@@ -40,7 +40,7 @@
 !             -4 : function in file is complex, dp.
 ! ---------------------------------------------------------
 
-subroutine X(input_function)(filename, mesh, ff, ierr, is_tmp, map)
+subroutine X(io_function_input)(filename, mesh, ff, ierr, is_tmp, map)
   character(len=*),  intent(in)    :: filename
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
@@ -54,7 +54,7 @@ subroutine X(input_function)(filename, mesh, ff, ierr, is_tmp, map)
   R_TYPE, allocatable :: ff_global(:)
 #endif
 
-  PUSH_SUB(X(input_function))
+  PUSH_SUB(X(io_function_input))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
@@ -68,7 +68,7 @@ subroutine X(input_function)(filename, mesh, ff, ierr, is_tmp, map)
     if(mpi_grp_is_root(mesh%mpi_grp)) then
       SAFE_DEALLOCATE_A(ff_global)
       SAFE_ALLOCATE(ff_global(1:mesh%np_global))
-      call X(input_function_global)(filename, mesh, ff_global, ierr, is_tmp_, map)
+      call X(io_function_input_global)(filename, mesh, ff_global, ierr, is_tmp_, map)
     end if
     if(in_debug_mode) call messages_debug_newlines(2)
 
@@ -89,16 +89,16 @@ subroutine X(input_function)(filename, mesh, ff, ierr, is_tmp, map)
     ASSERT(.false.) 
 #endif
   else
-    call X(input_function_global)(filename, mesh, ff, ierr, is_tmp_, map)
+    call X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp_, map)
   end if
 
-  POP_SUB(X(input_function))
+  POP_SUB(X(io_function_input))
 
-end subroutine X(input_function)
+end subroutine X(io_function_input)
 
 
 ! ---------------------------------------------------------
-subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
+subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
   character(len=*),  intent(in)    :: filename
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
@@ -123,7 +123,7 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
   R_TYPE, pointer :: read_ff(:)
 
   call profiling_in(read_prof, "DISK_READ")
-  PUSH_SUB(X(input_function_global))
+  PUSH_SUB(X(io_function_input_global))
 
   ierr = 0
 
@@ -290,7 +290,7 @@ subroutine X(input_function_global)(filename, mesh, ff, ierr, is_tmp, map)
     ierr = 1
   end select
 
-  POP_SUB(X(input_function_global))
+  POP_SUB(X(io_function_input_global))
   call profiling_out(read_prof)
 
 #if defined(HAVE_NETCDF)
@@ -303,7 +303,7 @@ contains
       dim_data_id(MAX_DIM), ndim(MAX_DIM), xtype, file_kind
     FLOAT, allocatable :: xx(:, :, :)
 
-    PUSH_SUB(X(input_function_global).read_netcdf)
+    PUSH_SUB(X(io_function_input_global).read_netcdf)
 
     !Inquire about dimensions
     if(status == NF90_NOERR) then
@@ -337,7 +337,7 @@ contains
       (ndim(2) .ne. cube%n(2)) .or. &
       (ndim(3) .ne. cube%n(3))) then
       ierr = 12
-      POP_SUB(X(input_function_global).read_netcdf)
+      POP_SUB(X(io_function_input_global).read_netcdf)
       return
     end if
 
@@ -423,16 +423,16 @@ contains
     SAFE_DEALLOCATE_A(xx)
 
     status = nf90_close(ncid)
-    POP_SUB(X(input_function_global).read_netcdf)
+    POP_SUB(X(io_function_input_global).read_netcdf)
   end subroutine read_netcdf
 
 #endif
 
-end subroutine X(input_function_global)
+end subroutine X(io_function_input_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, geo, grp)
+subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, geo, grp)
   integer,                    intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
   type(mesh_t),               intent(in)  :: mesh
@@ -449,7 +449,7 @@ subroutine X(output_function) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, ge
   R_TYPE, allocatable :: ff_global(:)
 #endif
 
-  PUSH_SUB(X(output_function))
+  PUSH_SUB(X(io_function_output))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
@@ -463,9 +463,9 @@ subroutine X(output_function) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, ge
 
     if(mesh%vp%rank.eq.mesh%vp%root) then
       if (present(geo)) then
-        call X(output_function_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_, geo = geo)
+        call X(io_function_output_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_, geo = geo)
       else
-        call X(output_function_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_)
+        call X(io_function_output_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_)
       end if
     end if
 
@@ -481,9 +481,9 @@ subroutine X(output_function) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, ge
     if(present(grp)) then ! only root writes output
       if(grp%rank.eq.0) then
         if (present(geo)) then
-          call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
+          call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
         else
-          call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
+          call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
         end if
       end if
       ! I have to broadcast the error code
@@ -496,9 +496,9 @@ subroutine X(output_function) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, ge
     else ! all nodes write output
 
       if (present(geo)) then
-        call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
+        call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
       else
-        call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
+        call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
       end if !present(geo)
     end if !present(grp)
 
@@ -511,18 +511,18 @@ subroutine X(output_function) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, ge
     ASSERT(.false.)
   end if
    if (present(geo)) then
-     call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
+     call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
    else
-     call X(output_function_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
+     call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
    endif
 #endif
 
-  POP_SUB(X(output_function))
-end subroutine X(output_function)
+  POP_SUB(X(io_function_output))
+end subroutine X(io_function_output)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function_global) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, geo)
+subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, geo)
   integer,                    intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
   type(mesh_t),               intent(in)  :: mesh
@@ -538,7 +538,7 @@ subroutine X(output_function_global) (how, dir, fname, mesh, ff, unit, ierr, is_
   FLOAT              :: x0
 
   call profiling_in(write_prof, "DISK_WRITE")
-  PUSH_SUB(X(output_function_global))
+  PUSH_SUB(X(io_function_output_global))
 
   call io_mkdir(dir)
 
@@ -598,7 +598,7 @@ subroutine X(output_function_global) (how, dir, fname, mesh, ff, unit, ierr, is_
   if(iand(how, C_OUTPUT_HOW_NETCDF)    .ne.0) call out_netcdf()
 #endif
 
-  POP_SUB(X(output_function_global))
+  POP_SUB(X(io_function_output_global))
   call profiling_out(write_prof)
 
 contains
@@ -607,13 +607,13 @@ contains
   subroutine out_binary()
     character(len=512) :: workdir
 
-    PUSH_SUB(X(output_function_global).out_binary)
+    PUSH_SUB(X(io_function_output_global).out_binary)
 
     workdir = io_workpath(dir, is_tmp=is_tmp)
     call io_binary_write(trim(workdir)//'/'//trim(fname)//'.obf', mesh%np_global, ff, ierr)
 
     call profiling_count_transfers(mesh%np_global, ff(1))
-    POP_SUB(X(output_function_global).out_binary)
+    POP_SUB(X(io_function_output_global).out_binary)
   end subroutine out_binary
 
 
@@ -625,7 +625,7 @@ contains
     FLOAT   :: xx(1:MAX_DIM)
     R_TYPE  :: fu
 
-    PUSH_SUB(X(output_function_global).out_axis)
+    PUSH_SUB(X(io_function_output_global).out_axis)
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d2)//"=0,"//index2axis(d3)//"=0"
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
@@ -642,7 +642,7 @@ contains
     end do
 
     call io_close(iunit)
-    POP_SUB(X(output_function_global).out_axis)
+    POP_SUB(X(io_function_output_global).out_axis)
   end subroutine out_axis
 
 
@@ -656,7 +656,7 @@ contains
     FLOAT   :: xx(1:MAX_DIM)
     R_TYPE  :: fu
 
-    PUSH_SUB(X(output_function_global).out_plane)
+    PUSH_SUB(X(io_function_output_global).out_plane)
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0"
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
@@ -708,7 +708,7 @@ contains
     write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
 
-    POP_SUB(X(output_function_global).out_plane)
+    POP_SUB(X(io_function_output_global).out_plane)
   end subroutine out_plane
 
 
@@ -721,7 +721,7 @@ contains
     FLOAT, allocatable :: out_vec(:)
     R_TYPE  :: fu
 
-    PUSH_SUB(X(output_function_global).out_matlab)
+    PUSH_SUB(X(io_function_output_global).out_matlab)
     
     min_d2 = mesh%idx%nr(1, d2) + mesh%idx%enlarge(d2)
     max_d2 = mesh%idx%nr(2, d2) - mesh%idx%enlarge(d2)
@@ -798,7 +798,7 @@ contains
     SAFE_DEALLOCATE_A(out_vec)
     call io_close(iunit)
 
-    POP_SUB(X(output_function_global).out_matlab)
+    POP_SUB(X(io_function_output_global).out_matlab)
   end subroutine out_matlab
 
 
@@ -809,7 +809,7 @@ contains
 
     integer :: idir
 
-    PUSH_SUB(X(output_function_global).out_mesh_index)
+    PUSH_SUB(X(io_function_output_global).out_mesh_index)
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write', is_tmp=is_tmp)
 
@@ -832,7 +832,7 @@ contains
     if(ierr == 0) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
 
-    POP_SUB(X(output_function_global).out_mesh_index)
+    POP_SUB(X(io_function_output_global).out_mesh_index)
   end subroutine out_mesh_index
 
 
@@ -844,7 +844,7 @@ contains
     character(len=40) :: nitems
     type(cube_function_t) :: cube
 
-    PUSH_SUB(X(output_function_global).out_dx)
+    PUSH_SUB(X(io_function_output_global).out_dx)
 
     ! put values in a nice cube
     call cube_function_init(cube, mesh%idx%ll)
@@ -895,7 +895,7 @@ contains
     call io_close(iunit)
     call cube_function_end(cube)
 
-    POP_SUB(X(output_function_global).out_dx)
+    POP_SUB(X(io_function_output_global).out_dx)
   end subroutine out_dx
 
 
@@ -907,7 +907,7 @@ contains
     FLOAT   :: offset(MAX_DIM)
     type(cube_function_t) :: cube
 
-    PUSH_SUB(X(output_function_global).out_cube)
+    PUSH_SUB(X(io_function_output_global).out_cube)
 
     ASSERT(present(geo))
 
@@ -951,7 +951,7 @@ contains
     call io_close(iunit)
     call cube_function_end(cube)
 
-    POP_SUB(X(output_function_global).out_cube)
+    POP_SUB(X(io_function_output_global).out_cube)
   end subroutine out_cube
 
 
@@ -976,7 +976,7 @@ contains
       return
     endif
 
-    PUSH_SUB(X(output_function_global).out_xcrysden)
+    PUSH_SUB(X(io_function_output_global).out_xcrysden)
 
     ! put values in a nice cube
     call cube_function_init(cube, mesh%idx%ll)
@@ -1073,7 +1073,7 @@ contains
     call io_close(iunit)
     call cube_function_end(cube)
 
-    POP_SUB(X(output_function_global).out_xcrysden)
+    POP_SUB(X(io_function_output_global).out_xcrysden)
   end subroutine out_xcrysden
 
 
@@ -1090,7 +1090,7 @@ contains
     integer :: data_im_id
 #endif
 
-    PUSH_SUB(X(output_function_global).out_netcdf)
+    PUSH_SUB(X(io_function_output_global).out_netcdf)
 
     ierr = 0
 
@@ -1104,7 +1104,7 @@ contains
     status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
     if(status.ne.NF90_NOERR) then
       ierr = 2
-      POP_SUB(X(output_function_global).out_netcdf)
+      POP_SUB(X(io_function_output_global).out_netcdf)
       return
     end if
 
@@ -1225,7 +1225,7 @@ contains
     status = nf90_close(ncid)
     call cube_function_end(cube)
 
-    POP_SUB(X(output_function_global).out_netcdf)
+    POP_SUB(X(io_function_output_global).out_netcdf)
   end subroutine out_netcdf
 
 
@@ -1235,7 +1235,7 @@ contains
     integer, intent(out) :: status
     FLOAT,   intent(in)  :: xx(:,:,:)
 
-    PUSH_SUB(X(output_function_global).write_variable)
+    PUSH_SUB(X(io_function_output_global).write_variable)
 
     select case(mesh%sb%dim)
     case(1)
@@ -1246,12 +1246,12 @@ contains
       status = nf90_put_var (ncid, data_id, xx)
     end select
     
-    POP_SUB(X(output_function_global).write_variable)
+    POP_SUB(X(io_function_output_global).write_variable)
   end subroutine write_variable
 
 #endif /*defined(HAVE_NETCDF)*/
 
-end subroutine X(output_function_global)
+end subroutine X(io_function_output_global)
 
 !----------------------------------------------------------------------
 ! This function prints a function in text format, for the moment it is

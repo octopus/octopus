@@ -35,22 +35,22 @@
     if(iand(outp%what, C_OUTPUT_POTENTIAL).ne.0) then
       SAFE_ALLOCATE(v0(1:mesh%np, 1:hm%d%dim))
       v0(1:mesh%np, 1) = hm%ep%vpsl(1:mesh%np)
-      call doutput_function(outp%how, dir, "v0", mesh, v0(:, 1), units_out%energy, err, geo = geo)
+      call dio_function_output(outp%how, dir, "v0", mesh, v0(:, 1), units_out%energy, err, geo = geo)
       SAFE_DEALLOCATE_A(v0)
 
       if(hm%ep%classical_pot > 0) then
-        call doutput_function(outp%how, dir, "vc", mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo)
+        call dio_function_output(outp%how, dir, "vc", mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo)
       end if
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        call doutput_function(outp%how, dir, 'vh', mesh, hm%vhartree, units_out%energy, err, geo = geo)
+        call dio_function_output(outp%how, dir, 'vh', mesh, hm%vhartree, units_out%energy, err, geo = geo)
         do is = 1, min(hm%d%ispin, 2)
           if(hm%d%ispin == 1) then
             write(fname, '(a)') 'vxc'
           else
             write(fname, '(a,i1)') 'vxc-sp', is
           endif
-          call doutput_function(outp%how, dir, fname, mesh, hm%vxc(:, is), units_out%energy, err, geo = geo)
+          call dio_function_output(outp%how, dir, fname, mesh, hm%vxc(:, is), units_out%energy, err, geo = geo)
 
           ! finally the full KS potential (without non-local PP contributions)
           if(hm%d%ispin == 1) then
@@ -59,10 +59,10 @@
             write(fname, '(a,i1)') 'vks-sp', is
           endif
           if (hm%ep%classical_pot > 0) then
-            call doutput_function(outp%how, dir, fname, mesh, &
+            call dio_function_output(outp%how, dir, fname, mesh, &
               hm%ep%vpsl + hm%ep%Vclassical + hm%vhxc(:, is), units_out%energy, err, geo = geo)
           else
-            call doutput_function(outp%how, dir, fname, mesh, &
+            call dio_function_output(outp%how, dir, fname, mesh, &
               hm%ep%vpsl + hm%vhxc(:, is), units_out%energy, err, geo = geo)
           end if
         end do
@@ -73,11 +73,11 @@
         select case(mesh%sb%dim)
         case(3)
           do idir = 1, mesh%sb%dim
-            call doutput_function(outp%how, dir, 'Bind_'//index2axis(idir), mesh, hm%b_ind(:, idir), &
+            call dio_function_output(outp%how, dir, 'Bind_'//index2axis(idir), mesh, hm%b_ind(:, idir), &
               units_out%force, err, geo = geo)
           enddo
         case(2)
-          call doutput_function(outp%how, dir, 'Bind_z', mesh, hm%b_ind(:, 1), units_out%force, err, geo = geo)
+          call dio_function_output(outp%how, dir, 'Bind_z', mesh, hm%b_ind(:, 1), units_out%force, err, geo = geo)
         end select
       end if
     end if

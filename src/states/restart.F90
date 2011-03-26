@@ -874,10 +874,10 @@ contains
         write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', ik, '-', ist, '-', idim
         select case(gr%sb%dim)
         case(1)
-          call zoutput_function(C_OUTPUT_HOW_AXIS_X, 'debug/open_boundaries', filename, &
+          call zio_function_output(C_OUTPUT_HOW_AXIS_X, 'debug/open_boundaries', filename, &
             m_center, st%zphi(:, idim, ist, ik), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
         case(2, 3)
-          call zoutput_function(C_OUTPUT_HOW_PLANE_Z, 'debug/open_boundaries', filename, &
+          call zio_function_output(C_OUTPUT_HOW_PLANE_Z, 'debug/open_boundaries', filename, &
             m_center, st%zphi(:, idim, ist, ik), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
         end select
       end if
@@ -1063,7 +1063,7 @@ contains
                 call messages_info(3)
 
                 ! finally read the state
-                call zinput_function(filename, mesh, st%zpsi(:, id, is, ik), ierr, .true.)
+                call zio_function_input(filename, mesh, st%zpsi(:, id, is, ik), ierr, .true.)
                 if (ierr > 0) then
                   message(1) = 'Could not read the file!'
                   write(message(2),'(a,i1)') 'Error code: ', ierr

@@ -215,7 +215,7 @@ contains
       rr = sys%st%qtot/rr
       target_rho(:,:) = rr*target_rho(:,:)
 
-      call doutput_function(io_function_fill_how("AxisX"), &
+      call dio_function_output(io_function_fill_how("AxisX"), &
            ".", "func", sys%gr%mesh, target_rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
 
       SAFE_DEALLOCATE_A(xx)

@@ -598,9 +598,9 @@ contains
 
         !print the XC potential before the correction
 
-        !call doutput_function(output_axis_x, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
-        !call doutput_function(output_axis_y, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
-        !call doutput_function(output_axis_z, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
+        !call dio_function_output(output_axis_x, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
+        !call dio_function_output(output_axis_y, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
+        !call dio_function_output(output_axis_z, "./static", vxc_name, ks%gr%fine%mesh, vxcc, unit_one, ierr)
 
         !Performing the correction to the "XC density" 
         do ip = 1, ks%gr%fine%mesh%np
@@ -616,8 +616,8 @@ contains
 
 
         !print the XC potential after the correction
-        !call doutput_function(output_axis_x, "./static", trim(nxc_name)//trim("cut") , ks%gr%fine%mesh, nxc, unit_one, ierr)
-        !call doutput_function(output_axis_x, "./static", trim(vxc_name)//trim("cut") , ks%gr%fine%mesh, vxcc, unit_one, ierr)
+        !call dio_function_output(output_axis_x, "./static", trim(nxc_name)//trim("cut") , ks%gr%fine%mesh, nxc, unit_one, ierr)
+        !call dio_function_output(output_axis_x, "./static", trim(vxc_name)//trim("cut") , ks%gr%fine%mesh, vxcc, unit_one, ierr)
 
         vxc(1:ks%gr%fine%mesh%np_part, ispin) = vxcc(1:ks%gr%fine%mesh%np_part)
 
@@ -681,8 +681,8 @@ contains
             call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, &
               ks%calc%vxc(:, ispin), hm%vxc(:, ispin), INJECTION)
             ! some debugging output that I will keep here for the moment, XA
-            !          call doutput_function(1, "./", "vxc_fine", ks%gr%fine%mesh, vxc(:, ispin), unit_one, ierr)
-            !          call doutput_function(1, "./", "vxc_coarse", ks%gr%mesh, hm%vxc(:, ispin), unit_one, ierr)
+            !          call dio_function_output(1, "./", "vxc_fine", ks%gr%fine%mesh, vxc(:, ispin), unit_one, ierr)
+            !          call dio_function_output(1, "./", "vxc_coarse", ks%gr%mesh, hm%vxc(:, ispin), unit_one, ierr)
           end do
           SAFE_DEALLOCATE_P(ks%calc%vxc)
         else
@@ -794,8 +794,8 @@ contains
       ! Hartree potential (and for some XC functionals).
       call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, pot, hm%vhartree, INJECTION)
       ! some debugging output that I will keep here for the moment, XA
-      !      call doutput_function(1, "./", "vh_fine", ks%gr%fine%mesh, pot, unit_one, is)
-      !      call doutput_function(1, "./", "vh_coarse", ks%gr%mesh, hm%vhartree, unit_one, is)
+      !      call dio_function_output(1, "./", "vh_fine", ks%gr%fine%mesh, pot, unit_one, is)
+      !      call dio_function_output(1, "./", "vh_coarse", ks%gr%mesh, hm%vhartree, unit_one, is)
       SAFE_DEALLOCATE_P(pot)
     end if
 

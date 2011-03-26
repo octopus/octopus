@@ -777,7 +777,7 @@ contains
 
       case(SPEC_FROM_FILE)
 
-        call dinput_function(trim(species_filename(spec)), mesh, vl, err)
+        call dio_function_input(trim(species_filename(spec)), mesh, vl, err)
         if(err .ne. 0) then
           write(message(1), '(a)')    'File '//trim(species_filename(spec))//'not found.'
           write(message(2), '(a,i4)') 'Error code returned = ', err

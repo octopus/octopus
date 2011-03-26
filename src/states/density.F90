@@ -213,8 +213,8 @@ contains
         SAFE_ALLOCATE(frho(1:this%gr%fine%mesh%np))
         call dmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, crho, frho, order = 2)
         ! some debugging output that I will keep here for the moment, XA
-        !      call doutput_function(1, "./", "n_fine", this%gr%fine%mesh, frho, unit_one, ierr)
-        !      call doutput_function(1, "./", "n_coarse", this%gr%mesh, crho, unit_one, ierr)
+        !      call dio_function_output(1, "./", "n_fine", this%gr%fine%mesh, frho, unit_one, ierr)
+        !      call dio_function_output(1, "./", "n_coarse", this%gr%mesh, crho, unit_one, ierr)
         forall(ip = 1:this%gr%fine%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + frho(ip)
         SAFE_DEALLOCATE_P(crho)
         SAFE_DEALLOCATE_A(frho)

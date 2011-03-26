@@ -309,9 +309,9 @@ contains
         
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
-        call doutput_function(io_function_fill_how("AxisX"), &
+        call dio_function_output(io_function_fill_how("AxisX"), &
              ".", "vhxc"//fname, gr%mesh, aux_hm%vhxc(:,1), units_out%energy, ierr)
-        call doutput_function(io_function_fill_how("AxisX"), &
+        call dio_function_output(io_function_fill_how("AxisX"), &
              ".", "rho"//fname, gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
       endif
 
@@ -453,16 +453,16 @@ contains
     ! calculate the Hartree potential
     call dpoisson_solve(hartree_solver,hm%vhartree,rho)
     
-    call doutput_function(io_function_fill_how("AxisX"), &
+    call dio_function_output(io_function_fill_how("AxisX"), &
            ".", "vhartree", gr%mesh, hm%vhartree(:), units_out%energy, ierr)
     
     ! initialize the KS potential
     call xc_get_vxc(gr%der, xc, st, target_rho, st%d%ispin, M_ZERO, st%qtot, ex = E_x, ec = E_c, vxc = hm%vxc)
     
-    call doutput_function(io_function_fill_how("AxisX"), &
+    call dio_function_output(io_function_fill_how("AxisX"), &
            ".", "vxcinit", gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
     
-    call doutput_function(io_function_fill_how("AxisX"), &
+    call dio_function_output(io_function_fill_how("AxisX"), &
            ".", "vext", gr%mesh, hm%ep%vpsl(:), units_out%energy, ierr)
     
     call hamiltonian_update(hm, gr%mesh)
@@ -489,9 +489,9 @@ contains
 
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
-        call doutput_function(io_function_fill_how("AxisX"), &
+        call dio_function_output(io_function_fill_how("AxisX"), &
              ".", "vxc"//fname, gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
-        call doutput_function(io_function_fill_how("AxisX"), &
+        call dio_function_output(io_function_fill_how("AxisX"), &
              ".", "rho"//fname, gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
       endif
     

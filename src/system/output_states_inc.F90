@@ -42,7 +42,7 @@
         else
           write(fname, '(a,i1)') 'density-sp', is
         endif
-        call doutput_function(outp%how, dir, fname, gr%fine%mesh, &
+        call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
           st%rho(:, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
       end do
     end if
@@ -58,7 +58,7 @@
           else
             write(fname, '(a,i1,2a)') 'dipole_density-sp', is, '-', index2axis(idir)
           endif
-          call doutput_function(outp%how, dir, fname, gr%fine%mesh, &
+          call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
             dtmp(:), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
         end do
       end do
@@ -78,7 +78,7 @@
             else
               write(fname, '(a,i1,2a)') 'current-sp', is, '-', index2axis(idir)
             endif
-            call doutput_function(outp%how, dir, fname, gr%mesh, &
+            call dio_function_output(outp%how, dir, fname, gr%mesh, &
               current(:, idir, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
           end do
         end do
@@ -110,10 +110,10 @@
               endif
                 
               if (states_are_real(st)) then
-                call doutput_function(outp%how, dir, fname, gr%mesh, &
+                call dio_function_output(outp%how, dir, fname, gr%mesh, &
                      st%dpsi(1:, idim, ist, ik), fn_unit, ierr, is_tmp = .false., geo = geo)
               else
-                call zoutput_function(outp%how, dir, fname, gr%mesh, &
+                call zio_function_output(outp%how, dir, fname, gr%mesh, &
                      st%zpsi(1:, idim, ist, ik), fn_unit, ierr, is_tmp = .false., geo = geo)
               end if
             end do
@@ -148,7 +148,7 @@
               else
                 dtmp = abs(st%zpsi(:, idim, ist, ik))**2
               end if
-              call doutput_function (outp%how, dir, fname, gr%mesh, &
+              call dio_function_output (outp%how, dir, fname, gr%mesh, &
                 dtmp, fn_unit, ierr, is_tmp = .false., geo = geo)
             end do
           end do
@@ -164,12 +164,12 @@
       select case(st%d%ispin)
         case(UNPOLARIZED)
           write(fname, '(a)') 'tau'
-          call doutput_function(outp%how, dir, trim(fname), gr%mesh, &
+          call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
             elf(:,1), unit_one, ierr, is_tmp = .false., geo = geo)
         case(SPIN_POLARIZED, SPINORS)
           do is = 1, 2
             write(fname, '(a,i1)') 'tau-sp', is
-            call doutput_function(outp%how, dir, trim(fname), gr%mesh, &
+            call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
               elf(:, is), unit_one, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
           end do
       end select

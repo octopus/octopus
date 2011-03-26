@@ -29,7 +29,7 @@ subroutine X(restart_write_function)(dir, filename, gr, ff, ierr, size)
 
   PUSH_SUB(X(restart_write_function))
 
-  call X(output_function)(restart_format, trim(dir), trim(filename), gr%mesh, ff(:), unit_one, ierr, is_tmp=.true.)
+  call X(io_function_output)(restart_format, trim(dir), trim(filename), gr%mesh, ff(:), unit_one, ierr, is_tmp=.true.)
   ! all restart files are in atomic units
 
   POP_SUB(X(restart_write_function))
@@ -61,7 +61,7 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
 #ifdef HAVE_MPI
   if(present(map) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
-    call X(input_function) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true., map = map)
+    call X(io_function_input) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true., map = map)
 
     POP_SUB(X(restart_read_function))
     return

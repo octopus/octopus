@@ -54,10 +54,10 @@ module io_function_m
     io_function_fill_how,         &
     write_xsf_geometry,           &
     write_xsf_geometry_file,      &
-    dinput_function,              &
-    zinput_function,              &
-    doutput_function,             &
-    zoutput_function,             &
+    dio_function_input,           &
+    zio_function_input,           &
+    dio_function_output,          &
+    zio_function_output,          &
     dio_function_out_text,        &
     zio_function_out_text
 
@@ -210,7 +210,7 @@ contains
 
   ! -------------------------------------------------------------------
   ! Use this function to quickly plot functions for debugging purposes:
-  ! call doutput_function(io_function_fill_how("AxisX_and_PlaneX_and_DX"), &
+  ! call dio_function_output(io_function_fill_how("AxisX_and_PlaneX_and_DX"), &
   !                       ".", "func", mesh, sb, func, M_ONE, ierr)
   ! -------------------------------------------------------------------
   integer function io_function_fill_how(where) result(how)

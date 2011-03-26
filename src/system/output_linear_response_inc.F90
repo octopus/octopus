@@ -54,7 +54,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
         else
           write(fname, '(a,i1,2a)') 'lr_density-sp', is, '-', index2axis(idir)
         endif
-        call X(output_function)(outp%how, dir, fname, gr%mesh, lr%X(dl_rho)(:, is), &
+        call X(io_function_output)(outp%how, dir, fname, gr%mesh, lr%X(dl_rho)(:, is), &
           fn_unit / pert_unit, ierr, geo = geo)
       end do
     end if
@@ -70,7 +70,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
           else
             write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(idir2), '-', index2axis(idir)
           endif
-          call X(output_function)(outp%how, dir, fname, gr%mesh, tmp, fn_unit / pert_unit, ierr, geo = geo)
+          call X(io_function_output)(outp%how, dir, fname, gr%mesh, tmp, fn_unit / pert_unit, ierr, geo = geo)
         end do
       end do
       SAFE_DEALLOCATE_A(tmp)
@@ -86,7 +86,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
             else
               write(fname, '(a,i1,4a)') 'lr_current-sp', is, '-', index2axis(idir2), '-',  index2axis(idir)
             endif
-            call zoutput_function(outp%how, dir, fname, gr%mesh, lr%dl_j(:, idir2, is), &
+            call zio_function_output(outp%how, dir, fname, gr%mesh, lr%dl_j(:, idir2, is), &
               fn_unit / pert_unit, ierr, geo = geo)
           end do
         end do
@@ -126,7 +126,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
                   'lr_wf-st', ist, '-', index2axis(idir), sigma
               endif
             endif
-            call X(output_function) (outp%how, dir, fname, gr%mesh, &
+            call X(io_function_output) (outp%how, dir, fname, gr%mesh, &
               lr%X(dl_psi) (1:, idim, ist, ik), fn_unit  / pert_unit, ierr, geo = geo)
           end do
         end do
@@ -160,7 +160,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
             endif
 
             dtmp = abs(lr%X(dl_psi) (:, idim, ist, ik))**2
-            call doutput_function (outp%how, dir, fname, gr%mesh, dtmp, fn_unit / pert_unit, ierr, geo = geo)
+            call dio_function_output (outp%how, dir, fname, gr%mesh, dtmp, fn_unit / pert_unit, ierr, geo = geo)
           end do
         end do
       end if
@@ -186,7 +186,7 @@ contains
       else
         write(fname, '(2a,i1,2a)') trim(filename1), '-sp', is, '-', index2axis(idir)
       endif
-      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, lr%X(dl_de)(1:gr%mesh%np,is), &
+      call X(io_function_output)(outp%how, dir, trim(fname), gr%mesh, lr%X(dl_de)(1:gr%mesh%np,is), &
         unit_one / pert_unit, ierr, geo = geo)
     end do
 
@@ -196,7 +196,7 @@ contains
       else
         write(fname, '(2a,i1,2a)') trim(filename2), '-sp', is, '-', index2axis(idir)
       endif
-      call X(output_function)(outp%how, dir, trim(fname), gr%mesh, lr%X(dl_elf)(1:gr%mesh%np,is), &
+      call X(io_function_output)(outp%how, dir, trim(fname), gr%mesh, lr%X(dl_elf)(1:gr%mesh%np,is), &
         unit_one / pert_unit, ierr, geo = geo)
     end do
 

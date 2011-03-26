@@ -448,9 +448,9 @@ contains
         do i = 1, 2
           do is = 1, st%d%nspin
             write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'td/vprev_', i, is
-            call dinput_function(trim(filename)//'.obf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
+            call dio_function_input(trim(filename)//'.obf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
             ! If we do not succeed, try netcdf
-            if(ierr > 0) call dinput_function(trim(filename)//'.ncdf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
+            if(ierr > 0) call dio_function_input(trim(filename)//'.ncdf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
             if(ierr > 0) then
               write(message(1), '(3a)') 'Unsuccessful read of "', trim(filename), '"'
               call messages_fatal(1)
@@ -847,7 +847,7 @@ contains
       do ii = 1, 2
         do is = 1, st%d%nspin
           write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
-          call doutput_function(restart_format, trim(tmpdir)//"td", &
+          call dio_function_output(restart_format, trim(tmpdir)//"td", &
             filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), unit_one, ierr, &
             is_tmp = .true., grp = st%mpi_grp)
           ! the unit is energy actually, but this only for restart, and can be kept in atomic units

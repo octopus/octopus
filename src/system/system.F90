@@ -148,7 +148,7 @@ contains
         
         do i=1, sys%gr%mesh%sb%dim
           write(fname, '(a,i1)') 'r-', i
-          call doutput_function(sys%outp%how, 'exec/', fname, sys%gr%mesh, sys%gr%mesh%x(:,i), &
+          call dio_function_output(sys%outp%how, 'exec/', fname, sys%gr%mesh, sys%gr%mesh%x(:,i), &
             units_out%length, ierr, geo = sys%geo)
         end do
       end if
