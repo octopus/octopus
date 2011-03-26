@@ -31,8 +31,8 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   integer :: ncid
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
-  type(etsf_dims) :: geometry_dims, density_dims, wfs_dims
-  type(etsf_groups_flags) :: geometry_flags, density_flags, wfs_flags
+  type(etsf_dims) :: geometry_dims, density_dims, wfs_dims, pw_dims
+  type(etsf_groups_flags) :: geometry_flags, density_flags, wfs_flags, pw_flags
 #endif
 
   PUSH_SUB(output_etsf)
@@ -43,6 +43,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
   !Create a cube
   call cube_function_init(cube, gr%mesh%idx%ll)
+  if (iand(outp%what, C_OUTPUT_WFS) /= 0) call dcube_function_fft_init(cube, gr%sb)
   call dcube_function_alloc_RS(cube)
 
   ! To create an etsf file one has to do the following:
@@ -104,6 +105,32 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     if (.not. lstat) call output_etsf_error(error_data)
 
   end if
+
+  ! wave-functions in fourier space
+  if (iand(outp%what, C_OUTPUT_WFS).ne.0) then
+    
+    
+
+    call output_etsf_geometry_dims(geo, gr%sb, pw_dims, pw_flags)
+    call output_etsf_kpoints_dims(gr%sb, pw_dims, pw_flags)
+    call output_etsf_electrons_dims(st, pw_dims, pw_flags)
+    call output_etsf_basisdata_dims(st, gr%mesh, cube, pw_dims, pw_flags)
+    call output_etsf_wfs_pw_dims(st, gr%mesh, cube, pw_dims, pw_flags)
+
+    call output_etsf_file_init(dir//"/wfs-pw-etsf.nc", "Wavefunctions file", pw_dims, pw_flags, ncid)
+
+    call output_etsf_electrons_write(st, ncid)
+    call output_etsf_geometry_write(geo, gr%sb, ncid)
+    call output_etsf_kpoints_write(gr%sb, ncid)
+    call output_etsf_basisdata_write(st, gr%mesh, cube, ncid)
+    call output_etsf_wfs_pw_write(st, gr%mesh, cube, ncid)
+
+    call etsf_io_low_close(ncid, lstat, error_data = error_data)
+    if (.not. lstat) call output_etsf_error(error_data)
+
+    call dcube_function_free_rs(cube)
+  end if
+
 #endif
 
   call cube_function_end(cube)
@@ -530,6 +557,99 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, ncid)
 
   POP_SUB(output_etsf_wfs_rsp_write)
 end subroutine output_etsf_wfs_rsp_write
+
+! --------------------------------------------------
+
+subroutine output_etsf_basisdata_dims(st, mesh, cube, dims, flags)
+  type(states_t),          intent(in)    :: st
+  type(mesh_t),            intent(in)    :: mesh
+  type(cube_function_t),   intent(in)    :: cube
+  type(etsf_dims),         intent(inout) :: dims
+  type(etsf_groups_flags), intent(inout) :: flags
+
+  PUSH_SUB(output_etsf_basisdata_dims)
+
+  flags%basisdata = etsf_basisdata_basis_set + etsf_basisdata_kin_cutoff
+
+  POP_SUB(output_etsf_basisdata_dims)
+
+end subroutine output_etsf_basisdata_dims
+
+! --------------------------------------------------------
+
+subroutine output_etsf_basisdata_write(st, mesh, cube, ncid)
+  type(states_t),        intent(in)    :: st
+  type(mesh_t),          intent(in)    :: mesh
+  type(cube_function_t), intent(inout) :: cube
+  integer,               intent(in)    :: ncid
+
+  type(etsf_basisdata) :: basisdata
+  type(etsf_io_low_error)  :: error_data
+  logical :: lstat
+
+  if((maxval(mesh%spacing(1:3)) - minval(mesh%spacing(1:3))) > CNST(1e-10)) then
+    message(1) = 'Cannot generate a ETSF plane wave wave-functions file,'
+    message(2) = 'spacing is not the same for each direction.'
+    call messages_fatal(2)
+  end if
+
+  PUSH_SUB(output_etsf_basisdata_write)
+
+  SAFE_ALLOCATE(basisdata%basis_set)
+
+  basisdata%basis_set = "plane_waves"
+
+  SAFE_ALLOCATE(basisdata%kinetic_energy_cutoff)
+
+  basisdata%kinetic_energy_cutoff = (M_PI/mesh%spacing(1))**2/M_TWO
+
+  call etsf_io_basisdata_put(ncid, basisdata, lstat, error_data = error_data)
+  if (.not. lstat) call output_etsf_error(error_data)
+
+  SAFE_DEALLOCATE_P(basisdata%basis_set)
+  SAFE_DEALLOCATE_P(basisdata%kinetic_energy_cutoff)
+
+  POP_SUB(output_etsf_basisdata_write)
+
+end subroutine output_etsf_basisdata_write
+
+! --------------------------------------------------------
+
+subroutine output_etsf_wfs_pw_dims(st, mesh, cube, dims, flags)
+  type(states_t),          intent(in)    :: st
+  type(mesh_t),            intent(in)    :: mesh
+  type(cube_function_t),   intent(in)    :: cube
+  type(etsf_dims),         intent(inout) :: dims
+  type(etsf_groups_flags), intent(inout) :: flags
+
+  PUSH_SUB(output_etsf_wfs_pw_dims)
+
+  dims%max_number_of_coefficients = cube%nx*cube%n(2)*cube%n(3)
+
+  if(states_are_real(st)) then
+    dims%real_or_complex_coefficients = 1
+  else
+    dims%real_or_complex_coefficients = 2
+  end if
+
+  POP_SUB(output_etsf_wfs_pw_dims)
+
+end subroutine output_etsf_wfs_pw_dims
+
+! --------------------------------------------------------
+
+subroutine output_etsf_wfs_pw_write(st, mesh, cube, ncid)
+  type(states_t),        intent(in)    :: st
+  type(mesh_t),          intent(in)    :: mesh
+  type(cube_function_t), intent(inout) :: cube
+  integer,               intent(in)    :: ncid
+
+  PUSH_SUB(output_etsf_wfs_pw_write)
+  
+  POP_SUB(output_etsf_wfs_pw_write)
+
+end subroutine output_etsf_wfs_pw_write
+
 #endif
 
 !! Local Variables:

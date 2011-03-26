@@ -29,6 +29,7 @@ module output_m
 #if defined(HAVE_ETSF_IO)
   use etsf_io
 #endif
+  use fourier_space_m
   use geometry_m
   use global_m
   use grid_m
