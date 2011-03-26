@@ -43,9 +43,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
   !Create a cube
   call cube_function_init(cube, gr%mesh%idx%ll)
-  if (iand(outp%what, C_OUTPUT_WFS) /= 0) call dcube_function_fft_init(cube, gr%sb)
-  call dcube_function_alloc_RS(cube)
-
+  
   ! To create an etsf file one has to do the following:
   !
   ! * Calculate the dimensions and the flags with the _dims functions
@@ -75,6 +73,8 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
   ! density
   if (iand(outp%what, C_OUTPUT_DENSITY).ne.0) then
+    call dcube_function_alloc_RS(cube)
+
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
     call output_etsf_density_dims(st, gr%mesh, cube, density_dims, density_flags)
 
@@ -85,10 +85,14 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
+
+    call dcube_function_free_rs(cube)
   end if
 
   ! wave-functions
   if (iand(outp%what, C_OUTPUT_WFS).ne.0) then
+    call dcube_function_alloc_RS(cube)
+
     call output_etsf_geometry_dims(geo, gr%sb, wfs_dims, wfs_flags)
     call output_etsf_kpoints_dims(gr%sb, wfs_dims, wfs_flags)
     call output_etsf_electrons_dims(st, wfs_dims, wfs_flags)
@@ -103,13 +107,14 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
-
+    
+    call dcube_function_free_rs(cube)
   end if
 
   ! wave-functions in fourier space
   if (iand(outp%what, C_OUTPUT_WFS).ne.0) then
-    
-    
+    call zcube_function_fft_init(cube, gr%sb)
+    call zcube_function_alloc_RS(cube)
 
     call output_etsf_geometry_dims(geo, gr%sb, pw_dims, pw_flags)
     call output_etsf_kpoints_dims(gr%sb, pw_dims, pw_flags)
@@ -128,9 +133,8 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
-    call dcube_function_free_rs(cube)
+    call zcube_function_free_rs(cube)
   end if
-
 #endif
 
   call cube_function_end(cube)
@@ -569,7 +573,8 @@ subroutine output_etsf_basisdata_dims(st, mesh, cube, dims, flags)
 
   PUSH_SUB(output_etsf_basisdata_dims)
 
-  flags%basisdata = etsf_basisdata_basis_set + etsf_basisdata_kin_cutoff
+  flags%basisdata = etsf_basisdata_basis_set + etsf_basisdata_kin_cutoff + &
+    etsf_basisdata_red_coord_pw
 
   POP_SUB(output_etsf_basisdata_dims)
 
@@ -586,6 +591,7 @@ subroutine output_etsf_basisdata_write(st, mesh, cube, ncid)
   type(etsf_basisdata) :: basisdata
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
+  integer :: ig, ng, ix, iy, iz, ixx(1:3)
 
   if((maxval(mesh%spacing(1:3)) - minval(mesh%spacing(1:3))) > CNST(1e-10)) then
     message(1) = 'Cannot generate a ETSF plane wave wave-functions file,'
@@ -603,11 +609,33 @@ subroutine output_etsf_basisdata_write(st, mesh, cube, ncid)
 
   basisdata%kinetic_energy_cutoff = (M_PI/mesh%spacing(1))**2/M_TWO
 
+  ng = product(cube%n(1:3))
+
+  SAFE_ALLOCATE(basisdata%reduced_coordinates_of_plane_waves%data2D(1:3, 1:ng))
+
+  ig = 0
+  do ix = 1, cube%n(1)
+    ixx(1) = pad_feq(ix, cube%n(1), .true.)
+    do iy = 1, cube%n(2)
+      ixx(2) = pad_feq(iy, cube%n(2), .true.)
+      do iz = 1, cube%n(3)
+        ixx(3) = pad_feq(iz, cube%n(3), .true.)
+        
+        INCR(ig, 1)
+        basisdata%reduced_coordinates_of_plane_waves%data2D(1:3, ig) = ixx(1:3)
+
+      end do
+    end do
+  end do
+
+  ASSERT(ig == ng)
+
   call etsf_io_basisdata_put(ncid, basisdata, lstat, error_data = error_data)
   if (.not. lstat) call output_etsf_error(error_data)
 
   SAFE_DEALLOCATE_P(basisdata%basis_set)
   SAFE_DEALLOCATE_P(basisdata%kinetic_energy_cutoff)
+  SAFE_DEALLOCATE_P(basisdata%reduced_coordinates_of_plane_waves%data2D)
 
   POP_SUB(output_etsf_basisdata_write)
 
@@ -624,13 +652,10 @@ subroutine output_etsf_wfs_pw_dims(st, mesh, cube, dims, flags)
 
   PUSH_SUB(output_etsf_wfs_pw_dims)
 
-  dims%max_number_of_coefficients = cube%nx*cube%n(2)*cube%n(3)
+  flags%main = etsf_main_wfs_coeff
 
-  if(states_are_real(st)) then
-    dims%real_or_complex_coefficients = 1
-  else
-    dims%real_or_complex_coefficients = 2
-  end if
+  dims%max_number_of_coefficients = product(cube%n(1:3))
+  dims%real_or_complex_coefficients = 2
 
   POP_SUB(output_etsf_wfs_pw_dims)
 
@@ -644,8 +669,84 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, ncid)
   type(cube_function_t), intent(inout) :: cube
   integer,               intent(in)    :: ncid
 
+  type(etsf_main) :: main
+  type(etsf_io_low_error)  :: error_data
+  logical :: lstat
+  REAL_DOUBLE, allocatable, target :: local_wfs(:, :, :, :, :, :)
+  CMPLX, pointer :: zpsi(:)
+  integer :: nkpoints, nspin, zdim
+  integer :: idim, ist, iq, ikpoint, ispin
+  integer :: ig, ng, ix, iy, iz, ixx(1:3)
+
   PUSH_SUB(output_etsf_wfs_pw_write)
-  
+
+  nspin = 1
+  if (st%d%ispin == SPIN_POLARIZED) nspin = 2
+
+  nkpoints = st%d%nik/nspin
+  zdim = 2
+
+  ng = product(cube%n(1:3))
+
+  !Write the wavefunctions to the file
+  SAFE_ALLOCATE(local_wfs(1:zdim, 1:ng, 1:st%d%dim, 1:st%nst, 1:nkpoints, 1:nspin))
+
+  if(states_are_real(st)) then
+    SAFE_ALLOCATE(zpsi(1:mesh%np))
+  end if
+
+  do iq = 1, st%d%nik
+    ispin = states_dim_get_spin_index(st%d, iq)
+    ikpoint = states_dim_get_kpoint_index(st%d, iq)
+    do ist = 1, st%nst
+      do idim = 1, st%d%dim
+
+        ! for the moment we treat all functions as complex
+        if (states_are_real(st)) then
+          zpsi(1:mesh%np) = st%dpsi(1:mesh%np, idim, ist, iq)
+        else
+          zpsi => st%zpsi(:, idim, ist, iq)
+        end if
+          
+        call zmesh_to_cube(mesh, zpsi, cube, local = .true.)
+        call zcube_function_rs2fs(cube)
+
+        ig = 0
+        do ix = 1, cube%n(1)
+          ixx(1) = pad_feq(ix, cube%n(1), .true.)
+          do iy = 1, cube%n(2)
+            ixx(2) = pad_feq(iy, cube%n(2), .true.)
+            do iz = 1, cube%n(3)
+              ixx(3) = pad_feq(iz, cube%n(3), .true.)
+              
+              INCR(ig, 1)
+
+              local_wfs(1, ig, idim, ist, ikpoint, ispin) = real(cube%fs(ix, iy, iz), 8)
+              local_wfs(2, ig, idim, ist, ikpoint, ispin) = aimag(cube%fs(ix, iy, iz))
+                           
+            end do
+          end do
+        end do
+        
+        ASSERT(ig == ng)
+
+      end do
+    end do
+  end do
+
+  if(states_are_real(st)) then
+    SAFE_DEALLOCATE_P(zpsi)
+  end if
+
+  main%coefficients_of_wavefunctions%data6D => local_wfs
+
+  call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
+  if (.not. lstat) call output_etsf_error(error_data)
+
+  call etsf_io_tools_set_time_reversal_symmetry(ncid, .false., lstat, error_data)
+
+  SAFE_DEALLOCATE_A(local_wfs)
+
   POP_SUB(output_etsf_wfs_pw_write)
 
 end subroutine output_etsf_wfs_pw_write

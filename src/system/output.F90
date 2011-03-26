@@ -28,7 +28,9 @@ module output_m
   use elf_m
 #if defined(HAVE_ETSF_IO)
   use etsf_io
+  use etsf_io_tools
 #endif
+  use fft_m
   use fourier_space_m
   use geometry_m
   use global_m
