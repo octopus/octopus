@@ -160,8 +160,8 @@ subroutine output_etsf_file_init(filename, filetype, dims, flags, ncid)
 
   PUSH_SUB(output_etsf_file_init)
 
-  call etsf_io_data_init(filename, flags, dims, &
-    filetype, "Created by "//PACKAGE_STRING, lstat, error_data, overwrite = .true.)
+  call etsf_io_data_init(filename, flags, dims, filetype, "Created by "//PACKAGE_STRING, &
+    lstat, error_data, overwrite = .true., k_dependent = .false.)
   if (.not. lstat) call output_etsf_error(error_data)
 
   call etsf_io_low_open_modify(ncid, filename, lstat, error_data = error_data)
