@@ -28,7 +28,7 @@ module td_write_m
   use geometry_m
   use global_m
   use grid_m
-  use h_sys_output_m
+  use output_m
   use hamiltonian_base_m
   use hamiltonian_m
   use io_m
@@ -497,7 +497,7 @@ contains
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(in)    :: hm
-    type(h_sys_output_t), intent(in)    :: outp
+    type(output_t),       intent(in)    :: outp
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: iter
 
@@ -518,7 +518,7 @@ contains
     ! now write down the rest
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
 
-    call h_sys_output_all(outp, gr, geo, st, hm, filename)
+    call output_all(outp, gr, geo, st, hm, filename)
 
     call profiling_out(prof)
     POP_SUB(td_write_data)

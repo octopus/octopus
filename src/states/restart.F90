@@ -874,10 +874,10 @@ contains
         write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', ik, '-', ist, '-', idim
         select case(gr%sb%dim)
         case(1)
-          call zoutput_function(output_axis_x, 'debug/open_boundaries', filename, &
+          call zoutput_function(C_OUTPUT_HOW_AXIS_X, 'debug/open_boundaries', filename, &
             m_center, st%zphi(:, idim, ist, ik), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
         case(2, 3)
-          call zoutput_function(output_plane_z, 'debug/open_boundaries', filename, &
+          call zoutput_function(C_OUTPUT_HOW_PLANE_Z, 'debug/open_boundaries', filename, &
             m_center, st%zphi(:, idim, ist, ik), sqrt(units_out%length**(-sb%dim)), err, is_tmp=.false.)
         end select
       end if

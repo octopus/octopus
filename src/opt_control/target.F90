@@ -27,7 +27,7 @@ module opt_control_target_m
   use geometry_m
   use global_m
   use grid_m
-  use h_sys_output_m
+  use output_m
   use io_m
   use io_function_m
   use lalg_adv_m
@@ -910,7 +910,7 @@ module opt_control_target_m
     type(grid_t), intent(inout)   :: gr
     character(len=*), intent(in)  :: dir
     type(geometry_t),       intent(in)  :: geo
-    type(h_sys_output_t),   intent(in)  :: outp
+    type(output_t),         intent(in)  :: outp
 
     integer :: ierr
     PUSH_SUB(target_output)
@@ -929,10 +929,10 @@ module opt_control_target_m
       call doutput_function(outp%how, trim(dir), 'density_target', gr%mesh, &
         target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
     case(oct_tg_excited)
-      call h_sys_output_states(target%est%st, gr, geo, trim(dir)//'/st', outp)
+      call output_states(target%est%st, gr, geo, trim(dir)//'/st', outp)
       call excited_states_output(target%est, trim(dir))
     case default
-      call h_sys_output_states(target%st, gr, geo, trim(dir), outp)
+      call output_states(target%st, gr, geo, trim(dir), outp)
     end select
 
     POP_SUB(target_output)

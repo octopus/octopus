@@ -27,7 +27,7 @@ module system_m
   use geometry_m
   use global_m
   use grid_m
-  use h_sys_output_m
+  use output_m
   use hamiltonian_m
   use io_function_m
   use mesh_m
@@ -61,7 +61,7 @@ module system_m
     type(grid_t),     pointer :: gr    !< the mesh
     type(states_t),   pointer :: st    !< the states
     type(v_ks_t)              :: ks    !< the Kohn-Sham potentials
-    type(h_sys_output_t)      :: outp  !< the output
+    type(output_t)      :: outp  !< the output
     type(multicomm_t)         :: mc    !< index and domain communicators
   end type system_t
 
@@ -99,7 +99,7 @@ contains
     call states_distribute_nodes(sys%st, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
     call states_densities_init(sys%st, sys%gr, sys%geo, sys%mc)
-    call h_sys_output_init(sys%gr%sb, sys%st%nst, sys%outp)
+    call output_init(sys%gr%sb, sys%st%nst, sys%outp)
     call elf_init()
 
     call poisson_init(psolver, sys%gr%der, sys%geo, sys%mc%master_comm)
@@ -144,7 +144,7 @@ contains
 
       PUSH_SUB(system_init.print_r)
       
-      if(iand(sys%outp%what, output_r).ne.0) then
+      if(iand(sys%outp%what, C_OUTPUT_R).ne.0) then
         
         do i=1, sys%gr%mesh%sb%dim
           write(fname, '(a,i1)') 'r-', i

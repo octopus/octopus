@@ -15,11 +15,11 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: h_sys_output.F90 3613 2007-11-29 16:47:41Z xavier $
+!! $Id: output.F90 3613 2007-11-29 16:47:41Z xavier $
 
 #include "global.h"
 
-module h_sys_output_m
+module output_m
   use basins_m
   use cube_function_m
   use datasets_m
@@ -68,17 +68,17 @@ module h_sys_output_m
 
   private
   public ::                    &
-    h_sys_output_t,            &
-    h_sys_output_init,         &
-    h_sys_output_states,       &
-    h_sys_output_modelmb,      &
-    h_sys_output_hamiltonian,  &
-    h_sys_output_all,          &
-    h_sys_output_current_flow, &
-    dh_sys_output_lr,          &
-    zh_sys_output_lr
+    output_t,            &
+    output_init,         &
+    output_states,       &
+    output_modelmb,      &
+    output_hamiltonian,  &
+    output_all,          &
+    output_current_flow, &
+    doutput_lr,          &
+    zoutput_lr
 
-  type h_sys_output_t
+  type output_t
     ! General output variables:
     integer :: what                ! what to output
     integer :: how                 ! how to output
@@ -94,43 +94,43 @@ module h_sys_output_m
     type(mesh_plane_t) :: plane    ! This is to calculate the current flow across a plane
     type(mesh_line_t)  :: line     ! or though a line (in 2D)
 
-  end type h_sys_output_t
+  end type output_t
 
   integer, parameter, public ::           &
-    output_potential       =        1,    &
-    output_density         =        2,    &
-    output_wfs             =        4,    &
-    output_wfs_sqmod       =        8,    &
-    output_geometry        =       16,    &
-    output_current         =       32,    &
-    output_ELF             =       64,    &
-    output_ELF_basins      =      128,    &
-    output_ELF_FS          =      256,    &
-    output_Bader           =      512,    &
-    output_el_pressure     =     1024,    &
-    output_matrix_elements =     2048,    &
-    output_pol_density     =     4096,    &
-    output_r               =     8192,    &
-    output_ked             =    16384,    &
-    output_j_flow          =    32768,    &
-    output_dos             =    65536,    &
-    output_tpa             =   131072,    &
-    output_density_matrix  =   262144,    &
-    output_modelmb         =   524288,    &
-    output_forces          =  1048576
+    C_OUTPUT_POTENTIAL       =        1,    &
+    C_OUTPUT_DENSITY         =        2,    &
+    C_OUTPUT_WFS             =        4,    &
+    C_OUTPUT_WFS_SQMOD       =        8,    &
+    C_OUTPUT_GEOMETRY        =       16,    &
+    C_OUTPUT_CURRENT         =       32,    &
+    C_OUTPUT_ELF             =       64,    &
+    C_OUTPUT_ELF_BASINS      =      128,    &
+    C_OUTPUT_ELF_FS          =      256,    &
+    C_OUTPUT_BADER           =      512,    &
+    C_OUTPUT_EL_PRESSURE     =     1024,    &
+    C_OUTPUT_MATRIX_ELEMENTS =     2048,    &
+    C_OUTPUT_POL_DENSITY     =     4096,    &
+    C_OUTPUT_R               =     8192,    &
+    C_OUTPUT_KED             =    16384,    &
+    C_OUTPUT_J_FLOW          =    32768,    &
+    C_OUTPUT_DOS             =    65536,    &
+    C_OUTPUT_TPA             =   131072,    &
+    C_OUTPUT_DENSITY_MATRIX  =   262144,    &
+    C_OUTPUT_MODELMB         =   524288,    &
+    C_OUTPUT_FORCES          =  1048576
 
 contains
 
-  subroutine h_sys_output_init(sb, nst, outp)
+  subroutine output_init(sb, nst, outp)
     type(simul_box_t),    intent(in)  :: sb
     integer,              intent(in)  :: nst
-    type(h_sys_output_t), intent(out) :: outp
+    type(output_t),       intent(out) :: outp
 
     type(block_t) :: blk
     FLOAT :: norm
     character(len=80) :: nst_string, default
 
-    PUSH_SUB(h_sys_output_init)
+    PUSH_SUB(output_init)
 
     !%Variable Output
     !%Type flag
@@ -231,15 +231,15 @@ contains
     !%End
     call parse_integer(datasets_check('Output'), 0, outp%what)
 
-    if(iand(outp%what, output_elf_fs) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_ELF_FS) .ne. 0) then
       call messages_experimental("ELF in Fourier space")
     endif
 
     ! cannot calculate the ELF in 1D
-    if(iand(outp%what, output_elf) .ne. 0 .or. iand(outp%what, output_elf_basins) .ne. 0 &
-       .or. iand(outp%what, output_elf_fs) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_ELF) .ne. 0 .or. iand(outp%what, C_OUTPUT_elf_basins) .ne. 0 &
+       .or. iand(outp%what, C_OUTPUT_ELF_FS) .ne. 0) then
        if(sb%dim .ne. 2 .and. sb%dim .ne. 3) then
-         outp%what = iand(outp%what, not(output_elf + output_elf_basins + output_elf_fs))
+         outp%what = iand(outp%what, not(C_OUTPUT_ELF + C_OUTPUT_ELF_BASINS + C_OUTPUT_ELF_FS))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
          call messages_warning(1)
        endif
@@ -249,21 +249,21 @@ contains
       call input_error('Output')
     end if
 
-    if(iand(outp%what, output_modelmb) .ne. 0 .or. iand(outp%what, output_density_matrix) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_MODELMB) .ne. 0 .or. iand(outp%what, C_OUTPUT_DENSITY_MATRIX) .ne. 0) then
       call messages_experimental("Model many-body and density matrix")
     endif
 
-    if(iand(outp%what, output_modelmb) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_MODELMB) .ne. 0) then
       write(message(1),'(a)') 'Model many-body quantities will be output, according to the presence of'
       write(message(2),'(a)') '  wfs, density, or density_matrix in Output.'
       call messages_info(2)
     end if
 
-    if(iand(outp%what, output_density_matrix) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX) .ne. 0) then
       write(message(1),'(a)') 'Info: The density matrix will be calculated, traced'
       write(message(2),'(a)') 'over the second dimension, diagonalized, and output.'
       call messages_info(2)
-      if(iand(outp%what, output_modelmb) .eq. 0) then
+      if(iand(outp%what, C_OUTPUT_MODELMB) .eq. 0) then
         write(message(1),'(a)') 'Note that density matrix only works for model MB calculations for the moment.'
         call messages_info(1)
       end if
@@ -274,7 +274,7 @@ contains
       !   dimensions. The current 1D 1-particle case is simple.
     end if
 
-    if(iand(outp%what, output_wfs) .ne. 0  .or.  iand(outp%what, output_wfs_sqmod) .ne. 0 ) then
+    if(iand(outp%what, C_OUTPUT_WFS) .ne. 0  .or.  iand(outp%what, C_OUTPUT_WFS_SQMOD) .ne. 0 ) then
 
       !%Variable OutputWfsNumber
       !%Type string
@@ -292,7 +292,7 @@ contains
     end if
 
     if(parse_block(datasets_check('CurrentThroughPlane'), blk) == 0) then
-      outp%what = ior(outp%what, output_j_flow)
+      outp%what = ior(outp%what, C_OUTPUT_J_FLOW)
 
       !%Variable CurrentThroughPlane
       !%Type block
@@ -403,7 +403,7 @@ contains
       end select
     end if
 
-    if(iand(outp%what, output_matrix_elements) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_MATRIX_ELEMENTS) .ne. 0) then
       call output_me_init(outp%me, sb)
     end if
 
@@ -431,33 +431,33 @@ contains
 
     call parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
 
-    if(outp%what .ne. 0 .and. outp%what .ne. output_matrix_elements) call io_function_read_how(sb, outp%how)
+    if(outp%what .ne. 0 .and. outp%what .ne. C_OUTPUT_MATRIX_ELEMENTS) call io_function_read_how(sb, outp%how)
 
-    POP_SUB(h_sys_output_init)
-  end subroutine h_sys_output_init
+    POP_SUB(output_init)
+  end subroutine output_init
 
 
   ! ---------------------------------------------------------
-  subroutine h_sys_output_all(outp, gr, geo, st, hm, dir)
+  subroutine output_all(outp, gr, geo, st, hm, dir)
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(in)    :: hm
-    type(h_sys_output_t), intent(in)    :: outp
+    type(output_t),       intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
 
     integer :: idir
     FLOAT   :: offset(1:MAX_DIM)
     
-    PUSH_SUB(h_sys_output_all)
+    PUSH_SUB(output_all)
     
-    call h_sys_output_states(st, gr, geo, dir, outp)
-    call h_sys_output_hamiltonian(hm, gr%mesh, dir, outp, geo)
-    call h_sys_output_localization_funct(st, hm, gr, dir, outp, geo)
-    call h_sys_output_current_flow(gr, st, dir, outp, geo)
+    call output_states(st, gr, geo, dir, outp)
+    call output_hamiltonian(hm, gr%mesh, dir, outp, geo)
+    call output_localization_funct(st, hm, gr, dir, outp, geo)
+    call output_current_flow(gr, st, dir, outp, geo)
 
-    if(iand(outp%what, output_geometry) .ne. 0) then
-      if(iand(outp%how, output_xcrysden) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_GEOMETRY) .ne. 0) then
+      if(iand(outp%how, C_OUTPUT_HOW_XCRYSDEN) .ne. 0) then
         
         offset = M_ZERO
         ! The corner of the cell is always (0,0,0) to XCrySDen
@@ -471,36 +471,36 @@ contains
 
         call write_xsf_geometry_file(dir, "geometry", geo, gr%sb, offset = offset)
       endif
-      if(iand(outp%how, output_xyz) .ne. 0) then
+      if(iand(outp%how, C_OUTPUT_HOW_XYZ) .ne. 0) then
         call atom_write_xyz(dir, "geometry", geo, gr%sb%dim)
         if(simul_box_is_periodic(gr%sb)) &
           call periodic_write_crystal(gr%sb, geo, dir)
       endif
     end if
 
-    if(iand(outp%what, output_forces) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_FORCES) .ne. 0) then
       call write_xsf_geometry_file(dir, "forces", geo, gr%sb, write_forces = .true.)
     endif
 
-    if(iand(outp%what, output_matrix_elements) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_MATRIX_ELEMENTS) .ne. 0) then
       call output_me(outp%me, dir, st, gr, geo, hm)
     end if
 
-    if (iand(outp%how, output_etsf) .ne. 0) then
-      call h_sys_output_etsf(st, gr, geo, dir, outp)
+    if (iand(outp%how, C_OUTPUT_HOW_ETSF) .ne. 0) then
+      call output_etsf(st, gr, geo, dir, outp)
     end if
     
-    POP_SUB(h_sys_output_all)
-  end subroutine h_sys_output_all
+    POP_SUB(output_all)
+  end subroutine output_all
 
 
   ! ---------------------------------------------------------
-  subroutine h_sys_output_localization_funct(st, hm, gr, dir, outp, geo)
+  subroutine output_localization_funct(st, hm, gr, dir, outp, geo)
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
     type(grid_t),           intent(inout) :: gr
     character(len=*),       intent(in)    :: dir
-    type(h_sys_output_t),   intent(in)    :: outp
+    type(output_t),         intent(in)    :: outp
     type(geometry_t),       intent(in)    :: geo
 
     FLOAT, allocatable :: f_loc(:,:)
@@ -508,7 +508,7 @@ contains
     integer :: is, ierr, imax
     type(mpi_grp_t) :: mpi_grp
 
-    PUSH_SUB(h_sys_output_localization_funct)
+    PUSH_SUB(output_localization_funct)
     
     mpi_grp = gr%mesh%mpi_grp
     if(st%parallel_in_states) mpi_grp = st%mpi_grp
@@ -521,13 +521,13 @@ contains
     SAFE_ALLOCATE(f_loc(1:gr%mesh%np, 1:imax))
 
     ! First the ELF in real space
-    if(iand(outp%what, output_elf) .ne. 0 .or. iand(outp%what, output_elf_basins) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_ELF) .ne. 0 .or. iand(outp%what, C_OUTPUT_ELF_BASINS) .ne. 0) then
       ASSERT(gr%mesh%sb%dim .ne. 1)
 
       call elf_calc(st, gr, f_loc)
       
       ! output ELF in real space
-      if(iand(outp%what, output_elf) .ne. 0) then
+      if(iand(outp%what, C_OUTPUT_ELF) .ne. 0) then
         write(fname, '(a)') 'elf_rs'
         call doutput_function(outp%how, dir, trim(fname), gr%mesh, &
           f_loc(:,imax), unit_one, ierr, is_tmp = .false., geo = geo)
@@ -543,12 +543,12 @@ contains
         end if
       end if
 
-      if(iand(outp%what, output_elf_basins) .ne. 0) &
+      if(iand(outp%what, C_OUTPUT_ELF_BASINS) .ne. 0) &
         call out_basins(f_loc(:,1), "elf_rs_basins")
     end if
 
     ! Second, ELF in Fourier space.
-    if(iand(outp%what, output_elf_fs) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_ELF_FS) .ne. 0) then
       call elf_calc_fs(st, gr, f_loc)
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'elf_fs-sp', is
@@ -559,7 +559,7 @@ contains
     end if
 
     ! Now Bader analysis
-    if(iand(outp%what, output_bader) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_BADER) .ne. 0) then
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,i1)') 'bader-sp', is
@@ -573,8 +573,8 @@ contains
     end if
 
     ! Now the pressure
-    if(iand(outp%what, output_el_pressure) .ne. 0) then
-      call h_sys_calc_electronic_pressure(st, hm, gr, f_loc(:,1))
+    if(iand(outp%what, C_OUTPUT_EL_PRESSURE) .ne. 0) then
+      call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call doutput_function(outp%how, dir, "el_pressure", gr%mesh, &
         f_loc(:,1), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)
       ! this quantity is dimensionless
@@ -582,7 +582,7 @@ contains
 
     SAFE_DEALLOCATE_A(f_loc)
 
-    POP_SUB(h_sys_output_localization_funct)
+    POP_SUB(output_localization_funct)
 
   contains
     ! ---------------------------------------------------------
@@ -594,7 +594,7 @@ contains
       type(basins_t)     :: basins
       integer            :: iunit
 
-      PUSH_SUB(h_sys_output_localization_funct.out_basins)
+      PUSH_SUB(output_localization_funct.out_basins)
 
       call basins_init(basins, gr%mesh)
       call basins_analyze(basins, gr%mesh, st%d%nspin, ff(:), st%rho, CNST(0.01))
@@ -610,14 +610,14 @@ contains
 
       call basins_end(basins)
 
-      POP_SUB(h_sys_output_localization_funct.out_basins)
+      POP_SUB(output_localization_funct.out_basins)
     end subroutine out_basins
 
-  end subroutine h_sys_output_localization_funct
+  end subroutine output_localization_funct
 
   
   ! ---------------------------------------------------------
-  subroutine h_sys_calc_electronic_pressure(st, hm, gr, pressure)
+  subroutine calc_electronic_pressure(st, hm, gr, pressure)
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
     type(grid_t),           intent(inout) :: gr
@@ -627,7 +627,7 @@ contains
     FLOAT   :: p_tf, dens
     integer :: is, ii
 
-    PUSH_SUB(h_sys_calc_electronic_pressure)
+    PUSH_SUB(calc_electronic_pressure)
 
     SAFE_ALLOCATE( rho(1:gr%mesh%np_part, 1:st%d%nspin))
     SAFE_ALLOCATE(lrho(1:gr%mesh%np))
@@ -659,8 +659,8 @@ contains
       pressure(ii) = M_HALF*(M_ONE + pressure(ii)/sqrt(M_ONE + pressure(ii)**2))
     end do
 
-    POP_SUB(h_sys_calc_electronic_pressure)
-  end subroutine h_sys_calc_electronic_pressure
+    POP_SUB(calc_electronic_pressure)
+  end subroutine calc_electronic_pressure
 
 
 #include "output_etsf_inc.F90"
@@ -676,7 +676,7 @@ contains
 #include "real.F90"
 #include "output_linear_response_inc.F90"
 
-end module h_sys_output_m
+end module output_m
 
 !! Local Variables:
 !! mode: f90

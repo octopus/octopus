@@ -31,7 +31,7 @@ module td_m
   use global_m
   use grid_m
   use ground_state_m
-  use h_sys_output_m
+  use output_m
   use hamiltonian_m
   use io_m
   use io_function_m

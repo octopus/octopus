@@ -25,7 +25,7 @@ module invert_ks_m
   use eigensolver_m 
   use global_m
   use hamiltonian_m 
-  use h_sys_output_m 
+  use output_m 
   use io_function_m 
   use io_m 
   use mesh_function_m 
@@ -146,7 +146,7 @@ contains
     call messages_info(1)
 
     ! output for all cases    
-    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, STATIC_DIR)
+    call output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, STATIC_DIR)
         
     ! save files in restart format
     call restart_write(trim(tmpdir) // GS_DIR, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)

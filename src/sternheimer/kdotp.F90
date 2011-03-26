@@ -24,7 +24,7 @@ module kdotp_m
   use geometry_m
   use global_m
   use grid_m
-  use h_sys_output_m
+  use output_m
   use hamiltonian_m
   use io_m
   use kdotp_calc_m

@@ -18,13 +18,13 @@
 !! $Id: states.F90 2515 2006-10-24 17:13:30Z acastro $
 
   ! ---------------------------------------------------------
-  subroutine h_sys_output_states(st, gr, geo, dir, outp)
+  subroutine output_states(st, gr, geo, dir, outp)
 
     type(states_t),         intent(inout) :: st
     type(grid_t),           intent(inout) :: gr
     type(geometry_t),       intent(in)    :: geo
     character(len=*),       intent(in)    :: dir
-    type(h_sys_output_t),   intent(in)    :: outp
+    type(output_t),         intent(in)    :: outp
 
     integer :: ik, ist, idim, idir, is, ierr, ip
     character(len=80) :: fname
@@ -32,9 +32,9 @@
     FLOAT, allocatable :: dtmp(:), elf(:,:)
     FLOAT, allocatable :: current(:, :, :)
 
-    PUSH_SUB(h_sys_output_states)
+    PUSH_SUB(output_states)
 
-    if(iand(outp%what, output_density) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_DENSITY) .ne. 0) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       do is = 1, st%d%nspin
         if(st%d%nspin == 1) then
@@ -47,7 +47,7 @@
       end do
     end if
 
-    if(iand(outp%what, output_pol_density) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_POL_DENSITY) .ne. 0) then
       fn_unit = units_out%length**(1-gr%mesh%sb%dim)
       SAFE_ALLOCATE(dtmp(1:gr%fine%mesh%np))
       do idir = 1, gr%sb%dim
@@ -65,7 +65,7 @@
       SAFE_DEALLOCATE_A(dtmp)
     end if
 
-    if(iand(outp%what, output_current) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_CURRENT) .ne. 0) then
       if(states_are_complex(st)) then
         fn_unit = units_out%time * units_out%length**(-gr%mesh%sb%dim)
         ! calculate current first
@@ -89,7 +89,7 @@
       endif
     end if
 
-    if(iand(outp%what, output_wfs).ne.0) then
+    if(iand(outp%what, C_OUTPUT_WFS).ne.0) then
       fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
       do ist = st%st_start, st%st_end
         if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -122,7 +122,7 @@
       end do
     end if
 
-    if(iand(outp%what, output_wfs_sqmod).ne.0) then
+    if(iand(outp%what, C_OUTPUT_WFS_SQMOD).ne.0) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
       do ist = st%st_start, st%st_end
@@ -157,7 +157,7 @@
       SAFE_DEALLOCATE_A(dtmp)
     end if
 
-    if(iand(outp%what, output_ked).ne.0) then
+    if(iand(outp%what, C_OUTPUT_KED).ne.0) then
       fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
       SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
       call states_calc_quantities(gr%der, st, kinetic_energy_density = elf)
@@ -176,33 +176,33 @@
       SAFE_DEALLOCATE_A(elf)
     end if
 
-    if(iand(outp%what, output_dos).ne.0) then
+    if(iand(outp%what, C_OUTPUT_DOS).ne.0) then
       call states_write_dos (trim(dir), st)
     end if
 
-    if(iand(outp%what, output_tpa).ne.0) then
+    if(iand(outp%what, C_OUTPUT_TPA).ne.0) then
       call states_write_tpa (trim(dir), gr, st)
     end if
 
-    if(iand(outp%what, output_modelmb).ne.0) then
-      call h_sys_output_modelmb (trim(dir), gr, st, geo, outp)
+    if(iand(outp%what, C_OUTPUT_MODELMB).ne.0) then
+      call output_modelmb (trim(dir), gr, st, geo, outp)
     end if
 
-    POP_SUB(h_sys_output_states)
+    POP_SUB(output_states)
 
-  end subroutine h_sys_output_states
+  end subroutine output_states
 
 
   ! ---------------------------------------------------------
   !
   !  routine for output of model many-body quantities.
   !
-  subroutine h_sys_output_modelmb (dir, gr, st, geo, outp)
+  subroutine output_modelmb (dir, gr, st, geo, outp)
     type(states_t),         intent(inout) :: st
     type(grid_t),           intent(inout) :: gr
     character(len=*),       intent(in)    :: dir
     type(geometry_t),       intent(in)    :: geo
-    type(h_sys_output_t),   intent(in)    :: outp
+    type(output_t),         intent(in)    :: outp
 
     ! local vars
     integer :: mm, iunit, itype
@@ -214,7 +214,7 @@
     type(modelmb_denmat_t) :: denmat
     type(modelmb_density_t) :: den
 
-    PUSH_SUB(h_sys_output_modelmb)
+    PUSH_SUB(output_modelmb)
 
     impose_exch_symmetry = .true.
 
@@ -227,12 +227,12 @@
     SAFE_ALLOCATE(wf(1:gr%mesh%np_part_global))
 
     call modelmb_density_matrix_nullify(denmat)
-    if(iand(outp%what, output_density_matrix).ne.0) then
+    if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0) then
       call modelmb_density_matrix_init(dirname, st, denmat)
     end if
  
     call modelmb_density_nullify(den)
-    if(iand(outp%what, output_density).ne.0) then
+    if(iand(outp%what, C_OUTPUT_DENSITY).ne.0) then
       call modelmb_density_init (dirname, st, den)
     end if
  
@@ -251,7 +251,7 @@
     do mm = 1, st%nst
       ! FIXME make this into some preprocessed X() stuff, along with dens and dens_mat
       if(states_are_real(st)) then
-        wf = cmplx(st%dpsi(1:gr%mesh%np_part_global, 1, mm, 1),M_ZERO)
+        wf = cmplx(st%dpsi(1:gr%mesh%np_part_global, 1, mm, 1), M_ZERO)
       else
         wf = st%zpsi(1:gr%mesh%np_part_global, 1, mm, 1)
       end if
@@ -270,17 +270,17 @@
              st%modelmbparticles, wf, symmetries_satisfied)
       end if
 
-      if(iand(outp%what, output_density_matrix).ne.0 .and. symmetries_satisfied) then
+      if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0 .and. symmetries_satisfied) then
         call modelmb_density_matrix_write(gr, st, wf, mm, denmat)
       end if
 
-      if(      iand(outp%what, output_density).ne.0 .and. &
-         .not. iand(outp%what, output_density_matrix).ne.0 .and. &
+      if(      iand(outp%what, C_OUTPUT_DENSITY).ne.0 .and. &
+         .not. iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0 .and. &
          symmetries_satisfied) then
         call modelmb_density_write(gr, st, wf, mm, den)
       end if
 
-      if(iand(outp%what, output_wfs).ne.0 .and. symmetries_satisfied) then
+      if(iand(outp%what, C_OUTPUT_WFS).ne.0 .and. symmetries_satisfied) then
         call zio_function_out_text(trim(dirname), gr%mesh, mm, wf)
       end if
 
@@ -290,35 +290,35 @@
 
     SAFE_DEALLOCATE_A(wf)
 
-    if(iand(outp%what, output_density_matrix).ne.0) then
+    if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0) then
       call modelmb_density_matrix_end (denmat)
     end if
 
-    if(iand(outp%what, output_density).ne.0) then
+    if(iand(outp%what, C_OUTPUT_DENSITY).ne.0) then
       call modelmb_density_end (den)
     end if
  
-    POP_SUB(h_sys_output_modelmb)
+    POP_SUB(output_modelmb)
 
-  end subroutine h_sys_output_modelmb
+  end subroutine output_modelmb
 
 
   ! ---------------------------------------------------------
-  subroutine h_sys_output_current_flow(gr, st, dir, outp, geo)
+  subroutine output_current_flow(gr, st, dir, outp, geo)
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
     character(len=*),     intent(in)    :: dir
-    type(h_sys_output_t), intent(in)    :: outp
+    type(output_t),       intent(in)    :: outp
     type(geometry_t),     intent(in)    :: geo
 
     integer :: iunit, ip, idir, rankmin
     FLOAT   :: flow, dmin
     FLOAT, allocatable :: j(:, :, :)
 
-    PUSH_SUB(h_sys_output_current_flow)
+    PUSH_SUB(output_current_flow)
 
-    if(iand(outp%what, output_j_flow) == 0) then
-      POP_SUB(h_sys_output_current_flow)
+    if(iand(outp%what, C_OUTPUT_J_FLOW) == 0) then
+      POP_SUB(output_current_flow)
       return
     end if
 
@@ -382,8 +382,8 @@
       call io_close(iunit)
     end if
 
-    POP_SUB(h_sys_output_current_flow)
-  end subroutine h_sys_output_current_flow
+    POP_SUB(output_current_flow)
+  end subroutine output_current_flow
 
 !! Local Variables:
 !! mode: f90

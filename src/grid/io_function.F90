@@ -62,28 +62,28 @@ module io_function_m
     zio_function_out_text
 
   integer, parameter, public ::   &
-    output_axis_x     =     1,    &
-    output_axis_y     =     2,    &
-    output_axis_z     =     4,    &
-    output_plane_x    =     8,    &
-    output_plane_y    =    16,    &
-    output_plane_z    =    32,    &
-    output_dx         =    64,    &
-    output_netcdf     =   128,    &
-    output_mesh_index =   512,    &
-    output_xcrysden   =  1024,    &
-    output_matlab     =  2048,    &
-    output_meshgrid   =  4096,    &
-    boundary_points   =  8192,    &
-    output_binary     = 16384,    &
-    output_etsf       = 32768,    &
-    output_xyz        = 65536,    &
-    output_cube       =131072
+    C_OUTPUT_HOW_AXIS_X          =      1,    &
+    C_OUTPUT_HOW_AXIS_Y          =      2,    &
+    C_OUTPUT_HOW_AXIS_Z          =      4,    &
+    C_OUTPUT_HOW_PLANE_X         =      8,    &
+    C_OUTPUT_HOW_PLANE_Y         =     16,    &
+    C_OUTPUT_HOW_PLANE_Z         =     32,    &
+    C_OUTPUT_HOW_DX              =     64,    &
+    C_OUTPUT_HOW_NETCDF          =    128,    &
+    C_OUTPUT_HOW_MESH_INDEX      =    512,    &
+    C_OUTPUT_HOW_XCRYSDEN        =   1024,    &
+    C_OUTPUT_HOW_MATLAB          =   2048,    &
+    C_OUTPUT_HOW_MESHGRID        =   4096,    &
+    C_OUTPUT_HOW_BOUNDARY_POINTS =   8192,    &
+    C_OUTPUT_HOW_BINARY          =  16384,    &
+    C_OUTPUT_HOW_ETSF            =  32768,    &
+    C_OUTPUT_HOW_XYZ             =  65536,    &
+    C_OUTPUT_HOW_CUBE            = 131072
 
   ! doutput_kind => real variables; zoutput_kind => complex variables.
   integer, parameter, private ::  &
-    doutput_kind      =    1,     &
-    zoutput_kind      =   -1
+    DOUTPUT_KIND      =    1,     &
+    ZOUTPUT_KIND      =   -1
 
   ! index to label mapping
   character(len=3), parameter ::  &
@@ -147,9 +147,11 @@ contains
     !% <tt>.xsf</tt> is appended to previous file names. Note that lattice vectors and coordinates are as
     !% specified by <tt>UnitsOutput</tt>.
     !%Option matlab 2048
-    !% In combination with <tt>plane_x</tt>, <tt>plane_y</tt> and <tt>plane_z</tt> this option produces output files 
-    !% which are suitable for 2D Matlab functions like <tt>mesh()</tt>, <tt>surf()</tt>, or <tt>waterfall()</tt>. To load 
-    !% these files into Matlab you can use, <i>e.g.</i>
+    !% In combination with <tt>plane_x</tt>, <tt>plane_y</tt> and
+    !% <tt>plane_z</tt> this option produces output files which are
+    !% suitable for 2D Matlab functions like <tt>mesh()</tt>,
+    !% <tt>surf()</tt>, or <tt>waterfall()</tt>. To load these files
+    !% into Matlab you can use, <i>e.g.</i>
     !%<tt>
     !%   >> density = load('static/density-1.x=0.matlab.abs');
     !%   >> mesh(density);
@@ -184,19 +186,19 @@ contains
      endif
 
     ! some modes are not available in some circumstances, so we reset how
-    if(sb%dim == 1) how = iand(how, not(output_axis_y + output_plane_z))
-    if(sb%dim <= 2) how = iand(how, not(output_axis_z + &
-      output_plane_x + output_plane_y + output_dx + output_cube))
+    if(sb%dim == 1) how = iand(how, not(C_OUTPUT_HOW_AXIS_Y + C_OUTPUT_HOW_PLANE_Z))
+    if(sb%dim <= 2) how = iand(how, not(C_OUTPUT_HOW_AXIS_Z + &
+      C_OUTPUT_HOW_PLANE_X + C_OUTPUT_HOW_PLANE_Y + C_OUTPUT_HOW_DX + C_OUTPUT_HOW_CUBE))
 
 #if !defined(HAVE_NETCDF)
-    if (iand(how, output_netcdf) .ne. 0) then
+    if (iand(how, C_OUTPUT_HOW_NETCDF) .ne. 0) then
       message(1) = 'Octopus was compiled without NetCDF support.'
       message(2) = 'It is not possible to write output in NetCDF format.'
       call messages_fatal(2)
     end if
 #endif
 #if !defined(HAVE_ETSF_IO)
-    if (iand(how, output_etsf) .ne. 0) then
+    if (iand(how, C_OUTPUT_HOW_ETSF) .ne. 0) then
       message(1) = 'Octopus was compiled without ETSF_IO support.'
       message(2) = 'It is not possible to write output in ETSF format.'
       call messages_fatal(2)
@@ -217,21 +219,21 @@ contains
     PUSH_SUB(io_function_fill_how)
 
     how = 0
-    if(index(where, "AxisX")     .ne. 0) how = ior(how, output_axis_x)
-    if(index(where, "AxisY")     .ne. 0) how = ior(how, output_axis_y)
-    if(index(where, "AxisZ")     .ne. 0) how = ior(how, output_axis_z)
-    if(index(where, "PlaneX")    .ne. 0) how = ior(how, output_plane_x)
-    if(index(where, "PlaneY")    .ne. 0) how = ior(how, output_plane_y)
-    if(index(where, "PlaneZ")    .ne. 0) how = ior(how, output_plane_z)
-    if(index(where, "DX")        .ne. 0) how = ior(how, output_dx)
-    if(index(where, "XCrySDen")  .ne. 0) how = ior(how, output_xcrysden)
-    if(index(where, "Binary")    .ne. 0) how = ior(how, output_binary)
-    if(index(where, "MeshIndex") .ne. 0) how = ior(how, output_mesh_index)
-    if(index(where, "XYZ")       .ne. 0) how = ior(how, output_xyz)
+    if(index(where, "AxisX")     .ne. 0) how = ior(how, C_OUTPUT_HOW_AXIS_X)
+    if(index(where, "AxisY")     .ne. 0) how = ior(how, C_OUTPUT_HOW_AXIS_Y)
+    if(index(where, "AxisZ")     .ne. 0) how = ior(how, C_OUTPUT_HOW_AXIS_Z)
+    IF(INDEX(WHERE, "PlaneX")    .ne. 0) how = ior(how, C_OUTPUT_HOW_PLANE_X)
+    if(index(where, "PlaneY")    .ne. 0) how = ior(how, C_OUTPUT_HOW_PLANE_Y)
+    if(index(where, "PlaneZ")    .ne. 0) how = ior(how, C_OUTPUT_HOW_PLANE_Z)
+    if(index(where, "DX")        .ne. 0) how = ior(how, C_OUTPUT_HOW_DX)
+    if(index(where, "XCrySDen")  .ne. 0) how = ior(how, C_OUTPUT_HOW_XCRYSDEN)
+    if(index(where, "Binary")    .ne. 0) how = ior(how, C_OUTPUT_HOW_BINARY)
+    if(index(where, "MeshIndex") .ne. 0) how = ior(how, C_OUTPUT_HOW_MESH_INDEX)
+    if(index(where, "XYZ")       .ne. 0) how = ior(how, C_OUTPUT_HOW_XYZ)
 #if defined(HAVE_NETCDF)
-    if(index(where, "NETCDF")    .ne. 0) how = ior(how, output_netcdf)
+    if(index(where, "NETCDF")    .ne. 0) how = ior(how, C_OUTPUT_HOW_NETCDF)
 #endif
-    if(index(where, "Cube")      .ne. 0) how = ior(how, output_cube)
+    if(index(where, "Cube")      .ne. 0) how = ior(how, C_OUTPUT_HOW_CUBE)
 
     POP_SUB(io_function_fill_how)
   end function io_function_fill_how

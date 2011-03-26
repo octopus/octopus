@@ -27,7 +27,7 @@ module phonons_fd_m
   use geometry_m
   use global_m
   use grid_m
-  use h_sys_output_m
+  use output_m
   use hamiltonian_m
   use io_m
   use lalg_adv_m
@@ -129,7 +129,7 @@ contains
     type(states_t),       intent(inout) :: st
     type(v_ks_t),         intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: hm
-    type(h_sys_output_t), intent(in)    :: outp
+    type(output_t),       intent(in)    :: outp
     type(vibrations_t),      intent(inout) :: vib
 
     type(scf_t)               :: scf

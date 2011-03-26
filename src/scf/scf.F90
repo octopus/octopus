@@ -29,7 +29,7 @@ module scf_m
   use geometry_m
   use global_m
   use grid_m
-  use h_sys_output_m
+  use output_m
   use hamiltonian_m
   use io_m
   use kpoints_m
@@ -359,7 +359,7 @@ contains
     type(states_t),       intent(inout) :: st !< States
     type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
     type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
-    type(h_sys_output_t), intent(in)    :: outp
+    type(output_t),       intent(in)    :: outp
     logical, optional,    intent(in)    :: gs_run
     integer, optional,    intent(in)    :: verbosity 
 
@@ -391,7 +391,7 @@ contains
       if(gs_run_) then 
         ! output final information
         call scf_write_static(STATIC_DIR, "info")
-        call h_sys_output_all(outp, gr, geo, st, hm, STATIC_DIR)
+        call output_all(outp, gr, geo, st, hm, STATIC_DIR)
       end if
 
       POP_SUB(scf_run)
@@ -582,7 +582,7 @@ contains
 
       if(outp%duringscf .and. gs_run_) then
         write(dirname,'(a,i4.4)') "scf.",iter
-        call h_sys_output_all(outp, gr, geo, st, hm, dirname)
+        call output_all(outp, gr, geo, st, hm, dirname)
       end if
 
       ! save information for the next iteration
@@ -634,7 +634,7 @@ contains
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
-      call h_sys_output_all(outp, gr, geo, st, hm, STATIC_DIR)
+      call output_all(outp, gr, geo, st, hm, STATIC_DIR)
 
       ! write part of the source term s(0)
       if(gr%ob_grid%open_boundaries) call states_write_proj_lead_wf(gr%sb, 'open_boundaries/', gr%intf, st)

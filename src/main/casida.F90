@@ -27,7 +27,7 @@ module casida_m
   use excited_states_m
   use gauss_legendre_m
   use global_m
-  use h_sys_output_m
+  use output_m
   use hamiltonian_m
   use io_m
   use io_function_m

@@ -29,7 +29,7 @@ module unocc_m
   use global_m
   use grid_m
   use geometry_m
-  use h_sys_output_m
+  use output_m
   use hamiltonian_m
   use io_m
   use lcao_m
@@ -156,7 +156,7 @@ contains
     end if
 
     ! output wavefunctions
-    call h_sys_output_states(sys%st, sys%gr, sys%geo, STATIC_DIR, sys%outp)
+    call output_states(sys%st, sys%gr, sys%geo, STATIC_DIR, sys%outp)
 
     call end_()
     POP_SUB(unocc_run)

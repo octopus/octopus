@@ -19,12 +19,12 @@
 
 ! ---------------------------------------------------------
 
-subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
+subroutine output_etsf(st, gr, geo, dir, outp)
   type(states_t),         intent(in) :: st
   type(grid_t),           intent(in) :: gr
   type(geometry_t),       intent(in) :: geo
   character(len=*),       intent(in) :: dir
-  type(h_sys_output_t),   intent(in) :: outp
+  type(output_t),         intent(in) :: outp
 
   type(cube_function_t) :: cube
 #ifdef HAVE_ETSF_IO
@@ -35,7 +35,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   type(etsf_groups_flags) :: geometry_flags, density_flags, wfs_flags
 #endif
 
-  PUSH_SUB(h_sys_output_etsf)
+  PUSH_SUB(output_etsf)
 
 #ifndef HAVE_ETSF_IO
   ASSERT(.false.)
@@ -60,7 +60,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 #ifdef HAVE_ETSF_IO
 
   ! geometry
-  if (iand(outp%what, output_geometry).ne.0) then
+  if (iand(outp%what, C_OUTPUT_GEOMETRY).ne.0) then
 
     call output_etsf_geometry_dims(geo, gr%sb, geometry_dims, geometry_flags)
 
@@ -73,7 +73,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! density
-  if (iand(outp%what, output_density).ne.0) then
+  if (iand(outp%what, C_OUTPUT_DENSITY).ne.0) then
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
     call output_etsf_density_dims(st, gr%mesh, cube, density_dims, density_flags)
 
@@ -87,7 +87,7 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! wave-functions
-  if (iand(outp%what, output_wfs).ne.0) then
+  if (iand(outp%what, C_OUTPUT_WFS).ne.0) then
     call output_etsf_geometry_dims(geo, gr%sb, wfs_dims, wfs_flags)
     call output_etsf_kpoints_dims(gr%sb, wfs_dims, wfs_flags)
     call output_etsf_electrons_dims(st, wfs_dims, wfs_flags)
@@ -108,8 +108,8 @@ subroutine h_sys_output_etsf(st, gr, geo, dir, outp)
 
   call cube_function_end(cube)
 
-  POP_SUB(h_sys_output_etsf)
-end subroutine h_sys_output_etsf
+  POP_SUB(output_etsf)
+end subroutine output_etsf
 
 #ifdef HAVE_ETSF_IO
 ! --------------------------------------------------------

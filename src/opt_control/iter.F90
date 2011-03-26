@@ -23,7 +23,7 @@ module opt_control_iter_m
   use datasets_m
   use global_m
   use grid_m
-  use h_sys_output_m
+  use output_m
   use io_m
   use parser_m
   use messages_m

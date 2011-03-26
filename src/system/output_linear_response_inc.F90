@@ -18,14 +18,14 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
+subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
   type(states_t),       intent(inout) :: st
   type(grid_t),         intent(inout) :: gr
   type(lr_t),           intent(inout) :: lr
   character(len=*),     intent(in)    :: dir
   integer,              intent(in)    :: idir      ! direction of perturbation
   integer,              intent(in)    :: isigma
-  type(h_sys_output_t), intent(in)    :: outp
+  type(output_t),       intent(in)    :: outp
   type(geometry_t),     intent(in)    :: geo
   type(unit_t),         intent(in)    :: pert_unit ! unit for perturbation
 
@@ -36,7 +36,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
   R_TYPE, allocatable :: tmp(:)
   character :: sigma
 
-  PUSH_SUB(X(h_sys_output_lr))
+  PUSH_SUB(X(output_lr))
 
   if(isigma == 1) then
     sigma = '+'
@@ -46,7 +46,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
 
   if(isigma == 1) then ! the density, current, etc. are only defined for the + frequency
 
-    if(iand(outp%what, output_density) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_DENSITY) .ne. 0) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       do is = 1, st%d%nspin
         if(st%d%nspin == 1) then
@@ -59,7 +59,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
       end do
     end if
 
-    if(iand(outp%what, output_pol_density) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_POL_DENSITY) .ne. 0) then
       fn_unit = units_out%length**(1 - gr%mesh%sb%dim)
       SAFE_ALLOCATE(tmp(1:gr%mesh%np))
       do is = 1, st%d%nspin
@@ -76,7 +76,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
       SAFE_DEALLOCATE_A(tmp)
     end if
 
-    if(iand(outp%what, output_current) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_CURRENT) .ne. 0) then
       if(states_are_complex(st)) then
         fn_unit = units_out%time**(-1) * units_out%length**(-gr%mesh%sb%dim)
         do is = 1, st%d%nspin
@@ -97,13 +97,13 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
     end if
 
     if(gr%mesh%sb%dim==3) then
-      if(iand(outp%what, output_elf).ne.0) call lr_elf('lr_elf_D','lr_elf')
+      if(iand(outp%what, C_OUTPUT_ELF).ne.0) call lr_elf('lr_elf_D','lr_elf')
     end if
 
   end if ! isigma == 1
 
 
-  if(iand(outp%what, output_wfs) .ne. 0) then
+  if(iand(outp%what, C_OUTPUT_WFS) .ne. 0) then
     fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
     do ist = st%st_start, st%st_end
       if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -134,7 +134,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
     end do
   end if
 
-  if(iand(outp%what, output_wfs_sqmod) .ne. 0) then
+  if(iand(outp%what, C_OUTPUT_WFS_SQMOD) .ne. 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(dtmp(gr%mesh%np_part))
     do ist = st%st_start, st%st_end
@@ -167,8 +167,7 @@ subroutine X(h_sys_output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_un
     end do
     SAFE_DEALLOCATE_A(dtmp)
   end if
-
-  POP_SUB(X(h_sys_output_lr))
+POP_SUB(X(output_lr))
 contains
 
   ! ---------------------------------------------------------
@@ -178,7 +177,7 @@ contains
     
     integer :: is, ierr
 
-    PUSH_SUB(X(h_sys_output_lr).lr_elf)
+    PUSH_SUB(X(output_lr).lr_elf)
 
     ! these quantities are dimensionless, before the perturbation
     do is = 1, st%d%nspin
@@ -201,11 +200,11 @@ contains
         unit_one / pert_unit, ierr, geo = geo)
     end do
 
-    POP_SUB(X(h_sys_output_lr).lr_elf)
+    POP_SUB(X(output_lr).lr_elf)
 
   end subroutine lr_elf
 
-end subroutine X(h_sys_output_lr)
+end subroutine X(output_lr)
 
 
 !! Local Variables:

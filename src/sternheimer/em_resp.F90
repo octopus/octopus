@@ -28,7 +28,7 @@ module em_resp_m
   use global_m
   use grid_m
   use hamiltonian_m
-  use h_sys_output_m
+  use output_m
   use io_m
   use kdotp_m
   use kdotp_calc_m
@@ -807,7 +807,7 @@ contains
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
     type(geometry_t),     intent(inout) :: geo
-    type(h_sys_output_t), intent(in)    :: outp
+    type(output_t),       intent(in)    :: outp
     type(em_resp_t),      intent(inout) :: em_vars
     integer,              intent(in)    :: iomega
     integer,              intent(in)    :: ifactor
@@ -1099,21 +1099,21 @@ contains
         if(states_are_complex(st)) then 
 
           if(gr%sb%dim == 3) then
-            if(iand(outp%what, output_elf).ne.0) &
+            if(iand(outp%what, C_OUTPUT_ELF).ne.0) &
               call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
           end if
           do isigma = 1, em_vars%nsigma
-            call zh_sys_output_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
+            call zoutput_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
           end do
         else
 
           if(gr%sb%dim == 3) then
-            if(iand(outp%what, output_elf) .ne. 0) &
+            if(iand(outp%what, C_OUTPUT_ELF) .ne. 0) &
               call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
           end if
 
           do isigma = 1, em_vars%nsigma
-            call dh_sys_output_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
+            call doutput_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
           end do
 
         end if

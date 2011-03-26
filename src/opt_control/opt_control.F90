@@ -29,7 +29,7 @@ module opt_control_m
   use geometry_m
   use global_m
   use grid_m
-  use h_sys_output_m
+  use output_m
   use hamiltonian_m
   use io_m
   use lasers_m
@@ -154,7 +154,7 @@ contains
 
 
     ! Informative output.
-    call h_sys_output_states(initial_st, sys%gr, sys%geo, OCT_DIR//'initial', sys%outp)
+    call output_states(initial_st, sys%gr, sys%geo, OCT_DIR//'initial', sys%outp)
     call target_output(target, sys%gr, OCT_DIR//'target', sys%geo, sys%outp)
 
 

@@ -26,7 +26,7 @@ module one_shot_m
   use epot_m
   use geometry_m
   use global_m
-  use h_sys_output_m
+  use output_m
   use hamiltonian_m
   use parser_m
   use loct_m
@@ -108,7 +108,7 @@ contains
     call messages_info(7, stdout)
     call messages_print_stress(stdout)
 
-    call h_sys_output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, STATIC_DIR)
+    call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, STATIC_DIR)
 
     call states_deallocate_wfns(sys%st)
 

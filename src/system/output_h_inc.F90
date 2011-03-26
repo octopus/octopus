@@ -18,11 +18,11 @@
 !! $Id: output_linear_h.F90 5765 2009-07-24 20:47:06Z dstrubbe $
 
   ! ---------------------------------------------------------
-  subroutine h_sys_output_hamiltonian(hm, mesh, dir, outp, geo)
+  subroutine output_hamiltonian(hm, mesh, dir, outp, geo)
     type(hamiltonian_t),   intent(in) :: hm
     type(mesh_t),          intent(in) :: mesh
     character(len=*),      intent(in) :: dir
-    type(h_sys_output_t),  intent(in) :: outp
+    type(output_t),        intent(in) :: outp
     type(geometry_t),      intent(in) :: geo
 
     integer :: is, err, idir
@@ -30,9 +30,9 @@
 
     FLOAT, allocatable :: v0(:,:)
     
-    PUSH_SUB(h_sys_output_hamiltonian)
+    PUSH_SUB(output_hamiltonian)
 
-    if(iand(outp%what, output_potential).ne.0) then
+    if(iand(outp%what, C_OUTPUT_POTENTIAL).ne.0) then
       SAFE_ALLOCATE(v0(1:mesh%np, 1:hm%d%dim))
       v0(1:mesh%np, 1) = hm%ep%vpsl(1:mesh%np)
       call doutput_function(outp%how, dir, "v0", mesh, v0(:, 1), units_out%energy, err, geo = geo)
@@ -82,8 +82,8 @@
       end if
     end if
 
-    POP_SUB(h_sys_output_hamiltonian)
-  end subroutine h_sys_output_hamiltonian
+    POP_SUB(output_hamiltonian)
+  end subroutine output_hamiltonian
 
 !! Local Variables:
 !! mode: f90

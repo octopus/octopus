@@ -556,46 +556,46 @@ subroutine X(output_function_global) (how, dir, fname, mesh, ff, unit, ierr, is_
 
   np_max = mesh%np_global
   ! should we output boundary points?
-  if(iand(how, boundary_points)  .ne.0) np_max = mesh%np_part_global
+  if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS)  .ne.0) np_max = mesh%np_part_global
 
-  if(iand(how, output_binary)    .ne.0) call out_binary()
-  if(iand(how, output_axis_x)    .ne.0) call out_axis (1, 2, 3) ! x ; y=0,z=0
-  if(iand(how, output_axis_y)    .ne.0) call out_axis (2, 1, 3) ! y ; x=0,z=0
-  if(iand(how, output_axis_z)    .ne.0) call out_axis (3, 1, 2) ! z ; x=0,y=0
-  if(iand(how, output_plane_x)   .ne.0) call out_plane(1, 2, 3) ! x=0; y; z;
-  if(iand(how, output_plane_y)   .ne.0) call out_plane(2, 1, 3) ! y=0; x; z;
-  if(iand(how, output_plane_z)   .ne.0) call out_plane(3, 1, 2) ! z=0; x; y;
-  if(iand(how, output_mesh_index).ne.0) call out_mesh_index()
-  if(iand(how, output_dx)        .ne.0) call out_dx()
-  if(iand(how, output_xcrysden)  .ne.0) then
+  if(iand(how, C_OUTPUT_HOW_BINARY)    .ne.0) call out_binary()
+  if(iand(how, C_OUTPUT_HOW_AXIS_X)    .ne.0) call out_axis (1, 2, 3) ! x ; y=0,z=0
+  if(iand(how, C_OUTPUT_HOW_AXIS_Y)    .ne.0) call out_axis (2, 1, 3) ! y ; x=0,z=0
+  if(iand(how, C_OUTPUT_HOW_AXIS_Z)    .ne.0) call out_axis (3, 1, 2) ! z ; x=0,y=0
+  if(iand(how, C_OUTPUT_HOW_PLANE_X)   .ne.0) call out_plane(1, 2, 3) ! x=0; y; z;
+  if(iand(how, C_OUTPUT_HOW_PLANE_Y)   .ne.0) call out_plane(2, 1, 3) ! y=0; x; z;
+  if(iand(how, C_OUTPUT_HOW_PLANE_Z)   .ne.0) call out_plane(3, 1, 2) ! z=0; x; y;
+  if(iand(how, C_OUTPUT_HOW_MESH_INDEX).ne.0) call out_mesh_index()
+  if(iand(how, C_OUTPUT_HOW_DX)        .ne.0) call out_dx()
+  if(iand(how, C_OUTPUT_HOW_XCRYSDEN)  .ne.0) then
     call out_xcrysden(.true.)
 #ifdef R_TCOMPLEX
     call out_xcrysden(.false.)
 #endif
   endif
-  if(iand(how, output_cube)      .ne.0) call out_cube()
+  if(iand(how, C_OUTPUT_HOW_CUBE)      .ne.0) call out_cube()
 
-  if(iand(how, output_matlab).ne.0) then
+  if(iand(how, C_OUTPUT_HOW_MATLAB).ne.0) then
 #if defined(R_TCOMPLEX)
     do jj = 1, 3 ! re, im, abs
 #else
     do jj = 1, 1 ! only real part
 #endif
-      if(iand(how, output_plane_x).ne.0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
-      if(iand(how, output_plane_y).ne.0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
-      if(iand(how, output_plane_z).ne.0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
+      if(iand(how, C_OUTPUT_HOW_PLANE_X).ne.0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
+      if(iand(how, C_OUTPUT_HOW_PLANE_Y).ne.0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
+      if(iand(how, C_OUTPUT_HOW_PLANE_Z).ne.0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
     end do
-    if(iand(how, output_meshgrid).ne.0) then
+    if(iand(how, C_OUTPUT_HOW_MESHGRID).ne.0) then
       do jj = 4, 5 ! meshgrid
-        if(iand(how, output_plane_x).ne.0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
-        if(iand(how, output_plane_y).ne.0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
-        if(iand(how, output_plane_z).ne.0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
+        if(iand(how, C_OUTPUT_HOW_PLANE_X).ne.0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
+        if(iand(how, C_OUTPUT_HOW_PLANE_Y).ne.0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
+        if(iand(how, C_OUTPUT_HOW_PLANE_Z).ne.0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
       end do
     end if
   end if
 
 #if defined(HAVE_NETCDF)
-  if(iand(how, output_netcdf)    .ne.0) call out_netcdf()
+  if(iand(how, C_OUTPUT_HOW_NETCDF)    .ne.0) call out_netcdf()
 #endif
 
   POP_SUB(X(output_function_global))
@@ -728,7 +728,7 @@ contains
     min_d3 = mesh%idx%nr(1, d3) + mesh%idx%enlarge(d3)
     max_d3 = mesh%idx%nr(2, d3) - mesh%idx%enlarge(d3)    
     
-    if(iand(how, boundary_points).ne.0) then
+    if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS).ne.0) then
       min_d2 = mesh%idx%nr(1, d2)
       max_d2 = mesh%idx%nr(2, d2)
       min_d3 = mesh%idx%nr(1, d3)
