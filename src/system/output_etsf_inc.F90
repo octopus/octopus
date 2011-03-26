@@ -113,7 +113,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! wave-functions in fourier space
-  if (iand(outp%what, C_OUTPUT_WFS).ne.0) then
+  if (iand(outp%what, C_OUTPUT_WFS_FOURIER).ne.0) then
     call zcube_function_fft_init(cube, gr%sb)
     call zcube_function_alloc_RS(cube)
     call fourier_shell_init(shell, cube, gr%mesh)

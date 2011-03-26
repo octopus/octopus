@@ -100,7 +100,7 @@ module output_m
 
   end type output_t
 
-  integer, parameter, public ::           &
+  integer, parameter, public ::             &
     C_OUTPUT_POTENTIAL       =        1,    &
     C_OUTPUT_DENSITY         =        2,    &
     C_OUTPUT_WFS             =        4,    &
@@ -121,7 +121,8 @@ module output_m
     C_OUTPUT_TPA             =   131072,    &
     C_OUTPUT_DENSITY_MATRIX  =   262144,    &
     C_OUTPUT_MODELMB         =   524288,    &
-    C_OUTPUT_FORCES          =  1048576
+    C_OUTPUT_FORCES          =  1048576,    &
+    C_OUTPUT_WFS_FOURIER     =  2097152
 
 contains
 
@@ -160,6 +161,10 @@ contains
     !% Outputs wavefunctions. Which wavefunctions are to be printed is specified
     !% by the variable <tt>OutputWfsNumber</tt> -- see below. The output file is called
     !% <tt>wf-</tt>, or <tt>lr_wf-</tt> in linear response.
+    !%Option wfs_fourier 2097152
+    !% (Experimental) Outputs wavefunctions in Fourier space. This is
+    !% only implemented for the ETSF file format output. The file will
+    !% be called <tt>static/wfs-pw-etsf.nc</tt>.  
     !%Option wfs_sqmod 8
     !% Outputs modulus squared of the wavefunctions. 
     !% The output file is called <tt>sqm-wf-</tt>. For linear response, the filename is <tt>sqm_lr_wf-</tt>.
@@ -237,6 +242,10 @@ contains
 
     if(iand(outp%what, C_OUTPUT_ELF_FS) .ne. 0) then
       call messages_experimental("ELF in Fourier space")
+    endif
+
+    if(iand(outp%what, C_OUTPUT_WFS_FOURIER) .ne. 0) then
+      call messages_experimental("Wave-functions in Fourier space")
     endif
 
     ! cannot calculate the ELF in 1D
