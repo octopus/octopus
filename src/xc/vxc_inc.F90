@@ -240,7 +240,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
           l_vsigma = M_ZERO
 
-          if(functl(ixc)%id == XC_GGA_C_LB) then
+          if(functl(ixc)%id == XC_GGA_X_LB) then
             call mesh_r(der%mesh, ip, rr)
             call XC_F90(gga_lb_modified)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
               rr, l_dedd(1,1))
