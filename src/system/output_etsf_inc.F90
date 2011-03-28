@@ -177,11 +177,14 @@ end subroutine output_etsf_file_init
 
 subroutine output_etsf_error(error_data)
   type(etsf_io_low_error), intent(in) :: error_data
+
+  PUSH_SUB(output_etsf_error)
   
   call etsf_io_low_error_handle(error_data)
   message(1) = "ETSF_IO returned a fatal error. See message above."
   call messages_fatal(1)
 
+  POP_SUB(output_etsf_error)
 end subroutine output_etsf_error
 
 ! --------------------------------------------------------
@@ -598,13 +601,13 @@ subroutine output_etsf_basisdata_write(st, mesh, cube, shell, ncid)
   logical :: lstat
   integer :: ig, ng, ix, iy, iz, ixx(1:3)
  
+  PUSH_SUB(output_etsf_basisdata_write)
+
   if((maxval(mesh%spacing(1:3)) - minval(mesh%spacing(1:3))) > CNST(1e-10)) then
     message(1) = 'Cannot generate a ETSF plane wave wave-functions file,'
     message(2) = 'spacing is not the same for each direction.'
     call messages_fatal(2)
   end if
-
-  PUSH_SUB(output_etsf_basisdata_write)
 
   SAFE_ALLOCATE(basisdata%basis_set)
 

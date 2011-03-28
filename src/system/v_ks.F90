@@ -150,7 +150,7 @@ contains
     !% hybrids in this scheme, but they will be handled the "DFT" way, <i>i.e.</i>, solving the
     !% OEP equation.
     !%Option classical 5
-    !% (Experimental) Only the classical interaction between particles is
+    !% (Experimental) Only the classical interaction between ions is
     !% considered. This is mainly for testing.
     !%End
     call parse_integer(datasets_check('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)

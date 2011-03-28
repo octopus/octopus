@@ -368,7 +368,7 @@ contains
     !%Section System::Species
     !%Description
     !% This block defines the type of classical interaction between
-    !% ions. Each line represent the interaction between two types of
+    !% ions. Each line represents the interaction between two types of
     !% species. The first two columns contain the element symbols, the
     !% next column is the type of interaction as defined below. The
     !% next columns are the parameters for the interaction (if
