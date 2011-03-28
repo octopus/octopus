@@ -32,3 +32,8 @@ module checksum_m
   end interface
 
 end module checksum_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

@@ -265,13 +265,17 @@ contains
       !% point of the region, and the following ones set
       !% the radii where resolution changes (measured from the
       !% central point).
-      !% NOTE: currently, only one area can be set up.
+      !% NOTE: currently, only one area can be set up, and only works in 3D.
       !%End
 
       if(parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
         
         call messages_experimental('Multi-resolution')
-
+        if(sb%dim /= 3) then
+          message(1) = "Multi-resolution implemented only for Dimensions = 3."
+          call messages_fatal(3)
+        endif
+        
         ! number of areas
         sb%hr_area%num_areas = parse_block_n(blk)
 
