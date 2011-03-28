@@ -25,6 +25,7 @@ module symmetrizer_m
   use messages_m
   use mesh_m
   use mpi_m
+  use par_vec_m
   use profiling_m
   use simul_box_m
   use symm_op_m
@@ -56,11 +57,6 @@ contains
     PUSH_SUB(symmetrizer_init)
     
     this%mesh => mesh
-
-    if(this%mesh%parallel_in_domains) then
-      message(1) = "Error: symmetrization not implemented for domain parallelization."
-      call messages_fatal(1, only_root_writes = .true.)
-    end if
 
     POP_SUB(symmetrizer_init)
   end subroutine symmetrizer_init

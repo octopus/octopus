@@ -127,7 +127,7 @@ stencil.o : stencil.F90
 hypercube.o : hypercube.F90
 transfer_table.o : transfer_table.F90
 mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o mesh_function.o
-symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o
+symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o par_vec.o
 partition.o : partition.F90 mesh.o
 partitioner.o : partitioner.F90 partition.o
 subarray.o : subarray.F90 subarray_inc.F90 batch.o

@@ -19,26 +19,50 @@
 
 subroutine X(symmetrizer_apply)(this, field, symmfield)
   type(symmetrizer_t), intent(in)    :: this
-  R_TYPE,               intent(in)    :: field(:)
-  R_TYPE,               intent(out)   :: symmfield(:)
+  R_TYPE, target,      intent(in)    :: field(:)
+  R_TYPE,              intent(out)   :: symmfield(:)
 
   integer :: ip, iop, nops, ipsrc, idir
   integer :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
   R_TYPE  :: acc
   FLOAT   :: weight
+  R_TYPE, pointer :: field_global(:)
+  type(pv_t), pointer :: vp
 
   PUSH_SUB(X(symmetrizer_apply))
+
+  vp => this%mesh%vp
+
+  if(this%mesh%parallel_in_domains) then
+
+    ! With domain parallelization, we collect all points of the
+    ! 'field' array. This seems reasonable, since we will probably
+    ! need almost all points anyway
+    !
+    ! The symmfield array is kept locally.
+
+    SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
+#ifdef HAVE_MPI
+    call X(vec_allgather)(vp, field_global, field)
+#endif
+  else
+    field_global => field
+  end if
   
   nops = symmetries_number(this%mesh%sb%symm)
   weight = M_ONE/nops
 
-  ASSERT(.not. this%mesh%parallel_in_domains)
-  
   lsize(1:3) = this%mesh%idx%ll(1:3)
   offset(1:3) = this%mesh%idx%nr(1, 1:3) + this%mesh%idx%enlarge(1:3)
 
   do ip = 1, this%mesh%np
-    destpoint(1:3) = this%mesh%idx%lxyz(ip, 1:3) - offset(1:3)
+
+    if(this%mesh%parallel_in_domains) then
+      ! convert to global point
+      destpoint(1:3) = this%mesh%idx%lxyz(vp%local(vp%xlocal(vp%partno) + ip - 1), 1:3) - offset(1:3)
+    else
+      destpoint(1:3) = this%mesh%idx%lxyz(ip, 1:3) - offset(1:3)
+    end if
 
     ASSERT(all(destpoint < lsize))
 
@@ -60,12 +84,17 @@ subroutine X(symmetrizer_apply)(this, field, symmfield)
       srcpoint(1:3) = srcpoint(1:3) + offset(1:3)
 
       ipsrc = this%mesh%idx%lxyz_inv(srcpoint(1), srcpoint(2), srcpoint(3))
-      acc = acc + field(ipsrc)
+
+      acc = acc + field_global(ipsrc)
     end do
 
     symmfield(ip) = weight*acc
 
   end do
+
+  if(this%mesh%parallel_in_domains) then
+    SAFE_DEALLOCATE_P(field_global)
+  end if
 
   POP_SUB(X(symmetrizer_apply))
 end subroutine X(symmetrizer_apply)
@@ -74,25 +103,46 @@ end subroutine X(symmetrizer_apply)
 
 subroutine X(symmetrizer_apply_vector)(this, field, symmfield)
   type(symmetrizer_t), intent(in)    :: this
-  R_TYPE,               intent(in)    :: field(:, :)
-  R_TYPE,               intent(out)   :: symmfield(:, :)
+  R_TYPE, target,      intent(in)    :: field(:, :)
+  R_TYPE,              intent(out)   :: symmfield(:, :)
 
   integer :: ip, iop, nops, ipsrc, idir
   integer :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
   FLOAT   :: weight
+  R_TYPE, pointer :: field_global(:, :)
+  type(pv_t), pointer :: vp
 
   PUSH_SUB(X(symmetrizer_apply_vector))
 
   nops = symmetries_number(this%mesh%sb%symm)
   weight = M_ONE/nops
 
-  ASSERT(.not. this%mesh%parallel_in_domains)
-  
+  vp => this%mesh%vp
+
+  if(this%mesh%parallel_in_domains) then
+    ! When running with domain parallelization, we collect all points
+    ! of the field array. The symmfield array is kept locally.
+
+    SAFE_ALLOCATE(field_global(1:this%mesh%np_global, 1:3))
+    do idir = 1, 3
+#ifdef HAVE_MPI
+      call X(vec_allgather)(vp, field_global(:, idir), field(:, idir))
+#endif
+    end do
+  else
+    field_global => field
+  end if
+
   lsize(1:3) = this%mesh%idx%ll(1:3)
   offset(1:3) = this%mesh%idx%nr(1, 1:3) + this%mesh%idx%enlarge(1:3)
 
   do ip = 1, this%mesh%np
-    destpoint(1:3) = this%mesh%idx%lxyz(ip, 1:3) - offset(1:3)
+    if(this%mesh%parallel_in_domains) then
+      ! convert to global point
+      destpoint(1:3) = this%mesh%idx%lxyz(vp%local(vp%xlocal(vp%partno) + ip - 1), 1:3) - offset(1:3)
+    else
+      destpoint(1:3) = this%mesh%idx%lxyz(ip, 1:3) - offset(1:3)
+    end if
 
     ASSERT(all(destpoint < lsize))
 
@@ -115,11 +165,15 @@ subroutine X(symmetrizer_apply_vector)(this, field, symmfield)
 
       ipsrc = this%mesh%idx%lxyz_inv(srcpoint(1), srcpoint(2), srcpoint(3))
 
-      symmfield(ip, 1:3) = symmfield(ip, 1:3) + weight*symm_op_apply(this%mesh%sb%symm%ops(iop), field(ipsrc, 1:3))
+      symmfield(ip, 1:3) = symmfield(ip, 1:3) + weight*symm_op_apply(this%mesh%sb%symm%ops(iop), field_global(ipsrc, 1:3))
 
     end do
 
   end do
+
+  if(this%mesh%parallel_in_domains) then
+    SAFE_DEALLOCATE_P(field_global)
+  end if
 
   POP_SUB(X(symmetrizer_apply_vector))
 end subroutine X(symmetrizer_apply_vector)
