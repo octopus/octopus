@@ -250,7 +250,7 @@ contains
     case(XC_LDA_C_2D_PRM)
       call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
 
-    case(XC_GGA_XC_LB)
+    case(XC_GGA_X_LB)
       call parse_integer(datasets_check('LB94_modified'), 0, functl%LB94_modified)
       call parse_float(datasets_check('LB94_threshold'), CNST(1.0e-6), functl%LB94_threshold)
       

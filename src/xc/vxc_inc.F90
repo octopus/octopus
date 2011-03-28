@@ -240,7 +240,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
           l_vsigma = M_ZERO
 
-          if(functl(ixc)%id == XC_GGA_XC_LB) then
+          if(functl(ixc)%id == XC_GGA_C_LB) then
             call mesh_r(der%mesh, ip, rr)
             call XC_F90(gga_lb_modified)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
               rr, l_dedd(1,1))
@@ -461,7 +461,7 @@ contains
     end if
 
     do ii = 1, 2
-      if(functl(ii)%id == XC_GGA_XC_LB) then
+      if(functl(ii)%id == XC_GGA_X_LB) then
         call XC_F90(gga_lb_set_par)(functl(ii)%conf, &
           functl(ii)%LB94_modified, functl(ii)%LB94_threshold, ioniz_pot, qtot)
       end if
@@ -506,7 +506,7 @@ contains
 
     ! If LB94, we can calculate an approximation to the energy from
     ! Levy-Perdew relation PRA 32, 2010 (1985)
-    if(calc_energy .and. functl(1)%id == XC_GGA_XC_LB) then
+    if(calc_energy .and. functl(1)%id == XC_GGA_X_LB) then
       SAFE_ALLOCATE(gf(1:der%mesh%np, 1:3))
 
       do is = 1, spin_channels
