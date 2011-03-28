@@ -248,15 +248,18 @@ contains
     !%Option non_collinear 3
     !%Option spinors 3
     !% The spin-orbitals are two-component spinors. This effectively allows the spin-density to
-    !% be oriented non-collinearly - <i>i.e.</i> the magnetization vector is allowed to take different
-    !% directions at different points.
+    !% be oriented non-collinearly: <i>i.e.</i> the magnetization vector is allowed to take different
+    !% directions at different points. (Only implemented in 3D.)
     !%End
     call parse_integer(datasets_check('SpinComponents'), UNPOLARIZED, st%d%ispin)
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) st%priv%wfs_type = TYPE_CMPLX
-
+    if (st%d%ispin == SPINORS .and. gr%sb%dim /= 3) then
+      message(1) = "Spinors only implemented for Dimensions = 3."
+      call messages_fatal(1)
+    endif
 
     !%Variable ExcessCharge
     !%Type float
