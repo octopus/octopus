@@ -60,12 +60,16 @@
 !% Gombas parametrization
 !%Option lda_k_tf               50
 !% Thomas-Fermi kinetic energy functional
+!%Option lda_k_lp               51
+!% Lee and Parr Gaussian ansatz
 !%Option gga_x_pbe               101
 !% Perdew, Burke & Ernzerhof exchange
 !%Option gga_x_pbe_r               102
 !% Perdew, Burke & Ernzerhof exchange (revised)
 !%Option gga_x_b86               103
 !% Becke 86 Xalfa,beta,gamma
+!%Option gga_x_herman               104
+!% Herman et al original GGA
 !%Option gga_x_b86_mgc               105
 !% Becke 86 Xalfa,beta,gamma (with mod. grad. correction)
 !%Option gga_x_b88               106
@@ -151,10 +155,10 @@
 !%Option gga_xc_kt2               146000
 !% Keal and Tozer version 2
 !%Option gga_c_wl               147000
-!% Lee, Yang & Parr
+!% Wilson & Levy
 !%Option gga_c_wi               148000
 !% Wilson & Ivanov
-!%Option gga_xc_lb               160000
+!%Option gga_x_lb               160
 !% van Leeuwen & Baerends
 !%Option gga_xc_hcth_93               161000
 !% HCTH functional fitted to  93 molecules
@@ -198,12 +202,40 @@
 !% Schmider-Becke 98 parameterization 2b
 !%Option gga_xc_sb98_2c               181000
 !% Schmider-Becke 98 parameterization 2c
-!%Option gga_k_ge2               200
-!% Second-order gradient expansion
-!%Option gga_k_tflw               201
-!% Thomas-Fermi-von Weizsaecker-like functionals
-!%Option gga_k_pearson               202
+!%Option gga_x_lbm               182
+!% van Leeuwen & Baerends modified
+!%Option gga_k_vw               500
+!% von Weiszaecker correction to Thomas-Fermi
+!%Option gga_k_ge2               501
+!% Second-order gradient expansion (l = 1/9)
+!%Option gga_k_golden               502
+!% TF-lambda-vW form by Golden (l = 13/45)
+!%Option gga_k_yt65               503
+!% TF-lambda-vW form by Yonei and Tomishima (l = 1/5)
+!%Option gga_k_baltin               504
+!% TF-lambda-vW form by Baltin (l = 5/9)
+!%Option gga_k_lieb               505
+!% TF-lambda-vW form by Lieb (l = 0.185909191)
+!%Option gga_k_absr1               506
+!% gamma-TFvW form by Acharya et al [g = 1 - 1.412/N^(1/3)]
+!%Option gga_k_absr2               507
+!% gamma-TFvW form by Acharya et al [g = 1 - 1.332/N^(1/3)]
+!%Option gga_k_gr               508
+!% gamma-TFvW form by Gázquez and Robles
+!%Option gga_k_ludena               509
+!% gamma-TFvW form by Ludeña
+!%Option gga_k_gp85               510
+!% gamma-TFvW form by Ghosh and Parr
+!%Option gga_k_pearson               511
 !% Pearson
+!%Option gga_k_ol1               512
+!% Ou-Yang and Levy v.1
+!%Option gga_k_ol2               513
+!% Ou-Yang and Levy v.2
+!%Option gga_k_fr_b88               514
+!% Fuentealba & Reyes (B88 version)
+!%Option gga_k_fr_pw86               515
+!% Fuentealba & Reyes (PW86 version)
 !%Option hyb_gga_xc_b3pw91               401000
 !% The original hybrid proposed by Becke
 !%Option hyb_gga_xc_b3lyp               402000
