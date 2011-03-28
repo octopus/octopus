@@ -79,7 +79,7 @@ dist_share_DATA =                                  \
         03-xc.gga_xc_hcth_147.inp                  \
         03-xc.gga_xc_hcth_407.inp                  \
         03-xc.gga_xc_hcth_93.inp                   \
-        03-xc.gga_xc_lb.inp                        \
+        03-xc.gga_x_lb.inp                         \
         03-xc.gga_xc_mpwlyp1w.inp                  \
         03-xc.gga_xc_pbe1w.inp                     \
         03-xc.gga_xc_pbelyp1w.inp                  \

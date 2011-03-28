@@ -168,8 +168,8 @@ Input: 03-xc.gga_x_optpbe_vdw.inp
 match ; gga_x_optpbe_vdw                       ; GREP(out, 'Exchange    =', 20)   ; -0.32559263
 
 # this functional can not be tested like this as it does not return the energy, but only the potential
-#Input: 03-xc.gga_xc_lb.inp
-#match ; gga_xc_lb                              ; GREP(out, 'Correlation =', 20)   ; 0.00000000
+#Input: 03-xc.gga_x_lb.inp
+#match ; gga_x_lb                              ; GREP(out, 'Correlation =', 20)   ; 0.00000000
 
 Input: 03-xc.gga_xc_hcth_93.inp
 match ; gga_xc_hcth_93                         ; GREP(out, 'Correlation =', 20)   ; -0.34470063
