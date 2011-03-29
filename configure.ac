@@ -269,9 +269,13 @@ else
 fi
 AC_SUBST(UTILITY_PROGRAMS)
 
-AC_ARG_WITH(max-dim, [  --with-max-dim=NDIM     maximum number of dimensions Octopus can use,
-                          the default is 3 (other values are experimental)],
+AC_ARG_WITH(max-dim, [  --with-max-dim=NDIM     maximum number of dimensions Octopus can use;
+                          the default is 3 (other values are experimental), must be >= 3],
   [maxdim=$withval], [maxdim=3])
+
+if test $maxdim -lt 3; then
+  AC_MSG_ERROR([max-dim must be at least 3])
+fi
 
 AC_DEFINE_UNQUOTED(MAX_DIM, $maxdim, [the maximum dimension of the space])
 
