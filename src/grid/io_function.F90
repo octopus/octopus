@@ -148,7 +148,7 @@ contains
     !% specified by <tt>UnitsOutput</tt>.
     !%Option matlab 2048
     !% In combination with <tt>plane_x</tt>, <tt>plane_y</tt> and
-    !% <tt>plane_z</tt> this option produces output files which are
+    !% <tt>plane_z</tt>, this option produces output files which are
     !% suitable for 2D Matlab functions like <tt>mesh()</tt>,
     !% <tt>surf()</tt>, or <tt>waterfall()</tt>. To load these files
     !% into Matlab you can use, <i>e.g.</i>

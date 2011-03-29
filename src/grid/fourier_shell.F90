@@ -56,6 +56,8 @@ contains
     FLOAT, allocatable :: modg2(:)
     integer, allocatable :: map(:), ucoords(:, :), ured_gvec(:, :)
 
+    PUSH_SUB(fourier_shell_init)
+
     dg(1:3) = M_PI/(cube%n(1:3)/2*mesh%spacing(1:3))
     gmax2 = (dg(1)*(cube%n(1)/2))**2
     this%ekin_cutoff = gmax2/M_TWO
@@ -107,6 +109,7 @@ contains
     SAFE_DEALLOCATE_A(modg2)
     SAFE_DEALLOCATE_A(map)
 
+    POP_SUB(fourier_shell_init)
   end subroutine fourier_shell_init
 
   ! -----------------------------------------------------
@@ -114,9 +117,12 @@ contains
   subroutine fourier_shell_end(this)
     type(fourier_shell_t), intent(inout) :: this
     
+    PUSH_SUB(fourier_shell_end)
+
     SAFE_DEALLOCATE_P(this%coords)
     SAFE_DEALLOCATE_P(this%red_gvec)
 
+    POP_SUB(fourier_shell_end)
   end subroutine fourier_shell_end
 
 end module fourier_shell_m
