@@ -363,17 +363,17 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
             do j_counter = 1,6
               select case(j_counter)
                 case(1)
-                  jx=ix-res_counter; jy=iy; jz=iz;
+                  jx=ix-res_counter; jy=iy; jz=iz
                 case(2)
-                  jx=ix+res_counter; jy=iy; jz=iz;
+                  jx=ix+res_counter; jy=iy; jz=iz
                 case(3)
-                  jx=ix; jy=iy-res_counter; jz=iz;
+                  jx=ix; jy=iy-res_counter; jz=iz
                 case(4)
-                  jx=ix; jy=iy+res_counter; jz=iz;
+                  jx=ix; jy=iy+res_counter; jz=iz
                 case(5)
-                  jx=ix; jy=iy; jz=iz-res_counter;
+                  jx=ix; jy=iy; jz=iz-res_counter
                 case(6)
-                  jx=ix; jy=iy; jz=iz+res_counter;
+                  jx=ix; jy=iy; jz=iz+res_counter
               end select
  
               if(any((/jx, jy, jz/) < mesh%idx%nr(1, 1:3)) .or. &
@@ -635,7 +635,7 @@ contains
     ! set the rest to zero
     mesh%idx%lxyz(1:mesh%np_part_global, 4:MAX_DIM) = 0
 
-    call checksum_calculate(1, mesh%np_part_global*MAX_DIM, mesh%idx%lxyz(1, 1), mesh%idx%checksum)
+    call checksum_calculate(1, mesh%np_part_global*mesh%sb%dim, mesh%idx%lxyz(1, 1), mesh%idx%checksum)
 
     ASSERT(iin == mesh%np_global)
     ASSERT(ien == mesh%np_part_global)
