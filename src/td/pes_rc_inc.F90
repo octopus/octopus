@@ -215,7 +215,7 @@ subroutine PES_rc_init_write(pesrc, mesh, st)
   
     do ip = 1, pesrc%npoints
       iunit = io_open('td.general/'//pesrc%filenames(ip), action='write')
-      xx(:)=mesh%idx%Lxyz(pesrc%points(ip),:)
+      xx(:)=mesh%idx%lxyz(pesrc%points(ip),:)
       write(iunit,'(a1)') '#'
       write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
            '# R = (',units_from_atomic(units_inp%length, xx(1)*mesh%spacing(1)), &

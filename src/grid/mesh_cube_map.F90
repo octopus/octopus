@@ -64,7 +64,7 @@ contains
 
         this%nmap = 0
         do ip = 1, np_global
-          i1(1:3) = idx%Lxyz(ip, 1:3)
+          i1(1:3) = idx%lxyz(ip, 1:3)
           if(any(i1(1:2) /= i2(1:2)) .or. i1(3) /= i2(3) + 1) then
             INCR(this%nmap, 1)
             if(step == 2) then

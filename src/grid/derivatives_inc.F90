@@ -117,9 +117,9 @@ contains
       ff => ffb%states_linear(ist)%X(psi)
 
       do ip = bndry_start, bndry_end
-        ix = der%mesh%idx%Lxyz(ip, 1)
-        iy = der%mesh%idx%Lxyz(ip, 2)
-        iz = der%mesh%idx%Lxyz(ip, 3)
+        ix = der%mesh%idx%lxyz(ip, 1)
+        iy = der%mesh%idx%lxyz(ip, 2)
+        iz = der%mesh%idx%lxyz(ip, 3)
 
         i_lev = der%mesh%resolution(ix,iy,iz)
 
@@ -136,7 +136,7 @@ contains
                   der%mesh%sb%hr_area%interp%ww(jj) *        &
                   der%mesh%sb%hr_area%interp%ww(kk)
 
-                ff(ip) = ff(ip) + weight * ff(der%mesh%idx%Lxyz_inv(   &
+                ff(ip) = ff(ip) + weight * ff(der%mesh%idx%lxyz_inv(   &
                   ix + der%mesh%sb%hr_area%interp%posi(ii) * dx,       &
                   iy + der%mesh%sb%hr_area%interp%posi(jj) * dy,       &
                   iz + der%mesh%sb%hr_area%interp%posi(kk) * dz))

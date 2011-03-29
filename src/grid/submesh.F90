@@ -146,7 +146,7 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = mesh%idx%Lxyz_inv(ix, iy, iz)
+            ip = mesh%idx%lxyz_inv(ix, iy, iz)
 #if defined(HAVE_MPI)
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
@@ -176,7 +176,7 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = mesh%idx%Lxyz_inv(ix, iy, iz)
+            ip = mesh%idx%lxyz_inv(ix, iy, iz)
 #if defined(HAVE_MPI)
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)

@@ -162,8 +162,8 @@ contains
       call io_close(iunit)
       ! Read the lxyz maps.
       nr = mm%idx%nr
-      SAFE_ALLOCATE(mm%idx%Lxyz(1:mm%np_part, 1:3))
-      SAFE_ALLOCATE(mm%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
+      SAFE_ALLOCATE(mm%idx%lxyz(1:mm%np_part, 1:3))
+      SAFE_ALLOCATE(mm%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
       call mesh_lxyz_init_from_file(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'lxyz')
     end do
 
@@ -209,8 +209,8 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     mesh%np_global      = hypercube_number_inner_points(mesh%idx%hypercube)
 
     nullify(mesh%resolution)
-    nullify(mesh%idx%Lxyz_inv)
-    nullify(mesh%idx%Lxyz)
+    nullify(mesh%idx%lxyz_inv)
+    nullify(mesh%idx%lxyz)
 
     call profiling_out(mesh_init_prof)
     POP_SUB(mesh_init_stage_2)
@@ -220,7 +220,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   nr = mesh%idx%nr
 
   ! allocate the xyz arrays
-  SAFE_ALLOCATE(mesh%idx%Lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
+  SAFE_ALLOCATE(mesh%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
 
   if(sb%mr_flag) then 
     SAFE_ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
@@ -229,7 +229,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     nullify(mesh%resolution)
   end if
 
-  mesh%idx%Lxyz_inv(:,:,:) = 0
+  mesh%idx%lxyz_inv(:,:,:) = 0
   res = 1
 
   SAFE_ALLOCATE(xx(1:MAX_DIM, mesh%idx%nr(1,1):mesh%idx%nr(2,1)))
@@ -276,16 +276,16 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
             n_mod = 2**sb%hr_area%num_radii
             if (sum((xx(:,ix)-sb%hr_area%center(:))**2).gt. sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
                  mod(ix, n_mod).eq.0 .and. mod(iy, n_mod).eq.0 .and. mod(iz,n_mod) .eq. 0) then
-              mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
+              mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
             end if
 
             ! Other option: must be inside the multiresolution area and satisfy coordinate index conditions
-            if(.not.btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) then
+            if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
               do i_lev = 1,sb%hr_area%num_radii
                 n_mod = 2**(i_lev-1)
                 if( sum((xx(:,ix)-sb%hr_area%center(:))**2) .lt. sb%hr_area%radius(i_lev)**2 + DELTA .and. &
                     mod(ix, n_mod).eq.0 .and. mod(iy, n_mod).eq.0 .and. mod(iz,n_mod) .eq. 0) then
-                  mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix,iy, iz), INNER_POINT)
+                  mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix,iy, iz), INNER_POINT)
                 end if
               end do
             end if
@@ -296,7 +296,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
           if (in_box(ix)) then
 
-            mesh%idx%Lxyz_inv(ix, iy, iz) = ibset(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)
+            mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
 
             do is = 1, stencil%size
               if(stencil%center == is) cycle
@@ -307,7 +307,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     
               if(any((/i, j, k/) < mesh%idx%nr(1, 1:3)) .or. any((/i, j, k/) >  mesh%idx%nr(2, 1:3))) cycle
     
-              mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
+              mesh%idx%lxyz_inv(i, j, k) = ibset(mesh%idx%lxyz_inv(i, j, k), ENLARGEMENT_POINT)
 
             end do
 
@@ -350,7 +350,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
           chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + sb%box_offset(1)
  
           ! skip if not inner point
-          if(.not.btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
+          if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
         
           res = -1
           res_counter = 0
@@ -379,7 +379,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
               if(any((/jx, jy, jz/) < mesh%idx%nr(1, 1:3)) .or. &
                  any((/jx, jy, jz/) > mesh%idx%nr(2, 1:3))) cycle
               ! exit after finding neighboring inner point
-              if(btest(mesh%idx%Lxyz_inv(jx, jy, jz), INNER_POINT)) then
+              if(btest(mesh%idx%lxyz_inv(jx, jy, jz), INNER_POINT)) then
                 res = res_counter
                 exit
               end if
@@ -402,10 +402,10 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
  
             if(any((/i, j, k/) < mesh%idx%nr(1, 1:3)) .or. any((/i, j, k/) >  mesh%idx%nr(2, 1:3))) cycle
 
-            mesh%idx%Lxyz_inv(i, j, k) = ibset(mesh%idx%Lxyz_inv(i, j, k), ENLARGEMENT_POINT)
+            mesh%idx%lxyz_inv(i, j, k) = ibset(mesh%idx%lxyz_inv(i, j, k), ENLARGEMENT_POINT)
 
             ! If the point is not an inner point, and if its resolution can be decreased, do it now
-            if(.not. btest(mesh%idx%Lxyz_inv(i, j, k), INNER_POINT)) then
+            if(.not. btest(mesh%idx%lxyz_inv(i, j, k), INNER_POINT)) then
               if(mesh%resolution(i, j, k) .eq. 0 .or. mesh%resolution(i, j, k) .gt. res) &
                 mesh%resolution(i,j,k) = res
             end if
@@ -423,8 +423,8 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
     do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-        if(btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) ik = ik + 1
-        if(mesh%idx%Lxyz_inv(ix, iy, iz) /= 0) il = il + 1
+        if(btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) ik = ik + 1
+        if(mesh%idx%lxyz_inv(ix, iy, iz) /= 0) il = il + 1
       end do
     end do
   end do
@@ -444,8 +444,8 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
           i_lev = mesh%resolution(ix,iy,iz)
 
           ! include enlargement points that are neither inner points nor outer boundary points.
-          if( .not. btest(mesh%idx%Lxyz_inv(ix, iy, iz),ENLARGEMENT_POINT)) cycle
-          if(  btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
+          if( .not. btest(mesh%idx%lxyz_inv(ix, iy, iz),ENLARGEMENT_POINT)) cycle
+          if(  btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
           if(  i_lev.eq.2**mesh%sb%hr_area%num_radii ) cycle
 
           ! the value of point (ix,iy,iz) is going to be interpolated
@@ -460,7 +460,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
                 newk = iz + mesh%sb%hr_area%interp%posi(kk)*dz
                 if(any((/newi, newj, newk/) <  mesh%idx%nr(1, 1:3)) .or. &
                    any((/newi, newj, newk/) >  mesh%idx%nr(2, 1:3)) .or. &
-                   mesh%idx%Lxyz_inv(newi,newj,newk).eq.0) then
+                   mesh%idx%lxyz_inv(newi,newj,newk).eq.0) then
 
                      message(1) = 'Multiresolution radii are too close to each other (or outer boundary)'
                      write(message(2),'(7I4)') ix,iy,iz,newi,newj,newk,mesh%resolution(ix,iy,iz)
@@ -509,7 +509,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   end if
   
   if(mesh%idx%sb%box_shape /= HYPERCUBE) then
-    call create_x_Lxyz()
+    call create_x_lxyz()
   else if(.not. mesh%parallel_in_domains) then
     do ip = 1, mesh%np_part_global
       mesh%x(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip, force=.true.)
@@ -543,16 +543,16 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
 contains
 
   ! ---------------------------------------------------------
-  subroutine create_x_Lxyz()
+  subroutine create_x_lxyz()
     integer :: il, iin, ien, ix, iy, iz
     integer :: ixb, iyb, izb, bsize(1:3)
     type(block_t) :: blk
     integer :: idir, nn
     FLOAT :: chi(1:MAX_DIM)
 
-    PUSH_SUB(mesh_init_stage_3.create_x_Lxyz)
+    PUSH_SUB(mesh_init_stage_3.create_x_lxyz)
 
-    SAFE_ALLOCATE(mesh%idx%Lxyz(1:mesh%np_part_global, 1:MAX_DIM))
+    SAFE_ALLOCATE(mesh%idx%lxyz(1:mesh%np_part_global, 1:MAX_DIM))
 
     call messages_obsolete_variable('MeshBlockSizeXY', 'MeshBlockSize')
     call messages_obsolete_variable('MeshBlockSizeZ', 'MeshBlockSize')
@@ -603,21 +603,21 @@ contains
               do iz = izb, min(izb + bsize(3) - 1, mesh%idx%nr(2,3))
                 chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + mesh%sb%box_offset(3)
                 
-                if(btest(mesh%idx%Lxyz_inv(ix, iy, iz), INNER_POINT)) then
+                if(btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
                   iin = iin + 1
                   il = iin
-                else if (btest(mesh%idx%Lxyz_inv(ix, iy, iz), ENLARGEMENT_POINT)) then
+                else if (btest(mesh%idx%lxyz_inv(ix, iy, iz), ENLARGEMENT_POINT)) then
                   ien = ien + 1
                   il = ien
                 else
                   cycle
                 end if
                   
-                mesh%idx%Lxyz(il, 1) = ix
-                mesh%idx%Lxyz(il, 2) = iy
-                mesh%idx%Lxyz(il, 3) = iz
+                mesh%idx%lxyz(il, 1) = ix
+                mesh%idx%lxyz(il, 2) = iy
+                mesh%idx%lxyz(il, 3) = iz
 
-                mesh%idx%Lxyz_inv(ix, iy, iz) = il
+                mesh%idx%lxyz_inv(ix, iy, iz) = il
 
 #ifdef HAVE_MPI
                 if(.not. mesh%parallel_in_domains) &
@@ -633,15 +633,15 @@ contains
     end do
     
     ! set the rest to zero
-    mesh%idx%Lxyz(1:mesh%np_part_global, 4:MAX_DIM) = 0
+    mesh%idx%lxyz(1:mesh%np_part_global, 4:MAX_DIM) = 0
 
-    call checksum_calculate(1, mesh%np_part_global*MAX_DIM, mesh%idx%Lxyz(1, 1), mesh%idx%checksum)
+    call checksum_calculate(1, mesh%np_part_global*MAX_DIM, mesh%idx%lxyz(1, 1), mesh%idx%checksum)
 
     ASSERT(iin == mesh%np_global)
     ASSERT(ien == mesh%np_part_global)
     
-    POP_SUB(mesh_init_stage_3.create_x_Lxyz)
-  end subroutine create_x_Lxyz
+    POP_SUB(mesh_init_stage_3.create_x_lxyz)
+  end subroutine create_x_lxyz
 
 
   ! ---------------------------------------------------------
@@ -684,10 +684,10 @@ contains
       else
         ! if there is a parent grid, use its partition
         do ip = 1, mesh%np_global
-          ix = 2*mesh%idx%Lxyz(ip, 1)
-          iy = 2*mesh%idx%Lxyz(ip, 2)
-          iz = 2*mesh%idx%Lxyz(ip, 3)
-          i = parent%idx%Lxyz_inv(ix, iy, iz)
+          ix = 2*mesh%idx%lxyz(ip, 1)
+          iy = 2*mesh%idx%lxyz(ip, 2)
+          iz = 2*mesh%idx%lxyz(ip, 3)
+          i = parent%idx%lxyz_inv(ix, iy, iz)
           part(ip) = parent%vp%part(i)
         end do
       end if
@@ -924,8 +924,8 @@ contains
               do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
  
                 ! Skip ordinary points
-                if(mesh%idx%Lxyz_inv(ix,iy,iz).gt.0 .and. &
-                     mesh%idx%Lxyz_inv(ix,iy,iz).le.mesh%np) cycle
+                if(mesh%idx%lxyz_inv(ix,iy,iz).gt.0 .and. &
+                     mesh%idx%lxyz_inv(ix,iy,iz).le.mesh%np) cycle
 
                 ! Is it the kind of intermediate point we are looking for?
                 n_mod = 2**i_lev
@@ -965,9 +965,9 @@ contains
 
         ! the volumes are now in vol_tmp table. Move them to vol_pp
         do ip = 1, mesh%np
-          ix = mesh%idx%Lxyz(ip, 1)
-          iy = mesh%idx%Lxyz(ip, 2)
-          iz = mesh%idx%Lxyz(ip, 3)
+          ix = mesh%idx%lxyz(ip, 1)
+          iy = mesh%idx%lxyz(ip, 2)
+          iz = mesh%idx%lxyz(ip, 3)
           mesh%vol_pp(ip) = vol_tmp(ix,iy,iz)
         end do
        

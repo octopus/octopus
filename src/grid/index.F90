@@ -39,8 +39,8 @@ module index_m
     type(simul_box_t), pointer :: sb
     integer                    :: nr(2, MAX_DIM)   ! dimensions of the box where the points are contained
     integer                    :: ll(MAX_DIM)      ! literally nr(2,:) - nr(1,:) + 1 - 2*enlarge(:)
-    integer, pointer           :: Lxyz(:,:)        ! return x, y and z for each point
-    integer, pointer           :: Lxyz_inv(:,:,:)  ! return points # for each xyz
+    integer, pointer           :: lxyz(:,:)        ! return x, y and z for each point
+    integer, pointer           :: lxyz_inv(:,:,:)  ! return points # for each xyz
     integer                    :: enlarge(MAX_DIM) ! number of points to add for boundary conditions
     integer(8)                 :: checksum
   end type index_t
@@ -63,7 +63,7 @@ contains
     forall (idir = dim + 1:MAX_DIM) ix2(idir) = 0
 
     if(idx%sb%box_shape /= HYPERCUBE) then
-      index = idx%Lxyz_inv(ix2(1), ix2(2), ix2(3))
+      index = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
     else
       call hypercube_x_to_i(idx%hypercube, dim, idx%nr, idx%enlarge(1), ix, index)
     end if
@@ -84,7 +84,7 @@ contains
     if(idx%sb%box_shape /= HYPERCUBE) then
       do ip = 1, npoints
         forall (idir = 1:dim) ix2(idir) = ix(idir, ip)
-        index(ip) = idx%Lxyz_inv(ix2(1), ix2(2), ix2(3))
+        index(ip) = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
       end do
     else
       do ip = 1, npoints
@@ -110,7 +110,7 @@ contains
     ! undefined on exit).
     ix = 0
     if(idx%sb%box_shape /= HYPERCUBE) then
-      forall (idir = 1:dim) ix(idir) = idx%Lxyz(ip, idir)
+      forall (idir = 1:dim) ix(idir) = idx%lxyz(ip, idir)
     else
       call hypercube_i_to_x(idx%hypercube, dim, idx%nr, idx%enlarge(1), ip, ix)
     end if

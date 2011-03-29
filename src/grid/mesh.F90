@@ -389,7 +389,7 @@ contains
     
     ASSERT(index >= 1 .and. index <= mesh%np)
     
-    ixyz(:) = mesh%idx%Lxyz(index, :)
+    ixyz(:) = mesh%idx%lxyz(index, :)
     
     do id = 1, mesh%sb%dim
       ixyz(id) = ixyz(id) + tdist(id)
@@ -577,9 +577,9 @@ contains
     end if
 
     do ip = 1, mesh%np_part
-      forall (idir = 1:mesh%sb%dim) ix(idir) = mesh%idx%Lxyz(ip, idir)
+      forall (idir = 1:mesh%sb%dim) ix(idir) = mesh%idx%lxyz(ip, idir)
       forall (idir = mesh%sb%dim + 1:MAX_DIM) ix(idir) = 0
-      mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)) = ip
+      mesh%idx%lxyz_inv(ix(1), ix(2), ix(3)) = ip
     end do
 
     POP_SUB(mesh_lxyz_init_from_file)
@@ -623,7 +623,7 @@ contains
     do ix = lb(1), ub(1)
       do iy = lb(2), ub(2)
         do iz = lb(3), ub(3)
-          indices(ii) = mesh%idx%Lxyz_inv(ix, iy, iz)
+          indices(ii) = mesh%idx%lxyz_inv(ix, iy, iz)
           ii         = ii + 1
         end do
       end do
@@ -683,8 +683,8 @@ contains
     end if
 
     SAFE_DEALLOCATE_P(mesh%resolution)
-    SAFE_DEALLOCATE_P(mesh%idx%Lxyz)
-    SAFE_DEALLOCATE_P(mesh%idx%Lxyz_inv)
+    SAFE_DEALLOCATE_P(mesh%idx%lxyz)
+    SAFE_DEALLOCATE_P(mesh%idx%lxyz_inv)
     SAFE_DEALLOCATE_P(mesh%x)
     SAFE_DEALLOCATE_P(mesh%vol_pp)
 
@@ -712,7 +712,7 @@ contains
     
     ! no push_sub, called too frequently
 
-    ix = mesh%idx%Lxyz(ip, :)
+    ix = mesh%idx%lxyz(ip, :)
     nr(1, :) = mesh%idx%nr(1, :) + mesh%idx%enlarge(:)
     nr(2, :) = mesh%idx%nr(2, :) - mesh%idx%enlarge(:)
     
@@ -721,7 +721,7 @@ contains
       if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - mesh%idx%ll(idim)
     end do
     
-    ipp = mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))
+    ipp = mesh%idx%lxyz_inv(ix(1), ix(2), ix(3))
     
   end function mesh_periodic_point
   
@@ -732,13 +732,13 @@ contains
     
     memory = 0.0_8
     
-    ! Lxyz_inv
+    ! lxyz_inv
     memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     ! resolution
     if(mesh%sb%mr_flag) then
       memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     end if
-    ! Lxyz
+    ! lxyz
     memory = memory + SIZEOF_UNSIGNED_INT * dble(mesh%np_part_global) * MAX_DIM
 
   end function mesh_global_memory

@@ -376,7 +376,7 @@ contains
             action='write')
           do ip = 1, vp%np_ghost(inode)
             jp = vp%ghost(vp%xghost(inode) + ip - 1)
-            write(iunit, '(4i8)') jp, idx%Lxyz(jp, :)
+            write(iunit, '(4i8)') jp, idx%lxyz(jp, :)
           end do
           call io_close(iunit)
         end do

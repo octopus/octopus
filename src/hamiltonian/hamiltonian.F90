@@ -573,7 +573,7 @@ contains
             mesh => gr%ob_grid%lead(il)%mesh
             do ix = mesh%idx%nr(1, 1)+mesh%idx%enlarge(1), mesh%idx%nr(2, 1)-mesh%idx%enlarge(1)
               do iy = mesh%idx%nr(1, 2)+mesh%idx%enlarge(2), mesh%idx%nr(2, 2)-mesh%idx%enlarge(2)
-                write(pot, '(2i8,e24.16)') ix, iy, hm%lead(il)%vks(mesh%idx%Lxyz_inv(ix, iy, 0), ispin)
+                write(pot, '(2i8,e24.16)') ix, iy, hm%lead(il)%vks(mesh%idx%lxyz_inv(ix, iy, 0), ispin)
               end do
             end do
             call io_close(pot)

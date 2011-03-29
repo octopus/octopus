@@ -184,7 +184,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
           ! Convert from local to global mesh index
           ip= index_from_coords(mesh%idx,mesh%sb%dim,int(mesh%x(ip_local,:)/mesh%spacing(:)))
 
-          ix3(:) =  mesh%idx%Lxyz(ip, :) + mesh%idx%ll(:)/2 + 1 
+          ix3(:) =  mesh%idx%lxyz(ip, :) + mesh%idx%ll(:)/2 + 1 
 
           wf1(ix3(1), ix3(2), ix3(3)) = mask_fn(ip_local) * st%zpsi(ip_local, idim, ist, ik)
           

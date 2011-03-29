@@ -761,11 +761,11 @@ contains
         
         select case(d1)
         case(1)
-          ip = mesh%idx%Lxyz_inv( 0, ix, iy)    ! plane_x
+          ip = mesh%idx%lxyz_inv( 0, ix, iy)    ! plane_x
         case(2)
-          ip = mesh%idx%Lxyz_inv(ix,  0, iy)    ! plane_y
+          ip = mesh%idx%lxyz_inv(ix,  0, iy)    ! plane_y
         case(3)
-          ip = mesh%idx%Lxyz_inv(ix, iy,  0)    ! plane_z
+          ip = mesh%idx%lxyz_inv(ix, iy,  0)    ! plane_z
         end select
 
         select case(out_what)

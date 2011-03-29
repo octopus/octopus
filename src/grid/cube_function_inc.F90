@@ -88,9 +88,9 @@ subroutine X(mesh_to_cube)(mesh, mf, cf, local)
     ip = mesh%cube_map%map(MCM_POINT, im)
     nn = mesh%cube_map%map(MCM_COUNT, im)
 
-    ix = mesh%idx%Lxyz(ip, 1) + center(1)
-    iy = mesh%idx%Lxyz(ip, 2) + center(2)
-    iz = mesh%idx%Lxyz(ip, 3) + center(3)
+    ix = mesh%idx%lxyz(ip, 1) + center(1)
+    iy = mesh%idx%lxyz(ip, 2) + center(2)
+    iz = mesh%idx%lxyz(ip, 3) + center(3)
     forall(ii = 0:nn - 1) cf%X(RS)(ix, iy, iz + ii) = gmf(ip + ii)
   end do
 
@@ -124,9 +124,9 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
   do im = 1, mesh%cube_map%nmap
     ip = mesh%cube_map%map(MCM_POINT, im)
     nn = mesh%cube_map%map(MCM_COUNT, im)
-    ix = mesh%idx%Lxyz(ip, 1) + center(1)
-    iy = mesh%idx%Lxyz(ip, 2) + center(2)
-    iz = mesh%idx%Lxyz(ip, 3) + center(3)
+    ix = mesh%idx%lxyz(ip, 1) + center(1)
+    iy = mesh%idx%lxyz(ip, 2) + center(2)
+    iz = mesh%idx%lxyz(ip, 3) + center(3)
     forall(ii = 0:nn - 1) mf(ip + ii) = cf%X(RS)(ix, iy, iz + ii)
   end do
   

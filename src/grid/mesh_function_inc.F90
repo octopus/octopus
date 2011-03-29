@@ -301,7 +301,7 @@ end subroutine X(mf_random)
 ! In order to retrieve the coordinate v of u(n), one needs
 ! to do:
 !  k = gr%mesh%idx%nr(1, j) + n - 1
-!  i = gr%mesh%idx%Lxyz_inv(k, 0, 0) ! Assuming j = 1
+!  i = gr%mesh%idx%lxyz_inv(k, 0, 0) ! Assuming j = 1
 !  if(i>0) v = gr%mesh%x(i, j)   ! I do not understand why
 !                                ! we need i>0 ...
 !
@@ -323,7 +323,7 @@ subroutine X(mf_partial_integrate)(mesh, jj, f_in, f_out)
 
   f_out(1:np_out) = M_ZERO
   do ip = 1, mesh%np
-     mm = mesh%idx%Lxyz(ip, jj) - mesh%idx%nr(1, jj) + 1
+     mm = mesh%idx%lxyz(ip, jj) - mesh%idx%nr(1, jj) + 1
      f_out(mm) = f_out(mm) + f_in(ip)
   end do
 
@@ -363,10 +363,10 @@ subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, f_in, f_out
       kk = ip
       if(mesh_out%parallel_in_domains) &
         kk = mesh_out%vp%local(mesh_out%vp%xlocal(mesh_out%vp%partno) + ip -1)
-      ix = mesh_out%idx%Lxyz(kk, 1); if ( ix < mesh_in%idx%nr(1, 1) .or. ix > mesh_in%idx%nr(2, 1) ) cycle
-      iy = mesh_out%idx%Lxyz(kk, 2); if ( iy < mesh_in%idx%nr(1, 2) .or. iy > mesh_in%idx%nr(2, 2) ) cycle
-      iz = mesh_out%idx%Lxyz(kk, 3); if ( iz < mesh_in%idx%nr(1, 3) .or. iz > mesh_in%idx%nr(2, 3) ) cycle
-      jj = mesh_in%idx%Lxyz_inv(ix, iy, iz)
+      ix = mesh_out%idx%lxyz(kk, 1); if ( ix < mesh_in%idx%nr(1, 1) .or. ix > mesh_in%idx%nr(2, 1) ) cycle
+      iy = mesh_out%idx%lxyz(kk, 2); if ( iy < mesh_in%idx%nr(1, 2) .or. iy > mesh_in%idx%nr(2, 2) ) cycle
+      iz = mesh_out%idx%lxyz(kk, 3); if ( iz < mesh_in%idx%nr(1, 3) .or. iz > mesh_in%idx%nr(2, 3) ) cycle
+      jj = mesh_in%idx%lxyz_inv(ix, iy, iz)
 
       if(mesh_in%parallel_in_domains) then
         if(jj > 0 .and. jj <= mesh_in%np_global) f_out(ip) = f_global(jj)

@@ -72,10 +72,10 @@ contains
       nn = intf%index(ip)
       ! ... find the points they are coupled to.
       do kk = 1, lapl%stencil%size
-        k_stencil = lapl%mesh%idx%Lxyz_inv(          &
-          lapl%mesh%idx%Lxyz(nn,1)+lapl%stencil%points(1,kk), &
-          lapl%mesh%idx%Lxyz(nn,2)+lapl%stencil%points(2,kk), &
-          lapl%mesh%idx%Lxyz(nn,3)+lapl%stencil%points(3,kk))
+        k_stencil = lapl%mesh%idx%lxyz_inv(          &
+          lapl%mesh%idx%lxyz(nn,1)+lapl%stencil%points(1,kk), &
+          lapl%mesh%idx%lxyz(nn,2)+lapl%stencil%points(2,kk), &
+          lapl%mesh%idx%lxyz(nn,3)+lapl%stencil%points(3,kk))
         ! If the coupling point is in the interface...
         if(k_stencil.le.lapl%np.and. &
           member_of_interface(k_stencil, intf, intf_index)) then
@@ -139,14 +139,14 @@ contains
       ! k iterates over all stencil points.
       do kk = 1, lapl%stencil%size
         ! Get point number of coupling point.
-        k_stencil = lapl%mesh%idx%Lxyz_inv(            &
-          lapl%mesh%idx%Lxyz(nn, 1)+lapl%stencil%points(1, kk), &
-          lapl%mesh%idx%Lxyz(nn, 2)+lapl%stencil%points(2, kk), &
-          lapl%mesh%idx%Lxyz(nn, 3)+lapl%stencil%points(3, kk))
+        k_stencil = lapl%mesh%idx%lxyz_inv(            &
+          lapl%mesh%idx%lxyz(nn, 1)+lapl%stencil%points(1, kk), &
+          lapl%mesh%idx%lxyz(nn, 2)+lapl%stencil%points(2, kk), &
+          lapl%mesh%idx%lxyz(nn, 3)+lapl%stencil%points(3, kk))
 
         ! Get coordinates of current interface point nn and current stencil point k_stencil.
-        p_n = lapl%mesh%idx%Lxyz(nn, :)
-        p_k = lapl%mesh%idx%Lxyz(k_stencil, :)
+        p_n = lapl%mesh%idx%lxyz(nn, :)
+        p_k = lapl%mesh%idx%lxyz(k_stencil, :)
 
         ! Now, we shift the stencil by the size of one unit cell (intf%extent_uc)
         ! and check if the coupling point with point number n_matr is in the interface.
@@ -170,7 +170,7 @@ contains
         shift        = abs(p_k(tdir)-p_n(tdir))
         p_matr       = p_n
         p_matr(tdir) = p_matr(tdir) + dir*(intf%extent_uc-shift)
-        n_matr       = lapl%mesh%idx%Lxyz_inv(p_matr(1), p_matr(2), p_matr(3))
+        n_matr       = lapl%mesh%idx%lxyz_inv(p_matr(1), p_matr(2), p_matr(3))
 
         if(member_of_interface(n_matr, intf, intf_idx)) then
 

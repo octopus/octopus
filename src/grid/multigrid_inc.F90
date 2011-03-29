@@ -182,14 +182,14 @@
         fn = fine_der%mesh%vp%local(fn - 1 + fine_der%mesh%vp%xlocal(fine_der%mesh%vp%partno))
       end if
 #endif
-      fi(:) = fine_der%mesh%idx%Lxyz(fn, :)
+      fi(:) = fine_der%mesh%idx%lxyz(fn, :)
 
       f_coarse(nn) = M_ZERO
 
       do di = -1, 1
         do dj = -1, 1
           do dk = -1, 1
-            fn = fine_der%mesh%idx%Lxyz_inv(fi(1) + di, fi(2) + dj, fi(3) + dk)
+            fn = fine_der%mesh%idx%lxyz_inv(fi(1) + di, fi(2) + dj, fi(3) + dk)
 
 #ifdef HAVE_MPI
             ! translate to a local index

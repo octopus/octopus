@@ -224,10 +224,10 @@ subroutine X(mesh_to_fourier) (mesh, mf, cf)
   cf%FS = M_z0
 
   do ip = 1, mesh%np_global
-    ix = pad_feq(mesh%idx%Lxyz(ip, 1), cf%n(1), .false.)
+    ix = pad_feq(mesh%idx%lxyz(ip, 1), cf%n(1), .false.)
     if(ix > cf%nx) cycle ! negative frequencies are redundant
-    iy = pad_feq(mesh%idx%Lxyz(ip, 2), cf%n(2), .false.)
-    iz = pad_feq(mesh%idx%Lxyz(ip, 3), cf%n(3), .false.)
+    iy = pad_feq(mesh%idx%lxyz(ip, 2), cf%n(2), .false.)
+    iz = pad_feq(mesh%idx%lxyz(ip, 3), cf%n(3), .false.)
 
     cf%FS(ix, iy, iz) = mf(ip)
   end do
@@ -245,13 +245,13 @@ subroutine X(fourier_to_mesh) (mesh, cf, mf)
   ASSERT(associated(cf%FS))
 
   do ip = 1, mesh%np_global
-    ix = pad_feq(mesh%idx%Lxyz(ip, 1), cf%n(1), .false.)
-    iy = pad_feq(mesh%idx%Lxyz(ip, 2), cf%n(2), .false.)
-    iz = pad_feq(mesh%idx%Lxyz(ip, 3), cf%n(3), .false.)
+    ix = pad_feq(mesh%idx%lxyz(ip, 1), cf%n(1), .false.)
+    iy = pad_feq(mesh%idx%lxyz(ip, 2), cf%n(2), .false.)
+    iz = pad_feq(mesh%idx%lxyz(ip, 3), cf%n(3), .false.)
 
 #ifdef R_TREAL
     if(ix > cf%nx) then
-      ix = pad_feq(-mesh%idx%Lxyz(ip, 1), cf%n(1), .false.)
+      ix = pad_feq(-mesh%idx%lxyz(ip, 1), cf%n(1), .false.)
       mf(ip) = conjg(cf%FS(ix, iy, iz))
     else
       mf(ip) = cf%FS(ix, iy, iz)

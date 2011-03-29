@@ -236,7 +236,7 @@ contains
     end if
 #endif
     
-    start(1:3) = mesh%idx%Lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
+    start(1:3) = mesh%idx%lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
     
     pp = start(1)
     do ll = this%interpolation_min, this%interpolation_max
@@ -247,7 +247,7 @@ contains
         rr = start(3)
         do nn = this%interpolation_min, this%interpolation_max
           
-          ip = mesh%idx%Lxyz_inv(pp, qq, rr)
+          ip = mesh%idx%lxyz_inv(pp, qq, rr)
 #ifdef HAVE_MPI      
           !map the global point to a local point
           if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
