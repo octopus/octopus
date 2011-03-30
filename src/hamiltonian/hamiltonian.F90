@@ -987,12 +987,6 @@ contains
 
     call hamiltonian_base_update(this%hm_base, mesh)
  
-    ! now regenerate the phases for the pseudopotentials
-    do iatom = 1, this%ep%natoms
-      call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
-        vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
-    end do
-
     call build_phase()
 
     call profiling_out(prof)
@@ -1001,10 +995,16 @@ contains
   contains
 
     subroutine build_phase()
-      integer :: ik
+      integer :: ik, imat, nmat, max_npoints
       FLOAT   :: kpoint(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_update.build_phase)
+
+      ! now regenerate the phases for the pseudopotentials
+      do iatom = 1, this%ep%natoms
+        call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
+          vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
+      end do
 
       if(associated(this%hm_base%uniform_vector_potential)) then 
         if(.not. associated(this%phase)) then
@@ -1019,6 +1019,26 @@ contains
             this%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
               + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
           end forall
+        end do
+      end if
+
+      max_npoints = this%hm_base%max_npoints
+      nmat = this%hm_base%nprojector_matrices
+
+
+      if(associated(this%phase) .and. associated(this%hm_base%projector_matrices)) then
+
+        if(.not. associated(this%hm_base%projector_phases)) then
+          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
+        end if
+
+        do ik = this%d%kpt%start, this%d%kpt%end
+          do imat = 1, this%hm_base%nprojector_matrices
+            iatom = this%hm_base%projector_to_atom(imat)
+            do ip = 1, this%hm_base%projector_matrices(imat)%npoints
+              this%hm_base%projector_phases(ip, imat, ik) = this%ep%proj(iatom)%phase(ip, ik)
+            end do
+          end do
         end do
       end if
 

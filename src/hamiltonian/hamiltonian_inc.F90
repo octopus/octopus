@@ -52,18 +52,18 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   terms_ = optional_default(terms, TERM_ALL)
 
   kinetic_only_ = (ieor(terms_, TERM_KINETIC) == 0)
-  
+
   if(present(time) .and. hm%d%cdft) then
     message(1) = "TDCDFT not yet implemented."
     call messages_fatal(1)
   end if
-  
+
   ASSERT(batch_is_ok(psib))
   ASSERT(batch_is_ok(hpsib))
   ASSERT(psib%nst == hpsib%nst)
   ASSERT(ik >= hm%d%kpt%start .and. ik <= hm%d%kpt%end)
   nst = psib%nst
-  
+
   apply_phase = associated(hm%phase)
 
   call X(derivatives_batch_set_bc)(der, psib)
@@ -85,28 +85,32 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
       call batch_add_state(epsib, psib%states(ii)%ist, psi_copy(:, :, ii))
     end do
     ASSERT(batch_is_ok(epsib))
+    if(batch_is_packed(psib)) call batch_pack(epsib, copy = .false.)
   else
     epsib => psib
   end if
 
   bs = hardware%X(block_size)
 
-  do sp = 1, der%mesh%np_part, bs
-    do ii = 1, nst
-      call set_pointers()
-      
-      if(apply_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
-        call profiling_in(phase_prof, "PBC_PHASE_APPLY")
-      
-        forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, der%mesh%np_part)) 
-          psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip, idim)
+  if(apply_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
+
+    call profiling_in(phase_prof, "PBC_PHASE_APPLY")
+    do sp = 1, der%mesh%np_part, bs
+      if(batch_is_packed(psib)) then
+        forall (ist = 1:psib%nst_linear, ip = sp:min(sp + bs - 1, der%mesh%np_part))
+          epsib%pack%X(psi)(ist, ip) = hm%phase(ip, ik)*psib%pack%X(psi)(ist, ip)
         end forall
-        
-        call profiling_out(phase_prof)
+      else
+        do ii = 1, nst
+          call set_pointers()
+          forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, der%mesh%np_part)) 
+            psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip, idim)
+          end forall
+        end do
       end if
-      
     end do
-  end do
+    call profiling_out(phase_prof)
+  end if
 
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
@@ -155,12 +159,12 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   if (iand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
     call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
-  
+
   do ii = 1, nst
     call set_pointers()
 
     if (iand(TERM_OTHERS, terms_) /= 0) then
-      
+
       ! all functions that require the gradient or other derivatives of
       ! epsi should go after this point and calculate it using Xget_grad
 
@@ -168,35 +172,42 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
       ! potentials are considered
 
       nullify(grad)
-      
+
       if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) call X(exchange_operator)(hm, der, epsi, hpsi, ist, ik)
-      
+
       if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) &
         call X(h_mgga_terms) (hm, der, epsi, hpsi, ik, grad)
 
       if(present(time)) call X(vborders) (der, hm, epsi, hpsi)
 
       SAFE_DEALLOCATE_P(grad)
-   
+
     end if
   end do
 
   if(apply_phase) then
+    call profiling_in(phase_prof)
     ! now we need to remove the exp(-i k.r) factor
     do sp = 1, der%mesh%np, bs
-      do ii = 1, nst
-        call set_pointers()
-        
-        call profiling_in(phase_prof)
-        
-        forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, der%mesh%np))
-          hpsi(ip, idim) = conjg(hm%phase(ip, ik))*hpsi(ip, idim)
+      
+      if(batch_is_packed(hpsib)) then
+        forall (ist = 1:hpsib%nst_linear, ip = sp:min(sp + bs - 1, der%mesh%np))
+          hpsib%pack%X(psi)(ist, ip) = conjg(hm%phase(ip, ik))*hpsib%pack%X(psi)(ist, ip)
         end forall
-
-        call profiling_out(phase_prof)
-        
-      end do
+      else
+        do ii = 1, nst
+          call set_pointers()
+          
+          forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, der%mesh%np))
+            hpsi(ip, idim) = conjg(hm%phase(ip, ik))*hpsi(ip, idim)
+          end forall
+        end do
+      end if
     end do
+
+    call profiling_out(phase_prof)
+
+    if(batch_is_packed(epsib)) call batch_unpack(epsib, copy = .false.)
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
   end if

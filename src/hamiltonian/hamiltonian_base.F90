@@ -90,10 +90,12 @@ module hamiltonian_base_m
     integer                           :: nprojector_matrices
     logical                           :: apply_projector_matrices
     integer                           :: full_projection_size
-#ifdef HAVE_OPENCL
     integer                           :: max_npoints
     integer                           :: total_points
     integer                           :: max_nprojs
+    CMPLX,                    pointer :: projector_phases(:, :, :)
+    integer,                  pointer :: projector_to_atom(:)
+#ifdef HAVE_OPENCL
     type(opencl_mem_t)                :: potential_opencl
     type(opencl_mem_t)                :: buff_offsets
     type(opencl_mem_t)                :: buff_sizes
@@ -308,6 +310,8 @@ contains
         call projector_matrix_deallocate(this%projector_matrices(iproj))
       end do
       SAFE_DEALLOCATE_P(this%projector_matrices)
+      SAFE_DEALLOCATE_P(this%projector_phases)
+      SAFE_DEALLOCATE_P(this%projector_to_atom)
     end if
 
   end subroutine hamiltonian_base_destroy_proj
@@ -335,10 +339,13 @@ contains
     this%nprojector_matrices = 0
     this%apply_projector_matrices = .false.
 
+    SAFE_ALLOCATE(this%projector_to_atom(1:epot%natoms))
+
     do iatom = 1, epot%natoms
       if(projector_is(epot%proj(iatom), M_KB)) then
         INCR(this%nprojector_matrices, 1)
         this%apply_projector_matrices = .true.
+        this%projector_to_atom(this%nprojector_matrices) = iatom
       else if(.not. projector_is_null(epot%proj(iatom))) then
         ! for the moment only KB projectors are supported
         this%apply_projector_matrices = .false.
@@ -347,13 +354,13 @@ contains
     end do
 
     if(mesh%use_curvilinear) this%apply_projector_matrices = .false.
-    if(simul_box_is_periodic(mesh%sb)) this%apply_projector_matrices = .false.
+    if(simul_box_is_periodic(mesh%sb) .and. opencl_is_enabled()) this%apply_projector_matrices = .false.
 
     if(.not. this%apply_projector_matrices) then
       POP_SUB(hamiltonian_base_build_proj)
       return
     end if
-    
+
     SAFE_ALLOCATE(this%projector_matrices(1:this%nprojector_matrices))
 
     this%full_projection_size = 0
@@ -397,9 +404,22 @@ contains
 
       forall(ip = 1:pmat%npoints) pmat%map(ip) = epot%proj(iatom)%sphere%jxyz(ip)
 
-       INCR(this%full_projection_size, pmat%nprojs)
+      INCR(this%full_projection_size, pmat%nprojs)
 
     end do
+
+    this%total_points = 0
+    this%max_npoints = 0
+    this%max_nprojs = 0
+    do imat = 1, this%nprojector_matrices
+      pmat => this%projector_matrices(imat)
+
+      this%max_npoints = max(this%max_npoints, pmat%npoints)
+      this%max_nprojs = max(this%max_nprojs, pmat%nprojs)
+      INCR(this%total_points, pmat%npoints)
+    end do
+    
+    nullify(this%projector_phases)
 
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled()) call build_opencl()
@@ -420,7 +440,7 @@ contains
       SAFE_ALLOCATE(offsets(1:4, 1:this%nprojector_matrices))
       SAFE_ALLOCATE(sizes(1:2, 1:this%nprojector_matrices))
       SAFE_ALLOCATE(cnt(1:mesh%np))
-      
+
       cnt = 0
 
       ! first we count
@@ -434,13 +454,13 @@ contains
 
         this%max_npoints = max(this%max_npoints, pmat%npoints)
         this%max_nprojs = max(this%max_nprojs, pmat%nprojs)
-        
+
         sizes(POINTS, imat) = pmat%npoints
         sizes(PROJS, imat) = pmat%nprojs
 
         offsets(MATRIX, imat) = matrix_size
         INCR(matrix_size, pmat%npoints*pmat%nprojs)
-        
+
         offsets(MAP, imat) = this%total_points
         INCR(this%total_points, pmat%npoints)
 
@@ -456,7 +476,7 @@ contains
       SAFE_ALLOCATE(invmap(1:maxval(cnt), 1:mesh%np))
       SAFE_ALLOCATE(invmap2(1:maxval(cnt)*mesh%np))
       SAFE_ALLOCATE(pos(1:mesh%np + 1))
-      
+
       cnt = 0
       ii = 0
       do imat = 1, this%nprojector_matrices
@@ -478,7 +498,7 @@ contains
         end do
         pos(ip + 1) = ipos
       end do
-      
+
       ! allocate
       call opencl_create_buffer(this%buff_matrices, CL_MEM_READ_ONLY, TYPE_FLOAT, matrix_size)
       call opencl_create_buffer(this%buff_maps, CL_MEM_READ_ONLY, TYPE_INTEGER, this%total_points)
@@ -487,7 +507,7 @@ contains
       ! now copy
       do imat = 1, this%nprojector_matrices
         pmat => this%projector_matrices(imat)
-        
+
         call opencl_write_buffer(this%buff_matrices, pmat%nprojs*pmat%npoints, pmat%projectors, offset = offsets(MATRIX, imat))
         call opencl_write_buffer(this%buff_maps, pmat%npoints, pmat%map, offset = offsets(MAP, imat))
         call opencl_write_buffer(this%buff_scals, pmat%nprojs, pmat%scal, offset = offsets(SCAL, imat))

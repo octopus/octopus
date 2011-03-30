@@ -343,6 +343,14 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
         end forall
       end if
 
+      if(associated(this%projector_phases)) then
+        forall(ip = 1:npoints)
+          forall(ist = 1:nst)
+            psi(ist, ip) = this%projector_phases(ip, imat, ik)*psi(ist, ip)
+          end forall
+        end forall
+      end if
+
       call profiling_out(prof_gather)
       
       ! Now matrix-multiply to calculate the projections.
@@ -453,6 +461,15 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
       call profiling_count_operations(nreal*nprojs*M_TWO*npoints)
 
       call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
+
+      if(associated(this%projector_phases)) then
+        forall(ip = 1:npoints)
+          forall(ist = 1:nst)
+            psi(ist, ip) = conjg(this%projector_phases(ip, imat, ik))*psi(ist, ip)
+          end forall
+        end forall
+      end if
+      
       ! and copy the points from the local buffer to its position
       ! MISSING: phases
       if(batch_is_packed(vpsib)) then
