@@ -286,6 +286,7 @@ contains
 
     integer :: ik, ist, idir, idim, iatom
     CMPLX, allocatable :: gpsi(:, :, :), epsi(:, :)
+    FLOAT, allocatable :: microcurrent(:, :)
     type(profile_t), save :: prof
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
@@ -296,9 +297,9 @@ contains
 
     SAFE_ALLOCATE(epsi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%dim))
+    SAFE_ALLOCATE(microcurrent(1:gr%mesh%np_part, 1:gr%sb%dim))
 
-    force%vecpot(1:MAX_DIM) = M_ZERO
-    
+    microcurrent = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
 
@@ -323,13 +324,20 @@ contains
         end do
         
         do idir = 1, gr%sb%dim
-          force%vecpot(idir) = force%vecpot(idir) + M_FOUR * M_PI * P_c / gr%sb%rcell_volume * &
-            st%d%kweights(ik) * st%occ(ist, ik) * aimag(zmf_dotp(gr%mesh, st%d%dim, epsi, gpsi(:, idir, :)))
+          do idim = 1, st%d%dim
+            microcurrent(1:gr%mesh%np, idir) = microcurrent(1:gr%mesh%np, idir) + &
+              M_FOUR*M_PI*P_c/gr%sb%rcell_volume*st%d%kweights(ik)*st%occ(ist, ik)*&
+              aimag(conjg(epsi(1:gr%mesh%np, idim))*gpsi(1:gr%mesh%np, idir, idim))
+          end do
         end do
         
       end do
     end do
-    
+
+    do idir = 1, gr%sb%dim
+      force%vecpot(idir) = dmf_integrate(gr%mesh, microcurrent(:, idir))
+    end do
+
 #ifdef HAVE_MPI
     if(st%parallel_in_states) then
       call MPI_Allreduce(force%vecpot, force_tmp, MAX_DIM, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
