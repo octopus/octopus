@@ -43,6 +43,7 @@ module gauge_field_m
   use states_m
   use states_dim_m
   use submesh_m
+  use symmetrizer_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -286,8 +287,9 @@ contains
 
     integer :: ik, ist, idir, idim, iatom
     CMPLX, allocatable :: gpsi(:, :, :), epsi(:, :)
-    FLOAT, allocatable :: microcurrent(:, :)
+    FLOAT, allocatable :: microcurrent(:, :), symmcurrent(:, :)
     type(profile_t), save :: prof
+    type(symmetrizer_t) :: symmetrizer
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
@@ -333,6 +335,15 @@ contains
         
       end do
     end do
+
+    if(st%symmetrize_density) then
+      SAFE_ALLOCATE(symmcurrent(1:gr%mesh%np, 1:gr%sb%dim))
+      call symmetrizer_init(symmetrizer, gr%mesh)
+      call dsymmetrizer_apply_vector(symmetrizer, microcurrent, symmcurrent)
+      microcurrent(1:gr%mesh%np, 1:gr%sb%dim) = symmcurrent(1:gr%mesh%np, 1:gr%sb%dim)
+      call symmetrizer_end(symmetrizer)
+      SAFE_DEALLOCATE_A(symmcurrent)
+    end if
 
     do idir = 1, gr%sb%dim
       force%vecpot(idir) = dmf_integrate(gr%mesh, microcurrent(:, idir))
