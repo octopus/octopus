@@ -247,7 +247,7 @@ contains
     integer :: ispin
     integer :: offset
 
-    PUSH_SUB(hamiltonian_check)
+    PUSH_SUB(hamiltonian_base_update)
 
     if(associated(this%uniform_vector_potential) .and. associated(this%vector_potential)) then
       call unify_vector_potentials()
@@ -265,12 +265,14 @@ contains
     end if
 #endif
 
-    POP_SUB(hamiltonian_check)
+    POP_SUB(hamiltonian_base_update)
 
   contains
 
     subroutine unify_vector_potentials()
       integer :: idir, ip
+
+      PUSH_SUB(hamiltonian_base_update.unify_vector_potentials)
       
       ! copy the uniform vector potential onto the non-uniform one
       forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
@@ -280,7 +282,7 @@ contains
       
       ! and deallocate
       SAFE_DEALLOCATE_P(this%uniform_vector_potential)
-      
+      POP_SUB(hamiltonian_base_update.unify_vector_potentials)      
     end subroutine unify_vector_potentials
 
   end subroutine hamiltonian_base_update
@@ -291,6 +293,8 @@ contains
     type(hamiltonian_base_t), intent(inout) :: this
 
     integer :: iproj
+
+    PUSH_SUB(hamiltonian_base_destroy_proj)
 
     if(associated(this%projector_matrices)) then
 
@@ -314,6 +318,7 @@ contains
       SAFE_DEALLOCATE_P(this%projector_to_atom)
     end if
 
+    POP_SUB(hamiltonian_base_destroy_proj)
   end subroutine hamiltonian_base_destroy_proj
 
   !-----------------------------------------------------------------
@@ -437,6 +442,8 @@ contains
       integer, parameter   :: MATRIX = 1, MAP = 2, SCAL = 3
       integer              :: ip, is, ii, ipos
 
+      PUSH_SUB(hamiltonian_base_build_proj.build_opencl)
+
       SAFE_ALLOCATE(offsets(1:4, 1:this%nprojector_matrices))
       SAFE_ALLOCATE(sizes(1:2, 1:this%nprojector_matrices))
       SAFE_ALLOCATE(cnt(1:mesh%np))
@@ -537,6 +544,7 @@ contains
 
 #endif  
 
+      POP_SUB(hamiltonian_base_build_proj.build_opencl)
     end subroutine build_opencl
 
   end subroutine hamiltonian_base_build_proj
@@ -560,8 +568,6 @@ contains
 #include "hamiltonian_base_inc.F90"
 
 end module hamiltonian_base_m
-
-
 
 !! Local Variables:
 !! mode: f90
