@@ -255,17 +255,9 @@ contains
     type(states_t),       intent(in)    :: st
     FLOAT,                intent(in)    :: dt
     
-    integer :: ik
-    FLOAT :: n_el
-
     PUSH_SUB(gauge_field_init_vec_pot)
 
-    n_el = M_ZERO
-    do ik = 1, st%d%spin_channels
-      n_el = n_el + dmf_integrate(mesh, st%rho(1:mesh%np, ik))
-    end do
-    
-    this%wp2 = M_FOUR * M_PI * n_el / sb%rcell_volume
+    this%wp2 = M_FOUR*M_PI*st%qtot/sb%rcell_volume
 
     write (message(1), '(a,f12.6,a)') "Info: Electron-gas plasmon frequency", &
          units_from_atomic(units_out%energy, sqrt(this%wp2)), " ["//trim(units_abbrev(units_out%energy))//"]"
