@@ -22,6 +22,7 @@ match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
 match ; <Sx>         ; GREP(static/info, '1   --', 36) ;  0.1975
 match ; <Sy>         ; GREP(static/info, '1   --', 44) ;  0.1975
 match ; <Sz>         ; GREP(static/info, '1   --', 52) ;  0.4147
+Precision : 0.00021
 match ; mx           ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ; 0.394958
 match ; my           ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ; 0.394958
 match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.829468
