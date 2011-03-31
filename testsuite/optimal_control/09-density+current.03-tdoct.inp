@@ -57,8 +57,9 @@ OCTTargetDensity = "OCTTargetDensityFromState"
  0 | 1 
 %
 
-OCTCurrentFunctional =  oct_min_curr_td
-OCTCurrentWeight = 5 
+OCTCurrentFunctional =  oct_curr_square_td
+# minmize current
+OCTCurrentWeight = -5 
 
 OCTControlRepresentation = control_function_parametrized
 

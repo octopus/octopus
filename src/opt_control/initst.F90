@@ -156,6 +156,7 @@ module opt_control_initst_m
       !%Type block
       !%Section Calculation Modes::Optimal Control
       !%Description
+      !% Define an initial state. Syntax follows the one of the <tt>UserDefinedStates</tt> block.
       !% Example:
       !%
       !% <tt>%OCTInitialUserdefined

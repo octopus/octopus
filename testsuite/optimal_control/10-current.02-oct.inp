@@ -54,8 +54,12 @@ OCTInitialState = oct_is_groundstate
 
 OCTTargetOperator = oct_tg_current
 
-OCTCurrentFunctional =  oct_min_curr
-OCTCurrentWeight = 10.
+OCTCurrentFunctional =  oct_curr_square
+OCTCurrentWeight = -10.
+%OCTSpatialCurrWeight
+1 |3 |-2  | 5
+%
+
 
 OCTDoubleCheck = yes 
 

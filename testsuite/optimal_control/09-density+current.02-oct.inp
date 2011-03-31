@@ -58,8 +58,9 @@ OCTTargetDensity = "OCTTargetDensityFromState"
  0 | 1
 %
 
-OCTCurrentFunctional =  oct_min_curr
-OCTCurrentWeight = 10.
+OCTCurrentFunctional =  oct_curr_square
+# minimize current:
+OCTCurrentWeight = -10.
 
 OCTDoubleCheck = no
 
