@@ -208,9 +208,9 @@ contains
       !%Section SCF::Eigensolver
       !%Description
       !% During the first iterations, the RMMDIIS eigensolver requires
-      !% some steepest descent minimizations to improve
+      !% some steepest-descent minimizations to improve
       !% convergence. This variable determines the number of those
-      !% minimzations. The default is 5.
+      !% minimizations. The default is 5.
       !%End
 
       call parse_integer(datasets_check('EigensolverMinimizationIter'), 5, eigens%rmmdiis_minimization_iter)
@@ -255,13 +255,12 @@ contains
 
     !%Variable EigensolverMaxIter
     !%Type integer
-    !%Default 25
     !%Section SCF::Eigensolver
     !%Description
     !% Determines the maximum number of iterations that the
     !% eigensolver will perform if the desired tolerance is not
     !% achieved. The default is 25 iterations for all eigensolvers
-    !% except for <tt>rmdiis</tt>, which only performs one iteration (only
+    !% except for <tt>rmdiis</tt>, which performs only 3 iterations (only
     !% increase it if you know what you are doing).
     !%End
     call parse_integer(datasets_check('EigensolverMaxIter'), default_iter, eigens%es_maxiter)
