@@ -846,7 +846,7 @@ module opt_control_target_m
               call messages_fatal(3)
             end if
             cstr_dim(idim) = 1
-            xp = gr%mesh%x(1:gr%mesh%np, idim)
+            xp(1:gr%mesh%np_part) = gr%mesh%x(1:gr%mesh%np_part, idim)
 
             call parse_block_float(blk, ib - 1, 1, fact)
 
