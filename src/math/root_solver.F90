@@ -81,7 +81,7 @@ contains
     FLOAT, optional,     intent(in)  :: rel_tolerance, abs_tolerance, ws_radius
     logical, optional,   intent(in)  :: have_polynomial
 
-    PUSH_SUB(root_solver_init)
+    ! no push_sub, called too often
 
     ! Fill in the defaults
     rs%dim             = dimensionality
@@ -99,7 +99,6 @@ contains
     if(present(have_polynomial)) rs%have_polynomial = have_polynomial
     if(present(ws_radius))       rs%ws_radius       = ws_radius
 
-    POP_SUB(root_solver_init)
   end subroutine root_solver_init
 
 
@@ -327,7 +326,7 @@ contains
     FLOAT   :: err
     FLOAT, allocatable :: f(:), jf(:, :), delta(:, :), rhs(:, :)
 
-    PUSH_SUB(droot_newton)
+    ! no push_sub, called too often
 
     SAFE_ALLOCATE(    f(1:rs%dim))
     SAFE_ALLOCATE(   jf(1:rs%dim, 1:rs%dim))
@@ -357,7 +356,7 @@ contains
     SAFE_DEALLOCATE_A(jf)
     SAFE_DEALLOCATE_A(delta)
     SAFE_DEALLOCATE_A(rhs)
-    POP_SUB(droot_newton)
+
   end subroutine droot_newton
 
 

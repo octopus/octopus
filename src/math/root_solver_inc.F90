@@ -34,7 +34,7 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, interval_, coef
 
 !!$  FLOAT :: interval(2) 
 
-  PUSH_SUB(X(root_solver_run))
+  ! no push_sub, called too often
 
   ! Initializations
   root = M_ZERO
@@ -114,7 +114,6 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, interval_, coef
     call messages_fatal(2)
   end select
 
-  POP_SUB(X(root_solver_run))
 end subroutine X(root_solver_run)
 
 
