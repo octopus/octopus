@@ -211,12 +211,12 @@ contains
       !%Default no
       !%Section Hamiltonian::XC
       !%Description
-      !% (Experimental) This variable enables to apply a correction to
+      !% (Experimental) This variable applies a correction to
       !% the value of the XC functional in near-zero-density regions.
       !% This zone might have numerical noise or it might 
       !% even be set to zero by <tt>libxc</tt>.
-      !% The correction is performed by forcing the "-1/r behaviour" of the XC potential
-      !% in the zones where the density is lower then XCTailCorrectionTol.
+      !% The correction is performed by forcing the "-1/<i>r</i> behaviour" of the XC potential
+      !% in the zones where the density is lower then <tt>XCTailCorrectionTol</tt>.
       !%End
       call parse_logical(datasets_check('XCTailCorrection'), .false., ks%tail_correction)
       
@@ -242,10 +242,11 @@ contains
         !%Default 1
         !%Section Hamiltonian::XC
         !%Description
-        !% (Experimental) This variable force a smooth transition beetween the region where the values of the XC functional 
-        !% have been previously calculated and the region where the -1/r correction has been applied. 
+        !% (Experimental) This variable forces a smooth transition between the region where the values of the XC functional 
+        !% have been previously calculated and the region where the -1/<i>r</i> correction has been applied. 
         !% The region of the transition starts where the electronic total density reaches the value of
-        !% (XCTailCorrectionLinkFactor * XCTailCorrectionTol) and ends where the density reaches the value of XCTailCorrectionTol
+        !% (<tt>XCTailCorrectionLinkFactor</tt> * <tt>XCTailCorrectionTol</tt>) and ends where the density reaches
+        !% the value of <tt>XCTailCorrectionTol</tt>.
         !%End
         call parse_float(datasets_check('XCTailCorrectionLinkFactor'), CNST(1.0), ks%tc_link_factor)
       
@@ -254,9 +255,9 @@ contains
         !%Default 0
         !%Section Hamiltonian::XC
         !%Description
-        !% (Experimental) This variable allows to skip the application of the tail correction during the first calls of the
-        !% subroutine that build the exchange-correlation potential (XCTailCorrectionDelay = number of calls skipped):
-        !%this can avoid problems caused by eventual initial guess wavefunctions.
+        !% (Experimental) This variable skips the application of the tail correction during the first calls of the
+        !% subroutine that build the exchange-correlation potential (<tt>XCTailCorrectionDelay</tt> = number of calls skipped):
+        !%this can avoid problems caused by initial guess wavefunctions.
         !%End
         call parse_integer(datasets_check('XCTailCorrectionDelay'), 0, ks%tc_delay)
 
@@ -265,17 +266,13 @@ contains
         !%Default 0
         !%Section Hamiltonian::XC
         !%Description
-        !% (Experimental) This variable allows the application of the tail correction to the xc potential only where
-        !% the distance of the local point from the center of mass of the system is greater than XCTailCorrectionCMDistance
+        !% (Experimental) This variable allows the application of the tail correction to the XC potential only where
+        !% the distance of the local point from the center of mass of the system is greater than
+        !% <tt>XCTailCorrectionCMDistance</tt>.
         !%End
         call parse_float(datasets_check('XCTailCorrectionCMDistance'), M_ZERO, ks%tc_distance)
       end if
-
       
-      
-
-
-
       if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
         call xc_oep_init(ks%oep, ks%xc_family, gr, dd)
       endif
@@ -615,11 +612,9 @@ contains
 
     !---------------------------------------------
 
-
     subroutine tail_correction(vxc,geo)
-
-      FLOAT,             intent(inout) :: vxc(:, :) 
-      type(geometry_t),  intent(in) :: geo
+      FLOAT,            intent(inout) :: vxc(:, :) 
+      type(geometry_t), intent(in)    :: geo
       
       FLOAT :: pos(MAX_DIM), distance_origin, distance_cm
       FLOAT, allocatable :: vxcc(:)
@@ -629,8 +624,7 @@ contains
       integer :: ierr, itmp
       integer , save :: counter = 0
       character(len=10) :: vxc_name
-      logical :: to_calc
-      
+      logical :: to_calc   
 
       PUSH_SUB(v_ks_calc_start.tail_correction)
       
@@ -650,7 +644,7 @@ contains
             to_calc = .false.
             if ((st%occ(ist,ik) .ne. M_ZERO) .and. (counter .gt. ks%tc_delay) ) to_calc = .true.
             
-            ! "If the state is not occupied and the call counter is greater than the desired value
+            ! If the state is not occupied and the call counter is greater than the desired value
             ! don't apply the correction and cycle
             if (to_calc .eqv. .false.) cycle 
             
@@ -671,9 +665,8 @@ contains
               call cm_pos(geo,pos)
               pos = M_ZERO
               if (ks%gr%mesh%sb%dim .ne. MAX_DIM) then
-                write(message(1),'(a)') "Error: simulation box dimension different from the dimension used in subroutine cm_pos"
-                call messages_info(1)
-                stop
+                message(1) = "Simulation box dimension different from the dimension used in subroutine cm_pos."
+                call messages_fatal(1)
               end if
               
               do idim = 1,ks%gr%mesh%sb%dim 
