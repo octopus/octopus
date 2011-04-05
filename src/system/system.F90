@@ -203,7 +203,7 @@ contains
     call states_fermi(sys%st, sys%gr%mesh)
     call density_calc(sys%st, sys%gr, sys%st%rho)
 
-    call v_ks_calc(sys%ks, hm, sys%st, calc_eigenval = .true.) ! get potentials
+    call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .true.) ! get potentials
     call states_fermi(sys%st, sys%gr%mesh)                             ! occupations
     call total_energy(hm, sys%gr, sys%st, -1)
 

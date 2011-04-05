@@ -59,7 +59,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
   FLOAT, allocatable :: symmtmp(:, :)  ! Temporary vector for the symmetrizer
 
   integer :: ib, ib2, ip, isp, families, ixc, spin_channels
-  FLOAT   :: rr
+  integer, save :: xc_get_vxc_counter = 0
+  FLOAT   :: rr,ipot_to_pass
   logical :: gga, mgga
   type(profile_t), save :: prof
   logical :: calc_energy
@@ -68,9 +69,14 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
 
   PUSH_SUB(xc_get_vxc)
   call profiling_in(prof, "XC_LOCAL")
-
+  
   ASSERT(present(ex) .eqv. present(ec))
   calc_energy = present(ex)
+  
+  xc_get_vxc_counter = xc_get_vxc_counter + 1
+  !xprint*, "xc_get_vxc call number ", xc_get_vxc_counter
+  
+
 
   !Pointer-shortcut for xcs%functl
   !It helps to remember that for xcs%functl(:,:)
@@ -113,7 +119,12 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
       call dderivatives_grad(der, dens(:, isp), gdens(:, :, isp)) 
     end do
   else if(mgga) then
-
+    if (xc_get_vxc_counter .le. 2) then 
+      ipot_to_pass = M_ONE
+    else
+      ipot_to_pass = ioniz_pot
+    end if
+    !print *, "Ioniz potential to pass =", ipot_to_pass
     ! We calculate everything from the wavefunctions to benefit from
     ! the error cancellation between the gradient of the density and
     ! tau.

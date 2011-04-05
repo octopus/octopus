@@ -449,11 +449,11 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, hm, sys%st, calc_eigenval=.false., calc_berry=.false.)
+      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
     else
-      call v_ks_calc(sys%ks, hm, sys%st, calc_eigenval=.true.)
+      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.true.)
 
       if(st_start .gt. sys%st%nst) then ! nothing to be done in LCAO
         POP_SUB(lcao_run)
@@ -545,7 +545,7 @@ contains
         message(1) = "Orthogonalizing random wavefunctions."
         call messages_info(1)
         call states_orthogonalize(sys%st, sys%gr%mesh)
-        call v_ks_calc(sys%ks, hm, sys%st, calc_eigenval=.true.) ! get potentials
+        call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.true.) ! get potentials
         call states_fermi(sys%st, sys%gr%mesh)                           ! occupations
       end if
 

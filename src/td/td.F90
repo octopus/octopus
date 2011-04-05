@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -225,7 +225,7 @@ contains
             ions = td%ions, geo = sys%geo, scsteps = scsteps)
         else
           call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, td%max_iter, iter, gauge_force, &
-            scsteps = scsteps)
+            geo=sys%geo, scsteps = scsteps)
         end if
       case(BO)
         ! move the hamiltonian to time t
@@ -272,7 +272,7 @@ contains
         end if
 
         ! update Hamiltonian and eigenvalues (fermi is *not* called)
-        call v_ks_calc(sys%ks, hm, st, calc_eigenval = update_energy, time = iter*td%dt, calc_energy = update_energy)
+        call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval = update_energy, time = iter*td%dt, calc_energy = update_energy)
         
         ! Get the energies.
         if(update_energy) call total_energy(hm, sys%gr, st, iunit = -1)
@@ -556,21 +556,21 @@ contains
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call messages_info(1)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(sys%ks, hm, st, calc_eigenval=.true., time = td%iter*td%dt)
+        call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       elseif(freeze_orbitals < 0) then
         ! This means SAE approximation. We calculate the Hxc first, then freeze all
         ! orbitals minus one.
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call messages_info(1)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(sys%ks, hm, st, calc_eigenval=.true., time = td%iter*td%dt)
+        call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
         call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
         call v_ks_freeze_hxc(sys%ks)
         call density_calc(st, gr, st%rho)
       else
         ! Normal run.
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(sys%ks, hm, st, calc_eigenval=.true., time = td%iter*td%dt)
+        call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       end if
 
       x = minval(st%eigenval(st%st_start, :))
