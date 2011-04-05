@@ -790,7 +790,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   FLOAT, allocatable :: work(:)
   logical :: invert_
 
-  PUSH_SUB(ddeterminant)
+  ! No PUSH_SUB, called to often
 
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
@@ -821,7 +821,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
-  POP_SUB(ddeterminant)
+
 end function ddeterminant
 
 
@@ -1022,7 +1022,7 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
   FLOAT, allocatable :: ferr(:), berr(:), work(:), r(:), c(:), af(:,:)
   character(1) :: equed
 
-  PUSH_SUB(dlinsyssolve)
+  ! no PUSH_SUB, called too often
 
   SAFE_ALLOCATE(ipiv(1:n))
   SAFE_ALLOCATE(iwork(1:n))
@@ -1055,7 +1055,6 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
   SAFE_DEALLOCATE_A(c)
   SAFE_DEALLOCATE_A(af)
 
-  POP_SUB(dlinsyssolve)
 end subroutine dlinsyssolve
 
 ! ---------------------------------------------------------
