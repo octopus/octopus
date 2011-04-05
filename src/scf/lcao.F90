@@ -121,7 +121,13 @@ contains
     nullify(this%atom)
     nullify(this%level)
     nullify(this%ddim)
-
+    nullify(this%radius)
+    nullify(this%basis_atom)
+    nullify(this%basis_orb)
+    nullify(this%atom_orb_basis)
+    nullify(this%norb_atom)
+    nullify(this%calc_atom)
+    
     this%initialized = .true.
 
     !%Variable LCAOAlternative
@@ -240,13 +246,6 @@ contains
 
       ASSERT(this%norbs >= st%nst)
       ASSERT(this%norbs <= this%maxorbs)
-      
-      nullify(this%radius)
-      nullify(this%basis_atom)
-      nullify(this%basis_orb)
-      nullify(this%atom_orb_basis)
-      nullify(this%norb_atom)
-      nullify(this%calc_atom)
     else
       call lcao2_init()
     end if
