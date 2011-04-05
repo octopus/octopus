@@ -73,7 +73,9 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
       if(abs(delta_e) >= CNST(1e-5)) then
         beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(Theta_Fi(ist) - Theta_Fi(jst))/delta_e
       else
-        if(st%smear%method .ne. SMEAR_FIXED_OCC) then 
+        ! cannot calculate for fixed occ or dynamic case, ignore
+        ! the kernel is supposed to kill off these KS resonances anyway
+        if(st%smear%method .ne. SMEAR_FIXED_OCC .and. abs(omega) > M_EPSILON) then 
           xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
           beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(smear_delta_function(st%smear, xx)/dsmear)
         endif
