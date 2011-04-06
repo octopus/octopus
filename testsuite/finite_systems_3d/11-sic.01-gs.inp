@@ -22,10 +22,11 @@ SICCorrection = sic_pz
 OEP_Level = oep_kli
 
 EigenSolver = cg_new
-EigenSolverInitTolerance = 1e-2
+EigenSolverInitTolerance = 1e-4
 EigenSolverFinalTolerance = 1e-5
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
-ConvRelDens = 1.0e-4
+Mixing = 0.1
+ConvRelDens = 5e-5
 
