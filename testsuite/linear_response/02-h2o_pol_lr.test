@@ -20,13 +20,13 @@ match ; Polarizability XX w=0.1    ; LINE(em_resp/freq_0.1000/alpha, 2,  5) ; 15
 match ; Polarizability YY w=0.1    ; LINE(em_resp/freq_0.1000/alpha, 3, 25) ; 12.856808
 match ; Polarizability ZZ w=0.1    ; LINE(em_resp/freq_0.1000/alpha, 4, 45) ; 29.766976
 
-match ; Born charge O XX w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 5,  5) ; -0.151322
-match ; Born charge O YY w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 6, 25) ; -0.349310
-match ; Born charge O ZZ w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 7, 45) ; -0.032368
+match ; Born charge O XX w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 3,  5) ; -0.151322
+match ; Born charge O YY w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 4, 25) ; -0.349310
+match ; Born charge O ZZ w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 5, 45) ; -0.032368
 
-match ; Born charge O XX w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 5,  5) ; -0.196726
-match ; Born charge O YY w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 6, 25) ; -0.408311
-match ; Born charge O ZZ w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 7, 45) ;  0.145284
+match ; Born charge O XX w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 3,  5) ; -0.196726
+match ; Born charge O YY w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 4, 25) ; -0.408311
+match ; Born charge O ZZ w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 5, 45) ;  0.145284
 
 Input: 02-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp
 Precision : 0.001
