@@ -272,7 +272,7 @@ contains
       !%Default yes
       !%Section SCF::LCAO
       !%Description
-      !% If set to yes (the default) Octopus keeps atomic arbitals in
+      !% If set to yes (the default) Octopus keeps atomic orbitals in
       !% memory during the LCAO procedure. If set to no, the orbitals
       !% are generated each time that they are needed, increasing
       !% computational time but saving memory.

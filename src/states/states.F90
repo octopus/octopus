@@ -504,7 +504,7 @@ contains
     !%Default yes
     !%Section States
     !%Description
-    !% If true, a term including the (paramagnetic or total) current is included in the calculation ot the kinetic energy density 
+    !% If true, a term including the (paramagnetic or total) current is included in the calculation of the kinetic-energy density.
     !%End
     call parse_logical(datasets_check('CurrentInTau'), .true., st%current_in_tau)
 
