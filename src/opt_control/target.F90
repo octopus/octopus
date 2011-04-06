@@ -782,9 +782,11 @@ module opt_control_target_m
       !% If not specified, g(x) = 1. 
       !% 
       !% Each g(x) is represented by one line of the block that has the following form
+      !%
       !% <tt>%OCTSpatialCurrWeight
       !% <br>&nbsp;&nbsp;  dimension  |  fact |  startpoint_1  | endpoint_1  | startpoint_2 | endpoint_2 |...
       !% <br>%</tt>
+      !%
       !% There are no restrictions on the number of lines, nor on the number of pairs of start- and endpoints. 
       !% Attention: <tt>startpoint</tt> and <tt>endpoint</tt> have to be supplied pairwise 
       !% with <tt>startpoint .lt. endpoint</tt>. <tt>dimension .gt. 0</tt> is integer, <tt>fact</tt> is float.

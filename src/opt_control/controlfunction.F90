@@ -1158,8 +1158,9 @@ contains
           ft = ft * dt
           write(iunit,'(3es20.8e3)') ww, real(ft), aimag(ft)
         end do
+        call io_close(iunit)
       end do
-      call io_close(iunit)
+      
 
     case(controlfunction_mode_f, controlfunction_mode_phi)
       iunit = io_open(trim(filename)//'/cpw', action='write')
