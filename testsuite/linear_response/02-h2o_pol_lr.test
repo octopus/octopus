@@ -49,9 +49,9 @@ match ; Born charge O XX w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 5,  5
 match ; Born charge O YY w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 6, 25) ; -0.407578
 match ; Born charge O ZZ w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 7, 45) ;  0.132121
 
-match ; Born charge O XX w=0.1    ; LINE(em_resp/freq_-0.2000/Born_charges, 5,  5) ; -0.366367
-match ; Born charge O YY w=0.1    ; LINE(em_resp/freq_-0.2000/Born_charges, 6, 25) ; -0.625975
-match ; Born charge O ZZ w=0.1    ; LINE(em_resp/freq_-0.2000/Born_charges, 7, 45) ; -1.699907
+match ; Born charge O XX w=-0.2   ; LINE(em_resp/freq_-0.2000/Born_charges, 5,  5) ; -0.366367
+match ; Born charge O YY w=-0.2   ; LINE(em_resp/freq_-0.2000/Born_charges, 6, 25) ; -0.625975
+match ; Born charge O ZZ w=-0.2   ; LINE(em_resp/freq_-0.2000/Born_charges, 7, 45) ; -1.699907
 
 Precision : 0.02
 match ; Hyperpolarizability w=0.0    ; GREP(em_resp/freq_0.0000/beta, 'beta // y', 10) ; -0.23080418E+02
