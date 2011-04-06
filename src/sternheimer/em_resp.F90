@@ -825,7 +825,10 @@ contains
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
       call out_polarizability()
-      if(em_vars%calc_Born) call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%sb%dim, dirname)
+      if(em_vars%calc_Born) then
+        call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%sb%dim, dirname, &
+          states_are_real(st))
+      endif
     else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       call out_susceptibility()
     end if

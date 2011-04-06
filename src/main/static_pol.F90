@@ -676,7 +676,10 @@ contains
         freq_factor(1:3) = M_ZERO ! for compatibility with em_resp version
         call out_hyperpolarizability(gr%sb, beta, freq_factor(1:3), .true., EM_RESP_FD_DIR)
 
-        if(calc_Born) call out_Born_charges(Born_charges, sys%geo, gr%mesh%sb%dim, EM_RESP_FD_DIR)
+        if(calc_Born) then
+          call out_Born_charges(Born_charges, sys%geo, gr%mesh%sb%dim, EM_RESP_FD_DIR, &
+            states_are_real(sys%st))
+        endif
       end if
 
       if(iand(sys%outp%what, C_OUTPUT_DENSITY) .ne. 0 .or. &

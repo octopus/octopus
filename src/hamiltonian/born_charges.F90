@@ -128,11 +128,13 @@ module born_charges_m
   end subroutine correct_Born_charges
 
   ! ---------------------------------------------------------
-  subroutine out_Born_charges(this, geo, dim, dirname)
+  subroutine out_Born_charges(this, geo, dim, dirname, write_real)
     type(Born_charges_t), intent(inout) :: this
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: dim
     character(len=*),     intent(in)    :: dirname
+    logical,              intent(in)    :: write_real
+       ! set write_real to true if they are all real, to suppress writing imaginary part and phase
 
     integer iatom, iunit
     FLOAT :: phase(1:MAX_DIM, 1:MAX_DIM)
@@ -143,38 +145,45 @@ module born_charges_m
 
     iunit = io_open(trim(dirname)//'/Born_charges', action='write')
     write(iunit,'(a)') '# (Frequency-dependent) Born effective charge tensors'
-    write(iunit,'(a)') '# Real and imaginary parts'
+    if(.not. write_real) write(iunit,'(a)') '# Real and imaginary parts'
     do iatom = 1, geo%natoms
       write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%spec)), &
         '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
 
-      write(iunit,'(a)') 'Real:'
+      if(.not. write_real) write(iunit,'(a)') 'Real:'
       call output_tensor(iunit, real(this%charge(:, :, iatom)), dim, unit_one)
 
-      write(iunit,'(a)') 'Imaginary:'
-      call output_tensor(iunit, aimag(this%charge(:, :, iatom)), dim, unit_one)
+      if(.not. write_real) then
+        write(iunit,'(a)') 'Imaginary:'
+        call output_tensor(iunit, aimag(this%charge(:, :, iatom)), dim, unit_one)
+      endif
+
       write(iunit,'(a)')
     enddo
 
-    write(iunit,'(a)') '# Magnitude and phase'
-    do iatom = 1, geo%natoms
-      write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%spec)), &
-        '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
-
-      write(iunit,'(a)') 'Magnitude:'
-      call output_tensor(iunit, TOFLOAT(abs(this%charge(:, :, iatom))), dim, unit_one)
-
-      write(iunit,'(a)') 'Phase:'
-      phase(1:dim, 1:dim) = atan2(aimag(this%charge(1:dim, 1:dim, iatom)), real(this%charge(1:dim, 1:dim, iatom)))
-      call output_tensor(iunit, phase(:, :), dim, unit_one, write_average = .false.)
-      write(iunit,'(a)')
-    enddo
+    if(.not. write_real) then
+      write(iunit,'(a)') '# Magnitude and phase'
+      do iatom = 1, geo%natoms
+        write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%spec)), &
+          '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
+        
+        write(iunit,'(a)') 'Magnitude:'
+        call output_tensor(iunit, TOFLOAT(abs(this%charge(:, :, iatom))), dim, unit_one)
+        
+        write(iunit,'(a)') 'Phase:'
+        phase(1:dim, 1:dim) = atan2(aimag(this%charge(1:dim, 1:dim, iatom)), real(this%charge(1:dim, 1:dim, iatom)))
+        call output_tensor(iunit, phase(:, :), dim, unit_one, write_average = .false.)
+        write(iunit,'(a)')
+      enddo
+    endif
 
     write(iunit,'(a)') '# Discrepancy of Born effective charges from acoustic sum rule before correction' 
-    write(iunit,'(a)') 'Real:'
+    if(.not. write_real) write(iunit,'(a)') 'Real:'
     call output_tensor(iunit, real(this%delta(:, :)), dim, unit_one)
-    write(iunit,'(a)') 'Imaginary:'
-    call output_tensor(iunit, aimag(this%delta(:, :)), dim, unit_one)
+    if(.not. write_real) then
+      write(iunit,'(a)') 'Imaginary:'
+      call output_tensor(iunit, aimag(this%delta(:, :)), dim, unit_one)
+    endif
 
     call io_close(iunit)
     POP_SUB(out_Born_charges)
