@@ -462,7 +462,7 @@ contains
       if(ks%theory_level .ne. HARTREE) call v_a_xc(geo)
     end if
 
-    if(associated(hm%ep%e_field) .and. simul_box_is_periodic(ks%gr%mesh%sb)) then
+    if(associated(hm%vberry)) then
       SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
       if(optional_default(calc_berry, .true.)) then
         call berry_potential(st, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
@@ -735,7 +735,7 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
     hm%energy => ks%calc%energy
 
-    if(associated(hm%ep%e_field) .and. simul_box_is_periodic(ks%gr%mesh%sb)) then
+    if(associated(hm%vberry)) then
       hm%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin)
       SAFE_DEALLOCATE_P(ks%calc%vberry)
     endif

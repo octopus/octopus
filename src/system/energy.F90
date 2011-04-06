@@ -132,7 +132,7 @@ contains
       hm%energy%total = hm%energy%total + gauge_field_get_energy(hm%ep%gfield, gr%sb)
     end if
 
-    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
+    if(associated(hm%vberry)) then
       hm%energy%berry = berry_energy_correction(st, gr%mesh, &
         hm%ep%E_field(1:gr%sb%periodic_dim), hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
       hm%energy%total = hm%energy%total + hm%energy%berry

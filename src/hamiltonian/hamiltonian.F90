@@ -269,7 +269,10 @@ contains
     call epot_init(hm%ep, gr, geo, hm%d%ispin, hm%d%nik)
 
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
-      SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
+      ! only need vberry if there is a field in a periodic direction
+      if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
+        SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
+      endif
     endif
 
     !Static magnetic field requires complex wavefunctions
@@ -716,9 +719,7 @@ contains
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)
     SAFE_DEALLOCATE_P(hm%axc)
-    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
-      SAFE_DEALLOCATE_P(hm%vberry)
-    endif
+    SAFE_DEALLOCATE_P(hm%vberry)
     SAFE_DEALLOCATE_P(hm%a_ind)
     SAFE_DEALLOCATE_P(hm%b_ind)
     
