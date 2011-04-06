@@ -47,7 +47,7 @@ module curv_gygi_m
 
   type curv_gygi_t
     FLOAT :: A             ! local reduction in grid spacing is 1/(1+A)
-    FLOAT :: alpha         ! range of enhacement of the resolution
+    FLOAT :: alpha         ! range of enhancement of the resolution
     FLOAT :: beta          ! distance over which Euclidian coordinates are recovered
     FLOAT, pointer :: pos(:, :)
     integer :: npos
@@ -68,6 +68,8 @@ contains
 
     integer :: ipos, idir
 
+    PUSH_SUB(curv_gygi_init)
+
     !%Variable CurvGygiA
     !%Type float
     !%Section Mesh::Curvilinear::Gygi
@@ -75,8 +77,8 @@ contains
     !% The grid spacing is reduced locally around each atom, and the reduction is
     !% given by 1/(1+A), where A is specified by this variable, CurvGygiA. So, if
     !% A=1/2 (the default), the grid spacing is reduced to two thirds = 1/(1+1/2).
-    !% [This is the <math>A_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli, Phys.
-    !% Rev. B 52, R2229 (1995)]
+    !% [This is the <math>A_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli, <i>Phys.
+    !% Rev. B</i> <b>52</b>, R2229 (1995)]
     !% It must be larger than zero.
     !%End
     call parse_float(datasets_check('CurvGygiA'), M_HALF, cv%A)
@@ -87,7 +89,7 @@ contains
     !% This number determines the region over which the grid is enhanced (range of
     !% enhancement of the resolution). That is, the grid is enhanced on a sphere
     !% around each atom, whose radius is given by this variable. [This is the <math>a_{\alpha}</math>
-    !% variable in Eq. 2 of F. Gygi and G. Galli, Phys. Rev. B 52, R2229 (1995)].
+    !% variable in Eq. 2 of F. Gygi and G. Galli, <i>Phys. Rev. B</i> <b>52M</b>, R2229 (1995)].
     !% The default is two atomic units.
     !% It must be larger than zero.
     !%End
@@ -98,7 +100,7 @@ contains
     !%Description
     !% This number determines the distance over which Euclidean coordinates are
     !% recovered. [This is the <math>b_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli,
-    !% Phys. Rev. B 52, R2229 (1995)]. The default is four atomic units.
+    !% <i>Phys. Rev. B</i> <b>52</b>, R2229 (1995)]. The default is four atomic units.
     !% It must be larger than zero.
     !%End
     call parse_float(datasets_check('CurvGygiBeta'),  units_from_atomic(units_inp%length, M_FOUR), cv%beta)
@@ -114,13 +116,18 @@ contains
     SAFE_ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim))
     forall(ipos = 1:cv%npos, idir = 1:sb%dim) cv%pos(ipos, idir) = geo%atom(ipos)%x(idir)
     
+    POP_SUB(curv_gygi_init)
   end subroutine curv_gygi_init
 
   ! ---------------------------------------------------------
   subroutine curv_gygi_end(cv)
     type(curv_gygi_t), intent(inout) :: cv
 
+    PUSH_SUB(curv_gygi_end)
+
     SAFE_DEALLOCATE_P(cv%pos)
+
+    POP_SUB(curv_gygi_end)
   end subroutine curv_gygi_end
 
   ! ---------------------------------------------------------
@@ -128,8 +135,12 @@ contains
     FLOAT, intent(in)    :: y(:)
     FLOAT, intent(out)   :: f(:), jf(:, :)
 
+    PUSH_SUB(getf)
+
     call curv_gygi_jacobian(sb_p, cv_p, y, f, jf, i_p)
     f(1:sb_p%dim) = f(1:sb_p%dim) - chi_p(1:sb_p%dim)
+
+    POP_SUB(getf)
   end subroutine getf 
 
 
@@ -144,6 +155,8 @@ contains
     integer :: i
     logical :: conv
     type(root_solver_t) :: rs
+
+    PUSH_SUB(curv_gygi_chi2x)
 
     call root_solver_init(rs, sb%dim,  &
       solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
@@ -174,6 +187,7 @@ contains
       call messages_fatal(5)
     end if
 
+    POP_SUB(curv_gygi_chi2x)
   end subroutine curv_gygi_chi2x
 
 
@@ -187,6 +201,8 @@ contains
     integer :: i, ia
     FLOAT   :: r, ar, th, ex
 
+    PUSH_SUB(curv_gygi_x2chi)
+
     chi(1:sb%dim) = x(1:sb%dim)
     do ia = 1, cv%npos
       r = max(sqrt(sum((x(1:sb%dim) - cv%pos(ia, 1:sb%dim))**2)), CNST(1e-6))
@@ -198,6 +214,7 @@ contains
       end do
     end do
 
+    POP_SUB(curv_gygi_x2chi)
   end subroutine curv_gygi_x2chi
 
 
@@ -213,6 +230,8 @@ contains
     integer :: i, ix, iy, natoms_
     FLOAT :: r, f_alpha, df_alpha
     FLOAT :: th, ex, ar
+
+    PUSH_SUB(curv_gygi_jacobian)
 
     J(1:sb%dim,1:sb%dim) = M_ZERO
     do ix = 1, sb%dim
@@ -243,6 +262,7 @@ contains
       end do
     end do
 
+    POP_SUB(curv_gygi_jacobian)
   end subroutine curv_gygi_jacobian
 
 end module curv_gygi_m
