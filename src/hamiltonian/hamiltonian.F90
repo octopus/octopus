@@ -121,7 +121,7 @@ module hamiltonian_m
     type(energy_t), pointer  :: energy
     FLOAT, pointer :: vhartree(:) ! Hartree potential
     FLOAT, pointer :: vxc(:,:)    ! XC potential
-    FLOAT, pointer :: vhxc(:,:)   ! XC potential + Hartree potential
+    FLOAT, pointer :: vhxc(:,:)   ! XC potential + Hartree potential + Berry potential
     FLOAT, pointer :: axc(:,:,:)  ! XC vector potential divided by c
     FLOAT, pointer :: vtau(:,:)   ! Derivative of e_XC w.r.t. tau
     FLOAT, pointer :: vberry(:,:) ! Berry phase potential from external E_field
@@ -925,12 +925,6 @@ contains
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
       end if
     end do
-
-    if(associated(this%ep%E_field) .and. simul_box_is_periodic(mesh%sb)) then
-      forall(ip = 1:mesh%np, ispin = 1:this%d%nspin)
-        this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + this%vberry(ip, ispin)
-      end forall
-    endif
 
     ! the lasers
     if (present(time)) then

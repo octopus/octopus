@@ -228,7 +228,8 @@ contains
     !% particles.
     !%Option potential 1
     !% The Kohn-Sham potential is mixed. This is the default for OEP
-    !% or MGGA calculations.
+    !% or MGGA calculations, or if <tt>StaticElectricField</tt> is applied in
+    !% a periodic direction.
     !%Option density 2
     !% Mix the density. This is the default for other cases, including
     !% LDA/GGA calculations.
@@ -237,6 +238,7 @@ contains
     mixdefault = MIXDENS
     if(hm%theory_level==INDEPENDENT_PARTICLES) mixdefault = MIXNONE
     if(iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA) /= 0) mixdefault = MIXPOT
+    if(associated(hm%vberry)) mixdefault = MIXPOT
 
     call parse_integer(datasets_check('MixField'), mixdefault, scf%mix_field)
     if(.not.varinfo_valid_option('MixField', scf%mix_field)) call input_error('MixField')

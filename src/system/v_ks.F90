@@ -795,9 +795,15 @@ contains
 
       ! Build Hartree + XC potential
       forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
+      if(associated(hm%vberry)) then
+        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
+      endif
       
       if(hm%d%ispin > UNPOLARIZED) then
-        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
+        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip) + hm%vberry(ip, 2)
+        if(associated(hm%vberry)) then
+          forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vhxc(ip, 2) + hm%vberry(ip, 2)
+        endif
       end if
       
       if(hm%d%ispin == SPINORS) then
