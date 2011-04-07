@@ -76,7 +76,7 @@ contains
     FLOAT :: center_dipole(1:MAX_DIM), diag_dipole(1:MAX_DIM), ionic_dipole(1:MAX_DIM), print_dipole(1:MAX_DIM)
     type(born_charges_t) :: born_charges
     logical :: calc_Born, start_density_is_zero_field, write_restart_densities, calc_diagonal, verbose
-    logical :: diagonal_done, center_written, fromScratch_local
+    logical :: diagonal_done, center_written, fromScratch_local, field_written
     character(len=80) :: fname, dir_name
     character :: sign_char
 
@@ -106,6 +106,7 @@ contains
     i_start = 1
     center_written = .false.
     diagonal_done = .false.
+    field_written = .false.
 
     if(.not. fromScratch) then
       iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='read', status='old', die=.false.)
@@ -115,6 +116,7 @@ contains
         rewind(iunit)
 
         read(iunit, fmt=*, iostat = ios) e_field_saved
+        field_written = (ios .eq. 0)
 
         read(iunit, fmt=*, iostat = ios) (center_dipole(jj), jj = 1, gr%mesh%sb%dim)
         center_written = (ios .eq. 0)
@@ -132,7 +134,7 @@ contains
       end if
 
       ! if saved dipoles used a different e_field, we cannot use them
-      if(abs(e_field_saved - e_field) > M_EPSILON) then
+      if(field_written .and. abs(e_field_saved - e_field) > CNST(1e-15)) then
         message(1) = "Saved dipoles are from a different electric field, cannot use them."
         call messages_warning(1)
         center_written = .false.
@@ -143,7 +145,7 @@ contains
       read_count = (i_start - 1) * 2
       if(center_written) read_count = read_count + 1
       if(diagonal_done)  read_count = read_count + 1
-      write(message(1),'(a,i1,a)') "Read ", read_count, " dipole(s) from file."
+      write(message(1),'(a,i1,a)') "Using ", read_count, " dipole(s) from file."
       call messages_info(1)
     end if
 
