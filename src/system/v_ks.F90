@@ -645,7 +645,7 @@ contains
             if ((st%occ(ist,ik) .ne. M_ZERO) .and. (counter .gt. ks%tc_delay) ) to_calc = .true.
             
             ! If the state is not occupied and the call counter is greater than the desired value
-            ! don't apply the correction and cycle
+            ! don`t apply the correction and cycle
             if (to_calc .eqv. .false.) cycle 
             
             vxcc(1:ks%gr%fine%mesh%np) = vxc(1:ks%gr%fine%mesh%np, is)

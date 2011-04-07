@@ -268,6 +268,7 @@ contains
     !Initialize external potential
     call epot_init(hm%ep, gr, geo, hm%d%ispin, hm%d%nik)
 
+    nullify(hm%vberry)
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
       ! only need vberry if there is a field in a periodic direction
       if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
