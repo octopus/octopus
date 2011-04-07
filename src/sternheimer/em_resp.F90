@@ -836,7 +836,7 @@ contains
 !      call out_projections()
 !      This routine does not give any useful information.
 
-    call out_wavefunctions()
+    call out_wfn_and_densities()
 
     if(gr%sb%periodic_dim .eq. gr%sb%dim) then
       call out_dielectric_constant()
@@ -1093,10 +1093,10 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine out_wavefunctions()
+    subroutine out_wfn_and_densities()
       integer :: idir, isigma
 
-      PUSH_SUB(em_resp_output.out_wavefunctions)
+      PUSH_SUB(em_resp_output.out_wfn_and_densities)
 
       do idir = 1, gr%sb%dim
         if(states_are_complex(st)) then 
@@ -1122,13 +1122,13 @@ contains
         end if
       end do
 
-      POP_SUB(em_resp_output.out_wavefunctions)
+      POP_SUB(em_resp_output.out_wfn_and_densities)
 
-    end subroutine out_wavefunctions
+    end subroutine out_wfn_and_densities
     
 
   ! ---------------------------------------------------------
-  ! See D Versano, LA Espinosa Leal, Xavier Andrade, MAL Marques, Rosa di Felice, Angel Rubio,
+  ! See D Varsano, LA Espinosa Leal, Xavier Andrade, MAL Marques, Rosa di Felice, Angel Rubio,
   ! Phys. Chem. Chem. Phys. 11, 4481 (2009)
     subroutine out_circular_dichroism
       type(pert_t) :: angular_momentum
