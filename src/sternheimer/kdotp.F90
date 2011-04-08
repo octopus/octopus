@@ -93,8 +93,9 @@ contains
     type(sternheimer_t)     :: sh
     logical                 :: calc_eff_mass, complex_response
 
-    integer              :: idir, ierr, pdim
+    integer              :: idir, ierr, pdim, ispin
     character(len=100)   :: dirname, str_tmp
+    real(8)              :: errornorm
 
     PUSH_SUB(kdotp_lr_run)
 
@@ -200,6 +201,24 @@ contains
       endif
 
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
+
+      errornorm = M_ZERO
+      if(states_are_real(sys%st)) then 
+        call doutput_lr(sys%st, sys%gr, kdotp_vars%lr(idir, 1), KDOTP_DIR, idir, 1, sys%outp, sys%geo, units_out%force)
+
+        do ispin = 1, sys%st%d%nspin
+          errornorm = hypot(errornorm, real(dmf_nrm2(sys%gr%mesh, kdotp_vars%lr(idir, 1)%ddl_rho(:, ispin)), 8))
+        end do
+      else
+        call zoutput_lr(sys%st, sys%gr, kdotp_vars%lr(idir, 1), KDOTP_DIR, idir, 1, sys%outp, sys%geo, units_out%force)
+
+        do ispin = 1, sys%st%d%nspin
+          errornorm = hypot(errornorm, real(zmf_nrm2(sys%gr%mesh, kdotp_vars%lr(idir, 1)%zdl_rho(:, ispin)), 8))
+        end do
+      endif
+
+      write(message(1),'(a,f10.6)') "Norm of density variation = ", errornorm
+      call messages_info(1)
     end do ! idir
 
     ! calculate effective masses
