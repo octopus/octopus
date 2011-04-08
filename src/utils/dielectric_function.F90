@@ -39,7 +39,7 @@ program dielectric_function
 
   integer :: in_file, out_file, ii, jj, kk, idir, ierr
   integer :: time_steps, energy_steps, istart, iend, ntiter
-  FLOAT :: vecpot0(1:MAX_DIM), dt, tt, ww, av
+  FLOAT :: vecpot0(1:MAX_DIM), dt, tt, ww
   FLOAT, allocatable :: vecpot(:, :), dumpa(:)
   CMPLX, allocatable :: dielectric(:, :), chi(:, :), invdielectric(:, :)
   FLOAT, parameter :: eta = CNST(0.2)/CNST(27.211383)
@@ -132,12 +132,6 @@ program dielectric_function
     case(SPECTRUM_DAMP_GAUSSIAN)
       dumpa(ii)= exp(-(jj*dt)**2*spectrum%damp_factor**2)
     end select
-  end do
-
-  !remove the dc component
-  do idir = 4, 6
-    av = sum(vecpot(idir, istart:iend))
-    vecpot(idir, istart:iend) = vecpot(idir, istart:iend) - av/dble(ntiter)
   end do
 
   energy_steps = spectrum%max_energy / spectrum%energy_step
