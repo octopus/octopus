@@ -217,7 +217,7 @@ contains
         end do
       endif
 
-      write(message(1),'(a,f10.6)') "Norm of density variation = ", errornorm
+      write(message(1),'(a,f10.6)') "Norm of relative density variation = ", errornorm / sys%st%qtot
       call messages_info(1)
     end do ! idir
 
