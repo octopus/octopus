@@ -22,13 +22,16 @@
 program dielectric_function
   use datasets_m
   use command_line_m
+  use geometry_m
   use global_m
   use io_m
   use loct_m
   use messages_m
   use parser_m
   use profiling_m
+  use space_m
   use spectrum_m
+  use simul_box_m
   use unit_m
   use unit_system_m
 
@@ -38,10 +41,13 @@ program dielectric_function
   integer :: time_steps, energy_steps, istart, iend, ntiter
   FLOAT :: vecpot0(1:MAX_DIM), dt, tt, ww, av
   FLOAT, allocatable :: vecpot(:, :), dumpa(:)
-  CMPLX, allocatable :: dielectric(:,:)
+  CMPLX, allocatable :: dielectric(:, :), chi(:, :), invdielectric(:, :)
   FLOAT, parameter :: eta = CNST(0.2)/CNST(27.211383)
-  type(spec_t) :: spectrum
-  type(block_t) :: blk
+  type(spec_t)      :: spectrum
+  type(block_t)     :: blk
+  type(space_t)     :: space
+  type(geometry_t)  :: geo
+  type(simul_box_t) :: sb
 
   ! Initialize stuff
   call global_init()
@@ -62,6 +68,10 @@ program dielectric_function
   call unit_system_init()
 
   call spectrum_init(spectrum)
+
+  call space_init(space)
+  call geometry_init(geo, space)
+  call simul_box_init(sb, geo, space)
     
   if(parse_block(datasets_check('GaugeVectorField'), blk) == 0) then
     
@@ -131,33 +141,38 @@ program dielectric_function
   end do
 
   energy_steps = spectrum%max_energy / spectrum%energy_step
-  SAFE_ALLOCATE(dielectric(1:MAX_DIM, 0:energy_steps))  
+  SAFE_ALLOCATE(invdielectric(1:MAX_DIM, 0:energy_steps))
+  SAFE_ALLOCATE(dielectric(1:MAX_DIM, 0:energy_steps))
+  SAFE_ALLOCATE(chi(1:MAX_DIM, 0:energy_steps))
+
   do kk = 0, energy_steps
     ww = kk*spectrum%energy_step
 
+    invdielectric(1:MAX_DIM, kk) = M_ZERO
+
     do ii = istart, iend
       tt = ii*dt
-      dielectric(1:MAX_DIM, kk) = dielectric(1:MAX_DIM, kk) + &
-           vecpot(MAX_DIM + 1:2*MAX_DIM, ii)*exp((M_zI*ww - eta)*tt)*dumpa(ii)*dt
+      invdielectric(1:MAX_DIM, kk) = &
+        invdielectric(1:MAX_DIM, kk) + vecpot(MAX_DIM + 1:2*MAX_DIM, ii)*exp((M_zI*ww - eta)*tt)*dumpa(ii)*dt
     end do
-
-    dielectric(1:MAX_DIM, kk) = dielectric(1:MAX_DIM, kk)/vecpot0(1:MAX_DIM) + 1
     
+    invdielectric(1:MAX_DIM, kk) = CNST(1.0) + invdielectric(1:MAX_DIM, kk)/vecpot0(1:MAX_DIM)
+    dielectric(1:MAX_DIM, kk) = CNST(1.0)/invdielectric(1:MAX_DIM, kk)
+    chi(1:MAX_DIM, kk) = (dielectric(1:MAX_DIM, kk) - CNST(1.0))*sb%rcell_volume/(CNST(4.0)*M_PI)
   end do
 
   out_file = io_open('td.general/inverse_dielectric_function', action='write')
   do kk = 0, energy_steps
     ww = kk*spectrum%energy_step
     write(out_file, '(7e15.6)') ww,                                         &
-         real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
-         real(dielectric(2, kk), REAL_PRECISION), aimag(dielectric(2, kk)), &
-         real(dielectric(3, kk), REAL_PRECISION), aimag(dielectric(3, kk))
+         real(invdielectric(1, kk), REAL_PRECISION), aimag(invdielectric(1, kk)), &
+         real(invdielectric(2, kk), REAL_PRECISION), aimag(invdielectric(2, kk)), &
+         real(invdielectric(3, kk), REAL_PRECISION), aimag(invdielectric(3, kk))
   end do
   call io_close(out_file)
-
+ 
   out_file = io_open('td.general/dielectric_function', action='write')
   do kk = 0, energy_steps
-    dielectric(1:3, kk) = M_ONE/dielectric(1:3, kk)
     ww = kk*spectrum%energy_step
     write(out_file, '(7e15.6)') ww,                                         &
          real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
@@ -166,10 +181,25 @@ program dielectric_function
   end do
   call io_close(out_file)
 
+  out_file = io_open('td.general/chi', action='write')
+  do kk = 0, energy_steps
+    dielectric(1:3, kk) = (dielectric(1:3, kk) - M_ONE)/(CNST(4.0)*M_PI)
+    ww = kk*spectrum%energy_step
+    write(out_file, '(7e15.6)') ww, &
+      real(chi(1, kk), REAL_PRECISION), aimag(chi(1, kk)), &
+      real(chi(2, kk), REAL_PRECISION), aimag(chi(2, kk)), &
+      real(chi(3, kk), REAL_PRECISION), aimag(chi(3, kk))
+  end do
+  call io_close(out_file)
+
   SAFE_DEALLOCATE_A(dielectric)
+  SAFE_DEALLOCATE_A(chi)
   SAFE_DEALLOCATE_A(vecpot)
   SAFE_DEALLOCATE_A(dumpa)
 
+  call simul_box_end(sb)
+  call geometry_end(geo)
+  call space_end(space)
   call io_end()
   call datasets_end()
   call parser_end()
