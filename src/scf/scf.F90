@@ -626,7 +626,7 @@ contains
     SAFE_DEALLOCATE_A(rhoin)
 
     if(.not.finish) then
-      message(1) = 'SCF *not* converged!'
+      write(message(1), '(a,i4,a)') 'SCF *not* converged after ', iter - 1, ' iterations.'
       call messages_warning(1)
     end if
 
