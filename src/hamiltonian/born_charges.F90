@@ -77,7 +77,8 @@ module born_charges_m
     !%Section Linear Response::Polarizabilities
     !%Description
     !% Enforce the acoustic sum rule by distributing the excess sum of Born charges equally among the atoms.
-    !% sum rule: sum(iatom) Z*(iatom,idir,idir2) = Z_tot delta(idir1, idir2)
+    !% Sum rule: sum(iatom) Z*(iatom,idir,idir2) = Z_tot delta(idir1, idir2).
+    !% Violation of the sum rule may be caused by inadequate spacing, box size, or <i>k</i>-point sampling.
     !%End
 
     call parse_logical(datasets_check('BornChargeSumRuleCorrection'), .true., this%correct)

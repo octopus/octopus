@@ -130,7 +130,7 @@ contains
       call messages_fatal(1)
     endif
 
-    complex_response = (em_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
+    complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
 
     if (states_are_real(sys%st)) then
@@ -643,9 +643,14 @@ contains
       !% for peaks in the spectrum. It can help convergence of the SCF cycle for the
       !% Sternheimer equation when on a resonance, and it can be used as a positive
       !% infinitesimal to get the imaginary parts of response functions at poles.
+      !% In units of energy. Cannot be negative.
       !%End
 
       call parse_float(datasets_check('EMEta'), M_ZERO, em_vars%eta, units_inp%energy)
+      if(em_vars%eta < -M_EPSILON) then
+        message(1) = "EMEta cannot be negative."
+        call messages_fatal(1)
+      endif
 
       ! reset the values of these variables
       em_vars%calc_hyperpol = .false.
@@ -827,7 +832,7 @@ contains
       call out_polarizability()
       if(em_vars%calc_Born) then
         call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%sb%dim, dirname, &
-          states_are_real(st))
+          write_real = em_vars%eta < M_EPSILON)
       endif
     else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       call out_susceptibility()
@@ -918,7 +923,7 @@ contains
       call io_close(iunit)
   
       ! CROSS SECTION (THE IMAGINARY PART OF POLARIZABILITY)
-      if(states_are_complex(st)) then 
+      if(em_vars%eta > M_EPSILON) then 
         cross(1:gr%sb%dim, 1:gr%sb%dim) = aimag(em_vars%alpha(1:gr%sb%dim, 1:gr%sb%dim, ifactor)) * &
           em_vars%freq_factor(ifactor) * em_vars%omega(iomega) * (M_FOUR * M_PI / P_c)
 
