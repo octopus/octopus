@@ -931,29 +931,26 @@ contains
     FLOAT,                     intent(out)   :: force(:, :) ! sb%dim, geo%natoms
 
     type(species_t), pointer :: spec
-    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself
+    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
     integer :: ix, iy, iz, isph, ss
     FLOAT   :: gg(1:MAX_DIM), gg2
     FLOAT   :: factor, charge
-    CMPLX   :: sumatoms
+    CMPLX   :: sumatoms, tmp(1:MAX_DIM)
     FLOAT, parameter :: alpha = CNST(1.1313708)
 
     PUSH_SUB(ion_interaction_periodic)
+
+    ! Check http://www.duke.edu/~kz10/file/ewald.pdf for the equations
+    ! implemented here.
 
     if(any(geo%ionic_interaction_type /= INTERACTION_COULOMB)) then
       message(1) = "Cannot calculate non-Coulombic interaction for periodic systems."
       call messages_fatal(1)
     end if
 
-    ! see
-    ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
-    ! for details about this routine.
-
     ereal = M_ZERO
-    efourier = M_ZERO
-    eself = M_ZERO
 
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
@@ -977,13 +974,15 @@ contains
           
           if(rr < CNST(1e-5)) cycle
           
+          erfc = M_ONE - loct_erf(alpha*rr)
+
           ! energy
-          ereal = ereal + M_HALF*zj*zi*(M_ONE - loct_erf(alpha*rr))/rr
+          ereal = ereal + M_HALF*zj*zi*erfc/rr
           
           ! force
           force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + &
-            M_HALF* zj * zi * (M_ONE - loct_erf(alpha * rr)) / &
-            rr * (geo%atom(jatom)%x(1:sb%dim) - xi(1:sb%dim))
+            M_HALF*zj*zi*(xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))*&
+            (erfc/rr + M_TWO*alpha/sqrt(M_PI)*exp(-(alpha*rr)**2))/rr**2
         end do
         
       end do
@@ -991,7 +990,19 @@ contains
       call periodic_copy_end(pc)
     end do
 
+    ! self-interaction
+    eself = M_ZERO
+    charge = M_ZERO
+    do iatom = 1, geo%natoms
+      zi = species_zval(geo%atom(iatom)%spec)
+      charge = charge + zi
+      eself = eself - alpha/sqrt(M_PI)*zi**2
+    end do
+
     ! And the long-range part, using an Ewald sum
+
+    ! First the G = 0 term (charge was calculated previously)
+    efourier = -M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
     
     isph = 100
     do ix = -isph, isph
@@ -1005,7 +1016,7 @@ contains
           gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
           gg2 = sum(gg(1:sb%dim)**2)
           
-          ! k=0 must be removed from the sum
+          ! g=0 must be removed from the sum
           if(gg2 == M_ZERO) cycle
 
           factor = M_TWO*M_PI/sb%rcell_volume*exp(-CNST(0.25)*gg2/alpha**2)/gg2
@@ -1020,26 +1031,16 @@ contains
           
           do iatom = 1, geo%natoms
             zi = species_zval(geo%atom(iatom)%spec)
-            force(1:sb%dim, iatom) = -M_TWO * zi * factor * sumatoms
+            xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
+            tmp(1:sb%dim) = M_ZI*zi*gg(1:sb%dim)*exp(M_ZI*sum(gg(1:sb%dim)*xi(1:sb%dim)))
+            force(1:sb%dim, iatom) = force(1:sb%dim, iatom) &
+              - factor*(conjg(tmp(1:sb%dim))*sumatoms + tmp(1:sb%dim)*conjg(sumatoms))
           end do
           
         end do
       end do
     end do
     
-    ! remove self-interaction
-    charge = M_ZERO
-    do iatom = 1, geo%natoms
-      zi = species_zval(geo%atom(iatom)%spec)
-      charge = charge + zi
-      eself = eself - alpha/sqrt(M_PI)*zi**2
-    end do
-    
-    ! This term is added in abinit, I am not sure where it comes
-    ! from and whether we should add it.
-    !
-    !  eself = eself - M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
-
     energy = ereal + efourier + eself
     
     POP_SUB(ion_interaction_periodic)

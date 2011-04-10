@@ -25,11 +25,11 @@ match ; Eigenvalue      [ k = 64 ] ; GREP(static/info, '#k =  64', 12,  1) ;  0.
 
 Input      : 05-lithium.02-td.inp
 
-match ; Energy           [step  1] ; LINE(td.general/energy, -21, 30) ; -5.375564607374e-01
-match ; Energy           [step  5] ; LINE(td.general/energy, -16, 30) ; -5.323752670767e-01
-match ; Energy           [step 10] ; LINE(td.general/energy, -11, 30) ; -5.323769839727e-01
-match ; Energy           [step 15] ; LINE(td.general/energy,  -6, 30) ; -5.323786652882e-01
-match ; Energy           [step 20] ; LINE(td.general/energy,  -1, 30) ; -5.323802994657e-01
+match ; Energy           [step  1] ; LINE(td.general/energy, -21, 30) ; -5.543774675224e-01
+match ; Energy           [step  5] ; LINE(td.general/energy, -16, 30) ; -5.491962738618e-01
+match ; Energy           [step 10] ; LINE(td.general/energy, -11, 30) ; -5.491979907577e-01
+match ; Energy           [step 15] ; LINE(td.general/energy,  -6, 30) ; -5.491996720732e-01
+match ; Energy           [step 20] ; LINE(td.general/energy,  -1, 30) ; -5.492013062508e-01
 
 match ; Vector potential [step  1] ; LINE(td.general/gauge_field, -21, 30) ; 1.000000000000e+01
 match ; Vector potential [step  5] ; LINE(td.general/gauge_field, -16, 30) ; 9.995809815058e+00
@@ -39,9 +39,9 @@ match ; Vector potential [step 20] ; LINE(td.general/gauge_field,  -1, 30) ; 9.9
 
 Input      : 05-lithium.03-td-restart.inp
 
-match ; Energy           [step 20] ; LINE(td.general/energy, -11, 30) ; -5.323802994657e-01
-match ; Energy           [step 35] ; LINE(td.general/energy,  -6, 30) ; -5.323818793394e-01
-match ; Energy           [step 30] ; LINE(td.general/energy,  -1, 30) ; -5.323833997373e-01
+match ; Energy           [step 20] ; LINE(td.general/energy, -11, 30) ; -5.492013062508e-01
+match ; Energy           [step 35] ; LINE(td.general/energy,  -6, 30) ; -5.492028861244e-01
+match ; Energy           [step 30] ; LINE(td.general/energy,  -1, 30) ; -5.492044065224e-01
 
 match ; Vector potential [step 20] ; LINE(td.general/gauge_field, -11, 30) ; 9.933201081578e+00
 match ; Vector potential [step 25] ; LINE(td.general/gauge_field,  -6, 30) ; 9.895834707018e+00
