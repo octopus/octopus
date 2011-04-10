@@ -913,7 +913,7 @@ contains
           end select
         end do !jatom
       end do !iatom
-
+      
     end if
 
     SAFE_DEALLOCATE_A(in_box)
@@ -931,7 +931,7 @@ contains
     FLOAT,                     intent(out)   :: force(:, :) ! sb%dim, geo%natoms
 
     type(species_t), pointer :: spec
-    FLOAT :: rr, xi(1:MAX_DIM), zi, zj
+    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
     integer :: ix, iy, iz, isph, ss
@@ -951,7 +951,10 @@ contains
     ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
     ! for details about this routine.
 
-    energy = M_ZERO
+    ereal = M_ZERO
+    efourier = M_ZERO
+    eself = M_ZERO
+
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
     ! if the system is periodic we have to add the energy of the
@@ -969,13 +972,13 @@ contains
         xi = periodic_copy_position(pc, sb, icopy)
         
         do jatom = 1, geo%natoms
-          zj = -species_zval(geo%atom(jatom)%spec)
+          zj = species_zval(geo%atom(jatom)%spec)
           rr = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
           
           if(rr < CNST(1e-5)) cycle
           
           ! energy
-          energy = energy + M_HALF * zj * zi * (M_ONE - loct_erf(alpha * rr))
+          ereal = ereal + M_HALF*zj*zi*(M_ONE - loct_erf(alpha*rr))/rr
           
           ! force
           force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + &
@@ -999,21 +1002,21 @@ contains
           
           if(ss == 0 .or. ss > isph**2) cycle
 
-          gg(1:sb%dim) = ix * sb%klattice(1:sb%dim, 1) + iy * sb%klattice(1:sb%dim, 2) + iz * sb%klattice(1:sb%dim, 3)
+          gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
           gg2 = sum(gg(1:sb%dim)**2)
           
           ! k=0 must be removed from the sum
           if(gg2 == M_ZERO) cycle
 
-          factor = M_TWO * M_PI/sb%rcell_volume * exp(-CNST(0.25) * gg2 / alpha**2) / gg2
+          factor = M_TWO*M_PI/sb%rcell_volume*exp(-CNST(0.25)*gg2/alpha**2)/gg2
           
           sumatoms = M_Z0
           do iatom = 1, geo%natoms
             zi = species_zval(geo%atom(iatom)%spec)
             xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
-            sumatoms = sumatoms + zi * exp(-M_ZI * sum(gg(1:sb%dim) * xi(1:sb%dim)))
+            sumatoms = sumatoms + zi*exp(M_ZI*sum(gg(1:sb%dim)*xi(1:sb%dim)))
           end do
-          energy = energy + factor * sumatoms * conjg(sumatoms)
+          efourier = efourier + factor*sumatoms*conjg(sumatoms)
           
           do iatom = 1, geo%natoms
             zi = species_zval(geo%atom(iatom)%spec)
@@ -1029,13 +1032,15 @@ contains
     do iatom = 1, geo%natoms
       zi = species_zval(geo%atom(iatom)%spec)
       charge = charge + zi
-      energy = energy - alpha * zi**2 / sqrt(M_PI) 
+      eself = eself - alpha/sqrt(M_PI)*zi**2
     end do
     
     ! This term is added in abinit, I am not sure where it comes
     ! from and whether we should add it.
     !
-    ! energy = energy - M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
+    !  eself = eself - M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
+
+    energy = ereal + efourier + eself
     
     POP_SUB(ion_interaction_periodic)
   end subroutine ion_interaction_periodic
