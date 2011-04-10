@@ -33,6 +33,8 @@ module messages_m
   private
 
   public ::                     &
+    messages_init,              &
+    messages_end,               &
     messages_fatal,             &
     messages_warning,           &
     messages_info,              &
@@ -93,6 +95,61 @@ module messages_m
   integer(8), public :: global_sizeof
 
 contains
+
+  ! ---------------------------------------------------------
+
+  subroutine messages_init()
+
+    call messages_obsolete_variable('DevelVersion', 'ExperimentalFeatures')
+
+    !%Variable ExperimentalFeatures
+    !%Type logical
+    !%Default no
+    !%Section Execution::Debug
+    !%Description
+    !% If true, allows the use of certain parts of the code that are
+    !% still under development and are not suitable for production
+    !% runs. This should not be used unless you know what you are doing.
+    !%End
+    call parse_logical('ExperimentalFeatures', .false., conf%devel_version)
+
+    !%Variable DebugLevel
+    !%Type integer
+    !%Default 0
+    !%Section Execution::Debug
+    !%Description
+    !% This variable decides whether or not to enter debug mode.
+    !% If it is greater than 0, different amounts of additional information
+    !% are written to standard output and additional assertion checks are performed.
+    !%Option 0
+    !% (default) <tt>Octopus</tt> does not enter debug mode.
+    !%Option 1
+    !% Moderate amount of debug output; assertion checks enabled.
+    !%Option 2
+    !% The code prints a stack trace as it enters end exits subroutines.
+    !% This is useful for developers and you should include this output when
+    !% submitting a bug report.
+    !%Option 99
+    !% The debug output is additionally written to files in the <tt>debug</tt>
+    !% directory. For each node (when running in parallel) there is a file called
+    !% <tt>debug_trace.&lt;rank&gt;</tt>. Writing these files slows down the code by a huge factor and
+    !% it is usually only necessary for parallel runs. In the serial case all
+    !% the information can be obtained from standard out.
+    !%End
+    call parse_integer('DebugLevel', 0, conf%debug_level)
+    if(conf%debug_level>0) then
+      in_debug_mode = .true.
+    else
+      in_debug_mode = .false.
+    end if
+
+  end subroutine messages_init
+
+  ! ---------------------------------------------------------
+
+  subroutine messages_end()
+
+  end subroutine messages_end
 
   ! ---------------------------------------------------------
   subroutine messages_fatal(no_lines, only_root_writes)

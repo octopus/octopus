@@ -54,12 +54,10 @@ program dielectric_function
   call getopt_init(ierr)
   if(ierr.eq.0) call getopt_dielectric_function
   call parser_init()
-  call parse_integer('DebugLevel', 0, conf%debug_level)
-  if(conf%debug_level>0) then
-    in_debug_mode = .true.
-  else
-    in_debug_mode = .false.
-  end if
+  call messages_init()
+
+  call parse_logical('ExperimentalFeatures', .false., conf%devel_version)
+
   call datasets_init(1)
   call io_init()
   if(in_debug_mode) then
@@ -196,6 +194,7 @@ program dielectric_function
   call space_end(space)
   call io_end()
   call datasets_end()
+  call messages_end()
   call parser_end()
   call global_end()
 

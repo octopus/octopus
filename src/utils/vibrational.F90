@@ -58,6 +58,8 @@ program vibrational
   mode = SPEC_VIBRATIONAL
   if(ierr.eq.0) call getopt_vibrational(mode)
   call parser_init()
+  call messages_init()
+
   call datasets_init(1)
   call io_init()
   if(in_debug_mode) then
@@ -244,6 +246,7 @@ program vibrational
 
   call io_end()
   call datasets_end()
+  call messages_end()
   call parser_end()
   call global_end()
 

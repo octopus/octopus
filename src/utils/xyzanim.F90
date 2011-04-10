@@ -45,11 +45,9 @@ program xyzanim
   call getopt_init(ierr)
   if(ierr.eq.0) call getopt_xyz_anim
   call parser_init()
+  call messages_init()
   call io_init()
   call datasets_init(1)
-  if(in_debug_mode) then
-    call io_mkdir('debug')
-  end if
   call unit_system_init()
 
   ! Sets the filenames
@@ -99,6 +97,7 @@ program xyzanim
 
   call io_end()
   call datasets_end()
+  call messages_end()
   call parser_end()
   call global_end()
 

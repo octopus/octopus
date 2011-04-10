@@ -44,11 +44,9 @@ program casida_spectrum
   call getopt_init(ierr)
   if(ierr.eq.0) call getopt_casida_spectrum
   call parser_init()
+  call messages_init()
   call datasets_init(1)
   call io_init()
-  if(in_debug_mode) then
-     call io_mkdir('debug')
-  end if
   call unit_system_init()
 
   !%Variable CasidaSpectrumBroadening
@@ -93,6 +91,7 @@ program casida_spectrum
 
   call io_end()
   call datasets_end()
+  call messages_end()
   call parser_end()
   call global_end()
 

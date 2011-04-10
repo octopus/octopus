@@ -145,6 +145,10 @@ contains
       call loct_rm('messages.stderr')
     end if
 
+    if(in_debug_mode) then
+      call io_mkdir('debug')
+    end if
+
   end subroutine io_init
 
 

@@ -44,13 +44,8 @@ program propagation_spectrum
   call getopt_init(ierr)
   if(ierr.eq.0) call getopt_propagation_spectrum
   call parser_init()
+  call messages_init()
 
-  call parse_integer('DebugLevel', 0, conf%debug_level)
-  if(conf%debug_level>0) then
-    in_debug_mode = .true.
-  else
-    in_debug_mode = .false.
-  end if
   call datasets_init(1)
   call io_init()
   if(in_debug_mode) then
@@ -74,6 +69,7 @@ program propagation_spectrum
 
   call io_end()
   call datasets_end()
+  call messages_end()
   call parser_end()
   call global_end()
 

@@ -67,15 +67,7 @@ program oct_test
   call global_init()
   call calc_mode_init()
   call parser_init()
-
-  conf%devel_version = .true.
-
-  call parse_integer('DebugLevel', 0, conf%debug_level)
-  if(conf%debug_level>0) then
-    in_debug_mode = .true.
-  else
-    in_debug_mode = .false.
-  end if
+  call messages_init()
 
   call messages_obsolete_variable('WhichTest', 'TestMode')
 
@@ -140,6 +132,7 @@ program oct_test
   call profiling_end()
   call io_end()
   call datasets_end()
+  call messages_end()
   call parser_end()
   call calc_mode_end()
   call global_end()

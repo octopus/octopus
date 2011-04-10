@@ -62,11 +62,10 @@ program harmonic_spectrum
   ! Initialize stuff
   call global_init()
   call parser_init()
+  call messages_init()
+
   call datasets_init(1)
   call io_init()
-  if(in_debug_mode) then
-    call io_mkdir('debug')
-  end if
   call unit_system_init()
 
   call spectrum_init(spectrum)
@@ -113,6 +112,7 @@ program harmonic_spectrum
 
   call io_end()
   call datasets_end()
+  call messages_end()
   call parser_end()
   call global_end()
 end program harmonic_spectrum
