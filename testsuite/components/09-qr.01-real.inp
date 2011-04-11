@@ -13,3 +13,5 @@ ExtraStates = 8
 StatesOrthogonalization = qr
 
 TestType = real
+
+ExperimentalFeatures = yes

@@ -7,7 +7,7 @@ TestGroups : long-run
 Enabled    : Yes
 
 Input: 06-h2o_pol_lr.01_gs.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -16.24623557
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -16.18506064
 match ; Eigenvalue 1 ; GREP(static/info, '1   --', 12)        ;  -1.136821
 match ; Dipole       ; GREP(static/info, '<y>', 14)           ;   5.20270E-01
 
