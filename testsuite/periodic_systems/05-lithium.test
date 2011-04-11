@@ -9,6 +9,14 @@ Enabled    : Yes
 # ground state
 Input      : 05-lithium.01-gs.inp
 
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -0.55438036
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -0.54866368
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ; -0.11103889
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  0.00074839
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ; -0.28174217
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ; -0.07142801
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  0.26589250
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;  0.08081263
 
 match ; Eigenvalue      [ k = 1  ] ; GREP(static/info, '#k =   1', 12,  1) ; -0.118409
 match ; Eigenvalue      [ k = 2  ] ; GREP(static/info, '#k =   2', 12,  1) ; -0.118409

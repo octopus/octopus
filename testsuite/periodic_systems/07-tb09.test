@@ -8,6 +8,16 @@ Enabled    : Yes
 
 # ground state
 Input      : 07-tb09.01-gs_symm.inp
+
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -41.91330309
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -51.15076275
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -3.66643425
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   3.86294461
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   0.00000000
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  -1.78001648
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  33.16720405
+match ; External energy    ; GREP(static/info, 'External    =', 20) ; -26.01267258
+
 match ; Eigenvalue [  k=1, n=1   ] ; GREP(static/info, '#k =   1', 12,  2) ; -0.237685
 match ; Eigenvalue [  k=1, n=8   ] ; GREP(static/info, '#k =   1', 12,  9) ; -0.033385
 match ; Eigenvalue [  k=1, n=16  ] ; GREP(static/info, '#k =   1', 12, 17) ;  0.431540
