@@ -1019,7 +1019,7 @@ yysyntax_error (char *yyresult, int yystate, int yychar)
 		       * (sizeof yyor - 1))];
       char const *yyprefix = yyexpecting;
 
-      /* Start YYX at -YYN if negative to avoid negative indexes in
+      /* Start YYX at -YYN if negative to avoid negative indices in
 	 YYCHECK.  */
       int yyxbegin = yyn < 0 ? -yyn : 0;
 

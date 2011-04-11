@@ -731,7 +731,7 @@ module opt_control_target_m
       !% in order to obtain a high-velocity impact, for instance). It is a static target, to be reached at
       !% total time. 
       !%Option oct_max_curr_ring 2
-      !% Maximizes the current of a quantum ring in one direction. The functional maximixes the z projection of the 
+      !% Maximizes the current of a quantum ring in one direction. The functional maximizes the z projection of the 
       !% outer product between the position \vec{r} and the current \vec{j}: 
       !% J1[j] = <tt>OCTCurrentWeight</tt>*\int (\vec{r} \times \vec{j}) \hat{z} dr. For <tt>OCTCurrentWeight</tt> .GT. 0. the
       !% current flows in counter clockwise direction, while for <tt>OCTCurrentWeight</tt> .LT. 0 the current is clockwise.

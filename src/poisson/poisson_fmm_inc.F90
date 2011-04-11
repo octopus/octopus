@@ -208,7 +208,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
     end do
   end if
 
-  ! invert the indexes
+  ! invert the indices
   do ii = sp, ep
     do jj = 1, MAX_DIM
       xyz(jj, ii) = this%der%mesh%x(ii, jj)

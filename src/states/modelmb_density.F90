@@ -142,7 +142,7 @@ contains
     SAFE_ALLOCATE(ix_1part_p(1:ndim1part))
     SAFE_ALLOCATE(dipole_moment(1:ndim1part))
 
-    ! Allocatation of the arrays that store the limiting indexes for each direction
+    ! Allocation of the arrays that store the limiting indices for each direction
     SAFE_ALLOCATE(npoints(1:ndims))
     do idir = 1, ndims
       npoints(idir) = gr%mesh%idx%ll(idir)

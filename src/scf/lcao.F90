@@ -329,7 +329,7 @@ contains
       SAFE_ALLOCATE(this%basis_orb(1:this%nbasis))
       SAFE_ALLOCATE(this%atom_orb_basis(1:geo%natoms, 1:this%maxorb))
 
-      ! Initialize the mapping between indexes
+      ! Initialize the mapping between indices
 
       ibasis = 0
       do iatom = 1, geo%natoms

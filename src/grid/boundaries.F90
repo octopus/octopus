@@ -250,7 +250,7 @@ contains
           call MPI_Recv(this%nsend(ipart), 1, MPI_INTEGER, ipart - 1, 0, mesh%vp%comm, status, mpi_err)
         end do
 
-        ! Now we send the indexes of the points
+        ! Now we send the indices of the points
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno .or. this%nrecv(ipart) == 0) cycle
           call MPI_Bsend(recv_rem_points(1, ipart), this%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
@@ -268,7 +268,7 @@ contains
         ! we no longer need this
         SAFE_DEALLOCATE_A(recv_rem_points)
 
-        ! Now we have all the indexes required locally, so we can
+        ! Now we have all the indices required locally, so we can
         ! build the mpi datatypes
 
         SAFE_ALLOCATE(this%dsend_type(1:mesh%vp%npart))
@@ -288,7 +288,7 @@ contains
 
             ASSERT(all(send_points(1:this%nsend(ipart), ipart) <= mesh%np))
 
-            ! MPI indexes start from zero
+            ! MPI indices start from zero
             send_points(1:this%nsend(ipart), ipart) = send_points(1:this%nsend(ipart), ipart) - 1
 
             call get_blocks(this%nsend(ipart), send_points(:, ipart), nblocks, blocklengths, offsets)

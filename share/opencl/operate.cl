@@ -40,7 +40,7 @@ __kernel void operate(const int nn,
   const int nst = get_global_size(0);
   const int l = get_global_id(1);
 
-  // copy the indexes and the weights to local memory
+  // copy the indices and the weights to local memory
   __local int * index = indexl + nn*get_local_id(1);
   for(int j = ist; j < nn; j+=nst){
     index[j] = ri[nn*l + j]*ldfi;

@@ -281,8 +281,8 @@ void FC_FUNC_(zoltan_partition, ZOLTAN_PARTITION)(const int * method,
 
   Zoltan_LB_Partition (zz,
 		       &changes, /* boolean indicating if the partition has changed */
-		       &num_gid_entries, /* number of dimension of the global indexes, 1 for us */
-		       &num_lid_entries, /* number of dimension of the local indexes, 1 for us */
+		       &num_gid_entries, /* number of dimension of the global indices, 1 for us */
+		       &num_lid_entries, /* number of dimension of the local indices, 1 for us */
 		       /* since we use "RESULT_LISTS" = "PARTITION_ASSIGNMENTS" 
 			  many arguments don't have values */
 		       &num_import,        /* -1 */

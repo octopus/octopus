@@ -95,7 +95,7 @@ contains
   !   n_partially_filled is the number of orbitals that are neither filled,
   !            half-filled, nor empty.
   ! The integer arrays filled, partially_filled and half_filled point
-  !   to the indexes where the filled, partially filled and half_filled
+  !   to the indices where the filled, partially filled and half_filled
   !   orbitals are, respectively.
   subroutine occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled, &
                              filled, partially_filled, half_filled)
