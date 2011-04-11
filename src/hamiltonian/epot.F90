@@ -931,7 +931,7 @@ contains
     FLOAT,                     intent(out)   :: force(:, :) ! sb%dim, geo%natoms
 
     type(species_t), pointer :: spec
-    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc
+    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
     integer :: ix, iy, iz, isph, ss
@@ -957,13 +957,15 @@ contains
     ! if the system is periodic we have to add the energy of the
     ! interaction with the copies
     
+    rcut = CNST(6.0)/alpha
+
     ! the short-range part is calculated directly
     do iatom = 1, geo%natoms
       spec => geo%atom(iatom)%spec
       if (.not. species_is_ps(spec)) cycle
       zi = species_zval(geo%atom(iatom)%spec)
 
-      call periodic_copy_init(pc, sb, geo%atom(iatom)%x, CNST(5.0))
+      call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rcut)
       
       do icopy = 1, periodic_copy_num(pc)
         xi = periodic_copy_position(pc, sb, icopy)
@@ -1003,8 +1005,11 @@ contains
 
     ! First the G = 0 term (charge was calculated previously)
     efourier = -M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
-    
-    isph = 100
+
+    ! get a converged value for the cutoff in g
+    rcut = min(sum(sb%klattice(1:sb%dim, 1))**2, sum(sb%klattice(1:sb%dim, 2))**2, sum(sb%klattice(1:sb%dim, 3))**2)
+    isph = ceiling(CNST(6.0)*alpha/rcut)
+
     do ix = -isph, isph
       do iy = -isph, isph
         do iz = -isph, isph
@@ -1027,6 +1032,7 @@ contains
             xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
             sumatoms = sumatoms + zi*exp(M_ZI*sum(gg(1:sb%dim)*xi(1:sb%dim)))
           end do
+          
           efourier = efourier + factor*sumatoms*conjg(sumatoms)
           
           do iatom = 1, geo%natoms
