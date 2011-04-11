@@ -39,7 +39,7 @@ program dielectric_function
 
   integer :: in_file, out_file, ii, jj, kk, idir, ierr
   integer :: time_steps, energy_steps, istart, iend, ntiter
-  FLOAT :: vecpot0(1:MAX_DIM), dt, tt, ww
+  FLOAT :: vecpot0(1:MAX_DIM), dt, tt, ww, n0
   FLOAT, allocatable :: vecpot(:, :), dumpa(:)
   CMPLX, allocatable :: dielectric(:, :), chi(:, :), invdielectric(:, :)
   FLOAT, parameter :: eta = CNST(0.2)/CNST(27.211383)
@@ -137,6 +137,8 @@ program dielectric_function
   SAFE_ALLOCATE(dielectric(1:MAX_DIM, 0:energy_steps))
   SAFE_ALLOCATE(chi(1:MAX_DIM, 0:energy_steps))
 
+  n0 = sqrt(sum(vecpot0(1:MAX_DIM)))
+
   do kk = 0, energy_steps
     ww = kk*spectrum%energy_step
 
@@ -148,7 +150,7 @@ program dielectric_function
         invdielectric(1:MAX_DIM, kk) + vecpot(MAX_DIM + 1:2*MAX_DIM, ii)*exp((M_zI*ww - eta)*tt)*dumpa(ii)*dt
     end do
     
-    invdielectric(1:MAX_DIM, kk) = CNST(1.0) + invdielectric(1:MAX_DIM, kk)/vecpot0(1:MAX_DIM)
+    invdielectric(1:MAX_DIM, kk) = CNST(1.0) + invdielectric(1:MAX_DIM, kk)/n0
     dielectric(1:MAX_DIM, kk) = CNST(1.0)/invdielectric(1:MAX_DIM, kk)
     chi(1:MAX_DIM, kk) = (dielectric(1:MAX_DIM, kk) - CNST(1.0))*sb%rcell_volume/(CNST(4.0)*M_PI)
   end do
