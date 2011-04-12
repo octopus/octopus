@@ -250,7 +250,7 @@ contains
     
     ! initialize the parser
     if(mpi_grp_is_root(mpi_world)) call loct_mkdir('exec')
-    ierr = parse_init('exec/out.oct', mpi_world%rank)
+    ierr = parse_init('exec/parser.log', mpi_world%rank)
     if(ierr .ne. 0) then
       write(6,'(a)') '*** Fatal Error (description follows)'
       write(6,'(a)') 'Error initializing liboct'
