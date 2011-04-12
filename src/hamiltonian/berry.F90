@@ -102,30 +102,24 @@ contains
 
     do ist = 1, st%nst
       do ist2 = 1, st%nst
-        
-        if (ist .le. ist2) then
-          matrix(ist, ist2) = M_Z0
-          do idim = 1, st%d%dim ! spinor components
+        matrix(ist, ist2) = M_Z0
+        do idim = 1, st%d%dim ! spinor components
             
-            if(states_are_complex(st)) then
-              forall(ip = 1:mesh%np)
-                tmp(ip) = conjg(st%zpsi(ip, idim, ist, ik)) * &
-                  exp(-M_zI * (M_PI / mesh%sb%lsize(dir)) * mesh%x(ip, dir)) * st%zpsi(ip, idim, ist2, ik)
-                ! factor of two removed from exp since actual lattice vector is 2 * lsize
-              end forall
-            else
-              forall(ip = 1:mesh%np)
-                tmp(ip) = st%dpsi(ip, idim, ist, ik) * &
-                  exp(-M_zI * (M_PI / mesh%sb%lsize(dir)) * mesh%x(ip, dir)) * st%dpsi(ip, idim, ist2, ik)
-              end forall
-            end if
-            
-            matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(mesh, tmp)
-          end do
-        else
-          ! enforce Hermiticity of matrix
-          matrix(ist, ist2) = conjg(matrix(ist2, ist))
-        end if
+          if(states_are_complex(st)) then
+            forall(ip = 1:mesh%np)
+              tmp(ip) = conjg(st%zpsi(ip, idim, ist, ik)) * &
+                exp(-M_zI * (M_PI / mesh%sb%lsize(dir)) * mesh%x(ip, dir)) * st%zpsi(ip, idim, ist2, ik)
+              ! factor of two removed from exp since actual lattice vector is 2 * lsize
+            end forall
+          else
+            forall(ip = 1:mesh%np)
+              tmp(ip) = st%dpsi(ip, idim, ist, ik) * &
+                exp(-M_zI * (M_PI / mesh%sb%lsize(dir)) * mesh%x(ip, dir)) * st%dpsi(ip, idim, ist2, ik)
+            end forall
+          end if
+          
+          matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(mesh, tmp)
+        end do
       enddo !ist2
     enddo !ist
       
@@ -165,7 +159,7 @@ contains
           else
             ! If det = 0, mu = -infinity, so this condition should never be reached
             ! if things are working properly.
-            write(message(1),*) "Divide by zero: Berry phase determinant = ", det
+            write(message(1),*) "Divide by zero: dir = ", idir, " Berry-phase determinant = ", det
             call messages_fatal(1)
           endif
           pot(1:mesh%np, ispin) = pot(1:mesh%np, ispin) + &
