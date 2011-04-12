@@ -166,7 +166,7 @@ contains
     end if
 
     if(warnings > 0) then
-      write(message(1), '(a, i2, a)') "Octopus emmited ", warnings, " warning(s)."
+      write(message(1), '(a, i2, a)') "Octopus emitted ", warnings, " warning(s)."
       call messages_info(1)
     end if
 
