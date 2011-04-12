@@ -94,6 +94,9 @@ module messages_m
   integer,    public :: global_alloc_err
   integer(8), public :: global_sizeof
 
+  integer :: warnings
+  integer :: experimentals
+
 contains
 
   ! ---------------------------------------------------------
@@ -142,12 +145,30 @@ contains
     else
       in_debug_mode = .false.
     end if
+    
+    warnings = 0
+    experimentals = 0    
 
   end subroutine messages_init
 
   ! ---------------------------------------------------------
 
   subroutine messages_end()
+
+    if(experimentals > 0 .or. warnings > 0) then
+      message(1) = ''
+      call messages_info(1)      
+    end if
+
+    if(experimentals > 0) then
+      write(message(1), '(a, i2, a)') "Octopus used ", experimentals, " experimental feature(s)."
+      call messages_info(1)
+    end if
+
+    if(warnings > 0) then
+      write(message(1), '(a, i2, a)') "Octopus emmited ", warnings, " warning(s)."
+      call messages_info(1)
+    end if
 
   end subroutine messages_end
 
@@ -235,6 +256,8 @@ contains
 #ifdef HAVE_MPI
     logical :: all_nodes_
 #endif
+
+    INCR(warnings, 1)
 
     have_to_write = mpi_grp_is_root(mpi_world)
 
@@ -895,6 +918,8 @@ contains
   subroutine messages_experimental(name)
     character(len=*), intent(in) :: name
     
+    INCR(experimentals, 1)
+
     if(.not. conf%devel_version) then
       write(message(1), '(a)') 'Error: '//trim(name)//' is under development.'
       write(message(2), '(a)') 'To use it (at your own risk) set the variable ExperimentalFeatures to yes.'
@@ -903,6 +928,9 @@ contains
       write(message(1), '(a)') trim(name)//' is under development.'
       write(message(2), '(a)') 'It might not work or produce wrong results.'
       call messages_warning(2)
+
+      ! remove this warning from the count
+      INCR(warnings, -1)
     end if
 
   end subroutine messages_experimental
