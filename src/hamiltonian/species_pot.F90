@@ -171,8 +171,9 @@ contains
       end if
 
     case (SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_UPF) ! ...from pseudopotential
-      ! the outer loop sums densities over atoms in neighbour cells
 
+      ! the outer loop sums densities over atoms in neighbour cells
+      pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(spec)
 
       call periodic_copy_init(pp, sb, atom%x, &

@@ -16,5 +16,3 @@ GuessMagnetDensity = user_defined
 %
 
 Eigensolver = rmmdiis
-
-ConvRelDens = 1e-20
