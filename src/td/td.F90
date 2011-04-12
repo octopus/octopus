@@ -257,7 +257,9 @@ contains
         call gauge_field_propagate(hm%ep%gfield, gauge_force, td%dt)
       end if
       
-      if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
+      if(generate .or. geometry_species_time_dependent(geo)) then 
+        call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
+      end if
 
       update_energy = (td%dynamics == BO) .or. (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter)
 

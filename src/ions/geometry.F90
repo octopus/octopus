@@ -61,7 +61,8 @@ module geometry_m
     atom_write_xyz,        &
     loadPDB,               &
     geometry_val_charge,   &
-    geometry_grid_defaults
+    geometry_grid_defaults,&
+    geometry_species_time_dependent
 
   integer, parameter, public :: &
     INTERACTION_COULOMB = 1,    &
@@ -100,6 +101,7 @@ module geometry_m
     type(species_t), pointer :: species(:)
 
     logical :: only_user_def        !< Do we want to treat only user-defined species?
+    logical :: species_time_dependent !< For time-dependent user defined species
 
     FLOAT :: kinetic_energy         !< the ion kinetic energy
 
@@ -265,7 +267,7 @@ contains
     type(geometry_t),  intent(inout) :: geo
     logical, optional, intent(in)    :: print_info
 
-    logical :: print_info_
+    logical :: print_info_, spec_user_defined
     integer :: i, j, k, ispin
 
     PUSH_SUB(geometry_init_species)
@@ -314,6 +316,26 @@ contains
     end do
     if(print_info_) then
       call messages_print_stress(stdout)
+    end if
+    
+    !%Variable SpeciesTimeDependent
+    !%Type logical
+    !%Default no
+    !%Section System::Species
+    !%Description
+    !% When this variable is set, the potential defined in the block <tt>Species</tt> is calculated
+    !% and applied to the Hamiltonian at each time step. You must have at least one <tt>spec_user_defined</tt>
+    !% type of species to use this.
+    !%End
+    call parse_logical(datasets_check('SpeciesTimeDependent'), .false., geo%species_time_dependent)
+    ! we must have at least one user defined species in order to have time dependency
+    do i = 1,geo%nspecies
+      if(species_type(geo%species(i)) == SPEC_USDEF) then
+        spec_user_defined = .true.
+      end if
+    end do
+    if (geo%species_time_dependent .and. .not. spec_user_defined) then
+      call input_error('SpeciesTimeDependent')
     end if
 
     !  assign species
@@ -544,6 +566,17 @@ contains
 
     POP_SUB(geometry_atoms_are_too_close)
   end function geometry_atoms_are_too_close
+  
+  ! ---------------------------------------------------------
+  logical function geometry_species_time_dependent(geo) result(time_dependent)
+    type(geometry_t), intent(in) :: geo
+
+    PUSH_SUB(geometry_species_time_dependent)
+
+    time_dependent = geo%species_time_dependent
+
+    POP_SUB(geometry_species_time_dependent)
+  end function geometry_species_time_dependent
 
   ! ---------------------------------------------------------
   subroutine geometry_dipole(geo, dipole)
