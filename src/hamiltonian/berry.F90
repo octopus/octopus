@@ -179,29 +179,21 @@ contains
     FLOAT,          intent(in) :: E_field(:)  ! mesh%sb%periodic_dim
     FLOAT,          intent(in) :: vberry(:,:) ! mesh%np, st%d%nspin
 
-    integer :: ispin, ist, ip, idir, idim
-    FLOAT, allocatable :: vpsi(:,:)
+    integer :: ispin, idir
 
     PUSH_SUB(berry_energy_correction)
-
-    SAFE_ALLOCATE(vpsi(1:mesh%np, 1:st%d%dim))
 
     ! first we calculate expectation value of Berry potential, to subtract off
     delta = M_ZERO
     do ispin = 1, st%d%nspin
-      do ist = 1, st%nst
-        forall(ip = 1:mesh%np, idim = 1:st%d%dim) vpsi(ip, idim) = st%dpsi(ip, idim, ist, ispin) * vberry(ip, ispin)
-        delta = delta + dmf_dotp(mesh, st%d%dim, st%dpsi(1:mesh%np, 1:st%d%dim, ist, ispin), vpsi(1:mesh%np, 1:st%d%dim))
-      enddo
+      delta = delta - dmf_dotp(mesh, st%rho(1:mesh%np, ispin), vberry(1:mesh%np, ispin))
     enddo
-    delta = -delta * st%smear%el_per_state
 
     ! the real energy contribution is -mu.E
     do idir = 1, mesh%sb%periodic_dim
       delta = delta - berry_dipole(st, mesh, idir) * E_field(idir)
     enddo
 
-    SAFE_DEALLOCATE_A(vpsi)
     POP_SUB(berry_energy_correction)
   end function berry_energy_correction
 
