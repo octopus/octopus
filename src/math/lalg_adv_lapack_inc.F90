@@ -790,7 +790,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   FLOAT, allocatable :: work(:)
   logical :: invert_
 
-  ! No PUSH_SUB, called to often
+  ! No PUSH_SUB, called too often
 
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))

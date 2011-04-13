@@ -129,7 +129,11 @@ contains
       enddo !ist2
     enddo !ist
       
-    det = lalg_determinant(noccst, matrix(1:noccst, 1:noccst), invert = .false.) ** st%smear%el_per_state
+    if(noccst > 0) then
+      det = lalg_determinant(noccst, matrix(1:noccst, 1:noccst), invert = .false.) ** st%smear%el_per_state
+    else
+      det = M_ONE
+    endif
 
     SAFE_DEALLOCATE_A(matrix)
     SAFE_DEALLOCATE_A(tmp)
