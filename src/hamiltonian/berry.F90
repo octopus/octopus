@@ -92,16 +92,22 @@ contains
     integer,        intent(in) :: dir
     integer,        intent(in) :: ik
 
-    integer ist, ist2, idim, ip
+    integer :: ist, ist2, idim, ip, noccst
     CMPLX, allocatable :: matrix(:, :), tmp(:)
 
     PUSH_SUB(berry_phase_det)
 
-    SAFE_ALLOCATE(matrix(1:st%nst, 1:st%nst))
+    ! find how many states are occupied on this k-point. Formalism only works if semiconducting anyway.
+    noccst = 0
+    do ist = 1, st%nst
+      if(st%occ(ist, ik) > M_EPSILON) noccst = ist
+    enddo
+
+    SAFE_ALLOCATE(matrix(1:noccst, 1:noccst))
     SAFE_ALLOCATE(tmp(1:mesh%np))
 
-    do ist = 1, st%nst
-      do ist2 = 1, st%nst
+    do ist = 1, noccst
+      do ist2 = 1, noccst
         matrix(ist, ist2) = M_Z0
         do idim = 1, st%d%dim ! spinor components
             
@@ -123,7 +129,7 @@ contains
       enddo !ist2
     enddo !ist
       
-    det = lalg_determinant(st%nst, matrix(1:st%nst, 1:st%nst), invert = .false.) ** st%smear%el_per_state
+    det = lalg_determinant(noccst, matrix(1:noccst, 1:noccst), invert = .false.) ** st%smear%el_per_state
 
     SAFE_DEALLOCATE_A(matrix)
     SAFE_DEALLOCATE_A(tmp)
