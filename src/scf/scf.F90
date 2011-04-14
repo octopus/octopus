@@ -694,6 +694,8 @@ contains
           call messages_info(1)
         endif
 
+        if(associated(hm%vberry)) call write_dipole(stdout)
+
         if(st%d%ispin > UNPOLARIZED) then
           call write_magnetic_moments(stdout, gr%mesh, st)
         end if
@@ -743,8 +745,7 @@ contains
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
 
-      FLOAT :: e_dip(4, st%d%nspin), n_dip(MAX_DIM)
-      integer :: iunit, ispin, idir, iatom, nquantumpol, ii
+      integer :: iunit, idir, iatom, ii
 
       PUSH_SUB(scf_run.scf_write_static)
 
@@ -789,8 +790,50 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
-      ! Next lines of code calculate the dipole of the molecule, summing the electronic and
-      ! ionic contributions.
+      call write_dipole(iunit)
+
+      if(mpi_grp_is_root(mpi_world)) then
+        write(iunit, '(a)') 'Convergence:'
+        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &
+          ' (', scf%conv_abs_dens, ')'
+        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_dens = ', scf%rel_dens, &
+          ' (', scf%conv_rel_dens, ')'
+        write(iunit, '(6x, a, es14.8,a,es14.8,4a)') 'abs_ev = ', scf%abs_ev, &
+          ' (', units_from_atomic(units_out%energy, scf%conv_abs_ev), ')', &
+          ' [',  trim(units_abbrev(units_out%energy)), ']'
+        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_ev = ', scf%rel_ev, &
+          ' (', scf%conv_rel_ev, ')'
+        write(iunit,'(1x)')
+
+        if(scf%calc_force) then
+          write(iunit,'(3a)') 'Forces on the ions [', trim(units_abbrev(units_out%force)), "]"
+          write(iunit,'(a,10x,99(14x,a))') ' Ion', (index2axis(idir), idir = 1, gr%sb%dim)
+          do iatom = 1, geo%natoms
+            write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%spec)), &
+              (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, gr%sb%dim)
+          end do
+          write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + gr%sb%dim * 15)
+          write(iunit,'(a14, 10f15.6)') " Max abs force", &
+            (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:geo%natoms)%f(idir)))), idir=1, gr%sb%dim)
+          write(iunit,'(a14, 10f15.6)') " Total force", &
+            (units_from_atomic(units_out%force, sum(geo%atom(1:geo%natoms)%f(idir))), idir=1, gr%sb%dim)
+        end if
+
+        call io_close(iunit)
+      end if
+
+      POP_SUB(scf_run.scf_write_static)
+    end subroutine scf_write_static
+  
+
+    ! ---------------------------------------------------------
+    subroutine write_dipole(iunit)
+      integer, intent(in) :: iunit
+    
+      integer :: ispin, idir
+      FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
+
+      PUSH_SUB(scf_run.write_dipole)
 
       do ispin = 1, st%d%nspin
         call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
@@ -798,7 +841,7 @@ contains
 
       call geometry_dipole(geo, n_dip)
 
-      do idir = 1, 3
+      do idir = 1, gr%sb%dim
         ! in periodic directions use single-point Berry`s phase calculation
         if(idir .le. gr%sb%periodic_dim) then
           n_dip(idir) = n_dip(idir) + berry_dipole(st, gr%mesh, idir)
@@ -837,38 +880,8 @@ contains
         write(iunit, *)
       endif
 
-      if(mpi_grp_is_root(mpi_world)) then
-        write(iunit, '(a)') 'Convergence:'
-        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &
-          ' (', scf%conv_abs_dens, ')'
-        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_dens = ', scf%rel_dens, &
-          ' (', scf%conv_rel_dens, ')'
-        write(iunit, '(6x, a, es14.8,a,es14.8,4a)') 'abs_ev = ', scf%abs_ev, &
-          ' (', units_from_atomic(units_out%energy, scf%conv_abs_ev), ')', &
-          ' [',  trim(units_abbrev(units_out%energy)), ']'
-        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_ev = ', scf%rel_ev, &
-          ' (', scf%conv_rel_ev, ')'
-        write(iunit,'(1x)')
-
-        if(scf%calc_force) then
-          write(iunit,'(3a)') 'Forces on the ions [', trim(units_abbrev(units_out%force)), "]"
-          write(iunit,'(a,10x,99(14x,a))') ' Ion', (index2axis(idir), idir = 1, gr%sb%dim)
-          do iatom = 1, geo%natoms
-            write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%spec)), &
-              (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, gr%sb%dim)
-          end do
-          write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + gr%sb%dim * 15)
-          write(iunit,'(a14, 10f15.6)') " Max abs force", &
-            (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:geo%natoms)%f(idir)))), idir=1, gr%sb%dim)
-          write(iunit,'(a14, 10f15.6)') " Total force", &
-            (units_from_atomic(units_out%force, sum(geo%atom(1:geo%natoms)%f(idir))), idir=1, gr%sb%dim)
-        end if
-
-        call io_close(iunit)
-      end if
-
-      POP_SUB(scf_run.scf_write_static)
-    end subroutine scf_write_static
+      POP_SUB(scf_run.write_dipole)
+    end subroutine
 
 
     ! ---------------------------------------------------------
