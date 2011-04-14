@@ -23,10 +23,10 @@ OEP_Level = oep_kli
 
 EigenSolver = cg_new
 EigenSolverInitTolerance = 1e-4
-EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalTolerance = 1e-6
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
 Mixing = 0.1
-ConvRelDens = 5e-5
+ConvRelDens = 1e-5
 
