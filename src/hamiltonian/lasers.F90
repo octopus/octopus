@@ -43,7 +43,7 @@ module lasers_m
     laser_t,                      &
     laser_init,                   &
     laser_end,                    &
-    laser_messages_info,             &
+    laser_messages_info,          &
     laser_field,                  &
     laser_potential,              &
     laser_vector_potential,       &

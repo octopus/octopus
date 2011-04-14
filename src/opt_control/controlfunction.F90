@@ -330,7 +330,7 @@ contains
     !%Option controlfunction_mode_f         2
     !% The optimization process attempts to find the best possible envelope. The full 
     !% control field is this envelope times a cosine function with a "carrier" frequency. 
-    !% This carrier frequencey is given by the carrier frequency of the <tt>TDExternalFields</tt> 
+    !% This carrier frequency is given by the carrier frequency of the <tt>TDExternalFields</tt> 
     !% in the <tt>inp</tt> file.
     !%Option controlfunction_mode_phi       3
     !% The optimization process attempts to find the best possible time-dependent phase. That is,
