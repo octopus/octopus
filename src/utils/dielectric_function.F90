@@ -25,6 +25,7 @@ program dielectric_function
   use geometry_m
   use global_m
   use io_m
+  use lalg_adv_m
   use loct_m
   use messages_m
   use parser_m
@@ -37,11 +38,11 @@ program dielectric_function
 
   implicit none
 
-  integer :: in_file, out_file, ii, jj, kk, idir, ierr
+  integer :: in_file, out_file, ii, jj, kk, idir, jdir, ierr
   integer :: time_steps, energy_steps, istart, iend, ntiter
   FLOAT   :: dt, tt, ww, n0
   FLOAT, allocatable :: vecpot(:, :), dumpa(:), vecpot0(:)
-  CMPLX, allocatable :: dielectric(:, :), chi(:, :), invdielectric(:, :)
+  CMPLX, allocatable :: dielectric(:, :), chi(:, :), invdielectric(:, :), fullmat(:, :)
   FLOAT, parameter :: eta = CNST(0.2)/CNST(27.211383)
   type(spec_t)      :: spectrum
   type(block_t)     :: blk
@@ -89,6 +90,12 @@ program dielectric_function
     end if
 
   end if
+
+  message(1) = "This program assumes that the gauge field is in the 'x'"
+  message(2) = "direction, and that the 'y' and 'z' directions are equivalent."
+  message(3) = "If this is not the case the dielectric function and the"
+  message(4) = "susceptibility will be wrong."
+  call messages_warning(4)
 
   in_file = io_open('td.general/gauge_field', action='read', status='old', die=.false.)
   call io_skip_header(in_file)
@@ -138,8 +145,9 @@ program dielectric_function
   SAFE_ALLOCATE(invdielectric(1:space%dim, 0:energy_steps))
   SAFE_ALLOCATE(dielectric(1:space%dim, 0:energy_steps))
   SAFE_ALLOCATE(chi(1:space%dim, 0:energy_steps))
+  SAFE_ALLOCATE(fullmat(1:space%dim, 1:space%dim))
 
-  n0 = sqrt(sum(vecpot0(1:space%dim)))
+  n0 = sqrt(sum(vecpot0(1:space%dim))**2)
 
   do kk = 0, energy_steps
     ww = kk*spectrum%energy_step
@@ -152,10 +160,31 @@ program dielectric_function
         invdielectric(1:space%dim, kk) + vecpot(space%dim + 1:2*space%dim, ii)*exp((M_zI*ww - eta)*tt)*dumpa(ii)*dt
     end do
     
-    invdielectric(1:space%dim, kk) = CNST(1.0) + invdielectric(1:space%dim, kk)/n0
-    dielectric(1:space%dim, kk) = CNST(1.0)/invdielectric(1:space%dim, kk)
-    chi(1:space%dim, kk) = (dielectric(1:space%dim, kk) - CNST(1.0))*sb%rcell_volume/(CNST(4.0)*M_PI)
+    invdielectric(1:space%dim, kk) = (vecpot0(1:space%dim) + invdielectric(1:space%dim, kk))/n0
+
+    ! calculate the full inverse dielectric matrix
+    do idir = 1, space%dim
+      do jdir = 1, space%dim
+        fullmat(idir, mod(jdir + idir - 2, space%dim) + 1) = invdielectric(jdir, kk)
+      end do
+    end do
+
+    ! and invert it
+    call lalg_sym_inverter('u', space%dim, fullmat)
+
+    ! symmetrize the rest dielectric matrix
+    do idir = 1, space%dim
+      do jdir = 1, jdir - 1
+        fullmat(jdir, idir) = fullmat(idir, jdir)
+      end do
+    end do
+
+    dielectric(1:space%dim, kk) = fullmat(1:space%dim, 1)
+
+    chi(1:space%dim, kk) = (dielectric(1:space%dim, kk) - vecpot0(1:space%dim)/n0)*sb%rcell_volume/(CNST(4.0)*M_PI)
   end do
+
+  SAFE_DEALLOCATE_A(fullmat)
 
   out_file = io_open('td.general/inverse_dielectric_function', action='write')
   do kk = 0, energy_steps
