@@ -39,8 +39,8 @@ program dielectric_function
 
   integer :: in_file, out_file, ii, jj, kk, idir, ierr
   integer :: time_steps, energy_steps, istart, iend, ntiter
-  FLOAT :: vecpot0(1:MAX_DIM), dt, tt, ww, n0
-  FLOAT, allocatable :: vecpot(:, :), dumpa(:)
+  FLOAT   :: dt, tt, ww, n0
+  FLOAT, allocatable :: vecpot(:, :), dumpa(:), vecpot0(:)
   CMPLX, allocatable :: dielectric(:, :), chi(:, :), invdielectric(:, :)
   FLOAT, parameter :: eta = CNST(0.2)/CNST(27.211383)
   type(spec_t)      :: spectrum
@@ -71,9 +71,11 @@ program dielectric_function
   call geometry_init(geo, space)
   call simul_box_init(sb, geo, space)
     
+  SAFE_ALLOCATE(vecpot0(1:space%dim))
+
   if(parse_block(datasets_check('GaugeVectorField'), blk) == 0) then
     
-    do ii = 1, MAX_DIM
+    do ii = 1, space%dim
       call parse_block_float(blk, 0, ii - 1, vecpot0(ii))
     end do
     
@@ -96,12 +98,12 @@ program dielectric_function
     call messages_fatal(1)
   end if
 
-  SAFE_ALLOCATE(vecpot(1:MAX_DIM*3, 1:time_steps))
+  SAFE_ALLOCATE(vecpot(1:space%dim*3, 1:time_steps))
 
   call io_skip_header(in_file)
   
   do ii = 1, time_steps
-    read(in_file, *) jj, tt, vecpot(1:MAX_DIM*3, ii)
+    read(in_file, *) jj, tt, vecpot(1:space%dim*3, ii)
   end do
 
   call io_close(in_file)
@@ -133,26 +135,26 @@ program dielectric_function
   end do
 
   energy_steps = spectrum%max_energy / spectrum%energy_step
-  SAFE_ALLOCATE(invdielectric(1:MAX_DIM, 0:energy_steps))
-  SAFE_ALLOCATE(dielectric(1:MAX_DIM, 0:energy_steps))
-  SAFE_ALLOCATE(chi(1:MAX_DIM, 0:energy_steps))
+  SAFE_ALLOCATE(invdielectric(1:space%dim, 0:energy_steps))
+  SAFE_ALLOCATE(dielectric(1:space%dim, 0:energy_steps))
+  SAFE_ALLOCATE(chi(1:space%dim, 0:energy_steps))
 
-  n0 = sqrt(sum(vecpot0(1:MAX_DIM)))
+  n0 = sqrt(sum(vecpot0(1:space%dim)))
 
   do kk = 0, energy_steps
     ww = kk*spectrum%energy_step
 
-    invdielectric(1:MAX_DIM, kk) = M_ZERO
+    invdielectric(1:space%dim, kk) = M_ZERO
 
     do ii = istart, iend
       tt = ii*dt
-      invdielectric(1:MAX_DIM, kk) = &
-        invdielectric(1:MAX_DIM, kk) + vecpot(MAX_DIM + 1:2*MAX_DIM, ii)*exp((M_zI*ww - eta)*tt)*dumpa(ii)*dt
+      invdielectric(1:space%dim, kk) = &
+        invdielectric(1:space%dim, kk) + vecpot(space%dim + 1:2*space%dim, ii)*exp((M_zI*ww - eta)*tt)*dumpa(ii)*dt
     end do
     
-    invdielectric(1:MAX_DIM, kk) = CNST(1.0) + invdielectric(1:MAX_DIM, kk)/n0
-    dielectric(1:MAX_DIM, kk) = CNST(1.0)/invdielectric(1:MAX_DIM, kk)
-    chi(1:MAX_DIM, kk) = (dielectric(1:MAX_DIM, kk) - CNST(1.0))*sb%rcell_volume/(CNST(4.0)*M_PI)
+    invdielectric(1:space%dim, kk) = CNST(1.0) + invdielectric(1:space%dim, kk)/n0
+    dielectric(1:space%dim, kk) = CNST(1.0)/invdielectric(1:space%dim, kk)
+    chi(1:space%dim, kk) = (dielectric(1:space%dim, kk) - CNST(1.0))*sb%rcell_volume/(CNST(4.0)*M_PI)
   end do
 
   out_file = io_open('td.general/inverse_dielectric_function', action='write')
