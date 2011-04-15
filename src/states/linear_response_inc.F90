@@ -57,8 +57,14 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
 
     do jst = 1, st%nst
       if(st%smear%method .eq. SMEAR_FIXED_OCC) then
-        theta_ij = theta_Fi(jst) / (theta_Fi(ist) + theta_Fi(jst))
-        theta_ji = theta_Fi(ist) / (theta_Fi(ist) + theta_Fi(jst))
+        if(theta_Fi(ist) + theta_Fi(jst) > M_EPSILON) then
+          theta_ij = theta_Fi(jst) / (theta_Fi(ist) + theta_Fi(jst))
+          theta_ji = theta_Fi(ist) / (theta_Fi(ist) + theta_Fi(jst))
+        else
+          ! avoid dividing by zero
+          theta_ij = M_ZERO
+          theta_ji = M_ZERO
+        endif
       else
         xx = (st%eigenval(ist, ik) - st%eigenval(jst, ik))/dsmear
         theta_ij = smear_step_function(st%smear,  xx)
