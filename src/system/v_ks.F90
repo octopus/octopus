@@ -434,7 +434,17 @@ contains
     if(present(time)) ks%calc%time = time
     ks%calc%calc_energy = optional_default(calc_energy, .true.)
 
-    ! If the Hxc term is frozen, there is nothing to do (WARNING: MISSING ks%calc%energy%intnvxc)
+    if(associated(hm%vberry)) then
+      SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
+      if(optional_default(calc_berry, .true.)) then
+        call berry_potential(st, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
+      else
+        ! before wfns are initialized, cannot calculate this term
+        ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO
+      endif
+    endif
+
+    ! If the Hxc term is frozen, there is nothing more to do (WARNING: MISSING ks%calc%energy%intnvxc)
     if(ks%frozen_hxc) then
       POP_SUB(v_ks_calc_start)
       return
@@ -461,16 +471,6 @@ contains
 
       if(ks%theory_level .ne. HARTREE) call v_a_xc(geo)
     end if
-
-    if(associated(hm%vberry)) then
-      SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
-      if(optional_default(calc_berry, .true.)) then
-        call berry_potential(st, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
-      else
-        ! before wfns are initialized, cannot calculate this term
-        ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO
-      endif
-    endif
 
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
       SAFE_ALLOCATE(ks%calc%hf_st)
@@ -723,13 +723,13 @@ contains
 
     PUSH_SUB(v_ks_calc_finish)
 
+    ASSERT(ks%calc%calculating)
+    ks%calc%calculating = .false.
+
     if(ks%frozen_hxc) then
       POP_SUB(v_ks_calc_finish)
       return
     end if
-
-    ASSERT(ks%calc%calculating)
-    ks%calc%calculating = .false.
 
     !change the pointer to the energy object
     SAFE_DEALLOCATE_P(hm%energy)
