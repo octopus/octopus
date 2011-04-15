@@ -747,6 +747,7 @@ return
     logical :: integral_occs
 
     PUSH_SUB(states_read_initial_occs)
+
     !%Variable Occupations
     !%Type block
     !%Section States
@@ -813,6 +814,8 @@ return
         ! have the same column number; otherwise the code will stop with an error.
         ncols = parse_block_cols(blk, 0)
         if(ncols > st%nst) then
+          message(1) = "Too many columns in block Occupations."
+          call messages_warning(1)
           call input_error("Occupations")
         end if
         ! Now we fill all the "missing" states with the maximum occupation.
@@ -1229,11 +1232,11 @@ return
       !% parallelization the default is par_gram_schmidt.
       !%Option gram_schmidt 1
       !% The standard Gram-Schmidt orthogonalization implemented using
-      !% Blas/Lapack. Can be used with domain parallelization but not
+      !% BLAS/LAPACK. Can be used with domain parallelization but not
       !% state parallelization.
       !%Option par_gram_schmidt 2
       !% The standard Gram-Schmidt orthogonalization implemented using
-      !% Scalapack. Compatible with states parallelization.
+      !% ScaLAPACK. Compatible with states parallelization.
       !%Option mgs 3
       !% Modified Gram-Schmidt orthogonalization.
       !%Option qr 4
@@ -1269,7 +1272,7 @@ return
         case(ORTH_OLDGS, ORTH_PAR_GS)
         case(ORTH_QR)
 #ifndef HAVE_SCALAPACK
-          message(1) = 'The QR orthogonalizer requires scalapack to work with state-parallelization.'
+          message(1) = 'The QR orthogonalizer requires ScaLAPACK to work with state-parallelization.'
           call messages_fatal(1)
 #endif
         case default
@@ -1282,15 +1285,15 @@ return
       ! some checks for ingenious users
       if(st%d%orth_method == ORTH_PAR_GS) then
 #ifndef HAVE_MPI
-        message(1) = 'The parallel gram schmidt orthogonalizer can only be used in parallel.'
+        message(1) = 'The parallel Gram-Schmidt orthogonalizer can only be used in parallel.'
         call messages_fatal(1)
 #else
 #ifndef HAVE_SCALAPACK
-        message(1) = 'The parallel gram schmidt orthogonalizer requires scalapack.'
+        message(1) = 'The parallel Gram-Schmidt orthogonalizer requires ScaLAPACK.'
         call messages_fatal(1)
 #endif
         if(st%dom_st_mpi_grp%size == 1) then
-          message(1) = 'The parallel gram schmidt orthogonalizer is designed to be used with domain or state parallelization.'
+          message(1) = 'The parallel Gram-Schmidt orthogonalizer is designed to be used with domain or state parallelization.'
           call messages_warning(1)
         end if
 #endif
