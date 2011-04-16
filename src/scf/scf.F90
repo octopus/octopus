@@ -829,7 +829,7 @@ contains
     ! ---------------------------------------------------------
     subroutine write_dipole(iunit)
       integer, intent(in) :: iunit
-    
+
       integer :: ispin, idir
       FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
 
@@ -845,17 +845,17 @@ contains
         ! in periodic directions use single-point Berry`s phase calculation
         if(idir .le. gr%sb%periodic_dim) then
           n_dip(idir) = n_dip(idir) + berry_dipole(st, gr%mesh, idir)
-          
+
           ! use quantum of polarization to reduce to smallest possible magnitude
-          nquantumpol = FLOOR(n_dip(idir)/(2 * gr%sb%lsize(idir)))
+          nquantumpol = FLOOR(n_dip(idir)/(CNST(2.0)*gr%sb%lsize(idir)))
           if(n_dip(idir) .lt. M_ZERO) then
-             nquantumpol = nquantumpol + 1
-             ! this makes that if n_dip = -1.1 R, it becomes -0.1 R, not 0.9 R
+            nquantumpol = nquantumpol + 1
+            ! this makes that if n_dip = -1.1 R, it becomes -0.1 R, not 0.9 R
           endif
 
           n_dip(idir) = n_dip(idir) - nquantumpol * (2 * gr%sb%lsize(idir))
 
-        ! in aperiodic directions use normal dipole formula
+          ! in aperiodic directions use normal dipole formula
         else
           e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
           n_dip(idir) = n_dip(idir) + e_dip(idir + 1, 1)
@@ -864,24 +864,28 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) then
         call output_dipole(iunit, -n_dip, gr%mesh%sb%dim)
-        
-        if (simul_box_is_periodic(gr%sb)) then
-           write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
-           write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
 
-           if (st%d%nik * st%smear%el_per_state .ne. 2) then
-              write(iunit, '(a)') &
-                   "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
-              write(iunit, '(a)') &
-                   "Instead, finite differences on k-points (not yet implemented) are needed."
-           endif
+        if (simul_box_is_periodic(gr%sb)) then
+          write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
+          write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
+
+          if (st%d%nik * st%smear%el_per_state .ne. 2) then
+            write(iunit, '(a)') &
+              "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
+            write(iunit, '(a)') &
+              "Instead, finite differences on k-points (not yet implemented) are needed."
+          endif
+
+          if(.not. smear_is_semiconducting(st%smear)) then
+            write(iunit, '(a)') "Single-point Berry's phase dipole calculation not correct without integer occupations."
+          endif
         endif
-        
+
         write(iunit, *)
       endif
 
       POP_SUB(scf_run.write_dipole)
-    end subroutine
+    end subroutine write_dipole
 
 
     ! ---------------------------------------------------------

@@ -61,11 +61,6 @@ contains
 
     PUSH_SUB(berry_dipole)
 
-    if(.not. smear_is_semiconducting(st%smear)) then
-      message(1) = "Warning: single-point Berry's phase dipole calculation not correct without integer occupations."
-      call messages_warning(1)
-    endif
-
     dipole = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end ! determinants for different spins and k-points multiply since matrix is block-diagonal
       det  = berry_phase_det(st, mesh, dir, ik)
