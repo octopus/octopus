@@ -369,7 +369,7 @@ contains
     type(profile_t), save :: prof
 
     integer :: iter, is, idim, iatom, nspin, err
-    FLOAT :: evsum_out, evsum_in, forcetmp
+    FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM)
     real(8) :: etime, itime
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
@@ -694,7 +694,10 @@ contains
           call messages_info(1)
         endif
 
-        if(associated(hm%vberry)) call write_dipole(stdout)
+        if(associated(hm%vberry)) then
+          call calc_dipole(dipole)
+          call write_dipole(stdout, dipole)
+        endif
 
         if(st%d%ispin > UNPOLARIZED) then
           call write_magnetic_moments(stdout, gr%mesh, st)
@@ -790,7 +793,8 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
-      call write_dipole(iunit)
+      call calc_dipole(dipole)
+      call write_dipole(iunit, dipole)
 
       if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(a)') 'Convergence:'
@@ -824,16 +828,16 @@ contains
 
       POP_SUB(scf_run.scf_write_static)
     end subroutine scf_write_static
-  
 
+  
     ! ---------------------------------------------------------
-    subroutine write_dipole(iunit)
-      integer, intent(in) :: iunit
+    subroutine calc_dipole(dipole)
+      FLOAT, intent(out) :: dipole(:)
 
       integer :: ispin, idir
       FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
 
-      PUSH_SUB(scf_run.write_dipole)
+      PUSH_SUB(scf_run.calc_dipole)
 
       do ispin = 1, st%d%nspin
         call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
@@ -844,26 +848,37 @@ contains
       do idir = 1, gr%sb%dim
         ! in periodic directions use single-point Berry`s phase calculation
         if(idir .le. gr%sb%periodic_dim) then
-          n_dip(idir) = n_dip(idir) + berry_dipole(st, gr%mesh, idir)
+          dipole(idir) = -n_dip(idir) - berry_dipole(st, gr%mesh, idir)
 
           ! use quantum of polarization to reduce to smallest possible magnitude
-          nquantumpol = FLOOR(n_dip(idir)/(CNST(2.0)*gr%sb%lsize(idir)))
-          if(n_dip(idir) .lt. M_ZERO) then
+          nquantumpol = FLOOR(dipole(idir)/(CNST(2.0)*gr%sb%lsize(idir)))
+          if(dipole(idir) .lt. M_ZERO) then
             nquantumpol = nquantumpol + 1
             ! this makes that if n_dip = -1.1 R, it becomes -0.1 R, not 0.9 R
           endif
 
-          n_dip(idir) = n_dip(idir) - nquantumpol * (2 * gr%sb%lsize(idir))
+          dipole(idir) = dipole(idir) + nquantumpol * (2 * gr%sb%lsize(idir))
 
           ! in aperiodic directions use normal dipole formula
         else
           e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
-          n_dip(idir) = n_dip(idir) + e_dip(idir + 1, 1)
+          dipole(idir) = -n_dip(idir) - e_dip(idir + 1, 1)
         endif
       end do
 
+      POP_SUB(scf_run.calc_dipole)
+    end subroutine calc_dipole
+
+
+    ! ---------------------------------------------------------
+    subroutine write_dipole(iunit, dipole)
+      integer, intent(in) :: iunit
+      FLOAT,   intent(in) :: dipole(:)
+
+      PUSH_SUB(scf_run.write_dipole)
+
       if(mpi_grp_is_root(mpi_world)) then
-        call output_dipole(iunit, -n_dip, gr%mesh%sb%dim)
+        call output_dipole(iunit, dipole, gr%mesh%sb%dim)
 
         if (simul_box_is_periodic(gr%sb)) then
           write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
