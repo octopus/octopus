@@ -452,6 +452,8 @@ contains
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
+
+      call init_states(sys%st, sys%gr%mesh, sys%geo)
     else
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.true.)
 
@@ -552,6 +554,53 @@ contains
     end if
 
     POP_SUB(lcao_run)
+
+  contains
+
+    subroutine init_states(st, mesh, geo)
+      type(states_t),   intent(inout) :: st
+      type(mesh_t),     intent(inout) :: mesh
+      type(geometry_t), intent(in)    :: geo
+
+      integer :: iatom, iorb, maxorbs, ist, idim, iq, ispin
+      FLOAT, allocatable :: aorbital(:)
+
+      SAFE_ALLOCATE(aorbital(1:mesh%np))
+
+      do iatom = 1, geo%natoms
+        maxorbs = max(maxorbs, species_niwfs(geo%atom(iatom)%spec))
+      end do
+
+      ist = 0
+      do iorb = 1, maxorbs
+        do iatom = 1, geo%natoms
+          if(iorb > species_niwfs(geo%atom(iatom)%spec)) cycle
+
+          INCR(ist, 1)
+          if(ist < st%st_start .or. ist > st%st_end) cycle
+
+          do ispin = 1, st%d%spin_channels ! we have to iterate over spinors dimensions or spin
+            idim = min(st%d%dim, ispin)
+
+            call species_get_orbital(geo%atom(iatom)%spec, mesh, iorb, 1, geo%atom(iatom)%x, aorbital)
+
+            do iq = st%d%kpt%start, st%d%kpt%end
+              if(st%d%ispin == SPIN_POLARIZED .and. ispin /= states_dim_get_spin_index(st%d, iq)) cycle
+
+              if(states_are_real(st)) then
+                st%dpsi(1:mesh%np, idim, ist, iq) = aorbital(1:mesh%np)
+              else
+                st%zpsi(1:mesh%np, idim, ist, iq) = aorbital(1:mesh%np)
+              end if
+            end do
+          end do
+
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(aorbital)
+    end subroutine init_states
+
   end subroutine lcao_run
 
   ! ---------------------------------------------------------
