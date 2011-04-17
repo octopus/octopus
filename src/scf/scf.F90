@@ -852,12 +852,12 @@ contains
 
           ! use quantum of polarization to reduce to smallest possible magnitude
           nquantumpol = FLOOR(dipole(idir)/(CNST(2.0)*gr%sb%lsize(idir)))
-          if(dipole(idir) .lt. M_ZERO) then
-            nquantumpol = nquantumpol + 1
+          if(dipole(idir) .gt. M_ZERO) then
+            nquantumpol = nquantumpol - 1
             ! this makes that if n_dip = -1.1 R, it becomes -0.1 R, not 0.9 R
           endif
 
-          dipole(idir) = dipole(idir) + nquantumpol * (2 * gr%sb%lsize(idir))
+          dipole(idir) = dipole(idir) - nquantumpol * (2 * gr%sb%lsize(idir))
 
           ! in aperiodic directions use normal dipole formula
         else
