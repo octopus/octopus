@@ -833,66 +833,81 @@ contains
   !! \todo Most of this work should be done inside the species
   !! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine species_get_orbital(spec, mesh, iorb, ispin, pos, phi)
+  subroutine species_get_orbital(spec, mesh, iorb, ispin, pos, orb)
     type(species_t),   intent(in)     :: spec
     type(mesh_t),      intent(in)     :: mesh
     integer,           intent(in)     :: iorb
     integer,           intent(in)     :: ispin   !< The spin index.
     FLOAT,             intent(in)     :: pos(:)  !< The position of the atom.
-    FLOAT,             intent(out)    :: phi(:)  !< The function defined in the mesh where the orbitals is returned.
+    FLOAT,             intent(out)    :: orb(:)  !< The function defined in the mesh where the orbitals is returned.
 
-    integer :: i, l, m, ip
-    FLOAT :: r2, x(1:MAX_DIM)
-    FLOAT, allocatable :: xf(:, :), ylm(:), sphi(:)
+    integer :: i, l, m, ip, icell
+    FLOAT :: r2, x(1:MAX_DIM), radius
+    FLOAT, allocatable :: xf(:, :), ylm(:), lorb(:)
     type(ps_t), pointer :: ps
-    type(submesh_t) :: sphere
+    type(periodic_copy_t) :: pc
 
     PUSH_SUB(species_get_orbital)
 
     call species_iwf_ilm(spec, iorb, ispin, i, l, m)
 
-    if(species_is_ps(spec)) then
+    radius = min(species_get_iwf_radius(spec, iorb, ispin), maxval(mesh%sb%lsize))
 
-      ps => species_ps(spec)
-      SAFE_ALLOCATE(xf(1:mesh%np, 1:mesh%sb%dim))
-      SAFE_ALLOCATE(ylm(1:mesh%np))
+    call periodic_copy_init(pc, mesh%sb, pos, range = radius)
 
-      do ip = 1, mesh%np
-        x(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim)
-        phi(ip) = sum(x(1:mesh%sb%dim)**2)
-        xf(ip, 1:mesh%sb%dim) = x(1:mesh%sb%dim)
-      end do
+    orb = M_ZERO
 
-      call spline_eval_vec(ps%ur_sq(i, ispin), mesh%np, phi)
-      call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
+    SAFE_ALLOCATE(lorb(1:mesh%np))
 
-      do ip = 1, mesh%np
-        phi(ip) = phi(ip)*ylm(ip)
-      end do
+    do icell = 1, periodic_copy_num(pc)
 
-      SAFE_DEALLOCATE_A(xf)
-      SAFE_DEALLOCATE_A(ylm)
+      if(species_is_ps(spec)) then
 
-      nullify(ps)
-    else
+        ps => species_ps(spec)
+        SAFE_ALLOCATE(xf(1:mesh%np, 1:mesh%sb%dim))
+        SAFE_ALLOCATE(ylm(1:mesh%np))
 
-      do ip = 1, mesh%np
-        x(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim)
-        r2 = sum(x(1:mesh%sb%dim)**2)
-        select case(mesh%sb%dim)
-        case(1)
-          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * hermite(i - 1, x(1)*sqrt(species_omega(spec)))
-        case(2)
-          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * &
-            hermite(i - 1, x(1)*sqrt(species_omega(spec))) * hermite(l - 1, x(2)*sqrt(species_omega(spec)))
-        case(3)
-          phi(ip) = exp(-species_omega(spec)*r2/M_TWO) * &
-               hermite(i - 1, x(1) * sqrt(species_omega(spec))) * &
-               hermite(l - 1, x(2) * sqrt(species_omega(spec))) * &
-               hermite(m - 1, x(3) * sqrt(species_omega(spec)))
-        end select
-      end do
-    end if
+        do ip = 1, mesh%np
+          x(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell)
+          lorb(ip) = sum(x(1:mesh%sb%dim)**2)
+          xf(ip, 1:mesh%sb%dim) = x(1:mesh%sb%dim)
+        end do
+
+        call spline_eval_vec(ps%ur_sq(i, ispin), mesh%np, lorb)
+        call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
+
+        do ip = 1, mesh%np
+          orb(ip) = orb(ip) + lorb(ip)*ylm(ip)
+        end do
+
+        SAFE_DEALLOCATE_A(xf)
+        SAFE_DEALLOCATE_A(ylm)
+
+        nullify(ps)
+
+      else
+
+        do ip = 1, mesh%np
+          x(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim)
+          r2 = sum(x(1:mesh%sb%dim)**2)
+          select case(mesh%sb%dim)
+          case(1)
+            orb(ip) = orb(ip) + exp(-species_omega(spec)*r2/M_TWO) * hermite(i - 1, x(1)*sqrt(species_omega(spec)))
+          case(2)
+             orb(ip) = orb(ip) + exp(-species_omega(spec)*r2/M_TWO) * &
+              hermite(i - 1, x(1)*sqrt(species_omega(spec))) * hermite(l - 1, x(2)*sqrt(species_omega(spec)))
+          case(3)
+             orb(ip) = orb(ip) + exp(-species_omega(spec)*r2/M_TWO) * hermite(i - 1, x(1)*sqrt(species_omega(spec)))* &
+              hermite(l - 1, x(2)*sqrt(species_omega(spec)))*hermite(m - 1, x(3)*sqrt(species_omega(spec)))
+          end select
+        end do
+      end if
+
+    end do
+
+    SAFE_DEALLOCATE_A(lorb)
+
+    call periodic_copy_end(pc)
 
     POP_SUB(species_get_orbital)
   end subroutine species_get_orbital

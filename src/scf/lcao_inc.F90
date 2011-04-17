@@ -55,32 +55,11 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, hm, geo, sb, psi, spin_chan
 
   SAFE_ALLOCATE(ao(1:mesh%np))
 
-  if (.not. simul_box_is_periodic(sb)) then
-
-    call species_get_orbital(spec, mesh, jj, max(spin_channel, idim), geo%atom(iatom)%x, ao)
-
-    do ip = 1, mesh%np
-      psi(ip, idim) = ao(ip)
-    end do
-
-  else
-
-    radius = min(species_get_iwf_radius(spec, jj, spin_channel), maxval(sb%lsize))
-
-    call periodic_copy_init(pc, sb, geo%atom(iatom)%x, range = radius)
-    do icell = 1, periodic_copy_num(pc)
-      pos = periodic_copy_position(pc, sb, icell)
-
-      call species_get_orbital(spec, mesh, jj, max(spin_channel, idim), pos, ao)
-      
-      do ip = 1, mesh%np
-        psi(ip, idim) = psi(ip, idim) + ao(ip)
-      end do
-
-    end do
-    call periodic_copy_end(pc)
-
-  end if
+  call species_get_orbital(spec, mesh, jj, max(spin_channel, idim), geo%atom(iatom)%x, ao)
+  
+  do ip = 1, mesh%np
+    psi(ip, idim) = ao(ip)
+  end do
 
   SAFE_DEALLOCATE_A(ao)
 
