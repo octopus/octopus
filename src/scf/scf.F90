@@ -87,6 +87,7 @@ module scf_m
   !> some variables used for the SCF cycle
   type scf_t
     integer :: max_iter   !< maximum number of SCF iterations
+    integer :: max_iter_berry  !< max number of electronic iterations before updating density, for Berry potential
 
     FLOAT :: lmm_r
 
@@ -127,6 +128,18 @@ contains
     !% has not been achieved. -1 means unlimited.
     !%End
     call parse_integer  (datasets_check('MaximumIter'), 200, scf%max_iter)
+
+    !%Variable MaximumIterBerry
+    !%Type integer
+    !%Default 10
+    !%Section SCF::Convergence
+    !%Description
+    !% Maximum number of iterations for the Berry potential, within each SCF iteration.
+    !% Only applies if a <tt>StaticElectricField</tt> is applied in a periodic direction.
+    !% The code will move on to the next SCF iteration even if convergence
+    !% has not been achieved. -1 means unlimited.
+    !%End
+    if(associated(hm%vberry)) call parse_integer  (datasets_check('MaximumIterBerry'), 10, scf%max_iter_berry)
 
     !%Variable ConvAbsDens
     !%Type float
@@ -208,6 +221,7 @@ contains
     end if
 
     if(scf%max_iter < 0) scf%max_iter = huge(scf%max_iter)
+    if(scf%max_iter_berry < 0) scf%max_iter_berry = huge(scf%max_iter_berry)
 
     call messages_obsolete_variable('What2Mix', 'MixField')
 
@@ -368,14 +382,14 @@ contains
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
 
-    integer :: iter, is, idim, iatom, nspin, err
-    FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM)
+    integer :: iter, is, idim, iatom, nspin, err, iberry, idir
+    FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
     character(len=8) :: dirname
-    logical :: finish, forced_finish, gs_run_
+    logical :: finish, forced_finish, gs_run_, berry_conv
     integer :: verbosity_
 
     PUSH_SUB(scf_run)
@@ -470,8 +484,33 @@ contains
         if(gr%ob_grid%open_boundaries) then
           call lippmann_schwinger(scf%eigens, hm, gr, st)
         else
-          scf%eigens%converged = 0
-          call eigensolver_run(scf%eigens, gr, st, hm, iter)
+          if(associated(hm%vberry)) then
+            ks%frozen_hxc = .true.
+            do iberry = 1, scf%max_iter_berry
+              scf%eigens%converged = 0
+              call eigensolver_run(scf%eigens, gr, st, hm, iter)
+
+              call v_ks_calc(ks, hm, st, geo)
+              call hamiltonian_update(hm, gr%mesh)
+
+              dipole_prev = dipole
+              call calc_dipole(dipole)
+              write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:gr%sb%dim)
+              call messages_info(1)
+
+              berry_conv = .true.
+              do idir = 1, gr%sb%periodic_dim
+                berry_conv = berry_conv .and. &
+                  (abs((dipole(idir) - dipole_prev(idir)) / dipole_prev(idir)) < CNST(1e-5) &
+                  .or. abs(dipole(idir) - dipole_prev(idir)) < CNST(1e-5))
+              enddo
+              if(berry_conv) exit
+            enddo
+            ks%frozen_hxc = .false.
+          else
+            scf%eigens%converged = 0
+            call eigensolver_run(scf%eigens, gr, st, hm, iter)
+          endif
         end if
       end if
 
