@@ -48,9 +48,7 @@ program propagation_spectrum
 
   call datasets_init(1)
   call io_init()
-  if(in_debug_mode) then
-     call io_mkdir('debug')
-  end if
+
   call unit_system_init()
 
   call spectrum_init(spectrum)

@@ -145,6 +145,7 @@ contains
       call loct_rm('messages.stderr')
     end if
 
+    ! NOTE: this call requires datasets to be initialized previously
     if(in_debug_mode) then
       call io_mkdir('debug')
     end if
@@ -159,8 +160,6 @@ contains
     character(len=256) :: node_hook
     logical :: file_exists, mpi_debug_hook
     integer :: sec, usec
-
-    if(in_debug_mode) call io_mkdir('debug')
 
     if(conf%debug_level .ge. 99) then
       !wipe out debug trace files from previous runs to start fresh rather than appending

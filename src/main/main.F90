@@ -47,9 +47,6 @@ program octopus
   call parser_init()
   call messages_init()
 
-  ! Now we can initialize the I/O
-  call io_init()
-
   !%Variable ReportMemory
   !%Type logical
   !%Default no
@@ -128,6 +125,9 @@ program octopus
     if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call input_error('CalculationMode')
     call datasets_init(inp_calc_mode)
   end if
+
+  ! Now we can initialize the I/O
+  call io_init()
 
   ! loop over all datasets
   datasets: do ns = 1, no_datasets

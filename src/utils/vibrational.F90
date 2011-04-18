@@ -62,9 +62,7 @@ program vibrational
 
   call datasets_init(1)
   call io_init()
-  if(in_debug_mode) then
-    call io_mkdir('debug')
-  end if
+
   call unit_system_init()
 
   !These variables are documented in src/td/spectrum.F90
