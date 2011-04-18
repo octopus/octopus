@@ -376,7 +376,7 @@ contains
   subroutine spline_init_0(spl)
     type(spline_t), intent(out) :: spl
 
-    ! No PUSH SUB, called to often
+    ! No PUSH SUB, called too often
 
     call set_null(spl%spl)
     call set_null(spl%acc)

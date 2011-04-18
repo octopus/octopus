@@ -565,6 +565,8 @@ contains
       integer :: iatom, iorb, maxorbs, ist, idim, iq, ispin
       FLOAT, allocatable :: aorbital(:)
 
+      PUSH_SUB(lcao_run.init_states)
+
       SAFE_ALLOCATE(aorbital(1:mesh%np))
 
       do iatom = 1, geo%natoms
@@ -599,6 +601,7 @@ contains
       end do
 
       SAFE_DEALLOCATE_A(aorbital)
+      POP_SUB(lcao_run.init_states)
     end subroutine init_states
 
   end subroutine lcao_run

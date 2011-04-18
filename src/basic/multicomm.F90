@@ -733,7 +733,7 @@ contains
     integer pure function get_partner(in, ir)
       integer, intent(in) :: in, ir
 
-      ! No PUSH SUB, called to often.
+      ! No PUSH SUB, called too often.
 
       if(mod(grp_size, 2).eq.0) then
         get_partner = get_partner_even(grp_size, in - 1, ir - 1) + 1
@@ -749,7 +749,7 @@ contains
 
       integer :: mm
 
-      ! No PUSH SUB, called to often.
+      ! No PUSH SUB, called too often.
 
       mm = grp_size / 2
 
@@ -771,7 +771,7 @@ contains
 
       integer :: mm
 
-      ! No PUSH SUB, called to often.
+      ! No PUSH SUB, called too often.
 
       mm = (grp_size + 1) / 2
 

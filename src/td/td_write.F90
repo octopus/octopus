@@ -1214,7 +1214,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    ! no PUSH SUB, called to often
+    ! no PUSH SUB, called too often
 
     if(iter == 0) then
       call td_write_print_header_init(out_laser)
