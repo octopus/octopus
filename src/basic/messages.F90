@@ -155,22 +155,31 @@ contains
 
   subroutine messages_end()
 
-    if(experimentals > 0 .or. warnings > 0) then
-      message(1) = ''
-      call messages_info(1)      
+    if(mpi_grp_is_root(mpi_world)) then
+  
+      if(experimentals > 0 .or. warnings > 0) then
+        message(1) = ''
+        call messages_info(1)      
+      end if
+      
+      if(experimentals > 0) then
+        write(message(1), '(a, i2, a)') "Octopus used ", experimentals, " experimental feature(s)."
+        call messages_info(1)
+      end if
+      
+      if(warnings > 0) then
+        write(message(1), '(a, i6, a)') "Octopus emitted ", warnings, " warning(s)."
+        call messages_info(1)
+      end if
+      
+      open(unit = iunit_out, file = 'exec/messages', action = 'write')
+      write(iunit_out, '(a, i9)') "warnings          = ", warnings
+      write(iunit_out, '(a, i9)') "experimental      = ", experimentals
+      close(iunit_out)
+    
     end if
-
-    if(experimentals > 0) then
-      write(message(1), '(a, i2, a)') "Octopus used ", experimentals, " experimental feature(s)."
-      call messages_info(1)
-    end if
-
-    if(warnings > 0) then
-      write(message(1), '(a, i6, a)') "Octopus emitted ", warnings, " warning(s)."
-      call messages_info(1)
-    end if
-
-  end subroutine messages_end
+  
+end subroutine messages_end
 
   ! ---------------------------------------------------------
   subroutine messages_fatal(no_lines, only_root_writes)
