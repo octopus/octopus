@@ -878,6 +878,8 @@ contains
 
       PUSH_SUB(scf_run.calc_dipole)
 
+      dipole(1:MAX_DIM) = M_ZERO
+
       do ispin = 1, st%d%nspin
         call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
       end do

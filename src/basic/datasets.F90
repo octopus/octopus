@@ -119,8 +119,8 @@ contains
       end if
     end do
     if(.not. all(order(:) == 0)) then
-      write(6,'(a)') '*** Fatal Error (description follows)'
-      write(6,'(a)') 'Ordering of the datasets seems to be wrong in block "%CalculationMode"'
+      write(0,'(a)') '*** Fatal Error (description follows)'
+      write(0,'(a)') 'Ordering of the datasets seems to be wrong in block "%CalculationMode"'
 #ifdef HAVE_MPI
       call MPI_Finalize(mpi_err)
 #endif
