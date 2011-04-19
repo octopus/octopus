@@ -46,7 +46,7 @@ module kpoints_m
     kpoints_number,          &
     kpoints_get_weight,      &
     kpoints_get_point,       &
-    kpoints_messages_info,      &
+    kpoints_messages_info,   &
     kpoints_point_is_gamma
 
   type kpoints_grid_t
@@ -654,6 +654,7 @@ contains
     
     integer :: ik, idir
     character(len=100) :: str_tmp
+    character :: index
     
     PUSH_SUB(kpoints_messages_info)
     
@@ -669,10 +670,11 @@ contains
       write(message(1),'(a,i3)') 'Number of k-points = ', kpoints_number(this)
       call messages_info(1, iunit)
     endif
-    
+
     write(message(1), '(6x,a)') 'ik'
     do idir = 1, this%full%dim
-      write(str_tmp, '(9x,2a)') 'k_', index2axis(idir)
+      index = index2axis(idir)
+      write(str_tmp, '(9x,2a)') 'k_', index
       message(1) = trim(message(1)) // trim(str_tmp)
     enddo
     write(str_tmp, '(6x,a)') 'Weight'
