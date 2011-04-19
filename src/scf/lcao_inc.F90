@@ -637,7 +637,8 @@ contains
 #endif
 
       if(info /= 0) then
-        write(message(1), '(a,i4,a)') 'LCAO parallel diagonalization failed. Scalapack returned info code ', info, '.'
+        write(message(1), '(a,i4,a)') &
+          'Workspace query for LCAO parallel diagonalization failed. ScaLAPACK returned info code ', info, '.'
         call messages_warning(1)
       end if
 
@@ -667,16 +668,17 @@ contains
         z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
         work = work(1), lwork = lwork, rwork = rwork(1), lrwork = lrwork, iwork = iwork(1), liwork = liwork, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
+      SAFE_DEALLOCATE_A(rwork)
 #endif
 
       if(info /= 0) then
-        write(message(1), '(a,i4,a)') 'LCAO parallel diagonalization failed. Scalapack returned info code ', info, '.'
+        write(message(1), '(a,i4,a)') 'LCAO parallel diagonalization failed. ScaLAPACK returned info code ', info, '.'
         call messages_warning(1)
       end if
 
       ! Now we have to rearrange the data between processors. We have
-      ! the data in levec, distributed according to scalapack and we
-      ! need to copy it to evec, distributed by colums according to
+      ! the data in levec, distributed according to ScaLAPACK and we
+      ! need to copy it to evec, distributed by columns according to
       ! state parallelization.
 
       SAFE_ALLOCATE(send_count(1:st%dom_st_mpi_grp%size))
@@ -800,7 +802,7 @@ contains
 
 #endif
       if(info /= 0) then
-        write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. Lapack returned info code ', info, '.'
+        write(message(1), '(a,i4,a)') 'Workspace query for LCAO diagonalization failed. LAPACK returned info code ', info, '.'
         call messages_warning(1)
       end if
 
@@ -825,7 +827,7 @@ contains
 #endif
 
       if(info /= 0) then
-        write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. Lapack returned info code ', info, '.'
+        write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. LAPACK returned info code ', info, '.'
         call messages_warning(1)
       end if
 
