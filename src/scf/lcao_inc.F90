@@ -601,6 +601,8 @@ contains
 #endif
     type(profile_t), save :: prof
 
+    PUSH_SUB(X(lcao_wf2).diagonalization)
+
     SAFE_ALLOCATE(ifail(1:this%nbasis))
 
     call profiling_in(prof, "LCAO_DIAG")
@@ -835,6 +837,7 @@ contains
 
     call profiling_out(prof)
 
+    POP_SUB(X(lcao_wf2).diagonalization)
   end subroutine diagonalization
 
 end subroutine X(lcao_wf2)
