@@ -200,9 +200,12 @@ contains
       !%Default 0.001 a.u.
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Convergence criterion, for stopping the minimization. In units of force; minimization
-      !% is stopped when all forces on ions are smaller than this criterion.
-      !% Used in conjunction with <tt>GOMinimumMove</tt>. If <tt>GOTolerance = 0</tt>, this criterion is ignored.
+      !% Convergence criterion, for stopping the minimization. In
+      !% units of force; minimization is stopped when all forces on
+      !% ions are smaller than this criterion.  Used in conjunction
+      !% with <tt>GOMinimumMove</tt>. If <tt>GOTolerance = 0</tt>,
+      !% this criterion is ignored. The default is 0.001 H/b (0.5
+      !% eV/Angstrom).
       !%End
       call parse_float(datasets_check('GOTolerance'), CNST(0.001), g_opt%tolgrad, units_inp%force)
       
@@ -211,11 +214,16 @@ contains
       !%Default 0.0 a.u.
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Convergence criterion, for stopping the minimization. In units of length; minimization
-      !% is stopped when the coordinates of all species change less than <tt>GOMinimumMove</tt>.
-      !% Used in conjunction with <tt>GOTolerance</tt>. If <tt>GOMinimumMove = 0</tt>, this criterion is ignored.
+      !% Convergence criterion, for stopping the minimization. In
+      !% units of length; minimization is stopped when the coordinates
+      !% of all species change less than <tt>GOMinimumMove</tt>.  Used
+      !% in conjunction with <tt>GOTolerance</tt>. If
+      !% <tt>GOMinimumMove = 0</tt>, this criterion is ignored. The
+      !% default is 0. 
       !%
-      !% Note that if you use <tt>GOMethod = simplex</tt>, then you must supply a non-zero <tt>GOMinimumMove</tt>.
+      !% Note that if you use <tt>GOMethod =
+      !% simplex</tt>, then you must supply a non-zero
+      !% <tt>GOMinimumMove</tt>.
       !%End
       call parse_float(datasets_check('GOMinimumMove'), CNST(0.0), g_opt%toldr, units_inp%length)
 
