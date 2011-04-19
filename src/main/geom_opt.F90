@@ -253,7 +253,9 @@ contains
         call messages_fatal(1)
       end if
 
-      !%Variable GOWhat2Minimize
+      call messages_obsolete_variable('GOWhat2Minimize', 'GOObjective')
+
+      !%Variable GOObjective
       !%Type integer
       !%Default minimize_energy
       !%Section Calculation Modes::Geometry Optimization
@@ -268,9 +270,9 @@ contains
       !% Note that in this case one still uses the forces as the gradient of the objective function.
       !% This is, of course, inconsistent, and may lead to very strange behavior.
       !%End
-      call parse_integer(datasets_check('GOWhat2Minimize'), MINWHAT_ENERGY, g_opt%what2minimize)
-      if(.not.varinfo_valid_option('GOWhat2Minimize', g_opt%what2minimize)) call input_error('GOWhat2Minimize')
-      call messages_print_var_option(stdout, "GOWhat2Minimize", g_opt%what2minimize)
+      call parse_integer(datasets_check('GOObjective'), MINWHAT_ENERGY, g_opt%what2minimize)
+      if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call input_error('GOObjective')
+      call messages_print_var_option(stdout, "GOObjective", g_opt%what2minimize)
 
       call loct_rm("./work-geom.xyz")
 
