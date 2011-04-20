@@ -58,13 +58,9 @@ module ion_dynamics_m
     ion_dynamics_kinetic_energy
 
   integer, parameter ::   &
-    STATIC_IONS     = 0,  &
-    VELOCITY_VERLET = 1,  &
-    NOSE_HOOVER     = 5
-
-  integer, parameter ::   &
     THERMO_NONE     = 0,  &
-    THERMO_SCAL     = 1
+    THERMO_SCAL     = 1,  &
+    THERMO_NH       = 2
 
   type nose_hoover_t
     private
@@ -75,7 +71,7 @@ module ion_dynamics_m
 
   type ion_dynamics_t
     private
-    integer          :: method
+    logical          :: move_ions
     integer          :: thermostat
     FLOAT            :: dt
     FLOAT            :: current_temperature
@@ -88,10 +84,6 @@ module ion_dynamics_m
     ! variables for the Nose-Hoover thermostat
     type(nose_hoover_t) :: nh1
     type(nose_hoover_t) :: nh2
-    FLOAT :: nh_t_start
-    FLOAT :: nh_t_end
-    FLOAT :: nh_end_time
-    FLOAT :: temp
     type(tdf_t) :: temperature
   end type ion_dynamics_t
 
@@ -117,25 +109,15 @@ contains
     PUSH_SUB(ion_dynamics_init)
 
     !%Variable MoveIons
-    !%Type integer
-    !%Default static_ions
+    !%Type logical
+    !%Default no
     !%Section Time-Dependent::Propagation
     !%Description
-    !% This variable specifies how to treat the dynamics of the ions
-    !% during a time-dependent run. By default they will remain static.
-    !%Option static_ions 0
-    !% Do not move the ions.
-    !%Option vel_verlet 1
-    !% Newtonian dynamics using the velocity Verlet integrator.
-    !%Option nose_hoover 5
-    !% Nos&eacute;-Hoover thermostat.
+    !% This variable controls whether atoms are moved during
+    !% a time propagation run. The default is no.
     !%End
-    
-    call parse_integer(datasets_check('MoveIons'), STATIC_IONS, this%method)
-    if(.not.varinfo_valid_option('MoveIons', this%method)) call input_error('MoveIons')
-    call messages_print_var_option(stdout, 'MoveIons', this%method)
-
-    if(this%method == NOSE_HOOVER) call messages_experimental('Nose-Hoover thermostat')
+    call parse_logical(datasets_check('MoveIons'), .false., this%move_ions)
+    call messages_print_var_value(stdout, 'MoveIons', this%move_ions)
 
     nullify(this%oldforce)
     
@@ -154,6 +136,8 @@ contains
     !% No thermostat is applied. This is the default.
     !%Option velocity_scaling 1
     !% Velocities are scaled to control the temperature.
+    !%Option nose_hoover 2
+    !% Nos&eacute;-Hoover thermostat.
     !%End
     
     call parse_integer(datasets_check('Thermostat'), THERMO_NONE, this%thermostat)
@@ -183,6 +167,22 @@ contains
         message(1) = "You have enabled a thermostat but Octopus could not find"
         message(2) = "the '"//trim(temp_function_name)//"' function in the TDFunctions block."
         call messages_fatal(2)
+      end if
+
+      if(this%thermostat == THERMO_NH) then
+        call parse_float(datasets_check("NHMass"), CNST(300.0), this%nh1%mass)
+        this%nh2%mass = this%nh1%mass
+
+        this%nh1%pos = M_ZERO
+        this%nh2%pos = M_ZERO
+        this%nh1%vel = M_ZERO
+        this%nh2%vel = M_ZERO
+        
+        SAFE_ALLOCATE(this%old_x(1:geo%space%dim, 1:geo%natoms))
+        
+        do iatom = 1, geo%natoms
+          this%old_x(1:geo%space%dim, iatom) = geo%atom(iatom)%x(1:geo%space%dim)
+        end do
       end if
 
     end if
@@ -304,31 +304,6 @@ contains
 
     geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
-    if(this%method == NOSE_HOOVER) then
-      call parse_float(datasets_check("NHTStart"), CNST(0.0), this%nh_t_start)
-      this%nh_t_start = P_Kb*this%nh_t_start
-      
-      call parse_float(datasets_check("NHTEnd"), CNST(300.0), this%nh_t_end)
-      this%nh_t_end = P_Kb*this%nh_t_end
-
-      call parse_float(datasets_check("NHEndTime"), CNST(200.0), this%nh_end_time)
-      
-      call parse_float(datasets_check("NHMass"), CNST(300.0), this%nh1%mass)
-      this%nh2%mass = this%nh1%mass
-
-      this%nh1%pos = M_ZERO
-      this%nh2%pos = M_ZERO
-      this%nh1%vel = M_ZERO
-      this%nh2%vel = M_ZERO
-
-      SAFE_ALLOCATE(this%old_x(1:geo%space%dim, 1:geo%natoms))
-
-      do iatom = 1, geo%natoms
-        this%old_x(1:geo%space%dim, iatom) = geo%atom(iatom)%x(1:geo%space%dim)
-      end do
-
-    end if
-
     POP_SUB(ion_dynamics_init)
   end subroutine ion_dynamics_init
 
@@ -355,13 +330,16 @@ contains
     type(geometry_t),     intent(inout) :: geo
     FLOAT,                intent(in)    :: time
     FLOAT,                intent(in)    :: dt
-    
+
     integer :: iatom
 
     if(.not. ion_dynamics_ions_move(this)) return
 
     PUSH_SUB(ion_dynamics_propagate)
 
+    this%dt = dt
+
+    ! get the temperature from the tdfunction for the current time
     if(this%thermostat /= THERMO_NONE) then
       this%current_temperature = tdf(this%temperature, time)
 
@@ -371,49 +349,40 @@ contains
           units_from_atomic(units_out%time, time), " ", trim(units_abbrev(units_out%time)), "."
         call messages_fatal(1)
       end if
-
     else
       this%current_temperature = CNST(0.0)
     end if
 
-    this%dt = dt
-
-    select case(this%method)
-    case(VELOCITY_VERLET)
-      
+    if(this%thermostat /= THERMO_NH) then
+      ! integrate using verlet
       do iatom = 1, geo%natoms
         if(.not. geo%atom(iatom)%move) cycle
-        
-        geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
-             + dt*geo%atom(iatom)%v(1:geo%space%dim) + &
-             M_HALF*dt**2 / species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%f(1:geo%space%dim)
-        
-        this%oldforce(1:geo%space%dim, iatom) = geo%atom(iatom)%f(1:geo%space%dim)
-        
-      end do
-      
-      call simul_box_atoms_in_box(sb, geo, .false.)
 
-    case(NOSE_HOOVER)
+        geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
+          + dt*geo%atom(iatom)%v(1:geo%space%dim) + &
+          M_HALF*dt**2 / species_weight(geo%atom(iatom)%spec) * geo%atom(iatom)%f(1:geo%space%dim)
+
+        this%oldforce(1:geo%space%dim, iatom) = geo%atom(iatom)%f(1:geo%space%dim)
+
+      end do
+
+    else
+      ! for the Nose-Hoover thermostat we use a special integrator
 
       ! The implementation of the Nose-Hoover thermostat is based on
       ! Understanding Molecular Simulations by Frenkel and Smit,
       ! Appendix E, page 540-542.
 
-      if (time < this%nh_end_time) then
-        this%temp = this%nh_t_start + (this%nh_t_end - this%nh_t_start)*time/this%nh_end_time
-      else
-        this%temp = this%nh_t_end
-      end if
-
       call chain(this, geo)
 
       do iatom = 1, geo%natoms
         geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + M_HALF*dt*geo%atom(iatom)%v(1:geo%space%dim)
-      enddo
+      end do
 
-    end select
-    
+    end if
+
+    call simul_box_atoms_in_box(sb, geo, .false.)
+
     POP_SUB(ion_dynamics_propagate)
   end subroutine ion_dynamics_propagate
   
@@ -432,11 +401,11 @@ contains
 
     uk = ion_dynamics_kinetic_energy(geo)
 
-    g2 = (this%nh1%mass*this%nh1%vel**2 - this%temp)/this%nh2%mass
+    g2 = (this%nh1%mass*this%nh1%vel**2 - this%current_temperature)/this%nh2%mass
     this%nh2%vel = this%nh2%vel + g2*dt/CNST(4.0)
     this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
 
-    g1 = (CNST(2.0)*uk - M_THREE*geo%natoms*this%temp)/this%nh1%mass
+    g1 = (CNST(2.0)*uk - M_THREE*geo%natoms*this%current_temperature)/this%nh1%mass
     this%nh1%vel = this%nh1%vel + g1*dt/CNST(4.0)
     this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
     this%nh1%pos = this%nh1%pos + this%nh1%vel*dt/CNST(2.0)
@@ -451,11 +420,11 @@ contains
     uk = uk*ss**2
 
     this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
-    g1 = (CNST(2.0)*uk - M_THREE*geo%natoms*this%temp)/this%nh1%mass
+    g1 = (CNST(2.0)*uk - M_THREE*geo%natoms*this%current_temperature)/this%nh1%mass
     this%nh1%vel = this%nh1%vel + g1*dt/CNST(4.0)
     this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
 
-    g2 = (this%nh1%mass*this%nh1%vel**2 - this%temp)/this%nh2%mass
+    g2 = (this%nh1%mass*this%nh1%vel**2 - this%current_temperature)/this%nh2%mass
     this%nh2%vel = this%nh2%vel + g2*dt/CNST(4.0)
     
     POP_SUB(chain)
@@ -473,30 +442,29 @@ contains
     if(.not. ion_dynamics_ions_move(this)) return
 
     PUSH_SUB(ion_dynamics_propagate_vel)
-
-    select case(this%method)
-    case(VELOCITY_VERLET)
-      
+    
+    if(this%thermostat /= THERMO_NH) then
+      ! velocity verlet
       do iatom = 1, geo%natoms
         if(.not. geo%atom(iatom)%move) cycle
         
         geo%atom(iatom)%v(1:geo%space%dim) = geo%atom(iatom)%v(1:geo%space%dim) &
-             + this%dt/species_weight(geo%atom(iatom)%spec) * M_HALF * (this%oldforce(1:geo%space%dim, iatom) + &
-             geo%atom(iatom)%f(1:geo%space%dim))
+          + this%dt/species_weight(geo%atom(iatom)%spec) * M_HALF * (this%oldforce(1:geo%space%dim, iatom) + &
+          geo%atom(iatom)%f(1:geo%space%dim))
         
       end do
-      
-    case(NOSE_HOOVER)
+
+    else
+      ! the nose-hoover integration
       do iatom = 1, geo%natoms
         geo%atom(iatom)%v(1:geo%space%dim) = geo%atom(iatom)%v(1:geo%space%dim) + &
           this%dt*geo%atom(iatom)%f(1:geo%space%dim) / species_weight(geo%atom(iatom)%spec)
         geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + M_HALF*this%dt*geo%atom(iatom)%v(1:geo%space%dim)
       enddo
-
+      
       call chain(this, geo)
 
-    end select
-
+    end if
 
     if(this%thermostat == THERMO_SCAL) then
       scal = sqrt(this%current_temperature/ion_dynamics_temperature(geo))
@@ -518,7 +486,7 @@ contains
 
     integer :: iatom
 
-    if(.not. ion_dynamics_ions_move(this) .or. this%method /= VELOCITY_VERLET) return
+    if(.not. ion_dynamics_ions_move(this)) return
 
     PUSH_SUB(ion_dynamics_save_state)
 
@@ -562,7 +530,7 @@ contains
   logical pure function ion_dynamics_ions_move(this) result(ions_move)
     type(ion_dynamics_t), intent(in)    :: this
     
-    ions_move = (this%method /= STATIC_IONS)
+    ions_move = this%move_ions
     
   end function ion_dynamics_ions_move
   
