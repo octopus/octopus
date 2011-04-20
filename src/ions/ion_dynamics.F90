@@ -78,6 +78,7 @@ module ion_dynamics_m
     integer          :: method
     integer          :: thermostat
     FLOAT            :: dt
+    FLOAT            :: current_temperature
 
     FLOAT, pointer   :: oldforce(:, :)
 
@@ -361,6 +362,20 @@ contains
 
     PUSH_SUB(ion_dynamics_propagate)
 
+    if(this%thermostat /= THERMO_NONE) then
+      this%current_temperature = tdf(this%temperature, time)
+
+      if(this%current_temperature < M_ZERO) then 
+        write(message(1), '(a, f10.3, a, f10.3, 3a)') &
+          "Negative temperature (", this%current_temperature, " K) at time ", &
+          units_from_atomic(units_out%time, time), " ", trim(units_abbrev(units_out%time)), "."
+        call messages_fatal(1)
+      end if
+
+    else
+      this%current_temperature = CNST(0.0)
+    end if
+
     this%dt = dt
 
     select case(this%method)
@@ -453,6 +468,7 @@ contains
     type(geometry_t),     intent(inout) :: geo
 
     integer :: iatom
+    FLOAT   :: scal
 
     if(.not. ion_dynamics_ions_move(this)) return
 
@@ -480,6 +496,15 @@ contains
       call chain(this, geo)
 
     end select
+
+
+    if(this%thermostat == THERMO_SCAL) then
+      scal = sqrt(this%current_temperature/ion_dynamics_temperature(geo))
+
+      do iatom = 1, geo%natoms
+        geo%atom(iatom)%v(1:geo%space%dim) = scal*geo%atom(iatom)%v(1:geo%space%dim)
+      end do
+    end if
 
     POP_SUB(ion_dynamics_propagate_vel)
   end subroutine ion_dynamics_propagate_vel
