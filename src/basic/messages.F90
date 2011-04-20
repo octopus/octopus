@@ -565,12 +565,16 @@ end subroutine messages_end
     character(len=*), intent(in) :: var
     logical,          intent(in) :: value
 
-    character(len=1) :: lstring
+    character(len=3) :: lstring
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
-    write(lstring,'(l1)') value
-    write(iunit,'(a)') 'Input: ['//trim(var)//' = '//lstring//']'
+    if(value) then
+      lstring = 'yes'
+    else
+      lstring = 'no'
+    end if
+    write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(lstring)//']'
 
   end subroutine messages_print_var_valuel
   ! ---------------------------------------------------------
