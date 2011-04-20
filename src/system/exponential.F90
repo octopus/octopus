@@ -71,6 +71,8 @@ contains
     type(exponential_t), intent(out) :: te
     type(derivatives_t), intent(in)  :: der
 
+    PUSH_SUB(exponential_init)
+
     !%Variable TDExponentialMethod
     !%Type integer
     !%Default taylor
@@ -163,12 +165,16 @@ contains
 
     end if
 
+    POP_SUB(exponential_init)
   end subroutine exponential_init
 
   ! ---------------------------------------------------------
   subroutine exponential_end(te)
     type(exponential_t), intent(inout) :: te
 
+    PUSH_SUB(exponential_end)
+
+    POP_SUB(exponential_end)
   end subroutine exponential_end
 
   ! ---------------------------------------------------------
@@ -176,10 +182,13 @@ contains
     type(exponential_t), intent(inout) :: teo
     type(exponential_t), intent(in)    :: tei
 
+    PUSH_SUB(exponential_copy)
+
     teo%exp_method  = tei%exp_method
     teo%lanczos_tol = tei%lanczos_tol
     teo%exp_order   = tei%exp_order
 
+    POP_SUB(exponential_copy)
   end subroutine exponential_copy
 
   ! ---------------------------------------------------------
@@ -216,7 +225,7 @@ contains
     logical :: apply_magnus
     type(profile_t), save :: exp_prof
 
-    PUSH_SUB(exponential_td)
+    PUSH_SUB(exponential_apply)
     call profiling_in(exp_prof, "EXPONENTIAL")
 
     ! The only method that is currently taking care of the presence of an inhomogeneous
@@ -259,7 +268,8 @@ contains
     end select
 
     call profiling_out(exp_prof)
-    POP_SUB(exponential_td)
+    POP_SUB(exponential_apply)
+
   contains
 
     ! ---------------------------------------------------------
@@ -267,12 +277,15 @@ contains
       CMPLX, intent(inout) :: psi(:, :)
       CMPLX, intent(inout) :: oppsi(:, :)
 
+      PUSH_SUB(exponential_apply.operate)
+
       if(apply_magnus) then
         call zmagnus(hm, der, psi, oppsi, ik, vmagnus)
       else
         call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik, time)
       end if
 
+      POP_SUB(exponential_apply.operate)
     end subroutine operate
     ! ---------------------------------------------------------
 
@@ -283,7 +296,7 @@ contains
       integer :: i, idim
       logical :: zfact_is_real
 
-      PUSH_SUB(taylor_series)
+      PUSH_SUB(exponential_apply.taylor_series)
 
       SAFE_ALLOCATE(zpsi1 (1:der%mesh%np_part, 1:hm%d%dim))
       SAFE_ALLOCATE(hzpsi1(1:der%mesh%np,      1:hm%d%dim))
@@ -322,7 +335,8 @@ contains
       SAFE_DEALLOCATE_A(hzpsi1)
 
       if(present(order)) order = te%exp_order
-      POP_SUB(taylor_series)
+
+      POP_SUB(exponential_apply.taylor_series)
     end subroutine taylor_series
     ! ---------------------------------------------------------
 
@@ -347,7 +361,7 @@ contains
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:,:)
 
-      PUSH_SUB(cheby)
+      PUSH_SUB(exponential_apply.cheby)
 
       SAFE_ALLOCATE(zpsi1(1:der%mesh%np_part, 1:hm%d%dim, 0:2))
       zpsi1 = M_z0
@@ -376,7 +390,8 @@ contains
       SAFE_DEALLOCATE_A(zpsi1)
 
       if(present(order)) order = te%exp_order
-      POP_SUB(cheby)
+
+      POP_SUB(exponential_apply.cheby)
     end subroutine cheby
     ! ---------------------------------------------------------
 
@@ -387,8 +402,7 @@ contains
       FLOAT :: beta, res, tol !, nrm
       CMPLX :: pp
 
-      PUSH_SUB(lanczos)
-
+      PUSH_SUB(exponential_apply.lanczos)
 
       SAFE_ALLOCATE(     v(1:der%mesh%np, 1:hm%d%dim, 1:te%exp_order+1))
       SAFE_ALLOCATE(   tmp(1:der%mesh%np, 1:hm%d%dim))
@@ -518,7 +532,8 @@ contains
       SAFE_DEALLOCATE_A(expo)
       SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(psi)
-      POP_SUB(lanczos)
+
+      POP_SUB(exponential_apply.lanczos)
     end subroutine lanczos
     ! ---------------------------------------------------------
 
@@ -536,6 +551,8 @@ contains
     integer :: ii, ist
     CMPLX, pointer :: psi(:, :)
 
+    PUSH_SUB(exponential_apply_batch)
+
     ASSERT(batch_type(psib) == TYPE_CMPLX)
 
     if (te%exp_method == EXP_TAYLOR) then 
@@ -551,6 +568,8 @@ contains
 
     end if
     
+    POP_SUB(exponential_apply_batch)
+
   contains
     
     subroutine taylor_series_batch()
@@ -562,7 +581,7 @@ contains
       type(batch_t) :: psi1b, hpsi1b
       type(profile_t), save :: prof
 
-      PUSH_SUB(taylor_series_batch)
+      PUSH_SUB(exponential_apply_batch.taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
       SAFE_ALLOCATE(psi1 (1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
@@ -621,7 +640,7 @@ contains
       SAFE_DEALLOCATE_A(hpsi1)
       
       call profiling_out(prof)
-      POP_SUB(taylor_series_batch)
+      POP_SUB(exponential_apply_batch.taylor_series_batch)
     end subroutine taylor_series_batch
     
   end subroutine exponential_apply_batch
