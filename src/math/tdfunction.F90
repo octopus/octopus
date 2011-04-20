@@ -130,7 +130,7 @@ module tdf_m
   subroutine tdf_read(f, function_name, ierr)
     type(tdf_t),      intent(inout) :: f
     character(len=*), intent(in)    :: function_name
-    integer,          intent(out)   :: ierr
+    integer,          intent(out)   :: ierr  !< Error code, 0 on success.
 
     type(block_t) :: blk
     integer :: nrows, i, function_type

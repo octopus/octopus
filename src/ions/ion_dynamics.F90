@@ -33,6 +33,7 @@ module ion_dynamics_m
   use parser_m
   use simul_box_m
   use species_m
+  use tdf_m
   use profiling_m
   use unit_m
   use unit_system_m
@@ -61,6 +62,10 @@ module ion_dynamics_m
     VELOCITY_VERLET = 1,  &
     NOSE_HOOVER     = 5
 
+  integer, parameter ::   &
+    THERMO_NONE     = 0,  &
+    THERMO_SCAL     = 1
+
   type nose_hoover_t
     private
     FLOAT :: mass
@@ -71,6 +76,7 @@ module ion_dynamics_m
   type ion_dynamics_t
     private
     integer          :: method
+    integer          :: thermostat
     FLOAT            :: dt
 
     FLOAT, pointer   :: oldforce(:, :)
@@ -85,6 +91,7 @@ module ion_dynamics_m
     FLOAT :: nh_t_end
     FLOAT :: nh_end_time
     FLOAT :: temp
+    type(tdf_t) :: temperature
   end type ion_dynamics_t
 
   type ion_state_t
@@ -100,10 +107,11 @@ contains
     type(ion_dynamics_t), intent(out)   :: this
     type(geometry_t),     intent(inout) :: geo
 
-    integer :: i, j, iatom
+    integer :: i, j, iatom, ierr
     FLOAT   :: x(MAX_DIM), temperature, sigma, kin1, kin2
     type(c_ptr) :: random_gen_pointer
     type(xyz_file_info) :: xyz
+    character(len=100)  :: temp_function_name
 
     PUSH_SUB(ion_dynamics_init)
 
@@ -132,6 +140,50 @@ contains
     
     if(ion_dynamics_ions_move(this)) then 
       SAFE_ALLOCATE(this%oldforce(1:geo%space%dim, 1:geo%natoms))
+    end if
+
+    !%Variable Thermostat
+    !%Type integer
+    !%Default none
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% This variable selects the type of thermostat applied to
+    !% control the ionic temperature. 
+    !%Option none 0
+    !% No thermostat is applied. This is the default.
+    !%Option velocity_scaling 1
+    !% Velocities are scaled to control the temperature.
+    !%End
+    
+    call parse_integer(datasets_check('Thermostat'), THERMO_NONE, this%thermostat)
+    if(.not.varinfo_valid_option('Thermostat', this%thermostat)) call input_error('Thermostat')
+    call messages_print_var_option(stdout, 'Thermostat', this%thermostat)
+    
+    if(this%thermostat /= THERMO_NONE) then
+      
+      call messages_experimental('Thermostat')
+
+      !%Variable TemperatureFunction
+      !%Type integer
+      !%Default none
+      !%Section Time-Dependent::Propagation
+      !%Description
+      !% If a thermostat is used, this variable indicates the name
+      !% function of the TDFunctions that will be used to control the
+      !% temperature. The values of the temperature are given in
+      !% degrees Kelvin. The default name for this function is
+      !% "temperature".
+      !%End
+      call parse_string(datasets_check('TemperatureFunction'), 'temperature', temp_function_name)
+
+      call tdf_read(this%temperature, temp_function_name, ierr)
+
+      if(ierr /= 0) then
+        message(1) = "You have enabled a thermostat but Octopus could not find"
+        message(2) = "the '"//trim(temp_function_name)//"' function in the TDFunctions block."
+        call messages_fatal(2)
+      end if
+
     end if
 
     !now initialize velocities
@@ -286,6 +338,10 @@ contains
 
     PUSH_SUB(ion_dynamics_end)
     SAFE_DEALLOCATE_P(this%oldforce)
+
+    if(this%thermostat /= THERMO_NONE) then
+      call tdf_end(this%temperature)
+    end if
 
     POP_SUB(ion_dynamics_end)
   end subroutine ion_dynamics_end
