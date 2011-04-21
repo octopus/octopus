@@ -79,7 +79,7 @@ contains
     logical      :: too_close
 
     ! we read the density in sensible units
-    gr_per_cm3%factor = CNST(10.541009)
+    gr_per_cm3%factor = CNST(162.67263)
     gr_per_cm3%abbrev = 'gr/cm^3'
     gr_per_cm3%name   = 'gr/cm^3'
 
