@@ -1016,7 +1016,7 @@ contains
 
     call write_iter_start(out_temperature)
 
-    call write_iter_double(out_temperature, ion_dynamics_temperature(geo), 1)
+    call write_iter_double(out_temperature, units_from_atomic(unit_kelvin, ion_dynamics_temperature(geo)), 1)
 
     call write_iter_nl(out_temperature)
 

@@ -210,13 +210,13 @@ contains
 
       if( mpi_grp_is_root(mpi_world)) then
         call loct_ran_init(random_gen_pointer)
-        call parse_float(datasets_check('RandomVelocityTemp'), M_ZERO, temperature)
+        call parse_float(datasets_check('RandomVelocityTemp'), M_ZERO, temperature, unit = unit_kelvin)
       end if
 
       do i = 1, geo%natoms
         !generate the velocities in the root node
         if( mpi_grp_is_root(mpi_world)) then
-          sigma = sqrt( P_Kb*temperature / species_weight(geo%atom(i)%spec) )
+          sigma = sqrt(temperature / species_weight(geo%atom(i)%spec) )
           do j = 1, 3
              geo%atom(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
           end do
@@ -245,12 +245,12 @@ contains
       end do
 
       write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities randomly distributed with T =', &
-        temperature, 'K'
+        units_from_atomic(unit_kelvin, temperature), units_abbrev(unit_kelvin)
       write(message(2),'(2x,a,f8.4,1x,a)') '<K>       =', &
         units_from_atomic(units_out%energy, ion_dynamics_kinetic_energy(geo)/geo%natoms), &
         units_abbrev(units_out%energy)
       write(message(3),'(2x,a,f8.4,1x,a)') '3/2 k_B T =', &
-        units_from_atomic(units_out%energy, (M_THREE/M_TWO)*P_Kb*temperature), &
+        units_from_atomic(units_out%energy, (M_THREE/M_TWO)*temperature), &
         units_abbrev(units_out%energy)
       call messages_info(3)
 
@@ -348,11 +348,13 @@ contains
 
     ! get the temperature from the tdfunction for the current time
     if(this%thermostat /= THERMO_NONE) then
-      this%current_temperature = tdf(this%temperature, time)
+      this%current_temperature = units_to_atomic(unit_kelvin, tdf(this%temperature, time))
 
       if(this%current_temperature < M_ZERO) then 
-        write(message(1), '(a, f10.3, a, f10.3, 3a)') &
-          "Negative temperature (", this%current_temperature, " K) at time ", &
+        write(message(1), '(a, f10.3, 3a, f10.3, 3a)') &
+          "Negative temperature (", &
+          units_from_atomic(unit_kelvin, this%current_temperature), " ", units_abbrev(unit_kelvin), &
+          ") at time ", &
           units_from_atomic(units_out%time, time), " ", trim(units_abbrev(units_out%time)), "."
         call messages_fatal(1)
       end if
@@ -408,7 +410,7 @@ contains
 
     uk = ion_dynamics_kinetic_energy(geo)
 
-    temp = this%current_temperature*P_KB
+    temp = this%current_temperature
     
     g2 = (this%nh(1)%mass*this%nh(1)%vel**2 - temp)/this%nh(2)%mass
     this%nh(2)%vel = this%nh(2)%vel + g2*dt/CNST(4.0)
@@ -560,10 +562,11 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! This function returns the ionic temperature in energy units.
   FLOAT pure function ion_dynamics_temperature(geo) result(temperature)
     type(geometry_t),      intent(in) :: geo
 
-    temperature = M_TWO/M_THREE*ion_dynamics_kinetic_energy(geo)/(geo%natoms*P_Kb)
+    temperature = CNST(2.0)/CNST(3.0)*ion_dynamics_kinetic_energy(geo)/geo%natoms
     
   end function ion_dynamics_temperature
 

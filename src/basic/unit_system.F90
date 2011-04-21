@@ -29,12 +29,6 @@
 !!
 !! 1 au_[mass] = 5.485799110e-4 u
 !!
-!! The atomic unit of mass is the mass of the electron. Unfortunately, the
-!! code uses units of mass of (eV/A^2)(h/(2pieV))^2, which are related to
-!! atomic units through 1 cu_[mass] = 7.619963358 au_[mass] . So:
-!!
-!! 1 u = (1/5.485799110e-4) au_[mass] = (1/5.485799110e-4) *
-!!      (1/7.619963358) cu_[mass] = 239.225360 cu_[mass].
 module unit_system_m
   use datasets_m
   use global_m
@@ -65,8 +59,16 @@ module unit_system_m
     type(unit_t) :: hyperpolarizability
   end type unit_system_t
 
-  type(unit_t),        public :: unit_one, unit_debye, unit_invcm, unit_ppm, unit_susc_ppm_cgs
+  ! the units systems for reading and writing
   type(unit_system_t), public :: units_inp, units_out
+
+  ! some special units required for particular quantities
+  type(unit_t),        public :: unit_one           !< For unitless quantities and arithmetics with units.
+  type(unit_t),        public :: unit_ppm           !< Parts per million.
+  type(unit_t),        public :: unit_debye         !< For dipoles.
+  type(unit_t),        public :: unit_invcm         !< For vibrational frequencies.
+  type(unit_t),        public :: unit_susc_ppm_cgs  !< Some magnetic stuff.
+  type(unit_t),        public :: unit_kelvin        !< For converting energies into temperatures.
 
   integer, parameter, public :: UNITS_ATOMIC = 1, UNITS_EVA = 2
 
@@ -165,6 +167,10 @@ contains
     unit_invcm%factor = M_ONE/CNST(219474.63)
     unit_invcm%abbrev = 'cm^-1'
     unit_invcm%name   = 'h times c over centimeters'
+
+    unit_kelvin%factor = P_KB
+    unit_kelvin%abbrev = 'K'
+    unit_kelvin%name   = 'degrees Kelvin'
 
     call unit_system_get(units_inp, cinp)
     call unit_system_get(units_out, cout)
