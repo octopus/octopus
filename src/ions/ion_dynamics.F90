@@ -82,8 +82,7 @@ module ion_dynamics_m
     FLOAT, pointer :: old_x(:, :)    
 
     ! variables for the Nose-Hoover thermostat
-    type(nose_hoover_t) :: nh1
-    type(nose_hoover_t) :: nh2
+    type(nose_hoover_t) :: nh(1:2)
     type(tdf_t) :: temperature
   end type ion_dynamics_t
 
@@ -137,7 +136,7 @@ contains
     !%Option velocity_scaling 1
     !% Velocities are scaled to control the temperature.
     !%Option nose_hoover 2
-    !% Nos&eacute;-Hoover thermostat.
+    !% Nose-Hoover thermostat.
     !%End
     
     call parse_integer(datasets_check('Thermostat'), THERMO_NONE, this%thermostat)
@@ -170,13 +169,21 @@ contains
       end if
 
       if(this%thermostat == THERMO_NH) then
-        call parse_float(datasets_check("NHMass"), CNST(300.0), this%nh1%mass)
-        this%nh2%mass = this%nh1%mass
+        !%Variable ThermostatMass
+        !%Type float
+        !%Default 1.0
+        !%Section Time-Dependent::Propagation
+        !%Description
+        !% This variable sets the fictitious mass for the Nose-Hoover
+        !% thermostat. The default is 1.0.
+        !%End
+        call messages_obsolete_variable('NHMass', 'ThermostatMass')
 
-        this%nh1%pos = M_ZERO
-        this%nh2%pos = M_ZERO
-        this%nh1%vel = M_ZERO
-        this%nh2%vel = M_ZERO
+        call parse_float(datasets_check('ThermostatMass'), CNST(1.0), this%nh(1)%mass)
+        this%nh(2)%mass = this%nh(1)%mass
+
+        this%nh(1:2)%pos = M_ZERO
+        this%nh(1:2)%vel = M_ZERO
         
         SAFE_ALLOCATE(this%old_x(1:geo%space%dim, 1:geo%natoms))
         
@@ -392,7 +399,7 @@ contains
     type(ion_dynamics_t), intent(inout) :: this
     type(geometry_t),     intent(inout) :: geo
 
-    FLOAT :: g1, g2, ss, uk, dt
+    FLOAT :: g1, g2, ss, uk, dt, temp
     integer :: iatom
 
     PUSH_SUB(chain)
@@ -401,17 +408,19 @@ contains
 
     uk = ion_dynamics_kinetic_energy(geo)
 
-    g2 = (this%nh1%mass*this%nh1%vel**2 - this%current_temperature)/this%nh2%mass
-    this%nh2%vel = this%nh2%vel + g2*dt/CNST(4.0)
-    this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
+    temp = this%current_temperature*P_KB
+    
+    g2 = (this%nh(1)%mass*this%nh(1)%vel**2 - temp)/this%nh(2)%mass
+    this%nh(2)%vel = this%nh(2)%vel + g2*dt/CNST(4.0)
+    this%nh(1)%vel = this%nh(1)%vel*exp(-this%nh(2)%vel*dt/CNST(8.0))
 
-    g1 = (CNST(2.0)*uk - M_THREE*geo%natoms*this%current_temperature)/this%nh1%mass
-    this%nh1%vel = this%nh1%vel + g1*dt/CNST(4.0)
-    this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
-    this%nh1%pos = this%nh1%pos + this%nh1%vel*dt/CNST(2.0)
-    this%nh2%pos = this%nh2%pos + this%nh2%vel*dt/CNST(2.0)
+    g1 = (CNST(2.0)*uk - M_THREE*geo%natoms*temp)/this%nh(1)%mass
+    this%nh(1)%vel = this%nh(1)%vel + g1*dt/CNST(4.0)
+    this%nh(1)%vel = this%nh(1)%vel*exp(-this%nh(2)%vel*dt/CNST(8.0))
+    this%nh(1)%pos = this%nh(1)%pos + this%nh(1)%vel*dt/CNST(2.0)
+    this%nh(2)%pos = this%nh(2)%pos + this%nh(2)%vel*dt/CNST(2.0)
 
-    ss = exp(-this%nh1%vel*dt/CNST(2.0))
+    ss = exp(-this%nh(1)%vel*dt/CNST(2.0))
     
     do iatom = 1, geo%natoms
       geo%atom(iatom)%v(1:geo%space%dim) = ss*geo%atom(iatom)%v(1:geo%space%dim)
@@ -419,13 +428,13 @@ contains
     
     uk = uk*ss**2
 
-    this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
-    g1 = (CNST(2.0)*uk - M_THREE*geo%natoms*this%current_temperature)/this%nh1%mass
-    this%nh1%vel = this%nh1%vel + g1*dt/CNST(4.0)
-    this%nh1%vel = this%nh1%vel*exp(-this%nh2%vel*dt/CNST(8.0))
+    this%nh(1)%vel = this%nh(1)%vel*exp(-this%nh(2)%vel*dt/CNST(8.0))
+    g1 = (CNST(2.0)*uk - M_THREE*geo%natoms*temp)/this%nh(1)%mass
+    this%nh(1)%vel = this%nh(1)%vel + g1*dt/CNST(4.0)
+    this%nh(1)%vel = this%nh(1)%vel*exp(-this%nh(2)%vel*dt/CNST(8.0))
 
-    g2 = (this%nh1%mass*this%nh1%vel**2 - this%current_temperature)/this%nh2%mass
-    this%nh2%vel = this%nh2%vel + g2*dt/CNST(4.0)
+    g2 = (this%nh(1)%mass*this%nh(1)%vel**2 - temp)/this%nh(2)%mass
+    this%nh(2)%vel = this%nh(2)%vel + g2*dt/CNST(4.0)
     
     POP_SUB(chain)
   end subroutine chain
