@@ -90,9 +90,15 @@ contains
 
     call init_()
     
+
     ! load wavefunctions
     if(.not. fromscratch) then
-      call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, exact = .true.)
+      call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
+      if(ierr .ne. 0) then
+        message(1) = "Could not load wavefunctions: Starting from scratch."
+        call messages_warning(1)
+        fromscratch = .true.
+      end if
     end if
 
     if(fromScratch) then
