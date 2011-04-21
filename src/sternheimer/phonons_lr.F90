@@ -39,6 +39,7 @@ module phonons_lr_m
   use profiling_m
   use projector_m
   use restart_m
+  use simul_box_m
   use species_m
   use states_m
   use states_dim_m
@@ -79,11 +80,16 @@ contains
 
     PUSH_SUB(phonons_lr_run)
 
-    !some shorcuts
+    !some shortcuts
 
     geo => sys%geo
     st  => sys%st
     gr  => sys%gr
+
+    if(simul_box_is_periodic(gr%sb)) then
+      message(1) = "Linear-response vib_modes is not implemented for periodic systems."
+      call messages_fatal(1)
+    endif
 
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
@@ -148,6 +154,7 @@ contains
 
       end do
       
+      ! this part is not correct for periodic systems, a different electric perturbation is required with d/dk
       do jdir = 1, ndim
         call pert_setup_dir(electric_pert, jdir)
         infrared(imat, jdir) = &
@@ -180,6 +187,8 @@ contains
   contains
 
     ! ---------------------------------------------------------
+    ! this formulation is only valid for finite systems, or an Ewald sum is required
+    ! as in Baroni et al. RMP 2001, Appendix B.
     subroutine build_ionic_dyn_matrix()
       FLOAT :: ac, xi(1:MAX_DIM), xj(1:MAX_DIM), xk(1:MAX_DIM), r2
       integer :: katom
