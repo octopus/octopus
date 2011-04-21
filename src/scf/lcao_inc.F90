@@ -349,7 +349,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     if(this%derivative) then
       call messages_warning(2)
     else
-      write(message(3), '(a)') 'You can duplicate the number of atomic orbitals by setting'
+      write(message(3), '(a)') 'You can double the number of atomic orbitals by setting'
       write(message(4), '(a)') 'LCAOExtraOrbitals to yes.'
       call messages_warning(4)
     end if

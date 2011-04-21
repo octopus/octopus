@@ -99,8 +99,8 @@ contains
 
     call blacs_pinfo(this%iam, this%nprocs)
 
-    ! The process id from scalapack is not always the
-    ! same than MPI, so we need to construct a map.
+    ! The process ID from ScaLAPACK is not always the
+    ! same as MPI, so we need to construct a map.
     SAFE_ALLOCATE(procmap(0:mpi_grp%size - 1))
     call MPI_Allgather(this%iam, 1, MPI_INTEGER, procmap(0), 1, MPI_INTEGER, comm, mpi_err)
 

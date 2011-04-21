@@ -141,6 +141,8 @@ contains
     integer             :: info, nbl, nrow, ncol
     integer             :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
 
+    PUSH_SUB(X(states_orthogonalization_full).par_gs)
+
     call states_blacs_blocksize(st, mesh, psi_block, total_np)
 
     ! We need to set to zero some extra parts of the array
@@ -182,6 +184,7 @@ contains
     call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
     SAFE_DEALLOCATE_A(ss)
+    POP_SUB(X(states_orthogonalization_full).par_gs)
 #endif
   end subroutine par_gs
 
@@ -194,6 +197,8 @@ contains
 #ifdef HAVE_SCALAPACK
     integer :: psi_block(2), psi_desc(BLACS_DLEN), blacs_info
 #endif
+
+    PUSH_SUB(X(states_orthogonalization_full).qr)
 
     ASSERT(.not. mesh%use_curvilinear)
 
@@ -237,7 +242,7 @@ contains
         call messages_warning(1)
       end if
 #else
-      message(1) = 'The QR orthogonalization in parallel requires Scalapack.'
+      message(1) = 'The QR orthogonalization in parallel requires ScaLAPACK.'
       call messages_fatal(1)
 #endif 
     else
@@ -273,6 +278,8 @@ contains
     ! we need to scale by the volume element to get the proper normalization
     psi = psi/sqrt(mesh%vol_pp(1))
 
+    POP_SUB(X(states_orthogonalization_full).qr)
+
   end subroutine qr
 
   ! ----------------------------------------------------------------------------------
@@ -283,7 +290,7 @@ contains
     R_TYPE, allocatable :: aa(:)
     FLOAT,  allocatable :: bb(:)
 
-    PUSH_SUB(X(states_orthogonalization_block).mgs)
+    PUSH_SUB(X(states_orthogonalization_full).mgs)
 
     SAFE_ALLOCATE(bb(1:nst))
 
@@ -327,7 +334,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(aa)
-    POP_SUB(X(states_orthogonalization_block).mgs)
+    POP_SUB(X(states_orthogonalization_full).mgs)
   end subroutine mgs
 
 end subroutine X(states_orthogonalization_full)
