@@ -88,7 +88,7 @@ contains
     integer,        intent(in) :: ik
 
     integer :: ist, ist2, idim, ip, noccst
-    CMPLX, allocatable :: matrix(:, :), tmp(:)
+    CMPLX, allocatable :: matrix(:, :), tmp(:), phase(:)
 
     PUSH_SUB(berry_phase_det)
 
@@ -100,6 +100,12 @@ contains
 
     SAFE_ALLOCATE(matrix(1:noccst, 1:noccst))
     SAFE_ALLOCATE(tmp(1:mesh%np))
+    SAFE_ALLOCATE(phase(1:mesh%np))
+
+    forall(ip = 1:mesh%np)
+      phase(ip) = exp(-M_zI*(M_PI/mesh%sb%lsize(dir))*mesh%x(ip, dir))
+      ! factor of two removed from exp since actual lattice vector is 2*lsize
+    end forall
 
     do ist = 1, noccst
       do ist2 = 1, noccst
@@ -108,14 +114,11 @@ contains
             
           if(states_are_complex(st)) then
             forall(ip = 1:mesh%np)
-              tmp(ip) = conjg(st%zpsi(ip, idim, ist, ik)) * &
-                exp(-M_zI * (M_PI / mesh%sb%lsize(dir)) * mesh%x(ip, dir)) * st%zpsi(ip, idim, ist2, ik)
-              ! factor of two removed from exp since actual lattice vector is 2 * lsize
+              tmp(ip) = conjg(st%zpsi(ip, idim, ist, ik))*phase(ip)*st%zpsi(ip, idim, ist2, ik)
             end forall
           else
             forall(ip = 1:mesh%np)
-              tmp(ip) = st%dpsi(ip, idim, ist, ik) * &
-                exp(-M_zI * (M_PI / mesh%sb%lsize(dir)) * mesh%x(ip, dir)) * st%dpsi(ip, idim, ist2, ik)
+              tmp(ip) = st%dpsi(ip, idim, ist, ik)*phase(ip)*st%dpsi(ip, idim, ist2, ik)
             end forall
           end if
           
@@ -132,6 +135,7 @@ contains
 
     SAFE_DEALLOCATE_A(matrix)
     SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(phase)
 
     POP_SUB(berry_phase_det)
   end function berry_phase_det
