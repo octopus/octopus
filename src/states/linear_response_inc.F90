@@ -79,9 +79,10 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
       if(abs(delta_e) >= CNST(1e-5)) then
         beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(Theta_Fi(ist) - Theta_Fi(jst))/delta_e
       else
-        ! cannot calculate for fixed occ or dynamic case, ignore
+        ! cannot calculate for fixed occ, ignore
         ! the kernel is supposed to kill off these KS resonances anyway
-        if(st%smear%method .ne. SMEAR_FIXED_OCC .and. abs(omega) > M_EPSILON) then 
+        ! in dynamic case, need to add `self term' without omega, for variation of occupations
+        if(st%smear%method .ne. SMEAR_FIXED_OCC) then 
           xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
           beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(smear_delta_function(st%smear, xx)/dsmear)
         endif
@@ -111,9 +112,10 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   integer,        intent(in)    :: nsigma
 
   integer :: ip, ist, ik, ispin, isigma
-  FLOAT   :: weight
+  FLOAT   :: weight, xx, dsmear, dos_ef, ef_shift
   CMPLX   :: cc
-  R_TYPE  :: dd
+  R_TYPE  :: dd, avg_dl_rho
+  logical :: is_ef_shift
 
   PUSH_SUB(X(lr_build_dl_rho))
 
@@ -121,11 +123,25 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
     message(1) = "Not yet implemented - please fix me"
     call messages_fatal(1)
   end if
+
+  ! correction to density response due to shift in Fermi level
+  ! it is zero for a finite system since the average potential cannot change with neutral perturbations
+  ! it is zero without smearing since there is no Fermi level
+  ! it is zero if the occupations are fixed since there is no Fermi level
+  ! see Baroni et al. eqs. 68, 75, 79; Quantum ESPRESSO PH/ef_shift.f90, localdos.f90
+  ! generalized to TDDFT. Note that their \Delta n_ext = 0 unless the perturbation explicitly
+  ! changes the charge of the system, as in "computational alchemy" (PRL 66 2116 (1991)).
+  ! n(r,E_F) * dV_SCF = dl_rho, before correction.
+  is_ef_shift = mesh%sb%dim == mesh%sb%periodic_dim .and. &
+    .not. smear_is_semiconducting(st%smear) .and. st%smear%method .ne. SMEAR_FIXED_OCC
   
   ! initialize density
   do isigma = 1, nsigma
     lr(isigma)%X(dl_rho)(:, :) = M_ZERO
   end do
+
+  dos_ef = M_ZERO
+  dsmear = max(CNST(1e-14), st%smear%dsmear)
 
   ! calculate density
   do ik = st%d%kpt%start, st%d%kpt%end
@@ -147,6 +163,11 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
         end do
       end if
 
+      if(is_ef_shift) then
+        xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
+        dos_ef = dos_ef + weight * smear_delta_function(st%smear, dsmear)
+      endif
+
     end do
   end do
 
@@ -156,6 +177,26 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
       call comm_allreduce(st%st_kpt_mpi_grp%comm, lr(isigma)%X(dl_rho), dim = (/mesh%np, st%d%nspin/))
     end do
   end if
+
+  if(is_ef_shift) then
+    do isigma = 1, nsigma
+      avg_dl_rho = M_ZERO
+      do ispin = 1, st%d%nspin
+        avg_dl_rho = avg_dl_rho + X(mf_integrate)(mesh, lr(isigma)%X(dl_rho)(:, ispin))
+      enddo
+      ef_shift = -avg_dl_rho / dos_ef
+      do ik = st%d%kpt%start, st%d%kpt%end
+        ispin = states_dim_get_spin_index(st%d, ik)
+        do ist  = st%st_start, st%st_end
+          xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
+          do ip = 1, mesh%np
+            lr(isigma)%X(dl_rho)(ip, ispin) = lr(isigma)%X(dl_rho)(ip, ispin) + abs(st%X(psi)(ip, 1, ist, ik))**2 &
+              * ef_shift * st%d%kweights(ik) * smear_delta_function(st%smear, xx) * st%smear%el_per_state
+          enddo
+        enddo
+      enddo
+    enddo
+  endif
       
   POP_SUB(X(lr_build_dl_rho))
 end subroutine X(lr_build_dl_rho)
