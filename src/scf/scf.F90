@@ -382,7 +382,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, gr, geo, st, ks, hm, outp, gs_run, verbosity)
+  subroutine scf_run(scf, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done)
     type(scf_t),          intent(inout) :: scf !< self consistent cycle
     type(grid_t),         intent(inout) :: gr !< grid
     type(geometry_t),     intent(inout) :: geo !< geometry
@@ -392,6 +392,7 @@ contains
     type(output_t),       intent(in)    :: outp
     logical, optional,    intent(in)    :: gs_run
     integer, optional,    intent(in)    :: verbosity 
+    integer, optional,    intent(out)   :: iters_done
 
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
@@ -625,6 +626,7 @@ contains
       end if
 
       if(finish) then
+        if(present(iters_done)) iters_done = iter
         if(verbosity_ >= VERB_COMPACT) then
           write(message(1), '(a, i4, a)') 'Info: SCF converged in ', iter, ' iterations'
           write(message(2), '(a)')        '' 

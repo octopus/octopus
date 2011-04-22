@@ -232,13 +232,15 @@ contains
         call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, iter*td%dt, td%dt)
         call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
         ! now calculate the eigenfunctions
-        call scf_run(td%scf, sys%gr, geo, st, sys%ks, hm, sys%outp, gs_run = .false., verbosity = VERB_COMPACT)
+        call scf_run(td%scf, sys%gr, geo, st, sys%ks, hm, sys%outp, &
+          gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
       case(CP)
         if(states_are_real(st)) then
           call dcpmd_propagate(td%cp_propagator, sys%gr, hm, st, iter, td%dt)
         else
           call zcpmd_propagate(td%cp_propagator, sys%gr, hm, st, iter, td%dt)
         end if
+        scsteps = 1
       end select
 
       ! update density
