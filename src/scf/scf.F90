@@ -98,6 +98,7 @@ module scf_m
     integer :: mix_field
     logical :: lcao_restricted
     logical :: calc_force
+    logical :: calc_dipole
     type(mix_t) :: smix
     type(eigensolver_t) :: eigens
     integer :: mixdim1
@@ -319,6 +320,19 @@ contains
     !% species.
     !%End
     call parse_logical(datasets_check('SCFCalculateForces'), .not. geo%only_user_def, scf%calc_force)
+
+    !%Variable SCFCalculateDipole
+    !%Type logical
+    !%Section SCF
+    !%Description
+    !% This variable controls whether the dipole is calculated at the
+    !% end of a self-consistent iteration. For finite systems the
+    !% default is yes. For periodic systems the default is no, in this
+    !% case the single-point Berry`s phase approximation is used for
+    !% periodic directions.
+    !%End
+    call parse_logical(datasets_check('SCFCalculateDipole'), .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
+    if(associated(hm%vberry)) scf%calc_dipole = .true.
 
     rmin = geometry_min_distance(geo)
     if(geo%natoms == 1) rmin = CNST(100.0)
@@ -832,8 +846,10 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
-      call calc_dipole(dipole)
-      call write_dipole(iunit, dipole)
+      if(scf%calc_dipole) then
+        call calc_dipole(dipole)
+        call write_dipole(iunit, dipole)
+      end if
 
       if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(a)') 'Convergence:'
