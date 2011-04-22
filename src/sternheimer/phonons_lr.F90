@@ -56,7 +56,9 @@ module phonons_lr_m
   private
   public :: &
        phonons_lr_run,    &
-       phn_nm_wfs_tag
+       phn_nm_wfs_tag,    &
+       phn_wfs_tag,       &
+       phn_rho_tag
   
 contains
 
@@ -127,10 +129,14 @@ contains
       iatom = vibrations_get_atom(vib, imat)
       idir  = vibrations_get_dir (vib, imat)
       
+      write(message(1),'(a,i5,a,a1,a)') &
+        "Calculating response to displacement of atom ", iatom, " in ", index2axis(idir), "-direction."
+      call messages_info(1)
+
       if (.not. fromscratch) then
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
-        call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir))//'_1',&
+        call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir))//'+',&
           st, gr, geo, ierr, lr = lr(1))
       end if
       
@@ -162,6 +168,8 @@ contains
           dpert_expectation_value(electric_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi)
       end do
 
+      message(1) = ""
+      call messages_info(1)
     end do 
 
     call pert_end(ionic_pert)
@@ -172,6 +180,8 @@ contains
     call vibrations_output(vib, "_lr")
     call calc_infrared
 
+    message(1) = "Calculating response wavefunctions for normal modes."
+    call messages_info(1)
     call vib_modes_wavefunctions
 
     !DESTRUCT
@@ -293,7 +303,7 @@ contains
 
             imat = vibrations_get_index(vib, iatom, idir)
 
-            call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir))//'_1',&
+            call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir))//'+',&
                  st, gr, geo, ierr, lr = lrtmp)
             
             do ik = 1, st%d%nik
@@ -310,7 +320,7 @@ contains
           end do
         end do
         
-        call restart_write(io_workpath(trim(tmpdir)//VIB_MODES_DIR//trim(phn_nm_wfs_tag(inm))//'_1'), &
+        call restart_write(io_workpath(trim(tmpdir)//VIB_MODES_DIR//trim(phn_nm_wfs_tag(inm))//'+'), &
           st, gr, ierr, lr = lr(1))
         
       end do
