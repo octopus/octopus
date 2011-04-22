@@ -384,7 +384,7 @@ contains
       ! Understanding Molecular Simulations by Frenkel and Smit,
       ! Appendix E, page 540-542.
 
-      call chain(this, geo)
+      call nh_chain(this, geo)
 
       do iatom = 1, geo%natoms
         geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + M_HALF*dt*geo%atom(iatom)%v(1:geo%space%dim)
@@ -399,7 +399,7 @@ contains
   
 
   ! ---------------------------------------------------------
-  subroutine chain(this, geo)
+  subroutine nh_chain(this, geo)
     type(ion_dynamics_t), intent(inout) :: this
     type(geometry_t),     intent(inout) :: geo
 
@@ -441,13 +441,14 @@ contains
     this%nh(2)%vel = this%nh(2)%vel + g2*dt/CNST(4.0)
     
     POP_SUB(chain)
-  end subroutine chain
+  end subroutine nh_chain
   
 
   ! ---------------------------------------------------------
-  subroutine ion_dynamics_propagate_vel(this, geo)
+  subroutine ion_dynamics_propagate_vel(this, geo, atoms_moved)
     type(ion_dynamics_t), intent(inout) :: this
     type(geometry_t),     intent(inout) :: geo
+    logical, optional,    intent(out)   :: atoms_moved !< Returns true if the atoms were moved by this function.
 
     integer :: iatom
     FLOAT   :: scal
@@ -456,6 +457,8 @@ contains
 
     PUSH_SUB(ion_dynamics_propagate_vel)
     
+    if(present(atoms_moved)) atoms_moved = this%thermostat == THERMO_NH
+
     if(this%thermostat /= THERMO_NH) then
       ! velocity verlet
       do iatom = 1, geo%natoms
@@ -475,7 +478,7 @@ contains
         geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + M_HALF*this%dt*geo%atom(iatom)%v(1:geo%space%dim)
       enddo
       
-      call chain(this, geo)
+      call nh_chain(this, geo)
 
     end if
 

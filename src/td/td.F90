@@ -302,8 +302,10 @@ contains
       if(ion_dynamics_ions_move(td%ions)) then
         if(td%dynamics /= BO) call forces_calculate(gr, sys%geo, hm%ep, st, iter*td%dt)
         
-        call ion_dynamics_propagate_vel(td%ions, sys%geo)
-        
+        call ion_dynamics_propagate_vel(td%ions, sys%geo, atoms_moved = generate)
+
+        if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
+
         geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
       end if
       
