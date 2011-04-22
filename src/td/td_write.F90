@@ -360,7 +360,8 @@ contains
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/coordinates")))
 
       if(writ%out(OUT_TEMPERATURE)%write) &
-        call write_iter_init(writ%out(OUT_TEMPERATURE)%handle, first, M_ONE, trim(io_workpath("td.general/temperature")))
+        call write_iter_init(writ%out(OUT_TEMPERATURE)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/temperature")))
 
       if(writ%out(OUT_POPULATIONS)%write) &
         call write_iter_init(writ%out(OUT_POPULATIONS)%handle, first, &
