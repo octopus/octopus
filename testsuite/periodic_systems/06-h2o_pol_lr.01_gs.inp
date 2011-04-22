@@ -12,6 +12,7 @@ ConvRelDens = 8.0e-8
 BoxShape = parallelepiped
 Lsize = 10
 PeriodicDimensions = 3
+SCFCalculateDipole = yes
 
 %KPointsGrid
 1 | 1 | 1

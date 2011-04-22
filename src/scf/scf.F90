@@ -327,8 +327,9 @@ contains
     !%Description
     !% This variable controls whether the dipole is calculated at the
     !% end of a self-consistent iteration. For finite systems the
-    !% default is yes. For periodic systems the default is no, in this
-    !% case the single-point Berry`s phase approximation is used for
+    !% default is yes. For periodic systems the default is no, unless
+    !% an electric field is being applied in a periodic direction.
+    !% The single-point Berry`s phase approximation is used for
     !% periodic directions.
     !%End
     call parse_logical(datasets_check('SCFCalculateDipole'), .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
