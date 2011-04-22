@@ -79,17 +79,19 @@ module ion_dynamics_m
     FLOAT, pointer   :: oldforce(:, :)
 
     ! the old positions for Verlet (used for the Nose-Hoover)
-    FLOAT, pointer :: old_x(:, :)    
+    FLOAT, pointer :: old_pos(:, :)    
 
     ! variables for the Nose-Hoover thermostat
     type(nose_hoover_t) :: nh(1:2)
-    type(tdf_t) :: temperature
+    type(tdf_t) :: temperature_function
   end type ion_dynamics_t
 
   type ion_state_t
     private
     FLOAT, pointer :: pos(:, :)
     FLOAT, pointer :: vel(:, :)
+    FLOAT, pointer :: old_pos(:, :)
+    type(nose_hoover_t) :: nh(1:2)
   end type ion_state_t
 
 contains
@@ -160,7 +162,7 @@ contains
       !%End
       call parse_string(datasets_check('TemperatureFunction'), 'temperature', temp_function_name)
 
-      call tdf_read(this%temperature, temp_function_name, ierr)
+      call tdf_read(this%temperature_function, temp_function_name, ierr)
 
       if(ierr /= 0) then
         message(1) = "You have enabled a thermostat but Octopus could not find"
@@ -185,10 +187,10 @@ contains
         this%nh(1:2)%pos = M_ZERO
         this%nh(1:2)%vel = M_ZERO
         
-        SAFE_ALLOCATE(this%old_x(1:geo%space%dim, 1:geo%natoms))
+        SAFE_ALLOCATE(this%old_pos(1:geo%space%dim, 1:geo%natoms))
         
         do iatom = 1, geo%natoms
-          this%old_x(1:geo%space%dim, iatom) = geo%atom(iatom)%x(1:geo%space%dim)
+          this%old_pos(1:geo%space%dim, iatom) = geo%atom(iatom)%x(1:geo%space%dim)
         end do
       end if
 
@@ -323,7 +325,7 @@ contains
     SAFE_DEALLOCATE_P(this%oldforce)
 
     if(this%thermostat /= THERMO_NONE) then
-      call tdf_end(this%temperature)
+      call tdf_end(this%temperature_function)
     end if
 
     POP_SUB(ion_dynamics_end)
@@ -348,7 +350,7 @@ contains
 
     ! get the temperature from the tdfunction for the current time
     if(this%thermostat /= THERMO_NONE) then
-      this%current_temperature = units_to_atomic(unit_kelvin, tdf(this%temperature, time))
+      this%current_temperature = units_to_atomic(unit_kelvin, tdf(this%temperature_function, time))
 
       if(this%current_temperature < M_ZERO) then 
         write(message(1), '(a, f10.3, 3a, f10.3, 3a)') &
@@ -509,13 +511,20 @@ contains
       state%vel(1:geo%space%dim, iatom) = geo%atom(iatom)%v(1:geo%space%dim)
     end do
 
+    if(this%thermostat == THERMO_NH) then
+      SAFE_ALLOCATE(state%old_pos(1:geo%space%dim, 1:geo%natoms))
+      state%old_pos(1:geo%space%dim, 1:geo%natoms) = this%old_pos(1:geo%space%dim, 1:geo%natoms)
+      state%nh(1:2)%pos = this%nh(1:2)%pos
+      state%nh(1:2)%vel = this%nh(1:2)%vel
+    end if
+    
     POP_SUB(ion_dynamics_save_state)
   end subroutine ion_dynamics_save_state
 
 
   ! ---------------------------------------------------------
   subroutine ion_dynamics_restore_state(this, geo, state)
-    type(ion_dynamics_t), intent(in)    :: this
+    type(ion_dynamics_t), intent(inout) :: this
     type(geometry_t),     intent(inout) :: geo
     type(ion_state_t),    intent(inout) :: state
 
@@ -529,6 +538,13 @@ contains
       geo%atom(iatom)%x(1:geo%space%dim) = state%pos(1:geo%space%dim, iatom)
       geo%atom(iatom)%v(1:geo%space%dim) = state%vel(1:geo%space%dim, iatom)
     end do
+
+    if(this%thermostat == THERMO_NH) then
+      this%old_pos(1:geo%space%dim, 1:geo%natoms) = state%old_pos(1:geo%space%dim, 1:geo%natoms)
+      this%nh(1:2)%pos = state%nh(1:2)%pos
+      this%nh(1:2)%vel = state%nh(1:2)%vel
+      SAFE_DEALLOCATE_P(state%old_pos)
+    end if
 
     SAFE_DEALLOCATE_P(state%pos)
     SAFE_DEALLOCATE_P(state%vel)
