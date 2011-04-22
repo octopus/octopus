@@ -90,7 +90,7 @@ contains
     !% until no more electrons are left.
     !%Option fermi_dirac 2
     !% Simple Fermi-Dirac distribution. In this case, <tt>Smearing</tt> has
-    !% the meaning of an electronic temperature.
+    !% the meaning of an electronic temperature. DN Mermin, <i>Phys. Rev.</i> <b>137</b>, A1441 (1965).
     !%Option cold_smearing 3
     !% N Marzari, D Vanderbilt, A De Vita, and MC Payne, <i>Phys. Rev. Lett.</i> <b>82</b>, 3296 (1999).
     !%Option methfessel_paxton 4
@@ -99,6 +99,7 @@ contains
     !% Occupations may be negative.
     !%Option spline_smearing 5
     !% Nearly identical to Gaussian smearing.
+    !% JM Holender, MJ Gillan, MC Payne, and AD Simpson, <i>Phys. Rev. B</i> <b>52</b>, 967 (1995).
     !%End
     if(fixed_occ) then
       this%method = SMEAR_FIXED_OCC
