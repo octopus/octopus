@@ -406,7 +406,7 @@ contains
     FLOAT :: g1, g2, ss, uk, dt, temp
     integer :: iatom
 
-    PUSH_SUB(chain)
+    PUSH_SUB(nh_chain)
 
     dt = this%dt
 
@@ -440,7 +440,7 @@ contains
     g2 = (this%nh(1)%mass*this%nh(1)%vel**2 - temp)/this%nh(2)%mass
     this%nh(2)%vel = this%nh(2)%vel + g2*dt/CNST(4.0)
     
-    POP_SUB(chain)
+    POP_SUB(nh_chain)
   end subroutine nh_chain
   
 

@@ -81,7 +81,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
       else
         ! cannot calculate for fixed occ, ignore
         ! the kernel is supposed to kill off these KS resonances anyway
-        ! in dynamic case, need to add `self term' without omega, for variation of occupations
+        ! in dynamic case, need to add 'self term' without omega, for variation of occupations
         if(st%smear%method .ne. SMEAR_FIXED_OCC) then 
           xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
           beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(smear_delta_function(st%smear, xx)/dsmear)
