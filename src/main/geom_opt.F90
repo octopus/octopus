@@ -36,6 +36,7 @@ module geom_opt_m
   use profiling_m
   use restart_m
   use scf_m
+  use simul_box_m
   use species_pot_m
   use states_m
   use states_calc_m
@@ -317,8 +318,11 @@ contains
     PUSH_SUB(calc_point)
 
     forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
-      g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim * iatom + idir)
+      g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim*iatom + idir)
     end forall
+
+    call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .true.)
+
     call atom_write_xyz(".", "work-geom", g_opt%geo, g_opt%dim, append=.true.)
 
     call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
