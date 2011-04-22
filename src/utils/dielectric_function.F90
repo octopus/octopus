@@ -43,7 +43,6 @@ program dielectric_function
   FLOAT   :: dt, tt, ww, n0
   FLOAT, allocatable :: vecpot(:, :), dumpa(:), vecpot0(:)
   CMPLX, allocatable :: dielectric(:, :), chi(:, :), invdielectric(:, :), fullmat(:, :)
-  FLOAT, parameter :: eta = CNST(0.2)/CNST(27.211383)
   type(spec_t)      :: spectrum
   type(block_t)     :: blk
   type(space_t)     :: space
@@ -155,7 +154,7 @@ program dielectric_function
     do ii = istart, iend
       tt = ii*dt
       invdielectric(1:space%dim, kk) = &
-        invdielectric(1:space%dim, kk) + vecpot(space%dim + 1:2*space%dim, ii)*exp((M_zI*ww - eta)*tt)*dumpa(ii)*dt
+        invdielectric(1:space%dim, kk) + vecpot(space%dim + 1:2*space%dim, ii)*exp(M_zI*ww*tt)*dumpa(ii)*dt
     end do
     
     invdielectric(1:space%dim, kk) = (vecpot0(1:space%dim) + invdielectric(1:space%dim, kk))/n0
