@@ -70,7 +70,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   call parse_integer(datasets_check('SPARSKITKrylovSubspaceSize'), 15, sk%krylov_size)
 
   ! preconditioner not implemented
-  sk%preconditioning == 0
+  sk%preconditioning = 0
 
   !%Variable SPARSKITMaxIter
   !%Type integer
