@@ -79,10 +79,10 @@ contains
     !convert the position to the orthogonal space
     this%pos_chi(1:pd) = matmul(pos(1:pd), sb%klattice_primitive(1:pd, 1:pd))
 
-    this%nbmin(1:pd) = int((this%pos_chi(1:pd) - range)/sb%lsize(1:pd) - M_HALF)
-    this%nbmax(1:pd) = int((this%pos_chi(1:pd) + range)/sb%lsize(1:pd) + M_HALF)
+    this%nbmin(1:pd) = -int(-(this%pos_chi(1:pd) - range)/(M_TWO*sb%lsize(1:pd)) + M_HALF)
+    this%nbmax(1:pd) = int((this%pos_chi(1:pd) + range)/(M_TWO*sb%lsize(1:pd)) + M_HALF)
 
-    !there are no copies in non-periodic directions
+    ! no copies in non-periodic directions
     this%nbmin(pd + 1:MAX_DIM) = 0
     this%nbmax(pd + 1:MAX_DIM) = 0
 

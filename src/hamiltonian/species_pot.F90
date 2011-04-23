@@ -491,8 +491,11 @@ contains
 #ifdef HAVE_MPI
     real(8) :: local_min(2), global_min(2)
 #endif
+    type(profile_t), save :: prof
 
     PUSH_SUB(species_get_density)
+
+    call profiling_in(prof, "SPECIES_DENSITY")
 
     select case(species_type(spec))
 
@@ -626,6 +629,7 @@ contains
 
     end select
 
+    call profiling_out(prof)
     POP_SUB(species_get_density)
   end subroutine species_get_density
 
