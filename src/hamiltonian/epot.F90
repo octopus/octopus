@@ -935,10 +935,11 @@ contains
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
     integer :: ix, iy, iz, isph, ss
-    FLOAT   :: gg(1:MAX_DIM), gg2
+    FLOAT   :: gg(1:MAX_DIM), gg2, gx
     FLOAT   :: factor, charge
     CMPLX   :: sumatoms, tmp(1:MAX_DIM)
     FLOAT, parameter :: alpha = CNST(1.1313708)
+    CMPLX, allocatable :: phase(:)
 
     PUSH_SUB(ion_interaction_periodic)
 
@@ -1002,6 +1003,7 @@ contains
     end do
 
     ! And the long-range part, using an Ewald sum
+    SAFE_ALLOCATE(phase(1:geo%natoms))
 
     ! First the G = 0 term (charge was calculated previously)
     efourier = -M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
@@ -1024,21 +1026,27 @@ contains
           ! g=0 must be removed from the sum
           if(gg2 == M_ZERO) cycle
 
-          factor = M_TWO*M_PI/sb%rcell_volume*exp(-CNST(0.25)*gg2/alpha**2)/gg2
-          
+          gx = -CNST(0.25)*gg2/alpha**2
+
+          if(gx < CNST(-36.0)) cycle
+
+          factor = M_TWO*M_PI/sb%rcell_volume*exp(gx)/gg2
+
+          if(factor < epsilon(factor)) cycle
+
           sumatoms = M_Z0
           do iatom = 1, geo%natoms
             zi = species_zval(geo%atom(iatom)%spec)
             xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
-            sumatoms = sumatoms + zi*exp(M_ZI*sum(gg(1:sb%dim)*xi(1:sb%dim)))
+            gx = sum(gg(1:sb%dim)*xi(1:sb%dim))
+            phase(iatom) = zi*cmplx(cos(gx), sin(gx), REAL_PRECISION)
+            sumatoms = sumatoms + phase(iatom)
           end do
           
           efourier = efourier + factor*sumatoms*conjg(sumatoms)
           
           do iatom = 1, geo%natoms
-            zi = species_zval(geo%atom(iatom)%spec)
-            xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
-            tmp(1:sb%dim) = M_ZI*zi*gg(1:sb%dim)*exp(M_ZI*sum(gg(1:sb%dim)*xi(1:sb%dim)))
+            tmp(1:sb%dim) = M_ZI*gg(1:sb%dim)*phase(iatom)
             force(1:sb%dim, iatom) = force(1:sb%dim, iatom) &
               - factor*(conjg(tmp(1:sb%dim))*sumatoms + tmp(1:sb%dim)*conjg(sumatoms))
           end do
@@ -1049,6 +1057,8 @@ contains
     
     energy = ereal + efourier + eself
     
+    SAFE_DEALLOCATE_A(phase)
+
     POP_SUB(ion_interaction_periodic)
   end subroutine ion_interaction_periodic
 
