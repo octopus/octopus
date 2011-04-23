@@ -53,10 +53,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   kinetic_only_ = (ieor(terms_, TERM_KINETIC) == 0)
 
-  if(present(time) .and. hm%d%cdft) then
-    message(1) = "TDCDFT not yet implemented."
-    call messages_fatal(1)
-  end if
+  if(present(time) .and. hm%d%cdft) call messages_not_implemented('TDCDFT')
 
   ASSERT(batch_is_ok(psib))
   ASSERT(batch_is_ok(hpsib))
@@ -103,8 +100,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
       else
         do ii = 1, nst
           call set_pointers()
-          forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, der%mesh%np_part)) 
-            psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip, idim)
+          forall (idim = 1:hm%d%dim)
+            forall(ip = sp:min(sp + bs - 1, der%mesh%np_part)) 
+              psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip, idim)
+            end forall
           end forall
         end do
       end if
@@ -168,9 +167,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
       ! all functions that require the gradient or other derivatives of
       ! epsi should go after this point and calculate it using Xget_grad
 
-      ! FIX ME: here not all the possible couplings between vector
-      ! potentials are considered
-
       nullify(grad)
 
       if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) call X(exchange_operator)(hm, der, epsi, hpsi, ist, ik)
@@ -197,9 +193,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
       else
         do ii = 1, nst
           call set_pointers()
-          
-          forall (idim = 1:hm%d%dim, ip = sp:min(sp + bs - 1, der%mesh%np))
-            hpsi(ip, idim) = conjg(hm%phase(ip, ik))*hpsi(ip, idim)
+          forall (idim = 1:hm%d%dim)
+            forall(ip = sp:min(sp + bs - 1, der%mesh%np))
+              hpsi(ip, idim) = conjg(hm%phase(ip, ik))*hpsi(ip, idim)
+            end forall
           end forall
         end do
       end if
