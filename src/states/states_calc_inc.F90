@@ -155,6 +155,11 @@ contains
     call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0, st%dom_st_proc_grid%context, &
       st%d%dim*ubound(psi, dim = 1), info)
 
+    if(info /= 0) then
+      write(message(1),'(a,i6)') "descinit for psi failed in states_orthogonalization_full.par_gs with error ", info
+      call messages_warning(1)
+    end if
+
     nbl = min(32, st%nst)
     nrow = max(1, numroc(st%nst, nbl, st%dom_st_proc_grid%myrow, 0, st%dom_st_proc_grid%nprow))
     ncol = max(1, numroc(st%nst, nbl, st%dom_st_proc_grid%mycol, 0, st%dom_st_proc_grid%npcol))
@@ -162,6 +167,11 @@ contains
     SAFE_ALLOCATE(ss(1:nrow, 1:ncol))
 
     call descinit(ss_desc(1), st%nst, st%nst, nbl, nbl, 0, 0, st%dom_st_proc_grid%context, ubound(ss, dim = 1), info)
+
+    if(info /= 0) then
+      write(message(1),'(a,i6)') "descinit for ss failed in states_orthogonalization_full.par_gs with error ", info
+      call messages_warning(1)
+    end if
 
     ss = M_ZERO
 
@@ -173,7 +183,8 @@ contains
     call scalapack_potrf(uplo = 'U', n = st%nst, a = ss(1, 1), ia = 1, ja = 1, desca = ss_desc(1), info = info)
 
     if(info /= 0) then
-      message(1) = "Orthogonalization failed; probably your eigenvectors are not independent."
+      write(message(1),'(a,i6,a)') &
+        "Orthogonalization with potrf failed with error ", info, "; probably your eigenvectors are not independent."
       call messages_warning(1)
     end if
 
