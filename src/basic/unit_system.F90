@@ -69,8 +69,9 @@ module unit_system_m
   type(unit_t),        public :: unit_invcm         !< For vibrational frequencies.
   type(unit_t),        public :: unit_susc_ppm_cgs  !< Some magnetic stuff.
   type(unit_t),        public :: unit_kelvin        !< For converting energies into temperatures.
+  type(unit_t),        public :: unit_femtosecond   !< Time in femtoseconds.
 
-  integer, parameter, public :: UNITS_ATOMIC = 1, UNITS_EVA = 2
+  integer, parameter, public :: UNITS_ATOMIC = 0, UNITS_EVA = 1, UNITS_FS = 2
 
 contains
 
@@ -86,11 +87,30 @@ contains
     !%Default atomic
     !%Section Execution::Units
     !%Description
+    !% This variable selects the units that Octopus use for
+    !% input and output.
+    !%
     !% Atomic units seem to be the preferred system in the atomic and
     !% molecular physics community. Internally, the code works in
     !% atomic units. However, for input or output, some people like
     !% to use a system based in eV for energies and <math>\AA</math>
     !% for length. The default is atomic units.
+    !%
+    !% Normally time units are derived from energy and length units,
+    !% so it is measured in <math>\hbar/Hartree</math> or
+    !% <math>\hbar/electronvolt</math>. Alternatively you can tell
+    !% Octopus to use femtoseconds as the time unit by adding the
+    !% value <tt>femtoseconds</tt> (Note that no other unit will be 
+    !% based on femtoseconds). So for example you can use:
+    !%
+    !% <tt>Units = femtoseconds</tt>
+    !%
+    !% or
+    !%
+    !% <tt>Units = ev_angstrom + femtoseconds</tt>
+    !%
+    !% You can use different unit systems for input and output by
+    !% setting the <tt>UnitsInput</tt> and <tt>UnitsOutput</tt>.
     !%
     !% Warning 1: All files read on input will also be treated using
     !% these units, including XYZ geometry files.
@@ -101,11 +121,14 @@ contains
     !% (cm<sup>-1</sup>) or temperatures (Kelvin). The unit of charge is always
     !% the electronic charge <i>e</i>.
     !%
-    !%Option atomic        1
+    !%Option atomic        0
     !% Atomic units.
-    !%Option ev_angstrom   2
+    !%Option ev_angstrom   1
     !% Electronvolts for energy, Angstroms for length, the rest of the
     !% units are derived from these and <math>hbar=1</math>.
+    !%Option femtoseconds  2
+    !% (Experimental) If you add this value to the other options,
+    !% Octopus will treat time in femtoseconds units.
     !%End
 
     !%Variable UnitsInput
@@ -114,11 +137,6 @@ contains
     !%Section Execution::Units
     !%Description
     !% Same as <tt>Units</tt>, but only refers to input values.
-    !%Option atomic        1
-    !% Atomic units.
-    !%Option ev_angstrom   2
-    !% Electronvolts for energy, Angstroms for length, and the rest of the
-    !% units are derived from these and <math>hbar=1</math>.
     !%End
 
     !%Variable UnitsOutput
@@ -127,24 +145,20 @@ contains
     !%Section Execution::Units
     !%Description
     !% Same as <tt>Units</tt>, but only refers to output values.
-    !%Option atomic        1
-    !% Atomic units
-    !%Option ev_angstrom   2
-    !% Electronvolts for energy, Angstroms for length, the rest of the
-    !% units are derived from these and <math>hbar=1</math>.
     !%End
 
     if(parse_isdef(datasets_check('Units')).ne.0) then
       call parse_integer(datasets_check('Units'), UNITS_ATOMIC, cc)
-      if(.not.varinfo_valid_option('Units', cc)) call input_error('Units')
+      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call input_error('Units')
       cinp = cc
       cout = cc
     else
+      ! note that we check the value is valid for the 'Units' variable
       call parse_integer(datasets_check('UnitsInput'), UNITS_ATOMIC, cc)
-      if(.not.varinfo_valid_option('UnitsInput', cc)) call input_error('UnitsInput')
+      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call input_error('UnitsInput')
       cinp = cc
       call parse_integer(datasets_check('UnitsOutput'), UNITS_ATOMIC, cc)
-      if(.not.varinfo_valid_option('UnitsOutput', cc)) call input_error('UnitsOutput')
+      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call input_error('UnitsOutput')
       cout = cc
     end if
 
@@ -154,11 +168,11 @@ contains
 
     unit_ppm%factor = CNST(1e-6)
     unit_ppm%abbrev = 'ppm a.u.'
-    unit_ppm%name   = 'parts per million atomic units'
+    unit_ppm%name   = 'parts per million'
 
     unit_susc_ppm_cgs%factor = CNST(1e-6)/CNST(8.9238878e-2)
     unit_susc_ppm_cgs%abbrev = 'ppm cgs/mol'
-    unit_susc_ppm_cgs%name   = 'magnetic susceptibility parts per million atomic units'
+    unit_susc_ppm_cgs%name   = 'magnetic susceptibility parts per million cgs'
 
     unit_debye%factor = M_ONE/CNST(2.5417462)
     unit_debye%abbrev = 'Debye'
@@ -172,8 +186,19 @@ contains
     unit_kelvin%abbrev = 'K'
     unit_kelvin%name   = 'degrees Kelvin'
 
-    call unit_system_get(units_inp, cinp)
-    call unit_system_get(units_out, cout)
+    unit_femtosecond%factor = CNST(1.0)/CNST(0.024188843)
+    unit_femtosecond%abbrev = 'fs'
+    unit_femtosecond%name   = 'femtoseconds'
+
+    call unit_system_get(units_inp, mod(cinp, 2))
+    call unit_system_get(units_out, mod(cout, 2))
+
+    if(cinp/2 == 1 .or. cout/2 == 1) then
+      call messages_experimental('Femtosecond units')
+    end if
+
+    if(cinp/2 == 1) units_inp%time = unit_femtosecond
+    if(cout/2 == 1) units_out%time = unit_femtosecond
 
     POP_SUB(unit_system_init)
 
