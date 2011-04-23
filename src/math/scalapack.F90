@@ -296,7 +296,7 @@ module scalapack_m
       integer,             intent(in)    :: descz
       complex(8),          intent(out)   :: work
       integer,             intent(in)    :: lwork
-      complex(8),          intent(out)   :: rwork
+      real(8),             intent(out)   :: rwork
       integer,             intent(in)    :: lrwork
       integer,             intent(out)   :: iwork
       integer,             intent(in)    :: liwork

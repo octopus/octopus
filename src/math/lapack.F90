@@ -263,7 +263,7 @@ module lapack_m
       integer,             intent(in)    :: ldz
       complex(8),          intent(out)   :: work
       integer,             intent(in)    :: lwork
-      complex(8),          intent(out)   :: rwork ! rwork(1:7*n)
+      real(8),             intent(out)   :: rwork ! rwork(1:7*n)
       integer,             intent(out)   :: iwork ! iwork(1:5*n)
       integer,             intent(out)   :: ifail ! ifail(1:n)
       integer,             intent(out)   :: info

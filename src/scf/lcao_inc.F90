@@ -580,11 +580,11 @@ contains
 
   subroutine diagonalization()
     integer              :: neval_found, info, lwork
-    R_TYPE               :: tmp
+    R_TYPE               :: tmp(3) ! size must be at least 3 according to ScaLAPACK
     R_TYPE,  allocatable :: work(:)
     integer, allocatable :: iwork(:), ifail(:)
 #ifdef R_TCOMPLEX
-    CMPLX,   allocatable :: rwork(:)
+    FLOAT,   allocatable :: rwork(:)
 #endif
 #ifdef HAVE_SCALAPACK
     integer              :: ilbasis, jlbasis, proc(1:2), dest(1:2)
@@ -595,7 +595,7 @@ contains
     R_TYPE,  allocatable :: send_buffer(:, :), recv_buffer(:, :)
     FLOAT                :: orfac
 #ifdef R_TCOMPLEX
-    CMPLX                :: rtmp
+    FLOAT                :: rtmp(3) ! size must be at least 3 according to ScaLAPACK
     integer              :: lrwork
 #endif
 #endif
@@ -623,7 +623,7 @@ contains
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
         z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
-        work = tmp, lwork = -1, iwork = liwork, liwork = -1, &
+        work = tmp(1), lwork = -1, iwork = liwork, liwork = -1, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
 #else
       call scalapack_hegvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
@@ -632,7 +632,7 @@ contains
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, nz = nevec_found, w = eval(1), orfac = orfac, &
         z = levec(1, 1), iz = 1, jz = 1, descz = this%desc(1), &
-        work = tmp, lwork = -1, rwork = rtmp, lrwork = -1, iwork = liwork, liwork = -1, &
+        work = tmp(1), lwork = -1, rwork = rtmp(1), lrwork = -1, iwork = liwork, liwork = -1, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
 #endif
 
@@ -642,10 +642,13 @@ contains
         call messages_warning(1)
       end if
 
-      lwork = nint(real(tmp, 8))
+      lwork = nint(R_REAL(tmp(1)))
 
       SAFE_ALLOCATE(work(1:lwork))
       SAFE_ALLOCATE(iwork(1:liwork))
+
+      SAFE_DEALLOCATE_A(ifail)
+      SAFE_ALLOCATE(ifail(1:this%nbasis))
 
 #ifdef R_TREAL
       call scalapack_sygvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
@@ -657,7 +660,7 @@ contains
         work = work(1), lwork = lwork, iwork = iwork(1), liwork = liwork, &
         ifail = ifail(1), iclustr = iclustr(1), gap = gap(1), info = info)
 #else
-      lrwork = nint(real(rtmp, 8))
+      lrwork = nint(rtmp(1))
       SAFE_ALLOCATE(rwork(1:lrwork))
 
       call scalapack_hegvx(ibtype = 1, jobz = 'V', range = 'I', uplo = 'U', &
@@ -789,7 +792,7 @@ contains
         n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
-        work = tmp, lwork = -1, iwork = iwork(1), ifail = ifail(1), info = info)
+        work = tmp(1), lwork = -1, iwork = iwork(1), ifail = ifail(1), info = info)
 #else
 
       SAFE_ALLOCATE(rwork(1:7*this%nbasis))
@@ -798,7 +801,7 @@ contains
         n = this%nbasis, a = hamiltonian(1, 1), lda = this%nbasis, b = overlap(1, 1), ldb = this%nbasis, &
         vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
         m = neval_found, w = eval(1), z = evec(1, 1), ldz = this%nbasis, &
-        work = tmp, lwork = -1, rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
+        work = tmp(1), lwork = -1, rwork = rwork(1), iwork = iwork(1), ifail = ifail(1), info = info)
 
 #endif
       if(info /= 0) then
@@ -806,7 +809,7 @@ contains
         call messages_warning(1)
       end if
 
-      lwork = nint(real(tmp, 8))
+      lwork = nint(R_REAL(tmp(1)))
 
       SAFE_ALLOCATE(work(1:lwork))
 
