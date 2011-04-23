@@ -1635,10 +1635,11 @@ module opt_control_target_m
       
     case(oct_max_curr_ring)
       call states_calc_quantities(gr%der, psi, paramagnetic_current=psi%current) 
+
       if(gr%sb%dim .ne. M_TWO) then
-        write(message(1), '(a)') 'This target only implemented for 2D.'
-        call messages_fatal(1)
+        call messages_not_implemented('Target for dimension != 2')
       end if
+
       do ip = 1, gr%mesh%np
         ! func = j_y * x - j_x * y 
         semilocal_function (ip) = psi%current(ip, 2, 1) *  gr%mesh%x(ip,1) -  &

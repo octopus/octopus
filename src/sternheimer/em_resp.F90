@@ -126,8 +126,7 @@ contains
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC .and. &
       any(abs(em_vars%omega(1:em_vars%nomega)) > M_EPSILON)) then
-      message(1) = "Dynamical magnetic response not implemented."
-      call messages_fatal(1)
+      call messages_not_implemented('Dynamical magnetic response')
     endif
 
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
@@ -141,9 +140,9 @@ contains
     call messages_info(1)
 
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
+
     if(use_kdotp .and. pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-      message(1) = "Magnetic perturbation in periodic system not implemented."
-      call messages_fatal(1)
+      call messages_not_implemented('Magnetic perturbation in periodic system')
     endif
 
     ! read kdotp wavefunctions if necessary

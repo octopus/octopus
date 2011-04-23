@@ -90,9 +90,8 @@ contains
     case(INDEPENDENT_PARTICLES)
       ! there is nothing to do
     case default
-      message(1) = "Fatal: the one shot calculation mode has not been implemented for"
-      message(2) = "       this theory level."
-      call messages_fatal(2)
+      call messages_not_implemented('one shot calculation for this theory level')
+
     end select
 
     e_tot = e_t + e_ext + hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%ep%eii

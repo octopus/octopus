@@ -58,11 +58,10 @@ module xc_oep_m
     XC_OEP_NONE   = 1,          &
     XC_OEP_SLATER = 2,          &
     XC_OEP_KLI    = 3,          &
-    XC_OEP_CEDA   = 4,          &  ! not yet implemented
-    XC_OEP_FULL   = 5              ! half-implemented
+    XC_OEP_FULL   = 5
 
   type xc_oep_t
-    integer       :: level      ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
+    integer       :: level      ! 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
     FLOAT         :: mixing     ! how much of the function S(r) to add to vxc in every iteration
     type(lr_t)    :: lr         ! to solve the equation H psi = b
     type(linear_solver_t) :: solver
@@ -115,10 +114,8 @@ contains
     !%Option oep_kli 3
     !% Krieger-Li-Iafrate (KLI) approximation
     !% (JB Krieger, Y Li, GJ Iafrate, <i>Phys. Rev. Lett. A</i> <b>146</b>, 256 (1990).
-    !%Option oep_ceda 4
-    !% Common-energy-denominator approximation (CEDA) (not implemented).
     !%Option oep_full 5
-    !% Full solution of OEP equation using the approach of S. Kuemmel (half-implemented).
+    !% (Experimental) Full solution of OEP equation using the Sternheimer approach.
     !%End
     call parse_integer(datasets_check('OEP_level'), XC_OEP_KLI, oep%level)
     if(.not. varinfo_valid_option('OEP_level', oep%level)) call input_error('OEP_level')

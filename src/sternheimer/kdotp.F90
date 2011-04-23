@@ -102,8 +102,7 @@ contains
     call messages_experimental("k.p perturbation and calculation of effective masses")
 
     if(hm%theory_level == HARTREE_FOCK) then
-      message(1) = "Commutator of Fock operator not yet implemented."
-      call messages_warning(1)
+      call messages_not_implemented('Commutator of Fock operator')
     endif
 
     pdim = sys%gr%sb%periodic_dim

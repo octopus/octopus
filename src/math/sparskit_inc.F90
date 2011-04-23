@@ -69,20 +69,8 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%End
   call parse_integer(datasets_check('SPARSKITKrylovSubspaceSize'), 15, sk%krylov_size)
 
-  !%Variable SPARSKITPreconditioning
-  !%Type integer
-  !%Default 0
-  !%Section Math::General
-  !%Description
-  !% This variable determines what kind of preconditioning the
-  !% chosen SPARSKIT solver will use.
-  !% However, currently there is none implemented.
-  !%End
-  call parse_integer(datasets_check('SPARSKITPreconditioning'),     0, sk%preconditioning)
-  if (sk%preconditioning.ne.0) then
-    message(1) = 'Error: Preconditioning not implemented yet ...'
-    call messages_fatal(1)
-  end if
+  ! preconditioner not implemented
+  sk%preconditioning == 0
 
   !%Variable SPARSKITMaxIter
   !%Type integer
@@ -322,22 +310,12 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
       call opt(sk_work(sk%ipar(8):sk%ipar(8)+sk%size/2),sk_work(sk%ipar(8)+sk%size/2:sk%ipar(8)+sk%size), &
            sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
 #endif
-    case(3)
+    case(3, 4, 5, 6)
       ! left preconditioner solver
-      message(1) = 'Error: Preconditioning not implemented yet.'
-      call messages_fatal(1)
-    case(4)
       ! left preconditioner transposed solve
-      message(1) = 'Error: Preconditioning not implemented yet.'
-      call messages_fatal(1)
-    case(5)
       ! right preconditioner solve
-      message(1) = 'Error: Preconditioning not implemented yet.'
-      call messages_fatal(1)
-    case(6)
       ! right preconditioner transposed solve
-      message(1) = 'Error: Preconditioning not implemented yet.'
-      call messages_fatal(1)
+      call messages_not_implemented('Sparskit preconditioning')
     case(0)
       ! successful exit of solver
       exit solver_iter

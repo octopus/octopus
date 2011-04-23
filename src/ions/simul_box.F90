@@ -271,10 +271,8 @@ contains
       if(parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
         
         call messages_experimental('Multi-resolution')
-        if(sb%dim /= 3) then
-          message(1) = "Multi-resolution implemented only for Dimensions = 3."
-          call messages_fatal(3)
-        endif
+
+        if(sb%dim /= 3) call messages_not_implemented('multi-resolution for dim != 3')
         
         ! number of areas
         sb%hr_area%num_areas = parse_block_n(blk)

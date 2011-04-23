@@ -80,8 +80,7 @@ contains
     PUSH_SUB(vdw_run)
 
     if(simul_box_is_periodic(sys%gr%sb)) then
-      message(1) = "Van der Waals calculation for periodic system not implemented."
-      call messages_fatal(1)
+      call messages_not_implemented('Van der Waals calculation for periodic system')
     endif
 
     call input()

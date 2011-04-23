@@ -216,10 +216,7 @@ contains
       call messages_fatal(1)
     end if
 
-    if(fft_dim .gt. 3) then
-      message(1) = "FFT for dimension greater than 3 not implemented."
-      call messages_fatal(1)
-    end if
+    if(fft_dim > 3) call messages_not_implemented('FFT for dimension > 3')
 
     optimize_ = .true.
     if(present(optimize)) optimize_ = optimize

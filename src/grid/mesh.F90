@@ -317,8 +317,7 @@ contains
       dist = sqrt(dist)
 
     case(BOX_IMAGE, BOX_USDEF)
-      message(1) = "Absorbing boundaries are not implemented for a user-defined box."
-      call messages_fatal(1)
+      call messages_not_implemented('Absorbing boundaries for user-defined box')
 
     end select
     

@@ -120,9 +120,7 @@ module epot_m
 
   integer, public, parameter :: &
     NOREL      = 0,             &
-    SPIN_ORBIT = 1,             &
-    APP_ZORA   = 2,             &
-    ZORA       = 3
+    SPIN_ORBIT = 1
 
 contains
 
@@ -297,10 +295,8 @@ contains
         if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call input_error('StaticMagneticField')
       end select
       call parse_block_end(blk)
-      if(gr%sb%dim > 3) then
-        message(1) = "Magnetic field not implemented for dim > 3."
-        call messages_fatal(1)
-      endif
+
+      if(gr%sb%dim > 3) call messages_not_implemented('Magnetic field for dim > 3')
 
       ! Compute the vector potential
       SAFE_ALLOCATE(ep%A_static(1:gr%mesh%np, 1:gr%sb%dim))
@@ -362,10 +358,6 @@ contains
     !% No relativistic corrections.
     !%Option spin_orbit 1
     !% Spin-orbit.
-    !%Option app_zora 2
-    !% Approximated zero-order regular approximation (ZORA) (not implemented).
-    !%Option zora 3
-    !% Zero-order regular approximation (ZORA) (not implemented).
     !%End
     call parse_integer(datasets_check('RelativisticCorrection'), NOREL, ep%reltype)
     if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call input_error('RelativisticCorrection')
@@ -373,11 +365,7 @@ contains
       message(1) = "The spin-orbit term can only be applied when using spinors."
       call messages_fatal(1)
     end if
-    ! This is temporary...
-    if(ep%reltype > SPIN_ORBIT) then
-      message(1) = 'Error: ZORA corrections not implemented.'
-      call messages_fatal(1)
-    end if
+
     call messages_print_var_option(stdout, "RelativisticCorrection", ep%reltype)
 
     !%Variable SOStrength

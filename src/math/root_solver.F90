@@ -185,8 +185,7 @@ contains
   subroutine droot_bisection
     PUSH_SUB(droot_bisection)
 
-    message(1) = 'Not implemented yet.'
-    call messages_fatal(1)
+    call messages_not_implemented('root bisection')
 
     POP_SUB(droot_bisection)
   end subroutine droot_bisection

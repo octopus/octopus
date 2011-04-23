@@ -599,15 +599,15 @@ contains
            char, chars, char, ik, char, ist, char, idim
 
         if(st%d%ispin .eq. SPIN_POLARIZED) then
-            message(1) = 'Spin-Transport not implemented!'
-            call messages_fatal(1)
+          call messages_not_implemented('Spin-Transport')
+
           if(is_spin_up(ik)) then
             !FIXME
-!              st%ob_eigenval(jst, SPIN_UP) = eigenval
-!              st%ob_occ(jst, SPIN_UP)      = occ
+            !              st%ob_eigenval(jst, SPIN_UP) = eigenval
+            !              st%ob_occ(jst, SPIN_UP)      = occ
           else
-!              st%ob_eigenval(jst, SPIN_DOWN) = eigenval
-!              st%ob_occ(jst, SPIN_DOWN)      = occ
+            !              st%ob_eigenval(jst, SPIN_DOWN) = eigenval
+            !              st%ob_occ(jst, SPIN_DOWN)      = occ
           end if
         else
           st%ob_eigenval(ist, ik) = eigenval

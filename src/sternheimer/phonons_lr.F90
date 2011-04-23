@@ -89,8 +89,7 @@ contains
     gr  => sys%gr
 
     if(simul_box_is_periodic(gr%sb)) then
-      message(1) = "Linear-response vib_modes is not implemented for periodic systems."
-      call messages_fatal(1)
+      call messages_not_implemented('linear-response vib_modes for periodic systems')
     endif
 
     natoms = geo%natoms

@@ -120,8 +120,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   PUSH_SUB(X(lr_build_dl_rho))
 
   if(st%d%ispin == SPINORS) then
-    message(1) = "Not yet implemented - please fix me"
-    call messages_fatal(1)
+    call messages_not_implemented('linear response density for spinors')
   end if
 
   ! correction to density response due to shift in Fermi level

@@ -600,10 +600,7 @@ contains
     PUSH_SUB(poisson_test)
 
     if(mesh%sb%dim == 1) then
-      write(message(1),'(a)') 'The Hartree integrator test is not implemented for the one-dimensional case.'
-      call messages_warning(1)
-      POP_SUB(poisson_test)
-      return
+      call messages_not_implemented('Poisson test for 1D case')
     endif
 
     n_gaussians = 1 
