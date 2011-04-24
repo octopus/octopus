@@ -491,8 +491,11 @@ contains
 #ifdef HAVE_MPI
     real(8) :: local_min(2), global_min(2)
 #endif
+    type(submesh_t)       :: sphere
     type(profile_t), save :: prof
-
+    FLOAT,    allocatable :: rho_sphere(:)
+    FLOAT, parameter      :: threshold = CNST(1e-5)
+    
     PUSH_SUB(species_get_density)
 
     call profiling_in(prof, "SPECIES_DENSITY")
@@ -501,12 +504,18 @@ contains
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       ps => species_ps(spec)
-      rho = M_ZERO
-      call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%nlr, ps%projectors_sphere_threshold))
-      do icell = 1, periodic_copy_num(pp)
-        call dmf_put_radial_spline(mesh, ps%nlr, periodic_copy_position(pp, mesh%sb, icell), rho, add = .true.)
-      end do
-      call periodic_copy_end(pp)
+
+      call submesh_init_sphere(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
+      SAFE_ALLOCATE(rho_sphere(1:sphere%ns))
+      
+      forall(ip = 1:sphere%ns) rho_sphere(ip) = sphere%x(ip, 0)
+      call spline_eval_vec(ps%nlr, sphere%ns, rho_sphere)
+
+      rho(1:mesh%np) = M_ZERO
+
+      forall(ip = 1:sphere%ns) rho(sphere%jxyz(ip)) = rho_sphere(ip)
+
+      SAFE_DEALLOCATE_A(rho_sphere)
       nullify(ps)
 
     case(SPEC_FULL_DELTA)
