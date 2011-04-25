@@ -938,7 +938,7 @@ contains
 
     integer :: i, l, m, ip
     FLOAT :: r2, x(1:MAX_DIM), sqrtw, ww
-    FLOAT, allocatable :: xf(:, :), ylm(:)
+    FLOAT, allocatable :: ylm(:)
     type(ps_t), pointer :: ps
     type(spline_t) :: dur
     logical :: derivative_
@@ -956,36 +956,27 @@ contains
     if(species_is_ps(spec)) then
       ps => species_ps(spec)
       
-      if(derivative_) then
-        call spline_init(dur)
-        call spline_der(ps%ur(i, ispin), dur)
-      end if
-
-      SAFE_ALLOCATE(xf(1:submesh%np, 1:submesh%mesh%sb%dim))
-      SAFE_ALLOCATE(ylm(1:submesh%np))
-      do ip = 1, submesh%np
-        x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%map(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
-        phi(ip) = sum(x(1:submesh%mesh%sb%dim)**2)
-        if(derivative_) phi(ip) = sqrt(phi(ip))
-        xf(ip, 1:submesh%mesh%sb%dim) = x(1:submesh%mesh%sb%dim)
-      end do
+      forall(ip = 1:submesh%np) phi(ip) = submesh%x(ip, 0)
 
       if(.not. derivative_) then
-        call spline_eval_vec(ps%ur_sq(i, ispin), submesh%np, phi)
+        call spline_eval_vec(ps%ur(i, ispin), submesh%np, phi)
       else
+        call spline_init(dur)
+        call spline_der(ps%ur(i, ispin), dur)
         call spline_eval_vec(dur, submesh%np, phi)
+        call spline_end(dur)
       end if
 
-      call loct_ylm(submesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
+      SAFE_ALLOCATE(ylm(1:submesh%np))
+
+      call loct_ylm(submesh%np, submesh%x(1, 1), submesh%x(1, 2), submesh%x(1, 3), l, m, ylm(1))
 
       do ip = 1, submesh%np
         phi(ip) = phi(ip)*ylm(ip)
       end do
 
-      SAFE_DEALLOCATE_A(xf)
       SAFE_DEALLOCATE_A(ylm)
 
-      if(derivative_) call spline_end(dur)
       nullify(ps)
     else
       
