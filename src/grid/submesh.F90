@@ -32,7 +32,9 @@ module submesh_m
   use profiling_m
   use simul_box_m
   use solids_m
-
+  use unit_m
+  use unit_system_m
+    
   implicit none
   private 
 
@@ -95,6 +97,8 @@ contains
 #endif
 
   end subroutine submesh_null
+
+  ! -------------------------------------------------------------
 
   subroutine submesh_init_sphere(this, sb, mesh, center, rc)
     type(submesh_t),      intent(out)  :: this
@@ -204,8 +208,15 @@ contains
       ! Get the total number of points inside the sphere considering
       ! replicas along PBCs
 
-      ! this requires some optimization, but we are far from doing MD
-      ! with PBC
+      ! this requires some optimization
+
+      if(any(rc >= sb%lsize(1:sb%dim))) then
+        write(message(1), '(a,f5.2,3a)') 'Submesh radius (', &
+          units_from_atomic(units_out%length, rc), " ", trim(units_abbrev(units_out%length)), &
+          ") is smaller than simulation box."
+        write(message(2), '(a)') 'Multiple periodic replicas in the same region will not be considered.'
+        call messages_warning(2)
+      end if
 
       call periodic_copy_init(pp, sb, center(1:MAX_DIM), rc)
       
