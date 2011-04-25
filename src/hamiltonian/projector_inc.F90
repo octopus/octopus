@@ -103,22 +103,22 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   reduce_buffer = R_TOTYPE(M_ZERO)
   
   !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is)
-  SAFE_ALLOCATE(lpsi(1:maxval(pj(1:npj)%sphere%ns), 1:dim))
+  SAFE_ALLOCATE(lpsi(1:maxval(pj(1:npj)%sphere%np), 1:dim))
   !$omp do
   do ist = 1, psib%nst
     do ipj = 1, npj
       if(pj(ipj)%type == M_NONE) cycle
-      ns = pj(ipj)%sphere%ns
+      ns = pj(ipj)%sphere%np
       if(ns < 1) cycle
 
       ! copy psi to the small spherical grid
       do idim = 1, dim
         if(associated(pj(ipj)%phase)) then
           forall (is = 1:ns) 
-            lpsi(is, idim) = psib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim)*pj(ipj)%phase(is, ik)
+            lpsi(is, idim) = psib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim)*pj(ipj)%phase(is, ik)
           end forall
         else
-          forall (is = 1:ns) lpsi(is, idim) = psib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim)
+          forall (is = 1:ns) lpsi(is, idim) = psib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim)
         end if
       end do
 
@@ -160,13 +160,13 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   ! calculate |ppsi> += |p><p|psi>
   !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is)
-  SAFE_ALLOCATE(lpsi(1:maxval(pj(1:npj)%sphere%ns), 1:dim))
+  SAFE_ALLOCATE(lpsi(1:maxval(pj(1:npj)%sphere%np), 1:dim))
   !$omp do
   do ist = 1, psib%nst
     do ipj = 1, npj
       if(pj(ipj)%type == M_NONE) cycle
 
-      ns = pj(ipj)%sphere%ns
+      ns = pj(ipj)%sphere%np
       if(ns < 1) cycle
 
       lpsi(1:ns, 1:dim) = M_ZERO
@@ -201,14 +201,14 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
       do idim = 1, dim
         if(associated(pj(ipj)%phase)) then
           forall (is = 1:ns) 
-            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = &
-              ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + &
+            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim) = &
+              ppsib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim) + &
               lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
           end forall
         else
           forall (is = 1:ns) 
-            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) = &
-              ppsib%states(ist)%X(psi)(pj(ipj)%sphere%jxyz(is), idim) + lpsi(is, idim)
+            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim) = &
+              ppsib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim) + lpsi(is, idim)
           end forall
         end if
       end do
@@ -248,7 +248,7 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
 
   PUSH_SUB(X(projector_matrix_element))
 
-  ns = pj%sphere%ns
+  ns = pj%sphere%np
 
   ASSERT(associated(pj%sphere%mesh))
   mesh => pj%sphere%mesh
@@ -259,11 +259,11 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
   do idim = 1, dim
     if(simul_box_is_periodic(mesh%sb)) then
       do is = 1, ns
-        lpsi(is, idim) = psib(pj%sphere%jxyz(is), idim)*pj%phase(is, ik)
+        lpsi(is, idim) = psib(pj%sphere%map(is), idim)*pj%phase(is, ik)
       end do
     else
       do is = 1, ns
-        lpsi(is, idim) = psib(pj%sphere%jxyz(is), idim)
+        lpsi(is, idim) = psib(pj%sphere%map(is), idim)
       end do
     end if
   end do
@@ -274,11 +274,11 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
   do idim = 1, dim
     if(simul_box_is_periodic(mesh%sb)) then
       do is = 1, ns
-        plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)*conjg(pj%phase(is, ik))
+        plpsi(is, idim) = R_CONJ(psia(pj%sphere%map(is), idim))*plpsi(is, idim)*conjg(pj%phase(is, ik))
       end do
     else
       do is = 1, ns
-        plpsi(is, idim) = R_CONJ(psia(pj%sphere%jxyz(is), idim))*plpsi(is, idim)
+        plpsi(is, idim) = R_CONJ(psia(pj%sphere%map(is), idim))*plpsi(is, idim)
       end do
     end if
 
@@ -348,7 +348,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
 
   integer ::  ns, idim
   R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:,:)
-  integer, pointer :: jxyz(:)
+  integer, pointer :: map(:)
   FLOAT,   pointer :: smx(:, :)
   type(profile_t), save :: prof
 
@@ -357,8 +357,8 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
 
   if(pj%type .ne. M_NONE) then
 
-    ns = pj%sphere%ns
-    jxyz => pj%sphere%jxyz
+    ns = pj%sphere%np
+    map => pj%sphere%map
     smx => pj%sphere%x
 
     SAFE_ALLOCATE(  lpsi(1:ns, 1:dim))
@@ -367,11 +367,11 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
 
     if(simul_box_is_periodic(gr%mesh%sb)) then
       do idim = 1, dim
-        lpsi(1:ns, idim) = psi(jxyz(1:ns), idim)*pj%phase(1:ns, ik)
+        lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj%phase(1:ns, ik)
       end do
     else
       do idim = 1, dim
-        lpsi(1:ns, idim) = psi(jxyz(1:ns), idim)
+        lpsi(1:ns, idim) = psi(map(1:ns), idim)
       end do
     end if
 
@@ -390,12 +390,12 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     ! |cpsi> += x V_nl |psi> - V_nl x |psi> 
     if(simul_box_is_periodic(gr%mesh%sb)) then
       do idim = 1, dim
-        cpsi(jxyz(1:ns), idim) = cpsi(jxyz(1:ns), idim) + &
+        cpsi(map(1:ns), idim) = cpsi(map(1:ns), idim) + &
           (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)) * R_CONJ(pj%phase(1:ns, ik))
       end do
     else
       do idim = 1, dim
-        cpsi(jxyz(1:ns), idim) = cpsi(jxyz(1:ns), idim) + xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)
+        cpsi(map(1:ns), idim) = cpsi(map(1:ns), idim) + xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)
       end do
     end if
 

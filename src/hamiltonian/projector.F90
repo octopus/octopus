@@ -210,7 +210,7 @@ contains
 
     PUSH_SUB(projector_init_phases)
 
-    ns = this%sphere%ns
+    ns = this%sphere%np
     ndim = sb%dim
 
     if(.not. associated(this%phase) .and. ns > 0) then
@@ -230,15 +230,15 @@ contains
         ! this is only the correction to the global phase, that can
         ! appear if the sphere crossed the boundary of the cell.
         
-        kr = sum(kpoint(1:ndim)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%jxyz(is), 1:ndim)))
+        kr = sum(kpoint(1:ndim)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
 
         if(present(vec_pot)) then
           if(associated(vec_pot)) kr = kr + &
-            sum(vec_pot(1:ndim)*(this%sphere%x(is, 1:ndim)- this%sphere%mesh%x(this%sphere%jxyz(is), 1:ndim)))
+            sum(vec_pot(1:ndim)*(this%sphere%x(is, 1:ndim)- this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
         end if
 
         if(present(vec_pot_var)) then
-          if(associated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, this%sphere%jxyz(is))*this%sphere%x(is, 1:ndim))
+          if(associated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, this%sphere%map(is))*this%sphere%x(is, 1:ndim))
         end if
 
         this%phase(is, iq) = exp(-M_zI*kr)

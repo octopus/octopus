@@ -376,7 +376,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
     ! initialize the radial grid
     call submesh_init_sphere(sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
-    INCR(dof, sphere(iatom)%ns*this%mult*norbs)
+    INCR(dof, sphere(iatom)%np*this%mult*norbs)
     call batch_init(orbitals(iatom), 1, this%mult*norbs)
   end do
 

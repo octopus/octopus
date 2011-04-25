@@ -389,7 +389,7 @@ contains
       ps => species_ps(geo%atom(iatom)%spec)
       pmat => this%projector_matrices(iproj)
 
-      call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%ns, nmat)
+      call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat)
 
       ! generate the matrix
       pmat%projectors = M_ZERO
@@ -407,7 +407,7 @@ contains
         end do
       end do
 
-      forall(ip = 1:pmat%npoints) pmat%map(ip) = epot%proj(iatom)%sphere%jxyz(ip)
+      forall(ip = 1:pmat%npoints) pmat%map(ip) = epot%proj(iatom)%sphere%map(ip)
 
       INCR(this%full_projection_size, pmat%nprojs)
 

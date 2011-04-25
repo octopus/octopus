@@ -60,17 +60,12 @@ module submesh_m
   type submesh_t
     FLOAT                 :: center(1:MAX_DIM)
     FLOAT                 :: radius
-    integer               :: ns = -1        !< number of points inside the submesh
-    integer               :: ns_part        !< number of points inside the submesh including ghost points
-    integer               :: np_part
-    integer,      pointer :: jxyz(:) => null() !< index in the mesh of the points inside the sphere
+    integer               :: np = -1        !< number of points inside the submesh
+    integer               :: np_part        !< number of points inside the submesh including ghost points
+    integer,      pointer :: map(:) => null() !< index in the mesh of the points inside the sphere
     FLOAT,        pointer :: x(:,:)  => null()
     type(mesh_t), pointer :: mesh
     logical               :: has_points
-#ifdef HAVE_MPI
-    integer,      pointer :: psize(:) => null()      ! the number of points each processor holds
-    type(mpi_grp_t)       :: mpi_grp
-#endif
   end type submesh_t
   
   integer :: tagcounter = 0
@@ -88,13 +83,10 @@ contains
   subroutine submesh_null(sm)
     type(submesh_t), intent(out) :: sm
 
-    sm%ns = -1
-    sm%np_part = 0
-    nullify(sm%jxyz)
+    sm%np = -1
+    nullify(sm%map)
     nullify(sm%x)
-#ifdef HAVE_MPI
-    nullify(sm%psize)
-#endif
+    nullify(sm%mesh)
 
   end subroutine submesh_null
 
@@ -112,13 +104,12 @@ contains
     integer :: icell, is, isb, ip, ix, iy, iz
     type(profile_t), save :: submesh_init_prof
     type(periodic_copy_t) :: pp
-    integer, allocatable :: jxyz_inv(:)
+    integer, allocatable :: map_inv(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
 
     PUSH_SUB(submesh_init_sphere)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
-    this%np_part = mesh%np_part
     this%mesh => mesh
 
     this%center = M_ZERO
@@ -130,8 +121,8 @@ contains
     ! mainly for performance reasons.
     if(.not. simul_box_is_periodic(sb)) then 
 
-      SAFE_ALLOCATE(jxyz_inv(0:this%np_part))
-      jxyz_inv(0:this%np_part) = 0
+      SAFE_ALLOCATE(map_inv(0:this%mesh%np_part))
+      map_inv(0:this%mesh%np_part) = 0
       
       nmin = 0
       nmax = 0
@@ -161,20 +152,20 @@ contains
               if(ip > mesh%np) then
                 ! boundary points are marked as negative values
                 isb = isb + 1
-                jxyz_inv(ip) = -isb
+                map_inv(ip) = -isb
               else
                 is = is + 1
-                jxyz_inv(ip) = is
+                map_inv(ip) = is
               end if
             end if
           end do
         end do
       end do
-      this%ns = is
-      this%ns_part = is + isb
+      this%np = is
+      this%np_part = is + isb
       
-      SAFE_ALLOCATE(this%jxyz(1:this%ns_part))
-      SAFE_ALLOCATE(this%x(1:this%ns_part, 0:MAX_DIM))
+      SAFE_ALLOCATE(this%map(1:this%np_part))
+      SAFE_ALLOCATE(this%x(1:this%np_part, 0:MAX_DIM))
       
       ! Generate the table and the positions
       do iz = nmin(3), nmax(3)
@@ -185,14 +176,14 @@ contains
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
 #endif
-            is = jxyz_inv(ip)
+            is = map_inv(ip)
             if(is == 0) cycle
             if(is < 0) then
               ! it is a boundary point, move it to ns+1:ns_part range
-              is = -is + this%ns
-              jxyz_inv(ip) = is
+              is = -is + this%np
+              map_inv(ip) = is
             end if
-            this%jxyz(is) = ip
+            this%map(is) = ip
             this%x(is, 1:MAX_DIM) = M_ZERO
             this%x(is, 1:sb%dim) = mesh%x(ip, 1:sb%dim) - center(1:sb%dim)
             this%x(is, 0) = sqrt(sum(this%x(is, 1:MAX_DIM)**2))
@@ -200,7 +191,7 @@ contains
         end do
       end do
 
-      SAFE_DEALLOCATE_A(jxyz_inv)
+      SAFE_DEALLOCATE_A(map_inv)
 
     ! This is the case for a periodic system
     else
@@ -233,13 +224,13 @@ contains
           if(r2 > rc**2 ) cycle
           is = is + 1
         end do
-        if (ip == mesh%np) this%ns = is
+        if (ip == mesh%np) this%np = is
       end do
       
-      this%ns_part = is
+      this%np_part = is
 
-      SAFE_ALLOCATE(this%jxyz(1:this%ns_part))
-      SAFE_ALLOCATE(this%x(1:this%ns_part, 0:MAX_DIM))
+      SAFE_ALLOCATE(this%map(1:this%np_part))
+      SAFE_ALLOCATE(this%x(1:this%np_part, 0:MAX_DIM))
             
       !iterate again to fill the tables
       is = 0
@@ -249,7 +240,7 @@ contains
           r2 = sum(xx(1:MAX_DIM)**2)
           if(r2 > rc**2 ) cycle
           is = is + 1
-          this%jxyz(is) = ip
+          this%map(is) = ip
           this%x(is, 0) = sqrt(r2)
           this%x(is, 1:MAX_DIM) = xx(1:MAX_DIM)
          end do
@@ -261,21 +252,23 @@ contains
 
     end if
 
-    this%has_points = (this%ns > 0)
+    this%has_points = (this%np > 0)
 
     call profiling_out(submesh_init_prof)
     POP_SUB(submesh_init_sphere)
   end subroutine submesh_init_sphere
+
+  ! --------------------------------------------------------------
 
   subroutine submesh_end(this)
     type(submesh_t),   intent(inout)  :: this
     
     PUSH_SUB(submesh_end)
 
-    if( this%ns /= -1 ) then
+    if( this%np /= -1 ) then
       nullify(this%mesh)
-      this%ns = -1
-      SAFE_DEALLOCATE_P(this%jxyz)
+      this%np = -1
+      SAFE_DEALLOCATE_P(this%map)
       SAFE_DEALLOCATE_P(this%x)
     end if
 
@@ -283,43 +276,46 @@ contains
 
   end subroutine submesh_end
 
+  ! --------------------------------------------------------------
+
   subroutine submesh_copy(sm_in, sm_out)
     type(submesh_t), target,  intent(in)   :: sm_in
     type(submesh_t),          intent(out)  :: sm_out
 
     PUSH_SUB(submesh_copy)
     
-    ASSERT(sm_out%ns == -1)
+    ASSERT(sm_out%np == -1)
 
     sm_out%mesh => sm_in%mesh
 
     sm_out%center = sm_in%center
     sm_out%radius = sm_in%radius
 
-    sm_out%ns = sm_in%ns
-    sm_out%ns_part = sm_in%ns_part
-    sm_out%np_part  = sm_in%np_part
+    sm_out%np = sm_in%np
+    sm_out%np_part = sm_in%np_part
     
-    SAFE_ALLOCATE(sm_out%jxyz(1:sm_out%ns_part))
-    SAFE_ALLOCATE(sm_out%x(1:sm_out%ns_part, 0:MAX_DIM))
+    SAFE_ALLOCATE(sm_out%map(1:sm_out%np_part))
+    SAFE_ALLOCATE(sm_out%x(1:sm_out%np_part, 0:MAX_DIM))
 
-    sm_out%jxyz(1:sm_out%ns_part) = sm_in%jxyz(1:sm_in%ns_part)
-    sm_out%x(1:sm_out%ns_part, 0:MAX_DIM) = sm_in%x(1:sm_in%ns_part, 0:MAX_DIM)
+    sm_out%map(1:sm_out%np_part) = sm_in%map(1:sm_in%np_part)
+    sm_out%x(1:sm_out%np_part, 0:MAX_DIM) = sm_in%x(1:sm_in%np_part, 0:MAX_DIM)
 
     POP_SUB(submesh_copy)
 
   end subroutine submesh_copy
 
-  subroutine submesh_get_inv(this, jxyz_inv)
+  ! --------------------------------------------------------------
+
+  subroutine submesh_get_inv(this, map_inv)
     type(submesh_t),      intent(in)   :: this
-    integer,              intent(out)  :: jxyz_inv(:)
+    integer,              intent(out)  :: map_inv(:)
 
     integer :: is
 
     PUSH_SUB(submesh_get_inv)
     
-    jxyz_inv(1:this%np_part) = 0
-    forall (is = 1:this%ns) jxyz_inv(this%jxyz(is)) = is
+    map_inv(1:this%mesh%np_part) = 0
+    forall (is = 1:this%np) map_inv(this%map(is)) = is
 
     POP_SUB(submesh_get_inv)
   end subroutine submesh_get_inv

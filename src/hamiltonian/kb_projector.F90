@@ -87,7 +87,7 @@ contains
 
     ps => species_ps(a%spec)
 
-    kb_p%n_s = sm%ns
+    kb_p%n_s = sm%np
     if (l == 0 .or. ps%kbc == 1) then
       n_c = 1
     else ! we have j-dependent projectors

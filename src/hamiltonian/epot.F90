@@ -700,10 +700,10 @@ contains
         radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%spec, der%mesh) + der%mesh%spacing(1)
 
         call submesh_init_sphere(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
-        SAFE_ALLOCATE(vl(1:sphere%ns))
+        SAFE_ALLOCATE(vl(1:sphere%np))
 
         call double_grid_apply_local(dgrid, geo%atom(iatom)%spec, der%mesh, sphere, geo%atom(iatom)%x, vl)
-        vpsl(sphere%jxyz(1:sphere%ns)) = vpsl(sphere%jxyz(1:sphere%ns)) + vl(1:sphere%ns)
+        vpsl(sphere%map(1:sphere%np)) = vpsl(sphere%map(1:sphere%np)) + vl(1:sphere%np)
 
         SAFE_DEALLOCATE_A(vl)
         call submesh_end(sphere)

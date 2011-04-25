@@ -79,7 +79,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
     do idim = 1, dim
       do ic = 1, kb_p%n_c
         do is = 1, ns
-          uvpsi(ic, idim) = uvpsi(ic, idim) + (kb_p%p(is, ic)*psi(is, idim))*mesh%vol_pp(sm%jxyz(is))
+          uvpsi(ic, idim) = uvpsi(ic, idim) + (kb_p%p(is, ic)*psi(is, idim))*mesh%vol_pp(sm%map(is))
         end do
       end do
     end do

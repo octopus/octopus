@@ -24,13 +24,13 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
 
   PUSH_SUB(X(sm_integrate))
 
-  ASSERT(present(ff) .or. sm%ns .eq. 0)
+  ASSERT(present(ff) .or. sm%np .eq. 0)
 
-  if(sm%ns > 0) then
+  if(sm%np > 0) then
     if (mesh%use_curvilinear) then
-      res = sum(ff(1:sm%ns)*mesh%vol_pp(sm%jxyz(1:sm%ns)) )
+      res = sum(ff(1:sm%np)*mesh%vol_pp(sm%map(1:sm%np)) )
     else
-      res = sum(ff(1:sm%ns))*mesh%vol_pp(1)
+      res = sum(ff(1:sm%np))*mesh%vol_pp(1)
     end if
   else
     res = M_ZERO
@@ -54,9 +54,9 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   PUSH_SUB(X(dsubmesh_add_to_mesh))
 
   if(present(factor)) then
-    forall(is = 1:this%ns) phi(this%jxyz(is)) = phi(this%jxyz(is)) + factor*sphi(is)
+    forall(is = 1:this%np) phi(this%map(is)) = phi(this%map(is)) + factor*sphi(is)
   else
-    forall(is = 1:this%ns) phi(this%jxyz(is)) = phi(this%jxyz(is)) + sphi(is)
+    forall(is = 1:this%np) phi(this%map(is)) = phi(this%map(is)) + sphi(is)
   end if
 
   POP_SUB(X(dsubmesh_add_to_mesh))
@@ -79,14 +79,14 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
 
   if(this%mesh%use_curvilinear) then
     do idim = 1, dim
-      do is = 1, this%ns
-        dotp = dotp + this%mesh%vol_pp(this%jxyz(is))*phi(this%jxyz(is), idim)*sphi(is)
+      do is = 1, this%np
+        dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is), idim)*sphi(is)
       end do
     end do
   else
     do idim = 1, dim
-      do is = 1, this%ns
-        dotp = dotp + phi(this%jxyz(is), idim)*sphi(is)
+      do is = 1, this%np
+        dotp = dotp + phi(this%map(is), idim)*sphi(is)
       end do
     end do
     dotp = dotp*this%mesh%vol_pp(1)
@@ -120,14 +120,14 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
       jdim = min(idim, ss%dim)
       do jst = 1, ss%nst
         if(associated(ss%states(jst)%dpsi)) then
-          forall(is = 1:this%ns)
-            mm%states(ist)%X(psi)(this%jxyz(is), idim) = &
-              mm%states(ist)%X(psi)(this%jxyz(is), idim) + factor(jst, ist)*ss%states(jst)%dpsi(is, jdim)
+          forall(is = 1:this%np)
+            mm%states(ist)%X(psi)(this%map(is), idim) = &
+              mm%states(ist)%X(psi)(this%map(is), idim) + factor(jst, ist)*ss%states(jst)%dpsi(is, jdim)
           end forall
         else
-          forall(is = 1:this%ns)
-            mm%states(ist)%X(psi)(this%jxyz(is), idim) = &
-              mm%states(ist)%X(psi)(this%jxyz(is), idim) + factor(jst, ist)*ss%states(jst)%zpsi(is, jdim)
+          forall(is = 1:this%np)
+            mm%states(ist)%X(psi)(this%map(is), idim) = &
+              mm%states(ist)%X(psi)(this%map(is), idim) + factor(jst, ist)*ss%states(jst)%zpsi(is, jdim)
           end forall
         end if
       end do
@@ -164,16 +164,16 @@ subroutine X(submesh_batch_add)(this, ss, mm)
 
       if(associated(ss%states(ist)%dpsi)) then
 
-        forall(is = 1:this%ns)
-          mm%states(ist)%X(psi)(this%jxyz(is), idim) = &
-            mm%states(ist)%X(psi)(this%jxyz(is), idim) + ss%states(ist)%dpsi(is, jdim)
+        forall(is = 1:this%np)
+          mm%states(ist)%X(psi)(this%map(is), idim) = &
+            mm%states(ist)%X(psi)(this%map(is), idim) + ss%states(ist)%dpsi(is, jdim)
         end forall
         
       else
         
-        forall(is = 1:this%ns)
-          mm%states(ist)%X(psi)(this%jxyz(is), idim) = &
-            mm%states(ist)%X(psi)(this%jxyz(is), idim) + ss%states(ist)%zpsi(is, jdim)
+        forall(is = 1:this%np)
+          mm%states(ist)%X(psi)(this%map(is), idim) = &
+            mm%states(ist)%X(psi)(this%map(is), idim) + ss%states(ist)%zpsi(is, jdim)
         end forall
         
       end if
@@ -208,17 +208,17 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
 
           if(associated(ss%states(ist)%dpsi)) then
 
-            do is = 1, this%ns
-              dotp = dotp + this%mesh%vol_pp(this%jxyz(is))*&
-                mm%states(jst)%X(psi)(this%jxyz(is), idim)*&
+            do is = 1, this%np
+              dotp = dotp + this%mesh%vol_pp(this%map(is))*&
+                mm%states(jst)%X(psi)(this%map(is), idim)*&
                 ss%states(ist)%dpsi(is, jdim)
             end do
 
           else
 
-            do is = 1, this%ns
-              dotp = dotp + this%mesh%vol_pp(this%jxyz(is))*&
-                mm%states(jst)%X(psi)(this%jxyz(is), idim)*&
+            do is = 1, this%np
+              dotp = dotp + this%mesh%vol_pp(this%map(is))*&
+                mm%states(jst)%X(psi)(this%map(is), idim)*&
                 ss%states(ist)%zpsi(is, jdim)
             end do
 
@@ -240,15 +240,15 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
           jdim = min(idim, ss%dim)
 
           if(associated(ss%states(ist)%dpsi)) then
-            do is = 1, this%ns
+            do is = 1, this%np
               dotp = dotp + &
-                mm%states(jst)%X(psi)(this%jxyz(is), idim)*&
+                mm%states(jst)%X(psi)(this%map(is), idim)*&
                 ss%states(ist)%dpsi(is, jdim)
             end do
           else
-            do is = 1, this%ns
+            do is = 1, this%np
               dotp = dotp + &
-                mm%states(jst)%X(psi)(this%jxyz(is), idim)*&
+                mm%states(jst)%X(psi)(this%map(is), idim)*&
                 ss%states(ist)%zpsi(is, jdim)
             end do
           end if

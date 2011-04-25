@@ -90,7 +90,7 @@ contains
 
     PUSH_SUB(hgh_projector_init)
 
-    hgh_p%n_s = sm%ns
+    hgh_p%n_s = sm%np
     SAFE_ALLOCATE(hgh_p%p (1:hgh_p%n_s, 1:3))
     SAFE_ALLOCATE(hgh_p%lp(1:hgh_p%n_s, 1:3, 1:3))
 

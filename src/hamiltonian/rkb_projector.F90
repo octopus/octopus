@@ -81,7 +81,7 @@ contains
     CMPLX :: zv
     type(ps_t), pointer :: ps
 
-    rkb_p%n_s = sm%ns
+    rkb_p%n_s = sm%np
 
     !Allocate memory
     SAFE_ALLOCATE(rkb_p%bra(1:rkb_p%n_s, 1:2))
@@ -188,8 +188,8 @@ contains
     SAFE_ALLOCATE(bra(1:n_s, 1:2))
 
     if(mesh%use_curvilinear) then
-      bra(1:n_s, 1) = rkb_p%bra(1:n_s, 1)*mesh%vol_pp(sm%jxyz(1:n_s))
-      bra(1:n_s, 2) = rkb_p%bra(1:n_s, 2)*mesh%vol_pp(sm%jxyz(1:n_s))
+      bra(1:n_s, 1) = rkb_p%bra(1:n_s, 1)*mesh%vol_pp(sm%map(1:n_s))
+      bra(1:n_s, 2) = rkb_p%bra(1:n_s, 2)*mesh%vol_pp(sm%map(1:n_s))
     else
       bra(1:n_s, 1:2) = rkb_p%bra(1:n_s, 1:2)*mesh%vol_pp(1)
     end if

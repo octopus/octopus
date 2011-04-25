@@ -733,7 +733,7 @@ contains
       call profiling_in(prof_orbitals, "LCAO_ORBITALS")
 
       ! allocate memory
-      call dbatch_new(orbitalb, 1, norbs, sphere%ns)
+      call dbatch_new(orbitalb, 1, norbs, sphere%np)
       
       ! generate the orbitals
       do iorb = 1, norbs

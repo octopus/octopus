@@ -35,7 +35,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 
   integer :: is
   integer :: ii, jj, kk
-  integer, allocatable :: jxyz_inv(:)
+  integer, allocatable :: map_inv(:)
   FLOAT,   allocatable :: vs(:)
   type(ps_t), pointer :: ps
 
@@ -51,7 +51,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 
   if (.not. this%use_double_grid) then 
 
-    do is = 1, sm%ns
+    do is = 1, sm%np
       r = sm%x(is, 0)
       xx(1:3) = sm%x(is, 1:3)
       calc_pot(vl(is))
@@ -63,38 +63,38 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 
     ASSERT(.not. simul_box_is_periodic(mesh%sb))
 
-    SAFE_ALLOCATE(jxyz_inv(1:sm%np_part))
-    call submesh_get_inv(sm, jxyz_inv)
+    SAFE_ALLOCATE(map_inv(1:sm%mesh%np_part))
+    call submesh_get_inv(sm, map_inv)
 
 #ifdef HAVE_OPENMP
-    vl(1:sm%ns) = M_ZERO
+    vl(1:sm%np) = M_ZERO
     call omp_init_lock(lock)
     !$omp parallel private(vs)
 #endif
 
     !$omp critical
-    SAFE_ALLOCATE(vs(0:sm%ns_part))
+    SAFE_ALLOCATE(vs(0:sm%np_part))
     !$omp end critical
 
     vs = M_ZERO
 
     !for each grid point
     !$omp do private(ii, jj, kk, vv, tmp, r, xx)
-    do is = 1, sm%ns_part
+    do is = 1, sm%np_part
 
       ! iterate over the fine grid
       do ii = -this%nn, this%nn
         do jj = -this%nn, this%nn
           do kk = -this%nn, this%nn
 
-            xx(1:3) = mesh%x(sm%jxyz(is), 1:3) + mesh%spacing(1:3)/this%spacing_divisor * (/ii, jj, kk/) - x_atom(1:3)
+            xx(1:3) = mesh%x(sm%map(is), 1:3) + mesh%spacing(1:3)/this%spacing_divisor * (/ii, jj, kk/) - x_atom(1:3)
             r = sqrt(sum(xx(1:3)**2))
 
             ! calculate the value of the potential at that point
             calc_pot(vv)
 
             ! and apply the corresponding term to all neighbouring grid points
-            call apply_to_nb(this, mesh, is, ii, jj, kk, sm%jxyz, jxyz_inv, vv, vs)
+            call apply_to_nb(this, mesh, is, ii, jj, kk, sm%map, map_inv, vv, vs)
 
           end do !kk
         end do !jj
@@ -104,10 +104,10 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
     !$omp end do nowait
 
 #ifndef HAVE_OPENMP
-    vl(1:sm%ns) = vs(1:sm%ns)/(this%spacing_divisor**3)
+    vl(1:sm%np) = vs(1:sm%np)/(this%spacing_divisor**3)
 #else
     call omp_set_lock(lock)
-    vl(1:sm%ns) = vl(1:sm%ns) + vs(1:sm%ns)/(this%spacing_divisor**3)
+    vl(1:sm%np) = vl(1:sm%np) + vs(1:sm%np)/(this%spacing_divisor**3)
     call omp_unset_lock(lock)
 #endif
 

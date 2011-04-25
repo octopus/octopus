@@ -506,14 +506,14 @@ contains
       ps => species_ps(spec)
 
       call submesh_init_sphere(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
-      SAFE_ALLOCATE(rho_sphere(1:sphere%ns))
+      SAFE_ALLOCATE(rho_sphere(1:sphere%np))
       
-      forall(ip = 1:sphere%ns) rho_sphere(ip) = sphere%x(ip, 0)
-      call spline_eval_vec(ps%nlr, sphere%ns, rho_sphere)
+      forall(ip = 1:sphere%np) rho_sphere(ip) = sphere%x(ip, 0)
+      call spline_eval_vec(ps%nlr, sphere%np, rho_sphere)
 
       rho(1:mesh%np) = M_ZERO
 
-      forall(ip = 1:sphere%ns) rho(sphere%jxyz(ip)) = rho_sphere(ip)
+      forall(ip = 1:sphere%np) rho(sphere%map(ip)) = rho_sphere(ip)
 
       SAFE_DEALLOCATE_A(rho_sphere)
       nullify(ps)
@@ -943,13 +943,13 @@ contains
     type(spline_t) :: dur
     logical :: derivative_
     
-    if(submesh%ns == 0) return
+    if(submesh%np == 0) return
 
     PUSH_SUB(species_get_orbital_submesh)
 
     derivative_ = optional_default(derivative, .false.)
 
-    ASSERT(ubound(phi, dim = 1) >= submesh%ns)
+    ASSERT(ubound(phi, dim = 1) >= submesh%np)
 
     call species_iwf_ilm(spec, iorb, ispin, i, l, m)
 
@@ -961,24 +961,24 @@ contains
         call spline_der(ps%ur(i, ispin), dur)
       end if
 
-      SAFE_ALLOCATE(xf(1:submesh%ns, 1:submesh%mesh%sb%dim))
-      SAFE_ALLOCATE(ylm(1:submesh%ns))
-      do ip = 1, submesh%ns
-        x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%jxyz(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
+      SAFE_ALLOCATE(xf(1:submesh%np, 1:submesh%mesh%sb%dim))
+      SAFE_ALLOCATE(ylm(1:submesh%np))
+      do ip = 1, submesh%np
+        x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%map(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
         phi(ip) = sum(x(1:submesh%mesh%sb%dim)**2)
         if(derivative_) phi(ip) = sqrt(phi(ip))
         xf(ip, 1:submesh%mesh%sb%dim) = x(1:submesh%mesh%sb%dim)
       end do
 
       if(.not. derivative_) then
-        call spline_eval_vec(ps%ur_sq(i, ispin), submesh%ns, phi)
+        call spline_eval_vec(ps%ur_sq(i, ispin), submesh%np, phi)
       else
-        call spline_eval_vec(dur, submesh%ns, phi)
+        call spline_eval_vec(dur, submesh%np, phi)
       end if
 
-      call loct_ylm(submesh%ns, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
+      call loct_ylm(submesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
 
-      do ip = 1, submesh%ns
+      do ip = 1, submesh%np
         phi(ip) = phi(ip)*ylm(ip)
       end do
 
@@ -996,20 +996,20 @@ contains
 
       select case(submesh%mesh%sb%dim)
       case(1)
-        do ip = 1, submesh%ns
-          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%jxyz(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
+        do ip = 1, submesh%np
+          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%map(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
           r2 = sum(x(1:submesh%mesh%sb%dim)**2)
           phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)
         end do
       case(2)
-        do ip = 1, submesh%ns
-          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%jxyz(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
+        do ip = 1, submesh%np
+          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%map(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
           r2 = sum(x(1:submesh%mesh%sb%dim)**2)
           phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)*hermite(l - 1, x(2)*sqrtw)
         end do
       case(3)
-        do ip = 1, submesh%ns
-          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%jxyz(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
+        do ip = 1, submesh%np
+          x(1:submesh%mesh%sb%dim) = submesh%mesh%x(submesh%map(ip), 1:submesh%mesh%sb%dim) - pos(1:submesh%mesh%sb%dim)
           phi(ip) = exp(-ww*r2/M_TWO)*hermite(i - 1, x(1)*sqrtw)*hermite(l - 1, x(2)*sqrtw)*hermite(m - 1, x(3)*sqrtw)
         end do
       end select
