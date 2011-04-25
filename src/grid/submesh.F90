@@ -201,7 +201,7 @@ contains
 
       ! this requires some optimization
 
-      if(any(rc >= sb%lsize(1:sb%dim))) then
+      if(any(rc >= sb%lsize(1:sb%periodic_dim))) then
         write(message(1), '(a,f5.2,3a)') 'Submesh radius (', &
           units_from_atomic(units_out%length, rc), " ", trim(units_abbrev(units_out%length)), &
           ") is smaller than simulation box."
