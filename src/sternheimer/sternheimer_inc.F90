@@ -412,26 +412,100 @@ end subroutine X(sternheimer_set_inhomog)
 
 !--------------------------------------------------------------
 subroutine X(sternheimer_solve_order2)( &
-     this, sys, hm, lr, nsigma, omega, perturbation,       &
-     restart_dir, rho_tag, wfs_tag, have_restart_rho)
+     this, sys, hm, lr1, lr2, nsigma, omega1, omega2, pert1, pert2,       &
+     lr_2ndorder, pert_2ndorder, restart_dir, rho_tag, wfs_tag, have_restart_rho)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
-  type(lr_t),             intent(inout) :: lr(:) 
+  type(lr_t),             intent(inout) :: lr1(:) 
+  type(lr_t),             intent(inout) :: lr2(:) 
   integer,                intent(in)    :: nsigma 
-  R_TYPE,                 intent(in)    :: omega
-  type(pert_t),           intent(in)    :: perturbation
+  R_TYPE,                 intent(in)    :: omega1
+  R_TYPE,                 intent(in)    :: omega2
+  type(pert_t),           intent(in)    :: pert1
+  type(pert_t),           intent(in)    :: pert2
+  type(lr_t),             intent(inout) :: lr_2ndorder(:)
+  type(pert_t),           intent(in)    :: pert_2ndorder
   character(len=*),       intent(in)    :: restart_dir
   character(len=*),       intent(in)    :: rho_tag
   character(len=*),       intent(in)    :: wfs_tag
   logical,      optional, intent(in)    :: have_restart_rho
 
+  integer :: isigma, ik, ist, idim, ispin
+  R_TYPE :: dl_eig1, dl_eig2, proj
+  R_TYPE, allocatable :: inhomog(:,:,:,:,:), hvar1(:,:,:), hvar2(:,:,:), pert1psi2(:,:), pert2psi1(:,:)
+  type(mesh_t), pointer :: mesh
+  type(states_t), pointer :: st
+
   PUSH_SUB(X(sternheimer_solve_order2))
+
+  ASSERT(nsigma == 1 .or. nsigma == 2)
+
+  mesh => sys%gr%mesh
+  st => sys%st
+
+  SAFE_ALLOCATE(inhomog(1:mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik, 1:nsigma))
+  SAFE_ALLOCATE(hvar1(1:mesh%np, 1:st%d%nspin, 1:nsigma))
+  SAFE_ALLOCATE(hvar2(1:mesh%np, 1:st%d%nspin, 1:nsigma))
+  SAFE_ALLOCATE(pert1psi2(1:mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(pert2psi1(1:mesh%np, 1:st%d%dim))
+
+  call X(sternheimer_calc_hvar)(this, sys, hm, lr1, nsigma, hvar1)
+!  call X(sternheimer_calc_hvar)(this, sys, hm, lr2, nsigma, hvar2)
+! for kdotp, hvar = 0
+  hvar2 = M_ZERO
+
+  inhomog(:,:,:,:,:) = M_ZERO
+
+  do isigma = 1, nsigma
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+
+      ispin = states_dim_get_spin_index(sys%st%d, ik)
+      do ist = st%st_start, st%st_end
+        ! for d2/dkdE there is no bare perturbation
+        !  call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), inhomog(:, :, isigma))
+
+        call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2(:, :))
+        call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1(:, :))
+
+        ! derivative of the eigenvalues
+        dl_eig1 = X(pert_expectation_value)(pert1, sys%gr, sys%geo, hm, st, st%X(psi), st%X(psi), 1) 
+        dl_eig2 = X(pert_expectation_value)(pert2, sys%gr, sys%geo, hm, st, st%X(psi), st%X(psi), 1) 
+
+        do idim = 1, st%d%dim
+          inhomog(1:mesh%np, idim, ist, ik, isigma) = -pert1psi2(1:mesh%np, idim) &
+            - (hvar1(1:mesh%np, ispin, isigma) - dl_eig1) * lr2(isigma)%X(dl_psi)(1:mesh%np, idim, ist, ik) &
+            - (hvar2(1:mesh%np, ispin, isigma) - dl_eig2) * lr1(isigma)%X(dl_psi)(1:mesh%np, idim, ist, ik)
+        end do
+
+        proj = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), inhomog(:, :, ist, ik, isigma))
+        do idim = 1, st%d%dim
+          call lalg_axpy(mesh%np, -proj, st%X(psi)(:, idim, ist, ik), inhomog(:, idim, ist, ik, isigma))
+        end do
+
+      enddo
+    enddo
+  enddo
+
+  inhomog(:,:,:,:,:) = inhomog(:,:,:,:,:) * M_HALF
+
+  ! sum frequency
+  call X(sternheimer_set_inhomog)(this, inhomog)
+  call X(sternheimer_solve)(this, sys, hm, lr_2ndorder, 1, &
+    omega1 + omega2, pert_2ndorder, restart_dir, rho_tag, wfs_tag, &
+    have_restart_rho = .false., have_exact_freq = .false.)
 
   ! construct inhomogeneous RHS term from first-order solution
   ! call X(sternheimer_solve) for sum frequency
   ! call X(sternheimer_solve) for difference frequency
   ! unless of course they are identical (one or both freqs the same)
+
+  SAFE_DEALLOCATE_A(inhomog)
+  SAFE_DEALLOCATE_A(hvar1)
+  SAFE_DEALLOCATE_A(hvar2)
+  SAFE_DEALLOCATE_A(pert1psi2)
+  SAFE_DEALLOCATE_A(pert2psi1)
 
   POP_SUB(X(sternheimer_solve_order2))
 end subroutine X(sternheimer_solve_order2)
