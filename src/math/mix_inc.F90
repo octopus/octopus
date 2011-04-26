@@ -263,10 +263,10 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
     smix%X(vin_old) = vin
     smix%X(f_old) = f
     
-    ! we need the output vector for vout. So lets do vnew = vout to get that information
+    ! we need the output vector for vout. So let`s do vnew = vout to get that information
     vnew = vout
   case (0)
-    ! Store df and dv from current iteration in arrays df and dv so that we can use them_m
+    ! Store df and dv from current iteration in arrays df and dv so that we can use them
     ! for the extrapolation. Next iterations they will be lost.
     ipos = mod(smix%last_ipos, smix%ns + 1) + 1
     call lalg_copy(d1, d2, d3, f(:, :, :), smix%X(df)(:, :, :, ipos))
@@ -276,7 +276,7 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
     
     smix%last_ipos = ipos
     
-    ! extrapotate new vector
+    ! extrapolate new vector
     iter_used = min(iter/2, smix%ns + 1)
     call X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, &
          smix%X(df)(1:d1, 1:d2, 1:d3, 1:iter_used), &
