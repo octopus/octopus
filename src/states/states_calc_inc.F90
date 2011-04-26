@@ -35,6 +35,14 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   logical :: bof
   type(batch_t) :: psib
 
+#ifdef HAVE_SCALAPACK
+!pgi$r opt=0
+!This is a pragma for the PGI compiler, forcing optimization -O0 for this subroutine
+!With PGI 10.9 and ScaLAPACK, at -O2 and higher optimization levels, the test finite_systems_3d/10-fullerene fails in
+!states_orthogonalization_full.par_gs with error message
+!glibc detected *** octopus_mpi: malloc(): memory corruption
+#endif
+
   ASSERT(st%d%orth_method /= 0)
 
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
