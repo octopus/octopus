@@ -394,13 +394,13 @@ contains
     !% species. The first two columns contain the element symbols, the
     !% next column is the type of interaction as defined below. The
     !% next columns are the parameters for the interaction (if
-    !% any). Pairs not specified interact through Coulomb's law.
+    !% any). Pairs not specified interact through Coulomb`s law.
     !%
     !% Note: In most cases there is no need to specify this block,
     !% since Coulomb interaction will be used by default.
     !%
     !%Option coulomb 1
-    !% Particles interact according to Coulomb's law. The interaction
+    !% Particles interact according to Coulomb`s law. The interaction
     !% strength is given by the charge of the species. There are no
     !% parameters.
     !%Option lennard_jones 2
