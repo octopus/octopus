@@ -27,6 +27,7 @@ program centergeom
   use io_m
   use messages_m
   use parser_m
+  use simul_box_m
   use space_m
   use unit_m
   use unit_system_m
@@ -35,8 +36,9 @@ program centergeom
   implicit none
 
   integer :: ierr
-  type(geometry_t) :: geo
-  type(space_t)    :: space
+  type(simul_box_t) :: sb
+  type(geometry_t)  :: geo
+  type(space_t)     :: space
 
   call global_init()                       ! initialize
   call getopt_init(ierr)
@@ -50,11 +52,13 @@ program centergeom
 
   call space_init(space)
   call geometry_init(geo, space)
+  call simul_box_init(sb, geo, space)
 
   call xyz_adjust_it(geo)
   call atom_write_xyz(".", "adjusted", geo, 3)
 
-  call geometry_end(geo)                   ! clean up
+  call simul_box_end(sb)
+  call geometry_end(geo)
   call space_end(space)
 
   call io_end()

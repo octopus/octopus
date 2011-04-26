@@ -29,6 +29,7 @@ program xyzanim
   use io_m
   use unit_m
   use unit_system_m
+  use simul_box_m
   use space_m
   use geometry_m
 
@@ -37,8 +38,9 @@ program xyzanim
   character(len=256) :: coords_file, xyzfile
   integer :: ierr, sampling, i, coords_unit, xyz_unit, iter, j, record_length
   FLOAT :: time
-
-  type(geometry_t) :: geo
+  type(simul_box_t) :: sb
+  type(geometry_t)  :: geo
+  type(space_t)     :: space
 
   ! Initialize stuff
   call global_init()
@@ -68,12 +70,9 @@ program xyzanim
     call messages_fatal(1)
   end if
 
-  nullify(geo%space)
-  allocate(geo%space)
-  call space_init(geo%space)
-
-  ! Initializes the atom system
-  call geometry_init_xyz(geo)
+  call space_init(space)
+  call geometry_init(geo, space)
+  call simul_box_init(sb, geo, space)
 
   record_length = 100 + 3*geo%natoms*3*20
 
@@ -92,6 +91,10 @@ program xyzanim
       call write_xyz()
     end if
   end do
+
+  call simul_box_end(sb)
+  call geometry_end(geo)
+  call space_end(space)
 
   call io_close(coords_unit); call io_close(xyz_unit)
 

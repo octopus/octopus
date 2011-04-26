@@ -30,6 +30,7 @@ program liquid
   use loct_math_m
   use parser_m
   use profiling_m
+  use simul_box_m
   use space_m
   use unit_m
   use unit_system_m
@@ -38,8 +39,9 @@ program liquid
   implicit none
 
   integer :: ierr
-  type(geometry_t) :: geo
-  type(space_t)    :: space
+  type(simul_box_t) :: sb
+  type(geometry_t)  :: geo
+  type(space_t)     :: space
   integer, parameter :: dim = 3
 
   call global_init()                       ! initialize
@@ -55,10 +57,13 @@ program liquid
 
   call space_init(space)
   call geometry_init(geo, space)
+  call simul_box_init(sb, geo, space)
 
   call generate_liquid()
-
+  
+  call simul_box_end(sb)
   call geometry_end(geo)
+  call space_end(space)
 
   call io_end()
   call datasets_end()

@@ -29,6 +29,7 @@ program vibrational
   use messages_m
   use parser_m
   use profiling_m
+  use simul_box_m
   use space_m
   use unit_m
   use unit_system_m
@@ -44,8 +45,9 @@ program vibrational
   FLOAT :: start_time, end_time
   FLOAT, allocatable :: vaf(:), time(:), dipole(:,:)
   CMPLX, allocatable :: ftvaf(:), ftdipole(:,:)
-  type(geometry_t) :: geo 
-  type(space_t)    :: space
+  type(geometry_t)  :: geo 
+  type(space_t)     :: space
+  type(simul_box_t) :: sb
 
   FLOAT :: ww, av, irtotal
   FLOAT :: dw, max_energy
@@ -77,12 +79,13 @@ program vibrational
   if (end_time < M_ZERO) end_time = huge(end_time)
 
   SAFE_ALLOCATE(time(0:max_iter+1))
+
+  call space_init(space)
+  call geometry_init(geo, space)
+  call simul_box_init(sb, geo, space)
   
   select case(mode)
     case(SPEC_VIBRATIONAL) 
-
-      call space_init(space)
-      call geometry_init(geo, space)
 
       ! Opens the coordinates files.
       iunit = io_open('td.general/coordinates', action='read')
@@ -199,9 +202,6 @@ program vibrational
  
       SAFE_DEALLOCATE_A(ftvaf)
  
-      call geometry_end(geo)
-      call space_end(space)
-
     case(SPEC_INFRARED)
 
       SAFE_ALLOCATE(dipole(0:max_iter+1, 1:3))
@@ -239,7 +239,11 @@ program vibrational
       call io_close(iunit)
 
   end select
-  
+
+  call simul_box_end(sb)
+  call geometry_end(geo)
+  call space_end(space)
+ 
   SAFE_DEALLOCATE_A(time)
 
   call io_end()
