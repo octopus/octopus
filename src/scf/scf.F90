@@ -140,7 +140,10 @@ contains
     !% The code will move on to the next SCF iteration even if convergence
     !% has not been achieved. -1 means unlimited.
     !%End
-    if(associated(hm%vberry)) call parse_integer  (datasets_check('MaximumIterBerry'), 10, scf%max_iter_berry)
+    if(associated(hm%vberry)) then
+      call parse_integer  (datasets_check('MaximumIterBerry'), 10, scf%max_iter_berry)
+      if(scf%max_iter_berry < 0) scf%max_iter_berry = huge(scf%max_iter_berry)
+    end if
 
     !%Variable ConvAbsDens
     !%Type float
@@ -222,7 +225,6 @@ contains
     end if
 
     if(scf%max_iter < 0) scf%max_iter = huge(scf%max_iter)
-    if(scf%max_iter_berry < 0) scf%max_iter_berry = huge(scf%max_iter_berry)
 
     call messages_obsolete_variable('What2Mix', 'MixField')
 
