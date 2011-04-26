@@ -494,7 +494,8 @@ contains
     type(submesh_t)       :: sphere
     type(profile_t), save :: prof
     FLOAT,    allocatable :: rho_sphere(:)
-    FLOAT, parameter      :: threshold = CNST(1e-5)
+    FLOAT, parameter      :: threshold = CNST(1e-6)
+    FLOAT                 :: norm_factor
     
     PUSH_SUB(species_get_density)
 
@@ -513,7 +514,13 @@ contains
 
       rho(1:mesh%np) = M_ZERO
 
-      forall(ip = 1:sphere%np) rho(sphere%map(ip)) = rho_sphere(ip)
+      ! A small amount of charge is missing with the cutoff, we
+      ! renormalize so that the long range potential is exact
+      norm_factor = abs(species_zval(spec)/dsm_integrate(mesh, sphere, rho_sphere))
+      
+      do ip = 1, sphere%np
+        rho(sphere%map(ip)) = rho(sphere%map(ip)) + norm_factor*rho_sphere(ip)
+      end do
 
       SAFE_DEALLOCATE_A(rho_sphere)
       nullify(ps)
