@@ -111,10 +111,15 @@ contains
     integer :: ia, ncol, iunit, jdir
     type(block_t) :: blk
     character(len=80) :: str
+    logical :: done
 
     PUSH_SUB(xyz_file_read)
 
+    done = .false.
+
     if(parse_isdef(datasets_check('PDB'//trim(what))) .ne. 0) then
+      call check_duplicated(done)
+
       gf%file_type = XYZ_FILE_PDB
       gf%flags = ior(gf%flags, XYZ_FLAGS_RESIDUE)
       gf%flags = ior(gf%flags, XYZ_FLAGS_CHARGE)
@@ -124,8 +129,11 @@ contains
       iunit = io_open(str, action='read')
       call xyz_file_read_PDB(what, iunit, gf)
       call io_close(iunit)
+    end if
 
-    else if(parse_isdef(datasets_check('XYZ'//trim(what))) .ne. 0) then ! read a xyz file
+    if(parse_isdef(datasets_check('XYZ'//trim(what))) .ne. 0) then ! read a xyz file
+      call check_duplicated(done)
+
       gf%file_type = XYZ_FILE_XYZ
       call parse_string(datasets_check('XYZ'//trim(what)), 'coords.xyz', str)
 
@@ -140,8 +148,11 @@ contains
       end do
 
       call io_close(iunit)
+    end if
+    
+    if(parse_block(datasets_check(trim(what)), blk) == 0) then
+      call check_duplicated(done)
 
-    else if(parse_block(datasets_check(trim(what)), blk) == 0) then
       gf%n = parse_block_n(blk)
 
       gf%file_type = XYZ_FILE_INP
@@ -165,8 +176,8 @@ contains
           gf%atom(ia)%move = .true.
         end if
       end do
-      call parse_block_end(blk)
 
+      call parse_block_end(blk)
     end if
 
     ! adjust units
@@ -178,6 +189,20 @@ contains
     end do
 
     POP_SUB(xyz_file_read)
+
+  contains
+    
+    subroutine check_duplicated(done)
+      logical, intent(inout) :: done
+      
+      if(.not. done) then
+        done = .true.
+      else
+        message(1) = 'Multiple definitions of '//trim(what)//' in the input file.'
+        call messages_fatal(1)
+      end if
+    end subroutine check_duplicated
+
   end subroutine xyz_file_read
 
 
