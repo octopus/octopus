@@ -145,6 +145,11 @@ subroutine X(sternheimer_solve)(                           &
               - hvar(1:mesh%np, ispin, sigma)*st%X(psi)(1:mesh%np, idim, ist, ik)
           end do
 
+          if(sternheimer_have_inhomog(this)) then
+            forall(idim = 1:st%d%dim, ip = 1:mesh%np) &
+              rhs(ip, idim, sigma) = rhs(ip, idim, sigma) + this%X(inhomog)(ip, idim, ist, ik, sigma)
+          endif
+
           ! Let Pc = projector onto unoccupied states, Pn` = projector that removes state n
           ! For an SCF run, we will apply Pn` for the last step always, since the whole wavefunction is useful for some
           ! things and the extra cost here is small. If occ_response, previous steps will also use Pn`. If !occ_response,
@@ -391,6 +396,18 @@ subroutine X(sternheimer_set_rhs)(this, rhs)
 
   POP_SUB(X(sternheimer_set_rhs))
 end subroutine X(sternheimer_set_rhs)
+
+
+!-----------------------------------------------------------
+subroutine X(sternheimer_set_inhomog)(this, inhomog)
+  type(sternheimer_t), intent(inout) :: this
+  R_TYPE, target,      intent(in)    :: inhomog(:, :, :, :, :)
+
+  PUSH_SUB(X(sternheimer_set_inhomog))
+  this%X(inhomog) => inhomog
+
+  POP_SUB(X(sternheimer_set_inhomog))
+end subroutine X(sternheimer_set_inhomog)
 
 
 !--------------------------------------------------------------

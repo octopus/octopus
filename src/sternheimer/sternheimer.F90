@@ -76,6 +76,10 @@ module sternheimer_m
        zsternheimer_set_rhs,      &
        sternheimer_have_rhs,      &
        sternheimer_unset_rhs,     &
+       dsternheimer_set_inhomog,  &
+       zsternheimer_set_inhomog,  &
+       sternheimer_have_inhomog,  &
+       sternheimer_unset_inhomog, &
        sternheimer_has_converged, &
        swap_sigma,                &
        wfs_tag_sigma
@@ -86,8 +90,10 @@ module sternheimer_m
      type(mix_t)           :: mixer
      type(scf_tol_t)       :: scf_tol
      FLOAT, pointer        :: fxc(:,:,:)    ! linear change of the XC potential (fxc)
-     FLOAT, pointer        :: drhs(:, :, :, :)
+     FLOAT, pointer        :: drhs(:, :, :, :) ! precomputed bare perturbation on RHS
      CMPLX, pointer        :: zrhs(:, :, :, :)
+     FLOAT, pointer        :: dinhomog(:, :, :, :, :) ! fixed inhomogeneous term on RHS
+     CMPLX, pointer        :: zinhomog(:, :, :, :, :)
      logical               :: add_fxc
      logical               :: add_hartree
      logical               :: ok
@@ -251,6 +257,8 @@ contains
 
     nullify(this%drhs)
     nullify(this%zrhs)
+    nullify(this%dinhomog)
+    nullify(this%zinhomog)
     POP_SUB(sternheimer_init)
   end subroutine sternheimer_init
 
@@ -330,6 +338,20 @@ contains
     nullify(this%drhs)
     nullify(this%zrhs)
   end subroutine sternheimer_unset_rhs
+
+  !-----------------------------------------------------------
+  logical pure function sternheimer_have_inhomog(this) result(have)
+    type(sternheimer_t), intent(in) :: this
+    have = associated(this%dinhomog) .or. associated(this%zinhomog)
+  end function sternheimer_have_inhomog
+
+  !-----------------------------------------------------------
+  subroutine sternheimer_unset_inhomog(this)
+    type(sternheimer_t), intent(inout) :: this
+    
+    nullify(this%dinhomog)
+    nullify(this%zinhomog)
+  end subroutine sternheimer_unset_inhomog
 
   !-----------------------------------------------------------
   integer pure function swap_sigma(sigma)
