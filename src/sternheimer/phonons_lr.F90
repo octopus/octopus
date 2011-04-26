@@ -135,7 +135,7 @@ contains
       if (.not. fromscratch) then
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
-        call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir))//'+',&
+        call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir)), &
           st, gr, geo, ierr, lr = lr(1))
       end if
       
@@ -302,7 +302,7 @@ contains
 
             imat = vibrations_get_index(vib, iatom, idir)
 
-            call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir))//'+',&
+            call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir)), &
                  st, gr, geo, ierr, lr = lrtmp)
             
             do ik = 1, st%d%nik
@@ -319,7 +319,7 @@ contains
           end do
         end do
         
-        call restart_write(io_workpath(trim(tmpdir)//VIB_MODES_DIR//trim(phn_nm_wfs_tag(inm))//'+'), &
+        call restart_write(io_workpath(trim(tmpdir)//VIB_MODES_DIR//trim(phn_nm_wfs_tag(inm))), &
           st, gr, ierr, lr = lr(1))
         
       end do
@@ -351,6 +351,7 @@ contains
     PUSH_SUB(phn_wfs_tag)
 
     write(str, '(a,i4.4,a,a)') "phn_wfs_", iatom, "_", index2axis(dir)
+    str = wfs_tag_sigma(str, 1)
 
     POP_SUB(phn_wfs_tag)
     
@@ -364,6 +365,7 @@ contains
     PUSH_SUB(phn_wfs_tag)
 
     write(str, '(a,i5.5)') "phn_nm_wfs_", inm
+    str = wfs_tag_sigma(str, 1)
 
     POP_SUB(phn_wfs_tag)
     
