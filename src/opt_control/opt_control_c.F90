@@ -217,7 +217,7 @@
 
 
   ! ---------------------------------------------------------
-  subroutine opt_control_direct_messages_info(iter, n, val, maxdx, x)
+  subroutine opt_control_direct_message_info(iter, n, val, maxdx, x)
     integer,     intent(in) :: iter, n
     REAL_DOUBLE, intent(in) :: val, maxdx
     REAL_DOUBLE, intent(in) :: x(n)
@@ -225,7 +225,7 @@
     FLOAT :: fluence, j1, j2, j
     FLOAT, allocatable :: theta(:)
 
-    PUSH_SUB(opt_control_direct_messages_info)
+    PUSH_SUB(opt_control_direct_message_info)
 
     SAFE_ALLOCATE(theta(1:n))
     theta = x
@@ -251,8 +251,11 @@
 
     call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
 
-    POP_SUB(opt_control_direct_messages_info)
-  end subroutine opt_control_direct_messages_info
+    POP_SUB(opt_control_direct_message_info)
+  end subroutine opt_control_direct_message_info
   ! ---------------------------------------------------------
 
-
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

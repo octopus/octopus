@@ -57,11 +57,11 @@ module opt_control_m
   implicit none
 
   private
-  public :: opt_control_run,              &
-            opt_control_cg_calc,          &
-            opt_control_cg_messages_info,    &
-            opt_control_direct_calc,      &
-            opt_control_direct_messages_info,&
+  public :: opt_control_run,                  &
+            opt_control_cg_calc,              &
+            opt_control_cg_messages_info,     &
+            opt_control_direct_calc,          &
+            opt_control_direct_message_info,  &
             opt_control_function_forward
 
 
@@ -470,9 +470,9 @@ contains
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator)
 
-      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, dim, x(1), step,&
+      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, dim, x(1), step, &
                real(oct_iterator_tolerance(iterator), 8), maxiter, &
-               opt_control_direct_calc, opt_control_direct_messages_info, minvalue)
+               opt_control_direct_calc, opt_control_direct_message_info, minvalue)
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then
