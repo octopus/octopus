@@ -112,6 +112,8 @@ module geometry_m
     
     integer, pointer :: ionic_interaction_type(:, :)
     FLOAT,   pointer :: ionic_interaction_parameter(:, :, :)
+
+    logical          :: reduced_coordinates !< If true the coordinates are stored in reduced coordinates and need to be converted.
   end type geometry_t
 
 contains
@@ -205,6 +207,23 @@ contains
     !% is not possible when specifying the coordinates through a <tt>PDBCoordinates</tt> or
     !% <tt>XYZCoordinates</tt> file). It is always possible to fix <b>all</b> atoms using the <tt>MoveIons</tt> directive.
     !%End
+
+    !%Variable ReducedCoordinates
+    !%Type block
+    !%Section System::Coordinates
+    !%Description
+    !% This block gives the atomic coordinates relative to the real
+    !% space unit cell. The format is the same as the
+    !% <tt>Coordinates</tt> block.
+    !%
+    !% Note that in Octopus the origin of coordinates is in the center
+    !% of the cell, so the coordinates inside the cell are in the
+    !% range [-0.5, 0.5).
+    !%
+    !% This block cannot be used with the <tt>minimum</tt> box shapes.
+    !% 
+    !%End
+
     call xyz_file_read('Coordinates', xyz, geo%space)
 
     ! copy information from xyz to geo
@@ -221,6 +240,9 @@ contains
         geo%atom(ia)%move = .true.
       end if
     end do
+
+    geo%reduced_coordinates = xyz%file_type == XYZ_FILE_REDUCED
+
     call xyz_file_end(xyz)
 
     ! load positions of the classical atoms, if any

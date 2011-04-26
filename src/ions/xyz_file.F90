@@ -45,7 +45,8 @@ module xyz_file_m
     XYZ_FILE_ERR      = 0,      &
     XYZ_FILE_PDB      = 1,      &
     XYZ_FILE_XYZ      = 2,      &
-    XYZ_FILE_INP      = 3
+    XYZ_FILE_INP      = 3,      &
+    XYZ_FILE_REDUCED  = 4
 
   integer, public, parameter :: &
     XYZ_FLAGS_RESIDUE = 1,      &
@@ -156,6 +157,37 @@ contains
       gf%n = parse_block_n(blk)
 
       gf%file_type = XYZ_FILE_INP
+      gf%flags = ior(gf%flags, XYZ_FLAGS_MOVE)
+
+      SAFE_ALLOCATE(gf%atom(1:gf%n))
+
+      do ia = 1, gf%n
+        ncol = parse_block_cols(blk, ia - 1)
+        if((ncol .lt. space%dim + 1) .or. (ncol .gt. space%dim + 2)) then
+          write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
+          call messages_fatal(1)
+        end if
+        call parse_block_string (blk, ia - 1, 0, gf%atom(ia)%label)
+        do jdir = 1, space%dim
+          call parse_block_float  (blk, ia - 1, jdir, gf%atom(ia)%x(jdir))
+        end do
+        if(ncol == space%dim + 2) then
+          call parse_block_logical(blk, ia - 1, space%dim + 1, gf%atom(ia)%move)
+        else
+          gf%atom(ia)%move = .true.
+        end if
+      end do
+
+      call parse_block_end(blk)
+    end if
+
+    ! This is valid only for Coordinates.
+    if(trim(what) == 'Coordinates' .and. parse_block(datasets_check('Reduced'//trim(what)), blk) == 0) then
+      call check_duplicated(done)
+
+      gf%n = parse_block_n(blk)
+
+      gf%file_type = XYZ_FILE_REDUCED
       gf%flags = ior(gf%flags, XYZ_FLAGS_MOVE)
 
       SAFE_ALLOCATE(gf%atom(1:gf%n))

@@ -347,8 +347,6 @@ contains
 
       PUSH_SUB(simul_box_init.read_box)
       ! Read box shape.
-      ! need to find out calc_mode already here since some of the variables here (e.g.
-      ! periodic dimensions) can be different for the subsystems
 
       !%Variable BoxShape
       !%Type integer
@@ -423,6 +421,13 @@ contains
         if(sb%rsize < M_ZERO) call input_error('radius')
         if(def_rsize>M_ZERO) call messages_check_def(def_rsize, sb%rsize, 'radius')
       case(MINIMUM)
+
+        if(geo%reduced_coordinates) then
+          message(1) = "The 'minimum' box shape cannot be used if atomic positions"
+          message(2) = "are given as reduced coordinates."
+          call messages_fatal(2)
+        end if
+
         default=sb%rsize
         call parse_float(datasets_check('radius'), default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call input_error('Radius')
@@ -684,10 +689,15 @@ contains
   end subroutine simul_box_build_lattice
 
 
-  !> This function checks that the atoms are inside the box. If not:
-  !! if the system is periodic, the atoms are moved inside the box.
-  !! if the system is finite, nothing happens or a warning is written,
-  !! depending on the argument warn_if_not.
+  !> This function adjusts the coordinates defined in the geomentry
+  !! object. If coordinates were given in reduced coordinates it
+  !! converts them to real coordinates and it checks that the atoms
+  !! are inside the box.
+  !!
+  !! If atoms are not in the box: if the system is periodic, the atoms
+  !! are moved inside the box, if the system is finite, nothing
+  !! happens or a warning is written, depending on the argument
+  !! warn_if_not.
   ! ---------------------------------------------------------
   subroutine simul_box_atoms_in_box(sb, geo, warn_if_not)
     type(simul_box_t), intent(in)    :: sb
@@ -698,15 +708,21 @@ contains
     FLOAT :: xx(1:MAX_DIM)
 
     PUSH_SUB(simul_box_atoms_in_box)
-
+    
     pd = sb%periodic_dim
 
     do iatom = 1, geo%natoms
-      if (simul_box_is_periodic(sb)) then
-        !convert the position to the orthogonal space
-        xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd) - sb%box_offset(1:pd), sb%klattice_primitive(1:pd, 1:pd))
 
-        xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
+      if (simul_box_is_periodic(sb)) then
+        if(.not. geo%reduced_coordinates) then
+          !convert the position to the orthogonal space
+          xx(1:pd) = matmul(geo%atom(iatom)%x(1:pd) - sb%box_offset(1:pd), sb%klattice_primitive(1:pd, 1:pd))
+          xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
+        else
+          ! in this case coordinates are already in reduced space
+          xx(1:pd) = geo%atom(iatom)%x(1:pd)
+        end if
+
         xx(1:pd) = xx(1:pd) + M_HALF
         do idir = 1, pd
           if(xx(idir) >= M_ZERO) then
@@ -719,7 +735,11 @@ contains
         xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd) 
 
         geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
-
+        
+      end if
+      
+      if(geo%reduced_coordinates) then
+        geo%atom(iatom)%x(pd + 1:sb%dim) = M_TWO*sb%lsize(pd + 1:sb%dim)*geo%atom(iatom)%x(pd + 1:sb%dim)
       end if
 
       if( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x) ) then 
@@ -733,6 +753,9 @@ contains
       end if 
 
     end do
+
+    ! done with the conversion to real coordinates
+    geo%reduced_coordinates =  .false.
 
     POP_SUB(simul_box_atoms_in_box)
   end subroutine simul_box_atoms_in_box
