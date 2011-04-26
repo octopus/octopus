@@ -9,14 +9,14 @@ Enabled    : Yes
 # ground state
 Input      : 04-silicon.01-gs.inp
 
-match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -34.17243463
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -34.17247007
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -33.79951714
-match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -1.12463535
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -1.12467857
 match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   2.17368924 
 match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;  -8.12513995
 match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  -1.49919711
-match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  12.41413579
-match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -5.33641323
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  12.41409942
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -5.33640011
 
 match ; k-point 1 (x) ; GREP(static/info, '#k =   1', 18) ; 0.077000
 match ; k-point 1 (y) ; GREP(static/info, '#k =   1', 30) ; 0.077000

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 mode: shell-script -*-
+\# -*- coding: utf-8 mode: shell-script -*-
 # $Id: 02-h2o_pol_lr.test 5186 2009-04-11 07:26:12Z xavier $
 
 Test       : Water in Supercell
@@ -7,33 +7,33 @@ TestGroups : long-run
 Enabled    : Yes
 
 Input: 06-h2o_pol_lr.01_gs.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -16.18506064
-match ; Eigenvalue 1 ; GREP(static/info, '1   --', 12)        ;  -1.136821
-match ; Dipole       ; GREP(static/info, '<y>', 14)           ;   4.39212E-01
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -16.18517858
+match ; Eigenvalue 1 ; GREP(static/info, '1   --', 12)        ;  -1.136830
+match ; Dipole       ; GREP(static/info, '<y>', 14)           ;   4.39206E-01
 
 Input: 06-h2o_pol_lr.02_kdotp.inp
 match ; Inverse effective mass 1 ; LINE(kdotp/kpoint_1_1, 11, 25) ;  0.117469
 match ; Inverse effective mass 2 ; LINE(kdotp/kpoint_1_1, 17, 25) ; -0.034437
 match ; Inverse effective mass 3 ; LINE(kdotp/kpoint_1_1, 23, 25) ; -0.024209
-match ; Inverse effective mass 4 ; LINE(kdotp/kpoint_1_1, 29, 25) ; -0.042213
+match ; Inverse effective mass 4 ; LINE(kdotp/kpoint_1_1, 29, 25) ; -0.042214
 
 Input: 06-h2o_pol_lr.03_emresp.inp
 Precision : 0.001
-match ; Polarizability XX w=0.0   ; LINE(em_resp/freq_0.0000/alpha, 2,  5) ; 13.979843
-match ; Polarizability YY w=0.0   ; LINE(em_resp/freq_0.0000/alpha, 3, 25) ; 12.653825
-match ; Polarizability ZZ w=0.0   ; LINE(em_resp/freq_0.0000/alpha, 4, 45) ; 19.686367
+match ; Polarizability XX w=0.0   ; LINE(em_resp/freq_0.0000/alpha, 2,  5) ; 13.979510
+match ; Polarizability YY w=0.0   ; LINE(em_resp/freq_0.0000/alpha, 3, 25) ; 12.653459
+match ; Polarizability ZZ w=0.0   ; LINE(em_resp/freq_0.0000/alpha, 4, 45) ; 19.685534
 
-match ; Polarizability XX w=0.1   ; LINE(em_resp/freq_0.1000/alpha, 2,  5) ; 14.566682
+match ; Polarizability XX w=0.1   ; LINE(em_resp/freq_0.1000/alpha, 2,  5) ; 14.566300
 match ; Polarizability YY w=0.1   ; LINE(em_resp/freq_0.1000/alpha, 3, 25) ; 13.237139
-match ; Polarizability ZZ w=0.1   ; LINE(em_resp/freq_0.1000/alpha, 4, 45) ; 23.806427
+match ; Polarizability ZZ w=0.1   ; LINE(em_resp/freq_0.1000/alpha, 4, 45) ; 23.805115
 
-match ; Cross sect. (avg) w=0.1   ; LINE(em_resp/freq_0.1000/cross_section, -1, 25) ; 0.43646483E-02
-match ; Cross sect. (ani) w=0.1   ; LINE(em_resp/freq_0.1000/cross_section, -1, 45) ; 0.78664128E-02
+match ; Cross sect. (avg) w=0.1   ; LINE(em_resp/freq_0.1000/cross_section, -1, 25) ; 0.43640757E-02
+match ; Cross sect. (ani) w=0.1   ; LINE(em_resp/freq_0.1000/cross_section, -1, 45) ; 0.78652534E-02
 
-match ; Born charge O XX w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 5,  5) ; -0.251970
-match ; Born charge O YY w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 6, 25) ; -0.303019
-match ; Born charge O ZZ w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 7, 45) ; -0.217846
+match ; Born charge O XX w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 5,  5) ; -0.251990
+match ; Born charge O YY w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 6, 25) ; -0.303009
+match ; Born charge O ZZ w=0.0    ; LINE(em_resp/freq_0.0000/Born_charges, 7, 45) ; -0.217839
 
-match ; Born charge O XX w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 5,  5) ; -0.298003
-match ; Born charge O YY w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 6, 25) ; -0.359143
-match ; Born charge O ZZ w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 7, 45) ; -0.201974
+match ; Born charge O XX w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 5,  5) ; -0.298013
+match ; Born charge O YY w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 6, 25) ; -0.359139
+match ; Born charge O ZZ w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 7, 45) ; -0.201982

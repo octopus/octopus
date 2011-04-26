@@ -20,7 +20,7 @@ match ; Bands n=2,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 2) ; -1.14
 match ; Bands n=2,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 2) ; -0.870845
 match ; Bands n=2,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 2) ; -0.413978
 match ; Bands n=2,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 2) ; -0.281613
-match ; Bands n=2,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 2) ; -1.210874
+match ; Bands n=2,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 2) ; -1.210890
 
 
 Input: 03-sodium_chain.02-ground_state_disp.inp
@@ -36,5 +36,5 @@ match ; Bands n=2,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 2) ; -1.14
 match ; Bands n=2,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 2) ; -0.870841
 match ; Bands n=2,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 2) ; -0.413974
 match ; Bands n=2,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 2) ; -0.281608
-match ; Bands n=2,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 2) ; -1.210870
+match ; Bands n=2,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 2) ; -1.210887
 
