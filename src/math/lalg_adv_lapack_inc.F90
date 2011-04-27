@@ -412,10 +412,10 @@ end subroutine deigensolve_nonh
 !! Here A and B are assumed to be symmetric and B is also positive definite.
 subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   integer,           intent(in)    :: k, n
-  FLOAT,             intent(in)    :: a(n,n)
-  FLOAT,             intent(in)    :: b(n,n)
-  FLOAT,             intent(out)   :: e(n)
-  FLOAT,             intent(out)   :: v(n, k)
+  FLOAT,             intent(in)    :: a(:, :)
+  FLOAT,             intent(in)    :: b(:, :)
+  FLOAT,             intent(out)   :: e(:)
+  FLOAT,             intent(out)   :: v(:, :)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
@@ -487,10 +487,10 @@ end subroutine dlowest_geneigensolve
 !! Here A and B are assumed to be Hermitian and B is also positive definite.
 subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   integer,           intent(in)    :: k, n
-  CMPLX,             intent(in)    :: a(n,n)
-  CMPLX,             intent(in)    :: b(n,n)
-  FLOAT,             intent(out)   :: e(n)
-  CMPLX,             intent(out)   :: v(n, k)
+  CMPLX,             intent(in)    :: a(:, :)
+  CMPLX,             intent(in)    :: b(:, :)
+  FLOAT,             intent(out)   :: e(:)
+  CMPLX,             intent(out)   :: v(:, :)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
