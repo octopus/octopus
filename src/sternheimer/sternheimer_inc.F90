@@ -146,8 +146,9 @@ subroutine X(sternheimer_solve)(                           &
           end do
 
           if(sternheimer_have_inhomog(this)) then
-            forall(idim = 1:st%d%dim, ip = 1:mesh%np) &
+            forall(idim = 1:st%d%dim, ip = 1:mesh%np)
               rhs(ip, idim, sigma) = rhs(ip, idim, sigma) + this%X(inhomog)(ip, idim, ist, ik, sigma)
+            end forall
           endif
 
           ! Let Pc = projector onto unoccupied states, Pn` = projector that removes state n
