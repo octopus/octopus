@@ -148,18 +148,23 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   if(present(reduce)) reduce_ = reduce
 
   use_blas = associated(aa%X(psicont)) .and. (.not. mesh%use_curvilinear)
-
+  
   if(use_blas) then
     call profiling_in(profgemm, "BATCH_HERK")
 
+    ! For some reason this has to be set to zero by hand (a bug in
+    ! some Blas libraries?). Otherwise NaNs might contaminate the
+    ! result.
+    dot(1:aa%nst, 1:aa%nst) = R_TOTYPE(CNST(0.0))
+    
     lda = size(aa%X(psicont), dim = 1)*aa%dim
 
-    call blas_herk('l', 'c', aa%nst, mesh%np, R_TOTYPE(mesh%vol_pp(1)), aa%X(psicont)(1, 1, 1), &
-      lda, R_TOTYPE(M_ZERO), dot(1, 1), aa%nst)
+    call blas_herk('l', 'c', aa%nst, mesh%np, mesh%vol_pp(1), aa%X(psicont)(1, 1, 1), &
+      lda, M_ZERO, dot(1, 1), ubound(dot, dim = 1))
 
     if(aa%dim == 2) then
-      call blas_herk('l', 'c', aa%nst, mesh%np, R_TOTYPE(mesh%vol_pp(1)), aa%X(psicont)(1, 2, 1), &
-        lda, R_TOTYPE(M_ONE), dot(1, 1), aa%nst)
+      call blas_herk('l', 'c', aa%nst, mesh%np, mesh%vol_pp(1), aa%X(psicont)(1, 2, 1), &
+        lda, M_ONE, dot(1, 1), ubound(dot, dim = 1))
     end if
 
   else

@@ -432,7 +432,8 @@ module blas_m
 
       character(1), intent(in)    :: uplo, trans
       integer,      intent(in)    :: n, k, lda, ldc
-      complex(4),   intent(in)    :: alpha, beta, a
+      real(4),      intent(in)    :: alpha, beta
+      complex(4),   intent(in)    :: a
       complex(4),   intent(inout) :: c
     end subroutine cherk
 
@@ -441,7 +442,8 @@ module blas_m
 
       character(1), intent(in)    :: uplo, trans
       integer,      intent(in)    :: n, k, lda, ldc
-      complex(8),   intent(in)    :: alpha, beta, a
+      real(8),      intent(in)    :: alpha, beta
+      complex(8),   intent(in)    :: a
       complex(8),   intent(inout) :: c
     end subroutine zherk
   end interface
