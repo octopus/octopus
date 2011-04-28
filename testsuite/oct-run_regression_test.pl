@@ -155,6 +155,8 @@ closedir(EXEC_DIRECTORY);
 $exec_suffix = "";
 if($opt_s)  { $exec_suffix = $opt_s; }
 
+$aexec = $ENV{EXEC};
+
 # MPI stuff
 $mpiexec = $ENV{MPIEXEC};
 $machinelist = $ENV{MACHINELIST};
@@ -266,14 +268,14 @@ foreach my $octopus_exe (@executables){
 		    $specify_np = "-n $np";
 		    $my_nslots = "";
 		}
-		$command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $octopus_exe_suffix > out";
+		$command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $octopus_exe_suffix > out";
 	      } else {
 		print "No mpiexec found: Skipping parallel test \n";
 		if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
 		exit 255;
 	      }
 	    } else {
-	      $command_line = "cd $workdir; $octopus_exe_suffix > out ";
+	      $command_line = "cd $workdir; $aexec $octopus_exe_suffix > out ";
 	    }
 
 	    print "Executing: " . $command_line . "\n";
