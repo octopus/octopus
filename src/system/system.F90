@@ -165,9 +165,7 @@ contains
 
     PUSH_SUB(system_end)
 
-#if defined(HAVE_MPI)
     call multicomm_end(sys%mc)
-#endif
 
     call poisson_end(psolver)
     call v_ks_end(sys%ks, sys%gr, sys%geo)

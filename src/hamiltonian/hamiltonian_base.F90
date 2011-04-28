@@ -344,13 +344,10 @@ contains
     this%nprojector_matrices = 0
     this%apply_projector_matrices = .false.
 
-    SAFE_ALLOCATE(this%projector_to_atom(1:epot%natoms))
-
     do iatom = 1, epot%natoms
       if(projector_is(epot%proj(iatom), M_KB)) then
         INCR(this%nprojector_matrices, 1)
         this%apply_projector_matrices = .true.
-        this%projector_to_atom(this%nprojector_matrices) = iatom
       else if(.not. projector_is_null(epot%proj(iatom))) then
         ! for the moment only KB projectors are supported
         this%apply_projector_matrices = .false.
@@ -367,12 +364,16 @@ contains
     end if
 
     SAFE_ALLOCATE(this%projector_matrices(1:this%nprojector_matrices))
+    SAFE_ALLOCATE(this%projector_to_atom(1:epot%natoms))
+
 
     this%full_projection_size = 0
     iproj = 0
     do iatom = 1, epot%natoms
       if(.not. projector_is(epot%proj(iatom), M_KB)) cycle
       INCR(iproj, 1)
+
+      this%projector_to_atom(iproj) = iatom
 
       lmax = epot%proj(iatom)%lmax
       lloc = epot%proj(iatom)%lloc
