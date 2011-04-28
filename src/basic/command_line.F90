@@ -71,6 +71,7 @@ module command_line_m
 
   private
   public :: getopt_init,                 &
+            getopt_end,                  &
             getopt_octopus,              &
             getopt_casida_spectrum,      &
             getopt_center_geom,          &
@@ -188,6 +189,8 @@ module command_line_m
       integer :: i
       character(len=*) :: argstring
     end subroutine set_clarg
+    subroutine clean_clarg()
+    end subroutine clean_clarg
   end interface
 
 
@@ -217,6 +220,12 @@ module command_line_m
 #endif
   end subroutine getopt_init
 
+
+  subroutine getopt_end
+#ifdef FC_COMMAND_LINE_ARGUMENTS
+    call clean_clarg()
+#endif
+  end subroutine getopt_end
 
 !if there is no way to access command line, define some dummy
 !functions to avoid problems when linking

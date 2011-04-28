@@ -50,6 +50,7 @@ program harmonic_spectrum
     write(stderr, '(a)') "the oct-harmonic-spectrum command is not available."
     stop
   end if
+  call getopt_end()
 
   ! These are the default values.
   get_maxima = .true.

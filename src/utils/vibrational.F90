@@ -56,9 +56,12 @@ program vibrational
   
   ! Initialize stuff
   call global_init()		 
+
   call getopt_init(ierr)
   mode = SPEC_VIBRATIONAL
   if(ierr.eq.0) call getopt_vibrational(mode)
+  call getopt_end()
+
   call parser_init()
   call messages_init()
 

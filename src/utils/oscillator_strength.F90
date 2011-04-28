@@ -196,6 +196,7 @@ program oscillator_strength
   call getopt_oscillator_strength(run_mode, omega, search_interval,             &
                                   order, nresonances, nfrequencies, final_time, &
                                   observable(1), observable(2), damping, ffile)
+  call getopt_end()
 
   ! Initialize stuff
   call global_init()

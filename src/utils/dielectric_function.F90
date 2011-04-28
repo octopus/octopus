@@ -51,8 +51,11 @@ program dielectric_function
 
   ! Initialize stuff
   call global_init()
+
   call getopt_init(ierr)
   if(ierr.eq.0) call getopt_dielectric_function
+  call getopt_end()
+
   call parser_init()
   call messages_init()
 

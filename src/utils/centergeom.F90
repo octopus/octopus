@@ -41,8 +41,11 @@ program centergeom
   type(space_t)     :: space
 
   call global_init()                       ! initialize
+
   call getopt_init(ierr)
   if(ierr.eq.0) call getopt_center_geom
+  call getopt_end()
+
   call parser_init()
   call messages_init()
 

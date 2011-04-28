@@ -42,6 +42,7 @@ program octopus
 
   call getopt_init(ierr)
   if(ierr .eq. 0) call getopt_octopus()
+  call getopt_end()
 
   call global_init()
   call parser_init()

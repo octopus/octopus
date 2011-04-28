@@ -37,8 +37,11 @@ program rotational_strength
 
   ! Initialize stuff
   call global_init()
+
   call getopt_init(ierr)
   if(ierr.eq.0) call getopt_rotatory_strength
+  call getopt_end()
+
   call parser_init()
   call messages_init()
   call datasets_init(1)

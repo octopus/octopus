@@ -42,9 +42,11 @@ program oct_help
     write(stderr, '(a)') "the oct-help command is not available."
     stop
   end if
+
   mode    = " "
   varname = " "
   call getopt_help(mode, varname)
+  call getopt_end()
 
   select case(mode)
   case("print")

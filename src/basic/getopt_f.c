@@ -48,6 +48,14 @@ void FC_FUNC_(set_clarg, SET_CLARG)(int *i, STR_F_TYPE arg STR_ARG1)
   argv[*i] = c;
 }
 
+void FC_FUNC_(clean_clarg, CLEAR_CLARG)()
+{
+  int i;
+  for(i=0; i<argc; i++)
+    free(argv[i]);
+  free(argv);
+}
+
 void print_config(){
 #ifdef HAVE_OPENMP
   printf("openmp");
