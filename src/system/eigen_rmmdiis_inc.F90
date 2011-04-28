@@ -67,6 +67,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   call profiling_in(prof, "RMMDIIS")
 
+  failed = .false.
+
   do jst = st%st_start, st%st_end, blocksize
     maxst = min(jst + blocksize - 1, st%st_end)
     bsize = maxst - jst + 1
@@ -142,7 +144,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       if(gr%mesh%parallel_in_domains) then
         SAFE_ALLOCATE(buff(1:4, 1:blocksize))
         buff(1:4, 1:blocksize) = fr(1:4, 1:blocksize)
-        call MPI_Allreduce(buff(1, 1), fr(1, 1), 4 * blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
+        call MPI_Allreduce(buff(1, 1), fr(1, 1), 4*blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
         SAFE_DEALLOCATE_A(buff)
       end if
 #endif
@@ -152,15 +154,15 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
         if(done(ib) /= 0) cycle
 
-        ca = fr(1, ib) * fr(4, ib) - fr(3, ib) * fr(2, ib)
-        cb = fr(3, ib) - st%eigenval(ist, ik) * fr(1, ib)
+        ca = fr(1, ib)*fr(4, ib) - fr(3, ib)*fr(2, ib)
+        cb = fr(3, ib) - st%eigenval(ist, ik)*fr(1, ib)
         cc = st%eigenval(ist, ik)*fr(2, ib) - fr(4, ib)
 
-        lambda(ib) = 2 * cc / (cb + sqrt(cb**2 - CNST(4.0) * ca * cc))
+        lambda(ib) = CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
 
         ! restrict the value of lambda to be between 0.1 and 1.0
-        if(abs(lambda(ib)) > CNST(1.0)) lambda(ib) = lambda(ib) / abs(lambda(ib))
-        if(abs(lambda(ib)) < CNST(0.1)) lambda(ib) = CNST(0.1) * lambda(ib) / abs(lambda(ib))
+        if(abs(lambda(ib)) > CNST(1.0)) lambda(ib) = lambda(ib)/abs(lambda(ib))
+        if(abs(lambda(ib)) < CNST(0.1)) lambda(ib) = CNST(0.1)*lambda(ib)/abs(lambda(ib))
       end do
 
       do iter = 2, niter
@@ -175,7 +177,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
           ! predict by jacobi
           forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-            psi(ip, idim, iter, ib) = lambda(ib) * psi(ip, idim, iter, ib) + psi(ip, idim, iter - 1, ib)
+            psi(ip, idim, iter, ib) = lambda(ib)*psi(ip, idim, iter, ib) + psi(ip, idim, iter - 1, ib)
           end forall
         end do
 
@@ -215,7 +217,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         if(gr%mesh%parallel_in_domains) then
           SAFE_ALLOCATE(mmc(1:iter, 1:iter, 1:2, 1:bsize))
           mmc(1:iter, 1:iter, 1:2, 1:bsize) = mm(1:iter, 1:iter, 1:2, 1:bsize)
-          call MPI_Allreduce(mmc(1, 1, 1, 1), mm(1, 1, 1, 1), iter**2 * 2 * bsize, R_MPITYPE, MPI_SUM, &
+          call MPI_Allreduce(mmc(1, 1, 1, 1), mm(1, 1, 1, 1), iter**2*2*bsize, R_MPITYPE, MPI_SUM, &
             gr%mesh%mpi_grp%comm, mpi_err)
           SAFE_DEALLOCATE_A(mmc)
         end if
@@ -280,7 +282,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         end if
 
         if(mpi_grp_is_root(mpi_world)) then
-          call loct_progress_bar(st%nst * (ik - 1) +  ist, st%nst * st%d%nik)
+          call loct_progress_bar(st%nst * (ik - 1) +  ist, st%nst*st%d%nik)
         end if
 
       end do
