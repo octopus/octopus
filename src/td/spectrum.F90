@@ -76,6 +76,7 @@ module spectrum_m
     KICK_SPIN_DENSITY_MODE   = 2
 
   integer, public, parameter ::    &
+    QKICKMODE_NONE           = 0,  &
     QKICKMODE_EXP            = 1,  &
     QKICKMODE_COS            = 2,  &
     QKICKMODE_SIN            = 3,  &
@@ -391,6 +392,7 @@ contains
       kick%pol_dir = 0
       kick%wprime = M_ZERO
       kick%n_multipoles = 0
+      kick%qkick_mode = QKICKMODE_NONE
       nullify(kick%l)
       nullify(kick%m)
       nullify(kick%weight)
@@ -617,6 +619,7 @@ contains
 
       call parse_block_end(blk)
     else
+      kick%qkick_mode = QKICKMODE_NONE
       kick%qvector(:) = M_ZERO
     end if
 

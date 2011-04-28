@@ -183,7 +183,6 @@ contains
     !% processed by the utility <tt>hs-from-vel</tt> in order to obtain the harmonic spectrum.
     !%End
 
-    ! by default print multipoles, ftchd, coordinates and energy
     default = &
          2**(OUT_MULTIPOLES - 1) +  &
          2**(OUT_FTCHD - 1) +       &
@@ -205,6 +204,7 @@ contains
     writ%out(OUT_TEMPERATURE)%write = writ%out(OUT_TEMPERATURE)%write .and. ions_move
     writ%out(OUT_GAUGE_FIELD)%write = writ%out(OUT_GAUGE_FIELD)%write .and. with_gauge_field
     writ%out(OUT_LASER)%write = writ%out(OUT_LASER)%write .and. (hm%ep%no_lasers > 0)
+    writ%out(OUT_FTCHD)%write = writ%out(OUT_FTCHD)%write .and. (kick%qkick_mode /= QKICKMODE_NONE)
 
     !%Variable TDDipoleLmax
     !%Type integer
@@ -646,7 +646,7 @@ contains
     type(kick_t),           intent(in)    :: kick
     integer,                intent(in)    :: iter
 
-    integer :: ik, ist, idir
+    integer :: idir
     character(len=130) :: aux
     FLOAT :: angular(MAX_DIM)
     type(pert_t)        :: angular_momentum
