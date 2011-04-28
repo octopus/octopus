@@ -7,7 +7,7 @@ dnl Check if the library was given in the command line
 AC_ARG_WITH(libxc-prefix, [AS_HELP_STRING([--with-libxc-prefix=DIR], [Directory where libxc was installed.])])
 case $with_libxc_prefix in
   no ) acx_libxc_ok=disable ;;
-  "") LIBS_LIBXC="-lxc"; FCFLAGS_LIBXC="" ;;
+  "") LIBS_LIBXC="-lxc"; FCFLAGS_LIBXC="-I/usr/include" ;;
   *) LIBS_LIBXC="-L$with_libxc_prefix/lib -lxc"; FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_prefix/include" ;;
 esac
 
