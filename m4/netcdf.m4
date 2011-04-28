@@ -43,11 +43,6 @@ if test "$acx_netcdf_ok" != disabled; then
 fi
 AC_MSG_RESULT([$acx_netcdf_ok ($LIBS_NETCDF)])
 
-AC_SUBST(FCFLAGS_NETCDF)
-AC_SUBST(LIBS_NETCDF)
-FCFLAGS="$acx_netcdf_save_FCFLAGS"
-LIBS="$acx_netcdf_save_LIBS"
-
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_netcdf_ok" = xyes; then
   AC_DEFINE(HAVE_NETCDF,1,[Defined if you have NETCDF library.])
@@ -55,6 +50,13 @@ if test x"$acx_netcdf_ok" = xyes; then
 else
   AC_MSG_WARN([Could not find NetCDF library. 
               *** Will compile without NetCDF and ETSF I/O support])
+  FCFLAGS_NETCDF=""
+  LIBS_NETCDF=""
   $2
 fi
+
+AC_SUBST(FCFLAGS_NETCDF)
+AC_SUBST(LIBS_NETCDF)
+FCFLAGS="$acx_netcdf_save_FCFLAGS"
+LIBS="$acx_netcdf_save_LIBS"
 ])dnl ACX_NETCDF

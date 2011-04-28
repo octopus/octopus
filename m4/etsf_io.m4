@@ -42,11 +42,6 @@ if test "$acx_etsf_io_ok" != disabled; then
 fi
 AC_MSG_RESULT([$acx_etsf_io_ok ($LIBS_ETSF_IO)])
 
-AC_SUBST(FCFLAGS_ETSF_IO)
-AC_SUBST(LIBS_ETSF_IO)
-FCFLAGS="$acx_etsf_io_save_FCFLAGS"
-LIBS="$acx_etsf_io_save_LIBS"
-
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_etsf_io_ok" = xyes; then
   AC_DEFINE(HAVE_ETSF_IO,1,[Defined if you have the ETSF_IO library.])
@@ -59,4 +54,8 @@ else
   $2
 fi
 
+AC_SUBST(FCFLAGS_ETSF_IO)
+AC_SUBST(LIBS_ETSF_IO)
+FCFLAGS="$acx_etsf_io_save_FCFLAGS"
+LIBS="$acx_etsf_io_save_LIBS"
 ])dnl ACX_ETSF_IO
