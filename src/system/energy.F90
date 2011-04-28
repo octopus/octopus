@@ -77,48 +77,38 @@ contains
 
     hm%energy%eigenvalues = states_eigenvalues_sum(st)
 
+    if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK).and.(hm%theory_level.ne.CLASSICAL)) then
+      if(states_are_real(st)) then
+        hm%energy%kinetic  = delectronic_kinetic_energy(hm, gr, st)
+        hm%energy%extern   = delectronic_external_energy(hm, gr, st)
+      else
+        hm%energy%kinetic  = zelectronic_kinetic_energy(hm, gr, st)
+        hm%energy%extern   = zelectronic_external_energy(hm, gr, st)
+      end if
+    end if
+
+
     select case(hm%theory_level)
     case(INDEPENDENT_PARTICLES)
       hm%energy%total   = hm%ep%eii + hm%energy%eigenvalues
 
     case(HARTREE)
-      if(states_are_real(st)) then
-        hm%energy%kinetic     = delectronic_kinetic_energy(hm, gr, st)
-        hm%energy%extern   = delectronic_external_energy(hm, gr, st)
-      else
-        hm%energy%kinetic     = zelectronic_kinetic_energy(hm, gr, st)
-        hm%energy%extern   = zelectronic_external_energy(hm, gr, st)
-      end if
       hm%energy%total = hm%ep%eii + M_HALF * (hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern)
 
     case(HARTREE_FOCK)
-      if(states_are_real(st)) then
-        hm%energy%kinetic     = delectronic_kinetic_energy(hm, gr, st)
-        hm%energy%extern   = delectronic_external_energy(hm, gr, st)
-      else
-        hm%energy%kinetic     = zelectronic_kinetic_energy(hm, gr, st)
-        hm%energy%extern   = zelectronic_external_energy(hm, gr, st)
-      end if
       hm%energy%total = hm%ep%eii + &
         M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc) + hm%energy%correlation
 
     case(KOHN_SHAM_DFT)
-      if(full_) then
-        if(states_are_real(st)) then
-          hm%energy%kinetic     = delectronic_kinetic_energy(hm, gr, st)
-          hm%energy%extern   = delectronic_external_energy(hm, gr, st)
-        else
-          hm%energy%kinetic     = zelectronic_kinetic_energy(hm, gr, st)
-          hm%energy%extern   = zelectronic_external_energy(hm, gr, st)
-        end if
-      end if
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc
 
     case(CLASSICAL)
-      st%eigenval = M_ZERO
+      st%eigenval           = M_ZERO
       hm%energy%eigenvalues = M_ZERO
-      hm%energy%total = hm%ep%eii
+      hm%energy%kinetic     = M_ZERO
+      hm%energy%extern      = hm%ep%eii
+      hm%energy%total       = hm%ep%eii
     end select
     
     hm%energy%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights, st%occ)
