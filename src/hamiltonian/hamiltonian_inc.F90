@@ -580,7 +580,7 @@ subroutine X(h_mgga_terms) (hm, der, psi, hpsi, ik, grad)
 
   do idim = 1, hm%d%dim
     do ispace = 1, der%mesh%sb%dim
-      cgrad(1:der%mesh%np, ispace) = M_TWO*grad(1:der%mesh%np, ispace, idim)*hm%vtau(1:der%mesh%np, ispin)
+      cgrad(1:der%mesh%np, ispace) = grad(1:der%mesh%np, ispace, idim)*hm%vtau(1:der%mesh%np, ispin)
     end do
 
     diverg(1:der%mesh%np) = M_ZERO
