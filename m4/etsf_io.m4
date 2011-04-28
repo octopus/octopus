@@ -13,6 +13,12 @@ case $with_etsf_io_prefix in
      FCFLAGS_ETSF_IO="$ax_cv_f90_modflag$with_etsf_io_prefix/include" ;;
 esac
 
+AC_ARG_WITH(etsf-io-include, [AS_HELP_STRING([--with-etsf-io-include=DIR], [Directory where etsf_io Fortran headers were installed.])])
+case $with_etsf_io_include in
+  "") ;;
+  *)  FCFLAGS_ETSF_IO="$ax_cv_f90_modflag$with_etsf_io_include" ;;
+esac
+
 dnl We cannot use etsf_io if netcdf is not found
 if test "x$acx_netcdf_ok" != xyes; then
   acx_etsf_io_ok=disabled
@@ -49,7 +55,7 @@ if test x"$acx_etsf_io_ok" = xyes; then
   $1
 else
   AC_MSG_WARN([Could not find etsf_io library. 
-           *** Will compile without etsf_io support])
+           *** Will compile without ETSF I/O support])
   $2
 fi
 

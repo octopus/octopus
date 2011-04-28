@@ -10,6 +10,12 @@ case $with_libxc_prefix in
   *) LIBS_LIBXC="-L$with_libxc_prefix/lib -lxc"; FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_prefix/include" ;;
 esac
 
+AC_ARG_WITH(libxc-include, [AS_HELP_STRING([--with-libxc-include=DIR], [Directory where libxc Fortran headers were installed.])])
+case $with_libxc_include in
+  "") ;;
+  *)  FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_include" ;;
+esac
+
 dnl Backup LIBS and FCFLAGS
 acx_libxc_save_LIBS="$LIBS"
 acx_libxc_save_FCFLAGS="$FCFLAGS"

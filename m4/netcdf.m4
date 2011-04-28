@@ -11,6 +11,12 @@ case $with_netcdf_prefix in
   *) LIBS_NETCDF="-L$with_netcdf_prefix/lib"; FCFLAGS_NETCDF="$ax_cv_f90_modflag$with_netcdf_prefix/include" ;;
 esac
 
+AC_ARG_WITH(netcdf-include, [AS_HELP_STRING([--with-netcdf-include=DIR], [Directory where netcdf Fortran headers were installed.])])
+case $with_netcdf_include in
+  "") ;;
+  *)  FCFLAGS_NETCDF="$ax_cv_f90_modflag$with_netcdf_include" ;;
+esac
+
 dnl Backup LIBS and FCFLAGS
 acx_netcdf_save_LIBS="$LIBS"
 acx_netcdf_save_FCFLAGS="$FCFLAGS"
@@ -48,7 +54,7 @@ if test x"$acx_netcdf_ok" = xyes; then
   $1
 else
   AC_MSG_WARN([Could not find NetCDF library. 
-              *** Will compile without NetCDF support])
+              *** Will compile without NetCDF and ETSF I/O support])
   $2
 fi
 ])dnl ACX_NETCDF
