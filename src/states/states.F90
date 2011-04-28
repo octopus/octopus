@@ -211,6 +211,8 @@ contains
 #endif
     st%d%orth_method = 0
 
+    st%open_boundaries = .false.
+
     POP_SUB(states_null)
   end subroutine states_null
 
