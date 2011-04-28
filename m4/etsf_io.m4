@@ -22,8 +22,6 @@ esac
 dnl We cannot use etsf_io if netcdf is not found
 if test "x$acx_netcdf_ok" != xyes; then
   acx_etsf_io_ok=disabled
-  FCFLAGS_ETSF_IO=""
-  LIBS_ETSF_IO=""
 fi
 
 dnl Backup LIBS and FCFLAGS
@@ -56,6 +54,8 @@ if test x"$acx_etsf_io_ok" = xyes; then
 else
   AC_MSG_WARN([Could not find etsf_io library. 
            *** Will compile without ETSF I/O support])
+  FCFLAGS_ETSF_IO=""
+  LIBS_ETSF_IO=""
   $2
 fi
 
