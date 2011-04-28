@@ -548,7 +548,7 @@ contains
 
     SAFE_ALLOCATE(restart_file(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     SAFE_ALLOCATE(restart_file_present(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
-    restart_file_present = .true.
+    restart_file_present = .false.
 
     ! Skip two lines.
     call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file,  line, err)
