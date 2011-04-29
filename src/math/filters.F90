@@ -149,6 +149,8 @@ contains
     ! remove the mask function
     call spline_mult(spl, mask)
 
+    call spline_end(mask)
+
     POP_SUB(spline_filter_mask)
 
   end subroutine spline_filter_mask
