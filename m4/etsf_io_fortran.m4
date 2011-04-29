@@ -12,6 +12,9 @@
 # Fortran compilers support
 #
 
+# WARNING: This macro is included only because it is needed to
+# reproduce ETSF I/O bug behaviour bug per bug. Do not use it for
+# anything else.
 
 
 # _ABI_CHECK_FC_ABSOFT(COMPILER)
@@ -34,7 +37,7 @@ AC_DEFUN([_ABI_CHECK_FC_ABSOFT],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_ABSOFT],1,[Define to 1 if you are using the ABSOFT Fortran compiler])
+  dnl AC_DEFINE([FC_ABSOFT],1,[Define to 1 if you are using the ABSOFT Fortran compiler])
   fc_type="absoft"
   fc_version=`echo "${abi_result}" | sed -e 's/Pro Fortran //'`
   if test "${fc_version}" = "${abi_result}"; then
@@ -71,7 +74,7 @@ AC_DEFUN([_ABI_CHECK_FC_COMPAQ],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_COMPAQ],1,[Define to 1 if you are using the COMPAQ Fortran compiler])
+  dnl AC_DEFINE([FC_COMPAQ],1,[Define to 1 if you are using the COMPAQ Fortran compiler])
   fc_type="compaq"
   fc_version=`echo "${abi_result}" | sed -e 's/.* V//;s/-.*//'`
   if test "${fc_version}" = "${abi_result}"; then
@@ -104,7 +107,7 @@ AC_DEFUN([_ABI_CHECK_FC_FUJITSU],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_FUJITSU],1,[Define to 1 if you are using the Fujitsu Fortran compiler])
+  dnl AC_DEFINE([FC_FUJITSU],1,[Define to 1 if you are using the Fujitsu Fortran compiler])
   fc_type="fujitsu"
   fc_version=`echo "${abi_result}" | sed -e 's/.*Driver //;s/ .*//'`
   if test "${fc_version}" = "${abi_result}"; then
@@ -137,7 +140,7 @@ AC_DEFUN([_ABI_CHECK_FC_G95],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_G95],1,[Define to 1 if you are using the G95 Fortran compiler])
+  dnl AC_DEFINE([FC_G95],1,[Define to 1 if you are using the G95 Fortran compiler])
   fc_type="g95"
   fc_version=`echo ${abi_result} | sed -e 's/.*GCC //; s/ .*//'`
   if test "${fc_version}" = "${abi_result}"; then
@@ -170,7 +173,7 @@ AC_DEFUN([_ABI_CHECK_FC_GCC],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_GCC],1,[Define to 1 if you are using the GNU Fortran compiler])
+  dnl AC_DEFINE([FC_GCC],1,[Define to 1 if you are using the GNU Fortran compiler])
   fc_type="gcc"
   fc_version=`echo ${abi_result} | sed -e 's/.*(GCC) //; s/.*GCC //; s/ .*//'`
   abi_result="yes"
@@ -200,7 +203,7 @@ AC_DEFUN([_ABI_CHECK_FC_HITACHI],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_HITACHI],1,[Define to 1 if you are using the Hitachi Fortran compiler])
+  dnl AC_DEFINE([FC_HITACHI],1,[Define to 1 if you are using the Hitachi Fortran compiler])
   fc_type="hitachi"
   fc_version=`echo "${abi_result}" | sed -e 's/.*Driver //;s/ .*//'`
   if test "${fc_version}" = "${abi_result}"; then
@@ -237,13 +240,13 @@ AC_DEFUN([_ABI_CHECK_FC_IBM],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
   if test "${fc_garbage}" -gt 50; then
-   AC_DEFINE([FC_IBM],1,[Define to 1 if you are using the IBM XL Fortran compiler])
+   dnl AC_DEFINE([FC_IBM],1,[Define to 1 if you are using the IBM XL Fortran compiler])
    fc_type="ibm"
    fc_version="UNKNOWN"
    abi_result="yes"
   fi
  else
-  AC_DEFINE([FC_IBM],1,[Define to 1 if you are using the IBM XL Fortran compiler])
+  dnl AC_DEFINE([FC_IBM],1,[Define to 1 if you are using the IBM XL Fortran compiler])
   fc_type="ibm"
   fc_version=`echo "${abi_result}" | sed -e 's/.* V\([[0-9\.]]*\) .*/\1/'`
   if test "${fc_version}" = "${abi_result}"; then
@@ -276,7 +279,7 @@ AC_DEFUN([_ABI_CHECK_FC_INTEL],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_INTEL],1,[Define to 1 if you are using the Intel Fortran compiler])
+  dnl AC_DEFINE([FC_INTEL],1,[Define to 1 if you are using the Intel Fortran compiler])
   fc_type="intel"
   fc_version=`echo "${fc_info_string}" | grep '^Version' | sed -e 's/Version //;s/ .*//;s/ //g' | head -n 1`
   if test "${fc_version}" = ""; then
@@ -310,7 +313,7 @@ AC_DEFUN([_ABI_CHECK_FC_MIPSPRO],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_MIPSPRO],1,[Define to 1 if you are using the MIPSpro Fortran compiler])
+  dnl AC_DEFINE([FC_MIPSPRO],1,[Define to 1 if you are using the MIPSpro Fortran compiler])
   fc_type="mipspro"
   fc_version=`echo "${abi_result}" | sed -e 's/.*Version //'`
   if test "${fc_version}" = "${abi_result}"; then
@@ -344,7 +347,7 @@ AC_DEFUN([_ABI_CHECK_FC_OPEN64],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_OPEN64],1,[Define to 1 if you are using the Open64 Fortran compiler])
+  dnl AC_DEFINE([FC_OPEN64],1,[Define to 1 if you are using the Open64 Fortran compiler])
   fc_type="open64"
   fc_version=`echo "${abi_result}" | sed -e 's/.* Version //; s/ .*//'`
   if test "${fc_version}" = "${abi_result}"; then
@@ -378,7 +381,7 @@ AC_DEFUN([_ABI_CHECK_FC_PATHSCALE],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_PATHSCALE],1,[Define to 1 if you are using the PathScale Fortran compiler])
+dnl  AC_DEFINE([FC_PATHSCALE],1,[Define to 1 if you are using the PathScale Fortran compiler])
   fc_type="pathscale"
   fc_version=`echo "${abi_result}" | sed -e 's/.* Version //; s/ .*//'`
   if test "${fc_version}" = "${abi_result}"; then
@@ -412,15 +415,15 @@ AC_DEFUN([_ABI_CHECK_FC_PGI],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_PGI],1,[Define to 1 if you are using the Portland Group Fortran compiler])
+  dnl AC_DEFINE([FC_PGI],1,[Define to 1 if you are using the Portland Group Fortran compiler])
   fc_type="pgi"
   fc_version=`echo "${abi_result}" | sed -e 's/^pgf9[[05]] //' | sed -e 's/-.*//'`
   if test "${fc_version}" = "${abi_result}"; then
    fc_version="UNKNOWN"
-  else
-   if test "${fc_version}" = "6.0"; then
-        AC_DEFINE([FC_PGI6],1,[Define to 1 if you are using the Portland Group Fortran compiler version 6])
-   fi
+  dnl else
+   dnl if test "${fc_version}" = "6.0"; then
+    dnl    AC_DEFINE([FC_PGI6],1,[Define to 1 if you are using the Portland Group Fortran compiler version 6])
+   dnl fi
   fi
   abi_result="yes"
  fi
@@ -449,7 +452,7 @@ AC_DEFUN([_ABI_CHECK_FC_SUN],
   fc_type="UNKNOWN"
   fc_version="UNKNOWN"
  else
-  AC_DEFINE([FC_SUN],1,[Define to 1 if you are using the Sun WorkShop])
+  dnl AC_DEFINE([FC_SUN],1,[Define to 1 if you are using the Sun WorkShop])
   fc_type="sun"
   fc_version=`echo "${abi_result}" | sed -e 's/.* Fortran 95 //;s/ .*//'`
   if test "${fc_version}" = "${abi_result}" -o "${fc_version}" = ""; then
@@ -540,7 +543,7 @@ AC_DEFUN([ABI_PROG_FC],
  fc_wrap="no"
 
  dnl Determine Fortran compiler type (the order is important)
- AC_MSG_CHECKING([which type of Fortran compiler we have])
+ dnl AC_MSG_CHECKING([which type of Fortran compiler we have])
 
  if test "${fc_type}" = "UNKNOWN"; then
   _ABI_CHECK_FC_G95(${FC})
@@ -593,7 +596,7 @@ AC_DEFUN([ABI_PROG_FC],
  fc_version=`echo ${fc_version} | cut -d. -f1-2`
 
  dnl Display final result
- AC_MSG_RESULT([${fc_type} ${fc_version}])
+ dnl AC_MSG_RESULT([${fc_type} ${fc_version}])
 
  dnl Schedule compiler info for substitution
  AC_SUBST(fc_type)

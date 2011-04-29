@@ -31,7 +31,7 @@ AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
   integer :: i
   i = xc_f90_info_number(info)
 ]), [acx_libxc_ok=yes; FCFLAGS_LIBXC="$libxc_fcflags"; LIBS_LIBXC="$libxc_libs"], [])
-AC_MSG_RESULT([$acx_libxc_ok ($LIBS_LIBXC)])
+AC_MSG_RESULT([$acx_libxc_ok ($FCFLAGS_LIBXC $LIBS_LIBXC)])
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_libxc_ok" = xyes; then

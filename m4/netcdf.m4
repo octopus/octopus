@@ -41,7 +41,7 @@ if test "$acx_netcdf_ok" != disabled; then
     fi
   done
 fi
-AC_MSG_RESULT([$acx_netcdf_ok ($LIBS_NETCDF)])
+AC_MSG_RESULT([$acx_netcdf_ok ($FCFLAGS_NETCDF $LIBS_NETCDF)])
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_netcdf_ok" = xyes; then

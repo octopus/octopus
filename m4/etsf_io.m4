@@ -9,9 +9,8 @@ case $with_etsf_io_prefix in
   "") if test x$FCFLAGS_ETSF_IO == x; then
     FCFLAGS_ETSF_IO="-I/usr/include"
   fi;;
-  *) ABI_PROG_FC()
-     LIBS_ETSF_IO="-L$with_etsf_io_prefix/lib"; 
-     FCFLAGS_ETSF_IO="$ax_cv_f90_modflag$with_etsf_io_prefix/include/$fc_type" ;;
+  *) LIBS_ETSF_IO="-L$with_etsf_io_prefix/lib"; 
+     FCFLAGS_ETSF_IO="$ax_cv_f90_modflag$with_etsf_io_prefix/include$fc_type" ;;
 esac
 
 AC_ARG_WITH(etsf-io-include, [AS_HELP_STRING([--with-etsf-io-include=DIR], [Directory where etsf_io Fortran headers were installed.])])
@@ -32,16 +31,23 @@ acx_etsf_io_save_FCFLAGS="$FCFLAGS"
 dnl The tests
 AC_MSG_CHECKING([for etsf_io])
 if test "$acx_etsf_io_ok" != disabled; then
-  etsf_io_fcflags="$FCFLAGS_ETSF_IO"; etsf_io_libs="$LIBS_ETSF_IO -letsf_io_utils -letsf_io"
-  FCFLAGS="$etsf_io_fcflags $acx_etsf_io_save_FCFLAGS $FCFLAGS_NETCDF"
-  LIBS="$etsf_io_libs $acx_etsf_io_save_LIBS $LIBS_NETCDF"
-  AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
-    use etsf_io
-    type(etsf_vars) :: vars
-    call etsf_io_vars_free(vars)
-  ]), [acx_etsf_io_ok=yes; FCFLAGS_ETSF_IO="$etsf_io_fcflags"; LIBS_ETSF_IO="$etsf_io_libs"], [])
+  etsf_io_libs="$LIBS_ETSF_IO -letsf_io_utils -letsf_io"
+  ABI_PROG_FC()
+  for etsf_io_fcflags in "$FCFLAGS_ETSF_IO" "$FCFLAGS_ETSF_IO"/$fc_type ; do
+    FCFLAGS="$etsf_io_fcflags $acx_etsf_io_save_FCFLAGS $FCFLAGS_NETCDF"
+    LIBS="$etsf_io_libs $acx_etsf_io_save_LIBS $LIBS_NETCDF"
+    AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
+      use etsf_io
+      type(etsf_vars) :: vars
+      call etsf_io_vars_free(vars)
+    ]), [acx_etsf_io_ok=yes; FCFLAGS_ETSF_IO="$etsf_io_fcflags"; LIBS_ETSF_IO="$etsf_io_libs"], [])
+    if test $acx_netcdf_ok == yes; then 
+      FCFLAGS_ETSF_IO=$etsf_io_fcflags
+      break
+    fi
+  done
 fi
-AC_MSG_RESULT([$acx_etsf_io_ok ($LIBS_ETSF_IO)])
+AC_MSG_RESULT([$acx_etsf_io_ok ($FCFLAGS_ETSF_IO $LIBS_ETSF_IO)])
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_etsf_io_ok" = xyes; then
