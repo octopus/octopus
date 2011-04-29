@@ -33,7 +33,7 @@ dnl The tests
 AC_MSG_CHECKING([for etsf_io])
 if test "$acx_etsf_io_ok" != disabled; then
   etsf_io_fcflags="$FCFLAGS_ETSF_IO"; etsf_io_libs="$LIBS_ETSF_IO -letsf_io_utils -letsf_io"
-  FCFLAGS="$etsf_io_fcflags $acx_etsf_io_save_FCFLAGS"
+  FCFLAGS="$etsf_io_fcflags $acx_etsf_io_save_FCFLAGS $FCFLAGS_NETCDF"
   LIBS="$etsf_io_libs $acx_etsf_io_save_LIBS $LIBS_NETCDF"
   AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
     use etsf_io
