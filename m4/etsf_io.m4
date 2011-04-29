@@ -10,7 +10,7 @@ case $with_etsf_io_prefix in
     FCFLAGS_ETSF_IO="-I/usr/include"
   fi;;
   *) LIBS_ETSF_IO="-L$with_etsf_io_prefix/lib"; 
-     FCFLAGS_ETSF_IO="$ax_cv_f90_modflag$with_etsf_io_prefix/include$fc_type" ;;
+     FCFLAGS_ETSF_IO="$ax_cv_f90_modflag$with_etsf_io_prefix/include" ;;
 esac
 
 AC_ARG_WITH(etsf-io-include, [AS_HELP_STRING([--with-etsf-io-include=DIR], [Directory where etsf_io Fortran headers were installed.])])
@@ -41,8 +41,7 @@ if test "$acx_etsf_io_ok" != disabled; then
       type(etsf_vars) :: vars
       call etsf_io_vars_free(vars)
     ]), [acx_etsf_io_ok=yes; FCFLAGS_ETSF_IO="$etsf_io_fcflags"; LIBS_ETSF_IO="$etsf_io_libs"], [])
-    if test $acx_netcdf_ok == yes; then 
-      FCFLAGS_ETSF_IO=$etsf_io_fcflags
+    if test $acx_etsf_io_ok == yes; then 
       break
     fi
   done
