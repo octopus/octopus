@@ -113,7 +113,7 @@ module states_m
 
     type(batch_t), pointer   :: psib(:, :)            !< A set of wave-functions blocks
     integer                  :: nblocks               !< The number of blocks
-    integer, pointer         :: iblock(:, :)          !< A map, that for each state index, returns the index of block that contains it. 
+    integer, pointer         :: iblock(:, :)          !< A map, that for each state index, returns the index of block containing it
     logical, pointer         :: block_is_local(:, :)  !< It is true if the block is in this node.
     logical                  :: block_initialized     !< For keeping track of the blocks to avoid memory leaks
 
@@ -187,31 +187,33 @@ contains
 
     PUSH_SUB(states_null)
 
-    nullify(st%dpsi, st%zpsi, st%zphi, st%rho, st%current, st%rho_core, st%frozen_rho, st%eigenval)
-    do il=1, NLEADS
+    call states_dim_null(st%d)
+    st%d%orth_method = 0
+    call modelmb_particles_nullify(st%modelmbparticles)
+    st%priv%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
+
+    nullify(st%dpsi, st%zpsi)
+    nullify(st%psib, st%iblock, st%block_is_local)
+    st%block_initialized = .false.
+
+    nullify(st%zphi, st%ob_eigenval, st%ob_occ)
+    st%open_boundaries = .false.
+    call states_dim_null(st%ob_d)
+    do il = 1, 2*MAX_DIM
       nullify(st%ob_lead(il)%intf_psi, st%ob_lead(il)%rho, st%ob_lead(il)%self_energy)
     end do
-    nullify(st%ob_eigenval, st%ob_occ)
-    nullify(st%occ, st%spin, st%node, st%user_def_states)
-    nullify(st%st_range, st%st_num)
-    nullify(st%psib, st%iblock, st%block_is_local)
-    nullify(st%ap%schedule)
+
+    nullify(st%user_def_states)
+    nullify(st%rho, st%current)
+    nullify(st%rho_core, st%frozen_rho)
+    nullify(st%eigenval, st%occ, st%spin)
 
     st%parallel_in_states = .false.
-
-    ! By default, calculations use real wavefunctions
-    st%priv%wfs_type = TYPE_FLOAT
-
-    st%block_initialized = .false.
-    call states_dim_null(st%d)
-    call states_dim_null(st%ob_d)
-    call modelmb_particles_nullify(st%modelmbparticles)
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
-    st%d%orth_method = 0
-
-    st%open_boundaries = .false.
+    nullify(st%node,st%st_range, st%st_num)
+    nullify(st%ap%schedule)
 
     POP_SUB(states_null)
   end subroutine states_null
@@ -1156,8 +1158,8 @@ return
        end do
 
        SAFE_DEALLOCATE_P(st%psib)
-       SAFE_DEALLOCATE_P(st%block_is_local)
        SAFE_DEALLOCATE_P(st%iblock)
+       SAFE_DEALLOCATE_P(st%block_is_local)
        st%block_initialized = .false.
     end if
 
@@ -1315,55 +1317,71 @@ return
 
     call states_null(stout)
 
-    stout%priv%wfs_type   = stin%priv%wfs_type
     call states_dim_copy(stout%d, stin%d)
-    stout%nst        = stin%nst
-    stout%qtot       = stin%qtot
-    stout%val_charge = stin%val_charge
-    call smear_copy(stout%smear, stin%smear)
-    stout%parallel_in_states = stin%parallel_in_states
-    stout%lnst       = stin%lnst
-    stout%st_start   = stin%st_start
-    stout%st_end     = stin%st_end
+    call modelmb_particles_copy(stout%modelmbparticles, stin%modelmbparticles)
+    stout%priv%wfs_type = stin%priv%wfs_type
+    stout%nst           = stin%nst
+
+    stout%only_userdef_istates = stin%only_userdef_istates
     call loct_pointer_copy(stout%dpsi, stin%dpsi)
     call loct_pointer_copy(stout%zpsi, stin%zpsi)
+    
+    ! the call to init_block is done at the end of this subroutine
+    ! it allocates iblock, psib, block_is_local
+    stout%nblocks = stin%nblocks
+
+    stout%open_boundaries = stin%open_boundaries
+    ! Warning: some of the "open boundaries" variables are not copied.
+
     call loct_pointer_copy(stout%user_def_states, stin%user_def_states)
 
     call loct_pointer_copy(stout%rho, stin%rho)
     call loct_pointer_copy(stout%current, stin%current)
+
     stout%nlcc = stin%nlcc
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
+    stout%current_in_tau = stin%current_in_tau
+
     call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
+
     call loct_pointer_copy(stout%eigenval, stin%eigenval)
     stout%fixed_occ = stin%fixed_occ
     call loct_pointer_copy(stout%occ, stin%occ)
     stout%fixed_spins = stin%fixed_spins
+
     call loct_pointer_copy(stout%spin, stin%spin)
-    call loct_pointer_copy(stout%node, stin%node)
+
+    stout%qtot       = stin%qtot
+    stout%val_charge = stin%val_charge
+
+    stout%extrastates = stin%extrastates
+    call smear_copy(stout%smear, stin%smear)
+
+    stout%parallel_in_states = stin%parallel_in_states
     call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
-    call loct_pointer_copy(stout%st_range, stin%st_range)
-    call loct_pointer_copy(stout%st_num, stin%st_num)
-
-    call modelmb_particles_copy(stout%modelmbparticles, stin%modelmbparticles)
-
-    if(stin%parallel_in_states) call multicomm_all_pairs_copy(stout%ap, stin%ap)
-
-    stout%open_boundaries = stin%open_boundaries
-    ! Some of the "open boundaries" variables are not copied.
-
-    stout%symmetrize_density = stin%symmetrize_density
-
-    if(associated(stout%dpsi) .or. associated(stout%zpsi)) then
-      call states_init_block(stout)
-    end if
-
     stout%dom_st_kpt_mpi_grp = stin%dom_st_kpt_mpi_grp
-    stout%st_kpt_mpi_grp = stin%st_kpt_mpi_grp
-    stout%st_kpt_mpi_grp = stin%st_kpt_mpi_grp
+    stout%st_kpt_mpi_grp     = stin%st_kpt_mpi_grp
+    stout%st_kpt_mpi_grp     = stin%st_kpt_mpi_grp
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_copy(stin%dom_st_proc_grid, stout%dom_st_proc_grid)
 #endif
+
+    stout%lnst       = stin%lnst
+    stout%st_start   = stin%st_start
+    stout%st_end     = stin%st_end
+    call loct_pointer_copy(stout%node, stin%node)
+    call loct_pointer_copy(stout%st_range, stin%st_range)
+    call loct_pointer_copy(stout%st_num, stin%st_num)
+
+    if(stin%parallel_in_states) call multicomm_all_pairs_copy(stout%ap, stin%ap)
+
+    stout%symmetrize_density = stin%symmetrize_density
+
+    stout%block_initialized = .false.
+    if(stin%block_initialized) then
+      call states_init_block(stout)
+    end if
 
     POP_SUB(states_copy)
   end subroutine states_copy
@@ -1377,11 +1395,19 @@ return
 
     PUSH_SUB(states_end)
     
-#ifdef HAVE_SCALAPACK
-    call blacs_proc_grid_end(st%dom_st_proc_grid)
-#endif
+    call states_dim_end(st%d)
+    call modelmb_particles_end(st%modelmbparticles)
 
+    ! this deallocates dpsi, zpsi, psib, iblock, iblock, st%ob_lead(:)%intf_psi
     call states_deallocate_wfns(st)
+
+    SAFE_DEALLOCATE_P(st%zphi)
+    SAFE_DEALLOCATE_P(st%ob_eigenval)
+    call states_dim_end(st%ob_d)
+    SAFE_DEALLOCATE_P(st%ob_occ)
+    do il = 1, 2*MAX_DIM
+      SAFE_DEALLOCATE_P(st%ob_lead(il)%self_energy)
+    end do
 
     SAFE_DEALLOCATE_P(st%user_def_states)
 
@@ -1389,11 +1415,14 @@ return
     SAFE_DEALLOCATE_P(st%current)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
-    SAFE_DEALLOCATE_P(st%eigenval)
 
+    SAFE_DEALLOCATE_P(st%eigenval)
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%spin)
 
+#ifdef HAVE_SCALAPACK
+    call blacs_proc_grid_end(st%dom_st_proc_grid)
+#endif
     SAFE_DEALLOCATE_P(st%node)
     SAFE_DEALLOCATE_P(st%st_range)
     SAFE_DEALLOCATE_P(st%st_num)
@@ -1401,18 +1430,6 @@ return
     if(st%parallel_in_states) then
       SAFE_DEALLOCATE_P(st%ap%schedule)
     end if
-
-    SAFE_DEALLOCATE_P(st%zphi)
-    call states_dim_end(st%d)
-
-    call states_dim_end(st%ob_d)
-    SAFE_DEALLOCATE_P(st%ob_eigenval)
-    SAFE_DEALLOCATE_P(st%ob_occ)
-    do il = 1, NLEADS
-      SAFE_DEALLOCATE_P(st%ob_lead(il)%self_energy)
-    end do
-
-    call modelmb_particles_end(st%modelmbparticles)
 
     POP_SUB(states_end)
   end subroutine states_end

@@ -233,11 +233,11 @@ contains
     ! This variable is documented in scf/scf.F90
     call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF, writ%lmm_r, units_inp%length)
 
-    if( (writ%out(OUT_PROJ)%write)  .or.  (writ%out(OUT_POPULATIONS)%write) ) then
+    if(writ%out(OUT_PROJ)%write.or.writ%out(OUT_POPULATIONS)%write) then
       call states_copy(writ%gs_st, st)
 
       ! clean up all the stuff we have to reallocate
-      SAFE_DEALLOCATE_P(writ%gs_st%zpsi)
+      call states_deallocate_wfns(writ%gs_st)
       SAFE_DEALLOCATE_P(writ%gs_st%occ)
       SAFE_DEALLOCATE_P(writ%gs_st%eigenval)
       SAFE_DEALLOCATE_P(writ%gs_st%node)
@@ -422,7 +422,9 @@ contains
       end do
     end if
 
-    if(writ%out(OUT_POPULATIONS)%write .or. writ%out(OUT_PROJ)%write) call states_end(writ%gs_st)
+    if(writ%out(OUT_PROJ)%write.or.writ%out(OUT_POPULATIONS)%write) then
+      call states_end(writ%gs_st)
+    end if
 
     POP_SUB(td_write_end)
   end subroutine td_write_end
@@ -1483,8 +1485,9 @@ contains
       end if
 
       SAFE_ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
-      do idir = 1, 3
-        projections(:,:,:) = M_Z0
+      do idir = 1, geo%space%dim
+        projections = M_Z0
+
         call dipole_matrix_elements(idir)
 
         if(mpi_grp_is_root(mpi_world)) then
@@ -1492,7 +1495,7 @@ contains
           call write_iter_string(out_proj, "# ------")
           call write_iter_header(out_proj, aux)
           do ik = 1, st%d%nik
-            do ist = gs_st%st_start, st%nst
+            do ist = max(gs_st%st_start, st%st_start), st%nst
               do uist = gs_st%st_start, gs_st%st_end
                 call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
                 call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
@@ -1565,7 +1568,8 @@ contains
       CMPLX, allocatable :: xpsi(:,:)
 
       PUSH_SUB(td_write_proj.dipole_matrix_elements)
-
+ 
+      ! n_dip is not defined for more than space%dim
       call geometry_dipole(geo, n_dip)
 
       SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:st%d%dim))

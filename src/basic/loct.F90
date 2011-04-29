@@ -78,6 +78,10 @@ module loct_m
     module procedure aloct_pointer_copy_2
     module procedure aloct_pointer_copy_3
     module procedure aloct_pointer_copy_4
+    module procedure lloct_pointer_copy_1
+    module procedure lloct_pointer_copy_2
+    module procedure lloct_pointer_copy_3
+    module procedure lloct_pointer_copy_4
   end interface loct_pointer_copy
 
 
@@ -278,6 +282,12 @@ contains
 
 #  define TYPE  character(len=*)
 #  define SUBNAME(x) a ## x
+#  include "loct_inc.F90"
+#  undef SUBNAME
+#  undef TYPE
+
+#  define TYPE  logical
+#  define SUBNAME(x) l ## x
 #  include "loct_inc.F90"
 #  undef SUBNAME
 #  undef TYPE
