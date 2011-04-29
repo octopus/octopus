@@ -1,16 +1,17 @@
 AC_DEFUN([ACX_ETSF_IO], [
 AC_REQUIRE([ACX_NETCDF])
 acx_etsf_io_ok=no
-FCFLAGS_ETSF_IO=""
-LIBS_ETSF_IO=""
 
 dnl Check if the library was given in the command line
 AC_ARG_WITH(etsf-io-prefix, [AS_HELP_STRING([--with-etsf-io-prefix=DIR], [Directory where etsf_io was installed.])])
 case $with_etsf_io_prefix in
   no ) acx_etsf_io_ok=disabled ;;
-  "") LIBS_ETSF_IO="-letsf_io_utils -letsf_io"; FCFLAGS_ETSF_IO="-I/usr/include" ;;
-  *) LIBS_ETSF_IO="-L$with_etsf_io_prefix/lib -letsf_io_utils -letsf_io"; 
-     FCFLAGS_ETSF_IO="$ax_cv_f90_modflag$with_etsf_io_prefix/include" ;;
+  "") if test x$FCFLAGS_ETSF_IO == x; then
+    FCFLAGS_ETSF_IO="-I/usr/include"
+  fi;;
+  *) ABI_PROG_FC()
+     LIBS_ETSF_IO="-L$with_etsf_io_prefix/lib"; 
+     FCFLAGS_ETSF_IO="$ax_cv_f90_modflag$with_etsf_io_prefix/include/$fc_type" ;;
 esac
 
 AC_ARG_WITH(etsf-io-include, [AS_HELP_STRING([--with-etsf-io-include=DIR], [Directory where etsf_io Fortran headers were installed.])])
@@ -31,7 +32,7 @@ acx_etsf_io_save_FCFLAGS="$FCFLAGS"
 dnl The tests
 AC_MSG_CHECKING([for etsf_io])
 if test "$acx_etsf_io_ok" != disabled; then
-  etsf_io_fcflags="$FCFLAGS_ETSF_IO"; etsf_io_libs="$LIBS_ETSF_IO"
+  etsf_io_fcflags="$FCFLAGS_ETSF_IO"; etsf_io_libs="$LIBS_ETSF_IO -letsf_io_utils -letsf_io"
   FCFLAGS="$etsf_io_fcflags $acx_etsf_io_save_FCFLAGS"
   LIBS="$etsf_io_libs $acx_etsf_io_save_LIBS $LIBS_NETCDF"
   AC_LINK_IFELSE(AC_LANG_PROGRAM([],[

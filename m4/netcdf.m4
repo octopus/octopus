@@ -1,13 +1,13 @@
 AC_DEFUN([ACX_NETCDF], [
 acx_netcdf_ok=no
-FCFLAGS_NETCDF=""
-LIBS_NETCDF=""
 
 dnl Check if the library was given in the command line
 AC_ARG_WITH(netcdf-prefix, [AS_HELP_STRING([--with-netcdf-prefix=DIR], [Directory where netcdf was installed.])])
 case $with_netcdf_prefix in
   no ) acx_netcdf_ok=disabled ;;
-  "") LIBS_NETCDF=""; FCFLAGS_NETCDF="-I/usr/include" ;;
+  "") if test x$FCFLAGS_NETCDF == x; then
+    FCFLAGS_NETCDF="-I/usr/include"
+  fi;;
   *) LIBS_NETCDF="-L$with_netcdf_prefix/lib"; FCFLAGS_NETCDF="$ax_cv_f90_modflag$with_netcdf_prefix/include" ;;
 esac
 
@@ -24,10 +24,10 @@ acx_netcdf_save_FCFLAGS="$FCFLAGS"
 dnl The tests
 AC_MSG_CHECKING([for netcdf])
 if test "$acx_netcdf_ok" != disabled; then
-  for netcdf_libsl in "-lnetcdff -lnetcdf" -lnetcdf; do
-    netcdf_fcflags="$FCFLAGS_NETCDF"
+  netcdf_fcflags="$FCFLAGS_NETCDF"
+  FCFLAGS="$netcdf_fcflags $acx_netcdf_save_FCFLAGS"
+  for netcdf_libsl in "" -lnetcdf "-lnetcdff -lnetcdf"; do
     netcdf_libs="$LIBS_NETCDF $netcdf_libsl"
-    FCFLAGS="$netcdf_fcflags $acx_netcdf_save_FCFLAGS"
     LIBS="$netcdf_libs $acx_netcdf_save_LIBS"
     AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
       use netcdf
