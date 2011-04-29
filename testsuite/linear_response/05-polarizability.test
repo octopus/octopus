@@ -2,7 +2,7 @@
 # $Id: 04-vib_modes.test 4255 2008-06-10 12:56:21Z marques $
 
 Test       : Sodium static polarizability
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 

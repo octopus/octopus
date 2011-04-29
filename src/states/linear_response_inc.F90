@@ -31,7 +31,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
   R_TYPE,              intent(in)    :: omega
 
   integer :: jst
-  FLOAT :: xx, theta, theta_ij, theta_ji, alpha_j, dsmear
+  FLOAT :: xx, yy, theta, theta_ij, theta_ji, alpha_j, dsmear, delta
   R_TYPE :: delta_e
   FLOAT, allocatable :: theta_Fi(:)
   R_TYPE, allocatable :: beta_ij(:)
@@ -56,7 +56,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
     theta_Fi(1:st%nst) = st%occ(1:st%nst, ik) / st%smear%el_per_state
 
     do jst = 1, st%nst
-      if(st%smear%method .eq. SMEAR_FIXED_OCC) then
+      if(st%smear%method .eq. SMEAR_FIXED_OCC .or. st%smear%method .eq. SMEAR_COLD) then
         if(theta_Fi(ist) + theta_Fi(jst) > M_EPSILON) then
           theta_ij = theta_Fi(jst) / (theta_Fi(ist) + theta_Fi(jst))
           theta_ji = theta_Fi(ist) / (theta_Fi(ist) + theta_Fi(jst))
@@ -84,7 +84,10 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
         ! in dynamic case, need to add 'self term' without omega, for variation of occupations
         if(st%smear%method .ne. SMEAR_FIXED_OCC) then 
           xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
-          beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(smear_delta_function(st%smear, xx)/dsmear)
+          yy = (st%smear%e_fermi - st%eigenval(jst, ik) + CNST(1e-14))/dsmear
+          ! average for better numerics, as in ABINIT
+          delta = M_HALF * (smear_delta_function(st%smear, xx) + smear_delta_function(st%smear, yy))
+          beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(delta/dsmear)
         endif
       end if
 
