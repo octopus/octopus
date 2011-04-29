@@ -325,6 +325,7 @@ contains
     end select
 
     if(ks%new_hartree) then
+      call poisson_end(ks%hartree_solver)
       SAFE_DEALLOCATE_P(ks%hartree_solver)
     end if
 
