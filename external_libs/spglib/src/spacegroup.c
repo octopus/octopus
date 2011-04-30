@@ -243,7 +243,7 @@ Symmetry tbl_get_conventional_symmetry(const Bravais *bravais,
 static int get_spacegroup_number(const Bravais *bravais, const Cell *cell,
 				 const Symmetry *prim_sym, const double symprec)
 {
-  int i, order;
+  int i, order, spacegroup_data;
   Symmetry symmetry;
 
   symmetry = tbl_get_conventional_symmetry(bravais, cell, prim_sym, symprec);
@@ -274,7 +274,11 @@ static int get_spacegroup_number(const Bravais *bravais, const Cell *cell,
   debug_print("holohedry: %d\n", bravais->holohedry);
   debug_print("centering: %d\n", bravais->centering);
 
-  return tbl_get_spacegroup_data(&symmetry, bravais, rot_class, symprec);
+  spacegroup_data = tbl_get_spacegroup_data(&symmetry, bravais, rot_class, symprec);
+
+  sym_delete_symmetry(&symmetry);
+  
+  return spacegroup_data;
 }
 
 static int get_class_order(int rot[3][3])
