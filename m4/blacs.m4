@@ -2,7 +2,7 @@ dnl NOT available from the GNU Autoconf Macro Archive at:
 dnl http://www.gnu.org/software/ac-archive/htmldoc/acx_blacs.html
 dnl
 AC_DEFUN([ACX_BLACS], [
-dnl AC_REQUIRE([ACX_BLAS])
+AC_REQUIRE([ACX_MPI])
 acx_blacs_ok=no
 
 dnl We cannot use BLACS if MPI is not found
