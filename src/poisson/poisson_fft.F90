@@ -716,29 +716,7 @@ contains
     
     PUSH_SUB(poisson_fft)
     
-    default_fft_library = FFTW3_LIB
-    !%Variable FFTLibrary
-    !%Type logical
-    !%Section Hamiltonian::Poisson
-    !%Default fftw 
-    !%Description
-    !% (experimental) You can select the FFT library to use.
-    !%Option fftw 0
-    !% Uses FFTW3 library.
-    !%Option pfft 1
-    !% Uses PFFT library, which has to be linked.
-    !%End
-    call parse_integer(datasets_check('FFTLibrary'), default_fft_library, fft_cf%fft_library)
-#ifndef HAVE_PFFT
-    if (fft_cf%fft_library == PFFT_LIB) then
-      write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
-      call messages_fatal(1)
-    end if
-#endif
-
-!    write(*,*) "LIBRARY = ",fft_cf%fft_library
-
-    average=M_ZERO !this avoids a non-initialized warning
+    average = M_ZERO !this avoids a non-initialized warning
     
     if(mesh%parallel_in_domains) then
       SAFE_ALLOCATE(rho_global(1:mesh%np_global))

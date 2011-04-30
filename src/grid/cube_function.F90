@@ -193,10 +193,21 @@ contains
     cf%offset = 0
     
     nullify(cf%fft)
+
+    !%Variable FFTLibrary
+    !%Type logical
+    !%Section Hamiltonian::Poisson
+    !%Default fftw 
+    !%Description
+    !% (experimental) You can select the FFT library to use.
+    !%Option fftw 0
+    !% Uses FFTW3 library.
+    !%Option pfft 1
+    !% (experimental) Uses PFFT library, which has to be linked.
+    !%End
     
     default_fft_library = FFTW3_LIB
 
-    ! this variable is defined in src/poisson/poisson_fft.F90
     call parse_integer(datasets_check('FFTLibrary'), default_fft_library, cf%fft_library)
 #ifndef HAVE_PFFT
     if (cf%fft_library == PFFT_LIB) then
