@@ -42,6 +42,7 @@ module fourier_space_m
     zcube_function_free_fs,        &
     dcube_function_fft_init,       &
     zcube_function_fft_init,       &
+    cube_function_fft_end,         &
     dcube_function_pfft_init,      &
     zcube_function_pfft_init,      &
     dcube_function_RS2FS,          &
@@ -65,6 +66,20 @@ module fourier_space_m
   end type fourier_space_op_t
 
 contains
+
+  subroutine cube_function_fft_end(cf)
+    type(cube_function_t),     intent(inout) :: cf
+
+    PUSH_SUB(cube_function_fft_end)
+
+    if(associated(cf%fft)) then
+      call fft_end(cf%fft)
+      SAFE_DEALLOCATE_P(cf%fft)
+    end if
+
+    POP_SUB(cube_function_fft_end)
+
+  end subroutine cube_function_fft_end
 
 #include "undef.F90"
 #include "real.F90"

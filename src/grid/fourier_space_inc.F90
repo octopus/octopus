@@ -185,7 +185,7 @@ end subroutine X(fourier_space_op_end)
 ! ---------------------------------------------------------
 subroutine X(fourier_space_op_apply)(this, cube)
   type(fourier_space_op_t), intent(in)     :: this
-  type(cube_function_t),            intent(inout)  :: cube
+  type(cube_function_t),    intent(inout)  :: cube
   
   integer :: ii, jj, kk
   

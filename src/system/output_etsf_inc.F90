@@ -137,6 +137,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
     call fourier_shell_end(shell)
     call zcube_function_free_rs(cube)
+    call cube_function_fft_end(cube)
   end if
 #endif
 

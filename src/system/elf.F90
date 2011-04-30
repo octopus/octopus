@@ -293,7 +293,8 @@ contains
       SAFE_DEALLOCATE_A(jj)
 
     end do do_is
-
+    
+    call cube_function_fft_end(cube_function_tmp)
     call cube_function_end(cube_function_tmp)
 
     POP_SUB(elf_calc_fs)
