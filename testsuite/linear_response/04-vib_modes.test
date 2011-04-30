@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Sodium vibrational frequency
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 

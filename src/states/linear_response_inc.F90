@@ -127,15 +127,13 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   end if
 
   ! correction to density response due to shift in Fermi level
-  ! it is zero for a finite system since the average potential cannot change with neutral perturbations
   ! it is zero without smearing since there is no Fermi level
   ! it is zero if the occupations are fixed since there is no Fermi level
   ! see Baroni et al. eqs. 68, 75, 79; Quantum ESPRESSO PH/ef_shift.f90, localdos.f90
   ! generalized to TDDFT. Note that their \Delta n_ext = 0 unless the perturbation explicitly
   ! changes the charge of the system, as in "computational alchemy" (PRL 66 2116 (1991)).
   ! n(r,E_F) * dV_SCF = dl_rho, before correction.
-  is_ef_shift = mesh%sb%dim == mesh%sb%periodic_dim .and. &
-    .not. smear_is_semiconducting(st%smear) .and. st%smear%method .ne. SMEAR_FIXED_OCC
+  is_ef_shift = .not. smear_is_semiconducting(st%smear) .and. st%smear%method .ne. SMEAR_FIXED_OCC
   
   ! initialize density
   do isigma = 1, nsigma
