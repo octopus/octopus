@@ -67,6 +67,7 @@ module geom_opt_m
     type(mesh_t),        pointer :: mesh
     type(states_t),      pointer :: st
     integer                      :: dim
+    integer                      :: total_dim
   end type geom_opt_t
 
   type(geom_opt_t) :: g_opt
@@ -114,19 +115,17 @@ contains
     call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, hm)
 
     !Initial point
-    SAFE_ALLOCATE(coords(1:g_opt%dim * g_opt%geo%natoms))
-    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
-      coords(g_opt%dim * iatom + idir) = g_opt%geo%atom(iatom + 1)%x(idir)
-    end forall
+    SAFE_ALLOCATE(coords(1:g_opt%total_dim))
+    call to_coords(g_opt, coords)
 
     !Minimize
     select case(g_opt%method)
     case(MINMETHOD_NMSIMPLEX)
-      ierr = loct_minimize_direct(g_opt%method, g_opt%dim * g_opt%geo%natoms, coords(1), real(g_opt%step, 8),&
+      ierr = loct_minimize_direct(g_opt%method, g_opt%total_dim, coords(1), real(g_opt%step, 8),&
            real(g_opt%toldr, 8), g_opt%max_iter, &
            calc_point_ng, write_iter_info_ng, energy)
     case default
-      ierr = loct_minimize(g_opt%method, g_opt%dim * g_opt%geo%natoms, coords(1), real(g_opt%step, 8),&
+      ierr = loct_minimize(g_opt%method, g_opt%total_dim, coords(1), real(g_opt%step, 8),&
            real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
            calc_point, write_iter_info, energy)
     end select
@@ -138,9 +137,7 @@ contains
     end if
 
     ! print out geometry
-    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
-      g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim * iatom + idir)
-    end forall
+    call from_coords(g_opt, coords)
     call atom_write_xyz(".", "min", g_opt%geo, g_opt%dim)
 
     SAFE_DEALLOCATE_A(coords)
@@ -163,6 +160,8 @@ contains
       g_opt%hm     => hm
       g_opt%syst   => sys
       g_opt%dim    =  sys%gr%mesh%sb%dim
+
+      g_opt%total_dim = g_opt%dim*g_opt%geo%natoms
 
       !%Variable GOMethod
       !%Type integer
@@ -317,9 +316,7 @@ contains
 
     PUSH_SUB(calc_point)
 
-    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
-      g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim*iatom + idir)
-    end forall
+    call from_coords(g_opt, coords)
 
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .true.)
 
@@ -394,9 +391,7 @@ contains
     write(title, '(f16.10)') units_from_atomic(units_out%energy, energy)
     call atom_write_xyz("geom", trim(c_geom_iter), g_opt%geo, g_opt%dim, comment=trim(title))
 
-    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
-      g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim * iatom + idir)
-    end forall
+    call from_coords(g_opt, coords)
 
     message(1) = ""
     message(2) = ""
@@ -416,6 +411,40 @@ contains
     POP_SUB(write_iter_info)
   end subroutine write_iter_info
 
+  ! ---------------------------------------------------------
+
+  subroutine to_coords(gopt, coords)
+    type(geom_opt_t), intent(in)  :: gopt
+    FLOAT,            intent(out) :: coords(:)
+
+    integer :: iatom, idir
+
+    PUSH_SUB(to_coords)
+
+    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
+      coords(g_opt%dim*iatom + idir) = g_opt%geo%atom(iatom + 1)%x(idir)
+    end forall
+
+    POP_SUB(to_coords)
+  end subroutine to_coords
+
+  ! ---------------------------------------------------------
+
+  subroutine from_coords(gopt, coords)
+    type(geom_opt_t), intent(out) :: gopt
+    FLOAT,            intent(in)  :: coords(:)
+
+    integer :: iatom, idir
+
+    PUSH_SUB(from_coords)
+
+    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
+      g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim*iatom + idir) 
+    end forall
+
+    POP_SUB(from_coords)
+  end subroutine from_coords
+    
   ! ---------------------------------------------------------
   ! Same as write_iter_info, but without the gradients.
   subroutine write_iter_info_ng(geom_iter, size, energy, maxdx, coords)
