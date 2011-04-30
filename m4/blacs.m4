@@ -2,13 +2,12 @@ dnl NOT available from the GNU Autoconf Macro Archive at:
 dnl http://www.gnu.org/software/ac-archive/htmldoc/acx_blacs.html
 dnl
 AC_DEFUN([ACX_BLACS], [
-AC_REQUIRE([ACX_MPI])
 acx_blacs_ok=no
 
 dnl We cannot use BLACS if MPI is not found
 if test "x$acx_mpi_ok" != xyes; then
   acx_blacs_ok=nompi
-fi
+else
 
 dnl Get fortran linker name of BLACS function to check for.
 dnl if not compiling with fortran, convert the names
@@ -64,5 +63,6 @@ else
   AC_MSG_WARN([Could not find Blacs library (required for Scalapack). 
                *** Will compile without Scalapack support])
   $2
+fi
 fi
 ])dnl ACX_BLACS
