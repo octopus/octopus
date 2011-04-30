@@ -523,6 +523,7 @@ contains
       end do
 
       SAFE_DEALLOCATE_A(rho_sphere)
+      call submesh_end(sphere)
       nullify(ps)
 
     case(SPEC_FULL_DELTA)
