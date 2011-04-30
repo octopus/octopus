@@ -67,7 +67,7 @@ module geom_opt_m
     type(mesh_t),        pointer :: mesh
     type(states_t),      pointer :: st
     integer                      :: dim
-    integer                      :: total_dim
+    integer                      :: size
   end type geom_opt_t
 
   type(geom_opt_t) :: g_opt
@@ -115,17 +115,17 @@ contains
     call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, hm)
 
     !Initial point
-    SAFE_ALLOCATE(coords(1:g_opt%total_dim))
+    SAFE_ALLOCATE(coords(1:g_opt%size))
     call to_coords(g_opt, coords)
 
     !Minimize
     select case(g_opt%method)
     case(MINMETHOD_NMSIMPLEX)
-      ierr = loct_minimize_direct(g_opt%method, g_opt%total_dim, coords(1), real(g_opt%step, 8),&
+      ierr = loct_minimize_direct(g_opt%method, g_opt%size, coords(1), real(g_opt%step, 8),&
            real(g_opt%toldr, 8), g_opt%max_iter, &
            calc_point_ng, write_iter_info_ng, energy)
     case default
-      ierr = loct_minimize(g_opt%method, g_opt%total_dim, coords(1), real(g_opt%step, 8),&
+      ierr = loct_minimize(g_opt%method, g_opt%size, coords(1), real(g_opt%step, 8),&
            real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
            calc_point, write_iter_info, energy)
     end select
@@ -161,7 +161,7 @@ contains
       g_opt%syst   => sys
       g_opt%dim    =  sys%gr%mesh%sb%dim
 
-      g_opt%total_dim = g_opt%dim*g_opt%geo%natoms
+      g_opt%size = g_opt%dim*g_opt%geo%natoms
 
       !%Variable GOMethod
       !%Type integer
@@ -306,7 +306,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine calc_point(size, coords, objective, getgrad, df)
-    integer,     intent(in)    :: size         ! must equal dim * natoms
+    integer,     intent(in)    :: size
     REAL_DOUBLE, intent(in)    :: coords(size)
     REAL_DOUBLE, intent(inout) :: objective
     integer,     intent(in)    :: getgrad
@@ -316,15 +316,17 @@ contains
 
     PUSH_SUB(calc_point)
 
+    ASSERT(size == g_opt%size)
+
     call from_coords(g_opt, coords)
 
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .true.)
 
-    call atom_write_xyz(".", "work-geom", g_opt%geo, g_opt%dim, append=.true.)
+    call atom_write_xyz(".", "work-geom", g_opt%geo, g_opt%dim, append = .true.)
 
     call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
-    call v_ks_calc(g_opt%syst%ks, g_opt%hm, g_opt%st, calc_eigenval=.true.)
+    call v_ks_calc(g_opt%syst%ks, g_opt%hm, g_opt%st, calc_eigenval = .true.)
     call total_energy(g_opt%hm, g_opt%syst%gr, g_opt%st, -1)
 
     ! do SCF calculation
@@ -332,11 +334,7 @@ contains
       g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT)
 
     ! store results
-    if(getgrad .eq. 1) then
-      forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
-        df(g_opt%dim * iatom + idir) = -g_opt%geo%atom(iatom + 1)%f(idir)
-      end forall
-    end if
+    if(getgrad .eq. 1) call to_grad(g_opt, df)
 
     if(g_opt%what2minimize == MINWHAT_FORCES) then
       objective = M_ZERO
@@ -355,7 +353,7 @@ contains
   ! ---------------------------------------------------------
   ! Same as calc_point, but without the gradients.
   subroutine calc_point_ng(size, coords, objective)
-    integer,     intent(in)  :: size         ! must equal dim * natoms
+    integer,     intent(in)  :: size
     REAL_DOUBLE, intent(in)  :: coords(size)
     REAL_DOUBLE, intent(out) :: objective
 
@@ -364,6 +362,8 @@ contains
     
     PUSH_SUB(calc_point_ng)
     
+    ASSERT(size == g_opt%size)
+
     getgrad = 0
     SAFE_ALLOCATE(df(1:size))
     df = M_ZERO
@@ -427,6 +427,23 @@ contains
 
     POP_SUB(to_coords)
   end subroutine to_coords
+
+  ! ---------------------------------------------------------
+
+  subroutine to_grad(gopt, grad)
+    type(geom_opt_t), intent(in)  :: gopt
+    FLOAT,            intent(out) :: grad(:)
+
+    integer :: iatom, idir
+
+    PUSH_SUB(to_grad)
+
+    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
+      grad(g_opt%dim*iatom + idir) = -g_opt%geo%atom(iatom + 1)%f(idir)
+    end forall
+
+    POP_SUB(to_grad)
+  end subroutine to_grad
 
   ! ---------------------------------------------------------
 
