@@ -176,12 +176,16 @@ int spg_get_max_multiplicity(const double lattice[3][3], const double position[]
 			     const double symprec)
 {
   Cell cell;
+  int multiplicity;
 
   cell = cel_new_cell(num_atom);
   cel_set_cell(&cell, lattice, position, types);
   /* 96 is a magic number, which is the twice of the number of rotations */
   /* in the highest point symmetry Oh. */
-  return sym_get_multiplicity(&cell, symprec) * 96;
+  multiplicity = sym_get_multiplicity(&cell, symprec) * 96;
+  cel_delete_cell(&cell);
+  
+  return multiplicity;
 }
 
 /* Find a primitive cell in the input cell. */
@@ -258,6 +262,8 @@ int spg_get_international(char symbol[21], const double lattice[3][3],
   spacegroup = tbl_get_spacegroup(&cell, symprec);
   strcpy(symbol, spacegroup.bravais_symbol);
   strcpy(&symbol[1], spacegroup.international);
+  
+  cel_delete_cell(&cell);
 
   return spacegroup.number;
 }
