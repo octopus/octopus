@@ -168,50 +168,53 @@ contains
 
     if(only_gamma) then
       this%method = KPOINTS_GAMMA
-      call read_MP(.true.)
-    else
+      call read_MP(gamma_only = .true.)
+    else 
       if(read_user_kpoints()) then
         this%method = KPOINTS_USER
       else
         this%method = KPOINTS_MONKH_PACK
-        call read_MP(.false.)
+        call read_MP(gamma_only = .false.)
+
+        write(message(1),'(a)') ' '
+        write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'
+        write(message(3),'(1x,a)') '---------------------------------------------------'
+
+        write(message(4),'(4x,a)') 'n ='    
+        do idir = 1, dim
+          write(str_tmp,'(i5)') this%nik_axis(idir)
+          message(4) = trim(message(4)) // trim(str_tmp)
+        enddo
+        write(str_tmp,'(6x,a)') 's ='
+        message(4) = trim(message(4)) // trim(str_tmp)
+        do idir = 1, dim
+          write(str_tmp,'(f6.2)') this%shifts(idir)
+          message(4) = trim(message(4)) // trim(str_tmp)
+        enddo
+        call messages_info(4)
+
       end if
-    end if
 
-    write(message(1),'(a)') ' '
-    write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'
-    write(message(3),'(1x,a)') '---------------------------------------------------'
+      write(message(1),'(a)') ' '
+      write(message(2),'(a)') ' index |    weight    |             coordinates              |'
+      call messages_info(2)
 
-    write(message(4),'(4x,a)') 'n ='    
-    do idir = 1, dim
-      write(str_tmp,'(i5)') this%nik_axis(idir)
-      message(4) = trim(message(4)) // trim(str_tmp)
-    enddo
-    write(str_tmp,'(6x,a)') 's ='
-    message(4) = trim(message(4)) // trim(str_tmp)
-    do idir = 1, dim
-      write(str_tmp,'(f6.2)') this%shifts(idir)
-      message(4) = trim(message(4)) // trim(str_tmp)
-    enddo
-
-    write(message(5),'(a)') ' '
-    write(message(6),'(a)') ' index |    weight    |             coordinates              |'
-    call messages_info(6)
-
-    do ik = 1, this%reduced%npoints
-      write(str_tmp,'(i6,a,f12.6,a)') ik, " | ", this%reduced%weight(ik), " |"
-      message(1) =  str_tmp
-      do idir = 1, dim
-        write(str_tmp,'(f12.6)') this%reduced%red_point(idir, ik)
+      do ik = 1, this%reduced%npoints
+        write(str_tmp,'(i6,a,f12.6,a)') ik, " | ", this%reduced%weight(ik), " |"
+        message(1) =  str_tmp
+        do idir = 1, dim
+          write(str_tmp,'(f12.6)') this%reduced%red_point(idir, ik)
+          message(1) = trim(message(1)) // trim(str_tmp)
+        enddo
+        write(str_tmp,'(a)') "  |"
         message(1) = trim(message(1)) // trim(str_tmp)
-      enddo
-      write(str_tmp,'(a)') "  |"
-      message(1) = trim(message(1)) // trim(str_tmp)
-      call messages_info(1)
-    end do
+        call messages_info(1)
+      end do
 
-    write(message(1),'(a)') ' '
-    call messages_info(1)
+      write(message(1),'(a)') ' '
+      call messages_info(1)
+
+    end if
 
     POP_SUB(kpoints_init)
 
