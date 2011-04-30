@@ -694,9 +694,9 @@ contains
   subroutine poisson_fft_end()
     PUSH_SUB(poisson_fft.end)
 
+    call fourier_space_op_end(coulb)
     call cube_function_fft_end(fft_cf)
     call cube_function_end(fft_cf)
-    call dfourier_space_op_end(coulb)
 
     POP_SUB(poisson_fft.end)
   end subroutine poisson_fft_end

@@ -51,11 +51,10 @@ module fourier_space_m
     zcube_function_FS2RS,          &
     fourier_space_op_t,         &
     dfourier_space_op_init,     &
-    dfourier_space_op_end,      &
     dfourier_space_op_apply,    &
     zfourier_space_op_init,     &
-    zfourier_space_op_end,      &
     zfourier_space_op_apply,    &
+    fourier_space_op_end,       &
     dfourier_to_mesh,           &
     zfourier_to_mesh
 
@@ -80,6 +79,19 @@ contains
     POP_SUB(cube_function_fft_end)
 
   end subroutine cube_function_fft_end
+
+  ! ---------------------------------------------------------
+
+  subroutine fourier_space_op_end(this)
+    type(fourier_space_op_t), intent(inout) :: this
+    
+    PUSH_SUB(fourier_space_op_end)
+
+    SAFE_DEALLOCATE_P(this%dop)
+    SAFE_DEALLOCATE_P(this%zop)
+
+    POP_SUB(fourier_space_op_end)
+  end subroutine fourier_space_op_end
 
 #include "undef.F90"
 #include "real.F90"

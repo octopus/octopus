@@ -160,6 +160,8 @@ subroutine X(fourier_space_op_init)(this, cube, op)
 
   integer :: ii, jj, kk
 
+  nullify(this%dop)
+  nullify(this%zop)
   SAFE_ALLOCATE(this%X(op)(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
 
   do kk = 1, cube%n(3)
@@ -171,16 +173,6 @@ subroutine X(fourier_space_op_init)(this, cube, op)
   end do
 
 end subroutine X(fourier_space_op_init)
-
-
-! ---------------------------------------------------------
-subroutine X(fourier_space_op_end)(this)
-  type(fourier_space_op_t), intent(inout) :: this
-
-  SAFE_DEALLOCATE_P(this%X(op))
-
-end subroutine X(fourier_space_op_end)
-
 
 ! ---------------------------------------------------------
 subroutine X(fourier_space_op_apply)(this, cube)

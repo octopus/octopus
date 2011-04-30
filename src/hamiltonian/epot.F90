@@ -424,8 +424,7 @@ contains
     end do
 
     if(ep%have_density) then
-      SAFE_ALLOCATE(ep%poisson_solver)
-      call poisson_init(ep%poisson_solver, gr%der, geo, gr%mesh%mpi_grp%comm)
+      ep%poisson_solver => psolver
 
       if (poisson_get_solver(ep%poisson_solver) == POISSON_SETE) then
         SAFE_ALLOCATE(rho_nuc(1:gr%mesh%np))
@@ -459,8 +458,7 @@ contains
         SAFE_DEALLOCATE_A(v_es3)
       end if
 
-      call poisson_end(ep%poisson_solver)
-      SAFE_DEALLOCATE_P(ep%poisson_solver)
+      nullify(ep%poisson_solver)
     end if
 
     SAFE_DEALLOCATE_P(ep%local_potential)
