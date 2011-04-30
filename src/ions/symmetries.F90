@@ -139,7 +139,7 @@ contains
         !this has to be fixed for non-orthogonal cells
         position(1:3, iatom) = M_HALF
         position(1:dim, iatom) = geo%atom(iatom)%x(1:dim)/(M_TWO*lsize(1:dim)) + M_HALF
-        typs(iatom) = anint(species_z(geo%atom(iatom)%spec))
+        typs(iatom) = species_index(geo%atom(iatom)%spec)
       end forall
 
       ! This outputs information about the symmetries.
