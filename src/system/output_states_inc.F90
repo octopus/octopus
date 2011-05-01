@@ -356,19 +356,19 @@
     end if
 
     if(states_are_complex(st)) then
-      SAFE_ALLOCATE(j(1:gr%mesh%np, 1:MAX_DIM, 0:st%d%nspin))
-      call states_calc_quantities(gr%der, st, paramagnetic_current = j(:, :, 1:))
+      SAFE_ALLOCATE(j(1:gr%mesh%np, 1:MAX_DIM, 1:st%d%nspin))
+      call states_calc_quantities(gr%der, st, paramagnetic_current = j)
 
       do idir = 1, gr%mesh%sb%dim
         do ip = 1, gr%mesh%np
-          j(ip, idir, 0) = sum(j(ip, idir, 1:st%d%nspin))
+          j(ip, idir, 1) = sum(j(ip, idir, 1:st%d%nspin))
         end do
       end do
 
       select case(gr%mesh%sb%dim)
-      case(3); flow = mf_surface_integral(gr%mesh, j(:, :, 0), outp%plane)
-      case(2); flow = mf_line_integral(gr%mesh, j(:, :, 0), outp%line)
-      case(1); flow = j(mesh_nearest_point(gr%mesh, outp%line%origin(1), dmin, rankmin), 1, 0)
+      case(3); flow = mf_surface_integral(gr%mesh, j(:, :, 1), outp%plane)
+      case(2); flow = mf_line_integral(gr%mesh, j(:, :, 1), outp%line)
+      case(1); flow = j(mesh_nearest_point(gr%mesh, outp%line%origin(1), dmin, rankmin), 1, 1)
       end select
 
       SAFE_DEALLOCATE_A(j)
@@ -377,8 +377,8 @@
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      write(iunit,'(3a,e20.12)') '# Flow [', trim(units_abbrev(unit_one / units_out%time)), '] = ', &
-           units_from_atomic(unit_one / units_out%time, flow)
+      write(iunit,'(3a,e20.12)') '# Flow [', trim(units_abbrev(unit_one/units_out%time)), '] = ', &
+           units_from_atomic(unit_one/units_out%time, flow)
       call io_close(iunit)
     end if
 
