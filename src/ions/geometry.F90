@@ -564,12 +564,8 @@ contains
 
     SAFE_DEALLOCATE_P(geo%ionic_interaction_type)
     SAFE_DEALLOCATE_P(geo%ionic_interaction_parameter)
-
     SAFE_DEALLOCATE_P(geo%atom)
-
-    if(geo%ncatoms > 0) then
-      SAFE_DEALLOCATE_P(geo%catom)
-    end if
+    SAFE_DEALLOCATE_P(geo%catom)
 
     call species_end(geo%nspecies, geo%species)
     SAFE_DEALLOCATE_P(geo%species)

@@ -246,12 +246,11 @@ void FC_FUNC_(read_binary,READ_BINARY)
 
   TO_C_STR1(fname, filename);
   fd = open(filename, O_RDONLY);
+  free(filename);
   if(fd < 0){
     *ierr = 2;
     return;
   }
-
-  free(filename);
 
   h = (header_t *) malloc(sizeof(header_t));
   assert(h != NULL);

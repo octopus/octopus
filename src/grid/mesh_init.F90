@@ -51,7 +51,8 @@ module mesh_init_m
   public ::                    &
     mesh_init_stage_1,         &
     mesh_init_stage_2,         &
-    mesh_init_stage_3
+    mesh_init_stage_3,         &
+    mesh_read_lead
 
   type(profile_t), save :: mesh_init_prof
   
@@ -132,44 +133,43 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
     !
     ! The indicated point (^) must be omitted to preserve correct periodicity.
     if(ob_grid%transport_mode) mesh%idx%nr(2, TRANS_DIR) = mesh%idx%nr(2, TRANS_DIR) - 1
-
-    call mesh_read_lead()
   end if
 
   mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_1)
-
-contains
-
-  ! ---------------------------------------------------------
-  subroutine mesh_read_lead()
-    integer :: il, iunit
-
-    type(mesh_t), pointer :: mm
-    integer :: nr(1:2, 1:MAX_DIM)
-
-    PUSH_SUB(mesh_init_stage_1.mesh_read_lead)
-
-    do il = 1, NLEADS
-      mm => ob_grid%lead(il)%mesh
-      mm%sb => mesh%sb
-      mm%cv => mesh%cv
-      mm%parallel_in_domains = mesh%parallel_in_domains
-      iunit = io_open(trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'mesh', action='read', is_tmp=.true.)
-      call mesh_init_from_file(mm, iunit)
-      call io_close(iunit)
-      ! Read the lxyz maps.
-      nr = mm%idx%nr
-      SAFE_ALLOCATE(mm%idx%lxyz(1:mm%np_part, 1:3))
-      SAFE_ALLOCATE(mm%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-      call mesh_lxyz_init_from_file(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'lxyz')
-    end do
-
-    POP_SUB(mesh_init_stage_1.mesh_read_lead)
-  end subroutine mesh_read_lead
 end subroutine mesh_init_stage_1
+
+! ---------------------------------------------------------
+subroutine mesh_read_lead(ob_grid, mesh)
+  type(ob_grid_t),  intent(in)    :: ob_grid
+  type(mesh_t),     intent(in)    :: mesh
+
+  integer :: il, iunit
+
+  type(mesh_t), pointer :: mm
+  integer :: nr(1:2, 1:MAX_DIM)
+
+  PUSH_SUB(mesh_read_lead)
+
+  do il = 1, NLEADS
+    mm => ob_grid%lead(il)%mesh
+    mm%sb => mesh%sb
+    mm%cv => mesh%cv
+    mm%parallel_in_domains = mesh%parallel_in_domains
+    iunit = io_open(trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'mesh', action='read', is_tmp=.true.)
+    call mesh_init_from_file(mm, iunit)
+    call io_close(iunit)
+    ! Read the lxyz maps.
+    nr = mm%idx%nr
+    SAFE_ALLOCATE(mm%idx%lxyz(1:mm%np_part, 1:3))
+    SAFE_ALLOCATE(mm%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
+    call mesh_lxyz_init_from_file(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR//'lxyz')
+  end do
+
+  POP_SUB(mesh_read_lead)
+end subroutine mesh_read_lead
 
 ! ---------------------------------------------------------
 

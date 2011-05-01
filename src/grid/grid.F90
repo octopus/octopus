@@ -205,6 +205,8 @@ contains
     ! now we generate the mesh and the derivatives
     call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge, gr%ob_grid)
 
+    if(gr%ob_grid%open_boundaries) call mesh_read_lead(gr%ob_grid, gr%mesh)
+
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
     call stencil_cube_get_lapl(cube, gr%sb%dim, order = 2)
@@ -304,8 +306,6 @@ contains
 
     call nl_operator_global_end()
 
-    call ob_grid_end(gr%ob_grid)
-
     if(gr%have_fine_mesh) then
       call derivatives_end(gr%fine%der)
       call mesh_end(gr%fine%mesh)
@@ -333,8 +333,15 @@ contains
     if(gr%ob_grid%open_boundaries) then
       do il=1, NLEADS
         call interface_end(gr%intf(il))
+        ! As usual with open boundaries code, this object is
+        ! half-created so we cannot call mesh_end and we have to
+        ! deallocate by hand. Please fix this.
+        SAFE_DEALLOCATE_P(gr%ob_grid%lead(il)%mesh%idx%lxyz)
+        SAFE_DEALLOCATE_P(gr%ob_grid%lead(il)%mesh%idx%lxyz_inv)        
       end do
     end if
+
+    call ob_grid_end(gr%ob_grid)
 
     call stencil_end(gr%stencil)
 
