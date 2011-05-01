@@ -1461,6 +1461,7 @@ contains
     ! Initialize the species of the "extended" central system.
     if(geo%nspecies .gt. 0) then
       SAFE_DEALLOCATE_P(geo%species)
+      SAFE_DEALLOCATE_P(geo%ionic_interaction_type)
     end if
     call geometry_init_species(geo, print_info=.false.)
 
