@@ -2,7 +2,7 @@
 # $Id: 27-fine_mesh.test $
 
 Test       : Fine mesh density - Benzene
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 

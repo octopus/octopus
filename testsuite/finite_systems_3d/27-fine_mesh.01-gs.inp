@@ -1,4 +1,5 @@
 CalculationMode = gs
+FromScratch = yes
 
 %Coordinates
 "C"   |   0.000000  |   2.638058  |   0.000000
@@ -30,5 +31,6 @@ LCAOAlternative = yes
 LCAOExtraStates = yes
 
 EigenSolver = rmmdiis
+ParallelizationStrategy = par_states
 
 ConvRelDens = 1e-6
