@@ -2,7 +2,7 @@
 # $Id: 04-silicon.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Silicon crystal
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
