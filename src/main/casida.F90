@@ -484,7 +484,8 @@ contains
                     st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma)
         if(cas%w(ia) < -M_EPSILON) then
           message(1) = "There are negative unocc-occ KS eigenvalue differences."
-          call messages_warning(1)
+          message(2) = "Probably this indicates an inconsistency in occupations between gs and unocc calculations."
+          call messages_fatal(2)
         endif
 
         if(cas%type == CASIDA_PETERSILKA) then
