@@ -28,7 +28,7 @@ libmath_a_SOURCES =                      \
 	dablas.c                         \
 	fftw3.F90                        \
 	pfft.F90			 \
-	filters.F90                      \
+	spline_filter.F90                \
 	gauss_legendre.F90               \
 	lalg_basic.F90                   \
 	lalg_adv.F90                     \
@@ -75,7 +75,7 @@ checksum_interface.o : checksum_interface.F90
 dablas.o : dablas.c 
 fftw3.o : fftw3.F90 lalg_basic.o loct_math.o
 pfft.o : pfft.F90 fftw3.o
-filters.o: filters.F90 splines.o
+spline_filter.o: spline_filter.F90 splines.o
 gauss_legendre.o : gauss_legendre.F90 
 lalg_basic.o : lalg_basic.F90 lalg_basic_blas.F90 blas.o 
 lalg_adv.o : lalg_adv.F90  lalg_adv_lapack_inc.F90 lapack.o scalapack.o
