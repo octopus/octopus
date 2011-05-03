@@ -11,4 +11,5 @@ Spacing = 0.5
   "Na" | 0 | 0 | 0
 %
 SpinComponents = spin_polarized
+TDTimeStep = 0.07
 TDMaximumIter = 10

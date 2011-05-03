@@ -24,29 +24,13 @@ subroutine td_init(td, sys, hm)
   type(hamiltonian_t),   intent(inout) :: hm
 
   integer :: dummy
+  FLOAT   :: spacing, default_dt
 
   PUSH_SUB(td_init)
 
   call ion_dynamics_init(td%ions, sys%geo)
 
   td%iter = 0
-
-  !%Variable TDTimeStep
-  !%Type float
-  !%Default 0.07 a.u.
-  !%Section Time-Dependent::Propagation
-  !%Description
-  !% Time-step for the time propagation. The default is 0.07
-  !% [hbar/Hartree].
-  !%End
-  call parse_float(datasets_check('TDTimeStep'), units_from_atomic(units_inp%time, CNST(0.07)), td%dt)
-  td%dt = units_to_atomic(units_inp%time, td%dt)
-
-  if (td%dt <= M_ZERO) then
-    write(message(1),'(a,f14.6,a)') "Input: '", td%dt, "' is not a valid TDTimeStep"
-    message(2) = '(0 < TDTimeStep)'
-    call messages_fatal(2)
-  end if
 
   !%Variable TDIonicTimeScale
   !%Type float
@@ -79,8 +63,46 @@ subroutine td_init(td, sys, hm)
   !% For more details see: <tt>http://arxiv.org/abs/0710.3321</tt>
   !%
   !%End
-
   call parse_float(datasets_check('TDIonicTimeScale'), CNST(1.0), td%mu)
+
+  if (td%mu <= M_ZERO) then
+    write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
+    call messages_fatal(1)
+  end if
+
+  call messages_print_var_value(stdout, datasets_check('TDIonicTimeScale'), td%mu)
+
+  !%Variable TDTimeStep
+  !%Type float
+  !%Section Time-Dependent::Propagation
+  !%Description
+  !% The time-step for the time propagation. For most propagators you
+  !% want to use the largest value that is possible without the
+  !% evolution becoming unstable.
+  !%
+  !% The default value is the maximum value that we have found
+  !% empirically that is stable for the spacing Octopus is
+  !% using. However, you might need to adjust this value.
+  !%End
+
+  spacing = minval(sys%gr%mesh%spacing(1:sys%gr%sb%dim))
+  ! These constants come from adjusting a parabola to values of
+  ! maximum dt for different spacings (Fig. 4 of
+  ! http://dx.doi.org/10.1021/ct800518j ).
+  !
+  ! This is probably valid for 3D systems only.
+  !
+  default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
+  default_dt = default_dt*td%mu
+
+  call parse_float(datasets_check('TDTimeStep'), default_dt, td%dt, unit = units_inp%time)
+
+  if (td%dt <= M_ZERO) then
+    write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
+    call messages_fatal(1)
+  end if
+
+  call messages_print_var_value(stdout, datasets_check('TDTimeStep'), td%dt, unit = units_out%time)
 
   !%Variable TDMaximumIter
   !%Type integer
