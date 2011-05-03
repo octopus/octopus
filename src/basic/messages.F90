@@ -26,6 +26,7 @@ module messages_m
   use mpi_m
   use parser_m
   use string_m
+  use unit_m
   use varinfo_m
 
   implicit none
@@ -543,17 +544,23 @@ end subroutine messages_end
 
 
   ! ---------------------------------------------------------
-  subroutine messages_print_var_valuer(iunit, var, value)
-    integer,          intent(in) :: iunit
-    character(len=*), intent(in) :: var
-    FLOAT,            intent(in) :: value
+  subroutine messages_print_var_valuer(iunit, var, value, unit)
+    integer,                intent(in) :: iunit
+    character(len=*),       intent(in) :: var
+    FLOAT,                  intent(in) :: value
+    type(unit_t), optional, intent(in) :: unit
 
     character(len=10) :: floatstring
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
-    write(floatstring,'(g10.4)') value
-    write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(floatstring))//']'
+    if(.not. present(unit)) then
+      write(floatstring,'(g10.4)') value
+      write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(floatstring))//']'
+    else
+      write(floatstring,'(g10.4)') units_from_atomic(unit, value)
+      write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(floatstring))//' '//trim(units_abbrev(unit))//']'
+    end if
 
   end subroutine messages_print_var_valuer
   ! ---------------------------------------------------------
