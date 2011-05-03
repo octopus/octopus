@@ -24,11 +24,11 @@
 # ----------------------------------
 AC_DEFUN([ACX_M128D],
 [AC_MSG_CHECKING([whether the compiler accepts the __m128d type])
-AC_LINK_IFELSE( AC_LANG_PROGRAM( [
+AC_LINK_IFELSE([AC_LANG_PROGRAM( [
 #include <emmintrin.h>
 ], [
 __m128d a __attribute__((aligned(16)));
- ]), 
+ ])], 
  [AC_DEFINE(HAVE_M128D, 1, [compiler supports the m128d type]) [acx_m128d=yes]], [acx_m128d=no])
 AC_MSG_RESULT($acx_m128d)])
 
@@ -37,11 +37,11 @@ AC_MSG_RESULT($acx_m128d)])
 # ----------------------------------
 AC_DEFUN([ACX_M256D],
 [AC_MSG_CHECKING([whether the compiler accepts the __m256d type])
-AC_LINK_IFELSE( AC_LANG_PROGRAM( [
+AC_LINK_IFELSE([AC_LANG_PROGRAM( [
 #include <immintrin.h>
 ], [
 __m256d a __attribute__((aligned(16)));
- ]), 
+ ])], 
  [acx_m256d=yes], [acx_m256d=no])
 AC_MSG_RESULT($acx_m256d)])
 
@@ -52,11 +52,11 @@ AC_DEFUN([ACX_AVX],
 [AC_MSG_CHECKING([whether AVX instructions can be used])
 acx_save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -xAVX"
-AC_RUN_IFELSE( AC_LANG_PROGRAM( [
+AC_RUN_IFELSE([AC_LANG_PROGRAM( [
 #include <immintrin.h>
 ], [
 __m256d a __attribute__((aligned(16)));
- ]), 
+ ])], 
  [acx_m256d=yes], [acx_m256d=no], [cross compiling; assumed OK... $ac_c])
 CFLAGS="$acx_save_CFLAGS"
 AC_MSG_RESULT($acx_m256d)])
@@ -66,14 +66,14 @@ AC_MSG_RESULT($acx_m256d)])
 # ----------------------------------
 AC_DEFUN([ACX_BLUE_GENE],
 [AC_MSG_CHECKING([for Blue Gene intrinsics])
-AC_LINK_IFELSE( AC_LANG_PROGRAM( [
+AC_LINK_IFELSE([AC_LANG_PROGRAM( [
 ], [[
   double aa, bb;
   double _Complex cc;
 
   cc = __cmplx(aa, bb);
   cc = __fpneg(cc);
- ]]), 
+ ]])], 
  [AC_DEFINE(HAVE_BLUE_GENE, 1, [compiler supports Blue Gene intrinsics]) [acx_blue_gene=yes]], [acx_blue_gene=no])
 AC_MSG_RESULT($acx_blue_gene)])
 
