@@ -510,7 +510,7 @@ contains
       SAFE_ALLOCATE(rho_sphere(1:sphere%np))
       
       forall(ip = 1:sphere%np) rho_sphere(ip) = sphere%x(ip, 0)
-      call spline_eval_vec(ps%nlr, sphere%np, rho_sphere)
+      if(sphere%np > 0) call spline_eval_vec(ps%nlr, sphere%np, rho_sphere)
 
       rho(1:mesh%np) = M_ZERO
 
