@@ -34,7 +34,7 @@ TheoryLevel = independent_particles
 
 stime  = 5.0
 dt = 0.01
-TDEvolutionMethod = crank_nicholson
+TDPropagator = crank_nicholson
 TDLanczosTol = 5.0e-5
 TDMaximumIter = stime/dt
 TDTimeStep = dt

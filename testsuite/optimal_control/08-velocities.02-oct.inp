@@ -64,11 +64,11 @@ TDEnergyUpdateIter = 1
 # For the OCT runs:
 stime  = 100.0
 TDMaximumIter = stime/dt
-TDEvolutionMethod = crank_nicholson
+TDPropagator = crank_nicholson
 
 # For the TD runs:
 totaltime = 500.0
-#TDEvolutionMethod = exp_mid
+#TDPropagator = exp_mid
 #TDMaximumIter = totaltime/dt
 #TDExponentialMethod = taylor
 #TDExpOrder = 4

@@ -80,7 +80,7 @@ contains
     !%Description
     !% Method used to numerically calculate the exponential of the Hamiltonian,
     !% a core part of the full algorithm used to approximate the evolution
-    !% operator, specified through the variable <tt>TDEvolutionMethod</tt>.
+    !% operator, specified through the variable <tt>TDPropagator</tt>.
     !% In the case of using the Magnus method, described below, the action of the exponential
     !% of the Magnus operator is also calculated through the algorithm specified
     !% by this variable.

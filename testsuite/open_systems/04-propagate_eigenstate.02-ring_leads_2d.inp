@@ -83,7 +83,7 @@ OpenBoundariesQMRMaxIter = 10000
 
 TDTimeStep = 0.02
 TDMaximumIter = 100
-TDEvolutionMethod = crank_nicholson_src_mem
+TDPropagator = crank_nicholson_src_mem
 
 # does not work for k-point parallelization yet
 %ring_lead_CurrentThroughPlane

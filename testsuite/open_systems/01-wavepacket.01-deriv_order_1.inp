@@ -32,7 +32,7 @@ Spacing = 0.1
 
 TDTimeStep = 0.05
 TDMaximumIter = 300
-TDEvolutionMethod = crank_nicholson_src_mem
+TDPropagator = crank_nicholson_src_mem
 
 %Species
  "flat" | 0 | spec_user_defined | 2.0 | "0"

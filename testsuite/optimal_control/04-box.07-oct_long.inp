@@ -12,7 +12,7 @@ RestartDir = "excited_states_restart"
 
 stime  = 300.0
 dt = 0.02
-TDEvolutionMethod = exp_mid
+TDPropagator = exp_mid
 TDExponentialMethod = lanczos
 TDExponentialOrder = 30
 TDLanczosTol = 1.0e-4

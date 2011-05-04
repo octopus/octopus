@@ -35,7 +35,7 @@ TheoryLevel = independent_particles
 
 stime  = 50.0
 dt = 0.01
-TDEvolutionMethod = exp_mid
+TDPropagator = exp_mid
 TDExponentialMethod = taylor
 TDExponentialOrder = 4
 TDLanczosTol = 5.0e-5

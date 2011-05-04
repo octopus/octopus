@@ -115,14 +115,14 @@
      ! case(PROP_EXPONENTIAL_MIDPOINT)
      !   if(tr%te%exp_method .ne. EXP_LANCZOS) then
      !     WRITE(message(1), '(a)') 'If you use time-dependent target, and you set'
-     !     write(message(2), '(a)') '"TDEvolutionMethod = exp_mid", then you must set'
+     !     write(message(2), '(a)') '"TDPropagator = exp_mid", then you must set'
      !     write(message(3), '(a)') '"TDExponentialMethod = lanczos".'
      !     call messages_fatal(3)
      !   end if
       case default
         write(message(1), '(a)') 'If you use time-dependent target, then you must set'
-        write(message(2), '(a)') '"TDEvolutionMethod = crank_nicholson"'
-     !   write(message(3), '(a)') '"TDEvolutionMethod = exp_mid".'
+        write(message(2), '(a)') '"TDPropagator = crank_nicholson"'
+     !   write(message(3), '(a)') '"TDPropagator = exp_mid".'
         call messages_fatal(3)
       end select
     end if
@@ -146,7 +146,7 @@
           (tr%method .ne. PROP_QOCT_TDDFT_PROPAGATOR_2) )  then
         if( .not. oct_algorithm_is_direct(oct) ) then
           write(message(1), '(a)') 'When doing QOCT with interacting electrons, then you must set'
-          write(message(2), '(a)') 'TDEvolutionMethod = qoct_tddft_propagator'
+          write(message(2), '(a)') 'TDPropagator = qoct_tddft_propagator'
           call messages_fatal(2)
         end if
       end if

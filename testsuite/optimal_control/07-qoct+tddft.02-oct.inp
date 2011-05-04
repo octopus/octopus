@@ -24,7 +24,7 @@ DerivativesOrder = 4
 
 stime  = 2.0
 dt = 0.005
-TDEvolutionMethod = qoct_tddft_propagator
+TDPropagator = qoct_tddft_propagator
 TDExponentialMethod = taylor
 TDExponentialOrder = 4
 TDMaximumIter = stime/dt

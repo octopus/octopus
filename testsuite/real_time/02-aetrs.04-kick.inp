@@ -20,7 +20,7 @@ TDTimeStep = 0.1
 
 TDMaximumIter = 20
 
-TDEvolutionMethod = aetrs
+TDPropagator = aetrs
 
 ParallelizationStrategy = par_domains + par_states
 

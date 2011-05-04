@@ -19,6 +19,6 @@ ConvRelDens = 1e-4
 ExtraStates = 50
 
 TDMaximumIter = 15
-TDEvolutionMethod = aetrs
+TDPropagator = aetrs
 
 XYZCoordinates = "c240.xyz"

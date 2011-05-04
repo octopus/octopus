@@ -154,7 +154,7 @@ contains
 
     PUSH_SUB(propagator_init)
 
-    !%Variable TDEvolutionMethod
+    !%Variable TDPropagator
     !%Type integer
     !%Default etrs
     !%Section Time-Dependent::Propagation
@@ -254,21 +254,22 @@ contains
     !%Option qoct_tddft_propagator_2 11
     !% WARNING: EXPERIMENTAL
     !%End
+    call messages_obsolete_variable('TDEvolutionMethod', 'TDPropagator')
 
     default_propagator = PROP_ETRS
     if(gr%ob_grid%open_boundaries) default_propagator = PROP_CRANK_NICHOLSON_SRC_MEM
 
-    call parse_integer(datasets_check('TDEvolutionMethod'), default_propagator, tr%method)
-    if(.not.varinfo_valid_option('TDEVolutionMethod', tr%method)) call input_error('TDEvolutionMethod')
+    call parse_integer(datasets_check('TDPropagator'), default_propagator, tr%method)
+    if(.not.varinfo_valid_option('TDPropagator', tr%method)) call input_error('TDPropagator')
 
     if(gr%ob_grid%open_boundaries.and.tr%method.ne.PROP_CRANK_NICHOLSON_SRC_MEM) then
       message(1) = 'The time-evolution method for time-dependent run cannot'
       message(2) = 'be chosen freely. The Crank-Nicholson propagator'
       message(3) = 'with source and memory term has to be used. Either set'
       message(4) = ''
-      message(5) = '  TDEvolutionmethod = crank_nicholson_src_mem'
+      message(5) = '  TDPropagator = crank_nicholson_src_mem'
       message(6) = ''
-      message(7) = 'in your input or remove the TDEvolutionMethod variable.'
+      message(7) = 'in your input or remove the TDPropagator variable.'
       call messages_fatal(7)
     end if
 
@@ -295,9 +296,9 @@ contains
     case(PROP_QOCT_TDDFT_PROPAGATOR)
     case(PROP_QOCT_TDDFT_PROPAGATOR_2)
     case default
-      call input_error('TDEvolutionMethod')
+      call input_error('TDPropagator')
     end select
-    call messages_print_var_option(stdout, 'TDEvolutionMethod', tr%method)
+    call messages_print_var_option(stdout, 'TDPropagator', tr%method)
 
     if(have_fields) then
       if(tr%method /= PROP_ETRS .and.    &
