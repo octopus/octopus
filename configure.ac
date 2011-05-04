@@ -397,7 +397,6 @@ AC_CONFIG_FILES([Makefile
   share/recipes/es/Makefile
   share/recipes/it/Makefile
   share/util/Makefile
-  share/samples/Makefile
   share/opencl/Makefile
   build/Makefile
   build/octopus.spec

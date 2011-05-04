@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-SUBDIRS = PP recipes util samples opencl
+SUBDIRS = PP recipes util opencl
 
 dta1dir = $(pkgdatadir)
 dist_dta1_DATA = logo filter_mask.data gequad.data
