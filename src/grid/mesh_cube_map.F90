@@ -37,8 +37,8 @@ module mesh_cube_map_m
     mesh_cube_map_end
 
   type mesh_cube_map_t
-    integer          :: nmap
-    integer, pointer :: map(:, :)
+    integer          :: nmap      !< DOCUMENTATION NEEDED
+    integer, pointer :: map(:, :) !< DOCUMENTATION NEEDED
   end type mesh_cube_map_t
 
   integer, public, parameter :: MCM_POINT = 1, MCM_COUNT = 2
@@ -46,6 +46,7 @@ module mesh_cube_map_m
 contains
 
   ! ---------------------------------------------------------
+  !>  DOCUMENTATION NEEDED
   subroutine mesh_cube_map_init(this, idx, np_global)
     type(mesh_cube_map_t),         intent(out) :: this
     type(index_t),                 intent(in)  :: idx

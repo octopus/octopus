@@ -357,7 +357,7 @@ contains
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_3d_0d)
-    
+
     select case(poisson_solver)
     case(POISSON_FFT_SPH)
       call mesh_double_box(mesh%sb, mesh, db)
@@ -712,8 +712,8 @@ contains
     FLOAT, allocatable :: rho_global(:), pot_global(:)
 
     FLOAT :: average
-    integer :: default_fft_library, fft_library
-    
+    integer :: default_fft_library, fft_library, i
+     
     PUSH_SUB(poisson_fft)
     
     average = M_ZERO !this avoids a non-initialized warning
@@ -722,14 +722,23 @@ contains
       SAFE_ALLOCATE(rho_global(1:mesh%np_global))
       SAFE_ALLOCATE(pot_global(1:mesh%np_global))
     end if
-
     call dcube_function_alloc_RS(fft_cf)          ! allocate the cube in real space
 
     ! put the density in the cube
     if(mesh%parallel_in_domains) then
 #if defined HAVE_MPI
-      call dvec_gather(mesh%vp, mesh%vp%root, rho_global, rho)
-      call dmesh_to_cube(mesh, rho_global, fft_cf) 
+      if (fft_cf%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT
+        !all the data has to be distributed again for the PFFT library
+        call dvec_allgather(mesh%vp, rho_global, rho)
+#else
+        write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
+        call messages_fatal(1)
+#endif
+        else 
+        call dvec_gather(mesh%vp, mesh%vp%root, rho_global, rho)
+      end if
+      call dmesh_to_cube(mesh, rho_global, fft_cf)   
 #endif
     else
       call dmesh_to_cube(mesh, rho, fft_cf)
@@ -767,7 +776,7 @@ contains
       SAFE_DEALLOCATE_A(rho_global)
       SAFE_DEALLOCATE_A(pot_global)
     end if
-
+    
     POP_SUB(poisson_fft)
   end subroutine poisson_fft
 

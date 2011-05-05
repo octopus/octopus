@@ -20,7 +20,7 @@
 #include "global.h"
 
 #define PFFT_MAX 10
-#define FFT_NULL -1
+#define PFFT_NULL -1
 
 #if defined(SINGLE_PRECISION)
 #  define PDFFT(x) dpfftf_ ## x
@@ -53,8 +53,9 @@ module pfft_m
     pfft_t,         &
     pfft_all_init,  &
     pfft_all_end,   &
+    pfft_end,       &
     pfft_init,      &
-    pfft_forward_3d,&
+    pfft_forward_3d, &
     pfft_backward_3d
 
   ! fftw constants. this is just a copy from file fftw3.f,
@@ -64,19 +65,28 @@ module pfft_m
        pfftw_forward            =    -1, &
        pfftw_backward           =     1, &
        pfft_measure             =     0 
-
+  
   type pfft_t
     integer     :: slot         !< in which slot do we have this fft
-    integer     :: n(3)         !< size of the fft
+    integer(ptrdiff_t_kind)     :: n(3)         !< size of the fft
     integer     :: is_real      !< is the fft real or complex. PFFT only works with complex
     integer(ptrdiff_t_kind)    :: comm_cart_2d !< 2-dimensional Cartesian processor grid
-    type(c_ptr) :: planf        !< the plan for forward transforms
-    type(c_ptr) :: planb        !< the plan for backward transforms
+    integer(ptrdiff_t_kind) :: planf        !< the plan for forward transforms
+    integer(ptrdiff_t_kind) :: planb        !< the plan for backward transforms
+    integer(ptrdiff_t_kind) :: alloc_local
+    
+    integer(ptrdiff_t_kind) :: local_ni(3)  !< local input points
+    integer(ptrdiff_t_kind) :: local_i_start(3) !< local input start index
+    integer(ptrdiff_t_kind) :: local_no(3) !< local output points
+    integer(ptrdiff_t_kind) :: local_o_start(3) !< local output start index
+    CMPLX, pointer ::  data_in(:)  !< input data 
+    CMPLX, pointer ::  data_out(:) !< output data
   end type pfft_t
 
   integer      :: pfft_refs(PFFT_MAX)
   type(pfft_t) :: pfft_array(PFFT_MAX)
   logical      :: fft_optimize
+  logical      :: pfft_output
   integer      :: pfft_prepare_plan
 
 contains
@@ -102,7 +112,7 @@ contains
     !%End
     call parse_logical(datasets_check('PFFTOptimize'), .true., fft_optimize)
     do ii = 1, PFFT_MAX
-      pfft_refs(ii) = FFT_NULL
+      pfft_refs(ii) = PFFT_NULL
     end do
  
     !%Variable PFFTPreparePlan
@@ -123,13 +133,25 @@ contains
     !%Option pfft_measure 0
     !% This is the default, and implies a longer initialization, but involves a more careful analysis
     !% of the strategy to follow, and therefore more efficient FFTs.
-    !%Option pfft_estimate 64
+    !%Option pfft_etimate 64
     !% This is the "fast initialization" scheme, in which the plan is merely guessed from "reasonable"
     !% assumptions.
     !%End
     call parse_integer(datasets_check('PFFTPreparePlan'), pfft_measure, pfft_prepare_plan)
     if(.not. varinfo_valid_option('PFFTPreparePlan', pfft_prepare_plan)) call input_error('PFFTPreparePlan')
-
+    
+    !%Variable PFFTOutput
+    !%Type logical
+    !%Default no
+    !%Section Mesh::FFTs
+    !%Description
+    !% Should <tt>octopus</tt> print the FFT values? 
+    !%End
+    call parse_logical(datasets_check('PFFTOutput'), .false., pfft_output)
+    
+    do ii = 1, PFFT_MAX
+      pfft_refs(ii) = PFFT_NULL
+    end do
     POP_SUB(pfft_all_init)
   end subroutine pfft_all_init
 
@@ -141,16 +163,43 @@ contains
     PUSH_SUB(pfft_all_end)
 
     do ii = 1, PFFT_MAX
-      if(pfft_refs(ii) /= FFT_NULL) then
+      if(pfft_refs(ii) /= PFFT_NULL) then
         call PDFFT(destroy_plan) (pfft_array(ii)%planf)
         call PDFFT(destroy_plan) (pfft_array(ii)%planb)
-        pfft_refs(ii) = FFT_NULL
+        pfft_refs(ii) = PFFT_NULL
       end if
     end do
 
     call PDFFT(cleanup)
     POP_SUB(pfft_all_end)
   end subroutine pfft_all_end
+
+  ! ---------------------------------------------------------
+  subroutine pfft_end(pfft)
+    type(pfft_t), intent(inout) :: pfft
+
+    integer :: ii
+
+    PUSH_SUB(pfft_end)
+    
+    ii = pfft%slot
+    if(pfft_refs(ii) == PFFT_NULL) then
+      message(1) = "Trying to deallocate PFFT that has not been allocated."
+      call messages_warning(1)
+    else
+      if(pfft_refs(ii) > 1) then
+        pfft_refs(ii) = pfft_refs(ii) - 1
+      else
+        pfft_refs(ii) = PFFT_NULL
+        call PDFFT(destroy_plan) (pfft_array(ii)%planf)
+        call PDFFT(destroy_plan) (pfft_array(ii)%planb)
+        write(message(1), '(a,i4)') "Info: PFFT deallocated from slot ", ii
+        call messages_info(1)
+      end if
+    end if
+
+    POP_SUB(pfft_end)
+  end subroutine pfft_end
 
   ! ---------------------------------------------------------
   subroutine pfft_init(nn, dim, is_real, pfft, optimize)
@@ -166,16 +215,18 @@ contains
     integer :: ii, jj, fft_dim, idir, ierror, process_column_size, process_row_size
     logical :: optimize_
     character(len=100) :: str_tmp
-    
-    integer(ptrdiff_t_kind) :: alloc_local
-    integer(ptrdiff_t_kind) :: local_ni(3), local_i_start(3)
-    integer(ptrdiff_t_kind) :: local_no(3), local_o_start(3)
-    !    integer comm_cart_2d
-    !integer(8) fftplan_forw, fftplan_back
-    CMPLX, allocatable ::  data_in(:)
-    CMPLX, allocatable ::  data_out(:)
+  
+    CMPLX, pointer :: p_data_in(:)  
+  
+    integer(ptrdiff_t_kind) :: nn_t_kind(1:3)
     
     PUSH_SUB(pfft_init)
+
+    !! Change the nn from 32 bits to 64 (if needed)
+    nn_t_kind(1) = nn(1)
+    nn_t_kind(2) = nn(2)
+    nn_t_kind(3) = nn(3)
+    
     ! First, figure out the dimensionality of the FFT. PFFT works efficiently with 3D
     fft_dim = 0
     do ii = 1, dim
@@ -185,10 +236,14 @@ contains
 
     if(fft_dim < 3) then
       message(1) = "Internal error in pfft_init: apparently, a 1x1x1 FFT is required."
+
       call messages_fatal(1)
     end if
 
-    if(fft_dim > 3) call messages_not_implemented('FFT for dimension > 3')
+    if(fft_dim > 3) then
+      message(1) = "FFT for dimension greater than 3 not implemented."
+      call messages_fatal(1)
+    end if
 
     optimize_ = .true.
     if(present(optimize)) optimize_ = optimize
@@ -212,7 +267,7 @@ contains
     ! find out if fft has already been allocated
     jj = 0
     do ii = PFFT_MAX, 1, -1
-      if(pfft_refs(ii) /= FFT_NULL) then
+      if(pfft_refs(ii) /= PFFT_NULL) then
         if(all(nn(1:dim) == pfft_array(ii)%n(1:dim)) .and. is_real == pfft_array(ii)%is_real) then
           pfft = pfft_array(ii)              ! return a copy
           pfft_refs(ii) = pfft_refs(ii) + 1  ! increment the ref count
@@ -233,49 +288,47 @@ contains
     ! jj now contains an empty slot
     pfft_refs(jj)          = 1
     pfft_array(jj)%slot    = jj
+
     pfft_array(jj)%n(1:3)  = nn(1:3)
     pfft_array(jj)%is_real = is_real
     
     ! With PFFT only could be 3D complex
-
+    
     SAFE_ALLOCATE( cin(1:nn(1), 1:nn(2), 1:nn(3)))
     SAFE_ALLOCATE(cout(1:nn(1), 1:nn(2), 1:nn(3)))
-
+    
     ! Create two-dimensional process grid of
     call decompose(mpi_world%size, process_column_size, process_row_size)
   
     call dpfft_init()
 
     call PDFFT(create_procmesh_2d) (ierror,MPI_COMM_WORLD,process_column_size,&
-         process_row_size,pfft%comm_cart_2d)
+         process_row_size,pfft_array(jj)%comm_cart_2d)
     if (ierror .ne. 0) then
       message(1) = "The number of rows and columns in PFFT processor grid is not equal to "
       message(2) = "the number of processor in the MPI communicator."
       message(3) = "Please check it."
       call messages_fatal(3)
     end if
-
-    call PDFFT(local_size_3d) (alloc_local, nn, pfft%comm_cart_2d, PFFT_TRANSPOSED, &
-         local_ni, local_i_start, local_no, local_o_start)
     
+    call PDFFT(local_size_3d) (pfft_array(jj)%alloc_local, pfft_array(jj)%n, pfft_array(jj)%comm_cart_2d, PFFT_TRANSPOSED, &
+         pfft_array(jj)%local_ni, pfft_array(jj)%local_i_start, pfft_array(jj)%local_no, pfft_array(jj)%local_o_start)
+
     !     Allocate memory
-    SAFE_ALLOCATE(data_in(alloc_local))
-    SAFE_ALLOCATE(data_out(alloc_local))
+    SAFE_ALLOCATE(pfft_array(jj)%data_in(pfft_array(jj)%alloc_local))
+    SAFE_ALLOCATE(pfft_array(jj)%data_out(pfft_array(jj)%alloc_local))
 
     ! Create the plan, with the processor grid 
-    call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, nn, data_in, data_out, &
-         pfft%comm_cart_2d, &
-         FFTW_FORWARD, PFFT_TRANSPOSED + PFFT_FORWARD, FFTW_MEASURE)
-    call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, nn, data_out, data_in, pfft%comm_cart_2d, &
-         & FFTW_BACKWARD, PFFT_TRANSPOSED + PFFT_BACKWARD, FFTW_MEASURE) 
-    SAFE_DEALLOCATE_A(data_in)
-    SAFE_DEALLOCATE_A(data_out)
-    
-    pfft = pfft_array(jj)
-    
+    call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, nn, & 
+         pfft_array(jj)%data_in, pfft_array(jj)%data_out, pfft_array(jj)%comm_cart_2d, &
+          FFTW_FORWARD, PFFT_TRANSPOSED + PFFT_FORWARD, FFTW_MEASURE)
+    call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, nn, &
+         pfft_array(jj)%data_out, pfft_array(jj)%data_in, pfft_array(jj)%comm_cart_2d, &
+         FFTW_BACKWARD, PFFT_TRANSPOSED + PFFT_BACKWARD, FFTW_MEASURE) 
+       
     write(message(1), '(a)') "Info: PFFT allocated with size ("
     do idir = 1, dim
-      write(str_tmp, '(i7,a)') nn(idir)
+      write(str_tmp, '(i7,a)') pfft_array(jj)%n(idir)
       if(idir == dim) then
         message(1) = trim(message(1)) // trim(str_tmp) // ") in slot "
       else
@@ -285,33 +338,138 @@ contains
     write(str_tmp, '(i2)') jj
     message(1) = trim(message(1)) // trim(str_tmp)
     call messages_info(1)
-    
+
+    pfft = pfft_array(jj)
+
     POP_SUB(pfft_init)       
   end subroutine pfft_init
 
   ! ---------------------------------------------------------
   !> These routines simply call pfft
   !! first the complex to complex versions
-  subroutine pfft_forward_3d(pfft)
-    type(pfft_t), intent(in)  :: pfft
+  subroutine pfft_forward_3d(pfft,dta_in,dta_out)
+    type(pfft_t), intent(inout)  :: pfft
+    FLOAT, intent(in) :: dta_in(:,:,:)
+    CMPLX, intent(out) :: dta_out(:,:,:)
+
+    Character(50) :: out_file
+    integer :: ii,jj,kk,index
+
+    integer :: fft_dim, idir, ierror, process_column_size, process_row_size
+    character(len=100) :: str_tmp
 
     PUSH_SUB(pfft_forward_3d)
-
+     
+    index = 1
+    ! convert from 3D to 1D and from real to complex
+    do kk = pfft%local_i_start(3), pfft%local_i_start(3)+pfft%local_ni(3)-1
+      do jj = pfft%local_i_start(2), pfft%local_i_start(2)+pfft%local_ni(2)-1
+        do ii = pfft%local_i_start(1),pfft%local_i_start(1)+pfft%local_ni(1)-1
+          pfft%data_in(index) = TOCMPLX(dta_in(ii,jj,kk),M_ZERO)
+          index = index + 1
+          if (pfft_output) then
+            write(message(1),*)'FW before: pfft%data_in(',index,')=',pfft%data_in(index)
+            call messages_info(1)
+          end if
+        end do
+      end do
+    end do
+    
     call PDFFT(execute) (pfft%planf)
-
+    
+    index = 1
+    !optionally, print the result of the fordward
+    if (pfft_output) then   
+      do kk = pfft%local_o_start(3), pfft%local_o_start(3)+pfft%local_no(3)-1
+        do jj = pfft%local_o_start(2), pfft%local_o_start(2)+pfft%local_no(2)-1
+          do ii = pfft%local_o_start(1), pfft%local_o_start(1)+pfft%local_no(1)-1
+            write(message(1),*)'FW_after: pfft%data_out(',index,')=',pfft%data_out(index)
+            call messages_info(1)
+            index = index + 1
+          end do
+        end do
+      end do
+    end if
+    
     POP_SUB(pfft_forward_3d)
   end subroutine pfft_forward_3d 
 
-  subroutine pfft_backward_3d(pfft)
-    type(pfft_t), intent(in) :: pfft
+  subroutine pfft_backward_3d(pfft,dta_out,dta_in)
+    type(pfft_t), intent(inout) :: pfft
+    CMPLX, intent(in) :: dta_out(:,:,:)
+    FLOAT, intent(out) :: dta_in(:,:,:)
+    
+    FLOAT :: scaling_fft_factor 
+
+    integer :: index,ii,jj,kk,mpi_err
+    integer(ptrdiff_t_kind) :: begin_index, i_start(3)
+    integer :: process_row_size, process_column_size, ierror
+    CMPLX,allocatable :: subarray(:)
+    FLOAT, allocatable :: dta_in_tmp(:,:,:)
+    integer(ptrdiff_t_kind), allocatable :: local_sizes(:), begin_indexes(:)
+    integer(ptrdiff_t_kind) :: tmp_local(6)
+    integer :: position
     
     PUSH_SUB(dpfft_backward)
     
-    call PDFFT(execute) (pfft%planb)
+    SAFE_ALLOCATE(dta_in_tmp(pfft%n(1),pfft%n(2),pfft%n(3)))
 
-    ! multiply by 1/(N1*N2*N2)
-    !call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
-    !  M_ONE / (fft%n(1)*fft%n(2)*fft%mn(3)), rr)
+    scaling_fft_factor = real(pfft%n(1)*pfft%n(2)*pfft%n(3))
+    
+    !optionally, print the before the backward
+    index = 1
+    if (pfft_output) then   
+      do kk = pfft%local_o_start(3), pfft%local_o_start(3)+pfft%local_no(3)-1
+        do jj = pfft%local_o_start(2),pfft%local_o_start(2)+pfft%local_no(2)-1
+          do ii = pfft%local_o_start(1), pfft%local_o_start(1)+pfft%local_no(1)-1
+            write(message(1),*)'BW bef: pfft%data_out(',index,')=',pfft%data_out(index) &
+                 ,' dta_out(',ii,jj,kk,')=',dta_out(ii,jj,kk) 
+            call messages_info(1)
+            index = index + 1
+          end do
+        end do
+      end do
+    end if
+    
+    call PDFFT(execute) (pfft%planb)
+    
+    index = 1
+    do kk = pfft%local_i_start(3), pfft%local_i_start(3)+pfft%local_ni(3)-1
+      do jj = pfft%local_i_start(2), pfft%local_i_start(2)+pfft%local_ni(2)-1
+        do ii = pfft%local_i_start(1), pfft%local_i_start(1)+pfft%local_ni(1)-1
+          dta_in(ii,jj,kk) = real(pfft%data_in(index))/scaling_fft_factor
+          if (pfft_output) then
+            write(message(1),*)'BW_after: pfft%data_in(',index,')=',pfft%data_in(index),' dta_in(i,j,k)=',dta_in(ii,jj,kk)
+            call messages_info(1)
+          end if
+          index = index + 1
+        end do
+      end do
+    end do
+    
+    !!BEGIN:gather the local information into a unique vector.
+    !!do a gather in 3d of all the box, into a loop
+    tmp_local(1) = pfft%local_i_start(1)
+    tmp_local(2) = pfft%local_i_start(2) 
+    tmp_local(3) = pfft%local_i_start(3) 
+    tmp_local(4) = pfft%local_ni(1)
+    tmp_local(5) = pfft%local_ni(2)
+    tmp_local(6) = pfft%local_ni(3) 
+    SAFE_ALLOCATE(local_sizes(6*mpi_world%size))
+    call MPI_Gather(tmp_local,6,MPI_INTEGER, &
+         local_sizes,6,MPI_INTEGER,&
+         0,mpi_world%comm,mpi_err)
+    
+    SAFE_ALLOCATE(begin_indexes(mpi_world%size))
+    do ii=1,mpi_world%size
+      position = ((ii-1)*6)+1
+      begin_indexes(ii) = (local_sizes(position) - 1) + &
+           ((local_sizes(position+1) - 1) * pfft%n(1)) + &
+           ((local_sizes(position+2) - 1) * pfft%n(2) * pfft%n(1)) + 1
+      !! implementation missing
+    end do
+
+    SAFE_DEALLOCATE_A(dta_in_tmp)
 
     POP_SUB(pfft_backward)
   end subroutine pfft_backward_3d
@@ -368,7 +526,8 @@ contains
     write(message(2),'(a, i9)') " No. of processors                = ",n_proc
     write(message(3),'(a, i9)') " No. of columns in the proc. grid = ",dim1
     write(message(4),'(a, i9)') " No. of rows    in the proc. grid = ",dim2
-    call messages_info(4)
+    write(message(5),'(a, i9)') " The size of integer is = ",ptrdiff_t_kind
+    call messages_info(5)
 
     POP_SUB(decompose)
   end subroutine decompose

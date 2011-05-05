@@ -257,11 +257,21 @@ contains
     SAFE_DEALLOCATE_P(cf%zRS)
     SAFE_DEALLOCATE_P(cf%FS)
     
+#ifdef HAVE_PFFT
+    if(associated(cf%pfft)) then
+      call pfft_end(cf%pfft)
+      SAFE_DEALLOCATE_P(cf%pfft)
+    end if
+#else      
+    write(message(1),'(a)')'Deallocating fft.'
+    call messages_info(1)
+
     if(associated(cf%fft)) then
       call fft_end(cf%fft)
       SAFE_DEALLOCATE_P(cf%fft)
     end if
-
+#endif 
+    
     POP_SUB(cube_function_end)
   end subroutine cube_function_end
 

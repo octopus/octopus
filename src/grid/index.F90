@@ -37,11 +37,11 @@ module index_m
   type index_t
     type(hypercube_t)          :: hypercube
     type(simul_box_t), pointer :: sb
-    integer                    :: nr(2, MAX_DIM)   ! dimensions of the box where the points are contained
-    integer                    :: ll(MAX_DIM)      ! literally nr(2,:) - nr(1,:) + 1 - 2*enlarge(:)
-    integer, pointer           :: lxyz(:,:)        ! return x, y and z for each point
-    integer, pointer           :: lxyz_inv(:,:,:)  ! return points # for each xyz
-    integer                    :: enlarge(MAX_DIM) ! number of points to add for boundary conditions
+    integer                    :: nr(2, MAX_DIM)   !< dimensions of the box where the points are contained
+    integer                    :: ll(MAX_DIM)      !< literally nr(2,:) - nr(1,:) + 1 - 2*enlarge(:)
+    integer, pointer           :: lxyz(:,:)        !< return x, y and z for each point
+    integer, pointer           :: lxyz_inv(:,:,:)  !< return points # for each xyz
+    integer                    :: enlarge(MAX_DIM) !< number of points to add for boundary conditions
     integer(8)                 :: checksum
   end type index_t
 

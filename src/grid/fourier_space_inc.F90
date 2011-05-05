@@ -56,13 +56,6 @@ subroutine X(cube_function_fft_init)(cf, sb)
   ASSERT(.not.associated(cf%X(RS)))
   ASSERT(.not.associated(cf%FS))
   SAFE_ALLOCATE(cf%fft)
-#ifdef R_TREAL
-  call fft_init(cf%n, sb%dim, fft_real, cf%fft, optimize = .not.simul_box_is_periodic(sb))
-  cf%nx = cf%n(1)/2 + 1
-#else
-  call fft_init(cf%n, sb%dim, fft_complex, cf%fft, optimize = .not.simul_box_is_periodic(sb))
-  cf%nx = cf%n(1)
-#endif
   
   if (cf%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
@@ -81,7 +74,15 @@ subroutine X(cube_function_fft_init)(cf, sb)
     message(2) = "but it has not been linked."
     call messages_fatal(2)
 #endif
-  end if
+    else
+#ifdef R_TREAL
+      call fft_init(cf%n, sb%dim, fft_real, cf%fft, optimize = .not.simul_box_is_periodic(sb))
+      cf%nx = cf%n(1)/2 + 1
+#else
+      call fft_init(cf%n, sb%dim, fft_complex, cf%fft, optimize = .not.simul_box_is_periodic(sb))
+      cf%nx = cf%n(1)
+#endif  
+    end if
 
   POP_SUB(X(cube_function_fft_init))
 end subroutine X(cube_function_fft_init)
@@ -114,41 +115,44 @@ subroutine X(cube_function_pfft_init)(cf, sb)
 end subroutine X(cube_function_pfft_init)
 
 ! ---------------------------------------------------------
-! The following routines convert the function between real space and Fourier space
-! Note that the dimensions of the function in FS are different depending on whether
-! f is real or complex, because the FFT representation is different (FFTW scheme).
+!> The following routines convert the function between real space and Fourier space
+!! Note that the dimensions of the function in FS are different depending on whether
+!! f is real or complex, because the FFT representation is different (FFTW scheme).
 subroutine X(cube_function_RS2FS)(cf)
   type(cube_function_t), intent(inout)  :: cf
+
+  integer ::ii,jj,kk,index
 
   ASSERT(associated(cf%X(RS)))
   if(.not.associated(cf%FS)) call X(cube_function_alloc_FS)(cf)
 
   if (cf%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
-    call pfft_forward_3d(cf%pfft)
+    call pfft_forward_3d(cf%pfft,cf%dRS,cf%FS)
 #endif
   else
     call X(fft_forward)(cf%fft, cf%X(RS), cf%FS)
   end if
-
+   
 end subroutine X(cube_function_RS2FS)
 
 
 ! ---------------------------------------------------------
 subroutine X(cube_function_FS2RS)(cf)
   type(cube_function_t), intent(inout)  :: cf
+  integer :: ii, jj, kk, index
 
   ASSERT(associated(cf%FS))
   if(.not.associated(cf%X(RS))) call X(cube_function_alloc_RS)(cf)
-  
+
   if (cf%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT 
-    call pfft_backward_3d(cf%pfft)
+    call pfft_backward_3d(cf%pfft,cf%FS,cf%dRS)
 #endif
   else
     call X(fft_backward)(cf%fft, cf%FS, cf%X(RS))
   end if
-
+  
 end subroutine X(cube_function_FS2RS)
 
 
@@ -179,30 +183,53 @@ subroutine X(fourier_space_op_apply)(this, cube)
   type(fourier_space_op_t), intent(in)     :: this
   type(cube_function_t),    intent(inout)  :: cube
   
-  integer :: ii, jj, kk
+  integer :: ii, jj, kk, index
   
   call X(cube_function_alloc_FS)(cube)
+  
   call X(cube_function_RS2FS)(cube)
+  
+  !NEW ASSIGNATION
 
-  do kk = 1, cube%n(3)
-    do jj = 1, cube%n(2)
-      do ii = 1, cube%nx
-        cube%FS(ii, jj, kk) = cube%FS(ii, jj, kk)*this%X(op)(ii, jj, kk)
+  if (cube%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT
+    index = 1
+    do kk =  cube%pfft%local_o_start(3),cube%pfft%local_o_start(3)+cube%pfft%local_no(3)-1
+      do jj = cube%pfft%local_o_start(2), cube%pfft%local_o_start(2)+cube%pfft%local_no(2)-1
+        do ii = cube%pfft%local_o_start(1), cube%pfft%local_o_start(1)+cube%pfft%local_no(1)-1 
+          cube%pfft%data_out(index)= cube%pfft%data_out(index)*this%X(op)(kk, jj, ii)
+          index=index+1
+        end do
       end do
     end do
-  end do
-
+#else
+    write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
+    call write_fatal(1)
+#endif
+  else
+!!$  OLD ASSIGNATION
+    index = 1
+    do kk = 1, cube%n(3)
+      do jj = 1, cube%n(2)
+        do ii = 1, cube%nx
+          cube%FS(ii, jj, kk) = cube%FS(ii, jj, kk)*this%X(op)(ii, jj, kk)
+          index=index+1
+        end do
+      end do
+    end do
+  end if
+  
   call X(cube_function_FS2RS)(cube)
   call X(cube_function_free_FS)(cube)
 
 end subroutine X(fourier_space_op_apply)
 
 ! ---------------------------------------------------------
-! The next two subroutines convert a function in Fourier space
-! between the normal mesh and the cube
-! Note that the function in the mesh should be defined
-! globally, not just in a partition (when running in
-! parallel in real-space domains).
+!> The next two subroutines convert a function in Fourier space
+!! between the normal mesh and the cube
+!! Note that the function in the mesh should be defined
+!! globally, not just in a partition (when running in
+!! parallel in real-space domains).
 ! ---------------------------------------------------------
 subroutine X(mesh_to_fourier) (mesh, mf, cf)
   type(mesh_t),  intent(in)    :: mesh

@@ -495,7 +495,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! convert between array index and G vector
+  !> convert between array index and G vector
   function pad_feq(ii, nn, mode)
     integer, intent(in) :: ii,nn
     logical, intent(in) :: mode

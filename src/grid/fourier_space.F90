@@ -71,9 +71,16 @@ contains
 
     PUSH_SUB(cube_function_fft_end)
 
-    if(associated(cf%fft)) then
-      call fft_end(cf%fft)
-      SAFE_DEALLOCATE_P(cf%fft)
+    if (cf%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT
+      call pfft_end(cf%pfft) !!JOSEBA: existitzen da??
+      SAFE_DEALLOCATE_P(cf%pfft)
+#else
+      if(associated(cf%fft)) then
+        call fft_end(cf%fft)
+        SAFE_DEALLOCATE_P(cf%fft)
+      end if
+#endif
     end if
 
     POP_SUB(cube_function_fft_end)

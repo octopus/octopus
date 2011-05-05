@@ -13,7 +13,7 @@
 !! You should have received a copy of the GNU General Public License
 !! along with this program; if not, write to the Free Software
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-!! 02111-1307, USA.
+!! 02111-1307, USA. 
 !!
 !! $Id: poisson_pfft.F90 2660 2011-02-08 15:11:54Z pablogr $
 
@@ -342,6 +342,102 @@ contains
 !!$  !-----------------------------------------------------------------
 !!$
 !!$
+  !-----------------------------------------------------------------
+  subroutine poisson_pfft_build_3d_0d(mesh, poisson_solver)
+    type(mesh_t), intent(inout) :: mesh
+    integer,      intent(in)    :: poisson_solver
+
+    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), idim
+    FLOAT :: temp(MAX_DIM), modg2
+    FLOAT :: gx, r_c, gg(MAX_DIM)
+    FLOAT :: DELTA_R = CNST(1.0e-12)
+    FLOAT, allocatable :: fft_coulb_FS(:,:,:)
+
+    PUSH_SUB(poisson_pfft_build_3d_0d)
+    
+    select case(poisson_solver)
+    case(POISSON_PFFT_SPH)
+      call mesh_double_box(mesh%sb, mesh, db)
+      db(:) = maxval(db)
+    case(POISSON_PFFT_CORRECTED)
+      db(:) = mesh%idx%ll(:)
+    end select
+
+    ! allocate cube function where we will perform the ffts
+    call dcf_new(db, fft_cf)
+
+    ! initialize the fft
+    call dcf_fft_init(fft_cf, mesh%sb)
+
+    ! dimensions may have been optimized
+    db(1:3) = fft_cf%n(1:3)
+
+    if (poisson_solver .ne. POISSON_PFFT_CORRECTED) then
+      call parse_float(datasets_check('PoissonCutoffRadius'),&
+        maxval(db(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
+
+      write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
+        trim(units_abbrev(units_out%length)), '] = ',       &
+        units_from_atomic(units_out%length, r_c)
+      call messages_info(1)
+      if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
+        message(1) = 'Poisson cutoff radius is larger than cell size.'
+        message(2) = 'You can see electrons in next cell(s).'
+        call messages_warning(2)
+      end if
+    end if
+
+    ! store the fourier transform of the Coulomb interaction
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+    fft_Coulb_FS = M_ZERO
+
+    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
+
+
+    do ix = 1, fft_cf%nx
+      ixx(1) = pad_feq(ix, db(1), .true.)
+      gx = temp(1)*ixx(1)
+      do iy = 1, db(2)
+        ixx(2) = pad_feq(iy, db(2), .true.)
+        do iz = 1, db(3)
+          ixx(3) = pad_feq(iz, db(3), .true.)
+
+          gg(:) = temp(:)*ixx(:)
+          gg(:) = matmul(gg, mesh%sb%klattice_primitive)
+          do idim = 1, mesh%sb%dim
+            gg(idim) = gg(idim) / lalg_nrm2(MAX_DIM, mesh%sb%klattice_primitive(:, idim))
+          end do
+          modg2 = sum(gg(:)**2)
+
+          if(modg2 /= M_ZERO) then
+            select case(poisson_solver)
+            case(POISSON_PFFT_SPH)
+              fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_0D(sqrt(modg2),r_c)/modg2
+            case(POISSON_PFFT_CORRECTED)
+              fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
+            end select
+          else
+            select case(poisson_solver)
+            case(POISSON_PFFT_SPH)
+              fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
+            case (POISSON_PFFT_CORRECTED)
+              fft_Coulb_FS(ix, iy, iz) = M_ZERO
+            end select
+          end if
+        end do
+      end do
+
+    end do
+
+    forall(iz=1:fft_cf%n(3), iy=1:fft_cf%n(2), ix=1:fft_cf%nx)
+      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+    end forall
+
+    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+
+    SAFE_DEALLOCATE_A(fft_Coulb_FS)
+    POP_SUB(poisson_pfft_build_3d_0d)
+  end subroutine poisson_pfft_build_3d_0d
 !!$  !-----------------------------------------------------------------
 !!$  subroutine poisson_pfft_build_3d_0d(mesh, poisson_solver)
 !!$    type(mesh_t), intent(inout) :: mesh
