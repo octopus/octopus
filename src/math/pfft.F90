@@ -133,7 +133,7 @@ contains
     !%Option pfft_measure 0
     !% This is the default, and implies a longer initialization, but involves a more careful analysis
     !% of the strategy to follow, and therefore more efficient FFTs.
-    !%Option pfft_etimate 64
+    !%Option pfft_estimate 64
     !% This is the "fast initialization" scheme, in which the plan is merely guessed from "reasonable"
     !% assumptions.
     !%End

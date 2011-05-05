@@ -189,7 +189,7 @@ subroutine X(fourier_space_op_apply)(this, cube)
   
   call X(cube_function_RS2FS)(cube)
   
-  !NEW ASSIGNATION
+  !NEW ASSIGNMENT
 
   if (cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
@@ -204,10 +204,10 @@ subroutine X(fourier_space_op_apply)(this, cube)
     end do
 #else
     write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
-    call write_fatal(1)
+    call messages_fatal(1)
 #endif
   else
-!!$  OLD ASSIGNATION
+!!$  OLD ASSIGNMENT
     index = 1
     do kk = 1, cube%n(3)
       do jj = 1, cube%n(2)
