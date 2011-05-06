@@ -73,9 +73,12 @@ contains
 
     if (cf%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
-      call pfft_end(cf%pfft) !!JOSEBA: existitzen da??
-      SAFE_DEALLOCATE_P(cf%pfft)
+      if(associated(cf%pfft)) then
+        call pfft_end(cf%pfft)
+        SAFE_DEALLOCATE_P(cf%pfft)
+      end if
 #else
+    else
       if(associated(cf%fft)) then
         call fft_end(cf%fft)
         SAFE_DEALLOCATE_P(cf%fft)
