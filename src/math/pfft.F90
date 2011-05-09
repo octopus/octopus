@@ -222,11 +222,6 @@ contains
     
     PUSH_SUB(pfft_init)
 
-    !! Change the nn from 32 bits to 64 (if needed)
-    nn_t_kind(1) = nn(1)
-    nn_t_kind(2) = nn(2)
-    nn_t_kind(3) = nn(3)
-    
     ! First, figure out the dimensionality of the FFT. PFFT works efficiently with 3D
     fft_dim = 0
     do ii = 1, dim
@@ -289,13 +284,13 @@ contains
     pfft_refs(jj)          = 1
     pfft_array(jj)%slot    = jj
 
+    !! Change the nn from 32 bits to 64 (if needed)  
     pfft_array(jj)%n(1:3)  = nn(1:3)
     pfft_array(jj)%is_real = is_real
     
     ! With PFFT only could be 3D complex
-    
-    SAFE_ALLOCATE( cin(1:nn(1), 1:nn(2), 1:nn(3)))
-    SAFE_ALLOCATE(cout(1:nn(1), 1:nn(2), 1:nn(3)))
+    SAFE_ALLOCATE( cin(1:pfft_array(jj)%n(1), 1:pfft_array(jj)%n(2), 1:pfft_array(jj)%n(3)))
+    SAFE_ALLOCATE(cout(1:pfft_array(jj)%n(1), 1:pfft_array(jj)%n(2), 1:pfft_array(jj)%n(3)))
     
     ! Create two-dimensional process grid of
     call decompose(mpi_world%size, process_column_size, process_row_size)
@@ -319,10 +314,10 @@ contains
     SAFE_ALLOCATE(pfft_array(jj)%data_out(pfft_array(jj)%alloc_local))
 
     ! Create the plan, with the processor grid 
-    call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, nn, & 
+    call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, pfft_array(jj)%n, & 
          pfft_array(jj)%data_in, pfft_array(jj)%data_out, pfft_array(jj)%comm_cart_2d, &
-          FFTW_FORWARD, PFFT_TRANSPOSED + PFFT_FORWARD, FFTW_MEASURE)
-    call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, nn, &
+         FFTW_FORWARD, PFFT_TRANSPOSED + PFFT_FORWARD, FFTW_MEASURE)
+    call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, pfft_array(jj)%n, &
          pfft_array(jj)%data_out, pfft_array(jj)%data_in, pfft_array(jj)%comm_cart_2d, &
          FFTW_BACKWARD, PFFT_TRANSPOSED + PFFT_BACKWARD, FFTW_MEASURE) 
        
@@ -366,11 +361,11 @@ contains
       do jj = pfft%local_i_start(2), pfft%local_i_start(2)+pfft%local_ni(2)-1
         do ii = pfft%local_i_start(1),pfft%local_i_start(1)+pfft%local_ni(1)-1
           pfft%data_in(index) = TOCMPLX(dta_in(ii,jj,kk),M_ZERO)
-          index = index + 1
           if (pfft_output) then
             write(message(1),*)'FW before: pfft%data_in(',index,')=',pfft%data_in(index)
             call messages_info(1)
           end if
+          index = index + 1
         end do
       end do
     end do
