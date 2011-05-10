@@ -131,7 +131,7 @@ contains
       call messages_fatal(1)
     endif
 
-    !%Variable KS_Inversion_Level
+    !%Variable KSInversionLevel
     !%Type integer
     !%Default ks_inversion_adiabatic
     !%Section Hamiltonian::XC
@@ -142,9 +142,9 @@ contains
     !%Option ks_inversion_adiabatic 2
     !% Compute exact adiabatic vxc
     !%End
-    
-    call parse_integer(datasets_check('KS_Inversion_Level'), XC_KS_INVERSION_ADIABATIC, ks_inv%level)
-    if(.not.varinfo_valid_option('KS_Inversion_Level', ks_inv%level)) call input_error('KS_Inversion_Level')
+    call messages_obsolete_variable('KS_Inversion_Level', 'KSInversionLevel')
+    call parse_integer(datasets_check('KSInversionLevel'), XC_KS_INVERSION_ADIABATIC, ks_inv%level)
+    if(.not.varinfo_valid_option('KSInversionLevel', ks_inv%level)) call input_error('KSInversionLevel')
 
     if(ks_inv%level.ne.XC_KS_INVERSION_NONE) then
       ! initialize auxilary random wavefunctions
@@ -189,7 +189,7 @@ contains
     if(ks_inversion%level.eq.XC_KS_INVERSION_NONE) return
 
     PUSH_SUB(xc_ks_inversion_messages_info)
-    call messages_print_var_option(iunit, 'KS_Inversion_Level', ks_inversion%level)
+    call messages_print_var_option(iunit, 'KSInversionLevel', ks_inversion%level)
 
     POP_SUB(xc_ks_inversion_messages_info)
   end subroutine xc_ks_inversion_messages_info
