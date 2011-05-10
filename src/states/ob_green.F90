@@ -59,10 +59,10 @@ contains
     np = intf%np_intf
     np_uc = intf%np_uc
     
-    eta = CNST(1e-9) ! FIXME: read from input. relative eta
+    eta = CNST(1e-7) ! FIXME: read from input. relative eta
     threshold = CNST(1e-14) ! FIXME: read from input.
     eps = CNST(1e-5) ! FIXME: read from input.
-    c_energy = energy + eta/abs(energy)*M_zI
+    c_energy = energy + eta*M_zI
 
     ! if we cannot reduce the unit cell
     ! we have only one way of calculating the Green`s function: with the Sancho method
@@ -192,8 +192,8 @@ contains
 
     tmp1(1:np, 1:np) = tmp1(1:np, 1:np) - tmp2(1:np, 1:np)
     det = lalg_inverter(np, tmp1, invert = .true.)
-    tmp1(1:np, 1:np) = tmp1(1:np, 1:np) - green(1:np, 1:np)
-    residual = infinity_norm(tmp1)/infinity_norm(green)
+!    tmp1(1:np, 1:np) = tmp1(1:np, 1:np) - green(1:np, 1:np)
+    residual = abs(M_ONE - infinity_norm(tmp1)/infinity_norm(green))
 
     SAFE_DEALLOCATE_A(tmp1)
     SAFE_DEALLOCATE_A(tmp2)
