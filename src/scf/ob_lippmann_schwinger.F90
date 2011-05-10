@@ -67,7 +67,7 @@ contains
   ! Solve the Lippmann-Schwinger equation for the open boundary
   ! system. Use convergence criteria in eigens.
   subroutine lippmann_schwinger(eigens, hm, gr, st)
-    type(eigensolver_t),        intent(out)   :: eigens
+    type(eigensolver_t),         intent(out)   :: eigens
     type(hamiltonian_t), target, intent(inout) :: hm
     type(grid_t), target,        intent(inout) :: gr
     type(states_t), target,      intent(inout) :: st
@@ -122,10 +122,10 @@ contains
         end do
 
         ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
-        rhs = st%zphi(:, :, ist, ik)
+        rhs(:, :) = st%zphi(:, :, ist, ik)
         call calc_rhs(rhs)
 
-        if (associated(hm%ep%A_static)) call calc_rhs(rhs, .true.) ! multiply transposed version
+        if (associated(hm%ep%A_static)) call calc_rhs(rhs, transposed = .true.) ! multiply transposed version
 
         ! Solve linear system lhs psi = rhs.
         iter = eigens%es_maxiter
@@ -184,7 +184,7 @@ contains
   ! The right hand side of the Lippmann-Schwinger equation
   ! e-T-V0-sum(a)[H_ca*g_a*H_ac].
   subroutine calc_rhs(rhs, transposed)
-    CMPLX, intent(inout)            :: rhs(:, :)
+    CMPLX, intent(inout)          :: rhs(:, :)
     logical, optional, intent(in) :: transposed ! needed only for the non hermitian part
 
     integer :: ip, idim, il
@@ -195,8 +195,7 @@ contains
 
     SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:st_p%d%dim))
 
-    transposed_ = .false.
-    if(present(transposed)) transposed_ = transposed
+    transposed_ = optional_default(transposed, .false.)
 
     if(transposed_) then ! the usual conjugate trick for the hermitian part
       tmp = conjg(rhs)
@@ -209,6 +208,7 @@ contains
     call zhamiltonian_apply(hm_p, gr_p%der, tmp, rhs, ist_p, ik_p, terms = TERM_KINETIC)
 
     ! Apply lead potential. Left and right lead potential are assumed to be equal.
+    ! FIXME: does not work for meshblocksize>1
     forall(ip = 1:gr_p%mesh%np )
       rhs(ip, :) = rhs(ip, :) + hm_p%lead(LEFT)%vks(mod(ip-1, gr_p%intf(LEFT)%np_intf) + 1, :) * tmp(ip, :)
     end forall

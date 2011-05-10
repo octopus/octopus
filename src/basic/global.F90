@@ -122,7 +122,7 @@ module global_m
   ! ---------------------------------------------------------
 
   interface optional_default
-    module procedure doptional_default, zoptional_default, ioptional_default, loptional_default
+    module procedure doptional_default, zoptional_default, ioptional_default, loptional_default, soptional_default
   end interface optional_default
 
 contains
@@ -230,6 +230,15 @@ contains
     val = def
     if(present(opt)) val = opt
   end function loptional_default
+
+  pure function soptional_default(opt, def) result(val)
+    character(len=*), optional, intent(in) :: opt
+    character(len=*),           intent(in) :: def
+    character(len=max(len(opt),len(def)))  :: val
+
+    val = def
+    if(present(opt)) val = opt
+  end function soptional_default
 
 end module global_m
 

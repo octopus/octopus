@@ -46,9 +46,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_cg_init(mesh, ml, thr, itr)
+  subroutine poisson_cg_init(mesh, thr, itr)
     type(mesh_t), intent(in) :: mesh
-    integer,      intent(in) :: ml, itr
+    integer,      intent(in) :: itr
     FLOAT,        intent(in) :: thr
 
     PUSH_SUB(poisson_cg_init)
