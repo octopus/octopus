@@ -86,40 +86,41 @@ contains
 
     PUSH_SUB(PES_init)
 
-
-    !%Variable CalcPES_rc
+    call messages_obsolete_variable('CalcPES_rc', 'PhotoElectronSpectrum')
+    !%Variable PhotoElectronSpectrum
     !%Type logical
     !%Default no
-    !%Section Time-Dependent::PES
+    !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !%  If <tt>true</tt>, store the wavefunctions at specific points in order to 
     !% calculate the photoelectron spectrum at a point far in the box as proposed in 
     !% A. Pohl, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. Lett.</i> <b>84</b>, 5090 (2000).
     !%End
-    call parse_logical(datasets_check('CalcPES_rc'), .false., pes%calc_rc)
+    call parse_logical(datasets_check('PhotoElectronSpectrum'), .false., pes%calc_rc)
     if(pes%calc_rc) then
       pes%calc_rc = .true.
       call PES_rc_init(pes%rc, mesh, st, save_iter)
     end if
 
-    !%Variable CalcPES_mask
+    call messages_obsolete_variable('CalcPES_mask', 'PhotoElectronSpectrumMask')
+    !%Variable PhotoElectronSpectrumMask
     !%Type logical
     !%Default no
-    !%Section Time-Dependent::PES
+    !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% If <tt>true</tt>, calculate the photo-electron spectrum using the mask method
     !% (M. Marques, D. Varsano, H. Appel, E.K.U. Gross and A. Rubio, to be submitted). 
     !% For this to work, masking boundaries are necessary (<tt>AbsorbingBoundaries == 2</tt>).
     !%End
-    call parse_logical(datasets_check('CalcPES_Mask'), .false., pes%calc_mask)
+    call parse_logical(datasets_check('PhotoElectronSpectrumMask'), .false., pes%calc_mask)
     if(pes%calc_mask) then
       call PES_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
     end if
 
     if(pes%calc_mask .and. ab /= 2) then
-      message(1) = 'Warning: CalcPES_mask works only with AbsorbingBoundaries=2.'
+      message(1) = 'Warning: PhotoElectronSpectrumMask works only with AbsorbingBoundaries=2.'
       call messages_info(1)
-      call input_error('CalcPES_Mask')
+      call input_error('PhotoElectronSpectrumMask')
     end if
 
     POP_SUB(PES_init)
