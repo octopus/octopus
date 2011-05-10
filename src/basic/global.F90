@@ -231,10 +231,11 @@ contains
     if(present(opt)) val = opt
   end function loptional_default
 
-  pure function soptional_default(opt, def) result(val)
+  !----------------------------------------------------------
+
+  character(len=80) pure function soptional_default(opt, def) result(val)
     character(len=*), optional, intent(in) :: opt
     character(len=*),           intent(in) :: def
-    character(len=max(len(opt),len(def)))  :: val
 
     val = def
     if(present(opt)) val = opt

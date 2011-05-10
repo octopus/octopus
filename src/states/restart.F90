@@ -167,7 +167,7 @@ contains
 
     PUSH_SUB(restart_look_and_read)
 
-    dir = optional_default(specify_dir, restart_dir)
+    dir = trim(optional_default(specify_dir, restart_dir))
 
     !check how many wfs we have
     call states_look(trim(dir)//GS_DIR, gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
