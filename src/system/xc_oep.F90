@@ -101,7 +101,7 @@ contains
     end if
 #endif
 
-    !%Variable OEP_level
+    !%Variable OEPLevel
     !%Type integer
     !%Default oep_kli
     !%Section Hamiltonian::XC
@@ -117,13 +117,23 @@ contains
     !%Option oep_full 5
     !% (Experimental) Full solution of OEP equation using the Sternheimer approach.
     !%End
-    call parse_integer(datasets_check('OEP_level'), XC_OEP_KLI, oep%level)
-    if(.not. varinfo_valid_option('OEP_level', oep%level)) call input_error('OEP_level')
+    call messages_obsolete_variable('OEP_Level', 'OEPLevel')
+    call parse_integer(datasets_check('OEPLevel'), XC_OEP_KLI, oep%level)
+    if(.not. varinfo_valid_option('OEPLevel', oep%level)) call input_error('OEP_level')
 
     if(oep%level .ne. XC_OEP_NONE) then
       if(oep%level == XC_OEP_FULL) then
-        call messages_experimental("Full OEP")
-        call parse_float(datasets_check('OEP_mixing'), M_ONE, oep%mixing)
+        call messages_experimental("Full OEP")    
+        !%Variable OEPMixing
+        !%Type float
+        !%Default 1.0
+        !%Section Hamiltonian::XC
+        !%Description
+        !% The linear mixing factor used to solve the Sternheimer
+        !% equation in the full OEP procedure. The default is 1.0.
+        !%End
+        call messages_obsolete_variable('OEP_Mixing', 'OEPMixing')
+        call parse_float(datasets_check('OEPMixing'), M_ONE, oep%mixing)
       end if
 
       ! this routine is only prepared for finite systems, and ispin = 1, 2
@@ -180,7 +190,7 @@ contains
     if(oep%level.eq.XC_OEP_NONE) return
 
     PUSH_SUB(xc_oep_messages_info)
-    call messages_print_var_option(iunit, 'OEP_level', oep%level)
+    call messages_print_var_option(iunit, 'OEPLevel', oep%level)
 
     POP_SUB(xc_oep_messages_info)
   end subroutine xc_oep_messages_info

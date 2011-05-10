@@ -39,7 +39,7 @@ Radius  = 13.0
 Spacing = 0.35
 
 XCFunctional = oep_x
-OEP_Level = oep_full
+OEPLevel = oep_full
 
 
 ConvRelDens = 8e-10

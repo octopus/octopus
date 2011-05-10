@@ -14,7 +14,7 @@ ExcessCharge = 1
 Spacing = 0.5
 
 XCFunctional = oep_x
-OEP_level = oep_full
+OEPLevel = oep_full
 
 ExperimentalFeatures = yes
 

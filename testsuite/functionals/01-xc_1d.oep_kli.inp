@@ -22,4 +22,4 @@ SpinComponents = spin_polarized
 
 XCFunctional = oep_x
 
-OEP_Level = oep_kli
+OEPLevel = oep_kli
