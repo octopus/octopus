@@ -42,8 +42,9 @@ module scf_tol_m
        scf_tol_end, & 
        scf_tol_stop, & 
        scf_tol_step, &
-       scf_tol_final
-       
+       scf_tol_final,             &
+       scf_tol_obsolete_variables
+
   type scf_tol_t
      integer           :: max_iter
      integer           :: scheme
@@ -264,6 +265,20 @@ contains
     scf_tol_final = this%final_tol
 
   end function scf_tol_final
+
+  !-----------------------------------------------------------------
+
+  subroutine scf_tol_obsolete_variables(old_prefix, new_prefix)
+    character(len=*),    intent(in)    :: old_prefix
+    character(len=*),    intent(in)    :: new_prefix
+    call messages_obsolete_variable(trim(old_prefix)//'LRMaximumIter', trim(new_prefix)//'LRMaximumIter')
+    call messages_obsolete_variable(trim(old_prefix)//'LRConvAbsDens', trim(new_prefix)//'LRConvAbsDens')
+    call messages_obsolete_variable(trim(old_prefix)//'LRTolScheme', trim(new_prefix)//'LRTolScheme')
+    call messages_obsolete_variable(trim(old_prefix)//'LRTolInitTol', trim(new_prefix)//'LRTolInitTol')
+    call messages_obsolete_variable(trim(old_prefix)//'LRTolFinalTol', trim(new_prefix)//'LRTolFinalTol')
+    call messages_obsolete_variable(trim(old_prefix)//'LRTolAdaptiveFactor', trim(new_prefix)//'LRTolAdaptiveFactor')
+    call messages_obsolete_variable(trim(old_prefix)//'LRTolIterWindow', trim(new_prefix)//'LRTolIterWindow')
+  end subroutine scf_tol_obsolete_variables
 
 end module scf_tol_m
 

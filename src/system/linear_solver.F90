@@ -59,8 +59,8 @@ module linear_solver_m
        linear_solver_end,     &
        dsolve_HXeY,           & 
        zsolve_HXeY,           &
-       linear_solver_ops_per_iter
-  
+       linear_solver_ops_per_iter,       &
+       linear_solver_obsolete_variables
 
   type linear_solver_t
      integer                :: solver         
@@ -228,6 +228,19 @@ contains
     end select
   
   end function linear_solver_ops_per_iter
+
+  ! ----------------------------------------------------------
+  
+  subroutine linear_solver_obsolete_variables(old_prefix, new_prefix)
+    character(len=*),    intent(in)    :: old_prefix
+    character(len=*),    intent(in)    :: new_prefix
+    
+    call messages_obsolete_variable(trim(old_prefix)//"LinearSolver", trim(new_prefix)//"LinearSolver")
+    call messages_obsolete_variable(trim(old_prefix)//"LinearSolverMaxIter", trim(new_prefix)//"LinearSolverMaxIter")
+
+    call preconditioner_obsolete_variables(old_prefix, new_prefix)
+
+  end subroutine linear_solver_obsolete_variables
 
 #include "undef.F90"
 

@@ -48,17 +48,17 @@ module preconditioners_m
     PRE_POISSON   = 3,              &
     PRE_MULTIGRID = 7
   
-  public ::                         &
-    preconditioner_t,               &
-    preconditioner_init,            &
-    preconditioner_null,            &
-    preconditioner_end,             &
-    preconditioner_is_multigrid,    &
-    dpreconditioner_apply,          &
-    zpreconditioner_apply,          &
-    dpreconditioner_apply_batch,    &
-    zpreconditioner_apply_batch
-
+  public ::                            &
+    preconditioner_t,                  &
+    preconditioner_init,               &
+    preconditioner_null,               &
+    preconditioner_end,                &
+    preconditioner_is_multigrid,       &
+    dpreconditioner_apply,             &
+    zpreconditioner_apply,             &
+    dpreconditioner_apply_batch,       &
+    zpreconditioner_apply_batch,       &
+    preconditioner_obsolete_variables
 
   type preconditioner_t
     integer :: which
@@ -201,6 +201,14 @@ contains
 
     req = (this%which == PRE_MULTIGRID)
   end function preconditioner_is_multigrid
+
+  ! ---------------------------------------------------------
+  subroutine preconditioner_obsolete_variables(old_prefix, new_prefix)
+    character(len=*),    intent(in)    :: old_prefix
+    character(len=*),    intent(in)    :: new_prefix
+
+    call messages_obsolete_variable(trim(old_prefix)//'Preconditioner', trim(new_prefix)//'Preconditioner')
+  end subroutine preconditioner_obsolete_variables
 
 #include "undef.F90"
 #include "complex.F90"

@@ -155,7 +155,8 @@ contains
       call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:))
     endif
 
-    call sternheimer_init(sh, sys, hm, "KdotP_", complex_response, set_ham_var = 0, &
+    call sternheimer_obsolete_variables('KdotP_', 'KdotP')
+    call sternheimer_init(sh, sys, hm, 'KdotP', complex_response, set_ham_var = 0, &
       set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = (kdotp_vars%occ_solution_method == 0))
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
 
@@ -260,7 +261,8 @@ contains
 
       PUSH_SUB(kdotp_lr_run.parse_input)
 
-      !%Variable KdotP_OccupiedSolutionMethod
+
+      !%Variable KdotPOccupiedSolutionMethod
       !%Type integer
       !%Default sternheimer
       !%Section Linear Response::KdotP
@@ -276,15 +278,16 @@ contains
       !% evaluate the contributions in the occupied subspace.
       !%End      
 
-      call parse_integer(datasets_check('KdotP_OccupiedSolutionMethod'), &
-        0, kdotp_vars%occ_solution_method)
+      call messages_obsolete_variable('KdotP_OccupiedSolutionMethod', 'KdotPOccupiedSolutionMethod')
+
+      call parse_integer(datasets_check('KdotPOccupiedSolutionMethod'), 0, kdotp_vars%occ_solution_method)
 
       call parse_float(datasets_check('DegeneracyThreshold'), &
         units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
       kdotp_vars%degen_thres = units_to_atomic(units_inp%energy, kdotp_vars%degen_thres)
       ! Note: this variable is defined in src/states_calc.F90, in states_degeneracy_matrix
 
-      !%Variable KdotP_Eta
+      !%Variable KdotPEta
       !%Type float
       !%Default 0.0
       !%Section Linear Response::KdotP
@@ -292,11 +295,11 @@ contains
       !% Imaginary frequency added to Sternheimer equation which may improve convergence.
       !% Not recommended.
       !%End
-
-      call parse_float(datasets_check('KdotP_Eta'), M_ZERO, kdotp_vars%eta)
+      call messages_obsolete_variable('KdotP_Eta', 'KdotPEta')
+      call parse_float(datasets_check('KdotPEta'), M_ZERO, kdotp_vars%eta)
       kdotp_vars%eta = units_to_atomic(units_inp%energy, kdotp_vars%eta)
 
-      !%Variable KdotP_CalculateEffectiveMasses
+      !%Variable KdotPCalculateEffectiveMasses
       !%Type logical
       !%Default true
       !%Section Linear Response::KdotP
@@ -304,9 +307,8 @@ contains
       !% If true, uses <tt>kdotp</tt> perturbations of ground-state wavefunctions
       !% to calculate effective masses.
       !%End      
-
-      call parse_logical(datasets_check('KdotP_CalculateEffectiveMasses'), &
-        .true., calc_eff_mass)
+      call messages_obsolete_variable('KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
+      call parse_logical(datasets_check('KdotPCalculateEffectiveMasses'), .true., calc_eff_mass)
 
       POP_SUB(kdotp_lr_run.parse_input)
 

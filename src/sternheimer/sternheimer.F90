@@ -82,8 +82,8 @@ module sternheimer_m
        sternheimer_unset_inhomog, &
        sternheimer_has_converged, &
        swap_sigma,                &
-       wfs_tag_sigma
-
+       wfs_tag_sigma,                     &
+       sternheimer_obsolete_variables
   type sternheimer_t
      private
      type(linear_solver_t) :: solver
@@ -389,6 +389,20 @@ contains
     POP_SUB(wfs_tag_sigma)
 
   end function wfs_tag_sigma
+
+  ! --------------------------------------------------------
+
+  subroutine sternheimer_obsolete_variables(old_prefix, new_prefix)
+    character(len=*),    intent(in)    :: old_prefix
+    character(len=*),    intent(in)    :: new_prefix
+    
+    call messages_obsolete_variable(trim(old_prefix)//'Preorthogonalization', trim(new_prefix)//'Preorthogonalization')
+    call messages_obsolete_variable(trim(old_prefix)//'HamiltonianVariation', trim(new_prefix)//'HamiltonianVariation')
+
+    call linear_solver_obsolete_variables(old_prefix, new_prefix)
+    call scf_tol_obsolete_variables(old_prefix, new_prefix)
+
+  end subroutine sternheimer_obsolete_variables
   
 #include "complex.F90"
 #include "sternheimer_inc.F90"
