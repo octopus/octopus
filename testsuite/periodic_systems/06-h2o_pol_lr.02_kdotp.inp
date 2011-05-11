@@ -14,7 +14,7 @@ BoxShape = parallelepiped
 Lsize = 10
 PeriodicDimensions = 3
 
-KdotP_Preconditioner = no
+KdotPPreconditioner = no
 
 %KPointsGrid
 1 | 1 | 1
