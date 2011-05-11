@@ -25,9 +25,10 @@ module phonons_lr_m
   use geometry_m
   use global_m
   use grid_m
-  use output_m
   use hamiltonian_m
   use io_m
+  use kdotp_m
+  use kdotp_calc_m
   use lalg_basic_m
   use linear_response_m
   use parser_m
@@ -35,11 +36,13 @@ module phonons_lr_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use output_m
   use pert_m
   use profiling_m
   use projector_m
   use restart_m
   use simul_box_m
+  use smear_m
   use species_m
   use states_m
   use states_dim_m
@@ -69,7 +72,7 @@ contains
     logical,                intent(in)    :: fromscratch
 
     type(sternheimer_t) :: sh
-    type(lr_t)          :: lr(1:1)
+    type(lr_t)          :: lr(1:1), kdotp_lr(MAX_DIM)
     type(vibrations_t)  :: vib
     type(pert_t)        :: ionic_pert, electric_pert
 
@@ -77,8 +80,10 @@ contains
     type(states_t),   pointer :: st
     type(grid_t),     pointer :: gr
 
-    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr
+    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr, ist, ik
     FLOAT, allocatable   :: infrared(:,:)
+    FLOAT :: term
+    character(len=80) :: dirname_restart, str_tmp
 
     PUSH_SUB(phonons_lr_run)
 
@@ -95,9 +100,29 @@ contains
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    !CONSTRUCT
-
     call restart_look_and_read(st, gr, geo)
+
+    ! read kdotp wavefunctions if necessary (for IR intensities)
+    if (simul_box_is_periodic(gr%sb)) then
+      message(1) = "Reading kdotp wavefunctions for periodic directions."
+      call messages_info(1)
+
+      do idir = 1, gr%sb%periodic_dim
+        call lr_init(kdotp_lr(idir))
+        call lr_allocate(kdotp_lr(idir), sys%st, sys%gr%mesh)
+
+        ! load wavefunctions
+        str_tmp = kdotp_wfs_tag(idir)
+        write(dirname_restart,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
+        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo,ierr, lr=kdotp_lr(idir))
+
+        if(ierr .ne. 0) then
+          message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
+          message(2) = "Previous kdotp calculation required."
+          call messages_fatal(2)
+        end if
+      end do
+    endif
 
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
@@ -159,8 +184,20 @@ contains
 
       end do
       
-      ! this part is not correct for periodic systems, a different electric perturbation is required with d/dk
-      do jdir = 1, ndim
+      if(.not. smear_is_semiconducting(st%smear)) then
+        do jdir = 1, gr%sb%periodic_dim
+          infrared(imat, jdir) = M_ZERO
+          do ik = 1, st%d%nik
+            term = M_ZERO
+            do ist = 1, st%nst
+              term = term + &
+                TOFLOAT(dmf_dotp(gr%mesh, st%d%dim, lr(1)%ddl_psi(:, :, ist, ik), kdotp_lr(jdir)%ddl_psi(:, :, ist, ik)))
+            enddo
+            infrared(imat, jdir) = infrared(imat, jdir) + M_TWO * term * st%smear%el_per_state * st%d%kweights(ik)
+          enddo
+        enddo
+      endif
+      do jdir = gr%sb%periodic_dim + 1, ndim
         call pert_setup_dir(electric_pert, jdir)
         infrared(imat, jdir) = &
           M_TWO * TOFLOAT(dpert_expectation_value(electric_pert, gr, geo, hm, st, lr(1)%ddl_psi, st%dpsi))
@@ -176,6 +213,12 @@ contains
     call vibrations_normalize_dyn_matrix(vib, geo)
     call vibrations_diag_dyn_matrix(vib)
     call vibrations_output(vib, "_lr")
+
+    if(simul_box_is_periodic(gr%sb) .and. .not. smear_is_semiconducting(st%smear)) then
+      message(1) = "Cannot calculate infrared intensities for periodic system with smearing (i.e. without a gap)."
+      call messages_info(1)
+      infrared(:,:) = M_ZERO
+    endif
     call calc_infrared
 
     message(1) = "Calculating response wavefunctions for normal modes."
