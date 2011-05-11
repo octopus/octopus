@@ -153,7 +153,7 @@ contains
         call pert_setup_dir(ionic_pert, jdir, idir)
         
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
-          -M_TWO*dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi)
+          -M_TWO * TOFLOAT(dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi))
         
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
 
@@ -163,8 +163,7 @@ contains
       do jdir = 1, ndim
         call pert_setup_dir(electric_pert, jdir)
         infrared(imat, jdir) = &
-          dpert_expectation_value(electric_pert, gr, geo, hm, st, lr(1)%ddl_psi, st%dpsi) + &
-          dpert_expectation_value(electric_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi)
+          M_TWO * TOFLOAT(dpert_expectation_value(electric_pert, gr, geo, hm, st, lr(1)%ddl_psi, st%dpsi))
       end do
 
       message(1) = ""
