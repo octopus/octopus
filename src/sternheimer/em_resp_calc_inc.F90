@@ -527,7 +527,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
 
                   ispin = states_dim_get_spin_index(sys%st%d, ik)
 
-                  if (present(kdotp_em_lr)) then
+                  if (present(kdotp_em_lr) .and. u(2) <= sys%gr%sb%periodic_dim) then
                     tmp(1:np, 1) = - M_zI * kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
                   else
                     call pert_setup_dir(dipole, u(2))
@@ -647,7 +647,7 @@ contains
           do ii = 1, ndir
             do ifreq = 1, 3
 
-              if (present(kdotp_lr)) then
+              if (present(kdotp_lr) .and. ii <= sys%gr%sb%periodic_dim) then
                 forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = - M_zI * kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
               else
                 call pert_setup_dir(dipole, ii)
