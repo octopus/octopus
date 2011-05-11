@@ -138,6 +138,7 @@ contains
     integer :: interact_1d
     FLOAT   :: alpha
     logical :: ok
+    integer, parameter :: INT_EXP_SCREENED = 0, INT_SOFT_COULOMB = 1
 
     PUSH_SUB(xc_functl_init_functl)
 
@@ -216,7 +217,7 @@ contains
       call XC_F90(lda_c_xalpha_set_par)(functl%conf, alpha)
 
     case(XC_LDA_X_1D, XC_LDA_C_1D_CSC)
-      !%Variable SoftInteraction1D_type
+      !%Variable Interaction1D
       !%Type integer
       !%Default interaction_soft_coulomb
       !%Section Hamiltonian::XC
@@ -227,19 +228,21 @@ contains
       !% Exponentially screened Coulomb interaction.
       !% See, <i>e.g.</i>, M Casula, S Sorella, and G Senatore, <i>Phys. Rev. B</i> <b>74</b>, 245427 (2006).
       !%Option interaction_soft_coulomb 1
-      !% Soft Coulomb interaction of the form 1/sqrt(x^2 + alpha^2).
+      !% Soft Coulomb interaction of the form 1/sqrt(x^2 + alpha^2). This is the default.
       !%End
-      call parse_integer(datasets_check('SoftInteraction1D_type'), 1, interact_1d)
+      call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1D')
+      call parse_integer(datasets_check('Interaction1D'), INT_SOFT_COULOMB, interact_1d)
 
-      !%Variable SoftInteraction1D_alpha
+      !%Variable Interaction1DScreening
       !%Type float
       !%Default 1.0
       !%Section Hamiltonian::XC
       !%Description
-      !% Defines the screening parameter of the softened Coulomb interaction
-      !% when running in 1D.
+      !% Defines the screening parameter, alpha, of the softened Coulomb interaction
+      !% when running in 1D. The default value is 1.0.
       !%End
-      call parse_float(datasets_check('SoftInteraction1D_alpha'), M_ONE, alpha)
+      call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1DScreening')
+      call parse_float(datasets_check('Interaction1DScreening'), M_ONE, alpha)
       
       if(functl%id == XC_LDA_X_1D) then
         call XC_F90(lda_x_1d_set_par)(functl%conf, interact_1d, alpha)
