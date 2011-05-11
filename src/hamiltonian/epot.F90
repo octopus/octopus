@@ -240,6 +240,11 @@ contains
 
       if(gr%sb%periodic_dim < gr%sb%dim) then
         ! Compute the scalar potential
+        !
+        ! Note that the -1 sign is missing. This is because we
+        ! consider the electrons with +1 charge. The electric field
+        ! however retains the sign because we also consider protons to
+        ! have +1 charge when calculating the force.
         SAFE_ALLOCATE(ep%v_static(1:gr%mesh%np))
         forall(ip = 1:gr%mesh%np)
           ep%v_static(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))

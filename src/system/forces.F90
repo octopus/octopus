@@ -113,8 +113,9 @@ contains
         case(E_FIELD_ELECTRIC)
           call laser_field(ep%lasers(j), gr%sb, x, t)
           do i = 1, geo%natoms
-            geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + &
-              P_PROTON_CHARGE * species_zval(geo%atom(i)%spec) * x(1:gr%mesh%sb%dim)
+            ! Here the proton charge is +1, since the electric field has the usual sign.
+            geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
+             + species_zval(geo%atom(i)%spec)*x(1:gr%mesh%sb%dim)
           end do
 
         case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL, E_FIELD_SCALAR_POTENTIAL)
@@ -127,8 +128,9 @@ contains
 
     if(associated(ep%E_field)) then
       do i = 1, geo%natoms
-        geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) + &
-          P_PROTON_CHARGE * species_zval(geo%atom(i)%spec) * ep%E_field(1:gr%mesh%sb%dim)
+        ! Here the proton charge is +1, since the electric field has the usual sign.
+        geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
+          + species_zval(geo%atom(i)%spec)*ep%E_field(1:gr%mesh%sb%dim)
       end do
     end if
     

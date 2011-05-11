@@ -580,6 +580,7 @@ contains
     case default
       field(1:mesh%sb%dim) = real(amp*laser%pol(1:mesh%sb%dim))
       do ip = 1, mesh%np
+        ! The -1 sign is missing here. Check epot.F90 for the explanation.
         pot(ip) = pot(ip) + sum(field(1:mesh%sb%dim)*mesh%x(ip, 1:mesh%sb%dim))
       end do
     end select
