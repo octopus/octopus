@@ -298,16 +298,17 @@ contains
 
         ! Create interpolation points (posi) and weights (ww)
 
-        !%Variable MR_InterpolationOrder
+        !%Variable MultiResolutionInterpolationOrder
         !%Type integer
         !%Default 5
         !%Section Mesh
         !%Description
-        !% The interpolation order in multiresolution approach.
+        !% The interpolation order in multiresolution approach. The default is 5.
         !%End
-        call parse_integer(datasets_check('MR_InterpolationOrder'), 5, sb%hr_area%interp%order)
+        call messages_obsolete_variable('MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
+        call parse_integer(datasets_check('MultiResolutionInterpolationOrder'), 5, sb%hr_area%interp%order)
         if(sb%hr_area%interp%order .le. 0) then
-          message(1) = "The value for MR_InterpolationOrder must be > 0."
+          message(1) = "The value for MultiResolutionInterpolationOrder must be > 0."
           call messages_fatal(1)
         end if
 
