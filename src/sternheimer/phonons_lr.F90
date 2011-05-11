@@ -20,6 +20,7 @@
 #include "global.h"
 
 module phonons_lr_m
+  use born_charges_m
   use datasets_m
   use epot_m
   use geometry_m
@@ -84,6 +85,7 @@ contains
     FLOAT, allocatable   :: infrared(:,:)
     FLOAT :: term
     character(len=80) :: dirname_restart, str_tmp
+    type(Born_charges_t) :: born
 
     PUSH_SUB(phonons_lr_run)
 
@@ -99,6 +101,8 @@ contains
 
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
+
+    call Born_charges_init(born, geo, st, gr%sb%dim)
 
     call restart_look_and_read(st, gr, geo)
 
@@ -203,6 +207,7 @@ contains
           M_TWO * TOFLOAT(dpert_expectation_value(electric_pert, gr, geo, hm, st, lr(1)%ddl_psi, st%dpsi))
       end do
 
+      born%charge(idir, 1:gr%sb%dim, iatom) = -infrared(imat, 1:gr%sb%dim)
       message(1) = ""
       call messages_info(1)
     end do 
@@ -218,7 +223,9 @@ contains
       message(1) = "Cannot calculate infrared intensities for periodic system with smearing (i.e. without a gap)."
       call messages_info(1)
       infrared(:,:) = M_ZERO
+      born%charge(:,:,:) = M_ZERO
     endif
+    call out_Born_charges(born, geo, gr%sb%dim, VIB_MODES_DIR, write_real = .true.)
     call calc_infrared
 
     message(1) = "Calculating response wavefunctions for normal modes."
@@ -228,6 +235,7 @@ contains
     !DESTRUCT
 
     SAFE_DEALLOCATE_A(infrared)
+    call Born_charges_end(born)
     call lr_dealloc(lr(1))
     call vibrations_end(vib)
     call sternheimer_end(sh)
