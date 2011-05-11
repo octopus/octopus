@@ -184,7 +184,7 @@ contains
 
       end do
       
-      if(.not. smear_is_semiconducting(st%smear)) then
+      if(smear_is_semiconducting(st%smear)) then
         do jdir = 1, gr%sb%periodic_dim
           infrared(imat, jdir) = M_ZERO
           do ik = 1, st%d%nik
