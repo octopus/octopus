@@ -143,14 +143,15 @@ contains
 
       PUSH_SUB(vdw_run.input)
 
-      !%Variable vdW_npoints
+      !%Variable vdWNPoints
       !%Type integer
       !%Section Linear Response::Polarizabilities
       !%Description
       !% How many points to use in the Gauss-Legendre integration to obtain the
-      !% van der Waals coefficients.
+      !% van der Waals coefficients. The default is 6.
       !%End
-      call  parse_integer(datasets_check('vdW_npoints'), 6, gaus_leg_n)
+      call messages_obsolete_variable('vdW_npoints', 'vdWNPoints')
+      call parse_integer(datasets_check('vdWNPoints'), 6, gaus_leg_n)
 
       ! \todo symmetry stuff should be general
       call parse_integer(datasets_check('TDPolarizationEquivAxes'), 0, equiv_axes)
