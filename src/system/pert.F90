@@ -151,7 +151,7 @@ contains
     end if
 
     if(this%pert_type == PERTURBATION_KDOTP) then
-      !%Variable KdotP_UseNonLocalPseudopotential
+      !%Variable KdotPUseNonLocalPseudopotential
       !%Type logical
       !%Default true
       !%Section Linear Response::KdotP
@@ -159,8 +159,8 @@ contains
       !% For testing purposes, set to false to ignore the term -i[r,V] in
       !% the k.p perturbation, which is due to non-local pseudopotentials.
       !%End
-
-      call parse_logical(datasets_check('KdotP_UseNonLocalPseudopotential'), &
+      call messages_obsolete_variable('KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
+      call parse_logical(datasets_check('KdotPUseNonLocalPseudopotential'), &
         .true., this%use_nonlocalpps)
     endif
 
