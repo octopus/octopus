@@ -112,12 +112,13 @@ contains
     !% calculate the photoelectron spectrum at a point far in the box as proposed in 
     !% A. Pohl, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. Lett.</i> <b>84</b>, 5090 (2000).
     !%Option pes_mask 4
-    !% Calculate the photo-electron spectrum using the mask method
-    !% (M. Marques, D. Varsano, H. Appel, E.K.U. Gross and A. Rubio, to be submitted). 
-    !% For this to work, masking boundaries are necessary (<tt>AbsorbingBoundaries == 2</tt>).
+    !% Calculate the photo-electron spectrum using the mask method.
+    !% (D. Varsano, PhD thesis, page 159 (2006) http://nano-bio.ehu.es/files/varsano_phd.pdf).
+    !%
+    !% For this to work, masking boundaries are necessary (<tt>AbsorbingBoundaries = mask</tt>).
     !%End
     call parse_integer(datasets_check('PhotoElectronSpectrum'), PHOTOELECTRON_NONE, photoelectron_flags)
-    if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag=.true.)) then
+    if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
       call input_error('PhotoElectronSpectrum')
     end if
     
