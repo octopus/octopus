@@ -37,19 +37,23 @@ subroutine PES_rc_init(pesrc, mesh, st, save_iter)
   message(1) = 'Info: Calculating PES using rc technique.'
   call messages_info(1)
 
-  !%Variable PES_rc_points
+  !%Variable PhotoElectronSpectrumPoints
   !%Type block
-  !%Section Time-Dependent::PES
+  !%Section Time-Dependent::PhotoElectronSpectrum
   !%Description
   !% List of points at which to calculate the photoelectron spectrum by Suraud method.
   !% The exact syntax is:
   !%
-  !% <tt>%PES_rc_points
+  !% <tt>%PhotoElectronSpectrumPoints
   !% <br>&nbsp;&nbsp;x1 | y1 | z1
   !% <br>%
   !% </tt>
   !%End
-  if (parse_block(datasets_check('PES_rc_points'), blk) < 0) call input_error('PES_rc_points')
+  call messages_obsolete_variable('PES_rc_points', 'PhotoElectronSpectrumPoints')
+  if (parse_block(datasets_check('PhotoElectronSpectrumPoints'), blk) < 0) then
+    message(1) = 'The PhotoElectronSpectrumPoints block is required PhotoElectronSpectrum = pes_rc'
+    call messages_fatal(1)
+  end if
 
   pesrc%npoints = parse_block_n(blk)
 

@@ -38,7 +38,7 @@ module PES_m
   use hamiltonian_m
   use geometry_m
   use lasers_m
-!  use em_field_m
+  use varinfo_m
 
   implicit none
 
@@ -71,6 +71,11 @@ module PES_m
     
   end type PES_t
 
+  integer, parameter ::     &
+    PHOTOELECTRON_NONE = 0, &
+    PHOTOELECTRON_RC   = 2, &
+    PHOTOELECTRON_MASK = 4
+
 contains
 
   ! ---------------------------------------------------------
@@ -84,44 +89,48 @@ contains
     integer,             intent(in)      :: max_iter
     FLOAT,               intent(in)      :: dt
 
+    integer :: photoelectron_flags
+
     PUSH_SUB(PES_init)
 
     call messages_obsolete_variable('CalcPES_rc', 'PhotoElectronSpectrum')
+    call messages_obsolete_variable('CalcPES_mask', 'PhotoElectronSpectrum')
+
     !%Variable PhotoElectronSpectrum
-    !%Type logical
+    !%Type flag
     !%Default no
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !%  If <tt>true</tt>, store the wavefunctions at specific points in order to 
+    !%This variable controls the method used for the calculation of
+    !%the photoelectron spectrum. You can specify more than one value
+    !%by giving them as a sum, for example:
+    !% <tt>PhotoElectronSpectrum = pes_rc + pes_mask</tt>
+    !%Option none 0
+    !% The photoelectron spectrum is not calculated. This is the default.
+    !%Option pes_rc 2
+    !% Store the wavefunctions at specific points in order to 
     !% calculate the photoelectron spectrum at a point far in the box as proposed in 
     !% A. Pohl, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. Lett.</i> <b>84</b>, 5090 (2000).
-    !%End
-    call parse_logical(datasets_check('PhotoElectronSpectrum'), .false., pes%calc_rc)
-    if(pes%calc_rc) then
-      pes%calc_rc = .true.
-      call PES_rc_init(pes%rc, mesh, st, save_iter)
-    end if
-
-    call messages_obsolete_variable('CalcPES_mask', 'PhotoElectronSpectrumMask')
-    !%Variable PhotoElectronSpectrumMask
-    !%Type logical
-    !%Default no
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% If <tt>true</tt>, calculate the photo-electron spectrum using the mask method
+    !%Option pes_mask 4
+    !% Calculate the photo-electron spectrum using the mask method
     !% (M. Marques, D. Varsano, H. Appel, E.K.U. Gross and A. Rubio, to be submitted). 
     !% For this to work, masking boundaries are necessary (<tt>AbsorbingBoundaries == 2</tt>).
     !%End
-    call parse_logical(datasets_check('PhotoElectronSpectrumMask'), .false., pes%calc_mask)
-    if(pes%calc_mask) then
-      call PES_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
+    call parse_integer(datasets_check('PhotoElectronSpectrum'), PHOTOELECTRON_NONE, photoelectron_flags)
+    if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag=.true.)) then
+      call input_error('PhotoElectronSpectrum')
     end if
+    
+    pes%calc_rc = iand(photoelectron_flags, PHOTOELECTRON_RC) /= 0
+    pes%calc_mask = iand(photoelectron_flags, PHOTOELECTRON_MASK) /= 0
 
-    if(pes%calc_mask .and. ab /= 2) then
-      message(1) = 'Warning: PhotoElectronSpectrumMask works only with AbsorbingBoundaries=2.'
-      call messages_info(1)
-      call input_error('PhotoElectronSpectrumMask')
+    if(pes%calc_mask .and. ab /= MASK_ABSORBING) then
+      message(1) = 'PhotoElectronSpectrum = pes_mask requires AbsorbingBoundaries = mask'
+      call messages_fatal(1)
     end if
+    
+    if(pes%calc_rc) call PES_rc_init(pes%rc, mesh, st, save_iter)
+    if(pes%calc_mask) call PES_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
 
     POP_SUB(PES_init)
   end subroutine PES_init
