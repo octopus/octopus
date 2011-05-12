@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: oct-run_regression_test.pl,v 1.15 2006/03/13 09:56:40 acastro Exp      :
 
-Test       : XC Functionals 1D
+Test       : KS Inversion
 Programs   : octopus
 TestGroups : short-run
 Enabled    : No
