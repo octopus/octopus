@@ -788,7 +788,7 @@ contains
     end do
     call geometry_dipole(geo, nuclear_dipole)
     do is = 1, st%d%nspin
-      multipole(2:gr%mesh%sb%dim+1, is) = -nuclear_dipole(1:gr%mesh%sb%dim) - multipole(2:gr%mesh%sb%dim+1, is)
+      multipole(2:gr%mesh%sb%dim+1, is) = -nuclear_dipole(1:gr%mesh%sb%dim)/st%d%nspin - multipole(2:gr%mesh%sb%dim+1, is)
     end do
 
     if(mpi_grp_is_root(mpi_world)) then

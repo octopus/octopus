@@ -24,7 +24,7 @@ omega = beta*sqrt(2*D/mu)
 #
 # E[nu] = -D + \hbar* [ omega*(nu+0.5) - Delta*(nu+0.5)^2 ] 
 # 
-# where Delta is the anharmocity constant:
+# where Delta is the anharmonicity constant:
 Delta = omega^2 / (4*D)
 # The numerical value is .00040895133 Ha
 #
