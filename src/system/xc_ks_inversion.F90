@@ -527,7 +527,7 @@ contains
 
     type(xc_ks_inversion_t),  intent(inout) :: ks_inversion
     type(grid_t),             intent(inout) :: gr
-    type(hamiltonian_t),      intent(in)    :: hm
+    type(hamiltonian_t),      intent(inout) :: hm
     type(states_t),           intent(inout) :: st
     FLOAT,                    intent(inout) :: ex, ec
     FLOAT,                    intent(inout) :: vxc(:,:) ! vxc(gr%mesh%np, st%d%nspin)
