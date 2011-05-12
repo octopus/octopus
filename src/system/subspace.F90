@@ -93,8 +93,8 @@ contains
     !%Option old 2
     !% Old routine, compatible with states parallelization.
     !%Option scalapack 3
-    !% State-parallelized version using scalapack. (Requires that
-    !% Octopus was compiled with scalpack support.)
+    !% State-parallelized version using ScaLAPACK. (Requires that
+    !% Octopus was compiled with ScaLAPACK support.)
     !%End
 
     default = SD_STANDARD

@@ -90,7 +90,7 @@ contains
     !%Description
     !% Which preconditioner to use in order to solve the Kohn-Sham equations or
     !% the linear-response equations. May apply prefix of linear-response (<i>e.g.</i>
-    !% <tt>EM</tt>, <tt>KdotP_</tt>) to differentiate from choice for ground state.
+    !% <tt>EM</tt>, <tt>KdotP</tt>, <tt>VM</tt>) to differentiate from choice for ground state.
     !%Option no 0
     !% Do not apply preconditioner.
     !%Option pre_filter 1
