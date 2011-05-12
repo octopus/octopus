@@ -208,7 +208,7 @@ contains
 
     !%Variable CasidaMomentumTransfer
     !%Type block
-    !%Section Linear Response::Response
+    !%Section Linear Response::Casida
     !%Default 0
     !%Description
     !% Momentum-transfer vector for the calculation of the dynamic structure
@@ -232,7 +232,7 @@ contains
 
     !%Variable CasidaQuadratureOrder
     !%Type integer
-    !%Section Linear Response::Response
+    !%Section Linear Response::Casida
     !%Default 5
     !%Description
     !% Directionally averaged dynamic structure factor is calculated by

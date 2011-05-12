@@ -221,10 +221,11 @@ contains
       do isign = 1, 2
         write(message(1), '(a)')
         write(message(2), '(a,f6.4,5a)') 'Info: Calculating dipole moment for field ', &
-          units_from_atomic(units_out%force, -(-1)**isign * e_field), ' ', &
+          units_from_atomic(units_out%force, (-1)**isign * e_field), ' ', &
           trim(units_abbrev(units_out%force)), ' in the ', index2axis(ii), '-direction.'
         call messages_info(2)
-        ! there is an extra factor of -1 in here that is for the electronic charge
+        ! there would be an extra factor of -1 in here that is for the electronic charge
+        ! except that we treat electrons as positive
 
         hm%ep%vpsl(1:gr%mesh%np) = vpsl_save(1:gr%mesh%np) + (-1)**isign * gr%mesh%x(1:gr%mesh%np, ii) * e_field
         call hamiltonian_update(hm, gr%mesh)

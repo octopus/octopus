@@ -40,6 +40,11 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out)
   ASSERT(this%dir .ne. -1)
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
+    if(this%dir <= gr%sb%periodic_dim) then
+      message(1) = "Internal error: cannot apply electric perturbation in periodic direction."
+      call messages_fatal(1)
+    endif
+  
     SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part, 1:hm%d%dim))
     do idim = 1, hm%d%dim
       call lalg_copy(gr%mesh%np, f_in(:, idim), f_in_copy(:, idim))
