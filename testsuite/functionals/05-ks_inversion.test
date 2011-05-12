@@ -4,7 +4,7 @@
 Test       : XC Functionals 1D
 Programs   : octopus
 TestGroups : short-run
-Enabled    : Yes
+Enabled    : No
 
 Input: 05-ks_inversion.01-target_density.inp
 match ; Density value 1                          ; LINE(static/density.y\=0\,z\=0,    2, 25) ; -1.68925577522562E-008

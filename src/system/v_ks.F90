@@ -581,16 +581,8 @@ contains
         endif
 
         if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
-
           ! Also treat KS inversion separately (not part of libxc)
-          if(present(time)) then
-            call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st,  &
-              energy%exchange, energy%correlation, vxc = ks%calc%vxc, time=ks%calc%time)
-          else
-            call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, &
-              energy%exchange, energy%correlation, vxc = ks%calc%vxc)
-          end if
-
+          call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
         endif
       end if
 

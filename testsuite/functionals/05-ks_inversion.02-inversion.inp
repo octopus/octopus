@@ -25,7 +25,7 @@ a=1.0
 
 # ks_inversion is defined as XC functional
 XCFunctional = ks_inversion
-KS_Inversion_Level = ks_inversion_adiabatic
+KSInversionLevel = ks_inversion_adiabatic
 InvertKSmethod = iterative
 
 InvertKSTargetDensity = "static/density.y=0,z=0"
