@@ -527,7 +527,7 @@ contains
 
     type(xc_ks_inversion_t),  intent(inout) :: ks_inversion
     type(grid_t),             intent(inout) :: gr
-    type(hamiltonian_t),      intent(inout) :: hm
+    type(hamiltonian_t),      intent(in)    :: hm
     type(states_t),           intent(inout) :: st
     FLOAT,                    intent(inout) :: ex, ec
     FLOAT,                    intent(inout) :: vxc(:,:) ! vxc(gr%mesh%np, st%d%nspin)
@@ -588,7 +588,6 @@ contains
       ks_inversion%aux_hm%vxc(:,ii)  = ks_inversion%aux_hm%vhxc(:,ii) - hm%vhartree(:)
     enddo
 
-    hm%vxc = ks_inversion%aux_hm%vxc
     vxc = ks_inversion%aux_hm%vxc
     
     !do ii = 1, st%d%nspin
