@@ -314,6 +314,8 @@
 !% Orestes, Marcasso & Capelle
 !%Option lca_lch               302
 !% Lee, Colwell & Handy
+!%Option ks_inversion             801
+!% Inversion of KS potential
 !%Option oep_x                    901
 !% OEP: Exact exchange
 !%Option none                       0

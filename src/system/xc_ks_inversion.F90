@@ -58,14 +58,12 @@ module xc_ks_inversion_m
     xc_ks_inversion_messages_info,    &
     xc_ks_inversion_calc,          &
     invertks_2part,                &
-    invertks_iter,                 &
-    invertvxc_iter
+    invertks_iter
 
   ! KS inversion methods/algorithms
   integer, public, parameter ::            &
     XC_INV_METHOD_VS_ITER      = 1,  &
-    XC_INV_METHOD_TWO_PARTICLE = 2,  &
-    XC_INV_METHOD_VXC_ITER     = 3
+    XC_INV_METHOD_TWO_PARTICLE = 2
 
   ! the KS inversion levels
   integer, public, parameter ::      &
@@ -76,6 +74,7 @@ module xc_ks_inversion_m
   type xc_ks_inversion_t
      integer             :: method
      integer             :: level
+     FLOAT, pointer      :: vxc_previous_step(:,:)
      type(states_t)      :: aux_st
      type(hamiltonian_t) :: aux_hm
      type(eigensolver_t) :: eigensolver
@@ -126,12 +125,12 @@ contains
             XC_INV_METHOD_VS_ITER, ks_inv%method)
 
     if(ks_inv%method < XC_INV_METHOD_VS_ITER &
-      .or. ks_inv%method > XC_INV_METHOD_VXC_ITER) then
+      .or. ks_inv%method > XC_INV_METHOD_TWO_PARTICLE) then
       call input_error('InvertKSmethod')
       call messages_fatal(1)
     endif
 
-    !%Variable KSInversionLevel
+    !%Variable KS_Inversion_Level
     !%Type integer
     !%Default ks_inversion_adiabatic
     !%Section Hamiltonian::XC
@@ -142,9 +141,9 @@ contains
     !%Option ks_inversion_adiabatic 2
     !% Compute exact adiabatic vxc
     !%End
-    call messages_obsolete_variable('KS_Inversion_Level', 'KSInversionLevel')
-    call parse_integer(datasets_check('KSInversionLevel'), XC_KS_INVERSION_ADIABATIC, ks_inv%level)
-    if(.not.varinfo_valid_option('KSInversionLevel', ks_inv%level)) call input_error('KSInversionLevel')
+    
+    call parse_integer(datasets_check('KS_Inversion_Level'), XC_KS_INVERSION_ADIABATIC, ks_inv%level)
+    if(.not.varinfo_valid_option('KS_Inversion_Level', ks_inv%level)) call input_error('KS_Inversion_Level')
 
     if(ks_inv%level.ne.XC_KS_INVERSION_NONE) then
       ! initialize auxilary random wavefunctions
@@ -158,6 +157,7 @@ contains
       call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st)
     end if
 
+    SAFE_ALLOCATE(ks_inv%vxc_previous_step(1:gr%mesh%np, 1:d%nspin))
     POP_SUB(xc_ks_inversion_init)
   end subroutine xc_ks_inversion_init
 
@@ -177,6 +177,7 @@ contains
       call states_end(ks_inv%aux_st)
     end if
 
+    SAFE_DEALLOCATE_P(ks_inv%vxc_previous_step)
     POP_SUB(xc_ks_inversion_end)
   end subroutine xc_ks_inversion_end
 
@@ -189,7 +190,7 @@ contains
     if(ks_inversion%level.eq.XC_KS_INVERSION_NONE) return
 
     PUSH_SUB(xc_ks_inversion_messages_info)
-    call messages_print_var_option(iunit, 'KSInversionLevel', ks_inversion%level)
+    call messages_print_var_option(iunit, 'KS_Inversion_Level', ks_inversion%level)
 
     POP_SUB(xc_ks_inversion_messages_info)
   end subroutine xc_ks_inversion_messages_info
@@ -206,7 +207,7 @@ contains
     FLOAT,   intent(in)      :: target_rho(1:gr%mesh%np, 1:nspin)
            
     integer :: ii, jj 
-    integer :: ndim, np
+    integer :: np_part, ndim, np
     FLOAT   :: spacing(1:MAX_DIM), stabilizer
     FLOAT, allocatable :: sqrtrho(:,:), laplace(:,:), vks(:,:)
 
@@ -236,11 +237,7 @@ contains
     
     do jj = 1, nspin
       do ii = 1, np
-        !if(target_rho(ii,jj)>1d-10) then
-          vks(ii, jj) = laplace(ii, jj)/(M_TWO*sqrtrho(ii, jj))
-        !else
-	 ! vhxc(ii,jj) =M_ZERO
-	!endif
+          vks(ii, jj) = laplace(ii, jj)/(M_TWO*sqrtrho(ii, jj)) + st%eigenval(1,jj)
       enddo
     enddo
     
@@ -272,129 +269,23 @@ contains
     integer,             intent(in)    :: nspin
     FLOAT,               intent(in)    :: target_rho(1:gr%mesh%np, 1:nspin)
         
+    type(mix_t) :: smix
     integer :: ii, jj, ierr, idiffmax
-    integer :: iunit, verbosity, counter, np
+    integer :: iunit, iunit2, verbosity, counter, np
+    FLOAT :: rr
+    FLOAT :: alpha, beta, convergence, alphascale, betascale
     FLOAT :: stabilizer, convdensity, diffdensity, aa
     FLOAT, allocatable :: vhxc(:,:)
 
+    character(len=20) :: alpha_str
+    character(len=20) :: beta_str
     character(len=256) :: fname
+    character(len=256) :: filename2
 
     PUSH_SUB(invertks_iter)
 
     np = gr%mesh%np
 
-    ! Variables defined in routine invertvxc_iter
-    call parse_float(datasets_check('InvertKSConvAbsDens'), CNST(1e-5), convdensity)
-    call parse_float(datasets_check('InvertKSStabilizer'), M_HALF, stabilizer)
-    call parse_integer(datasets_check('InvertKSVerbosity'), 0, verbosity)  
-    if(verbosity < 0 .or. verbosity > 2) then
-      call input_error('InvertKSVerbosity')
-      call messages_fatal(1)
-    endif
-           
-    SAFE_ALLOCATE(vhxc(1:np, 1:nspin))
-
-    vhxc(1:np,1:nspin) = aux_hm%vhxc(1:np,1:nspin)
-         
-    if(verbosity == 1 .or. verbosity == 2) then
-      iunit = io_open('InvertKSconvergence', action = 'write')
-    endif
-    
-    diffdensity = M_ONE
-    counter = 0
-
-    do while(diffdensity > convdensity)
-      
-      counter = counter + 1 
-        
-      if(verbosity == 2) then
-        write(fname,'(i6.6)') counter
-        call dio_function_output(io_function_fill_how("AxisX"), &
-             ".", "vhxc"//fname, gr%mesh, aux_hm%vhxc(:,1), units_out%energy, ierr)
-        call dio_function_output(io_function_fill_how("AxisX"), &
-             ".", "rho"//fname, gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
-      endif
-
-      call hamiltonian_update(aux_hm, gr%mesh)
-
-      call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
-
-      call density_calc(st, gr, st%rho)      
- 
-      aa = 0.1
-
-      vhxc(1:np, 1:nspin) = vhxc(1:np, 1:nspin) *  &
-        (-M_ONE/aa +  &
-         (M_TWO/aa + M_ONE)*((st%rho(1:np,1:nspin) + stabilizer)/(target_rho(1:np,1:nspin)+ stabilizer)) + &
-         (-M_ONE)/aa*((st%rho(1:np,1:nspin) + stabilizer)/(target_rho(1:np,1:nspin)+ stabilizer))**2)
-
-      aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
-      
-      do jj = 1, nspin
-        aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(:)
-      enddo
-      
-      diffdensity = M_ZERO
-      do jj = 1, nspin
-        do ii = 1, np
-          if (abs(st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
-            diffdensity = abs(st%rho(ii,jj)-target_rho(ii,jj))
-            idiffmax=ii
-          endif
-        enddo
-      enddo
-            
-      if(verbosity == 1 .or. verbosity == 2) then
-        write(iunit,'(i6.6)', ADVANCE = 'no') counter
-        write(iunit,'(es18.10)') diffdensity
-#ifdef HAVE_FLUSH
-        call flush(iunit)
-#endif
-      endif
-     
-    end do
-
-    !calculate final density
-
-    call hamiltonian_update(aux_hm, gr%mesh)
-    call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
-    call density_calc(st, gr, st%rho)
-    
-    write(message(1),'(a,I8)') "Iterative KS inversion, iterations needed:", counter
-    call messages_info(1)
-    
-    call io_close(iunit)      
-
-    SAFE_DEALLOCATE_A(vhxc)
-
-    POP_SUB(invertks_iter)
-
-  end subroutine invertks_iter
-
-
-  ! ---------------------------------------------------------
-  subroutine invertvxc_iter(target_rho, np, nspin, hm, xc, hartree_solver, frozen_hxc, gr, st, eigensolver)
-    type(xc_t),          intent(in)    :: xc
-    type(poisson_t),     intent(inout) :: hartree_solver
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
-    type(hamiltonian_t), intent(inout) :: hm
-    type(eigensolver_t), intent(inout) :: eigensolver
-    integer,             intent(in)    :: np, nspin
-    FLOAT,               intent(in)    :: target_rho(1:np, 1:nspin)
-    logical,             intent(out)   :: frozen_hxc
-        
-    integer :: ii, jj, ierr, idiffmax
-    integer :: iunit, verbosity, counter
-    FLOAT :: stabilizer, convdensity, diffdensity
-    FLOAT :: E_x, E_c
-    FLOAT, allocatable :: vxc_in(:,:,:), vxc_out(:,:,:), vxc_mix(:,:,:)
-    FLOAT, allocatable :: rho(:)
-    type(mix_t) :: smix
-    character(len=256) :: fname
-
-    PUSH_SUB(invertvxc_iter)
-    
     !%Variable InvertKSConvAbsDens
     !%Type float
     !%Default 1e-5
@@ -403,9 +294,8 @@ contains
     !% Absolute difference between the calculated and the target density in the KS
     !% inversion. Has to be larger than the convergence of the density in the SCF run.
     !%End
-    
     call parse_float(datasets_check('InvertKSConvAbsDens'), CNST(1e-5), convdensity)
-    
+
     !%Variable InvertKSStabilizer
     !%Type float
     !%Default 0.5
@@ -415,7 +305,6 @@ contains
     !%   (v(alpha+1)=rho(alpha)+c)/(rho_target+c)*v(alpha)
     !% ensures that very small densities do not cause numerical problems.
     !%End
-
     call parse_float(datasets_check('InvertKSStabilizer'), M_HALF, stabilizer)
 
     !%Variable InvertKSVerbosity
@@ -433,49 +322,15 @@ contains
     !% Same as 1 but outputs the density and the KS potential in each iteration in 
     !% addition.
     !%End
-      
     call parse_integer(datasets_check('InvertKSVerbosity'), 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
       call input_error('InvertKSVerbosity')
       call messages_fatal(1)
     endif
-  
-    SAFE_ALLOCATE(rho(1:np))
-    
-    ! calculate total density
-    rho = M_ZERO
-    do ii = 1, nspin
-      do jj = 1, np
-        rho(jj) = rho(jj) + target_rho(jj, ii)
-      enddo
-    enddo
-    
-    ! calculate the Hartree potential
-    call dpoisson_solve(hartree_solver,hm%vhartree,rho)
-    
-    call dio_function_output(io_function_fill_how("AxisX"), &
-           ".", "vhartree", gr%mesh, hm%vhartree(:), units_out%energy, ierr)
-    
-    ! initialize the KS potential
-    call xc_get_vxc(gr%der, xc, st, target_rho, st%d%ispin, M_ZERO, st%qtot, ex = E_x, ec = E_c, vxc = hm%vxc)
-    
-    call dio_function_output(io_function_fill_how("AxisX"), &
-           ".", "vxcinit", gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
-    
-    call dio_function_output(io_function_fill_how("AxisX"), &
-           ".", "vext", gr%mesh, hm%ep%vpsl(:), units_out%energy, ierr)
-    
-    call hamiltonian_update(hm, gr%mesh)
-    
-    frozen_hxc = .true.
-    
-    call mix_init(smix, np, nspin, 1, prefix_="InvertKS")
+           
+    SAFE_ALLOCATE(vhxc(1:np, 1:nspin))
 
-    SAFE_ALLOCATE(vxc_in(1:np, 1:nspin, 1:1))
-    SAFE_ALLOCATE(vxc_out(1:np, 1:nspin, 1:1))
-    SAFE_ALLOCATE(vxc_mix(1:np, 1:nspin, 1:1))
-    
-    vxc_in(1:np,1:nspin,1) = hm%vxc(1:np,1:nspin)
+    vhxc(1:np,1:nspin) = aux_hm%vhxc(1:np,1:nspin)
          
     if(verbosity == 1 .or. verbosity == 2) then
       iunit = io_open('InvertKSconvergence', action = 'write')
@@ -483,33 +338,46 @@ contains
     
     diffdensity = M_ONE
     counter = 0
-        
-    do while(diffdensity > convdensity)
-      counter = counter + 1 
+    alpha = CNST(0.1)
+    beta  = CNST(0.1)
+    convergence = CNST(0.1)
+    alphascale = 10
+    betascale = 100
+ 
+    if(verbosity == 2) then
+      write(alpha_str, '(f8.4)') alpha
+      write(beta_str, '(f8.4)') beta
+      filename2 = "diffdens_" // trim(adjustl(alpha_str)) // "_" // trim(adjustl(beta_str)) // ".dat"
+      iunit2 = io_open(trim(filename2), action='write')
+    end if
 
+    do while(diffdensity > convdensity)
+      
+      counter = counter + 1 
+        
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
         call dio_function_output(io_function_fill_how("AxisX"), &
-             ".", "vxc"//fname, gr%mesh, hm%vxc(:,1), units_out%energy, ierr)
+             ".", "vhxc"//fname, gr%mesh, aux_hm%vhxc(:,1), units_out%energy, ierr)
         call dio_function_output(io_function_fill_how("AxisX"), &
              ".", "rho"//fname, gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
       endif
-    
-      call eigensolver_run(eigensolver, gr, st, hm, 1, verbose = .false.)
-    
-      call density_calc(st, gr, st%rho)
-      
-      vxc_out(1:np, 1:nspin, 1) = &
-        (st%rho(1:np,1:nspin) + stabilizer)/&
-	(target_rho(1:np,1:nspin) + stabilizer) &
-         * hm%vxc(1:np, 1:nspin)
 
-      call dmixing(smix, counter, vxc_in, vxc_out, vxc_mix, dmf_dotp_aux)
+      call hamiltonian_update(aux_hm, gr%mesh)
+      call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
+      call density_calc(st, gr, st%rho)      
+       
+      ! Inversion according to Phys. Rev. Lett. 100, 153004 (2008), Eq. (6)
+      do jj = 1, np
+        call mesh_r(gr%mesh, jj, rr)
+        if (abs(rr).lt.CNST(1e-1)) rr = CNST(1e-1) 
+        vhxc(jj, 1:nspin) = vhxc(jj, 1:nspin) + (st%rho(jj,1:nspin) - target_rho(jj,1:nspin))*alpha*rr**beta
+      end do
 
-      hm%vxc(1:np,1:nspin) = vxc_mix(1:np, 1:nspin, 1)
-      vxc_in(1:np, 1:nspin, 1) = hm%vxc(1:np, 1:nspin)
-      
-      call hamiltonian_update(hm, gr%mesh)
+      aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
+      do jj = 1, nspin
+        aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(:)
+      enddo
       
       diffdensity = M_ZERO
       do jj = 1, nspin
@@ -520,33 +388,43 @@ contains
           endif
         enddo
       enddo
+
+      if (diffdensity .lt. convergence) then
+        if(verbosity == 2) then
+          write(iunit2,*) counter, diffdensity
+        end if
+        convergence = convergence / CNST(10)
+      endif
+      beta = min(M_ONE, diffdensity*betascale)
+      alpha = M_ONE - diffdensity
             
       if(verbosity == 1 .or. verbosity == 2) then
         write(iunit,'(i6.6)', ADVANCE = 'no') counter
         write(iunit,'(es18.10)') diffdensity
-
 #ifdef HAVE_FLUSH
         call flush(iunit)
 #endif
       endif
-     
     end do
 
-    write(message(1),'(a,I8)') "Invert KS: iterations needed:", counter
+    ! calculate final density
+    call hamiltonian_update(aux_hm, gr%mesh)
+    call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
+    call density_calc(st, gr, st%rho)
+    
+    write(message(1),'(a,I8)') "Iterative KS inversion, iterations needed:", counter
     call messages_info(1)
     
     call io_close(iunit)      
-    
-    call mix_end(smix)
+    if(verbosity == 2) then
+      call io_close(iunit2)      
+    end if
 
-    SAFE_DEALLOCATE_A(vxc_in)
-    SAFE_DEALLOCATE_A(vxc_out)
-    SAFE_DEALLOCATE_A(vxc_mix)
-    SAFE_DEALLOCATE_A(rho)
-    
-    POP_SUB(invertvxc_iter)
+    SAFE_DEALLOCATE_A(vhxc)
 
-  end subroutine invertvxc_iter
+    POP_SUB(invertks_iter)
+
+  end subroutine invertks_iter
 
 
   ! ---------------------------------------------------------
@@ -644,13 +522,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_calc(ks_inversion, gr, hm, st, ex, ec, vxc)
+  subroutine xc_ks_inversion_calc(ks_inversion, gr, hm, st, ex, ec, vxc, time)
+    use xc_functl_m
+
     type(xc_ks_inversion_t),  intent(inout) :: ks_inversion
     type(grid_t),             intent(inout) :: gr
     type(hamiltonian_t),      intent(in)    :: hm
     type(states_t),           intent(inout) :: st
     FLOAT,                    intent(inout) :: ex, ec
     FLOAT,                    intent(inout) :: vxc(:,:) ! vxc(gr%mesh%np, st%d%nspin)
+    FLOAT, optional,          intent(in)    :: time
 
     integer :: ii
 
@@ -660,7 +541,12 @@ contains
 
     call density_calc(st, gr, st%rho)
     
-    ks_inversion%aux_st%rho = st%rho
+    if(present(time)) then
+      write(message(1),'(A,F18.12)') 'xc_ks_inversion_calc - time:', time
+      call messages_info(1)
+    end if
+
+
 
     ks_inversion%aux_hm%energy%intnvxc     = M_ZERO
     ks_inversion%aux_hm%energy%hartree     = M_ZERO
@@ -668,11 +554,21 @@ contains
     ks_inversion%aux_hm%energy%correlation = M_ZERO
     
     ks_inversion%aux_hm%vhartree = hm%vhartree
-
-    do ii = 1, st%d%nspin
-      ks_inversion%aux_hm%vxc(:,ii)  = hm%ep%vpsl(:)
-      ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%aux_hm%vhartree(:) + ks_inversion%aux_hm%vxc(:,ii)
-    enddo
+ 
+    
+    if (present(time) .and. time > M_ZERO) then
+!      write(*,*) 'debug 1'
+      do ii = 1, st%d%nspin
+        ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%vxc_previous_step(:,ii)
+      enddo
+    else 
+      do ii = 1, st%d%nspin
+        ks_inversion%aux_hm%vxc(:,ii)  = M_ZERO !hm%ep%vpsl(:)
+        ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%aux_hm%vhartree(:) + ks_inversion%aux_hm%vxc(:,ii)
+      enddo
+    end if
+    !ks_inversion%aux_hm%ep%vpsl(:)  = M_ZERO ! hm%ep%vpsl(:)
+    ks_inversion%aux_hm%ep%vpsl(:)  = hm%ep%vpsl(:)
 
     ! compute ks inversion, vhxc contains total KS potential
     
@@ -682,20 +578,28 @@ contains
       call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
                          ks_inversion%aux_st, ks_inversion%eigensolver)
     case(XC_INV_METHOD_VS_ITER)
-      call invertks_iter(ks_inversion%aux_st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
+      call invertks_iter(st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
                          ks_inversion%aux_st, ks_inversion%eigensolver)
-    case(XC_INV_METHOD_VXC_ITER)
-      ! TODO: call to invertvxc_iter
     end select
 
     !subtract external and Hartree potentials, ATTENTION: subtracts true external potential not adiabatic one 
     
     do ii = 1, st%d%nspin
-      ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%aux_hm%vhxc(:,ii) - hm%ep%vpsl(:)
-      ks_inversion%aux_hm%vxc(:,ii)  = ks_inversion%aux_hm%vhxc(:,ii) - ks_inversion%aux_hm%vhartree(:)
+      ks_inversion%aux_hm%vxc(:,ii)  = ks_inversion%aux_hm%vhxc(:,ii) - hm%vhartree(:)
     enddo
 
-    vxc(1:gr%mesh%np, 1:hm%d%nspin) = ks_inversion%aux_hm%vxc(1:gr%mesh%np, 1:hm%d%nspin)
+    hm%vxc = ks_inversion%aux_hm%vxc
+    vxc = ks_inversion%aux_hm%vxc
+    
+    !do ii = 1, st%d%nspin
+    !  hm%vhxc(:,ii) = hm%vhartree(:) + hm%vxc(:,ii)
+    !enddo
+
+    if (present(time)) then
+!      write(*,*) 'debug 2'
+      ks_inversion%vxc_previous_step = ks_inversion%aux_hm%vhxc
+!      write(*,*) 'debug 3'
+    end if
 
     POP_SUB(X(xc_ks_inversion_calc))
 

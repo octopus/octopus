@@ -1,0 +1,27 @@
+CalculationMode = gs
+
+Dimensions = 1
+FromScratch = yes
+
+# simulation box
+BoxShape = Hypercube
+acell = 15
+spacing = 0.05
+%Lsize 
+ acell
+%
+
+# define system
+a=1.0
+%Species
+'He1D' | 0.0 | spec_user_defined | 2 |"-2/sqrt(x^2+a^2)" 
+%
+
+%Coordinates
+'He1D' | 0.0 |no
+%
+
+XCFunctional = lda_x_1d + lda_c_1d_csc
+
+Output = density
+OutputHow = Axis_X
