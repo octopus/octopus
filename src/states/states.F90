@@ -554,11 +554,15 @@ contains
     !%Default no
     !%Section States
     !%Description
-    !% (experimental) If true and the system is periodic, the density will be symmetrized.
+    !% When enabled the density is symmetrized. Currently, this can
+    !% only be done for periodic systems.
+    !%
+    !% It is enabled by default when symmetries are used to reduce the
+    !% k-point grid (KPointsUseSymmetries = yes), otherwise it is
+    !% disabled by default.
     !%End
-    call parse_logical(datasets_check('SymmetrizeDensity'), .false., st%symmetrize_density)
-
-    if(st%symmetrize_density) call messages_experimental("Symmetrization of the density")
+    call parse_logical(datasets_check('SymmetrizeDensity'), gr%sb%kpoints%use_symmetries, st%symmetrize_density)
+    call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)

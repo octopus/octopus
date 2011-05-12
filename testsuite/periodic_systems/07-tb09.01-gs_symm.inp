@@ -26,15 +26,12 @@ nk | nk | nk
 %
 
 KPointsUseSymmetries = yes
-SymmetrizeDensity = yes
 
 ExtraStates = 2
 
 FromScratch = yes
 
 XCFunctional = mgga_x_tb09 + lda_c_pz
-
-ExperimentalFeatures = yes
 
 ConvRelEv = 1e-8
 
