@@ -316,7 +316,7 @@ contains
     !%Option 0
     !% Only outputs the converged density and KS potential.
     !%Option 1
-    !% Same as 0 but outputs the maximum difference to the target density in each
+    !% Same as 0 but outputs the maximum difference from the target density in each
     !% iteration in addition.
     !%Option 2
     !% Same as 1 but outputs the density and the KS potential in each iteration in 
@@ -523,8 +523,6 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_ks_inversion_calc(ks_inversion, gr, hm, st, ex, ec, vxc, time)
-    use xc_functl_m
-
     type(xc_ks_inversion_t),  intent(inout) :: ks_inversion
     type(grid_t),             intent(inout) :: gr
     type(hamiltonian_t),      intent(in)    :: hm

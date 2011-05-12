@@ -399,6 +399,7 @@ contains
     POP_SUB(pfft_forward_3d)
   end subroutine pfft_forward_3d 
 
+  ! ---------------------------------------------------------
   subroutine pfft_backward_3d(pfft,dta_out,dta_in)
     type(pfft_t), intent(inout) :: pfft
     CMPLX, intent(in) :: dta_out(:,:,:)
@@ -417,7 +418,7 @@ contains
     integer(ptrdiff_t_kind) :: tmp_local(6)
     integer :: position
     
-    PUSH_SUB(dpfft_backward)
+    PUSH_SUB(pfft_backward_3d)
     
     scaling_fft_factor = real(pfft%n(1)*pfft%n(2)*pfft%n(3))
     
@@ -512,11 +513,12 @@ contains
     dta_in = dta_in_tmp
     SAFE_DEALLOCATE_A(dta_in_tmp)
 
-    POP_SUB(pfft_backward)
+    POP_SUB(pfft_backward_3d)
   end subroutine pfft_backward_3d
   
-  !> This function decomposes a given number of processors in a
-  !! two dimension processor grid.
+  ! ---------------------------------------------------------
+  !> This function decomposes a given number of processors into a
+  !! two-dimensional processor grid.
   !! @author Miquel Huix 
   subroutine decompose(n_proc, dim1, dim2)
     integer, intent(in)  :: n_proc !< Number of processors
@@ -573,6 +575,7 @@ contains
     POP_SUB(decompose)
   end subroutine decompose
 
+  ! ---------------------------------------------------------
   logical function prime(n) result(is_prime)
     integer, intent(in) :: n
     
