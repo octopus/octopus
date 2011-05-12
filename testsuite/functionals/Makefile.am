@@ -115,6 +115,9 @@ dist_share_DATA =                                  \
 	04-oep.01-jellium-lsda.inp                 \
 	04-oep.02-jellium-exx_kli.inp              \
 	04-oep.03-jellium-full_exx.inp             \
-	04-oep.test
+	04-oep.test                                \
+	05-ks_inversion.test                       \
+	05-ks_inversion.01-target_density.inp      \
+	05-ks_inversion.02-inversion.inp
 
 CLEANFILES = *~ *.bak

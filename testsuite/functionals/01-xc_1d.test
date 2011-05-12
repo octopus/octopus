@@ -29,10 +29,3 @@ match ; OEP KLI                                  ; GREP(out, 'Exchange    =', 20
 
 Input: 01-xc_1d.oep_exx.inp
 match ; OEP Exact exchange                       ; GREP(out, 'Exchange    =', 20)   ; -1.07717828
-
-Input: 01-xc_1d.ks_inversion_target_density.inp
-match ; Density value 1                          ; LINE(static/density.y\=0\,z\=0,    2, 25) ; -1.68925577522562E-008
-match ; Density value 2                          ; LINE(static/density.y\=0\,z\=0,  301, 25) ;  1.11520737646921E+000
-
-Input: 01-xc_1d.ks_inversion.inp
-match ; KS Inversion                             ; LINE(InvertKSconvergence,  52, 9) ; 9.9472765064E-04
