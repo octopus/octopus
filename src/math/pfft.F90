@@ -216,8 +216,6 @@ contains
     logical :: optimize_
     character(len=100) :: str_tmp
   
-    CMPLX, pointer :: p_data_in(:)  
-  
     integer(ptrdiff_t_kind) :: nn_t_kind(1:3)
     
     PUSH_SUB(pfft_init)
@@ -347,6 +345,8 @@ contains
     FLOAT, intent(in) :: dta_in(:,:,:)
     CMPLX, intent(out) :: dta_out(:,:,:)
 
+    character(len=256) ::  tmp_file
+    
     Character(50) :: out_file
     integer :: ii,jj,kk,index
 
@@ -355,6 +355,11 @@ contains
 
     PUSH_SUB(pfft_forward_3d)
      
+    if (pfft_output) then
+      write(tmp_file,'(a,i1)')'out-fw-before-',mpi_world%rank
+      open(13,file=tmp_file,form='formatted') 
+      write(13,*)"#pfft%data_in(index)"
+    end if
     index = 1
     ! convert from 3D to 1D and from real to complex
     do kk = pfft%local_i_start(3), pfft%local_i_start(3)+pfft%local_ni(3)-1
@@ -362,28 +367,33 @@ contains
         do ii = pfft%local_i_start(1),pfft%local_i_start(1)+pfft%local_ni(1)-1
           pfft%data_in(index) = TOCMPLX(dta_in(ii,jj,kk),M_ZERO)
           if (pfft_output) then
-            write(message(1),*)'FW before: pfft%data_in(',index,')=',pfft%data_in(index)
-            call messages_info(1)
+             write(13,*)dta_in(ii,jj,kk)
           end if
           index = index + 1
         end do
       end do
     end do
+    if (pfft_output) then
+      close(13)
+    end if
     
     call PDFFT(execute) (pfft%planf)
     
-    index = 1
     !optionally, print the result of the fordward
     if (pfft_output) then   
+      write(tmp_file,'(a,i1)')'out-fw-after-',mpi_world%rank
+      open(13,file=tmp_file,form='formatted') 
+      index = 1
+      write(13,*)"#pfft%data_out(index)"
       do kk = pfft%local_o_start(3), pfft%local_o_start(3)+pfft%local_no(3)-1
         do jj = pfft%local_o_start(2), pfft%local_o_start(2)+pfft%local_no(2)-1
           do ii = pfft%local_o_start(1), pfft%local_o_start(1)+pfft%local_no(1)-1
-            write(message(1),*)'FW_after: pfft%data_out(',index,')=',pfft%data_out(index)
-            call messages_info(1)
+            write(13,*)pfft%data_out(index)
             index = index + 1
           end do
         end do
       end do
+      close(13)
     end if
     
     POP_SUB(pfft_forward_3d)
@@ -401,47 +411,56 @@ contains
     integer :: process_row_size, process_column_size, ierror
     CMPLX,allocatable :: subarray(:)
     FLOAT, allocatable :: dta_in_tmp(:,:,:)
-    integer(ptrdiff_t_kind), allocatable :: local_sizes(:), begin_indexes(:)
+
+    character(len=256) ::  tmp_file
+    integer(ptrdiff_t_kind), allocatable :: local_sizes(:), begin_indexes(:),block_sizes(:)
     integer(ptrdiff_t_kind) :: tmp_local(6)
     integer :: position
     
     PUSH_SUB(dpfft_backward)
     
-    SAFE_ALLOCATE(dta_in_tmp(pfft%n(1),pfft%n(2),pfft%n(3)))
-
     scaling_fft_factor = real(pfft%n(1)*pfft%n(2)*pfft%n(3))
     
     !optionally, print the before the backward
-    index = 1
-    if (pfft_output) then   
+    if (pfft_output) then  
+      write(tmp_file,'(a,i1)')'out-bw-before-',mpi_world%rank
+      open(13,file=tmp_file,form='formatted') 
+      write(13,*)"#pfft%data_out(index)"
+      index = 1
       do kk = pfft%local_o_start(3), pfft%local_o_start(3)+pfft%local_no(3)-1
         do jj = pfft%local_o_start(2),pfft%local_o_start(2)+pfft%local_no(2)-1
           do ii = pfft%local_o_start(1), pfft%local_o_start(1)+pfft%local_no(1)-1
-            write(message(1),*)'BW bef: pfft%data_out(',index,')=',pfft%data_out(index) &
-                 ,' dta_out(',ii,jj,kk,')=',dta_out(ii,jj,kk) 
-            call messages_info(1)
+            write(13,*)pfft%data_out(index)
             index = index + 1
           end do
         end do
       end do
+      close(13)
     end if
     
     call PDFFT(execute) (pfft%planb)
     
+    if (pfft_output) then   
+      write(tmp_file,'(a,i1)')'out-bw-after-',mpi_world%rank
+      open(13,file=tmp_file,form='formatted')
+      write(13,*)"#dta_in(ii,jj,kk)"
+    end if
     index = 1
     do kk = pfft%local_i_start(3), pfft%local_i_start(3)+pfft%local_ni(3)-1
       do jj = pfft%local_i_start(2), pfft%local_i_start(2)+pfft%local_ni(2)-1
         do ii = pfft%local_i_start(1), pfft%local_i_start(1)+pfft%local_ni(1)-1
           dta_in(ii,jj,kk) = real(pfft%data_in(index))/scaling_fft_factor
           if (pfft_output) then
-            write(message(1),*)'BW_after: pfft%data_in(',index,')=',pfft%data_in(index),' dta_in(i,j,k)=',dta_in(ii,jj,kk)
-            call messages_info(1)
+            write(13,*)dta_in(ii,jj,kk)
           end if
           index = index + 1
         end do
       end do
     end do
-    
+    if (pfft_output) then 
+      close(13)
+    end if
+
     !!BEGIN:gather the local information into a unique vector.
     !!do a gather in 3d of all the box, into a loop
     tmp_local(1) = pfft%local_i_start(1)
@@ -451,19 +470,46 @@ contains
     tmp_local(5) = pfft%local_ni(2)
     tmp_local(6) = pfft%local_ni(3) 
     SAFE_ALLOCATE(local_sizes(6*mpi_world%size))
-    call MPI_Gather(tmp_local,6,MPI_INTEGER, &
+    call MPI_Allgather(tmp_local,6,MPI_INTEGER, &
          local_sizes,6,MPI_INTEGER,&
          0,mpi_world%comm,mpi_err)
     
     SAFE_ALLOCATE(begin_indexes(mpi_world%size))
+    SAFE_ALLOCATE(block_sizes(mpi_world%size))
     do ii=1,mpi_world%size
       position = ((ii-1)*6)+1
+      !get begin indexes of the global array
       begin_indexes(ii) = (local_sizes(position) - 1) + &
            ((local_sizes(position+1) - 1) * pfft%n(1)) + &
-           ((local_sizes(position+2) - 1) * pfft%n(2) * pfft%n(1)) + 1
-      !! implementation missing
+           ((local_sizes(position+2) - 1) * pfft%n(2) * pfft%n(1))
+      !get the sizes of each block 
+      block_sizes(ii) = local_sizes(position+3)*local_sizes(position+4)
     end do
+    
+    SAFE_ALLOCATE(dta_in_tmp(pfft%n(1),pfft%n(2),pfft%n(3)))
+    do ii=1,local_sizes(6)
+      call MPI_Gatherv ( &
+           dta_in(pfft%local_i_start(1),pfft%local_i_start(2),pfft%local_i_start(3)+ii-1), &
+           pfft%local_ni(1)*pfft%local_ni(2), MPI_DOUBLE_PRECISION, &
+           dta_in_tmp(1,1,ii), block_sizes,begin_indexes, &
+           MPI_DOUBLE_PRECISION, &
+           0, MPI_COMM_WORLD, mpi_err )
+    end do
+   
+    if (pfft_output) then
+      if(mpi_grp_is_root(mpi_world)) then
+        open(11,file='out-gather',form='formatted')
+        do kk=1,pfft%n(3)
+          do jj=1,pfft%n(2)
+            do ii=1,pfft%n(1)
+              write(11,*) dta_in_tmp(ii,jj,kk)
+            end do
+          end do
+        end do
+      end if
+    end if
 
+    dta_in = dta_in_tmp
     SAFE_DEALLOCATE_A(dta_in_tmp)
 
     POP_SUB(pfft_backward)
