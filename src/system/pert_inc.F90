@@ -105,11 +105,6 @@ contains
 
     PUSH_SUB(X(pert_apply).electric)
 
-    if(this%dir <= gr%sb%periodic_dim) then
-      message(1) = "Internal error: cannot apply electric perturbation in periodic direction."
-      call messages_fatal(1)
-    endif
-
     forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
       f_out(ip, idim) = f_in(ip, idim) * gr%mesh%x(ip, this%dir)
     end forall

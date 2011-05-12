@@ -202,7 +202,7 @@ contains
 
   ! --------------------------------------------------------------------
   subroutine pert_setup_dir(this, dir, dir2)
-    type(pert_t), intent(inout) :: this
+    type(pert_t),      intent(inout) :: this
     integer,           intent(in)    :: dir
     integer, optional, intent(in)    :: dir2
 
