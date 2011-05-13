@@ -25,8 +25,10 @@ dist_share_DATA =                                  \
 	01-xc_1d.test                              \
 	01-xc_1d.01-wfs-lda.inp                    \
 	01-xc_1d.02-wfs-hf.inp                     \
+	01-xc_1d.oep_kli.inp                       \
 	01-xc_1d.lda_csc.inp                       \
 	02-xc_2d.test                              \
+	02-xc_2d.00-hartree.inp                    \
 	02-xc_2d.01-hf.inp                         \
         02-xc_2d.gga_b86.inp                       \
         02-xc_2d.lda_prm.inp                       \
@@ -34,6 +36,7 @@ dist_share_DATA =                                  \
         02-xc_2d.gga_pbe.inp                       \
         02-xc_2d.lda_amgb.inp                      \
         02-xc_2d.gga_b86_mgc.inp                   \
+	01-xc_1d.oep_exx.inp                       \
         03-xc.test                                 \
         03-xc.01-gs.inp                            \
         03-xc.exx.inp                              \

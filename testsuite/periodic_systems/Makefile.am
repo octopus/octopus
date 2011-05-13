@@ -33,6 +33,7 @@ dist_share_DATA =                                \
 	03-sodium_chain.test                     \
 	04-silicon.test                          \
 	04-silicon.01-gs.inp                     \
+	04-silicon.02-kdotp.inp                  \
 	05-lithium.test                          \
 	05-lithium.01-gs.inp                     \
 	05-lithium.02-td.inp                     \

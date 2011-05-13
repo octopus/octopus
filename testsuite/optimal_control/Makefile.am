@@ -25,6 +25,7 @@ dist_share_DATA = \
 	01-asym_doublewell.01-ground_state.inp \
 	01-asym_doublewell.02-oct_run.inp      \
 	01-asym_doublewell.03-oct_run.inp      \
+	01-asym_doublewell.04-oct_run.inp      \
 	01-asym_doublewell.test                \
 	02-sym_doublewell.01-ground_state.inp  \
 	02-sym_doublewell.02-unocc.inp         \

@@ -74,6 +74,7 @@ dist_share_DATA = \
 	20-eigensolver.06-rmmdiis.inp \
 	20-eigensolver.test \
 	21-lobpcg.01-spin_polarized.inp \
+	21-lobpcg.02-spinors.inp \
 	21-lobpcg.test \
 	22-time_propagation.01-gs.inp \
 	22-time_propagation.02-td_domains.inp \
