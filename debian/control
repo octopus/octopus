@@ -2,7 +2,7 @@ Source: octopus
 Section: science
 Priority: optional
 Maintainer: Octopus Developers Team <octopus-devel@tddft.org>
-Build-Depends: debhelper (>> 3.0.0), automake, gcc, cpp, gfortran (>> 4.1.1), liblapack-dev, libatlas-base-dev, libgsl0-dev (>> 1.9), libfftw3-dev, wget, libopenmpi-dev |libmpich-dev 
+Build-Depends: debhelper (>> 3.0.0), automake, gcc, cpp, gfortran (>> 4.1.1), liblapack-dev, libblas-dev, libgsl0-dev (>> 1.9), libfftw3-dev, wget, libopenmpi-dev |libmpich-dev, perl-modules, libnetcdf-dev, libetsf-io-dev
 Standards-Version: 3.5.2
 
 Package: octopus
