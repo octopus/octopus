@@ -437,11 +437,13 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   type(pert_t),            intent(inout) :: dipole
   CMPLX,                   intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
   type(lr_t),    optional, intent(in)    :: kdotp_lr(:)
-  type(lr_t),    optional, intent(in)    :: kdotp_em_lr(:,:,:,:)
+  type(lr_t),    optional, intent(in)    :: kdotp_em_lr(:,:,:,:) ! kdotp dir, em dir, sigma, factor
   logical,       optional, intent(in)    :: occ_response ! do the wfns include the occ subspace?
 
   ! occ_response = yes is based on Baroni et al., RMP 73, 515 (2001), eqn 122
   ! occ_response = no  is based on Baroni et al., RMP 73, 515 (2001), eqn 123
+  !   The occ_response = no version can be used even if the wfns do include the
+  !   occupied subspace, it is just more efficient to use the other formula.
 
   type(states_t), pointer :: st
   type(mesh_t),   pointer :: mesh
@@ -528,7 +530,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
                   ispin = states_dim_get_spin_index(sys%st%d, ik)
 
                   if (present(kdotp_em_lr) .and. u(2) <= sys%gr%sb%periodic_dim) then
-                    tmp(1:np, 1) = - M_zI * kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
+                    tmp(1:np, 1) = - kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
                   else
                     call pert_setup_dir(dipole, u(2))
                     call X(pert_apply) &
@@ -645,12 +647,13 @@ contains
 
           if(occ_response_ .and. ist2 .ne. ist) cycle
           do ii = 1, ndir
+            call pert_setup_dir(dipole, ii)
+
             do ifreq = 1, 3
 
               if (present(kdotp_lr) .and. ii <= sys%gr%sb%periodic_dim) then
-                forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = - M_zI * kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
+                forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = -kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
               else
-                call pert_setup_dir(dipole, ii)
                 call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), ppsi)
               endif
 
