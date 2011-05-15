@@ -366,6 +366,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     SAFE_ALLOCATE(pxlpsi(1:ns, 1:dim))
 
     if(simul_box_is_periodic(gr%mesh%sb)) then
+      ASSERT(associated(pj%phase))
       do idim = 1, dim
         lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj%phase(1:ns, ik)
       end do
