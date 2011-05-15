@@ -38,7 +38,6 @@ program oct_test
   use profiling_m
   use states_calc_m
   use string_m
-  use subspace_m
   use system_m
   use unit_m
   use unit_system_m
@@ -53,8 +52,7 @@ program oct_test
   integer, parameter ::              &
     HARTREE_TEST       =   1,        &
     DER_TEST           =   2,        &
-    ORT_TEST           =   3,        &
-    SUBSPACE_TEST      =   4
+    ORT_TEST           =   3
 
   integer, parameter :: &
     TEST_REAL    = 1,   &
@@ -84,8 +82,6 @@ program oct_test
   !% Tests the implementation of the finite-difference operators, used to calculate derivatives.
   !%Option orthogonalization 3
   !% Tests the implementation of the orthogonalization routines.
-  !%Option subspace_diag 4
-  !% Tests the implementation of the subspace diagonalization routine.
   !%End
   call parse_integer('TestMode', HARTREE_TEST, test_mode)
   call datasets_init(test_mode)
@@ -122,10 +118,12 @@ program oct_test
   call unit_system_init()
 
   select case(test_mode)
-  case(HARTREE_TEST); call test_hartree()
-  case(DER_TEST); call test_derivatives()
-  case(ORT_TEST); call test_orthogonalization()
-  case(SUBSPACE_TEST); call test_subspace_diag()
+  case(HARTREE_TEST)
+    call test_hartree()
+  case(DER_TEST)
+    call test_derivatives()
+  case(ORT_TEST)
+    call test_orthogonalization()
   end select
 
   call fft_all_end()
@@ -213,44 +211,6 @@ program oct_test
 
     POP_SUB(test_orthogonalization)
   end subroutine test_orthogonalization
-
-  ! ---------------------------------------------------------
-
-  subroutine test_subspace_diag()
-    type(system_t) :: sys
-    type(hamiltonian_t) :: hm
-
-    PUSH_SUB(test_subspace_diag)
-
-    call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
-    call calc_mode_set_scalapack_compat()
-
-    call system_init(sys)
-
-    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
-    call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
-
-    message(1) = 'Info: Testing subspace diagonalization.'
-    message(2) = ''
-    call messages_info(2)
-
-    if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
-      message(1) = 'Info: Real wave-functions.'
-      call messages_info(1)
-      call dsubspace_test(sys%st, hm, sys%gr)
-    end if
-
-    if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
-      message(1) = 'Info: Complex wave-functions.'
-      call messages_info(1)
-      call zsubspace_test(sys%st, hm, sys%gr)
-    end if
-
-    call hamiltonian_end(hm, sys%gr, sys%geo)
-    call system_end(sys)
-
-    POP_SUB(test_subspace_diag)
-  end subroutine test_subspace_diag
 
 end program oct_test
 

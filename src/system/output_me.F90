@@ -209,11 +209,7 @@ contains
 
     SAFE_ALLOCATE(momentum(1:gr%sb%dim, 1:st%nst, 1:st%d%nik))
 
-    if (states_are_real(st)) then
-      call dstates_calc_momentum(gr, st, momentum)
-    else
-      call zstates_calc_momentum(gr, st, momentum)
-    end if
+    call states_calc_momentum(st, gr%der, momentum)
 
     iunit = io_open(fname, action='write')
 

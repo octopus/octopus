@@ -17,7 +17,7 @@
 !!
 !! $Id: states_inc.F90 7770 2011-04-26 00:51:17Z dstrubbe $
 
-subroutine X(states_get_state1)(st, mesh, ist, iqn, psi)
+subroutine X(states_get_state2)(st, mesh, ist, iqn, psi)
   type(states_t), intent(in)    :: st
   type(mesh_t),   intent(in)    :: mesh
   integer,        intent(in)    :: ist
@@ -39,11 +39,11 @@ subroutine X(states_get_state1)(st, mesh, ist, iqn, psi)
     end do
   end if
 
-end subroutine X(states_get_state1)
+end subroutine X(states_get_state2)
 
 ! ------------------------------------------------------------
 
-subroutine X(states_get_state2)(st, mesh, idim, ist, iqn, psi)
+subroutine X(states_get_state1)(st, mesh, idim, ist, iqn, psi)
   type(states_t), intent(in)    :: st
   type(mesh_t),   intent(in)    :: mesh
   integer,        intent(in)    :: idim
@@ -62,11 +62,11 @@ subroutine X(states_get_state2)(st, mesh, idim, ist, iqn, psi)
     forall(ip = 1:mesh%np) psi(ip) = st%zpsi(ip, idim, ist, iqn)
   end if
 
-end subroutine X(states_get_state2)
+end subroutine X(states_get_state1)
 
 ! ------------------------------------------------------------
 
-subroutine X(states_set_state1)(st, mesh, ist, iqn, psi)
+subroutine X(states_set_state2)(st, mesh, ist, iqn, psi)
   type(states_t), intent(inout) :: st
   type(mesh_t),   intent(in)    :: mesh
   integer,        intent(in)    :: ist
@@ -88,11 +88,11 @@ subroutine X(states_set_state1)(st, mesh, ist, iqn, psi)
     end do
   end if
 
-end subroutine X(states_set_state1)
+end subroutine X(states_set_state2)
 
 ! ------------------------------------------------------------
 
-subroutine X(states_set_state2)(st, mesh, idim, ist, iqn, psi)
+subroutine X(states_set_state1)(st, mesh, idim, ist, iqn, psi)
   type(states_t), intent(inout) :: st
   type(mesh_t),   intent(in)    :: mesh
   integer,        intent(in)    :: idim
@@ -111,6 +111,6 @@ subroutine X(states_set_state2)(st, mesh, idim, ist, iqn, psi)
     forall(ip = 1:mesh%np) st%zpsi(ip, idim, ist, iqn) = psi(ip)
   end if
   
-end subroutine X(states_set_state2)
+end subroutine X(states_set_state1)
 
 ! ------------------------------------------------------------

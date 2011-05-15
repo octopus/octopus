@@ -1805,11 +1805,7 @@ return
         do ist = st%st_start, st%st_end
 
           ! all calculations will be done with complex wavefunctions
-          if (states_are_real(st)) then
-            wf_psi(:,:) = cmplx(st%dpsi(:,:, ist, ik), KIND=REAL_PRECISION)
-          else
-            wf_psi(:,:) = st%zpsi(:,:, ist, ik)
-          end if
+          call states_get_state(st, der%mesh, ist, ik, wf_psi)
 
           ! calculate gradient of the wavefunction
           do st_dim = 1, st%d%dim

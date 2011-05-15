@@ -57,9 +57,7 @@ module subspace_m
     subspace_init,      &
     subspace_end,       &
     dsubspace_diag,     &
-    zsubspace_diag,     &
-    dsubspace_test,     &
-    zsubspace_test
+    zsubspace_diag
 
   integer, parameter ::        &
     SD_STANDARD  = 1,          &

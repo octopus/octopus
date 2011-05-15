@@ -149,7 +149,7 @@ subroutine td_calc_tvel(gr, geo, st, hm, vel, time)
   PUSH_SUB(td_calc_tvel)
 
   SAFE_ALLOCATE(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-  call zstates_calc_momentum(gr, st, momentum)
+  call states_calc_momentum(st, gr%der, momentum)
 
   momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, 1) = & 
     sum(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 3)

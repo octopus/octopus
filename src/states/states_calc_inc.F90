@@ -570,17 +570,15 @@ end function X(states_residue)
 !! operator
 !! <p> = < phi*(ist, k) | -i \nabla | phi(ist, ik) >
 !!
-!! Note, the blas routines cdotc, zdotc take care of complex 
-!! conjugation *. Therefore we pass phi directly.
 ! ---------------------------------------------------------
-subroutine X(states_calc_momentum)(gr, st, momentum)
-  type(grid_t),   intent(inout) :: gr
-  type(states_t), intent(inout) :: st
-  FLOAT,          intent(out)   :: momentum(:,:,:)
+subroutine X(states_calc_momentum)(st, der, momentum)
+  type(states_t),      intent(inout) :: st
+  type(derivatives_t), intent(inout) :: der
+  FLOAT,               intent(out)   :: momentum(:,:,:)
 
   integer             :: idim, ist, ik, idir
   CMPLX               :: expect_val_p
-  R_TYPE, allocatable :: grad(:,:,:)
+  R_TYPE, allocatable :: psi(:, :), grad(:,:,:)
   FLOAT               :: kpoint(1:MAX_DIM)  
 #if defined(HAVE_MPI)
   integer             :: tmp
@@ -591,22 +589,23 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
 
   PUSH_SUB(X(states_calc_momentum))
 
-  SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:st%d%dim, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:st%d%dim, 1:der%mesh%sb%dim))
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
+      call states_get_state(st, der%mesh, ist, ik, psi)
+
       do idim = 1, st%d%dim
-        ! compute gradient of st%X(psi)
-        call X(derivatives_grad)(gr%der, st%X(psi)(:, idim, ist, ik), grad(:, idim, 1:gr%mesh%sb%dim))
+        call X(derivatives_grad)(der, psi(:, idim), grad(:, idim, 1:der%mesh%sb%dim))
       end do
 
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, der%mesh%sb%dim
         ! since the expectation value of the momentum operator is real
         ! for square integrable wfns this integral should be purely imaginary 
         ! for complex wfns but real for real wfns (see case distinction below)
-        expect_val_p = X(mf_dotp)(gr%mesh, st%d%dim, &
-          st%X(psi)(1:gr%mesh%np, 1:st%d%dim, ist, ik), grad(1:gr%mesh%np, 1:st%d%dim, idir))
+        expect_val_p = X(mf_dotp)(der%mesh, st%d%dim, psi, grad(:, :, idir))
 
         ! In the case of real wavefunctions we do not include the 
         ! -i prefactor of p = -i \nabla
@@ -618,12 +617,11 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
       end do
 
       ! have to add the momentum vector in the case of periodic systems, 
-      ! since st%X(psi) contains only u_k
+      ! since psi contains only u_k
       kpoint = M_ZERO
-      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
-      do idir = 1, gr%sb%periodic_dim
-        momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
-      end do
+      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+      forall(idir = 1:der%mesh%sb%periodic_dim) momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
+
     end do
 
     ! Exchange momenta in the parallel case.
@@ -651,7 +649,7 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
       SAFE_ALLOCATE(lmomentum(1:st%lnst))
       SAFE_ALLOCATE(gmomentum(1:st%nst))
 
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, der%mesh%sb%dim
         lmomentum(1:st%lnst) = momentum(idir, st%st_start:st%st_end, ik)
         call lmpi_gen_allgatherv(st%lnst, lmomentum, tmp, gmomentum, st%mpi_grp)
         momentum(idir, 1:st%nst, ik) = gmomentum(1:st%nst)
@@ -662,6 +660,8 @@ subroutine X(states_calc_momentum)(gr, st, momentum)
     end if
 #endif
   end do
+
+  SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(grad)
 
   POP_SUB(X(states_calc_momentum))
@@ -834,14 +834,21 @@ contains
     integer :: ist, jst
     FLOAT :: dd
     R_TYPE, allocatable :: psi1(:, :), psi2(:, :)
+    R_TYPE, allocatable :: spsi1(:, :), spsi2(:, :)
 #ifdef HAVE_MPI
     integer :: req(1:4), nreq
 #endif
 
     PUSH_SUB(X(states_calc_orth_test).print_results)
 
-    SAFE_ALLOCATE(psi1(1:mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(psi2(1:mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(psi1(1:mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(psi2(1:mesh%np, 1:st%d%dim))
+#ifdef HAVE_MPI
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(spsi1(1:mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(spsi2(1:mesh%np, 1:st%d%dim))
+    end if
+#endif
 
     message(1) = 'Residuals:'
     call messages_info(1)
@@ -849,8 +856,8 @@ contains
     do ist = 1, st%nst
       do jst = ist, st%nst
         if(.not. st%parallel_in_states) then
-          psi1(1:mesh%np, 1:st%d%dim) = st%X(psi)(1:mesh%np, 1:st%d%dim, ist, 1)
-          psi2(1:mesh%np, 1:st%d%dim) = st%X(psi)(1:mesh%np, 1:st%d%dim, jst, 1)
+          call states_get_state(st, mesh, ist, 1, psi1)
+          call states_get_state(st, mesh, jst, 1, psi2)
         end if
 
 #ifdef HAVE_MPI
@@ -863,24 +870,22 @@ contains
 
           ! post the receptions
           if(st%mpi_grp%rank == 0) then
-            call MPI_Irecv(psi1(1, 1), mesh%np_part*st%d%dim, R_MPITYPE, st%node(ist), ist, &
-              st%mpi_grp%comm, req(nreq + 1), mpi_err)
-            call MPI_Irecv(psi2(1, 1), mesh%np_part*st%d%dim, R_MPITYPE, st%node(jst), jst, &
-              st%mpi_grp%comm, req(nreq + 2), mpi_err)
+            call MPI_Irecv(psi1(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(ist), ist, st%mpi_grp%comm, req(nreq + 1), mpi_err)
+            call MPI_Irecv(psi2(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(jst), jst, st%mpi_grp%comm, req(nreq + 2), mpi_err)
             INCR(nreq, 2)
           end if
 
           ! if I have the wave function, I send it (note: a node could be sending to itself, this is by design)
           if(st%node(ist)  == st%mpi_grp%rank) then
             INCR(nreq, 1)
-            call MPI_Isend(st%X(psi)(1, 1, ist, 1), mesh%np_part*st%d%dim, R_MPITYPE, 0, ist, &
-              st%mpi_grp%comm, req(nreq), mpi_err)
+            call states_get_state(st, mesh, ist, 1, spsi1)
+            call MPI_Isend(spsi1(1, 1), mesh%np*st%d%dim, R_MPITYPE, 0, ist, st%mpi_grp%comm, req(nreq), mpi_err)
           end if
           
           if(st%node(jst) == st%mpi_grp%rank) then
             INCR(nreq, 1)
-            call MPI_Isend(st%X(psi)(1, 1, jst, 1), mesh%np_part*st%d%dim, R_MPITYPE, 0, jst, &
-              st%mpi_grp%comm, req(nreq), mpi_err)
+            call states_get_state(st, mesh, jst, 1, spsi2)
+            call MPI_Isend(spsi2(1, 1), mesh%np*st%d%dim, R_MPITYPE, 0, jst, st%mpi_grp%comm, req(nreq), mpi_err)
           end if
 
           if(nreq > 0) call MPI_Waitall(nreq, req(1), MPI_STATUSES_IGNORE, mpi_err)
@@ -901,6 +906,8 @@ contains
 
     SAFE_DEALLOCATE_A(psi1)
     SAFE_DEALLOCATE_A(psi2)
+    SAFE_DEALLOCATE_A(spsi1)
+    SAFE_DEALLOCATE_A(spsi2)
 
     POP_SUB(X(states_calc_orth_test).print_results)
   end subroutine print_results
