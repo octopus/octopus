@@ -20,6 +20,7 @@
 #include "global.h"
 
 module eigensolver_m
+  use batch_m
   use datasets_m
   use derivatives_m
   use eigen_cg_m

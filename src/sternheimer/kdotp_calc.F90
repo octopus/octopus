@@ -69,43 +69,44 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
   FLOAT,               intent(out)   :: velocity(:,:,:)
 
   integer :: ik, ist, idir
-  CMPLX, allocatable :: pertpsi(:,:)
+  CMPLX, allocatable :: psi(:, :), pertpsi(:,:)
 #ifdef HAVE_MPI
   FLOAT, allocatable :: vel_temp(:,:,:)
 #endif
 
   PUSH_SUB(zkdotp_calc_band_velocity)
 
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
   SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
-#ifdef HAVE_MPI
-  SAFE_ALLOCATE(vel_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:sys%gr%sb%periodic_dim))
-#endif
 
-  velocity(:,:,:) = M_ZERO
+  velocity(:, :, :) = M_ZERO
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = sys%st%st_start, sys%st%st_end
+
+      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+
       do idir = 1, sys%gr%sb%periodic_dim
         call pert_setup_dir(pert, idir)
-        call zpert_apply(pert, sys%gr, sys%geo, hm, ik, sys%st%zpsi(:, :, ist, ik), pertpsi)
-        velocity(ik, ist, idir) = &
-          -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, sys%st%zpsi(:, :, ist, ik), pertpsi(:, :)))
-      enddo
-    enddo
-  enddo
+        call zpert_apply(pert, sys%gr, sys%geo, hm, ik, psi, pertpsi)
+        velocity(ik, ist, idir) = -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, psi, pertpsi))
+      end do
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(pertpsi)
 
 #ifdef HAVE_MPI
-  if(sys%st%parallel_in_states) then
-    call MPI_Allreduce(velocity, vel_temp, sys%st%d%nik * sys%st%nst * sys%gr%sb%periodic_dim, &
-      MPI_FLOAT, MPI_SUM, sys%st%mpi_grp%comm, mpi_err)
+  if(sys%st%parallel_in_states .or. sys%st%d%kpt%parallel) then
+    SAFE_ALLOCATE(vel_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:sys%gr%sb%periodic_dim))
+
+    call MPI_Allreduce(velocity, vel_temp, sys%st%d%nik*sys%st%nst*sys%gr%sb%periodic_dim, &
+      MPI_FLOAT, MPI_SUM, sys%st%st_kpt_mpi_grp%comm, mpi_err)
+
     velocity(:,:,:) = vel_temp(:,:,:)
+    SAFE_DEALLOCATE_A(vel_temp)
   endif
-  if(sys%st%d%kpt%parallel) then
-    call MPI_Allreduce(velocity, vel_temp, sys%st%d%nik * sys%st%nst * sys%gr%sb%periodic_dim, &
-      MPI_FLOAT, MPI_SUM, sys%st%d%kpt%mpi_grp%comm, mpi_err)
-    velocity(:,:,:) = vel_temp(:,:,:)
-  endif
-  SAFE_DEALLOCATE_A(vel_temp)
 #endif
 
   POP_SUB(zkdotp_calc_band_velocity)

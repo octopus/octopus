@@ -58,7 +58,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   R_TYPE, allocatable :: ham(:,:)        ! Projection of the Hamiltonian onto Krylov subspace.
   R_TYPE, allocatable :: hevec(:,:)
   R_TYPE, allocatable :: aux(:,:)
-
+  type(batch_t) :: vvb, avb
   integer  :: blk, ist, ii, idim, dim, jst, d1, d2, matvec, nconv
   FLOAT :: xx
 
@@ -171,15 +171,23 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         end if
       end do ortho
 
-      ! matrix-vector multiplication
+      call batch_init(vvb, st%d%dim, blk)
+      call batch_init(avb, st%d%dim, d1 + 1, d1 + blk, av(:, :, d1 + 1:))
+      call X(batch_new)(vvb, d1 + 1, d1 + blk, gr%mesh%np_part)
+
+      ! we need to copy to mesh%np_part size array
       do ist = 1, blk
         do idim = 1, dim
-          call lalg_copy(gr%mesh%np, vv(:, idim, d1 + ist), aux(:, idim))
+          call lalg_copy(gr%mesh%np, vv(:, idim, d1 + ist), vvb%states(ist)%X(psi)(:, idim))
         end do
-        av(:, :, d1 + ist) = R_TOTYPE(M_ZERO)
-        call X(hamiltonian_apply)(hm, gr%der, aux, av(:, :, d1 + ist), d1+ist, ik)
       end do
-      matvec = matvec + blk
+
+      call X(hamiltonian_apply_batch)(hm, gr%der, vvb, avb, ik)
+      INCR(matvec, blk)
+
+      call X(batch_delete)(vvb)
+      call batch_end(vvb)
+      call batch_end(avb)
 
       ! Here we calculate the last blk columns of H = V^T A V. We do not need the lower
       ! part of the matrix since it is symmetric (LAPACK routine only needs the upper triangle).
@@ -194,7 +202,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
       call lalg_eigensolve(d2, hevec(1:d2, 1:d2), tmp(1:d2))
 
       ! Store the Ritz values as approximate eigenvalues.
-      call lalg_copy(winsiz, tmp, eigenval(nec+1:nec+winsiz))
+      call lalg_copy(winsiz, tmp, eigenval(nec + 1:nec + winsiz))
 
       if ( d2+1.le.krylov .and. matvec.lt.maxmatvecs) then
         ! In this case, compute only the lowest Ritz eigenpair.
@@ -206,7 +214,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
 
         ! If the first Ritz eigen-pair converged, compute all
         ! Ritz vectors and the residual norms.
-        if(res(nec+1)<tol) then
+        if(res(nec + 1)<tol) then
           do ist = 2, winsiz
             call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), vv(:, :, 1:d2), hevec(1:d2, ist), &
                  R_TOTYPE(M_ZERO), eigenvec(:, :, nec+ist))
