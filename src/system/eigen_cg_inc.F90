@@ -72,12 +72,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   end do
 
   ! Set the diff to zero, since it is intent(out)
-  if(present(diff)) then 
-    diff(1:st%nst) = M_ZERO
-  end if
+  if(present(diff)) diff(1:st%nst) = M_ZERO
 
   ! Start of main loop, which runs over all the eigenvectors searched
-
   ASSERT(converged >= 0)
 
   eigenfunction_loop : do p = converged + 1, st%nst
@@ -314,15 +311,13 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   conv = converged
   states: do ist = conv + 1, nst
 
+    call states_get_state(st, gr%mesh, ist, ik, psi)
+
     ! Orthogonalize starting eigenfunctions to those already calculated...
     if(ist.gt.1) then
-      call X(states_orthogonalization)(gr%mesh, ist - 1, st%d%dim, st%X(psi)(:, :, 1:ist - 1, ik), &
-                                  st%X(psi)(:, :, ist, ik), normalize = .true.)
+      call X(states_orthogonalization)(gr%mesh, ist - 1, st%d%dim, &
+        st%X(psi)(:, :, 1:ist - 1, ik), psi, normalize = .true.)
     end if
-
-    do idim = 1, st%d%dim
-      call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), psi(:, idim))
-    end do
 
     ! Calculate starting gradient: |hpsi> = H|psi>
     call X(hamiltonian_apply)(hm, gr%der, psi, phi, ist, ik)
@@ -427,9 +422,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
 
     end do band
 
-    do idim = 1, st%d%dim
-      call lalg_copy(gr%mesh%np, psi(:, idim), st%X(psi)(:, idim, ist, ik))
-    end do
+    call states_set_state(st, gr%mesh, ist, ik, psi)
 
     st%eigenval(ist, ik) = lambda
 

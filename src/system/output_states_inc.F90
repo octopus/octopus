@@ -138,6 +138,9 @@
     if(iand(outp%what, C_OUTPUT_WFS_SQMOD).ne.0) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
+      if (states_are_complex(st)) then
+        SAFE_ALLOCATE(ztmp(1:gr%mesh%np))
+      end if
       do ist = st%st_start, st%st_end
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = st%d%kpt%start, st%d%kpt%end
@@ -157,9 +160,11 @@
               endif
 
               if (states_are_real(st)) then
-                dtmp = abs(st%dpsi(:, idim, ist, ik))**2
+                call states_get_state(st, gr%mesh, idim, ist, ik, dtmp)
+                dtmp(1:gr%mesh%np) = abs(dtmp(1:gr%mesh%np))**2
               else
-                dtmp = abs(st%zpsi(:, idim, ist, ik))**2
+                call states_get_state(st, gr%mesh, idim, ist, ik, ztmp)
+                dtmp(1:gr%mesh%np) = abs(ztmp(1:gr%mesh%np))**2
               end if
               call dio_function_output (outp%how, dir, fname, gr%mesh, &
                 dtmp, fn_unit, ierr, is_tmp = .false., geo = geo)
@@ -168,6 +173,7 @@
         end if
       end do
       SAFE_DEALLOCATE_A(dtmp)
+      SAFE_DEALLOCATE_A(ztmp)
     end if
 
     if(iand(outp%what, C_OUTPUT_KED).ne.0) then

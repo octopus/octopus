@@ -519,6 +519,8 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, ncid)
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
   REAL_DOUBLE, allocatable, target :: local_wfs(:,:,:,:,:,:,:)
+  FLOAT, allocatable :: dpsi(:)
+  CMPLX, allocatable :: zpsi(:)
 
   PUSH_SUB(output_etsf_wfs_rsp_write)
 
@@ -532,24 +534,32 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, ncid)
     zdim = 2
   end if
 
-  !Write the wavefunctions to the file
+  if (states_are_real(st)) then
+    SAFE_ALLOCATE(dpsi(1:mesh%np))
+  else
+    SAFE_ALLOCATE(zpsi(1:mesh%np))
+  end if
+
   SAFE_ALLOCATE(local_wfs(1:zdim, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1:st%d%dim, 1:st%nst, 1:st%d%nik))
   do ispin = 1, nspin
     do ik = 1, st%d%nik, nspin
       do ist = 1, st%nst
         do idim = 1, st%d%dim
           if (states_are_real(st)) then
-            call dmesh_to_cube(mesh, st%dpsi(1:mesh%np_part, idim, ist, ik+ispin-1), cube, local = .true.)
+            call states_get_state(st, mesh, idim, ist, ik + ispin - 1, dpsi)
+
+            call dmesh_to_cube(mesh, dpsi, cube, local = .true.)
             local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
               cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
           else if(states_are_complex(st)) then
-            call dmesh_to_cube(mesh, &
-              real(st%zpsi(1:mesh%np_part, idim, ist, ik+ispin-1), REAL_PRECISION), cube, local = .true.)
+            call states_get_state(st, mesh, idim, ist, ik + ispin - 1, zpsi)
+
+            call dmesh_to_cube(mesh, real(zpsi, REAL_PRECISION), cube, local = .true.)
             local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
               cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
-            call dmesh_to_cube(mesh, aimag(st%zpsi(1:mesh%np_part, idim, ist, ik+ispin-1)), cube, local = .true.)
+            call dmesh_to_cube(mesh, aimag(zpsi), cube, local = .true.)
             local_wfs(2, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
               cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
@@ -558,6 +568,9 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, ncid)
       end do
     end do
   end do
+
+  SAFE_DEALLOCATE_A(dpsi)
+  SAFE_DEALLOCATE_A(zpsi)
 
   main%real_space_wavefunctions%data7D => local_wfs
 
@@ -669,7 +682,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, shell, ncid)
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
   REAL_DOUBLE, allocatable, target :: local_wfs(:, :, :, :, :, :)
-  CMPLX, pointer :: zpsi(:)
+  CMPLX, allocatable :: zpsi(:)
   integer :: nkpoints, nspin, zdim
   integer :: idim, ist, iq, ikpoint, ispin
   integer :: ig, ng, ix, iy, iz, ixx(1:3)
@@ -687,9 +700,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, shell, ncid)
   !Write the wavefunctions to the file
   SAFE_ALLOCATE(local_wfs(1:zdim, 1:ng, 1:st%d%dim, 1:st%nst, 1:nkpoints, 1:nspin))
 
-  if(states_are_real(st)) then
-    SAFE_ALLOCATE(zpsi(1:mesh%np))
-  end if
+  SAFE_ALLOCATE(zpsi(1:mesh%np))
 
   do iq = 1, st%d%nik
     ispin = states_dim_get_spin_index(st%d, iq)
@@ -698,12 +709,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, shell, ncid)
       do idim = 1, st%d%dim
 
         ! for the moment we treat all functions as complex
-        if (states_are_real(st)) then
-          zpsi(1:mesh%np) = st%dpsi(1:mesh%np, idim, ist, iq)
-        else
-          zpsi => st%zpsi(:, idim, ist, iq)
-        end if
-          
+        call states_get_state(st, mesh, idim, ist, iq, zpsi)
         call zmesh_to_cube(mesh, zpsi, cube, local = .true.)
         call zcube_function_rs2fs(cube)
 
@@ -720,9 +726,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, shell, ncid)
     end do
   end do
 
-  if(states_are_real(st)) then
-    SAFE_DEALLOCATE_P(zpsi)
-  end if
+  SAFE_DEALLOCATE_A(zpsi)
 
   main%coefficients_of_wavefunctions%data6D => local_wfs
 
