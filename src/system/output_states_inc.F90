@@ -30,6 +30,7 @@
     character(len=80) :: fname
     type(unit_t) :: fn_unit
     FLOAT, allocatable :: dtmp(:), elf(:,:)
+    CMPLX, allocatable :: ztmp(:)
     FLOAT, allocatable :: current(:, :, :)
 
     PUSH_SUB(output_states)
@@ -91,6 +92,13 @@
 
     if(iand(outp%what, C_OUTPUT_WFS).ne.0) then
       fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
+
+      if (states_are_real(st)) then
+        SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
+      else
+        SAFE_ALLOCATE(ztmp(1:gr%mesh%np))
+      end if
+
       do ist = st%st_start, st%st_end
         if(loct_isinstringlist(ist, outp%wfs_list)) then
           do ik = st%d%kpt%start, st%d%kpt%end
@@ -110,16 +118,21 @@
               endif
                 
               if (states_are_real(st)) then
-                call dio_function_output(outp%how, dir, fname, gr%mesh, &
-                     st%dpsi(1:, idim, ist, ik), fn_unit, ierr, is_tmp = .false., geo = geo)
+                call states_get_state(st, gr%mesh, idim, ist, ik, dtmp)
+                call dio_function_output(outp%how, dir, fname, gr%mesh, dtmp, &
+                  fn_unit, ierr, is_tmp = .false., geo = geo)
               else
-                call zio_function_output(outp%how, dir, fname, gr%mesh, &
-                     st%zpsi(1:, idim, ist, ik), fn_unit, ierr, is_tmp = .false., geo = geo)
+                call states_get_state(st, gr%mesh, idim, ist, ik, ztmp)
+                call zio_function_output(outp%how, dir, fname, gr%mesh, ztmp, &
+                  fn_unit, ierr, is_tmp = .false., geo = geo)
               end if
             end do
           end do
         end if
       end do
+
+      SAFE_DEALLOCATE_A(dtmp)
+      SAFE_DEALLOCATE_A(ztmp)
     end if
 
     if(iand(outp%what, C_OUTPUT_WFS_SQMOD).ne.0) then

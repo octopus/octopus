@@ -87,7 +87,9 @@ module states_m
     states_are_complex,               &
     states_are_real,                  &
     states_set_complex,               &
-    states_blacs_blocksize
+    states_blacs_blocksize,           &
+    states_get_state,                 &
+    states_set_state
 
   type states_lead_t
     CMPLX, pointer     :: intf_psi(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
@@ -176,6 +178,14 @@ module states_m
 
     logical                     :: symmetrize_density
   end type states_t
+
+  interface states_get_state
+    module procedure dstates_get_state1, zstates_get_state1, dstates_get_state2, zstates_get_state2
+  end interface states_get_state
+
+  interface states_set_state
+    module procedure dstates_set_state1, zstates_set_state1, dstates_set_state2, zstates_set_state2
+  end interface states_set_state
 
 contains
 
@@ -2049,6 +2059,17 @@ return
 #endif
 
   end subroutine states_blacs_blocksize
+
+  ! ------------------------------------------------------------
+
+#include "undef.F90"
+#include "real.F90"
+#include "states_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "states_inc.F90"
+#include "undef.F90"
 
 end module states_m
 
