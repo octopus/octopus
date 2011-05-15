@@ -870,8 +870,10 @@ contains
 
           ! post the receptions
           if(st%mpi_grp%rank == 0) then
-            call MPI_Irecv(psi1(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(ist), ist, st%mpi_grp%comm, req(nreq + 1), mpi_err)
-            call MPI_Irecv(psi2(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(jst), jst, st%mpi_grp%comm, req(nreq + 2), mpi_err)
+            call MPI_Irecv(psi1(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(ist), ist, &
+              st%mpi_grp%comm, req(nreq + 1), mpi_err)
+            call MPI_Irecv(psi2(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(jst), jst, &
+              st%mpi_grp%comm, req(nreq + 2), mpi_err)
             INCR(nreq, 2)
           end if
 
