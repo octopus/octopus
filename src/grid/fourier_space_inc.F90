@@ -194,9 +194,10 @@ subroutine X(fourier_space_op_apply)(this, cube)
   if (cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
     index = 1
-    do kk =  cube%pfft%local_o_start(3),cube%pfft%local_o_start(3)+cube%pfft%local_no(3)-1
+
+    do kk =  cube%pfft%local_o_start(1),cube%pfft%local_o_start(1)+cube%pfft%local_no(1)-1
       do jj = cube%pfft%local_o_start(2), cube%pfft%local_o_start(2)+cube%pfft%local_no(2)-1
-        do ii = cube%pfft%local_o_start(1), cube%pfft%local_o_start(1)+cube%pfft%local_no(1)-1 
+        do ii = cube%pfft%local_o_start(3), cube%pfft%local_o_start(3)+cube%pfft%local_no(3)-1 
           cube%pfft%data_out(index)= cube%pfft%data_out(index)*this%X(op)(kk, jj, ii)
           index=index+1
         end do
@@ -208,12 +209,10 @@ subroutine X(fourier_space_op_apply)(this, cube)
 #endif
   else
 !!$  OLD ASSIGNMENT
-    index = 1
     do kk = 1, cube%n(3)
       do jj = 1, cube%n(2)
         do ii = 1, cube%nx
           cube%FS(ii, jj, kk) = cube%FS(ii, jj, kk)*this%X(op)(ii, jj, kk)
-          index=index+1
         end do
       end do
     end do
