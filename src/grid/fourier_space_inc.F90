@@ -189,8 +189,6 @@ subroutine X(fourier_space_op_apply)(this, cube)
   
   call X(cube_function_RS2FS)(cube)
   
-  !NEW ASSIGNMENT
-
   if (cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
     index = 1
@@ -208,7 +206,6 @@ subroutine X(fourier_space_op_apply)(this, cube)
     call messages_fatal(1)
 #endif
   else
-!!$  OLD ASSIGNMENT
     do kk = 1, cube%n(3)
       do jj = 1, cube%n(2)
         do ii = 1, cube%nx
