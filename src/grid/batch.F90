@@ -62,7 +62,8 @@ module batch_m
     batch_unpack,                   &
     batch_sync,                     &
     batch_status,                   &
-    batch_type
+    batch_type,                     &
+    batch_index
 
   !--------------------------------------------------------------
   type batch_state_t
@@ -790,6 +791,20 @@ subroutine batch_copy_data(np, xx, yy)
   call profiling_out(prof)
   POP_SUB(batch_copy_data)
 end subroutine batch_copy_data
+
+! ------------------------------------------------------
+
+integer pure function batch_index(this, cind) result(index)
+  type(batch_t),     intent(in)    :: this
+  integer,           intent(in)    :: cind(:)
+
+  if(ubound(cind, dim = 1) == 1) then
+    index = cind(1)
+  else
+    index = (cind(1) - 1)*this%dim + cind(2)
+  end if
+
+end function batch_index
 
 #include "real.F90"
 #include "batch_inc.F90"

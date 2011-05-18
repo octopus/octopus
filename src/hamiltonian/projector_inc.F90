@@ -57,7 +57,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   type(batch_t),     intent(inout) :: ppsib
   integer,           intent(in)    :: ik
 
-  integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist
+  integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist, bind
   R_TYPE, allocatable :: reduce_buffer(:), lpsi(:, :)
   integer, allocatable :: ireduce(:, :, :, :)
   type(profile_t), save :: prof
@@ -113,12 +113,15 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
       ! copy psi to the small spherical grid
       do idim = 1, dim
+        bind = batch_index(psib, (/ist, idim/))
         if(associated(pj(ipj)%phase)) then
           forall (is = 1:ns) 
-            lpsi(is, idim) = psib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim)*pj(ipj)%phase(is, ik)
+            lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
           end forall
         else
-          forall (is = 1:ns) lpsi(is, idim) = psib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim)
+          forall (is = 1:ns) 
+            lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))
+          end forall
         end if
       end do
 
@@ -199,16 +202,16 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     
       !put the result back in the complete grid
       do idim = 1, dim
+        bind = batch_index(psib, (/ist, idim/))
         if(associated(pj(ipj)%phase)) then
-          forall (is = 1:ns) 
-            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim) = &
-              ppsib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim) + &
-              lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
+          forall (is = 1:ns)
+            ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
+              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
           end forall
         else
           forall (is = 1:ns) 
-            ppsib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim) = &
-              ppsib%states(ist)%X(psi)(pj(ipj)%sphere%map(is), idim) + lpsi(is, idim)
+            ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
+              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)
           end forall
         end if
       end do

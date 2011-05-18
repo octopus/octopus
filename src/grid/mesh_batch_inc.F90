@@ -17,8 +17,6 @@
 !!
 !! $Id$
 
-
-
 subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   type(mesh_t),      intent(in)    :: mesh
   type(batch_t),     intent(in)    :: aa
@@ -27,7 +25,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   logical, optional, intent(in)    :: symm         !for the moment it is ignored
   logical, optional, intent(in)    :: reduce
 
-  integer :: ist, jst, idim, sp, block_size, ep, ip, lda, ldb
+  integer :: ist, jst, idim, sp, block_size, ep, ip, lda, ldb, indb, jndb
   R_TYPE :: ss
   R_TYPE, allocatable :: dd(:, :)
 #ifdef HAVE_MPI
@@ -45,6 +43,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #endif
 
   ASSERT(aa%dim == bb%dim)
+  ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
+  ASSERT(batch_status(bb) == BATCH_NOT_PACKED)
 
   SAFE_ALLOCATE(dd(1:aa%nst, 1:bb%nst))
 
@@ -74,11 +74,13 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
         if(mesh%use_curvilinear) then
 
           do ist = 1, aa%nst
+            indb = batch_index(aa, (/ist, idim/))
             do jst = 1, bb%nst
+              jndb = batch_index(bb, (/jst, idim/))
 
               ss = M_ZERO
               do ip = sp, ep
-                ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states(ist)%X(psi)(ip, idim))*bb%states(jst)%X(psi)(ip, idim)
+                ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states_linear(indb)%X(psi)(ip))*bb%states_linear(jndb)%X(psi)(ip)
               end do
               dd(ist, jst) = dd(ist, jst) + ss
 
@@ -88,9 +90,12 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
         else
 
           do ist = 1, aa%nst
+            indb = batch_index(aa, (/ist, idim/))
             do jst = 1, bb%nst
-              dd(ist, jst) = dd(ist, jst) + &
-                   mesh%vol_pp(1)*blas_dot(ep - sp + 1, aa%states(ist)%X(psi)(sp, idim), 1, bb%states(jst)%X(psi)(sp, idim), 1)
+              jndb = batch_index(bb, (/jst, idim/))
+
+              dd(ist, jst) = dd(ist, jst) + mesh%vol_pp(1)*&
+                blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, bb%states_linear(jndb)%X(psi)(sp), 1)
             end do
           end do
 
@@ -132,7 +137,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   R_TYPE,            intent(inout) :: dot(:, :)
   logical, optional, intent(in)    :: reduce
 
-  integer :: ist, jst, idim, sp, block_size, ep, ip, lda
+  integer :: ist, jst, idim, sp, block_size, ep, ip, lda, indb, jndb
   R_TYPE :: ss
   type(profile_t), save :: prof, profgemm, profcomm
   logical :: use_blas, reduce_
@@ -143,6 +148,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   ! some limitations of the current implementation
   ASSERT(ubound(dot, dim = 1) == aa%nst .and. ubound(dot, dim = 2) == aa%nst)
   ASSERT(aa%states(1)%ist == 1)
+  ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
 
   reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
@@ -180,11 +186,12 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
         if(mesh%use_curvilinear) then
 
           do ist = 1, aa%nst
+            indb = batch_index(aa, (/ist, idim/))
             do jst = 1, ist
-
+              jndb = batch_index(aa, (/jst, idim/))
               ss = M_ZERO
               do ip = sp, ep
-                ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states(ist)%X(psi)(ip, idim))*aa%states(jst)%X(psi)(ip, idim)
+                ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states_linear(indb)%X(psi)(ip))*aa%states_linear(jndb)%X(psi)(ip)
               end do
               dot(ist, jst) = dot(ist, jst) + ss
 
@@ -194,9 +201,11 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
         else
 
           do ist = 1, aa%nst
+            indb = batch_index(aa, (/ist, idim/))
             do jst = 1, ist
-              dot(ist, jst) = dot(ist, jst) + &
-                mesh%vol_pp(1)*blas_dot(ep - sp + 1, aa%states(ist)%X(psi)(sp, idim), 1, aa%states(jst)%X(psi)(sp, idim), 1)
+              jndb = batch_index(aa, (/jst, idim/))
+              dot(ist, jst) = dot(ist, jst) + mesh%vol_pp(1)*&
+                blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, aa%states_linear(jndb)%X(psi)(sp), 1)
             end do
           end do
 
@@ -237,11 +246,11 @@ subroutine X(mesh_batch_rotate)(mesh, aa, transf)
 
   R_TYPE, allocatable :: psinew(:, :), psicopy(:, :)
   
-  integer :: ist, idim, block_size, size, sp
+  integer :: ist, idim, block_size, size, sp, indb
   type(profile_t), save :: prof
-  logical :: use_blas
 
   call profiling_in(prof, "BATCH_ROTATE")
+  ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
 
 #ifdef R_TREAL  
   block_size = max(40, hardware%l2%size/(2*8*aa%nst))
@@ -249,48 +258,30 @@ subroutine X(mesh_batch_rotate)(mesh, aa, transf)
   block_size = max(20, hardware%l2%size/(2*16*aa%nst))
 #endif
 
-  use_blas = associated(aa%X(psicont))
-
   SAFE_ALLOCATE(psinew(1:block_size, 1:aa%nst))
-
-  if(.not. use_blas) then
-    SAFE_ALLOCATE(psicopy(1:block_size, 1:aa%nst))
-  end if
+  SAFE_ALLOCATE(psicopy(1:block_size, 1:aa%nst))
 
   do sp = 1, mesh%np, block_size
     size = min(block_size, mesh%np - sp + 1)
     
     do idim = 1, aa%dim
+
+      do ist = 1, aa%nst
+        indb = batch_index(aa, (/ist, idim/))
+        call blas_copy(size, aa%states_linear(indb)%X(psi)(sp), 1, psicopy(1, ist), 1)
+      end do
       
-      if(use_blas) then
-        
-        call blas_gemm('N', 'N', &
-          size, aa%nst, aa%nst, &
-          R_TOTYPE(M_ONE), aa%X(psicont)(sp, idim, 1), ubound(aa%X(psicont), dim=1)*aa%dim, &
-          transf(1, 1), aa%nst, &
-          R_TOTYPE(M_ZERO), psinew(1, 1), block_size)
-        
-        do ist = 1, aa%nst
-          call blas_copy(size, psinew(1, ist), 1, aa%X(psicont)(sp, idim, ist), 1)
-        end do
-        
-      else
-
-        do ist = 1, aa%nst
-          call blas_copy(size, aa%states(ist)%X(psi)(sp, idim), 1, psicopy(1, ist), 1)
-        end do
-
-        call blas_gemm('N', 'N', &
-          size, aa%nst, aa%nst, &
-          R_TOTYPE(M_ONE), psicopy(1, 1), block_size, &
-          transf(1, 1), aa%nst, &
-          R_TOTYPE(M_ZERO), psinew(1, 1), block_size)
-
-        do ist = 1, aa%nst
-          call blas_copy(size, psinew(1, ist), 1, aa%states(ist)%X(psi)(sp, idim), 1)
-        end do
-
-      end if
+      call blas_gemm('N', 'N', &
+        size, aa%nst, aa%nst, &
+        R_TOTYPE(M_ONE), psicopy(1, 1), block_size, &
+        transf(1, 1), aa%nst, &
+        R_TOTYPE(M_ZERO), psinew(1, 1), block_size)
+      
+      do ist = 1, aa%nst
+        indb = batch_index(aa, (/ist, idim/))
+        call blas_copy(size, psinew(1, ist), 1, aa%states_linear(indb)%X(psi)(sp), 1)
+      end do
+      
     end do
   end do
 
@@ -312,7 +303,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   R_TYPE,            intent(inout) :: dot(:)
   logical, optional, intent(in)    :: reduce
 
-  integer :: ist
+  integer :: ist, indb, idim
   logical :: reduce_
   type(profile_t), save :: prof, profcomm
 
@@ -324,9 +315,14 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   
   ASSERT(aa%nst == bb%nst)
   ASSERT(aa%dim == bb%dim)
+  ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
 
   do ist = 1, aa%nst
-    dot(ist) = X(mf_dotp)(mesh, aa%dim, aa%states(ist)%X(psi), bb%states(ist)%X(psi), reduce = .false.)
+    dot(ist) = M_ZERO
+    do idim = 1, aa%dim
+      indb = batch_index(aa, (/ist, idim/))
+      dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), bb%states_linear(indb)%X(psi), reduce = .false.)
+    end do
   end do
   
   if(mesh%parallel_in_domains .and. reduce_) then
@@ -339,6 +335,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   POP_SUB(X(mesh_batch_dotp_vector))
 end subroutine X(mesh_batch_dotp_vector)
 
+!--------------------------------------------------------------------------------------
 
 !> This functions exchanges points of a mesh according to a certain
 !! map. Two possible maps can be given. Only one map argument must be present.
@@ -359,6 +356,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
   ASSERT(present(backward_map) .neqv. present(forward_map))
   ASSERT(batch_type(aa) == R_TYPE_VAL)
+  ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
 
   if(.not. mesh%parallel_in_domains) then
     message(1) = "Not implemented for the serial case. Really, only in parallel."
