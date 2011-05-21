@@ -28,14 +28,14 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   integer, optional,     intent(in)    :: terms
 
   integer :: nst, bs, sp
-  R_TYPE, pointer     :: epsi(:,:)
+  R_TYPE, pointer     :: epsi(:)
   R_TYPE, pointer     :: grad(:, :, :)
   R_TYPE, allocatable :: psi_copy(:, :, :)
 
   type(profile_t), save :: phase_prof
   logical :: kinetic_only_, apply_phase, pack
   integer :: ii, ist, idim, ip
-  R_TYPE, pointer :: psi(:, :), hpsi(:, :)
+  R_TYPE, pointer :: psi(:), hpsi(:)
   type(batch_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
@@ -59,7 +59,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   ASSERT(batch_is_ok(hpsib))
   ASSERT(psib%nst == hpsib%nst)
   ASSERT(ik >= hm%d%kpt%start .and. ik <= hm%d%kpt%end)
-  nst = psib%nst
+  nst = psib%nst_linear
 
   apply_phase = associated(hm%phase)
 
@@ -100,11 +100,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
       else
         do ii = 1, nst
           call set_pointers()
-          forall (idim = 1:hm%d%dim)
-            forall(ip = sp:min(sp + bs - 1, der%mesh%np_part)) 
-              psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip, idim)
-            end forall
-          end forall
+          forall(ip = sp:min(sp + bs - 1, der%mesh%np_part)) psi_copy(ip, idim, ii) = hm%phase(ip, ik)*psi(ip)
         end do
       end if
     end do
@@ -139,10 +135,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
     do ii = 1, nst
       call set_pointers()
-      do idim = 1, hm%d%dim
-        hpsi(1:der%mesh%np, idim) = hpsi(1:der%mesh%np, idim) + &
-          hm%ep%vpsl(1:der%mesh%np)*epsi(1:der%mesh%np, idim)
-      end do
+      hpsi(1:der%mesh%np) = hpsi(1:der%mesh%np) + hm%ep%vpsl(1:der%mesh%np)*epsi(1:der%mesh%np)
     end do
   end if
 
@@ -159,25 +152,24 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
 
-  do ii = 1, nst
-    call set_pointers()
-
+  do ii = 1, psib%nst
     if (iand(TERM_OTHERS, terms_) /= 0) then
 
       ! all functions that require the gradient or other derivatives of
       ! epsi should go after this point and calculate it using Xget_grad
-
+      
       nullify(grad)
-
-      if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) call X(exchange_operator)(hm, der, epsi, hpsi, ist, ik)
+      
+      if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
+        call X(exchange_operator)(hm, der, epsib%states(ii)%X(psi), hpsib%states(ii)%X(psi), psib%states(ii)%ist, ik)
+      end if
 
       if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) &
-        call X(h_mgga_terms) (hm, der, epsi, hpsi, ik, grad)
-
-      if(present(time)) call X(vborders) (der, hm, epsi, hpsi)
-
+        call X(h_mgga_terms)(hm, der, epsib%states(ii)%X(psi), hpsib%states(ii)%X(psi), ik, grad)
+      
+      if(present(time)) call X(vborders) (der, hm, hpsib%states(ii)%X(psi), hpsib%states(ii)%X(psi))
+      
       SAFE_DEALLOCATE_P(grad)
-
     end if
   end do
 
@@ -193,11 +185,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
       else
         do ii = 1, nst
           call set_pointers()
-          forall (idim = 1:hm%d%dim)
-            forall(ip = sp:min(sp + bs - 1, der%mesh%np))
-              hpsi(ip, idim) = conjg(hm%phase(ip, ik))*hpsi(ip, idim)
-            end forall
-          end forall
+          forall(ip = sp:min(sp + bs - 1, der%mesh%np)) hpsi(ip) = conjg(hm%phase(ip, ik))*hpsi(ip)
         end do
       end if
     end do
@@ -222,10 +210,11 @@ contains
   subroutine set_pointers
     ! no push_sub since called very frequently
 
-    psi  => psib%states(ii)%X(psi)
-    epsi => epsib%states(ii)%X(psi)
-    hpsi => hpsib%states(ii)%X(psi)
-    ist  =  psib%states(ii)%ist
+    psi  => psib%states_linear(ii)%X(psi)
+    epsi => epsib%states_linear(ii)%X(psi)
+    hpsi => hpsib%states_linear(ii)%X(psi)
+    ist  =  psib%index(ii, 1)
+    idim =  psib%index(ii, 2)
   end subroutine set_pointers
 
 end subroutine X(hamiltonian_apply_batch)

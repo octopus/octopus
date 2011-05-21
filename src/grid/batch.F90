@@ -93,6 +93,9 @@ module batch_m
     integer                        :: current
     integer                        :: dim
 
+    integer                       :: ndims
+    integer,             pointer  :: index(:, :)
+
     !> We also need a linear array with the states in order to calculate derivatives, etc.
     integer                        :: nst_linear
     type(batch_state_l_t), pointer :: states_linear(:)
@@ -156,11 +159,14 @@ contains
 
     SAFE_DEALLOCATE_P(this%states)
     SAFE_DEALLOCATE_P(this%states_linear)
+    
+    SAFE_DEALLOCATE_P(this%index)
 
     POP_SUB(batch_end)
   end subroutine batch_end
 
   !--------------------------------------------------------------
+
   subroutine batch_init_empty (this, dim, nst)
     type(batch_t), intent(out)   :: this
     integer,       intent(in)    :: dim
@@ -194,8 +200,10 @@ contains
     nullify(this%pack%dpsi)
     nullify(this%pack%zpsi)
 
+    this%ndims = 2
+    SAFE_ALLOCATE(this%index(1:this%nst_linear, 1:this%ndims))
+
     POP_SUB(batch_init_empty)
-    
   end subroutine batch_init_empty
 
 
@@ -228,8 +236,10 @@ contains
     nullify(this%pack%dpsi)
     nullify(this%pack%zpsi)
 
+    this%ndims = 1
+    SAFE_ALLOCATE(this%index(1:this%nst_linear, 1:this%ndims))
+
     POP_SUB(batch_init_empty_linear)
-    
   end subroutine batch_init_empty_linear
 
 
@@ -288,8 +298,11 @@ contains
     end if
 #endif    
 
-    POP_SUB(batch_copy)
+    bout%ndims = bin%ndims
+    SAFE_ALLOCATE(bout%index(1:bin%nst, 1:bin%ndims))
+    bout%index(1:bin%nst, 1:bin%ndims) = bin%index(1:bin%nst, 1:bin%ndims)
 
+    POP_SUB(batch_copy)
   end subroutine batch_copy
 
   ! ----------------------------------------------------

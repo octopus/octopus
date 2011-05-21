@@ -42,9 +42,7 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
   end do
 
   POP_SUB(X(batch_init_contiguous))
-
 end subroutine X(batch_init_contiguous)
-
 
 !--------------------------------------------------------------
 subroutine X(batch_add_state)(this, ist, psi)
@@ -65,16 +63,17 @@ subroutine X(batch_add_state)(this, ist, psi)
   do idim = 1, this%dim
     ii = this%dim*(this%current - 1) + idim
     this%states_linear(ii)%X(psi) => psi(:, idim)
+    this%index(ii, 1) = ist
+    this%index(ii, 2) = idim
   end do
 
-  this%current = this%current  + 1
+  this%current = this%current + 1
 
   POP_SUB(X(batch_add_state))
-
 end subroutine X(batch_add_state)
 
-
 !--------------------------------------------------------------
+
 subroutine X(batch_add_state_linear)(this, psi)
   type(batch_t),  intent(inout) :: this
   R_TYPE, target, intent(in)    :: psi(:)
@@ -83,10 +82,11 @@ subroutine X(batch_add_state_linear)(this, psi)
 
   ASSERT(this%current <= this%nst_linear)
   this%states_linear(this%current)%X(psi) => psi
-  this%current = this%current  + 1
+  this%index(this%current, 1) = this%current
+
+  this%current = this%current + 1
 
   POP_SUB(X(batch_add_state_linear))
-
 end subroutine X(batch_add_state_linear)
 
 
