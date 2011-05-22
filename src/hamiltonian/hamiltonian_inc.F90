@@ -29,7 +29,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   integer :: nst, bs, sp
   R_TYPE, pointer     :: epsi(:)
-  R_TYPE, pointer     :: grad(:, :, :)
   R_TYPE, allocatable :: psi_copy(:, :, :)
 
   type(profile_t), save :: phase_prof
@@ -152,26 +151,23 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
 
-  do ii = 1, psib%nst
-    if (iand(TERM_OTHERS, terms_) /= 0) then
-
-      ! all functions that require the gradient or other derivatives of
-      ! epsi should go after this point and calculate it using Xget_grad
-      
-      nullify(grad)
+  if (iand(TERM_OTHERS, terms_) /= 0) then
+    do ii = 1, psib%nst
       
       if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
         call X(exchange_operator)(hm, der, epsib%states(ii)%X(psi), hpsib%states(ii)%X(psi), psib%states(ii)%ist, ik)
       end if
 
-      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) &
-        call X(h_mgga_terms)(hm, der, epsib%states(ii)%X(psi), hpsib%states(ii)%X(psi), ik, grad)
+    end do
+
+    do ii = 1, nst
+      call set_pointers()
+
+      if(present(time)) call X(vborders)(der, hm, epsi, hpsi)
+      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) call X(h_mgga_terms)(hm, der, epsi, hpsi, ik)
       
-      if(present(time)) call X(vborders) (der, hm, hpsib%states(ii)%X(psi), hpsib%states(ii)%X(psi))
-      
-      SAFE_DEALLOCATE_P(grad)
-    end if
-  end do
+    end do
+  end if
 
   if(apply_phase) then
     call profiling_in(phase_prof)
@@ -219,31 +215,8 @@ contains
 
 end subroutine X(hamiltonian_apply_batch)
 
-
 ! ---------------------------------------------------------
-subroutine X(get_grad)(hm, der, psi, grad)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: psi(:, :)
-  R_TYPE,              pointer       :: grad(:, :, :)
 
-  integer :: idim
-
-  PUSH_SUB(X(get_grad))
-
-  if( .not. associated(grad)) then
-    SAFE_ALLOCATE(grad(1:der%mesh%np, 1:MAX_DIM, 1:hm%d%dim))
-    do idim = 1, hm%d%dim 
-      ! boundary points were already set by the Laplacian
-      call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
-    end do
-  end if
-  
-  POP_SUB(X(get_grad))
-end subroutine X(get_grad)       
-
-
-! ---------------------------------------------------------
 subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
@@ -517,7 +490,9 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
 
   if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL)
 
-  call X(vborders)(der, hm, psi, hpsi)
+  do idim = 1, hm%d%dim
+    call X(vborders)(der, hm, psi(:, idim), hpsi(:, idim))
+  end do
 
   SAFE_DEALLOCATE_A(auxpsi)
   SAFE_DEALLOCATE_A(aux2psi)
@@ -529,55 +504,52 @@ end subroutine X(magnus)
 subroutine X(vborders) (der, hm, psi, hpsi)
   type(derivatives_t), intent(in)    :: der
   type(hamiltonian_t), intent(in)    :: hm
-  R_TYPE,              intent(in)    :: psi(:,:)
-  R_TYPE,              intent(inout) :: hpsi(:,:)
+  R_TYPE,              intent(in)    :: psi(:)
+  R_TYPE,              intent(inout) :: hpsi(:)
 
-  integer :: idim
+  integer :: ip
 
   PUSH_SUB(X(vborders))
 
-  if(hm%ab .eq. IMAGINARY_ABSORBING) then
-    do idim = 1, hm%d%dim
-      hpsi(1:der%mesh%np, idim) = hpsi(1:der%mesh%np, idim) + &
-        M_zI*hm%ab_pot(1:der%mesh%np)*psi(1:der%mesh%np, idim)
-    end do
+  if(hm%ab == IMAGINARY_ABSORBING) then
+    forall(ip = 1:der%mesh%np) hpsi(ip) = hpsi(ip) + M_zI*hm%ab_pot(ip)*psi(ip)
   end if
-
+  
   POP_SUB(X(vborders))
 end subroutine X(vborders)
 
 
 ! ---------------------------------------------------------
-subroutine X(h_mgga_terms) (hm, der, psi, hpsi, ik, grad)
+subroutine X(h_mgga_terms) (hm, der, psi, hpsi, ik)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: psi(:,:)
-  R_TYPE,              intent(inout) :: hpsi(:,:)
+  R_TYPE,              intent(inout) :: psi(:)
+  R_TYPE,              intent(inout) :: hpsi(:)
   integer,             intent(in)    :: ik
-  R_TYPE,              pointer       :: grad(:, :, :)
 
-  integer :: ispace, idim, ispin
-  R_TYPE, allocatable :: cgrad(:,:), diverg(:)
+  integer :: ispace, ispin
+  R_TYPE, allocatable :: cgrad(:,:), diverg(:), grad(:, :)
 
   PUSH_SUB(X(h_mgga_terms))
 
-  call X(get_grad)(hm, der, psi, grad)
   ispin = states_dim_get_spin_index(hm%d, ik)
 
+  SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:MAX_DIM))
   SAFE_ALLOCATE(cgrad(1:der%mesh%np_part, 1:MAX_DIM))
   SAFE_ALLOCATE(diverg(1:der%mesh%np))
 
-  do idim = 1, hm%d%dim
-    do ispace = 1, der%mesh%sb%dim
-      cgrad(1:der%mesh%np, ispace) = grad(1:der%mesh%np, ispace, idim)*hm%vtau(1:der%mesh%np, ispin)
-    end do
-
-    diverg(1:der%mesh%np) = M_ZERO
-    call X(derivatives_div)(der, cgrad, diverg)
-
-    hpsi(1:der%mesh%np, idim) = hpsi(1:der%mesh%np, idim) - diverg(1:der%mesh%np)
+  call X(derivatives_grad)(der, psi, grad, ghost_update = .false., set_bc = .false.)
+  
+  do ispace = 1, der%mesh%sb%dim
+    cgrad(1:der%mesh%np, ispace) = grad(1:der%mesh%np, ispace)*hm%vtau(1:der%mesh%np, ispin)
   end do
+  
+  diverg(1:der%mesh%np) = M_ZERO
+  call X(derivatives_div)(der, cgrad, diverg)
+  
+  hpsi(1:der%mesh%np) = hpsi(1:der%mesh%np) - diverg(1:der%mesh%np)
 
+  SAFE_DEALLOCATE_A(grad)
   SAFE_DEALLOCATE_A(cgrad)
   SAFE_DEALLOCATE_A(diverg)
 
