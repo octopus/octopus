@@ -409,12 +409,12 @@ contains
 
     integer :: index,ii,jj,kk,mpi_err
     integer(ptrdiff_t_kind) :: begin_index, i_start(3)
-    integer :: process_row_size, process_column_size, ierror
+    integer :: process_row_size, process_column_size
     CMPLX,allocatable :: subarray(:)
     FLOAT, allocatable :: dta_in_tmp(:,:,:)
 
     character(len=256) ::  tmp_file
-    integer(ptrdiff_t_kind), allocatable :: local_sizes(:), begin_indexes(:),block_sizes(:)
+    integer, allocatable :: local_sizes(:), begin_indexes(:),block_sizes(:)
     integer(ptrdiff_t_kind) :: tmp_local(6)
     integer :: position
     
@@ -473,7 +473,7 @@ contains
     SAFE_ALLOCATE(local_sizes(6*mpi_world%size))
     call MPI_Allgather(tmp_local,6,MPI_INTEGER, &
          local_sizes,6,MPI_INTEGER,&
-         0,mpi_world%comm,mpi_err)
+         mpi_world%comm,mpi_err)
     
     SAFE_ALLOCATE(begin_indexes(mpi_world%size))
     SAFE_ALLOCATE(block_sizes(mpi_world%size))
@@ -483,18 +483,22 @@ contains
       begin_indexes(ii) = (local_sizes(position) - 1) + &
            ((local_sizes(position+1) - 1) * pfft%n(1)) + &
            ((local_sizes(position+2) - 1) * pfft%n(2) * pfft%n(1))
-      !get the sizes of each block 
-      block_sizes(ii) = local_sizes(position+3)*local_sizes(position+4)
+      !get the sizes of each block and duplicate if is 64 bits
+      block_sizes(ii) = (local_sizes(position+3)*local_sizes(position+4))
     end do
     
     SAFE_ALLOCATE(dta_in_tmp(pfft%n(1),pfft%n(2),pfft%n(3)))
     do ii=1,local_sizes(6)
       call MPI_Gatherv ( &
            dta_in(pfft%local_i_start(1),pfft%local_i_start(2),pfft%local_i_start(3)+ii-1), &
-           pfft%local_ni(1)*pfft%local_ni(2), MPI_DOUBLE_PRECISION, &
-           dta_in_tmp(1,1,ii), block_sizes,begin_indexes, &
-           MPI_DOUBLE_PRECISION, &
-           0, MPI_COMM_WORLD, mpi_err )
+           block_sizes(mpi_world%rank+1), MPI_FLOAT, &
+           dta_in_tmp(1,1,ii), block_sizes(1),begin_indexes(1), &
+           MPI_FLOAT, &
+           0, mpi_world%comm, mpi_err )
+      if (mpi_err /= 0) then
+        write(message(1),'(a)')"MPI_Gatherv failed in pfft.F90"
+        call messages_fatal(1)
+      end if
     end do
    
     if (pfft_output) then
@@ -512,7 +516,7 @@ contains
 
     dta_in = dta_in_tmp
     SAFE_DEALLOCATE_A(dta_in_tmp)
-
+    write(*,*)mpi_world%rank,": finished pfft_bw<"
     POP_SUB(pfft_backward_3d)
   end subroutine pfft_backward_3d
   
