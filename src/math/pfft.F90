@@ -484,7 +484,7 @@ contains
            ((local_sizes(position+1) - 1) * pfft%n(1)) + &
            ((local_sizes(position+2) - 1) * pfft%n(2) * pfft%n(1))
       !get the sizes of each block and duplicate if is 64 bits
-      block_sizes(ii) = (local_sizes(position+3)*local_sizes(position+4))
+      block_sizes(ii) = local_sizes(position+3)*local_sizes(position+4)
     end do
     
     SAFE_ALLOCATE(dta_in_tmp(pfft%n(1),pfft%n(2),pfft%n(3)))
@@ -516,7 +516,7 @@ contains
 
     dta_in = dta_in_tmp
     SAFE_DEALLOCATE_A(dta_in_tmp)
-    write(*,*)mpi_world%rank,": finished pfft_bw<"
+
     POP_SUB(pfft_backward_3d)
   end subroutine pfft_backward_3d
   
