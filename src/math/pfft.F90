@@ -415,7 +415,7 @@ contains
 
     character(len=256) ::  tmp_file
     integer, allocatable :: local_sizes(:), begin_indexes(:),block_sizes(:)
-    integer(ptrdiff_t_kind) :: tmp_local(6)
+    integer :: tmp_local(6)
     integer :: position
     
     PUSH_SUB(pfft_backward_3d)
