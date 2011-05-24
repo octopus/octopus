@@ -124,7 +124,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! SAFE_DEALLOCATE_Ps variables allocated in lda_init
+  ! deallocates variables allocated in lda_init
   subroutine lda_end()
     PUSH_SUB(xc_get_fxc.lda_end)
 

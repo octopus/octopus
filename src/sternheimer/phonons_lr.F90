@@ -164,7 +164,7 @@ contains
       if (.not. fromscratch) then
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
-        call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir)), &
+        call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1)), &
           st, gr, geo, ierr, lr = lr(1))
       end if
       
@@ -337,6 +337,7 @@ contains
       ! now calculate the wavefunction associated with each normal mode
       type(lr_t) :: lrtmp
       integer :: ik, ist, idim, inm
+      character(len=80) :: dirname
 
       PUSH_SUB(phonons_lr_run.vib_modes_wavefunctions)
 
@@ -352,8 +353,13 @@ contains
 
             imat = vibrations_get_index(vib, iatom, idir)
 
-            call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(phn_wfs_tag(iatom, idir)), &
-                 st, gr, geo, ierr, lr = lrtmp)
+            dirname = trim(restart_dir)//VIB_MODES_DIR//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))
+            call restart_read(trim(dirname), st, gr, geo, ierr, lr = lrtmp)
+
+            if(ierr .ne. 0) then
+              message(1) = "Failed to load response wavefunctions from '"//dirname//"'"
+              call messages_fatal(1)
+            end if
             
             do ik = 1, st%d%nik
               do ist = st%st_start, st%st_end
@@ -401,7 +407,6 @@ contains
     PUSH_SUB(phn_wfs_tag)
 
     write(str, '(a,i4.4,a,a)') "phn_wfs_", iatom, "_", index2axis(dir)
-    str = wfs_tag_sigma(str, 1)
 
     POP_SUB(phn_wfs_tag)
     
@@ -412,12 +417,11 @@ contains
   character(len=100) function phn_nm_wfs_tag(inm) result(str)
     integer, intent(in) :: inm
 
-    PUSH_SUB(phn_wfs_tag)
+    PUSH_SUB(phn_nm_wfs_tag)
 
     write(str, '(a,i5.5)') "phn_nm_wfs_", inm
-    str = wfs_tag_sigma(str, 1)
 
-    POP_SUB(phn_wfs_tag)
+    POP_SUB(phn_nm_wfs_tag)
     
   end function phn_nm_wfs_tag
 
