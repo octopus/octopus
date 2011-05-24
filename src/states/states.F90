@@ -115,7 +115,11 @@ module states_m
 
     type(batch_t), pointer   :: psib(:, :)            !< A set of wave-functions blocks
     integer                  :: nblocks               !< The number of blocks
+    integer                  :: block_start           !< The lowest index of local blocks
+    integer                  :: block_end             !< The highest index of local blocks
     integer, pointer         :: iblock(:, :)          !< A map, that for each state index, returns the index of block containing it
+    integer, pointer         :: block_range(:, :)     !< Each block contains states from block_range(:, 1) to block_range(:, 2)
+    integer, pointer         :: block_size(:)         !< The number of states in each block.
     logical, pointer         :: block_is_local(:, :)  !< It is true if the block is in this node.
     logical                  :: block_initialized     !< For keeping track of the blocks to avoid memory leaks
 
@@ -204,6 +208,7 @@ contains
 
     nullify(st%dpsi, st%zpsi)
     nullify(st%psib, st%iblock, st%block_is_local)
+    nullify(st%block_range)
     st%block_initialized = .false.
 
     nullify(st%zphi, st%ob_eigenval, st%ob_occ)
@@ -1067,7 +1072,7 @@ return
   subroutine states_init_block(st)
     type(states_t),    intent(inout)   :: st
 
-    integer :: ib, iq, ist
+    integer :: ib, iqn, ist
     logical :: same_node
     integer, allocatable :: bstart(:), bend(:)
 
@@ -1120,27 +1125,37 @@ return
 !!$      
 !!$    end if
     
-    SAFE_ALLOCATE(st%psib(1:st%nblocks, 1:st%d%nik))
+    SAFE_ALLOCATE(st%psib(1:st%nblocks, 1:st%d%nik))    
     SAFE_ALLOCATE(st%block_is_local(1:st%nblocks, 1:st%d%nik))
     st%block_is_local = .false.
-
+    st%block_start  = -1
+    
     do ib = 1, st%nblocks
       if(bstart(ib) >= st%st_start .and. bend(ib) <= st%st_end) then
-        do iq = st%d%kpt%start, st%d%kpt%end
-          st%block_is_local(ib, iq) = .true.
-
+        if(st%block_start == -1) st%block_start = ib
+        st%block_end = ib
+        do iqn = st%d%kpt%start, st%d%kpt%end
+          st%block_is_local(ib, iqn) = .true.
+          
           if (states_are_real(st)) then
             ASSERT(associated(st%dpsi))
-            call batch_init(st%psib(ib, iq), st%d%dim, bstart(ib), bend(ib), st%dpsi(:, :, bstart(ib):bend(ib), iq))
+            call batch_init(st%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%dpsi(:, :, bstart(ib):bend(ib), iqn))
           else
             ASSERT(associated(st%zpsi))
-            call batch_init(st%psib(ib, iq), st%d%dim, bstart(ib), bend(ib), st%zpsi(:, :, bstart(ib):bend(ib), iq))
+            call batch_init(st%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%zpsi(:, :, bstart(ib):bend(ib), iqn))
           end if
           
         end do
       end if
     end do
 
+    SAFE_ALLOCATE(st%block_range(1:st%nblocks, 1:2))
+    SAFE_ALLOCATE(st%block_size(1:st%nblocks))
+
+    st%block_range(1:st%nblocks, 1) = bstart(1:st%nblocks)
+    st%block_range(1:st%nblocks, 2) = bend(1:st%nblocks)
+    st%block_size(1:st%nblocks) = bend(1:st%nblocks) - bstart(1:st%nblocks) + 1
+    
     st%block_initialized = .true.
 
     SAFE_DEALLOCATE_A(bstart)
@@ -1173,6 +1188,8 @@ return
 
        SAFE_DEALLOCATE_P(st%psib)
        SAFE_DEALLOCATE_P(st%iblock)
+       SAFE_DEALLOCATE_P(st%block_range)
+       SAFE_DEALLOCATE_P(st%block_size)
        SAFE_DEALLOCATE_P(st%block_is_local)
        st%block_initialized = .false.
     end if
