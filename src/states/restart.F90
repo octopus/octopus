@@ -436,8 +436,9 @@ contains
 
     ! If one restarts a GS calculation changing the %Occupations block, one
     ! cannot read the occupations, otherwise these overwrite the ones from
-    ! the input file. The same is true when reading a linear-response restart.
-    read_occ_ = optional_default(read_occ, .true.)
+    ! the input file. The same is true when reading a linear-response restart,
+    ! although in practice the read_occ_ variable is not use in the lr case anyway.
+    read_occ_ = optional_default(read_occ, .not. present(lr))
 
     ! sanity check
     gs_allocated = (associated(st%dpsi) .and. states_are_real(st)) .or. &
@@ -568,7 +569,7 @@ contains
       end if
 
       call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, line, err)
-      if(.not. present(lr)) then ! do not read eigenvalues when reading linear response
+      if(.not. present(lr)) then ! do not read eigenvalues or occupations when reading linear response
         ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
         read(line, *) my_occ, char, st%eigenval(ist, ik), char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
         if(read_occ_) st%occ(ist, ik) = my_occ
@@ -644,8 +645,9 @@ contains
     end if
 #endif
 
-    call fill_random()
-
+    if(.not. present(lr)) call fill_random()
+    ! it is better to initialize lr wfns to zero
+    
     if(ierr == 0) then
       ierr = -1 ! no files read
       if(.not. present(lr)) then 
