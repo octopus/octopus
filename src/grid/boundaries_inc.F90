@@ -200,7 +200,6 @@ subroutine X(ghost_update_batch_finish)(handle)
 #endif
 
   if(batch_is_packed(handle%ghost_send)) call batch_unpack(handle%ghost_send, copy = .false.)
-  call X(batch_delete)(handle%ghost_send)
   call batch_end(handle%ghost_send)
 
   call profiling_out(prof_wait)
