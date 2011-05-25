@@ -448,8 +448,8 @@ contains
   ! ---------------------------------------------------------
 
   subroutine from_coords(gopt, coords)
-    type(geom_opt_t), intent(out) :: gopt
-    FLOAT,            intent(in)  :: coords(:)
+    type(geom_opt_t), intent(inout) :: gopt
+    FLOAT,            intent(in)    :: coords(:)
 
     integer :: iatom, idir
 
