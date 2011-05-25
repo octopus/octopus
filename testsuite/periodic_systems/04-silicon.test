@@ -24,7 +24,7 @@ match ; k-point 1 (z) ; GREP(static/info, '#k =   1', 42) ; 0.077000
 match ; Eigenvalue  1 ; GREP(static/info, '#k =   1', 12,  1) ; -0.280425
 match ; Eigenvalue  8 ; GREP(static/info, '#k =   1', 12,  8) ;  0.022249
 match ; Eigenvalue 16 ; GREP(static/info, '#k =   1', 12, 16) ;  0.139511
-match ; Eigenvalue 17 ; GREP(static/info, '#k =   1', 12, 17) ;  0.172718
+match ; Eigenvalue 17 ; GREP(static/info, '#k =   1', 12, 17) ;  0.172650
 
 match ; k-point 2 (x) ; GREP(static/info, '#k =   2', 18) ; 0.077000
 match ; k-point 2 (y) ; GREP(static/info, '#k =   2', 30) ; 0.077000
