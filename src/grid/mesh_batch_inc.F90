@@ -303,9 +303,10 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   R_TYPE,            intent(inout) :: dot(:)
   logical, optional, intent(in)    :: reduce
 
-  integer :: ist, indb, idim
+  integer :: ist, indb, idim, ip
   logical :: reduce_
   type(profile_t), save :: prof, profcomm
+  R_TYPE, allocatable :: tmp(:)
 
   PUSH_SUB(X(mesh_batch_dotp_vector))
   call profiling_in(prof, "DOTPV_BATCH")
@@ -315,16 +316,52 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   
   ASSERT(aa%nst == bb%nst)
   ASSERT(aa%dim == bb%dim)
-  ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
 
-  do ist = 1, aa%nst
-    dot(ist) = M_ZERO
-    do idim = 1, aa%dim
-      indb = batch_index(aa, (/ist, idim/))
-      dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), bb%states_linear(indb)%X(psi), reduce = .false.)
+  select case(batch_status(aa))
+  case(BATCH_NOT_PACKED)
+    do ist = 1, aa%nst
+      dot(ist) = M_ZERO
+      do idim = 1, aa%dim
+        indb = batch_index(aa, (/ist, idim/))
+        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), bb%states_linear(indb)%X(psi), reduce = .false.)
+      end do
     end do
-  end do
-  
+
+  case(BATCH_PACKED)
+
+    SAFE_ALLOCATE(tmp(1:aa%nst_linear))
+
+    tmp = M_ZERO
+    
+    if(mesh%use_curvilinear) then
+      do ip = 1, mesh%np
+        do ist = 1, aa%nst_linear
+          tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
+        end do
+      end do
+    else
+      do ip = 1, mesh%np
+        do ist = 1, aa%nst_linear
+          tmp(ist) = tmp(ist) + R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
+        end do
+      end do
+      forall(ist = 1:aa%nst_linear)  tmp(ist) = tmp(ist)*mesh%vol_pp(1)
+    end if
+
+    do ist = 1, aa%nst
+      dot(ist) = M_ZERO
+      do idim = 1, aa%dim
+        indb = batch_index(aa, (/ist, idim/))
+        dot(ist) = dot(ist) + tmp(indb)
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(tmp)
+
+  case(BATCH_CL_PACKED)
+    call messages_not_implemented("CL version of mesh_batch_dotp_vector")
+  end select
+
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "DOTPV_BATCH_REDUCE")
     call comm_allreduce(mesh%mpi_grp%comm, dot, aa%nst)
