@@ -182,7 +182,6 @@ contains
     endif
 
     SAFE_ALLOCATE(em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
-    em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor)%nst = sys%st%nst
     do ifactor = 1, em_vars%nfactor
       call Born_charges_init(em_vars%Born_charges(ifactor), sys%geo, sys%st, gr%sb%dim)
     enddo
@@ -307,7 +306,8 @@ contains
                     ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
 
                   if(ierr .ne. 0) then
-                    message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
+                    message(1) = "Initializing to zero, could not load response wavefunctions from '" &
+                      //trim(tmpdir)//trim(dirname_restart)//"'"
                     call messages_warning(1)
                   end if
                 end do
@@ -1050,10 +1050,10 @@ contains
           if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
           write(iunit, '(a)', advance='no') '# state '
-          do ivar = 1, em_vars%lr(idir, 1, 1)%nst
+          do ivar = 1, st%nst
             do sigma = 1, em_vars%nsigma
 
-              if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(idir, 1, 1)%nst) then 
+              if( sigma == em_vars%nsigma .and. ivar == st%nst) then 
                 write(iunit, '(i3)', advance='yes') (3 - 2*sigma)*ivar
               else 
                 write(iunit, '(i3)', advance='no') (3 - 2*sigma)*ivar
@@ -1065,7 +1065,7 @@ contains
           do ist = 1, st%nst
             write(iunit, '(i3)', advance='no') ist
 
-            do ivar = 1, em_vars%lr(idir, 1, 1)%nst
+            do ivar = 1, st%nst
               do sigma = 1, em_vars%nsigma
 
                 if(states_are_complex(st)) then
@@ -1076,7 +1076,7 @@ contains
                        dmf_dotp(gr%mesh, st%d%dim, st%dpsi(:, :, ist, ik), em_vars%lr(idir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
                 end if
                   
-                if( sigma == em_vars%nsigma .and. ivar == em_vars%lr(idir, 1, 1)%nst) then 
+                if( sigma == em_vars%nsigma .and. ivar == st%nst) then 
                   write(iunit, '(f12.6)', advance='yes') abs(proj)
                 else 
                   write(iunit, '(f12.6,a)', advance='no') abs(proj), ' '

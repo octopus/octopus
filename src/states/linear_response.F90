@@ -60,8 +60,6 @@ module linear_response_m
 
 
   type lr_t
-    !the number of lr wfs
-    integer :: nst
     logical :: is_allocated
      
     ! the real quantities
