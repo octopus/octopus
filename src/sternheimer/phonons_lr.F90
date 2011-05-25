@@ -99,6 +99,10 @@ contains
       call messages_not_implemented('linear-response vib_modes for periodic systems')
     endif
 
+    if(st%nlcc) then
+      call messages_not_implemented('linear-response vib_modes with non-linear core corrections')
+    endif
+
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
