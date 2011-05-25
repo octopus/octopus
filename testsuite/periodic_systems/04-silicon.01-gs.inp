@@ -30,3 +30,4 @@ Lsize = a/2
 %
 
 ExtraStates = 1
+ConvRelDens = 1e-7
