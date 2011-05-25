@@ -764,7 +764,7 @@ contains
     PUSH_SUB(lcao_end_orbital)
 
     if(batch_is_ok(orbitalb)) then
-      call dbatch_delete(orbitalb)
+      call batch_delete(orbitalb)
     end if
 
     POP_SUB(lcao_end_orbital)

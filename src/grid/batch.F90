@@ -49,8 +49,7 @@ module batch_m
     batch_add_state,                &
     dbatch_new,                     &
     zbatch_new,                     &
-    dbatch_delete,                  &
-    zbatch_delete,                  &
+    batch_delete,                   &
     batch_set,                      &
     batch_set_zero,                 &
     batch_is_packed,                &
@@ -93,8 +92,10 @@ module batch_m
     integer                        :: current
     integer                        :: dim
 
-    integer                       :: ndims
-    integer,             pointer  :: index(:, :)
+    integer                        :: ndims
+    integer,             pointer   :: index(:, :)
+
+    logical                        :: is_allocated
 
     !> We also need a linear array with the states in order to calculate derivatives, etc.
     integer                        :: nst_linear
@@ -154,6 +155,10 @@ contains
 
     ASSERT(.not. batch_is_packed(this))
 
+    if(this%is_allocated) then
+      call batch_delete(this)
+    end if
+
     nullify(this%dpsicont)
     nullify(this%zpsicont)
 
@@ -166,6 +171,34 @@ contains
   end subroutine batch_end
 
   !--------------------------------------------------------------
+  subroutine batch_delete(this)
+    type(batch_t),  intent(inout) :: this
+    
+    integer :: ii
+    
+    PUSH_SUB(batch_delete)
+
+    this%is_allocated = .false.
+
+    do ii = 1, this%nst
+      nullify(this%states(ii)%dpsi)
+      nullify(this%states(ii)%zpsi)
+    end do
+    
+    do ii = 1, this%nst_linear
+      nullify(this%states_linear(ii)%dpsi)
+      nullify(this%states_linear(ii)%zpsi)
+    end do
+    
+    this%current = 1
+    
+    SAFE_DEALLOCATE_P(this%dpsicont)
+    SAFE_DEALLOCATE_P(this%zpsicont)
+    
+    POP_SUB(batch_delete)
+  end subroutine batch_delete
+  
+  !--------------------------------------------------------------
 
   subroutine batch_init_empty (this, dim, nst)
     type(batch_t), intent(out)   :: this
@@ -175,7 +208,8 @@ contains
     integer :: ist
 
     PUSH_SUB(batch_init_empty)
-    
+
+    this%is_allocated = .false.
     this%nst = nst
     this%dim = dim
     this%current = 1
@@ -216,7 +250,8 @@ contains
     integer :: ist
 
     PUSH_SUB(batch_init_empty_linear)
-    
+
+    this%is_allocated = .false.
     this%nst = 0
     this%dim = 0
     this%current = 1

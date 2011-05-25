@@ -103,37 +103,14 @@ subroutine X(batch_new)(this, st_start, st_end, np)
 
   SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:st_end - st_start + 1))
 
+  this%is_allocated = .true.
+
   do ist = st_start, st_end
     call X(batch_add_state)(this, ist,this%X(psicont)(:, :, ist - st_start + 1))
   end do
 
   POP_SUB(X(batch_new))
 end subroutine X(batch_new)
-
-
-!--------------------------------------------------------------
-subroutine X(batch_delete)(this)
-  type(batch_t),  intent(inout) :: this
-
-  integer :: ii
-
-  PUSH_SUB(X(batch_delete))
-
-  do ii = 1, this%nst
-    nullify(this%states(ii)%X(psi))
-  end do
-
-  do ii = 1, this%nst_linear
-    nullify(this%states_linear(ii)%X(psi))
-  end do
-
-  this%current = 1
-
-  SAFE_DEALLOCATE_P(this%X(psicont))
-
-  POP_SUB(X(batch_delete))
-end subroutine X(batch_delete)
-
 
 !--------------------------------------------------------------
 

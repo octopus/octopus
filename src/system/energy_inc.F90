@@ -67,7 +67,6 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
       call X(batch_new)(hpsib, minst, maxst, der%mesh%np)
       call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik, time)
       call X(mesh_batch_dotp_vector)(der%mesh, st%psib(ib, ik), hpsib, eigen(minst:maxst))
-      call X(batch_delete)(hpsib)
       call batch_end(hpsib)
 
     end do

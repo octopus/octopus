@@ -614,9 +614,7 @@ subroutine X(derivatives_test)(this)
   write(message(1), '(a, es16.10)') '      Error in the Laplacian = ', X(mf_nrm2)(this%mesh, opffb%states_linear(blocksize)%X(psi))
   call messages_info(1)
 
-  call X(batch_delete)(ffb)
   call batch_end(ffb)
-  call X(batch_delete)(opffb)
   call batch_end(opffb)
 
   call X(derivatives_grad)(this, ff, opff, set_bc = .false.)

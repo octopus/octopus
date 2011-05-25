@@ -185,7 +185,6 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
       call X(hamiltonian_apply_batch)(hm, gr%der, vvb, avb, ik)
       INCR(matvec, blk)
 
-      call X(batch_delete)(vvb)
       call batch_end(vvb)
       call batch_end(avb)
 
