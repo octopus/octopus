@@ -65,6 +65,8 @@ contains
 
     integer :: iatom
 
+    PUSH_SUB(vibrations_init)
+
     this%ndim = sb%dim
     this%natoms = geo%natoms
     this%num_modes = geo%natoms*sb%dim
@@ -77,6 +79,7 @@ contains
       this%total_mass = this%total_mass + species_weight(geo%atom(iatom)%spec)
     end do
 
+    POP_SUB(vibrations_init)
   end subroutine vibrations_init
 
 
@@ -84,10 +87,13 @@ contains
   subroutine vibrations_end(this)
     type(vibrations_t),     intent(inout) :: this
 
+    PUSH_SUB(vibrations_end)
+
     SAFE_DEALLOCATE_P(this%dyn_matrix)
     SAFE_DEALLOCATE_P(this%freq)
     SAFE_DEALLOCATE_P(this%normal_mode)
 
+    POP_SUB(vibrations_end)
   end subroutine vibrations_end
 
   ! ---------------------------------------------------------
@@ -98,6 +104,8 @@ contains
 
     FLOAT :: factor
     integer :: iatom, idir, jatom, jdir, imat, jmat
+
+    PUSH_SUB(vibrations_normalize_dyn_matrix)
 
     do iatom = 1, this%natoms
       do idir = 1, this%ndim
@@ -120,21 +128,28 @@ contains
       end do
     end do
 
+    POP_SUB(vibrations_normalize_dyn_matrix)
   end subroutine vibrations_normalize_dyn_matrix
 
+
+  ! ---------------------------------------------------------
   subroutine vibrations_diag_dyn_matrix(this)
     type(vibrations_t),      intent(inout) :: this
     
+    PUSH_SUB(vibrations_diag_dyn_matrix)
+
     this%normal_mode = M_ZERO
     
-    ! diag DYN_MATRIX
     this%normal_mode = this%dyn_matrix
     call lalg_eigensolve(this%num_modes, this%normal_mode, this%freq)
 
     this%freq(1:this%num_modes) = this%freq(1:this%num_modes) / this%total_mass
 
+    POP_SUB(vibrations_diag_dyn_matrix)
   end subroutine vibrations_diag_dyn_matrix
 
+
+  ! ---------------------------------------------------------
   integer pure function vibrations_get_index(this, iatom, idim)
     type(vibrations_t), intent(in) :: this
     integer,            intent(in) :: iatom
@@ -143,6 +158,8 @@ contains
     vibrations_get_index = (iatom - 1)*this%ndim + idim
   end function vibrations_get_index
 
+
+  ! ---------------------------------------------------------
   integer pure function vibrations_get_atom(this, index)
     type(vibrations_t), intent(in) :: this
     integer,            intent(in) :: index
@@ -150,6 +167,8 @@ contains
     vibrations_get_atom = 1 + (index - 1)/ this%ndim 
   end function vibrations_get_atom
 
+
+  ! ---------------------------------------------------------
   integer pure function vibrations_get_dir(this, index)
     type(vibrations_t), intent(in) :: this
     integer,            intent(in) :: index
@@ -157,12 +176,15 @@ contains
     vibrations_get_dir =  1 + mod(index - 1, this%ndim)
   end function vibrations_get_dir
 
+
+  ! ---------------------------------------------------------
   subroutine vibrations_output(this, suffix)
     type(vibrations_t),   intent(in) :: this
     character (len=*),    intent(in) :: suffix
     
     integer :: iunit, i, j, iatom, jatom, idir, jdir, imat, jmat
 
+    PUSH_SUB(vibrations_output)
 
     ! create directory for output
     call io_mkdir(VIB_MODES_DIR)
@@ -206,6 +228,7 @@ contains
     end do
     call io_close(iunit)
     
+    POP_SUB(vibrations_output)
   end subroutine vibrations_output
 
 end module vibrations_m
