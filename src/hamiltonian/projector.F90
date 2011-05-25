@@ -197,8 +197,6 @@ contains
     POP_SUB(projector_init)
   end subroutine projector_init
 
-
-  !---------------------------------------------------------
   subroutine projector_init_phases(this, sb, std, vec_pot, vec_pot_var)
     type(projector_t),  intent(inout) :: this
     type(simul_box_t),  intent(in)    :: sb
@@ -215,11 +213,7 @@ contains
     ns = this%sphere%np
     ndim = sb%dim
 
-!    if(.not. associated(this%phase) .and. ns > 0) then
-! The first option appears to cause a memory leak (r7062) but
-! also makes phases not be allocated sometimes in parallel when
-! applying the commutator (r7902). Better fix needed. --DAS
-    if(.not. associated(this%phase)) then
+    if(.not. associated(this%phase) .and. ns > 0) then
       SAFE_ALLOCATE(this%phase(1:ns, std%kpt%start:std%kpt%end))
     end if
 
