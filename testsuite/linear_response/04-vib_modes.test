@@ -15,4 +15,4 @@ Precision : 0.002
 
 Input: 04-vib_modes.02-vib_modes.inp
 match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_lr, 1, 7) ; 167.32279
-match ; Infrared Intensity      ; LINE(vib_modes/infrared, 2, 70)             ; 0.0
+match ; Infrared Intensity      ; LINE(vib_modes/infrared, 2, 60)             ; 0.0
