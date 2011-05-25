@@ -73,7 +73,8 @@ subroutine X(sternheimer_solve)(                           &
   SAFE_ALLOCATE(orth_mask(1:st%nst))
 
   conv = .false.
-  conv_last = .false.
+  conv_last = .not. (this%add_fxc .or. this%add_hartree) .or. .not. this%last_occ_response
+  ! otherwise it is not actually SCF, and there can only be one pass through
 
   have_restart_rho_ = .false.
   if(present(have_restart_rho)) have_restart_rho_ = have_restart_rho
@@ -105,10 +106,7 @@ subroutine X(sternheimer_solve)(                           &
     if (this%add_fxc .or. this%add_hartree) then
       write(message(1), '(a, i3)') "LR SCF Iteration: ", iter
       call messages_info(1)
-    else
-      conv_last = .true.
     endif
-    ! otherwise it is not actually SCF, and there can only be one pass through
 
     write(message(1), '(a, f20.6, a, f20.6, a, i1)') &
          "Frequency: ", units_from_atomic(units_out%energy,  R_REAL(omega)), &
