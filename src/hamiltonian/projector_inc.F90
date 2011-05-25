@@ -260,7 +260,7 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
   SAFE_ALLOCATE(plpsi(1:ns, 1:dim))
 
   do idim = 1, dim
-    if(simul_box_is_periodic(mesh%sb)) then
+    if(associated(pj%phase)) then
       do is = 1, ns
         lpsi(is, idim) = psib(pj%sphere%map(is), idim)*pj%phase(is, ik)
       end do
@@ -275,7 +275,7 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
 
   apb = M_ZERO
   do idim = 1, dim
-    if(simul_box_is_periodic(mesh%sb)) then
+    if(associated(pj%phase)) then
       do is = 1, ns
         plpsi(is, idim) = R_CONJ(psia(pj%sphere%map(is), idim))*plpsi(is, idim)*conjg(pj%phase(is, ik))
       end do
@@ -368,8 +368,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     SAFE_ALLOCATE(xplpsi(1:ns, 1:dim))
     SAFE_ALLOCATE(pxlpsi(1:ns, 1:dim))
 
-    if(simul_box_is_periodic(gr%mesh%sb)) then
-      ASSERT(associated(pj%phase))
+    if(associated(pj%phase)) then
       do idim = 1, dim
         lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj%phase(1:ns, ik)
       end do
@@ -392,7 +391,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
     call X(project_sphere)(gr%mesh, pj, dim, lpsi, pxlpsi)
     
     ! |cpsi> += x V_nl |psi> - V_nl x |psi> 
-    if(simul_box_is_periodic(gr%mesh%sb)) then
+    if(associated(pj%phase)) then
       do idim = 1, dim
         cpsi(map(1:ns), idim) = cpsi(map(1:ns), idim) + &
           (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)) * R_CONJ(pj%phase(1:ns, ik))
