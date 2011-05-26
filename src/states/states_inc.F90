@@ -24,20 +24,11 @@ subroutine X(states_get_state2)(st, mesh, ist, iqn, psi)
   integer,        intent(in)    :: iqn
   R_TYPE,         intent(out)   :: psi(:, :)
   
-  integer :: idim, ip
+  integer :: idim
 
-  if(states_are_real(st)) then
-    do idim = 1, st%d%dim
-      forall(ip = 1:mesh%np) psi(ip, idim) = st%dpsi(ip, idim, ist, iqn)
-    end do
-  else
-#ifdef R_TREAL
-    ASSERT(.false.)
-#endif
-    do idim = 1, st%d%dim
-      forall(ip = 1:mesh%np) psi(ip, idim) = st%zpsi(ip, idim, ist, iqn)
-    end do
-  end if
+  do idim =  1, st%d%dim
+    call X(states_get_state1)(st, mesh, idim, ist, iqn, psi(:, idim))
+  end do
 
 end subroutine X(states_get_state2)
 
@@ -73,20 +64,11 @@ subroutine X(states_set_state2)(st, mesh, ist, iqn, psi)
   integer,        intent(in)    :: iqn
   R_TYPE,         intent(in)    :: psi(:, :)
   
-  integer :: idim, ip
+  integer :: idim
 
-  if(states_are_real(st)) then
-#ifdef R_TCOMPLEX
-    ASSERT(.false.)
-#endif
-    do idim = 1, st%d%dim
-      forall(ip = 1:mesh%np) st%dpsi(ip, idim, ist, iqn) = psi(ip, idim)
-    end do
-  else
-    do idim = 1, st%d%dim
-      forall(ip = 1:mesh%np) st%zpsi(ip, idim, ist, iqn) = psi(ip, idim)
-    end do
-  end if
+  do idim =  1, st%d%dim
+    call X(states_set_state1)(st, mesh, idim, ist, iqn, psi(:, idim))
+  end do
 
 end subroutine X(states_set_state2)
 
