@@ -40,8 +40,9 @@ R_TYPE function X(mf_integrate) (mesh, ff) result(dd)
     do ip = 1, mesh%np
       dd = dd + ff(ip)
     end do
-    dd = dd*mesh%vol_pp(1)
   end if
+
+  dd = dd*mesh%volume_element
 
   if(mesh%parallel_in_domains) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
@@ -119,15 +120,17 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
 #endif
-      dotp = blas_dot(mesh%np, f1(1), 1, f2(1), 1)*mesh%vol_pp(1)
+      dotp = blas_dot(mesh%np, f1(1), 1, f2(1), 1)
 #ifdef R_TCOMPLEX
     else
-      dotp = blas_dotu(mesh%np, f1(1), 1, f2(1), 1)*mesh%vol_pp(1)
+      dotp = blas_dotu(mesh%np, f1(1), 1, f2(1), 1)
     endif
 #endif
     call profiling_count_operations(mesh%np*(R_ADD + R_MUL))
 
   end if
+
+  dotp = dotp*mesh%volume_element
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
@@ -188,8 +191,10 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
     nrm2 = lalg_nrm2(mesh%np, ll)
     SAFE_DEALLOCATE_A(ll)
   else
-    nrm2 = lalg_nrm2(mesh%np, ff)*sqrt(mesh%vol_pp(1))
+    nrm2 = lalg_nrm2(mesh%np, ff)
   end if
+
+  nrm2 = nrm2*sqrt(mesh%volume_element)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
@@ -327,7 +332,7 @@ subroutine X(mf_partial_integrate)(mesh, jj, f_in, f_out)
      f_out(mm) = f_out(mm) + f_in(ip)
   end do
 
-  f_out(1:np_out) = f_out(1:np_out) * mesh%vol_pp(1)/mesh%spacing(jj)
+  f_out(1:np_out) = f_out(1:np_out)*mesh%volume_element/mesh%spacing(jj)
 
   POP_SUB(X(mf_partial_integrate))
 end subroutine X(mf_partial_integrate)

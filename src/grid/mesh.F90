@@ -100,7 +100,8 @@ module mesh_m
     
     FLOAT, pointer :: x(:,:)            !< The (local) points,
     integer, pointer :: resolution(:, :, :)
-    FLOAT, pointer               :: vol_pp(:)         !< Element of volume for integrations of local points.
+    FLOAT            :: volume_element    !< The global volume element.
+    FLOAT, pointer   :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
     type(mesh_cube_map_t) :: cube_map
   end type mesh_t
   

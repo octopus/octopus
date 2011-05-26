@@ -990,6 +990,12 @@ contains
       end if
     end if
 
+    if(mesh%use_curvilinear) then
+      mesh%volume_element = CNST(1.0)
+    else
+      mesh%volume_element = mesh%vol_pp(1)
+    end if
+
     POP_SUB(mesh_init_stage_3.mesh_get_vol_pp)
 
   end subroutine mesh_get_vol_pp

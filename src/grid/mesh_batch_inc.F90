@@ -56,7 +56,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     lda = size(aa%X(psicont), dim = 1)
     ldb = size(bb%X(psicont), dim = 1)
     call blas_gemm('c', 'n', aa%nst, bb%nst, mesh%np, &
-         R_TOTYPE(mesh%vol_pp(1)), &
+         R_TOTYPE(mesh%volume_element), &
          aa%X(psicont)(1, 1, 1), lda, &
          bb%X(psicont)(1, 1, 1), ldb, &
          R_TOTYPE(M_ZERO), dd(1, 1), aa%nst)
@@ -94,7 +94,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
             do jst = 1, bb%nst
               jndb = batch_index(bb, (/jst, idim/))
 
-              dd(ist, jst) = dd(ist, jst) + mesh%vol_pp(1)*&
+              dd(ist, jst) = dd(ist, jst) + mesh%volume_element*&
                 blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, bb%states_linear(jndb)%X(psi)(sp), 1)
             end do
           end do
@@ -204,7 +204,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
             indb = batch_index(aa, (/ist, idim/))
             do jst = 1, ist
               jndb = batch_index(aa, (/jst, idim/))
-              dot(ist, jst) = dot(ist, jst) + mesh%vol_pp(1)*&
+              dot(ist, jst) = dot(ist, jst) + mesh%volume_element*&
                 blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, aa%states_linear(jndb)%X(psi)(sp), 1)
             end do
           end do
@@ -214,7 +214,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
     end do
 
   end if
-
+  
   if(mesh%use_curvilinear) then
     call profiling_count_operations(dble(mesh%np)*aa%nst**2*(R_ADD + 2*R_MUL))
   else
@@ -345,14 +345,13 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
           tmp(ist) = tmp(ist) + R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
         end do
       end do
-      forall(ist = 1:aa%nst_linear)  tmp(ist) = tmp(ist)*mesh%vol_pp(1)
     end if
 
     do ist = 1, aa%nst
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = batch_index(aa, (/ist, idim/))
-        dot(ist) = dot(ist) + tmp(indb)
+        dot(ist) = dot(ist) + mesh%volume_element*tmp(indb)
       end do
     end do
 
