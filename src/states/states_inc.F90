@@ -41,17 +41,8 @@ subroutine X(states_get_state1)(st, mesh, idim, ist, iqn, psi)
   integer,        intent(in)    :: ist
   integer,        intent(in)    :: iqn
   R_TYPE,         intent(out)   :: psi(:)
-  
-  integer :: ip
 
-  if(states_are_real(st)) then
-    forall(ip = 1:mesh%np) psi(ip) = st%dpsi(ip, idim, ist, iqn)
-  else
-#ifdef R_TREAL
-    ASSERT(.false.)
-#endif
-    forall(ip = 1:mesh%np) psi(ip) = st%zpsi(ip, idim, ist, iqn)
-  end if
+  call batch_get_state(st%psib(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
 
 end subroutine X(states_get_state1)
 
@@ -81,17 +72,8 @@ subroutine X(states_set_state1)(st, mesh, idim, ist, iqn, psi)
   integer,        intent(in)    :: ist
   integer,        intent(in)    :: iqn
   R_TYPE,         intent(in)    :: psi(:)
-  
-  integer :: ip
 
-  if(states_are_real(st)) then
-#ifdef R_TCOMPLEX
-    ASSERT(.false.)
-#endif
-    forall(ip = 1:mesh%np) st%dpsi(ip, idim, ist, iqn) = psi(ip)
-  else
-    forall(ip = 1:mesh%np) st%zpsi(ip, idim, ist, iqn) = psi(ip)
-  end if
+  call batch_set_state(st%psib(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
   
 end subroutine X(states_set_state1)
 

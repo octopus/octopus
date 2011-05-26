@@ -215,6 +215,109 @@ end subroutine X(batch_axpy)
 
 ! --------------------------------------------------------------
 
+subroutine X(batch_set_state1)(this, ist, np, psi)
+  type(batch_t),  intent(inout) :: this
+  integer,        intent(in)    :: ist
+  integer,        intent(in)    :: np
+  R_TYPE,         intent(in)    :: psi(:)
+
+  integer :: ip
+
+  PUSH_SUB(X(batch_set_state1))
+
+  ASSERT(ist >= 1 .and. ist <= this%nst_linear)
+#ifdef R_TCOMPLEX
+  ! cannot set a real batch with complex values
+  ASSERT(batch_type(this) /= TYPE_FLOAT)
+#endif
+
+  select case(batch_status(this))
+  case(BATCH_NOT_PACKED)
+    if(batch_type(this) == TYPE_FLOAT) then
+      forall(ip = 1:np) this%states_linear(ist)%dpsi(ip) = psi(ip)
+    else
+      forall(ip = 1:np) this%states_linear(ist)%zpsi(ip) = psi(ip)
+    end if
+  case(BATCH_PACKED)
+    if(batch_type(this) == TYPE_FLOAT) then
+      forall(ip = 1:np) this%pack%dpsi(ist, ip) = psi(ip)
+    else
+      forall(ip = 1:np) this%pack%zpsi(ist, ip) = psi(ip)
+    end if
+  case(BATCH_CL_PACKED)
+    call messages_not_implemented("CL batch_set_state")
+  end select
+
+  POP_SUB(X(batch_set_state1))
+end subroutine X(batch_set_state1)
+
+! --------------------------------------------------------------
+
+subroutine X(batch_set_state2)(this, index, np, psi)
+  type(batch_t),  intent(inout) :: this
+  integer,        intent(in)    :: index(:)
+  integer,        intent(in)    :: np
+  R_TYPE,         intent(in)    :: psi(:)
+
+  PUSH_SUB(X(batch_set_state2))
+
+  call X(batch_set_state1)(this, batch_inv_index(this, index), np, psi)
+
+  POP_SUB(X(batch_set_state2))
+end subroutine X(batch_set_state2)
+
+! --------------------------------------------------------------
+
+subroutine X(batch_get_state1)(this, ist, np, psi)
+  type(batch_t),  intent(in)    :: this
+  integer,        intent(in)    :: ist
+  integer,        intent(in)    :: np
+  R_TYPE,         intent(inout) :: psi(:)
+
+  integer :: ip
+
+  PUSH_SUB(X(batch_get_state1))
+
+  ASSERT(ist >= 1 .and. ist <= this%nst_linear)
+#ifdef R_TREAL
+  ! cannot get a real value from a complex batch
+  ASSERT(batch_type(this) /= TYPE_CMPLX)
+#endif
+
+  select case(batch_status(this))
+  case(BATCH_NOT_PACKED)
+    if(batch_type(this) == TYPE_FLOAT) then
+      forall(ip = 1:np) psi(ip) = this%states_linear(ist)%dpsi(ip)
+    else
+      forall(ip = 1:np) psi(ip) = this%states_linear(ist)%zpsi(ip)
+    end if
+  case(BATCH_PACKED)
+    if(batch_type(this) == TYPE_FLOAT) then
+      forall(ip = 1:np) psi(ip) = this%pack%dpsi(ist, ip)
+    else
+      forall(ip = 1:np) psi(ip) = this%pack%zpsi(ist, ip)
+    end if
+  case(BATCH_CL_PACKED)
+    call messages_not_implemented("CL batch_get_state")
+  end select
+
+  POP_SUB(X(batch_get_state1))
+end subroutine X(batch_get_state1)
+
+! --------------------------------------------------------------
+
+subroutine X(batch_get_state2)(this, index, np, psi)
+  type(batch_t),  intent(in)    :: this
+  integer,        intent(in)    :: index(:)
+  integer,        intent(in)    :: np
+  R_TYPE,         intent(inout) :: psi(:)
+
+  PUSH_SUB(X(batch_get_state2))
+
+  call X(batch_get_state1)(this, batch_inv_index(this, index), np, psi)
+
+  POP_SUB(X(batch_get_state2))
+end subroutine X(batch_get_state2)
 
 !! Local Variables:
 !! mode: f90

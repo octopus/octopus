@@ -62,7 +62,10 @@ module batch_m
     batch_sync,                     &
     batch_status,                   &
     batch_type,                     &
-    batch_index
+    batch_inv_index,                &
+    batch_linear_index,             &
+    batch_set_state,                &
+    batch_get_state
 
   !--------------------------------------------------------------
   type batch_state_t
@@ -133,6 +136,20 @@ module batch_m
   interface batch_axpy
     module procedure dbatch_axpy
     module procedure zbatch_axpy
+  end interface
+
+  interface batch_set_state
+    module procedure dbatch_set_state1
+    module procedure zbatch_set_state1
+    module procedure dbatch_set_state2
+    module procedure zbatch_set_state2
+  end interface
+
+  interface batch_get_state
+    module procedure dbatch_get_state1
+    module procedure zbatch_get_state1
+    module procedure dbatch_get_state2
+    module procedure zbatch_get_state2
   end interface
 
   type(profile_t), save :: axpy_prof
@@ -843,18 +860,31 @@ subroutine batch_copy_data(np, xx, yy)
 end subroutine batch_copy_data
 
 ! ------------------------------------------------------
-
-integer pure function batch_index(this, cind) result(index)
+integer function batch_inv_index(this, cind) result(index)
   type(batch_t),     intent(in)    :: this
   integer,           intent(in)    :: cind(:)
 
+  do index = 1, this%nst_linear
+    if(all(cind(1:this%ndims) == this%index(index, 1:this%ndims))) exit
+  end do
+
+  ASSERT(index <= this%nst_linear)
+
+end function batch_inv_index
+
+! ------------------------------------------------------
+
+integer pure function batch_linear_index(this, cind) result(index)
+  type(batch_t),     intent(in)    :: this
+  integer,           intent(in)    :: cind(:)
+  
   if(ubound(cind, dim = 1) == 1) then
     index = cind(1)
   else
     index = (cind(1) - 1)*this%dim + cind(2)
   end if
 
-end function batch_index
+end function batch_linear_index
 
 #include "real.F90"
 #include "batch_inc.F90"

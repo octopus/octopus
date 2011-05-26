@@ -113,7 +113,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
       ! copy psi to the small spherical grid
       do idim = 1, dim
-        bind = batch_index(psib, (/ist, idim/))
+        bind = batch_linear_index(psib, (/ist, idim/))
         if(associated(pj(ipj)%phase)) then
           forall (is = 1:ns) 
             lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
@@ -202,7 +202,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     
       !put the result back in the complete grid
       do idim = 1, dim
-        bind = batch_index(psib, (/ist, idim/))
+        bind = batch_linear_index(psib, (/ist, idim/))
         if(associated(pj(ipj)%phase)) then
           forall (is = 1:ns)
             ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
