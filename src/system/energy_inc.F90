@@ -65,8 +65,15 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
 
       call batch_init(hpsib, st%d%dim, st%block_size(ib))
       call X(batch_new)(hpsib, minst, maxst, der%mesh%np)
+
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
+        call batch_pack(st%psib(ib, ik))
+        call batch_pack(hpsib, copy = .false.)
+      end if
+
       call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik, time)
       call X(mesh_batch_dotp_vector)(der%mesh, st%psib(ib, ik), hpsib, eigen(minst:maxst))
+      call batch_unpack(st%psib(ib, ik))
       call batch_end(hpsib)
 
     end do

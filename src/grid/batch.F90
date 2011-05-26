@@ -153,7 +153,9 @@ contains
 
     PUSH_SUB(batch_end)
 
-    ASSERT(.not. batch_is_packed(this))
+    if(batch_is_packed(this)) then
+      call batch_unpack(this)
+    end if
 
     if(this%is_allocated) then
       call batch_delete(this)
