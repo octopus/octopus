@@ -2044,6 +2044,8 @@ return
     integer,         intent(out)   :: blocksize(2)
     integer,         intent(out)   :: total_np
 
+    PUSH_SUB(states_blacs_blocksize)
+
 #ifdef HAVE_SCALAPACK
     ! We need to select the block size of the decomposition. This is
     ! tricky, since not all processors have the same number of
@@ -2071,6 +2073,7 @@ return
     ASSERT(st%d%dim*mesh%np_part >= blocksize(1))
 #endif
 
+    POP_SUB(states_blacs_blocksize)
   end subroutine states_blacs_blocksize
 
   ! ------------------------------------------------------------

@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 !> Updates ghost points of every node. A vector suitable
-!! for non local operations contains local values and
+!! for non-local operations contains local values and
 !! ghost point values.
 !! Length of v_local must be
 !! vp%np_local(vp%partno)+vp%np_ghost(vp%partno)

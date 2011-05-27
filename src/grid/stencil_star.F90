@@ -137,7 +137,7 @@ contains
     integer,                intent(in)    :: dim
     integer,                intent(in)    :: order
     FLOAT,                  intent(in)    :: h(:)   ! h(dim)
-    type(nl_operator_t), intent(inout) :: lapl
+    type(nl_operator_t),    intent(inout) :: lapl
 
     integer :: k, i, j, morder
     FLOAT, allocatable :: cc(:,:,:)

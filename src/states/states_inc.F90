@@ -26,10 +26,13 @@ subroutine X(states_get_state2)(st, mesh, ist, iqn, psi)
   
   integer :: idim
 
+  PUSH_SUB(X(states_get_state2))
+
   do idim =  1, st%d%dim
     call X(states_get_state1)(st, mesh, idim, ist, iqn, psi(:, idim))
   end do
 
+  POP_SUB(X(states_get_state2))
 end subroutine X(states_get_state2)
 
 ! ------------------------------------------------------------
@@ -42,8 +45,11 @@ subroutine X(states_get_state1)(st, mesh, idim, ist, iqn, psi)
   integer,        intent(in)    :: iqn
   R_TYPE,         intent(out)   :: psi(:)
 
+  PUSH_SUB(X(states_get_state1))
+
   call batch_get_state(st%psib(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
 
+  POP_SUB(X(states_get_state1))
 end subroutine X(states_get_state1)
 
 ! ------------------------------------------------------------
@@ -57,10 +63,13 @@ subroutine X(states_set_state2)(st, mesh, ist, iqn, psi)
   
   integer :: idim
 
+  PUSH_SUB(X(states_set_state2))
+
   do idim =  1, st%d%dim
     call X(states_set_state1)(st, mesh, idim, ist, iqn, psi(:, idim))
   end do
 
+  POP_SUB(X(states_set_state2))
 end subroutine X(states_set_state2)
 
 ! ------------------------------------------------------------
@@ -73,8 +82,16 @@ subroutine X(states_set_state1)(st, mesh, idim, ist, iqn, psi)
   integer,        intent(in)    :: iqn
   R_TYPE,         intent(in)    :: psi(:)
 
+  PUSH_SUB(X(states_set_state1))
+
   call batch_set_state(st%psib(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
   
+  POP_SUB(X(states_set_state1))
 end subroutine X(states_set_state1)
 
 ! ------------------------------------------------------------
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
