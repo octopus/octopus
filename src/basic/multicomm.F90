@@ -44,25 +44,25 @@
 !! You can use the routine multicomm_strategy_is_parallel to know if a certain
 !! index is parallelized.
 
-  module multicomm_m
-    use datasets_m
-    use global_m
-    use io_m
-    use loct_m
-    use messages_m
-    use mpi_m
+module multicomm_m
+  use datasets_m
+  use global_m
+  use io_m
+  use loct_m
+  use messages_m
+  use mpi_m
 #if defined(HAVE_OPENMP)
-    use omp_lib
+  use omp_lib
 #endif
-    use parser_m
-    use profiling_m
-    use utils_m
-    use varinfo_m
-
+  use parser_m
+  use profiling_m
+  use utils_m
+  use varinfo_m
+  
   implicit none
-
+  
   private
-
+  
   public ::                          &
     multicomm_divide_range,          &
 #ifdef HAVE_OPENMP
@@ -143,7 +143,7 @@ contains
     type(multicomm_all_pairs_t), intent(inout) :: apout
     type(multicomm_all_pairs_t), intent(in)    :: apin
 
-    PUSH_SUB(all_pairs_copy)
+    PUSH_SUB(multicomm_all_pairs_copy)
 
     call mpi_grp_copy(apout%grp, apin%grp)
     apout%rounds = apin%rounds
@@ -152,7 +152,7 @@ contains
       apout%schedule = apin%schedule
     end if    
 
-    POP_SUB(all_pairs_copy)
+    POP_SUB(multicomm_all_pairs_copy)
   end subroutine multicomm_all_pairs_copy
 
   ! ---------------------------------------------------------
@@ -260,8 +260,8 @@ contains
       !% Specifies what kind of parallelization strategy <tt>Octopus</tt> should use.
       !% The values can be combined: for example, <tt>par_domains + par_states</tt>
       !% means a combined parallelization in domains and states.
-      !% Default: <tt>par_domains + par_states</tt> for <tt>CalculationMode = td </tt>,
-      !% <tt>par_domains + par_other</tt> for <tt>CalculationMode = casida </tt>,
+      !% Default: <tt>par_domains + par_states</tt> for <tt>CalculationMode = td</tt>,
+      !% <tt>par_domains + par_other</tt> for <tt>CalculationMode = casida</tt>,
       !% otherwise <tt>par_domains</tt>.
       !%Option serial 0
       !% <tt>Octopus</tt> will run in serial.
@@ -510,8 +510,8 @@ contains
 
 #if defined(HAVE_MPI)
       if(mc%par_strategy /= P_STRATEGY_SERIAL) then
-        ! Multilevel parallelization is organized in an hypercube. We
-        ! use an MPI cartesian topology to generate the communicators
+        ! Multilevel parallelization is organized in a hypercube. We
+        ! use an MPI Cartesian topology to generate the communicators
         ! that correspond to each level.
 
         ! create the topology
