@@ -1778,8 +1778,8 @@ return
 
     PUSH_SUB(states_calc_quantities)
 
-    something_to_do = present(kinetic_energy_density) .or. present(paramagnetic_current) .or. &
-      present(density_gradient) .or. present(density_laplacian)
+    something_to_do = present(kinetic_energy_density) .or. present(gi_kinetic_energy_density) .or. &
+      present(paramagnetic_current) .or. present(density_gradient) .or. present(density_laplacian) 
     ASSERT(something_to_do)
 
     SAFE_ALLOCATE( wf_psi(1:der%mesh%np_part, 1:st%d%dim))
