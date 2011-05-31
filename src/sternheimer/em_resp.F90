@@ -296,20 +296,28 @@ contains
               ! try to load wavefunctions, if first frequency; otherwise will already be initialized
               if(iomega == 1 .and. .not. em_vars%wfns_from_scratch) then
                 do sigma = 1, em_vars%nsigma
-                  sigma_alt = sigma
-                  if(em_vars%freq_factor(ifactor) * em_vars%omega(iomega) < M_ZERO .and. em_vars%nsigma == 2) &
-                    sigma_alt = swap_sigma(sigma)
-
-                  str_tmp = em_wfs_tag(idir, ifactor)
-                  write(dirname_restart,'(2a)') EM_RESP_DIR, trim(wfs_tag_sigma(str_tmp, sigma))
-                  call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo, &
-                    ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
-
-                  if(ierr .ne. 0) then
-                    message(1) = "Initializing to zero, could not load response wavefunctions from '" &
-                      //trim(tmpdir)//trim(dirname_restart)//"'"
-                    call messages_warning(1)
-                  end if
+                  if(sigma == 2 .and. abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)) < M_EPSILON) then
+                    if(states_are_real(sys%st)) then
+                      em_vars%lr(idir, 2, ifactor)%ddl_psi = em_vars%lr(idir, 1, ifactor)%ddl_psi
+                    else
+                      em_vars%lr(idir, 2, ifactor)%zdl_psi = em_vars%lr(idir, 1, ifactor)%zdl_psi
+                    endif
+                  else
+                    sigma_alt = sigma
+                    if(em_vars%freq_factor(ifactor) * em_vars%omega(iomega) < -M_EPSILON .and. em_vars%nsigma == 2) &
+                      sigma_alt = swap_sigma(sigma)
+                    
+                    str_tmp = em_wfs_tag(idir, ifactor)
+                    write(dirname_restart,'(2a)') EM_RESP_DIR, trim(wfs_tag_sigma(str_tmp, sigma))
+                    call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo, &
+                      ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
+                    
+                    if(ierr .ne. 0) then
+                      message(1) = "Initializing to zero, could not load response wavefunctions from '" &
+                        //trim(tmpdir)//trim(dirname_restart)//"'"
+                      call messages_warning(1)
+                    end if
+                  endif
                 end do
               endif
 
