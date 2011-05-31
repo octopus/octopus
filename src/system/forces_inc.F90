@@ -35,12 +35,14 @@ subroutine X(forces_gather)(geo, force)
 
   SAFE_ALLOCATE(recv_count(1:geo%atoms_dist%mpi_grp%size))
   SAFE_ALLOCATE(recv_displ(1:geo%atoms_dist%mpi_grp%size))
-  SAFE_ALLOCATE(force_local(1:geo%space%dim, 1:geo%atoms_dist%nlocal))
+  SAFE_ALLOCATE(force_local(1:geo%space%dim, 1:max(1, geo%atoms_dist%nlocal)))
   
   recv_count(1:geo%atoms_dist%mpi_grp%size) = geo%space%dim*geo%atoms_dist%num(0:geo%atoms_dist%mpi_grp%size - 1)
   recv_displ(1:geo%atoms_dist%mpi_grp%size) = geo%space%dim*(geo%atoms_dist%range(1, 0:geo%atoms_dist%mpi_grp%size - 1) - 1)
   
-  force_local(1:geo%space%dim, 1:geo%atoms_dist%nlocal) = force(1:geo%space%dim, geo%atoms_dist%start:geo%atoms_dist%end)
+  if(geo%atoms_dist%nlocal > 0) then
+    force_local(1:geo%space%dim, 1:geo%atoms_dist%nlocal) = force(1:geo%space%dim, geo%atoms_dist%start:geo%atoms_dist%end)
+  endif
 
 #ifdef HAVE_MPI  
   call MPI_Allgatherv(&
