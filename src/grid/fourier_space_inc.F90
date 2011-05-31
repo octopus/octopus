@@ -196,7 +196,11 @@ subroutine X(fourier_space_op_apply)(this, cube)
     do kk =  cube%pfft%local_o_start(1),cube%pfft%local_o_start(1)+cube%pfft%local_no(1)-1
       do jj = cube%pfft%local_o_start(2), cube%pfft%local_o_start(2)+cube%pfft%local_no(2)-1
         do ii = cube%pfft%local_o_start(3), cube%pfft%local_o_start(3)+cube%pfft%local_no(3)-1 
-          cube%pfft%data_out(index)= cube%pfft%data_out(index)*this%X(op)(kk, jj, ii)
+          if (kk <= cube%nx)then
+            cube%pfft%data_out(index)= cube%pfft%data_out(index)*this%X(op)(kk, jj, ii)
+          else
+            cube%pfft%data_out(index)= cube%pfft%data_out(index)*this%X(op)(cube%n(1)+2-kk, jj, ii)
+          end if
           index=index+1
         end do
       end do
