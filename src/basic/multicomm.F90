@@ -817,8 +817,13 @@ contains
       start(1) = 1
       do rank = 1, nprocs
         size = numroc(nobjs, nbl, rank - 1, 0, nprocs)
-        if(rank > 1) start(rank) = final(rank - 1) + 1
-        final(rank) = start(rank) + size - 1
+        if(size > 0) then
+          if(rank > 1) start(rank) = final(rank - 1) + 1
+          final(rank) = start(rank) + size - 1
+        else
+          start(rank) = 1
+          final(rank) = 0
+        endif
       end do
 #endif
     else

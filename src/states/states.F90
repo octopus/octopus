@@ -1705,9 +1705,12 @@ return
      call messages_info(1)
 
      do inode = 0, st%mpi_grp%size - 1
-       write(message(1),'(a,i4,a,i5,a,i6,a,i6)') &
-            'Info: Nodes in states-group ', inode, ' will manage ', st%st_num(inode), ' states:', &
-            st%st_range(1, inode), " - ", st%st_range(2, inode)
+       write(message(1),'(a,i4,a,i5,a)') &
+            'Info: Nodes in states-group ', inode, ' will manage ', st%st_num(inode), ' states'
+       if(st%st_num(inode) > 0) then
+         write(message(1),'(a,a,i6,a,i6)') trim(message(1)), ':', &
+           st%st_range(1, inode), " - ", st%st_range(2, inode)
+       endif
        call messages_info(1)
 
        do ist = st%st_range(1, inode), st%st_range(2, inode)

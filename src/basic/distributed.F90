@@ -128,7 +128,7 @@ contains
       call messages_info(1)
 
       do kk = 1, this%mpi_grp%size
-        write(message(1),'(a,i4,a,i6,a,i6,a,i6)') 'Info: Node in group ', kk - 1, &
+        write(message(1),'(a,i4,a,i6,a)') 'Info: Node in group ', kk - 1, &
              ' will manage ', this%num(kk - 1), ' '//trim(tag)
         if(this%num(kk - 1) > 0) then
           write(message(1),'(a,a,i6,a,i6)') trim(message(1)), ':', this%range(1, kk - 1), " - ", this%range(2, kk - 1)
