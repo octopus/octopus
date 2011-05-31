@@ -1719,8 +1719,10 @@ return
        end do
      end do
 
-     message(1) = "Cannot run with empty states-groups. Select a smaller number of processors so none are idle."
-     call messages_fatal(1, only_root_writes = .true.)
+     if(any(st%st_num(:) == 0)) then
+       message(1) = "Cannot run with empty states-groups. Select a smaller number of processors so none are idle."
+       call messages_fatal(1, only_root_writes = .true.)
+     endif
 
      st%st_start = st%st_range(1, st%mpi_grp%rank)
      st%st_end   = st%st_range(2, st%mpi_grp%rank)
