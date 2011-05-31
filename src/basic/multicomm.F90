@@ -790,11 +790,11 @@ contains
   !> Function to divide the range of numbers from 1 to nobjs
   !! between nprocs processors.
   !! THREADSAFE
-  subroutine multicomm_divide_range(nobjs, nprocs, start, final, lsize, scalapack_compat)
+  subroutine multicomm_divide_range(nobjs, nprocs, istart, ifinal, lsize, scalapack_compat)
     integer,           intent(in)    :: nobjs !< number of points to divide
     integer,           intent(in)    :: nprocs !< number of processors
-    integer,           intent(out)   :: start(:)
-    integer,           intent(out)   :: final(:)
+    integer,           intent(out)   :: istart(:)
+    integer,           intent(out)   :: ifinal(:)
     integer, optional, intent(out)   :: lsize(:) !< number of objects in each partition
     logical, optional, intent(in)    :: scalapack_compat
 
@@ -814,15 +814,15 @@ contains
       nbl = nobjs/nprocs
       if (mod(nobjs, nprocs) /= 0) INCR(nbl, 1)
       
-      start(1) = 1
+      istart(1) = 1
       do rank = 1, nprocs
         size = numroc(nobjs, nbl, rank - 1, 0, nprocs)
         if(size > 0) then
-          if(rank > 1) start(rank) = final(rank - 1) + 1
-          final(rank) = start(rank) + size - 1
+          if(rank > 1) istart(rank) = ifinal(rank - 1) + 1
+          ifinal(rank) = istart(rank) + size - 1
         else
-          start(rank) = 1
-          final(rank) = 0
+          istart(rank) = 1
+          ifinal(rank) = 0
         endif
       end do
 #endif
@@ -835,29 +835,29 @@ contains
           ii = nobjs - jj*nprocs
           if(ii > 0 .and. rank < ii) then
             jj = jj + 1
-            start(rank + 1) = rank*jj + 1
-            final(rank + 1) = start(rank + 1) + jj - 1
+            istart(rank + 1) = rank*jj + 1
+            ifinal(rank + 1) = istart(rank + 1) + jj - 1
           else
-            final(rank + 1) = nobjs - (nprocs - rank - 1)*jj
-            start(rank + 1) = final(rank + 1) - jj + 1
+            ifinal(rank + 1) = nobjs - (nprocs - rank - 1)*jj
+            istart(rank + 1) = ifinal(rank + 1) - jj + 1
           end if
         end do
 
       else
         do ii = 1, nprocs
           if(ii <= nobjs) then
-            start(ii) = ii
-            final(ii) = ii
+            istart(ii) = ii
+            ifinal(ii) = ii
           else
-            start(ii) = 1
-            final(ii) = 0
+            istart(ii) = 1
+            ifinal(ii) = 0
           end if
         end do
       end if
     end if
 
     if(present(lsize)) then
-      lsize(1:nprocs) = final(1:nprocs) - start(1:nprocs) + 1
+      lsize(1:nprocs) = ifinal(1:nprocs) - istart(1:nprocs) + 1
       ASSERT(sum(lsize(1:nprocs)) == nobjs)
     end if
 
@@ -872,11 +872,11 @@ contains
     integer, intent(out)   :: ini
     integer, intent(out)   :: nobjs_loc
     
-    integer :: start(MAX_OMP_THREADS), end(MAX_OMP_THREADS), lsize(MAX_OMP_THREADS), rank
+    integer :: istart(MAX_OMP_THREADS), ifinal(MAX_OMP_THREADS), lsize(MAX_OMP_THREADS), rank
 
     ! no push_sub, threadsafe
     
-    call multicomm_divide_range(nobjs, omp_get_num_threads(), start, end, lsize)
+    call multicomm_divide_range(nobjs, omp_get_num_threads(), istart, ifinal, lsize)
 
     rank   = 1 + omp_get_thread_num()
     ini    = start(rank)

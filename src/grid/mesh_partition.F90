@@ -96,7 +96,7 @@ contains
     integer :: library
     integer, parameter   :: METIS = 2, ZOLTAN = 3, GA = 4
     integer, parameter   :: STAR = 1, LAPLACIAN = 2
-    integer, allocatable :: start(:), final(:), lsize(:)
+    integer, allocatable :: istart(:), ifinal(:), lsize(:)
     FLOAT, allocatable   :: xglobal(:, :)
     type(partition_t)    :: partition
     type(partitioner_t)  :: partitioner
@@ -179,25 +179,25 @@ contains
     ! Documentation is in zoltan.F90
     call parse_integer(datasets_check('MeshPartition'), default_method, method)
 
-    SAFE_ALLOCATE(start(1:npart))
-    SAFE_ALLOCATE(final(1:npart))
+    SAFE_ALLOCATE(istart(1:npart))
+    SAFE_ALLOCATE(ifinal(1:npart))
     SAFE_ALLOCATE(lsize(1:npart))
 
     select case(library)
     case(METIS)
 
-      start(1:npart) = 1
-      final(1:npart) = mesh%np_global
+      istart(1:npart) = 1
+      ifinal(1:npart) = mesh%np_global
       lsize(1:npart) = mesh%np_global
 
     case(ZOLTAN)
 
       ! If we use Zoltan, we divide the space in a basic way, to balance
       ! the memory for the graph. 
-      call multicomm_divide_range(mesh%np_global, npart, start, final, lsize)
+      call multicomm_divide_range(mesh%np_global, npart, istart, ifinal, lsize)
 
       do ii = 1, npart
-        part(start(ii):final(ii)) = ii
+        part(istart(ii):ifinal(ii)) = ii
       end do
 
     end select
@@ -314,24 +314,25 @@ contains
 #ifdef HAVE_MPI
       !assign all points to one node
       call zoltan_partition(method, mesh%sb%dim, mesh%np_global, mesh%np_part_global, &
-        xglobal(1, 1),  start(ipart), xadj(1), adjncy(1), ipart, part(1), mesh%mpi_grp%comm)
+        xglobal(1, 1), istart(ipart), xadj(1), adjncy(1), ipart, part(1), mesh%mpi_grp%comm)
 #endif
 
       SAFE_DEALLOCATE_A(xglobal)
 
       ! we use xadj as a buffer
-      xadj(1:lsize(ipart)) = part(start(ipart):final(ipart))
+      xadj(1:lsize(ipart)) = part(istart(ipart):ifinal(ipart))
 
       ASSERT(all(xadj(1:lsize(ipart)) > 0))
 
       part(1:mesh%np_global) = 0 ! so we catch non-initialized values
 
       ! convert start to C notation
-      start = start - 1
+      istart = istart - 1
 
 #ifdef HAVE_MPI
       ! we collect part from all processors
-      call MPI_Allgatherv(xadj(1), lsize(ipart), MPI_INTEGER, part(1), lsize(1), start(1), MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
+      call MPI_Allgatherv(xadj(1), lsize(ipart), MPI_INTEGER, part(1), &
+        lsize(1), istart(1), MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
 #endif
 
     case(GA)
@@ -354,8 +355,8 @@ contains
 
     end select
 
-    SAFE_DEALLOCATE_A(start)
-    SAFE_DEALLOCATE_A(final)
+    SAFE_DEALLOCATE_A(istart)
+    SAFE_DEALLOCATE_A(ifinal)
     SAFE_DEALLOCATE_A(lsize)
     SAFE_DEALLOCATE_A(adjncy)
 
