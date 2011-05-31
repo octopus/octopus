@@ -297,7 +297,7 @@ contains
     !% use. This is normally not necessary since by default Octopus
     !% sets the number of states to the minimum necessary to hold the
     !% electrons present in the system. (This default behavior is
-    !% obtained by setting <tt>TotalStates</tt>  to 0).
+    !% obtained by setting <tt>TotalStates</tt> to 0).
     !%
     !% If you want to add some unoccupied states, probably it is more convenient to use the variable 
     !% <tt>ExtraStates</tt>.
@@ -1129,6 +1129,7 @@ return
     SAFE_ALLOCATE(st%block_is_local(1:st%nblocks, 1:st%d%nik))
     st%block_is_local = .false.
     st%block_start  = -1
+    st%block_end    = -2  ! this will make that loops block_start:block_end do not run if not initialized
     
     do ib = 1, st%nblocks
       if(bstart(ib) >= st%st_start .and. bend(ib) <= st%st_end) then
@@ -1717,6 +1718,9 @@ return
          st%node(ist) = inode
        end do
      end do
+
+     message(1) = "Cannot run with empty states-groups. Select a smaller number of processors so none are idle."
+     call messages_fatal(1, only_root_writes = .true.)
 
      st%st_start = st%st_range(1, st%mpi_grp%rank)
      st%st_end   = st%st_range(2, st%mpi_grp%rank)

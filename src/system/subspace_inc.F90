@@ -292,7 +292,6 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:lrwork))
 
-  ! parameter 4 is bad, they say
   call pzheev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
     w = eigenval(1), z = evectors(1, 1), iz = 1, jz = 1, descz = hs_desc(1), &
     work = work(1), lwork = lwork, rwork = rwork(1), lrwork = lrwork, info = info)
