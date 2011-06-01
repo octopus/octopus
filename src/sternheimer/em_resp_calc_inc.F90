@@ -529,13 +529,13 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
 
                   ispin = states_dim_get_spin_index(sys%st%d, ik)
 
-                  if (present(kdotp_em_lr) .and. u(2) <= sys%gr%sb%periodic_dim) then
-                    tmp(1:np, 1) = - kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
-                  else
+!                  if (present(kdotp_em_lr) .and. u(2) <= sys%gr%sb%periodic_dim) then
+!                    tmp(1:np, 1) = kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
+!                  else
                     call pert_setup_dir(dipole, u(2))
                     call X(pert_apply) &
                       (dipole, sys%gr, sys%geo, hm, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, :, ist, ik), tmp)
-                  endif
+!                  endif
 
                   do ip = 1, np
                     tmp(ip, 1) = tmp(ip, 1) + hvar(ip, ispin, isigma, idim, u(2), w(2)) &
@@ -651,8 +651,9 @@ contains
 
             do ifreq = 1, 3
 
-              if (present(kdotp_lr) .and. ii <= sys%gr%sb%periodic_dim) then
-                forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = -kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
+              ! ist = ist2 term cannot be captured by k.p perturbation
+              if (present(kdotp_lr) .and. ii <= sys%gr%sb%periodic_dim .and. ist .ne. ist2) then
+                forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
               else
                 call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), ppsi)
               endif
