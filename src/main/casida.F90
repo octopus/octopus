@@ -95,8 +95,11 @@ contains
 
   subroutine casida_run_init()
     
+    PUSH_SUB(casida_run_init)
+    
     call calc_mode_set_parallelization(P_STRATEGY_OTHER, default = .true.)
 
+    POP_SUB(casida_run_init)
   end subroutine casida_run_init
 
   ! ---------------------------------------------------------

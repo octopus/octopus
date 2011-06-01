@@ -251,6 +251,8 @@ contains
 
     subroutine calc_mode_init()
 
+      PUSH_SUB(calc_mode_init)
+
       select case(calc_mode_id)
       case(CM_GS)
         call ground_state_run_init()
@@ -260,6 +262,7 @@ contains
         call casida_run_init()
       end select
 
+      POP_SUB(calc_mode_init)
     end subroutine calc_mode_init
 
   end subroutine run_init

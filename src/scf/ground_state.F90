@@ -51,14 +51,16 @@ module ground_state_m
     ground_state_run_init,  &
     ground_state_run
 
-
 contains
 
   subroutine ground_state_run_init()
 
+    PUSH_SUB(ground_state_run_init)
+
     call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_set_scalapack_compat()
 
+    POP_SUB(ground_state_run_init)
   end subroutine ground_state_run_init
 
   ! ---------------------------------------------------------
