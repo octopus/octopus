@@ -108,10 +108,12 @@ contains
 
     type(grid_t),   pointer :: gr
     type(em_resp_t)         :: em_vars
-    type(sternheimer_t)     :: sh
+    type(sternheimer_t)     :: sh, sh_kdotp, sh2
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
+    type(lr_t), allocatable :: kdotp_em_lr2(:, :, :, :)
+    type(pert_t)            :: pert_kdotp, pert2_none
 
-    integer :: sigma, sigma_alt, ndim, idir, ierr, iomega, ifactor
+    integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor
     character(len=100) :: dirname_restart, dirname_output, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, exact_freq
 
@@ -181,6 +183,28 @@ contains
       ! only considering positive values
     endif
 
+    if(em_vars%calc_hyperpol .and. use_kdotp) then
+      call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
+      call pert_init(pert2_none, PERTURBATION_NONE,  sys%gr, sys%geo)
+      call messages_experimental("Second-order Sternheimer equation")
+      call pert_setup_dir(pert2_none, 1)  ! direction is irrelevant
+      SAFE_ALLOCATE(kdotp_em_lr2(1:gr%sb%periodic_dim, 1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
+      do ifactor = 1, em_vars%nfactor
+        do sigma = 1, em_vars%nsigma
+          do idir = 1, gr%sb%periodic_dim
+            do idir2 = 1, gr%sb%dim
+              call lr_init(kdotp_em_lr2(idir, idir2, sigma, ifactor))
+              call lr_allocate(kdotp_em_lr2(idir, idir2, sigma, ifactor), sys%st, sys%gr%mesh)
+            enddo
+          enddo
+        enddo
+      enddo
+      call sternheimer_init(sh2, sys, hm, "EM", complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
+      call sternheimer_init(sh_kdotp, sys, hm, "EM", complex_response, set_ham_var = 0, &
+        set_last_occ_response = em_vars%occ_response)
+      em_vars%occ_response = .true.
+    endif
+
     SAFE_ALLOCATE(em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
     do ifactor = 1, em_vars%nfactor
       call Born_charges_init(em_vars%Born_charges(ifactor), sys%geo, sys%st, gr%sb%dim)
@@ -195,7 +219,7 @@ contains
       .and. sys%st%d%nspin == 1 .and. states_are_real(sys%st)) then
       ! first-order response is zero if there is time-reversal symmetry. F Mauri and SG Louie, PRL 76, 4246 (1996)
       call sternheimer_init(sh, sys, hm, "EM", complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
-      ! set HamiltonVariation to V_ext_only, in magnetic case
+      ! set HamiltonianVariation to V_ext_only, in magnetic case
     else
       call sternheimer_init(sh, sys, hm, "EM", complex_response, set_last_occ_response = em_vars%occ_response)
       ! otherwise, use default, which is hartree + fxc
@@ -234,6 +258,8 @@ contains
           if(iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) have_to_calculate = .false. 
 
           if(ifactor > 1) then 
+
+            ! NEED TO COPY kdotp_em_lr here too!!!
 
             ! if this frequency is the same as the previous one, just copy it
             if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
@@ -426,6 +452,29 @@ contains
 
             em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
 
+            if(em_vars%calc_hyperpol .and. use_kdotp) then
+              do idir2 = 1, gr%sb%periodic_dim
+                write(message(1), '(a,a,a)') 'Info: Calculating kdotp response in ', index2axis(idir2), '-direction.'
+                call messages_info(1)
+                call pert_setup_dir(pert_kdotp, idir2)
+                
+                ! need nsigma
+                ! need to give a proper name to the restart files
+                if (states_are_complex(sys%st)) then
+                  call zsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:1, ifactor), &
+                    kdotp_lr(idir2, 1:1), 1, em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, M_z0, &
+                    em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:1, ifactor), pert2_none, EM_RESP_DIR, &
+                    "null", em_wfs_tag(idir, ifactor*idir2 + 3), have_restart_rho=.true., have_exact_freq = .true.)
+                  kdotp_em_lr2(idir2, idir, 2, ifactor)%zdl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%zdl_psi
+                else
+                  call dsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:1, ifactor), &
+                    kdotp_lr(idir2, 1:1), 1, em_vars%freq_factor(ifactor)*em_vars%omega(iomega), M_ZERO, &
+                    em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:1, ifactor), pert2_none, EM_RESP_DIR, &
+                    "null", em_wfs_tag(idir, ifactor*idir2 + 3), have_restart_rho=.true., have_exact_freq = .true.)
+                  kdotp_em_lr2(idir2, idir, 2, ifactor)%ddl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%ddl_psi
+                end if
+              enddo
+            endif
           end if ! have_to_calculate
 
         end do ! idir
@@ -509,11 +558,21 @@ contains
         write(message(1), '(a)') 'Info: Calculating hyperpolarizabilities.'
         call messages_info(1)
 
-        if(states_are_complex(sys%st)) then
-          call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
+        if(use_kdotp) then
+          if(states_are_complex(sys%st)) then
+            call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, &
+              kdotp_lr = kdotp_lr(:, 1), kdotp_em_lr = kdotp_em_lr2, occ_response = em_vars%occ_response)
+          else
+            call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, &
+              kdotp_lr = kdotp_lr(:, 1), kdotp_em_lr = kdotp_em_lr2, occ_response = em_vars%occ_response)
+          end if
         else
-          call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
-        end if
+          if(states_are_complex(sys%st)) then
+            call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
+          else
+            call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, occ_response = em_vars%occ_response)
+          end if
+        endif
 
         str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(1)*em_vars%omega(iomega)))
         write(dirname_output, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
