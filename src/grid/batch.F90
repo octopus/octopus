@@ -321,8 +321,8 @@ contains
   subroutine batch_copy(bin, bout, reference)
     type(batch_t),           intent(in)    :: bin
     type(batch_t),           intent(out)   :: bout
-    logical,       optional, intent(in)    :: reference !< If .false. (the default) the copy points to the same memory.
-                                                        !! If .true. new memory is allocated.
+    logical,       optional, intent(in)    :: reference !< If .true. (the default) the copy points to the same memory.
+                                                        !! If .false. new memory is allocated.
 
     integer :: ii, np
 
@@ -330,25 +330,7 @@ contains
 
     call batch_init_empty(bout, bin%dim, bin%nst)
 
-    if(optional_default(reference, .false.)) then
-      
-      if(batch_type(bin) == TYPE_FLOAT) then
-        np = 0
-        do ii = 1, bin%nst_linear
-          np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
-        end do
-
-        call dbatch_new(bout, 1, bin%nst, np)
-      else
-        np = 0
-        do ii = 1, bin%nst_linear
-          np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
-        end do
-
-        call zbatch_new(bout, 1, bin%nst, np)
-      end if
-
-    else
+    if(optional_default(reference, .true.)) then
       
       do ii = 1, bout%nst
         if(associated(bin%states(ii)%dpsi)) bout%states(ii)%dpsi => bin%states(ii)%dpsi
@@ -366,12 +348,30 @@ contains
       bout%dirty               = bin%dirty
       bout%pack%size(1:2)      = bin%pack%size(1:2)
       bout%pack%size_real(1:2) = bin%pack%size_real(1:2)
-      
+
 #ifdef HAVE_OPENCL
       if(opencl_is_enabled()) then
         bout%pack%buffer = bin%pack%buffer
       end if
 #endif
+
+    else      
+
+      if(batch_type(bin) == TYPE_FLOAT) then
+        np = 0
+        do ii = 1, bin%nst_linear
+          np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
+        end do
+
+        call dbatch_new(bout, 1, bin%nst, np)
+      else
+        np = 0
+        do ii = 1, bin%nst_linear
+          np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
+        end do
+
+        call zbatch_new(bout, 1, bin%nst, np)
+      end if
 
     end if
 
