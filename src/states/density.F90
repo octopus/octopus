@@ -308,8 +308,7 @@ contains
     type(grid_t),            intent(in)     :: gr
     FLOAT,                   intent(out)    :: density(:, :)
 
-    integer :: ik
-    type(batch_t)        :: psib
+    integer :: ik, ib
     type(density_calc_t) :: dens_calc
 
     PUSH_SUB(density_calc)
@@ -319,15 +318,9 @@ contains
     call density_calc_init(dens_calc, st, gr, density)
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      if(states_are_real(st)) then
-        call batch_init(psib, st%d%dim, st%st_start, st%st_end, st%dpsi(:, :, st%st_start:, ik))
-      else
-        call batch_init(psib, st%d%dim, st%st_start, st%st_end, st%zpsi(:, :, st%st_start:, ik))
-      end if
-
-      call density_calc_accumulate(dens_calc, ik, psib)
-      
-      call batch_end(psib)
+      do ib = st%block_start, st%block_end
+        call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
+      end do
     end do
 
     call density_calc_end(dens_calc)
