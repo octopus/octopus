@@ -564,9 +564,8 @@ contains
     ! Propagator with enforced time-reversal symmetry
     subroutine td_etrs
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
-      CMPLX, allocatable :: zpsi1(:,:,:)
-      integer :: ik, ist, ist2, idim, ste, sts
-      type(batch_t) :: zpsib
+      integer :: ik, ist, ist2, idim, ste, sts, ib
+      type(batch_t) :: zpsib_save
       type(density_calc_t) :: dens_calc
 
       PUSH_SUB(propagator_dt.td_etrs)
@@ -577,43 +576,27 @@ contains
         SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
         call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t1)
 
-        SAFE_ALLOCATE(zpsi1(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
-
         call density_calc_init(dens_calc, st, gr, st%rho)
 
         do ik = st%d%kpt%start, st%d%kpt%end
-          do sts = st%st_start, st%st_end, st%d%block_size
-            ste = min(st%st_end, sts + st%d%block_size - 1)
+          do ib = st%block_start, st%block_end
 
-            !save the states
-            !$omp parallel do private(ist2, idim)
-            do ist = sts, ste
-              ist2 = ist - sts + 1
-              do idim = 1, st%d%dim
-                call blas_copy(gr%mesh%np, st%zpsi(1, idim, ist, ik), 1, zpsi1(1, idim, ist2), 1)
-              end do
-            end do
-            
+            !save the state
+            call batch_copy(st%psib(ib, ik), zpsib_save, reference = .false.)
+            call batch_copy_data(gr%der%mesh%np, st%psib(ib, ik), zpsib_save)
+
             !propagate the state dt with H(time - dt)
-            call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
-            call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/mu, time - dt)
-            call density_calc_accumulate(dens_calc, ik, zpsib)
-            call batch_end(zpsib)
+            call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/mu, time - dt)
+            call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
 
             !restore the saved state
-            !$omp parallel do private(ist2, idim)
-            do ist = sts, ste
-              ist2 = ist - sts + 1
-              do idim = 1, st%d%dim
-                call lalg_copy(gr%mesh%np, zpsi1(:, idim, ist2), st%zpsi(:, idim, ist, ik))
-              end do
-            end do
+            call batch_copy_data(gr%der%mesh%np, zpsib_save, st%psib(ib, ik))
 
-          end do          
+            call batch_end(zpsib_save)
+
+          end do
         end do
 
-        SAFE_DEALLOCATE_A(zpsi1)
-        
         call density_calc_end(dens_calc)
 
         call v_ks_calc(ks, hm, st, geo)
@@ -625,12 +608,8 @@ contains
 
       ! propagate dt/2 with H(time - dt)
       do ik = st%d%kpt%start, st%d%kpt%end
-        do sts = st%st_start, st%st_end, st%d%block_size
-          ste = min(st%st_end, sts + st%d%block_size - 1)
-
-          call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
-          call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/(mu*M_TWO), time - dt)
-          call batch_end(zpsib)
+        do ib = st%block_start, st%block_end
+          call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/(mu*M_TWO), time - dt)
         end do
       end do
 
@@ -652,12 +631,8 @@ contains
       call hamiltonian_update(hm, gr%mesh, time = time)
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        do sts = st%st_start, st%st_end, st%d%block_size
-          ste = min(st%st_end, sts + st%d%block_size - 1)
-
-          call batch_init(zpsib, st%d%dim, sts, ste, st%zpsi(:, :, sts:, ik))
-          call exponential_apply_batch(tr%te, gr%der, hm, zpsib, ik, dt/(M_TWO*mu), time)
-          call batch_end(zpsib)
+        do ib = st%block_start, st%block_end
+          call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/(M_TWO*mu), time)
         end do
       end do
 
