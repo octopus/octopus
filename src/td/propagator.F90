@@ -564,7 +564,7 @@ contains
     ! Propagator with enforced time-reversal symmetry
     subroutine td_etrs
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
-      integer :: ik, ist, ist2, idim, ste, sts, ib
+      integer :: ik, ist, ib
       type(batch_t) :: zpsib_save
       type(density_calc_t) :: dens_calc
 
@@ -583,6 +583,7 @@ contains
 
             !save the state
             call batch_copy(st%psib(ib, ik), zpsib_save, reference = .false.)
+            if(batch_is_packed(st%psib(ib, ik))) call batch_pack(zpsib_save, copy = .false.)
             call batch_copy_data(gr%der%mesh%np, st%psib(ib, ik), zpsib_save)
 
             !propagate the state dt with H(time - dt)
@@ -648,7 +649,7 @@ contains
     ! ---------------------------------------------------------
     ! Propagator with approximate enforced time-reversal symmetry
     subroutine td_aetrs
-      integer :: ik, ispin, idim, ip, ist, ib
+      integer :: ik, ispin, ip, ist, ib
       type(batch_t) :: zpsib
       FLOAT :: vv
       CMPLX :: phase

@@ -93,6 +93,7 @@ module states_dim_m
     type(distributed_t) :: kpt
     integer :: block_size
     integer :: orth_method
+    logical :: pack_states
   end type states_dim_t
 
 contains

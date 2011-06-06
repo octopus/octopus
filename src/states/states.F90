@@ -1257,6 +1257,26 @@ return
       end if
 
       st%d%block_size = min(st%d%block_size, st%nst)
+      PUSH_SUB(states_densities_init.states_exec_init)
+
+      !%Variable StatesPack
+      !%Type logical
+      !%Default no
+      !%Section Execution::Optimization
+      !%Description
+      !% (Experimental) When set to yes, states are stored in packed
+      !% mode, which improves performance considerably. However this
+      !% is not fully implemented and it might give wrong results. The
+      !% default is no.
+      !%
+      !% If OpenCL is used and this variable is set to yes, Octopus
+      !% will store the wave-functions in device (GPU) memory. If
+      !% there is not enough memory to store all the wave-functions,
+      !% execution will stop with an error.
+      !%End
+
+      call parse_logical(datasets_check('StatesPack'), .false., st%d%pack_states)
+      if(st%d%pack_states) call messages_experimental('StatesPack')
 
       !%Variable StatesOrthogonalization
       !%Type integer
@@ -1264,7 +1284,7 @@ return
       !%Section Execution::Optimization
       !%Description
       !% The full orthogonalization method used by some
-      !% eigensolvers. The default is gram_schmidt. When state
+      !% eigensolvers. The default is gram_schmidt. With state
       !% parallelization the default is par_gram_schmidt.
       !%Option gram_schmidt 1
       !% The standard Gram-Schmidt orthogonalization implemented using

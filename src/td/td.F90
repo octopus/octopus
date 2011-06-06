@@ -20,6 +20,7 @@
 #include "global.h"
 
 module td_m
+  use batch_m
   use calc_mode_m
   use cpmd_m
   use datasets_m
@@ -126,7 +127,7 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping, update_energy
-    integer                   :: iter, ii, ierr, scsteps, ispin
+    integer                   :: iter, ii, ierr, scsteps, ispin, ik, ib
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force
@@ -208,6 +209,14 @@ contains
           call PES_restart_read(td%PESv,gr%mesh,st)
        endif
     endif
+
+    if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) then
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%block_start, st%block_end
+          call batch_pack(st%psib(ib, ik))
+        end do
+      end do
+    end if
 
     ii = 1
     stopping = .false.
@@ -334,6 +343,14 @@ contains
       if (stopping) exit
 
     end do propagation
+
+    if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) then
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%block_start, st%block_end
+          call batch_unpack(st%psib(ib, ik))
+        end do
+      end do
+    end if
 
     call td_write_end(write_handler)
     call end_()
