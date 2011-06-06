@@ -99,29 +99,44 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
   
   call mpi_grp_init(params_fmm%all_nodes_grp, all_nodes_comm)
 
-  call MPI_Cartdim_get(params_fmm%all_nodes_grp%comm, cdim, mpi_err)
+  if (mpi_world%size == 1) then
+    cdim = 1
 
-  SAFE_ALLOCATE(remains(1:cdim))
+    SAFE_ALLOCATE(params_fmm%disps(1))
+    SAFE_ALLOCATE(dend(1))
+    SAFE_ALLOCATE(params_fmm%dsize(1))
+    
+    dend = mesh%np
+    params_fmm%sp = 1 
+    params_fmm%ep = mesh%np
+    params_fmm%dsize(1) = mesh%np
+    params_fmm%disps = 0
+    params_fmm%nlocalcharges = params_fmm%dsize(1)
+    
+  else 
+    call MPI_Cartdim_get(params_fmm%all_nodes_grp%comm, cdim, mpi_err)
+ 
+    SAFE_ALLOCATE(remains(1:cdim))
+    
+    remains = .true.
+    remains(1) = .false.
+    
+    call MPI_Cart_sub(params_fmm%all_nodes_grp%comm, remains(1), subcomm, mpi_err)
+    
+    call mpi_grp_init(params_fmm%perp_grp, subcomm)
 
-  remains = .true.
-  remains(1) = .false.
-
-  call MPI_Cart_sub(params_fmm%all_nodes_grp%comm, remains(1), subcomm, mpi_err)
-
-  call mpi_grp_init(params_fmm%perp_grp, subcomm)
-
-  SAFE_ALLOCATE(params_fmm%disps(1:params_fmm%perp_grp%size))
-  SAFE_ALLOCATE(dend(1:params_fmm%perp_grp%size))
-  SAFE_ALLOCATE(params_fmm%dsize(1:params_fmm%perp_grp%size))
-
-  call multicomm_divide_range(mesh%np, params_fmm%perp_grp%size, params_fmm%disps, dend, params_fmm%dsize)
-
-  params_fmm%sp = params_fmm%disps(params_fmm%perp_grp%rank + 1)
-  params_fmm%ep = dend(params_fmm%perp_grp%rank + 1)
-  params_fmm%nlocalcharges = params_fmm%dsize(params_fmm%perp_grp%rank + 1)
-
-  params_fmm%disps = params_fmm%disps - 1
-
+    SAFE_ALLOCATE(params_fmm%disps(1:params_fmm%perp_grp%size))
+    SAFE_ALLOCATE(dend(1:params_fmm%perp_grp%size))
+    SAFE_ALLOCATE(params_fmm%dsize(1:params_fmm%perp_grp%size))
+    
+    call multicomm_divide_range(mesh%np, params_fmm%perp_grp%size, params_fmm%disps, dend, params_fmm%dsize)
+    
+    params_fmm%sp = params_fmm%disps(params_fmm%perp_grp%rank + 1)
+    params_fmm%ep = dend(params_fmm%perp_grp%rank + 1)
+    params_fmm%nlocalcharges = params_fmm%dsize(params_fmm%perp_grp%rank + 1)
+    
+    params_fmm%disps = params_fmm%disps - 1
+  end if
   call fmm_init()
 
   POP_SUB(poisson_fmm_init)
@@ -132,8 +147,7 @@ end subroutine poisson_fmm_init
 subroutine poisson_fmm_end(params_fmm)
   type(poisson_fmm_t), intent(inout) :: params_fmm
 #ifdef HAVE_LIBFM
-  
-  call MPI_Comm_free(params_fmm%perp_grp%comm, mpi_err)
+  if (mpi_world%size > 1) call MPI_Comm_free(params_fmm%perp_grp%comm, mpi_err)
   SAFE_DEALLOCATE_P(params_fmm%disps)
   SAFE_DEALLOCATE_P(params_fmm%dsize)
   call fmm_finalize()
@@ -228,10 +242,14 @@ subroutine poisson_fmm_solve(this, pot, rho)
   call fmm(totalcharges, this%params_fmm%nlocalcharges, q(sp), xyz(1, sp), absrel, deltaE, energyfmm, &
     potLibFMM(sp), periodic, periodicaxes, periodlength, dipolecorrection)
   
-  !now we need to allgather the results between "states"
-  call MPI_Allgatherv(potlibFMM(sp), this%params_fmm%nlocalcharges, MPI_FLOAT, &
-    pot(1), this%params_fmm%dsize(1), this%params_fmm%disps(1), MPI_FLOAT, &
-    this%params_fmm%perp_grp%comm, mpi_err)
+  if (mpi_world%size > 1) then
+    !now we need to allgather the results between "states"
+    call MPI_Allgatherv(potlibFMM(sp), this%params_fmm%nlocalcharges, MPI_FLOAT, &
+         pot(1), this%params_fmm%dsize(1), this%params_fmm%disps(1), MPI_FLOAT, &
+         this%params_fmm%perp_grp%comm, mpi_err)
+  else
+    pot = potlibFMM
+  end if
 
   ! FMM just calculates contributions from other cells. for self-interaction cell integration, we include 
   ! (as traditional in octopus) an approximate integration using a spherical cell whose volume is the volume of the actual cell
