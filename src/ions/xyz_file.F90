@@ -227,12 +227,16 @@ contains
     subroutine check_duplicated(done)
       logical, intent(inout) :: done
       
+      PUSH_SUB(xyz_file_read.check_duplicated)
+
       if(.not. done) then
         done = .true.
       else
         message(1) = 'Multiple definitions of '//trim(what)//' in the input file.'
         call messages_fatal(1)
       end if
+
+      POP_SUB(xyz_file_read.check_duplicated)
     end subroutine check_duplicated
 
   end subroutine xyz_file_read
