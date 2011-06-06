@@ -28,9 +28,9 @@ allocate(f1(nn), f2(nn))
 
 result1 = cmplx(0.0d0,0.0d0)
 do ii=1, nn
-  f1(ii) = cmplx(exp(real(ii)/real(nn)), 0.0d0)
-  f2(ii) = cmplx(cos(real(ii)/real(nn)), 0.0d0)
-  result1 = result1 + exp(real(ii)/real(nn))*cos(real(ii)/real(nn))
+  f1(ii) = cmplx(exp(dble(ii)/dble(nn)), 0.0d0)
+  f2(ii) = cmplx(cos(dble(ii)/dble(nn)), 0.0d0)
+  result1 = result1 + exp(dble(ii)/dble(nn))*cos(dble(ii)/dble(nn))
 end do
 
 result2 = cmplx(0.0d0,0.0d0)
