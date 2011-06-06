@@ -392,15 +392,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_run_zero_iter(hm, tr)
+  subroutine propagator_run_zero_iter(hm, gr, tr)
     type(hamiltonian_t),  intent(in)    :: hm
+    type(grid_t),         intent(in)    :: gr
     type(propagator_t),   intent(inout) :: tr
+
+    integer :: ip, ispin, idim
 
     PUSH_SUB(propagator_run_zero_iter)
 
-    tr%v_old(:, :, 2) = hm%vhxc(:, :)
-    tr%v_old(:, :, 3) = hm%vhxc(:, :)
-    tr%v_old(:, :, 1) = hm%vhxc(:, :)
+    forall(idim = 1:3, ispin = 1:hm%d%nspin, ip = 1:gr%mesh%np)
+      tr%v_old(ip, ispin, idim) = hm%vhxc(ip, ispin)
+    end forall
 
     POP_SUB(propagator_run_zero_iter)
   end subroutine propagator_run_zero_iter

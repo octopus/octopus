@@ -621,7 +621,7 @@ contains
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
       call apply_delta_field(td%kick)
-      call propagator_run_zero_iter(hm, td%tr)
+      call propagator_run_zero_iter(hm, gr, td%tr)
 
       POP_SUB(td_run.td_run_zero_iter)
     end subroutine td_run_zero_iter
