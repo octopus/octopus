@@ -243,7 +243,7 @@
     dirname = trim(dir)//'modelmb'
     call io_mkdir(trim(dirname))
 
-    SAFE_ALLOCATE(wf(1:gr%mesh%np_part_global))
+    SAFE_ALLOCATE(wf(1:gr%mesh%np_part))
 
     call modelmb_density_matrix_nullify(denmat)
     if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0) then
@@ -270,9 +270,9 @@
     do mm = 1, st%nst
       ! FIXME make this into some preprocessed X() stuff, along with dens and dens_mat
       if(states_are_real(st)) then
-        wf = cmplx(st%dpsi(1:gr%mesh%np_part_global, 1, mm, 1), M_ZERO)
+        wf = cmplx(st%dpsi(1:gr%mesh%np_part, 1, mm, 1), M_ZERO)
       else
-        wf = st%zpsi(1:gr%mesh%np_part_global, 1, mm, 1)
+        wf = st%zpsi(1:gr%mesh%np_part, 1, mm, 1)
       end if
 
       if (impose_exch_symmetry) then
