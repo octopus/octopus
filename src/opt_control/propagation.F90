@@ -163,7 +163,7 @@ module opt_control_propagation_m
     ! setup the Hamiltonian
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, time = M_ZERO)
-    call propagator_run_zero_iter(hm, td%tr)
+    call propagator_run_zero_iter(hm, gr, td%tr)
 
     if(target_type(target) .eq. oct_tg_velocity) then
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
@@ -268,7 +268,7 @@ module opt_control_propagation_m
     ! setup the Hamiltonian
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi)
-    call propagator_run_zero_iter(hm, td%tr)
+    call propagator_run_zero_iter(hm, gr, td%tr)
 
     call oct_prop_output(prop, td%max_iter, psi, gr)
     do i = td%max_iter, 1, -1
@@ -340,11 +340,11 @@ module opt_control_propagation_m
     ! setup forward propagation
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi)
-    call propagator_run_zero_iter(hm, td%tr)
-    call propagator_run_zero_iter(hm, tr_chi)
+    call propagator_run_zero_iter(hm, gr, td%tr)
+    call propagator_run_zero_iter(hm, gr, tr_chi)
     if(aux_fwd_propagation) then
       call propagator_copy(tr_psi2, td%tr)
-      call propagator_run_zero_iter(hm, tr_psi2)
+      call propagator_run_zero_iter(hm, gr, tr_psi2)
     end if
 
     call oct_prop_output(prop_psi, 0, psi, gr)
@@ -430,8 +430,8 @@ module opt_control_propagation_m
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi)
     call hamiltonian_update(hm, gr%mesh)
-    call propagator_run_zero_iter(hm, td%tr)
-    call propagator_run_zero_iter(hm, tr_chi)
+    call propagator_run_zero_iter(hm, gr, td%tr)
+    call propagator_run_zero_iter(hm, gr, tr_chi)
 
     td%dt = -td%dt
     call oct_prop_output(prop_chi, td%max_iter, chi, gr)
@@ -508,8 +508,8 @@ module opt_control_propagation_m
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi)
     call hamiltonian_update(hm, gr%mesh)
-    call propagator_run_zero_iter(hm, td%tr)
-    call propagator_run_zero_iter(hm, tr_chi)
+    call propagator_run_zero_iter(hm, gr, td%tr)
+    call propagator_run_zero_iter(hm, gr, tr_chi)
     td%dt = -td%dt
     call oct_prop_output(prop_chi, td%max_iter, chi, gr)
     do i = td%max_iter, 1, -1
