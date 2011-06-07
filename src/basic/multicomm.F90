@@ -863,8 +863,6 @@ contains
 
   end subroutine multicomm_divide_range
 
-
-#ifdef HAVE_OPENMP
   ! ---------------------------------------------------------
   ! THREADSAFE
   subroutine multicomm_divide_range_omp(nobjs, ini, nobjs_loc)
@@ -875,15 +873,15 @@ contains
     integer :: istart(MAX_OMP_THREADS), ifinal(MAX_OMP_THREADS), lsize(MAX_OMP_THREADS), rank
 
     ! no push_sub, threadsafe
-    
+#ifdef HAVE_OPENMP
     call multicomm_divide_range(nobjs, omp_get_num_threads(), istart, ifinal, lsize)
 
     rank   = 1 + omp_get_thread_num()
-    ini    = start(rank)
+#endif
+    ini    = istart(rank)
     nobjs_loc = lsize(rank)
 
   end subroutine multicomm_divide_range_omp
-#endif
 
   ! ---------------------------------------------------------
 
