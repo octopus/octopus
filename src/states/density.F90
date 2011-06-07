@@ -315,10 +315,11 @@ contains
 
     ASSERT(ubound(density, dim = 1) == gr%fine%mesh%np .or. ubound(density, dim = 1) == gr%fine%mesh%np_part)
 
-    call density_calc_init(dens_calc, st, gr, density)
+    call density_calc_init(dens_calc, st, gr, density, packed = batch_is_packed(st%psib(1, 1)))
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%block_start, st%block_end
+        ASSERT(batch_is_packed(st%psib(ib, ik)) .eqv. batch_is_packed(st%psib(1, 1)))
         call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
       end do
     end do
