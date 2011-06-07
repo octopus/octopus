@@ -310,16 +310,19 @@ contains
 
     integer :: ik, ib
     type(density_calc_t) :: dens_calc
+    logical :: packed
 
     PUSH_SUB(density_calc)
 
     ASSERT(ubound(density, dim = 1) == gr%fine%mesh%np .or. ubound(density, dim = 1) == gr%fine%mesh%np_part)
 
-    call density_calc_init(dens_calc, st, gr, density, packed = batch_is_packed(st%psib(1, 1)))
+    packed = batch_is_packed(st%psib(st%block_start, st%d%kpt%start))
+
+    call density_calc_init(dens_calc, st, gr, density, packed = packed)
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%block_start, st%block_end
-        ASSERT(batch_is_packed(st%psib(ib, ik)) .eqv. batch_is_packed(st%psib(1, 1)))
+        ASSERT(batch_is_packed(st%psib(ib, ik)) .eqv. packed)
         call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
       end do
     end do
