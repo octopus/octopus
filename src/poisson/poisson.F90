@@ -616,13 +616,10 @@ contains
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
-    !Last term (3.0) makes rho to vary more gradually, as it must be
-    !(it is the case for actual physical systems). It is most likely this
-    !makes a bigger box essential.
-    alpha = CNST(4.0)*mesh%spacing(1)*3.0
-    write(message(1),*)"The alpha value is = ",alpha
-    write(message(2),'(a)')"Higher values of alpha lead to more physical densities, and thus to more reliable hartree_result"
-    call messages_warning(2)
+    alpha = CNST(4.0)*mesh%spacing(1)
+    write(message(1),'(a,f14.6)')  "Info: The alpha value is ", alpha
+    write(message(2),'(a)')        "      Higher values of alpha lead to more physical densities and more reliable results."
+    call messages_info(2)
     beta = M_ONE / ( alpha**mesh%sb%dim * sqrt(M_PI)**mesh%sb%dim )
 
     write(message(1), '(a)') 'Building the Gaussian distribution of charge...'
@@ -633,17 +630,19 @@ contains
     rho = M_ZERO
     do nn = 1, n_gaussians
       norm = M_ZERO
-      do while(abs(norm-M_ONE)> CNST(1.0e-4))
-        do idir = 1, mesh%sb%dim
-          xx(idir, nn) = 0.000 
-        end do
-        rr = sqrt(sum(xx(:, nn)*xx(:,nn)))
-        do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, origin = xx(:, nn))
-          rhop(ip) = beta*exp(-(rr/alpha)**2)
-        end do
-        norm = dmf_integrate(mesh, rhop)
+
+      do idir = 1, mesh%sb%dim
+        xx(idir, nn) = 0.000 
       end do
+
+      rr = sqrt(sum(xx(:, nn)*xx(:,nn)))
+      do ip = 1, mesh%np
+        call mesh_r(mesh, ip, rr, origin = xx(:, nn))
+        rhop(ip) = beta*exp(-(rr/alpha)**2)
+      end do
+
+      norm = dmf_integrate(mesh, rhop)
+      
       rhop = (-1)**nn * rhop
       rho = rho + rhop
     end do
