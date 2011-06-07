@@ -32,23 +32,11 @@ subroutine X(modelmb_density_calculate)(ikeeppart, mb_1part, nparticles_dens, &
   R_TYPE, intent(in)       :: psi(:)
   FLOAT, intent(out)       :: rho(:)
 
-  integer :: imesh, icoord, jdim
+  integer :: imesh, icoord, jdim, ip_global
   integer, allocatable :: ix(:), ix_1part(:), ixp(:)
   FLOAT :: volume_element
-  R_TYPE, allocatable :: psi_global(:)
 
   PUSH_SUB(X(modelmb_density_calculate))
-
-  ! In case of running parallel in domains, we need to operate psi_global, which 
-  ! contains the full wavefunction after "gathering" all the domains.
-  SAFE_ALLOCATE(psi_global(1:mesh%np_part_global))
-  if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
-    call X(vec_allgather)(mesh%vp, psi_global, psi)
-#endif
-  else
-    psi_global(1:mesh%np_part_global) = psi(1:mesh%np_part_global)
-  end if
 
   SAFE_ALLOCATE(ix(1:MAX_DIM))
   SAFE_ALLOCATE(ixp(1:MAX_DIM))
@@ -64,9 +52,12 @@ subroutine X(modelmb_density_calculate)(ikeeppart, mb_1part, nparticles_dens, &
   rho = R_TOTYPE(M_ZERO)
 
   SAFE_ALLOCATE(ix_1part(1:mb_1part%ndim1part))
-  xloop: do imesh = 1, mesh%np_global
+  xloop: do imesh = 1, mesh%np
+! go from local to global point index
+     ip_global = mesh%vp%local(imesh + mesh%vp%xlocal(mesh%vp%partno) - 1)
+
 ! find coordinates of present point in full MAX_DIM space
-     call index_to_coords(mesh%idx, mesh%sb%dim, imesh, ix)
+     call index_to_coords(mesh%idx, mesh%sb%dim, ip_global, ix)
 
 ! find index of present coordinates for particle ikeeppart
      ix_1part = ix((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part)
@@ -75,10 +66,12 @@ subroutine X(modelmb_density_calculate)(ikeeppart, mb_1part, nparticles_dens, &
 
 ! accumulate into scalar density
       rho(icoord) = rho(icoord) + &
-            nparticles_dens*volume_element*psi_global(imesh)*R_CONJ(psi_global(imesh))
+            nparticles_dens*volume_element*TOFLOAT(psi(imesh)*R_CONJ(psi(imesh)))
   end do xloop
 
-  SAFE_DEALLOCATE_A(psi_global)
+! need to collect all the rho() here in parallel case
+  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, rho, dim = mb_1part%npt_part)
+
   SAFE_DEALLOCATE_A(ix)
   SAFE_DEALLOCATE_A(ixp)
   SAFE_DEALLOCATE_A(ix_1part)
