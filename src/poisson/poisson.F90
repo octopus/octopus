@@ -594,7 +594,8 @@ contains
     type(mesh_t), intent(inout) :: mesh
     FLOAT :: aux1, aux2
     FLOAT, allocatable :: rho(:), vh(:), vh2(:), vh3(:), vh_exact(:), rhop(:), xx(:, :)
-    FLOAT :: alpha, beta, rr, delta, norm, rnd, ralpha, range
+    FLOAT :: alpha, beta, rr, delta, norm, ralpha, range, hartree_nrg_num, &
+         hartree_nrg_analyt, lcl_hartree_nrg 
     integer :: ip, idir, ierr, iunit, nn, n_gaussians
 
     PUSH_SUB(poisson_test)
@@ -615,7 +616,13 @@ contains
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
-    alpha = CNST(4.0)*mesh%spacing(1)
+    !Last term (3.0) makes rho to vary more gradually, as it must be
+    !(it is the case for actual physical systems). It is most likely this
+    !makes a bigger box essential.
+    alpha = CNST(4.0)*mesh%spacing(1)*3.0
+    write(message(1),*)"The alpha value is = ",alpha
+    write(message(2),'(a)')"Higher values of alpha lead to more physical densities, and thus to more reliable hartree_result"
+    call messages_warning(2)
     beta = M_ONE / ( alpha**mesh%sb%dim * sqrt(M_PI)**mesh%sb%dim )
 
     write(message(1), '(a)') 'Building the Gaussian distribution of charge...'
@@ -628,7 +635,6 @@ contains
       norm = M_ZERO
       do while(abs(norm-M_ONE)> CNST(1.0e-4))
         do idir = 1, mesh%sb%dim
-          call random_number(rnd)
           xx(idir, nn) = 0.000 
         end do
         rr = sqrt(sum(xx(:, nn)*xx(:,nn)))
@@ -677,8 +683,48 @@ contains
 
     ! Output
     iunit = io_open("hartree_results", action='write')
-    write(iunit, '(a,f14.8)' ) 'Hartree test = ', delta
+    write(iunit, '(a,f19.13)' ) 'Hartree test = ', delta
+    
+    ! Calculate the numerical Hartree energy (serially)
+    lcl_hartree_nrg=M_ZERO
+    do ip=1, mesh%np
+      lcl_hartree_nrg=lcl_hartree_nrg+rho(ip)*vh(ip)
+    end do
+    lcl_hartree_nrg=lcl_hartree_nrg*mesh%spacing(1)*mesh%spacing(2)*mesh%spacing(3)/M_TWO
+#ifdef HAVE_MPI
+    call MPI_Reduce(lcl_hartree_nrg, hartree_nrg_num, 1, &
+         MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD, mpi_err)
+    if(mpi_err .ne. 0) then
+      write(*,*)"MPI error"
+    end if
+#else
+    hartree_nrg_num = lcl_hartree_nrg
+#endif
+
+    ! Calculate the anallytical Hartree energy (serially, discrete - not exactly exact)
+    lcl_hartree_nrg=M_ZERO
+    do ip=1, mesh%np
+      lcl_hartree_nrg=lcl_hartree_nrg+rho(ip)*vh_exact(ip)
+    end do
+    lcl_hartree_nrg=lcl_hartree_nrg*mesh%spacing(1)*mesh%spacing(2)*mesh%spacing(3)/M_TWO
+#ifdef HAVE_MPI 
+    call MPI_Reduce(lcl_hartree_nrg, hartree_nrg_analyt, 1, &
+         MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD, mpi_err)
+    if(mpi_err .ne. 0) then
+      write(*,*)"MPI error"
+    end if
+#else
+    hartree_nrg_analyt = lcl_hartree_nrg
+#endif 
+    
+    write(iunit, '(a,f19.13)' )
+
+    if (mpi_world%rank == 0) then
+      write(iunit,'(a,f19.13)') 'Hartree Energy (numerical) =',hartree_nrg_num,'Hartree Energy (analytical) =',hartree_nrg_analyt
+    end if
+    
     call io_close(iunit)
+    
     call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_rho", mesh, rho, unit_one, ierr)
     call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_exact", mesh, vh_exact, unit_one, ierr)
     call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", mesh, vh, unit_one, ierr)
