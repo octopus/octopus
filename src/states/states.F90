@@ -665,17 +665,20 @@ contains
 
     ierr = 0
     iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
+
     if(iunit < 0) then
       ierr = -1
-    POP_SUB(states_look)
-return
+      POP_SUB(states_look)
+      return
     end if
+
     iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false., is_tmp=.true., grp=mpi_grp)
+
     if(iunit2 < 0) then
       call io_close(iunit, grp = mpi_grp)
       ierr = -1
-    POP_SUB(states_look)
-return
+      POP_SUB(states_look)
+      return
     end if
 
     ! Skip two lines.
@@ -1257,7 +1260,6 @@ return
       end if
 
       st%d%block_size = min(st%d%block_size, st%nst)
-      PUSH_SUB(states_densities_init.states_exec_init)
 
       !%Variable StatesPack
       !%Type logical
