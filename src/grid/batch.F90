@@ -379,8 +379,6 @@ contains
       bout%states(ii)%ist = bin%states(ii)%ist
     end do
 
-    bout%ndims = bin%ndims
-    SAFE_ALLOCATE(bout%index(1:bin%nst, 1:bin%ndims))
     bout%index(1:bin%nst, 1:bin%ndims) = bin%index(1:bin%nst, 1:bin%ndims)
 
     POP_SUB(batch_copy)
