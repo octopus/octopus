@@ -89,7 +89,11 @@ module states_m
     states_set_complex,               &
     states_blacs_blocksize,           &
     states_get_state,                 &
-    states_set_state
+    states_set_state,                 &
+    states_pack,                      &
+    states_unpack,                    &
+    states_sync,                      &
+    states_are_packed
 
   type states_lead_t
     CMPLX, pointer     :: intf_psi(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
@@ -181,6 +185,7 @@ module states_m
     type(multicomm_all_pairs_t) :: ap                 !< All-pairs schedule.
 
     logical                     :: symmetrize_density
+    logical                     :: packed
   end type states_t
 
   interface states_get_state
@@ -230,6 +235,8 @@ contains
     nullify(st%node,st%st_range, st%st_num)
     nullify(st%ap%schedule)
 
+    st%packed = .false.
+    
     POP_SUB(states_null)
   end subroutine states_null
 
@@ -582,6 +589,8 @@ contains
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
+
+    st%packed = .false.
 
     POP_SUB(states_init)
 
@@ -1437,6 +1446,8 @@ contains
       call states_init_block(stout)
     end if
 
+    stout%packed = stin%packed
+
     POP_SUB(states_copy)
   end subroutine states_copy
 
@@ -2108,6 +2119,71 @@ contains
   end subroutine states_blacs_blocksize
 
   ! ------------------------------------------------------------
+
+  subroutine states_pack(st, copy)
+    type(states_t),    intent(inout) :: st
+    logical, optional, intent(in)    :: copy
+    
+    integer :: iqn, ib
+
+    ASSERT(.not. st%packed)
+
+    st%packed = .true.
+
+    do iqn = st%d%kpt%start, st%d%kpt%end
+      do ib = st%block_start, st%block_end
+        call batch_pack(st%psib(ib, iqn), copy)
+      end do
+    end do
+    
+  end subroutine states_pack
+
+  ! ------------------------------------------------------------
+
+  subroutine states_unpack(st, copy)
+    type(states_t),    intent(inout) :: st
+    logical, optional, intent(in)    :: copy
+    
+    integer :: iqn, ib
+
+    ASSERT(st%packed)
+
+    st%packed = .false.
+
+    do iqn = st%d%kpt%start, st%d%kpt%end
+      do ib = st%block_start, st%block_end
+        call batch_unpack(st%psib(ib, iqn), copy)
+      end do
+    end do
+    
+  end subroutine states_unpack
+
+  ! ------------------------------------------------------------
+
+  subroutine states_sync(st)
+    type(states_t),    intent(inout) :: st
+    
+    integer :: iqn, ib
+
+    if(states_are_packed(st)) then
+      
+      do iqn = st%d%kpt%start, st%d%kpt%end
+        do ib = st%block_start, st%block_end
+          call batch_sync(st%psib(ib, iqn))
+        end do
+      end do
+
+    end if
+
+  end subroutine states_sync
+
+  ! -----------------------------------------------------------
+  
+  logical pure function states_are_packed(st) result(packed)
+    type(states_t),    intent(in) :: st
+    
+    packed = st%packed
+  end function states_are_packed
 
 #include "undef.F90"
 #include "real.F90"

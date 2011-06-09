@@ -160,7 +160,7 @@ void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const 
     }
   }
 
-  /* print some info about the device */  
+  /* print some info about the device */
   clGetDeviceInfo(*device, CL_DEVICE_VENDOR, sizeof(device_string), &device_string, NULL);
   printf("device vendor           : %s\n", device_string);
 

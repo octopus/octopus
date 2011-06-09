@@ -210,13 +210,7 @@ contains
        endif
     endif
 
-    if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) then
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%block_start, st%block_end
-          call batch_pack(st%psib(ib, ik))
-        end do
-      end do
-    end if
+    if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
 
     ii = 1
     stopping = .false.
@@ -344,13 +338,7 @@ contains
 
     end do propagation
 
-    if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) then
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%block_start, st%block_end
-          call batch_unpack(st%psib(ib, ik))
-        end do
-      end do
-    end if
+    if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_unpack(st)
 
     call td_write_end(write_handler)
     call end_()
