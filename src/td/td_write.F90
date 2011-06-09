@@ -521,6 +521,9 @@ contains
     ! now write down the rest
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
 
+    ! this is required if st%X(psi) is used
+    call states_sync(st)
+
     call output_all(outp, gr, geo, st, hm, filename)
 
     call profiling_out(prof)
@@ -656,6 +659,9 @@ contains
     PUSH_SUB(td_write_angular)
 
     call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
+
+    ! this is required if st%X(psi) is used
+    call states_sync(st)
 
     do idir = 1, 3
        call pert_setup_dir(angular_momentum, idir)
@@ -1029,14 +1035,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_populations(out_populations, mesh, st, gs_st, n_excited_states, excited_st, dt, iter)
-    type(c_ptr),            intent(in) :: out_populations
-    type(mesh_t),           intent(in) :: mesh
-    type(states_t),         intent(in) :: st
-    type(states_t),         intent(in) :: gs_st
-    integer,                intent(in) :: n_excited_states
-    type(excited_states_t), intent(in) :: excited_st(:)
-    FLOAT,                  intent(in) :: dt
-    integer,                intent(in) :: iter
+    type(c_ptr),            intent(in)    :: out_populations
+    type(mesh_t),           intent(in)    :: mesh
+    type(states_t),         intent(inout) :: st
+    type(states_t),         intent(in)    :: gs_st
+    integer,                intent(in)    :: n_excited_states
+    type(excited_states_t), intent(in)    :: excited_st(:)
+    FLOAT,                  intent(in)    :: dt
+    integer,                intent(in)    :: iter
  
     integer :: ist
     character(len=6) :: excited_name
@@ -1046,6 +1052,9 @@ contains
 
 
     PUSH_SUB(td_write_populations)
+
+    ! this is required if st%X(psi) is used
+    call states_sync(st)
 
     SAFE_ALLOCATE(dotprodmatrix(1:gs_st%nst, 1:st%nst, 1:st%d%nik))
     call zstates_matrix(mesh, gs_st, st, dotprodmatrix)
@@ -1140,6 +1149,9 @@ contains
       call write_iter_nl(out_acc)
       call td_write_print_header_end(out_acc)
     end if
+
+    ! this is required if st%X(psi) is used
+    call states_sync(st)
 
     call td_calc_tacc(gr, geo, st, hm, acc, dt*iter)
 
@@ -1423,13 +1435,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_proj(out_proj, gr, geo, st, gs_st, kick, iter)
-    type(c_ptr),       intent(in) :: out_proj
-    type(grid_t),      intent(in) :: gr
-    type(geometry_t),  intent(in) :: geo
-    type(states_t),    intent(in) :: st
-    type(states_t),    intent(in) :: gs_st
-    type(kick_t),      intent(in) :: kick
-    integer,           intent(in) :: iter
+    type(c_ptr),       intent(in)    :: out_proj
+    type(grid_t),      intent(in)    :: gr
+    type(geometry_t),  intent(in)    :: geo
+    type(states_t),    intent(inout) :: st
+    type(states_t),    intent(in)    :: gs_st
+    type(kick_t),      intent(in)    :: kick
+    integer,           intent(in)    :: iter
 
     CMPLX, allocatable :: projections(:,:,:)
     character(len=80) :: aux
@@ -1514,6 +1526,9 @@ contains
 
     end if
 
+    ! this is required if st%X(psi) is used
+    call states_sync(st)
+
     SAFE_ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
     projections(:,:,:) = M_Z0
     call calc_projections()
@@ -1595,6 +1610,8 @@ contains
 
       POP_SUB(td_write_proj.dipole_matrix_elements)
     end subroutine dipole_matrix_elements
+
+    ! ------------------------------------------------
 
     subroutine distribute_projections
 #if defined(HAVE_MPI)
