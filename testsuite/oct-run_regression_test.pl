@@ -185,6 +185,7 @@ if ("$tempdirpath" eq "") { $tempdirpath = '/tmp'; }
 foreach my $octopus_exe (@executables){
 
   set_precision("default", $octopus_exe);
+  $test_succeeded = 1;
 
   $workdir = tempdir("$tempdirpath/octopus.XXXXXX");
   chomp($workdir);
@@ -330,7 +331,6 @@ foreach my $octopus_exe (@executables){
       if ( $_ =~ /^match/ && !$opt_n && $return_value == 0) {
 	if(run_match_new($_)){
 	  printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \n";
-	  $test_succeeded = 1;
 	  if ($opt_v) { print_hline(); }
 	} else {
 	  printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
