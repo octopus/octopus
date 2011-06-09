@@ -99,12 +99,13 @@
     
     ! ---------------------------------------------------
 
-    subroutine f90_cl_init_device(idevice, context, device)
+    subroutine f90_cl_init_device(idevice, platform, context, device)
       use c_pointer_m
 
       implicit none
 
       integer,          intent(in)    :: idevice
+      type(c_ptr),      intent(inout) :: platform
       type(c_ptr),      intent(inout) :: context
       type(c_ptr),      intent(out)   :: device
     end subroutine f90_cl_init_device

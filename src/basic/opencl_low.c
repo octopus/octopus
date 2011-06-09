@@ -112,24 +112,53 @@ void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * pl
   }
 }
 
-void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const cl_context * context, cl_device_id * device){
+void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const cl_context * platform, const cl_context * context, cl_device_id * device){
   size_t ParamDataBytes;
   char device_string[2048];
   cl_uint dim;
   cl_ulong mem;
   size_t max_workgroup_size;
   cl_device_id * Devices;
+  cl_device_type device_type;
+  cl_uint num_devices;
 
-  clGetContextInfo(*context, CL_CONTEXT_DEVICES, 0 , NULL, &ParamDataBytes);
-  Devices = (cl_device_id*) malloc(ParamDataBytes);
+  if(*idevice >= 0){
 
-  clGetContextInfo(*context, CL_CONTEXT_DEVICES, ParamDataBytes, Devices, NULL);
+    clGetContextInfo(*context, CL_CONTEXT_DEVICES, 0 , NULL, &ParamDataBytes);
+    Devices = (cl_device_id*) malloc(ParamDataBytes);
+    
+    clGetContextInfo(*context, CL_CONTEXT_DEVICES, ParamDataBytes, Devices, NULL);
+    
+    assert(sizeof(cl_device_id) == sizeof(void *));
+    
+    *device = Devices[*idevice];
+    
+    free(Devices);
 
-  assert(sizeof(cl_device_id) == sizeof(void *));
+  } else {
+    switch(*idevice){
+      /* These values come from opencl.F90 */
+    case -1:
+      device_type = CL_DEVICE_TYPE_GPU;
+      break;
+    case -2:
+      device_type = CL_DEVICE_TYPE_CPU;
+      break;
+    case -3:
+      device_type = CL_DEVICE_TYPE_ACCELERATOR;
+      break;
+    case -4:
+      device_type = CL_DEVICE_TYPE_DEFAULT;
+      break;
+    }
 
-  *device = Devices[*idevice];
+    clGetDeviceIDs(*platform, device_type, 1, device, &num_devices);
 
-  free(Devices);
+    /* Check if there were any devices of the type, otherwise just get the default.*/
+    if(num_devices == 0) {
+      clGetDeviceIDs(*platform, CL_DEVICE_TYPE_DEFAULT, 1, device, NULL);
+    }
+  }
 
   /* print some info about the device */  
   clGetDeviceInfo(*device, CL_DEVICE_VENDOR, sizeof(device_string), &device_string, NULL);

@@ -126,6 +126,13 @@ module opencl_m
   type(profile_t), save :: prof_read, prof_write, prof_kernel_run
 #endif
 
+  ! these values must be consistent with the ones in opencl_low.c
+  integer, parameter  ::  &
+    CL_GPU         = -1,  &
+    CL_CPU         = -2,  &
+    CL_ACCELERATOR = -3,  &
+    CL_DEFAULT     = -4
+
   contains
 
     pure logical function opencl_is_enabled() result(enabled)
@@ -174,9 +181,24 @@ module opencl_m
       !%Section Execution::OpenCL
       !%Description
       !% This variable selects the OpenCL device that Octopus will
-      !% use. Device 0 is used by default.
+      !% use. You can specify one of the options below or a numerical
+      !% id to select a specific device.
+      !%Option gpu -1
+      !% If available, Octopus will use a GPU for OpenCL. This is the default.
+      !%Option cpu -2
+      !% If available, Octopus will use a GPU for OpenCL.
+      !%Option accelerator -3
+      !% If available, Octopus will use an accelerator for OpenCL.
+      !%Option cl_default -4
+      !% Octopus will use the default device specified by the OpenCL
+      !% implementation.
       !%End
-      call parse_integer(datasets_check('OpenCLDevice'), 0, idevice)
+      call parse_integer(datasets_check('OpenCLDevice'), CL_GPU, idevice)
+
+      if(idevice < CL_DEFAULT) then
+        message(1) = 'Invalid OpenCLDevice.'
+        call messages_fatal(1)
+      end if
 
       if(disable) then
         POP_SUB(opencl_init)
@@ -189,7 +211,7 @@ module opencl_m
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
 
       call f90_cl_init_context(opencl%platform_id, opencl%context)
-      call f90_cl_init_device(idevice, opencl%context, opencl%device)
+      call f90_cl_init_device(idevice, opencl%platform_id, opencl%context, opencl%device)
 
       call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
