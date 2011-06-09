@@ -165,13 +165,14 @@ module batch_m
 contains
 
   !--------------------------------------------------------------
-  subroutine batch_end(this)
-    type(batch_t), intent(inout) :: this
+  subroutine batch_end(this, copy)
+    type(batch_t),           intent(inout) :: this
+    logical,       optional, intent(in)    :: copy
 
     PUSH_SUB(batch_end)
 
     if(batch_is_packed(this)) then
-      call batch_unpack(this)
+      call batch_unpack(this, copy)
     end if
 
     if(this%is_allocated) then
