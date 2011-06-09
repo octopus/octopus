@@ -144,9 +144,10 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
-      do idim = 1, st%d%dim
 
-        call lalg_copy(gr%mesh%np_part, st%X(psi)(:, idim, ist, iq), psi(:, idim))
+      call states_get_state(st, gr%mesh, ist, iq, psi)
+
+      do idim = 1, st%d%dim
         call X(derivatives_set_bc)(gr%der, psi(:, idim))
 
         ikpoint = states_dim_get_kpoint_index(st%d, iq)
@@ -272,7 +273,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_c
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
 
-        call lalg_copy(gr%mesh%np_part, st%X(psi)(:, idim, ist, iq), psi(:, idim))
+        call states_get_state(st, gr%mesh, idim, ist, iq, psi(:, idim))
         call X(derivatives_set_bc)(gr%der, psi(:, idim))
         call lalg_copy(gr%mesh%np_part, lr%X(dl_psi)(:, idim, ist, iq), dl_psi(:, idim))
         call X(derivatives_set_bc)(gr%der, dl_psi(:, idim))
