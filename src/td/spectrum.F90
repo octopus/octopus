@@ -557,10 +557,12 @@ contains
     !%Type block
     !%Section Time-Dependent::Response
     !%Description
+    !% Consider three orthogonal axes <i>p1</i>, <i>p2</i>, <i>p3</i>.
     !% Say you have a first symmetry operation <i>A</i>
     !% that takes you from the first axis <i>p1</i> to the second axis <i>p2</i>, and then
     !% a second symmetry operation <i>B</i> that takes you from the second axis <i>p2</i> to the
     !% third <i>p3</i>. Then <tt>TDPolarizationWprime</tt> = <i>A</i>^{-1} <i>p3</i>.
+    !% For more information see MJT Oliveira <i>et al.</i>, <i>J. Nanoscience and Nanotechnology<i> <b>8</b>, 3392 (2008).
     !%End
     if(parse_block(datasets_check('TDPolarizationWprime'), blk)==0) then
       do idir = 1, 3
