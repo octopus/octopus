@@ -364,7 +364,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
 #ifdef HAVE_OPENCL
     call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
 
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 0, aa%pack%size(2))
+    call opencl_set_kernel_arg(X(kernel_dot_vector), 0, mesh%np)
     call opencl_set_kernel_arg(X(kernel_dot_vector), 1, aa%pack%buffer)
     call opencl_set_kernel_arg(X(kernel_dot_vector), 2, log2(aa%pack%size(1)))
     call opencl_set_kernel_arg(X(kernel_dot_vector), 3, bb%pack%buffer)
