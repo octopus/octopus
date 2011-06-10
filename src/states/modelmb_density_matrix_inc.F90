@@ -82,11 +82,11 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   end do
 
   ! loop over the difference between
-  !  * the x' position of the kept particle, which we will impose below
+  !  * the x` position of the kept particle, which we will impose below
   !  * and the x position of the local particle
   do icoord_diff = 1, mb_1part%npt
 
-    ! make global map of all points to their image with x'=icoord + icoord_diff (modulus npt of course)
+    ! make global map of all points to their image with x`=icoord + icoord_diff (modulus npt of course)
     ! this map will be the same on all processors
     do ip_global = 1, mesh%np_global
 
