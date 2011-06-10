@@ -41,6 +41,7 @@ module restart_m
   use messages_m
   use mpi_m
   use ob_green_m
+  use ob_interface_m
   use parser_m
   use par_vec_m
   use profiling_m
@@ -372,7 +373,8 @@ contains
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(in) :: gr
 
-    integer              :: ik, ist, idim, il, ip
+    integer            :: ik, ist, idim, il, ip
+    CMPLX, allocatable :: zpsi(:)
 
     PUSH_SUB(restart_get_ob_intf)
 
@@ -385,18 +387,23 @@ contains
       ASSERT(il.le.2) ! FIXME: wrong if non-transport calculation
     end do
 
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
+
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
+          
+          call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
+
           do il = 1, NLEADS
-            forall(ip = 1:gr%intf(il)%np_uc)
-              ! FIXME: this will probably fail for MeshBlockSize > 1
-              st%ob_lead(il)%intf_psi(ip, idim, ist, ik) = st%zpsi(gr%intf(il)%index(ip), idim, ist, ik)
-            end forall
+            call get_intf_wf(gr%intf(il), zpsi, st%ob_lead(il)%intf_psi(:, idim, ist, ik))
           end do
+
         end do
       end do
     end do
+
+    SAFE_DEALLOCATE_A(zpsi)
 
     POP_SUB(restart_get_ob_intf)
   end subroutine restart_get_ob_intf

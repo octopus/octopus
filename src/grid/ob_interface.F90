@@ -166,8 +166,8 @@ contains
   ! ---------------------------------------------------------
   ! Checks if point number idx is an interface point of interface.
   logical function member_of_interface(idx, intf, index)
-    integer,           intent(in) :: idx
-    type(interface_t), intent(in) :: intf
+    integer,           intent(in)  :: idx
+    type(interface_t), intent(in)  :: intf
     integer,           intent(out) :: index ! index in interface
 
     integer :: ii
@@ -175,9 +175,7 @@ contains
     PUSH_SUB(member_of_interface)
 
     ! first test if index is between min and max
-    member_of_interface =              &
-      idx.ge.intf%index_range(1) .and. &
-      idx.le.intf%index_range(2)
+    member_of_interface = (idx >= intf%index_range(1) .and. idx <= intf%index_range(2))
 
     index = 0
 
@@ -223,7 +221,8 @@ contains
     CMPLX,             intent(inout)  :: zpsi(:)
 
     PUSH_SUB(put_intf_wf)
-
+    
+    ! FIXME: this will probably fail for MeshBlockSize > 1
     zpsi(intf%index(1:intf%np_uc)) = intf_wf(1:intf%np_uc)
 
     POP_SUB(put_intf_wf)
