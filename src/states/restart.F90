@@ -430,8 +430,8 @@ contains
     FLOAT                :: my_occ, flt
     logical              :: read_occ_, gs_allocated, lr_allocated, grid_changed, grid_reordered
     logical              :: exact_
-    FLOAT, pointer       :: dpsi(:, :, :, :)
-    CMPLX, pointer       :: zpsi(:, :, :, :)
+    FLOAT, allocatable   :: dpsi(:)
+    CMPLX, allocatable   :: zpsi(:)
     character(len=256), allocatable :: restart_file(:, :, :)
     logical,            allocatable :: restart_file_present(:, :, :)
 
@@ -542,19 +542,9 @@ contains
     end if
 
     if (states_are_real(st)) then
-      nullify(zpsi)
-      if(.not. present(lr)) then
-        dpsi => st%dpsi
-      else
-        dpsi => lr%ddl_psi
-      end if
+      SAFE_ALLOCATE(dpsi(1:gr%mesh%np))
     else
-      nullify(dpsi)
-      if(.not. present(lr)) then
-        zpsi => st%zpsi
-      else
-        zpsi => lr%zdl_psi
-      end if
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
     end if
 
     SAFE_ALLOCATE(restart_file(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
@@ -617,17 +607,32 @@ contains
 
           if (states_are_real(st)) then
             if (.not. grid_changed) then
-              call drestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, dpsi(:, idim, ist, ik), err)
+              call drestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
             else
-              call drestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, dpsi(:, idim, ist, ik), err, map)
+              call drestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, dpsi, err, map)
             end if
           else
             if (.not. grid_changed) then
-              call zrestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, zpsi(:, idim, ist, ik), err)
+              call zrestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
             else
-              call zrestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, zpsi(:, idim, ist, ik), err, map)
+              call zrestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, zpsi, err, map)
             end if
           end if
+
+          if(states_are_real(st)) then
+            if(.not. present(lr)) then
+              call states_set_state(st, gr%mesh, idim, ist, ik, dpsi)
+            else
+              call lalg_copy(gr%mesh%np, dpsi, lr%ddl_psi(:, idim, ist, ik))
+            end if
+          else
+            if(.not. present(lr)) then
+              call states_set_state(st, gr%mesh, idim, ist, ik, zpsi)
+            else
+              call lalg_copy(gr%mesh%np, zpsi, lr%zdl_psi(:, idim, ist, ik))
+            end if
+          end if
+
           
           if(err <= 0) then
             filled(idim, ist, ik) = .true.
@@ -642,6 +647,9 @@ contains
         end do
       end do
     end do
+
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(zpsi)
 
     if(mpi_grp_is_root(mpi_world)) then
       write(stdout, '(1x)')
@@ -948,6 +956,7 @@ contains
     integer :: ib, idim, inst, inik, normalize
     FLOAT :: xx(MAX_DIM), rr, psi_re, psi_im
     character(len=150) :: filename
+    CMPLX, allocatable :: zpsi(:, :)
 
     integer, parameter ::      &
       state_from_formula  = 1, &
@@ -1010,6 +1019,8 @@ contains
       ! find out how many lines (i.e. states) the block has
       nstates = parse_block_n(blk)
 
+      SAFE_ALLOCATE(zpsi(1:mesh%np, 1:st%d%dim))
+
       ! read all lines
       do ib = 1, nstates
         ! Check that number of columns is five or six.
@@ -1060,7 +1071,7 @@ contains
                   ! parse user-defined expressions
                   call parse_expression(psi_re, psi_im, mesh%sb%dim, xx, rr, M_ZERO, st%user_def_states(id, is, ik))
                   ! fill state
-                  st%zpsi(ip, id, is, ik) = psi_re + M_zI * psi_im
+                  zpsi(ip, 1) = psi_re + M_zI * psi_im
                 end do
 
               case(state_from_file)
@@ -1075,7 +1086,7 @@ contains
                 call messages_info(3)
 
                 ! finally read the state
-                call zio_function_input(filename, mesh, st%zpsi(:, id, is, ik), ierr, .true.)
+                call zio_function_input(filename, mesh, zpsi(:, 1), ierr, .true.)
                 if (ierr > 0) then
                   message(1) = 'Could not read the file!'
                   write(message(2),'(a,i1)') 'Error code: ', ierr
@@ -1088,6 +1099,8 @@ contains
                 call messages_fatal(2)
               end select
 
+              call states_set_state(st, mesh, id, is, ik, zpsi(:, 1))
+
               ! normalize orbital
               if(parse_block_cols(blk, ib - 1) .eq. 6) then
                 call parse_block_integer(blk, ib - 1, 5, normalize)
@@ -1097,23 +1110,28 @@ contains
               select case(normalize)
               case(normalize_no)
               case(normalize_yes)
-                call zstates_normalize_orbital(mesh, st%d%dim, st%zpsi(:,:, is, ik))
+                call states_get_state(st, mesh, is, ik, zpsi)
+                call zstates_normalize_orbital(mesh, st%d%dim, zpsi)
+                call states_set_state(st, mesh, is, ik, zpsi)
               case default
                 message(1) = 'The sixth column in UserDefinedStates may either be'
                 message(2) = '"normalize_yes" or "normalize_no"'
                 call messages_fatal(2)
               end select
+
             end do
           end do
         end do
 
       end do
 
+      SAFE_DEALLOCATE_A(zpsi)
+
       call parse_block_end(blk)
       call messages_print_stress(stdout)
 
     else
-      message(1) = '"UserDefinedStates" has to be specified as block.'
+      message(1) = "'UserDefinedStates' has to be specified as block."
       call messages_fatal(1)
     end if
 

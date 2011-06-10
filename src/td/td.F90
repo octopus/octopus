@@ -127,7 +127,7 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping, update_energy
-    integer                   :: iter, ii, ierr, scsteps, ispin, ik, ib
+    integer                   :: iter, ii, ierr, scsteps, ispin
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force
