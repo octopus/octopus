@@ -225,6 +225,8 @@ contains
     character(len=80) :: filename
     logical :: wfns_are_associated, lr_wfns_are_associated
     FLOAT   :: kpoint(1:MAX_DIM)
+    FLOAT,  allocatable :: dpsi(:)
+    CMPLX,  allocatable :: zpsi(:)
 
     PUSH_SUB(restart_write)
 
@@ -290,6 +292,13 @@ contains
       call io_close(iunit_states)
     end if
 
+    if(states_are_real(st)) then
+      SAFE_ALLOCATE(dpsi(1:gr%mesh%np))
+    else
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
+    end if
+
+
     itot = 1
     do ik = 1, st%d%nik
       kpoint = M_ZERO
@@ -312,17 +321,19 @@ contains
             if( .not. present(lr) ) then 
               if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
                 if (states_are_real(st)) then
-                  call drestart_write_function(dir, filename, gr, st%dpsi(:, idim, ist, ik), err, size(st%dpsi,1))
+                  call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
+                  call drestart_write_function(dir, filename, gr%mesh, dpsi, err)
                 else
-                  call zrestart_write_function(dir, filename, gr, st%zpsi(:, idim, ist, ik), err, size(st%zpsi,1))
+                  call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
+                  call zrestart_write_function(dir, filename, gr%mesh, zpsi, err)
                 end if
                 if(err == 0) ierr = ierr + 1
               end if
             else
               if (states_are_real(st)) then
-                call drestart_write_function(dir, filename, gr, lr%ddl_psi(:, idim, ist, ik), err, size(st%dpsi,1))
+                call drestart_write_function(dir, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
               else
-                call zrestart_write_function(dir, filename, gr, lr%zdl_psi(:, idim, ist, ik), err, size(st%zpsi,1))
+                call zrestart_write_function(dir, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
               end if
               if(err == 0) ierr = ierr + 1
             end if
@@ -332,6 +343,9 @@ contains
         end do
       end do
     end do
+
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(zpsi)
 
     ! do NOT use st%lnst here as it is not (st%st_end - st%st_start + 1)
     if(ierr == st%d%kpt%nlocal * (st%st_end - st%st_start + 1) * st%d%dim) ierr = 0 ! All OK

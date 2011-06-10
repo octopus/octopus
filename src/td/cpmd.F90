@@ -174,9 +174,9 @@ contains
           if (ist < st%st_start .or.  ist > st%st_end) cycle
           write(filename,'(i10.10)') ii
           if(states_are_real(st)) then
-            call drestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%dpsi2(:, idim, ist, ik), err, gr%mesh%np)
+            call drestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr%mesh, this%dpsi2(:, idim, ist, ik), err)
           else
-            call zrestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr, this%zpsi2(:, idim, ist, ik), err, gr%mesh%np)
+            call zrestart_write_function(trim(tmpdir)//'td/cpmd', filename, gr%mesh, this%zpsi2(:, idim, ist, ik), err)
           end if
         end do
       end do

@@ -19,17 +19,16 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_function)(dir, filename, gr, ff, ierr, size)
+subroutine X(restart_write_function)(dir, filename, mesh, ff, ierr)
   character(len=*), intent(in)  :: dir
   character(len=*), intent(in)  :: filename
-  type(grid_t),     intent(in)  :: gr
+  type(mesh_t),     intent(in)  :: mesh
+  R_TYPE,           intent(in)  :: ff(:)
   integer,          intent(out) :: ierr
-  integer,          intent(in)  :: size
-  R_TYPE,           intent(in)  :: ff(size)
 
   PUSH_SUB(X(restart_write_function))
 
-  call X(io_function_output)(restart_format, trim(dir), trim(filename), gr%mesh, ff(:), unit_one, ierr, is_tmp=.true.)
+  call X(io_function_output)(restart_format, trim(dir), trim(filename), mesh, ff(:), unit_one, ierr, is_tmp=.true.)
   ! all restart files are in atomic units
 
   POP_SUB(X(restart_write_function))
@@ -149,8 +148,7 @@ subroutine X(restart_write_lr_rho)(lr, gr, nspin, restart_dir, rho_tag)
   call block_signals()
   do is = 1, nspin
     write(fname, '(a,i1,a)') trim(rho_tag)//'_', is
-    call X(restart_write_function)(trim(tmpdir)//trim(RESTART_DIR), fname, gr,&
-         lr%X(dl_rho)(:, is), ierr, size(lr%X(dl_rho), 1))
+    call X(restart_write_function)(trim(tmpdir)//trim(RESTART_DIR), fname, gr%mesh, lr%X(dl_rho)(:, is), ierr)
   end do
   call unblock_signals()
 
