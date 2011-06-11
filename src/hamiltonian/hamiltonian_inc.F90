@@ -258,31 +258,24 @@ end subroutine X(hamiltonian_apply)
 
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_all) (hm, der, psi, hpsi, time)
+subroutine X(hamiltonian_apply_all) (hm, der, st, hst, time)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
-  type(states_t),      intent(inout) :: psi
-  type(states_t),      intent(inout) :: hpsi
+  type(states_t),      intent(inout) :: st
+  type(states_t),      intent(inout) :: hst
   FLOAT, optional,     intent(in)    :: time
 
-  integer :: ik
-  type(batch_t) :: psib, hpsib
+  integer :: ik, ib
 
   PUSH_SUB(X(hamiltonian_apply_all))
 
-  do ik = psi%d%kpt%start, psi%d%kpt%end
-    call batch_init(psib, hm%d%dim, psi%st_start, psi%st_end, psi%X(psi)(:, :, :, ik))
-    call batch_init(hpsib, hm%d%dim, hpsi%st_start, hpsi%st_end, hpsi%X(psi)(:, :, :, ik))
-    if(present(time)) then
-      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time)
-    else
-      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
-    endif
-    call batch_end(psib)
-    call batch_end(hpsib)
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ib = st%block_start, st%block_end
+      call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hst%psib(ib, ik), ik, time)
+    end do
   end do
   
-  if(hamiltonian_oct_exchange(hm)) call X(oct_exchange_operator_all)(hm, der, psi, hpsi)
+  if(hamiltonian_oct_exchange(hm)) call X(oct_exchange_operator_all)(hm, der, st, hst)
 
   POP_SUB(X(hamiltonian_apply_all))
 end subroutine X(hamiltonian_apply_all)

@@ -664,24 +664,23 @@ contains
   !
   ! phi(x) = (e^x - 1)/x
   ! ---------------------------------------------------------
-  subroutine exponential_apply_all(te, der, hm, psi, deltat, t, order, vmagnus, imag_time)
+  subroutine exponential_apply_all(te, der, hm, st, deltat, t, order, vmagnus, imag_time)
     type(exponential_t), intent(inout) :: te
     type(derivatives_t), intent(inout) :: der
     type(hamiltonian_t), intent(inout) :: hm
-    type(states_t),      intent(inout) :: psi
+    type(states_t),      intent(inout) :: st
     FLOAT,               intent(in)    :: deltat, t
     integer, optional,   intent(inout) :: order
     FLOAT,   optional,   intent(in)    :: vmagnus(der%mesh%np, hm%d%nspin, 2)
     logical, optional,   intent(in)    :: imag_time
 
-    integer :: ik, ist
+    integer :: ik, ib, i
     CMPLX   :: timestep
     logical :: apply_magnus
     CMPLX :: zfact
-    integer :: i, idim
     logical :: zfact_is_real
 
-    type(states_t) :: psi1, hpsi1
+    type(states_t) :: st1, hst1
 
     PUSH_SUB(exponential_apply_all)
 
@@ -695,13 +694,8 @@ contains
       if(imag_time) timestep = M_zI * deltat
     end if
 
-    call states_copy(psi1, psi)
-    call states_copy(hpsi1, psi)
-
-    forall(ik = psi%d%kpt%start:psi%d%kpt%end, ist = psi%st_start:psi%st_end)
-      psi1%zpsi(:, :, ist, ik)  = M_z0
-      hpsi1%zpsi(:, :, ist, ik) = M_z0
-    end forall
+    call states_copy(st1, st)
+    call states_copy(hst1, st)
 
     zfact = M_z1
     zfact_is_real = .true.
@@ -711,35 +705,25 @@ contains
       zfact_is_real = .not. zfact_is_real
       
       if (i == 1) then
-        call zhamiltonian_apply_all(hm, der, psi, hpsi1, t)
+        call zhamiltonian_apply_all(hm, der, st, hst1, t)
       else
-        call zhamiltonian_apply_all(hm, der, psi1, hpsi1, t)
+        call zhamiltonian_apply_all(hm, der, st1, hst1, t)
       end if
 
-      if(zfact_is_real) then
-        do ik = psi%d%kpt%start, psi%d%kpt%end
-          do ist = psi%st_start, psi%st_end
-            do idim = 1, hm%d%dim
-              call lalg_axpy(der%mesh%np, real(zfact), hpsi1%zpsi(:, idim, ist, ik), psi%zpsi(:, idim, ist, ik))
-            end do
-          end do
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%block_start, st%block_end
+          if(zfact_is_real) then
+            call batch_axpy(der%mesh%np, real(zfact), hst1%psib(ib, ik), st%psib(ib, ik))
+          else
+            call batch_axpy(der%mesh%np, zfact, hst1%psib(ib, ik), st%psib(ib, ik))
+          end if
         end do
-      else
-        do ik = psi%d%kpt%start, psi%d%kpt%end
-          do ist = psi%st_start, psi%st_end
-            do idim = 1, hm%d%dim
-              call lalg_axpy(der%mesh%np, zfact, hpsi1%zpsi(:, idim, ist, ik), psi%zpsi(:, idim, ist, ik))
-            end do
-          end do
-        end do
-      end if
+      end do
 
-      if(i .ne. te%exp_order) then
-        do ik = psi%d%kpt%start, psi%d%kpt%end
-          do ist = psi%st_start, psi%st_end
-            do idim = 1, hm%d%dim
-              call lalg_copy(der%mesh%np, hpsi1%zpsi(:, idim, ist, ik), psi1%zpsi(:, idim, ist, ik))
-            end do
+      if(i /= te%exp_order) then
+        do ik = st%d%kpt%start, st%d%kpt%end
+          do ib = st%block_start, st%block_end
+            call batch_copy_data(der%mesh%np, hst1%psib(ib, ik), st1%psib(ib, ik))
           end do
         end do
       end if
@@ -747,10 +731,10 @@ contains
     end do
     ! End of Taylor expansion loop.
 
-    call states_end(psi1)
-    call states_end(hpsi1)
+    call states_end(st1)
+    call states_end(hst1)
 
-    if(present(order)) order = te%exp_order*psi%d%nik*psi%nst ! This should be the correct number
+    if(present(order)) order = te%exp_order*st%d%nik*st%nst ! This should be the correct number
 
     POP_SUB(exponential_apply_all)
   end subroutine exponential_apply_all
