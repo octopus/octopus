@@ -478,8 +478,6 @@ subroutine X(sternheimer_solve_order2)( &
       ispin = states_dim_get_spin_index(sys%st%d, ik)
       do ist = st%st_start, st%st_end
 
-        SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
-
         call states_get_state(st, sys%gr%mesh, ist, ik, psi)
 
         call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, psi, pert1psi)
