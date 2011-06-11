@@ -30,12 +30,16 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
   type(grid_t),     intent(in) :: gr
   integer,          intent(in) :: ll, mm, ik
   
-  integer :: idim, ist, jst, ip, iunit
-  FLOAT, allocatable :: multipole(:, :)
+  integer :: ist, jst, ip, iunit
+  FLOAT, allocatable :: multipole(:)
   FLOAT :: rr, xx(MAX_DIM), ylm
   R_TYPE :: multip_element
-  
+    R_TYPE, allocatable :: psii(:, :), psij(:, :)
+
   PUSH_SUB(X(output_me_ks_multipoles))
+
+  SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   
   iunit = io_open(file = fname, action = 'write')
 
@@ -48,21 +52,26 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
     write(iunit, fmt = '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
   end if
   
-  SAFE_ALLOCATE(multipole(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(multipole(1:gr%mesh%np_part))
+
   multipole = M_ZERO
-  do idim = 1, st%d%dim
-    do ip = 1, gr%mesh%np
-      call mesh_r(gr%mesh, ip, rr, coords = xx)
-      call loct_ylm(1, xx(1), xx(2), xx(3), ll, mm, ylm)
-      multipole(ip, idim) = rr**ll * ylm
-    end do
+  do ip = 1, gr%mesh%np
+    call mesh_r(gr%mesh, ip, rr, coords = xx)
+    call loct_ylm(1, xx(1), xx(2), xx(3), ll, mm, ylm)
+    multipole(ip) = rr**ll * ylm
   end do
   
   do ist = 1, st%nst
+
+    call states_get_state(st, gr%mesh, ist, 1, psii)
+
     do jst = 1, st%nst
-      multip_element = X(mf_dotp) (gr%mesh, st%d%dim, &
-           R_CONJ(st%X(psi)(:, :, ist, 1)), &
-           st%X(psi)(:, :, jst, 1) * multipole(:, :))
+
+      call states_get_state(st, gr%mesh, jst, 1, psij)
+
+      psij(1:gr%mesh%np, 1) = psij(1:gr%mesh%np, 1)*multipole(1:gr%mesh%np)
+
+      multip_element = X(mf_dotp)(gr%mesh, st%d%dim, psii, psij)
 
       multip_element = units_from_atomic(units_out%length**ll, multip_element)
 
@@ -74,7 +83,9 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
     end do
     write(iunit, '(a)') ''
   end do
-  
+
+  SAFE_DEALLOCATE_A(psii)
+  SAFE_DEALLOCATE_A(psij)
   SAFE_DEALLOCATE_A(multipole)
   call io_close(iunit)
 
@@ -93,7 +104,11 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   integer ist, jst, iunit, idir, iatom, np
   R_TYPE :: me, exp_r, exp_g, corr
   R_TYPE, allocatable :: gpsi(:,:), cpsi(:,:)
+  R_TYPE, allocatable :: psii(:, :), psij(:, :)
 
+  SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
+  
   PUSH_SUB(X(one_body))
 
   np = gr%mesh%np
@@ -101,11 +116,17 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
 
   do ist = 1, st%nst
+
+    call states_get_state(st, gr%mesh, ist, 1, psii)
+    
     do jst = 1, st%nst
       if(jst > ist) cycle
       
-      me = st%eigenval(ist,1) - X(mf_integrate) (gr%mesh, R_CONJ(st%X(psi) (1:np, 1, ist, 1)) * &
-           hm%Vhxc(1:np, 1) * st%X(psi) (1:np, 1, jst, 1))
+      call states_get_state(st, gr%mesh, jst, 1, psij)
+
+      psij(1:np, 1) = R_CONJ(psii(1:np, 1))*hm%Vhxc(1:np, 1)*psij(1:np, 1)
+
+      me = st%eigenval(ist,1) - X(mf_integrate)(gr%mesh, psij(:, 1))
 
       write(iunit, *) ist, jst, me
     end do
@@ -117,28 +138,29 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   iunit = io_open(trim(dir)//'/output_me_gauge', action='write')
 
   do ist = 1, st%nst
+
+    call states_get_state(st, gr%mesh, ist, 1, psii)
+
     do jst = 1, st%nst
       if(st%occ(ist, 1) < CNST(0.0001)) cycle
       if(st%occ(jst, 1) > CNST(0.0001)) cycle
 
-      call X(derivatives_grad)(gr%der, st%X(psi)(:, 1, jst, 1), gpsi)
+      call states_get_state(st, gr%mesh, jst, 1, psij)
+
+      call X(derivatives_grad)(gr%der, psij(:, 1), gpsi)
        
       do idir = 1, 3
-         exp_r = X(mf_integrate) (gr%mesh, R_CONJ(st%X(psi) (1:np, 1, ist, 1)) * &
-              gr%mesh%x(1:np, idir) * st%X(psi) (1:np, 1, jst, 1))
-         
-         exp_g = X(mf_integrate) (gr%mesh, R_CONJ(st%X(psi) (1:np, 1, ist, 1)) * &
-              gpsi(1:np, idir))
+         exp_r = X(mf_integrate)(gr%mesh, R_CONJ(psii(1:np, 1))*gr%mesh%x(1:np, idir)*psij(1:np, 1))
+         exp_g = X(mf_integrate)(gr%mesh, R_CONJ(psii(1:np, 1))*gpsi(1:np, idir))
          
          corr = M_ZERO
          do iatom = 1, geo%natoms
            cpsi = M_ZERO
-           call X(projector_commute_r)(hm%ep%proj(iatom), gr, 1, idir, 1, st%X(psi)(:, :, jst, 1), cpsi)
-           corr = corr + &
-                X(mf_integrate)(gr%mesh, R_CONJ(st%X(psi)(1:np, 1, ist, 1)) * cpsi(1:np, 1))
+           call X(projector_commute_r)(hm%ep%proj(iatom), gr, 1, idir, 1, psij, cpsi)
+           corr = corr + X(mf_integrate)(gr%mesh, R_CONJ(psii(1:np, 1))*cpsi(1:np, 1))
          end do
 
-         me = (st%eigenval(jst, 1) - st%eigenval(ist, 1)) * exp_r
+         me = (st%eigenval(jst, 1) - st%eigenval(ist, 1))*exp_r
          
          write(iunit, *) ist, jst, idir, me, me - (exp_g + corr)
 
@@ -148,6 +170,8 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
    end do
    
   SAFE_DEALLOCATE_A(gpsi)
+  SAFE_DEALLOCATE_A(psii)
+  SAFE_DEALLOCATE_A(psij)
 
   call io_close(iunit)
   POP_SUB(X(one_body))
@@ -163,6 +187,7 @@ subroutine X(two_body) (dir, gr, st)
   integer ist, jst, kst, lst, iunit
   R_TYPE :: me
   R_TYPE, allocatable :: nn(:), vv(:)
+  R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
 
   PUSH_SUB(X(two_body))
 
@@ -170,28 +195,48 @@ subroutine X(two_body) (dir, gr, st)
 
   SAFE_ALLOCATE(nn(1:gr%mesh%np))
   SAFE_ALLOCATE(vv(1:gr%mesh%np))
+  SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psik(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psil(1:gr%mesh%np, 1:st%d%dim))
 
   do ist = 1, st%nst
+
+    call states_get_state(st, gr%mesh, ist, 1, psii)
+
     do jst = 1, st%nst
       if(jst > ist) cycle
 
-      nn(1:gr%mesh%np) = R_CONJ(st%X(psi) (1:gr%mesh%np, 1, ist, 1)) * st%X(psi) (1:gr%mesh%np, 1, jst, 1)
+      call states_get_state(st, gr%mesh, jst, 1, psij)
+
+      nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
 
       do kst = 1, st%nst
         if(kst > ist) cycle
+        
+        call states_get_state(st, gr%mesh, kst, 1, psik)
+
         do lst = 1, st%nst
           if(lst > kst) cycle
           if(lst > jst) cycle
 
-          me = X(mf_integrate) (gr%mesh, vv(1:gr%mesh%np) * &
-            st%X(psi) (1:gr%mesh%np, 1, kst, 1) * R_CONJ(st%X(psi) (1:gr%mesh%np, 1, lst, 1)))
+          call states_get_state(st, gr%mesh, lst, 1, psil)
+
+          psil(1:gr%mesh%np, 1) = vv(1:gr%mesh%np)*psik(1:gr%mesh%np, 1)*R_CONJ(psil(1:gr%mesh%np, 1))
+
+          me = X(mf_integrate)(gr%mesh, psil(:, 1))
 
           write(iunit, *) ist, jst, kst, lst, me
         end do
       end do
     end do
   end do
+
+  SAFE_DEALLOCATE_A(psii)
+  SAFE_DEALLOCATE_A(psij)
+  SAFE_DEALLOCATE_A(psik)
+  SAFE_DEALLOCATE_A(psil)
 
   call io_close(iunit)
   POP_SUB(X(two_body))
