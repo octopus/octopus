@@ -195,8 +195,8 @@ contains
 
     FLOAT :: factor, dd, sp
     integer :: ip, is, ik, ist, idim, idir
-    CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
-    FLOAT, allocatable :: rr(:), gradr(:,:), jj(:,:)
+    CMPLX, allocatable :: psi_fs(:), gpsi(:,:), zpsi(:)
+    FLOAT, allocatable :: rr(:), gradr(:,:), jj(:,:), dpsi(:)
     type(cube_function_t) :: cube_function_tmp
     FLOAT, parameter :: dmin = CNST(1e-10)
 
@@ -213,8 +213,10 @@ contains
     call cube_function_init(cube_function_tmp, gr%mesh%idx%ll)
 
     if (states_are_real(st)) then
+      SAFE_ALLOCATE(dpsi(1:gr%mesh%np))
       call dcube_function_fft_init(cube_function_tmp, gr%sb)
     else
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
       call zcube_function_fft_init(cube_function_tmp, gr%sb)
     end if
 
@@ -233,14 +235,16 @@ contains
           do idim = 1, st%d%dim
             
             if (states_are_real(st)) then
-              call dmf2mf_RS2FS(gr%mesh, st%dpsi(:, idim, ist, ik), psi_fs(:), cube_function_tmp)
+              call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
+              call dmf2mf_RS2FS(gr%mesh, dpsi, psi_fs(:), cube_function_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do idir = 1, gr%mesh%sb%dim
                 gpsi(:,idir) = gpsi(:, idir)*gr%mesh%spacing(idir)**2 * &
                      real(cube_function_tmp%n(idir), REAL_PRECISION)/(M_TWO*M_PI)
               end do
             else
-              call zmf2mf_RS2FS(gr%mesh, st%zpsi(:, idim, ist, ik), psi_fs(:), cube_function_tmp)
+              call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
+              call zmf2mf_RS2FS(gr%mesh, zpsi, psi_fs(:), cube_function_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do idir = 1, gr%mesh%sb%dim
                 gpsi(:, idir) = gpsi(:, idir)*gr%mesh%spacing(idir)**2 * &
@@ -293,7 +297,10 @@ contains
       SAFE_DEALLOCATE_A(jj)
 
     end do do_is
-    
+
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(zpsi)
+
     call cube_function_fft_end(cube_function_tmp)
     call cube_function_end(cube_function_tmp)
 

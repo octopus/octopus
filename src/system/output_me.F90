@@ -302,6 +302,8 @@ contains
     FLOAT, allocatable :: lang(:, :)
     integer            :: kstart, kend, kn
 #endif
+    FLOAT, allocatable :: dpsi(:, :)
+    CMPLX, allocatable :: zpsi(:, :)
 
     PUSH_SUB(output_me_out_ang_momentum)
 
@@ -323,15 +325,27 @@ contains
 
     SAFE_ALLOCATE(ang (1:st%nst, 1:st%d%nik, 1:3))
     SAFE_ALLOCATE(ang2(1:st%nst, 1:st%d%nik))
+
+    if (states_are_real(st)) then
+      SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
+    else
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:st%d%dim))
+    end if
+
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         if (states_are_real(st)) then
-          call dstates_angular_momentum(gr, st%dpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
+          call states_get_state(st, gr%mesh, ist, ik, dpsi)
+          call dstates_angular_momentum(gr, dpsi, ang(ist, ik, :), ang2(ist, ik))
         else
-          call zstates_angular_momentum(gr, st%zpsi(:, :, ist, ik), ang(ist, ik, :), ang2(ist, ik))
+          call states_get_state(st, gr%mesh, ist, ik, zpsi)
+          call zstates_angular_momentum(gr, zpsi, ang(ist, ik, :), ang2(ist, ik))
         end if
       end do
     end do
+
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(zpsi)
 
     angular(1) =  states_eigenvalues_sum(st, ang (st%st_start:st%st_end, :, 1))
     angular(2) =  states_eigenvalues_sum(st, ang (st%st_start:st%st_end, :, 2))

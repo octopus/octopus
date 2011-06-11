@@ -470,14 +470,15 @@ contains
       ! We have an inhomogeneous term.
       if( hamiltonian_inh_term(hm) ) then
 
-        beta = zmf_nrm2(der%mesh, hm%d%dim, hm%inh_st%zpsi(:, :, ist, ik))
+        call states_get_state(hm%inh_st, der%mesh, ist, ik, v(:, :, 1))
+        beta = zmf_nrm2(der%mesh, hm%d%dim, v(:, :, 1))
+
         if(beta > CNST(1.0e-12)) then
 
           hamilt = M_z0
           expo = M_z0
 
-          v(1:der%mesh%np, 1:hm%d%dim, 1) = &
-            hm%inh_st%zpsi(1:der%mesh%np, 1:hm%d%dim, ist, ik)/beta
+          v(1:der%mesh%np, 1:hm%d%dim, 1) = v(1:der%mesh%np, 1:hm%d%dim, 1)/beta
 
           psi = M_z0
           ! This is the Lanczos loop...

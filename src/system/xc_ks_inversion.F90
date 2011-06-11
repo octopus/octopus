@@ -563,7 +563,8 @@ contains
     FLOAT :: ki(1:np, 1:np)
     FLOAT :: eigenvals(1:np), inverseki(1:np,1:np)
     FLOAT, allocatable :: matrixmul(:,:), kired(:,:)
-    
+    FLOAT, allocatable :: psii(:, :), psij(:, :)
+
     PUSH_SUB(precond_kiks)
 
     numerator = M_ZERO
@@ -576,20 +577,31 @@ contains
     
     ki = M_ZERO
     
+    SAFE_ALLOCATE(psii(1:mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(psij(1:mesh%np, 1:st%d%dim))
+
     do jj = 1, st%nst
+
+      call states_get_state(st, mesh, jj, 1, psij)
+
       do ii = jj + 1, st%nst
+
+        call states_get_state(st, mesh, ii, 1, psii)
+
         epsij = M_ONE / (st%eigenval(jj, 1) - st%eigenval(ii, 1))
 	occij = st%occ(jj, 1) - st%occ(ii, 1)
         do iprime = 1, np
           do ip = 1, np
-            ki(ip, iprime) = ki(ip, iprime) + occij*epsij & 
-	                    * (st%dpsi(ip, 1, ii, 1)*st%dpsi(ip, 1, jj, 1)) & 
-                            * (st%dpsi(iprime, 1, ii, 1)*st%dpsi(iprime, 1, jj, 1))
-	  enddo
-	enddo
+            ki(ip, iprime) = ki(ip, iprime) + occij*epsij*(psii(ip, 1)*psij(ip, 1))*(psii(iprime, 1)*psij(iprime, 1))
+	  end do
+        end do
+
       end do
     end do
     
+    SAFE_DEALLOCATE_A(psii)
+    SAFE_DEALLOCATE_A(psij)
+
     call lalg_eigensolve(np, ki, eigenvals)
     
     !do ip = 1, np
