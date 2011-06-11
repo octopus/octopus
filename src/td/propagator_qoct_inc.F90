@@ -90,16 +90,17 @@
     ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        forall(idim = 1:st%d%dim)
-          zpsi((ist-1)*np*st%d%dim + (idim-1)*np +1:(ist-1)*np*st%d%dim + idim*np) = &
-            st%zpsi(1:np, idim, ist, ik)
+        do idim = 1, st%d%dim
+          call states_get_state(st, gr%mesh, idim, ist, ik, &
+            zpsi((ist - 1)*np*st%d%dim + (idim - 1)*np + 1:(ist - 1)*np*st%d%dim + idim*np))
           rhs((ist-1)*np*st%d%dim + (idim-1)*np +1:(ist-1)*np*st%d%dim + idim*np) = &
             st_op%zpsi(1:np, idim, ist, ik)
-        end forall
+        end do
       end do
     end do
 
-    ik_op = 1; iter = 2000
+    ik_op = 1
+    iter = 2000
     call zqmr_sym(st%nst*np*st%d%dim, zpsi, rhs, &
       propagator_qmr2_op, propagator_qmr_prec, iter, dres, cgtol, &
       showprogress = .false., converged = converged)
@@ -112,10 +113,10 @@
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        forall(idim = 1:st%d%dim)
-          st%zpsi(1:np, idim, ist, ik) = &
-            zpsi((ist-1)*np*st%d%dim + (idim-1)*np+1:(ist-1)*np*st%d%dim + (idim-1)*np+np)
-        end forall
+        do idim = 1, st%d%dim
+          call states_set_state(st, gr%mesh, idim, ist, ik, &
+            zpsi((ist - 1)*np*st%d%dim + (idim - 1)*np + 1:(ist - 1)*np*st%d%dim + idim*np))
+        end do
       end do
     end do
 

@@ -455,9 +455,7 @@ contains
 
         do ik = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
-            do idim = 1, st%d%dim
-              call lalg_copy(gr%mesh%np, st%zpsi(:, idim, ist, ik), zpsi1(:, idim, ist, ik))
-            end do
+            call states_get_state(st, gr%mesh, ist, ik, zpsi1(:, :, ist, ik))
           end do
         end do
 
@@ -514,9 +512,7 @@ contains
 
           do ik = st%d%kpt%start, st%d%kpt%end
             do ist = st%st_start, st%st_end
-              do idim = 1, st%d%dim
-                call lalg_copy(gr%mesh%np, zpsi1(:, idim, ist, ik), st%zpsi(:, idim, ist, ik))
-              end do
+              call states_set_state(st, gr%mesh, ist, ik, zpsi1(:, :, ist, ik))
             end do
           end do
           
@@ -934,8 +930,8 @@ contains
     ! ---------------------------------------------------------
     ! Crank-Nicholson propagator, QMR linear solver.
     subroutine td_crank_nicholson
-      CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:)
-      integer :: ik, ist, idim, isize, np_part, np, iter
+      CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:), inhpsi(:)
+      integer :: ik, ist, idim, ip, isize, np_part, np, iter
       FLOAT :: dres
       FLOAT :: cgtol = CNST(1.0e-12)
       logical :: converged
@@ -970,15 +966,23 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
 
-          zpsi_rhs(:, :) = st%zpsi(:, :, ist, ik)
+          call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs)
           call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, dt/M_TWO, time - dt/M_TWO)
-          if(hamiltonian_inh_term(hm)) &
-            zpsi_rhs(:, :) = zpsi_rhs(:, :) + dt * hm%inh_st%zpsi(:, :, ist, ik)
 
-          forall(idim = 1:st%d%dim)
-            zpsi((idim-1)*np+1:idim*np) = st%zpsi(1:np, idim, ist, ik)
-            rhs((idim-1)*np+1:idim*np) = zpsi_rhs(1:np, idim)
-          end forall
+          if(hamiltonian_inh_term(hm)) then
+            SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
+            do idim = 1, st%d%dim
+              call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
+              forall(ip = 1:gr%mesh%np) zpsi_rhs(ip, idim) = zpsi_rhs(ip, idim) + dt*inhpsi(ip)
+            end do
+            SAFE_DEALLOCATE_A(inhpsi)
+          end if
+
+          ! put the values is a continuous array
+          do idim = 1, st%d%dim
+            call states_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np))
+            rhs((idim - 1)*np + 1:idim*np) = zpsi_rhs(1:np, idim)
+          end do
 
           ist_op = ist
           ik_op = ik
@@ -987,10 +991,9 @@ contains
             propagator_qmr_op, propagator_qmr_prec, iter, dres, cgtol, &
             showprogress = .false., converged = converged)
 
-          forall(idim = 1:st%d%dim)
-            st%zpsi(1:np, idim, ist, ik) = &
-              zpsi((idim-1)*np_part+1:(idim-1)*np_part+np)
-          end forall
+          do idim = 1, st%d%dim
+            call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np))
+          end do
 
           if(.not.converged) then
             write(message(1),'(a)')        'The linear solver used for the Crank-Nicholson'
