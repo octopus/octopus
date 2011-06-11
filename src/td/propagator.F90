@@ -782,7 +782,7 @@ contains
     ! ---------------------------------------------------------
     ! Exponential midpoint
     subroutine exponential_midpoint
-      integer :: ist, ik
+      integer :: ib, ik
       type(ion_state_t) :: ions_state
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
 
@@ -792,7 +792,7 @@ contains
         call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
       end if
 
-      !move the ions to time time - dt/2
+      !move the ions to time 'time - dt/2'
       if(present(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
@@ -808,11 +808,12 @@ contains
       call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr%der, hm, st%zpsi(:,:, ist, ik), ist, ik, dt/mu, time - dt/M_TWO)
+        do ib = st%block_start, st%block_end
+          call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/mu, time - dt/M_TWO)
         end do
       end do
 
+      !restore to time 'time - dt'
       if(present(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
 
       if(gauge_field_is_applied(hm%ep%gfield)) then

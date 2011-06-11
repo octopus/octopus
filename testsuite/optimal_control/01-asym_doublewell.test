@@ -28,5 +28,4 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.21549
 # The same system but with a user-defined target wavefunction
 Input: 01-asym_doublewell.04-oct_run.inp
 Precision : 0.0000001
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.14447048
-
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.14447116
