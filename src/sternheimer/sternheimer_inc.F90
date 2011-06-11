@@ -40,7 +40,7 @@ subroutine X(sternheimer_solve)(                           &
   FLOAT :: dpsimod, tol
   integer :: iter, sigma, sigma_alt, ik, ist, err
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
-  R_TYPE, allocatable :: rhs(:, :, :), hvar(:, :, :)
+  R_TYPE, allocatable :: rhs(:, :, :), hvar(:, :, :), psi(:, :)
   R_TYPE, allocatable :: tmp(:)
   real(8):: abs_dens
   R_TYPE :: omega_sigma, proj
@@ -121,6 +121,8 @@ subroutine X(sternheimer_solve)(                           &
 
     call X(sternheimer_calc_hvar)(this, sys, hm, lr, nsigma, hvar)
 
+    SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+
     do ik = st%d%kpt%start, st%d%kpt%end
       !now calculate response for each state
       ispin = states_dim_get_spin_index(sys%st%d, ik)
@@ -128,6 +130,9 @@ subroutine X(sternheimer_solve)(                           &
       states_conv = .true.
 
       do ist = st%st_start, st%st_end
+
+        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+
         do sigma = 1, nsigma
           !calculate the RHS of the Sternheimer eq
           if(sternheimer_have_rhs(this)) then
@@ -135,12 +140,12 @@ subroutine X(sternheimer_solve)(                           &
             forall(idim = 1:st%d%dim, ip = 1:mesh%np) rhs(ip, idim, sigma) = this%X(rhs)(ip, idim, ist, ik)
           else
             rhs(1:mesh%np, 1:st%d%dim, sigma) = R_TOTYPE(M_ZERO)
-            call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), rhs(:, :, sigma))
+            call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, psi, rhs(:, :, sigma))
           end if
 
           do idim = 1, st%d%dim
             rhs(1:mesh%np, idim, sigma) = -rhs(1:mesh%np, idim, sigma) &
-              - hvar(1:mesh%np, ispin, sigma)*st%X(psi)(1:mesh%np, idim, ist, ik)
+              - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, idim)
           end do
 
           if(sternheimer_have_inhomog(this)) then
@@ -158,9 +163,9 @@ subroutine X(sternheimer_solve)(                           &
 
           if (conv_last .and. this%last_occ_response) then
             ! project out only the component of the unperturbed wavefunction
-            proj = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), rhs(:, :, sigma))
+            proj = X(mf_dotp)(mesh, st%d%dim, psi, rhs(:, :, sigma))
             do idim = 1, st%d%dim
-              call lalg_axpy(mesh%np, -proj, st%X(psi)(:, idim, ist, ik), rhs(:, idim, sigma))
+              call lalg_axpy(mesh%np, -proj, psi(:, idim), rhs(:, idim, sigma))
             end do
           else
             ! project RHS onto the unoccupied states
@@ -181,9 +186,9 @@ subroutine X(sternheimer_solve)(                           &
           if (this%preorthogonalization) then 
             !re-orthogonalize the resulting vector
             if (this%occ_response) then
-              proj = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), lr(sigma)%X(dl_psi)(:, :, ist, ik))
+              proj = X(mf_dotp)(mesh, st%d%dim, psi, lr(sigma)%X(dl_psi)(:, :, ist, ik))
               do idim = 1, st%d%dim
-                call lalg_axpy(mesh%np, -proj, st%X(psi)(:, idim, ist, ik), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
+                call lalg_axpy(mesh%np, -proj, psi(:, idim), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
               end do
             else
               call X(lr_orth_vector)(mesh, st, lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), ist, ik, omega)
@@ -204,6 +209,8 @@ subroutine X(sternheimer_solve)(                           &
         end do !sigma
       end do !ist
     end do !ik
+    
+    SAFE_DEALLOCATE_A(psi)
     
     call X(lr_build_dl_rho)(mesh, st, lr, nsigma)
     
@@ -437,6 +444,7 @@ subroutine X(sternheimer_solve_order2)( &
   R_TYPE :: dl_eig1, dl_eig2, proj
   R_TYPE, allocatable :: inhomog(:,:,:,:,:), hvar1(:,:,:), hvar2(:,:,:), &
     pert1psi2(:,:), pert2psi1(:,:), pert1psi(:,:), pert2psi(:,:)
+  R_TYPE, allocatable :: psi(:, :)
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
 
@@ -454,6 +462,7 @@ subroutine X(sternheimer_solve_order2)( &
   SAFE_ALLOCATE(pert2psi1(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(pert1psi(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(pert2psi(1:mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
   call X(sternheimer_calc_hvar)(sh1, sys, hm, lr1, nsigma, hvar1)
 !  call X(sternheimer_calc_hvar)(sh2, sys, hm, lr2, nsigma, hvar2)
@@ -468,18 +477,23 @@ subroutine X(sternheimer_solve_order2)( &
 
       ispin = states_dim_get_spin_index(sys%st%d, ik)
       do ist = st%st_start, st%st_end
-        call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), pert1psi(:, :))
-        call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), pert2psi(:, :))
-        call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2(:, :))
-        call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1(:, :))
+
+        SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+
+        call states_get_state(st, sys%gr%mesh, ist, ik, psi)
+
+        call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, psi, pert1psi)
+        call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, psi, pert2psi)
+        call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
+        call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1)
 
         ! derivative of the eigenvalues
-        dl_eig1 = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), pert1psi(:, :))
-        dl_eig2 = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), pert2psi(:, :))
+        dl_eig1 = X(mf_dotp)(mesh, st%d%dim, psi, pert1psi)
+        dl_eig2 = X(mf_dotp)(mesh, st%d%dim, psi, pert2psi)
 
         do idim = 1, st%d%dim
-          dl_eig1 = dl_eig1 + X(mf_dotp)(mesh, R_TOTYPE(abs(st%X(psi)(:, idim, ist, ik))**2), hvar1(:, ispin, isigma))
-          dl_eig2 = dl_eig2 + X(mf_dotp)(mesh, R_TOTYPE(abs(st%X(psi)(:, idim, ist, ik))**2), hvar2(:, ispin, isigma))
+          dl_eig1 = dl_eig1 + X(mf_dotp)(mesh, R_TOTYPE(abs(psi(:, idim))**2), hvar1(:, ispin, isigma))
+          dl_eig2 = dl_eig2 + X(mf_dotp)(mesh, R_TOTYPE(abs(psi(:, idim))**2), hvar2(:, ispin, isigma))
         enddo
 
 !        write(message(1),*) 'dl_eig1 ist ', ist, 'ik ', ik, dl_eig1
@@ -494,9 +508,9 @@ subroutine X(sternheimer_solve_order2)( &
             - (hvar2(1:mesh%np, ispin, isigma) - dl_eig2) * lr1(isigma)%X(dl_psi)(1:mesh%np, idim, ist, ik)
         end do
 
-        proj = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), inhomog(:, :, ist, ik, isigma))
+        proj = X(mf_dotp)(mesh, st%d%dim, psi, inhomog(:, :, ist, ik, isigma))
         do idim = 1, st%d%dim
-          call lalg_axpy(mesh%np, -proj, st%X(psi)(:, idim, ist, ik), inhomog(:, idim, ist, ik, isigma))
+          call lalg_axpy(mesh%np, -proj, psi(:, idim), inhomog(:, idim, ist, ik, isigma))
         end do
 
       enddo
@@ -527,6 +541,7 @@ subroutine X(sternheimer_solve_order2)( &
   SAFE_DEALLOCATE_A(pert2psi1)
   SAFE_DEALLOCATE_A(pert1psi)
   SAFE_DEALLOCATE_A(pert2psi)
+  SAFE_DEALLOCATE_A(psi)
 
   POP_SUB(X(sternheimer_solve_order2))
 end subroutine X(sternheimer_solve_order2)

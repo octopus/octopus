@@ -23,23 +23,30 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   type(casida_t), intent(in) :: cas
   type(states_t), intent(in) :: st
   type(mesh_t),   intent(in) :: mesh
-  FLOAT, intent(in)   :: dv(:)
+  FLOAT,          intent(in) :: dv(:)
   FLOAT :: xx(cas%n_pairs)
 
   R_TYPE, allocatable :: ff(:)
-  integer :: ip, ia, sigma, idim
+  R_TYPE, allocatable :: psii(:, :), psia(:, :)
+  integer :: ip, ia, idim
 
   PUSH_SUB(X(ks_matrix_elements))
 
   SAFE_ALLOCATE(ff(1:mesh%np))
+  SAFE_ALLOCATE(psii(1:mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psia(1:mesh%np, 1:st%d%dim))
+
   do ia = 1, cas%n_pairs
-    sigma = cas%pair(ia)%sigma
+    call states_get_state(st, mesh, cas%pair(ia)%i, cas%pair(ia)%sigma, psii)
+    call states_get_state(st, mesh, cas%pair(ia)%a, cas%pair(ia)%sigma, psia)
+
     do ip = 1, mesh%np
+      ff(ip) = M_ZERO
       do idim = 1, st%d%dim
-        ff(ip) = dv(ip) * R_CONJ(st%X(psi) (ip, idim, cas%pair(ia)%i, sigma)) &
-                               * st%X(psi) (ip, idim, cas%pair(ia)%a, sigma)
+        ff(ip) = ff(ip) + dv(ip)*R_CONJ(psii(ip, idim))*psia(ip, idim)
       end do
     end do
+
     xx(ia) = X(mf_integrate)(mesh, ff)
   end do
 
