@@ -195,12 +195,15 @@ contains
   
 
 ! ---------------------------------------------------------
-  character(len=100) function em_wfs_tag(idir, ifactor) result(str)
-    integer, intent(in) :: idir, ifactor
+  character(len=100) function em_wfs_tag(idir, ifactor, idir2) result(str)
+    integer,           intent(in) :: idir
+    integer,           intent(in) :: ifactor
+    integer, optional, intent(in) :: idir2
 
     PUSH_SUB(em_wfs_tag)
 
     write(str, '(3a,i1)') "wfs_", index2axis(idir), "_f", ifactor
+    if(present(idir2)) write(str, '(3a)') trim(str), "_", index2axis(idir2)
 
     POP_SUB(em_wfs_tag)
 
