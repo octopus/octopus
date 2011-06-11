@@ -31,8 +31,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   FLOAT,        optional, intent(out)   :: diff(1:st%nst)
   logical,      optional, intent(in)    :: verbose
 
-  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:)
-
+  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:), psi(:, :)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   real(8)  :: cg0, e0, res
   integer  :: p, iter, maxter, idim, ip
@@ -56,6 +55,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   maxter = niter
   niter = 0
 
+  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(h_psi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(   cg(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
@@ -83,26 +83,28 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       write(message(2),'(a,i4,a)') ' Eigenstate # ', p, ':'
     end if
 
+    call states_get_state(st, gr%mesh, p, ik, psi)
+
     ! Orthogonalize starting eigenfunctions to those already calculated...
     if(p > 1) then
-      call X(states_orthogonalization)(gr%mesh, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), st%X(psi)(:, :, p, ik), normalize = .true.)
+      call X(states_orthogonalization)(gr%mesh, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), psi, normalize = .true.)
     end if
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-    call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:,:, p, ik), h_psi, p, ik)
+    call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, p, ik)
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-    st%eigenval(p, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
+    st%eigenval(p, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
 
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
 
       ! inverse preconditioner....
-      call  X(preconditioner_apply)(pre, gr, hm, ik, h_psi(:,:), g(:,:))
-      call  X(preconditioner_apply)(pre, gr, hm, ik, st%X(psi)(:,:, p, ik), ppsi(:,:))
+      call  X(preconditioner_apply)(pre, gr, hm, ik, h_psi, g)
+      call  X(preconditioner_apply)(pre, gr, hm, ik, psi, ppsi)
 
-      es(1) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), g, reduce = .false.)
-      es(2) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
+      es(1) = X(mf_dotp) (gr%mesh, st%d%dim, psi, g, reduce = .false.)
+      es(2) = X(mf_dotp) (gr%mesh, st%d%dim, psi, ppsi, reduce = .false.)
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%vp%comm, es, dim = 2)
 
@@ -156,7 +158,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
         norma = gamma*cg0*sin(theta)
         
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          cg(ip, idim) = gamma*cg(ip, idim) + g(ip, idim) - norma*st%X(psi)(ip, idim, p, ik)
+          cg(ip, idim) = gamma*cg(ip, idim) + g(ip, idim) - norma*psi(ip, idim)
         end forall
         
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
@@ -167,9 +169,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       call X(hamiltonian_apply)(hm, gr%der, cg, ppsi, p, ik)
 
       ! Line minimization.
-      a0 = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:,:, p, ik), ppsi, reduce = .false.)
-      b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg(:,:), ppsi, reduce = .false.)
-      cg0 = X(mf_nrm2) (gr%mesh, st%d%dim, cg(:,:), reduce = .false.)
+      a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, ppsi, reduce = .false.)
+      b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, ppsi, reduce = .false.)
+      cg0 = X(mf_nrm2) (gr%mesh, st%d%dim, cg, reduce = .false.)
 
       if(gr%mesh%parallel_in_domains) then
         sb(1) = a0
@@ -197,13 +199,13 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       b0 = sin(theta)/cg0
 
       forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-        st%X(psi)(ip, idim, p, ik) = a0*st%X(psi)(ip, idim, p, ik) + b0*cg(ip, idim)
+        psi(ip, idim) = a0*psi(ip, idim) + b0*cg(ip, idim)
         h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*ppsi(ip, idim)
       end forall
 
       call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 4*R_MUL))
 
-      res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(p, ik), st%X(psi)(:, :, p, ik))
+      res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(p, ik), psi)
 
       if(in_debug_mode) then
         write(message(1), '(a,i4,a,i4,a,i4,a,f12.6)') 'Debug: CG Eigensolver - ik', ik, ' ist ', p, ' iter ', iter, ' res ', res
@@ -217,6 +219,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       end if
 
     end do iter_loop
+
+    call states_set_state(st, gr%mesh, p, ik, psi)
 
     if(verbose_) then
       if(res<tol) then
@@ -363,8 +367,8 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
         end do
       end do
 
-      if(ist > 1) &
-           call X(states_orthogonalization)(gr%mesh, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, normalize = .false., mask = orthogonal)
+      if(ist > 1) call X(states_orthogonalization)(gr%mesh, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, &
+        normalize = .false., mask = orthogonal)
 
       ! Get conjugate-gradient vector
       dot = X(mf_nrm2)(gr%mesh, dim, sd)**2

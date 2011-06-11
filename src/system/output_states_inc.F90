@@ -268,12 +268,7 @@
 
     iyoung = 1
     do mm = 1, st%nst
-      ! FIXME make this into some preprocessed X() stuff, along with dens and dens_mat
-      if(states_are_real(st)) then
-        wf = cmplx(st%dpsi(1:gr%mesh%np_part, 1, mm, 1), M_ZERO)
-      else
-        wf = st%zpsi(1:gr%mesh%np_part, 1, mm, 1)
-      end if
+      call states_get_state(st, gr%mesh, 1, mm, 1, wf)
 
       if (impose_exch_symmetry) then
         if (mm > 1) then

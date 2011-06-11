@@ -277,7 +277,7 @@ contains
     type(states_t),       intent(inout) :: st
     type(gauge_force_t),  intent(out)   :: force
 
-    integer :: ik, ist, idir, idim, iatom
+    integer :: ik, ist, idir, idim, iatom, ip
     CMPLX, allocatable :: gpsi(:, :, :), epsi(:, :)
     FLOAT, allocatable :: microcurrent(:, :), symmcurrent(:, :)
     type(profile_t), save :: prof
@@ -297,14 +297,16 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
 
-        do idim = 1, st%d%dim
+        call states_get_state(st, gr%mesh, ist, ik, epsi)
 
-          call zderivatives_set_bc(gr%der, st%zpsi(:, idim, ist, ik))
+        do idim = 1, st%d%dim
+          call zderivatives_set_bc(gr%der, epsi(:, idim))
 
           ! Apply the phase that contains both the k-point and vector-potential terms.
-          epsi(1:gr%mesh%np_part, idim) = &
-            phases(1:gr%mesh%np_part, ik - st%d%kpt%start + 1) * st%zpsi(1:gr%mesh%np_part, idim, ist, ik)
-          
+          forall(ip = 1:gr%mesh%np_part)
+            epsi(ip, idim) = phases(ip, ik - st%d%kpt%start + 1)*epsi(ip, idim)
+          end forall
+
           call zderivatives_grad(gr%der, epsi(:, idim), gpsi(:, :, idim), set_bc = .false.)
 
         end do
