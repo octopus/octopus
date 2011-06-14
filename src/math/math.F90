@@ -826,27 +826,21 @@ contains
 
   ! ---------------------------------------------------------
   ! Returns if n is even.
-  logical function even(n)
+  logical pure function even(n)
     integer, intent(in) :: n
 
-    PUSH_SUB(even)
+    even = (mod(n, 2) == 0)
 
-    even = mod(n, 2).eq.0
-
-    POP_SUB(even)
   end function even
 
 
   ! ---------------------------------------------------------
   ! Returns if n is odd.
-  logical function odd(n)
+  logical pure function odd(n)
     integer, intent(in) :: n
 
-    PUSH_SUB(odd)
+    odd = .not. even(n)
 
-    odd = .not.even(n)
-
-    POP_SUB(odd)
   end function odd
 
   ! ---------------------------------------------------------

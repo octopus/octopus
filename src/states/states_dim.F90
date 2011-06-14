@@ -151,29 +151,22 @@ contains
 
   ! ---------------------------------------------------------
   ! Returns true if k-point ik denotes spin-up, in spin-polarized case.
-  logical function is_spin_up(ik)
+  logical pure function is_spin_up(ik)
     integer, intent(in) :: ik
-
-    PUSH_SUB(is_spin_up)
 
     is_spin_up = even(ik)
 
-    POP_SUB(is_spin_up)
   end function is_spin_up
 
 
   ! ---------------------------------------------------------
   ! Returns true if k-point ik denotes spin-down, in spin-polarized case.
-  logical function is_spin_down(ik)
+  logical pure function is_spin_down(ik)
     integer, intent(in) :: ik
-
-    PUSH_SUB(is_spin_down)
 
     is_spin_down = odd(ik)
 
-    POP_SUB(is_spin_down)
   end function is_spin_down
-
 
   ! ---------------------------------------------------------
   integer pure function states_dim_get_spin_index(this, iq) result(index)

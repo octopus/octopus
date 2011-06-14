@@ -621,11 +621,11 @@ contains
     subroutine apply_delta_field(kick)
       type(kick_t), intent(in) :: kick
       integer :: im, iatom
-      integer :: ik, ist, idim, ip
+      integer :: iqn, ist, idim, ip, ispin
       CMPLX   :: cc(2), kick_value
       FLOAT   :: ylm, gylm(1:MAX_DIM), rr
       FLOAT   :: xx(MAX_DIM)
-      CMPLX, allocatable :: kick_function(:)
+      CMPLX, allocatable :: kick_function(:), psi(:, :)
 
       PUSH_SUB(td_run.apply_delta_field)
 
@@ -700,45 +700,57 @@ contains
           message(2) = "Info: Delta kick mode: Density + Spin modes"
         end select
         call messages_info(2)
+        
+        SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
 
-        select case (kick%delta_strength_mode)
-        case (KICK_DENSITY_MODE)
-          forall(ik = st%d%kpt%start:st%d%kpt%end, ist = st%st_start:st%st_end, idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-            st%zpsi(ip, idim, ist, ik) = exp(M_zI * kick%delta_strength * kick_function(ip)) &
-              * st%zpsi(ip, idim, ist, ik) 
-          end forall
+        do iqn = st%d%kpt%start, st%d%kpt%end
+          do ist = st%st_start, st%st_end
+            
+            call states_get_state(st, gr%mesh, ist, iqn, psi)
 
-        case (KICK_SPIN_MODE)
-          do ip = 1, gr%mesh%np
-            kick_value = M_zI * kick%delta_strength * kick_function(ip)
+            select case (kick%delta_strength_mode)
+            case (KICK_DENSITY_MODE)
+              forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+                psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim) 
+              end forall
 
-            cc(1) = exp(kick_value)
-            cc(2) = exp(-kick_value)
-            select case (st%d%ispin)
-            case (SPIN_POLARIZED)
+            case (KICK_SPIN_MODE)
+              ispin = states_dim_get_spin_index(st%d, iqn)
+              do ip = 1, gr%mesh%np
+                kick_value = M_zI*kick%delta_strength*kick_function(ip)
+                
+                cc(1) = exp(kick_value)
+                cc(2) = exp(-kick_value)
 
-              do ik = 1, st%d%nik, 2
-                st%zpsi(ip,:,:,ik)   = cc(1) * st%zpsi(ip,:,:,ik)
-                st%zpsi(ip,:,:,ik+1) = cc(2) * st%zpsi(ip,:,:,ik+1)
+                select case (st%d%ispin)
+                case (SPIN_POLARIZED)
+                  psi(ip, 1) = cc(ispin)*psi(ip, 1)
+                case (SPINORS)
+                  psi(ip, 1) = cc(1)*psi(ip, 1)
+                  psi(ip, 2) = cc(2)*psi(ip, 2)
+                end select
               end do
-            case (SPINORS)
-              st%zpsi(ip,1,:,:) = cc(1) * st%zpsi(ip,1,:,:)
-              st%zpsi(ip,2,:,:) = cc(2) * st%zpsi(ip,2,:,:)
-            end select
-          end do
-        case (KICK_SPIN_DENSITY_MODE)
-          do ip = 1, gr%mesh%np
-            cc(1) = exp(M_TWO*kick_value)
-            select case (st%d%ispin)
-            case (SPIN_POLARIZED)
-              do ik = 1, st%d%nik, 2
-                st%zpsi(ip,:,:,ik) = cc(1) * st%zpsi(ip,:,:,ik)
+              
+            case (KICK_SPIN_DENSITY_MODE)
+              do ip = 1, gr%mesh%np
+                cc(1) = exp(M_TWO*kick_value)
+                select case (st%d%ispin)
+                case (SPIN_POLARIZED)
+                  if(is_spin_up(iqn)) then
+                    psi(ip, 1) = cc(1)*psi(ip, 1)
+                  end if
+                case (SPINORS)
+                  psi(ip, 1) = cc(1)*psi(ip, 1)
+                end select
               end do
-            case (SPINORS)
-              st%zpsi(ip,1,:,:) = cc(1) * st%zpsi(ip,1,:,:)
             end select
+
+            call states_set_state(st, gr%mesh, ist, iqn, psi)
+
           end do
-        end select
+        end do
+
+        SAFE_DEALLOCATE_A(psi)
 
         ! The nuclear velocities will be changed by
         ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
