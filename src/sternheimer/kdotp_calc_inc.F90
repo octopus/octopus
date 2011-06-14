@@ -149,6 +149,39 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
 
 end subroutine X(calc_eff_mass_inv)
   
+
+! ---------------------------------------------------------
+subroutine X(kdotp_add_diagonal)(sys, hm, em_pert, kdotp_lr)
+  type(system_t),      intent(inout) :: sys
+  type(hamiltonian_t), intent(inout) :: hm
+  type(pert_t),        intent(inout) :: em_pert
+  type(lr_t),          intent(inout) :: kdotp_lr(:)
+
+  integer :: ik, ist, idir
+  R_TYPE, allocatable :: ppsi(:,:)
+  FLOAT :: expectation
+
+  PUSH_SUB(X(kdotp_add_diagonal))
+
+  SAFE_ALLOCATE(ppsi(sys%gr%mesh%np, sys%st%d%dim))
+
+  do idir = 1, sys%gr%sb%periodic_dim
+    call pert_setup_dir(em_pert, idir)
+    do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+      do ist = 1, sys%st%nst
+        call X(pert_apply)(em_pert, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:, :, ist, ik), ppsi)
+        expectation = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:, :, ist, ik), ppsi)
+        kdotp_lr(idir)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) = &
+          kdotp_lr(idir)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) + &
+          expectation * sys%st%X(psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik)
+      enddo
+    end do
+  enddo
+
+  SAFE_DEALLOCATE_A(ppsi) 
+  POP_SUB(X(kdotp_add_diagonal))
+end subroutine X(kdotp_add_diagonal)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

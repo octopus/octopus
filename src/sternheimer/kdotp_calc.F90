@@ -43,6 +43,8 @@ module kdotp_calc_m
     zcalc_eff_mass_inv,            &
     zcalc_band_velocity,           &
     zcalc_dipole_periodic,         &
+    dkdotp_add_diagonal,           &
+    zkdotp_add_diagonal,           &
     kdotp_wfs_tag
 
 contains
