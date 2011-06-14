@@ -32,6 +32,7 @@ module ob_propagator_m
   use lasers_m
   use parser_m
   use math_m
+  use mesh_m
   use mesh_function_m
   use messages_m
   use ob_interface_m
@@ -270,7 +271,7 @@ contains
     integer            :: il, it, m, qmr_iter, order, np
     integer, target    :: ist, ik
     CMPLX              :: factor, fac, f0
-    CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :)
+    CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :), psi(:, :)
     FLOAT              :: dres
     logical            :: conv
     
@@ -282,6 +283,7 @@ contains
     SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%ispin))
     SAFE_ALLOCATE(tmp_wf(1:np))
     SAFE_ALLOCATE(tmp_mem(1:np, 1:np))
+    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
 
     ! Set pointers to communicate with with backward propagator passed
     ! to iterative linear solver.
@@ -303,15 +305,18 @@ contains
     if (m.eq.0) then
       do il = 1, NLEADS
         np = gr%intf(il)%np_intf
-        call save_intf_wf(gr%intf(il), st, ob%lead(il)%st_intface(1:np, :, :, 0))
+        call save_intf_wf(gr%intf(il), st, gr%mesh, ob%lead(il)%st_intface(1:np, :, :, 0))
       end do
     end if
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
+
+        call states_get_state(st, gr%mesh, ist, ik, psi)
+
         ! Get right-hand side.
         !   1. Apply effective Hamiltonian.
-        call apply_h_eff(hm, gr, ob%lead, gr%intf, -M_ONE, dt, t, ist, ik, st%zpsi(:, :, ist, ik))
+        call apply_h_eff(hm, gr, ob%lead, gr%intf, -M_ONE, dt, t, ist, ik, psi)
 
         do il = 1, NLEADS
           np = gr%intf(il)%np_intf
@@ -328,7 +333,7 @@ contains
             call calc_source_wf(ob%max_mem_coeffs, m, np, il, hm%lead(il)%h_offdiag, tmp_mem(1:np, 1:np), dt, &
               st%ob_lead(il)%intf_psi(:, 1, ist, ik), ob%src_mem_u(:, il), f0, fac,              &
               lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
-            call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), st%zpsi(:, :, ist, ik))
+            call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), psi)
           end if
           ! 3. Add memory term.
           if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
@@ -339,7 +344,7 @@ contains
                           + ob%lead(il)%st_intface(1:np, ist, ik, mod(it, ob%max_mem_coeffs+1))
               tmp_mem(1:np, 1:np) = ob%lead(il)%q(1:np, 1:np, m-it)
               if((m-it).gt.0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-it-1)
-              call apply_mem(tmp_mem(1:np, 1:np), gr%intf(il), tmp_wf(1:np), st%zpsi(:, :, ist, ik), factor)
+              call apply_mem(tmp_mem(1:np, 1:np), gr%intf(il), tmp_wf(1:np), psi, factor)
             end do
           end if
         end do
@@ -347,17 +352,19 @@ contains
           ! 4. if H_eff is not complex symmetric do the following for solving the linear equation:
           ! A.x = b --> (A^T).A.x = (A^T).b
           ! In this case (A^T).A is complex symmetric and we can use the QMR_sym solver
-          call apply_h_eff(hm, gr, ob%lead, gr%intf, M_ONE, dt, t, &
-            ist, ik, st%zpsi(:, :, ist, ik), .true.)
+          call apply_h_eff(hm, gr, ob%lead, gr%intf, M_ONE, dt, t, ist, ik, psi, .true.)
         end if
 
-        ! Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
+        ! Solve linear system (1 + i \delta H_{eff}) psi = tmp.
         qmr_iter      = qmr_max_iter
-        tmp(1:gr%mesh%np, 1) = st%zpsi(1:gr%mesh%np, 1, ist, ik)
+        tmp(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)
         ! Use the stable symmetric QMR solver
         ! h_eff_backward must be a complex symmetric operator !
-        call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward, precond_prop, &
+        call zqmr_sym(gr%mesh%np, psi(:, 1), tmp(:, 1), h_eff_backward, precond_prop, &
           qmr_iter, residue=dres, threshold=qmr_tol, showprogress=in_debug_mode, converged=conv)
+
+        call states_set_state(st, gr%mesh, ist, ik, psi)
+
       end do
       if(in_debug_mode) then ! write info
         write(message(1), '(a,i8,e10.3)') 'Iterations, Residual: ', qmr_iter, dres
@@ -367,9 +374,10 @@ contains
 
     ! Save interface part of wavefunction for subsequent iterations.
     do il = 1, NLEADS
-      call save_intf_wf(gr%intf(il), st, ob%lead(il)%st_intface(:, :, :, mod(timestep,ob%max_mem_coeffs+1)))
+      call save_intf_wf(gr%intf(il), st, gr%mesh, ob%lead(il)%st_intface(:, :, :, mod(timestep,ob%max_mem_coeffs+1)))
     end do
 
+    SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_wf)
     SAFE_DEALLOCATE_A(tmp_mem)
@@ -395,7 +403,7 @@ contains
     integer            :: il, it, m, qmr_iter, order, np, npo
     integer, target    :: ist, ik
     CMPLX              :: factor, fac, f0
-    CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:)
+    CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:), psi(:, :)
     FLOAT              :: dres
     
     PUSH_SUB(cn_src_mem_dt)
@@ -406,6 +414,7 @@ contains
     SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%ispin))
     SAFE_ALLOCATE(tmp_wf(1:np))
     SAFE_ALLOCATE(tmp_mem(1:np*order))
+    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
 
     ! Set pointers to communicate with with backward propagator passed
     ! to iterative linear solver.
@@ -429,15 +438,18 @@ contains
     if (m.eq.0) then
       do il = 1, NLEADS
         np = gr%intf(il)%np_intf
-        call save_intf_wf(gr%intf(il), st, ob%lead(il)%st_intface(1:np, :, :, 0))
+        call save_intf_wf(gr%intf(il), st, gr%mesh, ob%lead(il)%st_intface(1:np, :, :, 0))
       end do
     end if
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
+
+        call states_get_state(st, gr%mesh, ist, ik, psi)
+
         ! Get right-hand side.
         !   1. Apply effective Hamiltonian.
-        call apply_h_eff_sp(hm, gr, ob%lead, gr%intf, -M_ONE, dt, t, ist, ik, st%zpsi(:, :, ist, ik))
+        call apply_h_eff_sp(hm, gr, ob%lead, gr%intf, -M_ONE, dt, t, ist, ik, psi)
 
         do il = 1, NLEADS
           np  = gr%intf(il)%np_intf
@@ -452,7 +464,7 @@ contains
               tmp_mem(1:npo), dt, order, gr%sb%dim, st%ob_lead(il)%intf_psi(:, 1, ist, ik), &
               ob%lead(il)%q_s(:, :, :), ob%lead(il)%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
               lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
-            call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), st%zpsi(:, :, ist, ik))
+            call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), psi)
           end if
           ! 3. Add memory term.
           if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
@@ -463,7 +475,7 @@ contains
                           + ob%lead(il)%st_intface(1:np, ist, ik, mod(it, ob%max_mem_coeffs+1))
               tmp_mem(1:npo) = ob%lead(il)%q_sp(1:npo, m-it)
               if((m-it).gt.0) tmp_mem(1:npo) = tmp_mem(1:npo) + ob%lead(il)%q_sp(1:npo, m-it-1)
-              call apply_sp_mem(tmp_mem(1:npo), gr%intf(il), tmp_wf(1:np), st%zpsi(:, :, ist, ik), &
+              call apply_sp_mem(tmp_mem(1:npo), gr%intf(il), tmp_wf(1:np), psi, &
                 factor, ob%lead(il)%q_s(:, :, :), order, gr%sb%dim, ob%lead(il)%sp2full_map)
             end do
           end if
@@ -472,25 +484,28 @@ contains
           ! 4. if H_eff is not complex symmetric do the following for solving the linear equation:
           ! A.x = b --> (A^T).A.x = (A^T).b
           ! In this case (A^T).A is complex symmetric and we can use the QMR_sym solver
-          call apply_h_eff_sp(hm, gr, ob%lead, gr%intf, M_ONE, dt, t, &
-                              ist, ik, st%zpsi(:, :, ist, ik), .true.)
+          call apply_h_eff_sp(hm, gr, ob%lead, gr%intf, M_ONE, dt, t, ist, ik, psi, .true.)
         end if
 
-        ! Solve linear system (1 + i \delta H_{eff}) st%zpsi = tmp.
+        ! Solve linear system (1 + i \delta H_{eff}) psi = tmp.
         qmr_iter      = qmr_max_iter
-        tmp(1:gr%mesh%np, 1) = st%zpsi(1:gr%mesh%np, 1, ist, ik)
-        call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), tmp(:, 1), h_eff_backward_sp, precond_prop, &
+        tmp(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)
+        call zqmr_sym(gr%mesh%np, psi(:, 1), tmp(:, 1), h_eff_backward_sp, precond_prop, &
           qmr_iter, residue=dres, threshold=qmr_tol, showprogress=.false.)
+
+        call states_set_state(st, gr%mesh, ist, ik, psi)
+
       end do
     end do
 
     ! Save interface part of wavefunction for subsequent iterations.
     do il = 1, NLEADS
       np = gr%intf(il)%np_intf
-      call save_intf_wf(gr%intf(il), st, &
+      call save_intf_wf(gr%intf(il), st, gr%mesh, &
                         ob%lead(il)%st_intface(1:np, :, :, mod(timestep,ob%max_mem_coeffs+1)))
     end do
 
+    SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_wf)
     SAFE_DEALLOCATE_A(tmp_mem)
@@ -549,21 +564,28 @@ contains
   ! ---------------------------------------------------------
   ! Save the interface part of all states st for timestep into
   ! the st_intf array.
-  subroutine save_intf_wf(intf, st, st_intf)
+  subroutine save_intf_wf(intf, st, mesh, st_intf)
     type(interface_t), intent(in)    :: intf
     type(states_t),    intent(in)    :: st
-    CMPLX,  intent(inout) :: st_intf(1:intf%np_intf, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
+    type(mesh_t),      intent(in)    :: mesh
+    CMPLX,             intent(inout) :: st_intf(1:intf%np_intf, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
 
     integer :: ik, ist
-    
+    CMPLX, allocatable :: psi(:, :)
+
     PUSH_SUB(save_intf_wf)
+
+    SAFE_ALLOCATE(psi(1:mesh%np, st%d%dim))
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        call get_intf_wf(intf, st%zpsi(:, 1, ist, ik), st_intf(:, ist, ik))
+        call states_get_state(st, mesh, ist, ik, psi)
+        call get_intf_wf(intf, psi(:, 1), st_intf(:, ist, ik))
       end do
     end do
 
+    SAFE_DEALLOCATE_A(psi)
+    
     POP_SUB(save_intf_wf)
   end subroutine save_intf_wf
 

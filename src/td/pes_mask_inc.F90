@@ -134,7 +134,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
   type(geometry_t), intent(in)    :: geo
 
   integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
-  CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:)
+  CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:), psi(:)
   FLOAT :: temp(MAX_DIM), vec
 
   integer :: ip_local,size
@@ -166,11 +166,11 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
 
 
   ! we now add the contribution from this timestep
+  SAFE_ALLOCATE(psi(1:mesh%np))
   SAFE_ALLOCATE(wf1(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3)))
   SAFE_ALLOCATE(wf2(1:mesh%idx%ll(1), 1:mesh%idx%ll(2), 1:mesh%idx%ll(3)))
 
   size = (mesh%idx%ll(1))*(mesh%idx%ll(2))*(mesh%idx%ll(3)) 
-
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
@@ -179,17 +179,18 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
         wf1 = M_z0
         wf2 = M_z0
 
+        call states_get_state(st, mesh, idim, ist, ik, psi)
+
         do ip_local = 1, mesh%np
 
           ! Convert from local to global mesh index
-          ip= index_from_coords(mesh%idx,mesh%sb%dim,int(mesh%x(ip_local,:)/mesh%spacing(:)))
+          ip = index_from_coords(mesh%idx,mesh%sb%dim, int(mesh%x(ip_local, :)/mesh%spacing(:)))
 
-          ix3(:) =  mesh%idx%lxyz(ip, :) + mesh%idx%ll(:)/2 + 1 
+          ix3(:) = mesh%idx%lxyz(ip, :) + mesh%idx%ll(:)/2 + 1 
 
-          wf1(ix3(1), ix3(2), ix3(3)) = mask_fn(ip_local) * st%zpsi(ip_local, idim, ist, ik)
+          wf1(ix3(1), ix3(2), ix3(3)) = mask_fn(ip_local)*psi(ip_local)
           
-       end do
-
+        end do
 
 #if defined(HAVE_MPI)
 
@@ -211,7 +212,6 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
         end if
 
 #endif
-           
 
         ! and add to our density (sum for idim, also)
         mask%r(:,:,:, ist, ik) = mask%r(:,:,:, ist, ik) + abs(wf1)**2
@@ -226,6 +226,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
     end do
   end do
 
+  SAFE_DEALLOCATE_A(psi)
 
 #ifdef HAVE_MPI
  ! wait for all processors to finish!
