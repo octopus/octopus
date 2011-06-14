@@ -21,6 +21,7 @@
 
 module eigen_rmmdiis_m
   use batch_m
+  use comm_m
   use global_m
   use grid_m
   use hamiltonian_m

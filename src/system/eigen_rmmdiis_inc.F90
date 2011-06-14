@@ -357,9 +357,6 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
   R_TYPE, allocatable :: res(:, :, :)
   R_TYPE, allocatable :: kres(:, :, :)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
-#ifdef HAVE_MPI
-  R_TYPE, allocatable :: metmp(:, :)
-#endif
 
   type(batch_t) :: psib, resb, kresb
 
@@ -385,22 +382,10 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
 
       call X(hamiltonian_apply_batch)(hm, gr%der, psib, resb, ik)
 
-      do ist = sst, est
-        ib = ist - sst + 1
+      call X(mesh_batch_dotp_vector)(gr%mesh, psib, resb, me1(1, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, psib, psib, me1(2, :), reduce = .false.)
 
-        me1(1, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi), res(:, :, ib), reduce = .false.)
-        me1(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi), psib%states(ib)%X(psi), reduce = .false.)
-
-      end do
-
-#ifdef HAVE_MPI
-      if(gr%mesh%parallel_in_domains) then
-        SAFE_ALLOCATE(metmp(1:2, 1:blocksize))
-        metmp = me1
-        call MPI_Allreduce(metmp(1, 1), me1(1, 1), 2 * blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
-        SAFE_DEALLOCATE_A(metmp)
-      end if
-#endif
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me1, (/2, blocksize/))
 
       do ist = sst, est
         ib = ist - sst + 1
@@ -416,26 +401,14 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
 
       call X(hamiltonian_apply_batch)(hm, gr%der, kresb, resb, ik)
 
-      niter = niter + 2 * bsize
+      niter = niter + 2*bsize
 
-      do ist = sst, est
-        ib = ist - sst + 1
+      call X(mesh_batch_dotp_vector)(gr%mesh, kresb, kresb, me2(1, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, psib,  kresb, me2(2, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, kresb, resb,  me2(3, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, psib,  resb,  me2(4, :), reduce = .false.)
 
-        me2(1, ib) = X(mf_dotp)(gr%mesh, st%d%dim, kres(:, :, ib), kres(:, :, ib), reduce = .false.)
-        me2(2, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi),  kres(:, :, ib), reduce = .false.)
-        me2(3, ib) = X(mf_dotp)(gr%mesh, st%d%dim, kres(:, :, ib), res(:, :, ib), reduce = .false.)
-        me2(4, ib) = X(mf_dotp)(gr%mesh, st%d%dim, psib%states(ib)%X(psi),  res(:, :, ib), reduce = .false.)
-
-      end do
-
-#ifdef HAVE_MPI
-      if(gr%mesh%parallel_in_domains) then
-        SAFE_ALLOCATE(metmp(1:4, 1:blocksize))
-        metmp = me2
-        call MPI_Allreduce(metmp(1, 1), me2(1, 1), 4 * blocksize, R_MPITYPE, MPI_SUM, gr%mesh%mpi_grp%comm, mpi_err)
-        SAFE_DEALLOCATE_A(metmp)
-      end if
-#endif
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me2, (/4, blocksize/))
 
       do ist = sst, est
         ib = ist - sst + 1
