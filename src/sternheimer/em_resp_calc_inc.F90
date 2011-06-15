@@ -530,7 +530,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
                   ispin = states_dim_get_spin_index(sys%st%d, ik)
 
 !                  if (present(kdotp_em_lr) .and. u(2) <= sys%gr%sb%periodic_dim) then
-!                    tmp(1:np, 1) = kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
+!                    tmp(1:np, idim) = kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
 !                  else
                     call pert_setup_dir(dipole, u(2))
                     call X(pert_apply) &
@@ -538,13 +538,13 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
 !                  endif
 
                   do ip = 1, np
-                    tmp(ip, 1) = tmp(ip, 1) + hvar(ip, ispin, isigma, idim, u(2), w(2)) &
+                    tmp(ip, idim) = tmp(ip, idim) + hvar(ip, ispin, isigma, idim, u(2), w(2)) &
                       * em_lr(u(3), isigma, w(3))%X(dl_psi)(ip, idim, ist, ik)
                   enddo
 
                   beta(ii, jj, kk) = beta(ii, jj, kk) &
                     - M_HALF * st%d%kweights(ik) * st%smear%el_per_state &
-                    * X(mf_dotp)(mesh, em_lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ik), tmp(1:np, 1))
+                    * X(mf_dotp)(mesh, em_lr(u(1), op_sigma, w(1))%X(dl_psi)(1:np, idim, ist, ik), tmp(1:np, idim))
                   
                   do ist2 = 1, st%nst
                     if(occ_response_ .and. ist2 .ne. ist) cycle
