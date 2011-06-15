@@ -361,6 +361,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
     SAFE_DEALLOCATE_A(tmp)
 
   case(BATCH_CL_PACKED)
+    SAFE_ALLOCATE(tmp(1:aa%nst_linear))
 #ifdef HAVE_OPENCL
     call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
 
@@ -374,12 +375,20 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
     call opencl_kernel_run(X(kernel_dot_vector), (/aa%pack%size(1)/), (/aa%pack%size(1)/))
     
     call opencl_finish()
-    
-    call opencl_read_buffer(dot_buffer, aa%nst, dot)
-    call opencl_release_buffer(dot_buffer)
 
-    forall(ist = 1:aa%nst) dot(ist) = dot(ist)*mesh%volume_element
+    call opencl_read_buffer(dot_buffer, aa%nst_linear, tmp)
+    call opencl_release_buffer(dot_buffer)
 #endif
+    
+    do ist = 1, aa%nst
+      dot(ist) = M_ZERO
+      do idim = 1, aa%dim
+        indb = batch_linear_index(aa, (/ist, idim/))
+        dot(ist) = dot(ist) + mesh%volume_element*tmp(indb)
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(tmp)
   end select
 
   if(mesh%parallel_in_domains .and. reduce_) then
