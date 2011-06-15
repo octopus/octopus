@@ -259,14 +259,21 @@ contains
 
           if(ifactor > 1) then 
 
-            ! NEED TO COPY kdotp_em_lr here too!!!
-
             ! if this frequency is the same as the previous one, just copy it
             if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
                                             - em_vars%freq_factor(ifactor) * em_vars%omega(iomega)) < M_EPSILON ) then
 
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor - 1), em_vars%lr(idir, 1, ifactor))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 2, ifactor))
+
+              if(em_vars%calc_hyperpol .and. use_kdotp) then
+                do idir2 = 1, gr%sb%periodic_dim
+                  call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 1, ifactor - 1), &
+                    kdotp_em_lr2(idir, idir2, 1, ifactor))
+                  call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, ifactor - 1), &
+                    kdotp_em_lr2(idir, idir2, 2, ifactor))
+                enddo
+              endif
 
               have_to_calculate = .false.
 
@@ -278,6 +285,15 @@ contains
 
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor - 1), em_vars%lr(idir, 2, ifactor))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 1, ifactor))
+
+              if(em_vars%calc_hyperpol .and. use_kdotp) then
+                do idir2 = 1, gr%sb%periodic_dim
+                  call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 1, ifactor - 1), &
+                    kdotp_em_lr2(idir, idir2, 2, ifactor))
+                  call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, ifactor - 1), &
+                    kdotp_em_lr2(idir, idir2, 1, ifactor))
+                enddo
+              endif
 
               have_to_calculate = .false.
 
@@ -293,6 +309,15 @@ contains
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, em_vars%nfactor), em_vars%lr(idir, 1, 1))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, em_vars%nfactor), em_vars%lr(idir, 2, 1))
 
+              if(em_vars%calc_hyperpol .and. use_kdotp) then
+                do idir2 = 1, gr%sb%periodic_dim
+                  call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 1, em_vars%nfactor), &
+                    kdotp_em_lr2(idir, idir2, 1, 1))
+                  call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, em_vars%nfactor), &
+                    kdotp_em_lr2(idir, idir2, 2, 1))
+                enddo
+              endif
+
               have_to_calculate = .false.
 
             end if
@@ -302,6 +327,15 @@ contains
 
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, em_vars%nfactor), em_vars%lr(idir, 2, 1))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, em_vars%nfactor), em_vars%lr(idir, 1, 1))
+
+              if(em_vars%calc_hyperpol .and. use_kdotp) then
+                do idir2 = 1, gr%sb%periodic_dim
+                  call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 1, em_vars%nfactor), &
+                    kdotp_em_lr2(idir, idir2, 2, 1))
+                  call lr_copy(sys%st, sys%gr%mesh, kdotp_em_lr2(idir, idir2, 2, em_vars%nfactor), &
+                    kdotp_em_lr2(idir, idir2, 1, 1))
+                enddo
+              endif
 
               have_to_calculate = .false.
 
@@ -328,6 +362,14 @@ contains
                     else
                       em_vars%lr(idir, 2, ifactor)%zdl_psi = em_vars%lr(idir, 1, ifactor)%zdl_psi
                     endif
+
+                    if(em_vars%calc_hyperpol .and. use_kdotp) then
+                      if(states_are_real(sys%st)) then
+                        kdotp_em_lr2(idir2, idir, 2, ifactor)%ddl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%ddl_psi
+                      else
+                        kdotp_em_lr2(idir2, idir, 2, ifactor)%zdl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%zdl_psi
+                      endif
+                    endif
                   else
                     sigma_alt = sigma
                     if(em_vars%freq_factor(ifactor) * em_vars%omega(iomega) < -M_EPSILON .and. em_vars%nsigma == 2) &
@@ -343,6 +385,21 @@ contains
                         //trim(tmpdir)//trim(dirname_restart)//"'"
                       call messages_warning(1)
                     end if
+
+                    if(em_vars%calc_hyperpol .and. use_kdotp) then
+                      do idir2 = 1, gr%sb%periodic_dim
+                        str_tmp = em_wfs_tag(idir, ifactor, idir2)
+                        write(dirname_restart,'(2a)') EM_RESP_DIR, trim(wfs_tag_sigma(str_tmp, sigma))
+                        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo, &
+                          ierr, lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
+                        
+                        if(ierr .ne. 0) then
+                          message(1) = "Initializing to zero, could not load second-order response wavefunctions from '" &
+                            //trim(tmpdir)//trim(dirname_restart)//"'"
+                          call messages_warning(1)
+                        end if
+                      enddo
+                    endif
                   endif
                 end do
               endif
@@ -460,19 +517,45 @@ contains
                 
                 ! need nsigma
                 ! need to give a proper name to the restart files
-                if (states_are_complex(sys%st)) then
-                  call zsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:1, ifactor), &
-                    kdotp_lr(idir2, 1:1), 1, em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, M_z0, &
-                    em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:1, ifactor), pert2_none, EM_RESP_DIR, &
-                    "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true.)
-                  kdotp_em_lr2(idir2, idir, 2, ifactor)%zdl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%zdl_psi
+
+                ! if the frequency is zero, we do not need to calculate both responses
+                if(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)) < M_EPSILON .and. em_vars%nsigma == 2) then
+                  if (states_are_complex(sys%st)) then
+                    call zsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:1, ifactor), &
+                      kdotp_lr(idir2, 1:1), 1, &
+                      em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, M_z0, &
+                      em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:1, ifactor), &
+                      pert2_none, EM_RESP_DIR, &
+                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true.)
+                    kdotp_em_lr2(idir2, idir, 2, ifactor)%zdl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%zdl_psi
+                  else
+                    call dsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:1, ifactor), &
+                      kdotp_lr(idir2, 1:1), 1, &
+                      em_vars%freq_factor(ifactor)*em_vars%omega(iomega), M_ZERO, &
+                      em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:1, ifactor), &
+                      pert2_none, EM_RESP_DIR, &
+                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true.)
+                    kdotp_em_lr2(idir2, idir, 2, ifactor)%ddl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%ddl_psi
+                  end if
                 else
-                  call dsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:1, ifactor), &
-                    kdotp_lr(idir2, 1:1), 1, em_vars%freq_factor(ifactor)*em_vars%omega(iomega), M_ZERO, &
-                    em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:1, ifactor), pert2_none, EM_RESP_DIR, &
-                    "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true.)
-                  kdotp_em_lr2(idir2, idir, 2, ifactor)%ddl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%ddl_psi
-                end if
+                  if (states_are_complex(sys%st)) then
+                    call zsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:em_vars%nsigma, ifactor), &
+                      kdotp_lr(idir2, 1:1), em_vars%nsigma, &
+                      em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, M_z0, &
+                      em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:em_vars%nsigma, ifactor), &
+                      pert2_none, EM_RESP_DIR, &
+                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true.)
+                  else
+                    call dsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:em_vars%nsigma, ifactor), &
+                      kdotp_lr(idir2, 1:1), em_vars%nsigma, &
+                      em_vars%freq_factor(ifactor)*em_vars%omega(iomega), M_ZERO, &
+                      em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:em_vars%nsigma, ifactor), &
+                      pert2_none, EM_RESP_DIR, &
+                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true.)
+                  end if
+                endif
+
+                em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
               enddo
             endif
           end if ! have_to_calculate
@@ -535,7 +618,7 @@ contains
               endif
             enddo
           endif
-    
+
         else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
           message(1) = "Info: Calculating magnetic susceptibilities."
           call messages_info(1)
