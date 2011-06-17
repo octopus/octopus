@@ -39,8 +39,6 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, psi, diff)
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
 
   select case(this%method)
-  case(SD_OLD)
-    call X(subspace_diag_old)(der, st, hm, ik, eigenval, psi, diff)
   case(SD_SCALAPACK)
     call X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   case(SD_STANDARD)
@@ -119,81 +117,6 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, psi, diff)
   POP_SUB(X(subspace_diag))
 
 end subroutine X(subspace_diag)
-
-! --------------------------------------------------------- 
-! This routine diagonalises the Hamiltonian in the subspace defined by
-! the states; this version is aware of parallelization in states but
-! consumes more memory.
-!
-! I leave this function here for the moment. Eventually it will be
-! removed. XA
-!
-subroutine X(subspace_diag_old)(der, st, hm, ik, eigenval, psi, diff)
-  type(derivatives_t), intent(in)    :: der
-  type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(in)    :: hm
-  integer,             intent(in)    :: ik
-  FLOAT,               intent(out)   :: eigenval(:)
-  R_TYPE,              intent(inout) :: psi(:, :, st%st_start:)
-  FLOAT, optional,     intent(out)   :: diff(:)
-
-  R_TYPE, allocatable :: h_subspace(:,:), ff(:,:,:)
-  integer             :: ist
-  FLOAT               :: nrm2
-#if defined(HAVE_MPI)
-  integer             :: tmp
-  FLOAT               :: ldiff(st%lnst)
-#endif
-
-  PUSH_SUB(X(subspace_diag_old))
-
-  SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
-  SAFE_ALLOCATE(ff(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
-  
-  ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
-  do ist = st%st_start, st%st_end
-    call X(hamiltonian_apply)(hm, der, psi(:, :, ist), ff(:, :, ist), ist, ik)
-  end do
-  call states_blockt_mul(der%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
-       psi(:, :, :), ff, h_subspace, symm=.true.)
-
-  ! Diagonalize the Hamiltonian in the subspace.
-  call lalg_eigensolve(st%nst, h_subspace, eigenval(:))
-
-  ! The new states are given by the eigenvectors of the matrix.
-  ff(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end) = psi(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
-
-  call states_block_matr_mul(der%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
-       ff, h_subspace, psi(:, :, :))
-
-  ! Renormalize.
-  do ist = st%st_start, st%st_end
-    nrm2 = X(mf_nrm2)(der%mesh, st%d%dim, psi(:, :, ist))
-    psi(1:der%mesh%np, 1:st%d%dim, ist) = psi(1:der%mesh%np, 1:st%d%dim, ist)/nrm2
-  end do
-
-  ! Recalculate the residues if requested by the diff argument.
-  if(present(diff)) then 
-    do ist = st%st_start, st%st_end
-      call X(hamiltonian_apply)(hm, der, psi(:, :, ist) , ff(:, :, st%st_start), ist, ik)
-      diff(ist) = X(states_residue)(der%mesh, st%d%dim, ff(:, :, st%st_start), eigenval(ist), &
-           psi(:, :, ist))
-    end do
-
-#if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      ldiff = diff(st%st_start:st%st_end)
-      call lmpi_gen_allgatherv(st%lnst, ldiff, tmp, diff(:), st%mpi_grp)
-    end if
-#endif
-  end if
-
-  SAFE_DEALLOCATE_A(ff)
-  SAFE_DEALLOCATE_A(h_subspace)
-  
-  POP_SUB(X(subspace_diag_old))
-  
-end subroutine X(subspace_diag_old)
 
 ! --------------------------------------------------------- 
 ! This routine diagonalises the Hamiltonian in the subspace defined by

@@ -61,7 +61,6 @@ module subspace_m
 
   integer, parameter ::        &
     SD_STANDARD  = 1,          &
-    SD_OLD       = 2,          &
     SD_SCALAPACK = 3
   
   type subspace_t
@@ -97,11 +96,14 @@ contains
 
     default = SD_STANDARD
 
+    if(st%parallel_in_states) then
 #ifdef HAVE_SCALAPACK
-    if(st%parallel_in_states) default = SD_SCALAPACK
+      default = SD_SCALAPACK
 #else
-    if(st%parallel_in_states) default = SD_OLD
+      message(1) = 'Parallelization in states of the ground state requires scalapack.'
+      call messages_fatal(1)
 #endif
+    end if
 
     call parse_integer(datasets_check('SubspaceDiagonalization'), default, this%method)
 
