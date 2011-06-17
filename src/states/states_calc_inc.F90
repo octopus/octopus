@@ -50,7 +50,11 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
 
   select case(st%d%orth_method)
   case(ORTH_GS)
-    ASSERT(.not. st%parallel_in_states)
+
+    if(st%parallel_in_states) then
+      message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
+      call messages_fatal(1)
+    end if
 
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
     ss = M_ZERO
@@ -85,8 +89,6 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
     call qr()
 
   case(ORTH_MGS)
-    ASSERT(.not. st%parallel_in_states)
-
     call mgs()
   end select
 
@@ -99,9 +101,27 @@ contains
 #ifdef HAVE_SCALAPACK
     integer             :: info, nbl, nrow, ncol
     integer             :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
+#endif
 
     PUSH_SUB(X(states_orthogonalization_full).par_gs)
 
+! some checks
+#ifndef HAVE_MPI
+    message(1) = 'The parallel Gram-Schmidt orthogonalizer can only be used in parallel.'
+    call messages_fatal(1)
+#else
+#ifndef HAVE_SCALAPACK
+    message(1) = 'The parallel Gram-Schmidt orthogonalizer requires ScaLAPACK.'
+    call messages_fatal(1)
+#endif
+    if(st%dom_st_mpi_grp%size == 1) then
+      message(1) = 'The parallel Gram-Schmidt orthogonalizer is designed to be used with domain or state parallelization.'
+      call messages_warning(1)
+    end if
+#endif
+
+
+#ifdef HAVE_SCALAPACK
     call states_blacs_blocksize(st, mesh, psi_block, total_np)
 
     ! We need to set to zero some extra parts of the array
@@ -154,8 +174,9 @@ contains
     call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
     SAFE_DEALLOCATE_A(ss)
-    POP_SUB(X(states_orthogonalization_full).par_gs)
 #endif
+
+    POP_SUB(X(states_orthogonalization_full).par_gs)
   end subroutine par_gs
 
   ! -----------------------------------------------------------------------------------------------
@@ -173,6 +194,12 @@ contains
     ASSERT(.not. mesh%use_curvilinear)
 
     if(mesh%parallel_in_domains .or. st%parallel_in_states) then
+
+#ifndef HAVE_SCALAPACK
+      message(1) = 'The QR orthogonalizer requires ScaLAPACK to work in parallel.'
+      call messages_fatal(1)
+#endif
+
 #ifdef HAVE_SCALAPACK
 
       call states_blacs_blocksize(st, mesh, psi_block, total_np)
@@ -261,6 +288,11 @@ contains
     FLOAT,  allocatable :: bb(:)
 
     PUSH_SUB(X(states_orthogonalization_full).mgs)
+
+    if(st%parallel_in_states) then
+      message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
+      call messages_fatal(1)
+    end if
 
     SAFE_ALLOCATE(bb(1:nst))
 

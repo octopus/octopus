@@ -1316,12 +1316,7 @@ contains
       !%End
 
       if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-#ifdef HAVE_SCALAPACK
         default = ORTH_PAR_GS
-#else
-        message(1) = 'State parallelization of the ground state requires scalapack.'
-        call messages_fatal(1)
-#endif
       else
         default = ORTH_GS
       end if
@@ -1331,42 +1326,8 @@ contains
       if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call input_error('StatesOrthogonalization')
       call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
 
-
       if(st%d%orth_method == ORTH_QR) call messages_experimental("QR Orthogonalization")
-
-#ifdef HAVE_MPI
-      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-        select case(st%d%orth_method)
-        case(ORTH_PAR_GS)
-        case(ORTH_QR)
-#ifndef HAVE_SCALAPACK
-          message(1) = 'The QR orthogonalizer requires ScaLAPACK to work with state-parallelization.'
-          call messages_fatal(1)
-#endif
-        case default
-          message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
-          call messages_fatal(1)
-        end select
-      end if
-#endif
-
-      ! some checks for ingenious users
-      if(st%d%orth_method == ORTH_PAR_GS) then
-#ifndef HAVE_MPI
-        message(1) = 'The parallel Gram-Schmidt orthogonalizer can only be used in parallel.'
-        call messages_fatal(1)
-#else
-#ifndef HAVE_SCALAPACK
-        message(1) = 'The parallel Gram-Schmidt orthogonalizer requires ScaLAPACK.'
-        call messages_fatal(1)
-#endif
-        if(st%dom_st_mpi_grp%size == 1) then
-          message(1) = 'The parallel Gram-Schmidt orthogonalizer is designed to be used with domain or state parallelization.'
-          call messages_warning(1)
-        end if
-#endif
-      end if
-
+ 
       POP_SUB(states_densities_init.states_exec_init)
     end subroutine states_exec_init
   end subroutine states_densities_init
