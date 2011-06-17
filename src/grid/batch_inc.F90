@@ -222,6 +222,12 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   R_TYPE,         intent(in)    :: psi(:)
 
   integer :: ip
+  type(profile_t), save :: prof
+#ifdef HAVE_OPENCL
+  type(opencl_mem_t) :: tmp
+#endif
+
+  call profiling_in(prof, "BATCH_SET_STATE")
 
   PUSH_SUB(X(batch_set_state1))
 
@@ -245,8 +251,26 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
       forall(ip = 1:np) this%pack%zpsi(ist, ip) = psi(ip)
     end if
   case(BATCH_CL_PACKED)
-    call messages_not_implemented("CL batch_set_state")
+#ifdef HAVE_OPENCL
+    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
+
+    call opencl_write_buffer(tmp, np, psi)
+
+    ! now call an opencl kernel to rearrange the data
+    call opencl_set_kernel_arg(X(pack), 0, this%pack%size(1))
+    call opencl_set_kernel_arg(X(pack), 1, ist - 1)
+    call opencl_set_kernel_arg(X(pack), 2, tmp)
+    call opencl_set_kernel_arg(X(pack), 3, this%pack%buffer)
+    
+    call opencl_kernel_run(X(pack), (/this%pack%size(2), 1/), (/opencl_max_workgroup_size(), 1/))
+    
+    call opencl_finish()
+
+    call opencl_release_buffer(tmp)
+#endif
   end select
+
+  call profiling_out(prof)
 
   POP_SUB(X(batch_set_state1))
 end subroutine X(batch_set_state1)
@@ -275,8 +299,14 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
   R_TYPE,         intent(inout) :: psi(:)
 
   integer :: ip
+  type(profile_t), save :: prof 
+#ifdef HAVE_OPENCL
+  type(opencl_mem_t) :: tmp
+#endif
 
   PUSH_SUB(X(batch_get_state1))
+
+  call profiling_in(prof, "BATCH_GET_STATE")
 
   ASSERT(ist >= 1 .and. ist <= this%nst_linear)
 #ifdef R_TREAL
@@ -298,8 +328,25 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
       forall(ip = 1:np) psi(ip) = this%pack%zpsi(ist, ip)
     end if
   case(BATCH_CL_PACKED)
-    call messages_not_implemented("CL batch_get_state")
+#ifdef HAVE_OPENCL
+    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
+
+    call opencl_set_kernel_arg(X(unpack), 0, this%pack%size(1))
+    call opencl_set_kernel_arg(X(unpack), 1, ist - 1)
+    call opencl_set_kernel_arg(X(unpack), 2, this%pack%buffer)
+    call opencl_set_kernel_arg(X(unpack), 3, tmp)
+
+    call opencl_kernel_run(X(unpack), (/1, this%pack%size(2)/), (/1, opencl_max_workgroup_size()/))
+
+    call opencl_finish()
+
+    call opencl_read_buffer(tmp, np, psi)
+
+    call opencl_release_buffer(tmp)
+#endif
   end select
+
+  call profiling_out(prof)
 
   POP_SUB(X(batch_get_state1))
 end subroutine X(batch_get_state1)
