@@ -2,7 +2,10 @@
 # $Id: 27-fine_mesh.test $
 
 Test       : Fine mesh density - Benzene
-Programs   : octopus; octopus_mpi
+Options    : scalapack
+Programs   : octopus_mpi
+Options    : 
+Programs   : octopus
 TestGroups : short-run
 Enabled    : Yes
 

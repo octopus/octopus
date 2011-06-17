@@ -57,7 +57,9 @@ contains
 
     PUSH_SUB(ground_state_run_init)
 
+#ifdef HAVE_SCALAPACK
     call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
+#endif
     call calc_mode_set_scalapack_compat()
 
     POP_SUB(ground_state_run_init)
