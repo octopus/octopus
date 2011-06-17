@@ -49,55 +49,6 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   PUSH_SUB(X(states_orthogonalization_full))
 
   select case(st%d%orth_method)
-  case(ORTH_OLDGS)
-    SAFE_ALLOCATE(qq(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(ss(1:nst, 1:nst))
-    ss = M_ZERO
-
-    call states_blockt_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
-      psi, psi, ss, symm = .true.)
-
-    qq = M_ZERO
-    do ist = 1, st%nst
-
-      if(ist > nst) then
-        qq(ist, ist) = M_ONE
-        cycle
-      end if
-
-      ! calculate the norm of the resulting vector, and use it to scale
-      ! the coefficients so we get normalized vectors.
-      nrm2 = ss(ist, ist)
-      do jst = 1, ist - 1
-        nrm2 = nrm2 - M_TWO*abs(ss(ist, jst))**2/ss(jst, jst)
-        do kst = 1, ist - 1
-          nrm2 = nrm2 + ss(jst, kst)*ss(ist, jst)*ss(kst, ist)/(ss(jst, jst)*ss(kst, kst))
-        end do
-      end do
-      nrm2 = M_ONE/sqrt(nrm2)
-
-      ! now generate the matrix with the linear combination of orbitals
-      qq(ist, ist) = nrm2
-      do jst = 1, ist - 1
-        qq(jst, ist) = -ss(jst, ist)/ss(jst, jst)*nrm2
-      end do
-
-    end do
-
-    SAFE_ALLOCATE(psi_tmp(1:mesh%np_part, 1:dim, 1:st%lnst))
-
-    do ist = 1, st%lnst
-      do idim = 1, dim
-        call lalg_copy(mesh%np, psi(:, idim, ist), psi_tmp(:, idim, ist))
-      end do
-    end do
-
-    call states_block_matr_mul(mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, psi_tmp, qq, psi)
-
-    SAFE_DEALLOCATE_A(psi_tmp)
-    SAFE_DEALLOCATE_A(ss)
-    SAFE_DEALLOCATE_A(qq)
-
   case(ORTH_GS)
     ASSERT(.not. st%parallel_in_states)
 

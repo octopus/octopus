@@ -1318,8 +1318,9 @@ contains
       if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
 #ifdef HAVE_SCALAPACK
         default = ORTH_PAR_GS
-#else        
-        default = ORTH_OLDGS
+#else
+        message(1) = 'State parallelization of the ground state requires scalapack.'
+        call messages_fatal(1)
 #endif
       else
         default = ORTH_GS
@@ -1336,7 +1337,7 @@ contains
 #ifdef HAVE_MPI
       if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
         select case(st%d%orth_method)
-        case(ORTH_OLDGS, ORTH_PAR_GS)
+        case(ORTH_PAR_GS)
         case(ORTH_QR)
 #ifndef HAVE_SCALAPACK
           message(1) = 'The QR orthogonalizer requires ScaLAPACK to work with state-parallelization.'
