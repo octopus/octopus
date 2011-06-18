@@ -31,7 +31,6 @@ The functions in this file write and read an array to binary file.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -239,15 +238,16 @@ void FC_FUNC_(read_binary,READ_BINARY)
 {
   header_t * h;
   char * filename;
-  int fd, i;
+  int i;
+  FILE * fp;
   ssize_t moved;
   int correct_endianness;
   byte * read_f;
 
   TO_C_STR1(fname, filename);
-  fd = open(filename, O_RDONLY);
+  fp = fopen(filename, "rb");
   free(filename);
-  if(fd < 0){
+  if(fp == NULL){
     *ierr = 2;
     return;
   }
@@ -256,18 +256,29 @@ void FC_FUNC_(read_binary,READ_BINARY)
   assert(h != NULL);
 
   /* read header */
-  moved = read(fd, h, sizeof(header_t));
-  if ( moved != sizeof(header_t) ) { 
+  moved = fread(h, sizeof(header_t), 1, fp);
+  if ( moved != 1) { 
     /* we couldn't read the complete header */
     *ierr = 3;
+    fclose(fp);
+    free(h);
     return;
   }
 
   *ierr = check_header(h, &correct_endianness);
-  if( *ierr != 0 ) return;
-
+  if( *ierr != 0 ) {
+    fclose(fp);
+    free(h);
+    return;
+  }
+  
   /* check whether the sizes match */ 
-  if( h->np < *np + *offset ){ *ierr = 4; return; }
+  if( h->np < *np + *offset ){
+    *ierr = 4;
+    fclose(fp);
+    free(h);
+    return; 
+  }
 
   if( h->type == *output_type){
     /* format is the same, we just read */
@@ -278,19 +289,20 @@ void FC_FUNC_(read_binary,READ_BINARY)
   }
 
   /* set the start point */
-  if(*offset != 0) lseek(fd, (*offset)*size_of[h->type], SEEK_CUR);
+  if(*offset != 0) lseek(fp, (*offset)*size_of[h->type], SEEK_CUR);
 
   /* now read the values and close the file */
-  moved = read(fd, read_f, (*np)*size_of[h->type]);
+  moved = fread(read_f, size_of[h->type], *np, fp);
+  fclose(fp);
 
-  if ( moved != (*np)*size_of[h->type]) { 
+  if ( moved != *np) {
     /* we couldn't read the whole dataset */
     *ierr = 3;
+    if(h->type != *output_type) free(read_f);
+    free(h);
     return;
   }
     
-  close(fd);
-  
   /* convert endianness */
   
   if(correct_endianness) {
