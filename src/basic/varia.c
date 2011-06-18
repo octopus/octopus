@@ -19,24 +19,36 @@
  $Id$
 */
 
+
+#include <config.h>
+
 #include <stdlib.h>
 #include <math.h>
 #include <sys/time.h>
-#include <sys/ioctl.h>
 #include <stdio.h>
-#include <termios.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/utsname.h>
 #include <string.h>
 
-#include <config.h>
+#ifdef HAVE_UNAME
+#include <sys/utsname.h>
+#endif
+
+#ifdef HAVE_IOCTL
+#include <sys/ioctl.h>
+#endif
+
+#if defined(HAVE_TCGETPGRP)
+#include <termios.h>
+#endif
+
 #include "varia.h"
 
 
 /* Gets the name of the machine */
 void sysname(char **c)
 {
+#ifdef HAVE_UNAME
   struct utsname name;
   uname(&name);
   *c = (char *)malloc(sizeof(name.nodename) + sizeof(name.sysname) + 4);
@@ -44,6 +56,10 @@ void sysname(char **c)
   strcat(*c, " (");
   strcat(*c, name.sysname);
   strcat(*c, ")");
+#else
+  *c = (char *)malloc(8);
+  strcpy(*c, "unknown");
+#endif
 }
 
 
@@ -74,28 +90,32 @@ void fft_optimize(int *n, int p, int par)
 	 copied from openssh scp source */
 static int foreground_proc(void)
 {
+#if defined(HAVE_TCGETPGRP) || defined(HAVE_IOCTL)
   static pid_t pgrp = -1;
   int ctty_pgrp;
   
-  if (pgrp == -1)
-    pgrp = getpgrp();
+  if (pgrp == -1) pgrp = getpgrp();
   
-#ifdef HAVE_TCGETPGRP
-  return ((ctty_pgrp = tcgetpgrp(STDOUT_FILENO)) != -1 &&
-	  ctty_pgrp == pgrp);
+#if defined(HAVE_TCGETPGRP)
+  return ((ctty_pgrp = tcgetpgrp(STDOUT_FILENO)) != -1 && ctty_pgrp == pgrp);
+#else defined(HAVE_IOCTL)
+  return ((ioctl(STDOUT_FILENO, TIOCGPGRP, &ctty_pgrp) != -1 && ctty_pgrp == pgrp));
+#endif
+
 #else
-  return ((ioctl(STDOUT_FILENO, TIOCGPGRP, &ctty_pgrp) != -1 &&
-	   ctty_pgrp == pgrp));
+  return 0;
 #endif
 }
 
 int getttywidth(void)
 {
+#ifdef HAVE_IOCTL  
   struct winsize winsize;
   
   if (ioctl(fileno(stdout), TIOCGWINSZ, &winsize) != -1)
     return (winsize.ws_col ? winsize.ws_col : 80);
   else
+#endif
     return (80);
 }
 

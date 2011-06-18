@@ -91,7 +91,7 @@ AC_FUNC_STAT
 AC_CHECK_FUNCS([gettimeofday \
 strndup tcgetpgrp scandir alphasort \
 sigaction readdir closedir strchr strtod \
-perror strcasestr sbrk getopt_long])
+perror strcasestr sbrk getopt_long uname ioctl])
 
 ACX_PAPI
 ACX_ARCH

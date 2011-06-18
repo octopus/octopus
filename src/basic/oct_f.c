@@ -69,7 +69,13 @@ void FC_FUNC_(oct_mkdir, OCT_MKDIR)
     free(name_c);
     return;
   }
+
+#ifndef _WIN32
   mkdir(name_c, 0775);
+#else
+  mkdir(name_c);
+#endif
+
   free(name_c);
 }
 
