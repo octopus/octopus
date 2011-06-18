@@ -189,18 +189,18 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
 {
   header_t * h;
   char * filename;
-  int fd;
+  FILE * fp;
   ssize_t moved;
 
   h = (header_t *) malloc(sizeof(header_t));
   assert(h != NULL);
 
   *ierr = 0;
-
+  
   TO_C_STR1(fname, filename);
-  fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 
-	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
-  if( fd < 0 ) {
+  fp = fopen(filename, "wb");
+
+  if(fp == NULL){
     inf_error("octopus.write_binary", ierr);
     *ierr = 2;
     return;
@@ -213,23 +213,23 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   h->type = *type;
 
   /* write header */
-  moved = write(fd, h, sizeof(header_t));
+  moved = fwrite(h, sizeof(header_t), 1, fp);
 
-  if(moved < sizeof(header_t)){
+  if(moved != 1){
     inf_error("octopus.write_binary", ierr);
-    close(fd);
+    fclose(fp);
     return;
   }
 
   /* now write the values */
-  moved = write(fd, f, (*np)*size_of[(*type)]);
+  moved = fwrite(f, size_of[(*type)], *np, fp);
 
-  if(moved < (*np)*size_of[(*type)]){
+  if(moved < (*np)){
     inf_error("octopus.write_binary", ierr);
   }
 
   /* close the file */
-  close(fd);
+  fclose(fp);
   free(h);
 
 }
