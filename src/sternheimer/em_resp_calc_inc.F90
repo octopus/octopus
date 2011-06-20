@@ -604,7 +604,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
     SAFE_DEALLOCATE_A(kxc)
   endif
   SAFE_DEALLOCATE_A(tmp)
-  SAFE_DEALLOCATE_A(hvar)
+  SAFE_DEALLOCATE_A(ppsi)
   SAFE_DEALLOCATE_A(me010)
   SAFE_DEALLOCATE_A(me11)
   SAFE_DEALLOCATE_A(hvar)
