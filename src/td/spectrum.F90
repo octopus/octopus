@@ -488,7 +488,8 @@ contains
     !% would contain the three Cartesian unit vectors (the default
     !% value), and one would make 3 runs varying
     !% <tt>TDPolarization</tt> from 1 to 3.
-    !%
+    !% If one is using symmetry,  <tt>TDPolarization</tt> should run only from 1
+    !% to <tt>TDPolarizationEquivAxes</tt>.
     !%End
 
     call parse_integer(datasets_check('TDPolarizationDirection'), 0, kick%pol_dir)
@@ -518,6 +519,9 @@ contains
     !%
     !% The default value for <tt>TDPolarization</tt> is the three
     !% Cartesian unit vectors (1,0,0), (0,1,0), and (0,0,1).
+    !%
+    !% Note that the directions do not necessarily need to be perpendicular
+    !% when symmetries are used.
     !%
     !% WARNING: If you want to obtain the cross-section tensor, the
     !% <tt>TDPolarization</tt> block must be exactly the same for the run in
@@ -556,13 +560,17 @@ contains
     !%Variable TDPolarizationWprime
     !%Type block
     !%Section Time-Dependent::Response
-    !%Description
-    !% Consider three orthogonal axes <i>p1</i>, <i>p2</i>, <i>p3</i>.
-    !% Say you have a first symmetry operation <i>A</i>
-    !% that takes you from the first axis <i>p1</i> to the second axis <i>p2</i>, and then
-    !% a second symmetry operation <i>B</i> that takes you from the second axis <i>p2</i> to the
-    !% third <i>p3</i>. Then <tt>TDPolarizationWprime</tt> = <i>A</i>^{-1} <i>p3</i>.
-    !% For more information see MJT Oliveira <i>et al.</i>, <i>J. Nanoscience and Nanotechnology<i> <b>8</b>, 3392 (2008).
+    !%Description 
+    !% This block is needed only when
+    !% <tt>TDPolarizationEquivAxes</tt> is set to 3.  In such a case,
+    !% the three directions (<i>pol1</i>, <i>pol2</i>, and <i>pol3</i>) defined in
+    !% the <tt>TDPolarization</tt> block should be related by symmetry
+    !% operations. If <i>A</i> is the symmetry operation that takes you
+    !% from <i>pol1</i> to <i>pol2</i>, then <tt>TDPolarizationWprime</tt> 
+    !% should be set to the direction defined by <i>A</i>^{-1} <i>pol3</i>.  
+    !% For more information see MJT Oliveira
+    !% <i>et al.</i>, <i>J. Nanoscience and Nanotechnology<i> <b>8</b>,
+    !% 3392 (2008).
     !%End
     if(parse_block(datasets_check('TDPolarizationWprime'), blk)==0) then
       do idir = 1, 3
