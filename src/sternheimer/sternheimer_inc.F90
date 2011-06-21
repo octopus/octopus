@@ -88,7 +88,12 @@ subroutine X(sternheimer_solve)(                           &
   ! preorthogonalization
   if (this%preorthogonalization) then 
     do sigma = 1, nsigma
-      call X(lr_orth_response)(mesh, st, lr(sigma), omega)
+      if(sigma == 1) then 
+        omega_sigma = omega
+      else 
+        omega_sigma = -R_CONJ(omega)
+      end if
+      call X(lr_orth_response)(mesh, st, lr(sigma), omega_sigma)
     enddo
   endif
 
@@ -161,6 +166,12 @@ subroutine X(sternheimer_solve)(                           &
           ! wavefunctions in the unoccupied subspace are needed to construct the first-order density.
           ! I am not sure what the generalization of this scheme is for metals, so we will just use Pc if there is smearing.
 
+          if(sigma == 1) then 
+            omega_sigma = omega
+          else 
+            omega_sigma = -R_CONJ(omega)
+          end if
+
           if (conv_last .and. this%last_occ_response) then
             ! project out only the component of the unperturbed wavefunction
             proj = X(mf_dotp)(mesh, st%d%dim, psi, rhs(:, :, sigma))
@@ -169,15 +180,9 @@ subroutine X(sternheimer_solve)(                           &
             end do
           else
             ! project RHS onto the unoccupied states
-            call X(lr_orth_vector)(mesh, st, rhs(:, :, sigma), ist, ik, omega)
+            call X(lr_orth_vector)(mesh, st, rhs(:, :, sigma), ist, ik, omega_sigma)
           endif
         
-          if(sigma == 1) then 
-            omega_sigma = omega
-          else 
-            omega_sigma = -R_CONJ(omega)
-          end if
-
           !solve the Sternheimer equation
           call X(solve_HXeY)(this%solver, hm, sys%gr, sys%st, ist, ik, &
                lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), &
@@ -191,7 +196,7 @@ subroutine X(sternheimer_solve)(                           &
                 call lalg_axpy(mesh%np, -proj, psi(:, idim), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
               end do
             else
-              call X(lr_orth_vector)(mesh, st, lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), ist, ik, omega)
+              call X(lr_orth_vector)(mesh, st, lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), ist, ik, omega_sigma)
             endif
           end if
 
