@@ -803,7 +803,7 @@ contains
         if(err .ne. 0) then
           write(message(1), '(a)')    'File '//trim(species_filename(spec))//'not found.'
           write(message(2), '(a,i4)') 'Error code returned = ', err
-          call messages_fatal(1)
+          call messages_fatal(2)
         end if
 
       case(SPEC_POINT, SPEC_JELLI)
