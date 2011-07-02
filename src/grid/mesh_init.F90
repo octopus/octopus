@@ -548,7 +548,7 @@ contains
     integer :: ixb, iyb, izb, bsize(1:3)
     type(block_t) :: blk
     integer :: idir, nn
-    FLOAT :: chi(1:MAX_DIM)
+    FLOAT :: chi(1:MAX_DIM), xx(1:MAX_DIM)
 
     PUSH_SUB(mesh_init_stage_3.create_x_lxyz)
 
@@ -620,10 +620,13 @@ contains
                 mesh%idx%lxyz_inv(ix, iy, iz) = il
 
 #ifdef HAVE_MPI
-                if(.not. mesh%parallel_in_domains) &
-#endif                  
-                  call curvilinear_chi2x(mesh%sb, mesh%cv, chi(:), mesh%x(il, 1:MAX_DIM))
-                
+                if(.not. mesh%parallel_in_domains) then
+#endif
+                  call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+                  mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
+#ifdef HAVE_MPI
+                end if
+#endif                                   
               end do
             end do
           end do
