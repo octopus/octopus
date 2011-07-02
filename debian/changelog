@@ -1,3 +1,10 @@
+octopus (4.0.0) unstable; urgency=low
+
+  * Updated to version 4.0.0
+  * Compilation now depends on blas instead of atlas.
+
+ -- Xavier Andrade <xavier@tddft.org>  Sun, 19 Jun 2011 22:40:54 -0400
+
 octopus (3.1.1) unstable; urgency=low
 
   * Updated to version 3.1.1
