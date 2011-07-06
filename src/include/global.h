@@ -19,81 +19,86 @@
 
 #include "config_F90.h"
 
-#define MAX_SPIN 4
-
-#if defined(LONG_LINES)
-#  define _newline_
-#  define _anl_
+! If the compiler accepts line number markers, then "CARDINAL" will
+! put them.  Otherwise, just a new line. Note that the "cardinal" and
+! "newline" words are substituted by the program preprocess.pl by the
+! ampersand and by a real new line just before compilation.
+#if defined(F90_ACCEPTS_LINE_NUMBERS)
+#    define CARDINAL \newline\cardinal __LINE__ __FILE__
 #else
-#  define _newline_    \newline
-#  define _anl_      & \newline
+#    define CARDINAL \newline
 #endif
 
-#if defined(LONG_LINES)
-#  define CARDINAL
-#else
-#  if defined(F90_ACCEPTS_LINE_NUMBERS)
-#    define CARDINAL _newline_\cardinal __LINE__ __FILE__
-#  else
-#    define CARDINAL _newline_
-#  endif
-#endif
 
+! The assertions are ignored if the code is compiled in not-debug mode (NDEBUG
+! is defined). Otherwise it is merely a logical assertion that, when fails,
+! prints out the assertion string, the file, and the line. The subroutine
+! aassert_die is in the global_m module.
 #define __STRING(x)     #x
-
 #if !defined(NDEBUG)
 #  define ASSERT(expr)  \
-  if(.not.(expr)) _anl_ \
-     call assert_die(__STRING(expr), _anl_ __FILE__, _anl_  __LINE__) \
+  if(.not.(expr)) & \newline \
+     call assert_die(__STRING(expr), & \newline __FILE__, & \newline  __LINE__) \
   CARDINAL
 #else
 #  define ASSERT(expr)
 #endif
 
+
+! Some compilers will not have the sizeof intrinsic.
 #ifdef HAVE_FC_SIZEOF
 #  define SIZEOF(x) sizeof(x)
 #else
 #  define SIZEOF(x) 1
 #endif
 
+
+! In octopus, one should normally use the SAFE_(DE)ALLOCATE macros below, which emit
+! a helpful error if the the allocation or deallocation fails. The "MY_DEALLOCATE" macro
+! is only used in this file; in the code, one should use SAFE_DEALLOCATE_P for pointers
+! and SAFE_DEALLOCATE_A for arrays.
 #if defined(NDEBUG)
 #  define SAFE_ALLOCATE(x) allocate(x)
 #  define SAFE_DEALLOCATE_P(x) if(associated(x)) then; deallocate(x); nullify(x); end if
 #  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; deallocate(x); end if
 #else
 #  define SAFE_ALLOCATE(x)			\
-  allocate(x, stat=global_alloc_err); _newline_ \
-  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) _anl_ \
-  global_sizeof = SIZEOF(x); _newline_	\
-  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
-    call profiling_memory_allocate(_anl_ #x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
-  if(global_alloc_err.ne.0) _anl_ \
-    call alloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
+  allocate(x, stat=global_alloc_err); \newline \
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) & \newline \
+  global_sizeof = SIZEOF(x); \newline	\
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) & \newline \
+    call profiling_memory_allocate(& \newline #x, & \newline __FILE__, & \newline __LINE__, & \newline global_sizeof); \newline \
+  if(global_alloc_err.ne.0) & \newline \
+    call alloc_error(global_sizeof, & \newline __FILE__, & \newline __LINE__); \
   CARDINAL
 
 #  define MY_DEALLOCATE(x) \
-  global_sizeof = SIZEOF(x); _newline_ \
-  deallocate(x, stat=global_alloc_err); _newline_ \
-  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
-    call profiling_memory_deallocate(#x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
-  if(global_alloc_err.ne.0) _anl_ \
-    call dealloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
+  global_sizeof = SIZEOF(x); \newline \
+  deallocate(x, stat=global_alloc_err); \newline \
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) & \newline \
+    call profiling_memory_deallocate(#x, & \newline __FILE__, & \newline __LINE__, & \newline global_sizeof); \newline \
+  if(global_alloc_err.ne.0) & \newline \
+    call dealloc_error(global_sizeof, & \newline __FILE__, & \newline __LINE__); \
   CARDINAL
 
 #  define SAFE_DEALLOCATE_P(x) \
-  if(associated(x)) then; _newline_ \
-    MY_DEALLOCATE(x);     _newline_ \
-    nullify(x);           _newline_ \
+  if(associated(x)) then; \newline \
+    MY_DEALLOCATE(x);     \newline \
+    nullify(x);           \newline \
   end if
 #  define SAFE_DEALLOCATE_A(x) \
-  if(allocated(x)) then;  _newline_ \
-    MY_DEALLOCATE(x);     _newline_ \
+  if(allocated(x)) then;  \newline \
+    MY_DEALLOCATE(x);     \newline \
   end if
 
 #endif
 
+! This was used in the past and should not be used any more.
 #define ALLOCATE(a,b) _DEPRECATED_PLEASE_USE_SAFE_ALLOCATE_
 
+
+! The following macros facilitate the use of real or complex variables,
+! and the possibility of compiling the code in single or double precision.
 #define REAL_DOUBLE real(8)
 #define REAL_SINGLE real(4)
 
@@ -125,6 +130,8 @@
 #define M_ONE CNST(1.0)
 #define M_ZERO CNST(0.0)
 
+
+! The code directories should be defined here, and not hard coded in the Fortran files.
 #define GS_DIR "gs/"
 #define STATIC_DIR "static/"
 #define EM_RESP_DIR "em_resp/"
@@ -135,6 +142,9 @@
 #define CASIDA_DIR "casida/"
 #define OCT_DIR "opt-control/"
 
+
+! The MPI1 and MPI2 standards are different regarding the MPI_IN_PLACE constant. In
+! the code, just use the MPI_IN_PLACE_OR defined here.
 #ifdef HAVE_MPI
 #ifdef HAVE_MPI2
 #define MPI_IN_PLACE_OR(x) MPI_IN_PLACE
@@ -150,16 +160,21 @@
 
 #define INCR(x, y) x = (x) + (y)
 
+
+! Whenever a procedure is not called too many times, one should start it
+! and finish it with the PUSH_SUB and POP_SUB macros, which are these
+! pieces of code that call the push_sub and pop_sub routines defined
+! in the messages_m module.
 #define PUSH_SUB(routine) \
-  if(in_debug_mode) then; _newline_ \
-    call push_sub(__FILE__//"."//TOSTRING(routine)); _newline_ \
+  if(in_debug_mode) then; \newline \
+    call push_sub(__FILE__//"."//TOSTRING(routine)); \newline \
   endif
 #define POP_SUB(routine) \
-  if(in_debug_mode) then; _newline_ \
-    call pop_sub(__FILE__//"."//TOSTRING(routine)); _newline_ \
+  if(in_debug_mode) then; \newline \
+    call pop_sub(__FILE__//"."//TOSTRING(routine)); \newline \
   endif
 
-! the leading dimension of the array
+! The leading dimension of the array
 #define LD(a) ubound(a,dim=1)
 
 !! Local Variables:

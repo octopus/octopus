@@ -2,9 +2,8 @@
 
 my $fin         = $ARGV[0];
 my $ndebug      = $ARGV[1] eq "no";
-my $nlong_lines = $ARGV[2] eq "no";
-my $nline_num   = $ARGV[3] eq "no";
-my $nf90_forall = $ARGV[4] eq "no";
+my $nline_num   = $ARGV[2] eq "no";
+my $nf90_forall = $ARGV[3] eq "no";
 
 my $tmpfile = "/tmp/oct_preprocess.$$";
 
@@ -28,17 +27,22 @@ my $ncount_forall;
 
 while($_ = <IN>)
 {
+  # First, eliminate the push_sub and pop_sub if the code is compiled in non-debug mode.
   if($ndebug){
       next if /push_sub/;
       next if /pop_sub/;
   }
-  if($nlong_lines){
-      s/\\newline/\n/g;
-      s/\\cardinal/#/g;
-  }
+
+  # Substitute "\newline" by a real new line.
+  s/\\newline/\n/g;
+
+  # Substitute "\cardinal" by "#".
+  s/\\cardinal/#/g;
+
   if($nline_num){
       next if /^#/;
   }
+
   if($nf90_forall){
       if(m/^\s*forall\s*\(($NestedGuts)\)\s*(.*)$/xi){
 	  print OUT "! preprocessed forall\n";
