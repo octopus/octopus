@@ -31,6 +31,7 @@ The functions in this file write and read an array to binary file.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -188,18 +189,18 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
 {
   header_t * h;
   char * filename;
-  FILE * fp;
+  int fd;
   ssize_t moved;
 
   h = (header_t *) malloc(sizeof(header_t));
   assert(h != NULL);
 
   *ierr = 0;
-  
-  TO_C_STR1(fname, filename);
-  fp = fopen(filename, "wb");
 
-  if(fp == NULL){
+  TO_C_STR1(fname, filename);
+  fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 
+	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+  if( fd < 0 ) {
     inf_error("octopus.write_binary", ierr);
     *ierr = 2;
     return;
@@ -212,23 +213,23 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   h->type = *type;
 
   /* write header */
-  moved = fwrite(h, sizeof(header_t), 1, fp);
+  moved = write(fd, h, sizeof(header_t));
 
-  if(moved != 1){
+  if(moved < sizeof(header_t)){
     inf_error("octopus.write_binary", ierr);
-    fclose(fp);
+    close(fd);
     return;
   }
 
   /* now write the values */
-  moved = fwrite(f, size_of[(*type)], *np, fp);
+  moved = write(fd, f, (*np)*size_of[(*type)]);
 
-  if(moved < (*np)){
+  if(moved < (*np)*size_of[(*type)]){
     inf_error("octopus.write_binary", ierr);
   }
 
   /* close the file */
-  fclose(fp);
+  close(fd);
   free(h);
 
 }
@@ -238,16 +239,15 @@ void FC_FUNC_(read_binary,READ_BINARY)
 {
   header_t * h;
   char * filename;
-  int i;
-  FILE * fp;
+  int fd, i;
   ssize_t moved;
   int correct_endianness;
   byte * read_f;
 
   TO_C_STR1(fname, filename);
-  fp = fopen(filename, "rb");
+  fd = open(filename, O_RDONLY);
   free(filename);
-  if(fp == NULL){
+  if(fd < 0){
     *ierr = 2;
     return;
   }
@@ -256,29 +256,18 @@ void FC_FUNC_(read_binary,READ_BINARY)
   assert(h != NULL);
 
   /* read header */
-  moved = fread(h, sizeof(header_t), 1, fp);
-  if ( moved != 1) { 
+  moved = read(fd, h, sizeof(header_t));
+  if ( moved != sizeof(header_t) ) { 
     /* we couldn't read the complete header */
     *ierr = 3;
-    fclose(fp);
-    free(h);
     return;
   }
 
   *ierr = check_header(h, &correct_endianness);
-  if( *ierr != 0 ) {
-    fclose(fp);
-    free(h);
-    return;
-  }
-  
+  if( *ierr != 0 ) return;
+
   /* check whether the sizes match */ 
-  if( h->np < *np + *offset ){
-    *ierr = 4;
-    fclose(fp);
-    free(h);
-    return; 
-  }
+  if( h->np < *np + *offset ){ *ierr = 4; return; }
 
   if( h->type == *output_type){
     /* format is the same, we just read */
@@ -289,20 +278,19 @@ void FC_FUNC_(read_binary,READ_BINARY)
   }
 
   /* set the start point */
-  if(*offset != 0) lseek(fp, (*offset)*size_of[h->type], SEEK_CUR);
+  if(*offset != 0) lseek(fd, (*offset)*size_of[h->type], SEEK_CUR);
 
   /* now read the values and close the file */
-  moved = fread(read_f, size_of[h->type], *np, fp);
-  fclose(fp);
+  moved = read(fd, read_f, (*np)*size_of[h->type]);
 
-  if ( moved != *np) {
+  if ( moved != (*np)*size_of[h->type]) { 
     /* we couldn't read the whole dataset */
     *ierr = 3;
-    if(h->type != *output_type) free(read_f);
-    free(h);
     return;
   }
     
+  close(fd);
+  
   /* convert endianness */
   
   if(correct_endianness) {
