@@ -360,7 +360,7 @@ contains
         tmp(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)
         ! Use the stable symmetric QMR solver
         ! h_eff_backward must be a complex symmetric operator !
-        call zqmr_sym(gr%mesh%np, psi(:, 1), tmp(:, 1), h_eff_backward, precond_prop, &
+        call zqmr_sym(gr%mesh%np_part, gr%mesh%np, psi(:, 1), tmp(:, 1), h_eff_backward, precond_prop, &
           qmr_iter, residue=dres, threshold=qmr_tol, showprogress=in_debug_mode, converged=conv)
 
         call states_set_state(st, gr%mesh, ist, ik, psi)
@@ -490,7 +490,7 @@ contains
         ! Solve linear system (1 + i \delta H_{eff}) psi = tmp.
         qmr_iter      = qmr_max_iter
         tmp(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)
-        call zqmr_sym(gr%mesh%np, psi(:, 1), tmp(:, 1), h_eff_backward_sp, precond_prop, &
+        call zqmr_sym(gr%mesh%np_part, gr%mesh%np, psi(:, 1), tmp(:, 1), h_eff_backward_sp, precond_prop, &
           qmr_iter, residue=dres, threshold=qmr_tol, showprogress=.false.)
 
         call states_set_state(st, gr%mesh, ist, ik, psi)

@@ -133,10 +133,10 @@ contains
 
         conv = .false.
         if (associated(hm%ep%A_static)) then ! magnetic gs
-          call zqmr_sym(gr%mesh%np_part*st%d%dim, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs_symmetrized, dotu, &
+          call zqmr_sym(gr%mesh%np_part, gr%mesh%np, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs_symmetrized, dotu, &
             nrm2, precond, iter, residue=res, threshold=tol, converged=conv, showprogress=in_debug_mode)
         else
-          call zqmr_sym(gr%mesh%np_part*st%d%dim, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs, dotu, nrm2, precond, &
+          call zqmr_sym(gr%mesh%np_part, gr%mesh%np, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs, dotu, nrm2, precond, &
             iter, residue=res, threshold=tol, converged=conv, showprogress=in_debug_mode)
         end if
         if(in_debug_mode) then ! write info

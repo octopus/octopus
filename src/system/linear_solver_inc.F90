@@ -66,7 +66,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_respo
 
   case(LS_QMR_SYMMETRIC)   
     ! complex symmetric: for Sternheimer, only if wfns are real
-    call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
+    call X(qmr_sym)(gr%mesh%np_part, gr%mesh%np, x(:, 1), y(:, 1), &
       X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
       this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
 
@@ -74,13 +74,13 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_respo
     ! symmetrized equation
     SAFE_ALLOCATE(z(1:gr%mesh%np, 1:1))
     call X(ls_solver_operator_t_na)(y(:, 1), z(:, 1))
-    call X(qmr_sym)(gr%mesh%np, x(:, 1), z(:, 1), &
+    call X(qmr_sym)(gr%mesh%np_part, gr%mesh%np, x(:, 1), z(:, 1), &
       X(ls_solver_operator_sym_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
       this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
 
   case(LS_QMR_DOTP)
     ! using conjugated dot product
-    call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
+    call X(qmr_sym)(gr%mesh%np_part, gr%mesh%np, x(:, 1), y(:, 1), &
       X(ls_solver_operator_na), X(ls_dotp_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
       this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
 

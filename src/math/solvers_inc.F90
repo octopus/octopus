@@ -102,16 +102,16 @@ subroutine X(sym_conjugate_gradients)(np_part, np, x, b, op, dotp, iter, residue
 
   PUSH_SUB(X(sym_conjugate_gradients))
 
-  if(present(threshold)) then
-    threshold_ = threshold
-  else
-    threshold_ = CNST(1.0e-6)
-  end if
+  threshold_ = optional_default(threshold, CNST(1.0e-6))
 
   SAFE_ALLOCATE( r(1:np))
-  SAFE_ALLOCATE(ax(1:np))
+  SAFE_ALLOCATE(ax(1:np_part))
   SAFE_ALLOCATE( p(1:np_part))
-  SAFE_ALLOCATE(ap(1:np))
+  SAFE_ALLOCATE(ap(1:np_part))
+
+  ax(np+1:np_part) = R_TOTYPE(M_ZERO)
+  p(np+1:np_part)  = R_TOTYPE(M_ZERO)
+  ap(np+1:np_part) = R_TOTYPE(M_ZERO)
 
   ! Initial residue.
   call op(x, ax)
@@ -175,11 +175,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
 
   PUSH_SUB(X(bi_conjugate_gradients))
 
-  if(present(threshold)) then
-    threshold_ = threshold
-  else
-    threshold_ = CNST(1.0e-6)
-  end if
+  threshold_ = optional_default(threshold, CNST(1.0e-6))
 
   SAFE_ALLOCATE(  r(1:np))
   SAFE_ALLOCATE( rr(1:np))
@@ -233,7 +229,8 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
 end subroutine X(bi_conjugate_gradients)
 
   ! ---------------------------------------------------------
-  subroutine X(qmr_sym_spec_dotu)(np, x, b, op, prec, iter, residue, threshold, showprogress, converged)
+  subroutine X(qmr_sym_spec_dotu)(np_part, np, x, b, op, prec, iter, residue, threshold, showprogress, converged)
+    integer, target,   intent(in)    :: np_part! number of points including boundaries
     integer, target,   intent(in)    :: np    ! number of points
     R_TYPE,             intent(inout) :: x(:)  ! initial guess and result
     R_TYPE,             intent(in)    :: b(:)  ! the right side
@@ -258,7 +255,7 @@ end subroutine X(bi_conjugate_gradients)
     PUSH_SUB(X(qmr_sym_spec_dotu))
 
     np_p => np
-    call X(qmr_sym_gen_dotu)(np, x, b, op, X(dotu_qmr), X(nrm2_qmr), prec, iter, &
+    call X(qmr_sym_gen_dotu)(np_part, np, x, b, op, X(dotu_qmr), X(nrm2_qmr), prec, iter, &
       residue, threshold, showprogress, converged)
 
     POP_SUB(X(qmr_sym_spec_dotu))
@@ -324,8 +321,9 @@ end subroutine X(bi_conjugate_gradients)
   ! ---------------------------------------------------------
   ! for complex symmetric matrices
   ! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
-  subroutine X(qmr_sym_gen_dotu)(np, x, b, op, dotu, nrm2, prec, iter, &
+  subroutine X(qmr_sym_gen_dotu)(np_part, np, x, b, op, dotu, nrm2, prec, iter, &
     residue, threshold, showprogress, converged)
+    integer,           intent(in)    :: np_part! number of points including boundaries
     integer,           intent(in)    :: np    ! number of points
     R_TYPE,             intent(inout) :: x(:)  ! the initial guess and the result
     R_TYPE,             intent(in)    :: b(:)  ! the right side
@@ -371,24 +369,21 @@ end subroutine X(bi_conjugate_gradients)
     if(present(converged)) then
       converged = .false.
     end if
-    if(present(threshold)) then
-      threshold_ = threshold
-    else
-      threshold_ = CNST(1.0e-6)
-    end if
-    if(present(showprogress)) then
-      showprogress_ = showprogress
-    else
-      showprogress_ = .false.
-    end if
+    threshold_ = optional_default(threshold, CNST(1.0e-6))
+    showprogress_ = optional_default(showprogress, .false.)
 
     SAFE_ALLOCATE(r(1:np))
-    SAFE_ALLOCATE(v(1:np))
-    SAFE_ALLOCATE(z(1:np))
-    SAFE_ALLOCATE(q(1:np))
-    SAFE_ALLOCATE(p(1:np))
+    SAFE_ALLOCATE(v(1:np_part))
+    SAFE_ALLOCATE(z(1:np_part))
+    SAFE_ALLOCATE(q(1:np_part))
+    SAFE_ALLOCATE(p(1:np_part))
     SAFE_ALLOCATE(deltax(1:np))
     SAFE_ALLOCATE(deltar(1:np))
+
+    v(np+1:np_part) = R_TOTYPE(M_ZERO)
+    z(np+1:np_part) = R_TOTYPE(M_ZERO)
+    p(np+1:np_part) = R_TOTYPE(M_ZERO)
+    q(np+1:np_part) = R_TOTYPE(M_ZERO)
 
     ! use v as temp var
     call op(x, v)
