@@ -19,14 +19,31 @@
 
 #include "config_F90.h"
 
+
+! If the compiler accepts long Fortran lines, it is better to use that
+! capacity, and build all the preprocessor definitions in one line. In
+! this way, the debuggers will provide the right line numbers.
+#if defined(LONG_LINES)
+#  define _newline_
+#  define _anl_
+#else
+#  define _newline_    \newline
+#  define _anl_      & \newline
+#endif
+
+
 ! If the compiler accepts line number markers, then "CARDINAL" will
 ! put them.  Otherwise, just a new line. Note that the "cardinal" and
 ! "newline" words are substituted by the program preprocess.pl by the
 ! ampersand and by a real new line just before compilation.
-#if defined(F90_ACCEPTS_LINE_NUMBERS)
-#    define CARDINAL \newline\cardinal __LINE__ __FILE__
+#if defined(LONG_LINES)
+#  define CARDINAL
 #else
-#    define CARDINAL \newline
+#  if defined(F90_ACCEPTS_LINE_NUMBERS)
+#    define CARDINAL _newline_\cardinal __LINE__ __FILE__
+#  else
+#    define CARDINAL _newline_
+#  endif
 #endif
 
 
@@ -37,8 +54,8 @@
 #define __STRING(x)     #x
 #if !defined(NDEBUG)
 #  define ASSERT(expr)  \
-  if(.not.(expr)) & \newline \
-     call assert_die(__STRING(expr), & \newline __FILE__, & \newline  __LINE__) \
+  if(.not.(expr)) _anl_ \
+     call assert_die(__STRING(expr), _anl_ __FILE__, _anl_  __LINE__) \
   CARDINAL
 #else
 #  define ASSERT(expr)
@@ -63,35 +80,36 @@
 #  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; deallocate(x); end if
 #else
 #  define SAFE_ALLOCATE(x)			\
-  allocate(x, stat=global_alloc_err); \newline \
-  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) & \newline \
-  global_sizeof = SIZEOF(x); \newline	\
-  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) & \newline \
-    call profiling_memory_allocate(& \newline #x, & \newline __FILE__, & \newline __LINE__, & \newline global_sizeof); \newline \
-  if(global_alloc_err.ne.0) & \newline \
-    call alloc_error(global_sizeof, & \newline __FILE__, & \newline __LINE__); \
+  allocate(x, stat=global_alloc_err); _newline_ \
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) _anl_ \
+  global_sizeof = SIZEOF(x); _newline_	\
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
+    call profiling_memory_allocate(_anl_ #x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
+  if(global_alloc_err.ne.0) _anl_ \
+    call alloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
   CARDINAL
 
 #  define MY_DEALLOCATE(x) \
-  global_sizeof = SIZEOF(x); \newline \
-  deallocate(x, stat=global_alloc_err); \newline \
-  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) & \newline \
-    call profiling_memory_deallocate(#x, & \newline __FILE__, & \newline __LINE__, & \newline global_sizeof); \newline \
-  if(global_alloc_err.ne.0) & \newline \
-    call dealloc_error(global_sizeof, & \newline __FILE__, & \newline __LINE__); \
+  global_sizeof = SIZEOF(x); _newline_ \
+  deallocate(x, stat=global_alloc_err); _newline_ \
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
+    call profiling_memory_deallocate(#x, _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
+  if(global_alloc_err.ne.0) _anl_ \
+    call dealloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
   CARDINAL
 
 #  define SAFE_DEALLOCATE_P(x) \
-  if(associated(x)) then; \newline \
-    MY_DEALLOCATE(x);     \newline \
-    nullify(x);           \newline \
+  if(associated(x)) then; _newline_ \
+    MY_DEALLOCATE(x);     _newline_ \
+    nullify(x);           _newline_ \
   end if
 #  define SAFE_DEALLOCATE_A(x) \
-  if(allocated(x)) then;  \newline \
-    MY_DEALLOCATE(x);     \newline \
+  if(allocated(x)) then;  _newline_ \
+    MY_DEALLOCATE(x);     _newline_ \
   end if
 
 #endif
+
 
 ! This was used in the past and should not be used any more.
 #define ALLOCATE(a,b) _DEPRECATED_PLEASE_USE_SAFE_ALLOCATE_
@@ -153,11 +171,11 @@
 #endif
 #endif
 
+
 ! the TOSTRING macro converts a macro into a string
 ! do not use the STRINGIFY macro
 #define STRINGIFY(x) #x
 #define TOSTRING(x)  STRINGIFY(x)
-
 #define INCR(x, y) x = (x) + (y)
 
 
@@ -166,15 +184,15 @@
 ! pieces of code that call the push_sub and pop_sub routines defined
 ! in the messages_m module.
 #define PUSH_SUB(routine) \
-  if(in_debug_mode) then; \newline \
-    call push_sub(__FILE__//"."//TOSTRING(routine)); \newline \
+  if(in_debug_mode) then; _newline_ \
+    call push_sub(__FILE__//"."//TOSTRING(routine)); _newline_ \
   endif
 #define POP_SUB(routine) \
-  if(in_debug_mode) then; \newline \
-    call pop_sub(__FILE__//"."//TOSTRING(routine)); \newline \
+  if(in_debug_mode) then; _newline_ \
+    call pop_sub(__FILE__//"."//TOSTRING(routine)); _newline_ \
   endif
 
-! The leading dimension of the array
+! the leading dimension of the array
 #define LD(a) ubound(a,dim=1)
 
 !! Local Variables:
