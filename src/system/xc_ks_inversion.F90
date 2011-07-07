@@ -534,8 +534,6 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_ks_inversion_calc(ks_inversion, gr, hm, st, ex, ec, vxc, time)
-    use xc_functl_m
-
     type(xc_ks_inversion_t),  intent(inout) :: ks_inversion
     type(grid_t),             intent(inout) :: gr
     type(hamiltonian_t),      intent(in)    :: hm
