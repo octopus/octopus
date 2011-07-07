@@ -93,15 +93,15 @@ contains
     ! calculate the Hartree potential
     call dpoisson_solve(sys%ks%hartree_solver, hm%vhartree, rho)
 
+    do ii = 1, nspin
+      hm%vhxc(:,ii) = hm%vhartree(:)
+    enddo
+
     call hamiltonian_update(hm, sys%gr%mesh)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
                          sys%ks%ks_inversion%aux_st, hm, 1, verbose = .false.)
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
     
-    do ii = 1, nspin
-      hm%vhxc(:,ii) = hm%vhartree(:)
-    enddo
-   
     write(message(1),'(a)') "Calculating KS potential"
     call messages_info(1)
        
@@ -114,12 +114,6 @@ contains
       if (sys%ks%ks_inversion%method == XC_INV_METHOD_VS_ITER) then ! iterative procedure for v_s 
         call invertks_iter(target_rho, nspin, hm, sys%gr, &
              sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver)
-      else
-       !TODO: iterative vxc
-       
-       ! call invertvxc_iter(target_rho, np, nspin, hm, sys%ks%xc, &
-       !      sys%ks%hartree_solver, sys%ks%frozen_hxc, sys%gr, &
-       !      sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver)
       endif
     end if
 
@@ -166,6 +160,7 @@ contains
       integer :: pass, iunit, ierr, ii, npoints
       FLOAT   :: l_xx(MAX_DIM), l_ff(4), rr
       FLOAT, allocatable :: xx(:,:), ff(:,:)
+      character(len=1)   :: char
 
       PUSH_SUB(invert_ks_run.read_target_rho)
 
@@ -183,9 +178,14 @@ contains
 
       npoints = 0
       do pass = 1, 2
-        ii = 0
+        ii = -1
         rewind(iunit)
         do
+          if(ii== -1) then
+            read(iunit, '(a)', advance='no') char
+            ii = 0
+            if (char .eq. '#') read(iunit, '(a)') char
+          end if
           read(iunit, fmt=*, iostat=ierr) l_xx(1:ndim), l_ff(1:nspin)
           if(ierr.ne.0) exit
           ii = ii + 1
@@ -198,7 +198,6 @@ contains
         if(pass == 1) then
           SAFE_ALLOCATE(xx(1:npoints, 1:ndim))
           SAFE_ALLOCATE(ff(1:npoints, 1:nspin))
-	  
         end if
       end do
 
@@ -214,9 +213,6 @@ contains
       end do
       rr = sys%st%qtot/rr
       target_rho(:,:) = rr*target_rho(:,:)
-
-      call dio_function_output(io_function_fill_how("AxisX"), &
-           ".", "func", sys%gr%mesh, target_rho(:,1), units_out%length**(-sys%gr%sb%dim), ierr)
 
       SAFE_DEALLOCATE_A(xx)
       SAFE_DEALLOCATE_A(ff)
