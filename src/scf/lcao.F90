@@ -569,6 +569,7 @@ contains
 
       SAFE_ALLOCATE(aorbital(1:mesh%np))
 
+      maxorbs = 0
       do iatom = 1, geo%natoms
         maxorbs = max(maxorbs, species_niwfs(geo%atom(iatom)%spec))
       end do

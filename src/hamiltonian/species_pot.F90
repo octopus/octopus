@@ -112,7 +112,7 @@ contains
       ! We put, for the electron density, the same as the positive density that 
       ! creates the external potential.
 
-      call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = sb%dim), &
+      call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = MAX_DIM), &
         range = M_TWO * maxval(sb%lsize(1:sb%dim)))
 
       rho = M_ZERO
@@ -131,6 +131,11 @@ contains
         rho(:, 1) = M_HALF*rho(:, 1)
         rho(:, 2) = rho(:, 1)
       end if
+      ! rescale to match the valence charge
+      do isp = 1, spin_channels
+        x = species_zval(spec) / dmf_integrate(mesh, rho(:, isp))
+        rho(1:mesh%np, isp) = x * rho(1:mesh%np, isp)
+      end do
 
     case (SPEC_POINT, SPEC_JELLI) ! ... from jellium
       in_points = 0
@@ -627,7 +632,7 @@ contains
 
     case(SPEC_CHARGE_DENSITY)
 
-      call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &
+      call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = MAX_DIM), &
         range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
 
       rho = M_ZERO
@@ -641,6 +646,8 @@ contains
           rho(ip) = rho(ip) - rerho
         end do
       end do
+      rr = species_zval(spec) / abs(dmf_integrate(mesh, rho(:)))
+      rho(1:mesh%np) = rr * rho(1:mesh%np)
 
       call periodic_copy_end(pp)
 
@@ -801,7 +808,7 @@ contains
 
         call dio_function_input(trim(species_filename(spec)), mesh, vl, err)
         if(err .ne. 0) then
-          write(message(1), '(a)')    'File '//trim(species_filename(spec))//'not found.'
+          write(message(1), '(a)')    'Error loading file '//trim(species_filename(spec))//'.'
           write(message(2), '(a,i4)') 'Error code returned = ', err
           call messages_fatal(2)
         end if

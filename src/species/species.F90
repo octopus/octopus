@@ -444,6 +444,7 @@ contains
 
     case(SPEC_CHARGE_DENSITY)
       spec%niwfs = int(max(2*spec%z_val, CNST(1.0)))
+      spec%omega = spec%z_val
       spec%has_density = .true.
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a distribution of charge:'
