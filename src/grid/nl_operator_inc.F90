@@ -312,8 +312,15 @@ contains
       isize = isize - mod(isize, fi%pack%size_real(1))
       bsize = fi%pack%size_real(1)*isize
       bsize = min(opencl_kernel_workgroup_size(kernel_operate), bsize)
+
+      if(bsize < fi%pack%size_real(1)) then
+        message(1) = "The value of StatesBlockSize is too large for this OpenCL implementation."
+        call messages_fatal(1)
+      end if
+
       isize = bsize/(fi%pack%size_real(1))
 
+      ASSERT(isize > 0)
       ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
 
       call opencl_set_kernel_arg(kernel_operate, 9, TYPE_INTEGER, isize*op%stencil%size)

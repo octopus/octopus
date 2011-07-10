@@ -175,7 +175,7 @@ module opencl_m
       !%End
       call parse_integer(datasets_check('OpenCLPlatform'), 0, iplatform)
 
-     !%Variable OpenCLDevice
+      !%Variable OpenCLDevice
       !%Type integer
       !%Default 0
       !%Section Execution::OpenCL
@@ -427,9 +427,10 @@ module opencl_m
       integer :: ierr
 
       PUSH_SUB(opencl_set_kernel_arg_buffer)
-
       call f90_cl_set_kernel_arg_buf(kernel, narg, buffer%mem, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_buf")
+      if(ierr /= CL_SUCCESS) then
+        call opencl_print_error(ierr, "set_kernel_arg_buf")
+      end if
 
       POP_SUB(opencl_set_kernel_arg_buffer)
 
@@ -453,10 +454,15 @@ module opencl_m
         write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", dble(size_in_bytes)/1024.0, " Kb"
         write(message(2), '(a,f12.6,a)') "          available local memory: ", dble(opencl%local_memory_size)/1024.0, " Kb"
         call messages_fatal(2)
+      else if(size_in_bytes <= 0) then
+        write(message(1), '(a,i10)') "CL Error: invalid local memory size: ", size_in_bytes
+        call messages_fatal(1)
       end if
 
       call f90_cl_set_kernel_arg_local(kernel, narg, size_in_bytes, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_buf")
+      if(ierr /= CL_SUCCESS) then 
+        call opencl_print_error(ierr, "set_kernel_arg_local")
+      end if
 
       POP_SUB(opencl_set_kernel_arg_local)
 
