@@ -21,6 +21,7 @@
 
 #ifdef EXT_KHR_FP64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#define HAVE_SINCOS
 #elif EXT_AMD_FP64
 #pragma OPENCL EXTENSION cl_amd_fp64 : enable
 #endif
@@ -32,8 +33,16 @@ __kernel void phase(const int offset,
   const int ist = get_global_id(0);
   const int ip  = get_global_id(1);
 
+#ifdef HAVE_SINCOS
   double cc;
   double ss = sincos(phase[offset + ip], &cc);
+#else
+#warning "Using single precision sincos functions."
+  float fcc;
+  double ss = (double) sincos((float) phase[offset + ip], &fcc);
+  double cc = (double) fcc;
+#endif
+
   double2 ff = psi[(ip<<ldpsi) + ist];
 
   psi[(ip<<ldpsi) + ist] = (double2)(cc*ff.x + ss*ff.y, cc*ff.y - ss*ff.x);
