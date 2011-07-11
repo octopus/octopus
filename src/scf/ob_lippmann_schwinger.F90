@@ -252,7 +252,7 @@ contains
     np_part = gr_p%mesh%np_part
     np      = gr_p%mesh%np
 
-    dot = M_ZERO
+    dot = M_z0
     do idim = 1, st_p%d%dim
       dot = dot + blas_dotu(np, x(l(idim)), 1, y(l(idim)), 1)
     end do
@@ -301,7 +301,7 @@ contains
     integer function u(idim)
       integer, intent(in) :: idim
 
-      u = l(idim)+np_part-1
+      u = l(idim)+np-1
     end function u
   end function nrm2
 
