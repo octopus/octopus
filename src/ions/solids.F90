@@ -66,7 +66,7 @@ contains
     ASSERT(range >= M_ZERO)
 
     this%range = range
-    this%pos = pos
+    this%pos(1:sb%dim) = pos(1:sb%dim)
     nullify(this%icell)
 
     if(.not. simul_box_is_periodic(sb)) then

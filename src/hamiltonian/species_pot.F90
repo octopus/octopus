@@ -112,7 +112,7 @@ contains
       ! We put, for the electron density, the same as the positive density that 
       ! creates the external potential.
 
-      call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = MAX_DIM), &
+      call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = sb%dim), &
         range = M_TWO * maxval(sb%lsize(1:sb%dim)))
 
       rho = M_ZERO
@@ -632,7 +632,7 @@ contains
 
     case(SPEC_CHARGE_DENSITY)
 
-      call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = MAX_DIM), &
+      call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &
         range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
 
       rho = M_ZERO
