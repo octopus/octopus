@@ -925,7 +925,7 @@ contains
     FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
-    integer :: ix, iy, iz, isph, ss
+    integer :: ix, iy, iz, isph, ss, idim
     FLOAT   :: gg(1:MAX_DIM), gg2, gx
     FLOAT   :: factor, charge
     CMPLX   :: sumatoms, tmp(1:MAX_DIM)
@@ -1000,7 +1000,11 @@ contains
     efourier = -M_PI*charge**2/(M_TWO*alpha**2*sb%rcell_volume)
 
     ! get a converged value for the cutoff in g
-    rcut = min(sum(sb%klattice(1:sb%dim, 1))**2, sum(sb%klattice(1:sb%dim, 2))**2, sum(sb%klattice(1:sb%dim, 3))**2)
+    rcut = sum(sb%klattice(1:sb%dim, 1))**2
+    do idim = 2, sb%dim
+      rcut = min(rcut, sum(sb%klattice(1:sb%dim, idim))**2)
+    end do
+
     isph = ceiling(CNST(6.0)*alpha/rcut)
 
     do ix = -isph, isph
