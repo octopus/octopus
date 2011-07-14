@@ -101,9 +101,8 @@
 
     ik_op = 1
     iter = 2000
-    call zqmr_sym(st%nst*np_part*st%d%dim, st%nst*np*st%d%dim, zpsi, rhs, &
-      propagator_qmr2_op, propagator_qmr_prec, iter, dres, cgtol, &
-      showprogress = .false., converged = converged)
+    call zqmr_sym(st%nst*np*st%d%dim, zpsi, rhs, propagator_qmr2_op, propagator_qmr_prec, iter, dres, cgtol, &
+                  showprogress = .false., converged = converged)
 
     if(.not.converged) then
       write(message(1),'(a)')        'The linear solver used for the Crank-Nicholson'

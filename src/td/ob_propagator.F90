@@ -268,10 +268,10 @@ contains
     FLOAT, target,               intent(in)    :: t
     integer,                     intent(in)    :: timestep
 
-    integer            :: il, it, m, qmr_iter, order, np
+    integer            :: il, it, idim, m, qmr_iter, order, np
     integer, target    :: ist, ik
     CMPLX              :: factor, fac, f0
-    CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:, :), psi(:, :)
+    CMPLX, allocatable :: tmp_wf(:), tmp_mem(:, :), psi(:, :), psi2(:), rhs(:)
     FLOAT              :: dres
     logical            :: conv
     
@@ -280,10 +280,11 @@ contains
     np = maxval(gr%intf(1:NLEADS)%np_intf)
 
     order = gr%der%order
-    SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:st%d%ispin))
     SAFE_ALLOCATE(tmp_wf(1:np))
     SAFE_ALLOCATE(tmp_mem(1:np, 1:np))
     SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(psi2(1:st%d%dim*gr%mesh%np))
+    SAFE_ALLOCATE(rhs(1:st%d%dim*gr%mesh%np))
 
     ! Set pointers to communicate with with backward propagator passed
     ! to iterative linear solver.
@@ -357,12 +358,21 @@ contains
 
         ! Solve linear system (1 + i \delta H_{eff}) psi = tmp.
         qmr_iter      = qmr_max_iter
-        tmp(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)
+
+        np = gr%mesh%np
+        do idim = 1, st%d%dim
+          psi2((idim - 1)*np + 1:idim*np) = psi(1:np, idim)
+        end do
+        rhs(:) = psi2(:)
+        
         ! Use the stable symmetric QMR solver
         ! h_eff_backward must be a complex symmetric operator !
-        call zqmr_sym(gr%mesh%np_part, gr%mesh%np, psi(:, 1), tmp(:, 1), h_eff_backward, precond_prop, &
-          qmr_iter, residue=dres, threshold=qmr_tol, showprogress=in_debug_mode, converged=conv)
+        call zqmr_sym(np, psi2(:), rhs(:), h_eff_backward, precond_prop, qmr_iter, &
+                      residue=dres, threshold=qmr_tol, showprogress=in_debug_mode, converged=conv)
 
+        do idim = 1, st%d%dim
+          psi(1:np, idim) = psi2((idim - 1)*np + 1:idim*np)
+        end do
         call states_set_state(st, gr%mesh, ist, ik, psi)
 
       end do
@@ -378,7 +388,8 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(psi)
-    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(psi2)
+    SAFE_DEALLOCATE_A(rhs)
     SAFE_DEALLOCATE_A(tmp_wf)
     SAFE_DEALLOCATE_A(tmp_mem)
     POP_SUB(cn_src_mem_dt)
@@ -490,8 +501,8 @@ contains
         ! Solve linear system (1 + i \delta H_{eff}) psi = tmp.
         qmr_iter      = qmr_max_iter
         tmp(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)
-        call zqmr_sym(gr%mesh%np_part, gr%mesh%np, psi(:, 1), tmp(:, 1), h_eff_backward_sp, precond_prop, &
-          qmr_iter, residue=dres, threshold=qmr_tol, showprogress=.false.)
+        call zqmr_sym(gr%mesh%np, psi(:, 1), tmp(:, 1), h_eff_backward_sp, precond_prop, &
+                      qmr_iter, residue=dres, threshold=qmr_tol, showprogress=.false.)
 
         call states_set_state(st, gr%mesh, ist, ik, psi)
 
@@ -613,10 +624,7 @@ contains
 
     ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
 
-    transposed_ = .false.
-    if(present(transposed)) then
-      transposed_ = transposed
-    end if
+    transposed_ = optional_default(transposed, .false.)
 
     do il = 1, NLEADS
       call get_intf_wf(intf(il), zpsi(:, 1), intf_wf(:, il))
@@ -668,10 +676,7 @@ contains
 
     ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
 
-    transposed_ = .false.
-    if(present(transposed)) then
-      transposed_ = transposed
-    end if
+    transposed_ = optional_default(transposed, .false.)
 
     do il = 1, NLEADS
       call get_intf_wf(intf(il), zpsi(:, 1), intf_wf(:, il))

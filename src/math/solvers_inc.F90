@@ -76,8 +76,7 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(sym_conjugate_gradients)(np_part, np, x, b, op, dotp, iter, residue, threshold)
-  integer, intent(in)    :: np_part
+subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, threshold)
   integer, intent(in)    :: np
   R_TYPE,  intent(inout) :: x(:)
   R_TYPE,  intent(in)    :: b(:)
@@ -105,13 +104,9 @@ subroutine X(sym_conjugate_gradients)(np_part, np, x, b, op, dotp, iter, residue
   threshold_ = optional_default(threshold, CNST(1.0e-6))
 
   SAFE_ALLOCATE( r(1:np))
-  SAFE_ALLOCATE(ax(1:np_part))
-  SAFE_ALLOCATE( p(1:np_part))
-  SAFE_ALLOCATE(ap(1:np_part))
-
-  ax(np+1:np_part) = R_TOTYPE(M_ZERO)
-  p(np+1:np_part)  = R_TOTYPE(M_ZERO)
-  ap(np+1:np_part) = R_TOTYPE(M_ZERO)
+  SAFE_ALLOCATE(ax(1:np))
+  SAFE_ALLOCATE( p(1:ubound(x, 1)))
+  SAFE_ALLOCATE(ap(1:np))
 
   ! Initial residue.
   call op(x, ax)
@@ -180,8 +175,8 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   SAFE_ALLOCATE(  r(1:np))
   SAFE_ALLOCATE( rr(1:np))
   SAFE_ALLOCATE( ax(1:np))
-  SAFE_ALLOCATE(  p(1:np))
-  SAFE_ALLOCATE( pp(1:np))
+  SAFE_ALLOCATE(  p(1:ubound(x, 1)))
+  SAFE_ALLOCATE( pp(1:ubound(x, 1)))
   SAFE_ALLOCATE( ap(1:np))
   SAFE_ALLOCATE(atp(1:np))
 
@@ -229,8 +224,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
 end subroutine X(bi_conjugate_gradients)
 
   ! ---------------------------------------------------------
-  subroutine X(qmr_sym_spec_dotu)(np_part, np, x, b, op, prec, iter, residue, threshold, showprogress, converged)
-    integer, target,   intent(in)    :: np_part! number of points including boundaries
+  subroutine X(qmr_sym_spec_dotu)(np, x, b, op, prec, iter, residue, threshold, showprogress, converged)
     integer, target,   intent(in)    :: np    ! number of points
     R_TYPE,             intent(inout) :: x(:)  ! initial guess and result
     R_TYPE,             intent(in)    :: b(:)  ! the right side
@@ -255,7 +249,7 @@ end subroutine X(bi_conjugate_gradients)
     PUSH_SUB(X(qmr_sym_spec_dotu))
 
     np_p => np
-    call X(qmr_sym_gen_dotu)(np_part, np, x, b, op, X(dotu_qmr), X(nrm2_qmr), prec, iter, &
+    call X(qmr_sym_gen_dotu)(np, x, b, op, X(dotu_qmr), X(nrm2_qmr), prec, iter, &
       residue, threshold, showprogress, converged)
 
     POP_SUB(X(qmr_sym_spec_dotu))
@@ -321,10 +315,9 @@ end subroutine X(bi_conjugate_gradients)
   ! ---------------------------------------------------------
   ! for complex symmetric matrices
   ! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
-  subroutine X(qmr_sym_gen_dotu)(np_part, np, x, b, op, dotu, nrm2, prec, iter, &
+  subroutine X(qmr_sym_gen_dotu)(np, x, b, op, dotu, nrm2, prec, iter, &
     residue, threshold, showprogress, converged)
-    integer,           intent(in)    :: np_part! number of points including boundaries
-    integer,           intent(in)    :: np    ! number of points
+    integer,           intent(in)     :: np    ! number of points
     R_TYPE,             intent(inout) :: x(:)  ! the initial guess and the result
     R_TYPE,             intent(in)    :: b(:)  ! the right side
     interface
@@ -333,13 +326,13 @@ end subroutine X(bi_conjugate_gradients)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
-    interface 
+    interface
       R_TYPE function dotu(x, y)               ! the dot product (must be x^T*y, not daggered)
         R_TYPE, intent(in) :: x(:)
         R_TYPE, intent(in) :: y(:)
       end function dotu
     end interface
-    interface 
+    interface
       FLOAT function nrm2(x)                  ! the 2-norm of the vector x
         R_TYPE, intent(in) :: x(:)
       end function nrm2
@@ -366,29 +359,22 @@ end subroutine X(bi_conjugate_gradients)
 
     PUSH_SUB(X(qmr_sym_gen_dotu))
 
-    if(present(converged)) then
-      converged = .false.
-    end if
+    if(present(converged)) converged = .false.
     threshold_ = optional_default(threshold, CNST(1.0e-6))
     showprogress_ = optional_default(showprogress, .false.)
 
     SAFE_ALLOCATE(r(1:np))
-    SAFE_ALLOCATE(v(1:np_part))
-    SAFE_ALLOCATE(z(1:np_part))
-    SAFE_ALLOCATE(q(1:np_part))
-    SAFE_ALLOCATE(p(1:np_part))
+    SAFE_ALLOCATE(v(1:np))
+    SAFE_ALLOCATE(z(1:np))
+    SAFE_ALLOCATE(q(1:ubound(x, 1)))
+    SAFE_ALLOCATE(p(1:np))
     SAFE_ALLOCATE(deltax(1:np))
     SAFE_ALLOCATE(deltar(1:np))
-
-    v(np+1:np_part) = R_TOTYPE(M_ZERO)
-    z(np+1:np_part) = R_TOTYPE(M_ZERO)
-    p(np+1:np_part) = R_TOTYPE(M_ZERO)
-    q(np+1:np_part) = R_TOTYPE(M_ZERO)
 
     ! use v as temp var
     call op(x, v)
 
-    forall (ip = 1:np) 
+    forall (ip = 1:np)
       r(ip) = b(ip) - v(ip)
       v(ip) = r(ip)
     end forall
@@ -451,7 +437,7 @@ end subroutine X(bi_conjugate_gradients)
           exit
         end if
         beta = epsilon/delta
-        forall (ip = 1:np) v(ip) = -beta*v(ip) + p(ip)        
+        forall (ip = 1:np) v(ip) = -beta*v(ip) + p(ip)
         oldrho = rho
 
         rho = nrm2(v)
@@ -475,7 +461,7 @@ end subroutine X(bi_conjugate_gradients)
         rtmp = eta*alpha
         if(iter == 1) then
 
-          forall (ip = 1:np) 
+          forall (ip = 1:np)
             deltax(ip) = rtmp*q(ip)
             x(ip) = x(ip) + deltax(ip)
           end forall
@@ -488,12 +474,12 @@ end subroutine X(bi_conjugate_gradients)
         else
 
           tmp  = (oldtheta*gamma)**2
-          forall (ip = 1:np) 
+          forall (ip = 1:np)
             deltax(ip) = tmp*deltax(ip) + rtmp*q(ip)
             x(ip) = x(ip) + deltax(ip)
           end forall
 
-          forall (ip = 1:np) 
+          forall (ip = 1:np)
             deltar(ip) = tmp*deltar(ip) + eta*p(ip)
             r(ip) = r(ip) - deltar(ip)
           end forall
@@ -580,13 +566,13 @@ end subroutine X(bi_conjugate_gradients)
         R_TYPE, intent(out) :: y(:)
       end subroutine opt
     end interface
-    interface 
+    interface
       R_TYPE function dotu(x, y)               ! the dot product
         R_TYPE, intent(in) :: x(:)
         R_TYPE, intent(in) :: y(:)
       end function dotu
     end interface
-    interface 
+    interface
       FLOAT function nrm2(x)                  ! the 2-norm of a vector
         R_TYPE, intent(in) :: x(:)
       end function nrm2
@@ -619,26 +605,16 @@ end subroutine X(bi_conjugate_gradients)
 
     PUSH_SUB(X(qmr_gen_dotu))
 
-    if(present(converged)) then
-      converged = .false.
-    end if
-    if(present(threshold)) then
-      threshold_ = threshold
-    else
-      threshold_ = CNST(1.0e-6)
-    end if
-    if(present(showprogress)) then
-      showprogress_ = showprogress
-    else
-      showprogress_ = .false.
-    end if
+    if(present(converged)) converged = .false.
+    threshold_ = optional_default(threshold, CNST(1.0e-6))
+    showprogress_ = optional_default(showprogress, .false.)
 
     SAFE_ALLOCATE(r(1:np))
     SAFE_ALLOCATE(v(1:np))
     SAFE_ALLOCATE(w(1:np))
     SAFE_ALLOCATE(z(1:np))
     SAFE_ALLOCATE(q(1:np))
-    SAFE_ALLOCATE(p(1:np))
+    SAFE_ALLOCATE(p(1:ubound(x, 1)))
     SAFE_ALLOCATE(tmp(1:np))
     SAFE_ALLOCATE(deltax(1:np))
 
@@ -719,7 +695,7 @@ end subroutine X(bi_conjugate_gradients)
         end if
         eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
 
-        if(iter == 1) then        
+        if(iter == 1) then
           call lalg_copy(np, p, deltax)
           call lalg_scal(np, eta, deltax)
           call lalg_copy(np, deltax, x)

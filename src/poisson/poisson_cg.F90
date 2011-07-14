@@ -95,8 +95,7 @@ contains
     mesh_pointer => der%mesh
     pk = zk
     iter = maxiter
-    call dconjugate_gradients(der%mesh%np_part, der%mesh%np, pk, zk, &
-      internal_laplacian_op, internal_dotp, iter, res, threshold)
+    call dconjugate_gradients(der%mesh%np, pk, zk, internal_laplacian_op, internal_dotp, iter, res, threshold)
     if(res >= threshold) then
       message(1) = 'Conjugate-gradients Poisson solver did not converge.'
       write(message(2), '(a,i8)')    '  Iter = ',iter
@@ -134,7 +133,7 @@ contains
     forall (ip = 1:der%mesh%np) rhs(ip) = CNST(-4.0)*M_PI*rho(ip)
     call lalg_copy(der%mesh%np, pot, potc)
 
-    call dconjugate_gradients(der%mesh%np_part, der%mesh%np, potc, rhs, internal_laplacian_op, internal_dotp, iter, res, threshold)
+    call dconjugate_gradients(der%mesh%np, potc, rhs, internal_laplacian_op, internal_dotp, iter, res, threshold)
 
     if(res >= threshold) then
       message(1) = 'Conjugate-gradients Poisson solver did not converge.'

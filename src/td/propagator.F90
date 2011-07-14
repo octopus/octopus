@@ -987,8 +987,7 @@ contains
           ist_op = ist
           ik_op = ik
           iter = 2000
-          call zqmr_sym(np_part*st%d%dim, np*st%d%dim, zpsi, rhs, &
-            propagator_qmr_op, propagator_qmr_prec, iter, dres, cgtol, &
+          call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, propagator_qmr_prec, iter, dres, cgtol, &
             showprogress = .false., converged = converged)
 
           do idim = 1, st%d%dim

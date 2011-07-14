@@ -133,10 +133,10 @@ contains
 
         conv = .false.
         if (associated(hm%ep%A_static)) then ! magnetic gs
-          call zqmr_sym(gr%mesh%np_part, gr%mesh%np, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs_symmetrized, dotu, &
+          call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs_symmetrized, dotu, &
             nrm2, precond, iter, residue=res, threshold=tol, converged=conv, showprogress=in_debug_mode)
         else
-          call zqmr_sym(gr%mesh%np_part, gr%mesh%np, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs, dotu, nrm2, precond, &
+          call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs, dotu, nrm2, precond, &
             iter, residue=res, threshold=tol, converged=conv, showprogress=in_debug_mode)
         end if
         if(in_debug_mode) then ! write info
@@ -244,28 +244,10 @@ contains
     CMPLX, intent(in) :: x(:)
     CMPLX, intent(in) :: y(:)
 
-    integer :: np_part, np, idim
-    CMPLX   :: dot
-
 ! no push_sub, called too frequently
 
-    np_part = gr_p%mesh%np_part
-    np      = gr_p%mesh%np
+    dotu = blas_dotu(st_p%d%dim*gr_p%mesh%np, x(1), 1, y(1), 1)
 
-    dot = M_z0
-    do idim = 1, st_p%d%dim
-      dot = dot + blas_dotu(np, x(l(idim)), 1, y(l(idim)), 1)
-    end do
-    dotu = dot
-
-  contains
-
-    integer function l(idim)
-      integer, intent(in) :: idim
-
-! no push_sub, called too frequently
-      l = (idim-1)*np_part+1
-    end function l
   end function dotu
 
 
@@ -275,34 +257,13 @@ contains
   FLOAT function nrm2(x)
     CMPLX, intent(in) :: x(:)
 
-    integer :: np_part, np, idim
-    FLOAT   :: nrm
+    integer :: np
 
 ! no push_sub, called too frequently
 
-    np_part = gr_p%mesh%np_part
-    np      = gr_p%mesh%np
+    np = st_p%d%dim*gr_p%mesh%np
+    nrm2 = lalg_nrm2(np, x)
 
-    nrm = M_ZERO
-    do idim = 1, st_p%d%dim
-      nrm = nrm + lalg_nrm2(np, x(l(idim):u(idim)))
-    end do
-    nrm2 = nrm
-
-  contains
-
-    integer function l(idim)
-      integer, intent(in) :: idim
-
-! no push_sub, called too frequently
-      l = (idim-1)*np_part+1
-    end function l
-
-    integer function u(idim)
-      integer, intent(in) :: idim
-
-      u = l(idim)+np-1
-    end function u
   end function nrm2
 
   
@@ -316,24 +277,25 @@ contains
 
     CMPLX, allocatable :: tmp_x(:, :)
     CMPLX, allocatable :: tmp_y(:, :)
-    integer            :: np_part, idim, il, dim
+    integer            :: np, np_part, idim, il, dim
 
 ! no push_sub, called too frequently
 
+    np = gr_p%mesh%np
     np_part = gr_p%mesh%np_part
     dim     = st_p%d%dim
 
     SAFE_ALLOCATE(tmp_x(1:np_part, 1:dim))
-    SAFE_ALLOCATE(tmp_y(1:np_part, 1:dim))
+    SAFE_ALLOCATE(tmp_y(1:np, 1:dim))
 
     do idim = 1, dim
-      tmp_x(1:np_part, idim) = x(l(idim):u(idim))
+      tmp_x(1:np, idim) = x((idim - 1)*np + 1:idim*np)
     end do
     call zhamiltonian_apply(hm_p, gr_p%der, tmp_x, tmp_y, ist_p, ik_p)
 
     ! y <- e x - tmp_y
     do idim = 1, dim
-      tmp_y(:, idim) = energy_p * x(l(idim):u(idim)) - tmp_y(1:np_part, idim)
+      tmp_y(1:np, idim) = energy_p * x((idim - 1)*np + 1:idim*np) - tmp_y((idim - 1)*np + 1:idim*np, idim)
     end do
 
     do il = 1, NLEADS
@@ -344,27 +306,12 @@ contains
     end do
 
     do idim = 1, dim
-      y(l(idim):u(idim)) = tmp_y(1:np_part, idim)
+      y((idim - 1)*np + 1:idim*np) = tmp_y(1:np, idim)
     end do
 
     SAFE_DEALLOCATE_A(tmp_x)
     SAFE_DEALLOCATE_A(tmp_y)
 
-  contains
-
-    integer function l(idim)
-      integer, intent(in) :: idim
-
-! no push_sub, called too frequently
-      l = (idim-1)*np_part+1
-    end function l
-
-    integer function u(idim)
-      integer, intent(in) :: idim
-
-! no push_sub, called too frequently
-      u = l(idim)+np_part-1
-    end function u
   end subroutine lhs
 
 
@@ -377,24 +324,25 @@ contains
 
     CMPLX, allocatable :: tmp_x(:, :)
     CMPLX, allocatable :: tmp_y(:, :)
-    integer            :: np_part, idim, il, dim
+    integer            :: np, np_part, idim, il, dim
 
 ! no push_sub, called too frequently
 
+    np = gr_p%mesh%np
     np_part = gr_p%mesh%np_part
     dim     = st_p%d%dim
 
     SAFE_ALLOCATE(tmp_x(1:np_part, 1:dim))
-    SAFE_ALLOCATE(tmp_y(1:np_part, 1:dim))
+    SAFE_ALLOCATE(tmp_y(1:np, 1:dim))
 
     do idim = 1, dim
-      tmp_x(1:np_part, idim) = conjg(y(l(idim):u(idim)))
+      tmp_x(1:np, idim) = conjg(y((idim-1)*np+1:idim*np))
     end do
     call zhamiltonian_apply(hm_p, gr_p%der, tmp_x, tmp_y, ist_p, ik_p)
 
     ! y <- e x - tmp_y
     do idim = 1, dim
-      tmp_y(1:np_part, idim) = energy_p * tmp_x(1:np_part, idim) - tmp_y(1:np_part, idim)
+      tmp_y(1:np, idim) = energy_p * tmp_x(1:np, idim) - tmp_y(1:np, idim)
     end do
     tmp_y = conjg(tmp_y)
     tmp_x = conjg(tmp_x) ! restore for the non-Hermitian part
@@ -407,27 +355,12 @@ contains
     end do
 
     do idim = 1, dim
-      y(l(idim):u(idim)) = tmp_y(1:np_part, idim)
+      y((idim-1)*np+1:idim*np) = tmp_y(1:np, idim)
     end do
 
     SAFE_DEALLOCATE_A(tmp_x)
     SAFE_DEALLOCATE_A(tmp_y)
 
-  contains
-
-    integer function l(idim)
-      integer, intent(in) :: idim
-
-! no push_sub, called too frequently
-      l = (idim-1)*np_part+1
-    end function l
-
-    integer function u(idim)
-      integer, intent(in) :: idim
-
-! no push_sub, called too frequently
-      u = l(idim)+np_part-1
-    end function u
   end subroutine lhs_t
 
 
@@ -455,9 +388,11 @@ contains
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
+    integer :: np
 ! no push_sub, called too frequently
 
-    y(:) = x(:)
+    np = st_p%d%dim*gr_p%mesh%np
+    y(1:np) = x(1:np)
 
   end subroutine precond
 end module ob_lippmann_schwinger_m
