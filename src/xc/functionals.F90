@@ -31,7 +31,6 @@ module xc_functl_m
   private
   public ::                     &
     xc_functl_t,                &
-    xc_j_functl_init,           &
     xc_functl_init_functl,      &
     xc_functl_end,              &
     xc_functl_messages_info
@@ -76,59 +75,9 @@ contains
     POP_SUB(xc_functl_init)
   end subroutine xc_functl_init
 
-
   ! ---------------------------------------------------------
-  subroutine xc_j_functl_init(functl, cdft, spin_channels)
-    type(xc_functl_t), intent(out) :: functl
-    logical,           intent(in)  :: cdft
-    integer,           intent(in)  :: spin_channels
-
-    PUSH_SUB(xc_j_functl_init)
-
-    ! initialize structure
-    call xc_functl_init(functl, spin_channels)
-
-    if (.not.cdft) then
-    POP_SUB(xc_j_functl_init)
-      return
-    end if
-
-    !%Variable JFunctional
-    !%Type integer
-    !%Default lca_omc
-    !%Section Hamiltonian::XC
-    !%Description
-    !% Defines the current functional for current-density functional theory.
-    !%Option none 0
-    !%Option lca_omc 301
-    !% Orestes, Marcasso & Capelle.
-    !%Option lca_lch 302
-    !% Lee, Colwell & Handy.
-    !%End
-    call parse_integer(datasets_check('JFunctional'), XC_LCA_OMC, functl%id)
-
-    ! initialize
-    select case(functl%id)
-    case(0)
-
-    case(XC_LCA_OMC, XC_LCA_LCH)
-      functl%family = XC_FAMILY_LCA
-      call XC_F90(func_init)(functl%conf, functl%info, functl%id, &
-        spin_channels)
-
-    case default
-      write(message(1), '(a,i3,a)') "'", functl%id, &
-        "' is not a known current functional!"
-      message(2) = "Please check the manual for a list of possible values."
-      call messages_fatal(2)
-    end select
-
-    POP_SUB(xc_j_functl_init)
-  end subroutine xc_j_functl_init
-
-
-  ! ---------------------------------------------------------
-  subroutine xc_functl_init_functl(functl, id, ndim, nel, spin_channels)
+ 
+ subroutine xc_functl_init_functl(functl, id, ndim, nel, spin_channels)
     type(xc_functl_t), intent(out) :: functl
     integer,           intent(in)  :: id
     integer,           intent(in)  :: ndim

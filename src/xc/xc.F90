@@ -46,21 +46,17 @@ module xc_m
     xc_end,             &
     xc_messages_info,      &
     xc_get_vxc,         &
-    xc_get_vxc_and_axc, &
     xc_get_fxc,         &
     xc_get_kxc
 
 
   type xc_t
-    logical :: cdft
-
     integer :: family                   ! the families present
     integer :: kernel_family
     type(xc_functl_t) :: functl(2,2)    ! (1,:) => exchange,    (2,:) => correlation
                                         ! (:,1) => unpolarized, (:,2) => polarized
 
     type(xc_functl_t) :: kernel(2,2)
-    type(xc_functl_t) :: j_functl       ! current-dependent part of the functional
 
     FLOAT   :: exx_coef                 ! amount of EXX to add for the hybrids
     integer :: mGGA_implementation      ! how to implement the MGGAs
@@ -81,18 +77,8 @@ contains
 
     PUSH_SUB(xc_messages_info)
 
-    if (xcs%cdft .and. iand(xcs%family, XC_FAMILY_LCA) /= 0) then
-      write(message(1), '(a)') "Current-dependent exchange-correlation:"
-      call messages_info(1, iunit)
-      call xc_functl_messages_info(xcs%j_functl, iunit)
-
-      write(message(1), '(1x)')
-      write(message(2), '(a)') "Auxiliary exchange-correlation functionals:"
-      call messages_info(2, iunit)
-    else
-      write(message(1), '(a)') "Exchange-correlation:"
-      call messages_info(1, iunit)
-    end if
+    write(message(1), '(a)') "Exchange-correlation:"
+    call messages_info(1, iunit)
 
     do isp = 1, 2
       call xc_functl_messages_info(xcs%functl(isp, 1), iunit)
@@ -122,96 +108,89 @@ contains
 
     PUSH_SUB(xc_init)
 
-    xcs%cdft   = cdft  ! make a copy of flag indicating the use of current-dft_m
-
     ! get current-dependent functional
-    call xc_j_functl_init (xcs%j_functl, cdft, spin_channels)
-    xcs%family = xcs%j_functl%family
     xcs%kernel_family = 0
 
-    if (xcs%family == XC_FAMILY_LCA .or. xcs%family == 0) then
-      
-      call parse()
+    call parse()
 
-      !we also need XC functionals that do not depend on the current
-      !get both spin-polarized and unpolarized
-      do isp = 1, 2
+    !we also need XC functionals that do not depend on the current
+    !get both spin-polarized and unpolarized
+    do isp = 1, 2
 
-        call xc_functl_init_functl(xcs%functl(1,isp),  x_id, ndim, nel, isp)
-        call xc_functl_init_functl(xcs%functl(2,isp),  c_id, ndim, nel, isp)
-        
-        call xc_functl_init_functl(xcs%kernel(1,isp), xk_id, ndim, nel, isp)
-        call xc_functl_init_functl(xcs%kernel(2,isp), ck_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functl(1,isp),  x_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functl(2,isp),  c_id, ndim, nel, isp)
 
-      end do
- 
-      xcs%family = ior(xcs%family, xcs%functl(1,1)%family)
-      xcs%family = ior(xcs%family, xcs%functl(2,1)%family)
+      call xc_functl_init_functl(xcs%kernel(1,isp), xk_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%kernel(2,isp), ck_id, ndim, nel, isp)
 
-      xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(1,1)%family)
-      xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(2,1)%family)
+    end do
 
-      ! Take care of hybrid functionals (they appear in the correlation functional)
-      xcs%exx_coef = M_ZERO
-      ll =  (hartree_fock) &
-        .or.(xcs%functl(1,1)%id.eq.XC_OEP_X) &
-        .or.(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0)
-      if(ll) then
-        if((xcs%functl(1,1)%id.ne.0).and.(xcs%functl(1,1)%id.ne.XC_OEP_X)) then
-          message(1) = "You cannot use an exchange functional when performing"
-          message(2) = "a Hartree-Fock calculation or using a hybrid functional."
-          call messages_fatal(2)
-        end if
+    xcs%family = ior(xcs%family, xcs%functl(1,1)%family)
+    xcs%family = ior(xcs%family, xcs%functl(2,1)%family)
 
-        ! get the mixing coefficient for hybrids
-        if(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0) then
-          call XC_F90(hyb_gga_exx_coef)(xcs%functl(2,1)%conf, xcs%exx_coef)
-        else
-          ! we are doing Hartree-Fock plus possibly a correlation functional
-          xcs%exx_coef = M_ONE
-        end if
+    xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(1,1)%family)
+    xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(2,1)%family)
 
-        ! reset certain variables
-        xcs%functl(1,1)%family = XC_FAMILY_OEP
-        xcs%functl(1,1)%id     = XC_OEP_X
-        xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
+    ! Take care of hybrid functionals (they appear in the correlation functional)
+    xcs%exx_coef = M_ZERO
+    ll =  (hartree_fock) &
+      .or.(xcs%functl(1,1)%id.eq.XC_OEP_X) &
+      .or.(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0)
+    if(ll) then
+      if((xcs%functl(1,1)%id.ne.0).and.(xcs%functl(1,1)%id.ne.XC_OEP_X)) then
+        message(1) = "You cannot use an exchange functional when performing"
+        message(2) = "a Hartree-Fock calculation or using a hybrid functional."
+        call messages_fatal(2)
       end if
 
-      ! Now it is time for these current functionals
-      if (iand(xcs%family, XC_FAMILY_LCA).ne.0 .and. &
-        iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP).ne.0) then
-        message(1) = "LCA functional can only be used along with LDA or GGA functionals."
-        call messages_fatal(1)
+      ! get the mixing coefficient for hybrids
+      if(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0) then
+        call XC_F90(hyb_gga_exx_coef)(xcs%functl(2,1)%conf, xcs%exx_coef)
+      else
+        ! we are doing Hartree-Fock plus possibly a correlation functional
+        xcs%exx_coef = M_ONE
       end if
 
-      if(iand(xcs%family, XC_FAMILY_MGGA).ne.0) then
-        !%Variable MGGAimplementation
-        !%Type integer
-        !%Default mgga_gea
-        !%Section Hamiltonian::XC
-        !%Description
-        !% Decides how to implement the meta-GGAs (NOT WORKING).
-        !%Option mgga_dphi 1
-        !% Use for <math>v_xc</math> the derivative of the energy functional with respect
-        !% to <math>\phi^*(r)</math>. This is the approach used in most quantum-chemistry
-        !% (and other) programs.
-        !%Option mgga_gea 2
-        !% Use gradient expansion (GEA) of the kinetic-energy density.
-        !%Option mgga_oep 3
-        !% Use the OEP equation to obtain the XC potential. This is the "correct" way
-        !% to do it within DFT.
-        !%End
-        call parse_integer(datasets_check('MGGAimplementation'), 1, xcs%mGGA_implementation)
-        if(.not.varinfo_valid_option('MGGAimplementation', xcs%mGGA_implementation)) &
-          call input_error('xcs%mGGA_implementation')
-      end if
-
+      ! reset certain variables
+      xcs%functl(1,1)%family = XC_FAMILY_OEP
+      xcs%functl(1,1)%id     = XC_OEP_X
+      xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
     end if
 
+    ! Now it is time for these current functionals
+    if (iand(xcs%family, XC_FAMILY_LCA).ne.0 .and. &
+      iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP).ne.0) then
+      message(1) = "LCA functional can only be used along with LDA or GGA functionals."
+      call messages_fatal(1)
+    end if
+
+    if(iand(xcs%family, XC_FAMILY_MGGA).ne.0) then
+      !%Variable MGGAimplementation
+      !%Type integer
+      !%Default mgga_gea
+      !%Section Hamiltonian::XC
+      !%Description
+      !% Decides how to implement the meta-GGAs (NOT WORKING).
+      !%Option mgga_dphi 1
+      !% Use for <math>v_xc</math> the derivative of the energy functional with respect
+      !% to <math>\phi^*(r)</math>. This is the approach used in most quantum-chemistry
+      !% (and other) programs.
+      !%Option mgga_gea 2
+      !% Use gradient expansion (GEA) of the kinetic-energy density.
+      !%Option mgga_oep 3
+      !% Use the OEP equation to obtain the XC potential. This is the "correct" way
+      !% to do it within DFT.
+      !%End
+      call parse_integer(datasets_check('MGGAimplementation'), 1, xcs%mGGA_implementation)
+      if(.not.varinfo_valid_option('MGGAimplementation', xcs%mGGA_implementation)) &
+        call input_error('xcs%mGGA_implementation')
+    end if
+
+
     POP_SUB(xc_init)
-    
+
   contains 
-    
+
     subroutine parse()
       integer :: val, default
 
@@ -272,9 +251,6 @@ contains
 
     PUSH_SUB(xc_end)
 
-    if (xcs%cdft) then
-      call xc_functl_end(xcs%j_functl)
-    end if
     do isp = 1, 2
       call xc_functl_end(xcs%functl(1,isp))
       call xc_functl_end(xcs%functl(2,isp))
@@ -288,7 +264,6 @@ contains
 
 
 #include "vxc_inc.F90"
-#include "axc_inc.F90"
 #include "fxc_inc.F90"
 #include "kxc_inc.F90"
 

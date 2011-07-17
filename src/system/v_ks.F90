@@ -555,11 +555,7 @@ contains
 
       ! Get the *local* XC term
       if(hm%d%cdft) then
-        SAFE_ALLOCATE(ks%calc%axc(1:ks%gr%mesh%np, 1:ks%gr%sb%dim, 1:hm%d%nspin))
-
-        ks%calc%axc = M_ZERO
-        call xc_get_vxc_and_axc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%current, st%d%ispin, ks%calc%vxc, ks%calc%axc, &
-             energy%exchange, energy%correlation, energy%xc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
+        call messages_not_implemented('Current-DFT')
       else if(ks%calc%calc_energy) then
         call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, &
           ex = energy%exchange, ec = energy%correlation, vxc = ks%calc%vxc, vtau = ks%calc%vtau)
@@ -788,11 +784,6 @@ contains
             call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
           end do
           SAFE_DEALLOCATE_P(ks%calc%vtau)
-        end if
-
-        if(hm%d%cdft) then
-          hm%axc(1:ks%gr%mesh%np, 1:ks%gr%sb%dim, 1:hm%d%nspin) = ks%calc%axc(1:ks%gr%mesh%np, 1:ks%gr%sb%dim, 1:hm%d%nspin)
-          SAFE_DEALLOCATE_P(ks%calc%axc)
         end if
 
       else

@@ -28,7 +28,6 @@ libxc_a_SOURCES =        \
 noinst_HEADERS =             \
 	functionals_list.F90 \
 	vxc_inc.F90          \
-	axc_inc.F90          \
 	fxc_inc.F90          \
 	kxc_inc.F90
 
@@ -38,4 +37,4 @@ depend:
 	@makedepf90 $(libxc_a_SOURCES)
 
 functionals.o : functionals.F90 
-xc.o : xc.F90 kxc_inc.F90 fxc_inc.F90 axc_inc.F90 vxc_inc.F90 functionals.o 
+xc.o : xc.F90 kxc_inc.F90 fxc_inc.F90 vxc_inc.F90 functionals.o 
