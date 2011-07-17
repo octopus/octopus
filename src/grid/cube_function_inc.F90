@@ -84,6 +84,8 @@ subroutine X(mesh_to_cube)(mesh, mf, cf, local)
 
   cf%X(RS) = M_ZERO
 
+  ASSERT(associated(mesh%cube_map%map))
+
   do im = 1, mesh%cube_map%nmap
     ip = mesh%cube_map%map(MCM_POINT, im)
     nn = mesh%cube_map%map(MCM_COUNT, im)
@@ -120,6 +122,8 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
   ASSERT(associated(cf%X(RS)))
 
   center(1:3) = cf%n(1:3)/2 + 1
+
+  ASSERT(associated(mesh%cube_map%map))
 
   do im = 1, mesh%cube_map%nmap
     ip = mesh%cube_map%map(MCM_POINT, im)
