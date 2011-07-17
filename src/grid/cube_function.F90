@@ -22,6 +22,7 @@
 module cube_function_m
   use datasets_m
   use global_m
+  use index_m
   use mesh_m
   use mesh_cube_map_m
   use messages_m

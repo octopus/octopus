@@ -57,7 +57,7 @@ contains
 
     PUSH_SUB(mesh_cube_map_init)
 
-    if (idx%sb%box_shape /= HYPERCUBE) then
+    if (idx%sb%dim <= 3) then
       do step = 1, 2
         if(step == 2) then
           SAFE_ALLOCATE(this%map(1:2, 1:this%nmap))
@@ -66,7 +66,10 @@ contains
         this%nmap = 0
         i2 = 0
         do ip = 1, np_global
-          i1(1:3) = idx%lxyz(ip, 1:3)
+
+          i1 = 0
+          call index_to_coords(idx, idx%sb%dim, ip, i1(1:3))
+
           if(any(i1(1:2) /= i2(1:2)) .or. i1(3) /= i2(3) + 1) then
             INCR(this%nmap, 1)
             if(step == 2) then
@@ -80,7 +83,6 @@ contains
         end do
       end do
     else
-      ! no map for hypercubes at the moment
       nullify(this%map)
     end if
 

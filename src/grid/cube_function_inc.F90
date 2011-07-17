@@ -57,7 +57,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cf, local)
   type(cube_function_t), intent(inout) :: cf
   logical, optional,     intent(in)    :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
 
-  integer :: ip, ix, iy, iz, center(3)
+  integer :: ip, ix, iy, iz, center(3), ixyz(1:3)
   integer :: im, ii, nn
   logical :: local_
   R_TYPE, pointer :: gmf(:)
@@ -85,16 +85,33 @@ subroutine X(mesh_to_cube)(mesh, mf, cf, local)
   cf%X(RS) = M_ZERO
 
   ASSERT(associated(mesh%cube_map%map))
+  ASSERT(mesh%sb%dim <= 3)
 
-  do im = 1, mesh%cube_map%nmap
-    ip = mesh%cube_map%map(MCM_POINT, im)
-    nn = mesh%cube_map%map(MCM_COUNT, im)
+  if(associated(mesh%idx%lxyz)) then
 
-    ix = mesh%idx%lxyz(ip, 1) + center(1)
-    iy = mesh%idx%lxyz(ip, 2) + center(2)
-    iz = mesh%idx%lxyz(ip, 3) + center(3)
-    forall(ii = 0:nn - 1) cf%X(RS)(ix, iy, iz + ii) = gmf(ip + ii)
-  end do
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
+      
+      ix = mesh%idx%lxyz(ip, 1) + center(1)
+      iy = mesh%idx%lxyz(ip, 2) + center(2)
+      iz = mesh%idx%lxyz(ip, 3) + center(3)
+      forall(ii = 0:nn - 1) cf%X(RS)(ix, iy, iz + ii) = gmf(ip + ii)
+    end do
+
+  else
+
+    ixyz = 0
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
+
+      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
+      ixyz = ixyz + center
+      forall(ii = 0:nn - 1) cf%X(RS)(ixyz(1), ixyz(2), ixyz(3) + ii) = gmf(ip + ii)
+    end do
+
+  end if
 
   if(local_) then
     SAFE_DEALLOCATE_P(gmf)
@@ -112,7 +129,7 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
   type(cube_function_t), intent(in)  :: cf
   R_TYPE,        intent(out) :: mf(:)  ! mf(mesh%np_global)
 
-  integer :: ip, ix, iy, iz, center(3)
+  integer :: ip, ix, iy, iz, center(3), ixyz(1:3)
   integer :: im, ii, nn
 
   PUSH_SUB(X(cube_to_mesh))
@@ -125,15 +142,33 @@ subroutine X(cube_to_mesh) (mesh, cf, mf)
 
   ASSERT(associated(mesh%cube_map%map))
 
-  do im = 1, mesh%cube_map%nmap
-    ip = mesh%cube_map%map(MCM_POINT, im)
-    nn = mesh%cube_map%map(MCM_COUNT, im)
-    ix = mesh%idx%lxyz(ip, 1) + center(1)
-    iy = mesh%idx%lxyz(ip, 2) + center(2)
-    iz = mesh%idx%lxyz(ip, 3) + center(3)
-    forall(ii = 0:nn - 1) mf(ip + ii) = cf%X(RS)(ix, iy, iz + ii)
-  end do
-  
+  if(associated(mesh%idx%lxyz)) then
+
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
+      ix = mesh%idx%lxyz(ip, 1) + center(1)
+      iy = mesh%idx%lxyz(ip, 2) + center(2)
+      iz = mesh%idx%lxyz(ip, 3) + center(3)
+      forall(ii = 0:nn - 1) mf(ip + ii) = cf%X(RS)(ix, iy, iz + ii)
+    end do
+
+  else
+
+    ixyz = 0
+
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
+
+      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
+      ixyz = ixyz + center
+
+      forall(ii = 0:nn - 1) mf(ip + ii) = cf%X(RS)(ixyz(1), ixyz(2), ixyz(3) + ii)
+    end do
+
+  end if
+
   call profiling_count_transfers(mesh%np_global, mf(1))
 
   call profiling_out(prof_c2m)
