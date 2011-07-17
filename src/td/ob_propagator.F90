@@ -204,7 +204,7 @@ contains
     SAFE_DEALLOCATE_A(um)
     SAFE_DEALLOCATE_A(td_pot)
 
-    call ob_propagator_messages_info(ob, st, gr, max_iter, order)
+    call ob_propagator_write_info(ob, st, gr, max_iter, order)
 
     ! Initialize source and memory terms.
     call ob_mem_init(gr%intf, hm, ob, dt/M_TWO, ob%max_mem_coeffs, gr%der%lapl, &
@@ -817,7 +817,7 @@ contains
 
   ! ---------------------------------------------------------
   ! Write some status information to stdout.
-  subroutine ob_propagator_messages_info(ob, st, gr, max_iter, order)
+  subroutine ob_propagator_write_info(ob, st, gr, max_iter, order)
     type(ob_terms_t), intent(in) :: ob
     type(states_t),   intent(in) :: st
     type(grid_t),     intent(in) :: gr
@@ -827,7 +827,7 @@ contains
     character(len=64) :: terms, mem_type_name
     integer           :: il
 
-    PUSH_SUB(ob_propagator_messages_info)
+    PUSH_SUB(ob_propagator_write_info)
 
     call messages_print_stress(stdout, 'Open Boundaries')
 
@@ -863,8 +863,8 @@ contains
 
     call messages_print_stress(stdout)
 
-    POP_SUB(ob_propagator_messages_info)
-  end subroutine ob_propagator_messages_info
+    POP_SUB(ob_propagator_write_info)
+  end subroutine ob_propagator_write_info
 
 
   ! ---------------------------------------------------------

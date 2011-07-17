@@ -55,7 +55,7 @@ module xc_ks_inversion_m
     xc_ks_inversion_t,             &
     xc_ks_inversion_init,          &
     xc_ks_inversion_end,           &
-    xc_ks_inversion_messages_info,    &
+    xc_ks_inversion_write_info,    &
     xc_ks_inversion_calc,          &
     invertks_2part,                &
     invertks_iter
@@ -181,17 +181,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_messages_info(ks_inversion, iunit)
+  subroutine xc_ks_inversion_write_info(ks_inversion, iunit)
     type(xc_ks_inversion_t), intent(in) :: ks_inversion
     integer,                 intent(in) :: iunit
 
     if(ks_inversion%level.eq.XC_KS_INVERSION_NONE) return
 
-    PUSH_SUB(xc_ks_inversion_messages_info)
+    PUSH_SUB(xc_ks_inversion_write_info)
     call messages_print_var_option(iunit, 'KSInversionLevel', ks_inversion%level)
 
-    POP_SUB(xc_ks_inversion_messages_info)
-  end subroutine xc_ks_inversion_messages_info
+    POP_SUB(xc_ks_inversion_write_info)
+  end subroutine xc_ks_inversion_write_info
 
 
   ! ---------------------------------------------------------

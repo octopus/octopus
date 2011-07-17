@@ -33,7 +33,7 @@ module xc_functl_m
     xc_functl_t,                &
     xc_functl_init_functl,      &
     xc_functl_end,              &
-    xc_functl_messages_info
+    xc_functl_write_info
 
 
   ! This adds to the constants defined in lib_xc. But since in that module
@@ -228,7 +228,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_functl_messages_info(functl, iunit)
+  subroutine xc_functl_write_info(functl, iunit)
     type(xc_functl_t), intent(in) :: functl
     integer,           intent(in) :: iunit
 
@@ -236,7 +236,7 @@ contains
     type(XC_F90(pointer_t)) :: str
     integer :: ii
 
-    PUSH_SUB(xc_functl_messages_info)
+    PUSH_SUB(xc_functl_write_info)
 
     if(functl%family == XC_FAMILY_OEP) then
       ! this is handled separately
@@ -287,8 +287,8 @@ contains
       end do
     end if
 
-    POP_SUB(xc_functl_messages_info)
-  end subroutine xc_functl_messages_info
+    POP_SUB(xc_functl_write_info)
+  end subroutine xc_functl_write_info
 
 end module xc_functl_m
 

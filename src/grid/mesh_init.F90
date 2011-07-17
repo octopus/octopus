@@ -704,7 +704,7 @@ contains
     call partition_init(partition, mesh)
     partition%point_to_part = part
     call partition_build(partition, mesh, stencil)
-    call partition_messages_info(partition)      
+    call partition_write_info(partition)      
     call partition_end(partition)
     call mesh_partition_messages_debug(mesh, part)
 

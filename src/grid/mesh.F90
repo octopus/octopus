@@ -58,7 +58,7 @@ module mesh_m
     mesh_inborder,             &
     mesh_r,                    &
     mesh_gcutoff,              &
-    mesh_messages_info,           &
+    mesh_write_info,           &
     mesh_nearest_point,        &
     mesh_subset_indices,       &
     mesh_periodic_point,       &
@@ -170,7 +170,7 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine mesh_messages_info(mesh, unit)
+  subroutine mesh_write_info(mesh, unit)
     type(mesh_t), intent(in) :: mesh
     integer,      intent(in) :: unit
     
@@ -179,7 +179,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
     
-    PUSH_SUB(mesh_messages_info)
+    PUSH_SUB(mesh_write_info)
     
     write(message(1),'(3a)') '  Spacing [', trim(units_abbrev(units_out%length)), '] = ('
     do ii = 1, mesh%sb%dim
@@ -198,8 +198,8 @@ contains
       units_from_atomic(units_out%energy, cutoff), '    Grid Cutoff [Ry] = ', cutoff * 2
     call messages_info(4, unit)
     
-    POP_SUB(mesh_messages_info)
-  end subroutine mesh_messages_info
+    POP_SUB(mesh_write_info)
+  end subroutine mesh_write_info
   
   
   ! ---------------------------------------------------------

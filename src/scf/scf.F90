@@ -814,14 +814,14 @@ contains
         call io_mkdir(dir)
         iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
 
-        call grid_messages_info(gr, geo, iunit)
+        call grid_write_info(gr, geo, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_messages_info(gr%mesh%sb%kpoints, iunit)
+          call kpoints_write_info(gr%mesh%sb%kpoints, iunit)
           write(iunit,'(1x)')
         end if
 
-        call v_ks_messages_info(ks, iunit)
+        call v_ks_write_info(ks, iunit)
 
         ! scf information
         if(finish) then

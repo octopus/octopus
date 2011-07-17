@@ -149,7 +149,7 @@ contains
 
       call derivatives_build(mgrid%level(i)%der, mgrid%level(i)%mesh)
 
-      call mesh_messages_info(mgrid%level(i)%mesh, stdout)
+      call mesh_write_info(mgrid%level(i)%mesh, stdout)
       
       mgrid%level(i)%der%finer => mgrid%level(i - 1)%der
       mgrid%level(i - 1)%der%coarser => mgrid%level(i)%der

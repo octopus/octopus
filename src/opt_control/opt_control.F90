@@ -59,7 +59,7 @@ module opt_control_m
   private
   public :: opt_control_run,                  &
             opt_control_cg_calc,              &
-            opt_control_cg_messages_info,     &
+            opt_control_cg_write_info,     &
             opt_control_direct_calc,          &
             opt_control_direct_message_info,  &
             opt_control_function_forward
@@ -122,7 +122,7 @@ contains
     call controlfunction_prepare_initial(par)
     call controlfunction_to_h(par, hm%ep)
     call messages_print_stress(stdout, "TD ext. fields after processing")
-    call laser_messages_info(hm%ep%lasers, stdout)
+    call laser_write_info(hm%ep%lasers, stdout)
     call messages_print_stress(stdout)
     call controlfunction_write(OCT_DIR//'initial_laser', par)
 
@@ -385,7 +385,7 @@ contains
         return
       end if
 
-      ! Set the module pointers, so that the direct_opt_calc and direct_opt_messages_info routines
+      ! Set the module pointers, so that the direct_opt_calc and direct_opt_write_info routines
       ! can use them.
       call controlfunction_copy(par_, par)
       sys_      => sys
@@ -403,7 +403,7 @@ contains
 
       ierr = loct_minimize(MINMETHOD_BFGS2, dof, x(1), step, &
            real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
-           maxiter, opt_control_cg_calc, opt_control_cg_messages_info, minvalue)
+           maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue)
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then
@@ -455,7 +455,7 @@ contains
 
       if(oct%random_initial_guess) call controlfunction_randomize(par)
 
-      ! Set the module pointers, so that the direct_opt_calc and direct_opt_messages_info routines
+      ! Set the module pointers, so that the direct_opt_calc and direct_opt_write_info routines
       ! can use them.
       call controlfunction_copy(par_, par)
       sys_      => sys

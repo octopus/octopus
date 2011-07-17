@@ -50,7 +50,7 @@ module simul_box_m
     simul_box_ob_info_t,        &
     simul_box_init,             &
     simul_box_end,              &
-    simul_box_messages_info,       &
+    simul_box_write_info,       &
     simul_box_is_periodic,      &
     simul_box_has_zero_bc,      &
     simul_box_in_box,           &
@@ -836,7 +836,7 @@ contains
 
 
   !--------------------------------------------------------------
-  recursive subroutine simul_box_messages_info(sb, geo, iunit)
+  recursive subroutine simul_box_write_info(sb, geo, iunit)
     type(simul_box_t), intent(in) :: sb
     type(geometry_t),  intent(in) :: geo
     integer,           intent(in) :: iunit
@@ -851,7 +851,7 @@ contains
 
     integer :: idir, idir2, ispec
 
-    PUSH_SUB(simul_box_messages_info)
+    PUSH_SUB(simul_box_write_info)
 
     write(message(1),'(a)') 'Simulation Box:'
     if(sb%box_shape .eq. BOX_USDEF) then
@@ -917,8 +917,8 @@ contains
       call messages_info(1+sb%dim, iunit)
     end if
 
-    POP_SUB(simul_box_messages_info)
-  end subroutine simul_box_messages_info
+    POP_SUB(simul_box_write_info)
+  end subroutine simul_box_write_info
 
 
   !--------------------------------------------------------------

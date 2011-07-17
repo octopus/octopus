@@ -142,14 +142,14 @@
 
 
   ! ---------------------------------------------------------
-  subroutine opt_control_cg_messages_info(iter, n, val, maxdx, maxdf, x)
+  subroutine opt_control_cg_write_info(iter, n, val, maxdx, maxdf, x)
     integer,     intent(in) :: iter, n
     REAL_DOUBLE, intent(in) :: val, maxdx, maxdf
     REAL_DOUBLE, intent(in) :: x(n)
 
     FLOAT :: fluence, j1, j2, j
 
-    PUSH_SUB(opt_control_cg_messages_info)
+    PUSH_SUB(opt_control_cg_write_info)
 
     j = - val
     fluence = controlfunction_fluence(par_)
@@ -169,8 +169,8 @@
 
     call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
 
-    POP_SUB(opt_control_cg_messages_info)
-  end subroutine opt_control_cg_messages_info
+    POP_SUB(opt_control_cg_write_info)
+  end subroutine opt_control_cg_write_info
   ! ---------------------------------------------------------
 
 

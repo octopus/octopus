@@ -53,7 +53,7 @@ module grid_m
     grid_init_stage_1,     &
     grid_init_stage_2,     &
     grid_end,              &
-    grid_messages_info,       &
+    grid_write_info,       &
     grid_create_multigrid, &
     grid_create_largergrid
 
@@ -289,8 +289,8 @@ contains
     nullify(gr%mgrid)
 
     ! print info concerning the grid
-    call grid_messages_info(gr, geo, stdout)
-    if(gr%ob_grid%open_boundaries) call ob_grid_messages_info(gr%ob_grid, stdout)
+    call grid_write_info(gr, geo, stdout)
+    if(gr%ob_grid%open_boundaries) call ob_grid_write_info(gr%ob_grid, stdout)
 
     POP_SUB(grid_init_stage_2)
   end subroutine grid_init_stage_2
@@ -350,47 +350,47 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_messages_info(gr, geo, iunit)
+  subroutine grid_write_info(gr, geo, iunit)
     type(grid_t),     intent(in) :: gr
     type(geometry_t), intent(in) :: geo
     integer,          intent(in) :: iunit
 
     integer :: il
 
-    PUSH_SUB(grid_messages_info)
+    PUSH_SUB(grid_write_info)
 
     if(.not.mpi_grp_is_root(mpi_world)) then
       if(in_debug_mode) call messages_debug_newlines(6)
-      POP_SUB(grid_messages_info)
+      POP_SUB(grid_write_info)
       return
     end if
 
     call messages_print_stress(iunit, "Grid")
-    call simul_box_messages_info(gr%sb, geo, iunit)
+    call simul_box_write_info(gr%sb, geo, iunit)
 
     if(gr%have_fine_mesh) then
       message(1) = "Wave-functions mesh:"
       call messages_info(1, iunit)
-      call mesh_messages_info(gr%mesh, iunit)
+      call mesh_write_info(gr%mesh, iunit)
       message(1) = "Density mesh:"
     else
       message(1) = "Main mesh:"
     end if
     call messages_info(1, iunit)
-    call mesh_messages_info(gr%fine%mesh, iunit)
+    call mesh_write_info(gr%fine%mesh, iunit)
 
     if(gr%ob_grid%open_boundaries) then
       do il = 1, NLEADS
-        call interface_messages_info(gr%intf(il), iunit)
+        call interface_write_info(gr%intf(il), iunit)
       end do
     end if
     if (gr%mesh%use_curvilinear) then
-      call curvilinear_messages_info(gr%cv, iunit)
+      call curvilinear_write_info(gr%cv, iunit)
     end if
     call messages_print_stress(iunit)
 
-    POP_SUB(grid_messages_info)
-  end subroutine grid_messages_info
+    POP_SUB(grid_write_info)
+  end subroutine grid_write_info
 
 
   !-------------------------------------------------------------------

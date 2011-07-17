@@ -38,7 +38,7 @@ module ob_grid_m
     ob_grid_t,                   &
     ob_grid_init,                &
     ob_grid_end,                 &
-    ob_grid_messages_info
+    ob_grid_write_info
 
   type ob_grid_lead_t
     type(simul_box_ob_info_t) :: info
@@ -308,11 +308,11 @@ contains
   end subroutine ob_grid_end
 
   !--------------------------------------------------------------
-  subroutine ob_grid_messages_info(ob_grid, iunit)
+  subroutine ob_grid_write_info(ob_grid, iunit)
     type(ob_grid_t), intent(inout) :: ob_grid
     integer,           intent(in)  :: iunit
 
-    PUSH_SUB(ob_grid_messages_info)
+    PUSH_SUB(ob_grid_write_info)
 
     if(ob_grid%open_boundaries) then
       write(message(1), '(a)')       'Open boundaries in x-direction:'
@@ -327,8 +327,8 @@ contains
       call messages_info(5, iunit)
     end if
 
-    POP_SUB(ob_grid_messages_info)
-  end subroutine ob_grid_messages_info
+    POP_SUB(ob_grid_write_info)
+  end subroutine ob_grid_write_info
 
 
   !--------------------------------------------------------------

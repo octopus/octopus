@@ -62,7 +62,7 @@ contains
     ! initialize KS inversion module
     call xc_ks_inversion_init(sys%ks%ks_inversion, sys%ks%xc_family, &
          sys%gr, sys%geo, sys%st%d, sys%mc)
-    call xc_ks_inversion_messages_info(sys%ks%ks_inversion, stdout)
+    call xc_ks_inversion_write_info(sys%ks%ks_inversion, stdout)
 
     !abbreviations
     np      = sys%gr%mesh%np

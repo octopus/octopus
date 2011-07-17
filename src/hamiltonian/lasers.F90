@@ -43,7 +43,7 @@ module lasers_m
     laser_t,                      &
     laser_init,                   &
     laser_end,                    &
-    laser_messages_info,          &
+    laser_write_info,          &
     laser_field,                  &
     laser_potential,              &
     laser_vector_potential,       &
@@ -467,7 +467,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_messages_info(lasers, iunit, dt, max_iter)
+  subroutine laser_write_info(lasers, iunit, dt, max_iter)
     type(laser_t),     intent(in) :: lasers(:)
     integer,           intent(in) :: iunit
     FLOAT,   optional, intent(in) :: dt 
@@ -479,7 +479,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
-    PUSH_SUB(laser_messages_info)
+    PUSH_SUB(laser_write_info)
 
     no_l = size(lasers)
     
@@ -550,8 +550,8 @@ contains
 
     end do
 
-    POP_SUB(laser_messages_info)
-  end subroutine laser_messages_info
+    POP_SUB(laser_write_info)
+  end subroutine laser_write_info
   ! ---------------------------------------------------------
 
 

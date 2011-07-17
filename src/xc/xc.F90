@@ -44,7 +44,7 @@ module xc_m
     xc_t,               &
     xc_init,            &
     xc_end,             &
-    xc_messages_info,      &
+    xc_write_info,      &
     xc_get_vxc,         &
     xc_get_fxc,         &
     xc_get_kxc
@@ -69,19 +69,19 @@ module xc_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_messages_info(xcs, iunit)
+  subroutine xc_write_info(xcs, iunit)
     type(xc_t), intent(in) :: xcs
     integer,    intent(in) :: iunit
 
     integer :: isp
 
-    PUSH_SUB(xc_messages_info)
+    PUSH_SUB(xc_write_info)
 
     write(message(1), '(a)') "Exchange-correlation:"
     call messages_info(1, iunit)
 
     do isp = 1, 2
-      call xc_functl_messages_info(xcs%functl(isp, 1), iunit)
+      call xc_functl_write_info(xcs%functl(isp, 1), iunit)
     end do
 
     if(xcs%exx_coef.ne.M_ZERO) then
@@ -90,8 +90,8 @@ contains
       call messages_info(2, iunit)
     end if
 
-    POP_SUB(xc_messages_info)
-  end subroutine xc_messages_info
+    POP_SUB(xc_write_info)
+  end subroutine xc_write_info
 
 
   ! ---------------------------------------------------------

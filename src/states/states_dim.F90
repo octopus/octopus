@@ -238,7 +238,7 @@ contains
       
       call io_mkdir('debug/')
       iunit = io_open('debug/kpoints', action = 'write')
-      call kpoints_messages_info(sb%kpoints, iunit)      
+      call kpoints_write_info(sb%kpoints, iunit)      
       call io_close(iunit)
 
       POP_SUB(states_choose_kpoints.print_kpoints_debug)

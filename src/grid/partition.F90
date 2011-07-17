@@ -44,7 +44,7 @@ module partition_m
     partition_build,       &
     partition_quality,     &
     partition_randomize,   &
-    partition_messages_info,  &
+    partition_write_info,  &
     partition_mutate,      &
     partition_crossover,   &
     partition_copy
@@ -152,7 +152,7 @@ contains
 
   ! ----------------------------------------------------------------------
 
-  subroutine partition_messages_info(this)
+  subroutine partition_write_info(this)
     type(partition_t), intent(in) :: this
     
     integer :: ipart
@@ -194,7 +194,7 @@ contains
     message(1) = ''
     call messages_info(1)
 
-  end subroutine partition_messages_info
+  end subroutine partition_write_info
 
   ! ----------------------------------------------------------------------
 

@@ -178,7 +178,7 @@ subroutine td_init(td, sys, hm)
   if(td%dynamics == BO)  call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
   if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
     call messages_print_stress(stdout, "Time-dependent external fields")
-    call laser_messages_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
+    call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
     call messages_print_stress(stdout)
   end if
 

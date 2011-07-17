@@ -60,7 +60,7 @@ module v_ks_m
     v_ks_t,             &
     v_ks_init,          &
     v_ks_end,           &
-    v_ks_messages_info,    &
+    v_ks_write_info,    &
     v_ks_calc,          &
     v_ks_calc_t,        &
     v_ks_calc_start,    &
@@ -283,7 +283,7 @@ contains
 
     ks%frozen_hxc = .false.
 
-    call v_ks_messages_info(ks, stdout)
+    call v_ks_write_info(ks, stdout)
 
     ks%new_hartree = .false.
     nullify(ks%hartree_solver)
@@ -335,13 +335,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_messages_info(ks, iunit)
+  subroutine v_ks_write_info(ks, iunit)
     type(v_ks_t), intent(in) :: ks
     integer,      intent(in) :: iunit
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
-    PUSH_SUB(v_ks_messages_info)
+    PUSH_SUB(v_ks_write_info)
 
     call messages_print_stress(iunit, "Theory Level")
     call messages_print_var_option(iunit, "TheoryLevel", ks%theory_level)
@@ -349,27 +349,27 @@ contains
     select case(ks%theory_level)
     case(HARTREE_FOCK)
       write(iunit, '(1x)')
-      call xc_messages_info(ks%xc, iunit)
+      call xc_write_info(ks%xc, iunit)
 
     case(KOHN_SHAM_DFT)
       write(iunit, '(1x)')
-      call xc_messages_info(ks%xc, iunit)
+      call xc_write_info(ks%xc, iunit)
 
       write(iunit, '(1x)')
       call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
 
       if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
-        call xc_oep_messages_info(ks%oep, iunit)
+        call xc_oep_write_info(ks%oep, iunit)
       end if
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
-        call xc_ks_inversion_messages_info(ks%ks_inversion, iunit)
+        call xc_ks_inversion_write_info(ks%ks_inversion, iunit)
       end if
     end select
 
     call messages_print_stress(iunit)
 
-    POP_SUB(v_ks_messages_info)
-  end subroutine v_ks_messages_info
+    POP_SUB(v_ks_write_info)
+  end subroutine v_ks_write_info
   ! ---------------------------------------------------------
 
 

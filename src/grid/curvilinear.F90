@@ -46,7 +46,7 @@ module curvilinear_m
     curvilinear_chi2x,           &
     curvilinear_x2chi,           &
     curvilinear_det_Jac,         &
-    curvilinear_messages_info
+    curvilinear_write_info
 
   integer, parameter, public :: &
     CURV_METHOD_UNIFORM = 1,    &
@@ -227,11 +227,11 @@ contains
   end function curvilinear_det_Jac
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_messages_info(cv, unit)
+  subroutine curvilinear_write_info(cv, unit)
     type(curvilinear_t), intent(in) :: cv
     integer,            intent(in) :: unit
 
-    PUSH_SUB(curvilinear_messages_info)
+    PUSH_SUB(curvilinear_write_info)
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
@@ -256,8 +256,8 @@ contains
 
     end select
 
-    POP_SUB(curvilinear_messages_info)
-  end subroutine curvilinear_messages_info
+    POP_SUB(curvilinear_write_info)
+  end subroutine curvilinear_write_info
 
   ! ---------------------------------------------------------
 

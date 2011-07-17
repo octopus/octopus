@@ -46,7 +46,7 @@ module kpoints_m
     kpoints_number,          &
     kpoints_get_weight,      &
     kpoints_get_point,       &
-    kpoints_messages_info,   &
+    kpoints_write_info,   &
     kpoints_point_is_gamma
 
   type kpoints_grid_t
@@ -651,7 +651,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine kpoints_messages_info(this, iunit)
+  subroutine kpoints_write_info(this, iunit)
     type(kpoints_t),    intent(in) :: this
     integer,            intent(in) :: iunit
     
@@ -659,7 +659,7 @@ contains
     character(len=100) :: str_tmp
     character :: index
     
-    PUSH_SUB(kpoints_messages_info)
+    PUSH_SUB(kpoints_write_info)
     
     if(this%method == KPOINTS_MONKH_PACK) then
       write(message(1),'(a)') 'Number of k-points in each direction = '
@@ -696,8 +696,8 @@ contains
       call messages_info(1, iunit, verbose_limit = .true.)
     end do
     
-    POP_SUB(kpoints_messages_info)
-  end subroutine kpoints_messages_info
+    POP_SUB(kpoints_write_info)
+  end subroutine kpoints_write_info
   
 
   ! ---------------------------------------------------------

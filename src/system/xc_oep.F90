@@ -49,7 +49,7 @@ module xc_oep_m
     xc_oep_t,                   &
     xc_oep_init,                &
     xc_oep_end,                 &
-    xc_oep_messages_info,          &
+    xc_oep_write_info,          &
     dxc_oep_calc,               &
     zxc_oep_calc
 
@@ -183,17 +183,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_messages_info(oep, iunit)
+  subroutine xc_oep_write_info(oep, iunit)
     type(xc_oep_t), intent(in) :: oep
     integer,        intent(in) :: iunit
 
     if(oep%level.eq.XC_OEP_NONE) return
 
-    PUSH_SUB(xc_oep_messages_info)
+    PUSH_SUB(xc_oep_write_info)
     call messages_print_var_option(iunit, 'OEPLevel', oep%level)
 
-    POP_SUB(xc_oep_messages_info)
-  end subroutine xc_oep_messages_info
+    POP_SUB(xc_oep_write_info)
+  end subroutine xc_oep_write_info
 
 
   ! ---------------------------------------------------------
