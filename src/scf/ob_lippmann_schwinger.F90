@@ -114,8 +114,9 @@ contains
 
     ASSERT(ubound(st%zphi, dim = 1) == np_part)
 
-    ! We have many k-points, so show the progress
-    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
+    ! We have many k-points, so show the progress, but only if not in debug mode since
+    ! for every k-point and state the convergence process is shown
+    if(.not. in_debug_mode .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%d%kpt%nlocal)
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
@@ -165,8 +166,10 @@ contains
         eigens%matvec = eigens%matvec + iter + 1 + 2
         if(conv) eigens%converged = eigens%converged + 1
         eigens%diff(ist, ik) = res
-        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(st%lnst*ik, st%lnst*st%d%kpt%nlocal)
       end do
+      if(.not. in_debug_mode .and. mpi_grp_is_root(mpi_world)) then
+        call loct_progress_bar(ik-st%d%kpt%start+1, st%d%kpt%nlocal)
+      end if
     end do
 
 #ifdef HAVE_MPI
