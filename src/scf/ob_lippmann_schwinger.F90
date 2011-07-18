@@ -72,28 +72,33 @@ contains
     type(grid_t), target,        intent(inout) :: gr
     type(states_t), target,      intent(inout) :: st
 
-    integer                    :: il, iter, np
+    integer                    :: il, iter, np, np_part, lead_np, idim, dim
     integer, target            :: ist, ik
     FLOAT, target              :: energy
     FLOAT                      :: tol, res
-    CMPLX, allocatable         :: rhs(:, :)
+    CMPLX, allocatable         :: rhs2(:, :), rhs(:), psi(:)
     type(p_se_t), target       :: lead(2*MAX_DIM)
     logical                    :: conv
 #ifdef HAVE_MPI
     integer :: outcount
     FLOAT, allocatable :: ldiff(:), leigenval(:)
 #endif
-    
+
     PUSH_SUB(lippmann_schwinger)
 
-    SAFE_ALLOCATE(rhs(1:gr%mesh%np_part, 1:st%d%dim))
+    np = gr%mesh%np
+    np_part = gr%mesh%np_part
+    dim = st%d%dim
+    SAFE_ALLOCATE(psi(1:np_part*dim))
+    SAFE_ALLOCATE(rhs2(1:np, 1:dim))
+    SAFE_ALLOCATE(rhs(1:np*dim))
     do il = 1, NLEADS
       if(gr%intf(il)%reducible) then
-        np = gr%intf(il)%np_intf
+        lead_np = gr%intf(il)%np_intf
       else
-        np = gr%intf(il)%np_uc
+        lead_np = gr%intf(il)%np_uc
       end if
-      SAFE_ALLOCATE(lead(il)%self_energy(1:np, 1:np, 1:st%d%dim))
+      SAFE_ALLOCATE(lead(il)%self_energy(1:lead_np, 1:lead_np, 1:dim))
     end do
 
     eigens%converged = 0
@@ -107,10 +112,10 @@ contains
     st_p     => st
     energy_p => energy
 
-    ASSERT(ubound(st%zphi, dim = 1) >= gr%mesh%np_part)
+    ASSERT(ubound(st%zphi, dim = 1) == np_part)
 
     ! We have many k-points, so show the progress
-    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%nst*st%d%nik)
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
@@ -122,10 +127,19 @@ contains
         end do
 
         ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
-        rhs(:, :) = st%zphi(:, :, ist, ik)
-        call calc_rhs(rhs)
+        rhs2(:, :) = st%zphi(:, :, ist, ik)
+        do idim = 1, dim
+          psi((idim-1)*np+1:idim*np) = rhs2(1:np, idim)
+        end do
 
-        if (associated(hm%ep%A_static)) call calc_rhs(rhs, transposed = .true.) ! multiply transposed version
+        call calc_rhs(rhs2)
+
+        if (associated(hm%ep%A_static)) call calc_rhs(rhs2, transposed = .true.) ! multiply transposed version
+        
+        ! put in continuous array
+        do idim = 1, dim
+          rhs((idim-1)*np+1:idim*np) = rhs2(1:np, idim)
+        end do
 
         ! Solve linear system lhs psi = rhs.
         iter = eigens%es_maxiter
@@ -133,12 +147,16 @@ contains
 
         conv = .false.
         if (associated(hm%ep%A_static)) then ! magnetic gs
-          call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs_symmetrized, dotu, &
+          call zqmr_sym(dim*np, psi, rhs, lhs_symmetrized, dotu, &
             nrm2, precond, iter, residue=res, threshold=tol, converged=conv, showprogress=in_debug_mode)
         else
-          call zqmr_sym(gr%mesh%np, st%zpsi(:, 1, ist, ik), rhs(:, 1), lhs, dotu, nrm2, precond, &
+          call zqmr_sym(dim*np, psi, rhs, lhs, dotu, nrm2, precond, &
             iter, residue=res, threshold=tol, converged=conv, showprogress=in_debug_mode)
         end if
+        do idim = 1, dim
+          call states_set_state(st, gr%mesh, idim, ist, ik, psi((idim-1)*np+1:idim*np))
+        end do
+
         if(in_debug_mode) then ! write info
           write(message(1), '(a,i8,e10.3)') 'Iterations, Residual: ', iter, res
           call messages_info(1)
@@ -147,7 +165,7 @@ contains
         eigens%matvec = eigens%matvec + iter + 1 + 2
         if(conv) eigens%converged = eigens%converged + 1
         eigens%diff(ist, ik) = res
-        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(st%nst*(ik - 1), st%nst*st%d%nik)
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(st%lnst*ik, st%lnst*st%d%kpt%nlocal)
       end do
     end do
 
@@ -172,6 +190,8 @@ contains
 #endif
 
     SAFE_DEALLOCATE_A(rhs)
+    SAFE_DEALLOCATE_A(rhs2)
+    SAFE_DEALLOCATE_A(psi)
     do il = 1, NLEADS
       SAFE_DEALLOCATE_P(lead(il)%self_energy)
     end do
@@ -232,14 +252,15 @@ contains
         end if
       end do
     end do
-    
+
     SAFE_DEALLOCATE_A(tmp)
     POP_SUB(calc_rhs)
   end subroutine calc_rhs
 
 
   ! ---------------------------------------------------------
-  ! Dot product for QMR solver, works for x being a spinor.
+  ! Dot product for QMR solver. This routine works for x being a spinor
+  ! considered as one continuous vector.
   CMPLX function dotu(x, y)
     CMPLX, intent(in) :: x(:)
     CMPLX, intent(in) :: y(:)
@@ -253,20 +274,17 @@ contains
 
   ! ---------------------------------------------------------
   ! Norm for QMR solver. This routine works for x being a spinor
-  ! considered as one vector.
+  ! considered as one continuous vector.
   FLOAT function nrm2(x)
     CMPLX, intent(in) :: x(:)
 
-    integer :: np
-
 ! no push_sub, called too frequently
 
-    np = st_p%d%dim*gr_p%mesh%np
-    nrm2 = lalg_nrm2(np, x)
+    nrm2 = lalg_nrm2(st_p%d%dim*gr_p%mesh%np, x)
 
   end function nrm2
 
-  
+
   ! ---------------------------------------------------------
   ! The left hand side of the Lippmann-Schwinger equation
   ! e-H-sum(a)[H_ca*g_a*H_ac].
@@ -281,8 +299,8 @@ contains
 
 ! no push_sub, called too frequently
 
-    np = gr_p%mesh%np
     np_part = gr_p%mesh%np_part
+    np      = gr_p%mesh%np
     dim     = st_p%d%dim
 
     SAFE_ALLOCATE(tmp_x(1:np_part, 1:dim))
@@ -295,7 +313,7 @@ contains
 
     ! y <- e x - tmp_y
     do idim = 1, dim
-      tmp_y(1:np, idim) = energy_p * x((idim - 1)*np + 1:idim*np) - tmp_y((idim - 1)*np + 1:idim*np, idim)
+      tmp_y(1:np, idim) = energy_p * x((idim - 1)*np + 1:idim*np) - tmp_y(1:np, idim)
     end do
 
     do il = 1, NLEADS
@@ -328,7 +346,7 @@ contains
 
 ! no push_sub, called too frequently
 
-    np = gr_p%mesh%np
+    np      = gr_p%mesh%np
     np_part = gr_p%mesh%np_part
     dim     = st_p%d%dim
 

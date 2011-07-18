@@ -67,7 +67,7 @@ KPointsUseSymmetries = false
 %
 
 #PoissonSolver = fft
-well_EigenSolverMaxiter = 5000
+well_EigenSolverMaxiter = 6000
 EigensolverFinalTolerance = 1e-9
 Eigensolver = plan
 
