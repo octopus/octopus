@@ -240,11 +240,11 @@ end subroutine X(bi_conjugate_gradients)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
-    integer,           intent(inout) :: iter  ! [in] number of max iterations, [out] used iterations
-    FLOAT, optional,   intent(out)   :: residue ! residue = abs(Ax-b)
-    FLOAT, optional,   intent(in)    :: threshold ! convergence threshold
+    integer,           intent(inout) :: iter         ! [in] number of max iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue      ! residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold    ! convergence threshold
     logical, optional, intent(in)    :: showprogress ! show progress bar
-    logical, optional, intent(out)   :: converged ! is the algorithm converged
+    logical, optional, intent(out)   :: converged    ! is the algorithm converged
 
     PUSH_SUB(X(qmr_sym_spec_dotu))
 
@@ -257,38 +257,38 @@ end subroutine X(bi_conjugate_gradients)
 
   ! ---------------------------------------------------------
   subroutine X(qmr_spec_dotu)(np, x, b, op, opt, prec, prect, iter, residue, threshold, showprogress, converged)
-    integer, target,   intent(in)    :: np    ! number of points
-    R_TYPE,             intent(inout) :: x(:)  ! initial guess and the result
-    R_TYPE,             intent(in)    :: b(:)  ! the right side
+    integer, target, intent(in)    :: np     ! number of points
+    R_TYPE,          intent(inout) :: x(:)   ! initial guess and the result
+    R_TYPE,          intent(in)    :: b(:)   ! the right side
     interface
-      subroutine op(x, y)                     ! the matrix A as operator y <- A*x
+      subroutine op(x, y)                    ! the matrix A as operator y <- A*x
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
     interface
-      subroutine opt(x, y)                    ! the transposed matrix A as operator y <- A^T*x
+      subroutine opt(x, y)                   ! the transposed matrix A as operator y <- A^T*x
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine opt
     end interface
     interface
-      subroutine prec(x, y)                   ! the preconditioner
+      subroutine prec(x, y)                  ! the preconditioner
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
     interface
-      subroutine prect(x, y)                  ! the transposed preconditioner
+      subroutine prect(x, y)                 ! the transposed preconditioner
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prect
     end interface
-    integer,           intent(inout) :: iter  ! [in] number of max iterations, [out] used iterations
-    FLOAT, optional,   intent(out)   :: residue ! residue = abs(Ax-b)
-    FLOAT, optional,   intent(in)    :: threshold ! convergence threshold
+    integer,           intent(inout) :: iter         ! [in] number of max iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue      ! residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold    ! convergence threshold
     logical, optional, intent(in)    :: showprogress ! show progress bar
-    logical, optional, intent(out)   :: converged ! is the algorithm converged
+    logical, optional, intent(out)   :: converged    ! is the algorithm converged
 
     PUSH_SUB(X(qmr_spec_dotu))
 
@@ -321,41 +321,39 @@ end subroutine X(bi_conjugate_gradients)
     R_TYPE,             intent(inout) :: x(:)  ! the initial guess and the result
     R_TYPE,             intent(in)    :: b(:)  ! the right side
     interface
-      subroutine op(x, y)                     ! the matrix A as operator
+      subroutine op(x, y)             ! the matrix A as operator
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
     interface
-      R_TYPE function dotu(x, y)               ! the dot product (must be x^T*y, not daggered)
+      R_TYPE function dotu(x, y)      ! the dot product (must be x^T*y, not daggered)
         R_TYPE, intent(in) :: x(:)
         R_TYPE, intent(in) :: y(:)
       end function dotu
     end interface
     interface
-      FLOAT function nrm2(x)                  ! the 2-norm of the vector x
+      FLOAT function nrm2(x)          ! the 2-norm of the vector x
         R_TYPE, intent(in) :: x(:)
       end function nrm2
     end interface
     interface
-      subroutine prec(x, y)                   ! the preconditioner
+      subroutine prec(x, y)           ! the preconditioner
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
-    integer,           intent(inout) :: iter  ! [in] the maximum number of iterations, [out] used iterations
-    FLOAT, optional,   intent(out)   :: residue ! the residue = abs(Ax-b)
-    FLOAT, optional,   intent(in)    :: threshold ! convergence threshold
+    integer,           intent(inout) :: iter         ! [in] the maximum number of iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue      ! the residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold    ! convergence threshold
     logical, optional, intent(in)    :: showprogress ! should there be a progress bar
-    logical, optional, intent(out)   :: converged ! has the algorithm converged
+    logical, optional, intent(out)   :: converged    ! has the algorithm converged
 
     R_TYPE, allocatable :: r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
     R_TYPE              :: eta, delta, epsilon, beta, rtmp
-    FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp
-    integer             :: max_iter, err, ip
+    FLOAT               :: rho, xsi, gamma, alpha, theta, threshold_, res, oldtheta, oldgamma, oldrho, tmp, norm_b
+    integer             :: max_iter, err, ip, ilog_res, ilog_thr
     logical             :: showprogress_
-    FLOAT               :: log_res, log_thr, norm_b
-    integer             :: ilog_res, ilog_thr
 
     PUSH_SUB(X(qmr_sym_gen_dotu))
 
@@ -399,9 +397,10 @@ end subroutine X(bi_conjugate_gradients)
       theta = M_ZERO
 
       ! initialize progress bar
-      log_thr = -log(threshold_)
-      ilog_thr = M_TEN**2*log_thr
-      if(showprogress_) call loct_progress_bar(-1, ilog_thr)
+      if(showprogress_) then
+        ilog_thr = max(M_ZERO, -M_TEN**2*log(threshold_))
+        call loct_progress_bar(-1, ilog_thr)
+      end if
 
       do while(iter < max_iter)
         iter = iter + 1
@@ -493,42 +492,40 @@ end subroutine X(bi_conjugate_gradients)
           res = nrm2(r)/norm_b
         endif
 
-        log_res = -log(res)
-        if(log_res < 0) log_res = 0
-        ilog_res = M_TEN**2*log_res
-        if(showprogress_)  call loct_progress_bar(ilog_res, ilog_thr)
+        if(showprogress_) then
+          ilog_res = M_TEN**2*max(M_ZERO, -log(res))
+          call loct_progress_bar(ilog_res, ilog_thr)
+        end if
+        
         if(res < threshold_) exit
       end do
     end if
 
-    if((err.eq.0).and.(iter.eq.max_iter)) err = 5
-
     select case(err)
     case(0)
-      ! converged
-      if(present(converged)) then
-        converged = .true.
+      if(res < threshold_) then
+        if (present(converged)) converged = .true.
+      else
+        write(message(1), '(a)') "QMR solver not converged!"
+        write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
+        call messages_warning(2)
       end if
     case(1)
       write(message(1), '(a)') "QMR breakdown, cannot continue: b or P*b is the zero vector!"
-      call messages_fatal(1)
     case(2)
       write(message(1), '(a)') "QMR breakdown, cannot continue: v^T*z is zero!"
-      call messages_fatal(1)
     case(3)
       write(message(1), '(a)') "QMR breakdown, cannot continue: q^T*p is zero!"
-      call messages_fatal(1)
     case(4)
       write(message(1), '(a)') "QMR breakdown, cannot continue: gamma is zero!"
-      call messages_fatal(1)
     case(5)
-      write(message(1), '(a)') "QMR solver not converged!"
-      write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
-      call messages_warning(2)
-      if(present(converged)) then
-        converged = .false.
-      end if
     end select
+
+    if (err>0) then
+      write(message(2), '(a)') "Try to change some system parameters (e.g. Spacing, TDTimeStep, ...)."
+      call messages_fatal(2)
+    end if
+
     if(showprogress_) write(*,*) ''
 
     if(present(residue)) residue = res
@@ -551,57 +548,55 @@ end subroutine X(bi_conjugate_gradients)
   ! http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19950017192_1995117192.pdf
   subroutine X(qmr_gen_dotu)(np, x, b, op, opt, dotu, nrm2, prec, prect, iter, &
     residue, threshold, showprogress, converged)
-    integer,            intent(in)    :: np    ! number of points
-    R_TYPE,             intent(inout) :: x(:)  ! initial guess and result
-    R_TYPE,             intent(in)    :: b(:)  ! right side
+    integer, intent(in)    :: np      ! number of points
+    R_TYPE,  intent(inout) :: x(:)    ! initial guess and result
+    R_TYPE,  intent(in)    :: b(:)    ! right side
     interface
-      subroutine op(x, y)                     ! the matrix A as operator: y <- A*x
+      subroutine op(x, y)             ! the matrix A as operator: y <- A*x
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
     interface
-      subroutine opt(x, y)                    ! the transposed matrix A as operator: y <- A^T*x
+      subroutine opt(x, y)            ! the transposed matrix A as operator: y <- A^T*x
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine opt
     end interface
     interface
-      R_TYPE function dotu(x, y)               ! the dot product
+      R_TYPE function dotu(x, y)      ! the dot product
         R_TYPE, intent(in) :: x(:)
         R_TYPE, intent(in) :: y(:)
       end function dotu
     end interface
     interface
-      FLOAT function nrm2(x)                  ! the 2-norm of a vector
+      FLOAT function nrm2(x)          ! the 2-norm of a vector
         R_TYPE, intent(in) :: x(:)
       end function nrm2
     end interface
     interface
-      subroutine prec(x, y)                   ! preconditioner
+      subroutine prec(x, y)           ! preconditioner
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
     interface
-      subroutine prect(x, y)                  ! transposed preconditioner
+      subroutine prect(x, y)          ! transposed preconditioner
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prect
     end interface
-    integer,           intent(inout) :: iter  ! [in] the maximum number of iterations, [out] used iterations
-    FLOAT, optional,   intent(out)   :: residue ! the residue = abs(Ax-b)
-    FLOAT, optional,   intent(in)    :: threshold ! convergence threshold
+    integer,           intent(inout) :: iter         ! [in] the maximum number of iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue      ! the residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold    ! convergence threshold
     logical, optional, intent(in)    :: showprogress ! should there be a progress bar
-    logical, optional, intent(out)   :: converged ! has the algorithm converged
+    logical, optional, intent(out)   :: converged    ! has the algorithm converged
 
     R_TYPE, allocatable :: r(:), v(:), w(:), z(:), q(:), p(:), deltax(:), tmp(:)
     R_TYPE              :: eta, delta, epsilon, beta
     FLOAT               :: rho, xsi, gamma, theta, threshold_, res, oldtheta, oldgamma, oldrho, nw, norm_b
-    integer             :: max_iter, err
+    integer             :: max_iter, err, ilog_res, ilog_thr
     logical             :: showprogress_
-    FLOAT               :: log_res, log_thr
-    integer             :: ilog_res, ilog_thr
 
     PUSH_SUB(X(qmr_gen_dotu))
 
@@ -643,9 +638,10 @@ end subroutine X(bi_conjugate_gradients)
       eta   = -M_ONE
 
       ! initialize progress bar
-      log_thr = -log(threshold_)
-      ilog_thr = M_TEN**2*log_thr
-      if(showprogress_) call loct_progress_bar(-1, ilog_thr)
+      if(showprogress_) then
+        ilog_thr = max(M_ZERO, -M_TEN**2*log(threshold_))
+        call loct_progress_bar(-1, ilog_thr)
+      end if
 
       do while(iter < max_iter)
         iter = iter + 1
@@ -719,41 +715,39 @@ end subroutine X(bi_conjugate_gradients)
           res = nrm2(r)/norm_b
         endif
 
-        log_res = -log(res)
-        if(log_res < 0) log_res = 0
-        ilog_res = M_TEN**2*log_res
-        if(showprogress_)  call loct_progress_bar(ilog_res, ilog_thr)
+        if(showprogress_) then
+          ilog_res = max(M_ZERO, -M_TEN**2*log(res))
+          call loct_progress_bar(ilog_res, ilog_thr)
+        end if
+        
         if(res < threshold_) exit
       end do
     end if
 
-    if((err.eq.0).and.(iter.eq.max_iter)) err = 5
-
     select case(err)
     case(0)
-      ! converged
-      if(present(converged)) then
-        converged = .true.
+      if(res < threshold_) then
+        if (present(converged)) converged = .true.
+      else
+        write(message(1), '(a)') "QMR solver not converged!"
+        write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
+        call messages_warning(2)
       end if
     case(1)
       write(message(1), '(a)') "QMR failure, can't continue: b or P*b is the zero vector!"
-      call messages_fatal(1)
     case(2)
       write(message(1), '(a)') "QMR failure, can't continue: z^T*y is zero!"
-      call messages_fatal(1)
     case(3)
       write(message(1), '(a)') "QMR failure, can't continue: q^T*p is zero!"
-      call messages_fatal(1)
     case(4)
       write(message(1), '(a)') "QMR failure, can't continue: gamma is zero!"
-      call messages_fatal(1)
-    case(5)
-      write(message(1), '(a)') "QMR Solver not converged!"
-      call messages_warning(1)
-      if(present(converged)) then
-        converged = .false.
-      end if
     end select
+
+    if (err>0) then
+      write(message(2), '(a)') "Try to change some system parameters (e.g. Spacing, TDTimeStep, ...)."
+      call messages_fatal(2)
+    end if
+
     if(showprogress_) write(*,*) ''
 
     if(present(residue)) residue = res
