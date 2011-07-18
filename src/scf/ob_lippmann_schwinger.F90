@@ -210,7 +210,7 @@ contains
     CMPLX, intent(inout)          :: rhs(:, :)
     logical, optional, intent(in) :: transposed ! needed only for the non hermitian part
 
-    integer :: ip, idim, il
+    integer :: ip, idim, il, np
     logical :: transposed_
     CMPLX, allocatable :: tmp(:, :)
 
@@ -220,10 +220,12 @@ contains
 
     transposed_ = optional_default(transposed, .false.)
 
+    np = gr_p%mesh%np
+
     if(transposed_) then ! the usual conjugate trick for the hermitian part
-      tmp = conjg(rhs)
+      tmp(1:np, :) = conjg(rhs(1:np, :))
     else
-      tmp = rhs
+      tmp(1:np, :) = rhs(1:np, :)
     end if
     ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
     rhs(:, :) = M_z0
@@ -232,12 +234,12 @@ contains
 
     ! Apply lead potential. Left and right lead potential are assumed to be equal.
     ! FIXME: does not work for meshblocksize>1
-    forall(ip = 1:gr_p%mesh%np )
+    forall(ip = 1:np )
       rhs(ip, :) = rhs(ip, :) + hm_p%lead(LEFT)%vks(mod(ip-1, gr_p%intf(LEFT)%np_intf) + 1, :) * tmp(ip, :)
     end forall
 
     ! Add energy.
-    forall(ip = 1:gr_p%mesh%np ) rhs(ip, :) = energy_p * tmp(ip, :) - rhs(ip, :)
+    forall(ip = 1:np ) rhs(ip, :) = energy_p * tmp(ip, :) - rhs(ip, :)
 
     if(transposed_) then
       rhs = conjg(rhs)
