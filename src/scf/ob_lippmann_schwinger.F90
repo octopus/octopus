@@ -128,7 +128,7 @@ contains
         end do
 
         ! Calculate right hand side e-T-V0-sum(a)[H_ca*g_a*H_ac].
-        rhs2(:, :) = st%zphi(:, :, ist, ik)
+        rhs2(1:np, :) = st%zphi(1:np, :, ist, ik)
         do idim = 1, dim
           psi((idim-1)*np+1:idim*np) = rhs2(1:np, idim)
         end do
