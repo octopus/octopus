@@ -239,25 +239,22 @@ contains
   end function io_function_fill_how
 
   ! ---------------------------------------------------------
-  subroutine write_xsf_geometry_file(dir, fname, geo, sb, offset, write_forces)
+  subroutine write_xsf_geometry_file(dir, fname, geo, mesh, write_forces)
     character(len=*),   intent(in) :: dir, fname
     type(geometry_t),   intent(in) :: geo
-    type(simul_box_t),  intent(in) :: sb
-    FLOAT,    optional, intent(in) :: offset(:)
+    type(mesh_t),       intent(in) :: mesh
     logical,  optional, intent(in) :: write_forces
 
-    integer iunit
-    character(len=6) position
-    FLOAT, allocatable:: offset_(:)
-    logical write_forces_
+    integer :: iunit, iatom, idir
+    FLOAT, allocatable :: forces(:,:)
+    logical :: write_forces_
 
     if( .not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(write_xsf_geometry_file)
 
     call io_mkdir(dir)
-    position = 'asis'
-    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xsf', action='write', position=position)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xsf', action='write', position='asis')
 
     if(.not. present(write_forces)) then
       write_forces_ = .false.
@@ -265,15 +262,16 @@ contains
       write_forces_ = write_forces
     endif
 
-    SAFE_ALLOCATE(offset_(1:sb%dim))
-    if(.not. present(offset)) then
-      offset_(1:sb%dim) = 0
+    if(write_forces_) then
+      SAFE_ALLOCATE(forces(1:geo%natoms, 1:mesh%sb%dim))
+      forall(iatom = 1:geo%natoms, idir = 1:mesh%sb%dim)
+        forces(iatom, idir) = units_from_atomic(units_out%force, geo%atom(iatom)%f(idir))
+      end forall
+      call write_xsf_geometry(iunit, geo, mesh, forces = forces)
+      SAFE_DEALLOCATE_A(forces)
     else
-      ASSERT(ubound(offset, 1) >= sb%dim)
-      offset_(1:sb%dim) = offset(1:sb%dim)
+      call write_xsf_geometry(iunit, geo, mesh)
     endif
-
-    call write_xsf_geometry(iunit, geo, sb, offset_(:), write_forces_)
 
     call io_close(iunit)
 
@@ -283,53 +281,68 @@ contains
   ! ---------------------------------------------------------
 ! for format specification see:
 ! http://www.xcrysden.org/doc/XSF.html#__toc__11
-  subroutine write_xsf_geometry(iunit, geo, sb, offset, write_forces)
-    integer,            intent(in) :: iunit
-    type(geometry_t),   intent(in) :: geo
-    type(simul_box_t),  intent(in) :: sb
-    FLOAT,    optional, intent(in) :: offset(:)
-    logical,  optional, intent(in) :: write_forces
+  subroutine write_xsf_geometry(iunit, geo, mesh, forces, index)
+    integer,           intent(in) :: iunit
+    type(geometry_t),  intent(in) :: geo
+    type(mesh_t),      intent(in) :: mesh
+    FLOAT,   optional, intent(in) :: forces(:, :)
+    integer, optional, intent(in) :: index ! for use in writing animated files
 
-    integer idir, idir2, iatom
-    logical write_forces_
+    integer :: idir, idir2, iatom, index_
+    character(len=7) :: index_str
+    FLOAT :: offset(3)
 
     PUSH_SUB(write_xsf_geometry)
 
-    if(present(write_forces)) then
-      write_forces_ = write_forces
+    if(present(index)) then
+      write(index_str, '(a,i6)') ' ', index
+      index_ = index
     else
-      write_forces_ = .false.
+      write(index_str, '(a)') ''
+      index_ = 1
     endif
 
-    if(simul_box_is_periodic(sb)) then
-      select case(sb%periodic_dim)
-        case(3)
-          write(iunit, '(a)') 'CRYSTAL'
-        case(2)
-          write(iunit, '(a)') 'SLAB'
-        case(1)
-          write(iunit, '(a)') 'POLYMER'
-      end select
+    offset = M_ZERO
+    ! The corner of the cell is always (0,0,0) to XCrySDen
+    ! so the offset is applied to the atomic coordinates.
+    ! Offset in periodic directions:
+    offset(1:3) = -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
+    ! Offset in aperiodic directions:
+    do idir = mesh%sb%periodic_dim + 1, 3
+      offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%spacing(idir)
+    end do
 
-      write(iunit, '(a)') 'PRIMVEC'
+    if(simul_box_is_periodic(mesh%sb)) then
+      if(index_ == 1) then
+        select case(mesh%sb%periodic_dim)
+          case(3)
+            write(iunit, '(a)') 'CRYSTAL'
+          case(2)
+            write(iunit, '(a)') 'SLAB'
+          case(1)
+            write(iunit, '(a)') 'POLYMER'
+        end select
+      endif
 
-      do idir = 1, sb%dim
+      write(iunit, '(a)') 'PRIMVEC'//trim(index_str)
+
+      do idir = 1, mesh%sb%dim
         write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
-          sb%rlattice(idir2, idir)), idir2 = 1, sb%dim)
+          mesh%sb%rlattice(idir2, idir)), idir2 = 1, mesh%sb%dim)
       enddo
 
-      write(iunit, '(a)') 'PRIMCOORD'
+      write(iunit, '(a)') 'PRIMCOORD'//trim(index_str)
       write(iunit, '(i10, a)') geo%natoms, ' 1'
     else
-      write(iunit, '(a)') 'ATOMS'
+      write(iunit, '(a)') 'ATOMS'//trim(index_str)
     endif
 
     ! BoxOffset should be considered here
     do iatom = 1, geo%natoms
       write(iunit, '(a10, 3f12.6)', advance='no') trim(geo%atom(iatom)%label), &
-        (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir) - offset(idir)), idir = 1, sb%dim)
-      if(write_forces_) then
-        write(iunit, '(5x, 3f12.6)', advance='no') (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir = 1, sb%dim)
+        (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir) - offset(idir)), idir = 1, mesh%sb%dim)
+      if(present(forces)) then
+        write(iunit, '(5x, 3f12.6)', advance='no') (forces(iatom, idir), idir = 1, mesh%sb%dim)
       endif
       write(iunit, '()')
     enddo

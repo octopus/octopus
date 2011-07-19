@@ -470,19 +470,8 @@ contains
     call output_current_flow(gr, st, dir, outp, geo)
 
     if(iand(outp%what, C_OUTPUT_GEOMETRY) .ne. 0) then
-      if(iand(outp%how, C_OUTPUT_HOW_XCRYSDEN) .ne. 0) then
-        
-        offset = M_ZERO
-        ! The corner of the cell is always (0,0,0) to XCrySDen
-        ! so the offset is applied to the atomic coordinates.
-        ! Offset in periodic directions:
-        offset(1:3) = -matmul(gr%mesh%sb%rlattice_primitive(1:3,1:3), gr%mesh%sb%lsize(1:3))
-        ! Offset in aperiodic directions:
-        do idir = gr%mesh%sb%periodic_dim + 1, 3
-          offset(idir) = -(gr%mesh%idx%ll(idir) - 1)/2*gr%mesh%spacing(idir)
-        end do
-
-        call write_xsf_geometry_file(dir, "geometry", geo, gr%sb, offset = offset)
+      if(iand(outp%how, C_OUTPUT_HOW_XCRYSDEN) .ne. 0) then        
+        call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
       endif
       if(iand(outp%how, C_OUTPUT_HOW_XYZ) .ne. 0) then
         call atom_write_xyz(dir, "geometry", geo, gr%sb%dim)
@@ -492,7 +481,7 @@ contains
     end if
 
     if(iand(outp%what, C_OUTPUT_FORCES) .ne. 0) then
-      call write_xsf_geometry_file(dir, "forces", geo, gr%sb, write_forces = .true.)
+      call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
     endif
 
     if(iand(outp%what, C_OUTPUT_MATRIX_ELEMENTS) .ne. 0) then

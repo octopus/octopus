@@ -28,6 +28,7 @@ module phonons_lr_m
   use grid_m
   use hamiltonian_m
   use io_m
+  use io_function_m
   use kdotp_m
   use kdotp_calc_m
   use lalg_basic_m
@@ -62,7 +63,8 @@ module phonons_lr_m
        phonons_lr_run,    &
        phn_nm_wfs_tag,    &
        phn_wfs_tag,       &
-       phn_rho_tag
+       phn_rho_tag,       &
+       axsf_mode_output
   
 contains
 
@@ -183,7 +185,7 @@ contains
         jdir  = vibrations_get_dir (vib, jmat)
 
         call pert_setup_atom(ionic_pert, jatom, iatom)
-        call pert_setup_dir(ionic_pert, jdir, idir)
+        call pert_setup_dir (ionic_pert, jdir,  idir)
         
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
           -M_TWO * TOFLOAT(dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi))
@@ -222,6 +224,7 @@ contains
     call vibrations_normalize_dyn_matrix(vib, geo)
     call vibrations_diag_dyn_matrix(vib)
     call vibrations_output(vib, "_lr")
+    call axsf_mode_output(vib, "_lr", geo, gr%mesh)
 
     if(simul_box_is_periodic(gr%sb) .and. .not. smear_is_semiconducting(st%smear)) then
       message(1) = "Cannot calculate infrared intensities for periodic system with smearing (i.e. without a gap)."
@@ -428,6 +431,38 @@ contains
     POP_SUB(phn_nm_wfs_tag)
     
   end function phn_nm_wfs_tag
+
+
+  ! ---------------------------------------------------------
+  ! output eigenvectors as animated XSF file, one per frame, displacements as forces
+  subroutine axsf_mode_output(this, suffix, geo, mesh)
+    type(vibrations_t), intent(in) :: this
+    character (len=*),  intent(in) :: suffix
+    type(geometry_t),   intent(in) :: geo
+    type(mesh_t),       intent(in) :: mesh
+    
+    integer :: iunit, iatom, idir, imat, jmat
+    FLOAT, allocatable :: forces(:,:)
+
+    PUSH_SUB(axsf_mode_output)
+
+    iunit = io_open(VIB_MODES_DIR//'normal_modes'//trim(suffix)//'.axsf', action='write')
+    write(iunit, '(a,i6)') 'ANIMSTEPS ', this%num_modes
+    SAFE_ALLOCATE(forces(1:geo%natoms, 1:mesh%sb%dim))
+    do imat = 1, this%num_modes
+      do jmat = 1, this%num_modes
+        iatom = vibrations_get_atom(this, jmat)
+        idir  = vibrations_get_dir (this, jmat)
+        forces(iatom, idir) = this%normal_mode(jmat, imat)
+      enddo
+      call write_xsf_geometry(iunit, geo, mesh, forces = forces, index = imat)
+    end do
+    SAFE_DEALLOCATE_A(forces)
+    call io_close(iunit)
+
+    POP_SUB(axsf_mode_output)
+  end subroutine axsf_mode_output
+
 
 end module phonons_lr_m
 

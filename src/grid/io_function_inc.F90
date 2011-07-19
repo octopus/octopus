@@ -983,15 +983,6 @@ contains
     call X(cube_function_alloc_RS) (cube)
     call X(mesh_to_cube) (mesh, ff, cube)
 
-    ! The corner of the cell is always (0,0,0) to XCrySDen
-    ! so the offset is applied to the atomic coordinates.
-    ! Offset in periodic directions:
-    offset = -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
-    ! Offset in aperiodic directions:
-    do idir = mesh%sb%periodic_dim + 1, 3
-      offset(idir) = -(mesh%idx%ll(idir) - 1)/2 * mesh%spacing(idir)
-    end do
-
     ! Note that XCrySDen uses "general" not "periodic" grids
     ! mesh%idx%ll is "general" in aperiodic directions,
     ! but "periodic" in periodic directions.
@@ -1018,7 +1009,7 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname_ext)//".xsf", action='write', is_tmp=is_tmp)
 
     ASSERT(present(geo))
-    call write_xsf_geometry(iunit, geo, mesh%sb, offset)
+    call write_xsf_geometry(iunit, geo, mesh)
 
     write(iunit, '(a)') 'BEGIN_BLOCK_DATAGRID3D'
     write(iunit, '(4a)') 'units: coords = ', trim(units_abbrev(units_out%length)), &
