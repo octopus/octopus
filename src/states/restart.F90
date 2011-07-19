@@ -73,12 +73,12 @@ module restart_m
     drestart_write_function, &
     zrestart_write_function, &
     drestart_read_function,  &
-    zrestart_read_function,  & 
+    zrestart_read_function,  &
     drestart_write_lr_rho,   &
     zrestart_write_lr_rho,   &
     drestart_read_lr_rho,    &
     zrestart_read_lr_rho
-  
+
   logical           :: restart_write_files
   integer           :: restart_format
   character(len=32) :: restart_dir
@@ -176,7 +176,7 @@ contains
       message(1) = 'Could not properly read wavefunctions from "'//trim(dir)//GS_DIR//'".'
       call messages_fatal(1)
     end if
-    
+
     ! FIXME: This wrong, one cannot just change the number of states
     ! without updating the internal structures.
     st%nst    = nst
@@ -185,9 +185,9 @@ contains
     SAFE_DEALLOCATE_P(st%occ)
 
     if (present(is_complex)) then
-      if ( is_complex ) then 
+      if ( is_complex ) then
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
-      else 
+      else
         call states_allocate_wfns(st, gr%mesh, TYPE_FLOAT)
       end if
     else
@@ -220,7 +220,7 @@ contains
     integer,           intent(out) :: ierr
     integer, optional, intent(in)  :: iter
     !if this next argument is present, the lr wfs are stored instead of the gs wfs
-    type(lr_t), optional, intent(in)  :: lr 
+    type(lr_t), optional, intent(in)  :: lr
 
     integer :: iunit, iunit2, iunit_mesh, iunit_states, err, ik, idir, ist, idim, itot
     character(len=80) :: filename
@@ -243,7 +243,7 @@ contains
       (associated(st%zpsi) .and. states_are_complex(st))
     ASSERT(wfns_are_associated)
 
-    if(present(lr)) then 
+    if(present(lr)) then
       lr_wfns_are_associated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
         (associated(lr%zdl_psi) .and. states_are_complex(st))
       ASSERT(lr_wfns_are_associated)
@@ -319,7 +319,7 @@ contains
           end if
 
           if(st%st_start <= ist .and. ist <= st%st_end) then
-            if( .not. present(lr) ) then 
+            if( .not. present(lr) ) then
               if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
                 if (states_are_real(st)) then
                   call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
@@ -392,7 +392,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
-          
+
           call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
 
           do il = 1, NLEADS
@@ -425,7 +425,7 @@ contains
     type(lr_t), optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
     logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions and on the same grid
 
-    integer              :: wfns_file, occ_file, err, ik, ist, idir, idim, int 
+    integer              :: wfns_file, occ_file, err, ik, ist, idir, idim, int
     integer              :: read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM), iread, nread
     character(len=12)    :: filename
     character(len=1)     :: char
@@ -448,7 +448,7 @@ contains
 
     exact_ = optional_default(exact, .false.)
 
-    if(.not. present(lr)) then 
+    if(.not. present(lr)) then
       write(message(1), '(a,i5)') 'Info: Loading restart information.'
     else
       write(message(1), '(a,i5)') 'Info: Loading restart information for linear response.'
@@ -466,7 +466,7 @@ contains
       (associated(st%zpsi) .and. states_are_complex(st))
     ASSERT(gs_allocated)
 
-    if(present(lr)) then 
+    if(present(lr)) then
       lr_allocated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
         (associated(lr%zdl_psi) .and. states_are_complex(st))
       ASSERT(lr_allocated)
@@ -640,12 +640,12 @@ contains
             end if
           end if
 
-          
+
           if(err <= 0) then
             filled(idim, ist, ik) = .true.
             ierr = ierr + 1
           end if
-          
+
           if(mpi_grp_is_root(mpi_world)) then
             call loct_progress_bar(iread, nread)
             INCR(iread, 1)
@@ -676,10 +676,10 @@ contains
 
     if(.not. present(lr)) call fill_random()
     ! it is better to initialize lr wfns to zero
-    
+
     if(ierr == 0) then
       ierr = -1 ! no files read
-      if(.not. present(lr)) then 
+      if(.not. present(lr)) then
         write(str, '(a,i5)') 'Loading restart information'
       else
         write(str, '(a,i5)') 'Loading restart information for linear response'
@@ -693,7 +693,7 @@ contains
       write(message(1), '(a)') 'Info: Restart loading done.'
       call messages_info(1)
     else
-      if(.not. present(lr)) then 
+      if(.not. present(lr)) then
         write(str, '(a,i5)') 'Loading restart information.'
       else
         write(str, '(a,i5)') 'Loading restart information for linear response.'
@@ -770,9 +770,9 @@ contains
   subroutine read_free_states(st, gr)
     type(states_t),       intent(inout) :: st
     type(grid_t), target, intent(in)    :: gr
-    
+
     integer                    :: ik, ist, idim, counter, err, wfns, occs, il
-    integer                    :: np, ip, ip_lead, idir, ix, iy, iz, ixlead(1:3)
+    integer                    :: np, ip, idir
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
     FLOAT                      :: occ, eval, kpoint(1:MAX_DIM), w_k
@@ -847,45 +847,21 @@ contains
 
       call lead_dens_accum()
 
-      ! Copy the wave-function from the lead to the central
-      ! region, using periodicity.
-      start(1:3) = gr%mesh%idx%nr(1, 1:3) + gr%mesh%idx%enlarge(1:3)
-      end(1:3) = gr%mesh%idx%nr(2, 1:3) - gr%mesh%idx%enlarge(1:3)
 
-      start_lead(1:3) = gr%ob_grid%lead(LEFT)%mesh%idx%nr(1, 1:3) + gr%ob_grid%lead(LEFT)%mesh%idx%enlarge(1:3)
-      end_lead(1:3) = gr%ob_grid%lead(LEFT)%mesh%idx%nr(2, 1:3) - gr%ob_grid%lead(LEFT)%mesh%idx%enlarge(1:3)
+      ! Copy the wave-function from the lead to the central region, using periodicity.
+      start(1:3) = m_center%idx%nr(1, 1:3) + m_center%idx%enlarge(1:3)
+      end(1:3) = m_center%idx%nr(2, 1:3) - m_center%idx%enlarge(1:3)
 
-      ixlead(1) = start_lead(1)
-      do ix = start(1), end(1)
+      start_lead(1:3) = m_lead%idx%nr(1, 1:3) + m_lead%idx%enlarge(1:3)
+      end_lead(1:3) = m_lead%idx%nr(2, 1:3) - m_lead%idx%enlarge(1:3)
 
-        ixlead(2) = start_lead(2)
-        do iy = start(2), end(2)
-          
-          ixlead(3) = start_lead(3)
-          do iz = start(3), end(3)
-
-            ip = gr%mesh%idx%lxyz_inv(ix, iy, iz)
-            ip_lead = gr%ob_grid%lead(LEFT)%mesh%idx%lxyz_inv(ixlead(1), ixlead(2), ixlead(3))
-
-            if(ip > 0 .and. ip <= gr%mesh%np .and. ip_lead > 0 .and. ip_lead <= gr%ob_grid%lead(LEFT)%mesh%np) then
-              st%zphi(ip, idim, ist, ik) = tmp(ip_lead, idim)
-            end if
-
-            INCR(ixlead(3), 1)
-            if(TRANS_DIR == 3 .and. ixlead(3) > end_lead(3)) ixlead(3) = start_lead(3)
-          end do
-
-          INCR(ixlead(2), 1)
-          if(TRANS_DIR == 2 .and. ixlead(2) > end_lead(2)) ixlead(2) = start_lead(2)
-        end do
-
-        INCR(ixlead(1), 1)
-        if(TRANS_DIR == 1 .and. ixlead(1) > end_lead(1)) ixlead(1) = start_lead(1)
-      end do
+      st%zphi(:, idim, ist, ik)  = M_z0
+      call zmf_add(m_lead, start_lead, end_lead, tmp(:, idim), m_center, start, end, &
+                    st%zphi(:, idim, ist, ik), TRANS_DIR)
 
       ! Apply phase. Here the kpoint read from the file is different
       ! from the one calculated by octopus, since the box size changed.
-      ! The read kpoints are use for describing the free states of the
+      ! The read kpoints are used for describing the free states of the
       ! open system, which are mapped 1 to 1 (periodic incoming to scattered)
       ! with the Lippmann-Schwinger equation.
 
@@ -952,11 +928,11 @@ contains
   end subroutine read_free_states
 
   ! ---------------------------------------------------------
-  ! the routine reads formulas for user-defined wavefunctions 
+  ! the routine reads formulas for user-defined wavefunctions
   ! from the input file and fills the respective orbitals
   subroutine restart_read_user_def_orbitals(mesh, st)
     type(mesh_t),      intent(in) :: mesh
-    type(states_t), intent(inout) :: st    
+    type(states_t), intent(inout) :: st
 
     type(block_t) :: blk
     integer :: ip, id, is, ik, nstates, state_from, ierr, ncols
@@ -978,7 +954,7 @@ contains
     !%Section States
     !%Description
     !% Instead of using the ground state as initial state for
-    !% time-propagations it might be interesting in some cases 
+    !% time-propagations it might be interesting in some cases
     !% to specify alternate states. Like with user-defined
     !% potentials, this block allows you to specify formulas for
     !% the orbitals at <i>t</i>=0.
@@ -989,19 +965,19 @@ contains
     !% <br>&nbsp;&nbsp; 1 | 1 | 1 | formula | "exp(-r^2)*exp(-i*0.2*x)" | normalize_yes
     !% <br>%</tt>
     !%
-    !% The first column specifies the component of the spinor, 
-    !% the second column the number of the state and the third 
+    !% The first column specifies the component of the spinor,
+    !% the second column the number of the state and the third
     !% contains <i>k</i>-point and spin quantum numbers. Column four
     !% indicates that column five should be interpreted as a formula
     !% for the corresponding orbital.
-    !% 
+    !%
     !% Alternatively, if column four states <tt>file</tt> the state will
     !% be read from the file given in column five.
     !%
     !% <tt>%UserDefinedStates
     !% <br>&nbsp;&nbsp; 1 | 1 | 1 | file | "/path/to/file" | normalize_no
     !% <br>%</tt>
-    !% 
+    !%
     !% Octopus reads first the ground-state orbitals from
     !% the <tt>restart/gs</tt> directory. Only the states that are
     !% specified in the above block will be overwritten with

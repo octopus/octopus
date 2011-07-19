@@ -46,6 +46,10 @@ module mesh_function_m
   public ::                &
     dmf_integrate,         &
     zmf_integrate,         &
+    dmf_add,               &
+    zmf_add,               &
+    dmf_copy,              &
+    zmf_copy,              &
     dmf_dotp,              &
     zmf_dotp,              &
     dmf_nrm2,              &

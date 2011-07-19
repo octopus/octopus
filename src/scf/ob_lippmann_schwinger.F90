@@ -33,6 +33,7 @@ module ob_lippmann_schwinger_m
   use lalg_basic_m
   use loct_m
   use math_m
+  use mesh_function_m
   use messages_m
   use mpi_m
   use mpi_lib_m
@@ -210,17 +211,20 @@ contains
     CMPLX, intent(inout)          :: rhs(:, :)
     logical, optional, intent(in) :: transposed ! needed only for the non hermitian part
 
-    integer :: ip, idim, il, np
+    integer :: ip, idim, il, iy, iz, np
+    integer :: start(1:3), finish(1:3), start_lead(1:3), finish_lead(1:3)
     logical :: transposed_
     CMPLX, allocatable :: tmp(:, :)
+    FLOAT, allocatable :: tmp_pot(:)
 
     PUSH_SUB(calc_rhs)
 
+    np = gr_p%mesh%np
+
     SAFE_ALLOCATE(tmp(1:gr_p%mesh%np_part, 1:st_p%d%dim))
+    SAFE_ALLOCATE(tmp_pot(1:np))
 
     transposed_ = optional_default(transposed, .false.)
-
-    np = gr_p%mesh%np
 
     if(transposed_) then ! the usual conjugate trick for the hermitian part
       tmp(1:np, :) = conjg(rhs(1:np, :))
@@ -233,11 +237,20 @@ contains
     call zhamiltonian_apply(hm_p, gr_p%der, tmp, rhs, ist_p, ik_p, terms = TERM_KINETIC)
 
     ! Apply lead potential. Left and right lead potential are assumed to be equal.
-    ! FIXME: does not work for meshblocksize>1
-    forall(ip = 1:np )
-      rhs(ip, :) = rhs(ip, :) + hm_p%lead(LEFT)%vks(mod(ip-1, gr_p%intf(LEFT)%np_intf) + 1, :) * tmp(ip, :)
-    end forall
+    start(1:3) = gr_p%mesh%idx%nr(1, 1:3) + gr_p%mesh%idx%enlarge(1:3)
+    finish(1:3) = gr_p%mesh%idx%nr(2, 1:3) - gr_p%mesh%idx%enlarge(1:3)
 
+    start_lead(1:3) = gr_p%ob_grid%lead(LEFT)%mesh%idx%nr(1, 1:3) + gr_p%ob_grid%lead(LEFT)%mesh%idx%enlarge(1:3)
+    finish_lead(1:3) = gr_p%ob_grid%lead(LEFT)%mesh%idx%nr(2, 1:3) - gr_p%ob_grid%lead(LEFT)%mesh%idx%enlarge(1:3)
+
+    do idim = 1, st_p%d%dim
+      tmp_pot(:) = M_ZERO
+      call dmf_add(gr_p%ob_grid%lead(LEFT)%mesh, start_lead, finish_lead, hm_p%lead(LEFT)%vks(:, idim), &
+                    gr_p%mesh, start, finish, tmp_pot(:), TRANS_DIR)
+      forall(ip = 1:gr_p%mesh%np)
+        rhs(ip, idim) = rhs(ip, idim) + tmp_pot(ip) * tmp(ip, idim)
+      end forall
+    end do
     ! Add energy.
     forall(ip = 1:np ) rhs(ip, :) = energy_p * tmp(ip, :) - rhs(ip, :)
 
@@ -259,8 +272,11 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(tmp_pot)
     POP_SUB(calc_rhs)
   end subroutine calc_rhs
+
+
 
 
   ! ---------------------------------------------------------
