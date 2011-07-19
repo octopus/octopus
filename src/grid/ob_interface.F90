@@ -58,7 +58,7 @@ module ob_interface_m
     integer          :: nblocks    ! number of interfaces in a unit cell
     integer          :: il         ! which lead (1..NLEADS)
     integer, pointer :: index(:)   ! (np_uc)
-    integer          :: index_range(2) ! lowest and highest index
+    integer          :: index_range(2) ! min and and max index
     logical          :: reducible  ! is the lead unit cell a integer multiple of the interface
   end type interface_t
 
@@ -68,7 +68,8 @@ module ob_interface_m
     CMPLX, pointer :: h_diag(:, :, :) ! Diagonal block of the lead Hamiltonian.
     CMPLX, pointer :: h_offdiag(:, :) ! Offdiagonal block of the lead Hamiltonian.
     FLOAT, pointer :: vks(:, :)       ! (np_uc, nspin) Kohn-Sham potential of the leads.
-    FLOAT, pointer :: vhartree(:)     ! (np_uc) Hartree potential of the leads.
+    FLOAT, pointer :: vh(:)           ! (np_uc) electron Hartree potential of the leads.
+    FLOAT, pointer :: v0(:)           ! (np_uc) static local potential of the leads
 !    FLOAT, pointer :: A_static(:,:)   ! static vector potential
 !    CMPLX, pointer :: grad_diag(:, :, :)    ! diagonal block of the gradient operator
 !    CMPLX, pointer :: grad_offdiag(:, :, :) ! offdiagonal block of the gradient operator
@@ -111,7 +112,7 @@ contains
       intf%nblocks = intf%extent_uc / derivatives_stencil_extent(der, tdir)
     end if
     ! Extract submeshes for the interface regions.
-    ! 
+    !
     ! In 2D for the left lead.
     !   +------to------------ ...
     !   |       |
@@ -119,17 +120,17 @@ contains
     ! from------+------------ ...
     ! valid for every lead
     ! directions: LEFT -> RIGHT, BOTTOM -> TOP, REAR -> FRONT
-    
+
     ! direction: +1 if from L->R and -1 if R->L (other leads accordingly)
     dir = (-1)**(il+1)
     ll(:) = der%mesh%idx%ll(:)
     ! the interface region has only intf%extent points in its normal direction
     ll(tdir) =  derivatives_stencil_extent(der, tdir)
-    
-    ! if bottom, top, front or back lead then reduce x-extention by 2 points
+
+    ! if bottom, top, front or back lead then reduce x-extension by 2 points
     ! (covered already by left and right lead)
     if(tdir > 1) ll(1) = ll(1)-2
-    ! if front or back lead then reduce also y-extention by 2 points
+    ! if front or back lead then reduce also y-extension by 2 points
     ! (covered already by bottom and top lead)
     if(tdir > 2) ll(2) = ll(2)-2
 
@@ -153,11 +154,8 @@ contains
     call mesh_subset_indices(der%mesh, from, to, intf%index)
 
     ! Extract begin and end point numbers of interface region.
-    ! Sort the array first to make translations between interface point
-    ! number and global point number faster.
-    call sort(intf%index)
-    intf%index_range(1) = intf%index(1)
-    intf%index_range(2) = intf%index(intf%np_uc)
+    intf%index_range(1) = minval(intf%index(:))
+    intf%index_range(2) = maxval(intf%index(:))
 
     POP_SUB(interface_init)
   end subroutine interface_init
@@ -221,8 +219,7 @@ contains
     CMPLX,             intent(inout)  :: zpsi(:)
 
     PUSH_SUB(put_intf_wf)
-    
-    ! FIXME: this will probably fail for MeshBlockSize > 1
+
     zpsi(intf%index(1:intf%np_uc)) = intf_wf(1:intf%np_uc)
 
     POP_SUB(put_intf_wf)
@@ -238,7 +235,7 @@ contains
     CMPLX,             intent(in)    :: op(:, :)
     CMPLX,             intent(in)    :: wf(:)
     CMPLX,             intent(inout) :: res(:)
-    
+
     CMPLX, allocatable :: intf_wf(:), op_intf_wf(:)
 
     PUSH_SUB(interface_apply_op)

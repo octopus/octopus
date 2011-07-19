@@ -85,6 +85,7 @@ module epot_m
     ! Ions
     FLOAT,             pointer :: vpsl(:)       ! the local part of the pseudopotentials
                                                 ! plus the potential from static electric fields
+    FLOAT,             pointer :: vpsl_lead(:, :) ! (np, NLEADS) the local part of the leads
     type(projector_t), pointer :: proj(:)       ! non-local projectors
     logical                    :: non_local
     integer                    :: natoms
@@ -169,6 +170,11 @@ contains
 
     ep%vpsl(1:gr%mesh%np) = M_ZERO
 
+    if (gr%ob_grid%open_boundaries) then
+      SAFE_ALLOCATE(ep%vpsl_lead(1:maxval(gr%ob_grid%lead(1:NLEADS)%mesh%np), 1:NLEADS))
+      ep%vpsl_lead(1:maxval(gr%ob_grid%lead(1:NLEADS)%mesh%np), 1:NLEADS) = M_ZERO
+    end if
+    
     ep%classical_pot = 0
     if(geo%ncatoms > 0) then
 
@@ -470,6 +476,7 @@ contains
     SAFE_DEALLOCATE_P(ep%fii)
 
     SAFE_DEALLOCATE_P(ep%vpsl)
+    SAFE_DEALLOCATE_P(ep%vpsl_lead)
 
     if(ep%classical_pot > 0) then
       ep%classical_pot = 0
@@ -524,8 +531,7 @@ contains
     sb   => gr%sb
     mesh => gr%mesh
 
-    time_ = M_ZERO
-    if (present(time)) time_ = time
+    time_ = optional_default(time, M_ZERO)
 
     SAFE_ALLOCATE(density(1:mesh%np))
     density = M_ZERO

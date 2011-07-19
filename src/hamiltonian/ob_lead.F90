@@ -240,7 +240,7 @@ contains
     FLOAT               :: tt
     FLOAT, allocatable  :: pot_im(:)
     character(len=1024) :: tmp_c_string
-    
+
     FLOAT :: zero(1)
 
     PUSH_SUB(lead_td_pot)
@@ -268,7 +268,7 @@ contains
     POP_SUB(lead_td_pot)
   end subroutine lead_td_pot
 
-  
+
   ! init the potentials of the lead
   subroutine lead_init_pot(lead, np, np_part, nspin)
     type(lead_t),        intent(out) :: lead
@@ -281,7 +281,8 @@ contains
     lead%np  = np
     lead%np_part = np_part
     SAFE_ALLOCATE(lead%vks(1:np, 1:nspin))
-    SAFE_ALLOCATE(lead%vhartree(1:np))
+    SAFE_ALLOCATE(lead%vh(1:np))
+    SAFE_ALLOCATE(lead%v0(1:np))
 
     POP_SUB(lead_init_pot)
   end subroutine lead_init_pot
@@ -313,7 +314,8 @@ contains
     SAFE_DEALLOCATE_P(lead%h_diag)
     SAFE_DEALLOCATE_P(lead%h_offdiag)
     SAFE_DEALLOCATE_P(lead%vks)
-    SAFE_DEALLOCATE_P(lead%vhartree)
+    SAFE_DEALLOCATE_P(lead%vh)
+    SAFE_DEALLOCATE_P(lead%v0)
 
     POP_SUB(lead_end)
   end subroutine lead_end
@@ -335,8 +337,9 @@ contains
 
     forall(ip = 1:np) dst%h_diag(1:np, ip, 1:dim) = src%h_diag(1:np, ip, 1:dim)
     forall(ip = 1:np) dst%h_offdiag(1:np, ip)     = src%h_offdiag(1:np, ip)
-    dst%vks(1:np, 1:nspin)        = src%vks(1:np, 1:nspin)
-    dst%vhartree(1:np)            = src%vhartree(1:np)
+    dst%vks(1:np, 1:nspin) = src%vks(1:np, 1:nspin)
+    dst%vh(1:np)           = src%vh(1:np)
+    dst%v0(1:np)           = src%v0(1:np)
 
     POP_SUB(lead_copy)
   end subroutine lead_copy

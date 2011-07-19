@@ -96,15 +96,15 @@ module hamiltonian_m
   public ::                          &
     energy_t,                        &
     energy_copy
-  
+
   type energy_t
     ! Energies
     FLOAT :: total       !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc]
     FLOAT :: eigenvalues !< Sum[Eigenvalues]
-    FLOAT :: exchange 
+    FLOAT :: exchange
     FLOAT :: correlation
     FLOAT :: xc_j
-    FLOAT :: intnvxc     !< Int[n vxc]   
+    FLOAT :: intnvxc     !< Int[n vxc]
     FLOAT :: hartree     !< Hartree      U = (1/2)*Int [n v_Hartree]
     FLOAT :: kinetic     !< Kinetic energy of the non-interacting (KS) system of electrons
     FLOAT :: extern      !< External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
@@ -147,7 +147,7 @@ module hamiltonian_m
 
     ! Open boundaries.
     type(lead_t) :: lead(2*MAX_DIM)
-    
+
     ! Spectral range
     FLOAT :: spectral_middle_point
     FLOAT :: spectral_half_span
@@ -159,7 +159,7 @@ module hamiltonian_m
 
     ! For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t), pointer :: hf_st
-    
+
     ! There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
     logical :: inh_term
     type(states_t) :: inh_st
@@ -256,7 +256,7 @@ contains
         hm%vxc(1:gr%mesh%np, ispin) = M_ZERO
         if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) hm%vtau(1:gr%mesh%np, ispin) = M_ZERO
       end do
-    
+
       if (hm%d%cdft) then
         SAFE_ALLOCATE(hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:hm%d%nspin))
         hm%axc = M_ZERO
@@ -289,7 +289,7 @@ contains
     !% field, which may in turn back-react on the system. Of course, a fully consistent treatment
     !% of this kind of effect should be done in QED theory, but we will attempt a first
     !% approximation to the problem by considering the lowest-order relativistic terms
-    !% plugged into the normal Hamiltonian equations (spin-other-orbit coupling terms, etc.). 
+    !% plugged into the normal Hamiltonian equations (spin-other-orbit coupling terms, etc.).
     !% For the moment being, none of this is done, but a first step is taken by calculating
     !% the induced magnetic field of a system that has a current, by considering the magnetostatic
     !% approximation and Biot-Savart law:
@@ -317,8 +317,8 @@ contains
     !%Default not_absorbing
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% To improve the quality of the spectra by avoiding the formation of 
-    !% standing density waves, one can make the boundaries of the simulation 
+    !% To improve the quality of the spectra by avoiding the formation of
+    !% standing density waves, one can make the boundaries of the simulation
     !% box absorbing.
     !%Option not_absorbing 0
     !% No absorbing boundaries.
@@ -339,7 +339,7 @@ contains
     call parse_integer(datasets_check('AbsorbingBoundaries'), NOT_ABSORBING, hm%ab)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call input_error('AbsorbingBoundaries')
     call messages_print_var_option(stdout, "AbsorbingBoundaries", hm%ab)
-    
+
     nullify(hm%ab_pot)
 
     if(hm%ab .ne. NOT_ABSORBING) call init_abs_boundaries()
@@ -348,7 +348,7 @@ contains
     !%Type float
     !%Default 1.0
     !%Section Hamiltonian
-    !%Description 
+    !%Description
     !% It is possible to make calculations for a particle with a mass
     !% different from one (atomic unit of mass, or mass of the electron).
     !% This is useful to describe non-electronic systems, or for
@@ -429,7 +429,7 @@ contains
       FLOAT   :: kpoint(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_init.init_phase)
-      
+
       SAFE_ALLOCATE(hm%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
 
       kpoint(1:gr%sb%dim) = M_ZERO
@@ -465,7 +465,7 @@ contains
         !%Type float
         !%Default -0.2 a.u.
         !%Section Time-Dependent::Absorbing Boundaries
-        !%Description 
+        !%Description
         !% When <tt>AbsorbingBoundaries = sin2</tt>, this is the height of the imaginary potential.
         !%End
         call parse_float(datasets_check('ABHeight'), -CNST(0.2), hm%ab_height, units_inp%energy)
@@ -490,131 +490,50 @@ contains
     ! Calculate the blocks of the lead Hamiltonian and read the potential
     ! of the lead unit cell.
     subroutine init_lead_h
-      integer               :: np, np_part, il, ierr, pot, ix, iy
+      integer               :: np, np_part, il, ierr, pot, ix, iy, is
       integer               :: irow, diag, offdiag
       character             :: channel
       character(len=256)    :: fname, fmt, static_dir
+      character(len=6)      :: name
       type(mesh_t), pointer :: mesh
       logical               :: t_inv
 
       PUSH_SUB(hamiltonian_init.init_lead_h)
 
-      ! Read potential of the leads. We try vks-x (for DFT without
-      ! pseudopotentials) and v0 (for non-interacting electrons) in
-      ! that order (Octopus binary and NetCDF format). If none of the
-      ! two can be found, a warning is written and zero potential
-      ! assumed.
+      ! Read potential of the leads. We try v0 (for non-interacting electrons)
+      ! (Octopus binary and NetCDF format). If DFT (without pseudopotentials)
+      ! is used we try to read vh and vks. If one is not existing a warning
+      ! is written and a zero potential is assumed.
+      ! \todo: spinors
       do il = 1, NLEADS
-        np = gr%intf(il)%np_uc
+        np      = gr%intf(il)%np_uc
         np_part = gr%intf(il)%np_part_uc
         static_dir = gr%ob_grid%lead(il)%info%static_dir
-        
+        mesh => gr%ob_grid%lead(il)%mesh
         call lead_init_pot(hm%lead(il), np, np_part, hm%d%nspin)
-        
-        do ispin = 1, hm%d%nspin
-          write(channel, '(i1)') ispin
 
-          ! Try vks-ispin first.
-          ! OBF.
-          if(ubound(hm%lead(il)%vks(:, ispin), dim = 1).eq.gr%ob_grid%lead(il)%mesh%np) then
-            fname = trim(static_dir)//'/vks-'//trim(channel)//'.obf'
-            call dio_function_input(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vks(:, ispin), ierr)
-            if(ierr.eq.0) then
-              message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-              call messages_info(1)
+        name = 'v0'
+        fname = trim(static_dir)//'/'//trim(name)
+        call read_potential(fname, mesh, hm%lead(il)%v0(:), trim(name), il)
+        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+          name = 'vh'
+          fname = trim(static_dir)//'/'//trim(name)
+          call read_potential(fname, mesh, hm%lead(il)%vh(:), trim(name), il)
+          ! not sure if this is correct as the potentials are only output up to is=2 in output_h_inc.F90
+          do is = 1, hm%d%ispin
+            if(hm%d%ispin == 1) then
+              write(name, '(a)') 'vks'
             else
-              ! NetCDF.
-              fname = trim(static_dir)//'/vks-'//trim(channel)//'.ncdf'
-              call dio_function_input(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vks(:, ispin), ierr)
-              if(ierr.eq.0) then
-                message(1) = 'Info: Successfully read KS potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-                call messages_info(1)
-              else
-                ! Now try v0.
-                ! OBF.
-                fname = trim(static_dir)//'/v0.obf'
-                call dio_function_input(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vks(:, ispin), ierr)
-                if(ierr.eq.0) then
-                  message(1) = 'Info: Successfully read external potential of the '// &
-                    trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-                  call messages_info(1)
-                else
-                  ! NetCDF.
-                  fname = trim(static_dir)//'/v0.ncdf'
-                  call dio_function_input(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vks(:, ispin), ierr)
-                  if(ierr.eq.0) then
-                    message(1) = 'Info: Successfully read external potential of the '// &
-                      trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-                    call messages_info(1)
-                  else
-                    ! Reading potential failed.
-                    message(1) = 'Could read neither vks-x nor v0 from the directory'
-                    message(2) = trim(static_dir)//' for the '//trim(LEAD_NAME(il))//' lead.'
-                    message(3) = 'Please include'
-                    message(4) = ''
-                    message(5) = '  Output = potential'
-                    message(6) = ''
-                    message(7) = 'in your periodic run. Octopus now assumes zero potential'
-                    message(8) = 'in the leads. This is most likely not what you want.'
-                    call messages_warning(8)
-                    hm%lead(il)%vks(:, ispin) = M_ZERO
-                  end if
-                end if
-              end if
-            end if
-          else
-            hm%lead(il)%vks(:, ispin) = M_ZERO ! no unit cell present, so fill with zero
-          end if
-
-          ! In debug mode, write potential to file in gnuplot format
-          ! (only z=0 plane).  We cannot use dio_function_output because
-          ! the lead mesh is not completely initialized, in particular
-          ! the x array is missing.
-          if(in_debug_mode) then
-            call io_mkdir('debug/open_boundaries')
-            fname = 'debug/open_boundaries/v_lead-'//trim(LEAD_NAME(il))//'-'//trim(channel)
-            pot = io_open(trim(fname), action='write', is_tmp=.false., grp=gr%mesh%mpi_grp)
-            mesh => gr%ob_grid%lead(il)%mesh
-            do ix = mesh%idx%nr(1, 1)+mesh%idx%enlarge(1), mesh%idx%nr(2, 1)-mesh%idx%enlarge(1)
-              do iy = mesh%idx%nr(1, 2)+mesh%idx%enlarge(2), mesh%idx%nr(2, 2)-mesh%idx%enlarge(2)
-                write(pot, '(2i8,e24.16)') ix, iy, hm%lead(il)%vks(mesh%idx%lxyz_inv(ix, iy, 0), ispin)
-              end do
-            end do
-            call io_close(pot)
-          end if
-        end do
-
-        ! Read Hartree potential.
-        ! OBF.
-        hm%lead(il)%vhartree(:) = M_ZERO
-        if(ubound(hm%lead(il)%vhartree(:), dim = 1).eq.gr%ob_grid%lead(il)%mesh%np) then
-          if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-            fname = trim(static_dir)//'/vh.obf'
-            call dio_function_input(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vhartree(:), ierr)
-            if(ierr.eq.0) then
-              message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.'
-              call messages_info(1)
-            else
-              ! NetCDF.
-              fname = trim(static_dir)//'/vh.ncdf'
-              call dio_function_input(trim(fname), gr%ob_grid%lead(il)%mesh, hm%lead(il)%vhartree(:), ierr)
-              if(ierr.eq.0) then
-                message(1) = 'Info: Successfully read Hartree potential of the '//trim(LEAD_NAME(il))&
-                              //' lead from '//trim(fname)//'.'
-                call messages_info(1)
-              else
-                message(1) = 'Could not read the Hartree potential of the leads.'
-                message(2) = 'The Hartree term will not be calculated correctly.'
-                message(3) = 'Include'
-                message(4) = ''
-                message(5) = '  Output = potential'
-                message(6) = ''
-                message(7) = 'in your periodic run and make sure the Hartree interaction'
-                message(8) = 'is switched on.'
-                call messages_warning(8)
-              end if
-            end if
-          end if
+              write(name, '(a,i1)') 'vks-sp', is
+            endif
+            fname = trim(static_dir)//'/'//trim(name)
+            call read_potential(fname, mesh, hm%lead(il)%vks(:, is), trim(name), il)
+          end do
+        else
+          do is = 1, hm%d%ispin
+            hm%lead(il)%vks(:, is) = hm%lead(il)%v0(:)
+          end do
+          hm%lead(il)%vh(:)     = M_ZERO
         end if
       end do
 
@@ -701,6 +620,49 @@ contains
 
       POP_SUB(hamiltonian_init.init_lead_h)
     end subroutine init_lead_h
+
+    subroutine read_potential(fname, mesh, pot, potname, il)
+      character(len=256),    intent(in)  :: fname
+      type(mesh_t), pointer, intent(in)  :: mesh
+      FLOAT,                 intent(out) :: pot(:)
+      character(len=*),      intent(in)  :: potname
+      integer,               intent(in)  :: il
+
+      integer :: ierr
+
+      PUSH_SUB(hamiltonian.hamiltonian_init.read_potential)
+
+      ! first try obf format
+      call dio_function_input(trim(fname)//'.obf', mesh, pot, ierr)
+      if(ierr.eq.0) then
+        message(1) = 'Info: Successfully read '//trim(potname)//' potential of the '&
+                     //trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.obf'//'.'
+        call messages_info(1)
+      else  ! try ncdf format
+        call dio_function_input(trim(fname)//'.ncdf', mesh, pot, ierr)
+        if(ierr.eq.0) then
+          message(1) = 'Info: Successfully read '//trim(potname)//' potential of the '&
+                     //trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.ncdf'//'.'
+          call messages_info(1)
+        end if
+      end if
+      if (ierr .ne. 0) then
+        ! Reading potential failed.
+        message(1) = 'Could not read '//trim(potname)//' potential from the file'
+        message(2) = trim(fname)
+        message(3) = 'for the '//trim(LEAD_NAME(il))//' lead.'
+        message(4) = 'Please include'
+        message(5) = ''
+        message(6) = '  Output = potential'
+        message(7) = ''
+        message(8) = 'in your periodic run. Octopus now assumes zero potential for'
+        message(9) = trim(potname)//' in the leads. This is most likely not what you want.'
+        call messages_warning(9)
+        pot(:) = M_ZERO
+      end if
+      POP_SUB(hamiltonian.hamiltonian_init.read_potential)
+    end subroutine read_potential
+
   end subroutine hamiltonian_init
 
   ! ---------------------------------------------------------
@@ -723,7 +685,7 @@ contains
     SAFE_DEALLOCATE_P(hm%vberry)
     SAFE_DEALLOCATE_P(hm%a_ind)
     SAFE_DEALLOCATE_P(hm%b_ind)
-    
+
     if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
@@ -913,7 +875,7 @@ contains
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
 
     if(present(time)) this%current_time = time
-    
+
     ! set everything to zero
     call hamiltonian_base_clear(this%hm_base)
 
@@ -942,7 +904,7 @@ contains
           SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
           vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
           call laser_vector_potential(this%ep%lasers(ilaser), mesh, vp, time)
-          forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
+          forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
             this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) - vp(ip, idir)/P_C
           end forall
           ! and the magnetic field
@@ -968,7 +930,7 @@ contains
     ! the vector potential of a static magnetic field
     if(associated(this%ep%a_static)) then
       call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL)
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
+      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
         this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
       end forall
     end if
@@ -976,13 +938,13 @@ contains
     ! and the static magnetic field
     if(associated(this%ep%b_field)) then
       call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD)
-      forall (idir = 1:3) 
+      forall (idir = 1:3)
         this%hm_base%uniform_magnetic_field(idir) = this%hm_base%uniform_magnetic_field(idir) + this%ep%b_field(idir)
       end forall
     end if
 
     call hamiltonian_base_update(this%hm_base, mesh)
- 
+
     call build_phase()
 
     call profiling_out(prof)
@@ -1002,7 +964,7 @@ contains
           vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
       end do
 
-      if(associated(this%hm_base%uniform_vector_potential)) then 
+      if(associated(this%hm_base%uniform_vector_potential)) then
         if(.not. associated(this%phase)) then
           SAFE_ALLOCATE(this%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
         end if
@@ -1010,7 +972,7 @@ contains
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
           kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
-          
+
           forall (ip = 1:mesh%np_part)
             this%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
               + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
@@ -1052,7 +1014,16 @@ contains
     type(states_t),        intent(inout) :: st
     FLOAT,       optional, intent(in)    :: time
 
+    integer :: np
+
     PUSH_SUB(hamiltonian_epot_generate)
+
+    if (st%open_boundaries) then
+      np = gr%ob_grid%lead(LEFT)%mesh%np
+      this%ep%vpsl_lead(1:np, LEFT) = this%lead(LEFT)%v0(1:np)
+      np = gr%ob_grid%lead(RIGHT)%mesh%np
+      this%ep%vpsl_lead(1:np, RIGHT) = this%lead(RIGHT)%v0(1:np)
+    end if
 
     if(present(time)) then
       call epot_generate(this%ep, gr, geo, st, time)
@@ -1066,10 +1037,10 @@ contains
   end subroutine hamiltonian_epot_generate
 
   ! -----------------------------------------------------------------
-  
+
   FLOAT function hamiltonian_get_time(this) result(time)
     type(hamiltonian_t),   intent(inout) :: this
-    
+
     time = this%current_time
   end function hamiltonian_get_time
 
@@ -1078,7 +1049,7 @@ contains
   logical pure function hamiltonian_apply_packed(this, mesh) result(apply)
     type(hamiltonian_t),   intent(in) :: this
     type(mesh_t),          intent(in) :: mesh
-    
+
     apply = this%apply_packed
     if(mesh%use_curvilinear) apply = .false.
     if(associated(this%phase)) apply = .false.
