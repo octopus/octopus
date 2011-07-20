@@ -190,7 +190,6 @@ contains
     call io_mkdir(VIB_MODES_DIR)
 
     ! output dynamic matrix
-    call io_assign(iunit)
     iunit = io_open(VIB_MODES_DIR//'dynamical_matrix'//trim(suffix), action='write')
 
     do iatom = 1, this%natoms

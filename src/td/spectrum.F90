@@ -1419,7 +1419,6 @@ contains
 
     PUSH_SUB(spectrum_hs_from_mult)
 
-    call io_assign(iunit)
     iunit = io_open('multipoles', action='read', status='old', die=.false.)
     if(iunit < 0) then
       iunit = io_open('td.general/multipoles', action='read', status='old')
