@@ -108,7 +108,7 @@ contains
 
     PUSH_SUB(xc_init)
 
-    ! get current-dependent functional
+    xcs%family = 0
     xcs%kernel_family = 0
 
     call parse()
