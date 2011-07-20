@@ -88,6 +88,7 @@ contains
     FLOAT :: term
     character(len=80) :: dirname_restart, str_tmp
     type(Born_charges_t) :: born
+    logical :: normal_mode_wfs
 
     PUSH_SUB(phonons_lr_run)
 
@@ -104,6 +105,17 @@ contains
     if(st%nlcc) then
       call messages_not_implemented('linear-response vib_modes with non-linear core corrections')
     endif
+
+    !%Variable CalcNormalModeWfs
+    !%Type logical
+    !%Default false
+    !%Section Linear Response::Vibrational Modes
+    !%Description
+    !% If set to true, the response wavefunctions for each normal mode will be calculated
+    !% and written in directory <tt>restart/vib_modes/phn_nm_wfs_XXXXX</tt>.
+    !% This part is time-consuming and not parallel, but not needed for most purposes.
+    !%End
+    call parse_logical(datasets_check('CalcNormalModeWfs'), .false., normal_mode_wfs)
 
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
@@ -235,9 +247,11 @@ contains
     call out_Born_charges(born, geo, gr%sb%dim, VIB_MODES_DIR, write_real = .true.)
     call calc_infrared
 
-    message(1) = "Calculating response wavefunctions for normal modes."
-    call messages_info(1)
-    call vib_modes_wavefunctions
+    if(normal_mode_wfs) then
+      message(1) = "Calculating response wavefunctions for normal modes."
+      call messages_info(1)
+      call vib_modes_wavefunctions
+    endif
 
     !DESTRUCT
 
@@ -331,7 +345,7 @@ contains
           end do
           lir(ndim+1) = sqrt(sum(lir(1:ndim)**2))
 
-          write(iunit, '(5f14.5)') units_from_atomic(unit_invcm, sqrt(abs(vib%freq(imat)))), lir(1:ndim+1)
+          write(iunit, '(5f14.5)') units_from_atomic(unit_invcm, vib%freq(imat)), lir(1:ndim+1)
         end do
       end do
 
@@ -384,7 +398,7 @@ contains
         
         call restart_write(io_workpath(trim(tmpdir)//VIB_MODES_DIR//trim(phn_nm_wfs_tag(inm))), &
           st, gr, ierr, lr = lr(1))
-        
+
       end do
 
       call lr_dealloc(lrtmp)

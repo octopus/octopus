@@ -59,9 +59,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine vibrations_init(this, geo, sb)
-    type(vibrations_t),     intent(out) :: this
-    type(geometry_t),    intent(inout) :: geo
-    type(simul_box_t),   intent(inout) :: sb
+    type(vibrations_t), intent(out) :: this
+    type(geometry_t),   intent(inout) :: geo
+    type(simul_box_t),  intent(inout) :: sb
 
     integer :: iatom
 
@@ -85,7 +85,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine vibrations_end(this)
-    type(vibrations_t),     intent(inout) :: this
+    type(vibrations_t), intent(inout) :: this
 
     PUSH_SUB(vibrations_end)
 
@@ -99,8 +99,8 @@ contains
   ! ---------------------------------------------------------
 
   subroutine vibrations_normalize_dyn_matrix(this, geo)
-    type(vibrations_t),      intent(inout) :: this
-    type(geometry_t),        intent(inout) :: geo
+    type(vibrations_t), intent(inout) :: this
+    type(geometry_t),   intent(inout) :: geo
 
     FLOAT :: factor
     integer :: iatom, idir, jatom, jdir, imat, jmat
@@ -134,8 +134,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine vibrations_diag_dyn_matrix(this)
-    type(vibrations_t),      intent(inout) :: this
+    type(vibrations_t), intent(inout) :: this
     
+    integer :: imode
+
     PUSH_SUB(vibrations_diag_dyn_matrix)
 
     this%normal_mode = M_ZERO
@@ -143,7 +145,19 @@ contains
     this%normal_mode = this%dyn_matrix
     call lalg_eigensolve(this%num_modes, this%normal_mode, this%freq)
 
-    this%freq(1:this%num_modes) = this%freq(1:this%num_modes) / this%total_mass
+    this%freq(1:this%num_modes) = -this%freq(1:this%num_modes) / this%total_mass
+
+    if(any(this%freq(1:this%num_modes) < -M_EPSILON)) then
+      message(1) = "There are imaginary vibrational frequencies (represented as negative)."
+      call messages_warning(1)
+    endif
+    do imode = 1, this%num_modes
+      if(this%freq(imode) > M_EPSILON) then
+        this%freq(imode) =  sqrt(abs(this%freq(imode)))
+      else
+        this%freq(imode) = -sqrt(abs(this%freq(imode)))
+      endif
+    enddo
 
     POP_SUB(vibrations_diag_dyn_matrix)
   end subroutine vibrations_diag_dyn_matrix
@@ -179,8 +193,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine vibrations_output(this, suffix)
-    type(vibrations_t),   intent(in) :: this
-    character (len=*),    intent(in) :: suffix
+    type(vibrations_t), intent(in) :: this
+    character (len=*),  intent(in) :: suffix
     
     integer :: iunit, i, j, iatom, jatom, idir, jdir, imat, jmat
 
@@ -212,7 +226,7 @@ contains
     ! output frequencies and eigenvectors
     iunit = io_open(VIB_MODES_DIR//'normal_frequencies'//trim(suffix), action='write')
     do i = 1, this%num_modes
-      write(iunit, '(i6,f14.5)') i, units_from_atomic(unit_invcm, sqrt(abs(this%freq(i))))
+      write(iunit, '(i6,f14.5)') i, units_from_atomic(unit_invcm, this%freq(i))
     end do
     call io_close(iunit)
 
