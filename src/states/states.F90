@@ -69,6 +69,7 @@ module states_m
     states_look,                      &
     states_densities_init,            &
     states_allocate_wfns,             &
+    states_allocate_intf_wfns,        &
     states_deallocate_wfns,           &
     states_null,                      &
     states_end,                       &
@@ -76,8 +77,8 @@ module states_m
     states_generate_random,           &
     states_fermi,                     &
     states_eigenvalues_sum,           &
-    states_allocate_free_states,      &
-    states_deallocate_free_states,    &
+    states_lead_densities_init,       &
+    states_lead_densities_end,        &
     states_spin_channel,              &
     states_calc_quantities,           &
     state_is_local,                   &
@@ -109,10 +110,10 @@ module states_m
   type states_t
     type(states_dim_t)       :: d
     type(modelmb_particle_t) :: modelmbparticles
-    type(states_priv_t)      :: priv                  !< the private components 
+    type(states_priv_t)      :: priv                  !< the private components
     integer                  :: nst                   !< Number of states in each irreducible subspace
 
-    ! pointers to the wavefunctions 
+    ! pointers to the wavefunctions
     logical                  :: only_userdef_istates  !< only use user-defined states as initial states in propagation
     FLOAT, pointer           :: dpsi(:,:,:,:)         !< dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
     CMPLX, pointer           :: zpsi(:,:,:,:)         !< zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
@@ -145,8 +146,8 @@ module states_m
 
     logical        :: nlcc             !< do we have non-linear core corrections
     FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
-    logical        :: current_in_tau   !< are we using in tau the term which depends on the paramagnetic current?  
-    
+    logical        :: current_in_tau   !< are we using in tau the term which depends on the paramagnetic current?
+
     !> It may be required to "freeze" the deepest orbitals during the evolution; the density
     !! of these orbitals is kept in frozen_rho. It is different from rho_core.
     FLOAT, pointer :: frozen_rho(:, :)
@@ -236,7 +237,7 @@ contains
     nullify(st%ap%schedule)
 
     st%packed = .false.
-    
+
     POP_SUB(states_null)
   end subroutine states_null
 
@@ -269,7 +270,7 @@ contains
     !% Spin-restricted calculations.
     !%Option polarized 2
     !%Option spin_polarized 2
-    !% Spin unrestricted, also known as spin-DFT, SDFT. This mode will double the number of 
+    !% Spin unrestricted, also known as spin-DFT, SDFT. This mode will double the number of
     !% wavefunctions necessary for a spin-unpolarized calculation.
     !%Option non_collinear 3
     !%Option spinors 3
@@ -288,7 +289,7 @@ contains
     !%Default 0.0
     !%Section States
     !%Description
-    !% The net charge of the system. A negative value means that we are adding 
+    !% The net charge of the system. A negative value means that we are adding
     !% electrons, while a positive value means we are taking electrons
     !% from the system.
     !%End
@@ -306,7 +307,7 @@ contains
     !% electrons present in the system. (This default behavior is
     !% obtained by setting <tt>TotalStates</tt> to 0).
     !%
-    !% If you want to add some unoccupied states, probably it is more convenient to use the variable 
+    !% If you want to add some unoccupied states, probably it is more convenient to use the variable
     !% <tt>ExtraStates</tt>.
     !%
     !% Note that this number is unrelated to <tt>CalculationMode == unocc</tt>.
@@ -357,7 +358,7 @@ contains
     call states_choose_kpoints(st%d, gr%sb, geo)
 
     call geometry_val_charge(geo, st%val_charge)
-    
+
     if(gr%ob_grid%open_boundaries) then
       ! renormalize charge of central region to match leads (open system, not finite)
       st%val_charge = st%val_charge * (gr%ob_grid%lead(LEFT)%sb%lsize(TRANS_DIR) / gr%sb%lsize(TRANS_DIR))
@@ -719,49 +720,44 @@ contains
   end subroutine states_look
 
   ! ---------------------------------------------------------
-  ! Allocate free states.
-  subroutine states_allocate_free_states(st, gr)
+  ! Allocate the lead densities.
+  subroutine states_lead_densities_init(st, gr)
     type(states_t), intent(inout) :: st
     type(grid_t),   intent(in)    :: gr
 
     integer :: il
 
-    PUSH_SUB(states_allocate_free_states)
+    PUSH_SUB(states_lead_densities_init)
 
-    ! FIXME: spin-polarized free states ignored.
     if(gr%ob_grid%open_boundaries) then
-      SAFE_ALLOCATE(st%zphi(1:gr%mesh%np_part, 1:st%ob_d%dim, 1:st%ob_nst, 1:st%ob_d%nik))
       do il = 1, NLEADS
         SAFE_ALLOCATE(st%ob_lead(il)%rho(1:gr%ob_grid%lead(il)%mesh%np, 1:st%d%nspin))
+        st%ob_lead(il)%rho(:, :) = M_ZERO
       end do
-      st%zphi = M_z0
-    else
-      nullify(st%zphi)
     end if
 
-    POP_SUB(states_allocate_free_states)
-  end subroutine states_allocate_free_states
+    POP_SUB(states_lead_densities_init)
+  end subroutine states_lead_densities_init
 
 
   ! ---------------------------------------------------------
-  ! Deallocate free states.
-  subroutine states_deallocate_free_states(st, gr)
+  ! Deallocate the lead density.
+  subroutine states_lead_densities_end(st, gr)
     type(states_t), intent(inout) :: st
     type(grid_t),   intent(in)    :: gr
 
     integer :: il
 
-    PUSH_SUB(states_deallocate_free_states)
+    PUSH_SUB(states_lead_densities_end)
 
     if(gr%ob_grid%open_boundaries) then
-      SAFE_DEALLOCATE_P(st%zphi)
       do il = 1, NLEADS
         SAFE_DEALLOCATE_P(st%ob_lead(il)%rho)
       end do
     end if
 
-    POP_SUB(states_deallocate_free_states)
-  end subroutine states_deallocate_free_states
+    POP_SUB(states_lead_densities_end)
+  end subroutine states_lead_densities_end
 
 
   ! ---------------------------------------------------------
@@ -866,7 +862,7 @@ contains
           end do
         end do
         do ik = 1, st%d%nik
-          do ist = st%nst - ncols + 1, st%nst 
+          do ist = st%nst - ncols + 1, st%nst
             call parse_block_float(blk, ik-1, ist-1-(st%nst-ncols), st%occ(ist, ik))
             integral_occs = integral_occs .and. &
               abs((st%occ(ist, ik) - el_per_state) * st%occ(ist, ik)) .le. M_EPSILON
@@ -954,7 +950,7 @@ contains
     !% place).
     !%
     !% This block is meaningless and ignored if the run is not in spinors mode
-    !% (<tt>SpinComponents = spinors</tt>). 
+    !% (<tt>SpinComponents = spinors</tt>).
     !%
     !% The structure of the block is very simple: each column contains the desired
     !% &lt;<i>S_x</i>&gt;, &lt;<i>S_y</i>&gt;, &lt;<i>S_z</i>&gt; for each spinor.
@@ -996,7 +992,7 @@ contains
       end if
       st%fixed_spins = .true.
       do i = 2, st%d%nik
-        st%spin(:, :, i) = st%spin(:, :, 1)     
+        st%spin(:, :, i) = st%spin(:, :, 1)
       end do
     end if spin_fix
 
@@ -1006,13 +1002,13 @@ contains
 
   ! ---------------------------------------------------------
   ! Allocates the KS wavefunctions defined within a states_t structure.
-  subroutine states_allocate_wfns(st, mesh, wfs_type, ob_mesh)
+  subroutine states_allocate_wfns(st, mesh, wfs_type, alloc_zphi)
     type(states_t),         intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
-    type(mesh_t), optional, intent(in)      :: ob_mesh(:)
+    logical,      optional, intent(in)      :: alloc_zphi ! only needed for gs transport
 
-    integer :: ip, ik, ist, idim, st1, st2, k1, k2, size, il
+    integer :: ip, ik, il, ist, idim, st1, st2, k1, k2, np_part
     logical :: force
 
     PUSH_SUB(states_allocate_wfns)
@@ -1021,7 +1017,7 @@ contains
       message(1) = "Trying to allocate wavefunctions that are already allocated."
       call messages_fatal(1)
     end if
-    
+
     if (present(wfs_type)) then
       ASSERT(wfs_type == TYPE_FLOAT .or. wfs_type == TYPE_CMPLX)
       st%priv%wfs_type = wfs_type
@@ -1034,7 +1030,7 @@ contains
     !%Description
     !% Normally <tt>Octopus</tt> determines automatically the type necessary
     !% for the wavefunctions. When set to yes this variable will
-    !% force the use of complex wavefunctions. 
+    !% force the use of complex wavefunctions.
     !%
     !% Warning: This variable is designed for testing and
     !% benchmarking and normal users need not use it.
@@ -1048,39 +1044,68 @@ contains
     st2 = st%st_end
     k1 = st%d%kpt%start
     k2 = st%d%kpt%end
-    size = mesh%np_part
+    np_part = mesh%np_part
 
     if (states_are_real(st)) then
-      SAFE_ALLOCATE(st%dpsi(1:size, 1:st%d%dim, st1:st2, k1:k2))
+      SAFE_ALLOCATE(st%dpsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
 
-      forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:size)
+      forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
         st%dpsi(ip, idim, ist, ik) = M_ZERO
       end forall
 
     else
-      SAFE_ALLOCATE(st%zpsi(1:size, 1:st%d%dim, st1:st2, k1:k2))
+      SAFE_ALLOCATE(st%zpsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
 
-      forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:size)
+      forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
         st%zpsi(ip, idim, ist, ik) = M_Z0
       end forall
     end if
 
-    if(present(ob_mesh)) then
-      ASSERT(st%open_boundaries)
-
-      do il = 1, NLEADS
-        SAFE_ALLOCATE(st%ob_lead(il)%intf_psi(1:ob_mesh(il)%np, 1:st%d%dim, st1:st2, k1:k2))
-        st%ob_lead(il)%intf_psi = M_z0
-      end do
+    if(optional_default(alloc_zphi, .false.)) then
+      SAFE_ALLOCATE(st%zphi(1:np_part, 1:st%ob_d%dim, st1:st2, k1:k2))
+      forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
+        st%zphi(ip, idim, ist, ik) = M_Z0
+      end forall
+    else
+      nullify(st%zphi)
     end if
 
     call states_init_block(st)
 
     POP_SUB(states_allocate_wfns)
   end subroutine states_allocate_wfns
-  
+
+  ! ---------------------------------------------------------
+  ! Allocates the interface wavefunctions defined within a states_t structure.
+  subroutine states_allocate_intf_wfns(st, ob_mesh)
+    type(states_t),         intent(inout)   :: st
+    type(mesh_t),           intent(in)      :: ob_mesh(:)
+
+    integer :: ip, ik, ist, idim, st1, st2, k1, k2, il
+
+    PUSH_SUB(states_allocate_intf_wfns)
+
+    ASSERT(st%open_boundaries)
+
+    st1 = st%st_start
+    st2 = st%st_end
+    k1 = st%d%kpt%start
+    k2 = st%d%kpt%end
+
+    do il = 1, NLEADS
+      ASSERT(.not.associated(st%ob_lead(il)%intf_psi))
+      SAFE_ALLOCATE(st%ob_lead(il)%intf_psi(1:ob_mesh(il)%np, 1:st%d%dim, st1:st2, k1:k2))
+      st%ob_lead(il)%intf_psi = M_z0
+    end do
+
+    ! TODO: write states_init_block for intf_psi
+!    call states_init_block(st)
+
+    POP_SUB(states_allocate_intf_wfns)
+  end subroutine states_allocate_intf_wfns
+
   ! -----------------------------------------------------
-  
+
   subroutine states_init_block(st)
     type(states_t),    intent(inout)   :: st
 
@@ -1124,32 +1149,32 @@ contains
 !!$      print*, "NST       ", st%nst
 !!$      print*, "BLOCKSIZE ", st%d%block_size
 !!$      print*, "NBLOCKS   ", st%nblocks
-!!$        
-!!$      print*, "===============" 
+!!$
+!!$      print*, "==============="
 !!$      do ist = 1, st%nst
 !!$        print*, st%node(ist), ist, st%iblock(ist, 1)
 !!$      end do
-!!$      print*, "===============" 
-!!$      
+!!$      print*, "==============="
+!!$
 !!$      do ib = 1, st%nblocks
 !!$        print*, ib, bstart(ib), bend(ib)
 !!$      end do
-!!$      
+!!$
 !!$    end if
-    
-    SAFE_ALLOCATE(st%psib(1:st%nblocks, 1:st%d%nik))    
+
+    SAFE_ALLOCATE(st%psib(1:st%nblocks, 1:st%d%nik))
     SAFE_ALLOCATE(st%block_is_local(1:st%nblocks, 1:st%d%nik))
     st%block_is_local = .false.
     st%block_start  = -1
     st%block_end    = -2  ! this will make that loops block_start:block_end do not run if not initialized
-    
+
     do ib = 1, st%nblocks
       if(bstart(ib) >= st%st_start .and. bend(ib) <= st%st_end) then
         if(st%block_start == -1) st%block_start = ib
         st%block_end = ib
         do iqn = st%d%kpt%start, st%d%kpt%end
           st%block_is_local(ib, iqn) = .true.
-          
+
           if (states_are_real(st)) then
             ASSERT(associated(st%dpsi))
             call batch_init(st%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%dpsi(:, :, bstart(ib):bend(ib), iqn))
@@ -1157,7 +1182,7 @@ contains
             ASSERT(associated(st%zpsi))
             call batch_init(st%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%zpsi(:, :, bstart(ib):bend(ib), iqn))
           end if
-          
+
         end do
       end if
     end do
@@ -1168,7 +1193,7 @@ contains
     st%block_range(1:st%nblocks, 1) = bstart(1:st%nblocks)
     st%block_range(1:st%nblocks, 2) = bend(1:st%nblocks)
     st%block_size(1:st%nblocks) = bend(1:st%nblocks) - bstart(1:st%nblocks) + 1
-    
+
     st%block_initialized = .true.
 
     SAFE_DEALLOCATE_A(bstart)
@@ -1243,7 +1268,7 @@ contains
     call states_exec_init()
 
     POP_SUB(states_densities_init)
-    
+
   contains
 
     subroutine states_exec_init()
@@ -1309,7 +1334,7 @@ contains
       !%Option qr 4
       !% (Experimental) Orthogonalization is performed based on a QR
       !% decomposition based on Lapack routines _getrf and _orgqr.
-      !% Compatible with states parallelization. 
+      !% Compatible with states parallelization.
       !%Option old_gram_schmidt 5
       !% Old Gram-Schmidt implementation, compatible with states
       !% parallelization.
@@ -1320,14 +1345,14 @@ contains
       else
         default = ORTH_GS
       end if
-      
+
       call parse_integer(datasets_check('StatesOrthogonalization'), default, st%d%orth_method)
 
       if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call input_error('StatesOrthogonalization')
       call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
 
       if(st%d%orth_method == ORTH_QR) call messages_experimental("QR Orthogonalization")
- 
+
       POP_SUB(states_densities_init.states_exec_init)
     end subroutine states_exec_init
   end subroutine states_densities_init
@@ -1350,7 +1375,7 @@ contains
     stout%only_userdef_istates = stin%only_userdef_istates
     call loct_pointer_copy(stout%dpsi, stin%dpsi)
     call loct_pointer_copy(stout%zpsi, stin%zpsi)
-    
+
     ! the call to init_block is done at the end of this subroutine
     ! it allocates iblock, psib, block_is_local
     stout%nblocks = stin%nblocks
@@ -1421,7 +1446,7 @@ contains
     integer :: il
 
     PUSH_SUB(states_end)
-    
+
     call states_dim_end(st%d)
     call modelmb_particles_end(st%modelmbparticles)
 
@@ -1508,11 +1533,11 @@ contains
       ASSERT(states_are_complex(st))
 
       if(st%fixed_spins) then
-        
+
         do ik = st%d%kpt%start, st%d%kpt%end
           do ist = ist_start, ist_end
             call zmf_random(mesh, st%zpsi(:, 1, ist, ik))
-            ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in 
+            ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
             ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
             ! determines the spin values. The values of (alpha, beta) can be be obtained
             ! with simple formulae from <Sx>, <Sy>, <Sz>.
@@ -1682,7 +1707,7 @@ contains
 #if defined(HAVE_MPI)
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
       st%parallel_in_states = .true.
-      
+
       call multicomm_create_all_pairs(st%mpi_grp, st%ap)
 
      if(st%nst < st%mpi_grp%size) then
@@ -1757,7 +1782,7 @@ contains
 
   end function states_are_real
 
-  ! --------------------------------------------------------- 
+  ! ---------------------------------------------------------
   !
   !> This function can calculate several quantities that depend on
   !! derivatives of the orbitals from the states and the density.
@@ -1783,7 +1808,7 @@ contains
     PUSH_SUB(states_calc_quantities)
 
     something_to_do = present(kinetic_energy_density) .or. present(gi_kinetic_energy_density) .or. &
-      present(paramagnetic_current) .or. present(density_gradient) .or. present(density_laplacian) 
+      present(paramagnetic_current) .or. present(density_gradient) .or. present(density_laplacian)
     ASSERT(something_to_do)
 
     SAFE_ALLOCATE( wf_psi(1:der%mesh%np_part, 1:st%d%dim))
@@ -1802,7 +1827,7 @@ contains
 
     ! for the gauge-invariant kinetic energy density we need the
     ! current and the kinetic energy density
-    if(present(gi_kinetic_energy_density)) then 
+    if(present(gi_kinetic_energy_density)) then
       if(.not. present(paramagnetic_current) .and. states_are_complex(st)) then
         SAFE_ALLOCATE(jp(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%nspin))
       end if
@@ -1875,7 +1900,7 @@ contains
               end if
             end if
 
-            if (associated(tau)) then 
+            if (associated(tau)) then
               tau (1:der%mesh%np, is)   = tau (1:der%mesh%np, is)        + &
                 ww*abs(gwf_psi(1:der%mesh%np, i_dim, 1))**2  &
                 + ww*abs(kpoint(i_dim))**2*abs(wf_psi(1:der%mesh%np, 1))**2  &
@@ -1915,7 +1940,7 @@ contains
               end if
 
               ! the expression for the paramagnetic current with spinors is
-              !     j = ( jp(1)             jp(3) + i jp(4) ) 
+              !     j = ( jp(1)             jp(3) + i jp(4) )
               !         (-jp(3) + i jp(4)   jp(2)           )
               if(associated(jp)) then
                 jp(1:der%mesh%np, i_dim, 2) = jp(1:der%mesh%np, i_dim, 2) + &
@@ -1928,7 +1953,7 @@ contains
               end if
 
               ! the expression for the paramagnetic current with spinors is
-              !     t = ( tau(1)              tau(3) + i tau(4) ) 
+              !     t = ( tau(1)              tau(3) + i tau(4) )
               !         ( tau(3) - i tau(4)   tau(2)            )
               if(associated(tau)) then
                 tau (1:der%mesh%np, 2) = tau (1:der%mesh%np, 2) + ww*abs(gwf_psi(1:der%mesh%np, i_dim, 2))**2
@@ -1940,7 +1965,7 @@ contains
               end if
 
               ASSERT(.not. present(gi_kinetic_energy_density))
-              
+
             end if !SPINORS
 
           end do
@@ -1965,7 +1990,7 @@ contains
 
     POP_SUB(states_calc_quantities)
 
-  contains 
+  contains
 
     subroutine reduce_all(grp)
       type(mpi_grp_t), intent(in)  :: grp
@@ -1978,14 +2003,14 @@ contains
         call comm_allreduce(grp%comm, gi_kinetic_energy_density, dim = (/der%mesh%np, st%d%nspin/))
 
       if (present(density_laplacian)) call comm_allreduce(grp%comm, density_laplacian, dim = (/der%mesh%np, st%d%nspin/))
-      
+
       do is = 1, st%d%nspin
         if(associated(jp)) call comm_allreduce(grp%comm, jp(:, :, is), dim = (/der%mesh%np, der%mesh%sb%dim/))
 
         if(present(density_gradient)) &
           call comm_allreduce(grp%comm, density_gradient(:, :, is), dim = (/der%mesh%np, der%mesh%sb%dim/))
       end do
-      
+
       POP_SUB(states_calc_quantities.reduce_all)
     end subroutine reduce_all
 
@@ -2061,7 +2086,7 @@ contains
     if (mesh%parallel_in_domains) then
       blocksize(1) = maxval(mesh%vp%np_local) + &
         (st%d%dim - 1)*maxval(mesh%vp%np_local + mesh%vp%np_bndry + mesh%vp%np_ghost)
-    else 
+    else
       blocksize(1) = mesh%np + (st%d%dim - 1)*mesh%np_part
     end if
 
@@ -2070,9 +2095,9 @@ contains
     else
       blocksize(2) = st%nst
     end if
-    
+
     total_np = blocksize(1)*st%dom_st_proc_grid%nprow
-  
+
 
     ASSERT(st%d%dim*mesh%np_part >= blocksize(1))
 #endif
@@ -2085,7 +2110,7 @@ contains
   subroutine states_pack(st, copy)
     type(states_t),    intent(inout) :: st
     logical, optional, intent(in)    :: copy
-    
+
     integer :: iqn, ib
 
     ASSERT(.not. st%packed)
@@ -2097,7 +2122,7 @@ contains
         call batch_pack(st%psib(ib, iqn), copy)
       end do
     end do
-    
+
   end subroutine states_pack
 
   ! ------------------------------------------------------------
@@ -2105,7 +2130,7 @@ contains
   subroutine states_unpack(st, copy)
     type(states_t),    intent(inout) :: st
     logical, optional, intent(in)    :: copy
-    
+
     integer :: iqn, ib
 
     ASSERT(st%packed)
@@ -2117,18 +2142,18 @@ contains
         call batch_unpack(st%psib(ib, iqn), copy)
       end do
     end do
-    
+
   end subroutine states_unpack
 
   ! ------------------------------------------------------------
 
   subroutine states_sync(st)
     type(states_t),    intent(inout) :: st
-    
+
     integer :: iqn, ib
 
     if(states_are_packed(st)) then
-      
+
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%block_start, st%block_end
           call batch_sync(st%psib(ib, iqn))
@@ -2140,10 +2165,10 @@ contains
   end subroutine states_sync
 
   ! -----------------------------------------------------------
-  
+
   logical pure function states_are_packed(st) result(packed)
     type(states_t),    intent(in) :: st
-    
+
     packed = st%packed
   end function states_are_packed
 

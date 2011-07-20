@@ -76,7 +76,7 @@ contains
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
 
-#ifdef HAVE_OPENCL    
+#ifdef HAVE_OPENCL
     call opencl_init()
 #endif
 
@@ -89,7 +89,7 @@ contains
     call states_init(sys%st, sys%gr, sys%geo)
     call grid_init_stage_1(sys%gr, sys%geo)
     ! if independent particles in N dimensions are being used, need to initialize them
-    !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init 
+    !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
     call modelmb_copy_masses (sys%st%modelmbparticles, sys%gr%der%masses)
 
     call parallel_init()
@@ -98,8 +98,9 @@ contains
     call kpoints_distribute(sys%st%d, sys%mc)
     call states_distribute_nodes(sys%st, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
-    call states_densities_init(sys%st, sys%gr, sys%geo, sys%mc)
     call output_init(sys%gr%sb, sys%st%nst, sys%outp)
+    call states_densities_init(sys%st, sys%gr, sys%geo, sys%mc)
+    call states_lead_densities_init(sys%st, sys%gr)
     call elf_init()
 
     call poisson_init(psolver, sys%gr%der, sys%geo, sys%mc%master_comm)
@@ -143,9 +144,9 @@ contains
       character(len=80) :: fname
 
       PUSH_SUB(system_init.print_r)
-      
+
       if(iand(sys%outp%what, C_OUTPUT_R).ne.0) then
-        
+
         do i=1, sys%gr%mesh%sb%dim
           write(fname, '(a,i1)') 'r-', i
           call dio_function_output(sys%outp%how, 'exec/', fname, sys%gr%mesh, sys%gr%mesh%x(:,i), &
@@ -155,7 +156,7 @@ contains
 
       POP_SUB(system_init.print_r)
     end subroutine print_r
-    
+
   end subroutine system_init
 
 
@@ -171,6 +172,7 @@ contains
     call v_ks_end(sys%ks, sys%gr, sys%geo)
 
     if(associated(sys%st)) then
+      call states_lead_densities_end(sys%st, sys%gr)
       call states_end(sys%st)
       SAFE_DEALLOCATE_P(sys%st)
     end if
@@ -184,7 +186,7 @@ contains
 #ifdef HAVE_OPENCL
     call opencl_end()
 #endif
-    
+
     SAFE_DEALLOCATE_P(sys%gr)
 
     POP_SUB(system_end)

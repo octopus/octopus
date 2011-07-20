@@ -82,8 +82,8 @@ module td_m
        EHRENFEST = 1,   &
        BO        = 2,   &
        CP        = 3
-  
-  type td_t 
+
+  type td_t
     type(propagator_t)   :: tr             ! contains the details of the time-evolution
     type(scf_t)          :: scf
     type(ion_dynamics_t) :: ions
@@ -92,7 +92,7 @@ module td_m
     integer              :: max_iter       ! maximum number of iterations to perform
     integer              :: iter           ! the actual iteration
     logical              :: recalculate_gs ! Recalculate ground-state along the evolution.
-    
+
     ! The *kick* used in "response in the time domain" calculations.
     type(kick_t)         :: kick
 
@@ -109,7 +109,7 @@ contains
   subroutine td_run_init()
 
     PUSH_SUB(td_run_init)
-    
+
     call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .true.)
 
     POP_SUB(td_run_init)
@@ -145,14 +145,13 @@ contains
 
     call td_init(td, sys, hm)
 
-    ! Alocate wavefunctions during time-propagation
+    ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
-      if(gr%ob_grid%open_boundaries) then
+      !complex wfs are required for Ehrenfest
+      call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+      if(st%open_boundaries) then
         ASSERT(associated(gr%ob_grid%lead))
-        call states_allocate_wfns(st, gr%mesh, ob_mesh = gr%ob_grid%lead(:)%mesh)
-      else
-        !complex wfs are required for Ehrenfest
-        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+        call states_allocate_intf_wfns(st, gr%ob_grid%lead(:)%mesh)
       end if
     else
       call states_allocate_wfns(st, gr%mesh)
@@ -254,7 +253,7 @@ contains
 
       generate = .false.
 
-      if(ion_dynamics_ions_move(td%ions)) then 
+      if(ion_dynamics_ions_move(td%ions)) then
         if(td%dynamics == CP .or. .not. propagator_ions_are_propagated(td%tr)) then
           call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, iter*td%dt, td%dt)
           generate = .true.
@@ -264,15 +263,15 @@ contains
       if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(td%tr)) then
         call gauge_field_propagate(hm%ep%gfield, gauge_force, td%dt)
       end if
-      
-      if(generate .or. geometry_species_time_dependent(geo)) then 
+
+      if(generate .or. geometry_species_time_dependent(geo)) then
         call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
       end if
 
       update_energy = (td%dynamics == BO) .or. (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter)
 
       if(update_energy .or. propagator_requires_vks(td%tr)) then
-        
+
         ! save the vhxc potential for later
         if(.not. propagator_requires_vks(td%tr)) then
           SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
@@ -283,10 +282,10 @@ contains
 
         ! update Hamiltonian and eigenvalues (fermi is *not* called)
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval = update_energy, time = iter*td%dt, calc_energy = update_energy)
-        
+
         ! Get the energies.
         if(update_energy) call total_energy(hm, sys%gr, st, iunit = -1)
-        
+
         if (td%dynamics == CP) then
           if(states_are_real(st)) then
             call dcpmd_propagate_vel(td%cp_propagator, sys%gr, hm, st, td%dt)
@@ -307,14 +306,14 @@ contains
       ! Recalculate forces, update velocities...
       if(ion_dynamics_ions_move(td%ions)) then
         if(td%dynamics /= BO) call forces_calculate(gr, sys%geo, hm%ep, st, iter*td%dt)
-        
+
         call ion_dynamics_propagate_vel(td%ions, sys%geo, atoms_moved = generate)
 
         if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
 
         geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
       end if
-      
+
       if(gauge_field_is_applied(hm%ep%gfield)) then
         if(td%dynamics /= BO) call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
         call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, td%dt)
@@ -325,7 +324,7 @@ contains
       if(td%PESv%calc_rc .or. td%PESv%calc_mask) &
            call PES_calc(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot,hm,geo,iter)
 
-      if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st) 
+      if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st)
 
       ! write down data
       call check_point()
@@ -356,7 +355,7 @@ contains
 
     subroutine print_header
 
-      if(td%dynamics /= CP) then 
+      if(td%dynamics /= CP) then
         write(message(1), '(a7,1x,a14,a14,a10,a17)') 'Iter ', 'Time ', 'Energy ', 'SC Steps', 'Elapsed Time '
       else
         write(message(1), '(a7,1x,a14,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'CP Energy ', 'Elapsed Time '
@@ -371,7 +370,7 @@ contains
       PUSH_SUB(td_run.check_point)
 
       ! write info
-      if(td%dynamics /= CP) then 
+      if(td%dynamics /= CP) then
         write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, &
              units_from_atomic(units_out%time, iter*td%dt), &
              units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
@@ -434,7 +433,7 @@ contains
 
       if(.not.fromscratch) then
         call restart_read(trim(tmpdir)//'td', st, gr, geo, ierr, iter=td%iter)
-        
+
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"
           call messages_warning(1)
@@ -445,19 +444,19 @@ contains
         if(st%open_boundaries) call restart_get_ob_intf(st, gr)
       end if
 
-      if(.not. fromscratch .and. td%dynamics == CP) then 
+      if(.not. fromscratch .and. td%dynamics == CP) then
         call cpmd_restart_read(td%cp_propagator, gr, st, ierr)
 
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(restart_dir)//"td/cpmd: Starting from scratch"
           call messages_warning(1)
-          
+
           fromScratch = .true.
           td%iter = 0
         end if
       end if
 
-      if(.not. fromscratch) then 
+      if(.not. fromscratch) then
         ! read potential from previous interactions
         do i = 1, 2
           do is = 1, st%d%nspin
@@ -471,7 +470,7 @@ contains
             end if
           end do
         end do
-          
+
       end if
 
       if(fromScratch) then
@@ -482,12 +481,12 @@ contains
             call messages_fatal(1)
           end if
           ! extract the interface wave function
-          if(gr%ob_grid%open_boundaries) call restart_get_ob_intf(st, gr)
+          if(st%open_boundaries) call restart_get_ob_intf(st, gr)
         end if
 
-        ! check if we should deploy user-defined wavefunctions. 
-        ! according to the settings in the input file the routine 
-        ! overwrites orbitals that were read from restart/gs 
+        ! check if we should deploy user-defined wavefunctions.
+        ! according to the settings in the input file the routine
+        ! overwrites orbitals that were read from restart/gs
         if(parse_isdef(datasets_check('UserDefinedStates')).ne.0) then
           call restart_read_user_def_orbitals(gr%mesh, st)
         end if
@@ -548,17 +547,17 @@ contains
       !% The Hartree and exchange-correlation potential due to these orbitals (which
       !% will be the lowest-energy ones) will be added during the propagation, but the orbitals
       !% will not be propagated.
-      !% 
+      !%
       !% <b>WARNING: NOT TESTED YET.</b>
       !%Option sae -1
-      !% Single-active-electron approximation. This option is only valid for time-dependent 
-      !% calculations (<tt>CalculationMode = td</tt>). Also, the nuclei should not move. 
-      !% The idea is that all orbitals except the last one are frozen. The orbitals are to 
+      !% Single-active-electron approximation. This option is only valid for time-dependent
+      !% calculations (<tt>CalculationMode = td</tt>). Also, the nuclei should not move.
+      !% The idea is that all orbitals except the last one are frozen. The orbitals are to
       !% be read from a previous ground-state calculation. The active orbital is then treated
       !% as independent (whether if it contains one electron or two) -- although it will
       !% feel the Hartree and exchange-correlation potentials from  the ground-state electronic
       !% configuration.
-      !% 
+      !%
       !% It is almost equivalent to setting <tt>TDFreezeOrbitals = N-1</tt>, where <tt>N</tt> is the number
       !% of orbitals, but not completely.
       !%End
@@ -679,7 +678,7 @@ contains
               do ip = 1, gr%mesh%np
                 call mesh_r(gr%mesh, ip, rr, coords = xx)
                 call loct_ylm(1, xx(1), xx(2), xx(3), kick%l(im), kick%m(im), ylm)
-                kick_function(ip) = kick_function(ip) + kick%weight(im) * (rr**kick%l(im)) * ylm 
+                kick_function(ip) = kick_function(ip) + kick%weight(im) * (rr**kick%l(im)) * ylm
               end do
             end do
           else
@@ -700,25 +699,25 @@ contains
           message(2) = "Info: Delta kick mode: Density + Spin modes"
         end select
         call messages_info(2)
-        
+
         SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
-            
+
             call states_get_state(st, gr%mesh, ist, iqn, psi)
 
             select case (kick%delta_strength_mode)
             case (KICK_DENSITY_MODE)
               forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-                psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim) 
+                psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim)
               end forall
 
             case (KICK_SPIN_MODE)
               ispin = states_dim_get_spin_index(st%d, iqn)
               do ip = 1, gr%mesh%np
                 kick_value = M_zI*kick%delta_strength*kick_function(ip)
-                
+
                 cc(1) = exp(kick_value)
                 cc(2) = exp(-kick_value)
 
@@ -730,7 +729,7 @@ contains
                   psi(ip, 2) = cc(2)*psi(ip, 2)
                 end select
               end do
-              
+
             case (KICK_SPIN_DENSITY_MODE)
               do ip = 1, gr%mesh%np
                 cc(1) = exp(M_TWO*kick_value)
@@ -812,7 +811,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine td_read_gauge_field()
-      
+
       integer :: iter, iunit
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM), dummy(1:MAX_DIM)
 
@@ -848,7 +847,7 @@ contains
       call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
       call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
       call hamiltonian_update(hm, gr%mesh)
-      
+
       call io_close(iunit)
       POP_SUB(td_run.td_read_gauge_field)
     end subroutine td_read_gauge_field

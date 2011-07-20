@@ -79,7 +79,7 @@ contains
     message(1) = "Info: Allocating ground state wave-functions"
     call messages_info(1)
 
-    call states_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_allocate_wfns(sys%st, sys%gr%mesh, alloc_zphi = sys%st%open_boundaries)
 #ifdef HAVE_MPI
     ! sometimes a deadlock can occur here (if some nodes can allocate and other cannot)
     call MPI_Barrier(sys%st%dom_st_kpt_mpi_grp%comm, mpi_err)
@@ -88,8 +88,7 @@ contains
     call messages_info(1)
 
     ! Read free states for ground-state open-boundary calculation.
-    if(sys%gr%ob_grid%open_boundaries) then
-      call states_allocate_free_states(sys%st, sys%gr)
+    if(sys%st%open_boundaries) then
       call read_free_states(sys%st, sys%gr)
       ! allocate self_energy and calculate
       call states_init_self_energy(sys%st, sys%gr, hm%d%nspin, hm%d%ispin, hm%lead)
@@ -129,7 +128,6 @@ contains
 
     ! clean up
     call states_deallocate_wfns(sys%st)
-    call states_deallocate_free_states(sys%st, sys%gr)
 
     POP_SUB(ground_state_run)
   end subroutine ground_state_run
