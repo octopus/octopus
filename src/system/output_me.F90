@@ -327,9 +327,9 @@ contains
     SAFE_ALLOCATE(ang2(1:st%nst, 1:st%d%nik))
 
     if (states_are_real(st)) then
-      SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
     else
-      SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:st%d%dim))
     end if
 
     do ik = st%d%kpt%start, st%d%kpt%end
