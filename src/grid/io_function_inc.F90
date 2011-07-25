@@ -1074,7 +1074,7 @@ contains
     integer :: ncid, status, data_id, pos_id, dim_min
     integer :: dim_data_id(3), dim_pos_id(2)
 
-    real(r4) :: pos(2, 3)
+    REAL_SINGLE :: pos(2, 3)
     type(cube_function_t) :: cube
     FLOAT, allocatable :: xx(:, :, :)
 #if defined(R_TCOMPLEX)

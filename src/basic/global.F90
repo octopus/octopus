@@ -53,15 +53,7 @@ module global_m
   end type conf_t
 
   type(conf_t),      public :: conf
-
-  ! Only "r4" is used somewhere (in file io_function_inc.F90), so probably this should
-  ! go away. The code uses the macros FLOAT, etc, to take care of the types, and these
-  ! are defined in global.h. 
-  integer, public, parameter  ::  r8 = selected_real_kind(12,256)
-  integer, public, parameter  ::  r4 = selected_real_kind(6,37)
-  integer, public, parameter  ::  i4 = selected_int_kind(9)
-  integer, public, parameter  ::  i2 = selected_int_kind(3)
-
+   
   FLOAT, public, parameter :: r_small = CNST(0.0001)
 
   ! some mathematical constants

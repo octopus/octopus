@@ -109,7 +109,7 @@ subroutine PES_rc_calc(pesrc, st,mesh, ii)
 
   integer :: ip, ik, ist, idim
   logical :: contains_ip
-  complex(r8) :: wf
+  CMPLX :: wf
 #if defined(HAVE_MPI)
   integer status(MPI_STATUS_SIZE)
 #endif
