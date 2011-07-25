@@ -415,7 +415,7 @@ contains
 
   subroutine to_coords(gopt, coords)
     type(geom_opt_t), intent(in)  :: gopt
-    FLOAT,            intent(out) :: coords(:)
+    REAL_DOUBLE,            intent(out) :: coords(:)
 
     integer :: iatom, idir
 
@@ -432,7 +432,7 @@ contains
 
   subroutine to_grad(gopt, grad)
     type(geom_opt_t), intent(in)  :: gopt
-    FLOAT,            intent(out) :: grad(:)
+    REAL_DOUBLE,            intent(out) :: grad(:)
 
     integer :: iatom, idir
 
@@ -449,7 +449,7 @@ contains
 
   subroutine from_coords(gopt, coords)
     type(geom_opt_t), intent(inout) :: gopt
-    FLOAT,            intent(in)    :: coords(:)
+    REAL_DOUBLE,            intent(in)    :: coords(:)
 
     integer :: iatom, idir
 

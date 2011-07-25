@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : 1D-Hydrogen
-Programs   : octopus; octopus_singlel; octopus_mpi
+Programs   : octopus; octopus_single; octopus_mpi
 TestGroups : short-run; daily
 Enabled    : Yes
 

@@ -54,7 +54,9 @@ module global_m
 
   type(conf_t),      public :: conf
 
-  ! the kinds used in the program
+  ! Only "r4" is used somewhere (in file io_function_inc.F90), so probably this should
+  ! go away. The code uses the macros FLOAT, etc, to take care of the types, and these
+  ! are defined in global.h. 
   integer, public, parameter  ::  r8 = selected_real_kind(12,256)
   integer, public, parameter  ::  r4 = selected_real_kind(6,37)
   integer, public, parameter  ::  i4 = selected_int_kind(9)
