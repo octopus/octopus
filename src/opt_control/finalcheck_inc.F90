@@ -42,7 +42,7 @@
 
     call propagate_forward(sys, hm, td, par, target, psi, write_iter = .true.)
 
-    j1 = j1_functional(target, sys%gr, psi)
+    j1 = target_j1(target, sys%gr, psi)
     fluence = controlfunction_fluence(par)
     j2 = controlfunction_j2(par)
     jfunctional = j1 + j2

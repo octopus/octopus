@@ -193,7 +193,7 @@
        end if
     end if
     
-    if(current_functional_type(target) .ne. oct_no_curr) then
+    if(target_curr_functional(target) .ne. oct_no_curr) then
       select case(sys%st%d%ispin)
       case(UNPOLARIZED)
       case(SPIN_POLARIZED)

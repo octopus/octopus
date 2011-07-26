@@ -45,7 +45,7 @@
     call controlfunction_theta_to_basis(par_)
     call states_copy(psi, initial_st)
     call propagate_forward(sys_, hm_, td_, par_, target, psi)
-    f = - j1_functional(target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
+    f = - target_j1(target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
     call states_end(psi)
 
     SAFE_DEALLOCATE_A(theta)
@@ -129,7 +129,7 @@
       call controlfunction_theta_to_basis(par_)
       call states_copy(psi, initial_st)
       call propagate_forward(sys_, hm_, td_, par_, target, psi)
-      f = - j1_functional(target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
+      f = - target_j1(target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
       call states_end(psi)
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
@@ -196,7 +196,7 @@
       ! We only need the value of the target functional.
       call states_copy(psi, initial_st)
       call propagate_forward(sys_, hm_, td_, par_, target, psi)
-      f = - j1_functional(target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
+      f = - target_j1(target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
       if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
       call states_end(psi)

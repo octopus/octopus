@@ -34,6 +34,29 @@ module opt_control_global_m
 
   implicit none
 
+  private
+  public :: oct_t,                    &
+            oct_read_inp,             &
+            oct_algorithm_is_direct  
+
+  integer, parameter, public :: &
+    oct_ctr_function_real_time       = 1,       &
+    oct_ctr_function_parametrized    = 2
+
+  ! These are the possible QOCT schemes or algorithms; the component "algorithm"
+  ! of the oct_t datatype can get any of these values.
+  integer, parameter, public ::  &
+    oct_algorithm_zbr98              = 1,       &
+    oct_algorithm_zr98               = 2,       &
+    oct_algorithm_wg05               = 3,       &
+    oct_algorithm_mt03               = 4,       &
+    oct_algorithm_krotov             = 5,       &
+    oct_algorithm_str_iter           = 6,       &
+    oct_algorithm_cg                 = 7,       &
+    oct_algorithm_direct             = 8,       &
+    oct_algorithm_newuoa             = 9
+
+
   !> The oct_t datatype stores the basic information about how the OCT run
   !! is done: which algorithm, how the control funtion is stored, should the
   !! intermediate results be stored for debugging, etc.
@@ -51,26 +74,7 @@ module opt_control_global_m
     logical :: random_initial_guess
   end type oct_t
 
-  integer, parameter :: &
-    oct_ctr_function_real_time       = 1,       &
-    oct_ctr_function_parametrized    = 2
-
-  ! These are the possible QOCT schemes or algorithms; the component "algorithm"
-  ! of the oct_t datatype can get any of these values.
-  integer, parameter ::  &
-    oct_algorithm_zbr98              = 1,       &
-    oct_algorithm_zr98               = 2,       &
-    oct_algorithm_wg05               = 3,       &
-    oct_algorithm_mt03               = 4,       &
-    oct_algorithm_krotov             = 5,       &
-    oct_algorithm_str_iter           = 6,       &
-    oct_algorithm_cg                 = 7,       &
-    oct_algorithm_direct             = 8,       &
-    oct_algorithm_newuoa             = 9
-
   contains
-
-
 
   !> Reads, from the inp file, some global information about how the QOCT run
   !! should be. It uses this information to fill the "oct" variable. All the components

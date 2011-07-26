@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: opt_control.F90 2870 2007-04-28 06:26:47Z acastro $
+!! $Id: target.F90 2870 2007-04-28 06:26:47Z acastro $
 
 #include "global.h"
 
@@ -66,12 +66,11 @@ module opt_control_target_m
             target_inh,              &
             target_mode,             &
             target_type,             &
-            j1_functional,           &
-            calc_chi,                &
+            target_j1,               &
+            target_chi,              &
             target_move_ions,        &
-            parse_velocity_target,   &
-            current_functional_type, &
-            is_spatial_curr_wgt
+            target_curr_functional
+
 
   integer, public, parameter ::       &
     oct_tg_groundstate      = 1,      &
@@ -126,8 +125,7 @@ module opt_control_target_m
 
 
   ! ----------------------------------------------------------------------
-  ! This just copies the states_t variable present in target, into st.
-  ! ----------------------------------------------------------------------
+  !> This just copies the states_t variable present in target, into st.
   subroutine target_get_state(target, st)
     type(target_t), intent(in)    :: target
     type(states_t), intent(inout) :: st
@@ -141,8 +139,7 @@ module opt_control_target_m
 
 
   ! ----------------------------------------------------------------------
-  ! The target is initialized, mainly by reading from the inp file.
-  ! ----------------------------------------------------------------------
+  !> The target is initialized, mainly by reading from the inp file.
   subroutine target_init(gr, geo, stin, td, w0, target, oct)
     type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(in)    :: geo
@@ -978,10 +975,9 @@ module opt_control_target_m
 
 
   ! ---------------------------------------------------------
-  ! Calculates, at a given point in time marked by the integer
-  ! index, the integrand of the target functional:
-  ! <Psi(t)|\hat{O}(t)|Psi(t)>.
-  ! ---------------------------------------------------------
+  !> Calculates, at a given point in time marked by the integer
+  !! index, the integrand of the target functional:
+  !! <Psi(t)|\hat{O}(t)|Psi(t)>.
   subroutine target_tdcalc(target, gr, psi, time)
     type(target_t), intent(inout) :: target
     type(grid_t),   intent(in)    :: gr
@@ -1051,9 +1047,8 @@ module opt_control_target_m
 
 
   ! ---------------------------------------------------------------
-  ! Calculates the inhomogeneous term that appears in the equation
-  ! for chi, and places it into inh.
-  ! ---------------------------------------------------------------
+  !> Calculates the inhomogeneous term that appears in the equation
+  !! for chi, and places it into inh.
   subroutine target_inh(psi, gr, target, time, inh)
     type(states_t),    intent(inout)     :: psi
     type(grid_t),      intent(in)        :: gr
@@ -1115,12 +1110,11 @@ module opt_control_target_m
 
 
   ! ---------------------------------------------------------
-  ! Calculates the J1 functional, i.e.:
-  ! <Psi(T)|\hat{O}|Psi(T) in the time-independent
-  ! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
-  ! the time-dependent case.
-  ! ---------------------------------------------------------
-  FLOAT function j1_functional(target, gr, psi, geo) result(j1)
+  !> Calculates the J1 functional, i.e.:
+  !! <Psi(T)|\hat{O}|Psi(T) in the time-independent
+  !! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
+  !! the time-dependent case.
+  FLOAT function target_j1(target, gr, psi, geo) result(j1)
     type(target_t), intent(inout)   :: target
     type(grid_t),   intent(inout)   :: gr
     type(states_t), intent(inout)   :: psi
@@ -1134,7 +1128,7 @@ module opt_control_target_m
     FLOAT :: f_re, dummy(3)
     character(len=4096) :: inp_string
 
-    PUSH_SUB(j1_functional)
+    PUSH_SUB(target_j1)
 
     j1 = M_ZERO
     select case(target%type)
@@ -1163,10 +1157,10 @@ module opt_control_target_m
         end do
         SAFE_DEALLOCATE_A(opsi)
       case(SPIN_POLARIZED)
-        message(1) = 'Error in target.j1_functional: spin_polarized.'
+        message(1) = 'Error in target.target_j1: spin_polarized.'
         call messages_fatal(1)
       case(SPINORS)
-        message(1) = 'Error in target.j1_functional: spinors.'
+        message(1) = 'Error in target.target_j1: spinors.'
         call messages_fatal(1)
       end select
 
@@ -1219,7 +1213,7 @@ module opt_control_target_m
       f_re = M_ZERO
       dummy(:) = M_ZERO
       inp_string = target%vel_input_string
-      call parse_velocity_target(inp_string, geo)
+      call target_parse_velocity(inp_string, geo)
       call conv_to_C_string(inp_string)
       call parse_expression(f_re, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), inp_string)
       j1 = f_re
@@ -1262,15 +1256,14 @@ module opt_control_target_m
       j1 = j1 + currfunc_tmp
     end if 
 
-    POP_SUB(j1_functional)
-  end function j1_functional
+    POP_SUB(target_j1)
+  end function target_j1
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  ! calculate |chi(T)> = \hat{O}(T) |psi(T)>
-  ! ---------------------------------------------------------
-  subroutine calc_chi(target, gr, psi_in, chi_out, geo)
+  !> Calculate |chi(T)> = \hat{O}(T) |psi(T)>
+  subroutine target_chi(target, gr, psi_in, chi_out, geo)
     type(target_t),    intent(inout) :: target
     type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(inout) :: psi_in
@@ -1283,7 +1276,7 @@ module opt_control_target_m
     character(len=1024) :: temp_string
     FLOAT :: df_dv, dummy(3)
 
-    PUSH_SUB(calc_chi)
+    PUSH_SUB(target_chi)
 
     no_electrons = -nint(psi_in%val_charge)
 
@@ -1316,10 +1309,10 @@ module opt_control_target_m
         end if
 
       case(SPIN_POLARIZED)
-         message(1) = 'Error in target.calc_chi: spin_polarized.'
+         message(1) = 'Error in target.target_chi: spin_polarized.'
          call messages_fatal(1)
       case(SPINORS)
-         message(1) = 'Error in target.calc_chi: spinors.'
+         message(1) = 'Error in target.target_chi: spinors.'
          call messages_fatal(1)
       end select
 
@@ -1334,10 +1327,10 @@ module opt_control_target_m
           end do
         end do
       case(SPIN_POLARIZED)
-         message(1) = 'Error in target.calc_chi: spin_polarized.'
+         message(1) = 'Error in target.target_chi: spin_polarized.'
          call messages_fatal(1)
       case(SPINORS)
-         message(1) = 'Error in target.calc_chi: spinors.'
+         message(1) = 'Error in target.target_chi: spinors.'
          call messages_fatal(1)
       end select
 
@@ -1383,7 +1376,7 @@ module opt_control_target_m
 
       select case(psi_in%d%ispin)
       case(UNPOLARIZED)
-        write(message(1), '(a)') 'Internal error in target.calc_chi: unpolarized.'
+        write(message(1), '(a)') 'Internal error in target.target_chi: unpolarized.'
         call messages_fatal(1)
 
       case(SPIN_POLARIZED)
@@ -1464,7 +1457,7 @@ module opt_control_target_m
       do ist=1, geo%natoms
          do jst=1, gr%sb%dim
             temp_string = target%vel_der_array(ist, jst)
-            call parse_velocity_target(temp_string, geo)
+            call target_parse_velocity(temp_string, geo)
             call conv_to_C_string(temp_string)
             call parse_expression(df_dv, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), temp_string)
             target%rho(:) = target%rho(:) + df_dv*target%grad_local_pot(ist,:,jst)/species_weight(geo%atom(ist)%spec)
@@ -1499,8 +1492,8 @@ module opt_control_target_m
     end if 
 
 
-    POP_SUB(calc_chi)
-  end subroutine calc_chi
+    POP_SUB(target_chi)
+  end subroutine target_chi
 
 
   ! ----------------------------------------------------------------------
@@ -1536,12 +1529,12 @@ module opt_control_target_m
 
 
   !-----------------------------------------------------------------------
-  integer pure function current_functional_type(target)
+  integer pure function target_curr_functional(target)
     type(target_t), intent(in) :: target
    
-    current_functional_type = target%curr_functional
+    target_curr_functional = target%curr_functional
  
-  end function current_functional_type
+  end function target_curr_functional
   !-----------------------------------------------------------------------
 
 
@@ -1568,13 +1561,13 @@ module opt_control_target_m
   ! replaces the "v[:,:]" from inp_string by the corresponding
   ! numbers from geo%atom(:)%v(:) so that the parser can handle inp_string
   ! ----------------------------------------------------------------------
-  subroutine parse_velocity_target(inp_string, geo)
+  subroutine target_parse_velocity(inp_string, geo)
     character(len=*), intent(inout)  :: inp_string  ! input string --> OCTVelocityTarget
     type(geometry_t), intent(in)     :: geo         ! velocities of the atoms --> geo%atom(n_atom)%v(coord)
     integer              :: i,m,n_atom,coord,string_length
     character (LEN=100)  :: v_string
 
-    PUSH_SUB(parse_velocity_target)
+    PUSH_SUB(target_parse_velocity)
     
     string_length = len(inp_string)
     do i=1, string_length - 1
@@ -1599,15 +1592,14 @@ module opt_control_target_m
        end if
     end do
 
-    POP_SUB(parse_velocity_target)
-  end subroutine parse_velocity_target
+    POP_SUB(target_parse_velocity)
+  end subroutine target_parse_velocity
   ! ----------------------------------------------------------------------
 
 
   ! ----------------------------------------------------------------------
-  ! Calculates a current functional that may be combined with
-  ! other functionals found in function target.j1_functional.
-  ! ----------------------------------------------------------------------
+  !> Calculates a current functional that may be combined with
+  !! other functionals found in function target_j1.
   FLOAT function jcurr_functional(target, gr, psi) result(jcurr)
     type(target_t), intent(in)    :: target
     type(grid_t),   intent(in)    :: gr
