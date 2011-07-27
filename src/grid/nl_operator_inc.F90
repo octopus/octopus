@@ -289,9 +289,6 @@ contains
       isize = 8
       pnri = pad(nri, bsize)
       
-      call opencl_set_kernel_arg(kernel_operate, 10, TYPE_INTEGER, op%stencil%size*bsize/(fi%pack%size(1)))
-      call opencl_set_kernel_arg(kernel_operate, 11, TYPE_FLOAT, op%stencil%size)
-      
       call opencl_kernel_run(kernel_operate, &
         (/fi%pack%size_real(1), pnri/), (/fi%pack%size_real(1), bsize/(fi%pack%size_real(1))/))
       

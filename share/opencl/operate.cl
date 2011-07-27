@@ -32,21 +32,11 @@ __kernel void operate(const int nn,
 		       __global const int * imax,
 		       __constant double * weights,
 		       __global const double * fi, const int ldfi,
-		       __global double * fo, const int ldfo,
-		       __local int * indexl,
-		       __local double * weightsl){
+		       __global double * fo, const int ldfo){
 
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
   const int l = get_global_id(1);
-
-  // copy the indices and the weights to local memory
-  __local int * index = indexl + nn*get_local_id(1);
-  for(int j = ist; j < nn; j+=nst){
-    index[j] = ri[nn*l + j]*ldfi;
-    weightsl[j] = weights[j];
-  }
-  barrier(CLK_LOCAL_MEM_FENCE);
 
   if(l >= nri) return;
 
@@ -54,7 +44,7 @@ __kernel void operate(const int nn,
   for(int i = imin[l]; i < imaxl; i++){
     double a0 = 0.0;
     for(int j = 0; j < nn; j++){
-      a0 += weightsl[j]*fi[ldfi*i + index[j] + ist];
+      a0 += weights[j]*fi[ldfi*(i + ri[nn*l + j]) + ist];
     }
     fo[ldfo*i + ist] = a0;
   }
