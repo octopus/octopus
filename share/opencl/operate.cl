@@ -66,14 +66,20 @@ __kernel void operate1(const int nn,
 
   if(k >= n1) return;
 
-  const int ip = map[k*2];
+  const int ip = map[k*2    ];
   const int ir = map[k*2 + 1];
 
   double a0 = 0.0;
-  for(int j = 0; j < nn; j++){
-    a0 += weights[j]*fi[ldfi*(ip + ri[ir + j]) + ist];
+  double a1 = 0.0;
+
+  for(int j = 0; j < nn - 2 + 1; j+=2){
+    a0 += weights[j    ]*fi[ldfi*(ip + ri[ir + j]    ) + ist];
+    a1 += weights[j + 1]*fi[ldfi*(ip + ri[ir + j + 1]) + ist];
   }
-  fo[ldfo*ip + ist] = a0;
+
+  if(nn & 1) a0 += weights[nn - 1]*fi[ldfi*(ip + ri[ir + nn - 1]) + ist];
+
+  fo[ldfo*ip + ist] = a0 + a1;
 
 }
 
@@ -92,21 +98,30 @@ __kernel void operate4(const int nn,
 
   if(k >= n1) return;
 
-  const int ip = map[k*2];
+  const int ip = map[k*2    ];
   const int ir = map[k*2 + 1];
 
-  for(int ii = 0; ii < 4; ii++){
-    double a0 = 0.0;
-    for(int j = 0; j < nn; j++){
-      a0 += weights[j]*fi[ldfi*(ip + ii + ri[ir + j]) + ist];
-    }
-    fo[ldfo*(ip + ii) + ist] = a0;
+  double a0 = 0.0;
+  double a1 = 0.0;
+  double a2 = 0.0;
+  double a3 = 0.0;
+
+  for(int j = 0; j < nn; j++){
+    a0 += weights[j]*fi[ldfi*(ip + 0 + ri[ir + j]) + ist];
+    a1 += weights[j]*fi[ldfi*(ip + 1 + ri[ir + j]) + ist];
+    a2 += weights[j]*fi[ldfi*(ip + 2 + ri[ir + j]) + ist];
+    a3 += weights[j]*fi[ldfi*(ip + 3 + ri[ir + j]) + ist];
   }
+
+  fo[ldfo*(ip + 0) + ist] = a0;
+  fo[ldfo*(ip + 1) + ist] = a1;
+  fo[ldfo*(ip + 2) + ist] = a2;
+  fo[ldfo*(ip + 3) + ist] = a3;
+
 }
 
-
 __kernel void operate_map(const int nn,
-			  const int np,
+		 	  const int np,
 			  __global const int * ri,
 			  __global const int * map,
 			  __constant double * weights,

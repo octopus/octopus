@@ -293,6 +293,14 @@ contains
 
     case(OP_MAP_SPLIT)
 
+      bsize = opencl_kernel_workgroup_size(kernel_operate)
+      isize = bsize/(fi%pack%size_real(1))
+
+      if(bsize < fi%pack%size_real(1)) then
+        message(1) = "The value of StatesBlockSize is too large for this OpenCL implementation."
+        call messages_fatal(1)
+      end if
+
       if(op%n4 > 0) then
         call opencl_set_kernel_arg(kernel_operate, 0, op%stencil%size)
         call opencl_set_kernel_arg(kernel_operate, 1, op%n4)
@@ -303,9 +311,6 @@ contains
         call opencl_set_kernel_arg(kernel_operate, 6, fi%pack%size_real(1))
         call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
         call opencl_set_kernel_arg(kernel_operate, 8, fo%pack%size_real(1))
-
-        bsize = 128
-        isize = bsize/(fi%pack%size_real(1))
 
         call opencl_kernel_run(kernel_operate, &
           (/fi%pack%size_real(1), pad(op%n4, isize)/), (/fi%pack%size_real(1), isize/))
@@ -322,8 +327,6 @@ contains
         call opencl_set_kernel_arg(kernel_operate_1, 7, fo%pack%buffer)
         call opencl_set_kernel_arg(kernel_operate_1, 8, fo%pack%size_real(1))
 
-        bsize = 128
-        isize = bsize/(fi%pack%size_real(1))
         call opencl_kernel_run(kernel_operate_1, &
           (/fi%pack%size_real(1), pad(op%n1, isize)/), (/fi%pack%size_real(1), isize/))
 
