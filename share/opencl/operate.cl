@@ -23,6 +23,7 @@
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #elif EXT_AMD_FP64
 #pragma OPENCL EXTENSION cl_amd_fp64 : enable
+/*#pragma OPENCL EXTENSION cl_amd_printf:enable*/
 #endif
 
 __kernel void operate(const int nn,
@@ -50,6 +51,59 @@ __kernel void operate(const int nn,
   }
   
 }
+
+__kernel void operate1(const int nn,
+		       const int n1,
+		       __global const int * ri,
+		       __global const int * map,
+		       __constant double * weights,
+		       __global const double * fi, const int ldfi,
+		       __global double * fo, const int ldfo){
+
+  const int ist = get_global_id(0);
+  const int nst = get_global_size(0);
+  const int k = get_global_id(1);
+
+  if(k >= n1) return;
+
+  const int ip = map[k*2];
+  const int ir = map[k*2 + 1];
+
+  double a0 = 0.0;
+  for(int j = 0; j < nn; j++){
+    a0 += weights[j]*fi[ldfi*(ip + ri[ir + j]) + ist];
+  }
+  fo[ldfo*ip + ist] = a0;
+
+}
+
+
+__kernel void operate4(const int nn,
+		       const int n1,
+		       __global const int * ri,
+		       __global const int * map,
+		       __constant double * weights,
+		       __global const double * fi, const int ldfi,
+		       __global double * fo, const int ldfo){
+
+  const int ist = get_global_id(0);
+  const int nst = get_global_size(0);
+  const int k = get_global_id(1);
+
+  if(k >= n1) return;
+
+  const int ip = map[k*2];
+  const int ir = map[k*2 + 1];
+
+  for(int ii = 0; ii < 4; ii++){
+    double a0 = 0.0;
+    for(int j = 0; j < nn; j++){
+      a0 += weights[j]*fi[ldfi*(ip + ii + ri[ir + j]) + ist];
+    }
+    fo[ldfo*(ip + ii) + ist] = a0;
+  }
+}
+
 
 __kernel void operate_map(const int nn,
 			  const int np,

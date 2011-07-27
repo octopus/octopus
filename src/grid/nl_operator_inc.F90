@@ -266,7 +266,7 @@ contains
 
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
-    
+
     ASSERT(points_ == OP_ALL)
 
     call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
@@ -284,14 +284,51 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 7, fi%pack%size_real(1))
       call opencl_set_kernel_arg(kernel_operate, 8, fo%pack%buffer)
       call opencl_set_kernel_arg(kernel_operate, 9, fo%pack%size_real(1))
-      
+
       bsize = 128
-      isize = 8
       pnri = pad(nri, bsize)
-      
+
       call opencl_kernel_run(kernel_operate, &
         (/fi%pack%size_real(1), pnri/), (/fi%pack%size_real(1), bsize/(fi%pack%size_real(1))/))
-      
+
+    case(OP_MAP_SPLIT)
+
+      if(op%n4 > 0) then
+        call opencl_set_kernel_arg(kernel_operate, 0, op%stencil%size)
+        call opencl_set_kernel_arg(kernel_operate, 1, op%n4)
+        call opencl_set_kernel_arg(kernel_operate, 2, op%buff_ri)
+        call opencl_set_kernel_arg(kernel_operate, 3, op%buff_map4)
+        call opencl_set_kernel_arg(kernel_operate, 4, buff_weights)
+        call opencl_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
+        call opencl_set_kernel_arg(kernel_operate, 6, fi%pack%size_real(1))
+        call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
+        call opencl_set_kernel_arg(kernel_operate, 8, fo%pack%size_real(1))
+
+        bsize = 128
+        isize = bsize/(fi%pack%size_real(1))
+
+        call opencl_kernel_run(kernel_operate, &
+          (/fi%pack%size_real(1), pad(op%n4, isize)/), (/fi%pack%size_real(1), isize/))
+      end if
+
+      if(op%n1 > 0) then
+        call opencl_set_kernel_arg(kernel_operate_1, 0, op%stencil%size)
+        call opencl_set_kernel_arg(kernel_operate_1, 1, op%n1)
+        call opencl_set_kernel_arg(kernel_operate_1, 2, op%buff_ri)
+        call opencl_set_kernel_arg(kernel_operate_1, 3, op%buff_map1)
+        call opencl_set_kernel_arg(kernel_operate_1, 4, buff_weights)
+        call opencl_set_kernel_arg(kernel_operate_1, 5, fi%pack%buffer)
+        call opencl_set_kernel_arg(kernel_operate_1, 6, fi%pack%size_real(1))
+        call opencl_set_kernel_arg(kernel_operate_1, 7, fo%pack%buffer)
+        call opencl_set_kernel_arg(kernel_operate_1, 8, fo%pack%size_real(1))
+
+        bsize = 128
+        isize = bsize/(fi%pack%size_real(1))
+        call opencl_kernel_run(kernel_operate_1, &
+          (/fi%pack%size_real(1), pad(op%n1, isize)/), (/fi%pack%size_real(1), isize/))
+
+      end if
+
     case(OP_MAP)
       call opencl_set_kernel_arg(kernel_operate, 0, op%stencil%size)
       call opencl_set_kernel_arg(kernel_operate, 1, op%mesh%np)
@@ -303,7 +340,7 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
       call opencl_set_kernel_arg(kernel_operate, 8, log2(fi%pack%size_real(1)))
 
-      
+
       local_mem_size = f90_cl_device_local_mem_size(opencl%device)
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = isize - mod(isize, fi%pack%size_real(1))
@@ -324,13 +361,13 @@ contains
 
       call opencl_kernel_run(kernel_operate, &
         (/fi%pack%size_real(1), pad(op%mesh%np, bsize)/), (/fi%pack%size_real(1), isize/))
-      
+
       call profiling_count_transfers(op%stencil%size*op%mesh%np + op%mesh%np, isize)
       do ist = 1, fi%nst_linear
         call profiling_count_transfers(op%mesh%np_part*op%stencil%size + op%mesh%np, R_TOTYPE(M_ONE))
       end do
     end select
-    
+
     call opencl_finish()
 
     call opencl_release_buffer(buff_weights)
