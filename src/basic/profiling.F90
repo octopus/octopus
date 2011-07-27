@@ -734,16 +734,16 @@ contains
     end if
 
     write(iunit, '(2a)')                                                                                    &
-      '                                                              CUMULATIVE TIME                    |', &
+      '                                                               CUMULATIVE TIME                      |', &
       '                  SELF TIME'
     write(iunit, '(2a)')                                                                                    &
-      '                                            -----------------------------------------------------|', &
+      '                                            --------------------------------------------------------|', &
       '-------------------------------------------'
     write(iunit, '(2a)')                                                                                    &
-      'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL  MFLOPS MBYTES/S   %TIME |', &
+      'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL    MFLOPS  MBYTES/S   %TIME |', &
       '        TOTAL_TIME    TIME_PER_CALL  %TIME'
     write(iunit, '(2a)')                                                                    &
-      '=================================================================================================|', &
+      '====================================================================================================|', &
       '==========================================='
 
     total_time = profile_total_time(C_PROFILING_COMPLETE_DATASET)
@@ -753,7 +753,7 @@ contains
 
       if(profile_num_calls(prof) == 0) cycle
 
-      write(iunit, '(a,i20,2f17.7,f8.1,f9.1,f8.1,a,2f17.7,f8.1)')     &
+      write(iunit, '(a,i20,2f17.7,f10.1,f10.1,f8.1,a,2f17.7,f8.1)')     &
            profile_label(prof),                             & 
            profile_num_calls(prof),                         &
            profile_total_time(prof),                        &
