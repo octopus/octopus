@@ -57,8 +57,9 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
   FLOAT, allocatable :: dedldens(:,:)  ! (Functional) Derivative of the exchange or correlation energy with
   !respect to the laplacian of the density.
   FLOAT, allocatable :: symmtmp(:, :)  ! Temporary vector for the symmetrizer
-
-  integer :: ib, ib2, ip, isp, families, ixc, spin_channels
+  FLOAT, allocatable :: vx(:, :)
+  FLOAT, allocatable :: gf(:,:)
+  integer :: ib, ib2, ip, isp, families, ixc, spin_channels, is
   integer, save :: xc_get_vxc_counter = 0
   FLOAT   :: rr,ipot_to_pass
   logical :: gga, mgga
@@ -69,14 +70,12 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
 
   PUSH_SUB(xc_get_vxc)
   call profiling_in(prof, "XC_LOCAL")
-  
+
   ASSERT(present(ex) .eqv. present(ec))
   calc_energy = present(ex)
-  
+
   xc_get_vxc_counter = xc_get_vxc_counter + 1
   !xprint*, "xc_get_vxc call number ", xc_get_vxc_counter
-  
-
 
   !Pointer-shortcut for xcs%functl
   !It helps to remember that for xcs%functl(:,:)
@@ -106,14 +105,18 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
   !Index 1 refers to "exchange mode" of type "xc_functl_t". For this purpose using 1 or 2 makes no difference. 
   spin_channels = functl(1)%spin_channels
 
+  if(xcs%xc_density_correction == LR_X) then
+    SAFE_ALLOCATE(vx(1:der%mesh%np, 1:spin_channels))
+  end if
+
   call lda_init()
-  if( gga) call  gga_init()
+  if(gga .or. xcs%xc_density_correction == LR_X) call  gga_init()
   if(mgga) call mgga_init()
 
   ! Get the gradient and the Laplacian of the density and the kinetic-energy density
   ! We do it here instead of doing it in gga_init and mgga_init in order to 
   ! avoid calling the subroutine states_calc_quantities twice
-  if(gga .and. (.not. mgga)) then
+  if((gga .and. (.not. mgga)) .or. xcs%xc_density_correction == LR_X) then
     ! get gradient of the density (this is faster than calling states_calc_quantities)
     do isp = 1, spin_channels 
       call dderivatives_grad(der, dens(:, isp), gdens(:, :, isp)) 
@@ -287,11 +290,25 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
 
       ! store results
       if(present(vxc)) then
-        ib2 = ip
-        do ib = 1, n_block
-          dedd(ib2, 1:spin_channels) = dedd(ib2, 1:spin_channels) + l_dedd(1:spin_channels, ib)
-          ib2 = ib2 + 1
-        end do
+
+        if(xcs%xc_density_correction == LR_X .and. &
+          (functl(ixc)%type == XC_EXCHANGE .or. functl(ixc)%type == XC_EXCHANGE_CORRELATION)) then
+
+          ! in this case, vx goes to a different array
+          ib2 = ip
+          do ib = 1, n_block
+            vx(ib2, 1:spin_channels) = l_dedd(1:spin_channels, ib)
+            ib2 = ib2 + 1
+          end do
+          
+        else
+          ib2 = ip
+          do ib = 1, n_block
+            dedd(ib2, 1:spin_channels) = dedd(ib2, 1:spin_channels) + l_dedd(1:spin_channels, ib)
+            ib2 = ib2 + 1
+          end do
+
+        end if
 
         if((functl(ixc)%family == XC_FAMILY_GGA).or.(functl(ixc)%family == XC_FAMILY_MGGA)) then
           ib2 = ip
@@ -319,6 +336,29 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
     end do functl_loop
   end do space_loop
 
+  if(xcs%xc_density_correction == LR_XC) then
+    call xc_density_correction_calc(der, spin_channels, rho, dedd)
+  end if
+
+  if(xcs%xc_density_correction == LR_X) then
+    call xc_density_correction_calc(der, spin_channels, rho, vx)
+    dedd(1:der%mesh%np, 1:spin_channels) = dedd(1:der%mesh%np, 1:spin_channels) + vx(1:der%mesh%np, 1:spin_channels)
+
+    if(calc_energy) then
+      ! get the energy density from Levy-Perdew
+      SAFE_ALLOCATE(gf(1:der%mesh%np, 1:3))
+      
+      do is = 1, spin_channels
+        do ip = 1, der%mesh%np
+          ex_per_vol(ip) = vx(ip, is)*(CNST(3.0)*rho(ip, is) &
+            + sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*gdens(ip, 1:der%mesh%sb%dim, is)))
+        end do
+      end do
+      
+      SAFE_DEALLOCATE_A(gf)
+    end if
+  end if
+  
   ! this has to be done in inverse order
   if(present(vxc)) then
     if(mgga) call mgga_process()
@@ -334,9 +374,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
 
   ! clean up allocated memory
   call lda_end()
-  if( gga) call  gga_end()
+  if(gga .or. xcs%xc_density_correction == LR_X) call  gga_end()
   if(mgga) call mgga_end()
-
 
   POP_SUB(xc_get_vxc)
   call profiling_out(prof)
@@ -647,6 +686,245 @@ contains
   end subroutine mgga_process
 
 end subroutine xc_get_vxc
+
+! -----------------------------------------------------
+
+subroutine xc_density_correction_calc(der, nspin, density, vxc)
+  type(derivatives_t), intent(in)    :: der
+  integer,             intent(in)    :: nspin
+  FLOAT,               intent(in)    :: density(:, :)
+  FLOAT,               intent(inout) :: vxc(:, :)
+
+  logical :: optimize_ncutoff, find_root, done, normalize, minimum
+  integer :: ispin, ip, iunit, ierr
+  integer, save :: iter = 0
+  FLOAT,   save :: ncsave
+  character(len=30) :: number
+  FLOAT   :: qxc, ncutoff(1:2), qxc_old, ncutoff_old, deriv, deriv_old, qxcfin(1:2)
+  FLOAT   :: x1, x2, x3, f1, f2, f3, dd(1:2), vol, mindd, maxdd
+  FLOAT, allocatable :: nxc(:, :), lrvxc(:)
+  type(profile_t), save :: prof
+  FLOAT, parameter :: thres = CNST(1e-6)
+
+  PUSH_SUB('vxc_inc.xc_density_correction_calc')
+
+  call profiling_in(prof, "XC_DENSITY_CORRECTION")
+
+  SAFE_ALLOCATE(nxc(1:der%mesh%np, 1:nspin))
+  SAFE_ALLOCATE(lrvxc(1:der%mesh%np_part))
+
+  do ispin = 1, nspin
+    forall(ip = 1:der%mesh%np) lrvxc(ip) = CNST(-1.0)/(CNST(4.0)*M_PI)*vxc(ip, ispin)
+    call dderivatives_lapl(der, lrvxc, nxc(:, ispin))
+  end do
+
+  call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "rho", der%mesh, density(:, 1), unit_one, ierr)
+  call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "vxcorig", der%mesh, vxc(:, 1), unit_one, ierr)
+  call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "nxc", der%mesh, nxc(:, 1), unit_one, ierr)
+ 
+  call parse_logical('XCDensityCorrectionOptimize', .true., optimize_ncutoff)
+
+  if(optimize_ncutoff) then
+
+    call parse_logical('XCDensityCorrectionMinimum', .true., minimum)
+
+    do ispin = 1, nspin
+
+      x1 = CNST(1.0e-8)
+      qxc = get_qxc(der%mesh, nxc(:, ispin), density(:, ispin), x1)
+      deriv = HUGE(deriv)
+      done = .false.
+
+      INCR(iter, 1)
+      if(mpi_world%rank == 0) then
+        write(number, '(i4)') iter
+        iunit = io_open('qxc.'//trim(adjustl(number)), action='write')
+      end if
+      do
+        if(.not. done) then
+          ncutoff_old = x1
+          qxc_old = qxc
+          deriv_old = deriv
+        end if
+
+        x1 = x1*CNST(1.01)
+
+        if(mpi_world%rank == 0) then
+          write(iunit, *) x1, qxc
+        end if
+
+        if(x1 > CNST(1.0)) exit
+
+        qxc = get_qxc(der%mesh, nxc(:, ispin), density(:, ispin), x1)
+
+        if(qxc == qxc_old) cycle
+
+        deriv = (qxc - qxc_old)/(x1 - ncutoff_old)
+
+        if(.not. done .and. abs(qxc) >= 1.0_8) then
+          find_root = .true.
+          done = .true.
+          ncutoff(ispin) = x1
+        end if
+
+
+        if(minimum .and. .not. done .and. abs(qxc_old) - abs(qxc) > thres) then
+          find_root = .false.
+          done = .true.
+          ncutoff(ispin) = x1
+          print*, x1, 0
+        end if
+
+      end do
+
+      if(mpi_world%rank == 0) call io_close(iunit)
+
+
+      if(iter > 1) x3 = ncsave
+
+      if(find_root) then
+        x1 = ncutoff(ispin)
+        x2 = ncutoff_old
+        x3 = ncutoff(ispin)
+        f1 = 1.0_8 + get_qxc(der%mesh, nxc(:, ispin), density(:, ispin), x1)
+        f2 = 1.0_8 + get_qxc(der%mesh, nxc(:, ispin), density(:, ispin), x2)
+
+        do ip = 1, 20
+          if(abs(f1 - f2) < 1e-16_8) exit
+          x3 = x2 - f2*(x2 - x1)/(f2 - f1)
+          f3 = 1.0_8 + get_qxc(der%mesh, nxc(:, ispin), density(:, ispin), x3)
+          if(abs(f3) < 1e-6_8) exit
+          x1 = x2
+          f1 = f2
+          x2 = x3
+          f2 = f3
+        end do
+
+        if(x3 <= ncutoff(ispin)) ncutoff(ispin) = x3
+      end if
+
+      ncsave = x3
+
+    end do
+
+  else
+    call parse_float('XCDensityCorrectionCutoff', CNST(0.0), ncutoff(1))
+    ncutoff(2:nspin) = ncutoff(1)
+  end if
+
+
+  do ispin = 1, nspin
+    
+    do ip = 1, der%mesh%np
+      if(density(ip, ispin) < ncutoff(ispin)) then
+!        if(normalize) then
+!          nxc(ip, ispin) = nxc(ip, ispin)*(CNST(1.0) - CNST(1.0)/qxcfin(ispin))
+!        else
+          nxc(ip, ispin) = CNST(0.0)
+!        end if
+      end if
+    end do
+
+    qxcfin(1:nspin) = dmf_integrate(der%mesh, nxc(:, 1))
+
+  end do
+
+  call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "nxcmod", der%mesh, nxc(:, 1), unit_one, ierr)
+
+  if(mpi_world%rank == 0) then
+    print*, "Iter",    iter, ncutoff(1:nspin), qxcfin(1:nspin)
+  end if
+
+  call parse_logical('XCLongRangeNormalize', .true., normalize)
+
+  do ispin = 1, nspin
+    call dpoisson_solve(psolver, lrvxc, nxc(:, ispin))
+
+    vol = M_ZERO
+    do ip = 1, der%mesh%np
+      lrvxc(ip) = lrvxc(ip) - vxc(ip, ispin)
+    end do
+
+    if(normalize .and. abs(qxcfin(ispin)) > CNST(1e-10)) then
+      do ip = 1, der%mesh%np
+        lrvxc(ip) = lrvxc(ip)/abs(qxcfin(ispin))
+      end do
+    end if
+
+    call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(C_OUTPUT_HOW_AXIS_Y, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(C_OUTPUT_HOW_AXIS_Z, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(C_OUTPUT_HOW_PLANE_X, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(C_OUTPUT_HOW_PLANE_Y, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(C_OUTPUT_HOW_PLANE_Z, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+
+    forall(ip = 1:der%mesh%np) vxc(ip, ispin) = vxc(ip, ispin) + lrvxc(ip)
+
+    maxdd = -HUGE(maxdd)
+    mindd =  HUGE(maxdd)
+    vol = M_ZERO
+    do ip = 1, der%mesh%np
+      if(density(ip, ispin) >= ncutoff(ispin)) then
+        vol = vol + der%mesh%volume_element
+        maxdd = max(lrvxc(ip), maxdd)
+        mindd = min(lrvxc(ip), mindd)
+      else
+        lrvxc(ip) = M_ZERO
+      end if
+    end do
+    
+    call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(C_OUTPUT_HOW_AXIS_Y, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(C_OUTPUT_HOW_AXIS_Z, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+
+    dd(ispin) = dmf_integrate(der%mesh, lrvxc)/vol
+
+    if(mpi_world%rank == 0) then
+      print*, "DD",  -CNST(2.0)*dd(ispin), -CNST(2.0)*mindd, -CNST(2.0)*maxdd
+    end if
+
+
+    call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "fnxc", der%mesh, nxc(:, ispin), unit_one, ierr)
+  end do
+
+
+  call profiling_out(prof)
+    
+  SAFE_DEALLOCATE_A(lrvxc)
+  SAFE_DEALLOCATE_A(nxc)
+
+  POP_SUB('vxc_inc.xc_density_correction_calc')
+end subroutine xc_density_correction_calc
+
+! -----------------------------------------------------
+
+FLOAT function get_qxc(mesh, nxc, density, ncutoff)  result(qxc)
+  type(mesh_t), intent(in) :: mesh
+  FLOAT,        intent(in) :: nxc(:)
+  FLOAT,        intent(in) :: density(:)
+  FLOAT,        intent(in) :: ncutoff
+
+  integer :: ip
+  FLOAT, allocatable :: nxc2(:)
+
+  PUSH_SUB('vxc_inc.get_qxc')
+
+  SAFE_ALLOCATE(nxc2(1:mesh%np))
+
+  do ip = 1, mesh%np
+    if(density(ip) < ncutoff) then
+      nxc2(ip) = 0.0
+    else
+      nxc2(ip) = nxc(ip)
+    end if
+  end do
+
+  qxc = dmf_integrate(mesh, nxc2)
+
+  SAFE_DEALLOCATE_A(nxc2)
+
+  POP_SUB('vxc_inc.get_qxc')
+end function get_qxc
 
 !! Local Variables:
 !! mode: f90

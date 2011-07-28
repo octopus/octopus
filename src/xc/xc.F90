@@ -24,15 +24,20 @@ module xc_m
   use derivatives_m
   use global_m
   use grid_m
+  use io_m
+  use io_function_m
   use lalg_basic_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use mpi_m
   use parser_m
+  use poisson_m
   use profiling_m
   use states_m
   use states_dim_m
   use symmetrizer_m
+  use unit_system_m
   use varinfo_m
   use XC_F90(lib_m)
   use xc_functl_m
@@ -60,11 +65,17 @@ module xc_m
 
     FLOAT   :: exx_coef                 ! amount of EXX to add for the hybrids
     integer :: mGGA_implementation      ! how to implement the MGGAs
-  end type xc_t
 
+    integer :: xc_density_correction
+  end type xc_t
 
   FLOAT, parameter :: tiny      = CNST(1.0e-12)
   FLOAT, parameter :: denom_eps = CNST(1.0e-20) ! added to denominators to avoid overflows...
+
+  integer, parameter :: &
+    LR_NONE = 0,        &
+    LR_X    = 1,        &
+    LR_XC   = 2
 
 contains
 
@@ -236,6 +247,27 @@ contains
         ck_id = val / 1000
         xk_id = val - ck_id*1000  
       end if
+
+      !%Variable XCDensityCorrection
+      !%Type integer
+      !%Default none
+      !%Section Hamiltonian::XC
+      !%Description
+      !% This variable controls the long range correction of the XC
+      !% potential using the XC density representation
+      !% (http://arxiv.org/abs/1107.4339). By default, no correction
+      !% is applied.
+      !%Option none 0
+      !% No correction is applied.
+      !%Option long_range_x 1
+      !% The correction is applied to the exchange potential.
+      !%Option long_range_xc 2
+      !% The correction is applied to the combined exchange and
+      !% correlation potential.
+      !%End
+      call parse_integer('XCDensityCorrection', LR_NONE, xcs%xc_density_correction)
+
+      if(xcs%xc_density_correction /= LR_NONE) call messages_experimental('XC density correction')
 
       POP_SUB(xc_init.parse)
     end subroutine parse
