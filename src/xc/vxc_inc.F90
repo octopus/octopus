@@ -697,13 +697,13 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, vxc)
   FLOAT,               intent(inout) :: vxc(:, :)
 
   logical :: find_root, done
-  integer :: ispin, ip, iunit, ierr
+  integer :: ip, iunit, ierr
   integer, save :: iter = 0
   FLOAT,   save :: ncsave
   character(len=30) :: number
-  FLOAT   :: qxc, ncutoff(1:2), qxc_old, ncutoff_old, deriv, deriv_old, qxcfin(1:2)
-  FLOAT   :: x1, x2, x3, f1, f2, f3, dd(1:2), vol, mindd, maxdd
-  FLOAT, allocatable :: nxc(:, :), lrvxc(:)
+  FLOAT   :: qxc, ncutoff, qxc_old, ncutoff_old, deriv, deriv_old, qxcfin
+  FLOAT   :: x1, x2, x3, f1, f2, f3, dd, vol, mindd, maxdd
+  FLOAT, allocatable :: nxc(:), lrvxc(:)
   type(profile_t), save :: prof
   FLOAT, parameter :: thres = CNST(1e-6)
 
@@ -711,179 +711,159 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, vxc)
 
   call profiling_in(prof, "XC_DENSITY_CORRECTION")
 
-  SAFE_ALLOCATE(nxc(1:der%mesh%np, 1:nspin))
+  SAFE_ALLOCATE(nxc(1:der%mesh%np))
   SAFE_ALLOCATE(lrvxc(1:der%mesh%np_part))
 
-  do ispin = 1, nspin
-    forall(ip = 1:der%mesh%np) lrvxc(ip) = CNST(-1.0)/(CNST(4.0)*M_PI)*vxc(ip, ispin)
-    call dderivatives_lapl(der, lrvxc, nxc(:, ispin))
-  end do
+  if(nspin > 1) then
+    call messages_not_implemented('XC density correction with spin polarization')
+  end if
+
+  forall(ip = 1:der%mesh%np) lrvxc(ip) = CNST(-1.0)/(CNST(4.0)*M_PI)*vxc(ip, 1)
+  call dderivatives_lapl(der, lrvxc, nxc)
 
   call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "rho", der%mesh, density(:, 1), unit_one, ierr)
   call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "vxcorig", der%mesh, vxc(:, 1), unit_one, ierr)
-  call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "nxc", der%mesh, nxc(:, 1), unit_one, ierr)
- 
+  call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "nxc", der%mesh, nxc, unit_one, ierr)
+
   if(xcs%xcd_optimize_cutoff) then
 
-    do ispin = 1, nspin
+    x1 = CNST(1.0e-8)
+    qxc = get_qxc(der%mesh, nxc, density(:, 1), x1)
+    deriv = HUGE(deriv)
+    done = .false.
 
-      x1 = CNST(1.0e-8)
-      qxc = get_qxc(der%mesh, nxc(:, ispin), density(:, ispin), x1)
-      deriv = HUGE(deriv)
-      done = .false.
+    INCR(iter, 1)
+    if(mpi_world%rank == 0) then
+      write(number, '(i4)') iter
+      iunit = io_open('qxc.'//trim(adjustl(number)), action='write')
+    end if
+    do
+      if(.not. done) then
+        ncutoff_old = x1
+        qxc_old = qxc
+        deriv_old = deriv
+      end if
 
-      INCR(iter, 1)
+      x1 = x1*CNST(1.01)
+
       if(mpi_world%rank == 0) then
-        write(number, '(i4)') iter
-        iunit = io_open('qxc.'//trim(adjustl(number)), action='write')
-      end if
-      do
-        if(.not. done) then
-          ncutoff_old = x1
-          qxc_old = qxc
-          deriv_old = deriv
-        end if
-
-        x1 = x1*CNST(1.01)
-
-        if(mpi_world%rank == 0) then
-          write(iunit, *) x1, qxc
-        end if
-
-        if(x1 > CNST(1.0)) exit
-
-        qxc = get_qxc(der%mesh, nxc(:, ispin), density(:, ispin), x1)
-
-        if(qxc == qxc_old) cycle
-
-        deriv = (qxc - qxc_old)/(x1 - ncutoff_old)
-
-        if(.not. done .and. abs(qxc) >= 1.0_8) then
-          find_root = .true.
-          done = .true.
-          ncutoff(ispin) = x1
-        end if
-
-
-        if(xcs%xcd_minimum .and. .not. done .and. abs(qxc_old) - abs(qxc) > thres) then
-          find_root = .false.
-          done = .true.
-          ncutoff(ispin) = x1
-          print*, x1, 0
-        end if
-
-      end do
-
-      if(mpi_world%rank == 0) call io_close(iunit)
-
-
-      if(iter > 1) x3 = ncsave
-
-      if(find_root) then
-        x1 = ncutoff(ispin)
-        x2 = ncutoff_old
-        x3 = ncutoff(ispin)
-        f1 = 1.0_8 + get_qxc(der%mesh, nxc(:, ispin), density(:, ispin), x1)
-        f2 = 1.0_8 + get_qxc(der%mesh, nxc(:, ispin), density(:, ispin), x2)
-
-        do ip = 1, 20
-          if(abs(f1 - f2) < 1e-16_8) exit
-          x3 = x2 - f2*(x2 - x1)/(f2 - f1)
-          f3 = 1.0_8 + get_qxc(der%mesh, nxc(:, ispin), density(:, ispin), x3)
-          if(abs(f3) < 1e-6_8) exit
-          x1 = x2
-          f1 = f2
-          x2 = x3
-          f2 = f3
-        end do
-
-        if(x3 <= ncutoff(ispin)) ncutoff(ispin) = x3
+        write(iunit, *) x1, qxc
       end if
 
-      ncsave = x3
+      if(x1 > CNST(1.0)) exit
+
+      qxc = get_qxc(der%mesh, nxc, density(:, 1), x1)
+
+      if(qxc == qxc_old) cycle
+
+      deriv = (qxc - qxc_old)/(x1 - ncutoff_old)
+
+      if(.not. done .and. abs(qxc) >= 1.0_8) then
+        find_root = .true.
+        done = .true.
+        ncutoff = x1
+      end if
+
+      if(xcs%xcd_minimum .and. .not. done .and. abs(qxc_old) - abs(qxc) > thres) then
+        find_root = .false.
+        done = .true.
+        ncutoff = x1
+        print*, x1, 0
+      end if
 
     end do
+
+    if(mpi_world%rank == 0) call io_close(iunit)
+
+    if(iter > 1) x3 = ncsave
+
+    if(find_root) then
+      x1 = ncutoff
+      x2 = ncutoff_old
+      x3 = ncutoff
+      f1 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x1)
+      f2 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x2)
+
+      do ip = 1, 20
+        if(abs(f1 - f2) < 1e-16_8) exit
+        x3 = x2 - f2*(x2 - x1)/(f2 - f1)
+        f3 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x3)
+        if(abs(f3) < 1e-6_8) exit
+        x1 = x2
+        f1 = f2
+        x2 = x3
+        f2 = f3
+      end do
+
+      if(x3 <= ncutoff) ncutoff = x3
+    end if
+
+    ncsave = x3
 
   else
-    ncutoff(2:nspin) = xcs%xcd_ncutoff
+    ncutoff = xcs%xcd_ncutoff
   end if
 
+  qxcfin = get_qxc(der%mesh, nxc, density(:, 1), ncutoff)
 
-  do ispin = 1, nspin
-    
-    do ip = 1, der%mesh%np
-      if(density(ip, ispin) < ncutoff(ispin)) then
-!        if(normalize) then
-!          nxc(ip, ispin) = nxc(ip, ispin)*(CNST(1.0) - CNST(1.0)/qxcfin(ispin))
-!        else
-          nxc(ip, ispin) = CNST(0.0)
-!        end if
-      end if
-    end do
-
-    qxcfin(1:nspin) = dmf_integrate(der%mesh, nxc(:, 1))
-
+  do ip = 1, der%mesh%np
+    if(density(ip, 1) < ncutoff) then
+      nxc(ip) = -nxc(ip)
+    else
+      nxc(ip) = M_ZERO
+    end if
   end do
 
-  call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "nxcmod", der%mesh, nxc(:, 1), unit_one, ierr)
+  call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "nxcmod", der%mesh, nxc, unit_one, ierr)
 
   if(mpi_world%rank == 0) then
-    print*, "Iter",    iter, ncutoff(1:nspin), qxcfin(1:nspin)
+    print*, "Iter",    iter, ncutoff, qxcfin
   end if
 
-  do ispin = 1, nspin
-    call dpoisson_solve(psolver, lrvxc, nxc(:, ispin))
+  call dpoisson_solve(psolver, lrvxc, nxc)
 
-    vol = M_ZERO
+  if(xcs%xcd_normalize .and. abs(qxcfin) > CNST(1e-10)) then
     do ip = 1, der%mesh%np
-      lrvxc(ip) = lrvxc(ip) - vxc(ip, ispin)
+      lrvxc(ip) = lrvxc(ip)/abs(qxcfin)
     end do
+  end if
 
-    if(xcs%xcd_normalize .and. abs(qxcfin(ispin)) > CNST(1e-10)) then
-      do ip = 1, der%mesh%np
-        lrvxc(ip) = lrvxc(ip)/abs(qxcfin(ispin))
-      end do
+  call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+  call dio_function_output(C_OUTPUT_HOW_AXIS_Y, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+  call dio_function_output(C_OUTPUT_HOW_AXIS_Z, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+  call dio_function_output(C_OUTPUT_HOW_PLANE_X, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+  call dio_function_output(C_OUTPUT_HOW_PLANE_Y, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+  call dio_function_output(C_OUTPUT_HOW_PLANE_Z, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+
+  forall(ip = 1:der%mesh%np) vxc(ip, 1) = vxc(ip, 1) + lrvxc(ip)
+
+  maxdd = -HUGE(maxdd)
+  mindd =  HUGE(maxdd)
+  vol = M_ZERO
+  do ip = 1, der%mesh%np
+    if(density(ip, 1) >= ncutoff) then
+      vol = vol + der%mesh%volume_element
+      maxdd = max(lrvxc(ip), maxdd)
+      mindd = min(lrvxc(ip), mindd)
+    else
+      lrvxc(ip) = M_ZERO
     end if
-
-    call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(C_OUTPUT_HOW_AXIS_Y, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(C_OUTPUT_HOW_AXIS_Z, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(C_OUTPUT_HOW_PLANE_X, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(C_OUTPUT_HOW_PLANE_Y, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(C_OUTPUT_HOW_PLANE_Z, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
-
-    forall(ip = 1:der%mesh%np) vxc(ip, ispin) = vxc(ip, ispin) + lrvxc(ip)
-
-    maxdd = -HUGE(maxdd)
-    mindd =  HUGE(maxdd)
-    vol = M_ZERO
-    do ip = 1, der%mesh%np
-      if(density(ip, ispin) >= ncutoff(ispin)) then
-        vol = vol + der%mesh%volume_element
-        maxdd = max(lrvxc(ip), maxdd)
-        mindd = min(lrvxc(ip), mindd)
-      else
-        lrvxc(ip) = M_ZERO
-      end if
-    end do
-    
-    call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(C_OUTPUT_HOW_AXIS_Y, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(C_OUTPUT_HOW_AXIS_Z, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-
-    dd(ispin) = dmf_integrate(der%mesh, lrvxc)/vol
-
-    if(mpi_world%rank == 0) then
-      print*, "DD",  -CNST(2.0)*dd(ispin), -CNST(2.0)*mindd, -CNST(2.0)*maxdd
-    end if
-
-
-    call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "fnxc", der%mesh, nxc(:, ispin), unit_one, ierr)
   end do
 
+  call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+  call dio_function_output(C_OUTPUT_HOW_AXIS_Y, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+  call dio_function_output(C_OUTPUT_HOW_AXIS_Z, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+
+  dd = dmf_integrate(der%mesh, lrvxc)/vol
+
+  if(mpi_world%rank == 0) then
+    print*, "DD",  -CNST(2.0)*dd, -CNST(2.0)*mindd, -CNST(2.0)*maxdd
+  end if
+
+  call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "fnxc", der%mesh, nxc, unit_one, ierr)
 
   call profiling_out(prof)
-    
+
   SAFE_DEALLOCATE_A(lrvxc)
   SAFE_DEALLOCATE_A(nxc)
 
