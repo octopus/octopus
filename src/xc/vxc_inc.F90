@@ -337,11 +337,11 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vt
   end do space_loop
 
   if(xcs%xc_density_correction == LR_XC) then
-    call xc_density_correction_calc(der, spin_channels, rho, dedd)
+    call xc_density_correction_calc(xcs, der, spin_channels, rho, dedd)
   end if
 
   if(xcs%xc_density_correction == LR_X) then
-    call xc_density_correction_calc(der, spin_channels, rho, vx)
+    call xc_density_correction_calc(xcs, der, spin_channels, rho, vx)
     dedd(1:der%mesh%np, 1:spin_channels) = dedd(1:der%mesh%np, 1:spin_channels) + vx(1:der%mesh%np, 1:spin_channels)
 
     if(calc_energy) then
@@ -689,13 +689,14 @@ end subroutine xc_get_vxc
 
 ! -----------------------------------------------------
 
-subroutine xc_density_correction_calc(der, nspin, density, vxc)
+subroutine xc_density_correction_calc(xcs, der, nspin, density, vxc)
+  type(xc_t),          intent(in)    :: xcs
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: nspin
   FLOAT,               intent(in)    :: density(:, :)
   FLOAT,               intent(inout) :: vxc(:, :)
 
-  logical :: optimize_ncutoff, find_root, done, normalize, minimum
+  logical :: find_root, done
   integer :: ispin, ip, iunit, ierr
   integer, save :: iter = 0
   FLOAT,   save :: ncsave
@@ -722,11 +723,7 @@ subroutine xc_density_correction_calc(der, nspin, density, vxc)
   call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "vxcorig", der%mesh, vxc(:, 1), unit_one, ierr)
   call dio_function_output(C_OUTPUT_HOW_AXIS_X, "./static", "nxc", der%mesh, nxc(:, 1), unit_one, ierr)
  
-  call parse_logical('XCDensityCorrectionOptimize', .true., optimize_ncutoff)
-
-  if(optimize_ncutoff) then
-
-    call parse_logical('XCDensityCorrectionMinimum', .true., minimum)
+  if(xcs%xcd_optimize_cutoff) then
 
     do ispin = 1, nspin
 
@@ -768,7 +765,7 @@ subroutine xc_density_correction_calc(der, nspin, density, vxc)
         end if
 
 
-        if(minimum .and. .not. done .and. abs(qxc_old) - abs(qxc) > thres) then
+        if(xcs%xcd_minimum .and. .not. done .and. abs(qxc_old) - abs(qxc) > thres) then
           find_root = .false.
           done = .true.
           ncutoff(ispin) = x1
@@ -808,8 +805,7 @@ subroutine xc_density_correction_calc(der, nspin, density, vxc)
     end do
 
   else
-    call parse_float('XCDensityCorrectionCutoff', CNST(0.0), ncutoff(1))
-    ncutoff(2:nspin) = ncutoff(1)
+    ncutoff(2:nspin) = xcs%xcd_ncutoff
   end if
 
 
@@ -835,8 +831,6 @@ subroutine xc_density_correction_calc(der, nspin, density, vxc)
     print*, "Iter",    iter, ncutoff(1:nspin), qxcfin(1:nspin)
   end if
 
-  call parse_logical('XCLongRangeNormalize', .true., normalize)
-
   do ispin = 1, nspin
     call dpoisson_solve(psolver, lrvxc, nxc(:, ispin))
 
@@ -845,7 +839,7 @@ subroutine xc_density_correction_calc(der, nspin, density, vxc)
       lrvxc(ip) = lrvxc(ip) - vxc(ip, ispin)
     end do
 
-    if(normalize .and. abs(qxcfin(ispin)) > CNST(1e-10)) then
+    if(xcs%xcd_normalize .and. abs(qxcfin(ispin)) > CNST(1e-10)) then
       do ip = 1, der%mesh%np
         lrvxc(ip) = lrvxc(ip)/abs(qxcfin(ispin))
       end do

@@ -67,6 +67,10 @@ module xc_m
     integer :: mGGA_implementation      ! how to implement the MGGAs
 
     integer :: xc_density_correction
+    logical :: xcd_optimize_cutoff
+    FLOAT   :: xcd_ncutoff
+    logical :: xcd_minimum
+    logical :: xcd_normalize
   end type xc_t
 
   FLOAT, parameter :: tiny      = CNST(1.0e-12)
@@ -267,7 +271,57 @@ contains
       !%End
       call parse_integer('XCDensityCorrection', LR_NONE, xcs%xc_density_correction)
 
-      if(xcs%xc_density_correction /= LR_NONE) call messages_experimental('XC density correction')
+      if(xcs%xc_density_correction /= LR_NONE) then 
+        call messages_experimental('XC density correction')
+
+        !%Variable XCDensityCorrectionOptimize
+        !%Type logical
+        !%Default true
+        !%Section Hamiltonian::XC
+        !%Description
+        !% When enabled, the default, the density cutoff will be
+        !% optimized to replicate the boundary conditions of the exact
+        !% XC potential. If the variable is set to no, the value of
+        !% the cutoff must be given by the XCDensityCorrectionCutoff
+        !% variable.
+        !%End
+        call parse_logical('XCDensityCorrectionOptimize', .true., xcs%xcd_optimize_cutoff)
+
+        !%Variable XCDensityCorrectionCutoff
+        !%Type float
+        !%Default 0.0
+        !%Section Hamiltonian::XC
+        !%Description
+        !% The value of the cutoff applied to the XC density. The default value is 0.
+        !%End
+        call parse_float('XCDensityCorrectionCutoff', CNST(0.0), xcs%xcd_ncutoff)
+
+        !%Variable XCDensityCorrectionMinimum
+        !%Type logical
+        !%Default true
+        !%Section Hamiltonian::XC
+        !%Description
+        !% When enabled, the default, the cutoff optimization will
+        !% return the first minimum of the q_xc function if it does
+        !% not find a value of -1 (See http://arxiv.org/abs/1107.4339
+        !% for details). This is required for atoms or small
+        !% molecules, but may cause numerical problems.
+        !%End
+        call parse_logical('XCDensityCorrectionMinimum', .true., xcs%xcd_minimum)
+
+        !%Variable XCDensityCorrectionNormalize
+        !%Type logical
+        !%Default true
+        !%Section Hamiltonian::XC
+        !%Description
+        !% When enabled, the default, the correction will be
+        !% normalized to reproduce the exact boundary conditions of
+        !% the XC potential.
+        !%End
+        call parse_logical('XCDensityCorrectionNormalize', .true., xcs%xcd_normalize)
+  
+      end if
+
 
       POP_SUB(xc_init.parse)
     end subroutine parse
