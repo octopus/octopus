@@ -233,17 +233,13 @@ void FC_FUNC(flreleasecontext, FLRELEASECONTEXT)(cl_context * context){
   clReleaseContext(*context);
 }
 
-void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
-     (cl_program * program, cl_context * context, cl_device_id * device, STR_F_TYPE file_name_f STR_ARG1){
+void FC_FUNC_(f90_cl_create_program_from_file, F90_CL_CREATE_PROGRAM_FROM_FILE)
+     (cl_program * program, cl_context * context, STR_F_TYPE file_name_f STR_ARG1){
   FILE * source_file;
   size_t szSourceLength;
   char* cSourceString;
   char * file_name;
   cl_int status;
-  char device_string[2048];
-  int ext_khr_fp64, ext_amd_fp64;
-  size_t len;
-  char buffer[5000];
 
   TO_C_STR1(file_name_f, file_name);
 
@@ -268,11 +264,31 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
     
   cSourceString[szSourceLength] = '\0';
 
+  *program = clCreateProgramWithSource(*context, 1, (const char**)&cSourceString, NULL, &status);
+
+  if(status != CL_SUCCESS){
+    fprintf(stderr, "Error: program creation %s failed.\n", file_name);
+    exit(1);
+  }
+
+  free(file_name);
+
+}
+
+void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
+     (cl_program * program, cl_context * context, cl_device_id * device, STR_F_TYPE flags_f STR_ARG1){
+  char * flags;
+  cl_int status;
+  char device_string[2048];
+  int ext_khr_fp64, ext_amd_fp64;
+  size_t len;
+  char buffer[5000];
+
+  TO_C_STR1(flags_f, flags);
+
   clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
   ext_khr_fp64 = strstr(device_string, "cl_khr_fp64");
   ext_amd_fp64 = strstr(device_string, "cl_amd_fp64");
-
-  *program = clCreateProgramWithSource(*context, 1, (const char**)&cSourceString, NULL, &status);
 
   if(ext_khr_fp64){
     status = clBuildProgram(*program, 0, NULL, "-DEXT_KHR_FP64 -cl-mad-enable", NULL, NULL);
@@ -282,23 +298,20 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
     fprintf(stderr, "Error: double precision not supported\n");
     exit(1);
   }
-
-  clGetProgramBuildInfo (*program, *device,
-			 CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
-			 &len);
+  
+  clGetProgramBuildInfo(*program, *device,
+			CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
+			&len);
 
   /* Print the compilation log */
-  if(len > 0) printf("%s\n\n", buffer);
-  
+  if(len > 1) printf("%s\n\n", buffer);
+
   if(status != CL_SUCCESS){
-    clGetProgramBuildInfo (*program, *device,
-			   CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
-			   &len);    
-    fprintf(stderr, "Error: compilation of file %s failed.\n", file_name);
+    fprintf(stderr, "Error: compilation failed.\n");
     exit(1);
   }
 
-  free(file_name);
+  free(flags);
 
 }
 

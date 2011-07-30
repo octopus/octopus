@@ -168,7 +168,19 @@
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_build_program(prog, context, device, source_file)
+    subroutine f90_cl_create_program_from_file(prog, context, source_file)
+      use c_pointer_m
+
+      implicit none
+
+      type(c_ptr),      intent(out)   :: prog
+      type(c_ptr),      intent(inout) :: context
+      character(len=*), intent(in)    :: source_file
+    end subroutine f90_cl_create_program_from_file
+
+    ! ----------------------------------------------------
+
+    subroutine f90_cl_build_program(prog, context, device, flags)
       use c_pointer_m
 
       implicit none
@@ -176,7 +188,7 @@
       type(c_ptr),      intent(out)   :: prog
       type(c_ptr),      intent(inout) :: context
       type(c_ptr),      intent(inout) :: device
-      character(len=*), intent(in)    :: source_file
+      character(len=*), intent(in)    :: flags
     end subroutine f90_cl_build_program
 
     ! ----------------------------------------------------

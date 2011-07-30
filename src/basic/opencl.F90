@@ -220,14 +220,14 @@ module opencl_m
       opencl%local_memory_size = f90_cl_device_local_mem_size(opencl%device)
 
       ! now initialize the kernels
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/vpsi.cl')
-      call opencl_create_kernel(kernel_vpsi, prog, "vpsi")
-      call opencl_create_kernel(kernel_vpsi_spinors, prog, "vpsi_spinors")
-      call opencl_release_program(prog)
-      
       call opencl_build_program(prog, trim(conf%share)//'/opencl/set_zero.cl')
       call opencl_create_kernel(set_zero, prog, "set_zero")
       call opencl_create_kernel(set_zero_part, prog, "set_zero_part")
+      call opencl_release_program(prog)
+      
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/vpsi.cl')
+      call opencl_create_kernel(kernel_vpsi, prog, "vpsi")
+      call opencl_create_kernel(kernel_vpsi_spinors, prog, "vpsi_spinors")
       call opencl_release_program(prog)
       
       call opencl_build_program(prog, trim(conf%share)//'/opencl/axpy.cl')
@@ -517,7 +517,8 @@ module opencl_m
       type(c_ptr),      intent(inout) :: prog
       character(len=*), intent(in)    :: filename
 
-      call f90_cl_build_program(prog, opencl%context, opencl%device, filename)
+      call f90_cl_create_program_from_file(prog, opencl%context, filename)
+      call f90_cl_build_program(prog, opencl%context, opencl%device, '')
     end subroutine opencl_build_program
 
     ! -----------------------------------------------
