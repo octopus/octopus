@@ -513,10 +513,11 @@ module opencl_m
 
     ! -----------------------------------------------
 
-    subroutine opencl_build_program(prog, filename)
-      type(c_ptr),      intent(inout) :: prog
-      character(len=*), intent(in)    :: filename
-
+    subroutine opencl_build_program(prog, filename, flags)
+      type(c_ptr),                intent(inout) :: prog
+      character(len=*),           intent(in)    :: filename
+      character(len=*), optional, intent(in)    :: flags
+      
       character(len=256) :: full_flags
 
       call f90_cl_create_program_from_file(prog, opencl%context, filename)
@@ -530,12 +531,16 @@ module opencl_m
         call messages_fatal(1)
       end if
 
+      if(present(flags)) then
+        full_flags = trim(full_flags)//' '//trim(flags)
+      end if
+
       if(in_debug_mode) then
         message(1) = "Debug info: compilation flags '"//trim(full_flags)//"'. "
         call messages_info(1)
       end if
 
-      call f90_cl_build_program(prog, opencl%context, opencl%device, full_flags)
+      call f90_cl_build_program(prog, opencl%context, opencl%device, trim(full_flags))
     end subroutine opencl_build_program
 
     ! -----------------------------------------------

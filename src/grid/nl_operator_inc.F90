@@ -260,17 +260,28 @@ contains
 
   ! ------------------------------------------
   subroutine operate_opencl()
-    integer :: pnri, bsize, isize, ist, local_mem_size
+    integer :: pnri, bsize, isize, ist, local_mem_size, eff_size
     type(opencl_mem_t) :: buff_weights
     type(profile_t), save :: prof
+    FLOAT, allocatable :: vecw(:, :)
 
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
 
     ASSERT(points_ == OP_ALL)
 
-    call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
-    call opencl_write_buffer(buff_weights, op%stencil%size, wre)
+    call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size*vecsize_opencl)
+    
+    SAFE_ALLOCATE(vecw(1:vecsize_opencl, 1:op%stencil%size))
+    do ist = 1, op%stencil%size
+      vecw(1:vecsize_opencl, ist) = wre(ist)
+    end do
+    call opencl_write_buffer(buff_weights, op%stencil%size*vecsize_opencl, vecw)
+    SAFE_DEALLOCATE_A(vecw)
+    
+    ASSERT(fi%pack%size_real(1) == fo%pack%size_real(1))
+
+    eff_size = fi%pack%size_real(1)/vecsize_opencl
 
     select case(function_opencl)
     case(OP_INVMAP)
@@ -281,22 +292,21 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 4, op%buff_imax)
       call opencl_set_kernel_arg(kernel_operate, 5, buff_weights)
       call opencl_set_kernel_arg(kernel_operate, 6, fi%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 7, fi%pack%size_real(1))
+      call opencl_set_kernel_arg(kernel_operate, 7, eff_size)
       call opencl_set_kernel_arg(kernel_operate, 8, fo%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 9, fo%pack%size_real(1))
+      call opencl_set_kernel_arg(kernel_operate, 9, eff_size)
 
-      bsize = 128
+      bsize = opencl_kernel_workgroup_size(kernel_operate)
       pnri = pad(nri, bsize)
-
-      call opencl_kernel_run(kernel_operate, &
-        (/fi%pack%size_real(1), pnri/), (/fi%pack%size_real(1), bsize/(fi%pack%size_real(1))/))
+      
+      call opencl_kernel_run(kernel_operate, (/eff_size, pnri/), (/eff_size, bsize/eff_size/))
 
     case(OP_MAP_SPLIT)
 
       bsize = opencl_kernel_workgroup_size(kernel_operate)
-      isize = bsize/(fi%pack%size_real(1))
+      isize = bsize/eff_size
 
-      if(bsize < fi%pack%size_real(1)) then
+      if(bsize < fi%pack%size_real(1)/vecsize_opencl) then
         message(1) = "The value of StatesBlockSize is too large for this OpenCL implementation."
         call messages_fatal(1)
       end if
@@ -308,12 +318,11 @@ contains
         call opencl_set_kernel_arg(kernel_operate, 3, op%buff_map4)
         call opencl_set_kernel_arg(kernel_operate, 4, buff_weights)
         call opencl_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate, 6, fi%pack%size_real(1))
+        call opencl_set_kernel_arg(kernel_operate, 6, eff_size)
         call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate, 8, fo%pack%size_real(1))
+        call opencl_set_kernel_arg(kernel_operate, 8, eff_size)
 
-        call opencl_kernel_run(kernel_operate, &
-          (/fi%pack%size_real(1), pad(op%n4, isize)/), (/fi%pack%size_real(1), isize/))
+        call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%n4, isize)/), (/eff_size, isize/))
       end if
 
       if(op%n1 > 0) then
@@ -323,12 +332,11 @@ contains
         call opencl_set_kernel_arg(kernel_operate_1, 3, op%buff_map1)
         call opencl_set_kernel_arg(kernel_operate_1, 4, buff_weights)
         call opencl_set_kernel_arg(kernel_operate_1, 5, fi%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate_1, 6, fi%pack%size_real(1))
+        call opencl_set_kernel_arg(kernel_operate_1, 6, eff_size)
         call opencl_set_kernel_arg(kernel_operate_1, 7, fo%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate_1, 8, fo%pack%size_real(1))
+        call opencl_set_kernel_arg(kernel_operate_1, 8, eff_size)
 
-        call opencl_kernel_run(kernel_operate_1, &
-          (/fi%pack%size_real(1), pad(op%n1, isize)/), (/fi%pack%size_real(1), isize/))
+        call opencl_kernel_run(kernel_operate_1, (/eff_size, pad(op%n1, isize)/), (/eff_size, isize/))
 
       end if
 
@@ -339,15 +347,15 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 3, op%buff_map)
       call opencl_set_kernel_arg(kernel_operate, 4, buff_weights)
       call opencl_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 6, log2(fi%pack%size_real(1)))
+      call opencl_set_kernel_arg(kernel_operate, 6, log2(eff_size))
       call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 8, log2(fi%pack%size_real(1)))
+      call opencl_set_kernel_arg(kernel_operate, 8, log2(eff_size))
 
 
       local_mem_size = f90_cl_device_local_mem_size(opencl%device)
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
-      isize = isize - mod(isize, fi%pack%size_real(1))
-      bsize = fi%pack%size_real(1)*isize
+      isize = isize - mod(isize, eff_size)
+      bsize = eff_size*isize
       bsize = min(opencl_kernel_workgroup_size(kernel_operate), bsize)
 
       if(bsize < fi%pack%size_real(1)) then
@@ -355,17 +363,17 @@ contains
         call messages_fatal(1)
       end if
 
-      isize = bsize/(fi%pack%size_real(1))
+      isize = bsize/eff_size
 
       ASSERT(isize > 0)
       ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
 
       call opencl_set_kernel_arg(kernel_operate, 9, TYPE_INTEGER, isize*op%stencil%size)
 
-      call opencl_kernel_run(kernel_operate, &
-        (/fi%pack%size_real(1), pad(op%mesh%np, bsize)/), (/fi%pack%size_real(1), isize/))
+      call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
 
       call profiling_count_transfers(op%stencil%size*op%mesh%np + op%mesh%np, isize)
+
       do ist = 1, fi%nst_linear
         call profiling_count_transfers(op%mesh%np_part*op%stencil%size + op%mesh%np, R_TOTYPE(M_ONE))
       end do

@@ -142,6 +142,7 @@ module nl_operator_m
   integer :: zfunction_global = -1
 #ifdef HAVE_OPENCL
   integer :: function_opencl
+  integer :: vecsize_opencl
 #endif
 
   type(profile_t), save :: nl_operate_profile
@@ -159,6 +160,7 @@ contains
     integer :: default
 #ifdef HAVE_OPENCL
     type(c_ptr) :: prog
+    character(len=20) :: vecsize_flag
 #endif
 
     PUSH_SUB(nl_operator_global_init)
@@ -204,26 +206,39 @@ contains
     if(.not.varinfo_valid_option('OperateComplex', dfunction_global)) call input_error('OperateComplex')
 
 #ifdef HAVE_OPENCL
-    !%Variable OperateOpenCL
-    !%Type integer
-    !%Default autodetect
-    !%Section Execution::Optimization
-    !%Description
-    !% This variable selects the subroutine used to apply non-local
-    !% operators over the grid when opencl is used. The default is
-    !% map.
-    !%Option invmap 1
-    !% The standard implementation ported to OpenCL.
-    !%Option map 2
-    !% A different version, more suitable for GPUs.
-    !%Option split 3
-    !% A new experimental version.
-    !%End
-
     if(opencl_is_enabled()) then
+
+      !%Variable OperateOpenCL
+      !%Type integer
+      !%Default autodetect
+      !%Section Execution::Optimization
+      !%Description
+      !% This variable selects the subroutine used to apply non-local
+      !% operators over the grid when opencl is used. The default is
+      !% map.
+      !%Option invmap 1
+      !% The standard implementation ported to OpenCL.
+      !%Option map 2
+      !% A different version, more suitable for GPUs.
+      !%Option split 3
+      !% A new experimental version.
+      !%End
       call parse_integer(datasets_check('OperateOpenCL'),  OP_MAP, function_opencl)
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/operate.cl')
+      !%Variable OperateOpenCLVecSize
+      !%Type integer
+      !%Default 1
+      !%Section Execution::Optimization
+      !%Description
+      !% Selects the size of vectors for the OpenCL application of
+      !% finite difference operators. Valid values are 1, 2, 4, 8 and
+      !% 16. The default is 1.
+      !%End
+      call parse_integer(datasets_check('OperateOpenCLVecSize'),  1, vecsize_opencl)
+
+      write(vecsize_flag, '(a,i1)') "-DVECSIZE=", vecsize_opencl
+
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/operate.cl', flags = vecsize_flag)
       select case(function_opencl)
       case(OP_MAP)
         call opencl_create_kernel(kernel_operate, prog, "operate_map")

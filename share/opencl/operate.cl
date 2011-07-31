@@ -26,14 +26,26 @@
 /*#pragma OPENCL EXTENSION cl_amd_printf:enable*/
 #endif
 
+#if   VECSIZE ==  8
+typedef double8 vectype;
+#elif VECSIZE ==  4
+typedef double4 vectype;
+#elif VECSIZE ==  2
+typedef double2 vectype;
+#elif VECSIZE ==  1
+typedef double vectype;
+#else
+#error VECSIZE not defined
+#endif
+
 __kernel void operate(const int nn,
 		       const int nri,
 		       __global const int * ri,
 		       __global const int * imin,
 		       __global const int * imax,
-		       __constant double * weights,
-		       __global const double * fi, const int ldfi,
-		       __global double * fo, const int ldfo){
+		       __constant vectype * weights,
+		       __global const vectype * fi, const int ldfi,
+		       __global vectype * fo, const int ldfo){
 
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
@@ -43,7 +55,7 @@ __kernel void operate(const int nn,
 
   const int imaxl = imax[l];
   for(int i = imin[l]; i < imaxl; i++){
-    double a0 = 0.0;
+    vectype a0 = (vectype) (0.0);
     for(int j = 0; j < nn; j++){
       a0 += weights[j]*fi[ldfi*(i + ri[nn*l + j]) + ist];
     }
@@ -56,9 +68,9 @@ __kernel void operate1(const int nn,
 		       const int n1,
 		       __global const int * ri,
 		       __global const int * map,
-		       __constant double * weights,
-		       __global const double * fi, const int ldfi,
-		       __global double * fo, const int ldfo){
+		       __constant vectype * weights,
+		       __global const vectype * fi, const int ldfi,
+		       __global vectype * fo, const int ldfo){
 
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
@@ -69,8 +81,8 @@ __kernel void operate1(const int nn,
   const int ip = map[k*2    ];
   const int ir = map[k*2 + 1];
 
-  double a0 = 0.0;
-  double a1 = 0.0;
+  vectype a0 = (vectype) (0.0);
+  vectype a1 = (vectype) (0.0);
 
   for(int j = 0; j < nn - 2 + 1; j+=2){
     a0 += weights[j    ]*fi[ldfi*(ip + ri[ir + j]    ) + ist];
@@ -88,9 +100,9 @@ __kernel void operate4(const int nn,
 		       const int n1,
 		       __global const int * ri,
 		       __global const int * map,
-		       __constant double * weights,
-		       __global const double * fi, const int ldfi,
-		       __global double * fo, const int ldfo){
+		       __constant vectype * weights,
+		       __global const vectype * fi, const int ldfi,
+		       __global vectype * fo, const int ldfo){
 
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
@@ -101,10 +113,10 @@ __kernel void operate4(const int nn,
   const int ip = map[k*2    ];
   const int ir = map[k*2 + 1];
 
-  double a0 = 0.0;
-  double a1 = 0.0;
-  double a2 = 0.0;
-  double a3 = 0.0;
+  vectype a0 = (vectype) (0.0);
+  vectype a1 = (vectype) (0.0);
+  vectype a2 = (vectype) (0.0);
+  vectype a3 = (vectype) (0.0);
 
   for(int j = 0; j < nn; j++){
     a0 += weights[j]*fi[ldfi*(ip + 0 + ri[ir + j]) + ist];
@@ -124,9 +136,9 @@ __kernel void operate_map(const int nn,
 		 	  const int np,
 			  __global const int * ri,
 			  __global const int * map,
-			  __constant double * weights,
-			  __global const double * fi, const int ldfi,
-			  __global double * fo, const int ldfo,
+			  __constant vectype * weights,
+			  __global const vectype * fi, const int ldfi,
+			  __global vectype * fo, const int ldfo,
 			  __local int * indexl){
 
   const int ist = get_global_id(0);
@@ -143,8 +155,8 @@ __kernel void operate_map(const int nn,
 
   if(ip >= np) return;
 
-  double a0 = 0.0;
-  double a1 = 0.0;
+  vectype a0 = (vectype) (0.0);
+  vectype a1 = (vectype) (0.0);
 
   for(int j = 0; j < nn - 2 + 1; j += 2){
     a0 += weights[j    ]*fi[((index[j    ] + ip)<<ldfi) + ist];
