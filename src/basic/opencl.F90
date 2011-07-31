@@ -517,8 +517,25 @@ module opencl_m
       type(c_ptr),      intent(inout) :: prog
       character(len=*), intent(in)    :: filename
 
+      character(len=256) :: full_flags
+
       call f90_cl_create_program_from_file(prog, opencl%context, filename)
-      call f90_cl_build_program(prog, opencl%context, opencl%device, '')
+      
+      if(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64") /= 0) then
+        full_flags = "-DEXT_KHR_FP64 -cl-mad-enable"
+      else if (f90_cl_device_has_extension(opencl%device, "cl_amd_fp64") /= 0) then
+        full_flags = "-DEXT_AMD_FP64"
+      else
+        message(1) = 'Octopus requires an OpenCL device with double precision support.' 
+        call messages_fatal(1)
+      end if
+
+      if(in_debug_mode) then
+        message(1) = "Debug info: compilation flags '"//trim(full_flags)//"'. "
+        call messages_info(1)
+      end if
+
+      call f90_cl_build_program(prog, opencl%context, opencl%device, full_flags)
     end subroutine opencl_build_program
 
     ! -----------------------------------------------

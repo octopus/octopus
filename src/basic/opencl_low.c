@@ -277,7 +277,7 @@ void FC_FUNC_(f90_cl_create_program_from_file, F90_CL_CREATE_PROGRAM_FROM_FILE)
 
 }
 
-void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
+int FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
      (cl_program * program, cl_context * context, cl_device_id * device, STR_F_TYPE flags_f STR_ARG1){
   char * flags;
   cl_int status;
@@ -288,25 +288,14 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
 
   TO_C_STR1(flags_f, flags);
 
-  clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
-  ext_khr_fp64 = strstr(device_string, "cl_khr_fp64") != NULL;
-  ext_amd_fp64 = strstr(device_string, "cl_amd_fp64") != NULL;
-
-  if(ext_khr_fp64){
-    status = clBuildProgram(*program, 0, NULL, "-DEXT_KHR_FP64 -cl-mad-enable", NULL, NULL);
-  } else if(ext_amd_fp64) {
-    status = clBuildProgram(*program, 0, NULL, "-DEXT_AMD_FP64", NULL, NULL);
-  } else {
-    fprintf(stderr, "Error: double precision not supported\n");
-    exit(1);
-  }
+  status = clBuildProgram(*program, 0, NULL, flags, NULL, NULL);
   
   clGetProgramBuildInfo(*program, *device,
 			CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
 			&len);
 
   /* Print the compilation log */
-  if(len > 1) printf("%s\n\n", buffer);
+  if(len > 2) printf("%s\n\n", buffer);
 
   if(status != CL_SUCCESS){
     fprintf(stderr, "Error: compilation failed.\n");
@@ -315,6 +304,23 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
 
   free(flags);
 
+}
+
+int FC_FUNC_(f90_cl_device_has_extension, F90_CL_DEVICE_HAS_EXTENSION)
+     (cl_device_id * device, STR_F_TYPE extension_f STR_ARG1){
+  char * extension;
+  cl_int status;
+  char device_string[2048];
+  size_t len;
+  char buffer[5000];
+  int has_ext;
+
+  TO_C_STR1(extension_f, extension);
+
+  clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
+  has_ext = strstr(device_string, extension) != NULL;
+  free(extension);
+  return has_ext;
 }
 
 void FC_FUNC_(f90_cl_release_program, F90_CL_RELEASE_PROGRAM)
