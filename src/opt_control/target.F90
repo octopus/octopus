@@ -1026,7 +1026,7 @@ module opt_control_target_m
       do is = 1, psi%d%nspin
         call dmf_multipoles(gr%mesh, psi%rho(:, is), 1, multipole(:, is))
       end do
-      target%td_fitness(time) = sum(multipole(2, 1:psi%d%spin_channels))
+      target%td_fitness(time) = -sum(multipole(2, 1:psi%d%spin_channels))
       SAFE_DEALLOCATE_A(multipole)
 
     ! case oct_tg_density only active if combined with td current functional

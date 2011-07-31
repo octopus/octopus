@@ -195,6 +195,8 @@ module opt_control_propagation_m
       call v_ks_calc(sys%ks, hm, psi, time = i*td%dt)
       call total_energy(hm, sys%gr, psi, -1)
 
+      if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, psi)
+
       ! if td_target
       call target_tdcalc(target, gr, psi, i)
 
