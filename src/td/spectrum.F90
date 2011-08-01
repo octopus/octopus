@@ -1337,13 +1337,13 @@ contains
 
     if( hsa == minhsval ) then
       omega_min = aa
-      func_min = hsval
+      func_min = hsa
       POP_SUB(spectrum_hsfunction_min)
       return
     end if
     if( hsb == minhsval ) then
       omega_min = bb
-      func_min = hsval
+      func_min = hsb
       POP_SUB(spectrum_hsfunction_min)
       return
     end if
