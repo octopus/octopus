@@ -292,9 +292,9 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 4, op%buff_imax)
       call opencl_set_kernel_arg(kernel_operate, 5, buff_weights)
       call opencl_set_kernel_arg(kernel_operate, 6, fi%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 7, eff_size)
+      call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
       call opencl_set_kernel_arg(kernel_operate, 8, fo%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 9, eff_size)
+      call opencl_set_kernel_arg(kernel_operate, 9, log2(eff_size))
 
       bsize = opencl_kernel_workgroup_size(kernel_operate)
       pnri = pad(nri, bsize)
@@ -318,9 +318,9 @@ contains
         call opencl_set_kernel_arg(kernel_operate, 3, op%buff_map4)
         call opencl_set_kernel_arg(kernel_operate, 4, buff_weights)
         call opencl_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate, 6, eff_size)
+        call opencl_set_kernel_arg(kernel_operate, 6, log2(eff_size))
         call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate, 8, eff_size)
+        call opencl_set_kernel_arg(kernel_operate, 8, log2(eff_size))
 
         call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%n4, isize)/), (/eff_size, isize/))
       end if
@@ -332,9 +332,9 @@ contains
         call opencl_set_kernel_arg(kernel_operate_1, 3, op%buff_map1)
         call opencl_set_kernel_arg(kernel_operate_1, 4, buff_weights)
         call opencl_set_kernel_arg(kernel_operate_1, 5, fi%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate_1, 6, eff_size)
+        call opencl_set_kernel_arg(kernel_operate_1, 6, log2(eff_size))
         call opencl_set_kernel_arg(kernel_operate_1, 7, fo%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate_1, 8, eff_size)
+        call opencl_set_kernel_arg(kernel_operate_1, 8, log2(eff_size))
 
         call opencl_kernel_run(kernel_operate_1, (/eff_size, pad(op%n1, isize)/), (/eff_size, isize/))
 

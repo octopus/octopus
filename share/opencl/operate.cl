@@ -57,9 +57,9 @@ __kernel void operate(const int nn,
   for(int i = imin[l]; i < imaxl; i++){
     vectype a0 = (vectype) (0.0);
     for(int j = 0; j < nn; j++){
-      a0 += weights[j]*fi[ldfi*(i + ri[nn*l + j]) + ist];
+      a0 += weights[j]*fi[((i + ri[nn*l + j])<<ldfi) + ist];
     }
-    fo[ldfo*i + ist] = a0;
+    fo[(i<<ldfo) + ist] = a0;
   }
   
 }
@@ -85,13 +85,13 @@ __kernel void operate1(const int nn,
   vectype a1 = (vectype) (0.0);
 
   for(int j = 0; j < nn - 2 + 1; j+=2){
-    a0 += weights[j    ]*fi[ldfi*(ip + ri[ir + j]    ) + ist];
-    a1 += weights[j + 1]*fi[ldfi*(ip + ri[ir + j + 1]) + ist];
+    a0 += weights[j    ]*fi[((ip + ri[ir + j]    )<<ldfi) + ist];
+    a1 += weights[j + 1]*fi[((ip + ri[ir + j + 1])<<ldfi) + ist];
   }
 
-  if(nn & 1) a0 += weights[nn - 1]*fi[ldfi*(ip + ri[ir + nn - 1]) + ist];
+  if(nn & 1) a0 += weights[nn - 1]*fi[((ip + ri[ir + nn - 1])<<ldfi) + ist];
 
-  fo[ldfo*ip + ist] = a0 + a1;
+  fo[(ip<<ldfo) + ist] = a0 + a1;
 
 }
 
@@ -119,16 +119,16 @@ __kernel void operate4(const int nn,
   vectype a3 = (vectype) (0.0);
 
   for(int j = 0; j < nn; j++){
-    a0 += weights[j]*fi[ldfi*(ip + 0 + ri[ir + j]) + ist];
-    a1 += weights[j]*fi[ldfi*(ip + 1 + ri[ir + j]) + ist];
-    a2 += weights[j]*fi[ldfi*(ip + 2 + ri[ir + j]) + ist];
-    a3 += weights[j]*fi[ldfi*(ip + 3 + ri[ir + j]) + ist];
+    a0 += weights[j]*fi[((ip + 0 + ri[ir + j])<<ldfi) + ist];
+    a1 += weights[j]*fi[((ip + 1 + ri[ir + j])<<ldfi) + ist];
+    a2 += weights[j]*fi[((ip + 2 + ri[ir + j])<<ldfi) + ist];
+    a3 += weights[j]*fi[((ip + 3 + ri[ir + j])<<ldfi) + ist];
   }
 
-  fo[ldfo*(ip + 0) + ist] = a0;
-  fo[ldfo*(ip + 1) + ist] = a1;
-  fo[ldfo*(ip + 2) + ist] = a2;
-  fo[ldfo*(ip + 3) + ist] = a3;
+  fo[((ip + 0)<<ldfo) + ist] = a0;
+  fo[((ip + 1)<<ldfo) + ist] = a1;
+  fo[((ip + 2)<<ldfo) + ist] = a2;
+  fo[((ip + 3)<<ldfo) + ist] = a3;
 
 }
 
