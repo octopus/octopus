@@ -150,7 +150,6 @@ module nl_operator_m
 
 #ifdef HAVE_OPENCL
   type(c_ptr), public :: kernel_operate
-  type(c_ptr), public :: kernel_operate_1
 #endif
 
 contains
@@ -244,7 +243,6 @@ contains
         call opencl_create_kernel(kernel_operate, prog, "operate_map")
       case(OP_MAP_SPLIT)
         call opencl_create_kernel(kernel_operate, prog, "operate4")
-        call opencl_create_kernel(kernel_operate_1, prog, "operate1")
       case(OP_INVMAP)
         call opencl_create_kernel(kernel_operate, prog, "operate")
       end select

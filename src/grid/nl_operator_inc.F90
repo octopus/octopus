@@ -271,14 +271,14 @@ contains
     ASSERT(points_ == OP_ALL)
 
     call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size*vecsize_opencl)
-    
+
     SAFE_ALLOCATE(vecw(1:vecsize_opencl, 1:op%stencil%size))
     do ist = 1, op%stencil%size
       vecw(1:vecsize_opencl, ist) = wre(ist)
     end do
     call opencl_write_buffer(buff_weights, op%stencil%size*vecsize_opencl, vecw)
     SAFE_DEALLOCATE_A(vecw)
-    
+
     ASSERT(fi%pack%size_real(1) == fo%pack%size_real(1))
 
     eff_size = fi%pack%size_real(1)/vecsize_opencl
@@ -298,7 +298,7 @@ contains
 
       bsize = opencl_kernel_workgroup_size(kernel_operate)
       pnri = pad(nri, bsize)
-      
+
       call opencl_kernel_run(kernel_operate, (/eff_size, pnri/), (/eff_size, bsize/eff_size/))
 
     case(OP_MAP_SPLIT)
@@ -311,34 +311,19 @@ contains
         call messages_fatal(1)
       end if
 
-      if(op%n4 > 0) then
-        call opencl_set_kernel_arg(kernel_operate, 0, op%stencil%size)
-        call opencl_set_kernel_arg(kernel_operate, 1, op%n4)
-        call opencl_set_kernel_arg(kernel_operate, 2, op%buff_ri)
-        call opencl_set_kernel_arg(kernel_operate, 3, op%buff_map4)
-        call opencl_set_kernel_arg(kernel_operate, 4, buff_weights)
-        call opencl_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate, 6, log2(eff_size))
-        call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate, 8, log2(eff_size))
+      call opencl_set_kernel_arg(kernel_operate, 0, op%stencil%size)
+      call opencl_set_kernel_arg(kernel_operate, 1, op%n1)
+      call opencl_set_kernel_arg(kernel_operate, 2, op%n4)
+      call opencl_set_kernel_arg(kernel_operate, 3, op%buff_ri)
+      call opencl_set_kernel_arg(kernel_operate, 4, op%buff_map1)
+      call opencl_set_kernel_arg(kernel_operate, 5, op%buff_map4)
+      call opencl_set_kernel_arg(kernel_operate, 6, buff_weights)
+      call opencl_set_kernel_arg(kernel_operate, 7, fi%pack%buffer)
+      call opencl_set_kernel_arg(kernel_operate, 8, log2(eff_size))
+      call opencl_set_kernel_arg(kernel_operate, 9, fo%pack%buffer)
+      call opencl_set_kernel_arg(kernel_operate, 10, log2(eff_size))
 
-        call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%n4, isize)/), (/eff_size, isize/))
-      end if
-
-      if(op%n1 > 0) then
-        call opencl_set_kernel_arg(kernel_operate_1, 0, op%stencil%size)
-        call opencl_set_kernel_arg(kernel_operate_1, 1, op%n1)
-        call opencl_set_kernel_arg(kernel_operate_1, 2, op%buff_ri)
-        call opencl_set_kernel_arg(kernel_operate_1, 3, op%buff_map1)
-        call opencl_set_kernel_arg(kernel_operate_1, 4, buff_weights)
-        call opencl_set_kernel_arg(kernel_operate_1, 5, fi%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate_1, 6, log2(eff_size))
-        call opencl_set_kernel_arg(kernel_operate_1, 7, fo%pack%buffer)
-        call opencl_set_kernel_arg(kernel_operate_1, 8, log2(eff_size))
-
-        call opencl_kernel_run(kernel_operate_1, (/eff_size, pad(op%n1, isize)/), (/eff_size, isize/))
-
-      end if
+      call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%n4 + op%n1, isize)/), (/eff_size, isize/))
 
     case(OP_MAP)
       call opencl_set_kernel_arg(kernel_operate, 0, op%stencil%size)

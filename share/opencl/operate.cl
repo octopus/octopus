@@ -64,42 +64,12 @@ __kernel void operate(const int nn,
   
 }
 
-__kernel void operate1(const int nn,
-		       const int n1,
-		       __global int const * restrict ri,
-		       __global int const * restrict map,
-		       __constant vectype * restrict weights,
-		       __global vectype const * restrict fi, const int ldfi,
-		       __global vectype * restrict fo, const int ldfo){
-
-  const int ist = get_global_id(0);
-  const int nst = get_global_size(0);
-  const int k = get_global_id(1);
-
-  if(k >= n1) return;
-
-  const int ip = map[k*2    ];
-  const int ir = map[k*2 + 1];
-
-  vectype a0 = (vectype) (0.0);
-  vectype a1 = (vectype) (0.0);
-
-  for(int j = 0; j < nn - 2 + 1; j+=2){
-    a0 += weights[j    ]*fi[((ip + ri[ir + j]    )<<ldfi) + ist];
-    a1 += weights[j + 1]*fi[((ip + ri[ir + j + 1])<<ldfi) + ist];
-  }
-
-  if(nn & 1) a0 += weights[nn - 1]*fi[((ip + ri[ir + nn - 1])<<ldfi) + ist];
-
-  fo[(ip<<ldfo) + ist] = a0 + a1;
-
-}
-
-
 __kernel void operate4(const int nn,
 		       const int n1,
+		       const int n4,
 		       __global int const * restrict ri,
-		       __global int const * restrict map,
+		       __global int const * restrict map1,
+		       __global int const * restrict map4,
 		       __constant vectype * restrict weights,
 		       __global vectype const * restrict fi, const int ldfi,
 		       __global vectype * restrict fo, const int ldfo){
@@ -108,28 +78,45 @@ __kernel void operate4(const int nn,
   const int nst = get_global_size(0);
   const int k = get_global_id(1);
 
-  if(k >= n1) return;
+  if(k < n1) {
+    
+    const int2 idx = vload2(k, map1);
+    // idx.s0 is the point
+    // idx.s1 is the map position
 
-  const int ip = map[k*2    ];
-  const int ir = map[k*2 + 1];
-
-  vectype a0 = (vectype) (0.0);
-  vectype a1 = (vectype) (0.0);
-  vectype a2 = (vectype) (0.0);
-  vectype a3 = (vectype) (0.0);
-
-  for(int j = 0; j < nn; j++){
-    a0 += weights[j]*fi[((ip + 0 + ri[ir + j])<<ldfi) + ist];
-    a1 += weights[j]*fi[((ip + 1 + ri[ir + j])<<ldfi) + ist];
-    a2 += weights[j]*fi[((ip + 2 + ri[ir + j])<<ldfi) + ist];
-    a3 += weights[j]*fi[((ip + 3 + ri[ir + j])<<ldfi) + ist];
+    vectype a0 = (vectype) (0.0);
+    vectype a1 = (vectype) (0.0);
+    
+    for(int j = 0; j < nn - 2 + 1; j+=2){
+      a0 += weights[j    ]*fi[((idx.s0 + ri[idx.s1 + j]    )<<ldfi) + ist];
+      a1 += weights[j + 1]*fi[((idx.s0 + ri[idx.s1 + j + 1])<<ldfi) + ist];
+    }
+    
+    if(nn & 1) a0 += weights[nn - 1]*fi[((idx.s0 + ri[idx.s1 + nn - 1])<<ldfi) + ist];
+    
+    fo[(idx.s0<<ldfo) + ist] = a0 + a1;
+    
+  } else if (k - n1 < n4) {
+    
+    const int2 idx = vload2(k - n1, map4);
+    
+    vectype a0 = (vectype) (0.0);
+    vectype a1 = (vectype) (0.0);
+    vectype a2 = (vectype) (0.0);
+    vectype a3 = (vectype) (0.0);
+    
+    for(int j = 0; j < nn; j++){
+      a0 += weights[j]*fi[((idx.s0 + 0 + ri[idx.s1 + j])<<ldfi) + ist];
+      a1 += weights[j]*fi[((idx.s0 + 1 + ri[idx.s1 + j])<<ldfi) + ist];
+      a2 += weights[j]*fi[((idx.s0 + 2 + ri[idx.s1 + j])<<ldfi) + ist];
+      a3 += weights[j]*fi[((idx.s0 + 3 + ri[idx.s1 + j])<<ldfi) + ist];
+    }
+    
+    fo[((idx.s0 + 0)<<ldfo) + ist] = a0;
+    fo[((idx.s0 + 1)<<ldfo) + ist] = a1;
+    fo[((idx.s0 + 2)<<ldfo) + ist] = a2;
+    fo[((idx.s0 + 3)<<ldfo) + ist] = a3;
   }
-
-  fo[((ip + 0)<<ldfo) + ist] = a0;
-  fo[((ip + 1)<<ldfo) + ist] = a1;
-  fo[((ip + 2)<<ldfo) + ist] = a2;
-  fo[((ip + 3)<<ldfo) + ist] = a3;
-
 }
 
 __kernel void operate_map(const int nn,
