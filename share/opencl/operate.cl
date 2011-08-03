@@ -40,11 +40,11 @@ typedef double vectype;
 
 __kernel void operate(const int nn,
 		       const int nri,
-		       __global const int * ri,
-		       __global const int * imin,
-		       __global const int * imax,
-		       __constant vectype * weights,
-		       __global const vectype * fi, const int ldfi,
+		       __global int const * restrict ri,
+		       __global int const * imin,
+		       __global int const * imax,
+		       __constant vectype * restrict weights,
+		       __global vectype const * restrict fi, const int ldfi,
 		       __global vectype * fo, const int ldfo){
 
   const int ist = get_global_id(0);
@@ -66,11 +66,11 @@ __kernel void operate(const int nn,
 
 __kernel void operate1(const int nn,
 		       const int n1,
-		       __global const int * ri,
-		       __global const int * map,
-		       __constant vectype * weights,
-		       __global const vectype * fi, const int ldfi,
-		       __global vectype * fo, const int ldfo){
+		       __global int const * restrict ri,
+		       __global int const * restrict map,
+		       __constant vectype * restrict weights,
+		       __global vectype const * restrict fi, const int ldfi,
+		       __global vectype * restrict fo, const int ldfo){
 
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
@@ -98,11 +98,11 @@ __kernel void operate1(const int nn,
 
 __kernel void operate4(const int nn,
 		       const int n1,
-		       __global const int * ri,
-		       __global const int * map,
-		       __constant vectype * weights,
-		       __global const vectype * fi, const int ldfi,
-		       __global vectype * fo, const int ldfo){
+		       __global int const * restrict ri,
+		       __global int const * restrict map,
+		       __constant vectype * restrict weights,
+		       __global vectype const * restrict fi, const int ldfi,
+		       __global vectype * restrict fo, const int ldfo){
 
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
@@ -134,11 +134,11 @@ __kernel void operate4(const int nn,
 
 __kernel void operate_map(const int nn,
 		 	  const int np,
-			  __global const int * ri,
-			  __global const int * map,
-			  __constant vectype * weights,
-			  __global const vectype * fi, const int ldfi,
-			  __global vectype * fo, const int ldfo,
+			  __global int const * restrict ri,
+			  __global int const * restrict map,
+			  __constant vectype * restrict weights,
+			  __global vectype const * restrict fi, const int ldfi,
+			  __global vectype * restrict fo, const int ldfo,
 			  __local int * indexl){
 
   const int ist = get_global_id(0);
