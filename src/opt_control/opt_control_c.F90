@@ -79,7 +79,6 @@
       call controlfunction_copy(par_new, par_)
       call f_striter(sys_, hm_, td_, par_new, j1)
       f = - j1 - controlfunction_j2(par_)
-      if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
       call controlfunction_set_rep(par_new)
       SAFE_ALLOCATE(dff(1:n))
@@ -131,7 +130,6 @@
       call propagate_forward(sys_, hm_, td_, par_, target, psi)
       f = - target_j1(target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
       call states_end(psi)
-      if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
     end if
 
@@ -197,7 +195,6 @@
       call states_copy(psi, initial_st)
       call propagate_forward(sys_, hm_, td_, par_, target, psi)
       f = - target_j1(target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
-      if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
       call states_end(psi)
     else
@@ -205,7 +202,6 @@
       call f_striter(sys_, hm_, td_, par_new, j1)
       delta = controlfunction_diff(par_, par_new)
       f = - oct%eta * j1 + oct%delta * delta
-      if(oct%dump_intermediate) call iterator_write(iterator, par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_, delta)
       call controlfunction_end(par_new)
     end if

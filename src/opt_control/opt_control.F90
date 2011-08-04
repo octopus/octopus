@@ -228,7 +228,6 @@ contains
       ctr_loop: do
         call controlfunction_copy(par_prev, par)
         call f_striter(sys, hm, td, par, j1)
-        if(oct%dump_intermediate) call iterator_write(iterator, par_prev)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
@@ -258,7 +257,6 @@ contains
       ctr_loop: do
         call controlfunction_copy(par_prev, par)
         call f_iter(sys, hm, td, psi, par, prop_psi, prop_chi, j1)
-        if(oct%dump_intermediate) call iterator_write(iterator, par)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if( oct%use_mixing .and. (oct_iterator_current(iterator) > 1) ) then
@@ -296,7 +294,6 @@ contains
       ctr_loop: do
         call controlfunction_copy(par_prev, par)
         call f_wg05(sys, hm, td, psi, par, prop_psi, prop_chi, j1)
-        if(oct%dump_intermediate) call iterator_write(iterator, par)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
@@ -327,7 +324,6 @@ contains
       call controlfunction_copy(par_prev, par)
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
       j1 = target_j1(target, sys%gr, psi)
-      if(oct%dump_intermediate) call iterator_write(iterator, par)
       stop_loop = iteration_manager(j1, par, par_prev, iterator)
       call controlfunction_end(par_prev)
       if(clean_stop() .or. stop_loop) then
@@ -343,7 +339,6 @@ contains
         call controlfunction_copy(par_prev, par)
         call f_zbr98(sys, hm, td, psi, prop_psi, prop_chi, par)
         j1 = target_j1(target, sys%gr, psi)
-        if(oct%dump_intermediate) call iterator_write(iterator, par)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop() .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
@@ -377,7 +372,6 @@ contains
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi)
       f = - target_j1(target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
-      if(oct%dump_intermediate) call iterator_write(iterator, par)
       call iteration_manager_direct(-f, par, iterator, sys)
       call states_end(psi)
       if(oct_iterator_maxiter(iterator).eq.0) then
@@ -442,7 +436,6 @@ contains
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi)
       f = - target_j1(target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
-      if(oct%dump_intermediate) call iterator_write(iterator, par)
       call iteration_manager_direct(-f, par, iterator, sys)
       call states_end(psi)
       if(oct_iterator_maxiter(iterator).eq.0) then
@@ -510,7 +503,6 @@ contains
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi)
       f = - target_j1(target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
-      if(oct%dump_intermediate) call iterator_write(iterator, par)
       call iteration_manager_direct(-f, par, iterator, sys)      
       call states_end(psi)
       if(oct_iterator_maxiter(iterator).eq.0) then

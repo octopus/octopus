@@ -69,7 +69,6 @@ module opt_control_global_m
     logical :: use_mixing
     logical :: oct_double_check
     FLOAT   :: check_gradient
-    logical :: dump_intermediate
     integer :: number_checkpoints
     logical :: random_initial_guess
   end type oct_t
@@ -267,19 +266,6 @@ module opt_control_global_m
     !%End
     call parse_float(datasets_check('OCTDirectStep'), CNST(0.25), oct%direct_step)
     call messages_print_var_value(stdout, "OCTDirectStep", oct%direct_step)
-
-    !%Variable OCTDumpIntermediate
-    !%Type logical
-    !%Section Calculation Modes::Optimal Control
-    !%Default true
-    !%Description 
-    !% Writes to disk some data during the OCT algorithm at intermediate steps.
-    !% This is rather technical and it should be considered only for debugging
-    !% purposes. Nevertheless, since the whole OCT infrastructure is at a very
-    !% preliminary stage of development, it is set to true by default.
-    !%End
-    call parse_logical(datasets_check('OCTDumpIntermediate'), .true., oct%dump_intermediate)
-    call messages_print_var_value(stdout, "OCTDumpIntermediate", oct%dump_intermediate)
 
     !%Variable OCTNumberCheckPoints
     !%Type integer

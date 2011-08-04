@@ -41,7 +41,6 @@ module opt_control_iter_m
             oct_iterator_end,         &
             iteration_manager,        &
             iteration_manager_direct, &
-            iterator_write,           &
             oct_iterator_bestpar,     &
             oct_iterator_current,     &
             oct_iterator_maxiter,     &
@@ -63,6 +62,7 @@ module opt_control_iter_m
     type(controlfunction_t), pointer :: best_par
     integer            :: convergence_iunit
     integer            :: velocities_iunit
+    logical            :: dump_intermediate
   end type oct_iterator_t
 
 contains
@@ -113,6 +113,17 @@ contains
       call messages_fatal(1)
     end if
     if(iterator%ctr_iter_max < 0) iterator%ctr_iter_max = huge(iterator%ctr_iter_max)
+
+    !%Variable OCTDumpIntermediate
+    !%Type logical
+    !%Section Calculation Modes::Optimal Control
+    !%Default true
+    !%Description 
+    !% Writes to disk the laser pulse data during the OCT algorithm at intermediate steps.
+    !% These are files called "opt_control/laser.xxxx", where "xxxx" is the iteration number.
+    !%End
+    call parse_logical(datasets_check('OCTDumpIntermediate'), .false., iterator%dump_intermediate)
+    call messages_print_var_value(stdout, "OCTDumpIntermediate", iterator%dump_intermediate)
 
     iterator%ctr_iter = 0
     iterator%ctr_iter_main = 0
@@ -175,7 +186,9 @@ contains
     logical :: bestj1
 
     PUSH_SUB(iteration_manager)
-    
+
+    if(iterator%dump_intermediate) call iterator_write(iterator, par)
+
     stoploop = .false.
 
     fluence = controlfunction_fluence(par)
@@ -222,6 +235,7 @@ contains
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
       call controlfunction_end(iterator%best_par)
       call controlfunction_copy(iterator%best_par, par)
+      if(.not.iterator%dump_intermediate) call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par)
     end if
 
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
@@ -244,6 +258,8 @@ contains
 
     FLOAT :: j1, j2, fluence, delta
     PUSH_SUB(iteration_manager_direct)
+
+    if(iterator%dump_intermediate) call iterator_write(iterator, par)
 
     fluence = controlfunction_fluence(par)
     j2 = controlfunction_j2(par)
@@ -282,6 +298,7 @@ contains
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
       call controlfunction_end(iterator%best_par)
       call controlfunction_copy(iterator%best_par, par)
+      if(.not.iterator%dump_intermediate) call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par)
     end if
 
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
