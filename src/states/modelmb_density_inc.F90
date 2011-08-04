@@ -54,7 +54,15 @@ subroutine X(modelmb_density_calculate)(ikeeppart, mb_1part, nparticles_dens, &
   SAFE_ALLOCATE(ix_1part(1:mb_1part%ndim1part))
   xloop: do imesh = 1, mesh%np
 ! go from local to global point index
-     ip_global = mesh%vp%local(imesh + mesh%vp%xlocal(mesh%vp%partno) - 1)
+
+  if(mesh%parallel_in_domains) then
+#if defined(HAVE_MPI)
+    ip_global = mesh%vp%local(imesh + mesh%vp%xlocal(mesh%vp%partno) - 1)
+#endif
+  else
+    ip_global = imesh
+  end if
+
 
 ! find coordinates of present point in full MAX_DIM space
      call index_to_coords(mesh%idx, mesh%sb%dim, ip_global, ix)
