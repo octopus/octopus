@@ -97,7 +97,7 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, st, time, gdensity, force
 
   end do
 
-  if(geo%atoms_dist%parallel) call X(forces_gather)(geo, force)
+  if(geo%atoms_dist%parallel .and. geo%atoms_dist%nlocal > 0) call X(forces_gather)(geo, force)
 
   SAFE_DEALLOCATE_A(vloc)
   SAFE_DEALLOCATE_P(zvloc)
