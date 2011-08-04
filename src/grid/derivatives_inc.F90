@@ -546,25 +546,21 @@ subroutine X(derivatives_test)(this)
   R_TYPE :: aa, bb, cc
   integer :: ip, idir, ist
   type(batch_t) :: ffb, opffb
-  integer :: blocksize
+  integer :: blocksize, max_blocksize, itime, times
   logical :: packstates
+  real(8) :: stime, etime
+  character(len=7) :: type
 
-  call parse_integer(datasets_check('StatesBlockSize'), 4, blocksize)
   call parse_logical(datasets_check('StatesPack'), .true., packstates)
-
-  write(message(1), '(a,i4)') '   Blocksize = ', blocksize
-  message(2) = ''
-  call messages_info(2)
-
-#ifdef R_TREAL
-  write(message(1), '(a)') '      Real functions'
-#else
-  write(message(1), '(a)') '      Complex functions'
-#endif
-  call messages_info(1)
 
   SAFE_ALLOCATE(ff(1:this%mesh%np_part))
   SAFE_ALLOCATE(opff(1:this%mesh%np, 1:this%mesh%sb%dim))
+
+#ifdef R_TREAL
+  type = 'real'
+#else
+  type = 'complex'
+#endif
 
   ! Note: here we need to use a constant function or anything that
   ! is constant at the borders, since we assume that all boundary
@@ -583,39 +579,64 @@ subroutine X(derivatives_test)(this)
 
   forall(ip = 1:this%mesh%np_part) ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, :)**2)) + cc
 
-  call batch_init(ffb, 1, blocksize)
-  call X(batch_new)(ffb, 1, blocksize, this%mesh%np_part)
+  call parse_integer(datasets_check('TestMinBlockSize'), 1, blocksize)
+  call parse_integer(datasets_check('TestMaxBlockSize'), 128, max_blocksize)
+  call parse_integer(datasets_check('TestRepetitions'), 10, times)
 
-  call batch_init(opffb, 1, blocksize)
-  call X(batch_new)(opffb, 1, blocksize, this%mesh%np)
+  do 
 
-  forall(ist = 1:blocksize, ip = 1:this%mesh%np_part)
-    ffb%states_linear(ist)%X(psi)(ip) = ff(ip)
-  end forall
+    call batch_init(ffb, 1, blocksize)
+    call X(batch_new)(ffb, 1, blocksize, this%mesh%np_part)
 
-  if(packstates) then
-    call batch_pack(ffb)
-    call batch_pack(opffb, copy = .false.)
-  end if
+    call batch_init(opffb, 1, blocksize)
+    call X(batch_new)(opffb, 1, blocksize, this%mesh%np)
 
-  call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false.)
+    forall(ist = 1:blocksize, ip = 1:this%mesh%np_part)
+      ffb%states_linear(ist)%X(psi)(ip) = ff(ip)
+    end forall
 
-  if(packstates) then
-    call batch_unpack(ffb, copy = .false.)
-    call batch_unpack(opffb)
-  end if
+    if(packstates) then
+      call batch_pack(ffb)
+      call batch_pack(opffb, copy = .false.)
+    end if
 
-  forall(ip = 1:this%mesh%np) 
-    opffb%states_linear(blocksize)%X(psi)(ip) = opffb%states_linear(blocksize)%X(psi)(ip) - &
-      (M_FOUR*aa**2*bb*sum(this%mesh%x(ip, :)**2)*exp(-aa*sum(this%mesh%x(ip, :)**2)) &
-      - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
-  end forall
+    stime = loct_clock()
+    do itime = 1, times
+      call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false.)
+    end do
+    etime = (loct_clock() - stime)/dble(times)
 
-  write(message(1), '(a, es16.10)') '      Error in the Laplacian = ', X(mf_nrm2)(this%mesh, opffb%states_linear(blocksize)%X(psi))
-  call messages_info(1)
+    if(packstates) then
+      call batch_unpack(ffb, copy = .false.)
+      call batch_unpack(opffb)
+    end if
 
-  call batch_end(ffb)
-  call batch_end(opffb)
+    forall(ip = 1:this%mesh%np) 
+      opffb%states_linear(blocksize)%X(psi)(ip) = opffb%states_linear(blocksize)%X(psi)(ip) - &
+        (M_FOUR*aa**2*bb*sum(this%mesh%x(ip, :)**2)*exp(-aa*sum(this%mesh%x(ip, :)**2)) &
+        - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
+    end forall
+
+    write(message(1), '(3a,i3,a,es16.10,a,f8.3)') &
+      'Laplacian ', trim(type),  &
+      ' bsize = ', blocksize,    &
+      ' , error = ', X(mf_nrm2)(this%mesh, opffb%states_linear(blocksize)%X(psi)), &
+      ' , gflops = ',  &
+#ifdef R_TREAL
+      blocksize*this%mesh%np*CNST(2.0)*this%lapl%stencil%size/(etime*CNST(1.0e9))
+#else
+      blocksize*this%mesh%np*CNST(4.0)*this%lapl%stencil%size/(etime*CNST(1.0e9))
+#endif
+
+    call messages_info(1)
+
+    call batch_end(ffb)
+    call batch_end(opffb)
+
+    blocksize = 2*blocksize
+    if(blocksize > max_blocksize) exit
+
+  end do
 
   call X(derivatives_grad)(this, ff, opff, set_bc = .false.)
 
@@ -623,11 +644,19 @@ subroutine X(derivatives_test)(this)
     opff(ip, idir) = opff(ip, idir) - (-M_TWO*aa*bb*this%mesh%x(ip, idir)*exp(-aa*sum(this%mesh%x(ip, :)**2)))
   end forall
 
-  write(message(1), '(a, es16.10)') '      Error in the gradient  = ', X(mf_nrm2)(this%mesh, this%mesh%sb%dim, opff)
-  message(2) = ''
-  call messages_info(2)
+  message(1) = ''
+  call messages_info(1)
+
+
+  write(message(1), '(3a, es16.10)') 'Gradient ', trim(type),  &
+    ' err = ', X(mf_nrm2)(this%mesh, this%mesh%sb%dim, opff)
+  call messages_info(1)
+
+  message(1) = ''
+  call messages_info(1)
 
   SAFE_DEALLOCATE_A(ff)
+  SAFE_DEALLOCATE_A(opff)
 
 end subroutine X(derivatives_test)
 

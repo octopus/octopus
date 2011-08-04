@@ -8,3 +8,5 @@ Dimensions = 2
 BoxShape = sphere
 Radius  = 20.0
 Spacing = 0.1
+
+TestRepetitions = 1

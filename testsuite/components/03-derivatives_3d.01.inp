@@ -9,3 +9,5 @@ Radius  = 15.0
 Spacing = 0.4
 
 StatesBlockSize = 2
+
+TestRepetitions = 1

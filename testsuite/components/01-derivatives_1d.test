@@ -8,16 +8,48 @@ Enabled    : Yes
 
 Precision : 3.0e-9
 Input: 01-derivatives_1d.01.inp
-match ; Real Laplacian     ; GREP(out, 'Real functions', 31, 1) ; 2.7801274971E-09
-match ; Complex Laplacian  ; GREP(out, 'Complex functions', 31, 1) ; 3.4710603750E-09
+match ; Real Laplacian (blocksize =   1); GREP(out, 'Laplacian real bsize =   1', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =   2); GREP(out, 'Laplacian real bsize =   2', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =   4); GREP(out, 'Laplacian real bsize =   4', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =   8); GREP(out, 'Laplacian real bsize =   8', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =  16); GREP(out, 'Laplacian real bsize =  16', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =  32); GREP(out, 'Laplacian real bsize =  32', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =  64); GREP(out, 'Laplacian real bsize =  64', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize = 128); GREP(out, 'Laplacian real bsize = 128', 37, 0) ; 2.7801274971E-09
+
+match ; Complex Laplacian (blocksize =   1); GREP(out, 'Laplacian complex bsize =   1', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =   2); GREP(out, 'Laplacian complex bsize =   2', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =   4); GREP(out, 'Laplacian complex bsize =   4', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =   8); GREP(out, 'Laplacian complex bsize =   8', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =  16); GREP(out, 'Laplacian complex bsize =  16', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =  32); GREP(out, 'Laplacian complex bsize =  32', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =  64); GREP(out, 'Laplacian complex bsize =  64', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize = 128); GREP(out, 'Laplacian complex bsize = 128', 40, 0) ; 3.4710603750E-09
+
 Precision : 3.0e-11
-match ; Real gradient      ; GREP(out, 'Real functions', 31, 2) ; 1.1709414428E-11
-match ; Complex gradient   ; GREP(out, 'Complex functions', 31, 2) ; 1.4055457659E-11
+match ; Real gradient; GREP(out, 'Gradient real', 20, 0) ; 1.1709414428E-11
+match ; Complex gradient; GREP(out, 'Gradient complex', 23, 0) ; 1.4055457659E-11
 
 Precision : 3.0e-9
 Input: 01-derivatives_1d.02-fortran.inp
-match ; Real Laplacian     ; GREP(out, 'Real functions', 31, 1) ; 2.7801274971E-09
-match ; Complex Laplacian  ; GREP(out, 'Complex functions', 31, 1) ; 3.4710603750E-09
+match ; Real Laplacian (blocksize =   1); GREP(out, 'Laplacian real bsize =   1', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =   2); GREP(out, 'Laplacian real bsize =   2', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =   4); GREP(out, 'Laplacian real bsize =   4', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =   8); GREP(out, 'Laplacian real bsize =   8', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =  16); GREP(out, 'Laplacian real bsize =  16', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =  32); GREP(out, 'Laplacian real bsize =  32', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize =  64); GREP(out, 'Laplacian real bsize =  64', 37, 0) ; 2.7801274971E-09
+match ; Real Laplacian (blocksize = 128); GREP(out, 'Laplacian real bsize = 128', 37, 0) ; 2.7801274971E-09
+
+match ; Complex Laplacian (blocksize =   1); GREP(out, 'Laplacian complex bsize =   1', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =   2); GREP(out, 'Laplacian complex bsize =   2', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =   4); GREP(out, 'Laplacian complex bsize =   4', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =   8); GREP(out, 'Laplacian complex bsize =   8', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =  16); GREP(out, 'Laplacian complex bsize =  16', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =  32); GREP(out, 'Laplacian complex bsize =  32', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize =  64); GREP(out, 'Laplacian complex bsize =  64', 40, 0) ; 3.4710603750E-09
+match ; Complex Laplacian (blocksize = 128); GREP(out, 'Laplacian complex bsize = 128', 40, 0) ; 3.4710603750E-09
+
 Precision : 3.0e-11
-match ; Real gradient      ; GREP(out, 'Real functions', 31, 2) ; 1.1709414428E-11
-match ; Complex gradient   ; GREP(out, 'Complex functions', 31, 2) ; 1.4055457659E-11
+match ; Real gradient; GREP(out, 'Gradient real', 20, 0) ; 1.1709414428E-11
+match ; Complex gradient; GREP(out, 'Gradient complex', 23, 0) ; 1.4055457659E-11

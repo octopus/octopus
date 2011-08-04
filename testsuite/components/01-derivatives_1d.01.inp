@@ -9,3 +9,4 @@ BoxShape = sphere
 Radius  = 100.0
 Spacing = 0.01
 
+TestRepetitions = 1

@@ -14,3 +14,4 @@ OperateComplex = fortran
 
 DisableOpencl = yes
 
+TestRepetitions = 1

@@ -8,8 +8,26 @@ Enabled    : Yes
 
 Precision : 3.0e-3
 Input: 03-derivatives_3d.01.inp
-match ; Real Laplacian     ; GREP(out, 'Real functions', 31, 1) ; 1.1962559177E-03
-match ; Complex Laplacian  ; GREP(out, 'Complex functions', 31, 1) ; 1.2044354237E-03
+
+match ; Real Laplacian (blocksize =   1); GREP(out, 'Laplacian real bsize =   1', 37, 0) ; 1.1962559177E-03
+match ; Real Laplacian (blocksize =   2); GREP(out, 'Laplacian real bsize =   2', 37, 0) ; 1.1962559177E-03
+match ; Real Laplacian (blocksize =   4); GREP(out, 'Laplacian real bsize =   4', 37, 0) ; 1.1962559177E-03
+match ; Real Laplacian (blocksize =   8); GREP(out, 'Laplacian real bsize =   8', 37, 0) ; 1.1962559177E-03
+match ; Real Laplacian (blocksize =  16); GREP(out, 'Laplacian real bsize =  16', 37, 0) ; 1.1962559177E-03
+match ; Real Laplacian (blocksize =  32); GREP(out, 'Laplacian real bsize =  32', 37, 0) ; 1.1962559177E-03
+match ; Real Laplacian (blocksize =  64); GREP(out, 'Laplacian real bsize =  64', 37, 0) ; 1.1962559177E-03
+match ; Real Laplacian (blocksize = 128); GREP(out, 'Laplacian real bsize = 128', 37, 0) ; 1.1962559177E-03
+
+match ; Complex Laplacian (blocksize =   1); GREP(out, 'Laplacian complex bsize =   1', 40, 0) ; 1.2044354237E-03
+match ; Complex Laplacian (blocksize =   2); GREP(out, 'Laplacian complex bsize =   2', 40, 0) ; 1.2044354237E-03
+match ; Complex Laplacian (blocksize =   4); GREP(out, 'Laplacian complex bsize =   4', 40, 0) ; 1.2044354237E-03
+match ; Complex Laplacian (blocksize =   8); GREP(out, 'Laplacian complex bsize =   8', 40, 0) ; 1.2044354237E-03
+match ; Complex Laplacian (blocksize =  16); GREP(out, 'Laplacian complex bsize =  16', 40, 0) ; 1.2044354237E-03
+match ; Complex Laplacian (blocksize =  32); GREP(out, 'Laplacian complex bsize =  32', 40, 0) ; 1.2044354237E-03
+match ; Complex Laplacian (blocksize =  64); GREP(out, 'Laplacian complex bsize =  64', 40, 0) ; 1.2044354237E-03
+match ; Complex Laplacian (blocksize = 128); GREP(out, 'Laplacian complex bsize = 128', 40, 0) ; 1.2044354237E-03
+
 Precision : 3.0e-4
-match ; Real gradient      ; GREP(out, 'Real functions', 31, 2) ; 1.6181665936E-04
-match ; Complex gradient   ; GREP(out, 'Complex functions', 31, 2) ; 1.6297563661E-04
+
+match ; Real gradient; GREP(out, 'Gradient real', 20, 0) ; 1.6181665936E-04
+match ; Complex gradient; GREP(out, 'Gradient complex', 23, 0) ; 1.6297563661E-04
