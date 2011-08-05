@@ -101,7 +101,7 @@ module opencl_m
 #include "opencl_iface_inc.F90"
 
   interface opencl_create_buffer
-    module procedure opencl_create_buffer_4, opencl_create_buffer_8
+    module procedure opencl_create_buffer_4
   end interface
 
   interface opencl_write_buffer
@@ -338,30 +338,6 @@ module opencl_m
 
     ! ------------------------------------------
 
-    subroutine opencl_create_buffer_8(this, flags, type, size)
-      type(opencl_mem_t),     intent(inout) :: this
-      integer,                intent(in)    :: flags
-      type(type_t),           intent(in)    :: type
-      integer(SIZEOF_SIZE_T), intent(in)    :: size
-      
-      integer(SIZEOF_SIZE_T) :: fsize
-      integer :: ierr
-
-      PUSH_SUB(opencl_create_buffer_8)
-
-      this%type = type
-      this%size = size
-
-      fsize = size*types_get_size(type)
-
-      call f90_cl_create_buffer(this%mem, opencl%context, flags, fsize, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
-
-      POP_SUB(opencl_create_buffer_8)
-    end subroutine opencl_create_buffer_8
-
-    ! ------------------------------------------
-
     subroutine opencl_release_buffer(this)
       type(opencl_mem_t), intent(inout) :: this
 
@@ -390,7 +366,7 @@ module opencl_m
 
     ! -----------------------------------------
 
-    integer(SIZEOF_SIZE_T) function opencl_padded_size(nn) result(psize)
+    integer function opencl_padded_size(nn) result(psize)
       integer,        intent(in) :: nn
 
       integer :: modnn, bsize
