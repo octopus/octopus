@@ -272,7 +272,7 @@ contains
     subroutine unify_vector_potentials()
       integer :: idir, ip
 
-      PUSH_SUB(hamiltonian_base_update.unify_vector_potentials)
+      !!P USH_SUB(hamiltonian_base_update.unify_vector_potentials)
       
       ! copy the uniform vector potential onto the non-uniform one
       forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
@@ -282,7 +282,7 @@ contains
       
       ! and deallocate
       SAFE_DEALLOCATE_P(this%uniform_vector_potential)
-      POP_SUB(hamiltonian_base_update.unify_vector_potentials)      
+      !!P OP_SUB(hamiltonian_base_update.unify_vector_potentials)      
     end subroutine unify_vector_potentials
 
   end subroutine hamiltonian_base_update

@@ -79,9 +79,9 @@ module mesh_m
   !! - x, vol_pp
   !! These four are defined for all the points the node is responsible for.
   type mesh_t
-    type(simul_box_t),   pointer :: sb
-    type(curvilinear_t), pointer :: cv
-    type(index_t)                :: idx
+    type(simul_box_t),   pointer :: sb  !< simulation box
+    type(curvilinear_t), pointer :: cv  !< DOCUMENTATION NEEDED
+    type(index_t)                :: idx !< DOCUMENTATION NEEDED
     logical :: use_curvilinear
     
     FLOAT :: spacing(MAX_DIM)         !< the (constant) spacing between the points

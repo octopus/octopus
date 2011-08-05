@@ -21,12 +21,13 @@ subroutine X(cube_function_alloc_FS)(cf)
   type(cube_function_t), intent(inout) :: cf
 
   PUSH_SUB(X(cube_function_alloc_FS))
+  !Safe memory if PFFT is used
+  if (cf%fft_library /= PFFT_LIB) then
+    ASSERT(.not.associated(cf%FS))
+    ASSERT(associated(cf%fft))
 
-  ASSERT(.not.associated(cf%FS))
-  ASSERT(associated(cf%fft))
-
-  SAFE_ALLOCATE(cf%FS(1:cf%nx, 1:cf%n(2), 1:cf%n(3)))
-
+    SAFE_ALLOCATE(cf%FS(1:cf%nx, 1:cf%n(2), 1:cf%n(3)))
+  end if
   POP_SUB(X(cube_function_alloc_FS))
 end subroutine X(cube_function_alloc_FS)
 
@@ -36,9 +37,11 @@ subroutine X(cube_function_free_FS)(cf)
   type(cube_function_t), intent(inout) :: cf
 
   PUSH_SUB(X(cube_function_free_FS))
-
-  ASSERT(associated(cf%FS))
-  SAFE_DEALLOCATE_P(cf%FS)
+  !Safe memory if PFFT is used
+  if (cf%fft_library /= PFFT_LIB) then
+    ASSERT(associated(cf%FS))
+    SAFE_DEALLOCATE_P(cf%FS)
+  end if
 
   POP_SUB(X(cube_function_free_FS))
 end subroutine X(cube_function_free_FS)
@@ -88,33 +91,6 @@ subroutine X(cube_function_fft_init)(cf, sb)
 end subroutine X(cube_function_fft_init)
 
 ! ---------------------------------------------------------
-!> initializes the ffts. As the dimension of the fft may be adjusted, this
-!! routine has to be called before allocating anything
-subroutine X(cube_function_pfft_init)(cf, sb)
-  type(cube_function_t),     intent(inout) :: cf
-  type(simul_box_t), intent(in)    :: sb
-
-  PUSH_SUB(X(cube_function_pfft_init))
-
-#ifdef HAVE_PFFT
-  ASSERT(.not.associated(cf%pfft))
-  ASSERT(.not.associated(cf%X(RS)))
-  ASSERT(.not.associated(cf%FS))
-
-  SAFE_ALLOCATE(cf%pfft)
-#ifdef R_TREAL
-  call pfft_init(cf%n, sb%dim, fft_real, cf%pfft, optimize = .not.simul_box_is_periodic(sb))
-  cf%nx = cf%n(1)/2 + 1
-#else
-  call pfft_init(cf%n, sb%dim, fft_complex, cf%pfft, .not.simul_box_is_periodic(sb))
-  cf%nx = cf%n(1)
-#endif
-
-#endif
-  POP_SUB(X(cube_function_pfft_init))
-end subroutine X(cube_function_pfft_init)
-
-! ---------------------------------------------------------
 !> The following routines convert the function between real space and Fourier space
 !! Note that the dimensions of the function in FS are different depending on whether
 !! f is real or complex, because the FFT representation is different (FFTW scheme).
@@ -123,12 +99,15 @@ subroutine X(cube_function_RS2FS)(cf)
 
   integer ::ii,jj,kk,index
 
-  ASSERT(associated(cf%X(RS)))
-  if(.not.associated(cf%FS)) call X(cube_function_alloc_FS)(cf)
-
+  !Safe memory if PFFT is used  
+  if (cf%fft_library /= PFFT_LIB) then
+    ASSERT(associated(cf%X(RS)))
+    if(.not.associated(cf%FS)) call X(cube_function_alloc_FS)(cf)
+  end if
+  
   if (cf%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
-    call pfft_forward_3d(cf%pfft,cf%dRS,cf%FS)
+    call pfft_forward_3d(cf%pfft)
 #endif
   else
     call X(fft_forward)(cf%fft, cf%X(RS), cf%FS)
@@ -141,13 +120,16 @@ end subroutine X(cube_function_RS2FS)
 subroutine X(cube_function_FS2RS)(cf)
   type(cube_function_t), intent(inout)  :: cf
   integer :: ii, jj, kk, index
-
-  ASSERT(associated(cf%FS))
-  if(.not.associated(cf%X(RS))) call X(cube_function_alloc_RS)(cf)
+  
+  !Safe memory if PFFT is used
+  if (cf%fft_library /= PFFT_LIB) then
+    ASSERT(associated(cf%FS))
+    if(.not.associated(cf%X(RS))) call X(cube_function_alloc_RS)(cf)
+  end if
 
   if (cf%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT 
-    call pfft_backward_3d(cf%pfft,cf%FS,cf%dRS)
+    call pfft_backward_3d(cf%pfft)
 #endif
   else
     call X(fft_backward)(cf%fft, cf%FS, cf%X(RS))
@@ -184,11 +166,20 @@ subroutine X(fourier_space_op_apply)(this, cube)
   type(cube_function_t),    intent(inout)  :: cube
   
   integer :: ii, jj, kk, index
+
+  type(profile_t), save :: prof_g, rs2fs_prof, fs2rs_prof, prof
   
-  call X(cube_function_alloc_FS)(cube)
+  !Safe memory if PFFT is used
+  if (cube%fft_library /= PFFT_LIB) then
+  	call X(cube_function_alloc_FS)(cube)
+  end if
   
+  call profiling_in(prof, "OP_APPLY")
+  call profiling_in(rs2fs_prof, "RS2FS")
   call X(cube_function_RS2FS)(cube)
+  call profiling_out(rs2fs_prof)
   
+  call profiling_in(prof_g,"G_APPLY")
   if (cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
     index = 1
@@ -218,9 +209,13 @@ subroutine X(fourier_space_op_apply)(this, cube)
       end do
     end do
   end if
+  call profiling_out(prof_g)
   
+  call profiling_in(fs2rs_prof, "FS2RS")
   call X(cube_function_FS2RS)(cube)
+  call profiling_out(fs2rs_prof)
   call X(cube_function_free_FS)(cube)
+  call profiling_out(prof)
 
 end subroutine X(fourier_space_op_apply)
 

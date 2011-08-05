@@ -125,7 +125,7 @@ module par_vec_m
     ! The content of these members is node-dependent.
     integer          :: rank                 !< Our rank in the communicator.
     integer          :: partno               !< Partition number of the
-                                             !< current node
+                                             !! current node
     type(subarray_t) :: sendpoints
     integer, pointer :: sendpos(:)
 
@@ -142,21 +142,21 @@ module par_vec_m
     integer, pointer        :: part(:)              !< Point -> partition.
     integer, pointer        :: np_local(:)          !< How many points has partition r?
     integer, pointer        :: xlocal(:)            !< Points of partition r start at
-                                                    !< xlocal(r) in local.
+                                                    !! xlocal(r) in local.
     integer, pointer        :: local(:)             !< Partition r has points
-                                                    !< local(xlocal(r):
-                                                    !< xlocal(r)+np_local(r)-1).
+                                                    !! local(xlocal(r):
+                                                    !! xlocal(r)+np_local(r)-1).
     integer, pointer        :: np_bndry(:)          !< Number of boundary points.
     integer, pointer        :: xbndry(:)            !< Index of bndry(:).
     integer, pointer        :: bndry(:)             !< Global numbers of boundary
-                                                    !< points.
+                                                    !! points.
     type(iihash_t), pointer :: global(:)            !< global(r) contains the global ->
-                                                    !< local mapping for partition r.
+                                                    !! local mapping for partition r.
     integer                 :: total                !< Total number of ghost points.
     integer, pointer        :: np_ghost(:)          !< How many ghost points has
-                                                    !< partition r?
+                                                    !! partition r?
     integer, pointer        :: np_ghost_neigh(:, :) !< Number of ghost points per
-                                                    !< neighbour per partition.
+                                                    !! neighbour per partition.
     integer, pointer        :: xghost(:)            !< Like xlocal.
     integer, pointer        :: xghost_neigh(:, :)   !< Like xghost for neighbours.
     integer, pointer        :: ghost(:)             !< Global indices of all local

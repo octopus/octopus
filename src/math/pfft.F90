@@ -35,10 +35,10 @@ module pfft_m
   use lalg_basic_m
   use loct_math_m
   use messages_m
+  use mpi_m
   use parser_m
   use profiling_m
   use varinfo_m
-  use mpi_m
 
   implicit none
 
@@ -67,20 +67,26 @@ module pfft_m
        pfft_measure             =     0 
   
   type pfft_t
-    integer     :: slot         !< in which slot do we have this fft
-    integer(ptrdiff_t_kind)     :: n(3)         !< size of the fft
-    integer     :: is_real      !< is the fft real or complex. PFFT only works with complex
-    integer(ptrdiff_t_kind)    :: comm_cart_2d !< 2-dimensional Cartesian processor grid
+    integer                 :: slot         !< in which slot do we have this fft
+    integer(ptrdiff_t_kind) :: n(3)         !< size of the fft
+    integer                 :: is_real      !< is the fft real or complex. PFFT only works with complex. Real = 0, Complex = 1
+    integer(ptrdiff_t_kind) :: comm_cart_2d !< 2-dimensional Cartesian processor grid
     integer(ptrdiff_t_kind) :: planf        !< the plan for forward transforms
     integer(ptrdiff_t_kind) :: planb        !< the plan for backward transforms
     integer(ptrdiff_t_kind) :: alloc_local
-    
-    integer(ptrdiff_t_kind) :: local_ni(3)  !< local input points
+
+    integer, allocatable :: begin_indexes(:) !< where does each process start
+    integer, allocatable :: block_sizes(:)   !< size of the block that is going to be used in the gatherv
+
+    integer(ptrdiff_t_kind) :: local_ni(3)      !< local input points
     integer(ptrdiff_t_kind) :: local_i_start(3) !< local input start index
-    integer(ptrdiff_t_kind) :: local_no(3) !< local output points
+    integer(ptrdiff_t_kind) :: local_no(3)      !< local output points
     integer(ptrdiff_t_kind) :: local_o_start(3) !< local output start index
-    CMPLX, pointer ::  data_in(:)  !< input data 
-    CMPLX, pointer ::  data_out(:) !< output data
+
+    CMPLX, pointer :: data_in(:)                   !< input data
+    CMPLX, pointer :: data_out(:)                  !< output data
+    FLOAT, pointer :: global_data_in(:)            !< ALL the input data
+    integer, allocatable :: get_local_index(:,:,:) !< Mapping vector between local and global pfft indexing
   end type pfft_t
 
   integer      :: pfft_refs(PFFT_MAX)
@@ -166,6 +172,12 @@ contains
       if(pfft_refs(ii) /= PFFT_NULL) then
         call PDFFT(destroy_plan) (pfft_array(ii)%planf)
         call PDFFT(destroy_plan) (pfft_array(ii)%planb)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%data_out)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%data_in)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%global_data_in)
+        SAFE_DEALLOCATE_A(pfft_array(ii)%begin_indexes)
+        SAFE_DEALLOCATE_A(pfft_array(ii)%block_sizes)
+        SAFE_DEALLOCATE_A(pfft_array(ii)%get_local_index)
         pfft_refs(ii) = PFFT_NULL
       end if
     end do
@@ -193,6 +205,12 @@ contains
         pfft_refs(ii) = PFFT_NULL
         call PDFFT(destroy_plan) (pfft_array(ii)%planf)
         call PDFFT(destroy_plan) (pfft_array(ii)%planb)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%data_out)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%data_in)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%global_data_in)
+        SAFE_DEALLOCATE_A(pfft_array(ii)%begin_indexes)
+        SAFE_DEALLOCATE_A(pfft_array(ii)%block_sizes)
+        SAFE_DEALLOCATE_A(pfft_array(ii)%get_local_index)
         write(message(1), '(a,i4)') "Info: PFFT deallocated from slot ", ii
         call messages_info(1)
       end if
@@ -310,6 +328,9 @@ contains
     !     Allocate memory
     SAFE_ALLOCATE(pfft_array(jj)%data_in(pfft_array(jj)%alloc_local))
     SAFE_ALLOCATE(pfft_array(jj)%data_out(pfft_array(jj)%alloc_local))
+    
+    ! Collect the indexes of all processes
+    call pfft_do_mapping(pfft_array(jj))
 
     ! Create the plan, with the processor grid 
     call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, pfft_array(jj)%n, & 
@@ -340,128 +361,74 @@ contains
   ! ---------------------------------------------------------
   !> These routines simply call pfft
   !! first the complex to complex versions
-  subroutine pfft_forward_3d(pfft,dta_in,dta_out)
+  subroutine pfft_forward_3d(pfft)
     type(pfft_t), intent(inout)  :: pfft
-    FLOAT, intent(in) :: dta_in(:,:,:)
-    CMPLX, intent(out) :: dta_out(:,:,:)
 
-    character(len=256) ::  tmp_file
-    
-    Character(50) :: out_file
-    integer :: ii,jj,kk,index
-
-    integer :: fft_dim, idir, ierror, process_column_size, process_row_size
-    character(len=100) :: str_tmp
+    type(profile_t), save :: prof_fw
 
     PUSH_SUB(pfft_forward_3d)
-     
-    if (pfft_output) then
-      write(tmp_file,'(a,i1)')'out-fw-before-',mpi_world%rank
-      open(13,file=tmp_file,form='formatted') 
-      write(13,*)"#pfft%data_in(index)"
-    end if
-    index = 1
-    ! convert from 3D to 1D and from real to complex
-    do kk = pfft%local_i_start(3), pfft%local_i_start(3)+pfft%local_ni(3)-1
-      do jj = pfft%local_i_start(2), pfft%local_i_start(2)+pfft%local_ni(2)-1
-        do ii = pfft%local_i_start(1),pfft%local_i_start(1)+pfft%local_ni(1)-1
-          pfft%data_in(index) = TOCMPLX(dta_in(ii,jj,kk),M_ZERO)
-          if (pfft_output) then
-             write(13,*)dta_in(ii,jj,kk)
-          end if
-          index = index + 1
-        end do
-      end do
-    end do
-    if (pfft_output) then
-      close(13)
-    end if
     
+    call profiling_in(prof_fw,"PFFT_FW")
     call PDFFT(execute) (pfft%planf)
-    
-    !optionally, print the result of the fordward
-    if (pfft_output) then   
-      write(tmp_file,'(a,i1)')'out-fw-after-',mpi_world%rank
-      open(13,file=tmp_file,form='formatted') 
-      index = 1
-      write(13,*)"#pfft%data_out(index)"
-      do kk = pfft%local_o_start(3), pfft%local_o_start(3)+pfft%local_no(3)-1
-        do jj = pfft%local_o_start(2), pfft%local_o_start(2)+pfft%local_no(2)-1
-          do ii = pfft%local_o_start(1), pfft%local_o_start(1)+pfft%local_no(1)-1
-            write(13,*)pfft%data_out(index)
-            index = index + 1
-          end do
-        end do
-      end do
-      close(13)
-    end if
+    call profiling_out(prof_fw)
     
     POP_SUB(pfft_forward_3d)
   end subroutine pfft_forward_3d 
 
   ! ---------------------------------------------------------
-  subroutine pfft_backward_3d(pfft,dta_out,dta_in)
+  subroutine pfft_backward_3d(pfft)
     type(pfft_t), intent(inout) :: pfft
-    CMPLX, intent(in) :: dta_out(:,:,:)
-    FLOAT, intent(out) :: dta_in(:,:,:)
-    
-    FLOAT :: scaling_fft_factor 
+    integer :: index, ii, jj, kk
+    type(profile_t), save :: prof_bw,prof_gtv,prof_g,prof_t
+    character(len=256) ::  tmp_file !< kentzeko!!!
 
-    integer :: index,ii,jj,kk,mpi_err
-    integer(ptrdiff_t_kind) :: begin_index, i_start(3)
-    integer :: process_row_size, process_column_size
-    CMPLX,allocatable :: subarray(:)
-    FLOAT, allocatable :: dta_in_tmp(:,:,:)
-
-    character(len=256) ::  tmp_file
-    integer, allocatable :: local_sizes(:), begin_indexes(:),block_sizes(:)
-    integer :: tmp_local(6)
-    integer :: position
-    
     PUSH_SUB(pfft_backward_3d)
     
-    scaling_fft_factor = real(pfft%n(1)*pfft%n(2)*pfft%n(3))
-    
-    !optionally, print the before the backward
-    if (pfft_output) then  
-      write(tmp_file,'(a,i1)')'out-bw-before-',mpi_world%rank
-      open(13,file=tmp_file,form='formatted') 
-      write(13,*)"#pfft%data_out(index)"
-      index = 1
-      do kk = pfft%local_o_start(3), pfft%local_o_start(3)+pfft%local_no(3)-1
-        do jj = pfft%local_o_start(2),pfft%local_o_start(2)+pfft%local_no(2)-1
-          do ii = pfft%local_o_start(1), pfft%local_o_start(1)+pfft%local_no(1)-1
-            write(13,*)pfft%data_out(index)
-            index = index + 1
-          end do
-        end do
-      end do
-      close(13)
-    end if
-    
+    call profiling_in(prof_bw,"PFFT_BW")
     call PDFFT(execute) (pfft%planb)
+    call profiling_out(prof_bw)
     
-    if (pfft_output) then   
-      write(tmp_file,'(a,i1)')'out-bw-after-',mpi_world%rank
-      open(13,file=tmp_file,form='formatted')
-      write(13,*)"#dta_in(ii,jj,kk)"
-    end if
+    call profiling_in(prof_t,"PFFT_TRANS")
+    !aling the data
     index = 1
     do kk = pfft%local_i_start(3), pfft%local_i_start(3)+pfft%local_ni(3)-1
       do jj = pfft%local_i_start(2), pfft%local_i_start(2)+pfft%local_ni(2)-1
         do ii = pfft%local_i_start(1), pfft%local_i_start(1)+pfft%local_ni(1)-1
-          dta_in(ii,jj,kk) = real(pfft%data_in(index))/scaling_fft_factor
-          if (pfft_output) then
-            write(13,*)dta_in(ii,jj,kk)
-          end if
-          index = index + 1
+          pfft%global_data_in(pfft%get_local_index(ii,jj,kk)) = real(pfft%data_in(index))
+          index = index + 1 
         end do
       end do
     end do
-    if (pfft_output) then 
-      close(13)
-    end if
+    close(13)
+    call profiling_out(prof_t)
 
+    !collect the data in all processes
+    call profiling_in(prof_g,"PFFT_GATV")
+    call MPI_Allgatherv ( &
+         pfft%global_data_in(pfft%begin_indexes(mpi_world%rank+1)), &
+         pfft%block_sizes(mpi_world%rank+1), MPI_FLOAT, &
+         pfft%global_data_in(1), &
+         pfft%block_sizes(1),pfft%begin_indexes - 1, &
+         MPI_FLOAT, &
+         mpi_world%comm, mpi_err )
+    if (mpi_err /= 0) then
+      write(message(1),'(a)')"MPI_Allgatherv failed in pfft.F90"
+      call messages_fatal(1)
+    end if
+    call profiling_out(prof_g) 
+
+    POP_SUB(pfft_backward_3d)
+  end subroutine pfft_backward_3d
+  
+  ! ---------------------------------------------------------
+  !> do the mapping between global and local points of PFFT arrays
+  subroutine pfft_do_mapping(pfft)
+    type(pfft_t), intent(inout) :: pfft
+    
+    integer :: tmp_local(6), position, process,ii, jj, kk, index
+    integer, allocatable ::local_sizes(:)
+    type(profile_t), save ::  prof_gt, prof_a
+    call profiling_in(prof_gt,"PFFT_GAT")
     !!BEGIN:gather the local information into a unique vector.
     !!do a gather in 3d of all the box, into a loop
     tmp_local(1) = pfft%local_i_start(1)
@@ -474,52 +441,40 @@ contains
     call MPI_Allgather(tmp_local,6,MPI_INTEGER, &
          local_sizes,6,MPI_INTEGER,&
          mpi_world%comm,mpi_err)
+    call profiling_out(prof_gt)
     
-    SAFE_ALLOCATE(begin_indexes(mpi_world%size))
-    SAFE_ALLOCATE(block_sizes(mpi_world%size))
-    do ii=1,mpi_world%size
-      position = ((ii-1)*6)+1
-      !get begin indexes of the global array
-      begin_indexes(ii) = (local_sizes(position) - 1) + &
-           ((local_sizes(position+1) - 1) * pfft%n(1)) + &
-           ((local_sizes(position+2) - 1) * pfft%n(2) * pfft%n(1))
-      !get the sizes of each block and duplicate if is 64 bits
-      block_sizes(ii) = local_sizes(position+3)*local_sizes(position+4)
-    end do
-    
-    SAFE_ALLOCATE(dta_in_tmp(pfft%n(1),pfft%n(2),pfft%n(3)))
-    do ii=1,local_sizes(6)
-      call MPI_Gatherv ( &
-           dta_in(pfft%local_i_start(1),pfft%local_i_start(2),pfft%local_i_start(3)+ii-1), &
-           block_sizes(mpi_world%rank+1), MPI_FLOAT, &
-           dta_in_tmp(1,1,ii), block_sizes(1),begin_indexes(1), &
-           MPI_FLOAT, &
-           0, mpi_world%comm, mpi_err )
-      if (mpi_err /= 0) then
-        write(message(1),'(a)')"MPI_Gatherv failed in pfft.F90"
-        call messages_fatal(1)
+    call profiling_in(prof_a,"PFFT_ALLOC")
+    SAFE_ALLOCATE(pfft%begin_indexes(mpi_world%size))
+    SAFE_ALLOCATE(pfft%block_sizes(mpi_world%size))
+    SAFE_ALLOCATE(pfft%global_data_in(pfft%n(1)*pfft%n(2)*pfft%n(3)))
+    SAFE_ALLOCATE(pfft%get_local_index(pfft%n(1),pfft%n(2),pfft%n(3)))
+
+    do process=1,mpi_world%size
+      position = ((process-1)*6)+1
+      if (position == 1) then
+        pfft%begin_indexes(1) = 1
+        pfft%block_sizes(1)  = local_sizes(4)*local_sizes(5)*local_sizes(6)
+      else
+        ! calculate the begin index and size of each process
+        pfft%begin_indexes(process) =  pfft%begin_indexes(process-1) +  pfft%block_sizes(process-1)
+        pfft%block_sizes(process) = local_sizes(position+3)*local_sizes(position+4)*local_sizes(position+5)
       end if
-    end do
-   
-    if (pfft_output) then
-      if(mpi_grp_is_root(mpi_world)) then
-        open(11,file='out-gather',form='formatted')
-        do kk=1,pfft%n(3)
-          do jj=1,pfft%n(2)
-            do ii=1,pfft%n(1)
-              write(11,*) dta_in_tmp(ii,jj,kk)
-            end do
+
+      !save the mapping between the global x,y,z and the local index
+      index = 0
+      do kk = local_sizes(position+2), local_sizes(position+2)+local_sizes(position+5)-1
+        do jj = local_sizes(position+1), local_sizes(position+1)+local_sizes(position+4)-1
+          do ii = local_sizes(position), local_sizes(position)+local_sizes(position+3)-1
+            pfft%get_local_index(ii,jj,kk) = index + pfft%begin_indexes(process)
+            index = index + 1
           end do
         end do
-      end if
-    end if
+      end do
+    end do    
 
-    dta_in = dta_in_tmp
-    SAFE_DEALLOCATE_A(dta_in_tmp)
-
-    POP_SUB(pfft_backward_3d)
-  end subroutine pfft_backward_3d
-  
+    call profiling_out(prof_a)
+    
+  end subroutine pfft_do_mapping
   ! ---------------------------------------------------------
   !> This function decomposes a given number of processors into a
   !! two-dimensional processor grid.
@@ -607,7 +562,6 @@ contains
 
     POP_SUB(prime)
   end function prime
-
 #endif
   
 end module pfft_m

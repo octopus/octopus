@@ -712,8 +712,9 @@ contains
     FLOAT, allocatable :: rho_global(:), pot_global(:)
 
     FLOAT :: average
-    integer :: default_fft_library, fft_library, i
-     
+    type(profile_t), save :: prof_bcast, prof_sct
+    integer :: default_fft_library, fft_library, ii, last, first
+    
     PUSH_SUB(poisson_fft)
     
     average = M_ZERO !this avoids a non-initialized warning
@@ -722,26 +723,37 @@ contains
       SAFE_ALLOCATE(rho_global(1:mesh%np_global))
       SAFE_ALLOCATE(pot_global(1:mesh%np_global))
     end if
-    call dcube_function_alloc_RS(fft_cf)          ! allocate the cube in real space
-
+    !Safe memory if PFFT is used  
+    if (fft_cf%fft_library /= PFFT_LIB) then
+      call dcube_function_alloc_RS(fft_cf)          ! allocate the cube in real space
+    end if
+    
     ! put the density in the cube
     if(mesh%parallel_in_domains) then
-#if defined HAVE_MPI
       if (fft_cf%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
-        !all the data has to be distributed again for the PFFT library
+        !all the data has to be distributed for the PFFT library
         call dvec_allgather(mesh%vp, rho_global, rho)
+        call dmesh_to_cube_parallel(mesh, rho_global, fft_cf)
 #else
         write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
         call messages_fatal(1)
 #endif
-        else 
+      else 
+#if defined HAVE_MPI
         call dvec_gather(mesh%vp, mesh%vp%root, rho_global, rho)
+        call dmesh_to_cube(mesh, rho_global, fft_cf)   
       end if
-      call dmesh_to_cube(mesh, rho_global, fft_cf)   
 #endif
-    else
-      call dmesh_to_cube(mesh, rho, fft_cf)
+    else !not parallel in domains
+      if (fft_cf%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT
+        ! Serial execution with PFFT
+        call dmesh_to_cube_parallel(mesh, rho, fft_cf)
+#endif 
+      else
+        call dmesh_to_cube(mesh, rho, fft_cf)
+      end if
     end if
 
     ! apply the Couloumb term in Fourier space
@@ -758,20 +770,47 @@ contains
 
     ! move the potential back to the mesh
     if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
-      call dcube_to_mesh(mesh, fft_cf, pot_global)
-      call dvec_scatter(mesh%vp, mesh%vp%root, pot_global, pot)
+#if defined(HAVE_MPI)   
+      if (fft_cf%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT
+        call dcube_to_mesh_parallel(mesh, fft_cf, pot_global)
+        call profiling_in(prof_sct, 'SCT')
+        !skip the scatter, because all the nodes have each part of pot_global
+        first = mesh%vp%xlocal(mesh%vp%partno)
+        last = mesh%vp%np_local(mesh%vp%partno)   
+        do ii = 1, last
+          pot(ii) = pot_global(mesh%vp%local(ii+first-1))
+        end do
+        call profiling_out(prof_sct)
+#else
+        write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
+        call messages_fatal(1)
 #endif
-    else
-      call dcube_to_mesh(mesh, fft_cf, pot)
+      else
+        call dcube_to_mesh(mesh, fft_cf, pot_global)
+        call dvec_scatter(mesh%vp, mesh%vp%root, pot_global, pot)
+      end if
+#endif
+    else !not parallel in domains
+      if (fft_cf%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT
+        ! Serial execution with PFFT
+        call dcube_to_mesh_parallel(mesh, fft_cf, pot)!_global)
+        !pot = pot_global
+#endif 
+      else
+        call dcube_to_mesh(mesh, fft_cf, pot)
+      end if
     end if
 
     if(present(average_to_zero)) then
       if(average_to_zero) pot(1:mesh%np) = pot(1:mesh%np) - average
     end if
-
-    call dcube_function_free_RS(fft_cf)           ! memory is no longer needed
-
+    
+    if (fft_cf%fft_library /= PFFT_LIB) then
+      call dcube_function_free_RS(fft_cf)           ! memory is no longer needed
+    end if
+    
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_A(rho_global)
       SAFE_DEALLOCATE_A(pot_global)

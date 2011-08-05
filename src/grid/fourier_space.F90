@@ -43,8 +43,6 @@ module fourier_space_m
     dcube_function_fft_init,       &
     zcube_function_fft_init,       &
     cube_function_fft_end,         &
-    dcube_function_pfft_init,      &
-    zcube_function_pfft_init,      &
     dcube_function_RS2FS,          &
     zcube_function_RS2FS,          &
     dcube_function_FS2RS,          &

@@ -94,10 +94,10 @@ module poisson_m
     type(mpi_grp_t) :: all_nodes_grp !< The communicator for all nodes.
     type(mpi_grp_t) :: perp_grp      !< The communicator perpendicular to the mesh communicator.
     integer(8) :: nlocalcharges
-    integer    :: sp
-    integer    :: ep
+    integer    :: sp !< Local start point
+    integer    :: ep !< Local end point
     integer, pointer :: disps(:)
-    integer, pointer :: dsize(:)
+    integer, pointer :: dsize(:) !< Local size
   end type poisson_fmm_t
   
   type poisson_t

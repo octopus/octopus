@@ -28,6 +28,7 @@ module cube_function_m
   use messages_m
   use mpi_m
   use fft_m
+  use pfft_m
   use parser_m
   use par_vec_m
   use pfft_m
@@ -49,8 +50,13 @@ module cube_function_m
     cube_function_phase_factor,    &
     dmesh_to_cube,                 &
     zmesh_to_cube,                 &
+    dmesh_to_cube_parallel,        &
+    zmesh_to_cube_parallel,        &
     dcube_to_mesh,                 &
-    zcube_to_mesh
+    zcube_to_mesh,                 &
+    dcube_to_mesh_parallel,        &
+    zcube_to_mesh_parallel,        &
+    cube_get_pfft_index
 
   type cube_function_t
     integer :: n(1:3)               !< the linear dimensions of the cube
@@ -273,6 +279,58 @@ contains
     
     POP_SUB(cube_function_end)
   end subroutine cube_function_end
+
+
+  ! ---------------------------------------------------------
+  logical function prime(n) result(is_prime)
+    integer, intent(in) :: n
+    
+    integer :: i, root
+
+    PUSH_SUB(prime)
+
+    if (n < 1) then
+      message(1) = "Internal error in pfft_init: "
+      message(2) = "Error calculating the negative prime number"
+      call messages_fatal(2)
+    end if
+    if (n == 1) then
+      is_prime = .false.
+    else
+      root = sqrt(real(n))
+      do i = 2, root
+        if (mod(n,i) == 0) then
+          is_prime = .false.
+          return
+        end if
+      end do
+      is_prime = .true.
+    end if
+
+    POP_SUB(prime)
+  end function prime
+
+#ifdef HAVE_PFFT
+  !> returns the local index for the PFFT library using the global x, y and z
+  integer function cube_get_pfft_index(pfft, ix, iy, iz) result(index)
+    type(pfft_t), intent(in) :: pfft
+    integer, intent(in) :: ix !< x index
+    integer, intent(in) :: iy !< y index
+    integer, intent(in) :: iz !< z index
+    
+    integer :: normalized(1:3)
+
+    !normalize to the min values
+    normalized(1) = ix - pfft%local_i_start(1) + 1 
+    normalized(2) = iy - pfft%local_i_start(2) + 1 
+    normalized(3) = iz - pfft%local_i_start(3) + 1 
+      
+    index = (normalized(1)-1) + &                                      ! x component
+         ((normalized(2)-1) * pfft%local_ni(1)) + &                    ! y component
+         ((normalized(3)-1) * pfft%local_ni(1) * pfft%local_ni(2)) + 1 ! z component and the sum of 1
+    
+  end function cube_get_pfft_index
+#endif
 
 #include "undef.F90"
 #include "real.F90"

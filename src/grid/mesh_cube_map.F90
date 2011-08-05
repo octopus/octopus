@@ -37,7 +37,7 @@ module mesh_cube_map_m
     mesh_cube_map_end
 
   type mesh_cube_map_t
-    integer          :: nmap      !< DOCUMENTATION NEEDED
+    integer          :: nmap      !< The number of maps
     integer, pointer :: map(:, :) !< DOCUMENTATION NEEDED
   end type mesh_cube_map_t
 
