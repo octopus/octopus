@@ -48,15 +48,17 @@ module cube_function_m
     zcube_function_free_RS,        &
     cube_function_surface_average, &
     cube_function_phase_factor,    &
-    dmesh_to_cube,                 &
-    zmesh_to_cube,                 &
+#ifdef HAVE_PFFT
     dmesh_to_cube_parallel,        &
     zmesh_to_cube_parallel,        &
-    dcube_to_mesh,                 &
-    zcube_to_mesh,                 &
     dcube_to_mesh_parallel,        &
     zcube_to_mesh_parallel,        &
-    cube_get_pfft_index
+    cube_get_pfft_index,           &
+#endif
+    dmesh_to_cube,                 &
+    zmesh_to_cube,                 &
+    dcube_to_mesh,                 &
+    zcube_to_mesh
 
   type cube_function_t
     integer :: n(1:3)               !< the linear dimensions of the cube

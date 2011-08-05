@@ -743,8 +743,8 @@ contains
 #if defined HAVE_MPI
         call dvec_gather(mesh%vp, mesh%vp%root, rho_global, rho)
         call dmesh_to_cube(mesh, rho_global, fft_cf)   
-      end if
 #endif
+      end if
     else !not parallel in domains
       if (fft_cf%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
