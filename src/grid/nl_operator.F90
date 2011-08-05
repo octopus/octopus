@@ -97,8 +97,7 @@ module nl_operator_m
     integer, pointer :: ri(:,:)
     integer, pointer :: rimap(:)
     integer, pointer :: rimap_inv(:)
-    integer, pointer :: map4(:, :)
-    integer, pointer :: map1(:, :)
+    integer, pointer :: map_split(:, :)
     integer          :: n4
     integer          :: n1
     
@@ -110,8 +109,7 @@ module nl_operator_m
     type(opencl_mem_t) :: buff_imax
     type(opencl_mem_t) :: buff_ri
     type(opencl_mem_t) :: buff_map
-    type(opencl_mem_t) :: buff_map4
-    type(opencl_mem_t) :: buff_map1
+    type(opencl_mem_t) :: buff_map_split
 #endif
   end type nl_operator_t
 
@@ -526,8 +524,7 @@ contains
       op%n1 = op%n1 + mod(nn, 4)
     end do
 
-    SAFE_ALLOCATE(op%map4(1:2, 1:op%n4))
-    SAFE_ALLOCATE(op%map1(1:2, 1:op%n1))
+    SAFE_ALLOCATE(op%map_split(1:2, 1:op%n1 + op%n4))
 
     bl1 = 1
     bl4 = 1
@@ -537,9 +534,8 @@ contains
 
       if(ii + 3 <= op%np) then
         if(op%rimap(ii) == op%rimap(ii + 3)) then
-
-          op%map4(1, bl4) = ii - 1
-          op%map4(2, bl4) = (op%rimap(ii) - 1)*op%stencil%size
+          op%map_split(1, op%n1 + bl4) = ii - 1
+          op%map_split(2, op%n1 + bl4) = (op%rimap(ii) - 1)*op%stencil%size
 
           bl4 = bl4 + 1
           ii = ii + 4
@@ -548,8 +544,8 @@ contains
       end if
 
       if(.not. iter_done) then
-        op%map1(1, bl1) = ii - 1
-        op%map1(2, bl1) = (op%rimap(ii) - 1)*op%stencil%size
+        op%map_split(1, bl1) = ii - 1
+        op%map_split(2, bl1) = (op%rimap(ii) - 1)*op%stencil%size
 
         bl1 = bl1 + 1
         ii = ii + 1
@@ -634,16 +630,9 @@ contains
         call opencl_write_buffer(op%buff_imax, op%nri, op%rimap_inv(2:))
 
       case(OP_MAP_SPLIT)
-
-        if(op%n4 > 0) then
-          call opencl_create_buffer(op%buff_map4, CL_MEM_READ_ONLY, TYPE_INTEGER, op%n4*2)
-          call opencl_write_buffer(op%buff_map4, op%n4*2, op%map4)
-        end if
-
-        if(op%n1 > 0) then
-          call opencl_create_buffer(op%buff_map1, CL_MEM_READ_ONLY, TYPE_INTEGER, op%n1*2)
-          call opencl_write_buffer(op%buff_map1, op%n1*2, op%map1)
-        end if
+        nn = pad(op%n4 + op%n1, opencl_max_workgroup_size())*2
+        call opencl_create_buffer(op%buff_map_split, CL_MEM_READ_ONLY, TYPE_INTEGER, nn)
+        call opencl_write_buffer(op%buff_map_split, (op%n1 + op%n4)*2, op%map_split)
 
       case(OP_MAP)
         call opencl_create_buffer(op%buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
@@ -652,8 +641,7 @@ contains
     end if
 #endif
 
-    SAFE_DEALLOCATE_P(op%map4)
-    SAFE_DEALLOCATE_P(op%map1)
+    SAFE_DEALLOCATE_P(op%map_split)
 
     POP_SUB(nl_operator_build)
 
@@ -1295,8 +1283,7 @@ contains
         call opencl_release_buffer(op%buff_imax)
 
       case(OP_MAP_SPLIT)
-        if(op%n4 > 0) call opencl_release_buffer(op%buff_map4)
-        if(op%n1 > 0) call opencl_release_buffer(op%buff_map1)
+        call opencl_release_buffer(op%buff_map_split)
 
       case(OP_MAP)
         call opencl_release_buffer(op%buff_map)

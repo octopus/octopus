@@ -313,15 +313,14 @@ contains
 
       call opencl_set_kernel_arg(kernel_operate, 0, op%stencil%size)
       call opencl_set_kernel_arg(kernel_operate, 1, op%n1)
-      call opencl_set_kernel_arg(kernel_operate, 2, op%n4)
+      call opencl_set_kernel_arg(kernel_operate, 2, op%n1 + op%n4)
       call opencl_set_kernel_arg(kernel_operate, 3, op%buff_ri)
-      call opencl_set_kernel_arg(kernel_operate, 4, op%buff_map1)
-      call opencl_set_kernel_arg(kernel_operate, 5, op%buff_map4)
-      call opencl_set_kernel_arg(kernel_operate, 6, buff_weights)
-      call opencl_set_kernel_arg(kernel_operate, 7, fi%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 8, log2(eff_size))
-      call opencl_set_kernel_arg(kernel_operate, 9, fo%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 10, log2(eff_size))
+      call opencl_set_kernel_arg(kernel_operate, 4, op%buff_map_split)
+      call opencl_set_kernel_arg(kernel_operate, 5, buff_weights)
+      call opencl_set_kernel_arg(kernel_operate, 6, fi%pack%buffer)
+      call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
+      call opencl_set_kernel_arg(kernel_operate, 8, fo%pack%buffer)
+      call opencl_set_kernel_arg(kernel_operate, 9, log2(eff_size))
 
       call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%n4 + op%n1, isize)/), (/eff_size, isize/))
 

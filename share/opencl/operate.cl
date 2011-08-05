@@ -66,10 +66,9 @@ __kernel void operate(const int nn,
 
 __kernel void operate4(const int nn,
 		       const int n1,
-		       const int n4,
+		       const int n1n4,
 		       __global int const * restrict ri,
-		       __global int const * restrict map1,
-		       __global int const * restrict map4,
+		       __global int const * restrict map_split,
 		       __constant vectype * restrict weights,
 		       __global vectype const * restrict fi, const int ldfi,
 		       __global vectype * restrict fo, const int ldfo){
@@ -77,12 +76,12 @@ __kernel void operate4(const int nn,
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
   const int k = get_global_id(1);
-
-  if(k < n1) {
     
-    const int2 idx = vload2(k, map1);
-    // idx.s0 is the point
-    // idx.s1 is the map position
+  const int2 idx = vload2(k, map_split);
+  // idx.s0 is the point
+  // idx.s1 is the map position
+  
+  if(k < n1) {
 
     vectype a0 = (vectype) (0.0);
     vectype a1 = (vectype) (0.0);
@@ -96,9 +95,7 @@ __kernel void operate4(const int nn,
     
     fo[(idx.s0<<ldfo) + ist] = a0 + a1;
     
-  } else if (k - n1 < n4) {
-    
-    const int2 idx = vload2(k - n1, map4);
+  } else if (k < n1n4) {
     
     vectype a0 = (vectype) (0.0);
     vectype a1 = (vectype) (0.0);
