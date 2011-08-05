@@ -303,10 +303,13 @@ contains
 
     case(OP_MAP_SPLIT)
 
-      bsize = opencl_kernel_workgroup_size(kernel_operate)
-      isize = bsize/eff_size
+      local_mem_size = f90_cl_device_local_mem_size(opencl%device)
+      isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
+      isize = pad_pow2(isize)/2
 
-      if(bsize < fi%pack%size_real(1)/vecsize_opencl) then
+      isize = min(isize, opencl_kernel_workgroup_size(kernel_operate)/eff_size)
+
+      if(eff_size*isize < fi%pack%size_real(1)/vecsize_opencl) then
         message(1) = "The value of StatesBlockSize is too large for this OpenCL implementation."
         call messages_fatal(1)
       end if
@@ -321,7 +324,9 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
       call opencl_set_kernel_arg(kernel_operate, 8, fo%pack%buffer)
       call opencl_set_kernel_arg(kernel_operate, 9, log2(eff_size))
+      call opencl_set_kernel_arg(kernel_operate, 10, TYPE_INTEGER, isize*op%stencil%size)
 
+!      print*, isize, eff_size*isize, isize*op%stencil%size*types_get_size(TYPE_INTEGER), local_mem_size
       call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%n4 + op%n1, isize)/), (/eff_size, isize/))
 
     case(OP_MAP)
