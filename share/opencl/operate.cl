@@ -71,15 +71,31 @@ __kernel void operate4(const int nn,
 		       __global int const * restrict map_split,
 		       __constant vectype * restrict weights,
 		       __global vectype const * restrict fi, const int ldfi,
-		       __global vectype * restrict fo, const int ldfo){
+		       __global vectype * restrict fo, const int ldfo,
+		       __local int * indexl){
 
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
   const int k = get_global_id(1);
-    
+  const int lk = get_local_id(1);
+  
+  __local int * restrict index = indexl + nn*lk;
+
   const int2 idx = vload2(k, map_split);
-  // idx.s0 is the point
+  // idx.s0 is the point index
   // idx.s1 is the map position
+
+  if(k < n1n4){
+    int j = ist<<2;
+    for(; j < nn - 4 + 1; j += (nst<<2)){
+      vstore4(vload4(0, ri + idx.s1 + j), 0, index + j);
+      }
+    for(; j < nn; j+= nst){
+      index[j] = ri[idx.s1 + j];
+    }
+  }
+
+  barrier(CLK_LOCAL_MEM_FENCE);
   
   if(k < n1) {
 
@@ -87,11 +103,12 @@ __kernel void operate4(const int nn,
     vectype a1 = (vectype) (0.0);
     
     for(int j = 0; j < nn - 2 + 1; j+=2){
-      a0 += weights[j    ]*fi[((idx.s0 + ri[idx.s1 + j]    )<<ldfi) + ist];
-      a1 += weights[j + 1]*fi[((idx.s0 + ri[idx.s1 + j + 1])<<ldfi) + ist];
+      int2 rij = vload2(0, index + j);
+      a0 += weights[j    ]*fi[((idx.s0 + rij.s0)<<ldfi) + ist];
+      a1 += weights[j + 1]*fi[((idx.s0 + rij.s1)<<ldfi) + ist];
     }
     
-    if(nn & 1) a0 += weights[nn - 1]*fi[((idx.s0 + ri[idx.s1 + nn - 1])<<ldfi) + ist];
+    if(nn & 1) a0 += weights[nn - 1]*fi[((idx.s0 + index[nn - 1])<<ldfi) + ist];
     
     fo[(idx.s0<<ldfo) + ist] = a0 + a1;
     
@@ -103,10 +120,10 @@ __kernel void operate4(const int nn,
     vectype a3 = (vectype) (0.0);
     
     for(int j = 0; j < nn; j++){
-      a0 += weights[j]*fi[((idx.s0 + 0 + ri[idx.s1 + j])<<ldfi) + ist];
-      a1 += weights[j]*fi[((idx.s0 + 1 + ri[idx.s1 + j])<<ldfi) + ist];
-      a2 += weights[j]*fi[((idx.s0 + 2 + ri[idx.s1 + j])<<ldfi) + ist];
-      a3 += weights[j]*fi[((idx.s0 + 3 + ri[idx.s1 + j])<<ldfi) + ist];
+      a0 += weights[j]*fi[((idx.s0 + 0 + index[j])<<ldfi) + ist];
+      a1 += weights[j]*fi[((idx.s0 + 1 + index[j])<<ldfi) + ist];
+      a2 += weights[j]*fi[((idx.s0 + 2 + index[j])<<ldfi) + ist];
+      a3 += weights[j]*fi[((idx.s0 + 3 + index[j])<<ldfi) + ist];
     }
     
     fo[((idx.s0 + 0)<<ldfo) + ist] = a0;
@@ -131,12 +148,12 @@ __kernel void operate_map(const int nn,
   const int lip = get_local_id(1);
 
   __local int * index = indexl + nn*lip;
-
+  
   for(int j = ist; j < nn; j += nst){
     if(ip < np) index[j] = ri[map[ip] + j];
   }
   barrier(CLK_LOCAL_MEM_FENCE);
-
+  
   if(ip >= np) return;
 
   vectype a0 = (vectype) (0.0);
