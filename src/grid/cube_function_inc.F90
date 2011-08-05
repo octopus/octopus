@@ -292,7 +292,6 @@ subroutine X(cube_to_mesh_parallel) (mesh, cf, mf)
   scaling_fft_factor = real(cf%pfft%n(1)*cf%pfft%n(2)*cf%pfft%n(3))
   if (mpi_world%size == 1) then
     do im = 1, mesh%cube_map%nmap
-      write(*,*)im,"do",scaling_fft_factor
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
