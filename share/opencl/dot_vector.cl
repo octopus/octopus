@@ -57,6 +57,40 @@ __kernel void zdot_vector(const int np,
   dot[ist] = tmp;
 }
 
+__kernel void ddot_matrix(const int np,
+			  __global double const * restrict xx, const int ldxx,
+			  __global double const * restrict yy, const int ldyy,
+			  __global double * restrict dot, const int lddot){
+  
+  int ist = get_global_id(0);
+  int jst = get_global_id(1);
+  double tmp;
+
+  tmp = 0.0;
+  for(int ip = 0; ip < np; ip++){
+    tmp += xx[(ip<<ldxx) + ist]*yy[(ip<<ldyy) + jst];
+  }
+  dot[ist + lddot*jst] = tmp;
+}
+
+__kernel void zdot_matrix(const int np,
+			  __global double2 const * restrict xx, const int ldxx,
+			  __global double2 const * restrict yy, const int ldyy,
+			  __global double2 * restrict dot, const int lddot){
+  
+  int ist = get_global_id(0);
+  int jst = get_global_id(1);
+  double2 tmp, a1, a2;
+
+  tmp = (double2) 0.0;
+  for(int ip = 0; ip < np; ip++){
+    a1 = xx[(ip<<ldxx) + ist];
+    a2 = yy[(ip<<ldyy) + jst];
+    tmp += (double2)(a1.x*a2.x + a1.y*a2.y, a1.x*a2.y - a1.y*a2.y);
+  }
+  dot[ist + lddot*jst] = tmp;
+}
+
 /*
  Local Variables:
  mode: c

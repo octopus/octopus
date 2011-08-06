@@ -33,6 +33,9 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #endif
   type(profile_t), save :: prof, profgemm, profcomm
   logical :: use_blas, reduce_, conj
+#ifdef HAVE_OPENCL
+  type(opencl_mem_t)  :: dot_buffer
+#endif
 
   PUSH_SUB(X(mesh_batch_dotp_matrix))
   call profiling_in(prof, "DOTP_BATCH")
@@ -126,8 +129,30 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
   case(BATCH_CL_PACKED)
     use_blas = .false.
+    ASSERT(.not. mesh%use_curvilinear)
+    ASSERT(aa%dim == 1)
+#ifdef HAVE_OPENCL
+    call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
+    
+    call opencl_set_kernel_arg(X(kernel_dot_matrix), 0, mesh%np)
+    call opencl_set_kernel_arg(X(kernel_dot_matrix), 1, aa%pack%buffer)
+    call opencl_set_kernel_arg(X(kernel_dot_matrix), 2, log2(aa%pack%size(1)))
+    call opencl_set_kernel_arg(X(kernel_dot_matrix), 3, bb%pack%buffer)
+    call opencl_set_kernel_arg(X(kernel_dot_matrix), 4, log2(bb%pack%size(1)))
+    call opencl_set_kernel_arg(X(kernel_dot_matrix), 5, dot_buffer)
+    call opencl_set_kernel_arg(X(kernel_dot_matrix), 6, aa%nst)
+    
+    call opencl_kernel_run(X(kernel_dot_matrix), (/aa%pack%size(1), bb%pack%size(1)/), &
+      (/aa%pack%size(1), 1/))
+    
+    call opencl_finish()
 
-    call messages_not_implemented('CL mesh_batch_dotp_matrix')
+    call opencl_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
+    call opencl_release_buffer(dot_buffer)
+
+    forall(ist = 1:aa%nst, jst = 1:bb%nst) dd(ist, jst) = mesh%volume_element*dd(ist, jst)
+#endif
+
   end select
 
   if(mesh%use_curvilinear) then

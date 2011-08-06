@@ -98,6 +98,8 @@ module opencl_m
   type(c_ptr), public :: kernel_phase
   type(c_ptr), public :: dkernel_dot_vector
   type(c_ptr), public :: zkernel_dot_vector
+  type(c_ptr), public :: dkernel_dot_matrix
+  type(c_ptr), public :: zkernel_dot_matrix
 
 #include "opencl_iface_inc.F90"
 
@@ -269,6 +271,8 @@ module opencl_m
       call opencl_build_program(prog, trim(conf%share)//'/opencl/dot_vector.cl')
       call opencl_create_kernel(dkernel_dot_vector, prog, "ddot_vector")
       call opencl_create_kernel(zkernel_dot_vector, prog, "zdot_vector")
+      call opencl_create_kernel(dkernel_dot_matrix, prog, "ddot_matrix")
+      call opencl_create_kernel(zkernel_dot_matrix, prog, "zdot_matrix")
       call opencl_release_program(prog)
 
       call messages_print_stress(stdout)
@@ -304,6 +308,8 @@ module opencl_m
         call opencl_release_kernel(kernel_phase)
         call opencl_release_kernel(dkernel_dot_vector)
         call opencl_release_kernel(zkernel_dot_vector)
+        call opencl_release_kernel(dkernel_dot_matrix)
+        call opencl_release_kernel(zkernel_dot_matrix)
 
         call flReleaseCommandQueue(opencl%command_queue, ierr)
 
