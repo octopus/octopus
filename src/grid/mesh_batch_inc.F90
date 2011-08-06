@@ -25,14 +25,14 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   logical, optional, intent(in)    :: symm         !for the moment it is ignored
   logical, optional, intent(in)    :: reduce
 
-  integer :: ist, jst, idim, sp, block_size, ep, ip, lda, ldb, indb, jndb
+  integer :: ist, jst, idim, sp, block_size, ep, ip, ldaa, ldbb, indb, jndb
   R_TYPE :: ss
   R_TYPE, allocatable :: dd(:, :)
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: ddtmp(:, :)
 #endif
   type(profile_t), save :: prof, profgemm, profcomm
-  logical :: use_blas, reduce_
+  logical :: use_blas, reduce_, conj
 
   PUSH_SUB(X(mesh_batch_dotp_matrix))
   call profiling_in(prof, "DOTP_BATCH")
@@ -41,69 +41,94 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
 #endif
+  conj = .false.
 
   ASSERT(aa%dim == bb%dim)
-  ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
-  ASSERT(batch_status(bb) == BATCH_NOT_PACKED)
+  ASSERT(batch_status(aa) == batch_status(bb))
 
   SAFE_ALLOCATE(dd(1:aa%nst, 1:bb%nst))
 
-  use_blas = associated(aa%X(psicont)) .and. associated(bb%X(psicont)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
+  select case(batch_status(aa))
+  case(BATCH_NOT_PACKED)
+    use_blas = associated(aa%X(psicont)) .and. associated(bb%X(psicont)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
 
-  if(use_blas) then
-    call profiling_in(profgemm, "DOTP_BATCH_GEMM")
+    if(use_blas) then
+      call profiling_in(profgemm, "DOTP_BATCH_GEMM")
 
-    lda = size(aa%X(psicont), dim = 1)
-    ldb = size(bb%X(psicont), dim = 1)
-    call blas_gemm('c', 'n', aa%nst, bb%nst, mesh%np, &
-         R_TOTYPE(mesh%volume_element), &
-         aa%X(psicont)(1, 1, 1), lda, &
-         bb%X(psicont)(1, 1, 1), ldb, &
-         R_TOTYPE(M_ZERO), dd(1, 1), aa%nst)
+      ldaa = size(aa%X(psicont), dim = 1)
+      ldbb = size(bb%X(psicont), dim = 1)
+      call blas_gemm('c', 'n', aa%nst, bb%nst, mesh%np, &
+        R_TOTYPE(mesh%volume_element), &
+        aa%X(psicont)(1, 1, 1), ldaa, &
+        bb%X(psicont)(1, 1, 1), ldbb, &
+        R_TOTYPE(M_ZERO), dd(1, 1), aa%nst)
 
-  else
+    else
 
-    dd = R_TOTYPE(M_ZERO)
+      dd = R_TOTYPE(M_ZERO)
 
-    block_size = hardware%X(block_size)
+      block_size = hardware%X(block_size)
 
-    do idim = 1, aa%dim
-      do sp = 1, mesh%np, block_size
-        ep = min(mesh%np, sp + block_size - 1)
+      do idim = 1, aa%dim
+        do sp = 1, mesh%np, block_size
+          ep = min(mesh%np, sp + block_size - 1)
 
-        if(mesh%use_curvilinear) then
+          if(mesh%use_curvilinear) then
 
-          do ist = 1, aa%nst
-            indb = batch_linear_index(aa, (/ist, idim/))
-            do jst = 1, bb%nst
-              jndb = batch_linear_index(bb, (/jst, idim/))
+            do ist = 1, aa%nst
+              indb = batch_linear_index(aa, (/ist, idim/))
+              do jst = 1, bb%nst
+                jndb = batch_linear_index(bb, (/jst, idim/))
 
-              ss = M_ZERO
-              do ip = sp, ep
-                ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states_linear(indb)%X(psi)(ip))*bb%states_linear(jndb)%X(psi)(ip)
+                ss = M_ZERO
+                do ip = sp, ep
+                  ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states_linear(indb)%X(psi)(ip))*bb%states_linear(jndb)%X(psi)(ip)
+                end do
+                dd(ist, jst) = dd(ist, jst) + ss
+
               end do
-              dd(ist, jst) = dd(ist, jst) + ss
-
             end do
-          end do
 
-        else
+          else
 
-          do ist = 1, aa%nst
-            indb = batch_linear_index(aa, (/ist, idim/))
-            do jst = 1, bb%nst
-              jndb = batch_linear_index(bb, (/jst, idim/))
+            do ist = 1, aa%nst
+              indb = batch_linear_index(aa, (/ist, idim/))
+              do jst = 1, bb%nst
+                jndb = batch_linear_index(bb, (/jst, idim/))
 
-              dd(ist, jst) = dd(ist, jst) + mesh%volume_element*&
-                blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, bb%states_linear(jndb)%X(psi)(sp), 1)
+                dd(ist, jst) = dd(ist, jst) + mesh%volume_element*&
+                  blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, bb%states_linear(jndb)%X(psi)(sp), 1)
+              end do
             end do
-          end do
 
-        end if
+          end if
+        end do
       end do
-    end do
 
-  end if
+    end if
+  case(BATCH_PACKED)
+    use_blas = (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
+
+    if(use_blas) then
+      conj = .true.
+      call profiling_in(profgemm, "DOTP_BATCH_GEMM")
+
+      ldaa = aa%pack%size(1)
+      ldbb = bb%pack%size(1)
+      call blas_gemm(transa = 'n', transb = 'c', m = aa%nst, n = bb%nst, k = mesh%np, &
+        alpha = R_TOTYPE(mesh%volume_element), &
+        a = aa%pack%X(psi)(1, 1), lda = ldaa, &
+        b = bb%pack%X(psi)(1, 1), ldb = ldbb, &
+        beta = R_TOTYPE(M_ZERO), c = dd(1, 1), ldc = aa%nst)
+    else
+      call messages_not_implemented('packed mesh_batch_dotp_matrix for spinors')
+    end if
+
+  case(BATCH_CL_PACKED)
+    use_blas = .false.
+
+    call messages_not_implemented('CL mesh_batch_dotp_matrix')
+  end select
 
   if(mesh%use_curvilinear) then
     call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
@@ -121,7 +146,11 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   end if
 #endif
 
-  forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = dd(ist, jst)
+  if(conj) then
+    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = R_CONJ(dd(ist, jst))
+  else
+    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = dd(ist, jst)
+  end if
 
   SAFE_DEALLOCATE_A(dd)
 
