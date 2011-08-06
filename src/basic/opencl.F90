@@ -55,7 +55,8 @@ module opencl_m
     opencl_release_program,       &
     opencl_release_kernel,        &
     opencl_create_kernel,         &
-    f90_cl_device_local_mem_size
+    f90_cl_device_local_mem_size,          &
+    f90_cl_device_max_constant_buffer_size
 
   type opencl_t 
     type(c_ptr) :: platform_id

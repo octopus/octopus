@@ -187,6 +187,11 @@ void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const 
   mem /= 1024; /* convert to kilobytes */
   printf("local memory            : %ld Kb\n", mem);
 
+  clGetDeviceInfo (*device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(cl_ulong), &mem, NULL);
+  mem /= 1024; /* convert to kilobytes */
+  printf("constant memory         : %ld Kb\n", mem);
+
+
   clGetDeviceInfo (*device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, sizeof(cl_ulong), &mem, NULL);
   mem /= (1024*1024); /* convert to megabytes */
   printf("device cache            : %ld Mb\n", mem);
@@ -227,6 +232,14 @@ int FC_FUNC_(f90_cl_device_local_mem_size, F90_CL_DEVICE_LOCAL_MEM_SIZE)(cl_devi
   cl_ulong mem;
 
   clGetDeviceInfo (*device, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(mem), &mem, NULL);
+
+  return (int) mem;
+}
+
+int FC_FUNC_(f90_cl_device_max_constant_buffer_size, F90_CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE)(cl_device_id * device){
+  cl_ulong mem;
+
+  clGetDeviceInfo (*device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(mem), &mem, NULL);
 
   return (int) mem;
 }

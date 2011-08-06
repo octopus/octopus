@@ -180,6 +180,16 @@
 
     ! ----------------------------------------------------
 
+    integer function f90_cl_device_max_constant_buffer_size(device)
+      use c_pointer_m
+
+      implicit none
+
+      type(c_ptr), intent(inout) :: device
+    end function f90_cl_device_max_constant_buffer_size
+
+    ! ----------------------------------------------------
+
     subroutine f90_cl_create_program_from_file(prog, context, source_file)
       use c_pointer_m
 
