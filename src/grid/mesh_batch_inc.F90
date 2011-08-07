@@ -25,7 +25,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   logical, optional, intent(in)    :: symm         !for the moment it is ignored
   logical, optional, intent(in)    :: reduce
 
-  integer :: ist, jst, idim, sp, block_size, ep, ip, ldaa, ldbb, indb, jndb
+  integer :: ist, jst, idim, sp, block_size, ep, ip, ldaa, ldbb, indb, jndb, eff_size
   R_TYPE :: ss
   R_TYPE, allocatable :: dd(:, :)
 #ifdef HAVE_MPI
@@ -34,7 +34,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   type(profile_t), save :: prof, profgemm, profcomm
   logical :: use_blas, reduce_, conj
 #ifdef HAVE_OPENCL
-  type(opencl_mem_t)  :: dot_buffer
+  type(opencl_mem_t) :: dot_buffer
+  type(c_ptr)        :: kernel
 #endif
 
   PUSH_SUB(X(mesh_batch_dotp_matrix))
@@ -130,20 +131,29 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   case(BATCH_CL_PACKED)
     use_blas = .false.
     ASSERT(.not. mesh%use_curvilinear)
-    ASSERT(aa%dim == 1)
 #ifdef HAVE_OPENCL
+
+    kernel = X(kernel_dot_matrix)
+#ifdef R_TCOMPLEX
+    if(aa%dim > 1) then
+      kernel = zkernel_dot_matrix_spinors
+    end if
+#else
+    ASSERT(aa%dim == 1)
+#endif
+
     call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
     
-    call opencl_set_kernel_arg(X(kernel_dot_matrix), 0, mesh%np)
-    call opencl_set_kernel_arg(X(kernel_dot_matrix), 1, aa%pack%buffer)
-    call opencl_set_kernel_arg(X(kernel_dot_matrix), 2, log2(aa%pack%size(1)))
-    call opencl_set_kernel_arg(X(kernel_dot_matrix), 3, bb%pack%buffer)
-    call opencl_set_kernel_arg(X(kernel_dot_matrix), 4, log2(bb%pack%size(1)))
-    call opencl_set_kernel_arg(X(kernel_dot_matrix), 5, dot_buffer)
-    call opencl_set_kernel_arg(X(kernel_dot_matrix), 6, aa%nst)
+    call opencl_set_kernel_arg(kernel, 0, mesh%np)
+    call opencl_set_kernel_arg(kernel, 1, aa%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 2, log2(aa%pack%size(1)/aa%dim))
+    call opencl_set_kernel_arg(kernel, 3, bb%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 4, log2(bb%pack%size(1)/aa%dim))
+    call opencl_set_kernel_arg(kernel, 5, dot_buffer)
+    call opencl_set_kernel_arg(kernel, 6, aa%nst)
     
-    call opencl_kernel_run(X(kernel_dot_matrix), (/aa%pack%size(1), bb%pack%size(1)/), &
-      (/aa%pack%size(1), 1/))
+    call opencl_kernel_run(kernel, (/aa%pack%size(1)/aa%dim, bb%nst/), &
+      (/aa%pack%size(1)/aa%dim, 1/))
     
     call opencl_finish()
 

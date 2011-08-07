@@ -100,6 +100,7 @@ module opencl_m
   type(c_ptr), public :: zkernel_dot_vector
   type(c_ptr), public :: dkernel_dot_matrix
   type(c_ptr), public :: zkernel_dot_matrix
+  type(c_ptr), public :: zkernel_dot_matrix_spinors
 
 #include "opencl_iface_inc.F90"
 
@@ -273,6 +274,7 @@ module opencl_m
       call opencl_create_kernel(zkernel_dot_vector, prog, "zdot_vector")
       call opencl_create_kernel(dkernel_dot_matrix, prog, "ddot_matrix")
       call opencl_create_kernel(zkernel_dot_matrix, prog, "zdot_matrix")
+      call opencl_create_kernel(zkernel_dot_matrix_spinors, prog, "zdot_matrix_spinors")
       call opencl_release_program(prog)
 
       call messages_print_stress(stdout)
@@ -310,7 +312,8 @@ module opencl_m
         call opencl_release_kernel(zkernel_dot_vector)
         call opencl_release_kernel(dkernel_dot_matrix)
         call opencl_release_kernel(zkernel_dot_matrix)
-
+        call opencl_release_kernel(zkernel_dot_matrix_spinors)
+        
         call flReleaseCommandQueue(opencl%command_queue, ierr)
 
         if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
