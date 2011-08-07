@@ -26,7 +26,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   logical, optional, intent(in)    :: reduce
 
   integer :: ist, jst, idim, sp, block_size, ep, ip, ldaa, ldbb, indb, jndb, eff_size
-  R_TYPE :: ss
+  R_TYPE :: ss, tmp1, tmp2
   R_TYPE, allocatable :: dd(:, :)
 #ifdef HAVE_MPI
   R_TYPE, allocatable :: ddtmp(:, :)
@@ -111,7 +111,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
     end if
   case(BATCH_PACKED)
-    use_blas = (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
+    ASSERT(.not. mesh%use_curvilinear)
+    use_blas = aa%dim == 1
 
     if(use_blas) then
       conj = .true.
@@ -125,7 +126,19 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
         b = bb%pack%X(psi)(1, 1), ldb = ldbb, &
         beta = R_TOTYPE(M_ZERO), c = dd(1, 1), ldc = aa%nst)
     else
-      call messages_not_implemented('packed mesh_batch_dotp_matrix for spinors')
+
+      do ist = 1, aa%nst
+        do jst = 1, bb%nst
+          tmp1 = 0.0
+          tmp2 = 0.0
+          do ip = 1, mesh%np
+            tmp1 = tmp1 + R_CONJ(aa%pack%X(psi)(2*ist - 1, ip))*bb%pack%X(psi)(2*jst - 1, ip)
+            tmp2 = tmp2 + R_CONJ(aa%pack%X(psi)(2*ist    , ip))*bb%pack%X(psi)(2*jst    , ip)
+          end do
+          dd(ist, jst) = mesh%volume_element*(tmp1 + tmp2)
+        end do
+      end do
+
     end if
 
   case(BATCH_CL_PACKED)
