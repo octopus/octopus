@@ -33,7 +33,9 @@ subroutine X(opencl_write_buffer)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
+#ifdef HAVE_OPENCL
   call flEnqueueWriteBuffer(this%mem, opencl%command_queue, fsize, offset_, data(1), ierr)
+#endif
 
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
 
@@ -60,7 +62,9 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
+#ifdef HAVE_OPENCL
   call flEnqueueWriteBuffer(this%mem, opencl%command_queue, fsize, offset_, data(1, 1), ierr)
+#endif
 
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
 
@@ -87,7 +91,9 @@ subroutine X(opencl_read_buffer)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
+#ifdef HAVE_OPENCL
   call flEnqueueReadBuffer(this%mem, opencl%command_queue, fsize, offset_, data(1), ierr)
+#endif
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 
   call profiling_count_transfers(size, data(1))
@@ -113,7 +119,9 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
+#ifdef HAVE_OPENCL
   call flEnqueueReadBuffer(this%mem, opencl%command_queue, fsize, offset_, data(1, 1), ierr)
+#endif
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 
   call profiling_count_transfers(size, data(1, 1))
@@ -131,7 +139,9 @@ subroutine X(opencl_set_kernel_arg_data)(kernel, narg, data)
   
   integer :: ierr
 
+#ifdef HAVE_OPENCL
   call f90_cl_set_kernel_arg_data(kernel, narg, R_SIZEOF, data, ierr)
+#endif
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_data")
 
 end subroutine X(opencl_set_kernel_arg_data)

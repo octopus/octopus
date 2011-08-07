@@ -21,6 +21,7 @@
 
 module system_m
   use calc_mode_m
+  use cl_kernel_m
   use density_m
   use elf_m
   use energy_m
@@ -78,6 +79,7 @@ contains
 
 #ifdef HAVE_OPENCL
     call opencl_init()
+    call cl_kernel_global_init()
 #endif
 
     call messages_obsolete_variable('SystemName')
@@ -184,6 +186,7 @@ contains
     call space_end(sys%space)
 
 #ifdef HAVE_OPENCL
+    call cl_kernel_global_end()
     call opencl_end()
 #endif
 

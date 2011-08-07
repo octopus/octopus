@@ -35,7 +35,6 @@ module opencl_m
   public ::                       &
     opencl_is_enabled
 
-#ifdef HAVE_OPENCL
   public ::                       &
     opencl_t,                     &
     opencl_init,                  &
@@ -55,6 +54,7 @@ module opencl_m
     opencl_release_program,       &
     opencl_release_kernel,        &
     opencl_create_kernel,         &
+    opencl_print_error,                    &
     f90_cl_device_local_mem_size,          &
     f90_cl_device_max_constant_buffer_size
 
@@ -96,8 +96,6 @@ module opencl_m
   type(c_ptr), public :: kernel_density_real
   type(c_ptr), public :: kernel_density_complex
   type(c_ptr), public :: kernel_phase
-  type(c_ptr), public :: dkernel_dot_vector
-  type(c_ptr), public :: zkernel_dot_vector
   type(c_ptr), public :: dkernel_dot_matrix
   type(c_ptr), public :: zkernel_dot_matrix
   type(c_ptr), public :: zkernel_dot_matrix_spinors
@@ -128,7 +126,6 @@ module opencl_m
   end interface
 
   type(profile_t), save :: prof_read, prof_write, prof_kernel_run
-#endif
 
   ! these values must be consistent with the ones in opencl_low.c
   integer, parameter  ::  &
@@ -147,9 +144,8 @@ module opencl_m
 #endif
     end function opencl_is_enabled
 
-#ifdef HAVE_OPENCL
     ! ------------------------------------------
-
+    
     subroutine opencl_init()
       type(c_ptr) :: prog
       logical  :: disable
@@ -204,13 +200,14 @@ module opencl_m
         call messages_fatal(1)
       end if
 
-      if(disable) then
+      if(.not. opencl_is_enabled()) then
         POP_SUB(opencl_init)
         return
       end if
 
       call messages_print_stress(stdout, "OpenCL")
 
+#ifdef HAVE_OPENCL
       ierr = flGetPlatformIDs(iplatform, opencl%platform_id)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
 
@@ -270,13 +267,11 @@ module opencl_m
       call opencl_release_program(prog)
 
       call opencl_build_program(prog, trim(conf%share)//'/opencl/dot_vector.cl')
-      call opencl_create_kernel(dkernel_dot_vector, prog, "ddot_vector")
-      call opencl_create_kernel(zkernel_dot_vector, prog, "zdot_vector")
       call opencl_create_kernel(dkernel_dot_matrix, prog, "ddot_matrix")
       call opencl_create_kernel(zkernel_dot_matrix, prog, "zdot_matrix")
       call opencl_create_kernel(zkernel_dot_matrix_spinors, prog, "zdot_matrix_spinors")
       call opencl_release_program(prog)
-
+#endif
       call messages_print_stress(stdout)
 
       POP_SUB(opencl_init)
@@ -290,6 +285,7 @@ module opencl_m
       PUSH_SUB(opencl_end)
 
       if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
         call opencl_release_kernel(kernel_vpsi)
         call opencl_release_kernel(kernel_vpsi_spinors)
         call opencl_release_kernel(set_zero)
@@ -308,8 +304,6 @@ module opencl_m
         call opencl_release_kernel(kernel_density_real)
         call opencl_release_kernel(kernel_density_complex)
         call opencl_release_kernel(kernel_phase)
-        call opencl_release_kernel(dkernel_dot_vector)
-        call opencl_release_kernel(zkernel_dot_vector)
         call opencl_release_kernel(dkernel_dot_matrix)
         call opencl_release_kernel(zkernel_dot_matrix)
         call opencl_release_kernel(zkernel_dot_matrix_spinors)
@@ -318,6 +312,7 @@ module opencl_m
 
         if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
         call flReleaseContext(opencl%context)
+#endif
       end if
 
       POP_SUB(opencl_end)
@@ -339,8 +334,10 @@ module opencl_m
       this%type = type
       this%size = size      
       fsize = size*types_get_size(type)
-      
+
+#ifdef HAVE_OPENCL
       call f90_cl_create_buffer(this%mem, opencl%context, flags, fsize, ierr)
+#endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
 
       POP_SUB(opencl_create_buffer_4)
@@ -354,7 +351,9 @@ module opencl_m
       integer :: ierr
 
       this%size = 0
+#ifdef HAVE_OPENCL
       call f90_cl_release_buffer(this%mem, ierr)
+#endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_buffer")
     end subroutine opencl_release_buffer
 
@@ -396,7 +395,9 @@ module opencl_m
 
       call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
 
+#ifdef HAVE_OPENCL
       call flFinish(opencl%command_queue, ierr)
+#endif
 
       call profiling_out(prof_kernel_run)
 
@@ -413,7 +414,10 @@ module opencl_m
       integer :: ierr
 
       PUSH_SUB(opencl_set_kernel_arg_buffer)
+
+#ifdef HAVE_OPENCL
       call f90_cl_set_kernel_arg_buf(kernel, narg, buffer%mem, ierr)
+#endif
       if(ierr /= CL_SUCCESS) then
         call opencl_print_error(ierr, "set_kernel_arg_buf")
       end if
@@ -445,7 +449,9 @@ module opencl_m
         call messages_fatal(1)
       end if
 
+#ifdef HAVE_OPENCL
       call f90_cl_set_kernel_arg_local(kernel, narg, size_in_bytes, ierr)
+#endif
       if(ierr /= CL_SUCCESS) then 
         call opencl_print_error(ierr, "set_kernel_arg_local")
       end if
@@ -477,7 +483,10 @@ module opencl_m
       gsizes(1:dim) = int(globalsizes(1:dim), SIZEOF_SIZE_T)
       lsizes(1:dim) = int(localsizes(1:dim), SIZEOF_SIZE_T)
 
+#ifdef HAVE_OPENCL
       call flEnqueueNDRangeKernel(kernel, opencl%command_queue, dim, gsizes(1), lsizes(1), ierr)
+#endif
+
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
 
       call profiling_out(prof_kernel_run)
@@ -493,8 +502,10 @@ module opencl_m
     ! -----------------------------------------------
     integer function opencl_kernel_workgroup_size(kernel) result(workgroup_size)
       type(c_ptr), intent(inout) :: kernel
-      
+
+#ifdef HAVE_OPENCL
       workgroup_size = f90_cl_kernel_wgroup_size(kernel, opencl%device)
+#endif
     end function opencl_kernel_workgroup_size
 
     ! -----------------------------------------------
@@ -506,6 +517,7 @@ module opencl_m
       
       character(len=256) :: full_flags
 
+#ifdef HAVE_OPENCL
       call f90_cl_create_program_from_file(prog, opencl%context, filename)
 
       full_flags=''
@@ -529,6 +541,7 @@ module opencl_m
       end if
 
       call f90_cl_build_program(prog, opencl%context, opencl%device, trim(full_flags))
+#endif
     end subroutine opencl_build_program
 
     ! -----------------------------------------------
@@ -538,7 +551,9 @@ module opencl_m
 
       integer :: ierr
 
+#ifdef HAVE_OPENCL
       call f90_cl_release_program(prog, ierr)
+#endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_program")
     end subroutine opencl_release_program
 
@@ -549,7 +564,9 @@ module opencl_m
 
       integer :: ierr
 
+#ifdef HAVE_OPENCL
       call f90_cl_release_kernel(prog, ierr)
+#endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_kernel")
     end subroutine opencl_release_kernel
 
@@ -561,7 +578,9 @@ module opencl_m
 
       integer :: ierr
 
+#ifdef HAVE_OPENCL
       call f90_cl_create_kernel(kernel, prog, name, ierr)
+#endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_kernel")
     end subroutine opencl_create_kernel
 
@@ -639,7 +658,7 @@ module opencl_m
 #include "undef.F90"
 #include "integer.F90"
 #include "opencl_inc.F90"
-#endif
+
 end module opencl_m
 
 !! Local Variables:

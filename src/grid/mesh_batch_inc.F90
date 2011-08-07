@@ -384,6 +384,8 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   logical :: reduce_
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:)
+  type(cl_kernel_t), save :: kernel
+  type(c_ptr)             :: kernel_ref
 #ifdef HAVE_OPENCL
   type(opencl_mem_t)  :: dot_buffer
 #endif
@@ -440,16 +442,21 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   case(BATCH_CL_PACKED)
     SAFE_ALLOCATE(tmp(1:aa%nst_linear))
 #ifdef HAVE_OPENCL
+    
     call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
 
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 0, mesh%np)
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 1, aa%pack%buffer)
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 2, log2(aa%pack%size(1)))
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 3, bb%pack%buffer)
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 4, log2(bb%pack%size(1)))
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 5, dot_buffer)
+    call cl_kernel_start_call(kernel, 'dot_vector.cl', TOSTRING(X(dot_vector)))
+
+    kernel_ref = cl_kernel_get_ref(kernel)
+
+    call opencl_set_kernel_arg(kernel_ref, 0, mesh%np)
+    call opencl_set_kernel_arg(kernel_ref, 1, aa%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 2, log2(aa%pack%size(1)))
+    call opencl_set_kernel_arg(kernel_ref, 3, bb%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 4, log2(bb%pack%size(1)))
+    call opencl_set_kernel_arg(kernel_ref, 5, dot_buffer)
     
-    call opencl_kernel_run(X(kernel_dot_vector), (/aa%pack%size(1)/), (/aa%pack%size(1)/))
+    call opencl_kernel_run(kernel_ref, (/aa%pack%size(1)/), (/aa%pack%size(1)/))
     
     call opencl_finish()
 
