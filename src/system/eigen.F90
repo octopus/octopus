@@ -379,9 +379,9 @@ contains
       
       if(eigens%subspace_diag .and. eigens%converged(ik) == 0) then
         if (states_are_real(st)) then
-          call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
+          call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         else
-          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
+          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
       end if
 
@@ -414,7 +414,7 @@ contains
         end select
 
         if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then
-          call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), st%dpsi(:, :, :, ik), eigens%diff(:, ik))
+          call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
 
       else
@@ -447,7 +447,7 @@ contains
         end select
 
         if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then
-          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), st%zpsi(:, :, :, ik), eigens%diff(:, ik))
+          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
 
       end if

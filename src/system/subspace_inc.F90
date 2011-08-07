@@ -19,24 +19,26 @@
 
 ! ---------------------------------------------------------
 ! This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, psi, diff)
-  type(subspace_t),    intent(in)    :: this
-  type(derivatives_t), intent(in)    :: der
-  type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(in)    :: hm
-  integer,             intent(in)    :: ik
-  FLOAT,               intent(out)   :: eigenval(:)
-  R_TYPE,              intent(inout) :: psi(:, :, :)
-  FLOAT, optional,     intent(out)   :: diff(:)
+subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
+  type(subspace_t),       intent(in)    :: this
+  type(derivatives_t),    intent(in)    :: der
+  type(states_t), target, intent(inout) :: st
+  type(hamiltonian_t),    intent(in)    :: hm
+  integer,                intent(in)    :: ik
+  FLOAT,                  intent(out)   :: eigenval(:)
+  FLOAT, optional,        intent(out)   :: diff(:)
 
   R_TYPE, allocatable :: h_subspace(:, :), f(:, :, :)
   integer             :: ist, ist2, size, idim
   FLOAT               :: nrm2
   type(profile_t),     save    :: diagon_prof
   type(batch_t) :: psib, hpsib, whole_psib
+  R_TYPE, pointer :: psi(:, :, :)
 
   PUSH_SUB(X(subspace_diag))
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
+
+  psi => st%X(psi)(:, :, :, ik)
 
   select case(this%method)
   case(SD_SCALAPACK)
