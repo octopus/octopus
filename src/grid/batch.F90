@@ -306,7 +306,8 @@ contains
     
     PUSH_SUB(batch_is_ok)
     
-    ok = (this%nst_linear >= 1)
+    ok = (this%nst_linear >= 1) .and. associated(this%states_linear)
+    ok = ubound(this%states_linear, dim = 1) == this%nst_linear
     if(ok) then
       do ist = 1, this%nst_linear
         ok = ok.and. &

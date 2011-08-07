@@ -28,11 +28,11 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   FLOAT,                  intent(out)   :: eigenval(:)
   FLOAT, optional,        intent(out)   :: diff(:)
 
-  R_TYPE, allocatable :: h_subspace(:, :), f(:, :, :)
-  integer             :: ist, ist2, size, idim
+  R_TYPE, allocatable :: hmss(:, :), f(:, :, :)
+  integer             :: ist, ist2, size, idim, ib, jb
   FLOAT               :: nrm2
   type(profile_t),     save    :: diagon_prof
-  type(batch_t) :: psib, hpsib, whole_psib
+  type(batch_t) :: hpsib, whole_psib, psib
   R_TYPE, pointer :: psi(:, :, :)
 
   PUSH_SUB(X(subspace_diag))
@@ -46,37 +46,31 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   case(SD_STANDARD)
     ASSERT(.not. st%parallel_in_states)
 
-    SAFE_ALLOCATE(h_subspace(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(f(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
-    ! Calculate the matrix representation of the Hamiltonian in the subspace <psi|H|psi>.
-    do ist = st%st_start, st%st_end, st%d%block_size
-      size = min(st%d%block_size, st%st_end - ist + 1)
+    do ib = st%block_start, st%block_end
+      call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
 
-      call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
+      call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik)
 
-      call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
+      do jb = ib, st%block_end
+        call X(mesh_batch_dotp_matrix)(der%mesh, hpsib, st%psib(jb, ik), hmss)
+      end do
 
-      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
-
-      call batch_end(psib)
-
-      call batch_init(whole_psib, hm%d%dim, ist, st%nst, psi(:, :, ist:st%nst))
-      call X(mesh_batch_dotp_matrix)(der%mesh, hpsib, whole_psib, h_subspace)
-      call batch_end(whole_psib)
       call batch_end(hpsib)
-      
+     
     end do
 
-    ! only half of h_subspace has the matrix, but this is what Lapack needs
+    ! only half of hmss has the matrix, but this is what Lapack needs
 
     ! Diagonalize the Hamiltonian in the subspace.
-    call lalg_eigensolve(st%nst, h_subspace, eigenval(:))
+    call lalg_eigensolve(st%nst, hmss, eigenval(:))
 
     ! Calculate the new eigenfunctions as a linear combination of the
     ! old ones.
     call batch_init(whole_psib, hm%d%dim, 1, st%nst, psi(:, :, :))
-    call X(mesh_batch_rotate)(der%mesh, whole_psib, h_subspace)
+    call X(mesh_batch_rotate)(der%mesh, whole_psib, hmss)
     call batch_end(whole_psib)
 
     ! Renormalize.
@@ -109,7 +103,7 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
     end if
 
     SAFE_DEALLOCATE_A(f)
-    SAFE_DEALLOCATE_A(h_subspace)
+    SAFE_DEALLOCATE_A(hmss)
 
   case default
     ASSERT(.false.)
