@@ -21,19 +21,19 @@
 ! ---------------------------------------------------------
 !> Orthonormalizes nst orbitals in mesh (honours state
 !! parallelization).
-subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
-  type(states_t),    intent(in)    :: st
-  integer,           intent(in)    :: nst !< Number of states
-  integer,           intent(in)    :: dim !< Dimension of ...?
-  type(mesh_t),      intent(in)    :: mesh
-  R_TYPE, target,    intent(inout) :: psi(:, :, :)
+subroutine X(states_orthogonalization_full)(st, mesh, ik)
+  type(states_t), target, intent(inout) :: st
+  type(mesh_t),           intent(in)    :: mesh
+  integer,                intent(in)    :: ik
+
 
   R_TYPE, allocatable :: ss(:, :), qq(:, :), psi_tmp(:, :, :)
   type(profile_t), save :: prof
-  integer :: idim, ist, jst, kst
+  integer :: idim, ist, jst, kst, nst
   FLOAT   :: nrm2
   logical :: bof
   type(batch_t) :: psib
+  R_TYPE, pointer :: psi(:, :, :)
 
 #ifdef HAVE_SCALAPACK
 !pgi$r opt=0
@@ -48,6 +48,9 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
   PUSH_SUB(X(states_orthogonalization_full))
 
+  psi => st%X(psi)(:, :, :, ik)
+  nst = st%nst
+
   select case(st%d%orth_method)
   case(ORTH_GS)
 
@@ -57,11 +60,8 @@ subroutine X(states_orthogonalization_full)(st, nst, mesh, dim, psi)
     end if
 
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
-    ss = M_ZERO
 
-    call batch_init(psib, st%d%dim, 1, nst, psi)
-    call X(mesh_batch_dotp_self)(mesh, psib, ss)
-    call batch_end(psib)
+    call X(states_overlap)(st, mesh, ik, ss)
 
     bof = .false.
     ! calculate the Cholesky decomposition
@@ -298,13 +298,13 @@ contains
 
     ! normalize the initial vectors
     do ist = 1, nst
-      bb(ist) = X(mf_dotp)(mesh, dim, psi(:, :, ist), psi(:, :, ist), reduce = .false.)
+      bb(ist) = X(mf_dotp)(mesh, st%d%dim, psi(:, :, ist), psi(:, :, ist), reduce = .false.)
     end do
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, bb, dim = nst)
 
     do ist = 1, nst      
-      do idim = 1, dim
+      do idim = 1, st%d%dim
         call lalg_scal(mesh%np, M_ONE/sqrt(bb(ist)), psi(:, idim, ist))
       end do
     end do
@@ -316,21 +316,21 @@ contains
     do ist = 1, nst
       ! calculate the projections
       do jst = 1, ist - 1
-        aa(jst) = X(mf_dotp)(mesh, dim, psi(:, :, jst), psi(:, :, ist), reduce = .false.)
+        aa(jst) = X(mf_dotp)(mesh, st%d%dim, psi(:, :, jst), psi(:, :, ist), reduce = .false.)
       end do
 
       if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
 
       ! substract the projections
       do jst = 1, ist - 1
-        do idim = 1, dim
+        do idim = 1, st%d%dim
           call lalg_axpy(mesh%np, -aa(jst), psi(:, idim, jst), psi(:, idim, ist))
         end do
       end do
 
       ! renormalize
-      cc = X(mf_dotp)(mesh, dim, psi(:, :, ist), psi(:, :, ist))
-      do idim = 1, dim
+      cc = X(mf_dotp)(mesh, st%d%dim, psi(:, :, ist), psi(:, :, ist))
+      do idim = 1, st%d%dim
         call lalg_scal(mesh%np, M_ONE/sqrt(cc), psi(:, idim, ist))
       end do
     end do
@@ -804,7 +804,7 @@ subroutine X(states_calc_orth_test)(st, mc, mesh)
   message(2) = ''
   call messages_info(2)
 
-  call X(states_orthogonalization_full)(st, st%nst, mesh, st%d%dim, st%X(psi)(:, :, :, 1))
+  call X(states_orthogonalization_full)(st, mesh, 1)
 
   call print_results()
   
@@ -911,13 +911,36 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   PUSH_SUB(states_rotate)
   
   ASSERT(associated(st%X(psi)))
-  
+
   call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
   call X(mesh_batch_rotate)(mesh, psib, uu)
   call batch_end(psib)
-  
+
   POP_SUB(states_rotate)
 end subroutine X(states_rotate_in_place)
+
+! ---------------------------------------------------------
+
+subroutine X(states_overlap)(st, mesh, ik, overlap)
+  type(states_t),    intent(in)    :: st
+  type(mesh_t),      intent(in)    :: mesh
+  integer,           intent(in)    :: ik
+  R_TYPE,            intent(out)   :: overlap(:, :)
+  
+  type(batch_t) :: psib
+  
+  PUSH_SUB(states_rotate)
+  
+  ASSERT(associated(st%X(psi)))
+
+  call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
+  call X(mesh_batch_dotp_self)(mesh, psib, overlap)
+  call batch_end(psib)
+
+  POP_SUB(states_rotate)
+end subroutine X(states_overlap)
+
+
 
 !! Local Variables:
 !! mode: f90

@@ -292,7 +292,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   call profiling_out(prof)
 
-  call X(states_orthogonalization_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
+  call X(states_orthogonalization_full)(st, gr%mesh, ik)
 
   ! recalculate the eigenvalues and residuals
   do jst = st%st_start, st%st_end, blocksize
@@ -437,7 +437,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
 
   end do
 
-  call X(states_orthogonalization_full)(st, st%nst, gr%mesh, st%d%dim, st%X(psi)(:, :, :, ik))
+  call X(states_orthogonalization_full)(st, gr%mesh, ik)
 
   SAFE_DEALLOCATE_A(me1)
   SAFE_DEALLOCATE_A(me2)

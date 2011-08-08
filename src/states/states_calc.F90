@@ -134,15 +134,14 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       if (states_are_real(st)) then
-        call dstates_orthogonalization_full(st, st%nst, mesh, st%d%dim, st%dpsi(:, :, :, ik))
+        call dstates_orthogonalization_full(st, mesh, ik)
       else
-        call zstates_orthogonalization_full(st, st%nst, mesh, st%d%dim, st%zpsi(:, :, :, ik))
+        call zstates_orthogonalization_full(st, mesh, ik)
       end if
     end do
 
     POP_SUB(states_orthogonalize)
   end subroutine states_orthogonalize
-
 
   ! -------------------------------------------------------
   subroutine states_degeneracy_matrix(sb, st)
