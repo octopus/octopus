@@ -898,6 +898,27 @@ contains
   end subroutine print_results
 end subroutine X(states_calc_orth_test)
 
+! ---------------------------------------------------------
+
+subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
+  type(mesh_t),      intent(in)    :: mesh
+  type(states_t),    intent(inout) :: st
+  R_TYPE,            intent(in)    :: uu(:, :)
+  integer,           intent(in)    :: ik
+  
+  type(batch_t) :: psib
+  
+  PUSH_SUB(states_rotate)
+  
+  ASSERT(associated(st%X(psi)))
+  
+  call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
+  call X(mesh_batch_rotate)(mesh, psib, uu)
+  call batch_end(psib)
+  
+  POP_SUB(states_rotate)
+end subroutine X(states_rotate_in_place)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

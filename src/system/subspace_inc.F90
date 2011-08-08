@@ -69,9 +69,7 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
 
     ! Calculate the new eigenfunctions as a linear combination of the
     ! old ones.
-    call batch_init(whole_psib, hm%d%dim, 1, st%nst, psi(:, :, :))
-    call X(mesh_batch_rotate)(der%mesh, whole_psib, hmss)
-    call batch_end(whole_psib)
+    call X(states_rotate_in_place)(der%mesh, st, hmss, ik)
 
     ! Renormalize.
     do ist = st%st_start, st%st_end

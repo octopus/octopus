@@ -70,6 +70,8 @@ module states_calc_m
     states_orthogonalize,           &
     states_degeneracy_matrix,       &
     states_rotate,                  &
+    dstates_rotate_in_place,        &
+    zstates_rotate_in_place,        &
     dstates_calc_orth_test,         &
     zstates_calc_orth_test,         &
     dstates_orthogonalization,      &
@@ -120,8 +122,8 @@ contains
     POP_SUB(states_rotate)
   end subroutine states_rotate
 
-
   ! ---------------------------------------------------------
+
   subroutine states_orthogonalize(st, mesh)
     type(states_t),    intent(inout) :: st
     type(mesh_t),      intent(in)    :: mesh

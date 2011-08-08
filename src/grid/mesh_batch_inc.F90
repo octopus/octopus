@@ -319,7 +319,7 @@ end subroutine X(mesh_batch_dotp_self)
 subroutine X(mesh_batch_rotate)(mesh, aa, transf)
   type(mesh_t),      intent(in)    :: mesh
   type(batch_t),     intent(inout) :: aa
-  R_TYPE,            intent(inout) :: transf(:, :)
+  R_TYPE,            intent(in)    :: transf(:, :)
 
   R_TYPE, allocatable :: psinew(:, :), psicopy(:, :)
   
