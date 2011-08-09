@@ -1309,12 +1309,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hsfunction_min(aa, bb, omega, omega_min, func_min)
-    FLOAT, intent(in)  :: aa, bb, omega
+  subroutine spectrum_hsfunction_min(aa, bb, dw, omega, omega_min, func_min)
+    FLOAT, intent(in)  :: aa, bb, omega, dw
     FLOAT, intent(out) :: omega_min, func_min
 
-    integer :: nfreqs, ierr, ifreq
-    FLOAT :: xx, hsval, minhsval, dw, ww, hsa, hsb
+    integer :: ierr
+    FLOAT :: xx, hsval, minhsval, ww
 
     PUSH_SUB(spectrum_hsfunction_min)
 
@@ -1322,35 +1322,19 @@ contains
     ! that we refine later calling 1dminimize.
     xx = omega
     call hsfunction(xx, minhsval)
-    nfreqs = 100
-    dw = (bb - aa) / (nfreqs - 1)
-    do ifreq = 1, nfreqs
-      ww = aa + dw * (ifreq - 1)
+    ww = aa - dw
+    do while(ww<bb)
+      ww = ww + dw
       call hsfunction(ww, hsval)
-      if(ifreq .eq. 1)      hsa = hsval
-      if(ifreq .eq. nfreqs) hsb = hsval
       if(hsval < minhsval) then
         minhsval = hsval
         xx = ww
       end if
-    end do
-
-    if( hsa == minhsval ) then
-      omega_min = aa
-      func_min = hsa
-      POP_SUB(spectrum_hsfunction_min)
-      return
-    end if
-    if( hsb == minhsval ) then
-      omega_min = bb
-      func_min = hsb
-      POP_SUB(spectrum_hsfunction_min)
-      return
-    end if
+    end do 
 
     ! Around xx, we call some GSL sophisticated search algorithm to find the minimum.
 #ifndef SINGLE_PRECISION
-    call loct_1dminimize(aa, bb, xx, hsfunction, ierr)
+    call loct_1dminimize(max(xx-CNST(10.0)*dw, aa), min(xx+CNST(10.0)*dw,bb), xx, hsfunction, ierr)
 #else
     stop "FIXME: cannot work in single-precision."
 #endif
@@ -1611,7 +1595,7 @@ contains
       ! output
       omega = w0
       do while(omega <= spectrum%max_energy)
-        call spectrum_hsfunction_min(omega - w0, omega + w0, omega, xx, hsval)
+        call spectrum_hsfunction_min(omega - w0, omega + w0, spectrum%energy_step, omega, xx, hsval)
 
         write(iunit, '(1x,2e20.8)') units_from_atomic(units_out%energy, xx), &
           units_from_atomic((units_out%length / units_out%time)**2, -hsval)
