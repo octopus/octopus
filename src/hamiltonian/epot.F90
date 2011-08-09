@@ -148,7 +148,8 @@ contains
     !% <tt>Octopus</tt> can filter the pseudopotentials so that they no
     !% longer contain Fourier components larger than the mesh itself. This is
     !% very useful to decrease the egg-box effect, and so should be used in
-    !% all instances where atoms move.
+    !% all instances where atoms move (<i>e.g.</i> geometry optimization,
+    !% molecular dynamics, and vibrational modes).
     !%Option filter_none 1
     !% Do not filter.
     !%Option filter_TS 2
@@ -347,7 +348,7 @@ contains
     !%Description
     !% The gyromagnetic ratio of the electron. This is of course a physical 
     !% constant, and the default value is the exact one that you should not 
-    !% touch, unless : 
+    !% touch, unless: 
     !% (i)  You want to disconnect the anomalous Zeeman term in the Hamiltonian 
     !% (then set it to zero; this number only affects that term);
     !% (ii) You are using an effective Hamiltonian, as is the case when

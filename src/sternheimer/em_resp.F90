@@ -831,6 +831,9 @@ contains
         !% This block describes the multiples of the frequency used for
         !% the dynamic hyperpolarizability. The results are written to the
         !% file <tt>beta</tt> in the directory for the first multiple.
+        !% There must be three factors, summing to zero. For example,
+        !% for second-harmonic generation, you could use
+        !% <tt>1 | 1 | -2</tt>.
         !%End
 
         if (parse_block(datasets_check('EMHyperpol'), blk) == 0) then 
