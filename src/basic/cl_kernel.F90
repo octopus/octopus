@@ -134,7 +134,7 @@ contains
 
   !--------------------------------------------------------------
 
-  type(c_ptr) pure function cl_kernel_get_ref(this) result(ref)
+  type(c_ptr) function cl_kernel_get_ref(this) result(ref)
     type(cl_kernel_t), intent(in) :: this
     
     ref = this%kernel
@@ -143,3 +143,8 @@ contains
   !--------------------------------------------------------------
 
 end module cl_kernel_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

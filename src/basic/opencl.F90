@@ -505,6 +505,8 @@ module opencl_m
 
 #ifdef HAVE_OPENCL
       workgroup_size = f90_cl_kernel_wgroup_size(kernel, opencl%device)
+#else
+      workgroup_size = 0
 #endif
     end function opencl_kernel_workgroup_size
 
