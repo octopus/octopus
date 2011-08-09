@@ -100,14 +100,6 @@ static const int size_of[6]      = {4, 8, 8, 16, 4, 8};
 static const int base_size_of[6] = {4, 8, 4, 8, 4, 8};
 static const int is_integer[6]   = {0, 0, 0, 0, 1, 1};
 
-static inline void inf_error(const char * msg, int * ierr){
-#ifdef HAVE_PERROR
-  perror(msg);
-#else
-  printf(msg);
-  printf(": I/O Error.\n");
-#endif
-}
 void FC_FUNC_(read_csv,READ_CSV)
      (unsigned long * np, byte * f, int * output_type, int * ierr, STR_F_TYPE fname STR_ARG1)
 {

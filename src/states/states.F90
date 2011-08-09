@@ -2100,6 +2100,10 @@ contains
 
 
     ASSERT(st%d%dim*mesh%np_part >= blocksize(1))
+#else
+    blocksize(1) = 0
+    blocksize(2) = 0
+    total_np = 0
 #endif
 
     POP_SUB(states_blacs_blocksize)

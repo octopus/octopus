@@ -76,7 +76,7 @@ static const int size_of[6]      = {4, 8, 8, 16, 4, 8};
 static const int base_size_of[6] = {4, 8, 4, 8, 4, 8};
 static const int is_integer[6]   = {0, 0, 0, 0, 1, 1};
 
-static inline void inf_error(const char * msg, int * ierr){
+static inline void inf_error(const char * msg){
 #ifdef HAVE_PERROR
   perror(msg);
 #else
@@ -201,7 +201,7 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 
 	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
   if( fd < 0 ) {
-    inf_error("octopus.write_binary", ierr);
+    inf_error("octopus.write_binary");
     *ierr = 2;
     return;
   }
@@ -216,7 +216,7 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   moved = write(fd, h, sizeof(header_t));
 
   if(moved < sizeof(header_t)){
-    inf_error("octopus.write_binary", ierr);
+    inf_error("octopus.write_binary");
     close(fd);
     return;
   }
@@ -225,7 +225,7 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   moved = write(fd, f, (*np)*size_of[(*type)]);
 
   if(moved < (*np)*size_of[(*type)]){
-    inf_error("octopus.write_binary", ierr);
+    inf_error("octopus.write_binary");
   }
 
   /* close the file */
