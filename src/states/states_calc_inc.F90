@@ -953,7 +953,7 @@ subroutine X(states_overlap)(st, mesh, ik, overlap)
     
   end if
 
-  POP_SUB(states_rotate)
+  POP_SUB(states_overlap)
 end subroutine X(states_overlap)
 
 !! Local Variables:

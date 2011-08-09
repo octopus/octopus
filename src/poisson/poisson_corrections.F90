@@ -83,12 +83,12 @@ contains
     !%Type integer
     !%Section Hamiltonian::Poisson
     !%Description
-    !% For finite systems, some Poisson solvers (multigrid,
-    !% cg_corrected and fft_corrected) require the calculation of the
+    !% For finite systems, some Poisson solvers (<tt>multigrid</tt>,
+    !% <tt>cg_corrected</tt> and <tt>fft_corrected</tt>) require the calculation of the
     !% boundary conditions with an auxiliary method. This variable
     !% selects that method. The default is <tt>multipole</tt>.
     !%Option multipole 1
-    !% A multipole expansion of the density is used to approximate the potential over the boundaries.
+    !% A multipole expansion of the density is used to approximate the potential on the boundaries.
     !%Option exact 3
     !% An exact integration of the Poisson equation is done over the boundaries.
     !%End
@@ -320,6 +320,8 @@ contains
     FLOAT   :: xx(MAX_DIM), rr, s1, sa, gylm(1:MAX_DIM)
     FLOAT, allocatable :: mult(:)
 
+    PUSH_SUB(boundary_conditions)
+
     SAFE_ALLOCATE(mult(1:(this%maxl+1)**2))
 
     call get_multipoles(this, mesh, rho, this%maxl, mult)
@@ -344,8 +346,8 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(mult)
+    POP_SUB(boundary_conditions)
   end subroutine boundary_conditions
-
 
 end module poisson_corrections_m
 
