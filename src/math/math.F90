@@ -57,8 +57,7 @@ module math_m
     operator(.app.),            &
     math_xor,                   &
     dcross_product,             &
-    zcross_product
-  public ::                     &
+    zcross_product,             &
     hypot,                      &
     ddelta,                     &
     member,                     &
@@ -76,7 +75,8 @@ module math_m
     hypersphere_grad_matrix,    &
     pad,                        &
     pad_pow2,                   &
-    log2
+    log2,                       &
+    is_prime
 
   !------------------------------------------------------------------------------
   ! This is the common interface to a simple-minded polynomical interpolation
@@ -1030,6 +1030,36 @@ contains
 
     ilog2 = nint(log2(real(xx, REAL_PRECISION)))
   end function ilog2
+
+  ! -------------------------------------------------------
+
+  logical function is_prime(n)
+    integer, intent(in) :: n
+    
+    integer :: i, root
+
+    PUSH_SUB(is_prime)
+
+    if (n < 1) then
+      message(1) = "Internal error: is_prime does not take negative numbers."
+      call messages_fatal(1)
+    end if
+    if (n == 1) then
+      is_prime = .false.
+      POP_SUB(is_prime); return 
+    endif
+
+    root = sqrt(real(n))
+    do i = 2, root
+      if (mod(n,i) == 0) then
+        is_prime = .false.
+        POP_SUB(is_prime); return
+      end if
+    end do
+
+    is_prime = .true.
+    POP_SUB(is_prime)
+  end function is_prime
 
 #include "undef.F90"
 #include "complex.F90"

@@ -47,14 +47,13 @@ module pfft_m
   include "fftw3.f"
 
   private ::        &
-       decompose,   &
-       prime
-  public ::         &
-    pfft_t,         &
-    pfft_all_init,  &
-    pfft_all_end,   &
-    pfft_end,       &
-    pfft_init,      &
+       decompose
+  public ::          &
+    pfft_t,          &
+    pfft_all_init,   &
+    pfft_all_end,    &
+    pfft_end,        &
+    pfft_init,       &
     pfft_forward_3d, &
     pfft_backward_3d
 
@@ -428,7 +427,10 @@ contains
     integer :: tmp_local(6), position, process,ii, jj, kk, index
     integer, allocatable ::local_sizes(:)
     type(profile_t), save ::  prof_gt, prof_a
+
+    PUSH_SUB(pfft_do_mapping)
     call profiling_in(prof_gt,"PFFT_GAT")
+
     !!BEGIN:gather the local information into a unique vector.
     !!do a gather in 3d of all the box, into a loop
     tmp_local(1) = pfft%local_i_start(1)
@@ -437,6 +439,7 @@ contains
     tmp_local(4) = pfft%local_ni(1)
     tmp_local(5) = pfft%local_ni(2)
     tmp_local(6) = pfft%local_ni(3) 
+
     SAFE_ALLOCATE(local_sizes(6*mpi_world%size))
     call MPI_Allgather(tmp_local,6,MPI_INTEGER, &
          local_sizes,6,MPI_INTEGER,&
@@ -473,7 +476,7 @@ contains
     end do    
 
     call profiling_out(prof_a)
-    
+    POP_SUB(pfft_do_mapping)    
   end subroutine pfft_do_mapping
   ! ---------------------------------------------------------
   !> This function decomposes a given number of processors into a
@@ -499,12 +502,12 @@ contains
     np = n_proc
     i = n_proc-1
     
-    if (prime(n_proc)) then
+    if (is_prime(n_proc)) then
       dim1 = n_proc
     else
       do
         if (i <= 1) exit
-        if(mod(np,i) /= 0.or.(.not.prime(i))) then
+        if(mod(np,i) /= 0.or.(.not. is_prime(i))) then
           i=i-1
           cycle
         end if
@@ -533,35 +536,6 @@ contains
 
     POP_SUB(decompose)
   end subroutine decompose
-
-  ! ---------------------------------------------------------
-  logical function prime(n) result(is_prime)
-    integer, intent(in) :: n
-    
-    integer :: i, root
-
-    PUSH_SUB(prime)
-
-    if (n < 1) then
-      message(1) = "Internal error in pfft_init: "
-      message(2) = "Error calculating the negative prime number"
-      call messages_fatal(2)
-    end if
-    if (n == 1) then
-      is_prime = .false.
-    else
-      root = sqrt(real(n))
-      do i = 2, root
-        if (mod(n,i) == 0) then
-          is_prime = .false.
-          return
-        end if
-      end do
-      is_prime = .true.
-    end if
-
-    POP_SUB(prime)
-  end function prime
 #endif
   
 end module pfft_m

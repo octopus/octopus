@@ -282,36 +282,6 @@ contains
     POP_SUB(cube_function_end)
   end subroutine cube_function_end
 
-
-  ! ---------------------------------------------------------
-  logical function prime(n) result(is_prime)
-    integer, intent(in) :: n
-    
-    integer :: i, root
-
-    PUSH_SUB(prime)
-
-    if (n < 1) then
-      message(1) = "Internal error in pfft_init: "
-      message(2) = "Error calculating the negative prime number"
-      call messages_fatal(2)
-    end if
-    if (n == 1) then
-      is_prime = .false.
-    else
-      root = sqrt(real(n))
-      do i = 2, root
-        if (mod(n,i) == 0) then
-          is_prime = .false.
-          return
-        end if
-      end do
-      is_prime = .true.
-    end if
-
-    POP_SUB(prime)
-  end function prime
-
 #ifdef HAVE_PFFT
   !> returns the local index for the PFFT library using the global x, y and z
   integer function cube_get_pfft_index(pfft, ix, iy, iz) result(index)

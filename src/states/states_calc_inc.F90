@@ -908,7 +908,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   
   type(batch_t) :: psib
   
-  PUSH_SUB(states_rotate)
+  PUSH_SUB(X(states_rotate_in_place))
   
   ASSERT(associated(st%X(psi)))
 
@@ -916,7 +916,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   call X(mesh_batch_rotate)(mesh, psib, uu)
   call batch_end(psib)
 
-  POP_SUB(states_rotate)
+  POP_SUB(X(states_rotate_in_place))
 end subroutine X(states_rotate_in_place)
 
 ! ---------------------------------------------------------
@@ -929,7 +929,7 @@ subroutine X(states_overlap)(st, mesh, ik, overlap)
   
   type(batch_t) :: psib
   
-  PUSH_SUB(states_rotate)
+  PUSH_SUB(X(states_overlap))
   
   ASSERT(associated(st%X(psi)))
 
@@ -937,7 +937,7 @@ subroutine X(states_overlap)(st, mesh, ik, overlap)
   call X(mesh_batch_dotp_self)(mesh, psib, overlap)
   call batch_end(psib)
 
-  POP_SUB(states_rotate)
+  POP_SUB(X(states_overlap))
 end subroutine X(states_overlap)
 
 
