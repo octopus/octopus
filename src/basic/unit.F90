@@ -126,7 +126,7 @@ contains
   end function zunits_from_atomic
 
   !-----------------------------------------------
-  ! now the single precision functions
+  ! now the single-precision functions
   !-----------------------------------------------
 
   real(4) elemental pure function dunits_to_atomic_4(this, val) result(res)

@@ -37,7 +37,7 @@ __kernel void phase(const int offset,
   double cc;
   double ss = sincos(phase[offset + ip], &cc);
 #else
-#warning "Using single precision sincos functions."
+#warning "Using single-precision sincos functions."
   float fcc;
   double ss = (double) sincos((float) phase[offset + ip], &fcc);
   double cc = (double) fcc;

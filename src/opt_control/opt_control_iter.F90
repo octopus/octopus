@@ -120,7 +120,7 @@ contains
     !%Default true
     !%Description 
     !% Writes to disk the laser pulse data during the OCT algorithm at intermediate steps.
-    !% These are files called "opt_control/laser.xxxx", where "xxxx" is the iteration number.
+    !% These are files called <tt>opt_control/laser.xxxx</tt>, where <tt>xxxx</tt> is the iteration number.
     !%End
     call parse_logical(datasets_check('OCTDumpIntermediate'), .false., iterator%dump_intermediate)
     call messages_print_var_value(stdout, "OCTDumpIntermediate", iterator%dump_intermediate)

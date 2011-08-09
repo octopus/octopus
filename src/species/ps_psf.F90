@@ -257,7 +257,7 @@ contains
     FLOAT :: vtot, diff, a2b4
     FLOAT, allocatable :: ve(:, :), rho(:, :), prev(:, :)
 
-    ! These variables are in double precision, no matter if single precision version of
+    ! These variables are in double precision, even if the single-precision version of
     ! octopus is compiled, because they are passed to egofv.
     REAL_DOUBLE :: e, z, dr, rmax
     REAL_DOUBLE, allocatable :: s(:), hato(:), gg(:), y(:)

@@ -527,7 +527,7 @@ module opencl_m
       else if(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64") /= 0) then
         full_flags = trim(full_flags)//'-DEXT_KHR_FP64 -cl-mad-enable'
       else
-        message(1) = 'Octopus requires an OpenCL device with double precision support.' 
+        message(1) = 'Octopus requires an OpenCL device with double-precision support.' 
         call messages_fatal(1)
       end if
 

@@ -228,7 +228,7 @@ contains
       !%Section Execution::Optimization
       !%Description
       !% Selects the size of vectors for the OpenCL application of
-      !% finite difference operators. Valid values are 1, 2, 4, 8 and
+      !% finite-difference operators. Valid values are 1, 2, 4, 8 and
       !% 16. The default is 1.
       !%End
       call parse_integer(datasets_check('OperateOpenCLVecSize'),  1, vecsize_opencl)

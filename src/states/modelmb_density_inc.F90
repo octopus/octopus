@@ -20,7 +20,7 @@
 
 !------------------------------------------------------------
 ! This routine calculates the density rho for particle 
-! ikeeppart, used in higher dimensional model
+! ikeeppart, used in higher-dimensional model
 ! hamiltonian calculations (MJV, NH) 
 !------------------------------------------------------------
 subroutine X(modelmb_density_calculate)(ikeeppart, mb_1part, nparticles_dens, &
@@ -55,26 +55,25 @@ subroutine X(modelmb_density_calculate)(ikeeppart, mb_1part, nparticles_dens, &
   xloop: do imesh = 1, mesh%np
 ! go from local to global point index
 
-  if(mesh%parallel_in_domains) then
+    if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
-    ip_global = mesh%vp%local(imesh + mesh%vp%xlocal(mesh%vp%partno) - 1)
+      ip_global = mesh%vp%local(imesh + mesh%vp%xlocal(mesh%vp%partno) - 1)
 #endif
-  else
-    ip_global = imesh
-  end if
+    else
+      ip_global = imesh
+    end if
 
-
-! find coordinates of present point in full MAX_DIM space
-     call index_to_coords(mesh%idx, mesh%sb%dim, ip_global, ix)
+! find coordinates of present point in full dimensional space
+    call index_to_coords(mesh%idx, mesh%sb%dim, ip_global, ix)
 
 ! find index of present coordinates for particle ikeeppart
-     ix_1part = ix((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part)
-     call hypercube_x_to_i(mb_1part%hypercube_1part, mb_1part%ndim1part, mb_1part%nr_1part, mb_1part%enlarge_1part(1), &
-              ix_1part, icoord)
+    ix_1part = ix((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part)
+    call hypercube_x_to_i(mb_1part%hypercube_1part, mb_1part%ndim1part, mb_1part%nr_1part, mb_1part%enlarge_1part(1), &
+      ix_1part, icoord)
 
 ! accumulate into scalar density
-      rho(icoord) = rho(icoord) + &
-            nparticles_dens*volume_element*TOFLOAT(psi(imesh)*R_CONJ(psi(imesh)))
+    rho(icoord) = rho(icoord) + &
+      nparticles_dens*volume_element*TOFLOAT(psi(imesh)*R_CONJ(psi(imesh)))
   end do xloop
 
 ! need to collect all the rho() here in parallel case
@@ -140,14 +139,14 @@ subroutine X(modelmb_2partdensity_calculate)(ikeeppart1, ikeeppart2, mb_1part, &
     ! find index of present coordinates for particle ikeeppart1
     ix_1part = ix((ikeeppart1 - 1)*mb_1part%ndim1part + 1:ikeeppart1*mb_1part%ndim1part)
     call hypercube_x_to_i(mb_1part%hypercube_1part, mb_1part%ndim1part, mb_1part%nr_1part, &
-           mb_1part%enlarge_1part(1), ix_1part, icoord1)
+      mb_1part%enlarge_1part(1), ix_1part, icoord1)
     ! find index of present coordinates for particle ikeeppart2
     ixp_1part = ixp((ikeeppart2 - 1)*mb_1part%ndim1part + 1:ikeeppart2*mb_1part%ndim1part)
     call hypercube_x_to_i(mb_1part%hypercube_1part, mb_1part%ndim1part, mb_1part%nr_1part, & 
-           mb_1part%enlarge_1part(1), ixp_1part, icoord2)
-      ! accumulate into two particle density
+      mb_1part%enlarge_1part(1), ixp_1part, icoord2)
+    ! accumulate into two-particle density
     rho2(icoord1, icoord2) = rho2(icoord1, icoord2) + nparticles_dens*(nparticles_dens-1)* &
-                           volume_element*psi_global(imesh)*R_CONJ(psi_global(imesh))
+      volume_element*psi_global(imesh)*R_CONJ(psi_global(imesh))
   end do 
 
   SAFE_DEALLOCATE_A(psi_global)

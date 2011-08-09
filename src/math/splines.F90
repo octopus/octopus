@@ -239,7 +239,7 @@ module splines_m
   end type spline_t
 
   ! Both the filling of the function, and the retrieval of the values
-  ! may be done using single or double precision values.
+  ! may be done using single- or double-precision values.
   interface spline_fit
     module procedure spline_fit4
     module procedure spline_fit8
