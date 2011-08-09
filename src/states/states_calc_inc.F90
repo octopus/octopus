@@ -32,7 +32,6 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
   integer :: idim, ist, jst, kst, nst
   FLOAT   :: nrm2
   logical :: bof
-  type(batch_t) :: psib
   R_TYPE, pointer :: psi(:, :, :)
 
 #ifdef HAVE_SCALAPACK
@@ -922,25 +921,40 @@ end subroutine X(states_rotate_in_place)
 ! ---------------------------------------------------------
 
 subroutine X(states_overlap)(st, mesh, ik, overlap)
-  type(states_t),    intent(in)    :: st
+  type(states_t),    intent(inout)    :: st
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: ik
   R_TYPE,            intent(out)   :: overlap(:, :)
   
+  integer       :: ib, jb
   type(batch_t) :: psib
   
   PUSH_SUB(X(states_overlap))
   
   ASSERT(associated(st%X(psi)))
 
-  call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
-  call X(mesh_batch_dotp_self)(mesh, psib, overlap)
-  call batch_end(psib)
+  if(states_are_packed(st)) then
 
-  POP_SUB(X(states_overlap))
+    call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
+    call X(mesh_batch_dotp_self)(mesh, psib, overlap)
+    call batch_end(psib)
+    
+  else
+    
+    do ib = st%block_start, st%block_end
+      do jb = ib, st%block_end
+        if(ib == jb) then
+          call X(mesh_batch_dotp_self)(mesh, st%psib(ib, ik), overlap)
+        else
+          call X(mesh_batch_dotp_matrix)(mesh, st%psib(ib, ik), st%psib(jb, ik), overlap)
+        end if
+      end do
+    end do
+    
+  end if
+
+  POP_SUB(states_rotate)
 end subroutine X(states_overlap)
-
-
 
 !! Local Variables:
 !! mode: f90
