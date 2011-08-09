@@ -503,9 +503,9 @@ contains
 
     case(POISSON_CG_CORRECTED)
       SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
-      SAFE_ALLOCATE(vh_correction(1:der%mesh%np))
+      SAFE_ALLOCATE(vh_correction(1:der%mesh%np_part))
       
-      call correct_rho(this%corrector, der%mesh, rho, rho_corrected, vh_correction)
+      call correct_rho(this%corrector, der, rho, rho_corrected, vh_correction)
       
       pot(1:der%mesh%np) = pot(1:der%mesh%np) - vh_correction(1:der%mesh%np)
       call poisson_cg2(der, pot, rho_corrected)
@@ -522,9 +522,9 @@ contains
 
     case(POISSON_FFT_CORRECTED)
       SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
-      SAFE_ALLOCATE(vh_correction(1:der%mesh%np))
+      SAFE_ALLOCATE(vh_correction(1:der%mesh%np_part))
 
-      call correct_rho(this%corrector, der%mesh, rho, rho_corrected, vh_correction)
+      call correct_rho(this%corrector, der, rho, rho_corrected, vh_correction)
       call poisson_fft(der%mesh, pot, rho_corrected, average_to_zero = .true.)
 
       pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)

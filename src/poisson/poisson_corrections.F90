@@ -20,6 +20,7 @@
 #include "global.h"
 
 module poisson_corrections_m
+  use datasets_m
   use derivatives_m
   use global_m
   use lalg_basic_m
@@ -28,7 +29,9 @@ module poisson_corrections_m
   use mesh_function_m
   use mesh_m
   use messages_m
+  use parser_m
   use profiling_m
+  use simul_box_m
 
   implicit none
 
@@ -48,16 +51,21 @@ module poisson_corrections_m
 
   FLOAT, parameter :: alpha_ = M_FIVE
 
-  type poisson_corr_t 
-     integer :: maxl
-     FLOAT, pointer :: phi(:, :)
-     FLOAT, pointer :: aux(:, :)
-     FLOAT, pointer :: gaussian(:)
+  type poisson_corr_t
+    integer :: method
+    integer :: maxl
+    FLOAT, pointer :: phi(:, :)
+    FLOAT, pointer :: aux(:, :)
+    FLOAT, pointer :: gaussian(:)
   end type poisson_corr_t
 
   type(derivatives_t), pointer :: der_pointer
   type(mesh_t),        pointer :: mesh_pointer
-     
+  
+  integer, parameter  ::     &
+    CORR_MULTIPOLE = 1,     &
+    CORR_EXACT     = 3
+
 contains
 
   ! ---------------------------------------------------------
@@ -71,47 +79,70 @@ contains
 
     PUSH_SUB(poisson_corrections_init)
 
-    this%maxl = ml
+    !%Variable PoissonSolverBoundaries
+    !%Type integer
+    !%Section Hamiltonian::Poisson
+    !%Description
+    !% For finite systems, some Poisson solvers (multigrid,
+    !% cg_corrected and fft_corrected) require the calculation of the
+    !% boundary conditions with an auxiliary method. This variable
+    !% selects that method. The default is <tt>multipole</tt>.
+    !%Option multipole 1
+    !% A multipole expansion of the density is used to approximate the potential over the boundaries.
+    !%Option exact 3
+    !% An exact integration of the Poisson equation is done over the boundaries.
+    !%End
+    call parse_integer(datasets_check('PoissonSolverBoundaries'), CORR_MULTIPOLE, this%method)
 
-    add_lm = 0
-    do ll = 0, this%maxl
-      do mm = -ll, ll
-        add_lm = add_lm + 1
-      end do
-    end do
-    
-    SAFE_ALLOCATE(this%phi(1:mesh%np, 1:add_lm))
-    SAFE_ALLOCATE(this%aux(1:mesh%np, 1:add_lm))
-    SAFE_ALLOCATE(this%gaussian(1:mesh%np))
+    select case(this%method)
+    case(CORR_MULTIPOLE)
+      this%maxl = ml
 
-    alpha = alpha_ * mesh%spacing(1)
-    do ip = 1, mesh%np
-      call mesh_r(mesh, ip, rr, coords = xx)
-      this%gaussian(ip) = exp(-(rr/alpha)**2)
-      add_lm = 1
+      add_lm = 0
       do ll = 0, this%maxl
-        lldfac = 1
-        do jj = 1, 2*ll+1, 2
-          lldfac = lldfac * jj
-        end do
-        gamma = ( sqrt(M_PI)*2**(ll+3) ) / lldfac
         do mm = -ll, ll
-          call grylmr(xx(1), xx(2), xx(3), ll, mm, ylm, gylm)
-          if(rr > M_EPSILON) then
-            this%phi(ip, add_lm) = gamma*isubl(ll, rr/alpha)*ylm/rr**(ll+1)
-            this%aux(ip, add_lm) = rr**ll*ylm
-          else
-            this%phi(ip, add_lm) = gamma*ylm / alpha
-            if(ll == 0) then
-              this%aux(ip, add_lm) = ylm
-            else
-              this%aux(ip, add_lm) = M_ZERO
-            end if
-          end if
           add_lm = add_lm + 1
         end do
       end do
-    end do
+
+      SAFE_ALLOCATE(this%phi(1:mesh%np, 1:add_lm))
+      SAFE_ALLOCATE(this%aux(1:mesh%np, 1:add_lm))
+      SAFE_ALLOCATE(this%gaussian(1:mesh%np))
+
+      alpha = alpha_ * mesh%spacing(1)
+      do ip = 1, mesh%np
+        call mesh_r(mesh, ip, rr, coords = xx)
+        this%gaussian(ip) = exp(-(rr/alpha)**2)
+        add_lm = 1
+        do ll = 0, this%maxl
+          lldfac = 1
+          do jj = 1, 2*ll+1, 2
+            lldfac = lldfac * jj
+          end do
+          gamma = ( sqrt(M_PI)*2**(ll+3) ) / lldfac
+          do mm = -ll, ll
+            call grylmr(xx(1), xx(2), xx(3), ll, mm, ylm, gylm)
+            if(rr > M_EPSILON) then
+              this%phi(ip, add_lm) = gamma*isubl(ll, rr/alpha)*ylm/rr**(ll+1)
+              this%aux(ip, add_lm) = rr**ll*ylm
+            else
+              this%phi(ip, add_lm) = gamma*ylm / alpha
+              if(ll == 0) then
+                this%aux(ip, add_lm) = ylm
+              else
+                this%aux(ip, add_lm) = M_ZERO
+              end if
+            end if
+            add_lm = add_lm + 1
+          end do
+        end do
+      end do
+
+    case(CORR_EXACT)
+      call messages_experimental('Exact Poisson solver boundaries')
+      if(mesh%parallel_in_domains) call messages_not_implemented('Exact Poisson solver boundaries with domain parallelization')
+
+    end select
 
     POP_SUB(poisson_corrections_init)
 
@@ -136,24 +167,28 @@ contains
 
     PUSH_SUB(poisson_corrections_end)
 
-    SAFE_DEALLOCATE_P(this%phi)
-    SAFE_DEALLOCATE_P(this%aux)
-    SAFE_DEALLOCATE_P(this%gaussian)
-
+    select case(this%method)
+    case(CORR_MULTIPOLE)
+      SAFE_DEALLOCATE_P(this%phi)
+      SAFE_DEALLOCATE_P(this%aux)
+      SAFE_DEALLOCATE_P(this%gaussian)
+    case(CORR_EXACT)
+    end select
+    
     POP_SUB(poisson_corrections_end)
   end subroutine poisson_corrections_end
 
 
   ! ---------------------------------------------------------
-  subroutine correct_rho(this, mesh, rho, rho_corrected, vh_correction)
-    type(poisson_corr_t), intent(in) :: this
-    type(mesh_t), intent(in)  :: mesh
-    FLOAT,        intent(in)  :: rho(:)
-    FLOAT,        intent(out) :: rho_corrected(:)
-    FLOAT,        intent(out) :: vh_correction(:)
+  subroutine correct_rho(this, der, rho, rho_corrected, vh_correction)
+    type(poisson_corr_t), intent(in)  :: this
+    type(derivatives_t),  intent(in)  :: der
+    FLOAT,                intent(in)  :: rho(:)
+    FLOAT,                intent(out) :: rho_corrected(:)
+    FLOAT,                intent(out) :: vh_correction(:)
 
-    integer :: ip, add_lm, ll, mm, lldfac, jj
-    FLOAT   :: alpha
+    integer :: ip, add_lm, ll, mm, lldfac, jj, ip2
+    FLOAT   :: alpha, vv, rr
     FLOAT, allocatable :: mult(:)
     FLOAT, allocatable :: betal(:)
     type(profile_t), save :: prof
@@ -161,39 +196,65 @@ contains
     PUSH_SUB(correct_rho)
     call profiling_in(prof, "POISSON_CORRECT")
 
-    SAFE_ALLOCATE(mult(1:(this%maxl+1)**2))
-    call get_multipoles(this, mesh, rho, this%maxl, mult)
+    ASSERT(ubound(vh_correction, dim = 1) == der%mesh%np_part)
 
-    alpha = alpha_ * mesh%spacing(1)
+    select case(this%method)
+    case(CORR_MULTIPOLE)
 
-    SAFE_ALLOCATE(betal(1:(this%maxl+1)**2))
-    add_lm = 1
-    do ll = 0, this%maxl
-      do mm = -ll, ll
-        lldfac = 1
-        do jj = 1, 2*ll+1, 2
-          lldfac = lldfac*jj
+      SAFE_ALLOCATE(mult(1:(this%maxl+1)**2))
+      call get_multipoles(this, der%mesh, rho, this%maxl, mult)
+
+      alpha = alpha_ * der%mesh%spacing(1)
+
+      SAFE_ALLOCATE(betal(1:(this%maxl+1)**2))
+      add_lm = 1
+      do ll = 0, this%maxl
+        do mm = -ll, ll
+          lldfac = 1
+          do jj = 1, 2*ll+1, 2
+            lldfac = lldfac*jj
+          end do
+          betal(add_lm) = (2**(ll+2))/( alpha**(2*ll+3) * sqrt(M_PI) * lldfac )
+          add_lm = add_lm + 1
         end do
-        betal(add_lm) = (2**(ll+2))/( alpha**(2*ll+3) * sqrt(M_PI) * lldfac )
-        add_lm = add_lm + 1
       end do
-    end do
 
-    call lalg_copy(mesh%np, rho, rho_corrected)
-    vh_correction = M_ZERO
-    add_lm = 1
-    do ll = 0, this%maxl
-      do mm = -ll, ll
-        forall(ip = 1:mesh%np)
-          rho_corrected(ip) = rho_corrected(ip) - mult(add_lm)*betal(add_lm)*this%aux(ip, add_lm)*this%gaussian(ip)
-        end forall
-        call lalg_axpy(mesh%np, mult(add_lm), this%phi(:, add_lm), vh_correction)
-        add_lm = add_lm + 1
+      call lalg_copy(der%mesh%np, rho, rho_corrected)
+      vh_correction = M_ZERO
+      add_lm = 1
+      do ll = 0, this%maxl
+        do mm = -ll, ll
+          forall(ip = 1:der%mesh%np)
+            rho_corrected(ip) = rho_corrected(ip) - mult(add_lm)*betal(add_lm)*this%aux(ip, add_lm)*this%gaussian(ip)
+          end forall
+          call lalg_axpy(der%mesh%np, mult(add_lm), this%phi(:, add_lm), vh_correction)
+          add_lm = add_lm + 1
+        end do
       end do
-    end do
 
-    SAFE_DEALLOCATE_A(mult)
-    SAFE_DEALLOCATE_A(betal)
+      SAFE_DEALLOCATE_A(mult)
+      SAFE_DEALLOCATE_A(betal)
+
+    case(CORR_EXACT)
+
+      forall(ip = 1:der%mesh%np) vh_correction(ip) = M_ZERO
+      
+      do ip = der%mesh%np + 1, der%mesh%np_part
+        vv = M_ZERO
+        do ip2 = 1, der%mesh%np
+          rr = sqrt(sum((der%mesh%x(ip, 1:MAX_DIM) - der%mesh%x(ip2, 1:MAX_DIM))**2))
+          vv = vv + rho(ip2)/rr
+        end do
+        vh_correction(ip) = der%mesh%volume_element*vv
+      end do
+
+      ASSERT(.not. simul_box_has_zero_bc(der%mesh%sb))
+
+      call dderivatives_lapl(der, vh_correction, rho_corrected, set_bc = .false.)
+ 
+      forall(ip = 1:der%mesh%np) rho_corrected(ip) = rho(ip) + CNST(1.0)/(CNST(4.0)*M_PI)*rho_corrected(ip)
+
+    end select
 
     call profiling_out(prof)
     POP_SUB(correct_rho)

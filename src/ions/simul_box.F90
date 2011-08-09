@@ -1085,7 +1085,10 @@ contains
   logical pure function simul_box_has_zero_bc(sb)
     type(simul_box_t), intent(in) :: sb
     
-    simul_box_has_zero_bc = .not. simul_box_is_periodic(sb)
+    ! this is necessary for the exact boundary conditions for the
+    ! poisson solver ( otherwise it should be
+    ! .not. simul_box_is_periodic(sb))
+    simul_box_has_zero_bc = .false.
     
   end function simul_box_has_zero_bc
 

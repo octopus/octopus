@@ -205,14 +205,14 @@ contains
     PUSH_SUB(poisson_multigrid_solver)
 
     ! correction for treating boundaries
-    SAFE_ALLOCATE(vh_correction(1:base_der%mesh%np))
+    SAFE_ALLOCATE(vh_correction(1:base_der%mesh%np_part))
     
     call gridhier_init(phi, base_der, np_part_size = .true.)
     call gridhier_init(phi_ini, base_der, np_part_size = .false.)
     call gridhier_init(tau, base_der, np_part_size = .true.)
     call gridhier_init(err, base_der, np_part_size = .true.)
 
-    call correct_rho(this%corrector, base_der%mesh, rho, tau%level(0)%p, vh_correction)
+    call correct_rho(this%corrector, base_der, rho, tau%level(0)%p, vh_correction)
     call lalg_scal(base_der%mesh%np, -M_FOUR*M_PI, tau%level(0)%p)
 
     forall (ip = 1:base_der%mesh%np) phi%level(0)%p(ip) = pot(ip) - vh_correction(ip)
