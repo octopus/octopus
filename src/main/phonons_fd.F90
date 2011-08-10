@@ -73,7 +73,7 @@ contains
     call messages_info(1)
     call system_h_setup(sys, hm)
 
-    call vibrations_init(vib, sys%geo, sys%gr%sb)
+    call vibrations_init(vib, sys%geo, sys%gr%sb, "fd")
 
     !%Variable Displacement
     !%Type float
@@ -91,7 +91,7 @@ contains
     ! calculate dynamical matrix
     call get_dyn_matrix(sys%gr, sys%geo, sys%mc, sys%st, sys%ks, hm, sys%outp, vib)
 
-    call vibrations_output(vib, "_fd")
+    call vibrations_output(vib)
     
     call vibrations_end(vib)
 
@@ -130,11 +130,11 @@ contains
     type(v_ks_t),         intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: hm
     type(output_t),       intent(in)    :: outp
-    type(vibrations_t),      intent(inout) :: vib
+    type(vibrations_t),   intent(inout) :: vib
 
     type(scf_t)               :: scf
     type(mesh_t),     pointer :: mesh
-    integer :: iatom, jatom, alpha, beta
+    integer :: iatom, jatom, alpha, beta, imat, jmat
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
     PUSH_SUB(get_dyn_matrix)
@@ -151,6 +151,8 @@ contains
       do alpha = 1, gr%mesh%sb%dim
         write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the ', index2axis(alpha), '-direction.'
         call messages_info(1)
+
+        imat = vibrations_get_index(vib, iatom, alpha)
 
         ! move atom iatom in direction alpha by dist
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
@@ -181,9 +183,11 @@ contains
 
         do jatom = 1, geo%natoms
           do beta = 1, gr%mesh%sb%dim
-            vib%dyn_matrix(vibrations_get_index(vib, iatom, alpha), vibrations_get_index(vib, jatom, beta)) = &
+            jmat = vibrations_get_index(vib, jatom, beta)
+            vib%dyn_matrix(imat, jmat) = &
               (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp ) &
               * vibrations_norm_factor(vib, geo, iatom, jatom)
+            call vibrations_out_dyn_matrix(vib, imat, jmat)
           end do
         end do
 

@@ -38,6 +38,7 @@ module phonons_lr_m
   use mesh_m
   use mesh_function_m
   use messages_m
+  use mpi_m
   use output_m
   use pert_m
   use profiling_m
@@ -151,7 +152,7 @@ contains
 
     call system_h_setup(sys, hm)
     call sternheimer_init(sh, sys, hm, "VM", .false.)
-    call vibrations_init(vib, geo, gr%sb)
+    call vibrations_init(vib, geo, gr%sb, "lr")
 
     call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo, time = M_ZERO)
 
@@ -206,6 +207,8 @@ contains
         
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
 
+        call vibrations_out_dyn_matrix(vib, imat, jmat)
+
       end do
       
       if(smear_is_semiconducting(st%smear)) then
@@ -236,7 +239,7 @@ contains
     call pert_end(electric_pert)
 
     call vibrations_diag_dyn_matrix(vib)
-    call vibrations_output(vib, "_lr")
+    call vibrations_output(vib)
     call axsf_mode_output(vib, "_lr", geo, gr%mesh)
 
     if(simul_box_is_periodic(gr%sb) .and. .not. smear_is_semiconducting(st%smear)) then
@@ -462,6 +465,8 @@ contains
     integer :: iunit, iatom, idir, imat, jmat
     FLOAT, allocatable :: forces(:,:)
 
+    if(.not. mpi_grp_is_root(mpi_world)) return
+
     PUSH_SUB(axsf_mode_output)
 
     iunit = io_open(VIB_MODES_DIR//'normal_modes'//trim(suffix)//'.axsf', action='write')
@@ -480,7 +485,6 @@ contains
 
     POP_SUB(axsf_mode_output)
   end subroutine axsf_mode_output
-
 
 end module phonons_lr_m
 
