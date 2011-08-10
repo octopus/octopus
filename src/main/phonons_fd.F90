@@ -81,7 +81,7 @@ contains
     !%Section Linear Response::Vibrational Modes
     !%Description
     !% When calculating phonon properties by finite differences (<tt>CalculationMode = vib_modes, 
-    !% ResponseMethod = finite_differences </tt>), 
+    !% ResponseMethod = finite_differences</tt>), 
     !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
     !% dynamical matrix.
     !%End
@@ -90,9 +90,6 @@ contains
 
     ! calculate dynamical matrix
     call get_dyn_matrix(sys%gr, sys%geo, sys%mc, sys%st, sys%ks, hm, sys%outp, vib)
-
-    call vibrations_normalize_dyn_matrix(vib, sys%geo)
-    call vibrations_diag_dyn_matrix(vib)
 
     call vibrations_output(vib, "_fd")
     

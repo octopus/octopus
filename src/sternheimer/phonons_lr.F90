@@ -201,6 +201,9 @@ contains
         
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
           -M_TWO * TOFLOAT(dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi))
+
+        vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
+          * vib%total_mass / (sqrt(species_weight(geo%atom(iatom)%spec)) * sqrt(species_weight(geo%atom(jatom)%spec)))
         
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
 
@@ -233,7 +236,6 @@ contains
     call pert_end(ionic_pert)
     call pert_end(electric_pert)
 
-    call vibrations_normalize_dyn_matrix(vib, geo)
     call vibrations_diag_dyn_matrix(vib)
     call vibrations_output(vib, "_lr")
     call axsf_mode_output(vib, "_lr", geo, gr%mesh)

@@ -16,3 +16,8 @@ Precision : 0.002
 Input: 04-vib_modes.02-vib_modes.inp
 match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_lr, 1, 7) ; 167.32279
 match ; Infrared Intensity      ; LINE(vib_modes/infrared, 2, 60)             ; 0.0
+match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_lr, 1, 21)  ; -10.4219
+
+Input: 04-vib_modes.03-vib_modes_fd.inp
+match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_fd, 1, 7) ; 168.11742
+match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_fd, 1, 21)  ; -10.2580

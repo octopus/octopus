@@ -1,0 +1,13 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+CalculationMode = vib_modes
+fromScratch = yes
+ResponseMethod = finite_differences
+
+dist = 2.77
+
+%Coordinates
+  "Na" | 0 | 0 | -dist
+  "Na" | 0 | 0 |  dist
+%
