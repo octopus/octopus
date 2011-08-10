@@ -202,8 +202,7 @@ contains
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
           -M_TWO * TOFLOAT(dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi))
 
-        vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
-          * vib%total_mass / (sqrt(species_weight(geo%atom(iatom)%spec)) * sqrt(species_weight(geo%atom(jatom)%spec)))
+        vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) * vibrations_norm_factor(vib, geo, iatom, jatom)
         
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
 
@@ -247,12 +246,12 @@ contains
       born%charge(:,:,:) = M_ZERO
     endif
     call out_Born_charges(born, geo, gr%sb%dim, VIB_MODES_DIR, write_real = .true.)
-    call calc_infrared
+    call calc_infrared()
 
     if(normal_mode_wfs) then
       message(1) = "Calculating response wavefunctions for normal modes."
       call messages_info(1)
-      call vib_modes_wavefunctions
+      call vib_modes_wavefunctions()
     endif
 
     !DESTRUCT
@@ -272,6 +271,7 @@ contains
     ! this formulation is only valid for finite systems, or an Ewald sum is required
     ! as in Baroni et al. RMP 2001, Appendix B.
     subroutine build_ionic_dyn_matrix()
+
       FLOAT :: ac, xi(1:MAX_DIM), xj(1:MAX_DIM), xk(1:MAX_DIM), r2
       integer :: katom
 
@@ -327,7 +327,8 @@ contains
     end subroutine build_ionic_dyn_matrix
 
     ! ---------------------------------------------------------
-    subroutine calc_infrared
+    subroutine calc_infrared()
+
       FLOAT :: lir(1:MAX_DIM+1)
 
       PUSH_SUB(phonons_lr_run.calc_infrared)
@@ -356,8 +357,9 @@ contains
     end subroutine calc_infrared
 
     ! ---------------------------------------------------------
-    subroutine vib_modes_wavefunctions
+    subroutine vib_modes_wavefunctions()
       ! now calculate the wavefunction associated with each normal mode
+
       type(lr_t) :: lrtmp
       integer :: ik, ist, idim, inm
       character(len=80) :: dirname

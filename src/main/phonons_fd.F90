@@ -182,7 +182,8 @@ contains
         do jatom = 1, geo%natoms
           do beta = 1, gr%mesh%sb%dim
             vib%dyn_matrix(vibrations_get_index(vib, iatom, alpha), vibrations_get_index(vib, jatom, beta)) = &
-              (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp )
+              (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp ) &
+              * vibrations_norm_factor(vib, geo, iatom, jatom)
           end do
         end do
 
@@ -192,7 +193,6 @@ contains
     SAFE_DEALLOCATE_A(forces)
     call scf_end(scf)
 
-    call vibrations_normalize_dyn_matrix(vib, geo)
     call vibrations_diag_dyn_matrix(vib)
 
     POP_SUB(get_dyn_matrix)

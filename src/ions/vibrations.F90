@@ -35,14 +35,15 @@ module vibrations_m
 
   private
   public :: &
-       vibrations_t, &
-       vibrations_init, &
-       vibrations_end,  &
+       vibrations_t,                    &
+       vibrations_init,                 &
+       vibrations_end,                  &
        vibrations_normalize_dyn_matrix, &
-       vibrations_diag_dyn_matrix, &
-       vibrations_get_index, &
-       vibrations_get_atom,  &
-       vibrations_get_dir,   &
+       vibrations_norm_factor,          &
+       vibrations_diag_dyn_matrix,      &
+       vibrations_get_index,            &
+       vibrations_get_atom,             &
+       vibrations_get_dir,              &
        vibrations_output
   
   type vibrations_t
@@ -99,7 +100,7 @@ contains
   ! ---------------------------------------------------------
 
   subroutine vibrations_normalize_dyn_matrix(this, geo)
-    type(vibrations_t), intent(inout) :: this
+    type(vibrations_t), intent(in)    :: this
     type(geometry_t),   intent(inout) :: geo
 
     FLOAT :: factor
@@ -117,8 +118,7 @@ contains
             
             jmat = vibrations_get_index(this, jatom, jdir)
 
-            factor = this%total_mass/sqrt(species_weight(geo%atom(iatom)%spec)) / &
-              sqrt(species_weight(geo%atom(jatom)%spec))
+            factor = vibrations_norm_factor(this, geo, iatom, jatom)
             
             this%dyn_matrix(imat, jmat) = this%dyn_matrix(imat, jmat) * factor
 
@@ -131,6 +131,17 @@ contains
     POP_SUB(vibrations_normalize_dyn_matrix)
   end subroutine vibrations_normalize_dyn_matrix
 
+  ! ---------------------------------------------------------
+  FLOAT pure function vibrations_norm_factor(this, geo, iatom, jatom)
+    type(vibrations_t), intent(in) :: this
+    type(geometry_t),   intent(in) :: geo
+    integer,            intent(in) :: iatom
+    integer,            intent(in) :: jatom
+
+    vibrations_norm_factor = this%total_mass / &
+      (sqrt(species_weight(geo%atom(iatom)%spec)) * sqrt(species_weight(geo%atom(jatom)%spec)))
+
+  end function vibrations_norm_factor
 
   ! ---------------------------------------------------------
   subroutine vibrations_diag_dyn_matrix(this)
