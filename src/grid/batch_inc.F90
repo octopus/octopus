@@ -366,6 +366,95 @@ subroutine X(batch_get_state2)(this, index, np, psi)
   POP_SUB(X(batch_get_state2))
 end subroutine X(batch_get_state2)
 
+
+! --------------------------------------------------------------
+
+subroutine X(batch_get_points)(this, sp, ep, psi)
+  type(batch_t),  intent(in)    :: this
+  integer,        intent(in)    :: sp  
+  integer,        intent(in)    :: ep
+  R_TYPE,         intent(inout) :: psi(:, :, sp:)
+
+  integer :: idim, ist, ist2
+
+  PUSH_SUB(X(batch_get_points))
+
+  select case(batch_status(this))
+  case(BATCH_NOT_PACKED)
+
+    if(batch_type(this) == TYPE_FLOAT) then
+      
+      do ist = 1, this%nst
+        ist2 = this%states(ist)%ist
+        do idim = 1, this%dim
+          psi(ist2, idim, sp:ep) = this%states(ist)%dpsi(sp:ep, idim)
+        end do
+      end do
+
+    else
+
+      do ist = 1, this%nst
+        ist2 = this%states(ist)%ist
+        do idim = 1, this%dim
+          psi(ist2, idim, sp:ep) = this%states(ist)%zpsi(sp:ep, idim)
+        end do
+      end do
+
+    end if
+
+  case(BATCH_PACKED)
+    call messages_not_implemented('batch_get_points for packed batches')
+  case(BATCH_CL_PACKED)
+    call messages_not_implemented('batch_get_points for CL packed batches')
+  end select
+
+  POP_SUB(X(batch_get_points))
+end subroutine X(batch_get_points)
+
+! --------------------------------------------------------------
+
+subroutine X(batch_set_points)(this, sp, ep, psi)
+  type(batch_t),  intent(in)    :: this
+  integer,        intent(in)    :: sp  
+  integer,        intent(in)    :: ep
+  R_TYPE,         intent(in)    :: psi(:, :, sp:)
+
+  integer :: idim, ist, ist2
+
+  PUSH_SUB(X(batch_set_points))
+
+  select case(batch_status(this))
+  case(BATCH_NOT_PACKED)
+
+    if(batch_type(this) == TYPE_FLOAT) then
+      
+      do ist = 1, this%nst
+        ist2 = this%states(ist)%ist
+        do idim = 1, this%dim
+          this%states(ist)%dpsi(sp:ep, idim) = psi(ist2, idim, sp:ep)
+        end do
+      end do
+
+    else
+
+      do ist = 1, this%nst
+        ist2 = this%states(ist)%ist
+        do idim = 1, this%dim
+          this%states(ist)%zpsi(sp:ep, idim) = psi(ist2, idim, sp:ep)
+        end do
+      end do
+
+    end if
+
+  case(BATCH_PACKED)
+    call messages_not_implemented('batch_set_points for packed batches')
+  case(BATCH_CL_PACKED)
+    call messages_not_implemented('batch_set_points for CL packed batches')
+  end select
+
+  POP_SUB(X(batch_set_points))
+end subroutine X(batch_set_points)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

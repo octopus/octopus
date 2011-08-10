@@ -65,7 +65,9 @@ module batch_m
     batch_inv_index,                &
     batch_linear_index,             &
     batch_set_state,                &
-    batch_get_state
+    batch_get_state,                &
+    batch_get_points,               &
+    batch_set_points
 
   !--------------------------------------------------------------
   type batch_state_t
@@ -151,6 +153,16 @@ module batch_m
     module procedure dbatch_get_state2
     module procedure zbatch_get_state2
   end interface
+
+  interface batch_get_points
+    module procedure dbatch_get_points
+    module procedure zbatch_get_points
+  end interface batch_get_points
+
+  interface batch_set_points
+    module procedure dbatch_set_points
+    module procedure zbatch_set_points
+  end interface batch_set_points
 
   type(profile_t), save :: axpy_prof
 

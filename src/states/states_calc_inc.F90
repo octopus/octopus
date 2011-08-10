@@ -906,14 +906,56 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   integer,           intent(in)    :: ik
   
   type(batch_t) :: psib
-  
+  integer       :: block_size, sp, idim, size, ib
+  R_TYPE, allocatable :: psinew(:, :, :), psicopy(:, :, :)
+
   PUSH_SUB(X(states_rotate_in_place))
   
   ASSERT(associated(st%X(psi)))
 
-  call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
-  call X(mesh_batch_rotate)(mesh, psib, uu)
-  call batch_end(psib)
+  if(states_are_packed(st)) then
+
+    call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
+    call X(mesh_batch_rotate)(mesh, psib, uu)
+    call batch_end(psib)
+
+  else
+
+#ifdef R_TREAL  
+    block_size = max(40, hardware%l2%size/(2*8*st%nst))
+#else
+    block_size = max(20, hardware%l2%size/(2*16*st%nst))
+#endif
+
+    SAFE_ALLOCATE(psinew(1:st%nst, 1:st%d%dim, 1:block_size))
+    SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
+    
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      
+      do ib = st%block_start, st%block_end
+        call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psicopy)
+      end do
+      
+      do idim = 1, st%d%dim
+        
+        call blas_gemm(transa = 't', transb = 'n',        &
+          m = st%nst, n = size, k = st%nst,               &
+          alpha = R_TOTYPE(M_ONE),                        &
+          a = uu(1, 1), lda = ubound(uu, dim = 1),        &
+          b = psicopy(1, idim, 1), ldb = st%nst*st%d%dim, &
+          beta = R_TOTYPE(M_ZERO),                        & 
+          c = psinew(1, idim, 1), ldc = st%nst*st%d%dim)
+        
+      end do
+      
+      do ib = st%block_start, st%block_end
+        call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psinew)
+      end do
+
+    end do
+
+  end if
 
   POP_SUB(X(states_rotate_in_place))
 end subroutine X(states_rotate_in_place)
