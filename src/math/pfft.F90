@@ -227,9 +227,6 @@ contains
     type(pfft_t),      intent(out)   :: pfft
     logical, optional, intent(in)    :: optimize
    
-    FLOAT, allocatable :: rin(:, :, :)
-    CMPLX, allocatable :: cin(:, :, :), cout(:, :, :)
-    
     integer :: ii, jj, fft_dim, idir, ierror, process_column_size, process_row_size
     logical :: optimize_
     character(len=100) :: str_tmp
@@ -305,8 +302,6 @@ contains
     pfft_array(jj)%is_real = is_real
     
     ! With PFFT only could be 3D complex
-    SAFE_ALLOCATE( cin(1:pfft_array(jj)%n(1), 1:pfft_array(jj)%n(2), 1:pfft_array(jj)%n(3)))
-    SAFE_ALLOCATE(cout(1:pfft_array(jj)%n(1), 1:pfft_array(jj)%n(2), 1:pfft_array(jj)%n(3)))
     
     ! Create two-dimensional process grid of
     call decompose(mpi_world%size, process_column_size, process_row_size)
