@@ -414,7 +414,7 @@ end subroutine X(batch_get_points)
 ! --------------------------------------------------------------
 
 subroutine X(batch_set_points)(this, sp, ep, psi)
-  type(batch_t),  intent(in)    :: this
+  type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: sp  
   integer,        intent(in)    :: ep
   R_TYPE,         intent(in)    :: psi(:, :, sp:)
