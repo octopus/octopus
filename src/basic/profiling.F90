@@ -124,7 +124,7 @@ module profiling_m
     module procedure rprofiling_count_operations
     module procedure dprofiling_count_operations
   end interface
-
+ 
   integer, parameter, public  ::   &
        PROFILING_TIME        = 1, &
        PROFILING_MEMORY      = 2, &
@@ -227,7 +227,7 @@ contains
 
     in_profiling_mode = (prof_vars%mode > 0)
     if(.not.in_profiling_mode) then
-    POP_SUB(profiling_init)
+      POP_SUB(profiling_init)
       return
     end if
 
@@ -238,7 +238,7 @@ contains
     !%Description
     !% This variable controls whether all nodes print the time
     !% profiling output. If set to no, the default, only the root node
-    !% will write the profile. If set to yes all nodes will print it.
+    !% will write the profile. If set to yes, all nodes will print it.
     !%End
 
     call parse_logical('ProfilingAllNodes', .false., prof_vars%all_nodes)
@@ -401,6 +401,8 @@ contains
     type(profile_t), target, intent(out)   :: this
     character(*),            intent(in)    :: label 
     
+    PUSH_SUB(profile_init)
+
     this%label = label
     this%total_time = M_ZERO
     this%self_time  = M_ZERO
@@ -412,7 +414,10 @@ contains
     this%active = .false.
     nullify(this%parent)
 
-    if(.not. in_profiling_mode) return
+    if(.not. in_profiling_mode) then
+      POP_SUB(profile_init)
+      return
+    endif
 
     prof_vars%last_profile = prof_vars%last_profile + 1
 
@@ -421,6 +426,7 @@ contains
     prof_vars%profile_list(prof_vars%last_profile)%p => this
     this%initialized = .true.
 
+    POP_SUB(profile_init)
   end subroutine profile_init
 
   ! ---------------------------------------------------------
@@ -458,6 +464,7 @@ contains
 #endif
 
     if(.not.in_profiling_mode) return
+    PUSH_SUB(profiling_in)
 
     if(.not. this%initialized) then 
       ASSERT(present(label))
@@ -489,6 +496,7 @@ contains
     prof_vars%current%p => this
     this%entry_time = now
 
+    POP_SUB(profiling_in)
   end subroutine profiling_in
 
 
@@ -505,6 +513,7 @@ contains
 #endif
     
     if(.not.in_profiling_mode) return
+    PUSH_SUB(profiling_out)
 
     ASSERT(this%active)
     this%active = .false.
@@ -541,6 +550,7 @@ contains
       nullify(prof_vars%current%p)
     end if
 
+    POP_SUB(profiling_out)
   end subroutine profiling_out
 
 
@@ -548,10 +558,14 @@ contains
 
   subroutine iprofiling_count_operations(ops)
     integer,         intent(in)    :: ops
+
 #ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
+    PUSH_SUB(iprofiling_count_operations)
 
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
+
+    POP_SUB(iprofiling_count_operations)
 #endif
   end subroutine iprofiling_count_operations
 
@@ -563,8 +577,11 @@ contains
 
 #ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
+    PUSH_SUB(rprofiling_count_operations)
     
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
+    
+    POP_SUB(rprofiling_count_operations)
 #endif
   end subroutine rprofiling_count_operations
 
@@ -576,8 +593,11 @@ contains
 
 #ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
+    PUSH_SUB(dprofiling_count_operations)
     
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + ops
+
+    POP_SUB(dprofiling_count_operations)
 #endif
   end subroutine dprofiling_count_operations
 
@@ -589,8 +609,11 @@ contains
     integer,         intent(in)    :: type
 
     if(.not.in_profiling_mode) return
+    PUSH_SUB(profiling_count_tran_int)
     
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
+
+    POP_SUB(profiling_count_tran_int)
   end subroutine profiling_count_tran_int
 
 
@@ -601,8 +624,11 @@ contains
     real(4),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
+    PUSH_SUB(profiling_count_tran_real_4)
     
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
+
+    POP_SUB(profiling_count_tran_real_4)
   end subroutine profiling_count_tran_real_4
 
 
@@ -613,8 +639,11 @@ contains
     real(8),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
+    PUSH_SUB(profiling_count_tran_real_8)
     
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
+
+    POP_SUB(profiling_count_tran_real_8)
   end subroutine profiling_count_tran_real_8
 
 
@@ -625,8 +654,11 @@ contains
     complex(4),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
+    PUSH_SUB(profiling_count_tran_complex_4)
     
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
+
+    POP_SUB(profiling_count_tran_complex_4)
   end subroutine profiling_count_tran_complex_4
 
 
@@ -637,50 +669,77 @@ contains
     complex(8),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
+    PUSH_SUB(profiling_count_tran_complex_8)
     
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(16*trf)
+
+    POP_SUB(profiling_count_tran_complex_8)
   end subroutine profiling_count_tran_complex_8
 
 
   ! ---------------------------------------------------------
   real(8) function profile_total_time(this)
     type(profile_t), intent(in) :: this
+
+    PUSH_SUB(profile_total_time)
     profile_total_time = this%total_time
+
+    POP_SUB(profile_total_time)
   end function profile_total_time
 
 
   ! ---------------------------------------------------------
   real(8) function profile_self_time(this)
     type(profile_t), intent(in) :: this
+
+    PUSH_SUB(profile_self_time)
     profile_self_time = this%self_time
+
+    POP_SUB(profile_self_time)
   end function profile_self_time
 
 
   ! ---------------------------------------------------------
   real(8) function profile_total_time_per_call(this)
     type(profile_t), intent(in) :: this
+
+    PUSH_SUB(profile_total_time_per_call)
     profile_total_time_per_call = this%total_time / dble(this%count)
+
+    POP_SUB(profile_total_time_per_call)
   end function profile_total_time_per_call
 
 
   ! ---------------------------------------------------------
   real(8) function profile_self_time_per_call(this)
     type(profile_t), intent(in) :: this
+
+    PUSH_SUB(profile_self_time_per_call)
     profile_self_time_per_call = this%self_time / dble(this%count)
+
+    POP_SUB(profile_self_time_per_call)
   end function profile_self_time_per_call
 
 
   ! ---------------------------------------------------------
   real(8) function profile_throughput(this)
     type(profile_t), intent(in) :: this
+
+    PUSH_SUB(profile_throughput)
     profile_throughput = this%op_count / this%total_time / CNST(1.0e6)
+
+    POP_SUB(profile_throughput)
   end function profile_throughput
 
 
   ! ---------------------------------------------------------
   real(8) function profile_bandwidth(this)
     type(profile_t), intent(in) :: this
+
+    PUSH_SUB(profile_bandwidth)
     profile_bandwidth = this%tr_count / (this%total_time*CNST(1024.0)**2)
+
+    POP_SUB(profile_bandwidth)
   end function profile_bandwidth
 
 
@@ -688,19 +747,26 @@ contains
   integer function profile_num_calls(this)
     type(profile_t), intent(in) :: this
     
+    PUSH_SUB(profile_num_calls)
     profile_num_calls = this%count
+
+    POP_SUB(profile_num_calls)
   end function profile_num_calls
 
 
   ! ---------------------------------------------------------
   character(LABEL_LENGTH) function profile_label(this)
     type(profile_t), intent(in) :: this
+
+    PUSH_SUB(profile_label)
     profile_label = this%label
+
+    POP_SUB(profile_label)
   end function profile_label
 
 
   ! ---------------------------------------------------------
-  !> Write profiling results of each node to profiling.NNN/profifling.nnn
+  !> Write profiling results of each node to profiling.NNN/profiling.nnn
   !! The format of each line is
   !! tag-label    pass_in    pass_out    time   time/pass_in
   !!
@@ -713,7 +779,6 @@ contains
     type(profile_t), pointer :: prof
 
     if(.not.in_profiling_mode) return
-
     PUSH_SUB(profiling_output)
 
 #ifdef HAVE_MPI
@@ -782,7 +847,7 @@ contains
 
     integer            :: ii, jj, nn
     
-    PUSH_SUB(profiling_make_position_str)
+    ! no push_sub, called too many times
 
     jj = len(var)
     if(var(jj:jj) == ')') then
@@ -802,7 +867,6 @@ contains
     write(str, '(4a,i5,a)') var(1:jj), "(", trim(file), ":", line, ")"
     call compact(str)
 
-    POP_SUB(profiling_make_position_str)
   end subroutine profiling_make_position_str
 
 
@@ -817,7 +881,7 @@ contains
     character(len=256) :: str
     integer(8) :: mem
     
-    PUSH_SUB(profiling_memory_log)
+    ! no push_sub, called too many times
 
     call profiling_make_position_str(var, file, line, str)
 
@@ -827,7 +891,6 @@ contains
     write(prof_vars%mem_iunit, '(f16.6,1x,a,3i16,1x,a)') loct_clock() - prof_vars%start_time, &
          trim(type), size, prof_vars%total_memory, mem, trim(str)
 
-    POP_SUB(profiling_memory_log)
   end subroutine profiling_memory_log
 
 
@@ -842,7 +905,7 @@ contains
     integer(8) :: size
     character(len=256) :: str
 
-    PUSH_SUB(profiling_memory_allocate)
+    ! no push_sub, called too many times
 
     size = size_ ! make a copy that we can change
 
@@ -899,7 +962,6 @@ contains
       end if
     end do
     
-    POP_SUB(profiling_memory_allocate)
   end subroutine profiling_memory_allocate
 
 
@@ -910,7 +972,7 @@ contains
     integer,          intent(in) :: line
     integer(8),       intent(in) :: size
     
-    PUSH_SUB(profiling_memory_deallocate)
+    ! no push_sub, called too many times
 
     prof_vars%dealloc_count  = prof_vars%dealloc_count + 1
     prof_vars%total_memory   = prof_vars%total_memory - size
@@ -919,7 +981,6 @@ contains
       call profiling_memory_log('D ', var, file, line, -size)
     end if
 
-    POP_SUB(profiling_memory_deallocate)
   end subroutine profiling_memory_deallocate
  
 
