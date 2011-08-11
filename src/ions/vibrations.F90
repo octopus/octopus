@@ -112,7 +112,7 @@ contains
   ! ---------------------------------------------------------
 
   subroutine vibrations_normalize_dyn_matrix(this, geo)
-    type(vibrations_t), intent(in)    :: this
+    type(vibrations_t), intent(inout) :: this
     type(geometry_t),   intent(inout) :: geo
 
     FLOAT :: factor
