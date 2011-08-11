@@ -69,7 +69,7 @@ module pert_m
      dionic_pert_matrix_elements_2, &
      zionic_pert_matrix_elements_2
 
-  integer, public, parameter ::  &
+  integer, public, parameter :: &
     PERTURBATION_ELECTRIC = 1,  &
     PERTURBATION_MAGNETIC = 2,  &
     PERTURBATION_IONIC    = 3,  &
@@ -235,7 +235,7 @@ contains
 
   ! --------------------------------------------------------------------
   subroutine pert_setup_atom(this, iatom, iatom2)
-    type(pert_t), intent(inout) :: this
+    type(pert_t),      intent(inout) :: this
     integer,           intent(in)    :: iatom
     integer, optional, intent(in)    :: iatom2
 
@@ -278,6 +278,7 @@ contains
     POP_SUB(pert_setup_mixed_dir)
   end subroutine pert_setup_mixed_dir
     
+  ! --------------------------------------------------------------------
   integer pure function pert_type(this)
     type(pert_t), intent(in) :: this
 

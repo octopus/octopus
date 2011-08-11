@@ -26,7 +26,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   integer,           intent(in)    :: npj
   integer,           intent(in)    :: dim
   R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:mesh%np, dim)
-  R_TYPE,            intent(in)    :: ppsi(:, :)  ! ppsi(1:mesh%np, dim)
+  R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:mesh%np, dim)
   integer,           intent(in)    :: ik
 
   type(batch_t) :: psib, ppsib

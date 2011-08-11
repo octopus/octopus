@@ -124,9 +124,6 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   R_TYPE, allocatable :: grad_psi(:, :, :)
   FLOAT,  allocatable :: grad_rho(:, :), force(:, :)
   CMPLX :: phase
-#ifdef HAVE_MPI
-  FLOAT, allocatable  :: force_local(:, :), grad_rho_local(:, :)
-#endif
 
   PUSH_SUB(X(forces_from_potential))
 
@@ -219,20 +216,15 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
 end subroutine X(forces_from_potential)
 
 ! --------------------------------------------------------------------------------
-subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_charges)
+subroutine X(forces_derivative)(gr, geo, ep, st, time, lr, lr2, force_deriv)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
   type(epot_t),                   intent(inout) :: ep
   type(states_t),                 intent(inout) :: st
   FLOAT,                          intent(in)    :: time
-  type(lr_t),                     intent(inout) :: lr
-  type(lr_t),                     intent(inout) :: lr2
-  integer,                        intent(in)    :: lr_dir
-  type(born_charges_t),           intent(out)   :: born_charges
-
-  ! lr, lr2 should be the wfns from electric perturbation in the lr_dir direction
-  ! lr is for +omega, lr2 is for -omega.
-  ! for each atom, Z*(i,j) = dF(j)/dE(i)
+  type(lr_t),                     intent(in)    :: lr
+  type(lr_t),                     intent(in)    :: lr2
+  CMPLX,                          intent(out)   :: force_deriv(:,:)
 
   integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
   FLOAT :: ff, kpoint(1:MAX_DIM)
@@ -242,16 +234,11 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_c
   R_TYPE, allocatable :: grad_psi(:, :, :)
   R_TYPE, allocatable :: grad_dl_psi(:, :, :)
   R_TYPE, allocatable :: grad_dl_psi2(:, :, :)
-  CMPLX,  allocatable :: grad_rho(:, :), force(:, :)
+  CMPLX,  allocatable :: grad_rho(:, :)
   CMPLX :: phase
-#ifdef HAVE_MPI
-  CMPLX, allocatable  :: force_local(:, :), grad_rho_local(:, :)
-#endif
+  CMPLX, allocatable  :: force_local(:, :)
 
-  PUSH_SUB(X(forces_born_charges))
-
-  ! need all to calculate Born charges
-  ASSERT(lr_dir > 0 .and. lr_dir <= gr%mesh%sb%dim)
+  PUSH_SUB(X(forces_derivative))
 
   np      = gr%mesh%np
   np_part = gr%mesh%np_part
@@ -261,8 +248,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_c
   SAFE_ALLOCATE(grad_psi(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
   SAFE_ALLOCATE(grad_rho(1:np, 1:gr%mesh%sb%dim))
   grad_rho = M_ZERO
-  SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
-  force = M_ZERO
+  force_deriv = M_ZERO
 
   ! even if there is no fine mesh, we need to make another copy
   SAFE_ALLOCATE(psi(1:np_part, 1:st%d%dim))
@@ -315,7 +301,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_c
         if(projector_is_null(ep%proj(iatom))) cycle
         do idir = 1, gr%mesh%sb%dim
 
-          force(idir, iatom) = force(idir, iatom) - st%d%kweights(iq) * st%occ(ist, iq) * &
+          force_deriv(idir, iatom) = force_deriv(idir, iatom) - st%d%kweights(iq) * st%occ(ist, iq) * &
             (X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, grad_psi(:, idir, :), dl_psi) &
             + X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_dl_psi(:, idir, :)) &
             + X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, dl_psi2, grad_psi(:, idir, :)) &
@@ -337,31 +323,53 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_c
 #if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force, dim = (/gr%mesh%sb%dim, geo%natoms/))
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_deriv, dim = (/gr%mesh%sb%dim, geo%natoms/))
     call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho, dim = (/np, gr%mesh%sb%dim/))
     call profiling_out(prof_comm)
   end if
 #endif
   
-  do iatom = 1, geo%natoms
-    born_charges%charge(lr_dir, 1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom)
-  end do
-
-  call zforces_from_local_potential(gr, geo, ep, st, time, grad_rho, force)
-
+  SAFE_ALLOCATE(force_local(1:gr%sb%dim, 1:geo%natoms))
+  call zforces_from_local_potential(gr, geo, ep, st, time, grad_rho, force_local)
+  force_deriv(:,:) = force_deriv(:,:) + force_local(:,:)
+  SAFE_DEALLOCATE_A(force_local)
   SAFE_DEALLOCATE_A(grad_rho)
+
+  POP_SUB(X(forces_derivative)) 
+end subroutine X(forces_derivative)
+
+! --------------------------------------------------------------------------------
+subroutine X(forces_born_charges)(gr, geo, ep, st, time, lr, lr2, lr_dir, born_charges)
+  type(grid_t),                   intent(inout) :: gr
+  type(geometry_t),               intent(inout) :: geo
+  type(epot_t),                   intent(inout) :: ep
+  type(states_t),                 intent(inout) :: st
+  FLOAT,                          intent(in)    :: time
+  type(lr_t),                     intent(in)    :: lr
+  type(lr_t),                     intent(in)    :: lr2
+  integer,                        intent(in)    :: lr_dir
+  type(born_charges_t),           intent(out)   :: born_charges
+
+  ! lr, lr2 should be the wfns from electric perturbation in the lr_dir direction
+  ! lr is for +omega, lr2 is for -omega.
+  ! for each atom, Z*(i,j) = dF(j)/dE(i)
+
+  integer :: iatom
+
+  PUSH_SUB(X(forces_born_charges))
+
+  ! need all to calculate Born charges
+  ASSERT(lr_dir > 0 .and. lr_dir <= gr%mesh%sb%dim)
+
+  call X(forces_derivative)(gr, geo, ep, st, time, lr, lr2, born_charges%charge(lr_dir, :, :))
 
   do iatom = 1, geo%natoms
     born_charges%charge(lr_dir, lr_dir, iatom) = born_charges%charge(lr_dir, lr_dir, iatom) + species_zval(geo%atom(iatom)%spec)
-    do idir = 1, gr%mesh%sb%dim
-      born_charges%charge(lr_dir, idir, iatom) = born_charges%charge(lr_dir, idir, iatom) + force(idir, iatom)
-    enddo
   enddo
 
-  SAFE_DEALLOCATE_A(force)
   POP_SUB(X(forces_born_charges))
-  
 end subroutine X(forces_born_charges)
+
 
 !! Local Variables:
 !! mode: f90
