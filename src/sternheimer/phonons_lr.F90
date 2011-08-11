@@ -23,6 +23,7 @@ module phonons_lr_m
   use born_charges_m
   use datasets_m
   use epot_m
+  use forces_m
   use geometry_m
   use global_m
   use grid_m
@@ -85,7 +86,8 @@ contains
     type(grid_t),     pointer :: gr
 
     integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr, ist, ik
-    FLOAT, allocatable   :: infrared(:,:)
+    FLOAT, allocatable :: infrared(:,:)
+    CMPLX, allocatable :: force_deriv(:,:)
     FLOAT :: term
     character(len=80) :: dirname_restart, str_tmp
     type(Born_charges_t) :: born
@@ -177,6 +179,7 @@ contains
     call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo, time = M_ZERO)
 
     SAFE_ALLOCATE(infrared(1:natoms*ndim, 1:ndim))
+    SAFE_ALLOCATE(force_deriv(1:ndim, 1:natoms))
 
     !CALCULATE
 
@@ -222,12 +225,9 @@ contains
         jatom = vibrations_get_atom(vib, jmat)
         jdir  = vibrations_get_dir (vib, jmat)
 
-        call pert_setup_atom(ionic_pert, jatom, iatom)
-        call pert_setup_dir (ionic_pert, jdir,  idir)
-        
-        vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) &
-          -M_TWO * TOFLOAT(dpert_expectation_value(ionic_pert, gr, geo, hm, st, st%dpsi, lr(1)%ddl_psi))
+        call dforces_derivative(gr, geo, hm%ep, st, M_ZERO, lr(1), lr(1), force_deriv)
 
+        vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) + TOFLOAT(force_deriv(jdir, jatom))
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) * vibrations_norm_factor(vib, geo, iatom, jatom)
         
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
@@ -285,6 +285,7 @@ contains
     !DESTRUCT
 
     SAFE_DEALLOCATE_A(infrared)
+    SAFE_DEALLOCATE_A(force_deriv)
     call Born_charges_end(born)
     call lr_dealloc(lr(1))
     call vibrations_end(vib)

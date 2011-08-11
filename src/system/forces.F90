@@ -68,6 +68,8 @@ module forces_m
     forces_calculate,          &
     dforces_from_potential,    &
     zforces_from_potential,    &
+    dforces_derivative,        &
+    zforces_derivative,        &
     dforces_born_charges,      &
     zforces_born_charges
 
