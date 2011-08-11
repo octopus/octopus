@@ -89,7 +89,7 @@ contains
     FLOAT :: term
     character(len=80) :: dirname_restart, str_tmp
     type(Born_charges_t) :: born
-    logical :: normal_mode_wfs
+    logical :: normal_mode_wfs, use_restart
 
     PUSH_SUB(phonons_lr_run)
 
@@ -117,6 +117,26 @@ contains
     !% This part is time-consuming and not parallel, but not needed for most purposes.
     !%End
     call parse_logical(datasets_check('CalcNormalModeWfs'), .false., normal_mode_wfs)
+
+    !%Variable UseRestartDontSolve
+    !%Type logical
+    !%Default false
+    !%Section Linear Response::Vibrational Modes
+    !%Description
+    !% If set to true, the restart info for each displacement will be used as is
+    !% in calculating normal modes, without trying to solve the Sternheimer equation.
+    !% This allows continuous of a previous calculation which did not complete
+    !% without doing anything at all with the displacements already solved, since
+    !% setting up the Sternheimer problem can be quite time-consuming for large systems.
+    !% Use with care: if the stored info is not the appropriate converged solution,
+    !% results will be incorrect.
+    !% If <tt>FromScratch = true</tt>, this variable is always false.
+    !%End
+    if(.not. fromScratch) then
+      call parse_logical(datasets_check('UseRestartDontSolve'), .false., use_restart)
+    else
+      use_restart = .false.
+    endif
 
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
@@ -190,8 +210,13 @@ contains
       call pert_setup_atom(ionic_pert, iatom)
       call pert_setup_dir(ionic_pert, idir)
       
-      call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
-        VIB_MODES_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+      if(.not. use_restart .or. ierr /= 0) then
+        call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
+          VIB_MODES_DIR, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
+      else
+        message(1) = "Restart info being used without solving Sternheimer equation."
+        call messages_warning(1)
+      endif
       
       do jmat = imat, vib%num_modes 
         jatom = vibrations_get_atom(vib, jmat)

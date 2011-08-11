@@ -410,7 +410,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! returns
+  ! returns in ierr:
   ! <0 => Fatal error
   ! =0 => read all wavefunctions
   ! >0 => could only read x wavefunctions
