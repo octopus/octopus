@@ -46,7 +46,8 @@ module vibrations_m
        vibrations_get_index,            &
        vibrations_get_atom,             &
        vibrations_get_dir,              &
-       vibrations_output
+       vibrations_output,               &
+       vibrations_get_suffix
   
   type vibrations_t
     integer :: num_modes
@@ -109,11 +110,22 @@ contains
     POP_SUB(vibrations_end)
   end subroutine vibrations_end
 
-  ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
+  character(len=2) function vibrations_get_suffix(this)
+    type(vibrations_t), intent(in) :: this
+
+    PUSH_SUB(vibrations_get_suffix)
+    vibrations_get_suffix = this%suffix
+
+    POP_SUB(vibrations_get_suffix)
+  end function vibrations_get_suffix
+
+
+  ! ---------------------------------------------------------
   subroutine vibrations_normalize_dyn_matrix(this, geo)
     type(vibrations_t), intent(inout) :: this
-    type(geometry_t),   intent(inout) :: geo
+    type(geometry_t),   intent(in)    :: geo
 
     FLOAT :: factor
     integer :: iatom, idir, jatom, jdir, imat, jmat

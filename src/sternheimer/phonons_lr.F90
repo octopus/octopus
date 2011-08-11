@@ -265,7 +265,7 @@ contains
 
     call vibrations_diag_dyn_matrix(vib)
     call vibrations_output(vib)
-    call axsf_mode_output(vib, "_lr", geo, gr%mesh)
+    call axsf_mode_output(vib, geo, gr%mesh)
 
     if(simul_box_is_periodic(gr%sb) .and. .not. smear_is_semiconducting(st%smear)) then
       message(1) = "Cannot calculate infrared intensities for periodic system with smearing (i.e. without a gap)."
@@ -481,20 +481,23 @@ contains
 
   ! ---------------------------------------------------------
   ! output eigenvectors as animated XSF file, one per frame, displacements as forces
-  subroutine axsf_mode_output(this, suffix, geo, mesh)
+  subroutine axsf_mode_output(this, geo, mesh)
     type(vibrations_t), intent(in) :: this
-    character (len=*),  intent(in) :: suffix
     type(geometry_t),   intent(in) :: geo
     type(mesh_t),       intent(in) :: mesh
     
     integer :: iunit, iatom, idir, imat, jmat
     FLOAT, allocatable :: forces(:,:)
+    character(len=2) :: suffix
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(axsf_mode_output)
 
-    iunit = io_open(VIB_MODES_DIR//'normal_modes'//trim(suffix)//'.axsf', action='write')
+    ! for some reason, direct usage of this%suffix gives an odd result
+    suffix = vibrations_get_suffix(this)
+    iunit = io_open(VIB_MODES_DIR//'normal_modes_'//suffix//'.axsf', action='write')
+
     write(iunit, '(a,i6)') 'ANIMSTEPS ', this%num_modes
     SAFE_ALLOCATE(forces(1:geo%natoms, 1:mesh%sb%dim))
     do imat = 1, this%num_modes
