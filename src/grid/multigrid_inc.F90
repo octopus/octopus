@@ -17,8 +17,6 @@
 !!
 !! $Id$
 
-#include "global.h"
-
   ! ---------------------------------------------------------
   subroutine X(multigrid_coarse2fine)(tt, coarse_der, fine_mesh, f_coarse, f_fine, order)
     type(transfer_table_t),  intent(in)    :: tt

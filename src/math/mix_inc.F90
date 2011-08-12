@@ -17,8 +17,6 @@
 !!
 !! $Id$
 
-#include "global.h"
-
 ! ---------------------------------------------------------
 subroutine X(mixing)(smix, iter, vin, vout, vnew, dotp)
   type(mix_t),  intent(inout) :: smix

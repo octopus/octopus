@@ -20,8 +20,6 @@
 ! Implementation of the locally optimal block preconditioned conjugate-
 ! gradients algorithm.
 
-#include "global.h"
-
 ! Index set of unconverged eigenvectors.
 #define UC uc(1:nuc)
 
@@ -416,7 +414,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     call batch_end(psib)
     call batch_end(hpsib)
       
-    ! Orthonormalize conjugate directions in all but the first iteratation.
+    ! Orthonormalize conjugate directions in all but the first iteration.
     ! Since h_dir also has to be modified (to avoid a full calculation of
     ! H dir with the new dir), we cannot use lobpcg_orth at this point.
     if(iter > 1) then
