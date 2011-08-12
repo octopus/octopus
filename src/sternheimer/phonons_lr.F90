@@ -79,7 +79,7 @@ contains
     type(sternheimer_t) :: sh
     type(lr_t)          :: lr(1:1), kdotp_lr(MAX_DIM)
     type(vibrations_t)  :: vib
-    type(pert_t)        :: ionic_pert, electric_pert
+    type(pert_t)        :: ionic_pert
 
     type(geometry_t), pointer :: geo
     type(states_t),   pointer :: st
@@ -201,7 +201,6 @@ contains
     call dionic_pert_matrix_elements_2(ionic_pert, sys%gr, sys%geo, hm, 1, st, st%dpsi(:, :, :, 1), vib, CNST(-1.0), vib%dyn_matrix)
 
     call pert_init(ionic_pert, PERTURBATION_IONIC, gr, geo)
-    call pert_init(electric_pert, PERTURBATION_ELECTRIC, gr, geo)
 
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
@@ -244,7 +243,6 @@ contains
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
 
         call vibrations_out_dyn_matrix(vib, imat, jmat)
-
       end do
       
       if(do_infrared) then
@@ -261,10 +259,9 @@ contains
             enddo
           enddo
         endif
+
         do jdir = gr%sb%periodic_dim + 1, ndim
-          call pert_setup_dir(electric_pert, jdir)
-          infrared(imat, jdir) = &
-            M_TWO * TOFLOAT(dpert_expectation_value(electric_pert, gr, geo, hm, st, lr(1)%ddl_psi, st%dpsi))
+          infrared(imat, jdir) = dmf_dotp(gr%mesh, gr%mesh%x(:, jdir), lr(1)%ddl_rho(:, 1))
         end do
 
         born%charge(idir, 1:gr%sb%dim, iatom) = -infrared(imat, 1:gr%sb%dim)
@@ -275,7 +272,6 @@ contains
     end do 
 
     call pert_end(ionic_pert)
-    call pert_end(electric_pert)
 
     call vibrations_diag_dyn_matrix(vib)
     call vibrations_output(vib)
