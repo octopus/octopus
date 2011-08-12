@@ -91,7 +91,7 @@ contains
     FLOAT :: term
     character(len=80) :: dirname_restart, str_tmp
     type(Born_charges_t) :: born
-    logical :: normal_mode_wfs, use_restart
+    logical :: normal_mode_wfs, use_restart, do_infrared
 
     PUSH_SUB(phonons_lr_run)
 
@@ -120,6 +120,16 @@ contains
     !%End
     call parse_logical(datasets_check('CalcNormalModeWfs'), .false., normal_mode_wfs)
 
+    !%Variable CalcInfrared
+    !%Type logical
+    !%Default true
+    !%Section Linear Response::Vibrational Modes
+    !%Description
+    !% If set to true, infrared intensities (and Born charges) will be calculated
+    !% and written in <tt>vib_modes/infrared</tt>.
+    !%End
+    call parse_logical(datasets_check('CalcInfrared'), .true., do_infrared)
+
     !%Variable UseRestartDontSolve
     !%Type logical
     !%Default false
@@ -127,7 +137,7 @@ contains
     !%Description
     !% If set to true, the restart info for each displacement will be used as is
     !% in calculating normal modes, without trying to solve the Sternheimer equation.
-    !% This allows continuous of a previous calculation which did not complete
+    !% This allows continuation of a previous calculation which did not complete
     !% without doing anything at all with the displacements already solved, since
     !% setting up the Sternheimer problem can be quite time-consuming for large systems.
     !% Use with care: if the stored info is not the appropriate converged solution,
@@ -143,12 +153,10 @@ contains
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    call Born_charges_init(born, geo, st, gr%sb%dim)
-
     call restart_look_and_read(st, gr, geo)
 
     ! read kdotp wavefunctions if necessary (for IR intensities)
-    if (simul_box_is_periodic(gr%sb)) then
+    if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
@@ -178,7 +186,10 @@ contains
 
     call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo, time = M_ZERO)
 
-    SAFE_ALLOCATE(infrared(1:natoms*ndim, 1:ndim))
+    if(do_infrared) then
+      SAFE_ALLOCATE(infrared(1:natoms*ndim, 1:ndim))
+      call Born_charges_init(born, geo, st, gr%sb%dim)
+    endif
     SAFE_ALLOCATE(force_deriv(1:ndim, 1:natoms))
 
     !CALCULATE
@@ -236,26 +247,29 @@ contains
 
       end do
       
-      if(smear_is_semiconducting(st%smear)) then
-        do jdir = 1, gr%sb%periodic_dim
-          infrared(imat, jdir) = M_ZERO
-          do ik = 1, st%d%nik
-            term = M_ZERO
-            do ist = 1, st%nst
-              term = term + &
-                TOFLOAT(dmf_dotp(gr%mesh, st%d%dim, lr(1)%ddl_psi(:, :, ist, ik), kdotp_lr(jdir)%ddl_psi(:, :, ist, ik)))
+      if(do_infrared) then
+        if(smear_is_semiconducting(st%smear)) then
+          do jdir = 1, gr%sb%periodic_dim
+            infrared(imat, jdir) = M_ZERO
+            do ik = 1, st%d%nik
+              term = M_ZERO
+              do ist = 1, st%nst
+                term = term + &
+                  TOFLOAT(dmf_dotp(gr%mesh, st%d%dim, lr(1)%ddl_psi(:, :, ist, ik), kdotp_lr(jdir)%ddl_psi(:, :, ist, ik)))
+              enddo
+              infrared(imat, jdir) = infrared(imat, jdir) + M_TWO * term * st%smear%el_per_state * st%d%kweights(ik)
             enddo
-            infrared(imat, jdir) = infrared(imat, jdir) + M_TWO * term * st%smear%el_per_state * st%d%kweights(ik)
           enddo
-        enddo
-      endif
-      do jdir = gr%sb%periodic_dim + 1, ndim
-        call pert_setup_dir(electric_pert, jdir)
-        infrared(imat, jdir) = &
-          M_TWO * TOFLOAT(dpert_expectation_value(electric_pert, gr, geo, hm, st, lr(1)%ddl_psi, st%dpsi))
-      end do
+        endif
+        do jdir = gr%sb%periodic_dim + 1, ndim
+          call pert_setup_dir(electric_pert, jdir)
+          infrared(imat, jdir) = &
+            M_TWO * TOFLOAT(dpert_expectation_value(electric_pert, gr, geo, hm, st, lr(1)%ddl_psi, st%dpsi))
+        end do
 
-      born%charge(idir, 1:gr%sb%dim, iatom) = -infrared(imat, 1:gr%sb%dim)
+        born%charge(idir, 1:gr%sb%dim, iatom) = -infrared(imat, 1:gr%sb%dim)
+      endif
+
       message(1) = ""
       call messages_info(1)
     end do 
@@ -267,14 +281,18 @@ contains
     call vibrations_output(vib)
     call axsf_mode_output(vib, geo, gr%mesh)
 
-    if(simul_box_is_periodic(gr%sb) .and. .not. smear_is_semiconducting(st%smear)) then
-      message(1) = "Cannot calculate infrared intensities for periodic system with smearing (i.e. without a gap)."
-      call messages_info(1)
-      infrared(:,:) = M_ZERO
-      born%charge(:,:,:) = M_ZERO
+    if(do_infrared) then
+      if(simul_box_is_periodic(gr%sb) .and. .not. smear_is_semiconducting(st%smear)) then
+        message(1) = "Cannot calculate infrared intensities for periodic system with smearing (i.e. without a gap)."
+        call messages_info(1)
+      else
+        call out_Born_charges(born, geo, gr%sb%dim, VIB_MODES_DIR, write_real = .true.)
+        call calc_infrared()
+      endif
+
+      SAFE_DEALLOCATE_A(infrared)
+      call Born_charges_end(born)
     endif
-    call out_Born_charges(born, geo, gr%sb%dim, VIB_MODES_DIR, write_real = .true.)
-    call calc_infrared()
 
     if(normal_mode_wfs) then
       message(1) = "Calculating response wavefunctions for normal modes."
@@ -284,9 +302,7 @@ contains
 
     !DESTRUCT
 
-    SAFE_DEALLOCATE_A(infrared)
     SAFE_DEALLOCATE_A(force_deriv)
-    call Born_charges_end(born)
     call lr_dealloc(lr(1))
     call vibrations_end(vib)
     call sternheimer_end(sh)
