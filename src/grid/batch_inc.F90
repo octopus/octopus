@@ -237,6 +237,8 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   ASSERT(batch_type(this) /= TYPE_FLOAT)
 #endif
 
+  call batch_pack_was_modified(this)
+
   select case(batch_status(this))
   case(BATCH_NOT_PACKED)
     if(batch_type(this) == TYPE_FLOAT) then
@@ -375,35 +377,56 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
   integer,        intent(in)    :: ep
   R_TYPE,         intent(inout) :: psi(:, :, sp:)
 
-  integer :: idim, ist, ist2
-
+  integer :: idim, ist, ii
+  
   PUSH_SUB(X(batch_get_points))
+
+#ifdef R_TREAL
+  ! cannot get a real value from a complex batch
+  ASSERT(batch_type(this) /= TYPE_CMPLX)
+#endif
 
   select case(batch_status(this))
   case(BATCH_NOT_PACKED)
 
     if(batch_type(this) == TYPE_FLOAT) then
       
-      do ist = 1, this%nst
-        ist2 = this%states(ist)%ist
-        do idim = 1, this%dim
-          psi(ist2, idim, sp:ep) = this%states(ist)%dpsi(sp:ep, idim)
-        end do
+      do ii = 1, this%nst_linear
+        ist = this%index(ii, 1)
+        idim = this%index(ii, 2)
+        psi(ist, idim, sp:ep) = this%states_linear(ii)%dpsi(sp:ep)
       end do
 
     else
 
-      do ist = 1, this%nst
-        ist2 = this%states(ist)%ist
-        do idim = 1, this%dim
-          psi(ist2, idim, sp:ep) = this%states(ist)%zpsi(sp:ep, idim)
-        end do
+      do ii = 1, this%nst_linear
+        ist = this%index(ii, 1)
+        idim = this%index(ii, 2)
+        psi(ist, idim, sp:ep) = this%states_linear(ii)%zpsi(sp:ep)
       end do
 
     end if
 
   case(BATCH_PACKED)
-    call messages_not_implemented('batch_get_points for packed batches')
+
+    if(batch_type(this) == TYPE_FLOAT) then
+      
+      do ii = 1, this%nst_linear
+        ist = this%index(ii, 1)
+        idim = this%index(ii, 2)
+        psi(ist, idim, sp:ep) = this%pack%dpsi(ii, sp:ep)
+      end do
+
+    else
+
+      do ii = 1, this%nst_linear
+        ist = this%index(ii, 1)
+        idim = this%index(ii, 2)
+        psi(ist, idim, sp:ep) = this%pack%zpsi(ii, sp:ep)
+      end do
+
+    end if
+
   case(BATCH_CL_PACKED)
     call messages_not_implemented('batch_get_points for CL packed batches')
   end select
@@ -419,35 +442,58 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
   integer,        intent(in)    :: ep
   R_TYPE,         intent(in)    :: psi(:, :, sp:)
 
-  integer :: idim, ist, ist2
+  integer :: idim, ist, ii
 
   PUSH_SUB(X(batch_set_points))
+
+#ifdef R_TCOMPLEX
+  ! cannot set a real batch with complex values
+  ASSERT(batch_type(this) /= TYPE_FLOAT)
+#endif
+
+  call batch_pack_was_modified(this)
 
   select case(batch_status(this))
   case(BATCH_NOT_PACKED)
 
     if(batch_type(this) == TYPE_FLOAT) then
-      
-      do ist = 1, this%nst
-        ist2 = this%states(ist)%ist
-        do idim = 1, this%dim
-          this%states(ist)%dpsi(sp:ep, idim) = psi(ist2, idim, sp:ep)
-        end do
+
+      do ii = 1, this%nst_linear
+        ist = this%index(ii, 1)
+        idim = this%index(ii, 2)
+        this%states_linear(ii)%dpsi(sp:ep) = psi(ist, idim, sp:ep)
       end do
 
     else
 
-      do ist = 1, this%nst
-        ist2 = this%states(ist)%ist
-        do idim = 1, this%dim
-          this%states(ist)%zpsi(sp:ep, idim) = psi(ist2, idim, sp:ep)
-        end do
+      do ii = 1, this%nst_linear
+        ist = this%index(ii, 1)
+        idim = this%index(ii, 2)
+        this%states_linear(ii)%zpsi(sp:ep) = psi(ist, idim, sp:ep)
       end do
 
     end if
 
   case(BATCH_PACKED)
-    call messages_not_implemented('batch_set_points for packed batches')
+
+    if(batch_type(this) == TYPE_FLOAT) then
+
+      do ii = 1, this%nst_linear
+        ist = this%index(ii, 1)
+        idim = this%index(ii, 2)
+        this%pack%dpsi(ii, sp:ep) = psi(ist, idim, sp:ep)
+      end do
+
+    else
+
+      do ii = 1, this%nst_linear
+        ist = this%index(ii, 1)
+        idim = this%index(ii, 2)
+        this%pack%zpsi(ii, sp:ep) = psi(ist, idim, sp:ep)
+      end do
+
+    end if
+
   case(BATCH_CL_PACKED)
     call messages_not_implemented('batch_set_points for CL packed batches')
   end select
