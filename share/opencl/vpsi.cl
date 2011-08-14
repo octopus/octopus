@@ -26,20 +26,21 @@
 #endif
 
 __kernel void vpsi(const int offset, 
-		    const __global double * vv, 
-		    const __global double * psi, const int ldpsi,
-		   __global double * vpsi, const int ldvpsi){
+		   __global double const * restrict vv, 
+		   __global double const * restrict psi, const int ldpsi,
+		   __global double * restrict vpsi, const int ldvpsi){
 
   int ist = get_global_id(0);
   int ip  = get_global_id(1);
 
   vpsi[(ip<<ldvpsi) + ist] += vv[offset + ip]*psi[(ip<<ldpsi) + ist];
+  //  vpsi[(ip<<ldvpsi) + ist] += psi[(ip<<ldpsi) + ist];
 
 }
 
-__kernel void vpsi_spinors(const __global double * vv, const int ldvv,
-			   const __global double2 * psi, const int ldpsi,
-			   __global double2 * vpsi, const int ldvpsi){
+__kernel void vpsi_spinors(__global double const * restrict vv, const int ldvv,
+			   __global double2 const * restrict psi, const int ldpsi,
+			   __global double2 * restrict vpsi, const int ldvpsi){
   int ist = 2*get_global_id(0);
   int ip = get_global_id(1);
 

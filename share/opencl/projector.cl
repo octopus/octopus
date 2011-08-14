@@ -26,13 +26,13 @@
 #endif
 
 __kernel void projector_bra(const int nmat,
-			    const __global int * sizes,
-			    const __global int * offsets,
-			    __global const double * matrix,
-			    __global const int * map,
-			    __global const double * scal,
-			    __global const double * psi, const int ldpsi,
-			    __global double * projection, const int ldprojection
+			    __global int const * restrict sizes,
+			    __global int const * restrict offsets,
+			    __global double const * restrict matrix,
+			    __global int const * restrict map,
+			    __global double const * restrict scal,
+			    __global double const * restrict psi, const int ldpsi,
+			    __global double * restrict projection, const int ldprojection
 			    ){
   
   const int ist = get_global_id(0);
@@ -58,12 +58,12 @@ __kernel void projector_bra(const int nmat,
 }
 
 __kernel void projector_ket(const int nmat,
-			    const __global int * sizes,
-			    const __global int * offsets,
-			    __global const double * matrix,
-			    __global const int * map,
-			    __global const double * projection, const int ldprojection,
-			    __global double * lpsi, const int ldlpsi
+			    __global int const * restrict sizes,
+			    __global int const * restrict offsets,
+			    __global double const * restrict matrix,
+			    __global int const * restrict map,
+			    __global double const * restrict projection, const int ldprojection,
+			    __global double * restrict lpsi, const int ldlpsi
 			    ){
   
   const int ist = get_global_id(0);
@@ -87,10 +87,10 @@ __kernel void projector_ket(const int nmat,
 }
 
 __kernel void projector_ket_copy(const int np,
-				 const __global int * pos,
-				 const __global int * invmap,
-				 const __global double * lpsi, const int ldlpsi,
-				 __global double * psi, const int ldpsi
+				 __global int const * restrict pos,
+				 __global int const * restrict invmap,
+				 __global double const * restrict lpsi, const int ldlpsi,
+				 __global double * restrict psi, const int ldpsi
 				 ){
   const int ist = get_global_id(0);
   const int ip = get_global_id(1);

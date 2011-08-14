@@ -48,11 +48,11 @@ __kernel void zdot_vector(const int np,
   int ist = get_global_id(0);
   double2 tmp, a1, a2;
 
-  tmp = (double2) 0.0;
+  tmp = (double2) (0.0);
   for(int ip = 0; ip < np; ip++){
     a1 = xx[(ip<<ldxx) + ist];
     a2 = yy[(ip<<ldyy) + ist];
-    tmp += (double2)(a1.x*a2.x + a1.y*a2.y, a1.x*a2.y - a1.y*a2.y);
+    tmp += (double2)(a1.s0*a2.s0 + a1.s1*a2.s1, a1.s0*a2.s1 - a1.s1*a2.s0);
   }
   dot[ist] = tmp;
 }
@@ -65,6 +65,8 @@ __kernel void ddot_matrix(const int np,
   int ist = get_global_id(0);
   int jst = get_global_id(1);
   double tmp;
+
+  if(ist >= lddot) return;
 
   tmp = 0.0;
   for(int ip = 0; ip < np; ip++){
@@ -80,16 +82,39 @@ __kernel void zdot_matrix(const int np,
   
   int ist = get_global_id(0);
   int jst = get_global_id(1);
-  double2 tmp, a1, a2;
 
-  tmp = (double2) 0.0;
+  if(ist >= lddot) return;
+		 
+  double2 tmp = (double2) (0.0);
   for(int ip = 0; ip < np; ip++){
-    a1 = xx[(ip<<ldxx) + ist];
-    a2 = yy[(ip<<ldyy) + jst];
-    tmp += (double2)(a1.x*a2.x + a1.y*a2.y, a1.x*a2.y - a1.y*a2.y);
+    double2 a1 = xx[(ip<<ldxx) + ist];
+    double2 a2 = yy[(ip<<ldyy) + jst];
+    tmp += (double2)(a1.s0*a2.s0 + a1.s1*a2.s1, a1.s0*a2.s1 - a1.s1*a2.s0);
   }
   dot[ist + lddot*jst] = tmp;
 }
+
+__kernel void zdot_matrix_spinors(const int np,
+				  __global double4 const * restrict xx, const int ldxx,
+				  __global double4 const * restrict yy, const int ldyy,
+				  __global double2 * restrict dot, const int lddot){
+  
+  int ist = get_global_id(0);
+  int jst = get_global_id(1);
+
+  if(ist >= lddot) return;
+
+  double2 tmp1 = (double2) (0.0);
+  double2 tmp2 = (double2) (0.0);
+  for(int ip = 0; ip < np; ip++){
+    double4 a1 = xx[(ip<<ldxx) + ist];
+    double4 a2 = yy[(ip<<ldyy) + jst];
+    tmp1 += (double2)(a1.s0*a2.s0 + a1.s1*a2.s1, a1.s0*a2.s1 - a1.s1*a2.s0);
+    tmp2 += (double2)(a1.s2*a2.s2 + a1.s3*a2.s3, a1.s2*a2.s3 - a1.s3*a2.s2);
+  }
+  dot[ist + lddot*jst] = tmp1 + tmp2;
+}
+
 
 /*
  Local Variables:
