@@ -86,9 +86,7 @@ module batch_m
     integer                        :: size_real(1:2)
     FLOAT, pointer                 :: dpsi(:, :)
     CMPLX, pointer                 :: zpsi(:, :)
-#ifdef HAVE_OPENCL
     type(opencl_mem_t)             :: buffer
-#endif
   end type batch_pack_t
   
   type batch_t
@@ -363,11 +361,9 @@ contains
       bout%pack%size(1:2)      = bin%pack%size(1:2)
       bout%pack%size_real(1:2) = bin%pack%size_real(1:2)
 
-#ifdef HAVE_OPENCL
       if(opencl_is_enabled()) then
         bout%pack%buffer = bin%pack%buffer
       end if
-#endif
 
     else      
 
@@ -468,17 +464,17 @@ contains
     if(.not. batch_is_packed(this)) then
       this%pack%size(1) = pad_pow2(this%nst_linear)
       this%pack%size(2) = batch_max_size(this)
-#ifdef HAVE_OPENCL
+
       if(opencl_is_enabled()) this%pack%size(2) = opencl_padded_size(this%pack%size(2))
-#endif
+
       this%pack%size_real = this%pack%size
       if(batch_type(this) == TYPE_CMPLX) this%pack%size_real(1) = 2*this%pack%size_real(1)
 
       if(opencl_is_enabled()) then
         this%status = BATCH_CL_PACKED
-#ifdef HAVE_OPENCL
+
         call opencl_create_buffer(this%pack%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
-#endif
+
       else
         this%status = BATCH_PACKED
         if(batch_type(this) == TYPE_FLOAT) then
@@ -493,9 +489,9 @@ contains
 
         this%dirty = .false.
         if(opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
+
           call batch_write_to_opencl_buffer(this)
-#endif
+
         else
           call pack_copy()
         end if
@@ -574,9 +570,9 @@ contains
         this%status = BATCH_NOT_PACKED
         
         if(opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
+
           call opencl_release_buffer(this%pack%buffer)
-#endif
+
         else
           SAFE_DEALLOCATE_P(this%pack%dpsi)
           SAFE_DEALLOCATE_P(this%pack%zpsi)
@@ -603,9 +599,7 @@ contains
       call profiling_in(prof, "BATCH_UNPACK")
       
       if(opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
         call batch_read_from_opencl_buffer(this)
-#endif
       else
         call unpack_copy()
       end if
@@ -648,7 +642,6 @@ contains
 
   ! ----------------------------------------------------
 
-#ifdef HAVE_OPENCL
   subroutine batch_write_to_opencl_buffer(this)
     type(batch_t),      intent(inout)  :: this
 
@@ -795,7 +788,6 @@ contains
     POP_SUB(batch_read_from_opencl_buffer)
   end subroutine batch_read_from_opencl_buffer
 
-#endif
 
 !--------------------------------------------------------------
 
@@ -803,16 +795,14 @@ contains
     type(batch_t),     intent(inout) :: this
 
     integer :: ist_linear
-#ifdef HAVE_OPENCL
     integer :: bsize
-#endif
 
     PUSH_SUB(batch_set_zero)
 
     call batch_pack_was_modified(this)
 
     if(batch_is_packed(this) .and. opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
+
       bsize = product(this%pack%size)
       if(batch_type(this) == TYPE_CMPLX) bsize = bsize*2
       
@@ -820,7 +810,7 @@ contains
       call opencl_kernel_run(set_zero, (/bsize/), (/opencl_max_workgroup_size()/))
       call batch_pack_was_modified(this)
       call opencl_finish()
-#endif
+
     else if(batch_is_packed(this) .and. batch_type(this) == TYPE_FLOAT) then
       this%pack%dpsi = M_ZERO
     else if(batch_is_packed(this) .and. batch_type(this) == TYPE_CMPLX) then
@@ -848,9 +838,7 @@ subroutine batch_copy_data(np, xx, yy)
 
   integer :: ist
   type(profile_t), save :: prof
-#ifdef HAVE_OPENCL
   integer :: localsize
-#endif
 
   PUSH_SUB(batch_copy_data)
   call profiling_in(prof, "BATCH_COPY_DATA")
@@ -861,7 +849,6 @@ subroutine batch_copy_data(np, xx, yy)
 
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
     call opencl_set_kernel_arg(kernel_copy, 0, xx%pack%buffer)
     call opencl_set_kernel_arg(kernel_copy, 1, log2(xx%pack%size_real(1)))
     call opencl_set_kernel_arg(kernel_copy, 2, yy%pack%buffer)
@@ -871,7 +858,6 @@ subroutine batch_copy_data(np, xx, yy)
     call opencl_kernel_run(kernel_copy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
     
     call opencl_finish()
-#endif
 
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_FLOAT) then

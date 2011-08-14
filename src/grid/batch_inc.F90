@@ -141,9 +141,7 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
   type(batch_t),     intent(inout) :: yy
 
   integer :: ist
-#ifdef HAVE_OPENCL
   integer :: localsize
-#endif
 
   PUSH_SUB(X(batch_axpy))
   call profiling_in(axpy_prof, "BATCH_AXPY")
@@ -158,7 +156,6 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
 
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
 #ifdef R_TREAL
 
     call opencl_set_kernel_arg(kernel_daxpy, 0, aa)
@@ -184,7 +181,6 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
 #endif
 
     call opencl_finish()
-#endif
 
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
@@ -223,9 +219,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
 
   integer :: ip
   type(profile_t), save :: prof
-#ifdef HAVE_OPENCL
   type(opencl_mem_t) :: tmp
-#endif
 
   call profiling_in(prof, "BATCH_SET_STATE")
 
@@ -253,7 +247,6 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
       forall(ip = 1:np) this%pack%zpsi(ist, ip) = psi(ip)
     end if
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
     call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
 
     call opencl_write_buffer(tmp, np, psi)
@@ -269,7 +262,6 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
     call opencl_finish()
 
     call opencl_release_buffer(tmp)
-#endif
   end select
 
   call profiling_out(prof)
@@ -302,9 +294,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
   integer :: ip
   type(profile_t), save :: prof 
-#ifdef HAVE_OPENCL
   type(opencl_mem_t) :: tmp
-#endif
 
   PUSH_SUB(X(batch_get_state1))
 
@@ -330,7 +320,6 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
       forall(ip = 1:np) psi(ip) = this%pack%zpsi(ist, ip)
     end if
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
     call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
 
     call opencl_set_kernel_arg(X(unpack), 0, this%pack%size(1))
@@ -345,7 +334,6 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     call opencl_read_buffer(tmp, np, psi)
 
     call opencl_release_buffer(tmp)
-#endif
   end select
 
   call profiling_out(prof)

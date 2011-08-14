@@ -913,7 +913,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   
   ASSERT(associated(st%X(psi)))
 
-  if(states_are_packed(st)) then
+  if(.not. states_are_packed(st)) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
     call X(mesh_batch_rotate)(mesh, psib, uu)
