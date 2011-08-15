@@ -24,7 +24,9 @@ module states_calc_m
   use blas_m
   use blacs_m
   use blacs_proc_grid_m
+  use c_pointer_m
   use calc_mode_m
+  use cl_kernel_m
   use comm_m
   use datasets_m
   use derivatives_m
@@ -46,6 +48,7 @@ module states_calc_m
   use mpi_m
   use mpi_lib_m
   use multicomm_m
+  use opencl_m
   use parser_m
   use pblas_m
   use physics_op_m

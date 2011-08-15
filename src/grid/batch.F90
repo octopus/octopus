@@ -22,6 +22,7 @@
 module batch_m
   use blas_m
   use c_pointer_m
+  use cl_kernel_m
   use datasets_m
   use global_m
   use hardware_m
@@ -155,11 +156,13 @@ module batch_m
   interface batch_get_points
     module procedure dbatch_get_points
     module procedure zbatch_get_points
+    module procedure batch_get_points_cl
   end interface batch_get_points
 
   interface batch_set_points
     module procedure dbatch_set_points
     module procedure zbatch_set_points
+    module procedure batch_set_points_cl
   end interface batch_set_points
 
   type(profile_t), save :: axpy_prof
@@ -910,6 +913,95 @@ integer pure function batch_linear_index(this, cind) result(index)
   end if
 
 end function batch_linear_index
+
+
+! --------------------------------------------------------------
+
+subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
+  type(batch_t),       intent(in)    :: this
+  integer,             intent(in)    :: sp  
+  integer,             intent(in)    :: ep
+  type(opencl_mem_t),  intent(inout) :: psi
+  integer,             intent(in)    :: ldpsi
+
+  integer :: tsize, offset
+  type(cl_kernel_t), save :: kernel
+  type(c_ptr)             :: kernel_ref
+  
+  PUSH_SUB(batch_get_points_cl)
+
+  select case(batch_status(this))
+  case(BATCH_NOT_PACKED, BATCH_PACKED)
+    call messages_not_implemented('batch_get_points_cl for non-CL batches')
+
+  case(BATCH_CL_PACKED)
+
+    tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
+    offset = this%index(1, 1) - 1
+
+    call cl_kernel_start_call(kernel, 'points.cl', 'get_points')
+
+    kernel_ref = cl_kernel_get_ref(kernel)
+
+    call opencl_set_kernel_arg(kernel_ref, 0, sp)
+    call opencl_set_kernel_arg(kernel_ref, 1, ep)
+    call opencl_set_kernel_arg(kernel_ref, 2, offset*tsize)
+    call opencl_set_kernel_arg(kernel_ref, 3, this%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 4, this%pack%size_real(1))
+    call opencl_set_kernel_arg(kernel_ref, 5, psi)
+    call opencl_set_kernel_arg(kernel_ref, 6, ldpsi*tsize)
+
+    call opencl_kernel_run(kernel_ref, (/this%pack%size_real(1), ep - sp + 1/), (/1, 1/))
+
+  end select
+
+  POP_SUB(batch_get_points_cl)
+end subroutine batch_get_points_cl
+
+! --------------------------------------------------------------
+
+subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
+  type(batch_t),       intent(inout) :: this
+  integer,             intent(in)    :: sp  
+  integer,             intent(in)    :: ep
+  type(opencl_mem_t),  intent(in)    :: psi
+  integer,             intent(in)    :: ldpsi
+
+  integer :: tsize, offset
+  type(cl_kernel_t), save :: kernel
+  type(c_ptr)             :: kernel_ref
+
+  PUSH_SUB(batch_set_points_cl)
+
+  call batch_pack_was_modified(this)
+
+  select case(batch_status(this))
+  case(BATCH_NOT_PACKED, BATCH_PACKED)
+    call messages_not_implemented('batch_get_points_cl for non-CL batches')
+
+  case(BATCH_CL_PACKED)
+
+    tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
+    offset = this%index(1, 1) - 1
+
+    call cl_kernel_start_call(kernel, 'points.cl', 'set_points')
+    
+    kernel_ref = cl_kernel_get_ref(kernel)
+
+    call opencl_set_kernel_arg(kernel_ref, 0, sp)
+    call opencl_set_kernel_arg(kernel_ref, 1, ep)
+    call opencl_set_kernel_arg(kernel_ref, 2, offset*tsize)
+    call opencl_set_kernel_arg(kernel_ref, 3, psi)
+    call opencl_set_kernel_arg(kernel_ref, 4, ldpsi*tsize)
+    call opencl_set_kernel_arg(kernel_ref, 5, this%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 6, this%pack%size_real(1))
+
+    call opencl_kernel_run(kernel_ref, (/this%pack%size_real(1), ep - sp + 1/), (/1, 1/))
+
+  end select
+
+  POP_SUB(batch_set_points_cl)
+end subroutine batch_set_points_cl
 
 #include "real.F90"
 #include "batch_inc.F90"

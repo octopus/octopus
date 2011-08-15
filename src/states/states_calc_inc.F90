@@ -908,6 +908,9 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   type(batch_t) :: psib
   integer       :: block_size, sp, idim, size, ib
   R_TYPE, allocatable :: psinew(:, :, :), psicopy(:, :, :)
+  type(cl_kernel_t), save :: dkernel, zkernel
+  type(c_ptr) :: kernel_ref
+  type(opencl_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
 
   PUSH_SUB(X(states_rotate_in_place))
   
@@ -919,8 +922,8 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
     call X(mesh_batch_rotate)(mesh, psib, uu)
     call batch_end(psib)
 
-  else
-
+  else if(.not. opencl_is_enabled()) then
+    
 #ifdef R_TREAL  
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
 #else
@@ -929,7 +932,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
 
     SAFE_ALLOCATE(psinew(1:st%nst, 1:st%d%dim, 1:block_size))
     SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
-    
+
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
       
@@ -955,6 +958,53 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
 
     end do
 
+  else
+
+    if(st%d%dim > 1) call messages_not_implemented('Opencl states_rotate for spinors')
+
+    block_size = mesh%np
+
+    call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call opencl_create_buffer(psinew_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+
+    call opencl_create_buffer(uu_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
+    call opencl_write_buffer(uu_buffer, product(ubound(uu)), uu)
+
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      
+      do ib = st%block_start, st%block_end
+        call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
+      end do
+
+      if(states_are_real(st)) then
+        call cl_kernel_start_call(dkernel, 'rotate.cl', 'drotate_states')
+        kernel_ref = cl_kernel_get_ref(dkernel)
+      else
+        call cl_kernel_start_call(zkernel, 'rotate.cl', 'zrotate_states')
+        kernel_ref = cl_kernel_get_ref(zkernel)
+      end if
+            
+      call opencl_set_kernel_arg(kernel_ref, 0, st%nst)
+      call opencl_set_kernel_arg(kernel_ref, 1, size)
+      call opencl_set_kernel_arg(kernel_ref, 2, uu_buffer)
+      call opencl_set_kernel_arg(kernel_ref, 3, ubound(uu, dim = 1))
+      call opencl_set_kernel_arg(kernel_ref, 4, psicopy_buffer)
+      call opencl_set_kernel_arg(kernel_ref, 5, st%nst)
+      call opencl_set_kernel_arg(kernel_ref, 6, psinew_buffer)
+      call opencl_set_kernel_arg(kernel_ref, 7, st%nst)
+      
+      call opencl_kernel_run(kernel_ref, (/st%nst, size/), (/1, 1/))
+
+      do ib = st%block_start, st%block_end
+        call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psinew_buffer, st%nst)
+      end do
+    end do
+    
+    call opencl_release_buffer(uu_buffer)
+    call opencl_release_buffer(psicopy_buffer)
+    call opencl_release_buffer(psinew_buffer)
+
   end if
 
   POP_SUB(X(states_rotate_in_place))
@@ -963,7 +1013,7 @@ end subroutine X(states_rotate_in_place)
 ! ---------------------------------------------------------
 
 subroutine X(states_overlap)(st, mesh, ik, overlap)
-  type(states_t),    intent(inout)    :: st
+  type(states_t),    intent(inout) :: st
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: ik
   R_TYPE,            intent(out)   :: overlap(:, :)
