@@ -207,7 +207,7 @@
 
       implicit none
 
-      type(c_ptr),      intent(out)   :: prog
+      type(c_ptr),      intent(inout) :: prog
       type(c_ptr),      intent(inout) :: context
       type(c_ptr),      intent(inout) :: device
       character(len=*), intent(in)    :: flags
@@ -234,7 +234,7 @@
       type(c_ptr),      intent(out)   :: kernel
       type(c_ptr),      intent(inout) :: prog
       character(len=*), intent(in)    :: kernel_name
-      integer,          intent(in)    :: ierr
+      integer,          intent(out)   :: ierr
     end subroutine f90_cl_create_kernel
 
     ! ----------------------------------------------------
@@ -245,7 +245,7 @@
       implicit none
 
       type(c_ptr), intent(inout) :: kernel
-      integer,     intent(in)    :: ierr
+      integer,     intent(out)   :: ierr
     end subroutine f90_cl_release_kernel
 
     ! ----------------------------------------------------
@@ -270,7 +270,7 @@
       type(c_ptr),            intent(inout) :: context
       integer,                intent(in)    :: flags
       integer(SIZEOF_SIZE_T), intent(in)    :: size
-      integer,                intent(in)    :: ierr
+      integer,                intent(out)   :: ierr
     end subroutine f90_cl_create_buffer
 
     ! ----------------------------------------------------
@@ -281,7 +281,7 @@
       implicit none
 
       type(c_ptr),            intent(inout) :: this
-      integer,                intent(in)    :: ierr
+      integer,                intent(out)   :: ierr
     end subroutine f90_cl_release_buffer
 
     ! ----------------------------------------------------
@@ -305,7 +305,7 @@
       type(c_ptr), intent(inout) :: kernel
       integer,     intent(in)    :: index
       type(c_ptr), intent(in)    :: buffer
-      integer,     intent(in)    :: ierr
+      integer,     intent(out)   :: ierr
     end subroutine f90_cl_set_kernel_arg_buf
 
     ! ----------------------------------------------------
@@ -318,7 +318,7 @@
       type(c_ptr), intent(inout) :: kernel
       integer,     intent(in)    :: index
       integer,     intent(in)    :: size
-      integer,     intent(in)    :: ierr
+      integer,     intent(out)   :: ierr
     end subroutine f90_cl_set_kernel_arg_local
 
     ! ----------------------------------------------------
@@ -333,7 +333,7 @@
       integer,                intent(in)    :: dim
       integer(SIZEOF_SIZE_T), intent(in)    :: globalsizes
       integer(SIZEOF_SIZE_T), intent(in)    :: localsizes
-      integer,                intent(in)    :: ierr
+      integer,                intent(out)   :: ierr
     end subroutine flEnqueueNDRangeKernel
 
   end interface
