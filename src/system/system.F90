@@ -77,10 +77,8 @@ contains
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
 
-#ifdef HAVE_OPENCL
     call opencl_init()
     call cl_kernel_global_init()
-#endif
 
     call messages_obsolete_variable('SystemName')
 
@@ -185,10 +183,8 @@ contains
 
     call space_end(sys%space)
 
-#ifdef HAVE_OPENCL
     call cl_kernel_global_end()
     call opencl_end()
-#endif
 
     SAFE_DEALLOCATE_P(sys%gr)
 

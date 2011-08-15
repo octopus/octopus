@@ -654,10 +654,8 @@ contains
       CMPLX :: phase
       type(density_calc_t)  :: dens_calc
       type(profile_t), save :: phase_prof
-#ifdef HAVE_OPENCL
       integer               :: pnp, iprange
       type(opencl_mem_t)    :: phase_buff
-#endif
 
       PUSH_SUB(propagator_dt.td_aetrs)
 
@@ -684,7 +682,6 @@ contains
           vold(ip, ispin) =  dt/(M_TWO*mu)*(hm%vhxc(ip, ispin) - vold(ip, ispin))
         end forall
 
-#ifdef HAVE_OPENCL
         ! copy vold to a cl buffer
         if(opencl_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
           pnp = opencl_padded_size(gr%mesh%np)
@@ -694,7 +691,7 @@ contains
             call opencl_write_buffer(phase_buff, gr%mesh%np, vold(:, ispin), offset = (ispin - 1)*pnp)
           end do
         end if
-#endif        
+
       end if
 
       ! interpolate the Hamiltonian to time t
@@ -741,7 +738,6 @@ contains
                 end forall
               end do
             case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
               call opencl_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
               call opencl_set_kernel_arg(kernel_phase, 1, phase_buff)
               call opencl_set_kernel_arg(kernel_phase, 2, st%psib(ib, ik)%pack%buffer)
@@ -751,7 +747,7 @@ contains
 
               call opencl_kernel_run(kernel_phase, (/st%psib(ib, ik)%pack%size(1), pnp/), &
                 (/st%psib(ib, ik)%pack%size(1), iprange/))
-#endif
+
             end select
             call profiling_out(phase_prof)
           end if
@@ -763,11 +759,9 @@ contains
         end do
       end do
 
-#ifdef HAVE_OPENCL
       if(tr%method == PROP_CAETRS .and. opencl_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
         call opencl_release_buffer(phase_buff)
       end if
-#endif
       
       call density_calc_end(dens_calc)
 

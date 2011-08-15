@@ -148,7 +148,7 @@ module opencl_m
     
     subroutine opencl_init()
       type(c_ptr) :: prog
-      logical  :: disable
+      logical  :: disable, default
       integer  :: ierr, idevice, iplatform
 
       PUSH_SUB(opencl_init)
@@ -162,8 +162,26 @@ module opencl_m
       !% initialize and use an OpenCL device. By setting this variable
       !% to <tt>yes</tt> you tell Octopus not to use OpenCL.
       !%End
-      call parse_logical(datasets_check('DisableOpenCL'), .false., disable)
+
+#ifndef HAVE_OPENCL
+      default = .true.
+#else
+      default = .false.
+#endif
+      call parse_logical(datasets_check('DisableOpenCL'), default, disable)
       opencl%enabled = .not. disable
+
+#ifndef HAVE_OPENCL
+      if(opencl%enabled) then
+        message(1) = 'Octopus was compiled without OpenCL support.'
+        call messages_fatal(1)
+      end if
+#endif
+
+      if(.not. opencl_is_enabled()) then
+        POP_SUB(opencl_init)
+        return
+      end if
 
       !%Variable OpenCLPlatform
       !%Type integer
@@ -198,11 +216,6 @@ module opencl_m
       if(idevice < CL_DEFAULT) then
         message(1) = 'Invalid OpenCLDevice.'
         call messages_fatal(1)
-      end if
-
-      if(.not. opencl_is_enabled()) then
-        POP_SUB(opencl_init)
-        return
       end if
 
       call messages_print_stress(stdout, "OpenCL")

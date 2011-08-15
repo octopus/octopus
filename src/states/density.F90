@@ -68,11 +68,9 @@ module density_m
     FLOAT,          pointer :: density(:, :)
     type(states_t), pointer :: st
     type(grid_t),   pointer :: gr
-#ifdef HAVE_OPENCL
     type(opencl_mem_t)      :: buff_density
     integer                 :: pnp
     logical                 :: packed
-#endif
   end type density_calc_t
 
 contains
@@ -92,7 +90,6 @@ contains
 
     this%density = M_ZERO
 
-#ifdef HAVE_OPENCL
     this%packed = .false.
     if(present(packed)) this%packed = packed .and. opencl_is_enabled()
     
@@ -105,7 +102,6 @@ contains
       call opencl_kernel_run(set_zero, (/this%pnp*this%st%d%nspin/), (/opencl_max_workgroup_size()/))
       call opencl_finish()
     end if
-#endif
 
     POP_SUB(density_calc_init)
   end subroutine density_calc_init
@@ -123,11 +119,10 @@ contains
     FLOAT, allocatable :: frho(:), weight(:)
     type(profile_t), save :: prof
     logical :: correct_size
-#ifdef HAVE_OPENCL
     integer            :: wgsize
     type(opencl_mem_t) :: buff_weight
     type(c_ptr)        :: kernel
-#endif
+
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
 
@@ -180,7 +175,6 @@ contains
           end do
         end if
       case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
         ASSERT(this%packed)
 
         if(states_are_real(this%st)) then
@@ -206,7 +200,6 @@ contains
         call opencl_finish()
         
         call opencl_release_buffer(buff_weight)
-#endif
       end select
 
       if(this%gr%have_fine_mesh) then
@@ -265,7 +258,6 @@ contains
 
     np = this%gr%fine%mesh%np
 
-#ifdef HAVE_OPENCL
     if(this%packed) then
       ! the density is in device memory
       do ispin = 1, this%st%d%nspin
@@ -274,7 +266,6 @@ contains
         this%packed = .false.
       end do
     end if
-#endif
 
     ! reduce over states and k-points
     if(this%st%parallel_in_states .or. this%st%d%kpt%parallel) then
