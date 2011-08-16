@@ -142,13 +142,13 @@ contains
     mesh => gr%mesh
 
     call scf_init(scf, gr, geo, st, hm)
-    SAFE_ALLOCATE(forces0(1:geo%natoms, 1:3))
-    SAFE_ALLOCATE(forces (1:geo%natoms, 1:3))
+    SAFE_ALLOCATE(forces0(1:geo%natoms, 1:mesh%sb%dim))
+    SAFE_ALLOCATE(forces (1:geo%natoms, 1:mesh%sb%dim))
     forces = M_ZERO
     forces0 = M_ZERO
 
     do iatom = 1, geo%natoms
-      do alpha = 1, gr%mesh%sb%dim
+      do alpha = 1, mesh%sb%dim
         write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the ', index2axis(alpha), '-direction.'
         call messages_info(1)
 
@@ -164,7 +164,7 @@ contains
         call total_energy (hm, gr, st, -1)
         call scf_run(scf, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
-          forces0(jatom, :) = geo%atom(jatom)%f(:)
+          forces0(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
         end do
 
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) - M_TWO*vib%disp
@@ -176,7 +176,7 @@ contains
         call total_energy(hm, gr, st, -1)
         call scf_run(scf, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
-          forces(jatom, :) = geo%atom(jatom)%f(:)
+          forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
         end do
 
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
@@ -185,7 +185,7 @@ contains
           do beta = 1, gr%mesh%sb%dim
             jmat = vibrations_get_index(vib, jatom, beta)
             vib%dyn_matrix(imat, jmat) = &
-              (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp ) &
+              (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp) &
               * vibrations_norm_factor(vib, geo, iatom, jatom)
             call vibrations_out_dyn_matrix(vib, imat, jmat)
           end do
