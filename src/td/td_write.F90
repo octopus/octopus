@@ -725,7 +725,7 @@ contains
 
     integer :: is, ll, mm, add_lm
     character(len=120) :: aux
-    FLOAT, allocatable :: nuclear_dipole(:), multipole(:,:)
+    FLOAT, allocatable :: ionic_dipole(:), multipole(:,:)
 
     PUSH_SUB(td_write_multipole)
 
@@ -784,17 +784,17 @@ contains
       call td_write_print_header_end(out_multip)
     end if
 
-    SAFE_ALLOCATE(nuclear_dipole(1:MAX_DIM))
+    SAFE_ALLOCATE(ionic_dipole(1:gr%mesh%sb%dim))
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
-    nuclear_dipole(:) = M_ZERO
+    ionic_dipole(:) = M_ZERO
     multipole   (:,:) = M_ZERO
 
     do is = 1, st%d%nspin
       call dmf_multipoles(gr%mesh, st%rho(:,is), lmax, multipole(:,is))
     end do
-    call geometry_dipole(geo, nuclear_dipole)
+    call geometry_dipole(geo, ionic_dipole)
     do is = 1, st%d%nspin
-      multipole(2:gr%mesh%sb%dim+1, is) = -nuclear_dipole(1:gr%mesh%sb%dim)/st%d%nspin - multipole(2:gr%mesh%sb%dim+1, is)
+      multipole(2:gr%mesh%sb%dim+1, is) = -ionic_dipole(1:gr%mesh%sb%dim)/st%d%nspin - multipole(2:gr%mesh%sb%dim+1, is)
     end do
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -811,7 +811,7 @@ contains
       call write_iter_nl(out_multip)
     end if
 
-    SAFE_DEALLOCATE_A(nuclear_dipole)
+    SAFE_DEALLOCATE_A(ionic_dipole)
     SAFE_DEALLOCATE_A(multipole)
     POP_SUB(td_write_multipole)
   end subroutine td_write_multipole
