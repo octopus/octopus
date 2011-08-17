@@ -29,6 +29,7 @@ module td_calc_m
   use lasers_m
   use mesh_function_m
   use messages_m
+  use mpi_m
   use profiling_m
   use states_calc_m
   use states_m
