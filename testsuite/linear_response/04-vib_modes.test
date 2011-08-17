@@ -1,23 +1,26 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Test       : Sodium vibrational frequency
+Test       : LiH vibrational frequency
 Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
+Processors : 4
 
 Input: 04-vib_modes.01-ground_state.inp
-match ; Total energy   ; GREP(static/info, 'Total       =', 20) ; -0.41787721
-match ; Eigenvalues    ; GREP(static/info, '1   --', 12) ;  -0.119004
+match ; Total Energy   ; GREP(static/info, 'Total       =', 20) ; -0.76459868
+match ; Eigenvalues    ; GREP(static/info, '1   --', 12)        ; -0.141240
+match ; Dipole Moment  ; GREP(static/info, '<z>', 14)           ;  2.24560
 
 Precision : 0.002
-
 Input: 04-vib_modes.02-vib_modes.inp
-match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_lr, 1, 7) ; 167.32279
-match ; Infrared Intensity      ; LINE(vib_modes/infrared, 2, 60)             ; 0.0
-match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_lr, 1, 21)  ; -10.4219
+match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_lr, 1, 7) ; 1420.83506
+match ; Infrared Intensity      ; LINE(vib_modes/infrared, 2, 60)             ;    1.11270
+match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_lr, 1, 21)  ; -3952.7359
 
 Input: 04-vib_modes.03-vib_modes_fd.inp
-match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_fd, 1, 7) ; 168.11742
-match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_fd, 1, 21)  ; -10.2580
+Precision : 0.005
+match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_fd, 1, 7) ; 1421.03197
+Precision : 0.4
+match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_fd, 1, 21)  ; -3996.3

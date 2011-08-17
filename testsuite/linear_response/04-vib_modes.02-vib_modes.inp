@@ -2,11 +2,14 @@
 # $Id$
 
 CalculationMode = vib_modes
-fromScratch = yes
+FromScratch = yes
 
-dist = 2.77
+FilterPotentials = filter_TS
+BoxShape = minimum
+Spacing = 0.4
+Radius = 6
 
 %Coordinates
-  "Na" | 0 | 0 | -dist
-  "Na" | 0 | 0 |  dist
+  "H"  | 0 | 0 | 0.053910
+  "Li" | 0 | 0 | 3.058523
 %

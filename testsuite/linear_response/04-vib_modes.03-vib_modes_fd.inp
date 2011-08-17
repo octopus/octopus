@@ -5,9 +5,14 @@ CalculationMode = vib_modes
 fromScratch = yes
 ResponseMethod = finite_differences
 
-dist = 2.77
+FilterPotentials = filter_TS
+BoxShape = minimum
+Spacing = 0.4
+Radius = 6
+ConvForce = 1e-10
+ConvRelDens = 1e-7
 
 %Coordinates
-  "Na" | 0 | 0 | -dist
-  "Na" | 0 | 0 |  dist
+  "H"  | 0 | 0 | 0.053910
+  "Li" | 0 | 0 | 3.058523
 %
