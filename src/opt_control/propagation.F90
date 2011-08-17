@@ -173,14 +173,15 @@ module opt_control_propagation_m
           sys%geo%atom(iatom)%v(1:MAX_DIM) = M_ZERO
           x_initial(iatom,1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM)
        end do
-       if(target_move_ions(target)) then
-         move_ions_ = .true.
-       else
-         call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo, time = M_ZERO)
-       end if
     end if
 
-    call target_tdcalc(target, gr, psi, 0)
+    if(target_move_ions(target)) then
+      move_ions_ = .true.
+    else
+      call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo, time = M_ZERO)
+    end if
+
+    call target_tdcalc(target, hm, gr, sys%geo, psi, 0)
 
     if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
     ii = 1
@@ -198,7 +199,7 @@ module opt_control_propagation_m
       if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, psi)
 
       ! if td_target
-      call target_tdcalc(target, gr, psi, i)
+      call target_tdcalc(target, hm, gr, sys%geo, psi, i)
 
       ! calculate velocity and new position of each atom
       if(vel_target_) then
@@ -365,7 +366,7 @@ module opt_control_propagation_m
       call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par, psi)
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i)
-      call target_tdcalc(target, gr, psi, i) 
+      call target_tdcalc(target, hm, gr, sys%geo, psi, i) 
       call oct_prop_output(prop_psi, i, psi, gr)
       call oct_prop_check(prop_chi, chi, gr, sys%geo, i)
     end do

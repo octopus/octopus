@@ -17,6 +17,30 @@
 !!
 !! $Id$
 
+#include "global.h"
+
+module td_calc_m
+  use forces_m
+  use geometry_m
+  use global_m
+  use grid_m
+  use hamiltonian_base_m
+  use hamiltonian_m
+  use lasers_m
+  use mesh_function_m
+  use messages_m
+  use profiling_m
+  use states_calc_m
+  use states_m
+
+  implicit none
+
+  private
+  public ::       &
+    td_calc_tacc, &
+    td_calc_tvel
+
+contains
 
 ! ---------------------------------------------------------
 ! Electronic acceleration (to calculate harmonic spectrum...)
@@ -160,6 +184,8 @@ subroutine td_calc_tvel(gr, geo, st, hm, vel, time)
   SAFE_DEALLOCATE_A(momentum)
   POP_SUB(td_calc_tvel)
 end subroutine td_calc_tvel
+
+end module td_calc_m
 
 !! Local Variables:
 !! mode: f90

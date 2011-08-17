@@ -50,6 +50,7 @@ module td_write_m
   use states_m
   use states_calc_m
   use states_dim_m
+  use td_calc_m
   use types_m
   use unit_m
   use unit_system_m
@@ -1664,9 +1665,6 @@ contains
 
     POP_SUB(td_write_print_header_end)
   end subroutine td_write_print_header_end
-
-
-#include "td_calc_inc.F90"
 
 end module td_write_m
 

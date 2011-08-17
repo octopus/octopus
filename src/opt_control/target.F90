@@ -27,17 +27,17 @@ module opt_control_target_m
   use geometry_m
   use global_m
   use grid_m
-  use output_m
+  use hamiltonian_m
   use io_m
   use io_function_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
-  use math_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use opt_control_global_m
+  use output_m
   use parser_m
   use profiling_m
   use restart_m
@@ -48,10 +48,11 @@ module opt_control_target_m
   use states_calc_m
   use states_dim_m
   use string_m
+  use td_calc_m
   use td_m
+  use types_m
   use unit_m
   use unit_system_m
-  use types_m
   use varinfo_m
 
   implicit none
@@ -978,15 +979,18 @@ module opt_control_target_m
   !> Calculates, at a given point in time marked by the integer
   !! index, the integrand of the target functional:
   !! <Psi(t)|\hat{O}(t)|Psi(t)>.
-  subroutine target_tdcalc(target, gr, psi, time)
-    type(target_t), intent(inout) :: target
-    type(grid_t),   intent(in)    :: gr
-    type(states_t), intent(inout) :: psi
-    integer,        intent(in)    :: time
+  subroutine target_tdcalc(target, hm, gr, geo, psi, time)
+    type(target_t),      intent(inout) :: target
+    type(hamiltonian_t), intent(inout) :: hm
+    type(grid_t),        intent(inout) :: gr
+    type(geometry_t),    intent(inout) :: geo
+    type(states_t),      intent(inout) :: psi
+    integer,             intent(in)    :: time
 
     CMPLX, allocatable :: opsi(:, :)
     FLOAT, allocatable :: multipole(:, :)
     integer :: ist, ip, is
+    FLOAT :: acc(MAX_DIM)
 
     if(target_type(target)  .eq. oct_tg_velocity) return
     if(target_mode(target)  .ne. oct_targetmode_td) return
@@ -1022,12 +1026,8 @@ module opt_control_target_m
 
     case(oct_tg_hhg)
 
-      SAFE_ALLOCATE(multipole(1:4, 1:psi%d%nspin))
-      do is = 1, psi%d%nspin
-        call dmf_multipoles(gr%mesh, psi%rho(:, is), 1, multipole(:, is))
-      end do
-      target%td_fitness(time) = -sum(multipole(2, 1:psi%d%spin_channels))
-      SAFE_DEALLOCATE_A(multipole)
+     call td_calc_tacc(gr, geo, psi, hm, acc, time*target%dt)
+     target%td_fitness(time) = acc(1)
 
     ! case oct_tg_density only active if combined with td current functional
     case(oct_tg_current, oct_tg_density)
@@ -1188,15 +1188,7 @@ module opt_control_target_m
       maxiter = size(target%td_fitness) - 1
       SAFE_ALLOCATE(ddipole(0:maxiter))
 
-      ddipole(0) = M_ZERO
-      do iter = 1, maxiter - 1
-        ddipole(iter) = (target%td_fitness(iter - 1) + target%td_fitness(iter + 1) - &
-                      M_TWO * target%td_fitness(iter)) / target%dt**2
-      end do
-      call interpolate( target%dt*(/ -3, -2, -1 /),   &
-                        ddipole(maxiter - 3:maxiter - 1), &
-                        M_ZERO, &
-                        ddipole(maxiter) )
+      ddipole = target%td_fitness
 
       call spectrum_hsfunction_init(target%dt, 0, maxiter, maxiter, ddipole)
       do jj = 1, target%hhg_nks
