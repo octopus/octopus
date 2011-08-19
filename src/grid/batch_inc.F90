@@ -247,7 +247,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
   case(BATCH_CL_PACKED)
 
     call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, yy%nst_linear)
-    call opencl_write_buffer(aa_buffer, yy%pack%size, aa_linear)
+    call opencl_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
 
     call cl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)))
 
