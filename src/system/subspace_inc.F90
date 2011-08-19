@@ -29,8 +29,7 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   FLOAT, optional,        intent(out)   :: diff(:)
 
   R_TYPE, allocatable :: hmss(:, :), f(:, :, :)
-  integer             :: ist, ist2, size, idim, ib, jb
-  FLOAT               :: nrm2
+  integer             :: ist, ist2, size, ib, jb
   type(profile_t),     save    :: diagon_prof
   type(batch_t) :: hpsib, whole_psib, psib
   R_TYPE, pointer :: psi(:, :, :)
@@ -70,14 +69,6 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
     ! Calculate the new eigenfunctions as a linear combination of the
     ! old ones.
     call X(states_rotate_in_place)(der%mesh, st, hmss, ik)
-
-    ! Renormalize.
-    do ist = st%st_start, st%st_end
-      nrm2 = X(mf_nrm2)(der%mesh, st%d%dim, psi(:, :, ist))
-      do idim = 1, st%d%dim
-        call lalg_scal(der%mesh%np, M_ONE/nrm2, psi(:, idim, ist))
-      end do
-    end do
 
     ! Recalculate the residues if requested by the diff argument.
     if(present(diff)) then 
