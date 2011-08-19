@@ -522,7 +522,7 @@ contains
 
     endif
 
-    if(.not. lcao_done .and. .not. present(st_start)) then
+    if(.not. lcao_done) then
 
       ! FIXME: the following initialization is wrong when not all
       ! wavefunctions are calculated by the Lippmann-Schwinger
@@ -543,7 +543,7 @@ contains
         end forall
       else
         ! Randomly generate the initial wavefunctions.
-        call states_generate_random(sys%st, sys%gr%mesh)
+        call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start)
         message(1) = "Orthogonalizing random wavefunctions."
         call messages_info(1)
         call states_orthogonalize(sys%st, sys%gr%mesh)
