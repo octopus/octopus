@@ -143,7 +143,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   integer :: ist
   integer :: localsize
 
-  PUSH_SUB(X(batch_axpy))
+  PUSH_SUB(X(batch_axpy_const))
   call profiling_in(axpy_prof, "BATCH_AXPY")
 
   ASSERT(batch_type(yy) == batch_type(xx))
@@ -206,7 +206,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   call batch_pack_was_modified(yy)
 
   call profiling_out(axpy_prof)
-  POP_SUB(X(batch_axpy))
+  POP_SUB(X(batch_axpy_const))
 end subroutine X(batch_axpy_const)
 
 ! --------------------------------------------------------------
@@ -223,7 +223,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
   R_TYPE, allocatable     :: aa_linear(:)
   type(opencl_mem_t)      :: aa_buffer
   
-  PUSH_SUB(X(batch_axpy))
+  PUSH_SUB(X(batch_axpy_vec))
   call profiling_in(axpy_prof, "BATCH_AXPY")
 
   ASSERT(batch_type(yy) == batch_type(xx))
@@ -298,7 +298,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
   SAFE_DEALLOCATE_A(aa_linear)
 
   call profiling_out(axpy_prof)
-  POP_SUB(X(batch_axpy))
+  POP_SUB(X(batch_axpy_vec))
 end subroutine X(batch_axpy_vec)
 
 ! --------------------------------------------------------------
