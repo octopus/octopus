@@ -135,8 +135,10 @@ module batch_m
   end interface
 
   interface batch_axpy
-    module procedure dbatch_axpy
-    module procedure zbatch_axpy
+    module procedure dbatch_axpy_const
+    module procedure zbatch_axpy_const
+    module procedure dbatch_axpy_vec
+    module procedure zbatch_axpy_vec
   end interface
 
   interface batch_set_state

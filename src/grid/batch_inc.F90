@@ -134,7 +134,7 @@ end subroutine X(batch_set)
 
 ! --------------------------------------------------------------
 
-subroutine X(batch_axpy)(np, aa, xx, yy)
+subroutine X(batch_axpy_const)(np, aa, xx, yy)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa
   type(batch_t),     intent(in)    :: xx
@@ -207,7 +207,99 @@ subroutine X(batch_axpy)(np, aa, xx, yy)
 
   call profiling_out(axpy_prof)
   POP_SUB(X(batch_axpy))
-end subroutine X(batch_axpy)
+end subroutine X(batch_axpy_const)
+
+! --------------------------------------------------------------
+
+subroutine X(batch_axpy_vec)(np, aa, xx, yy)
+  integer,           intent(in)    :: np
+  R_TYPE,            intent(in)    :: aa(:)
+  type(batch_t),     intent(in)    :: xx
+  type(batch_t),     intent(inout) :: yy
+
+  integer :: ist, ip, localsize, effsize
+  type(cl_kernel_t), save :: kernel
+  type(c_ptr)             :: kernel_ref
+  R_TYPE, allocatable     :: aa_linear(:)
+  type(opencl_mem_t)      :: aa_buffer
+  
+  PUSH_SUB(X(batch_axpy))
+  call profiling_in(axpy_prof, "BATCH_AXPY")
+
+  ASSERT(batch_type(yy) == batch_type(xx))
+#ifdef R_TCMPLX
+  !if aa is complex, the functions must be complex
+  ASSERT(batch_type(yy) == TYPE_CMPLX)
+#endif
+  ASSERT(xx%nst_linear == yy%nst_linear)
+  ASSERT(batch_status(xx) == batch_status(yy))
+
+  effsize = yy%nst_linear
+  if(batch_is_packed(yy)) effsize = yy%pack%size(1)
+  SAFE_ALLOCATE(aa_linear(1:effsize))
+
+  aa_linear = M_ZERO
+  do ist = 1, yy%nst_linear
+    aa_linear(ist) = aa(yy%index(ist, 1))
+  end do
+
+  select case(batch_status(xx))
+  case(BATCH_CL_PACKED)
+
+    call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, yy%nst_linear)
+    call opencl_write_buffer(aa_buffer, yy%pack%size, aa_linear)
+
+    call cl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)))
+
+    kernel_ref = cl_kernel_get_ref(kernel)
+
+    call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
+    call opencl_set_kernel_arg(kernel_ref, 1, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 2, xx%pack%size(1))
+    call opencl_set_kernel_arg(kernel_ref, 3, yy%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 4, yy%pack%size(1))
+
+    localsize = opencl_max_workgroup_size()
+    call opencl_kernel_run(kernel_ref, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
+
+    call opencl_finish()
+
+  case(BATCH_PACKED)
+    if(batch_type(yy) == TYPE_CMPLX) then
+      do ist = 1, yy%pack%size(2)
+        do ip = 1, np
+          yy%pack%zpsi(ist, ip) = aa_linear(ist)*xx%pack%zpsi(ist, ip) + yy%pack%zpsi(ist, ip)
+        end do
+      end do
+    else
+#ifdef R_TREAL
+      do ist = 1, yy%pack%size(2)
+        do ip = 1, np
+          yy%pack%dpsi(ist, ip) = aa_linear(ist)*xx%pack%dpsi(ist, ip) + yy%pack%dpsi(ist, ip)
+        end do
+      end do
+#endif
+    end if
+
+  case(BATCH_NOT_PACKED)
+    do ist = 1, yy%nst_linear
+      if(batch_type(yy) == TYPE_CMPLX) then
+        call lalg_axpy(np, aa_linear(ist), xx%states_linear(ist)%zpsi, yy%states_linear(ist)%zpsi)
+      else
+#ifdef R_TREAL
+        call lalg_axpy(np, aa_linear(ist), xx%states_linear(ist)%dpsi, yy%states_linear(ist)%dpsi)
+#endif
+      end if
+    end do
+  end select
+
+  call batch_pack_was_modified(yy)
+
+  SAFE_DEALLOCATE_A(aa_linear)
+
+  call profiling_out(axpy_prof)
+  POP_SUB(X(batch_axpy))
+end subroutine X(batch_axpy_vec)
 
 ! --------------------------------------------------------------
 

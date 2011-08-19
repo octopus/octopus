@@ -28,10 +28,10 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   FLOAT,                  intent(out)   :: eigenval(:)
   FLOAT, optional,        intent(out)   :: diff(:)
 
-  R_TYPE, allocatable :: hmss(:, :), f(:, :, :)
-  integer             :: ist, ist2, size, ib, jb
+  R_TYPE, allocatable :: hmss(:, :), rdiff(:)
+  integer             :: ib, jb, minst, maxst
   type(profile_t),     save    :: diagon_prof
-  type(batch_t) :: hpsib, whole_psib, psib
+  type(batch_t) :: hpsib
   R_TYPE, pointer :: psi(:, :, :)
 
   PUSH_SUB(X(subspace_diag))
@@ -46,7 +46,6 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
     ASSERT(.not. st%parallel_in_states)
 
     SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(f(1:der%mesh%np, 1:st%d%dim, 1:st%d%block_size))
 
     do ib = st%block_start, st%block_end
       call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
@@ -73,25 +72,27 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
     ! Recalculate the residues if requested by the diff argument.
     if(present(diff)) then 
       
-      do ist = st%st_start, st%st_end, st%d%block_size
-        size = min(st%d%block_size, st%st_end - ist + 1)
+      SAFE_ALLOCATE(rdiff(1:st%nst))
 
-        call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
-        call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, f)
-        
-        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik)
+      do ib = st%block_start, st%block_end
 
-        call batch_end(psib)
+        minst = st%block_range(ib, 1)
+        maxst = st%block_range(ib, 2)
+
+        call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
+
+        call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik)
+        call batch_axpy(der%mesh%np, -eigenval, st%psib(ib, ik), hpsib)
+        call X(mesh_batch_dotp_vector)(der%mesh, hpsib, hpsib, rdiff(minst:maxst))
+
         call batch_end(hpsib)
-        
-        do ist2 = ist, ist + size - 1
-          diff(ist2) = X(states_residue)(der%mesh, st%d%dim, f(:, :, ist2 - ist + 1), eigenval(ist2), psi(:, :, ist2))
-        end do
+
+        diff(minst:maxst) = sqrt(abs(rdiff(minst:maxst)))
+
       end do
 
     end if
 
-    SAFE_DEALLOCATE_A(f)
     SAFE_DEALLOCATE_A(hmss)
 
   case default
