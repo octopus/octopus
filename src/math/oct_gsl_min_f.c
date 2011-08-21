@@ -201,7 +201,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 
 
 /* B. Second, the interface to the gsl function that calculates the minimum
-   of an one dimensional function, with the knowledge of the function itself,
+   of a one-dimensional function, with the knowledge of the function itself,
    but not its gradient. */
 
 /* This is a type used to communicate with Fortran; func1 is the type of the

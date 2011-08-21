@@ -328,7 +328,7 @@ module loct_math_m
 
 contains
 
-  ! single precision version of the functions
+  ! single-precision version of the functions
   real(4) function oct_gamma4(x)
     real(4), intent(in) :: x
 

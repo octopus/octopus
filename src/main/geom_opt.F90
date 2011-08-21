@@ -255,7 +255,7 @@ contains
       !%End
       call parse_integer(datasets_check('GOMaxIter'), 200, g_opt%max_iter)
       if(g_opt%max_iter <= 0) then
-        message(1) = "GoMaxIter has to be larger than 0"
+        message(1) = "GOMaxIter has to be larger than 0"
         call messages_fatal(1)
       end if
 
