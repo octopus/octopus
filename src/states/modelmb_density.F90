@@ -159,7 +159,7 @@ contains
 
       SAFE_ALLOCATE(density(1:mb_1part%npt_part))
 
-      density = M_z0
+      density = M_ZERO
 
       !   calculate the 1-particle density for this many-body state, and for the chosen
       !   particle being the free coordinate

@@ -408,7 +408,7 @@ contains
     FLOAT,   allocatable :: rhs(:,:)
     integer :: i
     logical :: const_w_, cmplx_op_
-    character*32 :: name
+    character(len=32) :: name
     type(nl_operator_t) :: auxop
 
     PUSH_SUB(derivatives_build)

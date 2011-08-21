@@ -49,15 +49,12 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
   R_TYPE, pointer :: read_ff(:)
   type(profile_t), save :: prof_io
   type(batch_t) :: ffb
-#ifdef HAVE_MPI
   type(profile_t), save :: prof_comm
-#endif
 
   PUSH_SUB(X(restart_read_function))
   
   nullify(read_ff)
 
-#ifdef HAVE_MPI
   if(present(map) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
     call X(io_function_input) (trim(dir)//'/'//trim(filename)//'.obf', mesh, ff(1:mesh%np), ierr, is_tmp=.true., map = map)
@@ -65,7 +62,6 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
     POP_SUB(X(restart_read_function))
     return
   end if
-#endif
 
   if(present(map)) then
     call io_binary_get_info(trim(dir)//'/'//trim(filename)//'.obf', np, ierr)
@@ -77,12 +73,10 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
     offset = 0
   end if
 
-#ifdef HAVE_MPI
   !in the parallel case, each node reads a part of the file
   if(mesh%parallel_in_domains) then
     offset = mesh%vp%xlocal(mesh%vp%partno) - 1
   end if
-#endif
 
   ASSERT(associated(read_ff))
 
@@ -93,7 +87,6 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
 
   call profiling_out(prof_io)
 
-#ifdef HAVE_MPI
   if(mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "RESTART_READ_COMM")
     SAFE_ALLOCATE(list(1:mesh%np_global))
@@ -117,7 +110,6 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
     SAFE_DEALLOCATE_A(list)
     call profiling_out(prof_comm)
   end if
-#endif
 
   if(present(map)) then
     ff(1:mesh%np_global) = M_ZERO

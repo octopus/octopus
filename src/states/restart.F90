@@ -373,7 +373,7 @@ contains
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(in) :: gr
 
-    integer            :: ik, ist, idim, il, ip
+    integer            :: ik, ist, idim, il
     CMPLX, allocatable :: zpsi(:)
 
     PUSH_SUB(restart_get_ob_intf)
