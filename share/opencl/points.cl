@@ -47,7 +47,7 @@ __kernel void set_points(const int sp,
   const int ip  = get_global_id(1);
   const int sip = ip + sp - 1;
 
-  psi[ldpsi*ip + ist] = points[ldpoints*sip + ist + offset];
+  psi[ldpsi*sip + ist] = points[ldpoints*ip + ist + offset];
 
 }
 /*

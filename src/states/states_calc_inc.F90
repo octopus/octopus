@@ -1015,7 +1015,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_rotate for spinors')
 
-    block_size = mesh%np
+    block_size = 4000
 
     call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
     call opencl_create_buffer(psinew_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
@@ -1037,7 +1037,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
         call cl_kernel_start_call(zkernel, 'rotate.cl', 'zrotate_states')
         kernel_ref = cl_kernel_get_ref(zkernel)
       end if
-            
+
       call opencl_set_kernel_arg(kernel_ref, 0, st%nst)
       call opencl_set_kernel_arg(kernel_ref, 1, size)
       call opencl_set_kernel_arg(kernel_ref, 2, uu_buffer)
