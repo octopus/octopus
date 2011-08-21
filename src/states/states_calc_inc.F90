@@ -32,7 +32,6 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
   integer :: idim, ist, jst, kst, nst
   FLOAT   :: nrm2
   logical :: bof
-  R_TYPE, pointer :: psi(:, :, :)
 
 #ifdef HAVE_SCALAPACK
 !pgi$r opt=0
@@ -47,7 +46,6 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
   call profiling_in(prof, "GRAM_SCHMIDT_FULL")
   PUSH_SUB(X(states_orthogonalization_full))
 
-  psi => st%X(psi)(:, :, :, ik)
   nst = st%nst
 
   select case(st%d%orth_method)
@@ -74,7 +72,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
     do idim = 1, st%d%dim
       ! multiply by the inverse of ss
       call blas_trsm('R', 'U', 'N', 'N', mesh%np, nst, R_TOTYPE(M_ONE), ss(1, 1), nst, &
-        psi(1, idim, 1), ubound(psi, dim = 1)*st%d%dim)
+        st%X(psi)(1, idim, 1, ik), ubound(st%X(psi), dim = 1)*st%d%dim)
     end do
 
     call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
@@ -125,13 +123,13 @@ contains
 
     ! We need to set to zero some extra parts of the array
     if(st%d%dim == 1) then
-      psi(mesh%np + 1:psi_block(1), 1:st%d%dim, 1:st%lnst) = M_ZERO
+     st%X(psi)(mesh%np + 1:psi_block(1), 1:st%d%dim, 1:st%lnst, ik) = M_ZERO
     else
-      psi(mesh%np + 1:mesh%np_part, 1:st%d%dim, 1:st%lnst) = M_ZERO
+     st%X(psi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, 1:st%lnst, ik) = M_ZERO
     end if
 
     call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0, st%dom_st_proc_grid%context, &
-      st%d%dim*ubound(psi, dim = 1), info)
+      st%d%dim*ubound(st%X(psi), dim = 1), info)
 
     if(info /= 0) then
       write(message(1),'(a,i6)') "descinit for psi failed in states_orthogonalization_full.par_gs with error ", info
@@ -154,7 +152,7 @@ contains
     ss = M_ZERO
 
     call pblas_herk(uplo = 'U', trans = 'C', n = st%nst, k = total_np, &
-      alpha = R_TOTYPE(mesh%vol_pp(1)), a = psi(1, 1, 1), ia = 1, ja = 1, desca = psi_desc(1), &
+      alpha = R_TOTYPE(mesh%vol_pp(1)), a = st%X(psi)(1, 1, 1, ik), ia = 1, ja = 1, desca = psi_desc(1), &
       beta = R_TOTYPE(M_ZERO), c = ss(1, 1), ic = 1, jc = 1, descc = ss_desc(1))
 
     ! calculate the Cholesky decomposition
@@ -168,7 +166,7 @@ contains
 
     call pblas_trsm(side = 'R', uplo = 'U', transa = 'N', diag = 'N', m = total_np, n = st%nst, &
       alpha = R_TOTYPE(M_ONE), a = ss(1, 1), ia = 1, ja = 1, desca = ss_desc(1), &
-      b = psi(1, 1, 1), ib = 1, jb = 1, descb = psi_desc(1))
+      b = st%X(psi)(1, 1, 1, ik), ib = 1, jb = 1, descb = psi_desc(1))
 
     call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
@@ -205,9 +203,9 @@ contains
 
       ! We need to set to zero some extra parts of the array
       if(st%d%dim == 1) then
-        psi(mesh%np + 1:psi_block(1), 1:st%d%dim, 1:st%lnst) = M_ZERO
+        st%X(psi)(mesh%np + 1:psi_block(1), 1:st%d%dim, 1:st%lnst, ik) = M_ZERO
       else
-        psi(mesh%np + 1:mesh%np_part, 1:st%d%dim, 1:st%lnst) = M_ZERO
+        st%X(psi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, 1:st%lnst, ik) = M_ZERO
       end if
 
       ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
@@ -220,17 +218,17 @@ contains
       tau = M_ZERO
 
       ! calculate the QR decomposition
-      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
+      call scalapack_geqrf(total_np, nst, st%X(psi)(1, 1, 1, ik), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call scalapack_geqrf(total_np, nst, psi(1, 1, 1), 1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
+      call scalapack_geqrf(total_np, nst, st%X(psi)(1, 1, 1, ik), 1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
       SAFE_DEALLOCATE_A(work)
 
       ! now calculate Q
-      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
+      call scalapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, 1, ik), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call scalapack_orgqr(total_np, nst, nref, psi(1, 1, 1), 1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
+      call scalapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, 1, ik), 1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
       SAFE_DEALLOCATE_A(work)
 
       if(blacs_info /= 0) then
@@ -244,35 +242,36 @@ contains
     else
 
       total_np = mesh%np + mesh%np_part*(st%d%dim - 1)
-      psi(mesh%np + 1:mesh%np_part, 1:(st%d%dim - 1), 1:st%lnst) = M_ZERO
+      st%X(psi)(mesh%np + 1:mesh%np_part, 1:(st%d%dim - 1), 1:st%lnst, ik) = M_ZERO
 
       nref = min(nst, total_np)
       SAFE_ALLOCATE(tau(1:nref))
       tau = M_ZERO
 
       ! get the optimal size of the work array
-      call lapack_geqrf(total_np, nst, psi(1, 1, 1), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
+      call lapack_geqrf(total_np, nst, st%X(psi)(1, 1, 1, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
       wsize = nint(R_REAL(tmp))
 
       ! calculate the QR decomposition
       SAFE_ALLOCATE(work(1:wsize))
-      call lapack_geqrf(total_np, nst, psi(1, 1, 1), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
+      call lapack_geqrf(total_np, nst, st%X(psi)(1, 1, 1, ik), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
       SAFE_DEALLOCATE_A(work)
 
       ! get the optimal size of the work array
-      call lapack_orgqr(total_np, nst, nref, psi(1, 1, 1), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
+      call lapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, 1, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
       wsize = nint(R_REAL(tmp))
 
       ! now calculate Q
       SAFE_ALLOCATE(work(1:wsize))
-      call lapack_orgqr(total_np, nst, nref, psi(1, 1, 1), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
+      call lapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, 1, ik), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
       SAFE_DEALLOCATE_A(work)
     end if
 
     SAFE_DEALLOCATE_A(tau)
 
     ! we need to scale by the volume element to get the proper normalization
-    psi = psi/sqrt(mesh%vol_pp(1))
+    st%X(psi)(1:mesh%np, 1:st%d%dim, st%st_start:st%st_end, ik) = &
+      st%X(psi)(1:mesh%np, 1:st%d%dim, st%st_start:st%st_end, ik)/sqrt(mesh%volume_element)
 
     POP_SUB(X(states_orthogonalization_full).qr)
 
@@ -297,14 +296,14 @@ contains
 
     ! normalize the initial vectors
     do ist = 1, nst
-      bb(ist) = X(mf_dotp)(mesh, st%d%dim, psi(:, :, ist), psi(:, :, ist), reduce = .false.)
+      bb(ist) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist, ik), reduce = .false.)
     end do
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, bb, dim = nst)
 
     do ist = 1, nst      
       do idim = 1, st%d%dim
-        call lalg_scal(mesh%np, M_ONE/sqrt(bb(ist)), psi(:, idim, ist))
+        call lalg_scal(mesh%np, M_ONE/sqrt(bb(ist)), st%X(psi)(:, idim, ist, ik))
       end do
     end do
 
@@ -315,7 +314,7 @@ contains
     do ist = 1, nst
       ! calculate the projections
       do jst = 1, ist - 1
-        aa(jst) = X(mf_dotp)(mesh, st%d%dim, psi(:, :, jst), psi(:, :, ist), reduce = .false.)
+        aa(jst) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, jst, ik), st%X(psi)(:, :, ist, ik), reduce = .false.)
       end do
 
       if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
@@ -323,14 +322,14 @@ contains
       ! substract the projections
       do jst = 1, ist - 1
         do idim = 1, st%d%dim
-          call lalg_axpy(mesh%np, -aa(jst), psi(:, idim, jst), psi(:, idim, ist))
+          call lalg_axpy(mesh%np, -aa(jst), st%X(psi)(:, idim, jst, ik), st%X(psi)(:, idim, ist, ik))
         end do
       end do
 
       ! renormalize
-      cc = X(mf_dotp)(mesh, st%d%dim, psi(:, :, ist), psi(:, :, ist))
+      cc = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist, ik))
       do idim = 1, st%d%dim
-        call lalg_scal(mesh%np, M_ONE/sqrt(cc), psi(:, idim, ist))
+        call lalg_scal(mesh%np, M_ONE/sqrt(cc), st%X(psi)(:, idim, ist, ik))
       end do
     end do
 
