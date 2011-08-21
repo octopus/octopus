@@ -464,7 +464,7 @@ contains
 #endif
 
     if(.not.in_profiling_mode) return
-    PUSH_SUB(profiling_in)
+    ! no PUSH_SUB, called too often
 
     if(.not. this%initialized) then 
       ASSERT(present(label))
@@ -496,7 +496,6 @@ contains
     prof_vars%current%p => this
     this%entry_time = now
 
-    POP_SUB(profiling_in)
   end subroutine profiling_in
 
 
@@ -513,7 +512,7 @@ contains
 #endif
     
     if(.not.in_profiling_mode) return
-    PUSH_SUB(profiling_out)
+    ! no PUSH_SUB, called too often
 
     ASSERT(this%active)
     this%active = .false.
@@ -550,7 +549,6 @@ contains
       nullify(prof_vars%current%p)
     end if
 
-    POP_SUB(profiling_out)
   end subroutine profiling_out
 
 
