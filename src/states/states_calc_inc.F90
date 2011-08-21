@@ -22,15 +22,13 @@
 !> Orthonormalizes nst orbitals in mesh (honours state
 !! parallelization).
 subroutine X(states_orthogonalization_full)(st, mesh, ik)
-  type(states_t), target, intent(inout) :: st
+  type(states_t),         intent(inout) :: st
   type(mesh_t),           intent(in)    :: mesh
   integer,                intent(in)    :: ik
 
-
-  R_TYPE, allocatable :: ss(:, :), qq(:, :), psi_tmp(:, :, :)
+  R_TYPE, allocatable :: ss(:, :)
   type(profile_t), save :: prof
-  integer :: idim, ist, jst, kst, nst
-  FLOAT   :: nrm2
+  integer :: nst
   logical :: bof
 
 #ifdef HAVE_SCALAPACK
@@ -58,6 +56,8 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
 
+    ss = M_ZERO
+
     call X(states_overlap)(st, mesh, ik, ss)
 
     bof = .false.
@@ -69,11 +69,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
       call messages_warning(1)
     end if
 
-    do idim = 1, st%d%dim
-      ! multiply by the inverse of ss
-      call blas_trsm('R', 'U', 'N', 'N', mesh%np, nst, R_TOTYPE(M_ONE), ss(1, 1), nst, &
-        st%X(psi)(1, idim, 1, ik), ubound(st%X(psi), dim = 1)*st%d%dim)
-    end do
+    call X(states_trsm)(st, mesh, ik, ss)
 
     call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
@@ -339,6 +335,64 @@ contains
 
 end subroutine X(states_orthogonalization_full)
 
+
+! ---------------------------------------------------------
+
+subroutine X(states_trsm)(st, mesh, ik, ss)
+  type(states_t),         intent(inout) :: st
+  type(mesh_t),           intent(in)    :: mesh
+  integer,                intent(in)    :: ik
+  R_TYPE,                 intent(in)    :: ss(:, :)
+
+  integer :: idim, block_size, ib, size, sp
+  R_TYPE, allocatable :: psicopy(:, :, :)
+
+  PUSH_SUB(X(states_trsm))
+
+  if(.not. states_are_packed(st)) then
+
+    do idim = 1, st%d%dim
+      ! multiply by the inverse of ss
+      call blas_trsm('R', 'U', 'N', 'N', mesh%np, st%nst, R_TOTYPE(M_ONE), ss(1, 1), st%nst, &
+        st%X(psi)(1, idim, 1, ik), ubound(st%X(psi), dim = 1)*st%d%dim)
+    end do
+
+  else
+
+#ifdef R_TREAL  
+    block_size = max(40, hardware%l2%size/(2*8*st%nst))
+#else
+    block_size = max(20, hardware%l2%size/(2*16*st%nst))
+#endif
+
+    SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
+
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      
+      do ib = st%block_start, st%block_end
+        call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psicopy)
+      end do
+      
+      do idim = 1, st%d%dim
+        
+        call blas_trsm(side = 'L', uplo = 'U', transa = 'T', diag = 'N', &
+          m = st%nst, n = size, &
+          alpha = R_TOTYPE(M_ONE), a = ss(1, 1), lda = ubound(ss, dim = 1), &
+          b = psicopy(1, idim, 1), ldb = ubound(psicopy, dim = 1)*st%d%dim)
+
+      end do
+      
+      do ib = st%block_start, st%block_end
+        call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psicopy)
+      end do
+
+    end do 
+
+  end if
+
+  POP_SUB(X(states_trsm))
+end subroutine X(states_trsm)
 
 ! ---------------------------------------------------------
 !> Orthonormalizes phi to the nst orbitals psi.
