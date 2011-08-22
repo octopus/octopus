@@ -72,36 +72,38 @@ contains
 
     !%Variable CurvGygiA
     !%Type float
+    !%Default 0.5
     !%Section Mesh::Curvilinear::Gygi
     !%Description
     !% The grid spacing is reduced locally around each atom, and the reduction is
-    !% given by 1/(1+A), where A is specified by this variable, CurvGygiA. So, if
-    !% A=1/2 (the default), the grid spacing is reduced to two thirds = 1/(1+1/2).
+    !% given by 1/(1+<i>A</i>), where <i>A</i> is specified by this variable. So, if
+    !% <i>A</i>=1/2 (the default), the grid spacing is reduced to two thirds = 1/(1+1/2).
     !% [This is the <math>A_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli, <i>Phys.
-    !% Rev. B</i> <b>52</b>, R2229 (1995)]
-    !% It must be larger than zero.
+    !% Rev. B</i> <b>52</b>, R2229 (1995)]. It must be larger than zero.
     !%End
     call parse_float(datasets_check('CurvGygiA'), M_HALF, cv%A)
+
     !%Variable CurvGygiAlpha
     !%Type float
+    !%Default 2.0 a.u.
     !%Section Mesh::Curvilinear::Gygi
     !%Description
     !% This number determines the region over which the grid is enhanced (range of
     !% enhancement of the resolution). That is, the grid is enhanced on a sphere
     !% around each atom, whose radius is given by this variable. [This is the <math>a_{\alpha}</math>
-    !% variable in Eq. 2 of F. Gygi and G. Galli, <i>Phys. Rev. B</i> <b>52M</b>, R2229 (1995)].
-    !% The default is two atomic units.
+    !% variable in Eq. 2 of F. Gygi and G. Galli, <i>Phys. Rev. B</i> <b>52</b>, R2229 (1995)].
     !% It must be larger than zero.
     !%End
+
     call parse_float(datasets_check('CurvGygiAlpha'), units_from_atomic(units_inp%length, M_TWO), cv%alpha)
     !%Variable CurvGygiBeta
     !%Type float
+    !%Default 4.0 a.u.
     !%Section Mesh::Curvilinear::Gygi
     !%Description
     !% This number determines the distance over which Euclidean coordinates are
     !% recovered. [This is the <math>b_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli,
-    !% <i>Phys. Rev. B</i> <b>52</b>, R2229 (1995)]. The default is four atomic units.
-    !% It must be larger than zero.
+    !% <i>Phys. Rev. B</i> <b>52</b>, R2229 (1995)]. It must be larger than zero.
     !%End
     call parse_float(datasets_check('CurvGygiBeta'),  units_from_atomic(units_inp%length, M_FOUR), cv%beta)
 
