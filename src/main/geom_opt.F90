@@ -210,7 +210,7 @@ contains
       !% units of force; minimization is stopped when all forces on
       !% ions are smaller than this criterion.  Used in conjunction
       !% with <tt>GOMinimumMove</tt>. If <tt>GOTolerance = 0</tt>,
-      !% this criterion is ignored. The default is 0.001 H/b (0.5
+      !% this criterion is ignored. The default is 0.001 H/b (0.05
       !% eV/Angstrom).
       !%End
       call parse_float(datasets_check('GOTolerance'), CNST(0.001), g_opt%tolgrad, units_inp%force)
