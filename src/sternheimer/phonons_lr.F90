@@ -263,6 +263,7 @@ contains
         do jdir = gr%sb%periodic_dim + 1, ndim
           infrared(imat, jdir) = dmf_dotp(gr%mesh, gr%mesh%x(:, jdir), lr(1)%ddl_rho(:, 1))
         end do
+        infrared(imat, idir) = infrared(imat, idir) - species_zval(geo%atom(iatom)%spec)
 
         born%charge(1:gr%sb%dim, idir, iatom) = -infrared(imat, 1:gr%sb%dim)
       endif
