@@ -211,6 +211,7 @@ contains
           M_TWO * TOFLOAT(dpert_expectation_value(electric_pert, gr, geo, hm, st, lr(1)%ddl_psi, st%dpsi))
       end do
 
+      infrared(imat, jdir) = infrared(imat, jdir) - species_zval(geo%atom(iatom)%spec)
       born%charge(idir, 1:gr%sb%dim, iatom) = -infrared(imat, 1:gr%sb%dim)
       message(1) = ""
       call messages_info(1)
