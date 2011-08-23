@@ -133,7 +133,7 @@ contains
     if (ierr /= 0) then
       message(1) = "Error occurred during the GSL minimization procedure:"
       call loct_strerror(ierr, message(2))
-      call messages_fatal(2, only_root_writes = .true.)
+      call messages_fatal(2)
     end if
 
     ! print out geometry
@@ -194,7 +194,7 @@ contains
       !% This is experimental, and in fact, <b>not</b> recommended unless you just want to
       !% fool around. It is the Nead-Melder simplex algorithm, as implemented in the
       !% GNU Scientific Library (GSL). It does not make use of the gradients (<i>i.e.</i>, the
-      !% forces) which makes it more inefficient than other schemes. It is included here
+      !% forces) which makes it less efficient than other schemes. It is included here
       !% for completeness, since it is free.
       !%End
       call parse_integer(datasets_check('GOMethod'), MINMETHOD_STEEPEST_DESCENT, g_opt%method)
