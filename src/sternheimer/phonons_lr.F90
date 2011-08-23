@@ -264,7 +264,7 @@ contains
           infrared(imat, jdir) = dmf_dotp(gr%mesh, gr%mesh%x(:, jdir), lr(1)%ddl_rho(:, 1))
         end do
 
-        born%charge(idir, 1:gr%sb%dim, iatom) = -infrared(imat, 1:gr%sb%dim)
+        born%charge(1:gr%sb%dim, idir, iatom) = -infrared(imat, 1:gr%sb%dim)
       endif
 
       message(1) = ""
