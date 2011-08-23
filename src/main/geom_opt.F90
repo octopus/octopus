@@ -133,7 +133,7 @@ contains
     if (ierr /= 0) then
       message(1) = "Error occurred during the GSL minimization procedure:"
       call loct_strerror(ierr, message(2))
-      call messages_fatal(2)
+      call messages_fatal(2, only_root_writes = .true.)
     end if
 
     ! print out geometry

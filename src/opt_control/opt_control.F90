@@ -404,7 +404,7 @@ contains
         if(ierr <= 1024) then
           message(1) = "Error occurred during the GSL minimization procedure:"
           call loct_strerror(ierr, message(2))
-          call messages_fatal(2)
+          call messages_fatal(2, only_root_writes = .true.)
         else
           message(1) = "The CG optimization did not meet the convergence criterion."
           call messages_info(1)
