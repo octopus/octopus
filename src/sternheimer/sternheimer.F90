@@ -135,6 +135,12 @@ contains
       call mix_init(this%mixer, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_FLOAT)
     endif
 
+    if(present(set_occ_response)) then
+       this%occ_response = set_occ_response
+    else
+       this%occ_response = .false.
+    endif
+
     !%Variable Preorthogonalization
     !%Type logical 
     !%Section Linear Response::Sternheimer 
@@ -142,9 +148,11 @@ contains
     !% Whether initial linear-response wavefunctions should be orthogonalized 
     !% or not against the occupied states, at the start of each SCF cycle.
     !% Default is true only if <tt>SmearingFunction = semiconducting</tt>,
-    !% or if the <tt>Occupations</tt> block specifies all full or empty states.
+    !% or if the <tt>Occupations</tt> block specifies all full or empty states,
+    !% and we are not solving for linear response in the unoccupied subspace only.
     !%End 
-    default_preorthog = (sys%st%smear%method == SMEAR_SEMICONDUCTOR .or. sys%st%smear%integral_occs)
+    default_preorthog = (sys%st%smear%method == SMEAR_SEMICONDUCTOR .or. sys%st%smear%integral_occs) &
+                        .and. .not. this%occ_response
     if (parse_isdef(datasets_check(trim(prefix)//'Preorthogonalization')) /= 0) then 
       call parse_logical(datasets_check(trim(prefix)//'Preorthogonalization'), default_preorthog, this%preorthogonalization) 
     else 
@@ -192,12 +200,6 @@ contains
       this%add_hartree = .false.
     end if
     
-    if(present(set_occ_response)) then
-       this%occ_response = set_occ_response
-    else
-       this%occ_response = .false.
-    endif
-
     if(present(set_last_occ_response)) then
        this%last_occ_response = set_last_occ_response
     else

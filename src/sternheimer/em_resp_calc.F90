@@ -63,7 +63,9 @@ module em_resp_calc_m
      zlr_calc_beta,                    &
      freq2str,                         &
      em_wfs_tag,                       &
-     em_rho_tag
+     em_rho_tag,                       &
+     dpost_orthogonalize,              &
+     zpost_orthogonalize
 
   type(profile_t), save :: beta_prof
 

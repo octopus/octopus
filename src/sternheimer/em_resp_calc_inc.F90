@@ -762,6 +762,43 @@ subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pe
   POP_SUB(X(lr_calc_2np1))
 end subroutine X(lr_calc_2np1)
 
+subroutine X(post_orthogonalize)(sys, nfactor, nsigma, freq_factor, omega, kdotp_lr, em_lr, kdotp_em_lr)
+  type(system_t), intent(in) :: sys
+  integer, intent(in) :: nfactor
+  integer, intent(in) :: nsigma
+  FLOAT, intent(in) :: freq_factor(:)
+  R_TYPE, intent(in) :: omega
+  type(lr_t), intent(inout) :: kdotp_lr(:)          ! kdotp dir
+  type(lr_t), intent(inout) :: em_lr(:,:,:)         ! em dir, sigma, factor
+  type(lr_t), intent(inout) :: kdotp_em_lr(:,:,:,:) ! kdotp dir, em dir, sigma, factor
+
+  integer :: kdotp_dir, em_dir, isigma, ifactor
+  R_TYPE :: omega_factor
+
+  PUSH_SUB(X(post_orthogonalize))
+
+  do kdotp_dir = 1, sys%gr%sb%periodic_dim
+    call X(lr_orth_response)(sys%gr%mesh, sys%st, kdotp_lr(kdotp_dir), R_TOTYPE(M_ZERO))
+  enddo
+
+  do ifactor = 1, nfactor
+    do isigma = 1, nsigma
+      omega_factor = omega * freq_factor(ifactor)
+      if(isigma == 2) omega_factor = -R_CONJ(omega_factor)
+      
+      do em_dir = 1, sys%gr%sb%dim
+        call X(lr_orth_response)(sys%gr%mesh, sys%st, em_lr(em_dir, isigma, ifactor), omega_factor)
+        
+        do kdotp_dir = 1, sys%gr%sb%periodic_dim
+          call X(lr_orth_response)(sys%gr%mesh, sys%st, kdotp_em_lr(kdotp_dir, em_dir, isigma, ifactor), omega_factor)
+        enddo
+      enddo
+    enddo
+  enddo
+
+  POP_SUB(X(post_orthogonalize))
+end subroutine X(post_orthogonalize)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
