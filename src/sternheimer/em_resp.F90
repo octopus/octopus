@@ -364,11 +364,13 @@ contains
                     endif
 
                     if(em_vars%calc_hyperpol .and. use_kdotp) then
-                      if(states_are_real(sys%st)) then
-                        kdotp_em_lr2(idir2, idir, 2, ifactor)%ddl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%ddl_psi
-                      else
-                        kdotp_em_lr2(idir2, idir, 2, ifactor)%zdl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%zdl_psi
-                      endif
+                      do idir2 = 1, gr%sb%periodic_dim
+                        if(states_are_real(sys%st)) then
+                          kdotp_em_lr2(idir2, idir, 2, ifactor)%ddl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%ddl_psi
+                        else
+                          kdotp_em_lr2(idir2, idir, 2, ifactor)%zdl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%zdl_psi
+                        endif
+                      enddo
                     endif
                   else
                     sigma_alt = sigma
@@ -557,6 +559,8 @@ contains
 
                 em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
               enddo
+              write(message(1), '(a)') ''
+              call messages_info(1)
             endif
           end if ! have_to_calculate
 
