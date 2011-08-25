@@ -197,6 +197,7 @@ contains
     SAFE_DEALLOCATE_A(forces)
     call scf_end(scf)
 
+    call vibrations_symmetrize_dyn_matrix(vib)
     call vibrations_diag_dyn_matrix(vib)
 
     POP_SUB(get_dyn_matrix)

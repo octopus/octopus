@@ -39,6 +39,7 @@ module vibrations_m
        vibrations_t,                    &
        vibrations_init,                 &
        vibrations_end,                  &
+       vibrations_symmetrize_dyn_matrix, &
        vibrations_normalize_dyn_matrix, &
        vibrations_out_dyn_matrix,       &
        vibrations_norm_factor,          &
@@ -121,6 +122,26 @@ contains
     POP_SUB(vibrations_get_suffix)
   end function vibrations_get_suffix
 
+
+  ! ---------------------------------------------------------
+  subroutine vibrations_symmetrize_dyn_matrix(this)
+    type(vibrations_t), intent(inout) :: this
+
+    integer :: imat, jmat
+    FLOAT :: average
+
+    PUSH_SUB(vibrations_symmetrize_dyn_matrix)
+
+    do imat = 1, this%num_modes
+      do jmat = 1, this%num_modes
+        average = M_HALF * (this%dyn_matrix(imat, jmat) + this%dyn_matrix(jmat, imat))
+        this%dyn_matrix(imat, jmat) = average
+        this%dyn_matrix(jmat, imat) = average
+      end do
+    end do
+
+    POP_SUB(vibrations_symmetrize_dyn_matrix)
+  end subroutine vibrations_symmetrize_dyn_matrix
 
   ! ---------------------------------------------------------
   subroutine vibrations_normalize_dyn_matrix(this, geo)

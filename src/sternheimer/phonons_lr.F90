@@ -85,13 +85,13 @@ contains
     type(states_t),   pointer :: st
     type(grid_t),     pointer :: gr
 
-    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr, ist, ik
+    integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit, ierr, ist, ik, jmat_start
     FLOAT, allocatable :: infrared(:,:)
     CMPLX, allocatable :: force_deriv(:,:)
     FLOAT :: term
     character(len=80) :: dirname_restart, str_tmp
     type(Born_charges_t) :: born
-    logical :: normal_mode_wfs, use_restart, do_infrared
+    logical :: normal_mode_wfs, use_restart, do_infrared, symmetrize
 
     PUSH_SUB(phonons_lr_run)
 
@@ -129,6 +129,17 @@ contains
     !% and written in <tt>vib_modes/infrared</tt>.
     !%End
     call parse_logical(datasets_check('CalcInfrared'), .true., do_infrared)
+
+    !%Variable SymmetrizeDynamicalMatrix
+    !%Type logical
+    !%Default true
+    !%Section Linear Response::Vibrational Modes
+    !%Description
+    !% If set to true, all entries of the dynamical matrix will be calculated and then
+    !% the matrix will be symmetrized to enforce mat(i,j) = mat(j,i). If set to false,
+    !% only the upper half of the matrix will be calculated.
+    !%End
+    call parse_logical(datasets_check('SymmetrizeDynamicalMatrix'), .true., symmetrize)
 
     !%Variable UseRestartDontSolve
     !%Type logical
@@ -231,7 +242,13 @@ contains
         call messages_warning(1)
       endif
       
-      do jmat = imat, vib%num_modes 
+      if(symmetrize) then
+        jmat_start = 1
+      else
+        jmat_start = imat
+      endif
+
+      do jmat = jmat_start, vib%num_modes 
         jatom = vibrations_get_atom(vib, jmat)
         jdir  = vibrations_get_dir (vib, jmat)
 
@@ -240,7 +257,7 @@ contains
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) + TOFLOAT(force_deriv(jdir, jatom))
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) * vibrations_norm_factor(vib, geo, iatom, jatom)
         
-        vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
+        if(.not. symmetrize) vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(imat, jmat)
 
         call vibrations_out_dyn_matrix(vib, imat, jmat)
       end do
@@ -274,6 +291,7 @@ contains
 
     call pert_end(ionic_pert)
 
+    if(symmetrize) call vibrations_symmetrize_dyn_matrix(vib)
     call vibrations_diag_dyn_matrix(vib)
     call vibrations_output(vib)
     call axsf_mode_output(vib, geo, gr%mesh)
