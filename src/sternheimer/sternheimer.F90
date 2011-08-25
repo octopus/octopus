@@ -165,7 +165,7 @@ contains
     !%Section Linear Response::Sternheimer
     !%Description
     !% The terms to be considered in the variation of the
-    !% Hamiltonian. V_ext is always considered. The default is to include
+    !% Hamiltonian. The external potential (V_ext) is always considered. The default is to include
     !% also the exchange-correlation and Hartree terms, which fully
     !% takes into account local fields.
     !% Just <tt>hartree</tt> gives you the random-phase approximation (RPA).

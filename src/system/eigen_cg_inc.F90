@@ -226,7 +226,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       if(res<tol) then
         write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2)),"     converged. Iterations:", iter, '   [Res = ',res,']'
       else
-        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", iter, '   [Res = ',res,']'
+        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", maxter, '   [Res = ',res,']'
+        ! if it didn't converge, then iter = maxter + 1, which is one more than the number of iterations actually done
       end if
       call messages_info(1)
     end if

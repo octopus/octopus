@@ -106,7 +106,12 @@ contains
     if(fromScratch) then ! reset unoccupied states
       nst_calculated = occupied_states
     else
-      nst_calculated = ierr
+      if(ierr == 0) then
+        ! we have them all
+        nst_calculated = sys%st%nst
+      else
+        nst_calculated = ierr
+      endif
     end if
 
     call density_calc(sys%st, sys%gr, sys%st%rho)
