@@ -322,6 +322,11 @@ contains
     call vibrations_end(vib)
     call sternheimer_end(sh)
     call states_deallocate_wfns(st)
+    if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
+      do idir = 1, gr%sb%periodic_dim
+        call lr_dealloc(kdotp_lr(idir))
+      enddo
+    endif
 
     POP_SUB(phonons_lr_run)
 

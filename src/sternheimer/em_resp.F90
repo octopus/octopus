@@ -686,6 +686,29 @@ contains
     call sternheimer_end(sh)
     call pert_end(em_vars%perturbation)
 
+    if(use_kdotp) then
+      do idir = 1, gr%sb%periodic_dim
+        call lr_dealloc(kdotp_lr(idir, 1))
+      end do
+    endif
+
+    if(em_vars%calc_hyperpol .and. use_kdotp) then
+      call sternheimer_end(sh_kdotp)
+      call sternheimer_end(sh2)
+      call pert_end(pert_kdotp)
+      call pert_end(pert2_none)
+      do idir = 1, gr%sb%periodic_dim
+        do idir2 = 1, gr%sb%periodic_dim
+          do sigma = 1, em_vars%nsigma
+            do ifactor = 1, em_vars%nfactor
+              call lr_dealloc(kdotp_em_lr2(idir, idir2, sigma, ifactor))
+            end do
+          end do
+        end do
+      end do
+      SAFE_DEALLOCATE_A(kdotp_em_lr2)
+    endif
+
     SAFE_DEALLOCATE_P(em_vars%omega)
     SAFE_DEALLOCATE_P(em_vars%lr)
     do ifactor = 1, em_vars%nfactor

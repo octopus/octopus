@@ -146,8 +146,8 @@ contains
     end if
 
     if(this%pert_type == PERTURBATION_IONIC) then
-      SAFE_ALLOCATE(this%ionic%mix1(1:geo%natoms, 1:gr%mesh%sb%dim))
-      SAFE_ALLOCATE(this%ionic%mix2(1:geo%natoms, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(this%ionic%mix1(1:geo%natoms, 1:gr%sb%dim))
+      SAFE_ALLOCATE(this%ionic%mix2(1:geo%natoms, 1:gr%sb%dim))
     end if
 
     if(this%pert_type == PERTURBATION_KDOTP) then
