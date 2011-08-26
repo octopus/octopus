@@ -40,6 +40,6 @@ match ; Total energy   ; GREP(ground_state_static/info, 'Total       =', 20) ; -
 match ; HOMO           ; GREP(ground_state_static/info, '5   --', 12) ;  -0.384524
 match ; LUMO           ; LINE(unocc_states_static/eigenvalues, -8, 12) ; -0.085106
 match ; LUMO+8         ; LINE(unocc_states_static/eigenvalues, -1, 12) ;  0.153188
-match ; 1st excitation ; LINE(lrtddft_casida/casida, 2, 1) ; 3.37393747E-01
-match ; 2nd excitation ; LINE(lrtddft_casida/casida, 4, 1) ; 3.55373946E-01
-match ; 3rd excitation ; LINE(lrtddft_casida/casida, 5, 1) ; 3.75379848E-01
+match ; 1st excitation ; LINE(lrtddft_casida/casida, 2, 7) ; 3.37393747E-01
+match ; 2nd excitation ; LINE(lrtddft_casida/casida, 4, 7) ; 3.55373946E-01
+match ; 3rd excitation ; LINE(lrtddft_casida/casida, 5, 7) ; 3.75379848E-01

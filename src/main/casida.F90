@@ -929,6 +929,8 @@ contains
       if(cas%nspin == 2) then
         write(iunit, '(a5)', advance='no') 'Spin'
       endif
+    else
+      write(iunit, '(6x)', advance='no')
     endif
 
     select case(dim)
@@ -942,6 +944,8 @@ contains
         if(cas%nspin == 2) then
           write(iunit, '(i5)', advance='no') cas%pair(ind(ia))%sigma
         endif
+      else
+        write(iunit, '(i6)', advance='no') ind(ia)
       end if
       write(iunit, '(5(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
         (units_from_atomic(units_out%length, cas%tm(ind(ia), idim)), idim=1,dim), cas%f(ind(ia))
