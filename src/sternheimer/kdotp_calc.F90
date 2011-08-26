@@ -50,12 +50,14 @@ module kdotp_calc_m
 contains
 
 ! ---------------------------------------------------------
-  character(len=100) function kdotp_wfs_tag(dir) result(str)
-    integer, intent(in) :: dir 
+  character(len=100) function kdotp_wfs_tag(dir, dir2) result(str)
+    integer,           intent(in) :: dir 
+    integer, optional, intent(in) :: dir2
 
     PUSH_SUB(kdotp_wfs_tag)
 
     write(str, '(2a)') "wfs_", index2axis(dir)
+    if(present(dir2)) write(str, '(3a)') trim(str), "_", index2axis(dir2)
 
     POP_SUB(kdotp_wfs_tag)
 

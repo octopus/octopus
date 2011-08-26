@@ -65,6 +65,7 @@ module kdotp_m
 
   type kdotp_t
     type(pert_t) :: perturbation
+    type(pert_t) :: perturbation2
 
     FLOAT, pointer :: eff_mass_inv(:,:,:,:)  ! inverse effective-mass tensor
                                                 ! (ik, ist, idir1, idir2)
@@ -73,6 +74,9 @@ module kdotp_m
     type(lr_t), pointer :: lr(:,:) ! linear response for (sys%gr%sb%periodic_dim,1)
                                    ! second index is dummy; should only be 1
                                    ! for compatibility with em_resp routines
+
+    type(lr_t), pointer :: lr2(:,:,:) ! second-order response for 
+                                      ! (sys%gr%sb%periodic_dim,sys%gr%sb%periodic_dim,1)
 
     logical :: ok                   ! is converged?
     integer :: occ_solution_method  ! how to get occupied components of response
@@ -90,10 +94,10 @@ contains
     logical,             intent(inout) :: fromScratch
 
     type(kdotp_t)           :: kdotp_vars
-    type(sternheimer_t)     :: sh
-    logical                 :: calc_eff_mass, complex_response
+    type(sternheimer_t)     :: sh, sh2
+    logical                 :: calc_eff_mass, calc_2nd_order, complex_response
 
-    integer              :: idir, ierr, pdim, ispin
+    integer              :: idir, idir2, ierr, pdim, ispin
     character(len=100)   :: dirname, str_tmp
     real(8)              :: errornorm
 
@@ -118,10 +122,15 @@ contains
     kdotp_vars%velocity(:,:,:) = 0 
 
     call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
-
     SAFE_ALLOCATE(kdotp_vars%lr(1:pdim, 1:1))
 
     call parse_input()
+
+    if(calc_2nd_order) then
+      call pert_init(kdotp_vars%perturbation2, PERTURBATION_NONE, sys%gr, sys%geo)
+      call pert_setup_dir(kdotp_vars%perturbation2, 1) ! direction is irrelevant
+      SAFE_ALLOCATE(kdotp_vars%lr2(1:pdim, 1:pdim, 1:1))
+    endif
 
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
@@ -157,10 +166,21 @@ contains
     call sternheimer_init(sh, sys, hm, 'KdotP', complex_response, set_ham_var = 0, &
       set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = (kdotp_vars%occ_solution_method == 0))
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
+    if(calc_2nd_order) then
+      call sternheimer_init(sh2, sys, hm, 'KdotP', complex_response, set_ham_var = 0, &
+        set_occ_response = .false., set_last_occ_response = .false.)
+    endif
 
     do idir = 1, pdim
       call lr_init(kdotp_vars%lr(idir, 1))
       call lr_allocate(kdotp_vars%lr(idir, 1), sys%st, sys%gr%mesh)
+
+      if(calc_2nd_order) then
+        do idir2 = 1, pdim
+          call lr_init(kdotp_vars%lr2(idir, idir2, 1))
+          call lr_allocate(kdotp_vars%lr2(idir, idir2, 1), sys%st, sys%gr%mesh)
+        enddo
+      endif
 
       ! load wavefunctions
       if(.not. fromScratch) then
@@ -172,7 +192,21 @@ contains
         if(ierr .ne. 0) then
           message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
           call messages_warning(1)
-        end if      
+        end if
+
+        if(calc_2nd_order) then
+          do idir2 = 1, pdim
+            str_tmp = kdotp_wfs_tag(idir, idir2)
+            write(dirname,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
+            call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
+              ierr, lr=kdotp_vars%lr2(idir, idir2, 1))
+          
+            if(ierr .ne. 0) then
+              message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
+              call messages_warning(1)
+            end if
+          enddo
+        endif
       end if
     end do
 
@@ -217,6 +251,29 @@ contains
 
       write(message(1),'(a,f10.6)') "Norm of relative density variation = ", errornorm / sys%st%qtot
       call messages_info(1)
+
+      if(calc_2nd_order) then
+        do idir2 = 1, pdim
+          write(message(1), '(3a)') 'Info: Calculating second-order response in the ', index2axis(idir2), &
+            '-direction.' 
+          call messages_info(1)
+
+          if(states_are_real(sys%st)) then
+            call dsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(idir, 1:1), kdotp_vars%lr(idir, 1:1), &
+              1, M_ZERO, M_ZERO, kdotp_vars%perturbation, kdotp_vars%perturbation, &
+              kdotp_vars%lr2(idir, idir2, 1:1), kdotp_vars%perturbation2, KDOTP_DIR, "", kdotp_wfs_tag(idir, idir2), &
+              have_restart_rho = .false., have_exact_freq = .true.)
+          else
+            call zsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(idir, 1:1), kdotp_vars%lr(idir, 1:1), &
+              1, M_zI * kdotp_vars%eta, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, kdotp_vars%perturbation, &
+              kdotp_vars%lr2(idir, idir2, 1:1), kdotp_vars%perturbation2, KDOTP_DIR, "", kdotp_wfs_tag(idir, idir2), &
+              have_restart_rho = .false., have_exact_freq = .true.)
+          endif
+
+        enddo
+        message(1) = ""
+        call messages_info(1)
+      endif
     end do ! idir
 
     ! calculate effective masses
@@ -239,12 +296,24 @@ contains
     ! clean up some things
     do idir = 1, pdim
       call lr_dealloc(kdotp_vars%lr(idir, 1))
+
+      if(calc_2nd_order) then
+        do idir2 = 1, pdim
+          call lr_dealloc(kdotp_vars%lr2(idir, idir2, 1))
+        enddo
+      endif
     end do
 
     call sternheimer_end(sh)
     call pert_end(kdotp_vars%perturbation)
-
     SAFE_DEALLOCATE_P(kdotp_vars%lr)
+
+    if(calc_2nd_order) then
+      call sternheimer_end(sh2)
+      call pert_end(kdotp_vars%perturbation2)
+      SAFE_DEALLOCATE_P(kdotp_vars%lr2)
+    endif
+
     call states_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
     SAFE_DEALLOCATE_P(kdotp_vars%velocity)
@@ -307,6 +376,16 @@ contains
       !%End      
       call messages_obsolete_variable('KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
       call parse_logical(datasets_check('KdotPCalculateEffectiveMasses'), .true., calc_eff_mass)
+
+      !%Variable KdotPCalcSecondOrder
+      !%Type logical
+      !%Default false
+      !%Section Linear Response::KdotP
+      !%Description
+      !% If true, calculates second-order response of wavefunctions as well as first-order response.
+      !% Note that the second derivative of the Hamiltonian is NOT included in this calculation.
+      !%End      
+      call parse_logical(datasets_check('KdotPCalcSecondOrder'), .false., calc_2nd_order)
 
       POP_SUB(kdotp_lr_run.parse_input)
 
