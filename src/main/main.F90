@@ -92,8 +92,6 @@ program octopus
   !% Calculate van der Waals coefficients.
   !%Option vib_modes 12
   !% Calculation of the vibrational modes.
-  !%Option raman 13
-  !% Calculation of Raman response properties (experimental).
   !%Option one_shot 14
   !% Use the self-consistent wavefunctions in the <tt>restart</tt> directory to
   !% evaluate the total energy using a different XC functional.
