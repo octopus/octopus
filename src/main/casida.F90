@@ -992,8 +992,8 @@ contains
                                   units_from_atomic(units_out%length, cas%tm(ind(ia),3))
 
       temp = M_ONE
-      ! I do not know what this does, or what is for.
-      !if( maxval(cas%mat(:, ind(ia))) < abs(minval(cas%mat(:, ind(ia)))) ) temp = -temp
+      ! make the largest component positive, to specify the phase
+      if( maxval(cas%mat(:, ind(ia))) - abs(minval(cas%mat(:, ind(ia)))) < -M_EPSILON) temp = -temp
 
       do jb = 1, cas%n_pairs
         write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, temp * cas%mat(jb, ind(ia))

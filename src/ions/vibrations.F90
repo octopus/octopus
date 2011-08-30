@@ -230,11 +230,17 @@ contains
       message(1) = "There are imaginary vibrational frequencies (represented as negative)."
       call messages_warning(1)
     endif
+
     do imode = 1, this%num_modes
       if(this%freq(imode) > M_EPSILON) then
         this%freq(imode) =  sqrt(abs(this%freq(imode)))
       else
         this%freq(imode) = -sqrt(abs(this%freq(imode)))
+      endif
+
+      ! make the largest component positive, to specify the phase
+      if( maxval(this%normal_mode(:, imode)) - abs(minval(this%normal_mode(:, imode))) < -M_EPSILON) then
+        this%normal_mode(:, imode) = -this%normal_mode(:, imode)
       endif
     enddo
 
