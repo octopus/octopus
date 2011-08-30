@@ -432,10 +432,12 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
     st%eigenval(ist, ik) = lambda
 
     if(verbose_) then
+      write(message(1),'(a,i4,a)') ' Eigenstate # ', ist, ':'
+
       if(res<tol) then
-        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2)),"     converged. Iterations:", i, '   [Res = ',res,']'
+        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(1)),"     converged. Iterations:", i, '   [Res = ',res,']'
       else
-        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", i, '   [Res = ',res,']'
+        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(1))," not converged. Iterations:", i, '   [Res = ',res,']'
       end if
       call messages_info(1)
     end if
