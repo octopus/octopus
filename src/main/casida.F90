@@ -529,14 +529,14 @@ contains
           xx = zks_matrix_elements(cas, st, mesh, deltav)
         end if
         
-        cas%tm(:, idir) = M_TWO * xx(:)**2 * cas%w(:)
+        cas%tm(:, idir) = xx(:)
 
       end do
       SAFE_DEALLOCATE_A(xx)
       SAFE_DEALLOCATE_A(deltav)
 
       do ia = 1, cas%n_pairs
-        cas%f(ia) = (M_TWO / mesh%sb%dim) * sum((abs(cas%tm(ia, :)))**2)
+        cas%f(ia) = (M_TWO / mesh%sb%dim) * cas%w(ia) * sum((abs(cas%tm(ia, :)))**2)
       end do
 
       if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
