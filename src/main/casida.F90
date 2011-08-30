@@ -58,13 +58,14 @@ module casida_m
     casida_run,            &
     casida_run_init
 
-  integer, parameter ::    &
-    CASIDA_EPS_DIFF   = 1, &
-    CASIDA_PETERSILKA = 2, &
-    CASIDA_CASIDA     = 3
+  integer, parameter ::      &
+    CASIDA_EPS_DIFF     = 1, &
+    CASIDA_PETERSILKA   = 2, &
+    CASIDA_TAMM_DANCOFF = 3, &
+    CASIDA_CASIDA       = 4
 
   type casida_t
-    integer :: type          !< CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_CASIDA
+    integer :: type          !< CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_TAMM_DANCOFF | CASIDA_CASIDA
 
     integer, pointer  :: n_occ(:)       !< number of occupied states
     integer, pointer  :: n_unocc(:)     !< number of unoccupied states
@@ -267,6 +268,13 @@ contains
       call casida_work(sys, hm, cas)
       call casida_write(cas, 'petersilka')
 
+      ! Solve in the Tamm-Dancoff approximation
+      message(1) = "Info: Calculating resonance energies in the Tamm-Dancoff approximation"
+      call messages_info(1)
+      cas%type = CASIDA_TAMM_DANCOFF
+      call casida_work(sys, hm, cas)
+      call casida_write(cas, 'tamm_dancoff')
+
       ! And finally, solve the full Casida problem.
       message(1) = "Info: Calculating resonance energies with the full Casida method"
       call messages_info(1)
@@ -452,6 +460,8 @@ contains
       call solve_petersilka()
     case(CASIDA_PETERSILKA)
       call solve_petersilka()
+    case(CASIDA_TAMM_DANCOFF)
+      call solve_casida()
     case(CASIDA_CASIDA)
       call solve_casida()
     end select
@@ -593,25 +603,32 @@ contains
         ! complete the matrix and output the restart file
         iunit = io_open(trim(tmpdir)//'casida-restart', action='write', &
           position='append', is_tmp=.true.)
+
         do ia = 1, cas%n_pairs
           p => cas%pair(ia)
           temp = st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)
-
+            
           do jb = ia, cas%n_pairs
             q => cas%pair(jb)
             if(.not.saved_K(ia, jb)) write(iunit, *) ia, jb, cas%mat(ia, jb)
-
-            if(sys%st%d%ispin == UNPOLARIZED) then
-              cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
-                sqrt(st%eigenval(q%a, 1) - st%eigenval(q%i, 1))
-            else if(sys%st%d%ispin == SPIN_POLARIZED) then
-              cas%mat(ia, jb)  = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
-                sqrt(st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))
-            end if
+              
+            if(cas%type == CASIDA_CASIDA) then
+              if(sys%st%d%ispin == UNPOLARIZED) then
+                cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
+                  sqrt(st%eigenval(q%a, 1) - st%eigenval(q%i, 1))
+              else if(sys%st%d%ispin == SPIN_POLARIZED) then
+                cas%mat(ia, jb)  = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
+                  sqrt(st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))
+              end if
+            endif
 
             if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
           end do
-          cas%mat(ia, ia) = temp**2 + cas%mat(ia, ia)
+          if(cas%type == CASIDA_CASIDA) then
+            cas%mat(ia, ia) = temp**2 + cas%mat(ia, ia)
+          else
+            cas%mat(ia, ia) = cas%mat(ia, ia) + temp
+          endif
         end do
         call io_close(iunit)
 
@@ -625,7 +642,7 @@ contains
             call messages_warning(2)
             cas%w(ia) = M_ZERO
           else
-            cas%w(ia) = sqrt(cas%w(ia))
+            if(cas%type == CASIDA_CASIDA) cas%w(ia) = sqrt(cas%w(ia))
           end if
         end do
 
@@ -756,14 +773,15 @@ contains
       end if
 #endif
 
+      if(cas%type == CASIDA_TAMM_DANCOFF .and. mpi_grp_is_root(mpi_world)) write(*, "(1x)")
+
       POP_SUB(casida_work.solve_casida)
     end subroutine solve_casida
 
 
     ! ---------------------------------------------------------
     ! return the matrix element of <i(p),a(p)|v + fxc|j(q),b(q)>
-    function K_term(pp, qq)
-      FLOAT :: K_term
+    FLOAT function K_term(pp, qq)
       type(states_pair_t), intent(in) :: pp, qq
 
       integer :: pi, qi, sigma, pa, qa, mu
@@ -900,6 +918,7 @@ contains
     character(len=*),  intent(in) :: filename
 
     character(len=5) :: str
+    character(len=50) :: dir_name
     integer :: iunit, ia, jb, dim, idim
     FLOAT   :: temp
     integer, allocatable :: ind(:)
@@ -950,15 +969,16 @@ contains
 
     ! output eigenvectors in Casida approach
 
-    if(cas%type .ne. CASIDA_CASIDA) then
+    if(cas%type == CASIDA_EPS_DIFF .or. cas%type == CASIDA_PETERSILKA) then
       POP_SUB(casida_write)
       return
     end if
 
-    call io_mkdir(CASIDA_DIR//'excitations')
+    dir_name = CASIDA_DIR//trim(filename)//'_excitations'
+    call io_mkdir(trim(dir_name))
     do ia = 1, cas%n_pairs
       write(str,'(i5.5)') ia
-      iunit = io_open(CASIDA_DIR//'excitations/'//trim(str), action='write')
+      iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
       ! First, a little header
       write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
                                 units_from_atomic(units_out%energy, cas%w(ind(ia)))
