@@ -545,7 +545,7 @@ contains
       FLOAT, allocatable :: deltav(:)
       CMPLX, allocatable :: zf(:)
 
-      FLOAT, allocatable :: dx(:), tmp(:,:)
+      FLOAT, allocatable :: dx(:)
       CMPLX, allocatable :: zx(:)
       type(states_pair_t), pointer :: p, q
 
@@ -615,12 +615,8 @@ contains
         end do
         call io_close(iunit)
 
-        SAFE_ALLOCATE(tmp(1:cas%n_pairs, 1:cas%n_pairs))
-        tmp(1:cas%n_pairs,1:cas%n_pairs) = cas%mat(1:cas%n_pairs,1:cas%n_pairs)
         ! now we diagonalize the matrix
-        cas%mat = tmp
         call lalg_eigensolve(cas%n_pairs, cas%mat, cas%w)
-        SAFE_DEALLOCATE_A(tmp)
 
         do ia = 1, cas%n_pairs
           if(cas%w(ia) < -M_EPSILON) then
