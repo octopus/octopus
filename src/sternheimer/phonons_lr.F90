@@ -105,7 +105,7 @@ contains
       call messages_not_implemented('linear-response vib_modes for periodic systems')
     endif
 
-    if(st%nlcc) then
+    if(geo%nlcc) then
       call messages_not_implemented('linear-response vib_modes with non-linear core corrections')
     endif
 

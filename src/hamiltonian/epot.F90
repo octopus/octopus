@@ -539,11 +539,11 @@ contains
 
     ! Local part
     ep%vpsl = M_ZERO
-    if(st%nlcc) st%rho_core = M_ZERO
+    if(geo%nlcc) st%rho_core = M_ZERO
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
-      if(st%nlcc) then
+      if(geo%nlcc) then
         call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, time_, &
           rho_core = st%rho_core, density = density)
       else

@@ -68,6 +68,7 @@ module states_m
     states_init,                      &
     states_look,                      &
     states_densities_init,            &
+    states_exec_init,                 &
     states_allocate_wfns,             &
     states_allocate_intf_wfns,        &
     states_deallocate_wfns,           &
@@ -144,7 +145,6 @@ module states_m
     FLOAT, pointer :: rho(:,:)         !< rho(gr%mesh%np_part, st%d%nspin)
     FLOAT, pointer :: current(:, :, :) !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
 
-    logical        :: nlcc             !< do we have non-linear core corrections
     FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
     logical        :: current_in_tau   !< are we using in tau the term which depends on the paramagnetic current?
 
@@ -1258,104 +1258,108 @@ contains
       SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
       st%current = M_ZERO
     end if
-    st%nlcc = geo%nlcc
-    if(st%nlcc) then
+    if(geo%nlcc) then
       SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
       st%rho_core(:) = M_ZERO
     end if
 
-    ! This has to be here as it requires mc%nthreads that is not available in states_init
-    call states_exec_init()
-
     POP_SUB(states_densities_init)
-
-  contains
-
-    subroutine states_exec_init()
-      integer :: default
-
-      PUSH_SUB(states_densities_init.states_exec_init)
-
-      !%Variable StatesBlockSize
-      !%Type integer
-      !%Default max(4, 2*nthreads)
-      !%Section Execution::Optimization
-      !%Description
-      !% Some routines work over blocks of eigenfunctions, which
-      !% generally improves performance at the expense of increased
-      !% memory consumption. This variable selects the size of the
-      !% blocks to be used.
-      !%End
-
-      call parse_integer(datasets_check('StatesBlockSize'), max(4, 2*mc%nthreads), st%d%block_size)
-      if(st%d%block_size < 1) then
-        message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
-        call messages_fatal(1)
-      end if
-
-      st%d%block_size = min(st%d%block_size, st%nst)
-
-      !%Variable StatesPack
-      !%Type logical
-      !%Default no
-      !%Section Execution::Optimization
-      !%Description
-      !% (Experimental) When set to yes, states are stored in packed
-      !% mode, which improves performance considerably. However this
-      !% is not fully implemented and it might give wrong results. The
-      !% default is no.
-      !%
-      !% If OpenCL is used and this variable is set to yes, Octopus
-      !% will store the wave-functions in device (GPU) memory. If
-      !% there is not enough memory to store all the wave-functions,
-      !% execution will stop with an error.
-      !%End
-
-      call parse_logical(datasets_check('StatesPack'), .false., st%d%pack_states)
-      if(st%d%pack_states) call messages_experimental('StatesPack')
-
-      !%Variable StatesOrthogonalization
-      !%Type integer
-      !%Default gram_schmidt
-      !%Section Execution::Optimization
-      !%Description
-      !% The full orthogonalization method used by some
-      !% eigensolvers. The default is gram_schmidt. With state
-      !% parallelization the default is par_gram_schmidt.
-      !%Option gram_schmidt 1
-      !% The standard Gram-Schmidt orthogonalization implemented using
-      !% BLAS/LAPACK. Can be used with domain parallelization but not
-      !% state parallelization.
-      !%Option par_gram_schmidt 2
-      !% The standard Gram-Schmidt orthogonalization implemented using
-      !% ScaLAPACK. Compatible with states parallelization.
-      !%Option mgs 3
-      !% Modified Gram-Schmidt orthogonalization.
-      !%Option qr 4
-      !% (Experimental) Orthogonalization is performed based on a QR
-      !% decomposition based on Lapack routines _getrf and _orgqr.
-      !% Compatible with states parallelization.
-      !%Option old_gram_schmidt 5
-      !% Old Gram-Schmidt implementation, compatible with states
-      !% parallelization.
-      !%End
-
-      if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-        default = ORTH_PAR_GS
-      else
-        default = ORTH_GS
-      end if
-
-      call parse_integer(datasets_check('StatesOrthogonalization'), default, st%d%orth_method)
-
-      if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call input_error('StatesOrthogonalization')
-      call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
-
-      if(st%d%orth_method == ORTH_QR) call messages_experimental("QR Orthogonalization")
-
-      POP_SUB(states_densities_init.states_exec_init)
-    end subroutine states_exec_init
   end subroutine states_densities_init
+
+
+
+  !---------------------------------------------------------------------
+  !> This subroutine: (1) Fills in the block size (st%d%block_size);
+  !! (ii) Finds out whether or not to pack the states (st%d%pack_states);
+  !! (iii) Finds out the orthogonalization method (st%d%orth_method).
+  subroutine states_exec_init(st, mc)
+    type(states_t),    intent(inout) :: st
+    type(multicomm_t), intent(in)    :: mc
+
+    integer :: default
+
+    PUSH_SUB(states_exec_init)
+
+    !%Variable StatesBlockSize
+    !%Type integer
+    !%Default max(4, 2*nthreads)
+    !%Section Execution::Optimization
+    !%Description
+    !% Some routines work over blocks of eigenfunctions, which
+    !% generally improves performance at the expense of increased
+    !% memory consumption. This variable selects the size of the
+    !% blocks to be used.
+    !%End
+
+    call parse_integer(datasets_check('StatesBlockSize'), max(4, 2*mc%nthreads), st%d%block_size)
+    if(st%d%block_size < 1) then
+      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
+      call messages_fatal(1)
+    end if
+
+    st%d%block_size = min(st%d%block_size, st%nst)
+
+    !%Variable StatesPack
+    !%Type logical
+    !%Default no
+    !%Section Execution::Optimization
+    !%Description
+    !% (Experimental) When set to yes, states are stored in packed
+    !% mode, which improves performance considerably. However this
+    !% is not fully implemented and it might give wrong results. The
+    !% default is no.
+    !%
+    !% If OpenCL is used and this variable is set to yes, Octopus
+    !% will store the wave-functions in device (GPU) memory. If
+    !% there is not enough memory to store all the wave-functions,
+    !% execution will stop with an error.
+    !%End
+
+    call parse_logical(datasets_check('StatesPack'), .false., st%d%pack_states)
+    if(st%d%pack_states) call messages_experimental('StatesPack')
+
+    !%Variable StatesOrthogonalization
+    !%Type integer
+    !%Default gram_schmidt
+    !%Section Execution::Optimization
+    !%Description
+    !% The full orthogonalization method used by some
+    !% eigensolvers. The default is gram_schmidt. With state
+    !% parallelization the default is par_gram_schmidt.
+    !%Option gram_schmidt 1
+    !% The standard Gram-Schmidt orthogonalization implemented using
+    !% BLAS/LAPACK. Can be used with domain parallelization but not
+    !% state parallelization.
+    !%Option par_gram_schmidt 2
+    !% The standard Gram-Schmidt orthogonalization implemented using
+    !% ScaLAPACK. Compatible with states parallelization.
+    !%Option mgs 3
+    !% Modified Gram-Schmidt orthogonalization.
+    !%Option qr 4
+    !% (Experimental) Orthogonalization is performed based on a QR
+    !% decomposition based on Lapack routines _getrf and _orgqr.
+    !% Compatible with states parallelization.
+    !%Option old_gram_schmidt 5
+    !% Old Gram-Schmidt implementation, compatible with states
+    !% parallelization.
+    !%End
+
+    if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+      default = ORTH_PAR_GS
+    else
+      default = ORTH_GS
+    end if
+
+    call parse_integer(datasets_check('StatesOrthogonalization'), default, st%d%orth_method)
+
+    if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call input_error('StatesOrthogonalization')
+    call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
+
+    if(st%d%orth_method == ORTH_QR) call messages_experimental("QR Orthogonalization")
+
+    POP_SUB(states_exec_init)
+  end subroutine states_exec_init
+  !---------------------------------------------------------------------
 
 
   ! ---------------------------------------------------------
@@ -1388,7 +1392,6 @@ contains
     call loct_pointer_copy(stout%rho, stin%rho)
     call loct_pointer_copy(stout%current, stin%current)
 
-    stout%nlcc = stin%nlcc
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
     stout%current_in_tau = stin%current_in_tau
 
