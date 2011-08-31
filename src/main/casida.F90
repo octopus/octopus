@@ -510,11 +510,11 @@ contains
             write(iunit, *) ia, ia, ff
           end if
 
-          if(cas%nspin == 2) then
+          if(cas%nspin == 1) then
             cas%w(ia) = cas%w(ia) + M_TWO * ff
           else
             cas%w(ia) = cas%w(ia) + ff
-            ! note that Petersilka is probably inappropriate due to degenerate transitions!
+            ! note that Petersilka is probably inappropriate for spin-polarized system due to degenerate transitions!
           endif
         end if
 
