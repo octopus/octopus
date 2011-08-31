@@ -495,7 +495,13 @@ contains
             ff = K_term(cas%pair(ia), cas%pair(ia))
             write(iunit, *) ia, ia, ff
           end if
-          cas%w(ia) = cas%w(ia) + M_TWO * ff
+          
+          if(cas%nspin == 1) then
+            cas%w(ia) = cas%w(ia) + M_TWO * ff
+          else
+            cas%w(ia) = cas%w(ia) + ff
+            ! note that Petersilka is probably inappropriate due to degenerate transitions!
+          endif
         end if
 
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
@@ -517,6 +523,7 @@ contains
         end if
         
         cas%tm(:, idir) = xx(:)
+        if(cas%nspin == 1) cas%tm(:, idir) = sqrt(M_TWO) * cas%tm(:, idir)
 
       end do
       SAFE_DEALLOCATE_A(xx)
