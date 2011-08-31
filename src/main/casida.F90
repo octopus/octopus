@@ -289,7 +289,7 @@ contains
       call messages_info(1)
       cas%type = CASIDA_EPS_DIFF
       call casida_work(sys, hm, cas)
-      call casida_write(cas, 'eps-diff')
+      call casida_write(cas)
     endif
 
     if (sys%st%d%ispin /= SPINORS) then
@@ -300,7 +300,7 @@ contains
         call messages_info(1)
         cas%type = CASIDA_PETERSILKA
         call casida_work(sys, hm, cas)
-        call casida_write(cas, 'petersilka')
+        call casida_write(cas)
       endif
 
       ! Solve in the Tamm-Dancoff approximation
@@ -309,7 +309,7 @@ contains
         call messages_info(1)
         cas%type = CASIDA_TAMM_DANCOFF
         call casida_work(sys, hm, cas)
-        call casida_write(cas, 'tamm_dancoff')
+        call casida_write(cas)
       endif
 
       ! And finally, solve the full Casida problem.
@@ -318,15 +318,15 @@ contains
         call messages_info(1)
         cas%type = CASIDA_CASIDA
         call casida_work(sys, hm, cas)
-        call casida_write(cas, 'casida')
-        if(cas%qcalc) call qcasida_write(cas, 'qcasida')
+        call casida_write(cas)
+        if(cas%qcalc) call qcasida_write(cas)
       endif
 
-      ! Calculate and write the transition matrix
+      ! Calculate and write the transition densities
       if (states_are_real(sys%st)) then
-        call dget_transition_densities(cas, sys, cas%trandens)
+        call dget_transition_densities(cas, sys)
       else
-        call zget_transition_densities(cas, sys, cas%trandens)
+        call zget_transition_densities(cas, sys)
       end if
 
     end if
@@ -906,9 +906,8 @@ contains
   end subroutine casida_work
 
   ! ---------------------------------------------------------
-  subroutine qcasida_write(cas, filename)
+  subroutine qcasida_write(cas)
     type(casida_t), intent(in) :: cas
-    character(len=*),  intent(in) :: filename
 
     integer :: iunit, ia, dim
     integer, allocatable :: ind(:)
@@ -926,7 +925,7 @@ contains
     call sort(w, ind)
 
     call io_mkdir(CASIDA_DIR)
-    iunit = io_open(CASIDA_DIR//trim(filename), action='write')
+    iunit = io_open(CASIDA_DIR//'q'//trim(theory_name(cas)), action='write')
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,a10,3es15.8,a2)') '#','E' , '|<f|exp(iq.r)|i>|^2', &
                                                              '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:MAX_DIM),')'
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,10x,a15)')        '#', trim(units_abbrev(units_out%energy)), &
@@ -957,9 +956,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine casida_write(cas, filename)
+  subroutine casida_write(cas)
     type(casida_t), intent(in) :: cas
-    character(len=*),  intent(in) :: filename
 
     character(len=5) :: str
     character(len=50) :: dir_name
@@ -981,7 +979,7 @@ contains
 
     ! output excitation energies and oscillator strengths
     call io_mkdir(CASIDA_DIR)
-    iunit = io_open(CASIDA_DIR//trim(filename), action='write')
+    iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), action='write')
 
     if(cas%type == CASIDA_EPS_DIFF .or. (cas%type == CASIDA_PETERSILKA)) then
       write(iunit, '(2a4)', advance='no') 'From', '  To'
@@ -1018,7 +1016,7 @@ contains
       return
     end if
 
-    dir_name = CASIDA_DIR//trim(filename)//'_excitations'
+    dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
     call io_mkdir(trim(dir_name))
     do ia = 1, cas%n_pairs
       write(str,'(i5.5)') ia
@@ -1049,6 +1047,26 @@ contains
     SAFE_DEALLOCATE_A(ind)
     POP_SUB(casida_write)
   end subroutine casida_write
+
+  ! ---------------------------------------------------------
+  character*80 function theory_name(cas)
+    type(casida_t), intent(in) :: cas
+
+    select case(cas%type)
+      case(CASIDA_EPS_DIFF)
+        theory_name = "eps-diff"
+      case(CASIDA_PETERSILKA)
+        theory_name = "petersilka"
+      case(CASIDA_TAMM_DANCOFF)
+        theory_name = "tamm_dancoff"
+      case(CASIDA_CASIDA)
+        theory_name = "casida"
+      case default
+        write(message(1),'(a,i6)') 'Unknown Casida theory level ', cas%type
+        call messages_fatal(1)
+    end select
+
+  end function theory_name
 
 
 #include "undef.F90"

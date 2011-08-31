@@ -112,10 +112,9 @@ subroutine X(transition_density) (cas, st, mesh, ia, n0I)
 end subroutine X(transition_density)
 
 ! ---------------------------------------------------------
-subroutine X(get_transition_densities) (cas, sys, trandens)
+subroutine X(get_transition_densities) (cas, sys)
   type(casida_t),    intent(in) :: cas
   type(system_t),    intent(in) :: sys
-  character(len=80), intent(in) :: trandens
 
   integer :: ia, ierr
   character(len=5) :: intstr
@@ -130,7 +129,7 @@ subroutine X(get_transition_densities) (cas, sys, trandens)
   fn_unit = units_out%length**(-sys%gr%sb%dim)
 
   do ia = 1, cas%n_pairs
-    if(loct_isinstringlist(ia, trandens)) then
+    if(loct_isinstringlist(ia, cas%trandens)) then
       call X(transition_density) (cas, sys%st, sys%gr%mesh, ia, n0I)
       write(intstr,'(i5)') ia
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
