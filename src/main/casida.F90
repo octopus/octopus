@@ -61,16 +61,17 @@ module casida_m
   integer, parameter ::      &
     CASIDA_EPS_DIFF     = 1, &
     CASIDA_PETERSILKA   = 2, &
-    CASIDA_TAMM_DANCOFF = 3, &
-    CASIDA_CASIDA       = 4
+    CASIDA_TAMM_DANCOFF = 4, &
+    CASIDA_CASIDA       = 8
 
   type casida_t
-    integer :: type          !< CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_TAMM_DANCOFF | CASIDA_CASIDA
+    integer :: type !< CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_TAMM_DANCOFF | CASIDA_CASIDA
 
     integer, pointer  :: n_occ(:)       !< number of occupied states
     integer, pointer  :: n_unocc(:)     !< number of unoccupied states
     integer           :: nspin
     character(len=80) :: wfn_list
+    character(len=80) :: trandens
 
     integer           :: n_pairs        !< number of pairs to take into account
     type(states_pair_t), pointer :: pair(:)
@@ -110,7 +111,6 @@ contains
   !!   in Recent Advances in Density Functional Methods, edited by DE Chong, vol. 1
   !!   of Recent Advances in Computational Chemistry, pp. 155-192 (World Scientific,
   !!   Singapore)
-  !!   -- available at http://dcm.ujf-grenoble.fr/PERSONNEL/CT/casida/research/chong.ps
   subroutine casida_run(sys, hm, fromScratch)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
@@ -118,8 +118,8 @@ contains
 
     type(casida_t) :: cas
     type(block_t) :: blk
-    integer :: idir, ik, nk, n_filled, n_partially_filled, n_half_filled
-    character(len=80) :: trandens, nst_string, default
+    integer :: idir, ik, nk, n_filled, n_partially_filled, n_half_filled, theorylevel
+    character(len=80) :: nst_string, default
 
     PUSH_SUB(casida_run)
 
@@ -170,6 +170,36 @@ contains
     call messages_info(1)
     call system_h_setup(sys, hm)
 
+    !%Variable CasidaTheoryLevel
+    !%Type flag
+    !%Section Linear Response::Casida
+    !%Default <tt>eps_diff + petersilka + lrtddft_casida</tt>
+    !%Description
+    !% Choose which electron-hole matrix-based theory levels to use in calculating excitation energies.
+    !% More than one may be used to take advantage of the significant commonality between the calculations.
+    !% Only <tt>eps_diff</tt> is available for spinors.
+    !%Option eps_diff 1
+    !% Difference of eigenvalues, <i>i.e.</i> independent-particle approximation.
+    !%Option petersilka 2
+    !% The Petersilka approximation uses only the diagonal part of the response matrix.
+    !% This is acceptable if there is little mixing between single-particle transitions.
+    !% Ref: M Petersilka, UJ Gossmann, and EKU Gross, <i>Phys. Rev. Lett.</i> <b>76</b>, 1212 (1996).
+    !%Option tamm_dancoff 4
+    !% The Tamm-Dancoff approximation uses only occupied-unoccupied transitions and not
+    !% unoccupied-occupied transitions.
+    !% Ref: S Hirata and M Head-Gordon, <i>Chem. Phys. Lett.</i> <b>314</b>, 291 (1999).
+    !%Option lrtddft_casida 8
+    !% The full Casida method.
+    !% Ref: C Jamorski, ME Casida, and DR Salahub, <i>J. Chem. Phys.</i> <b>104</b>, 5134 (1996)
+    !% and ME Casida, "Time-dependent density functional response theory for molecules,"
+    !% in <i>Recent Advances in Density Functional Methods</i>, edited by DE Chong, vol. 1
+    !% of <i>Recent Advances in Computational Chemistry</i>, pp. 155-192 (World Scientific,
+    !% Singapore, 1995).
+    !%End
+
+    call parse_integer(datasets_check('CasidaTheoryLevel'), &
+      CASIDA_EPS_DIFF + CASIDA_PETERSILKA + CASIDA_CASIDA, theorylevel)
+
     !%Variable CasidaKohnShamStates
     !%Type string
     !%Section Linear Response::Casida
@@ -208,7 +238,7 @@ contains
     !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid.
     !%End
-    call parse_string(datasets_check('CasidaTransitionDensities'), "0", trandens)
+    call parse_string(datasets_check('CasidaTransitionDensities'), "0", cas%trandens)
 
     !%Variable CasidaMomentumTransfer
     !%Type block
@@ -254,43 +284,51 @@ contains
 
     ! First, print the differences between KS eigenvalues (first approximation to the
     ! excitation energies, or rather, to the DOS).
-    message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
-    call messages_info(1)
-    cas%type = CASIDA_EPS_DIFF
-    call casida_work(sys, hm, cas)
-    call casida_write(cas, 'eps-diff')
+    if(iand(theorylevel, CASIDA_EPS_DIFF) /= 0) then
+      message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
+      call messages_info(1)
+      cas%type = CASIDA_EPS_DIFF
+      call casida_work(sys, hm, cas)
+      call casida_write(cas, 'eps-diff')
+    endif
 
     if (sys%st%d%ispin /= SPINORS) then
 
       ! Then, calculate the excitation energies by making use of the Petersilka approximation
-      message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
-      call messages_info(1)
-      cas%type = CASIDA_PETERSILKA
-      call casida_work(sys, hm, cas)
-      call casida_write(cas, 'petersilka')
+      if(iand(theorylevel, CASIDA_PETERSILKA) /= 0) then
+        message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
+        call messages_info(1)
+        cas%type = CASIDA_PETERSILKA
+        call casida_work(sys, hm, cas)
+        call casida_write(cas, 'petersilka')
+      endif
 
       ! Solve in the Tamm-Dancoff approximation
-      message(1) = "Info: Calculating resonance energies in the Tamm-Dancoff approximation"
-      call messages_info(1)
-      cas%type = CASIDA_TAMM_DANCOFF
-      call casida_work(sys, hm, cas)
-      call casida_write(cas, 'tamm_dancoff')
+      if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
+        message(1) = "Info: Calculating resonance energies in the Tamm-Dancoff approximation"
+        call messages_info(1)
+        cas%type = CASIDA_TAMM_DANCOFF
+        call casida_work(sys, hm, cas)
+        call casida_write(cas, 'tamm_dancoff')
+      endif
 
       ! And finally, solve the full Casida problem.
-      message(1) = "Info: Calculating resonance energies with the full Casida method"
-      call messages_info(1)
-      cas%type = CASIDA_CASIDA
-      call casida_work(sys, hm, cas)
-      call casida_write(cas, 'casida')
-      if(cas%qcalc) call qcasida_write(cas, 'qcasida')
+      if(iand(theorylevel, CASIDA_CASIDA) /= 0) then
+        message(1) = "Info: Calculating resonance energies with the full Casida method"
+        call messages_info(1)
+        cas%type = CASIDA_CASIDA
+        call casida_work(sys, hm, cas)
+        call casida_write(cas, 'casida')
+        if(cas%qcalc) call qcasida_write(cas, 'qcasida')
+      endif
 
-    end if
+      ! Calculate and write the transition matrix
+      if (states_are_real(sys%st)) then
+        call dget_transition_densities(cas, sys, cas%trandens)
+      else
+        call zget_transition_densities(cas, sys, cas%trandens)
+      end if
 
-    ! Calculate and write the transition matrix
-    if (states_are_real(sys%st)) then
-      call dget_transition_densities(cas, sys, trandens)
-    else
-      call zget_transition_densities(cas, sys, trandens)
     end if
 
     call casida_type_end(cas)
@@ -779,7 +817,7 @@ contains
       end if
 #endif
 
-      if(cas%type == CASIDA_TAMM_DANCOFF .and. mpi_grp_is_root(mpi_world)) write(*, "(1x)")
+      if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
       POP_SUB(casida_work.solve_casida)
     end subroutine solve_casida
