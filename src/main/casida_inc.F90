@@ -58,7 +58,7 @@ end function X(ks_matrix_elements)
 R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
   type(casida_t), intent(in) :: cas
   integer,        intent(in) :: ia
-  R_TYPE,         intent(in) :: xx(:)
+  R_TYPE,         intent(in) :: xx(:) ! these are KS matrix elements
 
   integer :: jb
 
@@ -66,10 +66,17 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
 
   zz = R_TOTYPE(M_ZERO)
   if(cas%w(ia) > M_ZERO) then
-    do jb = 1, cas%n_pairs
-      zz = zz + xx(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
-    end do
-    zz = (M_ONE/sqrt(cas%w(ia))) * zz
+    if(cas%type == CASIDA_CASIDA) then
+      do jb = 1, cas%n_pairs
+        zz = zz + xx(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
+      end do
+      zz = (M_ONE/sqrt(cas%w(ia))) * zz
+    else ! TAMM_DANCOFF
+      do jb = 1, cas%n_pairs
+        zz = zz + xx(jb) * cas%mat(jb, ia)
+      end do
+      if(cas%nspin == 1) zz = sqrt(M_TWO) * zz
+    endif
   end if
 
   POP_SUB(X(transition_matrix_element))

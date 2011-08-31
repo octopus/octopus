@@ -261,6 +261,7 @@ contains
     call casida_write(cas, 'eps-diff')
 
     if (sys%st%d%ispin /= SPINORS) then
+
       ! Then, calculate the excitation energies by making use of the Petersilka approximation
       message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
       call messages_info(1)
@@ -508,7 +509,13 @@ contains
             ff = K_term(cas%pair(ia), cas%pair(ia))
             write(iunit, *) ia, ia, ff
           end if
-          cas%w(ia) = cas%w(ia) + M_TWO * ff
+
+          if(cas%nspin == 2) then
+            cas%w(ia) = cas%w(ia) + M_TWO * ff
+          else
+            cas%w(ia) = cas%w(ia) + ff
+            ! note that Petersilka is probably inappropriate due to degenerate transitions!
+          endif
         end if
 
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
@@ -530,6 +537,7 @@ contains
         end if
         
         cas%tm(:, idir) = xx(:)
+        if(cas%nspin == 1) cas%tm(:, idir) = sqrt(M_TWO) * cas%tm(:, idir) 
 
       end do
       SAFE_DEALLOCATE_A(xx)
@@ -613,13 +621,11 @@ contains
             if(.not.saved_K(ia, jb)) write(iunit, *) ia, jb, cas%mat(ia, jb)
               
             if(cas%type == CASIDA_CASIDA) then
-              if(sys%st%d%ispin == UNPOLARIZED) then
-                cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
-                  sqrt(st%eigenval(q%a, 1) - st%eigenval(q%i, 1))
-              else if(sys%st%d%ispin == SPIN_POLARIZED) then
-                cas%mat(ia, jb)  = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
-                  sqrt(st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))
-              end if
+              cas%mat(ia, jb) = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
+                sqrt(st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))
+            endif
+            if(sys%st%d%ispin == UNPOLARIZED) then
+              cas%mat(ia, jb) = M_TWO * cas%mat(ia, jb)
             endif
 
             if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
