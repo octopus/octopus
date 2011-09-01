@@ -53,6 +53,8 @@ contains
     integer :: mpi_err
 #endif
 
+    ! variable CalculationMode is defined in src/main.F90
+
     ! The block should be of the form
     ! %CalculationMode
     !   gs | unocc | td
@@ -67,6 +69,7 @@ contains
       no_datasets = 1
     end if
 
+    ! SAFE macros cannot be used here yet
     allocate(dataset_label(no_datasets))
     allocate(dataset_runmode(no_datasets))
     allocate(dataset_run_order(no_datasets))

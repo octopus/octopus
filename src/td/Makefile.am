@@ -40,6 +40,6 @@ propagator.o: propagator.F90 ob_propagator.o propagator_qoct_inc.F90
 ob_propagator.o: ob_propagator.F90 ob_mem.o ob_src.o ob_terms.o
 ob_mem.o: ob_mem.F90 ob_terms.o
 ob_src.o: ob_src.F90 ob_mem.o ob_terms.o
-td_write.o: td_write.F90 spectrum.o
+td_write.o: td_write.F90 spectrum.o td_calc.o
 td.o: td.F90 td_init_inc.F90 spectrum.o pes.o td_write.o propagator.o cpmd.o
 cpmd.o: cpmd.F90 cpmd_inc.F90

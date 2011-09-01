@@ -100,7 +100,8 @@ program octopus
   !%Option kdotp 15
   !% Calculation of effective masses by <i>k.p</i> perturbation theory (experimental).
   !%Option gcm 16
-  !% Generator-Coordinates calculation (experimental).
+  !% Generator-Coordinates Method calculation (experimental).
+  !% Ref. K. Capelle, <i>J. Chem. Phys.</i> <b>119</b>, 1285 (2003).
   !%Option memory 17
   !% Estimate the amount of memory <tt>Octopus</tt> will need to run.
   !%Option invert_ks 18
@@ -111,11 +112,11 @@ program octopus
   !% May also be used as a block for multi-dataset mode. The first line is a list of calculation modes,
   !% the second is labels (optional), and the third is the order for the runs (optional). Example:
   !%
-  !% <tt>%CalculationMode
-  !%   gs | unocc | td
-  !%   "run1" | "run2"
-  !%   1 | 2 | 3
-  !% %</tt>
+  !% <pre>%CalculationMode
+  !%   gs     | unocc  | td
+  !%   "run1" | "run2" | "run3"
+  !%   1      | 2      | 3
+  !% %</pre>
   !%End
   if(parse_block('CalculationMode', blk) == 0) then
     call datasets_init(inp_calc_mode, blk)

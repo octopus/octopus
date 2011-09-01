@@ -81,7 +81,9 @@ module gcm_m
     !%Type block
     !%Section Calculation Modes::Generator Coordinates
     !%Description
-    !%
+    !% Specify which Slater determinants are to be used, each generated from a previous
+    !% ground-state calculation. Supply a list of names of the directories in which the
+    !% results of each calculation was saved.
     !%End
     if(parse_block(datasets_check('GCMSlaterDeterminants'), blk) .ne. 0) then
       write(message(1),'(a)') 'If you run in "CalculationMode = gcm" mode, then you must'
