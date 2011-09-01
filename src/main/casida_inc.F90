@@ -122,6 +122,8 @@ subroutine X(get_transition_densities) (cas, sys)
   R_TYPE, allocatable :: n0I(:)
   type(unit_t) :: fn_unit
 
+  if(.not. mpi_grp_is_root(mpi_world)) return
+
   PUSH_SUB(X(get_transition_densities))
 
   SAFE_ALLOCATE(n0I(1:sys%gr%mesh%np))
@@ -133,7 +135,7 @@ subroutine X(get_transition_densities) (cas, sys)
       call X(transition_density) (cas, sys%st, sys%gr%mesh, ia, n0I)
       write(intstr,'(i5)') ia
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
-      write(filename,'(a,i'//trim(intstr)//')') 'n0',ia
+      write(filename,'(a,a,i'//trim(intstr)//')') trim(theory_name(cas)), '_rho_n0',ia
       call X(io_function_output)(sys%outp%how, CASIDA_DIR, trim(filename), &
                               sys%gr%mesh, n0I, fn_unit, ierr, geo = sys%geo)
     end if

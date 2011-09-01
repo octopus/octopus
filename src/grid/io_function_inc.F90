@@ -545,14 +545,19 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
 ! Define the format; check if code is single precision or double precision
 !  FIXME: this may need to be expanded for MAX_DIM > 3
 #if defined(SINGLE_PRECISION)
-    mformat    = '(4es15.6E3)'
-    mformat2   = '(i6,5es15.6E3)'
-    mfmtheader = '(a,a7,5a15)'
+  mformat    = '(4es15.6E3)'
+  mformat2   = '(i6,5es15.6E3)'
+  mfmtheader = '(a,a7,5a15)'
 #else
-    mformat    = '(4es23.14E3)'
-    mformat2   = '(i6,5es34.24E3)'
-    mfmtheader = '(a,a10,5a23)'
+  mformat    = '(4es23.14E3)'
+  mformat2   = '(i6,5es34.24E3)'
+  mfmtheader = '(a,a10,5a23)'
 #endif
+
+  if(how == 0) then
+    message(1) = "Internal error: cannot call io_function with outp%how = 0."
+    call messages_fatal(1)
+  endif
 
   np_max = mesh%np_global
   ! should we output boundary points?

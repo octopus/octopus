@@ -233,12 +233,14 @@ contains
     !%Description
     !% Specifies which transition densities are to be calculated and written down. The
     !% transition density for the many-body state <i>n</i> will be written to a file called
-    !% <tt>casida/rho0n</tt>.
+    !% <tt>rho0n</tt> prefixed by the theory level.
     !%
     !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid.
     !%End
     call parse_string(datasets_check('CasidaTransitionDensities'), "0", cas%trandens)
+
+    if(cas%trandens /= "0") call io_function_read_how(sys%gr%sb, sys%outp%how)
 
     !%Variable CasidaMomentumTransfer
     !%Type block
@@ -289,7 +291,7 @@ contains
       call messages_info(1)
       cas%type = CASIDA_EPS_DIFF
       call casida_work(sys, hm, cas)
-      call casida_write(cas)
+      call casida_write(cas, sys)
     endif
 
     if (sys%st%d%ispin /= SPINORS) then
@@ -300,7 +302,7 @@ contains
         call messages_info(1)
         cas%type = CASIDA_PETERSILKA
         call casida_work(sys, hm, cas)
-        call casida_write(cas)
+        call casida_write(cas, sys)
       endif
 
       ! Solve in the Tamm-Dancoff approximation
@@ -309,7 +311,7 @@ contains
         call messages_info(1)
         cas%type = CASIDA_TAMM_DANCOFF
         call casida_work(sys, hm, cas)
-        call casida_write(cas)
+        call casida_write(cas, sys)
       endif
 
       ! And finally, solve the full Casida problem.
@@ -318,16 +320,8 @@ contains
         call messages_info(1)
         cas%type = CASIDA_CASIDA
         call casida_work(sys, hm, cas)
-        call casida_write(cas)
-        if(cas%qcalc) call qcasida_write(cas)
+        call casida_write(cas, sys)
       endif
-
-      ! Calculate and write the transition densities
-      if (states_are_real(sys%st)) then
-        call dget_transition_densities(cas, sys)
-      else
-        call zget_transition_densities(cas, sys)
-      end if
 
     end if
 
@@ -369,6 +363,8 @@ contains
       message(1) = "Error: Maybe there are no unoccupied states?"
       call messages_fatal(1)
     end if
+
+    if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
     ! allocate stuff
     SAFE_ALLOCATE(cas%pair(1:cas%n_pairs))
@@ -956,8 +952,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine casida_write(cas)
+  subroutine casida_write(cas, sys)
     type(casida_t), intent(in) :: cas
+    type(system_t), intent(in) :: sys
 
     character(len=5) :: str
     character(len=50) :: dir_name
@@ -1009,13 +1006,14 @@ contains
     end do
     call io_close(iunit)
 
-    ! output eigenvectors in Casida approach
+    if(cas%qcalc) call qcasida_write(cas)
 
     if(cas%type == CASIDA_EPS_DIFF .or. cas%type == CASIDA_PETERSILKA) then
       POP_SUB(casida_write)
       return
     end if
 
+    ! output eigenvectors
     dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
     call io_mkdir(trim(dir_name))
     do ia = 1, cas%n_pairs
@@ -1045,6 +1043,14 @@ contains
 
     SAFE_DEALLOCATE_A(w)
     SAFE_DEALLOCATE_A(ind)
+
+    ! Calculate and write the transition densities
+    if (states_are_real(sys%st)) then
+      call dget_transition_densities(cas, sys)
+    else
+      call zget_transition_densities(cas, sys)
+    end if
+
     POP_SUB(casida_write)
   end subroutine casida_write
 
