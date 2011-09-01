@@ -546,7 +546,8 @@ contains
           if(saved_K(ia, ia)) then
             ff = cas%mat(ia, ia)
           else
-            ff = K_term(cas%pair(ia), cas%pair(ia))
+            cas%mat(ia, ia) = K_term(cas%pair(ia), cas%pair(ia))
+            ff = cas%mat(ia, ia)
             call write_K_term(cas, iunit, ia, ia)
           end if
 
@@ -898,9 +899,6 @@ contains
         jb = cas%index(jj, bb, js)
 
         if(ia > 0 .and. jb > 0) then
-          ASSERT(cas%pair(ia)%i == ii)
-          ASSERT(cas%pair(ia)%a == aa)
-        
           cas%mat(ia, jb) = val
           saved_K(ia, jb) = .true.
           cas%mat(jb, ia) = val
