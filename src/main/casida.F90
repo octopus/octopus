@@ -75,6 +75,7 @@ module casida_m
 
     integer           :: n_pairs        !< number of pairs to take into account
     type(states_pair_t), pointer :: pair(:)
+    integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%sigma) = j
 
     FLOAT,   pointer  :: mat(:,:)       !< general-purpose matrix
     FLOAT,   pointer  :: w(:)           !< The excitation energies.
@@ -373,11 +374,14 @@ contains
     SAFE_ALLOCATE(   cas%f(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
+    SAFE_ALLOCATE(cas%index(1:maxval(cas%n_occ), minval(cas%n_occ):maxval(cas%n_occ + cas%n_unocc), nk))
 
     if(cas%qcalc) then
       SAFE_ALLOCATE( cas%qf    (1:cas%n_pairs))
       SAFE_ALLOCATE( cas%qf_avg(1:cas%n_pairs))
     end if
+
+    cas%index(:,:,:) = 0
 
     ! create pairs
     jpair = 1
@@ -386,6 +390,7 @@ contains
         if(loct_isinstringlist(ast, cas%wfn_list)) then
           do ist = 1, cas%n_occ(ik)
             if(loct_isinstringlist(ist, cas%wfn_list)) then
+              cas%index(ist, ast, ik) = jpair
               cas%pair(jpair)%i = ist
               cas%pair(jpair)%a = ast
               cas%pair(jpair)%sigma = ik
@@ -416,6 +421,7 @@ contains
 
     ASSERT(associated(cas%pair))
     SAFE_DEALLOCATE_P(cas%pair)
+    SAFE_DEALLOCATE_P(cas%index)
     SAFE_DEALLOCATE_P(cas%mat)
     SAFE_DEALLOCATE_P(cas%tm)
     SAFE_DEALLOCATE_P(cas%s)
@@ -541,7 +547,7 @@ contains
             ff = cas%mat(ia, ia)
           else
             ff = K_term(cas%pair(ia), cas%pair(ia))
-            write(iunit, *) ia, ia, ff
+            call write_K_term(cas, iunit, ia, ia)
           end if
 
           if(cas%nspin == 1) then
@@ -652,7 +658,7 @@ contains
             
           do jb = ia, cas%n_pairs
             q => cas%pair(jb)
-            if(.not.saved_K(ia, jb)) write(iunit, *) ia, jb, cas%mat(ia, jb)
+            if(.not.saved_K(ia, jb)) call write_K_term(cas, iunit, ia, jb)
               
             if(cas%type == CASIDA_CASIDA) then
               cas%mat(ia, jb) = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
@@ -872,7 +878,7 @@ contains
     ! ---------------------------------------------------------
     subroutine load_saved
       integer :: iunit, err
-      integer :: ia, jb
+      integer :: ia, jb, ii, aa, is, jj, bb, js
       FLOAT   :: val
 
       PUSH_SUB(casida_work.load_saved)
@@ -885,14 +891,21 @@ contains
       end if
 
       do
-        read(iunit, fmt=*, iostat=err) ia, jb, val
+        read(iunit, fmt=*, iostat=err) ii, aa, is, jj, bb, js, val
         if(err.ne.0) exit
-        if((ia > 0 .and. ia <= cas%n_pairs) .and. (jb > 0 .and. jb <= cas%n_pairs)) then
+
+        ia = cas%index(ii, aa, is)
+        jb = cas%index(jj, bb, js)
+
+        if(ia > 0 .and. jb > 0) then
+          ASSERT(cas%pair(ia)%i == ii)
+          ASSERT(cas%pair(ia)%a == aa)
+        
           cas%mat(ia, jb) = val
           saved_K(ia, jb) = .true.
           cas%mat(jb, ia) = val
           saved_K(jb, ia) = .true.
-        end if
+        endif
       end do
 
       if(iunit > 0) call io_close(iunit)
@@ -1055,8 +1068,26 @@ contains
   end subroutine casida_write
 
   ! ---------------------------------------------------------
+  ! write matrix element to casida_restart file
+  subroutine write_K_term(cas, iunit, ia, jb)
+    type(casida_t), intent(in) :: cas
+    integer,        intent(in) :: iunit
+    integer,        intent(in) :: ia
+    integer,        intent(in) :: jb
+
+    PUSH_SUB(write_K_term)
+
+    write(iunit,*) cas%pair(ia)%i, cas%pair(ia)%a, cas%pair(ia)%sigma, &
+                   cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, cas%mat(ia, jb)
+
+    POP_SUB(write_Kterm)
+  end subroutine write_K_term
+
+  ! ---------------------------------------------------------
   character*80 function theory_name(cas)
     type(casida_t), intent(in) :: cas
+
+    PUSH_SUB(theory_name)
 
     select case(cas%type)
       case(CASIDA_EPS_DIFF)
@@ -1072,8 +1103,8 @@ contains
         call messages_fatal(1)
     end select
 
+    POP_SUB(theory_name)
   end function theory_name
-
 
 #include "undef.F90"
 #include "real.F90"
