@@ -353,9 +353,9 @@ contains
   ! ---------------------------------------------------------
   ! Same as calc_point, but without the gradients.
   subroutine calc_point_ng(size, coords, objective)
-    integer,     intent(in)  :: size
-    REAL_DOUBLE, intent(in)  :: coords(size)
-    REAL_DOUBLE, intent(out) :: objective
+    integer      :: size
+    REAL_DOUBLE  :: coords(size)
+    REAL_DOUBLE  :: objective
 
     integer :: getgrad
     REAL_DOUBLE , allocatable :: df(:)

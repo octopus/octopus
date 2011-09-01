@@ -174,9 +174,9 @@
 
   ! ---------------------------------------------------------
   subroutine opt_control_direct_calc(n, x, f)
-    integer, intent(in)  :: n
-    REAL_DOUBLE, intent(in)  :: x(n)
-    REAL_DOUBLE, intent(out) :: f
+    integer      :: n
+    REAL_DOUBLE  :: x(n)
+    REAL_DOUBLE  :: f
 
     FLOAT :: j1, delta
     FLOAT, allocatable :: theta(:)

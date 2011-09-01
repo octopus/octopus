@@ -304,9 +304,9 @@ module loct_math_m
       real(8), intent(out)   :: minimum
       interface
         subroutine f(n, x, val)
-          integer, intent(in) :: n
-          real(8), intent(in) :: x(n)
-          real(8), intent(out) :: val
+          integer :: n
+          real(8) :: x(n)
+          real(8) :: val
         end subroutine f
         subroutine write_iter_info(iter, n, val, maxdr, x)
           integer, intent(in) :: iter
