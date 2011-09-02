@@ -379,9 +379,9 @@ contains
       
       if(eigens%subspace_diag .and. eigens%converged(ik) == 0) then
         if (states_are_real(st)) then
-          call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik))
+          call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         else
-          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik))
+          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
       end if
 
