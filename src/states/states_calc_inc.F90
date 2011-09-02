@@ -119,9 +119,9 @@ contains
 
     ! We need to set to zero some extra parts of the array
     if(st%d%dim == 1) then
-     st%X(psi)(mesh%np + 1:psi_block(1), 1:st%d%dim, 1:st%lnst, ik) = M_ZERO
+     st%X(psi)(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
     else
-     st%X(psi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, 1:st%lnst, ik) = M_ZERO
+     st%X(psi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
     end if
 
     call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0, st%dom_st_proc_grid%context, &
@@ -148,7 +148,7 @@ contains
     ss = M_ZERO
 
     call pblas_herk(uplo = 'U', trans = 'C', n = st%nst, k = total_np, &
-      alpha = R_TOTYPE(mesh%vol_pp(1)), a = st%X(psi)(1, 1, 1, ik), ia = 1, ja = 1, desca = psi_desc(1), &
+      alpha = R_TOTYPE(mesh%vol_pp(1)), a = st%X(psi)(1, 1, st%st_start, ik), ia = 1, ja = 1, desca = psi_desc(1), &
       beta = R_TOTYPE(M_ZERO), c = ss(1, 1), ic = 1, jc = 1, descc = ss_desc(1))
 
     ! calculate the Cholesky decomposition
@@ -162,7 +162,7 @@ contains
 
     call pblas_trsm(side = 'R', uplo = 'U', transa = 'N', diag = 'N', m = total_np, n = st%nst, &
       alpha = R_TOTYPE(M_ONE), a = ss(1, 1), ia = 1, ja = 1, desca = ss_desc(1), &
-      b = st%X(psi)(1, 1, 1, ik), ib = 1, jb = 1, descb = psi_desc(1))
+      b = st%X(psi)(1, 1, st%st_start, ik), ib = 1, jb = 1, descb = psi_desc(1))
 
     call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
@@ -199,9 +199,9 @@ contains
 
       ! We need to set to zero some extra parts of the array
       if(st%d%dim == 1) then
-        st%X(psi)(mesh%np + 1:psi_block(1), 1:st%d%dim, 1:st%lnst, ik) = M_ZERO
+        st%X(psi)(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
       else
-        st%X(psi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, 1:st%lnst, ik) = M_ZERO
+        st%X(psi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
       end if
 
       ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
@@ -214,17 +214,18 @@ contains
       tau = M_ZERO
 
       ! calculate the QR decomposition
-      call scalapack_geqrf(total_np, nst, st%X(psi)(1, 1, 1, ik), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
+      call scalapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call scalapack_geqrf(total_np, nst, st%X(psi)(1, 1, 1, ik), 1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
+      call scalapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), 1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
       SAFE_DEALLOCATE_A(work)
 
       ! now calculate Q
-      call scalapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, 1, ik), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
+      call scalapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call scalapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, 1, ik), 1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
+      call scalapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), &
+        1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
       SAFE_DEALLOCATE_A(work)
 
       if(blacs_info /= 0) then
@@ -238,28 +239,28 @@ contains
     else
 
       total_np = mesh%np + mesh%np_part*(st%d%dim - 1)
-      st%X(psi)(mesh%np + 1:mesh%np_part, 1:(st%d%dim - 1), 1:st%lnst, ik) = M_ZERO
+      st%X(psi)(mesh%np + 1:mesh%np_part, 1:(st%d%dim - 1), st%st_start:st%st_end, ik) = M_ZERO
 
       nref = min(nst, total_np)
       SAFE_ALLOCATE(tau(1:nref))
       tau = M_ZERO
 
       ! get the optimal size of the work array
-      call lapack_geqrf(total_np, nst, st%X(psi)(1, 1, 1, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
+      call lapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
       wsize = nint(R_REAL(tmp))
 
       ! calculate the QR decomposition
       SAFE_ALLOCATE(work(1:wsize))
-      call lapack_geqrf(total_np, nst, st%X(psi)(1, 1, 1, ik), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
+      call lapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
       SAFE_DEALLOCATE_A(work)
 
       ! get the optimal size of the work array
-      call lapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, 1, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
+      call lapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
       wsize = nint(R_REAL(tmp))
 
       ! now calculate Q
       SAFE_ALLOCATE(work(1:wsize))
-      call lapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, 1, ik), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
+      call lapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
       SAFE_DEALLOCATE_A(work)
     end if
 
