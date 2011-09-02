@@ -70,6 +70,7 @@ module casida_m
     integer, pointer  :: n_occ(:)       !< number of occupied states
     integer, pointer  :: n_unocc(:)     !< number of unoccupied states
     integer           :: nspin
+    integer           :: el_per_state
     character(len=80) :: wfn_list
     character(len=80) :: trandens
 
@@ -119,7 +120,7 @@ contains
 
     type(casida_t) :: cas
     type(block_t) :: blk
-    integer :: idir, ik, nk, n_filled, n_partially_filled, n_half_filled, theorylevel
+    integer :: idir, ik, n_filled, n_partially_filled, n_half_filled, theorylevel
     character(len=80) :: nst_string, default
 
     PUSH_SUB(casida_run)
@@ -134,19 +135,19 @@ contains
 
     call restart_look_and_read(sys%st, sys%gr, sys%geo)
 
-    if (sys%st%d%ispin == SPIN_POLARIZED) then
-      cas%nspin = 2
-      nk = 2
-    else
-      cas%nspin = 1
-      nk = 1
-    endif
+    if (states_are_complex(sys%st)) then
+      message(1) = "Casida formulation does not apply to complex wavefunctions."
+      call messages_fatal(1)
+    end if
 
-    SAFE_ALLOCATE(  cas%n_occ(1:nk))
-    SAFE_ALLOCATE(cas%n_unocc(1:nk))
+    cas%el_per_state = sys%st%smear%el_per_state
+    cas%nspin = sys%st%d%nspin
+
+    SAFE_ALLOCATE(  cas%n_occ(1:cas%nspin))
+    SAFE_ALLOCATE(cas%n_unocc(1:cas%nspin))
 
     cas%n_occ(:) = 0
-    do ik = 1, nk
+    do ik = 1, cas%nspin
       call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
       cas%n_occ(ik) = n_filled + n_partially_filled + n_half_filled
       cas%n_unocc(ik) = sys%st%nst - cas%n_occ(ik)
@@ -281,7 +282,7 @@ contains
     call parse_integer(datasets_check('CasidaQuadratureOrder'), 5, cas%avg_order)
 
     ! Initialize structure
-    call casida_type_init(cas, sys%gr%sb%dim, nk, sys%mc)
+    call casida_type_init(cas, sys%gr%sb%dim, sys%mc)
 
     if(fromScratch) call loct_rm(trim(tmpdir)//'casida-restart') ! restart
 
@@ -333,10 +334,9 @@ contains
 
   ! ---------------------------------------------------------
   !> allocates stuff, and constructs the arrays pair_i and pair_j
-  subroutine casida_type_init(cas, dim, nk, mc)
+  subroutine casida_type_init(cas, dim, mc)
     type(casida_t),    intent(inout) :: cas
     integer,           intent(in)    :: dim
-    integer,           intent(in)    :: nk
     type(multicomm_t), intent(in)    :: mc
 
     integer :: ist, ast, jpair, ik
@@ -345,7 +345,7 @@ contains
 
     ! count pairs
     cas%n_pairs = 0
-    do ik = 1, nk
+    do ik = 1, cas%nspin
       do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
         if(loct_isinstringlist(ast, cas%wfn_list)) then
           do ist = 1, cas%n_occ(ik)
@@ -374,7 +374,7 @@ contains
     SAFE_ALLOCATE(   cas%f(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
-    SAFE_ALLOCATE(cas%index(1:maxval(cas%n_occ), minval(cas%n_occ):maxval(cas%n_occ + cas%n_unocc), nk))
+    SAFE_ALLOCATE(cas%index(1:maxval(cas%n_occ), minval(cas%n_occ):maxval(cas%n_occ + cas%n_unocc), cas%nspin))
 
     if(cas%qcalc) then
       SAFE_ALLOCATE( cas%qf    (1:cas%n_pairs))
@@ -385,7 +385,7 @@ contains
 
     ! create pairs
     jpair = 1
-    do ik = 1, nk
+    do ik = 1, cas%nspin
       do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
         if(loct_isinstringlist(ast, cas%wfn_list)) then
           do ist = 1, cas%n_occ(ik)
@@ -551,12 +551,8 @@ contains
             call write_K_term(cas, iunit, ia, ia)
           end if
 
-          if(cas%nspin == 1) then
-            cas%w(ia) = cas%w(ia) + M_TWO * ff
-          else
-            cas%w(ia) = cas%w(ia) + ff
-            ! note that Petersilka is probably inappropriate for spin-polarized system due to degenerate transitions!
-          endif
+          cas%w(ia) = cas%w(ia) + cas%el_per_state * ff
+          ! note that Petersilka is probably inappropriate for spin-polarized system due to degenerate transitions!
         end if
 
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
@@ -578,7 +574,7 @@ contains
         end if
         
         cas%tm(:, idir) = xx(:)
-        if(cas%nspin == 1) cas%tm(:, idir) = sqrt(M_TWO) * cas%tm(:, idir) 
+        cas%tm(:, idir) = sqrt(TOFLOAT(cas%el_per_state)) * cas%tm(:, idir) 
 
       end do
       SAFE_DEALLOCATE_A(xx)
@@ -1049,6 +1045,8 @@ contains
       do jb = 1, cas%n_pairs
         write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, temp * cas%mat(jb, ind(ia))
       end do
+
+      if(cas%type == CASIDA_TAMM_DANCOFF) call write_implied_occupations(cas, iunit, ind(ia))
       call io_close(iunit)
     end do
 
@@ -1103,6 +1101,48 @@ contains
 
     POP_SUB(theory_name)
   end function theory_name
+
+  ! ---------------------------------------------------------
+  subroutine write_implied_occupations(cas, iunit, ind)
+    type(casida_t), intent(in) :: cas
+    integer,        intent(in) :: iunit
+    integer,        intent(in) :: ind
+    
+    integer :: ik, ast, ist
+    FLOAT :: occ
+
+    PUSH_SUB(write_implied_occupations)
+
+    write(iunit, '(a)')
+    write(iunit, '(a)') 'Implied occupations:'
+    write(iunit, '(a)') '============================='
+    write(iunit, '(a)') 'spin       ist            occ'
+
+    do ik = 1, cas%nspin
+      do ist = 1, cas%n_occ(ik)
+        if(all(cas%index(ist, :, ik) == 0)) cycle  ! we were not using this state
+        occ = M_ONE
+        do ast = cas%n_occ(ik) + 1, cas%n_unocc(ik)
+          if(cas%index(ist, ast, ik) == 0) cycle  ! we were not using this state
+          occ = occ - abs(cas%mat(cas%index(ist, ast, ik), ind))**2
+        enddo
+        occ = occ * cas%el_per_state
+        write(iunit, '(i4,i10,f15.6)') ik, ist, occ
+      enddo
+      do ast = cas%n_occ(ik) + 1, cas%n_unocc(ik)
+        if(all(cas%index(:, ast, ik) == 0)) cycle  ! we were not using this state
+        occ = M_ZERO
+        do ist = 1, cas%n_occ(ik)
+          if(cas%index(ist, ast, ik) == 0) cycle  ! we were not using this state
+          occ = occ + abs(cas%mat(cas%index(ist, ast, ik), ind))**2
+        enddo
+        occ = occ * cas%el_per_state
+        write(iunit, '(i4,i10,f15.6)') ik, ast, occ
+      enddo
+    enddo
+
+    POP_SUB(write_implied_occupations)
+  end subroutine write_implied_occupations
 
 #include "undef.F90"
 #include "real.F90"
