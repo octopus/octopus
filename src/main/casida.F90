@@ -62,10 +62,12 @@ module casida_m
     CASIDA_EPS_DIFF     = 1, &
     CASIDA_PETERSILKA   = 2, &
     CASIDA_TAMM_DANCOFF = 4, &
-    CASIDA_CASIDA       = 8
+    CASIDA_VARIATIONAL  = 8, &
+    CASIDA_CASIDA       = 16
 
   type casida_t
-    integer :: type !< CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_TAMM_DANCOFF | CASIDA_CASIDA
+    integer :: type !< CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_TAMM_DANCOFF |
+                    !< CASIDA_VARIATIONAL | CASIDA_CASIDA
 
     integer, pointer  :: n_occ(:)       !< number of occupied states
     integer, pointer  :: n_unocc(:)     !< number of unoccupied states
@@ -107,12 +109,6 @@ contains
   end subroutine casida_run_init
 
   ! ---------------------------------------------------------
-  !> References for Casida:
-  !! C Jamorski, ME Casida, DR Salahub, J Chem Phys 104, 5134 (1996)
-  !! ME Casida, "Time-dependent density functional response theory for molecules,"
-  !!   in Recent Advances in Density Functional Methods, edited by DE Chong, vol. 1
-  !!   of Recent Advances in Computational Chemistry, pp. 155-192 (World Scientific,
-  !!   Singapore)
   subroutine casida_run(sys, hm, fromScratch)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
@@ -179,18 +175,23 @@ contains
     !%Description
     !% Choose which electron-hole matrix-based theory levels to use in calculating excitation energies.
     !% More than one may be used to take advantage of the significant commonality between the calculations.
-    !% Only <tt>eps_diff</tt> is available for spinors.
+    !% Only <tt>eps_diff</tt> is available for spinors. Note the restart data saved by each theory level
+    !% is compatible with all the others.
     !%Option eps_diff 1
     !% Difference of eigenvalues, <i>i.e.</i> independent-particle approximation.
     !%Option petersilka 2
-    !% The Petersilka approximation uses only the diagonal part of the response matrix.
+    !% The Petersilka approximation uses only the diagonal part of the Tamm-Dancoff matrix.
     !% This is acceptable if there is little mixing between single-particle transitions.
     !% Ref: M Petersilka, UJ Gossmann, and EKU Gross, <i>Phys. Rev. Lett.</i> <b>76</b>, 1212 (1996).
     !%Option tamm_dancoff 4
     !% The Tamm-Dancoff approximation uses only occupied-unoccupied transitions and not
     !% unoccupied-occupied transitions.
     !% Ref: S Hirata and M Head-Gordon, <i>Chem. Phys. Lett.</i> <b>314</b>, 291 (1999).
-    !%Option lrtddft_casida 8
+    !%Option variational 8
+    !% Second-order constrained variational theory CV(2)-DFT.
+    !% Ref: T Ziegler, M Seth, M Krykunov, J Autschbach, and F Wang,
+    !% <i>J. Chem. Phys.</i> <b>130</b>, 154102 (2009).
+    !%Option lrtddft_casida 16
     !% The full Casida method.
     !% Ref: C Jamorski, ME Casida, and DR Salahub, <i>J. Chem. Phys.</i> <b>104</b>, 5134 (1996)
     !% and ME Casida, "Time-dependent density functional response theory for molecules,"
@@ -298,7 +299,6 @@ contains
 
     if (sys%st%d%ispin /= SPINORS) then
 
-      ! Then, calculate the excitation energies by making use of the Petersilka approximation
       if(iand(theorylevel, CASIDA_PETERSILKA) /= 0) then
         message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
         call messages_info(1)
@@ -307,7 +307,6 @@ contains
         call casida_write(cas, sys)
       endif
 
-      ! Solve in the Tamm-Dancoff approximation
       if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
         message(1) = "Info: Calculating resonance energies in the Tamm-Dancoff approximation"
         call messages_info(1)
@@ -316,7 +315,14 @@ contains
         call casida_write(cas, sys)
       endif
 
-      ! And finally, solve the full Casida problem.
+      if(iand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
+        message(1) = "Info: Calculating resonance energies with the CV(2)-DFT theory"
+        call messages_info(1)
+        cas%type = CASIDA_VARIATIONAL
+        call casida_work(sys, hm, cas)
+        call casida_write(cas, sys)
+      endif
+
       if(iand(theorylevel, CASIDA_CASIDA) /= 0) then
         message(1) = "Info: Calculating resonance energies with the full Casida method"
         call messages_info(1)
@@ -497,13 +503,9 @@ contains
     end if
 
     select case(cas%type)
-    case(CASIDA_EPS_DIFF)
+    case(CASIDA_EPS_DIFF,CASIDA_PETERSILKA)
       call solve_petersilka()
-    case(CASIDA_PETERSILKA)
-      call solve_petersilka()
-    case(CASIDA_TAMM_DANCOFF)
-      call solve_casida()
-    case(CASIDA_CASIDA)
+    case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA)
       call solve_casida()
     end select
 
@@ -516,6 +518,7 @@ contains
     SAFE_DEALLOCATE_A(saved_K)
 
     POP_SUB(casida_work)
+
   contains
 
     ! ---------------------------------------------------------
@@ -632,6 +635,7 @@ contains
         end do
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, max)
       end do
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(max, max)
 
       ! sum all matrix elements
       if(cas%parallel_in_eh_pairs) then
@@ -660,6 +664,8 @@ contains
             if(cas%type == CASIDA_CASIDA) then
               cas%mat(ia, jb) = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
                 sqrt(st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))
+            else if(cas%type == CASIDA_VARIATIONAL) then
+              cas%mat(ia, jb) = M_TWO * cas%mat(ia, jb)
             endif
             if(sys%st%d%ispin == UNPOLARIZED) then
               cas%mat(ia, jb) = M_TWO * cas%mat(ia, jb)
@@ -676,6 +682,7 @@ contains
         call io_close(iunit)
 
         ! now we diagonalize the matrix
+        ! for huge matrices, perhaps we should consider ScaLAPACK here...
         call lalg_eigensolve(cas%n_pairs, cas%mat, cas%w)
 
         do ia = 1, cas%n_pairs
@@ -690,14 +697,16 @@ contains
         end do
 
         ! And let us now get the S matrix...
-        do ia = 1, cas%n_pairs
-          if(sys%st%d%ispin == UNPOLARIZED) then
-            cas%s(ia) = M_HALF / ( st%eigenval(cas%pair(ia)%a, 1) - st%eigenval(cas%pair(ia)%i, 1) )
-          elseif(sys%st%d%ispin == SPIN_POLARIZED) then
-            cas%s(ia) = M_ONE / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
-                                  st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma) )
-          end if
-        end do
+        if(cas%type == CASIDA_CASIDA) then
+          do ia = 1, cas%n_pairs
+            if(sys%st%d%ispin == UNPOLARIZED) then
+              cas%s(ia) = M_HALF / ( st%eigenval(cas%pair(ia)%a, 1) - st%eigenval(cas%pair(ia)%i, 1) )
+            elseif(sys%st%d%ispin == SPIN_POLARIZED) then
+              cas%s(ia) = M_ONE / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
+                                    st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma) )
+            end if
+          end do
+        endif
 
         SAFE_ALLOCATE(deltav(1:mesh%np))
         if (states_are_real(st)) then
@@ -815,8 +824,6 @@ contains
         call MPI_Barrier(cas%mpi_grp%comm, mpi_err)
       end if
 #endif
-
-      if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
       POP_SUB(casida_work.solve_casida)
     end subroutine solve_casida
@@ -1087,11 +1094,13 @@ contains
 
     select case(cas%type)
       case(CASIDA_EPS_DIFF)
-        theory_name = "eps-diff"
+        theory_name = "eps_diff"
       case(CASIDA_PETERSILKA)
         theory_name = "petersilka"
       case(CASIDA_TAMM_DANCOFF)
         theory_name = "tamm_dancoff"
+      case(CASIDA_VARIATIONAL)
+        theory_name = "variational"
       case(CASIDA_CASIDA)
         theory_name = "casida"
       case default

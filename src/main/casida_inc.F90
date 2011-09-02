@@ -71,7 +71,7 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
         zz = zz + xx(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
       end do
       zz = (M_ONE/sqrt(cas%w(ia))) * zz
-    else ! TAMM_DANCOFF
+    else ! TAMM_DANCOFF, VARIATIONAL
       do jb = 1, cas%n_pairs
         zz = zz + xx(jb) * cas%mat(jb, ia)
       end do
