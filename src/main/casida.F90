@@ -1130,12 +1130,11 @@ contains
     do ik = 1, cas%nspin
       do ist = 1, cas%n_occ(ik)
         if(all(cas%index(ist, :, ik) == 0)) cycle  ! we were not using this state
-        occ = M_ONE
+        occ = M_ONE * cas%el_per_state
         do ast = cas%n_occ(ik) + 1, cas%n_unocc(ik)
           if(cas%index(ist, ast, ik) == 0) cycle  ! we were not using this state
           occ = occ - abs(cas%mat(cas%index(ist, ast, ik), ind))**2
         enddo
-        occ = occ * cas%el_per_state
         write(iunit, '(i4,i10,f15.6)') ik, ist, occ
       enddo
       do ast = cas%n_occ(ik) + 1, cas%n_unocc(ik)
@@ -1145,7 +1144,6 @@ contains
           if(cas%index(ist, ast, ik) == 0) cycle  ! we were not using this state
           occ = occ + abs(cas%mat(cas%index(ist, ast, ik), ind))**2
         enddo
-        occ = occ * cas%el_per_state
         write(iunit, '(i4,i10,f15.6)') ik, ast, occ
       enddo
     enddo
