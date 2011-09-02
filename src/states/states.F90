@@ -899,7 +899,8 @@ contains
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs)
 
-    if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC .and. st%nst * 2 .le. st%qtot) then
+    if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC &
+       .and. st%nst * st%smear%el_per_state .le. st%qtot) then
       message(1) = "Smearing needs unoccupied states (via ExtraStates) to be useful."
       call messages_warning(1)
     endif
