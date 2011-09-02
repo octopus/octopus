@@ -913,7 +913,7 @@ contains
     if(abs(charge - st%qtot) > CNST(1e-6)) then
       message(1) = "Initial occupations do not integrate to total charge."
       write(message(2), '(6x,f12.6,a,f12.6)') charge, ' != ', st%qtot
-      call messages_fatal(2)
+      call messages_fatal(2, only_root_writes = .true.)
     end if
 
     POP_SUB(states_read_initial_occs)

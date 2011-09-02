@@ -1053,7 +1053,9 @@ contains
         write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, temp * cas%mat(jb, ind(ia))
       end do
 
-      if(cas%type == CASIDA_TAMM_DANCOFF) call write_implied_occupations(cas, iunit, ind(ia))
+      if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL) then
+        call write_implied_occupations(cas, iunit, ind(ia))
+      endif
       call io_close(iunit)
     end do
 
@@ -1131,13 +1133,13 @@ contains
       do ist = 1, cas%n_occ(ik)
         if(all(cas%index(ist, :, ik) == 0)) cycle  ! we were not using this state
         occ = M_ONE * cas%el_per_state
-        do ast = cas%n_occ(ik) + 1, cas%n_unocc(ik)
+        do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
           if(cas%index(ist, ast, ik) == 0) cycle  ! we were not using this state
           occ = occ - abs(cas%mat(cas%index(ist, ast, ik), ind))**2
         enddo
         write(iunit, '(i4,i10,f15.6)') ik, ist, occ
       enddo
-      do ast = cas%n_occ(ik) + 1, cas%n_unocc(ik)
+      do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
         if(all(cas%index(:, ast, ik) == 0)) cycle  ! we were not using this state
         occ = M_ZERO
         do ist = 1, cas%n_occ(ik)
