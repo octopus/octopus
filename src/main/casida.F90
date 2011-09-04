@@ -1125,30 +1125,30 @@ contains
     PUSH_SUB(write_implied_occupations)
 
     write(iunit, '(a)')
-    write(iunit, '(a)') 'Implied occupations:'
-    write(iunit, '(a)') '============================='
-    write(iunit, '(a)') 'spin       ist            occ'
+    write(iunit, '(a)') '%Occupations'
 
     do ik = 1, cas%nspin
       do ist = 1, cas%n_occ(ik)
-        if(all(cas%index(ist, :, ik) == 0)) cycle  ! we were not using this state
         occ = M_ONE * cas%el_per_state
         do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
           if(cas%index(ist, ast, ik) == 0) cycle  ! we were not using this state
           occ = occ - abs(cas%mat(cas%index(ist, ast, ik), ind))**2
         enddo
-        write(iunit, '(i4,i10,f15.6)') ik, ist, occ
+        write(iunit, '(f8.6,a)', advance='no') occ, ' | '
       enddo
       do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
-        if(all(cas%index(:, ast, ik) == 0)) cycle  ! we were not using this state
         occ = M_ZERO
         do ist = 1, cas%n_occ(ik)
           if(cas%index(ist, ast, ik) == 0) cycle  ! we were not using this state
           occ = occ + abs(cas%mat(cas%index(ist, ast, ik), ind))**2
         enddo
-        write(iunit, '(i4,i10,f15.6)') ik, ast, occ
+        write(iunit, '(f8.6)', advance='no') occ
+        if(ast < cas%n_occ(ik) + cas%n_unocc(ik)) write(iunit, '(a)', advance='no') ' | '
       enddo
+      write(iunit, '(a)')
     enddo
+    
+    write(iunit, '(a)') '%'
 
     POP_SUB(write_implied_occupations)
   end subroutine write_implied_occupations
