@@ -55,12 +55,13 @@ int parse_block_complex(sym_block *blk, int l, int col, gsl_complex *r);
 int parse_block_string (sym_block *blk, int l, int col, char **r);
 
 /* from parse_exp.c */
+enum pr_type {PR_NONE,PR_CMPLX, PR_STR};
 typedef struct parse_result{
   union {
     gsl_complex c;
     char *s;
   } value;
-  enum {PR_NONE,PR_CMPLX, PR_STR} type;
+  pr_type type;
 } parse_result;
 
 void parse_result_free(parse_result *t);

@@ -19,7 +19,7 @@
  $Id$
 */
 
-/* This is essencially the example from bison */
+/* This is essentially the example from bison */
 %{
 %}
 

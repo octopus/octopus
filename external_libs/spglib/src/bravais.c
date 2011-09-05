@@ -56,7 +56,7 @@ static int check_ortho(const double lattice[3][3], const double symprec);
 static int check_monocli(const double lattice[3][3], const double symprec);
 static int check_rhombo(const double lattice[3][3], const double symprec);
 static void get_right_hand_lattice(double lattice[3][3], const double symprec);
-static void get_projection(double projection[3][3], const min_lattice[3][3], const lattice[3][3]);
+static void get_projection(double projection[3][3], const double min_lattice[3][3], const double lattice[3][3]);
 
 /* math */
 static void get_metric(double metric[3][3], const double lattice[3][3]);
@@ -284,7 +284,7 @@ void brv_smallest_lattice_vector(double min_lattice[3][3], const double lattice[
 
 }
 
-static void get_projection(double projection[3][3], const min_lattice[3][3], const lattice[3][3])
+static void get_projection(double projection[3][3], const double min_lattice[3][3], const double lattice[3][3])
 {
   double tmp_matrix[3][3];
   

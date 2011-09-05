@@ -108,59 +108,59 @@ void sym_wrong_arg (symrec *sym)
 }
 
 static struct init_fntc arith_fncts[] = {
-  {"sqrt",   1, gsl_complex_sqrt},
-  {"exp",    1, gsl_complex_exp},
-  {"ln",     1, gsl_complex_log},
-  {"log",    1, gsl_complex_log},
-  {"log10",  1, gsl_complex_log10},
-  {"logb",   2, gsl_complex_log_b}, /* takes two arguments logb(z, b) = log_b(z) */
+  {"sqrt",   1, (gsl_complex (*)()) &gsl_complex_sqrt},
+  {"exp",    1, (gsl_complex (*)()) &gsl_complex_exp},
+  {"ln",     1, (gsl_complex (*)()) &gsl_complex_log},
+  {"log",    1, (gsl_complex (*)()) &gsl_complex_log},
+  {"log10",  1, (gsl_complex (*)()) &gsl_complex_log10},
+  {"logb",   2, (gsl_complex (*)()) &gsl_complex_log_b}, /* takes two arguments logb(z, b) = log_b(z) */
 
-  {"arg",    1, gsl_complex_carg},
-  {"abs",    1, gsl_complex_cabs},
-  {"abs2",   1, gsl_complex_cabs2},
-  {"logabs", 1, gsl_complex_clogabs},
+  {"arg",    1, (gsl_complex (*)()) &gsl_complex_carg},
+  {"abs",    1, (gsl_complex (*)()) &gsl_complex_cabs},
+  {"abs2",   1, (gsl_complex (*)()) &gsl_complex_cabs2},
+  {"logabs", 1, (gsl_complex (*)()) &gsl_complex_clogabs},
 
-  {"conjg",  1, gsl_complex_conjugate},
-  {"inv",    1, gsl_complex_inverse},
-  
-  {"sin",    1, gsl_complex_sin},
-  {"cos",    1, gsl_complex_cos},
-  {"tan",    1, gsl_complex_tan},
-  {"sec",    1, gsl_complex_sec},
-  {"csc",    1, gsl_complex_csc},
-  {"cot",    1, gsl_complex_cot},
+  {"conjg",  1, (gsl_complex (*)()) &gsl_complex_conjugate},
+  {"inv",    1, (gsl_complex (*)()) &gsl_complex_inverse},
 
-  {"asin",   1, gsl_complex_arcsin},
-  {"acos",   1, gsl_complex_arccos},
-  {"atan",   1, gsl_complex_arctan},
-  {"atan2",  2, gsl_complex_arctan2}, /* takes two arguments atan2(y,x) = atan(y/x) */
-  {"asec",   1, gsl_complex_arcsec},
-  {"acsc",   1, gsl_complex_arccsc},
-  {"acot",   1, gsl_complex_arccot},
+  {"sin",    1, (gsl_complex (*)()) &gsl_complex_sin},
+  {"cos",    1, (gsl_complex (*)()) &gsl_complex_cos},
+  {"tan",    1, (gsl_complex (*)()) &gsl_complex_tan},
+  {"sec",    1, (gsl_complex (*)()) &gsl_complex_sec},
+  {"csc",    1, (gsl_complex (*)()) &gsl_complex_csc},
+  {"cot",    1, (gsl_complex (*)()) &gsl_complex_cot},
 
-  {"sinh",   1, gsl_complex_sinh},
-  {"cosh",   1, gsl_complex_cosh},
-  {"tanh",   1, gsl_complex_tanh},
-  {"sech",   1, gsl_complex_sech},
-  {"csch",   1, gsl_complex_csch},
-  {"coth",   1, gsl_complex_coth},
-	
-  {"asinh",  1, gsl_complex_arcsinh},
-  {"acosh",  1, gsl_complex_arccosh},
-  {"atanh",  1, gsl_complex_arctanh},
-  {"asech",  1, gsl_complex_arcsech},
-  {"acsch",  1, gsl_complex_arccsch},
-  {"acoth",  1, gsl_complex_arccoth},	
+  {"asin",   1, (gsl_complex (*)()) &gsl_complex_arcsin},
+  {"acos",   1, (gsl_complex (*)()) &gsl_complex_arccos},
+  {"atan",   1, (gsl_complex (*)()) &gsl_complex_arctan},
+  {"atan2",  2, (gsl_complex (*)()) &gsl_complex_arctan2}, /* takes two arguments atan2(y,x) = atan(y/x) */
+  {"asec",   1, (gsl_complex (*)()) &gsl_complex_arcsec},
+  {"acsc",   1, (gsl_complex (*)()) &gsl_complex_arccsc},
+  {"acot",   1, (gsl_complex (*)()) &gsl_complex_arccot},
+
+  {"sinh",   1, (gsl_complex (*)()) &gsl_complex_sinh},
+  {"cosh",   1, (gsl_complex (*)()) &gsl_complex_cosh},
+  {"tanh",   1, (gsl_complex (*)()) &gsl_complex_tanh},
+  {"sech",   1, (gsl_complex (*)()) &gsl_complex_sech},
+  {"csch",   1, (gsl_complex (*)()) &gsl_complex_csch},
+  {"coth",   1, (gsl_complex (*)()) &gsl_complex_coth},
+
+  {"asinh",  1, (gsl_complex (*)()) &gsl_complex_arcsinh},
+  {"acosh",  1, (gsl_complex (*)()) &gsl_complex_arccosh},
+  {"atanh",  1, (gsl_complex (*)()) &gsl_complex_arctanh},
+  {"asech",  1, (gsl_complex (*)()) &gsl_complex_arcsech},
+  {"acsch",  1, (gsl_complex (*)()) &gsl_complex_arccsch},
+  {"acoth",  1, (gsl_complex (*)()) &gsl_complex_arccoth},	
  
 /* user defined step function. this is not available in GSL, 
    but we use GSL namespacing and macros here. */
-  {"step",   1, gsl_complex_step_real},
+  {"step",   1, (gsl_complex (*)()) &gsl_complex_step_real},
 
 /* Minimum and maximum of two arguments (comparing real parts) */  
-  {"min",    2, gsl_complex_min_real},
-  {"max",    2, gsl_complex_max_real},
+  {"min",    2, (gsl_complex (*)()) &gsl_complex_min_real},
+  {"max",    2, (gsl_complex (*)()) &gsl_complex_max_real},
 
-  {"erf",    1, gsl_complex_erf}, 
+  {"erf",    1, (gsl_complex (*)()) &gsl_complex_erf}, 
 
   {0, 0}
 };
