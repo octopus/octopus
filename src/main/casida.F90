@@ -75,6 +75,8 @@ module casida_m
     integer           :: el_per_state
     character(len=80) :: wfn_list
     character(len=80) :: trandens
+    logical           :: triplet        !< use triplet kernel?
+    character(len=80) :: restart_file
 
     integer           :: n_pairs        !< number of pairs to take into account
     type(states_pair_t), pointer :: pair(:)
@@ -282,10 +284,28 @@ contains
     !%End
     call parse_integer(datasets_check('CasidaQuadratureOrder'), 5, cas%avg_order)
 
+    !%Variable CasidaCalcTriplet
+    !%Type logical
+    !%Section Linear Response::Casida
+    !%Default false
+    !%Description
+    !% For a non-spin-polarized ground state, singlet or triplet excitations can be calculated
+    !% using different matrix elements. Default is to calculate singlets. This variable has no
+    !% effect for a spin-polarized calculation.
+    !%End
+    if(sys%st%d%ispin == UNPOLARIZED) then
+      call parse_logical(datasets_check('CasidaCalcTriplet'), .false., cas%triplet)
+    else
+      cas%triplet = .false.
+    endif
+
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, sys%mc)
 
-    if(fromScratch) call loct_rm(trim(tmpdir)//'casida-restart') ! restart
+    cas%restart_file = trim(tmpdir)//'casida-restart'
+    if(cas%triplet) cas%restart_file = trim(cas%restart_file)//'-triplet'
+
+    if(fromScratch) call loct_rm(trim(cas%restart_file)) ! restart
 
     ! First, print the differences between KS eigenvalues (first approximation to the
     ! excitation energies, or rather, to the DOS).
@@ -458,7 +478,7 @@ contains
     type(states_t), pointer :: st
     type(mesh_t),   pointer :: mesh
 
-    FLOAT, allocatable :: rho(:, :), fxc(:,:,:), pot(:)
+    FLOAT, allocatable :: rho(:, :), rho_spin(:, :), fxc(:,:,:), pot(:)
     integer :: qi_old, qa_old, mu_old
 
     PUSH_SUB(casida_work)
@@ -488,18 +508,31 @@ contains
 
     if (cas%type /= CASIDA_EPS_DIFF) then
       ! This is to be allocated here, and is used inside K_term.
-      SAFE_ALLOCATE(pot(1:mesh%np))
+      if(.not. cas%triplet) then
+        SAFE_ALLOCATE(pot(1:mesh%np))
+      endif
       qi_old = -1
       qa_old = -1
       mu_old = -1
       
       ! We calculate here the kernel, since it will be needed later.
       SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
-      SAFE_ALLOCATE(fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
+      if(cas%triplet) then
+        SAFE_ALLOCATE(rho_spin(1:mesh%np, 1:2))
+        SAFE_ALLOCATE(fxc(1:mesh%np, 1:2, 1:2))
+      else
+        SAFE_ALLOCATE(fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
+      endif
       fxc = M_ZERO
 
       call states_total_density(st, mesh, rho)
-      call xc_get_fxc(sys%ks%xc, mesh, rho, st%d%ispin, fxc)
+      if(cas%triplet) then
+        rho_spin(:, 1) = M_HALF * rho(:, 1)
+        rho_spin(:, 2) = M_HALF * rho(:, 1)
+        call xc_get_fxc(sys%ks%xc, mesh, rho_spin, SPIN_POLARIZED, fxc)
+      else
+        call xc_get_fxc(sys%ks%xc, mesh, rho, st%d%ispin, fxc)
+      endif
     end if
 
     select case(cas%type)
@@ -513,7 +546,9 @@ contains
     if (cas%type /= CASIDA_EPS_DIFF) then
       SAFE_DEALLOCATE_A(fxc)
       SAFE_DEALLOCATE_A(rho)
-      SAFE_DEALLOCATE_A(pot)
+      if(.not. cas%triplet) then
+        SAFE_DEALLOCATE_A(pot)
+      endif
     end if
     SAFE_DEALLOCATE_A(saved_K)
 
@@ -533,7 +568,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs)
 
       ! file to save matrix elements
-      iunit = io_open(trim(tmpdir)//'casida-restart', action='write', &
+      iunit = io_open(trim(cas%restart_file), action='write', &
         position='append', is_tmp=.true.)
 
       do ia = 1, cas%n_pairs
@@ -650,7 +685,7 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
         ! complete the matrix and output the restart file
-        iunit = io_open(trim(tmpdir)//'casida-restart', action='write', &
+        iunit = io_open(trim(cas%restart_file), action='write', &
           position='append', is_tmp=.true.)
 
         do ia = 1, cas%n_pairs
@@ -859,14 +894,19 @@ contains
       end if
 
       !  first the Hartree part (only works for real wfs...)
-      if( qi .ne. qi_old  .or.   qa .ne. qa_old   .or.  mu .ne. mu_old) then
+      if(.not. cas%triplet .and. (qi .ne. qi_old  .or.   qa .ne. qa_old   .or.  mu .ne. mu_old)) then
         pot(1:mesh%np) = M_ZERO
         if(hm%theory_level .ne. INDEPENDENT_PARTICLES) &
           call dpoisson_solve(psolver, pot, rho_j, all_nodes=.false.)
       end if
 
-      K_term = dmf_dotp(mesh, rho_i(:), pot(:))
-      rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * fxc(1:mesh%np, sigma, mu)
+      if(cas%triplet) then
+        K_term = M_ZERO
+        rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * M_HALF * (fxc(1:mesh%np, 1, 1) - fxc(1:mesh%np, 1, 2))
+      else
+        K_term = dmf_dotp(mesh, rho_i(:), pot(:))
+        rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * fxc(1:mesh%np, sigma, mu)
+      endif
       K_term = K_term + dmf_integrate(mesh, rho(:, 1))
 
       qi_old = qi
@@ -887,7 +927,7 @@ contains
 
       PUSH_SUB(casida_work.load_saved)
 
-      iunit = io_open(trim(tmpdir)//'casida-restart', action='read', &
+      iunit = io_open(trim(cas%restart_file), action='read', &
         status='old', die=.false., is_tmp=.true.)
       if( iunit <= 0) then
         POP_SUB(casida_work.load_saved)
