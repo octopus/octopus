@@ -454,7 +454,7 @@ contains
     type(hamiltonian_t),    intent(in)    :: hm
     type(casida_t),         intent(inout) :: cas
 
-    logical, allocatable :: saved_K(:, :)         ! which matrix elements have been loaded
+    logical, allocatable :: saved_K(:, :) ! which matrix elements have been loaded
     type(states_t), pointer :: st
     type(mesh_t),   pointer :: mesh
 
@@ -614,7 +614,7 @@ contains
 
       PUSH_SUB(casida_work.solve_casida)
 
-      max = (cas%n_pairs*(1 + cas%n_pairs)/2)/cas%mpi_grp%size
+      max = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
       counter = 0
       actual = 0
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
@@ -1085,7 +1085,7 @@ contains
     write(iunit,*) cas%pair(ia)%i, cas%pair(ia)%a, cas%pair(ia)%sigma, &
                    cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, cas%mat(ia, jb)
 
-    POP_SUB(write_Kterm)
+    POP_SUB(write_K_term)
   end subroutine write_K_term
 
   ! ---------------------------------------------------------
