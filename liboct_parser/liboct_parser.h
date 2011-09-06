@@ -61,7 +61,7 @@ typedef struct parse_result{
     gsl_complex c;
     char *s;
   } value;
-  pr_type type;
+  enum pr_type type;
 } parse_result;
 
 void parse_result_free(parse_result *t);
