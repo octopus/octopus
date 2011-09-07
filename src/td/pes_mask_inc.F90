@@ -68,7 +68,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
     do il = 1, hm%ep%no_lasers
       select case(laser_kind(hm%ep%lasers(il)))
       case(E_FIELD_ELECTRIC)
-        call   laser_field(hm%ep%lasers(il),mesh%sb, field,it*dt)
+        call   laser_field(hm%ep%lasers(il), field(1:mesh%sb%dim), it*dt)
       case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
         write(message(1),'(a)') 'PES with mask method does not work with magnetic fields yet'
         call messages_fatal(2)

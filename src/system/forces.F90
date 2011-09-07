@@ -113,7 +113,7 @@ contains
       do j = 1, ep%no_lasers
         select case(laser_kind(ep%lasers(j)))
         case(E_FIELD_ELECTRIC)
-          call laser_field(ep%lasers(j), gr%sb, x, t)
+          call laser_field(ep%lasers(j), x(1:gr%sb%dim), t)
           do i = 1, geo%natoms
             ! Here the proton charge is +1, since the electric field has the usual sign.
             geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &

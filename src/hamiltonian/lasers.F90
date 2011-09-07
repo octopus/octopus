@@ -43,8 +43,9 @@ module lasers_m
     laser_t,                      &
     laser_init,                   &
     laser_end,                    &
-    laser_write_info,          &
+    laser_write_info,             &
     laser_field,                  &
+    laser_electric_field,         & 
     laser_potential,              &
     laser_vector_potential,       &
     laser_to_numerical,           &
@@ -59,6 +60,7 @@ module lasers_m
     laser_carrier_frequency,      &
     zvlaser_operator_linear,      &
     zvlaser_operator_quadratic
+
 
   integer, public, parameter ::     &
     E_FIELD_NONE             =  0,  &
@@ -473,16 +475,16 @@ contains
     FLOAT,   optional, intent(in) :: dt 
     integer, optional, intent(in) :: max_iter 
 
-    FLOAT :: tt, fluence, max_intensity, intensity, dt_
-    CMPLX :: amp, val
+    FLOAT :: tt, fluence, max_intensity, intensity, dt_, dval, field(MAX_DIM)
     integer :: il, iter, idir, no_l, max_iter_
+    type(tdf_t) :: df
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(laser_write_info)
 
     no_l = size(lasers)
-    
+
     do il = 1, no_l
 
       if(present(dt)) then
@@ -524,17 +526,16 @@ contains
       ! In a Gaussian system of units,
       ! I(t) = (1/(8\pi)) * c * E(t)^2
       ! (1/(8\pi)) * c = 5.4525289841210 a.u.
-      if(lasers(il)%field .eq. E_FIELD_ELECTRIC) then
+      if(lasers(il)%field .eq. E_FIELD_ELECTRIC .or. lasers(il)%field .eq. E_FIELD_VECTOR_POTENTIAL) then
         fluence = M_ZERO
-
         max_intensity = M_ZERO
         do iter = 1, max_iter_
           tt = iter * dt_
-          val = tdf(lasers(il)%f, tt)
-          amp = val*exp(M_zI*(lasers(il)%omega*tt + tdf(lasers(il)%phi, tt)))
+          field = M_ZERO
+          call laser_electric_field(lasers(il), field, tt, dt_)
           intensity = M_ZERO
           do idir = 1, MAX_DIM
-            intensity = intensity + CNST(5.4525289841210) * real(amp*lasers(il)%pol(idir))**2
+            intensity = intensity + CNST(5.4525289841210) * field(idir)**2
           end do
           fluence = fluence + intensity
           if(intensity > max_intensity) max_intensity = intensity
@@ -615,16 +616,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_field(laser, sb, field, time)
+  subroutine laser_field(laser, field, time)
     type(laser_t),     intent(in)    :: laser
-    type(simul_box_t), intent(in)    :: sb
     FLOAT,             intent(inout) :: field(:)
     FLOAT, optional,   intent(in)    :: time
 
+    integer :: dim
     CMPLX :: amp
 
-    !no PUSH SUB, called too often
-
+    dim = size(field)    
+    
     if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
       return
     endif
@@ -633,9 +634,45 @@ contains
     else
       amp = M_z1
     end if
-    field(1:sb%dim) = field(1:sb%dim) + real(amp*laser%pol(1:sb%dim))
+    field(1:dim) = field(1:dim) + real(amp*laser%pol(1:dim))
 
   end subroutine laser_field
+
+
+  ! ---------------------------------------------------------
+  !> Returns a vector with the electric field, no matter if the laser is described directly as
+  !! an electric field, or with a vector potential in the velocity gauge.
+  subroutine laser_electric_field(laser, field, time, dt)
+    type(laser_t),     intent(in)    :: laser
+    FLOAT,             intent(inout) :: field(:)
+    FLOAT,             intent(in)    :: time
+    FLOAT,             intent(in)    :: dt
+
+    integer :: dim
+    FLOAT, allocatable :: field1(:), field2(:)
+
+    dim = size(field)
+
+    select case(laser%field)
+    case(E_FIELD_ELECTRIC)
+      field = M_ZERO
+      call laser_field(laser, field(1:dim), time)
+    case(E_FIELD_VECTOR_POTENTIAL)
+      SAFE_ALLOCATE(field1(1:dim))
+      SAFE_ALLOCATE(field2(1:dim))
+      field1 = M_ZERO
+      field2 = M_ZERO
+      call laser_field(laser, field1(1:dim), time - dt)
+      call laser_field(laser, field2(1:dim), time + dt)
+      field = - (field2 - field1) / (M_TWO * P_C * dt)
+      SAFE_DEALLOCATE_A(field1)
+      SAFE_DEALLOCATE_A(field2)
+    case default
+      field = M_ZERO
+    end select
+
+  end subroutine laser_electric_field
+  ! ---------------------------------------------------------
 
 #include "undef.F90"
 #include "real.F90"

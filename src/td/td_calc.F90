@@ -85,7 +85,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
   ! WARNING: this ignores the possibility of non-electric td external fields.
   field = M_ZERO
   do j = 1, hm%ep%no_lasers
-    call laser_field(hm%ep%lasers(j), gr%sb, field, time)
+    call laser_electric_field(hm%ep%lasers(j), field(1:gr%sb%dim), time, CNST(0.001))
     acc(1:gr%mesh%sb%dim) = acc(1:gr%mesh%sb%dim) - st%qtot*field(1:gr%mesh%sb%dim)
   end do
 

@@ -51,12 +51,12 @@ subroutine X(vlaser_operator_quadratic) (laser, der, std, psi, hpsi)
     call laser_vector_potential(laser, der%mesh, a_prime)
     aa = aa + a_prime
     b_prime = M_ZERO
-    call laser_field(laser, der%mesh%sb, b_prime)
+    call laser_field(laser, b_prime(1:der%mesh%sb%dim))
     bb = bb + b_prime
     magnetic_field = .true.
   case(E_FIELD_VECTOR_POTENTIAL)
     a_field_prime = M_ZERO
-    call laser_field(laser, der%mesh%sb, a_field_prime)
+    call laser_field(laser, a_field_prime(1:der%mesh%sb%dim))
     a_field = a_field + a_field_prime
     vector_potential = .true.
   end select
@@ -138,12 +138,12 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
     call laser_vector_potential(laser, der%mesh, a_prime)
     aa = aa + a_prime
     b_prime = M_ZERO
-    call laser_field(laser, der%mesh%sb, b_prime)
+    call laser_field(laser, b_prime(1:der%mesh%sb%dim))
     bb = bb + b_prime
     magnetic_field = .true.
   case(E_FIELD_VECTOR_POTENTIAL)
     a_field_prime = M_ZERO
-    call laser_field(laser, der%mesh%sb, a_field_prime)
+    call laser_field(laser, a_field_prime(1:der%mesh%sb%dim))
     a_field = a_field + a_field_prime
     vector_potential = .true.
   end select

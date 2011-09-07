@@ -908,13 +908,13 @@ contains
             this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) - vp(ip, idir)/P_C
           end forall
           ! and the magnetic field
-          call laser_field(this%ep%lasers(ilaser), mesh%sb, this%hm_base%uniform_magnetic_field, time)
+          call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time)
           SAFE_DEALLOCATE_A(vp)
         case(E_FIELD_VECTOR_POTENTIAL)
           call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL)
           ! get the uniform vector potential associated to a magnetic field
           aa = M_ZERO
-          call laser_field(this%ep%lasers(ilaser), mesh%sb, aa, time)
+          call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time)
           this%hm_base%uniform_vector_potential = this%hm_base%uniform_vector_potential - aa/P_C
         end select
       end do
