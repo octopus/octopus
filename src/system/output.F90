@@ -122,7 +122,8 @@ module output_m
     C_OUTPUT_DENSITY_MATRIX  =   262144,    &
     C_OUTPUT_MODELMB         =   524288,    &
     C_OUTPUT_FORCES          =  1048576,    &
-    C_OUTPUT_WFS_FOURIER     =  2097152
+    C_OUTPUT_WFS_FOURIER     =  2097152,    &
+    C_OUTPUT_XC_DENSITY      =  4194304
 
 contains
 
@@ -237,6 +238,10 @@ contains
     !%Option forces 1048576
     !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
     !% a vector associated with each atom, which can be visualized with XCrySDen.
+    !%Option xc_density 4194304
+    !% Outputs the XC density, which is the charge density that
+    !% generates the XC potential. (This <math>-1/4\pi</math> times
+    !% the Laplacian of the XC potential). The files are called 'nxc'.
     !%End
     call parse_integer(datasets_check('Output'), 0, outp%what)
 
@@ -465,7 +470,7 @@ contains
     PUSH_SUB(output_all)
     
     call output_states(st, gr, geo, dir, outp)
-    call output_hamiltonian(hm, gr%mesh, dir, outp, geo)
+    call output_hamiltonian(hm, gr%der, dir, outp, geo)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp, geo)
 
