@@ -624,6 +624,8 @@ contains
     integer :: dim
     CMPLX :: amp
 
+    !no PUSH SUB, called too often
+
     dim = size(field)    
     
     if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
@@ -640,7 +642,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Returns a vector with the electric field, no matter if the laser is described directly as
+  !> Returns a vector with the electric field, no matter whether the laser is described directly as
   !! an electric field, or with a vector potential in the velocity gauge.
   subroutine laser_electric_field(laser, field, time, dt)
     type(laser_t),     intent(in)    :: laser
@@ -650,6 +652,8 @@ contains
 
     integer :: dim
     FLOAT, allocatable :: field1(:), field2(:)
+
+    !no PUSH SUB, called too often
 
     dim = size(field)
 
