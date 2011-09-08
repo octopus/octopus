@@ -124,19 +124,14 @@ contains
     PUSH_SUB(casida_run)
 
     if (simul_box_is_periodic(sys%gr%sb)) then
-      message(1) = "Casida formulation does not apply to periodic systems."
-      call messages_fatal(1)
+      message(1) = "Casida oscillator strengths will be incorrect in periodic systems."
+      call messages_warning(1)
     end if
 
     message(1) = 'Info: Starting Casida linear-response calculation.'
     call messages_info(1)
 
     call restart_look_and_read(sys%st, sys%gr, sys%geo)
-
-    if (states_are_complex(sys%st)) then
-      message(1) = "Casida formulation does not apply to complex wavefunctions."
-      call messages_fatal(1)
-    end if
 
     cas%el_per_state = sys%st%smear%el_per_state
     cas%nspin = sys%st%d%nspin
@@ -204,6 +199,13 @@ contains
 
     call parse_integer(datasets_check('CasidaTheoryLevel'), &
       CASIDA_EPS_DIFF + CASIDA_PETERSILKA + CASIDA_CASIDA, theorylevel)
+
+    if (states_are_complex(sys%st) .and. &
+      (iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0 .or. iand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
+       .or. iand(theorylevel, CASIDA_CASIDA) /= 0)) then
+      message(1) = "Tamm-Dancoff, variational, and full Casida theory levels do not apply to complex wavefunctions."
+      call messages_fatal(1)
+    end if
 
     !%Variable CasidaKohnShamStates
     !%Type string
