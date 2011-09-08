@@ -33,9 +33,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, hm, geo, sb, psi, spin_chan
   integer,                  intent(in)    :: spin_channel
 
   type(species_t), pointer :: spec
-  type(periodic_copy_t) :: pc
-  integer :: icell, idim, iatom, jj, ip
-  FLOAT :: pos(MAX_DIM), radius
+  integer :: idim, iatom, jj, ip
   FLOAT, allocatable :: ao(:)
   type(profile_t), save :: prof
 
