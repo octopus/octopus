@@ -71,6 +71,7 @@ contains
     integer :: iunit, ierr, occupied_states, total_states, iter
     logical :: converged
     integer :: max_iter, nst_calculated
+    integer, allocatable :: states_read(:, :)
 
     PUSH_SUB(unocc_run)
 
@@ -90,9 +91,13 @@ contains
     call init_(sys%gr%mesh, sys%st)
     total_states = sys%st%nst
 
-    call restart_read (trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
+    ASSERT(total_states >= occupied_states)
 
-    if( (ierr .ne. 0)  .and.  (ierr < occupied_states) ) then
+    SAFE_ALLOCATE(states_read(1:sys%st%d%dim, 1:sys%st%d%kpt%nlocal))
+
+    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, number_read = states_read)
+
+    if(any(states_read < occupied_states)) then
       message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//GS_DIR//"'"
       message(2) = "Please run a ground-state calculation first!"
       call messages_fatal(2)
@@ -103,21 +108,19 @@ contains
       call messages_info(1)
     end if
 
-    if(fromScratch) then ! reset unoccupied states
-      nst_calculated = occupied_states
-    else
-      if(ierr == 0) then
-        ! we have them all
-        nst_calculated = sys%st%nst
-      else
-        nst_calculated = ierr
-      endif
-    end if
-
     call density_calc(sys%st, sys%gr, sys%st%rho)
 
-    call lcao_run(sys, hm, nst_calculated + 1)
+    if(fromScratch .or. ierr /= 0) then
+      if(ierr > 0 .and. .not. fromScratch) then
+        nst_calculated = minval(states_read)
+      else
+        nst_calculated = occupied_states
+      end if
+      call lcao_run(sys, hm, st_start = nst_calculated + 1)
+    end if
     
+    SAFE_DEALLOCATE_A(states_read)
+
     message(1) = "Info:  Starting calculation of unoccupied states."
     call messages_info(1)
 

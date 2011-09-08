@@ -413,8 +413,8 @@ contains
   ! returns in ierr:
   ! <0 => Fatal error
   ! =0 => read all wavefunctions
-  ! >0 => could only read x wavefunctions
-  subroutine restart_read(dir, st, gr, geo, ierr, read_occ, iter, lr, exact)
+  ! >0 => could only read ierr wavefunctions
+  subroutine restart_read(dir, st, gr, geo, ierr, read_occ, iter, lr, exact, number_read)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
@@ -424,6 +424,7 @@ contains
     integer,    optional, intent(inout) :: iter
     type(lr_t), optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
     logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions and on the same grid
+    integer,    optional, intent(out)    :: number_read(:, :)
 
     integer              :: wfns_file, occ_file, err, ik, ist, idir, idim, int
     integer              :: read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM), iread, nread
@@ -599,6 +600,7 @@ contains
 
     SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     filled = .false.
+    if(present(number_read)) number_read = 0
 
     if(mpi_grp_is_root(mpi_world)) then
       iread = 1
@@ -642,6 +644,7 @@ contains
 
 
           if(err <= 0) then
+            if(present(number_read)) INCR(number_read(idim, ik), 1)
             filled(idim, ist, ik) = .true.
             ierr = ierr + 1
           end if
