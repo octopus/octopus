@@ -457,6 +457,7 @@ contains
     else
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.true.)
 
+      ASSERT(st_start <= sys%st%nst)
       if(st_start .gt. sys%st%nst) then ! nothing to be done in LCAO
         POP_SUB(lcao_run)
         return
@@ -502,11 +503,7 @@ contains
       if(lcao_is_available(lcao)) then
         lcao_done = .true.
         
-        if(present(st_start)) then
-          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start=st_start)
-        else
-          call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm)
-        endif
+        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
 
         if (.not. present(st_start)) then
           !Just populate again the states, so that the eigenvalues are properly written
@@ -524,11 +521,24 @@ contains
 
     if(.not. lcao_done) then
 
-      ! FIXME: the following initialization is wrong when not all
-      ! wavefunctions are calculated by the Lippmann-Schwinger
-      ! equation.
-      ! Use free states as initial wavefunctions.
-      if(sys%gr%ob_grid%open_boundaries) then
+
+      if(.not. sys%gr%ob_grid%open_boundaries) then
+
+        ! Randomly generate the initial wavefunctions.
+        call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start)
+        message(1) = "Orthogonalizing random wavefunctions."
+        call messages_info(1)
+        call states_orthogonalize(sys%st, sys%gr%mesh)
+        call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.true.) ! get potentials
+        call states_fermi(sys%st, sys%gr%mesh)                            ! occupations
+
+      else
+  
+        ! FIXME: the following initialization is wrong when not all
+        ! wavefunctions are calculated by the Lippmann-Schwinger
+        ! equation.
+        ! Use free states as initial wavefunctions.
+
         ASSERT(sys%st%ob_nst .eq. sys%st%nst)
         ASSERT(sys%st%ob_d%nik .eq. sys%st%d%nik)
         s1 = sys%st%st_start
@@ -541,14 +551,6 @@ contains
         forall (ik = k1:k2, is = s1:s2, idim = 1:sys%st%d%dim, ip = 1:sys%gr%mesh%np)
           sys%st%zpsi(ip, idim, is, ik) = sys%st%zphi(ip, idim, is, ik)
         end forall
-      else
-        ! Randomly generate the initial wavefunctions.
-        call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start)
-        message(1) = "Orthogonalizing random wavefunctions."
-        call messages_info(1)
-        call states_orthogonalize(sys%st, sys%gr%mesh)
-        call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.true.) ! get potentials
-        call states_fermi(sys%st, sys%gr%mesh)                           ! occupations
       end if
 
     end if
