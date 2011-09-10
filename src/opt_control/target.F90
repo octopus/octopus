@@ -158,7 +158,7 @@ module opt_control_target_m
     FLOAT               :: stencil_size, point_dist, fact
     CMPLX, allocatable  :: rotation_matrix(:, :)
     type(states_t)      :: tmp_st
-    character(len=1024) :: expression, chk_name
+    character(len=1024) :: expression
 
     PUSH_SUB(target_init)
 
@@ -954,15 +954,21 @@ module opt_control_target_m
 
     select case(target%type)
     case(oct_tg_local)
-      call dio_function_output(outp%how, trim(dir), 'local_target', gr%mesh, &
-        target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+      if(outp%how /= 0) then
+        call dio_function_output(outp%how, trim(dir), 'local_target', gr%mesh, &
+          target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+      end if
     case(oct_tg_td_local)
       call target_build_tdlocal(target, gr, M_ZERO)
-      call dio_function_output(outp%how, trim(dir), 'td_local_target', gr%mesh, &
-        target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+      if(outp%how /= 0) then
+        call dio_function_output(outp%how, trim(dir), 'td_local_target', gr%mesh, &
+          target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+      end if
     case(oct_tg_density)
-      call dio_function_output(outp%how, trim(dir), 'density_target', gr%mesh, &
-        target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+      if(outp%how /= 0) then
+        call dio_function_output(outp%how, trim(dir), 'density_target', gr%mesh, &
+          target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+      end if
     case(oct_tg_excited)
       call output_states(target%est%st, gr, geo, trim(dir)//'/st', outp)
       call excited_states_output(target%est, trim(dir))
@@ -988,8 +994,7 @@ module opt_control_target_m
     integer,             intent(in)    :: time
 
     CMPLX, allocatable :: opsi(:, :)
-    FLOAT, allocatable :: multipole(:, :)
-    integer :: ist, ip, is
+    integer :: ist, ip
     FLOAT :: acc(MAX_DIM)
 
     if(target_type(target)  .eq. oct_tg_velocity) return
@@ -1120,7 +1125,7 @@ module opt_control_target_m
     type(states_t), intent(inout)   :: psi
     type(geometry_t), intent(in), optional :: geo
 
-    integer :: ip, ist, iter, jj, maxiter, ik
+    integer :: ip, ist, jj, maxiter, ik
     FLOAT :: omega, aa, maxhh, ww, currfunc_tmp
     FLOAT, allocatable :: local_function(:)
     CMPLX, allocatable :: ddipole(:)
