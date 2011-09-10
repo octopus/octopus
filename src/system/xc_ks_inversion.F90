@@ -247,7 +247,7 @@ contains
     
     call hamiltonian_update(aux_hm, gr%mesh)
     
-    call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
+    call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
 
     call density_calc(st, gr, st%rho)
     
@@ -362,7 +362,7 @@ contains
       endif
 
       call hamiltonian_update(aux_hm, gr%mesh)
-      call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
+      call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
       call density_calc(st, gr, st%rho)      
        
       ! Inversion according to Phys. Rev. Lett. 100, 153004 (2008), Eq. (6)
@@ -410,7 +410,7 @@ contains
     !calculate final density
 
     call hamiltonian_update(aux_hm, gr%mesh)
-    call eigensolver_run(eigensolver, gr, st, aux_hm, 1, verbose = .false.)
+    call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
     
     write(message(1),'(a,I8)') "Iterative KS inversion, iterations needed:", counter

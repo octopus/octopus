@@ -27,7 +27,7 @@
 ! ---------------------------------------------------------
 ! Driver for the LOBPCG eigensolver that performs a per-block,
 ! per-k-point iteration.
-  subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size, verbose)
+  subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size)
     type(grid_t),           intent(in)    :: gr
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
@@ -38,9 +38,7 @@
     integer,                intent(inout) :: converged
     FLOAT,                  intent(out)   :: diff(1:st%nst)
     integer,                intent(in)    :: block_size
-    logical, optional,      intent(in)    :: verbose
 
-    logical            :: verbose_
     integer            :: ib, psi_start, psi_end, constr_start, constr_end, bs
     integer            :: n_matvec, conv, maxiter, iblock
 #ifdef HAVE_MPI
@@ -49,11 +47,6 @@
 #endif
 
     PUSH_SUB(X(eigensolver_lobpcg))
-
-    verbose_ = .false.
-    if(present(verbose)) then
-      verbose_ = verbose
-    endif
 
     bs = block_size
 
@@ -64,7 +57,7 @@
 
     iblock = 0
 
-    if(mpi_grp_is_root(mpi_world).and..not.verbose) then
+    if(mpi_grp_is_root(mpi_world)) then
       call loct_progress_bar(st%nst*(ik - 1), st%nst*st%d%nik)
     end if
 
@@ -85,18 +78,17 @@
       if(constr_end >= constr_start) then
         call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
            constr_start, constr_end, &
-           ik, pre, tol, n_matvec, conv, diff, iblock, verbose_, &
+           ik, pre, tol, n_matvec, conv, diff, iblock, &
            constr = st%X(psi)(:, :, constr_start:constr_end, ik))
       else
         call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
-           constr_start, constr_end, &
-           ik, pre, tol, n_matvec, conv, diff, iblock, verbose_)
+           constr_start, constr_end, ik, pre, tol, n_matvec, conv, diff, iblock)
       end if
 
       niter         = niter + n_matvec
       converged = converged + conv  
 
-      if(mpi_grp_is_root(mpi_world).and..not.verbose) then
+      if(mpi_grp_is_root(mpi_world)) then
         call loct_progress_bar(st%nst*(ik - 1) + psi_end, st%nst*st%d%nik)
       end if
     end do
@@ -109,8 +101,6 @@
       SAFE_DEALLOCATE_A(ldiff)
     end if
 #endif
-
-    if(verbose_) call messages_print_stress(stdout)
 
     POP_SUB(X(eigensolver_lobpcg))
   end subroutine X(eigensolver_lobpcg)
@@ -132,7 +122,7 @@
 ! There is also a wiki page at
 ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:LOBPCG
 subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end,  &
-  ik, pre, tol, niter, converged, diff, ib, verbose, constr)
+  ik, pre, tol, niter, converged, diff, ib, constr)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -148,7 +138,6 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   integer,                intent(out)   :: converged
   FLOAT,                  intent(inout) :: diff(1:st%nst)
   integer,                intent(in)    :: ib
-  logical, optional,      intent(in)    :: verbose
   R_TYPE, optional,       intent(in)    :: constr(gr%mesh%np_part, st%d%dim, constr_start:constr_end)
 
   integer :: nps   ! Number of points per state.
@@ -167,7 +156,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 #endif
 
   integer           :: hash_table_size
-  logical           :: verbose_, no_bof, found
+  logical           :: no_bof, found
   logical           :: explicit_gram
   R_TYPE            :: beta
   type(iihash_t)    :: all_ev_inv
@@ -196,11 +185,6 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   else
     there_are_constraints = .false.
   end if
-
-  verbose_ = .false.
-  if(present(verbose)) then
-    verbose_ = verbose
-  endif
 
   ! The results with explicit Gram diagonal blocks were not better, so it is switched off.
   explicit_gram = .false.
@@ -306,7 +290,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   no_bof = .false.
   call X(lobpcg_orth)(st_start, st_end, psi(:, :, :), no_bof)
 
-  if(no_bof.and.verbose_) then
+  if(no_bof) then
     message(1) = 'Problem: orthonormalization of initial vectors failed.'
     call messages_warning(1)
   end if
@@ -327,7 +311,8 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   no_bof = .false.
   ritz_vec = gram_block
   call lalg_eigensolve(nst, ritz_vec, eval, bof=no_bof)
-  if(no_bof.and.verbose_) then
+
+  if(no_bof) then
     message(1) = 'Problem: Rayleigh-Ritz procedure for initial vectors failed.'
     call messages_warning(1)
   end if
@@ -384,7 +369,8 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     no_bof = .false.
     call X(lobpcg_orth)(st_start, st_end, res, no_bof)
     ! FIXME: a proper restart should be initiated here.
-    if(no_bof.and.verbose_) then
+
+    if(no_bof) then
       message(1) = 'Big problem: orthonormalization of residuals failed.'
       message(2) = 'Quitting eigensolver iteration.'
       write(message(3), '(a,i6)') 'in iteration #', iter
@@ -423,7 +409,8 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
       no_bof = .false.
       call lalg_cholesky(nuc, nuc_tmp, bof=no_bof)
       call profiling_out(C_PROFILING_LOBPCG_CHOL)
-      if(no_bof.and.verbose_) then
+
+      if(no_bof) then
         message(1) = 'Problem: orthonormalization of conjugate directions failed'
         write(message(2), '(a,i6)') 'in iteration #', iter
         call messages_warning(2)
@@ -509,7 +496,8 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     no_bof = .false.
     call lalg_lowest_geneigensolve(nst, nst+blks*nuc, gram_h, gram_i, eval, ritz_vec, bof=no_bof)
     call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
-    if(no_bof.and.verbose_) then
+
+    if(no_bof) then
       message(1) = 'Problem: Rayleigh-Ritz procedure failed'
       write(message(2), '(a,i6)') 'in iteration #', iter
       call messages_warning(2)
@@ -564,8 +552,6 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
   converged = nst - nuc
 
-  call X(lobpcg_info)(iter)
-
 #if defined(HAVE_MPI)
   ! Exchange number of matrix-vector operations.
   if(st%parallel_in_states) then
@@ -597,24 +583,6 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   POP_SUB(X(lobpcg))
 
 contains
-
-  ! ---------------------------------------------------------
-  ! In verbose mode: write number of converged eigenvectors of
-  ! current block.
-  subroutine X(lobpcg_info)(block_iter)
-    integer, intent(in) :: block_iter
-
-    PUSH_SUB(X(lobpcg).X(lobpcg_info))
-
-    if(verbose_) then
-      write(message(1), '(a,i3,a,i5,a,i5)') '  Converged vectors of block ', ib, &
-        ' after', block_iter, ' block iteration(s):', converged
-      call messages_info(1)
-    end if
-    
-    POP_SUB(X(lobpcg).X(lobpcg_info))
-  end subroutine X(lobpcg_info)
-
 
   ! ---------------------------------------------------------
   ! Calculate residuals

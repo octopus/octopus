@@ -309,16 +309,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_run(eigens, gr, st, hm, iter, conv, verbose)
+  subroutine eigensolver_run(eigens, gr, st, hm, iter, conv)
     type(eigensolver_t),  intent(inout) :: eigens
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(in)    :: hm
     integer,              intent(in)    :: iter
     logical,    optional, intent(inout) :: conv
-    logical,    optional, intent(in)    :: verbose
 
-    logical :: verbose_
     integer :: maxiter, ik, ns, idir
     FLOAT :: tol, kpoint(1:MAX_DIM)
 #ifdef HAVE_MPI
@@ -331,9 +329,6 @@ contains
 
     call profiling_in(prof, "EIGEN_SOLVER")
     PUSH_SUB(eigensolver_run)
-
-    verbose_ = eigens%verbose
-    if(present(verbose)) verbose_ = verbose
 
     if(iter < eigens%final_tol_iter) then
       tol = log(eigens%final_tol/eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
@@ -351,31 +346,12 @@ contains
 
     if(st%d%nspin == 2) ns = 2
 
-    if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens) .and. .not.verbose_) then
+    if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then
       call loct_progress_bar(-1, st%nst*st%d%nik)
     end if
 
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
       maxiter = eigens%es_maxiter
-      if(verbose_) then
-        if(st%d%nik > ns) then
-
-          kpoint = M_ZERO
-          kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
-
-          write(message(1), '(a,i4,a)') '#k =',ik,', k = ('
-          do idir = 1, gr%sb%dim
-            write(str_tmp, '(f12.6)') units_from_atomic(unit_one / units_out%length, kpoint(idir))
-            if(idir == gr%sb%dim) then
-              str_tmp = trim(str_tmp) // ',' 
-            else
-              str_tmp = trim(str_tmp) // ')' 
-            endif
-            message(1) = trim(message(1)) // trim(str_tmp)
-          enddo   
-          call messages_info(1)
-        end if
-      end if
       
       if(eigens%subspace_diag .and. eigens%converged(ik) == 0) then
         if (states_are_real(st)) then
@@ -389,10 +365,10 @@ contains
         
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call deigensolver_cg2_new(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+          call deigensolver_cg2_new(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
           call deigensolver_cg2(gr, st, hm, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+               eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PLAN)
           call deigensolver_plan(gr, st, hm, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
@@ -400,7 +376,7 @@ contains
                eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call deigensolver_lobpcg(gr, st, hm, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size, verbose = verbose_)
+               eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_MG)
           call deigensolver_mg(gr%der, st, hm, eigens%sdiag, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
@@ -421,10 +397,9 @@ contains
 
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call zeigensolver_cg2_new(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+          call zeigensolver_cg2_new(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-          call zeigensolver_cg2(gr, st, hm, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), verbose = verbose_)
+          call zeigensolver_cg2(gr, st, hm, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, tol, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik))
@@ -433,7 +408,7 @@ contains
                eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call zeigensolver_lobpcg(gr, st, hm, eigens%pre, tol, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size, verbose = verbose_)
+            eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_MG)
           call zeigensolver_mg(gr%der, st, hm, eigens%sdiag, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)

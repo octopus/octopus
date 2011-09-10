@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
-subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff, verbose)
+subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -29,7 +29,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
   FLOAT,        optional, intent(out)   :: diff(1:st%nst)
-  logical,      optional, intent(in)    :: verbose
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:), psi(:, :)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
@@ -39,18 +38,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   R_TYPE   :: sb(3)
 
   PUSH_SUB(X(eigensolver_cg2))
-
-  verbose_ = .false.
-  if(present(verbose)) verbose_ = verbose
-
-  if(verbose_) then
-    call messages_print_stress(stdout, "CG Info")
-    message(1) = "Diagonalization with the conjugate gradients algorithm."
-    write(message(2),'(a,e8.2)') '  Tolerance: ',tol
-    write(message(3),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
-    message(4) = ''
-    call messages_info(4)
-  end if
 
   maxter = niter
   niter = 0
@@ -78,10 +65,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   ASSERT(converged >= 0)
 
   eigenfunction_loop : do p = converged + 1, st%nst
-
-    if(verbose_) then
-      write(message(2),'(a,i4,a)') ' Eigenstate # ', p, ':'
-    end if
 
     call states_get_state(st, gr%mesh, p, ik, psi)
 
@@ -222,23 +205,13 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
     call states_set_state(st, gr%mesh, p, ik, psi)
 
-    if(verbose_) then
-      if(res<tol) then
-        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2)),"     converged. Iterations:", iter, '   [Res = ',res,']'
-      else
-        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", maxter, '   [Res = ',res,']'
-        ! if it didn't converge, then iter = maxter + 1, which is one more than the number of iterations actually done
-      end if
-      call messages_info(1)
-    end if
-
     niter = niter + iter + 1
 
     if(present(diff)) then
       diff(p) = res
     end if
 
-    if(mpi_grp_is_root(mpi_world).and..not.verbose_) then
+    if(mpi_grp_is_root(mpi_world)) then
       call loct_progress_bar(st%nst*(ik - 1) +  p, st%nst*st%d%nik)
     end if
 
@@ -279,18 +252,6 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   logical, allocatable :: orthogonal(:)
 
   PUSH_SUB(X(eigensolver_cg2_new))
-
-  verbose_ = .false.
-  if(present(verbose)) verbose_ = verbose
-
-  if(verbose_) then
-    call messages_print_stress(stdout, "CG Info")
-    message(1) = "Diagonalization with the conjugate gradients algorithm [new]."
-    write(message(2),'(a,e8.2)') '  Tolerance: ', tol
-    write(message(3),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
-    message(4) = ""
-    call messages_info(4)
-  end if
 
   dim = st%d%dim
   nst = st%nst
@@ -431,18 +392,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
 
     st%eigenval(ist, ik) = lambda
 
-    if(verbose_) then
-      write(message(1),'(a,i4,a)') ' Eigenstate # ', ist, ':'
-
-      if(res<tol) then
-        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(1)),"     converged. Iterations:", i, '   [Res = ',res,']'
-      else
-        write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(1))," not converged. Iterations:", i, '   [Res = ',res,']'
-      end if
-      call messages_info(1)
-    end if
-
-    if(mpi_grp_is_root(mpi_world).and..not.verbose_) then
+    if(mpi_grp_is_root(mpi_world)) then
       call loct_progress_bar(st%nst*(ik - 1) + ist, st%nst*st%d%nik)
     end if
 
