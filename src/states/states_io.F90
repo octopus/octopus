@@ -65,17 +65,21 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_write_eigenvalues(iunit, nst, st, sb, error)
+  subroutine states_write_eigenvalues(iunit, nst, st, sb, error, st_start)
     integer,           intent(in) :: iunit, nst
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
     FLOAT, optional,   intent(in) :: error(nst, st%d%nik)
+    integer, optional, intent(in) :: st_start
 
-    integer ik, ist, ns, is, idir
+    integer :: ik, ist, ns, is, idir, st_start_
     FLOAT :: occ, kpoint(1:MAX_DIM)
     character(len=80) tmp_str(MAX_DIM), cspin
 
     PUSH_SUB(states_write_eigenvalues)
+
+    st_start_ = 1
+    if(present(st_start)) st_start_ = st_start
 
     ns = 1
     if(st%d%nspin == 2) ns = 2
@@ -125,7 +129,7 @@ contains
         call messages_info(1, iunit)
       end if
 
-      do ist = 1, nst
+      do ist = st_start_, nst
         do is = 0, ns-1
           if(ist > st%nst) then
             occ = M_ZERO

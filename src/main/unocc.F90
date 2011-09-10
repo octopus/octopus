@@ -72,6 +72,7 @@ contains
     logical :: converged
     integer :: max_iter, nst_calculated
     integer, allocatable :: states_read(:, :)
+    character(len=50) :: str
 
     PUSH_SUB(unocc_run)
 
@@ -128,9 +129,12 @@ contains
     eigens%converged(:) = 0
 
     do iter = 1, max_iter
-      write(message(1), '(a,i3)') "Info: Unoccupied states iteration ", iter
-      call messages_info(1)
-      call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged, verbose = .true.)
+      call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged)
+
+      write(str, '(a,i5)') 'Unoccupied states iteration #', iter
+      call messages_print_stress(stdout, trim(str))
+      call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = occupied_states + 1)
+      call messages_print_stress(stdout)
 
       if(converged .or. clean_stop()) exit
     end do
