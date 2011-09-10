@@ -206,7 +206,7 @@ contains
     st%occ      = M_ZERO
 
     ! load wavefunctions
-    call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr, exact)
+    call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr, exact=exact)
 
     POP_SUB(restart_look_and_read)
   end subroutine restart_look_and_read
@@ -414,13 +414,12 @@ contains
   ! <0 => Fatal error
   ! =0 => read all wavefunctions
   ! >0 => could only read ierr wavefunctions
-  subroutine restart_read(dir, st, gr, geo, ierr, read_occ, iter, lr, exact, number_read)
+  subroutine restart_read(dir, st, gr, geo, ierr, iter, lr, exact, number_read)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(out)   :: ierr
-    logical,    optional, intent(in)    :: read_occ !< should I read the occupations
     integer,    optional, intent(inout) :: iter
     type(lr_t), optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
     logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions and on the same grid
@@ -436,7 +435,7 @@ contains
     integer, allocatable :: read_lxyz(:, :), map(:)
 
     FLOAT                :: my_occ, flt
-    logical              :: read_occ_, gs_allocated, lr_allocated, grid_changed, grid_reordered
+    logical              :: read_occ, gs_allocated, lr_allocated, grid_changed, grid_reordered
     logical              :: exact_
     FLOAT, allocatable   :: dpsi(:)
     CMPLX, allocatable   :: zpsi(:)
@@ -459,8 +458,8 @@ contains
     ! If one restarts a GS calculation changing the %Occupations block, one
     ! cannot read the occupations, otherwise these overwrite the ones from
     ! the input file. The same is true when reading a linear-response restart,
-    ! although in practice the read_occ_ variable is not use in the lr case anyway.
-    read_occ_ = optional_default(read_occ, .not. present(lr))
+    ! although in practice the read_occ variable is not use in the lr case anyway.
+    read_occ = .not. st%fixed_occ .and. .not. present(lr)
 
     ! sanity check
     gs_allocated = (associated(st%dpsi) .and. states_are_real(st)) .or. &
@@ -584,7 +583,7 @@ contains
       if(.not. present(lr)) then ! do not read eigenvalues or occupations when reading linear response
         ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
         read(line, *) my_occ, char, st%eigenval(ist, ik), char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
-        if(read_occ_) st%occ(ist, ik) = my_occ
+        if(read_occ) st%occ(ist, ik) = my_occ
       end if
 
       if(ist >= st%st_start .and. ist <= st%st_end .and. &
@@ -731,7 +730,7 @@ contains
             if(filled(idim, ist, ik)) cycle
 
             call states_generate_random(st, gr%mesh, ist, ist)
-            if(read_occ_) st%occ(ist, ik) = M_ZERO
+            if(read_occ) st%occ(ist, ik) = M_ZERO
           end do
         end do
       end do
@@ -758,9 +757,13 @@ contains
     ! ---------------------------------------------------------
 
     subroutine restart_fail()
+      PUSH_SUB(restart_read.restart_fail)
+
       message(1) = "Could not read KS orbitals from '"//trim(dir)
       message(2) = "Please run a ground-state calculation first!"
       call messages_fatal(2)
+
+      POP_SUB(restart_read.restart_fail)
     end subroutine restart_fail
 
   end subroutine restart_read

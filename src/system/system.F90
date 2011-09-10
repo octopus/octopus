@@ -62,7 +62,7 @@ module system_m
     type(grid_t),     pointer :: gr    !< the mesh
     type(states_t),   pointer :: st    !< the states
     type(v_ks_t)              :: ks    !< the Kohn-Sham potentials
-    type(output_t)      :: outp  !< the output
+    type(output_t)            :: outp  !< the output
     type(multicomm_t)         :: mc    !< index and domain communicators
   end type system_t
 
