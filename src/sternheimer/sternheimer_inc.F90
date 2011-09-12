@@ -90,7 +90,7 @@ subroutine X(sternheimer_solve)(                           &
     do sigma = 1, nsigma
       if(sigma == 1) then 
         omega_sigma = omega
-      else 
+      else
         omega_sigma = -R_CONJ(omega)
       end if
       call X(lr_orth_response)(mesh, st, lr(sigma), omega_sigma)
@@ -511,19 +511,11 @@ subroutine X(sternheimer_solve_order2)( &
             - (hvar2(1:mesh%np, ispin, isigma) - dl_eig2) * lr1(isigma)%X(dl_psi)(1:mesh%np, idim, ist, ik)
         end do
 
-        proj = X(mf_dotp)(mesh, st%d%dim, psi, inhomog(:, :, ist, ik, isigma))
-        do idim = 1, st%d%dim
-          call lalg_axpy(mesh%np, -proj, psi(:, idim), inhomog(:, idim, ist, ik, isigma))
-        end do
-
       enddo
     enddo
   enddo
 
   inhomog(:,:,:,:,:) = inhomog(:,:,:,:,:) * M_HALF
-!  if(nsigma == 1) then
-!    inhomog(:,:,:,:,2) = R_CONJ(inhomog(:,:,:,:,1))
-!  endif
 
   ! sum frequency
   call X(sternheimer_set_inhomog)(sh_2ndorder, inhomog)
@@ -531,9 +523,7 @@ subroutine X(sternheimer_solve_order2)( &
     omega1 + omega2, pert_2ndorder, restart_dir, rho_tag, wfs_tag, &
     have_restart_rho = have_restart_rho, have_exact_freq = have_exact_freq)
   call sternheimer_unset_inhomog(sh_2ndorder)
-
-  ! construct inhomogeneous RHS term from first-order solution
-  ! call X(sternheimer_solve) for sum frequency
+  
   ! call X(sternheimer_solve) for difference frequency
   ! unless of course they are identical (one or both freqs the same)
 
