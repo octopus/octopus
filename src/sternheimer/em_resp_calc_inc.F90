@@ -529,13 +529,13 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
 
                   ispin = states_dim_get_spin_index(sys%st%d, ik)
 
-!                  if (present(kdotp_em_lr) .and. u(2) <= sys%gr%sb%periodic_dim) then
-!                    tmp(1:np, idim) = kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
-!                  else
+                  if (present(kdotp_em_lr) .and. u(2) <= sys%gr%sb%periodic_dim) then
+                    tmp(1:np, idim) = kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
+                  else
                     call pert_setup_dir(dipole, u(2))
                     call X(pert_apply) &
                       (dipole, sys%gr, sys%geo, hm, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, :, ist, ik), tmp)
-!                  endif
+                  endif
 
                   do ip = 1, np
                     tmp(ip, idim) = tmp(ip, idim) + hvar(ip, ispin, isigma, idim, u(2), w(2)) &
@@ -666,6 +666,7 @@ contains
               me010(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist2, ik), ppsi)
 
             end do
+!            if(mpi_grp_is_root(mpi_world)) write(10,'(4i3,f10.6)') ist2, ist, ii, ik, me010(ist2, ist, ii, 1, ik)
           end do
         end do
       end do
@@ -694,6 +695,13 @@ contains
                     me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
                 endif
 
+!                if(ifreq == 1 .and. jfreq == 1 .and. mpi_grp_is_root(mpi_world)) then
+!                  do ist = 1, st%nst
+!                    do ist2 = 1, st%nst
+!                      write(11,'(6i3,f10.6)') ii, jj, isigma, ik, ist, ist2, me11(ii, jj, 1, 1, isigma, ik)%X(matrix)(ist, ist2)
+!                    end do
+!                  end do
+!                endif
               end do
             end do
           end do
@@ -763,23 +771,19 @@ subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pe
 end subroutine X(lr_calc_2np1)
 
 subroutine X(post_orthogonalize)(sys, nfactor, nsigma, freq_factor, omega, kdotp_lr, em_lr, kdotp_em_lr)
-  type(system_t), intent(in) :: sys
-  integer, intent(in) :: nfactor
-  integer, intent(in) :: nsigma
-  FLOAT, intent(in) :: freq_factor(:)
-  R_TYPE, intent(in) :: omega
-  type(lr_t), intent(inout) :: kdotp_lr(:)          ! kdotp dir
-  type(lr_t), intent(inout) :: em_lr(:,:,:)         ! em dir, sigma, factor
-  type(lr_t), intent(inout) :: kdotp_em_lr(:,:,:,:) ! kdotp dir, em dir, sigma, factor
+  type(system_t), intent(in)    :: sys
+  integer,        intent(in)    :: nfactor
+  integer,        intent(in)    :: nsigma
+  FLOAT,          intent(in)    :: freq_factor(:)
+  R_TYPE,         intent(in)    :: omega
+  type(lr_t),     intent(inout) :: kdotp_lr(:)          ! kdotp dir
+  type(lr_t),     intent(inout) :: em_lr(:,:,:)         ! em dir, sigma, factor
+  type(lr_t),     intent(inout) :: kdotp_em_lr(:,:,:,:) ! kdotp dir, em dir, sigma, factor
 
   integer :: kdotp_dir, em_dir, isigma, ifactor
   R_TYPE :: omega_factor
 
   PUSH_SUB(X(post_orthogonalize))
-
-  do kdotp_dir = 1, sys%gr%sb%periodic_dim
-    call X(lr_orth_response)(sys%gr%mesh, sys%st, kdotp_lr(kdotp_dir), R_TOTYPE(M_ZERO))
-  enddo
 
   do ifactor = 1, nfactor
     do isigma = 1, nsigma
