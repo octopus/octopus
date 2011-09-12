@@ -48,12 +48,12 @@ match ; J1 5th iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.787069
 
 # Then, run the optimization for "a few" iterations with the DIRECT OPTIMIZATION scheme
 Input: 04-box.06-oct_long.inp
-match ; J1 5th evaluation  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.35439048
+match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1', 40) ; 0.02116245
 
 # Then, run the optimization also with DIRECT OPTIMIZATION scheme, but optimizing
 # the envelope of the laser field only.
 Input: 04-box.07-oct_long.inp
-match ; J1 7th evaluation  ; GREP(opt-control/convergence, ' 7  ', 40) ; 0.54291394
+match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1', 40) ; 0.26364279
 
 # Now the CONJUGATE GRADIENTS scheme.
 Input: 04-box.08-oct_long.inp

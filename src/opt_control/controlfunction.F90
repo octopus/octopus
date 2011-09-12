@@ -92,7 +92,6 @@ module controlfunction_m
 
   integer, public, parameter ::     &
     ctr_real_time              = 1, &
-    ctr_sine_fourier_series_h  = 2, &
     ctr_fourier_series_h       = 3, &
     ctr_zero_fourier_series_h  = 4, &
     ctr_fourier_series         = 5, &
@@ -199,11 +198,6 @@ contains
     !% specify the kind of parameters that determine the control function.
     !% If <tt>OCTControlRepresentation = control_function_real_time</tt>, then this variable
     !% is ignored, and the control function is handled directly in real time.
-    !%Option control_sine_fourier_series_h 2
-    !% The control function is expanded in a sine Fourier series (which implies that it
-    !% it starts and ends at zero). Then, the total fluence is fixed, and a transformation
-    !% to hyperspherical coordinates is done; the parameters to optimize are the hyperspherical
-    !% angles.
     !%Option control_fourier_series_h 3
     !% The control function is expanded as a full Fourier series (although it must, of 
     !% course, be a real function). Then, the total fluence is fixed, and a transformation
@@ -227,17 +221,14 @@ contains
     !% in time, adds up to zero (this essentially means that the sum of all the cosine 
     !% coefficients is zero).
     !%End
+
+
     if (parametrized_controls) then
       call parse_integer(datasets_check('OCTControlFunctionRepresentation'), &
         ctr_fourier_series_h, cf_common%representation)
       if(.not.varinfo_valid_option('OCTControlFunctionRepresentation', cf_common%representation)) &
         call input_error('OCTControlFunctionRepresentation')
       select case(cf_common%representation)
-      case(ctr_sine_fourier_series_h)
-        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a sine '
-        write(message(2), '(a)') '      Fourier series, and then a transformation to hyperspherical'
-        write(message(3), '(a)') '      coordinates will be made.'
-        call messages_info(3)
       case(ctr_fourier_series_h)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
         write(message(2), '(a)') '      and then a transformation to hyperspherical coordinates will be made.'
@@ -406,9 +397,9 @@ contains
 
     mode_fixed_fluence = .false.
     select case(cf_common%representation)
-    case(ctr_sine_fourier_series_h, ctr_fourier_series_h, ctr_zero_fourier_series_h)
+    case(ctr_fourier_series_h, ctr_zero_fourier_series_h)
       if(cf_common%targetfluence .eq. M_ZERO) then
-        write(message(1), '(a)') 'Error: If you set "OCTControlFunctionRepresentation" to either "control_sine_fourier_series_h",'
+        write(message(1), '(a)') 'Error: If you set "OCTControlFunctionRepresentation" to either'
         write(message(2), '(a)') '       "control_fourier_series_h", or "control_zero_fourier_series_h", then the run'
         write(message(3), '(a)') '       must be done in fixed fluence mode.'
         call messages_fatal(3)
@@ -586,9 +577,6 @@ contains
     select case(cf_common%representation)
     case(ctr_real_time)
       cp%dim = ntiter + 1
-    case(ctr_sine_fourier_series_h)
-      ! cp%dim is directly the number of frequencies in the sine-Fourier expansion
-      cp%dim = tdf_sine_nfreqs(cp%f(1))
     case(ctr_fourier_series_h)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! and the zero-frequency component. Total, 2*(nf-1)+1
@@ -610,7 +598,6 @@ contains
       call messages_fatal(1)
     end select
 
-
     ! The "degrees of freedom" cp%dof is the number of parameters that define the control function.
     ! (if it is represented directly in real time, this would be meaningless, but we put the number of 
     ! control functions, times the "dimension", which in this case is the number of time discretization 
@@ -619,7 +606,7 @@ contains
     select case(cf_common%representation)
     case(ctr_real_time)
       cp%dof = cp%no_controlfunctions * cp%dim
-    case(ctr_sine_fourier_series_h, ctr_fourier_series_h)
+    case(ctr_fourier_series_h)
       ! The number of degrees of freedom is one fewer than the number of basis coefficients, since we
       ! add the constraint of fixed fluence.
       cp%dof = cp%dim - 1
@@ -781,12 +768,6 @@ contains
 
     if(par%current_representation.eq.ctr_real_time) then
       select case(cf_common%representation)
-      case(ctr_sine_fourier_series_h)
-        do ipar = 1, par%no_controlfunctions
-          call tdf_numerical_to_sineseries(par%f(ipar))
-        end do
-        par%current_representation = ctr_sine_fourier_series_h
-        call controlfunction_basis_to_theta(par)
       case(ctr_fourier_series_h)
         do ipar = 1, par%no_controlfunctions
           call tdf_numerical_to_fourier(par%f(ipar))
@@ -831,11 +812,6 @@ contains
     case(ctr_real_time)
       POP_SUB(controlfunction_to_realtime)
       return
-    case(ctr_sine_fourier_series_h)
-      call controlfunction_theta_to_basis(par)
-      do ipar = 1, par%no_controlfunctions
-        call tdf_sineseries_to_numerical(par%f(ipar))
-      end do
     case(ctr_fourier_series_h)
       call controlfunction_theta_to_basis(par)
       do ipar = 1, par%no_controlfunctions
@@ -1292,9 +1268,6 @@ contains
       do ipar = 1, par_%no_controlfunctions
         call tdf_init(ff)
         call tdf_copy(ff, par_%f(ipar))
-        if(par_%current_representation .eq. ctr_sine_fourier_series_h) then
-          call tdf_sineseries_to_numerical(ff)
-        end if
         do iter = 1, tdf_niter(ff) + 1
           time = (iter - 1) * tdf_dt(ff)
           fi = tdf(par_%f(ipar), iter)
@@ -1594,7 +1567,7 @@ contains
          grad(jj) = grad(jj) + M_TWO * controlfunction_alpha(par, 1) * sum(xx(1:(dim / 2) - 1)) + M_TWO * theta(1)
        end forall
 
-    case(ctr_fourier_series_h, ctr_sine_fourier_series_h)
+    case(ctr_fourier_series_h)
        SAFE_ALLOCATE(theta(1:dim))   ! dim = dof + 1 for fourier-series-h
        SAFE_ALLOCATE(grad_matrix(1:dim - 1, 1:dim))
 

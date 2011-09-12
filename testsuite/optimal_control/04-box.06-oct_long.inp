@@ -26,8 +26,8 @@ TDTimeStep = dt
 
 OCTControlRepresentation = control_function_parametrized
 
-OCTPenalty =1.0
-OCTEps   = 0.000001
+OCTPenalty = 1.0
+OCTEps = 0.000001
 OCTMaxIter = 1
 
 OCTInitialState = oct_is_groundstate
@@ -37,9 +37,9 @@ OCTTargetOperator = oct_tg_gstransformation
 %
 
 OCTScheme = oct_algorithm_direct
-OCTControlFunctionRepresentation = control_sine_fourier_series_h
+OCTControlFunctionRepresentation = control_fourier_series
 OCTControlFunctionOmegaMax = 0.10
-OCTFixFluenceTo = -1
+#OCTFixFluenceTo = -1
 
 OCTDoubleCheck = no
 OCTMixing = no
@@ -51,7 +51,7 @@ OCTMixing = no
 #-----------------------------
 
 ampl = 0.06
-freq = 0.157
+freq = (2*pi/stime)
 %TDExternalFields
   electric_field | 1 | 0 | 0 | freq | "envelope_function" 
 %

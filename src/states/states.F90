@@ -85,7 +85,6 @@ module states_m
     state_is_local,                   &
     states_distribute_nodes,          &
     states_wfns_memory,               &
-    states_init_block,                &
     states_are_complex,               &
     states_are_real,                  &
     states_set_complex,               &
@@ -1002,7 +1001,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Allocates the KS wavefunctions defined within a states_t structure.
+  !> Allocates the KS wavefunctions defined within a states_t structure.
   subroutine states_allocate_wfns(st, mesh, wfs_type, alloc_zphi)
     type(states_t),         intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
@@ -1104,9 +1103,26 @@ contains
 
     POP_SUB(states_allocate_intf_wfns)
   end subroutine states_allocate_intf_wfns
-
   ! -----------------------------------------------------
 
+
+  !---------------------------------------------------------------------
+  !> Initializes the data components in st that describe how the states
+  !! are distributed in blocks:
+  !!
+  !! st%nblocks: this is the number of blocks in which the states are divided. Note that
+  !!   this number is the total number of blocks, regardless of how many are actually stored
+  !!   in each node.
+  !! block_start: in each node, the index of the first block.
+  !! block_end: in each node, the index of the last block.
+  !!   If the states are not parallelized, then block_start is 1 and block_end is st%nblocks.
+  !! st%iblock(1:st%nst, 1:st%d%nik): it points, for each state, to the block that contains it.
+  !! st%block_is_local(): st%block_is_local(ib) is .true. if block ib is stored in the running node.
+  !! st%block_range(1:st%nblocks, 1:2): Block ib contains states fromn st%block_range(ib, 1) to st%block_range(ib, 2)
+  !! st%block_size(1:st%nblocks): Block ib contains st%block_size(ib) states.
+  !! st%block_initialized: it should be .false. on entry, and .true. after exiting this routine.
+  !!
+  !! The set of batches st%psib(1:st%nblocks) contains the blocks themselves.
   subroutine states_init_block(st)
     type(states_t),    intent(inout)   :: st
 
@@ -1145,24 +1161,6 @@ contains
       end if
     end do
 
-!!$    ! some debug output that I will keep here for the moment
-!!$    if(mpi_grp_is_root(mpi_world)) then
-!!$      print*, "NST       ", st%nst
-!!$      print*, "BLOCKSIZE ", st%d%block_size
-!!$      print*, "NBLOCKS   ", st%nblocks
-!!$
-!!$      print*, "==============="
-!!$      do ist = 1, st%nst
-!!$        print*, st%node(ist), ist, st%iblock(ist, 1)
-!!$      end do
-!!$      print*, "==============="
-!!$
-!!$      do ib = 1, st%nblocks
-!!$        print*, ib, bstart(ib), bend(ib)
-!!$      end do
-!!$
-!!$    end if
-
     SAFE_ALLOCATE(st%psib(1:st%nblocks, 1:st%d%nik))
     SAFE_ALLOCATE(st%block_is_local(1:st%nblocks, 1:st%d%nik))
     st%block_is_local = .false.
@@ -1196,6 +1194,26 @@ contains
     st%block_size(1:st%nblocks) = bend(1:st%nblocks) - bstart(1:st%nblocks) + 1
 
     st%block_initialized = .true.
+
+!!$!!!!DEBUG
+!!$    ! some debug output that I will keep here for the moment
+!!$    if(mpi_grp_is_root(mpi_world)) then
+!!$      print*, "NST       ", st%nst
+!!$      print*, "BLOCKSIZE ", st%d%block_size
+!!$      print*, "NBLOCKS   ", st%nblocks
+!!$
+!!$      print*, "==============="
+!!$      do ist = 1, st%nst
+!!$        print*, st%node(ist), ist, st%iblock(ist, 1)
+!!$      end do
+!!$      print*, "==============="
+!!$
+!!$      do ib = 1, st%nblocks
+!!$        print*, ib, bstart(ib), bend(ib)
+!!$      end do
+!!$
+!!$    end if
+!!$!!!!ENDOFDEBUG
 
     SAFE_DEALLOCATE_A(bstart)
     SAFE_DEALLOCATE_A(bend)
@@ -1270,7 +1288,7 @@ contains
 
 
   !---------------------------------------------------------------------
-  !> This subroutine: (1) Fills in the block size (st%d%block_size);
+  !> This subroutine: (i) Fills in the block size (st%d%block_size);
   !! (ii) Finds out whether or not to pack the states (st%d%pack_states);
   !! (iii) Finds out the orthogonalization method (st%d%orth_method).
   subroutine states_exec_init(st, mc)

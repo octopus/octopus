@@ -61,14 +61,11 @@ module tdf_m
             tdf_cosine_multiply,         &
             tdf_numerical_to_fourier,    &
             tdf_fourier_to_numerical,    &
-            tdf_numerical_to_sineseries, &
-            tdf_sineseries_to_numerical, &
             tdf_numerical_to_zerofourier,&
             tdf_zerofourier_to_numerical,&
             tdf_fourier_grid,            &
             tdf_write,                   &
             tdf_niter,                   &
-            tdf_sine_nfreqs,             &
             tdf_nfreqs,                  &
             tdf_dt,                      &
             tdf_copy,                    &
@@ -86,7 +83,6 @@ module tdf_m
     TDF_FROM_FILE     =  10006,  &
     TDF_NUMERICAL     =  10007,  &
     TDF_FROM_EXPR     =  10008,  &
-    TDF_SINE_SERIES   =  10009,  &
     TDF_FOURIER_SERIES=  10010,  &
     TDF_ZERO_FOURIER  =  10011
 
@@ -102,7 +98,6 @@ module tdf_m
     FLOAT   :: init_time   = M_ZERO
     FLOAT   :: final_time  = M_ZERO
     integer :: niter       = 0
-    integer :: sine_nfreqs = 0
     integer :: nfreqs      = 0
 
     type(spline_t)         :: amplitude
@@ -310,13 +305,6 @@ module tdf_m
     type(tdf_t), intent(in) :: f
     tdf_nfreqs = f%nfreqs
   end function tdf_nfreqs
-  !------------------------------------------------------------
-
-  !------------------------------------------------------------
-  integer pure function tdf_sine_nfreqs(f)
-    type(tdf_t), intent(in) :: f
-    tdf_sine_nfreqs = f%sine_nfreqs
-  end function tdf_sine_nfreqs
   !------------------------------------------------------------
 
 
@@ -540,13 +528,6 @@ module tdf_m
 
     if(omegamax > M_ZERO) then
       bigt = f%final_time - f%init_time
-      f%sine_nfreqs = int(bigt * omegamax / M_PI) + 1
-    else
-      f%sine_nfreqs = f%niter
-    end if
-
-    if(omegamax > M_ZERO) then
-      bigt = f%final_time - f%init_time
       f%nfreqs = int(bigt * omegamax / (M_TWO * M_PI) ) + 1
     else
       f%nfreqs = f%niter/2+1
@@ -557,11 +538,6 @@ module tdf_m
 
     if(present(rep)) then
       select case(rep)
-        case(TDF_SINE_SERIES)
-          SAFE_ALLOCATE(f%coeffs(1:f%sine_nfreqs))
-          f%coeffs = M_ZERO
-          SAFE_DEALLOCATE_P(f%val)
-          f%mode = TDF_SINE_SERIES
         case(TDF_FOURIER_SERIES)
           SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
           f%valww = M_ZERO
@@ -595,11 +571,6 @@ module tdf_m
       df = M_TWO * M_PI / (f%final_time-f%init_time)
       do i = 1, f%nfreqs
          wgrid(i) = (i-1)*df
-      enddo
-    case(TDF_SINE_SERIES)
-      df = M_PI / (f%final_time-f%init_time)
-      do i = 1, f%sine_nfreqs
-         wgrid(i) = i*df
       enddo
     case default
       stop 'Error'
@@ -710,8 +681,6 @@ module tdf_m
     select case(f%mode)
     case(TDF_NUMERICAL)
       f%val(1:f%niter+1) = values(1:f%niter+1)
-    case(TDF_SINE_SERIES)
-      f%coeffs(1:f%sine_nfreqs) = values(1:f%sine_nfreqs)
     case(TDF_FOURIER_SERIES)
       f%valww(1:2*f%nfreqs-1) = values(1:2*f%nfreqs-1)
     case(TDF_ZERO_FOURIER)
@@ -734,8 +703,6 @@ module tdf_m
     select case(f%mode)
     case(TDF_NUMERICAL)
       f%val(index) = value
-    case(TDF_SINE_SERIES)
-      f%coeffs(index) = value
     case(TDF_FOURIER_SERIES)
       f%valww(index) = value
     case(TDF_ZERO_FOURIER)
@@ -763,8 +730,6 @@ module tdf_m
       n = 2*f%nfreqs-1
     case(TDF_ZERO_FOURIER)
       n = 2*f%nfreqs-2
-    case(TDF_SINE_SERIES)
-      n = f%sine_nfreqs
     case default
       stop 'Error'
     end select
@@ -837,75 +802,6 @@ module tdf_m
 
 
   !------------------------------------------------------------
-  subroutine tdf_numerical_to_sineseries(f)
-    type(tdf_t), intent(inout) :: f
-
-    integer :: j, k
-    FLOAT :: bigt, t, omega
-
-    PUSH_SUB(tdf_numerical_to_sineseries)
-
-    ASSERT(f%mode .eq. TDF_NUMERICAL)
-
-    bigt = f%final_time - f%init_time
-    SAFE_ALLOCATE(f%coeffs(1:f%sine_nfreqs))
-    do j = 1, f%sine_nfreqs
-      omega = (M_PI/bigt) * j
-      f%coeffs(j) = M_ZERO
-      do k = 2, f%niter
-        t = (k-1)*f%dt
-        f%coeffs(j) = f%coeffs(j) + sin(omega*t) * tdf(f, k)
-      end do
-      f%coeffs(j) = sqrt(M_TWO/bigt) * f%coeffs(j) * f%dt
-    end do
-
-    SAFE_DEALLOCATE_P(f%val)
-    f%mode = TDF_SINE_SERIES
-
-    call fft_end(f%fft_handler)
-
-    POP_SUB(tdf_numerical_to_sineseries)
-  end subroutine tdf_numerical_to_sineseries
-  !------------------------------------------------------------
-
-
-  !------------------------------------------------------------
-  subroutine tdf_sineseries_to_numerical(f)
-    type(tdf_t), intent(inout) :: f
-
-    FLOAT :: bigt, t, omega
-    integer :: j, k, n(3)
-
-    PUSH_SUB(tdf_sineseries_to_numerical)
-
-    ASSERT(f%mode .eq. TDF_SINE_SERIES)
-
-    SAFE_ALLOCATE(f%val(1:f%niter+1))
-
-    bigt = f%final_time - f%init_time
-
-    do k = 1, f%niter + 1
-      t = (k-1)*f%dt
-      f%val(k) = M_ZERO
-      do j = 1, f%sine_nfreqs
-        omega = (M_PI/bigt) * j
-        f%val(k) = f%val(k) + sin(omega*t) * f%coeffs(j)
-      end do
-      f%val(k) = f%val(k) * sqrt(M_TWO/bigt)
-    end do
-
-    SAFE_DEALLOCATE_P(f%coeffs)
-    f%mode = TDF_NUMERICAL
-
-    n(1:3) = (/ f%niter, 1, 1 /)
-    call fft_init(n, 3, fft_real, f%fft_handler, optimize = .false.)
-
-    POP_SUB(tdf_sineseries_to_numerical)
-  end subroutine tdf_sineseries_to_numerical
-  !------------------------------------------------------------
-
-
-  !------------------------------------------------------------
   FLOAT pure function tdfi(f, i) result(y)
     type(tdf_t), intent(in) :: f
     integer, intent(in)     :: i
@@ -916,8 +812,6 @@ module tdf_m
     select case(f%mode)
     case(TDF_NUMERICAL)
       y = f%val(i)
-    case(TDF_SINE_SERIES)
-      y = f%coeffs(i)
     case(TDF_FOURIER_SERIES)
       y = f%valww(i)
     case(TDF_ZERO_FOURIER)
@@ -1014,8 +908,6 @@ module tdf_m
     case(TDF_FOURIER_SERIES)
       SAFE_DEALLOCATE_P(f%valww)
       call fft_end(f%fft_handler)
-    case(TDF_SINE_SERIES)
-      SAFE_DEALLOCATE_P(f%coeffs)
     end select
     f%mode = TDF_EMPTY
 
@@ -1047,7 +939,6 @@ module tdf_m
     fout%final_time = fin%final_time
     fout%init_time  = fin%init_time
     fout%expression = fin%expression
-    fout%sine_nfreqs = fin%sine_nfreqs
     fout%nfreqs = fin%nfreqs
     if(fin%mode .eq. TDF_FROM_FILE) then
       fout%amplitude = fin%amplitude
@@ -1066,10 +957,6 @@ module tdf_m
       SAFE_ALLOCATE(fout%valww(2*fout%nfreqs-1))
       fout%valww  = fin%valww
       call fft_copy(fin%fft_handler, fout%fft_handler)
-    end if
-    if(fin%mode .eq. TDF_SINE_SERIES) then
-      SAFE_ALLOCATE(fout%coeffs(fout%sine_nfreqs))
-      fout%coeffs = fin%coeffs
     end if
     fout%mode   = fin%mode
 
@@ -1092,8 +979,6 @@ module tdf_m
       f%val = alpha*f%val
     case(TDF_FOURIER_SERIES)
       f%valww = alpha*f%valww
-    case(TDF_SINE_SERIES)
-      f%coeffs = alpha*f%coeffs
     case(TDF_FROM_FILE)
       call spline_times(alpha, f%amplitude)
     end select
@@ -1205,12 +1090,6 @@ module tdf_m
       end do
       fg = fg + M_HALF * f%val(f%niter+1) * g%val(f%niter+1)
       fg = fg * f%dt
-
-    case(TDF_SINE_SERIES)
-      ! We assume that the frequencies grid is the same for both functions
-      do i = 1, f%sine_nfreqs
-        fg = fg + f%coeffs(i) * g%coeffs(i)
-      end do
     case(TDF_FOURIER_SERIES)
       fg = dot_product(f%valww, g%valww)
     case(TDF_ZERO_FOURIER)
@@ -1251,11 +1130,6 @@ module tdf_m
     case(TDF_NUMERICAL)
       do i = 1, f%niter
         fminusg%val(i) = fminusg%val(i) - g%val(i)
-      end do
-    case(TDF_SINE_SERIES)
-      ! We assume that the frequencies grid is the same for both functions
-      do i = 1, f%sine_nfreqs
-        fminusg%coeffs(i) = fminusg%coeffs(i) - g%coeffs(i)
       end do
     case(TDF_FOURIER_SERIES, TDF_ZERO_FOURIER)
       do i = 1, 2*(f%nfreqs-1)+1
