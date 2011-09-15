@@ -653,6 +653,8 @@ contains
 
     integer :: istencil, idir
 
+    PUSH_SUB(nl_operator_update_weights)
+
     if(in_debug_mode) then
 
       write(message(1), '(3a)') 'Debug info: Finite difference weights for ', trim(this%label), '.'
@@ -668,6 +670,8 @@ contains
       end do
       
     end if
+
+    POP_SUB(nl_operator_update_weights)
 
   end subroutine nl_operator_update_weights
 
@@ -1086,7 +1090,7 @@ contains
 
     type(nl_operator_t), pointer :: opg
 
-    PUSH_SUB(nl_operator_op_to_matrix)
+    PUSH_SUB(nl_operator_op_to_matrix_cmplx)
 
 #if defined(HAVE_MPI)
     if(op%mesh%parallel_in_domains) then
@@ -1119,7 +1123,7 @@ contains
     end if
     if(in_debug_mode) call messages_debug_newlines(2)
 
-    POP_SUB(nl_operator_op_to_matrix)
+    POP_SUB(nl_operator_op_to_matrix_cmplx)
 
   end subroutine nl_operator_op_to_matrix_cmplx
 
