@@ -54,7 +54,7 @@ module opt_control_m
   use states_dim_m
   use system_m
   use td_m
-  
+
   implicit none
 
   private
@@ -683,6 +683,8 @@ contains
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
     call bwd_step_2(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
+
+    if(controlfunction_mode().eq.controlfunction_mode_f) call controlfunction_cosine_multiply(par_chi)
 
     call controlfunction_set_rep(par_chi)
 

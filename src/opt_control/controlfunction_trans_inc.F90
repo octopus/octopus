@@ -205,6 +205,65 @@
       POP_SUB(controfunction_trans_matrix)
       return
 
+    case(ctr_fourier_series)
+
+      SAFE_ALLOCATE(par%utransf (1:par%dim, 1:par%dim))
+      SAFE_ALLOCATE(par%utransfi(1:par%dim, 1:par%dim))
+      par%utransf  = M_ZERO
+      par%utransfi = M_ZERO
+      forall(mm = 1:par%dim) par%utransf(mm, mm) = M_ONE
+      forall(mm = 1:par%dim) par%utransfi(mm, mm) = M_ONE
+
+      if( cf_common%mode .eq. controlfunction_mode_f ) then
+        ! If the object to optimize is the envelope of the
+        ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
+        ! has the form:
+        !   e(t) = f(t) cos(w0*t),
+        ! where f(t) is the envelope. This is then expanded in a basis set:
+        !   f(t) = sum_{n=1}^N f_n g_n(t).
+        ! The fluence F[e] is then given by:
+        !   F[e] = sum_{m=1}^N sum_{n=1}^N f_m f_n S_{nm},
+        !   S_{nm} = \int_{0}^{T} dt g_n(t) g_m(t) cos^2(w0*t).
+        ! The following lines of code calculate this matrix S and place it in par%utransf,
+        ! This can probably be optimized in some way?
+        SAFE_ALLOCATE(eigenvec(1:par%dim, 1:par%dim))
+        SAFE_ALLOCATE(eigenval(1:par%dim))
+        par%utransf  = M_ZERO
+        par%utransfi = M_ZERO
+
+        do mm = 1, par%dim
+          call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
+            cf_common%omegamax, rep = TDF_FOURIER_SERIES)
+          call tdf_set_numerical(fm, mm, M_ONE)
+          call tdf_fourier_to_numerical(fm)
+          do i = 1, tdf_niter(fm) + 1
+            t = (i-1)*tdf_dt(fm)
+            call tdf_set_numerical(fm, i, tdf(fm, i)*cos(par%w0*t))
+          end do
+
+          do nn = mm, par%dim
+            call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
+              cf_common%omegamax, rep = TDF_FOURIER_SERIES)
+            call tdf_set_numerical(fn, nn, M_ONE)
+            call tdf_fourier_to_numerical(fn)
+            do i = 1, tdf_niter(fn) + 1
+              t = (i-1)*tdf_dt(fn)
+              call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
+            end do
+            par%utransf(mm, nn) = tdf_dot_product(fm, fn)
+            call tdf_end(fn)
+          end do
+          call tdf_end(fm)
+        end do
+
+        do mm = 1, par%dim
+          do nn = 1, mm - 1
+            par%utransf(mm, nn) = par%utransf(nn, mm)
+          end do
+        end do
+
+      end if
+
     case(ctr_zero_fourier_series_h)
 
       n = par%dim

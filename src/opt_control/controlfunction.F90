@@ -88,7 +88,8 @@ module controlfunction_m
             controlfunction_alpha,             &
             controlfunction_targetfluence,     &
             controlfunction_filter,            &
-            controlfunction_gradient
+            controlfunction_gradient,          &
+            controlfunction_cosine_multiply
 
 
   integer, public, parameter ::     &
@@ -1549,16 +1550,18 @@ contains
     integer :: dim, jj, mm, kk, ss, tt
     FLOAT :: rr
     FLOAT, allocatable :: theta(:), grad_matrix(:,:), eigenvectors(:,:), eigenvalues(:), aa(:)
-    
+
     PUSH_SUB(controlfunction_gradient)
 
     dim = par%dim
 
     select case(par%current_representation)
     case(ctr_fourier_series)
+
        SAFE_ALLOCATE(theta(1:dim)) ! dim = dof for fourier-series
        call controlfunction_get_theta(par_output, theta)
-       forall(jj = 1:dim) grad(jj) =  M_TWO * controlfunction_alpha(par, 1) * xx(jj) - M_TWO * theta(jj)
+       forall(jj = 1:dim) grad(jj) = &
+         M_TWO * controlfunction_alpha(par, 1) * sum(par%utransf(jj, :)*xx(:)) - M_TWO * theta(jj)
 
     case(ctr_zero_fourier_series)
        SAFE_ALLOCATE(theta(1:dim))      ! dim should be # of basis sets for a zero-Fourier-series (even number)
@@ -1614,6 +1617,26 @@ contains
     POP_SUB(controlfunction_gradient)
   end subroutine controlfunction_gradient
   ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  !> Multiplies all the control function by cos(w0*t), where
+  !! w0 is the carrier frequency.
+  subroutine controlfunction_cosine_multiply(par)
+    type(controlfunction_t), intent(inout) :: par
+
+    integer :: i
+
+    PUSH_SUB(controlfunction_cosine_multiply)
+
+    call controlfunction_to_realtime(par)
+
+    do i = 1, par%no_controlfunctions
+      call tdf_cosine_multiply(par%w0, par%f(i))
+    end do
+
+    POP_SUB(controlfunction_cosine_multiply)
+  end subroutine controlfunction_cosine_multiply
 
 #include "controlfunction_trans_inc.F90"
 

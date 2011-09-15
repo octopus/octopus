@@ -210,9 +210,12 @@
     select case(controlfunction_mode())
     case(controlfunction_mode_f, controlfunction_mode_phi)
       if(.not. oct_algorithm_is_direct(oct)) then
-        message(1) = 'If you attempt an envelope-only or phase-only optimization, then'
-        message(2) = 'you must use a gradient-free algorithm.'
-        call messages_fatal(2)
+        if(oct%algorithm .ne. oct_algorithm_cg) then
+          message(1) = 'If you attempt an envelope-only or phase-only optimization, then'
+          message(2) = 'you must use either a gradient-free algorithm, or the conjugate'
+          message(3) = 'gradients algorithm.'
+          call messages_fatal(3)
+        end if
       end if
     end select
       
