@@ -24,7 +24,6 @@ module poisson_multigrid_m
   use datasets_m
   use derivatives_m
   use global_m
-  use gridhier_m
   use lalg_basic_m
   use parser_m
   use math_m
@@ -111,7 +110,7 @@ contains
     !% Maximum number of multigrid cycles that are performed if
     !% convergence is not achieved.
     !%End
-    call parse_integer(datasets_check('PoissonSolverMGMaxCycles'), 600, this%maxcycles)
+    call parse_integer(datasets_check('PoissonSolverMGMaxCycles'), 50, this%maxcycles)
 
     !%Variable PoissonSolverMGRestrictionMethod
     !%Type integer
@@ -185,9 +184,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine poisson_multigrid_solver(this, base_der, pot, rho)
+  subroutine poisson_multigrid_solver(this, der, pot, rho)
     type(mg_solver_t),           intent(in)    :: this
-    type(derivatives_t), target, intent(inout) :: base_der
+    type(derivatives_t), target, intent(inout) :: der
     FLOAT,                       intent(inout) :: pot(:)
     FLOAT,                       intent(in)    :: rho(:)
 
@@ -198,22 +197,22 @@ contains
     PUSH_SUB(poisson_multigrid_solver)
 
     ! correction for treating boundaries
-    SAFE_ALLOCATE(vh_correction(1:base_der%mesh%np_part))
-    SAFE_ALLOCATE(res(1:base_der%mesh%np))
-    SAFE_ALLOCATE(cor(1:base_der%mesh%np_part))
-    SAFE_ALLOCATE(err(1:base_der%mesh%np))
+    SAFE_ALLOCATE(vh_correction(1:der%mesh%np_part))
+    SAFE_ALLOCATE(res(1:der%mesh%np))
+    SAFE_ALLOCATE(cor(1:der%mesh%np_part))
+    SAFE_ALLOCATE(err(1:der%mesh%np))
     
-    call correct_rho(this%corrector, base_der, rho, res, vh_correction)
-    call lalg_scal(base_der%mesh%np, -M_FOUR*M_PI, res)
+    call correct_rho(this%corrector, der, rho, res, vh_correction)
+    call lalg_scal(der%mesh%np, -M_FOUR*M_PI, res)
 
-    forall (ip = 1:base_der%mesh%np) cor(ip) = pot(ip) - vh_correction(ip)
+    forall (ip = 1:der%mesh%np) cor(ip) = pot(ip) - vh_correction(ip)
 
     do iter = 1, this%maxcycles
 
-      call poisson_multigrid_cycle(this, base_der, cor, res)
-      call dderivatives_lapl(base_der, cor, err)
-      forall (ip = 1:base_der%mesh%np) err(ip) = res(ip) - err(ip)
-      resnorm =  dmf_nrm2(base_der%mesh, err)
+      call poisson_multigrid_cycle(this, der, cor, res)
+      call dderivatives_lapl(der, cor, err)
+      forall (ip = 1:der%mesh%np) err(ip) = res(ip) - err(ip)
+      resnorm =  dmf_nrm2(der%mesh, err)
 
       if(resnorm < this%threshold) exit
 
@@ -230,7 +229,7 @@ contains
       call messages_warning(2)
     end if
 
-    forall (ip = 1:base_der%mesh%np) pot(ip) = cor(ip) + vh_correction(ip)
+    forall (ip = 1:der%mesh%np) pot(ip) = cor(ip) + vh_correction(ip)
 
     SAFE_DEALLOCATE_A(vh_correction)
     SAFE_DEALLOCATE_A(res)

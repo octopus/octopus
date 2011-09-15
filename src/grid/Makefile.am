@@ -44,7 +44,6 @@ libgrid_a_SOURCES =       \
 	io_function.F90         \
 	multigrid.F90           \
 	ob_grid.F90             \
-	gridhier.F90            \
 	double_grid.F90         \
 	grid.F90                \
 	batch.F90               \
@@ -80,7 +79,6 @@ noinst_HEADERS =                  \
 	nl_operator_inc.F90       \
 	batch_inc.F90             \
 	multigrid_inc.F90         \
-	gridhier_inc.F90          \
 	mesh_batch_inc.F90        \
 	subarray_inc.F90          \
 	symmetrizer_inc.F90       \
@@ -118,7 +116,6 @@ io_function.o : io_function.F90 io_function_inc.F90 par_vec.o mesh.o mesh_functi
 multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o transfer_table.o boundaries.o
 double_grid.o : double_grid.F90 double_grid_apply_inc.F90 submesh.o mesh_function.o mesh.o curvilinear.o 
 grid.o : grid.F90  multigrid.o mesh.o double_grid.o curvilinear.o ob_interface.o mesh_init.o nl_operator.o
-gridhier.o : gridhier.F90 gridhier_inc.F90 multigrid.o
 ob_interface.o : ob_interface.F90 derivatives.o mesh.o
 zoltan_low.o : zoltan_low.c
 zoltan.o : zoltan.F90

@@ -30,7 +30,6 @@ module hamiltonian_m
   use geometry_m
   use global_m
   use grid_m
-  use gridhier_m
   use hardware_m
   use io_m
   use io_function_m
