@@ -28,10 +28,11 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
   integer,              intent(in)    :: iter
   FLOAT,                intent(in)    :: dt
 
-  integer :: ik, ist1, ddim, idim, np
+  integer :: ik, ist1, ddim, idim, np, ip
   R_TYPE, allocatable :: hpsi(:, :), psi(:, :), xx(:, :)
   R_TYPE, pointer     :: oldpsi(:, :, :)
   R_TYPE :: one 
+  type(batch_t) :: oldpsib
 
   PUSH_SUB(X(cpmd_propagate))
 
@@ -82,7 +83,7 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 
       call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")
 
-      call calc_xx
+      call calc_xx()
 
       ! psi <= psi + X * psi2
       call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
@@ -116,15 +117,24 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 
       call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")
       
-      call calc_xx
+      call calc_xx()
+
 
       ! psi <= psi + X * oldpsi
-      call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
-        oldpsi, xx, one, st%X(psi)(:, :, :, ik)) !(4.3)
-
       ! psi2 <= psi2 + 1/dt * X * oldpsi
-      call states_block_matr_mul_add(gr%mesh, st, one/dt, st%st_start, st%st_end, st%st_start, st%st_end, &
-        oldpsi, xx, one, this%X(psi2)(:, :, :, ik)) !(4.9) 1st part
+
+      call batch_init(oldpsib, st%d%dim, st%st_start, st%st_end, oldpsi(:, :, :))
+      call X(mesh_batch_rotate)(gr%mesh, oldpsib, xx)
+      call batch_end(oldpsib)
+      
+      do ist1 = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+          forall(ip = 1:gr%mesh%np)
+            st%X(psi)(ip, idim, ist1, ik) = st%X(psi)(ip, idim, ist1, ik) + oldpsi(ip, idim, ist1)
+            this%X(psi2)(ip, idim, ist1, ik) = this%X(psi2)(ip, idim, ist1, ik) + oldpsi(ip, idim, ist1)/dt
+          end forall
+        end do
+      end do
 
       call profiling_out(cpmd_orth)
       
@@ -143,7 +153,7 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 
 contains
 
-  subroutine calc_xx
+  subroutine calc_xx()
     integer :: ist1, ist2, it
     FLOAT   :: res
     FLOAT,  allocatable :: ii(:, :)

@@ -20,6 +20,8 @@
 #include "global.h"
   
 module cpmd_m
+  use batch_m
+  use mesh_batch_m
   use datasets_m
   use geometry_m
   use global_m
