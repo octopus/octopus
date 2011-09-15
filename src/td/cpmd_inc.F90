@@ -162,8 +162,7 @@ contains
       end do
     end do
 
-    call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
-      st%X(psi)(:, :, :, ik), st%X(psi)(:, :, :, ik), aa, symm=.true.)
+    call X(states_calc_overlap)(st, gr%mesh, ik, aa)
     call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
       oldpsi, st%X(psi)(:, :, :, ik), bb, symm=.false.)
 

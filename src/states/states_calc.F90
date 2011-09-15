@@ -89,7 +89,9 @@ module states_calc_m
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
     dstates_matrix,                 &
-    zstates_matrix
+    zstates_matrix,                 &
+    dstates_calc_overlap,           &
+    zstates_calc_overlap
 
 contains
 
@@ -278,7 +280,6 @@ contains
       call zstates_calc_momentum(st, der, momentum)
     end if
   end subroutine states_calc_momentum
-
 
 #include "undef.F90"
 #include "real.F90"

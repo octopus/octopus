@@ -58,7 +58,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 
     ss = M_ZERO
 
-    call X(states_overlap)(st, mesh, ik, ss)
+    call X(states_calc_overlap)(st, mesh, ik, ss)
 
     bof = .false.
     ! calculate the Cholesky decomposition
@@ -1066,7 +1066,7 @@ end subroutine X(states_rotate_in_place)
 
 ! ---------------------------------------------------------
 
-subroutine X(states_overlap)(st, mesh, ik, overlap)
+subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
   type(states_t),    intent(inout) :: st
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: ik
@@ -1075,7 +1075,7 @@ subroutine X(states_overlap)(st, mesh, ik, overlap)
   integer       :: ib, jb
   type(batch_t) :: psib
   
-  PUSH_SUB(X(states_overlap))
+  PUSH_SUB(X(states_calc_overlap))
   
   ASSERT(associated(st%X(psi)))
 
@@ -1099,8 +1099,8 @@ subroutine X(states_overlap)(st, mesh, ik, overlap)
     
   end if
 
-  POP_SUB(X(states_overlap))
-end subroutine X(states_overlap)
+  POP_SUB(X(states_calc_overlap))
+end subroutine X(states_calc_overlap)
 
 !! Local Variables:
 !! mode: f90
