@@ -55,6 +55,7 @@ module controlfunction_m
             controlfunction_mod_close,         &
             controlfunction_init,              &
             controlfunction_representation,    &
+            controlfunction_mode,              &
             controlfunction_set,               &
             controlfunction_end,               &
             controlfunction_copy,              &
@@ -98,10 +99,10 @@ module controlfunction_m
     ctr_zero_fourier_series    = 6
 
 
-  integer, parameter :: controlfunction_mode_none      = 0, &
-                        controlfunction_mode_epsilon   = 1, &
-                        controlfunction_mode_f         = 2, &
-                        controlfunction_mode_phi       = 3
+  integer, parameter, public :: controlfunction_mode_none      = 0, &
+                                controlfunction_mode_epsilon   = 1, &
+                                controlfunction_mode_f         = 2, &
+                                controlfunction_mode_phi       = 3
 
   !> This data type contains information that is filled when the module
   !! is initialized ("controlfunction_mod_init"), and stored while the module
@@ -577,21 +578,13 @@ contains
     select case(cf_common%representation)
     case(ctr_real_time)
       cp%dim = ntiter + 1
-    case(ctr_fourier_series_h)
+    case(ctr_fourier_series_h, ctr_fourier_series)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! and the zero-frequency component. Total, 2*(nf-1)+1
       cp%dim = 2 * (tdf_nfreqs(cp%f(1)) - 1) + 1
-    case(ctr_zero_fourier_series_h)
+    case(ctr_zero_fourier_series, ctr_zero_fourier_series_h)
       ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
       ! but no zero-frequency component. Total, 2*(nf-1)
-      cp%dim = 2 * (tdf_nfreqs(cp%f(1)) - 1)
-    case(ctr_fourier_series)
-      ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
-      ! and the zero-frequency component. Total, 2*(nf-1)+1
-      cp%dim = 2 * (tdf_nfreqs(cp%f(1)) - 1) + 1
-    case(ctr_zero_fourier_series)
-      ! If nf is the number of frequencies, we will have nf-1 non-zero "sines", nf-1 non-zero "cosines",
-      ! but no zero-frequency component. Total, 2*(nf-1)+1
       cp%dim = 2 * (tdf_nfreqs(cp%f(1)) - 1)
     case default
       message(1) = "Internal error: invalid representation."
@@ -683,6 +676,14 @@ contains
   integer pure function controlfunction_representation()
     controlfunction_representation = cf_common%representation
   end function controlfunction_representation
+  ! ---------------------------------------------------------
+
+
+  !> Returns the "mode" of the control function, i.e. if it is the full pulse, the envelope, 
+  !! or the phase.
+  integer pure function controlfunction_mode()
+    controlfunction_mode = cf_common%mode
+  end function controlfunction_mode
   ! ---------------------------------------------------------
 
 

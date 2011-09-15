@@ -206,6 +206,15 @@
         call messages_fatal(1)
       end select
     end if
+
+    select case(controlfunction_mode())
+    case(controlfunction_mode_f, controlfunction_mode_phi)
+      if(.not. oct_algorithm_is_direct(oct)) then
+        message(1) = 'If you attempt an envelope-only or phase-only optimization, then'
+        message(2) = 'you must use a gradient-free algorithm.'
+        call messages_fatal(2)
+      end if
+    end select
       
     POP_SUB(check_faulty_runmodes)
   end subroutine check_faulty_runmodes
