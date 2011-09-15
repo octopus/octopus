@@ -28,11 +28,7 @@ TDTimeStep = 0.2
 
 TDMaximumIter = 20
 
-ParallelizationStrategy = par_domains + par_states
-
-%ParallelizationGroupRanks
- 2 | 2
-%
+ParallelizationStrategy = par_domains
 
 FilterPotentials = filter_ts
 

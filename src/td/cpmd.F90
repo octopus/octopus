@@ -117,7 +117,12 @@ contains
     call parse_integer(datasets_check('CPMethod'), VERLET, this%method)
     if(.not.varinfo_valid_option('CPMethod', this%method)) call input_error('CPMethod')
     call messages_print_var_option(stdout, 'CPMethod', this%method)
-    
+
+    if(st%parallel_in_states) then
+      message(1) = 'CP dynamics does not work with states-parallelization.'
+      call messages_fatal(1)
+    end if
+        
     nullify(this%dpsi2, this%zpsi2)
 
     if(states_are_real(st)) then
