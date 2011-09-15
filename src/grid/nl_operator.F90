@@ -651,7 +651,23 @@ contains
   subroutine nl_operator_update_weights(this)
     type(nl_operator_t), intent(inout)  :: this
 
-    !nothing to here at the moment
+    integer :: istencil, idir
+
+    if(in_debug_mode) then
+
+      write(message(1), '(3a)') 'Debug info: Finite difference weights for ', trim(this%label), '.'
+      write(message(2), '(a)')  '            Spacing:'
+      do idir = 1, this%mesh%sb%dim
+        write(message(2), '(a,f16.8)') trim(message(2)), this%mesh%spacing(idir)
+      end do
+      call messages_info(2)
+      
+      do istencil = 1, this%stencil%size
+        write(message(1), '(a,i3,3i4,f16.10)') '      ', istencil, this%stencil%points(1:3, istencil), this%w_re(istencil, 1)
+        call messages_info(1)
+      end do
+      
+    end if
 
   end subroutine nl_operator_update_weights
 
