@@ -221,9 +221,9 @@ subroutine X(cpmd_propagate_vel)(this, gr, hm, st, dt)
   type(states_t),       intent(inout) :: st
   FLOAT,                intent(in)    :: dt
 
-  integer :: ik, ist1, ddim, np
-
-  R_TYPE, allocatable :: hpsi(:, :), yy(:, :)
+  integer :: ik, ist1, ddim, np, idim,  ip
+  type(batch_t) :: psirotb
+  R_TYPE, allocatable :: hpsi(:, :), yy(:, :), psirot(:, :, :)
   R_TYPE :: one
 
   one = R_TOTYPE(M_ONE)
@@ -260,9 +260,32 @@ subroutine X(cpmd_propagate_vel)(this, gr, hm, st, dt)
 
     call calc_yy()
 
-    ! psi2 <= psi2 + Y * psi
-    call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
-      st%X(psi)(:, :, :, ik), yy, one, this%X(psi2)(:, :, :, ik)) !(4.11)
+
+    ! psi2 <= psi2 + Y * psi (4.11)
+
+    SAFE_ALLOCATE(psirot(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end))
+    
+    do ist1 = st%st_start, st%st_end
+      do idim = 1, st%d%dim
+        forall(ip = 1:gr%mesh%np)
+          psirot(ip, idim, ist1) = st%X(psi)(ip, idim, ist1, ik)
+        end forall
+      end do
+    end do
+
+    call batch_init(psirotb, st%d%dim, st%st_start, st%st_end, psirot)
+    call X(mesh_batch_rotate)(gr%mesh, psirotb, yy)
+    call batch_end(psirotb)
+
+    do ist1 = st%st_start, st%st_end
+      do idim = 1, st%d%dim
+        forall(ip = 1:gr%mesh%np)
+          this%X(psi2)(ip, idim, ist1, ik) = this%X(psi2)(ip, idim, ist1, ik) + psirot(ip, idim, ist1)
+        end forall
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(psirot)
 
     call calc_yy()
 
