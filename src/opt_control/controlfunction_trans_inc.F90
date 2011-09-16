@@ -202,7 +202,7 @@
 
     case(ctr_real_time) 
 
-      POP_SUB(controfunction_trans_matrix)
+      POP_SUB(controlfunction_trans_matrix)
       return
 
     case(ctr_fourier_series)
