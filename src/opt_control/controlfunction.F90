@@ -1560,8 +1560,9 @@ contains
 
        SAFE_ALLOCATE(theta(1:dim)) ! dim = dof for fourier-series
        call controlfunction_get_theta(par_output, theta)
-       forall(jj = 1:dim) grad(jj) = &
-         M_TWO * controlfunction_alpha(par, 1) * sum(par%utransf(jj, :)*xx(:)) - M_TWO * theta(jj)
+       forall(jj = 1:dim) 
+         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%utransf(jj, :)*xx(:)) - M_TWO * theta(jj)
+       end forall
 
     case(ctr_zero_fourier_series)
        SAFE_ALLOCATE(theta(1:dim))      ! dim should be # of basis sets for a zero-Fourier-series (even number)
