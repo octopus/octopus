@@ -1079,7 +1079,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
   
   ASSERT(associated(st%X(psi)))
 
-  if(states_are_packed(st)) then
+  if(.not. states_are_packed(st)) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
     call X(mesh_batch_dotp_self)(mesh, psib, overlap)
