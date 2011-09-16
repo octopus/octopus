@@ -193,8 +193,7 @@ contains
     end do
 
     call X(states_calc_overlap)(st, gr%mesh, ik, aa)
-    call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
-      oldpsi, st%X(psi)(:, :, :, ik), bb, symm=.false.)
+    call X(states_calc_overlap)(st, gr%mesh, ik, bb, psi2 = oldpsi)
 
     xx = M_HALF*(ii - aa) !(4.6)
 
@@ -259,13 +258,13 @@ subroutine X(cpmd_propagate_vel)(this, gr, hm, st, dt)
 
     call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")          
 
-    call calc_yy
+    call calc_yy()
 
     ! psi2 <= psi2 + Y * psi
     call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
       st%X(psi)(:, :, :, ik), yy, one, this%X(psi2)(:, :, :, ik)) !(4.11)
 
-    call calc_yy
+    call calc_yy()
 
     call profiling_out(cpmd_orth)
 
@@ -280,15 +279,14 @@ subroutine X(cpmd_propagate_vel)(this, gr, hm, st, dt)
 
 contains
 
-  subroutine calc_yy
+  subroutine calc_yy()
     R_TYPE, allocatable :: cc(:, :)
 
     PUSH_SUB(X(cpmd_propagate_vel).calc_yy)
 
     SAFE_ALLOCATE(cc(1:st%nst, 1:st%nst))
 
-    call states_blockt_mul(gr%mesh, st, st%st_start, st%st_end, st%st_start, st%st_end, &
-      this%X(psi2)(:, :, :, ik), st%X(psi)(:, :, :, ik), cc, symm=.false.)
+    call X(states_calc_overlap)(st, gr%mesh, ik, cc, psi2 = this%X(psi2)(:, :, :, ik))
 
     yy = -M_HALF*(cc + transpose(cc))
 

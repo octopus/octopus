@@ -1066,14 +1066,15 @@ end subroutine X(states_rotate_in_place)
 
 ! ---------------------------------------------------------
 
-subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
+subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
   type(states_t),    intent(inout) :: st
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: ik
   R_TYPE,            intent(out)   :: overlap(:, :)
+  R_TYPE, optional,  intent(in)    :: psi2(:, :, :) !< if present it calculates <psi2|psi>
   
   integer       :: ib, jb
-  type(batch_t) :: psib
+  type(batch_t) :: psib, psi2b
   
   PUSH_SUB(X(states_calc_overlap))
   
@@ -1082,10 +1083,24 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
   if(.not. states_are_packed(st)) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
-    call X(mesh_batch_dotp_self)(mesh, psib, overlap)
+
+    if(.not. present(psi2)) then
+
+      call X(mesh_batch_dotp_self)(mesh, psib, overlap)
+
+    else
+
+      call batch_init(psi2b, st%d%dim, 1, st%nst, psi2)
+      call X(mesh_batch_dotp_matrix)(mesh, psi2b, psib, overlap)
+      call batch_end(psi2b)
+
+    end if
+
     call batch_end(psib)
     
   else
+
+    ASSERT(.not. present(psi2))
     
     do ib = st%block_start, st%block_end
       do jb = ib, st%block_end
