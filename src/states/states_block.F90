@@ -44,7 +44,6 @@ module states_block_m
   private
 
   public ::                    &
-!    states_block_t,            &
     states_blockt_mul,         &
     states_block_matr_mul_add, &
     states_block_matr_mul

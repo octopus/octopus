@@ -30,7 +30,7 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 
   integer :: ik, ist1, ddim, idim, np, ip
   R_TYPE, allocatable :: hpsi(:, :), psi(:, :), xx(:, :)
-  R_TYPE, pointer     :: oldpsi(:, :, :)
+  R_TYPE, allocatable :: oldpsi(:, :, :)
   R_TYPE :: one 
   type(batch_t) :: oldpsib
 
@@ -54,8 +54,6 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
     select case(this%method)
 
     case(VERLET)
-
-      oldpsi => this%X(psi2)(:, :, :, ik)
 
       do ist1 = st%st_start, st%st_end
 
@@ -83,11 +81,32 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 
       call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")
 
-      call calc_xx()
+      call calc_xx(this%X(psi2)(:, :, :, ik))
 
+      SAFE_ALLOCATE(oldpsi(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end))
+
+      do ist1 = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+          forall(ip = 1:gr%mesh%np)
+            oldpsi(ip, idim, ist1) = this%X(psi2)(ip, idim, ist1, ik)
+          end forall
+        end do
+      end do
+
+      call batch_init(oldpsib, st%d%dim, st%st_start, st%st_end, oldpsi)
+      call X(mesh_batch_rotate)(gr%mesh, oldpsib, xx)
+      call batch_end(oldpsib)
+      
       ! psi <= psi + X * psi2
-      call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
-        this%X(psi2)(:, :, :, ik), xx, one, st%X(psi)(:, :, :, ik)) !(4.3)
+      do ist1 = st%st_start, st%st_end
+        do idim = 1, st%d%dim
+          forall(ip = 1:gr%mesh%np)
+            st%X(psi)(ip, idim, ist1, ik) = st%X(psi)(ip, idim, ist1, ik) + oldpsi(ip, idim, ist1)
+          end forall
+        end do
+      end do
+      
+      SAFE_DEALLOCATE_A(oldpsi)
 
       call profiling_out(cpmd_orth)
 
@@ -117,8 +136,7 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 
       call profiling_in(cpmd_orth, "CP_ORTHOGONALIZATION")
       
-      call calc_xx()
-
+      call calc_xx(oldpsi)
 
       ! psi <= psi + X * oldpsi
       ! psi2 <= psi2 + 1/dt * X * oldpsi
@@ -138,7 +156,7 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 
       call profiling_out(cpmd_orth)
       
-      SAFE_DEALLOCATE_P(oldpsi)
+      SAFE_DEALLOCATE_A(oldpsi)
       
     end select
 
@@ -153,7 +171,9 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 
 contains
 
-  subroutine calc_xx()
+  subroutine calc_xx(oldpsi)
+    R_TYPE, intent(in) :: oldpsi(:, :, :)
+
     integer :: ist1, ist2, it
     FLOAT   :: res
     FLOAT,  allocatable :: ii(:, :)
