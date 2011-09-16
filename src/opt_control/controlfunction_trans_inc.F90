@@ -146,10 +146,10 @@
       n = par%dim
       SAFE_ALLOCATE(a(1:n))
 
-      a(1) = -sum(par%theta(1:n/2-1))
       do j = 2, n
         a(j) = par%theta(j-1)
       end do
+       a(1) = -sum(a(2:n/2))
       call tdf_set_numerical(par%f(1), a)
 
       SAFE_DEALLOCATE_A(a)
@@ -192,7 +192,7 @@
     type(controlfunction_t), intent(inout) :: par
 
     integer :: i, mm, nn, n, j, k
-    FLOAT :: t, det
+    FLOAT :: t, det, w1
     type(tdf_t) :: fn, fm
     FLOAT, allocatable :: neigenvec(:, :), eigenvec(:, :), eigenval(:), a(:), alpha(:, :)
 
@@ -226,8 +226,6 @@
         !   S_{nm} = \int_{0}^{T} dt g_n(t) g_m(t) cos^2(w0*t).
         ! The following lines of code calculate this matrix S and place it in par%utransf,
         ! This can probably be optimized in some way?
-        SAFE_ALLOCATE(eigenvec(1:par%dim, 1:par%dim))
-        SAFE_ALLOCATE(eigenval(1:par%dim))
         par%utransf  = M_ZERO
         par%utransfi = M_ZERO
 
@@ -263,6 +261,63 @@
         end do
 
       end if
+
+    case(ctr_zero_fourier_series)
+
+      SAFE_ALLOCATE(par%utransf (1:par%dof, 1:par%dof))
+      SAFE_ALLOCATE(par%utransfi(1:par%dof, 1:par%dof))
+
+      par%utransf  = M_ZERO
+      par%utransfi = M_ZERO
+
+      w1 = (M_TWO*M_PI/(tdf_dt(par%f(1))*tdf_niter(par%f(1))))
+
+      do mm = 1, par%dof
+        call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
+          cf_common%omegamax, rep = TDF_ZERO_FOURIER)
+        call tdf_set_numerical(fm, mm+1, M_ONE)
+        call tdf_fourier_to_numerical(fm)
+        if(mm <= par%dof/2) then
+          do i = 1, tdf_niter(fm) + 1
+            t = (i-1)*tdf_dt(fm)
+            call tdf_set_numerical(fm, i, &
+              (tdf(fm, i)-sqrt(M_TWO/(tdf_dt(fm)*tdf_niter(fm)))*cos(w1*t))*cos(par%w0*t))
+          end do
+        else
+          do i = 1, tdf_niter(fm) + 1
+            t = (i-1)*tdf_dt(fm)
+            call tdf_set_numerical(fm, i, tdf(fm, i)*cos(par%w0*t))
+          end do
+        end if
+
+        do nn = mm, par%dof
+          call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
+            cf_common%omegamax, rep = TDF_ZERO_FOURIER)
+          call tdf_set_numerical(fn, nn+1, M_ONE)
+          call tdf_fourier_to_numerical(fn)
+          if(nn <= par%dof/2) then
+            do i = 1, tdf_niter(fn) + 1
+              t = (i-1)*tdf_dt(fn)
+              call tdf_set_numerical(fn, i, &
+                (tdf(fn, i)-sqrt(M_TWO/(tdf_dt(fm)*tdf_niter(fm)))*cos(w1*t))*cos(par%w0*t))
+            end do
+          else
+            do i = 1, tdf_niter(fn) + 1
+              t = (i-1)*tdf_dt(fn)         
+              call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
+            end do
+          end if
+          par%utransf(mm, nn) = tdf_dot_product(fm, fn)
+          call tdf_end(fn)
+        end do
+        call tdf_end(fm)
+      end do
+
+      do mm = 1, par%dof
+        do nn = 1, mm - 1
+          par%utransf(mm, nn) = par%utransf(nn, mm)
+        end do
+      end do
 
     case(ctr_zero_fourier_series_h)
 

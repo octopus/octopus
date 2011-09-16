@@ -832,7 +832,7 @@ contains
     case(ctr_zero_fourier_series)
       call controlfunction_theta_to_basis(par)
       do ipar = 1, par%no_controlfunctions
-        call tdf_fourier_to_numerical(par%f(ipar))
+        call tdf_zerofourier_to_numerical(par%f(ipar))
       end do
     end select
 
@@ -1553,11 +1553,11 @@ contains
 
     PUSH_SUB(controlfunction_gradient)
 
-    dim = par%dim
 
     select case(par%current_representation)
     case(ctr_fourier_series)
 
+       dim = par%dim
        SAFE_ALLOCATE(theta(1:dim)) ! dim = dof for fourier-series
        call controlfunction_get_theta(par_output, theta)
        forall(jj = 1:dim) 
@@ -1565,14 +1565,24 @@ contains
        end forall
 
     case(ctr_zero_fourier_series)
-       SAFE_ALLOCATE(theta(1:dim))      ! dim should be # of basis sets for a zero-Fourier-series (even number)
-       forall(jj = 1:dim) theta(jj) = tdf(par_output%f(1), jj)    ! get the projection on my basis set of function f
-       forall(jj = 1:dim - 1) grad(jj) =  M_TWO * controlfunction_alpha(par, 1) * xx(jj) - M_TWO * theta(jj + 1)
-       forall(jj = 1:(dim / 2) - 1)
-         grad(jj) = grad(jj) + M_TWO * controlfunction_alpha(par, 1) * sum(xx(1:(dim / 2) - 1)) + M_TWO * theta(1)
+
+       dim = par%dof
+       forall(jj = 1:dim) 
+         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%utransf(jj, :)*xx(:))
        end forall
+       SAFE_ALLOCATE(theta(1:dim+1))
+       forall(jj = 1:dim+1) theta(jj) = tdf(par_output%f(1), jj)
+       do jj = 1, dim/2
+         grad(jj) = grad(jj) - M_TWO*(theta(jj+1) - theta(1))
+       end do
+       do jj = dim/2+1, dim
+         grad(jj) = grad(jj) - M_TWO*theta(jj+1)
+       end do
+
 
     case(ctr_fourier_series_h)
+
+       dim = par%dim
        SAFE_ALLOCATE(theta(1:dim))   ! dim = dof + 1 for fourier-series-h
        SAFE_ALLOCATE(grad_matrix(1:dim - 1, 1:dim))
 
@@ -1585,6 +1595,8 @@ contains
        SAFE_DEALLOCATE_A(grad_matrix)
 
     case(ctr_zero_fourier_series_h)
+
+       dim = par%dim
        SAFE_ALLOCATE(theta(1:dim))   ! dim = dof + 2 for zero-fourier-series-h
        SAFE_ALLOCATE(grad_matrix(1:dim - 2, 1:dim - 1))
        SAFE_ALLOCATE(eigenvectors(1:dim - 1, 1:dim - 1))
