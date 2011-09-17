@@ -266,21 +266,21 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
 
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
-      do ist = 1, yy%pack%size(2)
+      do ist = 1, yy%pack%size(1)
         do ip = 1, np
           yy%pack%zpsi(ist, ip) = aa_linear(ist)*xx%pack%zpsi(ist, ip) + yy%pack%zpsi(ist, ip)
         end do
       end do
     else
 #ifdef R_TREAL
-      do ist = 1, yy%pack%size(2)
+      do ist = 1, yy%pack%size(1)
         do ip = 1, np
           yy%pack%dpsi(ist, ip) = aa_linear(ist)*xx%pack%dpsi(ist, ip) + yy%pack%dpsi(ist, ip)
         end do
       end do
 #endif
     end if
-
+    
   case(BATCH_NOT_PACKED)
     do ist = 1, yy%nst_linear
       if(batch_type(yy) == TYPE_CMPLX) then

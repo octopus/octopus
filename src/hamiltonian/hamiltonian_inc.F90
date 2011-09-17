@@ -43,6 +43,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   PUSH_SUB(X(hamiltonian_apply_batch))
 
+  ASSERT(batch_status(psib) == batch_status(hpsib))
+
   if(present(time)) then
     ASSERT(abs(time - hm%current_time) < CNST(1e-10))
   end if
