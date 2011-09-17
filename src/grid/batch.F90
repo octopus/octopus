@@ -388,6 +388,8 @@ contains
         call zbatch_new(bout, 1, bin%nst, np)
       end if
 
+!      if(batch_is_packed(bin)) call batch_pack(bout, copy = .false.)
+
     end if
 
     do ii = 1, bout%nst
@@ -953,7 +955,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
     call opencl_set_kernel_arg(kernel_ref, 5, psi)
     call opencl_set_kernel_arg(kernel_ref, 6, ldpsi*tsize)
 
-    call opencl_kernel_run(kernel_ref, (/this%nst_linear, ep - sp + 1/), (/1, 1/))
+    call opencl_kernel_run(kernel_ref, (/this%nst_linear*tsize, ep - sp + 1/), (/1, 1/))
 
   end select
 
@@ -998,7 +1000,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
     call opencl_set_kernel_arg(kernel_ref, 5, this%pack%buffer)
     call opencl_set_kernel_arg(kernel_ref, 6, this%pack%size_real(1))
 
-    call opencl_kernel_run(kernel_ref, (/this%nst_linear, ep - sp + 1/), (/1, 1/))
+    call opencl_kernel_run(kernel_ref, (/this%nst_linear*tsize, ep - sp + 1/), (/1, 1/))
 
   end select
 

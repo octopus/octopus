@@ -48,6 +48,8 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 
   select case(st%d%orth_method)
   case(ORTH_GS)
+    
+    call states_pack(st)
 
     if(st%parallel_in_states) then
       message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
@@ -74,6 +76,8 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
     call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
     SAFE_DEALLOCATE_A(ss)
+
+    call states_unpack(st)
 
   case(ORTH_PAR_GS)
     call par_gs()
@@ -347,6 +351,9 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
   integer :: idim, block_size, ib, size, sp
   R_TYPE, allocatable :: psicopy(:, :, :)
+  type(opencl_mem_t) :: psicopy_buffer, ss_buffer
+  type(cl_kernel_t), save :: dkernel, zkernel
+  type(c_ptr) :: kernel_ref
 
   PUSH_SUB(X(states_trsm))
 
@@ -358,7 +365,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         st%X(psi)(1, idim, 1, ik), ubound(st%X(psi), dim = 1)*st%d%dim)
     end do
 
-  else
+  else if(.not. opencl_is_enabled()) then
 
 #ifdef R_TREAL  
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
@@ -389,6 +396,49 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
       end do
 
     end do 
+
+  else
+    
+    if(st%d%dim > 1) call messages_not_implemented('Opencl states_trsm for spinors')
+
+    block_size = 4000
+
+    call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+
+    call opencl_create_buffer(ss_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(ss)))
+    call opencl_write_buffer(ss_buffer, product(ubound(ss)), ss)
+
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      
+      do ib = st%block_start, st%block_end
+        ASSERT(R_TYPE_VAL == batch_type(st%psib(ib, ik)))
+        call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
+      end do
+
+      if(states_are_real(st)) then
+        call cl_kernel_start_call(dkernel, 'trsm.cl', 'dtrsm')
+        kernel_ref = cl_kernel_get_ref(dkernel)
+      else
+        call cl_kernel_start_call(zkernel, 'trsm.cl', 'ztrsm')
+        kernel_ref = cl_kernel_get_ref(zkernel)
+      end if
+
+      call opencl_set_kernel_arg(kernel_ref, 0, st%nst)
+      call opencl_set_kernel_arg(kernel_ref, 1, ss_buffer)
+      call opencl_set_kernel_arg(kernel_ref, 2, ubound(ss, dim = 1))
+      call opencl_set_kernel_arg(kernel_ref, 3, psicopy_buffer)
+      call opencl_set_kernel_arg(kernel_ref, 4, st%nst)
+      
+      call opencl_kernel_run(kernel_ref, (/size/), (/1/))
+
+      do ib = st%block_start, st%block_end
+        call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
+      end do
+    end do
+    
+    call opencl_release_buffer(ss_buffer)
+    call opencl_release_buffer(psicopy_buffer)
 
   end if
 

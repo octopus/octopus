@@ -246,7 +246,6 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
 
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
-    print*, aa_linear
     call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, batch_type(yy), yy%pack%size(1))
 
     if(batch_type(yy) == TYPE_CMPLX) then
