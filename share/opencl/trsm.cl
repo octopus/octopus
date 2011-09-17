@@ -62,7 +62,6 @@ __kernel void ztrsm(const int nst,
   
   for(int ist = 0; ist < nst; ist++){
     double2 a0 = (double2) (0.0);
-    //double a0 = 0.0;
     for(int jst = 0; jst < ist; jst++){
       a0 -= complex_mul(ss[ist*ldss + jst], psi[ip*ldpsi + jst]);
     }

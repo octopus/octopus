@@ -49,8 +49,6 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
   select case(st%d%orth_method)
   case(ORTH_GS)
     
-    call states_pack(st)
-
     if(st%parallel_in_states) then
       message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
       call messages_fatal(1)
@@ -76,9 +74,6 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
     call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
     SAFE_DEALLOCATE_A(ss)
-
-    call states_unpack(st)
-
   case(ORTH_PAR_GS)
     call par_gs()
 
