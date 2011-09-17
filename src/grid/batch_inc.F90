@@ -246,7 +246,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
 
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
-
+    print*, aa_linear
     call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, batch_type(yy), yy%pack%size(1))
 
     if(batch_type(yy) == TYPE_CMPLX) then
@@ -265,9 +265,9 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
 
     call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
     call opencl_set_kernel_arg(kernel_ref, 1, xx%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 2, xx%pack%size(1))
+    call opencl_set_kernel_arg(kernel_ref, 2, log2(xx%pack%size(1)))
     call opencl_set_kernel_arg(kernel_ref, 3, yy%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 4, yy%pack%size(1))
+    call opencl_set_kernel_arg(kernel_ref, 4, log2(yy%pack%size(1)))
 
     localsize = opencl_max_workgroup_size()
     call opencl_kernel_run(kernel_ref, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
