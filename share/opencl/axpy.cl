@@ -47,6 +47,32 @@ __kernel void zaxpy(const double re_aa, const double im_aa,
 
 }
 
+__kernel void daxpy_vec(const __constant double * restrict aa, 
+			const __global double * restrict xx, const int ldxx,
+			__global double * restrict yy, const int ldyy){
+
+  int ist = get_global_id(0);
+  int ip = get_global_id(1);
+  
+  yy[(ip<<ldyy) + ist] += aa[ist]*xx[(ip<<ldxx) + ist];
+
+}
+
+__kernel void zaxpy_vec(const __constant double2 * restrict aa, 
+			const __global double2 * restrict xx, const int ldxx,
+			__global double2 * restrict yy, const int ldyy){
+
+  int ist = get_global_id(0);
+  int ip = get_global_id(1);
+
+  double2 aai = aa[ist];
+  double2 xxi = xx[(ip<<ldxx) + ist];
+
+  yy[(ip<<ldyy) + ist] += (double2)(aai.x*xxi.x - aai.y*xxi.y, aai.x*xxi.y + aai.y*xxi.x);
+
+}
+
+
 /*
  Local Variables:
  mode: c

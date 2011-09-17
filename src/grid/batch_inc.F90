@@ -221,6 +221,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
   type(cl_kernel_t), save :: kernel
   type(c_ptr)             :: kernel_ref
   R_TYPE, allocatable     :: aa_linear(:)
+  CMPLX,  allocatable     :: zaa_linear(:)
   type(opencl_mem_t)      :: aa_buffer
   
   PUSH_SUB(X(batch_axpy_vec))
@@ -246,11 +247,20 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
 
-    call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, yy%nst_linear)
-    call opencl_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
+    call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, batch_type(yy), yy%pack%size(1))
+
+    if(batch_type(yy) == TYPE_CMPLX) then
+      ! convert aa_linear to complex
+      SAFE_ALLOCATE(zaa_linear(1:yy%pack%size(1)))
+      zaa_linear(1:yy%pack%size(1)) = aa_linear(1:yy%pack%size(1))
+      call opencl_write_buffer(aa_buffer, yy%pack%size(1), zaa_linear)
+      SAFE_DEALLOCATE_A(zaa_linear)
+    else
+      call opencl_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
+    end if
 
     call cl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)))
-
+  
     kernel_ref = cl_kernel_get_ref(kernel)
 
     call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
