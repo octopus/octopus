@@ -198,36 +198,17 @@
 
     PUSH_SUB(controlfunction_trans_matrix)
 
+    ! First, we will construct the matrix u, from which the fluence is computed
+    ! as dot_product(x, matmul(u, x)).
     select case(cf_common%representation)
 
-    case(ctr_real_time) 
+    case(ctr_fourier_series, ctr_fourier_series_h)
 
-      POP_SUB(controlfunction_trans_matrix)
-      return
-
-    case(ctr_fourier_series)
-
-      SAFE_ALLOCATE(par%utransf (1:par%dim, 1:par%dim))
-      SAFE_ALLOCATE(par%utransfi(1:par%dim, 1:par%dim))
-      par%utransf  = M_ZERO
-      par%utransfi = M_ZERO
-      forall(mm = 1:par%dim) par%utransf(mm, mm) = M_ONE
-      forall(mm = 1:par%dim) par%utransfi(mm, mm) = M_ONE
+      SAFE_ALLOCATE(par%u(1:par%dim, 1:par%dim))
+      par%u = M_ZERO
+      forall(mm = 1:par%dim) par%u(mm, mm) = M_ONE
 
       if( cf_common%mode .eq. controlfunction_mode_f ) then
-        ! If the object to optimize is the envelope of the
-        ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
-        ! has the form:
-        !   e(t) = f(t) cos(w0*t),
-        ! where f(t) is the envelope. This is then expanded in a basis set:
-        !   f(t) = sum_{n=1}^N f_n g_n(t).
-        ! The fluence F[e] is then given by:
-        !   F[e] = sum_{m=1}^N sum_{n=1}^N f_m f_n S_{nm},
-        !   S_{nm} = \int_{0}^{T} dt g_n(t) g_m(t) cos^2(w0*t).
-        ! The following lines of code calculate this matrix S and place it in par%utransf,
-        ! This can probably be optimized in some way?
-        par%utransf  = M_ZERO
-        par%utransfi = M_ZERO
 
         do mm = 1, par%dim
           call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
@@ -248,7 +229,7 @@
               t = (i-1)*tdf_dt(fn)
               call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
             end do
-            par%utransf(mm, nn) = tdf_dot_product(fm, fn)
+            par%u(mm, nn) = tdf_dot_product(fm, fn)
             call tdf_end(fn)
           end do
           call tdf_end(fm)
@@ -256,20 +237,16 @@
 
         do mm = 1, par%dim
           do nn = 1, mm - 1
-            par%utransf(mm, nn) = par%utransf(nn, mm)
+            par%u(mm, nn) = par%u(nn, mm)
           end do
         end do
 
       end if
 
-    case(ctr_zero_fourier_series)
+    case(ctr_zero_fourier_series, ctr_zero_fourier_series_h)
 
-      SAFE_ALLOCATE(par%utransf (1:par%dof, 1:par%dof))
-      SAFE_ALLOCATE(par%utransfi(1:par%dof, 1:par%dof))
-
-      par%utransf  = M_ZERO
-      par%utransfi = M_ZERO
-
+      SAFE_ALLOCATE(par%u (1:par%dof, 1:par%dof))
+      par%u = M_ZERO
       w1 = (M_TWO*M_PI/(tdf_dt(par%f(1))*tdf_niter(par%f(1))))
 
       do mm = 1, par%dof
@@ -307,7 +284,7 @@
               call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
             end do
           end if
-          par%utransf(mm, nn) = tdf_dot_product(fm, fn)
+          par%u(mm, nn) = tdf_dot_product(fm, fn)
           call tdf_end(fn)
         end do
         call tdf_end(fm)
@@ -315,9 +292,52 @@
 
       do mm = 1, par%dof
         do nn = 1, mm - 1
-          par%utransf(mm, nn) = par%utransf(nn, mm)
+          par%u(mm, nn) = par%u(nn, mm)
         end do
       end do
+
+    end select
+
+    ! Now the transformation matrices, in case they are needed.
+    select case(cf_common%representation)
+
+    case(ctr_fourier_series_h)
+
+      n = par%dim
+      SAFE_ALLOCATE(par%utransf(1:n, 1:n))
+      SAFE_ALLOCATE(par%utransfi(1:n, 1:n))
+      SAFE_ALLOCATE(eigenvec(1:n, 1:n))
+      SAFE_ALLOCATE(eigenval(1:n))
+
+      eigenvec = par%u
+      call lalg_eigensolve(par%dim, eigenvec, eigenval)
+
+      ! We need to make sure that eigenvectors have the same sign on all machines, which is not guaranteed
+      ! by LAPACK. So, we will use the following criterion: the sign of the first non-null component should be
+      ! positive.
+      do nn = 1, par%dim
+        do mm = 1, par%dim
+          if( eigenvec(mm, nn)*eigenvec(mm, nn) > CNST(1.0e-20) ) then
+            !eigenvec(1:par%dim, nn) = sign(eigenvec(mm, nn), M_ONE) * eigenvec(1:par%dim, nn)
+            if(eigenvec(mm, nn) < M_ZERO) eigenvec(1:par%dim, nn) = - eigenvec(1:par%dim, nn)
+            exit
+          end if
+        end do
+      end do
+
+      do mm = 1, par%dim
+        do nn = 1, par%dim
+          eigenvec(mm, nn) = eigenvec(mm, nn) * sqrt(eigenval(nn))
+        end do
+      end do
+
+      par%utransf = transpose(eigenvec)
+      par%utransfi = par%utransf
+      det = lalg_inverter(par%dim, par%utransfi)
+
+      SAFE_DEALLOCATE_A(eigenvec)
+      SAFE_DEALLOCATE_A(eigenval)
+
 
     case(ctr_zero_fourier_series_h)
 
@@ -481,15 +501,6 @@
         par%utransfi = par%utransf
 
       end if
-
-    case default
-
-      SAFE_ALLOCATE(par%utransf (1:par%dim, 1:par%dim))
-      SAFE_ALLOCATE(par%utransfi(1:par%dim, 1:par%dim))
-      par%utransf  = M_ZERO
-      par%utransfi = M_ZERO
-      forall(mm = 1:par%dim) par%utransf(mm, mm) = M_ONE
-      forall(mm = 1:par%dim) par%utransfi(mm, mm) = M_ONE
 
     end select
 

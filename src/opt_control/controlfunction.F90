@@ -146,6 +146,7 @@ module controlfunction_m
     integer :: current_representation = 0
 
     FLOAT   :: w0       = M_ZERO
+    FLOAT, pointer :: u(:, :) => NULL()
     FLOAT, pointer :: utransf(:, :)  => NULL()
     FLOAT, pointer :: utransfi(:, :) => NULL()
     FLOAT, pointer :: hypersphere_transform(:, :) => NULL()
@@ -1009,6 +1010,7 @@ contains
     end do
     SAFE_DEALLOCATE_P(cp%f)
     SAFE_DEALLOCATE_P(cp%alpha)
+    SAFE_DEALLOCATE_P(cp%u)
     SAFE_DEALLOCATE_P(cp%utransf)
     SAFE_DEALLOCATE_P(cp%utransfi)
     SAFE_DEALLOCATE_P(cp%theta)
@@ -1358,6 +1360,7 @@ contains
       call tdf_copy(cp_out%f(ipar), cp_in%f(ipar))
     end do
 
+    call loct_pointer_copy(cp_out%u, cp_in%u)
     call loct_pointer_copy(cp_out%utransf, cp_in%utransf)
     call loct_pointer_copy(cp_out%utransfi, cp_in%utransfi)
     call loct_pointer_copy(cp_out%theta, cp_in%theta)
@@ -1561,14 +1564,14 @@ contains
        SAFE_ALLOCATE(theta(1:dim)) ! dim = dof for fourier-series
        call controlfunction_get_theta(par_output, theta)
        forall(jj = 1:dim) 
-         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%utransf(jj, :)*xx(:)) - M_TWO * theta(jj)
+         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%u(jj, :)*xx(:)) - M_TWO * theta(jj)
        end forall
 
     case(ctr_zero_fourier_series)
 
        dim = par%dof
        forall(jj = 1:dim) 
-         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%utransf(jj, :)*xx(:))
+         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%u(jj, :)*xx(:))
        end forall
        SAFE_ALLOCATE(theta(1:dim+1))
        forall(jj = 1:dim+1) theta(jj) = tdf(par_output%f(1), jj)
@@ -1589,7 +1592,7 @@ contains
        forall(jj = 1:dim) theta(jj) = M_TWO * tdf(par_output%f(1), jj) ! get the projection on my basis set of function (theta=b)
        rr = sqrt(cf_common%targetfluence)
        call hypersphere_grad_matrix(grad_matrix, rr, xx)
-       grad = matmul(grad_matrix, theta)
+       grad = matmul(grad_matrix, matmul(par%utransf, theta))
        grad = -grad  ! the CG algorithm minimizes, so we need to give the negative gradient for maximization
        
        SAFE_DEALLOCATE_A(grad_matrix)
