@@ -351,45 +351,43 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
   integer, parameter :: sweeps = 5
   integer, parameter :: sd_steps = 2
 
-  integer :: isd, ist, sst, est, bsize, ib
+  integer :: isd, ist, sst, est, bsize, ib, ii
   R_TYPE  :: ca, cb, cc
   R_TYPE, allocatable :: res(:, :, :), lambda(:)
   R_TYPE, allocatable :: kres(:, :, :)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
 
-  type(batch_t) :: psib, resb, kresb
+  type(batch_t) :: resb, kresb
 
   PUSH_SUB(X(eigensolver_rmmdiis_min))
 
-  SAFE_ALLOCATE(me1(1:2, 1:blocksize))
-  SAFE_ALLOCATE(me2(1:4, 1:blocksize))
-  SAFE_ALLOCATE(res(1:gr%mesh%np_part, 1:st%d%dim, 1:blocksize))
-  SAFE_ALLOCATE(kres(1:gr%mesh%np_part, 1:st%d%dim, 1:blocksize))
+  SAFE_ALLOCATE(me1(1:2, 1:st%d%block_size))
+  SAFE_ALLOCATE(me2(1:4, 1:st%d%block_size))
+  SAFE_ALLOCATE(res(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
+  SAFE_ALLOCATE(kres(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
   SAFE_ALLOCATE(lambda(1:st%nst))
 
   niter = 0
 
-  do sst = st%st_start, st%st_end, blocksize
-    est = min(sst + blocksize - 1, st%st_end)
-    bsize = est - sst + 1
+  do ib = st%block_start, st%block_end
+    sst = st%block_range(ib, 1)
+    est = st%block_range(ib, 2)
 
-    call batch_init(psib, st%d%dim, sst, est, st%X(psi)(:, :, sst:, ik))
-
-    call batch_init(resb, st%d%dim, sst, est, res)
-    call batch_init(kresb, st%d%dim, sst, est, kres)
+    call batch_copy(st%psib(ib, ik), resb, reference= .false.)
+    call batch_copy(st%psib(ib, ik), kresb, reference= .false.)
 
     do isd = 1, sd_steps
 
-      call X(hamiltonian_apply_batch)(hm, gr%der, psib, resb, ik)
+      call X(hamiltonian_apply_batch)(hm, gr%der, st%psib(ib, ik), resb, ik)
 
-      call X(mesh_batch_dotp_vector)(gr%mesh, psib, resb, me1(1, :), reduce = .false.)
-      call X(mesh_batch_dotp_vector)(gr%mesh, psib, psib, me1(2, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, st%psib(ib, ik), resb, me1(1, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, st%psib(ib, ik), st%psib(ib, ik), me1(2, :), reduce = .false.)
 
-      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me1, (/2, blocksize/))
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me1, (/2, st%d%block_size/))
 
       forall(ist = sst:est) st%eigenval(ist, ik) = me1(1, ist - sst + 1)/me1(2, ist - sst + 1)
  
-      call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib, resb)
+      call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%psib(ib, ik), resb)
 
       call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb, kresb)
 
@@ -398,28 +396,27 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
       niter = niter + 2*bsize
 
       call X(mesh_batch_dotp_vector)(gr%mesh, kresb, kresb, me2(1, :), reduce = .false.)
-      call X(mesh_batch_dotp_vector)(gr%mesh, psib,  kresb, me2(2, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, st%psib(ib, ik),  kresb, me2(2, :), reduce = .false.)
       call X(mesh_batch_dotp_vector)(gr%mesh, kresb, resb,  me2(3, :), reduce = .false.)
-      call X(mesh_batch_dotp_vector)(gr%mesh, psib,  resb,  me2(4, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, st%psib(ib, ik),  resb,  me2(4, :), reduce = .false.)
 
-      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me2, (/4, blocksize/))
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me2, (/4, st%d%block_size/))
 
       do ist = sst, est
-        ib = ist - sst + 1
+        ii = ist - sst + 1
 
-        ca = me2(1, ib) * me2(4, ib) - me2(3, ib) * me2(2, ib)
-        cb = me1(2, ib) * me2(3, ib) - me1(1, ib) * me2(1, ib)
-        cc = me1(1, ib) * me2(2, ib) - me1(2, ib) * me2(4, ib)
+        ca = me2(1, ii) * me2(4, ii) - me2(3, ii) * me2(2, ii)
+        cb = me1(2, ii) * me2(3, ii) - me1(1, ii) * me2(1, ii)
+        cc = me1(1, ii) * me2(2, ii) - me1(2, ii) * me2(4, ii)
 
         lambda(ist) = CNST(2.0) * cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
 
       end do
 
-      call batch_axpy(gr%mesh%np, lambda, kresb, psib)
+      call batch_axpy(gr%mesh%np, lambda, kresb, st%psib(ib, ik))
 
     end do
 
-    call batch_end(psib)
     call batch_end(resb)
     call batch_end(kresb)
 
