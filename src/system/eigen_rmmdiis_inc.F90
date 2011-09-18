@@ -351,10 +351,9 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
   integer, parameter :: sweeps = 5
   integer, parameter :: sd_steps = 2
 
-  integer :: isd, ist, idim, sst, est, bsize, ib
-  R_TYPE  :: lambda, ca, cb, cc
-
-  R_TYPE, allocatable :: res(:, :, :)
+  integer :: isd, ist, sst, est, bsize, ib
+  R_TYPE  :: ca, cb, cc
+  R_TYPE, allocatable :: res(:, :, :), lambda(:)
   R_TYPE, allocatable :: kres(:, :, :)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
 
@@ -366,6 +365,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
   SAFE_ALLOCATE(me2(1:4, 1:blocksize))
   SAFE_ALLOCATE(res(1:gr%mesh%np_part, 1:st%d%dim, 1:blocksize))
   SAFE_ALLOCATE(kres(1:gr%mesh%np_part, 1:st%d%dim, 1:blocksize))
+  SAFE_ALLOCATE(lambda(1:st%nst))
 
   niter = 0
 
@@ -387,15 +387,9 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me1, (/2, blocksize/))
 
-      do ist = sst, est
-        ib = ist - sst + 1
-
-        st%eigenval(ist, ik) = me1(1, ib)/me1(2, ib)
-
-        do idim = 1, st%d%dim
-          call lalg_axpy(gr%mesh%np, -st%eigenval(ist, ik), psib%states(ib)%X(psi)(:, idim), res(:, idim, ib))
-        end do
-      end do
+      forall(ist = sst:est) st%eigenval(ist, ik) = me1(1, ist - sst + 1)/me1(2, ist - sst + 1)
+ 
+      call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib, resb)
 
       call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb, kresb)
 
@@ -417,13 +411,11 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
         cb = me1(2, ib) * me2(3, ib) - me1(1, ib) * me2(1, ib)
         cc = me1(1, ib) * me2(2, ib) - me1(2, ib) * me2(4, ib)
 
-        lambda = CNST(2.0) * cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
-
-        do idim = 1, st%d%dim
-          call lalg_axpy(gr%mesh%np, lambda, kres(:, idim, ib), psib%states(ib)%X(psi)(:, idim))
-        end do
+        lambda(ist) = CNST(2.0) * cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
 
       end do
+
+      call batch_axpy(gr%mesh%np, lambda, kresb, psib)
 
     end do
 
@@ -432,13 +424,14 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
     call batch_end(kresb)
 
     if(mpi_grp_is_root(mpi_world)) then
-      call loct_progress_bar(st%nst * (ik - 1) +  est, st%nst * st%d%nik)
+      call loct_progress_bar(st%nst*(ik - 1) +  est, st%nst*st%d%nik)
     end if
 
   end do
 
   call X(states_orthogonalization_full)(st, gr%mesh, ik)
 
+  SAFE_DEALLOCATE_A(lambda)
   SAFE_DEALLOCATE_A(me1)
   SAFE_DEALLOCATE_A(me2)
   SAFE_DEALLOCATE_A(res)
