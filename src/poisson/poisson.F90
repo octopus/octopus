@@ -330,13 +330,7 @@ contains
         message(4) = 'solver are providing, in your case, the same results.'
         call messages_warning(4)
       end if
-      
-      ! This should be done inside poisson3d_init, temporaly fix
-#ifdef HAVE_LIBFM
-      if (this%method == POISSON_FMM) then
-        call fmm_init()
-      end if
-#endif
+
       if (this%method == POISSON_SETE) then
         call messages_experimental('SETE poisson solver')
 
