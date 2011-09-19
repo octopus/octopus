@@ -22,14 +22,30 @@
   subroutine controlfunction_basis_to_theta(par)
     type(controlfunction_t), intent(inout) :: par
     integer :: j, n, dof
-    FLOAT, allocatable :: ep(:), e(:), y(:), a(:), x(:)
+    FLOAT, allocatable :: ep(:), e(:), y(:), x(:)
 
     PUSH_SUB(controlfunction_basis_to_theta)
 
     ASSERT(par%current_representation .ne. ctr_real_time)
 
     select case(par%current_representation)
-    case(ctr_fourier_series_h, ctr_zero_fourier_series_h)
+    case(ctr_fourier_series_h)
+      n = par%dim
+      dof = par%dof
+      SAFE_ALLOCATE( e(1:n))
+      SAFE_ALLOCATE(ep(1:n))
+      SAFE_ALLOCATE(x(1:dof))
+
+      forall(j = 1: n) ep(j) = tdf(par%f(1), j)
+      e = matmul(par%utransf, ep)
+      call cartesian2hyperspherical(e, x(1:n-1))
+
+      par%theta = x
+      SAFE_DEALLOCATE_A(e)
+      SAFE_DEALLOCATE_A(ep)
+      SAFE_DEALLOCATE_A(x)
+
+    case(ctr_zero_fourier_series_h)
       n = par%dim
       dof = par%dof
       SAFE_ALLOCATE( e(1:n))
@@ -39,14 +55,10 @@
       forall(j = 1: n) ep(j) = tdf(par%f(1), j)
       e = matmul(par%utransf, ep)
 
-      if(cf_common%representation .eq. ctr_zero_fourier_series_h) then
-        SAFE_ALLOCATE(y(1:n-1))
-        y = matmul(par%hypersphere_transform, ep(2:n))
-        call cartesian2hyperspherical(y, x(1:n-2))
-        SAFE_DEALLOCATE_A(y)
-       else
-        call cartesian2hyperspherical(e, x(1:n-1))
-      end if
+      SAFE_ALLOCATE(y(1:n-1))
+      y = matmul(par%hypersphere_transform, ep(2:n))
+      call cartesian2hyperspherical(y, x(1:n-2))
+      SAFE_DEALLOCATE_A(y)
 
       par%theta = x
       SAFE_DEALLOCATE_A(e)
@@ -88,7 +100,7 @@
   subroutine controlfunction_theta_to_basis(par)
     type(controlfunction_t), intent(inout) :: par
 
-    FLOAT, allocatable :: y(:), a(:), e(:), ep(:), x(:)
+    FLOAT, allocatable :: a(:), e(:), ep(:), x(:)
     integer :: n, dof, j
 
     PUSH_SUB(controlfunction_theta_to_basis)
@@ -97,7 +109,7 @@
 
 
     select case(par%current_representation)
-    case(ctr_fourier_series_h, ctr_zero_fourier_series_h)
+    case(ctr_fourier_series_h)
 
       n = par%dim
       dof = par%dof
@@ -106,19 +118,30 @@
       SAFE_ALLOCATE(x(1:dof))
       x = par%theta
 
-      if(cf_common%representation .eq. ctr_zero_fourier_series_h) then
-        call hyperspherical2cartesian(x, ep(2:n))
-        e(2:n) = matmul(par%ihypersphere_transform, ep(2:n))
-        e(1) = -sum(e(2:n/2))
-        e = sqrt(cf_common%targetfluence) * e
-        ep = matmul(par%utransfi, e)
-        call tdf_set_numerical(par%f(1), ep)
-      else
-        call hyperspherical2cartesian(x(1:n-1), e)
-        e = sqrt(cf_common%targetfluence) * e
-        ep = matmul(par%utransfi, e)
-        call tdf_set_numerical(par%f(1), ep)
-      end if
+      call hyperspherical2cartesian(x(1:n-1), e)
+      e = sqrt(cf_common%targetfluence) * e
+      ep = matmul(par%utransfi, e)
+      call tdf_set_numerical(par%f(1), ep)
+
+      SAFE_DEALLOCATE_A(e)
+      SAFE_DEALLOCATE_A(ep)
+      SAFE_DEALLOCATE_A(x)
+
+    case(ctr_zero_fourier_series_h)
+
+      n = par%dim
+      dof = par%dof
+      SAFE_ALLOCATE( e(1:n))
+      SAFE_ALLOCATE(ep(1:n))
+      SAFE_ALLOCATE(x(1:dof))
+      x = par%theta
+
+      call hyperspherical2cartesian(x, ep(2:n))
+      e(2:n) = matmul(par%ihypersphere_transform, ep(2:n))
+      e(1) = -sum(e(2:n/2))
+      e = sqrt(cf_common%targetfluence) * e
+      ep = matmul(par%utransfi, e)
+      call tdf_set_numerical(par%f(1), ep)
 
       SAFE_DEALLOCATE_A(e)
       SAFE_DEALLOCATE_A(ep)
@@ -194,7 +217,7 @@
     integer :: i, mm, nn, n, j, k
     FLOAT :: t, det, w1
     type(tdf_t) :: fn, fm
-    FLOAT, allocatable :: neigenvec(:, :), eigenvec(:, :), eigenval(:), a(:), alpha(:, :)
+    FLOAT, allocatable :: neigenvec(:, :), eigenvec(:, :), eigenval(:), alpha(:, :)
 
     PUSH_SUB(controlfunction_trans_matrix)
 
@@ -387,120 +410,17 @@
         par%hypersphere_transform(j, k) = par%hypersphere_transform(j, k) * sqrt(eigenval(k))
       end forall
 
-      SAFE_DEALLOCATE_A(alpha)
-      SAFE_DEALLOCATE_A(eigenvec)
-      SAFE_DEALLOCATE_A(neigenvec)
-      SAFE_DEALLOCATE_A(eigenval)
-
-      SAFE_ALLOCATE(par%utransf (1:par%dim, 1:par%dim))
-      SAFE_ALLOCATE(par%utransfi(1:par%dim, 1:par%dim))
+      SAFE_ALLOCATE(par%utransf (1:n, 1:n))
+      SAFE_ALLOCATE(par%utransfi(1:n, 1:n))
       par%utransf  = M_ZERO
       par%utransfi = M_ZERO
       forall(mm = 1:par%dim) par%utransf(mm, mm) = M_ONE
       forall(mm = 1:par%dim) par%utransfi(mm, mm) = M_ONE
 
-      ! WARNING: Here we are missing the cases in which cf_common%representation is
-      ! either ctr_fourier_series or ctr_zero_fourier_series.
-      if( cf_common%mode .eq. controlfunction_mode_f ) then
-        ! If the object to optimize is the envelope of the
-        ! the laser pulse. Being e(t) the laser pulse, it is assumed that it
-        ! has the form:
-        !   e(t) = f(t) cos(w0*t),
-        ! where f(t) is the envelope. This is then expanded in a basis set:
-        !   f(t) = sum_{n=1}^N f_n g_n(t).
-        ! The fluence F[e] is then given by:
-        !   F[e] = sum_{m=1}^N sum_{n=1}^N f_m f_n S_{nm},
-        !   S_{nm} = \int_{0}^{T} dt g_n(t) g_m(t) cos^2(w0*t).
-        ! The following lines of code calculate a matrix U, placed in par%utransf,
-        ! that performs the transformation of variables that takes {f_n} to
-        ! {h_n}, (\vec{h} = U\vec{f}), such that
-        !   F[e] = sum-{m=1}^N h_n^2.
-        ! The inverse matrix U^{-1} is placed in par%utransfi.
-        !
-        ! This scan probably be optimized in some way?
-        SAFE_ALLOCATE(eigenvec(1:par%dim, 1:par%dim))
-        SAFE_ALLOCATE(eigenval(1:par%dim))
-        par%utransf  = M_ZERO
-        par%utransfi = M_ZERO
-
-        do mm = 1, par%dim
-          select case(cf_common%representation)
-          case(ctr_fourier_series, ctr_fourier_series_h)
-            call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-              cf_common%omegamax, rep = TDF_FOURIER_SERIES)
-          case(ctr_zero_fourier_series_h, ctr_zero_fourier_series)
-            call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-              cf_common%omegamax, rep = TDF_ZERO_FOURIER)
-          end select
-          call tdf_set_numerical(fm, mm, M_ONE)
-          select case(cf_common%representation)
-            case(ctr_fourier_series_h, ctr_fourier_series)
-              call tdf_fourier_to_numerical(fm)
-            case(ctr_zero_fourier_series_h, ctr_zero_fourier_series)
-              call tdf_zerofourier_to_numerical(fm)
-          end select
-          do i = 1, tdf_niter(fm) + 1
-            t = (i-1)*tdf_dt(fm)
-            call tdf_set_numerical(fm, i, tdf(fm, i)*cos(par%w0*t))
-          end do
-
-          do nn = mm, par%dim
-            select case(cf_common%representation)
-            case(ctr_fourier_series_h, ctr_fourier_series)
-              call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-                cf_common%omegamax, rep = TDF_FOURIER_SERIES)
-            case(ctr_zero_fourier_series_h, ctr_zero_fourier_series)
-              call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-                cf_common%omegamax, rep = TDF_ZERO_FOURIER)
-            end select
-            call tdf_set_numerical(fn, nn, M_ONE)
-            select case(cf_common%representation)
-              case(ctr_fourier_series_h, ctr_fourier_series)
-                call tdf_fourier_to_numerical(fn)
-              case(ctr_zero_fourier_series_h, ctr_zero_fourier_series)
-                call tdf_zerofourier_to_numerical(fn)
-            end select
-            do i = 1, tdf_niter(fn) + 1
-              t = (i-1)*tdf_dt(fn)
-              call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
-            end do
-            par%utransf(mm, nn) = tdf_dot_product(fm, fn)
-            call tdf_end(fn)
-          end do
-          call tdf_end(fm)
-        end do
-
-        do mm = 1, par%dim
-          do nn = 1, mm - 1
-            par%utransf(mm, nn) = par%utransf(nn, mm)
-          end do
-        end do
-
-        eigenvec = par%utransf
-        call lalg_eigensolve(par%dim, eigenvec, eigenval)
-
-        ! We need to make sure that eigenvectors have the same sign on all machines, which is not guaranteed
-        ! by LAPACK. So, we will use the following criterion: the sign of the first non-null component should be
-        ! positive.
-        do nn = 1, par%dim
-          do mm = 1, par%dim
-            if( eigenvec(mm, nn)*eigenvec(mm, nn) > CNST(1.0e-20) ) then
-              !eigenvec(1:par%dim, nn) = sign(eigenvec(mm, nn), M_ONE) * eigenvec(1:par%dim, nn)
-              if(eigenvec(mm, nn) < M_ZERO) eigenvec(1:par%dim, nn) = - eigenvec(1:par%dim, nn)
-              exit
-            end if
-          end do
-        end do
-
-        do mm = 1, par%dim
-          do nn = 1, par%dim
-            eigenvec(mm, nn) = eigenvec(mm, nn) * sqrt(eigenval(nn))
-          end do
-        end do
-        par%utransf = transpose(eigenvec)
-        par%utransfi = par%utransf
-
-      end if
+      SAFE_DEALLOCATE_A(alpha)
+      SAFE_DEALLOCATE_A(eigenvec)
+      SAFE_DEALLOCATE_A(neigenvec)
+      SAFE_DEALLOCATE_A(eigenval)
 
     end select
 
