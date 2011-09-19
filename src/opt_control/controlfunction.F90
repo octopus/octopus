@@ -1592,7 +1592,7 @@ contains
        forall(jj = 1:dim) theta(jj) = M_TWO * tdf(par_output%f(1), jj) ! get the projection on my basis set of function (theta=b)
        rr = sqrt(cf_common%targetfluence)
        call hypersphere_grad_matrix(grad_matrix, rr, xx)
-       grad = matmul(grad_matrix, matmul(par%utransf, theta))
+       grad = matmul(grad_matrix, matmul(transpose(par%utransfi), theta))
        grad = -grad  ! the CG algorithm minimizes, so we need to give the negative gradient for maximization
        
        SAFE_DEALLOCATE_A(grad_matrix)
