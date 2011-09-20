@@ -219,8 +219,6 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cf, local)
 
   center(1:3) = cf%n(1:3)/2 + 1
   
-  !The author of PFFT library (M. Pippig) says that  is not needed to initialize to zero the input matrix. 
-  !Pippig, M. :An Efficient and Flexible Parallel FFT Implementation Based on FFTW (page 7)
 
   ! Save the limit values
   min_x = cf%pfft%local_i_start(1)
@@ -229,7 +227,16 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cf, local)
   max_x = cf%pfft%local_i_start(1)+cf%pfft%local_ni(1)
   max_y = cf%pfft%local_i_start(2)+cf%pfft%local_ni(2)
   max_z = cf%pfft%local_i_start(3)+cf%pfft%local_ni(3)
-    
+  
+  ! Initialize to zero the input matrix
+  do ix = min_x, max_x - 1
+    do iy = min_y, max_y - 1
+      do iz = min_z, max_z - 1
+        cf%pfft%data_in(cube_get_pfft_index(cf%pfft,ix,iy,iz)) = M_ZERO
+      end do
+    end do
+  end do
+
   ! Do the actual transform, only for the output values
   do im = 1, mesh%cube_map%nmap
     ip = mesh%cube_map%map(MCM_POINT, im)
