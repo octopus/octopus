@@ -146,11 +146,16 @@ end subroutine poisson_fmm_init
 ! ---------------------------------------------------------
 subroutine poisson_fmm_end(params_fmm)
   type(poisson_fmm_t), intent(inout) :: params_fmm
+
 #ifdef HAVE_LIBFM
+  PUSH_SUB(poisson_fmm_end)
+
   if (mpi_world%size > 1) call MPI_Comm_free(params_fmm%perp_grp%comm, mpi_err)
   SAFE_DEALLOCATE_P(params_fmm%disps)
   SAFE_DEALLOCATE_P(params_fmm%dsize)
   call fmm_finalize()
+
+  POP_SUB(poisson_fmm_end)
 #endif
 end subroutine poisson_fmm_end
 
@@ -365,7 +370,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
   call profiling_out(poisson_prof)
 
-  POP_SUB(poisson_fmm)
+  POP_SUB(poisson_fmm_solve)
 #endif
 end subroutine poisson_fmm_solve
 
@@ -373,5 +378,3 @@ end subroutine poisson_fmm_solve
 !! mode: f90
 !! coding: utf-8
 !! End:
-
-

@@ -10,7 +10,7 @@ Enabled    : Yes
 # modelled in 1D, and with independent electrons to simplify things. The initial guess field
 # does not break the bond, whereas the final optimized laser pulse does (without any significant
 # ionization). The test runs only the first conjugate gradient iteration. After around 40 CG
-# iterations, the field, although not converged, is already good enough to break the field.
+# iterations, the field, although not converged, is already good enough to break the bond.
 
 Input: 08-velocities.01-ground_state.inp
 
