@@ -48,20 +48,16 @@
     case(ctr_zero_fourier_series_h)
       n = par%dim
       dof = par%dof
-      SAFE_ALLOCATE( e(1:n))
       SAFE_ALLOCATE(ep(1:n))
       SAFE_ALLOCATE(x(1:dof))
 
       forall(j = 1: n) ep(j) = tdf(par%f(1), j)
-      e = matmul(par%utransf, ep)
-
       SAFE_ALLOCATE(y(1:n-1))
-      y = matmul(par%hypersphere_transform, ep(2:n))
+      y = matmul(par%utransf, ep(2:n))
       call cartesian2hyperspherical(y, x(1:n-2))
       SAFE_DEALLOCATE_A(y)
 
       par%theta = x
-      SAFE_DEALLOCATE_A(e)
       SAFE_DEALLOCATE_A(ep)
       SAFE_DEALLOCATE_A(x)
 
@@ -132,19 +128,18 @@
       n = par%dim
       dof = par%dof
       SAFE_ALLOCATE( e(1:n))
-      SAFE_ALLOCATE(ep(1:n))
+      SAFE_ALLOCATE( ep(1:n))
       SAFE_ALLOCATE(x(1:dof))
       x = par%theta
 
       call hyperspherical2cartesian(x, ep(2:n))
-      e(2:n) = matmul(par%ihypersphere_transform, ep(2:n))
+      e(2:n) = matmul(par%utransfi, ep(2:n))
       e(1) = -sum(e(2:n/2))
       e = sqrt(cf_common%targetfluence) * e
-      ep = matmul(par%utransfi, e)
-      call tdf_set_numerical(par%f(1), ep)
+      call tdf_set_numerical(par%f(1), e)
 
-      SAFE_DEALLOCATE_A(e)
       SAFE_DEALLOCATE_A(ep)
+      SAFE_DEALLOCATE_A(e)
       SAFE_DEALLOCATE_A(x)
 
     case(ctr_fourier_series)
@@ -217,7 +212,7 @@
     integer :: i, mm, nn, n, j, k
     FLOAT :: t, det, w1
     type(tdf_t) :: fn, fm
-    FLOAT, allocatable :: neigenvec(:, :), eigenvec(:, :), eigenval(:), alpha(:, :)
+    FLOAT, allocatable :: neigenvec(:, :), eigenvec(:, :), eigenval(:)
 
     PUSH_SUB(controlfunction_trans_matrix)
 
@@ -268,16 +263,17 @@
 
     case(ctr_zero_fourier_series, ctr_zero_fourier_series_h)
 
-      SAFE_ALLOCATE(par%u (1:par%dof, 1:par%dof))
+      n = par%dim - 1
+      SAFE_ALLOCATE(par%u (1:n, 1:n))
       par%u = M_ZERO
       w1 = (M_TWO*M_PI/(tdf_dt(par%f(1))*tdf_niter(par%f(1))))
 
-      do mm = 1, par%dof
+      do mm = 1, n
         call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
           cf_common%omegamax, rep = TDF_ZERO_FOURIER)
         call tdf_set_numerical(fm, mm+1, M_ONE)
         call tdf_fourier_to_numerical(fm)
-        if(mm <= par%dof/2) then
+        if(mm <= n/2) then
           do i = 1, tdf_niter(fm) + 1
             t = (i-1)*tdf_dt(fm)
             call tdf_set_numerical(fm, i, &
@@ -290,12 +286,12 @@
           end do
         end if
 
-        do nn = mm, par%dof
+        do nn = mm, n
           call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
             cf_common%omegamax, rep = TDF_ZERO_FOURIER)
           call tdf_set_numerical(fn, nn+1, M_ONE)
           call tdf_fourier_to_numerical(fn)
-          if(nn <= par%dof/2) then
+          if(nn <= n/2) then
             do i = 1, tdf_niter(fn) + 1
               t = (i-1)*tdf_dt(fn)
               call tdf_set_numerical(fn, i, &
@@ -313,7 +309,7 @@
         call tdf_end(fm)
       end do
 
-      do mm = 1, par%dof
+      do mm = 1, n
         do nn = 1, mm - 1
           par%u(mm, nn) = par%u(nn, mm)
         end do
@@ -365,59 +361,38 @@
     case(ctr_zero_fourier_series_h)
 
       n = par%dim
-      SAFE_ALLOCATE(par%hypersphere_transform (n-1, 1:n-1))
-      SAFE_ALLOCATE(par%ihypersphere_transform (n-1, 1:n-1))
-      SAFE_ALLOCATE(alpha(1:n-1, 1:n-1))
       SAFE_ALLOCATE(eigenvec(1:n-1, 1:n-1))
-      SAFE_ALLOCATE(neigenvec(1:n-1, 1:n-1))
       SAFE_ALLOCATE(eigenval(1:n-1))
-      ! k = 1
-      eigenvec = M_ZERO
-      eigenvec(1:n/2-1, 1) = M_ONE
-      eigenvec(n/2:n-1, 1) = M_ZERO
-      eigenval(1) = n/2
-      ! k = 2, ...., n/2-1
-      do k = 2, n/2-1
-        eigenval(k) = M_ONE
-        eigenvec(:, k) = M_ZERO
-        eigenvec(1, k) = -M_ONE
-        eigenvec(k, k) = M_ONE
-      end do
-      ! k = n/2, ..., n-1
-      do k = n/2, n-1
-        eigenval(k) = M_ONE
-        eigenvec(:, k) = M_ZERO
-        eigenvec(k, k) = M_ONE
-      end do
-
-      do k = 1, n-1
-        neigenvec(:, k) = eigenvec(:, k)
-        do j = 1, k-1
-          neigenvec(:, k) = neigenvec(:, k) - & 
-            (dot_product(eigenvec(:, k), neigenvec(:, j)) / dot_product(neigenvec(:, j), neigenvec(:, j))) * neigenvec(:, j)
-        end do
-      end do
-      do k = 1, n-1
-        neigenvec(:, k) = neigenvec(:, k)/sqrt(dot_product(neigenvec(:, k),neigenvec(:, k)))
-      end do
-      eigenvec = neigenvec
-
-      par%ihypersphere_transform = eigenvec
-      par%hypersphere_transform = transpose(eigenvec)
-
-      forall(j=1:n-1, k=1:n-1) 
-        par%ihypersphere_transform(j, k) = par%ihypersphere_transform(j, k) / sqrt(eigenval(k))
-        par%hypersphere_transform(j, k) = par%hypersphere_transform(j, k) * sqrt(eigenval(k))
-      end forall
-
-      SAFE_ALLOCATE(par%utransf (1:n, 1:n))
-      SAFE_ALLOCATE(par%utransfi(1:n, 1:n))
+      SAFE_ALLOCATE(par%utransf (1:n-1, 1:n-1))
+      SAFE_ALLOCATE(par%utransfi(1:n-1, 1:n-1))
       par%utransf  = M_ZERO
       par%utransfi = M_ZERO
-      forall(mm = 1:par%dim) par%utransf(mm, mm) = M_ONE
-      forall(mm = 1:par%dim) par%utransfi(mm, mm) = M_ONE
+      forall(mm = 1:n-1) par%utransf(mm, mm) = M_ONE
+      forall(mm = 1:n-1) par%utransfi(mm, mm) = M_ONE
 
-      SAFE_DEALLOCATE_A(alpha)
+      eigenvec = par%u
+      call lalg_eigensolve(n-1, eigenvec, eigenval)
+      ! We need to make sure that eigenvectors have the same sign on all machines, which is not guaranteed
+      ! by LAPACK. So, we will use the following criterion: the sign of the first non-null component should be
+      ! positive.
+      do nn = 1, n-1
+        do mm = 1, n-1
+          if( eigenvec(mm, nn)*eigenvec(mm, nn) > CNST(1.0e-20) ) then
+            !eigenvec(1:par%dim, nn) = sign(eigenvec(mm, nn), M_ONE) * eigenvec(1:par%dim, nn)
+            if(eigenvec(mm, nn) < M_ZERO) eigenvec(1:n-1, nn) = - eigenvec(1:n-1, nn)
+            exit
+          end if
+        end do
+      end do
+      do mm = 1, n-1
+        do nn = 1, n-1
+          eigenvec(mm, nn) = eigenvec(mm, nn) * sqrt(eigenval(nn))
+        end do
+      end do
+      par%utransf = transpose(eigenvec)
+      par%utransfi = par%utransf
+      det = lalg_inverter(n-1, par%utransfi)
+
       SAFE_DEALLOCATE_A(eigenvec)
       SAFE_DEALLOCATE_A(neigenvec)
       SAFE_DEALLOCATE_A(eigenval)

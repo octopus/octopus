@@ -149,8 +149,6 @@ module controlfunction_m
     FLOAT, pointer :: u(:, :) => NULL()
     FLOAT, pointer :: utransf(:, :)  => NULL()
     FLOAT, pointer :: utransfi(:, :) => NULL()
-    FLOAT, pointer :: hypersphere_transform(:, :) => NULL()
-    FLOAT, pointer :: ihypersphere_transform(:, :) => NULL()
 
     FLOAT, pointer :: theta(:) => NULL()
   end type controlfunction_t
@@ -1014,8 +1012,6 @@ contains
     SAFE_DEALLOCATE_P(cp%utransf)
     SAFE_DEALLOCATE_P(cp%utransfi)
     SAFE_DEALLOCATE_P(cp%theta)
-    SAFE_DEALLOCATE_P(cp%hypersphere_transform)
-    SAFE_DEALLOCATE_P(cp%ihypersphere_transform)
 
     POP_SUB(controlfunction_end)
   end subroutine controlfunction_end
@@ -1364,8 +1360,6 @@ contains
     call loct_pointer_copy(cp_out%utransf, cp_in%utransf)
     call loct_pointer_copy(cp_out%utransfi, cp_in%utransfi)
     call loct_pointer_copy(cp_out%theta, cp_in%theta)
-    call loct_pointer_copy(cp_out%hypersphere_transform, cp_in%hypersphere_transform)
-    call loct_pointer_copy(cp_out%ihypersphere_transform, cp_in%ihypersphere_transform)
 
     POP_SUB(controlfunction_copy)
   end subroutine controlfunction_copy
@@ -1552,7 +1546,7 @@ contains
 
     integer :: dim, jj, mm, kk, ss, tt
     FLOAT :: rr
-    FLOAT, allocatable :: theta(:), grad_matrix(:,:), eigenvectors(:,:), eigenvalues(:), aa(:)
+    FLOAT, allocatable :: theta(:), grad_matrix(:,:), gradb(:)
 
     PUSH_SUB(controlfunction_gradient)
 
@@ -1600,33 +1594,28 @@ contains
     case(ctr_zero_fourier_series_h)
 
        dim = par%dim
-       SAFE_ALLOCATE(theta(1:dim))   ! dim = dof + 2 for zero-fourier-series-h
+       SAFE_ALLOCATE(theta(1:dim))
+       SAFE_ALLOCATE(gradb(1:dim-1))
+
+       forall(jj = 1:dim) theta(jj) = tdf(par_output%f(1), jj)
+
+       do jj = 1, dim/2-1
+         gradb(jj) = - M_TWO*(theta(jj+1) - theta(1))
+       end do
+       do jj = dim/2, dim-1
+         gradb(jj) = - M_TWO*theta(jj+1)
+       end do
+
        SAFE_ALLOCATE(grad_matrix(1:dim - 2, 1:dim - 1))
-       SAFE_ALLOCATE(eigenvectors(1:dim - 1, 1:dim - 1))
-       SAFE_ALLOCATE(eigenvalues(1:dim - 1))
-       SAFE_ALLOCATE(aa(1:dim - 1))
-       
-       forall(jj = 1:dim) theta(jj) = M_TWO * tdf(par_output%f(1), jj) !get the projection on my basis set of function f
        rr = sqrt(cf_common%targetfluence)
        call hypersphere_grad_matrix(grad_matrix, rr, xx)
-       
-       grad = M_ZERO
-       do mm = 1, dim - 2
-          do kk = 1, dim - 1
-             do ss = 1, dim - 1
-                grad(mm) = grad(mm) + grad_matrix(mm, kk) * par%ihypersphere_transform(ss, kk) * theta(ss + 1)
-             end do
-             do tt = 1, dim / 2 - 1
-                grad(mm) = grad(mm) - grad_matrix(mm, kk) * par%ihypersphere_transform(tt, kk) * theta(1)
-             end do
-          end do
-       end do
-       grad = -grad
 
-       SAFE_DEALLOCATE_A(aa)
+       grad = matmul(grad_matrix, matmul(transpose(par%utransfi), gradb))
+
        SAFE_DEALLOCATE_A(grad_matrix)
-       SAFE_DEALLOCATE_A(eigenvectors)
-       SAFE_DEALLOCATE_A(eigenvalues)
+       SAFE_DEALLOCATE_A(theta)
+       SAFE_DEALLOCATE_A(gradb)
+
     end select
 
     SAFE_DEALLOCATE_A(theta)
