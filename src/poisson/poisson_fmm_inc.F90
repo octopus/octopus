@@ -183,6 +183,12 @@ subroutine poisson_fmm_solve(this, pot, rho)
   integer :: ii, jj, ierr
   integer :: sp, ep
 
+  integer  :: ip, idir, limit
+  integer, allocatable :: ix(:)
+  FLOAT :: aux1
+  FLOAT :: rho_half_neigh(1:6)
+
+  
   PUSH_SUB(poisson_fmm_solve)
 
   sp = this%params_fmm%sp
@@ -241,7 +247,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
   call fmm(totalcharges, this%params_fmm%nlocalcharges, q(sp), xyz(1, sp), absrel, deltaE, energyfmm, &
     potLibFMM(sp), periodic, periodicaxes, periodlength, dipolecorrection)
-  
+    
   if (mpi_world%size > 1) then
     !now we need to allgather the results between "states"
     call MPI_Allgatherv(potlibFMM(sp), this%params_fmm%nlocalcharges, MPI_FLOAT, &
@@ -280,6 +286,82 @@ subroutine poisson_fmm_solve(this, pot, rho)
   SAFE_DEALLOCATE_A(q)
   SAFE_DEALLOCATE_A(xyz)
   SAFE_DEALLOCATE_A(potLibFMM)
+     
+  SAFE_ALLOCATE(ix(1:this%der%mesh%sb%dim))
+  
+  ! Corrections for first neighbours obtained with linear interpolation      
+  ! First we obtain the densities in neighbouring points ip+1/2
+  rho_half_neigh=M_ZERO
+  do ip =1,this%der%mesh%np
+    do idir= 1, this%der%mesh%sb%dim
+      ix(idir) = this%der%mesh%idx%Lxyz(ip, idir)
+    end do
+    
+    limit=this%der%mesh%np_part
+    
+    if ( (this%der%mesh%idx%Lxyz_inv(ix(1)-2, ix(2), ix(3)) <= limit) .and. &
+         (this%der%mesh%idx%Lxyz_inv(ix(1)+2, ix(2), ix(3)) <= limit) .and. &
+         (this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)-2, ix(3)) <= limit) .and. &
+         (this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)+2, ix(3)) <= limit) .and. &
+         (this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)-2) <= limit) .and. &
+         (this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))+2 <= limit) ) then
+
+      rho_half_neigh(1)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1)-1, ix(2), ix(3))) &
+           + (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))))) &
+           - (1.0/16.0)*((rho(this%der%mesh%idx%Lxyz_inv(ix(1)-2, ix(2), ix(3)))&
+           + (rho(this%der%mesh%idx%Lxyz_inv(ix(1)+1, ix(2), ix(3))))))
+
+      rho_half_neigh(2)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))) + &
+           (rho(this%der%mesh%idx%Lxyz_inv(ix(1)+1, ix(2), ix(3))))) &
+           - (1.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1)-1, ix(2), ix(3))) + &
+           (rho(this%der%mesh%idx%Lxyz_inv(ix(1)+2, ix(2), ix(3)))))
+
+      rho_half_neigh(3)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)-1, ix(3))) + &
+           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))))) &
+           - (1.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)-2, ix(3))) + &
+           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)+1, ix(3)))))
+
+      rho_half_neigh(4)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))) + &
+           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)+1, ix(3))))) &
+           - (1.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)-1, ix(3))) + &
+           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)+2, ix(3)))))
+
+      rho_half_neigh(5)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)-1)) + &
+           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))))) &
+           - (1.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)-2)) + &
+           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)+1))))
+
+      rho_half_neigh(6)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))) + &
+           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)+1)))) &
+           - (1.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)-1)) + &
+           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)+2))))
+
+      aux1=M_ZERO
+      aux1=aux1+(this%der%mesh%spacing(2)*this%der%mesh%spacing(3))*&
+           (rho_half_neigh(1)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1)-1, ix(2), ix(3)))/16.0000)
+      aux1=aux1+(this%der%mesh%spacing(2)*this%der%mesh%spacing(3))*&
+           (rho_half_neigh(2)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1)+1, ix(2), ix(3)))/16.0000)
+      aux1=aux1+(this%der%mesh%spacing(1)*this%der%mesh%spacing(3))*&
+           (rho_half_neigh(3)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)-1, ix(3)))/16.0000)
+      aux1=aux1+(this%der%mesh%spacing(1)*this%der%mesh%spacing(3))*&
+           (rho_half_neigh(4)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)+1, ix(3)))/16.0000)
+      aux1=aux1+(this%der%mesh%spacing(1)*this%der%mesh%spacing(2))*&
+           (rho_half_neigh(5)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)-1))/16.0000)
+      aux1=aux1+(this%der%mesh%spacing(1)*this%der%mesh%spacing(2))*&
+           (rho_half_neigh(6)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)+1))/16.0000)
+
+      aux1=aux1-(M_SIX/22.862)*((this%der%mesh%spacing(1)*&
+           this%der%mesh%spacing(2)*&
+           this%der%mesh%spacing(3))**(2./3.))*&
+           rho(ip)*M_TWO*M_PI*(3./(M_PI*4.))**(2./3.)
+
+      !  if(aux1>0)then
+      pot(ip)=pot(ip)+aux1
+      !  end if
+    end if
+
+  end do
+  SAFE_DEALLOCATE_A(ix)
 
   call profiling_out(poisson_prof)
 
