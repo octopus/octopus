@@ -1340,8 +1340,9 @@ contains
 #endif
 
     if(ierr .ne. 0) then
-      write(message(1),'(a)') 'Could not find a maximum.'      
-      call messages_fatal(1)
+      write(message(1),'(a,f14.6,a)') 'spectrum_hsfunction_min: The maximum at', xx,' was not properly converged.'
+      write(message(2),'(a,i5)')      'Error code: ierr'
+      call messages_warning(2)
     end if
     call hsfunction(xx, hsval)
     omega_min = xx
