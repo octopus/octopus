@@ -2,7 +2,6 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : Current
-Programs   : octopus
 TestGroups : long-run
 Enabled    : Yes
 
@@ -27,7 +26,7 @@ Enabled    : Yes
 # TODO: This test is a little bit slow. It should be optimized to make it
 # faster. 
 
-
+Programs   : octopus
 Input: 18-current.01-current.inp
 match ; Current flow                  ; GREP(static/current-flow, '# Flow', 20) ; 0.200964249215E-01
 match ; Magnetic Field at loop center ; LINE(static/Bind_z.x=0\,z=0, 34, 24) ; 3.06863991178469E-004

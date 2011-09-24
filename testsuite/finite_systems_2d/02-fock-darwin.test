@@ -2,7 +2,6 @@
 # $Id$
 
 Test       : Fock-Darwin spectrum
-Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
@@ -21,6 +20,7 @@ Enabled    : Yes
 # Soc. 27, 86 (1930)]
 # 
 
+Programs   : octopus; octopus_mpi
 Input : 02-fock-darwin.01-ground_state.inp
 
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; 0.250200

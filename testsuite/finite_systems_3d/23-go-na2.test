@@ -2,10 +2,10 @@
 # $Id: 23-go-na2.test $
 
 Test       : Geometry optimization
-Programs   : octopus_mpi; octopus; octopus_single
 TestGroups : long-run
 Enabled    : Yes
 
+Programs   : octopus_mpi; octopus; octopus_single
 Input      : 23-go-na2.01-steep.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.41784564
 match ; Force    [1] ; GREP(static/info, 'Forces on the ions', 50, 2) ; -0.000732

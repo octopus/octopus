@@ -2,23 +2,24 @@
 # $Id$
 
 Test       : LiH vibrational frequency
-Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
+Programs   : octopus; octopus_mpi
 Processors : 4
-
 Input: 04-vib_modes.01-ground_state.inp
 match ; Total Energy   ; GREP(static/info, 'Total       =', 20) ; -0.76459868
 match ; Eigenvalues    ; GREP(static/info, '1   --', 12)        ; -0.141240
 match ; Dipole Moment  ; GREP(static/info, '<z>', 14)           ;  2.24560
 
+Programs   : octopus; octopus_mpi
 Precision : 0.002
 Input: 04-vib_modes.02-vib_modes.inp
 match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_lr, 1, 7) ; 1420.83506
 match ; Infrared Intensity      ; LINE(vib_modes/infrared, 2, 60)             ;    0.52791
 match ; Dynamical Matrix Entry  ; LINE(vib_modes/dynamical_matrix_lr, 1, 21)  ; -3952.7359
 
+Programs   : octopus; octopus_mpi
 Input: 04-vib_modes.03-vib_modes_fd.inp
 Precision : 0.005
 match ; Vibrational Frequency   ; LINE(vib_modes/normal_frequencies_fd, 1, 7) ; 1421.6355

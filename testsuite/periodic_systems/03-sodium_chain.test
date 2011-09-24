@@ -2,11 +2,11 @@
 # $Id$
 
 Test       : Sodium chain
-Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
 
+Programs   : octopus; octopus_mpi
 Input: 03-sodium_chain.01-ground_state.inp
 match ; Bands n=1,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 1) ; -3.648593
 match ; Bands n=1,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 1) ; -3.552608
@@ -22,7 +22,7 @@ match ; Bands n=2,k=4; GREP(unocc_static/eigenvalues, '#k =   4', 12, 2) ; -0.41
 match ; Bands n=2,k=5; GREP(unocc_static/eigenvalues, '#k =   5', 12, 2) ; -0.281613
 match ; Bands n=2,k=6; GREP(unocc_static/eigenvalues, '#k =   6', 12, 2) ; -1.210890
 
-
+Programs   : octopus; octopus_mpi
 Input: 03-sodium_chain.02-ground_state_disp.inp
 match ; Bands n=1,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 1) ; -3.648589
 match ; Bands n=1,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 1) ; -3.552604

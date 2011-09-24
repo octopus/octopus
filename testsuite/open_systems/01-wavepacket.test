@@ -2,20 +2,20 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : Open boundaries 1D
-Programs   : octopus; octopus_mpi
 TestGroups : short-run, open-systems
 Enabled    : Yes
 
 # We check the transparent boundary conditions for different
 # discretization orders in 1D by looking at the total charge in the
 # the central region.
-
+Programs   : octopus; octopus_mpi
 Input: 01-wavepacket.01-deriv_order_1.inp
 match ; Density [step   0] ; LINE(flat_td.general/multipoles,  16, 30) ; 2.000000000000e+00
 match ; Density [step 100] ; LINE(flat_td.general/multipoles, 116, 30) ; 1.986581544309e+00
 match ; Density [step 200] ; LINE(flat_td.general/multipoles, 216, 30) ; 1.226785158230e+00
 match ; Density [step 300] ; LINE(flat_td.general/multipoles, 316, 30) ; 4.850766932375e-01
 
+Programs   : octopus; octopus_mpi
 Input: 01-wavepacket.02-deriv_order_4.inp
 match ; Density [step   0] ; LINE(flat_td.general/multipoles,  16, 30) ; 2.000000000000e+00
 match ; Density [step 100] ; LINE(flat_td.general/multipoles, 116, 30) ; 1.986163865782e+00

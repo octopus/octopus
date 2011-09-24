@@ -2,10 +2,10 @@
 # $Id: 09-qr.test 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : QR orthogonalization
-Programs   : oct-test
 TestGroups : long-run
 Enabled    : Yes
 
+Programs   : oct-test
 Precision : 5.0e-14
 Input: 09-qr.01-real.inp
 match ; Overlap 1 1 ; GREP(out, '      1      1', 15) ;  0.100000E+01

@@ -2,10 +2,10 @@
 # $Id$
 
 Test       : Static magnetic field
-Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
+Programs   : octopus; octopus_mpi
 Input: 03-magnetic.01-gs-unpolarized.inp
 match ; Eigenvalue  1    ; GREP(static/info, '  1   --', 13) ;  -0.248426
 match ; Eigenvalue  2    ; GREP(static/info, '  2   --', 13) ;  -0.056939
@@ -13,6 +13,7 @@ match ; Eigenvalue  3    ; GREP(static/info, '  3   --', 13) ;  -0.048611
 match ; Eigenvalue  4    ; GREP(static/info, '  4   --', 13) ;  -0.039065
 match ; Total energy     ; GREP(static/info, 'Total       =', 20) ; -1.91221164
 
+Programs   : octopus; octopus_mpi
 Input: 03-magnetic.02-td-unpolarized.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.912211890243e+00
 match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.897585403351e+00
@@ -20,6 +21,7 @@ match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.897585391868e+0
 match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.897585897744e+00
 match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.897585936817e+00
 
+Programs   : octopus; octopus_mpi
 Input: 03-magnetic.03-gs-polarized.inp
 match ; Eigenvalue  1 up ; GREP(static/info, '  1   up', 13) ;  -0.269533
 match ; Eigenvalue  2 up ; GREP(static/info, '  2   up', 13) ;  -0.077346
@@ -31,6 +33,7 @@ match ; Eigenvalue  3 dn ; GREP(static/info, '  3   dn', 13) ;  -0.025279
 match ; Eigenvalue  4 dn ; GREP(static/info, '  4   dn', 13) ;  -0.015446
 match ; Total energy     ; GREP(static/info, 'Total       =', 20) ; -1.92627692
 
+Programs   : octopus; octopus_mpi
 Input: 03-magnetic.04-td-polarized.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.926276211519e+00
 match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.911651562369e+00
@@ -38,6 +41,7 @@ match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.911651557924e+0
 match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.911652069280e+00
 match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.911652106716e+00
 
+Programs   : octopus; octopus_mpi
 Input: 03-magnetic.05-gs-spinors.inp
 match ; Eigenvalue  1    ; GREP(static/info, '  1   --', 13) ;  -0.270007
 match ; Eigenvalue  2    ; GREP(static/info, '  2   --', 13) ;  -0.223101
@@ -46,6 +50,7 @@ match ; Eigenvalue  4    ; GREP(static/info, '  4   --', 13) ;  -0.068886
 match ; Eigenvalue  5    ; GREP(static/info, '  4   --', 13) ;  -0.068886
 match ; Total energy     ; GREP(static/info, 'Total       =', 20) ; -1.92715542
 
+Programs   : octopus; octopus_mpi
 Input: 03-magnetic.06-td-spinors.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.927155329551e+00
 match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.912530841625e+00

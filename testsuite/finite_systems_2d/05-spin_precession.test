@@ -2,17 +2,17 @@
 # $Id
 
 Test       : Spin Precession
-Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
 # This test demonstrates the precession of the spin of one single
 # electron around the axis determined by a static magnetic field.
-
+Programs   : octopus; octopus_mpi
 Input: 05-spin_precession.01-ground_state.inp
 
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 0.24999997
 
+Programs   : octopus; octopus_mpi
 Input: 05-spin_precession.02-time_propagation.inp
 
 match ; <Sx> (t=T/4) ; LINE(td.general/spin, -1, 29) ; 2.304949036240e-05

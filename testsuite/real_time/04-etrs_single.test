@@ -2,7 +2,6 @@
 # $Id: 24-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Enforced time-reversal symmetry propagator - single precision
-Programs   : octopus_single
 TestGroups : short-run
 Enabled    : Yes
 
@@ -11,10 +10,12 @@ Enabled    : Yes
 # test. Convergence criteria are less strict.
 
 # ground state
+Programs   : octopus_single
 Processors : 1
 Input      : 01-etrs.01-gs.inp
 match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -11.00275421
 
+Programs   : octopus_single
 Processors : 4
 Input      : 01-etrs.02-td.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.098091602325e+01

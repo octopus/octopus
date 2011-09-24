@@ -2,13 +2,15 @@
 # $Id: 24-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Time-dependent angular momentum
-Programs   : octopus_mpi; octopus
 TestGroups : long-run
 Enabled    : Yes
 
+
+Programs   : octopus_mpi; octopus
 Input      : 09-angular_momentum.01-gs.inp
 match ; Initial energy    ; GREP(static/info, 'Total       =', 20) ; -35.13242715
 
+Programs   : octopus_mpi; octopus
 Input      : 09-angular_momentum.02-td_gipaw.inp
 match ; Energy [step   1] ; LINE(td.general/energy, -101, 30) ; -3.513229020379e+01
 match ; Energy [step  25] ; LINE(td.general/energy,  -76, 30) ; -3.499682086980e+01
@@ -41,6 +43,7 @@ match ; Lz [step 100]     ; LINE(td.general/angular,   -1, 70) ; -2.601120844702
 #match ; L2 [step  75]     ; LINE(td.general/angular,  -26, 90) ; 1.651256625782e+02
 #match ; L2 [step 100]     ; LINE(td.general/angular,   -1, 90) ; 1.653179013477e+02
 
+Programs   : octopus_mpi; octopus
 Input      : 09-angular_momentum.03-td_icl.inp
 match ; Energy [step   1] ; LINE(td.general/energy, -101, 30) ; -3.513229020379e+01
 match ; Energy [step  25] ; LINE(td.general/energy,  -76, 30) ; -3.499682086980e+01

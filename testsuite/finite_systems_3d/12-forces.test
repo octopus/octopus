@@ -1,7 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 Test       : Forces
-Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
@@ -11,14 +10,17 @@ Enabled    : Yes
 # tagged as "short-run".  The purpose is to test the calculation of
 # the force on the atoms.
 
+Programs   : octopus; octopus_mpi
 Input: 12-forces.01-N2_gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -19.83069427
 match ; Force        ; GREP(static/info, 'Forces on the ions', 20, 2) ; 0.318750
 
+Programs   : octopus; octopus_mpi
 Input: 12-forces.02-N2_gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -19.99536317
 match ; Force        ; GREP(static/info, 'Forces on the ions', 20, 2) ; 0.037895
 
+Programs   : octopus; octopus_mpi
 Input: 12-forces.03-N2_gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -19.49489909
 match ; Force        ; GREP(static/info, 'Forces on the ions', 20, 2) ; -2.630955

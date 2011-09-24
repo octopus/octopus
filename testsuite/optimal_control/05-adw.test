@@ -2,7 +2,6 @@
 # $Id$
 
 Test       : 1D Asymmetric Double Well
-Programs   : octopus
 TestGroups : long-run, oct
 Enabled    : Yes
 
@@ -14,6 +13,7 @@ Enabled    : Yes
 #
 # V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3
 #
+Programs   : octopus
 Input: 05-adw.01-ground_state.inp
 match ; Total energy ; GREP(ground_state_static/info, 'Total       =', 20) ; -0.62061585
 match ; 2th state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -0.463839
@@ -26,6 +26,7 @@ match ; 2th state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -
 # It runs for only two iterations (which is enough to test that the
 # implementation is working), but if it is continued it replicates
 # nicely the results given in Fig. 2.
+Programs   : octopus
 Input: 05-adw.02-filter_fixed.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.00063351
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.57999349
@@ -35,6 +36,7 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.579993
 # however if the run is continued it reproduces nicely the result 
 # given in the paper (not exactly, due probably to small numerical 
 # differences).
+Programs   : octopus
 Input: 05-adw.03-filter_indirect.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.16380529
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.42622001

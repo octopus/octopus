@@ -2,17 +2,18 @@
 # $Id: 24-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Exponential midpoint-rule propagator
-Programs   : octopus_mpi; octopus
 TestGroups : short-run
 Enabled    : Yes
 
 #This test checks the time-propagation
 
 # ground state
+Programs   : octopus_mpi; octopus
 Processors : 1
 Input      : 03-exp_mid.01-gs.inp
 match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -10.60764719
 
+Programs   : octopus_mpi; octopus
 Processors : 4
 Input      : 03-exp_mid.02-td.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.058576638440e+01

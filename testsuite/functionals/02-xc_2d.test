@@ -2,10 +2,11 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : XC 2D
-Programs   : octopus; octopus_single; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
+
+Programs   : octopus; octopus_single; octopus_mpi
 Input: 02-xc_2d.00-hartree.inp
 match ; Hartree energy                           ; GREP(static/info, 'Total       =', 20)   ;  1.11152575
 match ; Hartree eigenvalues sum                  ; GREP(static/info, 'Eigenvalues =', 20)   ;  1.42855062
@@ -34,6 +35,7 @@ match ; Hartree eigenvalue 2 dn                  ; GREP(static/info, '  2   dn',
 # lower in energy and closer to the Quantum Monte Carlo numbers, which
 # could be due to the use of an underconverged basis set in the paper.
 
+Programs   : octopus; octopus_single; octopus_mpi
 Input: 02-xc_2d.01-hf.inp
 match ; Hartree-Fock energy                      ; GREP(static/info, 'Total       =', 20)   ;  1.04191861
 match ; Hartree-Fock eigenvalues sum             ; GREP(static/info, 'Eigenvalues =', 20)   ;  1.31401934
@@ -45,24 +47,33 @@ match ; Hartree-Fock eigenvalue 1 dn             ; GREP(static/info, '  1   dn',
 match ; Hartree-Fock eigenvalue 2 dn             ; GREP(static/info, '  2   dn', 13) ; 1.224726
 
 # We use the wave-functions obtained to test the 2D XC functionals
-
+Programs   : octopus; octopus_single; octopus_mpi
 Input: 02-xc_2d.lda_amgb.inp
 match ; LDA exchange                             ; GREP(out, 'Exchange    =', 20)   ; -0.62342504
 match ; LDA AMGB correlation                     ; GREP(out, 'Correlation =', 20)   ; -0.03534534
 
 # (this calculation is done without spin polarization)
+Programs   : octopus; octopus_single; octopus_mpi
 Input: 02-xc_2d.lda_prm.inp
 match ; LDA exchange                             ; GREP(out, 'Exchange    =', 20)   ; -0.44082808
 match ; LDA PRM correlation                      ; GREP(out, 'Correlation =', 20)   ; -0.12223476
 
+
+Programs   : octopus; octopus_single; octopus_mpi
 Input: 02-xc_2d.gga_b86.inp
 match ; GGA 2D B86 exchange                      ; GREP(out, 'Exchange    =', 20)   ; -0.66569035
 
+
+Programs   : octopus; octopus_single; octopus_mpi
 Input: 02-xc_2d.gga_b86_mgc.inp
 match ; GGA 2D B86 MGC exchange                  ; GREP(out, 'Exchange    =', 20)   ; -0.65901733
 
+
+Programs   : octopus; octopus_single; octopus_mpi
 Input: 02-xc_2d.gga_b88.inp
 match ; GGA 2D B88 exchange                      ; GREP(out, 'Exchange    =', 20)   ; -0.67040364
 
+
+Programs   : octopus; octopus_single; octopus_mpi
 Input: 02-xc_2d.gga_pbe.inp
 match ; GGA 2D PBE exchange                      ; GREP(out, 'Exchange    =', 20)   ; -0.67022789

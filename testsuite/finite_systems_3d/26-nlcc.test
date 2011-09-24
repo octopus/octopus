@@ -2,10 +2,10 @@
 # $Id: 23-go-na2.test $
 
 Test       : Non-linear core corrections
-Programs   : octopus_mpi; octopus
 TestGroups : short-run
 Enabled    : Yes
 
+Programs   : octopus_mpi; octopus
 Input      : 26-nlcc.01-Fatom.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -26.97584803
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ; -4.20331421

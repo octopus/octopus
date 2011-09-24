@@ -2,10 +2,10 @@
 # $Id: oct-run_regression_test.pl,v 1.15 2006/03/13 09:56:40 acastro Exp      :
 
 Test       : XC Functionals 1D
-Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
+Programs   : octopus; octopus_mpi
 Input: 01-xc_1d.01-wfs-lda.inp
 match ; LDA energy                               ; GREP(static/info, 'Total       =', 20)   ; -4.17967691
 match ; LDA eigenvalue 1 up                      ; GREP(static/info, '  1   up', 13) ;  -0.775161
@@ -13,6 +13,7 @@ match ; LDA eigenvalue 2 up                      ; GREP(static/info, '  2   up',
 match ; LDA eigenvalue 1 dn                      ; GREP(static/info, '  1   dn', 13) ;  -0.797099
 match ; LDA eigenvalue 2 dn                      ; GREP(static/info, '  2   dn', 13) ;  -0.167274
 
+Programs   : octopus; octopus_mpi
 Input: 01-xc_1d.02-wfs-hf.inp
 match ; Hartree-Fock energy                      ; GREP(static/info, 'Total       =', 20)   ; -4.19644929
 match ; Hartree-Fock eigenvalue 1 up             ; GREP(static/info, '  1   up', 13) ;  -1.071001
@@ -20,12 +21,15 @@ match ; Hartree-Fock eigenvalue 2 up             ; GREP(static/info, '  2   up',
 match ; Hartree-Fock eigenvalue 1 dn             ; GREP(static/info, '  1   dn', 13) ;  -1.126189 
 match ; Hartree-Fock eigenvalue 2 dn             ; GREP(static/info, '  2   dn', 13) ;  -0.315508
 
+Programs   : octopus; octopus_mpi
 Input: 01-xc_1d.lda_csc.inp
 match ; LDA exchange                             ; GREP(out, 'Exchange    =', 20)   ; -1.01931500
 match ; LDA CSC correlation                      ; GREP(out, 'Correlation =', 20)   ; -0.03745068
 
+Programs   : octopus; octopus_mpi
 Input: 01-xc_1d.oep_kli.inp
 match ; OEP KLI                                  ; GREP(out, 'Exchange    =', 20)   ; -1.07717828
 
+Programs   : octopus; octopus_mpi
 Input: 01-xc_1d.oep_exx.inp
 match ; OEP Exact exchange                       ; GREP(out, 'Exchange    =', 20)   ; -1.07717828

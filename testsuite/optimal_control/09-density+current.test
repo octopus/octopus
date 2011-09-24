@@ -1,14 +1,15 @@
 Test       : density+current
-Programs   : octopus
 TestGroups : long-run, oct
 Enabled    : Yes
 
 # calculate GS and first excited state of 1D 
 # asymmetric quantum well
+Programs   : octopus
 Input: 09-density+current.01-ground_state.inp
 
 # optimize overlap of density and minimize
 # the current of final state. Uses ZR98.
+Programs   : octopus
 Input: 09-density+current.02-oct.inp
 
 
@@ -21,6 +22,7 @@ match ; J2 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 60) ;  -0.2263
 # optimize overlap of density and minimize
 # the current of final state during certain 
 # time before final time. Uses CG.
+Programs   : octopus
 Input: 09-density+current.03-tdoct.inp
 
 Precision : 0.000001

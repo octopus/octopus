@@ -2,11 +2,11 @@
 # $Id: 07-tb09.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Diamond TB09 functional
-Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
 # ground state
+Programs   : octopus; octopus_mpi
 Input      : 07-tb09.01-gs_symm.inp
 
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -41.91336177
@@ -38,6 +38,7 @@ match ; Eigenvalue [  k=4, n=8   ] ; GREP(static/info, '#k =   4', 12,  9) ;  0.
 match ; Eigenvalue [  k=4, n=16  ] ; GREP(static/info, '#k =   4', 12, 17) ;  0.505460
 match ; Eigenvalue [  k=4, n=17  ] ; GREP(static/info, '#k =   4', 12, 18) ;  0.505460
 
+Programs   : octopus; octopus_mpi
 Input      : 07-tb09.02-gs_nosymm.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -41.91336177
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -51.15076275

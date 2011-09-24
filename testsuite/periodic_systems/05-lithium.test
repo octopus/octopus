@@ -2,13 +2,12 @@
 # $Id: 04-silicon.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Lithium
-Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
 # ground state
+Programs   : octopus; octopus_mpi
 Input      : 05-lithium.01-gs.inp
-
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -0.55438036
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -0.54866368
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ; -0.11103889
@@ -31,8 +30,8 @@ match ; Eigenvalue      [ k = 58 ] ; GREP(static/info, '#k =  58', 12,  1) ; -0.
 match ; Eigenvalue      [ k = 60 ] ; GREP(static/info, '#k =  60', 12,  1) ; -0.035409
 match ; Eigenvalue      [ k = 64 ] ; GREP(static/info, '#k =  64', 12,  1) ;  0.007876
 
+Programs   : octopus; octopus_mpi
 Input      : 05-lithium.02-td.inp
-
 match ; Energy           [step  1] ; LINE(td.general/energy, -21, 30) ; -5.543774675224e-01
 match ; Energy           [step  5] ; LINE(td.general/energy, -16, 30) ; -5.491962738618e-01
 match ; Energy           [step 10] ; LINE(td.general/energy, -11, 30) ; -5.491979907577e-01
@@ -45,8 +44,8 @@ match ; Vector potential [step 10] ; LINE(td.general/gauge_field, -11, 30) ; 9.9
 match ; Vector potential [step 15] ; LINE(td.general/gauge_field,  -6, 30) ; 9.962363792646e+00
 match ; Vector potential [step 20] ; LINE(td.general/gauge_field,  -1, 30) ; 9.933201081578e+00
 
+Programs   : octopus; octopus_mpi
 Input      : 05-lithium.03-td-restart.inp
-
 match ; Energy           [step 20] ; LINE(td.general/energy, -11, 30) ; -5.492013062508e-01
 match ; Energy           [step 35] ; LINE(td.general/energy,  -6, 30) ; -5.492028861244e-01
 match ; Energy           [step 30] ; LINE(td.general/energy,  -1, 30) ; -5.492044065224e-01

@@ -3,7 +3,6 @@
 
 Test       : Morse potential
 Arch       : Linux alberto-laptop 2.6.22-13-generic
-Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
@@ -16,16 +15,18 @@ Enabled    : Yes
 # It consists of the calculation of the evolution of the nuclear wavepacket
 # of an OH bond in a water molecule, modeled with the Morse potential.
 
+Programs   : octopus; octopus_mpi
 Input: 09-morse.01-gs.inp
-Input: 09-morse.02-unocc.inp
 
+Programs   : octopus; octopus_mpi
+Input: 09-morse.02-unocc.inp
 match ; 'E[nu=0]' ; GREP(static/eigenvalues, ' 1   -- ', 12) ; -0.190472
 match ; 'E[nu=1]' ; GREP(static/eigenvalues, ' 2   -- ', 12) ; -0.173229
 match ; 'E[nu=2]' ; GREP(static/eigenvalues, ' 3   -- ', 12) ; -0.156805
 match ; 'E[nu=6]' ; GREP(static/eigenvalues, ' 7   -- ', 12) ; -0.099285
 
+Programs   : octopus; octopus_mpi
 Input: 09-morse.03-td.inp
-
 match ; '<Psi(T)|Psi(0)> (niter)' ; LINE(td.general/projections, -1,  1) ; 1654
 match ; '<Psi(T)|Psi(0)>  (time)' ; LINE(td.general/projections, -1,  9) ; 4.135000000000e+02
 match ; '<Psi(T)|Psi(0)>  (proj)' ; LINE(td.general/projections, -1, 29) ; -9.760443910921e-01

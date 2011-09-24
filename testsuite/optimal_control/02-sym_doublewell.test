@@ -2,7 +2,6 @@
 # $Id: 03-asym_doublewell.test 2999 2007-06-16 12:56:04Z lorenzen $
 
 Test       : Symmetric Double Well
-Programs   : octopus; octopus_single
 TestGroups : long-run, oct
 Enabled    : Yes
 
@@ -13,10 +12,14 @@ Enabled    : Yes
 
 
 # Ground state and unoccupied states
+Programs   : octopus; octopus_single
 Input: 02-sym_doublewell.01-ground_state.inp
+
+Programs   : octopus; octopus_single
 Input: 02-sym_doublewell.02-unocc.inp
 match ; 2nd state    ; GREP(static/eigenvalues, '2   --', 12) ; -0.525874
 
 # Then, run the optimization.
+Programs   : octopus; octopus_single
 Input: 02-sym_doublewell.03-oct.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.51481998

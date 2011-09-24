@@ -6,6 +6,7 @@ Programs   : oct-test; oct-test_mpi
 TestGroups : short-run
 Enabled    : Yes
 
+Programs   : oct-test; oct-test_mpi
 Precision : 3.0e-3
 Input: 03-derivatives_3d.01.inp
 
@@ -27,6 +28,7 @@ match ; Complex Laplacian (blocksize =  32); GREP(out, 'Laplacian complex bsize 
 match ; Complex Laplacian (blocksize =  64); GREP(out, 'Laplacian complex bsize =  64', 40, 0) ; 1.2044354237E-03
 match ; Complex Laplacian (blocksize = 128); GREP(out, 'Laplacian complex bsize = 128', 40, 0) ; 1.2044354237E-03
 
+Programs   : oct-test; oct-test_mpi
 Precision : 3.0e-4
 
 match ; Real gradient; GREP(out, 'Gradient real', 20, 0) ; 1.6181665936E-04

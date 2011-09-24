@@ -2,7 +2,6 @@
 # $Id: 08-velocities.test $
 
 Test       : QOCT, velocity target
-Programs   : octopus
 TestGroups : oct
 Enabled    : Yes
 
@@ -12,9 +11,10 @@ Enabled    : Yes
 # ionization). The test runs only the first conjugate gradient iteration. After around 40 CG
 # iterations, the field, although not converged, is already good enough to break the bond.
 
+Programs   : octopus
 Input: 08-velocities.01-ground_state.inp
 
+Programs   : octopus
 Input: 08-velocities.02-oct.inp
-
 Precision : 0.1
 match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1 ', 35) ; 2885.97438576

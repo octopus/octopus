@@ -2,10 +2,10 @@
 # $Id: 07-gram_schmidt.test 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : Gram-Schmidt orthogonalization
-Programs   : oct-test; oct-test_mpi
 TestGroups : short-run
 Enabled    : Yes
 
+Programs   : oct-test; oct-test_mpi
 Precision : 1.0e-13
 Input: 07-gram_schmidt.01-real.inp
 match ; Overlap 1 1 ; GREP(out, '      1      1', 15) ;  0.100000E+01
@@ -15,6 +15,7 @@ match ; Overlap 6 6 ; GREP(out, '      6      6', 15) ;  0.100000E+01
 match ; Overlap 7 8 ; GREP(out, '      7      8', 15) ;  0.201708E-14
 match ; Overlap 9 9 ; GREP(out, '      9      9', 15) ;  0.100000E+01
 
+Programs   : oct-test; oct-test_mpi
 Input: 07-gram_schmidt.02-complex.inp
 match ; Overlap 1 1 ; GREP(out, '      1      1', 15) ;  0.100000E+01
 match ; Overlap 1 2 ; GREP(out, '      1      2', 15) ;  0.708249E-16

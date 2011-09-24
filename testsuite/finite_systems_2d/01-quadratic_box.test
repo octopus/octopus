@@ -2,13 +2,13 @@
 # $Id$
 
 Test       : Quadratic Box
-Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
 # The following tests reproduced some basic results from:
 # E. Rasanen et al., Phys. Rev. B 67, 235307 (2003).
 # This input file is just the particle in a box in 2D calculation.
+Programs   : octopus; octopus_mpi
 Input : 01-quadratic_box.01-ground_state.inp
 match ; Eigenvalue ; GREP(static/info, '1   --', 13) ; 0.999921
 match ; Occupation ; GREP(static/info, '1   --', 28) ; 1.000000
@@ -16,6 +16,7 @@ match ; Occupation ; GREP(static/info, '1   --', 28) ; 1.000000
 
 # This adds the Hartree interaction in 2D to the previous particle in a box example.
 # To make it more meaninful, it uses two electrons.
+Programs   : octopus; octopus_mpi
 Input : 01-quadratic_box.02-hartree.inp
 match ; Eigenvalue ; GREP(static/info, '1   --', 13) ; 3.768933
 match ; Occupation ; GREP(static/info, '1   --', 28) ; 2.000000
@@ -24,6 +25,7 @@ match ; Occupation ; GREP(static/info, '1   --', 28) ; 2.000000
 # Finally, the full calculation, i.e. with exchange and correlation. This calculations permits
 # to obtain one point in Fig. 3 of [E. Rasanen et al., Phys. Rev. B 67, 235307 (2003).]: that
 # corresponding to the chemical potential for the two electron dot, with beta = 1.
+Programs   : octopus; octopus_mpi
 Input : 01-quadratic_box.03-hartree+xc.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 3.35400744
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; 2.739407
@@ -33,5 +35,6 @@ match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; 2.739407
 # spin-polarized calculation. This calculations permits to obtain one point 
 # in Fig. 3 of [E. Rasanen et al., Phys. Rev. B 67, 235307 (2003).]: 
 # that point corresponding to the chemical potential for the three electron dot, with beta = 1.
+Programs   : octopus; octopus_mpi
 Input : 01-quadratic_box.04-spin_polarized.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 7.75925832

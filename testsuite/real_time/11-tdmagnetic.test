@@ -2,7 +2,6 @@
 # $Id
 
 Test       : Time-dependent magnetic field
-Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
@@ -30,13 +29,15 @@ Enabled    : Yes
 # The time-propagation is then performed with the symmetric
 # potential.
 
+Programs   : octopus; octopus_mpi
 Input: 11-tdmagnetic.01-gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 1.79226552
 
+Programs   : octopus; octopus_mpi
 Input: 11-tdmagnetic.02-unocc.inp
-
 match ; Unoccupied state 1; GREP(static/eigenvalues, '1   --', 12) ; 1.792266
 
+Programs   : octopus; octopus_mpi
 Input: 11-tdmagnetic.03-td.inp
 match ; <x>(t) ; LINE(td.general/multipoles, -1, 50) ; 1.448208882702e+00
 match ; <y>(t) ; LINE(td.general/multipoles, -1, 70) ; -1.105531371295e-02

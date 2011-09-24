@@ -2,15 +2,16 @@
 # $Id$
 
 Test       : Linear-Response Polarizabilities
-Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
+Programs   : octopus; octopus_mpi
 Input: 02-h2o_pol_lr.01_h2o_gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -16.06685186
 match ; Eigenvalues  ; GREP(static/info, '1   --', 12)        ;  -1.167612
 match ; Dipole       ; GREP(static/info, '<y>', 14)           ;   3.65917E-01
 
+Programs   : octopus; octopus_mpi
 Input: 02-h2o_pol_lr.02_h2o_dyn_pol.inp
 match ; Polarizability XX w=0.0    ; LINE(em_resp/freq_0.0000/alpha, 2,  5) ; 15.248041
 match ; Polarizability YY w=0.0    ; LINE(em_resp/freq_0.0000/alpha, 3, 25) ; 12.333210
@@ -28,6 +29,7 @@ match ; Born charge O XX w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 3,  5
 match ; Born charge O YY w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 4, 25) ; -0.408311
 match ; Born charge O ZZ w=0.1    ; LINE(em_resp/freq_0.1000/Born_charges, 5, 45) ;  0.145284
 
+Programs   : octopus; octopus_mpi
 Input: 02-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp
 Precision : 0.001
 match ; Polarizability XX w=0.0    ; LINE(em_resp/freq_0.0000/alpha, 2,  5) ; 15.241500
@@ -58,6 +60,7 @@ match ; Hyperpolarizability w=0.0    ; GREP(em_resp/freq_0.0000/beta, 'beta // y
 match ; Hyperpolarizability w=0.1 Re ; GREP(em_resp/freq_0.1000/beta, 'beta // y', 10) ;  0.86792097E+02
 match ; Hyperpolarizability w=0.1 Im ; GREP(em_resp/freq_0.1000/beta, 'beta // y', 32) ; -0.44353707E+00
 
+Programs   : octopus; octopus_mpi
 Input: 02-h2o_pol_lr.04_h2o_susc.inp
 Precision : 0.001
 match; Paramagnetic susceptibility ; LINE(em_resp/freq_0.0000/susceptibility,  5, 25) ;   30.003216

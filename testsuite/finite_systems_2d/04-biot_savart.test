@@ -2,7 +2,6 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : Biot-Savart law
-Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
@@ -21,6 +20,7 @@ Enabled    : Yes
 # and the radius of the ring is 3. Therefore, the predicted magnetic field
 # is 0.0002731 au, quite close to the value produced by the test.
 
+Programs   : octopus; octopus_mpi
 Input: 04-biot_savart.01-gs.inp
 match ; Current flow                  ; GREP(static/current-flow, '# Flow', 20) ; -0.180741589461E-01
 match ; Magnetic Field at loop center ; LINE(static/Bind_z.x=0\,z=0, 87, 24) ; 2.81319023461392E-004

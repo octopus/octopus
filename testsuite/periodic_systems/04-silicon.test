@@ -2,13 +2,12 @@
 # $Id: 04-silicon.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Silicon crystal
-Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
 # ground state
+Programs   : octopus; octopus_mpi
 Input      : 04-silicon.01-gs.inp
-
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -34.17247007
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -33.79951714
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -1.12467857
@@ -51,6 +50,7 @@ match ; Eigenvalue 16 ; GREP(static/info, '#k =   4', 12, 16) ;  0.110017
 match ; Eigenvalue 17 ; GREP(static/info, '#k =   4', 12, 17) ;  0.214325
 
 # ground state
+Programs   : octopus; octopus_mpi
 Input      : 04-silicon.02-kdotp.inp
 match ; vg(x) k1 st1  ; LINE(kdotp/velocity,     5, 20) ;  0.06521
 match ; vg(y) k2 st10 ; LINE(kdotp/velocity,    34, 32) ; -0.32180

@@ -2,12 +2,11 @@
 # $Id: 07-modelmb.test 5186 2009-04-11 07:26:12Z xavier $
 
 Test       : Model MB
-Programs   : octopus
 TestGroups : short-run
 Enabled    : Yes
 
+Programs   : octopus
 Input : 07-modelmb.01-gs.inp
-
 match ; Eigenvalue     1 ; GREP(static/info, ' 1   --', 13) ; -0.635661
 match ; Eigenvalue     2 ; GREP(static/info, ' 2   --', 13) ; -0.396570
 match ; Eigenvalue     3 ; GREP(static/info, ' 3   --', 13) ; -0.381559
@@ -15,8 +14,8 @@ match ; Density matrix 1 ; LINE(static/modelmb/densmatr_ip001_imb01, 5151, 23) ;
 match ; Density matrix 2 ; LINE(static/modelmb/densmatr_ip001_imb02, 5151, 23) ; 4.742E-01
 match ; Density matrix 3 ; LINE(static/modelmb/densmatr_ip001_imb03, 5151, 23) ; 4.888E-01
 
+Programs   : octopus
 Input : 07-modelmb.02-td.inp
-
 match ; Energy         [step   1]; LINE(td.general/energy, -201, 30) ; -1.271322167167e+00
 match ; Energy         [step  50]; LINE(td.general/energy, -151, 30) ; -1.261322168663e+00
 match ; Energy         [step 100]; LINE(td.general/energy, -101, 30) ; -1.261322168663e+00

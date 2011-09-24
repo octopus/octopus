@@ -2,10 +2,10 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : Derivatives 1D
-Programs   : oct-test; oct-test_mpi
 TestGroups : short-run
 Enabled    : Yes
 
+Programs   : oct-test; oct-test_mpi
 Precision : 3.0e-9
 Input: 01-derivatives_1d.01.inp
 match ; Real Laplacian (blocksize =   1); GREP(out, 'Laplacian real bsize =   1', 37, 0) ; 2.7801274971E-09
@@ -26,10 +26,12 @@ match ; Complex Laplacian (blocksize =  32); GREP(out, 'Laplacian complex bsize 
 match ; Complex Laplacian (blocksize =  64); GREP(out, 'Laplacian complex bsize =  64', 40, 0) ; 3.4710603750E-09
 match ; Complex Laplacian (blocksize = 128); GREP(out, 'Laplacian complex bsize = 128', 40, 0) ; 3.4710603750E-09
 
+Programs   : oct-test; oct-test_mpi
 Precision : 3.0e-11
 match ; Real gradient; GREP(out, 'Gradient real', 20, 0) ; 1.1709414428E-11
 match ; Complex gradient; GREP(out, 'Gradient complex', 23, 0) ; 1.4055457659E-11
 
+Programs   : oct-test; oct-test_mpi
 Precision : 3.0e-9
 Input: 01-derivatives_1d.02-fortran.inp
 match ; Real Laplacian (blocksize =   1); GREP(out, 'Laplacian real bsize =   1', 37, 0) ; 2.7801274971E-09

@@ -2,11 +2,10 @@
 # $Id$
 
 Test       : Spin-orbit coupling (fully converged SCF)
-Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
-
+Programs   : octopus; octopus_mpi
 Input: 08-spin_orbit_coupling_full.01-hgh.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -27.322244
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; -26.422600
@@ -28,7 +27,7 @@ match ; <Sz>       15 ; GREP(static/info, '15   --', 52) ;  0.4492
 
 match ; Force         ; GREP(static/info, 'Forces on the ions', 20, 2) ; -0.977686
 
-
+Programs   : octopus; octopus_mpi
 Input: 08-spin_orbit_coupling_full.02-rkb.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -27.330226
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; -26.439545

@@ -76,10 +76,10 @@ sub create_template {
 # $cvs_id
 
 Test       : $opt_c
-Programs   : octopus
 TestGroups : short-run
 Enabled    : Yes
 
+Programs   : octopus
 Input: 01-template.01-ground_state.inp
 
 # add your own matches
@@ -170,20 +170,13 @@ $mpiexec_raw =~ s/\ (.*)//;
 # default number of processors for MPI runs is 2
 $np = 2;
 
-
-# Figure out which are the executables to test
-my @executables;
-find_executables();
-
 # This variable counts the number of failed testcases.
 $failures = 0;
 
 $tempdirpath = $ENV{TEMPDIRPATH};
 if ("$tempdirpath" eq "") { $tempdirpath = '/tmp'; }
 
-# Loop over all the executables.
-foreach my $octopus_exe (@executables){
-
+{
   set_precision("default", $octopus_exe);
   $test_succeeded = 1;
 
@@ -216,7 +209,6 @@ foreach my $octopus_exe (@executables){
       if(!$opt_i) {
 	print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
 	print "Using workdir    : $workdir \n";
-	print "Using executable : $octopus_exe\n";
 	print "Using test file  : $opt_f \n";
       }
     }
@@ -232,114 +224,143 @@ foreach my $octopus_exe (@executables){
     # Running this regression test if it is enabled
     if ( $enabled eq "Yes" ) {
 
-      if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
-	$np = $1;
+      if ( $_ =~ /^Programs\s*:\s*(.*)\s*$/) {
+	my $i = 0;
+	foreach my $program (split(/;/, $1)) {
+	  $program =  "$program$exec_suffix";
+	  $program =~ s/^\s+//;
+	  foreach my $x (@octopus_execs) {
+	    $valid = $program cmp $x;
+	    if(!$valid) {
+	      # check if the executable was compiled with the required options
+	      $has_options = 1;
+	      foreach my $y (split(/;/, $options)){
+		$command_line = "$exec_directory/$x -c | grep -q $y";
+		$rv = system($command_line);
+		$has_options = $has_options && ($rv == 0)
+	      }
+	      
+	      if($has_options) {
+		$executables[$i] = "$exec_directory/$x";
+		$i = $i+1;
+	      }
+	    }
+	  }
+	}
       }
 
-      if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
-	$input_base = $1;
-	$input_file = dirname($opt_f) . "/" . $input_base;
-
-	if( -f $input_file ) {
-	  print "\n\nUsing input file : $input_file \n";
-	  system("cp $input_file $workdir/inp");
-	  # Ensure that the input file is writable so that it can
-	  # be overwritten by the next test.
-	  $mode = (stat "$workdir/inp")[2];
-	  chmod $mode|S_IWUSR, "$workdir/inp";
-	} else {
-	  die "could not find input file: $input_file\n";
+      foreach my $octopus_exe (@executables){
+	
+	if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
+	  $np = $1;
 	}
-
-	$return_value = 0;
-
-	if ( !$opt_m ) {
-	  if ( !$opt_n ) {
-	    print "\nStarting test run ...\n";
-
-	    $octopus_exe_suffix = $octopus_exe;
-
-	    # serial or MPI run?
-	    if ( $octopus_exe_suffix =~ /mpi$/) {
-	      if( -x "$mpiexec_raw") {
-		if ("$mpiexec" =~ /ibrun/) {
+	
+	if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
+	  $input_base = $1;
+	  $input_file = dirname($opt_f) . "/" . $input_base;
+	  
+	  if( -f $input_file ) {
+	    print "\n\nUsing input file : $input_file \n";
+	    print "Using executable : $octopus_exe\n";
+	    system("cp $input_file $workdir/inp");
+	    # Ensure that the input file is writable so that it can
+	    # be overwritten by the next test.
+	    $mode = (stat "$workdir/inp")[2];
+	    chmod $mode|S_IWUSR, "$workdir/inp";
+	  } else {
+	    die "could not find input file: $input_file\n";
+	  }
+	  
+	  $return_value = 0;
+	  
+	  if ( !$opt_m ) {
+	    if ( !$opt_n ) {
+	      print "\nStarting test run ...\n";
+	      
+	      $octopus_exe_suffix = $octopus_exe;
+	      
+	      # serial or MPI run?
+	      if ( $octopus_exe_suffix =~ /mpi$/) {
+		if( -x "$mpiexec_raw") {
+		  if ("$mpiexec" =~ /ibrun/) {
 		    $specify_np = "";
 		    $my_nslots = "MY_NSLOTS=$np";
-		} else {
+		  } else {
 		    $specify_np = "-n $np";
 		    $my_nslots = "";
+		  }
+		  $command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $octopus_exe_suffix > out";
+		} else {
+		  print "No mpiexec found: Skipping parallel test \n";
+		  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
+		  exit 255;
 		}
-		$command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $octopus_exe_suffix > out";
 	      } else {
-		print "No mpiexec found: Skipping parallel test \n";
-		if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-		exit 255;
+		$command_line = "cd $workdir; $aexec $octopus_exe_suffix > out ";
 	      }
-	    } else {
-	      $command_line = "cd $workdir; $aexec $octopus_exe_suffix > out ";
-	    }
-
-	    print "Executing: " . $command_line . "\n";
-
-	    $test_start = [gettimeofday];
-	    $return_value = system("$command_line");
-	    $test_end   = [gettimeofday];
-
-	    system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
-
-	    $elapsed = tv_interval($test_start, $test_end);
-	    printf("\tElapsed time: %8.1f s\n\n", $elapsed);
-
-	    if($return_value == 0) {
-	      print "Finished test run.\n\n";
-	      printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
+	      
+	      print "Executing: " . $command_line . "\n";
+	      
+	      $test_start = [gettimeofday];
+	      $return_value = system("$command_line");
+	      $test_end   = [gettimeofday];
+	      
+	      system("sed -n '/Running octopus/{N;N;N;N;N;N;p;}' $workdir/out > $workdir/build-stamp");
+	      
+	      $elapsed = tv_interval($test_start, $test_end);
+	      printf("\tElapsed time: %8.1f s\n\n", $elapsed);
+	      
+	      if($return_value == 0) {
+		print "Finished test run.\n\n";
+		printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
+		
+	      } else {
+		print "\n\nTest run failed with exit code $return_value.\n\n";
+		printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
+		$failures++;
+		$test_succeeded = 0;
+	      }
 	      
 	    } else {
-	      print "\n\nTest run failed with exit code $return_value.\n\n";
-	      printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
-	      $failures++;
-	      $test_succeeded = 0;
+	      if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix > out \n"; }
 	    }
-
-	  } else {
-	    if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix > out \n"; }
+	    $test{"run"} = 1;
 	  }
-	  $test{"run"} = 1;
+	  
+	  # copy all files of this run to archive directory with the name of the
+	  # current input file
+	  mkdir "$workdir/$input_base";
+	  @wfiles = `ls -d $workdir/* | grep -v inp`;
+	  $workfiles = join("",@wfiles);
+	  $workfiles =~ s/\n/ /g;
+	  system("cp -r $workfiles $workdir/inp $workdir/$input_base");
+	  
+	  # file for shell script with matches
+	  $mscript = "$workdir/$input_base/matches.sh";
+	  open(SCRIPT, ">$mscript") or die "could not create script file\n";
+	  # write skeleton for script
+	  print SCRIPT "#\!/bin/bash\n\n";
+	  close(SCRIPT);
+	  chmod 0755, $mscript;
+	}
+	
+	if ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
+	  set_precision($1, $octopus_exe) ;
 	}
 
-	# copy all files of this run to archive directory with the name of the
-	# current input file
-	mkdir "$workdir/$input_base";
-	@wfiles = `ls -d $workdir/* | grep -v inp`;
-	$workfiles = join("",@wfiles);
-	$workfiles =~ s/\n/ /g;
-	system("cp -r $workfiles $workdir/inp $workdir/$input_base");
-
-	# file for shell script with matches
-	$mscript = "$workdir/$input_base/matches.sh";
-	open(SCRIPT, ">$mscript") or die "could not create script file\n";
-	# write skeleton for script
-	print SCRIPT "#\!/bin/bash\n\n";
-	close(SCRIPT);
-	chmod 0755, $mscript;
-      }
-
-      if ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
-	set_precision($1, $octopus_exe) ;
-      }
-
-      if ( $_ =~ /^match/ && !$opt_n && $return_value == 0) {
-	if(run_match_new($_)){
-	  printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \n";
-	  if ($opt_v) { print_hline(); }
-	} else {
-	  printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
-	  print_hline();
-	  $test_succeeded = 0;
-	  $failures++;
+	if ( $_ =~ /^match/ && !$opt_n && $return_value == 0) {
+	  if(run_match_new($_)){
+	    printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \n";
+	    if ($opt_v) { print_hline(); }
+	  } else {
+	    printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
+	    print_hline();
+	    $test_succeeded = 0;
+	    $failures++;
+	  }
 	}
+	
       }
-
     } else {
       if ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
         if ( $enabled eq "No") {
@@ -352,7 +373,7 @@ foreach my $octopus_exe (@executables){
         }
       }
     }
-
+    
   }
 
   if ($opt_l)  { system ("cat $workdir/out >> out.log"); }
@@ -370,10 +391,6 @@ sub find_executables(){
 
   open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
   while ($_ = <TESTSUITE>) {
-
-    if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
-      $name = $1;
-    }
 
     if ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
       $options = $1;
@@ -403,7 +420,7 @@ sub find_executables(){
 	}
       }
     }
-
+    
   }
   close(TESTSUITE);
 

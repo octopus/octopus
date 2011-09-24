@@ -2,13 +2,13 @@
 # $Id: 05-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Car-Parrinello Molecular Dynamics
-Programs   : octopus_mpi; octopus
 TestGroups : short-run
 Enabled    : Yes
 
 #This test checks the time propagation
 
 # ground state
+Programs   : octopus_mpi; octopus
 Processors : 1
 Input      : 05-cpmd.01-gs.inp
 match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -10.60616403
@@ -27,7 +27,7 @@ match ; Forces [step 10] ; LINE(td.general/coordinates, -11, 270) ; -1.357621712
 match ; Forces [step 15] ; LINE(td.general/coordinates,  -6, 270) ; -1.378878597553e-01
 match ; Forces [step 20] ; LINE(td.general/coordinates,  -1, 270) ; -1.409192120424e-01
 
-
+Programs   : octopus_mpi; octopus
 Processors : 4
 Input      : 05-cpmd.03-vel_verlet.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.058427604716e+01

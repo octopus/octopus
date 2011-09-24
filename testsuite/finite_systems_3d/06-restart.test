@@ -2,23 +2,25 @@
 # $Id$
 
 Test       : Restart
-Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
 
 # First start a ground state calculation
+Programs   : octopus; octopus_mpi
 Input: 06-restart.01-ground_state.inp
 # no matches here ...
 
 
 # Now restart the previous calculation
+Programs   : octopus; octopus_mpi
 Input: 06-restart.02-restart_ground_state.inp
 match ; Eigenvalue [up] ; GREP(static/info, '1   up', 13) ; -0.014047
 match ; Eigenvalue [dn] ; GREP(static/info, '1   dn', 13) ; -0.085321
 
 
 # Start a time-dependent calculation
+Programs   : octopus; octopus_mpi
 Input: 06-restart.03-td_calc.inp
 match ; TD start    ; LINE(td.general/multipoles, -1,   9) ;  3.500000000000e-01
 match ; charge [up] ; LINE(td.general/multipoles, -1,  29) ;  0.000000000000e+00
@@ -27,9 +29,9 @@ match ; <x> [dn]    ; LINE(td.general/multipoles, -1, 129) ; -3.495466780114e-03
 
 
 # Finally restart the td calculation
+Programs   : octopus; octopus_mpi
 Input: 06-restart.04-restart_td_calc.inp
 match ; TD start    ; LINE(td.general/multipoles, -1,   9) ;  7.000000000000e-01
 match ; charge [up] ; LINE(td.general/multipoles, -1,  29) ;  0.000000000000e+00
 match ; charge [dn] ; LINE(td.general/multipoles, -1, 109) ;  9.999999999983e-01
 match ; <x> [dn]    ; LINE(td.general/multipoles, -1, 129) ; -6.969717724775e-03
-

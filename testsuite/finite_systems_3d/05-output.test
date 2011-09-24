@@ -2,10 +2,10 @@
 # $Id: 06-restart.test 5186 2009-04-11 07:26:12Z xavier $
 
 Test       : Output
-Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
+Programs   : octopus; octopus_mpi
 Input: 05-output.01-gs.inp
 match ; Total energy     ; GREP(static/info, 'Total       =', 20) ; -11.99584633
 

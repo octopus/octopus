@@ -2,14 +2,14 @@
 # $Id: 06-adw.test $
 
 Test       : QOCT+TDDFT
-Programs   : octopus
 TestGroups : long-run, oct
 Enabled    : Yes
 
 
+Programs   : octopus
 Input: 07-qoct+tddft.01-ground_state.inp
 
+Programs   : octopus
 Input: 07-qoct+tddft.02-oct.inp
-
 Precision : 0.005
 match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1 ', 40) ; 0.08836988
