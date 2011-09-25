@@ -2,6 +2,7 @@
 # $Id$
 
 Test       : 1D Box
+Programs   : octopus
 TestGroups : long-run, oct
 Enabled    : Yes
 
@@ -11,13 +12,12 @@ Enabled    : Yes
 # First, the two lowest eigenstates of the box
 # V(x) = -5*step(x+5)*step(5-x),
 # are calculated. 
-Programs   : octopus
 Input: 04-box.01-ground_state.inp
 match ; Total energy ; GREP(ground_state_static/info, 'Total       =', 20) ; -4.95697718
 match ; 2th state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -4.827968
 
 # Then, run the optimization for 5 iterations with ZBR98 scheme and compare the convergence.
-Programs   : octopus
+
 Input: 04-box.02-oct_long.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.64160059
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.75913866
@@ -25,7 +25,6 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.867604
 
 
 # Then, run the optimization for 5 iterations with a ZR98 scheme and compare the convergence.
-Programs   : octopus
 Input: 04-box.03-oct_long.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.62184007
 match ; J1 2nd iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.73956971
@@ -33,7 +32,6 @@ match ; J1 5th iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.872817
 
 
 # Then, run the optimization for 5 iterations with a WG05 scheme and compare the convergence.
-Programs   : octopus
 Input: 04-box.04-oct_long.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.71058031
 match ; J1 2nd iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.85779958
@@ -43,24 +41,20 @@ match ; J1 5th iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.985956
 # This test makes use of Broyden mixing.
 # Note that, despite the poor behaviour of the first iterations, the run actually converges
 # if it is allowed to run for more iterations.
-Programs   : octopus
 Input: 04-box.05-oct_long.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.57640934
 match ; J1 2nd iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.74128790
 match ; J1 5th iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.78706913
 
 # Then, run the optimization for "a few" iterations with the DIRECT OPTIMIZATION scheme
-Programs   : octopus
 Input: 04-box.06-oct_long.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1', 40) ; 0.02116245
 
 # Then, run the optimization also with DIRECT OPTIMIZATION scheme, but optimizing
 # the envelope of the laser field only.
-Programs   : octopus
 Input: 04-box.07-oct_long.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1', 40) ; 0.26364279
 
 # Now the CONJUGATE GRADIENTS scheme.
-Programs   : octopus
 Input: 04-box.08-oct_long.inp
 match ; J 1st iteration  ; GREP(opt-control/convergence, '##        1', 20) ; 0.67237016

@@ -2,317 +2,240 @@
 # $Id: oct-run_regression_test.pl,v 1.15 2006/03/13 09:56:40 acastro Exp      :
 
 Test       : XC Functionals
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
-
-Programs   : octopus; octopus_mpi
 Input: 03-xc.01-gs.inp
 match ; Hartree-Fock energy                    ; GREP(static/info, 'Total       =', 20)   ; -0.45473695
 match ; Hartree-Fock eigenvalue up             ; GREP(static/info, '  1   up', 13) ;   -1.128711
 match ; Hartree-Fock eigenvalue dn             ; GREP(static/info, '  1   dn', 13) ;   -0.683557
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_x.inp
 match ; lda_x                                  ; GREP(out, 'Exchange    =', 20) ; -0.27231872
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_wigner.inp
 match ; lda_c_wigner                           ; GREP(out, 'Correlation =', 20) ; -0.04403771
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_rpa.inp
 match ; lda_c_rpa                              ; GREP(out, 'Correlation =', 20) ; -0.04203203
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_hl.inp
 match ; lda_c_hl                               ; GREP(out, 'Correlation =', 20) ; -0.04827922
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_gl.inp
 match ; lda_c_gl                               ; GREP(out, 'Correlation =', 20) ; -0.04909824
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_xalpha.inp
 match ; lda_c_xalpha                           ; GREP(out, 'Correlation =', 20) ; -0.13615936
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_vwn.inp
 match ; lda_c_vwn                              ; GREP(out, 'Correlation =', 20) ; -0.03869312
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_vwn_rpa.inp
 match ; lda_c_vwn_rpa                          ; GREP(out, 'Correlation =', 20) ; -0.05643197
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_pz.inp
 match ; lda_c_pz                               ; GREP(out, 'Correlation =', 20) ; -0.03787715
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_pz_mod.inp
 match ; lda_c_pz_mod                           ; GREP(out, 'Correlation =', 20) ; -0.03787715
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_ob_pz.inp
 match ; lda_c_ob_pz                            ; GREP(out, 'Correlation =', 20) ; -0.03653120
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_pw.inp
 match ; lda_c_pw                               ; GREP(out, 'Correlation =', 20) ; -0.03849585
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_pw_mod.inp
 match ; lda_c_pw_mod                           ; GREP(out, 'Correlation =', 20) ; -0.03849578
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_ob_pw.inp
 match ; lda_c_ob_pw                            ; GREP(out, 'Correlation =', 20) ; -0.03723110
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_c_vbh.inp
 match ; lda_c_vbh                              ; GREP(out, 'Correlation =', 20) ; -0.05507011
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.lda_xc_teter93.inp
 match ; lda_xc_teter93                         ; GREP(out, 'Correlation =', 20) ; -0.31070454
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_pbe.inp
 match ; gga_x_pbe                              ; GREP(out, 'Exchange    =', 20)   ; -0.31679142
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_pbe_r.inp
 match ; gga_x_pbe_r                            ; GREP(out, 'Exchange    =', 20)   ; -0.32398108
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_b86.inp
 match ; gga_x_b86                              ; GREP(out, 'Exchange    =', 20)   ; -0.32201027
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_b86_mgc.inp
 match ; gga_x_b86_mgc                          ; GREP(out, 'Exchange    =', 20)   ; -0.32026479
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_b88.inp
-match ; gga_x_b88                              ; GREP(out, 'Exchange    =', 20)   ; -0.3228269
+match ; gga_x_b88                              ; GREP(out, 'Exchange    =', 20)   ; -0.32282696
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_g96.inp
 match ; gga_x_g96                              ; GREP(out, 'Exchange    =', 20)   ; -0.32654330
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_pw86.inp
 match ; gga_x_pw86                             ; GREP(out, 'Exchange    =', 20)   ; -0.32233736
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_pw91.inp
 match ; gga_x_pw91                             ; GREP(out, 'Exchange    =', 20)   ; -0.31717671
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_optx.inp
 match ; gga_x_optx                             ; GREP(out, 'Exchange    =', 20)   ; -0.32831885
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_dk87_r1.inp
 match ; gga_x_dk87_r1                          ; GREP(out, 'Exchange    =', 20)   ; -0.32024775
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_dk87_r2.inp
 match ; gga_x_dk87_r2                          ; GREP(out, 'Exchange    =', 20)   ; -0.32006476
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_lg93.inp
 match ; gga_x_lg93                             ; GREP(out, 'Exchange    =', 20)   ; -0.32083551
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_ft97_a.inp
 match ; gga_x_ft97_a                           ; GREP(out, 'Exchange    =', 20)   ; -0.32902638
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_ft97_b.inp
 match ; gga_x_ft97_b                           ; GREP(out, 'Exchange    =', 20)   ; -0.32881732
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_pbe_sol.inp
 match ; gga_x_pbe_sol                          ; GREP(out, 'Exchange    =', 20)   ; -0.30262561
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_rpbe.inp
 match ; gga_x_rpbe                             ; GREP(out, 'Exchange    =', 20)   ; -0.32449509
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_wc.inp
 match ; gga_x_wc                               ; GREP(out, 'Exchange    =', 20)   ; -0.30960897
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_mpw91.inp
 match ; gga_x_mpw91                            ; GREP(out, 'Exchange    =', 20)   ; -0.32242669
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_am05.inp
 match ; gga_x_am05                             ; GREP(out, 'Exchange    =', 20)   ; -0.28774147
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_pbea.inp
 match ; gga_x_pbea                             ; GREP(out, 'Exchange    =', 20)   ; -0.31167154
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_mpbe.inp
 match ; gga_x_mpbe                             ; GREP(out, 'Exchange    =', 20)   ; -0.31887879
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_xpbe.inp
 match ; gga_x_xpbe                             ; GREP(out, 'Exchange    =', 20)   ; -0.32072116
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_bayesian.inp
 match ; gga_x_bayesian                         ; GREP(out, 'Exchange    =', 20)   ; -0.31915901
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_pbe_jsjr.inp
 match ; gga_x_pbe_jsjr                         ; GREP(out, 'Exchange    =', 20)   ; -0.30720216
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_c_pbe.inp
 match ; gga_c_pbe                              ; GREP(out, 'Correlation =', 20)   ; -0.01453915
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_c_lyp.inp
 match ; gga_c_lyp                              ; GREP(out, 'Correlation =', 20)   ; -0.01069976
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_c_p86.inp
 match ; gga_c_p86                              ; GREP(out, 'Correlation =', 20)   ; -0.01385540
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_c_pbe_sol.inp
 match ; gga_c_pbe_sol                          ; GREP(out, 'Correlation =', 20)   ; -0.01754529
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_c_pw91.inp
 match ; gga_c_pw91                             ; GREP(out, 'Correlation =', 20)   ; -0.01535887
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_c_am05.inp
-match ; gga_c_am05                             ; GREP(out, 'Correlation =', 20)   ; -0.0337266
+match ; gga_c_am05                             ; GREP(out, 'Correlation =', 20)   ; -0.03372666
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_c_xpbe.inp
 match ; gga_c_xpbe                             ; GREP(out, 'Correlation =', 20)   ; -0.01404629
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_c_lm.inp
 match ; gga_c_lm                               ; GREP(out, 'Correlation =', 20)   ; -0.14127086
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_c_pbe_jrgx.inp
 match ; gga_c_pbe_jrgx                         ; GREP(out, 'Correlation =', 20)   ; -0.01924435
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_optb88_vdw.inp
 match ; gga_x_optb88_vdw                       ; GREP(out, 'Exchange    =', 20)   ; -0.31417392
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_pbek1_vdw.inp
 match ; gga_x_pbek1_vdw                        ; GREP(out, 'Exchange    =', 20)   ; -0.32039747
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_x_optpbe_vdw.inp
 match ; gga_x_optpbe_vdw                       ; GREP(out, 'Exchange    =', 20)   ; -0.31463108
 
 # this functional can not be tested like this as it does not return the energy, but only the potential
-#Programs   : octopus; octopus_mpi
 #Input: 03-xc.gga_x_lb.inp
 #match ; gga_x_lb                              ; GREP(out, 'Correlation =', 20)   ; 0.00000000
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_hcth_93.inp
 match ; gga_xc_hcth_93                         ; GREP(out, 'Correlation =', 20)   ; -0.34470063
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_hcth_120.inp
 match ; gga_xc_hcth_120                        ; GREP(out, 'Correlation =', 20)   ; -0.34222215
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_hcth_147.inp
 match ; gga_xc_hcth_147                        ; GREP(out, 'Correlation =', 20)   ; -0.34454813
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_hcth_407.inp
 match ; gga_xc_hcth_407                        ; GREP(out, 'Correlation =', 20)   ; -0.34656464
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_edf1.inp
 match ; gga_xc_edf1                            ; GREP(out, 'Correlation =', 20)   ; -0.34151185
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_xlyp.inp
 match ; gga_xc_xlyp                            ; GREP(out, 'Correlation =', 20)   ; -0.33505116
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_b97.inp
 match ; gga_xc_b97                             ; GREP(out, 'Correlation =', 20)   ; -0.27231614
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_b97_1.inp
 match ; gga_xc_b97_1                           ; GREP(out, 'Correlation =', 20)   ; -0.26492862
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_b97_2.inp
 match ; gga_xc_b97_2                           ; GREP(out, 'Correlation =', 20)   ; -0.26946618
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_b97_d.inp
 match ; gga_xc_b97_d                           ; GREP(out, 'Correlation =', 20)   ; -0.34058884
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_b97_k.inp
 match ; gga_xc_b97_k                           ; GREP(out, 'Correlation =', 20)   ; -0.19356517
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_b97_3.inp
 match ; gga_xc_b97_3                           ; GREP(out, 'Correlation =', 20)   ; -0.25035509
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_pbe1w.inp
 match ; gga_xc_pbe1w                           ; GREP(out, 'Correlation =', 20)   ; -0.33761061
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_mpwlyp1w.inp
 match ; gga_xc_mpwlyp1w                        ; GREP(out, 'Correlation =', 20)   ; -0.33648566
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_pbelyp1w.inp
 match ; gga_xc_pbelyp1w                        ; GREP(out, 'Correlation =', 20)   ; -0.33476946
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_sb98_1a.inp
 match ; gga_xc_sb98_1a                         ; GREP(out, 'Correlation =', 20)   ; -0.25339616
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_sb98_1b.inp
 match ; gga_xc_sb98_1b                         ; GREP(out, 'Correlation =', 20)   ; -0.27188700
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_sb98_1c.inp
 match ; gga_xc_sb98_1c                         ; GREP(out, 'Correlation =', 20)   ; -0.27333098
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_sb98_2a.inp
 match ; gga_xc_sb98_2a                         ; GREP(out, 'Correlation =', 20)   ; -0.28194616
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_sb98_2b.inp
 match ; gga_xc_sb98_2b                         ; GREP(out, 'Correlation =', 20)   ; -0.25603741
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.gga_xc_sb98_2c.inp
 match ; gga_xc_sb98_2c                         ; GREP(out, 'Correlation =', 20)   ; -0.26344385
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.kli.inp
 match ; OEP KLI Exchange                       ; GREP(out, 'Exchange    =', 20)   ; -0.25285983
 
-Programs   : octopus; octopus_mpi
 Input: 03-xc.exx.inp
 match ; OEP exact exchange                     ; GREP(out, 'Exchange    =', 20)   ; -0.25285983

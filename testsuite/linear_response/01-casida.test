@@ -2,6 +2,7 @@
 # $Id$
 
 Test       : LR-TDDFT, Nitrogen molecule
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
@@ -34,7 +35,6 @@ Enabled    : Yes
 # the basis-set truncation error, and because of this are difficult
 # to compare.
 
-Programs   : octopus; octopus_mpi
 Input: 01-casida.01-N2.inp
 match ; Total energy   ; GREP(ground_state_static/info, 'Total       =', 20) ; -19.92968467
 match ; HOMO           ; GREP(ground_state_static/info, '5   --', 12) ;  -0.384524

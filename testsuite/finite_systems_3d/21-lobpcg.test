@@ -2,6 +2,10 @@
 # $Id$
 
 Test       : LOBPCG
+Options    : scalapack
+Programs   : octopus_mpi
+Options    : 
+Programs   : octopus
 TestGroups : short-run
 Enabled    : Yes
 
@@ -10,11 +14,8 @@ Enabled    : Yes
 #   * spin-polarized.
 #   * spinors,
 #   * curvilinear coordinates,
+# The checks are only performed with the parallel LOBPCG.
 
-Options    : scalapack
-Programs   : octopus_mpi
-Options    : 
-Programs   : octopus
 Input: 21-lobpcg.01-spin_polarized.inp
 match ; Eigenvalue 1 up; GREP(static/info, ' 1   up', 13) ;       -14.461727
 match ; Eigenvalue 1 dn; GREP(static/info, ' 1   dn', 13) ;       -11.750136
@@ -25,10 +26,6 @@ match ; Eigenvalue 3 dn; GREP(static/info, ' 3   dn', 13) ;       -3.682145
 match ; Eigenvalue 4 up; GREP(static/info, ' 4   up', 13) ;       -6.187145
 match ; Eigenvalue 4 dn; GREP(static/info, ' 4   dn', 13) ;       -3.682145
 
-Options    : scalapack
-Programs   : octopus_mpi
-Options    : 
-Programs   : octopus
 Input: 21-lobpcg.02-spinors.inp
 Precision : 0.001
 match ; Eigenvalue 1 up; GREP(static/info, ' 1   --', 13) ;       -18.502399

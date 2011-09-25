@@ -2,14 +2,14 @@
 # $Id$
 
 Test       : Free Electron Bands in 1D
+Programs   : octopus; octopus_single; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
-Programs   : octopus; octopus_single; octopus_mpi
 Input: 01-free_electrons.01-ground_state.inp
 
-Programs   : octopus; octopus_single; octopus_mpi
 Input: 01-free_electrons.02-unocc.inp
+
 match ; Bands n=1,k=1; GREP(static/eigenvalues, '#k =   1', 12, 1) ; 0.000000
 match ; Bands n=1,k=2; GREP(static/eigenvalues, '#k =   2', 12, 1) ; 0.000493
 match ; Bands n=1,k=3; GREP(static/eigenvalues, '#k =   3', 12, 1) ; 0.001974

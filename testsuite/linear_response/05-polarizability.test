@@ -2,11 +2,11 @@
 # $Id: 04-vib_modes.test 4255 2008-06-10 12:56:21Z marques $
 
 Test       : Sodium static polarizability
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
 
-Programs   : octopus; octopus_mpi
 Input: 05-polarizability.01-gs.inp
 match ; Total energy   ; GREP(static/info, 'Total       =', 20) ; -11.40377627
 match ; Free energy    ; GREP(static/info, 'Free        =', 20) ; -11.48089886
@@ -15,18 +15,17 @@ match ; Occupation     ; GREP(static/info, '1   --', 28) ;   2.032697
 match ; Eigenvalue     ; GREP(static/info, '2   --', 12) ;  -1.836886
 match ; Occupation     ; GREP(static/info, '2   --', 28) ;  -0.032680
 
-Programs   : octopus; octopus_mpi
 Input: 05-polarizability.02-sternheimer.inp
 Precision: 0.001
 match ; Polarizability xx ; LINE(em_resp/freq_0.0000/alpha, 2,  1) ; 48.662972
 match ; Polarizability yy ; LINE(em_resp/freq_0.0000/alpha, 3, 28) ; 27.001112
 match ; Polarizability zz ; LINE(em_resp/freq_0.0000/alpha, 4, 45) ; 27.001112
 
-Programs   : octopus; octopus_mpi
 Input: 05-polarizability.03-finite-diff.inp
 match ; Polarizability xx ; LINE(em_resp_fd/alpha, 2,  1) ; 48.663362
 match ; Polarizability yy ; LINE(em_resp_fd/alpha, 3, 28) ; 27.001859
 match ; Polarizability zz ; LINE(em_resp_fd/alpha, 4, 45) ; 27.001852
+
 match ; Born charge xx ; LINE(em_resp_fd/Born_charges, 3,  5) ; 0.002287
 match ; Born charge yy ; LINE(em_resp_fd/Born_charges, 4, 25) ; 0.004818
 match ; Born charge zz ; LINE(em_resp_fd/Born_charges, 5, 45) ; 0.004802

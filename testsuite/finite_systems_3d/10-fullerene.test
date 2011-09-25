@@ -2,10 +2,10 @@
 # $Id$
 
 Test       : Fullerene
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
-Programs   : octopus; octopus_mpi
 Processors: 4
 Input: 10-fullerene.01-gs.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -340.67480783

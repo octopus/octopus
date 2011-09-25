@@ -2,13 +2,13 @@
 # $Id: 27-fine_mesh.test $
 
 Test       : Fine mesh density - Benzene
-TestGroups : short-run
-Enabled    : Yes
-
 Options    : scalapack
 Programs   : octopus_mpi
 Options    : 
 Programs   : octopus
+TestGroups : short-run
+Enabled    : Yes
+
 Input      : 27-fine_mesh.01-gs.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -37.85710807
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -12.93313889

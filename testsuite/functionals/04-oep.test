@@ -2,6 +2,7 @@
 # $Id$
 
 Test       : OEP
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
@@ -21,14 +22,12 @@ Enabled    : Yes
 
 
 # First, we reproduce the LSDA results for Li, 8 electrons.
-Programs   : octopus; octopus_mpi
 Input: 04-oep.01-jellium-lsda.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.50498581
 match ; Exchange     ; GREP(static/info, 'Exchange    =', 20) ; -0.95512970
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.201113
 
 # Now, EXX/KLI for Li, 8 electrons (restarting from the previous run)
-Programs   : octopus; octopus_mpi
 Input: 04-oep.02-jellium-exx_kli.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.33253805
 match ; Exchange     ; GREP(static/info, 'Exchange    =', 20) ; -1.03286631
@@ -37,7 +36,6 @@ match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.251965
 
 # And finally, full EXX for Li, 8 electrons (restarting from the previous run)
 # FULL OEP is disabled for the 3.0 release.
-#Programs   : octopus; octopus_mpi
 #Input: 04-oep.03-jellium-full_exx.inp
 #match ; Total energy ; GREP(static/info, 'Total       =', 20) ; XXXX
 #match ; Exchange     ; GREP(static/info, 'Exchange    =', 20) ; XXXX

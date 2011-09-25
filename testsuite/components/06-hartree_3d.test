@@ -2,26 +2,22 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : Hartree
+Programs   : oct-test; oct-test_mpi
 TestGroups : short-run
 Enabled    : Yes
 
-Programs   : oct-test; oct-test_mpi
 Precision : 0.005
 Input: 06-hartree_3d.01-isf.inp
 match ; ISF           ; GREP(hartree_results, 'Hartree test =', 15) ; 0.00035845
 
-Programs   : oct-test; oct-test_mpi
 Input: 06-hartree_3d.02-multigrid.inp
 match ; Multigrid     ; GREP(hartree_results, 'Hartree test =', 15) ; 0.00330663
 
-Programs   : oct-test; oct-test_mpi
 Input: 06-hartree_3d.03-fft.inp
 match ; FFT           ; GREP(hartree_results, 'Hartree test =', 15) ; 0.00035839
 
-Programs   : oct-test; oct-test_mpi
 Input: 06-hartree_3d.04-fft_corrected.inp
 match ; FFT Corrected ; GREP(hartree_results, 'Hartree test =', 15) ; 0.00154839
 
-Programs   : oct-test; oct-test_mpi
 Input: 06-hartree_3d.05-cg_corrected.inp
 match ; CG Corrected  ; GREP(hartree_results, 'Hartree test =', 15) ; 0.00349973

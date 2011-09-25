@@ -2,10 +2,10 @@
 # $Id: 23-go-na2.test $
 
 Test       : O2 - Spin
+Programs   : octopus_mpi; octopus
 TestGroups : short-run
 Enabled    : Yes
 
-Programs   : octopus_mpi; octopus
 Input      : 24-o2-spin.01-gs.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -31.40980858
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -7.26069056

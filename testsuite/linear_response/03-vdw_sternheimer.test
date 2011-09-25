@@ -2,6 +2,7 @@
 # $Id: 05-multigrid_solver.test 2392 2006-08-23 20:50:36Z appel $
 
 Test       : Van der Waals coefficient; Sternheimer method
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
@@ -16,10 +17,7 @@ Enabled    : Yes
 # the grid spacing to 0.20 a.u., and the box radius to 9.0 a.u., we
 # get 1.8626 Hartree * bohr^6.
 
-Programs   : octopus; octopus_mpi
 Input: 03-vdw_sternheimer.01-ground_state.inp
-
-Programs   : octopus; octopus_mpi
 Input: 03-vdw_sternheimer.02-vdw.inp
 Precision : 0.001
 match ; C6 ; GREP(vdw/vdw_c6, 'C_6  \[a.u.', 17) ; 1.828001742562

@@ -2,6 +2,7 @@
 # $Id$
 
 Test       : 1D-Helium
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
@@ -18,13 +19,11 @@ Enabled    : Yes
 # [M. S. Pindzola, D. C Griffin and C. Bottcher, Phys. Rev. Lett. 66, 2305 (1991)].
 # In this case, the electron-electron interaction is not exactly a soft-Coulomb
 # interaction. The total energy reproduces the -77.3eV quoted in the paper.
-Programs   : octopus; octopus_mpi
 Input: 03-helium_atom.01-ground_state.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.84045149
 
 # This second example reproduces the ground-state calculation present in
 # [W.-C. Liu et al, Phys. Rev. Lett. 83, 520 (1999)]
 # The total energy reproduces the -2.238Ha quoted in the paper.
-Programs   : octopus; octopus_mpi
 Input: 03-helium_atom.02-ground_state.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.23825108

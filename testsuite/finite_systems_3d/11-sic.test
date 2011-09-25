@@ -2,6 +2,7 @@
 # $Id: oct-run_regression_test.pl,v 1.15 2006/03/13 09:56:40 acastro Exp      :
 
 Test       : LDA+SIC/OEP-KLI Functional
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
@@ -19,7 +20,6 @@ Enabled    : Yes
 # The number is missed by 0.006Ha = 0.16eV. The reason is probably that we
 # use a LDA pseudopotential, whereas the results in the paper are all-electron.
 
-Programs   : octopus; octopus_mpi
 Precision : 0.0005
 Input     : 11-sic.01-gs.inp
 match ; Ionization Potential ; GREP(static/info, '4   --', 13) ; -0.542700

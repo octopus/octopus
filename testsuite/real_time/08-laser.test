@@ -2,6 +2,7 @@
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : Lasers
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
@@ -17,15 +18,12 @@ Enabled    : Yes
 # units. Note that the energies that will be obtained will not coincide,
 # since we are not using a gauge-independent energy expression.
 
-Programs   : octopus; octopus_mpi
 Input: 08-laser.01-ground_state.inp
 
-Programs   : octopus; octopus_mpi
 Input: 08-laser.02-length_gauge.inp
 match ;   n(t=0.2) ; LINE(td.general/multipoles, -1, 10) ;  2.000000000000e-01
 match ; <Z>(t=0.2) ; LINE(td.general/multipoles, -1, 90) ; -1.334845206979e-04
 
-Programs   : octopus; octopus_mpi
 Input: 08-laser.03-velocity_gauge.inp
 match ;   n(t=0.2) ; LINE(td.general/multipoles, -1, 10) ;  2.000000000000e-01
 match ; <Z>(t=0.2) ; LINE(td.general/multipoles, -1, 90) ; -1.332345613504e-04

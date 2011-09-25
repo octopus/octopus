@@ -2,6 +2,7 @@
 # $Id$
 
 Test       : 1D-Neon - MPI
+Programs   : octopus_mpi; octopus
 TestGroups : short-run
 Enabled    : Yes
 
@@ -9,19 +10,17 @@ Enabled    : Yes
 # interaction) in KLI approximation.
 
 
-Programs   : octopus_mpi; octopus
+# specify on how many processors we should run this test
 Processors : 3
 Input      : 02-neon_mpi.01-ground_state-IP_par_domains.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -87.55795211
 
-Programs   : octopus_mpi; octopus
 Input      : 02-neon_mpi.02-ground_state-kli_par_domains.inp
 Precision  : 0.0006
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -61.03753655
 
 
 # now we start a td calculation parallel in states on 5 processors
-Programs   : octopus_mpi; octopus
 Processors : 5
 Input      : 02-neon_mpi.03-td_calc-kli_par_states.inp
 

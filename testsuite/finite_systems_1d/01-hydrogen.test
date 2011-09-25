@@ -2,6 +2,7 @@
 # $Id$
 
 Test       : 1D-Hydrogen
+Programs   : octopus; octopus_single; octopus_mpi
 TestGroups : short-run; daily
 Enabled    : Yes
 
@@ -15,7 +16,6 @@ Enabled    : Yes
 # The numbers provided in that Table should match the values that octopus
 # prints in the excited_states_static/eigenvalues file.
 
-Programs   : octopus; octopus_single; octopus_mpi
 Input: 01-hydrogen.01-ground_state.inp
 match ; Total energy ; GREP(ground_state_static/info, 'Total       =', 20)    ; -0.66978603
 match ; 10th state   ; GREP(excited_states_static/eigenvalues, '10   --', 12) ; -0.017727

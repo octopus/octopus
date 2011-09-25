@@ -2,34 +2,31 @@
 # $Id$
 
 Test       : Eigensolver
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
 # This test checks the eigensolvers lobpcg, cg, cg_new, plan, evolution and rmmdiis with a simple
 # SiH4.
 
-Programs   : octopus; octopus_mpi
 Input: 20-eigensolver.01-lobpcg.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -14.539582
 match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.142330
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.142330
 match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.107420
 
-Programs   : octopus; octopus_mpi
 Input: 20-eigensolver.02-cg.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -14.539747
 match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.142338
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.142338
 match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.107428
 
-Programs   : octopus; octopus_mpi
 Input: 20-eigensolver.03-cg_new.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -14.539625
 match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.142251
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.142251
 match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.107344
 
-Programs   : octopus; octopus_mpi
 Input: 20-eigensolver.04-plan.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -14.539679
 match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.142294
@@ -39,14 +36,12 @@ match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.107378
 # In this case, the numbers are slightly different because the input
 # file sets a high convergence criterion. If allowed to proceed further,
 # the algorithm does converge to the correct numbers.
-Programs   : octopus; octopus_mpi
 Input: 20-eigensolver.05-evolution.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -15.069269
 match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.672146 
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.672146
 match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.635633
 
-Programs   : octopus; octopus_mpi
 Processors : 4
 Input: 20-eigensolver.06-rmmdiis.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -14.539769

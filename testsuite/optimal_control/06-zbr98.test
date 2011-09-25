@@ -2,6 +2,7 @@
 # $Id: 06-adw.test $
 
 Test       : ZBR98
+Programs   : octopus
 TestGroups : long-run, oct
 Enabled    : Yes
 
@@ -15,8 +16,6 @@ Enabled    : Yes
 # as modeled by a Morse potential.
 #
 # First, we have to get the ground state and the first excited state.
-
-Programs   : octopus
 Input: 06-zbr98.01-ground_state.inp
 match ; Total energy ; GREP(static/info, ' Total ', 23) ; -0.19047202
 match ; Eigenvalue 2 ; GREP(static/info, '2   --' , 13) ; -0.173229
@@ -34,7 +33,6 @@ match ; Eigenvalue 2 ; GREP(static/info, '2   --' , 13) ; -0.173229
 # The reason for this sensitivity is that the starting field is actually an
 # unstable solution of the equations, and therefore the behaviour of the first
 # iterations depends on numerical noise.
-Programs   : octopus
 Input: 06-zbr98.02-oct.inp
 Precision : 0.01
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.98872445

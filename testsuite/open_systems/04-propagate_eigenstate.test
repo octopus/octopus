@@ -2,11 +2,11 @@
 # $Id: 01-carbon_atom.test 4011 2008-04-02 09:30:10Z marques $
 
 Test       : Propagate eigenstate of 1D square well
+Programs   : octopus; octopus_mpi
 TestGroups : short-run, open-systems
 Enabled    : Yes
 
 # Calculate eigenstate of 1d attractive square-potential barrier.
-Programs   : octopus; octopus_mpi
 Input: 04-propagate_eigenstate.01-square_well_1d.inp
 match ; Total energy [step   0]; LINE(well_td.general/energy,   6, 30) ; 2.064295041168e+00
 match ; Total energy [step 100]; LINE(well_td.general/energy, 106, 30) ; 2.064288488499e+00
@@ -15,7 +15,6 @@ match ; Total energy [step 300]; LINE(well_td.general/energy, 306, 30) ; 2.06428
 
 # Calculate eigenstates of 2D ring potential attached to upside-down Gaussian-shaped
 # lead channels and propagate with a bias switched on.
-Programs   : octopus; octopus_mpi
 Input: 04-propagate_eigenstate.02-ring_leads_2d.inp
 match ; Total energy [step   0]; LINE(ring_lead_td.general/energy,   6, 30) ; 2.327101907973e+02
 match ; Total energy [step  25]; LINE(ring_lead_td.general/energy,  31, 30) ; 2.331485445084e+02

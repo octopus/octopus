@@ -2,13 +2,12 @@
 # $Id$
 
 Test       : Full-Potential Hydrogen
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
-Programs   : octopus; octopus_mpi
 Input: 13-full_potential_hydrogen.01-gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ;-0.49797178
 
-Programs   : octopus; octopus_mpi
 Input: 13-full_potential_hydrogen.02-gs-cg.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20);-0.50144038

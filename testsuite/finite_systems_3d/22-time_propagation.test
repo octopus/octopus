@@ -2,33 +2,30 @@
 # $Id: 22-time_propagation.test 3344 2007-10-13 13:38:03Z acastro $
 
 Test       : Time-propagation
+Programs   : octopus_mpi; octopus
 TestGroups : long-run
 Enabled    : Yes
 
 # This test checks the time-propagation.
 
 # ground state
-Programs   : octopus_mpi; octopus
 Processors : 4
 Input      : 22-time_propagation.01-gs.inp
 match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -37.92527580
 
 # time-propagation, parallel in domains
-Programs   : octopus_mpi; octopus
 Processors : 4
 Input      : 22-time_propagation.02-td_domains.inp
 match ; Energy [step  5] ; LINE(td.general/energy, -6, 30) ; -3.792522754945e+01
 match ; Energy [step 10] ; LINE(td.general/energy, -1, 30) ; -3.792522754814e+01
 
 # combined parallelization
-Programs   : octopus_mpi; octopus
 Processors : 4
 Input      : 22-time_propagation.03-td_domains_states.inp
 match ; Energy [step  5] ; LINE(td.general/energy, -6, 30) ; -3.792522754945e+01
 match ; Energy [step 10] ; LINE(td.general/energy, -1, 30) ; -3.792522754814e+01
 
 # moving the ions
-Programs   : octopus_mpi; octopus
 Processors : 4
 Input      : 22-time_propagation.04-td_md.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -11, 30) ; -3.791137115072e+01
@@ -36,7 +33,6 @@ match ; Energy [step  5] ; LINE(td.general/energy,  -6, 30) ; -3.791133478924e+0
 match ; Energy [step 10] ; LINE(td.general/energy,  -1, 30) ; -3.791129939150e+01
 
 # fast Ehrenfest molecular dynamics
-Programs   : octopus_mpi; octopus
 Processors : 4
 Input      : 22-time_propagation.05-td_fast_md.inp
 match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -3.791137115072e+01

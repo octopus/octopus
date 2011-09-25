@@ -2,6 +2,7 @@
 # $Id$
 
 Test       : Jellium
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
@@ -12,7 +13,6 @@ Enabled    : Yes
 # [W. Ekardt, Phys. Rev. B 29, 1558 (1984)].
 # 
 
-Programs   : octopus; octopus_mpi
 Input: 04-jellium.01-ground_state.inp
 match ; Total energy   ; GREP(static/info, 'Total       =', 20) ; -0.57652032
 match ; Eigenvalue [s] ; GREP(static/info, '1   --', 13) ; -0.167698

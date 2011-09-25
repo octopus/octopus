@@ -6,10 +6,7 @@ Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
-Programs   : octopus; octopus_single; octopus_mpi
 Input: 02-cosine_potential.01-ground_state.inp
-
-Programs   : octopus; octopus_single; octopus_mpi
 Input: 02-cosine_potential.02-unocc.inp
 match ; Bands n=1,k=1; GREP(static/eigenvalues, '#k =   1', 12, 1) ; -0.133002
 match ; Bands n=1,k=2; GREP(static/eigenvalues, '#k =   2', 12, 1) ; -0.133000
@@ -17,6 +14,7 @@ match ; Bands n=1,k=3; GREP(static/eigenvalues, '#k =   3', 12, 1) ; -0.132996
 match ; Bands n=1,k=4; GREP(static/eigenvalues, '#k =   4', 12, 1) ; -0.132992
 match ; Bands n=1,k=5; GREP(static/eigenvalues, '#k =   5', 12, 1) ; -0.132988
 match ; Bands n=1,k=6; GREP(static/eigenvalues, '#k =   6', 12, 1) ; -0.132986
+
 match ; Bands n=2,k=1; GREP(static/eigenvalues, '#k =   1', 12, 2) ; -0.006033
 match ; Bands n=2,k=2; GREP(static/eigenvalues, '#k =   2', 12, 2) ; -0.006086
 match ; Bands n=2,k=3; GREP(static/eigenvalues, '#k =   3', 12, 2) ; -0.006223

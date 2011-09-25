@@ -2,6 +2,7 @@
 # $Id: 03-asym_doublewell.test 3193 2007-09-09 23:14:17Z acastro $
 
 Test       : OCT with local target
+Programs   : octopus
 TestGroups : long-run, oct
 Enabled    : Yes
 
@@ -13,7 +14,6 @@ Enabled    : Yes
 # are calculated. 
 # A similar potential is used in Rev Mod (Haenggi, Griffoni)
 
-Programs   : octopus
 Input: 03-localtarget.01-gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.62061608
 
@@ -24,25 +24,22 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.62061608
 # overlap and J1 = -2 to overlap at all.
 # To get a better overlap, increase the quality of the mesh (reduce the grid
 # spacing) and/or increase the time interval.
-Programs   : octopus
 Input: 03-localtarget.02-oct.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -0.49521597
 
 
 # Now, we define the target as a time-dependent target. Also, we use
 # the conjugate gradients method for optimization.
-Programs   : octopus
 Input: 03-localtarget.03-tdoct.inp
 match ; J 1st iteration  ; GREP(opt-control/convergence, '##        1', 20) ;  0.36745495
 
 
 # Now we check that the many-particle version of the QOCT optimization of
 # local targets also works.
-Programs   : octopus
+
 Input: 03-localtarget.04-gs-mp.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.16891047
 
 # Now once again we run for only one iteration and check the convergence.
-Programs   : octopus
 Input: 03-localtarget.05-oct-mp.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -4.18554478

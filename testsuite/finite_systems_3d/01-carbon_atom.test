@@ -2,6 +2,7 @@
 # $Id$
 
 Test       : Carbon
+Programs   : octopus
 TestGroups : long-run
 Enabled    : Yes
 
@@ -20,7 +21,6 @@ Enabled    : Yes
 #   our VWN has some bug?)
 # It would be nice to investigate the reason for the small
 # discrepancy...
-Programs   : octopus
 Input: 01-carbon_atom.01-ground_state.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.74149007
 match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.461702
@@ -30,7 +30,6 @@ match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
 
 # Now we repeat the calculation but making use of the l=1 component
 # of the pseudopotencial to build the local component.
-Programs   : octopus
 Input: 01-carbon_atom.02-ground_state.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.81362567
 match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.466667
@@ -39,7 +38,6 @@ match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.683497
 match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
 
 #The same using double grid
-Programs   : octopus
 Input: 01-carbon_atom.03-ground_state_double_grid.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.66216092
 match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.418842

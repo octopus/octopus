@@ -2,10 +2,11 @@
 # $Id$
 
 Test       : Spin-orbit coupling
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
-Programs   : octopus; octopus_mpi
+
 Input: 07-spin_orbit_coupling.01-hgh.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -28.092425
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; -27.151179
@@ -29,7 +30,7 @@ match ; <Sz>       15 ; GREP(static/info, '15   --', 52) ;  0.4363
 match ; Force         ; GREP(static/info, 'Forces on the ions', 20, 2) ; 2.547272
 Precision : default
 
-Programs   : octopus; octopus_mpi
+
 Input: 07-spin_orbit_coupling.02-rkb.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -27.486551
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ; -26.534266

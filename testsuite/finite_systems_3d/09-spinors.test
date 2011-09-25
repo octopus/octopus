@@ -2,10 +2,10 @@
 # $Id$
 
 Test     : Spinors
+Programs : octopus; octopus_mpi
 TestGroups  : short-run
 Enabled  : Yes
 
-Programs   : octopus; octopus_mpi
 Input: 09-spinors.01-ground_state.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669588
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
@@ -16,7 +16,6 @@ match ; mx           ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ; 0.38
 match ; my           ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ; 0.385559
 match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.838265
 
-Programs   : octopus; octopus_mpi
 Input: 09-spinors.02-rmmdiis.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669588
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
