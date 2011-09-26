@@ -238,7 +238,13 @@ foreach my $octopus_exe (@executables){
 	$command = "$exec_directory/$1";
 	if( ! -x "$command") {
 	  $command = "$exec_directory/../utils/$1";
-	}	
+	}
+
+	if( ! -x "$command") {
+	  print "\nCannot find utility : $1 . Skipping utilities test \n";
+	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
+	  exit 0;
+	}
       }
 
       if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
