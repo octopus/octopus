@@ -1,0 +1,33 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 09-angular_momentum.01-ground_state.inp 2308 2006-07-29 00:56:52Z appel $
+
+FromScratch = yes
+
+CalculationMode = td
+
+%Coordinates
+'C' |  1.39035|   0.23194|   0.22174
+'C' |  0.10572|  -0.58402|  -0.23346
+'C' | -1.23218|   0.13720|   0.02969
+'O' |  0.86897|  -0.88344|   0.90236
+'H' |  1.09801|   1.25882|   0.48680
+'H' |  2.17433|   0.11627|  -0.54150
+'H' |  0.26236|  -1.19748|  -1.13361
+'H' | -2.05037|  -0.59729|  -0.00442
+'H' | -1.39561|   0.89932|  -0.74663
+'H' | -1.22157|   0.61868|   1.01903
+%
+
+Spacing = 0.6
+
+TDPropagator = aetrs
+TDTimeStep = 0.11
+TDMaximumIter = 100
+
+TDPolarizationDirection = 1
+TDDeltaStrength = 0.1
+
+TDOutput = energy + angular
+MagneticGaugeCorrection = gipaw
+
+TDEnergyUpdateIter = 25

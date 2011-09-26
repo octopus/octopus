@@ -1,0 +1,37 @@
+CalculationMode = td
+
+PeriodicDimensions = 3
+
+a = 6.6329387
+Lsize = a/2
+Spacing = a/10
+
+%Coordinates
+  "Li" |  0.0 | 0.0 | 0.0 
+  "Li" |  a/2 | a/2 | a/2 
+%
+
+%Species
+ 'Li' | 6.941 | spec_ps_psf | 3 | 2 | 0
+%
+
+BoxShape = parallelepiped
+
+%KPointsGrid
+ 4   |   4 |    4
+1/2 | 1/2 | 1/2
+%
+
+KPointsUseSymmetries = no
+
+%GaugeVectorField
+10.0 | 0.0 | 0.0
+%
+
+TDPropagator = aetrs
+TDTimeStep = 0.02
+TDMaximumIter = 30
+
+ExperimentalFeatures = yes
+
+TDEnergyUpdateIter = 5

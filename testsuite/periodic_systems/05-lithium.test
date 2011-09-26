@@ -54,3 +54,6 @@ match ; Energy           [step 30] ; LINE(td.general/energy,  -1, 30) ; -5.49204
 match ; Vector potential [step 20] ; LINE(td.general/gauge_field, -11, 30) ; 9.933201081578e+00
 match ; Vector potential [step 25] ; LINE(td.general/gauge_field,  -6, 30) ; 9.895834707018e+00
 match ; Vector potential [step 30] ; LINE(td.general/gauge_field,  -1, 30) ; 9.850345872326e+00
+
+Util : oct-dielectric-function
+Input      : 05-lithium.04-dielectric_function.inp

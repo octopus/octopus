@@ -72,3 +72,6 @@ match ; Lz [step 100]     ; LINE(td.general/angular,   -1, 70) ; -2.601120844702
 #match ; L2 [step  50]     ; LINE(td.general/angular,  -51, 90) ;  1.651038501047e+02
 #match ; L2 [step  75]     ; LINE(td.general/angular,  -26, 90) ;  1.651256625774e+02
 #match ; L2 [step 100]     ; LINE(td.general/angular,   -1, 90) ;  1.653179013479e+02
+
+Util : oct-rotatory_strength
+Input      : 09-angular_momentum.04-rotatory_strength.inp
