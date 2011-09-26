@@ -61,6 +61,8 @@ program casida_spectrum
   !%End
   call parse_float(datasets_check('CasidaSpectrumBroadening'), CNST(0.005), cs%br, units_inp%energy)
 
+  call messages_print_var_value(stdout, datasets_check('CasidaSpectrumBroadening'), cs%br, unit = units_out%energy)
+
   !%Variable CasidaSpectrumEnergyStep
   !%Type float
   !%Default 0.001
@@ -69,6 +71,8 @@ program casida_spectrum
   !% Sampling rate for the spectrum. 
   !%End
   call parse_float(datasets_check('CasidaSpectrumEnergyStep'), CNST(0.001), cs%energy_step, units_inp%energy)
+
+  call messages_print_var_value(stdout, datasets_check('CasidaSpectrumEnergyStep'), cs%energy_step, unit = units_out%energy)
 
   !%Variable CasidaSpectrumMinEnergy
   !%Type float
@@ -79,6 +83,8 @@ program casida_spectrum
   !%End
   call parse_float(datasets_check('CasidaSpectrumMinEnergy'), M_ZERO, cs%min_energy, units_inp%energy)
 
+  call messages_print_var_value(stdout, datasets_check('CasidaSpectrumMinEnergy'), cs%min_energy, unit = units_out%energy)
+
   !%Variable CasidaSpectrumMaxEnergy
   !%Type float
   !%Default 1.0
@@ -88,7 +94,9 @@ program casida_spectrum
   !%End
   call parse_float(datasets_check('CasidaSpectrumMaxEnergy'), M_ONE, cs%max_energy, units_inp%energy)
 
-  call calc_broad(cs, CASIDA_DIR, 'eps-diff', .true.)
+  call messages_print_var_value(stdout, datasets_check('CasidaSpectrumMaxEnergy'), cs%max_energy, unit = units_out%energy)
+
+  call calc_broad(cs, CASIDA_DIR, 'eps_diff', .true.)
   call calc_broad(cs, CASIDA_DIR, 'petersilka', .true.)
   call calc_broad(cs, CASIDA_DIR, 'casida', .false.)
 
@@ -116,7 +124,13 @@ contains
     spectrum = M_ZERO
 
     iunit = io_open(trim(dir)//"/"// fname, action='read', status='old', die = .false.)
-    if(iunit < 0) return
+
+    if(iunit < 0) then
+      message(1) = 'Cannot open file "'//trim(dir)//'/'//trim(fname)//'".'
+      message(2) = 'The '//trim(fname)//' spectrum was not generated.'
+      call messages_warning(2)
+      return
+    end if
 
     read(iunit, *) ! skip header
     do
