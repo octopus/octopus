@@ -88,7 +88,7 @@ program casida_spectrum
   !%End
   call parse_float(datasets_check('CasidaSpectrumMaxEnergy'), M_ONE, cs%max_energy, units_inp%energy)
 
-  call calc_broad(cs, CASIDA_DIR, 'eps-diff', .true.)
+  call calc_broad(cs, CASIDA_DIR, 'eps_diff', .true.)
   call calc_broad(cs, CASIDA_DIR, 'petersilka', .true.)
   call calc_broad(cs, CASIDA_DIR, 'casida', .false.)
 
@@ -116,7 +116,13 @@ contains
     spectrum = M_ZERO
 
     iunit = io_open(trim(dir)//"/"// fname, action='read', status='old', die = .false.)
-    if(iunit < 0) return
+
+    if(iunit < 0) then
+      message(1) = 'Cannot open file "'//trim(dir)//'/'//trim(fname)//'".'
+      message(2) = 'The '//trim(fname)//' spectrum was not generated.'
+      call messages_warning(2)
+      return
+    end if
 
     read(iunit, *) ! skip header
     do
