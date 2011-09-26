@@ -54,3 +54,7 @@ match ; Dipole [step  5] ; LINE(td.general/multipoles, -16, 50) ; -7.28127884291
 match ; Dipole [step 10] ; LINE(td.general/multipoles, -11, 50) ; -1.336559460269e+00
 match ; Dipole [step 15] ; LINE(td.general/multipoles,  -6, 50) ; -1.830007514614e+00
 match ; Dipole [step 20] ; LINE(td.general/multipoles,  -1, 50) ; -2.210494173511e+00
+
+Util       : oct-propagation_spectrum
+Input      : 02-aetrs.04-kick.inp
+

@@ -206,6 +206,8 @@ foreach my $octopus_exe (@executables){
   # testsuite
   open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file '$opt_f'.\n";
 
+  $command = $octopus_exe;
+
   while ($_ = <TESTSUITE>) {
 
     # skip comments
@@ -231,6 +233,13 @@ foreach my $octopus_exe (@executables){
 
     # Running this regression test if it is enabled
     if ( $enabled eq "Yes" ) {
+      
+      if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
+	$command = "$exec_directory/$1";
+	if( ! -x "$command") {
+	  $command = "$exec_directory/../utils/$1";
+	}	
+      }
 
       if ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
 	$np = $1;
@@ -257,10 +266,12 @@ foreach my $octopus_exe (@executables){
 	  if ( !$opt_n ) {
 	    print "\nStarting test run ...\n";
 
-	    $octopus_exe_suffix = $octopus_exe;
+	    $command_suffix = $command;
+
+	    print "$command_suffix" . "\n";
 
 	    # serial or MPI run?
-	    if ( $octopus_exe_suffix =~ /mpi$/) {
+	    if ( $command_suffix =~ /mpi$/) {
 	      if( -x "$mpiexec_raw") {
 		if ("$mpiexec" =~ /ibrun/) {
 		    $specify_np = "";
@@ -269,14 +280,14 @@ foreach my $octopus_exe (@executables){
 		    $specify_np = "-n $np";
 		    $my_nslots = "";
 		}
-		$command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $octopus_exe_suffix > out";
+		$command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $command_suffix > out";
 	      } else {
 		print "No mpiexec found: Skipping parallel test \n";
 		if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
 		exit 255;
 	      }
 	    } else {
-	      $command_line = "cd $workdir; $aexec $octopus_exe_suffix > out ";
+	      $command_line = "cd $workdir; $aexec $command_suffix > out ";
 	    }
 
 	    print "Executing: " . $command_line . "\n";
@@ -302,7 +313,7 @@ foreach my $octopus_exe (@executables){
 	    }
 
 	  } else {
-	    if(!$opt_i) { print "cd $workdir; $octopus_exe_suffix > out \n"; }
+	    if(!$opt_i) { print "cd $workdir; $command_suffix > out \n"; }
 	  }
 	  $test{"run"} = 1;
 	}
@@ -325,7 +336,7 @@ foreach my $octopus_exe (@executables){
       }
 
       if ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
-	set_precision($1, $octopus_exe) ;
+	set_precision($1, $command) ;
       }
 
       if ( $_ =~ /^match/ && !$opt_n && $return_value == 0) {
