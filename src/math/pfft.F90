@@ -44,8 +44,8 @@ module pfft_m
   implicit none
 
 #ifdef HAVE_PFFT
-  include "pfft.f"
   include "fftw3.f"
+  include "pfft.f"
 
   private ::        &
        decompose
@@ -317,7 +317,8 @@ contains
       call messages_fatal(3)
     end if
     
-    call PDFFT(local_size_3d) (pfft_array(jj)%alloc_local, pfft_array(jj)%n, pfft_array(jj)%comm_cart_2d, PFFT_TRANSPOSED, &
+    call PDFFT(local_size_dft_3d) (pfft_array(jj)%alloc_local, pfft_array(jj)%n, &
+         pfft_array(jj)%comm_cart_2d, PFFT_TRANSPOSED_OUT, &
          pfft_array(jj)%local_ni, pfft_array(jj)%local_i_start, pfft_array(jj)%local_no, pfft_array(jj)%local_o_start)
 
     !     Allocate memory
@@ -330,10 +331,10 @@ contains
     ! Create the plan, with the processor grid 
     call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, pfft_array(jj)%n, & 
          pfft_array(jj)%data_in, pfft_array(jj)%data_out, pfft_array(jj)%comm_cart_2d, &
-         FFTW_FORWARD, PFFT_TRANSPOSED + PFFT_FORWARD, FFTW_MEASURE)
+         FFTW_FORWARD, PFFT_TRANSPOSED_OUT, FFTW_MEASURE)
     call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, pfft_array(jj)%n, &
          pfft_array(jj)%data_out, pfft_array(jj)%data_in, pfft_array(jj)%comm_cart_2d, &
-         FFTW_BACKWARD, PFFT_TRANSPOSED + PFFT_BACKWARD, FFTW_MEASURE) 
+         FFTW_BACKWARD, PFFT_TRANSPOSED_IN, FFTW_MEASURE) 
        
     write(message(1), '(a)') "Info: PFFT allocated with size ("
     do idir = 1, dim

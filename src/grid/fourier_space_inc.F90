@@ -171,7 +171,7 @@ subroutine X(fourier_space_op_apply)(this, cube)
   
   !Safe memory if PFFT is used
   if (cube%fft_library /= PFFT_LIB) then
-  	call X(cube_function_alloc_FS)(cube)
+    call X(cube_function_alloc_FS)(cube)
   end if
   
   call profiling_in(prof, "OP_APPLY")
@@ -184,8 +184,8 @@ subroutine X(fourier_space_op_apply)(this, cube)
 #ifdef HAVE_PFFT
     index = 1
 
-    do kk =  cube%pfft%local_o_start(1),cube%pfft%local_o_start(1)+cube%pfft%local_no(1)-1
-      do jj = cube%pfft%local_o_start(2), cube%pfft%local_o_start(2)+cube%pfft%local_no(2)-1
+    do kk =  cube%pfft%local_o_start(2),cube%pfft%local_o_start(2)+cube%pfft%local_no(2)-1
+      do jj = cube%pfft%local_o_start(1), cube%pfft%local_o_start(1)+cube%pfft%local_no(1)-1
         do ii = cube%pfft%local_o_start(3), cube%pfft%local_o_start(3)+cube%pfft%local_no(3)-1 
           if (kk <= cube%nx)then
             cube%pfft%data_out(index)= cube%pfft%data_out(index)*this%X(op)(kk, jj, ii)
