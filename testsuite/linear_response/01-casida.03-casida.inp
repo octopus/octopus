@@ -1,0 +1,39 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+CalculationMode = casida
+
+FromScratch = yes
+
+bond_length = 2.0744
+
+%Coordinates
+"N" |  -bond_length/2 |  0.0 |  0.0 
+"N" |   bond_length/2 |  0.0 |  0.0 
+%
+
+%Species
+"N" | 14.0067000 | spec_ps_psf | 7 | 2 | 0 
+%
+
+BoxShape = sphere
+
+Radius = 12.0
+Spacing = 0.36
+
+XCFunctional = lda_x + lda_c_vwn
+
+ConvRelDens = 1e-9
+
+LCAODimension = 18
+
+EigenSolver = cg_new
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
+EigenSolverFinalToleranceIteration = 6
+
+EigenSolverMaxIter = 20
+
+NumberUnoccStates = 9
+
+PoissonSolver = fft_corrected

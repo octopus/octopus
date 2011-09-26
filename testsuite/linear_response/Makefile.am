@@ -22,7 +22,10 @@
 sharedir = $(pkgdatadir)/testsuite/linear_response
 
 dist_share_DATA = \
-	01-casida.01-N2.inp                      \
+	01-casida.01-gs.inp                      \
+	01-casida.02-unocc.inp                   \
+	01-casida.03-casida.inp                  \
+	01-casida.04-spectrum.inp                \
 	01-casida.test                           \
 	02-h2o_pol_lr.01_h2o_gs.inp              \
 	02-h2o_pol_lr.02_h2o_dyn_pol.inp         \

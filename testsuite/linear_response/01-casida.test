@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Test       : LR-TDDFT, Nitrogen molecule
+Test       : Casida linear response TDDFT
 Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
@@ -35,11 +35,18 @@ Enabled    : Yes
 # the basis-set truncation error, and because of this are difficult
 # to compare.
 
-Input: 01-casida.01-N2.inp
-match ; Total energy   ; GREP(ground_state_static/info, 'Total       =', 20) ; -19.92968467
-match ; HOMO           ; GREP(ground_state_static/info, '5   --', 12) ;  -0.384524
-match ; LUMO           ; LINE(unocc_states_static/eigenvalues, -8, 12) ; -0.085106
-match ; LUMO+8         ; LINE(unocc_states_static/eigenvalues, -1, 12) ;  0.153188
-match ; 1st excitation ; LINE(lrtddft_casida/casida, 2, 7) ; 3.37393747E-01
-match ; 2nd excitation ; LINE(lrtddft_casida/casida, 4, 7) ; 3.55373946E-01
-match ; 3rd excitation ; LINE(lrtddft_casida/casida, 5, 7) ; 3.75379848E-01
+Input: 01-casida.01-gs.inp
+match ; Total energy   ; GREP(static/info, 'Total       =', 20) ; -19.92968467
+match ; HOMO           ; GREP(static/info, '5   --', 12) ;  -0.384524
+
+Input: 01-casida.02-unocc.inp
+match ; LUMO           ; LINE(static/eigenvalues, -8, 12) ; -0.085106
+match ; LUMO+8         ; LINE(static/eigenvalues, -1, 12) ;  0.153188
+
+Input: 01-casida.03-casida.inp
+match ; 1st excitation ; LINE(casida/casida, 2, 7) ; 3.37393747E-01
+match ; 2nd excitation ; LINE(casida/casida, 4, 7) ; 3.55373946E-01
+match ; 3rd excitation ; LINE(casida/casida, 5, 7) ; 3.75379848E-01
+
+Util : oct-casida_spectrum
+Input: 01-casida.04-spectrum.inp

@@ -1,14 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-%CalculationMode
- gs              | unocc            | casida
- "ground_state_" |  "unocc_states_" | "lrtddft_"
- 1               | 2                | 3
-%
-
-unocc_states_RestartDir = "ground_state_restart"
-lrtddft_RestartDir = "unocc_states_restart"
+CalculationMode = gs
 
 FromScratch = yes
 
@@ -28,8 +21,6 @@ BoxShape = sphere
 Radius = 12.0
 Spacing = 0.36
 
-SpinComponents = unpolarized
-
 XCFunctional = lda_x + lda_c_vwn
 
 ConvRelDens = 1e-9
@@ -42,7 +33,5 @@ EigenSolverFinalTolerance = 1e-5
 EigenSolverFinalToleranceIteration = 6
 
 EigenSolverMaxIter = 20
-
-NumberUnoccStates = 9
 
 PoissonSolver = fft_corrected
