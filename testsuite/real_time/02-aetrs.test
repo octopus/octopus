@@ -56,5 +56,31 @@ match ; Dipole [step 15] ; LINE(td.general/multipoles,  -6, 50) ; -1.83000751461
 match ; Dipole [step 20] ; LINE(td.general/multipoles,  -1, 50) ; -2.210494173511e+00
 
 Util       : oct-propagation_spectrum
-Input      : 02-aetrs.04-kick.inp
+Input      : 02-aetrs.05-spectrum.inp
+match ; Electronic sum rule ; GREP(cross_section_vector, 'Electronic sum rule', 30) ; 0.316382
+match ; Polarizability sum rule ; GREP(cross_section_vector, 'Polarizability (sum rule)', 30) ; 1.814625
 
+Precision : 1e-9
+match ; Energy 1 ; LINE(cross_section_vector,  -2000, 1) ; 0.36749325E-03
+match ; Sigma x 1 ; LINE(cross_section_vector,  -2000, 21) ; 0.50005711E-07
+match ; Sigma y 1 ; LINE(cross_section_vector,  -2000, 41) ; -0.16762413E-22
+match ; Sigma z 1 ; LINE(cross_section_vector,  -2000, 61) ; 0.56727878E-23
+match ; Strength function 1; LINE(cross_section_vector,  -2000, 81) ; 0.34715589E-06
+
+match ; Energy 2 ; LINE(cross_section_vector,  -1500, 1) ; 0.18411412E+00
+match ; Sigma x 2 ; LINE(cross_section_vector,  -1500, 21) ; 0.12455535E-01
+match ; Sigma y 2 ; LINE(cross_section_vector,  -1500, 41) ; -0.41736572E-17
+match ; Sigma z 2 ; LINE(cross_section_vector,  -1500, 61) ; 0.14115660E-17
+match ; Strength function 2; LINE(cross_section_vector,  -1500, 81) ; 0.86470369E-01
+
+match ; Energy 3 ; LINE(cross_section_vector,  -1000, 1) ;  0.36786075E+00
+match ; Sigma x 3 ; LINE(cross_section_vector,  -1000, 21) ; 0.48591415E-01
+match ; Sigma y 3 ; LINE(cross_section_vector,  -1000, 41) ; 1.6264183e-17
+match ; Sigma z 3 ; LINE(cross_section_vector,  -1000, 61) ; 0.54897451E-17
+match ; Strength function 3; LINE(cross_section_vector,  -1000, 81) ; 0.33733739E+00
+
+match ; Energy 4 ; LINE(cross_section_vector,  -600, 1) ; 0.51485805E+00
+match ; Sigma x 4 ; LINE(cross_section_vector,  -600, 21) ; 0.92411633E-01
+match ; Sigma y 4 ; LINE(cross_section_vector,  -600, 41) ; -0.30888281E-16
+match ; Sigma z 4 ; LINE(cross_section_vector,  -600, 61) ; 0.10397215E-16
+match ; Strength function 4; LINE(cross_section_vector,  -600, 81) ; 0.64155158E+00

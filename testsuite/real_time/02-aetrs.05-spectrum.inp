@@ -1,0 +1,43 @@
+CalculationMode = td
+
+bond_length = 2.8
+
+%Coordinates
+ "C" |  -bond_length/2 |  0.0 |  0.0 
+ "C" |   bond_length/2 |  0.0 |  0.0 
+%
+
+%Velocities
+ "C" |  0.001 | 0.0 | 0.0
+ "C" | -0.001 | 0.0 | 0.0
+%
+
+Spacing = 0.6
+
+Radius = 6
+
+TDTimeStep = 0.1
+
+TDMaximumIter = 20
+
+TDPropagator = aetrs
+
+ParallelizationStrategy = par_domains + par_states
+
+%ParallelizationGroupRanks
+ 2 | 2
+%
+
+FromScratch = yes
+
+FilterPotentials = filter_ts
+
+TDDeltaStrength = 0.2
+
+TDPolarizationDirection = 1
+
+OutputEvery = 10
+
+TDEnergyUpdateIter = 5
+
+
