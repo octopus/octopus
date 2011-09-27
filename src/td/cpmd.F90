@@ -42,6 +42,7 @@ module cpmd_m
   use scf_m
   use states_m
   use states_calc_m
+  use states_block_m
   use system_m
   use varinfo_m
 
