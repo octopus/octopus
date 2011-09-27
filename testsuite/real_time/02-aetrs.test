@@ -60,7 +60,7 @@ Input      : 02-aetrs.05-spectrum.inp
 match ; Electronic sum rule ; GREP(cross_section_vector, 'Electronic sum rule', 30) ; 0.316382
 match ; Polarizability sum rule ; GREP(cross_section_vector, 'Polarizability (sum rule)', 30) ; 1.814625
 
-Precision : 1e-9
+Precision : 1e-7
 match ; Energy 1 ; LINE(cross_section_vector,  -2000, 1) ; 0.36749325E-03
 match ; Sigma x 1 ; LINE(cross_section_vector,  -2000, 21) ; 0.50005711E-07
 match ; Sigma y 1 ; LINE(cross_section_vector,  -2000, 41) ; -0.16762413E-22
