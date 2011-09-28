@@ -20,6 +20,7 @@
 #include "global.h"
 
 module spectrum_m
+  use batch_m
   use c_pointer_m
   use datasets_m
   use global_m
@@ -855,10 +856,11 @@ contains
 
     character(len=20) :: header_string
     integer :: nspin, lmax, time_steps, istart, iend, ntiter, it, jj, ii, isp, no_e, ie, idir, trash
-    FLOAT   :: dt, dump, xx, energy, ewsum, polsum, damp
+    FLOAT   :: dt, dump, energy, ewsum, polsum, damp
     type(kick_t) :: kick
     FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), sf(:, :)
     type(unit_system_t) :: file_units
+    type(batch_t) :: dipoleb, sigmab
 
     PUSH_SUB(spectrum_cross_section)
 
@@ -920,28 +922,13 @@ contains
     no_e = spectrum%max_energy / spectrum%energy_step
     SAFE_ALLOCATE(sigma(0:no_e, 1:3, 1:nspin))
 
-    sigma = M_ZERO
+    call batch_init(dipoleb, 3, 1, nspin, dipole)
+    call batch_init(sigmab, 3, 1, nspin, sigma)
 
-    do ie = 0, no_e
-      energy = ie * spectrum%energy_step
-      do it = istart, iend
-        jj = it - istart
+    call fourier_transform(spectrum%transform, istart + 1, iend + 1, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
 
-        select case(spectrum%transform)
-        case(SPECTRUM_TRANSFORM_SIN)
-          xx = sin(energy * jj * dt)
-        case(SPECTRUM_TRANSFORM_COS)
-          xx = cos(energy * jj * dt)
-        case(SPECTRUM_TRANSFORM_EXP)
-          xx = exp(-energy * jj * dt)
-        end select
-
-        do isp = 1, nspin
-          sigma(ie, 1:3, isp) = sigma(ie, 1:3, isp) + xx*dipole(it, 1:3, isp)
-        end do
-      end do
-      sigma(ie, 1:3, 1:nspin) = sigma(ie, 1:3, 1:nspin)*dt
-    end do
+    call batch_end(dipoleb)
+    call batch_end(sigmab)
 
     SAFE_DEALLOCATE_A(dipole)
 
@@ -1874,6 +1861,64 @@ contains
 
     POP_SUB(spectrum_fix_time_limits)
   end subroutine spectrum_fix_time_limits
+
+  ! -------------------------------------------------------
+
+  subroutine fourier_transform(transform_type, time_start, time_end, time_step, time_function, &
+    energy_start, energy_end, energy_step, energy_function)
+    integer,         intent(in)    :: transform_type
+    integer,         intent(in)    :: time_start
+    integer,         intent(in)    :: time_end
+    FLOAT,           intent(in)    :: time_step
+    type(batch_t),   intent(in)    :: time_function
+    integer,         intent(in)    :: energy_start
+    integer,         intent(in)    :: energy_end
+    FLOAT,           intent(in)    :: energy_step
+    type(batch_t),   intent(inout) :: energy_function
+    
+    integer :: itime, ienergy, ii
+    FLOAT   :: time, energy, kernel
+
+    PUSH_SUB(fourier_transform)
+
+    ASSERT(batch_is_ok(time_function))
+    ASSERT(batch_is_ok(energy_function))
+    ASSERT(time_function%nst_linear == energy_function%nst_linear)
+    ASSERT(batch_status(time_function) == batch_status(energy_function))
+    ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
+
+    do ienergy = energy_start, energy_end
+
+      energy = energy_step*(ienergy - energy_start)
+
+      forall(ii = 1:energy_function%nst_linear) energy_function%states_linear(ii)%dpsi(ienergy) = 0.0
+    
+      do itime = time_start, time_end
+
+        time = time_step*(itime - time_start)
+
+        select case(transform_type)
+        case(SPECTRUM_TRANSFORM_SIN)
+          kernel = sin(energy*time)
+        case(SPECTRUM_TRANSFORM_COS)
+          kernel = cos(energy*time)
+        case(SPECTRUM_TRANSFORM_EXP)
+          kernel = exp(-energy*time)
+        end select
+
+        kernel = kernel*time_step
+
+        do ii = 1, time_function%nst_linear
+          energy_function%states_linear(ii)%dpsi(ienergy) = &
+            energy_function%states_linear(ii)%dpsi(ienergy) + kernel*time_function%states_linear(ii)%dpsi(itime) 
+        end do
+        
+      end do
+    end do
+
+    POP_SUB(fourier_transform)
+
+  end subroutine fourier_transform
 
 end module spectrum_m
 
