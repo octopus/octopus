@@ -157,6 +157,7 @@ contains
     !%Option transport_off 0
     !% Just use open boundaries.
     !%End
+    NLEADS = 0
     if(parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
 
       call messages_experimental("Open boundaries")
