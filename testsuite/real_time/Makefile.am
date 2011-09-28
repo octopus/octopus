@@ -65,6 +65,11 @@ dist_share_DATA =                      \
 	12-absorption.01-gs.inp                \
 	12-absorption.02-td.inp                \
 	12-absorption.03-td-restart.inp        \
-	12-absorption.04-spectrum.inp
+	12-absorption.04-spectrum.inp          \
+	13-absorption-spin.test                \
+	13-absorption-spin.01-gs.inp           \
+	13-absorption-spin.02-td.inp           \
+	13-absorption-spin.03-td-restart.inp   \
+	13-absorption-spin.04-spectrum.inp
 
 CLEANFILES = *~ *.bak
