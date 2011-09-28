@@ -938,15 +938,18 @@ contains
 
         do isp = 1, nspin
           sigma(1:3, ie, isp) = sigma(1:3, ie, isp) + xx * damp(it) * dipole(1:3, it, isp)
-          sf(ie, isp) = sf(ie, isp) + xx * damp(it) * sum(dipole(1:3, it, isp) * kick%pol(1:3, kick%pol_dir))
         end do
       end do
       sigma(1:3, ie, 1:nspin) = sigma(1:3, ie, 1:nspin) * dt
-      sf(ie, 1:nspin) = sf(ie, 1:nspin) * dt
+    end do
+
+    do ie = 0, no_e
+      energy = ie * spectrum%energy_step
+      forall(isp = 1:nspin) sf(ie, isp) = sum(sigma(1:3, ie, isp)*kick%pol(1:3, kick%pol_dir))
       sf(ie, 1:nspin) = -sf(ie, 1:nspin) * (energy * M_TWO) / (M_PI * kick%delta_strength)
       sigma(1:3, ie, 1:nspin) = -sigma(1:3, ie, 1:nspin) * (M_FOUR * M_PI * energy / P_c) / kick%delta_strength
     end do
-
+    
     ewsum = sum(sf(0, 1:nspin))
     polsum = M_ZERO
 
