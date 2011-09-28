@@ -60,6 +60,11 @@ dist_share_DATA =                      \
 	11-tdmagnetic.test                     \
 	11-tdmagnetic.01-gs.inp                \
 	11-tdmagnetic.02-unocc.inp             \
-	11-tdmagnetic.03-td.inp
+	11-tdmagnetic.03-td.inp                \
+	12-absorption.test                     \
+	12-absorption.01-gs.inp                \
+	12-absorption.02-td.inp                \
+	12-absorption.03-td-restart.inp        \
+	12-absorption.04-spectrum.inp
 
 CLEANFILES = *~ *.bak
