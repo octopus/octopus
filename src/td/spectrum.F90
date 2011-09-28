@@ -855,9 +855,9 @@ contains
 
     character(len=20) :: header_string
     integer :: nspin, lmax, time_steps, istart, iend, ntiter, it, jj, ii, isp, no_e, ie, idir, trash
-    FLOAT   :: dt, dump, xx, energy, ewsum, polsum
+    FLOAT   :: dt, dump, xx, energy, ewsum, polsum, damp
     type(kick_t) :: kick
-    FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), damp(:), sf(:, :)
+    FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), sf(:, :)
     type(unit_system_t) :: file_units
 
     PUSH_SUB(spectrum_cross_section)
@@ -901,25 +901,23 @@ contains
     ! Get the number of energy steps.
     no_e = spectrum%max_energy / spectrum%energy_step
     SAFE_ALLOCATE(sigma(1:3, 0:no_e, 1:nspin))
-    SAFE_ALLOCATE(   sf(     0:no_e, nspin))
+
     sigma = M_ZERO
-    sf    = M_ZERO
 
     ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
-    SAFE_ALLOCATE(damp(istart:iend))
     do it = istart, iend
       jj = it - istart
       select case(spectrum%damp)
       case(SPECTRUM_DAMP_NONE)
-        damp(it) = M_ONE
+        damp = M_ONE
       case(SPECTRUM_DAMP_LORENTZIAN)
-        damp(it)= exp(-jj * dt * spectrum%damp_factor)
+        damp = exp(-jj*dt*spectrum%damp_factor)
       case(SPECTRUM_DAMP_POLYNOMIAL)
-        damp(it) = M_ONE - M_THREE * (real(jj) / ntiter)**2 &
-          + M_TWO * (real(jj) / ntiter)**3
+        damp = M_ONE - M_THREE*(real(jj)/ntiter)**2 + M_TWO*(real(jj)/ntiter)**3
       case(SPECTRUM_DAMP_GAUSSIAN)
-        damp(it)= exp(-(jj * dt)**2 * spectrum%damp_factor**2)
+        damp= exp(-(jj*dt)**2*spectrum%damp_factor**2)
       end select
+      forall(isp = 1:nspin) dipole(1:3, it, isp) = damp*dipole(1:3, it, isp)
     end do
 
     do ie = 0, no_e
@@ -937,11 +935,15 @@ contains
         end select
 
         do isp = 1, nspin
-          sigma(1:3, ie, isp) = sigma(1:3, ie, isp) + xx * damp(it) * dipole(1:3, it, isp)
+          sigma(1:3, ie, isp) = sigma(1:3, ie, isp) + xx*dipole(1:3, it, isp)
         end do
       end do
-      sigma(1:3, ie, 1:nspin) = sigma(1:3, ie, 1:nspin) * dt
+      sigma(1:3, ie, 1:nspin) = sigma(1:3, ie, 1:nspin)*dt
     end do
+
+    SAFE_DEALLOCATE_A(dipole)
+
+    SAFE_ALLOCATE(sf(0:no_e, nspin))
 
     do ie = 0, no_e
       energy = ie * spectrum%energy_step
@@ -1011,7 +1013,6 @@ contains
       write(out_file, '(1x)')
     end do
 
-    SAFE_DEALLOCATE_A(dipole)
     SAFE_DEALLOCATE_A(sigma)
     POP_SUB(spectrum_cross_section)
   end subroutine spectrum_cross_section
@@ -1024,7 +1025,7 @@ contains
 
     character(len=20) :: header_string
     integer :: time_steps, time_steps_sin, time_steps_cos
-    integer :: istart, iend, ntiter, it, jj, ii, isp, no_e, ie, idir, trash
+    integer :: istart, iend, ntiter, it, jj, ii, isp, no_e, ie, trash
     FLOAT   :: dt, dt_sin, dt_cos
     FLOAT   :: dump, dummy1, dummy2, dummy3, dummy4, energy, fsum
     type(kick_t) :: kick
