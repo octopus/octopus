@@ -877,34 +877,30 @@ contains
 
     ! Read the dipole.
     call io_skip_header(in_file)
-    SAFE_ALLOCATE(dipole(1:3, 0:time_steps, 1:nspin))
+
+    SAFE_ALLOCATE(dipole(0:time_steps, 1:3, 1:nspin))
+
     do it = 0, time_steps
       select case(nspin)
       case(1)
-        read(in_file, *) trash, dump, dump, dipole(1:3, it, 1)
+        read(in_file, *) trash, dump, dump, dipole(it, 1:3, 1)
       case(2)
-        read(in_file, *) trash, dump, dump, dipole(1:3, it, 1), dump, dipole(1:3, it, 2)
+        read(in_file, *) trash, dump, dump, dipole(it, 1:3, 1), dump, dipole(it, 1:3, 2)
       case(4)
-        read(in_file, *) trash, dump, dump, dipole(1:3, it, 1), dump, dipole(1:3, it, 2), &
-          dump, dipole(1:3, it, 3), dump, dipole(1:3, it, 4)
+        read(in_file, *) &
+          trash, dump, dump, dipole(it, 1:3, 1), dump, dipole(it, 1:3, 2), dump, dipole(it, 1:3, 3), dump, dipole(it, 1:3, 4)
       end select
 
-      dipole(1:3, it, :) = units_to_atomic(file_units%length, dipole(1:3, it, :))
+      dipole(it, 1:3, :) = units_to_atomic(file_units%length, dipole(it, 1:3, :))
       
     end do
 
     ! Now subtract the initial dipole.
     do it = time_steps, 0, -1
-      dipole(:, it, :) = dipole(:, it, :) - dipole(:, 0, :)
+      dipole(it, :, :) = dipole(it, :, :) - dipole(0, :, :)
     end do
 
-    ! Get the number of energy steps.
-    no_e = spectrum%max_energy / spectrum%energy_step
-    SAFE_ALLOCATE(sigma(1:3, 0:no_e, 1:nspin))
-
-    sigma = M_ZERO
-
-    ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
+    ! Gets the damping function
     do it = istart, iend
       jj = it - istart
       select case(spectrum%damp)
@@ -917,8 +913,14 @@ contains
       case(SPECTRUM_DAMP_GAUSSIAN)
         damp= exp(-(jj*dt)**2*spectrum%damp_factor**2)
       end select
-      forall(isp = 1:nspin) dipole(1:3, it, isp) = damp*dipole(1:3, it, isp)
+      forall(isp = 1:nspin) dipole(it, 1:3, isp) = damp*dipole(it, 1:3, isp)
     end do
+
+    ! Get the number of energy steps.
+    no_e = spectrum%max_energy / spectrum%energy_step
+    SAFE_ALLOCATE(sigma(0:no_e, 1:3, 1:nspin))
+
+    sigma = M_ZERO
 
     do ie = 0, no_e
       energy = ie * spectrum%energy_step
@@ -935,10 +937,10 @@ contains
         end select
 
         do isp = 1, nspin
-          sigma(1:3, ie, isp) = sigma(1:3, ie, isp) + xx*dipole(1:3, it, isp)
+          sigma(ie, 1:3, isp) = sigma(ie, 1:3, isp) + xx*dipole(it, 1:3, isp)
         end do
       end do
-      sigma(1:3, ie, 1:nspin) = sigma(1:3, ie, 1:nspin)*dt
+      sigma(ie, 1:3, 1:nspin) = sigma(ie, 1:3, 1:nspin)*dt
     end do
 
     SAFE_DEALLOCATE_A(dipole)
@@ -947,9 +949,9 @@ contains
 
     do ie = 0, no_e
       energy = ie * spectrum%energy_step
-      forall(isp = 1:nspin) sf(ie, isp) = sum(sigma(1:3, ie, isp)*kick%pol(1:3, kick%pol_dir))
+      forall(isp = 1:nspin) sf(ie, isp) = sum(sigma(ie, 1:3, isp)*kick%pol(1:3, kick%pol_dir))
       sf(ie, 1:nspin) = -sf(ie, 1:nspin) * (energy * M_TWO) / (M_PI * kick%delta_strength)
-      sigma(1:3, ie, 1:nspin) = -sigma(1:3, ie, 1:nspin) * (M_FOUR * M_PI * energy / P_c) / kick%delta_strength
+      sigma(ie, 1:3, 1:nspin) = -sigma(ie, 1:3, 1:nspin)*(M_FOUR*M_PI*energy/P_c)/kick%delta_strength
     end do
     
     ewsum = sum(sf(0, 1:nspin))
@@ -1004,7 +1006,7 @@ contains
     do ie = 0, no_e
       write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, ie * spectrum%energy_step)
       do isp = 1, nspin
-        write(out_file,'(3e20.8)', advance = 'no') (units_from_atomic(units_out%length**2, sigma(idir, ie, isp)), &
+        write(out_file,'(3e20.8)', advance = 'no') (units_from_atomic(units_out%length**2, sigma(ie, idir, isp)), &
                                                     idir = 1, 3)
       end do
       do isp = 1, nspin
@@ -1025,7 +1027,7 @@ contains
 
     character(len=20) :: header_string
     integer :: time_steps, time_steps_sin, time_steps_cos
-    integer :: istart, iend, ntiter, it, jj, ii, isp, no_e, ie, trash
+    integer :: istart, iend, ntiter, it, jj, ii, no_e, ie, trash
     FLOAT   :: dt, dt_sin, dt_cos
     FLOAT   :: dump, dummy1, dummy2, dummy3, dummy4, energy, fsum
     type(kick_t) :: kick
