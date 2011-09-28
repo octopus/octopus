@@ -855,8 +855,8 @@ contains
     type(spec_t), intent(inout) :: spectrum
 
     character(len=20) :: header_string
-    integer :: nspin, lmax, time_steps, istart, iend, ntiter, it, jj, ii, isp, no_e, ie, idir, trash
-    FLOAT   :: dt, dump, energy, ewsum, polsum, damp
+    integer :: nspin, lmax, time_steps, istart, iend, ntiter, it, ii, isp, no_e, ie, idir, trash
+    FLOAT   :: dt, dump, energy, ewsum, polsum
     type(kick_t) :: kick
     FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), sf(:, :)
     type(unit_system_t) :: file_units
@@ -902,22 +902,6 @@ contains
       dipole(it, :, :) = dipole(it, :, :) - dipole(0, :, :)
     end do
 
-    ! Gets the damping function
-    do it = istart, iend
-      jj = it - istart
-      select case(spectrum%damp)
-      case(SPECTRUM_DAMP_NONE)
-        damp = M_ONE
-      case(SPECTRUM_DAMP_LORENTZIAN)
-        damp = exp(-jj*dt*spectrum%damp_factor)
-      case(SPECTRUM_DAMP_POLYNOMIAL)
-        damp = M_ONE - M_THREE*(real(jj)/ntiter)**2 + M_TWO*(real(jj)/ntiter)**3
-      case(SPECTRUM_DAMP_GAUSSIAN)
-        damp= exp(-(jj*dt)**2*spectrum%damp_factor**2)
-      end select
-      forall(isp = 1:nspin) dipole(it, 1:3, isp) = damp*dipole(it, 1:3, isp)
-    end do
-
     ! Get the number of energy steps.
     no_e = spectrum%max_energy / spectrum%energy_step
     SAFE_ALLOCATE(sigma(0:no_e, 1:3, 1:nspin))
@@ -925,6 +909,7 @@ contains
     call batch_init(dipoleb, 3, 1, nspin, dipole)
     call batch_init(sigmab, 3, 1, nspin, sigma)
 
+    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, dipoleb)
     call fourier_transform(spectrum%transform, istart + 1, iend + 1, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
 
     call batch_end(dipoleb)
@@ -1087,7 +1072,7 @@ contains
     SAFE_ALLOCATE(chi(0:no_e))
     chi = M_ZERO
 
-    ! Gets the damping function
+    ! Gets the damp function
     SAFE_ALLOCATE(damp(istart:iend))
     do it = istart, iend
       jj = it - istart
@@ -1196,7 +1181,7 @@ contains
     sum1 = M_z0
     sum2 = M_z0
 
-    ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
+    ! Gets the damp function (here because otherwise it is awfully slow in "pol" mode...)
     SAFE_ALLOCATE(damp(istart:iend))
     do it = istart, iend
       jj = it - istart
@@ -1861,6 +1846,51 @@ contains
 
     POP_SUB(spectrum_fix_time_limits)
   end subroutine spectrum_fix_time_limits
+
+  ! -------------------------------------------------------
+
+  subroutine signal_damp(damp_type, damp_factor, time_start, time_end, time_step, time_function)
+    integer,         intent(in)    :: damp_type
+    FLOAT,           intent(in)    :: damp_factor    
+    integer,         intent(in)    :: time_start
+    integer,         intent(in)    :: time_end
+    FLOAT,           intent(in)    :: time_step
+    type(batch_t),   intent(in)    :: time_function
+
+    integer :: itime, ii
+    FLOAT   :: total_time, time, weight
+
+    PUSH_SUB(signal_damp)
+
+    ASSERT(batch_is_ok(time_function))
+    ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
+
+    total_time = time_step*(time_end - time_start + 1)
+
+    do itime = time_start, time_end
+      time = time_step*(itime - time_start)
+
+      ! Gets the damp function
+      select case(damp_type)
+      case(SPECTRUM_DAMP_NONE)
+        weight = M_ONE
+      case(SPECTRUM_DAMP_LORENTZIAN)
+        weight = exp(-time*damp_factor)
+      case(SPECTRUM_DAMP_POLYNOMIAL)
+        weight = M_ONE - M_THREE*(time/total_time)**2 + M_TWO*(time/total_time)**3
+      case(SPECTRUM_DAMP_GAUSSIAN)
+        weight = exp(-time**2*damp_factor**2)
+      end select
+            
+      do ii = 1, time_function%nst_linear
+        time_function%states_linear(ii)%dpsi(itime) = weight*time_function%states_linear(ii)%dpsi(itime)
+      end do
+      
+    end do
+
+    POP_SUB(signal_damp)
+
+  end subroutine signal_damp
 
   ! -------------------------------------------------------
 
