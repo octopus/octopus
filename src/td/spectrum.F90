@@ -1855,7 +1855,7 @@ contains
     integer,         intent(in)    :: time_start
     integer,         intent(in)    :: time_end
     FLOAT,           intent(in)    :: time_step
-    type(batch_t),   intent(in)    :: time_function
+    type(batch_t),   intent(inout) :: time_function
 
     integer :: itime, ii
     FLOAT   :: total_time, time, weight
