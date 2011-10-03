@@ -216,7 +216,8 @@ contains
     !%Default 0.01 eV
     !%Section Utilities::oct-propagation_spectrum
     !%Description
-    !% Sampling rate for the spectrum.
+    !% Sampling rate for the spectrum. If you supply a number equal or smaller than zero, then
+    !% the sampling rate will be (2 * pi / T), where T is the total propagation time.
     !%End
     call parse_float(datasets_check('PropagationSpectrumEnergyStep'), CNST(0.01) / (M_TWO * P_Ry), &
       spectrum%energy_step, units_inp%energy)
@@ -902,6 +903,8 @@ contains
       dipole(it, :, :) = dipole(it, :, :) - dipole(0, :, :)
     end do
 
+    if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
+
     ! Get the number of energy steps.
     no_e = spectrum%max_energy / spectrum%energy_step
     SAFE_ALLOCATE(sigma(0:no_e, 1:3, 1:nspin))
@@ -1066,6 +1069,8 @@ contains
       ftchd(it) = ftchd(it) - ftchd(0)
     end do
 
+    if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
+
     ! Get the number of energy steps.
     no_e = spectrum%max_energy / spectrum%energy_step
 
@@ -1175,6 +1180,8 @@ contains
     do idir = 1, 3
       angular(:, idir) = angular(:, idir) - angular(0, idir)
     end do
+
+    if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
     no_e = spectrum%max_energy / spectrum%energy_step
     SAFE_ALLOCATE(sp(0:no_e))
@@ -1389,6 +1396,8 @@ contains
     call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
 
+    if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
+
     call io_skip_header(iunit)
 
     ! load dipole from file
@@ -1454,6 +1463,8 @@ contains
     call spectrum_acc_info(iunit, time_steps, dt)
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
 
+    if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
+
     ! load dipole from file
     SAFE_ALLOCATE(acc(0:time_steps))
     acc = M_ZERO
@@ -1508,6 +1519,8 @@ contains
 
     call spectrum_vel_info(iunit, time_steps, dt)
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+
+    if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
     ! load dipole from file
     SAFE_ALLOCATE(vel(0:time_steps))
