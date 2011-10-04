@@ -51,7 +51,8 @@ libmath_a_SOURCES =                      \
 	scalapack.F90                    \
 	pblas.F90                        \
 	sgfft.F90                        \
-	matrix.F90
+	matrix.F90                       \
+	compressed_sensing.F90
 
 noinst_HEADERS =                         \
 	lalg_basic_blas.F90              \
