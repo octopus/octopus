@@ -19,4 +19,4 @@
 ##
 ## $Id$
 
-SUBDIRS = metis-4.0 qshep newuoa spglib zoltan slatec
+SUBDIRS = metis-4.0 qshep newuoa spglib zoltan slatec bpdn

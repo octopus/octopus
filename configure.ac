@@ -361,6 +361,7 @@ AC_CONFIG_FILES([Makefile
   external_libs/newuoa/Makefile
   external_libs/zoltan/Makefile
   external_libs/slatec/Makefile
+  external_libs/bpdn/Makefile
   liboct_parser/Makefile
   src/Makefile
   src/include/Makefile
