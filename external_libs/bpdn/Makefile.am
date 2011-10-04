@@ -34,3 +34,5 @@ spgl1_projector.o : spgl1_projector.c
 oneProjectorCore.o : oneProjectorCore.c oneProjectorCore.h heap.h
 heap.o : heap.c heap.h
 bpdn.o : bpdn.f90
+
+CLEANFILES = *~ *.bak *.mod *.MOD *.il *.d *.pc* ifc*
