@@ -42,18 +42,17 @@ module bpdn_m
     EXIT_ITERATIONS = 1,    &
     EXIT_NODESCENT  = 2
 
-  logical, parameter :: debug = .false.
+  logical, parameter :: debug = .true.
 
 contains
   
-  subroutine bpdn(mm, nn, aa, bb, sigma, xx)
-    integer, intent(in)    :: mm
+  subroutine bpdn(nn, mm, aa, bb, sigma, xx)
     integer, intent(in)    :: nn
+    integer, intent(in)    :: mm
     real(8), intent(in)    :: aa(:, :) !(1:nn, 1:mm)
     real(8), intent(in)    :: bb(:)    !(1:nn)
     real(8), intent(in)    :: sigma
     real(8), intent(out)   :: xx(:)    !(1:mm)
-
     integer, parameter :: nprevvals = 3
     real(8), parameter :: stepmin = 1.0e-16_8, stepmax = 1.0e+5_8
     real(8), parameter :: opttol = 1.0e-6_8
@@ -85,6 +84,8 @@ contains
     print*, 'b 2-norm          = ', bbnorm
     
     tau = 0.0_8
+
+    print*, "MATRIX ", ubound(aa), nn, mm
 
     ! Project the starting point and evaluate function and gradient.
     tmp = 1.0_8 ! some starting point

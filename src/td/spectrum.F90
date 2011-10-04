@@ -22,6 +22,7 @@
 module spectrum_m
   use batch_m
   use c_pointer_m
+  use compressed_sensing_m
   use datasets_m
   use global_m
   use io_m
@@ -87,6 +88,10 @@ module spectrum_m
     SPECTRUM_ABSORPTION      = 1,  &
     SPECTRUM_ENERGYLOSS      = 2
 
+  integer, public, parameter ::       &
+    SPECTRUM_FOURIER            = 1,  &
+    SPECTRUM_COMPRESSED_SENSING = 2
+
   type spec_t
     FLOAT   :: start_time          ! start time for the transform
     FLOAT   :: end_time            ! when to stop the transform
@@ -96,6 +101,7 @@ module spectrum_m
     integer :: transform           ! sine, cosine, or exponential transform
     FLOAT   :: damp_factor         ! factor used in damping
     integer :: spectype            ! damping type (none, exp or pol)
+    integer :: method
   end type spec_t
 
   type kick_t
@@ -243,6 +249,27 @@ contains
     !%End
     call parse_float(datasets_check('PropagationSpectrumDampFactor'), CNST(0.15), &
       spectrum%damp_factor, units_inp%time**(-1))
+
+    !%Variable SpectrumMethod
+    !%Type integer
+    !%Default fourier
+    !%Section Utilities::oct-propagation_spectrum
+    !%Description
+    !% Decides which method is used to obtain the spectrum. The
+    !% default is the fourier transform.
+    !%Option fourier 1
+    !% The standard fourier transform.
+    !%Option compressed_sensing 2
+    !% (Experimental) Uses the compressed sensing technique.
+    !%End
+    call parse_integer  (datasets_check('SpectrumMethod'), SPECTRUM_FOURIER, spectrum%method)
+    if(.not.varinfo_valid_option('SpectrumMethod', spectrum%method)) then
+      call input_error('SpectrumMethod')
+    endif
+
+    if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) then
+      call messages_experimental('compressed sensing')
+    end if
 
     POP_SUB(spectrum_init)
   end subroutine spectrum_init
@@ -913,7 +940,7 @@ contains
     call batch_init(sigmab, 3, 1, nspin, sigma)
 
     call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, dipoleb)
-    call fourier_transform(spectrum%transform, istart + 1, iend + 1, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
+    call fourier_transform(spectrum, istart + 1, iend + 1, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
 
     call batch_end(dipoleb)
     call batch_end(sigmab)
@@ -1907,9 +1934,9 @@ contains
 
   ! -------------------------------------------------------
 
-  subroutine fourier_transform(transform_type, time_start, time_end, time_step, time_function, &
+  subroutine fourier_transform(spec, time_start, time_end, time_step, time_function, &
     energy_start, energy_end, energy_step, energy_function)
-    integer,         intent(in)    :: transform_type
+    type(spec_t),    intent(in)    :: spec
     integer,         intent(in)    :: time_start
     integer,         intent(in)    :: time_end
     FLOAT,           intent(in)    :: time_step
@@ -1918,9 +1945,10 @@ contains
     integer,         intent(in)    :: energy_end
     FLOAT,           intent(in)    :: energy_step
     type(batch_t),   intent(inout) :: energy_function
-    
+
     integer :: itime, ienergy, ii
     FLOAT   :: time, energy, kernel
+    type(compressed_sensing_t) :: cs
 
     PUSH_SUB(fourier_transform)
 
@@ -1930,34 +1958,51 @@ contains
     ASSERT(batch_status(time_function) == batch_status(energy_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
 
-    do ienergy = energy_start, energy_end
+    select case(spec%method)
+    case(SPECTRUM_FOURIER)
 
-      energy = energy_step*(ienergy - energy_start)
+      do ienergy = energy_start, energy_end
 
-      forall(ii = 1:energy_function%nst_linear) energy_function%states_linear(ii)%dpsi(ienergy) = 0.0
-    
-      do itime = time_start, time_end
+        energy = energy_step*(ienergy - energy_start)
 
-        time = time_step*(itime - time_start)
+        forall(ii = 1:energy_function%nst_linear) energy_function%states_linear(ii)%dpsi(ienergy) = 0.0
 
-        select case(transform_type)
-        case(SPECTRUM_TRANSFORM_SIN)
-          kernel = sin(energy*time)
-        case(SPECTRUM_TRANSFORM_COS)
-          kernel = cos(energy*time)
-        case(SPECTRUM_TRANSFORM_EXP)
-          kernel = exp(-energy*time)
-        end select
+        do itime = time_start, time_end
 
-        kernel = kernel*time_step
+          time = time_step*(itime - time_start)
 
-        do ii = 1, time_function%nst_linear
-          energy_function%states_linear(ii)%dpsi(ienergy) = &
-            energy_function%states_linear(ii)%dpsi(ienergy) + kernel*time_function%states_linear(ii)%dpsi(itime) 
+          select case(spec%transform)
+          case(SPECTRUM_TRANSFORM_SIN)
+            kernel = sin(energy*time)
+          case(SPECTRUM_TRANSFORM_COS)
+            kernel = cos(energy*time)
+          case(SPECTRUM_TRANSFORM_EXP)
+            kernel = exp(-energy*time)
+          end select
+
+          kernel = kernel*time_step
+
+          do ii = 1, time_function%nst_linear
+            energy_function%states_linear(ii)%dpsi(ienergy) = &
+              energy_function%states_linear(ii)%dpsi(ienergy) + kernel*time_function%states_linear(ii)%dpsi(itime) 
+          end do
+
         end do
-        
       end do
-    end do
+
+    case(SPECTRUM_COMPRESSED_SENSING)
+
+      call compressed_sensing_init(cs, time_end - time_start + 1, time_step, time_step*time_start, &
+        energy_end - energy_start + 1, energy_step, energy_step*energy_start)
+
+      do ii = 1, time_function%nst_linear
+        call compressed_sensing_spectral_analysis(cs, time_function%states_linear(ii)%dpsi, &
+          energy_function%states_linear(ii)%dpsi)
+      end do
+
+      call compressed_sensing_end(cs)
+
+    end select
 
     POP_SUB(fourier_transform)
 

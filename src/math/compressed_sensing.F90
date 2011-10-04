@@ -25,6 +25,14 @@ module compressed_sensing_m
 
   implicit none
 
+  private
+  
+  public ::                                        &
+    compressed_sensing_t,                          &
+    compressed_sensing_init,                       &
+    compressed_sensing_end,                        &
+    compressed_sensing_spectral_analysis
+
   type compressed_sensing_t
     FLOAT   :: sigma
     integer :: ntime
