@@ -37,12 +37,19 @@ module bpdn_m
     end subroutine spgl1_projector
   end interface
 
-  integer, parameter ::     &
-    EXIT_CONVERGED  = 0,    &
-    EXIT_ITERATIONS = 1,    &
-    EXIT_NODESCENT  = 2
-
-  logical, parameter :: debug = .true.
+  integer, parameter ::        &
+    EXIT_CONVERGED     = 0,    &
+    EXIT_ITERATIONS    = 1,    &
+    EXIT_NODESCENT     = 10,   &
+    EXIT_ROOT_FOUND    = 2,    &
+    EXIT_BPSOL1_FOUND  = 3,    &
+    EXIT_BPSOL2_FOUND  = 4,    &
+    EXIT_OPTIMAL       = 5,    &
+    EXIT_LINE_ERROR    = 6,    &
+    EXIT_SUBOPTIMAL_BP = 7,    &
+    EXIT_ACTIVE_SET    = 9
+  
+  logical, parameter :: debug = .false.
 
 contains
   
@@ -64,7 +71,7 @@ contains
     real(8) :: bbnorm, ff, ffbest, ffold, dxxnorm, gstep, gradnorm, gap, rgap, resnorm
     real(8), allocatable :: res(:), grad(:), xxbest(:), dxx(:), tmp(:), xxnew(:), ss(:), gradnew(:), yy(:)
     real(8) :: aerror, rerror, sts, sty
-    integer :: nnzxold, nnzxiter, iter, maxits, lserr
+    integer :: nnzxold, nnzxiter, iter, maxits, lserr, status
     logical :: done, testsubopt, testrelchange1, testrelchange2, testupdatetau
 
     allocate(res(1:nn))
@@ -85,10 +92,8 @@ contains
     
     tau = 0.0_8
 
-    print*, "MATRIX ", ubound(aa), nn, mm
-
     ! Project the starting point and evaluate function and gradient.
-    tmp = 1.0_8 ! some starting point
+    tmp = 0.0_8 ! some starting point
     call spgl1_projector(xx, tmp, tau, mm)
     res(1:nn) = bb(1:nn) - matmul(aa(1:nn, 1:mm), xx(1:mm))
     grad(1:mm) = -matmul(transpose(aa(1:nn, 1:mm)), res(1:nn))
@@ -116,6 +121,7 @@ contains
     maxits = 2*nn
     iter = 0
     done = .false.
+    status = -1
     do
       if(debug) then
         print*, 'Iter ', iter
@@ -131,10 +137,22 @@ contains
       testsubopt = rgap <= max(opttol, rerror)
 
       if(testsubopt) then
-        if(resnorm <= bptol*bbnorm) done = .true.
-        if(gradnorm <= bptol*resnorm) done =  .true.
-        if(abs(aerror) <= opttol*max(1.0_8, resnorm)) done = .true.
-        if(resnorm <= sigma) done = .true.
+        if(resnorm <= sigma) then
+          status = EXIT_SUBOPTIMAL_BP
+          done = .true.
+        end if
+        if(abs(aerror) <= opttol*max(1.0_8, resnorm)) then
+          status = EXIT_ROOT_FOUND
+          done = .true.
+        end if
+        if(gradnorm <= bptol*resnorm) then
+          status = EXIT_BPSOL2_FOUND
+          done = .true.
+        end if
+        if(resnorm <= bptol*bbnorm) then
+          status = EXIT_BPSOL1_FOUND
+          done = .true.
+        end if
       end if
 
       testrelchange1 = abs(ff - ffold) <= dectol*ff
@@ -155,7 +173,8 @@ contains
 
       ! Too many its and not converged.
       if (.not. done .and. iter >= maxits) then
-        done = .true. 
+        status = EXIT_ITERATIONS
+        done = .true.
       end if
     
       if(done) exit
@@ -190,6 +209,28 @@ contains
       end if
 
     end do
+
+    print*, 'Iterations = ', iter
+    
+    ! Print final output.
+    select case (status)
+    case(EXIT_OPTIMAL)
+      print*, 'EXIT -- Optimal solution found'
+    case(EXIT_ITERATIONS)
+      print*, 'ERROR EXIT -- Too many iterations'
+    case(EXIT_ROOT_FOUND)
+      print*, 'EXIT -- Found a root'
+    case(EXIT_BPSOL1_FOUND, EXIT_BPSOL2_FOUND)
+      print*, 'EXIT -- Found a BP solution'
+    case(EXIT_LINE_ERROR)
+      print*, 'ERROR EXIT -- Linesearch error'
+    case(EXIT_SUBOPTIMAL_BP)
+      print*, 'EXIT -- Found a suboptimal BP solution'
+    case(EXIT_ACTIVE_SET)
+      print*, 'EXIT -- Found a possible active set'
+     case default 
+      stop 'Unknown termination condition'
+    end select
 
     deallocate(res)
     deallocate(grad)
@@ -249,6 +290,7 @@ contains
              
       if(gts >= 0.0_8) then
         ierr = EXIT_NODESCENT
+        print*, "warning: no descent in spglinecurvy"
         exit
       end if
       
@@ -256,6 +298,7 @@ contains
         ierr = EXIT_CONVERGED
         exit
       else if(iter >= maxiter) then
+        print*, "warning: max iterations reached in spglinecurvy"
         ierr = EXIT_ITERATIONS
         exit
       end if
