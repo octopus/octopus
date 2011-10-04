@@ -58,6 +58,8 @@ contains
     integer :: itime, ifreq
     FLOAT   :: time, freq
 
+    PUSH_SUB(compressed_sensing_init)
+
     this%sigma = CNST(3.0e-4)
 
     this%ntime = ntime
@@ -78,6 +80,7 @@ contains
       end do
     end do
     
+    POP_SUB(compressed_sensing_init)
   end subroutine compressed_sensing_init
 
   ! -------------------------------------------------------------------
@@ -85,7 +88,11 @@ contains
   subroutine compressed_sensing_end(this)
     type(compressed_sensing_t),  intent(inout) :: this
 
+    PUSH_SUB(compressed_sensing_end)
+
     SAFE_DEALLOCATE_P(this%fourier_matrix)
+
+    POP_SUB(compressed_sensing_end)
   end subroutine compressed_sensing_end
   
   ! -------------------------------------------------------------------
@@ -95,8 +102,11 @@ contains
     FLOAT,                       intent(in)  :: time_function(:)
     FLOAT,                       intent(out) :: freq_function(:)
     
+    PUSH_SUB(compressed_sensing_spectral_analysis)
+
     call bpdn(this%ntime, this%nfreq, this%fourier_matrix, time_function, this%sigma, freq_function)
-    
+
+    POP_SUB(compressed_sensing_spectral_analysis)    
   end subroutine compressed_sensing_spectral_analysis
 
 end module compressed_sensing_m
