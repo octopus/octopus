@@ -40,7 +40,6 @@ module bpdn_m
   integer, parameter ::        &
     EXIT_CONVERGED     = 0,    &
     EXIT_ITERATIONS    = 1,    &
-    EXIT_NODESCENT     = 10,   &
     EXIT_ROOT_FOUND    = 2,    &
     EXIT_BPSOL1_FOUND  = 3,    &
     EXIT_BPSOL2_FOUND  = 4,    &
@@ -71,8 +70,8 @@ contains
     real(8) :: bbnorm, ff, ffbest, ffold, dxxnorm, gstep, gradnorm, gap, rgap, resnorm
     real(8), allocatable :: res(:), grad(:), xxbest(:), dxx(:), tmp(:), xxnew(:), ss(:), gradnew(:), yy(:)
     real(8) :: aerror, rerror, sts, sty
-    integer :: nnzxold, nnzxiter, iter, maxits, lserr, status
-    logical :: done, testsubopt, testrelchange1, testrelchange2, testupdatetau
+    integer :: nnzxold, nnzxiter, iter, maxits, lserr, status, maxlineerrors
+    logical :: done, testsubopt, testrelchange1, testrelchange2, testupdatetau, singletau
 
     allocate(res(1:nn))
     allocate(grad(1:mm))
@@ -89,7 +88,15 @@ contains
     print*, 'Number of columns = ', nn
     print*, 'Number of rows    = ', mm
     print*, 'b 2-norm          = ', bbnorm
-    
+
+    singletau = .false.
+
+    ! Quick exit sigma is too large: tau = 0 will short-circuit the loop.
+    if(bbnorm <= sigma) then
+      tau = 0.0_8
+      singletau = .true.
+    end if
+  
     tau = 0.0_8
 
     ! Project the starting point and evaluate function and gradient.
@@ -98,7 +105,7 @@ contains
     res(1:nn) = bb(1:nn) - matmul(aa(1:nn, 1:mm), xx(1:mm))
     grad(1:mm) = -matmul(transpose(aa(1:nn, 1:mm)), res(1:nn))
     ff = dot_product(res(1:nn), res(1:nn))/2.0_8
-    
+
     ! Required for nonmonotone strategy.
     lastffv(1:nprevvals) = ff
     ffbest               = ff
@@ -106,7 +113,7 @@ contains
     ffold                = ff
     nnzxold              = -1
     nnzxiter             = 0
-    
+
     ! Compute projected gradient direction and initial steplength.
     call spgl1_projector(dxx, xx(1:mm) - grad(1:mm), tau, mm)
     dxx(1:mm) = dxx(1:mm) - xx(1:mm)
@@ -117,7 +124,8 @@ contains
     else
       gstep = min(stepmax, max(stepmin, 1.0_8/dxxnorm) );
     end if
-    
+
+    maxlineerrors = 10
     maxits = 2*nn
     iter = 0
     done = .false.
@@ -133,42 +141,53 @@ contains
       rgap = abs(gap)/max(1.0_8, ff)
       aerror = resnorm - sigma
       rerror = abs(ff - sigma**2/2.0_8)/max(1.0_8, ff)
-      
-      testsubopt = rgap <= max(opttol, rerror)
 
-      if(testsubopt) then
-        if(resnorm <= sigma) then
-          status = EXIT_SUBOPTIMAL_BP
-          done = .true.
-        end if
-        if(abs(aerror) <= opttol*max(1.0_8, resnorm)) then
-          status = EXIT_ROOT_FOUND
-          done = .true.
-        end if
-        if(gradnorm <= bptol*resnorm) then
-          status = EXIT_BPSOL2_FOUND
-          done = .true.
-        end if
-        if(resnorm <= bptol*bbnorm) then
-          status = EXIT_BPSOL1_FOUND
-          done = .true.
-        end if
-      end if
+      if(singletau) then
 
-      testrelchange1 = abs(ff - ffold) <= dectol*ff
-      testrelchange2 = abs(ff - ffold) <= 1.0e-1_8*ff*abs(resnorm - sigma)
-      testupdatetau = (testrelchange1 .and. resnorm > 2.0_8*sigma) &
-        .or. (testrelchange2 .and. resnorm <= 2.0_8*sigma) .and. .not. done
-
-      if(testupdatetau) then
-        tauold = tau
-        tau = tau + resnorm*aerror/gradnorm
-        if(tau < tauold) then
-          ! The one-norm ball has decreased.  Need to make sure that the
-          ! next iterate if feasible, which we do by projecting it.
-          tmp(1:mm) = xx(1:mm)
-          call spgl1_projector(xx, tmp, tau, mm)
+        if(rgap <= opttol) then
+          status = EXIT_OPTIMAL
+          done = .true.
         end if
+
+      else
+
+        testsubopt = rgap <= max(opttol, rerror)
+
+        if(testsubopt) then
+          if(resnorm <= sigma) then
+            status = EXIT_SUBOPTIMAL_BP
+            done = .true.
+          end if
+          if(abs(aerror) <= opttol*max(1.0_8, resnorm)) then
+            status = EXIT_ROOT_FOUND
+            done = .true.
+          end if
+          if(gradnorm <= bptol*resnorm) then
+            status = EXIT_BPSOL2_FOUND
+            done = .true.
+          end if
+          if(resnorm <= bptol*bbnorm) then
+            status = EXIT_BPSOL1_FOUND
+            done = .true.
+          end if
+        end if
+
+        testrelchange1 = abs(ff - ffold) <= dectol*ff
+        testrelchange2 = abs(ff - ffold) <= 1.0e-1_8*ff*abs(resnorm - sigma)
+        testupdatetau = (testrelchange1 .and. resnorm > 2.0_8*sigma) &
+          .or. (testrelchange2 .and. resnorm <= 2.0_8*sigma) .and. .not. done
+
+        if(testupdatetau) then
+          tauold = tau
+          tau = tau + resnorm*aerror/gradnorm
+          if(tau < tauold) then
+            ! The one-norm ball has decreased.  Need to make sure that the
+            ! next iterate if feasible, which we do by projecting it.
+            tmp(1:mm) = xx(1:mm)
+            call spgl1_projector(xx, tmp, tau, mm)
+          end if
+        end if
+        
       end if
 
       ! Too many its and not converged.
@@ -176,7 +195,7 @@ contains
         status = EXIT_ITERATIONS
         done = .true.
       end if
-    
+
       if(done) exit
 
       ! Iterations begin here.
@@ -184,16 +203,25 @@ contains
 
       ffold = ff
 
-      call spglinecurvy(mm, nn, aa, bb, xx, grad, maxval(lastffv), gstep, tau, xxnew, res, ff, lserr)
+      call spg_line_curvy(mm, nn, aa, bb, xx, grad, maxval(lastffv), gstep, tau, xxnew, res, ff, lserr)
 
-      if(ff > 0.5_8*sigma**2) then
+      if(lserr > 0) then
+        if(maxlineerrors <= 0) then
+          status = EXIT_LINE_ERROR
+          done = .true.
+        else
+          maxlineerrors = maxLineErrors - 1
+        end if
+      end if
+
+      if(singletau .or. ff > 0.5_8*sigma**2) then
         lastffv(mod(iter, nprevvals) + 1) = ff
         if(ffbest > ff) then
           ffbest = ff
           xxbest(1:mm) = xxnew(1:mm)
         end if
       end if
-      
+
       ! Update gradient and compute new step length.
       gradnew(1:mm) = -matmul(transpose(aa(1:nn, 1:mm)), res(1:nn))
       ss(1:mm) = xxnew(1:mm) - xx(1:mm)
@@ -210,8 +238,16 @@ contains
 
     end do
 
+    if(singletau .and. ff > ffbest) then
+      resnorm = sqrt(2.0_8*ffbest)
+      print*, 'Restoring best iterate to objective ', resnorm
+      xx(1:mm) = xxbest(1:mm)
+      res(1:nn) = bb(1:nn) - matmul(aa(1:nn, 1:mm), xx(1:mm))
+      grad(1:mm) = -matmul(transpose(aa(1:nn, 1:mm)), res(1:nn))
+    end if
+
     print*, 'Iterations = ', iter
-    
+
     ! Print final output.
     select case (status)
     case(EXIT_OPTIMAL)
@@ -228,7 +264,7 @@ contains
       print*, 'EXIT -- Found a suboptimal BP solution'
     case(EXIT_ACTIVE_SET)
       print*, 'EXIT -- Found a possible active set'
-     case default 
+    case default 
       stop 'Unknown termination condition'
     end select
 
@@ -246,7 +282,7 @@ contains
 
   !----------------------------------------------------------
 
-  subroutine spglinecurvy(mm, nn, aa, bb, xx, gg, fmax, stepmax, tau, xxnew, resnew, fnew, ierr)
+  subroutine spg_line_curvy(mm, nn, aa, bb, xx, gg, fmax, stepmax, tau, xxnew, resnew, fnew, ierr)
     integer, intent(in)    :: mm
     integer, intent(in)    :: nn
     real(8), intent(in)    :: aa(:, :) !(1:nn, 1:mm)
@@ -264,41 +300,33 @@ contains
     real(8), parameter :: gamma  = 1.0e-4_8
     integer, parameter :: maxiter = 10
     integer :: iter, nsafe
-    real(8) :: scale, gts, ssnorm, ssnormold, ggnorm, step
+    real(8) ::  gts, ssnorm, ssnormold, step
     real(8), allocatable :: ss(:)
 
     allocate(ss(1:mm))
 
     step = stepmax
     ! safeguard scaling variables
-    scale = 1.0_8 
     ssnorm = 0.0_8
     nsafe = 0
 
     iter = 0
     do
 
-      call spgl1_projector(xxnew, xx(1:mm) - step*scale*gg(1:mm), tau, mm)
+      call spgl1_projector(xxnew, xx(1:mm) - step*gg(1:mm), tau, mm)
       resnew(1:nn) = bb(1:nn) - matmul(aa(1:nn, 1:mm), xxnew(1:mm))
       fnew = dot_product(resnew(1:nn), resnew(1:nn))/2.0_8
       ss(1:mm) = xxnew(1:mm) - xx(1:mm)
-      gts = scale*dot_product(gg(1:mm), ss(1:mm))
+      gts = dot_product(gg(1:mm), ss(1:mm))
 
       if(debug) then
-        print*, ' LS ', iter, fNew, step, gts, scale
+        print*, ' LS ', iter, fNew, step, gts
       end if
              
-      if(gts >= 0.0_8) then
-        ierr = EXIT_NODESCENT
-        print*, "warning: no descent in spglinecurvy"
-        exit
-      end if
-      
-      if(fnew < fmax - gamma*step*abs(gts)) then
+      if(fnew < fmax + gamma*gts) then
         ierr = EXIT_CONVERGED
         exit
       else if(iter >= maxiter) then
-        print*, "warning: max iterations reached in spglinecurvy"
         ierr = EXIT_ITERATIONS
         exit
       end if
@@ -313,15 +341,15 @@ contains
       ssnormold = ssnorm
       ssnorm = norm_2(mm, ss)/sqrt(dble(mm))
       if(abs(ssnorm - ssnormold) < 1.0e-6*ssnorm) then
-        ggnorm = norm_2(mm, gg)/sqrt(dble(mm))
-        scale = ssnorm/ggnorm/(2.0_8**nsafe)
+        step = ssnorm/(2.0_8**nsafe)
         nsafe = nsafe + 1
       end if
+
     end do
 
     deallocate(ss)
 
-  end subroutine spglinecurvy
+  end subroutine spg_line_curvy
 
   ! --------------------------------------------
   
