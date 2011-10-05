@@ -72,9 +72,9 @@ contains
     SAFE_ALLOCATE(this%fourier_matrix(1:this%ntime, 1:this%nfreq))
 
     do ifreq = 1, this%nfreq
-      freq = ifreq*this%dfreq + this%sfreq
+      freq = (ifreq - 1)*this%dfreq + this%sfreq
       do itime = 1, this%ntime
-        time = itime*this%dtime + this%stime
+        time = (itime - 1)*this%dtime + this%stime
 
         this%fourier_matrix(itime, ifreq) = sin(freq*time)
       end do

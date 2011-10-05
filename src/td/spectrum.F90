@@ -1992,8 +1992,8 @@ contains
 
     case(SPECTRUM_COMPRESSED_SENSING)
 
-      call compressed_sensing_init(cs, time_end - time_start + 1, time_step, time_step*time_start, &
-        energy_end - energy_start + 1, energy_step, energy_step*energy_start)
+      call compressed_sensing_init(cs, time_end - time_start + 1, time_step, time_step*(time_start - 1), &
+        energy_end - energy_start + 1, energy_step, energy_step*(energy_start - 1))
 
       do ii = 1, time_function%nst_linear
         call compressed_sensing_spectral_analysis(cs, time_function%states_linear(ii)%dpsi, &
