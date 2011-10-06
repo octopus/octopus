@@ -126,7 +126,7 @@ contains
     end if
 
     maxlineerrors = 10
-    maxits = 2*nn
+    maxits = max(2000, 2*nn)
     iter = 0
     done = .false.
     status = -1
