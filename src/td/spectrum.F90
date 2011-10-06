@@ -132,7 +132,7 @@ module spectrum_m
   ! the C function loct_1dminimize
   FLOAT :: time_step_
   CMPLX, allocatable :: func_(:)
-  integer :: is_, ie_
+  integer :: is_, ie_, default
   logical :: from_vel_
 
 contains
@@ -158,15 +158,37 @@ contains
     call parse_integer  (datasets_check('PropagationSpectrumType'), SPECTRUM_ABSORPTION, spectrum%spectype)
     if(.not.varinfo_valid_option('PropagationSpectrumType', spectrum%spectype)) call input_error('PropagationSpectrumType')
 
+    !%Variable SpectrumMethod
+    !%Type integer
+    !%Default fourier
+    !%Section Utilities::oct-propagation_spectrum
+    !%Description
+    !% Decides which method is used to obtain the spectrum. The
+    !% default is the fourier transform.
+    !%Option fourier 1
+    !% The standard fourier transform.
+    !%Option compressed_sensing 2
+    !% (Experimental) Uses the compressed sensing technique.
+    !%End
+    call parse_integer  (datasets_check('SpectrumMethod'), SPECTRUM_FOURIER, spectrum%method)
+    if(.not.varinfo_valid_option('SpectrumMethod', spectrum%method)) then
+      call input_error('SpectrumMethod')
+    endif
+
+    if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) then
+      call messages_experimental('compressed sensing')
+    end if
 
     !%Variable PropagationSpectrumDampMode
     !%Type integer
     !%Default polynomial
     !%Section Utilities::oct-propagation_spectrum
     !%Description
-    !% Decides which damping/filtering is to be applied in order to calculate
-    !% spectra by calculating a Fourier transform.
-    !%Option no 0
+    !% Decides which damping/filtering is to be applied in order to
+    !% calculate spectra by calculating a Fourier transform. The
+    !% default is polynomial damping, except when compressed sensing
+    !% is used. In that case the default is none.
+    !%Option none 0
     !% No filtering at all.
     !%Option exponential 1
     !% Exponential filtering, corresponding to a Lorentzian-shaped spectrum.
@@ -175,8 +197,17 @@ contains
     !%Option gaussian 3
     !% Gaussian damping.
     !%End
+    default = SPECTRUM_DAMP_POLYNOMIAL
+    if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) default = SPECTRUM_DAMP_NONE
+
     call parse_integer  (datasets_check('PropagationSpectrumDampMode'), SPECTRUM_DAMP_POLYNOMIAL, spectrum%damp)
     if(.not.varinfo_valid_option('PropagationSpectrumDampMode', spectrum%damp)) call input_error('PropagationSpectrumDampMode')
+
+    if(spectrum%method == SPECTRUM_COMPRESSED_SENSING .and. spectrum%damp /= SPECTRUM_DAMP_NONE) then
+      message(1) = 'Using damping with compressed sensing, this is not required'
+      message(2) = 'and can introduce noise in the spectra.'
+      call messages_warning(2)
+    end if
 
     !%Variable PropagationSpectrumTransform
     !%Type integer
@@ -249,27 +280,6 @@ contains
     !%End
     call parse_float(datasets_check('PropagationSpectrumDampFactor'), CNST(0.15), &
       spectrum%damp_factor, units_inp%time**(-1))
-
-    !%Variable SpectrumMethod
-    !%Type integer
-    !%Default fourier
-    !%Section Utilities::oct-propagation_spectrum
-    !%Description
-    !% Decides which method is used to obtain the spectrum. The
-    !% default is the fourier transform.
-    !%Option fourier 1
-    !% The standard fourier transform.
-    !%Option compressed_sensing 2
-    !% (Experimental) Uses the compressed sensing technique.
-    !%End
-    call parse_integer  (datasets_check('SpectrumMethod'), SPECTRUM_FOURIER, spectrum%method)
-    if(.not.varinfo_valid_option('SpectrumMethod', spectrum%method)) then
-      call input_error('SpectrumMethod')
-    endif
-
-    if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) then
-      call messages_experimental('compressed sensing')
-    end if
 
     POP_SUB(spectrum_init)
   end subroutine spectrum_init
