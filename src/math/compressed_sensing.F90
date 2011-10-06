@@ -76,7 +76,7 @@ contains
       do itime = 1, this%ntime
         time = (itime - 1)*this%dtime + this%stime
 
-        this%fourier_matrix(itime, ifreq) = sin(freq*time)
+        this%fourier_matrix(itime, ifreq) = sin(freq*time)*dfreq*M_TWO/M_PI
       end do
     end do
     
