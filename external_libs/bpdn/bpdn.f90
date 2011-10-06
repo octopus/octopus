@@ -353,11 +353,21 @@ contains
 
   ! --------------------------------------------
   
-  real(8) pure function norm_2(nn, vv)
+  real(8) function norm_2(nn, vv)
     integer, intent(in) :: nn
     real(8), intent(in) :: vv(:)
 
-    norm_2 = sqrt(dot_product(vv(1:nn), vv(1:nn)))
+    interface 
+      real(8) function dnrm2(n, x, incx)
+        implicit none
+        
+        integer, intent(in) :: n
+        real(8), intent(in) :: x
+        integer, intent(in) :: incx      
+      end function dnrm2
+    end interface
+
+    norm_2 = dnrm2(nn, vv(1), 1)
   end function norm_2
 
 end module bpdn_m
