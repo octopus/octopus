@@ -76,4 +76,33 @@ match ; Energy     10 ; LINE(cross_section_tensor,  -1, 1) ;  10.0
 match ; Sigma      10 ; LINE(cross_section_tensor,  -1, 21) ; 0.17181933E-01
 match ; Anisotropy 10 ; LINE(cross_section_tensor,  -1, 41) ; 0.16888595E-01
 
+Util       : oct-propagation_spectrum
+Input      : 12-absorption.05-spectrum_compressed_sensing.inp
+match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.966109
+match ; Polarizability sum rule ; GREP(cross_section_vector.1, 'Polarizability (sum rule)', 30) ; 12.523498
 
+Precision : 1e-7
+
+match ; Energy      1 ; LINE(cross_section_tensor, 22, 1)  ; 1.0
+match ; Sigma       1 ; LINE(cross_section_tensor, 22, 21) ; 0.00000000E+00
+match ; Anisotropy  1 ; LINE(cross_section_tensor, 22, 41) ; 0.00000000E+00
+
+match ; Energy      2 ; LINE(cross_section_tensor, 39, 1)  ; 0.27000000E+01
+match ; Sigma       2 ; LINE(cross_section_tensor, 39, 21) ; 0.25212872E+01
+match ; Anisotropy  2 ; LINE(cross_section_tensor, 39, 41) ; 0.48824516E+01
+
+match ; Energy      3 ; LINE(cross_section_tensor, 44, 1)  ; 0.32000000E+01
+match ; Sigma       3 ; LINE(cross_section_tensor, 44, 21) ; 0.45879019E+01
+match ; Anisotropy  3 ; LINE(cross_section_tensor, 44, 41) ; 0.56190093E+01
+
+match ; Energy      4 ; LINE(cross_section_tensor, 81, 1)  ; 0.69000000E+01
+match ; Sigma       4 ; LINE(cross_section_tensor, 81, 21) ; 0.12718119E+00
+match ; Anisotropy  4 ; LINE(cross_section_tensor, 81, 41) ; 0.12921748E+00
+
+match ; Energy      5 ; LINE(cross_section_tensor, 118, 1) ; 0.10600000E+02
+match ; Sigma       5 ; LINE(cross_section_tensor, 118, 21); 0.41060089E-01
+match ; Anisotropy  5 ; LINE(cross_section_tensor, 118, 41); 0.79512520E-01
+
+match ; Energy      6 ; LINE(cross_section_tensor, 163, 1) ; 0.15100000E+02
+match ; Sigma       6 ; LINE(cross_section_tensor, 163, 21); 0.43034152E-01
+match ; Anisotropy  6 ; LINE(cross_section_tensor, 163, 41); 0.83335277E-01

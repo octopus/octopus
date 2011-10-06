@@ -1,0 +1,38 @@
+CalculationMode = td
+
+Units = ev_angstrom
+
+%Coordinates
+'Na'  | -1.4646408 | 0 | 0 | yes
+'Na'  |  1.4646408 | 0 | 0 | yes
+%
+
+ExcessCharge = 1
+
+FromScratch = yes
+
+Spacing = 0.32
+Radius = 6.0
+
+TDMaximumIter = 500
+
+TDPropagator = aetrs
+
+TDDeltaStrength = 0.01
+
+%TDPolarization
+ 1/sqrt(2) | -1/sqrt(2) | 0
+ 1/sqrt(2) |  1/sqrt(2) | 0
+ 1/sqrt(2) |  0         | 1/sqrt(2)
+%
+   
+TDPolarizationDirection = 1
+TDPolarizationEquivAxes = 3
+
+PropagationSpectrumMaxEnergy = 40.0
+PropagationSpectrumEnergyStep = 0.1
+
+SpectrumMethod = compressed_sensing
+PropagationSpectrumDampMode = no
+
+ExperimentalFeatures = yes
