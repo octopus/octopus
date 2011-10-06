@@ -101,10 +101,17 @@ contains
     type(compressed_sensing_t),  intent(out) :: this
     FLOAT,                       intent(in)  :: time_function(:)
     FLOAT,                       intent(out) :: freq_function(:)
+
+    integer :: ierr
     
     PUSH_SUB(compressed_sensing_spectral_analysis)
 
-    call bpdn(this%ntime, this%nfreq, this%fourier_matrix, time_function, this%sigma, freq_function)
+    call bpdn(this%ntime, this%nfreq, this%fourier_matrix, time_function, this%sigma, freq_function, ierr)
+    
+    if(ierr < 0) then
+      message(1) = 'The Basis Pursuit Denoising process failed to converged.'
+      call messages_warning(1)
+    end if
 
     POP_SUB(compressed_sensing_spectral_analysis)    
   end subroutine compressed_sensing_spectral_analysis

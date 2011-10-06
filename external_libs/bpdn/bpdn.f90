@@ -28,23 +28,25 @@ module bpdn_m
   public ::    &
     bpdn
 
-  interface 
+  interface
     subroutine spgl1_projector(xx, cc, tau, nn)
+      implicit none
+
+      integer, intent(in)    :: nn
       real(8), intent(inout) :: xx(1:nn)
       real(8), intent(in)    :: cc(1:nn)
       real(8), intent(in)    :: tau
-      integer, intent(in)    :: nn
     end subroutine spgl1_projector
   end interface
 
   integer, parameter ::        &
+    EXIT_LINE_ERROR    =-2,    &
+    EXIT_ITERATIONS    =-1,    &
     EXIT_CONVERGED     = 0,    &
-    EXIT_ITERATIONS    = 1,    &
     EXIT_ROOT_FOUND    = 2,    &
     EXIT_BPSOL1_FOUND  = 3,    &
     EXIT_BPSOL2_FOUND  = 4,    &
     EXIT_OPTIMAL       = 5,    &
-    EXIT_LINE_ERROR    = 6,    &
     EXIT_SUBOPTIMAL_BP = 7,    &
     EXIT_ACTIVE_SET    = 9
   
@@ -52,13 +54,15 @@ module bpdn_m
 
 contains
   
-  subroutine bpdn(nn, mm, aa, bb, sigma, xx)
-    integer, intent(in)    :: nn
-    integer, intent(in)    :: mm
-    real(8), intent(in)    :: aa(:, :) !(1:nn, 1:mm)
-    real(8), intent(in)    :: bb(:)    !(1:nn)
-    real(8), intent(in)    :: sigma
-    real(8), intent(out)   :: xx(:)    !(1:mm)
+  subroutine bpdn(nn, mm, aa, bb, sigma, xx, ierr)
+    integer,           intent(in)    :: nn
+    integer,           intent(in)    :: mm
+    real(8),           intent(in)    :: aa(:, :) !(1:nn, 1:mm)
+    real(8),           intent(in)    :: bb(:)    !(1:nn)
+    real(8),           intent(in)    :: sigma
+    real(8),           intent(out)   :: xx(:)    !(1:mm)
+    integer, optional, intent(out)   :: ierr     ! < 0 : some error occurred. >= 0 : solution found
+
     integer, parameter :: nprevvals = 3
     real(8), parameter :: stepmin = 1.0e-16_8, stepmax = 1.0e+5_8
     real(8), parameter :: opttol = 1.0e-6_8
@@ -100,7 +104,7 @@ contains
     tau = 0.0_8
 
     ! Project the starting point and evaluate function and gradient.
-    tmp = 0.0_8 ! some starting point
+    tmp(1:mm) = 0.0_8 ! some starting point
     call spgl1_projector(xx, tmp, tau, mm)
     res(1:nn) = bb(1:nn) - matmul(aa(1:nn, 1:mm), xx(1:mm))
     grad(1:mm) = -matmul(transpose(aa(1:nn, 1:mm)), res(1:nn))
@@ -267,6 +271,10 @@ contains
     case default 
       stop 'Unknown termination condition'
     end select
+
+    if(present(ierr)) then
+      ierr = status
+    end if
 
     deallocate(res)
     deallocate(grad)
