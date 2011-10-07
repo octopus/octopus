@@ -173,12 +173,12 @@ program dielectric_function
     call lalg_sym_inverter('u', space%dim, fullmat)
 
     ! symmetrize the rest dielectric matrix
-    do idir = 1, space%dim
-      do jdir = 1, jdir - 1
+    do idir = 2, space%dim
+      do jdir = 1, idir - 1
         fullmat(jdir, idir) = fullmat(idir, jdir)
       end do
     end do
-
+    
     dielectric(1:space%dim, kk) = fullmat(1:space%dim, 1)
 
     chi(1:space%dim, kk) = (dielectric(1:space%dim, kk) - vecpot0(1:space%dim)/n0)*sb%rcell_volume/(CNST(4.0)*M_PI)
