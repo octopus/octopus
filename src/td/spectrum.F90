@@ -200,7 +200,7 @@ contains
     default = SPECTRUM_DAMP_POLYNOMIAL
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) default = SPECTRUM_DAMP_NONE
 
-    call parse_integer  (datasets_check('PropagationSpectrumDampMode'), SPECTRUM_DAMP_POLYNOMIAL, spectrum%damp)
+    call parse_integer  (datasets_check('PropagationSpectrumDampMode'), default, spectrum%damp)
     if(.not.varinfo_valid_option('PropagationSpectrumDampMode', spectrum%damp)) call input_error('PropagationSpectrumDampMode')
 
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING .and. spectrum%damp /= SPECTRUM_DAMP_NONE) then
