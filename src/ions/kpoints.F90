@@ -555,7 +555,7 @@ contains
         if(kpoints(idir, ik) < -M_EPSILON) nrm(ik) = nrm(ik) + CNST(0.01)*(dim - idir + 1)
 
         !bring back point to first Brillouin zone
-        kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
+        if ( kpoints(idir,ik) /= M_HALF )  kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
       end do
 
     end do
