@@ -71,6 +71,8 @@ module bpdn_m
     end SUBROUTINE DGEMV
   end interface
 
+  real(8), parameter :: opttol = 1.0e-6_8
+
 contains
   
   subroutine bpdn(nn, mm, aa, bb, sigma, xx, ierr)
@@ -83,8 +85,8 @@ contains
     integer, optional, intent(out)   :: ierr     ! < 0 : some error occurred. >= 0 : solution found
 
     integer, parameter :: nprevvals = 3
+    integer, parameter :: activesetit = huge(1)
     real(8), parameter :: stepmin = 1.0e-16_8, stepmax = 1.0e+5_8
-    real(8), parameter :: opttol = 1.0e-6_8
     real(8), parameter :: bptol = 1.0e-6_8
     real(8), parameter :: dectol = 1.0e-4_8
 
@@ -92,9 +94,10 @@ contains
     real(8) :: tau, tauold
     real(8) :: bbnorm, ff, ffbest, ffold, dxxnorm, gstep, gradnorm, gap, rgap, resnorm
     real(8), allocatable :: res(:), grad(:), xxbest(:), dxx(:), tmp(:), xxnew(:), ss(:), gradnew(:), yy(:)
-    real(8) :: aerror, rerror, sts, sty
-    integer :: nnzxold, nnzxiter, iter, maxits, lserr, status, maxlineerrors
-    logical :: done, testsubopt, testrelchange1, testrelchange2, testupdatetau, singletau
+    real(8) :: aerror, rerror1, rerror2, sts, sty
+    integer :: nnziter, iter, maxits, lserr, status, maxlineerrors, nnzdiff, nnzg, nnzx
+    logical :: done, testrelchange1, testrelchange2, testupdatetau, singletau
+    logical, allocatable :: nnzidx(:)
 
     allocate(res(1:nn))
     allocate(grad(1:mm))
@@ -105,6 +108,7 @@ contains
     allocate(ss(1:mm))
     allocate(gradnew(1:mm))
     allocate(yy(1:mm))
+    allocate(nnzidx(1:mm))
 
     bbnorm = norm_2(nn, bb)
 
@@ -134,8 +138,7 @@ contains
     ffbest               = ff
     xxbest(1:mm)         = xx(1:mm)
     ffold                = ff
-    nnzxold              = -1
-    nnzxiter             = 0
+    nnziter              = 0
 
     ! Compute projected gradient direction and initial steplength.
     tmp(1:mm) = xx(1:mm) - grad(1:mm)
@@ -164,20 +167,32 @@ contains
       gap = sum(res(1:nn)*(res(1:nn) - bb(1:nn))) + tau*gradnorm
       rgap = abs(gap)/max(1.0_8, ff)
       aerror = resnorm - sigma
-      rerror = abs(ff - sigma**2/2.0_8)/max(1.0_8, ff)
+      rerror1 = abs(aerror)/max(1.0_8, resnorm)
+      rerror2 = abs(ff - sigma**2/2.0_8)/max(1.0_8, ff)
+
+      ! count number of consecutive iterations with identical support.
+      call active_vars(mm, xx, grad, nnzidx, nnzx, nnzg, nnzdiff)
+
+      if(nnzDiff > 0) then
+        nnziter = 0;
+      else
+        nnziter = nnziter + 1;
+        if(nnziter >= activesetit) then
+          done = .true.
+          status = EXIT_ACTIVE_SET
+        end if
+      end if
 
       if(singletau) then
 
-        if(rgap <= opttol) then
+        if(rgap <= opttol .or. resnorm < opttol*bbnorm) then
           status = EXIT_OPTIMAL
           done = .true.
         end if
 
       else
 
-        testsubopt = rgap <= max(opttol, rerror)
-
-        if(testsubopt) then
+        if(rgap <= max(opttol, rerror2) .or. rerror1 <= opttol) then
           if(resnorm <= sigma) then
             status = EXIT_SUBOPTIMAL_BP
             done = .true.
@@ -305,6 +320,7 @@ contains
     deallocate(ss)
     deallocate(gradnew)
     deallocate(yy)
+    deallocate(nnzidx)
 
   end subroutine bpdn
 
@@ -386,6 +402,50 @@ contains
     deallocate(ss)
 
   end subroutine spg_line_curvy
+
+  ! -----------------------------------------
+
+  ! Find the current active set.
+  subroutine active_vars(mm, xx, gg, nnzidx, nnzx, nnzg, nnzdiff)
+    integer, intent(in)    :: mm
+    real(8), intent(in)    :: xx(:)
+    real(8), intent(in)    :: gg(:)
+    logical, intent(inout) :: nnzidx(:) !< vector of primal/dual indicators.
+    integer, intent(out)   :: nnzx      !< the number of nonzero x.
+    integer, intent(out)   :: nnzg      !< is the number of elements in nnzIdx.
+    integer, intent(out)   :: nnzdiff   !< the no. of elements that changed in the support
+
+    real(8), parameter :: xtol  = 10.0_8*opttol
+    real(8), parameter :: gtol  = 10.0_8*opttol
+    real(8) :: ggnorm, z1, z2
+    logical, allocatable :: nnzold(:)
+    integer :: im
+    logical :: xpos, xneg
+
+    ggnorm = maxval(abs(gg(1:mm)))
+
+    allocate(nnzold(1:mm))
+    nnzold(1:mm) = nnzidx(1:mm)
+
+    nnzg = 0
+    nnzx = 0
+    nnzdiff = 0
+    do im = 1, mm
+      ! Reduced costs for postive & negative parts of x.
+      z1 = ggnorm + gg(im)
+      z2 = ggnorm - gg(im)
+      
+      ! Primal/dual based indicators.
+      xpos = xx(im) >  xtol .and. z1 < gtol
+      xneg = xx(im) < -xtol .and. z2 < gtol
+      nnzidx(im) = xpos .or. xneg
+      if(nnzidx(im))  nnzg = nnzg + 1
+      if(abs(xx(im)) >= xtol) nnzx = nnzx + 1
+      if(.not. nnzidx(im) .eqv. nnzold(im)) nnzdiff = nnzdiff + 1 
+    end do
+
+  end subroutine active_vars
+
 
   ! --------------------------------------------
   
