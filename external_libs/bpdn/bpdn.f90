@@ -52,6 +52,24 @@ module bpdn_m
   
   logical, parameter :: debug = .false.
 
+  interface
+    subroutine dgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+      implicit none
+
+      character, intent(in)    :: trans
+      integer,   intent(in)    :: m
+      integer,   intent(in)    :: n
+      real(8),   intent(in)    :: alpha
+      real(8),   intent(in)    :: a !(1:lda, :)
+      integer,   intent(in)    :: lda
+      real(8),   intent(in)    :: x !(:)
+      integer,   intent(in)    :: incx
+      real(8),   intent(in)    :: beta
+      real(8),   intent(in)    :: y !(:)
+      integer,   intent(in)    :: incy
+    end SUBROUTINE DGEMV
+  end interface
+
 contains
   
   subroutine bpdn(nn, mm, aa, bb, sigma, xx, ierr)
@@ -106,8 +124,8 @@ contains
     ! Project the starting point and evaluate function and gradient.
     tmp(1:mm) = 0.0_8 ! some starting point
     call spgl1_projector(xx, tmp, tau, mm)
-    res(1:nn) = bb(1:nn) - matmul(aa(1:nn, 1:mm), xx(1:mm))
-    grad(1:mm) = -matmul(transpose(aa(1:nn, 1:mm)), res(1:nn))
+    call residual(mm, nn, aa, bb, xx, res)
+    call calc_grad(mm, nn, aa, res, grad)
     ff = dot_product(res(1:nn), res(1:nn))/2.0_8
 
     ! Required for nonmonotone strategy.
@@ -227,7 +245,7 @@ contains
       end if
 
       ! Update gradient and compute new step length.
-      gradnew(1:mm) = -matmul(transpose(aa(1:nn, 1:mm)), res(1:nn))
+      call calc_grad(mm, nn, aa, res, gradnew)
       ss(1:mm) = xxnew(1:mm) - xx(1:mm)
       yy(1:mm) = gradnew(1:mm) - grad(1:mm)
       xx(1:mm) = xxnew(1:mm)
@@ -246,8 +264,8 @@ contains
       resnorm = sqrt(2.0_8*ffbest)
       print*, 'Restoring best iterate to objective ', resnorm
       xx(1:mm) = xxbest(1:mm)
-      res(1:nn) = bb(1:nn) - matmul(aa(1:nn, 1:mm), xx(1:mm))
-      grad(1:mm) = -matmul(transpose(aa(1:nn, 1:mm)), res(1:nn))
+      call residual(mm, nn, aa, bb, xx, res)
+      call calc_grad(mm, nn, aa, res, grad)
     end if
 
     print*, 'Iterations = ', iter
@@ -322,7 +340,7 @@ contains
     do
 
       call spgl1_projector(xxnew, xx(1:mm) - step*gg(1:mm), tau, mm)
-      resnew(1:nn) = bb(1:nn) - matmul(aa(1:nn, 1:mm), xxnew(1:mm))
+      call residual(mm, nn, aa, bb, xxnew, resnew)
       fnew = dot_product(resnew(1:nn), resnew(1:nn))/2.0_8
       ss(1:mm) = xxnew(1:mm) - xx(1:mm)
       gts = dot_product(gg(1:mm), ss(1:mm))
@@ -377,5 +395,35 @@ contains
 
     norm_2 = dnrm2(nn, vv(1), 1)
   end function norm_2
+
+  ! -------------------------------------------
+  
+  subroutine residual(mm, nn, aa, bb, xx, res)
+    integer, intent(in)    :: mm
+    integer, intent(in)    :: nn
+    real(8), intent(in)    :: aa(:, :) !(1:nn, 1:mm)
+    real(8), intent(in)    :: bb(:)    !(1:nn)
+    real(8), intent(in)    :: xx(:)    !(1:mm)
+    real(8), intent(out)   :: res(:)   !(1:nn)
+
+    res(1:nn) = bb(1:nn)
+    call dgemv(trans = 'n', m = nn, n = mm, alpha = -1.0_8, a = aa(1, 1), lda = ubound(aa, dim = 1), &
+      x = xx(1), incx = 1, beta = 1.0_8, y = res(1), incy = 1)
+  end subroutine residual
+
+  ! -------------------------------------------
+
+  subroutine calc_grad(mm, nn, aa, res, grad)
+    integer, intent(in)    :: mm
+    integer, intent(in)    :: nn
+    real(8), intent(in)    :: aa(:, :) !(1:nn, 1:mm)
+    real(8), intent(in)    :: res(:)   !(1:nn)
+    real(8), intent(out)   :: grad(:)  !(1:mm)
+
+    grad = 0.0_8
+    call dgemv(trans = 't', m = nn, n = mm, alpha = -1.0_8, a = aa(1, 1), lda = ubound(aa, dim = 1), &
+      x = res(1), incx = 1, beta = 0.0_8, y = grad(1), incy = 1)
+
+  end subroutine calc_grad
 
 end module bpdn_m
