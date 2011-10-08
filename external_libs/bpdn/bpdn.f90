@@ -33,8 +33,8 @@ module bpdn_m
       implicit none
 
       integer, intent(in)    :: nn
-      real(8), intent(inout) :: xx(1:nn)
-      real(8), intent(in)    :: cc(1:nn)
+      real(8), intent(inout) :: xx !(1:nn)
+      real(8), intent(in)    :: cc !(1:nn)
       real(8), intent(in)    :: tau
     end subroutine spgl1_projector
   end interface
@@ -123,10 +123,10 @@ contains
 
     ! Project the starting point and evaluate function and gradient.
     tmp(1:mm) = 0.0_8 ! some starting point
-    call spgl1_projector(xx, tmp, tau, mm)
+    call spgl1_projector(xx(1), tmp(1), tau, mm)
     call residual(mm, nn, aa, bb, xx, res)
     call calc_grad(mm, nn, aa, res, grad)
-    ff = dot_product(res(1:nn), res(1:nn))/2.0_8
+    ff = dotp(nn, res, res)/2.0_8
 
     ! Required for nonmonotone strategy.
     lastffv(1:nprevvals) = ff
@@ -137,7 +137,8 @@ contains
     nnzxiter             = 0
 
     ! Compute projected gradient direction and initial steplength.
-    call spgl1_projector(dxx, xx(1:mm) - grad(1:mm), tau, mm)
+    tmp(1:mm) = xx(1:mm) - grad(1:mm)
+    call spgl1_projector(dxx(1), tmp(1), tau, mm)
     dxx(1:mm) = dxx(1:mm) - xx(1:mm)
     dxxnorm = maxval(abs(dxx(1:mm)))
 
@@ -206,7 +207,7 @@ contains
             ! The one-norm ball has decreased.  Need to make sure that the
             ! next iterate if feasible, which we do by projecting it.
             tmp(1:mm) = xx(1:mm)
-            call spgl1_projector(xx, tmp, tau, mm)
+            call spgl1_projector(xx(1), tmp(1), tau, mm)
           end if
         end if
         
@@ -250,12 +251,12 @@ contains
       yy(1:mm) = gradnew(1:mm) - grad(1:mm)
       xx(1:mm) = xxnew(1:mm)
       grad(1:mm) = gradnew(1:mm)
-      sts = dot_product(ss(1:mm), ss(1:mm))
-      sty = dot_product(ss(1:mm), yy(1:mm))
+      sts = dotp(mm, ss, ss)
+      sty = dotp(mm, ss, yy)
       if(sty <= 0.0_8) then
         gstep = stepmax
       else
-        gstep = min(stepmax, max(stepmin, sts/sty) );
+        gstep = min(stepmax, max(stepmin, sts/sty))
       end if
 
     end do
@@ -338,12 +339,12 @@ contains
 
     iter = 0
     do
-
-      call spgl1_projector(xxnew, xx(1:mm) - step*gg(1:mm), tau, mm)
+      ss(1:mm) = xx(1:mm) - step*gg(1:mm)
+      call spgl1_projector(xxnew(1), ss(1), tau, mm)
       call residual(mm, nn, aa, bb, xxnew, resnew)
-      fnew = dot_product(resnew(1:nn), resnew(1:nn))/2.0_8
+      fnew = dotp(nn, resnew, resnew)/2.0_8
       ss(1:mm) = xxnew(1:mm) - xx(1:mm)
-      gts = dot_product(gg(1:mm), ss(1:mm))
+      gts = dotp(mm, gg, ss)
 
       if(debug) then
         print*, ' LS ', iter, fNew, step, gts
@@ -376,6 +377,28 @@ contains
     deallocate(ss)
 
   end subroutine spg_line_curvy
+
+  ! --------------------------------------------
+  
+  real(8) function dotp(nn, vv1, vv2)
+    integer, intent(in) :: nn
+    real(8), intent(in) :: vv1(:)
+    real(8), intent(in) :: vv2(:)
+
+    interface 
+      real(8) function ddot(n, x, incx, y, incy)
+        implicit none
+        
+        integer, intent(in) :: n
+        real(8), intent(in) :: x
+        integer, intent(in) :: incx
+        real(8), intent(in) :: y
+        integer, intent(in) :: incy
+      end function ddot
+    end interface
+
+    dotp = ddot(nn, vv1(1), 1, vv2(1), 1)
+  end function dotp
 
   ! --------------------------------------------
   
