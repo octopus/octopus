@@ -48,8 +48,9 @@ module bpdn_m
     EXIT_BPSOL2_FOUND  = 4,    &
     EXIT_OPTIMAL       = 5,    &
     EXIT_SUBOPTIMAL_BP = 7,    &
-    EXIT_ACTIVE_SET    = 9
-  
+    EXIT_ACTIVE_SET    = 9,    &
+    EXIT_NODESCENT     = 10
+
   logical, parameter :: debug = .false.
 
   interface
@@ -122,7 +123,7 @@ contains
     tau = 0.0_8
 
     ! Project the starting point and evaluate function and gradient.
-    tmp(1:mm) = 0.0_8 ! some starting point
+    tmp(1:mm) = 1.0_8 ! some starting point
     call spgl1_projector(xx(1), tmp(1), tau, mm)
     call residual(mm, nn, aa, bb, xx, res)
     call calc_grad(mm, nn, aa, res, grad)
@@ -202,7 +203,7 @@ contains
 
         if(testupdatetau) then
           tauold = tau
-          tau = tau + resnorm*aerror/gradnorm
+          tau = max(0.0_8, tau + resnorm*aerror/gradnorm)
           if(tau < tauold) then
             ! The one-norm ball has decreased.  Need to make sure that the
             ! next iterate if feasible, which we do by projecting it.
@@ -228,7 +229,7 @@ contains
 
       call spg_line_curvy(mm, nn, aa, bb, xx, grad, maxval(lastffv), gstep, tau, xxnew, res, ff, lserr)
 
-      if(lserr > 0) then
+      if(lserr /= EXIT_CONVERGED) then
         if(maxlineerrors <= 0) then
           status = EXIT_LINE_ERROR
           done = .true.
@@ -327,24 +328,31 @@ contains
     real(8), parameter :: gamma  = 1.0e-4_8
     integer, parameter :: maxiter = 10
     integer :: iter, nsafe
-    real(8) ::  gts, ssnorm, ssnormold, step
+    real(8) ::  gts, ssnorm, ssnormold, step, scale, ggnorm
     real(8), allocatable :: ss(:)
 
     allocate(ss(1:mm))
 
     step = stepmax
+    scale = 1.0_8
+
     ! safeguard scaling variables
     ssnorm = 0.0_8
     nsafe = 0
 
     iter = 0
     do
-      ss(1:mm) = xx(1:mm) - step*gg(1:mm)
+      ss(1:mm) = xx(1:mm) - step*scale*gg(1:mm)
       call spgl1_projector(xxnew(1), ss(1), tau, mm)
       call residual(mm, nn, aa, bb, xxnew, resnew)
       fnew = dotp(nn, resnew, resnew)/2.0_8
       ss(1:mm) = xxnew(1:mm) - xx(1:mm)
-      gts = dotp(mm, gg, ss)
+      gts = scale*dotp(mm, gg, ss)
+
+      if(gts >= 0) then
+        ierr = EXIT_NODESCENT;
+        exit
+      end if
 
       if(debug) then
         print*, ' LS ', iter, fNew, step, gts
@@ -368,7 +376,8 @@ contains
       ssnormold = ssnorm
       ssnorm = norm_2(mm, ss)/sqrt(dble(mm))
       if(abs(ssnorm - ssnormold) < 1.0e-6*ssnorm) then
-        step = ssnorm/(2.0_8**nsafe)
+        ggnorm = norm_2(mm, gg)/sqrt(dble(mm))
+        scale = ssnorm/ggnorm/(2.0_8**nsafe)
         nsafe = nsafe + 1
       end if
 

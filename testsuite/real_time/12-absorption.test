@@ -78,8 +78,10 @@ match ; Anisotropy 10 ; LINE(cross_section_tensor,  -1, 41) ; 0.16888595E-01
 
 Util       : oct-propagation_spectrum
 Input      : 12-absorption.05-spectrum_compressed_sensing.inp
-#match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.967932
-#match ; Polarizability sum rule ; GREP(cross_section_vector.1, 'Polarizability (sum rule)', 30) ; 13.064543
+Precision : 1e-2
+match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.992404
+Precision : 1e-1
+match ; Polarizability sum rule ; GREP(cross_section_vector.1, 'Polarizability (sum rule)', 30) ; 12.593504
 
 #match ; Energy      1 ; LINE(cross_section_tensor, 22, 1)  ; 1.0
 #match ; Sigma       1 ; LINE(cross_section_tensor, 22, 21) ;-0.12877608E-03
