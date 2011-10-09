@@ -453,10 +453,12 @@ contains
 
       ! do we have the correct number of processors
       if(product(mc%group_sizes(1:mc%n_index)) .ne. base_grp%size) then
-        write(message(1),'(a,i4,a,i4,a)') "Inconsistent number of processors (", &
-          product(real_group_sizes(1:mc%n_index)), ".ne.", base_grp%size, ")"
-        message(2) = "You probably have a problem in the block 'ParallelizationGroupRanks'"
-        call messages_fatal(2, only_root_writes = .true.)
+        write(message(1),'(a)') 'Inconsistent number of processors:'
+        write(message(2),'(a,i6)') '  MPI processes      = ', base_grp%size
+        write(message(3),'(a,i6)') '  Required processes = ', product(real_group_sizes(1:mc%n_index))
+        message(4) = ''
+        message(5) = 'You probably have a problem in the ParallelizationGroupRanks block.'
+        call messages_fatal(5, only_root_writes = .true.)
       end if
 
       if(any(real_group_sizes(1:mc%n_index) > index_range(1:mc%n_index))) then
