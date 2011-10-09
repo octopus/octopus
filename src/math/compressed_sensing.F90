@@ -109,7 +109,7 @@ contains
     call bpdn(this%ntime, this%nfreq, this%fourier_matrix, time_function, this%sigma, freq_function, ierr)
     
     if(ierr < 0) then
-      message(1) = 'The Basis Pursuit Denoising process failed to converged.'
+      message(1) = 'The Basis Pursuit Denoising process failed to converge.'
       call messages_warning(1)
     end if
 

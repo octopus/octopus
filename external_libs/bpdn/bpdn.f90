@@ -139,6 +139,7 @@ contains
     xxbest(1:mm)         = xx(1:mm)
     ffold                = ff
     nnziter              = 0
+    nnzidx(1:mm)         = .false.
 
     ! Compute projected gradient direction and initial steplength.
     tmp(1:mm) = xx(1:mm) - grad(1:mm)
