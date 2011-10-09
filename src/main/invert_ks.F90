@@ -60,8 +60,6 @@ contains
     PUSH_SUB(invert_ks_run)
 
     ! initialize KS inversion module
-    call xc_ks_inversion_init(sys%ks%ks_inversion, sys%ks%xc_family, &
-         sys%gr, sys%geo, sys%st%d, sys%mc)
     call xc_ks_inversion_write_info(sys%ks%ks_inversion, stdout)
 
     !abbreviations
@@ -88,7 +86,7 @@ contains
       rho(:) = rho(:) + target_rho(:,ii)
     enddo
     
-    call poisson_init(sys%ks%hartree_solver, sys%gr%der, sys%geo, sys%mc%master_comm)
+!    call poisson_init(sys%ks%hartree_solver, sys%gr%der, sys%geo, sys%mc%master_comm)
     
     ! calculate the Hartree potential
     call dpoisson_solve(sys%ks%hartree_solver, hm%vhartree, rho)
@@ -147,9 +145,7 @@ contains
 
     SAFE_DEALLOCATE_A(target_rho)
     SAFE_DEALLOCATE_A(rho)
-
-    call xc_ks_inversion_end(sys%ks%ks_inversion, sys%gr, sys%geo)
-
+    
     POP_SUB(invert_ks_run)
     
   contains
