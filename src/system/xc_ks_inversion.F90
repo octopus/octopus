@@ -173,7 +173,7 @@ contains
     if(ks_inv%level .ne. XC_KS_INVERSION_NONE) then
       ! cleanup
       call eigensolver_end(ks_inv%eigensolver)
-      !call hamiltonian_end(ks_inv%aux_hm, gr, geo)
+      call hamiltonian_end(ks_inv%aux_hm, gr, geo)
       call states_end(ks_inv%aux_st)
     end if
 

@@ -86,8 +86,6 @@ contains
       rho(:) = rho(:) + target_rho(:,ii)
     enddo
     
-!    call poisson_init(sys%ks%hartree_solver, sys%gr%der, sys%geo, sys%mc%master_comm)
-    
     ! calculate the Hartree potential
     call dpoisson_solve(sys%ks%hartree_solver, hm%vhartree, rho)
 

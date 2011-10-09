@@ -1,6 +1,5 @@
 ExperimentalFeatures = yes
 CalculationMode = invert_ks
-DebugLevel = 100
 
 Dimensions = 1
 FromScratch = yes
