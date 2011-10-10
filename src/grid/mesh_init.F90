@@ -774,7 +774,8 @@ contains
     ! we have a new communicator
     call mpi_grp_init(mesh%mpi_grp, graph_comm)
 
-    call vec_init(graph_comm, 0, part, mesh%np_global, mesh%np_part_global, mesh%idx, stencil, mesh%sb%dim, mesh%vp)
+    call vec_init(graph_comm, 0, part, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
+         mesh%sb%dim, mesh%sb%periodic_dim, mesh%vp)
     SAFE_DEALLOCATE_A(part)
 
     SAFE_ALLOCATE(nnb(1:mesh%vp%npart))

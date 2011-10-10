@@ -142,7 +142,8 @@ module par_vec_m
     integer, pointer        :: part(:)              !< Point -> partition.
     integer, pointer        :: np_local(:)          !< How many points has partition r?
     integer, pointer        :: xlocal(:)            !< Points of partition r start at
-                                                    !! xlocal(r) in local.
+                                                    !! xlocal(r) in local. Global start point
+                                                    !! of the local index.    
     integer, pointer        :: local(:)             !< Partition r has points
                                                     !! local(xlocal(r):
                                                     !! xlocal(r)+np_local(r)-1).
@@ -180,7 +181,7 @@ contains
   !! from how it is in the rest of the code (for historical reasons
   !! and also because the vec_init has more a global than local point
   !! of view on the mesh): See the comments in the parameter list.
-  subroutine vec_init(comm, root, part, np, np_part, idx, stencil, dim, vp)
+  subroutine vec_init(comm, root, part, np, np_part, idx, stencil, dim, periodic_dim, vp)
     integer,         intent(in)  :: comm         !< Communicator to use.
     integer,         intent(in)  :: root         !< The master node.
 
@@ -191,6 +192,7 @@ contains
     type(index_t),   intent(in)  :: idx
     type(stencil_t), intent(in)  :: stencil      !< The stencil for which to calculate ghost points.
     integer,         intent(in)  :: dim          !< Number of dimensions.
+    integer,         intent(in)  :: periodic_dim !< Number of periodic dimensions
     type(pv_t),      intent(out) :: vp           !< Description of partition.
 
     ! Careful: MPI counts node ranks from 0 to numproc-1.
@@ -252,19 +254,21 @@ contains
     ! (xlocal, local) and for boundary points (xbndry, bndry).
     vp%xlocal(1) = 1
     vp%xbndry(1) = 1
+    ! Set the starting point of local and boundary points
     do inode = 2, npart
       vp%xlocal(inode) = vp%xlocal(inode - 1) + vp%np_local(inode - 1)
       vp%xbndry(inode) = vp%xbndry(inode - 1) + vp%np_bndry(inode - 1)
     end do
+    ! Set the local and boundary points
     ir = 0
     do ip = 1, np
       vp%local(vp%xlocal(part(ip)) + ir(part(ip))) = ip
-      ir(part(ip))                                 = ir(part(ip)) + 1
+      ir(part(ip))                                 = ir(part(ip)) + 1 ! increment the counter
     end do
     ir = 0
     do ip = np+1, np+np_enl
       vp%bndry(vp%xbndry(part(ip)) + ir(part(ip))) = ip
-      ir(part(ip))                                 = ir(part(ip)) + 1
+      ir(part(ip))                                 = ir(part(ip)) + 1 ! increment the counter
     end do
 
     ! Format of ghost:
@@ -383,8 +387,15 @@ contains
       end if
     end if
 
-    ! Set up the global-to-local point number mapping.
-    do inode = 1, npart
+    ! Set up the global-to-local point number mapping
+    if (periodic_dim /= 0) then
+      ip = 1
+      jp = npart
+    else
+      ip = vp%partno
+      jp = vp%partno
+    end if
+    do inode = ip, jp
       ! Create hash table.
       call iihash_init(vp%global(inode), vp%np_local(inode) + vp%np_ghost(inode) + vp%np_bndry(inode))
       ! Insert local points.
@@ -400,7 +411,6 @@ contains
         call iihash_insert(vp%global(inode), vp%bndry(vp%xbndry(inode) + ip - 1), ip + vp%np_local(inode) + vp%np_ghost(inode))
       end do
     end do
-    
     ! Complete entries in vp.
     vp%comm   = comm
     vp%root   = root
@@ -507,9 +517,8 @@ contains
     SAFE_DEALLOCATE_P(vp%ghost)
 
     if(associated(vp%global)) then
-      do ipart = 1, vp%npart
-        call iihash_end(vp%global(ipart))
-      end do
+      ipart = vp%partno
+      call iihash_end(vp%global(ipart))
       SAFE_DEALLOCATE_P(vp%global)
     end if
 
