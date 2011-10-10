@@ -259,8 +259,11 @@ AC_SUBST(DEBUG)
 dnl set the default extension for the programs
 EXEEXT="${MYEXT}${EXEEXT}"
 
+dnl can force build of utilties even with mpi
+AC_ARG_ENABLE(utils, AS_HELP_STRING([--enable-utils], [Build utilities (may sometimes work even with mpi)]))
+
 dnl we only generate the utilities if single precision and MPI are off
-if test x"$enable_mpi" = x"no" -a -z "${SINGLE_PRECISION}"; then
+if test \( x"$enable_mpi" = x"no" -a -z "${SINGLE_PRECISION}" \) -o \( x"$enable_utils" = x"yes" \); then
   UTILITY_PROGRAMS='$(EXTRA_PROGRAMS)'
   msg="+ utilities"
 else

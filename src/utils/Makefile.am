@@ -21,6 +21,8 @@
 
 include $(srcdir)/../common-rules.make
 
+EXEEXT =
+
 EXTRA_PROGRAMS = oct-propagation_spectrum oct-rotatory_strength oct-harmonic-spectrum \
                  oct-casida_spectrum oct-vibrational oct-xyz-anim oct-center-geom oct-help \
                  oct-oscillator-strength \
