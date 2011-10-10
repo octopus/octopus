@@ -347,7 +347,7 @@ foreach my $octopus_exe (@executables){
 
       if ( $_ =~ /^match/ && !$opt_n && $return_value == 0) {
 	if(run_match_new($_)){
-	  printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \n";
+	  printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
 	  if ($opt_v) { print_hline(); }
 	} else {
 	  printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
@@ -483,7 +483,7 @@ sub run_match_new(){
     return 0;
   }
 
-  my $value = `cd $workdir; $pre_command`;
+  $value = `cd $workdir; $pre_command`;
 
   # append the command and the regexp also to the shell script matches.sh in the
   # current archive directory
