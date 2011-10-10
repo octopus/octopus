@@ -31,6 +31,7 @@ module system_m
   use output_m
   use hamiltonian_m
   use io_function_m
+  use math_m
   use mesh_m
   use messages_m
   use modelmb_particles_m
@@ -198,13 +199,34 @@ contains
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
 
+    integer, allocatable :: ind(:)
+    integer :: ist, ik
+    FLOAT, allocatable :: copy_occ(:)
+
     PUSH_SUB(system_h_setup)
 
     call states_fermi(sys%st, sys%gr%mesh)
     call density_calc(sys%st, sys%gr, sys%st%rho)
 
     call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .true.) ! get potentials
-    call states_fermi(sys%st, sys%gr%mesh)                             ! occupations
+
+    if(sys%st%restart_reorder_occs .and. sys%st%fromScratch) then
+      SAFE_ALLOCATE(ind(1:sys%st%nst))
+      SAFE_ALLOCATE(copy_occ(1:sys%st%nst))
+
+      do ik = 1, sys%st%d%nik
+        call sort(sys%st%eigenval(:, ik), ind)
+        copy_occ(1:sys%st%nst) = sys%st%occ(1:sys%st%nst, ik)
+        do ist = 1, sys%st%nst
+          sys%st%occ(ist, ik) = copy_occ(ind(ist))
+        enddo
+      enddo
+
+      SAFE_DEALLOCATE_A(ind)
+      SAFE_DEALLOCATE_A(copy_occ)
+    endif
+
+    call states_fermi(sys%st, sys%gr%mesh)                              ! occupations
     call total_energy(hm, sys%gr, sys%st, -1)
 
     POP_SUB(system_h_setup)

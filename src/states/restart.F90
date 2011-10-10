@@ -450,6 +450,7 @@ contains
 
     if(.not. present(lr)) then
       write(message(1), '(a,i5)') 'Info: Loading restart information.'
+      st%fromScratch = .false. ! obviously, we are using restart info
     else
       write(message(1), '(a,i5)') 'Info: Loading restart information for linear response.'
     end if

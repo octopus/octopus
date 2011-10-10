@@ -153,6 +153,7 @@ module states_m
 
     FLOAT, pointer :: eigenval(:,:) !< obviously the eigenvalues
     logical        :: fixed_occ     !< should the occupation numbers be fixed?
+    logical        :: restart_reorder_occs !< used for restart with altered occupation numbers
     FLOAT, pointer :: occ(:,:)      !< the occupation numbers
     logical        :: fixed_spins   !< In spinors mode, the spin direction is set
                                     !< for the initial (random) orbitals.
@@ -162,6 +163,7 @@ module states_m
     FLOAT          :: val_charge    !< valence charge
 
     logical        :: extrastates   ! are there extra states?
+    logical        :: fromScratch
     type(smear_t)  :: smear         ! smearing of the electronic occupations
 
     !> This is stuff needed for the parallelization in states.
@@ -254,6 +256,7 @@ contains
 
     PUSH_SUB(states_init)
 
+    st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_null(st)
 
     !%Variable SpinComponents
@@ -895,6 +898,24 @@ contains
 
       end if occ_fix
     end if
+
+    !%Variable RestartReorderOccs
+    !%Type logical
+    !%Default no
+    !%Section States
+    !%Description
+    !% Consider doing a ground-state calculation, and then restarting with new occupations set
+    !% with the <tt>Occupations</tt> block, in an attempt to populate the orbitals of the original
+    !% calculation. However, the eigenvalues may reorder as the density changes, in which case the
+    !% occupations will now be referring to different orbitals. Setting this variable to yes will
+    !% try to solve this issue when the restart data is being read, by reordering the occupations
+    !% according to the order of the expectation values of the restart wavefunctions.
+    !%End
+    if(st%fixed_occ) then
+      call parse_logical(datasets_check('RestartReorderOccs'), .false., st%restart_reorder_occs)
+    else
+      st%restart_reorder_occs = .true.
+    endif
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs)
 
