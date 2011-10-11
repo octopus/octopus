@@ -2,7 +2,7 @@
 # $Id: 09-qr.test 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : QR orthogonalization
-Programs   : oct-test
+Programs   : oct-test; oct-test_mpi
 TestGroups : long-run
 Enabled    : Yes
 

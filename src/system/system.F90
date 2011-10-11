@@ -210,7 +210,7 @@ contains
 
     call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .true.) ! get potentials
 
-    if(sys%st%restart_reorder_occs .and. sys%st%fromScratch) then
+    if(sys%st%restart_reorder_occs .and. .not. sys%st%fromScratch) then
       SAFE_ALLOCATE(ind(1:sys%st%nst))
       SAFE_ALLOCATE(copy_occ(1:sys%st%nst))
 
