@@ -84,6 +84,6 @@ StatesBlocksize = 32
 ParallelizationStrategy = par_states + par_domains
 
 %ParallelizationGroupRanks
- 2 | 2
+ fill | 2
 %
 

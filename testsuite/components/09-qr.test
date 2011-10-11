@@ -2,7 +2,10 @@
 # $Id: 09-qr.test 2423 2006-09-24 21:25:52Z acastro $
 
 Test       : QR orthogonalization
-Programs   : oct-test; oct-test_mpi
+Options    : scalapack
+Programs   : oct-test_mpi
+Options    : 
+Programs   : oct-test
 TestGroups : long-run
 Enabled    : Yes
 
