@@ -211,8 +211,9 @@
 
     integer :: i, mm, nn, n, j, k
     FLOAT :: t, det, w1
-    type(tdf_t) :: fn, fm
     FLOAT, allocatable :: neigenvec(:, :), eigenvec(:, :), eigenval(:)
+
+    type(tdf_t), allocatable :: fnn(:)
 
     PUSH_SUB(controlfunction_trans_matrix)
 
@@ -228,36 +229,32 @@
 
       if( cf_common%mode .eq. controlfunction_mode_f ) then
 
+        SAFE_ALLOCATE(fnn(par%dim))
         do mm = 1, par%dim
-          call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
+          call tdf_init_numerical(fnn(mm), tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
             cf_common%omegamax, rep = TDF_FOURIER_SERIES)
-          call tdf_set_numerical(fm, mm, M_ONE)
-          call tdf_fourier_to_numerical(fm)
-          do i = 1, tdf_niter(fm) + 1
-            t = (i-1)*tdf_dt(fm)
-            call tdf_set_numerical(fm, i, tdf(fm, i)*cos(par%w0*t))
+          call tdf_set_numerical(fnn(mm), mm, M_ONE)
+          call tdf_fourier_to_numerical(fnn(mm))
+          do i = 1, tdf_niter(fnn(mm)) + 1
+            t = (i-1)*tdf_dt(fnn(mm))
+            call tdf_set_numerical(fnn(mm), i, tdf(fnn(mm), i)*cos(par%w0*t))
           end do
-
-          do nn = mm, par%dim
-            call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-              cf_common%omegamax, rep = TDF_FOURIER_SERIES)
-            call tdf_set_numerical(fn, nn, M_ONE)
-            call tdf_fourier_to_numerical(fn)
-            do i = 1, tdf_niter(fn) + 1
-              t = (i-1)*tdf_dt(fn)
-              call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
-            end do
-            par%u(mm, nn) = tdf_dot_product(fm, fn)
-            call tdf_end(fn)
-          end do
-          call tdf_end(fm)
         end do
 
         do mm = 1, par%dim
+          do nn = mm, par%dim
+            par%u(mm, nn) = tdf_dot_product(fnn(mm), fnn(nn))
+          end do
+        end do
+
+        do mm = 1, par%dim
+          call tdf_end(fnn(mm))
           do nn = 1, mm - 1
             par%u(mm, nn) = par%u(nn, mm)
           end do
         end do
+
+        SAFE_DEALLOCATE_A(fnn)
 
       end if
 
@@ -268,52 +265,40 @@
       par%u = M_ZERO
       w1 = (M_TWO*M_PI/(tdf_dt(par%f(1))*tdf_niter(par%f(1))))
 
+      SAFE_ALLOCATE(fnn(n))
       do mm = 1, n
-        call tdf_init_numerical(fm, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
+        call tdf_init_numerical(fnn(mm), tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
           cf_common%omegamax, rep = TDF_ZERO_FOURIER)
-        call tdf_set_numerical(fm, mm+1, M_ONE)
-        call tdf_fourier_to_numerical(fm)
+        call tdf_set_numerical(fnn(mm), mm+1, M_ONE)
+        call tdf_fourier_to_numerical(fnn(mm))
         if(mm <= n/2) then
-          do i = 1, tdf_niter(fm) + 1
-            t = (i-1)*tdf_dt(fm)
-            call tdf_set_numerical(fm, i, &
-              (tdf(fm, i)-sqrt(M_TWO/(tdf_dt(fm)*tdf_niter(fm)))*cos(w1*t))*cos(par%w0*t))
+          do i = 1, tdf_niter(fnn(mm)) + 1
+            t = (i-1)*tdf_dt(fnn(mm))
+            call tdf_set_numerical(fnn(mm), i, &
+              (tdf(fnn(mm), i)-sqrt(M_TWO/(tdf_dt(fnn(mm))*tdf_niter(fnn(mm))))*cos(w1*t))*cos(par%w0*t))
           end do
         else
-          do i = 1, tdf_niter(fm) + 1
-            t = (i-1)*tdf_dt(fm)
-            call tdf_set_numerical(fm, i, tdf(fm, i)*cos(par%w0*t))
+          do i = 1, tdf_niter(fnn(mm)) + 1
+            t = (i-1)*tdf_dt(fnn(mm))
+            call tdf_set_numerical(fnn(mm), i, tdf(fnn(mm), i)*cos(par%w0*t))
           end do
         end if
-
-        do nn = mm, n
-          call tdf_init_numerical(fn, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-            cf_common%omegamax, rep = TDF_ZERO_FOURIER)
-          call tdf_set_numerical(fn, nn+1, M_ONE)
-          call tdf_fourier_to_numerical(fn)
-          if(nn <= n/2) then
-            do i = 1, tdf_niter(fn) + 1
-              t = (i-1)*tdf_dt(fn)
-              call tdf_set_numerical(fn, i, &
-                (tdf(fn, i)-sqrt(M_TWO/(tdf_dt(fm)*tdf_niter(fm)))*cos(w1*t))*cos(par%w0*t))
-            end do
-          else
-            do i = 1, tdf_niter(fn) + 1
-              t = (i-1)*tdf_dt(fn)         
-              call tdf_set_numerical(fn, i, tdf(fn, i)*cos(par%w0*t))
-            end do
-          end if
-          par%u(mm, nn) = tdf_dot_product(fm, fn)
-          call tdf_end(fn)
-        end do
-        call tdf_end(fm)
       end do
 
       do mm = 1, n
+        do nn = mm, n
+          par%u(mm, nn) = tdf_dot_product(fnn(mm), fnn(nn))
+        end do
+      end do
+
+      do mm = 1, n
+        call tdf_end(fnn(mm))
         do nn = 1, mm - 1
           par%u(mm, nn) = par%u(nn, mm)
         end do
       end do
+
+      SAFE_DEALLOCATE_A(fnn)
 
     end select
 
@@ -362,6 +347,7 @@
 
       n = par%dim
       SAFE_ALLOCATE(eigenvec(1:n-1, 1:n-1))
+      SAFE_ALLOCATE(neigenvec(1:n-1, 1:n-1))
       SAFE_ALLOCATE(eigenval(1:n-1))
       SAFE_ALLOCATE(par%utransf (1:n-1, 1:n-1))
       SAFE_ALLOCATE(par%utransfi(1:n-1, 1:n-1))
@@ -370,20 +356,62 @@
       forall(mm = 1:n-1) par%utransf(mm, mm) = M_ONE
       forall(mm = 1:n-1) par%utransfi(mm, mm) = M_ONE
 
-      eigenvec = par%u
-      call lalg_eigensolve(n-1, eigenvec, eigenval)
-      ! We need to make sure that eigenvectors have the same sign on all machines, which is not guaranteed
-      ! by LAPACK. So, we will use the following criterion: the sign of the first non-null component should be
-      ! positive.
-      do nn = 1, n-1
-        do mm = 1, n-1
-          if( eigenvec(mm, nn)*eigenvec(mm, nn) > CNST(1.0e-20) ) then
-            !eigenvec(1:par%dim, nn) = sign(eigenvec(mm, nn), M_ONE) * eigenvec(1:par%dim, nn)
-            if(eigenvec(mm, nn) < M_ZERO) eigenvec(1:n-1, nn) = - eigenvec(1:n-1, nn)
-            exit
-          end if
+      if( cf_common%mode .eq. controlfunction_mode_f ) then
+
+        eigenvec = par%u
+        call lalg_eigensolve(n-1, eigenvec, eigenval)
+        ! We need to make sure that eigenvectors have the same sign on all machines, which is not guaranteed
+        ! by LAPACK. So, we will use the following criterion: the sign of the first non-null component should be
+        ! positive.
+        do nn = 1, n-1
+          do mm = 1, n-1
+            if( eigenvec(mm, nn)*eigenvec(mm, nn) > CNST(1.0e-20) ) then
+              !eigenvec(1:par%dim, nn) = sign(eigenvec(mm, nn), M_ONE) * eigenvec(1:par%dim, nn)
+              if(eigenvec(mm, nn) < M_ZERO) eigenvec(1:n-1, nn) = - eigenvec(1:n-1, nn)
+              exit
+            end if
+          end do
         end do
-      end do
+
+      else
+
+        ! In this case, we can write explicitly the eigenvalues. It is better to do it this way, because there
+        ! are degenerate eigenvalues, and different machines will give different eigenvectors (all of them valid). This
+        ! would imply different results in different machines, which is not very nice.
+        ! k = 1
+        eigenvec = M_ZERO
+        eigenvec(1:n/2-1, 1) = M_ONE
+        eigenvec(n/2:n-1, 1) = M_ZERO
+        eigenval(1) = n/2
+        ! k = 2, ...., n/2-1
+        do k = 2, n/2-1
+          eigenval(k) = M_ONE
+          eigenvec(:, k) = M_ZERO
+          eigenvec(1, k) = -M_ONE
+          eigenvec(k, k) = M_ONE
+        end do
+        ! k = n/2, ..., n-1
+        do k = n/2, n-1
+          eigenval(k) = M_ONE
+          eigenvec(:, k) = M_ZERO
+          eigenvec(k, k) = M_ONE
+        end do
+
+        do k = 1, n-1
+          neigenvec(:, k) = eigenvec(:, k)
+          do j = 1, k-1
+            neigenvec(:, k) = neigenvec(:, k) - &
+              (dot_product(eigenvec(:, k), neigenvec(:, j)) / dot_product(neigenvec(:, j), neigenvec(:, j))) * neigenvec(:, j)
+          end do
+        end do
+        do k = 1, n-1
+          neigenvec(:, k) = neigenvec(:, k)/sqrt(dot_product(neigenvec(:, k),neigenvec(:, k)))
+        end do
+        eigenvec = neigenvec
+
+      end if
+
+
       do mm = 1, n-1
         do nn = 1, n-1
           eigenvec(mm, nn) = eigenvec(mm, nn) * sqrt(eigenval(nn))
