@@ -21,7 +21,7 @@ subroutine X(cube_function_alloc_FS)(cf)
   type(cube_function_t), intent(inout) :: cf
 
   PUSH_SUB(X(cube_function_alloc_FS))
-  !Safe memory if PFFT is used
+  !Save memory if PFFT is used
   if (cf%fft_library /= PFFT_LIB) then
     ASSERT(.not.associated(cf%FS))
     ASSERT(associated(cf%fft))
@@ -37,7 +37,7 @@ subroutine X(cube_function_free_FS)(cf)
   type(cube_function_t), intent(inout) :: cf
 
   PUSH_SUB(X(cube_function_free_FS))
-  !Safe memory if PFFT is used
+  !Save memory if PFFT is used
   if (cf%fft_library /= PFFT_LIB) then
     ASSERT(associated(cf%FS))
     SAFE_DEALLOCATE_P(cf%FS)
@@ -99,7 +99,7 @@ subroutine X(cube_function_RS2FS)(cf)
 
   integer ::ii,jj,kk,index
 
-  !Safe memory if PFFT is used  
+  !Save memory if PFFT is used
   if (cf%fft_library /= PFFT_LIB) then
     ASSERT(associated(cf%X(RS)))
     if(.not.associated(cf%FS)) call X(cube_function_alloc_FS)(cf)
@@ -121,7 +121,7 @@ subroutine X(cube_function_FS2RS)(cf)
   type(cube_function_t), intent(inout)  :: cf
   integer :: ii, jj, kk, index
   
-  !Safe memory if PFFT is used
+  !Save memory if PFFT is used
   if (cf%fft_library /= PFFT_LIB) then
     ASSERT(associated(cf%FS))
     if(.not.associated(cf%X(RS))) call X(cube_function_alloc_RS)(cf)
@@ -169,7 +169,7 @@ subroutine X(fourier_space_op_apply)(this, cube)
 
   type(profile_t), save :: prof_g, rs2fs_prof, fs2rs_prof, prof
   
-  !Safe memory if PFFT is used
+  !Save memory if PFFT is used
   if (cube%fft_library /= PFFT_LIB) then
     call X(cube_function_alloc_FS)(cube)
   end if

@@ -23,7 +23,7 @@ subroutine X(cube_function_alloc_RS)(cf)
   type(cube_function_t), intent(inout) :: cf
 
   PUSH_SUB(X(cube_function_alloc_RS))
-  !Safe memory if PFFT is used  
+  !Save memory if PFFT is used
   if (cf%fft_library /= PFFT_LIB) then
     ASSERT(.not.associated(cf%X(RS)))
     SAFE_ALLOCATE(cf%X(RS)(1:cf%n(1), 1:cf%n(2), 1:cf%n(3)))
@@ -38,7 +38,7 @@ subroutine X(cube_function_free_RS)(cf)
   type(cube_function_t), intent(inout) :: cf
 
   PUSH_SUB(X(cube_function_free_RS))
-  !Safe memory if PFFT is used  
+  !Save memory if PFFT is used
   if (cf%fft_library /= PFFT_LIB) then
     ASSERT(associated(cf%X(RS)))
     SAFE_DEALLOCATE_P(cf%X(RS))

@@ -723,7 +723,7 @@ contains
       SAFE_ALLOCATE(rho_global(1:mesh%np_global))
       SAFE_ALLOCATE(pot_global(1:mesh%np_global))
     end if
-    !Safe memory if PFFT is used  
+    !Save memory if PFFT is used  
     if (fft_cf%fft_library /= PFFT_LIB) then
       call dcube_function_alloc_RS(fft_cf)          ! allocate the cube in real space
     end if
