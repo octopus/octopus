@@ -698,6 +698,9 @@ contains
     call controlfunction_end(par_chi)
     call oct_prop_end(prop_chi)
     call oct_prop_end(prop_psi)
+    call states_end(psi)
+    call states_end(chi)
+
     POP_SUB(f_striter)
   end subroutine f_striter
   ! ---------------------------------------------------------
