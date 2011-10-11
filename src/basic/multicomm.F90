@@ -346,6 +346,10 @@ contains
       do ii = 1, min(nn, mc%n_index)
         if(multicomm_strategy_is_parallel(mc, ii)) then
           call parse_block_integer(blk, 0, ii - 1, mc%group_sizes(ii))
+        else
+          message(1) = 'In ParallelizationGroupRanks, ignoring specification for ' // par_types(ii)
+          message(2) = 'This parallelization strategy is not available.'
+          call messages_warning(2)
         end if
       end do
 
@@ -353,7 +357,7 @@ contains
       do ii = 1, mc%n_index
         if(mc%group_sizes(ii) == -1) then
           if(fill_used) then
-            message = "Error: The 'fill' value can be used only once in ParallelizationGroupRanks."
+            message(1) = "Error: The 'fill' value can be used only once in ParallelizationGroupRanks."
             call messages_fatal(1, only_root_writes = .true.)
           end if
           mc%group_sizes(ii) = -base_grp%size / product(mc%group_sizes)
