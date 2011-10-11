@@ -490,10 +490,12 @@ contains
 
   ! ---------------------------------------------------------
   !> Deallocate memory used by vp.
-  subroutine vec_end(vp)
+  subroutine vec_end(vp, periodic_dim)
     type(pv_t), intent(inout) :: vp
+    integer,         intent(in)  :: periodic_dim !< Number of periodic dimensions
 
     integer :: ipart
+    integer :: ip, jp, jj, index, inode, jnode !< Counters.
 
     PUSH_SUB(vec_end)
 
@@ -516,9 +518,17 @@ contains
     SAFE_DEALLOCATE_P(vp%xghost_neigh)
     SAFE_DEALLOCATE_P(vp%ghost)
 
-    if(associated(vp%global)) then
-      ipart = vp%partno
-      call iihash_end(vp%global(ipart))
+    if(associated(vp%global)) then 
+      if (periodic_dim /= 0) then
+        ip = 1
+        jp = vp%npart
+      else
+        ip = vp%partno
+        jp = vp%partno
+      end if
+      do ipart = ip, jp
+        call iihash_end(vp%global(ipart))
+      end do
       SAFE_DEALLOCATE_P(vp%global)
     end if
 
