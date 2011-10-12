@@ -22,3 +22,5 @@ TheoryLevel = independent_particles
 %Coordinates
   "Neon1D" | 0
 %
+
+ConvRelDens = 1e-7
