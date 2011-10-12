@@ -605,7 +605,7 @@ contains
       end if
     end do
 
-    if(read_occ) then
+    if(st%restart_fixed_occ) then
       ! reset to overwrite whatever smearing may have been set earlier
       call smear_init(st%smear, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs)
     endif
