@@ -46,6 +46,7 @@ module restart_m
   use par_vec_m
   use profiling_m
   use simul_box_m
+  use smear_m
   use states_m
   use states_calc_m
   use states_dim_m
@@ -423,7 +424,7 @@ contains
     integer,    optional, intent(inout) :: iter
     type(lr_t), optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
     logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions and on the same grid
-    integer,    optional, intent(out)    :: number_read(:, :)
+    integer,    optional, intent(out)   :: number_read(:, :)
 
     integer              :: wfns_file, occ_file, err, ik, ist, idir, idim, int
     integer              :: read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM), iread, nread
@@ -436,7 +437,7 @@ contains
 
     FLOAT                :: my_occ, flt
     logical              :: read_occ, gs_allocated, lr_allocated, grid_changed, grid_reordered
-    logical              :: exact_
+    logical              :: exact_, integral_occs
     FLOAT, allocatable   :: dpsi(:)
     CMPLX, allocatable   :: zpsi(:)
     character(len=256), allocatable :: restart_file(:, :, :)
@@ -458,9 +459,14 @@ contains
 
     ! If one restarts a GS calculation changing the %Occupations block, one
     ! cannot read the occupations, otherwise these overwrite the ones from
-    ! the input file. The same is true when reading a linear-response restart,
-    ! although in practice the read_occ variable is not use in the lr case anyway.
-    read_occ = .not. st%fixed_occ .and. .not. present(lr)
+    ! the input file. restart_fixed_occ makes that we do use the ones in the file.
+    if(st%restart_fixed_occ) then
+      read_occ = .true.
+      st%fixed_occ = .true.
+      integral_occs = .true.
+    else
+      read_occ = .not. st%fixed_occ
+    endif
 
     ! sanity check
     gs_allocated = (associated(st%dpsi) .and. states_are_real(st)) .or. &
@@ -584,7 +590,11 @@ contains
       if(.not. present(lr)) then ! do not read eigenvalues or occupations when reading linear response
         ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
         read(line, *) my_occ, char, st%eigenval(ist, ik), char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
-        if(read_occ) st%occ(ist, ik) = my_occ
+        if(read_occ) then
+          st%occ(ist, ik) = my_occ
+          integral_occs = integral_occs .and. &
+            abs((st%occ(ist, ik) - st%smear%el_per_state) * st%occ(ist, ik)) .le. M_EPSILON
+        endif
       end if
 
       if(ist >= st%st_start .and. ist <= st%st_end .and. &
@@ -594,6 +604,11 @@ contains
         restart_file_present(idim, ist, ik) = .true.
       end if
     end do
+
+    if(read_occ) then
+      ! reset to overwrite whatever smearing may have been set earlier
+      call smear_init(st%smear, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs)
+    endif
 
     !now we really read, to avoid serialisation of reads in the
     !parallel case (io_par works as a barrier)

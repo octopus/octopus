@@ -58,6 +58,6 @@ states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o smea
 states_block.o : states_block.F90 states_block_inc.F90 states.o
 excited_states.o : excited_states.F90 excited_states_inc.F90 states.o states_calc.o
 linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_calc.o smear.o
-restart.o : restart.F90 restart_inc.F90 states.o linear_response.o states_calc.o states_io.o
+restart.o : restart.F90 restart_inc.F90 states.o linear_response.o states_calc.o states_io.o smear.o
 density.o : states.o
 states_io.o : states.o

@@ -153,6 +153,7 @@ module states_m
 
     FLOAT, pointer :: eigenval(:,:) !< obviously the eigenvalues
     logical        :: fixed_occ     !< should the occupation numbers be fixed?
+    logical        :: restart_fixed_occ !< should the occupation numbers be fixed by restart?
     logical        :: restart_reorder_occs !< used for restart with altered occupation numbers
     FLOAT, pointer :: occ(:,:)      !< the occupation numbers
     logical        :: fixed_spins   !< In spinors mode, the spin direction is set
@@ -781,6 +782,18 @@ contains
 
     PUSH_SUB(states_read_initial_occs)
 
+    !%Variable RestartFixedOccupations
+    !%Type logical
+    !%Default no
+    !%Section States
+    !%Description
+    !% Setting this variable will make the restart proceed as
+    !% if the occupations from the previous calculation had been set via the <tt>Occupations</tt> block,
+    !% <i>i.e.</i> fixed. Otherwise, occupations will be determined by smearing.
+    !%End
+    call parse_logical(datasets_check('RestartFixedOccupations'), .false., st%restart_fixed_occ)
+    ! we will turn on st%fixed_occ if restart_read is ever called
+
     !%Variable Occupations
     !%Type block
     !%Section States
@@ -823,8 +836,9 @@ contains
     !% of the spin options.
     !%
     !% If the sum of occupations is not equal to the total charge set by <tt>ExcessCharge</tt>,
-    !% an error message is printed. If <tt>FromScratch = no</tt>, this block is ignored when restart information
-    !% is read, and the previous occupations are used.
+    !% an error message is printed.
+    !% If </tt>FromScratch = no</tt> and <tt>RestartFixedOccupations = yes<tt>,
+    !% this block will be ignored.
     !%End
 
     integral_occs = .true.
