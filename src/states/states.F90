@@ -914,7 +914,7 @@ contains
     if(st%fixed_occ) then
       call parse_logical(datasets_check('RestartReorderOccs'), .false., st%restart_reorder_occs)
     else
-      st%restart_reorder_occs = .true.
+      st%restart_reorder_occs = .false.
     endif
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs)
