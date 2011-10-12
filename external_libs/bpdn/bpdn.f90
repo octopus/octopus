@@ -140,6 +140,7 @@ contains
     ffold                = ff
     nnziter              = 0
     nnzidx(1:mm)         = .false.
+    testupdatetau        = .false.
 
     ! Compute projected gradient direction and initial steplength.
     tmp(1:mm) = xx(1:mm) - grad(1:mm)
@@ -215,7 +216,8 @@ contains
         testrelchange1 = abs(ff - ffold) <= dectol*ff
         testrelchange2 = abs(ff - ffold) <= 1.0e-1_8*ff*abs(resnorm - sigma)
         testupdatetau = (testrelchange1 .and. resnorm > 2.0_8*sigma) &
-          .or. (testrelchange2 .and. resnorm <= 2.0_8*sigma) .and. .not. done
+          .or. (testrelchange2 .and. resnorm <= 2.0_8*sigma) &
+          .and. .not. done .and. .not. testupdatetau
 
         if(testupdatetau) then
           tauold = tau
