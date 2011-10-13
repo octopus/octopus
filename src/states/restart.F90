@@ -460,10 +460,10 @@ contains
     ! If one restarts a GS calculation changing the %Occupations block, one
     ! cannot read the occupations, otherwise these overwrite the ones from
     ! the input file. restart_fixed_occ makes that we do use the ones in the file.
+    integral_occs = .true. ! only used if restart_fixed_occ
     if(st%restart_fixed_occ) then
       read_occ = .true.
       st%fixed_occ = .true.
-      integral_occs = .true.
     else
       read_occ = .not. st%fixed_occ
     endif
