@@ -101,7 +101,8 @@ module spectrum_m
     integer :: transform           ! sine, cosine, or exponential transform
     FLOAT   :: damp_factor         ! factor used in damping
     integer :: spectype            ! damping type (none, exp or pol)
-    integer :: method
+    integer :: method              ! fourier transform or compressed sensing 
+    FLOAT   :: noise               ! the level of noise that is assumed in the time series for compressed sensing 
   end type spec_t
 
   type kick_t
@@ -174,6 +175,18 @@ contains
     if(.not.varinfo_valid_option('SpectrumMethod', spectrum%method)) then
       call input_error('SpectrumMethod')
     endif
+
+    !%Variable SpectrumSignalNoise
+    !%Type float
+    !%Default 3e-4 au
+    !%Section Utilities::oct-propagation_spectrum
+    !%Description
+    !% For compressed sensing, the signal to process, the
+    !% time-dependent dipole in this case, is assumed to have some
+    !% noise that is given by this quantity. The default value is
+    !% 3.0e-4. This value is always assumed to be in atomic units.
+    !%End
+    call parse_float(datasets_check('SpectrumSignalNoise'), CNST(3.0e-4), spectrum%noise)
 
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) then
       call messages_experimental('compressed sensing')
@@ -2003,7 +2016,7 @@ contains
     case(SPECTRUM_COMPRESSED_SENSING)
 
       call compressed_sensing_init(cs, time_end - time_start + 1, time_step, time_step*(time_start - 1), &
-        energy_end - energy_start + 1, energy_step, energy_step*(energy_start - 1))
+        energy_end - energy_start + 1, energy_step, energy_step*(energy_start - 1), spec%noise)
 
       do ii = 1, time_function%nst_linear
         call compressed_sensing_spectral_analysis(cs, time_function%states_linear(ii)%dpsi, &

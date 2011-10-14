@@ -46,7 +46,7 @@ module compressed_sensing_m
 
 contains
 
-  subroutine compressed_sensing_init(this, ntime, dtime, stime, nfreq, dfreq, sfreq)
+  subroutine compressed_sensing_init(this, ntime, dtime, stime, nfreq, dfreq, sfreq, noise)
     type(compressed_sensing_t),  intent(out) :: this
     integer,                     intent(in)  :: ntime
     FLOAT,                       intent(in)  :: dtime
@@ -54,13 +54,14 @@ contains
     integer,                     intent(in)  :: nfreq
     FLOAT,                       intent(in)  :: dfreq
     FLOAT,                       intent(in)  :: sfreq
+    FLOAT,                       intent(in)  :: noise
 
     integer :: itime, ifreq
     FLOAT   :: time, freq
 
     PUSH_SUB(compressed_sensing_init)
 
-    this%sigma = CNST(3.0e-4)
+    this%sigma = noise
 
     this%ntime = ntime
     this%dtime = dtime

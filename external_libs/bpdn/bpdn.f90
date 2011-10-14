@@ -126,6 +126,9 @@ contains
   
     tau = 0.0_8
 
+    print*, 'Sigma             = ', sigma
+    print*, 'Initial tau       = ', tau
+
     ! Project the starting point and evaluate function and gradient.
     tmp(1:mm) = 1.0_8 ! some starting point
     call spgl1_projector(xx(1), tmp(1), tau, mm)
@@ -288,7 +291,8 @@ contains
       call calc_grad(mm, nn, aa, res, grad)
     end if
 
-    print*, 'Iterations = ', iter
+    print*, 'Iterations        = ', iter
+    print*, 'Final tau         = ', tau
 
     ! Print final output.
     select case (status)
