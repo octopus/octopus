@@ -218,8 +218,8 @@ contains
 
         testrelchange1 = abs(ff - ffold) <= dectol*ff
         testrelchange2 = abs(ff - ffold) <= 1.0e-1_8*ff*abs(resnorm - sigma)
-        testupdatetau = (testrelchange1 .and. resnorm > 2.0_8*sigma) &
-          .or. (testrelchange2 .and. resnorm <= 2.0_8*sigma) &
+        testupdatetau = ((testrelchange1 .and. resnorm > 2.0_8*sigma) &
+          .or. (testrelchange2 .and. resnorm <= 2.0_8*sigma)) &
           .and. .not. done .and. .not. testupdatetau
 
         if(testupdatetau) then
@@ -240,6 +240,9 @@ contains
         status = EXIT_ITERATIONS
         done = .true.
       end if
+
+      print*, 'iter = ', iter, 'tau =', tau, 'sigma(tau) =', resnorm
+
 
       if(done) exit
 
@@ -293,6 +296,7 @@ contains
 
     print*, 'Iterations        = ', iter
     print*, 'Final tau         = ', tau
+    print*, 'Final sigma(tau)  = ', resnorm
 
     ! Print final output.
     select case (status)
