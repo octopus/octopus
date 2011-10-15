@@ -1453,6 +1453,8 @@ contains
 
     call loct_pointer_copy(stout%eigenval, stin%eigenval)
     stout%fixed_occ = stin%fixed_occ
+    stout%restart_fixed_occ = stin%restart_fixed_occ
+
     call loct_pointer_copy(stout%occ, stin%occ)
     stout%fixed_spins = stin%fixed_spins
 
