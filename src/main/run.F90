@@ -98,13 +98,13 @@ contains
 
 #ifdef HAVE_MPI2
     if(sys%ks%theory_level/=INDEPENDENT_PARTICLES)then
-       call poisson_async_init(sys%ks%hartree_solver, sys%mc)
-       ! slave nodes do not call the calculation routine
-       if(multicomm_is_slave(sys%mc))then
-          !for the moment we only have one type of slave
-          call poisson_slave_work(sys%ks%hartree_solver)
-          return
-       end if
+      call poisson_async_init(sys%ks%hartree_solver, sys%mc)
+      ! slave nodes do not call the calculation routine
+      if(multicomm_is_slave(sys%mc))then
+        !for the moment we only have one type of slave
+        call poisson_slave_work(sys%ks%hartree_solver)
+        return
+      end if
     end if
 #endif
 
@@ -126,50 +126,50 @@ contains
 
     select case(calc_mode_id)
     case(CM_GS)
-       call ground_state_run(sys, hm, fromScratch)
+      call ground_state_run(sys, hm, fromScratch)
     case(CM_UNOCC)
-       call unocc_run(sys, hm, fromScratch)
+      call unocc_run(sys, hm, fromScratch)
     case(CM_TD)
-       call td_run(sys, hm, fromScratch)
+      call td_run(sys, hm, fromScratch)
     case(CM_LR_POL)
-       select case(get_resp_method())
-       case(FD)
-          call static_pol_run(sys, hm, fromScratch)
-       case(LR)
-          call em_resp_run(sys, hm, fromScratch)
-       end select
+      select case(get_resp_method())
+      case(FD)
+        call static_pol_run(sys, hm, fromScratch)
+      case(LR)
+        call em_resp_run(sys, hm, fromScratch)
+      end select
     case(CM_VDW)
-       call vdW_run(sys, hm, fromScratch)
+      call vdW_run(sys, hm, fromScratch)
     case(CM_GEOM_OPT)
-       call geom_opt_run(sys, hm, fromScratch)
+      call geom_opt_run(sys, hm, fromScratch)
     case(CM_PHONONS_LR)
-       select case(get_resp_method())
-       case(FD)
-          call phonons_run(sys, hm)
-       case(LR)
-          call phonons_lr_run(sys, hm, fromscratch)
-       end select
+      select case(get_resp_method())
+      case(FD)
+        call phonons_run(sys, hm)
+      case(LR)
+        call phonons_lr_run(sys, hm, fromscratch)
+      end select
     case(CM_OPT_CONTROL)
-       call opt_control_run(sys, hm)
+      call opt_control_run(sys, hm)
     case(CM_CASIDA)
-       call casida_run(sys, hm, fromScratch)
+      call casida_run(sys, hm, fromScratch)
     case(CM_ONE_SHOT)
-       call one_shot_run(sys, hm)
+      call one_shot_run(sys, hm)
     case(CM_KDOTP)
-       call kdotp_lr_run(sys, hm, fromScratch)
+      call kdotp_lr_run(sys, hm, fromScratch)
     case(CM_MEMORY)
-       call memory_run(sys, hm)
+      call memory_run(sys, hm)
     case(CM_GCM)
-       call gcm_run(sys, hm)
+      call gcm_run(sys, hm)
     case(CM_INVERTKDS)
-       call invert_ks_run(sys, hm)
+      call invert_ks_run(sys, hm)
     case(CM_PULPO_A_FEIRA)
-       call pulpo_print()
+      call pulpo_print()
     end select
 
 #ifdef HAVE_MPI2
     if(sys%ks%theory_level/=INDEPENDENT_PARTICLES) &
-         call poisson_async_end(sys%ks%hartree_solver, sys%mc)
+      call poisson_async_end(sys%ks%hartree_solver, sys%mc)
 #endif
 
     POP_SUB(run)

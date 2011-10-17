@@ -63,7 +63,7 @@ while($_ = <IN>)
 	  my @loops = split(/,/x, $newstr);
 	  $ncount_forall = $#loops + 1;
 	  for($i=0; $i<$ncount_forall; $i++){
-	      $loops[$i] =~ s/:/,/;
+	      $loops[$i] =~ s/:/,/g;
 	      $loops[$i] =~ s/#comma#/,/;
 	      print OUT "do ", $loops[$i], "\n";
 	  }

@@ -31,122 +31,122 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 #endif
 
   if(.not. associated(this%potential)) then
-     return
+    return
   end if
 
   call profiling_in(prof_vlpsi, "VLPSI")
   PUSH_SUB(X(hamiltonian_base_local))
 
   if(batch_is_packed(psib) .or. batch_is_packed(vpsib)) then
-     ASSERT(batch_is_packed(psib))
-     ASSERT(batch_is_packed(vpsib))
-     call batch_pack_was_modified(vpsib)
+    ASSERT(batch_is_packed(psib))
+    ASSERT(batch_is_packed(vpsib))
+    call batch_pack_was_modified(vpsib)
   end if
 
   select case(batch_status(psib))
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
-     pnp = opencl_padded_size(mesh%np)
+    pnp = opencl_padded_size(mesh%np)
 
-     select case(std%ispin)
+    select case(std%ispin)
 
-     case(UNPOLARIZED, SPIN_POLARIZED)
-        call opencl_set_kernel_arg(kernel_vpsi, 0, pnp*(ispin - 1))
-        call opencl_set_kernel_arg(kernel_vpsi, 1, this%potential_opencl)
-        call opencl_set_kernel_arg(kernel_vpsi, 2, psib%pack%buffer)
-        call opencl_set_kernel_arg(kernel_vpsi, 3, log2(psib%pack%size_real(1)))
-        call opencl_set_kernel_arg(kernel_vpsi, 4, vpsib%pack%buffer)
-        call opencl_set_kernel_arg(kernel_vpsi, 5, log2(vpsib%pack%size_real(1)))
+    case(UNPOLARIZED, SPIN_POLARIZED)
+      call opencl_set_kernel_arg(kernel_vpsi, 0, pnp*(ispin - 1))
+      call opencl_set_kernel_arg(kernel_vpsi, 1, this%potential_opencl)
+      call opencl_set_kernel_arg(kernel_vpsi, 2, psib%pack%buffer)
+      call opencl_set_kernel_arg(kernel_vpsi, 3, log2(psib%pack%size_real(1)))
+      call opencl_set_kernel_arg(kernel_vpsi, 4, vpsib%pack%buffer)
+      call opencl_set_kernel_arg(kernel_vpsi, 5, log2(vpsib%pack%size_real(1)))
 
-        iprange = opencl_max_workgroup_size()/psib%pack%size_real(1)
+      iprange = opencl_max_workgroup_size()/psib%pack%size_real(1)
 
-        call opencl_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), iprange/))
+      call opencl_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), iprange/))
 
-     case(SPINORS)
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 0, this%potential_opencl)
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 1, pnp)
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 2, psib%pack%buffer)
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 3, psib%pack%size(1))
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 4, vpsib%pack%buffer)
-        call opencl_set_kernel_arg(kernel_vpsi_spinors, 5, vpsib%pack%size(1))
+    case(SPINORS)
+      call opencl_set_kernel_arg(kernel_vpsi_spinors, 0, this%potential_opencl)
+      call opencl_set_kernel_arg(kernel_vpsi_spinors, 1, pnp)
+      call opencl_set_kernel_arg(kernel_vpsi_spinors, 2, psib%pack%buffer)
+      call opencl_set_kernel_arg(kernel_vpsi_spinors, 3, psib%pack%size(1))
+      call opencl_set_kernel_arg(kernel_vpsi_spinors, 4, vpsib%pack%buffer)
+      call opencl_set_kernel_arg(kernel_vpsi_spinors, 5, vpsib%pack%size(1))
 
-        call opencl_kernel_run(kernel_vpsi_spinors, (/psib%pack%size(1)/2, pnp/), &
-             (/psib%pack%size(1)/2, 2*opencl_max_workgroup_size()/psib%pack%size(1)/))
+      call opencl_kernel_run(kernel_vpsi_spinors, (/psib%pack%size(1)/2, pnp/), &
+        (/psib%pack%size(1)/2, 2*opencl_max_workgroup_size()/psib%pack%size(1)/))
 
-     end select
+    end select
 
-     call opencl_finish()
+    call opencl_finish()
 
-     call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
-     call profiling_count_transfers(mesh%np, M_ONE)
-     call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
+    call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
+    call profiling_count_transfers(mesh%np, M_ONE)
+    call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
 
 #endif
   case(BATCH_PACKED)
 
-     select case(std%ispin)
-     case(UNPOLARIZED, SPIN_POLARIZED)
-        !$omp parallel workshare
-        forall(ip = 1:mesh%np:1)
-           vpsib%pack%X(psi)(1:psib%nst_linear, ip) = &
-                vpsib%pack%X(psi)(1:psib%nst_linear, ip) + &
-                this%potential(ip, ispin) * psib%pack%X(psi)(1:psib%nst_linear, ip)
-        end forall
-        !$omp end parallel workshare
+    select case(std%ispin)
+    case(UNPOLARIZED, SPIN_POLARIZED)
+      !$omp parallel workshare
+      forall(ip = 1:mesh%np)
+        vpsib%pack%X(psi)(1:psib%nst_linear, ip) = &
+          vpsib%pack%X(psi)(1:psib%nst_linear, ip) + &
+          this%potential(ip, ispin) * psib%pack%X(psi)(1:psib%nst_linear, ip)
+      end forall
+      !$omp end parallel workshare
 
-        call profiling_count_operations((2*R_ADD*psib%nst_linear)*mesh%np)
-        call profiling_count_transfers(mesh%np, M_ONE)
-        call profiling_count_transfers(mesh%np*psib%nst_linear, R_TOTYPE(M_ONE))
+      call profiling_count_operations((2*R_ADD*psib%nst_linear)*mesh%np)
+      call profiling_count_transfers(mesh%np, M_ONE)
+      call profiling_count_transfers(mesh%np*psib%nst_linear, R_TOTYPE(M_ONE))
 
-     case(SPINORS)
-        ASSERT(mod(psib%nst_linear, 2) == 0)
-        !the spinor case is more complicated since it mixes the two components.
-        !$omp parallel workshare
-        forall(ist=1:psib%nst_linear:2)
-           vpsib%pack%zpsi(ist,  1:mesh%np) = vpsib%pack%zpsi(ist,  1:mesh%np) + &
-                this%potential(1:mesh%np,1) * psib%pack%zpsi(ist,  1:mesh%np)  + &
-                (this%potential(1:mesh%np,3) + M_zI*this%potential(1:mesh%np,4)) * psib%pack%zpsi(ist+1,1:mesh%np)
-           vpsib%pack%zpsi(ist+1,1:mesh%np) = vpsib%pack%zpsi(ist+1,1:mesh%np) + &
-                this%potential(1:mesh%np,2) * psib%pack%zpsi(ist+1,1:mesh%np)  + &
-                (this%potential(1:mesh%np,3) - M_zI*this%potential(1:mesh%np,4)) * psib%pack%zpsi(ist,  1:mesh%np)
-        end forall
-        !$omp end parallel workshare
+    case(SPINORS)
+      ASSERT(mod(psib%nst_linear, 2) == 0)
+      !the spinor case is more complicated since it mixes the two components.
+      !$omp parallel workshare
+      forall(ist=1:psib%nst_linear:2)
+        vpsib%pack%zpsi(ist,  1:mesh%np) = vpsib%pack%zpsi(ist,  1:mesh%np) + &
+          this%potential(1:mesh%np,1) * psib%pack%zpsi(ist,  1:mesh%np)  + &
+          (this%potential(1:mesh%np,3) + M_zI*this%potential(1:mesh%np,4)) * psib%pack%zpsi(ist+1,1:mesh%np)
+        vpsib%pack%zpsi(ist+1,1:mesh%np) = vpsib%pack%zpsi(ist+1,1:mesh%np) + &
+          this%potential(1:mesh%np,2) * psib%pack%zpsi(ist+1,1:mesh%np)  + &
+          (this%potential(1:mesh%np,3) - M_zI*this%potential(1:mesh%np,4)) * psib%pack%zpsi(ist,  1:mesh%np)
+      end forall
+      !$omp end parallel workshare
 
-        call profiling_count_operations((6*R_ADD + 2*R_MUL)*mesh%np*psib%nst)
+      call profiling_count_operations((6*R_ADD + 2*R_MUL)*mesh%np*psib%nst)
 
-     end select
+    end select
 
   case(BATCH_NOT_PACKED)
 
-     select case(std%ispin)
-     case(UNPOLARIZED, SPIN_POLARIZED)
-        !$omp parallel workshare
-        forall(ist = 1:psib%nst:1)
-           vpsib%states(ist)%X(psi)(1:mesh%np, 1) = &
-                vpsib%states(ist)%X(psi)(1:mesh%np, 1) + &
-                this%potential(1:mesh%np, ispin) * psib%states(ist)%X(psi)(1:mesh%np, 1)
-        end forall
-        !$omp end parallel workshare
+    select case(std%ispin)
+    case(UNPOLARIZED, SPIN_POLARIZED)
+      !$omp parallel workshare
+      forall(ist = 1:psib%nst)
+        vpsib%states(ist)%X(psi)(1:mesh%np, 1) = &
+          vpsib%states(ist)%X(psi)(1:mesh%np, 1) + &
+          this%potential(1:mesh%np, ispin) * psib%states(ist)%X(psi)(1:mesh%np, 1)
+      end forall
+      !$omp end parallel workshare
 
-        call profiling_count_operations((2*R_ADD*psib%nst)*mesh%np)
-        call profiling_count_transfers(mesh%np, M_ONE)
-        call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
+      call profiling_count_operations((2*R_ADD*psib%nst)*mesh%np)
+      call profiling_count_transfers(mesh%np, M_ONE)
+      call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
 
-     case(SPINORS)
-        !the spinor case is more complicated since it mixes the two components.
-        !$omp parallel workshare
-        forall(ist = 1:psib%nst)
-           vpsib%states(ist)%X(psi)(1:mesh%np,1) = vpsib%states(ist)%X(psi)(1:mesh%np,1) + &
-                this%potential(1:mesh%np,1) * psib%states(ist)%X(psi)(1:mesh%np,1) + &
-                (this%potential(1:mesh%np,3) + M_zI*this%potential(1:mesh%np,4)) * psib%states(ist)%X(psi)(1:mesh%np,2)
-           vpsib%states(ist)%X(psi)(1:mesh%np,2) = vpsib%states(ist)%X(psi)(1:mesh%np,2) + &
-                this%potential(1:mesh%np,2) * psib%states(ist)%X(psi)(1:mesh%np,2) + &
-                (this%potential(1:mesh%np,3) - M_zI*this%potential(1:mesh%np,4)) * psib%states(ist)%X(psi)(1:mesh%np,1)
-        end forall
-        !$omp end parallel workshare
-        call profiling_count_operations((6*R_ADD + 2*R_MUL)*mesh%np*psib%nst)
+    case(SPINORS)
+      !the spinor case is more complicated since it mixes the two components.
+      !$omp parallel workshare
+      forall(ist = 1:psib%nst)
+        vpsib%states(ist)%X(psi)(1:mesh%np,1) = vpsib%states(ist)%X(psi)(1:mesh%np,1) + &
+          this%potential(1:mesh%np,1) * psib%states(ist)%X(psi)(1:mesh%np,1) + &
+          (this%potential(1:mesh%np,3) + M_zI*this%potential(1:mesh%np,4)) * psib%states(ist)%X(psi)(1:mesh%np,2)
+        vpsib%states(ist)%X(psi)(1:mesh%np,2) = vpsib%states(ist)%X(psi)(1:mesh%np,2) + &
+          this%potential(1:mesh%np,2) * psib%states(ist)%X(psi)(1:mesh%np,2) + &
+          (this%potential(1:mesh%np,3) - M_zI*this%potential(1:mesh%np,4)) * psib%states(ist)%X(psi)(1:mesh%np,1)
+      end forall
+      !$omp end parallel workshare
+      call profiling_count_operations((6*R_ADD + 2*R_MUL)*mesh%np*psib%nst)
 
-     end select
+    end select
 
   end select
 
