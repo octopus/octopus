@@ -326,7 +326,7 @@ contains
   ! ---------------------------------------------------------
 
   subroutine states_freeze_orbitals(st, gr, mc, n)
-    type(states_t),    intent(in) :: st
+    type(states_t),    intent(inout) :: st
     type(grid_t),      intent(in)    :: gr
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
