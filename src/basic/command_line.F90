@@ -135,16 +135,26 @@ module command_line_m
       character(len=*) :: file
     end subroutine getopt_oscillator_strength
 
-    subroutine getopt_harmonic_spectrum(w0, m, pol)
+    subroutine getopt_harmonic_spectrum(w0, m, ar, x, y, z, pol)
       real(8)          :: w0
       integer          :: m
+      integer          :: ar
       character(len=*) :: pol
+      real(8)          :: x
+      real(8)          :: y
+      real(8)          :: z
     end subroutine getopt_harmonic_spectrum
 
     subroutine getopt_help(mode, name)
       character(len=*) :: mode
       character(len=*) :: name
     end subroutine getopt_help
+    
+    subroutine getopt_photoelectron_spectrum(mode,interp)
+      integer          :: mode
+      integer          :: interp
+    end subroutine getopt_photoelectron_spectrum
+
   end interface
 
   ! If Fortran 2003 interface to command line arguments is not

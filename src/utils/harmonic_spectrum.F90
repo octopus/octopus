@@ -33,8 +33,8 @@ program harmonic_spectrum
 
   implicit none
 
-  integer :: mode, ierr
-  FLOAT :: w0
+  integer :: mode, ierr, ar
+  FLOAT :: w0,vec(MAX_DIM)
   type(spec_t) :: spectrum
   character :: pol
   logical :: get_maxima
@@ -55,7 +55,9 @@ program harmonic_spectrum
   w0 = M_ZERO
   pol = 'x'
   mode = 1
-  call getopt_harmonic_spectrum(w0, mode, pol)
+  ar = 0
+  vec = M_ZERO 
+  call getopt_harmonic_spectrum(w0, mode, ar, vec(1),vec(2),vec(3),pol)
   if(w0 <= M_ZERO) get_maxima = .false.
   call getopt_end()
 
@@ -78,7 +80,8 @@ program harmonic_spectrum
       (pol.ne.'y') .and. &
       (pol.ne.'z') .and. &
       (pol.ne.'+') .and. &
-      (pol.ne.'-') ) then
+      (pol.ne.'-') .and. &
+      (pol.ne.'v') ) then
     message(1) = 'The polarization direction given in the command line is not valid.'
     call messages_fatal(1)
   end if
@@ -92,15 +95,27 @@ program harmonic_spectrum
   select case(mode)
   case(HS_FROM_MULT)
     if(get_maxima) then
-      call spectrum_hs_from_mult('hs-mult-maxima', spectrum, pol, w0)
+      call spectrum_hs_from_mult('hs-mult-maxima', spectrum, pol, vec, w0)
     else
-      call spectrum_hs_from_mult('hs-mult', spectrum, pol)
+      if(ar .eq. 1) then
+         message(1)= "Calculating angle-resolved hs from multipoles."
+        call messages_info(1)
+        call spectrum_hs_ar_from_mult('hs-mult', spectrum, vec)
+      else
+        call spectrum_hs_from_mult('hs-mult', spectrum, pol, vec)
+      end if
     end if
   case(HS_FROM_ACC)
     if(get_maxima) then
-      call spectrum_hs_from_acc('hs-acc-maxima', spectrum, pol, w0)
+      call spectrum_hs_from_acc('hs-acc-maxima', spectrum, pol, vec, w0)
     else
-      call spectrum_hs_from_acc('hs-acc', spectrum, pol)
+      if(ar .eq. 1) then
+         message(1)= "Calculating angle-resolved hs from acceleration."
+        call messages_info(1)
+        call spectrum_hs_ar_from_acc('hs-acc', spectrum, vec)
+      else
+       call spectrum_hs_from_acc('hs-acc', spectrum, pol, vec)
+      end if
     end if
   case(HS_FROM_VEL)
     if(get_maxima) then

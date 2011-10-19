@@ -255,7 +255,10 @@ void harmonic_spectrum_help(){
   printf("                     'z' : Linearly polarized field in the x direction.\n");
   printf("                     '+' : Circularly polarized field, counterclockwise.\n");
   printf("                     '-' : Circularly polarized field, clockwise.\n");
+  printf("                     'v' : Along a direction specified by -x X -y Y -z Z.\n");
   printf("                  The default is 'x'\n");
+  printf("  -a, --ar        Calculates the angle resolved harmonic-spectrum along a\n");
+  printf("                  direction (X,Y,Z) specified by  by -x X -y Y -z Z.\n");
   printf("  -m, --mode=mode Whether the harmonic spectrum is computed by taking the\n");
   printf("                  second derivative of the dipole moment numerically, or by\n");
   printf("                  making use of the acceleration operator, stored in the\n:");
@@ -268,7 +271,7 @@ void harmonic_spectrum_help(){
 }
 
 void FC_FUNC_(getopt_harmonic_spectrum, GETOPT_HARMONIC_SPECTRUM)
-     (double *w0, int *m, STR_F_TYPE pol STR_ARG1)
+     (double *w0, int *m, int *ar,  double *x, double *y, double *z, STR_F_TYPE pol STR_ARG1)
 {
   int c;
 
@@ -280,6 +283,10 @@ void FC_FUNC_(getopt_harmonic_spectrum, GETOPT_HARMONIC_SPECTRUM)
       {"freq", required_argument, 0, 'w'},
       {"pol", required_argument, 0, 'p'},
       {"mode", required_argument, 0, 'm'},
+      {"ar", required_argument, 0, 'a'},
+      {"x", required_argument, 0, 'x'},
+      {"y", required_argument, 0, 'y'},
+      {"z", required_argument, 0, 'z'},
       {0, 0, 0, 0}
     };
 #endif
@@ -287,9 +294,9 @@ void FC_FUNC_(getopt_harmonic_spectrum, GETOPT_HARMONIC_SPECTRUM)
   while (1) {
     int option_index = 0;
 #if defined(HAVE_GETOPT_LONG)
-    c = getopt_long(argc, argv, "hvw:p:m:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hvw:p:m:x:y:z:a", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "hvw:p:m:");
+    c = getopt(argc, argv, "hvw:p:m:x:y:z:a");
 #endif
     if (c == -1) break;
     switch (c) {
@@ -312,6 +319,22 @@ void FC_FUNC_(getopt_harmonic_spectrum, GETOPT_HARMONIC_SPECTRUM)
 
     case 'm':
       *m = (int)atoi(optarg);
+      break;
+
+    case 'a':
+      *ar = 1;
+      break;
+
+    case 'x':
+      *x = (double)atof(optarg);
+      break;
+
+    case 'y':
+      *y = (double)atof(optarg);
+      break;
+
+    case 'z':
+      *z = (double)atof(optarg);
       break;
 
     }
@@ -784,5 +807,75 @@ void FC_FUNC_(getopt_xyz_anim, GETOPT_XYZ_ANIM)
 
 /***************************************************************/
 
+
+/* FUNCTIONS TO BE USED BY THE PROGRAM oct-photoelectron-spectrum */
+void photoelectron_spectrum_help(){
+  printf("Usage: oct-photoelectron-spectrum [OPTIONS] \n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help      Prints this help and exits.\n");
+  printf("  -v, --version   Prints octopus version.\n");
+  printf("  -m, --mode=mode Wheter we want the angle or energy resolved photoelectron\n");
+  printf("                  spectrum. The options are:\n");
+  printf("                     '1' : energy resolved.\n");
+  printf("                     '2' : angle resolved.\n");
+  printf("                     '3' : momentum resolved on a plane.\n");
+  printf("                  The default is '1'\n");
+  printf("  -i, --int=Y/N   Interpolate the output. Default is Yes.\n");
+  exit(-1);
+}
+
+void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
+     ( int *m, int *interp)
+{
+  int c;
+
+  *interp = 1;
+
+#if defined(HAVE_GETOPT_LONG)
+  static struct option long_options[] =
+    {
+      {"help", no_argument, 0, 'h'},
+      {"version", no_argument, 0, 'v'},
+      {"mode", required_argument, 0, 'm'},
+      {"int", required_argument, 0, 'i'},
+      {0, 0, 0, 0}
+    };
+#endif
+
+  while (1) {
+    int option_index = 0;
+#if defined(HAVE_GETOPT_LONG)
+    c = getopt_long(argc, argv, "hvm:i:", long_options, &option_index);
+#else
+    c = getopt(argc, argv, "hvm:i:");
+#endif
+    if (c == -1) break;
+    switch (c) {
+
+    case 'h':
+      photoelectron_spectrum_help();
+      break;
+
+    case 'v':
+      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      exit(0);
+
+
+    case 'm':
+      *m = (int)atoi(optarg);
+      break;
+
+    case 'i':
+      if ((strcmp(optarg,"y") == 0)|| (strcmp(optarg,"yes")== 0))  *interp = 1;
+      if ((strcmp(optarg,"n") == 0)|| (strcmp(optarg,"no") == 0))  *interp = 0;
+         
+      break;
+
+     
+    }
+  }
+
+}
 
 

@@ -49,6 +49,8 @@ module spectrum_m
     spectrum_dyn_structure_factor, &
     spectrum_rotatory_strength,    &
     spectrum_hs_from_mult,         &
+    spectrum_hs_ar_from_mult,      &
+    spectrum_hs_ar_from_acc,       &
     spectrum_hs_from_acc,          &
     spectrum_hs_from_vel,          &
     spectrum_hsfunction_init,      &
@@ -132,7 +134,8 @@ module spectrum_m
   ! Module variables, necessary to compute the function hsfunction, called by
   ! the C function loct_1dminimize
   FLOAT :: time_step_
-  CMPLX, allocatable :: func_(:)
+  CMPLX, allocatable :: func_(:),func_ar_(:,:),pos_(:,:),tret_(:)
+  CMPLX :: vv_(MAX_DIM)
   integer :: is_, ie_, default
   logical :: from_vel_
 
@@ -1411,8 +1414,8 @@ contains
     FLOAT, intent(in)             :: omega
     FLOAT, intent(out)            :: power
 
-    CMPLX   :: cc, ez1, ez, zz
-    integer :: jj
+    CMPLX   :: cc, ez1, ez, zz, pp(MAX_DIM)
+    integer :: jj,dir
 
     PUSH_SUB(hsfunction)
 
@@ -1420,6 +1423,7 @@ contains
     zz = M_zI * omega * time_step_
     ez1 = exp((is_ - 1) * zz)
     ez  = exp(zz)
+
     if (from_vel_) then
       do jj = is_, ie_
         ! This would be easier, but slower.
@@ -1436,20 +1440,288 @@ contains
     
     power = -abs(cc)**2 * time_step_**2
 
+    if(allocated(func_)) then
+      do jj = is_, ie_
+        ! This would be easier, but slower.
+        !cc = cc + exp(M_zI * omega * jj * time_step_)*func_(jj)
+        ez1 = ez1 * ez
+        cc = cc + ez1 * func_(jj)
+      end do
+      power = -abs(cc)**2 * time_step_**2
+    end if
+    
+    if(allocated(func_ar_)) then 
+      power=M_ZERO
+      do dir=1, MAX_DIM
+        ez1 = exp((is_ - 1) * zz)
+        cc = M_z0
+        do jj = is_, ie_
+          ! This would be easier, but slower.
+          !cc = cc + exp(M_zI * omega * jj * time_step_)*func_(jj)
+          ez1 = ez1 * ez 
+          cc = cc + ez1 * func_ar_(dir,jj) &
+               *exp(-M_zI * omega * tret_(jj) ) !integrate over the retarded time
+        end do
+        power = power - abs(cc)**2 * time_step_**2
+!        pp(dir) = cc * time_step_
+      end do
+!      power = - sum(abs(zcross_product(vv_, pp))**2)
+
+
+    end if 
+
+
     POP_SUB(hsfunction)
   end subroutine hsfunction
   ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
+  subroutine spectrum_hsfunction_ar_init(dt, is, ie, niter, acc, pos,tret)
+    FLOAT,   intent(in) :: dt
+    integer, intent(in) :: is, ie, niter
+    CMPLX,   intent(in) :: acc(:,:),pos(:,:),tret(:)
+
+    PUSH_SUB(spectrum_hsfunction_ar_init)
+
+    is_ = is
+    ie_ = ie
+    time_step_ = dt
+    SAFE_ALLOCATE(func_ar_(1:MAX_DIM,0:niter))
+    SAFE_ALLOCATE(pos_(1:MAX_DIM,0:niter))
+    SAFE_ALLOCATE(tret_(0:niter))
+    func_ar_ = acc
+    pos_= pos  
+    tret_=tret   
+ 
+
+    POP_SUB(spectrum_hsfunction_ar_init)
+  end subroutine spectrum_hsfunction_ar_init
+  ! ---------------------------------------------------------
+
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs_from_mult(out_file, spectrum, pol, w0)
+  subroutine spectrum_hsfunction_ar_end
+    PUSH_SUB(spectrum_hsfunction_ar_end)
+    SAFE_DEALLOCATE_A(func_ar_)
+    SAFE_DEALLOCATE_A(pos_)
+    SAFE_DEALLOCATE_A(tret_)
+    POP_SUB(spectrum_hsfunction_ar_end)
+  end subroutine spectrum_hsfunction_ar_end
+  ! ---------------------------------------------------------
+
+  ! ---------------------------------------------------------
+  subroutine spectrum_hs_ar_from_acc(out_file, spectrum, vec, w0)
     character(len=*), intent(in)    :: out_file
     type(spec_t),     intent(inout) :: spectrum
-    character,        intent(in)    :: pol
+    FLOAT,            intent(in)    :: vec(:)
+    FLOAT,  optional, intent(in)    :: w0
+
+    integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax, ierr, jj
+    FLOAT :: dt, dump,aa(MAX_DIM)
+    type(kick_t) :: kick
+    FLOAT, allocatable :: dd(:,:)
+    CMPLX, allocatable :: acc(:,:),PP(:,:),pos(:,:),nn(:,:),tret(:)
+    FLOAT :: vv(1:MAX_DIM)   
+    type(unit_system_t) :: file_units
+
+    PUSH_SUB(spectrum_hs_ar_from_acc)
+
+    call spectrum_acc_info(iunit, time_steps, dt)
+    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+
+    ! load dipole from file
+    SAFE_ALLOCATE(acc(1:MAX_DIM,0:time_steps))
+    SAFE_ALLOCATE(PP(1:MAX_DIM,0:time_steps))
+    SAFE_ALLOCATE(pos(1:MAX_DIM,0:time_steps))
+    SAFE_ALLOCATE(nn(1:MAX_DIM,0:time_steps))
+    SAFE_ALLOCATE(tret(0:time_steps))
+
+    acc = M_ZERO
+    pos = M_ZERO
+    PP = M_ZERO
+    nn = M_ZERO
+    tret = M_ZERO
+
+    call io_skip_header(iunit)
+    do istep = 0, time_steps-1
+      aa = M_ZERO
+      read(iunit, '(28x,e20.12)', advance = 'no', iostat = ierr) aa(1)
+      ! What on earth is the point of this with jj??
+      jj = 2
+      do while( (ierr.eq.0) .and. (jj <= MAX_DIM) )
+       read(iunit, '(e20.12)', advance = 'no', iostat = ierr) aa(jj)
+       jj = jj+1
+      end do
+
+!      read(iunit, *) trash, dump, aa
+
+      acc(:,istep) = units_to_atomic(units_out%acceleration, aa(:))
+!      write (*,*) istep, Real(acc(:,istep))
+    end do
+    close(iunit)
+
+
+    ! Try to get the trajectory from multipole file
+
+    iunit = io_open('multipoles', action='read', status='old', die=.false.)
+    if(iunit < 0) then
+      iunit = io_open('td.general/multipoles', action='read', status='old')
+    end if
+    if (.not.(iunit < 0)) then
+      call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
+      call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+
+      call io_skip_header(iunit)
+!    write (*,*) 
+
+      SAFE_ALLOCATE(dd(1:3, 1:nspin))
+      do istep = 0, time_steps-1
+        read(iunit, *) trash, dump, dump, dd
+        pos(1:MAX_DIM,istep) = -sum(dd(1:MAX_DIM, :),2)
+        pos(:,istep) = units_to_atomic(units_out%length, pos(:,istep))
+!        write (*,*) istep, Real(pos(:,istep))
+      end do
+      SAFE_DEALLOCATE_A(dd)
+      pos(:,0) = pos(:,1)
+      call io_close(iunit)
+
+    end if 
+
+!    write (*,*)  
+
+    ! normalize vector and set to global var
+!    vv = vec / sqrt(sum(vec(:)**2))  
+    vv = vec
+    write (*,*) "vv",vv
+
+
+
+    PP(:,0) = M_ZERO
+    do istep = 0, time_steps - 1
+       nn(:,istep) = vv(:)-pos(:,istep)
+       nn(:,istep) = nn(:,istep)/sqrt(sum(nn(:,istep)**2 ))
+       tret(istep) = ddot_product(vv(:),Real(pos(:,istep)) )/P_C 
+       PP(:,istep) = zcross_product(nn, zcross_product(nn, acc(:,istep))) 
+!       write (*,*) istep, Real(PP(:,istep)),"acc", Real (acc(:,istep))
+    end do
+
+    call spectrum_hsfunction_ar_init(dt, istart, iend, time_steps, PP, pos,tret)
+    call spectrum_hs(out_file, spectrum, 'a', w0)
+    call spectrum_hsfunction_end()
+
+    SAFE_DEALLOCATE_A(acc)
+    SAFE_DEALLOCATE_A(PP)
+    SAFE_DEALLOCATE_A(pos)
+    SAFE_DEALLOCATE_A(nn)
+    SAFE_DEALLOCATE_A(tret)
+
+    POP_SUB(spectrum_hs_ar_from_acc)
+  end subroutine spectrum_hs_ar_from_acc
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine spectrum_hs_ar_from_mult(out_file, spectrum, vec, w0)
+    character(len=*), intent(in)    :: out_file
+    type(spec_t),     intent(inout) :: spectrum
+    FLOAT,            intent(in)    :: vec(:)
     FLOAT,  optional, intent(in)    :: w0
 
     integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax
     FLOAT :: dt, dump
+    type(kick_t) :: kick
+    FLOAT, allocatable :: dd(:,:)
+    CMPLX, allocatable :: dipole(:,:), ddipole(:,:), PP(:,:), tret(:)
+    CMPLX :: vv(MAX_DIM)   
+    type(unit_system_t) :: file_units
+
+    PUSH_SUB(spectrum_hs_ar_from_mult)
+
+
+    iunit = io_open('multipoles', action='read', status='old', die=.false.)
+    if(iunit < 0) then
+      iunit = io_open('td.general/multipoles', action='read', status='old')
+    end if
+    call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
+    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+
+    call io_skip_header(iunit)
+
+    ! load dipole from file
+    SAFE_ALLOCATE(dipole(1:MAX_DIM,0:time_steps))
+    SAFE_ALLOCATE(ddipole(1:MAX_DIM,0:time_steps))
+    SAFE_ALLOCATE(PP(1:MAX_DIM,0:time_steps))
+    SAFE_ALLOCATE(tret(0:time_steps))
+    SAFE_ALLOCATE(dd(1:3, 1:nspin))
+    
+    tret= M_ZERO
+
+    do istep = 1, time_steps
+      read(iunit, *) trash, dump, dump, dd
+      dipole(1:MAX_DIM,istep) = -sum(dd(1:MAX_DIM, :),2)
+      dipole(:,istep) = units_to_atomic(units_out%length, dipole(:,istep))
+    end do
+    SAFE_DEALLOCATE_A(dd)
+    dipole(:,0) = dipole(:,1)
+    call io_close(iunit)
+
+    ! we now calculate the acceleration.
+    ddipole(:,0) = M_ZERO
+    do istep = 1, time_steps - 1
+      ddipole(:,istep) = (dipole(:,istep - 1) + dipole(:,istep + 1) - M_TWO * dipole(:,istep)) / dt**2
+    end do
+    call interpolate( dt*(/ -3, -2, -1 /),   &
+                      ddipole(1,time_steps - 3:time_steps - 1), &
+                      M_ZERO, &
+                      ddipole(1,time_steps) )
+    call interpolate( dt*(/ -3, -2, -1 /),   &
+                      ddipole(2,time_steps - 3:time_steps - 1), &
+                      M_ZERO, &
+                      ddipole(2,time_steps) )
+    call interpolate( dt*(/ -3, -2, -1 /),   &
+                      ddipole(3,time_steps - 3:time_steps - 1), &
+                      M_ZERO, &
+                      ddipole(3,time_steps) )
+
+   ! normalize vector and set to global var
+    vv = vec / sqrt(sum(vec(:)**2))  
+
+    PP(:,0) = M_ZERO
+    do istep = 1, time_steps - 1
+!      write (*,*) istep, istep*dt, Real(ddipole(1,istep)), Real(ddipole(2,istep))
+       tret(istep) = zdot_product(vv(:),dipole(:,istep) )/P_C        
+       PP(:,istep) = zcross_product(vv, zcross_product(vv, ddipole(:,istep - 1))) 
+!      PP(istep) = sum(abs(dipole(:,istep))**2)
+!      write(*,*) istep, PP(istep)
+      
+    end do
+
+
+    call spectrum_hsfunction_ar_init(dt, istart, iend, time_steps, PP, dipole,tret)
+    call spectrum_hs(out_file, spectrum, 'a', w0)
+    call spectrum_hsfunction_end()
+
+    SAFE_DEALLOCATE_A(dipole)
+    SAFE_DEALLOCATE_A(ddipole)
+    SAFE_DEALLOCATE_A(PP)
+    SAFE_DEALLOCATE_A(tret)
+
+
+    POP_SUB(spectrum_hs_ar_from_mult)
+  end subroutine spectrum_hs_ar_from_mult
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine spectrum_hs_from_mult(out_file, spectrum, pol, vec, w0)
+    character(len=*), intent(in)    :: out_file
+    type(spec_t),     intent(inout) :: spectrum
+    character,        intent(in)    :: pol
+    FLOAT,            intent(in)    :: vec(:)
+    FLOAT,  optional, intent(in)    :: w0
+
+    integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax
+    FLOAT :: dt, dump, vv(MAX_DIM)  
     type(kick_t) :: kick
     FLOAT, allocatable :: dd(:,:)
     CMPLX, allocatable :: dipole(:), ddipole(:)
@@ -1473,6 +1745,8 @@ contains
     SAFE_ALLOCATE(ddipole(0:time_steps))
     SAFE_ALLOCATE(dd(1:3, 1:nspin))
 
+    vv = vec / sqrt(sum(vec(:)**2))  
+
     do istep = 1, time_steps
       read(iunit, *) trash, dump, dump, dd
       select case(pol)
@@ -1486,6 +1760,8 @@ contains
         dipole(istep) = -sum(dd(1, :) + M_zI * dd(2, :)) / sqrt(M_TWO)
       case('-')
         dipole(istep) = -sum(dd(1, :) - M_zI * dd(2, :)) / sqrt(M_TWO)
+      case('v')
+        dipole(istep) = -sum(vv(1)*dd(1, :) + vv(2)*dd(2, :) + vv(3)*dd(3, :))
       end select
       dipole(istep) = units_to_atomic(units_out%length, dipole(istep))
     end do
@@ -1516,14 +1792,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs_from_acc(out_file, spectrum, pol, w0)
+  subroutine spectrum_hs_from_acc(out_file, spectrum, pol, vec, w0)
     character(len=*), intent(in)    :: out_file
     type(spec_t),     intent(inout) :: spectrum
     character,        intent(in)    :: pol
+    FLOAT,            intent(in)    :: vec(:)
     FLOAT,  optional, intent(in)    :: w0
 
     integer :: istep, jj, iunit, time_steps, istart, iend, ntiter, ierr
-    FLOAT :: dt, aa(MAX_DIM)
+    FLOAT :: dt, aa(MAX_DIM),vv(MAX_DIM)
     CMPLX, allocatable :: acc(:)
 
     PUSH_SUB(spectrum_hs_from_acc)
@@ -1536,6 +1813,7 @@ contains
     ! load dipole from file
     SAFE_ALLOCATE(acc(0:time_steps))
     acc = M_ZERO
+    vv = vec / sqrt(sum(vec(:)**2))  
     call io_skip_header(iunit)
     do istep = 1, time_steps
       aa = M_ZERO
@@ -1544,6 +1822,7 @@ contains
       jj = 2
       do while( (ierr.eq.0) .and. (jj <= MAX_DIM) )
         read(iunit, '(e20.12)', advance = 'no', iostat = ierr) aa(jj)
+        jj = jj + 1 
       end do
       select case(pol)
       case('x')
@@ -1556,6 +1835,8 @@ contains
         acc(istep) = (aa(1) + M_zI * aa(2)) / sqrt(M_TWO)
       case('-')
         acc(istep) = (aa(1) - M_zI * aa(2)) / sqrt(M_TWO)
+      case('v')
+        acc(istep) = vv(1)*aa(1) + vv(2)*aa(2) + vv(3)*aa(3)
       end select
       acc(istep) = units_to_atomic(units_out%acceleration, acc(istep))
     end do
