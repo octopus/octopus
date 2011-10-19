@@ -318,6 +318,11 @@ AC_LANG_POP(C)
 dnl check for FFT
 ACX_FFT
 
+dnl check for NFFT
+AC_LANG_PUSH(C)
+ACX_NFFT
+AC_LANG_POP(C)
+
 dnl check for NETCDF
 ACX_NETCDF
 
@@ -414,7 +419,8 @@ AC_CONFIG_FILES([Makefile
   testsuite/linear_response/Makefile
   testsuite/optimal_control/Makefile
   testsuite/open_systems/Makefile
-  testsuite/periodic_systems/Makefile])
+  testsuite/periodic_systems/Makefile
+  testsuite/photo_electron/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite], [chmod +x testsuite/oct-run_testsuite])
 
 AC_OUTPUT
