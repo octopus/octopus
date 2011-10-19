@@ -26,7 +26,6 @@ libmath_a_SOURCES =                      \
 	checksum.c                       \
 	checksum_interface.F90           \
 	dablas.c                         \
-	fftw3.F90                        \
 	pfft.F90			 \
 	spline_filter.F90                \
 	gauss_legendre.F90               \
@@ -49,10 +48,13 @@ libmath_a_SOURCES =                      \
 	ylm.c                            \
 	young.F90                        \
 	scalapack.F90                    \
+        nfft.F90			 \
+        nfft_f.c                         \
 	pblas.F90                        \
 	sgfft.F90                        \
 	matrix.F90                       \
-	compressed_sensing.F90
+	compressed_sensing.F90           \
+	fftw3.F90
 
 noinst_HEADERS =                         \
 	lalg_basic_blas.F90              \
@@ -100,3 +102,5 @@ young.o : young.F90 math.o
 scalapack.o : scalapack.F90
 pblas.o : pblas.F90
 matrix.o : matrix.F90 matrix_inc.F90
+nfft_f.o : nfft_f.c
+nfft.o : nfft.F90 nfft_f.o
