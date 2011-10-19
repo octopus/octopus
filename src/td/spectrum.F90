@@ -1297,6 +1297,8 @@ contains
     write(out_file, '(a1,a20,a20,a20)') '#', str_center('[' // trim(units_abbrev(units_out%energy)) // ']', 20), &
          str_center('[' // trim(units_abbrev(units_out%length**3)) // ']', 20), &
          str_center('[' // trim(units_abbrev(units_out%length**4)) // ']', 20)
+    write(out_file, '(a,5e15.6,5e15.6)') '# R(0) sum rule = ', sum1
+    write(out_file, '(a,5e15.6,5e15.6)') '# R(2) sum rule = ', sum2
     do ie = 0, no_e
       write(out_file,'(e20.8,e20.8,e20.8)') units_from_atomic(units_out%energy, ie * spectrum%energy_step), &
         units_from_atomic(units_out%length**3, aimag(sp(ie)) / M_PI), &
