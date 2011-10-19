@@ -123,7 +123,11 @@ module output_m
     C_OUTPUT_MODELMB         =   524288,    &
     C_OUTPUT_FORCES          =  1048576,    &
     C_OUTPUT_WFS_FOURIER     =  2097152,    &
-    C_OUTPUT_XC_DENSITY      =  4194304
+    C_OUTPUT_XC_DENSITY      =  4194304,    &
+    C_OUTPUT_PES_WFS         =  8388608,    &
+    C_OUTPUT_PES_DENSITY     = 16777216,    &
+    C_OUTPUT_PES             = 33554432
+
 
 contains
 
@@ -242,6 +246,14 @@ contains
     !% Outputs the XC density, which is the charge density that
     !% generates the XC potential. (This <math>-1/4\pi</math> times
     !% the Laplacian of the XC potential). The files are called 'nxc'.
+    !%Option PES_wfs 8388608
+    !% Outputs the photoelectron wavefunctions. The file name is <tt>pes_wfs-</tt>  
+    !% plus the orbital number. 
+    !%Option PES_density 16777216
+    !% Outputs the photolectron density. Output file is <tt>pes_dens-</tt> plus spin species if
+    !% spin polarized calculation is preformed. 
+    !%Option PES 33554432   
+    !% Outputs the time-dependent photoelectron spectrum.
     !%End
     call parse_integer(datasets_check('Output'), 0, outp%what)
 
