@@ -35,12 +35,12 @@ module io_binary_m
 
   interface io_binary_write
     module procedure swrite_binary, dwrite_binary, cwrite_binary, zwrite_binary, iwrite_binary, lwrite_binary
-    module procedure iwrite_binary2, lwrite_binary2, zwrite_3D_binary, cwrite_3D_binary
+    module procedure iwrite_binary2, lwrite_binary2, zwrite_binary3, cwrite_binary3, dwrite_binary3
   end interface
 
   interface io_binary_read
     module procedure sread_binary, dread_binary, cread_binary, zread_binary, iread_binary, lread_binary
-    module procedure iread_binary2, lread_binary2, zread_3D_binary, cread_3D_binary
+    module procedure iread_binary2, lread_binary2, zread_binary3, cread_binary3, dread_binary3
   end interface
 
 contains
@@ -127,7 +127,25 @@ contains
 
   !------------------------------------------------------
 
-  subroutine zwrite_3D_binary(fname, np, ff, ierr)
+  subroutine dwrite_binary3(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    real(8),          intent(in)  :: ff(:,:,:)
+    integer,             intent(out) :: ierr
+
+    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
+
+    PUSH_SUB(dwrite_binary3)
+
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+    call write_binary(np, ff(1,1,1), type, ierr, trim(fname))
+
+    POP_SUB(dwrite_binary3)
+  end subroutine dwrite_binary3
+
+  subroutine zwrite_binary3(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     complex(8),          intent(in)  :: ff(:,:,:)
@@ -135,17 +153,17 @@ contains
 
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 
-    PUSH_SUB(zwrite_3D_binary)
+    PUSH_SUB(zwrite_binary3)
 
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
     call write_binary(np, ff(1,1,1), type, ierr, trim(fname))
 
-    POP_SUB(zwrite_3D_binary)
-  end subroutine zwrite_3D_binary
+    POP_SUB(zwrite_binary3)
+  end subroutine zwrite_binary3
 
-  subroutine cwrite_3D_binary(fname, np, ff, ierr)
+  subroutine cwrite_binary3(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     complex(4),          intent(in)  :: ff(:,:,:)
@@ -153,15 +171,15 @@ contains
 
     integer, parameter :: type = TYPE_FLOAT_COMPLEX
 
-    PUSH_SUB(cwrite_3D_binary)
+    PUSH_SUB(cwrite_binary3)
 
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
     call write_binary(np, ff(1,1,1), type, ierr, trim(fname))
 
-    POP_SUB(cwrite_3D_binary)
-  end subroutine cwrite_3D_binary
+    POP_SUB(cwrite_binary3)
+  end subroutine cwrite_binary3
 
   !------------------------------------------------------
   
@@ -326,8 +344,25 @@ contains
   end subroutine zread_binary
 
   !------------------------------------------------------
+  subroutine dread_binary3(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    real(8),          intent(out) :: ff(:,:,:)
+    integer,             intent(out) :: ierr
 
-  subroutine zread_3D_binary(fname, np, ff, ierr)
+    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
+
+    PUSH_SUB(dread_binary3)
+   
+    ASSERT(product(ubound(ff)) >= np)
+
+    ierr = 0
+    call read_binary(np, 0, ff(1,1,1), type, ierr, trim(fname))
+
+    POP_SUB(dread_binary3)
+  end subroutine dread_binary3
+
+  subroutine zread_binary3(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     complex(8),          intent(out) :: ff(:,:,:)
@@ -335,17 +370,17 @@ contains
 
     integer, parameter :: type = TYPE_DOUBLE_COMPLEX
 
-    PUSH_SUB(zread_3D_binary)
+    PUSH_SUB(zread_binary3)
    
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
     call read_binary(np, 0, ff(1,1,1), type, ierr, trim(fname))
 
-    POP_SUB(zread_3D_binary)
-  end subroutine zread_3D_binary
+    POP_SUB(zread_binary3)
+  end subroutine zread_binary3
 
-  subroutine cread_3D_binary(fname, np, ff, ierr)
+  subroutine cread_binary3(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
     complex(4),          intent(out) :: ff(:,:,:)
@@ -353,15 +388,15 @@ contains
 
     integer, parameter :: type = TYPE_FLOAT_COMPLEX
 
-    PUSH_SUB(cread_3D_binary)
+    PUSH_SUB(cread_binary3)
    
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
     call read_binary(np, 0, ff(1,1,1), type, ierr, trim(fname))
 
-    POP_SUB(cread_3D_binary)
-  end subroutine cread_3D_binary
+    POP_SUB(cread_binary3)
+  end subroutine cread_binary3
 
   !------------------------------------------------------
  
