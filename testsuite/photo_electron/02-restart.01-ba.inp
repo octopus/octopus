@@ -1,0 +1,86 @@
+CalculationMode = td
+
+Dimensions = 1
+
+FromScratch = YES
+
+ExperimentalFeatures = YES
+
+#############################
+# GS
+#############################
+
+%Coordinates
+"H1D" | 0.0
+%
+
+%Species
+'H1D' | 1.0079400 | spec_user_defined | 1 | '-1.0/(abs(x)+0.002)'
+%
+
+%UserDefinedStates
+  1 | 1 | 1 | formula | "sqrt(2)*x*exp(-abs(x))" | normalize_no
+%
+
+OnlyUserDefinedInitialStates = YES
+
+BoxShape = sphere
+Radius = 10  
+Spacing = 0.2
+
+SpinComponents = spin_polarized
+TheoryLevel = independent_particles
+
+
+#############################
+# TD
+#############################
+
+
+dt = 0.008
+T = 60
+
+TDTimeStep = dt
+TDMaximumIter = 800
+
+
+
+#############################
+# PES
+#############################
+PhotoElectronSpectrum = pes_mask
+
+%PESMaskSize
+  3 | Radius
+%
+
+PESMaskMode = mask_mode
+PESMaskOutWaveProjection = fft_bare
+PESMaskEnableBackAction = YES
+PESMaskEnlargeLev = 3
+PESMaskSpectEnergyMax = 123.4
+PESMaskSpectEnergyStep = 0.6672E-03
+
+
+##########################
+#LASER
+##########################
+
+amplitude = .7763
+omega = 1.5
+
+%TDExternalFields
+  vector_potential | 1 | 0 | 0 | omega | "ramp"
+%
+
+%TDFunctions
+ "ramp" | tdf_trapezoidal | amplitude | 50 | 29.3 | 4.2
+%
+
+
+#########################
+# OUT
+#########################
+
+OutputEvery = 50
+

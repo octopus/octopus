@@ -1,0 +1,22 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Photoelectron linear regime
+Programs   : octopus_mpi; octopus
+TestGroups : short-run
+Enabled    : Yes
+
+
+# Mask method with bare fft
+Processors : 2
+Input      : 01-h1d_lin.01-mask.inp
+match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 31, 21) ;  1.810496419345E-04
+match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 47, 21) ;  1.080437170164E-05
+match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 85, 21) ;  1.162635131303E-06
+
+# BackAction method with bare fft
+Processors : 2
+Input      : 01-h1d_lin.02-ba.inp
+match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 41, 21) ;  5.453698825079E-05
+match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 51, 21) ;  4.792053525371E-05
+match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 71, 21) ;  2.486856180514E-06
+

@@ -1,0 +1,20 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Photoelectron restart
+Programs   : octopus_mpi; octopus
+TestGroups : short-run
+Enabled    : Yes
+
+
+# Start the evolution with BA
+Processors : 2
+Input      : 02-restart.01-ba.inp
+#no matches here
+
+# Restart the evolution 
+Processors : 2
+Input      : 02-restart.02-restart_ba.inp
+match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 41, 21) ;  5.453698825079E-05
+match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 51, 21) ;  4.792053525371E-05
+match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 71, 21) ;  2.486856180514E-06
+
