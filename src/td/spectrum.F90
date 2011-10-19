@@ -1208,10 +1208,9 @@ contains
     integer :: istart, iend, ntiter, jj, ie, idir, time_steps, no_e, nspin, trash, it
     FLOAT :: dump, dt, energy
     type(kick_t) :: kick
-    CMPLX :: zz, sum1, sum2
-    CMPLX, pointer :: sp(:)
+    CMPLX :: zz, sum1, sum2, sp
     FLOAT, allocatable :: damp(:)
-    FLOAT, allocatable :: angular(:, :)
+    FLOAT, allocatable :: angular(:, :), resp(:), imsp(:)
     type(unit_system_t) :: file_units
 
     PUSH_SUB(spectrum_rotatory_strength)
@@ -1234,9 +1233,9 @@ contains
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
     no_e = spectrum%max_energy / spectrum%energy_step
-    SAFE_ALLOCATE(sp(0:no_e))
-    sum1 = M_z0
-    sum2 = M_z0
+
+    SAFE_ALLOCATE(resp(0:no_e))
+    SAFE_ALLOCATE(imsp(0:no_e))
 
     ! Gets the damp function (here because otherwise it is awfully slow in "pol" mode...)
     SAFE_ALLOCATE(damp(istart:iend))
@@ -1257,20 +1256,34 @@ contains
 
     do ie = 0, no_e
       energy = ie * spectrum%energy_step
-      sp(ie) = M_z0
+      sp = M_z0
       do it = istart, iend
 
         jj = it - istart
 
         zz = exp(M_zI * energy * jj *dt)
-        sp(ie) = sp(ie) + zz * damp(it)*sum(angular(it, :)*kick%pol(1:3, kick%pol_dir))
-
+        sp = sp + zz*damp(it)*sum(angular(it, :)*kick%pol(1:3, kick%pol_dir))*dt
       end do
-      sp(ie) = M_zI / (M_TWO * P_c * kick%delta_strength) * sp(ie) * dt
 
-      sum1 = sum1 + sp(ie) * spectrum%energy_step
-      sum2 = sum2 + (sp(ie) * energy**2) * spectrum%energy_step
+      resp(ie) = real(sp)
+      imsp(ie) = aimag(sp)
 
+    end do
+
+    sum1 = M_Z0
+    sum2 = M_Z0
+    do ie = 0, no_e
+      energy = ie * spectrum%energy_step
+
+      sp = cmplx(resp(ie), imsp(ie))
+
+      sp = sp*M_ZI/(M_TWO*P_c*kick%delta_strength)
+
+      sum1 = sum1 + spectrum%energy_step*sp
+      sum2 = sum2 + spectrum%energy_step*sp*energy**2
+
+      resp(ie) = real(sp)
+      imsp(ie) = aimag(sp)
     end do
 
     SAFE_DEALLOCATE_A(angular)
@@ -1300,10 +1313,13 @@ contains
     write(out_file, '(a,5e15.6,5e15.6)') '# R(0) sum rule = ', sum1
     write(out_file, '(a,5e15.6,5e15.6)') '# R(2) sum rule = ', sum2
     do ie = 0, no_e
-      write(out_file,'(e20.8,e20.8,e20.8)') units_from_atomic(units_out%energy, ie * spectrum%energy_step), &
-        units_from_atomic(units_out%length**3, aimag(sp(ie)) / M_PI), &
-        units_from_atomic(units_out%length**4, real(sp(ie)) * P_C / (M_THREE * max(ie, 1) * spectrum%energy_step))
+      write(out_file,'(e20.8,e20.8,e20.8)') units_from_atomic(units_out%energy, ie*spectrum%energy_step), &
+        units_from_atomic(units_out%length**3, imsp(ie)/M_PI), &
+        units_from_atomic(units_out%length**4, resp(ie)*P_C/(M_THREE*max(ie, 1)*spectrum%energy_step))
     end do
+
+    SAFE_DEALLOCATE_A(resp)
+    SAFE_DEALLOCATE_A(imsp)
 
     POP_SUB(spectrum_rotatory_strength)
   end subroutine spectrum_rotatory_strength
