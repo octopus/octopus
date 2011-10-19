@@ -38,9 +38,53 @@ module PES_m
   use hamiltonian_m
   use geometry_m
   use lasers_m
+  use output_m
+  use grid_m
+  use states_io_m
+  use io_function_m
+  use density_m
+  use batch_m
+  use varinfo_m
+  use string_m
+  use tdpsf_m
+  use system_m
+  use derivatives_m
+  use qshepmod_m
+#if defined(HAVE_NFFT) 
+  use nfft_m
+#endif
   use varinfo_m
 
   implicit none
+
+  integer, parameter ::   &
+    FREE           =  1,  &    ! The scattering waves evolve in time as free plane waves
+    VOLKOV         =  2,  &    ! The scattering waves evolve with exp(i(p-A(t)/c)^2*dt/2)
+    CORRECTED1D    =  3,  &
+    EMBEDDING1D    =  4,  &     
+    VOLKOV_CORRECTED= 5
+
+  integer, parameter ::       &
+    PW_MAP_INTEGRAL    =  1,  &    ! projection on outgoing waves by direct integration
+    PW_MAP_FFT         =  2,  &    ! fft on outgoing waves (1D only)
+    PW_MAP_BARE_FFT    =  3,  &    ! bare fft 
+    PW_MAP_TDPSF       =  4,  &    ! time dependent phase-space filter
+    PW_MAP_NFFT        =  5        ! non equi-spaced fft
+
+  integer, parameter ::      &
+    M_SIN2            =  1,  &  
+    M_STEP            =  2,  & 
+    M_ERF             =  3    
+
+  integer, parameter ::       &
+    MODE_MASK         =   2,  &  
+    MODE_EXACT        =   4,  &
+    MODE_PSF          =   8,  &
+    MODE_BACKACTION   =  16  
+
+  integer, parameter ::      &
+    IN                =  1,  &  
+    OUT               =  2
 
   type PES_rc_t
     integer          :: npoints   ! how many points we store the wf
@@ -51,16 +95,62 @@ module PES_m
   end type PES_rc_t
 
   type PES_mask_t
-    CMPLX, pointer :: k(:,:,:,:,:,:) ! masked wf in momentum space
-    FLOAT, pointer :: r(:,:,:,:,:)   ! summed masked density in real space
-    
-    FLOAT, pointer :: vec_pot(:,:)   ! vector potential from the laser
-    type(fft_t) :: fft
-    
+
+
+    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() ! masked wf in momentum space
+!    FLOAT, pointer :: r(:,:,:,:,:) => NULL()  ! momentum resolved photoelectron yeld
+
+    ! Some mesh related stuff
+    integer          :: ll(MAX_DIM)          ! the size of the square mesh   
+    FLOAT            :: spacing(MAX_DIM)     ! the spacing 
+    integer, pointer :: Lxyz_inv(:,:,:)  => NULL()    ! return a point on the main mesh from xyz on the mask square mesh
+    type(mesh_t), pointer  :: mesh           ! a pointer to the mesh
+ 
+
+    FLOAT, pointer :: ext_pot(:,:) => NULL()  ! external time dependent potential i.e. the lasers
+
+    FLOAT, pointer :: mask_fn(:)  => NULL()   !the mask function on the mesh        
+    FLOAT, pointer :: M(:,:,:)  => NULL()     !the mask on a cubic mesh containig the simulation box
+    FLOAT, pointer :: mask_R(:)  => NULL()    !the mask inner (component 1) and outer (component 2) radius
+    INTEGER        :: shape          !mask shape
+
+    FLOAT, pointer :: Lk(:) => NULL()           ! the k-vectors map
+
+
+
+    Integer          :: resample_lev          ! resampling level
+    Integer          :: enlarge               ! Fourier space enlargement 
+    Integer          :: enlarge_nfft          ! NFFT space enlargement
+    integer          :: llr(MAX_DIM)          ! the size of the resampled square mesh   
+       
+
     FLOAT :: energyMax 
     FLOAT :: energyStep 
 
+    INTEGER :: ab
+    INTEGER :: sw_evolve
+    INTEGER :: propagator            !the time propagator for scattering wavefunctions
+    
+    logical :: back_action           !apply back action from B to A
+    logical :: add_psia              !add the contribute of Psi_A to PES 
+    logical :: interpolate_out       !output interpolation  
+
+
+    INTEGER        :: mode           ! calculation mode
+
+    INTEGER :: pw_map_how            ! how to perform projection on outgoing plane waves
+    type(fft_t)    :: fft
+    #if defined(HAVE_NFFT) 
+    type(nfft_t)   :: nfft
+    #endif
+
+    type(tdpsf_t) :: psf             !Phase-space filter
+
+
   end type PES_mask_t
+
+
+
 
   type PES_t
     logical :: calc_rc
@@ -79,7 +169,7 @@ module PES_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine PES_init(pes, mesh, sb, st, ab, save_iter,hm, max_iter,dt)
+  subroutine PES_init(pes, mesh, sb, st, ab, save_iter,hm, max_iter,dt,mask_fn,sys)
     type(pes_t),         intent(out)     :: pes
     type(mesh_t),        intent(inout)   :: mesh
     type(simul_box_t),   intent(in)      :: sb
@@ -88,7 +178,10 @@ contains
     type(hamiltonian_t), intent(in)      :: hm
     integer,             intent(in)      :: max_iter
     FLOAT,               intent(in)      :: dt
+    FLOAT,          pointer              :: mask_fn(:)
+    type(system_t),         intent(in)      :: sys
 
+    character(len=50)    :: str
     integer :: photoelectron_flags
 
     PUSH_SUB(PES_init)
@@ -114,9 +207,8 @@ contains
     !%Option pes_mask 4
     !% Calculate the photo-electron spectrum using the mask method.
     !% (D. Varsano, PhD thesis, page 159 (2006) http://nano-bio.ehu.es/files/varsano_phd.pdf).
-    !%
-    !% For this to work, masking boundaries are necessary (<tt>AbsorbingBoundaries = mask</tt>).
     !%End
+
     call parse_integer(datasets_check('PhotoElectronSpectrum'), PHOTOELECTRON_NONE, photoelectron_flags)
     if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
       call input_error('PhotoElectronSpectrum')
@@ -125,13 +217,26 @@ contains
     pes%calc_rc = iand(photoelectron_flags, PHOTOELECTRON_RC) /= 0
     pes%calc_mask = iand(photoelectron_flags, PHOTOELECTRON_MASK) /= 0
 
-    if(pes%calc_mask .and. ab /= MASK_ABSORBING) then
-      message(1) = 'PhotoElectronSpectrum = pes_mask requires AbsorbingBoundaries = mask'
-      call messages_fatal(1)
+    !Header Photoelectron info
+    if(pes%calc_rc .or. pes%calc_mask) then 
+      write(str, '(a,i5)') 'Photoelectron'
+      call messages_print_stress(stdout, trim(str))
+    end if 
+
+
+    if(pes%calc_mask) then
+       message(1) = 'Warning: PhotoElectronSpectrum = pes_mask requires BoxShape = sphere' 
+       call messages_info(1)
     end if
     
     if(pes%calc_rc) call PES_rc_init(pes%rc, mesh, st, save_iter)
     if(pes%calc_mask) call PES_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
+
+
+    !Footer Photoelectron info
+    if(pes%calc_rc .or. pes%calc_mask) then 
+      call messages_print_stress(stdout)
+    end if 
 
     POP_SUB(PES_init)
   end subroutine PES_init
@@ -154,7 +259,7 @@ contains
   subroutine PES_calc(pes, mesh, st, ii, dt, mask,hm,geo,iter)
     type(PES_t),    intent(inout) :: pes
     type(mesh_t),   intent(in)    :: mesh
-    type(states_t), intent(in)    :: st
+    type(states_t), intent(inout) :: st
     FLOAT,          intent(in)    :: dt
     FLOAT,          pointer       :: mask(:)
     integer,        intent(in)    :: ii
@@ -173,12 +278,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine PES_output(pes, mesh, st, iter, save_iter, dt)
-    type(PES_t),    intent(inout) :: pes
-    type(mesh_t),   intent(in) :: mesh
-    type(states_t), intent(in) :: st
-    integer,        intent(in) :: iter, save_iter
-    FLOAT,          intent(in) :: dt
+  subroutine PES_output(pes, mesh, st, iter, outp, dt, gr, geo)
+    type(PES_t),          intent(inout) :: pes
+    type(mesh_t),         intent(in) :: mesh
+    type(states_t),       intent(in) :: st
+    integer,              intent(in) :: iter
+    type(output_t), intent(in) :: outp
+    FLOAT,                intent(in) :: dt
+    type(grid_t),           intent(inout) :: gr
+    type(geometry_t),       intent(in)    :: geo
+
+
 
     PUSH_SUB(PES_output)
     
@@ -186,8 +296,8 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
 
-      if(pes%calc_rc)   call PES_rc_output   (pes%rc, st, iter, save_iter, dt)
-      if(pes%calc_mask) call PES_mask_output (pes%mask, mesh, st, "td.general/PES")
+      if(pes%calc_rc)   call PES_rc_output   (pes%rc, st, iter,outp%iter, dt)
+      if(pes%calc_mask) call PES_mask_output (pes%mask, mesh, st,outp, "td.general/PESM",gr, geo,iter)
 
     endif
 
@@ -247,6 +357,7 @@ contains
 
 #include "pes_rc_inc.F90"
 #include "pes_mask_inc.F90"
+#include "pes_mask_out.F90"
 
 end module PES_m
 

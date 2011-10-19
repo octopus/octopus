@@ -222,6 +222,10 @@ contains
       if(clean_stop()) stopping = .true.
       call profiling_in(prof, "TIME_STEP")
 
+
+      !Apply mask absorbing boudaires
+      if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st) 
+
       ! time iterate wavefunctions
       select case(td%dynamics)
       case(EHRENFEST)
@@ -279,6 +283,8 @@ contains
             call lalg_copy(gr%mesh%np, hm%vhxc(:, ispin), vold(:, ispin))
           end do
         end if
+   
+
 
         ! update Hamiltonian and eigenvalues (fermi is *not* called)
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval = update_energy, time = iter*td%dt, calc_energy = update_energy)
@@ -319,12 +325,12 @@ contains
         call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, td%dt)
       end if
 
-      call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, iter)
-
-      if(td%PESv%calc_rc .or. td%PESv%calc_mask) &
+      !Photoelectron stuff 
+      if(td%PESv%calc_rc .or. td%PESv%calc_mask ) &
            call PES_calc(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot,hm,geo,iter)
 
-      if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st)
+
+      call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, iter)
 
       ! write down data
       call check_point()
@@ -392,7 +398,7 @@ contains
         call td_save_restart(iter)
         call td_write_data(write_handler, gr, st, hm, sys%outp, geo, iter)
 	!Photoelectron output and restart dump
-        call PES_output(td%PESv, gr%mesh, st, iter, sys%outp%iter, td%dt)
+        call PES_output(td%PESv, gr%mesh, st, iter, sys%outp, td%dt,gr,geo)
         call PES_restart_write(td%PESv, gr%mesh, st)
         if( (ion_dynamics_ions_move(td%ions)) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
