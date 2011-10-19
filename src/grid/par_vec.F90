@@ -304,41 +304,62 @@ contains
     vp%total          = 0
     vp%np_ghost_neigh = 0
     vp%np_ghost       = 0
-    ! Check all nodes.
-    do inode = 1, npart
-      ! Check all points of this node.
-      do ip = vp%xlocal(inode), vp%xlocal(inode)+ vp%np_local(inode) - 1
-        ! Get coordinates of current point.
-        call index_to_coords(idx, dim, vp%local(ip), p1)
-
-        ! For all points in stencil.
-        do jj = 1, stencil%size
-          ! Get point number of possible ghost point.
-          index = index_from_coords(idx, dim, p1(:) + stencil%points(:, jj))
-          ASSERT(index.ne.0)
-          ! If this index does not belong to partition of node "inode",
-          ! then index is a ghost point for "inode" with part(index) now being
-          ! a neighbour of "inode".
-          if(part(index).ne.inode) then
-            ! Only mark and count this ghost point, if it is not
-            ! done yet. Otherwise, points would possibly be registered
-            ! more than once.
-            tmp = iihash_lookup(ghost_flag(inode), index, found)
-            if(.not.found) then
-              ! Mark point ip as ghost point for inode from part(index).
-              call iihash_insert(ghost_flag(inode), index, part(index))
-              ! Increase number of ghost points of inode from part(index).
-              vp%np_ghost_neigh(inode, part(index)) = vp%np_ghost_neigh(inode, part(index))+1
-              ! Increase total number of ghostpoints of inode.
-              vp%np_ghost(inode)                    = vp%np_ghost(inode) + 1
-              ! One more ghost point.
-              vp%total                              = vp%total + 1
-            end if
+    ! Check process node and communicate
+    inode = vp%partno
+    ! Check all points of this node.
+    do ip = vp%xlocal(inode), vp%xlocal(inode)+ vp%np_local(inode) - 1
+      ! Get coordinates of current point.
+      call index_to_coords(idx, dim, vp%local(ip), p1)
+      
+      ! For all points in stencil.
+      do jj = 1, stencil%size
+        ! Get point number of possible ghost point.
+        index = index_from_coords(idx, dim, p1(:) + stencil%points(:, jj))
+        ASSERT(index.ne.0)
+        ! If this index does not belong to partition of node "inode",
+        ! then index is a ghost point for "inode" with part(index) now being
+        ! a neighbour of "inode".
+        if(part(index).ne.inode) then
+          ! Only mark and count this ghost point, if it is not
+          ! done yet. Otherwise, points would possibly be registered
+          ! more than once.
+          tmp = iihash_lookup(ghost_flag(inode), index, found)
+          if(.not.found) then
+            ! Mark point ip as ghost point for inode from part(index).
+            call iihash_insert(ghost_flag(inode), index, part(index))
+            ! Increase number of ghost points of inode from part(index).
+            vp%np_ghost_neigh(part(index),inode) = vp%np_ghost_neigh(part(index),inode)+1
+            ! Increase total number of ghostpoints of inode.
+            vp%np_ghost(inode)                    = vp%np_ghost(inode) + 1
+            ! One more ghost point.
+            vp%total                              = vp%total + 1
           end if
-        end do
+        end if
       end do
     end do
-
+    
+    tmp=0
+    call MPI_Allreduce(vp%total, tmp, 1, MPI_INTEGER, MPI_SUM, comm, mpi_err)
+    vp%total = tmp
+    ! Distribute local data to all processes
+    inode = vp%partno
+    call MPI_Allgather(vp%np_ghost_neigh(1,inode),npart,MPI_INTEGER, &
+         vp%np_ghost_neigh(1,1),npart,MPI_INTEGER, &
+         comm, mpi_err)
+    call MPI_Allgather(vp%np_ghost(inode),1,MPI_INTEGER, &
+         vp%np_ghost(1),1, MPI_INTEGER, &
+         comm, mpi_err)
+    
+    ! Transpose data
+    tmp = 0
+    do inode = 1, npart-1
+      do jnode = inode + 1, npart
+        tmp = vp%np_ghost_neigh(jnode, inode)
+        vp%np_ghost_neigh(jnode, inode) = vp%np_ghost_neigh(inode, jnode)
+        vp%np_ghost_neigh(inode, jnode) = tmp
+      end do
+    end do
+    
     ! Set index tables xghost and xghost_neigh.
     vp%xghost(1) = 1
     do inode = 2, npart
@@ -357,13 +378,21 @@ contains
     ! Fill ghost as described above.
     irr = 0
     do ip = 1, np+np_enl
-      do inode = 1, npart
-        jnode = iihash_lookup(ghost_flag(inode), ip, found)
-        ! If point ip is a ghost point for inode from jnode, save this
-        ! information.
-        if(found) then
-          vp%ghost(vp%xghost_neigh(inode, jnode) + irr(inode, jnode)) = ip
-          irr(inode, jnode)                                           = irr(inode, jnode) + 1
+      inode = vp%partno
+      jnode = iihash_lookup(ghost_flag(inode), ip, found)
+      ! If point ip is a ghost point for inode from jnode, save this
+      ! information.
+      if(found) then
+        vp%ghost(vp%xghost_neigh(inode, jnode) + irr(inode, jnode)) = ip
+        irr(inode, jnode)                                           = irr(inode, jnode) + 1
+      end if
+    end do
+
+    do inode =  1, npart
+      do jnode = 1, npart
+        if(inode /= jnode) then
+          call MPI_Bcast(vp%ghost(vp%xghost_neigh(inode, jnode)), vp%np_ghost_neigh(inode,jnode), MPI_INTEGER, &
+               inode-1, comm, mpi_err)
         end if
       end do
     end do
@@ -394,6 +423,12 @@ contains
     else
       ip = vp%partno
       jp = vp%partno
+      ! initialize to zero all input
+      do inode = 1, npart
+        if (inode /= vp%partno) then
+          call iihash_init(vp%global(inode),1)
+        end if
+      end do
     end if
     do inode = ip, jp
       ! Create hash table.
@@ -490,12 +525,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Deallocate memory used by vp.
-  subroutine vec_end(vp, periodic_dim)
+  subroutine vec_end(vp)
     type(pv_t), intent(inout) :: vp
-    integer,         intent(in)  :: periodic_dim !< Number of periodic dimensions
 
     integer :: ipart
-    integer :: ip, jp, jj, index, inode, jnode !< Counters.
 
     PUSH_SUB(vec_end)
 
@@ -519,14 +552,7 @@ contains
     SAFE_DEALLOCATE_P(vp%ghost)
 
     if(associated(vp%global)) then 
-      if (periodic_dim /= 0) then
-        ip = 1
-        jp = vp%npart
-      else
-        ip = vp%partno
-        jp = vp%partno
-      end if
-      do ipart = ip, jp
+      do ipart = 1, vp%npart
         call iihash_end(vp%global(ipart))
       end do
       SAFE_DEALLOCATE_P(vp%global)

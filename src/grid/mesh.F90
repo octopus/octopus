@@ -690,7 +690,7 @@ contains
 
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      call vec_end(mesh%vp,mesh%sb%periodic_dim)
+      call vec_end(mesh%vp)
 #endif
     end if
 
