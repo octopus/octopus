@@ -343,10 +343,10 @@ contains
     vp%total = tmp
     ! Distribute local data to all processes
     inode = vp%partno
-    call MPI_Allgather(vp%np_ghost_neigh(1,inode),npart,MPI_INTEGER, &
+    call MPI_Allgather(MPI_IN_PLACE,npart,MPI_INTEGER, &
          vp%np_ghost_neigh(1,1),npart,MPI_INTEGER, &
          comm, mpi_err)
-    call MPI_Allgather(vp%np_ghost(inode),1,MPI_INTEGER, &
+    call MPI_Allgather(MPI_IN_PLACE,1,MPI_INTEGER, &
          vp%np_ghost(1),1, MPI_INTEGER, &
          comm, mpi_err)
     
