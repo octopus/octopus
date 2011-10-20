@@ -103,4 +103,4 @@ scalapack.o : scalapack.F90
 pblas.o : pblas.F90
 matrix.o : matrix.F90 matrix_inc.F90
 nfft_f.o : nfft_f.c
-nfft.o : nfft.F90 nfft_f.o
+nfft.o : nfft.F90 nfft_f.o lalg_basic.o fftw3.o
