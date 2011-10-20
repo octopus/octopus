@@ -209,7 +209,8 @@ contains
     character(len=3)            :: filenum
     integer                     :: tmp
     logical                     :: found
-
+    integer                     :: np_ghost_partno  !< Number of ghost point of the actual process
+    integer, allocatable        :: np_ghost_neigh_partno(:) !< Number of the neighbours ghost points of the actual process
     PUSH_SUB(vec_init)
 
     ! Shortcuts.
@@ -235,6 +236,7 @@ contains
     SAFE_ALLOCATE(vp%global(1:npart))
     SAFE_ALLOCATE(vp%np_ghost(1:npart))
     SAFE_ALLOCATE(vp%np_ghost_neigh(1:npart, 1:npart))
+    SAFE_ALLOCATE(np_ghost_neigh_partno(1:npart))
     SAFE_ALLOCATE(vp%xghost(1:npart))
     SAFE_ALLOCATE(vp%xghost_neigh(1:npart, 1:npart))
 
@@ -301,9 +303,10 @@ contains
       ASSERT(all(stencil%points(1:dim, jj) <= idx%enlarge(1:dim)))
     end do
 
-    vp%total          = 0
-    vp%np_ghost_neigh = 0
-    vp%np_ghost       = 0
+    vp%total              = 0
+    np_ghost_neigh_partno = 0
+    vp%np_ghost           = 0
+    np_ghost_partno       = 0
     ! Check process node and communicate
     inode = vp%partno
     ! Check all points of this node.
@@ -328,9 +331,9 @@ contains
             ! Mark point ip as ghost point for inode from part(index).
             call iihash_insert(ghost_flag(inode), index, part(index))
             ! Increase number of ghost points of inode from part(index).
-            vp%np_ghost_neigh(part(index),inode) = vp%np_ghost_neigh(part(index),inode)+1
+            np_ghost_neigh_partno(part(index)) = np_ghost_neigh_partno(part(index))+1
             ! Increase total number of ghostpoints of inode.
-            vp%np_ghost(inode)                    = vp%np_ghost(inode) + 1
+            np_ghost_partno                       = np_ghost_partno + 1
             ! One more ghost point.
             vp%total                              = vp%total + 1
           end if
@@ -343,13 +346,14 @@ contains
     vp%total = tmp
     ! Distribute local data to all processes
     inode = vp%partno
-    call MPI_Allgather(MPI_IN_PLACE,npart,MPI_INTEGER, &
+    call MPI_Allgather(np_ghost_neigh_partno(1),npart,MPI_INTEGER, &
          vp%np_ghost_neigh(1,1),npart,MPI_INTEGER, &
          comm, mpi_err)
-    call MPI_Allgather(MPI_IN_PLACE,1,MPI_INTEGER, &
+    call MPI_Allgather(np_ghost_partno,1,MPI_INTEGER, &
          vp%np_ghost(1),1, MPI_INTEGER, &
          comm, mpi_err)
-    
+
+    SAFE_DEALLOCATE_A(np_ghost_neigh_partno)
     ! Transpose data
     tmp = 0
     do inode = 1, npart-1
