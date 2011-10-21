@@ -84,7 +84,7 @@ module run_m
     CM_ONE_SHOT           =  14,  &
     CM_KDOTP              =  15,  &
     CM_GCM                =  16,  &
-    CM_MEMORY             =  17,  &
+    CM_DUMMY              =  17,  &
     CM_INVERTKDS          =  18,  &
     CM_PULPO_A_FEIRA      =  99
 
@@ -157,8 +157,7 @@ contains
       call one_shot_run(sys, hm)
     case(CM_KDOTP)
       call kdotp_lr_run(sys, hm, fromScratch)
-    case(CM_MEMORY)
-      call memory_run(sys, hm)
+    case(CM_DUMMY)
     case(CM_GCM)
       call gcm_run(sys, hm)
     case(CM_INVERTKDS)
@@ -237,7 +236,12 @@ contains
       call unit_system_init()
       call system_init(sys)
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
-      if(calc_mode_id /= CM_MEMORY) then
+      
+      call messages_print_stress(stdout, 'Approximated memory requirements')
+      call memory_run(sys, hm)
+      call messages_print_stress(stdout)
+
+      if(calc_mode_id /= CM_DUMMY) then
         message(1) = "Info: Generating external potential"
         call messages_info(1)
         call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)

@@ -102,8 +102,8 @@ program octopus
   !%Option gcm 16
   !% Generator-Coordinates Method calculation (experimental).
   !% Ref. K. Capelle, <i>J. Chem. Phys.</i> <b>119</b>, 1285 (2003).
-  !%Option memory 17
-  !% Estimate the amount of memory <tt>Octopus</tt> will need to run.
+  !%Option dummy 17
+  !% This calculation mode does nothing. Useful for debugging, testing and benchmarking.  
   !%Option invert_ks 18
   !% Invert the Kohn-Sham equations (experimental).
   !%Option recipe 99
