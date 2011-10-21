@@ -98,7 +98,7 @@ LIBS="$LIBS_NFFT $acx_nfft_save_LIBS"
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_nfft_ok" = xyes; then
-   AC_DEFINE(HAVE_NFFT,1,[Defined if you have NFTT library.])
+   AC_DEFINE(HAVE_NFFT,1,[Defined if you have NFFT library.])
    $1
 else
    if test $acx_nfft_ok != disable; then 

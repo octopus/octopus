@@ -20,6 +20,8 @@
 
 #include "global.h"
 
+#ifdef HAVE_NFFT
+
 #define NFFT_MAX 10
 #define NFFT_NULL -1
 
@@ -635,6 +637,7 @@ contains
 
 end module nfft_m
 
+#endif
 
 !! Local Variables:
 !! mode: f90
