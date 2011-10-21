@@ -94,7 +94,8 @@ module states_m
     states_pack,                      &
     states_unpack,                    &
     states_sync,                      &
-    states_are_packed
+    states_are_packed,                &
+    states_write_info
 
   type states_lead_t
     CMPLX, pointer     :: intf_psi(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
@@ -2227,6 +2228,24 @@ contains
 
   end subroutine states_sync
 
+  ! -----------------------------------------------------------
+
+  subroutine states_write_info(st)
+    type(states_t),    intent(in) :: st
+
+    PUSH_SUB(states_write_info)
+
+    call messages_print_stress(stdout, "States")
+
+    write(message(1), '(a,f12.3)') 'Total electronic charge  = ', st%qtot
+    write(message(2), '(a,i8)')    'Number of states         = ', st%nst
+    call messages_info(2)
+
+    call messages_print_stress(stdout)
+
+    POP_SUB(states_write_info)
+  end subroutine states_write_info
+ 
   ! -----------------------------------------------------------
 
   logical pure function states_are_packed(st) result(packed)

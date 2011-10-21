@@ -88,6 +88,7 @@ contains
     call geometry_init(sys%geo, sys%space)
     call grid_init_stage_0(sys%gr, sys%geo, sys%space)
     call states_init(sys%st, sys%gr, sys%geo)
+    call states_write_info(sys%st)
     call grid_init_stage_1(sys%gr, sys%geo)
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
