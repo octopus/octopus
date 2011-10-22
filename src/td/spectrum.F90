@@ -966,7 +966,8 @@ contains
     call batch_init(sigmab, 3, 1, nspin, sigma)
 
     call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, dipoleb)
-    call fourier_transform(spectrum, istart + 1, iend + 1, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
+    call fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
+      istart + 1, iend + 1, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
 
     call batch_end(dipoleb)
     call batch_end(sigmab)
@@ -2256,9 +2257,11 @@ contains
 
   ! -------------------------------------------------------
 
-  subroutine fourier_transform(spec, time_start, time_end, time_step, time_function, &
+  subroutine fourier_transform(method, transform, noise, time_start, time_end, time_step, time_function, &
     energy_start, energy_end, energy_step, energy_function)
-    type(spec_t),    intent(in)    :: spec
+    integer,         intent(in)    :: method
+    integer,         intent(in)    :: transform
+    FLOAT,           intent(in)    :: noise
     integer,         intent(in)    :: time_start
     integer,         intent(in)    :: time_end
     FLOAT,           intent(in)    :: time_step
@@ -2280,7 +2283,7 @@ contains
     ASSERT(batch_status(time_function) == batch_status(energy_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
 
-    select case(spec%method)
+    select case(method)
     case(SPECTRUM_FOURIER)
 
       do ienergy = energy_start, energy_end
@@ -2293,7 +2296,7 @@ contains
 
           time = time_step*(itime - time_start)
 
-          select case(spec%transform)
+          select case(transform)
           case(SPECTRUM_TRANSFORM_SIN)
             kernel = sin(energy*time)
           case(SPECTRUM_TRANSFORM_COS)
@@ -2314,8 +2317,10 @@ contains
 
     case(SPECTRUM_COMPRESSED_SENSING)
 
+      ASSERT(transform == SPECTRUM_TRANSFORM_SIN)
+
       call compressed_sensing_init(cs, time_end - time_start + 1, time_step, time_step*(time_start - 1), &
-        energy_end - energy_start + 1, energy_step, energy_step*(energy_start - 1), spec%noise)
+        energy_end - energy_start + 1, energy_step, energy_step*(energy_start - 1), noise)
 
       do ii = 1, time_function%nst_linear
         call compressed_sensing_spectral_analysis(cs, time_function%states_linear(ii)%dpsi, &
