@@ -223,7 +223,7 @@ contains
       call profiling_in(prof, "TIME_STEP")
 
 
-      !Apply mask absorbing boudaires
+      !Apply mask absorbing boundaries
       if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st) 
 
       ! time iterate wavefunctions
@@ -327,7 +327,7 @@ contains
 
       !Photoelectron stuff 
       if(td%PESv%calc_rc .or. td%PESv%calc_mask ) &
-           call PES_calc(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot,hm,geo,iter)
+        call PES_calc(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot, hm, geo, iter)
 
 
       call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, iter)
@@ -398,7 +398,7 @@ contains
         call td_save_restart(iter)
         call td_write_data(write_handler, gr, st, hm, sys%outp, geo, iter)
 	!Photoelectron output and restart dump
-        call PES_output(td%PESv, gr%mesh, st, iter, sys%outp, td%dt,gr,geo)
+        call PES_output(td%PESv, gr%mesh, st, iter, sys%outp, td%dt, gr, geo)
         call PES_restart_write(td%PESv, gr%mesh, st)
         if( (ion_dynamics_ions_move(td%ions)) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')

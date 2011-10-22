@@ -98,7 +98,7 @@ module PES_m
 
 
     CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() ! masked wf in momentum space
-!    FLOAT, pointer :: r(:,:,:,:,:) => NULL()  ! momentum resolved photoelectron yeld
+!    FLOAT, pointer :: r(:,:,:,:,:) => NULL()  ! momentum-resolved photoelectron yeld
 
     ! Some mesh related stuff
     integer          :: ll(MAX_DIM)          ! the size of the square mesh   
@@ -107,42 +107,42 @@ module PES_m
     type(mesh_t), pointer  :: mesh           ! a pointer to the mesh
  
 
-    FLOAT, pointer :: ext_pot(:,:) => NULL()  ! external time dependent potential i.e. the lasers
+    FLOAT, pointer :: ext_pot(:,:) => NULL()  ! external time-dependent potential i.e. the lasers
 
     FLOAT, pointer :: mask_fn(:)  => NULL()   !the mask function on the mesh        
-    FLOAT, pointer :: M(:,:,:)  => NULL()     !the mask on a cubic mesh containig the simulation box
+    FLOAT, pointer :: M(:,:,:)  => NULL()     !the mask on a cubic mesh containing the simulation box
     FLOAT, pointer :: mask_R(:)  => NULL()    !the mask inner (component 1) and outer (component 2) radius
-    INTEGER        :: shape          !mask shape
+    integer        :: shape                   !mask shape
 
-    FLOAT, pointer :: Lk(:) => NULL()           ! the k-vectors map
+    FLOAT, pointer :: Lk(:) => NULL()         ! the k-vectors map
 
 
 
-    Integer          :: resample_lev          ! resampling level
-    Integer          :: enlarge               ! Fourier space enlargement 
-    Integer          :: enlarge_nfft          ! NFFT space enlargement
+    integer          :: resample_lev          ! resampling level
+    integer          :: enlarge               ! Fourier space enlargement 
+    integer          :: enlarge_nfft          ! NFFT space enlargement
     integer          :: llr(MAX_DIM)          ! the size of the resampled square mesh   
        
 
     FLOAT :: energyMax 
     FLOAT :: energyStep 
 
-    INTEGER :: ab
-    INTEGER :: sw_evolve
-    INTEGER :: propagator            !the time propagator for scattering wavefunctions
+    integer :: ab
+    integer :: sw_evolve
+    integer :: propagator            !the time propagator for scattering wavefunctions
     
     logical :: back_action           !apply back action from B to A
     logical :: add_psia              !add the contribute of Psi_A to PES 
     logical :: interpolate_out       !output interpolation  
 
 
-    INTEGER        :: mode           ! calculation mode
+    integer :: mode           ! calculation mode
 
-    INTEGER :: pw_map_how            ! how to perform projection on outgoing plane waves
+    integer :: pw_map_how            ! how to perform projection on outgoing plane waves
     type(fft_t)    :: fft
-    #if defined(HAVE_NFFT) 
+#if defined(HAVE_NFFT) 
     type(nfft_t)   :: nfft
-    #endif
+#endif
 
     type(tdpsf_t) :: psf             !Phase-space filter
 
@@ -154,7 +154,7 @@ module PES_m
 
   type PES_t
     logical :: calc_rc
-    type(PES_rc_t)   :: rc
+    type(PES_rc_t) :: rc
 
     logical :: calc_mask
     type(PES_mask_t) :: mask
@@ -169,17 +169,16 @@ module PES_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine PES_init(pes, mesh, sb, st, ab, save_iter,hm, max_iter,dt,mask_fn,sys)
-    type(pes_t),         intent(out)     :: pes
-    type(mesh_t),        intent(inout)   :: mesh
-    type(simul_box_t),   intent(in)      :: sb
-    type(states_t),      intent(in)      :: st
-    integer,             intent(in)      :: ab, save_iter
-    type(hamiltonian_t), intent(in)      :: hm
-    integer,             intent(in)      :: max_iter
-    FLOAT,               intent(in)      :: dt
-    FLOAT,          pointer              :: mask_fn(:)
-    type(system_t),         intent(in)      :: sys
+  subroutine PES_init(pes, mesh, sb, st, ab, save_iter,hm, max_iter,dt,sys)
+    type(pes_t),         intent(out)   :: pes
+    type(mesh_t),        intent(inout) :: mesh
+    type(simul_box_t),   intent(in)    :: sb
+    type(states_t),      intent(in)    :: st
+    integer,             intent(in)    :: ab, save_iter
+    type(hamiltonian_t), intent(in)    :: hm
+    integer,             intent(in)    :: max_iter
+    FLOAT,               intent(in)    :: dt
+    type(system_t),      intent(in)    :: sys
 
     character(len=50)    :: str
     integer :: photoelectron_flags
@@ -225,8 +224,8 @@ contains
 
 
     if(pes%calc_mask) then
-       message(1) = 'Warning: PhotoElectronSpectrum = pes_mask requires BoxShape = sphere' 
-       call messages_info(1)
+       message(1) = 'PhotoElectronSpectrum = pes_mask requires BoxShape = sphere' 
+       call messages_warning(1)
     end if
     
     if(pes%calc_rc) call PES_rc_init(pes%rc, mesh, st, save_iter)
@@ -257,21 +256,20 @@ contains
 
   ! ---------------------------------------------------------
   subroutine PES_calc(pes, mesh, st, ii, dt, mask,hm,geo,iter)
-    type(PES_t),    intent(inout) :: pes
-    type(mesh_t),   intent(in)    :: mesh
-    type(states_t), intent(inout) :: st
-    FLOAT,          intent(in)    :: dt
-    FLOAT,          pointer       :: mask(:)
-    integer,        intent(in)    :: ii
-    integer,        intent(in)    :: iter
+    type(PES_t),         intent(inout) :: pes
+    type(mesh_t),        intent(in)    :: mesh
+    type(states_t),      intent(inout) :: st
+    FLOAT,               intent(in)    :: dt
+    FLOAT,               intent(in)    :: mask(:)
+    integer,             intent(in)    :: ii
+    integer,             intent(in)    :: iter
     type(hamiltonian_t), intent(in)    :: hm
-    type(geometry_t), intent(in)    :: geo
+    type(geometry_t),    intent(in)    :: geo
 
     PUSH_SUB(PES_calc)
 
-    if(pes%calc_rc)   call PES_rc_calc  (pes%rc, st,mesh, ii)
-    if(pes%calc_mask) call PES_mask_calc(pes%mask, mesh, st, dt, mask&
-         ,hm,geo,iter)
+    if(pes%calc_rc)   call PES_rc_calc  (pes%rc, st, mesh, ii)
+    if(pes%calc_mask) call PES_mask_calc(pes%mask, mesh, st, dt, mask, hm, geo, iter)
 
     POP_SUB(PES_calc)
   end subroutine PES_calc
@@ -279,14 +277,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine PES_output(pes, mesh, st, iter, outp, dt, gr, geo)
-    type(PES_t),          intent(inout) :: pes
-    type(mesh_t),         intent(in) :: mesh
-    type(states_t),       intent(in) :: st
-    integer,              intent(in) :: iter
-    type(output_t), intent(in) :: outp
-    FLOAT,                intent(in) :: dt
-    type(grid_t),           intent(inout) :: gr
-    type(geometry_t),       intent(in)    :: geo
+    type(PES_t),      intent(inout) :: pes
+    type(mesh_t),     intent(in)    :: mesh
+    type(states_t),   intent(in)    :: st
+    integer,          intent(in)    :: iter
+    type(output_t),   intent(in)    :: outp
+    FLOAT,            intent(in)    :: dt
+    type(grid_t),     intent(inout) :: gr
+    type(geometry_t), intent(in)    :: geo
 
 
 
