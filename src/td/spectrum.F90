@@ -1209,12 +1209,12 @@ contains
     integer,      intent(in)    :: out_file
     type(spec_t), intent(inout) :: spectrum
 
-    integer :: istart, iend, ntiter, jj, ie, idir, time_steps, no_e, nspin, trash, it
+    integer :: istart, iend, ntiter, ie, idir, time_steps, no_e, nspin, trash, it
     FLOAT :: dump, dt, energy
     type(kick_t) :: kick
-    CMPLX :: zz, sum1, sum2, sp
-    FLOAT, allocatable :: damp(:)
+    CMPLX :: sum1, sum2, sp
     FLOAT, allocatable :: angular(:, :), resp(:), imsp(:)
+    type(batch_t) :: angularb, respb, imspb
     type(unit_system_t) :: file_units
 
     PUSH_SUB(spectrum_rotatory_strength)
@@ -1238,42 +1238,32 @@ contains
 
     no_e = spectrum%max_energy / spectrum%energy_step
 
+    do it = istart, iend
+      angular(it, 1) = sum(angular(it, 1:3)*kick%pol(1:3, kick%pol_dir))
+    end do
+
     SAFE_ALLOCATE(resp(0:no_e))
     SAFE_ALLOCATE(imsp(0:no_e))
 
-    ! Gets the damp function (here because otherwise it is awfully slow in "pol" mode...)
-    SAFE_ALLOCATE(damp(istart:iend))
-    do it = istart, iend
-      jj = it - istart
-      select case(spectrum%damp)
-      case(SPECTRUM_DAMP_NONE)
-        damp(it) = M_ONE
-      case(SPECTRUM_DAMP_LORENTZIAN)
-        damp(it)= exp(-jj * dt * spectrum%damp_factor)
-      case(SPECTRUM_DAMP_POLYNOMIAL)
-        damp(it) = 1.0 - 3.0 * (real(jj) / ntiter)**2 &
-          + 2.0 * (real(jj) / ntiter)**3
-      case(SPECTRUM_DAMP_GAUSSIAN)
-        damp(it)= exp(-(jj * dt)**2 * spectrum%damp_factor**2)
-      end select
-    end do
+    call batch_init(angularb, 1)
+    call batch_init(respb, 1)
+    call batch_init(imspb, 1)
 
-    do ie = 0, no_e
-      energy = ie * spectrum%energy_step
-      sp = M_z0
-      do it = istart, iend
+    call batch_add_state(angularb, angular(:, 1))
+    call batch_add_state(respb, resp)
+    call batch_add_state(imspb, imsp)
 
-        jj = it - istart
+    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, angularb)
 
-        zz = exp(M_zI * energy * jj *dt)
-        sp = sp + zz*damp(it)*sum(angular(it, :)*kick%pol(1:3, kick%pol_dir))*dt
-      end do
+    call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+      istart + 1, iend + 1, dt, angularb, 1, no_e + 1, spectrum%energy_step, respb)
+    call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+      istart + 1, iend + 1, dt, angularb, 1, no_e + 1, spectrum%energy_step, imspb)
 
-      resp(ie) = real(sp)
-      imsp(ie) = aimag(sp)
-
-    end do
-
+    call batch_end(angularb)
+    call batch_end(respb)
+    call batch_end(imspb)
+    
     sum1 = M_Z0
     sum2 = M_Z0
     do ie = 0, no_e
@@ -1291,7 +1281,6 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(angular)
-    SAFE_DEALLOCATE_A(damp)
 
     ! print some info
     write(message(1), '(a,i8)')    'Number of time steps = ', ntiter
@@ -1415,7 +1404,7 @@ contains
     FLOAT, intent(in)             :: omega
     FLOAT, intent(out)            :: power
 
-    CMPLX   :: cc, ez1, ez, zz, pp(MAX_DIM)
+    CMPLX   :: cc, ez1, ez, zz
     integer :: jj,dir
 
     PUSH_SUB(hsfunction)
@@ -1850,10 +1839,9 @@ contains
     SAFE_DEALLOCATE_A(acc)
     POP_SUB(spectrum_hs_from_acc)
   end subroutine spectrum_hs_from_acc
+
   ! ---------------------------------------------------------
   
-  
-    ! ---------------------------------------------------------
   subroutine spectrum_hs_from_vel(out_file, spectrum, pol, w0)
     character(len=*), intent(in)    :: out_file
     type(spec_t),     intent(inout) :: spectrum
