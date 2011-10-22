@@ -326,8 +326,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
         field=M_ZERO
         select case(laser_kind(hm%ep%lasers(il)))
         case(E_FIELD_MAGNETIC, E_FIELD_ELECTRIC)
-          write(message(1),'(a)') 'PESMask works only with vector_potential unless &
-          in passive_mode.'
+          write(message(1),'(a)') 'PESMask works only with vector_potential unless in passive_mode.'
           call messages_warning(1)
         case(E_FIELD_VECTOR_POTENTIAL)
           call laser_field(hm%ep%lasers(il), field, it*dt)

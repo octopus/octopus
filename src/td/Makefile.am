@@ -26,15 +26,19 @@ libtd_a_SOURCES = \
 	ob_propagator.F90 ob_src.F90 ob_mem.F90 ob_terms.F90 tdpsf.F90
 
 noinst_HEADERS = \
-	pes_rc_inc.F90 pes_mask_inc.F90 td_init_inc.F90 cpmd_inc.F90 \
-	propagator_qoct_inc.F90 
+	pes_rc_inc.F90               \
+	pes_mask_inc.F90             \
+	pes_mask_out_inc.F90         \
+	td_init_inc.F90              \
+	cpmd_inc.F90                 \
+	propagator_qoct_inc.F90
 
 include $(srcdir)/../common-rules.make
 
 depend:
 	@makedepf90 $(libtd_a_SOURCES)
 
-pes.o: pes.F90 pes_mask_inc.F90 pes_mask_out.F90 pes_rc_inc.F90 tdpsf.o
+pes.o: pes.F90 pes_mask_inc.F90 pes_mask_out_inc.F90 pes_rc_inc.F90 tdpsf.o
 tdpsf.o: tdpsf.F90
 spectrum.o: spectrum.F90
 propagator.o: propagator.F90 ob_propagator.o propagator_qoct_inc.F90

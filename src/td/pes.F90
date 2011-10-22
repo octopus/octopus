@@ -357,7 +357,7 @@ contains
 
 #include "pes_rc_inc.F90"
 #include "pes_mask_inc.F90"
-#include "pes_mask_out.F90"
+#include "pes_mask_out_inc.F90"
 
 end module PES_m
 
