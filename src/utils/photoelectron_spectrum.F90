@@ -22,21 +22,19 @@
 program photoelectron_spectrum
   
   use command_line_m
-  use global_m
-  use messages_m
-  use varinfo_m
-  use parser_m
-  use profiling_m
-  use io_m
   use datasets_m
+  use global_m
+  use io_m
+  use messages_m
+  use parser_m
+  use pes_m
   use unit_m
   use unit_system_m
-  use pes_m
+  use varinfo_m
 
   implicit none
 
   integer              :: argc, ierr, mode, interp
-  integer, parameter   :: help_stdout = 6, help_stderr = 0
 
   integer              :: dim, ll(MAX_DIM), ii
   FLOAT                :: Emax, Estep
@@ -57,14 +55,13 @@ program photoelectron_spectrum
 
   call getopt_init(ierr)
   if(ierr.ne.0) then
-    write(stderr, '(a)') "Your Fortran compiler doesn't support command-line arguments;"
-    write(stderr, '(a)') "the oct-photoelectron-spectrum command is not available."
-    stop
+    message(1) = "Your Fortran compiler doesn't support command-line arguments;"
+    message(2) = "the oct-photoelectron-spectrum command is not available."
+    call messages_fatal(2)
   end if
   
   call getopt_photoelectron_spectrum(mode,interp)
   if(interp .eq. 0) interpolate = .false.
-
 
 
   call PES_mask_read_info(tmpdir, dim, Emax, Estep, ll(1), Lk)
@@ -73,6 +70,7 @@ program photoelectron_spectrum
     ll(ii) = ll(1)
   end do    
 
+! Use formats and the messages_info function. --DAS
   write (*,*) "Recovered pes info "
   write (*,*) "dim",dim
   write (*,*) "Emax",Emax
@@ -92,16 +90,16 @@ program photoelectron_spectrum
  
 
   select case(mode)
-  case(1) ! Energy resolved
-    write(message(1), '(a)') 'Calculating energy resolved PES'
+  case(1) ! Energy-resolved
+    write(message(1), '(a)') 'Calculating energy-resolved PES'
     call messages_info(1)
     call PES_mask_dump_power_totalM(PESK,'td.general/PES_power.sum', Lk, dim, Emax, Estep, interpolate)
  
  
-  case(2) ! Angle resolved
+  case(2) ! Angle-resolved
 
   case(3) ! On a plane
-    write(message(1), '(a)') 'Calculating momentum resoled PES on plane z=0'
+    write(message(1), '(a)') 'Calculating momentum-resolved PES on plane z=0'
     call messages_info(1)
     call PES_mask_dump_full_mapM(PESK, 'td.general/PES_map.z=0', Lk, dim, dir = 3)    
 

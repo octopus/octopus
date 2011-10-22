@@ -23,29 +23,14 @@ module tdpsf_m
   use datasets_m
   use fft_m
   use global_m
-  use io_m
-  use io_binary_m
+  use loct_math_m
   use mesh_m
-  use index_m
   use messages_m
+  use mpi_m
   use parser_m
   use profiling_m
-  use simul_box_m
-  use states_m
   use unit_m
   use unit_system_m
-  use mpi_m
-  use hamiltonian_m
-  use geometry_m
-!  use h_sys_output_m
-  use output_m
-  use grid_m
-  use states_io_m
-  use io_function_m
-  use density_m
-  use batch_m
-  use varinfo_m
-  use loct_math_m
 
   implicit none
 
@@ -76,7 +61,7 @@ module tdpsf_m
     FLOAT, pointer :: XFltr(:,:,:)     !< Filter on real space       
     FLOAT, pointer :: KFltr(:,:,:)     !< Filter on K space
     
-    INTEGER        ::ll(MAX_DIM)
+    integer        :: ll(MAX_DIM)
       
 
   end type tdpsf_t
@@ -85,13 +70,13 @@ module tdpsf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine tdpsf_init(psf,fft, mesh, max_iter,dt,width)
-    type(tdpsf_t),       intent(out)     :: psf
-    type(fft_t),         intent(in)      :: fft
-    type(mesh_t),target, intent(in)      :: mesh
-    integer,             intent(in)      :: max_iter
-    FLOAT,               intent(in)      :: dt
-    FLOAT,               intent(in)      :: width
+  subroutine tdpsf_init(psf, fft, mesh, max_iter, dt, width)
+    type(tdpsf_t),        intent(out)  :: psf
+    type(fft_t),          intent(in)   :: fft
+    type(mesh_t), target, intent(in)   :: mesh
+    integer,              intent(in)   :: max_iter
+    FLOAT,                intent(in)   :: dt
+    FLOAT,                intent(in)   :: width
 
     integer :: ll(MAX_DIM),lmax,i,dim
     FLOAT   :: sigma,kmax,kmin,dlmax
@@ -125,7 +110,7 @@ contains
     
     psf%fft = fft
      
-    !waves cannot cross buffer region for in a time shorter than Tstep
+    !waves cannot cross buffer region in a time shorter than Tstep
     psf%Tstep= width/(3*M_PI/dlmax)
     psf%Tstep=2.0E-3    
     
@@ -133,14 +118,14 @@ contains
 
     psf%width = width
 
-    write(message(1),*) 'TDPSF:  time step = ',units_from_atomic(units_inp%time,psf%Tstep)
-    call messages_info(1)
-    write(message(1),*) 'TDPSF:  Buffer region = ',units_from_atomic(units_inp%length,psf%width)
-    call messages_info(1)
+    write(message(1),*) 'TDPSF:  time step = ', units_from_atomic(units_inp%time, psf%Tstep)
+    write(message(2),*) 'TDPSF:  Buffer region = ', units_from_atomic(units_inp%length, psf%width)
+    call messages_info(2)
     write (*,*) "dlmax",dlmax,"lmax",lmax,"kmax",kmax
 
 
     !%Variable TDPSFSigma 
+    !%Default sqrt(2)
     !%Type float
     !%Section Time-Dependent::TDPSF
     !%Description
@@ -151,15 +136,17 @@ contains
 
 
     !%Variable TDPSFDelta 
+    !%Default 0.0001
     !%Type float
     !%Section Time-Dependent::TDPSF
     !%Description
-    !% Filter error treshold.
+    !% Filter error threshold.
     !%End
-    call parse_float(datasets_check('TDPSFDelta'),M_ONE*1.0E-4,psf%delta)
+    call parse_float(datasets_check('TDPSFDelta'),1.0d-4,psf%delta)
     call messages_print_var_value(stdout, "TDPSFDelta",psf%delta)
 
     !%Variable TDPSFKmin
+    !%Default pi/width
     !%Type float
     !%Section Time-Dependent::TDPSF
     !%Description
@@ -192,6 +179,7 @@ contains
     type(tdpsf_t), intent(inout) :: psf
 
     PUSH_SUB(tdpsf_end)
+
     SAFE_DEALLOCATE_P(psf%XFltr)
     SAFE_DEALLOCATE_P(psf%KFltr)
 
@@ -234,7 +222,7 @@ contains
 
     psf%XFltr= psf%XFltr/M_TWO
 
-   ! The filer in reciprocal space
+   ! The filter in reciprocal space
     normK=M_TWO**((dim-M_ONE)/M_TWO) *  M_PI**((dim-M_ONE)/M_TWO) * (sigma)**(dim+M_ONE)
 
      do idir=1, dim
@@ -259,10 +247,10 @@ contains
     type(tdpsf_t), intent(inout) :: psf
     CMPLX,         intent(in)    :: wfin(:,:,:) 
     CMPLX,         intent(out)   :: wfout(:,:,:)
-    INTEGER,       intent(in)    :: axis
-    INTEGER,       intent(in)    :: direction 
+    integer,       intent(in)    :: axis
+    integer,       intent(in)    :: direction 
 
-    INTEGER :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
+    integer :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
     CMPLX,allocatable :: wftmp(:,:,:)
 
 
@@ -328,8 +316,8 @@ contains
     CMPLX,         intent(in)    :: wfin(:,:,:)  
     CMPLX,         intent(out)   :: wfout(:,:,:)
 
-    INTEGER :: idir, ii, dim
-    CMPLX,allocatable :: wftmp(:,:,:)
+    integer :: idir, ii, dim
+    CMPLX, allocatable :: wftmp(:,:,:)
 
 
     PUSH_SUB(tdpsf_filter_out)
@@ -372,14 +360,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine tdpsf_project_X_to_K(psf,wfin,wfout,axis,direction)
-    type(tdpsf_t), intent(in)    :: psf
-    CMPLX,         intent(in)    :: wfin(:,:,:) 
-    CMPLX,         intent(out)   :: wfout(:,:,:)
-    INTEGER,       intent(in)    :: axis
-    INTEGER,       intent(in)    :: direction 
+    type(tdpsf_t), intent(in)  :: psf
+    CMPLX,         intent(in)  :: wfin(:,:,:) 
+    CMPLX,         intent(out) :: wfout(:,:,:)
+    integer,       intent(in)  :: axis
+    integer,       intent(in)  :: direction 
 
-    INTEGER :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
-    CMPLX,allocatable :: wftmp(:,:,:)
+    integer :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
+    CMPLX, allocatable :: wftmp(:,:,:)
 
 
     PUSH_SUB(tdpsf_project_X_to_K)
@@ -424,13 +412,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine tdpsf_X_to_K(psf,wfin,wfout)
-    type(tdpsf_t), intent(in) :: psf
-    CMPLX,         intent(in)    :: wfin(:,:,:)  
-    CMPLX,         intent(out)   :: wfout(:,:,:)
+  subroutine tdpsf_X_to_K(psf, wfin, wfout)
+    type(tdpsf_t), intent(in)  :: psf
+    CMPLX,         intent(in)  :: wfin(:,:,:)
+    CMPLX,         intent(out) :: wfout(:,:,:)
 
-    INTEGER :: idir, ii, dim
-    CMPLX,allocatable :: wf1(:,:,:),wf2(:,:,:),wffltrd(:,:,:)
+    integer :: idir, ii, dim
+    CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:), wffltrd(:,:,:)
 
 
     PUSH_SUB(tdpsf_X_to_K)
@@ -482,8 +470,6 @@ contains
       end if 
     end if 
 
-
-
     SAFE_DEALLOCATE_A(wf1)
     SAFE_DEALLOCATE_A(wf2)
     SAFE_DEALLOCATE_A(wffltrd)
@@ -496,13 +482,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine tdpsf_project_K_to_X(psf,wfin,wfout,axis,direction)
-    type(tdpsf_t), intent(in) :: psf
-    CMPLX,         intent(in)    :: wfin(:,:,:) 
-    CMPLX,         intent(out)   :: wfout(:,:,:)
-    INTEGER,       intent(in)    :: axis
-    INTEGER,       intent(in)    :: direction 
+    type(tdpsf_t), intent(in)  :: psf
+    CMPLX,         intent(in)  :: wfin(:,:,:) 
+    CMPLX,         intent(out) :: wfout(:,:,:)
+    integer,       intent(in)  :: axis
+    integer,       intent(in)  :: direction 
 
-    INTEGER :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
+    integer :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
 
 
     PUSH_SUB(tdpsf_project_K_to_X)
@@ -534,8 +520,8 @@ contains
     CMPLX,         intent(in)    :: wfin(:,:,:)  
     CMPLX,         intent(out)   :: wfout(:,:,:)
 
-    INTEGER :: idir, ii, dim
-    CMPLX,allocatable :: wf1(:,:,:),wf2(:,:,:),wffltrd(:,:,:)
+    integer :: idir, ii, dim
+    CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:), wffltrd(:,:,:)
 
 
     PUSH_SUB(tdpsf_K_to_X)
@@ -599,15 +585,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine tdpsf_project_K(psf,wfin,wfout,axis,direction)
+  subroutine tdpsf_project_K(psf, wfin, wfout, axis, direction)
     type(tdpsf_t), intent(inout) :: psf
     CMPLX,         intent(in)    :: wfin(:,:,:) 
     CMPLX,         intent(out)   :: wfout(:,:,:)
-    INTEGER,       intent(in)    :: axis
-    INTEGER,       intent(in)    :: direction 
+    integer,       intent(in)    :: axis
+    integer,       intent(in)    :: direction 
 
-    INTEGER :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
-    CMPLX,allocatable :: wftmp(:,:,:)
+    integer :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
+    CMPLX, allocatable :: wftmp(:,:,:)
 
 
     PUSH_SUB(tdpsf_project_K)
@@ -674,8 +660,8 @@ contains
     CMPLX,         intent(in)    :: wfin(:,:,:)  
     CMPLX,         intent(out)   :: wfout(:,:,:)
 
-    INTEGER :: idir, ii, dim
-    CMPLX,allocatable :: wftmp(:,:,:)
+    integer :: idir, ii, dim
+    CMPLX, allocatable :: wftmp(:,:,:)
 
 
     PUSH_SUB(tdpsf_filter_out_K)
@@ -714,10 +700,6 @@ contains
 
     POP_SUB(tdpsf_filter_out_K)
   end subroutine tdpsf_filter_out_K
-
-
-
-
 
 end module tdpsf_m
 
