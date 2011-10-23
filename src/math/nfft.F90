@@ -29,15 +29,13 @@
 module nfft_m
   use c_pointer_m
   use datasets_m
-  use global_m
-  use messages_m
-  use lalg_basic_m
-  use parser_m
-  use profiling_m
-  use varinfo_m
-  use iso_c_binding
   use fft_m   
-  use loct_math_m
+  use global_m
+  use iso_c_binding
+!  use lalg_basic_m
+  use messages_m
+  use parser_m
+  use varinfo_m
 
   implicit none
 
@@ -172,27 +170,27 @@ interface
     bind(c,name='oct_nfft_precompute_one_psi_1d')
       import
       type(c_ptr),            intent(inout) :: plan
-      integer(c_int), value,     intent(in) :: M
-      real(c_double),            intent(in) :: X1(*)
+      integer(c_int), value,  intent(in)    :: M
+      real(c_double),         intent(in)    :: X1(*)
   end subroutine oct_nfft_precompute_one_psi_1d
 
   subroutine oct_nfft_precompute_one_psi_2d(plan, M, X1, X2) &
     bind(c,name='oct_nfft_precompute_one_psi_2d')
       import
       type(c_ptr),            intent(inout) :: plan
-      integer(c_int), value,     intent(in) :: M
-      real(c_double),            intent(in) :: X1(*)
-      real(c_double),            intent(in) :: X2(*)
+      integer(c_int), value,  intent(in)    :: M
+      real(c_double),         intent(in)    :: X1(*)
+      real(c_double),         intent(in)    :: X2(*)
   end subroutine oct_nfft_precompute_one_psi_2d
 
   subroutine oct_nfft_precompute_one_psi_3d(plan, M, X1, X2, X3) &
     bind(c,name='oct_nfft_precompute_one_psi_3d')
       import
       type(c_ptr),            intent(inout) :: plan
-      integer(c_int), value,     intent(in) :: M
-      real(c_double),            intent(in) :: X1(*)
-      real(c_double),            intent(in) :: X2(*)
-      real(c_double),            intent(in) :: X3(*)
+      integer(c_int), value,  intent(in)    :: M
+      real(c_double),         intent(in)    :: X1(*)
+      real(c_double),         intent(in)    :: X2(*)
+      real(c_double),         intent(in)    :: X3(*)
   end subroutine oct_nfft_precompute_one_psi_3d
 
   subroutine oct_znfft_forward(plan, M, in, out) &
@@ -207,52 +205,50 @@ interface
   subroutine oct_set_f(plan, M, dim, val, ix, iy, iz) &
     bind(c,name='oct_set_f')
       import
-      type(c_ptr),                intent(in)  :: plan
-      integer(c_int), value,         intent(in)  :: M
-      integer(c_int), value,         intent(in)  :: dim
-      complex(c_double_complex),value, intent(in):: val
-      integer(c_int), value,      intent(in)  :: ix
-      integer(c_int), value,      intent(in)  :: iy
-      integer(c_int), value,      intent(in)  :: iz
+      type(c_ptr),                      intent(in) :: plan
+      integer(c_int), value,            intent(in) :: M
+      integer(c_int), value,            intent(in) :: dim
+      complex(c_double_complex), value, intent(in) :: val
+      integer(c_int), value,            intent(in) :: ix
+      integer(c_int), value,            intent(in) :: iy
+      integer(c_int), value,            intent(in) :: iz
   end subroutine oct_set_f
 
   subroutine oct_get_f(plan, M, dim, val, ix, iy, iz) &
     bind(c,name='oct_get_f')
       import
-      type(c_ptr),                intent(in)  :: plan
-      integer(c_int), value,         intent(in)  :: M
-      integer(c_int), value,         intent(in)  :: dim
-      complex(c_double_complex),     intent(in):: val
-      integer(c_int), value,      intent(in)  :: ix
-      integer(c_int), value,      intent(in)  :: iy
-      integer(c_int), value,      intent(in)  :: iz
+      type(c_ptr),               intent(in) :: plan
+      integer(c_int), value,     intent(in) :: M
+      integer(c_int), value,     intent(in) :: dim
+      complex(c_double_complex), intent(in) :: val
+      integer(c_int), value,     intent(in) :: ix
+      integer(c_int), value,     intent(in) :: iy
+      integer(c_int), value,     intent(in) :: iz
   end subroutine oct_get_f
 
   subroutine oct_set_f_hat(plan, M, dim, val, ix, iy, iz) &
     bind(c,name='oct_set_f_hat')
       import
-      type(c_ptr),                intent(in)  :: plan
-      integer(c_int), value,         intent(in)  :: M
-      integer(c_int), value,         intent(in)  :: dim
-      complex(c_double_complex),value, intent(in):: val
-      integer(c_int), value,      intent(in)  :: ix
-      integer(c_int), value,      intent(in)  :: iy
-      integer(c_int), value,      intent(in)  :: iz
+      type(c_ptr),                      intent(in) :: plan
+      integer(c_int), value,            intent(in) :: M
+      integer(c_int), value,            intent(in) :: dim
+      complex(c_double_complex), value, intent(in) :: val
+      integer(c_int), value,            intent(in) :: ix
+      integer(c_int), value,            intent(in) :: iy
+      integer(c_int), value,            intent(in) :: iz
   end subroutine oct_set_f_hat
 
   subroutine oct_get_f_hat(plan, M, dim, val, ix, iy, iz) &
     bind(c,name='oct_get_f_hat')
       import
-      type(c_ptr),                intent(in)  :: plan
-      integer(c_int), value,         intent(in)  :: M
-      integer(c_int), value,         intent(in)  :: dim
-      complex(c_double_complex),     intent(in):: val
-      integer(c_int), value,      intent(in)  :: ix
-      integer(c_int), value,      intent(in)  :: iy
-      integer(c_int), value,      intent(in)  :: iz
+      type(c_ptr),               intent(in) :: plan
+      integer(c_int), value,     intent(in) :: M
+      integer(c_int), value,     intent(in) :: dim
+      complex(c_double_complex), intent(in) :: val
+      integer(c_int), value,     intent(in) :: ix
+      integer(c_int), value,     intent(in) :: iy
+      integer(c_int), value,     intent(in) :: iz
   end subroutine oct_get_f_hat
-
-  
 
 end interface
 
@@ -261,9 +257,9 @@ contains
   ! ---------------------------------------------------------
   ! GURU options
   subroutine nfft_guru_options(nfft)
-    type(nfft_t),      intent(inout)   :: nfft
-    PUSH_SUB(nfft_guru_options)
+    type(nfft_t), intent(inout) :: nfft
 
+    PUSH_SUB(nfft_guru_options)
 
     !%Variable NFFTGuruInterface
     !%Type logical
@@ -272,7 +268,7 @@ contains
     !%Description
     !% Perform NFFT with guru interface. This permits the fine tuning of several critical parameters.
     !%End
-    call parse_logical(datasets_check('NFFTGuruInterface'),.false.,nfft%guru)
+    call parse_logical(datasets_check('NFFTGuruInterface'), .false., nfft%guru)
  
 
     !%Variable NFFTCutoff
@@ -283,17 +279,17 @@ contains
     !% Cut-off parameter of the window function. 
     !% See NFFT manual for details.
     !%End
-    call parse_integer(datasets_check('NFFTCutoff'),6, nfft%mm)
+    call parse_integer(datasets_check('NFFTCutoff'), 6, nfft%mm)
 
 
-    !%Variable NFFTOversamplig
+    !%Variable NFFTOversampling
     !%Type float
     !%Default 2
     !%Section Mesh::FFTs
     !%Description
     !% NFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_float(datasets_check('NFFTOversamplig'),M_TWO,nfft%sigma)
+    call parse_float(datasets_check('NFFTOversampling'), M_TWO, nfft%sigma)
 
     !%Variable NFFTPrecompute
     !%Type integer
@@ -309,7 +305,7 @@ contains
     !% This is the default option.
     !%Option NFFT_PRE_FULL_PSI 32
     !% Is the fastest method but requires a large amount of memory as it requires to store (2*m+1)^d*M  
-    !% real numbers. No extra operation are needed during matrix vector multiplication.
+    !% real numbers. No extra operations are needed during matrix vector multiplication.
     !%End
     call parse_integer(datasets_check('NFFTPrecompute'), 16, nfft%precompute)
      if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute)) call input_error('NFFTPrecompute')
@@ -320,20 +316,18 @@ contains
  !   end if
 
 
-
-
     POP_SUB(nfft_guru_options)
   end subroutine nfft_guru_options
 
 
 
   ! ---------------------------------------------------------
-  subroutine nfft_init(nn, dim, mm ,is_real, nfft, optimize)
+  subroutine nfft_init(nn, dim, mm, is_real, nfft, optimize)
     integer,           intent(inout) :: nn(1:MAX_DIM)
     integer,           intent(inout) :: mm
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: is_real
-    type(nfft_t),      intent(inout)   :: nfft
+    type(nfft_t),      intent(inout) :: nfft
     logical, optional, intent(in)    :: optimize
 
     integer :: ii, jj, nfft_dim, idir,my_nn(1:MAX_DIM)
@@ -409,7 +403,7 @@ contains
       end if
     end do
     write(str_tmp, '(i7,a)') mm
-    message(1)=trim(message(1)) // trim(str_tmp) // ") "
+    message(1) = trim(message(1)) // trim(str_tmp) // ") "
     call messages_info(1)
 
 
@@ -445,8 +439,6 @@ contains
     end if
 
 
-
-
     POP_SUB(nfft_init)
   end subroutine nfft_init
 
@@ -460,7 +452,7 @@ contains
 
     call nfft_finalize(nfft%plan);
 
-     message(1) = "Info: NFFT deallocated."
+    message(1) = "Info: NFFT deallocated."
     call messages_info(1)
 
    
@@ -469,50 +461,49 @@ contains
 
 
   !----------------------------------------------------------
-  ! We allow differen spacing for each direction x,y,z
+  ! We allow different spacing for each direction x,y,z
   ! ---------------------------------------------------------
   subroutine nfft_precompute(nfft, X1,X2,X3)
-    FLOAT,             intent(in)    :: X1(:)
-    FLOAT, optional,   intent(in)    :: X2(:)
-    FLOAT, optional,   intent(in)    :: X3(:)
+    FLOAT,           intent(in)    :: X1(:)
+    FLOAT, optional, intent(in)    :: X2(:)
+    FLOAT, optional, intent(in)    :: X3(:)
+    type(nfft_t),    intent(inout) :: nfft
 
-    type(nfft_t),       intent(inout)   :: nfft
 
-
-    real(c_double)            :: x1_(1:nfft%M), x2_(1:nfft%M), x3_(1:nfft%M)
-    FLOAT             ::length,cc, eps
+    real(c_double) :: x1_(1:nfft%M), x2_(1:nfft%M), x3_(1:nfft%M)
+    FLOAT :: length, cc, eps
 
     PUSH_SUB(nfft_precompute)
  
     eps = 1.000001 ! the sample nodes must be in [0.5,0.5)
  
     select case(nfft%dim)
-    case(3)
-    length= (maxval(X1)-minval(X1))*eps
-    cc = (minval(X1)+maxval(X1))/M_TWO
-    x1_=(X1-cc)/length
-    length= (maxval(X2)-minval(X2))*eps
-    cc = (minval(X2)+maxval(X2))/M_TWO
-    x2_=(X2-cc)/length
-    length= (maxval(X3)-minval(X3))*eps
-    cc = (minval(X3)+maxval(X3))/M_TWO
-    x3_=(X3-cc)/length
-    call  oct_nfft_precompute_one_psi_3d(nfft%plan,nfft%M,x1_,x2_,x3_)
+      case(3)
+        length = (maxval(X1)-minval(X1))*eps
+        cc = (minval(X1)+maxval(X1))/M_TWO
+        x1_ =(X1-cc)/length
+        length = (maxval(X2)-minval(X2))*eps
+        cc = (minval(X2)+maxval(X2))/M_TWO
+        x2_ =(X2-cc)/length
+        length = (maxval(X3)-minval(X3))*eps
+        cc = (minval(X3)+maxval(X3))/M_TWO
+        x3_ =(X3-cc)/length
+        call oct_nfft_precompute_one_psi_3d(nfft%plan, nfft%M, x1_, x2_, x3_)
 
-    case(2)
-    length= (maxval(X1)-minval(X1))*eps
-    cc = (minval(X1)+maxval(X1))/M_TWO
-    x1_=(X1-cc)/length
-    length= (maxval(X2)-minval(X2))*eps
-    cc = (minval(X2)+maxval(X2))/M_TWO
-    x2_=(X2-cc)/length
-    call  oct_nfft_precompute_one_psi_2d(nfft%plan,nfft%M,x1_,x2_)
+      case(2)
+        length = (maxval(X1)-minval(X1))*eps
+        cc = (minval(X1)+maxval(X1))/M_TWO
+        x1_ =(X1-cc)/length
+        length = (maxval(X2)-minval(X2))*eps
+        cc = (minval(X2)+maxval(X2))/M_TWO
+        x2_ =(X2-cc)/length
+        call oct_nfft_precompute_one_psi_2d(nfft%plan, nfft%M, x1_, x2_)
 
-    case(1)
-    length= (maxval(X1)-minval(X1))*eps
-    cc = (minval(X1)+maxval(X1))/M_TWO
-    x1_=(X1-cc)/length
-    call  oct_nfft_precompute_one_psi_1d(nfft%plan,nfft%M,x1_)
+      case(1)
+        length = (maxval(X1)-minval(X1))*eps
+        cc = (minval(X1)+maxval(X1))/M_TWO
+        x1_ =(X1-cc)/length
+        call oct_nfft_precompute_one_psi_1d(nfft%plan,nfft%M,x1_)
  
     end select
 
@@ -524,40 +515,39 @@ contains
     call messages_info(1)
 
 
-
     PUSH_SUB(nfft_precompute)
   end subroutine nfft_precompute
 
   subroutine znfft_forward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
-    CMPLX,       intent(in)  :: in(:,:,:)
-    CMPLX,       intent(out) :: out(:,:,:)
+    CMPLX,        intent(in)  :: in(:,:,:)
+    CMPLX,        intent(out) :: out(:,:,:)
 
-    integer :: ix,iy,iz, MM(MAX_DIM)
+    integer :: ix, iy, iz, MM(MAX_DIM)
 
     PUSH_SUB(znfft_forward)
     
     select case(nfft%dim)
-    case (1)
-      MM(1)=nfft%M
-      MM(2)=1
-      MM(3)=1
+      case (1)
+        MM(1) = nfft%M
+        MM(2) = 1
+        MM(3) = 1
 
-    case (2)
-      MM(1)=nfft%M
-      MM(2)=nfft%M
-      MM(3)=1
+      case (2)
+        MM(1) = nfft%M
+        MM(2) = nfft%M
+        MM(3) = 1
 
-    case (3)
-      MM(1)=nfft%M
-      MM(2)=nfft%M
-      MM(3)=nfft%M
+      case (3)
+        MM(1) = nfft%M
+        MM(2) = nfft%M
+        MM(3) = nfft%M
 
     end select 
 
-    do ix=1,nfft%N(1)
-      do iy=1, nfft%N(2)
-        do  iz=1, nfft%N(3)
+    do ix = 1, nfft%N(1)
+      do iy = 1, nfft%N(2)
+        do iz = 1, nfft%N(3)
           call oct_set_f_hat(nfft%plan, nfft%N(1), nfft%dim, in(ix,iy,iz), ix, iy, iz)
         end do
       end do
@@ -565,9 +555,9 @@ contains
 
     call nfft_trafo(nfft%plan)
 
-    do ix=1, MM(1)
-      do iy=1, MM(2)
-        do iz=1, MM(3)
+    do ix = 1, MM(1)
+      do iy = 1, MM(2)
+        do iz = 1, MM(3)
           call oct_get_f(nfft%plan, nfft%M, nfft%dim, out(ix,iy,iz), ix, iy, iz)
         end do
       end do
@@ -581,33 +571,34 @@ contains
   ! ---------------------------------------------------------
   subroutine znfft_backward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
-    CMPLX,       intent(in)  :: in (:,:,:)
-    CMPLX,       intent(out) :: out(:,:,:)
+    CMPLX,        intent(in)  :: in (:,:,:)
+    CMPLX,        intent(out) :: out(:,:,:)
 
-    integer :: ix,iy,iz, MM(MAX_DIM)
+    integer :: ix, iy, iz, MM(MAX_DIM)
 
     PUSH_SUB(znfft_backward)
+
     select case(nfft%dim)
-    case (1)
-      MM(1)=nfft%M
-      MM(2)=1
-      MM(3)=1
+      case (1)
+        MM(1) = nfft%M
+        MM(2) = 1
+        MM(3) = 1
 
-    case (2)
-      MM(1)=nfft%M
-      MM(2)=nfft%M
-      MM(3)=1
+      case (2)
+        MM(1) = nfft%M
+        MM(2) = nfft%M
+        MM(3) = 1
 
-    case (3)
-      MM(1)=nfft%M
-      MM(2)=nfft%M
-      MM(3)=nfft%M
+      case (3)
+        MM(1) = nfft%M
+        MM(2) = nfft%M
+        MM(3) = nfft%M
 
-    end select 
+    end select
 
-    do ix=1, MM(1)
-      do iy=1, MM(2)
-        do iz=1, MM(3)
+    do ix = 1, MM(1)
+      do iy = 1, MM(2)
+        do iz = 1, MM(3)
           call oct_set_f(nfft%plan, nfft%M, nfft%dim, in(ix,iy,iz), ix, iy, iz)
         end do
       end do
@@ -615,9 +606,9 @@ contains
 
     call nfft_adjoint(nfft%plan)
 
-    do ix=1,nfft%N(1)
-      do iy=1, nfft%N(2)
-        do iz=1, nfft%N(3)
+    do ix = 1,nfft%N(1)
+      do iy = 1, nfft%N(2)
+        do iz = 1, nfft%N(3)
           call oct_get_f_hat(nfft%plan, nfft%M, nfft%dim, out(ix,iy,iz), ix, iy, iz)
         end do
       end do

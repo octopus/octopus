@@ -161,8 +161,4 @@ void oct_get_f_hat
 
 }
 
-
-
-
 #endif 
-

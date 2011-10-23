@@ -1,5 +1,5 @@
 #include <global.h> 
-! This routines are part of the ISF poisson solver, eventualy they
+! This routines are part of the ISF poisson solver, eventually they
 ! will be integrated with the other FFT. Do not use them for other
 ! purposes.
 
@@ -103,7 +103,7 @@ contains
   !-----------------------------------------------------------
   
   ! FFT PART -----------------------------------------------------------------
-  !        CALCULATES THE DISCRETE FOURIERTRANSFORM F(I1,I2,I3)=
+  !        CALCULATES THE DISCRETE FOURIER TRANSFORM F(I1,I2,I3)=
   !        S_(j1,j2,j3) EXP(isign*i*2*pi*(j1*i1/n1+j2*i2/n2+j3*i3/n3)) R(j1,j2,j3)
   !       with optimal performance on vector computer, workstations and 
   !       multiprocessor shared memory computers using OpenMP compiler directives

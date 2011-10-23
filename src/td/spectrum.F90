@@ -1347,7 +1347,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_hsfunction_end
+
     PUSH_SUB(spectrum_hsfunction_end)
+
     SAFE_DEALLOCATE_A(func_)
     POP_SUB(spectrum_hsfunction_end)
   end subroutine spectrum_hsfunction_end
@@ -1401,8 +1403,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hsfunction(omega, power)
-    FLOAT, intent(in)             :: omega
-    FLOAT, intent(out)            :: power
+    FLOAT, intent(in)  :: omega
+    FLOAT, intent(out) :: power
 
     CMPLX   :: cc, ez1, ez, zz
     integer :: jj,dir
@@ -1457,7 +1459,6 @@ contains
       end do
 !      power = - sum(abs(zcross_product(vv_, pp))**2)
 
-
     end if 
 
 
@@ -1491,10 +1492,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_hsfunction_ar_end
+
     PUSH_SUB(spectrum_hsfunction_ar_end)
+
     SAFE_DEALLOCATE_A(func_ar_)
     SAFE_DEALLOCATE_A(pos_)
     SAFE_DEALLOCATE_A(tret_)
+
     POP_SUB(spectrum_hsfunction_ar_end)
   end subroutine spectrum_hsfunction_ar_end
   ! ---------------------------------------------------------

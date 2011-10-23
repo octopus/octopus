@@ -244,14 +244,14 @@ contains
     !% a vector associated with each atom, which can be visualized with XCrySDen.
     !%Option xc_density 4194304
     !% Outputs the XC density, which is the charge density that
-    !% generates the XC potential. (This <math>-1/4\pi</math> times
-    !% the Laplacian of the XC potential). The files are called 'nxc'.
+    !% generates the XC potential. (This is <math>-1/4\pi</math> times
+    !% the Laplacian of the XC potential). The files are called <tt>nxc</tt>.
     !%Option PES_wfs 8388608
     !% Outputs the photoelectron wavefunctions. The file name is <tt>pes_wfs-</tt>  
-    !% plus the orbital number. 
+    !% plus the orbital number.
     !%Option PES_density 16777216
     !% Outputs the photolectron density. Output file is <tt>pes_dens-</tt> plus spin species if
-    !% spin polarized calculation is preformed. 
+    !% spin-polarized calculation is performed. 
     !%Option PES 33554432   
     !% Outputs the time-dependent photoelectron spectrum.
     !%End

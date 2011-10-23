@@ -257,7 +257,7 @@ void harmonic_spectrum_help(){
   printf("                     '-' : Circularly polarized field, clockwise.\n");
   printf("                     'v' : Along a direction specified by -x X -y Y -z Z.\n");
   printf("                  The default is 'x'\n");
-  printf("  -a, --ar        Calculates the angle resolved harmonic-spectrum along a\n");
+  printf("  -a, --ar        Calculates the angle-resolved harmonic-spectrum along a\n");
   printf("                  direction (X,Y,Z) specified by  by -x X -y Y -z Z.\n");
   printf("  -m, --mode=mode Whether the harmonic spectrum is computed by taking the\n");
   printf("                  second derivative of the dipole moment numerically, or by\n");
@@ -815,11 +815,11 @@ void photoelectron_spectrum_help(){
   printf("Options:\n");
   printf("  -h, --help      Prints this help and exits.\n");
   printf("  -v, --version   Prints octopus version.\n");
-  printf("  -m, --mode=mode Wheter we want the angle or energy resolved photoelectron\n");
+  printf("  -m, --mode=mode Whether we want the angle- or energy-resolved photoelectron\n");
   printf("                  spectrum. The options are:\n");
-  printf("                     '1' : energy resolved.\n");
-  printf("                     '2' : angle resolved.\n");
-  printf("                     '3' : momentum resolved on a plane.\n");
+  printf("                     '1' : energy-resolved.\n");
+  printf("                     '2' : angle-resolved.\n");
+  printf("                     '3' : momentum-resolved on a plane.\n");
   printf("                  The default is '1'\n");
   printf("  -i, --int=Y/N   Interpolate the output. Default is Yes.\n");
   exit(-1);
