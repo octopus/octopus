@@ -42,7 +42,7 @@ module controlfunction_m
   use profiling_m
   use states_m
   use string_m
-  use tdf_m
+  use tdfunction_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -356,7 +356,7 @@ contains
     end do
 
 
-    ! The laser field is defined by "td functions", as implemented in module "tdf_m". At this point, they
+    ! The laser field is defined by "td functions", as implemented in module "tdfunction_m". At this point, they
     ! can be in "non-numerical" representation (i.e. described with a set of parameters, e.g. frequency, 
     ! width, etc). We need them to be in numerical form (i.e. time grid, values at the time grid). 
     ! Here we do the transformation.

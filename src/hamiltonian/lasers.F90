@@ -34,7 +34,7 @@ module lasers_m
   use states_dim_m
   use unit_m
   use unit_system_m
-  use tdf_m
+  use tdfunction_m
 
   implicit none
 

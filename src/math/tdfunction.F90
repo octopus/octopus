@@ -24,7 +24,7 @@
 ! the lasers module, or in the future in order to define time-dependent
 ! magnetic fields.
 !--------------------------------------------------------------
-module tdf_m
+module tdfunction_m
   use c_pointer_m
   use datasets_m
   use fft_m
@@ -1136,17 +1136,19 @@ module tdf_m
         fminusg%valww(i) = fminusg%valww(i) - g%valww(i)
       end do
     case default
-      stop 'Error'
+      message(1) = "Illegal value for f%mode in tdf_diff"
+      call messages_fatal(1)
     end select
 
     fg = tdf_dot_product(fminusg, fminusg)
 
     call tdf_end(fminusg)
+
     POP_SUB(tdf_diff)
   end function tdf_diff
   !------------------------------------------------------------
 
-end module tdf_m
+end module tdfunction_m
 
 !! Local Variables:
 !! mode: f90

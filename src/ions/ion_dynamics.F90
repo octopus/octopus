@@ -33,7 +33,7 @@ module ion_dynamics_m
   use parser_m
   use simul_box_m
   use species_m
-  use tdf_m
+  use tdfunction_m
   use profiling_m
   use unit_m
   use unit_system_m

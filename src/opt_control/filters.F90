@@ -29,7 +29,7 @@ module filter_m
   use messages_m
   use profiling_m
   use string_m
-  use tdf_m
+  use tdfunction_m
 
   implicit none
 
