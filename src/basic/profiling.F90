@@ -559,11 +559,9 @@ contains
 
 #ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
-    PUSH_SUB(iprofiling_count_operations)
+    ! no PUSH_SUB, called too often
 
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
-
-    POP_SUB(iprofiling_count_operations)
 #endif
   end subroutine iprofiling_count_operations
 
@@ -575,11 +573,10 @@ contains
 
 #ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
-    PUSH_SUB(rprofiling_count_operations)
+    ! no PUSH_SUB, called too often
     
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
     
-    POP_SUB(rprofiling_count_operations)
 #endif
   end subroutine rprofiling_count_operations
 
@@ -591,11 +588,10 @@ contains
 
 #ifndef HAVE_PAPI
     if(.not.in_profiling_mode) return
-    PUSH_SUB(dprofiling_count_operations)
+    ! no PUSH_SUB, called too often
     
     prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + ops
 
-    POP_SUB(dprofiling_count_operations)
 #endif
   end subroutine dprofiling_count_operations
 
@@ -607,11 +603,9 @@ contains
     integer,         intent(in)    :: type
 
     if(.not.in_profiling_mode) return
-    PUSH_SUB(profiling_count_tran_int)
-    
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
+    ! no PUSH_SUB, called too often    
 
-    POP_SUB(profiling_count_tran_int)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
   end subroutine profiling_count_tran_int
 
 
@@ -622,11 +616,10 @@ contains
     real(4),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
-    PUSH_SUB(profiling_count_tran_real_4)
-    
+    ! no PUSH_SUB, called too often
+
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
 
-    POP_SUB(profiling_count_tran_real_4)
   end subroutine profiling_count_tran_real_4
 
 
@@ -637,11 +630,10 @@ contains
     real(8),         intent(in)    :: type
     
     if(.not.in_profiling_mode) return
-    PUSH_SUB(profiling_count_tran_real_8)
+    ! no PUSH_SUB, called too often
     
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
 
-    POP_SUB(profiling_count_tran_real_8)
   end subroutine profiling_count_tran_real_8
 
 
@@ -652,11 +644,10 @@ contains
     complex(4),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
-    PUSH_SUB(profiling_count_tran_complex_4)
+    ! no PUSH_SUB, called too often
     
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
 
-    POP_SUB(profiling_count_tran_complex_4)
   end subroutine profiling_count_tran_complex_4
 
 
@@ -667,11 +658,10 @@ contains
     complex(8),      intent(in)    :: type
 
     if(.not.in_profiling_mode) return
-    PUSH_SUB(profiling_count_tran_complex_8)
+    ! no PUSH_SUB, called too often
     
     prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(16*trf)
 
-    POP_SUB(profiling_count_tran_complex_8)
   end subroutine profiling_count_tran_complex_8
 
 
