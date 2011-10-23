@@ -78,7 +78,8 @@ module restart_m
     drestart_write_lr_rho,   &
     zrestart_write_lr_rho,   &
     drestart_read_lr_rho,    &
-    zrestart_read_lr_rho
+    zrestart_read_lr_rho,    &
+    write_restart
 
   logical           :: restart_write_files
   integer           :: restart_format
@@ -1142,6 +1143,15 @@ contains
 
     POP_SUB(restart_read_user_def_orbitals)
   end subroutine restart_read_user_def_orbitals
+
+  ! --------------------------------------------
+
+  logical pure function write_restart()
+    
+    write_restart = restart_write_files
+
+  end function write_restart
+
 
 #include "undef.F90"
 #include "real.F90"

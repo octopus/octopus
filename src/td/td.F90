@@ -865,6 +865,8 @@ contains
       integer :: ii, is, ierr
       character(len=256) :: filename
 
+      if(.not. write_restart()) return
+
       PUSH_SUB(td_run.td_save_restart)
 
       ! first write resume file
