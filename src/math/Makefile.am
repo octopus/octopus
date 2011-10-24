@@ -57,7 +57,7 @@ libmath_a_SOURCES =                      \
 	fftw3.F90
 
 noinst_HEADERS =                         \
-	lalg_basic_blas.F90              \
+	lalg_basic_blas_inc.F90          \
 	lalg_adv_lapack_inc.F90          \
 	lalg_adv_scalapack_inc.F90       \
 	math_inc.F90                     \
@@ -82,7 +82,7 @@ fftw3.o : fftw3.F90 lalg_basic.o loct_math.o
 pfft.o : pfft.F90 fftw3.o math.o
 spline_filter.o: spline_filter.F90 splines.o
 gauss_legendre.o : gauss_legendre.F90 
-lalg_basic.o : lalg_basic.F90 lalg_basic_blas.F90 blas.o 
+lalg_basic.o : lalg_basic.F90 lalg_basic_blas_inc.F90 blas.o 
 lalg_adv.o : lalg_adv.F90  lalg_adv_lapack_inc.F90 lapack.o scalapack.o
 lapack.o : lapack.F90
 loct_math.o : loct_math.F90

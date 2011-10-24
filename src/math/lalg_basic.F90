@@ -208,19 +208,19 @@ module lalg_basic_m
 contains
 
 #  define TYPE 1
-#  include "lalg_basic_blas.F90"
+#  include "lalg_basic_blas_inc.F90"
 #  undef TYPE
 
 #  define TYPE 2
-#  include "lalg_basic_blas.F90"
+#  include "lalg_basic_blas_inc.F90"
 #  undef TYPE
 
 #  define TYPE 3
-#  include "lalg_basic_blas.F90"
+#  include "lalg_basic_blas_inc.F90"
 #  undef TYPE
 
 #  define TYPE 4
-#  include "lalg_basic_blas.F90"
+#  include "lalg_basic_blas_inc.F90"
 #  undef TYPE
 
 end module lalg_basic_m
