@@ -145,19 +145,33 @@ subroutine X(fourier_space_op_init)(this, cube, op)
   R_TYPE,                   intent(in)  :: op(:, :, :)
 
   integer :: ii, jj, kk
+  integer :: start(3),last(3)
 
   nullify(this%dop)
   nullify(this%zop)
-  SAFE_ALLOCATE(this%X(op)(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
-
-  do kk = 1, cube%n(3)
-    do jj = 1, cube%n(2)
-      do ii = 1, cube%nx
-        this%X(op)(ii, jj, kk) = op(ii, jj, kk)
+  if (cube%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT
+    start = cube%pfft%local_o_start
+    last = cube%pfft%local_o_start + cube%pfft%local_no - 1
+    SAFE_ALLOCATE(this%X(op)(start(2):last(2),start(1):last(1),start(3):last(3)))
+     do kk =  cube%pfft%local_o_start(2),cube%pfft%local_o_start(2)+cube%pfft%local_no(2)-1
+      do jj = cube%pfft%local_o_start(1), cube%pfft%local_o_start(1)+cube%pfft%local_no(1)-1
+        do ii = cube%pfft%local_o_start(3), cube%pfft%local_o_start(3)+cube%pfft%local_no(3)-1
+          this%X(op)(kk, jj, ii) = op(kk-start(2)+1, jj-start(1)+1, ii-start(3)+1)
+        end do
       end do
     end do
-  end do
-
+#endif
+  else
+    SAFE_ALLOCATE(this%X(op)(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
+    do kk = 1, cube%n(3)
+      do jj = 1, cube%n(2)
+        do ii = 1, cube%nx
+          this%X(op)(ii, jj, kk) = op(ii, jj, kk)
+        end do
+      end do
+    end do
+  end if
 end subroutine X(fourier_space_op_init)
 
 ! ---------------------------------------------------------
@@ -166,6 +180,7 @@ subroutine X(fourier_space_op_apply)(this, cube)
   type(cube_function_t),    intent(inout)  :: cube
   
   integer :: ii, jj, kk, index
+  integer :: start(3), last(3)
 
   type(profile_t), save :: prof_g, rs2fs_prof, fs2rs_prof, prof
   
@@ -183,15 +198,12 @@ subroutine X(fourier_space_op_apply)(this, cube)
   if (cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
     index = 1
-
+    start = cube%pfft%local_o_start
+    last = cube%pfft%local_o_start + cube%pfft%local_no - 1
     do kk =  cube%pfft%local_o_start(2),cube%pfft%local_o_start(2)+cube%pfft%local_no(2)-1
       do jj = cube%pfft%local_o_start(1), cube%pfft%local_o_start(1)+cube%pfft%local_no(1)-1
         do ii = cube%pfft%local_o_start(3), cube%pfft%local_o_start(3)+cube%pfft%local_no(3)-1 
-          if (kk <= cube%nx)then
-            cube%pfft%data_out(index)= cube%pfft%data_out(index)*this%X(op)(kk, jj, ii)
-          else
-            cube%pfft%data_out(index)= cube%pfft%data_out(index)*this%X(op)(cube%n(1)+2-kk, jj, ii)
-          end if
+          cube%pfft%data_out(index)= cube%pfft%data_out(index)*this%X(op)(kk, jj,ii)
           index=index+1
         end do
       end do

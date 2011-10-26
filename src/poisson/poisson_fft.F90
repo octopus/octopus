@@ -355,6 +355,7 @@ contains
     FLOAT :: gx, r_c, gg(MAX_DIM)
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
+    integer :: start(3),last(3)
 
     PUSH_SUB(poisson_fft_build_3d_0d)
 
@@ -391,50 +392,104 @@ contains
     end if
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+    ! store only the relevant part if PFFT is used
+    if (fft_cf%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT
+      start = fft_cf%pfft%local_o_start
+      last = fft_cf%pfft%local_o_start + fft_cf%pfft%local_no - 1
+      SAFE_ALLOCATE(fft_Coulb_FS(start(2):last(2),start(1):last(1),start(3):last(3)))
+#endif
+    else
+      SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+    end if
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
-
-    do ix = 1, fft_cf%nx
-      ixx(1) = pad_feq(ix, db(1), .true.)
-      gx = temp(1)*ixx(1)
-      do iy = 1, db(2)
-        ixx(2) = pad_feq(iy, db(2), .true.)
-        do iz = 1, db(3)
-          ixx(3) = pad_feq(iz, db(3), .true.)
-
-          gg(:) = temp(:)*ixx(:)
-          gg(:) = matmul(gg, mesh%sb%klattice_primitive)
-          do idim = 1, mesh%sb%dim
-            gg(idim) = gg(idim) / lalg_nrm2(mesh%sb%dim, mesh%sb%klattice_primitive(:, idim))
+    if (fft_cf%fft_library == PFFT_LIB) then
+      do ix = start(2), last(2)
+        ixx(2) = pad_feq(ix, db(2), .true.)
+        gx = temp(2)*ixx(2)
+        do iy = start(1), last(1)
+          ixx(1) = pad_feq(iy, db(1), .true.)
+          do iz = start(3), last(3)
+            ixx(3) = pad_feq(iz, db(3), .true.)
+            
+            gg(:) = temp(:)*ixx(:)
+            gg(:) = matmul(gg, mesh%sb%klattice_primitive)
+            do idim = 1, mesh%sb%dim
+              gg(idim) = gg(idim) / lalg_nrm2(mesh%sb%dim, mesh%sb%klattice_primitive(:, idim))
+            end do
+            modg2 = sum(gg(:)**2)
+            
+            if(abs(modg2) > M_EPSILON) then
+              select case(poisson_solver)
+              case(POISSON_FFT_SPH)
+                fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_0D(sqrt(modg2),r_c)/modg2
+              case(POISSON_FFT_CORRECTED)
+                fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
+              end select
+            else
+              select case(poisson_solver)
+              case(POISSON_FFT_SPH)
+                fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
+              case (POISSON_FFT_CORRECTED)
+                fft_Coulb_FS(ix, iy, iz) = M_ZERO
+              end select
+            end if
           end do
-          modg2 = sum(gg(:)**2)
-
-          if(abs(modg2) > M_EPSILON) then
-            select case(poisson_solver)
-            case(POISSON_FFT_SPH)
-              fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_0D(sqrt(modg2),r_c)/modg2
-            case(POISSON_FFT_CORRECTED)
-              fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
-            end select
-          else
-            select case(poisson_solver)
-            case(POISSON_FFT_SPH)
-              fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
-            case (POISSON_FFT_CORRECTED)
-              fft_Coulb_FS(ix, iy, iz) = M_ZERO
-            end select
-          end if
         end do
       end do
+    else
+      do ix = 1, fft_cf%nx
+        ixx(1) = pad_feq(ix, db(1), .true.)
+        gx = temp(1)*ixx(1)
+        do iy = 1, db(2)
+          ixx(2) = pad_feq(iy, db(2), .true.)
+          do iz = 1, db(3)
+            ixx(3) = pad_feq(iz, db(3), .true.)
+            
+            gg(:) = temp(:)*ixx(:)
+            gg(:) = matmul(gg, mesh%sb%klattice_primitive)
+            do idim = 1, mesh%sb%dim
+              gg(idim) = gg(idim) / lalg_nrm2(mesh%sb%dim, mesh%sb%klattice_primitive(:, idim))
+            end do
+            modg2 = sum(gg(:)**2)
+            
+            if(abs(modg2) > M_EPSILON) then
+              select case(poisson_solver)
+              case(POISSON_FFT_SPH)
+                fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_0D(sqrt(modg2),r_c)/modg2
+              case(POISSON_FFT_CORRECTED)
+                fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
+              end select
+            else
+              select case(poisson_solver)
+              case(POISSON_FFT_SPH)
+                fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
+              case (POISSON_FFT_CORRECTED)
+                fft_Coulb_FS(ix, iy, iz) = M_ZERO
+              end select
+            end if
+          end do
+        end do
 
-    end do
+      end do
+    end if
 
-    forall(iz=1:fft_cf%n(3), iy=1:fft_cf%n(2), ix=1:fft_cf%nx)
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
+    if (fft_cf%fft_library == PFFT_LIB) then 
+      do ix = start(2), last(2)
+        do iy = start(1), last(1)
+          do iz = start(3), last(3)
+            fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+          end do
+        end do
+      end do
+    else
+      forall(iz=1:fft_cf%n(3), iy=1:fft_cf%n(2), ix=1:fft_cf%nx)
+        fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+      end forall
+    end if
 
     call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
 
