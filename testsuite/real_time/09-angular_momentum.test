@@ -80,22 +80,22 @@ match ; R(0) sum rule 2; GREP(rotatory_strength, "R(0) sum rule", 34) ; -0.54874
 match ; R(2) sum rule 1; GREP(rotatory_strength, "R(2) sum rule", 18) ; -0.144380E-04
 match ; R(2) sum rule 2; GREP(rotatory_strength, "R(2) sum rule", 34) ; -0.147652E-03
 
-match ; Energy 1 ; LINE(rotatory_strength, 14, 1)  ;  0.00000000E+00
-match ; R      1 ; LINE(rotatory_strength, 14, 21) ; -0.48377003E-04
-match ; Beta   1 ; LINE(rotatory_strength, 14, 41) ; -0.00000000E+00
+match ; Energy 1 ; LINE(rotatory_strength, 15, 1)  ;  0.00000000E+00
+match ; R      1 ; LINE(rotatory_strength, 15, 21) ; -0.48377003E-04
+match ; Beta   1 ; LINE(rotatory_strength, 15, 41) ; -0.00000000E+00
 
-match ; Energy 2 ; LINE(rotatory_strength, 30, 1)  ;  0.58798921E-02
-match ; R      2 ; LINE(rotatory_strength, 30, 21) ; -0.48425452E-04
-match ; Beta   2 ; LINE(rotatory_strength, 30, 41) ; -0.95072727E-01
+match ; Energy 2 ; LINE(rotatory_strength, 31, 1)  ;  0.58798921E-02
+match ; R      2 ; LINE(rotatory_strength, 31, 21) ; -0.48425452E-04
+match ; Beta   2 ; LINE(rotatory_strength, 31, 41) ; -0.95072727E-01
 
-match ; Energy 3 ; LINE(rotatory_strength, 1001, 1)  ; 0.36271584E+00
-match ; R      3 ; LINE(rotatory_strength, 1001, 21) ; -0.23108112E-03
-match ; Beta   3 ; LINE(rotatory_strength, 1001, 41) ; -0.63858791E-01
+match ; Energy 3 ; LINE(rotatory_strength, 1002, 1)  ; 0.36271584E+00
+match ; R      3 ; LINE(rotatory_strength, 1002, 21) ; -0.23108112E-03
+match ; Beta   3 ; LINE(rotatory_strength, 1002, 41) ; -0.63858791E-01
 
-match ; Energy 4 ; LINE(rotatory_strength, 1705, 1)  ;  0.62143109E+00
-match ; R      4 ; LINE(rotatory_strength, 1705, 21) ; -0.41373255E-03
-match ; Beta   4 ; LINE(rotatory_strength, 1705, 41) ;  0.46676199E-04
+match ; Energy 4 ; LINE(rotatory_strength, 1706, 1)  ;  0.62143109E+00
+match ; R      4 ; LINE(rotatory_strength, 1706, 21) ; -0.41373255E-03
+match ; Beta   4 ; LINE(rotatory_strength, 1706, 41) ;  0.46676199E-04
 
-match ; Energy 5 ; LINE(rotatory_strength, 2014, 1)  ;  0.73498651E+00
-match ; R      5 ; LINE(rotatory_strength, 2014, 21) ; -0.40713142E-03 
-match ; Beta   5 ; LINE(rotatory_strength, 2014, 41) ;  0.23320309E-01
+match ; Energy 5 ; LINE(rotatory_strength, 2015, 1)  ;  0.73498651E+00
+match ; R      5 ; LINE(rotatory_strength, 2015, 21) ; -0.40713142E-03 
+match ; Beta   5 ; LINE(rotatory_strength, 2015, 41) ;  0.23320309E-01
