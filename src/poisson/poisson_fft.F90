@@ -391,7 +391,7 @@ contains
     if (fft_cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
       start = fft_cube%pfft%local_o_start
-      last = fft_cube%pfft%local_o_start + fft_cf%pfft%local_no - 1
+      last = fft_cube%pfft%local_o_start + fft_cube%pfft%local_no - 1
       SAFE_ALLOCATE(fft_Coulb_FS(start(2):last(2),start(1):last(1),start(3):last(3)))
 #endif
     else
