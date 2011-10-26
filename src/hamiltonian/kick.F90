@@ -518,7 +518,7 @@ contains
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(ion_dynamics_t), intent(in)    :: ions
-    type(geometry_t),     intent(in)    :: geo
+    type(geometry_t),     intent(inout) :: geo
     type(kick_t),         intent(in)    :: kick
 
     integer :: im, iatom
