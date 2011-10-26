@@ -27,6 +27,12 @@ module compressed_sensing_m
 
   private
   
+  ! these values are copied from td/spectrum.f90
+  integer, parameter ::            &
+    SPECTRUM_TRANSFORM_EXP   = 1,  &
+    SPECTRUM_TRANSFORM_SIN   = 2,  &
+    SPECTRUM_TRANSFORM_COS   = 3
+  
   public ::                                        &
     compressed_sensing_t,                          &
     compressed_sensing_init,                       &
@@ -46,8 +52,9 @@ module compressed_sensing_m
 
 contains
 
-  subroutine compressed_sensing_init(this, ntime, dtime, stime, nfreq, dfreq, sfreq, noise)
+  subroutine compressed_sensing_init(this, transform_type, ntime, dtime, stime, nfreq, dfreq, sfreq, noise)
     type(compressed_sensing_t),  intent(out) :: this
+    integer,                     intent(in)  :: transform_type
     integer,                     intent(in)  :: ntime
     FLOAT,                       intent(in)  :: dtime
     FLOAT,                       intent(in)  :: stime
@@ -74,11 +81,30 @@ contains
 
     do ifreq = 1, this%nfreq
       freq = (ifreq - 1)*this%dfreq + this%sfreq
-      do itime = 1, this%ntime
-        time = (itime - 1)*this%dtime + this%stime
 
-        this%fourier_matrix(itime, ifreq) = sin(freq*time)*dfreq*M_TWO/M_PI
-      end do
+      select case(transform_type)
+      case(SPECTRUM_TRANSFORM_EXP)
+        do itime = 1, this%ntime
+          time = (itime - 1)*this%dtime + this%stime
+          
+          this%fourier_matrix(itime, ifreq) = exp(-freq*time)*dfreq*M_TWO/M_PI
+        end do
+        
+      case(SPECTRUM_TRANSFORM_SIN)
+        do itime = 1, this%ntime
+          time = (itime - 1)*this%dtime + this%stime
+          
+          this%fourier_matrix(itime, ifreq) = sin(freq*time)*dfreq*M_TWO/M_PI
+        end do
+
+      case(SPECTRUM_TRANSFORM_COS)
+        do itime = 1, this%ntime
+          time = (itime - 1)*this%dtime + this%stime
+          
+          this%fourier_matrix(itime, ifreq) = cos(freq*time)*dfreq*M_TWO/M_PI
+        end do
+      end select
+
     end do
     
     POP_SUB(compressed_sensing_init)

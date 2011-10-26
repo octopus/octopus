@@ -2309,9 +2309,8 @@ contains
 
     case(SPECTRUM_COMPRESSED_SENSING)
 
-      ASSERT(transform == SPECTRUM_TRANSFORM_SIN)
-
-      call compressed_sensing_init(cs, time_end - time_start + 1, time_step, time_step*(time_start - 1), &
+      call compressed_sensing_init(cs, transform, &
+        time_end -time_start + 1, time_step, time_step*(time_start - 1), &
         energy_end - energy_start + 1, energy_step, energy_step*(energy_start - 1), noise)
 
       do ii = 1, time_function%nst_linear
