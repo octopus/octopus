@@ -154,7 +154,7 @@ module opt_control_propagation_m
 
     if(write_iter_) then
       call td_write_init(write_handler, gr, sys%st, hm, sys%geo, &
-        ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), td%kick, td%iter, td%max_iter, td%dt)
+        ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
       call td_write_data(write_handler, gr, psi, hm, sys%outp, sys%geo, 0)
     end if
 
@@ -222,7 +222,7 @@ module opt_control_propagation_m
 
       ! only write in final run
       if(write_iter_) then
-        call td_write_iter(write_handler, gr, psi, hm, sys%geo, td%kick, td%dt, i)
+        call td_write_iter(write_handler, gr, psi, hm, sys%geo, hm%ep%kick, td%dt, i)
         ii = ii + 1 
         if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output
           if(i == td%max_iter) sys%outp%iter = ii - 1

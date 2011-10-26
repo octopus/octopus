@@ -23,6 +23,7 @@ module oscillator_strength_m
   use datasets_m
   use global_m
   use io_m
+  use kick_m
   use loct_m
   use loct_math_m
   use parser_m
@@ -737,6 +738,7 @@ subroutine generate_signal(order, observable)
   use global_m
   use messages_m
   use datasets_m
+  use kick_m
   use loct_m
   use parser_m
   use io_m
@@ -1014,11 +1016,12 @@ end subroutine modify_ot
 subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   use global_m
   use io_m
-  use unit_m
-  use unit_system_m
+  use kick_m
+  use profiling_m
   use spectrum_m
   use string_m
-  use profiling_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 

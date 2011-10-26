@@ -24,6 +24,7 @@ program propagation_spectrum
   use datasets_m
   use global_m
   use io_m
+  use kick_m
   use loct_m
   use messages_m
   use parser_m

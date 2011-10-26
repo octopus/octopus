@@ -128,7 +128,7 @@ subroutine td_init(td, sys, hm)
   end if
   
   ! Initialize the kick (if optical-spectrum calculations are to be performed)
-  call kick_init(td%kick, sys%st%d%nspin, sys%gr%mesh%sb%dim)
+  call kick_init(hm%ep%kick, sys%st%d%nspin, sys%gr%mesh%sb%dim)
 
   ! now the photoelectron stuff
   call parse_integer(datasets_check('AbsorbingBoundaries'), 0, dummy)

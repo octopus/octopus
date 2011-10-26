@@ -30,6 +30,7 @@ module epot_m
   use grid_m
   use index_m
   use io_m
+  use kick_m
   use lalg_adv_m
   use lalg_basic_m
   use lasers_m
@@ -99,6 +100,9 @@ module epot_m
     FLOAT, pointer         :: A_static(:,:)        ! static vector potential
     type(gauge_field_t)    :: gfield               ! the time-dependent gauge field
     integer                :: reltype              ! type of relativistic correction to use
+
+    ! The possible kick
+    type(kick_t) :: kick
 
     ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.)
@@ -212,6 +216,15 @@ contains
 
     ! lasers
     call laser_init(ep%no_lasers, ep%lasers, gr%mesh)
+
+    select case(ispin)
+    case(UNPOLARIZED)
+      call kick_init(ep%kick, 1, gr%mesh%sb%dim)
+    case(SPIN_POLARIZED)
+      call kick_init(ep%kick, 2, gr%mesh%sb%dim)
+    case(SPINORS)
+      call kick_init(ep%kick, 4, gr%mesh%sb%dim)
+    end select
 
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable('UserDefinedTDPotential', 'TDExternalFields')

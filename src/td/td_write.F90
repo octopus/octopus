@@ -33,6 +33,7 @@ module td_write_m
   use hamiltonian_m
   use io_m
   use ion_dynamics_m
+  use kick_m
   use lasers_m
   use loct_m
   use loct_math_m

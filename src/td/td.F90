@@ -37,6 +37,7 @@ module td_m
   use io_m
   use io_function_m
   use ion_dynamics_m
+  use kick_m
   use lasers_m
   use lalg_basic_m
   use loct_m
@@ -92,9 +93,6 @@ module td_m
     integer              :: max_iter       ! maximum number of iterations to perform
     integer              :: iter           ! the actual iteration
     logical              :: recalculate_gs ! Recalculate ground-state along the evolution.
-
-    ! The *kick* used in "response in the time domain" calculations.
-    type(kick_t)         :: kick
 
     type(PES_t)          :: PESv
 
@@ -191,7 +189,7 @@ contains
     end if
 
     call td_write_init(write_handler, gr, st, hm, geo, &
-         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), td%kick, td%iter, td%max_iter, td%dt)
+         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
 
     if(td%iter == 0) call td_run_zero_iter()
 
@@ -216,14 +214,19 @@ contains
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
-    ! step "i" means propagation from (iter-1)*dt to iter*dt.
+    ! step "iter" means propagation from (iter-1)*dt to iter*dt.
     propagation: do iter = td%iter, td%max_iter
 
       if(clean_stop()) stopping = .true.
       call profiling_in(prof, "TIME_STEP")
 
+      if(iter > 1) then
+        if( ((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time) ) then
+          call kick_apply(gr, st, td%ions, geo, hm%ep%kick)
+        end if
+      end if
 
-      !Apply mask absorbing boundaries
+      !Apply mask absorbing boudaires
       if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st) 
 
       ! time iterate wavefunctions
@@ -327,10 +330,9 @@ contains
 
       !Photoelectron stuff 
       if(td%PESv%calc_rc .or. td%PESv%calc_mask ) &
-        call PES_calc(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot, hm, geo, iter)
+           call PES_calc(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot,hm,geo,iter)
 
-
-      call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, iter)
+      call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
 
       ! write down data
       call check_point()
@@ -398,7 +400,7 @@ contains
         call td_save_restart(iter)
         call td_write_data(write_handler, gr, st, hm, sys%outp, geo, iter)
 	!Photoelectron output and restart dump
-        call PES_output(td%PESv, gr%mesh, st, iter, sys%outp, td%dt, gr, geo)
+        call PES_output(td%PESv, gr%mesh, st, iter, sys%outp, td%dt,gr,geo)
         call PES_restart_write(td%PESv, gr%mesh, st)
         if( (ion_dynamics_ions_move(td%ions)) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
@@ -609,171 +611,17 @@ contains
     subroutine td_run_zero_iter()
       PUSH_SUB(td_run.td_run_zero_iter)
 
-      call td_write_iter(write_handler, gr, st, hm, geo, td%kick, td%dt, 0)
+      call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, 0)
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
-      call apply_delta_field(td%kick)
+      if(hm%ep%kick%time .eq. M_ZERO) then
+        call kick_apply(gr, st, td%ions, geo, hm%ep%kick)
+      end if
       call propagator_run_zero_iter(hm, gr, td%tr)
 
       POP_SUB(td_run.td_run_zero_iter)
     end subroutine td_run_zero_iter
-
-
-    ! ---------------------------------------------------------
-    ! Applies the delta-function electric field E(t) = E_0 delta(t)
-    ! where E_0 = - k \hbar / e, k = kick%delta_strength.
-    subroutine apply_delta_field(kick)
-      type(kick_t), intent(in) :: kick
-      integer :: im, iatom
-      integer :: iqn, ist, idim, ip, ispin
-      CMPLX   :: cc(2), kick_value
-      FLOAT   :: ylm, gylm(1:MAX_DIM), rr
-      FLOAT   :: xx(MAX_DIM)
-      CMPLX, allocatable :: kick_function(:), psi(:, :)
-
-      PUSH_SUB(td_run.apply_delta_field)
-
-      ! The wavefunctions at time delta t read
-      ! psi(delta t) = psi(t) exp(i k x)
-      delta_strength: if(kick%delta_strength .ne. M_ZERO) then
-
-        SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
-
-        if(abs(kick%qlength) > M_EPSILON) then ! q-vector is set
-
-          select case (kick%qkick_mode)
-            case (QKICKMODE_COS)
-              write(message(1), '(a,3F9.5,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(:), ')'
-            case (QKICKMODE_SIN)
-              write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(:), ')'
-            case (QKICKMODE_SIN + QKICKMODE_COS)
-              write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(:), ')'
-            case (QKICKMODE_EXP)
-              write(message(1), '(a,3F9.5,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(:), ')'
-            case (QKICKMODE_BESSEL)
-              write(message(1), '(a,I2,a,I2,a,F9.5)') 'Info: Using j_l(qr)*Y_lm(r) field with (l,m)= (', &
-                                                      kick%qbessel_l, ",", kick%qbessel_m,') and q = ', kick%qlength
-            case default
-              write(message(1), '(a,3F9.6,a)') 'Info: Unknown field type!'
-          end select
-          call messages_info(1)
-
-          kick_function = M_ZERO
-          do ip = 1, gr%mesh%np
-            call mesh_r(gr%mesh, ip, rr, coords = xx)
-            select case (kick%qkick_mode)
-              case (QKICKMODE_COS)
-                kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:) * xx(:)))
-              case (QKICKMODE_SIN)
-                kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)))
-              case (QKICKMODE_SIN+QKICKMODE_COS)
-                kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)))
-              case (QKICKMODE_EXP)
-                kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:) * xx(:)))
-              case (QKICKMODE_BESSEL)
-                call grylmr(gr%mesh%x(ip, 1), gr%mesh%x(ip, 2), gr%mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm, gylm)
-                kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
-            end select
-          end do
-
-        else
-          if(kick%n_multipoles > 0) then
-            kick_function = M_ZERO
-            do im = 1, kick%n_multipoles
-              do ip = 1, gr%mesh%np
-                call mesh_r(gr%mesh, ip, rr, coords = xx)
-                call loct_ylm(1, xx(1), xx(2), xx(3), kick%l(im), kick%m(im), ylm)
-                kick_function(ip) = kick_function(ip) + kick%weight(im) * (rr**kick%l(im)) * ylm
-              end do
-            end do
-          else
-            forall(ip = 1:gr%mesh%np)
-              kick_function(ip) = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * &
-                kick%pol(1:gr%mesh%sb%dim, kick%pol_dir))
-            end forall
-          end if
-        end if
-
-        write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', kick%delta_strength
-        select case (kick%delta_strength_mode)
-        case (KICK_DENSITY_MODE)
-          message(2) = "Info: Delta kick mode: Density mode"
-        case (KICK_SPIN_MODE)
-          message(2) = "Info: Delta kick mode: Spin mode"
-        case (KICK_SPIN_DENSITY_MODE)
-          message(2) = "Info: Delta kick mode: Density + Spin modes"
-        end select
-        call messages_info(2)
-
-        SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
-
-        do iqn = st%d%kpt%start, st%d%kpt%end
-          do ist = st%st_start, st%st_end
-
-            call states_get_state(st, gr%mesh, ist, iqn, psi)
-
-            select case (kick%delta_strength_mode)
-            case (KICK_DENSITY_MODE)
-              forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-                psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim)
-              end forall
-
-            case (KICK_SPIN_MODE)
-              ispin = states_dim_get_spin_index(st%d, iqn)
-              do ip = 1, gr%mesh%np
-                kick_value = M_zI*kick%delta_strength*kick_function(ip)
-
-                cc(1) = exp(kick_value)
-                cc(2) = exp(-kick_value)
-
-                select case (st%d%ispin)
-                case (SPIN_POLARIZED)
-                  psi(ip, 1) = cc(ispin)*psi(ip, 1)
-                case (SPINORS)
-                  psi(ip, 1) = cc(1)*psi(ip, 1)
-                  psi(ip, 2) = cc(2)*psi(ip, 2)
-                end select
-              end do
-
-            case (KICK_SPIN_DENSITY_MODE)
-              do ip = 1, gr%mesh%np
-                cc(1) = exp(M_TWO*kick_value)
-                select case (st%d%ispin)
-                case (SPIN_POLARIZED)
-                  if(is_spin_up(iqn)) then
-                    psi(ip, 1) = cc(1)*psi(ip, 1)
-                  end if
-                case (SPINORS)
-                  psi(ip, 1) = cc(1)*psi(ip, 1)
-                end select
-              end do
-            end select
-
-            call states_set_state(st, gr%mesh, ist, iqn, psi)
-
-          end do
-        end do
-
-        SAFE_DEALLOCATE_A(psi)
-
-        ! The nuclear velocities will be changed by
-        ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
-        ! where M and Z are the ionic mass and charge, respectively.
-        if(ion_dynamics_ions_move(td%ions)  .and. kick%delta_strength .ne. M_ZERO) then
-          do iatom = 1, geo%natoms
-            geo%atom(iatom)%v(1:gr%mesh%sb%dim) = geo%atom(iatom)%v(1:gr%mesh%sb%dim) + &
-              kick%delta_strength * kick%pol(1:gr%mesh%sb%dim, kick%pol_dir) * &
-              P_PROTON_CHARGE * species_zval(geo%atom(iatom)%spec) / &
-              species_weight(geo%atom(iatom)%spec)
-          end do
-        end if
-
-        SAFE_DEALLOCATE_A(kick_function)
-      end if delta_strength
-
-      POP_SUB(td_run.apply_delta_field)
-    end subroutine apply_delta_field
 
 
     ! ---------------------------------------------------------

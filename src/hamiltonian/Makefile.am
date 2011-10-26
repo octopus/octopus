@@ -22,6 +22,7 @@
 noinst_LIBRARIES = libhamiltonian.a
 
 libhamiltonian_a_SOURCES =         \
+	kick.F90                   \
 	lasers.F90                 \
 	species_pot.F90            \
 	rkb_projector.F90          \

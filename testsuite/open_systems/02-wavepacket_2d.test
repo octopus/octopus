@@ -10,7 +10,7 @@ Enabled    : Yes
 # discretization with the full and compacted Q matrices.
 
 Input: 02-wavepacket_2d.01-full_q.inp
-match ; Density [step  0] ; LINE(flat_td.general/multipoles, 16, 30) ; 1.000000000000e+00
-match ; Density [step 25] ; LINE(flat_td.general/multipoles, 41, 30) ; 6.700419681475e-01
-match ; Density [step 50] ; LINE(flat_td.general/multipoles, 66, 30) ; 1.648425645707e-01
-match ; Density [step 75] ; LINE(flat_td.general/multipoles, 91, 30) ; 6.976446739097e-02
+match ; Density [step  0] ; LINE(flat_td.general/multipoles, 17, 30) ; 1.000000000000e+00
+match ; Density [step 25] ; LINE(flat_td.general/multipoles, 42, 30) ; 6.700419681475e-01
+match ; Density [step 50] ; LINE(flat_td.general/multipoles, 67, 30) ; 1.648425645707e-01
+match ; Density [step 75] ; LINE(flat_td.general/multipoles, 92, 30) ; 6.976446739097e-02
