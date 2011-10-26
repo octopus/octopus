@@ -58,7 +58,9 @@ module spectrum_m
     spectrum_hsfunction_min,       &
     spectrum_mult_info,            &
     spectrum_fix_time_limits,      &
-    count_time_steps
+    count_time_steps,              &
+    signal_damp,                   &
+    fourier_transform
 
   integer, public, parameter ::    &
     SPECTRUM_DAMP_NONE       = 0,  &

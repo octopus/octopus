@@ -20,6 +20,7 @@
 #include "global.h"
 
 program dielectric_function
+  use batch_m
   use datasets_m
   use command_line_m
   use geometry_m
@@ -41,13 +42,14 @@ program dielectric_function
   integer :: in_file, out_file, ii, jj, kk, idir, jdir, ierr
   integer :: time_steps, energy_steps, istart, iend, ntiter
   FLOAT   :: dt, tt, ww, n0
-  FLOAT, allocatable :: vecpot(:, :), dumpa(:), vecpot0(:)
+  FLOAT, allocatable :: vecpot(:, :), vecpot0(:), ftreal(:, :), ftimag(:, :)
   CMPLX, allocatable :: dielectric(:, :), chi(:, :), invdielectric(:, :), fullmat(:, :)
   type(spec_t)      :: spectrum
   type(block_t)     :: blk
   type(space_t)     :: space
   type(geometry_t)  :: geo
   type(simul_box_t) :: sb
+  type(batch_t)     :: vecpotb, ftrealb, ftimagb
 
   ! Initialize stuff
   call global_init()
@@ -100,17 +102,20 @@ program dielectric_function
   in_file = io_open('td.general/gauge_field', action='read', status='old', die=.false.)
   call io_skip_header(in_file)
   call count_time_steps(in_file, time_steps, dt)
+  
+  time_steps = time_steps + 1
+
   if(in_file < 0) then 
     message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field'))//"'"
     call messages_fatal(1)
   end if
 
-  SAFE_ALLOCATE(vecpot(1:space%dim*3, 1:time_steps))
-
+  SAFE_ALLOCATE(vecpot(1:time_steps, space%dim*3))
+  
   call io_skip_header(in_file)
   
   do ii = 1, time_steps
-    read(in_file, *) jj, tt, vecpot(1:space%dim*3, ii)
+    read(in_file, *) jj, tt, vecpot(ii, 1:space%dim*3)
   end do
 
   call io_close(in_file)
@@ -125,42 +130,43 @@ program dielectric_function
 
   istart = max(1, istart)
 
-  SAFE_ALLOCATE(dumpa(istart:iend))
+  energy_steps = spectrum%max_energy / spectrum%energy_step
 
-  do ii = istart, iend
-    jj = ii - istart
-    select case(spectrum%damp)
-    case(SPECTRUM_DAMP_NONE)
-      dumpa(ii) = M_ONE
-    case(SPECTRUM_DAMP_LORENTZIAN)
-      dumpa(ii)= exp(-jj*dt*spectrum%damp_factor)
-    case(SPECTRUM_DAMP_POLYNOMIAL)
-      dumpa(ii) = M_ONE - M_THREE*(real(jj)/ntiter)**2+ M_TWO*(real(jj)/ntiter)**3
-    case(SPECTRUM_DAMP_GAUSSIAN)
-      dumpa(ii)= exp(-(jj*dt)**2*spectrum%damp_factor**2)
-    end select
+  n0 = sqrt(sum(vecpot0(1:space%dim))**2)
+
+  SAFE_ALLOCATE(ftreal(0:energy_steps, 1:space%dim))
+  SAFE_ALLOCATE(ftimag(0:energy_steps, 1:space%dim))
+
+  call batch_init(vecpotb, space%dim)
+  call batch_init(ftrealb, space%dim)
+  call batch_init(ftimagb, space%dim)
+
+  do ii = 1, space%dim
+    call batch_add_state(vecpotb, vecpot(:,  space%dim + ii))
+    call batch_add_state(ftrealb, ftreal(0:,  ii))
+    call batch_add_state(ftimagb, ftimag(0:,  ii))
   end do
 
-  energy_steps = spectrum%max_energy / spectrum%energy_step
+  call signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, dt, vecpotb)
+
+  call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+    istart, iend, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftrealb)
+  call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+    istart, iend, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftimagb)
+
+  call batch_end(vecpotb)
+  call batch_end(ftrealb)
+  call batch_end(ftimagb)
+
   SAFE_ALLOCATE(invdielectric(1:space%dim, 0:energy_steps))
   SAFE_ALLOCATE(dielectric(1:space%dim, 0:energy_steps))
   SAFE_ALLOCATE(chi(1:space%dim, 0:energy_steps))
   SAFE_ALLOCATE(fullmat(1:space%dim, 1:space%dim))
 
-  n0 = sqrt(sum(vecpot0(1:space%dim))**2)
-
   do kk = 0, energy_steps
     ww = kk*spectrum%energy_step
 
-    invdielectric(1:space%dim, kk) = M_ZERO
-
-    do ii = istart, iend
-      tt = ii*dt
-      invdielectric(1:space%dim, kk) = &
-        invdielectric(1:space%dim, kk) + vecpot(space%dim + 1:2*space%dim, ii)*exp(M_zI*ww*tt)*dumpa(ii)*dt
-    end do
-    
-    invdielectric(1:space%dim, kk) = (vecpot0(1:space%dim) + invdielectric(1:space%dim, kk))/n0
+    invdielectric(1:space%dim, kk) = (vecpot0(1:space%dim) + cmplx(ftreal(kk, 1:space%dim), ftimag(kk, 1:space%dim)))/n0
 
     ! calculate the full inverse dielectric matrix
     do idir = 1, space%dim
@@ -220,7 +226,6 @@ program dielectric_function
   SAFE_DEALLOCATE_A(dielectric)
   SAFE_DEALLOCATE_A(chi)
   SAFE_DEALLOCATE_A(vecpot)
-  SAFE_DEALLOCATE_A(dumpa)
 
   call simul_box_end(sb)
   call geometry_end(geo)
