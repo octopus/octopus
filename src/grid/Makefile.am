@@ -37,6 +37,7 @@ libgrid_a_SOURCES =       \
 	stencil.F90             \
 	stencil_starplus.F90    \
 	derivatives.F90         \
+	cube.F90                \
 	cube_function.F90       \
 	fourier_space.F90       \
 	mesh_function.F90       \
@@ -108,7 +109,8 @@ stencil_variational.o : stencil_variational.F90 nl_operator.o stencil.o
 stencil_cube.o : stencil_cube.F90 stencil.o
 stencil_starplus.o : stencil_starplus.F90 stencil.o
 derivatives.o : derivatives.F90 derivatives_inc.F90 stencil_variational.o stencil_starplus.o stencil_star.o stencil_cube.o  nl_operator.o mesh.o batch.o transfer_table.o mesh_function.o boundaries.o
-cube_function.o : cube_function.F90 cube_function_inc.F90  mesh.o mesh_cube_map.o par_vec.o
+cube.o : cube.F90
+cube_function.o : cube_function.F90 cube_function_inc.F90  mesh.o cube.o par_vec.o
 fourier_space.o : fourier_space.F90 fourier_space_inc.F90 cube_function.o mesh.o 
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o modelmb_1part.o
 basins.o : basins.F90 par_vec.o index.o mesh.o 

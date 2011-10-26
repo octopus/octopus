@@ -1,4 +1,4 @@
-!! Copyright (C) 2009
+!! Copyright (C) 2009-2011 X. Andrade, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -26,7 +26,8 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   character(len=*),       intent(in) :: dir
   type(output_t),         intent(in) :: outp
 
-  type(cube_function_t) :: cube
+  type(cube_t) :: cube
+  type(cube_function_t) :: cf
 #ifdef HAVE_ETSF_IO
   type(fourier_shell_t) :: shell
   integer :: ncid
@@ -43,7 +44,8 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 #endif
 
   !Create a cube
-  call cube_function_init(cube, gr%mesh%idx%ll)
+  call cube_init(cube, gr%mesh%idx%ll, gr%sb, gr%mesh%idx, gr%mesh%np_global)
+  call cube_function_null(cf)
   
   ! To create an etsf file one has to do the following:
   !
@@ -74,25 +76,25 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
   ! density
   if (iand(outp%what, C_OUTPUT_DENSITY).ne.0) then
-    call dcube_function_alloc_RS(cube)
+    call dcube_function_alloc_RS(cube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
     call output_etsf_density_dims(st, gr%mesh, cube, density_dims, density_flags)
 
     call output_etsf_file_init(dir//"/density-etsf.nc", "Density file", density_dims, density_flags, ncid)
 
-    call output_etsf_density_write(st, gr%mesh, cube, ncid)
+    call output_etsf_density_write(st, gr%mesh, cube, cf, ncid)
     call output_etsf_geometry_write(geo, gr%sb, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
-    call dcube_function_free_rs(cube)
+    call dcube_function_free_rs(cf)
   end if
 
   ! wave-functions
   if (iand(outp%what, C_OUTPUT_WFS).ne.0) then
-    call dcube_function_alloc_RS(cube)
+    call dcube_function_alloc_RS(cube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, wfs_dims, wfs_flags)
     call output_etsf_kpoints_dims(gr%sb, wfs_dims, wfs_flags)
@@ -104,18 +106,17 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call output_etsf_electrons_write(st, ncid)
     call output_etsf_geometry_write(geo, gr%sb, ncid)
     call output_etsf_kpoints_write(gr%sb, ncid)
-    call output_etsf_wfs_rsp_write(st, gr%mesh, cube, ncid)
+    call output_etsf_wfs_rsp_write(st, gr%mesh, cube, cf, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
     
-    call dcube_function_free_rs(cube)
+    call dcube_function_free_rs(cf)
   end if
 
   ! wave-functions in fourier space
   if (iand(outp%what, C_OUTPUT_WFS_FOURIER).ne.0) then
-    call zcube_function_fft_init(cube, gr%sb)
-    call zcube_function_alloc_RS(cube)
+    call zcube_function_alloc_RS(cube, cf)
     call fourier_shell_init(shell, cube, gr%mesh)
 
     call output_etsf_geometry_dims(geo, gr%sb, pw_dims, pw_flags)
@@ -129,19 +130,19 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call output_etsf_electrons_write(st, ncid)
     call output_etsf_geometry_write(geo, gr%sb, ncid)
     call output_etsf_kpoints_write(gr%sb, ncid)
-    call output_etsf_basisdata_write(st, gr%mesh, cube, shell, ncid)
-    call output_etsf_wfs_pw_write(st, gr%mesh, cube, shell, ncid)
+    call output_etsf_basisdata_write(st, gr%mesh, shell, ncid)
+    call output_etsf_wfs_pw_write(st, gr%mesh, cube, cf, shell, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
     call fourier_shell_end(shell)
-    call zcube_function_free_rs(cube)
-    call cube_function_fft_end(cube)
+    call zcube_function_free_rs(cf)
   end if
 #endif
 
-  call cube_function_end(cube)
+  call cube_end(cube)
+  call cube_function_end(cf)
 
   POP_SUB(output_etsf)
 end subroutine output_etsf
@@ -414,7 +415,7 @@ end subroutine output_etsf_electrons_write
 subroutine output_etsf_density_dims(st, mesh, cube, dims, flags)
   type(states_t),          intent(in)    :: st
   type(mesh_t),            intent(in)    :: mesh
-  type(cube_function_t),   intent(in)    :: cube
+  type(cube_t),            intent(in)    :: cube
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
 
@@ -433,10 +434,11 @@ end subroutine output_etsf_density_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_density_write(st, mesh, cube, ncid)
+subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
   type(states_t),        intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
-  type(cube_function_t), intent(inout) :: cube
+  type(cube_t),          intent(inout) :: cube
+  type(cube_function_t), intent(inout) :: cf
   integer,               intent(in)    :: ncid
 
   type(etsf_main) :: main
@@ -451,8 +453,8 @@ subroutine output_etsf_density_write(st, mesh, cube, ncid)
 
   if (st%d%ispin /= SPINORS) then
     do ispin = 1, st%d%nspin
-      call dmesh_to_cube(mesh, st%rho(:, ispin), cube, local = .true.)
-      main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), ispin) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+      call dmesh_to_cube(mesh, st%rho(:, ispin), cube, cf, local = .true.)
+      main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), ispin) = cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
     end do
   else
     SAFE_ALLOCATE(md(1:mesh%np, 1:3))
@@ -461,11 +463,11 @@ subroutine output_etsf_density_write(st, mesh, cube, ncid)
     d = st%rho(:, 1) + st%rho(:, 2)
     call magnetic_density(mesh, st, st%rho, md)
 
-    call dmesh_to_cube(mesh, d, cube, local = .true.)
-    main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+    call dmesh_to_cube(mesh, d, cube, cf, local = .true.)
+    main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1) = cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
     do ispin = 1, 3
-      call dmesh_to_cube(mesh, md(:, ispin), cube, local = .true.)
-      main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), ispin + 1) = cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+      call dmesh_to_cube(mesh, md(:, ispin), cube, cf, local = .true.)
+      main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), ispin + 1) = cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
     end do
     SAFE_DEALLOCATE_A(d)
     SAFE_DEALLOCATE_A(md)
@@ -485,7 +487,7 @@ end subroutine output_etsf_density_write
 subroutine output_etsf_wfs_rsp_dims(st, mesh, cube, dims, flags)
   type(states_t),          intent(in)    :: st
   type(mesh_t),            intent(in)    :: mesh
-  type(cube_function_t),   intent(in)    :: cube
+  type(cube_t),            intent(in)    :: cube
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
 
@@ -508,10 +510,11 @@ end subroutine output_etsf_wfs_rsp_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_wfs_rsp_write(st, mesh, cube, ncid)
+subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
   type(states_t),        intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
-  type(cube_function_t), intent(inout) :: cube
+  type(cube_t),          intent(inout) :: cube
+  type(cube_function_t), intent(inout) :: cf
   integer,               intent(in)    :: ncid
 
   integer :: ist, ispin, ik, idim, nspin, zdim, nkpoints
@@ -548,20 +551,20 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, ncid)
           if (states_are_real(st)) then
             call states_get_state(st, mesh, idim, ist, ik + ispin - 1, dpsi)
 
-            call dmesh_to_cube(mesh, dpsi, cube, local = .true.)
+            call dmesh_to_cube(mesh, dpsi, cube, cf, local = .true.)
             local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
-              cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+              cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
           else if(states_are_complex(st)) then
             call states_get_state(st, mesh, idim, ist, ik + ispin - 1, zpsi)
 
-            call dmesh_to_cube(mesh, real(zpsi, REAL_PRECISION), cube, local = .true.)
+            call dmesh_to_cube(mesh, real(zpsi, REAL_PRECISION), cube, cf, local = .true.)
             local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
-              cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+              cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
-            call dmesh_to_cube(mesh, aimag(zpsi), cube, local = .true.)
+            call dmesh_to_cube(mesh, aimag(zpsi), cube, cf, local = .true.)
             local_wfs(2, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
-              cube%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+              cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
 
           end if
         end do
@@ -587,7 +590,7 @@ end subroutine output_etsf_wfs_rsp_write
 subroutine output_etsf_basisdata_dims(st, mesh, cube, shell, dims, flags)
   type(states_t),          intent(in)    :: st
   type(mesh_t),            intent(in)    :: mesh
-  type(cube_function_t),   intent(in)    :: cube
+  type(cube_t),            intent(in)    :: cube
   type(fourier_shell_t),   intent(in)    :: shell
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
@@ -603,10 +606,9 @@ end subroutine output_etsf_basisdata_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_basisdata_write(st, mesh, cube, shell, ncid)
+subroutine output_etsf_basisdata_write(st, mesh, shell, ncid)
   type(states_t),        intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
-  type(cube_function_t), intent(inout) :: cube
   type(fourier_shell_t), intent(in)    :: shell
   integer,               intent(in)    :: ncid
 
@@ -653,7 +655,7 @@ end subroutine output_etsf_basisdata_write
 subroutine output_etsf_wfs_pw_dims(st, mesh, cube, shell, dims, flags)
   type(states_t),          intent(in)    :: st
   type(mesh_t),            intent(in)    :: mesh
-  type(cube_function_t),   intent(in)    :: cube
+  type(cube_t),            intent(in)    :: cube
   type(fourier_shell_t),   intent(in)    :: shell
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
@@ -671,10 +673,11 @@ end subroutine output_etsf_wfs_pw_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_wfs_pw_write(st, mesh, cube, shell, ncid)
+subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
   type(states_t),        intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
-  type(cube_function_t), intent(inout) :: cube
+  type(cube_t),          intent(inout) :: cube
+  type(cube_function_t), intent(inout) :: cf
   type(fourier_shell_t), intent(in)    :: shell
   integer,               intent(in)    :: ncid
 
@@ -710,16 +713,16 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, shell, ncid)
 
         ! for the moment we treat all functions as complex
         call states_get_state(st, mesh, idim, ist, iq, zpsi)
-        call zmesh_to_cube(mesh, zpsi, cube, local = .true.)
-        call zcube_function_rs2fs(cube)
+        call zmesh_to_cube(mesh, zpsi, cube, cf, local = .true.)
+        call zcube_function_rs2fs(cube, cf)
 
         do ig = 1, ng
           ix = shell%coords(1, ig)
           iy = shell%coords(2, ig)
           iz = shell%coords(3, ig)
           
-          local_wfs(1, ig, idim, ist, ikpoint, ispin) = real(cube%fs(ix, iy, iz), 8)
-          local_wfs(2, ig, idim, ist, ikpoint, ispin) = aimag(cube%fs(ix, iy, iz))
+          local_wfs(1, ig, idim, ist, ikpoint, ispin) = real(cf%fs(ix, iy, iz), 8)
+          local_wfs(2, ig, idim, ist, ikpoint, ispin) = aimag(cf%fs(ix, iy, iz))
         end do
 
       end do

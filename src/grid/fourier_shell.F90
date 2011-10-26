@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 module fourier_shell_m
   use cube_function_m
+  use cube_m
   use fft_m
   use global_m
   use math_m
@@ -48,7 +49,7 @@ contains
 
   subroutine fourier_shell_init(this, cube, mesh)
     type(fourier_shell_t), intent(out)   :: this
-    type(cube_function_t), intent(in)    :: cube
+    type(cube_t),          intent(in)    :: cube
     type(mesh_t),          intent(in)    :: mesh
 
     integer :: ig, ng, ix, iy, iz, ixx(1:3), imap

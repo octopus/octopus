@@ -22,6 +22,7 @@
 module output_m
   use basins_m
   use cube_function_m
+  use cube_m
   use datasets_m
   use density_m
   use derivatives_m

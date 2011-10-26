@@ -21,6 +21,7 @@
 
 module io_function_m
   use cube_function_m
+  use cube_m
   use datasets_m
   use geometry_m
   use global_m

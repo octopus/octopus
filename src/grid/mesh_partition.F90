@@ -37,6 +37,7 @@ module mesh_partition_m
   use parser_m
   use partition_m
   use partitioner_m
+  use pfft_m
   use profiling_m
   use simul_box_m
   use stencil_m
@@ -68,7 +69,7 @@ contains
   subroutine mesh_partition(mesh, lapl_stencil, part)
     type(mesh_t),    intent(in)  :: mesh
     type(stencil_t), intent(in)  :: lapl_stencil
-    integer,         intent(out) :: part(:)
+    integer,         intent(out) :: part(:) ! 1:mesh%np_part_global
 
     integer              :: iv, jp, inb
     integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
@@ -94,7 +95,7 @@ contains
     integer :: ii, stencil_to_use, ip
     integer :: default_method, method
     integer :: library
-    integer, parameter   :: METIS = 2, ZOLTAN = 3, GA = 4
+    integer, parameter   :: METIS = 2, ZOLTAN = 3, GA = 4, PFFT = 5
     integer, parameter   :: STAR = 1, LAPLACIAN = 2
     integer, allocatable :: istart(:), ifinal(:), lsize(:)
     FLOAT, allocatable   :: xglobal(:, :)
@@ -125,6 +126,9 @@ contains
     !% Zoltan library.
     !%Option ga 4
     !% (Experimental) Genetic-algorithm optimization of the grid partition.
+    !%Option pfft_part 5
+    !% (Experimental) Use PFFT to perform the mesh partition. This only works
+    !% for parallelepiped boxes.
     !%End
     default = ZOLTAN
 #ifdef HAVE_METIS
@@ -133,10 +137,23 @@ contains
     call parse_integer(datasets_check('MeshPartitionPackage'), default, library)
 
     if(library == GA) call messages_experimental('Genetic algorithm mesh partition')
+    if(library == PFFT) call messages_experimental('PFFT mesh partition')
+
+    if (library == PFFT .and. mesh%sb%box_shape /= PARALLELEPIPED) then
+      message(1) = 'Error: PFFT partition can only be used for parallelepiped boxes'
+      call messages_fatal(1)      
+    end if
 
 #ifndef HAVE_METIS
     if(library == METIS) then
       message(1) = 'Error: METIS was requested, but Octopus was compiled without it.'
+      call messages_fatal(1)
+    end if
+#endif
+
+#ifndef HAVE_PFFT
+    if(library == PFFT) then
+      message(1) = 'Error: PFFT was requested, but Octopus was compiled without it.'
       call messages_fatal(1)
     end if
 #endif
@@ -202,7 +219,7 @@ contains
 
     end select
 
-    if(library /= GA) then
+    if(library /= GA .and. library /= PFFT) then
       ! Shortcut (number of vertices).
       nv = lsize(ipart)
       SAFE_ALLOCATE(xadj(1:nv + 1))
@@ -353,6 +370,20 @@ contains
       call MPI_Bcast(part(1), mesh%np_part_global, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
 
+    case(PFFT)
+#ifdef HAVE_PFFT
+
+      !call pfft_partition(mesh%idx%ll, mesh%idx%nr, npart, mesh%np_part_global, part)
+
+      if(mpi_world%rank == 1) then
+        do ip = 1, mesh%np_global
+!          write(*,*) ip, part(ip)
+        end do
+      end if
+
+      write(*,*) "End of PFFT partitioning"
+      stop
+#endif
     end select
 
     SAFE_DEALLOCATE_A(istart)

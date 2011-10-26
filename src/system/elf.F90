@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 module elf_m
   use cube_function_m
+  use cube_m
   use density_m
   use datasets_m
   use derivatives_m
@@ -197,6 +198,7 @@ contains
     integer :: ip, is, ik, ist, idim, idir
     CMPLX, allocatable :: psi_fs(:), gpsi(:,:), zpsi(:)
     FLOAT, allocatable :: rr(:), gradr(:,:), jj(:,:), dpsi(:)
+    type(cube_t) :: cube_tmp
     type(cube_function_t) :: cube_function_tmp
     FLOAT, parameter :: dmin = CNST(1e-10)
 
@@ -210,15 +212,8 @@ contains
     end if
  
 
-    call cube_function_init(cube_function_tmp, gr%mesh%idx%ll)
-
-    if (states_are_real(st)) then
-      SAFE_ALLOCATE(dpsi(1:gr%mesh%np))
-      call dcube_function_fft_init(cube_function_tmp, gr%sb)
-    else
-      SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
-      call zcube_function_fft_init(cube_function_tmp, gr%sb)
-    end if
+    call cube_init(cube_tmp, gr%mesh%idx%ll, gr%sb, gr%mesh%idx, gr%mesh%np_global)
+    call cube_function_null(cube_function_tmp)
 
     do_is: do is = 1, st%d%nspin
       SAFE_ALLOCATE(   rr(1:gr%mesh%np))
@@ -236,19 +231,19 @@ contains
             
             if (states_are_real(st)) then
               call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
-              call dmf2mf_RS2FS(gr%mesh, dpsi, psi_fs(:), cube_function_tmp)
+              call dmf2mf_RS2FS(gr%mesh, dpsi, psi_fs(:), cube_tmp, cube_function_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do idir = 1, gr%mesh%sb%dim
                 gpsi(:,idir) = gpsi(:, idir)*gr%mesh%spacing(idir)**2 * &
-                     real(cube_function_tmp%n(idir), REAL_PRECISION)/(M_TWO*M_PI)
+                     real(cube_tmp%n(idir), REAL_PRECISION)/(M_TWO*M_PI)
               end do
             else
               call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-              call zmf2mf_RS2FS(gr%mesh, zpsi, psi_fs(:), cube_function_tmp)
+              call zmf2mf_RS2FS(gr%mesh, zpsi, psi_fs(:), cube_tmp, cube_function_tmp)
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do idir = 1, gr%mesh%sb%dim
                 gpsi(:, idir) = gpsi(:, idir)*gr%mesh%spacing(idir)**2 * &
-                     real(cube_function_tmp%n(idir), REAL_PRECISION)/(M_TWO*M_PI)
+                     real(cube_tmp%n(idir), REAL_PRECISION)/(M_TWO*M_PI)
               end do
             end if
 
@@ -301,7 +296,7 @@ contains
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(zpsi)
 
-    call cube_function_fft_end(cube_function_tmp)
+    call cube_end(cube_tmp)
     call cube_function_end(cube_function_tmp)
 
     POP_SUB(elf_calc_fs)
@@ -309,19 +304,20 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    subroutine dmf2mf_RS2FS(mesh, fin, fout, cc)
+    subroutine dmf2mf_RS2FS(mesh, fin, fout, cube, cc)
       type(mesh_t),  intent(in)    :: mesh
       FLOAT,         intent(in)    :: fin(:)
       CMPLX,         intent(out)   :: fout(:)
+      type(cube_t),  intent(inout) :: cube
       type(cube_function_t),   intent(inout) :: cc
     
       PUSH_SUB(elf_calc_fs.dmf2mf_RS2FS)
 
-      call dcube_function_alloc_RS(cc)
-      call dcube_function_alloc_FS(cc)
-      call dmesh_to_cube(mesh, fin, cc)
-      call dcube_function_RS2FS(cc)
-      call dfourier_to_mesh(mesh, cc, fout)
+      call dcube_function_alloc_RS(cube, cc)
+      call dcube_function_alloc_FS(cube, cc)
+      call dmesh_to_cube(mesh, fin, cube, cc)
+      call dcube_function_RS2FS(cube, cc)
+      call dfourier_to_mesh(cube, cc, mesh, fout)
       call dcube_function_free_RS(cc)
       call dcube_function_free_FS(cc)
 
@@ -329,19 +325,20 @@ contains
     end subroutine dmf2mf_RS2FS
 
     ! ---------------------------------------------------------
-    subroutine zmf2mf_RS2FS(mesh, fin, fout, cc)
+    subroutine zmf2mf_RS2FS(mesh, fin, fout, cube, cc)
       type(mesh_t),  intent(in)    :: mesh
       CMPLX,         intent(in)    :: fin(:)
       CMPLX,         intent(out)   :: fout(:)
+      type(cube_t),  intent(inout) :: cube
       type(cube_function_t),   intent(inout) :: cc
     
       PUSH_SUB(elf_calc_fs.zmf2mf_RS2FS)
 
-      call zcube_function_alloc_RS(cc)
-      call zcube_function_alloc_FS(cc)
-      call zmesh_to_cube(mesh, fin, cc)
-      call zcube_function_RS2FS(cc)
-      call zfourier_to_mesh(mesh, cc, fout)
+      call zcube_function_alloc_RS(cube, cc)
+      call zcube_function_alloc_FS(cube, cc)
+      call zmesh_to_cube(mesh, fin, cube, cc)
+      call zcube_function_RS2FS(cube, cc)
+      call zfourier_to_mesh(cube, cc, mesh, fout)
       call zcube_function_free_RS(cc)
       call zcube_function_free_FS(cc)
 

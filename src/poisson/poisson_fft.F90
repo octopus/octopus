@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 module poisson_fft_m
   use cube_function_m
+  use cube_m
   use datasets_m
   use fft_m
   use fourier_space_m
@@ -66,6 +67,7 @@ module poisson_fft_m
        POISSON_FFT_NOCUT     =  3,      &
        POISSON_FFT_CORRECTED =  4
 
+  type(cube_t),          public      :: fft_cube
   type(cube_function_t), public      :: fft_cf
   type(fourier_space_op_t) :: coulb
 
@@ -84,18 +86,17 @@ contains
     ! double the box (or not) to perform the fourier transforms
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
     ! allocate cube function where we will perform the ffts
-    call cube_function_init(fft_cf, db)
-    ! initialize the fft
-    call dcube_function_fft_init(fft_cf, mesh%sb)
+    call cube_init(fft_cube, db, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_function_null(fft_cf)
     ! dimensions may have been optimized
-    db(1:3) = fft_cf%n(1:3)
+    db(1:3) = fft_cube%n(1:3)
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cube%nx, 1:fft_cube%n(2), 1:fft_cube%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
-    do ix = 1, fft_cf%nx
+    do ix = 1, fft_cube%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
       do iy = 1, db(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
@@ -120,11 +121,11 @@ contains
 
     end do
 
-    forall(iz=1:fft_cf%n(3), iy=1:fft_cf%n(2), ix=1:fft_cf%nx)
+    forall(iz=1:fft_cube%n(3), iy=1:fft_cube%n(2), ix=1:fft_cube%nx)
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
-    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+    call dfourier_space_op_init(coulb, fft_cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     POP_SUB(poisson_fft_build_3d_3d)
@@ -148,13 +149,11 @@ contains
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
 
     ! allocate cube function where we will perform the ffts
-    call cube_function_init(fft_cf, db)
-
-    ! initialize the fft
-    call dcube_function_fft_init(fft_cf, mesh%sb)
+    call cube_init(fft_cube, db, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_function_null(fft_cf)
 
     ! dimensions may have been optimized
-    db(1:3) = fft_cf%n(1:3)
+    db(1:3) = fft_cube%n(1:3)
 
     call parse_float(datasets_check('PoissonCutoffRadius'),&
       maxval(db(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
@@ -170,12 +169,12 @@ contains
     end if
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cube%nx, 1:fft_cube%n(2), 1:fft_cube%n(3)))
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
-    do ix = 1, fft_cf%nx
+    do ix = 1, fft_cube%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
       gx = temp(1)*ixx(1)
       do iy = 1, db(2)
@@ -204,11 +203,11 @@ contains
 
     end do
 
-    forall(iz=1:fft_cf%n(3), iy=1:fft_cf%n(2), ix=1:fft_cf%nx)
+    forall(iz=1:fft_cube%n(3), iy=1:fft_cube%n(2), ix=1:fft_cube%nx)
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
-    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+    call dfourier_space_op_init(coulb, fft_cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     POP_SUB(poisson_fft_build_3d_2d)
@@ -233,13 +232,11 @@ contains
     call mesh_double_box(mesh%sb, mesh, db)
 
     ! allocate cube function where we will perform the ffts
-    call cube_function_init(fft_cf, db)
-
-    ! initialize the fft
-    call dcube_function_fft_init(fft_cf, mesh%sb)
+    call cube_init(fft_cube, db, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_function_null(fft_cf)
 
     ! dimensions may have been optimized
-    db(1:3) = fft_cf%n(1:3)
+    db(1:3) = fft_cube%n(1:3)
 
     call parse_float(datasets_check('PoissonCutoffRadius'),&
       maxval(db(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
@@ -255,7 +252,7 @@ contains
     end if
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cube%nx, 1:fft_cube%n(2), 1:fft_cube%n(3)))
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
@@ -267,7 +264,7 @@ contains
     end if
 
 
-    do ix = 1, fft_cf%nx
+    do ix = 1, fft_cube%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
       gx = temp(1)*ixx(1)
 
@@ -331,11 +328,11 @@ contains
       if( mesh%sb%periodic_dim == 0 ) call spline_end(cylinder_cutoff_f)
     end do
 
-    forall(iz=1:fft_cf%n(3), iy=1:fft_cf%n(2), ix=1:fft_cf%nx)
+    forall(iz=1:fft_cube%n(3), iy=1:fft_cube%n(2), ix=1:fft_cube%nx)
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
-    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+    call dfourier_space_op_init(coulb, fft_cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     SAFE_DEALLOCATE_A(x)
@@ -368,13 +365,11 @@ contains
     end select
 
     ! allocate cube function where we will perform the ffts
-    call cube_function_init(fft_cf, db)
-
-    ! initialize the fft
-    call dcube_function_fft_init(fft_cf, mesh%sb)
+    call cube_init(fft_cube, db, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_function_null(fft_cf)
 
     ! dimensions may have been optimized
-    db(1:3) = fft_cf%n(1:3)
+    db(1:3) = fft_cube%n(1:3)
 
     if (poisson_solver .ne. POISSON_FFT_CORRECTED) then
       call parse_float(datasets_check('PoissonCutoffRadius'),&
@@ -393,20 +388,21 @@ contains
 
     ! store the fourier transform of the Coulomb interaction
     ! store only the relevant part if PFFT is used
-    if (fft_cf%fft_library == PFFT_LIB) then
+    if (fft_cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
-      start = fft_cf%pfft%local_o_start
-      last = fft_cf%pfft%local_o_start + fft_cf%pfft%local_no - 1
+      start = fft_cube%pfft%local_o_start
+      last = fft_cube%pfft%local_o_start + fft_cf%pfft%local_no - 1
       SAFE_ALLOCATE(fft_Coulb_FS(start(2):last(2),start(1):last(1),start(3):last(3)))
 #endif
     else
-      SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+      SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cube%nx, 1:fft_cube%n(2), 1:fft_cube%n(3)))
     end if
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
-    if (fft_cf%fft_library == PFFT_LIB) then
+    if (fft_cube%fft_library == PFFT_LIB) then
+#ifdef HAVE_PFFT
       do ix = start(2), last(2)
         ixx(2) = pad_feq(ix, db(2), .true.)
         gx = temp(2)*ixx(2)
@@ -440,8 +436,9 @@ contains
           end do
         end do
       end do
+#endif
     else
-      do ix = 1, fft_cf%nx
+      do ix = 1, fft_cube%nx
         ixx(1) = pad_feq(ix, db(1), .true.)
         gx = temp(1)*ixx(1)
         do iy = 1, db(2)
@@ -477,7 +474,8 @@ contains
       end do
     end if
 
-    if (fft_cf%fft_library == PFFT_LIB) then 
+    if (fft_cube%fft_library == PFFT_LIB) then 
+#ifdef HAVE_PFFT
       do ix = start(2), last(2)
         do iy = start(1), last(1)
           do iz = start(3), last(3)
@@ -485,13 +483,14 @@ contains
           end do
         end do
       end do
+#endif
     else
-      forall(iz=1:fft_cf%n(3), iy=1:fft_cf%n(2), ix=1:fft_cf%nx)
+      forall(iz=1:fft_cube%n(3), iy=1:fft_cube%n(2), ix=1:fft_cube%nx)
         fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
       end forall
     end if
 
-    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+    call dfourier_space_op_init(coulb, fft_cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     POP_SUB(poisson_fft_build_3d_0d)
@@ -517,11 +516,11 @@ contains
     db(1:2) = maxval(db)
 
     ! allocate cube function where we will perform the ffts
-    call cube_function_init(fft_cf, db)      
-    ! initialize fft
-    call dcube_function_fft_init(fft_cf, mesh%sb)
+    call cube_init(fft_cube, db, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_function_null(fft_cf)
+
     ! dimensions may have been optimized
-    db(1:3) = fft_cf%n(1:3)
+    db(1:3) = fft_cube%n(1:3)
 
     call parse_float(datasets_check('PoissonCutoffRadius'),&
       maxval(db(1:2)*mesh%spacing(1:2)/M_TWO), r_c, units_inp%length)
@@ -538,7 +537,7 @@ contains
     call spline_init(besselintf)
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cube%nx, 1:fft_cube%n(2), 1:fft_cube%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
@@ -557,7 +556,7 @@ contains
 
     do iy = 1, db(2)
       ixx(2) = pad_feq(iy, db(2), .true.)
-      do ix = 1, fft_cf%nx
+      do ix = 1, fft_cube%nx
         ixx(1) = pad_feq(ix, db(1), .true.)
         vec = sqrt( (temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
         if (vec > M_ZERO) then
@@ -568,7 +567,7 @@ contains
       end do
     end do
 
-    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+    call dfourier_space_op_init(coulb, fft_cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     SAFE_DEALLOCATE_A(x)
@@ -593,16 +592,16 @@ contains
     call mesh_double_box(mesh%sb, mesh, db)                 ! get dimensions of the double box
 
     ! allocate cube function where we will perform the ffts
-    call cube_function_init(fft_cf, db)      
-    ! initialize fft
-    call dcube_function_fft_init(fft_cf, mesh%sb)
+    call cube_init(fft_cube, db, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_function_null(fft_cf)
+
     ! dimensions may have been optimized
-    db(1:3) = fft_cf%n(1:3)
+    db(1:3) = fft_cube%n(1:3)
 
     r_c = M_TWO * mesh%sb%lsize(2)
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cube%nx, 1:fft_cube%n(2), 1:fft_cube%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
@@ -614,7 +613,7 @@ contains
       fft_coulb_fs(1, iy, 1) = -M_FOUR * poisson_cutoff_intcoslog(r_c, gy, M_ONE )
     end do
 
-    do ix = 2, fft_cf%nx
+    do ix = 2, fft_cube%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
       gx = temp(1)*ixx(1)
       do iy = 1, db(2)
@@ -625,7 +624,7 @@ contains
       end do
     end do
 
-    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+    call dfourier_space_op_init(coulb, fft_cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
 
@@ -646,27 +645,27 @@ contains
 
     db(:) = mesh%idx%ll(:)
     ! allocate cube function where we will perform the ffts
-    call cube_function_init(fft_cf, db)      
-    ! initialize fft
-    call dcube_function_fft_init(fft_cf, mesh%sb)
+    call cube_init(fft_cube, db, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_function_null(fft_cf)
+
     ! dimensions may have been optimized
-    db(1:3) = fft_cf%n(1:3)
+    db(1:3) = fft_cube%n(1:3)
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:fft_cube%nx, 1:fft_cube%n(2), 1:fft_cube%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
 
     do iy = 1, db(2)
       ixx(2) = pad_feq(iy, db(2), .true.)
-      do ix = 1, fft_cf%nx
+      do ix = 1, fft_cube%nx
         ixx(1) = pad_feq(ix, db(1), .true.)
         vec = sqrt( (temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
         if (vec > M_ZERO) fft_coulb_fs(ix, iy, 1) = M_TWO * M_PI / vec
       end do
     end do
 
-    call dfourier_space_op_init(coulb, fft_cf, fft_Coulb_FS)
+    call dfourier_space_op_init(coulb, fft_cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     POP_SUB(poisson_fft_build_2d_2d)
@@ -686,20 +685,21 @@ contains
     PUSH_SUB(poisson_fft_build_1d_1d)
 
     box = mesh%idx%ll
-    call cube_function_init(fft_cf, box)
-    call dcube_function_fft_init(fft_cf, mesh%sb)
-    box(1:3) = fft_cf%n(1:3)
+    call cube_init(fft_cube, box, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_function_null(fft_cf)
 
-    SAFE_ALLOCATE(fft_coulb_fs(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+    box(1:3) = fft_cube%n(1:3)
+
+    SAFE_ALLOCATE(fft_coulb_fs(1:fft_cube%nx, 1:fft_cube%n(2), 1:fft_cube%n(3)))
     fft_coulb_fs = M_ZERO
 
     ! Fourier transform of Soft Coulomb interaction.
-    do ix = 1, fft_cf%nx
+    do ix = 1, fft_cube%nx
       g = ix*M_PI/mesh%sb%lsize(1) ! note that g is always positive with this definition
       fft_coulb_fs(ix, 1, 1) = M_TWO * loct_bessel_k0(poisson_soft_coulomb_param*g)
     end do
 
-    call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)
+    call dfourier_space_op_init(coulb, fft_cube, fft_coulb_fs)
     SAFE_DEALLOCATE_A(fft_coulb_fs)
     
     POP_SUB(poisson_fft_build_1d_1d)
@@ -720,24 +720,25 @@ contains
 
     call mesh_double_box(mesh%sb, mesh, box)
     
-    call cube_function_init(fft_cf, box)
-    call dcube_function_fft_init(fft_cf, mesh%sb)
-    box(1:3) = fft_cf%n(1:3)
+    call cube_init(fft_cube, box, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_function_null(fft_cf)
+
+    box(1:3) = fft_cube%n(1:3)
 
     r_c = box(1)*mesh%spacing(1)/M_TWO
 
-    SAFE_ALLOCATE(fft_coulb_fs(1:fft_cf%nx, 1:fft_cf%n(2), 1:fft_cf%n(3)))
+    SAFE_ALLOCATE(fft_coulb_fs(1:fft_cube%nx, 1:fft_cube%n(2), 1:fft_cube%n(3)))
     fft_coulb_fs = M_ZERO
     temp(:) = M_TWO*M_PI/(box(:)*mesh%spacing(:))
 
     ! Fourier transform of Soft Coulomb interaction.
-    do ix = 1, fft_cf%nx
+    do ix = 1, fft_cube%nx
       ixx(1) = pad_feq(ix, box(1), .true.)
       g = temp(1)*ixx(1)
       fft_coulb_fs(ix, 1, 1) = poisson_cutoff_1D_0D(g, poisson_soft_coulomb_param, r_c)
     end do
 
-    call dfourier_space_op_init(coulb, fft_cf, fft_coulb_fs)
+    call dfourier_space_op_init(coulb, fft_cube, fft_coulb_fs)
     SAFE_DEALLOCATE_A(fft_coulb_fs)
     
     POP_SUB(poisson_fft_build_1d_0d)
@@ -750,7 +751,7 @@ contains
     PUSH_SUB(poisson_fft.end)
 
     call fourier_space_op_end(coulb)
-    call cube_function_fft_end(fft_cf)
+    call cube_end(fft_cube)
     call cube_function_end(fft_cf)
 
     POP_SUB(poisson_fft.end)
@@ -779,17 +780,17 @@ contains
       SAFE_ALLOCATE(pot_global(1:mesh%np_global))
     end if
     !Save memory if PFFT is used  
-    if (fft_cf%fft_library /= PFFT_LIB) then
-      call dcube_function_alloc_RS(fft_cf)          ! allocate the cube in real space
+    if (fft_cube%fft_library /= PFFT_LIB) then
+      call dcube_function_alloc_RS(fft_cube, fft_cf) ! allocate the cube in real space
     end if
     
     ! put the density in the cube
     if(mesh%parallel_in_domains) then
-      if (fft_cf%fft_library == PFFT_LIB) then
+      if (fft_cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
         !all the data has to be distributed for the PFFT library
         call dvec_allgather(mesh%vp, rho_global, rho)
-        call dmesh_to_cube_parallel(mesh, rho_global, fft_cf)
+        call dmesh_to_cube_parallel(mesh, rho_global, fft_cube, fft_cf)
 #else
         write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
         call messages_fatal(1)
@@ -797,26 +798,26 @@ contains
       else 
 #if defined HAVE_MPI
         call dvec_gather(mesh%vp, mesh%vp%root, rho_global, rho)
-        call dmesh_to_cube(mesh, rho_global, fft_cf)   
+        call dmesh_to_cube(mesh, rho_global, fft_cube, fft_cf)
 #endif
       end if
     else !not parallel in domains
-      if (fft_cf%fft_library == PFFT_LIB) then
+      if (fft_cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
         ! Serial execution with PFFT
-        call dmesh_to_cube_parallel(mesh, rho, fft_cf)
+        call dmesh_to_cube_parallel(mesh, rho, fft_cube, fft_cf)
 #endif 
       else
-        call dmesh_to_cube(mesh, rho, fft_cf)
+        call dmesh_to_cube(mesh, rho, fft_cube, fft_cf)
       end if
     end if
 
     ! apply the Couloumb term in Fourier space
-    call dfourier_space_op_apply(coulb, fft_cf)
+    call dfourier_space_op_apply(coulb, fft_cube, fft_cf)
 
     !now the cube has the potential
     if(present(average_to_zero)) then
-      if(average_to_zero) average = cube_function_surface_average(fft_cf)
+      if(average_to_zero) average = cube_function_surface_average(fft_cube, fft_cf)
 #if defined HAVE_MPI
       ! Only root has the right average.
       if(mesh%parallel_in_domains) call MPI_Bcast(average, 1, MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
@@ -826,9 +827,9 @@ contains
     ! move the potential back to the mesh
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)   
-      if (fft_cf%fft_library == PFFT_LIB) then
+      if (fft_cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
-        call dcube_to_mesh_parallel(mesh, fft_cf, pot_global)
+        call dcube_to_mesh_parallel(fft_cube, fft_cf, mesh, pot_global)
         call profiling_in(prof_sct, 'SCT')
         !skip the scatter, because all the nodes have each part of pot_global
         first = mesh%vp%xlocal(mesh%vp%partno)
@@ -842,19 +843,18 @@ contains
         call messages_fatal(1)
 #endif
       else
-        call dcube_to_mesh(mesh, fft_cf, pot_global)
+        call dcube_to_mesh(fft_cube, fft_cf, mesh, pot_global)
         call dvec_scatter(mesh%vp, mesh%vp%root, pot_global, pot)
       end if
 #endif
     else !not parallel in domains
-      if (fft_cf%fft_library == PFFT_LIB) then
+      if (fft_cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
         ! Serial execution with PFFT
-        call dcube_to_mesh_parallel(mesh, fft_cf, pot)!_global)
-        !pot = pot_global
+        call dcube_to_mesh_parallel(fft_cube, fft_cf, mesh, pot)
 #endif 
       else
-        call dcube_to_mesh(mesh, fft_cf, pot)
+        call dcube_to_mesh(fft_cube, fft_cf, mesh, pot)
       end if
     end if
 
@@ -862,7 +862,7 @@ contains
       if(average_to_zero) pot(1:mesh%np) = pot(1:mesh%np) - average
     end if
     
-    if (fft_cf%fft_library /= PFFT_LIB) then
+    if (fft_cube%fft_library /= PFFT_LIB) then
       call dcube_function_free_RS(fft_cf)           ! memory is no longer needed
     end if
     

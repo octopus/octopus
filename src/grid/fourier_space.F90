@@ -20,6 +20,7 @@
 #include "global.h"
 
 module fourier_space_m
+  use cube_m
   use cube_function_m
   use global_m
   use mesh_m
@@ -40,9 +41,6 @@ module fourier_space_m
     zcube_function_alloc_fs,       &
     dcube_function_free_fs,        &
     zcube_function_free_fs,        &
-    dcube_function_fft_init,       &
-    zcube_function_fft_init,       &
-    cube_function_fft_end,         &
     dcube_function_RS2FS,          &
     zcube_function_RS2FS,          &
     dcube_function_FS2RS,          &
@@ -63,30 +61,6 @@ module fourier_space_m
   end type fourier_space_op_t
 
 contains
-
-  subroutine cube_function_fft_end(cf)
-    type(cube_function_t),     intent(inout) :: cf
-
-    PUSH_SUB(cube_function_fft_end)
-
-    if (cf%fft_library == PFFT_LIB) then
-#ifdef HAVE_PFFT
-      if(associated(cf%pfft)) then
-        call pfft_end(cf%pfft)
-        SAFE_DEALLOCATE_P(cf%pfft)
-      end if
-#else
-    else
-      if(associated(cf%fft)) then
-        call fft_end(cf%fft)
-        SAFE_DEALLOCATE_P(cf%fft)
-      end if
-#endif
-    end if
-
-    POP_SUB(cube_function_fft_end)
-
-  end subroutine cube_function_fft_end
 
   ! ---------------------------------------------------------
 

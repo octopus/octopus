@@ -22,6 +22,7 @@
 
 module poisson_isf_m
   use cube_function_m
+  use cube_m
   use datasets_m
   use global_m
   use io_m
@@ -62,7 +63,8 @@ module poisson_isf_m
 
   type poisson_isf_t
     integer                      :: all_nodes_comm
-    type(cube_function_t)                  :: rho_cf
+    type(cube_t)                 :: cube
+    type(cube_function_t)        :: rho_cf
     type(isf_cnf_t)              :: cnf(1:N_CNF)
   end type poisson_isf_t
 
@@ -99,7 +101,8 @@ contains
     if(present(init_world)) init_world_ = init_world
 #endif
 
-    call cube_function_init(this%rho_cf, mesh%idx%ll)
+    call cube_init(this%cube, mesh%idx%ll, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_function_null(this%rho_cf)
 
     ! we need to nullify the pointer so they can be deallocated safely
     ! afterwards
@@ -109,7 +112,7 @@ contains
 
     if(.not. mesh%parallel_in_domains) then
       ! The serial version is always needed (as used, e.g., in the casida runmode)
-      call calculate_dimensions(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), &
+      call calculate_dimensions(this%cube%n(1), this%cube%n(2), this%cube%n(3), &
         this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3)
 
       n1 = this%cnf(SERIAL)%nfft1/2 + 1
@@ -118,7 +121,7 @@ contains
 
       SAFE_ALLOCATE(this%cnf(SERIAL)%kernel(1:n1, 1:n2, 1:n3))
 
-      call build_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3),   &
+      call build_kernel(this%cube%n(1), this%cube%n(2), this%cube%n(3),   &
         this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3, &
         real(mesh%spacing(1), 8), order_scaling_function, this%cnf(SERIAL)%kernel)
     end if
@@ -185,7 +188,7 @@ contains
         cycle
       end if
       if (this%cnf(i_cnf)%mpi_grp%rank /= -1 .or. i_cnf /= WORLD ) then
-        call par_calculate_dimensions(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), &
+        call par_calculate_dimensions(this%cube%n(1), this%cube%n(2), this%cube%n(3), &
           m1, m2, m3, n1, n2, n3, md1, md2, md3, this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, &
           this%cnf(i_cnf)%nfft3, this%cnf(i_cnf)%mpi_grp%size)
 
@@ -196,7 +199,7 @@ contains
 
         SAFE_ALLOCATE(this%cnf(i_cnf)%kernel(1:n(1), 1:n(2), 1:n(3)/this%cnf(i_cnf)%mpi_grp%size))
 
-        call par_build_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), n1, n2, n3,     &
+        call par_build_kernel(this%cube%n(1), this%cube%n(2), this%cube%n(3), n1, n2, n3,     &
           this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, this%cnf(i_cnf)%nfft3,                      &
           mesh%spacing(1), order_scaling_function,                                            &
           this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm, &
@@ -228,7 +231,7 @@ contains
     
     PUSH_SUB(poisson_isf_solve)
 
-    call dcube_function_alloc_RS(this%rho_cf)
+    call dcube_function_alloc_RS(this%cube, this%rho_cf)
 
     if(mesh%parallel_in_domains) then
     
@@ -241,10 +244,10 @@ contains
       ! for which every node requires the full data.
       call dvec_allgather(mesh%vp, rho_global, rho)
 
-      call dmesh_to_cube(mesh, rho_global, this%rho_cf)
+      call dmesh_to_cube(mesh, rho_global, this%cube, this%rho_cf)
 #endif
     else
-      call dmesh_to_cube(mesh, rho, this%rho_cf)
+      call dmesh_to_cube(mesh, rho, this%cube, this%rho_cf)
     end if
 
     ! Choose configuration.
@@ -265,13 +268,13 @@ contains
     if(i_cnf == SERIAL) then
 
 #ifdef SINGLE_PRECISION
-      SAFE_ALLOCATE(rhop(1:this%rho_cf%n(1), 1:this%rho_cf%n(2), 1:this%rho_cf%n(3)))
+      SAFE_ALLOCATE(rhop(1:this%cube%n(1), 1:this%cube%n(2), 1:this%cube%n(3)))
       rhop = this%rho_cf%dRS
 #else
       rhop => this%rho_cf%dRS
 #endif
 
-      call psolver_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3),    &
+      call psolver_kernel(this%cube%n(1), this%cube%n(2), this%cube%n(3),    &
         this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3, &
         real(mesh%spacing(1), 8), this%cnf(SERIAL)%kernel, rhop)
 
@@ -283,7 +286,7 @@ contains
 #if defined(HAVE_MPI)
     else
       if (this%cnf(i_cnf)%mpi_grp%size /= -1 .or. i_cnf /= WORLD) then
-        call par_psolver_kernel(this%rho_cf%n(1), this%rho_cf%n(2), this%rho_cf%n(3), &
+        call par_psolver_kernel(this%cube%n(1), this%cube%n(2), this%cube%n(3), &
           this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, this%cnf(i_cnf)%nfft3,  &
           real(mesh%spacing(1), 8), this%cnf(i_cnf)%kernel, this%rho_cf%dRS,                      &
           this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm)
@@ -291,7 +294,7 @@ contains
       ! we need to be sure that the root of every domain-partition has a copy of the potential
       ! for the moment we broadcast to all nodes, but this is more than what we really need 
       if(i_cnf == WORLD .and. .not. this%cnf(WORLD)%all_nodes) then
-        call MPI_Bcast(this%rho_cf%drs(1, 1, 1), this%rho_cf%n(1)*this%rho_cf%n(2)*this%rho_cf%n(3), &
+        call MPI_Bcast(this%rho_cf%drs(1, 1, 1), this%cube%n(1)*this%cube%n(2)*this%cube%n(3), &
           MPI_FLOAT, 0, this%all_nodes_comm, mpi_err)
       end if
 #endif
@@ -299,7 +302,7 @@ contains
 
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
-       call dcube_to_mesh(mesh, this%rho_cf, pot_global)
+       call dcube_to_mesh(this%cube, this%rho_cf, mesh, pot_global)
 
        call dvec_scatter(mesh%vp, mesh%vp%root, pot_global, pot)
 
@@ -307,7 +310,7 @@ contains
        SAFE_DEALLOCATE_A(pot_global)
 #endif
     else
-       call dcube_to_mesh(mesh, this%rho_cf, pot)
+       call dcube_to_mesh(this%cube, this%rho_cf, mesh, pot)
     end if
     
     call dcube_function_free_RS(this%rho_cf)
@@ -337,6 +340,7 @@ contains
 #endif
 
     call cube_function_end(this%rho_cf)
+    call cube_end(this%cube)
 
     POP_SUB(poisson_isf_end)
   end subroutine poisson_isf_end

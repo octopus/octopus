@@ -515,7 +515,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
       mesh%x(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip, force=.true.)
     end do
   end if
-  
+
   if(mesh%parallel_in_domains) then
     ASSERT(present(stencil))
     
@@ -534,8 +534,6 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   end if
 
   call mesh_get_vol_pp(mesh%sb)
-
-  call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_3)
