@@ -26,6 +26,7 @@ module td_m
   use datasets_m
   use density_m
   use energy_m
+  use epot_m
   use forces_m
   use gauge_field_m
   use geometry_m
@@ -170,6 +171,8 @@ contains
       call forces_calculate(gr, geo, hm%ep, st, td%iter*td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+    else
+      call epot_precalc_local_potential(hm%ep, gr, geo, td%iter * td%dt)
     end if
 
     ! Calculate initial value of the gauge vector field
