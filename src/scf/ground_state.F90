@@ -118,7 +118,7 @@ contains
 
     ! run self-consistency
     if (states_are_real(sys%st)) then
-      call message_write('Info: SCF using real wavefunctions.')
+      call messages_write('Info: SCF using real wavefunctions.')
     else
       call messages_write('Info: SCF using complex wavefunctions.')
     end if
