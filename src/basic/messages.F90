@@ -59,9 +59,12 @@ module messages_m
     messages_obsolete_variable, &
     messages_experimental,      &
     messages_check_def,         &
-    messages_not_implemented
+    messages_not_implemented,   &
+    messages_new_line,          &
+    messages_write
 
-  character(len=256), dimension(20), public :: message    ! to be output by fatal, warning
+  integer, parameter :: max_lines = 20
+  character(len=256), dimension(max_lines), public :: message    ! to be output by fatal, warning
   character(len=68),      parameter, public :: hyphens = &
     '--------------------------------------------------------------------'
   character(len=69),      parameter, public :: shyphens = '*'//hyphens
@@ -91,12 +94,18 @@ module messages_m
     module procedure messages_print_var_valuel
   end interface messages_print_var_value
 
+  interface messages_write
+    module procedure messages_write_float
+    module procedure messages_write_integer
+    module procedure messages_write_str
+  end interface messages_write
 
   integer,    public :: global_alloc_err
   integer(8), public :: global_sizeof
 
   integer :: warnings
   integer :: experimentals
+  integer :: current_line
 
 contains
 
@@ -150,6 +159,8 @@ contains
     warnings = 0
     experimentals = 0    
 
+    call messages_reset_lines()
+
   end subroutine messages_init
 
   ! ---------------------------------------------------------
@@ -164,13 +175,17 @@ contains
       end if
       
       if(experimentals > 0) then
-        write(message(1), '(a, i2, a)') "Octopus used ", experimentals, " experimental feature(s)."
-        call messages_info(1)
+        call messages_write('Octopus used ')
+        call messages_write(experimentals)
+        call messages_write(' experimental feature(s).')
+        call messages_info()
       end if
       
       if(warnings > 0) then
-        write(message(1), '(a, i6, a)') "Octopus emitted ", warnings, " warning(s)."
-        call messages_info(1)
+        call messages_write('Octopus emitted ')
+        call messages_write(warnings)
+        call messages_write(' warning(s).')
+        call messages_info()
       end if
       
       open(unit = iunit_out, file = 'exec/messages', action = 'write')
@@ -184,11 +199,14 @@ end subroutine messages_end
 
   ! ---------------------------------------------------------
   subroutine messages_fatal(no_lines, only_root_writes)
-    integer,           intent(in) :: no_lines
+    integer, optional, intent(in) :: no_lines
     logical, optional, intent(in) :: only_root_writes
 
-    integer :: ii
+    integer :: ii, no_lines_
     logical :: only_root_writes_, should_write
+
+    no_lines_ = current_line
+    if(present(no_lines)) no_lines_ = no_lines
 
     if(present(only_root_writes)) then
       should_write = mpi_grp_is_root(mpi_world) .or. (.not. only_root_writes)
@@ -258,14 +276,17 @@ end subroutine messages_end
 
   ! ---------------------------------------------------------
   subroutine messages_warning(no_lines, all_nodes)
-    integer,           intent(in) :: no_lines
+    integer, optional, intent(in) :: no_lines
     logical, optional, intent(in) :: all_nodes
 
-    integer :: il
+    integer :: il, no_lines_
     logical :: have_to_write
 #ifdef HAVE_MPI
     logical :: all_nodes_
 #endif
+    
+    no_lines_ = current_line
+    if(present(no_lines)) no_lines_ = no_lines
 
     INCR(warnings, 1)
 
@@ -294,7 +315,7 @@ end subroutine messages_end
       end if
 #endif
 
-      do il = 1, no_lines
+      do il = 1, no_lines_
         write(msg , '(a,3x,a)') '**', trim(message(il))
         call flush_msg(stderr, msg)
       end do
@@ -308,20 +329,25 @@ end subroutine messages_end
       
     end if
 
+    call messages_reset_lines()
+
     return
   end subroutine messages_warning
 
 
   ! ---------------------------------------------------------
   subroutine messages_info(no_lines, iunit, verbose_limit, stress)
-    integer,           intent(in) :: no_lines
+    integer, optional, intent(in) :: no_lines
     integer, optional, intent(in) :: iunit
     logical, optional, intent(in) :: verbose_limit
     logical, optional, intent(in) :: stress
 
-    integer :: il, iu
+    integer :: il, iu, no_lines_
 
     if(.not. mpi_grp_is_root(mpi_world)) return
+
+    no_lines_ = current_line
+    if(present(no_lines)) no_lines_ = no_lines
 
     if(flush_messages) then
       open(unit=iunit_out, file='messages.stdout', &
@@ -338,7 +364,7 @@ end subroutine messages_end
       call messages_print_stress(iu)
     end if
 
-    do il = 1, no_lines
+    do il = 1, no_lines_
       if(.not. present(verbose_limit) .or. in_debug_mode) then
         write(msg, '(a)') trim(message(il))
         call flush_msg(iu, msg)
@@ -353,6 +379,9 @@ end subroutine messages_end
 #ifdef HAVE_FLUSH
     call flush(iu)
 #endif
+
+    call messages_reset_lines()
+
   end subroutine messages_info
 
 
@@ -987,6 +1016,70 @@ end subroutine messages_end
   end subroutine messages_not_implemented
 
   ! ------------------------------------------------------------
+
+  subroutine messages_reset_lines()
+
+    current_line = 1
+    message(1) = ''
+    
+  end subroutine messages_reset_lines
+
+  ! ------------------------------------------------------------
+
+  subroutine messages_new_line()
+    
+    current_line = current_line + 1
+    message(current_line) = ''
+
+    if(current_line > max_lines) stop 'Too many message lines.'
+   
+  end subroutine messages_new_line
+
+  ! ------------------------------------------------------------
+
+  subroutine messages_write_float(val, fmt)
+    FLOAT,                      intent(in) :: val
+    character(len=*), optional, intent(in) :: fmt
+
+
+    character(len=5) :: fmt_
+
+    if(present(fmt)) then
+      fmt_ = trim(fmt)
+    else
+      fmt_ = 'f12.6'
+    end if
+
+    write(message(current_line), '(a, '//trim(fmt_)//')') trim(message(current_line)), val
+
+  end subroutine messages_write_float
+
+  ! ------------------------------------------------------------
+
+  subroutine messages_write_integer(val, fmt)
+    integer,                    intent(in) :: val
+    character(len=*), optional, intent(in) :: fmt
+
+    character(len=10) :: number
+
+    if(present(fmt)) then
+      write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val
+    else
+      write(number, '(i10)') val
+      write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+    end if
+
+  end subroutine messages_write_integer
+
+  ! ------------------------------------------------------------
+
+  subroutine messages_write_str(val)
+    character(len=*), intent(in) :: val
+
+    write(message(current_line), '(2a)') trim(message(current_line)), trim(val)
+
+  end subroutine messages_write_str
+
 end module messages_m
 
 !! Local Variables:

@@ -76,16 +76,16 @@ contains
 
     PUSH_SUB(ground_state_run)
 
-    message(1) = "Info: Allocating ground state wave-functions"
-    call messages_info(1)
+    call messages_write('Info: Allocating ground state wave-functions')
+    call messages_info()
 
     call states_allocate_wfns(sys%st, sys%gr%mesh, alloc_zphi = sys%st%open_boundaries)
 #ifdef HAVE_MPI
     ! sometimes a deadlock can occur here (if some nodes can allocate and other cannot)
     call MPI_Barrier(sys%st%dom_st_kpt_mpi_grp%comm, mpi_err)
 #endif
-    message(1) = "      done."
-    call messages_info(1)
+    call messages_write('      done.')
+    call messages_info()
 
     ! Read free states for ground-state open-boundary calculation.
     if(sys%st%open_boundaries) then
@@ -99,9 +99,10 @@ contains
       call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
 
       if(ierr .ne. 0) then
-        message(1) = "Could not load wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
-        message(2) = "Starting from scratch!"
-        call messages_warning(2)
+        call messages_write("Could not load wavefunctions from '"//trim(restart_dir)//GS_DIR//"'")
+        call messages_new_line()
+        call messages_write("Starting from scratch!")
+        call messages_warning()
         fromScratch = .true.
       end if
     end if
@@ -110,18 +111,18 @@ contains
       call lcao_run(sys, hm)
     else
       ! setup Hamiltonian
-      message(1) = 'Info: Setting up Hamiltonian.'
-      call messages_info(1)
+      call messages_write('Info: Setting up Hamiltonian.')
+      call messages_info()
       call system_h_setup(sys, hm)
     end if
 
     ! run self-consistency
     if (states_are_real(sys%st)) then
-      message(1) = 'Info: SCF using real wavefunctions.'
+      call message_write('Info: SCF using real wavefunctions.')
     else
-      message(1) = 'Info: SCF using complex wavefunctions.'
+      call messages_write('Info: SCF using complex wavefunctions.')
     end if
-    call messages_info(1)
+    call messages_info()
 
     call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
     call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
