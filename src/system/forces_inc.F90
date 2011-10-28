@@ -106,6 +106,30 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, st, time, gdensity, force
   POP_SUB(X(forces_from_local_potential))
 end subroutine X(forces_from_local_potential)
 
+
+!---------------------------------------------------------------------------
+subroutine X(total_force_from_local_potential)(gr, ep, gdensity, force)
+  type(grid_t),                   intent(inout) :: gr
+  type(epot_t),                   intent(inout) :: ep
+  R_TYPE,                         intent(in)    :: gdensity(:, :)
+  R_TYPE,                         intent(inout) :: force(:)
+
+  R_TYPE, pointer     :: zvloc(:)
+  integer             :: idir
+ 
+  PUSH_SUB(X(total_force_from_local_potential))
+  SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
+  
+  zvloc(1:gr%mesh%np) = ep%vpsl(1:gr%mesh%np)
+  do idir = 1, gr%mesh%sb%dim
+    force(idir) = force(idir) + X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir))
+  end do
+
+  SAFE_DEALLOCATE_P(zvloc)
+  POP_SUB(X(total_force_from_local_potential))
+end subroutine X(total_force_from_local_potential)
+
+
 !---------------------------------------------------------------------------
 ! Ref: Kikuji Hirose, Tomoya Ono, Yoshitaka Fujimoto, and Shigeru Tsukamoto,
 ! First-principles calculations in real-space formalism: Electronic configurations
@@ -214,6 +238,116 @@ subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   SAFE_DEALLOCATE_A(force)
   POP_SUB(X(forces_from_potential))
 end subroutine X(forces_from_potential)
+
+
+!---------------------------------------------------------------------------
+! Ref: Kikuji Hirose, Tomoya Ono, Yoshitaka Fujimoto, and Shigeru Tsukamoto,
+! First-principles calculations in real-space formalism: Electronic configurations
+! and transport properties of nanostructures, Imperial College Press (2005)
+! Section 1.6, page 12
+subroutine X(total_force_from_potential)(gr, geo, ep, st, time, x)
+  type(grid_t),                   intent(inout) :: gr
+  type(geometry_t),               intent(in)    :: geo
+  type(epot_t),                   intent(inout) :: ep
+  type(states_t),                 intent(inout) :: st
+  FLOAT,                          intent(in)    :: time
+  FLOAT,                          intent(inout) :: x(1:MAX_DIM)
+ 
+  integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
+  FLOAT :: ff, kpoint(1:MAX_DIM)
+  R_TYPE, allocatable :: psi(:, :)
+  R_TYPE, allocatable :: grad_psi(:, :, :)
+  FLOAT,  allocatable :: grad_rho(:, :), force(:, :)
+  CMPLX :: phase
+
+  PUSH_SUB(X(forces_from_potential))
+
+  np = gr%mesh%np
+  np_part = gr%mesh%np_part
+
+  SAFE_ALLOCATE(grad_psi(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
+  SAFE_ALLOCATE(grad_rho(1:np, 1:gr%mesh%sb%dim))
+  grad_rho = M_ZERO
+  SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
+  force = M_ZERO
+
+  ! even if there is no fine mesh, we need to make another copy
+  SAFE_ALLOCATE(psi(1:np_part, 1:st%d%dim))
+
+  !THE NON-LOCAL PART (parallel in states and k-points)
+  do iq = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
+
+      call states_get_state(st, gr%mesh, ist, iq, psi)
+
+      do idim = 1, st%d%dim
+        call X(derivatives_set_bc)(gr%der, psi(:, idim))
+
+        ikpoint = states_dim_get_kpoint_index(st%d, iq)
+        if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
+
+          kpoint = M_ZERO
+          kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
+
+          do ip = 1, np_part
+            phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
+            psi(ip, idim) = phase*psi(ip, idim)
+          end do
+        endif
+
+        call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
+
+        ff = st%d%kweights(iq) * st%occ(ist, iq) * M_TWO
+        do idir = 1, gr%mesh%sb%dim
+          do ip = 1, np
+            grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi(ip, idim))*grad_psi(ip, idir, idim))
+          end do
+        end do
+
+      end do
+
+      call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
+
+      ! iterate over the projectors
+      do iatom = 1, geo%natoms
+        if(projector_is_null(ep%proj(iatom))) cycle
+        do idir = 1, gr%mesh%sb%dim
+
+          force(idir, iatom) = force(idir, iatom) - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
+            R_REAL(X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+
+        end do
+      end do
+
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(grad_psi)
+
+#if defined(HAVE_MPI)
+  if(st%parallel_in_states .or. st%d%kpt%parallel) then
+    call profiling_in(prof_comm, "FORCES_COMM")
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, force, dim = (/gr%mesh%sb%dim, geo%natoms/))
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho, dim = (/np, gr%mesh%sb%dim/))
+    call profiling_out(prof_comm)
+  end if
+#endif
+
+
+  call dtotal_force_from_local_potential(gr, ep, grad_rho, x)
+
+  do iatom = 1, geo%natoms
+    do idir = 1, gr%mesh%sb%dim
+      x(idir) = x(idir) + force(idir, iatom)
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(force)
+  POP_SUB(X(forces_from_potential))
+end subroutine X(total_force_from_potential)
+
+
 
 ! --------------------------------------------------------------------------------
 subroutine X(forces_derivative)(gr, geo, ep, st, time, lr, lr2, force_deriv)

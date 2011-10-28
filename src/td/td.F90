@@ -171,8 +171,6 @@ contains
       call forces_calculate(gr, geo, hm%ep, st, td%iter*td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
-    else
-      call epot_precalc_local_potential(hm%ep, gr, geo, td%iter * td%dt)
     end if
 
     ! Calculate initial value of the gauge vector field
