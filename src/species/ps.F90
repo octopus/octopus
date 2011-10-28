@@ -848,6 +848,7 @@ contains
     do is = 1, ps%ispin
       do l = 1, ps%conf%p
         hato = ps_upf%wfs(:, l)/ps%g%rofi
+        if (ps%g%rofi(1) == M_ZERO) hato(1) = M_ZERO
         call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%ur(l, is))
         call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
       end do
