@@ -535,6 +535,8 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
 
   call mesh_get_vol_pp(mesh%sb)
 
+  call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
+
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_3)
 

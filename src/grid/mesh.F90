@@ -30,6 +30,7 @@ module mesh_m
   use io_m
   use io_binary_m
   use math_m
+  use mesh_cube_map_m
   use messages_m
   use mpi_m
   use multicomm_m
@@ -101,6 +102,8 @@ module mesh_m
     integer, pointer :: resolution(:, :, :)
     FLOAT            :: volume_element    !< The global volume element.
     FLOAT, pointer   :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
+
+    type(mesh_cube_map_t) :: cube_map
   end type mesh_t
   
   !> This data type defines a plane, and a regular grid defined on 
@@ -667,6 +670,8 @@ contains
 #endif
 
     PUSH_SUB(mesh_end)
+
+    call mesh_cube_map_end(mesh%cube_map)
 
     if (present(is_lead)) then
       is_lead_ = is_lead

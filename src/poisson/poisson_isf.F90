@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2011 M. Marques, A. Castro, X. Andrade, J. Alberdi
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, X. Andrade, J. Alberdi, M. Oliveira
 !! Copyright (C) Luigi Genovese, Thierry Deutsch, CEA Grenoble, 2006
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -223,10 +223,6 @@ contains
     logical,             intent(in)    :: all_nodes
 
     integer :: i_cnf
-#if defined(HAVE_MPI)
-    FLOAT, allocatable :: rho_global(:)
-    FLOAT, allocatable :: pot_global(:)
-#endif
     real(8), pointer :: rhop(:,:,:)
     
     PUSH_SUB(poisson_isf_solve)
@@ -234,18 +230,7 @@ contains
     call dcube_function_alloc_RS(this%cube, this%rho_cf)
 
     if(mesh%parallel_in_domains) then
-    
-#if defined(HAVE_MPI)
-      SAFE_ALLOCATE(rho_global(1:mesh%np_global))
-      SAFE_ALLOCATE(pot_global(1:mesh%np_global))
-
-      ! At this point, dvec_allgather is required because the ISF solver
-      ! uses another data distribution algorithm than for the mesh functions
-      ! for which every node requires the full data.
-      call dvec_allgather(mesh%vp, rho_global, rho)
-
-      call dmesh_to_cube(mesh, rho_global, this%cube, this%rho_cf)
-#endif
+      call dmesh_to_cube(mesh, rho, this%cube, this%rho_cf, local=.true.)
     else
       call dmesh_to_cube(mesh, rho, this%cube, this%rho_cf)
     end if
@@ -301,14 +286,7 @@ contains
     end if
 
     if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
-       call dcube_to_mesh(this%cube, this%rho_cf, mesh, pot_global)
-
-       call dvec_scatter(mesh%vp, mesh%vp%root, pot_global, pot)
-
-       SAFE_DEALLOCATE_A(rho_global)
-       SAFE_DEALLOCATE_A(pot_global)
-#endif
+      call dcube_to_mesh(this%cube, this%rho_cf, mesh, pot, local=.true.)
     else
        call dcube_to_mesh(this%cube, this%rho_cf, mesh, pot)
     end if

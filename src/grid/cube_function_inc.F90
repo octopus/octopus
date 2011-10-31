@@ -58,7 +58,8 @@ end subroutine X(cube_function_free_RS)
 
 subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   type(mesh_t),          intent(in)    :: mesh
-  R_TYPE,  target,       intent(in)    :: mf(:)  !< mf(mesh%np_global). It is the global rho
+  R_TYPE,  target,       intent(in)    :: mf(:) !< function defined on the mesh. Can be 
+                                                !< mf(mesh%np) or mf(mesh%np_global), depending if it is a local or global function
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
   logical, optional,     intent(in)    :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
@@ -90,15 +91,15 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 
   cf%X(RS) = M_ZERO
 
-  ASSERT(associated(cube%map))
+  ASSERT(associated(mesh%cube_map%map))
   ASSERT(mesh%sb%dim <= 3)
 
   if(associated(mesh%idx%lxyz)) then
 
-    do im = 1, cube%nmap
-      ip = cube%map(MCM_POINT, im)
-      nn = cube%map(MCM_COUNT, im)
-      
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
+
       ix = mesh%idx%lxyz(ip, 1) + center(1)
       iy = mesh%idx%lxyz(ip, 2) + center(2)
       iz = mesh%idx%lxyz(ip, 3) + center(3)
@@ -108,9 +109,9 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   else
 
     ixyz = 0
-    do im = 1, cube%nmap
-      ip = cube%map(MCM_POINT, im)
-      nn = cube%map(MCM_COUNT, im)
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
 
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
       ixyz = ixyz + center
@@ -130,50 +131,75 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 end subroutine X(mesh_to_cube)
 
 ! ---------------------------------------------------------
-subroutine X(cube_to_mesh) (cube, cf, mesh, mf)
+subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   type(cube_t),          intent(in)  :: cube
   type(cube_function_t), intent(in)  :: cf
   type(mesh_t),          intent(in)  :: mesh
-  R_TYPE,                intent(out) :: mf(:)  ! mf(mesh%np_global)
+  R_TYPE,  target,       intent(out) :: mf(:) !< function defined on the mesh. Can be 
+                                              !< mf(mesh%np) or mf(mesh%np_global), depending if it is a local or global function
+  logical, optional,     intent(in)  :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
 
   integer :: ip, ix, iy, iz, center(3), ixyz(1:3)
-  integer :: im, ii, nn
+  integer :: im, ii, nn, last, first
+  logical :: local_
+  R_TYPE, pointer :: gmf(:)
 
   PUSH_SUB(X(cube_to_mesh))
 
   call profiling_in(prof_c2m, "CUBE_TO_MESH")
 
+  local_ = optional_default(local, .false.) .and. mesh%parallel_in_domains
+  
+  if(local_) then
+    ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
+    SAFE_ALLOCATE(gmf(1:mesh%np_global))
+  else
+    ASSERT(ubound(mf, dim = 1) == mesh%np_global .or. ubound(mf, dim = 1) == mesh%np_part_global)
+    gmf => mf
+  end if
+
   ASSERT(associated(cf%X(RS)))
 
   center(1:3) = cube%n(1:3)/2 + 1
 
-  ASSERT(associated(cube%map))
+  ASSERT(associated(mesh%cube_map%map))
 
   if(associated(mesh%idx%lxyz)) then
 
-    do im = 1, cube%nmap
-      ip = cube%map(MCM_POINT, im)
-      nn = cube%map(MCM_COUNT, im)
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
       ix = mesh%idx%lxyz(ip, 1) + center(1)
       iy = mesh%idx%lxyz(ip, 2) + center(2)
       iz = mesh%idx%lxyz(ip, 3) + center(3)
-      forall(ii = 0:nn - 1) mf(ip + ii) = cf%X(RS)(ix, iy, iz + ii)
+      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(RS)(ix, iy, iz + ii)
     end do
 
   else
 
     ixyz = 0
 
-    do im = 1, cube%nmap
-      ip = cube%map(MCM_POINT, im)
-      nn = cube%map(MCM_COUNT, im)
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
 
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
       ixyz = ixyz + center
 
-      forall(ii = 0:nn - 1) mf(ip + ii) = cf%X(RS)(ixyz(1), ixyz(2), ixyz(3) + ii)
+      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(RS)(ixyz(1), ixyz(2), ixyz(3) + ii)
     end do
 
+  end if
+
+  if(local_) then
+#ifdef HAVE_MPI
+    first = mesh%vp%xlocal(mesh%vp%partno)
+    last = mesh%vp%np_local(mesh%vp%partno)   
+    do ii = 1, last
+      mf(ii) = gmf(mesh%vp%local(ii+first-1))
+    end do
+#endif
+    SAFE_DEALLOCATE_P(gmf)
   end if
 
   call profiling_count_transfers(mesh%np_global, mf(1))
@@ -242,9 +268,9 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local)
   end do
 
   ! Do the actual transform, only for the output values
-  do im = 1, cube%nmap
-    ip = cube%map(MCM_POINT, im)
-    nn = cube%map(MCM_COUNT, im)
+  do im = 1, mesh%cube_map%nmap
+    ip = mesh%cube_map%map(MCM_POINT, im)
+    nn = mesh%cube_map%map(MCM_COUNT, im)
     
     ix = mesh%idx%lxyz(ip, 1) + center(1)
     if (ix >= min_x .and. ix < max_x) then
@@ -277,20 +303,33 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local)
 end subroutine X(mesh_to_cube_parallel)
 
 ! ---------------------------------------------------------
-subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf)
+subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
   type(cube_t),          intent(in)  :: cube
   type(cube_function_t), intent(in)  :: cf
   type(mesh_t),          intent(in)  :: mesh
-  R_TYPE,                intent(out) :: mf(:)  ! mf(mesh%np_global)
+  R_TYPE, target,        intent(out) :: mf(:)  ! mf(mesh%np_global)
+  logical, optional,     intent(in)  :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
 
   integer :: ip, ix, iy, iz, center(3)
-  integer :: im, ii, nn
+  integer :: im, ii, nn, last, first
   integer :: min_x, min_y, min_z, max_x,max_y,max_z,recv_count
   FLOAT :: scaling_fft_factor
+  logical :: local_
+  R_TYPE, pointer :: gmf(:)
 
   PUSH_SUB(X(cube_to_mesh_parallel))
 
   call profiling_in(prof_c2m, "CUBE_TO_MESH_PARALLEL")
+
+  local_ = optional_default(local, .false.) .and. mesh%parallel_in_domains
+  
+  if(local_) then
+    ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
+    SAFE_ALLOCATE(gmf(1:mesh%np_global))
+  else
+    ASSERT(ubound(mf, dim = 1) == mesh%np_global .or. ubound(mf, dim = 1) == mesh%np_part_global)
+    gmf => mf
+  end if
 
   center(1:3) = cube%n(1:3)/2 + 1
 
@@ -303,20 +342,20 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf)
        
   scaling_fft_factor = real(cube%pfft%n(1)*cube%pfft%n(2)*cube%pfft%n(3))
   if (mpi_world%size == 1) then
-    do im = 1, cube%nmap
-      ip = cube%map(MCM_POINT, im)
-      nn = cube%map(MCM_COUNT, im)
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
 
       ix = mesh%idx%lxyz(ip, 1) + center(1)
       iy = mesh%idx%lxyz(ip, 2) + center(2)
       iz = mesh%idx%lxyz(ip, 3) + center(3)
-      forall(ii = 0:nn - 1) mf(ip + ii) = cube%pfft%global_data_in(cube%pfft%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
+      forall(ii = 0:nn - 1) gmf(ip + ii) = cube%pfft%global_data_in(cube%pfft%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
     end do
   else
     !General execution
-    do im = 1, cube%nmap
-      ip = cube%map(MCM_POINT, im)
-      nn = cube%map(MCM_COUNT, im)
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
 
       ix = mesh%idx%lxyz(ip, 1) + center(1)
       iy = mesh%idx%lxyz(ip, 2) + center(2)
@@ -325,10 +364,21 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf)
       do ii = 0, nn - 1
         !Only work with the points of the mesh of my mesh
         if (mesh%vp%part(ip+ii) == mesh%vp%partno) then
-          mf(ip + ii) = cube%pfft%global_data_in(cube%pfft%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
+          gmf(ip + ii) = cube%pfft%global_data_in(cube%pfft%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
         end if
       end do
     end do
+  end if
+
+  if(local_) then
+#ifdef HAVE_MPI
+    first = mesh%vp%xlocal(mesh%vp%partno)
+    last = mesh%vp%np_local(mesh%vp%partno)   
+    do ii = 1, last
+      mf(ii) = gmf(mesh%vp%local(ii+first-1))
+    end do
+#endif
+    SAFE_DEALLOCATE_P(gmf)
   end if
 
   call profiling_count_transfers(mesh%np_global, mf(1))

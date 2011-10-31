@@ -765,20 +765,14 @@ contains
     FLOAT,             intent(in)  :: rho(:)
     logical, optional, intent(in)  :: average_to_zero
 
-    FLOAT, allocatable :: rho_global(:), pot_global(:)
-
     FLOAT :: average
     type(profile_t), save :: prof_bcast, prof_sct
-    integer :: default_fft_library, fft_library, ii, last, first
+    integer :: default_fft_library, fft_library
     
     PUSH_SUB(poisson_fft)
     
     average = M_ZERO !this avoids a non-initialized warning
     
-    if(mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(rho_global(1:mesh%np_global))
-      SAFE_ALLOCATE(pot_global(1:mesh%np_global))
-    end if
     !Save memory if PFFT is used  
     if (fft_cube%fft_library /= PFFT_LIB) then
       call dcube_function_alloc_RS(fft_cube, fft_cf) ! allocate the cube in real space
@@ -789,17 +783,13 @@ contains
       if (fft_cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
         !all the data has to be distributed for the PFFT library
-        call dvec_allgather(mesh%vp, rho_global, rho)
-        call dmesh_to_cube_parallel(mesh, rho_global, fft_cube, fft_cf)
+        call dmesh_to_cube_parallel(mesh, rho, fft_cube, fft_cf, local=.true.)
 #else
         write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
         call messages_fatal(1)
 #endif
       else 
-#if defined HAVE_MPI
-        call dvec_gather(mesh%vp, mesh%vp%root, rho_global, rho)
-        call dmesh_to_cube(mesh, rho_global, fft_cube, fft_cf)
-#endif
+        call dmesh_to_cube(mesh, rho, fft_cube, fft_cf, local=.true.)
       end if
     else !not parallel in domains
       if (fft_cube%fft_library == PFFT_LIB) then
@@ -829,22 +819,13 @@ contains
 #if defined(HAVE_MPI)   
       if (fft_cube%fft_library == PFFT_LIB) then
 #ifdef HAVE_PFFT
-        call dcube_to_mesh_parallel(fft_cube, fft_cf, mesh, pot_global)
-        call profiling_in(prof_sct, 'SCT')
-        !skip the scatter, because all the nodes have each part of pot_global
-        first = mesh%vp%xlocal(mesh%vp%partno)
-        last = mesh%vp%np_local(mesh%vp%partno)   
-        do ii = 1, last
-          pot(ii) = pot_global(mesh%vp%local(ii+first-1))
-        end do
-        call profiling_out(prof_sct)
+        call dcube_to_mesh_parallel(fft_cube, fft_cf, mesh, pot, local=.true.)
 #else
         write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
         call messages_fatal(1)
 #endif
       else
-        call dcube_to_mesh(fft_cube, fft_cf, mesh, pot_global)
-        call dvec_scatter(mesh%vp, mesh%vp%root, pot_global, pot)
+        call dcube_to_mesh(fft_cube, fft_cf, mesh, pot, local=.true.)
       end if
 #endif
     else !not parallel in domains
@@ -864,11 +845,6 @@ contains
     
     if (fft_cube%fft_library /= PFFT_LIB) then
       call dcube_function_free_RS(fft_cf)           ! memory is no longer needed
-    end if
-    
-    if(mesh%parallel_in_domains) then
-      SAFE_DEALLOCATE_A(rho_global)
-      SAFE_DEALLOCATE_A(pot_global)
     end if
     
     POP_SUB(poisson_fft)

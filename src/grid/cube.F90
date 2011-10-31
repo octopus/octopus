@@ -45,17 +45,14 @@ module cube_m
 
 
   type cube_t
-    integer :: n(1:3)        !< the global dimensions of the cube
-    integer :: n_part(1:3)   !< the dimensions of the local portion of the cube
-    integer :: nx            ! = n(1)/2 + 1, first dimension of the FS array
+    integer :: n(1:3)      !< the global dimensions of the cube
+    integer :: n_part(1:3) !< the dimensions of the local portion of the cube
+    integer :: nx          ! = n(1)/2 + 1, first dimension of the FS array
 
     integer :: istart(1:3) !< where does the local portion of the cube start
 
     logical :: parallel_in_domains !< will the cube be divided in domains?
     type(mpi_grp_t) :: mpi_grp     !< the mpi group describing parallelization in domains
-
-    integer          :: nmap      !< The number of maps
-    integer, pointer :: map(:, :) !< DOCUMENTATION NEEDED
 
     integer :: offset(1:3) !< 
 
@@ -138,35 +135,6 @@ contains
     end if
 
 
-    if (sb%dim <= 3) then
-      do step = 1, 2
-        if(step == 2) then
-          SAFE_ALLOCATE(cube%map(1:2, 1:cube%nmap))
-        end if
-
-        cube%nmap = 0
-        i2 = 0
-        do ip = 1, np_global
-
-          i1 = 0
-          call index_to_coords(idx, sb%dim, ip, i1(1:3))
-
-          if(any(i1(1:2) /= i2(1:2)) .or. i1(3) /= i2(3) + 1) then
-            INCR(cube%nmap, 1)
-            if(step == 2) then
-              cube%map(MCM_POINT, cube%nmap) = ip
-              cube%map(MCM_COUNT, cube%nmap) = 1
-            end if
-          else
-            if(step == 2) INCR(cube%map(MCM_COUNT, cube%nmap), 1)
-          end if
-          i2 = i1
-        end do
-      end do
-    else
-      nullify(cube%map)
-    end if
-
   POP_SUB(cube_init)
 end subroutine  cube_init
 
@@ -191,8 +159,6 @@ end subroutine  cube_init
       call fft_end(cube%zfftw)
       SAFE_DEALLOCATE_P(cube%zfftw)
     end if
-
-    SAFE_DEALLOCATE_P(cube%map)
 
     POP_SUB(cube_end)
   end subroutine  cube_end
