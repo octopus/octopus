@@ -79,61 +79,27 @@ module forces_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine total_force_calculate(gr, geo, ep, st, x, t)
+  ! This computes the total forces on the ions created by the electrons
+  ! (it excludes the force due to possible time-dependent external fields).
+  subroutine total_force_calculate(gr, geo, ep, st, x)
     type(grid_t),     intent(inout) :: gr
     type(geometry_t), intent(in)    :: geo
     type(epot_t),     intent(inout) :: ep
     type(states_t),   intent(inout) :: st
     FLOAT, intent(inout)            :: x(MAX_DIM)
-    FLOAT,     optional, intent(in) :: t
 
     integer :: i, j
-    FLOAT :: time, field(1:MAX_DIM)
+    FLOAT :: field(1:MAX_DIM)
     type(profile_t), save :: forces_prof
 
     call profiling_in(forces_prof, "FORCES")
     PUSH_SUB(total_force_calculate)
 
     x = M_ZERO
-    time = M_ZERO
-    if(present(t)) time = t
-
-    ! the ion-ion term is already calculated
-    do i = 1, geo%natoms
-      x(1:gr%sb%dim) = x(1:gr%sb%dim) + ep%fii(1:gr%sb%dim, i)
-    end do
-
     if (states_are_real(st) ) then 
-      call dtotal_force_from_potential(gr, geo, ep, st, time, x)
+      call dtotal_force_from_potential(gr, geo, ep, st, x)
     else
-      call ztotal_force_from_potential(gr, geo, ep, st, time, x)
-    end if
-
-    !\todo forces due to the magnetic fields (static and time-dependent)
-    if(present(t)) then
-      do j = 1, ep%no_lasers
-        select case(laser_kind(ep%lasers(j)))
-        case(E_FIELD_ELECTRIC)
-          call laser_field(ep%lasers(j), field(1:gr%sb%dim), t)
-          do i = 1, geo%natoms
-            x(1:gr%mesh%sb%dim) = x(1:gr%mesh%sb%dim) &
-             + species_zval(geo%atom(i)%spec)*field(1:gr%mesh%sb%dim)
-          end do
-
-        case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL, E_FIELD_SCALAR_POTENTIAL)
-          write(message(1),'(a)') 'The forces are currently not properly calculated if time-dependent'
-          write(message(2),'(a)') 'magnetic fields are present.'
-          call messages_fatal(2)
-        end select
-      end do
-    end if
-
-    if(associated(ep%E_field)) then
-      do i = 1, geo%natoms
-        ! Here the proton charge is +1, since the electric field has the usual sign.
-        x(1:gr%mesh%sb%dim) = x(1:gr%mesh%sb%dim) &
-          + species_zval(geo%atom(i)%spec)*ep%E_field(1:gr%mesh%sb%dim)
-      end do
+      call ztotal_force_from_potential(gr, geo, ep, st, x)
     end if
 
     POP_SUB(total_force_calculate)

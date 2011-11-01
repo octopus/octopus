@@ -241,16 +241,11 @@ end subroutine X(forces_from_potential)
 
 
 !---------------------------------------------------------------------------
-! Ref: Kikuji Hirose, Tomoya Ono, Yoshitaka Fujimoto, and Shigeru Tsukamoto,
-! First-principles calculations in real-space formalism: Electronic configurations
-! and transport properties of nanostructures, Imperial College Press (2005)
-! Section 1.6, page 12
-subroutine X(total_force_from_potential)(gr, geo, ep, st, time, x)
+subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(inout) :: ep
   type(states_t),                 intent(inout) :: st
-  FLOAT,                          intent(in)    :: time
   FLOAT,                          intent(inout) :: x(1:MAX_DIM)
  
   integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
@@ -334,19 +329,17 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, time, x)
   end if
 #endif
 
-
   call dtotal_force_from_local_potential(gr, ep, grad_rho, x)
 
   do iatom = 1, geo%natoms
     do idir = 1, gr%mesh%sb%dim
-      x(idir) = x(idir) + force(idir, iatom)
+      x(idir) = x(idir) - force(idir, iatom)
     end do
   end do
 
   SAFE_DEALLOCATE_A(force)
   POP_SUB(X(forces_from_potential))
 end subroutine X(total_force_from_potential)
-
 
 
 ! --------------------------------------------------------------------------------

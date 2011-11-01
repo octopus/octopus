@@ -91,16 +91,16 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
 
   ! And now, i<[H,[V_nl,x]]>
   x = M_ZERO
-  SAFE_ALLOCATE(hzpsi (1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(hhzpsi(1:3, 1:gr%mesh%np))
+  SAFE_ALLOCATE(hzpsi (1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(hhzpsi(1:3, 1:gr%mesh%np_part))
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
       call zhamiltonian_apply(hm, gr%der, st%zpsi(:, :, ist, ik), hzpsi(:,:), ist, ik, time)
 
-      SAFE_ALLOCATE(xzpsi    (1:gr%mesh%np, 1:st%d%dim, 1:3))
-      SAFE_ALLOCATE(vnl_xzpsi(1:gr%mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(xzpsi    (1:gr%mesh%np_part, 1:st%d%dim, 1:3))
+      SAFE_ALLOCATE(vnl_xzpsi(1:gr%mesh%np_part, 1:st%d%dim))
       xzpsi = M_z0
       do k = 1, gr%mesh%np
         do j = 1, gr%mesh%sb%dim
