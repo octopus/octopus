@@ -8,16 +8,28 @@ Enabled    : Yes
 
 # Calculate eigenstate of 1d attractive square-potential barrier.
 Input: 04-propagate_eigenstate.01-square_well_1d.inp
+Precision : 1.0e-5
 match ; Total energy [step   0]; LINE(well_td.general/energy,   6, 30) ; 2.064295041168e+00
 match ; Total energy [step 100]; LINE(well_td.general/energy, 106, 30) ; 2.064288488499e+00
 match ; Total energy [step 200]; LINE(well_td.general/energy, 206, 30) ; 2.064285752809e+00
 match ; Total energy [step 300]; LINE(well_td.general/energy, 306, 30) ; 2.064283788739e+00
+Precision : 1.0e-15
+match ; Current [step 100] ; LINE(well_td.0000100/current-flow, 3, 22) ; 0.255131844470E-10
+match ; Current [step 200] ; LINE(well_td.0000200/current-flow, 3, 22) ; -0.133238721488E-09
+match ; Current [step 300] ; LINE(well_td.0000300/current-flow, 3, 22) ; 0.183429641105E-09
 
 # Calculate eigenstates of 2D ring potential attached to upside-down Gaussian-shaped
 # lead channels and propagate with a bias switched on.
 Input: 04-propagate_eigenstate.02-ring_leads_2d.inp
+Precision : 1.0e-4
 match ; Total energy [step   0]; LINE(ring_lead_td.general/energy,   6, 30) ; 2.327101907973e+02
 match ; Total energy [step  25]; LINE(ring_lead_td.general/energy,  31, 30) ; 2.331485445084e+02
 match ; Total energy [step  50]; LINE(ring_lead_td.general/energy,  56, 30) ; 2.337913224715e+02
 match ; Total energy [step  75]; LINE(ring_lead_td.general/energy,  81, 30) ; 2.351978245927e+02
 match ; Total energy [step 100]; LINE(ring_lead_td.general/energy, 106, 30) ; 2.370989994856e+02
+Precision : 1.0e-6
+match ; Current [step  25] ; LINE(ring_lead_td.0000025/current-flow, 7, 22) ; -0.326241510898E-02
+match ; Current [step  50] ; LINE(ring_lead_td.0000050/current-flow, 7, 22) ; 0.104242655917E+00
+match ; Current [step  75] ; LINE(ring_lead_td.0000075/current-flow, 7, 22) ; 0.914811082853E+00
+match ; Current [step 100] ; LINE(ring_lead_td.0000100/current-flow, 7, 22) ; 0.469203643928E+00
+

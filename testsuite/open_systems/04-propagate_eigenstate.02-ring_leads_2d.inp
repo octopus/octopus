@@ -85,7 +85,6 @@ TDTimeStep = 0.02
 TDMaximumIter = 100
 TDPropagator = crank_nicholson_src_mem
 
-# does not work for k-point parallelization yet
 %ring_lead_CurrentThroughPlane
    0.0 | 0.0 # origin
    0.0 | -1.0 # u
@@ -93,10 +92,10 @@ TDPropagator = crank_nicholson_src_mem
    -Ly/Spacing | Ly/Spacing # nu | mu
 %
 
-lead_Output = potential + density + wfs_sqmod + wfs
+lead_Output = potential + density# + wfs_sqmod + wfs
 ring_lead_Output = density
-OutputHow = binary + plane_z
-#OutputEvery = 10
+OutputHow = binary #+ plane_z
+OutputEvery = 25
 
 TDEnergyUpdateIter = 25
 

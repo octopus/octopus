@@ -46,7 +46,9 @@ module kpoints_m
     kpoints_number,          &
     kpoints_get_weight,      &
     kpoints_get_point,       &
-    kpoints_write_info,   &
+    kpoints_set_point,       &
+    kpoints_set_transport_mode,&
+    kpoints_write_info,      &
     kpoints_point_is_gamma
 
   type kpoints_grid_t
@@ -411,6 +413,22 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! sets the kpoints to zero (only to be used in transport mode)
+  subroutine kpoints_set_transport_mode(this)
+    type(kpoints_t), intent(inout) :: this
+
+    PUSH_SUB(kpoints_set_transport_mode)
+
+    this%full%point = M_ZERO
+    this%full%red_point = M_ZERO
+    this%reduced%point = M_ZERO
+    this%reduced%red_point = M_ZERO
+
+    POP_SUB(kpoints_set_transport_mode)
+  end subroutine kpoints_set_transport_mode
+
+
+  ! ---------------------------------------------------------
   subroutine kpoints_to_absolute(klattice, kin, kout, dim)
     FLOAT,   intent(in)  :: klattice(:,:)
     FLOAT,   intent(in)  :: kin(:)
@@ -493,7 +511,18 @@ contains
   end function kpoints_get_point
 
   ! ----------------------------------------------------------
+  ! sets the ik-th kpoint to a given value (only to be used in transport mode)
+  subroutine kpoints_set_point(this, ik, point)
+    type(kpoints_t), intent(inout) :: this
+    integer,         intent(in)    :: ik
+    FLOAT  ,         intent(in)    :: point(1:this%full%dim)
 
+    this%reduced%point(1:this%full%dim, ik) = point(1:this%full%dim)
+    call kpoints_grid_copy(this%reduced, this%full)
+
+  end subroutine kpoints_set_point
+
+  ! ----------------------------------------------------------
   FLOAT pure function kpoints_get_weight(this, ik) result(weight)
     type(kpoints_t), intent(in) :: this
     integer,         intent(in) :: ik

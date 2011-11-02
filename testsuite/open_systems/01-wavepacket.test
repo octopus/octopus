@@ -11,13 +11,24 @@ Enabled    : Yes
 # the central region.
 
 Input: 01-wavepacket.01-deriv_order_1.inp
+Precision : 1.0e-6
 match ; Density [step   0] ; LINE(flat_td.general/multipoles,  17, 30) ; 2.000000000000e+00
 match ; Density [step 100] ; LINE(flat_td.general/multipoles, 117, 30) ; 1.986581544309e+00
 match ; Density [step 200] ; LINE(flat_td.general/multipoles, 217, 30) ; 1.226785158230e+00
 match ; Density [step 300] ; LINE(flat_td.general/multipoles, 317, 30) ; 4.850766932375e-01
+Precision : 1.0e-11
+match ; Current [step 100] ; LINE(flat_td.0000100/current-flow, 3, 22) ; -0.146885635235E-05
+match ; Current [step 200] ; LINE(flat_td.0000200/current-flow, 3, 22) ; -0.832651103945E-06
+match ; Current [step 300] ; LINE(flat_td.0000300/current-flow, 3, 22) ; 0.498403328199E-06
 
 Input: 01-wavepacket.02-deriv_order_4.inp
+Precision : 1.0e-6
 match ; Density [step   0] ; LINE(flat_td.general/multipoles,  17, 30) ; 2.000000000000e+00
 match ; Density [step 100] ; LINE(flat_td.general/multipoles, 117, 30) ; 1.986163865782e+00
 match ; Density [step 200] ; LINE(flat_td.general/multipoles, 217, 30) ; 1.223080179950e+00
 match ; Density [step 300] ; LINE(flat_td.general/multipoles, 317, 30) ; 4.839848256222e-01
+Precision : 1.0e-11
+match ; Current [step 100] ; LINE(flat_td.0000100/current-flow, 3, 22) ; -0.253639904656E-05
+match ; Current [step 200] ; LINE(flat_td.0000200/current-flow, 3, 22) ; 0.769305398685E-06
+match ; Current [step 300] ; LINE(flat_td.0000300/current-flow, 3, 22) ; 0.790752473616E-06
+

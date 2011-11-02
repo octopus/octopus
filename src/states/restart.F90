@@ -792,7 +792,7 @@ contains
   ! equation to obtain extended eigenstates.
   subroutine read_free_states(st, gr)
     type(states_t),       intent(inout) :: st
-    type(grid_t), target, intent(in)    :: gr
+    type(grid_t), target, intent(inout) :: gr
 
     integer                    :: ik, ist, idim, counter, err, wfns, occs, il
     integer                    :: np, ip, idir
@@ -860,6 +860,9 @@ contains
       read(line, *) occ, char, eval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), &
         w_k, char, chars, char, ik, char, ist, char, idim
 
+      ! we need the kpoints from the periodic run for the scattering states
+      ! so overwrite the "false" kpoints of the finite center
+      call kpoints_set_point(gr%sb%kpoints, ik, kpoint(1:gr%sb%dim))
       st%d%kweights(ik) = w_k
       st%occ(ist, ik) = occ
       counter = counter + 1

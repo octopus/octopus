@@ -189,6 +189,13 @@ contains
     only_gamma_kpoint = sb%periodic_dim == 0 .and. .not. present(transport_mode)
     call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%rlattice, sb%klattice, geo, only_gamma_kpoint)
 
+    ! With open boundaries we have a different situation than in a periodic system.
+    ! We set them here to zero to mimic a gamma point only calculation.
+    ! In the gs mode we need the kpoints from the periodic run, these will be set
+    ! in restart.F90:read_free_states.
+    ! In the td run all kpoints must be zero to correctly calculate the current.
+    if (present(transport_mode)) call kpoints_set_transport_mode(sb%kpoints)
+
     POP_SUB(simul_box_init)
 
   contains

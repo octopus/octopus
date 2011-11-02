@@ -14,3 +14,4 @@ match ; Total energy ; GREP(well_static/info, 'Total       =', 20) ; 5.0086
 # shaped lead channels.
 Input: 03-extended_eigenstate.02-ring_leads_2d.inp
 match ; Total energy ; GREP(ring_lead_static/info, 'Total       =', 20) ; 55.5646
+

@@ -43,8 +43,10 @@ lead_PeriodicDimensions = 1
 %lead_Coordinates
  "flat" | 0 | 0
 %
+
+Ly = 4
 %lead_Lsize
- DerivativesOrder*Spacing | 4
+ DerivativesOrder*Spacing | Ly
 %
 %KPointsGrid 
   2 | 1
@@ -83,3 +85,17 @@ ci = {0, 1}
 %
 
 flat_OpenBoundariesAdditionalTerms = mem_term
+
+%flat_CurrentThroughPlane
+   0.0 | 0.0 # origin
+   0.0 | -1.0 # u
+   Spacing # spacing
+   -Ly/Spacing | Ly/Spacing # nu | mu
+%
+
+Output = density
+OutputHow = binary
+OutputEvery = 25
+
+TDEnergyUpdateIter = 1
+

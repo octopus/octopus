@@ -81,3 +81,14 @@ flat_OnlyUserDefinedInitialStates = yes
 %
 
 flat_OpenBoundariesAdditionalTerms = mem_term
+
+%flat_CurrentThroughPlane
+   0.0 # origin
+%
+
+Output = density
+OutputHow = binary
+OutputEvery = 100
+
+TDEnergyUpdateIter = 100
+
