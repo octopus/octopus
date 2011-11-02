@@ -154,7 +154,8 @@ module opencl_m
 
       type(c_ptr) :: prog
       logical  :: disable, default
-      integer  :: ierr, idevice, iplatform
+      integer  :: ierr, idevice, iplatform, ndevices, idev
+      character(len=256) :: device_name
 
       PUSH_SUB(opencl_init)
       
@@ -229,6 +230,20 @@ module opencl_m
 
       ierr = flGetPlatformIDs(iplatform, opencl%platform_id)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
+
+      ndevices = f90_cl_get_number_of_devices(opencl%platform_id)
+
+      call messages_write('Info: Available CL devices: ')
+      call messages_write(ndevices)
+      call messages_info()
+
+      do idev = 0, ndevices - 1
+        call f90_cl_get_device_name(opencl%platform_id, idev, device_name)
+        call messages_write('      Device ')
+        call messages_write(idev)
+        call messages_write(' : '//device_name)
+        call messages_info()
+      end do
 
 #ifdef HAVE_MPI
       ! with we have to select the device so multiple GPUs in one node
@@ -309,11 +324,10 @@ module opencl_m
       
       subroutine select_device(idevice)
         integer, intent(inout) :: idevice
-#ifdef HAVE_MPI
-        integer :: ndevices, irank
+#if defined(HAVE_MPI) && defined(HAVE_OPENCL)
+        integer :: irank
+        character(len=256) :: device_name
 
-        ndevices = f90_cl_get_number_of_devices(opencl%platform_id)
-       
         idevice = mod(base_grp%rank, ndevices)
 
         call MPI_Barrier(base_grp%comm, mpi_err)
@@ -325,6 +339,8 @@ module opencl_m
             call messages_write(base_grp%rank)
             call messages_write(' -> CL device ')
             call messages_write(idevice)
+            call f90_cl_get_device_name(opencl%platform_id, idevice, device_name)
+            call messages_write(' : '//device_name)
             call messages_info(all_nodes = .true.)
           end if
           call MPI_Barrier(base_grp%comm, mpi_err)

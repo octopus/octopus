@@ -97,6 +97,18 @@
       type(c_ptr),      intent(in)   :: platform_id
     end function f90_cl_get_number_of_devices
     
+
+    ! ---------------------------------------------------
+
+    subroutine f90_cl_get_devices_name(platform_id, idevice, device_name)
+      use c_pointer_m
+
+      implicit none
+      type(c_ptr),      intent(in)   :: platform_id
+      integer,          intent(in)   :: idevice
+      character(len=*), intent(out)  :: device_name
+    end subroutine f90_cl_get_devices_name
+
     ! ---------------------------------------------------
 
     subroutine f90_cl_init_context(platform_id, context)

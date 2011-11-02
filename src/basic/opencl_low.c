@@ -29,6 +29,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include <string_f.h>
+
 #define MAX_PLATFORMS 4
 #define MAX_DEVICES   16
 
@@ -71,28 +73,6 @@ int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platfo
 
   *platform = all_platforms[*iplatform];
 
-  status = clGetDeviceIDs(*platform, CL_DEVICE_TYPE_ALL, MAX_DEVICES, all_devices, &ret_devices);
-
-  if (status != CL_SUCCESS){
-    fprintf(stderr, "\nError: clGetDeviceIDs returned error code: %d\n", status);
-    exit(1);
-  }
-
-  printf("Available OpenCL devices: %d\n", ret_devices);
-  
-  for(ip = 0; ip < ret_devices; ip++){
-    status = clGetDeviceInfo(all_devices[ip], CL_DEVICE_NAME, sizeof(info), info, NULL);
-
-    if (status != CL_SUCCESS){
-      fprintf(stderr, "\nError: clGetDeviceInfo returned error code: %d\n", status);
-      exit(1);
-    }
-
-    printf("  Device %d : %s\n", ip, info);
-  }
-
-  printf("\n");
-
   return status;
 }
 
@@ -109,6 +89,30 @@ int FC_FUNC_(f90_cl_get_number_of_devices, F90_CL_GET_NUMBER_OF_DEVICES)(const c
   }
 
   return ret_devices;
+}
+
+void FC_FUNC_(f90_cl_get_device_name, F90_CL_GET_DEVICE_NAME)
+     (const cl_platform_id * platform, const int * idevice, STR_F_TYPE device_name STR_ARG1){
+  char info[2048];
+  cl_int status;
+  cl_device_id all_devices[MAX_DEVICES];
+  cl_uint ret_devices;
+
+  status = clGetDeviceIDs(*platform, CL_DEVICE_TYPE_ALL, MAX_DEVICES, all_devices, &ret_devices);
+
+  if (status != CL_SUCCESS){
+    fprintf(stderr, "\nError: clGetDeviceIDs returned error code: %d\n", status);
+    exit(1);
+  }
+
+  status = clGetDeviceInfo(all_devices[*idevice], CL_DEVICE_NAME, sizeof(info), info, NULL);
+
+  if (status != CL_SUCCESS){
+    fprintf(stderr, "\nError: clGetDeviceIDs returned error code: %d\n", status);
+    exit(1);
+  }
+
+  TO_F_STR1(info, device_name);
 }
 
 void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * platform, cl_context * context){
