@@ -40,8 +40,6 @@ int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platfo
   cl_uint ret_platform;
   cl_uint ip;
   char info[2048];
-  cl_device_id all_devices[MAX_DEVICES];
-  cl_uint ret_devices;
 
   status = clGetPlatformIDs(MAX_PLATFORMS, all_platforms, &ret_platform);
 
@@ -133,10 +131,6 @@ void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * pl
 
 void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const cl_platform_id * platform, const cl_context * context, cl_device_id * device){
   size_t ParamDataBytes;
-  char device_string[2048];
-  cl_uint dim;
-  cl_ulong mem;
-  size_t max_workgroup_size;
   cl_device_id * Devices;
   cl_device_type device_type;
   cl_uint num_devices;
@@ -173,7 +167,7 @@ void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const 
       device_type = CL_DEVICE_TYPE_DEFAULT;
       break;
     }
-
+  
     clGetDeviceIDs(*platform, device_type, 1, device, &num_devices);
 
     /* Check if there were any devices of the type, otherwise just get the default.*/
@@ -181,6 +175,14 @@ void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const 
       clGetDeviceIDs(*platform, CL_DEVICE_TYPE_DEFAULT, 1, device, NULL);
     }
   }
+
+}
+
+void FC_FUNC_(f90_cl_device_info,F90_CL_DEVICE_INFO)(const cl_device_id * device){
+  char device_string[2048];
+  cl_uint dim;
+  cl_ulong mem;
+  size_t max_workgroup_size;
 
   /* print some info about the device */
   clGetDeviceInfo(*device, CL_DEVICE_VENDOR, sizeof(device_string), &device_string, NULL);
@@ -209,7 +211,6 @@ void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const 
   clGetDeviceInfo (*device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(cl_ulong), &mem, NULL);
   mem /= 1024; /* convert to kilobytes */
   printf("constant memory         : %ld Kb\n", mem);
-
 
   clGetDeviceInfo (*device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, sizeof(cl_ulong), &mem, NULL);
   mem /= (1024*1024); /* convert to megabytes */
@@ -309,12 +310,10 @@ void FC_FUNC_(f90_cl_create_program_from_file, F90_CL_CREATE_PROGRAM_FROM_FILE)
 
 }
 
-int FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
+void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
      (cl_program * program, cl_context * context, cl_device_id * device, STR_F_TYPE flags_f STR_ARG1){
   char * flags;
   cl_int status;
-  char device_string[2048];
-  int ext_khr_fp64, ext_amd_fp64;
   size_t len;
   char buffer[5000];
 
@@ -335,16 +334,12 @@ int FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
   }
 
   free(flags);
-
 }
 
 int FC_FUNC_(f90_cl_device_has_extension, F90_CL_DEVICE_HAS_EXTENSION)
      (cl_device_id * device, STR_F_TYPE extension_f STR_ARG1){
   char * extension;
-  cl_int status;
   char device_string[2048];
-  size_t len;
-  char buffer[5000];
   int has_ext;
 
   TO_C_STR1(extension_f, extension);

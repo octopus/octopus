@@ -256,6 +256,8 @@ module opencl_m
       call f90_cl_init_context(opencl%platform_id, opencl%context)
       call f90_cl_init_device(idevice, opencl%platform_id, opencl%context, opencl%device)
 
+      if(mpi_grp_is_root(base_grp)) call f90_cl_device_info(opencl%device)
+
       call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
       
