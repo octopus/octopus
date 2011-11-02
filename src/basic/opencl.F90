@@ -24,6 +24,7 @@ module opencl_m
   use datasets_m
   use global_m
   use messages_m
+  use mpi_m
   use types_m
   use parser_m
   use profiling_m
@@ -148,7 +149,9 @@ module opencl_m
 
     ! ------------------------------------------
     
-    subroutine opencl_init()
+    subroutine opencl_init(base_grp)
+      type(mpi_grp_t),  intent(inout) :: base_grp
+
       type(c_ptr) :: prog
       logical  :: disable, default
       integer  :: ierr, idevice, iplatform
@@ -223,8 +226,17 @@ module opencl_m
       call messages_print_stress(stdout, "OpenCL")
 
 #ifdef HAVE_OPENCL
+
       ierr = flGetPlatformIDs(iplatform, opencl%platform_id)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
+
+#ifdef HAVE_MPI
+      ! with we have to select the device so multiple GPUs in one node
+      ! are correctly distributed
+      if(idevice < 0) then
+        call select_device(idevice)
+      end if
+#endif
 
       call f90_cl_init_context(opencl%platform_id, opencl%context)
       call f90_cl_init_device(idevice, opencl%platform_id, opencl%context, opencl%device)
@@ -292,6 +304,35 @@ module opencl_m
       call messages_print_stress(stdout)
 
       POP_SUB(opencl_init)
+
+    contains
+      
+      subroutine select_device(idevice)
+        integer, intent(inout) :: idevice
+#ifdef HAVE_MPI
+        integer :: ndevices, irank
+
+        ndevices = f90_cl_get_number_of_devices(opencl%platform_id)
+       
+        idevice = mod(base_grp%rank, ndevices)
+
+        call MPI_Barrier(base_grp%comm, mpi_err)
+        call messages_write('Info: CL device distribution:')
+        call messages_info()
+        do irank = 0, base_grp%size - 1
+          if(irank == base_grp%rank) then
+            call messages_write('      MPI node ')
+            call messages_write(base_grp%rank)
+            call messages_write(' -> CL device ')
+            call messages_write(idevice)
+            call messages_info(all_nodes = .true.)
+          end if
+          call MPI_Barrier(base_grp%comm, mpi_err)
+        end do
+#endif
+
+      end subroutine select_device
+
     end subroutine opencl_init
 
     ! ------------------------------------------

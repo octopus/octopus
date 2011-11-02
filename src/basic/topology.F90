@@ -84,7 +84,7 @@
       type(mpi_grp_t),  intent(inout) :: base_grp
 
 #ifdef HAVE_MPI
-      character(len=25) :: my_name, its_name
+      character(len=256) :: my_name, its_name
       integer :: ir,  wsize, ig
 
       PUSH_SUB(topology_init)

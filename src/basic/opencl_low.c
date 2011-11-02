@@ -30,7 +30,7 @@
 #include <string.h>
 
 #define MAX_PLATFORMS 4
-#define MAX_DEVICES   8
+#define MAX_DEVICES   16
 
 int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platform_id * platform){
   cl_platform_id all_platforms[MAX_PLATFORMS];
@@ -94,6 +94,21 @@ int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platfo
   printf("\n");
 
   return status;
+}
+
+int FC_FUNC_(f90_cl_get_number_of_devices, F90_CL_GET_NUMBER_OF_DEVICES)(const cl_platform_id * platform){
+  cl_int status;
+  cl_device_id all_devices[MAX_DEVICES];
+  cl_uint ret_devices;
+
+  status = clGetDeviceIDs(*platform, CL_DEVICE_TYPE_ALL, MAX_DEVICES, all_devices, &ret_devices);
+
+  if (status != CL_SUCCESS){
+    fprintf(stderr, "\nError: clGetDeviceIDs returned error code: %d\n", status);
+    exit(1);
+  }
+
+  return ret_devices;
 }
 
 void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * platform, cl_context * context){

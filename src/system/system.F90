@@ -78,7 +78,7 @@ contains
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
 
-    call opencl_init()
+    call opencl_init(mpi_world)
     call cl_kernel_global_init()
 
     call messages_obsolete_variable('SystemName')

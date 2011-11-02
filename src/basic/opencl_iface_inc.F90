@@ -87,6 +87,16 @@
       type(c_ptr),      intent(out) :: platform_id
     end function flGetPlatformIDs
 
+
+    ! ---------------------------------------------------
+
+    integer function f90_cl_get_number_of_devices(platform_id)
+      use c_pointer_m
+
+      implicit none
+      type(c_ptr),      intent(in)   :: platform_id
+    end function f90_cl_get_number_of_devices
+    
     ! ---------------------------------------------------
 
     subroutine f90_cl_init_context(platform_id, context)

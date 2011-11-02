@@ -331,20 +331,23 @@ end subroutine messages_end
 
     call messages_reset_lines()
 
-    return
   end subroutine messages_warning
 
-
   ! ---------------------------------------------------------
-  subroutine messages_info(no_lines, iunit, verbose_limit, stress)
+
+  subroutine messages_info(no_lines, iunit, verbose_limit, stress, all_nodes)
     integer, optional, intent(in) :: no_lines
     integer, optional, intent(in) :: iunit
     logical, optional, intent(in) :: verbose_limit
     logical, optional, intent(in) :: stress
+    logical, optional, intent(in) :: all_nodes
 
     integer :: il, iu, no_lines_
 
-    if(.not. mpi_grp_is_root(mpi_world)) return
+    if(.not. mpi_grp_is_root(mpi_world) .and. .not. optional_default(all_nodes, .false.)) then 
+      call messages_reset_lines()
+      return
+    end if
 
     no_lines_ = current_line
     if(present(no_lines)) no_lines_ = no_lines
