@@ -89,19 +89,93 @@ int FC_FUNC_(f90_cl_get_number_of_devices, F90_CL_GET_NUMBER_OF_DEVICES)(const c
   return ret_devices;
 }
 
-void FC_FUNC_(f90_cl_get_device_name, F90_CL_GET_DEVICE_NAME)
-     (const cl_device_id * device, STR_F_TYPE device_name STR_ARG1){
+void FC_FUNC_(flgetdeviceinfo_str, FLGETDEVICEINFO_STR)
+     (const cl_device_id * device, const int * param_name, STR_F_TYPE param_value STR_ARG1){
   char info[2048];
   cl_int status;
 
-  status = clGetDeviceInfo(*device, CL_DEVICE_NAME, sizeof(info), info, NULL);
+  status = clGetDeviceInfo(*device, (cl_device_info) *param_name, sizeof(info), info, NULL);
 
   if (status != CL_SUCCESS){
-    fprintf(stderr, "\nError: clGetDeviceIDs returned error code: %d\n", status);
+    fprintf(stderr, "\nError: clGetDeviceInfo returned error code: %d\n", status);
     exit(1);
   }
 
-  TO_F_STR1(info, device_name);
+  TO_F_STR1(info, param_value);
+}
+
+
+void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
+     (const cl_device_id * device, const int * param_name, cl_long * param_value){
+  char info[2048];
+  cl_int status;
+  union { 
+    cl_uint  val_uint;
+    cl_bool  val_bool;
+    cl_ulong val_ulong;
+    size_t   val_size_t;
+  } rval;
+  
+  status = clGetDeviceInfo(*device, (cl_device_info) *param_name, sizeof(rval), &rval, NULL);
+  
+  if (status != CL_SUCCESS){
+    fprintf(stderr, "\nError: clGetDeviceInfo returned error code: %d\n", status);
+    exit(1);
+  }
+  
+  switch(*param_name){
+    /* return cl_uint*/
+  case CL_DEVICE_ADDRESS_BITS:
+  case CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE:
+  case CL_DEVICE_MAX_CLOCK_FREQUENCY:
+  case CL_DEVICE_MAX_COMPUTE_UNITS:
+  case CL_DEVICE_MAX_CONSTANT_ARGS:
+  case CL_DEVICE_MAX_READ_IMAGE_ARGS:
+  case CL_DEVICE_MAX_SAMPLERS:
+  case CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS:
+  case CL_DEVICE_MAX_WRITE_IMAGE_ARGS:
+  case CL_DEVICE_MEM_BASE_ADDR_ALIGN:
+  case CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE:
+  case CL_DEVICE_NATIVE_VECTOR_WIDTH_CHAR:
+  case CL_DEVICE_NATIVE_VECTOR_WIDTH_SHORT:
+  case CL_DEVICE_NATIVE_VECTOR_WIDTH_INT:
+  case CL_DEVICE_NATIVE_VECTOR_WIDTH_LONG:
+  case CL_DEVICE_NATIVE_VECTOR_WIDTH_FLOAT:
+  case CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE:
+  case CL_DEVICE_NATIVE_VECTOR_WIDTH_HALF:
+  case CL_DEVICE_PREFERRED_VECTOR_WIDTH_CHAR:
+  case CL_DEVICE_PREFERRED_VECTOR_WIDTH_SHORT:
+  case CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT:
+  case CL_DEVICE_PREFERRED_VECTOR_WIDTH_LONG:
+  case CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT:
+  case CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE:
+  case CL_DEVICE_PREFERRED_VECTOR_WIDTH_HALF:
+  case CL_DEVICE_VENDOR_ID:
+    *param_value = rval.val_uint;
+    break;
+    /* return cl_ulong */
+  case CL_DEVICE_GLOBAL_MEM_CACHE_SIZE:
+  case CL_DEVICE_GLOBAL_MEM_SIZE:
+  case CL_DEVICE_LOCAL_MEM_SIZE:
+  case CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE:
+  case CL_DEVICE_MAX_MEM_ALLOC_SIZE:
+    *param_value = rval.val_ulong;
+    break;
+  /* other */
+  default:
+    fprintf(stderr, "\nError: flGetDeviceInfo not implemented param_name.\n");
+    exit(1);
+    break;
+  }
+
+}
+void FC_FUNC_(flgetdeviceinfo_int, FLGETDEVICEINFO_INT)
+     (const cl_device_id * device, const int * param_name, cl_int * param_value){
+  cl_long param_value64;
+
+  FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)(device, param_name, &param_value64);
+  
+  *param_value = (cl_int) param_value64;
 }
 
 void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * platform, cl_context * context){

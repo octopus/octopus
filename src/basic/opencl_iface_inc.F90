@@ -164,16 +164,6 @@
 
     ! ---------------------------------------------------
 
-    subroutine f90_cl_get_device_name(device, device_name)
-      use c_pointer_m
-
-      implicit none
-      type(c_ptr),      intent(in)   :: device
-      character(len=*), intent(out)  :: device_name
-    end subroutine f90_cl_get_device_name
-
-    ! ---------------------------------------------------
-
     subroutine f90_cl_init_context(platform_id, context)
       use c_pointer_m
 
@@ -432,6 +422,40 @@
     end subroutine flEnqueueNDRangeKernel
 
   end interface
+
+  ! ---------------------------------------------------
+
+  interface flGetDeviceInfo
+    subroutine flgetdeviceinfo_str(device, param_name, param_value)
+      use c_pointer_m
+      
+      implicit none
+      type(c_ptr),      intent(in)   :: device
+      integer,          intent(in)   :: param_name
+      character(len=*), intent(out)  :: param_value
+    end subroutine flgetdeviceinfo_str
+
+    subroutine flgetdeviceinfo_int(device, param_name, param_value)
+      use c_pointer_m
+      
+      implicit none
+      type(c_ptr),      intent(in)   :: device
+      integer,          intent(in)   :: param_name
+      integer,          intent(out)  :: param_value
+    end subroutine flgetdeviceinfo_int
+
+    subroutine flgetdeviceinfo_int64(device, param_name, param_value)
+      use c_pointer_m
+      
+      implicit none
+      type(c_ptr),      intent(in)   :: device
+      integer,          intent(in)   :: param_name
+      integer(8),       intent(out)  :: param_value
+    end subroutine flgetdeviceinfo_int64
+
+  end interface flGetDeviceInfo
+  
+  ! ---------------------------------------------------
 
   !! Local Variables:
   !! mode: f90

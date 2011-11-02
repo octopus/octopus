@@ -240,9 +240,9 @@ module opencl_m
 
       do idev = 0, ndevices - 1
         call f90_cl_init_device(idev, opencl%platform_id, opencl%context, opencl%device)
-        call f90_cl_get_device_name(opencl%device, device_name)
         call messages_write('      Device ')
         call messages_write(idev)
+        call flGetDeviceInfo(opencl%device, CL_DEVICE_NAME, device_name)
         call messages_write(' : '//device_name)
         call messages_info()
       end do
@@ -338,11 +338,12 @@ module opencl_m
         call messages_info()
         do irank = 0, base_grp%size - 1
           if(irank == base_grp%rank) then
+            call f90_cl_init_device(idev, opencl%platform_id, opencl%context, opencl%device)
+            call flGetDeviceInfo(opencl%device, CL_DEVICE_NAME, device_name)
             call messages_write('      MPI node ')
             call messages_write(base_grp%rank)
             call messages_write(' -> CL device ')
             call messages_write(idevice)
-            call f90_cl_get_device_name(opencl%platform_id, idevice, device_name)
             call messages_write(' : '//device_name)
             call messages_info(all_nodes = .true.)
           end if
