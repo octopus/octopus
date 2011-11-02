@@ -232,13 +232,15 @@ module opencl_m
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
 
       ndevices = f90_cl_get_number_of_devices(opencl%platform_id)
+      call f90_cl_init_context(opencl%platform_id, opencl%context)
 
       call messages_write('Info: Available CL devices: ')
       call messages_write(ndevices)
       call messages_info()
 
       do idev = 0, ndevices - 1
-        call f90_cl_get_device_name(opencl%platform_id, idev, device_name)
+        call f90_cl_init_device(idev, opencl%platform_id, opencl%context, opencl%device)
+        call f90_cl_get_device_name(opencl%device, device_name)
         call messages_write('      Device ')
         call messages_write(idev)
         call messages_write(' : '//device_name)
@@ -253,7 +255,6 @@ module opencl_m
       end if
 #endif
 
-      call f90_cl_init_context(opencl%platform_id, opencl%context)
       call f90_cl_init_device(idevice, opencl%platform_id, opencl%context, opencl%device)
 
       if(mpi_grp_is_root(base_grp)) call f90_cl_device_info(opencl%device)

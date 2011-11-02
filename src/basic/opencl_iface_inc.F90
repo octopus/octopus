@@ -20,6 +20,7 @@
   
   ! these values are copied from OpenCL include CL/cl.h
   
+  !  Error Codes
   integer, parameter, public ::  CL_SUCCESS = 0
   integer, parameter, public ::  CL_DEVICE_NOT_FOUND = -1
   integer, parameter, public ::  CL_DEVICE_NOT_AVAILABLE = -2
@@ -68,6 +69,69 @@
   integer, parameter, public ::  CL_INVALID_MIP_LEVEL = -62
   integer, parameter, public ::  CL_INVALID_GLOBAL_WORK_SIZE = -63
 
+  ! /* cl_device_info */
+  integer, parameter, public ::  CL_DEVICE_TYPE                              = 4096 ! 0x1000
+  integer, parameter, public ::  CL_DEVICE_VENDOR_ID                         = 4097 ! 0x1001
+  integer, parameter, public ::  CL_DEVICE_MAX_COMPUTE_UNITS                 = 4098 ! 0x1002
+  integer, parameter, public ::  CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS          = 4099 ! 0x1003
+  integer, parameter, public ::  CL_DEVICE_MAX_WORK_GROUP_SIZE               = 4100 ! 0x1004
+  integer, parameter, public ::  CL_DEVICE_MAX_WORK_ITEM_SIZES               = 4101 ! 0x1005
+  integer, parameter, public ::  CL_DEVICE_PREFERRED_VECTOR_WIDTH_CHAR       = 4102 ! 0x1006
+  integer, parameter, public ::  CL_DEVICE_PREFERRED_VECTOR_WIDTH_SHORT      = 4103 ! 0x1007
+  integer, parameter, public ::  CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT        = 4104 ! 0x1008
+  integer, parameter, public ::  CL_DEVICE_PREFERRED_VECTOR_WIDTH_LONG       = 4105 ! 0x1009
+  integer, parameter, public ::  CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT      = 4106 ! 0x100A
+  integer, parameter, public ::  CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE     = 4107 ! 0x100B
+  integer, parameter, public ::  CL_DEVICE_MAX_CLOCK_FREQUENCY               = 4108 ! 0x100C
+  integer, parameter, public ::  CL_DEVICE_ADDRESS_BITS                      = 4109 ! 0x100D
+  integer, parameter, public ::  CL_DEVICE_MAX_READ_IMAGE_ARGS               = 4110 ! 0x100E
+  integer, parameter, public ::  CL_DEVICE_MAX_WRITE_IMAGE_ARGS              = 4111 ! 0x100F
+  integer, parameter, public ::  CL_DEVICE_MAX_MEM_ALLOC_SIZE                = 4112 ! 0x1010
+  integer, parameter, public ::  CL_DEVICE_IMAGE2D_MAX_WIDTH                 = 4113 ! 0x1011
+  integer, parameter, public ::  CL_DEVICE_IMAGE2D_MAX_HEIGHT                = 4114 ! 0x1012
+  integer, parameter, public ::  CL_DEVICE_IMAGE3D_MAX_WIDTH                 = 4115 ! 0x1013
+  integer, parameter, public ::  CL_DEVICE_IMAGE3D_MAX_HEIGHT                = 4116 ! 0x1014
+  integer, parameter, public ::  CL_DEVICE_IMAGE3D_MAX_DEPTH                 = 4117 ! 0x1015
+  integer, parameter, public ::  CL_DEVICE_IMAGE_SUPPORT                     = 4118 ! 0x1016
+  integer, parameter, public ::  CL_DEVICE_MAX_PARAMETER_SIZE                = 4119 ! 0x1017
+  integer, parameter, public ::  CL_DEVICE_MAX_SAMPLERS                      = 4120 ! 0x1018
+  integer, parameter, public ::  CL_DEVICE_MEM_BASE_ADDR_ALIGN               = 4121 ! 0x1019
+  integer, parameter, public ::  CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE          = 4122 ! 0x101A
+  integer, parameter, public ::  CL_DEVICE_SINGLE_FP_CONFIG                  = 4123 ! 0x101B
+  integer, parameter, public ::  CL_DEVICE_GLOBAL_MEM_CACHE_TYPE             = 4124 ! 0x101C
+  integer, parameter, public ::  CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE         = 4125 ! 0x101D
+  integer, parameter, public ::  CL_DEVICE_GLOBAL_MEM_CACHE_SIZE             = 4126 ! 0x101E
+  integer, parameter, public ::  CL_DEVICE_GLOBAL_MEM_SIZE                   = 4127 ! 0x101F
+  integer, parameter, public ::  CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE          = 4128 ! 0x1020
+  integer, parameter, public ::  CL_DEVICE_MAX_CONSTANT_ARGS                 = 4129 ! 0x1021
+  integer, parameter, public ::  CL_DEVICE_LOCAL_MEM_TYPE                    = 4130 ! 0x1022
+  integer, parameter, public ::  CL_DEVICE_LOCAL_MEM_SIZE                    = 4131 ! 0x1023
+  integer, parameter, public ::  CL_DEVICE_ERROR_CORRECTION_SUPPORT          = 4132 ! 0x1024
+  integer, parameter, public ::  CL_DEVICE_PROFILING_TIMER_RESOLUTION        = 4133 ! 0x1025
+  integer, parameter, public ::  CL_DEVICE_ENDIAN_LITTLE                     = 4134 ! 0x1026
+  integer, parameter, public ::  CL_DEVICE_AVAILABLE                         = 4135 ! 0x1027
+  integer, parameter, public ::  CL_DEVICE_COMPILER_AVAILABLE                = 4136 ! 0x1028
+  integer, parameter, public ::  CL_DEVICE_EXECUTION_CAPABILITIES            = 4137 ! 0x1029
+  integer, parameter, public ::  CL_DEVICE_QUEUE_PROPERTIES                  = 4138 ! 0x102A
+  integer, parameter, public ::  CL_DEVICE_NAME                              = 4139 ! 0x102B
+  integer, parameter, public ::  CL_DEVICE_VENDOR                            = 4140 ! 0x102C
+  integer, parameter, public ::  CL_DRIVER_VERSION                           = 4141 ! 0x102D
+  integer, parameter, public ::  CL_DEVICE_PROFILE                           = 4142 ! 0x102E
+  integer, parameter, public ::  CL_DEVICE_VERSION                           = 4143 ! 0x102F
+  integer, parameter, public ::  CL_DEVICE_EXTENSIONS                        = 4144 ! 0x1030
+  integer, parameter, public ::  CL_DEVICE_PLATFORM                          = 4145 ! 0x1031
+  !/* 0x1032 reserved for CL_DEVICE_DOUBLE_FP_CONFIG */
+  !/* 0x1033 reserved for CL_DEVICE_HALF_FP_CONFIG */
+  integer, parameter, public ::  CL_DEVICE_PREFERRED_VECTOR_WIDTH_HALF       = 4148 ! 0x1034
+  integer, parameter, public ::  CL_DEVICE_HOST_UNIFIED_MEMORY               = 4149 ! 0x1035
+  integer, parameter, public ::  CL_DEVICE_NATIVE_VECTOR_WIDTH_CHAR          = 4150 ! 0x1036
+  integer, parameter, public ::  CL_DEVICE_NATIVE_VECTOR_WIDTH_SHORT         = 4151 ! 0x1037
+  integer, parameter, public ::  CL_DEVICE_NATIVE_VECTOR_WIDTH_INT           = 4152 ! 0x1038
+  integer, parameter, public ::  CL_DEVICE_NATIVE_VECTOR_WIDTH_LONG          = 4153 ! 0x1039
+  integer, parameter, public ::  CL_DEVICE_NATIVE_VECTOR_WIDTH_FLOAT         = 4154 ! 0x103A
+  integer, parameter, public ::  CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE        = 4155 ! 0x103B
+  integer, parameter, public ::  CL_DEVICE_NATIVE_VECTOR_WIDTH_HALF          = 4156 ! 0x103C
+  integer, parameter, public ::  CL_DEVICE_OPENCL_C_VERSION                  = 4157 ! 0x103D
 
   integer, parameter, public ::        &
     CL_MEM_READ_WRITE = 1,             &
@@ -96,18 +160,17 @@
       implicit none
       type(c_ptr),      intent(in)   :: platform_id
     end function f90_cl_get_number_of_devices
-    
+
 
     ! ---------------------------------------------------
 
-    subroutine f90_cl_get_devices_name(platform_id, idevice, device_name)
+    subroutine f90_cl_get_device_name(device, device_name)
       use c_pointer_m
 
       implicit none
-      type(c_ptr),      intent(in)   :: platform_id
-      integer,          intent(in)   :: idevice
+      type(c_ptr),      intent(in)   :: device
       character(len=*), intent(out)  :: device_name
-    end subroutine f90_cl_get_devices_name
+    end subroutine f90_cl_get_device_name
 
     ! ---------------------------------------------------
 
@@ -118,7 +181,7 @@
       type(c_ptr),      intent(in)   :: platform_id
       type(c_ptr),      intent(out)  :: context
     end subroutine f90_cl_init_context
-    
+
     ! ---------------------------------------------------
 
     subroutine f90_cl_device_info(device)
@@ -163,7 +226,7 @@
       type(c_ptr), intent(inout) :: context
       type(c_ptr), intent(inout) :: device
       integer,     intent(out)   :: ierr
-      
+
     end subroutine flCreateCommandQueue
 
     ! ----------------------------------------------------
@@ -175,7 +238,7 @@
 
       type(c_ptr), intent(inout) :: command_queue
       integer,     intent(out)   :: ierr
-      
+
     end subroutine flReleaseCommandQueue
 
     ! ----------------------------------------------------
@@ -326,7 +389,7 @@
       type(c_ptr),            intent(inout) :: command_queue
       integer,                intent(out)   :: ierr
     end subroutine flFinish
-    
+
     ! ----------------------------------------------------
 
     subroutine f90_cl_set_kernel_arg_buf(kernel, index, buffer, ierr)
