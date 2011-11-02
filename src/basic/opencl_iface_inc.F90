@@ -174,16 +174,6 @@
 
     ! ---------------------------------------------------
 
-    subroutine f90_cl_device_info(device)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr),      intent(in)   :: device
-    end subroutine f90_cl_device_info
-
-    ! ---------------------------------------------------
-
     subroutine f90_cl_init_device(idevice, platform, context, device)
       use c_pointer_m
 

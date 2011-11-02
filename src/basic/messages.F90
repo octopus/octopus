@@ -97,6 +97,7 @@ module messages_m
   interface messages_write
     module procedure messages_write_float
     module procedure messages_write_integer
+    module procedure messages_write_integer8
     module procedure messages_write_str
   end interface messages_write
 
@@ -1056,6 +1057,23 @@ end subroutine messages_end
     write(message(current_line), '(a, '//trim(fmt_)//')') trim(message(current_line)), val
 
   end subroutine messages_write_float
+
+  ! ------------------------------------------------------------
+
+  subroutine messages_write_integer8(val, fmt)
+    integer(8),                 intent(in) :: val
+    character(len=*), optional, intent(in) :: fmt
+
+    character(len=10) :: number
+
+    if(present(fmt)) then
+      write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val
+    else
+      write(number, '(i10)') val
+      write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+    end if
+
+  end subroutine messages_write_integer8
 
   ! ------------------------------------------------------------
 

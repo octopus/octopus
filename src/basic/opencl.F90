@@ -257,7 +257,7 @@ module opencl_m
 
       call f90_cl_init_device(idevice, opencl%platform_id, opencl%context, opencl%device)
 
-      if(mpi_grp_is_root(base_grp)) call f90_cl_device_info(opencl%device)
+      if(mpi_grp_is_root(base_grp)) call device_info()
 
       call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
@@ -352,6 +352,70 @@ module opencl_m
 #endif
 
       end subroutine select_device
+
+      subroutine device_info()
+        integer(8) :: val 
+        character(len=256) :: val_str
+
+        call messages_new_line()
+        call messages_write('Selected CL device:')
+        call messages_new_line()
+
+        call flGetDeviceInfo(opencl%device, CL_DEVICE_VENDOR, val_str)
+        call messages_write('      Device vendor        : '//trim(val_str))
+        call messages_new_line()
+
+        call flGetDeviceInfo(opencl%device, CL_DEVICE_NAME, val_str)
+        call messages_write('      Device name          : '//trim(val_str))
+        call messages_new_line()
+
+        call flGetDeviceInfo(opencl%device, CL_DRIVER_VERSION, val_str)
+        call messages_write('      Driver version       : '//trim(val_str))
+        call messages_new_line()
+
+        call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_COMPUTE_UNITS, val)
+        call messages_write('      Compute units        :')
+        call messages_write(val)
+        call messages_new_line()
+
+        call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CLOCK_FREQUENCY, val)
+        call messages_write('      Clock frequency      :')
+        call messages_write(val)
+        call messages_write(' GHz')
+        call messages_new_line()
+
+        call flGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_SIZE, val)
+        call messages_write('      Device memory        :')
+        call messages_write(val/(1024**2))
+        call messages_write(' Mb')
+        call messages_new_line()
+
+        call flGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val)
+        call messages_write('      Device cache         :')
+        call messages_write(val/1024)
+        call messages_write(' Kb')
+        call messages_new_line()
+
+        call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, val)
+        call messages_write('      Local memory         :')
+        call messages_write(val/1024)
+        call messages_write(' Kb')
+        call messages_new_line()
+
+        call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val)
+        call messages_write('      Constant memory      :')
+        call messages_write(val/1024)
+        call messages_write(' Kb')
+        call messages_new_line()
+
+        call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val)
+        call messages_write('      Max. workgroup size  :')
+        call messages_write(val)
+        call messages_new_line()
+
+        call messages_info()
+
+      end subroutine device_info
 
     end subroutine opencl_init
 

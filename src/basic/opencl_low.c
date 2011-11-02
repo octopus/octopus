@@ -153,6 +153,7 @@ void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
   case CL_DEVICE_VENDOR_ID:
     *param_value = rval.val_uint;
     break;
+
     /* return cl_ulong */
   case CL_DEVICE_GLOBAL_MEM_CACHE_SIZE:
   case CL_DEVICE_GLOBAL_MEM_SIZE:
@@ -161,6 +162,29 @@ void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
   case CL_DEVICE_MAX_MEM_ALLOC_SIZE:
     *param_value = rval.val_ulong;
     break;
+
+    /* return size_t */
+  case CL_DEVICE_IMAGE2D_MAX_HEIGHT:
+  case CL_DEVICE_IMAGE2D_MAX_WIDTH:
+  case CL_DEVICE_IMAGE3D_MAX_DEPTH:
+  case CL_DEVICE_IMAGE3D_MAX_HEIGHT:
+  case CL_DEVICE_IMAGE3D_MAX_WIDTH:
+  case CL_DEVICE_MAX_PARAMETER_SIZE:
+  case CL_DEVICE_MAX_WORK_GROUP_SIZE:
+  case CL_DEVICE_PROFILING_TIMER_RESOLUTION:
+   *param_value = rval.val_size_t;
+    break;
+
+    /* return cl_bool */
+  case CL_DEVICE_AVAILABLE:
+  case CL_DEVICE_COMPILER_AVAILABLE:
+  case CL_DEVICE_ENDIAN_LITTLE:
+  case CL_DEVICE_ERROR_CORRECTION_SUPPORT:
+  case CL_DEVICE_HOST_UNIFIED_MEMORY:
+  case CL_DEVICE_IMAGE_SUPPORT:
+    *param_value = rval.val_bool;
+    break;
+
   /* other */
   default:
     fprintf(stderr, "\nError: flGetDeviceInfo not implemented param_name.\n");
@@ -243,58 +267,7 @@ void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const 
 
 }
 
-void FC_FUNC_(f90_cl_device_info,F90_CL_DEVICE_INFO)(const cl_device_id * device){
-  char device_string[2048];
-  cl_uint dim;
-  cl_ulong mem;
-  size_t max_workgroup_size;
-
-  /* print some info about the device */
-  clGetDeviceInfo(*device, CL_DEVICE_VENDOR, sizeof(device_string), &device_string, NULL);
-  printf("device vendor           : %s\n", device_string);
-
-  clGetDeviceInfo(*device, CL_DRIVER_VERSION, sizeof(device_string), &device_string, NULL);
-  printf("driver version          : %s\n", device_string);
-
-  clGetDeviceInfo(*device, CL_DEVICE_NAME, sizeof(device_string), &device_string, NULL);
-  printf("device name             : %s\n", device_string);
-
-  clGetDeviceInfo (*device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &dim, NULL);
-  printf("compute units           : %d\n", dim);
-
-  clGetDeviceInfo (*device, CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(cl_uint), &dim, NULL);
-  printf("maximum clock frequency : %d MHz\n", dim);
-
-  clGetDeviceInfo (*device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
-  mem /= (1024*1024); /* convert to megabytes */
-  printf("device memory           : %ld Mb\n", mem);
-
-  clGetDeviceInfo (*device, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &mem, NULL);
-  mem /= 1024; /* convert to kilobytes */
-  printf("local memory            : %ld Kb\n", mem);
-
-  clGetDeviceInfo (*device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(cl_ulong), &mem, NULL);
-  mem /= 1024; /* convert to kilobytes */
-  printf("constant memory         : %ld Kb\n", mem);
-
-  clGetDeviceInfo (*device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, sizeof(cl_ulong), &mem, NULL);
-  mem /= (1024*1024); /* convert to megabytes */
-  printf("device cache            : %ld Mb\n", mem);
-
-  clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
-  printf("cl_khr_fp64 extension   : ");
-  if(strstr(device_string, "cl_khr_fp64")) printf("yes\n");
-  else printf("no\n");
-
-  printf("cl_amd_fp64 extension   : ");
-  if(strstr(device_string, "cl_amd_fp64")) printf("yes\n");
-  else printf("no\n");
-
-  clGetDeviceInfo(*device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
-  printf("maximum workgroup size  : %zd\n", max_workgroup_size);
-
-  printf("\n");
-}
+/* -----------------------------------------------------------------------*/
 
 /* clCreateCommandQueue */
 void FC_FUNC(flcreatecommandqueue, FLCREATECOMMANDQUEUE)
@@ -302,16 +275,22 @@ void FC_FUNC(flcreatecommandqueue, FLCREATECOMMANDQUEUE)
   *command_queue = clCreateCommandQueue(*context, *device, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, ierr);
 }
 
+/* -----------------------------------------------------------------------*/
+
 /* clReleaseCommandQueue */
 void FC_FUNC(flreleasecommandqueue, FLRELEASECOMMANDQUEUE)(cl_command_queue * command_queue, int * ierr){
   *ierr = clReleaseCommandQueue(*command_queue);
 }
+
+/* -----------------------------------------------------------------------*/
 
 int FC_FUNC_(f90_cl_max_workgroup_size, F90_CL_MAX_WORKGROUP_SIZE)(cl_device_id * device){
   size_t max_workgroup_size;
   clGetDeviceInfo(*device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
   return (int) max_workgroup_size;
 }
+
+/* -----------------------------------------------------------------------*/
 
 int FC_FUNC_(f90_cl_device_local_mem_size, F90_CL_DEVICE_LOCAL_MEM_SIZE)(cl_device_id * device){
   cl_ulong mem;
@@ -320,6 +299,8 @@ int FC_FUNC_(f90_cl_device_local_mem_size, F90_CL_DEVICE_LOCAL_MEM_SIZE)(cl_devi
 
   return (int) mem;
 }
+
+/* -----------------------------------------------------------------------*/
 
 int FC_FUNC_(f90_cl_device_max_constant_buffer_size, F90_CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE)(cl_device_id * device){
   cl_ulong mem;
