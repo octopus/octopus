@@ -354,6 +354,8 @@ module opencl_m
       end subroutine select_device
 
       subroutine device_info()
+
+#ifdef HAVE_OPENCL
         integer(8) :: val 
         character(len=256) :: val_str
 
@@ -415,6 +417,7 @@ module opencl_m
 
         call messages_info()
 
+#endif
       end subroutine device_info
 
     end subroutine opencl_init
