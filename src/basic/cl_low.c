@@ -101,6 +101,13 @@ void FC_FUNC_(flgetdeviceids_getdev, FLGETDEVICEIDS_GETDEV)
 
 /* -----------------------------------------------------------------------*/
 
+void FC_FUNC_(flgetdeviceids_setdev, FLGETDEVICEIDS_SETDEV)
+     (cl_device_id * alldevices, const int * idevice, const cl_device_id * device){
+  alldevices[*idevice] = *device;
+}
+
+/* -----------------------------------------------------------------------*/
+
 void FC_FUNC_(flgetdeviceinfo_str, FLGETDEVICEINFO_STR)
      (const cl_device_id * device, const int * param_name, STR_F_TYPE param_value, int * status STR_ARG1){
   char info[2048];
@@ -205,24 +212,6 @@ void FC_FUNC_(flgetdeviceinfo_int, FLGETDEVICEINFO_INT)
   FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)(device, param_name, &param_value64, status);
   
   *param_value = (cl_int) param_value64;
-}
-
-/* -----------------------------------------------------------------------*/
-
-void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * platform, cl_context * context){
-  cl_int status;
-  cl_context_properties cps[3];
-
-  cps[0] = CL_CONTEXT_PLATFORM;
-  cps[1] = (cl_context_properties) *platform;
-  cps[2] = 0;
-  
-  *context = clCreateContextFromType(cps, CL_DEVICE_TYPE_ALL, NULL, NULL, &status);
-
-  if (status != CL_SUCCESS){
-    fprintf(stderr, "\nError: clCreateContextFromType returned error code: %d\n", status);
-    exit(1);
-  }
 }
 
 /* -----------------------------------------------------------------------*/
@@ -429,4 +418,20 @@ void FC_FUNC(flenqueuendrangekernel, FLENQUEUENDRANGEKERNEL)
   *status = clEnqueueNDRangeKernel(*cq, *kernel, *dim,
 				   NULL,  globalsizes, localsizes, 0, NULL, NULL);
 
+}
+
+/* -----------------------------------------------------------------------*/
+
+void FC_FUNC_(flcreatecontext_low, CLCREATECONTEXT_low)
+     (const cl_platform_id * platform, const int * num_devices, const cl_device_id * devices, int * errcode_ret, cl_context * context){
+  cl_int errcode_ret_cl;
+  cl_context_properties context_properties[3];
+
+  context_properties[0] = CL_CONTEXT_PLATFORM;
+  context_properties[1] = (cl_context_properties) *platform;
+  context_properties[2] = 0;
+  
+  *context = clCreateContext(context_properties, (cl_uint) *num_devices, devices, NULL, NULL, &errcode_ret_cl);
+  *errcode_ret = (int) errcode_ret_cl;
+  
 }

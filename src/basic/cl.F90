@@ -73,7 +73,7 @@ module cl_m
   use cl_types
 
   implicit none 
-  
+
   private
 
   ! the datatypes
@@ -90,6 +90,7 @@ module cl_m
   public ::                          &
     flGetPlatformIDs,                &
     flGetPlatformInfo,               &
+    flCreateContext,                 &
     flEnqueueNDRangeKernel,          &
     flGetDeviceInfo,                 &
     flGetDeviceIDs,                  &
@@ -324,7 +325,6 @@ module cl_m
 
   ! ---------------------------------------------------
 
-
   interface flGetPlatformIDs
 
     subroutine flgetplatformids_num(num_platforms, status)
@@ -342,7 +342,7 @@ module cl_m
   ! ---------------------------------------------------
 
   interface
-    
+
     subroutine flGetPlatformInfo(platform, param_name, param_value, status)
       use cl_types
 
@@ -389,7 +389,7 @@ module cl_m
 
     subroutine flgetdeviceinfo_int(device, param_name, param_value, status)
       use cl_types
-      
+
       implicit none
       type(cl_device_id), intent(in)   :: device
       integer,            intent(in)   :: param_name
@@ -410,133 +410,183 @@ module cl_m
     module procedure flgetdeviceinfo_logical
 
   end interface flGetDeviceInfo
-  
+
   ! ---------------------------------------------------
 
-  contains
+contains
 
-    subroutine flgetplatformids_list(num_entries, platforms, num_platforms, status)
-      integer,              intent(out)  :: num_entries
-      type(cl_platform_id), intent(out)  :: platforms(:)
-      integer,              intent(out)  :: num_platforms
-      integer,              intent(out)  :: status
-
-#ifdef HAVE_OPENCL
-      integer                         :: iplatform
-      type(cl_platform_id), allocatable :: plat(:)
-
-      interface
-        subroutine flgetplatformids_listall(num_entries, platforms, num_platforms, status)
-          use cl_types
-
-          implicit none
-
-          integer,              intent(out)  :: num_entries
-          type(cl_platform_id), intent(out)  :: platforms
-          integer,              intent(out)  :: num_platforms
-          integer,              intent(out)  :: status
-        end subroutine flgetplatformids_listall
-
-        subroutine flgetplatformids_getplat(allplatforms, iplatform, platform)
-          use cl_types
-
-          implicit none
-
-          type(cl_platform_id), intent(in)   :: allplatforms
-          integer,              intent(in)   :: iplatform
-          type(cl_platform_id), intent(out)  :: platform
-        end subroutine flgetplatformids_getplat
-      end interface
-
-      ! since our cl_platform_id type might be longer than the C
-      ! cl_platform_id type we need to get all the values in an array
-      ! and the copy them explicitly to the return array
-
-      allocate(plat(1:num_entries))
-
-      call flgetplatformids_listall(num_entries, plat(1), num_platforms, status)
-
-      do iplatform = 1, num_platforms
-        call flgetplatformids_getplat(plat(1), iplatform - 1, platforms(iplatform))
-      end do
-
-      deallocate(plat)
-#endif
-    end subroutine flgetplatformids_list
-
-    ! ----------------------------------------------------------
-
-    subroutine flgetdeviceids_list(platform, device_type, num_entries, devices, num_devices, status)
-      type(cl_platform_id), intent(in)   :: platform
-      integer,              intent(in)   :: device_type
-      integer,              intent(out)  :: num_entries
-      type(cl_device_id),   intent(out)  :: devices(:)
-      integer,              intent(out)  :: num_devices
-      integer,              intent(out)  :: status
+  subroutine flgetplatformids_list(num_entries, platforms, num_platforms, status)
+    integer,              intent(out)  :: num_entries
+    type(cl_platform_id), intent(out)  :: platforms(:)
+    integer,              intent(out)  :: num_platforms
+    integer,              intent(out)  :: status
 
 #ifdef HAVE_OPENCL
-      integer                         :: idevice
-      type(cl_device_id), allocatable :: dev(:)
+    integer                         :: iplatform
+    type(cl_platform_id), allocatable :: plat(:)
 
-      interface
-        subroutine flgetdeviceids_listall(platform, device_type, num_entries, devices, num_devices, status)
-          use cl_types
+    interface
+      subroutine flgetplatformids_listall(num_entries, platforms, num_platforms, status)
+        use cl_types
 
-          implicit none
+        implicit none
 
-          type(cl_platform_id), intent(in)   :: platform
-          integer,              intent(in)   :: device_type
-          integer,              intent(out)  :: num_entries
-          type(cl_device_id),   intent(out)  :: devices
-          integer,              intent(out)  :: num_devices
-          integer,              intent(out)  :: status
-        end subroutine flgetdeviceids_listall
+        integer,              intent(out)  :: num_entries
+        type(cl_platform_id), intent(out)  :: platforms
+        integer,              intent(out)  :: num_platforms
+        integer,              intent(out)  :: status
+      end subroutine flgetplatformids_listall
 
-        subroutine flgetdeviceids_getdev(alldevices, idevice, device)
-          use cl_types
+      subroutine flgetplatformids_getplat(allplatforms, iplatform, platform)
+        use cl_types
 
-          implicit none
+        implicit none
 
-          type(cl_device_id),   intent(in)   :: alldevices
-          integer,              intent(in)   :: idevice
-          type(cl_device_id),   intent(out)  :: device
-        end subroutine flgetdeviceids_getdev
-      end interface
+        type(cl_platform_id), intent(in)   :: allplatforms
+        integer,              intent(in)   :: iplatform
+        type(cl_platform_id), intent(out)  :: platform
+      end subroutine flgetplatformids_getplat
+    end interface
 
-      ! since our cl_device_id type might be longer than the C
-      ! cl_device_id type we need to get all the values in an array
-      ! and the copy them explicitly to the return array
+    ! since our cl_platform_id type might be longer than the C
+    ! cl_platform_id type we need to get all the values in an array
+    ! and the copy them explicitly to the return array
 
-      allocate(dev(1:num_entries))
+    allocate(plat(1:num_entries))
 
-      call flgetdeviceids_listall(platform, device_type, num_entries, dev(1), num_devices, status)
+    call flgetplatformids_listall(num_entries, plat(1), num_platforms, status)
 
-      do idevice = 1, num_devices
-        call flgetdeviceids_getdev(dev(1), idevice - 1, devices(idevice))
-      end do
+    do iplatform = 1, num_platforms
+      call flgetplatformids_getplat(plat(1), iplatform - 1, platforms(iplatform))
+    end do
 
-      deallocate(dev)
+    deallocate(plat)
 #endif
-    end subroutine flgetdeviceids_list
+  end subroutine flgetplatformids_list
 
-    ! ----------------------------------------------------------
+  ! ----------------------------------------------------------
+
+  subroutine flgetdeviceids_list(platform, device_type, num_entries, devices, num_devices, status)
+    type(cl_platform_id), intent(in)   :: platform
+    integer,              intent(in)   :: device_type
+    integer,              intent(out)  :: num_entries
+    type(cl_device_id),   intent(out)  :: devices(:)
+    integer,              intent(out)  :: num_devices
+    integer,              intent(out)  :: status
+
+#ifdef HAVE_OPENCL
+    integer                         :: idevice
+    type(cl_device_id), allocatable :: dev(:)
+
+    interface
+      subroutine flgetdeviceids_listall(platform, device_type, num_entries, devices, num_devices, status)
+        use cl_types
+
+        implicit none
+
+        type(cl_platform_id), intent(in)   :: platform
+        integer,              intent(in)   :: device_type
+        integer,              intent(out)  :: num_entries
+        type(cl_device_id),   intent(out)  :: devices
+        integer,              intent(out)  :: num_devices
+        integer,              intent(out)  :: status
+      end subroutine flgetdeviceids_listall
+
+      subroutine flgetdeviceids_getdev(alldevices, idevice, device)
+        use cl_types
+
+        implicit none
+
+        type(cl_device_id),   intent(in)   :: alldevices
+        integer,              intent(in)   :: idevice
+        type(cl_device_id),   intent(out)  :: device
+      end subroutine flgetdeviceids_getdev
+    end interface
+
+    ! since our cl_device_id type might be longer than the C
+    ! cl_device_id type we need to get all the values in an array
+    ! and the copy them explicitly to the return array
+
+    allocate(dev(1:num_entries))
+
+    call flgetdeviceids_listall(platform, device_type, num_entries, dev(1), num_devices, status)
+
+    do idevice = 1, num_devices
+      call flgetdeviceids_getdev(dev(1), idevice - 1, devices(idevice))
+    end do
+
+    deallocate(dev)
+#endif
+  end subroutine flgetdeviceids_list
+
+  ! ----------------------------------------------------------
+
+  subroutine flgetdeviceinfo_logical(device, param_name, param_value, status)
+    type(cl_device_id), intent(in)   :: device
+    integer,            intent(in)   :: param_name
+    logical,            intent(out)  :: param_value
+    integer,            intent(out)  :: status
+
+    integer(8) :: param_value_64
+
+#ifdef HAVE_OPENCL
+    call flgetdeviceinfo_int64(device, param_name, param_value_64, status)
+#endif
+
+    param_value = param_value_64 /= 0
+
+  end subroutine flgetdeviceinfo_logical
+
+  ! ---------------------------------------------------------
+
+  type(cl_context) function flCreateContext(platform, num_devices, devices, errcode_ret) result(context)
+    type(cl_platform_id), intent(in)   :: platform
+    integer,              intent(in)   :: num_devices
+    type(cl_device_id),   intent(in)   :: devices(:)
+    integer,              intent(out)  :: errcode_ret
+
+    interface
+      subroutine flcreatecontext_low(platform, num_devices, devices, errcode_ret, context)
+        use cl_types
+
+        implicit none
+
+        type(cl_platform_id), intent(in)   :: platform
+        integer,              intent(in)   :: num_devices
+        type(cl_device_id),   intent(in)   :: devices
+        integer,              intent(out)  :: errcode_ret
+        type(cl_context),     intent(out)  :: context
+      end subroutine flcreatecontext_low
+
+      subroutine flgetdeviceids_setdev(alldevices, idevice, device)
+        use cl_types
+
+        implicit none
+
+        type(cl_device_id),   intent(out)   :: alldevices
+        integer,              intent(in)   :: idevice
+        type(cl_device_id),   intent(in)  :: device
+      end subroutine flgetdeviceids_setdev
+    end interface
+
+    integer :: idev
+    type(cl_device_id), allocatable :: devs(:)
     
-    subroutine flgetdeviceinfo_logical(device, param_name, param_value, status)
-      type(cl_device_id), intent(in)   :: device
-      integer,            intent(in)   :: param_name
-      logical,            intent(out)  :: param_value
-      integer,            intent(out)  :: status
+    allocate(devs(1:num_devices))
 
-      integer(8) :: param_value_64
-
+    do idev = 1, num_devices
 #ifdef HAVE_OPENCL
-      call flgetdeviceinfo_int64(device, param_name, param_value_64, status)
+      call flgetdeviceids_setdev(devs(1), idev - 1, devices(idev))
+#endif
+    end do
+    
+#ifdef HAVE_OPENCL
+    call flcreatecontext_low(platform, num_devices, devs(1), errcode_ret, context)
 #endif
 
-      param_value = param_value_64 /= 0
+    deallocate(devs)
 
-    end subroutine flgetdeviceinfo_logical
-
+  end function flCreateContext
 
 end module cl_m
 

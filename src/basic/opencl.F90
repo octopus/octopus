@@ -153,7 +153,7 @@ module opencl_m
       type(cl_program) :: prog
       logical  :: disable, default
       integer  :: device_type
-      integer  :: ierr, idevice, iplatform, ndevices, idev, cl_status, ret_devices, nplatforms, iplat
+      integer  :: idevice, iplatform, ndevices, idev, cl_status, ret_devices, nplatforms, iplat
       character(len=256) :: device_name
       type(cl_platform_id), allocatable :: allplatforms(:)
       type(cl_device_id), allocatable :: alldevices(:)
@@ -230,12 +230,12 @@ module opencl_m
 #ifdef HAVE_OPENCL
 
       call flGetPlatformIDs(nplatforms, cl_status)
-      if(cl_status /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
+      if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
  
       SAFE_ALLOCATE(allplatforms(1:nplatforms))
 
       call flGetPlatformIDs(nplatforms, allplatforms, iplat, cl_status)
-      if(cl_status /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
+      if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
 
       call messages_write('Info: Available CL platforms: ')
       call messages_write(nplatforms)
@@ -256,7 +256,6 @@ module opencl_m
       SAFE_DEALLOCATE_A(allplatforms)
 
       call flGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, cl_status)
-      call f90_cl_init_context(opencl%platform_id, opencl%context)
 
       call messages_write('Info: Available CL devices: ')
       call messages_write(ndevices)
@@ -307,12 +306,16 @@ module opencl_m
 
       opencl%device = alldevices(idevice + 1)
 
-      SAFE_DEALLOCATE_A(alldevices)
-
       if(mpi_grp_is_root(base_grp)) call device_info()
 
-      call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
+      ! create the context
+      opencl%context = flCreateContext(opencl%platform_id, 1, alldevices(idevice + 1:), cl_status)
+      if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateContext")
+
+      SAFE_DEALLOCATE_A(alldevices)
+
+      call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, cl_status)
+      if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateCommandQueue")
       
       call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, opencl%max_workgroup_size, cl_status)
       call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, opencl%local_memory_size, cl_status)
