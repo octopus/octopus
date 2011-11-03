@@ -314,7 +314,7 @@ module opencl_m
 
       SAFE_DEALLOCATE_A(alldevices)
 
-      call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, cl_status)
+      opencl%command_queue = flCreateCommandQueue(opencl%context, opencl%device, CL_QUEUE_PROFILING_ENABLE, cl_status)
       if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateCommandQueue")
       
       call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, opencl%max_workgroup_size, cl_status)
@@ -851,6 +851,10 @@ module opencl_m
       case(CL_INVALID_BUFFER_SIZE); errcode = 'CL_INVALID_BUFFER_SIZE '
       case(CL_INVALID_MIP_LEVEL); errcode = 'CL_INVALID_MIP_LEVEL '
       case(CL_INVALID_GLOBAL_WORK_SIZE); errcode = 'CL_INVALID_GLOBAL_WORK_SIZE '
+      case(CL_PLATFORM_NOT_FOUND_KHR); errcode = 'CL_PLATFORM_NOT_FOUND_KHR'
+      case default
+        write(errcode, '(i10)') ierr
+        errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
       end select
 
       message(1) = 'Error: OpenCL '//trim(name)//' '//trim(errcode)

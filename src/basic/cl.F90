@@ -91,12 +91,12 @@ module cl_m
     flGetPlatformIDs,                &
     flGetPlatformInfo,               &
     flCreateContext,                 &
-    flEnqueueNDRangeKernel,          &
-    flGetDeviceInfo,                 &
-    flGetDeviceIDs,                  &
     flReleaseContext,                &
     flCreateCommandQueue,            &
     flReleaseCommandQueue,           &
+    flGetDeviceInfo,                 &
+    flGetDeviceIDs,                  &
+    flEnqueueNDRangeKernel,          &
     flFinish,                        &
     f90_cl_init_context,             &
     f90_cl_init_device,              &
@@ -145,20 +145,6 @@ module cl_m
       type(cl_context), intent(inout) :: context
       integer,          intent(out)   :: status
     end subroutine flReleaseContext
-
-    ! ----------------------------------------------------
-
-    subroutine flCreateCommandQueue(command_queue, context, device, status)
-      use cl_types
-
-      implicit none
-
-      type(cl_command_queue), intent(inout) :: command_queue
-      type(cl_context),       intent(inout) :: context
-      type(cl_device_id),     intent(inout) :: device
-      integer,                intent(out)   :: status
-
-    end subroutine flCreateCommandQueue
 
     ! ----------------------------------------------------
 
@@ -587,6 +573,32 @@ contains
     deallocate(devs)
 
   end function flCreateContext
+
+  type(cl_command_queue) function flCreateCommandQueue(context, device, properties, errcode_ret) result(command_queue)
+      type(cl_context),       intent(inout) :: context
+      type(cl_device_id),     intent(inout) :: device
+      integer,                intent(in)    :: properties
+      integer,                intent(out)   :: errcode_ret
+
+    interface
+      subroutine flcreatecommandqueue_low(context, device, properties, errcode_ret, command_queue)
+        use cl_types
+        
+        implicit none
+        
+        type(cl_context),       intent(inout) :: context
+        type(cl_device_id),     intent(inout) :: device
+        integer,                intent(in)    :: properties
+        integer,                intent(out)   :: errcode_ret
+        type(cl_command_queue), intent(inout) :: command_queue
+      end subroutine flcreatecommandqueue_low
+    end interface
+
+#ifdef HAVE_OPENCL
+    call flcreatecommandqueue_low(context, device, properties, errcode_ret, command_queue)
+#endif
+
+  end function flCreateCommandQueue
 
 end module cl_m
 

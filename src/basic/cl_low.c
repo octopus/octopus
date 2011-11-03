@@ -217,9 +217,11 @@ void FC_FUNC_(flgetdeviceinfo_int, FLGETDEVICEINFO_INT)
 /* -----------------------------------------------------------------------*/
 
 /* clCreateCommandQueue */
-void FC_FUNC(flcreatecommandqueue, FLCREATECOMMANDQUEUE)
-     (cl_command_queue * command_queue, cl_context * context, cl_device_id * device, int * status){
-  *command_queue = clCreateCommandQueue(*context, *device, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, status);
+void FC_FUNC_(flcreatecommandqueue_low, FLCREATECOMMANDQUEUE_LOW)
+     (cl_context * context, cl_device_id * device, const int * properties, int * status, cl_command_queue * command_queue){
+  cl_int status_cl;
+  *command_queue = clCreateCommandQueue(*context, *device, (cl_command_queue_properties) *properties, &status_cl);
+  *status = (int) status_cl;
 }
 
 /* -----------------------------------------------------------------------*/
@@ -343,6 +345,8 @@ int FC_FUNC_(f90_cl_kernel_wgroup_size, F90_CL_KERNEL_WGROUP_SIZE)(cl_kernel * k
   return (int) workgroup_size;
 }
 
+/* -----------------------------------------------------------------------*/
+
 void FC_FUNC_(f90_cl_create_buffer, F90_CL_CREATE_BUFFER)
      (cl_mem * buffer, cl_context * context, const int * flags, const size_t * size, int * status){
 
@@ -422,7 +426,7 @@ void FC_FUNC(flenqueuendrangekernel, FLENQUEUENDRANGEKERNEL)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flcreatecontext_low, CLCREATECONTEXT_low)
+void FC_FUNC_(flcreatecontext_low, CLCREATECONTEXT_LOW)
      (const cl_platform_id * platform, const int * num_devices, const cl_device_id * devices, int * errcode_ret, cl_context * context){
   cl_int errcode_ret_cl;
   cl_context_properties context_properties[3];
