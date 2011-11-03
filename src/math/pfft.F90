@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: pfft.F90 7027 2011-02-08 22:47:20Z pablogr $
+!! $Id$
 
 #include "global.h"
 

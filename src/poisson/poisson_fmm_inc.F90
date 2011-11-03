@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch, J. Alberdi, P. Garcia Risueño
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: poisson_fmm.F90 7XXX 2011-01-15 22:19:34Z pgarciarisueno and jalberdi$
+!! $Id$
 
 ! ---------------------------------------------------------
 subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
