@@ -150,8 +150,10 @@ module opencl_m
 
       type(cl_program) :: prog
       logical  :: disable, default
-      integer  :: ierr, idevice, iplatform, ndevices, idev
+      integer  :: device_type
+      integer  :: ierr, idevice, iplatform, ndevices, idev, cl_status, ret_devices
       character(len=256) :: device_name
+      type(cl_device_id), allocatable :: alldevices(:)
 
       PUSH_SUB(opencl_init)
       
@@ -227,31 +229,59 @@ module opencl_m
       ierr = flGetPlatformIDs(iplatform, opencl%platform_id)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
 
-      ndevices = f90_cl_get_number_of_devices(opencl%platform_id)
+      call flGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, cl_status)
       call f90_cl_init_context(opencl%platform_id, opencl%context)
 
       call messages_write('Info: Available CL devices: ')
       call messages_write(ndevices)
       call messages_info()
 
-      do idev = 0, ndevices - 1
-        call f90_cl_init_device(idev, opencl%platform_id, opencl%context, opencl%device)
+      SAFE_ALLOCATE(alldevices(1:ndevices))
+
+      ! list all devices
+
+      call flGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, alldevices, ret_devices, cl_status)
+
+      do idev = 1, ndevices
         call messages_write('      Device ')
         call messages_write(idev)
-        call flGetDeviceInfo(opencl%device, CL_DEVICE_NAME, device_name)
+        call flGetDeviceInfo(alldevices(idev), CL_DEVICE_NAME, device_name)
         call messages_write(' : '//device_name)
         call messages_info()
       end do
 
-#ifdef HAVE_MPI
-      ! with we have to select the device so multiple GPUs in one node
-      ! are correctly distributed
-      if(idevice < 0) then
-        call select_device(idevice)
-      end if
-#endif
+      select case(idevice)
+        case(-1)
+          device_type = CL_DEVICE_TYPE_GPU
+        case(-2)
+          device_type = CL_DEVICE_TYPE_CPU
+        case(-3)
+          device_type = CL_DEVICE_TYPE_ACCELERATOR
+        case(-4)
+          device_type = CL_DEVICE_TYPE_DEFAULT
+        case default
+          device_type = CL_DEVICE_TYPE_ALL
+      end select
 
-      call f90_cl_init_device(idevice, opencl%platform_id, opencl%context, opencl%device)
+      ! now get a list of the selected type
+      call flGetDeviceIDs(opencl%platform_id, device_type, ndevices, alldevices, ret_devices, cl_status)
+
+      ! the number of devices can be smaller
+      ndevices = ret_devices
+
+      if(idevice < 0) then
+        if(base_grp%size > 1) then
+          ! with MPI we have to select the device so multiple GPUs in one
+          ! node are correctly distributed
+          call select_device(idevice)
+        else
+          idevice = 0
+        end if
+      end if
+
+      opencl%device = alldevices(idevice + 1)
+
+      SAFE_DEALLOCATE_A(alldevices)
 
       if(mpi_grp_is_root(base_grp)) call device_info()
 
@@ -334,8 +364,7 @@ module opencl_m
         call messages_info()
         do irank = 0, base_grp%size - 1
           if(irank == base_grp%rank) then
-            call f90_cl_init_device(idev, opencl%platform_id, opencl%context, opencl%device)
-            call flGetDeviceInfo(opencl%device, CL_DEVICE_NAME, device_name)
+            call flGetDeviceInfo(alldevices(idevice + 1), CL_DEVICE_NAME, device_name)
             call messages_write('      MPI node ')
             call messages_write(base_grp%rank)
             call messages_write(' -> CL device ')
@@ -815,7 +844,6 @@ module opencl_m
       has = index(all_extensions, extension) /= 0
 
     end function f90_cl_device_has_extension
-
 
 #include "undef.F90"
 #include "real.F90"

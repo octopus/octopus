@@ -91,11 +91,11 @@ module cl_m
     flGetPlatformIDs,                &
     flEnqueueNDRangeKernel,          &
     flGetDeviceInfo,                 &
+    flGetDeviceIDs,                  &
     flReleaseContext,                &
     flCreateCommandQueue,            &
     flReleaseCommandQueue,           &
     flFinish,                        &
-    f90_cl_get_number_of_devices,    &
     f90_cl_init_context,             &
     f90_cl_init_device,              &
     f90_cl_create_program_from_file, &
@@ -119,17 +119,6 @@ module cl_m
       integer,              intent(in)  :: iplatform
       type(cl_platform_id), intent(out) :: platform_id
     end function flGetPlatformIDs
-
-
-    ! ---------------------------------------------------
-
-    integer function f90_cl_get_number_of_devices(platform_id)
-      use cl_types
-
-      implicit none
-      type(cl_platform_id), intent(in)   :: platform_id
-    end function f90_cl_get_number_of_devices
-
 
     ! ---------------------------------------------------
 
@@ -343,6 +332,24 @@ module cl_m
 
   ! ---------------------------------------------------
 
+  interface flGetDeviceIDs
+
+    subroutine flgetdeviceids_num(platform, device_type, num_devices, status)
+      use cl_types
+
+      implicit none
+      type(cl_platform_id), intent(in)   :: platform
+      integer,              intent(in)   :: device_type
+      integer,              intent(out)  :: num_devices
+      integer,              intent(out)  :: status
+    end subroutine flgetdeviceids_num
+
+    module procedure flgetdeviceids_list
+
+  end interface flGetDeviceIDs
+
+  ! ---------------------------------------------------
+
   interface flGetDeviceInfo
 
     subroutine flgetdeviceinfo_str(device, param_name, param_value)
@@ -380,6 +387,61 @@ module cl_m
 
   contains
 
+    subroutine flgetdeviceids_list(platform, device_type, num_entries, devices, num_devices, status)
+      type(cl_platform_id), intent(in)   :: platform
+      integer,              intent(in)   :: device_type
+      integer,              intent(out)  :: num_entries
+      type(cl_device_id),   intent(out)  :: devices(:)
+      integer,              intent(out)  :: num_devices
+      integer,              intent(out)  :: status
+
+#ifdef HAVE_OPENCL
+      integer                         :: idevice
+      type(cl_device_id), allocatable :: dev(:)
+
+      interface
+        subroutine flgetdeviceids_listall(platform, device_type, num_entries, devices, num_devices, status)
+          use cl_types
+
+          implicit none
+
+          type(cl_platform_id), intent(in)   :: platform
+          integer,              intent(in)   :: device_type
+          integer,              intent(out)  :: num_entries
+          type(cl_device_id),   intent(out)  :: devices
+          integer,              intent(out)  :: num_devices
+          integer,              intent(out)  :: status
+        end subroutine flgetdeviceids_listall
+
+        subroutine flgetdeviceids_getdev(alldevices, idevice, device)
+          use cl_types
+
+          implicit none
+
+          type(cl_device_id),   intent(in)   :: alldevices
+          integer,              intent(in)   :: idevice
+          type(cl_device_id),   intent(out)  :: device
+        end subroutine flgetdeviceids_getdev
+      end interface
+
+      ! since our cl_device_id type might be longer than the C
+      ! cl_device_id type we need to get all the values in an array
+      ! and the copy them explicitly to the return array
+
+      allocate(dev(1:num_entries))
+
+      call flgetdeviceids_listall(platform, device_type, num_entries, dev(1), num_devices, status)
+
+      do idevice = 1, num_devices
+        call flgetdeviceids_getdev(dev(1), idevice - 1, devices(idevice))
+      end do
+
+      deallocate(dev)
+#endif
+    end subroutine flgetdeviceids_list
+
+    ! ----------------------------------------------------------
+    
     subroutine flgetdeviceinfo_logical(device, param_name, param_value)
       type(cl_device_id), intent(in)   :: device
       integer,            intent(in)   :: param_name

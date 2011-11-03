@@ -132,6 +132,13 @@
   integer, parameter, public ::  CL_DEVICE_NATIVE_VECTOR_WIDTH_HALF          = 4156 ! 0x103C
   integer, parameter, public ::  CL_DEVICE_OPENCL_C_VERSION                  = 4157 ! 0x103D
 
+  !/* cl_device_type - bitfield */
+  integer, parameter, public :: CL_DEVICE_TYPE_DEFAULT     =  1 ! (1 << 0)
+  integer, parameter, public :: CL_DEVICE_TYPE_CPU         =  2 ! (1 << 1)
+  integer, parameter, public :: CL_DEVICE_TYPE_GPU         =  4 ! (1 << 2)
+  integer, parameter, public :: CL_DEVICE_TYPE_ACCELERATOR =  8 ! (1 << 3)
+  integer, parameter, public :: CL_DEVICE_TYPE_ALL         = -1 ! 0xFFFFFFFF
+
   integer, parameter, public ::        &
     CL_MEM_READ_WRITE = 1,             &
     CL_MEM_WRITE_ONLY = 2,             &

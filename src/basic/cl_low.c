@@ -32,7 +32,6 @@
 #include <string_f.h>
 
 #define MAX_PLATFORMS 4
-#define MAX_DEVICES   16
 
 int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platform_id * platform){
   cl_platform_id all_platforms[MAX_PLATFORMS];
@@ -74,20 +73,36 @@ int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platfo
   return status;
 }
 
-int FC_FUNC_(f90_cl_get_number_of_devices, F90_CL_GET_NUMBER_OF_DEVICES)(const cl_platform_id * platform){
-  cl_int status;
-  cl_device_id all_devices[MAX_DEVICES];
-  cl_uint ret_devices;
+/* -----------------------------------------------------------------------*/
 
-  status = clGetDeviceIDs(*platform, CL_DEVICE_TYPE_ALL, MAX_DEVICES, all_devices, &ret_devices);
+void FC_FUNC_(flgetdeviceids_num, FLGETDEVICEIDS_NUM)
+     (const cl_platform_id * platform, const int * device_type, int * num_devices, int * status){
+  cl_uint unum_devices;
 
-  if (status != CL_SUCCESS){
-    fprintf(stderr, "\nError: clGetDeviceIDs returned error code: %d\n", status);
-    exit(1);
-  }
-
-  return ret_devices;
+  *status = (int) clGetDeviceIDs(*platform, *device_type, 0, NULL, &unum_devices);
+  *num_devices = (int) unum_devices;
 }
+
+/* -----------------------------------------------------------------------*/
+
+void FC_FUNC_(flgetdeviceids_listall, FLGETDEVICEIDS_LISTALL)
+     (const cl_platform_id * platform, const int * device_type, const int * num_entries, cl_device_id * devices, 
+      int * num_devices, int * status){
+
+  cl_uint unum_devices;
+
+  *status = (int) clGetDeviceIDs(*platform, *device_type, (cl_uint) *num_entries, devices, &unum_devices);
+  *num_devices = (int) unum_devices;
+}
+
+/* -----------------------------------------------------------------------*/
+
+void FC_FUNC_(flgetdeviceids_getdev, FLGETDEVICEIDS_GETDEV)
+     (const cl_device_id * alldevices, const int * idevice, cl_device_id * device){
+  *device = alldevices[*idevice];
+}
+
+/* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(flgetdeviceinfo_str, FLGETDEVICEINFO_STR)
      (const cl_device_id * device, const int * param_name, STR_F_TYPE param_value STR_ARG1){
@@ -104,10 +119,10 @@ void FC_FUNC_(flgetdeviceinfo_str, FLGETDEVICEINFO_STR)
   TO_F_STR1(info, param_value);
 }
 
+/* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
      (const cl_device_id * device, const int * param_name, cl_long * param_value){
-  char info[2048];
   cl_int status;
   union { 
     cl_uint  val_uint;
@@ -193,6 +208,9 @@ void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
   }
 
 }
+
+/* -----------------------------------------------------------------------*/
+
 void FC_FUNC_(flgetdeviceinfo_int, FLGETDEVICEINFO_INT)
      (const cl_device_id * device, const int * param_name, cl_int * param_value){
   cl_long param_value64;
@@ -201,6 +219,8 @@ void FC_FUNC_(flgetdeviceinfo_int, FLGETDEVICEINFO_INT)
   
   *param_value = (cl_int) param_value64;
 }
+
+/* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * platform, cl_context * context){
   cl_int status;
@@ -216,55 +236,6 @@ void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * pl
     fprintf(stderr, "\nError: clCreateContextFromType returned error code: %d\n", status);
     exit(1);
   }
-}
-
-void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const cl_platform_id * platform, const cl_context * context, cl_device_id * device){
-  size_t ParamDataBytes;
-  cl_device_id * Devices;
-  cl_device_type device_type;
-  cl_uint num_devices;
-
-  if(*idevice >= 0){
-
-    clGetContextInfo(*context, CL_CONTEXT_DEVICES, 0 , NULL, &ParamDataBytes);
-    Devices = (cl_device_id*) malloc(ParamDataBytes);
-    
-    clGetContextInfo(*context, CL_CONTEXT_DEVICES, ParamDataBytes, Devices, NULL);
-    
-    assert(sizeof(cl_device_id) == sizeof(void *));
-    
-    *device = Devices[*idevice];
-    
-    free(Devices);
-
-  } else {
-
-    device_type = CL_DEVICE_TYPE_DEFAULT;
-
-    switch(*idevice){
-      /* These values come from opencl.F90 */
-    case -1:
-      device_type = CL_DEVICE_TYPE_GPU;
-      break;
-    case -2:
-      device_type = CL_DEVICE_TYPE_CPU;
-      break;
-    case -3:
-      device_type = CL_DEVICE_TYPE_ACCELERATOR;
-      break;
-    case -4:
-      device_type = CL_DEVICE_TYPE_DEFAULT;
-      break;
-    }
-  
-    clGetDeviceIDs(*platform, device_type, 1, device, &num_devices);
-
-    /* Check if there were any devices of the type, otherwise just get the default.*/
-    if(num_devices == 0) {
-      clGetDeviceIDs(*platform, CL_DEVICE_TYPE_DEFAULT, 1, device, NULL);
-    }
-  }
-
 }
 
 /* -----------------------------------------------------------------------*/
@@ -287,6 +258,8 @@ void FC_FUNC(flreleasecommandqueue, FLRELEASECOMMANDQUEUE)(cl_command_queue * co
 void FC_FUNC(flreleasecontext, FLRELEASECONTEXT)(cl_context * context){
   clReleaseContext(*context);
 }
+
+/* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(f90_cl_create_program_from_file, F90_CL_CREATE_PROGRAM_FROM_FILE)
      (cl_program * program, cl_context * context, STR_F_TYPE file_name_f STR_ARG1){
@@ -330,6 +303,8 @@ void FC_FUNC_(f90_cl_create_program_from_file, F90_CL_CREATE_PROGRAM_FROM_FILE)
 
 }
 
+/* -----------------------------------------------------------------------*/
+
 void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
      (cl_program * program, cl_context * context, cl_device_id * device, STR_F_TYPE flags_f STR_ARG1){
   char * flags;
@@ -356,11 +331,15 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
   free(flags);
 }
 
+/* -----------------------------------------------------------------------*/
+
 void FC_FUNC_(f90_cl_release_program, F90_CL_RELEASE_PROGRAM)
      (cl_program * program, int * ierr){
 
   *ierr = clReleaseProgram(*program);
 }
+
+/* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(f90_cl_create_kernel, F90_CL_CREATE_KERNEL)
      (cl_kernel * kernel, cl_program * program, STR_F_TYPE kernel_name_f, int * ierr STR_ARG1){
@@ -373,9 +352,14 @@ void FC_FUNC_(f90_cl_create_kernel, F90_CL_CREATE_KERNEL)
   free(kernel_name);
 }
 
+
+/* -----------------------------------------------------------------------*/
+
 void FC_FUNC_(f90_cl_release_kernel, F90_CL_RELEASE_KERNEL)(cl_kernel * kernel, int * ierr){
   *ierr = clReleaseKernel(*kernel);
 }
+
+/* -----------------------------------------------------------------------*/
 
 int FC_FUNC_(f90_cl_kernel_wgroup_size, F90_CL_KERNEL_WGROUP_SIZE)(cl_kernel * kernel, cl_device_id * device){
   size_t workgroup_size;
@@ -390,11 +374,14 @@ void FC_FUNC_(f90_cl_create_buffer, F90_CL_CREATE_BUFFER)
 
 }
 
+/* -----------------------------------------------------------------------*/
+
 void FC_FUNC_(f90_cl_release_buffer, F90_CL_RELEASE_BUFFER)(cl_mem * buffer, int * ierr){
 
   *ierr = clReleaseMemObject(*buffer);
 }
 
+/* -----------------------------------------------------------------------*/
 
 /* clEnqueueWriteBuffer */
 void FC_FUNC(flenqueuewritebuffer, FLENQUEUEWRITEBUFFER)
@@ -404,6 +391,8 @@ void FC_FUNC(flenqueuewritebuffer, FLENQUEUEWRITEBUFFER)
 
 }
 
+/* -----------------------------------------------------------------------*/
+
 /* clEnqueueReadBuffer */
 void FC_FUNC(flenqueuereadbuffer, FLENQUEUEREADBUFFER)
      (cl_mem * buffer, cl_command_queue * cq, const size_t * size, const size_t * offset, void * data, int * ierr){
@@ -411,16 +400,21 @@ void FC_FUNC(flenqueuereadbuffer, FLENQUEUEREADBUFFER)
   *ierr = clEnqueueReadBuffer(*cq, *buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
 }
 
+/* -----------------------------------------------------------------------*/
 
 void FC_FUNC(flfinish, FLFINISH)(cl_command_queue * cq, int * ierr){
   *ierr = clFinish(*cq);
 }
+
+/* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(f90_cl_set_kernel_arg_buf, F90_CL_SET_KERNEL_ARG_BUF)
      (cl_kernel * kernel, const int * index, cl_mem * buffer, int * ierr){
 
   *ierr = clSetKernelArg(*kernel, *index, sizeof(cl_mem), buffer);
 }
+
+/* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(f90_cl_set_kernel_arg_data, F90_CL_SET_KERNEL_ARG_DATA)
      (cl_kernel * kernel, const int * index, const int * sizeof_data, const void * data, int * ierr){
@@ -429,6 +423,8 @@ void FC_FUNC_(f90_cl_set_kernel_arg_data, F90_CL_SET_KERNEL_ARG_DATA)
   *ierr = clSetKernelArg(*kernel, *index, *sizeof_data, data);
 }
 
+/* -----------------------------------------------------------------------*/
+
 void FC_FUNC_(f90_cl_set_kernel_arg_local, F90_CL_SET_KERNEL_ARG_LOCAL)
      (cl_kernel * kernel, const int * index, const int * size_of_local, int * ierr){
   
@@ -436,6 +432,8 @@ void FC_FUNC_(f90_cl_set_kernel_arg_local, F90_CL_SET_KERNEL_ARG_LOCAL)
 
   *ierr = clSetKernelArg(*kernel, *index, *size_of_local, NULL);
 }
+
+/* -----------------------------------------------------------------------*/
 
 /* clEnqueueNDRangeKernel*/
 void FC_FUNC(flenqueuendrangekernel, FLENQUEUENDRANGEKERNEL)
