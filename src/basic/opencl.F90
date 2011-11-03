@@ -59,13 +59,13 @@ module opencl_m
     opencl_print_error
 
   type opencl_t 
-    type(c_ptr) :: platform_id
-    type(c_ptr) :: context
-    type(c_ptr) :: command_queue
-    type(c_ptr) :: device
-    integer     :: max_workgroup_size
-    integer     :: local_memory_size
-    logical     :: enabled
+    type(cl_platform_id)   :: platform_id
+    type(cl_context)       :: context
+    type(cl_command_queue) :: command_queue
+    type(cl_device_id)     :: device
+    integer                :: max_workgroup_size
+    integer                :: local_memory_size
+    logical                :: enabled
   end type opencl_t
 
   type opencl_mem_t
@@ -805,8 +805,8 @@ module opencl_m
     ! ----------------------------------------------------
 
     logical function f90_cl_device_has_extension(device, extension) result(has)
-      type(c_ptr),      intent(inout) :: device
-      character(len=*), intent(in)    :: extension
+      type(cl_device_id), intent(inout) :: device
+      character(len=*),   intent(in)    :: extension
 
       character(len=2048) :: all_extensions
 

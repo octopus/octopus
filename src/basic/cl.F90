@@ -18,14 +18,48 @@
   !! $Id: cl.F90 3587 2007-11-22 16:43:00Z xavier $
 
 #include "global.h"
+
+module cl_types
+  implicit none 
   
+  type :: cl_platform_id
+    private 
+    integer, pointer :: p 
+  end type cl_platform_id
+  
+  type :: cl_device_id
+    private 
+    integer, pointer :: p 
+  end type cl_device_id
+
+  type :: cl_context
+    private 
+    integer, pointer :: p 
+  end type cl_context
+
+  type :: cl_command_queue
+    private 
+    integer, pointer :: p 
+  end type cl_command_queue
+
+end module cl_types
+ 
 module cl_m
   use c_pointer_m
+  use cl_types
 
   implicit none 
   
   private
 
+  ! the datatypes
+  public ::                          &
+    cl_platform_id,                  &
+    cl_device_id,                    &
+    cl_context,                      &
+    cl_command_queue
+
+  ! the functions
   public ::                          &
     flGetPlatformIDs,                &
     flEnqueueNDRangeKernel,          &
@@ -52,80 +86,80 @@ module cl_m
   interface
 
     integer function flGetPlatformIDs(iplatform, platform_id)
-      use c_pointer_m
+      use cl_types
 
       implicit none
-      integer,          intent(in)  :: iplatform
-      type(c_ptr),      intent(out) :: platform_id
+      integer,              intent(in)  :: iplatform
+      type(cl_platform_id), intent(out) :: platform_id
     end function flGetPlatformIDs
 
 
     ! ---------------------------------------------------
 
     integer function f90_cl_get_number_of_devices(platform_id)
-      use c_pointer_m
+      use cl_types
 
       implicit none
-      type(c_ptr),      intent(in)   :: platform_id
+      type(cl_platform_id), intent(in)   :: platform_id
     end function f90_cl_get_number_of_devices
 
 
     ! ---------------------------------------------------
 
     subroutine f90_cl_init_context(platform_id, context)
-      use c_pointer_m
+      use cl_types
 
       implicit none
-      type(c_ptr),      intent(in)   :: platform_id
-      type(c_ptr),      intent(out)  :: context
+      type(cl_platform_id), intent(in)   :: platform_id
+      type(cl_context),     intent(out)  :: context
     end subroutine f90_cl_init_context
 
     ! ---------------------------------------------------
 
     subroutine f90_cl_init_device(idevice, platform, context, device)
-      use c_pointer_m
+      use cl_types
 
       implicit none
 
-      integer,          intent(in)    :: idevice
-      type(c_ptr),      intent(inout) :: platform
-      type(c_ptr),      intent(inout) :: context
-      type(c_ptr),      intent(out)   :: device
+      integer,              intent(in)    :: idevice
+      type(cl_platform_id), intent(inout) :: platform
+      type(cl_context),     intent(inout) :: context
+      type(cl_device_id),   intent(out)   :: device
     end subroutine f90_cl_init_device
 
     ! ----------------------------------------------------
 
     subroutine flReleaseContext(context)
-      use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr), intent(inout) :: context
+      type(cl_context), intent(inout) :: context
     end subroutine flReleaseContext
 
     ! ----------------------------------------------------
 
     subroutine flCreateCommandQueue(command_queue, context, device, ierr)
-      use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr), intent(inout) :: command_queue
-      type(c_ptr), intent(inout) :: context
-      type(c_ptr), intent(inout) :: device
-      integer,     intent(out)   :: ierr
+      type(cl_command_queue), intent(inout) :: command_queue
+      type(cl_context),       intent(inout) :: context
+      type(cl_device_id),     intent(inout) :: device
+      integer,                intent(out)   :: ierr
 
     end subroutine flCreateCommandQueue
 
     ! ----------------------------------------------------
 
     subroutine flReleaseCommandQueue(command_queue, ierr)
-      use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr), intent(inout) :: command_queue
-      integer,     intent(out)   :: ierr
+      type(cl_command_queue), intent(inout) :: command_queue
+      integer,                intent(out)   :: ierr
 
     end subroutine flReleaseCommandQueue
 
@@ -134,11 +168,12 @@ module cl_m
 
     subroutine f90_cl_create_program_from_file(prog, context, source_file)
       use c_pointer_m
+      use cl_types
 
       implicit none
 
       type(c_ptr),      intent(out)   :: prog
-      type(c_ptr),      intent(inout) :: context
+      type(cl_context), intent(inout) :: context
       character(len=*), intent(in)    :: source_file
     end subroutine f90_cl_create_program_from_file
 
@@ -146,13 +181,14 @@ module cl_m
 
     subroutine f90_cl_build_program(prog, context, device, flags)
       use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr),      intent(inout) :: prog
-      type(c_ptr),      intent(inout) :: context
-      type(c_ptr),      intent(inout) :: device
-      character(len=*), intent(in)    :: flags
+      type(c_ptr),        intent(inout) :: prog
+      type(cl_context),   intent(inout) :: context
+      type(cl_device_id), intent(inout) :: device
+      character(len=*),   intent(in)    :: flags
     end subroutine f90_cl_build_program
 
     ! ----------------------------------------------------
@@ -194,22 +230,24 @@ module cl_m
 
     integer function f90_cl_kernel_wgroup_size(kernel, device)
       use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr), intent(inout) :: kernel
-      type(c_ptr), intent(inout) :: device
+      type(c_ptr),        intent(inout) :: kernel
+      type(cl_device_id), intent(inout) :: device
     end function f90_cl_kernel_wgroup_size
 
     ! ----------------------------------------------------
 
     subroutine f90_cl_create_buffer(this, context, flags, size, ierr)
       use c_pointer_m
+      use cl_types
 
       implicit none
 
       type(c_ptr),            intent(inout) :: this
-      type(c_ptr),            intent(inout) :: context
+      type(cl_context),       intent(inout) :: context
       integer,                intent(in)    :: flags
       integer(SIZEOF_SIZE_T), intent(in)    :: size
       integer,                intent(out)   :: ierr
@@ -229,11 +267,11 @@ module cl_m
     ! ----------------------------------------------------
 
     subroutine flFinish(command_queue, ierr)
-      use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr),            intent(inout) :: command_queue
+      type(cl_command_queue), intent(inout) :: command_queue
       integer,                intent(out)   :: ierr
     end subroutine flFinish
 
@@ -267,11 +305,12 @@ module cl_m
 
     subroutine flEnqueueNDRangeKernel(kernel, command_queue, dim, globalsizes, localsizes, ierr)
       use c_pointer_m
+      use cl_types
 
       implicit none
 
       type(c_ptr),            intent(inout) :: kernel
-      type(c_ptr),            intent(inout) :: command_queue
+      type(cl_command_queue), intent(inout) :: command_queue
       integer,                intent(in)    :: dim
       integer(SIZEOF_SIZE_T), intent(in)    :: globalsizes
       integer(SIZEOF_SIZE_T), intent(in)    :: localsizes
@@ -285,30 +324,30 @@ module cl_m
   interface flGetDeviceInfo
 
     subroutine flgetdeviceinfo_str(device, param_name, param_value)
-      use c_pointer_m
-      
+      use cl_types
+
       implicit none
-      type(c_ptr),      intent(in)   :: device
-      integer,          intent(in)   :: param_name
-      character(len=*), intent(out)  :: param_value
+      type(cl_device_id), intent(in)   :: device
+      integer,            intent(in)   :: param_name
+      character(len=*),   intent(out)  :: param_value
     end subroutine flgetdeviceinfo_str
 
     subroutine flgetdeviceinfo_int(device, param_name, param_value)
-      use c_pointer_m
+      use cl_types
       
       implicit none
-      type(c_ptr),      intent(in)   :: device
-      integer,          intent(in)   :: param_name
-      integer,          intent(out)  :: param_value
+      type(cl_device_id), intent(in)   :: device
+      integer,            intent(in)   :: param_name
+      integer,            intent(out)  :: param_value
     end subroutine flgetdeviceinfo_int
 
     subroutine flgetdeviceinfo_int64(device, param_name, param_value)
-      use c_pointer_m
-      
+      use cl_types
+
       implicit none
-      type(c_ptr),      intent(in)   :: device
-      integer,          intent(in)   :: param_name
-      integer(8),       intent(out)  :: param_value
+      type(cl_device_id), intent(in)   :: device
+      integer,            intent(in)   :: param_name
+      integer(8),         intent(out)  :: param_value
     end subroutine flgetdeviceinfo_int64
 
     module procedure flgetdeviceinfo_logical
@@ -320,9 +359,9 @@ module cl_m
   contains
 
     subroutine flgetdeviceinfo_logical(device, param_name, param_value)
-      type(c_ptr),      intent(in)   :: device
-      integer,          intent(in)   :: param_name
-      logical,          intent(out)  :: param_value
+      type(cl_device_id), intent(in)   :: device
+      integer,            intent(in)   :: param_name
+      logical,            intent(out)  :: param_value
 
       integer(8) :: param_value_64
 
