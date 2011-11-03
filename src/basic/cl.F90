@@ -326,7 +326,9 @@ module cl_m
 
       integer(8) :: param_value_64
 
+#ifdef HAVE_OPENCL
       call flgetdeviceinfo_int64(device, param_name, param_value_64)
+#endif
 
       param_value = param_value_64 /= 0
 
