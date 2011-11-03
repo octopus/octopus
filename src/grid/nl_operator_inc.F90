@@ -304,7 +304,7 @@ contains
 
     case(OP_MAP_SPLIT)
 
-      call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size)
+      call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = pad_pow2(isize)/2
 
@@ -341,7 +341,7 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
       call opencl_set_kernel_arg(kernel_operate, 8, log2(eff_size))
 
-      call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size)
+      call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = isize - mod(isize, eff_size)
       bsize = eff_size*isize

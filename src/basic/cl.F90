@@ -352,31 +352,34 @@ module cl_m
 
   interface flGetDeviceInfo
 
-    subroutine flgetdeviceinfo_str(device, param_name, param_value)
+    subroutine flgetdeviceinfo_str(device, param_name, param_value, status)
       use cl_types
 
       implicit none
       type(cl_device_id), intent(in)   :: device
       integer,            intent(in)   :: param_name
       character(len=*),   intent(out)  :: param_value
+      integer,            intent(out)  :: status
     end subroutine flgetdeviceinfo_str
 
-    subroutine flgetdeviceinfo_int(device, param_name, param_value)
+    subroutine flgetdeviceinfo_int(device, param_name, param_value, status)
       use cl_types
       
       implicit none
       type(cl_device_id), intent(in)   :: device
       integer,            intent(in)   :: param_name
       integer,            intent(out)  :: param_value
+      integer,            intent(out)  :: status
     end subroutine flgetdeviceinfo_int
 
-    subroutine flgetdeviceinfo_int64(device, param_name, param_value)
+    subroutine flgetdeviceinfo_int64(device, param_name, param_value, status)
       use cl_types
 
       implicit none
       type(cl_device_id), intent(in)   :: device
       integer,            intent(in)   :: param_name
       integer(8),         intent(out)  :: param_value
+      integer,            intent(out)  :: status
     end subroutine flgetdeviceinfo_int64
 
     module procedure flgetdeviceinfo_logical
@@ -442,15 +445,16 @@ module cl_m
 
     ! ----------------------------------------------------------
     
-    subroutine flgetdeviceinfo_logical(device, param_name, param_value)
+    subroutine flgetdeviceinfo_logical(device, param_name, param_value, status)
       type(cl_device_id), intent(in)   :: device
       integer,            intent(in)   :: param_name
       logical,            intent(out)  :: param_value
+      integer,            intent(out)  :: status
 
       integer(8) :: param_value_64
 
 #ifdef HAVE_OPENCL
-      call flgetdeviceinfo_int64(device, param_name, param_value_64)
+      call flgetdeviceinfo_int64(device, param_name, param_value_64, status)
 #endif
 
       param_value = param_value_64 /= 0

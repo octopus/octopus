@@ -105,16 +105,10 @@ void FC_FUNC_(flgetdeviceids_getdev, FLGETDEVICEIDS_GETDEV)
 /* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(flgetdeviceinfo_str, FLGETDEVICEINFO_STR)
-     (const cl_device_id * device, const int * param_name, STR_F_TYPE param_value STR_ARG1){
+     (const cl_device_id * device, const int * param_name, STR_F_TYPE param_value, int * status STR_ARG1){
   char info[2048];
-  cl_int status;
 
-  status = clGetDeviceInfo(*device, (cl_device_info) *param_name, sizeof(info), info, NULL);
-
-  if (status != CL_SUCCESS){
-    fprintf(stderr, "\nError: clGetDeviceInfo returned error code: %d\n", status);
-    exit(1);
-  }
+  *status = (int) clGetDeviceInfo(*device, (cl_device_info) *param_name, sizeof(info), info, NULL);
 
   TO_F_STR1(info, param_value);
 }
@@ -122,8 +116,7 @@ void FC_FUNC_(flgetdeviceinfo_str, FLGETDEVICEINFO_STR)
 /* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
-     (const cl_device_id * device, const int * param_name, cl_long * param_value){
-  cl_int status;
+     (const cl_device_id * device, const int * param_name, cl_long * param_value, int * status){
   union { 
     cl_uint  val_uint;
     cl_bool  val_bool;
@@ -131,12 +124,8 @@ void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
     size_t   val_size_t;
   } rval;
   
-  status = clGetDeviceInfo(*device, (cl_device_info) *param_name, sizeof(rval), &rval, NULL);
+  *status = (int) clGetDeviceInfo(*device, (cl_device_info) *param_name, sizeof(rval), &rval, NULL);
   
-  if (status != CL_SUCCESS){
-    fprintf(stderr, "\nError: clGetDeviceInfo returned error code: %d\n", status);
-    exit(1);
-  }
   
   switch(*param_name){
     /* return cl_uint*/
@@ -212,10 +201,10 @@ void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
 /* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(flgetdeviceinfo_int, FLGETDEVICEINFO_INT)
-     (const cl_device_id * device, const int * param_name, cl_int * param_value){
+     (const cl_device_id * device, const int * param_name, cl_int * param_value, int * status){
   cl_long param_value64;
 
-  FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)(device, param_name, &param_value64);
+  FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)(device, param_name, &param_value64, status);
   
   *param_value = (cl_int) param_value64;
 }
