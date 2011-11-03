@@ -518,7 +518,7 @@ contains
     FLOAT  ,         intent(in)    :: point(1:this%full%dim)
 
     this%reduced%point(1:this%full%dim, ik) = point(1:this%full%dim)
-    call kpoints_grid_copy(this%reduced, this%full)
+    this%full%point(1:this%full%dim, ik)    = point(1:this%full%dim)
 
   end subroutine kpoints_set_point
 
