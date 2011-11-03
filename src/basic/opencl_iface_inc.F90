@@ -223,17 +223,6 @@
 
     ! ----------------------------------------------------
 
-    integer function f90_cl_max_workgroup_size(device)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr), intent(inout) :: device
-    end function f90_cl_max_workgroup_size
-
-
-    ! ----------------------------------------------------
-
     integer function f90_cl_device_has_extension(device, extension)
       use c_pointer_m
 
@@ -243,25 +232,6 @@
       character(len=*), intent(in)    :: extension
     end function f90_cl_device_has_extension
 
-    ! ----------------------------------------------------
-
-    integer function f90_cl_device_local_mem_size(device)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr), intent(inout) :: device
-    end function f90_cl_device_local_mem_size
-
-    ! ----------------------------------------------------
-
-    integer function f90_cl_device_max_constant_buffer_size(device)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr), intent(inout) :: device
-    end function f90_cl_device_max_constant_buffer_size
 
     ! ----------------------------------------------------
 
@@ -416,6 +386,7 @@
   ! ---------------------------------------------------
 
   interface flGetDeviceInfo
+
     subroutine flgetdeviceinfo_str(device, param_name, param_value)
       use c_pointer_m
       

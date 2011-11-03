@@ -56,8 +56,7 @@ module opencl_m
     opencl_release_kernel,        &
     opencl_create_kernel,         &
     opencl_print_error,                    &
-    f90_cl_device_local_mem_size,          &
-    f90_cl_device_max_constant_buffer_size
+    flGetDeviceInfo
 
   type opencl_t 
     type(c_ptr) :: platform_id
@@ -262,8 +261,8 @@ module opencl_m
       call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
       
-      opencl%max_workgroup_size = f90_cl_max_workgroup_size(opencl%device)
-      opencl%local_memory_size = f90_cl_device_local_mem_size(opencl%device)
+      call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, opencl%max_workgroup_size)
+      call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, opencl%local_memory_size)
 
       ! now initialize the kernels
       call opencl_build_program(prog, trim(conf%share)//'/opencl/set_zero.cl')

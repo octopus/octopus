@@ -260,7 +260,8 @@ contains
 
   ! ------------------------------------------
   subroutine operate_opencl()
-    integer :: pnri, bsize, isize, ist, local_mem_size, eff_size
+    integer    :: pnri, bsize, isize, ist, eff_size
+    integer(8) :: local_mem_size
     type(opencl_mem_t) :: buff_weights
     type(profile_t), save :: prof
     FLOAT, allocatable :: vecw(:, :)
@@ -303,7 +304,7 @@ contains
 
     case(OP_MAP_SPLIT)
 
-      local_mem_size = f90_cl_device_local_mem_size(opencl%device)
+      call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size)
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = pad_pow2(isize)/2
 
@@ -340,8 +341,7 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
       call opencl_set_kernel_arg(kernel_operate, 8, log2(eff_size))
 
-
-      local_mem_size = f90_cl_device_local_mem_size(opencl%device)
+      call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size)
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = isize - mod(isize, eff_size)
       bsize = eff_size*isize

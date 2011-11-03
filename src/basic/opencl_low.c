@@ -284,32 +284,6 @@ void FC_FUNC(flreleasecommandqueue, FLRELEASECOMMANDQUEUE)(cl_command_queue * co
 
 /* -----------------------------------------------------------------------*/
 
-int FC_FUNC_(f90_cl_max_workgroup_size, F90_CL_MAX_WORKGROUP_SIZE)(cl_device_id * device){
-  size_t max_workgroup_size;
-  clGetDeviceInfo(*device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_workgroup_size), &max_workgroup_size, NULL);
-  return (int) max_workgroup_size;
-}
-
-/* -----------------------------------------------------------------------*/
-
-int FC_FUNC_(f90_cl_device_local_mem_size, F90_CL_DEVICE_LOCAL_MEM_SIZE)(cl_device_id * device){
-  cl_ulong mem;
-
-  clGetDeviceInfo (*device, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(mem), &mem, NULL);
-
-  return (int) mem;
-}
-
-/* -----------------------------------------------------------------------*/
-
-int FC_FUNC_(f90_cl_device_max_constant_buffer_size, F90_CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE)(cl_device_id * device){
-  cl_ulong mem;
-
-  clGetDeviceInfo (*device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(mem), &mem, NULL);
-
-  return (int) mem;
-}
-
 void FC_FUNC(flreleasecontext, FLRELEASECONTEXT)(cl_context * context){
   clReleaseContext(*context);
 }
