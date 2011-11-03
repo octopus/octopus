@@ -21,6 +21,7 @@
 
 module opencl_m
   use c_pointer_m
+  use cl_m
   use datasets_m
   use global_m
   use messages_m
@@ -55,8 +56,7 @@ module opencl_m
     opencl_release_program,       &
     opencl_release_kernel,        &
     opencl_create_kernel,         &
-    opencl_print_error,                    &
-    flGetDeviceInfo
+    opencl_print_error
 
   type opencl_t 
     type(c_ptr) :: platform_id
@@ -101,8 +101,6 @@ module opencl_m
   type(c_ptr), public :: zkernel_dot_matrix_spinors
   type(c_ptr), public :: dkernel_dot_vector
   type(c_ptr), public :: zkernel_dot_vector
-
-#include "opencl_iface_inc.F90"
 
   interface opencl_create_buffer
     module procedure opencl_create_buffer_4

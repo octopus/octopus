@@ -20,6 +20,7 @@
 #include "global.h"
 
 module cl_kernel_m
+  use cl_m
   use c_pointer_m
   use datasets_m
   use global_m

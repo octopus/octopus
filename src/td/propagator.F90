@@ -22,6 +22,7 @@
 module propagator_m
   use batch_m
   use blas_m
+  use cl_m
   use cube_function_m
   use datasets_m
   use density_m

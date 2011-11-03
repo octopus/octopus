@@ -22,6 +22,7 @@
 module nl_operator_m
   use batch_m
   use boundaries_m
+  use cl_m
   use c_pointer_m
   use datasets_m
   use global_m
