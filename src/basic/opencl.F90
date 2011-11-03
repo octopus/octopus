@@ -493,7 +493,7 @@ module opencl_m
         call flReleaseCommandQueue(opencl%command_queue, ierr)
 
         if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
-        call flReleaseContext(opencl%context)
+        call flReleaseContext(opencl%context, cl_status)
 #endif
       end if
 

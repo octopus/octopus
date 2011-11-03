@@ -125,7 +125,8 @@ void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
   } rval;
   
   *status = (int) clGetDeviceInfo(*device, (cl_device_info) *param_name, sizeof(rval), &rval, NULL);
-  
+
+  if(*status != CL_SUCCESS) return;
   
   switch(*param_name){
     /* return cl_uint*/
@@ -231,21 +232,21 @@ void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * pl
 
 /* clCreateCommandQueue */
 void FC_FUNC(flcreatecommandqueue, FLCREATECOMMANDQUEUE)
-     (cl_command_queue * command_queue, cl_context * context, cl_device_id * device, int * ierr){
-  *command_queue = clCreateCommandQueue(*context, *device, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, ierr);
+     (cl_command_queue * command_queue, cl_context * context, cl_device_id * device, int * status){
+  *command_queue = clCreateCommandQueue(*context, *device, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, status);
 }
 
 /* -----------------------------------------------------------------------*/
 
 /* clReleaseCommandQueue */
-void FC_FUNC(flreleasecommandqueue, FLRELEASECOMMANDQUEUE)(cl_command_queue * command_queue, int * ierr){
-  *ierr = clReleaseCommandQueue(*command_queue);
+void FC_FUNC(flreleasecommandqueue, FLRELEASECOMMANDQUEUE)(cl_command_queue * command_queue, int * status){
+  *status = clReleaseCommandQueue(*command_queue);
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC(flreleasecontext, FLRELEASECONTEXT)(cl_context * context){
-  clReleaseContext(*context);
+void FC_FUNC(flreleasecontext, FLRELEASECONTEXT)(cl_context * context, int * status){
+  *status = (int) clReleaseContext(*context);
 }
 
 /* -----------------------------------------------------------------------*/
@@ -323,20 +324,20 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
 /* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(f90_cl_release_program, F90_CL_RELEASE_PROGRAM)
-     (cl_program * program, int * ierr){
+     (cl_program * program, int * status){
 
-  *ierr = clReleaseProgram(*program);
+  *status = clReleaseProgram(*program);
 }
 
 /* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(f90_cl_create_kernel, F90_CL_CREATE_KERNEL)
-     (cl_kernel * kernel, cl_program * program, STR_F_TYPE kernel_name_f, int * ierr STR_ARG1){
+     (cl_kernel * kernel, cl_program * program, STR_F_TYPE kernel_name_f, int * status STR_ARG1){
   char * kernel_name;
 
   TO_C_STR1(kernel_name_f, kernel_name);
 
-  *kernel = clCreateKernel(*program, kernel_name, ierr);
+  *kernel = clCreateKernel(*program, kernel_name, status);
 
   free(kernel_name);
 }
@@ -344,8 +345,8 @@ void FC_FUNC_(f90_cl_create_kernel, F90_CL_CREATE_KERNEL)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(f90_cl_release_kernel, F90_CL_RELEASE_KERNEL)(cl_kernel * kernel, int * ierr){
-  *ierr = clReleaseKernel(*kernel);
+void FC_FUNC_(f90_cl_release_kernel, F90_CL_RELEASE_KERNEL)(cl_kernel * kernel, int * status){
+  *status = clReleaseKernel(*kernel);
 }
 
 /* -----------------------------------------------------------------------*/
@@ -357,26 +358,26 @@ int FC_FUNC_(f90_cl_kernel_wgroup_size, F90_CL_KERNEL_WGROUP_SIZE)(cl_kernel * k
 }
 
 void FC_FUNC_(f90_cl_create_buffer, F90_CL_CREATE_BUFFER)
-     (cl_mem * buffer, cl_context * context, const int * flags, const size_t * size, int * ierr){
+     (cl_mem * buffer, cl_context * context, const int * flags, const size_t * size, int * status){
 
-  *buffer = clCreateBuffer(*context, *flags, (size_t) *size, NULL, ierr);
+  *buffer = clCreateBuffer(*context, *flags, (size_t) *size, NULL, status);
 
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(f90_cl_release_buffer, F90_CL_RELEASE_BUFFER)(cl_mem * buffer, int * ierr){
+void FC_FUNC_(f90_cl_release_buffer, F90_CL_RELEASE_BUFFER)(cl_mem * buffer, int * status){
 
-  *ierr = clReleaseMemObject(*buffer);
+  *status = clReleaseMemObject(*buffer);
 }
 
 /* -----------------------------------------------------------------------*/
 
 /* clEnqueueWriteBuffer */
 void FC_FUNC(flenqueuewritebuffer, FLENQUEUEWRITEBUFFER)
-     (cl_mem * buffer, cl_command_queue * cq, const size_t * size, const size_t * offset, const void * data, int * ierr){
+     (cl_mem * buffer, cl_command_queue * cq, const size_t * size, const size_t * offset, const void * data, int * status){
 
-  *ierr = clEnqueueWriteBuffer(*cq, *buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
+  *status = clEnqueueWriteBuffer(*cq, *buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
 
 }
 
@@ -384,51 +385,51 @@ void FC_FUNC(flenqueuewritebuffer, FLENQUEUEWRITEBUFFER)
 
 /* clEnqueueReadBuffer */
 void FC_FUNC(flenqueuereadbuffer, FLENQUEUEREADBUFFER)
-     (cl_mem * buffer, cl_command_queue * cq, const size_t * size, const size_t * offset, void * data, int * ierr){
+     (cl_mem * buffer, cl_command_queue * cq, const size_t * size, const size_t * offset, void * data, int * status){
 
-  *ierr = clEnqueueReadBuffer(*cq, *buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
+  *status = clEnqueueReadBuffer(*cq, *buffer, CL_TRUE, *offset, *size, data, 0, NULL, NULL);
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC(flfinish, FLFINISH)(cl_command_queue * cq, int * ierr){
-  *ierr = clFinish(*cq);
+void FC_FUNC(flfinish, FLFINISH)(cl_command_queue * cq, int * status){
+  *status = clFinish(*cq);
 }
 
 /* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(f90_cl_set_kernel_arg_buf, F90_CL_SET_KERNEL_ARG_BUF)
-     (cl_kernel * kernel, const int * index, cl_mem * buffer, int * ierr){
+     (cl_kernel * kernel, const int * index, cl_mem * buffer, int * status){
 
-  *ierr = clSetKernelArg(*kernel, *index, sizeof(cl_mem), buffer);
+  *status = clSetKernelArg(*kernel, *index, sizeof(cl_mem), buffer);
 }
 
 /* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(f90_cl_set_kernel_arg_data, F90_CL_SET_KERNEL_ARG_DATA)
-     (cl_kernel * kernel, const int * index, const int * sizeof_data, const void * data, int * ierr){
+     (cl_kernel * kernel, const int * index, const int * sizeof_data, const void * data, int * status){
   /* printf("kernel=%ld index=%d\n", *kernel, *index);*/
 
-  *ierr = clSetKernelArg(*kernel, *index, *sizeof_data, data);
+  *status = clSetKernelArg(*kernel, *index, *sizeof_data, data);
 }
 
 /* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(f90_cl_set_kernel_arg_local, F90_CL_SET_KERNEL_ARG_LOCAL)
-     (cl_kernel * kernel, const int * index, const int * size_of_local, int * ierr){
+     (cl_kernel * kernel, const int * index, const int * size_of_local, int * status){
   
   /* printf("kernel=%ld index=%d\n", *kernel, *index);*/
 
-  *ierr = clSetKernelArg(*kernel, *index, *size_of_local, NULL);
+  *status = clSetKernelArg(*kernel, *index, *size_of_local, NULL);
 }
 
 /* -----------------------------------------------------------------------*/
 
 /* clEnqueueNDRangeKernel*/
 void FC_FUNC(flenqueuendrangekernel, FLENQUEUENDRANGEKERNEL)
-     (cl_kernel * kernel, cl_command_queue * cq, const int * dim, const size_t * globalsizes, const size_t * localsizes, int * ierr){
+     (cl_kernel * kernel, cl_command_queue * cq, const int * dim, const size_t * globalsizes, const size_t * localsizes, int * status){
 
-  *ierr = clEnqueueNDRangeKernel(*cq, *kernel, *dim,
-				NULL,  globalsizes, localsizes, 0, NULL, NULL);
+  *status = clEnqueueNDRangeKernel(*cq, *kernel, *dim,
+				   NULL,  globalsizes, localsizes, 0, NULL, NULL);
 
 }

@@ -145,17 +145,18 @@ module cl_m
 
     ! ----------------------------------------------------
 
-    subroutine flReleaseContext(context)
+    subroutine flReleaseContext(context, status)
       use cl_types
 
       implicit none
 
       type(cl_context), intent(inout) :: context
+      integer,          intent(out)   :: status
     end subroutine flReleaseContext
 
     ! ----------------------------------------------------
 
-    subroutine flCreateCommandQueue(command_queue, context, device, ierr)
+    subroutine flCreateCommandQueue(command_queue, context, device, status)
       use cl_types
 
       implicit none
@@ -163,19 +164,19 @@ module cl_m
       type(cl_command_queue), intent(inout) :: command_queue
       type(cl_context),       intent(inout) :: context
       type(cl_device_id),     intent(inout) :: device
-      integer,                intent(out)   :: ierr
+      integer,                intent(out)   :: status
 
     end subroutine flCreateCommandQueue
 
     ! ----------------------------------------------------
 
-    subroutine flReleaseCommandQueue(command_queue, ierr)
+    subroutine flReleaseCommandQueue(command_queue, status)
       use cl_types
 
       implicit none
 
       type(cl_command_queue), intent(inout) :: command_queue
-      integer,                intent(out)   :: ierr
+      integer,                intent(out)   :: status
 
     end subroutine flReleaseCommandQueue
 
@@ -207,18 +208,18 @@ module cl_m
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_release_program(prog, ierr)
+    subroutine f90_cl_release_program(prog, status)
       use cl_types
 
       implicit none
 
       type(cl_program), intent(inout) :: prog
-      integer,          intent(out)   :: ierr
+      integer,          intent(out)   :: status
     end subroutine f90_cl_release_program
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_create_kernel(kernel, prog, kernel_name, ierr)
+    subroutine f90_cl_create_kernel(kernel, prog, kernel_name, status)
       use cl_types
 
       implicit none
@@ -226,18 +227,18 @@ module cl_m
       type(cl_kernel),  intent(out)   :: kernel
       type(cl_program), intent(inout) :: prog
       character(len=*), intent(in)    :: kernel_name
-      integer,          intent(out)   :: ierr
+      integer,          intent(out)   :: status
     end subroutine f90_cl_create_kernel
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_release_kernel(kernel, ierr)
+    subroutine f90_cl_release_kernel(kernel, status)
       use cl_types
 
       implicit none
 
       type(cl_kernel), intent(inout) :: kernel
-      integer,         intent(out)   :: ierr
+      integer,         intent(out)   :: status
     end subroutine f90_cl_release_kernel
 
     ! ----------------------------------------------------
@@ -253,7 +254,7 @@ module cl_m
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_create_buffer(this, context, flags, size, ierr)
+    subroutine f90_cl_create_buffer(this, context, flags, size, status)
       use cl_types
 
       implicit none
@@ -262,34 +263,34 @@ module cl_m
       type(cl_context),       intent(inout) :: context
       integer,                intent(in)    :: flags
       integer(SIZEOF_SIZE_T), intent(in)    :: size
-      integer,                intent(out)   :: ierr
+      integer,                intent(out)   :: status
     end subroutine f90_cl_create_buffer
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_release_buffer(this, ierr)
+    subroutine f90_cl_release_buffer(this, status)
       use cl_types
 
       implicit none
 
       type(cl_mem),           intent(inout) :: this
-      integer,                intent(out)   :: ierr
+      integer,                intent(out)   :: status
     end subroutine f90_cl_release_buffer
 
     ! ----------------------------------------------------
 
-    subroutine flFinish(command_queue, ierr)
+    subroutine flFinish(command_queue, status)
       use cl_types
 
       implicit none
 
       type(cl_command_queue), intent(inout) :: command_queue
-      integer,                intent(out)   :: ierr
+      integer,                intent(out)   :: status
     end subroutine flFinish
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_set_kernel_arg_buf(kernel, index, buffer, ierr)
+    subroutine f90_cl_set_kernel_arg_buf(kernel, index, buffer, status)
       use cl_types
 
       implicit none
@@ -297,12 +298,12 @@ module cl_m
       type(cl_kernel), intent(inout) :: kernel
       integer,         intent(in)    :: index
       type(cl_mem),    intent(in)    :: buffer
-      integer,         intent(out)   :: ierr
+      integer,         intent(out)   :: status
     end subroutine f90_cl_set_kernel_arg_buf
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_set_kernel_arg_local(kernel, index, size, ierr)
+    subroutine f90_cl_set_kernel_arg_local(kernel, index, size, status)
       use cl_types
 
       implicit none
@@ -310,12 +311,12 @@ module cl_m
       type(cl_kernel), intent(inout) :: kernel
       integer,         intent(in)    :: index
       integer,         intent(in)    :: size
-      integer,         intent(out)   :: ierr
+      integer,         intent(out)   :: status
     end subroutine f90_cl_set_kernel_arg_local
 
     ! ----------------------------------------------------
 
-    subroutine flEnqueueNDRangeKernel(kernel, command_queue, dim, globalsizes, localsizes, ierr)
+    subroutine flEnqueueNDRangeKernel(kernel, command_queue, dim, globalsizes, localsizes, status)
       use cl_types
 
       implicit none
@@ -325,7 +326,7 @@ module cl_m
       integer,                intent(in)    :: dim
       integer(SIZEOF_SIZE_T), intent(in)    :: globalsizes
       integer(SIZEOF_SIZE_T), intent(in)    :: localsizes
-      integer,                intent(out)   :: ierr
+      integer,                intent(out)   :: status
     end subroutine flEnqueueNDRangeKernel
 
   end interface
