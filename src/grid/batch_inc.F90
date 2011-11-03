@@ -219,7 +219,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
 
   integer :: ist, ip, localsize, effsize
   type(cl_kernel_t), save :: kernel
-  type(c_ptr)             :: kernel_ref
+  type(cl_kernel)         :: kernel_ref
   R_TYPE, allocatable     :: aa_linear(:)
   CMPLX,  allocatable     :: zaa_linear(:)
   type(opencl_mem_t)      :: aa_buffer

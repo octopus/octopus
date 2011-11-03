@@ -148,7 +148,7 @@ module nl_operator_m
   type(profile_t), save :: operate_batch_prof
 
 #ifdef HAVE_OPENCL
-  type(c_ptr), public :: kernel_operate
+  type(cl_kernel), public :: kernel_operate
 #endif
 
 contains
@@ -157,7 +157,7 @@ contains
   subroutine nl_operator_global_init()
     integer :: default
 #ifdef HAVE_OPENCL
-    type(c_ptr) :: prog
+    type(cl_program) :: prog
     character(len=20) :: vecsize_flag
 #endif
 

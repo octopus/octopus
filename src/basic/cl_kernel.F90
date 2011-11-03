@@ -41,7 +41,7 @@ module cl_kernel_m
 
   type cl_kernel_t
     private
-    type(c_ptr)                :: kernel
+    type(cl_kernel)            :: kernel
     logical                    :: initialized = .false.
     type(cl_kernel_t), pointer :: next
     integer                    :: arg_count
@@ -86,7 +86,7 @@ contains
     character(len=*),  intent(in)    :: file_name
     character(len=*),  intent(in)    :: kernel_name
 
-    type(c_ptr) :: prog
+    type(cl_program) :: prog
 
     PUSH_SUB(cl_kernel_build)
 
@@ -135,7 +135,7 @@ contains
 
   !--------------------------------------------------------------
 
-  type(c_ptr) function cl_kernel_get_ref(this) result(ref)
+  type(cl_kernel) function cl_kernel_get_ref(this) result(ref)
     type(cl_kernel_t), intent(in) :: this
     
     ref = this%kernel

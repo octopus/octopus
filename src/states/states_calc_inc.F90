@@ -348,7 +348,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   R_TYPE, allocatable :: psicopy(:, :, :)
   type(opencl_mem_t) :: psicopy_buffer, ss_buffer
   type(cl_kernel_t), save :: dkernel, zkernel
-  type(c_ptr) :: kernel_ref
+  type(cl_kernel) :: kernel_ref
 
   PUSH_SUB(X(states_trsm))
 
@@ -1008,7 +1008,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   integer       :: block_size, sp, idim, size, ib
   R_TYPE, allocatable :: psinew(:, :, :), psicopy(:, :, :)
   type(cl_kernel_t), save :: dkernel, zkernel
-  type(c_ptr) :: kernel_ref
+  type(cl_kernel) :: kernel_ref
   type(opencl_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
 
   PUSH_SUB(X(states_rotate_in_place))

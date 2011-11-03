@@ -35,7 +35,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   logical :: use_blas, reduce_, conj
 #ifdef HAVE_OPENCL
   type(opencl_mem_t) :: dot_buffer
-  type(c_ptr)        :: kernel
+  type(cl_kernel)    :: kernel
 #endif
 
   PUSH_SUB(X(mesh_batch_dotp_matrix))
@@ -397,7 +397,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:)
   type(cl_kernel_t), save :: kernel
-  type(c_ptr)             :: kernel_ref
+  type(cl_kernel)         :: kernel_ref
 #ifdef HAVE_OPENCL
   type(opencl_mem_t)  :: dot_buffer
 #endif

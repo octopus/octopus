@@ -42,10 +42,34 @@ module cl_types
     integer, pointer :: p 
   end type cl_command_queue
 
+  type :: cl_mem
+    private 
+    integer, pointer :: p 
+  end type cl_mem
+
+  type :: cl_program
+    private 
+    integer, pointer :: p 
+  end type cl_program
+
+  type :: cl_kernel
+    private 
+    integer, pointer :: p 
+  end type cl_kernel
+
+  type :: cl_event
+    private 
+    integer, pointer :: p 
+  end type cl_event
+
+  type :: cl_sampler
+    private 
+    integer, pointer :: p 
+  end type cl_sampler
+
 end module cl_types
  
 module cl_m
-  use c_pointer_m
   use cl_types
 
   implicit none 
@@ -57,7 +81,10 @@ module cl_m
     cl_platform_id,                  &
     cl_device_id,                    &
     cl_context,                      &
-    cl_command_queue
+    cl_command_queue,                &
+    cl_mem,                          &
+    cl_program,                      &
+    cl_kernel
 
   ! the functions
   public ::                          &
@@ -167,12 +194,11 @@ module cl_m
     ! ----------------------------------------------------
 
     subroutine f90_cl_create_program_from_file(prog, context, source_file)
-      use c_pointer_m
       use cl_types
 
       implicit none
 
-      type(c_ptr),      intent(out)   :: prog
+      type(cl_program), intent(out)   :: prog
       type(cl_context), intent(inout) :: context
       character(len=*), intent(in)    :: source_file
     end subroutine f90_cl_create_program_from_file
@@ -180,12 +206,11 @@ module cl_m
     ! ----------------------------------------------------
 
     subroutine f90_cl_build_program(prog, context, device, flags)
-      use c_pointer_m
       use cl_types
 
       implicit none
 
-      type(c_ptr),        intent(inout) :: prog
+      type(cl_program),   intent(inout) :: prog
       type(cl_context),   intent(inout) :: context
       type(cl_device_id), intent(inout) :: device
       character(len=*),   intent(in)    :: flags
@@ -194,23 +219,23 @@ module cl_m
     ! ----------------------------------------------------
 
     subroutine f90_cl_release_program(prog, ierr)
-      use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr), intent(inout) :: prog
-      integer,     intent(out)   :: ierr
+      type(cl_program), intent(inout) :: prog
+      integer,          intent(out)   :: ierr
     end subroutine f90_cl_release_program
 
     ! ----------------------------------------------------
 
     subroutine f90_cl_create_kernel(kernel, prog, kernel_name, ierr)
-      use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr),      intent(out)   :: kernel
-      type(c_ptr),      intent(inout) :: prog
+      type(cl_kernel),  intent(out)   :: kernel
+      type(cl_program), intent(inout) :: prog
       character(len=*), intent(in)    :: kernel_name
       integer,          intent(out)   :: ierr
     end subroutine f90_cl_create_kernel
@@ -218,35 +243,33 @@ module cl_m
     ! ----------------------------------------------------
 
     subroutine f90_cl_release_kernel(kernel, ierr)
-      use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr), intent(inout) :: kernel
-      integer,     intent(out)   :: ierr
+      type(cl_kernel), intent(inout) :: kernel
+      integer,         intent(out)   :: ierr
     end subroutine f90_cl_release_kernel
 
     ! ----------------------------------------------------
 
     integer function f90_cl_kernel_wgroup_size(kernel, device)
-      use c_pointer_m
       use cl_types
 
       implicit none
 
-      type(c_ptr),        intent(inout) :: kernel
+      type(cl_kernel),    intent(inout) :: kernel
       type(cl_device_id), intent(inout) :: device
     end function f90_cl_kernel_wgroup_size
 
     ! ----------------------------------------------------
 
     subroutine f90_cl_create_buffer(this, context, flags, size, ierr)
-      use c_pointer_m
       use cl_types
 
       implicit none
 
-      type(c_ptr),            intent(inout) :: this
+      type(cl_mem),           intent(inout) :: this
       type(cl_context),       intent(inout) :: context
       integer,                intent(in)    :: flags
       integer(SIZEOF_SIZE_T), intent(in)    :: size
@@ -256,11 +279,11 @@ module cl_m
     ! ----------------------------------------------------
 
     subroutine f90_cl_release_buffer(this, ierr)
-      use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr),            intent(inout) :: this
+      type(cl_mem),           intent(inout) :: this
       integer,                intent(out)   :: ierr
     end subroutine f90_cl_release_buffer
 
@@ -278,38 +301,37 @@ module cl_m
     ! ----------------------------------------------------
 
     subroutine f90_cl_set_kernel_arg_buf(kernel, index, buffer, ierr)
-      use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr), intent(inout) :: kernel
-      integer,     intent(in)    :: index
-      type(c_ptr), intent(in)    :: buffer
-      integer,     intent(out)   :: ierr
+      type(cl_kernel), intent(inout) :: kernel
+      integer,         intent(in)    :: index
+      type(cl_mem),    intent(in)    :: buffer
+      integer,         intent(out)   :: ierr
     end subroutine f90_cl_set_kernel_arg_buf
 
     ! ----------------------------------------------------
 
     subroutine f90_cl_set_kernel_arg_local(kernel, index, size, ierr)
-      use c_pointer_m
+      use cl_types
 
       implicit none
 
-      type(c_ptr), intent(inout) :: kernel
-      integer,     intent(in)    :: index
-      integer,     intent(in)    :: size
-      integer,     intent(out)   :: ierr
+      type(cl_kernel), intent(inout) :: kernel
+      integer,         intent(in)    :: index
+      integer,         intent(in)    :: size
+      integer,         intent(out)   :: ierr
     end subroutine f90_cl_set_kernel_arg_local
 
     ! ----------------------------------------------------
 
     subroutine flEnqueueNDRangeKernel(kernel, command_queue, dim, globalsizes, localsizes, ierr)
-      use c_pointer_m
       use cl_types
 
       implicit none
 
-      type(c_ptr),            intent(inout) :: kernel
+      type(cl_kernel),        intent(inout) :: kernel
       type(cl_command_queue), intent(inout) :: command_queue
       integer,                intent(in)    :: dim
       integer(SIZEOF_SIZE_T), intent(in)    :: globalsizes

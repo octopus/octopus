@@ -133,7 +133,7 @@ end subroutine X(opencl_read_buffer_2)
 ! ---------------------------------------------------------------------------
 
 subroutine X(opencl_set_kernel_arg_data)(kernel, narg, data)
-  type(c_ptr),        intent(inout) :: kernel
+  type(cl_kernel),    intent(inout) :: kernel
   integer,            intent(in)    :: narg
   R_TYPE,             intent(in)    :: data
   

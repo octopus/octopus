@@ -655,7 +655,7 @@ contains
 
     integer :: ist, ist2, unroll
     type(opencl_mem_t) :: tmp
-    type(c_ptr) :: kernel
+    type(cl_kernel) :: kernel
     type(profile_t), save :: prof_pack
 
     PUSH_SUB(batch_write_to_opencl_buffer)
@@ -731,7 +731,7 @@ contains
 
     integer :: ist, ist2, unroll
     type(opencl_mem_t) :: tmp
-    type(c_ptr) :: kernel
+    type(cl_kernel) :: kernel
     type(profile_t), save :: prof_unpack
 
     PUSH_SUB(batch_read_from_opencl_buffer)
@@ -931,7 +931,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
 
   integer :: tsize, offset
   type(cl_kernel_t), save :: kernel
-  type(c_ptr)             :: kernel_ref
+  type(cl_kernel)         :: kernel_ref
   
   PUSH_SUB(batch_get_points_cl)
 
@@ -974,7 +974,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
 
   integer :: tsize, offset
   type(cl_kernel_t), save :: kernel
-  type(c_ptr)             :: kernel_ref
+  type(cl_kernel)         :: kernel_ref
 
   PUSH_SUB(batch_set_points_cl)
 

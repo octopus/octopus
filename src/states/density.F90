@@ -122,7 +122,7 @@ contains
     logical :: correct_size
     integer            :: wgsize
     type(opencl_mem_t) :: buff_weight
-    type(c_ptr)        :: kernel
+    type(cl_kernel)    :: kernel
 
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")

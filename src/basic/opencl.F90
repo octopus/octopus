@@ -20,7 +20,6 @@
 #include "global.h"
 
 module opencl_m
-  use c_pointer_m
   use cl_m
   use datasets_m
   use global_m
@@ -70,7 +69,7 @@ module opencl_m
 
   type opencl_mem_t
     private
-    type(c_ptr)            :: mem
+    type(cl_mem)           :: mem
     integer(SIZEOF_SIZE_T) :: size
     type(type_t)           :: type
   end type opencl_mem_t
@@ -78,29 +77,29 @@ module opencl_m
   type(opencl_t), public :: opencl
 
   ! the kernels
-  type(c_ptr), public :: kernel_vpsi
-  type(c_ptr), public :: kernel_vpsi_spinors
-  type(c_ptr), public :: set_zero
-  type(c_ptr), public :: set_zero_part
-  type(c_ptr), public :: kernel_daxpy
-  type(c_ptr), public :: kernel_zaxpy
-  type(c_ptr), public :: kernel_copy
-  type(c_ptr), public :: kernel_projector_bra
-  type(c_ptr), public :: kernel_projector_ket
-  type(c_ptr), public :: kernel_projector_ket_copy
-  type(c_ptr), public :: dpack
-  type(c_ptr), public :: zpack
-  type(c_ptr), public :: dunpack
-  type(c_ptr), public :: zunpack
-  type(c_ptr), public :: kernel_subarray_gather
-  type(c_ptr), public :: kernel_density_real
-  type(c_ptr), public :: kernel_density_complex
-  type(c_ptr), public :: kernel_phase
-  type(c_ptr), public :: dkernel_dot_matrix
-  type(c_ptr), public :: zkernel_dot_matrix
-  type(c_ptr), public :: zkernel_dot_matrix_spinors
-  type(c_ptr), public :: dkernel_dot_vector
-  type(c_ptr), public :: zkernel_dot_vector
+  type(cl_kernel), public :: kernel_vpsi
+  type(cl_kernel), public :: kernel_vpsi_spinors
+  type(cl_kernel), public :: set_zero
+  type(cl_kernel), public :: set_zero_part
+  type(cl_kernel), public :: kernel_daxpy
+  type(cl_kernel), public :: kernel_zaxpy
+  type(cl_kernel), public :: kernel_copy
+  type(cl_kernel), public :: kernel_projector_bra
+  type(cl_kernel), public :: kernel_projector_ket
+  type(cl_kernel), public :: kernel_projector_ket_copy
+  type(cl_kernel), public :: dpack
+  type(cl_kernel), public :: zpack
+  type(cl_kernel), public :: dunpack
+  type(cl_kernel), public :: zunpack
+  type(cl_kernel), public :: kernel_subarray_gather
+  type(cl_kernel), public :: kernel_density_real
+  type(cl_kernel), public :: kernel_density_complex
+  type(cl_kernel), public :: kernel_phase
+  type(cl_kernel), public :: dkernel_dot_matrix
+  type(cl_kernel), public :: zkernel_dot_matrix
+  type(cl_kernel), public :: zkernel_dot_matrix_spinors
+  type(cl_kernel), public :: dkernel_dot_vector
+  type(cl_kernel), public :: zkernel_dot_vector
 
   interface opencl_create_buffer
     module procedure opencl_create_buffer_4
@@ -149,7 +148,7 @@ module opencl_m
     subroutine opencl_init(base_grp)
       type(mpi_grp_t),  intent(inout) :: base_grp
 
-      type(c_ptr) :: prog
+      type(cl_program) :: prog
       logical  :: disable, default
       integer  :: ierr, idevice, iplatform, ndevices, idev
       character(len=256) :: device_name
@@ -355,7 +354,6 @@ module opencl_m
 #ifdef HAVE_OPENCL
         integer(8) :: val 
         character(len=256) :: val_str
-        logical :: has_ext
 
         call messages_new_line()
         call messages_write('Selected CL device:')
@@ -560,7 +558,7 @@ module opencl_m
     ! ------------------------------------------
 
     subroutine opencl_set_kernel_arg_buffer(kernel, narg, buffer)
-      type(c_ptr),        intent(inout) :: kernel
+      type(cl_kernel),    intent(inout) :: kernel
       integer,            intent(in)    :: narg
       type(opencl_mem_t), intent(in)    :: buffer
       
@@ -582,7 +580,7 @@ module opencl_m
     ! ------------------------------------------
 
     subroutine opencl_set_kernel_arg_local(kernel, narg, type, size)
-      type(c_ptr),        intent(inout) :: kernel
+      type(cl_kernel),    intent(inout) :: kernel
       integer,            intent(in)    :: narg
       type(type_t),       intent(in)    :: type
       integer,            intent(in)    :: size
@@ -616,7 +614,7 @@ module opencl_m
     ! ------------------------------------------
 
     subroutine opencl_kernel_run(kernel, globalsizes, localsizes)
-      type(c_ptr),        intent(inout) :: kernel
+      type(cl_kernel),    intent(inout) :: kernel
       integer,            intent(in)    :: globalsizes(:)
       integer,            intent(in)    :: localsizes(:)
       
@@ -654,7 +652,7 @@ module opencl_m
 
     ! -----------------------------------------------
     integer function opencl_kernel_workgroup_size(kernel) result(workgroup_size)
-      type(c_ptr), intent(inout) :: kernel
+      type(cl_kernel), intent(inout) :: kernel
 
 #ifdef HAVE_OPENCL
       workgroup_size = f90_cl_kernel_wgroup_size(kernel, opencl%device)
@@ -666,7 +664,7 @@ module opencl_m
     ! -----------------------------------------------
 
     subroutine opencl_build_program(prog, filename, flags)
-      type(c_ptr),                intent(inout) :: prog
+      type(cl_program),           intent(inout) :: prog
       character(len=*),           intent(in)    :: filename
       character(len=*), optional, intent(in)    :: flags
       
@@ -702,7 +700,7 @@ module opencl_m
     ! -----------------------------------------------
 
     subroutine opencl_release_program(prog)
-      type(c_ptr),      intent(inout) :: prog
+      type(cl_program),    intent(inout) :: prog
 
       integer :: ierr
 
@@ -715,7 +713,7 @@ module opencl_m
     ! -----------------------------------------------
 
     subroutine opencl_release_kernel(prog)
-      type(c_ptr),      intent(inout) :: prog
+      type(cl_kernel),      intent(inout) :: prog
 
       integer :: ierr
 
@@ -727,8 +725,8 @@ module opencl_m
 
     ! -----------------------------------------------
     subroutine opencl_create_kernel(kernel, prog, name)
-      type(c_ptr),      intent(inout) :: kernel
-      type(c_ptr),      intent(inout) :: prog
+      type(cl_kernel),  intent(inout) :: kernel
+      type(cl_program), intent(inout) :: prog
       character(len=*), intent(in)    :: name
 
       integer :: ierr
