@@ -231,8 +231,6 @@ contains
     logical :: optimize_
     character(len=100) :: str_tmp
   
-    integer(ptrdiff_t_kind) :: nn_t_kind(1:3)
-    
     PUSH_SUB(pfft_init)
 
     ! First, figure out the dimensionality of the FFT. PFFT works efficiently with 3D
@@ -375,8 +373,7 @@ contains
   subroutine pfft_backward_3d(pfft)
     type(pfft_t), intent(inout) :: pfft
     integer :: index, ii, jj, kk
-    type(profile_t), save :: prof_bw,prof_gtv,prof_g,prof_t
-    character(len=256) ::  tmp_file !< kentzeko!!!
+    type(profile_t), save :: prof_bw, prof_g, prof_t
 
     PUSH_SUB(pfft_backward_3d)
     
