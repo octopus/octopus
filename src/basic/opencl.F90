@@ -810,7 +810,9 @@ module opencl_m
 
       character(len=2048) :: all_extensions
 
+#ifdef HAVE_OPENCL
       call flGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, all_extensions)
+#endif
 
       has = index(all_extensions, extension) /= 0
 
