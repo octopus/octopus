@@ -153,8 +153,9 @@ module opencl_m
       type(cl_program) :: prog
       logical  :: disable, default
       integer  :: device_type
-      integer  :: ierr, idevice, iplatform, ndevices, idev, cl_status, ret_devices
+      integer  :: ierr, idevice, iplatform, ndevices, idev, cl_status, ret_devices, nplatforms, iplat
       character(len=256) :: device_name
+      type(cl_platform_id), allocatable :: allplatforms(:)
       type(cl_device_id), allocatable :: alldevices(:)
 
       PUSH_SUB(opencl_init)
@@ -228,8 +229,31 @@ module opencl_m
 
 #ifdef HAVE_OPENCL
 
-      ierr = flGetPlatformIDs(iplatform, opencl%platform_id)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
+      call flGetPlatformIDs(nplatforms, cl_status)
+      if(cl_status /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
+ 
+      SAFE_ALLOCATE(allplatforms(1:nplatforms))
+
+      call flGetPlatformIDs(nplatforms, allplatforms, iplat, cl_status)
+      if(cl_status /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
+
+      call messages_write('Info: Available CL platforms: ')
+      call messages_write(nplatforms)
+      call messages_info()
+
+      do iplat = 1, nplatforms
+        call messages_write('      Platform ')
+        call messages_write(iplat)
+        call flGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_NAME, device_name, cl_status)
+        call messages_write(' : '//device_name)
+        call flGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_VERSION, device_name, cl_status)
+        call messages_write(' ('//trim(device_name)//')')
+        call messages_info()
+      end do
+
+      opencl%platform_id = allplatforms(iplatform + 1)
+
+      SAFE_DEALLOCATE_A(allplatforms)
 
       call flGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, cl_status)
       call f90_cl_init_context(opencl%platform_id, opencl%context)

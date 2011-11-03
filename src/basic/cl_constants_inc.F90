@@ -139,6 +139,13 @@
   integer, parameter, public :: CL_DEVICE_TYPE_ACCELERATOR =  8 ! (1 << 3)
   integer, parameter, public :: CL_DEVICE_TYPE_ALL         = -1 ! 0xFFFFFFFF
 
+  !/* cl_platform_info */
+  integer, parameter, public :: CL_PLATFORM_PROFILE    = 2304 ! 0x0900
+  integer, parameter, public :: CL_PLATFORM_VERSION    = 2305 ! 0x0901
+  integer, parameter, public :: CL_PLATFORM_NAME       = 2306 ! 0x0902
+  integer, parameter, public :: CL_PLATFORM_VENDOR     = 2307 ! 0x0903
+  integer, parameter, public :: CL_PLATFORM_EXTENSIONS = 2308 ! 0x0904
+
   integer, parameter, public ::        &
     CL_MEM_READ_WRITE = 1,             &
     CL_MEM_WRITE_ONLY = 2,             &

@@ -33,44 +33,41 @@
 
 #define MAX_PLATFORMS 4
 
-int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platform_id * platform){
-  cl_platform_id all_platforms[MAX_PLATFORMS];
-  cl_int status;
+void FC_FUNC(flgetplatformids_num, FLGETPLATFORMIDS_NUM)(int * num_platforms, int * status){
   cl_uint ret_platform;
-  cl_uint ip;
+
+  *status = (int) clGetPlatformIDs(0, NULL, &ret_platform);
+  *num_platforms = (int) ret_platform;
+}
+
+
+/* -----------------------------------------------------------------------*/
+
+void FC_FUNC_(flgetplatformids_listall, FLGETPLATFORMIDS_LISTALL)
+     (const int * num_entries, cl_platform_id * platforms, int * num_platforms, int * status){
+
+  cl_uint unum_platforms;
+
+  *status = (int) clGetPlatformIDs((cl_uint) *num_entries, platforms, &unum_platforms);
+  *num_platforms = (int) unum_platforms;
+}
+
+/* -----------------------------------------------------------------------*/
+
+void FC_FUNC_(flgetplatformids_getplat, FLGETPLATFORMIDS_GETPLAT)
+     (const cl_platform_id * allplatforms, const int * iplatform, cl_platform_id * platform){
+  *platform = allplatforms[*iplatform];
+}
+
+/* -----------------------------------------------------------------------*/
+
+void FC_FUNC_(flgetplatforminfo, FLGETPLATFORMINFO)
+     (const cl_platform_id * platform, const int * param_name, STR_F_TYPE param_value, int * status STR_ARG1){
   char info[2048];
 
-  status = clGetPlatformIDs(MAX_PLATFORMS, all_platforms, &ret_platform);
+  *status = (int) clGetPlatformInfo(*platform, (cl_platform_info) *param_name, sizeof(info), info, NULL);
 
-  printf("Available OpenCL platforms: %d\n", ret_platform);
-
-  for(ip = 0; ip < ret_platform; ip++){
-    
-    /*PLATFORM NAME*/
-    status = clGetPlatformInfo(all_platforms[ip], CL_PLATFORM_NAME, sizeof(info), info, NULL);
-    
-    if (status != CL_SUCCESS){
-      fprintf(stderr, "\nError: clGetPlatformInfo returned error code: %d\n", status);
-      exit(1);
-    }
-    printf("%c Platform %d : %s", ((*iplatform == ip)?'*':' '), ip, info);
-
-    /*PLATFORM VERSION*/
-    status = clGetPlatformInfo(all_platforms[ip], CL_PLATFORM_VERSION, sizeof(info), info, NULL);
-    
-    if (status != CL_SUCCESS){
-      fprintf(stderr, "\nError: clGetPlatformInfo returned error code: %d\n", status);
-      exit(1);
-    }
-
-    printf(" %s\n", info);
-  }
-
-  printf("\n");
-
-  *platform = all_platforms[*iplatform];
-
-  return status;
+  TO_F_STR1(info, param_value);
 }
 
 /* -----------------------------------------------------------------------*/
