@@ -99,6 +99,7 @@ module messages_m
     module procedure messages_write_integer
     module procedure messages_write_integer8
     module procedure messages_write_str
+    module procedure messages_write_logical
   end interface messages_write
 
   integer,    public :: global_alloc_err
@@ -1100,6 +1101,19 @@ end subroutine messages_end
     write(message(current_line), '(2a)') trim(message(current_line)), trim(val)
 
   end subroutine messages_write_str
+
+  ! ------------------------------------------------------------
+
+  subroutine messages_write_logical(val)
+    logical, intent(in) :: val
+
+    if(val) then
+      write(message(current_line), '(2a)') trim(message(current_line)), ' yes'
+    else
+      write(message(current_line), '(2a)') trim(message(current_line)), ' no'
+    end if
+
+  end subroutine messages_write_logical
 
 end module messages_m
 

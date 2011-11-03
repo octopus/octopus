@@ -355,61 +355,70 @@ module opencl_m
 #ifdef HAVE_OPENCL
         integer(8) :: val 
         character(len=256) :: val_str
+        logical :: has_ext
 
         call messages_new_line()
         call messages_write('Selected CL device:')
         call messages_new_line()
 
         call flGetDeviceInfo(opencl%device, CL_DEVICE_VENDOR, val_str)
-        call messages_write('      Device vendor        : '//trim(val_str))
+        call messages_write('      Device vendor          : '//trim(val_str))
         call messages_new_line()
 
         call flGetDeviceInfo(opencl%device, CL_DEVICE_NAME, val_str)
-        call messages_write('      Device name          : '//trim(val_str))
+        call messages_write('      Device name            : '//trim(val_str))
         call messages_new_line()
 
         call flGetDeviceInfo(opencl%device, CL_DRIVER_VERSION, val_str)
-        call messages_write('      Driver version       : '//trim(val_str))
+        call messages_write('      Driver version         : '//trim(val_str))
         call messages_new_line()
 
         call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_COMPUTE_UNITS, val)
-        call messages_write('      Compute units        :')
+        call messages_write('      Compute units          :')
         call messages_write(val)
         call messages_new_line()
 
         call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CLOCK_FREQUENCY, val)
-        call messages_write('      Clock frequency      :')
+        call messages_write('      Clock frequency        :')
         call messages_write(val)
         call messages_write(' GHz')
         call messages_new_line()
 
         call flGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_SIZE, val)
-        call messages_write('      Device memory        :')
+        call messages_write('      Device memory          :')
         call messages_write(val/(1024**2))
         call messages_write(' Mb')
         call messages_new_line()
 
         call flGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val)
-        call messages_write('      Device cache         :')
+        call messages_write('      Device cache           :')
         call messages_write(val/1024)
         call messages_write(' Kb')
         call messages_new_line()
 
         call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, val)
-        call messages_write('      Local memory         :')
+        call messages_write('      Local memory           :')
         call messages_write(val/1024)
         call messages_write(' Kb')
         call messages_new_line()
 
         call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val)
-        call messages_write('      Constant memory      :')
+        call messages_write('      Constant memory        :')
         call messages_write(val/1024)
         call messages_write(' Kb')
         call messages_new_line()
 
         call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val)
-        call messages_write('      Max. workgroup size  :')
+        call messages_write('      Max. workgroup size    :')
         call messages_write(val)
+        call messages_new_line()
+
+        call messages_write('      Extension cl_khr_fp64  :')
+        call messages_write(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64"))
+        call messages_new_line()
+
+        call messages_write('      Extension cl_amd_fp64  :')
+        call messages_write(f90_cl_device_has_extension(opencl%device, "cl_amd_fp64"))
         call messages_new_line()
 
         call messages_info()
@@ -668,9 +677,9 @@ module opencl_m
 
       full_flags=''
 
-      if (f90_cl_device_has_extension(opencl%device, "cl_amd_fp64") /= 0) then
+      if (f90_cl_device_has_extension(opencl%device, "cl_amd_fp64")) then
         full_flags = trim(full_flags)//'-DEXT_AMD_FP64'
-      else if(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64") /= 0) then
+      else if(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64")) then
         full_flags = trim(full_flags)//'-DEXT_KHR_FP64 -cl-mad-enable'
       else
         message(1) = 'Octopus requires an OpenCL device with double-precision support.' 
@@ -792,6 +801,21 @@ module opencl_m
       call messages_fatal(1)
   
     end subroutine opencl_print_error
+
+    ! ----------------------------------------------------
+
+    logical function f90_cl_device_has_extension(device, extension) result(has)
+      type(c_ptr),      intent(inout) :: device
+      character(len=*), intent(in)    :: extension
+
+      character(len=2048) :: all_extensions
+
+      call flGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, all_extensions)
+
+      has = index(all_extensions, extension) /= 0
+
+    end function f90_cl_device_has_extension
+
 
 #include "undef.F90"
 #include "real.F90"

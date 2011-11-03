@@ -37,7 +37,6 @@ module cl_m
     f90_cl_get_number_of_devices,    &
     f90_cl_init_context,             &
     f90_cl_init_device,              &
-    f90_cl_device_has_extension,     &
     f90_cl_create_program_from_file, &
     f90_cl_build_program,            &
     f90_cl_release_program,          &
@@ -129,17 +128,6 @@ module cl_m
       integer,     intent(out)   :: ierr
 
     end subroutine flReleaseCommandQueue
-
-    ! ----------------------------------------------------
-
-    integer function f90_cl_device_has_extension(device, extension)
-      use c_pointer_m
-
-      implicit none
-
-      type(c_ptr),      intent(inout) :: device
-      character(len=*), intent(in)    :: extension
-    end function f90_cl_device_has_extension
 
 
     ! ----------------------------------------------------
@@ -323,9 +311,27 @@ module cl_m
       integer(8),       intent(out)  :: param_value
     end subroutine flgetdeviceinfo_int64
 
+    module procedure flgetdeviceinfo_logical
+
   end interface flGetDeviceInfo
   
   ! ---------------------------------------------------
+
+  contains
+
+    subroutine flgetdeviceinfo_logical(device, param_name, param_value)
+      type(c_ptr),      intent(in)   :: device
+      integer,          intent(in)   :: param_name
+      logical,          intent(out)  :: param_value
+
+      integer(8) :: param_value_64
+
+      call flgetdeviceinfo_int64(device, param_name, param_value_64)
+
+      param_value = param_value_64 /= 0
+
+    end subroutine flgetdeviceinfo_logical
+
 
 end module cl_m
 

@@ -356,20 +356,6 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
   free(flags);
 }
 
-int FC_FUNC_(f90_cl_device_has_extension, F90_CL_DEVICE_HAS_EXTENSION)
-     (cl_device_id * device, STR_F_TYPE extension_f STR_ARG1){
-  char * extension;
-  char device_string[2048];
-  int has_ext;
-
-  TO_C_STR1(extension_f, extension);
-
-  clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
-  has_ext = strstr(device_string, extension) != NULL;
-  free(extension);
-  return has_ext;
-}
-
 void FC_FUNC_(f90_cl_release_program, F90_CL_RELEASE_PROGRAM)
      (cl_program * program, int * ierr){
 
