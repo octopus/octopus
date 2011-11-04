@@ -165,7 +165,7 @@ contains
       gx = temp(1)*ixx(1)
       do iy = 1, db(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
-        do iz = 1, cube%n(3)
+        do iz = 1, db(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
           gg(:) = temp(:)*ixx(:)
@@ -219,7 +219,7 @@ contains
     db(1:3) = cube%n(1:3)
 
     call parse_float(datasets_check('PoissonCutoffRadius'),&
-      maxval(cube%n(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
+      maxval(db(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
 
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_abbrev(units_out%length)), '] = ',       &
@@ -341,13 +341,13 @@ contains
 
     if (poisson_solver .ne. POISSON_FFT_CORRECTED) then
       call parse_float(datasets_check('PoissonCutoffRadius'),&
-        maxval(cube%n(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
+        maxval(db(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
 
       write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
         trim(units_abbrev(units_out%length)), '] = ',       &
         units_from_atomic(units_out%length, r_c)
       call messages_info(1)
-      if ( r_c > maxval(cube%n(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
+      if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
         message(1) = 'Poisson cutoff radius is larger than cell size.'
         message(2) = 'You can see electrons in next cell(s).'
         call messages_warning(2)
@@ -483,13 +483,13 @@ contains
     db(1:3) = cube%n(1:3)
 
     call parse_float(datasets_check('PoissonCutoffRadius'),&
-      maxval(cube%n(1:2)*mesh%spacing(1:2)/M_TWO), r_c, units_inp%length)
+      maxval(db(1:2)*mesh%spacing(1:2)/M_TWO), r_c, units_inp%length)
 
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
     call messages_info(1)
-    if ( r_c > maxval(cube%n(1:2)*mesh%spacing(1:2)/M_TWO) + DELTA_R) then
+    if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in next cell(s).'
       call messages_warning(2)
