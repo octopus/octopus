@@ -294,13 +294,13 @@ module cl_m
 
     ! ----------------------------------------------------
 
-    subroutine flEnqueueNDRangeKernel(kernel, command_queue, dim, globalsizes, localsizes, status)
+    subroutine flEnqueueNDRangeKernel(command_queue, kernel, dim, globalsizes, localsizes, status)
       use cl_types
 
       implicit none
 
-      type(cl_kernel),        intent(inout) :: kernel
       type(cl_command_queue), intent(inout) :: command_queue
+      type(cl_kernel),        intent(inout) :: kernel
       integer,                intent(in)    :: dim
       integer(SIZEOF_SIZE_T), intent(in)    :: globalsizes
       integer(SIZEOF_SIZE_T), intent(in)    :: localsizes

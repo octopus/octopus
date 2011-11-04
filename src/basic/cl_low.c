@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2010 X. Andrade, N. Suberviola
+ Copyright (C) 2010-2011 X. Andrade
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -31,7 +31,6 @@
 
 #include <string_f.h>
 
-#define MAX_PLATFORMS 4
 
 void FC_FUNC(flgetplatformids_num, FLGETPLATFORMIDS_NUM)(int * num_platforms, int * status){
   cl_uint ret_platform;
@@ -417,10 +416,10 @@ void FC_FUNC_(f90_cl_set_kernel_arg_local, F90_CL_SET_KERNEL_ARG_LOCAL)
 
 /* clEnqueueNDRangeKernel*/
 void FC_FUNC(flenqueuendrangekernel, FLENQUEUENDRANGEKERNEL)
-     (cl_kernel * kernel, cl_command_queue * cq, const int * dim, const size_t * globalsizes, const size_t * localsizes, int * status){
+     (cl_command_queue * command_queue, cl_kernel * kernel, const int * dim, const size_t * globalsizes, const size_t * localsizes, int * status){
 
-  *status = clEnqueueNDRangeKernel(*cq, *kernel, *dim,
-				   NULL,  globalsizes, localsizes, 0, NULL, NULL);
+  *status = (int) clEnqueueNDRangeKernel(*command_queue, *kernel, *dim,
+					 NULL,  globalsizes, localsizes, 0, NULL, NULL);
 
 }
 

@@ -693,7 +693,7 @@ module opencl_m
       lsizes(1:dim) = int(localsizes(1:dim), SIZEOF_SIZE_T)
 
 #ifdef HAVE_OPENCL
-      call flEnqueueNDRangeKernel(kernel, opencl%command_queue, dim, gsizes(1), lsizes(1), ierr)
+      call flEnqueueNDRangeKernel(opencl%command_queue, kernel, dim, gsizes(1), lsizes(1), ierr)
 #endif
 
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
