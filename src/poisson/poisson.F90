@@ -55,6 +55,7 @@ module poisson_m
   private
   public ::                      &
     poisson_t,                   &
+    poisson_fmm_t,               &
     poisson_get_solver,          &
     poisson_init_stage_1,        &
     poisson_init_stage_2,        &
