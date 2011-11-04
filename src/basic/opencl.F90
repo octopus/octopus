@@ -545,7 +545,7 @@ module opencl_m
       fsize = size*types_get_size(type)
 
 #ifdef HAVE_OPENCL
-      call f90_cl_create_buffer(this%mem, opencl%context, flags, fsize, ierr)
+      this%mem = flCreateBuffer(opencl%context, flags, fsize, ierr)
 #endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
 
@@ -561,7 +561,7 @@ module opencl_m
 
       this%size = 0
 #ifdef HAVE_OPENCL
-      call f90_cl_release_buffer(this%mem, ierr)
+      call flReleaseMemObject(this%mem, ierr)
 #endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_buffer")
     end subroutine opencl_release_buffer

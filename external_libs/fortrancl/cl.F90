@@ -28,6 +28,7 @@ module cl
   use cl_context_m
   use cl_platform_m
   use cl_command_queue_m
+  use cl_buffer_m
 
   implicit none 
 

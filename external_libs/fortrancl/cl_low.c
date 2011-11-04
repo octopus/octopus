@@ -141,22 +141,6 @@ int FC_FUNC_(f90_cl_kernel_wgroup_size, F90_CL_KERNEL_WGROUP_SIZE)(cl_kernel * k
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(f90_cl_create_buffer, F90_CL_CREATE_BUFFER)
-     (cl_mem * buffer, cl_context * context, const int * flags, const size_t * size, int * status){
-
-  *buffer = clCreateBuffer(*context, *flags, (size_t) *size, NULL, status);
-
-}
-
-/* -----------------------------------------------------------------------*/
-
-void FC_FUNC_(f90_cl_release_buffer, F90_CL_RELEASE_BUFFER)(cl_mem * buffer, int * status){
-
-  *status = clReleaseMemObject(*buffer);
-}
-
-/* -----------------------------------------------------------------------*/
-
 /* clEnqueueWriteBuffer */
 void FC_FUNC(flenqueuewritebuffer, FLENQUEUEWRITEBUFFER)
      (cl_mem * buffer, cl_command_queue * cq, const size_t * size, const size_t * offset, const void * data, int * status){
