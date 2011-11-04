@@ -18,7 +18,7 @@
   !! $Id: cl_constants_inc.F90 3587 2007-11-22 16:43:00Z xavier $
 
   ! these values are copied from OpenCL include CL/cl.h
-module cl_constants
+module cl_constants_m
   
   implicit none
 
@@ -162,7 +162,7 @@ module cl_constants
   integer, parameter, public :: CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE = 1 ! (1 << 0)
   integer, parameter, public :: CL_QUEUE_PROFILING_ENABLE              = 2 ! (1 << 1)
 
-end module cl_constants
+end module cl_constants_m
 
 !! Local Variables:
 !! mode: f90

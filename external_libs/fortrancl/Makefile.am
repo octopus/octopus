@@ -25,18 +25,32 @@ libfortrancl_a_SOURCES =       \
 	cl_types.F90           \
 	cl_constants.F90       \
 	cl_functions.F90       \
+	cl_device.F90          \
+	cl_platform.F90        \
+	cl_context.F90         \
+	cl_command_queue.F90   \
 	cl.F90
 
 if COMPILE_OPENCL
- libfortrancl_a_SOURCES += cl_low.c
+ libfortrancl_a_SOURCES +=           \
+	cl_low.c                     \
+	cl_device_low.c              \
+	cl_platform_low.c            \
+	cl_context_low.c             \
+	cl_command_queue_low.c
 endif
 
 noinst_HEADERS =               \
 	string_f.h
-cl_types.o     : cl_types.F90
-cl_constants.o : cl_constants.F90
-cl_functions.o : cl_functions.F90 cl_constants.F90 cl_types.F90  config_F90.h
-cl.o : cl.F90 cl_constants.F90 cl_types.o cl_functions.o
+
+cl_types.o     : cl_types.F90 config_F90.h
+cl_constants.o : cl_constants.F90 config_F90.h
+cl_functions.o : cl_functions.F90 cl_types.F90 config_F90.h
+cl_platform.o  : cl_platform.F90 cl_types.F90 config_F90.h
+cl_device.o    : cl_device.F90 cl_types.F90 config_F90.h
+cl_context.o   : cl_context.F90 cl_types.F90 config_F90.h
+cl_command_queue.o : cl_command_queue.F90 cl_types.F90 config_F90.h
+cl.o : cl.F90 cl_constants.F90 cl_types.o cl_functions.o cl_device.o cl_platform.o cl_context.o cl_command_queue.o
 
 config_F90.h: $(top_builddir)/config.h
 	grep '^#define' $^ > config_F90.h

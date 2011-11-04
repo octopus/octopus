@@ -19,7 +19,7 @@
 
 #include "config_F90.h"
 
-module cl_types
+module cl_types_m
   implicit none 
   
   type :: cl_platform_id
@@ -67,7 +67,7 @@ module cl_types
     integer, pointer :: p 
   end type cl_sampler
 
-end module cl_types
+end module cl_types_m
 
 !! Local Variables:
 !! mode: f90
