@@ -60,8 +60,6 @@ module cl_functions
     f90_cl_set_kernel_arg_buf,       &
     f90_cl_set_kernel_arg_local
 
-#include "cl_constants_inc.F90"
-
   interface
 
     subroutine f90_cl_init_context(platform_id, context)
