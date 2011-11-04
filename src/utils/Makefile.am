@@ -48,7 +48,7 @@ oct_harmonic_spectrum_SOURCES = harmonic_spectrum.F90
 oct_harmonic_spectrum_LDADD   = $(all_LIBS)
 
 oct_photoelectron_spectrum_SOURCES = photoelectron_spectrum.F90
-oct_photoelectron_spectrum_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
+oct_photoelectron_spectrum_LDADD   =  $(all_LIBS)
 
 oct_xyz_anim_SOURCES = xyzanim.F90
 oct_xyz_anim_LDADD   = $(all_LIBS)
