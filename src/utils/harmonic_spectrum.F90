@@ -56,7 +56,7 @@ program harmonic_spectrum
   pol = 'x'
   mode = 1
   ar = 0
-  vec = M_ZERO 
+  vec = (/M_ONE, M_ZERO, M_ONE /)
   call getopt_harmonic_spectrum(w0, mode, ar, vec(1),vec(2),vec(3),pol)
   if(w0 <= M_ZERO) get_maxima = .false.
   call getopt_end()
