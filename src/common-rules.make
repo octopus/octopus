@@ -35,8 +35,9 @@ AM_FCFLAGS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/scf     	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/td          \
 	@F90_MODULE_FLAG@$(top_builddir)/src/opt_control \
-	@F90_MODULE_FLAG@$(top_builddir)/src/sternheimer \
-	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep \
+	@F90_MODULE_FLAG@$(top_builddir)/src/sternheimer         \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/qshep     \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/fortrancl \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/bpdn
 
 AM_CPPFLAGS = \
@@ -78,9 +79,10 @@ core_LIBS = \
 	@GSL_LIBS@ @GD_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@
 
 external_LIBS = \
-	$(top_builddir)/external_libs/qshep/libqshep.a        \
-	$(top_builddir)/external_libs/spglib/src/libspglib.a  \
-	$(top_builddir)/external_libs/slatec/libslatec.a      \
+	$(top_builddir)/external_libs/qshep/libqshep.a            \
+	$(top_builddir)/external_libs/spglib/src/libspglib.a      \
+	$(top_builddir)/external_libs/slatec/libslatec.a          \
+	$(top_builddir)/external_libs/fortrancl/libfortrancl.a    \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a
 
 if COMPILE_METIS

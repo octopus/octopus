@@ -17,7 +17,7 @@
   !!
   !! $Id: cl.F90 3587 2007-11-22 16:43:00Z xavier $
 
-#include "global.h"
+#include "config_F90.h"
 
 module cl_types
   implicit none 

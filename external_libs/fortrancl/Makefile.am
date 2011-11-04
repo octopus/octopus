@@ -17,6 +17,22 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 ## 02111-1307, USA.
 ##
-## $Id$
+## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
-SUBDIRS = metis-4.0 qshep newuoa spglib zoltan slatec fortrancl bpdn
+noinst_LIBRARIES = libfortrancl.a
+
+libfortrancl_a_SOURCES =     \
+	cl.F90
+
+if COMPILE_OPENCL
+ libfortrancl_a_SOURCES += cl_low.c
+endif
+
+noinst_HEADERS =               \
+	cl_constants_inc.F90   \
+	string_f.h
+
+cl.o : cl.F90 cl_constants_inc.F90 config_F90.h string_f.h
+
+config_F90.h: $(top_builddir)/config.h
+	grep '^#define' $^ > config_F90.h
