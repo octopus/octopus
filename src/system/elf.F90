@@ -211,8 +211,7 @@ contains
       sp = M_ONE
     end if
  
-
-    call cube_init(cube_tmp, gr%mesh%idx%ll, gr%sb, gr%mesh%idx, gr%mesh%np_global)
+    call cube_init(cube_tmp, gr%mesh%idx%ll, gr%sb, fft = .true.)
     call cube_function_null(cube_function_tmp)
 
     do_is: do is = 1, st%d%nspin

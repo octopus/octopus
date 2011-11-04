@@ -25,10 +25,16 @@ subroutine X(cube_function_alloc_RS)(cube, cf)
 
   PUSH_SUB(X(cube_function_alloc_RS))
 
-  !Save memory if PFFT is used  
-  if (cube%fft_library /= PFFT_LIB) then
+  if (cube%fft_library /= FFTLIB_PFFT) then
     ASSERT(.not.associated(cf%X(RS)))
     SAFE_ALLOCATE(cf%X(RS)(1:cube%n(1), 1:cube%n(2), 1:cube%n(3)))
+#ifdef HAVE_PFFT
+  else
+    ASSERT(.not.associated(cf%pRS))
+    cf%pRS => cube%pfft%rs_data
+    ASSERT(.not.associated(cf%global_pRS))
+    SAFE_ALLOCATE(cf%global_pRS(cube%n(1)*cube%n(2)*cube%n(3)))
+#endif
   end if
 
   POP_SUB(X(cube_function_alloc_RS))
@@ -44,6 +50,14 @@ subroutine X(cube_function_free_RS)(cf)
   if (associated(cf%X(RS))) then
     SAFE_DEALLOCATE_P(cf%X(RS))
   end if
+#ifdef HAVE_PFFT
+  if (associated(cf%pRS)) then
+    nullify(cf%pRS)
+  end if
+  if (associated(cf%global_pRS)) then
+    SAFE_DEALLOCATE_P(cf%global_pRS)
+  end if
+#endif
 
   POP_SUB(X(cube_function_free_RS))
 end subroutine X(cube_function_free_RS)
@@ -248,21 +262,20 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local)
   end if
 
   center(1:3) = cube%n(1:3)/2 + 1
-  
 
   ! Save the limit values
-  min_x = cube%pfft%local_i_start(1)
-  min_y = cube%pfft%local_i_start(2)
-  min_z = cube%pfft%local_i_start(3)
-  max_x = cube%pfft%local_i_start(1) + cube%pfft%local_ni(1)
-  max_y = cube%pfft%local_i_start(2) + cube%pfft%local_ni(2)
-  max_z = cube%pfft%local_i_start(3) + cube%pfft%local_ni(3)
+  min_x = cube%rs_istart(1)
+  min_y = cube%rs_istart(2)
+  min_z = cube%rs_istart(3)
+  max_x = cube%rs_istart(1) + cube%rs_n(1)
+  max_y = cube%rs_istart(2) + cube%rs_n(2)
+  max_z = cube%rs_istart(3) + cube%rs_n(3)
   
   ! Initialize to zero the input matrix
   do ix = min_x, max_x - 1
     do iy = min_y, max_y - 1
       do iz = min_z, max_z - 1
-        cube%pfft%data_in(cube_get_pfft_index(cube%pfft, ix, iy, iz)) = M_ZERO
+        cf%pRS(cube_get_pfft_index(cube, ix, iy, iz)) = M_ZERO
       end do
     end do
   end do
@@ -280,9 +293,9 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local)
         do ii = 0, nn - 1
           if (iz+ii >= min_z .and. iz+ii < max_z) then      
             if (cube%pfft%is_real == 0) then
-              cube%pfft%data_in(cube_get_pfft_index(cube%pfft,ix,iy,iz+ii)) = TOCMPLX(real(gmf(ip + ii)),M_ZERO)
+              cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = TOCMPLX(real(gmf(ip + ii)),M_ZERO)
             else 
-              cube%pfft%data_in(cube_get_pfft_index(cube%pfft,ix,iy,iz+ii)) = gmf(ip + ii)
+              cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = gmf(ip + ii)
             end if
           else
             cycle
@@ -333,12 +346,12 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
 
   center(1:3) = cube%n(1:3)/2 + 1
 
-  min_x = cube%pfft%local_i_start(1)
-  min_y = cube%pfft%local_i_start(2)
-  min_z = cube%pfft%local_i_start(3)
-  max_x = cube%pfft%local_i_start(1) + cube%pfft%local_ni(1)
-  max_y = cube%pfft%local_i_start(2) + cube%pfft%local_ni(2)
-  max_z = cube%pfft%local_i_start(3) + cube%pfft%local_ni(3)
+  min_x = cube%rs_istart(1)
+  min_y = cube%rs_istart(2)
+  min_z = cube%rs_istart(3)
+  max_x = cube%rs_istart(1) + cube%rs_n(1)
+  max_y = cube%rs_istart(2) + cube%rs_n(2)
+  max_z = cube%rs_istart(3) + cube%rs_n(3)
        
   scaling_fft_factor = real(cube%pfft%n(1)*cube%pfft%n(2)*cube%pfft%n(3))
   if (mpi_world%size == 1) then
@@ -349,7 +362,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
       ix = mesh%idx%lxyz(ip, 1) + center(1)
       iy = mesh%idx%lxyz(ip, 2) + center(2)
       iz = mesh%idx%lxyz(ip, 3) + center(3)
-      forall(ii = 0:nn - 1) gmf(ip + ii) = cube%pfft%global_data_in(cube%pfft%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
+      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%global_pRS(cube%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
     end do
   else
     !General execution
@@ -364,7 +377,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
       do ii = 0, nn - 1
         !Only work with the points of the mesh of my mesh
         if (mesh%vp%part(ip+ii) == mesh%vp%partno) then
-          gmf(ip + ii) = cube%pfft%global_data_in(cube%pfft%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
+          gmf(ip + ii) = cf%global_pRS(cube%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
         end if
       end do
     end do

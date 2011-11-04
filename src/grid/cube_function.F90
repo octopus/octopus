@@ -25,6 +25,7 @@ module cube_function_m
   use global_m
   use index_m
   use mesh_m
+  use mesh_cube_map_m
   use messages_m
   use mpi_m
   use fft_m
@@ -62,6 +63,11 @@ module cube_function_m
     FLOAT, pointer :: dRS(:, :, :)  !< real-space grid
     CMPLX, pointer :: zRS(:, :, :)  !< real-space grid, complex numbers
     CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid
+#ifdef HAVE_PFFT
+    CMPLX, pointer :: pRS(:)
+    CMPLX, pointer :: pFS(:)
+    FLOAT, pointer :: global_pRS(:)
+#endif
   end type cube_function_t
 
   type(profile_t), save :: prof_m2c, prof_c2m
@@ -172,6 +178,11 @@ contains
     nullify(cf%zRS)
     nullify(cf%dRS)
     nullify(cf%FS)
+#ifdef HAVE_PFFT
+    nullify(cf%pRS)
+    nullify(cf%pFS)
+    nullify(cf%global_pRS)
+#endif
     
     POP_SUB(cube_function_null) 
   end subroutine cube_function_null
@@ -185,6 +196,11 @@ contains
     SAFE_DEALLOCATE_P(cf%dRS)
     SAFE_DEALLOCATE_P(cf%zRS)
     SAFE_DEALLOCATE_P(cf%FS)
+#ifdef HAVE_PFFT
+    SAFE_DEALLOCATE_P(cf%pRS)
+    SAFE_DEALLOCATE_P(cf%pFS)
+    SAFE_DEALLOCATE_P(cf%global_pRS)
+#endif
 
     POP_SUB(cube_function_end)
   end subroutine cube_function_end

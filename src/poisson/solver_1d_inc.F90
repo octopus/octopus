@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -29,9 +29,9 @@ subroutine poisson1d_init(this)
 
   select case(this%method)
   case(POISSON_FFT_SPH)
-    call poisson_fft_build_1d_0d(this%der%mesh, this%poisson_soft_coulomb_param)
+    call poisson_fft_build_1d_0d(this%der%mesh, this%cube, this%poisson_soft_coulomb_param)
   case(POISSON_FFT_NOCUT)
-    call poisson_fft_build_1d_1d(this%der%mesh, this%poisson_soft_coulomb_param)
+    call poisson_fft_build_1d_1d(this%der%mesh, this%cube, this%poisson_soft_coulomb_param)
   end select
 
   POP_SUB(poisson1d_init)

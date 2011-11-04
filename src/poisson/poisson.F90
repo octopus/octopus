@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #include "global.h"
 
 module poisson_m
+  use cube_m
   use datasets_m
   use derivatives_m
   use geometry_m
@@ -55,7 +56,8 @@ module poisson_m
   public ::                      &
     poisson_t,                   &
     poisson_get_solver,          &
-    poisson_init,                &
+    poisson_init_stage_1,        &
+    poisson_init_stage_2,        &
     dpoisson_solve,              &
     zpoisson_solve,              &
     poisson_solver_is_iterative, &
@@ -104,6 +106,7 @@ module poisson_m
     private
     type(derivatives_t), pointer :: der
     integer :: method = -99
+    type(cube_t), public :: cube
     type(mg_solver_t) :: mg
     FLOAT   :: poisson_soft_coulomb_param = M_ONE
     logical :: all_nodes_default
@@ -130,17 +133,16 @@ module poisson_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, geo, all_nodes_comm)
+  subroutine poisson_init_stage_1(this, mesh)
     type(poisson_t),             intent(out)   :: this
-    type(derivatives_t), target, intent(in)    :: der
-    type(geometry_t),            intent(in)    :: geo
-    integer,                     intent(in)    :: all_nodes_comm
+    type(mesh_t),                intent(in)    :: mesh
+
+    logical :: need_cube, need_fft
+    integer :: default_solver, box(MAX_DIM)
 
     if(this%method.ne.-99) return ! already initialized
 
-    PUSH_SUB(poisson_init)
-
-    this%der => der
+    PUSH_SUB(poisson_init_stage_1)
 
     call messages_print_stress(stdout, "Hartree")
 
@@ -159,17 +161,6 @@ contains
 
     call parse_logical(datasets_check('ParallelizationPoissonAllNodes'), .true., this%all_nodes_default)
 #endif
-
-    select case(der%mesh%sb%dim)
-    case(1); call init_1D()
-    case(2); call init_2D()
-    case(3); call init_3D()
-    end select
-
-    call messages_print_stress(stdout)
-
-    POP_SUB(poisson_init)
-  contains
 
     !%Variable PoissonSolver
     !%Type integer
@@ -210,20 +201,17 @@ contains
     !% (Experimental) SETE solver.
     !%End
 
-    !------------------------------------------------------------------
-    subroutine init_1D()
-      integer :: default_solver
+    select case(mesh%sb%dim)
+    case(1)
 
-      PUSH_SUB(poisson_init.init_1D)
-
-      if(der%mesh%sb%periodic_dim==0) then
+      if(mesh%sb%periodic_dim==0) then
         default_solver = POISSON_FFT_SPH
       else
         default_solver = POISSON_FFT_NOCUT
       end if
       call parse_integer(datasets_check('PoissonSolver'), default_solver, this%method)
 
-      select case(der%mesh%sb%periodic_dim)
+      select case(mesh%sb%periodic_dim)
       case(0)
         if( (this%method.ne.POISSON_FFT_SPH)       .and. &
             (this%method.ne.POISSON_DIRECT_SUM_1D)) call input_error('PoissonSolver')
@@ -231,26 +219,16 @@ contains
         if( (this%method.ne.POISSON_FFT_NOCUT) ) call input_error('PoissonSolver')
       end select
 
-      if(der%mesh%use_curvilinear.and.this%method.ne.POISSON_DIRECT_SUM_1D) then
+      if(mesh%use_curvilinear.and.this%method.ne.POISSON_DIRECT_SUM_1D) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
         message(2) = 'Poisson solver is -1 ("direct summation in one dimension").'
         call messages_fatal(2)
       end if
 
-      call messages_print_var_option(stdout, "PoissonSolver", this%method)
-      call poisson1d_init(this)
+    case(2)
 
-      POP_SUB(poisson_init.init_1D)
-    end subroutine init_1D
-
-
-    !-----------------------------------------------------------------
-    subroutine init_2D()
-      integer :: default_solver
-      PUSH_SUB(poisson_init.init_2D)
-
-      if (der%mesh%sb%periodic_dim > 0) then 
-        default_solver = der%mesh%sb%periodic_dim
+      if (mesh%sb%periodic_dim > 0) then 
+        default_solver = mesh%sb%periodic_dim
       else
         default_solver = POISSON_FFT_SPH
       end if
@@ -267,24 +245,13 @@ contains
       ! In 2D, periodic in two dimensions means no cut-off at all.
       if(this%method == 2) this%method = 3
 
-      if(der%mesh%use_curvilinear .and. (this%method .ne. -der%mesh%sb%dim) ) then
+      if(mesh%use_curvilinear .and. (this%method .ne. -mesh%sb%dim) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
         message(2) = 'Poisson solver is -2 ("direct summation in two dimensions").'
         call messages_fatal(2)
       end if
 
-      call messages_print_var_option(stdout, "PoissonSolver", this%method)
-      call poisson2D_init(this)
-
-      POP_SUB(poisson_init.init_2D)
-    end subroutine init_2D
-
-
-    !-----------------------------------------------------------------
-    subroutine init_3D()
-      integer :: default_solver 
-
-      PUSH_SUB(poisson_init.init_3D)
+    case(3)
 
 #ifndef SINGLE_PRECISION
       default_solver = POISSON_ISF
@@ -292,8 +259,8 @@ contains
       default_solver = POISSON_FFT_SPH
 #endif
 
-      if (der%mesh%use_curvilinear) default_solver = POISSON_CG_CORRECTED
-      if (der%mesh%sb%periodic_dim > 0) default_solver = der%mesh%sb%periodic_dim
+      if (mesh%use_curvilinear) default_solver = POISSON_CG_CORRECTED
+      if (mesh%sb%periodic_dim > 0) default_solver = mesh%sb%periodic_dim
       
       call parse_integer(datasets_check('PoissonSolver'), default_solver, this%method)
       if(this%method < POISSON_FMM .or. this%method > POISSON_SETE .or. &
@@ -301,29 +268,29 @@ contains
         call input_error('PoissonSolver')	    
       end if
 
-      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
+      if(mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
         write(message(1), '(a,i1,a)')'FMM is not ready to deal with periodic boundaries at present, '
         write(message(2), '(a,i1,a)')'because it requires null net charge.'
         call messages_warning(2)
       end if
 
-      if(der%mesh%sb%periodic_dim > 0 .and. &
-           this%method /= der%mesh%sb%periodic_dim .and. &
+      if(mesh%sb%periodic_dim > 0 .and. &
+           this%method /= mesh%sb%periodic_dim .and. &
            this%method < POISSON_CG .and. &
            this%method /= POISSON_FFT_CORRECTED .and. this%method /= POISSON_FFT_CYL .and. this%method /= POISSON_FMM) then
-        write(message(1), '(a,i1,a)')'The system is periodic in ', der%mesh%sb%periodic_dim ,' dimension(s),'
+        write(message(1), '(a,i1,a)')'The system is periodic in ', mesh%sb%periodic_dim ,' dimension(s),'
         write(message(2), '(a,i1,a)')'but Poisson solver is set for ',this%method,' dimensions.'
         message(3) =                 'You know what you are doing, right?'
         call messages_warning(3)
       end if
 
-      if(der%mesh%use_curvilinear .and. (this%method.ne.POISSON_CG_CORRECTED)) then
+      if(mesh%use_curvilinear .and. (this%method.ne.POISSON_CG_CORRECTED)) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
         message(2) = 'Poisson solver is cg_corrected.'
         call messages_fatal(2)
       end if
 
-      if( (der%mesh%sb%box_shape == MINIMUM) .and. (this%method == POISSON_CG_CORRECTED) ) then
+      if( (mesh%sb%box_shape == MINIMUM) .and. (this%method == POISSON_CG_CORRECTED) ) then
         message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
         message(2) = 'Poisson solver, we have observed "sometimes" some non-'
         message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
@@ -334,7 +301,7 @@ contains
       if (this%method == POISSON_SETE) then
         call messages_experimental('SETE poisson solver')
 
-        if(.not. simul_box_complex_boundaries(der%mesh%sb)) then
+        if(.not. simul_box_complex_boundaries(mesh%sb)) then
           message(1) = 'Complex boundaries must be enabled to use the SETE poisson solver.'
           message(2) = 'Use ComplexBoundaries = yes in your input file.'
           call messages_fatal(2)
@@ -345,17 +312,96 @@ contains
         call messages_experimental('FMM poisson solver')
       end if
 
-      !      if (this%method == POISSON_DIRECT_SUM_3D) then
+    end select
+
+    call messages_print_var_option(stdout, "PoissonSolver", this%method)
+
+
+
+    ! Now that we know the method, we check if we need a cube and its dimentions
+    need_cube = .true.
+    need_fft = .true.
+
+    select case (mesh%sb%dim)
+    case (1)
+
+      select case(this%method)
+      case(POISSON_FFT_SPH)
+        call mesh_double_box(mesh%sb, mesh, box)
+      case(POISSON_FFT_NOCUT)
+        box = mesh%idx%ll
+      case default
+        need_cube = .false.
+      end select
+
+    case (2)
+
+      select case(this%method)
+      case(POISSON_FFT_SPH)
+        call mesh_double_box(mesh%sb, mesh, box)
+        box(1:2) = maxval(box)
+      case(POISSON_FFT_CYL)
+        call mesh_double_box(mesh%sb, mesh, box)
+      case(POISSON_FFT_NOCUT)
+        box(:) = mesh%idx%ll(:)
+      case default
+        need_cube = .false.
+      end select
+
+    case (3)
+
+      select case(this%method)
+      case(POISSON_FFT_SPH) 
+        call mesh_double_box(mesh%sb, mesh, box)
+        box(:) = maxval(box)
+      case(POISSON_FFT_CORRECTED)
+        box(:) = mesh%idx%ll(:)
+      case(POISSON_FFT_CYL, POISSON_FFT_PLA, POISSON_FFT_NOCUT)
+        call mesh_double_box(mesh%sb, mesh, box)
+      case(POISSON_ISF)
+        need_fft = .false.
+        box(:) = mesh%idx%ll(:)
+      case default
+        need_cube = .false.
+      end select
+
+    case default
+      need_cube = .false.
+    end select
+
+    ! Create the cube
+    if (need_cube) then
+      call cube_init(this%cube, box, mesh%sb, fft=need_fft)
+    end if
+
+    call messages_print_stress(stdout)
+
+    POP_SUB(poisson_init_stage_1)
+  end subroutine poisson_init_stage_1
+
+
+  !-----------------------------------------------------------------
+  subroutine poisson_init_stage_2(this, der, geo, all_nodes_comm)
+    type(poisson_t),             intent(inout) :: this
+    type(derivatives_t), target, intent(in)    :: der
+    type(geometry_t),            intent(in)    :: geo
+    integer,                     intent(in)    :: all_nodes_comm
+
+    PUSH_SUB(poisson_init_stage_2)
+
+    this%der => der
+
+    select case(der%mesh%sb%dim)
+    case (1)
+      call poisson1d_init(this)
+    case (2)
+      call poisson2D_init(this)
+    case (3)
       call poisson3D_init(this, geo, all_nodes_comm)
-      !     end if
-      
-      call messages_print_var_option(stdout, "PoissonSolver", this%method)
+    end select
 
-      POP_SUB(poisson_init.init_3D)
-    end subroutine init_3D
-
-  end subroutine poisson_init
-
+    POP_SUB(poisson_init_stage_2)
+  end subroutine poisson_init_stage_2
 
   !-----------------------------------------------------------------
   subroutine poisson_end(this)
@@ -512,21 +558,21 @@ contains
       call poisson_multigrid_solver(this%mg, der, pot, rho)
 
     case(POISSON_FFT_SPH,POISSON_FFT_CYL,POISSON_FFT_PLA,POISSON_FFT_NOCUT)
-      call poisson_fft(der%mesh, pot, rho)
+      call poisson_fft(der%mesh, this%cube, pot, rho)
 
     case(POISSON_FFT_CORRECTED)
       SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
       SAFE_ALLOCATE(vh_correction(1:der%mesh%np_part))
 
       call correct_rho(this%corrector, der, rho, rho_corrected, vh_correction)
-      call poisson_fft(der%mesh, pot, rho_corrected, average_to_zero = .true.)
+      call poisson_fft(der%mesh, this%cube, pot, rho_corrected, average_to_zero = .true.)
 
       pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
       SAFE_DEALLOCATE_A(rho_corrected)
       SAFE_DEALLOCATE_A(vh_correction)
 
     case(POISSON_ISF)
-      call poisson_isf_solve(this%isf_solver, der%mesh, pot, rho, all_nodes_value)
+      call poisson_isf_solve(this%isf_solver, der%mesh, this%cube, pot, rho, all_nodes_value)
      
     case(POISSON_SETE)
 

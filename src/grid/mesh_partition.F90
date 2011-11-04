@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #include "global.h"
 
 module mesh_partition_m
+  use cube_m
   use curvilinear_m
   use datasets_m
   use geometry_m
@@ -31,6 +32,7 @@ module mesh_partition_m
   use loct_m
   use math_m
   use mesh_m
+  use mesh_cube_map_m
   use messages_m
   use mpi_m
   use multicomm_m
@@ -66,10 +68,11 @@ contains
   !! which has to be allocated beforehand.
   !! (mesh_partition_end should be called later.)
   ! ---------------------------------------------------------------
-  subroutine mesh_partition(mesh, lapl_stencil, part)
+  subroutine mesh_partition(mesh, lapl_stencil, part, cube)
     type(mesh_t),    intent(in)  :: mesh
     type(stencil_t), intent(in)  :: lapl_stencil
     integer,         intent(out) :: part(:) ! 1:mesh%np_part_global
+    type(cube_t), optional, intent(in)  :: cube
 
     integer              :: iv, jp, inb
     integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
@@ -92,8 +95,9 @@ contains
 #endif
 
     type(stencil_t) :: stencil
-    integer :: ii, stencil_to_use, ip
-    integer :: default_method, method
+    integer :: ip, iix, iiy, iiz, center(3)
+    integer :: im, ii, nn
+    integer :: stencil_to_use, default_method, method
     integer :: library
     integer, parameter   :: METIS = 2, ZOLTAN = 3, GA = 4, PFFT = 5
     integer, parameter   :: STAR = 1, LAPLACIAN = 2
@@ -127,8 +131,7 @@ contains
     !%Option ga 4
     !% (Experimental) Genetic-algorithm optimization of the grid partition.
     !%Option pfft_part 5
-    !% (Experimental) Use PFFT to perform the mesh partition. This only works
-    !% for parallelepiped boxes.
+    !% (Experimental) Use PFFT to perform the mesh partition.
     !%End
     default = ZOLTAN
 #ifdef HAVE_METIS
@@ -139,9 +142,8 @@ contains
     if(library == GA) call messages_experimental('Genetic algorithm mesh partition')
     if(library == PFFT) call messages_experimental('PFFT mesh partition')
 
-    if (library == PFFT .and. mesh%sb%box_shape /= PARALLELEPIPED) then
-      message(1) = 'Error: PFFT partition can only be used for parallelepiped boxes'
-      call messages_fatal(1)      
+    if (library == PFFT) then
+      ASSERT(present(cube))
     end if
 
 #ifndef HAVE_METIS
@@ -372,17 +374,20 @@ contains
 
     case(PFFT)
 #ifdef HAVE_PFFT
+      part = 0
 
-      !call pfft_partition(mesh%idx%ll, mesh%idx%nr, npart, mesh%np_part_global, part)
+      ASSERT(associated(mesh%cube_map%map))
 
-      if(mpi_world%rank == 1) then
-        do ip = 1, mesh%np_global
-!          write(*,*) ip, part(ip)
-        end do
-      end if
+      center(1:3) = cube%n(1:3)/2 + 1
+      do im = 1, mesh%cube_map%nmap
+        ip = mesh%cube_map%map(MCM_POINT, im)
+        nn = mesh%cube_map%map(MCM_COUNT, im)
+        iix = mesh%idx%lxyz(ip, 1) + center(1)
+        iiy = mesh%idx%lxyz(ip, 2) + center(2)
+        iiz = mesh%idx%lxyz(ip, 3) + center(3)
+        forall(ii = 0:nn - 1) part(ip + ii) = cube%part(iix, iiy, iiz + ii)
+      end do
 
-      write(*,*) "End of PFFT partitioning"
-      stop
 #endif
     end select
 

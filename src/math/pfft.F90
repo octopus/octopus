@@ -1,4 +1,4 @@
-!! Copyright (C) 2011 J. Alberdi, P. Garcia Risueño
+!! Copyright (C) 2011 J. Alberdi, P. Garcia Risueño, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -67,26 +67,14 @@ module pfft_m
        pfft_measure             =     0 
   
   type pfft_t
-    integer                 :: slot         !< in which slot do we have this fft
-    integer(ptrdiff_t_kind) :: n(3)         !< size of the fft
-    integer                 :: is_real      !< is the fft real or complex. PFFT only works with complex. Real = 0, Complex = 1
-    integer(ptrdiff_t_kind) :: comm_cart_2d !< 2-dimensional Cartesian processor grid
-    integer(ptrdiff_t_kind) :: planf        !< the plan for forward transforms
-    integer(ptrdiff_t_kind) :: planb        !< the plan for backward transforms
-    integer(ptrdiff_t_kind) :: alloc_local
+    integer                 :: slot    !< in which slot do we have this fft
+    integer(ptrdiff_t_kind) :: n(3)    !< size of the fft
+    integer                 :: is_real !< is the fft real or complex. PFFT only works with complex. Real = 0, Complex = 1
+    integer(ptrdiff_t_kind) :: planf   !< the plan for forward transforms
+    integer(ptrdiff_t_kind) :: planb   !< the plan for backward transforms
 
-    integer, allocatable :: begin_indexes(:) !< where does each process start
-    integer, allocatable :: block_sizes(:)   !< size of the block that is going to be used in the gatherv
-
-    integer(ptrdiff_t_kind) :: local_ni(3)      !< local input points
-    integer(ptrdiff_t_kind) :: local_i_start(3) !< local input start index
-    integer(ptrdiff_t_kind) :: local_no(3)      !< local output points
-    integer(ptrdiff_t_kind) :: local_o_start(3) !< local output start index
-
-    CMPLX, pointer :: data_in(:)                   !< input data
-    CMPLX, pointer :: data_out(:)                  !< output data
-    FLOAT, pointer :: global_data_in(:)            !< ALL the input data
-    integer, allocatable :: get_local_index(:,:,:) !< Mapping vector between local and global pfft indexing
+    CMPLX, pointer :: rs_data(:)       !< array used to store the function in real space that is passed to PFFT.
+    CMPLX, pointer :: fs_data(:)       !< array used to store the function in fourier space that is passed to PFFT
   end type pfft_t
 
   integer      :: pfft_refs(PFFT_MAX)
@@ -172,12 +160,8 @@ contains
       if(pfft_refs(ii) /= PFFT_NULL) then
         call PDFFT(destroy_plan) (pfft_array(ii)%planf)
         call PDFFT(destroy_plan) (pfft_array(ii)%planb)
-        SAFE_DEALLOCATE_P(pfft_array(ii)%data_out)
-        SAFE_DEALLOCATE_P(pfft_array(ii)%data_in)
-        SAFE_DEALLOCATE_P(pfft_array(ii)%global_data_in)
-        SAFE_DEALLOCATE_A(pfft_array(ii)%begin_indexes)
-        SAFE_DEALLOCATE_A(pfft_array(ii)%block_sizes)
-        SAFE_DEALLOCATE_A(pfft_array(ii)%get_local_index)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%rs_data)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%fs_data)
         pfft_refs(ii) = PFFT_NULL
       end if
     end do
@@ -205,12 +189,8 @@ contains
         pfft_refs(ii) = PFFT_NULL
         call PDFFT(destroy_plan) (pfft_array(ii)%planf)
         call PDFFT(destroy_plan) (pfft_array(ii)%planb)
-        SAFE_DEALLOCATE_P(pfft_array(ii)%data_out)
-        SAFE_DEALLOCATE_P(pfft_array(ii)%data_in)
-        SAFE_DEALLOCATE_P(pfft_array(ii)%global_data_in)
-        SAFE_DEALLOCATE_A(pfft_array(ii)%begin_indexes)
-        SAFE_DEALLOCATE_A(pfft_array(ii)%block_sizes)
-        SAFE_DEALLOCATE_A(pfft_array(ii)%get_local_index)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%rs_data)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%fs_data)
         write(message(1), '(a,i4)') "Info: PFFT deallocated from slot ", ii
         call messages_info(1)
       end if
@@ -219,18 +199,26 @@ contains
     POP_SUB(pfft_end)
   end subroutine pfft_end
 
+
   ! ---------------------------------------------------------
-  subroutine pfft_init(nn, dim, is_real, pfft, optimize)
+  subroutine pfft_init(nn, dim, is_real, np, rs_istart, fs_istart, rs_n, fs_n, mpi_comm, pfft, optimize)
     integer,           intent(inout) :: nn(1:3)
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: is_real
+    integer,           intent(out)   :: np
+    integer,           intent(out)   :: rs_istart(1:3)
+    integer,           intent(out)   :: fs_istart(1:3)
+    integer,           intent(out)   :: rs_n(1:3)
+    integer,           intent(out)   :: fs_n(1:3)
+    integer,           intent(out)   :: mpi_comm
     type(pfft_t),      intent(out)   :: pfft
     logical, optional, intent(in)    :: optimize
-   
+    
     integer :: ii, jj, fft_dim, idir, ierror, process_column_size, process_row_size
     logical :: optimize_
     character(len=100) :: str_tmp
-  
+    integer(ptrdiff_t_kind) :: tmp_np, tmp_rs_n(3), tmp_fs_n(3), tmp_rs_istart(3), tmp_fs_istart(3)
+
     PUSH_SUB(pfft_init)
 
     ! First, figure out the dimensionality of the FFT. PFFT works efficiently with 3D
@@ -306,34 +294,37 @@ contains
   
     call dpfft_init()
 
-    call PDFFT(create_procmesh_2d) (ierror,MPI_COMM_WORLD,process_column_size,&
-         process_row_size,pfft_array(jj)%comm_cart_2d)
+    call PDFFT(create_procmesh_2d) (ierror, MPI_COMM_WORLD, process_column_size, &
+         process_row_size, mpi_comm)
     if (ierror .ne. 0) then
       message(1) = "The number of rows and columns in PFFT processor grid is not equal to "
       message(2) = "the number of processor in the MPI communicator."
       message(3) = "Please check it."
       call messages_fatal(3)
     end if
-    
-    call PDFFT(local_size_dft_3d) (pfft_array(jj)%alloc_local, pfft_array(jj)%n, &
-         pfft_array(jj)%comm_cart_2d, PFFT_TRANSPOSED_OUT, &
-         pfft_array(jj)%local_ni, pfft_array(jj)%local_i_start, pfft_array(jj)%local_no, pfft_array(jj)%local_o_start)
 
-    !     Allocate memory
-    SAFE_ALLOCATE(pfft_array(jj)%data_in(pfft_array(jj)%alloc_local))
-    SAFE_ALLOCATE(pfft_array(jj)%data_out(pfft_array(jj)%alloc_local))
-    
-    ! Collect the indexes of all processes
-    call pfft_do_mapping(pfft_array(jj))
+    call PDFFT(local_size_dft_3d) (tmp_np, pfft_array(jj)%n, &
+         mpi_comm, PFFT_TRANSPOSED_OUT, &
+         tmp_rs_n, tmp_rs_istart, tmp_fs_n, tmp_fs_istart)
+
+    np = tmp_np
+    rs_istart = tmp_rs_istart
+    fs_istart = tmp_fs_istart
+    rs_n = tmp_rs_n
+    fs_n = tmp_fs_n
+
+    ! Allocate memory
+    SAFE_ALLOCATE(pfft_array(jj)%rs_data(tmp_np))
+    SAFE_ALLOCATE(pfft_array(jj)%fs_data(tmp_np))
 
     ! Create the plan, with the processor grid 
     call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, pfft_array(jj)%n, & 
-         pfft_array(jj)%data_in, pfft_array(jj)%data_out, pfft_array(jj)%comm_cart_2d, &
+         pfft_array(jj)%rs_data, pfft_array(jj)%fs_data, mpi_comm, &
          FFTW_FORWARD, PFFT_TRANSPOSED_OUT, FFTW_MEASURE)
     call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, pfft_array(jj)%n, &
-         pfft_array(jj)%data_out, pfft_array(jj)%data_in, pfft_array(jj)%comm_cart_2d, &
+         pfft_array(jj)%fs_data, pfft_array(jj)%rs_data, mpi_comm, &
          FFTW_BACKWARD, PFFT_TRANSPOSED_IN, FFTW_MEASURE) 
-       
+
     write(message(1), '(a)') "Info: PFFT allocated with size ("
     do idir = 1, dim
       write(str_tmp, '(i7,a)') pfft_array(jj)%n(idir)
@@ -356,122 +347,34 @@ contains
   !> These routines simply call pfft
   !! first the complex to complex versions
   subroutine pfft_forward_3d(pfft)
-    type(pfft_t), intent(inout)  :: pfft
+    type(pfft_t),  intent(inout)  :: pfft
 
     type(profile_t), save :: prof_fw
 
     PUSH_SUB(pfft_forward_3d)
-    
+   
     call profiling_in(prof_fw,"PFFT_FW")
     call PDFFT(execute) (pfft%planf)
     call profiling_out(prof_fw)
-    
+
     POP_SUB(pfft_forward_3d)
   end subroutine pfft_forward_3d 
 
   ! ---------------------------------------------------------
   subroutine pfft_backward_3d(pfft)
     type(pfft_t), intent(inout) :: pfft
-    integer :: index, ii, jj, kk
-    type(profile_t), save :: prof_bw, prof_g, prof_t
+
+    type(profile_t), save :: prof_bw
 
     PUSH_SUB(pfft_backward_3d)
-    
+
     call profiling_in(prof_bw,"PFFT_BW")
     call PDFFT(execute) (pfft%planb)
     call profiling_out(prof_bw)
-    
-    call profiling_in(prof_t,"PFFT_TRANS")
-    !aling the data
-    index = 1
-    do kk = pfft%local_i_start(3), pfft%local_i_start(3)+pfft%local_ni(3)-1
-      do jj = pfft%local_i_start(2), pfft%local_i_start(2)+pfft%local_ni(2)-1
-        do ii = pfft%local_i_start(1), pfft%local_i_start(1)+pfft%local_ni(1)-1
-          pfft%global_data_in(pfft%get_local_index(ii,jj,kk)) = real(pfft%data_in(index))
-          index = index + 1 
-        end do
-      end do
-    end do
-    close(13)
-    call profiling_out(prof_t)
-
-    !collect the data in all processes
-    call profiling_in(prof_g,"PFFT_GATV")
-    call MPI_Allgatherv ( &
-         pfft%global_data_in(pfft%begin_indexes(mpi_world%rank+1)), &
-         pfft%block_sizes(mpi_world%rank+1), MPI_FLOAT, &
-         pfft%global_data_in(1), &
-         pfft%block_sizes(1),pfft%begin_indexes - 1, &
-         MPI_FLOAT, &
-         mpi_world%comm, mpi_err )
-    if (mpi_err /= 0) then
-      write(message(1),'(a)')"MPI_Allgatherv failed in pfft.F90"
-      call messages_fatal(1)
-    end if
-    call profiling_out(prof_g) 
 
     POP_SUB(pfft_backward_3d)
   end subroutine pfft_backward_3d
   
-  ! ---------------------------------------------------------
-  !> do the mapping between global and local points of PFFT arrays
-  subroutine pfft_do_mapping(pfft)
-    type(pfft_t), intent(inout) :: pfft
-    
-    integer :: tmp_local(6), position, process,ii, jj, kk, index
-    integer, allocatable ::local_sizes(:)
-    type(profile_t), save ::  prof_gt, prof_a
-
-    PUSH_SUB(pfft_do_mapping)
-    call profiling_in(prof_gt,"PFFT_GAT")
-
-    !!BEGIN:gather the local information into a unique vector.
-    !!do a gather in 3d of all the box, into a loop
-    tmp_local(1) = pfft%local_i_start(1)
-    tmp_local(2) = pfft%local_i_start(2) 
-    tmp_local(3) = pfft%local_i_start(3) 
-    tmp_local(4) = pfft%local_ni(1)
-    tmp_local(5) = pfft%local_ni(2)
-    tmp_local(6) = pfft%local_ni(3) 
-
-    SAFE_ALLOCATE(local_sizes(6*mpi_world%size))
-    call MPI_Allgather(tmp_local,6,MPI_INTEGER, &
-         local_sizes,6,MPI_INTEGER,&
-         mpi_world%comm,mpi_err)
-    call profiling_out(prof_gt)
-    
-    call profiling_in(prof_a,"PFFT_ALLOC")
-    SAFE_ALLOCATE(pfft%begin_indexes(mpi_world%size))
-    SAFE_ALLOCATE(pfft%block_sizes(mpi_world%size))
-    SAFE_ALLOCATE(pfft%global_data_in(pfft%n(1)*pfft%n(2)*pfft%n(3)))
-    SAFE_ALLOCATE(pfft%get_local_index(pfft%n(1),pfft%n(2),pfft%n(3)))
-
-    do process=1,mpi_world%size
-      position = ((process-1)*6)+1
-      if (position == 1) then
-        pfft%begin_indexes(1) = 1
-        pfft%block_sizes(1)  = local_sizes(4)*local_sizes(5)*local_sizes(6)
-      else
-        ! calculate the begin index and size of each process
-        pfft%begin_indexes(process) =  pfft%begin_indexes(process-1) +  pfft%block_sizes(process-1)
-        pfft%block_sizes(process) = local_sizes(position+3)*local_sizes(position+4)*local_sizes(position+5)
-      end if
-
-      !save the mapping between the global x,y,z and the local index
-      index = 0
-      do kk = local_sizes(position+2), local_sizes(position+2)+local_sizes(position+5)-1
-        do jj = local_sizes(position+1), local_sizes(position+1)+local_sizes(position+4)-1
-          do ii = local_sizes(position), local_sizes(position)+local_sizes(position+3)-1
-            pfft%get_local_index(ii,jj,kk) = index + pfft%begin_indexes(process)
-            index = index + 1
-          end do
-        end do
-      end do
-    end do    
-
-    call profiling_out(prof_a)
-    POP_SUB(pfft_do_mapping)    
-  end subroutine pfft_do_mapping
   ! ---------------------------------------------------------
   !> This function decomposes a given number of processors into a
   !! two-dimensional processor grid.
@@ -522,10 +425,10 @@ contains
     end if
     
     write(message(1),'(a)') "Info: PFFT processor grid"
-    write(message(2),'(a, i9)') " No. of processors                = ",n_proc
-    write(message(3),'(a, i9)') " No. of columns in the proc. grid = ",dim1
-    write(message(4),'(a, i9)') " No. of rows    in the proc. grid = ",dim2
-    write(message(5),'(a, i9)') " The size of integer is = ",ptrdiff_t_kind
+    write(message(2),'(a, i9)') " No. of processors                = ", n_proc
+    write(message(3),'(a, i9)') " No. of columns in the proc. grid = ", dim1
+    write(message(4),'(a, i9)') " No. of rows    in the proc. grid = ", dim2
+    write(message(5),'(a, i9)') " The size of integer is = ", ptrdiff_t_kind
     call messages_info(5)
 
     POP_SUB(decompose)

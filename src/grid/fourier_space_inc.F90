@@ -23,12 +23,16 @@ subroutine X(cube_function_alloc_FS)(cube, cf)
 
   PUSH_SUB(X(cube_function_alloc_FS))
 
-  !Save memory if PFFT is used
-  if (cube%fft_library /= PFFT_LIB) then
+  if (cube%fft_library /= FFTLIB_PFFT) then
     ASSERT(.not.associated(cf%FS))
     ASSERT(associated(cube%X(fftw)))
 
     SAFE_ALLOCATE(cf%FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
+#ifdef HAVE_PFFT
+  else
+    ASSERT(.not.associated(cf%pFS))
+    cf%pFS => cube%pfft%fs_data
+#endif
   end if
 
   POP_SUB(X(cube_function_alloc_FS))
@@ -41,10 +45,14 @@ subroutine X(cube_function_free_FS)(cf)
 
   PUSH_SUB(X(cube_function_free_FS))
 
-  !Save memory if PFFT is used
   if (associated(cf%FS)) then
     SAFE_DEALLOCATE_P(cf%FS)
   end if
+#ifdef HAVE_PFFT
+  if (associated(cf%pFS)) then
+    nullify(cf%pFS)
+  end if
+#endif
 
   POP_SUB(X(cube_function_free_FS))
 end subroutine X(cube_function_free_FS)
@@ -54,20 +62,22 @@ end subroutine X(cube_function_free_FS)
 !! Note that the dimensions of the function in FS are different depending on whether
 !! f is real or complex, because the FFT representation is different (FFTW scheme).
 subroutine X(cube_function_RS2FS)(cube, cf)
-  type(cube_t),          intent(inout)  :: cube
-  type(cube_function_t), intent(inout)  :: cf
+  type(cube_t),          intent(inout) :: cube
+  type(cube_function_t), intent(inout) :: cf
 
-  !Save memory if PFFT is used
-  if (cube%fft_library /= PFFT_LIB) then
-    ASSERT(associated(cf%X(RS)))
-    if(.not.associated(cf%FS)) call X(cube_function_alloc_FS)(cube, cf)
-  end if
-  
-  if (cube%fft_library == PFFT_LIB) then
+  ASSERT(cube%fft_library /= FFTLIB_NONE)
+
+  if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
+    ASSERT(associated(cf%pRS))
+    ASSERT(associated(cf%pFS))
+
     call pfft_forward_3d(cube%pfft)
 #endif
   else
+    ASSERT(associated(cf%X(RS)))
+    ASSERT(associated(cf%FS))
+
     call X(fft_forward)(cube%X(fftw), cf%X(RS), cf%FS)
   end if
    
@@ -76,20 +86,55 @@ end subroutine X(cube_function_RS2FS)
 
 ! ---------------------------------------------------------
 subroutine X(cube_function_FS2RS)(cube, cf)
-  type(cube_t),          intent(inout)  :: cube
-  type(cube_function_t), intent(inout)  :: cf
+  type(cube_t),          intent(inout) :: cube
+  type(cube_function_t), intent(inout) :: cf
 
-  !Save memory if PFFT is used
-  if (cube%fft_library /= PFFT_LIB) then
-    ASSERT(associated(cf%FS))
-    if(.not.associated(cf%X(RS))) call X(cube_function_alloc_RS)(cube, cf)
-  end if
+  integer :: index, ii, jj, kk
+  type(profile_t), save :: prof_g,prof_t
 
-  if (cube%fft_library == PFFT_LIB) then
-#ifdef HAVE_PFFT 
+  ASSERT(cube%fft_library /= FFTLIB_NONE)
+
+  if (cube%fft_library == FFTLIB_PFFT) then
+#ifdef HAVE_PFFT
+    ASSERT(associated(cf%pRS))
+    ASSERT(associated(cf%global_pRS))
+    ASSERT(associated(cf%pFS))
+
     call pfft_backward_3d(cube%pfft)
+
+    call profiling_in(prof_t,"PFFT_TRANS")
+    !aling the data
+    index = 1
+    do kk = cube%rs_istart(3), cube%rs_istart(3)+cube%rs_n(3)-1
+      do jj = cube%rs_istart(2), cube%rs_istart(2)+cube%rs_n(2)-1
+        do ii = cube%rs_istart(1), cube%rs_istart(1)+cube%rs_n(1)-1
+          cf%global_pRS(cube%get_local_index(ii,jj,kk)) = real(cf%pRS(index))
+          index = index + 1
+        end do
+      end do
+    end do
+    call profiling_out(prof_t)
+
+    !collect the data in all processes
+    call profiling_in(prof_g,"PFFT_GATV")
+    call MPI_Allgatherv ( &
+         cf%global_pRS(cube%begin_indexes(mpi_world%rank+1)), &
+         cube%block_sizes(mpi_world%rank+1), MPI_FLOAT, &
+         cf%global_pRS(1), &
+         cube%block_sizes(1),cube%begin_indexes - 1, &
+         MPI_FLOAT, &
+         mpi_world%comm, mpi_err )
+    if (mpi_err /= 0) then
+      write(message(1),'(a)')"MPI_Allgatherv failed in pfft.F90"
+      call messages_fatal(1)
+    end if
+    call profiling_out(prof_g) 
+
 #endif
   else
+    ASSERT(associated(cf%X(RS)))
+    ASSERT(associated(cf%FS))
+
     call X(fft_backward)(cube%X(fftw), cf%FS, cf%X(RS))
   end if
 
@@ -105,16 +150,18 @@ subroutine X(fourier_space_op_init)(this, cube, op)
   integer :: ii, jj, kk
   integer :: start(3),last(3)
 
+  ASSERT(cube%fft_library /= FFTLIB_NONE)
+
   nullify(this%dop)
   nullify(this%zop)
-  if (cube%fft_library == PFFT_LIB) then
+  if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
-    start = cube%pfft%local_o_start
-    last = cube%pfft%local_o_start + cube%pfft%local_no - 1
+    start = cube%fs_istart
+    last = cube%fs_istart + cube%fs_n - 1
     SAFE_ALLOCATE(this%X(op)(start(2):last(2),start(1):last(1),start(3):last(3)))
-     do kk =  cube%pfft%local_o_start(2),cube%pfft%local_o_start(2)+cube%pfft%local_no(2)-1
-      do jj = cube%pfft%local_o_start(1), cube%pfft%local_o_start(1)+cube%pfft%local_no(1)-1
-        do ii = cube%pfft%local_o_start(3), cube%pfft%local_o_start(3)+cube%pfft%local_no(3)-1
+     do kk =  cube%fs_istart(2),cube%fs_istart(2)+cube%fs_n(2)-1
+      do jj = cube%fs_istart(1), cube%fs_istart(1)+cube%fs_n(1)-1
+        do ii = cube%fs_istart(3), cube%fs_istart(3)+cube%fs_n(3)-1
           this%X(op)(kk, jj, ii) = op(kk-start(2)+1, jj-start(1)+1, ii-start(3)+1)
         end do
       end do
@@ -142,11 +189,10 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   integer :: start(3), last(3)
 
   type(profile_t), save :: prof_g, rs2fs_prof, fs2rs_prof, prof
-  
-  !Save memory if PFFT is used
-  if (cube%fft_library /= PFFT_LIB) then
-    call X(cube_function_alloc_FS)(cube, cf)
-  end if
+
+  ASSERT(cube%fft_library /= FFTLIB_NONE)
+
+  call X(cube_function_alloc_FS)(cube, cf)
 
   call profiling_in(prof, "OP_APPLY")
   call profiling_in(rs2fs_prof, "RS2FS")
@@ -154,15 +200,15 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   call profiling_out(rs2fs_prof)
   
   call profiling_in(prof_g,"G_APPLY")
-  if (cube%fft_library == PFFT_LIB) then
+  if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
     index = 1
-    start = cube%pfft%local_o_start
-    last = cube%pfft%local_o_start + cube%pfft%local_no - 1
-    do kk =  cube%pfft%local_o_start(2),cube%pfft%local_o_start(2)+cube%pfft%local_no(2)-1
-      do jj = cube%pfft%local_o_start(1), cube%pfft%local_o_start(1)+cube%pfft%local_no(1)-1
-        do ii = cube%pfft%local_o_start(3), cube%pfft%local_o_start(3)+cube%pfft%local_no(3)-1 
-          cube%pfft%data_out(index)= cube%pfft%data_out(index)*this%X(op)(kk, jj,ii)
+    start = cube%fs_istart
+    last = cube%fs_istart + cube%fs_n - 1
+    do kk =  cube%fs_istart(2),cube%fs_istart(2)+cube%fs_n(2)-1
+      do jj = cube%fs_istart(1), cube%fs_istart(1)+cube%fs_n(1)-1
+        do ii = cube%fs_istart(3), cube%fs_istart(3)+cube%fs_n(3)-1 
+          cf%pFS(index)= cf%pFS(index)*this%X(op)(kk,jj,ii)
           index=index+1
         end do
       end do

@@ -151,7 +151,7 @@ contains
     type(simul_box_t), intent(in)  :: sb
     type(mesh_t),      intent(in)  :: mesh
     integer,           intent(out) :: db(MAX_DIM)
-    
+
     integer :: idir
     
     PUSH_SUB(mesh_double_box)

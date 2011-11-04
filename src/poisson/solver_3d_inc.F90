@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -98,48 +98,48 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
 #endif
 
   case(POISSON_CG)
-     call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
-     write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
-     call messages_info(1)
-     call parse_integer(datasets_check('PoissonSolverMaxIter'), 400, iter)
-     call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
-     call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
-     call poisson_cg_init(this%der%mesh, threshold, iter)
+    call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
+    write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
+    call messages_info(1)
+    call parse_integer(datasets_check('PoissonSolverMaxIter'), 400, iter)
+    call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
+    call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+    call poisson_cg_init(this%der%mesh, threshold, iter)
 
   case(POISSON_CG_CORRECTED)
-     call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
-     call parse_integer(datasets_check('PoissonSolverMaxIter'), 400, iter)
-     call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
-     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
-     call messages_info(1)
-     call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
-     call poisson_cg_init(this%der%mesh, threshold, iter)
+    call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
+    call parse_integer(datasets_check('PoissonSolverMaxIter'), 400, iter)
+    call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
+    write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
+    call messages_info(1)
+    call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+    call poisson_cg_init(this%der%mesh, threshold, iter)
 
   case(POISSON_MULTIGRID)
-     call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
-     call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
-     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
-     call messages_info(1)
+    call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)
+    call parse_float(datasets_check('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
+    write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
+    call messages_info(1)
 
-     call poisson_multigrid_init(this%mg, this%der%mesh, maxl, threshold)
+    call poisson_multigrid_init(this%mg, this%der%mesh, maxl, threshold)
      
   case(POISSON_ISF)
-     call poisson_isf_init(this%isf_solver, this%der%mesh, all_nodes_comm, init_world = this%all_nodes_default)
+    call poisson_isf_init(this%isf_solver, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
 
   case(POISSON_FFT_SPH)
-    call poisson_fft_build_3d_0d(this%der%mesh, this%method)
+    call poisson_fft_build_3d_0d(this%der%mesh, this%cube, this%method)
 
   case(POISSON_FFT_CYL)
-    call poisson_fft_build_3d_1d(this%der%mesh)
+    call poisson_fft_build_3d_1d(this%der%mesh, this%cube)
 
   case(POISSON_FFT_PLA)
-    call poisson_fft_build_3d_2d(this%der%mesh)
+    call poisson_fft_build_3d_2d(this%der%mesh, this%cube)
 
   case(POISSON_FFT_NOCUT)
-    call poisson_fft_build_3d_3d(this%der%mesh)
+    call poisson_fft_build_3d_3d(this%der%mesh, this%cube)
 
   case(POISSON_FFT_CORRECTED)
-    call poisson_fft_build_3d_0d(this%der%mesh, this%method)
+    call poisson_fft_build_3d_0d(this%der%mesh, this%cube, this%method)
     call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call messages_info(1)

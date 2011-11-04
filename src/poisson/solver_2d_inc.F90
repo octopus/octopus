@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -25,11 +25,11 @@ subroutine poisson2D_init(this)
 
   select case(this%method)
   case(POISSON_FFT_SPH)
-    call poisson_fft_build_2d_0d(this%der%mesh)
+    call poisson_fft_build_2d_0d(this%der%mesh, this%cube)
   case(POISSON_FFT_CYL)
-    call poisson_fft_build_2d_1d(this%der%mesh)
+    call poisson_fft_build_2d_1d(this%der%mesh, this%cube)
   case(POISSON_FFT_NOCUT)
-    call poisson_fft_build_2d_2d(this%der%mesh)
+    call poisson_fft_build_2d_2d(this%der%mesh, this%cube)
   end select
 
   POP_SUB(poisson2D_init)

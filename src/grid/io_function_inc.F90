@@ -142,7 +142,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
     if(status.ne.NF90_NOERR) then
       ierr = 2
     else
-      call cube_init(cube, mesh%idx%ll, mesh%sb, mesh%idx, mesh%np_global)
+      call cube_init(cube, mesh%idx%ll, mesh%sb)
       call cube_function_null(cf)
       call X(cube_function_alloc_RS)(cube, cf)
 #if defined(R_TCOMPLEX)
@@ -192,7 +192,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
       call messages_fatal(1)
     end if 
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb, mesh%idx, mesh%np_global)  
+    call cube_init(cube, mesh%idx%ll, mesh%sb)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS)(cube, cf)
     
@@ -855,7 +855,7 @@ contains
     PUSH_SUB(X(io_function_output_global).out_dx)
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_init(cube, mesh%idx%ll, mesh%sb)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
@@ -923,7 +923,7 @@ contains
     ASSERT(present(geo))
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_init(cube, mesh%idx%ll, mesh%sb)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
@@ -993,7 +993,7 @@ contains
     PUSH_SUB(X(io_function_output_global).out_xcrysden)
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_init(cube, mesh%idx%ll, mesh%sb)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
@@ -1103,7 +1103,7 @@ contains
     ierr = 0
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb, mesh%idx, mesh%np_global)
+    call cube_init(cube, mesh%idx%ll, mesh%sb)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)

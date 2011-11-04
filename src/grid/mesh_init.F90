@@ -20,6 +20,7 @@
 #include "global.h"
 
 module mesh_init_m
+  use cube_m
   use curvilinear_m
   use datasets_m
   use geometry_m
@@ -487,11 +488,12 @@ end subroutine mesh_init_stage_2
 !! mpi_grp is the communicator group that will be used for
 !! this mesh.
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
+subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent, cube)
   type(mesh_t),              intent(inout) :: mesh
   type(stencil_t), optional, intent(in)    :: stencil
   type(mpi_grp_t), optional, intent(in)    :: mpi_grp
-  type(mesh_t), optional,    intent(in)    :: parent
+  type(mesh_t),    optional, intent(in)    :: parent
+  type(cube_t),    optional, intent(in)    :: cube
 
   integer :: ip
 
@@ -516,6 +518,8 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
     end do
   end if
 
+  call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
+
   if(mesh%parallel_in_domains) then
     ASSERT(present(stencil))
     
@@ -534,8 +538,6 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   end if
 
   call mesh_get_vol_pp(mesh%sb)
-
-  call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_3)
@@ -683,7 +685,11 @@ contains
     if(ierr /= 0) then
       
       if(.not. present(parent)) then
-        call mesh_partition(mesh, stencil, part)
+        if (present(cube)) then
+          call mesh_partition(mesh, stencil, part, cube)
+        else
+          call mesh_partition(mesh, stencil, part)
+        end if
       else
         ! if there is a parent grid, use its partition
         do ip = 1, mesh%np_global
