@@ -27,8 +27,8 @@ EXTRA_PROGRAMS = oct-propagation_spectrum oct-rotatory_strength oct-harmonic-spe
                  oct-casida_spectrum oct-vibrational oct-xyz-anim oct-center-geom oct-help \
                  oct-oscillator-strength \
 		 oct-dielectric-function \
-		 oct-liquid
-##		 oct-photoelectron_spectrum
+		 oct-liquid \
+		 oct-photoelectron_spectrum
 
 bin_PROGRAMS = @UTILITY_PROGRAMS@
 
@@ -47,8 +47,8 @@ oct_rotatory_strength_LDADD   = $(all_LIBS)
 oct_harmonic_spectrum_SOURCES = harmonic_spectrum.F90
 oct_harmonic_spectrum_LDADD   = $(all_LIBS)
 
-##oct_photoelectron_spectrum_SOURCES = photoelectron_spectrum.F90
-##oct_photoelectron_spectrum_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
+oct_photoelectron_spectrum_SOURCES = photoelectron_spectrum.F90
+oct_photoelectron_spectrum_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS) $(external_LIBS)
 
 oct_xyz_anim_SOURCES = xyzanim.F90
 oct_xyz_anim_LDADD   = $(all_LIBS)
@@ -69,8 +69,7 @@ oct_help_SOURCES = help.F90
 oct_help_LDADD =  $(core_LIBS)
 
 depend:
-	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_rotatory_strength_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES)
-## $(oct_photoelectron_spectrum_SOURCES)
+	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_rotatory_strength_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES)
 
 propagation_spectrum.o : propagation_spectrum.F90 
 rotatory_strength.o : rotatory_strength.F90 
@@ -82,4 +81,4 @@ centergeom.o : centergeom.F90
 help.o : help.F90 
 dielectric_function.o : dielectric_function.F90
 liquid.o : liquid.F90
-##photoelectron_spectrum.o : photoelectron_spectrum.F90
+photoelectron_spectrum.o : photoelectron_spectrum.F90

@@ -63,24 +63,14 @@ program photoelectron_spectrum
   call getopt_photoelectron_spectrum(mode,interp)
   if(interp .eq. 0) interpolate = .false.
 
+  write(message(1), '(a)') 'Read PES info and restart files.'
+  call messages_info(1)
 
   call PES_mask_read_info(tmpdir, dim, Emax, Estep, ll(1), Lk)
 
   do ii=2, dim
     ll(ii) = ll(1)
   end do    
-
-! Use formats and the messages_info function. --DAS
-  write (*,*) "Recovered pes info "
-  write (*,*) "dim",dim
-  write (*,*) "Emax",Emax
-  write (*,*) "Estep", Estep
-  write (*,*) "ll", ll
-  write (*,*) 
-!  write (*,*) "lk"
-!  do ii=1, ll(1)
-!    write(*,*) Lk(ii)
-!  end do 
   
   SAFE_ALLOCATE(PESK(1:ll(1),1:ll(2),1:ll(3)))
 
