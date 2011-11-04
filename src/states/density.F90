@@ -23,7 +23,7 @@ module density_m
   use blas_m
   use batch_m
   use c_pointer_m
-  use cl_m
+  use cl
   use comm_m
   use datasets_m
   use derivatives_m

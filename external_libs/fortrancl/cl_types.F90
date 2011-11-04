@@ -17,14 +17,57 @@
   !!
   !! $Id: cl.F90 3587 2007-11-22 16:43:00Z xavier $
 
-module cl
-  use cl_types
-  use cl_constants
-  use cl_functions
+#include "config_F90.h"
 
+module cl_types
   implicit none 
+  
+  type :: cl_platform_id
+    private 
+    integer, pointer :: p 
+  end type cl_platform_id
+  
+  type :: cl_device_id
+    private 
+    integer, pointer :: p 
+  end type cl_device_id
 
-end module cl
+  type :: cl_context
+    private 
+    integer, pointer :: p 
+  end type cl_context
+
+  type :: cl_command_queue
+    private 
+    integer, pointer :: p 
+  end type cl_command_queue
+
+  type :: cl_mem
+    private 
+    integer, pointer :: p 
+  end type cl_mem
+
+  type :: cl_program
+    private 
+    integer, pointer :: p 
+  end type cl_program
+
+  type :: cl_kernel
+    private 
+    integer, pointer :: p 
+  end type cl_kernel
+
+  type :: cl_event
+    private 
+    integer, pointer :: p 
+  end type cl_event
+
+  type :: cl_sampler
+    private 
+    integer, pointer :: p 
+  end type cl_sampler
+
+end module cl_types
 
 !! Local Variables:
 !! mode: f90

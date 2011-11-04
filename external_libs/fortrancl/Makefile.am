@@ -21,7 +21,10 @@
 
 noinst_LIBRARIES = libfortrancl.a
 
-libfortrancl_a_SOURCES =     \
+libfortrancl_a_SOURCES =       \
+	cl_types.F90           \
+	cl_constants.F90       \
+	cl_functions.F90       \
 	cl.F90
 
 if COMPILE_OPENCL
@@ -29,10 +32,14 @@ if COMPILE_OPENCL
 endif
 
 noinst_HEADERS =               \
-	cl_constants_inc.F90   \
 	string_f.h
-
-cl.o : cl.F90 cl_constants_inc.F90 config_F90.h string_f.h
+cl_types.o     : cl_types.F90
+cl_constants.o : cl_constants.F90
+cl_functions.o : cl_functions.F90 cl_constants.F90 cl_types.F90  config_F90.h
+cl.o : cl.F90 cl_constants.F90 cl_types.o cl_functions.o
 
 config_F90.h: $(top_builddir)/config.h
 	grep '^#define' $^ > config_F90.h
+
+CLEANFILES = *~ *.bak *.mod *.MOD *.il *.d *.pc* ifc* config_F90.h
+

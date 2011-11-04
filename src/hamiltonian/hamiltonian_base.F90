@@ -23,7 +23,7 @@ module hamiltonian_base_m
   use batch_m
   ! do not include blas, since we pass complex values to dgemm
   ! use blas_m
-  use cl_m
+  use cl
   use datasets_m
   use derivatives_m
   use epot_m

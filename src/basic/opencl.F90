@@ -20,7 +20,7 @@
 #include "global.h"
 
 module opencl_m
-  use cl_m
+  use cl
   use datasets_m
   use global_m
   use messages_m

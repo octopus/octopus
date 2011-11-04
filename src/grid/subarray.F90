@@ -21,7 +21,7 @@
 
 module subarray_m
   use batch_m
-  use cl_m
+  use cl
   use global_m
   use math_m
   use messages_m

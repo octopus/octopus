@@ -22,7 +22,7 @@
 module batch_m
   use blas_m
   use c_pointer_m
-  use cl_m
+  use cl
   use cl_kernel_m
   use datasets_m
   use global_m
