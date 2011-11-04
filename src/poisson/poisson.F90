@@ -103,21 +103,21 @@ module poisson_m
   end type poisson_fmm_t
   
   type poisson_t
-    type(derivatives_t), private, pointer :: der
-    integer,             private :: method = -99
-    type(cube_t),        public  :: cube
-    type(mg_solver_t),   private :: mg
-    FLOAT,   private :: poisson_soft_coulomb_param = M_ONE
-    logical, private :: all_nodes_default
-    type(poisson_corr_t), private :: corrector
-    type(poisson_sete_t), private :: sete_solver
-    type(poisson_isf_t),  private :: isf_solver
-    type(poisson_fmm_t),  private :: params_fmm
-    integer,              private :: nslaves
+    type(derivatives_t), pointer :: der
+    integer           :: method = -99
+    type(cube_t)      :: cube
+    type(mg_solver_t) :: mg
+    FLOAT   :: poisson_soft_coulomb_param = M_ONE
+    logical :: all_nodes_default
+    type(poisson_corr_t) :: corrector
+    type(poisson_sete_t) :: sete_solver
+    type(poisson_isf_t)  :: isf_solver
+    type(poisson_fmm_t)  :: params_fmm
+    integer :: nslaves
 #ifdef HAVE_MPI2
-    integer,         private :: intercomm
-    type(mpi_grp_t), private :: local_grp
-    logical,         private :: root
+    integer         :: intercomm
+    type(mpi_grp_t) :: local_grp
+    logical         :: root
 #endif
 
   end type poisson_t
