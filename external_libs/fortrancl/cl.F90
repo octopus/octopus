@@ -22,13 +22,14 @@ module cl
   ! This is the module that should be used by the users.
 
   use cl_types_m
-  use cl_constants_m
-  use cl_functions_m
-  use cl_device_m
-  use cl_context_m
-  use cl_platform_m
-  use cl_command_queue_m
   use cl_buffer_m
+  use cl_command_queue_m
+  use cl_constants_m
+  use cl_context_m
+  use cl_device_m
+  use cl_kernel_m
+  use cl_platform_m
+  use cl_program_m
 
   implicit none 
 

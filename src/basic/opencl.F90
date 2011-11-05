@@ -765,9 +765,9 @@ module opencl_m
       integer :: ierr
 
 #ifdef HAVE_OPENCL
-      call f90_cl_release_program(prog, ierr)
+      call clReleaseProgram(prog, ierr)
 #endif
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_program")
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseProgram")
     end subroutine opencl_release_program
 
     ! -----------------------------------------------
@@ -778,9 +778,9 @@ module opencl_m
       integer :: ierr
 
 #ifdef HAVE_OPENCL
-      call f90_cl_release_kernel(prog, ierr)
+      call clReleaseKernel(prog, ierr)
 #endif
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_kernel")
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseKernel")
     end subroutine opencl_release_kernel
 
     ! -----------------------------------------------

@@ -19,62 +19,21 @@
 
 #include "config_F90.h"
  
-module cl_functions_m
+module cl_kernel_m
   use cl_types_m
 
   implicit none 
 
   private
 
-  ! the functions
   public ::                          &
-    f90_cl_create_program_from_file, &
-    f90_cl_build_program,            &
-    f90_cl_release_program,          &
     f90_cl_create_kernel,            &
-    f90_cl_release_kernel,           &
+    clReleaseKernel,                 &
     f90_cl_kernel_wgroup_size,       &
-    f90_cl_create_buffer,            &
     f90_cl_set_kernel_arg_buf,       &
     f90_cl_set_kernel_arg_local
 
   interface
-
-    ! ----------------------------------------------------
-
-    subroutine f90_cl_create_program_from_file(prog, context, source_file)
-      use cl_types_m
-
-      implicit none
-
-      type(cl_program), intent(out)   :: prog
-      type(cl_context), intent(inout) :: context
-      character(len=*), intent(in)    :: source_file
-    end subroutine f90_cl_create_program_from_file
-
-    ! ----------------------------------------------------
-
-    subroutine f90_cl_build_program(prog, context, device, flags)
-      use cl_types_m
-
-      implicit none
-
-      type(cl_program),   intent(inout) :: prog
-      type(cl_context),   intent(inout) :: context
-      type(cl_device_id), intent(inout) :: device
-      character(len=*),   intent(in)    :: flags
-    end subroutine f90_cl_build_program
-
-    ! ----------------------------------------------------
-
-    subroutine f90_cl_release_program(prog, status)
-      use cl_types_m
-
-      implicit none
-
-      type(cl_program), intent(inout) :: prog
-      integer,          intent(out)   :: status
-    end subroutine f90_cl_release_program
 
     ! ----------------------------------------------------
 
@@ -91,14 +50,14 @@ module cl_functions_m
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_release_kernel(kernel, status)
+    subroutine clReleaseKernel(kernel, status)
       use cl_types_m
-
+      
       implicit none
-
+      
       type(cl_kernel), intent(inout) :: kernel
       integer,         intent(out)   :: status
-    end subroutine f90_cl_release_kernel
+    end subroutine clReleaseKernel
 
     ! ----------------------------------------------------
 
@@ -139,7 +98,7 @@ module cl_functions_m
 
   end interface
 
-end module cl_functions_m
+end module cl_kernel_m
 
 !! Local Variables:
 !! mode: f90

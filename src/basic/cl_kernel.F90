@@ -107,7 +107,7 @@ contains
       PUSH_SUB(cl_kernel_end)
 
 #ifdef HAVE_OPENCL
-      call f90_cl_release_kernel(this%kernel, ierr)
+      call clReleaseKernel(this%kernel, ierr)
 #endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_kernel")
       this%initialized = .false.
