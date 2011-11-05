@@ -1,23 +1,20 @@
-  !! Copyright (C) 2010 X. Andrade
-  !!
-  !! This program is free software; you can redistribute it and/or modify
-  !! it under the terms of the GNU General Public License as published by
-  !! the Free Software Foundation; either version 2, or (at your option)
-  !! any later version.
-  !!
-  !! This program is distributed in the hope that it will be useful,
-  !! but WITHOUT ANY WARRANTY; without even the implied warranty of
-  !! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  !! GNU General Public License for more details.
-  !!
-  !! You should have received a copy of the GNU General Public License
-  !! along with this program; if not, write to the Free Software
-  !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-  !! 02111-1307, USA.
-  !!
-  !! $Id: cl_constants_inc.F90 3587 2007-11-22 16:43:00Z xavier $
+!! Copyright (C) 2010-2011 X. Andrade <xavier@tddft.org>
+!! 
+!! This program is free software: you can redistribute it and/or modify
+!! it under the terms of the GNU Lesser General Public License as published by
+!! the Free Software Foundation, either version 3 of the License, or
+!! (at your option) any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU Lesser General Public License for more details.
+!!
+!! You should have received a copy of the GNU Lesser General Public License
+!! along with this program.  If not, see <http://www.gnu.org/licenses/>.
+!!
+!! $Id$
 
-  ! these values are copied from OpenCL include CL/cl.h
 module cl_constants_m
   
   implicit none
@@ -26,6 +23,8 @@ module cl_constants_m
 
   public ::                   &
     cl_bool
+
+  ! these values replicate the values from OpenCL include CL/cl.h
 
   !  Error Codes
   integer, parameter, public ::  CL_SUCCESS                      = 0
