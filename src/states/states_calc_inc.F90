@@ -347,7 +347,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   integer :: idim, block_size, ib, size, sp
   R_TYPE, allocatable :: psicopy(:, :, :)
   type(opencl_mem_t) :: psicopy_buffer, ss_buffer
-  type(cl_kernel_t), save :: dkernel, zkernel
+  type(octcl_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
 
   PUSH_SUB(X(states_trsm))
@@ -412,11 +412,11 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
       end do
 
       if(states_are_real(st)) then
-        call cl_kernel_start_call(dkernel, 'trsm.cl', 'dtrsm')
-        kernel_ref = cl_kernel_get_ref(dkernel)
+        call octcl_kernel_start_call(dkernel, 'trsm.cl', 'dtrsm')
+        kernel_ref = octcl_kernel_get_ref(dkernel)
       else
-        call cl_kernel_start_call(zkernel, 'trsm.cl', 'ztrsm')
-        kernel_ref = cl_kernel_get_ref(zkernel)
+        call octcl_kernel_start_call(zkernel, 'trsm.cl', 'ztrsm')
+        kernel_ref = octcl_kernel_get_ref(zkernel)
       end if
 
       call opencl_set_kernel_arg(kernel_ref, 0, st%nst)
@@ -1007,7 +1007,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   type(batch_t) :: psib
   integer       :: block_size, sp, idim, size, ib
   R_TYPE, allocatable :: psinew(:, :, :), psicopy(:, :, :)
-  type(cl_kernel_t), save :: dkernel, zkernel
+  type(octcl_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
   type(opencl_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
 
@@ -1077,11 +1077,11 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
       end do
 
       if(states_are_real(st)) then
-        call cl_kernel_start_call(dkernel, 'rotate.cl', 'drotate_states')
-        kernel_ref = cl_kernel_get_ref(dkernel)
+        call octcl_kernel_start_call(dkernel, 'rotate.cl', 'drotate_states')
+        kernel_ref = octcl_kernel_get_ref(dkernel)
       else
-        call cl_kernel_start_call(zkernel, 'rotate.cl', 'zrotate_states')
-        kernel_ref = cl_kernel_get_ref(zkernel)
+        call octcl_kernel_start_call(zkernel, 'rotate.cl', 'zrotate_states')
+        kernel_ref = octcl_kernel_get_ref(zkernel)
       end if
 
       call opencl_set_kernel_arg(kernel_ref, 0, st%nst)

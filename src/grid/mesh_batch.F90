@@ -24,7 +24,7 @@ module mesh_batch_m
   use blas_m
   use c_pointer_m
   use cl
-  use cl_kernel_m
+  use octcl_kernel_m
   use comm_m
   use global_m
   use hardware_m

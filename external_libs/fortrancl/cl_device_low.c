@@ -150,7 +150,7 @@ void FC_FUNC_(clgetdeviceinfo_int64, CLGETDEVICEINFO_INT64)
 
   /* other */
   default:
-    fprintf(stderr, "\nError: clGetDeviceInfo not implemented param_name.\n");
+    fprintf(stderr, "\nFortranCL error: clGetDeviceInfo not implemented param_name.\n");
     exit(1);
     break;
   }

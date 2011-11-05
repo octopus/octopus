@@ -396,7 +396,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   logical :: reduce_
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:)
-  type(cl_kernel_t), save :: kernel
+  type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #ifdef HAVE_OPENCL
   type(opencl_mem_t)  :: dot_buffer

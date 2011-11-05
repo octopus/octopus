@@ -21,7 +21,7 @@
 
 module system_m
   use calc_mode_m
-  use cl_kernel_m
+  use octcl_kernel_m
   use density_m
   use elf_m
   use energy_m
@@ -79,7 +79,7 @@ contains
     SAFE_ALLOCATE(sys%st)
 
     call opencl_init(mpi_world)
-    call cl_kernel_global_init()
+    call octcl_kernel_global_init()
 
     call messages_obsolete_variable('SystemName')
 
@@ -187,7 +187,7 @@ contains
 
     call space_end(sys%space)
 
-    call cl_kernel_global_end()
+    call octcl_kernel_global_end()
     call opencl_end()
 
     SAFE_DEALLOCATE_P(sys%gr)

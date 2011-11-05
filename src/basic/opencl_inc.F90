@@ -134,6 +134,8 @@ end subroutine X(opencl_read_buffer_2)
 
 ! ---------------------------------------------------------------------------
 
+#ifndef R_TCOMPLEX
+
 subroutine X(opencl_set_kernel_arg_data)(kernel, narg, data)
   type(cl_kernel),    intent(inout) :: kernel
   integer,            intent(in)    :: narg
@@ -142,11 +144,13 @@ subroutine X(opencl_set_kernel_arg_data)(kernel, narg, data)
   integer :: ierr
 
 #ifdef HAVE_OPENCL
-  call f90_cl_set_kernel_arg_data(kernel, narg, R_SIZEOF, data, ierr)
+  call clSetKernelArg(kernel, narg, data, ierr)
 #endif
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_data")
 
 end subroutine X(opencl_set_kernel_arg_data)
+
+#endif
 
 !! Local Variables:
 !! mode: f90

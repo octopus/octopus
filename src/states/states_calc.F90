@@ -27,7 +27,7 @@ module states_calc_m
   use c_pointer_m
   use calc_mode_m
   use cl
-  use cl_kernel_m
+  use octcl_kernel_m
   use comm_m
   use datasets_m
   use derivatives_m

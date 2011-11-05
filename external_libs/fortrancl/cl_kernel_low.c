@@ -33,13 +33,15 @@
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(f90_cl_create_kernel, F90_CL_CREATE_KERNEL)
-     (cl_kernel * kernel, cl_program * program, STR_F_TYPE kernel_name_f, int * status STR_ARG1){
+void FC_FUNC_(clcreatekernel_low, CLCREATEKERNEL_LOW)
+     (cl_program * program, STR_F_TYPE kernel_name_f, int * errcode_ret, cl_kernel * kernel STR_ARG1){
   char * kernel_name;
+  cl_int errcode_ret_cl;
 
   TO_C_STR1(kernel_name_f, kernel_name);
 
-  *kernel = clCreateKernel(*program, kernel_name, status);
+  *kernel = clCreateKernel(*program, kernel_name, &errcode_ret_cl);
+  *errcode_ret = (int) errcode_ret_cl;
 
   free(kernel_name);
 }
@@ -53,37 +55,74 @@ void FC_FUNC(clreleasekernel, CLRELEASEKERNEL)(cl_kernel * kernel, int * status)
 
 /* -----------------------------------------------------------------------*/
 
-int FC_FUNC_(f90_cl_kernel_wgroup_size, F90_CL_KERNEL_WGROUP_SIZE)(cl_kernel * kernel, cl_device_id * device){
-  size_t workgroup_size;
-  clGetKernelWorkGroupInfo(*kernel, *device, CL_KERNEL_WORK_GROUP_SIZE, sizeof(workgroup_size), &workgroup_size, NULL);
-  return (int) workgroup_size;
+void FC_FUNC_(clsetkernelarg_buf, CLSETKERNELARG_BUF)
+     (cl_kernel * kernel, const int * arg_index, cl_mem * arg_value, int * status){
+
+  *status = (int) clSetKernelArg(*kernel, (cl_uint) *arg_index, (size_t) sizeof(cl_mem), arg_value);
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(f90_cl_set_kernel_arg_buf, F90_CL_SET_KERNEL_ARG_BUF)
-     (cl_kernel * kernel, const int * index, cl_mem * buffer, int * status){
+void FC_FUNC_(clsetkernelarg_int, CLSETKERNELARG_INT)
+     (cl_kernel * kernel, const int * arg_index, const int * arg_value, int * status){
 
-  *status = clSetKernelArg(*kernel, *index, sizeof(cl_mem), buffer);
+  *status = (int) clSetKernelArg(*kernel, (cl_uint) *arg_index, (size_t) sizeof(int), arg_value);
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(f90_cl_set_kernel_arg_data, F90_CL_SET_KERNEL_ARG_DATA)
-     (cl_kernel * kernel, const int * index, const int * sizeof_data, const void * data, int * status){
-  /* printf("kernel=%ld index=%d\n", *kernel, *index);*/
+void FC_FUNC_(clsetkernelarg_float, CLSETKERNELARG_FLOAT)
+     (cl_kernel * kernel, const int * arg_index, const float * arg_value, int * status){
 
-  *status = clSetKernelArg(*kernel, *index, *sizeof_data, data);
+  *status = (int) clSetKernelArg(*kernel, (cl_uint) *arg_index, (size_t) sizeof(float), arg_value);
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(f90_cl_set_kernel_arg_local, F90_CL_SET_KERNEL_ARG_LOCAL)
-     (cl_kernel * kernel, const int * index, const int * size_of_local, int * status){
+void FC_FUNC_(clsetkernelarg_double, CLSETKERNELARG_DOUBLE)
+     (cl_kernel * kernel, const int * arg_index, const double * arg_value, int * status){
+
+  *status = (int) clSetKernelArg(*kernel, (cl_uint) *arg_index, (size_t) sizeof(double), arg_value);
+}
+
+/* -----------------------------------------------------------------------*/
+
+void FC_FUNC(clsetkernelarglocal, CLSETKERNELARGLOCAL)
+     (cl_kernel * kernel, const int * arg_index, const cl_long * arg_size, int * status){
   
-  /* printf("kernel=%ld index=%d\n", *kernel, *index);*/
-
-  *status = clSetKernelArg(*kernel, *index, *size_of_local, NULL);
+  *status = (int) clSetKernelArg(*kernel, *arg_index, (size_t) *arg_size, NULL);
 }
 
 /* -----------------------------------------------------------------------*/
+
+void FC_FUNC_(clkernelworkgroupinfo_int64, CLKERNELWORKGROUPINFO_int64)
+     (cl_kernel * kernel, cl_device_id * device, int * param_name, cl_long * param_value, int * retcode_err){
+
+  union {
+    size_t val_size_t;
+    cl_ulong val_ulong;
+  } rval;
+
+  *retcode_err = (int) clGetKernelWorkGroupInfo(*kernel, *device, (cl_kernel_work_group_info) *param_name, 
+					       sizeof(rval), &rval, NULL);
+  if(*retcode_err != CL_SUCCESS) return;
+
+  switch(*param_name){
+  case CL_KERNEL_WORK_GROUP_SIZE:
+  case CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE:
+    *param_value = rval.val_size_t;
+    break;
+  case CL_KERNEL_LOCAL_MEM_SIZE:
+  case CL_KERNEL_PRIVATE_MEM_SIZE:
+    *param_value = rval.val_ulong;
+    break;
+  default:
+    fprintf(stderr, "\nFortranCL error: clGetKernelWorkGroupInfo not implemented param_name.\n");
+    exit(1);
+    break;
+  }
+
+}
+
+/* -----------------------------------------------------------------------*/
+

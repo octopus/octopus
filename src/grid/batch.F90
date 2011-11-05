@@ -23,7 +23,7 @@ module batch_m
   use blas_m
   use c_pointer_m
   use cl
-  use cl_kernel_m
+  use octcl_kernel_m
   use datasets_m
   use global_m
   use hardware_m
@@ -930,7 +930,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset
-  type(cl_kernel_t), save :: kernel
+  type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
   
   PUSH_SUB(batch_get_points_cl)
@@ -944,9 +944,9 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
     tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
     offset = this%index(1, 1) - 1
 
-    call cl_kernel_start_call(kernel, 'points.cl', 'get_points')
+    call octcl_kernel_start_call(kernel, 'points.cl', 'get_points')
 
-    kernel_ref = cl_kernel_get_ref(kernel)
+    kernel_ref = octcl_kernel_get_ref(kernel)
 
     call opencl_set_kernel_arg(kernel_ref, 0, sp)
     call opencl_set_kernel_arg(kernel_ref, 1, ep)
@@ -973,7 +973,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset
-  type(cl_kernel_t), save :: kernel
+  type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 
   PUSH_SUB(batch_set_points_cl)
@@ -989,9 +989,9 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
     tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
     offset = this%index(1, 1) - 1
 
-    call cl_kernel_start_call(kernel, 'points.cl', 'set_points')
+    call octcl_kernel_start_call(kernel, 'points.cl', 'set_points')
     
-    kernel_ref = cl_kernel_get_ref(kernel)
+    kernel_ref = octcl_kernel_get_ref(kernel)
 
     call opencl_set_kernel_arg(kernel_ref, 0, sp)
     call opencl_set_kernel_arg(kernel_ref, 1, ep)

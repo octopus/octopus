@@ -97,6 +97,6 @@ void FC_FUNC(clenqueuereadbuffer, CLENQUEUEREADBUFFER)
      (cl_command_queue * command_queue, cl_mem * buffer, const int * blocking_read, 
       const cl_long * offset, const cl_long * cb, void * ptr, int * status){
 
-  *status = (int) clEnqueueReadBuffer(*command_queue, *buffer, (cl_bool) blocking_read, 
+  *status = (int) clEnqueueReadBuffer(*command_queue, *buffer, (cl_bool) *blocking_read, 
 				      (size_t) *offset, (size_t) *cb, ptr, 0, NULL, NULL);
 }

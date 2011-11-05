@@ -120,7 +120,6 @@ module opencl_m
       opencl_set_kernel_arg_buffer,  &
       iopencl_set_kernel_arg_data,   &
       dopencl_set_kernel_arg_data,   &
-      zopencl_set_kernel_arg_data,   &
       opencl_set_kernel_arg_local
   end interface
 
@@ -627,7 +626,7 @@ module opencl_m
       PUSH_SUB(opencl_set_kernel_arg_buffer)
 
 #ifdef HAVE_OPENCL
-      call f90_cl_set_kernel_arg_buf(kernel, narg, buffer%mem, ierr)
+      call clSetKernelArg(kernel, narg, buffer%mem, ierr)
 #endif
       if(ierr /= CL_SUCCESS) then
         call opencl_print_error(ierr, "set_kernel_arg_buf")
@@ -646,10 +645,10 @@ module opencl_m
       integer,            intent(in)    :: size
 
       integer :: ierr
-      integer :: size_in_bytes
+      integer(8) :: size_in_bytes
       PUSH_SUB(opencl_set_kernel_arg_local)
 
-      size_in_bytes = size*types_get_size(type)
+      size_in_bytes = int(size, 8)*types_get_size(type)
       
       if(size_in_bytes > opencl%local_memory_size) then
         write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", dble(size_in_bytes)/1024.0, " Kb"
@@ -661,7 +660,7 @@ module opencl_m
       end if
 
 #ifdef HAVE_OPENCL
-      call f90_cl_set_kernel_arg_local(kernel, narg, size_in_bytes, ierr)
+      call clSetKernelArgLocal(kernel, narg, size_in_bytes, ierr)
 #endif
       if(ierr /= CL_SUCCESS) then 
         call opencl_print_error(ierr, "set_kernel_arg_local")
@@ -714,8 +713,13 @@ module opencl_m
     integer function opencl_kernel_workgroup_size(kernel) result(workgroup_size)
       type(cl_kernel), intent(inout) :: kernel
 
+      integer(8) :: workgroup_size8
+      integer    :: ierr
+
 #ifdef HAVE_OPENCL
-      workgroup_size = f90_cl_kernel_wgroup_size(kernel, opencl%device)
+      call clKernelWorkGroupInfo(kernel, opencl%device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
+      workgroup_size = workgroup_size8
 #else
       workgroup_size = 0
 #endif
@@ -792,9 +796,9 @@ module opencl_m
       integer :: ierr
 
 #ifdef HAVE_OPENCL
-      call f90_cl_create_kernel(kernel, prog, name, ierr)
+      kernel = clCreateKernel(prog, name, ierr)
 #endif
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_kernel")
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateKernel")
     end subroutine opencl_create_kernel
 
     ! ------------------------------------------------

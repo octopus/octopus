@@ -218,7 +218,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
   type(batch_t),     intent(inout) :: yy
 
   integer :: ist, ip, localsize, effsize
-  type(cl_kernel_t), save :: kernel
+  type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
   R_TYPE, allocatable     :: aa_linear(:)
   CMPLX,  allocatable     :: zaa_linear(:)
@@ -258,9 +258,9 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
       call opencl_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
     end if
 
-    call cl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)))
+    call octcl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)))
   
-    kernel_ref = cl_kernel_get_ref(kernel)
+    kernel_ref = octcl_kernel_get_ref(kernel)
 
     call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
     call opencl_set_kernel_arg(kernel_ref, 1, xx%pack%buffer)
