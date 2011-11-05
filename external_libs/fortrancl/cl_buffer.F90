@@ -30,48 +30,52 @@ module cl_buffer_m
     clCreateBuffer,                  &
     clReleaseMemObject
 
-  interface
+  interface clReleaseMemObject
 
-    subroutine clReleaseMemObject(memobj, status)
+    subroutine clReleaseMemObject_low(memobj, status)
       use cl_types_m
 
       implicit none
 
       type(cl_mem),           intent(inout) :: memobj
       integer,                intent(out)   :: status
-    end subroutine clReleaseMemObject
+    end subroutine clReleaseMemObject_low
 
   end interface
 
-  contains 
-
-    type(cl_mem) function clCreateBuffer(context, flags, size, errcode_ret) result(buffer)
-      type(cl_context), intent(in)    :: context
-      integer,          intent(in)    :: flags
-      integer(8),       intent(in)    :: size
-      integer,          intent(out)   :: errcode_ret
+  interface clCreateBuffer
+    module procedure clCreateBuffer_noptr
+  end interface clCreateBuffer
+  
+contains 
+  
+  type(cl_mem) function clCreateBuffer_noptr(context, flags, size, errcode_ret) result(buffer)
+    type(cl_context), intent(in)    :: context
+    integer,          intent(in)    :: flags
+    integer(8),       intent(in)    :: size
+    integer,          intent(out)   :: errcode_ret
+    
+    interface
       
-      interface
+      subroutine clCreateBuffer_low(context, flags, size, errcode_ret, buffer)
+        use cl_types_m
         
-        subroutine clCreateBuffer_low(context, flags, size, errcode_ret, buffer)
-          use cl_types_m
-          
-          implicit none
-          
-          type(cl_context),        intent(in)    :: context
-          integer,                 intent(in)    :: flags
-          integer(8),              intent(in)    :: size
-          integer,                 intent(out)   :: errcode_ret
-          type(cl_mem),            intent(out)   :: buffer
-        end subroutine clCreateBuffer_low
+        implicit none
         
-      end interface
-
+        type(cl_context),        intent(in)    :: context
+        integer,                 intent(in)    :: flags
+        integer(8),              intent(in)    :: size
+        integer,                 intent(out)   :: errcode_ret
+        type(cl_mem),            intent(out)   :: buffer
+      end subroutine clCreateBuffer_low
+      
+    end interface
+    
 #ifdef HAVE_OPENCL
-      call clCreateBuffer_low(context, flags, size, errcode_ret, buffer)
+    call clCreateBuffer_low(context, flags, size, errcode_ret, buffer)
 #endif
-      
-    end function clCreateBuffer
+    
+  end function clCreateBuffer_noptr
 
 end module cl_buffer_m
 

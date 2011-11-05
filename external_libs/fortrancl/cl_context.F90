@@ -30,20 +30,24 @@ module cl_context_m
     clCreateContext,                 &
     clReleaseContext
 
-  interface
-    subroutine clReleaseContext(context, status)
+  interface clReleaseContext
+    subroutine clReleaseContext_low(context, status)
       use cl_types_m
 
       implicit none
 
       type(cl_context), intent(inout) :: context
       integer,          intent(out)   :: status
-    end subroutine clReleaseContext
+    end subroutine clReleaseContext_low
   end interface
+
+  interface clCreateContext
+    module procedure clCreateContext_nocallback
+  end interface clCreateContext
 
 contains
 
-  type(cl_context) function clCreateContext(platform, num_devices, devices, errcode_ret) result(context)
+  type(cl_context) function clCreateContext_nocallback(platform, num_devices, devices, errcode_ret) result(context)
     type(cl_platform_id), intent(in)   :: platform
     integer,              intent(in)   :: num_devices
     type(cl_device_id),   intent(in)   :: devices(:)
@@ -89,8 +93,8 @@ contains
 #endif
 
     deallocate(devs)
-
-  end function clCreateContext
+    
+  end function clCreateContext_nocallback
 
 end module cl_context_m
 

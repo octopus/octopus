@@ -33,19 +33,20 @@ module cl_kernel_m
     clSetKernelArgLocal,             &
     clSetKernelArg
 
-  interface
+  interface clReleaseKernel
 
-    subroutine clReleaseKernel(kernel, status)
+    subroutine clReleaseKernel_low(kernel, status)
       use cl_types_m
 
       implicit none
 
       type(cl_kernel), intent(inout) :: kernel
       integer,         intent(out)   :: status
-    end subroutine clReleaseKernel
+    end subroutine clReleaseKernel_low
 
   end interface
 
+  ! --------------------------------------------------
 
   interface clSetKernelArg
 
@@ -103,8 +104,9 @@ module cl_kernel_m
 
   ! ----------------------------------------------------
 
-  interface
-    subroutine clSetKernelArgLocal(kernel, arg_index, arg_size, status)
+  interface clSetKernelArgLocal
+
+    subroutine clSetKernelArgLocal_low(kernel, arg_index, arg_size, status)
       use cl_types_m
 
       implicit none
@@ -113,8 +115,11 @@ module cl_kernel_m
       integer,         intent(in)    :: arg_index
       integer(8),      intent(in)    :: arg_size
       integer,         intent(out)   :: status
-    end subroutine clSetKernelArgLocal
+    end subroutine clSetKernelArgLocal_low
+
   end interface
+
+  ! ----------------------------------------------------
 
   interface clKernelWorkGroupInfo
 
@@ -132,9 +137,15 @@ module cl_kernel_m
 
   end interface clKernelWorkGroupInfo
 
+  ! ----------------------------------------------------
+
+  interface clCreateKernel
+    module procedure clCreateKernel_full
+  end interface clCreateKernel
+
 contains
 
-  type(cl_kernel) function clCreateKernel(program, kernel_name, errcode_ret) result(kernel)
+  type(cl_kernel) function clCreateKernel_full(program, kernel_name, errcode_ret) result(kernel)
     type(cl_program), intent(inout) :: program
     character(len=*), intent(in)    :: kernel_name
     integer,          intent(out)   :: errcode_ret
@@ -156,7 +167,7 @@ contains
     call clcreatekernel_low(program, kernel_name, errcode_ret, kernel)
 #endif
 
-  end function clCreateKernel
+  end function clCreateKernel_full
 
 end module cl_kernel_m
 

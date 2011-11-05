@@ -32,18 +32,18 @@ module cl_program_m
     clReleaseProgram,                &
     clGetProgramBuildInfo
 
-  interface
+  interface clReleaseProgram
 
-    subroutine clReleaseProgram(program, status)
+    subroutine clReleaseProgram_low(program, status)
       use cl_types_m
 
       implicit none
 
       type(cl_program), intent(inout) :: program
       integer,          intent(out)   :: status
-    end subroutine clReleaseProgram
+    end subroutine clReleaseProgram_low
 
-  end interface
+  end interface clReleaseProgram
 
   ! ----------------------------------------------------
 
@@ -81,9 +81,15 @@ module cl_program_m
 
   ! ----------------------------------------------------
 
+  interface clCreateProgramWithSource
+    module procedure clCreateProgramWithSource_str
+  end interface clCreateProgramWithSource
+
+  ! ----------------------------------------------------
+
   contains
 
-    type(cl_program) function clCreateProgramWithSource(context, string, retcode_err) result(program)
+    type(cl_program) function clCreateProgramWithSource_str(context, string, retcode_err) result(program)
       type(cl_context), intent(inout) :: context
       character(len=*), intent(in)    :: string
       integer,          intent(out)   :: retcode_err
@@ -104,7 +110,7 @@ module cl_program_m
 #ifdef HAVE_OPENCL
       call clCreateProgramWithSource_low(context, string, retcode_err, program)
 #endif
-    end function clCreateProgramWithSource
+    end function clCreateProgramWithSource_str
 
 end module cl_program_m
 

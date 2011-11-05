@@ -44,20 +44,20 @@ void FC_FUNC_(clcreatecommandqueue_low, CLCREATECOMMANDQUEUE_LOW)
 /* -----------------------------------------------------------------------*/
 
 /* clReleaseCommandQueue */
-void FC_FUNC(clreleasecommandqueue, CLRELEASECOMMANDQUEUE)(cl_command_queue * command_queue, int * status){
+void FC_FUNC_(clreleasecommandqueue_low, CLRELEASECOMMANDQUEUE_LOW)(cl_command_queue * command_queue, int * status){
   *status = (int) clReleaseCommandQueue(*command_queue);
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC(clfinish, CLFINISH)(cl_command_queue * command_queue, int * status){
+void FC_FUNC_(clfinish_low, CLFINISH_LOW)(cl_command_queue * command_queue, int * status){
   *status = (int) clFinish(*command_queue);
 }
 
 /* -----------------------------------------------------------------------*/
 
 /* clEnqueueNDRangeKernel*/
-void FC_FUNC(clenqueuendrangekernel, CLENQUEUENDRANGEKERNEL)
+void FC_FUNC_(clenqueuendrangekernel_low, CLENQUEUENDRANGEKERNEL_LOW)
      (cl_command_queue * command_queue, cl_kernel * kernel, const int * work_dim, 
       const cl_long * global_work_size, const cl_long * local_work_size, int * status){
 

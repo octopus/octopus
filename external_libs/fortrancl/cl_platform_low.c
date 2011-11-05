@@ -60,7 +60,7 @@ void FC_FUNC_(clgetplatformids_getplat, CLGETPLATFORMIDS_GETPLAT)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(clgetplatforminfo, CLGETPLATFORMINFO)
+void FC_FUNC_(clgetplatforminfo_str, CLGETPLATFORMINFO_STR)
      (const cl_platform_id * platform, const int * param_name, STR_F_TYPE param_value, int * status STR_ARG1){
   char info[2048];
 

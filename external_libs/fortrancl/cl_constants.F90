@@ -156,11 +156,14 @@ module cl_constants_m
   integer, parameter, public :: CL_PLATFORM_VENDOR     = 2307 ! 0x0903
   integer, parameter, public :: CL_PLATFORM_EXTENSIONS = 2308 ! 0x0904
 
-  integer, parameter, public ::        &
-    CL_MEM_READ_WRITE = 1,             &
-    CL_MEM_WRITE_ONLY = 2,             &
-    CL_MEM_READ_ONLY  = 4
-
+  !/* cl_mem_flags - bitfield */
+  integer, parameter, public :: CL_MEM_READ_WRITE     = 1    ! (1 << 0)
+  integer, parameter, public :: CL_MEM_WRITE_ONLY     = 2    ! (1 << 1)
+  integer, parameter, public :: CL_MEM_READ_ONLY      = 4    ! (1 << 2)
+  integer, parameter, public :: CL_MEM_USE_HOST_PTR   = 8    ! (1 << 3)
+  integer, parameter, public :: CL_MEM_ALLOC_HOST_PTR = 16   ! (1 << 4)
+  integer, parameter, public :: CL_MEM_COPY_HOST_PTR  = 32   ! (1 << 5)
+  
   !/* cl_command_queue_properties - bitfield */
   integer, parameter, public :: CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE = 1 ! (1 << 0)
   integer, parameter, public :: CL_QUEUE_PROFILING_ENABLE              = 2 ! (1 << 1)

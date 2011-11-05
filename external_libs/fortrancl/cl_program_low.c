@@ -118,7 +118,7 @@ void FC_FUNC_(clgetprogrambuildinfo_str,CLGETPROGRAMBUILDINFO_STR)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC(clreleaseprogram, CLRELEASEPROGRAM)
+void FC_FUNC_(clreleaseprogram_low, CLRELEASEPROGRAM_LOW)
      (cl_program * program, int * status){
 
   *status = (int) clReleaseProgram(*program);

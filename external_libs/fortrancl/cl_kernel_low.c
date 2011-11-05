@@ -49,7 +49,7 @@ void FC_FUNC_(clcreatekernel_low, CLCREATEKERNEL_LOW)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC(clreleasekernel, CLRELEASEKERNEL)(cl_kernel * kernel, int * status){
+void FC_FUNC_(clreleasekernel_low, CLRELEASEKERNEL_LOW)(cl_kernel * kernel, int * status){
   *status = (int) clReleaseKernel(*kernel);
 }
 
@@ -87,7 +87,7 @@ void FC_FUNC_(clsetkernelarg_double, CLSETKERNELARG_DOUBLE)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC(clsetkernelarglocal, CLSETKERNELARGLOCAL)
+void FC_FUNC_(clsetkernelarglocal_low, CLSETKERNELARGLOCAL_LOW)
      (cl_kernel * kernel, const int * arg_index, const cl_long * arg_size, int * status){
   
   *status = (int) clSetKernelArg(*kernel, *arg_index, (size_t) *arg_size, NULL);

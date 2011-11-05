@@ -26,7 +26,6 @@ module cl_platform_m
 
   private
 
-  ! the functions
   public ::                          &
     clGetPlatformIDs,                &
     clGetPlatformInfo
@@ -47,9 +46,9 @@ module cl_platform_m
 
   ! ---------------------------------------------------
 
-  interface
+  interface clGetPlatformInfo
 
-    subroutine clGetPlatformInfo(platform, param_name, param_value, status)
+    subroutine clGetPlatformInfo_str(platform, param_name, param_value, status)
       use cl_types_m
 
       implicit none
@@ -57,9 +56,9 @@ module cl_platform_m
       integer,              intent(in)   :: param_name
       character(len=*),     intent(out)  :: param_value
       integer,              intent(out)  :: status
-    end subroutine clGetPlatformInfo
+    end subroutine clGetPlatformInfo_str
 
-  end interface
+  end interface clGetPlatformInfo
 
   ! ---------------------------------------------------
 

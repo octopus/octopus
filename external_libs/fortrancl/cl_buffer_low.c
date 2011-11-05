@@ -44,7 +44,7 @@ void FC_FUNC_(clcreatebuffer_low, CLCREATEBUFFER_LOW)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC(clreleasememobject, CLRELEASEMEMOBJECT)(cl_mem * memobj, int * status){
+void FC_FUNC_(clreleasememobject_low, CLRELEASEMEMOBJECT_LOW)(cl_mem * memobj, int * status){
 
   *status = (int)clReleaseMemObject(*memobj);
 }
