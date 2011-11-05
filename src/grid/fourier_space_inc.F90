@@ -65,6 +65,8 @@ subroutine X(cube_function_RS2FS)(cube, cf)
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
 
+  PUSH_SUB(X(cube_function_RS2FS))
+
   ASSERT(cube%fft_library /= FFTLIB_NONE)
 
   if (cube%fft_library == FFTLIB_PFFT) then
@@ -80,7 +82,8 @@ subroutine X(cube_function_RS2FS)(cube, cf)
 
     call X(fft_forward)(cube%X(fftw), cf%X(RS), cf%FS)
   end if
-   
+
+  POP_SUB(X(cube_function_RS2FS))
 end subroutine X(cube_function_RS2FS)
 
 
@@ -91,6 +94,8 @@ subroutine X(cube_function_FS2RS)(cube, cf)
 
   integer :: index, ii, jj, kk
   type(profile_t), save :: prof_g,prof_t
+
+  PUSH_SUB(X(cube_function_FS2RS))
 
   ASSERT(cube%fft_library /= FFTLIB_NONE)
 
@@ -138,6 +143,8 @@ subroutine X(cube_function_FS2RS)(cube, cf)
     call X(fft_backward)(cube%X(fftw), cf%FS, cf%X(RS))
   end if
 
+  POP_SUB(X(cube_function_FS2RS))
+
 end subroutine X(cube_function_FS2RS)
 
 
@@ -149,6 +156,8 @@ subroutine X(fourier_space_op_init)(this, cube, op)
 
   integer :: ii, jj, kk
   integer :: start(3),last(3)
+
+  PUSH_SUB(X(fourier_space_op_init))
 
   ASSERT(cube%fft_library /= FFTLIB_NONE)
 
@@ -177,6 +186,8 @@ subroutine X(fourier_space_op_init)(this, cube, op)
       end do
     end do
   end if
+
+  POP_SUB(X(fourier_space_op_init))
 end subroutine X(fourier_space_op_init)
 
 ! ---------------------------------------------------------
@@ -189,6 +200,8 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   integer :: start(3), last(3)
 
   type(profile_t), save :: prof_g, rs2fs_prof, fs2rs_prof, prof
+
+  PUSH_SUB(X(fourier_space_op_apply))
 
   ASSERT(cube%fft_library /= FFTLIB_NONE)
 
@@ -234,6 +247,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   call X(cube_function_free_FS)(cf)
   call profiling_out(prof)
 
+  POP_SUB(X(fourier_space_op_apply))
 end subroutine X(fourier_space_op_apply)
 
 ! ---------------------------------------------------------
@@ -251,6 +265,8 @@ subroutine X(mesh_to_fourier) (mesh, mf, cube, cf)
 
   integer :: ip, ix, iy, iz
 
+  PUSH_SUB(X(mesh_to_fourier))
+
   ASSERT(associated(cf%FS))
 
   cf%FS = M_z0
@@ -263,6 +279,8 @@ subroutine X(mesh_to_fourier) (mesh, mf, cube, cf)
 
     cf%FS(ix, iy, iz) = mf(ip)
   end do
+
+  POP_SUB(X(mesh_to_fourier))
 end subroutine X(mesh_to_fourier)
 
 
@@ -274,6 +292,8 @@ subroutine X(fourier_to_mesh) (cube, cf, mesh, mf)
   CMPLX,         intent(out) :: mf(:) ! mf(mesh%np_global)
 
   integer :: ip, ix, iy, iz
+
+  PUSH_SUB(X(fourier_to_mesh))
 
   ASSERT(associated(cf%FS))
 
@@ -294,6 +314,7 @@ subroutine X(fourier_to_mesh) (cube, cf, mesh, mf)
 #endif
   end do
 
+  POP_SUB(X(fourier_to_mesh))
 end subroutine X(fourier_to_mesh)
 
 !! Local Variables:

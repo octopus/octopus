@@ -30,7 +30,6 @@ module cube_m
   use pfft_m
   use parser_m
   use par_vec_m
-  use pfft_m
   use profiling_m
   use simul_box_m
 

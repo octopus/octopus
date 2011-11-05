@@ -25,8 +25,8 @@ module kick_m
   use geometry_m
   use global_m
   use grid_m
-  use ion_dynamics_m
   use io_m
+  use ion_dynamics_m
   use loct_math_m
   use math_m
   use mesh_m
@@ -107,7 +107,7 @@ contains
     !%Default 0.0
     !%Section Time-Dependent::Response
     !%Description
-    !% The delta-perturbation that can be applied by making use of the "TDDeltaStrength" variable,
+    !% The delta-perturbation that can be applied by making use of the <tt>TDDeltaStrength</tt> variable,
     !% can be applied at the time given by this variable. Usually, this time is zero, since one wants
     !% to apply the delta pertubation or "kick" at a system at equilibrium, and no other time-dependent
     !% external potential is used. However, one may want to apply a kick on top of a laser field,
@@ -670,9 +670,6 @@ contains
 
     POP_SUB(kick_apply)
   end subroutine kick_apply
-
-
-
 
 end module kick_m
 

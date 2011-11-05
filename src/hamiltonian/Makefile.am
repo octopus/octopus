@@ -67,3 +67,4 @@ hamiltonian_base.o : hamiltonian_base.F90 hamiltonian_base_inc.F90 projector.o e
 born_charges.o : born_charges.F90
 projector_matrix.o : projector_matrix.F90
 berry.o : berry.F90
+kick.o : kick.F90
