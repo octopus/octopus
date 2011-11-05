@@ -176,6 +176,11 @@ module cl_constants_m
   integer, parameter, public :: CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE = 4531 ! 0x11B3
   integer, parameter, public :: CL_KERNEL_PRIVATE_MEM_SIZE                   = 4532 ! 0x11B4
 
+  !/* cl_program_build_info */
+  integer, parameter, public :: CL_PROGRAM_BUILD_STATUS  = 4481 ! 0x1181
+  integer, parameter, public :: CL_PROGRAM_BUILD_OPTIONS = 4482 ! 0x1182
+  integer, parameter, public :: CL_PROGRAM_BUILD_LOG     = 4483 ! 0x1183
+
 contains
   
   integer pure function cl_bool(fortran_logical)

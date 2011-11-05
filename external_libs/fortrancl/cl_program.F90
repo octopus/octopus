@@ -28,8 +28,9 @@ module cl_program_m
 
   public ::                          &
     f90_cl_create_program_from_file, &
-    f90_cl_build_program,            &
-    clReleaseProgram
+    clBuildProgram,                  &
+    clReleaseProgram,                &
+    clGetProgramBuildInfo
 
   interface
 
@@ -47,19 +48,6 @@ module cl_program_m
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_build_program(prog, context, device, flags)
-      use cl_types_m
-
-      implicit none
-
-      type(cl_program),   intent(inout) :: prog
-      type(cl_context),   intent(inout) :: context
-      type(cl_device_id), intent(inout) :: device
-      character(len=*),   intent(in)    :: flags
-    end subroutine f90_cl_build_program
-
-    ! ----------------------------------------------------
-
     subroutine clReleaseProgram(prog, status)
       use cl_types_m
 
@@ -70,6 +58,38 @@ module cl_program_m
     end subroutine clReleaseProgram
 
   end interface
+
+  interface clBuildProgram
+
+    subroutine clBuildProgram_nodevices(program, options, retcode_err)
+      use cl_types_m
+
+      implicit none
+
+      type(cl_program),   intent(inout) :: program
+      character(len=*),   intent(in)    :: options
+      integer,            intent(in)    :: retcode_err
+    end subroutine clBuildProgram_nodevices
+
+  end interface clBuildProgram
+
+  interface clGetProgramBuildInfo
+    
+    subroutine clGetProgramBuildInfo_str(program, device, param_name, param_value, retcode_err)
+      use cl_types_m
+
+      implicit none
+
+      type(cl_program),   intent(in)    :: program
+      type(cl_device_id), intent(in)    :: device
+      integer,            intent(in)    :: param_name
+      character(len=*),   intent(out)   :: param_value
+      integer,            intent(out)   :: retcode_err
+    end subroutine clGetProgramBuildInfo_str
+
+  end interface clGetProgramBuildInfo
+
+  ! ----------------------------------------------------
 
 end module cl_program_m
 

@@ -77,30 +77,28 @@ void FC_FUNC_(f90_cl_create_program_from_file, F90_CL_CREATE_PROGRAM_FROM_FILE)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
-     (cl_program * program, cl_context * context, cl_device_id * device, STR_F_TYPE flags_f STR_ARG1){
-  char * flags;
-  cl_int status;
-  size_t len;
-  char buffer[5000];
+void FC_FUNC_(clbuildprogram_nodevices,CLBUILDPROGRAM_NODEVICES)
+     (cl_program * program, STR_F_TYPE options, int * retcode_err STR_ARG1){
+  char * options_c;
 
-  TO_C_STR1(flags_f, flags);
+  TO_C_STR1(options, options_c);
 
-  status = clBuildProgram(*program, 0, NULL, flags, NULL, NULL);
-  
-  clGetProgramBuildInfo(*program, *device,
-			CL_PROGRAM_BUILD_LOG, sizeof (buffer), buffer,
-			&len);
+  *retcode_err = (int) clBuildProgram(*program, 0, NULL, options_c, NULL, NULL);
 
-  /* Print the compilation log */
-  if(len > 2) printf("%s\n\n", buffer);
+  free(options_c);
+}
 
-  if(status != CL_SUCCESS){
-    fprintf(stderr, "Error: compilation failed.\n");
-    exit(1);
-  }
+/* -----------------------------------------------------------------------*/
 
-  free(flags);
+void FC_FUNC_(clgetprogrambuildinfo_str,CLGETPROGRAMBUILDINFO_STR)
+     (cl_program * program, cl_device_id * device, const int * param_name, 
+      STR_F_TYPE param_value, int * retcode_err STR_ARG1){
+  char param_value_c[2000];
+
+  *retcode_err = (int) clGetProgramBuildInfo(*program, *device, (cl_program_build_info) *param_name,
+					     sizeof(param_value_c), param_value_c, NULL);
+
+  TO_F_STR1(param_value_c, param_value);
 }
 
 /* -----------------------------------------------------------------------*/

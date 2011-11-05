@@ -733,7 +733,8 @@ module opencl_m
       character(len=*), optional, intent(in)    :: flags
       
       character(len=256) :: full_flags
-
+      character(len=3000) :: build_log
+      integer :: ierr, ierrlog
 #ifdef HAVE_OPENCL
       call f90_cl_create_program_from_file(prog, opencl%context, filename)
 
@@ -757,7 +758,15 @@ module opencl_m
         call messages_info(1)
       end if
 
-      call f90_cl_build_program(prog, opencl%context, opencl%device, trim(full_flags))
+      call clBuildProgram(prog, trim(full_flags), ierr)
+
+      call clGetProgramBuildInfo(prog, opencl%device, CL_PROGRAM_BUILD_LOG, build_log, ierrlog)
+      if(ierrlog /= CL_SUCCESS) call opencl_print_error(ierrlog, "clGetProgramBuildInfo")
+      
+      if(len(trim(build_log)) > 0) write(stderr, '(a)') trim(build_log)
+
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clBuildProgram")
+
 #endif
     end subroutine opencl_build_program
 
