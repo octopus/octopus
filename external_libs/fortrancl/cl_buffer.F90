@@ -66,8 +66,10 @@ module cl_buffer_m
         end subroutine flCreateBuffer_low
         
       end interface
-  
+
+#ifdef HAVE_OPENCL
       call flCreateBuffer_low(context, flags, size, errcode_ret, buffer)
+#endif
       
     end function flCreateBuffer
 
