@@ -20,13 +20,16 @@
 
 #include "global.h"
 
-#ifdef HAVE_NFFT
-
 #define NFFT_MAX 10
 #define NFFT_NULL -1
 
 
 module nfft_m
+
+#if !defined(HAVE_NFFT) 
+  integer, public :: nfft_dummy ! this avoids compilers complaining about empty module 
+#else
+
   use c_pointer_m
   use datasets_m
   use fft_m   
@@ -624,11 +627,9 @@ contains
 
   end subroutine znfft_backward
 
-
+#endif
 
 end module nfft_m
-
-#endif
 
 !! Local Variables:
 !! mode: f90
