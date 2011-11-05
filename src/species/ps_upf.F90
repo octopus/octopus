@@ -385,7 +385,7 @@ contains
       end if
       if (string_matches("<"//string//">", string2) ) exit
     end do
-write(*,*) string    
+
     POP_SUB(init_tag)
   end subroutine init_tag
 
