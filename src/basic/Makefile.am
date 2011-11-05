@@ -118,7 +118,7 @@ write_iter.o : write_iter.F90 c_pointer.o
 io_binary_f.o : io_binary_f.F90 io_binary.h messages.o
 io_csv_f.o : io_csv_f.F90 io_csv.h messages.o
 
-opencl.o : opencl.F90 opencl_inc.F90 global.o types.o profiling.o messages.o parser.o mpi.o
+opencl.o : opencl.F90 opencl_inc.F90 global.o types.o profiling.o messages.o parser.o mpi.o io.o
 octcl_kernel.o : octcl_kernel.F90 opencl.o c_pointer.o global.o
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o

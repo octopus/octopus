@@ -27,37 +27,25 @@ module cl_program_m
   private
 
   public ::                          &
-    f90_cl_create_program_from_file, &
+    clCreateProgramWithSource,       &
     clBuildProgram,                  &
     clReleaseProgram,                &
     clGetProgramBuildInfo
 
   interface
 
-    ! ----------------------------------------------------
-
-    subroutine f90_cl_create_program_from_file(prog, context, source_file)
+    subroutine clReleaseProgram(program, status)
       use cl_types_m
 
       implicit none
 
-      type(cl_program), intent(out)   :: prog
-      type(cl_context), intent(inout) :: context
-      character(len=*), intent(in)    :: source_file
-    end subroutine f90_cl_create_program_from_file
-
-    ! ----------------------------------------------------
-
-    subroutine clReleaseProgram(prog, status)
-      use cl_types_m
-
-      implicit none
-
-      type(cl_program), intent(inout) :: prog
+      type(cl_program), intent(inout) :: program
       integer,          intent(out)   :: status
     end subroutine clReleaseProgram
 
   end interface
+
+  ! ----------------------------------------------------
 
   interface clBuildProgram
 
@@ -72,6 +60,8 @@ module cl_program_m
     end subroutine clBuildProgram_nodevices
 
   end interface clBuildProgram
+
+  ! ----------------------------------------------------
 
   interface clGetProgramBuildInfo
     
@@ -90,6 +80,31 @@ module cl_program_m
   end interface clGetProgramBuildInfo
 
   ! ----------------------------------------------------
+
+  contains
+
+    type(cl_program) function clCreateProgramWithSource(context, string, retcode_err) result(program)
+      type(cl_context), intent(inout) :: context
+      character(len=*), intent(in)    :: string
+      integer,          intent(out)   :: retcode_err
+
+      interface 
+        subroutine clCreateProgramWithSource_low(context, string, retcode_err, program)
+          use cl_types_m
+
+          implicit none
+
+          type(cl_context), intent(inout) :: context
+          character(len=*), intent(in)    :: string
+          integer,          intent(out)   :: retcode_err
+          type(cl_program), intent(out)   :: program
+        end subroutine clCreateProgramWithSource_low
+      end interface
+
+#ifdef HAVE_OPENCL
+      call clCreateProgramWithSource_low(context, string, retcode_err, program)
+#endif
+    end function clCreateProgramWithSource
 
 end module cl_program_m
 

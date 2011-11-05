@@ -23,6 +23,7 @@ module opencl_m
   use cl
   use datasets_m
   use global_m
+  use io_m
   use messages_m
   use mpi_m
   use types_m
@@ -133,6 +134,8 @@ module opencl_m
 
   ! a "convenience" public variable
   integer, public :: cl_status
+
+  integer, parameter :: OPENCL_MAX_FILE_LENGTH = 10000
 
   contains
 
@@ -732,38 +735,63 @@ module opencl_m
       character(len=*),           intent(in)    :: filename
       character(len=*), optional, intent(in)    :: flags
       
-      character(len=256) :: full_flags
-      character(len=3000) :: build_log
-      integer :: ierr, ierrlog
+      character(len = OPENCL_MAX_FILE_LENGTH) :: string
+      integer :: ierr, ierrlog, iunit, irec
 #ifdef HAVE_OPENCL
-      call f90_cl_create_program_from_file(prog, opencl%context, filename)
 
-      full_flags=''
+      string = ''
+
+      call io_assign(iunit)
+      open(unit = iunit, file = trim(filename), access='direct', status = 'old', action = 'read', iostat = ierr, recl = 1)
+      irec = 1
+      do
+        read(unit = iunit, rec = irec, iostat = ierr) string(irec:irec) 
+        if (ierr /= 0) exit
+        if(irec == OPENCL_MAX_FILE_LENGTH) then
+          call messages_write('Error: CL source file is too big: '//trim(filename)//'.')
+          call messages_new_line()
+          call messages_write("       Increase 'OPENCL_MAX_FILE_LENGTH'.")
+          call messages_fatal()
+        end if
+        irec = irec + 1
+      end do
+
+      close(unit = iunit)
+      call io_free(iunit)
+
+      call messages_write('Building CL program '//trim(filename)//'.')
+      call messages_info()
+
+      prog = clCreateProgramWithSource(opencl%context, string, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateProgramWithSource")
+
+      ! build the compilation flags
+      string=''
 
       if (f90_cl_device_has_extension(opencl%device, "cl_amd_fp64")) then
-        full_flags = trim(full_flags)//'-DEXT_AMD_FP64'
+        string = trim(string)//'-DEXT_AMD_FP64'
       else if(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64")) then
-        full_flags = trim(full_flags)//'-DEXT_KHR_FP64 -cl-mad-enable'
+        string = trim(string)//'-DEXT_KHR_FP64 -cl-mad-enable'
       else
         message(1) = 'Octopus requires an OpenCL device with double-precision support.' 
         call messages_fatal(1)
       end if
 
       if(present(flags)) then
-        full_flags = trim(full_flags)//' '//trim(flags)
+        string = trim(string)//' '//trim(flags)
       end if
 
       if(in_debug_mode) then
-        message(1) = "Debug info: compilation flags '"//trim(full_flags)//"'. "
+        message(1) = "Debug info: compilation flags '"//trim(string)//"'. "
         call messages_info(1)
       end if
 
-      call clBuildProgram(prog, trim(full_flags), ierr)
+      call clBuildProgram(prog, trim(string), ierr)
 
-      call clGetProgramBuildInfo(prog, opencl%device, CL_PROGRAM_BUILD_LOG, build_log, ierrlog)
+      call clGetProgramBuildInfo(prog, opencl%device, CL_PROGRAM_BUILD_LOG, string, ierrlog)
       if(ierrlog /= CL_SUCCESS) call opencl_print_error(ierrlog, "clGetProgramBuildInfo")
       
-      if(len(trim(build_log)) > 0) write(stderr, '(a)') trim(build_log)
+      if(len(trim(string)) > 0) write(stderr, '(a)') trim(string)
 
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clBuildProgram")
 

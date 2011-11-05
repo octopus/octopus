@@ -236,7 +236,7 @@ end subroutine messages_end
       endif
 #endif
       call flush_msg(stderr, shyphens)
-      do ii = 1, no_lines
+      do ii = 1, no_lines_
         write(msg, '(a,1x,a)') '*', trim(message(ii))
         call flush_msg(stderr, msg)
       end do

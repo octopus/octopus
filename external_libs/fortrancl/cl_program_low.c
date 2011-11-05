@@ -77,6 +77,21 @@ void FC_FUNC_(f90_cl_create_program_from_file, F90_CL_CREATE_PROGRAM_FROM_FILE)
 
 /* -----------------------------------------------------------------------*/
 
+void FC_FUNC_(clcreateprogramwithsource_low, CLCREATEPROGRAMWITHSOURCE_LOW)
+     (cl_context * context, STR_F_TYPE string, int * retcode_err, cl_program * program STR_ARG1){
+  char * string_c;
+  cl_int retcode_err_cl;
+
+  TO_C_STR1(string, string_c);
+
+  *program = clCreateProgramWithSource(*context, 1, (const char**) &string_c, NULL, &retcode_err_cl);
+  *retcode_err = (int) retcode_err_cl;
+
+  free(string_c);
+}
+
+/* -----------------------------------------------------------------------*/
+
 void FC_FUNC_(clbuildprogram_nodevices,CLBUILDPROGRAM_NODEVICES)
      (cl_program * program, STR_F_TYPE options, int * retcode_err STR_ARG1){
   char * options_c;
