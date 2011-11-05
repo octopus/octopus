@@ -24,17 +24,19 @@ subroutine X(opencl_write_buffer)(this, size, data, offset)
   R_TYPE,                           intent(in)    :: data(:)
   integer,                optional, intent(in)    :: offset
 
-  integer(SIZEOF_SIZE_T) :: fsize, offset_
+  integer(8) :: fsize, offset_
   integer :: ierr
 
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
-  fsize = size*R_SIZEOF
+  fsize = int(size,8)*R_SIZEOF
   offset_ = 0
-  if(present(offset)) offset_ = offset*R_SIZEOF
+  if(present(offset)) offset_ = int(offset, 8)*R_SIZEOF
+
+  ASSERT(fsize >= 0)
 
 #ifdef HAVE_OPENCL
-  call flEnqueueWriteBuffer(this%mem, opencl%command_queue, fsize, offset_, data(1), ierr)
+  call flEnqueueWriteBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1), ierr)
 #endif
 
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
@@ -53,17 +55,17 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   R_TYPE,                           intent(in)    :: data(:, :)
   integer,                optional, intent(in)    :: offset
 
-  integer(SIZEOF_SIZE_T) :: fsize, offset_
+  integer(8) :: fsize, offset_
   integer :: ierr
 
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
-  fsize = size*R_SIZEOF
+  fsize = int(size, 8)*R_SIZEOF
   offset_ = 0
-  if(present(offset)) offset_ = offset*R_SIZEOF
+  if(present(offset)) offset_ = int(offset, 8)*R_SIZEOF
 
 #ifdef HAVE_OPENCL
-  call flEnqueueWriteBuffer(this%mem, opencl%command_queue, fsize, offset_, data(1, 1), ierr)
+  call flEnqueueWriteBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1), ierr)
 #endif
 
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
@@ -82,7 +84,7 @@ subroutine X(opencl_read_buffer)(this, size, data, offset)
   R_TYPE,                           intent(out)   :: data(:)
   integer,                optional, intent(in)    :: offset
 
-  integer(SIZEOF_SIZE_T) :: fsize, offset_
+  integer(8) :: fsize, offset_
   integer :: ierr
 
   call profiling_in(prof_read, "CL_READ_BUFFER")
@@ -92,7 +94,7 @@ subroutine X(opencl_read_buffer)(this, size, data, offset)
   if(present(offset)) offset_ = offset*R_SIZEOF
 
 #ifdef HAVE_OPENCL
-  call flEnqueueReadBuffer(this%mem, opencl%command_queue, fsize, offset_, data(1), ierr)
+  call flEnqueueReadBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1), ierr)
 #endif
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 
@@ -110,7 +112,7 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   R_TYPE,                           intent(out)   :: data(:, :)
   integer,                optional, intent(in)    :: offset
 
-  integer(SIZEOF_SIZE_T) :: fsize, offset_
+  integer(8) :: fsize, offset_
   integer :: ierr
   
   call profiling_in(prof_read, "CL_READ_BUFFER")
@@ -120,7 +122,7 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   if(present(offset)) offset_ = offset*R_SIZEOF
 
 #ifdef HAVE_OPENCL
-  call flEnqueueReadBuffer(this%mem, opencl%command_queue, fsize, offset_, data(1, 1), ierr)
+  call flEnqueueReadBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1), ierr)
 #endif
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 

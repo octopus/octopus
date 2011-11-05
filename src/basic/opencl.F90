@@ -535,14 +535,16 @@ module opencl_m
       type(type_t),       intent(in)    :: type
       integer,            intent(in)    :: size
       
-      integer(SIZEOF_SIZE_T) :: fsize
+      integer(8) :: fsize
       integer :: ierr
 
       PUSH_SUB(opencl_create_buffer_4)
 
       this%type = type
       this%size = size      
-      fsize = size*types_get_size(type)
+      fsize = int(size, 8)*types_get_size(type)
+
+      ASSERT(fsize >= 0)
 
 #ifdef HAVE_OPENCL
       this%mem = flCreateBuffer(opencl%context, flags, fsize, ierr)

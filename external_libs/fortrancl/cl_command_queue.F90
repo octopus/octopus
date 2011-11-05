@@ -32,8 +32,34 @@ module cl_command_queue_m
     flReleaseCommandQueue,           &
     flEnqueueNDRangeKernel,          &
     flFinish
+    !flEnqueueWriteBuffer
+    !flEnqueueReadBuffer
 
   interface
+
+    ! The following functions are not declared since they are
+    ! polymorphic beyond the capabilities of Fortran. They can be
+    ! called anyway, but no type checking will be done by the compiler.
+
+    !    subroutine flEnqueueWriteBuffer(command_queue, buffer, blocking_write, offset, cb, ptr, retcode_err)
+    !      type(cl_command_queue), intent(inout) :: command_queue
+    !      type(cl_mem),           intent(inout) :: buffer
+    !      integer,                intent(in)    :: blocking_write
+    !      integer(8),             intent(in)    :: offset
+    !      integer(8),             intent(in)    :: cb
+    !      type(any),              intent(inout) :: ptr
+    !      integer,                intent(out)   :: retcode_err
+    !    end subroutine flEnqueueWriteBuffer
+
+    !    subroutine flEnqueueReadBuffer(command_queue, buffer, blocking_write, offset, cb, ptr, retcode_err)
+    !      type(cl_command_queue), intent(inout) :: command_queue
+    !      type(cl_mem),           intent(inout) :: buffer
+    !      integer,                intent(in)    :: blocking_write
+    !      integer(8),             intent(in)    :: offset
+    !      integer(8),             intent(in)    :: cb
+    !      type(any),              intent(inout) :: ptr
+    !      integer,                intent(out)   :: retcode_err
+    !    end subroutine flEnqueueReadBuffer
 
     ! ----------------------------------------------------
 

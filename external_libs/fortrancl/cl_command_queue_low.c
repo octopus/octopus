@@ -58,9 +58,33 @@ void FC_FUNC(flfinish, FLFINISH)(cl_command_queue * cq, int * status){
 
 /* clEnqueueNDRangeKernel*/
 void FC_FUNC(flenqueuendrangekernel, FLENQUEUENDRANGEKERNEL)
-     (cl_command_queue * command_queue, cl_kernel * kernel, const int * dim, const size_t * globalsizes, const size_t * localsizes, int * status){
+     (cl_command_queue * command_queue, cl_kernel * kernel, const int * dim, 
+      const size_t * globalsizes, const size_t * localsizes, int * status){
 
   *status = (int) clEnqueueNDRangeKernel(*command_queue, *kernel, *dim,
 					 NULL,  globalsizes, localsizes, 0, NULL, NULL);
 
+}
+
+/* -----------------------------------------------------------------------*/
+
+/* clEnqueueWriteBuffer */
+void FC_FUNC(flenqueuewritebuffer, FLENQUEUEWRITEBUFFER)
+     (cl_command_queue * command_queue, cl_mem * buffer, const int * blocking_write, 
+      const cl_long * offset, const cl_long * cb, const void * ptr, int * status){
+
+  *status = (int) clEnqueueWriteBuffer(*command_queue, *buffer, (cl_bool) * blocking_write, 
+				       (size_t) *offset, (size_t) *cb, ptr, 0, NULL, NULL);
+
+}
+
+/* -----------------------------------------------------------------------*/
+
+/* clEnqueueReadBuffer */
+void FC_FUNC(flenqueuereadbuffer, FLENQUEUEREADBUFFER)
+     (cl_command_queue * command_queue, cl_mem * buffer, const int * blocking_read, 
+      const cl_long * offset, const cl_long * cb, void * ptr, int * status){
+
+  *status = (int) clEnqueueReadBuffer(*command_queue, *buffer, (cl_bool) blocking_read, 
+				      (size_t) *offset, (size_t) *cb, ptr, 0, NULL, NULL);
 }

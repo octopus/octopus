@@ -24,6 +24,9 @@ module cl_constants_m
 
   private
 
+  public ::                   &
+    cl_bool
+
   !  Error Codes
   integer, parameter, public ::  CL_SUCCESS                      = 0
   integer, parameter, public ::  CL_DEVICE_NOT_FOUND             = -1
@@ -162,6 +165,23 @@ module cl_constants_m
   integer, parameter, public :: CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE = 1 ! (1 << 0)
   integer, parameter, public :: CL_QUEUE_PROFILING_ENABLE              = 2 ! (1 << 1)
 
+  !/* cl_bool */
+  integer, parameter, public :: CL_FALSE = 0
+  integer, parameter, public :: CL_TRUE  = 1
+
+contains
+  
+  integer pure function cl_bool(fortran_logical)
+    logical, intent(in) :: fortran_logical
+    
+    if(fortran_logical .eqv. .true.) then
+      cl_bool = CL_TRUE
+    else
+      cl_bool = CL_FALSE
+    end if
+    
+  end function cl_bool
+  
 end module cl_constants_m
 
 !! Local Variables:

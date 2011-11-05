@@ -60,14 +60,14 @@ module cl_buffer_m
           
           type(cl_context),        intent(in)    :: context
           integer,                 intent(in)    :: flags
-          integer(SIZEOF_SIZE_T),  intent(in)    :: size
+          integer(8),              intent(in)    :: size
           integer,                 intent(out)   :: errcode_ret
           type(cl_mem),            intent(out)   :: buffer
         end subroutine flCreateBuffer_low
         
       end interface
   
-      call flCreateBuffer_low(context, flags, int(size, SIZEOF_SIZE_T), errcode_ret, buffer)
+      call flCreateBuffer_low(context, flags, size, errcode_ret, buffer)
       
     end function flCreateBuffer
 
