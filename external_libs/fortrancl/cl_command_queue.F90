@@ -39,7 +39,7 @@ module cl_command_queue_m
 
     ! The following functions are not declared since they are
     ! polymorphic beyond the capabilities of Fortran. They can be
-    ! called anyway, but no type checking will be done by the compiler.
+    ! called, but no type checking will be done by the compiler.
 
     !    subroutine flEnqueueWriteBuffer(command_queue, buffer, blocking_write, offset, cb, ptr, retcode_err)
     !      type(cl_command_queue), intent(inout) :: command_queue
@@ -94,8 +94,8 @@ module cl_command_queue_m
       type(cl_command_queue), intent(inout) :: command_queue
       type(cl_kernel),        intent(inout) :: kernel
       integer,                intent(in)    :: dim
-      integer(SIZEOF_SIZE_T), intent(in)    :: globalsizes
-      integer(SIZEOF_SIZE_T), intent(in)    :: localsizes
+      integer(8),             intent(in)    :: globalsizes
+      integer(8),             intent(in)    :: localsizes
       integer,                intent(out)   :: status
     end subroutine flEnqueueNDRangeKernel
 

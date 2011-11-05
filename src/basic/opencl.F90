@@ -679,8 +679,8 @@ module opencl_m
       integer,            intent(in)    :: localsizes(:)
       
       integer :: dim, ierr
-      integer(SIZEOF_SIZE_T) :: gsizes(1:3)
-      integer(SIZEOF_SIZE_T) :: lsizes(1:3)
+      integer(8) :: gsizes(1:3)
+      integer(8) :: lsizes(1:3)
 
       PUSH_SUB(opencl_kernel_run)
       call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
@@ -691,8 +691,8 @@ module opencl_m
       ASSERT(all(localsizes <= opencl_max_workgroup_size()))
       ASSERT(all(mod(globalsizes, localsizes) == 0))
      
-      gsizes(1:dim) = int(globalsizes(1:dim), SIZEOF_SIZE_T)
-      lsizes(1:dim) = int(localsizes(1:dim), SIZEOF_SIZE_T)
+      gsizes(1:dim) = int(globalsizes(1:dim), 8)
+      lsizes(1:dim) = int(localsizes(1:dim), 8)
 
 #ifdef HAVE_OPENCL
       call flEnqueueNDRangeKernel(opencl%command_queue, kernel, dim, gsizes(1), lsizes(1), ierr)

@@ -45,24 +45,36 @@ void FC_FUNC_(flcreatecommandqueue_low, FLCREATECOMMANDQUEUE_LOW)
 
 /* clReleaseCommandQueue */
 void FC_FUNC(flreleasecommandqueue, FLRELEASECOMMANDQUEUE)(cl_command_queue * command_queue, int * status){
-  *status = clReleaseCommandQueue(*command_queue);
+  *status = (int) clReleaseCommandQueue(*command_queue);
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC(flfinish, FLFINISH)(cl_command_queue * cq, int * status){
-  *status = clFinish(*cq);
+void FC_FUNC(flfinish, FLFINISH)(cl_command_queue * command_queue, int * status){
+  *status = (int) clFinish(*command_queue);
 }
 
 /* -----------------------------------------------------------------------*/
 
 /* clEnqueueNDRangeKernel*/
 void FC_FUNC(flenqueuendrangekernel, FLENQUEUENDRANGEKERNEL)
-     (cl_command_queue * command_queue, cl_kernel * kernel, const int * dim, 
-      const size_t * globalsizes, const size_t * localsizes, int * status){
+     (cl_command_queue * command_queue, cl_kernel * kernel, const int * work_dim, 
+      const cl_long * global_work_size, const cl_long * local_work_size, int * status){
 
-  *status = (int) clEnqueueNDRangeKernel(*command_queue, *kernel, *dim,
-					 NULL,  globalsizes, localsizes, 0, NULL, NULL);
+  int ii;
+  size_t * gsizes = (size_t *) malloc((*work_dim)*sizeof(size_t));
+  size_t * lsizes = (size_t *) malloc((*work_dim)*sizeof(size_t));
+
+  for(ii = 0; ii < *work_dim; ii++) {
+    gsizes[ii] = (size_t) global_work_size[ii];
+    lsizes[ii] = (size_t) local_work_size[ii];
+  }
+
+  *status = (int) clEnqueueNDRangeKernel(*command_queue, *kernel, (cl_uint) *work_dim,
+					 NULL,  gsizes, lsizes, 0, NULL, NULL);
+
+  free(gsizes);
+  free(lsizes);
 
 }
 
