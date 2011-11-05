@@ -33,7 +33,7 @@
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flgetdeviceids_num, FLGETDEVICEIDS_NUM)
+void FC_FUNC_(clgetdeviceids_num, CLGETDEVICEIDS_NUM)
      (const cl_platform_id * platform, const int * device_type, int * num_devices, int * status){
   cl_uint unum_devices;
 
@@ -43,7 +43,7 @@ void FC_FUNC_(flgetdeviceids_num, FLGETDEVICEIDS_NUM)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flgetdeviceids_listall, FLGETDEVICEIDS_LISTALL)
+void FC_FUNC_(clgetdeviceids_listall, CLGETDEVICEIDS_LISTALL)
      (const cl_platform_id * platform, const int * device_type, const int * num_entries, cl_device_id * devices, 
       int * num_devices, int * status){
 
@@ -55,14 +55,14 @@ void FC_FUNC_(flgetdeviceids_listall, FLGETDEVICEIDS_LISTALL)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flgetdeviceids_getdev, FLGETDEVICEIDS_GETDEV)
+void FC_FUNC_(clgetdeviceids_getdev, CLGETDEVICEIDS_GETDEV)
      (const cl_device_id * alldevices, const int * idevice, cl_device_id * device){
   *device = alldevices[*idevice];
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flgetdeviceinfo_str, FLGETDEVICEINFO_STR)
+void FC_FUNC_(clgetdeviceinfo_str, CLGETDEVICEINFO_STR)
      (const cl_device_id * device, const int * param_name, STR_F_TYPE param_value, int * status STR_ARG1){
   char info[2048];
 
@@ -73,7 +73,7 @@ void FC_FUNC_(flgetdeviceinfo_str, FLGETDEVICEINFO_STR)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
+void FC_FUNC_(clgetdeviceinfo_int64, CLGETDEVICEINFO_INT64)
      (const cl_device_id * device, const int * param_name, cl_long * param_value, int * status){
   union { 
     cl_uint  val_uint;
@@ -150,7 +150,7 @@ void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
 
   /* other */
   default:
-    fprintf(stderr, "\nError: flGetDeviceInfo not implemented param_name.\n");
+    fprintf(stderr, "\nError: clGetDeviceInfo not implemented param_name.\n");
     exit(1);
     break;
   }
@@ -159,11 +159,11 @@ void FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flgetdeviceinfo_int, FLGETDEVICEINFO_INT)
+void FC_FUNC_(clgetdeviceinfo_int, CLGETDEVICEINFO_INT)
      (const cl_device_id * device, const int * param_name, cl_int * param_value, int * status){
   cl_long param_value64;
 
-  FC_FUNC_(flgetdeviceinfo_int64, FLGETDEVICEINFO_INT64)(device, param_name, &param_value64, status);
+  FC_FUNC_(clgetdeviceinfo_int64, CLGETDEVICEINFO_INT64)(device, param_name, &param_value64, status);
   
   *param_value = (cl_int) param_value64;
 }

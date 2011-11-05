@@ -113,31 +113,6 @@ module cl_functions_m
 
     ! ----------------------------------------------------
 
-    subroutine f90_cl_create_buffer(this, context, flags, size, status)
-      use cl_types_m
-
-      implicit none
-
-      type(cl_mem),           intent(inout) :: this
-      type(cl_context),       intent(inout) :: context
-      integer,                intent(in)    :: flags
-      integer(SIZEOF_SIZE_T), intent(in)    :: size
-      integer,                intent(out)   :: status
-    end subroutine f90_cl_create_buffer
-
-    ! ----------------------------------------------------
-
-    subroutine f90_cl_release_buffer(this, status)
-      use cl_types_m
-
-      implicit none
-
-      type(cl_mem),           intent(inout) :: this
-      integer,                intent(out)   :: status
-    end subroutine f90_cl_release_buffer
-
-    ! ----------------------------------------------------
-
     subroutine f90_cl_set_kernel_arg_buf(kernel, index, buffer, status)
       use cl_types_m
 

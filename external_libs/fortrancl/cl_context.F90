@@ -27,30 +27,30 @@ module cl_context_m
   private
 
   public ::                          &
-    flCreateContext,                 &
-    flReleaseContext
+    clCreateContext,                 &
+    clReleaseContext
 
   interface
-    subroutine flReleaseContext(context, status)
+    subroutine clReleaseContext(context, status)
       use cl_types_m
 
       implicit none
 
       type(cl_context), intent(inout) :: context
       integer,          intent(out)   :: status
-    end subroutine flReleaseContext
+    end subroutine clReleaseContext
   end interface
 
 contains
 
-  type(cl_context) function flCreateContext(platform, num_devices, devices, errcode_ret) result(context)
+  type(cl_context) function clCreateContext(platform, num_devices, devices, errcode_ret) result(context)
     type(cl_platform_id), intent(in)   :: platform
     integer,              intent(in)   :: num_devices
     type(cl_device_id),   intent(in)   :: devices(:)
     integer,              intent(out)  :: errcode_ret
 
     interface
-      subroutine flcreatecontext_low(platform, num_devices, devices, errcode_ret, context)
+      subroutine clcreatecontext_low(platform, num_devices, devices, errcode_ret, context)
         use cl_types_m
 
         implicit none
@@ -60,9 +60,9 @@ contains
         type(cl_device_id),   intent(in)   :: devices
         integer,              intent(out)  :: errcode_ret
         type(cl_context),     intent(out)  :: context
-      end subroutine flcreatecontext_low
+      end subroutine clcreatecontext_low
 
-      subroutine flgetdeviceids_setdev(alldevices, idevice, device)
+      subroutine clgetdeviceids_setdev(alldevices, idevice, device)
         use cl_types_m
 
         implicit none
@@ -70,7 +70,7 @@ contains
         type(cl_device_id),   intent(out)   :: alldevices
         integer,              intent(in)   :: idevice
         type(cl_device_id),   intent(in)  :: device
-      end subroutine flgetdeviceids_setdev
+      end subroutine clgetdeviceids_setdev
     end interface
 
     integer :: idev
@@ -80,17 +80,17 @@ contains
 
     do idev = 1, num_devices
 #ifdef HAVE_OPENCL
-      call flgetdeviceids_setdev(devs(1), idev - 1, devices(idev))
+      call clgetdeviceids_setdev(devs(1), idev - 1, devices(idev))
 #endif
     end do
     
 #ifdef HAVE_OPENCL
-    call flcreatecontext_low(platform, num_devices, devs(1), errcode_ret, context)
+    call clcreatecontext_low(platform, num_devices, devs(1), errcode_ret, context)
 #endif
 
     deallocate(devs)
 
-  end function flCreateContext
+  end function clCreateContext
 
 end module cl_context_m
 

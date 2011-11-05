@@ -33,7 +33,7 @@
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flcreatebuffer_low, FLCREATEBUFFER_LOW)
+void FC_FUNC_(clcreatebuffer_low, CLCREATEBUFFER_LOW)
      (cl_context * context, const int * flags, const cl_long * size, int * errcode_ret, cl_mem * buffer){
   
   cl_int errcode_ret_cl;
@@ -44,7 +44,7 @@ void FC_FUNC_(flcreatebuffer_low, FLCREATEBUFFER_LOW)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC(flreleasememobject, FLRELEASEMEMOBJECT)(cl_mem * memobj, int * status){
+void FC_FUNC(clreleasememobject, CLRELEASEMEMOBJECT)(cl_mem * memobj, int * status){
 
   *status = (int)clReleaseMemObject(*memobj);
 }

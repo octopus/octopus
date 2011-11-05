@@ -27,14 +27,14 @@ module cl_device_m
   private
 
   public ::                          &
-    flGetDeviceInfo,                 &
-    flGetDeviceIDs
+    clGetDeviceInfo,                 &
+    clGetDeviceIDs
 
   ! ---------------------------------------------------
 
-  interface flGetDeviceIDs
+  interface clGetDeviceIDs
 
-    subroutine flgetdeviceids_num(platform, device_type, num_devices, status)
+    subroutine clgetdeviceids_num(platform, device_type, num_devices, status)
       use cl_types_m
 
       implicit none
@@ -42,17 +42,17 @@ module cl_device_m
       integer,              intent(in)   :: device_type
       integer,              intent(out)  :: num_devices
       integer,              intent(out)  :: status
-    end subroutine flgetdeviceids_num
+    end subroutine clgetdeviceids_num
 
-    module procedure flgetdeviceids_list
+    module procedure clgetdeviceids_list
 
-  end interface flGetDeviceIDs
+  end interface clGetDeviceIDs
 
   ! ---------------------------------------------------
 
-  interface flGetDeviceInfo
+  interface clGetDeviceInfo
 
-    subroutine flgetdeviceinfo_str(device, param_name, param_value, status)
+    subroutine clgetdeviceinfo_str(device, param_name, param_value, status)
       use cl_types_m
 
       implicit none
@@ -60,9 +60,9 @@ module cl_device_m
       integer,            intent(in)   :: param_name
       character(len=*),   intent(out)  :: param_value
       integer,            intent(out)  :: status
-    end subroutine flgetdeviceinfo_str
+    end subroutine clgetdeviceinfo_str
 
-    subroutine flgetdeviceinfo_int(device, param_name, param_value, status)
+    subroutine clgetdeviceinfo_int(device, param_name, param_value, status)
       use cl_types_m
 
       implicit none
@@ -70,9 +70,9 @@ module cl_device_m
       integer,            intent(in)   :: param_name
       integer,            intent(out)  :: param_value
       integer,            intent(out)  :: status
-    end subroutine flgetdeviceinfo_int
+    end subroutine clgetdeviceinfo_int
 
-    subroutine flgetdeviceinfo_int64(device, param_name, param_value, status)
+    subroutine clgetdeviceinfo_int64(device, param_name, param_value, status)
       use cl_types_m
 
       implicit none
@@ -80,17 +80,17 @@ module cl_device_m
       integer,            intent(in)   :: param_name
       integer(8),         intent(out)  :: param_value
       integer,            intent(out)  :: status
-    end subroutine flgetdeviceinfo_int64
+    end subroutine clgetdeviceinfo_int64
 
-    module procedure flgetdeviceinfo_logical
+    module procedure clgetdeviceinfo_logical
 
-  end interface flGetDeviceInfo
+  end interface clGetDeviceInfo
 
   ! ---------------------------------------------------
 
 contains
 
-  subroutine flgetdeviceids_list(platform, device_type, num_entries, devices, num_devices, status)
+  subroutine clgetdeviceids_list(platform, device_type, num_entries, devices, num_devices, status)
     type(cl_platform_id), intent(in)   :: platform
     integer,              intent(in)   :: device_type
     integer,              intent(out)  :: num_entries
@@ -103,7 +103,7 @@ contains
     type(cl_device_id), allocatable :: dev(:)
 
     interface
-      subroutine flgetdeviceids_listall(platform, device_type, num_entries, devices, num_devices, status)
+      subroutine clgetdeviceids_listall(platform, device_type, num_entries, devices, num_devices, status)
         use cl_types_m
 
         implicit none
@@ -114,9 +114,9 @@ contains
         type(cl_device_id),   intent(out)  :: devices
         integer,              intent(out)  :: num_devices
         integer,              intent(out)  :: status
-      end subroutine flgetdeviceids_listall
+      end subroutine clgetdeviceids_listall
 
-      subroutine flgetdeviceids_getdev(alldevices, idevice, device)
+      subroutine clgetdeviceids_getdev(alldevices, idevice, device)
         use cl_types_m
 
         implicit none
@@ -124,7 +124,7 @@ contains
         type(cl_device_id),   intent(in)   :: alldevices
         integer,              intent(in)   :: idevice
         type(cl_device_id),   intent(out)  :: device
-      end subroutine flgetdeviceids_getdev
+      end subroutine clgetdeviceids_getdev
     end interface
 
     ! since our cl_device_id type might be longer than the C
@@ -133,19 +133,19 @@ contains
 
     allocate(dev(1:num_entries))
 
-    call flgetdeviceids_listall(platform, device_type, num_entries, dev(1), num_devices, status)
+    call clgetdeviceids_listall(platform, device_type, num_entries, dev(1), num_devices, status)
 
     do idevice = 1, num_devices
-      call flgetdeviceids_getdev(dev(1), idevice - 1, devices(idevice))
+      call clgetdeviceids_getdev(dev(1), idevice - 1, devices(idevice))
     end do
 
     deallocate(dev)
 #endif
-  end subroutine flgetdeviceids_list
+  end subroutine clgetdeviceids_list
 
   ! ----------------------------------------------------------
 
-  subroutine flgetdeviceinfo_logical(device, param_name, param_value, status)
+  subroutine clgetdeviceinfo_logical(device, param_name, param_value, status)
     type(cl_device_id), intent(in)   :: device
     integer,            intent(in)   :: param_name
     logical,            intent(out)  :: param_value
@@ -154,12 +154,12 @@ contains
     integer(8) :: param_value_64
 
 #ifdef HAVE_OPENCL
-    call flgetdeviceinfo_int64(device, param_name, param_value_64, status)
+    call clgetdeviceinfo_int64(device, param_name, param_value_64, status)
 #endif
 
     param_value = param_value_64 /= 0
 
-  end subroutine flgetdeviceinfo_logical
+  end subroutine clgetdeviceinfo_logical
 
 end module cl_device_m
 

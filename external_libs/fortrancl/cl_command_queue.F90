@@ -28,12 +28,12 @@ module cl_command_queue_m
 
   ! the functions
   public ::                          &
-    flCreateCommandQueue,            &
-    flReleaseCommandQueue,           &
-    flEnqueueNDRangeKernel,          &
-    flFinish
-    !flEnqueueWriteBuffer
-    !flEnqueueReadBuffer
+    clCreateCommandQueue,            &
+    clReleaseCommandQueue,           &
+    clEnqueueNDRangeKernel,          &
+    clFinish
+    !clEnqueueWriteBuffer
+    !clEnqueueReadBuffer
 
   interface
 
@@ -41,7 +41,7 @@ module cl_command_queue_m
     ! polymorphic beyond the capabilities of Fortran. They can be
     ! called, but no type checking will be done by the compiler.
 
-    !    subroutine flEnqueueWriteBuffer(command_queue, buffer, blocking_write, offset, cb, ptr, retcode_err)
+    !    subroutine clEnqueueWriteBuffer(command_queue, buffer, blocking_write, offset, cb, ptr, retcode_err)
     !      type(cl_command_queue), intent(inout) :: command_queue
     !      type(cl_mem),           intent(inout) :: buffer
     !      integer,                intent(in)    :: blocking_write
@@ -49,9 +49,9 @@ module cl_command_queue_m
     !      integer(8),             intent(in)    :: cb
     !      type(any),              intent(inout) :: ptr
     !      integer,                intent(out)   :: retcode_err
-    !    end subroutine flEnqueueWriteBuffer
+    !    end subroutine clEnqueueWriteBuffer
 
-    !    subroutine flEnqueueReadBuffer(command_queue, buffer, blocking_write, offset, cb, ptr, retcode_err)
+    !    subroutine clEnqueueReadBuffer(command_queue, buffer, blocking_write, offset, cb, ptr, retcode_err)
     !      type(cl_command_queue), intent(inout) :: command_queue
     !      type(cl_mem),           intent(inout) :: buffer
     !      integer,                intent(in)    :: blocking_write
@@ -59,11 +59,11 @@ module cl_command_queue_m
     !      integer(8),             intent(in)    :: cb
     !      type(any),              intent(inout) :: ptr
     !      integer,                intent(out)   :: retcode_err
-    !    end subroutine flEnqueueReadBuffer
+    !    end subroutine clEnqueueReadBuffer
 
     ! ----------------------------------------------------
 
-    subroutine flReleaseCommandQueue(command_queue, status)
+    subroutine clReleaseCommandQueue(command_queue, status)
       use cl_types_m
 
       implicit none
@@ -71,22 +71,22 @@ module cl_command_queue_m
       type(cl_command_queue), intent(inout) :: command_queue
       integer,                intent(out)   :: status
 
-    end subroutine flReleaseCommandQueue
+    end subroutine clReleaseCommandQueue
 
     ! ----------------------------------------------------
 
-    subroutine flFinish(command_queue, status)
+    subroutine clFinish(command_queue, status)
       use cl_types_m
 
       implicit none
 
       type(cl_command_queue), intent(inout) :: command_queue
       integer,                intent(out)   :: status
-    end subroutine flFinish
+    end subroutine clFinish
 
     ! ----------------------------------------------------
 
-    subroutine flEnqueueNDRangeKernel(command_queue, kernel, dim, globalsizes, localsizes, status)
+    subroutine clEnqueueNDRangeKernel(command_queue, kernel, dim, globalsizes, localsizes, status)
       use cl_types_m
 
       implicit none
@@ -97,7 +97,7 @@ module cl_command_queue_m
       integer(8),             intent(in)    :: globalsizes
       integer(8),             intent(in)    :: localsizes
       integer,                intent(out)   :: status
-    end subroutine flEnqueueNDRangeKernel
+    end subroutine clEnqueueNDRangeKernel
 
   end interface
 
@@ -107,14 +107,14 @@ contains
 
   ! --------------------------------------------------------
 
-  type(cl_command_queue) function flCreateCommandQueue(context, device, properties, errcode_ret) result(command_queue)
+  type(cl_command_queue) function clCreateCommandQueue(context, device, properties, errcode_ret) result(command_queue)
       type(cl_context),       intent(inout) :: context
       type(cl_device_id),     intent(inout) :: device
       integer,                intent(in)    :: properties
       integer,                intent(out)   :: errcode_ret
 
     interface
-      subroutine flcreatecommandqueue_low(context, device, properties, errcode_ret, command_queue)
+      subroutine clcreatecommandqueue_low(context, device, properties, errcode_ret, command_queue)
         use cl_types_m
         
         implicit none
@@ -124,14 +124,14 @@ contains
         integer,                intent(in)    :: properties
         integer,                intent(out)   :: errcode_ret
         type(cl_command_queue), intent(inout) :: command_queue
-      end subroutine flcreatecommandqueue_low
+      end subroutine clcreatecommandqueue_low
     end interface
 
 #ifdef HAVE_OPENCL
-    call flcreatecommandqueue_low(context, device, properties, errcode_ret, command_queue)
+    call clcreatecommandqueue_low(context, device, properties, errcode_ret, command_queue)
 #endif
 
-  end function flCreateCommandQueue
+  end function clCreateCommandQueue
 
 end module cl_command_queue_m
 

@@ -27,25 +27,25 @@ module cl_buffer_m
   private
 
   public ::                          &
-    flCreateBuffer,                  &
-    flReleaseMemObject
+    clCreateBuffer,                  &
+    clReleaseMemObject
 
   interface
 
-    subroutine flReleaseMemObject(memobj, status)
+    subroutine clReleaseMemObject(memobj, status)
       use cl_types_m
 
       implicit none
 
       type(cl_mem),           intent(inout) :: memobj
       integer,                intent(out)   :: status
-    end subroutine flReleaseMemObject
+    end subroutine clReleaseMemObject
 
   end interface
 
   contains 
 
-    type(cl_mem) function flCreateBuffer(context, flags, size, errcode_ret) result(buffer)
+    type(cl_mem) function clCreateBuffer(context, flags, size, errcode_ret) result(buffer)
       type(cl_context), intent(in)    :: context
       integer,          intent(in)    :: flags
       integer(8),       intent(in)    :: size
@@ -53,7 +53,7 @@ module cl_buffer_m
       
       interface
         
-        subroutine flCreateBuffer_low(context, flags, size, errcode_ret, buffer)
+        subroutine clCreateBuffer_low(context, flags, size, errcode_ret, buffer)
           use cl_types_m
           
           implicit none
@@ -63,15 +63,15 @@ module cl_buffer_m
           integer(8),              intent(in)    :: size
           integer,                 intent(out)   :: errcode_ret
           type(cl_mem),            intent(out)   :: buffer
-        end subroutine flCreateBuffer_low
+        end subroutine clCreateBuffer_low
         
       end interface
 
 #ifdef HAVE_OPENCL
-      call flCreateBuffer_low(context, flags, size, errcode_ret, buffer)
+      call clCreateBuffer_low(context, flags, size, errcode_ret, buffer)
 #endif
       
-    end function flCreateBuffer
+    end function clCreateBuffer
 
 end module cl_buffer_m
 

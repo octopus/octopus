@@ -32,7 +32,7 @@
 #include <string_f.h>
 
 
-void FC_FUNC(flgetplatformids_num, FLGETPLATFORMIDS_NUM)(int * num_platforms, int * status){
+void FC_FUNC(clgetplatformids_num, CLGETPLATFORMIDS_NUM)(int * num_platforms, int * status){
   cl_uint ret_platform;
 
   *status = (int) clGetPlatformIDs(0, NULL, &ret_platform);
@@ -42,7 +42,7 @@ void FC_FUNC(flgetplatformids_num, FLGETPLATFORMIDS_NUM)(int * num_platforms, in
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flgetplatformids_listall, FLGETPLATFORMIDS_LISTALL)
+void FC_FUNC_(clgetplatformids_listall, CLGETPLATFORMIDS_LISTALL)
      (const int * num_entries, cl_platform_id * platforms, int * num_platforms, int * status){
 
   cl_uint unum_platforms;
@@ -53,14 +53,14 @@ void FC_FUNC_(flgetplatformids_listall, FLGETPLATFORMIDS_LISTALL)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flgetplatformids_getplat, FLGETPLATFORMIDS_GETPLAT)
+void FC_FUNC_(clgetplatformids_getplat, CLGETPLATFORMIDS_GETPLAT)
      (const cl_platform_id * allplatforms, const int * iplatform, cl_platform_id * platform){
   *platform = allplatforms[*iplatform];
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flgetplatforminfo, FLGETPLATFORMINFO)
+void FC_FUNC_(clgetplatforminfo, CLGETPLATFORMINFO)
      (const cl_platform_id * platform, const int * param_name, STR_F_TYPE param_value, int * status STR_ARG1){
   char info[2048];
 
@@ -71,7 +71,7 @@ void FC_FUNC_(flgetplatforminfo, FLGETPLATFORMINFO)
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flgetdeviceids_setdev, FLGETDEVICEIDS_SETDEV)
+void FC_FUNC_(clgetdeviceids_setdev, CLGETDEVICEIDS_SETDEV)
      (cl_device_id * alldevices, const int * idevice, const cl_device_id * device){
   alldevices[*idevice] = *device;
 }

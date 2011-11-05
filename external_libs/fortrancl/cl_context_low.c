@@ -33,13 +33,13 @@
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC(flreleasecontext, FLRELEASECONTEXT)(cl_context * context, int * status){
+void FC_FUNC(clreleasecontext, CLRELEASECONTEXT)(cl_context * context, int * status){
   *status = (int) clReleaseContext(*context);
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flcreatecontext_low, CLCREATECONTEXT_LOW)
+void FC_FUNC_(clcreatecontext_low, CLCREATECONTEXT_LOW)
      (const cl_platform_id * platform, const int * num_devices, const cl_device_id * devices, int * errcode_ret, cl_context * context){
   cl_int errcode_ret_cl;
   cl_context_properties context_properties[3];

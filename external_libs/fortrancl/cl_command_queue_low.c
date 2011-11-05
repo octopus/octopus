@@ -34,7 +34,7 @@
 /* -----------------------------------------------------------------------*/
 
 /* clCreateCommandQueue */
-void FC_FUNC_(flcreatecommandqueue_low, FLCREATECOMMANDQUEUE_LOW)
+void FC_FUNC_(clcreatecommandqueue_low, CLCREATECOMMANDQUEUE_LOW)
      (cl_context * context, cl_device_id * device, const int * properties, int * status, cl_command_queue * command_queue){
   cl_int status_cl;
   *command_queue = clCreateCommandQueue(*context, *device, (cl_command_queue_properties) *properties, &status_cl);
@@ -44,20 +44,20 @@ void FC_FUNC_(flcreatecommandqueue_low, FLCREATECOMMANDQUEUE_LOW)
 /* -----------------------------------------------------------------------*/
 
 /* clReleaseCommandQueue */
-void FC_FUNC(flreleasecommandqueue, FLRELEASECOMMANDQUEUE)(cl_command_queue * command_queue, int * status){
+void FC_FUNC(clreleasecommandqueue, CLRELEASECOMMANDQUEUE)(cl_command_queue * command_queue, int * status){
   *status = (int) clReleaseCommandQueue(*command_queue);
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC(flfinish, FLFINISH)(cl_command_queue * command_queue, int * status){
+void FC_FUNC(clfinish, CLFINISH)(cl_command_queue * command_queue, int * status){
   *status = (int) clFinish(*command_queue);
 }
 
 /* -----------------------------------------------------------------------*/
 
 /* clEnqueueNDRangeKernel*/
-void FC_FUNC(flenqueuendrangekernel, FLENQUEUENDRANGEKERNEL)
+void FC_FUNC(clenqueuendrangekernel, CLENQUEUENDRANGEKERNEL)
      (cl_command_queue * command_queue, cl_kernel * kernel, const int * work_dim, 
       const cl_long * global_work_size, const cl_long * local_work_size, int * status){
 
@@ -81,7 +81,7 @@ void FC_FUNC(flenqueuendrangekernel, FLENQUEUENDRANGEKERNEL)
 /* -----------------------------------------------------------------------*/
 
 /* clEnqueueWriteBuffer */
-void FC_FUNC(flenqueuewritebuffer, FLENQUEUEWRITEBUFFER)
+void FC_FUNC(clenqueuewritebuffer, CLENQUEUEWRITEBUFFER)
      (cl_command_queue * command_queue, cl_mem * buffer, const int * blocking_write, 
       const cl_long * offset, const cl_long * cb, const void * ptr, int * status){
 
@@ -93,7 +93,7 @@ void FC_FUNC(flenqueuewritebuffer, FLENQUEUEWRITEBUFFER)
 /* -----------------------------------------------------------------------*/
 
 /* clEnqueueReadBuffer */
-void FC_FUNC(flenqueuereadbuffer, FLENQUEUEREADBUFFER)
+void FC_FUNC(clenqueuereadbuffer, CLENQUEUEREADBUFFER)
      (cl_command_queue * command_queue, cl_mem * buffer, const int * blocking_read, 
       const cl_long * offset, const cl_long * cb, void * ptr, int * status){
 

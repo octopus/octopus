@@ -229,12 +229,12 @@ module opencl_m
 
 #ifdef HAVE_OPENCL
 
-      call flGetPlatformIDs(nplatforms, cl_status)
+      call clGetPlatformIDs(nplatforms, cl_status)
       if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
  
       SAFE_ALLOCATE(allplatforms(1:nplatforms))
 
-      call flGetPlatformIDs(nplatforms, allplatforms, iplat, cl_status)
+      call clGetPlatformIDs(nplatforms, allplatforms, iplat, cl_status)
       if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
 
       call messages_write('Info: Available CL platforms: ')
@@ -244,9 +244,9 @@ module opencl_m
       do iplat = 1, nplatforms
         call messages_write('      Platform ')
         call messages_write(iplat)
-        call flGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_NAME, device_name, cl_status)
+        call clGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_NAME, device_name, cl_status)
         call messages_write(' : '//device_name)
-        call flGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_VERSION, device_name, cl_status)
+        call clGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_VERSION, device_name, cl_status)
         call messages_write(' ('//trim(device_name)//')')
         call messages_info()
       end do
@@ -255,7 +255,7 @@ module opencl_m
 
       SAFE_DEALLOCATE_A(allplatforms)
 
-      call flGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, cl_status)
+      call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, cl_status)
 
       call messages_write('Info: Available CL devices: ')
       call messages_write(ndevices)
@@ -265,12 +265,12 @@ module opencl_m
 
       ! list all devices
 
-      call flGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, alldevices, ret_devices, cl_status)
+      call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, alldevices, ret_devices, cl_status)
 
       do idev = 1, ndevices
         call messages_write('      Device ')
         call messages_write(idev)
-        call flGetDeviceInfo(alldevices(idev), CL_DEVICE_NAME, device_name, cl_status)
+        call clGetDeviceInfo(alldevices(idev), CL_DEVICE_NAME, device_name, cl_status)
         call messages_write(' : '//device_name)
         call messages_info()
       end do
@@ -289,7 +289,7 @@ module opencl_m
       end select
 
       ! now get a list of the selected type
-      call flGetDeviceIDs(opencl%platform_id, device_type, ndevices, alldevices, ret_devices, cl_status)
+      call clGetDeviceIDs(opencl%platform_id, device_type, ndevices, alldevices, ret_devices, cl_status)
 
       ! the number of devices can be smaller
       ndevices = ret_devices
@@ -309,16 +309,16 @@ module opencl_m
       if(mpi_grp_is_root(base_grp)) call device_info()
 
       ! create the context
-      opencl%context = flCreateContext(opencl%platform_id, 1, alldevices(idevice + 1:), cl_status)
+      opencl%context = clCreateContext(opencl%platform_id, 1, alldevices(idevice + 1:), cl_status)
       if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateContext")
 
       SAFE_DEALLOCATE_A(alldevices)
 
-      opencl%command_queue = flCreateCommandQueue(opencl%context, opencl%device, CL_QUEUE_PROFILING_ENABLE, cl_status)
+      opencl%command_queue = clCreateCommandQueue(opencl%context, opencl%device, CL_QUEUE_PROFILING_ENABLE, cl_status)
       if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateCommandQueue")
       
-      call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, opencl%max_workgroup_size, cl_status)
-      call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, opencl%local_memory_size, cl_status)
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, opencl%max_workgroup_size, cl_status)
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, opencl%local_memory_size, cl_status)
 
       ! now initialize the kernels
       call opencl_build_program(prog, trim(conf%share)//'/opencl/set_zero.cl')
@@ -393,7 +393,7 @@ module opencl_m
         call messages_info()
         do irank = 0, base_grp%size - 1
           if(irank == base_grp%rank) then
-            call flGetDeviceInfo(alldevices(idevice + 1), CL_DEVICE_NAME, device_name, cl_status)
+            call clGetDeviceInfo(alldevices(idevice + 1), CL_DEVICE_NAME, device_name, cl_status)
             call messages_write('      MPI node ')
             call messages_write(base_grp%rank)
             call messages_write(' -> CL device ')
@@ -417,54 +417,54 @@ module opencl_m
         call messages_write('Selected CL device:')
         call messages_new_line()
 
-        call flGetDeviceInfo(opencl%device, CL_DEVICE_VENDOR, val_str, cl_status)
+        call clGetDeviceInfo(opencl%device, CL_DEVICE_VENDOR, val_str, cl_status)
         call messages_write('      Device vendor          : '//trim(val_str))
         call messages_new_line()
 
-        call flGetDeviceInfo(opencl%device, CL_DEVICE_NAME, val_str, cl_status)
+        call clGetDeviceInfo(opencl%device, CL_DEVICE_NAME, val_str, cl_status)
         call messages_write('      Device name            : '//trim(val_str))
         call messages_new_line()
 
-        call flGetDeviceInfo(opencl%device, CL_DRIVER_VERSION, val_str, cl_status)
+        call clGetDeviceInfo(opencl%device, CL_DRIVER_VERSION, val_str, cl_status)
         call messages_write('      Driver version         : '//trim(val_str))
         call messages_new_line()
 
-        call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_COMPUTE_UNITS, val, cl_status)
+        call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_COMPUTE_UNITS, val, cl_status)
         call messages_write('      Compute units          :')
         call messages_write(val)
         call messages_new_line()
 
-        call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CLOCK_FREQUENCY, val, cl_status)
+        call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CLOCK_FREQUENCY, val, cl_status)
         call messages_write('      Clock frequency        :')
         call messages_write(val)
         call messages_write(' GHz')
         call messages_new_line()
 
-        call flGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_SIZE, val, cl_status)
+        call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_SIZE, val, cl_status)
         call messages_write('      Device memory          :')
         call messages_write(val/(1024**2))
         call messages_write(' Mb')
         call messages_new_line()
 
-        call flGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val, cl_status)
+        call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val, cl_status)
         call messages_write('      Device cache           :')
         call messages_write(val/1024)
         call messages_write(' Kb')
         call messages_new_line()
 
-        call flGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, val, cl_status)
+        call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, val, cl_status)
         call messages_write('      Local memory           :')
         call messages_write(val/1024)
         call messages_write(' Kb')
         call messages_new_line()
 
-        call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val, cl_status)
+        call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val, cl_status)
         call messages_write('      Constant memory        :')
         call messages_write(val/1024)
         call messages_write(' Kb')
         call messages_new_line()
 
-        call flGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val, cl_status)
+        call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val, cl_status)
         call messages_write('      Max. workgroup size    :')
         call messages_write(val)
         call messages_new_line()
@@ -517,10 +517,10 @@ module opencl_m
         call opencl_release_kernel(zkernel_dot_vector)
         call opencl_release_kernel(zkernel_dot_matrix_spinors)
         
-        call flReleaseCommandQueue(opencl%command_queue, ierr)
+        call clReleaseCommandQueue(opencl%command_queue, ierr)
 
         if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
-        call flReleaseContext(opencl%context, cl_status)
+        call clReleaseContext(opencl%context, cl_status)
 #endif
       end if
 
@@ -547,7 +547,7 @@ module opencl_m
       ASSERT(fsize >= 0)
 
 #ifdef HAVE_OPENCL
-      this%mem = flCreateBuffer(opencl%context, flags, fsize, ierr)
+      this%mem = clCreateBuffer(opencl%context, flags, fsize, ierr)
 #endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
 
@@ -563,7 +563,7 @@ module opencl_m
 
       this%size = 0
 #ifdef HAVE_OPENCL
-      call flReleaseMemObject(this%mem, ierr)
+      call clReleaseMemObject(this%mem, ierr)
 #endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_buffer")
     end subroutine opencl_release_buffer
@@ -607,7 +607,7 @@ module opencl_m
       call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
 
 #ifdef HAVE_OPENCL
-      call flFinish(opencl%command_queue, ierr)
+      call clFinish(opencl%command_queue, ierr)
 #endif
 
       call profiling_out(prof_kernel_run)
@@ -695,7 +695,7 @@ module opencl_m
       lsizes(1:dim) = int(localsizes(1:dim), 8)
 
 #ifdef HAVE_OPENCL
-      call flEnqueueNDRangeKernel(opencl%command_queue, kernel, dim, gsizes(1), lsizes(1), ierr)
+      call clEnqueueNDRangeKernel(opencl%command_queue, kernel, dim, gsizes(1), lsizes(1), ierr)
 #endif
 
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
@@ -874,7 +874,7 @@ module opencl_m
       character(len=2048) :: all_extensions
 
 #ifdef HAVE_OPENCL
-      call flGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, all_extensions, cl_status)
+      call clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, all_extensions, cl_status)
 #endif
 
       has = index(all_extensions, extension) /= 0

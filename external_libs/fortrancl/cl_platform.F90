@@ -28,28 +28,28 @@ module cl_platform_m
 
   ! the functions
   public ::                          &
-    flGetPlatformIDs,                &
-    flGetPlatformInfo
+    clGetPlatformIDs,                &
+    clGetPlatformInfo
 
-  interface flGetPlatformIDs
+  interface clGetPlatformIDs
 
-    subroutine flgetplatformids_num(num_platforms, status)
+    subroutine clgetplatformids_num(num_platforms, status)
       use cl_types_m
 
       implicit none
       integer,              intent(out)  :: num_platforms
       integer,              intent(out)  :: status
-    end subroutine flgetplatformids_num
+    end subroutine clgetplatformids_num
 
-    module procedure flgetplatformids_list
+    module procedure clgetplatformids_list
 
-  end interface flGetPlatformIDs
+  end interface clGetPlatformIDs
 
   ! ---------------------------------------------------
 
   interface
 
-    subroutine flGetPlatformInfo(platform, param_name, param_value, status)
+    subroutine clGetPlatformInfo(platform, param_name, param_value, status)
       use cl_types_m
 
       implicit none
@@ -57,7 +57,7 @@ module cl_platform_m
       integer,              intent(in)   :: param_name
       character(len=*),     intent(out)  :: param_value
       integer,              intent(out)  :: status
-    end subroutine flGetPlatformInfo
+    end subroutine clGetPlatformInfo
 
   end interface
 
@@ -65,7 +65,7 @@ module cl_platform_m
 
 contains
 
-  subroutine flgetplatformids_list(num_entries, platforms, num_platforms, status)
+  subroutine clgetplatformids_list(num_entries, platforms, num_platforms, status)
     integer,              intent(out)  :: num_entries
     type(cl_platform_id), intent(out)  :: platforms(:)
     integer,              intent(out)  :: num_platforms
@@ -76,7 +76,7 @@ contains
     type(cl_platform_id), allocatable :: plat(:)
 
     interface
-      subroutine flgetplatformids_listall(num_entries, platforms, num_platforms, status)
+      subroutine clgetplatformids_listall(num_entries, platforms, num_platforms, status)
         use cl_types_m
 
         implicit none
@@ -85,9 +85,9 @@ contains
         type(cl_platform_id), intent(out)  :: platforms
         integer,              intent(out)  :: num_platforms
         integer,              intent(out)  :: status
-      end subroutine flgetplatformids_listall
+      end subroutine clgetplatformids_listall
 
-      subroutine flgetplatformids_getplat(allplatforms, iplatform, platform)
+      subroutine clgetplatformids_getplat(allplatforms, iplatform, platform)
         use cl_types_m
 
         implicit none
@@ -95,7 +95,7 @@ contains
         type(cl_platform_id), intent(in)   :: allplatforms
         integer,              intent(in)   :: iplatform
         type(cl_platform_id), intent(out)  :: platform
-      end subroutine flgetplatformids_getplat
+      end subroutine clgetplatformids_getplat
     end interface
 
     ! since our cl_platform_id type might be longer than the C
@@ -104,15 +104,15 @@ contains
 
     allocate(plat(1:num_entries))
 
-    call flgetplatformids_listall(num_entries, plat(1), num_platforms, status)
+    call clgetplatformids_listall(num_entries, plat(1), num_platforms, status)
 
     do iplatform = 1, num_platforms
-      call flgetplatformids_getplat(plat(1), iplatform - 1, platforms(iplatform))
+      call clgetplatformids_getplat(plat(1), iplatform - 1, platforms(iplatform))
     end do
 
     deallocate(plat)
 #endif
-  end subroutine flgetplatformids_list
+  end subroutine clgetplatformids_list
 
   ! ----------------------------------------------------------
 
