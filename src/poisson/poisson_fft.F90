@@ -150,7 +150,7 @@ contains
     call messages_info(1)
     if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
-      message(2) = 'You can see electrons in next cell(s).'
+      message(2) = 'You can see electrons in neighboring cell(s).'
       call messages_warning(2)
     end if
 
@@ -227,7 +227,7 @@ contains
     call messages_info(1)
     if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
-      message(2) = 'You can see electrons in next cell(s).'
+      message(2) = 'You can see electrons in neighboring cell(s).'
       call messages_warning(2)
     end if
 
@@ -349,7 +349,7 @@ contains
       call messages_info(1)
       if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
         message(1) = 'Poisson cutoff radius is larger than cell size.'
-        message(2) = 'You can see electrons in next cell(s).'
+        message(2) = 'You can see electrons in neighboring cell(s).'
         call messages_warning(2)
       end if
     end if
@@ -491,7 +491,7 @@ contains
     call messages_info(1)
     if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
-      message(2) = 'You can see electrons in next cell(s).'
+      message(2) = 'You can see electrons in neighboring cell(s).'
       call messages_warning(2)
     end if
     call spline_init(besselintf)
@@ -722,7 +722,7 @@ contains
         !all the data has to be distributed for the PFFT library
         call dmesh_to_cube_parallel(mesh, rho, cube, cf, local=.true.)
 #else
-        write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
+        write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
         call messages_fatal(1)
 #endif
       else 
@@ -758,7 +758,7 @@ contains
 #ifdef HAVE_PFFT
         call dcube_to_mesh_parallel(cube, cf, mesh, pot, local=.true.)
 #else
-        write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
+        write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
         call messages_fatal(1)
 #endif
       else

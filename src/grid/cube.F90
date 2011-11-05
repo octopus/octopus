@@ -119,7 +119,7 @@ contains
       call parse_integer(datasets_check('FFTLibrary'), FFTLIB_FFTW, cube%fft_library)
 #ifndef HAVE_PFFT
       if (cube%fft_library == FFTLIB_PFFT) then
-        write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
+        write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
         call messages_fatal(1)
       end if
 #endif

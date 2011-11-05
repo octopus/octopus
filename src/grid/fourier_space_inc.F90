@@ -227,7 +227,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
       end do
     end do
 #else
-    write(message(1),'(a)')'You have selected the PFFT for FFT, but it is not compiled.'
+    write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
     call messages_fatal(1)
 #endif
   else
