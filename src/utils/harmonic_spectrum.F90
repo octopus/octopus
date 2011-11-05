@@ -46,9 +46,10 @@ program harmonic_spectrum
 
   call getopt_init(ierr)
   if(ierr.ne.0) then
-    write(stderr, '(a)') "Your Fortran compiler doesn't support command-line arguments;"
-    write(stderr, '(a)') "the oct-harmonic-spectrum command is not available."
-    stop
+    call messages_write("Your Fortran compiler doesn't support command-line arguments;")
+    call messages_new_line()
+    call messages_write("the oct-harmonic-spectrum command is not available.")
+    call messages_fatal()
   end if
   ! These are the default values.
   get_maxima = .true.

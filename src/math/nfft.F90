@@ -32,7 +32,6 @@ module nfft_m
   use fft_m   
   use global_m
   use iso_c_binding
-!  use lalg_basic_m
   use loct_math_m
   use messages_m
   use parser_m
