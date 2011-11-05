@@ -6,7 +6,7 @@ Programs   : octopus; octopus_mpi
 TestGroups : short-run, open-systems
 Enabled    : Yes
 
-# We check the transparent boundary conditions in 2D for second order
+# We check the transparent boundary conditions in 2D for second-order
 # discretization with the full matrices.
 
 Input: 02-wavepacket_2d.01-full_q.inp

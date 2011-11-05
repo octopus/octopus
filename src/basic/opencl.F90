@@ -388,6 +388,8 @@ module opencl_m
         integer :: irank
         character(len=256) :: device_name
 
+        PUSH_SUB(opencl_init.select_device)
+
         idevice = mod(base_grp%rank, ndevices)
 
         call MPI_Barrier(base_grp%comm, mpi_err)
@@ -407,6 +409,7 @@ module opencl_m
         end do
 #endif
 
+        POP_SUB(opencl_init.select_device)
       end subroutine select_device
 
       subroutine device_info()
@@ -414,6 +417,8 @@ module opencl_m
 #ifdef HAVE_OPENCL
         integer(8) :: val 
         character(len=256) :: val_str
+
+        PUSH_SUB(opencl_init.device_info)
 
         call messages_new_line()
         call messages_write('Selected CL device:')
@@ -481,6 +486,7 @@ module opencl_m
 
         call messages_info()
 
+        POP_SUB(opencl_init.device_info)
 #endif
       end subroutine device_info
 
@@ -563,11 +569,15 @@ module opencl_m
 
       integer :: ierr
 
+        PUSH_SUB(opencl_release_buffer)
+
       this%size = 0
 #ifdef HAVE_OPENCL
       call clReleaseMemObject(this%mem, ierr)
 #endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_buffer")
+
+      POP_SUB(opencl_release_buffer)
     end subroutine opencl_release_buffer
 
     ! ------------------------------------------
@@ -606,6 +616,8 @@ module opencl_m
     subroutine opencl_finish()
       integer :: ierr
 
+      PUSH_SUB(opencl_finish)
+
       call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
 
 #ifdef HAVE_OPENCL
@@ -615,6 +627,7 @@ module opencl_m
       call profiling_out(prof_kernel_run)
 
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'cl_finish') 
+      POP_SUB(opencl_finish)
     end subroutine opencl_finish
 
     ! ------------------------------------------
@@ -649,6 +662,7 @@ module opencl_m
 
       integer :: ierr
       integer(8) :: size_in_bytes
+
       PUSH_SUB(opencl_set_kernel_arg_local)
 
       size_in_bytes = int(size, 8)*types_get_size(type)
@@ -737,6 +751,9 @@ module opencl_m
       
       character(len = OPENCL_MAX_FILE_LENGTH) :: string
       integer :: ierr, ierrlog, iunit, irec
+
+      PUSH_SUB(opencl_build_program)
+
 #ifdef HAVE_OPENCL
 
       string = ''
@@ -796,6 +813,8 @@ module opencl_m
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clBuildProgram")
 
 #endif
+
+      POP_SUB(opencl_build_program)
     end subroutine opencl_build_program
 
     ! -----------------------------------------------
@@ -805,10 +824,14 @@ module opencl_m
 
       integer :: ierr
 
+      PUSH_SUB(opencl_release_program)
+
 #ifdef HAVE_OPENCL
       call clReleaseProgram(prog, ierr)
 #endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseProgram")
+
+      POP_SUB(opencl_release_program)
     end subroutine opencl_release_program
 
     ! -----------------------------------------------
@@ -818,10 +841,14 @@ module opencl_m
 
       integer :: ierr
 
+      PUSH_SUB(opencl_release_kernel)
+
 #ifdef HAVE_OPENCL
       call clReleaseKernel(prog, ierr)
 #endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseKernel")
+
+      POP_SUB(opencl_release_kernel)
     end subroutine opencl_release_kernel
 
     ! -----------------------------------------------
@@ -832,10 +859,14 @@ module opencl_m
 
       integer :: ierr
 
+      PUSH_SUB(opencl_create_kernel)
+
 #ifdef HAVE_OPENCL
       kernel = clCreateKernel(prog, name, ierr)
 #endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateKernel")
+
+      POP_SUB(opencl_create_kernel)
     end subroutine opencl_create_kernel
 
     ! ------------------------------------------------
@@ -846,6 +877,8 @@ module opencl_m
 
       character(len=40) :: errcode
     
+      PUSH_SUB(opencl_print_error)
+
       select case(ierr)
       case(CL_SUCCESS); errcode = 'CL_SUCCESS '
       case(CL_DEVICE_NOT_FOUND); errcode = 'CL_DEVICE_NOT_FOUND '
@@ -903,6 +936,7 @@ module opencl_m
       message(1) = 'Error: OpenCL '//trim(name)//' '//trim(errcode)
       call messages_fatal(1)
   
+      POP_SUB(opencl_print_error)
     end subroutine opencl_print_error
 
     ! ----------------------------------------------------

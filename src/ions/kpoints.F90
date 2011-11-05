@@ -517,9 +517,12 @@ contains
     integer,         intent(in)    :: ik
     FLOAT  ,         intent(in)    :: point(1:this%full%dim)
 
+    PUSH_SUB(kpoints_set_point)
+
     this%reduced%point(1:this%full%dim, ik) = point(1:this%full%dim)
     this%full%point(1:this%full%dim, ik)    = point(1:this%full%dim)
 
+    POP_SUB(kpoints_set_point)
   end subroutine kpoints_set_point
 
   ! ----------------------------------------------------------
