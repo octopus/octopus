@@ -33,11 +33,13 @@
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(flcreatebuffer_low, FFLCREATEBUFFER_LOW)
-     (cl_mem * buffer, cl_context * context, const int * flags, const size_t * size, int * status){
-
-  *buffer = clCreateBuffer(*context, *flags, (size_t) *size, NULL, status);
+void FC_FUNC_(flcreatebuffer_low, FLCREATEBUFFER_LOW)
+     (cl_context * context, const int * flags, const size_t * size, int * errcode_ret, cl_mem * buffer){
   
+  cl_int errcode_ret_cl;
+
+  *buffer = clCreateBuffer(*context, (cl_mem_flags) *flags, *size, NULL, &errcode_ret_cl);
+  *errcode_ret = (int) errcode_ret_cl;
 }
 
 /* -----------------------------------------------------------------------*/
