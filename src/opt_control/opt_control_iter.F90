@@ -393,10 +393,12 @@ contains
     type(oct_iterator_t),    intent(in) :: iterator
     type(system_t),          intent(in) :: sys
 
-    CHARACTER (LEN=100) :: temp_str
-    CHARACTER (LEN=2) :: atoms_str
-    CHARACTER (LEN=1) :: dim_str
+    character (len=100) :: temp_str
+    character (len=2) :: atoms_str
+    character (len=1) :: dim_str
     integer :: i, j, n_atoms, dim
+
+    PUSH_SUB(velocities_write)
 
     n_atoms = sys%geo%natoms
     dim = sys%gr%sb%dim
@@ -427,6 +429,7 @@ contains
     end do
     write(iterator%velocities_iunit,'("")')
 
+    POP_SUB(velocities_write)
   end subroutine velocities_write
   ! ---------------------------------------------------------
 
