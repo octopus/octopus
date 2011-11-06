@@ -100,7 +100,6 @@ module spectrum_m
   CMPLX, allocatable :: func_(:),func_ar_(:,:),pos_(:,:),tret_(:)
   CMPLX :: vv_(MAX_DIM)
   integer :: is_, ie_, default
-  logical :: from_vel_
 
 contains
 
@@ -890,11 +889,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hsfunction_init(dt, is, ie, niter, acc, from_vel)
+  subroutine spectrum_hsfunction_init(dt, is, ie, niter, acc)!, from_vel)
     FLOAT,   intent(in)           :: dt
     integer, intent(in)           :: is, ie, niter
     CMPLX,   intent(in)           :: acc(:)
-    logical, optional, intent(in) :: from_vel
 
     PUSH_SUB(spectrum_hsfunction_init)
 
@@ -904,12 +902,6 @@ contains
     SAFE_ALLOCATE(func_(0:niter))
     func_ = acc
     
-    if (present(from_vel)) then
-      from_vel_ = from_vel
-    else
-      from_vel_ = .false.
-    end if
-
     POP_SUB(spectrum_hsfunction_init)
   end subroutine spectrum_hsfunction_init
   ! ---------------------------------------------------------
@@ -985,21 +977,10 @@ contains
     zz = M_zI * omega * time_step_
     ez1 = exp((is_ - 1) * zz)
     ez  = exp(zz)
-
-    if (from_vel_) then
-      do jj = is_, ie_
-        ! This would be easier, but slower.
-        !cc = cc + exp(M_zI * omega * jj * time_step_)*func_(jj)
-        ez1 = ez1 * ez
-        cc = cc + ez1 * func_(jj) * omega
-      end do
-    else
-      do jj = is_, ie_
-        ez1 = ez1 * ez
-        cc = cc + ez1 * func_(jj)
-      end do
-    end if
-    
+    do jj = is_, ie_
+      ez1 = ez1 * ez
+      cc = cc + ez1 * func_(jj)
+    end do
     power = -abs(cc)**2 * time_step_**2
 
     if(allocated(func_ar_)) then 
@@ -1274,11 +1255,13 @@ contains
     FLOAT,            intent(in)    :: vec(:)
     FLOAT,  optional, intent(in)    :: w0
 
-    integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax
+    integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax, no_e, ie
     FLOAT :: dt, dump, vv(MAX_DIM)  
     type(kick_t) :: kick
     FLOAT, allocatable :: dd(:,:)
+    FLOAT, allocatable :: sps(:), spc(:), racc(:)
     CMPLX, allocatable :: dipole(:), ddipole(:)
+    type(batch_t) :: acc_batch, sps_batch, spc_batch
     type(unit_system_t) :: file_units
 
     PUSH_SUB(spectrum_hs_from_mult)
@@ -1333,9 +1316,49 @@ contains
                       M_ZERO, &
                       ddipole(time_steps) )
 
-    call spectrum_hsfunction_init(dt, istart, iend, time_steps, ddipole)
-    call spectrum_hs(out_file, spectrum, pol, w0)
-    call spectrum_hsfunction_end()
+    if(present(w0)) then
+
+      call spectrum_hsfunction_init(dt, istart, iend, time_steps, ddipole)
+      call spectrum_hs(out_file, spectrum, pol, w0)
+      call spectrum_hsfunction_end()
+
+    else
+
+      SAFE_ALLOCATE(racc(0:time_steps))
+      racc = ddipole
+
+      no_e = spectrum%max_energy / spectrum%energy_step
+      SAFE_ALLOCATE(sps(0:no_e))
+      SAFE_ALLOCATE(spc(0:no_e))
+      sps = M_ZERO
+      spc = M_ZERO
+
+      call batch_init(acc_batch, 1)
+      call batch_init(sps_batch, 1)
+      call batch_init(spc_batch, 1)
+
+      call batch_add_state(acc_batch, racc)
+      call batch_add_state(sps_batch, sps)
+      call batch_add_state(spc_batch, spc)
+
+      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+        istart + 1, iend + 1, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, spc_batch)
+      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+        istart + 1, iend + 1, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, sps_batch)
+
+      do ie = 0, no_e
+        sps(ie) = (sps(ie)**2 + spc(ie)**2)
+      end do
+
+      call spectrum_hs_output(out_file, spectrum, pol, no_e, sps)   
+
+      call batch_end(acc_batch)
+      call batch_end(sps_batch)
+      call batch_end(spc_batch)
+
+      SAFE_DEALLOCATE_A(racc)
+
+    end if
 
     SAFE_DEALLOCATE_A(dipole)
     SAFE_DEALLOCATE_A(ddipole)
@@ -1433,23 +1456,7 @@ contains
         sps(ie) = (sps(ie)**2 + spc(ie)**2)
       end do
 
-      ! output
-      if(trim(out_file) .ne. '-') then
-        iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
-        write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
-
-        write(iunit, '(a1,a20,a20)') &
-          '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
-          str_center('[('//trim(units_abbrev(units_out%length))//'/' &
-            //trim(units_abbrev(units_out%time**2)), 20)
-
-        do ie = 0, no_e
-          write(iunit, '(2e15.6)') units_from_atomic(units_out%energy, ie * spectrum%energy_step), &
-            units_from_atomic((units_out%length / units_out%time)**2, sps(ie))
-        end do
-
-        call io_close(iunit)
-      end if
+      call spectrum_hs_output(out_file, spectrum, pol, no_e, sps)   
 
       call batch_end(acc_batch)
       call batch_end(sps_batch)
@@ -1471,10 +1478,11 @@ contains
     character,        intent(in)    :: pol
     FLOAT,  optional, intent(in)    :: w0
 
-    integer :: istep, jj, iunit, time_steps, istart, iend, ntiter, ierr
-    FLOAT :: dt, aa(MAX_DIM)
+    integer :: istep, jj, iunit, time_steps, istart, iend, ntiter, ierr, ie, no_e
+    FLOAT :: dt, aa(MAX_DIM), omega
     CMPLX, allocatable :: vel(:)
-    logical :: from_vel
+    FLOAT, allocatable :: rvel(:), sps(:), spc(:)
+    type(batch_t) :: acc_batch, sps_batch, spc_batch
 
     PUSH_SUB(spectrum_hs_from_vel)
 
@@ -1511,10 +1519,51 @@ contains
     end do
     close(iunit)
 
-    from_vel = .true.
-    call spectrum_hsfunction_init(dt, istart, iend, time_steps, vel, from_vel)
-    call spectrum_hs(out_file, spectrum, pol, w0)
-    call spectrum_hsfunction_end()
+    if(present(w0)) then
+
+      ! This is wroing, because we pass the velocity as if it were the acceleration.
+      call spectrum_hsfunction_init(dt, istart, iend, time_steps, vel)!, from_vel)
+      call spectrum_hs(out_file, spectrum, pol, w0)
+      call spectrum_hsfunction_end()
+
+    else
+
+      SAFE_ALLOCATE(rvel(0:time_steps))
+      rvel = vel
+
+      no_e = spectrum%max_energy / spectrum%energy_step
+      SAFE_ALLOCATE(sps(0:no_e))
+      SAFE_ALLOCATE(spc(0:no_e))
+      sps = M_ZERO
+      spc = M_ZERO
+
+      call batch_init(acc_batch, 1)
+      call batch_init(sps_batch, 1)
+      call batch_init(spc_batch, 1)
+
+      call batch_add_state(acc_batch, rvel)
+      call batch_add_state(sps_batch, sps)
+      call batch_add_state(spc_batch, spc)
+
+      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+        istart + 1, iend + 1, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, spc_batch)
+      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+        istart + 1, iend + 1, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, sps_batch)
+
+      do ie = 0, no_e
+        omega = ie * spectrum%energy_step
+        sps(ie) = ((sps(ie)*omega)**2 + (spc(ie)*omega)**2)
+      end do
+
+      call spectrum_hs_output(out_file, spectrum, pol, no_e, sps)   
+
+      call batch_end(acc_batch)
+      call batch_end(sps_batch)
+      call batch_end(spc_batch)
+
+      SAFE_DEALLOCATE_A(rvel)
+
+    end if
 
     SAFE_DEALLOCATE_A(vel)
     POP_SUB(spectrum_hs_from_vel)
@@ -1568,23 +1617,8 @@ contains
         sp(ie) = -sp(ie)
       end do
 
-      ! output
-      if(trim(out_file) .ne. '-') then
-        iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
-        write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
-        
-        write(iunit, '(a1,a20,a20)') &
-          '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
-          str_center('[('//trim(units_abbrev(units_out%length))//'/' &
-            //trim(units_abbrev(units_out%time**2)), 20)
-        
-        do ie = 0, no_e
-          write(iunit, '(2e15.6)') units_from_atomic(units_out%energy, ie * spectrum%energy_step), &
-            units_from_atomic((units_out%length / units_out%time)**2, sp(ie))
-        end do
-        
-        call io_close(iunit)
-      end if
+      call spectrum_hs_output(out_file, spectrum, pol, no_e, sp)
+
       SAFE_DEALLOCATE_A(sp)
 
     end if
@@ -1592,6 +1626,39 @@ contains
     POP_SUB(spectrum_hs)
   end subroutine spectrum_hs
   ! ---------------------------------------------------------
+
+
+  subroutine spectrum_hs_output(out_file, spectrum, pol, no_e, sp)
+    character(len=*), intent(in)    :: out_file
+    type(spec_t),     intent(inout) :: spectrum
+    character,        intent(in)    :: pol
+    integer,          intent(in)    :: no_e
+    FLOAT,            intent(in)    :: sp(0:no_e)
+
+    integer :: iunit, ie
+
+    PUSH_SUB(spectrum_hs_output)
+
+      ! output
+    if(trim(out_file) .ne. '-') then
+      iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
+      write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
+       
+      write(iunit, '(a1,a20,a20)') &
+        '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
+        str_center('[('//trim(units_abbrev(units_out%length))//'/' &
+          //trim(units_abbrev(units_out%time**2)), 20)
+        
+      do ie = 0, no_e
+        write(iunit, '(2e15.6)') units_from_atomic(units_out%energy, ie * spectrum%energy_step), &
+          units_from_atomic((units_out%length / units_out%time)**2, sp(ie))
+      end do
+        
+      call io_close(iunit)
+    end if
+
+    POP_SUB(spectrum_hs_output)
+  end subroutine spectrum_hs_output
 
 
   ! ---------------------------------------------------------
