@@ -589,10 +589,10 @@ end subroutine messages_end
     if(.not. mpi_grp_is_root(mpi_world)) return
 
     if(.not. present(unit)) then
-      write(floatstring,'(g10.4)') value
+      write(floatstring,'(g11.4)') value
       write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(floatstring))//']'
     else
-      write(floatstring,'(g10.4)') units_from_atomic(unit, value)
+      write(floatstring,'(g11.4)') units_from_atomic(unit, value)
       write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(floatstring))//' '//trim(units_abbrev(unit))//']'
     end if
 

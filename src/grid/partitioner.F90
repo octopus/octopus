@@ -57,6 +57,8 @@ contains
   subroutine partitioner_init(this)
     type(partitioner_t), intent(out) :: this
 
+    PUSH_SUB(partitioner_init)
+
     call loct_ran_init(this%rng)
 
     !%Variable MeshPartitionGAPopulation
@@ -79,6 +81,7 @@ contains
     !%End
     call parse_integer(datasets_check('MeshPartitionGAMaxSteps'), 1000, this%nsteps)
 
+    POP_SUB(partitioner_init)
   end subroutine partitioner_init
   
   ! ----------------------------------------------------
@@ -95,6 +98,8 @@ contains
     FLOAT :: fsum, psum, random
     FLOAT, parameter :: mutation_rate = 0.2
     FLOAT :: fbest
+
+    PUSH_SUB(partitioner_perform)
 
     message(1) = "Info: Performing a genetic algorithm optimization of the mesh partitioning"
     call messages_info(1)
@@ -118,7 +123,7 @@ contains
 
       if(abs(maxval(fitness) - fbest) > M_EPSILON) then
         fbest = maxval(fitness)
-        write(message(1), '(a,i5,a,e10.4)') "      GA generation: ", igen, " fitness ", fbest 
+        write(message(1), '(a,i5,a,e11.4)') "      GA generation: ", igen, " fitness ", fbest 
         call messages_info(1)
       end if
 
@@ -176,14 +181,22 @@ contains
     SAFE_DEALLOCATE_A(fitness)
     SAFE_DEALLOCATE_P(parents)
     SAFE_DEALLOCATE_P(childs)
+
+    POP_SUB(partitioner_perform)
+
   contains 
 
     subroutine get_fitness()
+
+      PUSH_SUB(partitioner_perform.get_fitness)
+
       do ipop = 1, this%npop
         call partition_build(parents(ipop), mesh, stencil)
         fitness(ipop) = partition_quality(parents(ipop))
       end do
       ipop = maxloc(fitness, dim = 1)
+
+      POP_SUB(partitioner_perform.get_fitness)
     end subroutine get_fitness
 
   end subroutine partitioner_perform
@@ -193,6 +206,9 @@ contains
   subroutine partitioner_end(this)
     type(partitioner_t), intent(inout) :: this
 
+    PUSH_SUB(partitioner_end)
+
+    POP_SUB(partitioner_end)
   end subroutine partitioner_end
 
 end module partitioner_m

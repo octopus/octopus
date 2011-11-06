@@ -374,7 +374,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 
   ! output status info
   if(sk%verbose) then
-    write(message(1), '(a,I5,a,E18.12)') 'SPARSKIT iter: ', sk%used_iter, ' residual norm: ', sk%residual_norm
+    write(message(1), '(a,I5,a,E19.12)') 'SPARSKIT iter: ', sk%used_iter, ' residual norm: ', sk%residual_norm
     call messages_info(1)
   end if
 

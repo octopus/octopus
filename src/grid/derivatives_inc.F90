@@ -617,7 +617,7 @@ subroutine X(derivatives_test)(this)
         - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
     end forall
 
-    write(message(1), '(3a,i3,a,es16.10,a,f8.3)') &
+    write(message(1), '(3a,i3,a,es17.10,a,f8.3)') &
       'Laplacian ', trim(type),  &
       ' bsize = ', blocksize,    &
       ' , error = ', X(mf_nrm2)(this%mesh, opffb%states_linear(blocksize)%X(psi)), &
@@ -648,7 +648,7 @@ subroutine X(derivatives_test)(this)
   call messages_info(1)
 
 
-  write(message(1), '(3a, es16.10)') 'Gradient ', trim(type),  &
+  write(message(1), '(3a, es17.10)') 'Gradient ', trim(type),  &
     ' err = ', X(mf_nrm2)(this%mesh, this%mesh%sb%dim, opff)
   call messages_info(1)
 
