@@ -858,14 +858,14 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(a)') 'Convergence:'
-        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &
+        write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'abs_dens = ', scf%abs_dens, &
           ' (', scf%conv_abs_dens, ')'
-        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_dens = ', scf%rel_dens, &
+        write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_dens = ', scf%rel_dens, &
           ' (', scf%conv_rel_dens, ')'
-        write(iunit, '(6x, a, es14.8,a,es14.8,4a)') 'abs_ev = ', scf%abs_ev, &
+        write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_ev = ', scf%abs_ev, &
           ' (', units_from_atomic(units_out%energy, scf%conv_abs_ev), ')', &
           ' [',  trim(units_abbrev(units_out%energy)), ']'
-        write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_ev = ', scf%rel_ev, &
+        write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ev = ', scf%rel_ev, &
           ' (', scf%conv_rel_ev, ')'
         write(iunit,'(1x)')
 

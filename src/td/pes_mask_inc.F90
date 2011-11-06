@@ -283,9 +283,9 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call input_error('PESMaskShape')
   call messages_print_var_option(stdout, "PESMaskShape", mask%shape)
 
-  write(message(1),'(a,es9.3,3a)') & 
+  write(message(1),'(a,es10.3,3a)') & 
            "Input: Mask  R1 = ", units_from_atomic(units_inp%length, mask%mask_R(1) )," [a.u.]"
-  write(message(2),'(a,es9.3,3a)') & 
+  write(message(2),'(a,es10.3,3a)') & 
            "             R2 = ", units_from_atomic(units_inp%length, mask%mask_R(2) )," [a.u.]"
   call messages_info(2)
 

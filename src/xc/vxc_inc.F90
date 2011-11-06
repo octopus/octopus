@@ -630,7 +630,7 @@ contains
 
     tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
 
-    write(message(1), '(a,f8.6)') "Info: In the functional TB09 c = ", tb09_c
+    write(message(1), '(a,f13.6)') "Info: In the functional TB09 c = ", tb09_c
     call messages_info(1)
 
     call  XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)

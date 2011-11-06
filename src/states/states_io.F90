@@ -146,21 +146,21 @@ contains
             if(st%d%ispin == SPINORS) then
               write(tmp_str(2), '(1x,f12.6,3x,4f5.2)') &
                 units_from_atomic(units_out%energy, st%eigenval(ist, ik)), occ, st%spin(1:3, ist, ik)
-              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik+is), ')'
+              if(present(error)) write(tmp_str(3), '(a7,es8.1,a1)')'      (', error(ist, ik+is), ')'
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
                 units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), occ
-              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik), ')'
+              if(present(error)) write(tmp_str(3), '(a7,es8.1,a1)')'      (', error(ist, ik), ')'
             end if
           else
             if(st%d%ispin == SPINORS) then
               write(tmp_str(2), '(1x,f12.6,5x,f5.2,3x,3f8.4)') &
                 units_from_atomic(units_out%energy, st%eigenval(ist, ik)), occ, st%spin(1:3, ist, ik)
-              if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(ist, ik+is), ')'
+              if(present(error)) write(tmp_str(3), '(a3,es8.1,a1)')'  (', error(ist, ik+is), ')'
             else
               write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
                 units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), occ
-              if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik), ')'
+              if(present(error)) write(tmp_str(3), '(a7,es8.1,a1)')'      (', error(ist, ik), ')'
             end if
           end if
           if(present(error)) then

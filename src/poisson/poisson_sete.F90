@@ -421,7 +421,7 @@ contains
         end if
 
         if(idebug == 1) then
-          write(57, '(1x,i8,8(1x,e10.4))') iec, (av(ii),ii=1,7), q2(ia)
+          write(57, '(1x,i8,8(1x,e11.4))') iec, (av(ii),ii=1,7), q2(ia)
         endif
 
         DO ICOL=1,7  !  this IS SLAP TRIAD FORMAT

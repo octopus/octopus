@@ -313,7 +313,7 @@ contains
 
           if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
             write(iunit, '(i8,a,i8,a,i8,3a)') ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
-            write(iunit2, '(e20.14,a,e20.14,a)', advance='no') st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | '
+            write(iunit2, '(e21.14,a,e21.14,a)', advance='no') st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | '
             do idir = 1, gr%sb%dim
               write(iunit2, '(e21.14,a)', advance='no') kpoint(idir), ' | '
             enddo

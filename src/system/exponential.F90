@@ -454,7 +454,7 @@ contains
         end do
 
         if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
-          write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
+          write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', res
           call messages_warning(1)
         end if
 
@@ -512,7 +512,7 @@ contains
           end do
 
           if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
-            write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
+            write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', res
             call messages_warning(1)
           end if
 

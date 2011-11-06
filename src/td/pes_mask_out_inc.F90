@@ -333,7 +333,7 @@ subroutine PES_mask_dump_full_map(mask, st, outp, file, dir)
       
       temp = temp * scale
          
-      write(iunit, '(es18.11,2x,es18.11,2x,es18.12,i10,2x,i10,2x,es18.12,2x,i10)') &
+      write(iunit, '(es18.11,2x,es18.11,2x,es19.12,i10,2x,i10,2x,es19.12,2x,i10)') &
         KK(1), KK(2), temp, ix , iy,  sum(KK(1:mask%mesh%sb%dim)**2) / M_TWO, &
         int((sum(KK(1:mask%mesh%sb%dim)**2) / M_TWO) / mask%energyStep) + 1
 
@@ -386,7 +386,7 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk, dim, dir)
       
       temp = temp * abs(lk(2)-lk(1))
       
-      write(iunit, '(es18.11,2x,es18.11,2x,es18.12,i10,2x,i10,2x,es18.12,2x,i10)') & 
+      write(iunit, '(es18.11,2x,es18.11,2x,es19.12,i10,2x,i10,2x,es19.12,2x,i10)') & 
         KK(1), KK(2), temp , ix , iy,  sum(KK(1:dim)**2) / M_TWO, &
         int((sum(KK(1:dim)**2) / M_TWO)) + 1
       
@@ -820,10 +820,10 @@ subroutine PES_mask_write_power_total(file, step, pes, npoints)
   do ii = 1, nn
     if(present(npoints)) then
       if(npoints(ii) > 0) then
-        write(iunit, '(es18.12,2x,es18.12,2x,es18.12)')  units_from_atomic(units_out%energy, (ii - 1) * step), pes(ii), npoints(ii)
+        write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')  units_from_atomic(units_out%energy, (ii - 1) * step), pes(ii), npoints(ii)
       end if
     else
-      write(iunit, '(es18.12,2x,es18.12)')  units_from_atomic(units_out%energy, (ii - 1) * step), pes(ii)
+      write(iunit, '(es19.12,2x,es19.12)')  units_from_atomic(units_out%energy, (ii - 1) * step), pes(ii)
     end if
   end do
   
@@ -922,7 +922,7 @@ subroutine PES_mask_dump_ARPES(mask, st, file, wfAk)
   
   do ii = 1, nn
     if(npoints(ii) > 0) then
-      write(iunit, '(es18.12,2x,es18.12,2x,es18.12)')  (ii-1)*CNST(180.0)/real(nn-1, REAL_PRECISION), arpes(ii), npoints(ii)
+      write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')  (ii-1)*CNST(180.0)/real(nn-1, REAL_PRECISION), arpes(ii), npoints(ii)
     end if
   end do
   
@@ -1100,8 +1100,8 @@ subroutine PES_mask_write_info(mask, dir)
   iunit = io_open(filename, action='write')
 
   write(iunit, '(a,2x,i2)') 'dim', mask%mesh%sb%dim
-  write(iunit, '(a,2x,es18.12)') 'Emax', mask%energyMax
-  write(iunit, '(a,2x,es18.12)') 'Estep', mask%energyStep
+  write(iunit, '(a,2x,es19.12)') 'Emax', mask%energyMax
+  write(iunit, '(a,2x,es19.12)') 'Estep', mask%energyStep
   write(iunit, '(a)') '-------'
 
   write(iunit, '(a,2x,i18)') 'nK', mask%ll(1)
@@ -1200,3 +1200,8 @@ subroutine PES_mask_restart_read(mask, mesh, st)
 
   POP_SUB(PES_mask_restart_read)
 end subroutine PES_mask_restart_read
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
