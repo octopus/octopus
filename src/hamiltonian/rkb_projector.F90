@@ -63,9 +63,12 @@ contains
   subroutine rkb_projector_null(rkb_p)
     type(rkb_projector_t), intent(out) :: rkb_p
 
+    PUSH_SUB(rkb_projector_null)
+
     nullify(rkb_p%bra)
     nullify(rkb_p%ket)
 
+    POP_SUB(rkb_projector_null)
   end subroutine rkb_projector_null
 
   ! ---------------------------------------------------------
@@ -81,6 +84,8 @@ contains
     CMPLX :: zv
     type(ps_t), pointer :: ps
 
+    PUSH_SUB(rkb_projector_init)
+
     rkb_p%n_s = sm%np
 
     !Allocate memory
@@ -89,7 +94,7 @@ contains
 
     !Build projectors
     do is = 1, rkb_p%n_s
-      x(1:MAX_DIM) = sm%x(is, 1:MAX_DIM)
+      x(1:ubound(sm%x, 2)) = sm%x(is, 1:ubound(sm%x, 2))
 
       ! i runs over j=l+1/2 and j=l-1/2
       do i = 1, 2
@@ -129,15 +134,19 @@ contains
     rkb_p%f(2, :, :) = rkb_p%f(2, :, :) * ps%h(l, 2, 2)
     nullify(ps)
 
+    POP_SUB(rkb_projector_init)
   end subroutine rkb_projector_init
 
   ! ---------------------------------------------------------
   subroutine rkb_projector_end(rkb_p)
     type(rkb_projector_t), intent(inout) :: rkb_p
 
+    PUSH_SUB(rkb_projector_end)
+
     SAFE_DEALLOCATE_P(rkb_p%bra)
     SAFE_DEALLOCATE_P(rkb_p%ket)
 
+    POP_SUB(rkb_projector_end)
   end subroutine rkb_projector_end
 
   ! ---------------------------------------------------------
@@ -153,6 +162,8 @@ contains
     CMPLX :: uvpsi_tmp(1:2, 1:2)
 #endif
 
+    PUSH_SUB(rkb_project)
+
     call rkb_project_bra(mesh, sm, rkb_p, psi, uvpsi)
 
 #if defined(HAVE_MPI)
@@ -164,6 +175,7 @@ contains
 
     call rkb_project_ket(rkb_p, uvpsi, ppsi)
 
+    POP_SUB(rkb_project)
   end subroutine rkb_project
 
   ! ---------------------------------------------------------
