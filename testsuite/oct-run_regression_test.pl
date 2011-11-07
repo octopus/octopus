@@ -278,7 +278,7 @@ foreach my $octopus_exe (@executables){
 
 	    # serial or MPI run?
 	    if ( $command_suffix =~ /mpi$/) {
-	      if("$mpiexec_raw") {
+	      if( -x "$mpiexec_raw") {
 		if ("$mpiexec" =~ /ibrun/) {
 		    $specify_np = "";
 		    $my_nslots = "MY_NSLOTS=$np";
