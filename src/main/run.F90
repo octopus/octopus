@@ -237,7 +237,7 @@ contains
       call system_init(sys)
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
       
-      call messages_print_stress(stdout, 'Approximated memory requirements')
+      call messages_print_stress(stdout, 'Approximate memory requirements')
       call memory_run(sys, hm)
       call messages_print_stress(stdout)
 

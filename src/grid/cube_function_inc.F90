@@ -228,9 +228,9 @@ end subroutine X(cube_to_mesh)
 ! ---------------------------------------------------------
 !> The next two subroutines convert a function between the normal
 !! mesh and the cube in parallel.
-!! "Note that the function in the mesh should be defined
+!! ``Note that the function in the mesh should be defined
 !! globally, not just in a partition (when running in
-!! parallel in real-space domains)."
+!! parallel in real-space domains).``
 ! ---------------------------------------------------------
 subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local)
   type(mesh_t),          intent(in)    :: mesh

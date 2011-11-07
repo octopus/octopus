@@ -72,22 +72,24 @@ module poisson_fft_m
 contains
 
   !-----------------------------------------------------------------
+  ! This routine can only work in 3D, i.e. sb%dim = 3.
   subroutine poisson_fft_build_3d_3d(mesh, cube)
     type(mesh_t), intent(inout) :: mesh
     type(cube_t), intent(inout) :: cube
-    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), idim
-    FLOAT :: temp(MAX_DIM), modg2
-    FLOAT :: gg(MAX_DIM)
+
+    integer :: ix, iy, iz, ixx(3), db(3), idim
+    FLOAT :: temp(3), modg2
+    FLOAT :: gg(3)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
     
     PUSH_SUB(poisson_fft_build_3d_3d)
 
     db(1:3) = cube%n(1:3)
 
-    ! store the fourier transform of the Coulomb interaction
+    ! store the Fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
+    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
     do ix = 1, cube%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
@@ -96,13 +98,13 @@ contains
         do iz = 1, db(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          gg(:) = temp(:)*ixx(:)
-          gg(:) = matmul(gg, mesh%sb%klattice_primitive)
-          do idim = 1, mesh%sb%dim
-            gg(idim) = gg(idim) / lalg_nrm2(mesh%sb%dim, mesh%sb%klattice_primitive(:, idim))
+          gg(1:3) = temp(1:3)*ixx(1:3)
+          gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
+          do idim = 1, 3
+            gg(idim) = gg(idim) / lalg_nrm2(mesh%sb%dim, mesh%sb%klattice_primitive(1:3, idim))
           end do
 
-          modg2 = sum(gg(:)**2)
+          modg2 = sum(gg(1:3)**2)
 
           if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
