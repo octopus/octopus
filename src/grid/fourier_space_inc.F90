@@ -92,9 +92,6 @@ subroutine X(cube_function_FS2RS)(cube, cf)
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
 
-  integer :: index, ii, jj, kk
-  type(profile_t), save :: prof_g,prof_t
-
   PUSH_SUB(X(cube_function_FS2RS))
 
   ASSERT(cube%fft_library /= FFTLIB_NONE)
@@ -102,39 +99,9 @@ subroutine X(cube_function_FS2RS)(cube, cf)
   if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
     ASSERT(associated(cf%pRS))
-    ASSERT(associated(cf%global_pRS))
     ASSERT(associated(cf%pFS))
 
     call pfft_backward_3d(cube%pfft)
-
-    call profiling_in(prof_t,"PFFT_TRANS")
-    !aling the data
-    index = 1
-    do kk = cube%rs_istart(3), cube%rs_istart(3)+cube%rs_n(3)-1
-      do jj = cube%rs_istart(2), cube%rs_istart(2)+cube%rs_n(2)-1
-        do ii = cube%rs_istart(1), cube%rs_istart(1)+cube%rs_n(1)-1
-          cf%global_pRS(cube%get_local_index(ii,jj,kk)) = real(cf%pRS(index))
-          index = index + 1
-        end do
-      end do
-    end do
-    call profiling_out(prof_t)
-
-    !collect the data in all processes
-    call profiling_in(prof_g,"PFFT_GATV")
-    call MPI_Allgatherv ( &
-         cf%global_pRS(cube%begin_indexes(mpi_world%rank+1)), &
-         cube%block_sizes(mpi_world%rank+1), MPI_FLOAT, &
-         cf%global_pRS(1), &
-         cube%block_sizes(1),cube%begin_indexes - 1, &
-         MPI_FLOAT, &
-         mpi_world%comm, mpi_err )
-    if (mpi_err /= 0) then
-      write(message(1),'(a)')"MPI_Allgatherv failed in pfft.F90"
-      call messages_fatal(1)
-    end if
-    call profiling_out(prof_g) 
-
 #endif
   else
     ASSERT(associated(cf%X(RS)))

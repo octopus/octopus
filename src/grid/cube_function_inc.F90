@@ -32,8 +32,6 @@ subroutine X(cube_function_alloc_RS)(cube, cf)
   else
     ASSERT(.not.associated(cf%pRS))
     cf%pRS => cube%pfft%rs_data
-    ASSERT(.not.associated(cf%global_pRS))
-    SAFE_ALLOCATE(cf%global_pRS(cube%n(1)*cube%n(2)*cube%n(3)))
 #endif
   end if
 
@@ -53,9 +51,6 @@ subroutine X(cube_function_free_RS)(cf)
 #ifdef HAVE_PFFT
   if (associated(cf%pRS)) then
     nullify(cf%pRS)
-  end if
-  if (associated(cf%global_pRS)) then
-    SAFE_DEALLOCATE_P(cf%global_pRS)
   end if
 #endif
 
@@ -329,6 +324,8 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
   FLOAT :: scaling_fft_factor
   logical :: local_
   R_TYPE, pointer :: gmf(:)
+  type(profile_t), save :: prof_g
+  FLOAT, allocatable :: tmp(:), gcf(:)
 
   PUSH_SUB(X(cube_to_mesh_parallel))
 
@@ -344,6 +341,27 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
     gmf => mf
   end if
 
+  !collect the data in all processes
+  call profiling_in(prof_g,"PFFT_GATV")
+
+  SAFE_ALLOCATE(tmp(cube%np))
+  SAFE_ALLOCATE(gcf(cube%n(1)*cube%n(2)*cube%n(3)))
+  tmp(1:cube%np) = real(cf%pRS(1:cube%np))
+
+  call MPI_Allgatherv ( tmp(1), &
+       cube%block_sizes(mpi_world%rank+1), MPI_FLOAT, &
+       gcf(1), cube%block_sizes(1),cube%begin_indexes - 1, &
+       MPI_FLOAT, mpi_world%comm, mpi_err )
+  if (mpi_err /= 0) then
+    write(message(1),'(a)')"MPI_Allgatherv failed in cube_to_mesh_parallel"
+    call messages_fatal(1)
+  end if
+  call profiling_out(prof_g) 
+
+  SAFE_DEALLOCATE_A(tmp)
+
+
+  ! cube to mesh
   center(1:3) = cube%n(1:3)/2 + 1
 
   min_x = cube%rs_istart(1)
@@ -362,7 +380,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
       ix = mesh%idx%lxyz(ip, 1) + center(1)
       iy = mesh%idx%lxyz(ip, 2) + center(2)
       iz = mesh%idx%lxyz(ip, 3) + center(3)
-      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%global_pRS(cube%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
+      forall(ii = 0:nn - 1) gmf(ip + ii) = gcf(cube%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
     end do
   else
     !General execution
@@ -377,11 +395,13 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
       do ii = 0, nn - 1
         !Only work with the points of the mesh of my mesh
         if (mesh%vp%part(ip+ii) == mesh%vp%partno) then
-          gmf(ip + ii) = cf%global_pRS(cube%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
+          gmf(ip + ii) = gcf(cube%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
         end if
       end do
     end do
   end if
+
+  SAFE_DEALLOCATE_A(gcf)
 
   if(local_) then
 #ifdef HAVE_MPI

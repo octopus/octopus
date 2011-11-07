@@ -66,7 +66,6 @@ module cube_function_m
 #ifdef HAVE_PFFT
     CMPLX, pointer :: pRS(:)
     CMPLX, pointer :: pFS(:)
-    FLOAT, pointer :: global_pRS(:)
 #endif
   end type cube_function_t
 
@@ -181,7 +180,6 @@ contains
 #ifdef HAVE_PFFT
     nullify(cf%pRS)
     nullify(cf%pFS)
-    nullify(cf%global_pRS)
 #endif
     
     POP_SUB(cube_function_null) 
@@ -199,7 +197,6 @@ contains
 #ifdef HAVE_PFFT
     SAFE_DEALLOCATE_P(cf%pRS)
     SAFE_DEALLOCATE_P(cf%pFS)
-    SAFE_DEALLOCATE_P(cf%global_pRS)
 #endif
 
     POP_SUB(cube_function_end)
