@@ -72,7 +72,6 @@ module poisson_fft_m
 contains
 
   !-----------------------------------------------------------------
-  ! This routine can only work in 3D, i.e. sb%dim = 3.
   subroutine poisson_fft_build_3d_3d(mesh, cube)
     type(mesh_t), intent(inout) :: mesh
     type(cube_t), intent(inout) :: cube
@@ -101,7 +100,7 @@ contains
           gg(1:3) = temp(1:3)*ixx(1:3)
           gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
           do idim = 1, 3
-            gg(idim) = gg(idim) / lalg_nrm2(mesh%sb%dim, mesh%sb%klattice_primitive(1:3, idim))
+            gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
           end do
 
           modg2 = sum(gg(1:3)**2)
@@ -133,9 +132,9 @@ contains
     type(mesh_t), intent(inout) :: mesh
     type(cube_t), intent(inout) :: cube
 
-    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), idim
-    FLOAT :: temp(MAX_DIM), modg2
-    FLOAT :: gpar, gx, gz, r_c, gg(MAX_DIM)
+    integer :: ix, iy, iz, ixx(3), db(3), idim
+    FLOAT :: temp(3), modg2
+    FLOAT :: gpar, gx, gz, r_c, gg(3)
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
@@ -144,13 +143,13 @@ contains
     db(1:3) = cube%n(1:3)
 
     call parse_float(datasets_check('PoissonCutoffRadius'),&
-      maxval(db(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
+      maxval(db(1:3)*mesh%spacing(1:3)/M_TWO), r_c, units_inp%length)
 
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
     call messages_info(1)
-    if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
+    if ( r_c > maxval(db(1:3)*mesh%spacing(1:3)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in neighboring cell(s).'
       call messages_warning(2)
@@ -160,7 +159,7 @@ contains
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
 
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
+    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
     do ix = 1, cube%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
@@ -170,14 +169,14 @@ contains
         do iz = 1, db(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          gg(:) = temp(:)*ixx(:)
+          gg(1:3) = temp(1:3)*ixx(1:3)
 
-          gg(:) = matmul(gg, mesh%sb%klattice_primitive)
-          do idim = 1, mesh%sb%dim
-            gg(idim) = gg(idim) / lalg_nrm2(mesh%sb%dim, mesh%sb%klattice_primitive(:, idim))
+          gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
+          do idim = 1, 3
+            gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
           end do
 
-          modg2 = sum(gg(:)**2)
+          modg2 = sum(gg(1:3)**2)
 
           if(abs(modg2) > M_EPSILON) then
             gz = abs(gg(3))
@@ -210,9 +209,9 @@ contains
 
     type(spline_t)     :: cylinder_cutoff_f
     FLOAT, allocatable :: x(:), y(:)
-    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), k, ngp, idim
-    FLOAT :: temp(MAX_DIM), modg2, xmax
-    FLOAT :: gperp, gx, gy, gz, r_c, gg(MAX_DIM)
+    integer :: ix, iy, iz, ixx(3), db(3), k, ngp, idim
+    FLOAT :: temp(3), modg2, xmax
+    FLOAT :: gperp, gx, gy, gz, r_c, gg(3)
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
@@ -221,13 +220,13 @@ contains
     db(1:3) = cube%n(1:3)
 
     call parse_float(datasets_check('PoissonCutoffRadius'),&
-      maxval(db(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
+      maxval(db(1:3)*mesh%spacing(1:3)/M_TWO), r_c, units_inp%length)
 
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
     call messages_info(1)
-    if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
+    if ( r_c > maxval(db(1:3)*mesh%spacing(1:3)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in neighboring cell(s).'
       call messages_warning(2)
@@ -237,7 +236,7 @@ contains
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
 
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
+    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
     if( mesh%sb%periodic_dim == 0 ) then
       ngp = 8*db(2)
@@ -265,14 +264,14 @@ contains
         do iz = 1, db(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          gg(:) = temp(:)*ixx(:)
+          gg(1:3) = temp(1:3)*ixx(1:3)
 
-          gg(:) = matmul(gg, mesh%sb%klattice_primitive)
-          do idim = 1, mesh%sb%dim
-            gg(idim) = gg(idim) / lalg_nrm2(mesh%sb%dim, mesh%sb%klattice_primitive(:, idim))
+          gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
+          do idim = 1, 2
+            gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
           end do
 
-          modg2 = sum(gg(:)**2)
+          modg2 = sum(gg(1:3)**2)
 
           if(abs(modg2) > M_EPSILON) then
             gperp = hypot(gg(2), gg(3))
@@ -330,9 +329,9 @@ contains
     type(cube_t), intent(inout) :: cube
     integer,      intent(in)    :: poisson_solver
 
-    integer :: ix, iy, iz, ixx(MAX_DIM), db(MAX_DIM), idim
-    FLOAT :: temp(MAX_DIM), modg2
-    FLOAT :: gx, r_c, gg(MAX_DIM)
+    integer :: ix, iy, iz, ixx(3), db(3), idim
+    FLOAT :: temp(3), modg2
+    FLOAT :: gx, r_c, gg(3)
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
     integer :: start(3),last(3)
@@ -343,13 +342,13 @@ contains
 
     if (poisson_solver .ne. POISSON_FFT_CORRECTED) then
       call parse_float(datasets_check('PoissonCutoffRadius'),&
-        maxval(db(:)*mesh%spacing(:)/M_TWO), r_c, units_inp%length)
+        maxval(db(1:3)*mesh%spacing(1:3)/M_TWO), r_c, units_inp%length)
 
       write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
         trim(units_abbrev(units_out%length)), '] = ',       &
         units_from_atomic(units_out%length, r_c)
       call messages_info(1)
-      if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
+      if ( r_c > maxval(db(1:3)*mesh%spacing(1:3)/M_TWO) + DELTA_R) then
         message(1) = 'Poisson cutoff radius is larger than cell size.'
         message(2) = 'You can see electrons in neighboring cell(s).'
         call messages_warning(2)
@@ -369,7 +368,7 @@ contains
     end if
     fft_Coulb_FS = M_ZERO
 
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
+    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
     if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
@@ -381,12 +380,12 @@ contains
           do iz = start(3), last(3)
             ixx(3) = pad_feq(iz, db(3), .true.)
             
-            gg(:) = temp(:)*ixx(:)
-            gg(:) = matmul(gg, mesh%sb%klattice_primitive)
-            do idim = 1, mesh%sb%dim
-              gg(idim) = gg(idim) / lalg_nrm2(mesh%sb%dim, mesh%sb%klattice_primitive(:, idim))
+            gg(1:3) = temp(1:3)*ixx(1:3)
+            gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
+            do idim = 1, 3
+              gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
             end do
-            modg2 = sum(gg(:)**2)
+            modg2 = sum(gg(1:3)**2)
             
             if(abs(modg2) > M_EPSILON) then
               select case(poisson_solver)
@@ -416,12 +415,12 @@ contains
           do iz = 1, db(3)
             ixx(3) = pad_feq(iz, db(3), .true.)
             
-            gg(:) = temp(:)*ixx(:)
-            gg(:) = matmul(gg, mesh%sb%klattice_primitive)
-            do idim = 1, mesh%sb%dim
-              gg(idim) = gg(idim) / lalg_nrm2(mesh%sb%dim, mesh%sb%klattice_primitive(:, idim))
+            gg(1:3) = temp(1:3)*ixx(1:3)
+            gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
+            do idim = 1, 3
+              gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
             end do
-            modg2 = sum(gg(:)**2)
+            modg2 = sum(gg(1:3)**2)
             
             if(abs(modg2) > M_EPSILON) then
               select case(poisson_solver)
@@ -474,15 +473,15 @@ contains
     type(cube_t), intent(inout) :: cube
 
     type(spline_t) :: besselintf
-    integer :: i, ix, iy, ixx(MAX_DIM), db(MAX_DIM), npoints
-    FLOAT :: temp(MAX_DIM), vec, r_c, maxf, dk
+    integer :: i, ix, iy, ixx(2), db(2), npoints
+    FLOAT :: temp(2), vec, r_c, maxf, dk
     FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: x(:), y(:)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_2d_0d)
 
-    db(1:3) = cube%n(1:3)
+    db(1:2) = cube%n(1:2)
 
     call parse_float(datasets_check('PoissonCutoffRadius'),&
       maxval(db(1:2)*mesh%spacing(1:2)/M_TWO), r_c, units_inp%length)
@@ -491,7 +490,7 @@ contains
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
     call messages_info(1)
-    if ( r_c > maxval(db(:)*mesh%spacing(:)/M_TWO) + DELTA_R) then
+    if ( r_c > maxval(db(1:2)*mesh%spacing(1:2)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in neighboring cell(s).'
       call messages_warning(2)
@@ -501,7 +500,7 @@ contains
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
+    temp(1:2) = M_TWO*M_PI/(db(1:2)*mesh%spacing(1:2))
 
     maxf = r_c * sqrt((temp(1)*db(1)/2)**2 + (temp(2)*db(2)/2)**2)
     dk = CNST(0.25) ! This seems to be reasonable.
@@ -545,20 +544,20 @@ contains
     type(mesh_t), intent(in) :: mesh
     type(cube_t), intent(inout) :: cube
 
-    integer :: ix, iy, ixx(MAX_DIM), db(MAX_DIM)
-    FLOAT :: temp(MAX_DIM), vec, r_c, gx, gy
+    integer :: ix, iy, ixx(2), db(2)
+    FLOAT :: temp(2), vec, r_c, gx, gy
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_2d_1d)
 
-    db(1:3) = cube%n(1:3)
+    db(1:2) = cube%n(1:2)
 
     r_c = M_TWO * mesh%sb%lsize(2)
 
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
+    temp(1:2) = M_TWO*M_PI/(db(1:2)*mesh%spacing(1:2))
 
     ! First, the term ix = 0 => gx = 0.
     fft_coulb_fs(1, 1, 1) = -M_FOUR * r_c * (log(r_c)-M_ONE)
@@ -593,18 +592,18 @@ contains
     type(mesh_t), intent(in) :: mesh
     type(cube_t), intent(inout) :: cube
 
-    integer :: ix, iy, ixx(MAX_DIM), db(MAX_DIM)
-    FLOAT :: temp(MAX_DIM), vec
+    integer :: ix, iy, ixx(2), db(2)
+    FLOAT :: temp(2), vec
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_2d_2d)
 
-    db(1:3) = cube%n(1:3)
+    db(1:2) = cube%n(1:2)
 
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
-    temp(:) = M_TWO*M_PI/(db(:)*mesh%spacing(:))
+    temp(1:2) = M_TWO*M_PI/(db(1:2)*mesh%spacing(1:2))
 
     do iy = 1, db(2)
       ixx(2) = pad_feq(iy, db(2), .true.)
@@ -658,19 +657,19 @@ contains
     type(cube_t), intent(inout) :: cube
     FLOAT,        intent(in) :: poisson_soft_coulomb_param
 
-    integer            :: box(MAX_DIM), ixx(MAX_DIM), ix
-    FLOAT              :: temp(MAX_DIM), g, r_c
+    integer            :: box(1), ixx(1), ix
+    FLOAT              :: temp(1), g, r_c
     FLOAT, allocatable :: fft_coulb_fs(:, :, :)
 
     PUSH_SUB(poisson_fft_build_1d_0d)
 
-    box(1:3) = cube%n(1:3)
+    box(1:1) = cube%n(1:1)
 
     r_c = box(1)*mesh%spacing(1)/M_TWO
 
     SAFE_ALLOCATE(fft_coulb_fs(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_coulb_fs = M_ZERO
-    temp(:) = M_TWO*M_PI/(box(:)*mesh%spacing(:))
+    temp(1:1) = M_TWO*M_PI/(box(1:1)*mesh%spacing(1:1))
 
     ! Fourier transform of Soft Coulomb interaction.
     do ix = 1, cube%nx
