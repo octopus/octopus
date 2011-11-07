@@ -483,7 +483,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
   do ip = 1, mesh%np_part_global
-    xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
+    xglobal(ip, 1:) = mesh_x_global(mesh, ip)
   end do
 
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
@@ -668,7 +668,7 @@ end function X(mf_line_integral_vector)
 subroutine X(mf_put_radial_spline)(mesh, spl, center, ff, add)
   type(mesh_t),        intent(in)    :: mesh
   type(spline_t),      intent(in)    :: spl
-  FLOAT,               intent(in)    :: center(1:MAX_DIM)
+  FLOAT,               intent(in)    :: center(:)
   R_TYPE,              intent(inout) :: ff(:)
   logical, optional,   intent(in)    :: add
 

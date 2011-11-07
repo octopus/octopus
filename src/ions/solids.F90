@@ -41,12 +41,13 @@ module solids_m
     periodic_copy_num,        &
     periodic_write_crystal
 
+  ! parts of this module explicitly work on for 3 dimensions
   type periodic_copy_t
     private
-    FLOAT :: pos(1:MAX_DIM)
-    FLOAT :: pos_chi(1:MAX_DIM)
+    FLOAT :: pos(1:3)
+    FLOAT :: pos_chi(1:3)
     FLOAT :: range
-    integer :: nbmax(MAX_DIM), nbmin(MAX_DIM)
+    integer :: nbmax(3), nbmin(3)
     integer, pointer :: icell(:, :)
   end type periodic_copy_t
 
@@ -55,7 +56,7 @@ contains
   subroutine periodic_copy_init(this, sb, pos, range)
     type(periodic_copy_t), intent(out) :: this
     type(simul_box_t),     intent(in)  :: sb
-    FLOAT,                 intent(in)  :: pos(1:MAX_DIM)
+    FLOAT,                 intent(in)  :: pos(:)
     FLOAT,                 intent(in)  :: range
 
     integer :: pd
@@ -85,16 +86,15 @@ contains
     this%nbmax(1:pd) = int((this%pos_chi(1:pd) + range)/(M_TWO*sb%lsize(1:pd)) + M_HALF)
 
     ! no copies in non-periodic directions
-    this%nbmin(pd + 1:MAX_DIM) = 0
-    this%nbmax(pd + 1:MAX_DIM) = 0
+    this%nbmin(pd + 1:3) = 0
+    this%nbmax(pd + 1:3) = 0
 
-    SAFE_ALLOCATE(this%icell(1:MAX_DIM, 1:periodic_copy_num(this)))
+    SAFE_ALLOCATE(this%icell(1:3, 1:periodic_copy_num(this)))
 
     jj = 1
     do icell1 = this%nbmin(1), this%nbmax(1)
       do icell2 = this%nbmin(2), this%nbmax(2)
         do icell3 = this%nbmin(3), this%nbmax(3)
-          this%icell(1:MAX_DIM, jj) = 0
           this%icell(1:3, jj) = (/icell1, icell2, icell3/)
           jj = jj + 1
         end do
@@ -135,7 +135,7 @@ contains
     type(periodic_copy_t),   intent(in)  :: this
     type(simul_box_t),       intent(in)  :: sb
     integer, intent(in)                  :: ii
-    FLOAT                                :: pcopy(MAX_DIM) 
+    FLOAT                                :: pcopy(sb%dim)
     
     integer :: pd
 
@@ -148,7 +148,7 @@ contains
 
     pcopy(1:pd) = this%pos_chi(1:pd) - M_TWO*sb%lsize(1:pd)*this%icell(1:pd, ii)
     pcopy(1:pd) = matmul(sb%rlattice_primitive(1:pd, 1:pd), pcopy(1:pd))
-    pcopy(pd + 1:MAX_DIM) = this%pos(pd+1:MAX_DIM)
+    pcopy(pd + 1:sb%dim) = this%pos(pd+1:sb%dim)
 
   end function periodic_copy_position
 
@@ -185,8 +185,8 @@ contains
     do iatom = 1, geo%natoms
       call periodic_copy_init(pp, sb, geo%atom(iatom)%x, radius)
       do icopy = 1, periodic_copy_num(pp)
-        pos = units_from_atomic(units_out%length, periodic_copy_position(pp, sb, icopy))
-        write(iunit, '(a, 3f12.6)') geo%atom(iatom)%label, pos(1:3)
+        pos(1:sb%dim) = units_from_atomic(units_out%length, periodic_copy_position(pp, sb, icopy))
+        write(iunit, '(a, 99f12.6)') geo%atom(iatom)%label, pos(1:sb%dim)
           
       end do
       call periodic_copy_end(pp)

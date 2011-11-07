@@ -117,7 +117,7 @@ contains
 
       rho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
-        yy = periodic_copy_position(pp, sb, icell)
+        yy(1:sb%dim) = periodic_copy_position(pp, sb, icell)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = atom%x, coords = xx)
           xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
@@ -185,7 +185,7 @@ contains
         range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
 
       do icell = 1, periodic_copy_num(pp)
-        pos = periodic_copy_position(pp, sb, icell)
+        pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
           rr = max(rr, r_small)
@@ -637,7 +637,7 @@ contains
 
       rho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
-        yy = periodic_copy_position(pp, mesh%sb, icell)
+        yy(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos, coords = xx)
           xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) + yy(1:mesh%sb%dim)

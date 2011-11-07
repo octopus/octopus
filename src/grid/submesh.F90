@@ -112,7 +112,6 @@ contains
 
     this%mesh => mesh
 
-    this%center = M_ZERO
     this%center(1:sb%dim) = center(1:sb%dim)
 
     this%radius = rc
@@ -132,8 +131,8 @@ contains
       nmax(1:sb%dim) = int((center(1:sb%dim) + abs(rc) - sb%box_offset(1:sb%dim))/mesh%spacing(1:sb%dim)) + 1
 
       ! make sure that the cube is inside the grid
-      nmin(1:MAX_DIM) = max(mesh%idx%nr(1, 1:MAX_DIM), nmin(1:MAX_DIM))
-      nmax(1:MAX_DIM) = min(mesh%idx%nr(2, 1:MAX_DIM), nmax(1:MAX_DIM))
+      nmin(1:sb%dim) = max(mesh%idx%nr(1, 1:sb%dim), nmin(1:sb%dim))
+      nmax(1:sb%dim) = min(mesh%idx%nr(2, 1:sb%dim), nmax(1:sb%dim))
 
       ! Get the total number of points inside the sphere
       is = 0   ! this index counts inner points
@@ -165,7 +164,7 @@ contains
       this%np_part = is + isb
       
       SAFE_ALLOCATE(this%map(1:this%np_part))
-      SAFE_ALLOCATE(this%x(1:this%np_part, 0:MAX_DIM))
+      SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
       
       ! Generate the table and the positions
       do iz = nmin(3), nmax(3)
@@ -184,9 +183,8 @@ contains
               map_inv(ip) = is
             end if
             this%map(is) = ip
-            this%x(is, 1:MAX_DIM) = M_ZERO
             this%x(is, 1:sb%dim) = mesh%x(ip, 1:sb%dim) - center(1:sb%dim)
-            this%x(is, 0) = sqrt(sum(this%x(is, 1:MAX_DIM)**2))
+            this%x(is, 0) = sqrt(sum(this%x(is, 1:sb%dim)**2))
           end do
         end do
       end do
@@ -209,18 +207,18 @@ contains
         call messages_warning(2)
       end if
 
-      call periodic_copy_init(pp, sb, center(1:MAX_DIM), rc)
+      call periodic_copy_init(pp, sb, center(1:sb%dim), rc)
       
-      SAFE_ALLOCATE(center_copies(1:MAX_DIM, 1:periodic_copy_num(pp)))
+      SAFE_ALLOCATE(center_copies(1:sb%dim, 1:periodic_copy_num(pp)))
 
       do icell = 1, periodic_copy_num(pp)
-        center_copies(1:MAX_DIM, icell) = periodic_copy_position(pp, sb, icell)
+        center_copies(1:sb%dim, icell) = periodic_copy_position(pp, sb, icell)
       end do
 
       is = 0
       do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
-          r2 = sum((mesh%x(ip, 1:MAX_DIM) - center_copies(1:MAX_DIM, icell))**2)
+          r2 = sum((mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell))**2)
           if(r2 > rc**2 ) cycle
           is = is + 1
         end do
@@ -230,19 +228,19 @@ contains
       this%np_part = is
 
       SAFE_ALLOCATE(this%map(1:this%np_part))
-      SAFE_ALLOCATE(this%x(1:this%np_part, 0:MAX_DIM))
+      SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
             
       !iterate again to fill the tables
       is = 0
       do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
-          xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM) - center_copies(1:MAX_DIM, icell)
-          r2 = sum(xx(1:MAX_DIM)**2)
+          xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
+          r2 = sum(xx(1:sb%dim)**2)
           if(r2 > rc**2 ) cycle
           is = is + 1
           this%map(is) = ip
           this%x(is, 0) = sqrt(r2)
-          this%x(is, 1:MAX_DIM) = xx(1:MAX_DIM)
+          this%x(is, 1:sb%dim) = xx(1:sb%dim)
          end do
       end do
 
@@ -295,10 +293,10 @@ contains
     sm_out%np_part = sm_in%np_part
     
     SAFE_ALLOCATE(sm_out%map(1:sm_out%np_part))
-    SAFE_ALLOCATE(sm_out%x(1:sm_out%np_part, 0:MAX_DIM))
+    SAFE_ALLOCATE(sm_out%x(1:sm_out%np_part, 0:ubound(sm_in%x, 2)))
 
     sm_out%map(1:sm_out%np_part) = sm_in%map(1:sm_in%np_part)
-    sm_out%x(1:sm_out%np_part, 0:MAX_DIM) = sm_in%x(1:sm_in%np_part, 0:MAX_DIM)
+    sm_out%x(1:sm_out%np_part, 0:ubound(sm_in%x, 2)) = sm_in%x(1:sm_in%np_part, 0:ubound(sm_in%x, 2))
 
     POP_SUB(submesh_copy)
 

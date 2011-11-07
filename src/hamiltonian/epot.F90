@@ -980,7 +980,7 @@ contains
       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rcut)
       
       do icopy = 1, periodic_copy_num(pc)
-        xi = periodic_copy_position(pc, sb, icopy)
+        xi(1:sb%dim) = periodic_copy_position(pc, sb, icopy)
         
         do jatom = 1, geo%natoms
           zj = species_zval(geo%atom(jatom)%spec)
