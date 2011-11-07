@@ -42,6 +42,9 @@ dist_share_DATA =                                  \
         08-mgs.01-real.inp                         \
         08-mgs.02-complex.inp                      \
         09-qr.test                                 \
-        09-qr.01-real.inp
+        09-qr.01-real.inp                          \
+        10-hartree_pfft.test                       \
+        10-hartree_pfft.01-fft.inp                 \
+        10-hartree_pfft.02-fft_corrected.inp
 
 CLEANFILES = *~ *.bak
