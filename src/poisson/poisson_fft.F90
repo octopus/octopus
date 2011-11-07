@@ -705,6 +705,7 @@ contains
     FLOAT,             intent(in)  :: rho(:)
     logical, optional, intent(in)  :: average_to_zero
 
+    logical :: average_to_zero_
     FLOAT :: average
     type(profile_t), save :: prof_bcast, prof_sct
     integer :: default_fft_library, fft_library
@@ -712,6 +713,8 @@ contains
 
     PUSH_SUB(poisson_fft)
     
+    average_to_zero_ = .false.
+    if (present(average_to_zero)) average_to_zero_ = average_to_zero
     average = M_ZERO !this avoids a non-initialized warning
 
     call cube_function_null(cf)    
@@ -745,13 +748,20 @@ contains
     call dfourier_space_op_apply(coulb, cube, cf)
 
     !now the cube has the potential
-    if(present(average_to_zero)) then
-      if(average_to_zero) average = cube_function_surface_average(cube, cf)
-#if defined HAVE_MPI
-      ! Only root has the right average.
-      if(mesh%parallel_in_domains) call MPI_Bcast(average, 1, MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
+    if(average_to_zero_) then
+      if(cube%parallel_in_domains) then
+#ifdef HAVE_PFFT
+        average = cube_function_surface_average_parallel(cube, cf)
 #endif
-    end if
+      else
+        average = cube_function_surface_average(cube, cf)
+      end if
+
+#if defined HAVE_MPI
+    ! Only root has the right average.
+    if(mesh%parallel_in_domains) call MPI_Bcast(average, 1, MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
+#endif
+  end if
 
     ! move the potential back to the mesh
     if(mesh%parallel_in_domains) then
@@ -778,9 +788,7 @@ contains
       end if
     end if
 
-    if(present(average_to_zero)) then
-      if(average_to_zero) pot(1:mesh%np) = pot(1:mesh%np) - average
-    end if
+    if(average_to_zero_) pot(1:mesh%np) = pot(1:mesh%np) - average
     
     call dcube_function_free_RS(cf)           ! memory is no longer needed
     call cube_function_end(cf)    

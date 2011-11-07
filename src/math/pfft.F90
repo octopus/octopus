@@ -372,6 +372,8 @@ contains
     call PDFFT(execute) (pfft%planb)
     call profiling_out(prof_bw)
 
+    pfft%rs_data = pfft%rs_data/(pfft%n(1)*pfft%n(2)*pfft%n(3))
+
     POP_SUB(pfft_backward_3d)
   end subroutine pfft_backward_3d
   

@@ -321,7 +321,6 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
   integer :: ip, ix, iy, iz, center(3)
   integer :: im, ii, nn, last, first
   integer :: min_x, min_y, min_z, max_x,max_y,max_z,recv_count
-  FLOAT :: scaling_fft_factor
   logical :: local_
   R_TYPE, pointer :: gmf(:)
   type(profile_t), save :: prof_g
@@ -371,7 +370,6 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
   max_y = cube%rs_istart(2) + cube%rs_n(2)
   max_z = cube%rs_istart(3) + cube%rs_n(3)
        
-  scaling_fft_factor = real(cube%pfft%n(1)*cube%pfft%n(2)*cube%pfft%n(3))
   if (mpi_world%size == 1) then
     do im = 1, mesh%cube_map%nmap
       ip = mesh%cube_map%map(MCM_POINT, im)
@@ -380,7 +378,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
       ix = mesh%idx%lxyz(ip, 1) + center(1)
       iy = mesh%idx%lxyz(ip, 2) + center(2)
       iz = mesh%idx%lxyz(ip, 3) + center(3)
-      forall(ii = 0:nn - 1) gmf(ip + ii) = gcf(cube%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
+      forall(ii = 0:nn - 1) gmf(ip + ii) = gcf(cube%get_local_index(ix,iy,iz+ii))
     end do
   else
     !General execution
@@ -395,7 +393,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local)
       do ii = 0, nn - 1
         !Only work with the points of the mesh of my mesh
         if (mesh%vp%part(ip+ii) == mesh%vp%partno) then
-          gmf(ip + ii) = gcf(cube%get_local_index(ix,iy,iz+ii))/scaling_fft_factor
+          gmf(ip + ii) = gcf(cube%get_local_index(ix,iy,iz+ii))
         end if
       end do
     end do

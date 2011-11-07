@@ -53,6 +53,7 @@ module cube_function_m
     zmesh_to_cube_parallel,        &
     dcube_to_mesh_parallel,        &
     zcube_to_mesh_parallel,        &
+    cube_function_surface_average_parallel, &
 #endif
     dmesh_to_cube,                 &
     zmesh_to_cube,                 &
@@ -130,6 +131,45 @@ contains
 
     POP_SUB(cube_function_surface_average)
   end function cube_function_surface_average
+
+#ifdef HAVE_PFFT
+  FLOAT function cube_function_surface_average_parallel(cube, cf) result(x)
+    type(cube_t),          intent(in) :: cube
+    type(cube_function_t), intent(in) :: cf
+
+    integer ii, jj, kk, ix, iy, iz, npoints
+    FLOAT :: tmp_x
+
+    PUSH_SUB(cube_function_surface_average_parallel)
+npoints = 0
+    tmp_x = M_ZERO
+    do ii = 1, cube%rs_n(1)
+      do jj = 1, cube%rs_n(2)
+        do kk = 1, cube%rs_n(3)
+          ix = ii + cube%rs_istart(1) - 1
+          iy = jj + cube%rs_istart(2) - 1
+          iz = kk + cube%rs_istart(3) - 1
+          if ( (ix == 1 .or. ix == cube%n(1)                                          ) .or. &
+             ( (iy == 1 .or. iy == cube%n(2)) .and. (ix /= 1 .and. ix /= cube%n(1))   ) .or. &
+             ( (iz == 1 .or. iz == cube%n(3)) .and. (ix /= 1 .and. ix /= cube%n(1) .and. iy /= 1 .and. iy /= cube%n(2))) ) then
+            tmp_x = tmp_x + real(cf%pRS(cube_get_pfft_index(cube, ix, iy, iz)))
+          end if
+        end do
+      end do
+    end do
+
+#ifdef HAVE_MPI
+    call MPI_Allreduce(tmp_x, x, 1, MPI_FLOAT, MPI_SUM, cube%mpi_grp%comm, mpi_err)
+#endif
+
+    npoints = 2*(cube%n(1)-2)**2 + 4*(cube%n(1)-2) + &
+              2*(cube%n(2)-2)**2 + 4*(cube%n(2)-2) + &
+              2*(cube%n(3)-2)**2 + 4*(cube%n(3)-2) + 8
+    x = x/npoints
+
+    POP_SUB(cube_function_surface_average_parallel)
+  end function cube_function_surface_average_parallel
+#endif
 
   ! ---------------------------------------------------------
   ! this routine computes
