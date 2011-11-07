@@ -96,6 +96,9 @@ void print_config(){
 #ifdef HAVE_ETSF_IO
   printf("etsf_io ");
 #endif
+#ifdef HAVE_PFFT
+  printf("pfft ");
+#endif
   printf("\n");
 }
 

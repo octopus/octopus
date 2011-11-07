@@ -1,0 +1,13 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test       : Hartree
+Options    : pfft
+Programs   : oct-test_mpi
+TestGroups : short-run
+Enabled    : Yes
+
+Precision : 0.005
+Input: 10-hartree_pfft.01-fft.inp
+match ; FFT           ; GREP(hartree_results, 'Hartree test =', 15) ; 0.00035839
+
