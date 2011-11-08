@@ -755,16 +755,20 @@ contains
       else
         average = cube_function_surface_average(cube, cf)
       end if
-
-#if defined HAVE_MPI
-    ! Only root has the right average.
-    if(mesh%parallel_in_domains) call MPI_Bcast(average, 1, MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
+      
+#ifdef HAVE_MPI
+      ! Only root has the right average, if PFFT is not used
+      if(mesh%parallel_in_domains) then
+        if(cube%fft_library == FFTLIB_PFFT) then
+          call MPI_Bcast(average, 1, MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
+        end if
+      end if
 #endif
-  end if
-
+    end if
+    
     ! move the potential back to the mesh
     if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)   
+#ifdef HAVE_MPI
       if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
         call dcube_to_mesh_parallel(cube, cf, mesh, pot, local=.true.)
