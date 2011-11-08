@@ -548,7 +548,7 @@ contains
 
         ! Ponderomotive Energy is the cycle-averaged kinetic energy of 
         ! a free electron quivering in the field 
-        ! Up = E^2/(4*\omea^2)
+        ! Up = E^2/(4*\omega^2)
         Up = maxfield/(4*lasers(il)%omega**2)
 
         write(iunit,'(a,es17.6,3a)') '   Peak intensity       = ', max_intensity, ' [a.u]'

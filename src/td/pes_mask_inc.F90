@@ -58,8 +58,8 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   endif
 
   if(sb%box_shape /= SPHERE) then
-     message(1) ='PhotoElectronSpectrum = pes_mask requires BoxShape = sphere'
-     message(2) = 'Modify the paramenter  and rerun.'
+     message(1) = 'PhotoElectronSpectrum = pes_mask requires BoxShape = sphere'
+     message(2) = 'Modify the parameter and rerun.'
      call messages_warning(1)
    end if 
 
@@ -77,11 +77,11 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !%Option mask_mode 1
   !% Mask method. 
   !%Option fullmask_mode 2
-  !% Full mask method. This include a back action of the momentum space states on the 
-  !% interaction region. This enables eletrons to come back from the continuum. 
+  !% Full mask method. This includes a back action of the momentum-space states on the 
+  !% interaction region. This enables electrons to come back from the continuum. 
   !%Option passive_mode 3 
-  !% Passive analysis of the wf. Simply analize the plane wave components of the 
-  !% wavefunctions on the region r>R1. This mode employ a step masking function by default.
+  !% Passive analysis of the wf. Simply analyze the plane-wave components of the 
+  !% wavefunctions on the region <i>r</i> > <i>R1</i>. This mode employs a step masking function by default.
   !%Option psf_mode 4
   !% Phase-space filter. Implementation not complete.
   !%End
@@ -129,13 +129,13 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !%Default fft_bare
   !%Section Time-Dependent::PES
   !%Description
-  !% How to calculate the plane waves projections.
+  !% How to calculate the plane-wave projections.
   !%Option integral 1
   !% Direct integration_map.
   !%Option fft_map 2 
   !%1D only.  
   !%Option fft_bare 3 
-  !%Bare FFT map. This will contain also ingoing terms.
+  !%Bare FFT map. This will contain also incoming terms.
   !%Option tdpsf_map 4
   !%Time-dependent phase-space filter map.
   !%Option nfft_map 5
@@ -300,7 +300,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   if (parse_block(datasets_check('PESMaskSize'), blk) < 0)then
      mask%mask_R(1)=mesh%sb%rsize/M_TWO
      mask%mask_R(2)=mesh%sb%rsize
-     message(1)="PEMaskSize not specified. Using default values."
+     message(1)="PESMaskSize not specified. Using default values."
      call messages_info(1)
   else 
     call parse_block_float(blk, 0, 0, mask%mask_R(1), units_inp%length)
@@ -346,7 +346,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !% Literally adds the Fourier components of: 
   !% \Theta(r-R1)*\Psi_A(r)
   !% with \Theta being the Heaviside step function. 
-  !% With this option PES will contain all the contributions staring from the inner 
+  !% With this option PES will contain all the contributions starting from the inner 
   !% radius R1. Use this option to improve convergence with respect to the box size 
   !% and total simulation time. 
   !% Note: carefully choose R1 in order to avoid contributions from returning electrons. 
