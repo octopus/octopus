@@ -131,8 +131,7 @@ subroutine td_init(td, sys, hm)
   call kick_init(hm%ep%kick, sys%st%d%nspin, sys%gr%mesh%sb%dim)
 
   ! now the photoelectron stuff
-  call parse_integer(datasets_check('AbsorbingBoundaries'), 0, dummy)
-  call PES_init(td%PESv, sys%gr%mesh, sys%gr%sb, sys%st, dummy, sys%outp%iter,hm,td%max_iter,td%dt,sys)
+  call PES_init(td%PESv, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%iter,hm,td%max_iter,td%dt,sys)
 
   !%Variable TDDynamics
   !%Type integer

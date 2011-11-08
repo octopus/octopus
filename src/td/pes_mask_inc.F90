@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2006-2011 U. De Giovannini, M. Marques 
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   FLOAT :: field(MAX_DIM)
   FLOAT :: DeltaE,MaxE,MaxDR
   FLOAT :: width 
-  integer :: dir
+  integer :: dir, defaultMask
   FLOAT, allocatable  :: X1(:),X2(:),X3(:)  
 
   PUSH_SUB(PES_mask_init)
@@ -47,8 +47,6 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   call messages_info(1)
 
 
-
-
   if (st%parallel_in_states) then
     call messages_experimental("PES_mask parallelization on states")
 
@@ -59,14 +57,79 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
       end if    
   endif
 
+  if(sb%box_shape /= SPHERE) then
+     message(1) ='PhotoElectronSpectrum = pes_mask requires BoxShape = sphere'
+     message(2) = 'Modify the paramenter  and rerun.'
+     call messages_warning(1)
+   end if 
 
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!  Calculation mode
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  !%Variable PESMaskMode
+  !%Type integer
+  !%Default mask_mode
+  !%Section Time-Dependent::PES
+  !%Description
+  !% PES calculation mode.
+  !%Option mask_mode 1
+  !% Mask method. 
+  !%Option fullmask_mode 2
+  !% Full mask method. This include a back action of the momentum space states on the 
+  !% interaction region. This enables eletrons to come back from the continuum. 
+  !%Option passive_mode 3 
+  !% Passive analysis of the wf. Simply analize the plane wave components of the 
+  !% wavefunctions on the region r>R1. This mode employ a step masking function by default.
+  !%Option psf_mode 4
+  !% Phase-space filter. Implementation not complete.
+  !%End
+  call parse_integer(datasets_check('PESMaskMode'),MODE_MASK,mask%mode)
+  if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call input_error('PESMaskMode')
+  call messages_print_var_option(stdout, "PESMaskMode", mask%mode)
+
+  select case(mask%mode)
+    case(MODE_PASSIVE)
+    defaultMask = M_STEP   
+    mask%back_action = .false.   
+
+    case(MODE_BACKACTION)
+    defaultMask = M_SIN2   
+    mask%back_action = .true.
+    mask%mode = MODE_MASK
+    case default
+    defaultMask = M_SIN2
+    mask%back_action = .false.   
+  end select
+
+
+  !%Variable PESMaskPropagator 
+  !%Type integer
+  !%Default volkov
+  !%Section Time-Dependent::PES
+  !%Description
+  !% Photoelectron waves time propagation operator in momentum space.
+  !%Option volkov 2
+  !% Plane wave evolves with exp(i(p-A(t)/c)^2*dt/2).
+  !%Option free 1
+  !% Free plane-wave propagation.   
+  !%End
+  call parse_integer(datasets_check('PESMaskPropagator'),VOLKOV,mask%sw_evolve)
+  if(.not.varinfo_valid_option('PESMaskPropagator',mask%sw_evolve)) call input_error('PESMaskPropagator')
+  call messages_print_var_option(stdout, "PESMaskPropagator",mask%sw_evolve)
+
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!  Optimization 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !%Variable PESMaskOutWaveProjection
   !%Type integer
   !%Default fft_bare
   !%Section Time-Dependent::PES
   !%Description
-  !% How to calculate the plane waves projection.
+  !% How to calculate the plane waves projections.
   !%Option integral 1
   !% Direct integration_map.
   !%Option fft_map 2 
@@ -192,54 +255,34 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 
   ! generate the map between mesh and square mesh
   call  PES_mask_generate_Lxyz_inv(mask)
-  !
   call  PES_mask_generate_Lk(mask)
 
 
-  !%Variable PESMaskMode
-  !%Type integer
-  !%Default mask_mode
-  !%Section Time-Dependent::PES
-  !%Description
-  !% PES calculation mode.
-  !%Option mask_mode 2
-  !% Mask function method. 
-  !%Option passive_mode 4 
-  !% Passive analysis of the wf.
-  !%Option psf_mode 8
-  !% Phase-space filter.
-  !%End
-  call parse_integer(datasets_check('PESMaskMode'),MODE_MASK,mask%mode)
 
-  if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call input_error('PESMaskMode')
-  call messages_print_var_option(stdout, "PESMaskMode", mask%mode)
-
-  !%Variable PESMaskEnableBackAction 
-  !%Type logical
-  !%Default false
-  !%Section Time-Dependent::PES
-  !%Description
-  !% Enable photoelectron scattering-waves correction to the evolution of 
-  !% the bound states.  
-  !%End
-  call parse_logical(datasets_check('PESMaskEnableBackAction'),.false.,mask%back_action)
-
-  if(mask%back_action .eqv. .true.) then
-    message(1)= "Input: PES_mask back action correction ENABLED."
-    call messages_info(1)
-
-  end if
-
-
-
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!  Mask Function options
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   SAFE_ALLOCATE(mask%mask_fn(1:mesh%np_global))
   SAFE_ALLOCATE(mask%mask_R(2))
-
   mask%mask_fn=M_ZERO
-  ! these initializations have no effect, they are overwritten by parse_block_float below. DAS
-  mask%mask_R(1)=mesh%sb%rsize/M_TWO
-  mask%mask_R(2)=mesh%sb%rsize
+
+  !%Variable PESMaskShape
+  !%Type integer
+  !%Default m_sin2
+  !%Section Time-Dependent::PES
+  !%Description
+  !% The mask function shape.
+  !%Option m_sin2 1
+  !% sin2 mask.
+  !%Option m_step 2 
+  !%step function.  
+  !%Option m_erf 3 
+  !%Error function. Not Implemented.
+  !%End
+  call parse_integer(datasets_check('PESMaskShape'),defaultMask,mask%shape)
+  if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call input_error('PESMaskShape')
+  call messages_print_var_option(stdout, "PESMaskShape", mask%shape)
 
   !%Variable PESMaskSize
   !%Type block
@@ -254,9 +297,11 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !% <br>%</tt>
   !%
   !%End
- 
   if (parse_block(datasets_check('PESMaskSize'), blk) < 0)then
-    !call input_error('PESMaskSize')
+     mask%mask_R(1)=mesh%sb%rsize/M_TWO
+     mask%mask_R(2)=mesh%sb%rsize
+     message(1)="PEMaskSize not specified. Using default values."
+     call messages_info(1)
   else 
     call parse_block_float(blk, 0, 0, mask%mask_R(1), units_inp%length)
     call parse_block_float(blk, 0, 1, mask%mask_R(2), units_inp%length)
@@ -265,28 +310,13 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   if(mask%mask_R(2) .gt. mesh%sb%rsize)  mask%mask_R(2) = mesh%sb%rsize 
 
 
-  !%Variable PESMaskShape
-  !%Type integer
-  !%Default m_sin2
-  !%Section Time-Dependent::PES
-  !%Description
-  !% The mask function shape.
-  !%Option m_sin2 1
-  !% sin2 mask.
-  !%Option m_step 2 
-  !%step function.  
-  !%Option m_erf 3 
-  !%error function.
-  !%End
-  call parse_integer(datasets_check('PESMaskShape'),M_SIN2,mask%shape)
-
-  if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call input_error('PESMaskShape')
-  call messages_print_var_option(stdout, "PESMaskShape", mask%shape)
 
   write(message(1),'(a,es10.3,3a)') & 
-           "Input: Mask  R1 = ", units_from_atomic(units_inp%length, mask%mask_R(1) )," [a.u.]"
+           "Input: Mask  R1 = ", units_from_atomic(units_inp%length, mask%mask_R(1) ),&
+           ' [', trim(units_abbrev(units_inp%length)), ']'
   write(message(2),'(a,es10.3,3a)') & 
-           "             R2 = ", units_from_atomic(units_inp%length, mask%mask_R(2) )," [a.u.]"
+           "             R2 = ", units_from_atomic(units_inp%length, mask%mask_R(2) ),&
+           ' [', trim(units_abbrev(units_inp%length)), ']'
   call messages_info(2)
 
 
@@ -299,63 +329,35 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 
 
 
-  !%Variable PESMaskPropagator 
-  !%Type integer
-  !%Default volkov
-  !%Section Time-Dependent::PES
-  !%Description
-  !% Photoelectron waves propagator in momentum space.
-  !%Option volkov 2
-  !% Plane wave evolves with exp(i(p-A(t)/c)^2*dt/2).
-  !%Option free 1
-  !% Free plane-wave propagation.   
-  !%End
-  call parse_integer(datasets_check('PESMaskPropagator'),VOLKOV,mask%sw_evolve)
-
-  if(.not.varinfo_valid_option('PESMaskPropagator',mask%sw_evolve)) call input_error('PESMaskPropagator')
-  call messages_print_var_option(stdout, "PESMaskPropagator",mask%sw_evolve)
 
 
 
 
-  SAFE_ALLOCATE(mask%ext_pot(0:max_iter,1:MAX_DIM))
-  mask%ext_pot=M_ZERO
-
-  if(mask%sw_evolve .eq. VOLKOV) then
-  ! Precalculate the potential vector for all the simulation time
-    do it = 1, max_iter
-      do il = 1, hm%ep%no_lasers
-        field=M_ZERO
-        select case(laser_kind(hm%ep%lasers(il)))
-        case(E_FIELD_MAGNETIC, E_FIELD_ELECTRIC)
-          write(message(1),'(a)') 'PESMask works only with vector_potential unless in passive_mode.'
-          call messages_warning(1)
-        case(E_FIELD_VECTOR_POTENTIAL)
-          call laser_field(hm%ep%lasers(il), field, it*dt)
-       end select
-       mask%ext_pot(it,:)= mask%ext_pot(it,:)-field(:) !Sum up all the fields
-     end do
-    end do
-  else 
-  end if
-
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!  Output
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !%Variable PESMaskIncludePsiA
   !%Type logical
   !%Default false
   !%Section Time-Dependent::PES
   !%Description
-  !% Add the contribution of Psi_A to the photo-electron spectrum.
+  !% Add the contribution of \Psi_A in the mask region to the photo-electron spectrum.
+  !% Literally adds the Fourier components of: 
+  !% \Theta(r-R1)*\Psi_A(r)
+  !% with \Theta being the Heaviside step function. 
+  !% With this option PES will contain all the contributions staring from the inner 
+  !% radius R1. Use this option to improve convergence with respect to the box size 
+  !% and total simulation time. 
+  !% Note: carefully choose R1 in order to avoid contributions from returning electrons. 
   !%End
   call parse_logical(datasets_check('PESMaskIncludePsiA'),.false.,mask%add_psia)
-
   if(mask%add_psia) then
     message(1)= "Input: Include contribution from Psi_A."
     call messages_info(1)
   end if
-
-
-  
+ 
+ 
   !%Variable PESMaskSpectEnergyMax 
   !%Type float
   !%Default maxval(mask%Lk)**2/2
@@ -394,6 +396,31 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   if(mask%interpolate_out) then
     message(1)= "Input: output interpolation ENABLED."
     call messages_info(1)
+  end if
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!  External fields 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  SAFE_ALLOCATE(mask%ext_pot(0:max_iter,1:MAX_DIM))
+  mask%ext_pot=M_ZERO
+
+  if(mask%sw_evolve .eq. VOLKOV) then
+  ! Precalculate the potential vector for all the simulation time
+    do il = 1, hm%ep%no_lasers
+      select case(laser_kind(hm%ep%lasers(il)))
+      case(E_FIELD_MAGNETIC, E_FIELD_ELECTRIC)
+        write(message(1),'(a)') 'PESMask works only with vector_potential unless in passive_mode.'
+        call messages_warning(1)
+      case(E_FIELD_VECTOR_POTENTIAL)
+        do it = 1, max_iter
+          field=M_ZERO
+          call laser_field(hm%ep%lasers(il), field, it*dt)
+          mask%ext_pot(it,:)= mask%ext_pot(it,:)-field(:) !Sum up all the fields
+        end do
+     end select
+    end do
+  else 
   end if
 
 
@@ -1354,7 +1381,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
      !----------------------------------------- 
      ! Passive Mask method
      !----------------------------------------
-          case(MODE_EXACT)
+          case(MODE_PASSIVE)
             
             wf1 = (M_ONE-mask%M)*wf1
             call PES_mask_X_to_K(mask,mesh,wf1,wf2) 

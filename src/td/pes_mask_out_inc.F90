@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2011 U. De Giovannini
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -80,7 +80,7 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
 
         call PES_mask_square_to_mesh(mask,mesh,PsiAB(:, idim, ist, ik),wf1,MaskHow = 3,Const = M_ONE)
 
-        if (mask%mode .ne. MODE_EXACT) then 
+        if (mask%mode .ne. MODE_PASSIVE) then 
           PsiAB(:, idim, ist, ik) = PsiAB(:, idim, ist, ik) + st%zpsi(:, idim, ist, ik) 
         end if
         
@@ -963,7 +963,6 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
 
   PUSH_SUB(PES_mask_output)
 
-  !FIXME: this could be dumped at the beginning of the simulation 
   !Dump info for easy post-process
   call PES_mask_write_info(mask, tmpdir)
  

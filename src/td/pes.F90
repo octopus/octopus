@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2006-2011 M. Marques, U. De Giovannini
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -77,10 +77,10 @@ module PES_m
     M_ERF             =  3    
 
   integer, parameter ::       &
-    MODE_MASK         =   2,  &  
-    MODE_EXACT        =   4,  &
-    MODE_PSF          =   8,  &
-    MODE_BACKACTION   =  16  
+    MODE_MASK         =   1,  &  
+    MODE_BACKACTION   =   2,  &  
+    MODE_PASSIVE      =   3,  &
+    MODE_PSF          =   4
 
   integer, parameter ::      &
     IN                =  1,  &  
@@ -169,12 +169,12 @@ module PES_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine PES_init(pes, mesh, sb, st, ab, save_iter,hm, max_iter,dt,sys)
+  subroutine PES_init(pes, mesh, sb, st, save_iter,hm, max_iter,dt,sys)
     type(pes_t),         intent(out)   :: pes
     type(mesh_t),        intent(inout) :: mesh
     type(simul_box_t),   intent(in)    :: sb
     type(states_t),      intent(in)    :: st
-    integer,             intent(in)    :: ab, save_iter
+    integer,             intent(in)    :: save_iter
     type(hamiltonian_t), intent(in)    :: hm
     integer,             intent(in)    :: max_iter
     FLOAT,               intent(in)    :: dt
@@ -222,11 +222,6 @@ contains
       call messages_print_stress(stdout, trim(str))
     end if 
 
-
-    if(pes%calc_mask) then
-       message(1) = 'PhotoElectronSpectrum = pes_mask requires BoxShape = sphere' 
-       call messages_warning(1)
-    end if
     
     if(pes%calc_rc) call PES_rc_init(pes%rc, mesh, st, save_iter)
     if(pes%calc_mask) call PES_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
