@@ -759,7 +759,7 @@ contains
 #ifdef HAVE_MPI
       ! Only root has the right average, if PFFT is not used
       if(mesh%parallel_in_domains) then
-        if(cube%fft_library == FFTLIB_PFFT) then
+        if(cube%fft_library /= FFTLIB_PFFT) then
           call MPI_Bcast(average, 1, MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
         end if
       end if
