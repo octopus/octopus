@@ -414,10 +414,11 @@ contains
 
     case(POISSON_FFT_SPH,POISSON_FFT_CYL, POISSON_FFT_PLA, POISSON_FFT_NOCUT)
       call poisson_fft_end()
+      call cube_end(this%cube)
     case(POISSON_FFT_CORRECTED)
       call poisson_fft_end()
       call poisson_corrections_end(this%corrector)
-
+      call cube_end(this%cube)
     case(POISSON_CG_CORRECTED, POISSON_CG)
       call poisson_cg_end()
       call poisson_corrections_end(this%corrector)
@@ -426,6 +427,7 @@ contains
       call poisson_multigrid_end(this%mg)
     case(POISSON_ISF)
       call poisson_isf_end(this%isf_solver)
+      call cube_end(this%cube)
     case(POISSON_SETE)
       call poisson_sete_end(this%sete_solver)
 
