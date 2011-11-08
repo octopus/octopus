@@ -28,7 +28,6 @@ BoxShape = sphere
 Radius = 10  
 Spacing = 0.2
 
-SpinComponents = spin_polarized
 TheoryLevel = independent_particles
 
 
@@ -54,9 +53,8 @@ PhotoElectronSpectrum = pes_mask
   3 | Radius
 %
 
-PESMaskMode = mask_mode
+PESMaskMode = fullmask_mode
 PESMaskOutWaveProjection = fft_bare
-PESMaskEnableBackAction = YES
 PESMaskEnlargeLev = 3
 PESMaskSpectEnergyMax = 123.4
 PESMaskSpectEnergyStep = 0.6672E-03
