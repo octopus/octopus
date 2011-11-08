@@ -133,7 +133,7 @@ contains
     real(8),          intent(in)  :: ff(:,:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
+    integer, parameter :: type = TYPE_DOUBLE
 
     PUSH_SUB(dwrite_binary3)
 
@@ -350,7 +350,7 @@ contains
     real(8),          intent(out) :: ff(:,:,:)
     integer,             intent(out) :: ierr
 
-    integer, parameter :: type = TYPE_DOUBLE_COMPLEX
+    integer, parameter :: type = TYPE_DOUBLE
 
     PUSH_SUB(dread_binary3)
    
