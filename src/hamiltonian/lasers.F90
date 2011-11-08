@@ -475,7 +475,7 @@ contains
     FLOAT,   optional, intent(in) :: dt 
     integer, optional, intent(in) :: max_iter 
 
-    FLOAT :: tt, fluence, max_intensity, intensity, dt_, dval, field(MAX_DIM)
+    FLOAT :: tt, fluence, max_intensity, intensity, dt_, dval, field(MAX_DIM), Up, maxfield,tmp
     integer :: il, iter, idir, no_l, max_iter_
     type(tdf_t) :: df
 
@@ -529,6 +529,7 @@ contains
       if(lasers(il)%field .eq. E_FIELD_ELECTRIC .or. lasers(il)%field .eq. E_FIELD_VECTOR_POTENTIAL) then
         fluence = M_ZERO
         max_intensity = M_ZERO
+        maxfield= M_ZERO   
         do iter = 1, max_iter_
           tt = iter * dt_
           field = M_ZERO
@@ -539,14 +540,26 @@ contains
           end do
           fluence = fluence + intensity
           if(intensity > max_intensity) max_intensity = intensity
+
+          tmp = sum(field(:)**2)
+          if( tmp > maxfield) maxfield = tmp
         end do
         fluence = fluence * dt_
-        write(iunit,'(a,es17.6,3a)') '   Peak intensity = ', max_intensity, ' [a.u]'
-        write(iunit,'(a,es17.6,3a)') '                  = ', &
+
+        ! Ponderomotive Energy is the cycle-averaged kinetic energy of 
+        ! a free electron quivering in the field 
+        ! Up = E^2/(4*\omea^2)
+        Up = maxfield/(4*lasers(il)%omega**2)
+
+        write(iunit,'(a,es17.6,3a)') '   Peak intensity       = ', max_intensity, ' [a.u]'
+        write(iunit,'(a,es17.6,3a)') '                        = ', &
           max_intensity * 6.4364086e+15, ' [W/cm^2]'
-        write(iunit,'(a,es17.6,a)')  '   Int. intensity = ', fluence, ' [a.u]'
-        write(iunit,'(a,es17.6,a)')  '   Fluence        = ', &
+        write(iunit,'(a,es17.6,a)')  '   Int. intensity       = ', fluence, ' [a.u]'
+        write(iunit,'(a,es17.6,a)')  '   Fluence              = ', &
           fluence / CNST(5.4525289841210) , ' [a.u]'
+        write(iunit,'(a,es17.6,3a)') '   Ponderomotive energy = ', &
+          units_from_atomic(units_out%energy, Up) ,& 
+          ' [', trim(units_abbrev(units_out%energy)), ']'
       end if
 
     end do
@@ -677,6 +690,7 @@ contains
 
   end subroutine laser_electric_field
   ! ---------------------------------------------------------
+
 
 #include "undef.F90"
 #include "real.F90"
