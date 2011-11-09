@@ -227,33 +227,38 @@ end subroutine X(cube_to_mesh)
 !! globally, not just in a partition (when running in
 !! parallel in real-space domains).``
 ! ---------------------------------------------------------
-subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local)
+subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
   type(mesh_t),          intent(in)    :: mesh
   R_TYPE,  target,       intent(in)    :: mf(:)  !< mf(mesh%np_global)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
   logical, optional,     intent(in)    :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
+  logical, optional,     intent(in)    :: pfft_part !< If .true. the used partition is the pfft equal partition
 
   integer :: ip, ix, iy, iz, center(3)
   integer :: im, ii, jj, kk, nn
-  integer :: min_x, min_y, min_z, max_x,max_y,max_z
-  logical :: local_
+  integer :: min_x, min_y, min_z, max_x, max_y, max_z, index
+  logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)
 
   PUSH_SUB(X(mesh_to_cube_parallel))
   call profiling_in(prof_m2c, "MESH_TO_CUBE_PARALLEL")
 
   local_ = optional_default(local, .false.) .and. mesh%parallel_in_domains
-  
-  if(local_) then
-    ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
-    SAFE_ALLOCATE(gmf(1:mesh%np_global))
-#ifdef HAVE_MPI
-    call X(vec_allgather)(mesh%vp, gmf, mf)
-#endif
+  pfft_part_ = optional_default(pfft_part, .false.) 
+  if (pfft_part_) then
+    ASSERT(ubound(mf, dim=1) == mesh%np)
   else
-    ASSERT(ubound(mf, dim = 1) == mesh%np_global .or. ubound(mf, dim = 1) == mesh%np_part_global)
-    gmf => mf
+    if(local_) then
+      ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
+      SAFE_ALLOCATE(gmf(1:mesh%np_global))
+#ifdef HAVE_MPI
+      call X(vec_allgather)(mesh%vp, gmf, mf)
+#endif
+    else
+      ASSERT(ubound(mf, dim = 1) == mesh%np_global .or. ubound(mf, dim = 1) == mesh%np_part_global)
+      gmf => mf
+    end if
   end if
 
   center(1:3) = cube%n(1:3)/2 + 1
@@ -275,7 +280,6 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local)
     end do
   end do
 
-  ! Do the actual transform, only for the output values
   do im = 1, mesh%cube_map%nmap
     ip = mesh%cube_map%map(MCM_POINT, im)
     nn = mesh%cube_map%map(MCM_COUNT, im)
@@ -287,10 +291,14 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local)
         iz = mesh%idx%lxyz(ip, 3) + center(3)
         do ii = 0, nn - 1
           if (iz+ii >= min_z .and. iz+ii < max_z) then      
-            if (cube%pfft%is_real == 0) then
-              cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = TOCMPLX(real(gmf(ip + ii)),M_ZERO)
-            else 
-              cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = gmf(ip + ii)
+            if (pfft_part_) then
+              cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
+            else
+              if (cube%pfft%is_real == 0) then
+                cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = TOCMPLX(real(gmf(ip + ii)),M_ZERO)
+              else 
+                cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = gmf(ip + ii)
+              end if
             end if
           else
             cycle

@@ -69,7 +69,7 @@ contains
   !! (mesh_partition_end should be called later.)
   ! ---------------------------------------------------------------
   subroutine mesh_partition(mesh, lapl_stencil, part, cube)
-    type(mesh_t),    intent(in)  :: mesh
+    type(mesh_t),    intent(inout)  :: mesh
     type(stencil_t), intent(in)  :: lapl_stencil
     integer,         intent(out) :: part(:) ! 1:mesh%np_part_global
     type(cube_t), optional, intent(in)  :: cube
@@ -99,7 +99,7 @@ contains
     integer :: im, ii, nn
     integer :: stencil_to_use, default_method, method
     integer :: library
-    integer, parameter   :: METIS = 2, ZOLTAN = 3, GA = 4, PFFT = 5
+    integer, parameter   :: METIS = 2, ZOLTAN = 3, GA = 4, PFFT_PART = 5
     integer, parameter   :: STAR = 1, LAPLACIAN = 2
     integer, allocatable :: istart(:), ifinal(:), lsize(:)
     FLOAT, allocatable   :: xglobal(:, :)
@@ -140,9 +140,9 @@ contains
     call parse_integer(datasets_check('MeshPartitionPackage'), default, library)
 
     if(library == GA) call messages_experimental('Genetic algorithm mesh partition')
-    if(library == PFFT) call messages_experimental('PFFT mesh partition')
+    if(library == PFFT_PART) call messages_experimental('PFFT mesh partition')
 
-    if (library == PFFT) then
+    if (library == PFFT_PART) then
       ASSERT(present(cube))
     end if
 
@@ -154,11 +154,12 @@ contains
 #endif
 
 #ifndef HAVE_PFFT
-    if(library == PFFT) then
+    if(library == PFFT_PART) then
       message(1) = 'Error: PFFT was requested, but Octopus was compiled without it.'
       call messages_fatal(1)
     end if
 #endif
+    mesh%partition_library = library
 
     !%Variable MeshPartitionStencil
     !%Type integer
@@ -221,7 +222,7 @@ contains
 
     end select
 
-    if(library /= GA .and. library /= PFFT) then
+    if(library /= GA .and. library /= PFFT_PART) then
       ! Shortcut (number of vertices).
       nv = lsize(ipart)
       SAFE_ALLOCATE(xadj(1:nv + 1))
@@ -372,7 +373,7 @@ contains
       call MPI_Bcast(part(1), mesh%np_part_global, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
 
-    case(PFFT)
+    case(PFFT_PART)
 #ifdef HAVE_PFFT
       part = 0
 

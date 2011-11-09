@@ -724,7 +724,7 @@ contains
       if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
         !all the data has to be distributed for the PFFT library
-        call dmesh_to_cube_parallel(mesh, rho, cube, cf, local=.true.)
+        call dmesh_to_cube_parallel(mesh, rho, cube, cf, local=.true., pfft_part=mesh%partition_library == 5)! 5 == PFFT_PART
 #else
         write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
         call messages_fatal(1)

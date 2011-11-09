@@ -102,6 +102,7 @@ module mesh_m
     integer, pointer :: resolution(:, :, :)
     FLOAT            :: volume_element    !< The global volume element.
     FLOAT, pointer   :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
+    integer          :: partition_library !< The partition name that has been used to partition the mesh
 
     type(mesh_cube_map_t) :: cube_map
   end type mesh_t
