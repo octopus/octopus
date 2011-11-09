@@ -771,7 +771,7 @@ contains
 #ifdef HAVE_MPI
       if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
-        call dcube_to_mesh_parallel(cube, cf, mesh, pot, local=.true.)
+        call dcube_to_mesh_parallel(cube, cf, mesh, pot, local=.true., pfft_part=mesh%partition_library == 5)! 5 == PFFT_PART
 #else
         write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
         call messages_fatal(1)
