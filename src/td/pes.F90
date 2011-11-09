@@ -317,8 +317,8 @@ contains
   ! ---------------------------------------------------------
   subroutine PES_restart_read(pes, mesh, st)
     type(PES_t),    intent(inout) :: pes
-    type(mesh_t),   intent(in) :: mesh
-    type(states_t), intent(in) :: st
+    type(mesh_t),   intent(in)    :: mesh
+    type(states_t), intent(inout) :: st
 
     PUSH_SUB(PES_restart_read)
 

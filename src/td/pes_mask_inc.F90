@@ -537,29 +537,53 @@ subroutine PES_mask_generate_mask(mask,mesh)
   type(PES_mask_t), intent(inout) :: mask
   type(mesh_t),     intent(in)    :: mesh
 
+
+
+  PUSH_SUB(PES_mask_generate_mask)
+
+  call PES_mask_generate_mask_function(mask,mesh, mask%shape, mask%mask_R, mask%M, mask%mask_fn)
+
+  POP_SUB(PES_mask_generate_mask)
+
+end subroutine PES_mask_generate_mask
+
+! --------------------------------------------------------
+!  Generate the mask function on the cubic mesh containing 
+!  the simulation box
+! ---------------------------------------------------------
+subroutine PES_mask_generate_mask_function(mask,mesh, shape, R, mask_sq, mask_m)
+  type(PES_mask_t),     intent(in)    :: mask
+  type(mesh_t),     intent(in)    :: mesh
+  integer,          intent(in)    :: shape
+  FLOAT,            intent(in)    :: R(2)
+  FLOAT,            intent(out)   :: mask_sq(:,:,:)
+  FLOAT, optional,  intent(out)   :: mask_m(:)
+
   integer :: ip, ix3(MAX_DIM)
   integer :: ip_local
   FLOAT   :: dd1,dd2,width
   FLOAT   :: xx(MAX_DIM), rr, dd, radius
   integer :: ix,iy,iz
+  FLOAT,allocatable :: mask_fn(:)
 
+  PUSH_SUB(PES_mask_generate_mask_function)
 
-  PUSH_SUB(PES_mask_generate_mask)
 
   ! generate the mask function on the mesh 
-  mask%mask_fn = M_ZERO
-  width = mask%mask_R(2)-mask%mask_R(1)
+  SAFE_ALLOCATE(mask_fn(1:mesh%np))
+  mask_fn = M_ZERO
+  width = R(2) - R(1)
 
-  select case(mask%shape)
+  select case(shape)
     case(M_SIN2)
       do ip = 1, mesh%np
         call mesh_r(mesh, ip, rr, coords=xx)
-        dd = rr -  mask%mask_R(1) 
+        dd = rr -  R(1) 
         if(dd .gt. M_ZERO ) then 
           if (dd .lt. width) then
-            mask%mask_fn(ip) = M_ONE * sin(dd * M_PI / (M_TWO * (width) ))**2
+            mask_fn(ip) = M_ONE * sin(dd * M_PI / (M_TWO * (width) ))**2
           else 
-            mask%mask_fn(ip) = M_ONE 
+            mask_fn(ip) = M_ONE 
           end if
         end if
       end do
@@ -567,12 +591,12 @@ subroutine PES_mask_generate_mask(mask,mesh)
     case(M_STEP)
       do ip = 1, mesh%np
         call mesh_r(mesh, ip, rr, coords=xx)
-        dd = rr -  mask%mask_R(1) 
+        dd = rr - R(1) 
         if(dd .gt. M_ZERO ) then 
           if (dd .lt. width) then
-            mask%mask_fn(ip) = M_ONE 
+            mask_fn(ip) = M_ONE 
           else 
-            mask%mask_fn(ip) = M_ZERO
+            mask_fn(ip) = M_ZERO
           end if
         end if
       end do
@@ -587,7 +611,7 @@ subroutine PES_mask_generate_mask(mask,mesh)
 
   !the mask is zero in the points of the cube not contained in the
   !simulation box
-  mask%M = M_z0
+  mask_sq = M_z0
 
 
   do ix=1,mask%ll(1)
@@ -596,15 +620,19 @@ subroutine PES_mask_generate_mask(mask,mesh)
         
         ip= mask%Lxyz_inv(ix,iy,iz)
         if (ip > 0) then
-          mask%M(ix,iy,iz) = (1-mask%mask_fn(ip))
+          mask_sq(ix,iy,iz) = (1-mask_fn(ip))
         end if
       end do
     end do
   end do
 
-  POP_SUB(PES_mask_generate_mask)
+  if(present(mask_m)) mask_m = mask_fn
 
-end subroutine PES_mask_generate_mask
+  SAFE_DEALLOCATE_A(mask_fn)
+
+  POP_SUB(PES_mask_generate_mask_function)
+
+end subroutine PES_mask_generate_mask_function
 
 
 ! --------------------------------------------------------

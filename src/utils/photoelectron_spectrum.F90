@@ -38,7 +38,7 @@ program photoelectron_spectrum
 
   integer              :: dim, ll(MAX_DIM), ii
   FLOAT                :: Emax, Estep
-  FLOAT, pointer       :: lk(:)
+  FLOAT, pointer       :: lk(:),RR(:)
   FLOAT, allocatable   :: PESK(:,:,:)
   logical              :: interpolate
   
@@ -65,7 +65,7 @@ program photoelectron_spectrum
   call getopt_photoelectron_spectrum(mode,interp)
   if(interp .eq. 0) interpolate = .false.
 
-  call PES_mask_read_info(tmpdir, dim, Emax, Estep, ll(1), Lk)
+  call PES_mask_read_info(tmpdir, dim, Emax, Estep, ll(1), Lk,RR)
 
   write(message(1), '(a)') 'Read PES info file.'
   call messages_info(1)

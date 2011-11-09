@@ -1033,16 +1033,16 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
 end subroutine PES_mask_output
 
 ! ---------------------------------------------------------
-! Read PES info. This is needed by the photoelectron-spectrum 
-! utility. 
+! Read PES info.
 ! ---------------------------------------------------------
-subroutine PES_mask_read_info(dir, dim, Emax, Estep, ll, Lk)
+subroutine PES_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
   character(len=*), intent(in)  :: dir
   integer,          intent(out) :: dim  
   FLOAT,            intent(out) :: Emax
   FLOAT,            intent(out) :: Estep
   integer,          intent(out) :: ll
   FLOAT, pointer,   intent(out) :: Lk(:)
+  FLOAT, pointer,   intent(out) :: RR(:)
 
 
   character(len=256) :: filename,dummy
@@ -1056,8 +1056,12 @@ subroutine PES_mask_read_info(dir, dim, Emax, Estep, ll, Lk)
   filename = trim(dir)//'td/pes'
   iunit = io_open(filename, action='read', status='old')
 
+  SAFE_ALLOCATE(RR(1:2))
+
   rewind(iunit)
   read(iunit, *) dummy, dim
+  read(iunit,'(a10,2x,es19.12)') dummy, RR(1)
+  read(iunit,'(a10,2x,es19.12)') dummy, RR(2)
   read(iunit, *) dummy, Emax
   read(iunit, *) dummy, Estep
   read(iunit, *) 
@@ -1078,8 +1082,7 @@ end subroutine PES_mask_read_info
 
 
 ! ---------------------------------------------------------
-! Dump PES info needed for post-processing with photoelectron-spectrum
-! utility.
+! Dump PES info
 ! ---------------------------------------------------------
 subroutine PES_mask_write_info(mask, dir)
   type(PES_mask_t), intent(in) :: mask
@@ -1098,9 +1101,11 @@ subroutine PES_mask_write_info(mask, dir)
 
   iunit = io_open(filename, action='write')
 
-  write(iunit, '(a,2x,i2)') 'dim', mask%mesh%sb%dim
-  write(iunit, '(a,2x,es19.12)') 'Emax', mask%energyMax
-  write(iunit, '(a,2x,es19.12)') 'Estep', mask%energyStep
+  write(iunit, '(a10,2x,i2)') 'dim', mask%mesh%sb%dim
+  write(iunit, '(a10,2x,es19.12)') 'Mask R1', mask%mask_R(1)
+  write(iunit, '(a10,2x,es19.12)') 'Mask R2', mask%mask_R(2)
+  write(iunit, '(a10,2x,es19.12)') 'Emax', mask%energyMax
+  write(iunit, '(a10,2x,es19.12)') 'Estep', mask%energyStep
   write(iunit, '(a)') '-------'
 
   write(iunit, '(a,2x,i18)') 'nK', mask%ll(1)
@@ -1165,12 +1170,14 @@ end subroutine PES_mask_restart_write
 subroutine PES_mask_restart_read(mask, mesh, st)
   type(PES_mask_t), intent(inout) :: mask
   type(mesh_t),     intent(in)    :: mesh
-  type(states_t),   intent(in)    :: st
+  type(states_t),   intent(inout) :: st
 
   character(len=80) :: filename, dir ,path
 
-  integer :: itot, ik, ist, idim , np, ierr
+  integer :: itot, ik, ist, idim , np, ierr,idummy
   integer :: ll(MAX_DIM)
+  FLOAT   :: fdummy
+  FLOAT, pointer :: afdummy(:),RR(:)
 
 
   PUSH_SUB(PES_mask_restart_read)
@@ -1202,8 +1209,71 @@ subroutine PES_mask_restart_read(mask, mesh, st)
     end do
   end do
 
+  call  PES_mask_read_info(tmpdir, idummy,fdummy,fdummy,idummy,afdummy,RR)
+  if(RR(1) .ne. mask%mask_R(1) .or. RR(2) .ne. mask%mask_R(2)) then
+    message(1)="PhotoElectronSpectrum = pes_mask : The mask parameters have changed."
+    message(2)="I will restart mapping from the previuos context."
+    call messages_warning(2)
+    call  PES_mask_restart_map(mask, st, RR)
+  endif 
+ 
+  SAFE_DEALLOCATE_P(afdummy)
+  SAFE_DEALLOCATE_P(RR)
+
   POP_SUB(PES_mask_restart_read)
 end subroutine PES_mask_restart_read
+
+
+! ---------------------------------------------------------
+subroutine PES_mask_restart_map(mask, st, RR)
+  type(PES_mask_t), intent(inout) :: mask
+  type(states_t),   intent(inout) :: st
+  FLOAT,            intent(in)    :: RR(2)
+
+
+  integer :: itot, ik, ist, idim , np, ierr,idummy
+  integer :: ll(MAX_DIM)
+  CMPLX, allocatable :: wf1(:,:,:),wf2(:,:,:)
+  FLOAT, allocatable :: M_old(:,:,:)
+
+
+  PUSH_SUB(PES_mask_restart_map)
+
+
+  ll(1:MAX_DIM) = mask%ll(1:MAX_DIM)
+  np =ll(1)*ll(2)*ll(3); 
+
+ SAFE_ALLOCATE(wf1(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
+ SAFE_ALLOCATE(wf2(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
+ SAFE_ALLOCATE(M_old(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
+
+ call PES_mask_generate_mask_function(mask,mask%mesh,mask%shape, RR, M_old)
+
+  itot = 1
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
+      do idim = 1, st%d%dim
+        wf1 = M_z0
+        call PES_mask_K_to_X(mask, mask%mesh, mask%k(:,:,:, idim, ist, ik),wf1)
+        call PES_mask_mesh_to_square(mask,mask%mesh,st%zpsi(:, idim, ist, ik),wf2,MaskHow = 3,Const = M_ONE)
+        wf2 = wf1 + wf2 ! the whole pes orbital in real space 
+        wf1 = wf2* mask%M !modify the orbital in A
+        call PES_mask_square_to_mesh(mask,mask%mesh,st%zpsi(:, idim, ist, ik),wf1,MaskHow = 3,Const = M_ONE)
+        wf2 = wf2 * (mask%M-M_old) ! modify the k-orbital in B 
+        call PES_mask_X_to_K(mask, mask%mesh, wf2, wf1)
+        mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - wf1
+      end do
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(M_old)
+  SAFE_DEALLOCATE_A(wf1)
+  SAFE_DEALLOCATE_A(wf2)
+
+  POP_SUB(PES_mask_restart_map)
+end subroutine PES_mask_restart_map
+
+
 
 !! Local Variables:
 !! mode: f90
