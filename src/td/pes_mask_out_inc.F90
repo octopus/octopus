@@ -1191,6 +1191,11 @@ subroutine PES_mask_restart_read(mask, mesh, st)
         path=trim(dir)//'pes_'//trim(filename)//'.obf'
         
         call io_binary_read(path,np, mask%k(:,:,:, idim, ist, ik), ierr)
+        if(ierr > 0) then
+          message(1) = "Error: failed to read file "//trim(path)//'.obf'
+         call messages_fatal(1)
+        end if
+
 
         itot = itot + 1
       end do

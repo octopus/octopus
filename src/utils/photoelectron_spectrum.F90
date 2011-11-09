@@ -41,6 +41,8 @@ program photoelectron_spectrum
   FLOAT, pointer       :: lk(:)
   FLOAT, allocatable   :: PESK(:,:,:)
   logical              :: interpolate
+  
+  character(len=80) :: filename
 
   !Initial values
   ll = 1 
@@ -63,10 +65,10 @@ program photoelectron_spectrum
   call getopt_photoelectron_spectrum(mode,interp)
   if(interp .eq. 0) interpolate = .false.
 
-  write(message(1), '(a)') 'Read PES info and restart files.'
-  call messages_info(1)
-
   call PES_mask_read_info(tmpdir, dim, Emax, Estep, ll(1), Lk)
+
+  write(message(1), '(a)') 'Read PES info file.'
+  call messages_info(1)
 
   do ii=2, dim
     ll(ii) = ll(1)
@@ -74,7 +76,18 @@ program photoelectron_spectrum
   
   SAFE_ALLOCATE(PESK(1:ll(1),1:ll(2),1:ll(3)))
 
-  call io_binary_read('td.general/PESM_map.obf',ll(1)**dim,PESK, ierr) 
+  filename='td.general/PESM_map.obf'
+  call io_binary_read(trim(filename),ll(1)**dim,PESK, ierr) 
+  if(ierr > 0) then
+    message(1) = "Error: failed to read file "//trim(filename)//'.obf'
+    call messages_fatal(1)
+  end if
+
+
+  write(message(1), '(a)') 'Read PES restart file.'
+  call messages_info(1)
+
+
   
   call unit_system_init()
  
