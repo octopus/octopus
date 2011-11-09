@@ -294,8 +294,8 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
           if (iz+ii >= min_z .and. iz+ii < max_z) then      
             if (pfft_part_) then 
               if (cube%pfft%is_real == 0) then
-                cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = TOCMPLX(real(&
-                     mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))),M_ZERO)
+                cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = &
+                     TOCMPLX(real(mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))),M_ZERO)
               else
                 cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
               end if
