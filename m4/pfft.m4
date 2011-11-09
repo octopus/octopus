@@ -39,7 +39,7 @@ pfft_func="dpfft_plan_dft_3d"
 
 dnl Check if the library was given in the command line
 if test $acx_pfft_ok = no; then
-  AC_ARG_WITH(pfft, [AS_HELP_STRING([--with-pfft=<lib>], [use PFFT library <lib>])])
+  AC_ARG_WITH(pfft, [AS_HELP_STRING([--with-pfft=<lib>], [use PFFT library (http://www-user.tu-chemnitz.de/~mpip/software.php)])])
   case $with_pfft in
     yes | "") ;;
     no) acx_pfft_ok=disable ;;

@@ -1199,7 +1199,7 @@ subroutine PES_mask_restart_read(mask, mesh, st)
         
         call io_binary_read(path,np, mask%k(:,:,:, idim, ist, ik), ierr)
         if(ierr > 0) then
-          message(1) = "Error: failed to read file "//trim(path)//'.obf'
+          message(1) = "Failed to read file "//trim(path)//'.obf'
          call messages_fatal(1)
         end if
 
@@ -1212,7 +1212,7 @@ subroutine PES_mask_restart_read(mask, mesh, st)
   call  PES_mask_read_info(tmpdir, idummy,fdummy,fdummy,idummy,afdummy,RR)
   if(RR(1) .ne. mask%mask_R(1) .or. RR(2) .ne. mask%mask_R(2)) then
     message(1)="PhotoElectronSpectrum = pes_mask : The mask parameters have changed."
-    message(2)="I will restart mapping from the previuos context."
+    message(2)="I will restart mapping from the previous context."
     call messages_warning(2)
     call  PES_mask_restart_map(mask, st, RR)
   endif 
@@ -1241,7 +1241,7 @@ subroutine PES_mask_restart_map(mask, st, RR)
 
 
   ll(1:MAX_DIM) = mask%ll(1:MAX_DIM)
-  np =ll(1)*ll(2)*ll(3); 
+  np =ll(1)*ll(2)*ll(3)
 
  SAFE_ALLOCATE(wf1(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
  SAFE_ALLOCATE(wf2(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))

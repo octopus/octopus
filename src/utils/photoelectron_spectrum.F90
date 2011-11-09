@@ -79,7 +79,7 @@ program photoelectron_spectrum
   filename='td.general/PESM_map.obf'
   call io_binary_read(trim(filename),ll(1)**dim,PESK, ierr) 
   if(ierr > 0) then
-    message(1) = "Error: failed to read file "//trim(filename)//'.obf'
+    message(1) = "Failed to read file "//trim(filename)//'.obf'
     call messages_fatal(1)
   end if
 
@@ -120,3 +120,8 @@ program photoelectron_spectrum
   SAFE_DEALLOCATE_A(PESK)    
 
 end program photoelectron_spectrum
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
