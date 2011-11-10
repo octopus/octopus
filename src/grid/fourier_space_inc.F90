@@ -48,11 +48,10 @@ subroutine X(cube_function_free_FS)(cf)
   if (associated(cf%FS)) then
     SAFE_DEALLOCATE_P(cf%FS)
   end if
-#ifdef HAVE_PFFT
+
   if (associated(cf%pFS)) then
     nullify(cf%pFS)
   end if
-#endif
 
   POP_SUB(X(cube_function_free_FS))
 end subroutine X(cube_function_free_FS)
@@ -131,7 +130,6 @@ subroutine X(fourier_space_op_init)(this, cube, op)
   nullify(this%dop)
   nullify(this%zop)
   if (cube%fft_library == FFTLIB_PFFT) then
-#ifdef HAVE_PFFT
     start = cube%fs_istart
     last = cube%fs_istart + cube%fs_n - 1
     SAFE_ALLOCATE(this%X(op)(start(2):last(2),start(1):last(1),start(3):last(3)))
@@ -142,7 +140,6 @@ subroutine X(fourier_space_op_init)(this, cube, op)
         end do
       end do
     end do
-#endif
   else
     SAFE_ALLOCATE(this%X(op)(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     do kk = 1, cube%n(3)
@@ -181,7 +178,6 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   
   call profiling_in(prof_g,"G_APPLY")
   if (cube%fft_library == FFTLIB_PFFT) then
-#ifdef HAVE_PFFT
     index = 1
     start = cube%fs_istart
     last = cube%fs_istart + cube%fs_n - 1
@@ -193,10 +189,6 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
         end do
       end do
     end do
-#else
-    write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
-    call messages_fatal(1)
-#endif
   else
     do kk = 1, cube%n(3)
       do jj = 1, cube%n(2)
