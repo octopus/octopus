@@ -773,7 +773,7 @@ contains
     ps%icore = 'nc'
     if(ps_upf%nlcc) ps%icore=''
 
-    ! The spin-dependent pseudopotentials are not suported yet, so we need to fix the occupations
+    ! The spin-dependent pseudopotentials are not supported yet, so we need to fix the occupations
     ! if we want to have a spin-dependent atomic density.
     if(ps%ispin == 2) then
       do l = 1, ps%conf%p
@@ -786,6 +786,11 @@ contains
 
     SAFE_ALLOCATE(hato(1:ps%g%nrval))
 
+    ! only ps%g%rofi(1) is allowed to be zero
+    if(any(abs(ps%g%rofi(2:ps%g%nrval)) < M_EPSILON)) then
+      message(1) = "Illegal zero values in UPF radial grid ps%g%rofi(2:ps%g%nrval)"
+      call messages_fatal(1)
+    endif
 
     !Non-linear core-corrections
     if(ps_upf%nlcc) then
@@ -847,14 +852,15 @@ contains
     ! with a correct normalization function
     do is = 1, ps%ispin
       do l = 1, ps%conf%p
-        !hato = ps_upf%wfs(:, l)/ps%g%rofi
-        !if (ps%g%rofi(1) == M_ZERO) hato(1) = M_ZERO
-        ! Solved divide by zero bug not exactly the same meaning please verify
-        where(ps%g%rofi==M_ZERO)
-          hato=M_ZERO
-        elsewhere
-          hato = ps_upf%wfs(:, l)/ps%g%rofi
-        end where
+        ! do not divide by zero
+        if(ps%g%rofi(1) > M_EPSILON) then
+          hato(1) = ps_upf%wfs(1, l)/ps%g%rofi(1)
+        else
+          hato(1) = M_ZERO
+        endif
+        ! rofi /= 0 except rofi(1) possibly
+        hato(2:ps%g%nrval) = ps_upf%wfs(2:ps%g%nrval, l)/ps%g%rofi(2:ps%g%nrval)
+
         call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%ur(l, is))
         call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
       end do

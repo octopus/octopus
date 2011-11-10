@@ -552,7 +552,8 @@ contains
         write(iunit,'(a,es17.6,a)')  '   Int. intensity       = ', fluence, ' [a.u]'
         write(iunit,'(a,es17.6,a)')  '   Fluence              = ', &
           fluence / CNST(5.4525289841210) , ' [a.u]'
-        if(lasers(il)%omega/=0.0)then
+
+        if(abs(lasers(il)%omega) > M_EPSILON)then
           ! Ponderomotive Energy is the cycle-averaged kinetic energy of 
           ! a free electron quivering in the field 
           ! Up = E^2/(4*\omega^2)
