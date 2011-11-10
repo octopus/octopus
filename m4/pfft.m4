@@ -19,7 +19,32 @@
 ##
 
 AC_DEFUN([ACX_PFFT], [
+AC_REQUIRE([ACX_FFT])
 acx_pfft_ok=no
+
+dnl Check if the library was given in the command line
+AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--pfft-prefix=DIR], [http://www-user.tu-chemnitz.de/~mpip/software.php])])
+case $with_pfft_prefix in
+  no) acx_pfft_ok=disable ;;
+  *) LIBS_PFFT="-L$with_pfft_prefix/lib -lpfft"; 
+     FCFLAGS_PFFT="$ax_cv_f90_modflag$with_pfft_prefix/include" ;;
+esac
+
+dnl We only use the include file 'fftw3.f' with PFFT but not otherwise with FFTW, so fft.m4 did not check for it.
+AC_ARG_WITH(fft-include, [AS_HELP_STRING([--with-fft-include=DIR], [Directory where FFTW Fortran include files were installed.])])
+case $with_fft_include in
+ "") FCFLAGS_FFT="$ax_cv_f90_modflag /usr/include";;
+ *)  FCFLAGS_FFT="$ax_cv_f90_modflag$with_fft_include" ;;
+esac
+
+AC_ARG_WITH(pfft-include, [AS_HELP_STRING([--with-pfft-include=DIR], [Directory where PFFT Fortran include files were installed.])])
+case $with_pfft_include in
+  "") if test "x$FCFLAGS_PFFT" == x; then
+  FCFLAGS_PFFT="$ax_cv_f90_modflag /usr/include"
+  fi;;
+  *)  FCFLAGS_PFFT="$ax_cv_f90_modflag$with_pfft_include" ;;
+esac
+FCFLAGS_PFFT="$FCFLAGS_PFFT $FCFLAGS_FFT"
 
 dnl We cannot use PFFT if MPI is not found
 if test "x$acx_mpi_ok" != xyes; then
@@ -31,48 +56,35 @@ if test "x$acx_fft_ok" != xyes; then
   acx_pfft_ok=nofftw3
 fi
 
-dnl Get fortran linker name of PFFT function to check for.
-dnl if not compiling with fortran, convert the names
-m4_if(_AC_LANG, Fortran, [blacs_pinfo=blacs_pinfo], [AC_FC_FUNC(blacs_pinfo)])
+dnl Backup LIBS and FCFLAGS
+acx_pfft_save_LIBS="$LIBS"
+acx_pfft_save_FCFLAGS="$FCFLAGS"
+
+LIBS="$LIBS_PFFT $LIBS_FFT $LIBS $FLIBS"
+FCFLAGS="$FCFLAGS_PFFT $FCFLAGS"
 
 pfft_func="dpfft_plan_dft_3d"
 
-dnl Check if the library was given in the command line
-if test $acx_pfft_ok = no; then
-  AC_ARG_WITH(pfft, [AS_HELP_STRING([--with-pfft=<lib>], [use PFFT library (http://www-user.tu-chemnitz.de/~mpip/software.php)])])
-  case $with_pfft in
-    yes | "") ;;
-    no) acx_pfft_ok=disable ;;
-    -* | */* | *.a | *.so | *.so.* | *.o) LIBS_PFFT="$with_pfft" ;;
-    *) LIBS_PFFT="-l$with_pfft" ;;
-  esac
-fi
-
-dnl Backup LIBS 
-acx_pfft_save_LIBS="$LIBS"
-LIBS="$LIBS_PFFT $LIBS_FFT $LIBS $FLIBS"
-
 dnl First, check LIBS_PFFT environment variable
-if test $acx_pfft_ok = no; then
-  AC_MSG_CHECKING([for $pfft_func in $LIBS_PFFT])
-  AC_TRY_LINK_FUNC($pfft_func, [acx_pfft_ok=yes], [])
-  if test $acx_pfft_ok = no; then
-    AC_MSG_RESULT([$acx_pfft_ok ($LIBS_PFFT)])
-  else
-    AC_MSG_RESULT([$acx_pfft_ok ($LIBS_PFFT)])
-  fi
+if test x"$acx_pfft_ok" = xno; then
+  AC_MSG_CHECKING([for $pfft_func in $FCFLAGS_PFFT $LIBS_PFFT])
+  AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
+    include 'fftw3.f'
+    include 'pfft.f'
+    integer :: x = PFFT_REDFT00
+    call dpfft_plan_dft_3d()
+  ]), [acx_pfft_ok=yes], [])
 fi
 
-dnl Generic PFFT library?
+AC_MSG_RESULT([$acx_pfft_ok ($FCFLAGS_PFFT $LIBS_PFFT)])
+
+dnl Generic PFFT library? is there such a thing?
 for pfft in pfft; do
-  if test $acx_pfft_ok = no; then
+  if test x"$acx_pfft_ok" = xno; then
     AC_CHECK_LIB($pfft -lfftw3_mpi -lfftw3 -lfftw3_mpi -lm, $pfft_func,
       [acx_pfft_ok=yes; LIBS_PFFT="$LIBS_PFFT -lfftw3 -lfftw3_mpi -lm"], [], [$FLIBS])
   fi
 done
-
-AC_SUBST(LIBS_PFFT)
-LIBS="$acx_pfft_save_LIBS"
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_pfft_ok" = xyes; then
@@ -81,6 +93,14 @@ if test x"$acx_pfft_ok" = xyes; then
 else
   AC_MSG_WARN([Could not find PFFT library. 
                *** Will compile without PFFT support])
+  LIBS_PFFT=""
+  FCFLAGS_PFFT=""
   $2
 fi
+
+AC_SUBST(LIBS_PFFT)
+AC_SUBST(FCFLAGS_PFFT)
+LIBS="$acx_pfft_save_LIBS"
+FCFLAGS="$acx_pfft_save_FCFLAGS"
+
 ])dnl ACX_PFFT

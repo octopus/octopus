@@ -6,8 +6,8 @@ dnl Check if the library was given in the command line
 AC_ARG_WITH(etsf-io-prefix, [AS_HELP_STRING([--with-etsf-io-prefix=DIR], [Directory where etsf_io was installed.])])
 case $with_etsf_io_prefix in
   no ) acx_etsf_io_ok=disabled ;;
-  "") if test x$FCFLAGS_ETSF_IO == x; then
-    FCFLAGS_ETSF_IO="-I/usr/include"
+  "") if test "x$FCFLAGS_ETSF_IO" = x; then
+    FCFLAGS_ETSF_IO="$ax_cv_f90_modflag /usr/include"
   fi;;
   *) LIBS_ETSF_IO="-L$with_etsf_io_prefix/lib"; 
      FCFLAGS_ETSF_IO="$ax_cv_f90_modflag$with_etsf_io_prefix/include" ;;
@@ -41,7 +41,7 @@ if test "$acx_etsf_io_ok" != disabled; then
       type(etsf_vars) :: vars
       call etsf_io_vars_free(vars)
     ]), [acx_etsf_io_ok=yes; FCFLAGS_ETSF_IO="$etsf_io_fcflags"; LIBS_ETSF_IO="$etsf_io_libs"], [])
-    if test $acx_etsf_io_ok == yes; then 
+    if test x"$acx_etsf_io_ok" == xyes; then 
       break
     fi
   done

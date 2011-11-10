@@ -114,7 +114,8 @@ contains
     !%Default pfft_measure
     !%Section Mesh::FFTs
     !%Description
-    !% The FFTs are performed in octopus with the help of the PFFT and FFTW package (http://www.fftw.org).
+    !% The FFTs are performed in octopus with the help of the PFFT (http://www-user.tu-chemnitz.de/~mpip/software.php)
+    !% and FFTW packages (http://www.fftw.org).
     !% Before doing the actual computations, this package prepares a "plan", which means that 
     !% the precise numerical strategy to be followed to compute the FFT is machine/compiler-dependent,
     !% and therefore the software attempts to figure out which is this precise strategy (see the
