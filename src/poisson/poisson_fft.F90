@@ -358,11 +358,9 @@ contains
     ! store the fourier transform of the Coulomb interaction
     ! store only the relevant part if PFFT is used
     if (cube%fft_library == FFTLIB_PFFT) then
-#ifdef HAVE_PFFT
       start = cube%fs_istart
       last = cube%fs_istart + cube%fs_n - 1
       SAFE_ALLOCATE(fft_Coulb_FS(start(2):last(2),start(1):last(1),start(3):last(3)))
-#endif
     else
       SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     end if
@@ -371,7 +369,6 @@ contains
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
     if (cube%fft_library == FFTLIB_PFFT) then
-#ifdef HAVE_PFFT
       do ix = start(2), last(2)
         ixx(2) = pad_feq(ix, db(2), .true.)
         gx = temp(2)*ixx(2)
@@ -405,7 +402,6 @@ contains
           end do
         end do
       end do
-#endif
     else
       do ix = 1, cube%nx
         ixx(1) = pad_feq(ix, db(1), .true.)
@@ -722,22 +718,15 @@ contains
     ! put the density in the cube
     if(mesh%parallel_in_domains) then
       if (cube%fft_library == FFTLIB_PFFT) then
-#ifdef HAVE_PFFT
         !all the data has to be distributed for the PFFT library
         call dmesh_to_cube_parallel(mesh, rho, cube, cf, local=.true., pfft_part=mesh%partition_library == 5)! 5 == PFFT_PART
-#else
-        write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
-        call messages_fatal(1)
-#endif
       else 
         call dmesh_to_cube(mesh, rho, cube, cf, local=.true.)
       end if
     else !not parallel in domains
       if (cube%fft_library == FFTLIB_PFFT) then
-#ifdef HAVE_PFFT
         ! Serial execution with PFFT
         call dmesh_to_cube_parallel(mesh, rho, cube, cf)
-#endif 
       else
         call dmesh_to_cube(mesh, rho, cube, cf)
       end if
@@ -749,9 +738,7 @@ contains
     !now the cube has the potential
     if(average_to_zero_) then
       if(cube%parallel_in_domains) then
-#ifdef HAVE_PFFT
         average = cube_function_surface_average_parallel(cube, cf)
-#endif
       else
         average = cube_function_surface_average(cube, cf)
       end if
@@ -770,22 +757,15 @@ contains
     if(mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
       if (cube%fft_library == FFTLIB_PFFT) then
-#ifdef HAVE_PFFT
         call dcube_to_mesh_parallel(cube, cf, mesh, pot, local=.true., pfft_part=mesh%partition_library == 5)! 5 == PFFT_PART
-#else
-        write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
-        call messages_fatal(1)
-#endif
       else
         call dcube_to_mesh(cube, cf, mesh, pot, local=.true.)
       end if
 #endif
     else !not parallel in domains
       if (cube%fft_library == FFTLIB_PFFT) then
-#ifdef HAVE_PFFT
         ! Serial execution with PFFT
         call dcube_to_mesh_parallel(cube, cf, mesh, pot)
-#endif 
       else
         call dcube_to_mesh(cube, cf, mesh, pot)
       end if

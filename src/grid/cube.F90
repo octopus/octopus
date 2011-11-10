@@ -35,12 +35,10 @@ module cube_m
 
   implicit none
   private
-  public ::               &
-    cube_t,               &
-    cube_init,            &
-#ifdef HAVE_PFFT
-    cube_get_pfft_index,  &
-#endif
+  public ::             &
+    cube_t,             &
+    cube_init,          &
+    cube_global2local,  &
     cube_end
 
 
@@ -201,8 +199,8 @@ end subroutine  cube_init
     POP_SUB(cube_end)
   end subroutine  cube_end
 
-  !> returns the local index for the PFFT library using the global x, y and z
-  integer function cube_get_pfft_index(cube, ix, iy, iz) result(index)
+  !> returns the local index using the global x, y and z
+  integer function cube_global2local(cube, ix, iy, iz) result(index)
     type(cube_t), intent(in) :: cube
     integer,      intent(in) :: ix !< x index
     integer,      intent(in) :: iy !< y index
@@ -219,7 +217,7 @@ end subroutine  cube_init
          ((normalized(2)-1) * cube%rs_n(1)) + &                ! y component
          ((normalized(3)-1) * cube%rs_n(1) * cube%rs_n(2)) + 1 ! z component and the sum of 1
     
-  end function cube_get_pfft_index
+  end function cube_global2local
 
   ! ---------------------------------------------------------
   !> do the mapping between global and local points of PFFT arrays
@@ -259,10 +257,10 @@ end subroutine  cube_init
       position = ((process-1)*6)+1
       if (position == 1) then
         cube%begin_indexes(1) = 1
-        cube%block_sizes(1)  = local_sizes(4)*local_sizes(5)*local_sizes(6)
+        cube%block_sizes(1) = local_sizes(4)*local_sizes(5)*local_sizes(6)
       else
         ! calculate the begin index and size of each process
-        cube%begin_indexes(process) =  cube%begin_indexes(process-1) +  cube%block_sizes(process-1)
+        cube%begin_indexes(process) = cube%begin_indexes(process-1) + cube%block_sizes(process-1)
         cube%block_sizes(process) = local_sizes(position+3)*local_sizes(position+4)*local_sizes(position+5)
       end if
 

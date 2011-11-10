@@ -518,8 +518,6 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent, cube)
     end do
   end if
 
-  call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
-
   if(mesh%parallel_in_domains) then
     ASSERT(present(stencil))
     
@@ -536,6 +534,8 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent, cube)
     mesh%vp%np = mesh%np_global
     mesh%vp%npart  = 1
   end if
+
+  call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
 
   call mesh_get_vol_pp(mesh%sb)
 

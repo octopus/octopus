@@ -32,7 +32,6 @@ module mesh_partition_m
   use loct_m
   use math_m
   use mesh_m
-  use mesh_cube_map_m
   use messages_m
   use mpi_m
   use multicomm_m
@@ -95,7 +94,7 @@ contains
 #endif
 
     type(stencil_t) :: stencil
-    integer :: ip, iix, iiy, iiz, center(3)
+    integer :: ip, center(3)
     integer :: im, ii, nn
     integer :: stencil_to_use, default_method, method
     integer :: library
@@ -376,19 +375,12 @@ contains
     case(PFFT_PART)
 #ifdef HAVE_PFFT
       part = 0
-
-      ASSERT(associated(mesh%cube_map%map))
-
       center(1:3) = cube%n(1:3)/2 + 1
-      do im = 1, mesh%cube_map%nmap
-        ip = mesh%cube_map%map(MCM_POINT, im)
-        nn = mesh%cube_map%map(MCM_COUNT, im)
-        iix = mesh%idx%lxyz(ip, 1) + center(1)
-        iiy = mesh%idx%lxyz(ip, 2) + center(2)
-        iiz = mesh%idx%lxyz(ip, 3) + center(3)
-        forall(ii = 0:nn - 1) part(ip + ii) = cube%part(iix, iiy, iiz + ii)
+      do ip = 1, mesh%np_global
+        call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix(1:3))
+        ix(1:3) = ix(1:3) + center(1:3)
+        part(ip) = cube%part(ix(1), ix(2), ix(3))
       end do
-
 #endif
     end select
 

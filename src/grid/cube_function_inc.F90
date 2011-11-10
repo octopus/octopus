@@ -219,7 +219,6 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
 end subroutine X(cube_to_mesh)
 
-#ifdef HAVE_PFFT
 ! ---------------------------------------------------------
 !> The next two subroutines convert a function between the normal
 !! mesh and the cube in parallel.
@@ -275,7 +274,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
   do ix = min_x, max_x - 1
     do iy = min_y, max_y - 1
       do iz = min_z, max_z - 1
-        cf%pRS(cube_get_pfft_index(cube, ix, iy, iz)) = M_ZERO
+        cf%pRS(cube_global2local(cube, ix, iy, iz)) = M_ZERO
       end do
     end do
   end do
@@ -292,21 +291,24 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
         iz = mesh%idx%lxyz(ip, 3) + center(3)
         do ii = 0, nn - 1
           if (iz+ii >= min_z .and. iz+ii < max_z) then      
+#ifdef HAVE_PFFT
             if (pfft_part_) then 
               if (cube%pfft%is_real == 0) then
-                cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = &
+                cf%pRS(cube_global2local(cube,ix,iy,iz+ii)) = &
                      TOCMPLX(real(mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))),M_ZERO)
               else
-                cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
+                cf%pRS(cube_global2local(cube,ix,iy,iz+ii)) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
               end if
+
             else
               if (cube%pfft%is_real == 0) then
-                cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = TOCMPLX(real(gmf(ip + ii)),M_ZERO)
+                cf%pRS(cube_global2local(cube,ix,iy,iz+ii)) = TOCMPLX(real(gmf(ip + ii)),M_ZERO)
               else 
-                cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)) = gmf(ip + ii)
+                cf%pRS(cube_global2local(cube,ix,iy,iz+ii)) = gmf(ip + ii)
               end if
             end if
           else
+#endif
             cycle
           end if
         end do
@@ -380,11 +382,13 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
           iz = mesh%idx%lxyz(ip, 3) + center(3)
           do ii = 0, nn - 1
             if (iz+ii >= min_z .and. iz+ii < max_z) then  
+#ifdef HAVE_PFFT
               if (cube%pfft%is_real == 0) then
-                mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii))
+                mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = cf%pRS(cube_global2local(cube,ix,iy,iz+ii))
               else
-                mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = real(cf%pRS(cube_get_pfft_index(cube,ix,iy,iz+ii)))
+                mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = real(cf%pRS(cube_global2local(cube,ix,iy,iz+ii)))
               end if
+#endif
             else
               cycle
             end if
@@ -393,23 +397,24 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
       end if
     end do
   else
+
     !collect the data in all processes
     call profiling_in(prof_g,"PFFT_GATV")
     
     SAFE_ALLOCATE(tmp(cube%np))
     SAFE_ALLOCATE(gcf(cube%n(1)*cube%n(2)*cube%n(3)))
     tmp(1:cube%np) = real(cf%pRS(1:cube%np))
-    
+#ifdef HAVE_MPI
     call MPI_Allgatherv ( tmp(1), &
          cube%block_sizes(mpi_world%rank+1), MPI_FLOAT, &
          gcf(1), cube%block_sizes(1),cube%begin_indexes - 1, &
          MPI_FLOAT, mpi_world%comm, mpi_err )
+#endif
     if (mpi_err /= 0) then
       write(message(1),'(a)')"MPI_Allgatherv failed in cube_to_mesh_parallel"
       call messages_fatal(1)
     end if
     call profiling_out(prof_g) 
-
     SAFE_DEALLOCATE_A(tmp)
 
     ! cube to mesh
@@ -463,8 +468,6 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
   POP_SUB(X(cube_to_mesh_parallel))
 
 end subroutine X(cube_to_mesh_parallel)
-
-#endif
 
 !! Local Variables:
 !! mode: f90

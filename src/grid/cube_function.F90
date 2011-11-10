@@ -47,14 +47,12 @@ module cube_function_m
     dcube_function_free_RS,        &
     zcube_function_free_RS,        &
     cube_function_surface_average, &
+    cube_function_surface_average_parallel, &
     cube_function_phase_factor,    &
-#ifdef HAVE_PFFT
     dmesh_to_cube_parallel,        &
     zmesh_to_cube_parallel,        &
     dcube_to_mesh_parallel,        &
     zcube_to_mesh_parallel,        &
-    cube_function_surface_average_parallel, &
-#endif
     dmesh_to_cube,                 &
     zmesh_to_cube,                 &
     dcube_to_mesh,                 &
@@ -64,10 +62,9 @@ module cube_function_m
     FLOAT, pointer :: dRS(:, :, :)  !< real-space grid
     CMPLX, pointer :: zRS(:, :, :)  !< real-space grid, complex numbers
     CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid
-#ifdef HAVE_PFFT
-    CMPLX, pointer :: pRS(:)
-    CMPLX, pointer :: pFS(:)
-#endif
+
+    CMPLX, pointer :: pRS(:) !< real-space grid, complex number, in parallel
+    CMPLX, pointer :: pFS(:) !< fourier-space grid, in parallel
   end type cube_function_t
 
   type(profile_t), save :: prof_m2c, prof_c2m
@@ -132,7 +129,6 @@ contains
     POP_SUB(cube_function_surface_average)
   end function cube_function_surface_average
 
-#ifdef HAVE_PFFT
   FLOAT function cube_function_surface_average_parallel(cube, cf) result(x)
     type(cube_t),          intent(in) :: cube
     type(cube_function_t), intent(in) :: cf
@@ -141,7 +137,8 @@ contains
     FLOAT :: tmp_x
 
     PUSH_SUB(cube_function_surface_average_parallel)
-npoints = 0
+
+    npoints = 0
     tmp_x = M_ZERO
     do ii = 1, cube%rs_n(1)
       do jj = 1, cube%rs_n(2)
@@ -152,7 +149,7 @@ npoints = 0
           if ( (ix == 1 .or. ix == cube%n(1)                                          ) .or. &
              ( (iy == 1 .or. iy == cube%n(2)) .and. (ix /= 1 .and. ix /= cube%n(1))   ) .or. &
              ( (iz == 1 .or. iz == cube%n(3)) .and. (ix /= 1 .and. ix /= cube%n(1) .and. iy /= 1 .and. iy /= cube%n(2))) ) then
-            tmp_x = tmp_x + real(cf%pRS(cube_get_pfft_index(cube, ix, iy, iz)))
+            tmp_x = tmp_x + real(cf%pRS(cube_global2local(cube, ix, iy, iz)))
           end if
         end do
       end do
@@ -169,7 +166,6 @@ npoints = 0
 
     POP_SUB(cube_function_surface_average_parallel)
   end function cube_function_surface_average_parallel
-#endif
 
   ! ---------------------------------------------------------
   ! this routine computes
@@ -217,11 +213,10 @@ npoints = 0
     nullify(cf%zRS)
     nullify(cf%dRS)
     nullify(cf%FS)
-#ifdef HAVE_PFFT
+
     nullify(cf%pRS)
     nullify(cf%pFS)
-#endif
-    
+
     POP_SUB(cube_function_null) 
   end subroutine cube_function_null
 
@@ -234,10 +229,9 @@ npoints = 0
     SAFE_DEALLOCATE_P(cf%dRS)
     SAFE_DEALLOCATE_P(cf%zRS)
     SAFE_DEALLOCATE_P(cf%FS)
-#ifdef HAVE_PFFT
-    SAFE_DEALLOCATE_P(cf%pRS)
-    SAFE_DEALLOCATE_P(cf%pFS)
-#endif
+
+    nullify(cf%pRS)
+    nullify(cf%pFS)
 
     POP_SUB(cube_function_end)
   end subroutine cube_function_end
