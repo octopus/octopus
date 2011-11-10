@@ -546,20 +546,25 @@ contains
         end do
         fluence = fluence * dt_
 
-        ! Ponderomotive Energy is the cycle-averaged kinetic energy of 
-        ! a free electron quivering in the field 
-        ! Up = E^2/(4*\omega^2)
-        Up = maxfield/(4*lasers(il)%omega**2)
-
         write(iunit,'(a,es17.6,3a)') '   Peak intensity       = ', max_intensity, ' [a.u]'
         write(iunit,'(a,es17.6,3a)') '                        = ', &
           max_intensity * 6.4364086e+15, ' [W/cm^2]'
         write(iunit,'(a,es17.6,a)')  '   Int. intensity       = ', fluence, ' [a.u]'
         write(iunit,'(a,es17.6,a)')  '   Fluence              = ', &
           fluence / CNST(5.4525289841210) , ' [a.u]'
-        write(iunit,'(a,es17.6,3a)') '   Ponderomotive energy = ', &
-          units_from_atomic(units_out%energy, Up) ,& 
-          ' [', trim(units_abbrev(units_out%energy)), ']'
+        if(lasers(il)%omega/=0.0)then
+          ! Ponderomotive Energy is the cycle-averaged kinetic energy of 
+          ! a free electron quivering in the field 
+          ! Up = E^2/(4*\omega^2)
+          !
+          ! subroutine laser_to_numerical_all sets lasers%omega to zero
+          !
+          Up = maxfield/(4*lasers(il)%omega**2)
+
+          write(iunit,'(a,es17.6,3a)') '   Ponderomotive energy = ', &
+            units_from_atomic(units_out%energy, Up) ,& 
+            ' [', trim(units_abbrev(units_out%energy)), ']'
+        end if
       end if
 
     end do

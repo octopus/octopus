@@ -100,15 +100,14 @@ program dielectric_function
   call messages_warning(4)
 
   in_file = io_open('td.general/gauge_field', action='read', status='old', die=.false.)
-  call io_skip_header(in_file)
-  call count_time_steps(in_file, time_steps, dt)
-  
-  time_steps = time_steps + 1
-
   if(in_file < 0) then 
     message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field'))//"'"
     call messages_fatal(1)
   end if
+  call io_skip_header(in_file)
+  call count_time_steps(in_file, time_steps, dt)
+  
+  time_steps = time_steps + 1
 
   SAFE_ALLOCATE(vecpot(1:time_steps, space%dim*3))
   

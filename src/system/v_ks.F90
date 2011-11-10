@@ -18,7 +18,7 @@
 !! $Id$
 
 #include "global.h"
-
+ 
 module v_ks_m
   use berry_m
   use datasets_m
@@ -891,8 +891,10 @@ contains
 
     if (ks%calc%calc_energy .and. poisson_get_solver(ks%hartree_solver) == POISSON_SETE) then !SEC
       hm%energy%hartree = hm%energy%hartree + poisson_energy(ks%hartree_solver)
-      write(89,*) hm%energy%hartree*CNST(2.0)*CNST(13.60569193), poisson_energy(ks%hartree_solver)*CNST(2.0)*CNST(13.60569193), &
-        hm%ep%eii*CNST(2.0)*CNST(13.60569193)
+      ! can not find any reference to unit 89 anywhere else in the code forgotten debug write?
+      !write(89,*) hm%energy%hartree*CNST(2.0)*CNST(13.60569193), &
+      !  poisson_energy(ks%hartree_solver)*CNST(2.0)*CNST(13.60569193), &
+      !  hm%ep%eii*CNST(2.0)*CNST(13.60569193)
     endif
 
     POP_SUB(v_ks_hartree)

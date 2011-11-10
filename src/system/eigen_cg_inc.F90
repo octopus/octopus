@@ -34,7 +34,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   real(8)  :: cg0, e0, res
   integer  :: p, iter, maxter, idim, ip
-  logical  :: verbose_
   R_TYPE   :: sb(3)
 
   PUSH_SUB(X(eigensolver_cg2))
@@ -224,8 +223,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   SAFE_DEALLOCATE_A(cg)
   SAFE_DEALLOCATE_A(ppsi)
 
-  if(verbose_) call messages_print_stress(stdout)
-
   POP_SUB(X(eigensolver_cg2))
 end subroutine X(eigensolver_cg2)
 
@@ -233,6 +230,7 @@ end subroutine X(eigensolver_cg2)
 ! ---------------------------------------------------------
 !> The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
 subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, verbose)
+  intrinsic :: present
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in)    :: hm
@@ -244,7 +242,6 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   logical,   optional, intent(in)    :: verbose
 
   integer :: nst, dim, ist, maxter, i, conv, ip, idim
-  logical :: verbose_
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
        gamma, sol(2), alpha, beta, theta, theta2, res ! Could be complex?
@@ -407,7 +404,10 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   SAFE_DEALLOCATE_A(sd)
   SAFE_DEALLOCATE_A(cgp)
   SAFE_DEALLOCATE_A(orthogonal)
-  if(verbose_) call messages_print_stress(stdout)
+
+  if(present(verbose))then
+    if(verbose)call messages_print_stress(stdout)
+  end if
 
   POP_SUB(X(eigensolver_cg2_new))
 end subroutine X(eigensolver_cg2_new)

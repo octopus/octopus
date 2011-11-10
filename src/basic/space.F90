@@ -65,3 +65,8 @@ contains
   end subroutine space_end
 
 end module space_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

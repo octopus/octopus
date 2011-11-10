@@ -352,6 +352,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
 
       call X(hamiltonian_apply_batch)(hm, gr%der, kresb, resb, ik)
 
+      ! bsize is not being initialized
       niter = niter + 2*bsize
 
       call X(mesh_batch_dotp_vector)(gr%mesh, kresb, kresb, me2(1, :), reduce = .false.)

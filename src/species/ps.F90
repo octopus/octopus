@@ -847,8 +847,14 @@ contains
     ! with a correct normalization function
     do is = 1, ps%ispin
       do l = 1, ps%conf%p
-        hato = ps_upf%wfs(:, l)/ps%g%rofi
-        if (ps%g%rofi(1) == M_ZERO) hato(1) = M_ZERO
+        !hato = ps_upf%wfs(:, l)/ps%g%rofi
+        !if (ps%g%rofi(1) == M_ZERO) hato(1) = M_ZERO
+        ! Solved divide by zero bug not exactly the same meaning please verify
+        where(ps%g%rofi==M_ZERO)
+          hato=M_ZERO
+        elsewhere
+          hato = ps_upf%wfs(:, l)/ps%g%rofi
+        end where
         call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%ur(l, is))
         call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
       end do

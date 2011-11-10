@@ -435,7 +435,7 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
   ll = 1
   do ii = 1, dim
     ll(ii) = size(PESK,ii) 
-  end do 
+  end do
 
   step= Estep
   nn  = int(Emax/step)
@@ -476,62 +476,65 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
             end if
           end if
 
-        end do 
+        end do
       end do
-    end do 
-   
-    do ii = 2, nn
-      EE = (ii-1)*step
-      !Multiply for the correct Jacobian factor
-      pes(ii) = pes(ii)*sqrt(M_TWO*EE)**(dim - 2) 
-      pes(ii) = pes(ii) / npoints(ii)
     end do
- 
 
-  ! Interpolate the output
+    do ii = 2, nn
+      ! npoints==0.0 when pes==0.0
+      if(pes(ii)/=0.0)then
+        EE = (ii-1)*step
+        !Multiply for the correct Jacobian factor
+        pes(ii) = pes(ii)*sqrt(M_TWO*EE)**(dim - 2) 
+        pes(ii) = pes(ii) / npoints(ii)
+      end if
+    end do
+
+
+    ! Interpolate the output
   else
-    
+
     call PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
-    
+
     select case(dim)
-      case(2)
-      
-        do ii = 1, nn
-          EE = (ii-1)*step
-          do ith = 0, Ntheta
-            theta = ith*Dtheta
-            KK(1) = sqrt(2*EE)*cos(theta) 
-            KK(2) = sqrt(2*EE)*sin(theta)
-            pes(ii) = pes(ii) + qshep_interpolate(interp, cube_f, KK(1:2))
+    case(2)
+
+      do ii = 1, nn
+        EE = (ii-1)*step
+        do ith = 0, Ntheta
+          theta = ith*Dtheta
+          KK(1) = sqrt(2*EE)*cos(theta) 
+          KK(2) = sqrt(2*EE)*sin(theta)
+          pes(ii) = pes(ii) + qshep_interpolate(interp, cube_f, KK(1:2))
+        end do
+      end do
+
+      pes = pes * Dtheta
+
+    case(3)
+
+      do ii = 1, nn
+        EE = (ii-1)*step
+        do ith = 0, Ntheta
+          theta = ith * Dtheta
+          do iph = 0, Nphi
+            phi = iph * Dphi
+            KK(1) = sqrt(M_TWO*EE)*sin(phi)*cos(theta) 
+            KK(2) = sqrt(M_TWO*EE)*sin(phi)*sin(theta)
+            KK(3) = sqrt(M_TWO*EE)*cos(phi)
+            pes(ii) = pes(ii) + qshep_interpolate(interp, cube_f, KK(1:3))
           end do
         end do
-        
-        pes = pes * Dtheta
-        
-      case(3)
-        
-        do ii = 1, nn
-          EE = (ii-1)*step
-          do ith = 0, Ntheta
-            theta = ith * Dtheta
-            do iph = 0, Nphi
-              phi = iph * Dphi
-              KK(1) = sqrt(M_TWO*EE)*sin(phi)*cos(theta) 
-              KK(2) = sqrt(M_TWO*EE)*sin(phi)*sin(theta)
-              KK(3) = sqrt(M_TWO*EE)*cos(phi)
-              pes(ii) = pes(ii) + qshep_interpolate(interp, cube_f, KK(1:3))
-            end do
-          end do
-          pes(ii) = pes(ii) * sqrt(M_TWO*EE)    
-        end do
-        
-        pes = pes * Dtheta * Dphi
-        
+        pes(ii) = pes(ii) * sqrt(M_TWO*EE)    
+      end do
+
+      pes = pes * Dtheta * Dphi
+
     end select
 
     call PES_mask_interpolator_end(cube_f, interp)
 
-  end if 
+  end if
 
 
   if (interpolate) then 

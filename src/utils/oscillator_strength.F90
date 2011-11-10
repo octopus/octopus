@@ -54,6 +54,7 @@ module oscillator_strength_m
   integer             :: mode
   FLOAT               :: dt
 
+
   contains
 
 
@@ -223,6 +224,7 @@ program oscillator_strength
   call io_end()
   call datasets_end()
   call global_end()
+
 end program oscillator_strength
 ! ---------------------------------------------------------
 
@@ -1297,7 +1299,6 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   SAFE_DEALLOCATE_A(tarray)
 end subroutine print_omega_file
 ! ---------------------------------------------------------
-
 
 !! Local Variables:
 !! mode: f90
