@@ -310,7 +310,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
   integer, parameter :: sweeps = 5
   integer, parameter :: sd_steps = 2
 
-  integer :: isd, ist, sst, est, bsize, ib, ii
+  integer :: isd, ist, sst, est, ib, ii
   R_TYPE  :: ca, cb, cc
   R_TYPE, allocatable :: res(:, :, :), lambda(:)
   R_TYPE, allocatable :: kres(:, :, :)
@@ -352,8 +352,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
 
       call X(hamiltonian_apply_batch)(hm, gr%der, kresb, resb, ik)
 
-      ! bsize is not being initialized
-      niter = niter + 2*bsize
+      niter = niter + 2*(est - sst + 1)
 
       call X(mesh_batch_dotp_vector)(gr%mesh, kresb, kresb, me2(1, :), reduce = .false.)
       call X(mesh_batch_dotp_vector)(gr%mesh, st%psib(ib, ik),  kresb, me2(2, :), reduce = .false.)
