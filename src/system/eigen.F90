@@ -62,7 +62,6 @@ module eigensolver_m
 
   type eigensolver_t
     integer :: es_type    ! which eigensolver to use
-    logical :: verbose    ! If true, the solver prints additional information.
 
     logical :: subspace_diag
     
@@ -160,14 +159,7 @@ contains
       call messages_fatal(2)
     end if
 
-    !%Variable EigensolverVerbose
-    !%Type logical
-    !%Default no
-    !%Section SCF::Eigensolver
-    !%Description
-    !% If enabled, the eigensolver prints additional information.
-    !%End
-    call parse_logical(datasets_check('EigensolverVerbose'), .false., eigens%verbose)
+    call messages_obsolete_variable('EigensolverVerbose')
 
     !%Variable EigensolverSubspaceDiag
     !%Type logical

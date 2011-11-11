@@ -229,7 +229,7 @@ end subroutine X(eigensolver_cg2)
 
 ! ---------------------------------------------------------
 !> The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
-subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, verbose)
+subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
   intrinsic :: present
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(inout) :: st
@@ -239,7 +239,6 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   integer,             intent(inout) :: converged
   integer,             intent(in)    :: ik
   FLOAT,     optional, intent(out)   :: diff(1:st%nst)
-  logical,   optional, intent(in)    :: verbose
 
   integer :: nst, dim, ist, maxter, i, conv, ip, idim
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
@@ -404,10 +403,6 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff, 
   SAFE_DEALLOCATE_A(sd)
   SAFE_DEALLOCATE_A(cgp)
   SAFE_DEALLOCATE_A(orthogonal)
-
-  if(present(verbose))then
-    if(verbose)call messages_print_stress(stdout)
-  end if
 
   POP_SUB(X(eigensolver_cg2_new))
 end subroutine X(eigensolver_cg2_new)
