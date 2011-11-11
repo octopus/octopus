@@ -200,7 +200,7 @@ contains
     ! For this reason, all ranks are incremented by one.
     integer                     :: npart            !< Number of partitions.
     integer                     :: np_enl           !< Number of points in enlargement.
-    integer                     :: ip, jp, jj, index, inode, jnode !< Counters.
+    integer                     :: ip, jp, kp, jj, index, inode, jnode !< Counters.
     integer, allocatable        :: ir(:), irr(:, :) !< Counters.
     integer                     :: rank             !< Rank of current node.
     integer                     :: p1(MAX_DIM)      !< Points.
@@ -438,16 +438,16 @@ contains
       ! Create hash table.
       call iihash_init(vp%global(inode), vp%np_local(inode) + vp%np_ghost(inode) + vp%np_bndry(inode))
       ! Insert local points.
-      do ip = 1, vp%np_local(inode)
-        call iihash_insert(vp%global(inode), vp%local(vp%xlocal(inode) + ip - 1), ip)
+      do kp = 1, vp%np_local(inode)
+        call iihash_insert(vp%global(inode), vp%local(vp%xlocal(inode) + kp - 1), kp)
       end do
       ! Insert ghost points.
-      do ip = 1, vp%np_ghost(inode)
-        call iihash_insert(vp%global(inode), vp%ghost(vp%xghost(inode) + ip - 1), ip + vp%np_local(inode))
+      do kp = 1, vp%np_ghost(inode)
+        call iihash_insert(vp%global(inode), vp%ghost(vp%xghost(inode) + kp - 1), kp + vp%np_local(inode))
       end do
       ! Insert boundary points.
-      do ip = 1, vp%np_bndry(inode)
-        call iihash_insert(vp%global(inode), vp%bndry(vp%xbndry(inode) + ip - 1), ip + vp%np_local(inode) + vp%np_ghost(inode))
+      do kp = 1, vp%np_bndry(inode)
+        call iihash_insert(vp%global(inode), vp%bndry(vp%xbndry(inode) + kp - 1), kp + vp%np_local(inode) + vp%np_ghost(inode))
       end do
     end do
     ! Complete entries in vp.

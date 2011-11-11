@@ -121,6 +121,7 @@ contains
     type(ialist_t), intent(inout) :: l
   
     integer                 :: i
+    logical                 :: found
     type(iacons_t), pointer :: ptr
 
     ! List is empty.
@@ -134,16 +135,18 @@ contains
     else
       ! Look for key in list.
       ptr => l%head
+      found = .false.
       do i = 1, l%length
         ! If found, replace key`s value.
         if(ptr%key.eq.key) then
           ptr%val = val
+          found = .true.
           exit
         end if
         ptr => ptr%next
       end do
       ! If not found, prepend a new cons to the list.
-      if(i.gt.l%length) then
+      if(.not. found) then
         SAFE_ALLOCATE(ptr)
         ptr%key  =  key
         ptr%val  =  val
