@@ -111,9 +111,9 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
     ASSERT(associated(hm%hm_base%kinetic))
-    call profiling_in(prof_kinetic, "KINETIC")
+    call profiling_in(prof_kinetic_start, "KINETIC_START")
     call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
-    call profiling_out(prof_kinetic)
+    call profiling_out(prof_kinetic_start)
   end if
 
   if (hm%ep%non_local .and. iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
@@ -123,9 +123,9 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   end if
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
-    call profiling_in(prof_kinetic, "KINETIC")
+    call profiling_in(prof_kinetic_finish, "KINETIC_FINISH")
     call X(derivatives_batch_finish)(handle)
-    call profiling_out(prof_kinetic)
+    call profiling_out(prof_kinetic_finish)
   else
     call batch_set_zero(hpsib)
   end if

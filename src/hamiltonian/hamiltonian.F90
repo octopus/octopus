@@ -192,7 +192,7 @@ module hamiltonian_m
     KOHN_SHAM_DFT         = 4, &
     CLASSICAL             = 5
 
-  type(profile_t), save :: prof_hamiltonian, prof_vlpsi, prof_kinetic
+  type(profile_t), save :: prof_hamiltonian, prof_vlpsi, prof_kinetic_start, prof_kinetic_finish
 
 contains
 
