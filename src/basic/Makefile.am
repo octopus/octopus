@@ -129,7 +129,7 @@ calc_mode.o : calc_mode.F90 multicomm.o messages.o
 blacs_proc_grid.o : blacs_proc_grid.F90 blacs.o mpi.o profiling.o messages.o global.o
 comm.o : comm.F90 comm_inc.F90 mpi.o messages.o global.o profiling.o
 
-ialist.o : ialist.F90 messages.o profiling.o
+ialist.o : ialist.F90 global.o messages.o profiling.o
 iihash.o : iihash.F90 ialist.o global.o
 lookup.o : lookup.F90 global.o messages.o profiling.o
 utils.o : utils.F90 messages.o global.o unit.o unit_system.o

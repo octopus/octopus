@@ -23,6 +23,7 @@
 ! values. It is used by the separate changing hash-table implementation.
 
 module ialist_m
+  use global_m
   use messages_m
   use profiling_m
 
@@ -57,8 +58,12 @@ contains
   subroutine ialist_init(l)
     type(ialist_t), intent(out) :: l
 
+    PUSH_SUB(ialist_init)
+
     l%length = 0
     nullify(l%head)
+
+    POP_SUB(ialist_init)
   end subroutine ialist_init
 
 
@@ -69,12 +74,16 @@ contains
 
     type(iacons_t), pointer :: old_head
 
+    PUSH_SUB(ialist_drop)
+
     if(l%length.gt.0) then
       old_head => l%head
       l%head => l%head%next
       SAFE_DEALLOCATE_P(old_head)
       l%length = l%length - 1
     end if
+
+    POP_SUB(ialist_drop)
   end subroutine ialist_drop
 
 
@@ -86,6 +95,8 @@ contains
 
     integer                 :: i
     type(iacons_t), pointer :: ptr
+
+    PUSH_SUB(ialist_delete)
 
     ! Deletions are only possible from nonempty lists.
     if (l%length.ge.1) then
@@ -109,6 +120,8 @@ contains
         end if
       end if
     end if
+
+    POP_SUB(ialist_delete)
   end subroutine ialist_delete
 
 
@@ -200,11 +213,15 @@ contains
 
     integer :: i
 
+    PUSH_SUB(ialist_end)
+
     do i = 1, l%length
       call ialist_drop(l)
     end do
     l%length = 0
     nullify(l%head)
+
+    POP_SUB(ialist_end)
   end subroutine ialist_end
 end module ialist_m
 
