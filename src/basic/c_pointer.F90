@@ -26,7 +26,7 @@ module c_pointer_types_m
   
   type, public :: c_ptr 
     private 
-    integer, pointer :: p=>null()
+    integer, pointer :: p 
   end type c_ptr
   
 end module c_pointer_types_m

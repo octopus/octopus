@@ -51,8 +51,8 @@ module io_m
     io_file_exists
 
   integer, parameter :: min_lun=10, max_lun=99
-  logical            :: lun_is_free(min_lun:max_lun)=.true.
-  character(len=512) :: work_dir="."    ! name of the output directory
+  logical            :: lun_is_free(min_lun:max_lun)
+  character(len=512) :: work_dir    ! name of the output directory
 
 contains
 
@@ -69,14 +69,17 @@ contains
 
     if(present(defaults)) then
       if(defaults) then
+        lun_is_free(min_lun:max_lun)=.true.
         stdin  = 5
         stdout = 6
         stderr = 0
+        work_dir = '.'
         flush_messages = .false.
         return
       end if
     end if
 
+    lun_is_free(min_lun:max_lun)=.true.
     stdin = 5
 
     !%Variable stdout
