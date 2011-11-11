@@ -866,15 +866,17 @@ end subroutine messages_end
       integer,  intent(in) :: iunit_out
 
       integer :: ii
+      character(len=200) :: tmpstr
 
-      write(iunit_out,'(a,i6,a,i6.6,f20.6,i8,a)', advance='no') "* I ", &
+      write(tmpstr,'(a,i6,a,i6.6,f20.6,i8,a)') "* I ", &
         sec, '.', usec, &
         loct_clock(), &
         get_memory_usage() / 1024, " | "
       do ii = no_sub_stack - 1, 1, -1
-        write(iunit_out,'(a)', advance='no') "..|"
+        write(tmpstr, '(2a)') trim(tmpstr), "..|"
       end do
-      write(iunit_out,'(a)') trim(sub_name)
+      write(tmpstr, '(2a)') trim(tmpstr), trim(sub_name)
+      call flush_msg(iunit_out, tmpstr)
 
     end subroutine push_sub_write
 
@@ -930,15 +932,17 @@ end subroutine messages_end
       integer, intent(in) :: iunit_out
 
       integer :: ii
+      character(len=200) :: tmpstr
 
-      write(iunit_out,'(a,i6,a,i6.6,f20.6,i8, a)', advance='no') "* O ", &
+      write(tmpstr,'(a,i6,a,i6.6,f20.6,i8, a)') "* O ", &
         sec, '.', usec, &
         loct_clock() - time_stack(no_sub_stack), &
         get_memory_usage() / 1024, " | "
       do ii = no_sub_stack - 1, 1, -1
-        write(iunit_out,'(a)', advance='no') "..|"
+        write(tmpstr,'(2a)') trim(tmpstr), "..|"
       end do
-      write(iunit_out,'(a)') trim(sub_stack(no_sub_stack))
+      write(tmpstr,'(2a)') trim(tmpstr), trim(sub_stack(no_sub_stack))
+      call flush_msg(iunit_out, tmpstr)
 
     end subroutine pop_sub_write
 

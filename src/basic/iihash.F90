@@ -64,6 +64,8 @@ contains
 
     integer :: prime_size, i, min_size
 
+    PUSH_SUB(iihash_init)
+
     if(size.lt.2) then
       min_size = 3
     else
@@ -76,6 +78,8 @@ contains
       call ialist_init(h%keyval(i))
     end do
     h%size = prime_size
+
+    POP_SUB(iihash_init)
   end subroutine iihash_init
 
 
@@ -86,10 +90,14 @@ contains
 
     integer :: i
 
+    PUSH_SUB(iihash_end)
+
     do i = 0, h%size-1
       call ialist_end(h%keyval(i))
     end do
     SAFE_DEALLOCATE_P(h%keyval)
+
+    POP_SUB(iihash_end)
   end subroutine iihash_end
 
 
@@ -138,8 +146,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns a the smallest prime number that is greater than k
-  ! bu using the Sieve of Eratosthenes.
+  ! Returns the smallest prime number that is greater than k
+  ! using the Sieve of Eratosthenes.
   integer function get_next_prime(k)
     integer, intent(in) :: k
 
