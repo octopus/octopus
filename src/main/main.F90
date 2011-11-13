@@ -179,6 +179,9 @@ program octopus
 #ifdef HAVE_M128D
     message(1) = trim(message(1))//' sse2'
 #endif
+#ifdef HAVE_M256D
+    message(1) = trim(message(1))//' avx'
+#endif
 #ifdef HAVE_BLUE_GENE
     message(1) = trim(message(1))//' bluegene'
 #endif

@@ -69,6 +69,9 @@ void print_config(){
 #ifdef HAVE_M128D
   printf("sse2 ");
 #endif
+#ifdef HAVE_M256D
+  printf("avx ");
+#endif
 #ifdef HAVE_BLUE_GENE
   printf("bluegene ");
 #endif
