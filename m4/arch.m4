@@ -62,6 +62,26 @@ CFLAGS="$acx_save_CFLAGS"
 AC_MSG_RESULT($acx_m256d)])
 
 ################################################################
+# Check whether the hardware accepts FMA4 instructions
+# ----------------------------------
+AC_DEFUN([ACX_FMA4],
+[AC_MSG_CHECKING([whether FMA4 instructions can be used])
+acx_save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS"
+AC_RUN_IFELSE([AC_LANG_PROGRAM( [
+#include <x86intrin.h>
+], [
+__m128d a __attribute__((aligned(16)));
+__m128d b __attribute__((aligned(16)));
+__m128d c __attribute__((aligned(16)));
+__m128d d __attribute__((aligned(16)));
+d =  _mm_macc_pd(a, b, c);
+ ])], 
+ [acx_fma4=yes], [acx_fma4=no], [cross compiling; assumed OK... $ac_c])
+CFLAGS="$acx_save_CFLAGS"
+AC_MSG_RESULT($acx_fma4)])
+
+################################################################
 # Check whether the compiler accepts Blue Gene extensions
 # ----------------------------------
 AC_DEFUN([ACX_BLUE_GENE],
@@ -96,6 +116,10 @@ if test x$acx_m256d = xyes ; then
 fi
 if test x$acx_m256d = xyes ; then
  AC_DEFINE(HAVE_M256D, 1, [compiler supports the m256d type])
+fi
+ACX_FMA4 
+if test x$acx_fma4 = xyes ; then
+ AC_DEFINE(HAVE_FMA4, 1, [compiler and hardware supports the FMA4 instructions])
 fi
 oct_arch=x86_64
 vector=$acx_m256d

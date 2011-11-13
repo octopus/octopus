@@ -28,13 +28,20 @@
 
 #ifdef HAVE_M256D
 #include <immintrin.h>
+#ifdef HAVE_FMA4
+#include <x86intrin.h>
+#endif
 #define VEC_SIZE 4
 #define VEC_TYPE __m256d
 #define VEC_LD(addr) _mm256_load_pd(addr)
 #define VEC_LDU(addr) _mm256_loadu_pd(addr)
 #define VEC_ST(addr, vec)  _mm256_store_pd(addr, vec)
 #define VEC_STU(addr, vec)  _mm256_storeu_pd(addr, vec)
+#ifdef HAVE_FMA4
+#define VEC_FMA(aa, bb, cc) _mm256_macc_pd(aa, bb, cc)
+#else
 #define VEC_FMA(aa, bb, cc) _mm256_add_pd(cc, _mm256_mul_pd(aa, bb))
+#endif
 #define VEC_SCAL(aa) _mm256_set1_pd(aa)
 #define VEC_ZERO _mm256_setzero_pd()
 
@@ -43,13 +50,20 @@
 
 #if !defined(HAVE_M256D) && defined(HAVE_M128D)
 #include <emmintrin.h>
+#ifdef HAVE_FMA4
+#include <x86intrin.h>
+#endif
 #define VEC_SIZE 2
 #define VEC_TYPE __m128d
 #define VEC_LD(addr) _mm_load_pd(addr)
 #define VEC_LDU(addr) _mm_loadu_pd(addr)
 #define VEC_ST(addr, vec)  _mm_store_pd(addr, vec)
 #define VEC_STU(addr, vec)  _mm_storeu_pd(addr, vec)
+#ifdef HAVE_FMA4
+#define VEC_FMA(aa, bb, cc) _mm_macc_pd(aa, bb, cc)
+#else
 #define VEC_FMA(aa, bb, cc) _mm_add_pd(cc, _mm_mul_pd(aa, bb))
+#endif
 #define VEC_SCAL(aa) _mm_set1_pd(aa)
 #define VEC_ZERO _mm_setzero_pd()
 
