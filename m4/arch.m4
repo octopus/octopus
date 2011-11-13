@@ -108,35 +108,47 @@ assembler=no
 blue_gene=no
 
 case "${host}" in
+##########################################
 x86_64*)
+
+oct_arch=x86_64
+assembler=no
+AC_DEFINE(OCT_ARCH_X86_64, 1, [This an x86_64 system])
+
+#SSE2
 ACX_M128D
-ACX_M256D
-if test x$acx_m256d = xyes ; then
- ACX_AVX
-fi
-if test x$acx_m256d = xyes ; then
- AC_DEFINE(HAVE_M256D, 1, [compiler supports the m256d type])
-fi
+vector=$acx_m128d
+vector_type="(sse2)"
+
+#FMA4
 ACX_FMA4 
 if test x$acx_fma4 = xyes ; then
  AC_DEFINE(HAVE_FMA4, 1, [compiler and hardware supports the FMA4 instructions])
 fi
-oct_arch=x86_64
-vector=$acx_m256d
-vector_type="(avx)"
+
+#AVX
 ac_enable_avx=yes
 AC_ARG_ENABLE(avx, AS_HELP_STRING([--disable-avx], [Disable the use of AVX vectorial instructions (x86_64)]), 
 	[ac_enable_avx=${enableval}])
 if test x$vector = xno ; then
  ac_enable_avx=no
 fi
-if test x$ac_enable_avx = xno ; then
- vector=$acx_m128d
- vector_type="(sse2)"
+if test x$ac_enable_avx = xyes ; then
+  ACX_M256D
+  if test x$acx_m256d = xyes ; then
+    ACX_AVX
+  fi
+else
+  AC_MSG_NOTICE([AVX instruction support disabled])
+  acx_m256d=no
 fi
-assembler=no
-AC_DEFINE(OCT_ARCH_X86_64, 1, [This an x86_64 system])
+if test x$acx_m256d = xyes ; then
+  AC_DEFINE(HAVE_M256D, 1, [compiler supports the m256d type])
+  vector=$acx_m256d
+  vector_type="(avx)"
+fi
 ;;
+##########################################
 i?86*)
 ACX_M128D
 vector=$acx_m128d
@@ -154,22 +166,27 @@ fi
 fi
 AC_DEFINE(OCT_ARCH_X86_64, 1, [This an x86 system])
 ;;	
+##########################################
 ia64*)
 oct_arch=ia64
 AC_DEFINE(OCT_ARCH_IA64, 1, [This an Itanium system])
 ;;
+##########################################
 sparc*)
 oct_arch=sparc
 AC_DEFINE(OCT_ARCH_SPARC, 1, [This a Sparc system])
 ;;
+##########################################
 alphaev*)
 oct_arch=alpha
 AC_DEFINE(OCT_ARCH_ALPHA, 1, [This an Alpha system])
 ;;
+##########################################
 mips*)
 oct_arch=mips
 AC_DEFINE(OCT_ARCH_MIPS, 1, [This a MIPS system])
 ;;
+##########################################
 powerpc*)
 oct_arch=powerpc
 AC_DEFINE(OCT_ARCH_POWERPC, 1, [This a PowerPC system])
@@ -178,6 +195,7 @@ blue_gene=$acx_blue_gene
 vector=$acx_blue_gene
 vector_type="(bg)"
 ;;
+##########################################
 *)
 oct_arch=unknown
 ;;
