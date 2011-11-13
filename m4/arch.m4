@@ -51,7 +51,7 @@ AC_MSG_RESULT($acx_m256d)])
 AC_DEFUN([ACX_AVX],
 [AC_MSG_CHECKING([whether AVX instructions can be used])
 acx_save_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -xAVX"
+CFLAGS="$CFLAGS"
 AC_RUN_IFELSE([AC_LANG_PROGRAM( [
 #include <immintrin.h>
 ], [
