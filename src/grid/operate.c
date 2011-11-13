@@ -38,8 +38,8 @@ void FC_FUNC_(operate_ri_vec,OPERATE_RI_VEC)(const int * opn,
 
   /* check whether we got aligned vectors or not */
   int aligned = 1;
-  aligned = aligned && (((long long) fi)%16 == 0);
-  aligned = aligned && (((long long) fo)%16 == 0);
+  aligned = aligned && (((long long) fi)%(8*VEC_SIZE) == 0);
+  aligned = aligned && (((long long) fo)%(8*VEC_SIZE) == 0);
   aligned = aligned && ((1<<ldf)%VEC_SIZE == 0);
 
   if(aligned){
