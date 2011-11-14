@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: cube_function.F90 8159 2011-08-09 01:45:03Z dstrubbe $
+!! $Id$
 
 #include "global.h"
 
@@ -39,6 +39,10 @@ module cube_m
     cube_t,             &
     cube_init,          &
     cube_global2local,  &
+    cube_local2global,  &
+    cube_index_to_coords, &
+    cube_index_from_coords, &
+    cube_local_index_from_coords, &
     cube_end
 
 
@@ -55,8 +59,9 @@ module cube_m
     integer :: fs_istart(1:3) !< where does the local portion of the cube start in fourier space
     integer :: np             !< the number of points in the local portion of the cube
 
+    integer, pointer :: lxyz(:,:)
+    integer, pointer :: lxyz_inv(:,:,:)
     integer, pointer :: part(:,:,:)            !< point -> partition
-    integer, pointer :: get_local_index(:,:,:) !< Mapping vector between local and global pfft indexing
     integer, pointer :: begin_indexes(:)       !< where does each process start
     integer, pointer :: block_sizes(:)         !< size of the block that is going to be used in the gatherv
 
@@ -83,8 +88,7 @@ contains
     type(simul_box_t), intent(in)  :: sb
     logical, optional, intent(in)  :: fft !< Is the cube going to be used to perform FFTs?
 
-    integer :: i1(1:3), i2(1:3)
-    integer :: step, ip, mpi_comm
+    integer :: mpi_comm
     logical :: fft_
 
     PUSH_SUB(cube_init)
@@ -125,13 +129,19 @@ contains
       cube%fft_library = FFTLIB_NONE
     end if
 
-
     select case (cube%fft_library)
     case (FFTLIB_NONE)
+      cube%rs_n = n
+      cube%fs_n(1) = cube%nx
+      cube%fs_n(2:3) = n(2:3)
+      cube%rs_istart = 1
+      cube%fs_istart = 1
       cube%parallel_in_domains = .false.
+      mpi_comm = -1
 
     case (FFTLIB_FFTW)
       cube%parallel_in_domains = .false.
+      mpi_comm = -1
 
       SAFE_ALLOCATE(cube%dfftw)
       SAFE_ALLOCATE(cube%zfftw)
@@ -140,10 +150,9 @@ contains
       call fft_init(cube%n, sb%dim, 1, cube%zfftw, optimize = .not.simul_box_is_periodic(sb))
       cube%nx = cube%n(1)/2 + 1
 
-      cube%np = cube%n(1)*cube%n(2)*cube%n(3)
-      cube%rs_n = n
+      cube%rs_n = cube%n
       cube%fs_n(1) = cube%nx
-      cube%fs_n(2:3) = n(2:3)
+      cube%fs_n(2:3) = cube%n(2:3)
       cube%rs_istart = 1
       cube%fs_istart = 1
 
@@ -152,17 +161,19 @@ contains
       cube%parallel_in_domains = .true.
 
       SAFE_ALLOCATE(cube%pfft)
-      call pfft_init(cube%n, sb%dim, 1, cube%np, cube%rs_istart, cube%fs_istart, cube%rs_n, &
+      call pfft_init(cube%n, sb%dim, 1, cube%rs_istart, cube%fs_istart, cube%rs_n, &
            cube%fs_n, mpi_comm, cube%pfft, optimize = .not.simul_box_is_periodic(sb))
       cube%nx = cube%n(1)/2 + 1
-      call mpi_grp_init(cube%mpi_grp, mpi_comm)
 #endif
     end select
+    cube%np = cube%rs_n(1)*cube%rs_n(2)*cube%rs_n(3)
 
-    if (cube%parallel_in_domains) then
-      call cube_do_mapping(cube)
-      call cube_partition_messages_debug(cube)
-    end if
+
+    call mpi_grp_init(cube%mpi_grp, mpi_comm)
+
+    call cube_do_mapping(cube)
+
+    if (cube%parallel_in_domains) call cube_partition_messages_debug(cube)
 
   POP_SUB(cube_init)
 end subroutine  cube_init
@@ -180,12 +191,11 @@ end subroutine  cube_init
     end if
 #endif  
 
-    if (cube%parallel_in_domains) then
-      SAFE_DEALLOCATE_P(cube%part)
-      SAFE_DEALLOCATE_P(cube%begin_indexes)
-      SAFE_DEALLOCATE_P(cube%block_sizes)
-      SAFE_DEALLOCATE_P(cube%get_local_index)
-    end if
+    SAFE_DEALLOCATE_P(cube%lxyz)
+    SAFE_DEALLOCATE_P(cube%lxyz_inv)
+    SAFE_DEALLOCATE_P(cube%part)
+    SAFE_DEALLOCATE_P(cube%begin_indexes)
+    SAFE_DEALLOCATE_P(cube%block_sizes)
 
     if(associated(cube%dfftw)) then
       call fft_end(cube%dfftw)
@@ -199,37 +209,68 @@ end subroutine  cube_init
     POP_SUB(cube_end)
   end subroutine  cube_end
 
-  !> returns the local index using the global x, y and z
-  integer function cube_global2local(cube, ix, iy, iz) result(index)
+  !> returns the local index from the global one
+  integer function cube_local2global(cube, index) result(ip)
     type(cube_t), intent(in) :: cube
-    integer,      intent(in) :: ix !< x index
-    integer,      intent(in) :: iy !< y index
-    integer,      intent(in) :: iz !< z index
-    
-    integer :: normalized(1:3)
+    integer,      intent(in) :: index !< local index
 
-    !normalize to the min values
-    normalized(1) = ix - cube%rs_istart(1) + 1 
-    normalized(2) = iy - cube%rs_istart(2) + 1 
-    normalized(3) = iz - cube%rs_istart(3) + 1 
-      
-    index = (normalized(1)-1) + &                              ! x component
-         ((normalized(2)-1) * cube%rs_n(1)) + &                ! y component
-         ((normalized(3)-1) * cube%rs_n(1) * cube%rs_n(2)) + 1 ! z component and the sum of 1
+    ip = cube%begin_indexes(cube%mpi_grp%rank+1) + index - 1
+
+  end function cube_local2global
+
+  !> returns the global index from the local one, 
+  !> or zero if the point does not belong to this partition.
+  integer function cube_global2local(cube, ip) result(index)
+    type(cube_t), intent(in) :: cube
+    integer,      intent(in) :: ip !< global index
+
+    index = 0
+    if (ip >= cube%begin_indexes(cube%mpi_grp%rank+1) .and. &
+        ip <=  cube%begin_indexes(cube%mpi_grp%rank+1) + cube%np - 1) then
+      index = ip - cube%begin_indexes(cube%mpi_grp%rank+1) + 1
+    end if
     
   end function cube_global2local
 
+  !> returns the local index using the global x, y and z
+  integer function cube_local_index_from_coords(cube, ix) result(index)
+    type(cube_t), intent(in) :: cube
+    integer,      intent(in) :: ix(:)
+
+    index = cube_global2local(cube, cube_index_from_coords(cube, ix))
+
+  end function cube_local_index_from_coords
+
+  !> returns the global index using the global x, y and z
+  integer function cube_index_from_coords(cube, ix) result(index)
+    type(cube_t), intent(in) :: cube
+    integer,      intent(in) :: ix(:)
+
+    index = cube%lxyz_inv(ix(1), ix(2), ix(3))
+
+  end function cube_index_from_coords
+
+  !> returns the global x, y and z using the globa lindex
+  subroutine cube_index_to_coords(cube, index, ix)
+    type(cube_t), intent(in)  :: cube
+    integer,      intent(in)  :: index
+    integer,      intent(out) :: ix(:)
+
+    ix(1:3) = cube%lxyz(index, 1:3)
+
+  end subroutine cube_index_to_coords
+
   ! ---------------------------------------------------------
-  !> do the mapping between global and local points of PFFT arrays
+  !> do the mapping between global and local points of the cube,
+  !> and between index and coordinates
   subroutine cube_do_mapping(cube)
     type(cube_t), intent(inout) :: cube
     
-    integer :: tmp_local(6), position, process,ii, jj, kk, index
-    integer, allocatable ::local_sizes(:)
-    type(profile_t), save ::  prof_gt, prof_a
+    integer :: tmp_local(6), position, process, ii, jj, kk, index
+    integer, allocatable :: local_sizes(:)
+    type(profile_t), save ::  prof_gt, prof_map
 
     PUSH_SUB(cube_do_mapping)
-    call profiling_in(prof_gt,"PFFT_GAT")
 
     !!BEGIN:gather the local information into a unique vector.
     !!do a gather in 3d of all the box, into a loop
@@ -238,21 +279,30 @@ end subroutine  cube_init
     tmp_local(3) = cube%rs_istart(3)
     tmp_local(4) = cube%rs_n(1)
     tmp_local(5) = cube%rs_n(2)
-    tmp_local(6) = cube%rs_n(3) 
+    tmp_local(6) = cube%rs_n(3)
 
-    SAFE_ALLOCATE(local_sizes(6*cube%mpi_grp%size))
+    if (cube%parallel_in_domains) then
+      SAFE_ALLOCATE(local_sizes(6*cube%mpi_grp%size))
+      call profiling_in(prof_gt,"CUBE_GAT")
 #ifdef HAVE_MPI
-    call MPI_Allgather(tmp_local, 6, MPI_INTEGER, local_sizes, 6, MPI_INTEGER,&
-                       cube%mpi_grp%comm, mpi_err)
+      call MPI_Allgather(tmp_local, 6, MPI_INTEGER, local_sizes, 6, MPI_INTEGER,&
+                         cube%mpi_grp%comm, mpi_err)
 #endif
-    call profiling_out(prof_gt)
+      call profiling_out(prof_gt)
+    else
+      SAFE_ALLOCATE(local_sizes(6))
+      local_sizes = tmp_local
+    end if
 
-    call profiling_in(prof_a,"PFFT_ALLOC")
+    call profiling_in(prof_map,"CUBE_MAP")
+
     SAFE_ALLOCATE(cube%part(cube%n(1), cube%n(2), cube%n(3)))
     SAFE_ALLOCATE(cube%begin_indexes(cube%mpi_grp%size))
     SAFE_ALLOCATE(cube%block_sizes(cube%mpi_grp%size))
-    SAFE_ALLOCATE(cube%get_local_index(cube%n(1),cube%n(2),cube%n(3)))
+    SAFE_ALLOCATE(cube%lxyz(cube%n(1)*cube%n(2)*cube%n(3), 3))
+    SAFE_ALLOCATE(cube%lxyz_inv(cube%n(1), cube%n(2), cube%n(3)))
 
+    index = 1
     do process = 1, cube%mpi_grp%size
       position = ((process-1)*6)+1
       if (position == 1) then
@@ -264,23 +314,26 @@ end subroutine  cube_init
         cube%block_sizes(process) = local_sizes(position+3)*local_sizes(position+4)*local_sizes(position+5)
       end if
 
-      !save the mapping between the global x,y,z and the local index and
-      !get the partition
-      index = 0
+      ! save the mapping between the global x,y,z and the global index
+      ! and determine the which partition the point belongs to
       do kk = local_sizes(position+2), local_sizes(position+2)+local_sizes(position+5)-1
         do jj = local_sizes(position+1), local_sizes(position+1)+local_sizes(position+4)-1
           do ii = local_sizes(position), local_sizes(position)+local_sizes(position+3)-1
             cube%part(ii,jj,kk) = process
-            cube%get_local_index(ii,jj,kk) = index + cube%begin_indexes(process)
+            cube%lxyz(index, 1) = ii
+            cube%lxyz(index, 2) = jj
+            cube%lxyz(index, 3) = kk
+            cube%lxyz_inv(ii, jj, kk) = index
             index = index + 1
           end do
         end do
       end do
     end do
 
+    call profiling_out(prof_map)
+
     SAFE_DEALLOCATE_A(local_sizes)
 
-    call profiling_out(prof_a)
     POP_SUB(cube_do_mapping)
   end subroutine cube_do_mapping
 

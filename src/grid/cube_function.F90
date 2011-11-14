@@ -133,26 +133,23 @@ contains
     type(cube_t),          intent(in) :: cube
     type(cube_function_t), intent(in) :: cf
 
-    integer ii, jj, kk, ix, iy, iz, npoints
+    integer ix(3), npoints, index, ip
     FLOAT :: tmp_x
 
     PUSH_SUB(cube_function_surface_average_parallel)
 
-    npoints = 0
     tmp_x = M_ZERO
-    do ii = 1, cube%rs_n(1)
-      do jj = 1, cube%rs_n(2)
-        do kk = 1, cube%rs_n(3)
-          ix = ii + cube%rs_istart(1) - 1
-          iy = jj + cube%rs_istart(2) - 1
-          iz = kk + cube%rs_istart(3) - 1
-          if ( (ix == 1 .or. ix == cube%n(1)                                          ) .or. &
-             ( (iy == 1 .or. iy == cube%n(2)) .and. (ix /= 1 .and. ix /= cube%n(1))   ) .or. &
-             ( (iz == 1 .or. iz == cube%n(3)) .and. (ix /= 1 .and. ix /= cube%n(1) .and. iy /= 1 .and. iy /= cube%n(2))) ) then
-            tmp_x = tmp_x + real(cf%pRS(cube_global2local(cube, ix, iy, iz)))
-          end if
-        end do
-      end do
+    do index = 1, cube%np
+      ip = cube_local2global(cube, index)
+      call cube_index_to_coords(cube, ip, ix)
+      if ( (  ix(1) == 1 .or. ix(1) == cube%n(1)         ) .or. &
+           ( (ix(2) == 1 .or.  ix(2) == cube%n(2)) .and.        &
+             (ix(1) /= 1 .and. ix(1) /= cube%n(1))       ) .or. &
+           ( (ix(3) == 1 .or.  ix(3) == cube%n(3)) .and.        &
+             (ix(1) /= 1 .and. ix(1) /= cube%n(1) .and.         &
+              ix(2) /= 1 .and. ix(2) /= cube%n(2))       )      ) then
+        tmp_x = tmp_x + real(cf%pRS(index))
+      end if
     end do
 
 #ifdef HAVE_MPI

@@ -202,11 +202,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pfft_init(nn, dim, is_real, np, rs_istart, fs_istart, rs_n, fs_n, mpi_comm, pfft, optimize)
+  subroutine pfft_init(nn, dim, is_real, rs_istart, fs_istart, rs_n, fs_n, mpi_comm, pfft, optimize)
     integer,           intent(inout) :: nn(1:3)
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: is_real
-    integer,           intent(out)   :: np
     integer,           intent(out)   :: rs_istart(1:3)
     integer,           intent(out)   :: fs_istart(1:3)
     integer,           intent(out)   :: rs_n(1:3)
@@ -308,7 +307,6 @@ contains
          mpi_comm, PFFT_TRANSPOSED_OUT, &
          tmp_rs_n, tmp_rs_istart, tmp_fs_n, tmp_fs_istart)
 
-    np = tmp_np
     rs_istart = tmp_rs_istart
     fs_istart = tmp_fs_istart
     rs_n = tmp_rs_n
