@@ -58,6 +58,31 @@ subroutine X(cube_function_free_RS)(cf)
 end subroutine X(cube_function_free_RS)
 
 ! ---------------------------------------------------------
+#ifdef HAVE_MPI
+subroutine X(cube_function_allgather)(cube, cf, cf_local)
+  type(cube_t),   intent(in) :: cube
+  R_TYPE,         intent(out) :: cf(:)
+  R_TYPE, target, intent(in)  :: cf_local(:)
+
+  type(profile_t), save :: prof_allgather
+
+  PUSH_SUB(X(cube_function_allgather))
+  call profiling_in(prof_allgather, "CF_ALLGATHER")
+
+  call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
+  call MPI_Allgatherv ( cf_local(1), &
+       cube%block_sizes(mpi_world%rank+1), MPI_FLOAT, &
+       cf(1), cube%block_sizes(1),cube%begin_indexes - 1, &
+       MPI_FLOAT, cube%mpi_grp%comm, mpi_err)
+  call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
+
+  call profiling_out(prof_allgather)
+
+  POP_SUB(X(cube_function_allgather))
+end subroutine X(cube_function_allgather)
+#endif
+
+! ---------------------------------------------------------
 !> The next two subroutines convert a function between the normal
 !! mesh and the cube.
 !! Note that the function in the mesh should be defined
@@ -316,8 +341,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
   integer :: last, first
   logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)
-  type(profile_t), save :: prof_g
-  FLOAT, allocatable :: tmp(:), gcf(:)
+  CMPLX, allocatable :: gcf(:)
 
   PUSH_SUB(X(cube_to_mesh_parallel))
 
@@ -364,23 +388,10 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
   else
 
     !collect the data in all processes
-    call profiling_in(prof_g,"PFFT_GATV")
-    
-    SAFE_ALLOCATE(tmp(cube%np))
-    SAFE_ALLOCATE(gcf(cube%n(1)*cube%n(2)*cube%n(3)))
-    tmp(1:cube%np) = real(cf%pRS(1:cube%np))
+    SAFE_ALLOCATE(gcf(cube%np_global))
 #ifdef HAVE_MPI
-    call MPI_Allgatherv ( tmp(1), &
-         cube%block_sizes(mpi_world%rank+1), MPI_FLOAT, &
-         gcf(1), cube%block_sizes(1),cube%begin_indexes - 1, &
-         MPI_FLOAT, mpi_world%comm, mpi_err )
+    call zcube_function_allgather(cube, gcf, cf%pRS)
 #endif
-    if (mpi_err /= 0) then
-      write(message(1),'(a)')"MPI_Allgatherv failed in cube_to_mesh_parallel"
-      call messages_fatal(1)
-    end if
-    call profiling_out(prof_g) 
-    SAFE_DEALLOCATE_A(tmp)
 
     ! cube to mesh
     do im = 1, mesh%cube_map%nmap
@@ -389,11 +400,20 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
 
       do ii = 0, nn - 1
         ixyz(1:3) = mesh%idx%lxyz(ip+ii, 1:3) + center(1:3)
-        if (mpi_world%size == 1) then                
+        if (mpi_world%size == 1) then
+#ifdef R_TCOMPLEX
           gmf(ip + ii) = gcf(cube_index_from_coords(cube, ixyz))
+#else
+          gmf(ip + ii) = real(gcf(cube_index_from_coords(cube, ixyz)))
+#endif
         else
           if (mesh%vp%part(ip+ii) == mesh%vp%partno) then
+#ifdef R_TCOMPLEX
             gmf(ip + ii) = gcf(cube_index_from_coords(cube, ixyz))
+#else
+            gmf(ip + ii) = real(gcf(cube_index_from_coords(cube, ixyz)))
+#endif
+
           end if
         end if
       end do

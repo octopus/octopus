@@ -49,6 +49,7 @@ module cube_m
   type cube_t
     integer :: n(1:3)      !< the global dimensions of the cube
     integer :: nx          ! = n(1)/2 + 1, first dimension of the FS array
+    integer :: np_global   !< the number of global points in the cube
 
     logical :: parallel_in_domains !< will the cube be divided in domains?
     type(mpi_grp_t) :: mpi_grp     !< the mpi group describing parallelization in domains
@@ -166,6 +167,7 @@ contains
       cube%nx = cube%n(1)/2 + 1
 #endif
     end select
+    cube%np_global = cube%n(1)*cube%n(2)*cube%n(3)
     cube%np = cube%rs_n(1)*cube%rs_n(2)*cube%rs_n(3)
 
 
