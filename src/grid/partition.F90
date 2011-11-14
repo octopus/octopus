@@ -66,8 +66,6 @@ contains
     type(partition_t), intent(out) :: this
     type(mesh_t),      intent(in)  :: mesh
 
-    PUSH_SUB(partition_init)
-    
     this%npart = mesh%mpi_grp%size
     this%npoints = mesh%np_part_global
 
@@ -78,7 +76,6 @@ contains
     SAFE_ALLOCATE(this%nlocal(1:this%npart))
     SAFE_ALLOCATE(this%nneigh(1:this%npart))
 
-    POP_SUB(partition_init)
   end subroutine partition_init
   ! ----------------------------------------------------------------------
 
@@ -94,7 +91,6 @@ contains
     logical, allocatable :: is_a_neigh(:, :), gotit(:)
 
     call profiling_in(prof, "PARTITION_BUILD")
-    PUSH_SUB(partition_build)
 
     SAFE_ALLOCATE(is_a_neigh(1:this%npart, 1:this%npart))
 
@@ -150,8 +146,10 @@ contains
     end forall
 
     SAFE_DEALLOCATE_A(is_a_neigh)
+    SAFE_DEALLOCATE_A(gotit)
+    SAFE_DEALLOCATE_A(jpcoords)
+    SAFE_DEALLOCATE_A(jp)
 
-    POP_SUB(partition_build)
     call profiling_out(prof)
   end subroutine partition_build
 
@@ -161,8 +159,6 @@ contains
     type(partition_t), intent(in) :: this
     
     integer :: ipart
-
-    PUSH_SUB(partition_write_info)
 
     ! Write information about partitions.
     message(1) = &
@@ -201,7 +197,6 @@ contains
     message(1) = ''
     call messages_info(1)
 
-    POP_SUB(partition_write_info)
   end subroutine partition_write_info
 
   ! ----------------------------------------------------------------------
@@ -209,15 +204,12 @@ contains
   subroutine partition_end(this)
     type(partition_t), intent(inout) :: this
 
-    PUSH_SUB(partition_end)
-
     SAFE_DEALLOCATE_P(this%point_to_part)
     SAFE_DEALLOCATE_P(this%nghost)
     SAFE_DEALLOCATE_P(this%nbound)
     SAFE_DEALLOCATE_P(this%nlocal)
     SAFE_DEALLOCATE_P(this%nneigh)
 
-    POP_SUB(partition_end)
   end subroutine partition_end
 
   ! ----------------------------------------------------------------------
@@ -226,8 +218,6 @@ contains
     type(partition_t), intent(in) :: this
     
     FLOAT :: scal
-
-    PUSH_SUB(partition_quality)
 
     scal = real(this%npart, REAL_PRECISION)/this%npoints
 
@@ -238,7 +228,6 @@ contains
 
     quality = M_ONE/(M_ONE + quality)
 
-    POP_SUB(partition_quality)
   end function partition_quality
 
   ! -----------------------------------------------------------------------
@@ -250,15 +239,12 @@ contains
     integer :: ip
     FLOAT :: rand
 
-    PUSH_SUB(partition_randomize)
-
     do ip = 1,this%npoints
       rand = loct_ran_flat(rng, M_ZERO, M_ONE)
       this%point_to_part(ip) = nint(rand*this%npart + M_HALF)
       ASSERT(this%point_to_part(ip) > 0 .and. this%point_to_part(ip) <= this%npart)
     end do
 
-    POP_SUB(partition_randomize)
   end subroutine partition_randomize
 
   ! ----------------------------------------------------------------------
@@ -271,8 +257,6 @@ contains
 
     FLOAT :: random
 
-    PUSH_SUB(partition_mutate)
-
     random = loct_ran_flat(rng, M_ZERO, M_ONE)
 
     if(random >= CNST(0.5)) then
@@ -281,29 +265,21 @@ contains
       call mutate_all()
     end if
 
-    POP_SUB(partition_mutate)
-
   contains
     
     subroutine mutate_all()
       integer :: ip
-
-      PUSH_SUB(partition_mutate.mutate_all)
 
       do ip = 1, this%npoints
         if(loct_ran_flat(rng, M_ZERO, M_ONE) < CNST(0.01)) then
           this%point_to_part(ip) = nint(loct_ran_flat(rng, M_ZERO, M_ONE)*this%npart + M_HALF)
         end if
       end do
-
-      POP_SUB(partition_mutate.mutate_all)
     end subroutine mutate_all
     
     subroutine mutate_contamination()
       integer :: istencil, ip, ipart, ipcoords(1:MAX_DIM)
       integer, allocatable :: jpcoords(:, :), jp(:)
-
-      PUSH_SUB(partition_mutate.mutate_contamination)
 
       SAFE_ALLOCATE(jpcoords(1:MAX_DIM, 1:stencil%size))
       SAFE_ALLOCATE(jp(1:stencil%size))
@@ -320,8 +296,6 @@ contains
       call index_from_coords_vec(mesh%idx, mesh%sb%dim, stencil%size, jpcoords, jp)
 
       forall(istencil = 1:stencil%size) this%point_to_part(jp(istencil)) = ipart
-
-      POP_SUB(partition_mutate.mutate_contamination)
     end subroutine mutate_contamination
     
 
@@ -337,8 +311,6 @@ contains
     type(partition_t), intent(inout) :: child2
 
     integer :: p1, p2, p3, p4, ip
-
-    PUSH_SUB(partition_crossover)
 
     ASSERT(parent1%npoints == parent2%npoints)
     ASSERT(parent1%npoints == child1%npoints)
@@ -365,7 +337,6 @@ contains
       child2%point_to_part(ip) = parent2%point_to_part(ip)
     end forall
 
-    POP_SUB(partition_crossover)
   end subroutine partition_crossover
   
   ! -----------------------------------------------------------
@@ -373,14 +344,10 @@ contains
     type(partition_t), intent(in)    :: parta
     type(partition_t), intent(inout) :: partb
 
-    PUSH_SUB(partition_copy)
-
     ASSERT(parta%npart == partb%npart)
     ASSERT(parta%npoints == partb%npoints)
 
     partb%point_to_part = parta%point_to_part
-
-    POP_SUB(partition_copy)
   end subroutine partition_copy
 
 end module partition_m
