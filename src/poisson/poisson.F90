@@ -720,12 +720,12 @@ contains
     ! This calculates the numerical potential
     call dpoisson_solve(psolver, vh, rho)
 
-    ! And this compares.
-    delta = dmf_nrm2(mesh, vh-vh_exact)
-
-    ! Output
+    ! Output results
     iunit = io_open("hartree_results", action='write')
-    write(iunit, '(a,f19.13)' ) 'Hartree test = ', delta
+    delta = dmf_nrm2(mesh, vh-vh_exact)
+    write(iunit, '(a,f19.13)' ) 'Hartree test (abs.) = ', delta
+    delta = delta/dmf_nrm2(mesh, vh_exact)
+    write(iunit, '(a,f19.13)' ) 'Hartree test (rel.) = ', delta
     
     ! Calculate the numerical Hartree energy (serially)
     lcl_hartree_nrg=M_ZERO

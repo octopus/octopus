@@ -8,16 +8,16 @@ Enabled    : Yes
 
 Precision : 0.005
 Input: 06-hartree_3d.01-isf.inp
-match ; ISF           ; GREP(hartree_results, 'Hartree test =', 15) ; 0.00035845
+match ; ISF           ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00035845
 
 Input: 06-hartree_3d.02-multigrid.inp
-match ; Multigrid     ; GREP(hartree_results, 'Hartree test =', 15) ; 0.00330663
+match ; Multigrid     ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00330663
 
 Input: 06-hartree_3d.03-fft.inp
-match ; FFT           ; GREP(hartree_results, 'Hartree test =', 15) ; 0.00035839
+match ; FFT           ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00035839
 
 Input: 06-hartree_3d.04-fft_corrected.inp
-match ; FFT Corrected ; GREP(hartree_results, 'Hartree test =', 15) ; 0.00154839
+match ; FFT Corrected ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00154839
 
 Input: 06-hartree_3d.05-cg_corrected.inp
-match ; CG Corrected  ; GREP(hartree_results, 'Hartree test =', 15) ; 0.00349973
+match ; CG Corrected  ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00349973
