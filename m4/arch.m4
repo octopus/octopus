@@ -55,12 +55,16 @@ CFLAGS="$CFLAGS"
 AC_RUN_IFELSE([AC_LANG_PROGRAM( [
 #include <immintrin.h>
 ], [
+changequote(,)
 __m256d a __attribute__((aligned(32)));
 __m256d b __attribute__((aligned(32)));
 __m256d c __attribute__((aligned(32)));
+double d[4];
 
 a = _mm256_add_pd(b, c);
-
+_mm256_storeu_pd(d, a);
+printf("",  *d);
+changequote([, ])
  ])], 
  [acx_m256d=yes], [acx_m256d=no], [cross compiling; assumed OK... $ac_c])
 CFLAGS="$acx_save_CFLAGS"
