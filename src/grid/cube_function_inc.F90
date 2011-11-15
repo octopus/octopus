@@ -62,7 +62,7 @@ end subroutine X(cube_function_free_RS)
 subroutine X(cube_function_allgather)(cube, cf, cf_local)
   type(cube_t),   intent(in) :: cube
   R_TYPE,         intent(out) :: cf(:)
-  R_TYPE, target, intent(in)  :: cf_local(:)
+  R_TYPE,         intent(in)  :: cf_local(:)
 
   type(profile_t), save :: prof_allgather
 
@@ -71,9 +71,9 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local)
 
   call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
   call MPI_Allgatherv ( cf_local(1), &
-       cube%block_sizes(mpi_world%rank+1), MPI_FLOAT, &
+       cube%block_sizes(mpi_world%rank+1), R_MPITYPE, &
        cf(1), cube%block_sizes(1),cube%begin_indexes - 1, &
-       MPI_FLOAT, cube%mpi_grp%comm, mpi_err)
+       R_MPITYPE, cube%mpi_grp%comm, mpi_err)
   call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
 
   call profiling_out(prof_allgather)
