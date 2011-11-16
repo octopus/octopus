@@ -356,97 +356,50 @@ contains
 
     ! store the fourier transform of the Coulomb interaction
     ! store only the relevant part if PFFT is used
-    if (cube%fft_library == FFTLIB_PFFT) then
-      SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n(1),1:cube%fs_n(2),1:cube%fs_n(3)))
-    else
-      SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
-    end if
+    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n(1),1:cube%fs_n(2),1:cube%fs_n(3)))
     fft_Coulb_FS = M_ZERO
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
-    if (cube%fft_library == FFTLIB_PFFT) then
-      do lx = 1, cube%fs_n(1)
-        ix = cube%fs_istart(1) + lx - 1
-        ixx(1) = pad_feq(ix, db(1), .true.)
-        gx = temp(1)*ixx(1)
-        do ly = 1, cube%fs_n(2)
-          iy = cube%fs_istart(2) + ly - 1
-          ixx(2) = pad_feq(iy, db(2), .true.)
-          do lz = 1, cube%fs_n(3)
-            iz = cube%fs_istart(3) + lz - 1
-            ixx(3) = pad_feq(iz, db(3), .true.)
+    do lx = 1, cube%fs_n(1)
+      ix = cube%fs_istart(1) + lx - 1
+      ixx(1) = pad_feq(ix, db(1), .true.)
+      gx = temp(1)*ixx(1)
+      do ly = 1, cube%fs_n(2)
+        iy = cube%fs_istart(2) + ly - 1
+        ixx(2) = pad_feq(iy, db(2), .true.)
+        do lz = 1, cube%fs_n(3)
+          iz = cube%fs_istart(3) + lz - 1
+          ixx(3) = pad_feq(iz, db(3), .true.)
             
-            gg(1:3) = temp(1:3)*ixx(1:3)
-            gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
-            do idim = 1, 3
-              gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
-            end do
-            modg2 = sum(gg(1:3)**2)
-            
-            if(abs(modg2) > M_EPSILON) then
-              select case(poisson_solver)
-              case(POISSON_FFT_SPH)
-                fft_Coulb_FS(lx, ly, lz) = poisson_cutoff_3D_0D(sqrt(modg2),r_c)/modg2
-              case(POISSON_FFT_CORRECTED)
-                fft_Coulb_FS(lx, ly, lz) = M_ONE/modg2
-              end select
-            else
-              select case(poisson_solver)
-              case(POISSON_FFT_SPH)
-                fft_Coulb_FS(lx, ly, lz) = r_c**2/M_TWO
-              case (POISSON_FFT_CORRECTED)
-                fft_Coulb_FS(lx, ly, lz) = M_ZERO
-              end select
-            end if
+          gg(1:3) = temp(1:3)*ixx(1:3)
+          gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
+          do idim = 1, 3
+            gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
           end do
+          modg2 = sum(gg(1:3)**2)
+            
+          if(abs(modg2) > M_EPSILON) then
+            select case(poisson_solver)
+            case(POISSON_FFT_SPH)
+              fft_Coulb_FS(lx, ly, lz) = poisson_cutoff_3D_0D(sqrt(modg2),r_c)/modg2
+            case(POISSON_FFT_CORRECTED)
+              fft_Coulb_FS(lx, ly, lz) = M_ONE/modg2
+            end select
+          else
+            select case(poisson_solver)
+            case(POISSON_FFT_SPH)
+              fft_Coulb_FS(lx, ly, lz) = r_c**2/M_TWO
+            case (POISSON_FFT_CORRECTED)
+              fft_Coulb_FS(lx, ly, lz) = M_ZERO
+            end select
+          end if
         end do
       end do
-    else
-      do ix = 1, cube%nx
-        ixx(1) = pad_feq(ix, db(1), .true.)
-        gx = temp(1)*ixx(1)
-        do iy = 1, db(2)
-          ixx(2) = pad_feq(iy, db(2), .true.)
-          do iz = 1, db(3)
-            ixx(3) = pad_feq(iz, db(3), .true.)
-            
-            gg(1:3) = temp(1:3)*ixx(1:3)
-            gg(1:3) = matmul(gg(1:3), mesh%sb%klattice_primitive(1:3,1:3))
-            do idim = 1, 3
-              gg(idim) = gg(idim) / lalg_nrm2(3, mesh%sb%klattice_primitive(1:3, idim))
-            end do
-            modg2 = sum(gg(1:3)**2)
-            
-            if(abs(modg2) > M_EPSILON) then
-              select case(poisson_solver)
-              case(POISSON_FFT_SPH)
-                fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_0D(sqrt(modg2),r_c)/modg2
-              case(POISSON_FFT_CORRECTED)
-                fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
-              end select
-            else
-              select case(poisson_solver)
-              case(POISSON_FFT_SPH)
-                fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
-              case (POISSON_FFT_CORRECTED)
-                fft_Coulb_FS(ix, iy, iz) = M_ZERO
-              end select
-            end if
-          end do
-        end do
+    end do
 
-      end do
-    end if
-
-    if (cube%fft_library == FFTLIB_PFFT) then 
-      forall(iz=1:cube%fs_n(3), iy=1:cube%fs_n(2), ix=1:cube%fs_n(1))
-        fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-      end forall
-    else
-      forall(iz=1:cube%n(3), iy=1:cube%n(2), ix=1:cube%nx)
-        fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-      end forall
-    end if
+    forall(iz=1:cube%fs_n(3), iy=1:cube%fs_n(2), ix=1:cube%fs_n(1))
+      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+    end forall
 
     call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
 
