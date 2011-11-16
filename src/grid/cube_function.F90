@@ -75,7 +75,7 @@ contains
     type(cube_t),          intent(in) :: cube
     type(cube_function_t), intent(in) :: cf
 
-    integer ix, iy, iz, npoints
+    integer :: ix, iy, iz, npoints
     x = M_ZERO
 
     PUSH_SUB(cube_function_surface_average)

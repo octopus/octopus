@@ -70,8 +70,8 @@ module PES_m
     PW_MAP_INTEGRAL    =  1,  &    !> projection on outgoing waves by direct integration
     PW_MAP_FFT         =  2,  &    !> FFT on outgoing waves (1D only)
     PW_MAP_BARE_FFT    =  3,  &    !> FFT - normally from fftw3 
-    PW_MAP_TDPSF       =  4,  &    !> time dependent phase-space filter
-    PW_MAP_NFFT        =  5        !> non equispaced fft (NFFT)
+    PW_MAP_TDPSF       =  4,  &    !> time-dependent phase-space filter
+    PW_MAP_NFFT        =  5        !> non-equispaced fft (NFFT)
 
   integer, parameter ::      &
     M_SIN2            =  1,  &  
@@ -93,7 +93,7 @@ module PES_m
     integer, pointer :: points(:) 					!> which points to use
     character(len=30), pointer :: filenames(:)  !> filenames
     CMPLX, pointer :: wf(:,:,:,:,:)
-    integer, pointer ::rankmin(:)  				   !>partion of the mesh containing the points
+    integer, pointer :: rankmin(:)  				   !>partition of the mesh containing the points
   end type PES_rc_t
 
   type PES_mask_t
@@ -101,7 +101,7 @@ module PES_m
 
     CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !> The continuum wfs in momentum space
 
-    ! Some mesh related stuff
+    ! Some mesh-related stuff
     integer          :: ll(MAX_DIM)            !> the size of the square mesh   
     integer          :: np                     !> number of mesh points associated with the mesh
                                                !> (either mesh%np or mesh%np_global) 

@@ -54,7 +54,7 @@ module zoltan_m
   !%Option rib 3
   !% Recursive inertial bisection partitioning.
   !%Option hsfc 4
-  !% Hilbert space-filling curve partioning.
+  !% Hilbert space-filling curve partitioning.
   !%Option reftree 5
   !% Refinement-tree-based partitioning.
   !%Option graph 6
