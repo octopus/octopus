@@ -20,56 +20,58 @@
 #include "global.h"
 
 module PES_m
-  use datasets_m
-  use fft_m
-  use global_m
-  use io_m
-  use io_binary_m
-  use mesh_m
-  use index_m
-  use messages_m
-  use parser_m
-  use profiling_m
-  use simul_box_m
-  use states_m
-  use unit_m
-  use unit_system_m
-  use mpi_m
-  use hamiltonian_m
-  use geometry_m
-  use lasers_m
-  use output_m
-  use grid_m
-  use states_io_m
-  use io_function_m
-  use density_m
   use batch_m
-  use varinfo_m
-  use string_m
-  use tdpsf_m
-  use system_m
+  use cube_function_m
+  use cube_m
+  use datasets_m
+  use density_m
   use derivatives_m
-  use qshepmod_m
+  use fft_m
+  use geometry_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
+  use index_m
+  use io_binary_m
+  use io_function_m
+  use io_m
+  use lasers_m
+  use mesh_m
+  use messages_m
+  use mpi_m
 #if defined(HAVE_NFFT) 
   use nfft_m
 #endif
+  use output_m
+  use parser_m
+  use profiling_m
+  use qshepmod_m
+  use simul_box_m
+  use states_io_m
+  use states_m
+  use string_m
+  use system_m
+  use tdpsf_m
+  use unit_m
+  use unit_system_m
+  use varinfo_m
   use varinfo_m
 
   implicit none
 
   integer, parameter ::   &
-    FREE           =  1,  &    ! The scattering waves evolve in time as free plane waves
-    VOLKOV         =  2,  &    ! The scattering waves evolve with exp(i(p-A(t)/c)^2*dt/2)
+    FREE           =  1,  &    !> The scattering waves evolve in time as free plane waves
+    VOLKOV         =  2,  &    !> The scattering waves evolve with exp(i(p-A(t)/c)^2*dt/2)
     CORRECTED1D    =  3,  &
     EMBEDDING1D    =  4,  &     
     VOLKOV_CORRECTED= 5
 
   integer, parameter ::       &
-    PW_MAP_INTEGRAL    =  1,  &    ! projection on outgoing waves by direct integration
-    PW_MAP_FFT         =  2,  &    ! fft on outgoing waves (1D only)
-    PW_MAP_BARE_FFT    =  3,  &    ! bare fft 
-    PW_MAP_TDPSF       =  4,  &    ! time dependent phase-space filter
-    PW_MAP_NFFT        =  5        ! non equi-spaced fft
+    PW_MAP_INTEGRAL    =  1,  &    !> projection on outgoing waves by direct integration
+    PW_MAP_FFT         =  2,  &    !> FFT on outgoing waves (1D only)
+    PW_MAP_BARE_FFT    =  3,  &    !> FFT - normally from fftw3 
+    PW_MAP_TDPSF       =  4,  &    !> time dependent phase-space filter
+    PW_MAP_NFFT        =  5        !> non equispaced fft (NFFT)
 
   integer, parameter ::      &
     M_SIN2            =  1,  &  
@@ -87,64 +89,59 @@ module PES_m
     OUT               =  2
 
   type PES_rc_t
-    integer          :: npoints   ! how many points we store the wf
-    integer, pointer :: points(:) ! which points to use
-    character(len=30), pointer :: filenames(:) ! filenames
+    integer          :: npoints   					!> how many points we store the wf
+    integer, pointer :: points(:) 					!> which points to use
+    character(len=30), pointer :: filenames(:)  !> filenames
     CMPLX, pointer :: wf(:,:,:,:,:)
-    integer, pointer ::rankmin(:)  !partion of the mesh containing the points
+    integer, pointer ::rankmin(:)  				   !>partion of the mesh containing the points
   end type PES_rc_t
 
   type PES_mask_t
 
 
-    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() ! masked wf in momentum space
-!    FLOAT, pointer :: r(:,:,:,:,:) => NULL()  ! momentum-resolved photoelectron yeld
+    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !> The continuum wfs in momentum space
 
     ! Some mesh related stuff
-    integer          :: ll(MAX_DIM)          ! the size of the square mesh   
-    FLOAT            :: spacing(MAX_DIM)     ! the spacing 
-    integer, pointer :: Lxyz_inv(:,:,:)  => NULL()    ! return a point on the main mesh from xyz on the mask square mesh
-    type(mesh_t), pointer  :: mesh           ! a pointer to the mesh
- 
+    integer          :: ll(MAX_DIM)            !> the size of the square mesh   
+    integer          :: np                     !> number of mesh points associated with the mesh
+                                               !> (either mesh%np or mesh%np_global) 
+    FLOAT            :: spacing(MAX_DIM)       !> the spacing 
+    integer, pointer :: Lxyz_inv(:,:,:)  => NULL()    !> return a point on the main mesh from xyz on the mask square mesh
+    type(mesh_t), pointer  :: mesh             !> a pointer to the mesh 
+    type(cube_t)     :: cube                   !> the cubic mesh  
 
-    FLOAT, pointer :: ext_pot(:,:) => NULL()  ! external time-dependent potential i.e. the lasers
+    FLOAT, pointer :: ext_pot(:,:) => NULL()   !> external time-dependent potential i.e. the lasers
 
-    FLOAT, pointer :: mask_fn(:)  => NULL()   !the mask function on the mesh        
-    FLOAT, pointer :: M(:,:,:)  => NULL()     !the mask on a cubic mesh containing the simulation box
-    FLOAT, pointer :: mask_R(:)  => NULL()    !the mask inner (component 1) and outer (component 2) radius
-    integer        :: shape                   !mask shape
+    FLOAT, pointer :: M(:,:,:)  => NULL()      !> the mask on a cubic mesh containing the simulation box
+    type(cube_function_t) :: cM                !> the mask cube function
+    FLOAT, pointer :: mask_R(:)  => NULL()     !> the mask inner (component 1) and outer (component 2) radius
+    integer        :: shape                    !> which mask function?  
 
-    FLOAT, pointer :: Lk(:) => NULL()         ! the k-vectors map
+    FLOAT, pointer :: Lk(:) => NULL()          !> associate a k value to an cube index
+                                               !> we implicitly assume k to be the same for all the direction 
 
-
-
-    integer          :: resample_lev          ! resampling level
-    integer          :: enlarge               ! Fourier space enlargement 
-    integer          :: enlarge_nfft          ! NFFT space enlargement
-    integer          :: llr(MAX_DIM)          ! the size of the resampled square mesh   
+    integer          :: resample_lev           !> resampling level
+    integer          :: enlarge                !> Fourier space enlargement 
+    integer          :: enlarge_nfft           !> NFFT space enlargement
+    integer          :: llr(MAX_DIM)           !> the size of the rescaled cubic mesh   
        
-
     FLOAT :: energyMax 
     FLOAT :: energyStep 
 
-    integer :: ab
-    integer :: sw_evolve
-    integer :: propagator            !the time propagator for scattering wavefunctions
-    
-    logical :: back_action           !apply back action from B to A
-    logical :: add_psia              !add the contribute of Psi_A to PES 
-    logical :: interpolate_out       !output interpolation  
+    integer :: sw_evolve             !> choose the time propagator for the continuum wfs    
+    logical :: back_action           !> whether to enable back action from B to A
+    logical :: add_psia              !> add the contribute of Psi_A in the buffer region to the output 
+    logical :: interpolate_out       !> whether to apply interpolation on the output files  
 
+    integer :: mode                  !> calculation mode
+    integer :: pw_map_how            !> how to perform projection on plane waves
 
-    integer :: mode           ! calculation mode
-
-    integer :: pw_map_how            ! how to perform projection on outgoing plane waves
-    type(fft_t)    :: fft
+    type(fft_t)    :: fft            !> FFT plan
 #if defined(HAVE_NFFT) 
-    type(nfft_t)   :: nfft
+    type(nfft_t)   :: nfft           !> NFFT plan
 #endif
 
-    type(tdpsf_t) :: psf             !Phase-space filter
+    type(tdpsf_t) :: psf             !> Phase-space filter struct reference
 
 
   end type PES_mask_t
@@ -288,11 +285,11 @@ contains
     if(pes%calc_mask .AND. st%parallel_in_states) call PES_mask_collect(pes%mask, st,mesh)
 
     if(mpi_grp_is_root(mpi_world)) then
-
       if(pes%calc_rc)   call PES_rc_output   (pes%rc, st, iter,outp%iter, dt)
-      if(pes%calc_mask) call PES_mask_output (pes%mask, mesh, st,outp, "td.general/PESM",gr, geo,iter)
-
     endif
+
+    if(pes%calc_mask) call PES_mask_output (pes%mask, mesh, st,outp, "td.general/PESM",gr, geo,iter)
+
 
     POP_SUB(PES_output)
   end subroutine PES_output

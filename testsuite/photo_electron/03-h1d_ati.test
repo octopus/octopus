@@ -1,0 +1,14 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Photoelectron ATI peaks
+Programs   : octopus_mpi; octopus
+TestGroups : short-run
+Enabled    : Yes
+
+
+Processors : 2
+Input      : 03-h1d_ati.01.inp
+match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 30, 21) ;  6.468096285664E-01
+match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 49, 21) ;  4.817931662065E-01
+match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 62, 21) ;  1.950455920482E-01
+

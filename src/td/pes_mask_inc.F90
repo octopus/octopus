@@ -29,7 +29,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 
   type(block_t) :: blk
 
-  integer :: ll(MAX_DIM), il,it,ii
+  integer :: il,it,ii
   FLOAT :: field(MAX_DIM)
   FLOAT :: DeltaE,MaxE,MaxDR
   FLOAT :: width 
@@ -241,14 +241,20 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 #endif
   end if
 
+  !!ALLOCATIONS
 
-  ll(1:MAX_DIM) = mask%ll(1:MAX_DIM)
-  
+  mask%np = mesh%np_part_global !we do not divide the cube objects in this implementation 
+   
   SAFE_ALLOCATE(mask%k(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3),1:st%d%dim,1:st%nst,1:st%d%nik))
-  SAFE_ALLOCATE(mask%Lxyz_inv(1:ll(1),1:ll(2),1:ll(3)))
-  
+  SAFE_ALLOCATE(mask%Lxyz_inv(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
+  call cube_init(mask%cube, mask%ll, mesh%sb)  
+
   SAFE_ALLOCATE(mask%M(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
+	call cube_function_null(mask%cM)    
+	call dcube_function_alloc_RS(mask%cube, mask%cM)
+
   SAFE_ALLOCATE(mask%Lk(1:mask%ll(1)))
+
 
   mask%k = M_z0
 
@@ -263,9 +269,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !!  Mask Function options
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  SAFE_ALLOCATE(mask%mask_fn(1:mesh%np_global))
   SAFE_ALLOCATE(mask%mask_R(2))
-  mask%mask_fn=M_ZERO
 
   !%Variable PESMaskShape
   !%Type integer
@@ -439,7 +443,6 @@ subroutine PES_mask_end(mask)
 
     SAFE_DEALLOCATE_P(mask%ext_pot)
     SAFE_DEALLOCATE_P(mask%M)
-    SAFE_DEALLOCATE_P(mask%mask_fn)
     SAFE_DEALLOCATE_P(mask%mask_R)
     SAFE_DEALLOCATE_P(mask%Lxyz_inv)
     SAFE_DEALLOCATE_P(mask%Lk)
@@ -452,10 +455,12 @@ subroutine PES_mask_end(mask)
 #endif
     end if 
 
-
     if(mask%mode == MODE_PSF) then 
       call tdpsf_end(mask%psf)
     end if
+
+   call cube_end(mask%cube)   
+   call dcube_function_free_RS(mask%cube, mask%cM)
 
   POP_SUB(PES_mask_end)
 end subroutine PES_mask_end
@@ -541,7 +546,7 @@ subroutine PES_mask_generate_mask(mask,mesh)
 
   PUSH_SUB(PES_mask_generate_mask)
 
-  call PES_mask_generate_mask_function(mask,mesh, mask%shape, mask%mask_R, mask%M, mask%mask_fn)
+  call PES_mask_generate_mask_function(mask,mesh, mask%shape, mask%mask_R, mask%M)
 
   POP_SUB(PES_mask_generate_mask)
 
@@ -552,7 +557,7 @@ end subroutine PES_mask_generate_mask
 !  the simulation box
 ! ---------------------------------------------------------
 subroutine PES_mask_generate_mask_function(mask,mesh, shape, R, mask_sq, mask_m)
-  type(PES_mask_t),     intent(in)    :: mask
+  type(PES_mask_t),     intent(inout)    :: mask
   type(mesh_t),     intent(in)    :: mesh
   integer,          intent(in)    :: shape
   FLOAT,            intent(in)    :: R(2)
@@ -562,22 +567,33 @@ subroutine PES_mask_generate_mask_function(mask,mesh, shape, R, mask_sq, mask_m)
   integer :: ip, ix3(MAX_DIM)
   integer :: ip_local
   FLOAT   :: dd1,dd2,width
-  FLOAT   :: xx(MAX_DIM), rr, dd, radius
-  integer :: ix,iy,iz
+  FLOAT   :: xx(1:MAX_DIM), rr, dd, radius
+  integer :: ix,iy,iz, ii
   FLOAT,allocatable :: mask_fn(:)
+  logical :: local_
 
   PUSH_SUB(PES_mask_generate_mask_function)
 
 
   ! generate the mask function on the mesh 
-  SAFE_ALLOCATE(mask_fn(1:mesh%np))
+  SAFE_ALLOCATE(mask_fn(1:mask%np))
+
   mask_fn = M_ZERO
   width = R(2) - R(1)
+  xx = M_ZERO
+ 
+  !We want the mask cube function to be divided on the nodes?
+  local_=(mask%np .eq. mask%mesh%np) .or. (mask%np .eq. mask%mesh%np_part)
 
   select case(shape)
     case(M_SIN2)
-      do ip = 1, mesh%np
-        call mesh_r(mesh, ip, rr, coords=xx)
+      do ip = 1, mask%np
+	      if(local_) then
+	        call mesh_r(mesh, ip, rr, coords=xx)
+        else
+					xx=mesh_x_global(mesh, ip) 
+					rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
+        end if
         dd = rr -  R(1) 
         if(dd .gt. M_ZERO ) then 
           if (dd .lt. width) then
@@ -589,8 +605,13 @@ subroutine PES_mask_generate_mask_function(mask,mesh, shape, R, mask_sq, mask_m)
       end do
       
     case(M_STEP)
-      do ip = 1, mesh%np
-        call mesh_r(mesh, ip, rr, coords=xx)
+      do ip = 1, mask%np
+	      if(local_) then
+	        call mesh_r(mesh, ip, rr, coords=xx)
+        else
+					xx=mesh_x_global(mesh, ip) 
+					rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
+        end if
         dd = rr - R(1) 
         if(dd .gt. M_ZERO ) then 
           if (dd .lt. width) then
@@ -604,29 +625,22 @@ subroutine PES_mask_generate_mask_function(mask,mesh, shape, R, mask_sq, mask_m)
     case(M_ERF)
 
     case default
-    !Program should quit before coming here
+    message(1)="PhotoElectronSpectrum = pes_mask. Unrecognized mask type."
+    call messages_fatal(1) 
   end select
 
 
+ 
+   mask_fn(:) = M_ONE - mask_fn(:)
+ 
+  call dmesh_to_cube(mask%mesh, mask_fn, mask%cube, mask%cM)
 
-  !the mask is zero in the points of the cube not contained in the
-  !simulation box
-  mask_sq = M_z0
+  mask_sq = mask%cM%dRS
 
 
-  do ix=1,mask%ll(1)
-    do iy=1,mask%ll(2)
-      do iz=1,mask%ll(3)
-        
-        ip= mask%Lxyz_inv(ix,iy,iz)
-        if (ip > 0) then
-          mask_sq(ix,iy,iz) = (1-mask_fn(ip))
-        end if
-      end do
-    end do
-  end do
-
-  if(present(mask_m)) mask_m = mask_fn
+  if(present(mask_m)) then 
+	  mask_m = mask_fn
+  end if 
 
   SAFE_DEALLOCATE_A(mask_fn)
 
@@ -642,16 +656,22 @@ subroutine PES_mask_apply_mask(mask,st,mesh)
   type(mesh_t),     intent(in)    :: mesh
 
   integer :: ik, ist, idim
+  FLOAT, allocatable :: mmask(:)
 
   PUSH_SUB(PES_mask_apply_mask)
+  SAFE_ALLOCATE(mmask(1:mask%mesh%np_part))
+
+  call dcube_to_mesh(mask%cube, mask%cM, mask%mesh, mmask, local = .true.)
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
-        st%zpsi(1:mesh%np, idim, ist, ik) = st%zpsi(1:mesh%np, idim, ist, ik)*(M_ONE - mask%mask_fn(1:mesh%np))
+ 					st%zpsi(1:mask%mesh%np_part, idim, ist, ik) = st%zpsi(1:mask%mesh%np_part, idim, ist, ik)*mmask(1:mask%mesh%np_part)
       end do
     end do
   end do
+
+  SAFE_DEALLOCATE_A(mmask)
 
   POP_SUB(PES_mask_apply_mask)
 end subroutine PES_mask_apply_mask
@@ -716,7 +736,8 @@ subroutine PES_mask_backaction_wf_apply(mask, mesh, wfB,state)
   CMPLX,            intent(in)    :: wfB(:,:,:)
 
   integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
-  CMPLX, allocatable ::  wf2(:,:,:)
+  type(cube_function_t) :: cf
+  CMPLX, allocatable :: mf(:)
   FLOAT :: temp(MAX_DIM), vec
   FLOAT :: dd
   integer :: il,ll(MAX_DIM)
@@ -731,28 +752,23 @@ subroutine PES_mask_backaction_wf_apply(mask, mesh, wfB,state)
 
 
   ll(1:MAX_DIM) = mask%ll(1:MAX_DIM)
-  SAFE_ALLOCATE(wf2(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
- 
+	call cube_function_null(cf)    
+	call zcube_function_alloc_RS(mask%cube, cf) 
+  SAFE_ALLOCATE(mf(1:mask%mesh%np_part))
 
-  wf2 = M_z0
-  call PES_mask_K_to_X(mask,mesh, wfB , wf2)
+
+	cf%zRS = M_z0
+	call PES_mask_K_to_X(mask,mesh, wfB , cf%zRs)
   
-  
-  do ix=1,mask%ll(1)
-    do iy=1,mask%ll(2)
-      do iz=1,mask%ll(3)
-        
-        ip= mask%Lxyz_inv(ix,iy,iz)
-        if (ip > 0) then
-          state(ip) = state(ip) + wf2(ix, iy, iz)
-        end if
-      end do
-    end do
-  end do
+  call zcube_to_mesh(mask%cube, cf, mask%mesh, mf, local = .true.)  
+  state = state + mf    
 
-  SAFE_DEALLOCATE_A(wf2)
+
+
  
-
+  SAFE_DEALLOCATE_A(mf)
+  call zcube_function_free_RS(mask%cube,cf)
+ 
   POP_SUB(PES_mask_backaction_wf_apply)
  
   call profiling_out(prof)
@@ -763,126 +779,50 @@ end subroutine PES_mask_backaction_wf_apply
 
 
 
-!---------------------------------------------------------------
-! Maps a wavefunction on the mesh to a function on the smallest
-! bounding box containing the mesh. 
-! Optionally can also apply a operation on the wavefunction such
-! as multiplication for a mask function M of the mesh and a constant 
-! factor.
-!
-!          wf_m(mesh)[*M(mesh)*C] -> wf_sq(square)  
-!
-! It is also possible to apply the complement mask (1-M) via the 
-! optional parameter CompM.
-!--------------------------------------------------------------
-subroutine PES_mask_mesh_to_square(mask,mesh, wf_m,wf_sq, MaskHow,Const)
-  type(PES_mask_t), intent(in)  :: mask
-  type(mesh_t),     intent(in)  :: mesh
-  CMPLX,            intent(in)  :: wf_m(:)
-  CMPLX,            intent(out) :: wf_sq(:,:,:) 
-  integer,          intent(in)  :: MaskHow
-  FLOAT,            intent(in)  :: Const
-
-  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM)
-  FLOAT :: dd
-  integer :: il,ip_local,ixx,iyy,izz
-  INTEGER :: idx(MAX_DIM)
-
-  type(profile_t), save :: prof
-  call profiling_in(prof, "PESMASK_mesh_to_square")
 
 
+!---------------------------------------------------------
+! Local frontend to similar functions defined in cube_function_inc.F90
+!---------------------------------------------------------
 
-  ! no push_sub, called too frequently
+subroutine PES_mask_mesh_to_cube(mask, mf, cf, local)
+  type(pes_mask_t),      intent(in)    :: mask
+  CMPLX,  target,        intent(in)    :: mf(:) 
+  type(cube_function_t), intent(out) :: cf
+  logical, optional,     intent(in)    :: local 
+
+  logical :: local_
+
+  PUSH_SUB(PES_mask_mesh_to_cube)
+
+  local_ = optional_default(local, .true.) .and. mask%mesh%parallel_in_domains
   
-  wf_sq= M_z0
+  call zmesh_to_cube(mask%mesh, mf, mask%cube, cf, local_)
 
-  do ix=1, mask%ll(1)
-    ixx = ix
-    do iy=1,mask%ll(2)
-      iyy = iy
-      do iz=1,mask%ll(3)
-        izz = iz
-        
-        ip= mask%Lxyz_inv(ix,iy,iz)
-        if (ip > 0) then
-          select case(MaskHow)
-            case(1)
-              wf_sq(ixx,iyy,izz) = Const*mask%M(ixx,iyy,izz) * wf_m(ip)
-            case(2)
-              wf_sq(ixx,iyy,izz) = Const*(1-mask%M(ixx,iyy,izz)) * wf_m(ip)
-            case(3)
-              wf_sq(ixx,iyy,izz) = Const * wf_m(ip)
-            case default
-              wf_sq(ixx,iyy,izz) = Const * wf_m(ip)
-              
-          end select
-            
-        end if
-      end do
-    end do
-  end do
+	POP_SUB(PES_mask_mesh_to_cube)
 
-  call profiling_out(prof)
-
-end subroutine PES_mask_mesh_to_square
-
-!---------------------------------------------------------------
-! Inverse function of PES_mask_mesh_to_square
-!
-!          wf_sq(square) -> wf_sq(mesh)*[*M(mesh)*C]  
-!
-!--------------------------------------------------------------
-subroutine PES_mask_square_to_mesh(mask,mesh, wf_m,wf_sq, MaskHow,Const)
-  type(PES_mask_t), intent(in)  :: mask
-  type(mesh_t),     intent(in)  :: mesh
-  CMPLX,            intent(out) :: wf_m(:)
-  CMPLX,            intent(in)  :: wf_sq(:,:,:)
-  integer,          intent(in)  :: MaskHow
-  FLOAT,            intent(in)  :: Const
-
-  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM)
-  FLOAT :: dd
-  integer :: il,ip_local,idx(MAX_DIM),ixx,iyy,izz
-  FLOAT :: CConst
-
-  type(profile_t), save :: prof
-  call profiling_in(prof, "PESMASK_square_to_mesh")
+end subroutine PES_mask_mesh_to_cube
 
 
-  ! no push_sub, called too frequently
-  
-  wf_m = M_z0
-  
-  do ix=1, mask%ll(1)
-    ixx = ix
-    do iy=1,mask%ll(2)
-      iyy = +iy
-      do iz=1,mask%ll(3)
-        izz = iz
-        
-        ip= mask%Lxyz_inv(ix,iy,iz)
-        if (ip > 0) then
-          select case(MaskHow)
-            case(1)
-              wf_m(ip) = Const*mask%M(ixx,iyy,izz) * wf_sq(ixx,iyy,izz)
-            case(2)
-              wf_m(ip) = Const*(1-mask%M(ixx,iyy,izz)) * wf_sq(ixx,iyy,izz)
-            case(3)
-              wf_m(ip) = Const * wf_sq(ixx,iyy,izz)
-            case default
-              wf_m(ip) = Const * wf_sq(ixx,iyy,izz)
-              
-          end select
+subroutine PES_mask_cube_to_mesh(mask, cf, mf, local)
+  type(pes_mask_t),      intent(in)    :: mask
+  CMPLX,  target,        intent(out)   :: mf(:) 
+  type(cube_function_t), intent(in)    :: cf
+  logical, optional,     intent(in)    :: local 
 
-        end if
-      end do
-    end do
-  end do
-  
-  call profiling_out(prof)
-  
-end subroutine PES_mask_square_to_mesh
+  logical :: local_
+
+  PUSH_SUB(PES_mask_cube_to_mesh)
+
+  local_ = optional_default(local, .true.) .and. mask%mesh%parallel_in_domains
+
+	call zcube_to_mesh(mask%cube, cf, mask%mesh, mf, local_)
+
+
+	POP_SUB(PES_mask_cube_to_mesh)
+
+end subroutine PES_mask_cube_to_mesh
+
 
 !---------------------------------------------------------
 subroutine fft_X_to_K(mask, mesh, wfin, wfout)
@@ -1195,34 +1135,39 @@ end subroutine integral_K_to_X
 subroutine PES_mask_X_to_K(mask,mesh,wfin,wfout)
   type(PES_mask_t), intent(in)  :: mask
   type(mesh_t),     intent(in)  :: mesh
-  CMPLX,            intent(in)  :: wfin(:,:,:)
-  CMPLX,            intent(out) :: wfout(:,:,:)
+	type(cube_function_t), intent(in):: wfin
+	type(cube_function_t), intent(out):: wfout
 
   FLOAT :: Norm1,Norm2
-
   type(profile_t), save :: prof
+ 
+  integer ::i
+
+
   call profiling_in(prof, "PESMASK_X_to_K")
+
 
   PUSH_SUB(PES_mask_X_to_K)
 
-  wfout=M_z0
+  wfout%zRs=M_z0
+
 
   select case(mask%pw_map_how)
     case(PW_MAP_INTEGRAL)
-      call integral_X_to_K(mask,mesh,wfin,wfout)
+      call integral_X_to_K(mask,mesh,wfin%zRs,wfout%zRs)
       
     case(PW_MAP_FFT)
-      call fft_X_to_K(mask,mesh,wfin,wfout)
+      call fft_X_to_K(mask,mesh,wfin%zRs,wfout%zRs)
       
     case(PW_MAP_BARE_FFT)
-      call zfft_forward(mask%fft, wfin,wfout)
+      call zfft_forward(mask%fft, wfin%zRs,wfout%zRs)
       
     case(PW_MAP_TDPSF)
-      call tdpsf_X_to_K(mask%psf, wfin,wfout)
+      call tdpsf_X_to_K(mask%psf, wfin%zRs,wfout%zRs)
       
 #if defined(HAVE_NFFT) 
     case(PW_MAP_NFFT)
-      call znfft_forward(mask%nfft,wfin,wfout)
+      call znfft_forward(mask%nfft,wfin%zRs,wfout%zRs)
 #endif
 
 
@@ -1307,10 +1252,10 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
   type(geometry_t),    intent(in)    :: geo
 
   integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
-  CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:),wf3(:,:,:),wf4(:,:,:)
-  FLOAT :: temp(MAX_DIM), vec,aa(1:mesh%np_part,1:mesh%sb%dim)
+  type(cube_function_t):: cf1,cf2,cf3,cf4
+  FLOAT :: temp(MAX_DIM), vec
   FLOAT :: dd
-  integer :: il
+  integer :: il,i
 
   FLOAT :: dmin
   integer :: rankmin,ip_local,size
@@ -1328,18 +1273,24 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
   PUSH_SUB(PES_mask_calc)
 
 
-  !Allocate memory for the different schemes
-  SAFE_ALLOCATE(wf1(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
-  SAFE_ALLOCATE(wf2(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
-  select case(mask%mode) 
-    case(MODE_MASK)
-      if(mask%back_action .eqv. .true.) then
-        SAFE_ALLOCATE(wf3(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
-      end if
-    case(MODE_PSF)
-      SAFE_ALLOCATE(wf3(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
-      SAFE_ALLOCATE(wf4(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
-  end select
+
+	call cube_function_null(cf1)    
+	call zcube_function_alloc_RS(mask%cube, cf1) 
+	call cube_function_null(cf2)    
+	call zcube_function_alloc_RS(mask%cube, cf2) 
+	select case(mask%mode) 
+	  case(MODE_MASK)
+	    if(mask%back_action .eqv. .true.) then
+			call cube_function_null(cf3)    
+		  call zcube_function_alloc_RS(mask%cube, cf3) 
+	    end if
+	  case(MODE_PSF)
+		 call cube_function_null(cf3)    
+	   call zcube_function_alloc_RS(mask%cube, cf3) 
+		 call cube_function_null(cf4)    
+	   call zcube_function_alloc_RS(mask%cube, cf4) 
+	end select
+
 
   size = (mask%ll(1))*(mask%ll(2))*(mask%ll(3)) 
 
@@ -1348,28 +1299,10 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
 
-        wf1 = M_z0
-        wf2 = M_z0
-        
-        call PES_mask_mesh_to_square(mask,mesh,st%zpsi(:, idim, ist, ik),wf1,MaskHow = 3,Const = M_ONE)
- 
-#if defined(HAVE_MPI)
-
-        if(mesh%parallel_in_domains)then
-
-          !send all the wavefunctions to root node
-          if(mesh%mpi_grp%rank .gt. 0 ) then
-            call MPI_Send(wf1,size,MPI_CMPLX,0,666, mesh%mpi_grp%comm, mpi_err)
-          else
-            do iproc = 1, mesh%mpi_grp%size-1
-              call MPI_Recv(wf2,size,MPI_CMPLX,iproc,666, mesh%mpi_grp%comm, status, mpi_err)
-              ! add contribution for other nodes
-              wf1 = wf1 +wf2 
-            end do
-            
-          end if
-        end if
-#endif
+        cf1%zRs = M_z0
+        cf2%zRS = M_z0
+       
+				call zmesh_to_cube(mask%mesh, st%zpsi(:, idim, ist, ik), mask%cube, cf1, local=.true.)
 
         select case(mask%mode)
      !----------------------------------------- 
@@ -1377,33 +1310,41 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
      !----------------------------------------
           case(MODE_MASK)
            
-            wf1 = (M_ONE-mask%M)*wf1                                            ! wf1 =(1-M)*U(t2,t1)*\Psi_A(x,t1)
-            call PES_mask_X_to_K(mask,mesh,wf1,wf2)                             ! wf2 = \tilde{\Psi}_A(k,t2)
-            
-            if(mask%back_action .eqv. .true.) then
-              wf3 = mask%k(:,:,:,idim,ist,ik)                                   ! wf3 = \tilde{\Psi}_B(k,t1) 
-              call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,wf3)  ! wf3 = \tilde{\Psi}_B(k,t2))
-              call PES_mask_backaction_wf_apply(mask, mesh,wf3,st%zpsi(:, idim, ist, ik))
-            end if
-            
-            wf1 = mask%k(:,:,:, idim, ist, ik)                                  ! wf1 = \Psi_B(k,t1)
-            mask%k(:,:,:, idim, ist, ik) =  wf2                                 ! mask%k = \tilde{\Psi}_A(k,t2)          
-            call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,wf1)    ! wf1 = \tilde{\Psi}_B(k,t2)
-            
-            if(mask%back_action .eqv. .true.) then
-              ! Apply correction to \Psi_B that enforces it to have 0 components in  deep region A
-              !-----                                  ----!
-              call PES_mask_K_to_X(mask,mesh,wf1,wf2)                           ! wf2 = \Psi_B(x,t2)
-              wf2= (mask%M)*wf2                                                 ! wf2 = M*\Psi_B(x,t1)    
-              call PES_mask_X_to_K(mask,mesh,wf2,wf3)                           
-              wf1=wf1-wf3
-              !-----                                  ----!
-            end if
 
-            wf2=wf1                                                             ! wf2 = \tilde{\Psi}_B(k,t2)
+						cf1%zRs = (M_ONE-mask%M)*cf1%zRs                                        ! cf1 =(1-M)*U(t2,t1)*\Psi_A(x,t1)
+						call PES_mask_X_to_K(mask,mesh,cf1,cf2)                                 ! cf2 = \tilde{\Psi}_A(k,t2)
+            
 
-            ! and add to our spectrum
-            mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + wf2 
+						if(mask%back_action .eqv. .true.) then
+						  cf3%zRs = mask%k(:,:,:,idim,ist,ik)                                   ! cf3 = \tilde{\Psi}_B(k,t1) 
+						  call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf3%zRs)  ! cf3 = \tilde{\Psi}_B(k,t2))
+						  call PES_mask_backaction_wf_apply(mask, mesh,cf3%zRs,st%zpsi(:, idim, ist, ik))
+						end if
+
+            
+
+            cf1%zRs = mask%k(:,:,:, idim, ist, ik)                                  ! cf1 = \Psi_B(k,t1)
+            mask%k(:,:,:, idim, ist, ik) =  cf2%zRs                                 ! mask%k = \tilde{\Psi}_A(k,t2)          
+            call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf1%zRs)    ! cf1 = \tilde{\Psi}_B(k,t2)
+
+            
+
+						if(mask%back_action .eqv. .true.) then
+						  ! Apply correction to \Psi_B that enforces it to have 0 components in  deep region A
+						  !-----                                  ----!
+						  call PES_mask_K_to_X(mask,mesh,cf1%zRs,cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
+						  cf2%zRs= (mask%M)*cf2%zRs                                             ! cf2 = M*\Psi_B(x,t1)    
+						  call PES_mask_X_to_K(mask,mesh,cf2,cf3)                           
+						  cf1%zRs=cf1%zRs-cf3%zRs
+						  !-----                                  ----!
+						end if
+
+
+            cf2%zRs=cf1%zRs                                                         ! cf2 = \tilde{\Psi}_B(k,t2)
+
+
+						! and add to our spectrum
+						mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + cf2%zRs 
 
 
      !----------------------------------------- 
@@ -1411,10 +1352,11 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
      !----------------------------------------
           case(MODE_PASSIVE)
             
-            wf1 = (M_ONE-mask%M)*wf1
-            call PES_mask_X_to_K(mask,mesh,wf1,wf2) 
-            
-            mask%k(:,:,:, idim, ist, ik) = wf2(:,:,:)
+
+						cf1%zRs = (M_ONE-mask%M)*cf1%zRs
+						call PES_mask_X_to_K(mask,mesh,cf1,cf2) 
+
+						mask%k(:,:,:, idim, ist, ik) = cf2%zRs(:,:,:)
 
 
      !----------------------------------------- 
@@ -1422,82 +1364,100 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
      !----------------------------------------
      
           case(MODE_PSF)
-!          if (MOD(iter*dt,mask%psf%Tstep) .eq. M_ZERO) then 
-!            write (*,*) "APPLY TDPSF!!"
-!!            call tdpsf_filter_out(mask%psf,wf1,wf2)
-!            call PES_mask_X_to_K(mask,mesh,wf1,wf3)
-!            call PES_mask_K_to_X(mask,mesh,wf3,wf2)
+! !          if (MOD(iter*dt,mask%psf%Tstep) .eq. M_ZERO) then 
+! !            write (*,*) "APPLY TDPSF!!"
+! !!            call tdpsf_filter_out(mask%psf,wf1,wf2)
+! !            call PES_mask_X_to_K(mask,mesh,wf1,wf3)
+! !            call PES_mask_K_to_X(mask,mesh,wf3,wf2)
+! 
+!             call tdpsf_X_to_K(mask%psf,wf1,wf3)
+!             call tdpsf_K_to_X(mask%psf,wf3,wf2)
+! 
+!             wf2 = wf1 - wf2
+!             
+!             
+!             if(mask%back_action) then
+!               wf1 = mask%k(:,:,:, idim, ist, ik) - wf4
+!               call PES_mask_K_to_X(mask,mesh,wf1,mask%k(:,:,:, idim, ist, ik))
+!               wf2 = wf2 + mask%k(:,:,:, idim, ist, ik)
+!             end if
+! 
+!             !substitute the KS wf with the filtered one
+!             call PES_mask_square_to_mesh(mask,mesh,st%zpsi(:, idim, ist, ik),wf2,MaskHow = 3,Const = M_ONE)
+! 
+!             !the out-going part of the wf
+!             wf4 = wf1 - wf2
+!             call PES_mask_X_to_K(mask,mesh,wf4,wf3) 
+! 
+! !            do ix=1,mask%ll(1)
+! !              write (*,*) ix, wf1(ix,1,1),wf2(ix,1,1),wf3(ix,1,1)
+! !            end do             
+! !!            call PES_mask_X_to_K(mask,mesh,wf3,wf1)
+! !            call PES_mask_K_to_X(mask,mesh,mask%k(:,:,:, idim, ist, ik),wf3)
+! !            call PES_mask_X_to_K(mask,mesh,wf3,mask%k(:,:,:, idim, ist, ik))
+! 
+!             call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter,mask%k(:,:,:, idim, ist, ik) )
+!             wf4 = mask%k(:,:,:, idim, ist, ik)            
+! 
+! !            mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + wf1(:,:,:)
+!             mask%k(:,:,:, idim, ist, ik) =  wf4 + wf3
+!             
+! !          end if 
 
-            call tdpsf_X_to_K(mask%psf,wf1,wf3)
-            call tdpsf_K_to_X(mask%psf,wf3,wf2)
+            call tdpsf_X_to_K(mask%psf,cf1%zRs,cf3%zRs)
+            call tdpsf_K_to_X(mask%psf,cf3%zRs,cf2%zRs)
 
-            wf2 = wf1 - wf2
-            
-            
+            cf2%zRs = cf1%zRs - cf2%zRs
+
             if(mask%back_action) then
-              wf1 = mask%k(:,:,:, idim, ist, ik) - wf4
-              call PES_mask_K_to_X(mask,mesh,wf1,mask%k(:,:,:, idim, ist, ik))
-              wf2 = wf2 + mask%k(:,:,:, idim, ist, ik)
+              cf1%zRs = mask%k(:,:,:, idim, ist, ik) - cf4%zRs
+              call PES_mask_K_to_X(mask,mesh,cf1%zRs,mask%k(:,:,:, idim, ist, ik))
+              cf2%zRs = cf2%zRs + mask%k(:,:,:, idim, ist, ik)
             end if
 
             !substitute the KS wf with the filtered one
-            call PES_mask_square_to_mesh(mask,mesh,st%zpsi(:, idim, ist, ik),wf2,MaskHow = 3,Const = M_ONE)
-
+						call zcube_to_mesh(mask%cube, cf2, mask%mesh, st%zpsi(:, idim, ist, ik), local = .true.)
             !the out-going part of the wf
-            wf4 = wf1 - wf2
-            call PES_mask_X_to_K(mask,mesh,wf4,wf3) 
-
-!            do ix=1,mask%ll(1)
-!              write (*,*) ix, wf1(ix,1,1),wf2(ix,1,1),wf3(ix,1,1)
-!            end do             
-!!            call PES_mask_X_to_K(mask,mesh,wf3,wf1)
-!            call PES_mask_K_to_X(mask,mesh,mask%k(:,:,:, idim, ist, ik),wf3)
-!            call PES_mask_X_to_K(mask,mesh,wf3,mask%k(:,:,:, idim, ist, ik))
+            cf4%zRs = cf1%zRs - cf2%zRs
+            call PES_mask_X_to_K(mask,mesh,cf4,cf3) 
 
             call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter,mask%k(:,:,:, idim, ist, ik) )
-            wf4 = mask%k(:,:,:, idim, ist, ik)            
+            cf4%zRs = mask%k(:,:,:, idim, ist, ik)            
 
-!            mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + wf1(:,:,:)
-            mask%k(:,:,:, idim, ist, ik) =  wf4 + wf3
-            
-!          end if 
+            mask%k(:,:,:, idim, ist, ik) =  cf4%zRs + cf3%zRs
 
 
           case default
            !Program should die before coming here
-           ! Then a fatal error should be generated. -DAS
-        end select
+ 			      write(message(1),'(a)') "PhotoElectroSpectrum = pes_mask. Unrecognized calculation mode." 
+			      call messages_fatal(1)
+ 
+       end select
 
 
       end do
     end do
   end do
- 
-
-  if(mask%mode .eq. MODE_MASK ) call PES_mask_apply_mask(mask,st,mesh)  !apply the mask to all the states
 
 
-#ifdef HAVE_MPI
-  ! wait for all processors to finish!
-  ! is this really necessary? I doubt it. --DAS
-  if(st%mpi_grp%size .gt. 1 ) then
-    call MPI_Barrier(st%mpi_grp%comm, mpi_err)
-  end if
-#endif
+  if(mask%mode .eq. MODE_MASK ) call PES_mask_apply_mask(mask,st,mesh)  !apply the mask to all the KS orbitals
 
 
-
-  SAFE_DEALLOCATE_A(wf1)
-  SAFE_DEALLOCATE_A(wf2)
+  call zcube_function_free_RS(mask%cube, cf1)
+  call zcube_function_free_RS(mask%cube, cf2)
   select case(mask%mode) 
   case(MODE_MASK)
     if(mask%back_action) then
-      SAFE_DEALLOCATE_A(wf3)
+		  call zcube_function_free_RS(mask%cube, cf3)
     end if
   case(MODE_PSF)
-    SAFE_DEALLOCATE_A(wf3)
-    SAFE_DEALLOCATE_A(wf4)
+	  call zcube_function_free_RS(mask%cube, cf3)
+	  call zcube_function_free_RS(mask%cube, cf4)
   end select
+
+
+
+
 
   POP_SUB(PES_mask_calc)
 

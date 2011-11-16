@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Photoelectron restart
-Programs   : octopus
+Programs   : octopus_mpi;octopus
 TestGroups : short-run
 Enabled    : Yes
 
