@@ -27,11 +27,11 @@ subroutine X(cube_function_alloc_RS)(cube, cf)
 
   if (cube%fft_library /= FFTLIB_PFFT) then
     ASSERT(.not.associated(cf%X(RS)))
-    SAFE_ALLOCATE(cf%X(RS)(1:cube%n(1), 1:cube%n(2), 1:cube%n(3)))
+    SAFE_ALLOCATE(cf%X(RS)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
 #ifdef HAVE_PFFT
   else
-    ASSERT(.not.associated(cf%pRS))
-    cf%pRS => cube%pfft%rs_data
+    ASSERT(.not.associated(cf%zRS))
+    cf%zRS => cube%pfft%rs_data
 #endif
   end if
 
@@ -40,19 +40,17 @@ end subroutine X(cube_function_alloc_RS)
 
 
 ! ---------------------------------------------------------
-subroutine X(cube_function_free_RS)(cf)
+subroutine X(cube_function_free_RS)(cube, cf)
+  type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
   PUSH_SUB(X(cube_function_free_RS))
 
-  if (associated(cf%X(RS))) then
+  if (cube%fft_library /= FFTLIB_PFFT) then
     SAFE_DEALLOCATE_P(cf%X(RS))
+  else
+    nullify(cf%zRS)    
   end if
-#ifdef HAVE_PFFT
-  if (associated(cf%pRS)) then
-    nullify(cf%pRS)
-  end if
-#endif
 
   POP_SUB(X(cube_function_free_RS))
 end subroutine X(cube_function_free_RS)
@@ -272,7 +270,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
   logical, optional,     intent(in)    :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
   logical, optional,     intent(in)    :: pfft_part !< If .true. the used partition is the pfft equal partition
 
-  integer :: im, ip, ii, nn, index, center(3), ixyz(3), lxyz(3), ix, iy, iz
+  integer :: im, ip, ii, nn, center(3), ixyz(3), lxyz(3), ix, iy, iz
   logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)
 
@@ -297,7 +295,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
   end if
   
   ! Initialize to zero the input matrix
-  forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%pRS(ix, iy, iz) = M_Z0
+  forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%zRS(ix, iy, iz) = M_Z0
 
   ! Do the actual transform, only for the output values
   center(1:3) = cube%n(1:3)/2 + 1
@@ -313,16 +311,16 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
         if (pfft_part_) then
 #ifdef HAVE_MPI
 #ifdef R_TCOMPLEX
-          cf%pRS(lxyz(1), lxyz(2), lxyz(3)) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
+          cf%zRS(lxyz(1), lxyz(2), lxyz(3)) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
 #else
-          cf%pRS(lxyz(1), lxyz(2), lxyz(3)) = TOCMPLX(real(mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))),M_ZERO)
+          cf%zRS(lxyz(1), lxyz(2), lxyz(3)) = TOCMPLX(real(mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))),M_ZERO)
 #endif
 #endif
         else
 #ifdef R_TCOMPLEX
-          cf%pRS(lxyz(1), lxyz(2), lxyz(3)) = gmf(ip + ii)
+          cf%zRS(lxyz(1), lxyz(2), lxyz(3)) = gmf(ip + ii)
 #else
-          cf%pRS(lxyz(1), lxyz(2), lxyz(3)) = TOCMPLX(real(gmf(ip + ii)),M_ZERO)
+          cf%zRS(lxyz(1), lxyz(2), lxyz(3)) = TOCMPLX(real(gmf(ip + ii)),M_ZERO)
 #endif
         end if
       end if
@@ -388,9 +386,9 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
         if (cube_global2local(cube, ixyz, lxyz)) then
 #ifdef HAVE_MPI
 #ifdef R_TCOMPLEX
-          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = cf%pRS(lxyz(1), lxyz(2), lxyz(3))
+          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = cf%zRS(lxyz(1), lxyz(2), lxyz(3))
 #else
-          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = real(cf%pRS(lxyz(1), lxyz(2), lxyz(3)))
+          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = real(cf%zRS(lxyz(1), lxyz(2), lxyz(3)))
 #endif
 #endif
         end if
@@ -402,7 +400,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
     !collect the data in all processes
     SAFE_ALLOCATE(gcf(cube%n(1), cube%n(2), cube%n(3)))
 #ifdef HAVE_MPI
-    call zcube_function_allgather(cube, gcf, cf%pRS)
+    call zcube_function_allgather(cube, gcf, cf%zRS)
 #endif
 
     ! cube to mesh

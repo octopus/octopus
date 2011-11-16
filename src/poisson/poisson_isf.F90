@@ -62,12 +62,11 @@ module poisson_isf_m
   end type isf_cnf_t
 
   type poisson_isf_t
-    integer                      :: all_nodes_comm
-    type(cube_function_t)        :: rho_cf
-    type(isf_cnf_t)              :: cnf(1:N_CNF)
+    integer         :: all_nodes_comm
+    type(isf_cnf_t) :: cnf(1:N_CNF)
   end type poisson_isf_t
 
-  integer, parameter           :: order_scaling_function = 8 
+  integer, parameter :: order_scaling_function = 8 
 
 contains
 
@@ -93,15 +92,12 @@ contains
     integer :: nodes
 #endif
 
-
     PUSH_SUB(poisson_isf_init)
 
 #ifdef HAVE_MPI
     init_world_ = .true.
     if(present(init_world)) init_world_ = init_world
 #endif
-
-    call cube_function_null(this%rho_cf)
 
     ! we need to nullify the pointer so they can be deallocated safely
     ! afterwards
@@ -224,15 +220,17 @@ contains
 
     integer :: i_cnf
     real(8), pointer :: rhop(:,:,:)
+    type(cube_function_t) :: rho_cf
     
     PUSH_SUB(poisson_isf_solve)
 
-    call dcube_function_alloc_RS(cube, this%rho_cf)
+    call cube_function_null(rho_cf)
+    call dcube_function_alloc_RS(cube, rho_cf)
 
     if(mesh%parallel_in_domains) then
-      call dmesh_to_cube(mesh, rho, cube, this%rho_cf, local=.true.)
+      call dmesh_to_cube(mesh, rho, cube, rho_cf, local=.true.)
     else
-      call dmesh_to_cube(mesh, rho, cube, this%rho_cf)
+      call dmesh_to_cube(mesh, rho, cube, rho_cf)
     end if
 
     ! Choose configuration.
@@ -254,9 +252,9 @@ contains
 
 #ifdef SINGLE_PRECISION
       SAFE_ALLOCATE(rhop(1:cube%n(1), 1:cube%n(2), 1:cube%n(3)))
-      rhop = this%rho_cf%dRS
+      rhop = rho_cf%dRS
 #else
-      rhop => this%rho_cf%dRS
+      rhop => rho_cf%dRS
 #endif
 
       call psolver_kernel(cube%n(1), cube%n(2), cube%n(3),    &
@@ -264,7 +262,7 @@ contains
         real(mesh%spacing(1), 8), this%cnf(SERIAL)%kernel, rhop)
 
 #ifdef SINGLE_PRECISION
-      this%rho_cf%dRS = rhop
+      rho_cf%dRS = rhop
       SAFE_DEALLOCATE_P(rhop)
 #endif
 
@@ -273,25 +271,25 @@ contains
       if (this%cnf(i_cnf)%mpi_grp%size /= -1 .or. i_cnf /= WORLD) then
         call par_psolver_kernel(cube%n(1), cube%n(2), cube%n(3), &
           this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, this%cnf(i_cnf)%nfft3,  &
-          real(mesh%spacing(1), 8), this%cnf(i_cnf)%kernel, this%rho_cf%dRS,                      &
+          real(mesh%spacing(1), 8), this%cnf(i_cnf)%kernel, rho_cf%dRS,                      &
           this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm)
       end if
       ! we need to be sure that the root of every domain-partition has a copy of the potential
       ! for the moment we broadcast to all nodes, but this is more than what we really need 
       if(i_cnf == WORLD .and. .not. this%cnf(WORLD)%all_nodes) then
-        call MPI_Bcast(this%rho_cf%drs(1, 1, 1), cube%n(1)*cube%n(2)*cube%n(3), &
+        call MPI_Bcast(rho_cf%drs(1, 1, 1), cube%n(1)*cube%n(2)*cube%n(3), &
           MPI_FLOAT, 0, this%all_nodes_comm, mpi_err)
       end if
 #endif
     end if
 
     if(mesh%parallel_in_domains) then
-      call dcube_to_mesh(cube, this%rho_cf, mesh, pot, local=.true.)
+      call dcube_to_mesh(cube, rho_cf, mesh, pot, local=.true.)
     else
-       call dcube_to_mesh(cube, this%rho_cf, mesh, pot)
+       call dcube_to_mesh(cube, rho_cf, mesh, pot)
     end if
     
-    call dcube_function_free_RS(this%rho_cf)
+    call dcube_function_free_RS(cube, rho_cf)
 
     POP_SUB(poisson_isf_solve)
   end subroutine poisson_isf_solve
@@ -316,8 +314,6 @@ contains
 #else
     SAFE_DEALLOCATE_P(this%cnf(SERIAL)%kernel)
 #endif
-
-    call cube_function_end(this%rho_cf)
 
     POP_SUB(poisson_isf_end)
   end subroutine poisson_isf_end

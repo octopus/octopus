@@ -89,7 +89,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
-    call dcube_function_free_rs(cf)
+    call dcube_function_free_rs(cube, cf)
   end if
 
   ! wave-functions
@@ -111,7 +111,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
     
-    call dcube_function_free_rs(cf)
+    call dcube_function_free_rs(cube, cf)
   end if
 
   ! wave-functions in fourier space
@@ -137,12 +137,11 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     if (.not. lstat) call output_etsf_error(error_data)
 
     call fourier_shell_end(shell)
-    call zcube_function_free_rs(cf)
+    call zcube_function_free_rs(cube, cf)
   end if
 #endif
 
   call cube_end(cube)
-  call cube_function_end(cf)
 
   POP_SUB(output_etsf)
 end subroutine output_etsf

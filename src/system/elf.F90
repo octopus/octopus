@@ -296,7 +296,6 @@ contains
     SAFE_DEALLOCATE_A(zpsi)
 
     call cube_end(cube_tmp)
-    call cube_function_end(cube_function_tmp)
 
     POP_SUB(elf_calc_fs)
 
@@ -317,8 +316,8 @@ contains
       call dmesh_to_cube(mesh, fin, cube, cc)
       call dcube_function_RS2FS(cube, cc)
       call dfourier_to_mesh(cube, cc, mesh, fout)
-      call dcube_function_free_RS(cc)
-      call dcube_function_free_FS(cc)
+      call dcube_function_free_RS(cube, cc)
+      call dcube_function_free_FS(cube, cc)
 
       POP_SUB(elf_calc_fs.dmf2mf_RS2FS)
     end subroutine dmf2mf_RS2FS
@@ -338,8 +337,8 @@ contains
       call zmesh_to_cube(mesh, fin, cube, cc)
       call zcube_function_RS2FS(cube, cc)
       call zfourier_to_mesh(cube, cc, mesh, fout)
-      call zcube_function_free_RS(cc)
-      call zcube_function_free_FS(cc)
+      call zcube_function_free_RS(cube, cc)
+      call zcube_function_free_FS(cube, cc)
 
       POP_SUB(elf_calc_fs.zmf2mf_RS2FS)
     end subroutine zmf2mf_RS2FS

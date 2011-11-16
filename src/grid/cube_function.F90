@@ -42,7 +42,6 @@ module cube_function_m
   public ::                        &
     cube_function_t,               &
     cube_function_null,            &
-    cube_function_end,             &
     dcube_function_alloc_RS,       &
     zcube_function_alloc_RS,       &
     dcube_function_free_RS,        &
@@ -63,9 +62,6 @@ module cube_function_m
     FLOAT, pointer :: dRS(:, :, :)  !< real-space grid
     CMPLX, pointer :: zRS(:, :, :)  !< real-space grid, complex numbers
     CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid
-
-    CMPLX, pointer :: pRS(:,:,:) !< real-space grid, complex number, in parallel
-    CMPLX, pointer :: pFS(:,:,:) !< fourier-space grid, in parallel
   end type cube_function_t
 
   type(profile_t), save :: prof_m2c, prof_c2m
@@ -149,7 +145,7 @@ contains
           if ( (ix == 1 .or. ix == cube%n(1)                                          ) .or. &
                ( (iy == 1 .or. iy == cube%n(2)) .and. (ix /= 1 .and. ix /= cube%n(1))   ) .or. &
                ( (iz == 1 .or. iz == cube%n(3)) .and. (ix /= 1 .and. ix /= cube%n(1) .and. iy /= 1 .and. iy /= cube%n(2))) ) then
-            tmp_x = tmp_x + real(cf%pRS(ii, jj, kk))
+            tmp_x = tmp_x + real(cf%zRS(ii, jj, kk))
           end if
         end do
       end do
@@ -214,27 +210,8 @@ contains
     nullify(cf%dRS)
     nullify(cf%FS)
 
-    nullify(cf%pRS)
-    nullify(cf%pFS)
-
     POP_SUB(cube_function_null) 
   end subroutine cube_function_null
-
-  ! ---------------------------------------------------------
-  subroutine cube_function_end(cf)
-    type(cube_function_t), intent(inout) :: cf
-    
-    PUSH_SUB(cube_function_end)
-    
-    SAFE_DEALLOCATE_P(cf%dRS)
-    SAFE_DEALLOCATE_P(cf%zRS)
-    SAFE_DEALLOCATE_P(cf%FS)
-
-    nullify(cf%pRS)
-    nullify(cf%pFS)
-
-    POP_SUB(cube_function_end)
-  end subroutine cube_function_end
 
 
 #include "undef.F90"

@@ -719,8 +719,7 @@ contains
 
     if(average_to_zero_) pot(1:mesh%np) = pot(1:mesh%np) - average
     
-    call dcube_function_free_RS(cf)           ! memory is no longer needed
-    call cube_function_end(cf)    
+    call dcube_function_free_RS(cube, cf) ! memory is no longer needed
 
     POP_SUB(poisson_fft)
   end subroutine poisson_fft

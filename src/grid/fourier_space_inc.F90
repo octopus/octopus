@@ -27,11 +27,11 @@ subroutine X(cube_function_alloc_FS)(cube, cf)
     ASSERT(.not.associated(cf%FS))
     ASSERT(associated(cube%X(fftw)))
 
-    SAFE_ALLOCATE(cf%FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
+    SAFE_ALLOCATE(cf%FS(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
 #ifdef HAVE_PFFT
   else
-    ASSERT(.not.associated(cf%pFS))
-    cf%pFS => cube%pfft%fs_data
+    ASSERT(.not.associated(cf%FS))
+    cf%FS => cube%pfft%fs_data(1:cube%fs_n(3), 1:cube%fs_n(1), 1:cube%fs_n(2))
 #endif
   end if
 
@@ -40,17 +40,16 @@ end subroutine X(cube_function_alloc_FS)
 
 
 ! ---------------------------------------------------------
-subroutine X(cube_function_free_FS)(cf)
+subroutine X(cube_function_free_FS)(cube, cf)
+  type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
   PUSH_SUB(X(cube_function_free_FS))
 
-  if (associated(cf%FS)) then
+  if (cube%fft_library /= FFTLIB_PFFT) then
     SAFE_DEALLOCATE_P(cf%FS)
-  end if
-
-  if (associated(cf%pFS)) then
-    nullify(cf%pFS)
+  else
+    nullify(cf%FS)
   end if
 
   POP_SUB(X(cube_function_free_FS))
@@ -70,8 +69,8 @@ subroutine X(cube_function_RS2FS)(cube, cf)
 
   if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
-    ASSERT(associated(cf%pRS))
-    ASSERT(associated(cf%pFS))
+    ASSERT(associated(cf%zRS))
+    ASSERT(associated(cf%FS))
 
     call pfft_forward_3d(cube%pfft)
 #endif
@@ -97,8 +96,8 @@ subroutine X(cube_function_FS2RS)(cube, cf)
 
   if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
-    ASSERT(associated(cf%pRS))
-    ASSERT(associated(cf%pFS))
+    ASSERT(associated(cf%zRS))
+    ASSERT(associated(cf%FS))
 
     call pfft_backward_3d(cube%pfft)
 #endif
@@ -163,7 +162,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
     do kk = 1, cube%fs_n(3)
       do jj = 1, cube%fs_n(2)
         do ii = 1, cube%fs_n(1)
-          cf%pFS(kk, ii, jj) = cf%pFS(kk, ii, jj)*this%X(op) (ii, jj, kk)
+          cf%FS(kk, ii, jj) = cf%FS(kk, ii, jj)*this%X(op) (ii, jj, kk)
         end do
       end do
     end do
@@ -181,7 +180,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   call profiling_in(fs2rs_prof, "FS2RS")
   call X(cube_function_FS2RS)(cube, cf)
   call profiling_out(fs2rs_prof)
-  call X(cube_function_free_FS)(cf)
+  call X(cube_function_free_FS)(cube, cf)
   call profiling_out(prof)
 
   POP_SUB(X(fourier_space_op_apply))

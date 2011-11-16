@@ -153,13 +153,13 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
       call read_netcdf()
       cf%zRS = re%dRS + M_zI*im%dRS
       call X(cube_to_mesh) (cube, cf, mesh, ff)
-      call cube_function_end(re)
-      call cube_function_end(im)
+      call dcube_function_free_RS(cube, re)
+      call dcube_function_free_RS(cube, im)
 #else
       call read_netcdf()
       call X(cube_to_mesh)(cube, cf, mesh, ff)
 #endif
-      call cube_function_end(cf)
+      call dcube_function_free_RS(cube, cf)
       call cube_end(cube)
     end if
 #endif
@@ -284,7 +284,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
     cf%X(RS) = reshape(ff, (/ cube%n(1), cube%n(2), cube%n(3) /))
     
     call X(cube_to_mesh) (cube, cf, mesh, ff)
-    call cube_function_end(cf)
+    call X(cube_function_free_RS)(cube, cf)
     call cube_end(cube)
     
     SAFE_DEALLOCATE_P(read_ff)
@@ -903,7 +903,7 @@ contains
 
     call io_close(iunit)
     call cube_end(cube)
-    call cube_function_end(cf)
+    call X(cube_function_free_RS)(cube, cf)
 
     POP_SUB(X(io_function_output_global).out_dx)
   end subroutine out_dx
@@ -962,7 +962,7 @@ contains
 
     call io_close(iunit)
     call cube_end(cube)
-    call cube_function_end(cf)
+    call X(cube_function_free_RS)(cube, cf)
 
     POP_SUB(X(io_function_output_global).out_cube)
   end subroutine out_cube
@@ -1078,7 +1078,7 @@ contains
 
     call io_close(iunit)
     call cube_end(cube)
-    call cube_function_end(cf)
+    call X(cube_function_free_RS)(cube, cf)
 
     POP_SUB(X(io_function_output_global).out_xcrysden)
   end subroutine out_xcrysden
@@ -1233,7 +1233,7 @@ contains
     ! close
     status = nf90_close(ncid)
     call cube_end(cube)
-    call cube_function_end(cf)
+    call X(cube_function_free_RS)(cube, cf)
 
     POP_SUB(X(io_function_output_global).out_netcdf)
   end subroutine out_netcdf
