@@ -121,7 +121,6 @@ subroutine X(fourier_space_op_init)(this, cube, op)
   R_TYPE,                   intent(in)  :: op(:, :, :)
 
   integer :: ii, jj, kk
-  integer :: start(3),last(3)
 
   PUSH_SUB(X(fourier_space_op_init))
 
@@ -129,25 +128,10 @@ subroutine X(fourier_space_op_init)(this, cube, op)
 
   nullify(this%dop)
   nullify(this%zop)
-  if (cube%fft_library == FFTLIB_PFFT) then
-    SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
-    do kk = 1, cube%fs_n(3)
-      do jj = 1, cube%fs_n(2)
-        do ii = 1, cube%fs_n(1)
-          this%X(op)(ii, jj, kk) = op(ii, jj, kk)
-        end do
-      end do
-    end do
-  else
-    SAFE_ALLOCATE(this%X(op)(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
-    do kk = 1, cube%n(3)
-      do jj = 1, cube%n(2)
-        do ii = 1, cube%nx
-          this%X(op)(ii, jj, kk) = op(ii, jj, kk)
-        end do
-      end do
-    end do
-  end if
+  SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
+  forall (kk = 1:cube%fs_n(3), jj = 1:cube%fs_n(2), ii = 1:cube%fs_n(1)) 
+    this%X(op)(ii, jj, kk) = op(ii, jj, kk)
+  end forall
 
   POP_SUB(X(fourier_space_op_init))
 end subroutine X(fourier_space_op_init)
@@ -159,7 +143,6 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   type(cube_function_t),    intent(inout)  :: cf
   
   integer :: ii, jj, kk, index
-  integer :: start(3), last(3)
 
   type(profile_t), save :: prof_g, rs2fs_prof, fs2rs_prof, prof
 

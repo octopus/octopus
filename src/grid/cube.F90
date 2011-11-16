@@ -92,8 +92,6 @@ contains
     if (present(fft)) fft_ = fft
 
     cube%n = n
-!    cube%n(2) = n(2) + 1
-!    cube%n(3) = n(3) + 2
 
 #ifdef HAVE_PFFT
     nullify(cube%pfft)
