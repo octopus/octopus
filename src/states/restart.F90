@@ -40,6 +40,7 @@ module restart_m
   use mesh_init_m
   use messages_m
   use mpi_m
+  use multigrid_m
   use ob_green_m
   use ob_interface_m
   use parser_m
@@ -216,26 +217,28 @@ contains
 
   ! ---------------------------------------------------------
   subroutine restart_write(dir, st, gr, ierr, iter, lr)
-    character(len=*),  intent(in)  :: dir
-    type(states_t),    intent(in)  :: st
-    type(grid_t),      intent(in)  :: gr
-    integer,           intent(out) :: ierr
-    integer, optional, intent(in)  :: iter
+    character(len=*),     intent(in)    :: dir
+    type(states_t),       intent(inout) :: st
+    type(grid_t),         intent(in)    :: gr
+    integer,              intent(out)   :: ierr
+    integer,    optional, intent(in)    :: iter
     !if this next argument is present, the lr wfs are stored instead of the gs wfs
-    type(lr_t), optional, intent(in)  :: lr
+    type(lr_t), optional, intent(in)    :: lr
 
-    integer :: iunit, iunit2, iunit_mesh, iunit_states, err, ik, idir, ist, idim, itot
+    integer :: iunit, iunit2, iunit_mesh, iunit_states, iunit_rho
+    integer :: err, ik, idir, ist, idim, isp, itot
     character(len=80) :: filename
     logical :: wfns_are_associated, lr_wfns_are_associated
     FLOAT   :: kpoint(1:MAX_DIM)
     FLOAT,  allocatable :: dpsi(:)
     CMPLX,  allocatable :: zpsi(:)
+    FLOAT, pointer :: rho(:)
 
     PUSH_SUB(restart_write)
 
     if(.not. restart_write_files) then
       ierr = 0
-    POP_SUB(restart_write)
+      POP_SUB(restart_write)
       return
     end if
 
@@ -353,19 +356,58 @@ contains
     ! do NOT use st%lnst here as it is not (st%st_end - st%st_start + 1)
     if(ierr == st%d%kpt%nlocal * (st%st_end - st%st_start + 1) * st%d%dim) ierr = 0 ! All OK
 
+    !write the densities
+    if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
+      iunit_rho = io_open(trim(dir)//'/density', action='write', is_tmp=.true.)
+      write(iunit_rho,'(a)') '#     #spin    #nspin    filename'
+      write(iunit_rho,'(a)') '%densities'
+    end if
+    if(gr%have_fine_mesh)then
+      SAFE_ALLOCATE(rho(1:gr%mesh%np))
+    else
+      nullify(rho)
+    end if
+    do isp = 1, st%d%nspin
+      if(st%d%nspin==1) then
+        write(unit=filename, fmt='(a)') 'density'
+      else
+        write(unit=filename, fmt='(a,i1)') 'density-sp', isp
+      endif
+      if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
+        write(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
+      end if
+      if(gr%have_fine_mesh)then
+        call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, st%rho(:,isp), rho, INJECTION)
+      else
+        rho=>st%rho(:,isp)
+      end if
+      call drestart_write_function(dir, filename, gr%mesh, rho, err)
+      if(.not.gr%have_fine_mesh)nullify(rho)
+      if(err==0) ierr = ierr + 1
+    end do
+    if(gr%have_fine_mesh)then
+      SAFE_DEALLOCATE_P(rho)
+    end if
+    if(ierr==st%d%nspin) ierr=0 ! All OK
+
     if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
       write(iunit,'(a)') '%'
-      if(present(iter)) write(iunit,'(a,i7)') 'Iter = ', iter
       write(iunit2, '(a)') '%'
-
+      write(iunit_rho,'(a)') '%'
+      if(present(iter)) then
+        write(iunit,'(a,i7)') 'Iter = ', iter
+        write(iunit_rho,'(a,i7)') 'Iter = ', iter
+      end if
       call io_close(iunit)
       call io_close(iunit2)
+      call io_close(iunit_rho)
     end if
 
     call unblock_signals()
 
     call profiling_out(prof_write)
     POP_SUB(restart_write)
+    return
   end subroutine restart_write
 
 
