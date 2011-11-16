@@ -829,7 +829,7 @@ contains
     end if
 
     if(ks%calc%time_present) then
-      call hamiltonian_update(hm, ks%gr%mesh, ks%calc%time)
+      call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
     else
       call hamiltonian_update(hm, ks%gr%mesh)
     end if
