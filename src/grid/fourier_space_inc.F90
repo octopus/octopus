@@ -130,13 +130,11 @@ subroutine X(fourier_space_op_init)(this, cube, op)
   nullify(this%dop)
   nullify(this%zop)
   if (cube%fft_library == FFTLIB_PFFT) then
-    start = cube%fs_istart
-    last = cube%fs_istart + cube%fs_n - 1
-    SAFE_ALLOCATE(this%X(op)(start(2):last(2),start(1):last(1),start(3):last(3)))
-     do kk =  cube%fs_istart(2),cube%fs_istart(2)+cube%fs_n(2)-1
-      do jj = cube%fs_istart(1), cube%fs_istart(1)+cube%fs_n(1)-1
-        do ii = cube%fs_istart(3), cube%fs_istart(3)+cube%fs_n(3)-1
-          this%X(op)(kk, jj, ii) = op(kk-start(2)+1, jj-start(1)+1, ii-start(3)+1)
+    SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
+    do kk = 1, cube%fs_n(3)
+      do jj = 1, cube%fs_n(2)
+        do ii = 1, cube%fs_n(1)
+          this%X(op)(ii, jj, kk) = op(ii, jj, kk)
         end do
       end do
     end do
@@ -178,14 +176,11 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   
   call profiling_in(prof_g,"G_APPLY")
   if (cube%fft_library == FFTLIB_PFFT) then
-    index = 1
-    start = cube%fs_istart
-    last = cube%fs_istart + cube%fs_n - 1
-    do kk =  cube%fs_istart(2),cube%fs_istart(2)+cube%fs_n(2)-1
-      do jj = cube%fs_istart(1), cube%fs_istart(1)+cube%fs_n(1)-1
-        do ii = cube%fs_istart(3), cube%fs_istart(3)+cube%fs_n(3)-1 
-          cf%pFS(index)= cf%pFS(index)*this%X(op)(kk,jj,ii)
-          index=index+1
+    !Note that the function in fourier space returned by PFFT is transposed
+    do kk = 1, cube%fs_n(3)
+      do jj = 1, cube%fs_n(2)
+        do ii = 1, cube%fs_n(1)
+          cf%pFS(kk, ii, jj) = cf%pFS(kk, ii, jj)*this%X(op) (ii, jj, kk)
         end do
       end do
     end do

@@ -61,20 +61,33 @@ end subroutine X(cube_function_free_RS)
 #ifdef HAVE_MPI
 subroutine X(cube_function_allgather)(cube, cf, cf_local)
   type(cube_t),   intent(in) :: cube
-  R_TYPE,         intent(out) :: cf(:)
-  R_TYPE,         intent(in)  :: cf_local(:)
+  R_TYPE,         intent(out) :: cf(:,:,:)
+  R_TYPE,         intent(in)  :: cf_local(:,:,:)
 
+  integer :: ix, iy, iz, index
+  R_TYPE, allocatable :: cf_tmp(:)
   type(profile_t), save :: prof_allgather
 
   PUSH_SUB(X(cube_function_allgather))
   call profiling_in(prof_allgather, "CF_ALLGATHER")
 
+  SAFE_ALLOCATE(cf_tmp(cube%n(1)*cube%n(2)*cube%n(3)))
+
   call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
-  call MPI_Allgatherv ( cf_local(1), &
-       cube%block_sizes(mpi_world%rank+1), R_MPITYPE, &
-       cf(1), cube%block_sizes(1),cube%begin_indexes - 1, &
-       R_MPITYPE, cube%mpi_grp%comm, mpi_err)
+  call MPI_Allgatherv ( cf_local(1,1,1), cube%np_local(cube%mpi_grp%rank+1), R_MPITYPE, &
+       cf_tmp(1), cube%np_local, cube%xlocal - 1, R_MPITYPE, &
+       cube%mpi_grp%comm, mpi_err)
   call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
+
+  ! Copy values to cf in the correct order
+  do index = 1, cube%n(1)*cube%n(2)*cube%n(3)
+    ix = cube%local(index, 1)
+    iy = cube%local(index, 2)
+    iz = cube%local(index, 3)
+    cf(ix, iy, iz) = cf_tmp(index)
+  end do
+
+  SAFE_DEALLOCATE_A(cf_tmp)
 
   call profiling_out(prof_allgather)
 
@@ -259,7 +272,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
   logical, optional,     intent(in)    :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
   logical, optional,     intent(in)    :: pfft_part !< If .true. the used partition is the pfft equal partition
 
-  integer :: im, ip, ii, nn, index, center(3), ixyz(3)
+  integer :: im, ip, ii, nn, index, center(3), ixyz(3), lxyz(3), ix, iy, iz
   logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)
 
@@ -284,7 +297,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
   end if
   
   ! Initialize to zero the input matrix
-  forall(index = 1:cube%np) cf%pRS(index) = M_Z0
+  forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%pRS(ix, iy, iz) = M_Z0
 
   ! Do the actual transform, only for the output values
   center(1:3) = cube%n(1:3)/2 + 1
@@ -292,24 +305,24 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
     ip = mesh%cube_map%map(MCM_POINT, im)
     nn = mesh%cube_map%map(MCM_COUNT, im)
 
+    ixyz(1:3) = mesh%idx%lxyz(ip, 1:3) + center(1:3)
     do ii = 0, nn - 1
-      ixyz(1:3) = mesh%idx%lxyz(ip+ii, 1:3) + center(1:3)
-      index = cube_local_index_from_coords(cube, ixyz)
+      ixyz(1:3) = mesh%idx%lxyz(ip + ii, 1:3) + center(1:3)
+      if (cube_global2local(cube, ixyz, lxyz)) then
 
-      if (index /= 0) then
-        if (pfft_part_) then 
+        if (pfft_part_) then
 #ifdef HAVE_MPI
 #ifdef R_TCOMPLEX
-          cf%pRS(index) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
+          cf%pRS(lxyz(1), lxyz(2), lxyz(3)) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
 #else
-          cf%pRS(index) = TOCMPLX(real(mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))),M_ZERO)
+          cf%pRS(lxyz(1), lxyz(2), lxyz(3)) = TOCMPLX(real(mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))),M_ZERO)
 #endif
 #endif
         else
 #ifdef R_TCOMPLEX
-          cf%pRS(index) = gmf(ip + ii)
+          cf%pRS(lxyz(1), lxyz(2), lxyz(3)) = gmf(ip + ii)
 #else
-          cf%pRS(index) = TOCMPLX(real(gmf(ip + ii)),M_ZERO)
+          cf%pRS(lxyz(1), lxyz(2), lxyz(3)) = TOCMPLX(real(gmf(ip + ii)),M_ZERO)
 #endif
         end if
       end if
@@ -337,11 +350,11 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
   logical, optional,     intent(in)  :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
   logical, optional,     intent(in)  :: pfft_part !< If .true. the used partition is the pfft equal partition
 
-  integer :: ip, im, ii, nn, index, center(3), ixyz(3)
+  integer :: ip, im, ii, nn, index, center(3), ixyz(3), lxyz(3)
   integer :: last, first
   logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)
-  CMPLX, allocatable :: gcf(:)
+  CMPLX, allocatable :: gcf(:,:,:)
 
   PUSH_SUB(X(cube_to_mesh_parallel))
 
@@ -368,17 +381,16 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
     do im = 1, mesh%cube_map%nmap
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
-      
-      do ii = 0, nn - 1
-        ixyz(1:3) = mesh%idx%lxyz(ip+ii, 1:3) + center(1:3)
-        index = cube_local_index_from_coords(cube, ixyz)
 
-        if (index /= 0) then ! The point is local
+      do ii = 0, nn - 1
+        ixyz(1:3) = mesh%idx%lxyz(ip + ii, 1:3) + center(1:3)
+
+        if (cube_global2local(cube, ixyz, lxyz)) then
 #ifdef HAVE_MPI
 #ifdef R_TCOMPLEX
-          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = cf%pRS(index)
+          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = cf%pRS(lxyz(1), lxyz(2), lxyz(3))
 #else
-          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = real(cf%pRS(index))
+          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = real(cf%pRS(lxyz(1), lxyz(2), lxyz(3)))
 #endif
 #endif
         end if
@@ -388,7 +400,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
   else
 
     !collect the data in all processes
-    SAFE_ALLOCATE(gcf(cube%np_global))
+    SAFE_ALLOCATE(gcf(cube%n(1), cube%n(2), cube%n(3)))
 #ifdef HAVE_MPI
     call zcube_function_allgather(cube, gcf, cf%pRS)
 #endif
@@ -398,20 +410,20 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
+      ixyz(1:3) = mesh%idx%lxyz(ip, 1:3) + center(1:3)
       do ii = 0, nn - 1
-        ixyz(1:3) = mesh%idx%lxyz(ip+ii, 1:3) + center(1:3)
         if (mpi_world%size == 1) then
 #ifdef R_TCOMPLEX
-          gmf(ip + ii) = gcf(cube_index_from_coords(cube, ixyz))
+          gmf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
 #else
-          gmf(ip + ii) = real(gcf(cube_index_from_coords(cube, ixyz)))
+          gmf(ip + ii) = real(gcf(ixyz(1), ixyz(2), ixyz(3) + ii))
 #endif
         else
           if (mesh%vp%part(ip+ii) == mesh%vp%partno) then
 #ifdef R_TCOMPLEX
-            gmf(ip + ii) = gcf(cube_index_from_coords(cube, ixyz))
+            gmf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
 #else
-            gmf(ip + ii) = real(gcf(cube_index_from_coords(cube, ixyz)))
+            gmf(ip + ii) = real(gcf(ixyz(1), ixyz(2), ixyz(3) + ii))
 #endif
 
           end if

@@ -73,8 +73,8 @@ module pfft_m
     integer(ptrdiff_t_kind) :: planf   !< the plan for forward transforms
     integer(ptrdiff_t_kind) :: planb   !< the plan for backward transforms
 
-    CMPLX, pointer :: rs_data(:)       !< array used to store the function in real space that is passed to PFFT.
-    CMPLX, pointer :: fs_data(:)       !< array used to store the function in fourier space that is passed to PFFT
+    CMPLX, pointer :: rs_data(:,:,:)   !< array used to store the function in real space that is passed to PFFT.
+    CMPLX, pointer :: fs_data(:,:,:)   !< array used to store the function in fourier space that is passed to PFFT
   end type pfft_t
 
   integer      :: pfft_refs(PFFT_MAX)
@@ -214,7 +214,7 @@ contains
     type(pfft_t),      intent(out)   :: pfft
     logical, optional, intent(in)    :: optimize
     
-    integer :: ii, jj, fft_dim, idir, ierror, process_column_size, process_row_size
+    integer :: ii, jj, fft_dim, idir, ierror, process_column_size, process_row_size, n3
     logical :: optimize_
     character(len=100) :: str_tmp
     integer(ptrdiff_t_kind) :: tmp_np, tmp_rs_n(3), tmp_fs_n(3), tmp_rs_istart(3), tmp_fs_istart(3)
@@ -312,16 +312,19 @@ contains
     rs_n = tmp_rs_n
     fs_n = tmp_fs_n
 
-    ! Allocate memory
-    SAFE_ALLOCATE(pfft_array(jj)%rs_data(tmp_np))
-    SAFE_ALLOCATE(pfft_array(jj)%fs_data(tmp_np))
+    ! Allocate memory. Note that PFFT may need extra memory space 
+    ! and that in fourier space the function will be transposed
+    n3 = ceiling(real(tmp_np)/real(rs_n(1)*rs_n(2)))
+    SAFE_ALLOCATE(pfft_array(jj)%rs_data(rs_n(1), rs_n(2), n3))
+    n3 = ceiling(real(tmp_np)/real(fs_n(3)*fs_n(1)))
+    SAFE_ALLOCATE(pfft_array(jj)%fs_data(fs_n(3), fs_n(1), n3))
 
     ! Create the plan, with the processor grid 
     call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, pfft_array(jj)%n, & 
-         pfft_array(jj)%rs_data, pfft_array(jj)%fs_data, mpi_comm, &
+         pfft_array(jj)%rs_data(1,1,1), pfft_array(jj)%fs_data(1,1,1), mpi_comm, &
          FFTW_FORWARD, PFFT_TRANSPOSED_OUT, FFTW_MEASURE)
     call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, pfft_array(jj)%n, &
-         pfft_array(jj)%fs_data, pfft_array(jj)%rs_data, mpi_comm, &
+         pfft_array(jj)%fs_data(1,1,1), pfft_array(jj)%rs_data(1,1,1), mpi_comm, &
          FFTW_BACKWARD, PFFT_TRANSPOSED_IN, FFTW_MEASURE) 
 
     write(message(1), '(a)') "Info: PFFT allocated with size ("
@@ -363,6 +366,7 @@ contains
   subroutine pfft_backward_3d(pfft)
     type(pfft_t), intent(inout) :: pfft
 
+    integer :: ii, jj, kk
     type(profile_t), save :: prof_bw
 
     PUSH_SUB(pfft_backward_3d)
