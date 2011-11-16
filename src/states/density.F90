@@ -446,19 +446,19 @@ contains
 
     PUSH_SUB(states_total_density)
 
-    forall(is = 1:st%d%nspin, ip = 1:mesh%np)
+    forall(ip = 1:mesh%np, is = 1:st%d%nspin)
       rho(ip, is) = st%rho(ip, is)
     end forall
 
     if(associated(st%rho_core)) then
-      forall(is = 1:st%d%spin_channels, ip = 1:mesh%np)
+      forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
         rho(ip, is) = rho(ip, is) + st%rho_core(ip)/st%d%nspin
       end forall
     end if
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
-      forall(is = 1:st%d%spin_channels, ip = 1:mesh%np)
+      forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
         rho(ip, is) = rho(ip, is) + st%frozen_rho(ip, is)
       end forall
     end if
