@@ -958,8 +958,8 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
 
   PUSH_SUB(PES_mask_output)
 
-  !Dump info for easy post-process
-  call PES_mask_write_info(mask, tmpdir)
+!   !Dump info for easy post-process
+    call PES_mask_write_info(mask, tmpdir)
  
 
   !Photoelectron wavefunction and density in real space
@@ -971,7 +971,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   !Dump the output in the td.00iter directories
   dir = file 
   if(iand(outp%what, C_OUTPUT_PES) .ne. 0 ) then
-    write(dir, '(a,i7.7,a)') "td.", iter,"/PES"  ! name of directory
+    write(dir, '(a,i7.7,a)') "td.", iter,"/PESM"  ! name of directory
   end if
 
 
@@ -1008,7 +1008,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   if(mpi_grp_is_root(mpi_world)) then ! only root node writes the output
     ! Dump the full matrix in binary format for subsequent post-processing 
     write(fn, '(a,a)') trim(dir), '_map.obf'
-    call io_binary_write(fn,mask%ll(1)*mask%ll(2)*mask%ll(3),PESK, ierr)
+    call io_binary_write(io_workpath(fn),mask%ll(1)*mask%ll(2)*mask%ll(3),PESK, ierr)
   
 
     ! Dump the k resolved PES on plane kz=0
@@ -1057,7 +1057,7 @@ subroutine PES_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
 
 
   filename = trim(dir)//'td/pes'
-  iunit = io_open(filename, action='read', status='old')
+  iunit = io_open(filename, action='read', status='old', is_tmp = .true.)
 
   SAFE_ALLOCATE(RR(1:2))
 
@@ -1101,8 +1101,9 @@ subroutine PES_mask_write_info(mask, dir)
 
 
   filename = trim(dir)//'td/pes'
+  write (*,*) "filename ",filename
 
-  iunit = io_open(filename, action='write')
+  iunit = io_open(filename, action='write', is_tmp = .true.)
 
   write(iunit, '(a10,2x,i2)') 'dim', mask%mesh%sb%dim
   write(iunit, '(a10,2x,es19.12)') 'Mask R1', mask%mask_R(1)
@@ -1146,11 +1147,10 @@ subroutine PES_mask_restart_write(mask, mesh, st)
   np = ll(1)*ll(2)*ll(3) 
 
 
-  dir = trim(tmpdir)//'td/'
+  dir = trim(restart_dir)//'td/'
 
   itot = 1
 
-  !assumes that only the main thread is allowed to dump the restart info
   do ik = 1, st%d%nik
     do ist = 1, st%nst
       do idim = 1, st%d%dim
@@ -1159,8 +1159,16 @@ subroutine PES_mask_restart_write(mask, mesh, st)
         
         path = trim(dir)//'pes_'//trim(filename)//'.obf'
         
-        call io_binary_write(path,np, mask%k(:,:,:, idim, ist, ik), ierr)
+        if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
 
+          call io_binary_write(path,np, mask%k(:,:,:, idim, ist, ik), ierr)
+          if(ierr > 0) then
+            message(1) = "Failed to write file "//trim(path)
+            call messages_fatal(1)
+          end if
+        
+        end if
+        
         itot = itot + 1
       end do
     end do
@@ -1190,7 +1198,7 @@ subroutine PES_mask_restart_read(mask, mesh, st)
   np =ll(1)*ll(2)*ll(3) 
 
 
-  dir = trim(tmpdir)//'td/'
+  dir = trim(restart_dir)//'td/'
 
   itot = 1
   do ik = st%d%kpt%start, st%d%kpt%end
@@ -1202,7 +1210,7 @@ subroutine PES_mask_restart_read(mask, mesh, st)
         
         call io_binary_read(path,np, mask%k(:,:,:, idim, ist, ik), ierr)
         if(ierr > 0) then
-          message(1) = "Failed to read file "//trim(path)//'.obf'
+          message(1) = "Failed to read file "//trim(path)
          call messages_fatal(1)
         end if
 

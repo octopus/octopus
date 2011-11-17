@@ -41,6 +41,7 @@ program photoelectron_spectrum
   FLOAT, pointer       :: lk(:),RR(:)
   FLOAT, allocatable   :: PESK(:,:,:)
   logical              :: interpolate
+  type(block_t) :: blk
   
   character(len=80) :: filename
 
@@ -51,7 +52,11 @@ program photoelectron_spectrum
 
   call global_init()
   call parser_init()
-  call datasets_init(1)
+  if(parse_block('CalculationMode', blk) == 0) then
+    call datasets_init(3, blk)
+  else
+    call datasets_init(3)
+  end if
   call io_init()
   call io_init_datasets()
 
@@ -76,10 +81,10 @@ program photoelectron_spectrum
   
   SAFE_ALLOCATE(PESK(1:ll(1),1:ll(2),1:ll(3)))
 
-  filename='td.general/PESM_map.obf'
+  filename=io_workpath('td.general/PESM_map.obf')
   call io_binary_read(trim(filename),ll(1)**dim,PESK, ierr) 
   if(ierr > 0) then
-    message(1) = "Failed to read file "//trim(filename)//'.obf'
+    message(1) = "Failed to read file "//trim(filename)
     call messages_fatal(1)
   end if
 

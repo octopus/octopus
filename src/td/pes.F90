@@ -46,6 +46,7 @@ module PES_m
   use parser_m
   use profiling_m
   use qshepmod_m
+  use restart_m
   use simul_box_m
   use states_io_m
   use states_m
@@ -302,11 +303,7 @@ contains
 
     PUSH_SUB(PES_restart_write)
 
-    if(mpi_grp_is_root(mpi_world)) then
-
       if(pes%calc_mask) call PES_mask_restart_write (pes%mask, mesh, st)
-
-    endif
 
     POP_SUB(PES_restart_write)
   end subroutine PES_restart_write
