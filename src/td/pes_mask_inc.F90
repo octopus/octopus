@@ -109,7 +109,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !%Default volkov
   !%Section Time-Dependent::PES
   !%Description
-  !% Photoelectron waves time propagation operator in momentum space.
+  !% Photoelectron waves time-propagation operator in momentum space.
   !%Option volkov 2
   !% Plane wave evolves with exp(i(p-A(t)/c)^2*dt/2).
   !%Option free 1
@@ -130,15 +130,15 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !%Default fft_map
   !%Section Time-Dependent::PES
   !%Description
-  !% With the mask method wavefunctions in the continuum are treated as plane-waves.
+  !% With the mask method, wavefunctions in the continuum are treated as plane waves.
   !% This variable sets how to calculate the plane-wave projection in the buffer 
   !% region. We perform discrete Fourier transforms (DFT) in order to approximate  
-  !% a continuos Fourier transform. The mayor drawback of this approach is the built
-  !% periodic boundary condition of DFT. Choosing an appropriate plane wave projection 
+  !% a continuous Fourier transform. The major drawback of this approach is the built-in
+  !% periodic boundary condition of DFT. Choosing an appropriate plane-wave projection 
   !% for a given simulation in addition to <tt>PESMaskEnlargeLev</tt> and 
   !% <tt>PESMaskNFFTEnlargeLev</tt>will help to converge the results.   
   !%
-  !% NOTE: depending on the value of <tt>PESMaskMode</tt> <tt>PESMaskPlaneWaveProjection</tt>
+  !% NOTE: depending on the value of <tt>PESMaskMode</tt> <tt>PESMaskPlaneWaveProjection</tt>,
   !% may affect not only performance but also the time evolution of the density. 
   !%Option integral 1
   !% Direct integration_map.

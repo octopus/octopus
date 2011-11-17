@@ -118,7 +118,7 @@ module PES_m
     integer        :: shape                    !< which mask function?
 
     FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to an cube index
-                                               !< we implicitly assume k to be the same for all the direction
+                                               !< we implicitly assume k to be the same for all directions
 
     integer          :: resample_lev           !< resampling level
     integer          :: enlarge                !< Fourier space enlargement
@@ -130,7 +130,7 @@ module PES_m
 
     integer :: sw_evolve             !< choose the time propagator for the continuum wfs
     logical :: back_action           !< whether to enable back action from B to A
-    logical :: add_psia              !< add the contribute of Psi_A in the buffer region to the output
+    logical :: add_psia              !< add the contribution of Psi_A in the buffer region to the output
     logical :: interpolate_out       !< whether to apply interpolation on the output files
 
     integer :: mode                  !< calculation mode
