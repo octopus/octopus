@@ -29,25 +29,25 @@
 #include <assert.h>
 #include <string.h>
 
+#define MAX_PLATFORM 4
+#define MAX_DEVICES  8
+
 int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platform_id * platform){
-  const cl_uint max_platform = 4;
-  cl_platform_id all_platforms[max_platform];
+  cl_platform_id all_platforms[MAX_PLATFORM];
   cl_int status;
   cl_uint ret_platform;
   cl_uint ip;
   char info[2048];
-  const cl_uint max_devices = 8;
-  cl_device_id all_devices[max_devices];
+  cl_device_id all_devices[MAX_DEVICES];
   cl_uint ret_devices;
-  cl_bool available;
 
-  status = clGetPlatformIDs(max_platform, all_platforms, &ret_platform);
+  status = clGetPlatformIDs(MAX_PLATFORM, all_platforms, &ret_platform);
 
   printf("Available OpenCL platforms: %d\n", ret_platform);
 
   for(ip = 0; ip < ret_platform; ip++){
     
-    //PLATFORM NAME
+    /*PLATFORM NAME*/
     status = clGetPlatformInfo(all_platforms[ip], CL_PLATFORM_NAME, sizeof(info), info, NULL);
     
     if (status != CL_SUCCESS){
@@ -56,7 +56,7 @@ int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platfo
     }
     printf("%c Platform %d : %s", ((*iplatform == ip)?'*':' '), ip, info);
 
-    //PLATFORM VERSION
+    /*PLATFORM VERSION*/
     status = clGetPlatformInfo(all_platforms[ip], CL_PLATFORM_VERSION, sizeof(info), info, NULL);
     
     if (status != CL_SUCCESS){
@@ -71,7 +71,7 @@ int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platfo
 
   *platform = all_platforms[*iplatform];
 
-  status = clGetDeviceIDs(*platform, CL_DEVICE_TYPE_ALL, max_devices, all_devices, &ret_devices);
+  status = clGetDeviceIDs(*platform, CL_DEVICE_TYPE_ALL, MAX_DEVICES, all_devices, &ret_devices);
 
   if (status != CL_SUCCESS){
     fprintf(stderr, "\nError: clGetDeviceIDs returned error code: %d\n", status);
@@ -192,7 +192,6 @@ int FC_FUNC_(f90_cl_max_workgroup_size, F90_CL_MAX_WORKGROUP_SIZE)(cl_device_id 
 }
 
 int FC_FUNC_(f90_cl_device_local_mem_size, F90_CL_DEVICE_LOCAL_MEM_SIZE)(cl_device_id * device){
-  size_t workgroup_size;
   cl_ulong mem;
 
   clGetDeviceInfo (*device, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(mem), &mem, NULL);
@@ -240,8 +239,8 @@ void FC_FUNC_(f90_cl_build_program, F90_CL_BUILD_PROGRAM)
   cSourceString[szSourceLength] = '\0';
 
   clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, sizeof(device_string), &device_string, NULL);
-  ext_khr_fp64 = strstr(device_string, "cl_khr_fp64");
-  ext_amd_fp64 = strstr(device_string, "cl_amd_fp64");
+  ext_khr_fp64 = (strstr(device_string, "cl_khr_fp64") != NULL);
+  ext_amd_fp64 = (strstr(device_string, "cl_amd_fp64") != NULL);
 
   *program = clCreateProgramWithSource(*context, 1, (const char**)&cSourceString, NULL, &status);
 
