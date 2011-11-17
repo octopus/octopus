@@ -96,7 +96,7 @@ int FC_FUNC(flgetplatformids, FLGETPLATFORMIDS)(const int * iplatform, cl_platfo
   return status;
 }
 
-void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * platform, cl_context * context){
+void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * platform, const cl_device_id * device, cl_context * context){
   cl_int status;
   cl_context_properties cps[3];
 
@@ -104,7 +104,7 @@ void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * pl
   cps[1] = (cl_context_properties) *platform;
   cps[2] = 0;
   
-  *context = clCreateContextFromType(cps, CL_DEVICE_TYPE_ALL, NULL, NULL, &status);
+  *context = clCreateContext(cps, 1, device, NULL, NULL, &status);
 
   if (status != CL_SUCCESS){
     fprintf(stderr, "\nError: clCreateContextFromType returned error code: %d\n", status);
@@ -112,24 +112,22 @@ void FC_FUNC_(f90_cl_init_context,F90_CL_INIT_CONTEXT)(const cl_platform_id * pl
   }
 }
 
-void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const cl_context * context, cl_device_id * device){
-  size_t ParamDataBytes;
+void FC_FUNC_(f90_cl_init_device,F90_CL_INIT_DEVICE)(const int * idevice, const cl_platform_id * platform, cl_device_id * device){
   char device_string[2048];
   cl_uint dim;
   cl_ulong mem;
   size_t max_workgroup_size;
-  cl_device_id * Devices;
+  cl_device_id Devices[MAX_DEVICES];
+  cl_int status;
 
-  clGetContextInfo(*context, CL_CONTEXT_DEVICES, 0 , NULL, &ParamDataBytes);
-  Devices = (cl_device_id*) malloc(ParamDataBytes);
+  status = clGetDeviceIDs(*platform, CL_DEVICE_TYPE_ALL, MAX_DEVICES, Devices, NULL);
 
-  clGetContextInfo(*context, CL_CONTEXT_DEVICES, ParamDataBytes, Devices, NULL);
-
-  assert(sizeof(cl_device_id) == sizeof(void *));
-
+  if (status != CL_SUCCESS){
+    fprintf(stderr, "\nError: clGetDeviceIDs returned error code: %d\n", status);
+    exit(1);
+  }
+  
   *device = Devices[*idevice];
-
-  free(Devices);
 
   /* print some info about the device */  
   clGetDeviceInfo(*device, CL_DEVICE_VENDOR, sizeof(device_string), &device_string, NULL);

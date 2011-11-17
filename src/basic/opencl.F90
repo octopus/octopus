@@ -186,8 +186,8 @@ module opencl_m
       ierr = flGetPlatformIDs(iplatform, opencl%platform_id)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "GetPlatformIDs")
 
-      call f90_cl_init_context(opencl%platform_id, opencl%context)
-      call f90_cl_init_device(idevice, opencl%context, opencl%device)
+      call f90_cl_init_device(idevice, opencl%platform_id, opencl%device)
+      call f90_cl_init_context(opencl%platform_id, opencl%device, opencl%context)
 
       call flCreateCommandQueue(opencl%command_queue, opencl%context, opencl%device, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "CreateCommandQueue")
