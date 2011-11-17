@@ -54,7 +54,7 @@ PhotoElectronSpectrum = pes_mask
 %
 
 PESMaskMode = mask_mode
-PESMaskOutWaveProjection = fft_bare
+PESMaskPlaneWaveProjection = fft_map
 PESMaskSpectEnergyMax = 123.4
 PESMaskSpectEnergyStep = 0.1790E-02
 

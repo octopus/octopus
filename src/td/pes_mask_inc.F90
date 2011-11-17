@@ -120,35 +120,45 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   call messages_print_var_option(stdout, "PESMaskPropagator",mask%sw_evolve)
 
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!  Optimization 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !%Variable PESMaskOutWaveProjection
+! =================
+! = Optimization  =
+! =================
+
+  !%Variable PESMaskPlaneWaveProjection
   !%Type integer
-  !%Default fft_bare
+  !%Default fft_map
   !%Section Time-Dependent::PES
   !%Description
-  !% How to calculate the plane-wave projections.
+  !% With the mask method wavefunctions in the continuum are treated as plane-waves.
+  !% This variable sets how to calculate the plane-wave projection in the buffer 
+  !% region. We perform discrete Fourier transforms (DFT) in order to approximate  
+  !% a continuos Fourier transform. The mayor drawback of this approach is the built
+  !% periodic boundary condition of DFT. Choosing an appropriate plane wave projection 
+  !% for a given simulation in addition to <tt>PESMaskEnlargeLev</tt> and 
+  !% <tt>PESMaskNFFTEnlargeLev</tt>will help to converge the results.   
+  !%
+  !% NOTE: depending on the value of <tt>PESMaskMode</tt> <tt>PESMaskPlaneWaveProjection</tt>
+  !% may affect not only performance but also the time evolution of the density. 
   !%Option integral 1
   !% Direct integration_map.
-  !%Option fft_map 2 
-  !%1D only.  
-  !%Option fft_bare 3 
-  !%Bare FFT map. This will contain also incoming terms.
+  !%Option fft_out 2 
+  !% FFT filtered in order to keep only outgoing waves. 1D only.  
+  !%Option fft_map 3 
+  !% FFT transform.
   !%Option tdpsf_map 4
-  !%Time-dependent phase-space filter map.
+  !% Time-dependent phase-space filter map.
   !%Option nfft_map 5
-  !%Non-equispaced FFT map.
+  !% Non-equispaced FFT map. 
   !%End
-  call parse_integer(datasets_check('PESMaskOutWaveProjection'),PW_MAP_BARE_FFT,mask%pw_map_how)
+  call parse_integer(datasets_check('PESMaskPlaneWaveProjection'),PW_MAP_BARE_FFT,mask%pw_map_how)
 
-  if(.not.varinfo_valid_option('PESMaskOutWaveProjection', mask%pw_map_how)) call input_error('PESMaskOutWaveProjection')
-  call messages_print_var_option(stdout, "PESMaskOutWaveProjection", mask%pw_map_how)
+  if(.not.varinfo_valid_option('PESMaskPlaneWaveProjection', mask%pw_map_how)) call input_error('PESMaskPlaneWaveProjection')
+  call messages_print_var_option(stdout, "PESMaskPlaneWaveProjection", mask%pw_map_how)
 
 #if !defined(HAVE_NFFT) 
   if (mask%pw_map_how ==  PW_MAP_NFFT) then
-    message(1) = "PESMaskOutWaveProjection = nfft_map requires libnfft3. Recompile and try again." 
+    message(1) = "PESMaskPlaneWaveProjection = nfft_map requires libnfft3. Recompile and try again." 
     call messages_fatal(1) 
   endif 
 #endif
@@ -159,8 +169,8 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !%Default 0
   !%Section Time-Dependent::PES
   !%Description
-  !% Mask box enlargement level. Enlarges the mask bounding box by a factor 2**<tt>PESMaskEnlargeLev</tt>
-  !% in order to avoid wrapping at the boundaries.
+  !% Mask box enlargement level. Enlarges the mask bounding box by a factor 2**<tt>PESMaskEnlargeLev</tt>.
+  !% This will avoid wavefunction wrapping at the boundaries.
   !%End
 
   call parse_integer(datasets_check('PESMaskEnlargeLev'),0,mask%enlarge)
@@ -176,8 +186,9 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !%Description
   !% Mask box enlargement level. Enlarges the mask box by a factor 2**<tt>PESMaskEnlargeLev</tt>
   !% using NFFT. This way we add two points in each direction at a distance
-  !% L=Lb*2**<tt>PESMaskEnlargeLev</tt> where <i>Lb</i> is the box size. 
-  !% Note: the corresponding Fourier space is shrunk by the same factor.
+  !% L=Lb*2**<tt>PESMaskEnlargeLev</tt> where <i>Lb</i> is the box size.
+  !% 
+  !% Note: the corresponding Fourier space is restricted by the same factor.
   !%End
 
   call parse_integer(datasets_check('PESMaskNFFTEnlargeLev'),0,mask%enlarge_nfft)
