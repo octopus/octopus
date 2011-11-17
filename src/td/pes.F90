@@ -60,18 +60,18 @@ module PES_m
   implicit none
 
   integer, parameter ::   &
-    FREE           =  1,  &    !> The scattering waves evolve in time as free plane waves
-    VOLKOV         =  2,  &    !> The scattering waves evolve with exp(i(p-A(t)/c)^2*dt/2)
+    FREE           =  1,  &    !< The scattering waves evolve in time as free plane waves
+    VOLKOV         =  2,  &    !< The scattering waves evolve with exp(i(p-A(t)/c)^2*dt/2)
     CORRECTED1D    =  3,  &
     EMBEDDING1D    =  4,  &     
     VOLKOV_CORRECTED= 5
 
   integer, parameter ::       &
-    PW_MAP_INTEGRAL    =  1,  &    !> projection on outgoing waves by direct integration
-    PW_MAP_FFT         =  2,  &    !> FFT on outgoing waves (1D only)
-    PW_MAP_BARE_FFT    =  3,  &    !> FFT - normally from fftw3 
-    PW_MAP_TDPSF       =  4,  &    !> time-dependent phase-space filter
-    PW_MAP_NFFT        =  5        !> non-equispaced fft (NFFT)
+    PW_MAP_INTEGRAL    =  1,  &    !< projection on outgoing waves by direct integration
+    PW_MAP_FFT         =  2,  &    !< FFT on outgoing waves (1D only)
+    PW_MAP_BARE_FFT    =  3,  &    !< FFT - normally from fftw3
+    PW_MAP_TDPSF       =  4,  &    !< time-dependent phase-space filter
+    PW_MAP_NFFT        =  5        !< non-equispaced fft (NFFT)
 
   integer, parameter ::      &
     M_SIN2            =  1,  &  
@@ -89,59 +89,59 @@ module PES_m
     OUT               =  2
 
   type PES_rc_t
-    integer          :: npoints   					!> how many points we store the wf
-    integer, pointer :: points(:) 					!> which points to use
-    character(len=30), pointer :: filenames(:)  !> filenames
+    integer          :: npoints   					!< how many points we store the wf
+    integer, pointer :: points(:) 					!< which points to use
+    character(len=30), pointer :: filenames(:)  !< filenames
     CMPLX, pointer :: wf(:,:,:,:,:)
-    integer, pointer :: rankmin(:)  				   !>partition of the mesh containing the points
+    integer, pointer :: rankmin(:)  				   !<partition of the mesh containing the points
   end type PES_rc_t
 
   type PES_mask_t
 
 
-    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !> The continuum wfs in momentum space
+    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !< The continuum wfs in momentum space
 
     ! Some mesh-related stuff
-    integer          :: ll(MAX_DIM)            !> the size of the square mesh   
-    integer          :: np                     !> number of mesh points associated with the mesh
-                                               !> (either mesh%np or mesh%np_global) 
-    FLOAT            :: spacing(MAX_DIM)       !> the spacing 
-    integer, pointer :: Lxyz_inv(:,:,:)  => NULL()    !> return a point on the main mesh from xyz on the mask square mesh
-    type(mesh_t), pointer  :: mesh             !> a pointer to the mesh 
-    type(cube_t)     :: cube                   !> the cubic mesh  
+    integer          :: ll(MAX_DIM)            !< the size of the square mesh
+    integer          :: np                     !< number of mesh points associated with the mesh
+                                               !< (either mesh%np or mesh%np_global)
+    FLOAT            :: spacing(MAX_DIM)       !< the spacing
+    integer, pointer :: Lxyz_inv(:,:,:)  => NULL()    !< return a point on the main mesh from xyz on the mask square mesh
+    type(mesh_t), pointer  :: mesh             !< a pointer to the mesh
+    type(cube_t)     :: cube                   !< the cubic mesh
 
-    FLOAT, pointer :: ext_pot(:,:) => NULL()   !> external time-dependent potential i.e. the lasers
+    FLOAT, pointer :: ext_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
 
-    FLOAT, pointer :: M(:,:,:)  => NULL()      !> the mask on a cubic mesh containing the simulation box
-    type(cube_function_t) :: cM                !> the mask cube function
-    FLOAT, pointer :: mask_R(:)  => NULL()     !> the mask inner (component 1) and outer (component 2) radius
-    integer        :: shape                    !> which mask function?  
+    FLOAT, pointer :: M(:,:,:)  => NULL()      !< the mask on a cubic mesh containing the simulation box
+    type(cube_function_t) :: cM                !< the mask cube function
+    FLOAT, pointer :: mask_R(:)  => NULL()     !< the mask inner (component 1) and outer (component 2) radius
+    integer        :: shape                    !< which mask function?
 
-    FLOAT, pointer :: Lk(:) => NULL()          !> associate a k value to an cube index
-                                               !> we implicitly assume k to be the same for all the direction 
+    FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to an cube index
+                                               !< we implicitly assume k to be the same for all the direction
 
-    integer          :: resample_lev           !> resampling level
-    integer          :: enlarge                !> Fourier space enlargement 
-    integer          :: enlarge_nfft           !> NFFT space enlargement
-    integer          :: llr(MAX_DIM)           !> the size of the rescaled cubic mesh   
+    integer          :: resample_lev           !< resampling level
+    integer          :: enlarge                !< Fourier space enlargement
+    integer          :: enlarge_nfft           !< NFFT space enlargement
+    integer          :: llr(MAX_DIM)           !< the size of the rescaled cubic mesh
        
     FLOAT :: energyMax 
     FLOAT :: energyStep 
 
-    integer :: sw_evolve             !> choose the time propagator for the continuum wfs    
-    logical :: back_action           !> whether to enable back action from B to A
-    logical :: add_psia              !> add the contribute of Psi_A in the buffer region to the output 
-    logical :: interpolate_out       !> whether to apply interpolation on the output files  
+    integer :: sw_evolve             !< choose the time propagator for the continuum wfs
+    logical :: back_action           !< whether to enable back action from B to A
+    logical :: add_psia              !< add the contribute of Psi_A in the buffer region to the output
+    logical :: interpolate_out       !< whether to apply interpolation on the output files
 
-    integer :: mode                  !> calculation mode
-    integer :: pw_map_how            !> how to perform projection on plane waves
+    integer :: mode                  !< calculation mode
+    integer :: pw_map_how            !< how to perform projection on plane waves
 
-    type(fft_t)    :: fft            !> FFT plan
+    type(fft_t)    :: fft            !< FFT plan
 #if defined(HAVE_NFFT) 
-    type(nfft_t)   :: nfft           !> NFFT plan
+    type(nfft_t)   :: nfft           !< NFFT plan
 #endif
 
-    type(tdpsf_t) :: psf             !> Phase-space filter struct reference
+    type(tdpsf_t) :: psf             !< Phase-space filter struct reference
 
 
   end type PES_mask_t

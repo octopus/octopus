@@ -797,11 +797,11 @@ contains
   !! between nprocs processors.
   !! THREADSAFE
   subroutine multicomm_divide_range(nobjs, nprocs, istart, ifinal, lsize, scalapack_compat)
-    integer,           intent(in)    :: nobjs !< number of points to divide
-    integer,           intent(in)    :: nprocs !< number of processors
+    integer,           intent(in)    :: nobjs !< Number of points to divide
+    integer,           intent(in)    :: nprocs !< Number of processors
     integer,           intent(out)   :: istart(:)
     integer,           intent(out)   :: ifinal(:)
-    integer, optional, intent(out)   :: lsize(:) !< number of objects in each partition
+    integer, optional, intent(out)   :: lsize(:) !< Number of objects in each partition
     logical, optional, intent(in)    :: scalapack_compat
 
     integer :: ii, jj, rank, size
@@ -870,15 +870,18 @@ contains
   end subroutine multicomm_divide_range
 
   ! ---------------------------------------------------------
+  !> Function to divide the range of numbers from 1 to nobjs
+  !! between all available threads with OpenMP.
   ! THREADSAFE
   subroutine multicomm_divide_range_omp(nobjs, ini, nobjs_loc)
-    integer, intent(in)    :: nobjs
-    integer, intent(out)   :: ini
-    integer, intent(out)   :: nobjs_loc
+    integer, intent(in)    :: nobjs       !< Number of points to divide
+    integer, intent(out)   :: ini         !< Start point of the partition
+    integer, intent(out)   :: nobjs_loc   !< Number of objects in each partition
     
     integer :: istart(MAX_OMP_THREADS), ifinal(MAX_OMP_THREADS), lsize(MAX_OMP_THREADS), rank
 
     ! no push_sub, threadsafe
+    rank = 1
 #ifdef HAVE_OPENMP
     call multicomm_divide_range(nobjs, omp_get_num_threads(), istart, ifinal, lsize)
 
