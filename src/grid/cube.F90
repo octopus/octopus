@@ -62,7 +62,8 @@ module cube_m
     type(fft_t), pointer :: dfftw
     type(fft_t), pointer :: zfftw
 #ifdef HAVE_PFFT
-    type(pfft_t), pointer :: pfft
+    type(pfft_t), pointer :: dpfft
+    type(pfft_t), pointer :: zpfft
 #endif
   end type cube_t
 
@@ -79,27 +80,28 @@ contains
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: n(3)
     type(simul_box_t), intent(in)  :: sb
-    logical, optional, intent(in)  :: fft !< Is the cube going to be used to perform FFTs?
+    integer, optional, intent(in)  :: fft !< Is the cube going to be used to perform FFTs?
 
     integer :: mpi_comm
-    logical :: fft_
+    integer :: fft_
 
     PUSH_SUB(cube_init)
 
     ASSERT(all(n(1:3) > 0))
 
-    fft_ = .false.
+    fft_ = FFT_NONE
     if (present(fft)) fft_ = fft
 
     cube%n = n
 
 #ifdef HAVE_PFFT
-    nullify(cube%pfft)
+    nullify(cube%dpfft)
+    nullify(cube%zpfft)
 #endif
     nullify(cube%dfftw)
     nullify(cube%zfftw)
 
-    if (fft_) then
+    if (fft_ /= FFT_NONE) then
       !%Variable FFTLibrary
       !%Type logical
       !%Section Hamiltonian::Poisson
@@ -136,11 +138,14 @@ contains
       cube%parallel_in_domains = .false.
       mpi_comm = -1
 
-      SAFE_ALLOCATE(cube%dfftw)
-      SAFE_ALLOCATE(cube%zfftw)
-
-      call fft_init(cube%n, sb%dim, FFT_REAL,    cube%dfftw, optimize = .not.simul_box_is_periodic(sb))
-      call fft_init(cube%n, sb%dim, FFT_COMPLEX, cube%zfftw, optimize = .not.simul_box_is_periodic(sb))
+      if(iand(fft_, FFT_REAL) .ne. 0) then
+        SAFE_ALLOCATE(cube%dfftw)
+        call fft_init(cube%n, sb%dim, FFT_REAL,    cube%dfftw, optimize = .not.simul_box_is_periodic(sb))
+      end if
+      if(iand(fft_, FFT_COMPLEX) .ne. 0) then
+        SAFE_ALLOCATE(cube%zfftw)
+        call fft_init(cube%n, sb%dim, FFT_COMPLEX, cube%zfftw, optimize = .not.simul_box_is_periodic(sb))
+      end if
       cube%nx = cube%n(1)/2 + 1
 
       cube%rs_n = cube%n
@@ -153,10 +158,18 @@ contains
 #ifdef HAVE_PFFT
       cube%parallel_in_domains = .true.
 
-      SAFE_ALLOCATE(cube%pfft)
-      call pfft_init(cube%n, sb%dim, PFFT_REAL, cube%rs_istart, cube%fs_istart, cube%rs_n, &
-           cube%fs_n, mpi_comm, cube%pfft, optimize = .not.simul_box_is_periodic(sb))
+      if(iand(fft_, FFT_REAL) .ne. 0) then
+        SAFE_ALLOCATE(cube%dpfft)
+        call pfft_init(cube%n, sb%dim, FFT_REAL, cube%rs_istart, cube%fs_istart, cube%rs_n, &
+             cube%fs_n, mpi_comm, cube%dpfft, optimize = .not.simul_box_is_periodic(sb))
+      end if
+      if(iand(fft_, FFT_COMPLEX) .ne. 0) then
+        SAFE_ALLOCATE(cube%zpfft)
+        call pfft_init(cube%n, sb%dim, FFT_COMPLEX, cube%rs_istart, cube%fs_istart, cube%rs_n, &
+             cube%fs_n, mpi_comm, cube%zpfft, optimize = .not.simul_box_is_periodic(sb))
+      end if
       cube%nx = cube%n(1)/2 + 1
+
 #endif
     end select
 
@@ -176,9 +189,13 @@ end subroutine  cube_init
     PUSH_SUB(cube_end)
 
 #ifdef HAVE_PFFT
-    if(associated(cube%pfft)) then
-      call pfft_end(cube%pfft)
-      SAFE_DEALLOCATE_P(cube%pfft)
+    if(associated(cube%dpfft)) then
+      call pfft_end(cube%dpfft)
+      SAFE_DEALLOCATE_P(cube%dpfft)
+    end if
+    if(associated(cube%zpfft)) then
+      call pfft_end(cube%zpfft)
+      SAFE_DEALLOCATE_P(cube%zpfft)
     end if
 #endif  
 

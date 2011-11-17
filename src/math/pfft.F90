@@ -31,6 +31,7 @@
 module pfft_m
   use c_pointer_m
   use datasets_m
+  use fft_m
   use global_m
   use lalg_basic_m
   use loct_math_m
@@ -44,7 +45,6 @@ module pfft_m
   implicit none
 
 #ifdef HAVE_PFFT
-  include "fftw3.f"
   include "pfft.f"
 
   private ::        &
@@ -65,17 +65,12 @@ module pfft_m
        pfftw_forward            =    -1, &
        pfftw_backward           =     1, &
        pfft_measure             =     0 
-  
-  ! global constants
-  integer, public, parameter :: &
-       PFFT_REAL    = 0,        &
-       PFFT_COMPLEX = 1
 
   type pfft_t
     integer                 :: slot    !< in which slot do we have this fft
     integer(ptrdiff_t_kind) :: n(3)    !< size of the fft
     integer                 :: rs_n(3) !< local size of the fft
-    integer                 :: is_real !< is the fft real or complex. PFFT only works with complex. Real = 0, Complex = 1
+    integer                 :: type    !< is the fft real or complex.
     integer(ptrdiff_t_kind) :: planf   !< the plan for forward transforms
     integer(ptrdiff_t_kind) :: planb   !< the plan for backward transforms
 
@@ -211,10 +206,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pfft_init(nn, dim, is_real, rs_istart, fs_istart, rs_n, fs_n, mpi_comm, pfft, optimize)
+  subroutine pfft_init(nn, dim, type, rs_istart, fs_istart, rs_n, fs_n, mpi_comm, pfft, optimize)
     integer,           intent(inout) :: nn(1:3)
     integer,           intent(in)    :: dim
-    integer,           intent(in)    :: is_real
+    integer,           intent(in)    :: type
     integer,           intent(out)   :: rs_istart(1:3)
     integer,           intent(out)   :: fs_istart(1:3)
     integer,           intent(out)   :: rs_n(1:3)
@@ -229,6 +224,8 @@ contains
     integer(ptrdiff_t_kind) :: tmp_np, tmp_rs_n(3), tmp_fs_n(3), tmp_rs_istart(3), tmp_fs_istart(3)
 
     PUSH_SUB(pfft_init)
+
+    ASSERT(type == FFT_REAL .or. type == FFT_COMPLEX)
 
     ! First, figure out the dimensionality of the FFT. PFFT works efficiently with 3D
     fft_dim = 0
@@ -271,7 +268,7 @@ contains
     jj = 0
     do ii = PFFT_MAX, 1, -1
       if(pfft_refs(ii) /= PFFT_NULL) then
-        if(all(nn(1:dim) == pfft_array(ii)%n(1:dim)) .and. is_real == pfft_array(ii)%is_real) then
+        if(all(nn(1:dim) == pfft_array(ii)%n(1:dim)) .and. type == pfft_array(ii)%type) then
           pfft = pfft_array(ii)              ! return a copy
           pfft_refs(ii) = pfft_refs(ii) + 1  ! increment the ref count
           POP_SUB(pfft_init)
@@ -294,7 +291,7 @@ contains
 
     !! Change the nn from 32 bits to 64 (if needed)  
     pfft_array(jj)%n(1:3)  = nn(1:3)
-    pfft_array(jj)%is_real = is_real
+    pfft_array(jj)%type = type
     
     ! With PFFT only could be 3D complex
     
@@ -312,7 +309,7 @@ contains
       call messages_fatal(3)
     end if
 
-    if (is_real == PFFT_REAL) then
+    if (type == FFT_REAL) then
 
       call PDFFT(local_size_dft_r2c_3d)(tmp_np, pfft_array(jj)%n, &
            mpi_comm, PFFT_TRANSPOSED_OUT, &
@@ -399,7 +396,7 @@ contains
 
     PUSH_SUB(pfft_forward_3d)
 
-    if (pfft%is_real == PFFT_REAL .and. pfft%rs_n(1) > pfft%n(1)) then
+    if (pfft%type == FFT_REAL .and. pfft%rs_n(1) > pfft%n(1)) then
       do jj = 1, pfft%rs_n(2)
         do kk = 1, pfft%rs_n(3)
           pfft%drs_data(pfft%rs_n(1), jj, kk) = M_ZERO
@@ -430,7 +427,7 @@ contains
     do ii = 1, pfft%rs_n(1)
       do jj = 1, pfft%rs_n(2)
         do kk = 1, pfft%rs_n(3)
-          if (pfft%is_real == PFFT_REAL) then
+          if (pfft%type == FFT_REAL) then
             pfft%drs_data(ii, jj, kk) = pfft%drs_data(ii, jj, kk)/(pfft%n(1)*pfft%n(2)*pfft%n(3))
           else
             pfft%zrs_data(ii, jj, kk) = pfft%zrs_data(ii, jj, kk)/(pfft%n(1)*pfft%n(2)*pfft%n(3))

@@ -25,6 +25,7 @@ module elf_m
   use density_m
   use datasets_m
   use derivatives_m
+  use fft_m
   use fourier_space_m
   use global_m
   use grid_m
@@ -211,7 +212,11 @@ contains
       sp = M_ONE
     end if
  
-    call cube_init(cube_tmp, gr%mesh%idx%ll, gr%sb, fft = .true.)
+    if (states_are_real(st)) then
+      call cube_init(cube_tmp, gr%mesh%idx%ll, gr%sb, fft = FFT_REAL)
+    else
+      call cube_init(cube_tmp, gr%mesh%idx%ll, gr%sb, fft = FFT_COMPLEX)
+    end if
     call cube_function_null(cube_function_tmp)
 
     do_is: do is = 1, st%d%nspin

@@ -44,7 +44,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 #endif
 
   !Create a cube
-  call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft=.true.)
+  call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft=FFT_REAL + FFT_COMPLEX)
   call cube_function_null(cf)
   
   ! To create an etsf file one has to do the following:

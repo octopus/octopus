@@ -58,9 +58,10 @@ module fft_m
     dfft_backward1
 
   ! global constants
-  integer, public, parameter ::                &
-    fft_real    = 0,                   &
-    fft_complex = 1
+  integer, public, parameter :: &
+    FFT_NONE    = 0,            &
+    FFT_REAL    = 1,            &
+    FFT_COMPLEX = 2
 
   ! fftw constants. this is just a copy from file fftw3.f,
   ! distributed with fftw package.
@@ -102,7 +103,7 @@ module fft_m
     integer     :: slot       !< in which slot do we have this fft
 
     integer     :: n(3)       !< size of the fft
-    integer     :: is_real    !< is the fft real or complex
+    integer     :: type       !< is the fft real or complex
     type(c_ptr) :: planf      !< the plan for forward transforms
     type(c_ptr) :: planb      !< the plan for backward transforms
   end type fft_t
@@ -188,10 +189,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine fft_init(nn, dim, is_real, fft, optimize)
+  subroutine fft_init(nn, dim, type, fft, optimize)
     integer,           intent(inout) :: nn(1:3)
     integer,           intent(in)    :: dim
-    integer,           intent(in)    :: is_real
+    integer,           intent(in)    :: type
     type(fft_t),       intent(out)   :: fft
     logical, optional, intent(in)    :: optimize
 
@@ -203,6 +204,8 @@ contains
     character(len=100) :: str_tmp
 
     PUSH_SUB(fft_init)
+
+    ASSERT(type == FFT_REAL .or. type == FFT_COMPLEX)
 
     ! First, figure out the dimensionality of the FFT.
     fft_dim = 0
@@ -241,7 +244,7 @@ contains
     jj = 0
     do ii = FFT_MAX, 1, -1
       if(fft_refs(ii) /= FFT_NULL) then
-        if(all(nn(1:dim) == fft_array(ii)%n(1:dim)) .and. is_real == fft_array(ii)%is_real) then
+        if(all(nn(1:dim) == fft_array(ii)%n(1:dim)) .and. type == fft_array(ii)%type) then
           fft = fft_array(ii)              ! return a copy
           fft_refs(ii) = fft_refs(ii) + 1  ! increment the ref count
           POP_SUB(fft_init)
@@ -262,8 +265,8 @@ contains
     fft_refs(jj)          = 1
     fft_array(jj)%slot    = jj
     fft_array(jj)%n(1:3)  = nn(1:3)
-    fft_array(jj)%is_real = is_real
-    if(is_real == fft_real) then
+    fft_array(jj)%type = type
+    if(type == FFT_REAL) then
       SAFE_ALLOCATE(rin(1:nn(1), 1:nn(2), 1:nn(3)))
       SAFE_ALLOCATE(cout(1:nn(1)/2+1, 1:nn(2), 1:nn(3)))
 
@@ -381,7 +384,7 @@ contains
     PUSH_SUB(fft_getdim_complex)
 
     dd = fft%n
-    if(fft%is_real == fft_real)  dd(1) = dd(1)/2 + 1
+    if(fft%type == FFT_REAL)  dd(1) = dd(1)/2 + 1
 
     POP_SUB(fft_getdim_complex)
   end subroutine fft_getdim_complex

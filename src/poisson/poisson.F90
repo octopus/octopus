@@ -23,6 +23,7 @@ module poisson_m
   use cube_m
   use datasets_m
   use derivatives_m
+  use fft_m
   use geometry_m
   use global_m
   use index_m
@@ -138,8 +139,8 @@ contains
     type(poisson_t),             intent(out)   :: this
     type(mesh_t),                intent(in)    :: mesh
 
-    logical :: need_cube, need_fft
-    integer :: default_solver, box(MAX_DIM)
+    logical :: need_cube
+    integer :: default_solver, box(MAX_DIM), need_fft
 
     if(this%method.ne.-99) return ! already initialized
 
@@ -321,7 +322,7 @@ contains
 
     ! Now that we know the method, we check if we need a cube and its dimentions
     need_cube = .true.
-    need_fft = .true.
+    need_fft = FFT_REAL
 
     select case (mesh%sb%dim)
     case (1)
@@ -360,7 +361,7 @@ contains
       case(POISSON_FFT_CYL, POISSON_FFT_PLA, POISSON_FFT_NOCUT)
         call mesh_double_box(mesh%sb, mesh, box)
       case(POISSON_ISF)
-        need_fft = .false.
+        need_fft = FFT_NONE
         box(:) = mesh%idx%ll(:)
       case default
         need_cube = .false.

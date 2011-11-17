@@ -31,7 +31,7 @@ subroutine X(cube_function_alloc_FS)(cube, cf)
 #ifdef HAVE_PFFT
   else
     ASSERT(.not.associated(cf%FS))
-    cf%FS => cube%pfft%fs_data(1:cube%fs_n(3), 1:cube%fs_n(1), 1:cube%fs_n(2))
+    cf%FS => cube%X(pfft)%fs_data(1:cube%fs_n(3), 1:cube%fs_n(1), 1:cube%fs_n(2))
 #endif
   end if
 
@@ -72,7 +72,7 @@ subroutine X(cube_function_RS2FS)(cube, cf)
     ASSERT(associated(cf%X(RS)))
     ASSERT(associated(cf%FS))
 
-    call pfft_forward_3d(cube%pfft)
+    call pfft_forward_3d(cube%X(pfft))
 #endif
   else
     ASSERT(associated(cf%X(RS)))
@@ -99,7 +99,7 @@ subroutine X(cube_function_FS2RS)(cube, cf)
     ASSERT(associated(cf%X(RS)))
     ASSERT(associated(cf%FS))
 
-    call pfft_backward_3d(cube%pfft)
+    call pfft_backward_3d(cube%X(pfft))
 #endif
   else
     ASSERT(associated(cf%X(RS)))

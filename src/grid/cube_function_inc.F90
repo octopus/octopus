@@ -31,7 +31,7 @@ subroutine X(cube_function_alloc_RS)(cube, cf)
 #ifdef HAVE_PFFT
   else
     ASSERT(.not.associated(cf%X(RS)))
-    cf%X(RS) => cube%pfft%X(rs_data(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
+    cf%X(RS) => cube%X(pfft)%X(rs_data(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
 #endif
   end if
 
