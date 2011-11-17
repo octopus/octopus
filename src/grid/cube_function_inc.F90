@@ -30,8 +30,8 @@ subroutine X(cube_function_alloc_RS)(cube, cf)
     SAFE_ALLOCATE(cf%X(RS)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
 #ifdef HAVE_PFFT
   else
-    ASSERT(.not.associated(cf%zRS))
-    cf%zRS => cube%pfft%rs_data
+    ASSERT(.not.associated(cf%X(RS)))
+    cf%X(RS) => cube%pfft%X(rs_data(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
 #endif
   end if
 
@@ -49,7 +49,7 @@ subroutine X(cube_function_free_RS)(cube, cf)
   if (cube%fft_library /= FFTLIB_PFFT) then
     SAFE_DEALLOCATE_P(cf%X(RS))
   else
-    nullify(cf%zRS)    
+    nullify(cf%X(RS))
   end if
 
   POP_SUB(X(cube_function_free_RS))
@@ -72,7 +72,11 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local)
   SAFE_ALLOCATE(cf_tmp(cube%n(1)*cube%n(2)*cube%n(3)))
 
   call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
-  call MPI_Allgatherv ( cf_local(1,1,1), cube%np_local(cube%mpi_grp%rank+1), R_MPITYPE, &
+  ! Warning: in the next line we have to pass the full cf_local array, not just the first element.
+  ! This is because cf_local might be a pointer to a subarray when using PFFT, such that
+  ! memory will not be contiguous (see cube_function_alloc_RS). In that case the 
+  ! Fortran compiler should do a temporary copy.
+  call MPI_Allgatherv ( cf_local, cube%np_local(cube%mpi_grp%rank+1), R_MPITYPE, &
        cf_tmp(1), cube%np_local, cube%xlocal - 1, R_MPITYPE, &
        cube%mpi_grp%comm, mpi_err)
   call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
@@ -295,7 +299,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
   end if
   
   ! Initialize to zero the input matrix
-  forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%zRS(ix, iy, iz) = M_Z0
+  forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%X(RS)(ix, iy, iz) = M_ZERO
 
   ! Do the actual transform, only for the output values
   center(1:3) = cube%n(1:3)/2 + 1
@@ -310,18 +314,10 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
 
         if (pfft_part_) then
 #ifdef HAVE_MPI
-#ifdef R_TCOMPLEX
-          cf%zRS(lxyz(1), lxyz(2), lxyz(3)) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
-#else
-          cf%zRS(lxyz(1), lxyz(2), lxyz(3)) = TOCMPLX(real(mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))),M_ZERO)
-#endif
+          cf%X(RS)(lxyz(1), lxyz(2), lxyz(3)) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
 #endif
         else
-#ifdef R_TCOMPLEX
-          cf%zRS(lxyz(1), lxyz(2), lxyz(3)) = gmf(ip + ii)
-#else
-          cf%zRS(lxyz(1), lxyz(2), lxyz(3)) = TOCMPLX(real(gmf(ip + ii)),M_ZERO)
-#endif
+          cf%X(RS)(lxyz(1), lxyz(2), lxyz(3)) = gmf(ip + ii)
         end if
       end if
       
@@ -352,7 +348,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
   integer :: last, first
   logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)
-  CMPLX, allocatable :: gcf(:,:,:)
+  R_TYPE, allocatable :: gcf(:,:,:)
 
   PUSH_SUB(X(cube_to_mesh_parallel))
 
@@ -385,11 +381,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
 
         if (cube_global2local(cube, ixyz, lxyz)) then
 #ifdef HAVE_MPI
-#ifdef R_TCOMPLEX
-          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = cf%zRS(lxyz(1), lxyz(2), lxyz(3))
-#else
-          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = real(cf%zRS(lxyz(1), lxyz(2), lxyz(3)))
-#endif
+          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = cf%X(RS)(lxyz(1), lxyz(2), lxyz(3))
 #endif
         end if
       end do
@@ -400,7 +392,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
     !collect the data in all processes
     SAFE_ALLOCATE(gcf(cube%n(1), cube%n(2), cube%n(3)))
 #ifdef HAVE_MPI
-    call zcube_function_allgather(cube, gcf, cf%zRS)
+    call X(cube_function_allgather)(cube, gcf, cf%X(RS))
 #endif
 
     ! cube to mesh
@@ -411,19 +403,10 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
       ixyz(1:3) = mesh%idx%lxyz(ip, 1:3) + center(1:3)
       do ii = 0, nn - 1
         if (mpi_world%size == 1) then
-#ifdef R_TCOMPLEX
           gmf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
-#else
-          gmf(ip + ii) = real(gcf(ixyz(1), ixyz(2), ixyz(3) + ii))
-#endif
         else
           if (mesh%vp%part(ip+ii) == mesh%vp%partno) then
-#ifdef R_TCOMPLEX
             gmf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
-#else
-            gmf(ip + ii) = real(gcf(ixyz(1), ixyz(2), ixyz(3) + ii))
-#endif
-
           end if
         end if
       end do

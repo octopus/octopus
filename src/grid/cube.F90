@@ -139,8 +139,8 @@ contains
       SAFE_ALLOCATE(cube%dfftw)
       SAFE_ALLOCATE(cube%zfftw)
 
-      call fft_init(cube%n, sb%dim, 0, cube%dfftw, optimize = .not.simul_box_is_periodic(sb))
-      call fft_init(cube%n, sb%dim, 1, cube%zfftw, optimize = .not.simul_box_is_periodic(sb))
+      call fft_init(cube%n, sb%dim, FFT_REAL,    cube%dfftw, optimize = .not.simul_box_is_periodic(sb))
+      call fft_init(cube%n, sb%dim, FFT_COMPLEX, cube%zfftw, optimize = .not.simul_box_is_periodic(sb))
       cube%nx = cube%n(1)/2 + 1
 
       cube%rs_n = cube%n
@@ -154,7 +154,7 @@ contains
       cube%parallel_in_domains = .true.
 
       SAFE_ALLOCATE(cube%pfft)
-      call pfft_init(cube%n, sb%dim, 1, cube%rs_istart, cube%fs_istart, cube%rs_n, &
+      call pfft_init(cube%n, sb%dim, PFFT_REAL, cube%rs_istart, cube%fs_istart, cube%rs_n, &
            cube%fs_n, mpi_comm, cube%pfft, optimize = .not.simul_box_is_periodic(sb))
       cube%nx = cube%n(1)/2 + 1
 #endif

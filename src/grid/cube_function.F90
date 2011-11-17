@@ -145,7 +145,7 @@ contains
           if ( (ix == 1 .or. ix == cube%n(1)                                          ) .or. &
                ( (iy == 1 .or. iy == cube%n(2)) .and. (ix /= 1 .and. ix /= cube%n(1))   ) .or. &
                ( (iz == 1 .or. iz == cube%n(3)) .and. (ix /= 1 .and. ix /= cube%n(1) .and. iy /= 1 .and. iy /= cube%n(2))) ) then
-            tmp_x = tmp_x + real(cf%zRS(ii, jj, kk))
+            tmp_x = tmp_x + cf%dRS(ii, jj, kk)
           end if
         end do
       end do

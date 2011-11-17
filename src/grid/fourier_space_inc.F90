@@ -69,7 +69,7 @@ subroutine X(cube_function_RS2FS)(cube, cf)
 
   if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
-    ASSERT(associated(cf%zRS))
+    ASSERT(associated(cf%X(RS)))
     ASSERT(associated(cf%FS))
 
     call pfft_forward_3d(cube%pfft)
@@ -96,7 +96,7 @@ subroutine X(cube_function_FS2RS)(cube, cf)
 
   if (cube%fft_library == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
-    ASSERT(associated(cf%zRS))
+    ASSERT(associated(cf%X(RS)))
     ASSERT(associated(cf%FS))
 
     call pfft_backward_3d(cube%pfft)

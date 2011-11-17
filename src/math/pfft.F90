@@ -66,15 +66,22 @@ module pfft_m
        pfftw_backward           =     1, &
        pfft_measure             =     0 
   
+  ! global constants
+  integer, public, parameter :: &
+       PFFT_REAL    = 0,        &
+       PFFT_COMPLEX = 1
+
   type pfft_t
     integer                 :: slot    !< in which slot do we have this fft
     integer(ptrdiff_t_kind) :: n(3)    !< size of the fft
+    integer                 :: rs_n(3) !< local size of the fft
     integer                 :: is_real !< is the fft real or complex. PFFT only works with complex. Real = 0, Complex = 1
     integer(ptrdiff_t_kind) :: planf   !< the plan for forward transforms
     integer(ptrdiff_t_kind) :: planb   !< the plan for backward transforms
 
-    CMPLX, pointer :: rs_data(:,:,:)   !< array used to store the function in real space that is passed to PFFT.
-    CMPLX, pointer :: fs_data(:,:,:)   !< array used to store the function in fourier space that is passed to PFFT
+    FLOAT, pointer :: drs_data(:,:,:)  !< array used to store the function in real space that is passed to PFFT.
+    CMPLX, pointer :: zrs_data(:,:,:)  !< array used to store the function in real space that is passed to PFFT.
+    CMPLX, pointer ::  fs_data(:,:,:)  !< array used to store the function in fourier space that is passed to PFFT
   end type pfft_t
 
   integer      :: pfft_refs(PFFT_MAX)
@@ -161,7 +168,8 @@ contains
       if(pfft_refs(ii) /= PFFT_NULL) then
         call PDFFT(destroy_plan) (pfft_array(ii)%planf)
         call PDFFT(destroy_plan) (pfft_array(ii)%planb)
-        SAFE_DEALLOCATE_P(pfft_array(ii)%rs_data)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%drs_data)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%zrs_data)
         SAFE_DEALLOCATE_P(pfft_array(ii)%fs_data)
         pfft_refs(ii) = PFFT_NULL
       end if
@@ -190,7 +198,8 @@ contains
         pfft_refs(ii) = PFFT_NULL
         call PDFFT(destroy_plan) (pfft_array(ii)%planf)
         call PDFFT(destroy_plan) (pfft_array(ii)%planb)
-        SAFE_DEALLOCATE_P(pfft_array(ii)%rs_data)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%drs_data)
+        SAFE_DEALLOCATE_P(pfft_array(ii)%zrs_data)
         SAFE_DEALLOCATE_P(pfft_array(ii)%fs_data)
         write(message(1), '(a,i4)') "Info: PFFT deallocated from slot ", ii
         call messages_info(1)
@@ -303,29 +312,63 @@ contains
       call messages_fatal(3)
     end if
 
-    call PDFFT(local_size_dft_3d) (tmp_np, pfft_array(jj)%n, &
-         mpi_comm, PFFT_TRANSPOSED_OUT, &
-         tmp_rs_n, tmp_rs_istart, tmp_fs_n, tmp_fs_istart)
+    if (is_real == PFFT_REAL) then
 
-    rs_istart = tmp_rs_istart
-    fs_istart = tmp_fs_istart
-    rs_n = tmp_rs_n
-    fs_n = tmp_fs_n
+      call PDFFT(local_size_dft_r2c_3d)(tmp_np, pfft_array(jj)%n, &
+           mpi_comm, PFFT_TRANSPOSED_OUT, &
+           tmp_rs_n, tmp_rs_istart, tmp_fs_n, tmp_fs_istart)
 
-    ! Allocate memory. Note that PFFT may need extra memory space 
-    ! and that in fourier space the function will be transposed
-    n3 = ceiling(real(tmp_np)/real(rs_n(1)*rs_n(2)))
-    SAFE_ALLOCATE(pfft_array(jj)%rs_data(rs_n(1), rs_n(2), n3))
-    n3 = ceiling(real(tmp_np)/real(fs_n(3)*fs_n(1)))
-    SAFE_ALLOCATE(pfft_array(jj)%fs_data(fs_n(3), fs_n(1), n3))
+      pfft_array(jj)%rs_n = tmp_rs_n
+      rs_istart = tmp_rs_istart
+      fs_istart = tmp_fs_istart
+      rs_n = tmp_rs_n
+      fs_n = tmp_fs_n
 
-    ! Create the plan, with the processor grid 
-    call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, pfft_array(jj)%n, & 
-         pfft_array(jj)%rs_data(1,1,1), pfft_array(jj)%fs_data(1,1,1), mpi_comm, &
-         FFTW_FORWARD, PFFT_TRANSPOSED_OUT, FFTW_MEASURE)
-    call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, pfft_array(jj)%n, &
-         pfft_array(jj)%fs_data(1,1,1), pfft_array(jj)%rs_data(1,1,1), mpi_comm, &
-         FFTW_BACKWARD, PFFT_TRANSPOSED_IN, FFTW_MEASURE) 
+      ! Allocate memory. Note that PFFT may need extra memory space 
+      ! and that in fourier space the function will be transposed
+      n3 = ceiling(real(2*tmp_np)/real(rs_n(1)*rs_n(2)))
+      SAFE_ALLOCATE(pfft_array(jj)%drs_data(rs_n(1), rs_n(2), n3))
+      n3 = ceiling(real(tmp_np)/real(fs_n(3)*fs_n(1)))
+      SAFE_ALLOCATE(pfft_array(jj)%fs_data(fs_n(3), fs_n(1), n3))
+
+      ! Create the plan, with the processor grid 
+      call PDFFT(plan_dft_r2c_3d) (pfft_array(jj)%planf, pfft_array(jj)%n, & 
+           pfft_array(jj)%drs_data(1,1,1), pfft_array(jj)%fs_data(1,1,1), mpi_comm, &
+           FFTW_FORWARD, PFFT_TRANSPOSED_OUT, FFTW_MEASURE)
+      call PDFFT(plan_dft_c2r_3d) (pfft_array(jj)%planb, pfft_array(jj)%n, &
+           pfft_array(jj)%fs_data(1,1,1), pfft_array(jj)%drs_data(1,1,1), mpi_comm, &
+           FFTW_BACKWARD, PFFT_TRANSPOSED_IN, FFTW_MEASURE)
+
+      ! PFFT increases the size of rs_n(1) by 1, such that rs_n(1) = nn(1) + 1.
+      ! The rest of the code does not need to know about this.
+      rs_n(1) = rs_n(1) - 1
+
+    else
+      call PDFFT(local_size_dft_3d) (tmp_np, pfft_array(jj)%n, &
+           mpi_comm, PFFT_TRANSPOSED_OUT, &
+           tmp_rs_n, tmp_rs_istart, tmp_fs_n, tmp_fs_istart)
+
+      pfft_array(jj)%rs_n = tmp_rs_n
+      rs_istart = tmp_rs_istart
+      fs_istart = tmp_fs_istart
+      rs_n = tmp_rs_n
+      fs_n = tmp_fs_n
+
+      ! Allocate memory. Note that PFFT may need extra memory space 
+      ! and that in fourier space the function will be transposed
+      n3 = ceiling(real(tmp_np)/real(rs_n(1)*rs_n(2)))
+      SAFE_ALLOCATE(pfft_array(jj)%zrs_data(rs_n(1), rs_n(2), n3))
+      n3 = ceiling(real(tmp_np)/real(fs_n(3)*fs_n(1)))
+      SAFE_ALLOCATE(pfft_array(jj)%fs_data(fs_n(3), fs_n(1), n3))
+
+      ! Create the plan, with the processor grid 
+      call PDFFT(plan_dft_3d) (pfft_array(jj)%planf, pfft_array(jj)%n, & 
+           pfft_array(jj)%zrs_data(1,1,1), pfft_array(jj)%fs_data(1,1,1), mpi_comm, &
+           FFTW_FORWARD, PFFT_TRANSPOSED_OUT, FFTW_MEASURE)
+      call PDFFT(plan_dft_3d) (pfft_array(jj)%planb, pfft_array(jj)%n, &
+           pfft_array(jj)%fs_data(1,1,1), pfft_array(jj)%zrs_data(1,1,1), mpi_comm, &
+           FFTW_BACKWARD, PFFT_TRANSPOSED_IN, FFTW_MEASURE) 
+    end if
 
     write(message(1), '(a)') "Info: PFFT allocated with size ("
     do idir = 1, dim
@@ -352,9 +395,18 @@ contains
     type(pfft_t),  intent(inout)  :: pfft
 
     type(profile_t), save :: prof_fw
+    integer :: ii, jj, kk
 
     PUSH_SUB(pfft_forward_3d)
-   
+
+    if (pfft%is_real == PFFT_REAL .and. pfft%rs_n(1) > pfft%n(1)) then
+      do jj = 1, pfft%rs_n(2)
+        do kk = 1, pfft%rs_n(3)
+          pfft%drs_data(pfft%rs_n(1), jj, kk) = M_ZERO
+        end do
+      end do
+    end if
+
     call profiling_in(prof_fw,"PFFT_FW")
     call PDFFT(execute) (pfft%planf)
     call profiling_out(prof_fw)
@@ -375,7 +427,17 @@ contains
     call PDFFT(execute) (pfft%planb)
     call profiling_out(prof_bw)
 
-    pfft%rs_data = pfft%rs_data/(pfft%n(1)*pfft%n(2)*pfft%n(3))
+    do ii = 1, pfft%rs_n(1)
+      do jj = 1, pfft%rs_n(2)
+        do kk = 1, pfft%rs_n(3)
+          if (pfft%is_real == PFFT_REAL) then
+            pfft%drs_data(ii, jj, kk) = pfft%drs_data(ii, jj, kk)/(pfft%n(1)*pfft%n(2)*pfft%n(3))
+          else
+            pfft%zrs_data(ii, jj, kk) = pfft%zrs_data(ii, jj, kk)/(pfft%n(1)*pfft%n(2)*pfft%n(3))
+          end if
+        end do
+      end do
+    end do
 
     POP_SUB(pfft_backward_3d)
   end subroutine pfft_backward_3d
