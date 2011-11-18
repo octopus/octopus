@@ -100,7 +100,7 @@ module PES_m
   type PES_mask_t
 
 
-    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !< The continuum wfs in momentum space
+    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
 
     ! Some mesh-related stuff
     integer          :: ll(MAX_DIM)            !< the size of the square mesh
@@ -283,8 +283,6 @@ contains
 
     PUSH_SUB(PES_output)
     
-    if(pes%calc_mask .AND. st%parallel_in_states) call PES_mask_collect(pes%mask, st,mesh)
-
     if(mpi_grp_is_root(mpi_world)) then
       if(pes%calc_rc)   call PES_rc_output   (pes%rc, st, iter,outp%iter, dt)
     endif

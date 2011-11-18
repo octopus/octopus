@@ -19,13 +19,13 @@
 
 ! ---------------------------------------------------------
 subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
-  type(PES_mask_t),    intent(out) :: mask
-  type(mesh_t),target, intent(in)  :: mesh
-  type(simul_box_t),   intent(in)  :: sb
-  type(states_t),      intent(in)  :: st
-  type(hamiltonian_t), intent(in)  :: hm
-  integer,             intent(in)  :: max_iter
-  FLOAT,               intent(in)  :: dt
+  type(PES_mask_t),         intent(out) :: mask
+  type(mesh_t),target,      intent(in)  :: mesh
+  type(simul_box_t),        intent(in)  :: sb
+  type(states_t),           intent(in)  :: st
+  type(hamiltonian_t),      intent(in)  :: hm
+  integer,                  intent(in)  :: max_iter
+  FLOAT,                    intent(in)  :: dt
 
   type(block_t) :: blk
 
@@ -33,7 +33,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   FLOAT :: field(MAX_DIM)
   FLOAT :: DeltaE,MaxE,MaxDR
   FLOAT :: width 
-  integer :: dir, defaultMask
+  integer :: dir, defaultMask,k1,k2,st1,st2
   FLOAT, allocatable  :: X1(:),X2(:),X3(:)  
 
   PUSH_SUB(PES_mask_init)
@@ -47,15 +47,13 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   call messages_info(1)
 
 
-  if (st%parallel_in_states) then
-    call messages_experimental("PES_mask parallelization on states")
 
-    if(mesh%parallel_in_domains) then
-      write(message(1),'(a)') "PES_mask: simultaneous parallelization on mesh and states not supported"
-      write(message(2),'(a)') "Modify ParallelizationStrategy and rerun." 
-      call messages_fatal(2) 
-      end if    
-  endif
+  if(mesh%parallel_in_domains .and. st%parallel_in_states) then
+    write(message(1),'(a)') "PES_mask: simultaneous parallelization on mesh and states not supported"
+    write(message(2),'(a)') "Modify ParallelizationStrategy and rerun." 
+    call messages_fatal(2) 
+  end if    
+
 
   if(sb%box_shape /= SPHERE) then
      message(1) = 'PhotoElectronSpectrum = pes_mask requires BoxShape = sphere'
@@ -255,8 +253,9 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !!ALLOCATIONS
 
   mask%np = mesh%np_part_global !we do not divide the cube objects in this implementation 
-   
-  SAFE_ALLOCATE(mask%k(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3),1:st%d%dim,1:st%nst,1:st%d%nik))
+
+ 
+
   SAFE_ALLOCATE(mask%Lxyz_inv(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
   call cube_init(mask%cube, mask%ll, mesh%sb)  
 
@@ -266,7 +265,11 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 
   SAFE_ALLOCATE(mask%Lk(1:mask%ll(1)))
 
-
+  st1 = st%st_start
+  st2 = st%st_end
+  k1 = st%d%kpt%start
+  k2 = st%d%kpt%end   
+  SAFE_ALLOCATE(mask%k(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3),1:st%d%dim,st1:st2,k1:k2))
   mask%k = M_z0
 
 
@@ -1475,70 +1478,6 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
   call profiling_out(prof)
 end subroutine PES_mask_calc
 
-
-!---------------------------------------------------------------------------
-! Collect the states from all the nodes when the code run parallel on states
-! --------------------------------------------------------------------------
-subroutine PES_mask_collect(mask, st,mesh)
-  type(PES_mask_t), intent(inout) :: mask
-  type(states_t),   intent(in)    :: st
-  type(mesh_t),     intent(in)    :: mesh
-
-  CMPLX, allocatable :: wf(:,:,:)
-  FLOAT, allocatable :: wfr(:,:,:)
-  integer ::  idim, ist, ik
-
-#ifdef HAVE_MPI
-  integer :: iproc, size
-  integer :: status(MPI_STATUS_SIZE)
-#endif
-
- PUSH_SUB(PES_mask_collect)
-
-#ifdef HAVE_MPI
-
-  SAFE_ALLOCATE(wf(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
-  SAFE_ALLOCATE(wfr(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
-
-  size = (mask%ll(1))*(mask%ll(2))*(mask%ll(3))
-
- 
-
-  do ik = 1, st%d%nik
-    do ist = 1, st%nst
-      
-      do idim = 1, st%d%dim
-        
-        !send all the wavefunctions to root node
-        if(st%mpi_grp%rank .gt. 0 ) then
-          wf= mask%k(:,:,:, idim, ist, ik) 
-          call MPI_Send(wf, size, MPI_CMPLX,0, 1, st%mpi_grp%comm, mpi_err)
-        else
-          !root node collects all the data
-          do iproc = 1, st%mpi_grp%size-1 
-            call MPI_Recv(wf, size ,MPI_CMPLX, iproc, 1, st%mpi_grp%comm, status, mpi_err)
-            mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + wf
-          end do
-        end if
-
-
-      end do
-    end do
-  end do
-  
-  !wait for all threads to finish
-  ! again, I doubt this is necessary. --DAS
-  if(st%mpi_grp%size .gt. 1 ) then
-    call MPI_Barrier(st%mpi_grp%comm, mpi_err)
-  end if
-  
-  SAFE_DEALLOCATE_A(wf)
-  SAFE_DEALLOCATE_A(wfr)
-
-#endif
-
-  POP_SUB(PES_mask_collect)
-end subroutine PES_mask_collect
 
 !! Local Variables:
 !! mode: f90

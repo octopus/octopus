@@ -150,29 +150,50 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
 
   integer :: ist, ik, ii, kx, ky, kz,idim
   FLOAT   :: scale
+   FLOAT, allocatable :: PESKsum(:,:,:)
+  
 
   PUSH_SUB(PES_mask_create_full_map)
 
   PESK = M_ZERO
 
-  do kx = 1, mask%ll(1)
-    do ky = 1, mask%ll(2)
-      do kz = 1, mask%ll(3)
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
 
-        do ik = 1,st%d%nik
-          do ist = 1, st%nst
+      do kx = 1, mask%ll(1)
+        do ky = 1, mask%ll(2)
+          do kz = 1, mask%ll(3)
+
             if(present(wfAk))then
               PESK(kx,ky,kz) = PESK(kx,ky,kz) + st%occ(ist, ik) * &
                 sum(abs(mask%k(kx, ky, kz, :, ist, ik) + wfAk(kx,ky,kz,:, ist, ik)  )**2)
             else
               PESK(kx,ky,kz) = PESK(kx,ky,kz) + st%occ(ist, ik) * sum(abs(mask%k(kx, ky, kz, :, ist, ik)  )**2)
             end if
+
           end do
         end do
-        
       end do
+
     end do
   end do
+
+#ifdef HAVE_MPI
+  if(st%parallel_in_states) then
+    SAFE_ALLOCATE(PESKsum(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
+
+    call MPI_Reduce(PESK, PESKsum, mask%ll(1)*mask%ll(2)*mask%ll(3), &
+        MPI_FLOAT, MPI_SUM, 0, st%dom_st_kpt_mpi_grp%comm, mpi_err)
+    if(mpi_err .ne. 0) then
+      write(*,*)"MPI error"
+    end if
+    if(mpi_grp_is_root(mpi_world)) PESK = PESKsum 
+
+
+    SAFE_DEALLOCATE_A(PESKsum) 
+  end if  
+#endif
+
 
   ! This is needed in order to normalize the Fourier integral 
   scale = M_ONE
@@ -949,7 +970,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
 
   CMPLX, allocatable :: wf(:,:,:),wfAk(:,:,:,:,:,:) 
   FLOAT :: PESK(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3))
-  integer :: ist, ik, ii,  iunit, idim, ierr
+  integer :: ist, ik, ii,  iunit, idim, ierr, st1, st2, k1, k2
   character(len=100) :: fn
   character(len=256) :: dir
   type(cube_function_t) :: cf1,cf2  
@@ -959,7 +980,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   PUSH_SUB(PES_mask_output)
 
 !   !Dump info for easy post-process
-    call PES_mask_write_info(mask, tmpdir)
+    if(mpi_grp_is_root(mpi_world)) call PES_mask_write_info(mask, tmpdir)
  
 
   !Photoelectron wavefunction and density in real space
@@ -974,17 +995,22 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
     write(dir, '(a,i7.7,a)') "td.", iter,"/PESM"  ! name of directory
   end if
 
-
+ !The contribution of \Psi_A(x,t2) to the PES 
   if(mask%add_psia) then 
-    !The contribution of \Psi_A(x,t2) to the PES 
-    SAFE_ALLOCATE(wfAk(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3),1:st%d%dim,1:st%nst,1:st%d%nik))
+    st1 = st%st_start
+    st2 = st%st_end
+    k1 = st%d%kpt%start
+    k2 = st%d%kpt%end
+    SAFE_ALLOCATE(wfAk(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3),1:st%d%dim,st1:st2,k1:k2))
+    wfAk = M_z0
+  
     call cube_function_null(cf1)    
     call zcube_function_alloc_RS(mask%cube, cf1) 
     call cube_function_null(cf2)    
     call zcube_function_alloc_RS(mask%cube, cf2)    
 
-    do ik = 1,st%d%nik
-      do ist =  1, st%nst
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist =  st%st_start, st%st_end
         do idim = 1, st%d%dim
           call zmesh_to_cube(mask%mesh, st%zpsi(:, idim, ist, ik), mask%cube, cf1, local=.true.)
           cf1%zRs = (M_ONE-mask%M**10)*cf1%zRs ! mask^10 is practically a box function
@@ -999,6 +1025,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   end if 
 
   !Create the full momentum-resolved PES matrix
+  PESK = M_ZERO
   if(mask%add_psia) then 
     call PES_mask_create_full_map(mask,st,PESK,wfAk)
   else 
@@ -1009,23 +1036,15 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
     ! Dump the full matrix in binary format for subsequent post-processing 
     write(fn, '(a,a)') trim(dir), '_map.obf'
     call io_binary_write(io_workpath(fn),mask%ll(1)*mask%ll(2)*mask%ll(3),PESK, ierr)
-  
 
     ! Dump the k resolved PES on plane kz=0
     write(fn, '(a,a)') trim(dir), '_map.z=0'
-    ! call PES_mask_dump_full_map(mask, st, outp, fn, dir = 3)
     call PES_mask_dump_full_mapM(PESK, fn, mask%Lk, mask%mesh%sb%dim, dir = 3)
-
 
     ! Total power spectrum 
     write(fn, '(a,a)') trim(dir), '_power.sum'
-!  if(mask%add_psia) then 
-!    call PES_mask_dump_power_total(mask, st, fn, wfAk)
-!  else 
-!    call PES_mask_dump_power_total(mask, st, fn)
-!  end if
-
     call PES_mask_dump_power_totalM(PESK,fn, mask%Lk, mask%mesh%sb%dim, mask%energyMax, mask%energyStep, mask%interpolate_out)
+
   end if
 
   if(mask%add_psia) then 
@@ -1101,7 +1120,6 @@ subroutine PES_mask_write_info(mask, dir)
 
 
   filename = trim(dir)//'td/pes'
-  write (*,*) "filename ",filename
 
   iunit = io_open(filename, action='write', is_tmp = .true.)
 
@@ -1151,8 +1169,8 @@ subroutine PES_mask_restart_write(mask, mesh, st)
 
   itot = 1
 
-  do ik = 1, st%d%nik
-    do ist = 1, st%nst
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
         
         write(filename,'(i10.10)') itot
