@@ -415,22 +415,23 @@ contains
   subroutine pfft_backward_3d(pfft)
     type(pfft_t), intent(inout) :: pfft
 
-    integer :: ii, jj, kk
+    integer :: ii, jj, kk, scaling_factor
     type(profile_t), save :: prof_bw
 
     PUSH_SUB(pfft_backward_3d)
-
+    
+    scaling_factor = (pfft%n(1)*pfft%n(2)*pfft%n(3))
     call profiling_in(prof_bw,"PFFT_BW")
     call PDFFT(execute) (pfft%planb)
     call profiling_out(prof_bw)
 
-    do ii = 1, pfft%rs_n(1)
+    do kk = 1, pfft%rs_n(3)
       do jj = 1, pfft%rs_n(2)
-        do kk = 1, pfft%rs_n(3)
+        do ii = 1, pfft%rs_n(1)
           if (pfft%type == FFT_REAL) then
-            pfft%drs_data(ii, jj, kk) = pfft%drs_data(ii, jj, kk)/(pfft%n(1)*pfft%n(2)*pfft%n(3))
+            pfft%drs_data(ii, jj, kk) = pfft%drs_data(ii, jj, kk)/scaling_factor
           else
-            pfft%zrs_data(ii, jj, kk) = pfft%zrs_data(ii, jj, kk)/(pfft%n(1)*pfft%n(2)*pfft%n(3))
+            pfft%zrs_data(ii, jj, kk) = pfft%zrs_data(ii, jj, kk)/scaling_factor
           end if
         end do
       end do
