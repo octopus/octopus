@@ -22,6 +22,7 @@
 module states_m
   use blacs_proc_grid_m
   use calc_mode_m
+  use cl
   use comm_m
   use batch_m
   use blas_m
@@ -45,6 +46,7 @@ module states_m
   use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_lib_m
   use multicomm_m
+  use opencl_m
   use parser_m
   use profiling_m
   use simul_box_m
@@ -2176,16 +2178,45 @@ contains
     logical, optional, intent(in)    :: copy
 
     integer :: iqn, ib
+    integer(8) :: max_mem, mem
+#ifdef HAVE_OPENCL
+    FLOAT, parameter :: mem_frac = 0.75
+#endif
 
     ASSERT(.not. st%packed)
 
     st%packed = .true.
 
-    do iqn = st%d%kpt%start, st%d%kpt%end
+    if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_SIZE, max_mem, cl_status)
+      max_mem = int(mem_frac*real(max_mem, REAL_PRECISION), 8)
+#endif
+    else
+      max_mem = HUGE(max_mem)
+    end if
+
+
+    mem = 0
+    qnloop: do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%block_start, st%block_end
+
+        mem = mem + batch_pack_size(st%psib(ib, iqn))
+
+        if(mem > max_mem) then
+          call messages_write('Not enough CL device memory to store all states simultaneously.', new_line = .true.)
+          call messages_write('Only ')
+          call messages_write(ib - st%block_start)
+          call messages_write(' of ')
+          call messages_write(st%block_end - - st%block_start + 1)
+          call messages_write(' blocks will be stored in device memory.', new_line = .true.)
+          call messages_warning()
+          exit qnloop
+        end if
+        
         call batch_pack(st%psib(ib, iqn), copy)
       end do
-    end do
+    end do qnloop
 
   end subroutine states_pack
 
@@ -2203,7 +2234,7 @@ contains
 
     do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%block_start, st%block_end
-        call batch_unpack(st%psib(ib, iqn), copy)
+        if(batch_is_packed(st%psib(ib, iqn))) call batch_unpack(st%psib(ib, iqn), copy)
       end do
     end do
 

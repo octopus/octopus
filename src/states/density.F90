@@ -314,8 +314,9 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%block_start, st%block_end
-        ASSERT(batch_is_packed(st%psib(ib, ik)) .eqv. packed)
+        if(packed) call batch_pack(st%psib(ib, ik))
         call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
+        if(packed) call batch_unpack(st%psib(ib, ik))
       end do
     end do
 

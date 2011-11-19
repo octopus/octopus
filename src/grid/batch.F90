@@ -69,7 +69,8 @@ module batch_m
     batch_set_state,                &
     batch_get_state,                &
     batch_get_points,               &
-    batch_set_points
+    batch_set_points,               &
+    batch_pack_size
 
   !--------------------------------------------------------------
   type batch_state_t
@@ -452,6 +453,17 @@ contains
 
     this%dirty = .true.
   end subroutine batch_pack_was_modified
+
+  ! ----------------------------------------------------
+
+  integer function batch_pack_size(this) result(size)
+    type(batch_t),      intent(inout) :: this
+
+    size = batch_max_size(this)
+    if(opencl_is_enabled()) size = opencl_padded_size(size)
+    size = size*pad_pow2(this%nst_linear)*types_get_size(batch_type(this))
+
+  end function batch_pack_size
 
   ! ----------------------------------------------------
 
