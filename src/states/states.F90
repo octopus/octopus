@@ -2198,6 +2198,8 @@ contains
     FLOAT, parameter :: mem_frac = 0.75
 #endif
 
+    PUSH_SUB(states_pack)
+
     ASSERT(.not. st%packed)
 
     st%packed = .true.
@@ -2233,6 +2235,7 @@ contains
       end do
     end do qnloop
 
+    POP_SUB(states_pack)
   end subroutine states_pack
 
   ! ------------------------------------------------------------
@@ -2242,6 +2245,8 @@ contains
     logical, optional, intent(in)    :: copy
 
     integer :: iqn, ib
+
+    PUSH_SUB(states_unpack)
 
     ASSERT(st%packed)
 
@@ -2253,6 +2258,7 @@ contains
       end do
     end do
 
+    POP_SUB(states_unpack)
   end subroutine states_unpack
 
   ! ------------------------------------------------------------
@@ -2261,6 +2267,8 @@ contains
     type(states_t),    intent(inout) :: st
 
     integer :: iqn, ib
+
+    PUSH_SUB(states_sync)
 
     if(states_are_packed(st)) then
 
@@ -2272,6 +2280,7 @@ contains
 
     end if
 
+    POP_SUB(states_sync)
   end subroutine states_sync
 
   ! -----------------------------------------------------------
@@ -2307,12 +2316,15 @@ contains
 
     integer :: iqn, ib
 
+    PUSH_SUB(states_set_zero)
+
     do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%block_start, st%block_end
         call batch_set_zero(st%psib(ib, iqn))
       end do
     end do
-      
+    
+    POP_SUB(states_set_zero)
   end subroutine states_set_zero
 
 
