@@ -564,7 +564,7 @@ contains
       type(mesh_t),     intent(inout) :: mesh
       type(geometry_t), intent(in)    :: geo
 
-      integer :: iatom, iorb, maxorbs, ist, idim, iq, ispin
+      integer :: iatom, iorb, maxorbs, ist, idim, iqn, ispin
       FLOAT, allocatable :: aorbital(:)
 
       PUSH_SUB(lcao_run.init_states)
@@ -589,14 +589,11 @@ contains
 
             call species_get_orbital(geo%atom(iatom)%spec, mesh, iorb, 1, geo%atom(iatom)%x, aorbital)
 
-            do iq = st%d%kpt%start, st%d%kpt%end
-              if(st%d%ispin == SPIN_POLARIZED .and. ispin /= states_dim_get_spin_index(st%d, iq)) cycle
+            do iqn = st%d%kpt%start, st%d%kpt%end
+              if(st%d%ispin == SPIN_POLARIZED .and. ispin /= states_dim_get_spin_index(st%d, iqn)) cycle
 
-              if(states_are_real(st)) then
-                st%dpsi(1:mesh%np, idim, ist, iq) = aorbital(1:mesh%np)
-              else
-                st%zpsi(1:mesh%np, idim, ist, iq) = aorbital(1:mesh%np)
-              end if
+              call states_set_state(st, mesh, idim, ist, iqn, aorbital)
+
             end do
           end do
 

@@ -97,7 +97,8 @@ module states_m
     states_unpack,                    &
     states_sync,                      &
     states_are_packed,                &
-    states_write_info
+    states_write_info,                &
+    states_set_zero
 
   type states_lead_t
     CMPLX, pointer     :: intf_psi(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
@@ -2298,6 +2299,22 @@ contains
 
     packed = st%packed
   end function states_are_packed
+
+  ! ------------------------------------------------------------
+
+  subroutine states_set_zero(st)
+    type(states_t),    intent(inout) :: st
+
+    integer :: iqn, ib
+
+    do iqn = st%d%kpt%start, st%d%kpt%end
+      do ib = st%block_start, st%block_end
+        call batch_set_zero(st%psib(ib, iqn))
+      end do
+    end do
+      
+  end subroutine states_set_zero
+
 
 #include "undef.F90"
 #include "real.F90"

@@ -162,10 +162,9 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
     call lalg_geneigensolve(this%norbs, hamilt(1:this%norbs, 1:this%norbs, ik), overlap(:, :, ispin), ev)
 
     st%eigenval(lcao_start:nst, ik) = ev(lcao_start:nst)
-
-    st%X(psi)(1:gr%mesh%np, 1:st%d%dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
   end do
-  
+
+
 #ifdef HAVE_MPI
   if(st%d%kpt%parallel) then
     ASSERT(.not. st%parallel_in_states)
@@ -178,6 +177,8 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
   end if
 #endif
 
+  call states_set_zero(st)
+
   ! Change of basis
   do n2 = 1, this%norbs
     do ispin = 1, st%d%spin_channels
@@ -188,7 +189,9 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
         if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
         do idim = 1, st%d%dim
           do n1 = lcao_start, st%st_end
-            call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), st%X(psi)(:, idim, n1, ik))
+            call states_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
+            call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
+            call states_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
           end do
         end do
       end do
@@ -226,6 +229,7 @@ contains
 
     SAFE_ALLOCATE(cst(1:this%norbs, 1:st%d%spin_channels))
     SAFE_ALLOCATE( ck(1:this%norbs, 1:st%d%spin_channels))
+    SAFE_ALLOCATE(  ao(1:gr%mesh%np, 1:st%d%dim))
 
     ck = 0
 
@@ -239,7 +243,8 @@ contains
         cst(iorb, ispin) = ist
         ck(iorb, ispin) = ik
 
-        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, st%X(psi)(:, :, ist, ik), ispin)
+        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, ao, ispin)
+        call states_set_state(st, gr%mesh, ist, ik, ao)
 
         if(ispin < st%d%spin_channels) then
           ispin = ispin + 1
@@ -263,7 +268,6 @@ contains
       call messages_info(1)
 
       SAFE_ALLOCATE(buff(1:gr%mesh%np, 1:st%d%dim, iorb:this%norbs, 1:st%d%spin_channels))
-      SAFE_ALLOCATE(  ao(1:gr%mesh%np, 1:st%d%dim))
       
       do iorb = iorb, this%norbs
         do ispin = 1, st%d%spin_channels
@@ -272,8 +276,9 @@ contains
         end do
       end do
       
-      SAFE_DEALLOCATE_A(ao)
     end if
+
+    SAFE_DEALLOCATE_A(ao)
 
     POP_SUB(X(lcao_wf).init_orbitals)
 
@@ -295,9 +300,7 @@ contains
       ao(1:gr%mesh%np, 1:st%d%dim) = buff(1:gr%mesh%np, 1:st%d%dim, iorb, ispin)
     else
       if(use_psi) then
-        do idim = 1, st%d%dim
-          call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, cst(iorb, ispin), ck(iorb, ispin)), ao(:, idim))
-        end do
+        call states_get_state(st, gr%mesh, cst(iorb, ispin), ck(iorb, ispin), ao)
       else
         call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, ao, ispin)
       end if
