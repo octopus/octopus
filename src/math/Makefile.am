@@ -99,7 +99,7 @@ solvers.o : solvers.F90 solvers_inc.F90 lalg_adv.o lalg_basic.o blas.o loct_math
 splines.o : splines.F90 loct_math.o
 sparskit.o : sparskit.F90
 symm_op.o : symm_op.F90 symm_op_inc.F90
-tdfunction.o : tdfunction.F90 splines.o fftw.o
+tdfunction.o : tdfunction.F90 splines.o fft.o
 ylm.o : ylm.c
 young.o : young.F90 math.o
 scalapack.o : scalapack.F90
