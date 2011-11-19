@@ -267,7 +267,7 @@ contains
     ! Initialize parallel communicator
     if (library == FFTLIB_PFFT) then
       ASSERT(present(mpi_comm))
-
+#ifdef HAVE_PFFT
       call dpfft_init()
 
       call pfft_decompose(mpi_world%size, column_size, row_size)
@@ -279,6 +279,7 @@ contains
         message(3) = "Please check it."
         call messages_fatal(3)
       end if
+#endif
     else
       if (present(mpi_comm)) mpi_comm = -1
     end if
@@ -293,9 +294,11 @@ contains
       fft_array(jj)%fs_istart = 1
 
     case (FFTLIB_PFFT)
+#ifdef HAVE_PFFT     
       call pfft_get_dims(fft_array(jj)%rs_n_global, mpi_comm, type == FFT_REAL, alloc_size, &
            fft_array(jj)%fs_n_global, fft_array(jj)%rs_n, &
            fft_array(jj)%fs_n, fft_array(jj)%rs_istart, fft_array(jj)%fs_istart)
+#endif
 
       ! Allocate memory. Note that PFFT may need extra memory space 
       ! and that in fourier space the function will be transposed
