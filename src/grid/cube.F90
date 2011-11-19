@@ -48,60 +48,43 @@ module cube_m
     logical :: parallel_in_domains !< will the cube be divided in domains?
     type(mpi_grp_t) :: mpi_grp     !< the mpi group describing parallelization in domains
 
-    integer :: rs_n(1:3)      !< the dimensions of the local portion of the cube in real space
-    integer :: fs_n(1:3)      !< the dimensions of the local portion of the cube in fourier space
-    integer :: rs_istart(1:3) !< where does the local portion of the cube start in real space
-    integer :: fs_istart(1:3) !< where does the local portion of the cube start in fourier space
+    integer :: rs_n_global(1:3) !< the dimensions of the cube in real space
+    integer :: fs_n_global(1:3) !< the dimensions of the cube in fourier space
+    integer :: rs_n(1:3)        !< the dimensions of the local portion of the cube in real space
+    integer :: fs_n(1:3)        !< the dimensions of the local portion of the cube in fourier space
+    integer :: rs_istart(1:3)   !< where does the local portion of the cube start in real space
+    integer :: fs_istart(1:3)   !< where does the local portion of the cube start in fourier space
 
     integer, pointer :: part(:,:,:) !< point -> partition
     integer, pointer :: np_local(:) !< Number of points in each partition
     integer, pointer :: xlocal(:)   !< where does each process start when gathering a function
     integer, pointer :: local(:,:)  !< local to global map used when gathering a function
 
-    integer :: fft_library !< which FFT library to use. Options: NONE=0, FFTW=1, PFFT=2
-    type(fft_t), pointer :: dfftw
-    type(fft_t), pointer :: zfftw
-#ifdef HAVE_PFFT
-    type(pfft_t), pointer :: dpfft
-    type(pfft_t), pointer :: zpfft
-#endif
+    integer :: fft_library !< library used to perform the fft
+    integer :: fft_type    !< real or complex fft
+    type(fft_t), pointer :: fft
   end type cube_t
-
-
-  integer, public, parameter :: &
-       FFTLIB_NONE = 0, &
-       FFTLIB_FFTW = 1, &
-       FFTLIB_PFFT = 2
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, n, sb, fft)
+  subroutine cube_init(cube, n, sb, fft_type)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: n(3)
     type(simul_box_t), intent(in)  :: sb
-    integer, optional, intent(in)  :: fft !< Is the cube going to be used to perform FFTs?
+    integer, optional, intent(in)  :: fft_type !< Is the cube going to be used to perform FFTs?
 
-    integer :: mpi_comm
-    integer :: fft_
+    integer :: mpi_comm, tmp_n(3)
 
     PUSH_SUB(cube_init)
 
     ASSERT(all(n(1:3) > 0))
 
-    fft_ = FFT_NONE
-    if (present(fft)) fft_ = fft
+    cube%fft_type = optional_default(fft_type, FFT_NONE)
 
-    cube%n = n
+    nullify(cube%fft)
 
-#ifdef HAVE_PFFT
-    nullify(cube%dpfft)
-    nullify(cube%zpfft)
-#endif
-    nullify(cube%dfftw)
-    nullify(cube%zfftw)
-
-    if (fft_ /= FFT_NONE) then
+    if (cube%fft_type /= FFT_NONE) then
       !%Variable FFTLibrary
       !%Type logical
       !%Section Hamiltonian::Poisson
@@ -115,7 +98,7 @@ contains
       !%End
       call parse_integer(datasets_check('FFTLibrary'), FFTLIB_FFTW, cube%fft_library)
 #ifndef HAVE_PFFT
-      if (cube%fft_library == FFTLIB_PFFT) then
+      if (cube%ftt_library == FFTLIB_PFFT) then
         write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
         call messages_fatal(1)
       end if
@@ -124,54 +107,28 @@ contains
       cube%fft_library = FFTLIB_NONE
     end if
 
-    select case (cube%fft_library)
-    case (FFTLIB_NONE)
-      cube%rs_n = n
-      cube%fs_n(1) = cube%nx
-      cube%fs_n(2:3) = n(2:3)
+    cube%n = n
+    cube%parallel_in_domains = cube%fft_library == FFTLIB_PFFT
+    if (cube%fft_library == FFTLIB_NONE) then
+      cube%nx = n(1)
+      cube%rs_n_global = cube%n
+      cube%fs_n_global = cube%n
+      cube%rs_n = cube%rs_n_global
+      cube%fs_n = cube%fs_n_global
       cube%rs_istart = 1
       cube%fs_istart = 1
-      cube%parallel_in_domains = .false.
       mpi_comm = -1
+    else
+      SAFE_ALLOCATE(cube%fft)
+      tmp_n = n
+      call fft_init(cube%fft, tmp_n, sb%dim, cube%fft_type, cube%fft_library, &
+           mpi_comm=mpi_comm, optimize = .not.simul_box_is_periodic(sb))
 
-    case (FFTLIB_FFTW)
-      cube%parallel_in_domains = .false.
-      mpi_comm = -1
-
-      if(iand(fft_, FFT_REAL) .ne. 0) then
-        SAFE_ALLOCATE(cube%dfftw)
-        call fft_init(cube%n, sb%dim, FFT_REAL,    cube%dfftw, optimize = .not.simul_box_is_periodic(sb))
-      end if
-      if(iand(fft_, FFT_COMPLEX) .ne. 0) then
-        SAFE_ALLOCATE(cube%zfftw)
-        call fft_init(cube%n, sb%dim, FFT_COMPLEX, cube%zfftw, optimize = .not.simul_box_is_periodic(sb))
-      end if
-      cube%nx = cube%n(1)/2 + 1
-
-      cube%rs_n = cube%n
-      cube%fs_n(1) = cube%nx
-      cube%fs_n(2:3) = cube%n(2:3)
-      cube%rs_istart = 1
-      cube%fs_istart = 1
-
-    case (FFTLIB_PFFT)
-#ifdef HAVE_PFFT
-      cube%parallel_in_domains = .true.
-
-      if(iand(fft_, FFT_REAL) .ne. 0) then
-        SAFE_ALLOCATE(cube%dpfft)
-        call pfft_init(cube%n, sb%dim, FFT_REAL, cube%rs_istart, cube%fs_istart, cube%rs_n, &
-             cube%fs_n, mpi_comm, cube%dpfft, optimize = .not.simul_box_is_periodic(sb))
-      end if
-      if(iand(fft_, FFT_COMPLEX) .ne. 0) then
-        SAFE_ALLOCATE(cube%zpfft)
-        call pfft_init(cube%n, sb%dim, FFT_COMPLEX, cube%rs_istart, cube%fs_istart, cube%rs_n, &
-             cube%fs_n, mpi_comm, cube%zpfft, optimize = .not.simul_box_is_periodic(sb))
-      end if
-      cube%nx = cube%n(1)/2 + 1
-
-#endif
-    end select
+      call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
+           cube%rs_istart, cube%fs_istart)
+      cube%n = cube%rs_n_global
+      cube%nx = cube%fs_n_global(1)
+    end if
 
     call mpi_grp_init(cube%mpi_grp, mpi_comm)
 
@@ -188,30 +145,15 @@ end subroutine  cube_init
     
     PUSH_SUB(cube_end)
 
-#ifdef HAVE_PFFT
-    if(associated(cube%dpfft)) then
-      call pfft_end(cube%dpfft)
-      SAFE_DEALLOCATE_P(cube%dpfft)
+    if(associated(cube%fft)) then
+      call fft_end(cube%fft)
+      SAFE_DEALLOCATE_P(cube%fft)
     end if
-    if(associated(cube%zpfft)) then
-      call pfft_end(cube%zpfft)
-      SAFE_DEALLOCATE_P(cube%zpfft)
-    end if
-#endif  
 
     SAFE_DEALLOCATE_P(cube%part)
     SAFE_DEALLOCATE_P(cube%np_local)
     SAFE_DEALLOCATE_P(cube%xlocal)
     SAFE_DEALLOCATE_P(cube%local)
-
-    if(associated(cube%dfftw)) then
-      call fft_end(cube%dfftw)
-      SAFE_DEALLOCATE_P(cube%dfftw)
-    end if
-    if(associated(cube%zfftw)) then
-      call fft_end(cube%zfftw)
-      SAFE_DEALLOCATE_P(cube%zfftw)
-    end if
 
     POP_SUB(cube_end)
   end subroutine  cube_end

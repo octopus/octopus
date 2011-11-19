@@ -30,7 +30,6 @@ module cube_function_m
   use mpi_m
   use mpi_debug_m
   use fft_m
-  use pfft_m
   use parser_m
   use par_vec_m
   use pfft_m

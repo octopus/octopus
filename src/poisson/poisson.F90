@@ -140,7 +140,7 @@ contains
     type(mesh_t),                intent(in)    :: mesh
 
     logical :: need_cube
-    integer :: default_solver, box(MAX_DIM), need_fft
+    integer :: default_solver, box(MAX_DIM), fft_type
 
     if(this%method.ne.-99) return ! already initialized
 
@@ -322,7 +322,7 @@ contains
 
     ! Now that we know the method, we check if we need a cube and its dimentions
     need_cube = .true.
-    need_fft = FFT_REAL
+    fft_type = FFT_REAL
 
     select case (mesh%sb%dim)
     case (1)
@@ -361,7 +361,7 @@ contains
       case(POISSON_FFT_CYL, POISSON_FFT_PLA, POISSON_FFT_NOCUT)
         call mesh_double_box(mesh%sb, mesh, box)
       case(POISSON_ISF)
-        need_fft = FFT_NONE
+        fft_type = FFT_NONE
         box(:) = mesh%idx%ll(:)
       case default
         need_cube = .false.
@@ -373,7 +373,7 @@ contains
 
     ! Create the cube
     if (need_cube) then
-      call cube_init(this%cube, box, mesh%sb, fft=need_fft)
+      call cube_init(this%cube, box, mesh%sb, fft_type=fft_type)
     end if
 
     call messages_print_stress(stdout)

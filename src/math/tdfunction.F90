@@ -534,7 +534,7 @@ module tdfunction_m
     end if
 
     n(1:3) = (/ f%niter, 1, 1 /)
-    call fft_init(n, 3, fft_real, f%fft_handler, optimize = .false.)
+    call fft_init(f%fft_handler, n, 3, FFT_REAL, FFTLIB_FFTW, optimize=.false.)
 
     if(present(rep)) then
       select case(rep)

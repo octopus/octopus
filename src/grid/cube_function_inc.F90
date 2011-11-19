@@ -25,14 +25,13 @@ subroutine X(cube_function_alloc_RS)(cube, cf)
 
   PUSH_SUB(X(cube_function_alloc_RS))
 
+  ASSERT(.not.associated(cf%X(RS)))
+
   if (cube%fft_library /= FFTLIB_PFFT) then
-    ASSERT(.not.associated(cf%X(RS)))
     SAFE_ALLOCATE(cf%X(RS)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
-#ifdef HAVE_PFFT
   else
-    ASSERT(.not.associated(cf%X(RS)))
-    cf%X(RS) => cube%X(pfft)%X(rs_data(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
-#endif
+    ASSERT(associated(cube%fft))
+    cf%X(RS) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
   end if
 
   POP_SUB(X(cube_function_alloc_RS))

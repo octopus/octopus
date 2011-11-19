@@ -213,9 +213,9 @@ contains
     end if
  
     if (states_are_real(st)) then
-      call cube_init(cube_tmp, gr%mesh%idx%ll, gr%sb, fft = FFT_REAL)
+      call cube_init(cube_tmp, gr%mesh%idx%ll, gr%sb, fft_type = FFT_REAL)
     else
-      call cube_init(cube_tmp, gr%mesh%idx%ll, gr%sb, fft = FFT_COMPLEX)
+      call cube_init(cube_tmp, gr%mesh%idx%ll, gr%sb, fft_type = FFT_COMPLEX)
     end if
     call cube_function_null(cube_function_tmp)
 

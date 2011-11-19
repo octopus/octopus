@@ -26,7 +26,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   character(len=*),       intent(in) :: dir
   type(output_t),         intent(in) :: outp
 
-  type(cube_t) :: cube
+  type(cube_t) :: dcube, zcube
   type(cube_function_t) :: cf
 #ifdef HAVE_ETSF_IO
   type(fourier_shell_t) :: shell
@@ -44,7 +44,8 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 #endif
 
   !Create a cube
-  call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft=FFT_REAL + FFT_COMPLEX)
+  call cube_init(dcube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_REAL)
+  call cube_init(zcube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
   call cube_function_null(cf)
   
   ! To create an etsf file one has to do the following:
@@ -76,54 +77,54 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
   ! density
   if (iand(outp%what, C_OUTPUT_DENSITY).ne.0) then
-    call dcube_function_alloc_RS(cube, cf)
+    call dcube_function_alloc_RS(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
-    call output_etsf_density_dims(st, gr%mesh, cube, density_dims, density_flags)
+    call output_etsf_density_dims(st, gr%mesh, dcube, density_dims, density_flags)
 
     call output_etsf_file_init(dir//"/density-etsf.nc", "Density file", density_dims, density_flags, ncid)
 
-    call output_etsf_density_write(st, gr%mesh, cube, cf, ncid)
+    call output_etsf_density_write(st, gr%mesh, dcube, cf, ncid)
     call output_etsf_geometry_write(geo, gr%sb, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
-    call dcube_function_free_rs(cube, cf)
+    call dcube_function_free_rs(dcube, cf)
   end if
 
   ! wave-functions
   if (iand(outp%what, C_OUTPUT_WFS).ne.0) then
-    call dcube_function_alloc_RS(cube, cf)
+    call dcube_function_alloc_RS(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, wfs_dims, wfs_flags)
     call output_etsf_kpoints_dims(gr%sb, wfs_dims, wfs_flags)
     call output_etsf_electrons_dims(st, wfs_dims, wfs_flags)
-    call output_etsf_wfs_rsp_dims(st, gr%mesh, cube, wfs_dims, wfs_flags)
+    call output_etsf_wfs_rsp_dims(st, gr%mesh, dcube, wfs_dims, wfs_flags)
 
     call output_etsf_file_init(dir//"/wfs-etsf.nc", "Wavefunctions file", wfs_dims, wfs_flags, ncid)
 
     call output_etsf_electrons_write(st, ncid)
     call output_etsf_geometry_write(geo, gr%sb, ncid)
     call output_etsf_kpoints_write(gr%sb, ncid)
-    call output_etsf_wfs_rsp_write(st, gr%mesh, cube, cf, ncid)
+    call output_etsf_wfs_rsp_write(st, gr%mesh, dcube, cf, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
     
-    call dcube_function_free_rs(cube, cf)
+    call dcube_function_free_rs(dcube, cf)
   end if
 
   ! wave-functions in fourier space
   if (iand(outp%what, C_OUTPUT_WFS_FOURIER).ne.0) then
-    call zcube_function_alloc_RS(cube, cf)
-    call fourier_shell_init(shell, cube, gr%mesh)
+    call zcube_function_alloc_RS(zcube, cf)
+    call fourier_shell_init(shell, zcube, gr%mesh)
 
     call output_etsf_geometry_dims(geo, gr%sb, pw_dims, pw_flags)
     call output_etsf_kpoints_dims(gr%sb, pw_dims, pw_flags)
     call output_etsf_electrons_dims(st, pw_dims, pw_flags)
-    call output_etsf_basisdata_dims(st, gr%mesh, cube, shell, pw_dims, pw_flags)
-    call output_etsf_wfs_pw_dims(st, gr%mesh, cube, shell, pw_dims, pw_flags)
+    call output_etsf_basisdata_dims(st, gr%mesh, zcube, shell, pw_dims, pw_flags)
+    call output_etsf_wfs_pw_dims(st, gr%mesh, zcube, shell, pw_dims, pw_flags)
 
     call output_etsf_file_init(dir//"/wfs-pw-etsf.nc", "Wavefunctions file", pw_dims, pw_flags, ncid)
 
@@ -131,17 +132,18 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call output_etsf_geometry_write(geo, gr%sb, ncid)
     call output_etsf_kpoints_write(gr%sb, ncid)
     call output_etsf_basisdata_write(st, gr%mesh, shell, ncid)
-    call output_etsf_wfs_pw_write(st, gr%mesh, cube, cf, shell, ncid)
+    call output_etsf_wfs_pw_write(st, gr%mesh, zcube, cf, shell, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data)
 
     call fourier_shell_end(shell)
-    call zcube_function_free_rs(cube, cf)
+    call zcube_function_free_rs(zcube, cf)
   end if
 #endif
 
-  call cube_end(cube)
+  call cube_end(dcube)
+  call cube_end(zcube)
 
   POP_SUB(output_etsf)
 end subroutine output_etsf

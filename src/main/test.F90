@@ -33,7 +33,6 @@ program oct_test
   use mpi_m
   use multicomm_m
   use parser_m
-  use pfft_m
   use poisson_m
   use profiling_m
   use states_calc_m
@@ -112,9 +111,6 @@ program oct_test
   call messages_print_stress(stdout)
 
   call fft_all_init()
-#ifdef HAVE_PFFT
-  call pfft_all_init()
-#endif
   call unit_system_init()
 
   select case(test_mode)

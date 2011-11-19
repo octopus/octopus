@@ -26,7 +26,8 @@ libmath_a_SOURCES =                      \
 	checksum.c                       \
 	checksum_interface.F90           \
 	dablas.c                         \
-	pfft.F90			 \
+	fft.F90                          \
+	fftw.F90                         \
 	spline_filter.F90                \
 	gauss_legendre.F90               \
 	lalg_basic.F90                   \
@@ -39,6 +40,7 @@ libmath_a_SOURCES =                      \
 	oct_gsl_min_f.c                  \
 	ode_solver.F90                   \
 	permutations.F90                 \
+	pfft.F90			 \
 	root_solver.F90                  \
 	solvers.F90                      \
 	splines.F90                      \
@@ -53,10 +55,10 @@ libmath_a_SOURCES =                      \
 	pblas.F90                        \
 	sgfft.F90                        \
 	matrix.F90                       \
-	compressed_sensing.F90           \
-	fftw3.F90
+	compressed_sensing.F90
 
 noinst_HEADERS =                         \
+	fft_inc.F90                      \
 	lalg_basic_blas_inc.F90          \
 	lalg_adv_lapack_inc.F90          \
 	lalg_adv_scalapack_inc.F90       \
@@ -78,8 +80,9 @@ blas.o : blas.F90
 checksum.o : checksum.c
 checksum_interface.o : checksum_interface.F90
 dablas.o : dablas.c 
-fftw3.o : fftw3.F90 lalg_basic.o loct_math.o
-pfft.o : pfft.F90 fftw3.o math.o
+fft.o : fft.F90 fft_inc.F90 fftw.o pfft.o lalg_basic.o loct_math.o
+fftw.o : fftw.F90
+pfft.o : pfft.F90 fftw.o math.o
 spline_filter.o: spline_filter.F90 splines.o
 gauss_legendre.o : gauss_legendre.F90 
 lalg_basic.o : lalg_basic.F90 lalg_basic_blas_inc.F90 blas.o 
@@ -96,11 +99,11 @@ solvers.o : solvers.F90 solvers_inc.F90 lalg_adv.o lalg_basic.o blas.o loct_math
 splines.o : splines.F90 loct_math.o
 sparskit.o : sparskit.F90
 symm_op.o : symm_op.F90 symm_op_inc.F90
-tdfunction.o : tdfunction.F90 splines.o fftw3.o
+tdfunction.o : tdfunction.F90 splines.o fftw.o
 ylm.o : ylm.c
 young.o : young.F90 math.o
 scalapack.o : scalapack.F90
 pblas.o : pblas.F90
 matrix.o : matrix.F90 matrix_inc.F90
 nfft_f.o : nfft_f.c
-nfft.o : nfft.F90 nfft_f.o lalg_basic.o fftw3.o loct_math.o
+nfft.o : nfft.F90 nfft_f.o lalg_basic.o fftw.o loct_math.o
