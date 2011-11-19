@@ -251,8 +251,8 @@ contains
     type(density_calc_t), intent(inout) :: this
 
     type(symmetrizer_t) :: symmetrizer
-    FLOAT,  allocatable :: symmrho(:)
-    integer :: ispin, np
+    FLOAT,  allocatable :: tmpdensity(:)
+    integer :: ispin, np, ip
     type(profile_t), save :: reduce_prof
 
     PUSH_SUB(density_calc_end)
@@ -260,12 +260,15 @@ contains
     np = this%gr%fine%mesh%np
 
     if(this%packed) then
+      SAFE_ALLOCATE(tmpdensity(1:np))
       ! the density is in device memory
       do ispin = 1, this%st%d%nspin
-        call opencl_read_buffer(this%buff_density, np, this%density(:, ispin), offset = (ispin - 1)*this%pnp)
-        call opencl_release_buffer(this%buff_density)
-        this%packed = .false.
+        call opencl_read_buffer(this%buff_density, np, tmpdensity, offset = (ispin - 1)*this%pnp)
+        forall(ip = 1:np) this%density(ip, ispin) = this%density(ip, ispin) + tmpdensity(ip)
       end do
+      this%packed = .false.
+      call opencl_release_buffer(this%buff_density)
+      SAFE_DEALLOCATE_A(tmpdensity)
     end if
 
     ! reduce over states and k-points
@@ -276,16 +279,16 @@ contains
     end if
 
     if(this%st%symmetrize_density) then
-      SAFE_ALLOCATE(symmrho(1:np))
+      SAFE_ALLOCATE(tmpdensity(1:np))
       call symmetrizer_init(symmetrizer, this%gr%fine%mesh)
 
       do ispin = 1, this%st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, this%density(:, ispin), symmrho)
-        this%density(1:np, ispin) = symmrho(1:np)
+        call dsymmetrizer_apply(symmetrizer, this%density(:, ispin), tmpdensity)
+        this%density(1:np, ispin) = tmpdensity(1:np)
       end do
 
       call symmetrizer_end(symmetrizer)
-      SAFE_DEALLOCATE_A(symmrho)
+      SAFE_DEALLOCATE_A(tmpdensity)
     end if
 
     POP_SUB(density_calc_end)
@@ -314,9 +317,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%block_start, st%block_end
-        if(packed) call batch_pack(st%psib(ib, ik))
         call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
-        if(packed) call batch_unpack(st%psib(ib, ik))
       end do
     end do
 
