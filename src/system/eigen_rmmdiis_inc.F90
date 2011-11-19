@@ -31,13 +31,13 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   FLOAT,                  intent(out)   :: diff(1:st%nst)
   integer,                intent(in)    :: blocksize
 
-  R_TYPE, allocatable :: res(:, :, :, :)
+  R_TYPE, allocatable :: res(:, :, :, :), tmp(:, :)
   R_TYPE, allocatable :: psi(:, :, :, :)
   R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :, :)
   R_TYPE, allocatable :: eigen(:)
   FLOAT,  allocatable :: eval(:, :)
   FLOAT, allocatable :: lambda(:)
-  integer :: ist, minst, idim, ip, ii, iter, nops, maxst, jj, bsize
+  integer :: ist, minst, idim, ip, ii, iter, nops, maxst, jj, bsize, ib
   R_TYPE :: ca, cb, cc
   R_TYPE, allocatable :: fr(:, :)
   type(profile_t), save :: prof
@@ -50,6 +50,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, 1:niter, 1:blocksize))
   SAFE_ALLOCATE(res(1:gr%mesh%np_part, 1:st%d%dim, 1:niter, 1:blocksize))
+  SAFE_ALLOCATE(tmp(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(lambda(1:st%nst))
   SAFE_ALLOCATE(psib(1:niter))
   SAFE_ALLOCATE(resb(1:niter))
@@ -64,16 +65,14 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   failed = .false.
 
-  do minst = st%st_start, st%st_end, blocksize
-    maxst = min(minst + blocksize - 1, st%st_end)
+  do ib = st%block_start, st%block_end
+    minst = st%block_range(ib, 1)
+    maxst = st%block_range(ib, 2)
     bsize = maxst - minst + 1
 
-    call batch_init(stpsib, st%d%dim, minst, maxst, st%X(psi)(:, :, minst:, ik))
     call batch_init(psib(1), st%d%dim, minst, maxst, psi(:, :, 1, :))
 
-    call batch_copy_data(gr%mesh%np, stpsib, psib(1))
-
-    call batch_end(stpsib)
+    call batch_copy_data(gr%mesh%np, st%psib(ib, ik), psib(1))
 
     call batch_init(resb(1), st%d%dim, minst, maxst, res(:, :, 1, :))
 
@@ -227,15 +226,15 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       if(.not. failed(ii)) then
         ! end with a trial move
-        call X(preconditioner_apply)(pre, gr, hm, ik, res(:, :, iter - 1, ii), st%X(psi)(: , :, ist, ik))
+        call X(preconditioner_apply)(pre, gr, hm, ik, res(:, :, iter - 1, ii), tmp)
 
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          st%X(psi)(ip, idim, ist, ik) = psi(ip, idim, iter - 1, ii) + lambda(ist)*st%X(psi)(ip, idim, ist, ik)
+          tmp(ip, idim) = psi(ip, idim, iter - 1, ii) + lambda(ist)*tmp(ip, idim)
         end forall
+
+        call states_set_state(st, gr%mesh, ist, ik, tmp)
       else
-        do idim = 1, st%d%dim
-          call lalg_copy(gr%mesh%np, psi(:, idim, last(ii), ii), st%X(psi)(: , idim, ist, ik))
-        end do
+        call states_set_state(st, gr%mesh, ist, ik, psi(:, :, last(ii), ii))
       end if
 
       if(mpi_grp_is_root(mpi_world)) then
@@ -254,24 +253,23 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   SAFE_ALLOCATE(eigen(st%st_start:st%st_end))
 
-  do minst = st%st_start, st%st_end, blocksize
-    maxst = min(minst + blocksize - 1, st%st_end)
+  do ib = st%block_start, st%block_end
+    minst = st%block_range(ib, 1)
+    maxst = st%block_range(ib, 2)
 
-    call batch_init(psib(1), st%d%dim, minst, maxst, st%X(psi)(:, :, minst:, ik))
     call batch_init(resb(1), st%d%dim, minst, maxst, res(:, :, 1, :))
 
-    call X(hamiltonian_apply_batch)(hm, gr%der, psib(1), resb(1), ik)
-    call X(mesh_batch_dotp_vector)(gr%der%mesh, psib(1), resb(1), eigen(minst:maxst))
+    call X(hamiltonian_apply_batch)(hm, gr%der, st%psib(ib, ik), resb(1), ik)
+    call X(mesh_batch_dotp_vector)(gr%der%mesh, st%psib(ib, ik), resb(1), eigen(minst:maxst))
 
     st%eigenval(minst:maxst, ik) = eigen(minst:maxst)
 
-    call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(1), resb(1))
+    call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%psib(ib, ik), resb(1))
 
     call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(1), resb(1), eigen(minst:maxst))
 
     diff(minst:maxst) = sqrt(abs(eigen(minst:maxst)))
 
-    call batch_end(psib(1))
     call batch_end(resb(1))
 
     nops = nops + maxst - minst + 1
@@ -283,6 +281,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(res)
+  SAFE_DEALLOCATE_A(tmp)
   SAFE_DEALLOCATE_A(lambda)
   SAFE_DEALLOCATE_A(psib)
   SAFE_DEALLOCATE_A(resb)
