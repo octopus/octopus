@@ -1046,10 +1046,10 @@ end subroutine messages_end
 
   ! ------------------------------------------------------------
 
-  subroutine messages_write_float(val, fmt)
+  subroutine messages_write_float(val, fmt, new_line)
     FLOAT,                      intent(in) :: val
     character(len=*), optional, intent(in) :: fmt
-
+    logical,          optional, intent(in) :: new_line
 
     character(len=5) :: fmt_
 
@@ -1061,13 +1061,18 @@ end subroutine messages_end
 
     write(message(current_line), '(a, '//trim(fmt_)//')') trim(message(current_line)), val
 
+    if(present(new_line)) then
+      if(new_line) call messages_new_line()
+    end if
+
   end subroutine messages_write_float
 
   ! ------------------------------------------------------------
 
-  subroutine messages_write_integer8(val, fmt)
+  subroutine messages_write_integer8(val, fmt, new_line)
     integer(8),                 intent(in) :: val
     character(len=*), optional, intent(in) :: fmt
+    logical,          optional, intent(in) :: new_line
 
     character(len=10) :: number
 
@@ -1076,15 +1081,20 @@ end subroutine messages_end
     else
       write(number, '(i10)') val
       write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+    end if
+
+    if(present(new_line)) then
+      if(new_line) call messages_new_line()
     end if
 
   end subroutine messages_write_integer8
 
   ! ------------------------------------------------------------
 
-  subroutine messages_write_integer(val, fmt)
+  subroutine messages_write_integer(val, fmt, new_line)
     integer,                    intent(in) :: val
     character(len=*), optional, intent(in) :: fmt
+    logical,          optional, intent(in) :: new_line
 
     character(len=10) :: number
 
@@ -1095,26 +1105,40 @@ end subroutine messages_end
       write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
     end if
 
+    if(present(new_line)) then
+      if(new_line) call messages_new_line()
+    end if
+
   end subroutine messages_write_integer
 
   ! ------------------------------------------------------------
 
-  subroutine messages_write_str(val)
-    character(len=*), intent(in) :: val
+  subroutine messages_write_str(val, new_line)
+    character(len=*),           intent(in) :: val
+    logical,          optional, intent(in) :: new_line
 
     write(message(current_line), '(2a)') trim(message(current_line)), trim(val)
+
+    if(present(new_line)) then
+      if(new_line) call messages_new_line()
+    end if
 
   end subroutine messages_write_str
 
   ! ------------------------------------------------------------
 
-  subroutine messages_write_logical(val)
-    logical, intent(in) :: val
+  subroutine messages_write_logical(val, new_line)
+    logical,           intent(in) :: val
+    logical, optional, intent(in) :: new_line
 
     if(val) then
       write(message(current_line), '(2a)') trim(message(current_line)), ' yes'
     else
       write(message(current_line), '(2a)') trim(message(current_line)), ' no'
+    end if
+
+    if(present(new_line)) then
+      if(new_line) call messages_new_line()
     end if
 
   end subroutine messages_write_logical
