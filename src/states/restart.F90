@@ -228,7 +228,7 @@ contains
     integer :: iunit, iunit2, iunit_mesh, iunit_states, iunit_rho
     integer :: err, ik, idir, ist, idim, isp, itot
     character(len=80) :: filename
-    logical :: wfns_are_associated, lr_wfns_are_associated
+    logical :: lr_wfns_are_associated
     FLOAT   :: kpoint(1:MAX_DIM)
     FLOAT,  allocatable :: dpsi(:)
     CMPLX,  allocatable :: zpsi(:)
@@ -243,10 +243,6 @@ contains
     end if
 
     call profiling_in(prof_write, "RESTART_WRITE")
-
-    wfns_are_associated = (associated(st%dpsi) .and. states_are_real(st)) .or. &
-      (associated(st%zpsi) .and. states_are_complex(st))
-    ASSERT(wfns_are_associated)
 
     if(present(lr)) then
       lr_wfns_are_associated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
@@ -479,7 +475,7 @@ contains
     integer, allocatable :: read_lxyz(:, :), map(:)
 
     FLOAT                :: my_occ, flt
-    logical              :: read_occ, gs_allocated, lr_allocated, grid_changed, grid_reordered
+    logical              :: read_occ, lr_allocated, grid_changed, grid_reordered
     logical              :: exact_, integral_occs
     FLOAT, allocatable   :: dpsi(:)
     CMPLX, allocatable   :: zpsi(:)
@@ -512,10 +508,6 @@ contains
     endif
 
     ! sanity check
-    gs_allocated = (associated(st%dpsi) .and. states_are_real(st)) .or. &
-      (associated(st%zpsi) .and. states_are_complex(st))
-    ASSERT(gs_allocated)
-
     if(present(lr)) then
       lr_allocated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
         (associated(lr%zdl_psi) .and. states_are_complex(st))

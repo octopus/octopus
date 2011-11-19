@@ -125,6 +125,7 @@ contains
     dout%spin_channels  = din%spin_channels
     dout%cdft           = din%cdft
     dout%block_size     = din%block_size
+    dout%pack_states    = din%pack_states
 
     call loct_pointer_copy(dout%kweights, din%kweights)
 

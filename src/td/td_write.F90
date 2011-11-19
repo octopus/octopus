@@ -1530,6 +1530,8 @@ contains
     ! this is required if st%X(psi) is used
     call states_sync(st)
 
+    ASSERT(associated(st%dpsi) .or. associated(st%zpsi))
+
     SAFE_ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
     projections(:,:,:) = M_Z0
     call calc_projections()
@@ -1585,6 +1587,9 @@ contains
 
       PUSH_SUB(td_write_proj.dipole_matrix_elements)
  
+      ASSERT(associated(st%zpsi))
+      ASSERT(associated(gs_st%zpsi))
+
       ! n_dip is not defined for more than space%dim
       call geometry_dipole(geo, n_dip)
 

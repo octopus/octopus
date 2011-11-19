@@ -1084,31 +1084,35 @@ contains
     k2 = st%d%kpt%end
     np_part = mesh%np_part
 
-    if (states_are_real(st)) then
-      SAFE_ALLOCATE(st%dpsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
+    if(.not. st%d%pack_states) then
 
-      forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
-        st%dpsi(ip, idim, ist, ik) = M_ZERO
-      end forall
+      if (states_are_real(st)) then
+        SAFE_ALLOCATE(st%dpsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
+        
+        forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
+          st%dpsi(ip, idim, ist, ik) = M_ZERO
+        end forall
+        
+      else
+        SAFE_ALLOCATE(st%zpsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
+        
+        forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
+          st%zpsi(ip, idim, ist, ik) = M_Z0
+        end forall
+      end if
+      
+      if(optional_default(alloc_zphi, .false.)) then
+        SAFE_ALLOCATE(st%zphi(1:np_part, 1:st%ob_d%dim, st1:st2, k1:k2))
+        forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
+          st%zphi(ip, idim, ist, ik) = M_Z0
+        end forall
+      else
+        nullify(st%zphi)
+      end if
 
-    else
-      SAFE_ALLOCATE(st%zpsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
-
-      forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
-        st%zpsi(ip, idim, ist, ik) = M_Z0
-      end forall
     end if
 
-    if(optional_default(alloc_zphi, .false.)) then
-      SAFE_ALLOCATE(st%zphi(1:np_part, 1:st%ob_d%dim, st1:st2, k1:k2))
-      forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
-        st%zphi(ip, idim, ist, ik) = M_Z0
-      end forall
-    else
-      nullify(st%zphi)
-    end if
-
-    call states_init_block(st)
+    call states_init_block(st, mesh)
 
     POP_SUB(states_allocate_wfns)
   end subroutine states_allocate_wfns
@@ -1157,12 +1161,13 @@ contains
   !! st%iblock(1:st%nst, 1:st%d%nik): it points, for each state, to the block that contains it.
   !! st%block_is_local(): st%block_is_local(ib) is .true. if block ib is stored in the running node.
   !! st%block_range(1:st%nblocks, 1:2): Block ib contains states fromn st%block_range(ib, 1) to st%block_range(ib, 2)
-  !! st%block_size(1:st%nblocks): Block ib contains st%block_size(ib) states.
+  !! st%block_size(1:st%nblocks): Block ib contains a number st%block_size(ib) of states.
   !! st%block_initialized: it should be .false. on entry, and .true. after exiting this routine.
   !!
   !! The set of batches st%psib(1:st%nblocks) contains the blocks themselves.
-  subroutine states_init_block(st)
-    type(states_t),    intent(inout)   :: st
+  subroutine states_init_block(st, mesh)
+    type(states_t),           intent(inout) :: st
+    type(mesh_t),   optional, intent(in)    :: mesh
 
     integer :: ib, iqn, ist
     logical :: same_node
@@ -1213,13 +1218,22 @@ contains
           st%block_is_local(ib, iqn) = .true.
 
           if (states_are_real(st)) then
-            ASSERT(associated(st%dpsi))
-            call batch_init(st%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%dpsi(:, :, bstart(ib):bend(ib), iqn))
+            if(associated(st%dpsi)) then
+              call batch_init(st%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%dpsi(:, :, bstart(ib):bend(ib), iqn))
+            else
+              ASSERT(present(mesh))
+              call batch_init(st%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
+              call dbatch_new(st%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+            end if
           else
-            ASSERT(associated(st%zpsi))
-            call batch_init(st%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%zpsi(:, :, bstart(ib):bend(ib), iqn))
+            if(associated(st%zpsi)) then
+              call batch_init(st%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%zpsi(:, :, bstart(ib):bend(ib), iqn))
+            else
+              ASSERT(present(mesh))
+              call batch_init(st%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
+              call zbatch_new(st%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+            end if
           end if
-
         end do
       end if
     end do
@@ -1268,16 +1282,10 @@ contains
 
     PUSH_SUB(states_deallocate_wfns)
 
-    if (states_are_real(st)) then
-      SAFE_DEALLOCATE_P(st%dpsi)
-    else
-      SAFE_DEALLOCATE_P(st%zpsi)
-    end if
-
     if (st%block_initialized) then
        do ib = 1, st%nblocks
           do iq = st%d%kpt%start, st%d%kpt%end
-             if(st%block_is_local(ib, iq)) call batch_end(st%psib(ib, iq))
+            if(st%block_is_local(ib, iq)) call batch_end(st%psib(ib, iq))
           end do
        end do
 
@@ -1287,6 +1295,12 @@ contains
        SAFE_DEALLOCATE_P(st%block_size)
        SAFE_DEALLOCATE_P(st%block_is_local)
        st%block_initialized = .false.
+    end if
+
+    if (states_are_real(st)) then
+      SAFE_DEALLOCATE_P(st%dpsi)
+    else
+      SAFE_DEALLOCATE_P(st%zpsi)
     end if
 
     if(st%open_boundaries) then
@@ -2208,7 +2222,7 @@ contains
           call messages_write('Only ')
           call messages_write(ib - st%block_start)
           call messages_write(' of ')
-          call messages_write(st%block_end - - st%block_start + 1)
+          call messages_write(st%block_end - st%block_start + 1)
           call messages_write(' blocks will be stored in device memory.', new_line = .true.)
           call messages_warning()
           exit qnloop
