@@ -323,7 +323,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: start
 
-  integer :: iatom, jatom, ik, ist, idim, ip, ispin, nev
+  integer :: iatom, jatom, ik, ist, idim, ip, ispin, nev, ib
   integer :: ibasis, jbasis, iorb, jorb, norbs, dof
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
   integer :: prow, pcol, ilbasis, jlbasis
@@ -386,6 +386,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       'Info: LCAO requires', nint(dof*CNST(8.0)/CNST(1024.0)**2), ' Mb of memory for atomic orbitals.'
     call messages_info(1)
   end if
+
+  call states_set_zero(st)
 
   do ispin = 1, st%d%spin_channels
 
@@ -526,37 +528,31 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       st%eigenval(1:nev, ik) = eval(1:nev)
       st%eigenval(this%nbasis + 1:st%nst, ik) = HUGE(M_ONE)
 
-      do ist = st%st_start, st%st_end
-        if(ist <= this%nbasis) then
-          do idim = 1, st%d%dim
-            forall(ip = 1:gr%mesh%np) st%X(psi)(ip, idim, ist, ik) = R_TOTYPE(M_ZERO)
-          end do
-        else
-          !we do not have enough basis functions, so randomize the missing orbitals
-          call X(mf_random)(gr%mesh, st%X(psi)(:, 1, ist, ik))
-          st%X(psi)(1:gr%mesh%np, 2:st%d%dim, ist, ik) = R_TOTYPE(M_ZERO)
-        end if
-      end do
-
-      call batch_init(psib, st%d%dim, st%st_start,  min(st%st_end, this%nbasis), st%X(psi)(:, :, :, ik))
-
       ibasis = 1
       do iatom = 1, geo%natoms
         norbs = this%norb_atom(iatom)
 
         call lcao_get_orbital(orbitals(iatom), sphere(iatom), st, geo, ispin, iatom, this%norb_atom(iatom))
-        call X(submesh_batch_add_matrix)(sphere(iatom), evec(ibasis:, st%st_start:), orbitals(iatom), psib)
+
+        do ib = st%block_start, st%block_end
+          call X(submesh_batch_add_matrix)(sphere(iatom), evec(ibasis:, st%block_range(ib, 1):), orbitals(iatom), st%psib(ib, ik))
+        end do
+
         if(.not. this%keep_orb) call lcao_end_orbital(orbitals(iatom))
 
         ibasis = ibasis + norbs
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, this%nbasis)
       end do
 
-      call batch_end(psib)
-
       SAFE_DEALLOCATE_A(eval)
       SAFE_DEALLOCATE_A(evec)
       SAFE_DEALLOCATE_A(levec)
+
+      ! if we do not have enough basis functions randomize the missing orbitals
+      do ist = this%nbasis + 1, st%st_end
+        call X(mf_random)(gr%mesh, psii(:, 1, 1))
+        call states_set_state(st, gr%mesh, 1, ist, ik, psii(:, 1, 1))
+      end do
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
       call profiling_out(prof_wavefunction)
