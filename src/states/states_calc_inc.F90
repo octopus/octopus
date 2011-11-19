@@ -352,7 +352,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
   PUSH_SUB(X(states_trsm))
 
-  if(.not. states_are_packed(st)) then
+  if(associated(st%X(psi))) then
 
     do idim = 1, st%d%dim
       ! multiply by the inverse of ss
@@ -1013,9 +1013,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
 
   PUSH_SUB(X(states_rotate_in_place))
   
-  ASSERT(associated(st%X(psi)))
-
-  if(.not. states_are_packed(st)) then
+  if(associated(st%X(psi))) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
     call X(mesh_batch_rotate)(mesh, psib, uu)
@@ -1123,9 +1121,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
   
   PUSH_SUB(X(states_calc_overlap))
   
-  ASSERT(associated(st%X(psi)))
-
-  if(.not. states_are_packed(st)) then
+  if(associated(st%X(psi))) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
 
