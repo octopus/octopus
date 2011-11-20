@@ -470,7 +470,13 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(ss(1:nst))
 
+  ss = M_ZERO
+
   do ist = 1, nst
+    if(present(mask)) then
+      if(mask(ist)) cycle
+    end if
+          
     call states_get_state(st, mesh, ist, iqn, psi)
     ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false.)
   end do
@@ -499,7 +505,6 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     end if
     
     call states_get_state(st, mesh, ist, iqn, psi)
-    ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false.)
     do idim = 1, st%d%dim
       call blas_axpy(mesh%np, -ss(ist), psi(1, idim), 1, phi(1, idim), 1)
     end do

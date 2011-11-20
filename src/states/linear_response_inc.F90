@@ -97,8 +97,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
     SAFE_DEALLOCATE_A(theta_Fi)
   end if
 
-  call X(states_orthogonalization)(mesh, st%nst, st%d%dim, st%X(psi)(:, :, :, ik), vec(:, :), &
-    Theta_Fi=theta, beta_ij=beta_ij)
+  call X(states_orthogonalize_single)(st, mesh, st%nst, ik, vec(:, :), theta_fi = theta, beta_ij = beta_ij)
 
   SAFE_DEALLOCATE_A(beta_ij)
 
