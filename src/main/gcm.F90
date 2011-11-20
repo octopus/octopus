@@ -137,8 +137,8 @@ module gcm_m
       call density_calc(phi(i), gr, phi(i)%rho)
 
       ! First, the one-body part of the total energy:
-      etot(i) = delectronic_kinetic_energy(hm, gr, phi(i)) + &
-                delectronic_external_energy(hm, gr, phi(i))
+      etot(i) = delectronic_energy(hm, gr%der, phi(i), TERM_KINETIC) + &
+        delectronic_energy(hm, gr%der, phi(i), TERM_LOCAL_POTENTIAL + TERM_NON_LOCAL_POTENTIAL)
 
       ! Coulomb contribution.
       do j = 1, gr%mesh%np

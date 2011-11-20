@@ -28,6 +28,7 @@ module one_shot_m
   use global_m
   use output_m
   use hamiltonian_m
+  use hamiltonian_base_m
   use parser_m
   use loct_m
   use loct_math_m
@@ -80,11 +81,11 @@ contains
     case(KOHN_SHAM_DFT)
       ! kinetic energy + local potential + Hartree + xc
       if(states_are_real(sys%st)) then
-        e_t     = delectronic_kinetic_energy(hm, sys%gr, sys%st)
-        e_ext   = delectronic_external_energy(hm, sys%gr, sys%st)
+        e_t     = delectronic_energy(hm, sys%gr%der, sys%st, terms = TERM_KINETIC)
+        e_ext   = delectronic_energy(hm, sys%gr%der, sys%st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
       else
-        e_t     = zelectronic_kinetic_energy(hm, sys%gr, sys%st)
-        e_ext   = zelectronic_external_energy(hm, sys%gr, sys%st)
+        e_t     = zelectronic_energy(hm, sys%gr%der, sys%st, terms = TERM_KINETIC)
+        e_ext   = zelectronic_energy(hm, sys%gr%der, sys%st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
       end if
 
     case(INDEPENDENT_PARTICLES)

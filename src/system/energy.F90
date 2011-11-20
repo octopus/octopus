@@ -49,10 +49,8 @@ module energy_m
   private
   public ::                      &
     total_energy,                &
-    delectronic_kinetic_energy,  &
-    zelectronic_kinetic_energy,  &
-    delectronic_external_energy, &
-    zelectronic_external_energy, &
+    delectronic_energy,          &
+    zelectronic_energy,          &
     energy_calculate_eigenvalues
 
 contains
@@ -79,11 +77,11 @@ contains
 
     if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK).and.(hm%theory_level.ne.CLASSICAL)) then
       if(states_are_real(st)) then
-        hm%energy%kinetic  = delectronic_kinetic_energy(hm, gr, st)
-        hm%energy%extern   = delectronic_external_energy(hm, gr, st)
+        hm%energy%kinetic  = delectronic_energy(hm, gr%der, st, terms = TERM_KINETIC)
+        hm%energy%extern   = delectronic_energy(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
       else
-        hm%energy%kinetic  = zelectronic_kinetic_energy(hm, gr, st)
-        hm%energy%extern   = zelectronic_external_energy(hm, gr, st)
+        hm%energy%kinetic  = zelectronic_energy(hm, gr%der, st, terms = TERM_KINETIC)
+        hm%energy%extern   = zelectronic_energy(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
       end if
     end if
 

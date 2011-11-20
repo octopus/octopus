@@ -91,68 +91,42 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
 end subroutine X(calculate_eigenvalues)
 
 ! ---------------------------------------------------------
-FLOAT function X(electronic_kinetic_energy)(hm, gr, st) result(t0)
+FLOAT function X(electronic_energy)(hm, der, st, terms) result(energy)
   type(hamiltonian_t), intent(in)    :: hm
-  type(grid_t),        intent(inout) :: gr
+  type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
+  integer,             intent(in)    :: terms
 
-  integer :: ik, ist
-  R_TYPE, allocatable :: tpsi(:, :), psi(:, :)
-  FLOAT, allocatable  :: t(:, :)
+  integer :: ik, ist, ib, minst, maxst
+  type(batch_t) :: hpsib
+  R_TYPE, allocatable  :: tt(:, :)
+ 
+  PUSH_SUB(X(electronic_energy))
 
-  PUSH_SUB(X(electronic_kinetic_energy))
+  SAFE_ALLOCATE(tt(st%st_start:st%st_end, 1:st%d%nik))
 
-  SAFE_ALLOCATE(tpsi(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(t(st%st_start:st%st_end, 1:st%d%nik))
-
-  t = M_ZERO
+  tt = M_ZERO
 
   do ik = st%d%kpt%start, st%d%kpt%end
-    do ist = st%st_start, st%st_end
-      tpsi = R_TOTYPE(M_ZERO)
-      call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:, :, ist, ik), tpsi, ist, ik, terms = TERM_KINETIC)
-      t(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), tpsi)
+    do ib = st%block_start, st%block_end
+      minst = st%block_range(ib, 1)
+      maxst = st%block_range(ib, 2)
+
+      call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
+
+      call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik, terms = terms)
+      call X(mesh_batch_dotp_vector)(der%mesh, st%psib(ib, ik), hpsib, tt(minst:maxst, ik))
+
+      call batch_end(hpsib, copy = .false.)
+
     end do
   end do
   
-  t0 = states_eigenvalues_sum(st, t)
+  energy = states_eigenvalues_sum(st, real(tt, REAL_PRECISION))
   
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(tpsi)
-  SAFE_DEALLOCATE_A(t)
-  POP_SUB(X(electronic_kinetic_energy))
-end function X(electronic_kinetic_energy)
-
-! ---------------------------------------------------------
-FLOAT function X(electronic_external_energy)(hm, gr, st) result(v)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
-
-  integer :: ik, ist
-  R_TYPE, allocatable :: vpsi(:, :)
-  FLOAT, allocatable :: t(:, :)
-
-  PUSH_SUB(X(electronic_external_energy))
-
-  SAFE_ALLOCATE(vpsi(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(t(st%st_start:st%st_end, 1:st%d%nik))
-  t = M_ZERO
-
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ist = st%st_start, st%st_end
-      call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:, :, ist, ik), vpsi, ist, ik, &
-        terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
-      t(ist, ik) = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), vpsi)
-    end do
-  end do
-
-  v = states_eigenvalues_sum(st, t)
-
-  SAFE_DEALLOCATE_A(vpsi)
-  SAFE_DEALLOCATE_A(t)
-  POP_SUB(X(electronic_external_energy))
-end function X(electronic_external_energy)
+  SAFE_DEALLOCATE_A(tt)
+  POP_SUB(X(electronic_energy))
+end function X(electronic_energy)
 
 !! Local Variables:
 !! mode: f90
