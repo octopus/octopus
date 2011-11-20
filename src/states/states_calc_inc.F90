@@ -441,6 +441,101 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 end subroutine X(states_trsm)
 
 ! ---------------------------------------------------------
+subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij)
+  type(states_t),    intent(in)    :: st
+  type(mesh_t),      intent(in)    :: mesh
+  integer,           intent(in)    :: nst
+  integer,           intent(in)    :: iqn
+  R_TYPE,            intent(inout) :: phi(:,:)     !< phi(mesh%np_part, dim)
+  logical, optional, intent(in)    :: normalize
+  logical, optional, intent(inout) :: mask(:)      !< mask(nst)
+  R_TYPE,  optional, intent(out)   :: overlap(:) 
+  R_TYPE,  optional, intent(out)   :: norm
+  FLOAT,   optional, intent(in)    :: theta_fi
+  R_TYPE,  optional, intent(in)    :: beta_ij(:)   ! beta_ij(nst)
+
+  logical :: normalize_
+  integer :: ist, idim
+  FLOAT   :: nrm2
+  R_TYPE, allocatable  :: ss(:), psi(:, :)
+  type(profile_t), save :: prof
+  type(profile_t), save :: reduce_prof
+  
+  call profiling_in(prof, "GRAM_SCHMIDT")
+  PUSH_SUB(X(states_orthogonalize_single))
+
+  ASSERT(nst <= st%nst)
+  ASSERT(.not. st%parallel_in_states)
+
+  SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(ss(1:nst))
+
+  do ist = 1, nst
+    call states_get_state(st, mesh, ist, iqn, psi)
+    ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false.)
+  end do
+    
+  if(mesh%parallel_in_domains) then
+    call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
+    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = nst)
+    call profiling_out(reduce_prof)
+  end if
+
+  if(present(mask)) then
+    do ist = 1, nst
+      mask(ist) = (abs(ss(ist)) <= M_EPSILON)
+    end do
+  end if
+
+  if(present(beta_ij)) ss(1:nst) = ss(1:nst)*beta_ij(1:nst)
+  
+  if(present(theta_fi)) then
+    if(theta_fi /= M_ONE) phi(1:mesh%np, 1:st%d%dim) = theta_fi*phi(1:mesh%np, 1:st%d%dim)
+  end if
+
+  do ist = 1, nst
+    if(present(mask)) then
+      if(mask(ist)) cycle
+    end if
+    
+    call states_get_state(st, mesh, ist, iqn, psi)
+    ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false.)
+    do idim = 1, st%d%dim
+      call blas_axpy(mesh%np, -ss(ist), psi(1, idim), 1, phi(1, idim), 1)
+    end do
+  end do
+
+  ! the following ifs cannot be given as a single line (without the
+  ! then) to avoid a bug in xlf 10.1
+  normalize_ = .false.
+  if(present(normalize)) then
+    normalize_ = normalize
+  end if
+
+  if(normalize_) then
+    nrm2 = X(mf_nrm2)(mesh, st%d%dim, phi)
+    do idim = 1, st%d%dim
+      call lalg_scal(mesh%np, M_ONE/nrm2, phi(:, idim))
+    end do
+  end if
+
+  if(present(overlap)) then
+    overlap(1:nst) = ss(1:nst)
+  end if
+
+  if(present(norm)) then
+    ASSERT(normalize)
+    norm = nrm2
+  end if
+
+  SAFE_DEALLOCATE_A(ss)
+  SAFE_DEALLOCATE_A(psi)
+
+  POP_SUB(X(states_orthogonalize_single))
+  call profiling_out(prof)
+end subroutine X(states_orthogonalize_single)
+
+! ---------------------------------------------------------
 !> Orthonormalizes phi to the nst orbitals psi.
 !! It also permits doing only the orthogonalization (no normalization).
 !! And one can pass an extra optional argument, mask, which:

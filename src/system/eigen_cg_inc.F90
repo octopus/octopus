@@ -68,9 +68,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
     call states_get_state(st, gr%mesh, p, ik, psi)
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
-    if(p > 1) then
-      call X(states_orthogonalization)(gr%mesh, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), psi, normalize = .true.)
-    end if
+    if(p > 1) call X(states_orthogonalize_single)(st, gr%mesh, p - 1, ik, psi, normalize = .true.)
 
     ! Calculate starting gradient: |hpsi> = H|psi>
     call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, p, ik)
@@ -97,7 +95,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
       end do
 
       ! Orthogonalize to lowest eigenvalues (already calculated)
-      if(p > 1) call X(states_orthogonalization)(gr%mesh, p - 1, st%d%dim, st%X(psi)(:, :, :, ik), g, normalize = .false.)
+      if(p > 1) call X(states_orthogonalize_single)(st, gr%mesh, p - 1, ik, g, normalize = .false.)
 
       if(iter .ne. 1) then
         gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g, g0, reduce = .false.)
@@ -276,10 +274,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
     call states_get_state(st, gr%mesh, ist, ik, psi)
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
-    if(ist.gt.1) then
-      call X(states_orthogonalization)(gr%mesh, ist - 1, st%d%dim, &
-        st%X(psi)(:, :, 1:ist - 1, ik), psi, normalize = .true.)
-    end if
+    if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
 
     ! Calculate starting gradient: |hpsi> = H|psi>
     call X(hamiltonian_apply)(hm, gr%der, psi, phi, ist, ik)
@@ -325,8 +320,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
         end do
       end do
 
-      if(ist > 1) call X(states_orthogonalization)(gr%mesh, ist - 1, dim, st%X(psi)(:, :, :, ik), sd, &
-        normalize = .false., mask = orthogonal)
+      if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, sd, normalize = .false., mask = orthogonal)
 
       ! Get conjugate-gradient vector
       dot = X(mf_nrm2)(gr%mesh, dim, sd)**2

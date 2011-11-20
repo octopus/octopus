@@ -80,6 +80,8 @@ module states_calc_m
     zstates_calc_orth_test,         &
     dstates_orthogonalization,      &
     zstates_orthogonalization,      &
+    dstates_orthogonalize_single,   &
+    zstates_orthogonalize_single,   &
     dstates_orthogonalization_full, &
     zstates_orthogonalization_full, &
     dstates_normalize_orbital,      &
