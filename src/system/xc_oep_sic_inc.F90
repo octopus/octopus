@@ -23,17 +23,21 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   type(xc_t),     intent(in)    :: xcs
   type(grid_t),   intent(inout) :: gr
   type(states_t), intent(inout) :: st
-  integer,           intent(in) :: is
+  integer,        intent(in)    :: is
   type(xc_oep_t), intent(inout) :: oep
   FLOAT,          intent(inout) :: ex, ec
 
   integer  :: ist
   FLOAT :: ex2, ec2, ex_, ec_, edummy
   FLOAT, allocatable :: vxc(:, :), rho(:,:)
+  R_TYPE, allocatable :: psi(:, :)
 
   call profiling_in(C_PROFILING_XC_SIC)
   PUSH_SUB(X(oep_sic))
 
+  ASSERT(st%d%dim == 1)
+
+  SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(rho(1:gr%mesh%np, 1:2))
   SAFE_ALLOCATE(Vxc(1:gr%mesh%np, 1:2))
   rho(1:gr%mesh%np, 2) = M_ZERO
@@ -43,8 +47,11 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   ec_ = M_ZERO
   do ist = st%st_start, st%st_end
     if(st%occ(ist, is) .gt. small) then ! we only need the occupied states
+
+      call states_get_state(st, gr%mesh, ist, is, psi)
+
       ! get orbital density
-      rho(1:gr%mesh%np, 1) = oep%socc*st%occ(ist, is)*R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is))**2
+      rho(1:gr%mesh%np, 1) = oep%socc*st%occ(ist, is)*R_ABS(psi(1:gr%mesh%np, 1))**2
 
       ! initialize before calling get_vxc
       vxc = M_ZERO
@@ -58,8 +65,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2
 
-      oep%X(lxc)(1:gr%mesh%np, ist) = oep%X(lxc)(1:gr%mesh%np, ist) - &
-        vxc(1:gr%mesh%np, 1)*R_CONJ(st%X(psi) (1:gr%mesh%np, 1, ist, is))
+      oep%X(lxc)(1:gr%mesh%np, ist) = oep%X(lxc)(1:gr%mesh%np, ist) - vxc(1:gr%mesh%np, 1)*R_CONJ(psi(1:gr%mesh%np, 1))
 
       ! calculate the Hartree contribution using Poisson equation
       vxc(1:gr%mesh%np, 1) = M_ZERO
@@ -67,10 +73,10 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 
       ! The exchange energy.
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(ist, is)* &
-        dmf_dotp(gr%mesh, vxc(1:gr%mesh%np, 1), R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is))**2)
+        dmf_dotp(gr%mesh, vxc(1:gr%mesh%np, 1), R_ABS(psi(1:gr%mesh%np, 1))**2)
 
       oep%X(lxc)(1:gr%mesh%np, ist) = oep%X(lxc)(1:gr%mesh%np, ist) - &
-        vxc(1:gr%mesh%np, 1)*R_CONJ(st%X(psi) (1:gr%mesh%np, 1, ist, is))
+        vxc(1:gr%mesh%np, 1)*R_CONJ(psi(1:gr%mesh%np, 1))
     end if
   end do
 
@@ -88,6 +94,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(Vxc)
+  SAFE_DEALLOCATE_A(psi)
 
   POP_SUB(X(oep_sic))
   call profiling_out(C_PROFILING_XC_SIC)

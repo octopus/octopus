@@ -38,6 +38,8 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 
   one = R_TOTYPE(M_ONE)
 
+  ASSERT(associated(st%X(psi)))
+
   call profiling_in(cpmd_prop, "CP_PROPAGATION")
 
   np = gr%mesh%np

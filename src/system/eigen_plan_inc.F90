@@ -103,9 +103,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
 
   ! First of all, copy the initial estimates.
   do ist = 1, st%nst
-    do idim = 1, dim
-      call lalg_copy(gr%mesh%np, st%X(psi)(:, idim, ist, ik), eigenvec(:, idim, ist))
-    end do
+    call states_get_state(st, gr%mesh, ist, ik, eigenvec(:, :, ist))
     eigenval(ist) = st%eigenval(ist, ik)
   end do
 
@@ -300,9 +298,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   end do outer_loop
 
   do ist = 1, st%nst
-    do idim = 1, dim
-      call lalg_copy(gr%mesh%np, eigenvec(:, idim, ist), st%X(psi)(:, idim, ist, ik))
-    end do
+    call states_set_state(st, gr%mesh, ist, ik, eigenvec(:, :, ist))
     st%eigenval(ist, ik) = eigenval(ist)
     diff(ist) = res(ist)
   end do

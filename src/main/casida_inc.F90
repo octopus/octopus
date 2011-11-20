@@ -97,6 +97,8 @@ subroutine X(transition_density) (cas, st, mesh, ia, n0I)
 
   SAFE_ALLOCATE(xx(1:cas%n_pairs))
 
+  ASSERT(associated(st%X(psi)))
+
   do ip = 1, mesh%np
     do jb = 1, cas%n_pairs
       do idim = 1, st%d%dim

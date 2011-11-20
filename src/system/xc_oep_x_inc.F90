@@ -57,6 +57,8 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
   call profiling_in(C_PROFILING_XC_EXX)
   PUSH_SUB(X(oep_x))
 
+  ASSERT(associated(st%X(psi)))
+
   SAFE_ALLOCATE(F_ij(1:gr%mesh%np))
   SAFE_ALLOCATE(rho_ij(1:gr%mesh%np))
   SAFE_ALLOCATE(send_buffer(1:gr%mesh%np))
