@@ -89,6 +89,7 @@ contains
 
     integer :: ist, ist2, idim, ip, noccst
     CMPLX, allocatable :: matrix(:, :), tmp(:), phase(:)
+    CMPLX, allocatable :: psi(:, :), psi2(:, :)
 
     PUSH_SUB(berry_phase_det)
 
@@ -101,6 +102,8 @@ contains
     SAFE_ALLOCATE(matrix(1:noccst, 1:noccst))
     SAFE_ALLOCATE(tmp(1:mesh%np))
     SAFE_ALLOCATE(phase(1:mesh%np))
+    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(psi2(1:mesh%np, 1:st%d%dim))
 
     forall(ip = 1:mesh%np)
       phase(ip) = exp(-M_zI*(M_PI/mesh%sb%lsize(dir))*mesh%x(ip, dir))
@@ -108,19 +111,15 @@ contains
     end forall
 
     do ist = 1, noccst
+      call states_get_state(st, mesh, ist, ik, psi)
       do ist2 = 1, noccst
+        call states_get_state(st, mesh, ist2, ik, psi2)
         matrix(ist, ist2) = M_Z0
         do idim = 1, st%d%dim ! spinor components
             
-          if(states_are_complex(st)) then
-            forall(ip = 1:mesh%np)
-              tmp(ip) = conjg(st%zpsi(ip, idim, ist, ik))*phase(ip)*st%zpsi(ip, idim, ist2, ik)
-            end forall
-          else
-            forall(ip = 1:mesh%np)
-              tmp(ip) = st%dpsi(ip, idim, ist, ik)*phase(ip)*st%dpsi(ip, idim, ist2, ik)
-            end forall
-          end if
+          forall(ip = 1:mesh%np)
+            tmp(ip) = conjg(psi(ip, idim))*phase(ip)*psi2(ip, idim)
+          end forall
           
           matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(mesh, tmp)
         end do
@@ -136,6 +135,8 @@ contains
     SAFE_DEALLOCATE_A(matrix)
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(phase)
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(psi2)
 
     POP_SUB(berry_phase_det)
   end function berry_phase_det
