@@ -98,7 +98,10 @@ module states_m
     states_sync,                      &
     states_are_packed,                &
     states_write_info,                &
-    states_set_zero
+    states_set_zero,                  &
+    states_block_min,                 &
+    states_block_max,                 &
+    states_block_size
 
   type states_lead_t
     CMPLX, pointer     :: intf_psi(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
@@ -2319,6 +2322,32 @@ contains
     POP_SUB(states_set_zero)
   end subroutine states_set_zero
 
+  ! ------------------------------------------------------------
+
+  integer pure function states_block_min(st, ib) result(range)
+    type(states_t),    intent(in) :: st
+    integer,           intent(in) :: ib
+    
+    range = st%block_range(ib, 1)
+  end function states_block_min
+
+  ! ------------------------------------------------------------
+
+  integer pure function states_block_max(st, ib) result(range)
+    type(states_t),    intent(in) :: st
+    integer,           intent(in) :: ib
+    
+    range = st%block_range(ib, 2)
+  end function states_block_max
+
+  ! ------------------------------------------------------------
+
+  integer pure function states_block_size(st, ib) result(size)
+    type(states_t),    intent(in) :: st
+    integer,           intent(in) :: ib
+    
+    size = st%block_size(ib)
+  end function states_block_size
 
 #include "undef.F90"
 #include "real.F90"
