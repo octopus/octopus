@@ -1089,17 +1089,8 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(st%dpsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
-        
-        forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
-          st%dpsi(ip, idim, ist, ik) = M_ZERO
-        end forall
-        
       else
         SAFE_ALLOCATE(st%zpsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
-        
-        forall(ik=k1:k2, ist=st1:st2, idim=1:st%d%dim, ip=1:np_part)
-          st%zpsi(ip, idim, ist, ik) = M_Z0
-        end forall
       end if
       
       if(optional_default(alloc_zphi, .false.)) then
@@ -1114,6 +1105,7 @@ contains
     end if
 
     call states_init_block(st, mesh)
+    call states_set_zero(st)
 
     POP_SUB(states_allocate_wfns)
   end subroutine states_allocate_wfns
