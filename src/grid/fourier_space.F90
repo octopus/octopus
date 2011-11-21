@@ -26,6 +26,9 @@ module fourier_space_m
   use mesh_m
   use messages_m
   use fft_m
+#ifdef HAVE_OPENMP
+  use omp_lib
+#endif
 #ifdef HAVE_PFFT
   use pfft_m
 #endif

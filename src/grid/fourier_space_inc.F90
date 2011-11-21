@@ -115,7 +115,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   type(cube_t),             intent(inout)  :: cube
   type(cube_function_t),    intent(inout)  :: cf
   
-  integer :: ii, jj, kk, index
+  integer :: ii, jj, kk
 
   type(profile_t), save :: prof_g, rs2fs_prof, fs2rs_prof, prof
 
@@ -133,6 +133,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   call profiling_in(prof_g,"G_APPLY")
   if (cube%fft_library == FFTLIB_PFFT) then
     !Note that the function in fourier space returned by PFFT is transposed
+    !$omp parallel do
     do kk = 1, cube%fs_n(3)
       do jj = 1, cube%fs_n(2)
         do ii = 1, cube%fs_n(1)
@@ -140,7 +141,9 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
         end do
       end do
     end do
+    !$omp end parallel do
   else
+    !$omp parallel do
     do kk = 1, cube%fs_n(3)
       do jj = 1, cube%fs_n(2)
         do ii = 1, cube%fs_n(1)
@@ -148,6 +151,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
         end do
       end do
     end do
+    !$omp end parallel do
   end if
   call profiling_out(prof_g)
   
