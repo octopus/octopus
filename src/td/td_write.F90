@@ -667,7 +667,7 @@ contains
     do idir = 1, 3
        call pert_setup_dir(angular_momentum, idir)
        !we have to multiply by 2, because the perturbation returns L/2
-       angular(idir) = M_TWO*zpert_expectation_value(angular_momentum, gr, geo, hm, st, st%zpsi, st%zpsi)
+       angular(idir) = M_TWO*zpert_states_expectation_value(angular_momentum, gr, geo, hm, st)
     end do
 
     call pert_end(angular_momentum)

@@ -20,6 +20,8 @@
 #include "global.h"
 
 module pert_m
+  use batch_m
+  use comm_m
   use datasets_m
   use derivatives_m
   use epot_m
@@ -30,6 +32,7 @@ module pert_m
   use lalg_basic_m
   use math_m
   use mesh_m
+  use mesh_batch_m
   use mesh_function_m
   use messages_m
   use mpi_m
@@ -49,24 +52,28 @@ module pert_m
   implicit none
 
   private
-  public ::                         &
-     pert_t,                        &
-     pert_init,                     &
-     pert_end,                      &
-     pert_info,                     &
-     pert_setup_dir,                &
-     pert_setup_atom,               &
-     pert_setup_mixed_dir,          &
-     pert_type,                     &
-     dpert_apply,                   &
-     zpert_apply,                   &
-     dpert_apply_order_2,           &
-     zpert_apply_order_2,           &
-     dpert_expectation_value,       &
-     zpert_expectation_value,       &
-     dpert_expectation_density,     &
-     zpert_expectation_density,     &
-     dionic_pert_matrix_elements_2, &
+  public ::                            &
+     pert_t,                           &
+     pert_init,                        &
+     pert_end,                         &
+     pert_info,                        &
+     pert_setup_dir,                   &
+     pert_setup_atom,                  &
+     pert_setup_mixed_dir,             &
+     pert_type,                        &
+     dpert_apply,                      &
+     zpert_apply,                      &
+     dpert_apply_batch,                &
+     zpert_apply_batch,                &
+     dpert_apply_order_2,              &
+     zpert_apply_order_2,              &
+     dpert_expectation_value,          &
+     zpert_expectation_value,          &
+     dpert_states_expectation_value,   &
+     zpert_states_expectation_value,   &
+     dpert_expectation_density,        &
+     zpert_expectation_density,        &
+     dionic_pert_matrix_elements_2,    &
      zionic_pert_matrix_elements_2
 
   integer, public, parameter :: &

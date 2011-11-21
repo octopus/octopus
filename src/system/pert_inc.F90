@@ -18,9 +18,33 @@
 !! $Id: pert_inc.F90 2548 2006-11-06 21:42:27Z xavier $
 
 ! --------------------------------------------------------------------------
+subroutine X(pert_apply_batch)(this, gr, geo, hm, ik, f_in, f_out)
+  type(pert_t),         intent(in)    :: this
+  type(grid_t),         intent(inout) :: gr
+  type(geometry_t),     intent(in)    :: geo
+  type(hamiltonian_t),  intent(inout) :: hm
+  integer,              intent(in)    :: ik
+  type(batch_t),        intent(in)    :: f_in
+  type(batch_t),        intent(inout) :: f_out
+
+  integer :: ist
+
+  PUSH_SUB(X(pert_apply_batch))
+
+  ASSERT(batch_status(f_in) == batch_status(f_out))
+  ASSERT(batch_status(f_in) == BATCH_NOT_PACKED)
+
+  do ist = 1, f_in%nst
+    call X(pert_apply)(this, gr, geo, hm, ik, f_in%states(ist)%X(psi), f_out%states(ist)%X(psi))
+  end do
+
+  POP_SUB(X(pert_apply_batch))
+end subroutine X(pert_apply_batch)
+
+! --------------------------------------------------------------------------
+!> Returns f_out = H' f_in, where H' is perturbation Hamiltonian
+!! Note that e^ikr phase is applied to f_in, then is removed afterward
 subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out)
-! Returns f_out = H' f_in, where H' is perturbation Hamiltonian
-! Note that e^ikr phase is applied to f_in, then is removed afterward
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr
   type(geometry_t),     intent(in)    :: geo
@@ -747,6 +771,59 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, hm, st, psia, psib, pe
   POP_SUB(X(pert_expectation_value))
 
 end function X(pert_expectation_value)
+
+! --------------------------------------------------------------------------
+
+R_TYPE function X(pert_states_expectation_value)(this, gr, geo, hm, st, pert_order) result(expval)
+  type(pert_t),         intent(in)    :: this
+  type(grid_t),         intent(inout) :: gr
+  type(geometry_t),     intent(in)    :: geo
+  type(hamiltonian_t),  intent(inout) :: hm
+  type(states_t),       intent(in)    :: st
+  integer, optional,    intent(in)    :: pert_order
+
+  integer :: order, ik, ib, minst, maxst, ist
+  R_TYPE, allocatable :: tt(:)
+  type(batch_t) :: hpsib
+
+  PUSH_SUB(X(pert_states_expectation_value))
+
+  order = 1
+  if(present(pert_order)) order = pert_order
+
+  ASSERT(order == 1)
+  
+  SAFE_ALLOCATE(tt(st%st_start:st%st_end))
+  
+  expval = M_ZERO
+  do ik = st%d%kpt%start, st%d%kpt%end
+    tt = M_ZERO
+
+    do ib = st%block_start, st%block_end
+      minst = states_block_min(st, ib)
+      maxst = states_block_max(st, ib)
+
+      call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
+
+      call X(pert_apply_batch)(this, gr, geo, hm, ik, st%psib(ib, ik), hpsib)
+      call X(mesh_batch_dotp_vector)(gr%der%mesh, st%psib(ib, ik), hpsib, tt(minst:maxst))
+
+      call batch_end(hpsib, copy = .false.)
+
+    end do
+    
+    do ist = st%st_start, st%st_end
+      expval = expval + st%d%kweights(ik)*st%smear%el_per_state*tt(ist)
+    end do
+    
+  end do
+
+  if(st%parallel_in_states) call comm_allreduce(st%mpi_grp%comm, expval)
+
+
+  POP_SUB(X(pert_states_expectation_value))
+
+end function X(pert_states_expectation_value)
 
 !! Local Variables:
 !! mode: f90
