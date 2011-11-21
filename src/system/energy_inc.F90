@@ -60,8 +60,8 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ib = st%block_start, st%block_end
 
-      minst = st%block_range(ib, 1)
-      maxst = st%block_range(ib, 2)
+      minst = states_block_min(st, ib)
+      maxst = states_block_max(st, ib)
 
       call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
 
@@ -109,8 +109,8 @@ FLOAT function X(electronic_energy)(hm, der, st, terms) result(energy)
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ib = st%block_start, st%block_end
-      minst = st%block_range(ib, 1)
-      maxst = st%block_range(ib, 2)
+      minst = states_block_min(st, ib)
+      maxst = states_block_max(st, ib)
 
       call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
 

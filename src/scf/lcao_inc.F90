@@ -535,7 +535,8 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
         call lcao_get_orbital(orbitals(iatom), sphere(iatom), st, geo, ispin, iatom, this%norb_atom(iatom))
 
         do ib = st%block_start, st%block_end
-          call X(submesh_batch_add_matrix)(sphere(iatom), evec(ibasis:, st%block_range(ib, 1):), orbitals(iatom), st%psib(ib, ik))
+          call X(submesh_batch_add_matrix)(sphere(iatom), evec(ibasis:, states_block_min(st, ib):), &
+            orbitals(iatom), st%psib(ib, ik))
         end do
 
         if(.not. this%keep_orb) call lcao_end_orbital(orbitals(iatom))

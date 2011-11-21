@@ -76,8 +76,8 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
 
       do ib = st%block_start, st%block_end
 
-        minst = st%block_range(ib, 1)
-        maxst = st%block_range(ib, 2)
+        minst = states_block_min(st, ib)
+        maxst = states_block_max(st, ib)
 
         call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
 

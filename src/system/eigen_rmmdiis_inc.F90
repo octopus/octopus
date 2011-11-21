@@ -66,8 +66,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   failed = .false.
 
   do ib = st%block_start, st%block_end
-    minst = st%block_range(ib, 1)
-    maxst = st%block_range(ib, 2)
+    minst = states_block_min(st, ib)
+    maxst = states_block_max(st, ib)
     bsize = maxst - minst + 1
 
     call batch_init(psib(1), st%d%dim, minst, maxst, psi(:, :, 1, :))
@@ -254,8 +254,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_ALLOCATE(eigen(st%st_start:st%st_end))
 
   do ib = st%block_start, st%block_end
-    minst = st%block_range(ib, 1)
-    maxst = st%block_range(ib, 2)
+    minst = states_block_min(st, ib)
+    maxst = states_block_max(st, ib)
 
     call batch_init(resb(1), st%d%dim, minst, maxst, res(:, :, 1, :))
 
@@ -328,8 +328,8 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
   niter = 0
 
   do ib = st%block_start, st%block_end
-    sst = st%block_range(ib, 1)
-    est = st%block_range(ib, 2)
+    sst = states_block_min(st, ib)
+    est = states_block_max(st, ib)
 
     call batch_copy(st%psib(ib, ik), resb, reference= .false.)
     call batch_copy(st%psib(ib, ik), kresb, reference= .false.)
