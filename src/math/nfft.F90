@@ -33,6 +33,7 @@ module nfft_m
   use c_pointer_m
   use datasets_m
   use fft_m   
+  use fftw_m
   use global_m
   use iso_c_binding
   use loct_math_m
