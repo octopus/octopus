@@ -1822,7 +1822,8 @@ contains
     type(batch_t),   intent(inout) :: energy_function
 
     integer :: itime, ienergy, ii
-    FLOAT   :: time, energy, kernel
+    FLOAT   :: time, energy!, kernel
+    CMPLX :: ez, eidt
     type(compressed_sensing_t) :: cs
 
     PUSH_SUB(fourier_transform)
@@ -1834,35 +1835,69 @@ contains
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
 
     select case(method)
+
     case(SPECTRUM_FOURIER)
 
       do ienergy = energy_start, energy_end
 
         energy = energy_step*(ienergy - energy_start)
-
         forall(ii = 1:energy_function%nst_linear) energy_function%states_linear(ii)%dpsi(ienergy) = 0.0
 
-        do itime = time_start, time_end
+        select case(transform)
 
-          time = time_step*(itime - time_start)
+        ! The sine and cosine transforms are computed as the real and imaginary part of the exponential.
+        ! One can compute the exponential by successive multiplications, instead of calling the sine or
+        ! cosine function at each time step.
+        case(SPECTRUM_TRANSFORM_SIN)
 
-          select case(transform)
-          case(SPECTRUM_TRANSFORM_SIN)
-            kernel = sin(energy*time)
-          case(SPECTRUM_TRANSFORM_COS)
-            kernel = cos(energy*time)
-          case(SPECTRUM_TRANSFORM_EXP)
-            kernel = exp(-energy*time)
-          end select
-
-          kernel = kernel*time_step
-
-          do ii = 1, time_function%nst_linear
-            energy_function%states_linear(ii)%dpsi(ienergy) = &
-              energy_function%states_linear(ii)%dpsi(ienergy) + kernel*time_function%states_linear(ii)%dpsi(itime) 
+          eidt = exp(M_zI * energy * time_step)
+          ez = M_z1
+          do itime = time_start, time_end
+            time = time_step*(itime - time_start)
+            do ii = 1, time_function%nst_linear
+              energy_function%states_linear(ii)%dpsi(ienergy) = &
+                energy_function%states_linear(ii)%dpsi(ienergy) + &
+                aimag( time_function%states_linear(ii)%dpsi(itime) * ez)
+            end do
+            ez = ez * eidt
           end do
 
+        case(SPECTRUM_TRANSFORM_COS)
+
+          eidt = exp(M_zI * energy * time_step)
+          ez = M_z1
+          do itime = time_start, time_end
+            time = time_step*(itime - time_start)
+            do ii = 1, time_function%nst_linear
+              energy_function%states_linear(ii)%dpsi(ienergy) = &
+                energy_function%states_linear(ii)%dpsi(ienergy) + &
+                real( time_function%states_linear(ii)%dpsi(itime) * ez, REAL_PRECISION)
+            end do
+            ez = ez * eidt
+          end do
+
+        case(SPECTRUM_TRANSFORM_EXP)
+
+          eidt = exp( -energy * time_step)
+          ez = M_z1
+          do itime = time_start, time_end
+            time = time_step*(itime - time_start)
+            do ii = 1, time_function%nst_linear
+              energy_function%states_linear(ii)%dpsi(ienergy) = &
+                energy_function%states_linear(ii)%dpsi(ienergy) + &
+                real( time_function%states_linear(ii)%dpsi(itime) * ez, REAL_PRECISION)
+            end do
+            ez = ez * eidt
+          end do
+
+        end select
+
+        ! The total sum must be multiplied by time_step in order to get the integral.
+        do ii = 1, time_function%nst_linear
+          energy_function%states_linear(ii)%dpsi(ienergy) = &
+            energy_function%states_linear(ii)%dpsi(ienergy) * time_step
         end do
+
       end do
 
     case(SPECTRUM_COMPRESSED_SENSING)
