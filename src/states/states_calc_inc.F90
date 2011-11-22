@@ -360,7 +360,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         st%X(psi)(1, idim, 1, ik), ubound(st%X(psi), dim = 1)*st%d%dim)
     end do
 
-  else if(.not. opencl_is_enabled()) then
+  else if(.not. states_are_packed(st) .or. .not. opencl_is_enabled()) then
 
 #ifdef R_TREAL  
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
@@ -1119,7 +1119,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
     call X(mesh_batch_rotate)(mesh, psib, uu)
     call batch_end(psib)
 
-  else if(.not. opencl_is_enabled()) then
+  else if(.not. states_are_packed(st) .or. .not. opencl_is_enabled()) then
     
 #ifdef R_TREAL  
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
