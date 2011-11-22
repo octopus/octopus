@@ -273,7 +273,9 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
   logical, optional,     intent(in)    :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
   logical, optional,     intent(in)    :: pfft_part !< If .true. the used partition is the pfft equal partition
 
-  integer :: im, ip, ii, nn, center(3), ixyz(3), lxyz(3), ix, iy, iz
+  integer :: ip, ix, iy, iz, center(3)
+  integer :: im, ii, nn
+  integer :: min_x, min_y, min_z, max_x, max_y, max_z, index
   logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)
 
@@ -296,31 +298,44 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
       gmf => mf
     end if
   end if
+
+  center(1:3) = cube%n(1:3)/2 + 1
+
+  ! Save the limit values
+  min_x = cube%rs_istart(1)
+  min_y = cube%rs_istart(2)
+  min_z = cube%rs_istart(3)
+  max_x = cube%rs_istart(1) + cube%rs_n(1)
+  max_y = cube%rs_istart(2) + cube%rs_n(2)
+  max_z = cube%rs_istart(3) + cube%rs_n(3)
   
   ! Initialize to zero the input matrix
   forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%X(RS)(ix, iy, iz) = M_ZERO
 
   ! Do the actual transform, only for the output values
-  center(1:3) = cube%n(1:3)/2 + 1
   do im = 1, mesh%cube_map%nmap
     ip = mesh%cube_map%map(MCM_POINT, im)
     nn = mesh%cube_map%map(MCM_COUNT, im)
+    
+    ix = mesh%idx%lxyz(ip, 1) + center(1)
+    if (ix >= min_x .and. ix < max_x) then
+      iy = mesh%idx%lxyz(ip, 2) + center(2)
+      if (iy >= min_y .and. iy < max_y) then
+        iz = mesh%idx%lxyz(ip, 3) + center(3)
+        do ii = 0, nn - 1
+          if (iz+ii >= min_z .and. iz+ii < max_z) then
 
-    ixyz(1:3) = mesh%idx%lxyz(ip, 1:3) + center(1:3)
-    do ii = 0, nn - 1
-      ixyz(1:3) = mesh%idx%lxyz(ip + ii, 1:3) + center(1:3)
-      if (cube_global2local(cube, ixyz, lxyz)) then
-
-        if (pfft_part_) then
+            if (pfft_part_) then
 #ifdef HAVE_MPI
-          cf%X(RS)(lxyz(1), lxyz(2), lxyz(3)) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
+              cf%X(RS)(ix-min_x+1, iy-min_y+1, iz+ii-min_z+1) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
 #endif
-        else
-          cf%X(RS)(lxyz(1), lxyz(2), lxyz(3)) = gmf(ip + ii)
-        end if
+            else
+              cf%X(RS)(ix-min_x+1, iy-min_y+1, iz+ii-min_z+1) = gmf(ip + ii)
+            end if
+          end if
+        end do
       end if
-      
-    end do
+    end if
 
   end do
   
@@ -413,6 +428,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
 
     SAFE_DEALLOCATE_A(gcf)
 
+    !Rearrange the output matrix
     if(local_) then
 #ifdef HAVE_MPI
       first = mesh%vp%xlocal(mesh%vp%partno)
