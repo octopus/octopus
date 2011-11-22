@@ -245,13 +245,22 @@ module opencl_m
 
       do iplat = 1, nplatforms
         call messages_write('      Platform ')
-        call messages_write(iplat)
+        call messages_write(iplat - 1)
         call clGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_NAME, device_name, cl_status)
         call messages_write(' : '//device_name)
         call clGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_VERSION, device_name, cl_status)
         call messages_write(' ('//trim(device_name)//')')
         call messages_info()
       end do
+
+      call messages_info()
+
+      if(iplatform >= nplatforms) then
+        call messages_write('Requested CL platform does not exist (platform = ')
+        call messages_write(iplatform)
+        call messages_write(').')
+        call messages_fatal()
+      end if
 
       opencl%platform_id = allplatforms(iplatform + 1)
 
@@ -271,7 +280,7 @@ module opencl_m
 
       do idev = 1, ndevices
         call messages_write('      Device ')
-        call messages_write(idev)
+        call messages_write(idev - 1)
         call clGetDeviceInfo(alldevices(idev), CL_DEVICE_NAME, device_name, cl_status)
         call messages_write(' : '//device_name)
         call messages_info()
@@ -304,6 +313,15 @@ module opencl_m
         else
           idevice = 0
         end if
+      end if
+
+      if(idevice >= ndevices) then
+        call messages_write('Requested CL device does not exist (device = ')
+        call messages_write(idevice)
+        call messages_write(', platform = ')
+        call messages_write(iplatform)
+        call messages_write(').')
+        call messages_fatal()
       end if
 
       opencl%device = alldevices(idevice + 1)
