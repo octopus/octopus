@@ -80,7 +80,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call dcube_function_alloc_RS(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
-    call output_etsf_density_dims(st, gr%mesh, dcube, density_dims, density_flags)
+    call output_etsf_density_dims(st, dcube, density_dims, density_flags)
 
     call output_etsf_file_init(dir//"/density-etsf.nc", "Density file", density_dims, density_flags, ncid)
 
@@ -413,9 +413,8 @@ end subroutine output_etsf_electrons_write
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_density_dims(st, mesh, cube, dims, flags)
+subroutine output_etsf_density_dims(st, cube, dims, flags)
   type(states_t),          intent(in)    :: st
-  type(mesh_t),            intent(in)    :: mesh
   type(cube_t),            intent(in)    :: cube
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
