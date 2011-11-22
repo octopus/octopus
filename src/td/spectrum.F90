@@ -52,7 +52,6 @@ module spectrum_m
     spectrum_hs_ar_from_mult,      &
     spectrum_hs_ar_from_acc,       &
     spectrum_hs_from_acc,          &
-    spectrum_hs_from_vel,          &
     spectrum_hsfunction_init,      &
     spectrum_hsfunction_end,       &
     spectrum_hsfunction_min,       &
@@ -1469,107 +1468,21 @@ contains
     SAFE_DEALLOCATE_A(acc)
     POP_SUB(spectrum_hs_from_acc)
   end subroutine spectrum_hs_from_acc
+  ! ---------------------------------------------------------
+
 
   ! ---------------------------------------------------------
-  
-  subroutine spectrum_hs_from_vel(out_file, spectrum, pol, w0)
-    character(len=*), intent(in)    :: out_file
+  subroutine spectrum_hs_fourier_transform(spectrum, no_e, time_steps, acc, sp)
     type(spec_t),     intent(inout) :: spectrum
-    character,        intent(in)    :: pol
-    FLOAT,  optional, intent(in)    :: w0
+    integer,          intent(in)    :: no_e, time_steps
+    FLOAT,            intent(in)    :: acc(0:time_steps)
+    FLOAT,            intent(inout) :: sp(0:no_e)
 
-    integer :: istep, jj, iunit, time_steps, istart, iend, ntiter, ierr, ie, no_e
-    FLOAT :: dt, aa(MAX_DIM), omega
-    CMPLX, allocatable :: vel(:)
-    FLOAT, allocatable :: rvel(:), sps(:), spc(:)
-    type(batch_t) :: acc_batch, sps_batch, spc_batch
+    PUSH_SUB(spectrum_hs_fourier_transform)
 
-    PUSH_SUB(spectrum_hs_from_vel)
-
-    call spectrum_vel_info(iunit, time_steps, dt)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
-
-    if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
-
-    ! load dipole from file
-    SAFE_ALLOCATE(vel(0:time_steps))
-    vel = M_ZERO
-    call io_skip_header(iunit)
-    do istep = 1, time_steps
-      aa = M_ZERO
-      read(iunit, '(28x,e20.12)', advance = 'no', iostat = ierr) aa(1)
-      ! What on earth is the point of this with jj??
-      jj = 2
-      do while( (ierr.eq.0) .and. (jj <= MAX_DIM) )
-        read(iunit, '(e20.12)', advance = 'no', iostat = ierr) aa(jj)
-      end do
-      select case(pol)
-      case('x')
-        vel(istep) = aa(1)
-      case('y')
-        vel(istep) = aa(2)
-      case('z')
-        vel(istep) = aa(3)
-      case('+')
-        vel(istep) = (aa(1) + M_zI * aa(2)) / sqrt(M_TWO)
-      case('-')
-        vel(istep) = (aa(1) - M_zI * aa(2)) / sqrt(M_TWO)
-      end select
-      vel(istep) = units_to_atomic(units_out%velocity, vel(istep))
-    end do
-    close(iunit)
-
-    if(present(w0)) then
-
-      ! This is wroing, because we pass the velocity as if it were the acceleration.
-      call spectrum_hsfunction_init(dt, istart, iend, time_steps, vel)!, from_vel)
-      call spectrum_hs(out_file, spectrum, pol, w0)
-      call spectrum_hsfunction_end()
-
-    else
-
-      SAFE_ALLOCATE(rvel(0:time_steps))
-      rvel = vel
-
-      no_e = spectrum%max_energy / spectrum%energy_step
-      SAFE_ALLOCATE(sps(0:no_e))
-      SAFE_ALLOCATE(spc(0:no_e))
-      sps = M_ZERO
-      spc = M_ZERO
-
-      call batch_init(acc_batch, 1)
-      call batch_init(sps_batch, 1)
-      call batch_init(spc_batch, 1)
-
-      call batch_add_state(acc_batch, rvel)
-      call batch_add_state(sps_batch, sps)
-      call batch_add_state(spc_batch, spc)
-
-      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-        istart + 1, iend + 1, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, spc_batch)
-      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-        istart + 1, iend + 1, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, sps_batch)
-
-      do ie = 0, no_e
-        omega = ie * spectrum%energy_step
-        sps(ie) = ((sps(ie)*omega)**2 + (spc(ie)*omega)**2)
-      end do
-
-      call spectrum_hs_output(out_file, spectrum, pol, no_e, sps)   
-
-      call batch_end(acc_batch)
-      call batch_end(sps_batch)
-      call batch_end(spc_batch)
-
-      SAFE_DEALLOCATE_A(rvel)
-
-    end if
-
-    SAFE_DEALLOCATE_A(vel)
-    POP_SUB(spectrum_hs_from_vel)
-  end subroutine spectrum_hs_from_vel
+    POP_SUB(spectrum_hs_fourier_transform)
+  end subroutine spectrum_hs_fourier_transform
   ! ---------------------------------------------------------
-
 
 
   ! ---------------------------------------------------------
@@ -1814,49 +1727,8 @@ contains
     rewind(iunit)
     POP_SUB(spectrum_acc_info)
   end subroutine spectrum_acc_info
+
   
-    ! ---------------------------------------------------------
-  subroutine spectrum_vel_info(iunit, time_steps, dt)
-    integer, intent(out) :: iunit, time_steps
-    FLOAT,   intent(out) :: dt
-
-    integer :: trash
-    FLOAT :: t1, t2, dummy
-
-    PUSH_SUB(spectrum_vel_info)
-
-    ! open files
-    iunit = io_open('velocity', action='read', status='old', die=.false.)
-    if(iunit < 0) then
-      iunit = io_open('td.general/velocity', action='read', status='old')
-    end if
-
-    ! read in dipole
-    call io_skip_header(iunit)
-
-    ! count number of time_steps
-    time_steps = 0
-    do
-      read(iunit, *, end=100) trash, dummy
-      time_steps = time_steps + 1
-      if(time_steps == 1) t1 = dummy
-      if(time_steps == 2) t2 = dummy
-    end do
-100 continue
-    dt = units_to_atomic(units_out%time, t2 - t1) ! units_out is OK
-    time_steps = time_steps - 1
-
-    if(time_steps < 3) then
-      message(1) = "Empty multipole file?"
-      call messages_fatal(1)
-    end if
-
-    rewind(iunit)
-    POP_SUB(spectrum_vel_info)
-  end subroutine spectrum_vel_info
-
-
-
   ! ---------------------------------------------------------
   subroutine spectrum_fix_time_limits(time_steps, dt, start_time, end_time, istart, iend, ntiter)
     integer, intent(in)    :: time_steps
