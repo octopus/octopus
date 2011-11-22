@@ -32,6 +32,9 @@ module fft_m
   use loct_math_m
   use messages_m
   use mpi_m
+#ifdef HAVE_OPENMP
+  use omp_lib
+#endif
   use parser_m
   use pfft_m
   use pfft_params_m
