@@ -216,23 +216,19 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     end do
 
-    do iter = 1, niter
-      call batch_end(psib(iter))
-      call batch_end(resb(iter))
-    end do
+    ! end with a trial move
+    call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(niter), resb(niter - 1))
 
     do ist = minst, maxst
       ii = ist - minst + 1
 
       if(.not. failed(ii)) then
-        ! end with a trial move
-        call X(preconditioner_apply)(pre, gr, hm, ik, res(:, :, iter - 1, ii), tmp)
 
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          tmp(ip, idim) = psi(ip, idim, iter - 1, ii) + lambda(ist)*tmp(ip, idim)
+          res(ip, idim, niter - 1, ii) = psi(ip, idim, niter, ii) + lambda(ist)*res(ip, idim, niter - 1, ii)
         end forall
-
-        call states_set_state(st, gr%mesh, ist, ik, tmp)
+        
+        call states_set_state(st, gr%mesh, ist, ik, res(:, :, niter - 1, ii))
       else
         call states_set_state(st, gr%mesh, ist, ik, psi(:, :, last(ii), ii))
       end if
@@ -241,6 +237,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         call loct_progress_bar(st%nst * (ik - 1) +  ist, st%nst*st%d%nik)
       end if
 
+    end do
+
+    do iter = 1, niter
+      call batch_end(psib(iter))
+      call batch_end(resb(iter))
     end do
 
   end do
