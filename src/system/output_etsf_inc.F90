@@ -118,6 +118,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   ! wave-functions in fourier space
   if (iand(outp%what, C_OUTPUT_WFS_FOURIER).ne.0) then
     call zcube_function_alloc_RS(zcube, cf)
+    call zcube_function_alloc_FS(zcube, cf)
     call fourier_shell_init(shell, zcube, gr%mesh)
 
     call output_etsf_geometry_dims(geo, gr%sb, pw_dims, pw_flags)
@@ -138,6 +139,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     if (.not. lstat) call output_etsf_error(error_data)
 
     call fourier_shell_end(shell)
+    call zcube_function_free_fs(zcube, cf)
     call zcube_function_free_rs(zcube, cf)
   end if
 #endif
