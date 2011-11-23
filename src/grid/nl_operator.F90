@@ -208,7 +208,7 @@ contains
 
       !%Variable OperateOpenCL
       !%Type integer
-      !%Default autodetect
+      !%Default split
       !%Section Execution::Optimization
       !%Description
       !% This variable selects the subroutine used to apply non-local

@@ -1349,13 +1349,13 @@ contains
 
     !%Variable StatesBlockSize
     !%Type integer
-    !%Default max(4, 2*nthreads)
     !%Section Execution::Optimization
     !%Description
     !% Some routines work over blocks of eigenfunctions, which
     !% generally improves performance at the expense of increased
     !% memory consumption. This variable selects the size of the
-    !% blocks to be used.
+    !% blocks to be used. If OpenCl is enabled, the default is 32;
+    !% otherwise it is max(4, 2*nthreads).
     !%End
 
     if(opencl_is_enabled()) then
