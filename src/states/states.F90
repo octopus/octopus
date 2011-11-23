@@ -1358,7 +1358,13 @@ contains
     !% blocks to be used.
     !%End
 
-    call parse_integer(datasets_check('StatesBlockSize'), max(4, 2*mc%nthreads), st%d%block_size)
+    if(opencl_is_enabled()) then
+      default = 32
+    else
+      default = max(4, 2*mc%nthreads)
+    end if
+
+    call parse_integer(datasets_check('StatesBlockSize'), default, st%d%block_size)
     if(st%d%block_size < 1) then
       message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
       call messages_fatal(1)
