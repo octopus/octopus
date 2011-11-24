@@ -159,7 +159,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
       call read_netcdf()
       call X(cube_to_mesh)(cube, cf, mesh, ff)
 #endif
-      call dcube_function_free_RS(cube, cf)
+      call X(cube_function_free_RS)(cube, cf)
       call cube_end(cube)
     end if
 #endif
