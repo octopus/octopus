@@ -672,6 +672,90 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   POP_SUB(X(mesh_batch_exchange_points))
 end subroutine X(mesh_batch_exchange_points)
 
+! -----------------------------------------------------
+! This function should not be called directly, but through mesh_batch_nrm2.
+subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
+  type(mesh_t),            intent(in)    :: mesh
+  type(batch_t),           intent(in)    :: aa
+  FLOAT,                   intent(out)   :: nrm2(:)
+
+  integer :: ist, idim, indb, ip
+  R_TYPE :: a0
+  FLOAT, allocatable :: scal(:), ssq(:)
+
+  PUSH_SUB(X(mesh_batch_nrm2))
+
+  select case(batch_status(aa))
+  case(BATCH_NOT_PACKED)
+    do ist = 1, aa%nst
+      nrm2(ist) = M_ZERO
+      do idim = 1, aa%dim
+        indb = batch_linear_index(aa, (/ist, idim/))
+        nrm2(ist) = hypot(nrm2(ist), X(mf_nrm2)(mesh, aa%states_linear(indb)%X(psi), reduce = .false.))
+      end do
+    end do
+
+  case(BATCH_PACKED)
+    
+    SAFE_ALLOCATE(scal(1:aa%nst_linear))
+    SAFE_ALLOCATE(ssq(1:aa%nst_linear))
+
+    scal = M_ZERO
+    ssq  = M_ONE
+    
+    if(.not. mesh%use_curvilinear) then
+
+      scal = M_ZERO
+      ssq  = M_ONE
+
+      do ip = 1, mesh%np
+        do ist = 1, aa%nst_linear
+          a0 = aa%pack%X(psi)(ist, ip)
+          if(a0 == R_TOTYPE(M_ZERO)) cycle
+          if(scal(ist) < abs(a0)) then
+            ssq(ist) = M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
+            scal(ist) = abs(a0)
+          else
+            ssq(ist) = ssq(ist) + (abs(a0)/scal(ist))**2
+          end if
+        end do
+      end do
+
+    else
+
+      scal = M_ZERO
+      ssq  = M_ONE
+
+      do ip = 1, mesh%np
+        do ist = 1, aa%nst_linear
+          a0 = aa%pack%X(psi)(ist, ip)
+          if(a0 == R_TOTYPE(M_ZERO)) cycle
+          if(scal(ist) < abs(a0)) then
+            ssq(ist) =  mesh%vol_pp(ip)*M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
+            scal(ist) = abs(a0)
+          else
+            ssq(ist) = ssq(ist) + mesh%vol_pp(ip)*(abs(a0)/scal(ist))**2
+          end if
+        end do
+      end do
+
+    end if
+
+    do ist = 1, aa%nst
+      nrm2(ist) = M_ZERO
+      do idim = 1, aa%dim
+        indb = batch_linear_index(aa, (/ist, idim/))
+        nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
+      end do
+    end do
+
+  case(BATCH_CL_PACKED)
+    call messages_not_implemented('mesh_batch_nrm2 for CL packed batches')
+  end select
+  
+  POP_SUB(X(mesh_batch_nrm2))
+end subroutine X(mesh_batch_nrm2)
+
 
 !! Local Variables:
 !! mode: f90

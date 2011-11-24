@@ -67,27 +67,13 @@ subroutine mesh_batch_nrm2(mesh, aa, nrm2, reduce)
   FLOAT,                   intent(out)   :: nrm2(:)
   logical,       optional, intent(in)    :: reduce
 
-  integer :: ist, idim, indb
-
   PUSH_SUB(mesh_batch_nrm2)
 
-  select case(batch_status(aa))
-  case(BATCH_NOT_PACKED)
-    do ist = 1, aa%nst
-      nrm2(ist) = M_ZERO
-      do idim = 1, aa%dim
-        indb = batch_linear_index(aa, (/ist, idim/))
-        if(associated(aa%states_linear(indb)%dpsi)) then
-          nrm2(ist) = hypot(nrm2(ist), dmf_nrm2(mesh, aa%states_linear(indb)%dpsi, reduce = .false.))
-        else
-          nrm2(ist) = hypot(nrm2(ist), zmf_nrm2(mesh, aa%states_linear(indb)%zpsi, reduce = .false.))
-        end if
-      end do
-    end do
-
-  case(BATCH_PACKED, BATCH_CL_PACKED)
-    call messages_not_implemented('mesh_batch_nrm2 for packed batches')
-  end select
+  if(batch_type(aa) == TYPE_FLOAT) then
+    call dmesh_batch_nrm2(mesh, aa, nrm2)
+  else
+    call zmesh_batch_nrm2(mesh, aa, nrm2)
+  end if
   
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     nrm2(1:aa%nst) = nrm2(1:aa%nst)**2
