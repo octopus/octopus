@@ -923,7 +923,7 @@ contains
     FLOAT, intent(out) :: omega_min, func_min
 
     integer :: ierr
-    FLOAT :: xx, hsval, minhsval, ww
+    FLOAT :: xx, hsval, minhsval, ww, xa, xb, hxa, hxb
 
     PUSH_SUB(spectrum_hsfunction_min)
 
@@ -931,19 +931,33 @@ contains
     ! that we refine later calling 1dminimize.
     xx = omega
     call hsfunction(xx, minhsval)
-    ww = aa - dw
+    ww = aa
     do while(ww<bb)
-      ww = ww + dw
       call hsfunction(ww, hsval)
       if(hsval < minhsval) then
         minhsval = hsval
         xx = ww
       end if
+      ww = ww + dw
     end do 
 
     ! Around xx, we call some GSL sophisticated search algorithm to find the minimum.
 #ifndef SINGLE_PRECISION
-    call loct_1dminimize(max(xx-CNST(10.0)*dw, aa), min(xx+CNST(10.0)*dw,bb), xx, hsfunction, ierr)
+    ! First, we get the value of the function at the extremes of the interval
+    xa = max(xx-CNST(10.0)*dw, aa)
+    xb = min(xx+CNST(10.0)*dw, bb)
+    call hsfunction(xa, hxa)
+    call hsfunction(xb, hxb)
+
+    if(hxa <= minhsval) then
+      xx = xa
+      minhsval = hxa
+    elseif(hxb <= minhsval) then
+      xx = xb
+      minhsval = hxb
+    else
+      call loct_1dminimize(xa, xb, xx, hsfunction, ierr)
+    end if
 #else
     stop "FIXME: cannot work in single-precision."
 #endif
