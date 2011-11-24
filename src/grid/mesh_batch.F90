@@ -54,9 +54,50 @@ module mesh_batch_m
     dmesh_batch_rotate,             &
     zmesh_batch_rotate,             &
     dmesh_batch_exchange_points,    &
-    zmesh_batch_exchange_points
+    zmesh_batch_exchange_points,    &
+    mesh_batch_nrm2
 
 contains
+
+! -----------------------------------------------------
+
+subroutine mesh_batch_nrm2(mesh, aa, nrm2, reduce)
+  type(mesh_t),            intent(in)    :: mesh
+  type(batch_t),           intent(in)    :: aa
+  FLOAT,                   intent(out)   :: nrm2(:)
+  logical,       optional, intent(in)    :: reduce
+
+  integer :: ist, idim, indb
+
+  PUSH_SUB(mesh_batch_nrm2)
+
+  select case(batch_status(aa))
+  case(BATCH_NOT_PACKED)
+    do ist = 1, aa%nst
+      nrm2(ist) = M_ZERO
+      do idim = 1, aa%dim
+        indb = batch_linear_index(aa, (/ist, idim/))
+        if(associated(aa%states_linear(indb)%dpsi)) then
+          nrm2(ist) = hypot(nrm2(ist), dmf_nrm2(mesh, aa%states_linear(indb)%dpsi, reduce = .false.))
+        else
+          nrm2(ist) = hypot(nrm2(ist), zmf_nrm2(mesh, aa%states_linear(indb)%zpsi, reduce = .false.))
+        end if
+      end do
+    end do
+
+  case(BATCH_PACKED, BATCH_CL_PACKED)
+    call messages_not_implemented('mesh_batch_nrm2 for packed batches')
+  end select
+  
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
+    nrm2(1:aa%nst) = nrm2(1:aa%nst)**2
+    call comm_allreduce(mesh%mpi_grp%comm, nrm2, aa%nst)
+    nrm2(1:aa%nst) = sqrt(nrm2(1:aa%nst))
+  end if
+
+  POP_SUB(mesh_batch_nrm2)
+end subroutine mesh_batch_nrm2
+
 
 #include "undef.F90"
 #include "real.F90"

@@ -36,7 +36,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :, :)
   R_TYPE, allocatable :: eigen(:)
   FLOAT,  allocatable :: eval(:, :)
-  FLOAT, allocatable :: lambda(:)
+  FLOAT, allocatable :: lambda(:), nrm(:)
   integer :: ist, minst, idim, ip, ii, iter, nops, maxst, jj, bsize, ib
   R_TYPE :: ca, cb, cc
   R_TYPE, allocatable :: fr(:, :)
@@ -58,6 +58,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_ALLOCATE(last(1:blocksize))
   SAFE_ALLOCATE(failed(1:blocksize))
   SAFE_ALLOCATE(fr(1:4, 1:blocksize))
+  SAFE_ALLOCATE(nrm(1:blocksize))
 
   nops = 0
 
@@ -89,21 +90,18 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(1), resb(1))
 
-    call batch_end(psib(1))
-    call batch_end(resb(1))
-
     done = 0
 
-    do ist = minst, maxst
-      ii = ist - minst + 1
+    call mesh_batch_nrm2(gr%mesh, resb(1), nrm)
 
-      if(X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, 1, ii)) < tol) done(ii) = 1
+    do ii = 1, bsize
+      if(nrm(ii) < tol) done(ii) = 1
     end do
 
     if(all(done(1:bsize) /= 0)) cycle
 
-    ! initialize the batch objects
-    do iter = 1, niter
+    ! initialize the remaining batch objects
+    do iter = 2, niter
       call batch_init(psib(iter), st%d%dim, maxst - minst + 1)
       call batch_init(resb(iter), st%d%dim, maxst - minst + 1)
       
@@ -290,6 +288,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(last)
   SAFE_DEALLOCATE_A(failed)
   SAFE_DEALLOCATE_A(fr)
+  SAFE_DEALLOCATE_A(nrm)
 
   POP_SUB(X(eigensolver_rmmdiis))
 
