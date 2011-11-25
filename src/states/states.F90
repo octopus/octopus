@@ -1430,6 +1430,23 @@ contains
 
     if(st%d%orth_method == ORTH_QR) call messages_experimental("QR Orthogonalization")
 
+
+    !%Variable StatesCLDeviceMemory
+    !%Type float
+    !%Section Execution::Optimization
+    !%Description
+    !% This variable select the amount of OpenCL device memory that
+    !% would be used by Octopus to store the states. 
+    !%
+    !% A number smaller than 1 indicates a fraction of the total
+    !% device memory. A number larger than one indicates an absolute
+    !% amount of memory in megabytes. A negative number indicates an
+    !% amount of memory in megabytes that would be substracted from
+    !% the total device memory. The default is -512.
+    !%
+    !%End
+    call parse_float(datasets_check('StatesCLDeviceMemory'), CNST(-512.0), st%d%cl_states_mem)
+
     POP_SUB(states_exec_init)
   end subroutine states_exec_init
   !---------------------------------------------------------------------
@@ -2208,12 +2225,17 @@ contains
     if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
       call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_SIZE, max_mem, cl_status)
-      max_mem = int(mem_frac*real(max_mem, REAL_PRECISION), 8)
 #endif
+      if(st%d%cl_states_mem > CNST(1.0)) then
+        max_mem = int(st%d%cl_states_mem, 8)*(1024_8)**2
+      else if(st%d%cl_states_mem < CNST(0.0)) then
+        max_mem = max_mem + int(st%d%cl_states_mem, 8)*(1024_8)**2
+      else
+        max_mem = int(st%d%cl_states_mem*real(max_mem, REAL_PRECISION), 8)
+      end if
     else
       max_mem = HUGE(max_mem)
     end if
-
 
     mem = 0
     qnloop: do iqn = st%d%kpt%start, st%d%kpt%end

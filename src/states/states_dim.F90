@@ -93,6 +93,7 @@ module states_dim_m
     integer :: block_size
     integer :: orth_method
     logical :: pack_states
+    FLOAT   :: cl_states_mem
   end type states_dim_t
 
 contains
@@ -126,6 +127,7 @@ contains
     dout%cdft           = din%cdft
     dout%block_size     = din%block_size
     dout%pack_states    = din%pack_states
+    dout%cl_states_mem  = din%cl_states_mem
 
     call loct_pointer_copy(dout%kweights, din%kweights)
 
