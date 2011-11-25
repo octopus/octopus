@@ -38,8 +38,6 @@ module fourier_space_m
   implicit none
   private
   public ::                     &
-    dcube_function_alloc_rs,       &
-    zcube_function_alloc_rs,       &
     dcube_function_alloc_fs,       & 
     zcube_function_alloc_fs,       &
     dcube_function_free_fs,        &

@@ -23,6 +23,9 @@
 #define FFT_MAX 10
 #define FFT_NULL -1
 
+!> Fast Fourier Transform module.
+!! This module provides a unique interface to works with different
+!! FFT implementations.
 module fft_m
   use c_pointer_m
   use datasets_m
@@ -178,14 +181,15 @@ contains
   end subroutine fft_all_end
 
   ! ---------------------------------------------------------
-  subroutine fft_init(fft, nn, dim, type, library, mpi_comm, optimize)
-    type(fft_t),       intent(out)   :: fft
-    integer,           intent(inout) :: nn(1:3)
-    integer,           intent(in)    :: dim
-    integer,           intent(in)    :: type
-    integer,           intent(in)    :: library
-    logical, optional, intent(in)    :: optimize
-    integer, optional, intent(out)   :: mpi_comm
+  subroutine fft_init(fft, nn, dim, fft_alpha, type, library, mpi_comm, optimize)
+    type(fft_t),       intent(out)   :: fft      !< FFT data type
+    integer,           intent(inout) :: nn(1:3)  !< Size of the box
+    integer,           intent(in)    :: dim      !< Dimensions of the box
+    FLOAT,             intent(in)    :: fft_alpha!< The factor that has to be used to multiply the Fourier space matrix
+    integer,           intent(in)    :: type     !< The type of the FFT; real or complex
+    integer,           intent(in)    :: library  !< Library of FFT; PFFT or FFTW3
+    logical, optional, intent(in)    :: optimize !< Is optimize going to use? Call FFT optimization functions
+    integer, optional, intent(out)   :: mpi_comm !< MPI communicator
 
     integer :: ii, jj, fft_dim, idir, column_size, row_size, alloc_size, ierror, n3
     logical :: optimize_
@@ -295,8 +299,8 @@ contains
 
     case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT     
-      call pfft_get_dims(fft_array(jj)%rs_n_global, mpi_comm, type == FFT_REAL, alloc_size, &
-           fft_array(jj)%fs_n_global, fft_array(jj)%rs_n, &
+      call pfft_get_dims(fft_array(jj)%rs_n_global, mpi_comm, type == FFT_REAL, fft_alpha, &
+           alloc_size, fft_array(jj)%fs_n_global, fft_array(jj)%rs_n, &
            fft_array(jj)%fs_n, fft_array(jj)%rs_istart, fft_array(jj)%fs_istart)
 #endif
 

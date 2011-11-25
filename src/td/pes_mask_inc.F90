@@ -213,7 +213,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   if (mask%pw_map_how .ne.  PW_MAP_NFFT) then
 
     ! allocate FFTs in case they are not allocated yet
-    call fft_init(mask%fft,mask%ll,sb%dim,FFT_COMPLEX,FFTLIB_FFTW,optimize = .not.simul_box_is_periodic(sb))
+    call fft_init(mask%fft,mask%ll,sb%dim,sb%fft_alpha,FFT_COMPLEX,FFTLIB_FFTW,optimize = .not.simul_box_is_periodic(sb))
 
   else
 #if defined(HAVE_NFFT) 

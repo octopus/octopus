@@ -121,7 +121,7 @@ contains
     else
       SAFE_ALLOCATE(cube%fft)
       tmp_n = n
-      call fft_init(cube%fft, tmp_n, sb%dim, cube%fft_type, cube%fft_library, &
+      call fft_init(cube%fft, tmp_n, sb%dim, sb%fft_alpha, cube%fft_type, cube%fft_library, &
            mpi_comm=mpi_comm, optimize = .not.simul_box_is_periodic(sb))
 
       call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
