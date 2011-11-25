@@ -682,6 +682,9 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
   integer :: ist, idim, indb, ip
   R_TYPE :: a0
   FLOAT, allocatable :: scal(:), ssq(:)
+#ifdef HAVE_OPENCL
+  type(opencl_mem_t)  :: nrm2_buffer
+#endif
 
   PUSH_SUB(X(mesh_batch_nrm2))
 
@@ -750,7 +753,42 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
     end do
 
   case(BATCH_CL_PACKED)
-    call messages_not_implemented('mesh_batch_nrm2 for CL packed batches')
+
+    ASSERT(.not. mesh%use_curvilinear)
+
+    SAFE_ALLOCATE(ssq(1:aa%pack%size_real(1)))
+#ifdef HAVE_OPENCL
+    
+    call opencl_create_buffer(nrm2_buffer, CL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack%size_real(1))
+
+    call opencl_set_kernel_arg(kernel_nrm2_vector, 0, mesh%np)
+    call opencl_set_kernel_arg(kernel_nrm2_vector, 1, aa%pack%buffer)
+    call opencl_set_kernel_arg(kernel_nrm2_vector, 2, log2(aa%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_nrm2_vector, 3, nrm2_buffer)
+    
+    call opencl_kernel_run(kernel_nrm2_vector, (/aa%pack%size_real(1)/), (/aa%pack%size_real(1)/))
+    
+    call opencl_finish()
+
+    call opencl_read_buffer(nrm2_buffer, aa%pack%size_real(1), ssq)
+    call opencl_release_buffer(nrm2_buffer)
+#endif
+
+    do ist = 1, aa%nst
+      nrm2(ist) = M_ZERO
+      do idim = 1, aa%dim
+        indb = batch_linear_index(aa, (/ist, idim/))
+#ifdef R_TREAL
+        nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element*ssq(indb)))
+#else
+        nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element*ssq(2*(indb - 1) + 1)))
+        nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element*ssq(2*(indb - 1) + 2)))
+#endif
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(ssq)
+
   end select
   
   POP_SUB(X(mesh_batch_nrm2))

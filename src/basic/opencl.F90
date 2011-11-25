@@ -101,6 +101,7 @@ module opencl_m
   type(cl_kernel), public :: zkernel_dot_matrix_spinors
   type(cl_kernel), public :: dkernel_dot_vector
   type(cl_kernel), public :: zkernel_dot_vector
+  type(cl_kernel), public :: kernel_nrm2_vector
 
   interface opencl_create_buffer
     module procedure opencl_create_buffer_4
@@ -392,6 +393,7 @@ module opencl_m
       call opencl_create_kernel(dkernel_dot_matrix, prog, "ddot_matrix")
       call opencl_create_kernel(zkernel_dot_matrix, prog, "zdot_matrix")
       call opencl_create_kernel(zkernel_dot_matrix_spinors, prog, "zdot_matrix_spinors")
+      call opencl_create_kernel(kernel_nrm2_vector, prog, "nrm2_vector")
       call opencl_release_program(prog)
 #endif
       call messages_print_stress(stdout)
