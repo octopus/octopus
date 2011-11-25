@@ -387,7 +387,7 @@ module opencl_m
       call opencl_create_kernel(kernel_phase, prog, "phase")
       call opencl_release_program(prog)
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/dot_vector.cl')
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/mesh_batch.cl')
       call opencl_create_kernel(dkernel_dot_vector, prog, "ddot_vector")
       call opencl_create_kernel(zkernel_dot_vector, prog, "zdot_vector")
       call opencl_create_kernel(dkernel_dot_matrix, prog, "ddot_matrix")
