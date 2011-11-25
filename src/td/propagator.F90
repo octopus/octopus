@@ -710,7 +710,7 @@ contains
 
       call hamiltonian_update(hm, gr%mesh, time = time)
 
-      call density_calc_init(dens_calc, st, gr, st%rho, packed = hamiltonian_apply_packed(hm, gr%mesh))
+      call density_calc_init(dens_calc, st, gr, st%rho)
 
       ! propagate the other half with H(t)
       do ik = st%d%kpt%start, st%d%kpt%end

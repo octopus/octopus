@@ -76,12 +76,11 @@ module density_m
 
 contains
   
-  subroutine density_calc_init(this, st, gr, density, packed)
+  subroutine density_calc_init(this, st, gr, density)
     type(density_calc_t),           intent(out)   :: this
     type(states_t),       target,   intent(in)    :: st
     type(grid_t),         target,   intent(in)    :: gr
     FLOAT,                target,   intent(out)   :: density(:, :)
-    logical,              optional, intent(in)    :: packed
 
     PUSH_SUB(density_calc_init)
 
@@ -92,20 +91,29 @@ contains
     this%density = M_ZERO
 
     this%packed = .false.
-    if(present(packed)) this%packed = packed .and. opencl_is_enabled()
-    
-    if(this%packed) then
-      this%pnp = opencl_padded_size(this%gr%mesh%np)
-      call opencl_create_buffer(this%buff_density, CL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
-
-      ! set to zero
-      call opencl_set_kernel_arg(set_zero, 0, this%buff_density)
-      call opencl_kernel_run(set_zero, (/this%pnp*this%st%d%nspin/), (/opencl_max_workgroup_size()/))
-      call opencl_finish()
-    end if
 
     POP_SUB(density_calc_init)
   end subroutine density_calc_init
+
+  ! ---------------------------------------------------
+
+  subroutine density_calc_pack(this)
+    type(density_calc_t),           intent(out)   :: this
+
+    PUSH_SUB(density_calc_pack)
+
+    this%packed = .true.
+    
+    this%pnp = opencl_padded_size(this%gr%mesh%np)
+    call opencl_create_buffer(this%buff_density, CL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
+    
+    ! set to zero
+    call opencl_set_kernel_arg(set_zero, 0, this%buff_density)
+    call opencl_kernel_run(set_zero, (/this%pnp*this%st%d%nspin/), (/opencl_max_workgroup_size()/))
+    call opencl_finish()
+
+    POP_SUB(density_calc_pack)
+  end subroutine density_calc_pack
 
   ! ---------------------------------------------------
 
@@ -176,7 +184,7 @@ contains
           end do
         end if
       case(BATCH_CL_PACKED)
-        ASSERT(this%packed)
+        if(.not. this%packed) call density_calc_pack(this)
 
         if(states_are_real(this%st)) then
           kernel = kernel_density_real
@@ -305,15 +313,12 @@ contains
 
     integer :: ik, ib
     type(density_calc_t) :: dens_calc
-    logical :: packed
 
     PUSH_SUB(density_calc)
 
     ASSERT(ubound(density, dim = 1) == gr%fine%mesh%np .or. ubound(density, dim = 1) == gr%fine%mesh%np_part)
 
-    packed = batch_is_packed(st%psib(st%block_start, st%d%kpt%start))
-
-    call density_calc_init(dens_calc, st, gr, density, packed = packed)
+    call density_calc_init(dens_calc, st, gr, density)
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%block_start, st%block_end
