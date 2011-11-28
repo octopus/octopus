@@ -290,7 +290,8 @@ contains
     howmany = 1
     tmp_n(1:3) = n(1:3)
 
-    call PDFFT(plan_many_dft_r2c) (plan, 3, tmp_n(1), tmp_n(1), tmp_n(1), howmany, PFFT_DEFAULT_BLOCKS, PFFT_DEFAULT_BLOCKS, &
+    call PDFFT(plan_many_dft_r2c) (plan, int(3,ptrdiff_t_kind), tmp_n(1), tmp_n(1), &
+         tmp_n(1), howmany, PFFT_DEFAULT_BLOCKS, PFFT_DEFAULT_BLOCKS, &
          in(1,1,1), out(1,1,1), mpi_comm, sign, PFFT_TRANSPOSED_OUT, flags)
 
     POP_SUB(pfft_prepare_plan_r2c)
@@ -315,7 +316,8 @@ contains
     howmany = 1
     tmp_n(1:3) = n(1:3)
 
-    call PDFFT(plan_many_dft_c2r) (plan, 3, tmp_n(1), tmp_n(1), tmp_n(1), howmany, PFFT_DEFAULT_BLOCKS, PFFT_DEFAULT_BLOCKS, &
+    call PDFFT(plan_many_dft_c2r) (plan, int(3,ptrdiff_t_kind), tmp_n(1), tmp_n(1), &
+         tmp_n(1), howmany, PFFT_DEFAULT_BLOCKS, PFFT_DEFAULT_BLOCKS, &
          in(1,1,1), out(1,1,1), mpi_comm, sign, PFFT_TRANSPOSED_IN, flags)
 
     POP_SUB(pfft_prepare_plan_c2r)
@@ -376,7 +378,8 @@ contains
     tmp_n(1:3) = rs_n_global(1:3)
 
     if (is_real) then
-      call PDFFT(local_size_many_dft_r2c)(tmp_alloc_size, 3, tmp_n(1), tmp_n(1), tmp_n(1), howmany, &
+      call PDFFT(local_size_many_dft_r2c)(tmp_alloc_size, int(3,ptrdiff_t_kind), tmp_n(1), &
+           tmp_n(1), tmp_n(1), howmany, &
            PFFT_DEFAULT_BLOCKS, PFFT_DEFAULT_BLOCKS, mpi_comm, PFFT_TRANSPOSED_OUT, &
            tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1))
       fs_n_global(1) = rs_n_global(1)/2 + 1
