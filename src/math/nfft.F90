@@ -298,7 +298,7 @@ contains
     !%Variable NFFTPrecompute
     !%Type integer
     !%Default NFFT_PRE_PSI
-    !%Section Mesh:FFTs
+    !%Section Mesh::FFTs
     !%Description
     !% NFFT precomputation strategy.
     !%Option NFFT_PRE_LIN_PSI 4
