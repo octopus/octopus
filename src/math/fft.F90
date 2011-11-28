@@ -24,7 +24,7 @@
 #define FFT_NULL -1
 
 !> Fast Fourier Transform module.
-!! This module provides a unique interface to works with different
+!! This module provides a single interface that works with different
 !! FFT implementations.
 module fft_m
   use c_pointer_m

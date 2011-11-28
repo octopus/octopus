@@ -135,13 +135,13 @@ module pfft_m
       integer(ptrdiff_t_kind), intent(inout) :: local_o_start !< Local start point of the output matrix. Rank = 3
     end subroutine PDFFT(local_size_many_dft)
 
-    !> PFFT simple interface to create plan from real to clomplex
+    !> PFFT simple interface to create plan from real to complex
     subroutine PDFFT(plan_dft_r2c_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags, fftw_flags)
       use pfft_params_m
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
-      FLOAT,                   intent(in)    :: in      !< The input matrix that is going to use to do the transform
-      CMPLX,                   intent(in)    :: out     !< The output matrix that is going to use to do the transform
+      FLOAT,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
+      CMPLX,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
       integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
     end subroutine PDFFT(plan_dft_r2c_3d)
 
@@ -150,8 +150,8 @@ module pfft_m
       use pfft_params_m
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
-      CMPLX,                   intent(in)    :: in      !< The input matrix that is going to use to do the transform
-      FLOAT,                   intent(in)    :: out     !< The output matrix that is going to use to do the transform
+      CMPLX,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
+      FLOAT,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
       integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
     end subroutine PDFFT(plan_dft_c2r_3d)
 
@@ -172,8 +172,8 @@ module pfft_m
                                                         !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
       integer(ptrdiff_t_kind), intent(in)    :: oblock  !< The block size of the output data distribution (Just use the constant 
                                                         !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
-      FLOAT,                   intent(in)    :: in      !< The input matrix that is going to use to do the transform
-      CMPLX,                   intent(in)    :: out     !< The output matrix that is going to use to do the transform
+      FLOAT,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
+      CMPLX,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
       integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
     end subroutine PDFFT(plan_many_dft_r2c) 
 
@@ -194,8 +194,8 @@ module pfft_m
                                                         !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
       integer(ptrdiff_t_kind), intent(in)    :: oblock  !< The block size of the output data distribution (Just use the constant 
                                                         !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
-      CMPLX,                   intent(in)    :: in      !< The input matrix that is going to use to do the transform
-      FLOAT,                   intent(in)    :: out     !< The output matrix that is going to use to do the transform
+      CMPLX,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
+      FLOAT,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
       integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
     end subroutine PDFFT(plan_many_dft_c2r)
 
@@ -204,8 +204,8 @@ module pfft_m
       use pfft_params_m
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
-      CMPLX,                   intent(in)    :: in      !< The input matrix that is going to use to do the transform
-      CMPLX,                   intent(in)    :: out     !< The output matrix that is going to use to do the transform
+      CMPLX,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
+      CMPLX,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
       integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
     end subroutine PDFFT(plan_dft_3d)
   end interface
@@ -275,8 +275,8 @@ contains
   subroutine pfft_prepare_plan_r2c(plan, n, in, out, sign, flags, mpi_comm)
     integer(ptrdiff_t_kind), intent(out)   :: plan       !< The plan that is created by PFFT
     integer,                 intent(in)    :: n(:)       !< The size of the global matrix
-    FLOAT,   pointer,        intent(inout) :: in(:,:,:)  !< The input matrix that is going to use to do the transform
-    CMPLX,   pointer,        intent(inout) :: out(:,:,:) !< The output matrix that is going to use to do the transform
+    FLOAT,   pointer,        intent(inout) :: in(:,:,:)  !< The input matrix that is going to be used to do the transform
+    CMPLX,   pointer,        intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
     integer,                 intent(in)    :: sign       !< Sign flag to decide FFT direction. Has to be FFTW_FORWARD
     integer,                 intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
                                                          !! FFTPreparePlan. Default value is FFTW_MEASURE
@@ -300,8 +300,8 @@ contains
   subroutine pfft_prepare_plan_c2r(plan, n, in, out, sign, flags, mpi_comm)
     integer(ptrdiff_t_kind), intent(out)   :: plan       !< The plan that is created by PFFT
     integer,                 intent(in)    :: n(:)       !< The size of the global matrix
-    CMPLX,   pointer,        intent(inout) :: in(:,:,:)  !< The input matrix that is going to use to do the transform
-    FLOAT,   pointer,        intent(inout) :: out(:,:,:) !< The output matrix that is going to use to do the transform
+    CMPLX,   pointer,        intent(inout) :: in(:,:,:)  !< The input matrix that is going to be used to do the transform
+    FLOAT,   pointer,        intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
     integer,                 intent(in)    :: sign       !< Sign flag to decide FFT direction. Has to be FFTW_BACKWARD
     integer,                 intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
                                                          !! FFTPreparePlan. Default value is FFTW_MEASURE
@@ -326,8 +326,8 @@ contains
   subroutine pfft_prepare_plan_c2c(plan, n, in, out, sign, flags, mpi_comm)
     integer(ptrdiff_t_kind), intent(out)   :: plan       !< The plan that is created by PFFT
     integer,                 intent(in)    :: n(:)       !< The size of the global matrix
-    CMPLX,   pointer,        intent(inout) :: in(:,:,:)  !< The input matrix that is going to use to do the transform
-    CMPLX,   pointer,        intent(inout) :: out(:,:,:) !< The output matrix that is going to use to do the transform
+    CMPLX,   pointer,        intent(inout) :: in(:,:,:)  !< The input matrix that is going to be used to do the transform
+    CMPLX,   pointer,        intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
     integer,                 intent(in)    :: sign       !< Sign flag to decide FFT direction. 
                                                          !! Has to be FFTW_FORWARD or FFTW_BACKWARD
     integer,                 intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
