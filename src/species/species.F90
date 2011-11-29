@@ -59,6 +59,7 @@ module species_m
     species_def_rsize,         &
     species_def_h,             &
     species_jradius,           &
+    species_jthick,            &
     species_sigma,             &
     species_omega,             &
     species_weight,            &
@@ -80,6 +81,7 @@ module species_m
     SPEC_USDEF  = 123,          & !< user-defined function
     SPEC_POINT  = 2,            & !< point charge: jellium sphere of radius 0.5 a.u.
     SPEC_JELLI  = 3,            & !< jellium sphere.
+    SPEC_JELLI_SLAB     = 4,    & !< jellium slab.
     SPEC_FULL_DELTA     = 127,  & !< full-potential atom
     SPEC_FULL_GAUSSIAN  = 124,  & !< full-potential atom
     SPEC_CHARGE_DENSITY = 125,  &
@@ -112,6 +114,7 @@ module species_m
 
 
     FLOAT :: jradius              !< jellium stuff
+    FLOAT :: jthick               !< jellium stuff
 
 
     type(ps_t), pointer :: ps
@@ -236,6 +239,10 @@ contains
     !%Option spec_jelli  3
     !% Jellium sphere: the extra parameters are the charge of the jellium
     !% sphere (an equal value of valence charge is assumed) and the radius of
+    !% the sphere.
+    !%Option spec_jelli_slab  4
+    !% Jellium slab: the extra parameters are the charge of the jellium
+    !% slab (an equal value of valence charge is assumed) and the thickness of
     !% the sphere.
     !%Option spec_ps_psf  100
     !% Troullier Martins pseudopotential in <tt>SIESTA</tt> format: the pseudopotential will be
@@ -425,6 +432,18 @@ contains
         write(message(2),'(a,f11.6)')  '   Valence charge = ', spec%z_val
         write(message(3),'(a,f11.6)')  '   Radius [a.u]   = ', spec%jradius
         write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', spec%jradius * spec%z_val ** (-M_ONE/M_THREE)
+        call messages_info(4)
+      end if
+      spec%niwfs = 2*spec%z_val
+      spec%omega = CNST(0.1)
+
+    case(SPEC_JELLI_SLAB)
+      if(print_info_) then
+        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a jellium slab.'
+        write(message(2),'(a,f11.6)')  '   Valence charge = ', spec%z_val
+        write(message(3),'(a,f11.6)')  '   thikness [a.u] = ', spec%jthick
+        !write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', ( M_THREE /( M_FOUR *M_PI ) &
+        !& *spec%z_val /( *sb%lsize(1) *sb%lsize(2) ) )**(1.0/3.0) 
         call messages_info(4)
       end if
       spec%niwfs = 2*spec%z_val
@@ -620,6 +639,14 @@ contains
     type(species_t), intent(in) :: spec
     species_jradius = spec%jradius
   end function species_jradius
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  FLOAT pure function species_jthick(spec)
+    type(species_t), intent(in) :: spec
+    species_jthick = spec%jthick
+  end function species_jthick
   ! ---------------------------------------------------------
 
 
@@ -902,6 +929,9 @@ contains
     if (spec%type == SPEC_JELLI .or. spec%type == SPEC_POINT) then
       write(iunit, '(a,f15.2)') 'jradius= ', spec%jradius
     end if
+    if (spec%type == SPEC_JELLI_SLAB) then
+      write(iunit, '(a,f15.2)') 'jthick= ', spec%jthick
+    end if
     write(iunit, '(a,l1)')    'nlcc   = ', spec%nlcc
     write(iunit, '(a,f15.2)') 'def_rsize = ', spec%def_rsize
     write(iunit, '(a,f15.2)') 'def_h = ', spec%def_h
@@ -992,6 +1022,13 @@ contains
       call parse_block_float(blk, row, 3, spec%Z)      ! charge of the jellium sphere
       call parse_block_float(blk, row, 4, spec%jradius)! radius of the jellium sphere
       spec%jradius = units_to_atomic(units_inp%length, spec%jradius) ! units conversion
+      spec%Z_val = spec%Z
+      read_data = 5
+
+    case(SPEC_JELLI_SLAB)
+      call parse_block_float(blk, row, 3, spec%Z)      ! charge of the jellium slab
+      call parse_block_float(blk, row, 4, spec%jthick) ! thickness of the jellium slab
+      spec%jthick = units_to_atomic(units_inp%length, spec%jthick) ! units conversion
       spec%Z_val = spec%Z
       read_data = 5
 

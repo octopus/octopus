@@ -175,6 +175,44 @@ contains
         end if
       end if
 
+    case (SPEC_JELLI_SLAB) ! ... from jellium slab
+      in_points = 0
+      do ip = 1, mesh%np
+        rr = abs( mesh%x( ip, 3 ) )
+        if( rr <= species_jthick(spec)/M_TWO ) then
+          in_points = in_points + 1
+        end if
+      end do
+
+#if defined(HAVE_MPI)
+      if(mesh%parallel_in_domains) then
+        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%vp%comm, mpi_err)
+        in_points = in_points_red
+      end if
+#endif
+
+      if(in_points > 0) then
+        ! This probably should be done inside the mesh_function_m module.
+
+        if (mesh%use_curvilinear) then
+          do ip = 1, mesh%np
+            rr = abs( mesh%x( ip, 3 ) )
+            if( rr <= species_jthick(spec)/M_TWO ) then
+              rho(ip, 1:spin_channels) = species_zval(spec) /   &
+                (mesh%vol_pp(ip)*real(in_points*spin_channels, REAL_PRECISION))
+            end if
+          end do
+        else
+          do ip = 1, mesh%np
+            rr = abs( mesh%x( ip, 3 ) )
+            if( rr <= species_jthick(spec)/M_TWO ) then
+              rho(ip, 1:spin_channels) = species_zval(spec) /   &
+                (mesh%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
+            end if
+          end do
+        end if
+      end if
+
     case (SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_UPF) ! ...from pseudopotential
 
       ! the outer loop sums densities over atoms in neighbour cells
@@ -830,7 +868,22 @@ contains
           end if
           
         end do
-        
+      
+      case(SPEC_JELLI_SLAB)
+        a1 = M_TWO *M_PI * species_z(spec)/ (M_FOUR *mesh%sb%lsize(1) *mesh%sb%lsize(2) )
+
+        do ip = 1, mesh%np
+
+          r = abs( mesh%x(ip, 3 ) )
+
+          if(r <= species_jthick(spec)/M_TWO ) then
+            vl(ip) = a1 *( r*r/species_jthick(spec) + species_jthick(spec)/M_FOUR )
+          else
+            vl(ip) = a1 *r
+          end if
+
+        end do
+
       case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
         ps => species_ps(spec)
         do ip = 1, mesh%np

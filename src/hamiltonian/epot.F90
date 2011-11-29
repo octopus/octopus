@@ -851,7 +851,15 @@ contains
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
     if(simul_box_is_periodic(sb)) then
-      call ion_interaction_periodic(geo, sb, energy, force)
+      ! This depends on the area, but we should check if it's fully consistent.        
+      spec => geo%atom(1)%spec
+      if( species_type(spec).eq.SPEC_JELLI_SLAB ) then
+        energy = energy +M_PI *species_zval(spec)**2 /( M_FOUR *sb%lsize(1) *sb%lsize(2) ) &
+          & *( sb%lsize(3) - species_jthick(spec) /M_THREE ) 
+      else
+        call ion_interaction_periodic(geo, sb, energy, force)
+      end if
+
     else if(simul_box_complex_boundaries(sb)) then
       ! only interaction inside the cell
       write(68,'(a)') "Calling SETE interaction"
@@ -880,8 +888,15 @@ contains
 
         if(species_type(spec) .eq. SPEC_JELLI) then
           energy = energy + (M_THREE / M_FIVE) * species_zval(spec)**2 / species_jradius(spec)
+          ! The part depending on the simulation sphere is neglected
         end if
-        
+
+        if(species_type(spec) .eq. SPEC_JELLI_SLAB) then
+          energy = energy -M_PI *species_zval(spec)**2 /( M_FOUR *sb%lsize(1) *sb%lsize(2) ) &
+            & *species_jthick(spec) /M_THREE
+          ! The part depending on the simulation box transverse dimension is neglected
+        end if
+
         iindex = species_index(geo%atom(iatom)%spec)
 
         do jatom = 1, geo%natoms
