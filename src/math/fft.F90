@@ -447,7 +447,7 @@ contains
 
     slot = fft%slot
     rs_n_global(1:3) = fft_array(slot)%rs_n_global(1:3)
-    fs_n_global = fft_array(slot)%fs_n_global(1:3)
+    fs_n_global(1:3) = fft_array(slot)%fs_n_global(1:3)
     rs_n(1:3) = fft_array(slot)%rs_n(1:3)
     fs_n(1:3) = fft_array(slot)%fs_n(1:3)
     rs_istart(1:3) = fft_array(slot)%rs_istart(1:3)
