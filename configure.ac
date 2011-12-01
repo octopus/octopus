@@ -329,6 +329,9 @@ ACX_NETCDF
 dnl check for ETSF_IO
 ACX_ETSF_IO
 
+dnl check for BerkeleyGW
+ACX_BERKELEYGW
+
 dnl check for SPARSKIT
 ACX_SPARSKIT
   
