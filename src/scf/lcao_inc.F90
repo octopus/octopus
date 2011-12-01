@@ -578,7 +578,7 @@ contains
 
   subroutine diagonalization()
     integer              :: neval_found, info, lwork
-    R_TYPE               :: tmp(3) ! size must be at least 3 according to ScaLAPACK
+    R_TYPE               :: tmp(3) !< size must be at least 3 according to ScaLAPACK
     R_TYPE,  allocatable :: work(:)
     integer, allocatable :: iwork(:), ifail(:)
 #ifdef R_TCOMPLEX
@@ -593,7 +593,7 @@ contains
     R_TYPE,  allocatable :: send_buffer(:, :), recv_buffer(:, :)
     FLOAT                :: orfac
 #ifdef R_TCOMPLEX
-    FLOAT                :: rtmp(3) ! size must be at least 3 according to ScaLAPACK
+    FLOAT                :: rtmp(3) !< size must be at least 3 according to ScaLAPACK
     integer              :: lrwork
 #endif
 #endif

@@ -252,9 +252,9 @@ contains
     if(mpi_grp_is_root(mpi_world)) call loct_mkdir('exec')
     ierr = parse_init('exec/parser.log', mpi_world%rank)
     if(ierr .ne. 0) then
-      write(6,'(a)') '*** Fatal Error (description follows)'
-      write(6,'(a)') 'Error initializing liboct'
-      write(6,'(a)') 'Do you have write permissions in this directory?'
+      write(0,'(a)') '*** Fatal Error (description follows)'
+      write(0,'(a)') 'Error initializing liboct'
+      write(0,'(a)') 'Do you have write permissions in this directory?'
 #ifdef HAVE_MPI
       call MPI_Finalize(mpi_err)
 #endif
@@ -264,8 +264,8 @@ contains
     ! read in default variables
     ierr = parse_input_file(trim(conf%share)//'/variables')
     if(ierr .ne. 0) then
-      write(6,'(a)') '*** Fatal Error (description follows)'
-      write(6,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
+      write(0,'(a)') '*** Fatal Error (description follows)'
+      write(0,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
 #ifdef HAVE_MPI
       call MPI_Finalize(mpi_err)
 #endif
@@ -275,10 +275,10 @@ contains
     ! setup standard input
     ierr = parse_input_file('inp')
     if(ierr .ne. 0) then 
-      write(6,'(a)') '*** Fatal Error (description follows)' 
-      write(6,'(a)') 'Error initializing liboct' 
-      write(6,'(a)') 'Cannot open input file!' 
-      write(6,'(a)') 'Please provide an input file with name inp in the current workdir'
+      write(0,'(a)') '*** Fatal Error (description follows)' 
+      write(0,'(a)') 'Error initializing liboct' 
+      write(0,'(a)') 'Cannot open input file!' 
+      write(0,'(a)') 'Please provide an input file with name inp in the current workdir'
 #ifdef HAVE_MPI
       call MPI_Finalize(mpi_err)
 #endif
