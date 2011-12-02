@@ -68,7 +68,7 @@ module output_m
   use utils_m
   use varinfo_m
 #if defined(HAVE_BERKELEYGW)
-  use wfn_rho_vxc_io_m,  only : write_binary_header
+  use wfn_rho_vxc_io_m
 #endif
   use young_m
 

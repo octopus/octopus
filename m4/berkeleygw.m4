@@ -20,9 +20,7 @@ if test "$acx_berkeleygw_ok" != disabled; then
   LIBS="$LIBS_BERKELEYGW $acx_berkeleygw_save_LIBS"
   AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
     use wfn_rho_vxc_io_m
-    type(crystal) :: crys
-    type(kpoints) :: kp
-    call dealloc_header_type('RHO', crys, kp)
+    call bgw_conf_test()
     ]), [acx_berkeleygw_ok=yes], [])
 fi
 AC_MSG_RESULT([$acx_berkeleygw_ok ($FCFLAGS_BERKELEYGW $LIBS_BERKELEYGW)])
