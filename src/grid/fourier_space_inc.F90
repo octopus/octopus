@@ -17,6 +17,9 @@
 !!
 !! $Id$
 
+!> Allocates locally the Fourier space grid, if PFFT library is not used.
+!! Otherwise, it assigns the PFFT Fourier space grid to the cube Fourier space grid,
+!! via pointer.
 subroutine X(cube_function_alloc_FS)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -26,10 +29,10 @@ subroutine X(cube_function_alloc_FS)(cube, cf)
   ASSERT(.not.associated(cf%FS))
 
   if (cube%fft_library /= FFTLIB_PFFT) then
-    SAFE_ALLOCATE(cf%FS(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
+    SAFE_ALLOCATE(cf%FS(1:cube%fft%fs_n(1), 1:cube%fft%fs_n(2), 1:cube%fft%fs_n(3)))
   else
     ASSERT(associated(cube%fft))
-    cf%FS => cube%fft%fs_data(1:cube%fs_n(3), 1:cube%fs_n(1), 1:cube%fs_n(2))
+    cf%FS => cube%fft%fs_data(1:cube%fft%fs_n(3), 1:cube%fft%fs_n(1), 1:cube%fft%fs_n(2))
   end if
 
   POP_SUB(X(cube_function_alloc_FS))
@@ -37,6 +40,7 @@ end subroutine X(cube_function_alloc_FS)
 
 
 ! ---------------------------------------------------------
+!> Deallocates the Fourier space grid
 subroutine X(cube_function_free_FS)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -101,8 +105,8 @@ subroutine X(fourier_space_op_init)(this, cube, op)
 
   nullify(this%dop)
   nullify(this%zop)
-  SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
-  forall (kk = 1:cube%fs_n(3), jj = 1:cube%fs_n(2), ii = 1:cube%fs_n(1)) 
+  SAFE_ALLOCATE(this%X(op)(1:cube%fft%fs_n(1), 1:cube%fft%fs_n(2), 1:cube%fft%fs_n(3)))
+  forall (kk = 1:cube%fft%fs_n(3), jj = 1:cube%fft%fs_n(2), ii = 1:cube%fft%fs_n(1)) 
     this%X(op)(ii, jj, kk) = op(ii, jj, kk)
   end forall
 
@@ -110,6 +114,8 @@ subroutine X(fourier_space_op_init)(this, cube, op)
 end subroutine X(fourier_space_op_init)
 
 ! ---------------------------------------------------------
+!> Applies a multiplication factor to the Fourier space grid.
+!! This is a local function.
 subroutine X(fourier_space_op_apply)(this, cube, cf)
   type(fourier_space_op_t), intent(in)     :: this
   type(cube_t),             intent(inout)  :: cube
@@ -134,9 +140,9 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   if (cube%fft_library == FFTLIB_PFFT) then
     !Note that the function in fourier space returned by PFFT is transposed
     !$omp parallel do
-    do kk = 1, cube%fs_n(3)
-      do jj = 1, cube%fs_n(2)
-        do ii = 1, cube%fs_n(1)
+    do kk = 1, cube%fft%fs_n(3)
+      do jj = 1, cube%fft%fs_n(2)
+        do ii = 1, cube%fft%fs_n(1)
           cf%FS(kk, ii, jj) = cf%FS(kk, ii, jj)*this%X(op) (ii, jj, kk)
         end do
       end do
@@ -144,9 +150,9 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
     !$omp end parallel do
   else
     !$omp parallel do
-    do kk = 1, cube%fs_n(3)
-      do jj = 1, cube%fs_n(2)
-        do ii = 1, cube%fs_n(1)
+    do kk = 1, cube%fft%fs_n(3)
+      do jj = 1, cube%fft%fs_n(2)
+        do ii = 1, cube%fft%fs_n(1)
           cf%FS(ii, jj, kk) = cf%FS(ii, jj, kk)*this%X(op)(ii, jj, kk)
         end do
       end do
@@ -166,14 +172,15 @@ end subroutine X(fourier_space_op_apply)
 
 ! ---------------------------------------------------------
 !> The next two subroutines convert a function in Fourier space
-!! between the normal mesh and the cube
+!! between the normal mesh and the cube.
+!!
 !! Note that the function in the mesh should be defined
 !! globally, not just in a partition (when running in
 !! parallel in real-space domains).
 ! ---------------------------------------------------------
 subroutine X(mesh_to_fourier) (mesh, mf, cube, cf)
   type(mesh_t),  intent(in)    :: mesh
-  CMPLX,         intent(in)    :: mf(:)   ! mf(mesh%np_global)
+  CMPLX,         intent(in)    :: mf(:)   !< mf(mesh%np_global)
   type(cube_t),  intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
@@ -187,7 +194,7 @@ subroutine X(mesh_to_fourier) (mesh, mf, cube, cf)
 
   do ip = 1, mesh%np_global
     ix = pad_feq(mesh%idx%lxyz(ip, 1), cube%n(1), .false.)
-    if(ix > cube%nx) cycle ! negative frequencies are redundant
+    if(ix > cube%fft%nx) cycle ! negative frequencies are redundant
     iy = pad_feq(mesh%idx%lxyz(ip, 2), cube%n(2), .false.)
     iz = pad_feq(mesh%idx%lxyz(ip, 3), cube%n(3), .false.)
 
@@ -203,7 +210,7 @@ subroutine X(fourier_to_mesh) (cube, cf, mesh, mf)
   type(cube_t),  intent(in)  :: cube
   type(cube_function_t), intent(in)  :: cf
   type(mesh_t),  intent(in)  :: mesh
-  CMPLX,         intent(out) :: mf(:) ! mf(mesh%np_global)
+  CMPLX,         intent(out) :: mf(:) !< mf(mesh%np_global)
 
   integer :: ip, ix, iy, iz
 
@@ -217,7 +224,7 @@ subroutine X(fourier_to_mesh) (cube, cf, mesh, mf)
     iz = pad_feq(mesh%idx%lxyz(ip, 3), cube%n(3), .false.)
 
 #ifdef R_TREAL
-    if(ix > cube%nx) then
+    if(ix > cube%fft%nx) then
       ix = pad_feq(-mesh%idx%lxyz(ip, 1), cube%n(1), .false.)
       mf(ip) = conjg(cf%FS(ix, iy, iz))
     else

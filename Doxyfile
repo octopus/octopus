@@ -570,7 +570,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT                  =
+INPUT                  = src
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is
@@ -599,7 +599,7 @@ RECURSIVE              = YES
 # excluded from the INPUT source files. This way you can easily exclude a
 # subdirectory from a directory tree whose root is specified with the INPUT tag.
 
-EXCLUDE                =
+EXCLUDE                = .svn
 
 # The EXCLUDE_SYMLINKS tag can be used select whether or not files or
 # directories that are symbolic links (a Unix filesystem feature) are excluded
@@ -658,7 +658,7 @@ IMAGE_PATH             =
 # If FILTER_PATTERNS is specified, this tag will be
 # ignored.
 
-INPUT_FILTER           =
+INPUT_FILTER           = "cpp -C -ansi  -Isrc/include -Isrc/include -Iexternal_libs/spglib/src -Iliboct_parser  -DHAVE_PFFT -DHAVE_MPI -DHAVE_ETSF_IO -DHAVE_NETCDF -DHAVE_LAPACK -DHAVE_BLAS -DHAVE_LIBXC -DHAVE_OPENCL -DHAVE_OPENMP -DHAVE_LIBFM -DSHARE_OCTOPUS='share/octopus'"
 
 # The FILTER_PATTERNS tag can be used to specify filters on a per file pattern
 # basis.
@@ -1242,7 +1242,7 @@ SEARCH_INCLUDES        = YES
 # contain include files that are not input files but should be processed by
 # the preprocessor.
 
-INCLUDE_PATH           =
+INCLUDE_PATH           = external_libs/zoltan/include
 
 # You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wildcard
 # patterns (like *.h and *.hpp) to filter out the header-files in the
@@ -1384,7 +1384,7 @@ DOT_FONTPATH           =
 # indirect inheritance relations. Setting this tag to YES will force the
 # the CLASS_DIAGRAMS tag to NO.
 
-CLASS_GRAPH            = YES
+CLASS_GRAPH            = NO
 
 # If the COLLABORATION_GRAPH and HAVE_DOT tags are set to YES then doxygen
 # will generate a graph for each documented class showing the direct and
@@ -1486,7 +1486,7 @@ DOT_GRAPH_MAX_NODES    = 50
 # code bases. Also note that the size of a graph can be further restricted by
 # DOT_GRAPH_MAX_NODES. Using a depth of 0 means no depth restriction.
 
-MAX_DOT_GRAPH_DEPTH    = 0
+MAX_DOT_GRAPH_DEPTH    = 1
 
 # Set the DOT_TRANSPARENT tag to YES to generate images with a transparent
 # background. This is disabled by default, because dot on Windows does not

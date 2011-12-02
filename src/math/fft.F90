@@ -51,7 +51,6 @@ module fft_m
     fft_init,       &
     fft_end,        &
     fft_copy,       &
-    fft_get_dims,   &
     pad_feq,        &
     dfft_forward,   &
     zfft_forward,   &
@@ -86,11 +85,12 @@ module fft_m
     integer     :: fs_n(3)        !< local size of the fft in in each direction fourier space
     integer     :: rs_istart(1:3) !< where does the local portion of the function start in real space
     integer     :: fs_istart(1:3) !< where does the local portion of the function start in fourier space
+    integer     :: nx             !< = n(1)/2 + 1, first dimension of the FS array
 
-    type(c_ptr) :: planf                  ! plan for forward transform
-    type(c_ptr) :: planb                  ! plan for backward transform
-    integer(ptrdiff_t_kind) :: pfft_planf ! PFFT plan for forward transform
-    integer(ptrdiff_t_kind) :: pfft_planb ! PFFT plan for backward transform
+    type(c_ptr) :: planf                  !< plan for forward transform
+    type(c_ptr) :: planb                  !< plan for backward transform
+    integer(ptrdiff_t_kind) :: pfft_planf !< PFFT plan for forward transform
+    integer(ptrdiff_t_kind) :: pfft_planb !< PFFT plan for backward transform
 
     ! The next arrays have to be stored here and allocated in the initialization routine because
     ! PFFT 
@@ -430,31 +430,6 @@ contains
 
     POP_SUB(fft_copy)
   end subroutine fft_copy
-
-  ! ---------------------------------------------------------
-  subroutine fft_get_dims(fft, rs_n_global, fs_n_global, rs_n, fs_n, rs_istart, fs_istart)
-    type(fft_t), intent(in)  :: fft
-    integer,     intent(out) :: rs_n_global(1:3)
-    integer,     intent(out) :: fs_n_global(1:3)
-    integer,     intent(out) :: rs_n(1:3)
-    integer,     intent(out) :: fs_n(1:3)
-    integer,     intent(out) :: rs_istart(1:3)
-    integer,     intent(out) :: fs_istart(1:3)
-
-    integer :: slot
-
-    PUSH_SUB(fft_get_dims)
-
-    slot = fft%slot
-    rs_n_global(1:3) = fft_array(slot)%rs_n_global(1:3)
-    fs_n_global(1:3) = fft_array(slot)%fs_n_global(1:3)
-    rs_n(1:3) = fft_array(slot)%rs_n(1:3)
-    fs_n(1:3) = fft_array(slot)%fs_n(1:3)
-    rs_istart(1:3) = fft_array(slot)%rs_istart(1:3)
-    fs_istart(1:3) = fft_array(slot)%fs_istart(1:3)
-
-    POP_SUB(fft_get_dims)
-  end subroutine fft_get_dims
 
   ! ---------------------------------------------------------
   !> convert between array index and G vector

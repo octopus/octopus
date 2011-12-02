@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira, J. Alberdi
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -43,17 +43,9 @@ module cube_m
 
   type cube_t
     integer :: n(1:3)      !< the global dimensions of the cube
-    integer :: nx          ! = n(1)/2 + 1, first dimension of the FS array
 
     logical :: parallel_in_domains !< will the cube be divided in domains?
     type(mpi_grp_t) :: mpi_grp     !< the mpi group describing parallelization in domains
-
-    integer :: rs_n_global(1:3) !< the dimensions of the cube in real space
-    integer :: fs_n_global(1:3) !< the dimensions of the cube in fourier space
-    integer :: rs_n(1:3)        !< the dimensions of the local portion of the cube in real space
-    integer :: fs_n(1:3)        !< the dimensions of the local portion of the cube in fourier space
-    integer :: rs_istart(1:3)   !< where does the local portion of the cube start in real space
-    integer :: fs_istart(1:3)   !< where does the local portion of the cube start in fourier space
 
     integer, pointer :: part(:,:,:) !< point -> partition
     integer, pointer :: np_local(:) !< Number of points in each partition
@@ -108,26 +100,24 @@ contains
     end if
 
     cube%n = n
+    SAFE_ALLOCATE(cube%fft)
     cube%parallel_in_domains = cube%fft_library == FFTLIB_PFFT
     if (cube%fft_library == FFTLIB_NONE) then
-      cube%nx = n(1)
-      cube%rs_n_global = cube%n
-      cube%fs_n_global = cube%n
-      cube%rs_n = cube%rs_n_global
-      cube%fs_n = cube%fs_n_global
-      cube%rs_istart = 1
-      cube%fs_istart = 1
+      cube%fft%nx = n(1)
+      cube%fft%rs_n_global = cube%n
+      cube%fft%fs_n_global = cube%n
+      cube%fft%rs_n = cube%fft%rs_n_global
+      cube%fft%fs_n = cube%fft%fs_n_global
+      cube%fft%rs_istart = 1
+      cube%fft%fs_istart = 1
       mpi_comm = -1
     else
-      SAFE_ALLOCATE(cube%fft)
       tmp_n = n
       call fft_init(cube%fft, tmp_n, sb%dim, sb%fft_alpha, cube%fft_type, cube%fft_library, &
            mpi_comm=mpi_comm, optimize = .not.simul_box_is_periodic(sb))
 
-      call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
-           cube%rs_istart, cube%fs_istart)
-      cube%n = cube%rs_n_global
-      cube%nx = cube%fs_n_global(1)
+      cube%n = cube%fft%rs_n_global
+      cube%fft%nx = cube%fft%fs_n_global(1)
     end if
 
     call mpi_grp_init(cube%mpi_grp, mpi_comm)
@@ -159,18 +149,18 @@ end subroutine  cube_init
   end subroutine  cube_end
 
   !> True if global coordinates belong to this process. On output
-  !> lxyz contains the local coordinates
+  !! lxyz contains the local coordinates
   logical function cube_global2local(cube, ixyz, lxyz) result(is_here)
     type(cube_t), intent(in)  :: cube
     integer,      intent(in)  :: ixyz(3) !< global coordinates
     integer,      intent(out) :: lxyz(3) !< local coordinates
 
-    lxyz(1) = ixyz(1) - cube%rs_istart(1) + 1
-    lxyz(2) = ixyz(2) - cube%rs_istart(2) + 1
-    lxyz(3) = ixyz(3) - cube%rs_istart(3) + 1
-    is_here = lxyz(1) >= 1 .and. lxyz(1) <= cube%rs_n(1) .and. &
-              lxyz(2) >= 1 .and. lxyz(2) <= cube%rs_n(2) .and. &
-              lxyz(3) >= 1 .and. lxyz(3) <= cube%rs_n(3)
+    lxyz(1) = ixyz(1) - cube%fft%rs_istart(1) + 1
+    lxyz(2) = ixyz(2) - cube%fft%rs_istart(2) + 1
+    lxyz(3) = ixyz(3) - cube%fft%rs_istart(3) + 1
+    is_here = lxyz(1) >= 1 .and. lxyz(1) <= cube%fft%rs_n(1) .and. &
+              lxyz(2) >= 1 .and. lxyz(2) <= cube%fft%rs_n(2) .and. &
+              lxyz(3) >= 1 .and. lxyz(3) <= cube%fft%rs_n(3)
     
   end function cube_global2local
 
@@ -187,12 +177,12 @@ end subroutine  cube_init
 
     !!BEGIN:gather the local information into a unique vector.
     !!do a gather in 3d of all the box, into a loop
-    tmp_local(1) = cube%rs_istart(1)
-    tmp_local(2) = cube%rs_istart(2)
-    tmp_local(3) = cube%rs_istart(3)
-    tmp_local(4) = cube%rs_n(1)
-    tmp_local(5) = cube%rs_n(2)
-    tmp_local(6) = cube%rs_n(3)
+    tmp_local(1) = cube%fft%rs_istart(1)
+    tmp_local(2) = cube%fft%rs_istart(2)
+    tmp_local(3) = cube%fft%rs_istart(3)
+    tmp_local(4) = cube%fft%rs_n(1)
+    tmp_local(5) = cube%fft%rs_n(2)
+    tmp_local(6) = cube%fft%rs_n(3)
 
     if (cube%parallel_in_domains) then
       SAFE_ALLOCATE(local_sizes(6*cube%mpi_grp%size))
