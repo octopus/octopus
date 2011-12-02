@@ -77,6 +77,7 @@ module output_m
   private
   public ::              &
     output_t,            &
+    output_bgw_t,        &
     output_init,         &
     output_states,       &
     output_modelmb,      &
