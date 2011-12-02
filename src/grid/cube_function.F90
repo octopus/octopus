@@ -68,8 +68,8 @@ module cube_function_m
 contains
 
   ! ---------------------------------------------------------
-  !> This function calculates the surface average of any function.
-  !! \warning Some more careful testing should be done on this.
+  ! This function calculates the surface average of any function.
+  ! \warning: Some more careful testing should be done on this.
   FLOAT function cube_function_surface_average(cube, cf) result(x)
     type(cube_t),          intent(in) :: cube
     type(cube_function_t), intent(in) :: cf
@@ -125,9 +125,6 @@ contains
     POP_SUB(cube_function_surface_average)
   end function cube_function_surface_average
 
-  ! ---------------------------------------------------------
-  !> This function calculates in parallel the surface average of any function.
-  !! \warning Some more careful testing should be done on this.
   FLOAT function cube_function_surface_average_parallel(cube, cf) result(x)
     type(cube_t),          intent(in) :: cube
     type(cube_function_t), intent(in) :: cf
@@ -138,12 +135,12 @@ contains
     PUSH_SUB(cube_function_surface_average_parallel)
 
     tmp_x = M_ZERO
-    do ii = 1, cube%fft%rs_n(1)
-      do jj = 1, cube%fft%rs_n(2)
-        do kk = 1, cube%fft%rs_n(3)
-          ix = ii + cube%fft%rs_istart(1) - 1
-          iy = jj + cube%fft%rs_istart(2) - 1
-          iz = kk + cube%fft%rs_istart(3) - 1
+    do ii = 1, cube%rs_n(1)
+      do jj = 1, cube%rs_n(2)
+        do kk = 1, cube%rs_n(3)
+          ix = ii + cube%rs_istart(1) - 1
+          iy = jj + cube%rs_istart(2) - 1
+          iz = kk + cube%rs_istart(3) - 1
           if ( (ix == 1 .or. ix == cube%n(1)                                          ) .or. &
                ( (iy == 1 .or. iy == cube%n(2)) .and. (ix /= 1 .and. ix /= cube%n(1))   ) .or. &
                ( (iz == 1 .or. iz == cube%n(3)) .and. (ix /= 1 .and. ix /= cube%n(1) .and. iy /= 1 .and. iy /= cube%n(2))) ) then
@@ -166,8 +163,8 @@ contains
   end function cube_function_surface_average_parallel
 
   ! ---------------------------------------------------------
-  !> This routine computes
-  !! \f$ cube\_function_o = cf_o + e^{-k vec} cf_i \f$
+  ! this routine computes
+  ! cube_function_o = cf_o + exp(-k vec) cf_i
   subroutine cube_function_phase_factor(mesh, vec, cube, cf_i, cf_o)
     type(mesh_t),          intent(in)    :: mesh
     FLOAT,                 intent(in)    :: vec(3)
@@ -190,7 +187,7 @@ contains
       izz = pad_feq(iz, n(3), .true.)
       do iy = 1, n(2)
         iyy = pad_feq(iy, n(2), .true.)
-        do ix = 1, cube%fft%nx
+        do ix = 1, cube%nx
           ixx = pad_feq(ix, n(1), .true.)
 
           cf_o%FS(ix, iy, iz) = cf_o%FS(ix, iy, iz) + &
@@ -203,7 +200,6 @@ contains
   end subroutine cube_function_phase_factor
   
   ! ---------------------------------------------------------
-  !> Nullifies the real space and Fourier space grids
   subroutine cube_function_null(cf)
     type(cube_function_t), intent(out) :: cf
     

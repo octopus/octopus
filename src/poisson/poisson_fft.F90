@@ -86,11 +86,11 @@ contains
     db(1:3) = cube%n(1:3)
 
     ! store the Fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fft%nx, 1:cube%n(2), 1:cube%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
-    do ix = 1, cube%fft%nx
+    do ix = 1, cube%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
       do iy = 1, db(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
@@ -115,7 +115,7 @@ contains
 
     end do
 
-    forall(iz=1:cube%n(3), iy=1:cube%n(2), ix=1:cube%fft%nx)
+    forall(iz=1:cube%n(3), iy=1:cube%n(2), ix=1:cube%nx)
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
@@ -156,12 +156,12 @@ contains
     end if
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fft%nx, 1:cube%n(2), 1:cube%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
-    do ix = 1, cube%fft%nx
+    do ix = 1, cube%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
       gx = temp(1)*ixx(1)
       do iy = 1, db(2)
@@ -190,7 +190,7 @@ contains
 
     end do
 
-    forall(iz=1:cube%n(3), iy=1:cube%n(2), ix=1:cube%fft%nx)
+    forall(iz=1:cube%n(3), iy=1:cube%n(2), ix=1:cube%nx)
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
@@ -233,7 +233,7 @@ contains
     end if
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fft%nx, 1:cube%n(2), 1:cube%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
@@ -245,7 +245,7 @@ contains
     end if
 
 
-    do ix = 1, cube%fft%nx
+    do ix = 1, cube%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
       gx = temp(1)*ixx(1)
 
@@ -309,7 +309,7 @@ contains
       if( mesh%sb%periodic_dim == 0 ) call spline_end(cylinder_cutoff_f)
     end do
 
-    forall(iz=1:cube%n(3), iy=1:cube%n(2), ix=1:cube%fft%nx)
+    forall(iz=1:cube%n(3), iy=1:cube%n(2), ix=1:cube%nx)
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
@@ -356,19 +356,19 @@ contains
 
     ! store the fourier transform of the Coulomb interaction
     ! store only the relevant part if PFFT is used
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fft%fs_n(1),1:cube%fft%fs_n(2),1:cube%fft%fs_n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n(1),1:cube%fs_n(2),1:cube%fs_n(3)))
     fft_Coulb_FS = M_ZERO
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
-    do lx = 1, cube%fft%fs_n(1)
-      ix = cube%fft%fs_istart(1) + lx - 1
+    do lx = 1, cube%fs_n(1)
+      ix = cube%fs_istart(1) + lx - 1
       ixx(1) = pad_feq(ix, db(1), .true.)
       gx = temp(1)*ixx(1)
-      do ly = 1, cube%fft%fs_n(2)
-        iy = cube%fft%fs_istart(2) + ly - 1
+      do ly = 1, cube%fs_n(2)
+        iy = cube%fs_istart(2) + ly - 1
         ixx(2) = pad_feq(iy, db(2), .true.)
-        do lz = 1, cube%fft%fs_n(3)
-          iz = cube%fft%fs_istart(3) + lz - 1
+        do lz = 1, cube%fs_n(3)
+          iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
             
           gg(1:3) = temp(1:3)*ixx(1:3)
@@ -397,7 +397,7 @@ contains
       end do
     end do
 
-    forall(iz=1:cube%fft%fs_n(3), iy=1:cube%fft%fs_n(2), ix=1:cube%fft%fs_n(1))
+    forall(iz=1:cube%fs_n(3), iy=1:cube%fs_n(2), ix=1:cube%fs_n(1))
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
@@ -440,7 +440,7 @@ contains
     call spline_init(besselintf)
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fft%nx, 1:cube%n(2), 1:cube%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(1:2) = M_TWO*M_PI/(db(1:2)*mesh%spacing(1:2))
 
@@ -459,7 +459,7 @@ contains
 
     do iy = 1, db(2)
       ixx(2) = pad_feq(iy, db(2), .true.)
-      do ix = 1, cube%fft%nx
+      do ix = 1, cube%nx
         ixx(1) = pad_feq(ix, db(1), .true.)
         vec = sqrt( (temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
         if (vec > M_ZERO) then
@@ -497,7 +497,7 @@ contains
     r_c = M_TWO * mesh%sb%lsize(2)
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fft%nx, 1:cube%n(2), 1:cube%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(1:2) = M_TWO*M_PI/(db(1:2)*mesh%spacing(1:2))
 
@@ -509,7 +509,7 @@ contains
       fft_coulb_fs(1, iy, 1) = -M_FOUR * poisson_cutoff_intcoslog(r_c, gy, M_ONE )
     end do
 
-    do ix = 2, cube%fft%nx
+    do ix = 2, cube%nx
       ixx(1) = pad_feq(ix, db(1), .true.)
       gx = temp(1)*ixx(1)
       do iy = 1, db(2)
@@ -543,13 +543,13 @@ contains
     db(1:2) = cube%n(1:2)
 
     ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fft%nx, 1:cube%n(2), 1:cube%n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_Coulb_FS = M_ZERO
     temp(1:2) = M_TWO*M_PI/(db(1:2)*mesh%spacing(1:2))
 
     do iy = 1, db(2)
       ixx(2) = pad_feq(iy, db(2), .true.)
-      do ix = 1, cube%fft%nx
+      do ix = 1, cube%nx
         ixx(1) = pad_feq(ix, db(1), .true.)
         vec = sqrt( (temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
         if (vec > M_ZERO) fft_coulb_fs(ix, iy, 1) = M_TWO * M_PI / vec
@@ -576,11 +576,11 @@ contains
 
     PUSH_SUB(poisson_fft_build_1d_1d)
 
-    SAFE_ALLOCATE(fft_coulb_fs(1:cube%fft%nx, 1:cube%n(2), 1:cube%n(3)))
+    SAFE_ALLOCATE(fft_coulb_fs(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_coulb_fs = M_ZERO
 
     ! Fourier transform of Soft Coulomb interaction.
-    do ix = 1, cube%fft%nx
+    do ix = 1, cube%nx
       g = ix*M_PI/mesh%sb%lsize(1) ! note that g is always positive with this definition
       fft_coulb_fs(ix, 1, 1) = M_TWO * loct_bessel_k0(poisson_soft_coulomb_param*g)
     end do
@@ -609,12 +609,12 @@ contains
 
     r_c = box(1)*mesh%spacing(1)/M_TWO
 
-    SAFE_ALLOCATE(fft_coulb_fs(1:cube%fft%nx, 1:cube%n(2), 1:cube%n(3)))
+    SAFE_ALLOCATE(fft_coulb_fs(1:cube%nx, 1:cube%n(2), 1:cube%n(3)))
     fft_coulb_fs = M_ZERO
     temp(1:1) = M_TWO*M_PI/(box(1:1)*mesh%spacing(1:1))
 
     ! Fourier transform of Soft Coulomb interaction.
-    do ix = 1, cube%fft%nx
+    do ix = 1, cube%nx
       ixx(1) = pad_feq(ix, box(1), .true.)
       g = temp(1)*ixx(1)
       fft_coulb_fs(ix, 1, 1) = poisson_cutoff_1D_0D(g, poisson_soft_coulomb_param, r_c)
@@ -648,6 +648,8 @@ contains
 
     logical :: average_to_zero_
     FLOAT :: average
+    type(profile_t), save :: prof_bcast, prof_sct
+    integer :: default_fft_library, fft_library
     type(cube_function_t) :: cf
 
     PUSH_SUB(poisson_fft)

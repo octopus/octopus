@@ -19,9 +19,6 @@
 
 
 ! ---------------------------------------------------------
-!> Allocates locally the real space grid, if PFFT library is not used.
-!! Otherwise, it assigns the PFFT real space grid to the cube real space grid,
-!! via pointer.
 subroutine X(cube_function_alloc_RS)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -31,10 +28,10 @@ subroutine X(cube_function_alloc_RS)(cube, cf)
   ASSERT(.not.associated(cf%X(RS)))
 
   if (cube%fft_library /= FFTLIB_PFFT) then
-    SAFE_ALLOCATE(cf%X(RS)(1:cube%fft%rs_n(1), 1:cube%fft%rs_n(2), 1:cube%fft%rs_n(3)))
+    SAFE_ALLOCATE(cf%X(RS)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
   else
     ASSERT(associated(cube%fft))
-    cf%X(RS) => cube%fft%X(rs_data)(1:cube%fft%rs_n(1), 1:cube%fft%rs_n(2), 1:cube%fft%rs_n(3))
+    cf%X(RS) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
   end if
 
   POP_SUB(X(cube_function_alloc_RS))
@@ -42,7 +39,6 @@ end subroutine X(cube_function_alloc_RS)
 
 
 ! ---------------------------------------------------------
-!> Deallocates the real space grid
 subroutine X(cube_function_free_RS)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -103,7 +99,6 @@ end subroutine X(cube_function_allgather)
 ! ---------------------------------------------------------
 !> The next two subroutines convert a function between the normal
 !! mesh and the cube.
-!!
 !! Note that the function in the mesh should be defined
 !! globally, not just in a partition (when running in
 !! parallel in real-space domains).
@@ -266,7 +261,6 @@ end subroutine X(cube_to_mesh)
 ! ---------------------------------------------------------
 !> The next two subroutines convert a function between the normal
 !! mesh and the cube in parallel.
-!!
 !! ``Note that the function in the mesh should be defined
 !! globally, not just in a partition (when running in
 !! parallel in real-space domains).``
@@ -281,7 +275,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
 
   integer :: ip, ix, iy, iz, center(3)
   integer :: im, ii, nn
-  integer :: min_x, min_y, min_z, max_x, max_y, max_z
+  integer :: min_x, min_y, min_z, max_x, max_y, max_z, index
   logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)
 
@@ -308,15 +302,15 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
   center(1:3) = cube%n(1:3)/2 + 1
 
   ! Save the limit values
-  min_x = cube%fft%rs_istart(1)
-  min_y = cube%fft%rs_istart(2)
-  min_z = cube%fft%rs_istart(3)
-  max_x = cube%fft%rs_istart(1) + cube%fft%rs_n(1)
-  max_y = cube%fft%rs_istart(2) + cube%fft%rs_n(2)
-  max_z = cube%fft%rs_istart(3) + cube%fft%rs_n(3)
+  min_x = cube%rs_istart(1)
+  min_y = cube%rs_istart(2)
+  min_z = cube%rs_istart(3)
+  max_x = cube%rs_istart(1) + cube%rs_n(1)
+  max_y = cube%rs_istart(2) + cube%rs_n(2)
+  max_z = cube%rs_istart(3) + cube%rs_n(3)
   
   ! Initialize to zero the input matrix
-  forall(iz = 1:cube%fft%rs_n(3), iy = 1:cube%fft%rs_n(2), ix = 1:cube%fft%rs_n(1)) cf%X(RS)(ix, iy, iz) = M_ZERO
+  forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%X(RS)(ix, iy, iz) = M_ZERO
 
   ! Do the actual transform, only for the output values
   do im = 1, mesh%cube_map%nmap
@@ -360,11 +354,11 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
   type(cube_t),          intent(in)  :: cube
   type(cube_function_t), intent(in)  :: cf
   type(mesh_t),          intent(in)  :: mesh
-  R_TYPE, target,        intent(out) :: mf(:)  !< mf(mesh%np_global)
+  R_TYPE, target,        intent(out) :: mf(:)  ! mf(mesh%np_global)
   logical, optional,     intent(in)  :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
   logical, optional,     intent(in)  :: pfft_part !< If .true. the used partition is the pfft equal partition
 
-  integer :: ip, im, ii, nn, center(3), ixyz(3), lxyz(3)
+  integer :: ip, im, ii, nn, index, center(3), ixyz(3), lxyz(3)
   integer :: last, first
   logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)
