@@ -5,8 +5,8 @@ dnl Check if the library was given in the command line
 AC_ARG_WITH(berkeleygw-prefix, [AS_HELP_STRING([--with-berkeleygw-prefix=DIR], [Directory where BerkeleyGW was installed.])])
 case $with_berkeleygw_prefix in
   no ) acx_berkeleygw_ok=disabled ;;
-  *) LIBS_BERKELEYGW="-L$with_berkeleygw_prefix/Common -lBGW_wfn"; 
-     FCFLAGS_BERKELEYGW="$ax_cv_f90_modflag$with_berkeleygw_prefix/Common" ;;
+  *) LIBS_BERKELEYGW="-L$with_berkeleygw_prefix/library -lBGW_wfn"; 
+     FCFLAGS_BERKELEYGW="$ax_cv_f90_modflag$with_berkeleygw_prefix/library" ;;
 esac
 
 dnl Backup LIBS and FCFLAGS

@@ -67,12 +67,15 @@ module output_m
   use unit_system_m
   use utils_m
   use varinfo_m
+#if defined(HAVE_BERKELEYGW)
+  use wfn_rho_vxc_io_m,  only : write_binary_header
+#endif
   use young_m
 
   implicit none
 
   private
-  public ::                    &
+  public ::              &
     output_t,            &
     output_init,         &
     output_states,       &
@@ -82,6 +85,16 @@ module output_m
     output_current_flow, &
     doutput_lr,          &
     zoutput_lr
+
+  type output_bgw_t
+    integer           :: nbands
+    integer           :: vxc_diag_nmin
+    integer           :: vxc_diag_nmax
+    integer           :: vxc_offdiag_nmin
+    integer           :: vxc_offdiag_nmax
+    logical           :: complex
+    character(len=80) :: wfn_filename
+  end type output_bgw_t
 
   type output_t
     ! General output variables:
@@ -98,6 +111,8 @@ module output_m
 
     type(mesh_plane_t) :: plane    ! This is to calculate the current flow across a plane
     type(mesh_line_t)  :: line     ! or though a line (in 2D)
+
+    type(output_bgw_t) :: bgw      ! parameters for BerkeleyGW output
 
   end type output_t
 
@@ -127,8 +142,8 @@ module output_m
     C_OUTPUT_XC_DENSITY      =  4194304,    &
     C_OUTPUT_PES_WFS         =  8388608,    &
     C_OUTPUT_PES_DENSITY     = 16777216,    &
-    C_OUTPUT_PES             = 33554432
-
+    C_OUTPUT_PES             = 33554432,    &
+    C_OUTPUT_BERKELEYGW      = 67108864
 
 contains
 
@@ -255,6 +270,8 @@ contains
     !% spin-polarized calculation is performed. 
     !%Option PES 33554432   
     !% Outputs the time-dependent photoelectron spectrum.
+    !%Option BerkeleyGW 67108864
+    !% Output for a run with BerkeleyGW (<tt>www.berkeleygw.org</tt>). See <tt>Output::BerkeleyGW</tt> for further specification.
     !%End
     call parse_integer(datasets_check('Output'), 0, outp%what)
 
@@ -436,6 +453,10 @@ contains
 
     if(iand(outp%what, C_OUTPUT_MATRIX_ELEMENTS) .ne. 0) then
       call output_me_init(outp%me, sb)
+    end if
+
+    if(iand(outp%what, C_OUTPUT_BERKELEYGW) .ne. 0) then
+      call output_berkeleygw_init(nst, outp%bgw)
     end if
 
     !%Variable OutputEvery
@@ -684,6 +705,7 @@ contains
 
 
 #include "output_etsf_inc.F90"
+#include "output_berkeleygw_inc.F90"
 
 #include "output_states_inc.F90"
 #include "output_h_inc.F90"
