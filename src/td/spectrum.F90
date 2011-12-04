@@ -24,6 +24,7 @@ module spectrum_m
   use c_pointer_m
   use compressed_sensing_m
   use datasets_m
+  use fft_m
   use global_m
   use io_m
   use kick_m
@@ -95,8 +96,10 @@ module spectrum_m
 
   ! Module variables, necessary to compute the function hsfunction, called by
   ! the C function loct_1dminimize
-  FLOAT :: time_step_
-  CMPLX, allocatable :: func_(:),func_ar_(:,:),pos_(:,:),tret_(:)
+  integer :: niter_
+  FLOAT :: time_step_, energy_step_
+  CMPLX, allocatable :: func_(:),func_ar_(:,:),pos_(:,:),tret_(:), funcw_(:)
+  type(fft_t) :: fft_handler
   CMPLX :: vv_(MAX_DIM)
   integer :: is_, ie_, default
 
@@ -888,19 +891,32 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hsfunction_init(dt, is, ie, niter, acc)!, from_vel)
+  subroutine spectrum_hsfunction_init(dt, is, ie, niter, acc)
     FLOAT,   intent(in)           :: dt
     integer, intent(in)           :: is, ie, niter
     CMPLX,   intent(in)           :: acc(:)
+
+    integer :: nn(3), j
 
     PUSH_SUB(spectrum_hsfunction_init)
 
     is_ = is
     ie_ = ie
     time_step_ = dt
+    niter_ = niter
+    energy_step_ = (M_TWO * M_PI) / (niter * time_step_)
     SAFE_ALLOCATE(func_(0:niter))
+    SAFE_ALLOCATE(funcw_(0:niter))
+    func_ = M_z0
     func_ = acc
-    
+    nn(1:3) = (/ niter, 1, 1 /)
+
+    call fft_init(fft_handler, nn(1:3), 1, M_ONE, FFT_COMPLEX, FFTLIB_FFTW, optimize = .false.)
+    call zfft_forward1(fft_handler, func_(0:niter-1), funcw_(0:niter-1))
+    do j = 0, niter - 1
+      funcw_(j) = -abs(funcw_(j))**2 * dt**2
+    end do
+
     POP_SUB(spectrum_hsfunction_init)
   end subroutine spectrum_hsfunction_init
   ! ---------------------------------------------------------
@@ -911,41 +927,52 @@ contains
 
     PUSH_SUB(spectrum_hsfunction_end)
 
+    call fft_end(fft_handler)
+
     SAFE_DEALLOCATE_A(func_)
+    SAFE_DEALLOCATE_A(funcw_)
     POP_SUB(spectrum_hsfunction_end)
   end subroutine spectrum_hsfunction_end
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hsfunction_min(aa, bb, dw, omega, omega_min, func_min)
-    FLOAT, intent(in)  :: aa, bb, omega, dw
+  subroutine spectrum_hsfunction_min(aa, bb, omega, omega_min, func_min)
+    FLOAT, intent(in)  :: aa, bb, omega
     FLOAT, intent(out) :: omega_min, func_min
 
-    integer :: ierr
+    integer :: ierr, ie
     FLOAT :: xx, hsval, minhsval, ww, xa, xb, hxa, hxb
 
     PUSH_SUB(spectrum_hsfunction_min)
 
     ! xx should be an initial guess for the minimum. So we do a quick search
     ! that we refine later calling 1dminimize.
-    xx = omega
-    call hsfunction(xx, minhsval)
-    ww = aa
-    do while(ww<bb)
-      call hsfunction(ww, hsval)
+    !xx = omega
+    !call hsfunction(xx, minhsval)
+
+    ie = int(aa/energy_step_)
+    ww = ie * energy_step_
+    if(ww < aa) then
+      ie = ie + 1
+      ww = ie * energy_step_
+    end if
+    minhsval = real(funcw_(ie))
+    do while(ww <= bb)
+      hsval = real(funcw_(ie))
       if(hsval < minhsval) then
         minhsval = hsval
         xx = ww
       end if
-      ww = ww + dw
-    end do 
+      ie = ie + 1
+      ww = ie * energy_step_
+    end do
 
     ! Around xx, we call some GSL sophisticated search algorithm to find the minimum.
 #ifndef SINGLE_PRECISION
     ! First, we get the value of the function at the extremes of the interval
-    xa = max(xx-CNST(10.0)*dw, aa)
-    xb = min(xx+CNST(10.0)*dw, bb)
+    xa = max(xx-energy_step_, aa)
+    xb = min(xx+energy_step_, bb)
     call hsfunction(xa, hxa)
     call hsfunction(xb, hxb)
 
@@ -1524,7 +1551,7 @@ contains
       ! output
       omega = w0
       do while(omega <= spectrum%max_energy)
-        call spectrum_hsfunction_min(omega - w0, omega + w0, spectrum%energy_step, omega, xx, hsval)
+        call spectrum_hsfunction_min(omega - w0, omega + w0, omega, xx, hsval)
 
         write(iunit, '(1x,2e20.8)') units_from_atomic(units_out%energy, xx), &
           units_from_atomic((units_out%length / units_out%time)**2, -hsval)

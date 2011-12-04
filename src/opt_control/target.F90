@@ -1192,15 +1192,14 @@ module opt_control_target_m
 
       maxiter = size(target%td_fitness) - 1
       SAFE_ALLOCATE(ddipole(0:maxiter))
-
+      ddipole = M_z0
       ddipole = target%td_fitness
 
       call spectrum_hsfunction_init(target%dt, 0, maxiter, maxiter, ddipole)
       do jj = 1, target%hhg_nks
         aa = target%hhg_a(jj) * target%hhg_w0
         ww = target%hhg_k(jj) * target%hhg_w0
-        call spectrum_hsfunction_min(ww - aa, ww + aa, &
-          (M_TWO*M_PI / maxiter*target%dt)/20, ww, omega, maxhh)
+        call spectrum_hsfunction_min(ww - aa, ww + aa, ww, omega, maxhh)
         j1 = j1 + target%hhg_alpha(jj) * log(-maxhh)
       end do
       call spectrum_hsfunction_end()
