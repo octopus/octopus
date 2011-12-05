@@ -492,11 +492,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_all(outp, gr, geo, st, hm, dir)
+  subroutine output_all(outp, gr, geo, st, hm, xc, dir)
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(in)    :: hm
+    type(xc_t),           intent(in)    :: xc
     type(output_t),       intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
 
@@ -531,6 +532,10 @@ contains
 
     if (iand(outp%how, C_OUTPUT_HOW_ETSF) .ne. 0) then
       call output_etsf(st, gr, geo, dir, outp)
+    end if
+
+    if (iand(outp%how, C_OUTPUT_BERKELEYGW) .ne. 0) then
+      call output_berkeleygw(outp%bgw, dir, st, gr, xc)
     end if
     
     POP_SUB(output_all)
@@ -705,13 +710,15 @@ contains
     POP_SUB(calc_electronic_pressure)
   end subroutine calc_electronic_pressure
 
+
+  ! ---------------------------------------------------------
   subroutine output_berkeleygw_init(nst, bgw)
     integer,            intent(in)  :: nst
     type(output_bgw_t), intent(out) :: bgw
   
     PUSH_SUB(output_berkeleygw_init)
   
-    ! conditions to die: spinors, not 3D, parallel in states or k-points (if spin-polarized)
+    ! conditions to die: spinors, not 3D, parallel in states or k-points (if spin-polarized), non-local functionals
 
 #ifndef HAVE_BERKELEYGW
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
@@ -784,6 +791,30 @@ contains
   
     POP_SUB(output_berkeleygw_init)
   end subroutine output_berkeleygw_init
+
+
+  ! ---------------------------------------------------------
+  subroutine output_berkeleygw(bgw, dir, st, gr, xc)
+    type(output_bgw_t), intent(in) :: bgw
+    character(len=*),   intent(in) :: dir
+    type(states_t),     intent(in) :: st
+    type(grid_t),       intent(in) :: gr
+    type(xc_t),         intent(in) :: xc
+
+    PUSH_SUB(output_berkeleygw)
+
+    if(states_are_real(st)) then
+      call dbgw_vxc_dat(bgw, dir, st, gr, xc)
+    else
+      call zbgw_vxc_dat(bgw, dir, st, gr, xc)
+    endif
+
+    ! vxc
+    ! rho
+    ! wfns
+
+    POP_SUB(output_berkeleygw)
+  end subroutine output_berkeleygw
 
 #include "output_etsf_inc.F90"
 

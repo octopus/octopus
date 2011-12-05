@@ -73,11 +73,11 @@ contains
        
     call read_target_rho()
 
-    hm%energy%intnvxc     = M_ZERO
+    hm%energy%intnvxc = M_ZERO
     hm%energy%hartree = M_ZERO
-    hm%energy%exchange       = M_ZERO
-    hm%energy%correlation       = M_ZERO
-    hm%vxc      = M_ZERO
+    hm%energy%exchange = M_ZERO
+    hm%energy%correlation = M_ZERO
+    hm%vxc = M_ZERO
 
     ! calculate total density
     
@@ -136,7 +136,7 @@ contains
     call messages_info(1)
 
     ! output for all cases    
-    call output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, STATIC_DIR)
+    call output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, sys%ks%xc, STATIC_DIR)
         
     ! save files in restart format
     call restart_write(trim(tmpdir) // GS_DIR, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)

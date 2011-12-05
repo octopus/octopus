@@ -57,6 +57,7 @@ module td_write_m
   use unit_system_m
   use varinfo_m
   use write_iter_m
+  use xc_m
 
   implicit none
 
@@ -496,11 +497,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_data(writ, gr, st, hm, outp, geo, iter)
+  subroutine td_write_data(writ, gr, st, hm, xc, outp, geo, iter)
     type(td_write_t),     intent(in)    :: writ
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(in)    :: hm
+    type(xc_t),           intent(in)    :: xc
     type(output_t),       intent(in)    :: outp
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: iter
@@ -525,7 +527,7 @@ contains
     ! this is required if st%X(psi) is used
     call states_sync(st)
 
-    call output_all(outp, gr, geo, st, hm, filename)
+    call output_all(outp, gr, geo, st, hm, xc, filename)
 
     call profiling_out(prof)
     POP_SUB(td_write_data)

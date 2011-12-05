@@ -425,7 +425,7 @@ contains
       if(gs_run_) then 
         ! output final information
         call scf_write_static(STATIC_DIR, "info")
-        call output_all(outp, gr, geo, st, hm, STATIC_DIR)
+        call output_all(outp, gr, geo, st, hm, ks%xc, STATIC_DIR)
       end if
 
       POP_SUB(scf_run)
@@ -642,7 +642,7 @@ contains
 
       if(outp%duringscf .and. gs_run_) then
         write(dirname,'(a,i4.4)') "scf.",iter
-        call output_all(outp, gr, geo, st, hm, dirname)
+        call output_all(outp, gr, geo, st, hm, ks%xc, dirname)
       end if
 
       ! save information for the next iteration
@@ -694,7 +694,7 @@ contains
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
-      call output_all(outp, gr, geo, st, hm, STATIC_DIR)
+      call output_all(outp, gr, geo, st, hm, ks%xc, STATIC_DIR)
 
       ! write part of the source term s(0)
       if(gr%ob_grid%open_boundaries) call states_write_proj_lead_wf(gr%sb, 'open_boundaries/', gr%intf, st)

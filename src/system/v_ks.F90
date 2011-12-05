@@ -227,7 +227,7 @@ contains
         
         !%Variable XCTailCorrectionTol
         !%Type float
-        !%Default 5-e12
+        !%Default 5e-12
         !%Section Hamiltonian::XC
         !%Description
         !%This variable sets the total electronic density threshold corresponding
@@ -818,7 +818,7 @@ contains
         SAFE_DEALLOCATE_P(hm%hf_st)
         hm%hf_st => ks%calc%hf_st
 
-        select  case(ks%theory_level)
+        select case(ks%theory_level)
         case(HARTREE_FOCK)
           hm%exx_coef = ks%xc%exx_coef
         case(HARTREE)

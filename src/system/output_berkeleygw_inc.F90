@@ -17,10 +17,9 @@
 !!
 !! $Id: output_etsf_inc.F90 5880 2009-09-03 23:44:44Z dstrubbe $
 
-#ifdef HAVE_BERKELEYGW
-
-subroutine X(bgw_vxc_dat)(bgw, st, gr, xc)
+subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
   type(output_bgw_t), intent(in) :: bgw
+  character(len=*),   intent(in) :: dir
   type(states_t),     intent(in) :: st
   type(grid_t),       intent(in) :: gr
   type(xc_t),         intent(in) :: xc
@@ -34,7 +33,9 @@ subroutine X(bgw_vxc_dat)(bgw, st, gr, xc)
 
   PUSH_SUB(X(bgw_vxc_dat))
 
-  if(mpi_grp_is_root(mpi_world)) iunit = io_open('vxc.dat', action='write')
+#ifdef HAVE_BERKELEYGW
+
+  if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', action='write')
   ndiag = bgw%vxc_diag_nmax - bgw%vxc_diag_nmin + 1
   SAFE_ALLOCATE(psi(gr%mesh%np))
   noffdiag = bgw%vxc_offdiag_nmax - bgw%vxc_offdiag_nmin + 1
@@ -45,7 +46,7 @@ subroutine X(bgw_vxc_dat)(bgw, st, gr, xc)
   endif
   SAFE_ALLOCATE(mtxel(ndiag + noffdiag, st%d%nspin))
 
-  ! BerkeleyGW allows using only spin down, but we won't give that option here
+  ! BerkeleyGW allows using only spin down, but we will not give that option here
   do ispin = 1, st%d%nspin
     spin_index(ispin) = ispin
   enddo
@@ -64,8 +65,11 @@ subroutine X(bgw_vxc_dat)(bgw, st, gr, xc)
     enddo
   enddo
 
+  ! we should not include core rho here. that is why we do not just use hm%vxc
   call xc_get_vxc(gr%fine%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc = vxc)
-
+  ! in case of hybrids, we should apply exchange operator too here
+  ! in that case, we can write x.dat file as well
+  
   do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
     kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ik)
 
@@ -97,11 +101,14 @@ subroutine X(bgw_vxc_dat)(bgw, st, gr, xc)
   endif
   SAFE_DEALLOCATE_A(mtxel)
 
+#else
+    message(1) = "Cannot do BerkeleyGW output: the library was not linked."
+    call messages_fatal(1)
+#endif
+
   POP_SUB(output_berkeleygw_init)
 
 end subroutine X(bgw_vxc_dat)
-
-#endif ! HAVE_BERKELEYGW
 
 !! Local Variables:
 !! mode: f90
