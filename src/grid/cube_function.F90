@@ -68,8 +68,8 @@ module cube_function_m
 contains
 
   ! ---------------------------------------------------------
-  ! This function calculates the surface average of any function.
-  ! \warning: Some more careful testing should be done on this.
+  !> This function calculates the surface average of any function.
+  !! \warning Some more careful testing should be done on this.
   FLOAT function cube_function_surface_average(cube, cf) result(x)
     type(cube_t),          intent(in) :: cube
     type(cube_function_t), intent(in) :: cf
@@ -125,6 +125,9 @@ contains
     POP_SUB(cube_function_surface_average)
   end function cube_function_surface_average
 
+  ! ---------------------------------------------------------
+  !> This function calculates in parallel the surface average of any function.
+  !! \warning Some more careful testing should be done on this.
   FLOAT function cube_function_surface_average_parallel(cube, cf) result(x)
     type(cube_t),          intent(in) :: cube
     type(cube_function_t), intent(in) :: cf
@@ -163,8 +166,8 @@ contains
   end function cube_function_surface_average_parallel
 
   ! ---------------------------------------------------------
-  ! this routine computes
-  ! cube_function_o = cf_o + exp(-k vec) cf_i
+  !> This routine computes
+  !! \f$ cube\_function_o = cf_o + e^{-k vec} cf_i \f$
   subroutine cube_function_phase_factor(mesh, vec, cube, cf_i, cf_o)
     type(mesh_t),          intent(in)    :: mesh
     FLOAT,                 intent(in)    :: vec(3)
@@ -200,6 +203,7 @@ contains
   end subroutine cube_function_phase_factor
   
   ! ---------------------------------------------------------
+  !> Nullifies the real space and Fourier space grids
   subroutine cube_function_null(cf)
     type(cube_function_t), intent(out) :: cf
     

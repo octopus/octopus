@@ -648,8 +648,6 @@ contains
 
     logical :: average_to_zero_
     FLOAT :: average
-    type(profile_t), save :: prof_bcast, prof_sct
-    integer :: default_fft_library, fft_library
     type(cube_function_t) :: cf
 
     PUSH_SUB(poisson_fft)

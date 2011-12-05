@@ -87,10 +87,10 @@ module fft_m
     integer     :: rs_istart(1:3) !< where does the local portion of the function start in real space
     integer     :: fs_istart(1:3) !< where does the local portion of the function start in fourier space
 
-    type(c_ptr) :: planf                  ! plan for forward transform
-    type(c_ptr) :: planb                  ! plan for backward transform
-    integer(ptrdiff_t_kind) :: pfft_planf ! PFFT plan for forward transform
-    integer(ptrdiff_t_kind) :: pfft_planb ! PFFT plan for backward transform
+    type(c_ptr) :: planf                  !< plan for forward transform
+    type(c_ptr) :: planb                  !< plan for backward transform
+    integer(ptrdiff_t_kind) :: pfft_planf !< PFFT plan for forward transform
+    integer(ptrdiff_t_kind) :: pfft_planb !< PFFT plan for backward transform
 
     ! The next arrays have to be stored here and allocated in the initialization routine because
     ! PFFT 

@@ -17,6 +17,9 @@
 !!
 !! $Id$
 
+!> Allocates locally the Fourier space grid, if PFFT library is not used.
+!! Otherwise, it assigns the PFFT Fourier space grid to the cube Fourier space grid,
+!! via pointer.
 subroutine X(cube_function_alloc_FS)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -37,6 +40,7 @@ end subroutine X(cube_function_alloc_FS)
 
 
 ! ---------------------------------------------------------
+!> Deallocates the Fourier space grid
 subroutine X(cube_function_free_FS)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -110,6 +114,8 @@ subroutine X(fourier_space_op_init)(this, cube, op)
 end subroutine X(fourier_space_op_init)
 
 ! ---------------------------------------------------------
+!> Applies a multiplication factor to the Fourier space grid.
+!! This is a local function.
 subroutine X(fourier_space_op_apply)(this, cube, cf)
   type(fourier_space_op_t), intent(in)     :: this
   type(cube_t),             intent(inout)  :: cube
@@ -166,14 +172,15 @@ end subroutine X(fourier_space_op_apply)
 
 ! ---------------------------------------------------------
 !> The next two subroutines convert a function in Fourier space
-!! between the normal mesh and the cube
+!! between the normal mesh and the cube.
+!!
 !! Note that the function in the mesh should be defined
 !! globally, not just in a partition (when running in
 !! parallel in real-space domains).
 ! ---------------------------------------------------------
 subroutine X(mesh_to_fourier) (mesh, mf, cube, cf)
   type(mesh_t),  intent(in)    :: mesh
-  CMPLX,         intent(in)    :: mf(:)   ! mf(mesh%np_global)
+  CMPLX,         intent(in)    :: mf(:)   !< mf(mesh%np_global)
   type(cube_t),  intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
@@ -203,7 +210,7 @@ subroutine X(fourier_to_mesh) (cube, cf, mesh, mf)
   type(cube_t),  intent(in)  :: cube
   type(cube_function_t), intent(in)  :: cf
   type(mesh_t),  intent(in)  :: mesh
-  CMPLX,         intent(out) :: mf(:) ! mf(mesh%np_global)
+  CMPLX,         intent(out) :: mf(:) !< mf(mesh%np_global)
 
   integer :: ip, ix, iy, iz
 

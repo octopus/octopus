@@ -19,6 +19,9 @@
 
 
 ! ---------------------------------------------------------
+!> Allocates locally the real space grid, if PFFT library is not used.
+!! Otherwise, it assigns the PFFT real space grid to the cube real space grid,
+!! via pointer.
 subroutine X(cube_function_alloc_RS)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -39,6 +42,7 @@ end subroutine X(cube_function_alloc_RS)
 
 
 ! ---------------------------------------------------------
+!> Deallocates the real space grid
 subroutine X(cube_function_free_RS)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -99,6 +103,7 @@ end subroutine X(cube_function_allgather)
 ! ---------------------------------------------------------
 !> The next two subroutines convert a function between the normal
 !! mesh and the cube.
+!!
 !! Note that the function in the mesh should be defined
 !! globally, not just in a partition (when running in
 !! parallel in real-space domains).
@@ -261,6 +266,7 @@ end subroutine X(cube_to_mesh)
 ! ---------------------------------------------------------
 !> The next two subroutines convert a function between the normal
 !! mesh and the cube in parallel.
+!!
 !! ``Note that the function in the mesh should be defined
 !! globally, not just in a partition (when running in
 !! parallel in real-space domains).``
@@ -275,7 +281,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
 
   integer :: ip, ix, iy, iz, center(3)
   integer :: im, ii, nn
-  integer :: min_x, min_y, min_z, max_x, max_y, max_z, index
+  integer :: min_x, min_y, min_z, max_x, max_y, max_z
   logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)
 
@@ -354,11 +360,11 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
   type(cube_t),          intent(in)  :: cube
   type(cube_function_t), intent(in)  :: cf
   type(mesh_t),          intent(in)  :: mesh
-  R_TYPE, target,        intent(out) :: mf(:)  ! mf(mesh%np_global)
+  R_TYPE, target,        intent(out) :: mf(:)  !< mf(mesh%np_global)
   logical, optional,     intent(in)  :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
   logical, optional,     intent(in)  :: pfft_part !< If .true. the used partition is the pfft equal partition
 
-  integer :: ip, im, ii, nn, index, center(3), ixyz(3), lxyz(3)
+  integer :: ip, im, ii, nn, center(3), ixyz(3), lxyz(3)
   integer :: last, first
   logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)

@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira, J. Alberdi
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -159,7 +159,7 @@ end subroutine  cube_init
   end subroutine  cube_end
 
   !> True if global coordinates belong to this process. On output
-  !> lxyz contains the local coordinates
+  !! lxyz contains the local coordinates
   logical function cube_global2local(cube, ixyz, lxyz) result(is_here)
     type(cube_t), intent(in)  :: cube
     integer,      intent(in)  :: ixyz(3) !< global coordinates
