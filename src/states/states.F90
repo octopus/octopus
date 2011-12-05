@@ -1885,7 +1885,7 @@ contains
   subroutine states_calc_quantities(der, st, &
     kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, gi_kinetic_energy_density)
     type(derivatives_t),     intent(in)    :: der
-    type(states_t),          intent(inout) :: st
+    type(states_t),          intent(in)    :: st
     FLOAT, optional, target, intent(out)   :: kinetic_energy_density(:,:)       !< The kinetic energy density.
     FLOAT, optional, target, intent(out)   :: paramagnetic_current(:,:,:)       !< The paramagnetic current.
     FLOAT, optional,         intent(out)   :: density_gradient(:,:,:)           !< The gradient of the density.

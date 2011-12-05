@@ -71,6 +71,7 @@ module output_m
   use wfn_rho_vxc_io_m
 #endif
   use young_m
+  use xc_m
 
   implicit none
 
@@ -704,9 +705,87 @@ contains
     POP_SUB(calc_electronic_pressure)
   end subroutine calc_electronic_pressure
 
+  subroutine output_berkeleygw_init(nst, bgw)
+    integer,            intent(in)  :: nst
+    type(output_bgw_t), intent(out) :: bgw
+  
+    PUSH_SUB(output_berkeleygw_init)
+  
+    ! conditions to die: spinors, not 3D, parallel in states or k-points (if spin-polarized)
+
+#ifndef HAVE_BERKELEYGW
+    message(1) = "Cannot do BerkeleyGW output: the library was not linked."
+    call messages_fatal(1)
+#endif
+  
+    !%Variable BerkeleyGW_NumberBands
+    !%Type integer
+    !%Default all states
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Wavefunctions for bands up to this number will be output.
+    !%End
+    call parse_integer(datasets_check('BerkeleyGW_NumberBands'), nst, bgw%nbands)
+  
+    !%Variable BerkeleyGW_Vxc_diag_nmin
+    !%Type integer
+    !%Default 1
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Lowest band for which to write diagonal exchange-correlation matrix elements.
+    !%End
+    call parse_integer(datasets_check('BerkeleyGW_Vxc_diag_nmin'), 1, bgw%vxc_diag_nmin)
+    
+    !%Variable BerkeleyGW_Vxc_diag_nmax
+    !%Type integer
+    !%Default nst
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Highest band for which to write diagonal exchange-correlation matrix elements.
+    !%End
+    call parse_integer(datasets_check('BerkeleyGW_Vxc_diag_nmax'), nst, bgw%vxc_diag_nmax)
+    
+    !%Variable BerkeleyGW_Vxc_offdiag_nmin
+    !%Type integer
+    !%Default 1
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Lowest band for which to write off-diagonal exchange-correlation matrix elements.
+    !%End
+    call parse_integer(datasets_check('BerkeleyGW_Vxc_offdiag_nmin'), 1, bgw%vxc_offdiag_nmin)
+    
+    !%Variable BerkeleyGW_Vxc_offdiag_nmax
+    !%Type integer
+    !%Default nst
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Highest band for which to write off-diagonal exchange-correlation matrix elements.
+    !%End
+    call parse_integer(datasets_check('BerkeleyGW_Vxc_offdiag_nmax'), nst, bgw%vxc_offdiag_nmax)
+    
+    !%Variable BerkeleyGW_Complex
+    !%Type logical
+    !%Default false
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Even when wavefunctions, density, and XC potential could be real in reciprocal space,
+    !% they will be output as complex.
+    !%End
+    call parse_logical(datasets_check('BerkeleyGW_Complex'), .false., bgw%complex)
+    
+    !%Variable BerkeleyGW_WFN_filename
+    !%Type string
+    !%Default WFN
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Filename for the wavefunctions.
+    !%End
+    call parse_string(datasets_check('BerkeleyGW_WFN_filename'), 'WFN', bgw%wfn_filename)
+  
+    POP_SUB(output_berkeleygw_init)
+  end subroutine output_berkeleygw_init
 
 #include "output_etsf_inc.F90"
-#include "output_berkeleygw_inc.F90"
 
 #include "output_states_inc.F90"
 #include "output_h_inc.F90"
@@ -714,10 +793,12 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "output_linear_response_inc.F90"
+#include "output_berkeleygw_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
 #include "output_linear_response_inc.F90"
+#include "output_berkeleygw_inc.F90"
 
 end module output_m
 

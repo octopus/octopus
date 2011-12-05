@@ -376,14 +376,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine v_ks_calc(ks, hm, st, geo, calc_eigenval, time, calc_berry, calc_energy)
-    type(v_ks_t),           intent(inout) :: ks
-    type(hamiltonian_t),    intent(inout) :: hm
-    type(states_t),         intent(inout) :: st
+    type(v_ks_t),               intent(inout) :: ks
+    type(hamiltonian_t),        intent(inout) :: hm
+    type(states_t),             intent(inout) :: st
     type(geometry_t), optional, intent(in)    :: geo
-    logical,      optional, intent(in)    :: calc_eigenval
-    FLOAT,        optional, intent(in)    :: time
-    logical,      optional, intent(in)    :: calc_berry ! use this before wfns initialized
-    logical,      optional, intent(in)    :: calc_energy
+    logical,          optional, intent(in)    :: calc_eigenval
+    FLOAT,            optional, intent(in)    :: time
+    logical,          optional, intent(in)    :: calc_berry ! use this before wfns initialized
+    logical,          optional, intent(in)    :: calc_energy
     
     call v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy)
     call v_ks_calc_finish(ks, hm)

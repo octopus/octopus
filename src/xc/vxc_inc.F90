@@ -19,9 +19,9 @@
 
 ! ---------------------------------------------------------
 subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vtau)
-  type(derivatives_t),  intent(inout) :: der             !< Discretization and the derivative operators and details
+  type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
-  type(states_t),       intent(inout) :: st              !< State of the system (wavefunction,eigenvalues...)
+  type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
   FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
   integer,              intent(in)    :: ispin           !< Number of spin channels 
   FLOAT,                intent(in)    :: ioniz_pot
