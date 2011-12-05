@@ -56,7 +56,7 @@ cl_device.o    : cl_device.F90 cl_types.o config_F90.h
 cl_context.o   : cl_context.F90 cl_types.o config_F90.h
 cl_command_queue.o : cl_command_queue.F90 cl_types.o config_F90.h
 cl_buffer.o    : cl_buffer.F90  cl_types.o config_F90.h
-cl.o : cl.F90 cl_constants.F90 cl_types.o cl_device.o cl_kernel.o cl_program.o cl_platform.o cl_context.o cl_command_queue.o cl_buffer.o
+cl.o : cl.F90 cl_constants.o cl_types.o cl_device.o cl_kernel.o cl_program.o cl_platform.o cl_context.o cl_command_queue.o cl_buffer.o
 
 config_F90.h: $(top_builddir)/config.h
 	grep '^#define' $^ > config_F90.h
