@@ -239,7 +239,7 @@ contains
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do idir = 1, gr%mesh%sb%dim
                 gpsi(:,idir) = gpsi(:, idir)*gr%mesh%spacing(idir)**2 * &
-                     real(cube_tmp%n(idir), REAL_PRECISION)/(M_TWO*M_PI)
+                     real(cube_tmp%rs_n_global(idir), REAL_PRECISION)/(M_TWO*M_PI)
               end do
             else
               call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
@@ -247,7 +247,7 @@ contains
               call zderivatives_grad(gr%der, psi_fs(:), gpsi)
               do idir = 1, gr%mesh%sb%dim
                 gpsi(:, idir) = gpsi(:, idir)*gr%mesh%spacing(idir)**2 * &
-                     real(cube_tmp%n(idir), REAL_PRECISION)/(M_TWO*M_PI)
+                     real(cube_tmp%rs_n_global(idir), REAL_PRECISION)/(M_TWO*M_PI)
               end do
             end if
 

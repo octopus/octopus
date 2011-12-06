@@ -193,10 +193,10 @@ subroutine X(mesh_to_fourier) (mesh, mf, cube, cf)
   cf%FS = M_z0
 
   do ip = 1, mesh%np_global
-    ix = pad_feq(mesh%idx%lxyz(ip, 1), cube%n(1), .false.)
-    if(ix > cube%nx) cycle ! negative frequencies are redundant
-    iy = pad_feq(mesh%idx%lxyz(ip, 2), cube%n(2), .false.)
-    iz = pad_feq(mesh%idx%lxyz(ip, 3), cube%n(3), .false.)
+    ix = pad_feq(mesh%idx%lxyz(ip, 1), cube%rs_n_global(1), .false.)
+    if(ix > cube%fs_n_global(1)) cycle ! negative frequencies are redundant
+    iy = pad_feq(mesh%idx%lxyz(ip, 2), cube%rs_n_global(2), .false.)
+    iz = pad_feq(mesh%idx%lxyz(ip, 3), cube%rs_n_global(3), .false.)
 
     cf%FS(ix, iy, iz) = mf(ip)
   end do
@@ -219,13 +219,13 @@ subroutine X(fourier_to_mesh) (cube, cf, mesh, mf)
   ASSERT(associated(cf%FS))
 
   do ip = 1, mesh%np_global
-    ix = pad_feq(mesh%idx%lxyz(ip, 1), cube%n(1), .false.)
-    iy = pad_feq(mesh%idx%lxyz(ip, 2), cube%n(2), .false.)
-    iz = pad_feq(mesh%idx%lxyz(ip, 3), cube%n(3), .false.)
+    ix = pad_feq(mesh%idx%lxyz(ip, 1), cube%rs_n_global(1), .false.)
+    iy = pad_feq(mesh%idx%lxyz(ip, 2), cube%rs_n_global(2), .false.)
+    iz = pad_feq(mesh%idx%lxyz(ip, 3), cube%rs_n_global(3), .false.)
 
 #ifdef R_TREAL
-    if(ix > cube%nx) then
-      ix = pad_feq(-mesh%idx%lxyz(ip, 1), cube%n(1), .false.)
+    if(ix > cube%fs_n_global(1)) then
+      ix = pad_feq(-mesh%idx%lxyz(ip, 1), cube%rs_n_global(1), .false.)
       mf(ip) = conjg(cf%FS(ix, iy, iz))
     else
       mf(ip) = cf%FS(ix, iy, iz)

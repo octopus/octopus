@@ -94,7 +94,7 @@ contains
 #endif
 
     type(stencil_t) :: stencil
-    integer :: ip, center(3)
+    integer :: ip
     integer :: im, ii, nn
     integer :: stencil_to_use, default_method, method
     integer :: library
@@ -375,10 +375,9 @@ contains
     case(PFFT_PART)
 #ifdef HAVE_PFFT
       part = 0
-      center(1:3) = cube%n(1:3)/2 + 1
       do ip = 1, mesh%np_global
         call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix(1:3))
-        ix(1:3) = ix(1:3) + center(1:3)
+        ix(1:3) = ix(1:3) + cube%center(1:3)
         part(ip) = cube%part(ix(1), ix(2), ix(3))
       end do
 #endif

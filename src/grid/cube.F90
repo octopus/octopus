@@ -42,9 +42,6 @@ module cube_m
     cube_end
 
   type cube_t
-    integer :: n(1:3)      !< the global dimensions of the cube
-    integer :: nx          ! = n(1)/2 + 1, first dimension of the FS array
-
     logical :: parallel_in_domains !< will the cube be divided in domains?
     type(mpi_grp_t) :: mpi_grp     !< the mpi group describing parallelization in domains
 
@@ -54,15 +51,15 @@ module cube_m
     integer :: fs_n(1:3)        !< the dimensions of the local portion of the cube in fourier space
     integer :: rs_istart(1:3)   !< where does the local portion of the cube start in real space
     integer :: fs_istart(1:3)   !< where does the local portion of the cube start in fourier space
+    integer :: center(1:3)      !< the coordinates of the center of the cube
 
     integer, pointer :: part(:,:,:) !< point -> partition
     integer, pointer :: np_local(:) !< Number of points in each partition
     integer, pointer :: xlocal(:)   !< where does each process start when gathering a function
     integer, pointer :: local(:,:)  !< local to global map used when gathering a function
 
-    integer :: fft_library !< library used to perform the fft
-    integer :: fft_type    !< real or complex fft
-    type(fft_t), pointer :: fft
+    integer :: fft_library      !< library used to perform the fft
+    type(fft_t), pointer :: fft !< the fft object
   end type cube_t
 
 contains
@@ -74,17 +71,17 @@ contains
     type(simul_box_t), intent(in)  :: sb
     integer, optional, intent(in)  :: fft_type !< Is the cube going to be used to perform FFTs?
 
-    integer :: mpi_comm, tmp_n(3)
+    integer :: mpi_comm, tmp_n(3), fft_type_
 
     PUSH_SUB(cube_init)
 
     ASSERT(all(n(1:3) > 0))
 
-    cube%fft_type = optional_default(fft_type, FFT_NONE)
+    fft_type_ = optional_default(fft_type, FFT_NONE)
 
     nullify(cube%fft)
 
-    if (cube%fft_type /= FFT_NONE) then
+    if (fft_type_ /= FFT_NONE) then
       !%Variable FFTLibrary
       !%Type logical
       !%Section Hamiltonian::Poisson
@@ -107,12 +104,10 @@ contains
       cube%fft_library = FFTLIB_NONE
     end if
 
-    cube%n = n
     cube%parallel_in_domains = cube%fft_library == FFTLIB_PFFT
     if (cube%fft_library == FFTLIB_NONE) then
-      cube%nx = n(1)
-      cube%rs_n_global = cube%n
-      cube%fs_n_global = cube%n
+      cube%rs_n_global = n
+      cube%fs_n_global = n
       cube%rs_n = cube%rs_n_global
       cube%fs_n = cube%fs_n_global
       cube%rs_istart = 1
@@ -121,14 +116,13 @@ contains
     else
       SAFE_ALLOCATE(cube%fft)
       tmp_n = n
-      call fft_init(cube%fft, tmp_n, sb%dim, sb%fft_alpha, cube%fft_type, cube%fft_library, &
+      call fft_init(cube%fft, tmp_n, sb%dim, sb%fft_alpha, fft_type_, cube%fft_library, &
            mpi_comm=mpi_comm, optimize = .not.simul_box_is_periodic(sb))
 
       call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
            cube%rs_istart, cube%fs_istart)
-      cube%n = cube%rs_n_global
-      cube%nx = cube%fs_n_global(1)
     end if
+    cube%center(1:3) = cube%rs_n_global(1:3)/2 + 1
 
     call mpi_grp_init(cube%mpi_grp, mpi_comm)
 
@@ -209,10 +203,10 @@ end subroutine  cube_init
 
     call profiling_in(prof_map,"CUBE_MAP")
 
-    SAFE_ALLOCATE(cube%part(cube%n(1), cube%n(2), cube%n(3)))
+    SAFE_ALLOCATE(cube%part(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
     SAFE_ALLOCATE(cube%xlocal(cube%mpi_grp%size))
     SAFE_ALLOCATE(cube%np_local(cube%mpi_grp%size))
-    SAFE_ALLOCATE(cube%local(cube%n(1)*cube%n(2)*cube%n(3), 3))
+    SAFE_ALLOCATE(cube%local(cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), 3))
 
     index = 1
     do process = 1, cube%mpi_grp%size
@@ -271,9 +265,9 @@ end subroutine  cube_init
 
         iunit = io_open('debug/cube_partition/cube_partition.'//filenum, &
              action='write')
-        do kk = 1, cube%n(3)
-          do jj = 1, cube%n(2)
-            do ii = 1, cube%n(1)
+        do kk = 1, cube%rs_n_global(3)
+          do jj = 1, cube%rs_n_global(2)
+            do ii = 1, cube%rs_n_global(1)
               if(cube%part(ii, jj, kk) .eq. nn) write(iunit, '(3i8)') ii, jj, kk
             end do
           end do

@@ -59,21 +59,21 @@ contains
 
     PUSH_SUB(fourier_shell_init)
 
-    dg(1:3) = M_PI/(cube%n(1:3)/2*mesh%spacing(1:3))
-    gmax2 = (dg(1)*(cube%n(1)/2))**2
+    dg(1:3) = M_PI/(cube%rs_n_global(1:3)/2*mesh%spacing(1:3))
+    gmax2 = (dg(1)*(cube%rs_n_global(1)/2))**2
     this%ekin_cutoff = gmax2/M_TWO
 
-    SAFE_ALLOCATE(modg2(1:product(cube%n(1:3))))
-    SAFE_ALLOCATE(ucoords(1:3, product(cube%n(1:3))))
-    SAFE_ALLOCATE(ured_gvec(1:3, product(cube%n(1:3))))
+    SAFE_ALLOCATE(modg2(1:product(cube%rs_n_global(1:3))))
+    SAFE_ALLOCATE(ucoords(1:3, product(cube%rs_n_global(1:3))))
+    SAFE_ALLOCATE(ured_gvec(1:3, product(cube%rs_n_global(1:3))))
     
     ig = 0
-    do ix = 1, cube%n(1)
-      ixx(1) = pad_feq(ix, cube%n(1), .true.)
-      do iy = 1, cube%n(2)
-        ixx(2) = pad_feq(iy, cube%n(2), .true.)
-        do iz = 1, cube%n(3)
-          ixx(3) = pad_feq(iz, cube%n(3), .true.)
+    do ix = 1, cube%rs_n_global(1)
+      ixx(1) = pad_feq(ix, cube%rs_n_global(1), .true.)
+      do iy = 1, cube%rs_n_global(2)
+        ixx(2) = pad_feq(iy, cube%rs_n_global(2), .true.)
+        do iz = 1, cube%rs_n_global(3)
+          ixx(3) = pad_feq(iz, cube%rs_n_global(3), .true.)
 
           gvec(1:3) = dg(1:3)*ixx(1:3)
           if(sum(gvec(1:3)**2) <= gmax2 + CNST(1e-10)) then

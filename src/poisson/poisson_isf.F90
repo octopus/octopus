@@ -107,7 +107,7 @@ contains
 
     if(.not. mesh%parallel_in_domains) then
       ! The serial version is always needed (as used, e.g., in the casida runmode)
-      call calculate_dimensions(cube%n(1), cube%n(2), cube%n(3), &
+      call calculate_dimensions(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), &
         this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3)
 
       n1 = this%cnf(SERIAL)%nfft1/2 + 1
@@ -116,7 +116,7 @@ contains
 
       SAFE_ALLOCATE(this%cnf(SERIAL)%kernel(1:n1, 1:n2, 1:n3))
 
-      call build_kernel(cube%n(1), cube%n(2), cube%n(3),   &
+      call build_kernel(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3),   &
         this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3, &
         real(mesh%spacing(1), 8), order_scaling_function, this%cnf(SERIAL)%kernel)
     end if
@@ -183,7 +183,7 @@ contains
         cycle
       end if
       if (this%cnf(i_cnf)%mpi_grp%rank /= -1 .or. i_cnf /= WORLD ) then
-        call par_calculate_dimensions(cube%n(1), cube%n(2), cube%n(3), &
+        call par_calculate_dimensions(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), &
           m1, m2, m3, n1, n2, n3, md1, md2, md3, this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, &
           this%cnf(i_cnf)%nfft3, this%cnf(i_cnf)%mpi_grp%size)
 
@@ -194,7 +194,7 @@ contains
 
         SAFE_ALLOCATE(this%cnf(i_cnf)%kernel(1:n(1), 1:n(2), 1:n(3)/this%cnf(i_cnf)%mpi_grp%size))
 
-        call par_build_kernel(cube%n(1), cube%n(2), cube%n(3), n1, n2, n3,     &
+        call par_build_kernel(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), n1, n2, n3,     &
           this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, this%cnf(i_cnf)%nfft3,                      &
           mesh%spacing(1), order_scaling_function,                                            &
           this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm, &
@@ -251,13 +251,13 @@ contains
     if(i_cnf == SERIAL) then
 
 #ifdef SINGLE_PRECISION
-      SAFE_ALLOCATE(rhop(1:cube%n(1), 1:cube%n(2), 1:cube%n(3)))
+      SAFE_ALLOCATE(rhop(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
       rhop = rho_cf%dRS
 #else
       rhop => rho_cf%dRS
 #endif
 
-      call psolver_kernel(cube%n(1), cube%n(2), cube%n(3),    &
+      call psolver_kernel(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3),    &
         this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3, &
         real(mesh%spacing(1), 8), this%cnf(SERIAL)%kernel, rhop)
 
@@ -269,7 +269,7 @@ contains
 #if defined(HAVE_MPI)
     else
       if (this%cnf(i_cnf)%mpi_grp%size /= -1 .or. i_cnf /= WORLD) then
-        call par_psolver_kernel(cube%n(1), cube%n(2), cube%n(3), &
+        call par_psolver_kernel(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), &
           this%cnf(i_cnf)%nfft1, this%cnf(i_cnf)%nfft2, this%cnf(i_cnf)%nfft3,  &
           real(mesh%spacing(1), 8), this%cnf(i_cnf)%kernel, rho_cf%dRS,                      &
           this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm)
@@ -277,7 +277,7 @@ contains
       ! we need to be sure that the root of every domain-partition has a copy of the potential
       ! for the moment we broadcast to all nodes, but this is more than what we really need 
       if(i_cnf == WORLD .and. .not. this%cnf(WORLD)%all_nodes) then
-        call MPI_Bcast(rho_cf%drs(1, 1, 1), cube%n(1)*cube%n(2)*cube%n(3), &
+        call MPI_Bcast(rho_cf%drs(1, 1, 1), cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), &
           MPI_FLOAT, 0, this%all_nodes_comm, mpi_err)
       end if
 #endif

@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
+ !! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -213,75 +213,75 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
 
     if(mesh%sb%dim == 1) then
       SAFE_ALLOCATE(x_in(1:dims(1), 1:1))
-      SAFE_ALLOCATE(x_out(1:cube%n(1), 1:1))
+      SAFE_ALLOCATE(x_out(1:cube%rs_n_global(1), 1:1))
       
       do ii = 1, dims(1)
-        x_in(ii,:) = (/ real(ii-1)*(real(cube%n(1)-1)/(dims(1)-1)) /)
+        x_in(ii,:) = (/ real(ii-1)*(real(cube%rs_n_global(1)-1)/(dims(1)-1)) /)
       end do
 
       
-      do ii = 1, cube%n(1)
+      do ii = 1, cube%rs_n_global(1)
         x_out(ii,1) = real(ii-1)
       end do
         
       call X(mf_interpolate_points)(2, int(dims(1),4), x_in(:,:),&
-           &read_ff, cube%n(1), x_out(:,:), ff)
+           &read_ff, cube%rs_n_global(1), x_out(:,:), ff)
            
       SAFE_DEALLOCATE_A(x_in)
       SAFE_DEALLOCATE_A(x_out)
       
     else if(mesh%sb%dim == 2) then
       SAFE_ALLOCATE(x_in(1:(dims(1)*dims(2)), 1:2))
-      SAFE_ALLOCATE(x_out(1:(cube%n(1)*cube%n(2)), 1:2))
+      SAFE_ALLOCATE(x_out(1:(cube%rs_n_global(1)*cube%rs_n_global(2)), 1:2))
       
       do ii = 1, dims(2)
         do jj = 1, dims(1)
           x_in((ii-1)*dims(1) + jj,:) = & 
-              &(/ real(jj-1)*(real(cube%n(1)-1)/(dims(1)-1)),&
-              &   real(ii-1)*(real(cube%n(2)-1)/(dims(2)-1)) /)
+              &(/ real(jj-1)*(real(cube%rs_n_global(1)-1)/(dims(1)-1)),&
+              &   real(ii-1)*(real(cube%rs_n_global(2)-1)/(dims(2)-1)) /)
         end do
       end do
       
-      do ii = 1, cube%n(2)
-        do jj = 1, cube%n(1)
-          x_out((ii-1)*cube%n(1) + jj,:) = (/ real(jj-1), real(ii-1) /)
+      do ii = 1, cube%rs_n_global(2)
+        do jj = 1, cube%rs_n_global(1)
+          x_out((ii-1)*cube%rs_n_global(1) + jj,:) = (/ real(jj-1), real(ii-1) /)
         end do
       end do
       call X(mf_interpolate_points)(2, int(dims(1)*dims(2),4), x_in(:,:),&
-           &read_ff, cube%n(1)*cube%n(2), x_out(:,:), ff)
+           &read_ff, cube%rs_n_global(1)*cube%rs_n_global(2), x_out(:,:), ff)
            
       SAFE_DEALLOCATE_A(x_in)
       SAFE_DEALLOCATE_A(x_out)
     else if(mesh%sb%dim == 3) then
       SAFE_ALLOCATE(x_in(1:(dims(1)*dims(2)*dims(3)), 1:3))
-      SAFE_ALLOCATE(x_out(1:(cube%n(1)*cube%n(2)*cube%n(3)), 1:3))
+      SAFE_ALLOCATE(x_out(1:(cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)), 1:3))
       
       do ii = 1, dims(3)
         do jj = 1, dims(2)
           do kk = 1, dims(1)
             x_in((ii-1)*dims(1)*dims(2) + (jj-1)*dims(1) + kk,:) = &
-              &(/ real(kk-1)*(real(cube%n(1)-1)/(dims(1)-1))  ,&
-              &   real(jj-1)*(real(cube%n(2)-1)/(dims(2)-1))  ,&
-              &   real(ii-1)*(real(cube%n(3)-1)/(dims(3)-1))  /)
+              &(/ real(kk-1)*(real(cube%rs_n_global(1)-1)/(dims(1)-1))  ,&
+              &   real(jj-1)*(real(cube%rs_n_global(2)-1)/(dims(2)-1))  ,&
+              &   real(ii-1)*(real(cube%rs_n_global(3)-1)/(dims(3)-1))  /)
           end do
         end do
       end do
     
-      do ii = 1, cube%n(3)
-        do jj = 1, cube%n(2)
-          do kk = 1, cube%n(1)
-            x_out((ii-1)*cube%n(1)*cube%n(2) + (jj-1)*cube%n(1) + kk,:) = &
+      do ii = 1, cube%rs_n_global(3)
+        do jj = 1, cube%rs_n_global(2)
+          do kk = 1, cube%rs_n_global(1)
+            x_out((ii-1)*cube%rs_n_global(1)*cube%rs_n_global(2) + (jj-1)*cube%rs_n_global(1) + kk,:) = &
               &(/ real(kk-1), real(jj-1), real(ii-1) /)
             end do
           end do
         end do
       call X(mf_interpolate_points)(3, int(dims(1)*dims(2)*dims(3),4), x_in(:,:),&
-           &read_ff, cube%n(1)*cube%n(2)*cube%n(3), x_out(:,:), ff)
+           &read_ff, cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), x_out(:,:), ff)
       SAFE_DEALLOCATE_A(x_in)
       SAFE_DEALLOCATE_A(x_out)
     end if
     
-    cf%X(RS) = reshape(ff, (/ cube%n(1), cube%n(2), cube%n(3) /))
+    cf%X(RS) = reshape(ff, (/ cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3) /))
     
     call X(cube_to_mesh) (cube, cf, mesh, ff)
     call X(cube_function_free_RS)(cube, cf)
@@ -335,9 +335,9 @@ contains
       status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(1))
       call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     end if
-    if((ndim(1) .ne. cube%n(1)) .or. &
-      (ndim(2) .ne. cube%n(2)) .or. &
-      (ndim(3) .ne. cube%n(3))) then
+    if((ndim(1) .ne. cube%rs_n_global(1)) .or. &
+      (ndim(2) .ne. cube%rs_n_global(2)) .or. &
+      (ndim(3) .ne. cube%rs_n_global(3))) then
       ierr = 12
       POP_SUB(X(io_function_input_global).read_netcdf)
       return
@@ -378,7 +378,7 @@ contains
       end select
     end if
 
-    SAFE_ALLOCATE(xx(1:cube%n(3), 1:cube%n(2), 1:cube%n(1)))
+    SAFE_ALLOCATE(xx(1:cube%rs_n_global(3), 1:cube%rs_n_global(2), 1:cube%rs_n_global(1)))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
       select case(mesh%sb%dim)
@@ -865,16 +865,16 @@ contains
     offset(1:3) = units_from_atomic(units_out%length, -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)))
 
     do idir = mesh%sb%periodic_dim+1, 3
-      offset(idir) = units_from_atomic(units_out%length, -(cube%n(idir) - 1)/2*mesh%spacing(idir))
+      offset(idir) = units_from_atomic(units_out%length, -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir))
     end do
 
     ! just for nice formatting of the output
-    write(nitems,*) cube%n(1)*cube%n(2)*cube%n(3)
+    write(nitems,*) cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
     nitems=trim(adjustl(nitems))
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".dx", action='write', is_tmp=is_tmp)
 
-    write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%n(1:3)
+    write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%rs_n_global(1:3)
     write(iunit, '(a,3f12.6)') ' origin', offset(1:3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
                                            mesh%spacing(1)*mesh%sb%rlattice_primitive(idir, 1)), idir = 1, 3)
@@ -882,15 +882,15 @@ contains
                                            mesh%spacing(2)*mesh%sb%rlattice_primitive(idir, 2)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
                                            mesh%spacing(3)*mesh%sb%rlattice_primitive(idir, 3)), idir = 1, 3)
-    write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%n(1:3)
+    write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%rs_n_global(1:3)
 #if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ', nitems, ' data follows'
 #else
     write(iunit, '(a,a,a)') 'object 3 class array type float category complex rank 0 items ', nitems, ' data follows'
 #endif
-    do ix = 1, cube%n(1)
-      do iy = 1, cube%n(2)
-        do iz = 1, cube%n(3)
+    do ix = 1, cube%rs_n_global(1)
+      do iy = 1, cube%rs_n_global(2)
+        do iz = 1, cube%rs_n_global(3)
           write(iunit,'(2f25.15)') units_from_atomic(unit, cf%X(RS)(ix, iy, iz))
         end do
       end do
@@ -933,7 +933,7 @@ contains
     offset(1:3) = units_from_atomic(units_out%length, -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)))
 
     do idir = mesh%sb%periodic_dim+1, 3
-      offset(idir) = units_from_atomic(units_out%length, -(cube%n(idir) - 1)/2*mesh%spacing(idir))
+      offset(idir) = units_from_atomic(units_out%length, -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir))
     end do
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".cube", action='write', is_tmp=is_tmp)
@@ -942,7 +942,7 @@ contains
     write(iunit, '(4a)') 'svn: ', trim(conf%latest_svn), " build: ",  trim(conf%build_time)
     write(iunit, '(i5,3f12.6)') geo%natoms, offset(1:3)
     do idir = 1, 3
-      write(iunit, '(i5,3f12.6)') cube%n(idir), (units_from_atomic(units_out%length, &
+      write(iunit, '(i5,3f12.6)') cube%rs_n_global(idir), (units_from_atomic(units_out%length, &
         mesh%spacing(idir)*mesh%sb%rlattice_primitive(idir2, idir)), idir2 = 1, 3)
     end do
     do iatom = 1, geo%natoms
@@ -950,9 +950,9 @@ contains
         (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir)), idir = 1, 3)
     end do
 
-    do ix = 1, cube%n(1)
-      do iy = 1, cube%n(2)
-        do iz = 1, cube%n(3)
+    do ix = 1, cube%rs_n_global(1)
+      do iy = 1, cube%rs_n_global(2)
+        do iz = 1, cube%rs_n_global(3)
           write(iunit,'(e14.6)', advance='no') units_from_atomic(unit, R_REAL(cf%X(RS)(ix, iy, iz)))
           if(mod(iz-1, 6) == 5)  write(iunit, '(1x)')
         end do
@@ -1119,17 +1119,17 @@ contains
 
     ! dimensions
     if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "dim_1", cube%n(3), dim_data_id(1))
+      status = nf90_def_dim (ncid, "dim_1", cube%rs_n_global(3), dim_data_id(1))
       call ncdf_error('nf90_def_dim', status, filename, ierr)
     end if
 
     if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "dim_2", cube%n(2), dim_data_id(2))
+      status = nf90_def_dim (ncid, "dim_2", cube%rs_n_global(2), dim_data_id(2))
       call ncdf_error('nf90_def_dim', status, filename, ierr)
     end if
 
     if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "dim_3", cube%n(1), dim_data_id(3))
+      status = nf90_def_dim (ncid, "dim_3", cube%rs_n_global(1), dim_data_id(3))
       call ncdf_error('nf90_der_dim', status, filename, ierr)
     end if
 
@@ -1201,7 +1201,7 @@ contains
     ! data
     pos(:,:) = M_ZERO
     pos(1, 1:mesh%sb%dim) = &
-      real(units_from_atomic(units_out%length, - (cube%n(1:mesh%sb%dim) - 1)/2*mesh%spacing(1:mesh%sb%dim)), 4)
+      real(units_from_atomic(units_out%length, - (cube%rs_n_global(1:mesh%sb%dim) - 1)/2*mesh%spacing(1:mesh%sb%dim)), 4)
     pos(2, 1:mesh%sb%dim) = real(units_from_atomic(units_out%length, mesh%spacing(1:mesh%sb%dim)), 4)
 
     if(status == NF90_NOERR) then
@@ -1209,7 +1209,7 @@ contains
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 
-    SAFE_ALLOCATE(xx(1:cube%n(3), 1:cube%n(2), 1:cube%n(1)))
+    SAFE_ALLOCATE(xx(1:cube%rs_n_global(3), 1:cube%rs_n_global(2), 1:cube%rs_n_global(1)))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
       call transpose3(real(cf%X(RS), REAL_PRECISION), xx)

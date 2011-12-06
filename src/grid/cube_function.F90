@@ -46,7 +46,6 @@ module cube_function_m
     dcube_function_free_RS,        &
     zcube_function_free_RS,        &
     cube_function_surface_average, &
-    cube_function_surface_average_parallel, &
     cube_function_phase_factor,    &
     dmesh_to_cube_parallel,        &
     zmesh_to_cube_parallel,        &
@@ -74,68 +73,10 @@ contains
     type(cube_t),          intent(in) :: cube
     type(cube_function_t), intent(in) :: cf
 
-    integer :: ix, iy, iz, npoints
-    x = M_ZERO
-
-    PUSH_SUB(cube_function_surface_average)
-
-    do iy = 2, cube%n(2) - 1
-      do iz = 2, cube%n(3) - 1
-        x = x + (cf%dRS(1, iy, iz) + cf%dRS(cube%n(1), iy, iz))
-      end do
-    end do
-
-    do ix = 2, cube%n(1) - 1
-      do iz = 2, cube%n(3) - 1
-        x = x + (cf%dRS(ix, 1, iz) + cf%dRS(ix, cube%n(2), iz))
-      end do
-    end do
-
-    do ix = 2, cube%n(1) - 1
-      do iy = 2, cube%n(2) - 1
-        x = x + (cf%dRS(ix, iy, 1) + cf%dRS(ix, iy, cube%n(3)))
-      end do
-    end do
-
-    do iz = 2, cube%n(3) - 1
-      x = x + cf%dRS(1, 1, iz) + cf%dRS(cube%n(1), 1, iz) + &
-        cf%dRS(1, cube%n(2), iz) + cf%dRS(cube%n(1), cube%n(2), 1)
-    end do
-
-    do iy = 2, cube%n(2) - 1
-      x = x + cf%dRS(1, iy, 1) + cf%dRS(cube%n(1), iy, 1) + &
-        cf%dRS(1, iy, cube%n(3)) + cf%dRS(cube%n(1), iy, cube%n(3))
-    end do
-
-    do ix = 2, cube%n(1) - 1
-      x = x + cf%dRS(ix, 1, 1) + cf%dRS(ix, cube%n(2), 1) + &
-        cf%dRS(ix, 1, cube%n(3)) + cf%dRS(ix, cube%n(2), cube%n(3))
-    end do
-
-    x = x + cf%dRS(1, 1, 1)           + cf%dRS(cube%n(1), 1, 1) + &
-      cf%dRS(1, cube%n(2), 1)         + cf%dRS(cube%n(1), cube%n(2), 1) + &
-      cf%dRS(1, 1, cube%n(3))         + cf%dRS(cube%n(1), 1, cube%n(3)) + &
-      cf%dRS(1, cube%n(2), cube%n(3)) + cf%dRS(cube%n(1), cube%n(2), cube%n(3))
-
-    npoints = 2*(cube%n(1)-2)**2 + 4*(cube%n(1)-2) + &
-              2*(cube%n(2)-2)**2 + 4*(cube%n(2)-2) + &
-              2*(cube%n(3)-2)**2 + 4*(cube%n(3)-2) + 8
-    x = x/npoints
-
-    POP_SUB(cube_function_surface_average)
-  end function cube_function_surface_average
-
-  ! ---------------------------------------------------------
-  !> This function calculates in parallel the surface average of any function.
-  !! \warning Some more careful testing should be done on this.
-  FLOAT function cube_function_surface_average_parallel(cube, cf) result(x)
-    type(cube_t),          intent(in) :: cube
-    type(cube_function_t), intent(in) :: cf
-
     integer :: ii, jj, kk, ix, iy, iz, npoints
     FLOAT :: tmp_x
 
-    PUSH_SUB(cube_function_surface_average_parallel)
+    PUSH_SUB(cube_function_surface_average)
 
     tmp_x = M_ZERO
     do ii = 1, cube%rs_n(1)
@@ -144,26 +85,32 @@ contains
           ix = ii + cube%rs_istart(1) - 1
           iy = jj + cube%rs_istart(2) - 1
           iz = kk + cube%rs_istart(3) - 1
-          if ( (ix == 1 .or. ix == cube%n(1)                                          ) .or. &
-               ( (iy == 1 .or. iy == cube%n(2)) .and. (ix /= 1 .and. ix /= cube%n(1))   ) .or. &
-               ( (iz == 1 .or. iz == cube%n(3)) .and. (ix /= 1 .and. ix /= cube%n(1) .and. iy /= 1 .and. iy /= cube%n(2))) ) then
+          if ( (ix == 1 .or. ix == cube%rs_n_global(1) ) .or. &
+               ( (iy == 1 .or. iy == cube%rs_n_global(2)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1)) ) .or. &
+               ( (iz == 1 .or. iz == cube%rs_n_global(3)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1) .and. &
+                 iy /= 1 .and. iy /= cube%rs_n_global(2))) ) then
             tmp_x = tmp_x + cf%dRS(ii, jj, kk)
           end if
         end do
       end do
     end do
 
+    
+    if (cube%parallel_in_domains) then
 #ifdef HAVE_MPI
-    call MPI_Allreduce(tmp_x, x, 1, MPI_FLOAT, MPI_SUM, cube%mpi_grp%comm, mpi_err)
+      call MPI_Allreduce(tmp_x, x, 1, MPI_FLOAT, MPI_SUM, cube%mpi_grp%comm, mpi_err)
 #endif
+    else
+      x = tmp_x
+    end if
 
-    npoints = 2*(cube%n(1)-2)**2 + 4*(cube%n(1)-2) + &
-              2*(cube%n(2)-2)**2 + 4*(cube%n(2)-2) + &
-              2*(cube%n(3)-2)**2 + 4*(cube%n(3)-2) + 8
+    npoints = 2*(cube%rs_n_global(1)-2)**2 + 4*(cube%rs_n_global(1)-2) + &
+              2*(cube%rs_n_global(2)-2)**2 + 4*(cube%rs_n_global(2)-2) + &
+              2*(cube%rs_n_global(3)-2)**2 + 4*(cube%rs_n_global(3)-2) + 8
     x = x/npoints
 
-    POP_SUB(cube_function_surface_average_parallel)
-  end function cube_function_surface_average_parallel
+    POP_SUB(cube_function_surface_average)
+  end function cube_function_surface_average
 
   ! ---------------------------------------------------------
   !> This routine computes
@@ -181,16 +128,17 @@ contains
     PUSH_SUB(cube_function_phase_factor)
 
     ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))
+    ASSERT(.not. cube%parallel_in_domains)
 
     k = M_z0
-    k(1:mesh%sb%dim) = M_zI * ((M_TWO*M_Pi)/(cube%n(1:mesh%sb%dim)*mesh%spacing(1:mesh%sb%dim)))
+    k(1:mesh%sb%dim) = M_zI * ((M_TWO*M_Pi)/(cube%rs_n_global(1:mesh%sb%dim)*mesh%spacing(1:mesh%sb%dim)))
 
-    n  = cube%n
+    n  = cube%fs_n_global
     do iz = 1, n(3)
       izz = pad_feq(iz, n(3), .true.)
       do iy = 1, n(2)
         iyy = pad_feq(iy, n(2), .true.)
-        do ix = 1, cube%nx
+        do ix = 1, n(1)
           ixx = pad_feq(ix, n(1), .true.)
 
           cf_o%FS(ix, iy, iz) = cf_o%FS(ix, iy, iz) + &

@@ -72,7 +72,7 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local)
   PUSH_SUB(X(cube_function_allgather))
   call profiling_in(prof_allgather, "CF_ALLGATHER")
 
-  SAFE_ALLOCATE(cf_tmp(cube%n(1)*cube%n(2)*cube%n(3)))
+  SAFE_ALLOCATE(cf_tmp(cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)))
 
   call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
   ! Warning: in the next line we have to pass the full cf_local array, not just the first element.
@@ -85,7 +85,7 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local)
   call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
 
   ! Copy values to cf in the correct order
-  do index = 1, cube%n(1)*cube%n(2)*cube%n(3)
+  do index = 1, cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
     ix = cube%local(index, 1)
     iy = cube%local(index, 2)
     iz = cube%local(index, 3)
@@ -117,7 +117,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   type(cube_function_t), intent(inout) :: cf
   logical, optional,     intent(in)    :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
 
-  integer :: ip, ix, iy, iz, center(3), ixyz(1:3)
+  integer :: ip, ix, iy, iz, ixyz(1:3)
   integer :: im, ii, nn
   logical :: local_
   R_TYPE, pointer :: gmf(:)
@@ -140,8 +140,6 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 
   ASSERT(associated(cf%X(RS)))
 
-  center(1:3) = cube%n(1:3)/2 + 1
-
   cf%X(RS) = M_ZERO
 
   ASSERT(associated(mesh%cube_map%map))
@@ -153,9 +151,9 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
-      ix = mesh%idx%lxyz(ip, 1) + center(1)
-      iy = mesh%idx%lxyz(ip, 2) + center(2)
-      iz = mesh%idx%lxyz(ip, 3) + center(3)
+      ix = mesh%idx%lxyz(ip, 1) + cube%center(1)
+      iy = mesh%idx%lxyz(ip, 2) + cube%center(2)
+      iz = mesh%idx%lxyz(ip, 3) + cube%center(3)
       forall(ii = 0:nn - 1) cf%X(RS)(ix, iy, iz + ii) = gmf(ip + ii)
     end do
 
@@ -167,7 +165,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
-      ixyz = ixyz + center
+      ixyz = ixyz + cube%center
       forall(ii = 0:nn - 1) cf%X(RS)(ixyz(1), ixyz(2), ixyz(3) + ii) = gmf(ip + ii)
     end do
 
@@ -192,7 +190,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
                                               !< mf(mesh%np) or mf(mesh%np_global), depending if it is a local or global function
   logical, optional,     intent(in)  :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
 
-  integer :: ip, ix, iy, iz, center(3), ixyz(1:3)
+  integer :: ip, ix, iy, iz, ixyz(1:3)
   integer :: im, ii, nn, last, first
   logical :: local_
   R_TYPE, pointer :: gmf(:)
@@ -212,9 +210,6 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   end if
 
   ASSERT(associated(cf%X(RS)))
-
-  center(1:3) = cube%n(1:3)/2 + 1
-
   ASSERT(associated(mesh%cube_map%map))
 
   if(associated(mesh%idx%lxyz)) then
@@ -222,9 +217,9 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
     do im = 1, mesh%cube_map%nmap
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
-      ix = mesh%idx%lxyz(ip, 1) + center(1)
-      iy = mesh%idx%lxyz(ip, 2) + center(2)
-      iz = mesh%idx%lxyz(ip, 3) + center(3)
+      ix = mesh%idx%lxyz(ip, 1) + cube%center(1)
+      iy = mesh%idx%lxyz(ip, 2) + cube%center(2)
+      iz = mesh%idx%lxyz(ip, 3) + cube%center(3)
       forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(RS)(ix, iy, iz + ii)
     end do
 
@@ -237,7 +232,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
-      ixyz = ixyz + center
+      ixyz = ixyz + cube%center
 
       forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(RS)(ixyz(1), ixyz(2), ixyz(3) + ii)
     end do
@@ -279,7 +274,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
   logical, optional,     intent(in)    :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
   logical, optional,     intent(in)    :: pfft_part !< If .true. the used partition is the pfft equal partition
 
-  integer :: ip, ix, iy, iz, center(3)
+  integer :: ip, ix, iy, iz
   integer :: im, ii, nn
   integer :: min_x, min_y, min_z, max_x, max_y, max_z
   logical :: local_, pfft_part_
@@ -305,8 +300,6 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
     end if
   end if
 
-  center(1:3) = cube%n(1:3)/2 + 1
-
   ! Save the limit values
   min_x = cube%rs_istart(1)
   min_y = cube%rs_istart(2)
@@ -323,11 +316,11 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
     ip = mesh%cube_map%map(MCM_POINT, im)
     nn = mesh%cube_map%map(MCM_COUNT, im)
     
-    ix = mesh%idx%lxyz(ip, 1) + center(1)
+    ix = mesh%idx%lxyz(ip, 1) + cube%center(1)
     if (ix >= min_x .and. ix < max_x) then
-      iy = mesh%idx%lxyz(ip, 2) + center(2)
+      iy = mesh%idx%lxyz(ip, 2) + cube%center(2)
       if (iy >= min_y .and. iy < max_y) then
-        iz = mesh%idx%lxyz(ip, 3) + center(3)
+        iz = mesh%idx%lxyz(ip, 3) + cube%center(3)
         do ii = 0, nn - 1
           if (iz+ii >= min_z .and. iz+ii < max_z) then
 
@@ -364,7 +357,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
   logical, optional,     intent(in)  :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
   logical, optional,     intent(in)  :: pfft_part !< If .true. the used partition is the pfft equal partition
 
-  integer :: ip, im, ii, nn, center(3), ixyz(3), lxyz(3)
+  integer :: ip, im, ii, nn, ixyz(3), lxyz(3)
   integer :: last, first
   logical :: local_, pfft_part_
   R_TYPE, pointer :: gmf(:)
@@ -388,8 +381,6 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
     end if
   end if
   
-  center(1:3) = cube%n(1:3)/2 + 1
-
   if (pfft_part_) then
 
     do im = 1, mesh%cube_map%nmap
@@ -397,7 +388,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
       do ii = 0, nn - 1
-        ixyz(1:3) = mesh%idx%lxyz(ip + ii, 1:3) + center(1:3)
+        ixyz(1:3) = mesh%idx%lxyz(ip + ii, 1:3) + cube%center(1:3)
 
         if (cube_global2local(cube, ixyz, lxyz)) then
 #ifdef HAVE_MPI
@@ -410,7 +401,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
   else
 
     !collect the data in all processes
-    SAFE_ALLOCATE(gcf(cube%n(1), cube%n(2), cube%n(3)))
+    SAFE_ALLOCATE(gcf(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
 #ifdef HAVE_MPI
     call X(cube_function_allgather)(cube, gcf, cf%X(RS))
 #endif
@@ -420,7 +411,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
-      ixyz(1:3) = mesh%idx%lxyz(ip, 1:3) + center(1:3)
+      ixyz(1:3) = mesh%idx%lxyz(ip, 1:3) + cube%center(1:3)
       do ii = 0, nn - 1
         if (mpi_world%size == 1) then
           gmf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)

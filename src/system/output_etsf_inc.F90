@@ -426,9 +426,9 @@ subroutine output_etsf_density_dims(st, cube, dims, flags)
   flags%main = etsf_main_density
 
   dims%number_of_components = st%d%nspin
-  dims%number_of_grid_points_vector1 = cube%n(1)
-  dims%number_of_grid_points_vector2 = cube%n(2)
-  dims%number_of_grid_points_vector3 = cube%n(3)
+  dims%number_of_grid_points_vector1 = cube%rs_n_global(1)
+  dims%number_of_grid_points_vector2 = cube%rs_n_global(2)
+  dims%number_of_grid_points_vector3 = cube%rs_n_global(3)
   dims%real_or_complex_density = 1
   
   POP_SUB(output_etsf_density_dims)
@@ -451,12 +451,13 @@ subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
 
   PUSH_SUB(output_etsf_density_write)
 
-  SAFE_ALLOCATE(main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1:st%d%nspin))
+  SAFE_ALLOCATE(main%density%data4D(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3), 1:st%d%nspin))
 
   if (st%d%ispin /= SPINORS) then
     do ispin = 1, st%d%nspin
       call dmesh_to_cube(mesh, st%rho(:, ispin), cube, cf, local = .true.)
-      main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), ispin) = cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+      main%density%data4D(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3), ispin) = &
+           cf%dRS(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3))
     end do
   else
     SAFE_ALLOCATE(md(1:mesh%np, 1:3))
@@ -466,10 +467,12 @@ subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
     call magnetic_density(mesh, st, st%rho, md)
 
     call dmesh_to_cube(mesh, d, cube, cf, local = .true.)
-    main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1) = cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+    main%density%data4D(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3), 1) = &
+         cf%dRS(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3))
     do ispin = 1, 3
       call dmesh_to_cube(mesh, md(:, ispin), cube, cf, local = .true.)
-      main%density%data4D(1:cube%n(1), 1:cube%n(2), 1:cube%n(3), ispin + 1) = cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+      main%density%data4D(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3), ispin + 1) = &
+           cf%dRS(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3))
     end do
     SAFE_DEALLOCATE_A(d)
     SAFE_DEALLOCATE_A(md)
@@ -500,9 +503,9 @@ subroutine output_etsf_wfs_rsp_dims(st, cube, dims, flags)
     dims%real_or_complex_wavefunctions = 2
   end if
 
-  dims%number_of_grid_points_vector1 = cube%n(1)
-  dims%number_of_grid_points_vector2 = cube%n(2)
-  dims%number_of_grid_points_vector3 = cube%n(3)
+  dims%number_of_grid_points_vector1 = cube%rs_n_global(1)
+  dims%number_of_grid_points_vector2 = cube%rs_n_global(2)
+  dims%number_of_grid_points_vector3 = cube%rs_n_global(3)
 
   flags%main = etsf_main_wfs_rsp
 
@@ -518,7 +521,7 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
   type(cube_function_t), intent(inout) :: cf
   integer,               intent(in)    :: ncid
 
-  integer :: ist, ispin, ik, idim, nspin, zdim, nkpoints
+  integer :: ist, ispin, ik, idim, nspin, zdim, nkpoints, n(3)
   type(etsf_main) :: main
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
@@ -544,7 +547,8 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
     SAFE_ALLOCATE(zpsi(1:mesh%np))
   end if
 
-  SAFE_ALLOCATE(local_wfs(1:zdim, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), 1:st%d%dim, 1:st%nst, 1:st%d%nik))
+  n = cube%rs_n_global
+  SAFE_ALLOCATE(local_wfs(1:zdim, 1:n(1), 1:n(2), 1:n(3), 1:st%d%dim, 1:st%nst, 1:st%d%nik))
   do ispin = 1, nspin
     do ik = 1, st%d%nik, nspin
       do ist = 1, st%nst
@@ -553,19 +557,16 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
             call states_get_state(st, mesh, idim, ist, ik + ispin - 1, dpsi)
 
             call dmesh_to_cube(mesh, dpsi, cube, cf, local = .true.)
-            local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
-              cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+            local_wfs(1, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
 
           else if(states_are_complex(st)) then
             call states_get_state(st, mesh, idim, ist, ik + ispin - 1, zpsi)
 
             call dmesh_to_cube(mesh, real(zpsi, REAL_PRECISION), cube, cf, local = .true.)
-            local_wfs(1, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
-              cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+            local_wfs(1, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
 
             call dmesh_to_cube(mesh, aimag(zpsi), cube, cf, local = .true.)
-            local_wfs(2, 1:cube%n(1), 1:cube%n(2), 1:cube%n(3), idim, ist, ik+(ispin-1)*nkpoints) = &
-              cf%dRS(1:cube%n(1), 1:cube%n(2), 1:cube%n(3))
+            local_wfs(2, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
 
           end if
         end do
