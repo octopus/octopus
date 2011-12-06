@@ -626,7 +626,7 @@ void propagation_spectrum_help(){
   printf("  -h, --help            Prints this help and exits.\n");
   printf("  -v, --version         Prints octopus version.\n");
   printf("  -r, --reference REF   REF should be the name of the 'reference' multipoles file,.\n");
-  printf("                        whenever you want to do a time-dependente response function.\n");
+  printf("                        whenever you want to do a time-dependent response function.\n");
   printf("                        calculation.\n");
   exit(-1);
 }

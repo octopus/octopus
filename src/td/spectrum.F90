@@ -1892,7 +1892,7 @@ contains
   ! whereas the initial and final computed energies are given by energy_start and energy_end. The result
   ! is placed in the energy_function batch. The cosine Fourier function is computed by multiplying the
   ! real function by cos(w*(t-t0)), the sine Fourier transform is computed by multiplying the real function
-  ! by sin(w*(t-t0)), and the "expoential" transform is computed by multiplying the real function by
+  ! by sin(w*(t-t0)), and the "exponential" transform is computed by multiplying the real function by
   ! e(-I*w*t0)*e(-w*t).
   subroutine fourier_transform(method, transform, noise, time_start, time_end, t0, time_step, time_function, &
     energy_start, energy_end, energy_step, energy_function)
