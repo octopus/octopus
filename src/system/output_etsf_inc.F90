@@ -446,18 +446,19 @@ subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
   type(etsf_main) :: main
   type(etsf_io_low_error)  :: error_data
   logical :: lstat
-  integer :: ispin
+  integer :: ispin, n(3)
   FLOAT, allocatable :: d(:), md(:,:)
 
   PUSH_SUB(output_etsf_density_write)
 
-  SAFE_ALLOCATE(main%density%data4D(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3), 1:st%d%nspin))
+
+  n = cube%rs_n_global
+  SAFE_ALLOCATE(main%density%data4D(1:n(1), 1:n(2), 1:n(3), 1:st%d%nspin))
 
   if (st%d%ispin /= SPINORS) then
     do ispin = 1, st%d%nspin
       call dmesh_to_cube(mesh, st%rho(:, ispin), cube, cf, local = .true.)
-      main%density%data4D(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3), ispin) = &
-           cf%dRS(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3))
+      main%density%data4D(1:n(1), 1:n(2), 1:n(3), ispin) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
     end do
   else
     SAFE_ALLOCATE(md(1:mesh%np, 1:3))
@@ -467,12 +468,10 @@ subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
     call magnetic_density(mesh, st, st%rho, md)
 
     call dmesh_to_cube(mesh, d, cube, cf, local = .true.)
-    main%density%data4D(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3), 1) = &
-         cf%dRS(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3))
+    main%density%data4D(1:n(1), 1:n(2), 1:n(3), 1) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
     do ispin = 1, 3
       call dmesh_to_cube(mesh, md(:, ispin), cube, cf, local = .true.)
-      main%density%data4D(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3), ispin + 1) = &
-           cf%dRS(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3))
+      main%density%data4D(1:n(1), 1:n(2), 1:n(3), ispin + 1) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
     end do
     SAFE_DEALLOCATE_A(d)
     SAFE_DEALLOCATE_A(md)
