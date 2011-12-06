@@ -35,16 +35,19 @@ program propagation_spectrum
 
   implicit none
 
-  integer :: in_file(3), out_file(3), eq_axes, nspin, lmax, time_steps, ierr
-  logical :: calculate_tensor
+  integer :: in_file(3), out_file(3), ref_file, eq_axes, nspin, &
+             ref_nspin, lmax, ref_lmax, time_steps, ref_time_steps, ierr
+  logical :: calculate_tensor, reference_multipoles
   type(spec_t) :: spectrum
-  type(unit_system_t) :: file_units
+  type(unit_system_t) :: file_units, ref_file_units
+  character(len=80) :: refmultipoles
 
   ! Initialize stuff
   call global_init()
 
   call getopt_init(ierr)
-  if(ierr.eq.0) call getopt_propagation_spectrum
+  refmultipoles = ""
+  if(ierr.eq.0) call getopt_propagation_spectrum(refmultipoles)
   call getopt_end()
 
   call parser_init()
@@ -59,7 +62,7 @@ program propagation_spectrum
 
   select case (spectrum%spectype)
     case (SPECTRUM_ABSORPTION)
-      call read_files('multipoles')
+      call read_files('multipoles', refmultipoles)
       call calculate('cross_section')
     case (SPECTRUM_ENERGYLOSS)
       call calculate_ftchd('ftchd', 'dynamic_structure_factor')
@@ -109,11 +112,12 @@ program propagation_spectrum
     ! the files ftchds.lXX_mYY, which would be used to obtain the directionally
     ! averaged dynamic structure factor.
     !---------------------------------------------------------------------------*/!
-    subroutine read_files(fname)
+    subroutine read_files(fname, reffname)
       character(len=*), intent(in) :: fname
+      character(len=*), intent(in) :: reffname
 
-      type(kick_t) :: kick
-      FLOAT :: dt
+      type(kick_t) :: kick, ref_kick
+      FLOAT :: dt, ref_dt
 
       PUSH_SUB(read_files)
       
@@ -203,6 +207,22 @@ program propagation_spectrum
         
       end if
 
+      if(reffname .eq. "") then
+        reference_multipoles = .false.
+      else
+        reference_multipoles = .true.
+        if(calculate_tensor) then
+          write(message(1),'(a)') 'When using a reference multipoles file, the code cannot make use of'
+          write(message(2),'(a)') 'symmetries.'
+          call messages_fatal(2)
+        end if
+        ref_file = io_open(trim(reffname), action='read', status='old', die=.false.)
+        if(ref_file < 0) then
+          write(message(1),'(3a)') 'No "',trim(reffname), '" file found.'
+          call messages_fatal(1)
+        end if
+      end if
+
       POP_SUB(read_files)
     end subroutine read_files
 
@@ -219,7 +239,11 @@ program propagation_spectrum
       if(.not.calculate_tensor) then
 
         out_file(1) = io_open(trim(fname)//'_vector', action='write')
-        call spectrum_cross_section(in_file(1), out_file(1), spectrum)
+        if(.not.reference_multipoles) then
+          call spectrum_cross_section(in_file(1), out_file(1), spectrum)
+        else
+          call spectrum_cross_section(in_file(1), out_file(1), spectrum, ref_file)
+        end if
         call io_close(in_file(1))
         call io_close(out_file(1))
         

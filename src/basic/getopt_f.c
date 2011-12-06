@@ -625,11 +625,14 @@ void propagation_spectrum_help(){
   printf("Options:\n");
   printf("  -h, --help            Prints this help and exits.\n");
   printf("  -v, --version         Prints octopus version.\n");
+  printf("  -r, --reference REF   REF should be the name of the 'reference' multipoles file,.\n");
+  printf("                        whenever you want to do a time-dependente response function.\n");
+  printf("                        calculation.\n");
   exit(-1);
 }
 
 void FC_FUNC_(getopt_propagation_spectrum, GETOPT_PROPAGATION_SPECTRUM)
-     ()
+     (STR_F_TYPE fname STR_ARG1)
 {
   int c;
 #if defined(HAVE_GETOPT_LONG)
@@ -637,6 +640,7 @@ void FC_FUNC_(getopt_propagation_spectrum, GETOPT_PROPAGATION_SPECTRUM)
     {
       {"help", no_argument, 0, 'h'},
       {"version", no_argument, 0, 'v'},
+      {"reference", required_argument, 0, 'r'},
       {0, 0, 0, 0}
     };
 #endif
@@ -644,9 +648,9 @@ void FC_FUNC_(getopt_propagation_spectrum, GETOPT_PROPAGATION_SPECTRUM)
   while (1) {
     int option_index = 0;
 #if defined(HAVE_GETOPT_LONG)
-    c = getopt_long(argc, argv, "hv", long_options, &option_index);
+    c = getopt_long(argc, argv, "hvr:", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "hv");
+    c = getopt(argc, argv, "hvr:");
 #endif
     if (c == -1) break;
     switch (c) {
@@ -656,6 +660,9 @@ void FC_FUNC_(getopt_propagation_spectrum, GETOPT_PROPAGATION_SPECTRUM)
     case 'v':
       printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
       exit(0);
+    case 'r':
+      TO_F_STR1(optarg, fname);
+      break;
     }
   }
   if (optind < argc) propagation_spectrum_help();

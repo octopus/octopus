@@ -108,7 +108,8 @@ module command_line_m
     subroutine getopt_dielectric_function
     end subroutine getopt_dielectric_function
 
-    subroutine getopt_propagation_spectrum
+    subroutine getopt_propagation_spectrum(fname)
+      character(len=*) :: fname
     end subroutine getopt_propagation_spectrum
 
     subroutine getopt_rotatory_strength

@@ -474,17 +474,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_cross_section(in_file, out_file, spectrum)
-    integer,      intent(in)    :: in_file
-    integer,      intent(in)    :: out_file
-    type(spec_t), intent(inout) :: spectrum
+  subroutine spectrum_cross_section(in_file, out_file, spectrum, ref_file)
+    integer,           intent(in)    :: in_file
+    integer,           intent(in)    :: out_file
+    type(spec_t),      intent(inout) :: spectrum
+    integer, optional, intent(in)    :: ref_file
 
     character(len=20) :: header_string
-    integer :: nspin, lmax, time_steps, istart, iend, ntiter, it, ii, isp, no_e, ie, idir, trash
-    FLOAT   :: dt, dump, energy, ewsum, polsum
-    type(kick_t) :: kick
-    FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), sf(:, :)
-    type(unit_system_t) :: file_units
+    integer :: nspin, ref_nspin, lmax, ref_lmax, time_steps, &
+               ref_time_steps, istart, iend, ntiter, it, ii, isp, no_e, ie, idir, trash
+    FLOAT   :: dt, ref_dt, dump, energy, ewsum, polsum
+    type(kick_t) :: kick, ref_kick
+    FLOAT, allocatable :: dipole(:, :, :), ref_dipole(:, :, :), sigma(:, :, :), sf(:, :)
+    type(unit_system_t) :: file_units, ref_file_units
     type(batch_t) :: dipoleb, sigmab
 
     PUSH_SUB(spectrum_cross_section)
@@ -492,6 +494,18 @@ contains
     ! This function gives us back the unit connected to the "multipoles" file, the header information,
     ! the number of time steps, and the time step.
     call spectrum_mult_info(in_file, nspin, kick, time_steps, dt, file_units, lmax=lmax)
+
+    if(present(ref_file)) then
+      call spectrum_mult_info(ref_file, ref_nspin, ref_kick, &
+        ref_time_steps, ref_dt, ref_file_units, lmax = ref_lmax)
+      if( (nspin .ne. ref_nspin)           .or. &
+          (time_steps .ne. ref_time_steps) .or. &
+          (.not.(dt .app. ref_dt))         .or. &
+          (lmax .ne. ref_lmax) ) then
+        write(message(1),'(a)') 'The multipoles and reference multipoles files do not match.'
+        call messages_fatal(1)
+      end if
+    end if
 
     ! Now we cannot process files that do not contain the dipole, or that contain more than the dipole.
     if(lmax.ne.1) then
@@ -522,10 +536,32 @@ contains
       
     end do
 
+    if(present(ref_file)) then
+      call io_skip_header(ref_file)
+      SAFE_ALLOCATE(ref_dipole(0:time_steps, 1:3, 1:nspin))
+      do it = 0, time_steps
+        select case(nspin)
+        case(1)
+          read(ref_file, *) trash, dump, dump, ref_dipole(it, 1:3, 1)
+        case(2)
+          read(ref_file, *) trash, dump, dump, ref_dipole(it, 1:3, 1), dump, ref_dipole(it, 1:3, 2)
+        case(4)
+          read(ref_file, *) &
+            trash, dump, dump, ref_dipole(it, 1:3, 1), dump, ref_dipole(it, 1:3, 2), &
+            dump, ref_dipole(it, 1:3, 3), dump, ref_dipole(it, 1:3, 4)
+        end select
+        ref_dipole(it, 1:3, :) = units_to_atomic(file_units%length, ref_dipole(it, 1:3, :))
+      end do
+    end if
+
     ! Now subtract the initial dipole.
-    do it = time_steps, 0, -1
-      dipole(it, :, :) = dipole(it, :, :) - dipole(0, :, :)
-    end do
+    if(present(ref_file)) then
+      dipole = dipole - ref_dipole
+    else
+      do it = time_steps, 0, -1
+        dipole(it, :, :) = dipole(it, :, :) - dipole(0, :, :)
+      end do
+    end if
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
@@ -544,6 +580,9 @@ contains
     call batch_end(sigmab)
 
     SAFE_DEALLOCATE_A(dipole)
+    if(present(ref_file)) then
+      SAFE_DEALLOCATE_A(ref_dipole)
+    end if
 
     SAFE_ALLOCATE(sf(0:no_e, nspin))
 
