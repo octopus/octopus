@@ -149,9 +149,9 @@ program dielectric_function
   call signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, dt, vecpotb)
 
   call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-    istart, iend, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftrealb)
+    istart, iend, M_ZERO, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftrealb)
   call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-    istart, iend, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftimagb)
+    istart, iend, M_ZERO, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftimagb)
 
   call batch_end(vecpotb)
   call batch_end(ftrealb)

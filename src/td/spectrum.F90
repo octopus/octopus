@@ -538,7 +538,7 @@ contains
 
     call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, dipoleb)
     call fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
-      istart + 1, iend + 1, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
+      istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
 
     call batch_end(dipoleb)
     call batch_end(sigmab)
@@ -827,9 +827,9 @@ contains
     call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, angularb)
 
     call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-      istart + 1, iend + 1, dt, angularb, 1, no_e + 1, spectrum%energy_step, respb)
+      istart + 1, iend + 1, kick%time, dt, angularb, 1, no_e + 1, spectrum%energy_step, respb)
     call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-      istart + 1, iend + 1, dt, angularb, 1, no_e + 1, spectrum%energy_step, imspb)
+      istart + 1, iend + 1, kick%time, dt, angularb, 1, no_e + 1, spectrum%energy_step, imspb)
 
     call batch_end(angularb)
     call batch_end(respb)
@@ -1382,9 +1382,9 @@ contains
       call batch_add_state(spc_batch, spc)
 
       call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-        istart + 1, iend + 1, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, spc_batch)
+        istart + 1, iend + 1, M_ZERO, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, spc_batch)
       call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-        istart + 1, iend + 1, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, sps_batch)
+        istart + 1, iend + 1, M_ZERO, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, sps_batch)
 
       do ie = 0, no_e
         sps(ie) = (sps(ie)**2 + spc(ie)**2)
@@ -1488,9 +1488,9 @@ contains
       call batch_add_state(spc_batch, spc)
 
       call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-        istart + 1, iend + 1, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, spc_batch)
+        istart + 1, iend + 1, M_ZERO, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, spc_batch)
       call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-        istart + 1, iend + 1, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, sps_batch)
+        istart + 1, iend + 1, M_ZERO, dt, acc_batch, 1, no_e + 1, spectrum%energy_step, sps_batch)
 
       do ie = 0, no_e
         sps(ie) = (sps(ie)**2 + spc(ie)**2)
@@ -1845,16 +1845,24 @@ contains
     POP_SUB(signal_damp)
 
   end subroutine signal_damp
-
   ! -------------------------------------------------------
 
-  subroutine fourier_transform(method, transform, noise, time_start, time_end, time_step, time_function, &
+  ! -------------------------------------------------------
+  ! Computes the sine, cosine, (or "exponential") Fourier transform of the real function given in the
+  ! time_function batch. The initial and final integration times are given by time_start and time_end,
+  ! whereas the initial and final computed energies are given by energy_start and energy_end. The result
+  ! is placed in the energy_function batch. The cosine Fourier function is computed by multiplying the
+  ! real function by cos(w*(t-t0)), the sine Fourier transform is computed by multiplying the real function
+  ! by sin(w*(t-t0)), and the "expoential" transform is computed by multiplying the real function by
+  ! e(-I*w*t0)*e(-w*t).
+  subroutine fourier_transform(method, transform, noise, time_start, time_end, t0, time_step, time_function, &
     energy_start, energy_end, energy_step, energy_function)
     integer,         intent(in)    :: method
     integer,         intent(in)    :: transform
     FLOAT,           intent(in)    :: noise
     integer,         intent(in)    :: time_start
     integer,         intent(in)    :: time_end
+    FLOAT,           intent(in)    :: t0
     FLOAT,           intent(in)    :: time_step
     type(batch_t),   intent(in)    :: time_function
     integer,         intent(in)    :: energy_start
@@ -1891,8 +1899,8 @@ contains
         ! cosine function at each time step.
         case(SPECTRUM_TRANSFORM_SIN)
 
-          eidt = exp(M_zI * energy * time_step)
-          ez = M_z1
+          eidt = exp(M_zI * energy * time_step )
+          ez = exp(-M_zI * energy * t0)
           do itime = time_start, time_end
             time = time_step*(itime - time_start)
             do ii = 1, time_function%nst_linear
@@ -1906,7 +1914,7 @@ contains
         case(SPECTRUM_TRANSFORM_COS)
 
           eidt = exp(M_zI * energy * time_step)
-          ez = M_z1
+          ez = exp(-M_zI * energy * t0)
           do itime = time_start, time_end
             time = time_step*(itime - time_start)
             do ii = 1, time_function%nst_linear
@@ -1920,7 +1928,7 @@ contains
         case(SPECTRUM_TRANSFORM_EXP)
 
           eidt = exp( -energy * time_step)
-          ez = M_z1
+          ez = exp(-M_zI * energy * t0)
           do itime = time_start, time_end
             time = time_step*(itime - time_start)
             do ii = 1, time_function%nst_linear
@@ -1944,7 +1952,7 @@ contains
     case(SPECTRUM_COMPRESSED_SENSING)
 
       call compressed_sensing_init(cs, transform, &
-        time_end -time_start + 1, time_step, time_step*(time_start - 1), &
+        time_end -time_start + 1, time_step, time_step*(time_start - 1) - t0, &
         energy_end - energy_start + 1, energy_step, energy_step*(energy_start - 1), noise)
 
       do ii = 1, time_function%nst_linear
