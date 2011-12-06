@@ -718,7 +718,7 @@ contains
   
     PUSH_SUB(output_berkeleygw_init)
   
-    ! conditions to die: spinors, not 3D, parallel in states or k-points (if spin-polarized), non-local functionals
+    ! conditions to die: spinors, not 3D, parallel in states or k-points (if spin-polarized), non-local functionals, SIC
 
 #ifndef HAVE_BERKELEYGW
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."

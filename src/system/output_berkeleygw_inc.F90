@@ -54,8 +54,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
   SAFE_ALLOCATE(mtxel(ndiag + noffdiag, st%d%nspin))
 
   message(1) = "BerkeleyGW output: vxc.dat"
-  write(message(2),*) "ndiag = ", ndiag, ", noffdiag = ", noffdiag
-  call messages_info(2)
+  call messages_info(1)
 
   ! BerkeleyGW allows using only spin down, but we will not give that option here
   do ispin = 1, st%d%nspin
@@ -79,8 +78,12 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
   endif
 
   SAFE_ALLOCATE(vxc(gr%mesh%np, st%d%nspin))
+  vxc(:,:) = M_ZERO
   ! we should not include core rho here. that is why we do not just use hm%vxc
-  call xc_get_vxc(gr%fine%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc = vxc)
+  call xc_get_vxc(gr%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc = vxc)
+  ! convert to eV
+  vxc(:,:) = M_TWO * P_Ry * vxc(:,:)
+
   ! in case of hybrids, we should apply exchange operator too here
   ! in that case, we can write x.dat file as well
   
@@ -101,8 +104,6 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
       enddo
     enddo
 
-    ! convert to eV
-    mtxel(:,:) = M_TWO * P_Ry * mtxel(:,:)
     if(mpi_grp_is_root(mpi_world)) &
       call write_matrix_elements(iunit, kpoint, st%d%nspin, ndiag, noffdiag, spin_index, diag, off1, off2, mtxel) 
   enddo
@@ -123,7 +124,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
     call messages_fatal(1)
 #endif
 
-  POP_SUB(output_berkeleygw_init)
+  POP_SUB(X(bgw_vxc_dat))
 
 end subroutine X(bgw_vxc_dat)
 
