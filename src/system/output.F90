@@ -534,7 +534,7 @@ contains
       call output_etsf(st, gr, geo, dir, outp)
     end if
 
-    if (iand(outp%how, C_OUTPUT_BERKELEYGW) .ne. 0) then
+    if (iand(outp%what, C_OUTPUT_BERKELEYGW) .ne. 0) then
       call output_berkeleygw(outp%bgw, dir, st, gr, xc)
     end if
     
@@ -758,6 +758,7 @@ contains
     !%Section Output::BerkeleyGW
     !%Description
     !% Lowest band for which to write off-diagonal exchange-correlation matrix elements.
+    !% If < 1, off-diagonals will be skipped.
     !%End
     call parse_integer(datasets_check('BerkeleyGW_Vxc_offdiag_nmin'), 1, bgw%vxc_offdiag_nmin)
     
@@ -767,6 +768,7 @@ contains
     !%Section Output::BerkeleyGW
     !%Description
     !% Highest band for which to write off-diagonal exchange-correlation matrix elements.
+    !% If < 1, off-diagonals will be skipped.
     !%End
     call parse_integer(datasets_check('BerkeleyGW_Vxc_offdiag_nmax'), nst, bgw%vxc_offdiag_nmax)
     

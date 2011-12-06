@@ -35,16 +35,27 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
 
 #ifdef HAVE_BERKELEYGW
 
+  if(st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states")
+  if(st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points")
+
   if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', action='write')
   ndiag = bgw%vxc_diag_nmax - bgw%vxc_diag_nmin + 1
   SAFE_ALLOCATE(psi(gr%mesh%np))
-  noffdiag = bgw%vxc_offdiag_nmax - bgw%vxc_offdiag_nmin + 1
+  if(bgw%vxc_offdiag_nmin < 1 .or. bgw%vxc_offdiag_nmax < 1) then
+    noffdiag = 0
+  else
+    noffdiag = (bgw%vxc_offdiag_nmax - bgw%vxc_offdiag_nmin + 1)**2
+  endif
   if(noffdiag > 0) then
     SAFE_ALLOCATE(psi2(gr%mesh%np))
     SAFE_ALLOCATE(off1(noffdiag))
     SAFE_ALLOCATE(off2(noffdiag))
   endif
   SAFE_ALLOCATE(mtxel(ndiag + noffdiag, st%d%nspin))
+
+  message(1) = "BerkeleyGW output: vxc.dat"
+  write(message(2),*) "ndiag = ", ndiag, ", noffdiag = ", noffdiag
+  call messages_info(2)
 
   ! BerkeleyGW allows using only spin down, but we will not give that option here
   do ispin = 1, st%d%nspin
@@ -56,15 +67,18 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
     diag(idiag) = bgw%vxc_diag_nmin + idiag - 1
   enddo
 
-  ioff = 1
-  do ist = bgw%vxc_offdiag_nmin, bgw%vxc_offdiag_nmax
-    do ist2 = bgw%vxc_offdiag_nmin, bgw%vxc_offdiag_nmax
-      off1(ioff) = ist
-      off2(ioff) = ist2
-      ioff = ioff + 1
+  if(noffdiag > 0) then
+    ioff = 1
+    do ist = bgw%vxc_offdiag_nmin, bgw%vxc_offdiag_nmax
+      do ist2 = bgw%vxc_offdiag_nmin, bgw%vxc_offdiag_nmax
+        off1(ioff) = ist
+        off2(ioff) = ist2
+        ioff = ioff + 1
+      enddo
     enddo
-  enddo
+  endif
 
+  SAFE_ALLOCATE(vxc(gr%mesh%np, st%d%nspin))
   ! we should not include core rho here. that is why we do not just use hm%vxc
   call xc_get_vxc(gr%fine%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc = vxc)
   ! in case of hybrids, we should apply exchange operator too here
@@ -83,23 +97,26 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
       do ioff = 1, noffdiag
         call states_get_state(st, gr%mesh, 1, off1(ioff), ikk, psi)
         call states_get_state(st, gr%mesh, 1, off2(ioff), ikk, psi2)
-        mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:), psi2(:) * vxc(:, ispin))
+        mtxel(ndiag + ioff, ispin) = X(mf_dotp)(gr%mesh, psi(:), psi2(:) * vxc(:, ispin))
       enddo
     enddo
 
+    ! convert to eV
+    mtxel(:,:) = M_TWO * P_Ry * mtxel(:,:)
     if(mpi_grp_is_root(mpi_world)) &
       call write_matrix_elements(iunit, kpoint, st%d%nspin, ndiag, noffdiag, spin_index, diag, off1, off2, mtxel) 
   enddo
 
   if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
   SAFE_DEALLOCATE_A(diag)
-  SAFE_DEALLOCATE_A(off1)
-  SAFE_DEALLOCATE_A(off2)
   SAFE_DEALLOCATE_A(psi)
   if(noffdiag > 0) then
+    SAFE_DEALLOCATE_A(off1)
+    SAFE_DEALLOCATE_A(off2)
     SAFE_DEALLOCATE_A(psi2)
   endif
   SAFE_DEALLOCATE_A(mtxel)
+  SAFE_DEALLOCATE_A(vxc)
 
 #else
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
