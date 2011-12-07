@@ -76,9 +76,6 @@ module geometry_m
     character(len=15) :: label
     type(species_t), pointer :: spec             !< pointer to species
     FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)  !< position/velocity/force of atom in real space
-    CMPLX :: Born_charge(MAX_DIM, MAX_DIM)       !< (frequency-dependent) Born effective charges
-                                                 !< Z*(field dir, force dir)
-                                                 !< = Z*(polarization dir, displacement dir)
     logical :: move                              !< should I move this atom in the optimization mode
   end type atom_t
 

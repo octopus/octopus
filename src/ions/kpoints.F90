@@ -68,7 +68,7 @@ module kpoints_m
     logical        :: use_symmetries
     logical        :: use_time_reversal
 
-    ! For the modified Monkhorst-Pack  scheme
+    ! For the modified Monkhorst-Pack scheme
     integer        :: nik_axis(MAX_DIM)    ! number of MP divisions
     FLOAT          :: shifts(MAX_DIM)      ! 
   end type kpoints_t

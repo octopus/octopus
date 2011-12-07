@@ -28,11 +28,11 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
   type(cube_t) :: dcube, zcube
   type(cube_function_t) :: cf
-#ifdef HAVE_ETSF_IO
   type(fourier_shell_t) :: shell
   integer :: ncid
-  type(etsf_io_low_error)  :: error_data
   logical :: lstat
+#ifdef HAVE_ETSF_IO
+  type(etsf_io_low_error)  :: error_data
   type(etsf_dims) :: geometry_dims, density_dims, wfs_dims, pw_dims
   type(etsf_groups_flags) :: geometry_flags, density_flags, wfs_flags, pw_flags
 #endif

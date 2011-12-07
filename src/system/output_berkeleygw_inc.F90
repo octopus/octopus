@@ -88,7 +88,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
   ! in that case, we can write x.dat file as well
   
   do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
-    kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ik)
+    kpoint(1:gr%sb%dim) = gr%sb%kpoints%reduced%red_point(1:gr%sb%dim, ik) ! crystal coordinates
 
     do ispin = 1, st%d%nspin
       ikk = ik + ispin - 1
@@ -97,6 +97,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
         mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:), psi(:) * vxc(:, ispin))
       enddo
 
+      ! could do only upper or lower triangle here
       do ioff = 1, noffdiag
         call states_get_state(st, gr%mesh, 1, off1(ioff), ikk, psi)
         call states_get_state(st, gr%mesh, 1, off2(ioff), ikk, psi2)
