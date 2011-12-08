@@ -535,7 +535,7 @@ contains
     end if
 
     if (iand(outp%what, C_OUTPUT_BERKELEYGW) .ne. 0) then
-      call output_berkeleygw(outp%bgw, dir, st, gr, xc)
+      call output_berkeleygw(outp%bgw, dir, st, gr, xc, geo)
     end if
     
     POP_SUB(output_all)
@@ -719,6 +719,7 @@ contains
     PUSH_SUB(output_berkeleygw_init)
   
     ! conditions to die: spinors, not 3D, parallel in states or k-points (if spin-polarized), non-local functionals, SIC
+    ! nlcc, not a kgrid, st%smear%method == SMEAR_FIXED_OCC, single precision
 
 #ifndef HAVE_BERKELEYGW
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
@@ -796,14 +797,27 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw(bgw, dir, st, gr, xc)
+  subroutine output_berkeleygw(bgw, dir, st, gr, xc, geo)
     type(output_bgw_t), intent(in) :: bgw
     character(len=*),   intent(in) :: dir
     type(states_t),     intent(in) :: st
     type(grid_t),       intent(in) :: gr
     type(xc_t),         intent(in) :: xc
+    type(geometry_t),   intent(in) :: geo
+
+    integer :: ik, is, ikk, ist, itran, iunit, iatom, mtrx(3, 3, 48), ig, ix, iy, iz
+    integer, pointer :: ifmin(:,:), ifmax(:,:), atyp(:), ngk(:)
+    character*3 :: sheader
+    FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48)
+    FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:)
+    CMPLX, pointer :: vxc(:,:), vxc_g(:,:)
+    type(cube_t) :: zcube
+    type(cube_function_t) :: cf
+    type(fourier_shell_t) :: shell
 
     PUSH_SUB(output_berkeleygw)
+
+#ifdef HAVE_BERKELEYGW
 
     if(states_are_real(st)) then
       call dbgw_vxc_dat(bgw, dir, st, gr, xc)
@@ -811,9 +825,99 @@ contains
       call zbgw_vxc_dat(bgw, dir, st, gr, xc)
     endif
 
+    call cube_init(zcube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
+    call cube_function_null(cf)
+    call zcube_function_alloc_RS(zcube, cf)
+    call zcube_function_alloc_FS(zcube, cf)
+    call fourier_shell_init(shell, zcube, gr%mesh)
+
+!    cutoff = mesh_gcutoff(gr%mesh)**2 / M_TWO
+
+    adot(:,:) = matmul(gr%sb%rlattice, gr%sb%rlattice)
+    bdot(:,:) = matmul(gr%sb%klattice, gr%sb%klattice)
+    recvol = (M_TWO * M_PI)**3 / gr%sb%rcell_volume
+
+    ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
+    do itran = 1, symmetries_number(gr%sb%symm)
+      mtrx(:,:, itran) = symm_op_rotation_matrix(gr%sb%symm%ops(itran))
+      tnp(:, itran) = symm_op_translation_vector(gr%sb%symm%ops(itran))
+    enddo
+
+    SAFE_ALLOCATE(ifmin(gr%sb%kpoints%reduced%npoints, st%d%nspin))
+    SAFE_ALLOCATE(ifmax(gr%sb%kpoints%reduced%npoints, st%d%nspin))
+    SAFE_ALLOCATE(energies(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
+    SAFE_ALLOCATE(occupations(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
+    SAFE_ALLOCATE(ngk(gr%sb%kpoints%reduced%npoints))
+    ifmin(:,:) = 1
+    ifmax(:,:) = 0
+    ngk(:) = shell%ngvectors
+    do ik = 1, st%d%nik
+      is = states_dim_get_spin_index(st%d, ik)
+      ikk = states_dim_get_kpoint_index(st%d, ik)
+      energies(1:st%nst, ikk, is) = st%eigenval(1:st%nst,ik) * M_TWO
+      occupations(1:st%nst, ikk, is) = st%occ(1:st%nst, ik) / st%smear%el_per_state
+      do ist = 1, st%nst
+        if(st%eigenval(ist, ik) > st%smear%e_fermi) then
+          ifmax(ikk, is) = ist - 1
+          exit
+        endif
+      enddo
+    enddo
+
+    SAFE_ALLOCATE(atyp(geo%natoms))
+    SAFE_ALLOCATE(apos(3, geo%natoms))
+    do iatom = 1, geo%natoms
+      atyp(iatom) = species_index(geo%atom(iatom)%spec)
+      apos(1:3, iatom) = geo%atom(iatom)%x(1:3)
+    enddo
+
+    sheader = 'VXC'
+    if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // sheader, action='write')
+    call write_binary_header(iunit, sheader, iflavor = 2, ns = st%d%nspin, ng = shell%ngvectors, &
+      ntran = symmetries_number(gr%sb%symm), cell_symmetry = 0, nat = geo%natoms, &
+      nk = gr%sb%kpoints%reduced%npoints, nbands = st%nst, ngkmax = shell%ngvectors, ecutrho = shell%ekin_cutoff,  &
+      ecutwfc = shell%ekin_cutoff, kmax = gr%mesh%idx%ll, kgrid = gr%sb%kpoints%nik_axis, kshift = gr%sb%kpoints%shifts, &
+      celvol = gr%sb%rcell_volume, alat = M_ONE, avec = gr%sb%rlattice, adot = adot, recvol = recvol, &
+      blat = M_ONE, bvec = gr%sb%klattice, bdot = bdot, mtrx = mtrx, tnp = tnp, atyp = atyp, &
+      apos = apos, ngk = ngk, kw = gr%sb%kpoints%reduced%weight, kpt = gr%sb%kpoints%reduced%red_point, &
+      ifmin = ifmin, ifmax = ifmax, energies = energies, occupations = occupations, warn = .false.)
+
+    call write_binary_gvectors(iunit, shell%ngvectors, shell%ngvectors, shell%red_gvec)
+
+    do is = 1, st%d%nspin
+      call zmesh_to_cube(gr%mesh, vxc(:, is), zcube, cf, local = .true.)
+
+      do ig = 1, shell%ngvectors
+        ix = shell%coords(1, ig)
+        iy = shell%coords(2, ig)
+        iz = shell%coords(3, ig)
+        vxc_g(ig, is) = cf%fs(ix, iy, iz)
+      enddo
+    enddo
+
+    call write_binary_complex_data(iunit, shell%ngvectors, shell%ngvectors, st%d%nspin, vxc_g)
+    if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
+
+    call fourier_shell_end(shell)
+    call zcube_function_free_fs(zcube, cf)
+    call zcube_function_free_rs(zcube, cf)
+
     ! vxc
     ! rho
     ! wfns
+
+    SAFE_DEALLOCATE_P(ifmin)
+    SAFE_DEALLOCATE_P(ifmax)
+    SAFE_DEALLOCATE_P(ngk)
+    SAFE_DEALLOCATE_P(energies)
+    SAFE_DEALLOCATE_P(occupations)
+    SAFE_DEALLOCATE_P(atyp)
+    SAFE_DEALLOCATE_P(apos)
+
+#else
+    message(1) = "Cannot do BerkeleyGW output: the library was not linked."
+    call messages_fatal(1)
+#endif
 
     POP_SUB(output_berkeleygw)
   end subroutine output_berkeleygw
