@@ -810,7 +810,7 @@ contains
     character*3 :: sheader
     FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48)
     FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:), vxc(:,:)
-    CMPLX, pointer :: vxc_g(:,:)
+    CMPLX, pointer :: field_g(:,:)
     type(cube_t) :: dcube
     type(cube_function_t) :: cf
     type(fourier_shell_t) :: shell
@@ -824,6 +824,9 @@ contains
     ! we should not include core rho here. that is why we do not just use hm%vxc
     call xc_get_vxc(gr%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc = vxc)
 
+    message(1) = "BerkeleyGW output: vxc.dat"
+    call messages_info(1)
+
     if(states_are_real(st)) then
       call dbgw_vxc_dat(bgw, dir, st, gr, vxc)
     else
@@ -835,7 +838,7 @@ contains
     call dcube_function_alloc_rs(dcube, cf)
     call dcube_function_alloc_fs(dcube, cf)
     call fourier_shell_init(shell, dcube, gr%mesh)
-    SAFE_ALLOCATE(vxc_g(shell%ngvectors, st%d%nspin))
+    SAFE_ALLOCATE(field_g(shell%ngvectors, st%d%nspin))
 
     adot(:,:) = matmul(gr%sb%rlattice, gr%sb%rlattice)
     bdot(:,:) = matmul(gr%sb%klattice, gr%sb%klattice)
@@ -875,49 +878,30 @@ contains
       apos(1:3, iatom) = geo%atom(iatom)%x(1:3)
     enddo
 
+    message(1) = "BerkeleyGW output: VXC"
+    call messages_info(1)
+
     sheader = 'VXC'
-    if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir) // sheader, form = 'unformatted', action = 'write')
-      call write_binary_header(iunit, sheader, iflavor = 2, ns = st%d%nspin, ng = shell%ngvectors, &
-        ntran = symmetries_number(gr%sb%symm), cell_symmetry = 0, nat = geo%natoms, &
-        nk = gr%sb%kpoints%reduced%npoints, nbands = st%nst, ngkmax = shell%ngvectors, ecutrho = shell%ekin_cutoff / 2,  &
-        ecutwfc = shell%ekin_cutoff / 2, kmax = gr%mesh%idx%ll, kgrid = gr%sb%kpoints%nik_axis, kshift = gr%sb%kpoints%shifts, &
-        celvol = gr%sb%rcell_volume, alat = M_ONE, avec = gr%sb%rlattice, adot = adot, recvol = recvol, &
-        blat = M_ONE, bvec = gr%sb%klattice, bdot = bdot, mtrx = mtrx, tnp = tnp, atyp = atyp, &
-        apos = apos, ngk = ngk, kw = gr%sb%kpoints%reduced%weight, kpt = gr%sb%kpoints%reduced%red_point, &
-        ifmin = ifmin, ifmax = ifmax, energies = energies, occupations = occupations, warn = .false.)
+    if(mpi_grp_is_root(mpi_world)) call bgw_write_header(sheader, iunit)
+    call dbgw_write_FS(iunit, vxc, field_g, shell, st%d%nspin, gr, dcube, cf)
+    if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
+    SAFE_DEALLOCATE_P(vxc)
 
-      call write_binary_gvectors(iunit, shell%ngvectors, shell%ngvectors, shell%red_gvec)
-    endif
+    message(1) = "BerkeleyGW output: RHO"
+    call messages_info(1)
 
-    do is = 1, st%d%nspin
-      call dmesh_to_cube(gr%mesh, vxc(:, is), dcube, cf, local = .true.)
-      call dcube_function_rs2fs(dcube, cf)
-
-      do ig = 1, shell%ngvectors
-        ix = shell%coords(1, ig)
-        iy = shell%coords(2, ig)
-        iz = shell%coords(3, ig)
-        vxc_g(ig, is) = cf%fs(ix, iy, iz)
-      enddo
-    enddo
-
-    if(mpi_grp_is_root(mpi_world)) then
-      call write_binary_complex_data(iunit, shell%ngvectors, shell%ngvectors, st%d%nspin, vxc_g)
-      call io_close(iunit)
-    endif
+    sheader = 'RHO'
+    if(mpi_grp_is_root(mpi_world)) call bgw_write_header(sheader, iunit)
+    call dbgw_write_FS(iunit, st%rho, field_g, shell, st%d%nspin, gr, dcube, cf)
+    if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
 
     call fourier_shell_end(shell)
     call dcube_function_free_fs(dcube, cf)
     call dcube_function_free_rs(dcube, cf)
 
-    ! vxc
-    ! rho
     ! wfns
 
-    SAFE_DEALLOCATE_P(vxc)
-    SAFE_DEALLOCATE_P(vxc_g)
-
+    SAFE_DEALLOCATE_P(field_g)
     SAFE_DEALLOCATE_P(ifmin)
     SAFE_DEALLOCATE_P(ifmax)
     SAFE_DEALLOCATE_P(ngk)
@@ -932,6 +916,32 @@ contains
 #endif
 
     POP_SUB(output_berkeleygw)
+
+  contains
+    
+    subroutine bgw_write_header(sheader, iunit)
+      character(len=3), intent(inout) :: sheader
+      integer,          intent(out)   :: iunit
+      
+      PUSH_SUB(output_berkeleygw.bgw_write_header)
+
+      if(mpi_grp_is_root(mpi_world)) then
+        iunit = io_open(trim(dir) // sheader, form = 'unformatted', action = 'write')
+        call write_binary_header(iunit, sheader, iflavor = 2, ns = st%d%nspin, ng = shell%ngvectors, &
+          ntran = symmetries_number(gr%sb%symm), cell_symmetry = 0, nat = geo%natoms, &
+          nk = gr%sb%kpoints%reduced%npoints, nbands = st%nst, ngkmax = shell%ngvectors, ecutrho = shell%ekin_cutoff / 2,  &
+          ecutwfc = shell%ekin_cutoff / 2, kmax = gr%mesh%idx%ll, kgrid = gr%sb%kpoints%nik_axis, kshift = gr%sb%kpoints%shifts, &
+          celvol = gr%sb%rcell_volume, alat = M_ONE, avec = gr%sb%rlattice, adot = adot, recvol = recvol, &
+          blat = M_ONE, bvec = gr%sb%klattice, bdot = bdot, mtrx = mtrx, tnp = tnp, atyp = atyp, &
+          apos = apos, ngk = ngk, kw = gr%sb%kpoints%reduced%weight, kpt = gr%sb%kpoints%reduced%red_point, &
+          ifmin = ifmin, ifmax = ifmax, energies = energies, occupations = occupations, warn = .false.)
+
+        call write_binary_gvectors(iunit, shell%ngvectors, shell%ngvectors, shell%red_gvec)
+      endif
+
+      POP_SUB(output_berkeleygw.bgw_write_header)
+    end subroutine bgw_write_header
+
   end subroutine output_berkeleygw
 
 #include "output_etsf_inc.F90"

@@ -52,9 +52,6 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, vxc)
   endif
   SAFE_ALLOCATE(mtxel(ndiag + noffdiag, st%d%nspin))
 
-  message(1) = "BerkeleyGW output: vxc.dat"
-  call messages_info(1)
-
   ! BerkeleyGW allows using only spin down, but we will not give that option here
   do ispin = 1, st%d%nspin
     spin_index(ispin) = ispin
@@ -122,6 +119,45 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, vxc)
   POP_SUB(X(bgw_vxc_dat))
 
 end subroutine X(bgw_vxc_dat)
+
+
+! --------------------------------------------------------- 
+subroutine X(bgw_write_FS)(iunit, field_r, field_g, shell, nspin, gr, cube, cf)
+  integer,               intent(in)    :: iunit
+  R_TYPE,                intent(in)    :: field_r(:,:)
+  CMPLX,                 intent(inout) :: field_g(:,:)
+  type(fourier_shell_t), intent(in)    :: shell
+  integer,               intent(in)    :: nspin
+  type(grid_t),          intent(in)    :: gr
+  type(cube_t),          intent(inout) :: cube
+  type(cube_function_t), intent(inout) :: cf
+
+  integer :: ig, ix, iy, iz, is
+
+  PUSH_SUB(X(bgw_write_FS))
+
+  do is = 1, nspin
+    call X(mesh_to_cube)(gr%mesh, field_r(:, is), cube, cf, local = .true.)
+    call X(cube_function_rs2fs)(cube, cf)
+    
+    do ig = 1, shell%ngvectors
+      ix = shell%coords(1, ig)
+      iy = shell%coords(2, ig)
+      iz = shell%coords(3, ig)
+      field_g(ig, is) = cf%fs(ix, iy, iz)
+    enddo
+  enddo
+
+  ! do Gram-Schmidt here if appropriate
+
+
+
+  if(mpi_grp_is_root(mpi_world)) then
+    call write_binary_complex_data(iunit, shell%ngvectors, shell%ngvectors, nspin, field_g)
+  endif
+
+  POP_SUB(X(bgw_write_FS))
+end subroutine X(bgw_write_FS)
 
 !! Local Variables:
 !! mode: f90
