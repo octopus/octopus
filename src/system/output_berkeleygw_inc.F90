@@ -122,7 +122,7 @@ end subroutine X(bgw_vxc_dat)
 
 
 ! --------------------------------------------------------- 
-subroutine X(bgw_write_FS)(iunit, field_r, field_g, shell, nspin, gr, cube, cf)
+subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf)
   integer,               intent(in)    :: iunit
   R_TYPE,                intent(in)    :: field_r(:,:)
   CMPLX,                 intent(inout) :: field_g(:,:)
@@ -134,7 +134,7 @@ subroutine X(bgw_write_FS)(iunit, field_r, field_g, shell, nspin, gr, cube, cf)
 
   integer :: ig, ix, iy, iz, is
 
-  PUSH_SUB(X(bgw_write_FS))
+  PUSH_SUB(X(bgw_write_fs))
 
   do is = 1, nspin
     call X(mesh_to_cube)(gr%mesh, field_r(:, is), cube, cf, local = .true.)
@@ -156,8 +156,8 @@ subroutine X(bgw_write_FS)(iunit, field_r, field_g, shell, nspin, gr, cube, cf)
     call write_binary_complex_data(iunit, shell%ngvectors, shell%ngvectors, nspin, field_g)
   endif
 
-  POP_SUB(X(bgw_write_FS))
-end subroutine X(bgw_write_FS)
+  POP_SUB(X(bgw_write_fs))
+end subroutine X(bgw_write_fs)
 
 !! Local Variables:
 !! mode: f90

@@ -719,7 +719,9 @@ contains
     PUSH_SUB(output_berkeleygw_init)
   
     ! conditions to die: spinors, not 3D, parallel in states or k-points (if spin-polarized), non-local functionals, SIC
-    ! nlcc, not a kgrid, st%smear%method == SMEAR_FIXED_OCC, single precision
+    ! nlcc, not a kgrid, st%smear%method == SMEAR_FIXED_OCC, single precision, OEP?
+
+    call messages_experimental("BerkeleyGW output")
 
 #ifndef HAVE_BERKELEYGW
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
@@ -809,9 +811,9 @@ contains
     integer, pointer :: ifmin(:,:), ifmax(:,:), atyp(:), ngk(:)
     character*3 :: sheader
     FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48)
-    FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:), vxc(:,:)
-    CMPLX, pointer :: field_g(:,:)
-    type(cube_t) :: cube
+    FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:), vxc(:,:), dpsi(:,:)
+    CMPLX, pointer :: field_g(:,:), zpsi(:,:)
+    type(cube_t) :: dcube, zcube
     type(cube_function_t) :: dcf, zcf
     type(fourier_shell_t) :: shell
 
@@ -833,80 +835,100 @@ contains
       call zbgw_vxc_dat(bgw, dir, st, gr, vxc)
     endif
 
-    call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
+    ! we use this for RHO and VXC, and maybe WFN
+    call cube_init(dcube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
     call cube_function_null(dcf)
-    call dcube_function_alloc_rs(cube, dcf)
-    call cube_function_alloc_fs(cube, dcf)
-    call fourier_shell_init(shell, cube, gr%mesh)
-    SAFE_ALLOCATE(field_g(shell%ngvectors, st%d%nspin))
+    call dcube_function_alloc_rs(dcube, dcf)
+    call cube_function_alloc_fs(dcube, dcf)
 
+    ! this is only for WFN
     if(states_are_complex(st)) then
+      call cube_init(zcube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
       call cube_function_null(zcf)
-      call zcube_function_alloc_rs(cube, zcf)
-      call cube_function_alloc_fs(cube, zcf)
+      call zcube_function_alloc_rs(zcube, zcf)
+      call cube_function_alloc_fs(zcube, zcf)
     endif
 
-    adot(:,:) = matmul(gr%sb%rlattice, gr%sb%rlattice)
-    bdot(:,:) = matmul(gr%sb%klattice, gr%sb%klattice)
-    recvol = (M_TWO * M_PI)**3 / gr%sb%rcell_volume
+    call fourier_shell_init(shell, dcube, gr%mesh)
+    SAFE_ALLOCATE(field_g(shell%ngvectors, st%d%nspin))
 
-    ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
-    do itran = 1, symmetries_number(gr%sb%symm)
-      mtrx(:,:, itran) = symm_op_rotation_matrix(gr%sb%symm%ops(itran))
-      tnp(:, itran) = symm_op_translation_vector(gr%sb%symm%ops(itran))
-    enddo
+    call bgw_setup_header()
 
-    SAFE_ALLOCATE(ifmin(gr%sb%kpoints%reduced%npoints, st%d%nspin))
-    SAFE_ALLOCATE(ifmax(gr%sb%kpoints%reduced%npoints, st%d%nspin))
-    SAFE_ALLOCATE(energies(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
-    SAFE_ALLOCATE(occupations(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
-    SAFE_ALLOCATE(ngk(gr%sb%kpoints%reduced%npoints))
-    ifmin(:,:) = 1
-    ifmax(:,:) = 0
-    ngk(:) = shell%ngvectors
-    do ik = 1, st%d%nik
-      is = states_dim_get_spin_index(st%d, ik)
-      ikk = states_dim_get_kpoint_index(st%d, ik)
-      energies(1:st%nst, ikk, is) = st%eigenval(1:st%nst,ik) * M_TWO
-      occupations(1:st%nst, ikk, is) = st%occ(1:st%nst, ik) / st%smear%el_per_state
-      do ist = 1, st%nst
-        if(st%eigenval(ist, ik) > st%smear%e_fermi) then
-          ifmax(ikk, is) = ist - 1
-          exit
-        endif
-      enddo
-    enddo
-
-    SAFE_ALLOCATE(atyp(geo%natoms))
-    SAFE_ALLOCATE(apos(3, geo%natoms))
-    do iatom = 1, geo%natoms
-      atyp(iatom) = species_index(geo%atom(iatom)%spec)
-      apos(1:3, iatom) = geo%atom(iatom)%x(1:3)
-    enddo
 
     message(1) = "BerkeleyGW output: VXC"
     call messages_info(1)
 
     sheader = 'VXC'
-    if(mpi_grp_is_root(mpi_world)) call bgw_write_header(sheader, iunit)
-    call dbgw_write_FS(iunit, vxc, field_g, shell, st%d%nspin, gr, cube, dcf)
+    if(mpi_grp_is_root(mpi_world)) then
+      iunit = io_open(trim(dir) // 'VXC', form = 'unformatted', action = 'write')
+      call bgw_write_header(sheader, iunit)
+    endif
+    call dbgw_write_FS(iunit, vxc, field_g, shell, st%d%nspin, gr, dcube, dcf)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
     SAFE_DEALLOCATE_P(vxc)
+
 
     message(1) = "BerkeleyGW output: RHO"
     call messages_info(1)
 
     sheader = 'RHO'
-    if(mpi_grp_is_root(mpi_world)) call bgw_write_header(sheader, iunit)
-    call dbgw_write_FS(iunit, st%rho, field_g, shell, st%d%nspin, gr, cube, dcf)
+    if(mpi_grp_is_root(mpi_world)) then
+      iunit = io_open(trim(dir) // 'RHO', form = 'unformatted', action = 'write')
+      call bgw_write_header(sheader, iunit)
+    endif
+    call dbgw_write_FS(iunit, st%rho, field_g, shell, st%d%nspin, gr, dcube, dcf)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
 
+
+    message(1) = "BerkeleyGW output: WFN"
+    call messages_info(1)
+
+    if(states_are_real(st)) then
+      SAFE_ALLOCATE(dpsi(gr%mesh%np, st%d%nspin))
+    else
+      SAFE_ALLOCATE(zpsi(gr%mesh%np, st%d%nspin))
+    endif
+
+    sheader = 'WFN'
+    if(mpi_grp_is_root(mpi_world)) then
+      iunit = io_open(trim(dir) // bgw%wfn_filename, form = 'unformatted', action = 'write')
+      call bgw_write_header(sheader, iunit)
+    endif
+
+    do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
+      if(mpi_grp_is_root(mpi_world)) &
+        call write_binary_gvectors(iunit, shell%ngvectors, shell%ngvectors, shell%red_gvec)
+      do ist = 1, st%nst
+        do is = 1, st%d%nspin
+          ikk = ik + is - 1
+          if(states_are_real(st)) then
+            call states_get_state(st, gr%mesh, 1, ist, ikk, dpsi(:, is))
+          else
+            call states_get_state(st, gr%mesh, 1, ist, ikk, zpsi(:, is))
+          endif
+        enddo
+        if(states_are_real(st)) then
+          call dbgw_write_FS(iunit, dpsi, field_g, shell, st%d%nspin, gr, dcube, dcf)
+        else
+          call zbgw_write_FS(iunit, zpsi, field_g, shell, st%d%nspin, gr, zcube, zcf)
+        endif
+      enddo
+    enddo
+
+    if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
+
+
+    ! deallocate everything
     call fourier_shell_end(shell)
-    call cube_function_free_fs(cube, dcf)
-    call dcube_function_free_rs(cube, dcf)
+    call cube_function_free_fs(dcube, dcf)
+    call dcube_function_free_rs(dcube, dcf)
 
-    ! wfns
-
+    if(states_are_real(st)) then
+      SAFE_DEALLOCATE_P(dpsi)
+    else
+      SAFE_DEALLOCATE_P(zpsi)
+    endif
+    SAFE_DEALLOCATE_P(vxc)
     SAFE_DEALLOCATE_P(field_g)
     SAFE_DEALLOCATE_P(ifmin)
     SAFE_DEALLOCATE_P(ifmax)
@@ -925,25 +947,67 @@ contains
 
   contains
     
+    subroutine bgw_setup_header()
+      PUSH_SUB(output_berkeleygw.bgw_setup_header)
+
+      adot(:,:) = matmul(gr%sb%rlattice, gr%sb%rlattice)
+      bdot(:,:) = matmul(gr%sb%klattice, gr%sb%klattice)
+      recvol = (M_TWO * M_PI)**3 / gr%sb%rcell_volume
+      
+      ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
+      do itran = 1, symmetries_number(gr%sb%symm)
+        mtrx(:,:, itran) = symm_op_rotation_matrix(gr%sb%symm%ops(itran))
+        tnp(:, itran) = symm_op_translation_vector(gr%sb%symm%ops(itran))
+      enddo
+      
+      SAFE_ALLOCATE(ifmin(gr%sb%kpoints%reduced%npoints, st%d%nspin))
+      SAFE_ALLOCATE(ifmax(gr%sb%kpoints%reduced%npoints, st%d%nspin))
+      SAFE_ALLOCATE(energies(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
+      SAFE_ALLOCATE(occupations(st%nst, gr%sb%kpoints%reduced%npoints, st%d%nspin))
+      SAFE_ALLOCATE(ngk(gr%sb%kpoints%reduced%npoints))
+      ifmin(:,:) = 1
+      ifmax(:,:) = st%nst
+      ngk(:) = shell%ngvectors
+      do ik = 1, st%d%nik
+        is = states_dim_get_spin_index(st%d, ik)
+        ikk = states_dim_get_kpoint_index(st%d, ik)
+        energies(1:st%nst, ikk, is) = st%eigenval(1:st%nst,ik) * M_TWO
+        occupations(1:st%nst, ikk, is) = st%occ(1:st%nst, ik) / st%smear%el_per_state
+        do ist = 1, st%nst
+          if(st%eigenval(ist, ik) > st%smear%e_fermi) then
+            ifmax(ikk, is) = ist - 1
+            exit
+          endif
+        enddo
+      enddo
+      
+      SAFE_ALLOCATE(atyp(geo%natoms))
+      SAFE_ALLOCATE(apos(3, geo%natoms))
+      do iatom = 1, geo%natoms
+        atyp(iatom) = species_index(geo%atom(iatom)%spec)
+        apos(1:3, iatom) = geo%atom(iatom)%x(1:3)
+      enddo
+
+      POP_SUB(output_berkeleygw.bgw_setup_header)
+    end subroutine bgw_setup_header
+
+    ! ---------------------------------------------------------
     subroutine bgw_write_header(sheader, iunit)
       character(len=3), intent(inout) :: sheader
       integer,          intent(out)   :: iunit
       
       PUSH_SUB(output_berkeleygw.bgw_write_header)
 
-      if(mpi_grp_is_root(mpi_world)) then
-        iunit = io_open(trim(dir) // sheader, form = 'unformatted', action = 'write')
-        call write_binary_header(iunit, sheader, iflavor = 2, ns = st%d%nspin, ng = shell%ngvectors, &
-          ntran = symmetries_number(gr%sb%symm), cell_symmetry = 0, nat = geo%natoms, &
-          nk = gr%sb%kpoints%reduced%npoints, nbands = st%nst, ngkmax = shell%ngvectors, ecutrho = shell%ekin_cutoff / 2,  &
-          ecutwfc = shell%ekin_cutoff / 2, kmax = gr%mesh%idx%ll, kgrid = gr%sb%kpoints%nik_axis, kshift = gr%sb%kpoints%shifts, &
-          celvol = gr%sb%rcell_volume, alat = M_ONE, avec = gr%sb%rlattice, adot = adot, recvol = recvol, &
-          blat = M_ONE, bvec = gr%sb%klattice, bdot = bdot, mtrx = mtrx, tnp = tnp, atyp = atyp, &
-          apos = apos, ngk = ngk, kw = gr%sb%kpoints%reduced%weight, kpt = gr%sb%kpoints%reduced%red_point, &
-          ifmin = ifmin, ifmax = ifmax, energies = energies, occupations = occupations, warn = .false.)
+      call write_binary_header(iunit, sheader, iflavor = 2, ns = st%d%nspin, ng = shell%ngvectors, &
+        ntran = symmetries_number(gr%sb%symm), cell_symmetry = 0, nat = geo%natoms, &
+        nk = gr%sb%kpoints%reduced%npoints, nbands = st%nst, ngkmax = shell%ngvectors, ecutrho = shell%ekin_cutoff / 2,  &
+        ecutwfc = shell%ekin_cutoff / 2, kmax = gr%mesh%idx%ll, kgrid = gr%sb%kpoints%nik_axis, kshift = gr%sb%kpoints%shifts, &
+        celvol = gr%sb%rcell_volume, alat = M_ONE, avec = gr%sb%rlattice, adot = adot, recvol = recvol, &
+        blat = M_ONE, bvec = gr%sb%klattice, bdot = bdot, mtrx = mtrx, tnp = tnp, atyp = atyp, &
+        apos = apos, ngk = ngk, kw = gr%sb%kpoints%reduced%weight, kpt = gr%sb%kpoints%reduced%red_point, &
+        ifmin = ifmin, ifmax = ifmax, energies = energies, occupations = occupations, warn = .false.)
 
-        call write_binary_gvectors(iunit, shell%ngvectors, shell%ngvectors, shell%red_gvec)
-      endif
+      call write_binary_gvectors(iunit, shell%ngvectors, shell%ngvectors, shell%red_gvec)
 
       POP_SUB(output_berkeleygw.bgw_write_header)
     end subroutine bgw_write_header

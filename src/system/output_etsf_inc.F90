@@ -458,7 +458,7 @@ subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
   if (st%d%ispin /= SPINORS) then
     do ispin = 1, st%d%nspin
       call dmesh_to_cube(mesh, st%rho(:, ispin), cube, cf, local = .true.)
-      main%density%data4D(1:n(1), 1:n(2), 1:n(3), ispin) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
+      main%density%data4D(1:n(1), 1:n(2), 1:n(3), ispin) = cf%drs(1:n(1), 1:n(2), 1:n(3))
     end do
   else
     SAFE_ALLOCATE(md(1:mesh%np, 1:3))
@@ -468,10 +468,10 @@ subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
     call magnetic_density(mesh, st, st%rho, md)
 
     call dmesh_to_cube(mesh, d, cube, cf, local = .true.)
-    main%density%data4D(1:n(1), 1:n(2), 1:n(3), 1) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
+    main%density%data4D(1:n(1), 1:n(2), 1:n(3), 1) = cf%drs(1:n(1), 1:n(2), 1:n(3))
     do ispin = 1, 3
       call dmesh_to_cube(mesh, md(:, ispin), cube, cf, local = .true.)
-      main%density%data4D(1:n(1), 1:n(2), 1:n(3), ispin + 1) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
+      main%density%data4D(1:n(1), 1:n(2), 1:n(3), ispin + 1) = cf%drs(1:n(1), 1:n(2), 1:n(3))
     end do
     SAFE_DEALLOCATE_A(d)
     SAFE_DEALLOCATE_A(md)
@@ -556,16 +556,16 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
             call states_get_state(st, mesh, idim, ist, ik + ispin - 1, dpsi)
 
             call dmesh_to_cube(mesh, dpsi, cube, cf, local = .true.)
-            local_wfs(1, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
+            local_wfs(1, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%drs(1:n(1), 1:n(2), 1:n(3))
 
           else if(states_are_complex(st)) then
             call states_get_state(st, mesh, idim, ist, ik + ispin - 1, zpsi)
 
             call dmesh_to_cube(mesh, real(zpsi, REAL_PRECISION), cube, cf, local = .true.)
-            local_wfs(1, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
+            local_wfs(1, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%drs(1:n(1), 1:n(2), 1:n(3))
 
             call dmesh_to_cube(mesh, aimag(zpsi), cube, cf, local = .true.)
-            local_wfs(2, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%dRS(1:n(1), 1:n(2), 1:n(3))
+            local_wfs(2, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%drs(1:n(1), 1:n(2), 1:n(3))
 
           end if
         end do
