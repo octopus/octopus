@@ -316,13 +316,13 @@ contains
     
       PUSH_SUB(elf_calc_fs.dmf2mf_RS2FS)
 
-      call dcube_function_alloc_RS(cube, cc)
-      call dcube_function_alloc_FS(cube, cc)
+      call dcube_function_alloc_rs(cube, cc)
+      call cube_function_alloc_fs(cube, cc)
       call dmesh_to_cube(mesh, fin, cube, cc)
       call dcube_function_RS2FS(cube, cc)
       call dfourier_to_mesh(cube, cc, mesh, fout)
-      call dcube_function_free_RS(cube, cc)
-      call dcube_function_free_FS(cube, cc)
+      call dcube_function_free_rs(cube, cc)
+      call cube_function_free_fs(cube, cc)
 
       POP_SUB(elf_calc_fs.dmf2mf_RS2FS)
     end subroutine dmf2mf_RS2FS
@@ -337,13 +337,13 @@ contains
     
       PUSH_SUB(elf_calc_fs.zmf2mf_RS2FS)
 
-      call zcube_function_alloc_RS(cube, cc)
-      call zcube_function_alloc_FS(cube, cc)
+      call zcube_function_alloc_rs(cube, cc)
+      call cube_function_alloc_fs(cube, cc)
       call zmesh_to_cube(mesh, fin, cube, cc)
       call zcube_function_RS2FS(cube, cc)
       call zfourier_to_mesh(cube, cc, mesh, fout)
-      call zcube_function_free_RS(cube, cc)
-      call zcube_function_free_FS(cube, cc)
+      call zcube_function_free_rs(cube, cc)
+      call cube_function_free_fs(cube, cc)
 
       POP_SUB(elf_calc_fs.zmf2mf_RS2FS)
     end subroutine zmf2mf_RS2FS

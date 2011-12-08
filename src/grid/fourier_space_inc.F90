@@ -17,45 +17,6 @@
 !!
 !! $Id$
 
-!> Allocates locally the Fourier space grid, if PFFT library is not used.
-!! Otherwise, it assigns the PFFT Fourier space grid to the cube Fourier space grid,
-!! via pointer.
-subroutine X(cube_function_alloc_fs)(cube, cf)
-  type(cube_t),          intent(in)    :: cube
-  type(cube_function_t), intent(inout) :: cf
-
-  PUSH_SUB(X(cube_function_alloc_fs))
-
-  ASSERT(.not.associated(cf%fs))
-
-  if (cube%fft_library /= FFTLIB_PFFT) then
-    SAFE_ALLOCATE(cf%fs(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
-  else
-    ASSERT(associated(cube%fft))
-    cf%fs => cube%fft%fs_data(1:cube%fs_n(3), 1:cube%fs_n(1), 1:cube%fs_n(2))
-  end if
-
-  POP_SUB(X(cube_function_alloc_fs))
-end subroutine X(cube_function_alloc_fs)
-
-
-! ---------------------------------------------------------
-!> Deallocates the Fourier space grid
-subroutine X(cube_function_free_fs)(cube, cf)
-  type(cube_t),          intent(in)    :: cube
-  type(cube_function_t), intent(inout) :: cf
-
-  PUSH_SUB(X(cube_function_free_fs))
-
-  if (cube%fft_library /= FFTLIB_PFFT) then
-    SAFE_DEALLOCATE_P(cf%fs)
-  else
-    nullify(cf%fs)
-  end if
-
-  POP_SUB(X(cube_function_free_fs))
-end subroutine X(cube_function_free_fs)
-
 ! ---------------------------------------------------------
 !> The following routines convert the function between real space and Fourier space
 !! Note that the dimensions of the function in fs are different depending on whether
@@ -129,7 +90,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
 
   ASSERT(cube%fft_library /= FFTLIB_NONE)
 
-  call X(cube_function_alloc_fs)(cube, cf)
+  call cube_function_alloc_fs(cube, cf)
 
   call profiling_in(prof, "OP_APPLY")
   call profiling_in(rs2fs_prof, "rs2fs")
@@ -164,7 +125,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   call profiling_in(fs2rs_prof, "fs2rs")
   call X(cube_function_fs2rs)(cube, cf)
   call profiling_out(fs2rs_prof)
-  call X(cube_function_free_fs)(cube, cf)
+  call cube_function_free_fs(cube, cf)
   call profiling_out(prof)
 
   POP_SUB(X(fourier_space_op_apply))

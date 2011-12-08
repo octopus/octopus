@@ -811,8 +811,8 @@ contains
     FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48)
     FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:), vxc(:,:)
     CMPLX, pointer :: field_g(:,:)
-    type(cube_t) :: dcube
-    type(cube_function_t) :: cf
+    type(cube_t) :: cube
+    type(cube_function_t) :: dcf, zcf
     type(fourier_shell_t) :: shell
 
     PUSH_SUB(output_berkeleygw)
@@ -833,12 +833,18 @@ contains
       call zbgw_vxc_dat(bgw, dir, st, gr, vxc)
     endif
 
-    call cube_init(dcube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
-    call cube_function_null(cf)
-    call dcube_function_alloc_rs(dcube, cf)
-    call dcube_function_alloc_fs(dcube, cf)
-    call fourier_shell_init(shell, dcube, gr%mesh)
+    call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
+    call cube_function_null(dcf)
+    call dcube_function_alloc_rs(cube, dcf)
+    call cube_function_alloc_fs(cube, dcf)
+    call fourier_shell_init(shell, cube, gr%mesh)
     SAFE_ALLOCATE(field_g(shell%ngvectors, st%d%nspin))
+
+    if(states_are_complex(st)) then
+      call cube_function_null(zcf)
+      call zcube_function_alloc_rs(cube, zcf)
+      call cube_function_alloc_fs(cube, zcf)
+    endif
 
     adot(:,:) = matmul(gr%sb%rlattice, gr%sb%rlattice)
     bdot(:,:) = matmul(gr%sb%klattice, gr%sb%klattice)
@@ -883,7 +889,7 @@ contains
 
     sheader = 'VXC'
     if(mpi_grp_is_root(mpi_world)) call bgw_write_header(sheader, iunit)
-    call dbgw_write_FS(iunit, vxc, field_g, shell, st%d%nspin, gr, dcube, cf)
+    call dbgw_write_FS(iunit, vxc, field_g, shell, st%d%nspin, gr, cube, dcf)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
     SAFE_DEALLOCATE_P(vxc)
 
@@ -892,12 +898,12 @@ contains
 
     sheader = 'RHO'
     if(mpi_grp_is_root(mpi_world)) call bgw_write_header(sheader, iunit)
-    call dbgw_write_FS(iunit, st%rho, field_g, shell, st%d%nspin, gr, dcube, cf)
+    call dbgw_write_FS(iunit, st%rho, field_g, shell, st%d%nspin, gr, cube, dcf)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
 
     call fourier_shell_end(shell)
-    call dcube_function_free_fs(dcube, cf)
-    call dcube_function_free_rs(dcube, cf)
+    call cube_function_free_fs(cube, dcf)
+    call dcube_function_free_rs(cube, dcf)
 
     ! wfns
 

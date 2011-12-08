@@ -22,41 +22,41 @@
 !> Allocates locally the real space grid, if PFFT library is not used.
 !! Otherwise, it assigns the PFFT real space grid to the cube real space grid,
 !! via pointer.
-subroutine X(cube_function_alloc_RS)(cube, cf)
+subroutine X(cube_function_alloc_rs)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
-  PUSH_SUB(X(cube_function_alloc_RS))
+  PUSH_SUB(X(cube_function_alloc_rs))
 
-  ASSERT(.not.associated(cf%X(RS)))
+  ASSERT(.not.associated(cf%X(rs)))
 
   if (cube%fft_library /= FFTLIB_PFFT) then
-    SAFE_ALLOCATE(cf%X(RS)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
+    SAFE_ALLOCATE(cf%X(rs)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
   else
     ASSERT(associated(cube%fft))
-    cf%X(RS) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
+    cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
   end if
 
-  POP_SUB(X(cube_function_alloc_RS))
-end subroutine X(cube_function_alloc_RS)
+  POP_SUB(X(cube_function_alloc_rs))
+end subroutine X(cube_function_alloc_rs)
 
 
 ! ---------------------------------------------------------
 !> Deallocates the real space grid
-subroutine X(cube_function_free_RS)(cube, cf)
+subroutine X(cube_function_free_rs)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
-  PUSH_SUB(X(cube_function_free_RS))
+  PUSH_SUB(X(cube_function_free_rs))
 
   if (cube%fft_library /= FFTLIB_PFFT) then
-    SAFE_DEALLOCATE_P(cf%X(RS))
+    SAFE_DEALLOCATE_P(cf%X(rs))
   else
-    nullify(cf%X(RS))
+    nullify(cf%X(rs))
   end if
 
-  POP_SUB(X(cube_function_free_RS))
-end subroutine X(cube_function_free_RS)
+  POP_SUB(X(cube_function_free_rs))
+end subroutine X(cube_function_free_rs)
 
 ! ---------------------------------------------------------
 #ifdef HAVE_MPI
@@ -77,7 +77,7 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local)
   call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
   ! Warning: in the next line we have to pass the full cf_local array, not just the first element.
   ! This is because cf_local might be a pointer to a subarray when using PFFT, such that
-  ! memory will not be contiguous (see cube_function_alloc_RS). In that case the 
+  ! memory will not be contiguous (see cube_function_alloc_rs). In that case the 
   ! Fortran compiler should do a temporary copy.
   call MPI_Allgatherv ( cf_local, cube%np_local(cube%mpi_grp%rank+1), R_MPITYPE, &
        cf_tmp(1), cube%np_local, cube%xlocal - 1, R_MPITYPE, &
@@ -138,9 +138,9 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     gmf => mf
   end if
 
-  ASSERT(associated(cf%X(RS)))
+  ASSERT(associated(cf%X(rs)))
 
-  cf%X(RS) = M_ZERO
+  cf%X(rs) = M_ZERO
 
   ASSERT(associated(mesh%cube_map%map))
   ASSERT(mesh%sb%dim <= 3)
@@ -154,7 +154,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
       ix = mesh%idx%lxyz(ip, 1) + cube%center(1)
       iy = mesh%idx%lxyz(ip, 2) + cube%center(2)
       iz = mesh%idx%lxyz(ip, 3) + cube%center(3)
-      forall(ii = 0:nn - 1) cf%X(RS)(ix, iy, iz + ii) = gmf(ip + ii)
+      forall(ii = 0:nn - 1) cf%X(rs)(ix, iy, iz + ii) = gmf(ip + ii)
     end do
 
   else
@@ -166,7 +166,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
       ixyz = ixyz + cube%center
-      forall(ii = 0:nn - 1) cf%X(RS)(ixyz(1), ixyz(2), ixyz(3) + ii) = gmf(ip + ii)
+      forall(ii = 0:nn - 1) cf%X(rs)(ixyz(1), ixyz(2), ixyz(3) + ii) = gmf(ip + ii)
     end do
 
   end if
@@ -209,7 +209,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
     gmf => mf
   end if
 
-  ASSERT(associated(cf%X(RS)))
+  ASSERT(associated(cf%X(rs)))
   ASSERT(associated(mesh%cube_map%map))
 
   if(associated(mesh%idx%lxyz)) then
@@ -220,7 +220,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
       ix = mesh%idx%lxyz(ip, 1) + cube%center(1)
       iy = mesh%idx%lxyz(ip, 2) + cube%center(2)
       iz = mesh%idx%lxyz(ip, 3) + cube%center(3)
-      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(RS)(ix, iy, iz + ii)
+      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(rs)(ix, iy, iz + ii)
     end do
 
   else
@@ -234,7 +234,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
       ixyz = ixyz + cube%center
 
-      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(RS)(ixyz(1), ixyz(2), ixyz(3) + ii)
+      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(rs)(ixyz(1), ixyz(2), ixyz(3) + ii)
     end do
 
   end if
@@ -309,7 +309,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
   max_z = cube%rs_istart(3) + cube%rs_n(3)
   
   ! Initialize to zero the input matrix
-  forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%X(RS)(ix, iy, iz) = M_ZERO
+  forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%X(rs)(ix, iy, iz) = M_ZERO
 
   ! Do the actual transform, only for the output values
   do im = 1, mesh%cube_map%nmap
@@ -326,10 +326,10 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, local, pfft_part)
 
             if (pfft_part_) then
 #ifdef HAVE_MPI
-              cf%X(RS)(ix-min_x+1, iy-min_y+1, iz+ii-min_z+1) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
+              cf%X(rs)(ix-min_x+1, iy-min_y+1, iz+ii-min_z+1) = mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno))
 #endif
             else
-              cf%X(RS)(ix-min_x+1, iy-min_y+1, iz+ii-min_z+1) = gmf(ip + ii)
+              cf%X(rs)(ix-min_x+1, iy-min_y+1, iz+ii-min_z+1) = gmf(ip + ii)
             end if
           end if
         end do
@@ -392,7 +392,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
 
         if (cube_global2local(cube, ixyz, lxyz)) then
 #ifdef HAVE_MPI
-          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = cf%X(RS)(lxyz(1), lxyz(2), lxyz(3))
+          mf(vec_global2local(mesh%vp,ip+ii, mesh%vp%partno)) = cf%X(rs)(lxyz(1), lxyz(2), lxyz(3))
 #endif
         end if
       end do
@@ -403,7 +403,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, local, pfft_part)
     !collect the data in all processes
     SAFE_ALLOCATE(gcf(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
 #ifdef HAVE_MPI
-    call X(cube_function_allgather)(cube, gcf, cf%X(RS))
+    call X(cube_function_allgather)(cube, gcf, cf%X(rs))
 #endif
 
     ! cube to mesh

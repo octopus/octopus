@@ -38,14 +38,12 @@ module fourier_space_m
   implicit none
   private
   public ::                     &
-    dcube_function_alloc_fs,       & 
-    zcube_function_alloc_fs,       &
-    dcube_function_free_fs,        &
-    zcube_function_free_fs,        &
-    dcube_function_RS2FS,          &
-    zcube_function_RS2FS,          &
-    dcube_function_FS2RS,          &
-    zcube_function_FS2RS,          &
+    cube_function_alloc_fs,     & 
+    cube_function_free_fs,      &
+    dcube_function_rs2fs,       &
+    zcube_function_rs2fs,       &
+    dcube_function_fs2rs,       &
+    zcube_function_fs2rs,       &
     fourier_space_op_t,         &
     dfourier_space_op_init,     &
     dfourier_space_op_apply,    &
@@ -65,6 +63,47 @@ contains
 
   ! ---------------------------------------------------------
 
+  !> Allocates locally the Fourier space grid, if PFFT library is not used.
+  !! Otherwise, it assigns the PFFT Fourier space grid to the cube Fourier space grid,
+  !! via pointer.
+  subroutine cube_function_alloc_fs(cube, cf)
+    type(cube_t),          intent(in)    :: cube
+    type(cube_function_t), intent(inout) :: cf
+    
+    PUSH_SUB(cube_function_alloc_fs)
+    
+    ASSERT(.not.associated(cf%fs))
+    
+    if (cube%fft_library /= FFTLIB_PFFT) then
+      SAFE_ALLOCATE(cf%fs(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
+    else
+      ASSERT(associated(cube%fft))
+      cf%fs => cube%fft%fs_data(1:cube%fs_n(3), 1:cube%fs_n(1), 1:cube%fs_n(2))
+    end if
+    
+    POP_SUB(cube_function_alloc_fs)
+  end subroutine cube_function_alloc_fs
+
+  
+  ! ---------------------------------------------------------
+  !> Deallocates the Fourier space grid
+  subroutine cube_function_free_fs(cube, cf)
+    type(cube_t),          intent(in)    :: cube
+    type(cube_function_t), intent(inout) :: cf
+    
+    PUSH_SUB(cube_function_free_fs)
+    
+    if (cube%fft_library /= FFTLIB_PFFT) then
+      SAFE_DEALLOCATE_P(cf%fs)
+    else
+      nullify(cf%fs)
+    end if
+    
+    POP_SUB(cube_function_free_fs)
+  end subroutine cube_function_free_fs
+  
+
+  ! ---------------------------------------------------------  
   subroutine fourier_space_op_end(this)
     type(fourier_space_op_t), intent(inout) :: this
     
