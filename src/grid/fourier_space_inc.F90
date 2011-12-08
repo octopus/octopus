@@ -20,76 +20,76 @@
 !> Allocates locally the Fourier space grid, if PFFT library is not used.
 !! Otherwise, it assigns the PFFT Fourier space grid to the cube Fourier space grid,
 !! via pointer.
-subroutine X(cube_function_alloc_FS)(cube, cf)
+subroutine X(cube_function_alloc_fs)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
-  PUSH_SUB(X(cube_function_alloc_FS))
+  PUSH_SUB(X(cube_function_alloc_fs))
 
-  ASSERT(.not.associated(cf%FS))
+  ASSERT(.not.associated(cf%fs))
 
   if (cube%fft_library /= FFTLIB_PFFT) then
-    SAFE_ALLOCATE(cf%FS(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
+    SAFE_ALLOCATE(cf%fs(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
   else
     ASSERT(associated(cube%fft))
-    cf%FS => cube%fft%fs_data(1:cube%fs_n(3), 1:cube%fs_n(1), 1:cube%fs_n(2))
+    cf%fs => cube%fft%fs_data(1:cube%fs_n(3), 1:cube%fs_n(1), 1:cube%fs_n(2))
   end if
 
-  POP_SUB(X(cube_function_alloc_FS))
-end subroutine X(cube_function_alloc_FS)
+  POP_SUB(X(cube_function_alloc_fs))
+end subroutine X(cube_function_alloc_fs)
 
 
 ! ---------------------------------------------------------
 !> Deallocates the Fourier space grid
-subroutine X(cube_function_free_FS)(cube, cf)
+subroutine X(cube_function_free_fs)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
-  PUSH_SUB(X(cube_function_free_FS))
+  PUSH_SUB(X(cube_function_free_fs))
 
   if (cube%fft_library /= FFTLIB_PFFT) then
-    SAFE_DEALLOCATE_P(cf%FS)
+    SAFE_DEALLOCATE_P(cf%fs)
   else
-    nullify(cf%FS)
+    nullify(cf%fs)
   end if
 
-  POP_SUB(X(cube_function_free_FS))
-end subroutine X(cube_function_free_FS)
+  POP_SUB(X(cube_function_free_fs))
+end subroutine X(cube_function_free_fs)
 
 ! ---------------------------------------------------------
 !> The following routines convert the function between real space and Fourier space
-!! Note that the dimensions of the function in FS are different depending on whether
+!! Note that the dimensions of the function in fs are different depending on whether
 !! f is real or complex, because the FFT representation is different (FFTW scheme).
-subroutine X(cube_function_RS2FS)(cube, cf)
+subroutine X(cube_function_rs2fs)(cube, cf)
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
 
-  PUSH_SUB(X(cube_function_RS2FS))
+  PUSH_SUB(X(cube_function_rs2fs))
 
   ASSERT(cube%fft_library /= FFTLIB_NONE)
-  ASSERT(associated(cf%X(RS)))
-  ASSERT(associated(cf%FS))
+  ASSERT(associated(cf%X(rs)))
+  ASSERT(associated(cf%fs))
 
-  call X(fft_forward)(cube%fft, cf%X(RS), cf%FS)
+  call X(fft_forward)(cube%fft, cf%X(rs), cf%fs)
 
-  POP_SUB(X(cube_function_RS2FS))
-end subroutine X(cube_function_RS2FS)
+  POP_SUB(X(cube_function_rs2fs))
+end subroutine X(cube_function_rs2fs)
 
 ! ---------------------------------------------------------
-subroutine X(cube_function_FS2RS)(cube, cf)
+subroutine X(cube_function_fs2rs)(cube, cf)
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
 
-  PUSH_SUB(X(cube_function_FS2RS))
+  PUSH_SUB(X(cube_function_fs2rs))
 
   ASSERT(cube%fft_library /= FFTLIB_NONE)
-  ASSERT(associated(cf%X(RS)))
-  ASSERT(associated(cf%FS))
+  ASSERT(associated(cf%X(rs)))
+  ASSERT(associated(cf%fs))
 
-  call X(fft_backward)(cube%fft, cf%FS, cf%X(RS))
+  call X(fft_backward)(cube%fft, cf%fs, cf%X(rs))
 
-  POP_SUB(X(cube_function_FS2RS))
-end subroutine X(cube_function_FS2RS)
+  POP_SUB(X(cube_function_fs2rs))
+end subroutine X(cube_function_fs2rs)
 
 ! ---------------------------------------------------------
 subroutine X(fourier_space_op_init)(this, cube, op)
@@ -129,11 +129,11 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
 
   ASSERT(cube%fft_library /= FFTLIB_NONE)
 
-  call X(cube_function_alloc_FS)(cube, cf)
+  call X(cube_function_alloc_fs)(cube, cf)
 
   call profiling_in(prof, "OP_APPLY")
-  call profiling_in(rs2fs_prof, "RS2FS")
-  call X(cube_function_RS2FS)(cube, cf)
+  call profiling_in(rs2fs_prof, "rs2fs")
+  call X(cube_function_rs2fs)(cube, cf)
   call profiling_out(rs2fs_prof)
   
   call profiling_in(prof_g,"G_APPLY")
@@ -143,7 +143,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
     do kk = 1, cube%fs_n(3)
       do jj = 1, cube%fs_n(2)
         do ii = 1, cube%fs_n(1)
-          cf%FS(kk, ii, jj) = cf%FS(kk, ii, jj)*this%X(op) (ii, jj, kk)
+          cf%fs(kk, ii, jj) = cf%fs(kk, ii, jj)*this%X(op) (ii, jj, kk)
         end do
       end do
     end do
@@ -153,7 +153,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
     do kk = 1, cube%fs_n(3)
       do jj = 1, cube%fs_n(2)
         do ii = 1, cube%fs_n(1)
-          cf%FS(ii, jj, kk) = cf%FS(ii, jj, kk)*this%X(op)(ii, jj, kk)
+          cf%fs(ii, jj, kk) = cf%fs(ii, jj, kk)*this%X(op)(ii, jj, kk)
         end do
       end do
     end do
@@ -161,10 +161,10 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   end if
   call profiling_out(prof_g)
   
-  call profiling_in(fs2rs_prof, "FS2RS")
-  call X(cube_function_FS2RS)(cube, cf)
+  call profiling_in(fs2rs_prof, "fs2rs")
+  call X(cube_function_fs2rs)(cube, cf)
   call profiling_out(fs2rs_prof)
-  call X(cube_function_free_FS)(cube, cf)
+  call X(cube_function_free_fs)(cube, cf)
   call profiling_out(prof)
 
   POP_SUB(X(fourier_space_op_apply))
@@ -188,9 +188,9 @@ subroutine X(mesh_to_fourier) (mesh, mf, cube, cf)
 
   PUSH_SUB(X(mesh_to_fourier))
 
-  ASSERT(associated(cf%FS))
+  ASSERT(associated(cf%fs))
 
-  cf%FS = M_z0
+  cf%fs = M_z0
 
   do ip = 1, mesh%np_global
     ix = pad_feq(mesh%idx%lxyz(ip, 1), cube%rs_n_global(1), .false.)
@@ -198,7 +198,7 @@ subroutine X(mesh_to_fourier) (mesh, mf, cube, cf)
     iy = pad_feq(mesh%idx%lxyz(ip, 2), cube%rs_n_global(2), .false.)
     iz = pad_feq(mesh%idx%lxyz(ip, 3), cube%rs_n_global(3), .false.)
 
-    cf%FS(ix, iy, iz) = mf(ip)
+    cf%fs(ix, iy, iz) = mf(ip)
   end do
 
   POP_SUB(X(mesh_to_fourier))
@@ -216,7 +216,7 @@ subroutine X(fourier_to_mesh) (cube, cf, mesh, mf)
 
   PUSH_SUB(X(fourier_to_mesh))
 
-  ASSERT(associated(cf%FS))
+  ASSERT(associated(cf%fs))
 
   do ip = 1, mesh%np_global
     ix = pad_feq(mesh%idx%lxyz(ip, 1), cube%rs_n_global(1), .false.)
@@ -226,12 +226,12 @@ subroutine X(fourier_to_mesh) (cube, cf, mesh, mf)
 #ifdef R_TREAL
     if(ix > cube%fs_n_global(1)) then
       ix = pad_feq(-mesh%idx%lxyz(ip, 1), cube%rs_n_global(1), .false.)
-      mf(ip) = conjg(cf%FS(ix, iy, iz))
+      mf(ip) = conjg(cf%fs(ix, iy, iz))
     else
-      mf(ip) = cf%FS(ix, iy, iz)
+      mf(ip) = cf%fs(ix, iy, iz)
     end if
 #else
-    mf(ip) = cf%FS(ix, iy, iz)
+    mf(ip) = cf%fs(ix, iy, iz)
 #endif
   end do
 

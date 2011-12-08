@@ -17,18 +17,17 @@
 !!
 !! $Id: output_etsf_inc.F90 5880 2009-09-03 23:44:44Z dstrubbe $
 
-subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
+subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, vxc)
   type(output_bgw_t), intent(in) :: bgw
   character(len=*),   intent(in) :: dir
   type(states_t),     intent(in) :: st
   type(grid_t),       intent(in) :: gr
-  type(xc_t),         intent(in) :: xc
+  FLOAT,              intent(in) :: vxc(:,:)
 
   integer :: iunit, ispin, ik, ikk, ist, ist2, idiag, ioff, ndiag, noffdiag, spin_index(st%d%nspin)
   integer, allocatable :: diag(:), off1(:), off2(:)
   FLOAT :: kpoint(3)
   R_TYPE, allocatable :: psi(:), psi2(:)
-  FLOAT, allocatable :: vxc(:,:)
   CMPLX, allocatable :: mtxel(:,:)
 
   PUSH_SUB(X(bgw_vxc_dat))
@@ -77,13 +76,6 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
     enddo
   endif
 
-  SAFE_ALLOCATE(vxc(gr%mesh%np, st%d%nspin))
-  vxc(:,:) = M_ZERO
-  ! we should not include core rho here. that is why we do not just use hm%vxc
-  call xc_get_vxc(gr%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc = vxc)
-  ! convert to eV
-  vxc(:,:) = M_TWO * P_Ry * vxc(:,:)
-
   ! in case of hybrids, we should apply exchange operator too here
   ! in that case, we can write x.dat file as well
   
@@ -105,6 +97,9 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
       enddo
     enddo
 
+    ! convert to eV
+    mtxel(:,:) = M_TWO * P_Ry * mtxel(:,:)
+
     if(mpi_grp_is_root(mpi_world)) &
       call write_matrix_elements(iunit, kpoint, st%d%nspin, ndiag, noffdiag, spin_index, diag, off1, off2, mtxel) 
   enddo
@@ -118,7 +113,6 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, xc)
     SAFE_DEALLOCATE_A(psi2)
   endif
   SAFE_DEALLOCATE_A(mtxel)
-  SAFE_DEALLOCATE_A(vxc)
 
 #else
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."

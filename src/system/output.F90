@@ -809,9 +809,9 @@ contains
     integer, pointer :: ifmin(:,:), ifmax(:,:), atyp(:), ngk(:)
     character*3 :: sheader
     FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48)
-    FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:)
-    CMPLX, pointer :: vxc(:,:), vxc_g(:,:)
-    type(cube_t) :: zcube
+    FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:), vxc(:,:)
+    CMPLX, pointer :: vxc_g(:,:)
+    type(cube_t) :: dcube
     type(cube_function_t) :: cf
     type(fourier_shell_t) :: shell
 
@@ -819,19 +819,23 @@ contains
 
 #ifdef HAVE_BERKELEYGW
 
+    SAFE_ALLOCATE(vxc(gr%mesh%np, st%d%nspin))
+    vxc(:,:) = M_ZERO
+    ! we should not include core rho here. that is why we do not just use hm%vxc
+    call xc_get_vxc(gr%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc = vxc)
+
     if(states_are_real(st)) then
-      call dbgw_vxc_dat(bgw, dir, st, gr, xc)
+      call dbgw_vxc_dat(bgw, dir, st, gr, vxc)
     else
-      call zbgw_vxc_dat(bgw, dir, st, gr, xc)
+      call zbgw_vxc_dat(bgw, dir, st, gr, vxc)
     endif
 
-    call cube_init(zcube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
+    call cube_init(dcube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
     call cube_function_null(cf)
-    call zcube_function_alloc_RS(zcube, cf)
-    call zcube_function_alloc_FS(zcube, cf)
-    call fourier_shell_init(shell, zcube, gr%mesh)
-
-!    cutoff = mesh_gcutoff(gr%mesh)**2 / M_TWO
+    call dcube_function_alloc_rs(dcube, cf)
+    call dcube_function_alloc_fs(dcube, cf)
+    call fourier_shell_init(shell, dcube, gr%mesh)
+    SAFE_ALLOCATE(vxc_g(shell%ngvectors, st%d%nspin))
 
     adot(:,:) = matmul(gr%sb%rlattice, gr%sb%rlattice)
     bdot(:,:) = matmul(gr%sb%klattice, gr%sb%klattice)
@@ -872,20 +876,23 @@ contains
     enddo
 
     sheader = 'VXC'
-    if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // sheader, action='write')
-    call write_binary_header(iunit, sheader, iflavor = 2, ns = st%d%nspin, ng = shell%ngvectors, &
-      ntran = symmetries_number(gr%sb%symm), cell_symmetry = 0, nat = geo%natoms, &
-      nk = gr%sb%kpoints%reduced%npoints, nbands = st%nst, ngkmax = shell%ngvectors, ecutrho = shell%ekin_cutoff,  &
-      ecutwfc = shell%ekin_cutoff, kmax = gr%mesh%idx%ll, kgrid = gr%sb%kpoints%nik_axis, kshift = gr%sb%kpoints%shifts, &
-      celvol = gr%sb%rcell_volume, alat = M_ONE, avec = gr%sb%rlattice, adot = adot, recvol = recvol, &
-      blat = M_ONE, bvec = gr%sb%klattice, bdot = bdot, mtrx = mtrx, tnp = tnp, atyp = atyp, &
-      apos = apos, ngk = ngk, kw = gr%sb%kpoints%reduced%weight, kpt = gr%sb%kpoints%reduced%red_point, &
-      ifmin = ifmin, ifmax = ifmax, energies = energies, occupations = occupations, warn = .false.)
+    if(mpi_grp_is_root(mpi_world)) then
+      iunit = io_open(trim(dir) // sheader, form = 'unformatted', action = 'write')
+      call write_binary_header(iunit, sheader, iflavor = 2, ns = st%d%nspin, ng = shell%ngvectors, &
+        ntran = symmetries_number(gr%sb%symm), cell_symmetry = 0, nat = geo%natoms, &
+        nk = gr%sb%kpoints%reduced%npoints, nbands = st%nst, ngkmax = shell%ngvectors, ecutrho = shell%ekin_cutoff / 2,  &
+        ecutwfc = shell%ekin_cutoff / 2, kmax = gr%mesh%idx%ll, kgrid = gr%sb%kpoints%nik_axis, kshift = gr%sb%kpoints%shifts, &
+        celvol = gr%sb%rcell_volume, alat = M_ONE, avec = gr%sb%rlattice, adot = adot, recvol = recvol, &
+        blat = M_ONE, bvec = gr%sb%klattice, bdot = bdot, mtrx = mtrx, tnp = tnp, atyp = atyp, &
+        apos = apos, ngk = ngk, kw = gr%sb%kpoints%reduced%weight, kpt = gr%sb%kpoints%reduced%red_point, &
+        ifmin = ifmin, ifmax = ifmax, energies = energies, occupations = occupations, warn = .false.)
 
-    call write_binary_gvectors(iunit, shell%ngvectors, shell%ngvectors, shell%red_gvec)
+      call write_binary_gvectors(iunit, shell%ngvectors, shell%ngvectors, shell%red_gvec)
+    endif
 
     do is = 1, st%d%nspin
-      call zmesh_to_cube(gr%mesh, vxc(:, is), zcube, cf, local = .true.)
+      call dmesh_to_cube(gr%mesh, vxc(:, is), dcube, cf, local = .true.)
+      call dcube_function_rs2fs(dcube, cf)
 
       do ig = 1, shell%ngvectors
         ix = shell%coords(1, ig)
@@ -895,16 +902,21 @@ contains
       enddo
     enddo
 
-    call write_binary_complex_data(iunit, shell%ngvectors, shell%ngvectors, st%d%nspin, vxc_g)
-    if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
+    if(mpi_grp_is_root(mpi_world)) then
+      call write_binary_complex_data(iunit, shell%ngvectors, shell%ngvectors, st%d%nspin, vxc_g)
+      call io_close(iunit)
+    endif
 
     call fourier_shell_end(shell)
-    call zcube_function_free_fs(zcube, cf)
-    call zcube_function_free_rs(zcube, cf)
+    call dcube_function_free_fs(dcube, cf)
+    call dcube_function_free_rs(dcube, cf)
 
     ! vxc
     ! rho
     ! wfns
+
+    SAFE_DEALLOCATE_P(vxc)
+    SAFE_DEALLOCATE_P(vxc_g)
 
     SAFE_DEALLOCATE_P(ifmin)
     SAFE_DEALLOCATE_P(ifmax)
