@@ -119,7 +119,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   if (iand(outp%what, C_OUTPUT_WFS_FOURIER).ne.0) then
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)
-    call fourier_shell_init(shell, zcube, gr%mesh)
+    call fourier_shell_init(shell, zcube, gr%mesh, convention = .true.)
 
     call output_etsf_geometry_dims(geo, gr%sb, pw_dims, pw_flags)
     call output_etsf_kpoints_dims(gr%sb, pw_dims, pw_flags)

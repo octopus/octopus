@@ -47,10 +47,13 @@ module fourier_shell_m
 
 contains
 
-  subroutine fourier_shell_init(this, cube, mesh)
+  !> convention = .true.  : G-vectors are in (-n/2, n/2]
+  !> convention = .false. : G-vectors are in [-n/2, n/2)
+  subroutine fourier_shell_init(this, cube, mesh, convention)
     type(fourier_shell_t), intent(out)   :: this
     type(cube_t),          intent(in)    :: cube
     type(mesh_t),          intent(in)    :: mesh
+    logical,               intent(in)    :: convention
 
     integer :: ig, ng, ix, iy, iz, ixx(1:3), imap
     FLOAT :: dg(1:3), gmax2, gvec(1:3)
@@ -70,10 +73,13 @@ contains
     ig = 0
     do ix = 1, cube%rs_n_global(1)
       ixx(1) = pad_feq(ix, cube%rs_n_global(1), .true.)
+      if(.not. convention .and. ixx(1) == cube%rs_n_global(1)/2) ixx(1) = -ixx(1)
       do iy = 1, cube%rs_n_global(2)
         ixx(2) = pad_feq(iy, cube%rs_n_global(2), .true.)
+        if(.not. convention .and. ixx(2) == cube%rs_n_global(2)/2) ixx(2) = -ixx(2)
         do iz = 1, cube%rs_n_global(3)
           ixx(3) = pad_feq(iz, cube%rs_n_global(3), .true.)
+          if(.not. convention .and. ixx(3) == cube%rs_n_global(3)/2) ixx(3) = -ixx(3)
 
           gvec(1:3) = dg(1:3)*ixx(1:3)
           if(sum(gvec(1:3)**2) <= gmax2 + CNST(1e-10)) then

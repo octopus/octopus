@@ -122,31 +122,113 @@ end subroutine X(bgw_vxc_dat)
 
 
 ! --------------------------------------------------------- 
-subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf)
+subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, is_wfn)
   integer,               intent(in)    :: iunit
-  R_TYPE,                intent(in)    :: field_r(:,:)
+  R_TYPE, target,        intent(in)    :: field_r(:,:)
   CMPLX,                 intent(inout) :: field_g(:,:)
   type(fourier_shell_t), intent(in)    :: shell
   integer,               intent(in)    :: nspin
   type(grid_t),          intent(in)    :: gr
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
+  logical,               intent(in)    :: is_wfn !< make false for RHO, VXC
 
   integer :: ig, ix, iy, iz, is
+  FLOAT :: norm
+  CMPLX, pointer :: zfield_r(:)
 
   PUSH_SUB(X(bgw_write_fs))
 
+  ! We always need to use FFT's from a complex function, since BerkeleyGW does not use
+  ! the half-sphere Hermitian representation for real functions.
+
+#ifdef R_TREAL
+  SAFE_ALLOCATE(zfield_r(gr%mesh%np))
+#endif
+
   do is = 1, nspin
-    call X(mesh_to_cube)(gr%mesh, field_r(:, is), cube, cf, local = .true.)
-    call X(cube_function_rs2fs)(cube, cf)
+#ifdef R_TREAL
+    zfield_r(1:gr%mesh%np) = cmplx(field_r(1:gr%mesh%np, is), M_ZERO, REAL_PRECISION)
+#else
+    zfield_r => field_r(:, is)
+#endif
+    call zmesh_to_cube(gr%mesh, zfield_r(:), cube, cf, local = .true.)
+    call zcube_function_rs2fs(cube, cf)
+
+    norm = M_ZERO
+    do iz = 1, cube%rs_n_global(3)
+      do iy = 1, cube%rs_n_global(2)
+        do ix = 1, cube%rs_n_global(1) 
+          if(is_wfn) then
+            norm = norm + abs(cf%zrs(ix, iy, iz))**2
+          else
+            norm = norm + cf%zrs(ix, iy, iz)
+          endif
+        enddo
+      enddo
+    enddo
+    norm = norm * gr%mesh%volume_element
+    if(is_wfn) norm = sqrt(norm)
+    if(mpi_grp_is_root(mpi_world)) then
+      write(0,*) 'norm in real space = ', norm
+    endif
+
+    norm = M_ZERO
+    do iz = 1, cube%fs_n_global(3)
+      do iy = 1, cube%fs_n_global(2)
+        do ix = 1, cube%fs_n_global(1) 
+          if(is_wfn) then
+            norm = norm + abs(cf%fs(ix, iy, iz))**2
+          else
+            norm = norm + cf%fs(ix, iy, iz)
+          endif
+        enddo
+      enddo
+    enddo
+    if(is_wfn) then
+      norm = sqrt(norm * gr%mesh%volume_element / product(cube%rs_n_global(1:3)))
+    else
+      norm = norm / product(cube%rs_n_global(1:3))
+    endif
+    if(mpi_grp_is_root(mpi_world)) then
+      write(0,*) 'norm in Fourier space = ', norm
+    endif
     
+    norm = M_ZERO
     do ig = 1, shell%ngvectors
       ix = shell%coords(1, ig)
       iy = shell%coords(2, ig)
       iz = shell%coords(3, ig)
-      field_g(ig, is) = cf%fs(ix, iy, iz)
+      if(is_wfn) then
+        field_g(ig, is) = cf%fs(ix, iy, iz) * &
+          sqrt(gr%mesh%volume_element / product(cube%rs_n_global(1:3)))
+        norm = norm + abs(field_g(ig,is))**2
+      else
+        field_g(ig, is) = cf%fs(ix, iy, iz) / product(cube%rs_n_global(1:3))
+        norm = norm + field_g(ig,is)
+      endif
     enddo
+
+    ! renormalize
+
+    write(0,*) 'shell norm = ', norm
+    if(is_wfn) then
+      field_g(:,:) = field_g(:,:) / sqrt(norm)
+      if(abs(norm - M_ONE) > 0.01) then
+        write(message(1), '(a,f12.6)') 'Wavefunction norm within G-sphere (before renormalization) is only ', norm
+        call messages_warning(1)
+      endif
+    endif
+
+    if(.not. is_wfn) then
+      write(0,*) 'shell%red_gvec(1) = ', shell%red_gvec(1:3, 1)
+      write(0,*) 'average = ', cf%fs(1,1,1) / product(cube%rs_n_global(1:3))
+    endif
   enddo
+
+#ifdef R_TREAL
+  SAFE_DEALLOCATE_P(zfield_r)
+#endif
 
   ! do Gram-Schmidt here if appropriate
 

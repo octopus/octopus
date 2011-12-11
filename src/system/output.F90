@@ -719,7 +719,7 @@ contains
     PUSH_SUB(output_berkeleygw_init)
   
     ! conditions to die: spinors, not 3D, parallel in states or k-points (if spin-polarized), non-local functionals, SIC
-    ! nlcc, not a kgrid, st%smear%method == SMEAR_FIXED_OCC, single precision, OEP?
+    ! nlcc, not a kgrid, st%smear%method == SMEAR_FIXED_OCC, single precision, OEP, mGGA
 
     call messages_experimental("BerkeleyGW output")
 
@@ -813,8 +813,8 @@ contains
     FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48)
     FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:), vxc(:,:), dpsi(:,:)
     CMPLX, pointer :: field_g(:,:), zpsi(:,:)
-    type(cube_t) :: dcube, zcube
-    type(cube_function_t) :: dcf, zcf
+    type(cube_t) :: cube
+    type(cube_function_t) :: cf
     type(fourier_shell_t) :: shell
 
     PUSH_SUB(output_berkeleygw)
@@ -835,21 +835,14 @@ contains
       call zbgw_vxc_dat(bgw, dir, st, gr, vxc)
     endif
 
-    ! we use this for RHO and VXC, and maybe WFN
-    call cube_init(dcube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
-    call cube_function_null(dcf)
-    call dcube_function_alloc_rs(dcube, dcf)
-    call cube_function_alloc_fs(dcube, dcf)
+    call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
+    call cube_function_null(cf)
+    call zcube_function_alloc_rs(cube, cf)
+    call cube_function_alloc_fs(cube, cf)
 
-    ! this is only for WFN
-    if(states_are_complex(st)) then
-      call cube_init(zcube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
-      call cube_function_null(zcf)
-      call zcube_function_alloc_rs(zcube, zcf)
-      call cube_function_alloc_fs(zcube, zcf)
-    endif
-
-    call fourier_shell_init(shell, dcube, gr%mesh)
+    ! NOTE: in BerkeleyGW, no G-vector may have coordinate equal to the FFT grid size.
+    ! Instead, they should be minus that.
+    call fourier_shell_init(shell, cube, gr%mesh, convention = .false.)
     SAFE_ALLOCATE(field_g(shell%ngvectors, st%d%nspin))
 
     call bgw_setup_header()
@@ -863,7 +856,8 @@ contains
       iunit = io_open(trim(dir) // 'VXC', form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     endif
-    call dbgw_write_FS(iunit, vxc, field_g, shell, st%d%nspin, gr, dcube, dcf)
+    vxc(:,:) = vxc(:,:) * M_TWO ! convert from Ha to Ry
+    call dbgw_write_FS(iunit, vxc, field_g, shell, st%d%nspin, gr, cube, cf, is_wfn = .false.)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
     SAFE_DEALLOCATE_P(vxc)
 
@@ -876,7 +870,7 @@ contains
       iunit = io_open(trim(dir) // 'RHO', form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     endif
-    call dbgw_write_FS(iunit, st%rho, field_g, shell, st%d%nspin, gr, dcube, dcf)
+    call dbgw_write_FS(iunit, st%rho, field_g, shell, st%d%nspin, gr, cube, cf, is_wfn = .false.)
     if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
 
 
@@ -908,9 +902,9 @@ contains
           endif
         enddo
         if(states_are_real(st)) then
-          call dbgw_write_FS(iunit, dpsi, field_g, shell, st%d%nspin, gr, dcube, dcf)
+          call dbgw_write_FS(iunit, dpsi, field_g, shell, st%d%nspin, gr, cube, cf, is_wfn = .true.)
         else
-          call zbgw_write_FS(iunit, zpsi, field_g, shell, st%d%nspin, gr, zcube, zcf)
+          call zbgw_write_FS(iunit, zpsi, field_g, shell, st%d%nspin, gr, cube, cf, is_wfn = .true.)
         endif
       enddo
     enddo
@@ -920,8 +914,8 @@ contains
 
     ! deallocate everything
     call fourier_shell_end(shell)
-    call cube_function_free_fs(dcube, dcf)
-    call dcube_function_free_rs(dcube, dcf)
+    call cube_function_free_fs(cube, cf)
+    call dcube_function_free_rs(cube, cf)
 
     if(states_are_real(st)) then
       SAFE_DEALLOCATE_P(dpsi)
