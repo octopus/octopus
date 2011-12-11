@@ -206,6 +206,24 @@ program octopus
 #ifdef HAVE_SPARSKIT
     message(2) = trim(message(2))//' sparskit'
 #endif
+#ifdef HAVE_ETSF_IO
+    message(2) = trim(message(2))//' etsf_io'
+#endif
+#ifdef HAVE_BERKELEYGW
+    message(2) = trim(message(2))//' berkeleygw'
+#endif
+#ifdef HAVE_PFFT
+    message(2) = trim(message(2))//' pfft'
+#endif
+#ifdef HAVE_NFFT
+    message(2) = trim(message(2))//' nfft'
+#endif
+#ifdef HAVE_SCALAPACK
+    message(2) = trim(message(2))//' scalapack'
+#endif
+#ifdef HAVE_LIBFM
+    message(2) = trim(message(2))//' libfm'
+#endif
 
     message(3) = &
       'Architecture           : '// TOSTRING(OCT_ARCH)
