@@ -945,6 +945,7 @@ contains
 
     POP_SUB(output_berkeleygw)
 
+#ifdef HAVE_BERKELEYGW
   contains
     
     subroutine bgw_setup_header()
@@ -1012,6 +1013,8 @@ contains
       POP_SUB(output_berkeleygw.bgw_write_header)
     end subroutine bgw_write_header
 
+#endif
+
   end subroutine output_berkeleygw
 
 #include "output_etsf_inc.F90"
@@ -1022,12 +1025,16 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "output_linear_response_inc.F90"
+#ifdef HAVE_BERKELEYGW
 #include "output_berkeleygw_inc.F90"
+#endif
 
 #include "undef.F90"
 #include "real.F90"
 #include "output_linear_response_inc.F90"
+#ifdef HAVE_BERKELEYGW
 #include "output_berkeleygw_inc.F90"
+#endif
 
 end module output_m
 
