@@ -113,7 +113,7 @@ contains
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
       call messages_info()
-      call system_h_setup(sys, hm)
+      call system_h_setup(sys, hm, calc_eigenval = .false.)
     end if
 
     ! run self-consistency

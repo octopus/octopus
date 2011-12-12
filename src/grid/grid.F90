@@ -146,7 +146,8 @@ contains
     !%Description
     !% The spacing between the points in the mesh. If using curvilinear
     !% coordinates, this is a canonical spacing that will be changed locally by the
-    !% transformation.
+    !% transformation. In periodic directions, your spacing may be slightly larger than
+    !% what you request here, since the box size must be an integer multiple of the spacing.
     !%
     !% It is possible to have a different spacing in each one of the Cartesian directions
     !% if we define <tt>Spacing</tt> as block of the form

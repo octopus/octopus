@@ -511,7 +511,7 @@ contains
           call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
 
           ! Update the density and the Hamiltonian
-          if (lcao_start == LCAO_START_FULL) call system_h_setup(sys, hm)
+          if (lcao_start == LCAO_START_FULL) call system_h_setup(sys, hm, calc_eigenval = .false.)
         endif
       endif
 

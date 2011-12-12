@@ -193,7 +193,8 @@ contains
     !%Description
     !% Relative convergence of the sum of the eigenvalues:
     !%
-    !% <math>\epsilon = {1 \over \vert \sum_{j=1}^{N_{occ}} \epsilon_j^{out} \vert}  \vert \sum_{j=1}^{N_{occ}}  \epsilon_j^{out}- \sum_{j=1}^{N_{occ}}  \epsilon_j^{inp} \vert  <\math>
+    !% <math>\epsilon = \vert \sum_{j=1}^{N_{occ}} ( \epsilon_j^{out} -  \epsilon_j^{inp} ) \vert
+    !% \over \vert \sum_{j=1}^{N_{occ}} \epsilon_j^{out} \vert </math>
     !%
     !%A zero value (the default) means do not use this criterion.
     !%End
