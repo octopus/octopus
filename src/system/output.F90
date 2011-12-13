@@ -486,7 +486,9 @@ contains
 
     call parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
 
-    if(outp%what .ne. 0 .and. outp%what .ne. C_OUTPUT_MATRIX_ELEMENTS) call io_function_read_how(sb, outp%how)
+    ! these two kinds of Output do not have a how
+    if(iand(outp%what, iand(not(C_OUTPUT_MATRIX_ELEMENTS), not(C_OUTPUT_BERKELEYGW))) /= 0) &
+      call io_function_read_how(sb, outp%how)
 
     POP_SUB(output_init)
   end subroutine output_init
