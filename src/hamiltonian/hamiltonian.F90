@@ -90,7 +90,9 @@ module hamiltonian_m
     hamiltonian_epot_generate,       &
     hamiltonian_update,              &
     hamiltonian_get_time,            &
-    hamiltonian_apply_packed
+    hamiltonian_apply_packed,        &
+    dexchange_operator,              &
+    zexchange_operator
 
   public ::                          &
     energy_t,                        &
@@ -384,8 +386,12 @@ contains
         call parse_block_end(blk)
     end if
 
-    SAFE_ALLOCATE(hm%hf_st)
-    call states_null(hm%hf_st)
+    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
+      SAFE_ALLOCATE(hm%hf_st)
+      call states_null(hm%hf_st)
+    else
+      nullify(hm%hf_st)
+    endif
 
     hm%inh_term = .false.
     call hamiltonian_remove_oct_exchange(hm)
@@ -700,8 +706,10 @@ contains
     end if
 
     call states_dim_end(hm%d)
-    call states_end(hm%hf_st)
-    SAFE_DEALLOCATE_P(hm%hf_st)
+    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
+      call states_end(hm%hf_st)
+      SAFE_DEALLOCATE_P(hm%hf_st)
+    endif
 
     SAFE_DEALLOCATE_P(hm%energy)
 

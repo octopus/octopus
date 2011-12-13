@@ -157,7 +157,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     do ii = 1, psib%nst
       
       if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
-        call X(exchange_operator)(hm, der, epsib%states(ii)%X(psi), hpsib%states(ii)%X(psi), psib%states(ii)%ist, ik)
+        call X(exchange_operator)(hm, der, epsib%states(ii)%X(psi), hpsib%states(ii)%X(psi), psib%states(ii)%ist, ik, hm%exx_coef)
       end if
 
     end do
@@ -284,13 +284,14 @@ end subroutine X(hamiltonian_apply_all)
 
 
 ! ---------------------------------------------------------
-subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
+subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   R_TYPE,              intent(inout) :: psi(:,:)
   R_TYPE,              intent(inout) :: hpsi(:,:)
   integer,             intent(in)    :: ist
   integer,             intent(in)    :: ik
+  FLOAT,               intent(in)    :: exx_coef
 
   R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :)
   integer :: jst, ip, idim
@@ -304,7 +305,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:hm%d%dim))
 
   do jst = 1, hm%hf_st%nst
-    if(hm%hf_st%occ(jst, ik) <= M_ZERO) cycle
+    if(hm%hf_st%occ(jst, ik) < M_EPSILON) cycle
 
     ! in Hartree we just remove the self-interaction
     if(hm%theory_level == HARTREE .and. jst .ne. ist) cycle
@@ -327,7 +328,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik)
 
     do idim = 1, hm%hf_st%d%dim
       forall(ip = 1:der%mesh%np)
-        hpsi(ip, idim) = hpsi(ip, idim) - hm%exx_coef*ff*psi2(ip, idim)*pot(ip)
+        hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
       end forall
     end do
 
