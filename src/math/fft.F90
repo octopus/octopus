@@ -80,6 +80,7 @@ module fft_m
     integer     :: type    !< is the fft real or complex
     integer     :: library !< what library are we using (FFTLIB_FFTW or FFTLIB_PFFT)
 
+    integer     :: comm           !< MPI communicator
     integer     :: rs_n_global(3) !< total size of the fft in each direction in real space
     integer     :: fs_n_global(3) !< total size of the fft in each direction in fourier space
     integer     :: rs_n(3)        !< local size of the fft in in each direction real space
@@ -243,6 +244,7 @@ contains
              .and. library == fft_array(ii)%library) then
           fft = fft_array(ii)              ! return a copy
           fft_refs(ii) = fft_refs(ii) + 1  ! increment the ref count
+          if (present(mpi_comm)) mpi_comm = fft_array(ii)%comm ! also return the MPI communicator
           POP_SUB(fft_init)
           return
         end if
@@ -270,13 +272,12 @@ contains
 
     ! Initialize parallel communicator
     if (library == FFTLIB_PFFT) then
-      ASSERT(present(mpi_comm))
 #ifdef HAVE_PFFT
       call dpfft_init()
 
       call pfft_decompose(mpi_world%size, column_size, row_size)
  
-      call pfft_create_procmesh_2d(ierror, MPI_COMM_WORLD, column_size, row_size, mpi_comm)
+      call pfft_create_procmesh_2d(ierror, MPI_COMM_WORLD, column_size, row_size, fft_array(jj)%comm)
       if (ierror .ne. 0) then
         message(1) = "The number of rows and columns in PFFT processor grid is not equal to "
         message(2) = "the number of processor in the MPI communicator."
@@ -285,8 +286,9 @@ contains
       end if
 #endif
     else
-      if (present(mpi_comm)) mpi_comm = -1
+      fft_array(jj)%comm = -1
     end if
+    if (present(mpi_comm)) mpi_comm = fft_array(jj)%comm
 
     ! Get dimentions of arrays
     select case (library)
