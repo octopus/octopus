@@ -501,7 +501,7 @@ contains
     type(td_write_t),     intent(in)    :: writ
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(in)    :: hm
+    type(hamiltonian_t),  intent(inout) :: hm
     type(xc_t),           intent(in)    :: xc
     type(output_t),       intent(in)    :: outp
     type(geometry_t),     intent(in)    :: geo
