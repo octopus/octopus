@@ -136,7 +136,7 @@ contains
       end do
 
       forall(iatom = 1:geo%natoms)
-        !this has to be fixed for non-orthogonal cells
+        !this has to be fixed for non-orthogonal cells. So does everything else!
         position(1:3, iatom) = M_HALF
         position(1:dim, iatom) = geo%atom(iatom)%x(1:dim)/(M_TWO*lsize(1:dim)) + M_HALF
         typs(iatom) = species_index(geo%atom(iatom)%spec)

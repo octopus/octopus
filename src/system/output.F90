@@ -841,7 +841,11 @@ contains
     ! we should not include core rho here. that is why we do not just use hm%vxc
     call xc_get_vxc(gr%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc = vxc)
 
-    message(1) = "BerkeleyGW output: vxc.dat"
+    if(bgw%calc_exchange) then
+      message(1) = "BerkeleyGW output: vxc.dat and x.dat"
+    else
+      message(1) = "BerkeleyGW output: vxc.dat"
+    endif
     call messages_info(1)
 
     if(states_are_real(st)) then

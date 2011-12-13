@@ -189,7 +189,7 @@ contains
     FLOAT,             intent(in)    :: fft_alpha!< The factor that has to be used to multiply the Fourier space matrix
     integer,           intent(in)    :: type     !< The type of the FFT; real or complex
     integer,           intent(in)    :: library  !< Library of FFT; PFFT or FFTW3
-    logical, optional, intent(in)    :: optimize !< Is optimize going to use? Call FFT optimization functions
+    logical, optional, intent(in)    :: optimize !< Is optimize going to be used? Call FFT optimization functions
     integer, optional, intent(out)   :: mpi_comm !< MPI communicator
 
     integer :: ii, jj, fft_dim, idir, column_size, row_size, alloc_size, ierror, n3
@@ -459,7 +459,7 @@ contains
   end subroutine fft_get_dims
 
   ! ---------------------------------------------------------
-  !> convert between array index and G vector
+  !> convert between array index and G-vector
   function pad_feq(ii, nn, mode)
     integer, intent(in) :: ii,nn
     logical, intent(in) :: mode
