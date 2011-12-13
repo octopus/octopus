@@ -84,7 +84,7 @@ contains
     if (fft_type_ /= FFT_NONE) then
       !%Variable FFTLibrary
       !%Type logical
-      !%Section Hamiltonian::Poisson
+      !%Section Mesh:FFTs
       !%Default fftw 
       !%Description
       !% (experimental) You can select the FFT library to use.
@@ -131,7 +131,7 @@ contains
     if (cube%parallel_in_domains) call cube_partition_messages_debug(cube)
 
   POP_SUB(cube_init)
-end subroutine  cube_init
+end subroutine cube_init
 
   ! ---------------------------------------------------------
   subroutine cube_end(cube)
@@ -150,7 +150,7 @@ end subroutine  cube_init
     SAFE_DEALLOCATE_P(cube%local)
 
     POP_SUB(cube_end)
-  end subroutine  cube_end
+  end subroutine cube_end
 
   !> True if global coordinates belong to this process. On output
   !! lxyz contains the local coordinates
@@ -221,7 +221,7 @@ end subroutine  cube_init
       end if
 
       ! save the mapping between the global x,y,z and the global index
-      ! and determine the which partition the point belongs to
+      ! and determine which partition the point belongs to
       do iz = local_sizes(position+2), local_sizes(position+2)+local_sizes(position+5)-1
         do iy = local_sizes(position+1), local_sizes(position+1)+local_sizes(position+4)-1
           do ix = local_sizes(position), local_sizes(position)+local_sizes(position+3)-1
