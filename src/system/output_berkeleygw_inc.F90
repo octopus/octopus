@@ -17,18 +17,19 @@
 !!
 !! $Id: output_etsf_inc.F90 5880 2009-09-03 23:44:44Z dstrubbe $
 
-subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, vxc)
-  type(output_bgw_t), intent(in) :: bgw
-  character(len=*),   intent(in) :: dir
-  type(states_t),     intent(in) :: st
-  type(grid_t),       intent(in) :: gr
-  FLOAT,              intent(in) :: vxc(:,:)
+subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
+  type(output_bgw_t),     intent(in)    :: bgw
+  character(len=*),       intent(in)    :: dir
+  type(states_t), target, intent(in)    :: st
+  type(grid_t),           intent(in)    :: gr
+  type(hamiltonian_t),    intent(inout) :: hm
+  FLOAT,                  intent(in)    :: vxc(:,:)
 
-  integer :: iunit, ispin, ik, ikk, ist, ist2, idiag, ioff, ndiag, noffdiag, spin_index(st%d%nspin)
+  integer :: iunit, iunit_x, ispin, ik, ikk, ist, ist2, idiag, ioff, ndiag, noffdiag, spin_index(st%d%nspin)
   integer, allocatable :: diag(:), off1(:), off2(:)
   FLOAT :: kpoint(3)
-  R_TYPE, allocatable :: psi(:), psi2(:)
-  CMPLX, allocatable :: mtxel(:,:)
+  R_TYPE, allocatable :: psi(:,:), psi2(:), xpsi(:,:)
+  CMPLX, allocatable :: mtxel(:,:), mtxel_x(:,:)
 
   PUSH_SUB(X(bgw_vxc_dat))
 
@@ -39,7 +40,15 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, vxc)
 
   if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', action='write')
   ndiag = bgw%vxc_diag_nmax - bgw%vxc_diag_nmin + 1
-  SAFE_ALLOCATE(psi(gr%mesh%np))
+  SAFE_ALLOCATE(psi(gr%mesh%np, 1))
+
+  if(bgw%calc_exchange) then
+    if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', action='write')
+    SAFE_ALLOCATE(xpsi(gr%mesh%np, 1)) ! exchange
+    if(.not. associated(hm%hf_st)) hm%hf_st => st
+    SAFE_ALLOCATE(mtxel_x(ndiag + noffdiag, st%d%nspin)) ! exchange
+  endif
+
   if(bgw%vxc_offdiag_nmin < 1 .or. bgw%vxc_offdiag_nmax < 1) then
     noffdiag = 0
   else
@@ -82,23 +91,34 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, vxc)
     do ispin = 1, st%d%nspin
       ikk = ik + ispin - 1
       do idiag = 1, ndiag
-        call states_get_state(st, gr%mesh, 1, diag(idiag), ikk, psi)
-        mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:), psi(:) * vxc(:, ispin))
+        call states_get_state(st, gr%mesh, 1, diag(idiag), ikk, psi(:, 1))
+        mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi(:, 1) * vxc(:, ispin))
+        if(bgw%calc_exchange) then
+          !        call X(derivatives_set_bc)(gr%der, psi(:, 1))
+          xpsi(:,:) = M_ZERO
+          call X(exchange_operator)(hm, gr%der, psi, xpsi, ist, ikk, M_ONE)
+          mtxel_x(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), xpsi(:, 1))
+        endif
       enddo
 
       ! could do only upper or lower triangle here
       do ioff = 1, noffdiag
-        call states_get_state(st, gr%mesh, 1, off1(ioff), ikk, psi)
+        call states_get_state(st, gr%mesh, 1, off1(ioff), ikk, psi(:, 1))
         call states_get_state(st, gr%mesh, 1, off2(ioff), ikk, psi2)
-        mtxel(ndiag + ioff, ispin) = X(mf_dotp)(gr%mesh, psi(:), psi2(:) * vxc(:, ispin))
+        mtxel(ndiag + ioff, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi2(:) * vxc(:, ispin))
       enddo
     enddo
 
     ! convert to eV
     mtxel(:,:) = M_TWO * P_Ry * mtxel(:,:)
-
     if(mpi_grp_is_root(mpi_world)) &
-      call write_matrix_elements(iunit, kpoint, st%d%nspin, ndiag, noffdiag, spin_index, diag, off1, off2, mtxel) 
+      call write_matrix_elements(iunit, kpoint, st%d%nspin, ndiag, noffdiag, spin_index, diag, off1, off2, mtxel)
+
+    if(bgw%calc_exchange) then
+      mtxel_x(:,:) = M_TWO * P_Ry * mtxel_x(:,:)
+      if(mpi_grp_is_root(mpi_world)) &
+        call write_matrix_elements(iunit_x, kpoint, st%d%nspin, ndiag, noffdiag, spin_index, diag, off1, off2, mtxel_x)
+    endif
   enddo
 
   if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
@@ -110,6 +130,12 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, vxc)
     SAFE_DEALLOCATE_A(psi2)
   endif
   SAFE_DEALLOCATE_A(mtxel)
+
+  if(bgw%calc_exchange) then
+    if(mpi_grp_is_root(mpi_world)) call io_close(iunit_x)
+    SAFE_DEALLOCATE_A(xpsi)
+    SAFE_DEALLOCATE_A(mtxel_x)
+  endif
 
 #else
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
@@ -139,7 +165,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
 
   PUSH_SUB(X(bgw_write_fs))
 
-  ! We always need to use FFT's from a complex function, since BerkeleyGW does not use
+  ! We always need to use FFT`s from a complex function, since BerkeleyGW does not use
   ! the half-sphere Hermitian representation for real functions.
 
 #ifdef R_TREAL

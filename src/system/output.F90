@@ -96,6 +96,7 @@ module output_m
     integer           :: vxc_offdiag_nmax
     logical           :: complex
     character(len=80) :: wfn_filename
+    logical           :: calc_exchange
   end type output_bgw_t
 
   type output_t
@@ -496,7 +497,7 @@ contains
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(in)    :: hm
+    type(hamiltonian_t),  intent(inout) :: hm
     type(xc_t),           intent(in)    :: xc
     type(output_t),       intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
@@ -535,7 +536,7 @@ contains
     end if
 
     if (iand(outp%what, C_OUTPUT_BERKELEYGW) .ne. 0) then
-      call output_berkeleygw(outp%bgw, dir, st, gr, xc, geo)
+      call output_berkeleygw(outp%bgw, dir, st, gr, xc, hm, geo)
     end if
     
     POP_SUB(output_all)
@@ -794,18 +795,30 @@ contains
     !%End
     call parse_string(datasets_check('BerkeleyGW_WFN_filename'), 'WFN', bgw%wfn_filename)
   
+    !%Variable BerkeleyGW_CalcExchange
+    !%Type logical
+    !%Default false
+    !%Section Output::BerkeleyGW
+    !%Description
+    !% Whether to calculate exchange matrix elements to be written in <tt>x.dat</tt>.
+    !% These will be calculated anyway by BerkeleyGW <tt>Sigma</tt>, so this is useful
+    !% mainly for comparison and testing.
+    !%End
+    call parse_logical(datasets_check('BerkeleyGW_CalcExchange'), .false., bgw%calc_exchange)
+
     POP_SUB(output_berkeleygw_init)
   end subroutine output_berkeleygw_init
 
 
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw(bgw, dir, st, gr, xc, geo)
-    type(output_bgw_t), intent(in) :: bgw
-    character(len=*),   intent(in) :: dir
-    type(states_t),     intent(in) :: st
-    type(grid_t),       intent(in) :: gr
-    type(xc_t),         intent(in) :: xc
-    type(geometry_t),   intent(in) :: geo
+  subroutine output_berkeleygw(bgw, dir, st, gr, xc, hm, geo)
+    type(output_bgw_t),  intent(in)    :: bgw
+    character(len=*),    intent(in)    :: dir
+    type(states_t),      intent(in)    :: st
+    type(grid_t),        intent(in)    :: gr
+    type(xc_t),          intent(in)    :: xc
+    type(hamiltonian_t), intent(inout) :: hm
+    type(geometry_t),    intent(in)    :: geo
 
     integer :: ik, is, ikk, ist, itran, iunit, iatom, mtrx(3, 3, 48), ig, ix, iy, iz
     integer, pointer :: ifmin(:,:), ifmax(:,:), atyp(:), ngk(:)
@@ -830,9 +843,9 @@ contains
     call messages_info(1)
 
     if(states_are_real(st)) then
-      call dbgw_vxc_dat(bgw, dir, st, gr, vxc)
+      call dbgw_vxc_dat(bgw, dir, st, gr, hm, vxc)
     else
-      call zbgw_vxc_dat(bgw, dir, st, gr, vxc)
+      call zbgw_vxc_dat(bgw, dir, st, gr, hm, vxc)
     endif
 
     call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type=FFT_COMPLEX)
