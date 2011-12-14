@@ -259,7 +259,7 @@ contains
         call spline_fit(ngp, x, y, cylinder_cutoff_f)
       end if
 
-      do iy = 1, cube%fs_n_global(1)
+      do iy = 1, cube%fs_n_global(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
         do iz = 1, db(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
