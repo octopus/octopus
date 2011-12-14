@@ -837,7 +837,7 @@ void photoelectron_spectrum_help(){
   printf("  -i, --int=Y/N       Interpolate the output. Default is Yes.\n");
   printf("  -p, --pol=x:y:z     The polarization axis direction. Default: 1:0:0. \n");
   printf("  -e, --de            The resolution in energy.\n");
-  printf("  -E,                 Maximum and mium energy colon separated values. \n");
+  printf("  -E,                 Maximum and minimum energy, colon-separated values. \n");
   printf("   --espan=Emin:Emax                                                  \n");
   exit(-1);
 }
