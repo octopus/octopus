@@ -64,17 +64,19 @@ module cube_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, n, sb, fft_type)
+  subroutine cube_init(cube, nn, sb, fft_type, nn_out)
     type(cube_t),      intent(out) :: cube
-    integer,           intent(in)  :: n(3)
+    integer,           intent(in)  :: nn(3)
     type(simul_box_t), intent(in)  :: sb
-    integer, optional, intent(in)  :: fft_type !< Is the cube going to be used to perform FFTs?
+    integer, optional, intent(in)  :: fft_type  !< Is the cube going to be used to perform FFTs?
+    integer, optional, intent(out) :: nn_out(3) !< What are the FFT dims?
+                                                !! If optimized, may be different from input nn.
 
     integer :: mpi_comm, tmp_n(3), fft_type_
 
     PUSH_SUB(cube_init)
 
-    ASSERT(all(n(1:3) > 0))
+    ASSERT(all(nn(1:3) > 0))
 
     fft_type_ = optional_default(fft_type, FFT_NONE)
 
@@ -105,18 +107,20 @@ contains
 
     cube%parallel_in_domains = cube%fft_library == FFTLIB_PFFT
     if (cube%fft_library == FFTLIB_NONE) then
-      cube%rs_n_global = n
-      cube%fs_n_global = n
+      cube%rs_n_global = nn
+      cube%fs_n_global = nn
       cube%rs_n = cube%rs_n_global
       cube%fs_n = cube%fs_n_global
       cube%rs_istart = 1
       cube%fs_istart = 1
       mpi_comm = -1
+      if(present(nn_out)) nn_out(1:3) = nn(1:3)
     else
       SAFE_ALLOCATE(cube%fft)
-      tmp_n = n
+      tmp_n = nn
       call fft_init(cube%fft, tmp_n, sb%dim, sb%fft_alpha, fft_type_, cube%fft_library, &
            mpi_comm=mpi_comm, optimize = .not.simul_box_is_periodic(sb))
+      if(present(nn_out)) nn_out(1:3) = tmp_n(1:3)
 
       call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
            cube%rs_istart, cube%fs_istart)
@@ -129,8 +133,8 @@ contains
 
     if (cube%parallel_in_domains) call cube_partition_messages_debug(cube)
 
-  POP_SUB(cube_init)
-end subroutine cube_init
+    POP_SUB(cube_init)
+  end subroutine cube_init
 
   ! ---------------------------------------------------------
   subroutine cube_end(cube)
@@ -151,6 +155,7 @@ end subroutine cube_init
     POP_SUB(cube_end)
   end subroutine cube_end
 
+  ! ---------------------------------------------------------
   !> True if global coordinates belong to this process. On output
   !! lxyz contains the local coordinates
   logical function cube_global2local(cube, ixyz, lxyz) result(is_here)
@@ -241,6 +246,7 @@ end subroutine cube_init
     POP_SUB(cube_do_mapping)
   end subroutine cube_do_mapping
 
+  ! ---------------------------------------------------------
   subroutine cube_partition_messages_debug(cube)
     type(cube_t), intent(in)    :: cube
 
