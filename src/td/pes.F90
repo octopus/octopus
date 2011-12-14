@@ -90,11 +90,11 @@ module PES_m
     OUT               =  2
 
   type PES_rc_t
-    integer          :: npoints   					!< how many points we store the wf
-    integer, pointer :: points(:) 					!< which points to use
+    integer          :: npoints                 !< how many points we store the wf
+    integer, pointer :: points(:)               !< which points to use
     character(len=30), pointer :: filenames(:)  !< filenames
     CMPLX, pointer :: wf(:,:,:,:,:)
-    integer, pointer :: rankmin(:)  				   !<partition of the mesh containing the points
+    integer, pointer :: rankmin(:)              !<partition of the mesh containing the points
   end type PES_rc_t
 
   type PES_mask_t
@@ -114,6 +114,7 @@ module PES_m
     FLOAT, pointer :: ext_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
 
     FLOAT, pointer :: M(:,:,:)  => NULL()      !< the mask on a cubic mesh containing the simulation box
+    FLOAT, pointer :: Mk(:,:,:)  => NULL()     !< the momentum space filter
     type(cube_function_t) :: cM                !< the mask cube function
     FLOAT, pointer :: mask_R(:)  => NULL()     !< the mask inner (component 1) and outer (component 2) radius
     integer        :: shape                    !< which mask function?
@@ -133,6 +134,7 @@ module PES_m
     logical :: back_action           !< whether to enable back action from B to A
     logical :: add_psia              !< add the contribution of Psi_A in the buffer region to the output
     logical :: interpolate_out       !< whether to apply interpolation on the output files
+    logical :: filter_k              !< whether to filter the wavefunctions in momentum space
 
     integer :: mode                  !< calculation mode
     integer :: pw_map_how            !< how to perform projection on plane waves

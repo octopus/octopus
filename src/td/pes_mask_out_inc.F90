@@ -225,6 +225,7 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
 
   PUSH_SUB(PES_mask_interpolator_init)
 
+
   ll = 1
   do ii = 1, dim
     ll(ii) = size(PESK,ii) 
@@ -282,6 +283,9 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
   SAFE_DEALLOCATE_A(kx)    
   SAFE_DEALLOCATE_A(ky)    
   SAFE_DEALLOCATE_A(kz)    
+ 
+  message(1) = "Qshep interpolator initialized."
+  call messages_info(1)
   
 
   POP_SUB(PES_mask_interpolator_init)
@@ -388,15 +392,17 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk, dim, dir)
     do iy = 1, ll(2)
       KK(2) = Lk(iy)
       
-      temp = M_ZERO
-      do iz = 1, ll(3)
-        KK(3) = Lk(iz)
-        
-        temp = temp + PESK(ix,iy,iz)
-      end do
-      
-      temp = temp * abs(lk(2)-lk(1))
-      
+!      temp = M_ZERO
+!      do iz = 1, ll(3)
+!        KK(3) = Lk(iz)
+!        
+!        temp = temp + PESK(ix,iy,iz)
+!      end do
+!      
+!      temp = temp * abs(lk(2)-lk(1))
+ 
+      temp = PESK(ix,iy,ll(3)/2+1)    
+ 
       write(iunit, '(es18.11,2x,es18.11,2x,es19.12,i10,2x,i10,2x,es19.12,2x,i10)') & 
         KK(1), KK(2), temp , ix , iy,  sum(KK(1:dim)**2) / M_TWO, &
         int((sum(KK(1:dim)**2) / M_TWO)) + 1
@@ -411,6 +417,189 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk, dim, dir)
 
   POP_SUB(PES_mask_dump_full_mapM)
 end subroutine PES_mask_dump_full_mapM
+
+! ---------------------------------------------------------
+subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, Emax, Estep)
+  FLOAT,            intent(in) :: PESK(:,:,:)
+  character(len=*), intent(in) :: file
+  FLOAT,            intent(in) :: Lk(:)
+  integer,          intent(in) :: dim
+  FLOAT,            intent(in) :: Emax
+  FLOAT,            intent(in) :: Estep
+
+  integer :: ist, ik, ii, ix, iy, iz, iunit,idim
+  FLOAT ::  KK(MAX_DIM),vec
+
+  integer :: nn, nx, ny
+  FLOAT  :: step,DE
+  FLOAT, allocatable ::  pesM(:,:)
+
+  ! needed for interpolation in 2D and 3D 
+  FLOAT, pointer :: cube_f(:)
+  type(qshep_t) :: interp
+
+  FLOAT :: Dtheta, Dphi, theta, phi,Ex,Ey, EE
+  integer :: np, Ntheta, Nphi, ith, iph
+  integer :: ll(MAX_DIM)
+
+
+  type(profile_t), save :: prof
+  call profiling_in(prof, "PESMask_ar_plane")
+
+  PUSH_SUB(PES_mask_dump_ar_plane_M)
+
+  ll = 1
+  do ii = 1, dim
+    ll(ii) = size(PESK,ii) 
+  end do
+
+  step= Estep
+  nn  = int(Emax/step)
+
+  nx = 2*nn
+  ny = nn  
+
+
+  Nphi = 360
+  Dphi = M_PI/Nphi
+
+  SAFE_ALLOCATE(pesM(1:2*nn,1:nn))
+  pesM = M_ZERO
+
+
+  !in 1D we do not interpolate 
+  if (  (dim .eq. 1) ) then 
+    message(1)="Impossible to evaluate PES angle in 1D."
+    call messages_fatal(1)
+
+  else
+
+    call PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
+
+    select case(dim)
+    case(2)
+
+      do ix = 1, nx
+        Ex = (ix -nx/2 -1)*step 
+        do iy = 1, ny
+          Ey = (iy-1)*step
+          EE =sqrt(Ex**2 + Ey**2)
+          theta = atan2(Ey,Ex)
+
+          KK(1) = sqrt(2*EE)*cos(theta) 
+          KK(2) = sqrt(2*EE)*sin(theta)
+
+          pesM(ix,iy) = pesM(ix,iy) + qshep_interpolate(interp, cube_f, KK(1:2))
+
+        end do
+      end do
+
+
+    case(3)
+
+      do ix = 1, nx
+        Ex = (ix -nx/2 -1)*step 
+        do iy = 1, ny
+          Ey = (iy-1)*step
+          EE =sqrt(Ex**2 + Ey**2)
+
+          do iph = 0, Nphi
+            phi = iph * Dphi
+            theta = atan2(Ey,Ex)
+
+            KK(2) = sqrt(M_TWO*EE)*sin(theta)*cos(phi) 
+            KK(3) = sqrt(M_TWO*EE)*sin(theta)*sin(phi)
+            KK(1) = sqrt(M_TWO*EE)*cos(theta)
+            !sometimes the interpolator gives negative values therefore the abs()  
+            pesM(ix,iy) = pesM(ix,iy) + abs(qshep_interpolate(interp, cube_f, KK(1:3)))
+          end do
+          pesM(ix,iy) = pesM(ix,iy) * sqrt(M_TWO*EE)     
+
+        end do
+      end do
+
+      pesM = pesM * Dphi
+
+    end select
+
+    call PES_mask_interpolator_end(cube_f, interp)
+
+  end if
+
+
+  call PES_mask_write_ar_total(file, pesM, step)
+
+  SAFE_DEALLOCATE_A(pesM)
+
+  POP_SUB(PES_mask_dump_ar_plane_M)
+
+  call profiling_out(prof)
+
+end subroutine PES_mask_dump_ar_plane_M
+
+
+! ---------------------------------------------------------
+subroutine PES_mask_write_ar_total(file, pesM, Estep, Thstep)
+  character(len=*), intent(in) :: file
+  FLOAT,            intent(in) :: Estep
+  FLOAT, optional,  intent(in) :: Thstep
+  FLOAT,            intent(in) :: pesM(:,:)
+
+  integer :: nx,ny, iunit, ii,ix,iy
+
+  PUSH_SUB(PES_mask_write_ar_total)
+
+  nx = size(pesM,1)
+  ny = size(pesM,2)
+
+  iunit = io_open(file, action='write')
+
+  if(present(Thstep)) then
+  !!Angle Energy polar
+    write(iunit, '(a)') '##################################################'
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("Theta", 19),&
+                                          str_center("E", 19),&
+                                          str_center("P(E)", 19)
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') &
+      '#', str_center('[rad]', 19), &
+           str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), & 
+           str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
+    write(iunit, '(a)') '##################################################'
+
+  else
+  !!Angle Energy Cartesian
+    write(iunit, '(a)') '##################################################'
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("E*cos(th)", 19),&
+                                          str_center("E*sin(th)", 19),&
+                                          str_center("P(E)", 19)
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') &
+      '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), &
+           str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), & 
+           str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
+    write(iunit, '(a)') '##################################################'
+  end if 
+
+  do ix = 1, nx
+    do iy = 1, ny
+      if (present(Thstep)) then
+      write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')   (ix - nx/2)  * Thstep,&
+                                                        units_from_atomic(units_out%energy, (iy - 1) * Estep), pesM(ix,iy)
+      else 
+      write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')   units_from_atomic(units_out%energy, (ix -nx/2 - 1) * Estep),&
+                                                        units_from_atomic(units_out%energy, (iy - 1) * Estep), pesM(ix,iy)
+      end if 
+    end do
+    write(iunit,*) 
+  end do
+  
+  call io_close(iunit)
+
+
+  POP_SUB(PES_mask_write_ar_total)
+end subroutine PES_mask_write_ar_total
+
+
+
 
 ! ---------------------------------------------------------
 subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpolate)
@@ -452,10 +641,10 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
   nn  = int(Emax/step)
 
 
-  Ntheta = 36
+  Ntheta = 360
   Dtheta = M_TWO*M_PI/Ntheta
 
-  Nphi = 18
+  Nphi = 180
   Dphi = M_PI/Nphi
 
   SAFE_ALLOCATE(pes(1:nn))
@@ -530,9 +719,11 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
           theta = ith * Dtheta
           do iph = 0, Nphi
             phi = iph * Dphi
-            KK(1) = sqrt(M_TWO*EE)*sin(phi)*cos(theta) 
-            KK(2) = sqrt(M_TWO*EE)*sin(phi)*sin(theta)
-            KK(3) = sqrt(M_TWO*EE)*cos(phi)
+
+            KK(2) = sqrt(M_TWO*EE)*sin(phi)*cos(theta) 
+            KK(3) = sqrt(M_TWO*EE)*sin(phi)*sin(theta)
+            KK(1) = sqrt(M_TWO*EE)*cos(phi)
+
             pes(ii) = pes(ii) + qshep_interpolate(interp, cube_f, KK(1:3))
           end do
         end do

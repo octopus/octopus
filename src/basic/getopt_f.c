@@ -825,24 +825,38 @@ void photoelectron_spectrum_help(){
   printf("Usage: oct-photoelectron-spectrum [OPTIONS] \n");
   printf("\n");
   printf("Options:\n");
-  printf("  -h, --help      Prints this help and exits.\n");
-  printf("  -v, --version   Prints octopus version.\n");
-  printf("  -m, --mode=mode Whether we want the angle- or energy-resolved photoelectron\n");
-  printf("                  spectrum. The options are:\n");
-  printf("                     '1' : energy-resolved.\n");
-  printf("                     '2' : angle-resolved.\n");
-  printf("                     '3' : momentum-resolved on a plane.\n");
-  printf("                  The default is '1'\n");
-  printf("  -i, --int=Y/N   Interpolate the output. Default is Yes.\n");
+  printf("  -h, --help          Prints this help and exits.\n");
+  printf("  -v, --version       Prints octopus version.\n");
+  printf("  -m, --mode=mode     Whether we want the angle- or energy-resolved photoelectron\n");
+  printf("                      spectrum. The options are:\n");
+  printf("                         '1' : energy-resolved.\n");
+  printf("                         '2' : angle and energy resolved.\n");
+  printf("                         '3' : velocity map on a plane.\n");
+  printf("                         '4' : angle and energy resolved on the azimuthal plane.\n");
+  printf("                      The default is '1'\n");
+  printf("  -i, --int=Y/N       Interpolate the output. Default is Yes.\n");
+  printf("  -p, --pol=x:y:z     The polarization axis direction. Default: 1:0:0. \n");
+  printf("  -e, --de            The resolution in energy.\n");
+  printf("  -E,                 Maximum and mium energy colon separated values. \n");
+  printf("   --espan=Emin:Emax                                                  \n");
   exit(-1);
 }
 
 void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
-     ( int *m, int *interp)
+     ( int *m, int *interp, double *estep, double *espan, double *pol)
 {
   int c;
+  char delims[] = ":";
+  char *tok = NULL;
+
 
   *interp = 1;
+  *estep  = -1.;
+  espan[0]  = -1.;
+  espan[1]  = -1.;
+  pol[0] = 1;
+  pol[1] = 0;
+  pol[2] = 0;
 
 #if defined(HAVE_GETOPT_LONG)
   static struct option long_options[] =
@@ -851,6 +865,9 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
       {"version", no_argument, 0, 'v'},
       {"mode", required_argument, 0, 'm'},
       {"int", required_argument, 0, 'i'},
+      {"de", required_argument, 0, 'e'},
+      {"espan", required_argument, 0, 'E'},
+      {"pol", required_argument, 0, 'p'},
       {0, 0, 0, 0}
     };
 #endif
@@ -858,9 +875,9 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
   while (1) {
     int option_index = 0;
 #if defined(HAVE_GETOPT_LONG)
-    c = getopt_long(argc, argv, "hvm:i:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hvm:i:e:E:p:", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "hvm:i:");
+    c = getopt(argc, argv, "hvm:i:e:E:p:");
 #endif
     if (c == -1) break;
     switch (c) {
@@ -872,6 +889,7 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
     case 'v':
       printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
       exit(0);
+    break;
 
 
     case 'm':
@@ -881,8 +899,29 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
     case 'i':
       if ((strcmp(optarg,"y") == 0)|| (strcmp(optarg,"yes")== 0))  *interp = 1;
       if ((strcmp(optarg,"n") == 0)|| (strcmp(optarg,"no") == 0))  *interp = 0;
-         
-      break;
+    break;
+   
+    case 'e':
+      *estep = atof(optarg);
+    break;
+
+    case 'E':
+      tok = strtok(optarg,delims);
+      espan[0] = atof(tok);
+      tok = strtok(NULL,delims);
+      espan[1] = atof(tok);     
+
+    break;
+
+    case 'p':
+      tok = strtok(optarg,delims);
+      pol[0] = atof(tok);
+      tok = strtok(NULL,delims);
+      pol[1] = atof(tok);     
+      tok = strtok(NULL,delims);
+      pol[2] = atof(tok);     
+
+    break;
 
      
     }

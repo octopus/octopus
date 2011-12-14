@@ -31,7 +31,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 
   integer :: il,it,ii
   FLOAT :: field(MAX_DIM)
-  FLOAT :: DeltaE,MaxE,MaxDR
+  FLOAT :: DeltaE,MaxE,MaxDR, pCutOff
   FLOAT :: width 
   integer :: dir, defaultMask,k1,k2,st1,st2
   FLOAT, allocatable  :: X1(:),X2(:),X3(:)  
@@ -119,10 +119,9 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 
 
 
-! =================
-! = Optimization  =
-! =================
-
+! ========================================
+! = Optimization and numerical stability =
+! ========================================
   !%Variable PESMaskPlaneWaveProjection
   !%Type integer
   !%Default fft_map
@@ -345,9 +344,28 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
     call PES_mask_generate_mask(mask,mesh)
   end if
 
-
-
-
+  !%Variable PESMaskFilterCutOff 
+  !%Type float
+  !%Default -1
+  !%Section Time-Dependent::PES
+  !%Description
+  !% In calculation with <tt>PESMaskMode = fullmask_mode<\tt> and NFFT spurious frequencies 
+  !% may lead to numerical instability of the algorithm. This option gives the possibility 
+  !% to filter out the unwanted components by setting an energy cut-off. 
+  !% If <tt>PESMaskFilterCutOff = -1<\tt> no filter is applied.
+  !%End
+  call parse_float(datasets_check('PESMaskFilterCutOff'),&
+       units_to_atomic(units_inp%energy, - M_ONE), pCutOff)
+  if(pCutOff > M_ZERO) then       
+    call messages_print_var_value(stdout, "PESMaskFilterCutOff",pCutOff)
+    mask%filter_k = .TRUE.
+    
+    SAFE_ALLOCATE(mask%Mk(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
+    
+    call PES_mask_generate_filter(mask,pCutOff)
+    
+    
+  endif
 
 
 
@@ -417,7 +435,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   end if
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!  External fields 
+  !!  Set external fields 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   SAFE_ALLOCATE(mask%ext_pot(0:max_iter,1:MAX_DIM))
@@ -471,6 +489,10 @@ subroutine PES_mask_end(mask)
 
     if(mask%mode == MODE_PSF) then 
       call tdpsf_end(mask%psf)
+    end if
+   
+    if ( mask%filter_k ) then
+      SAFE_DEALLOCATE_P(mask%Mk)
     end if
 
    call cube_end(mask%cube)   
@@ -541,11 +563,53 @@ subroutine PES_mask_generate_Lk(mask)
     else
       mask%Lk(ii) = pad_feq(ii,nn, .true.) * temp
     end if
-    
+      
   end do
 
   POP_SUB(PES_mask_generate_Lk)
 end subroutine PES_mask_generate_Lk
+
+! ======================================
+! = Generate the momentum space filter =
+! ======================================
+subroutine PES_mask_generate_filter(mask,cutOff)
+  type(PES_mask_t), intent(inout) :: mask
+  FLOAT,            intent(in)    ::cutOff
+  
+  
+  integer :: kx,ky,kz, power
+  FLOAT   :: KK(3), EE, Emax
+
+  PUSH_SUB(PES_mask_generate_filter)
+  
+  mask%Mk = M_ZERO
+  
+  Emax = maxval(mask%Lk)**2 / M_TWO
+  
+  power = 8 
+  
+  do kx = 1, mask%ll(1)
+    KK(1) = mask%Lk(kx) 
+    do ky = 1, mask%ll(2)
+      KK(2) = mask%Lk(ky)
+      do kz = 1, mask%ll(3)
+        KK(3) = mask%Lk(kz)
+
+        EE = sum(KK(1:mask%mesh%sb%dim)**2) / M_TWO
+         
+        if ( EE > cutOff .and. EE < Emax ) then
+          mask%Mk(kx,ky,kz) = M_ONE * sin((Emax-EE) * M_PI / (M_TWO * (cutOff) ))**power
+        else 
+          if( EE <= cutOff )  mask%Mk(kx,ky,kz) = M_ONE 
+        end if
+
+      end do
+    end do  
+  end do
+  
+  
+  POP_SUB(PES_mask_generate_filter)
+end subroutine PES_mask_generate_filter
 
 
 ! --------------------------------------------------------
@@ -1327,6 +1391,10 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
             
             cf1%zRs = (M_ONE-mask%M)*cf1%zRs                                        ! cf1 =(1-M)*U(t2,t1)*\Psi_A(x,t1)
             call PES_mask_X_to_K(mask,mesh,cf1,cf2)                                 ! cf2 = \tilde{\Psi}_A(k,t2)
+
+            if ( mask%filter_k ) then ! apply a filter to the Fourier transform to remove unwanted energies
+              cf2%zRs= cf2%zRs * mask%Mk(:,:,:) 
+            end if
             
             
             if(mask%back_action .eqv. .true.) then

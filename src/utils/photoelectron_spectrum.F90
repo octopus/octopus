@@ -37,7 +37,7 @@ program photoelectron_spectrum
   integer              :: argc, ierr, mode, interp
 
   integer              :: dim, ll(MAX_DIM), ii
-  FLOAT                :: Emax, Estep
+  FLOAT                :: Emax, Emin,Estep, uEstep,uEspan(2), pol(3)
   FLOAT, pointer       :: lk(:),RR(:)
   FLOAT, allocatable   :: PESK(:,:,:)
   logical              :: interpolate
@@ -67,7 +67,7 @@ program photoelectron_spectrum
     call messages_fatal(2)
   end if
   
-  call getopt_photoelectron_spectrum(mode,interp)
+  call getopt_photoelectron_spectrum(mode,interp,uEstep, uEspan,pol)
   if(interp .eq. 0) interpolate = .false.
 
   call PES_mask_read_info(tmpdir, dim, Emax, Estep, ll(1), Lk,RR)
@@ -92,8 +92,14 @@ program photoelectron_spectrum
   write(message(1), '(a)') 'Read PES restart file.'
   call messages_info(1)
 
-
+  !! set user values
+  if(uEstep >  0 .and. uEstep > Estep)    Estep = uEstep
   
+  if(uEspan(1) > 0 ) Emin = uEspan(1)
+
+  if(uEspan(2) > 0 ) Emax = uEspan(2)
+
+
   call unit_system_init()
  
 
@@ -104,12 +110,25 @@ program photoelectron_spectrum
     call PES_mask_dump_power_totalM(PESK,'td.general/PES_power.sum', Lk, dim, Emax, Estep, interpolate)
  
  
-  case(2) ! Angle-resolved
+  case(2) ! Angle and energy resolved
+    write(message(1), '(a)') 'Not yet implemented'
+    call messages_warning(1)
 
   case(3) ! On a plane
     write(message(1), '(a)') 'Calculating momentum-resolved PES on plane z=0'
     call messages_info(1)
     call PES_mask_dump_full_mapM(PESK, 'td.general/PES_map.z=0', Lk, dim, dir = 3)    
+
+  case(4) ! Angle energy resolved on plane 
+    write(message(1), '(a)') 'Calculating angle and energy-resolved PES (cartesian) with polarization axis (1,0,0)'
+    call messages_info(1)
+    if(uEstep >  0 .and. uEstep > Estep) then
+      Estep = uEstep
+    else
+      Estep = Emax/size(Lk,1)
+    end if
+
+    call PES_mask_dump_ar_plane_M(PESK,'td.general/PES_energy_map.sum', Lk, dim, Emax, Estep)
 
   end select
 
