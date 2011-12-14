@@ -228,6 +228,7 @@
     integer :: iyoung
     logical :: symmetries_satisfied, impose_exch_symmetry
     CMPLX, allocatable :: wf(:)
+    CMPLX, allocatable :: wf_global(:)
     character(len=80) :: dirname
     character(len=80) :: filename
     type(modelmb_denmat_t) :: denmat
@@ -244,6 +245,9 @@
     call io_mkdir(trim(dirname))
 
     SAFE_ALLOCATE(wf(1:gr%mesh%np_part))
+#if defined(HAVE_MPI)
+    SAFE_ALLOCATE(wf_global(1:gr%mesh%np_part_global))
+#endif
 
     call modelmb_density_matrix_nullify(denmat)
     if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0) then
@@ -294,14 +298,29 @@
         call modelmb_density_write(gr, st, wf, mm, den)
       end if
 
+      if(gr%mesh%parallel_in_domains) then
+#if defined(HAVE_MPI)
+        call zvec_allgather(gr%mesh%vp, wf_global, wf)
+#endif
+      end if
+
       if(iand(outp%what, C_OUTPUT_WFS).ne.0 .and. symmetries_satisfied) then
-        call zio_function_out_text(trim(dirname), gr%mesh, mm, wf)
+        if(gr%mesh%parallel_in_domains) then
+#if defined(HAVE_MPI)
+          call zio_function_out_text(trim(dirname), gr%mesh, mm, wf_global)
+#endif
+        else 
+          call zio_function_out_text(trim(dirname), gr%mesh, mm, wf)
+        end if
       end if
 
     end do
 
     call io_close(iunit)
 
+#if defined(HAVE_MPI)
+    SAFE_DEALLOCATE_A(wf_global)
+#endif
     SAFE_DEALLOCATE_A(wf)
 
     if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0) then
