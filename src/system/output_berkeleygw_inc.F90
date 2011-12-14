@@ -220,6 +220,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
       write(0,*) 'norm in Fourier space = ', norm
     endif
     
+    field_g(:,:) = M_ZERO
     norm = M_ZERO
     do ig = 1, shell%ngvectors
       ix = shell%coords(1, ig)

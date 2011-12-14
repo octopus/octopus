@@ -73,13 +73,13 @@ contains
     ig = 0
     do ix = 1, cube%rs_n_global(1)
       ixx(1) = pad_feq(ix, cube%rs_n_global(1), .true.)
-      if(.not. convention .and. ixx(1) == cube%rs_n_global(1)/2) ixx(1) = -ixx(1)
+      if(.not. convention .and. 2 * ixx(1) == cube%rs_n_global(1)) ixx(1) = -ixx(1)
       do iy = 1, cube%rs_n_global(2)
         ixx(2) = pad_feq(iy, cube%rs_n_global(2), .true.)
-        if(.not. convention .and. ixx(2) == cube%rs_n_global(2)/2) ixx(2) = -ixx(2)
+        if(.not. convention .and. 2 * ixx(2) == cube%rs_n_global(2)) ixx(2) = -ixx(2)
         do iz = 1, cube%rs_n_global(3)
           ixx(3) = pad_feq(iz, cube%rs_n_global(3), .true.)
-          if(.not. convention .and. ixx(3) == cube%rs_n_global(3)/2) ixx(3) = -ixx(3)
+          if(.not. convention .and. 2 * ixx(3) == cube%rs_n_global(3)) ixx(3) = -ixx(3)
 
           gvec(1:3) = dg(1:3)*ixx(1:3)
           if(sum(gvec(1:3)**2) <= gmax2 + CNST(1e-10)) then

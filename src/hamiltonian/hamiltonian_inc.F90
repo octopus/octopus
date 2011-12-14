@@ -300,6 +300,8 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 
   PUSH_SUB(X(exchange_operator))
 
+  if(der%mesh%sb%kpoints%reduced%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+
   SAFE_ALLOCATE(rho(1:der%mesh%np))
   SAFE_ALLOCATE(pot(1:der%mesh%np))
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:hm%d%dim))
