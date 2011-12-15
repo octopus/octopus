@@ -162,7 +162,12 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
     call lalg_geneigensolve(this%norbs, hamilt(1:this%norbs, 1:this%norbs, ik), overlap(:, :, ispin), ev)
 
     st%eigenval(lcao_start:nst, ik) = ev(lcao_start:nst)
-    st%X(psi)(1:gr%mesh%np, 1:st%d%dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
+
+    if(lcao_start /= 1) then 
+      ASSERT(associated(st%X(psi)))
+      st%X(psi)(1:gr%mesh%np, 1:st%d%dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
+    end if
+
   end do
 
 
@@ -178,8 +183,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
   end if
 #endif
 
-! this does not work. --DAS
-!  call states_set_zero(st)
+  if(lcao_start == 1) call states_set_zero(st)
 
   ! Change of basis
   do n2 = 1, this%norbs
