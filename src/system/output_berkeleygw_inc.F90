@@ -42,13 +42,6 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
   ndiag = bgw%vxc_diag_nmax - bgw%vxc_diag_nmin + 1
   SAFE_ALLOCATE(psi(gr%mesh%np, 1))
 
-  if(bgw%calc_exchange) then
-    if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', action='write')
-    SAFE_ALLOCATE(xpsi(gr%mesh%np, 1)) ! exchange
-    if(.not. associated(hm%hf_st)) hm%hf_st => st
-    SAFE_ALLOCATE(mtxel_x(ndiag + noffdiag, st%d%nspin)) ! exchange
-  endif
-
   if(bgw%vxc_offdiag_nmin < 1 .or. bgw%vxc_offdiag_nmax < 1) then
     noffdiag = 0
   else
@@ -60,6 +53,13 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
     SAFE_ALLOCATE(off2(noffdiag))
   endif
   SAFE_ALLOCATE(mtxel(ndiag + noffdiag, st%d%nspin))
+
+  if(bgw%calc_exchange) then
+    if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', action='write')
+    SAFE_ALLOCATE(xpsi(gr%mesh%np, 1))
+    if(.not. associated(hm%hf_st)) hm%hf_st => st
+    SAFE_ALLOCATE(mtxel_x(ndiag + noffdiag, st%d%nspin))
+  endif
 
   ! BerkeleyGW allows using only spin down, but we will not give that option here
   do ispin = 1, st%d%nspin
