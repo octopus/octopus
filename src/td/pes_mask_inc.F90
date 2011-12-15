@@ -356,6 +356,9 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !%End
   call parse_float(datasets_check('PESMaskFilterCutOff'),&
        units_to_atomic(units_inp%energy, - M_ONE), pCutOff)
+  
+  nullify(mask%Mk)
+
   if(pCutOff > M_ZERO) then       
     call messages_print_var_value(stdout, "PESMaskFilterCutOff",pCutOff)
     mask%filter_k = .TRUE.
@@ -1393,6 +1396,9 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
             call PES_mask_X_to_K(mask,mesh,cf1,cf2)                                 ! cf2 = \tilde{\Psi}_A(k,t2)
 
             if ( mask%filter_k ) then ! apply a filter to the Fourier transform to remove unwanted energies
+              
+              ASSERT(associated(mask%Mk))
+
               cf2%zRs= cf2%zRs * mask%Mk(:,:,:) 
             end if
             
