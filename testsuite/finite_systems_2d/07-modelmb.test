@@ -2,7 +2,7 @@
 # $Id: 07-modelmb.test 5186 2009-04-11 07:26:12Z xavier $
 
 Test       : Model MB
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
