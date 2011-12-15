@@ -133,7 +133,7 @@ contains
     type(unit_t), intent(in) :: this
     real(4),      intent(in) :: val
 
-    res = val*this%factor
+    res = real(real(val, 8)*this%factor, 4)
 
   end function dunits_to_atomic_4
  
@@ -143,7 +143,7 @@ contains
     type(unit_t), intent(in) :: this
     complex(4),   intent(in) :: val
 
-    res = val*this%factor
+    res = cmplx(cmplx(val, kind = 8)*this%factor, kind = 4)
 
   end function zunits_to_atomic_4
 
@@ -153,7 +153,7 @@ contains
     type(unit_t), intent(in) :: this
     real(4),      intent(in) :: val
 
-    res = val/this%factor
+    res = real(real(val, 8)/this%factor, 4)
 
   end function dunits_from_atomic_4
 
@@ -163,7 +163,7 @@ contains
     type(unit_t), intent(in) :: this
     complex(4),   intent(in) :: val
 
-    res = val/this%factor
+    res = cmplx(cmplx(val, kind = 8)/this%factor, kind = 4)
 
   end function zunits_from_atomic_4
 
