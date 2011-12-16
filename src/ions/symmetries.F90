@@ -41,7 +41,8 @@ module symmetries_m
        symmetries_end,                &
        symmetries_number,             &
        symmetries_apply_kpoint,       &
-       symmetries_space_group_number
+       symmetries_space_group_number, &
+       symmetries_have_break_dir
 
   type symmetries_t
     type(symm_op_t), pointer :: ops(:)
@@ -282,6 +283,12 @@ contains
   end function symmetries_space_group_number
 
   ! -------------------------------------------------------------------------------
+
+  logical pure function symmetries_have_break_dir(this) result(have)
+    type(symmetries_t),  intent(in)  :: this
+
+    have = any(abs(this%breakdir(1:3)) > M_EPSILON)
+  end function symmetries_have_break_dir
 
 end module symmetries_m
 

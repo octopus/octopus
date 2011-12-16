@@ -150,7 +150,16 @@ contains
     !% This variable defines whether symmetries are taken into account
     !% or not for the choice of <i>k</i>-points. If it is set to no, the <i>k</i>-point
     !% sampling will range over the full Brillouin zone.
-    !% Symmetries should not be used whenever a perturbation is applied to the system.
+    !%
+    !% The default is no.
+    !%
+    !% When a perturbation is applied to the system, the full
+    !% symmetries of the system cannot be used. In this case you must
+    !% not use symmetries or use the <tt>SymmetryBreakDir</tt> to tell
+    !% Octopus the direction of the perturbation (for the moment this
+    !% has to be done by hand by the user, in the future it will be
+    !% automatic).
+    !%
     !%End
     call parse_logical(datasets_check('KPointsUseSymmetries'), .false., this%use_symmetries)
 
@@ -159,14 +168,20 @@ contains
     !%Default yes
     !%Section Mesh::KPoints
     !%Description
-    !% <b>WARNING: This variable does not seem to work.</b>
-    !% This variable defines whether time-reversal symmetry is taken into account
-    !% or not for the choice of <i>k</i>-points. If it is set to no, the <i>k</i>-point
-    !% sampling will not be reduced according to time-reversal symmetry. The default is
-    !% yes. If <tt>KPointsUseSymmetries = no</tt>, this variable is ignored, and time-reversal
-    !% symmetry is not used.
+    !% If symmetries are used to reduce the number of <i>k</i>-points,
+    !% this variable defines whether time-reversal symmetry is taken
+    !% into account or not. If it is set to no, the <i>k</i>-point
+    !% sampling will not be reduced according to time-reversal
+    !% symmetry.
+    !%
+    !% The default is yes, unless symmetries are broken in one
+    !% direction by the SymmetryBreakDir block.
+    !% 
+    !% Warning: For time propagation runs with an external field, the
+    !% time reversal symmetry should not be used.
+    !%
     !%End
-    call parse_logical(datasets_check('KPointsUseTimeReversal'), .true., this%use_time_reversal)
+    call parse_logical(datasets_check('KPointsUseTimeReversal'), .not. symmetries_have_break_dir(symm), this%use_time_reversal)
 
     if(only_gamma) then
       this%method = KPOINTS_GAMMA
