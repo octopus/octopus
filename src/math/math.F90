@@ -76,7 +76,8 @@ module math_m
     pad,                        &
     pad_pow2,                   &
     log2,                       &
-    is_prime
+    is_prime,                   &
+     generate_rotation_matrix
 
   !------------------------------------------------------------------------------
   ! This is the common interface to a simple-minded polynomical interpolation
@@ -1060,6 +1061,82 @@ contains
     is_prime = .true.
     POP_SUB(is_prime)
   end function is_prime
+
+! ====================================================================
+!  Generates a rotation matrix M from direction u to direction v. 
+! ====================================================================
+subroutine generate_rotation_matrix(M, u, v)
+  FLOAT,   intent(out)  :: M(:,:)
+  FLOAT,   intent(in)   :: u(:)
+  FLOAT,   intent(in)   :: v(:)
+
+  integer            :: dim, ii, jj
+  FLOAT              :: phi
+  FLOAT, allocatable :: axis(:), uu(:), vv(:)
+
+  PUSH_SUB(generate_rotation_matrix)
+
+  dim = size(u,1)  
+ 
+  ASSERT((dim < 3) .or. (dim > 2))
+  ASSERT(size(v,1) .eq. dim)
+  ASSERT((size(M,1) .eq. dim) .and. (size(M,2) .eq. dim))
+  
+  SAFE_ALLOCATE(uu(1:dim))
+  SAFE_ALLOCATE(vv(1:dim))
+
+  
+  vv = v /dot_product(v,v)
+  uu = u /dot_product(u,u)
+
+  phi = acos(dot_product(uu,vv))
+
+  if(phi > M_ZERO) then
+    select case (dim)
+      case (2)
+        M(1,1) = cos(phi)
+        M(1,2) = -sin(phi)
+
+        M(2,1) = sin(phi)
+        M(2,2) = cos(phi)
+  
+      case (3)
+        SAFE_ALLOCATE(axis(1:dim))
+
+        axis = dcross_product(uu,vv)    
+        axis = axis / dot_product(axis, axis)
+    
+        M(1,1) = cos(phi) + axis(1)**2 * (1 - cos(phi))    
+        M(1,2) = axis(1)*axis(2)*(1-cos(phi)) - axis(3)*sin(phi)
+        M(1,3) = axis(1)*axis(3)*(1-cos(phi)) + axis(2)*sin(phi)
+
+        M(2,1) = axis(2)*axis(1)*(1-cos(phi)) + axis(3)*sin(phi)
+        M(2,2) = cos(phi) + axis(2)**2 * (1 - cos(phi))
+        M(2,3) = axis(2)*axis(3)*(1-cos(phi)) - axis(2)*sin(phi) 
+
+        M(3,1) = axis(3)*axis(1)*(1-cos(phi)) - axis(2)*sin(phi)
+        M(3,2) = axis(3)*axis(2)*(1-cos(phi)) + axis(1)*sin(phi)
+        M(3,3) = cos(phi) + axis(3)**2 * (1 - cos(phi))          
+    
+        SAFE_DEALLOCATE_A(axis)
+    end select
+
+  else
+    
+    M = M_ZERO
+    do ii=1,dim
+      M(ii,ii) = M_ONE 
+    end do
+  
+  endif
+
+
+  SAFE_DEALLOCATE_A(uu)
+  SAFE_DEALLOCATE_A(vv)
+
+  POP_SUB(generate_rotation_matrix)  
+end subroutine generate_rotation_matrix
+
 
 #include "undef.F90"
 #include "complex.F90"

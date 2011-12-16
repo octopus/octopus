@@ -827,36 +827,55 @@ void photoelectron_spectrum_help(){
   printf("Options:\n");
   printf("  -h, --help          Prints this help and exits.\n");
   printf("  -v, --version       Prints octopus version.\n");
-  printf("  -m, --mode=mode     Whether we want the angle- or energy-resolved photoelectron\n");
-  printf("                      spectrum. The options are:\n");
-  printf("                         '1' : energy-resolved.\n");
-  printf("                         '2' : angle and energy resolved.\n");
-  printf("                         '3' : velocity map on a plane.\n");
-  printf("                         '4' : angle and energy resolved on the azimuthal plane.\n");
+  printf("  -m, --mode=mode     Extract the photoelectron spectrum information from the P-space   \n");
+  printf("                      matrix. We use a polar coordinates where the zenith axis is set   \n");
+  printf("                      by vec (usually the field polarization direction), theta is the   \n");  
+  printf("                      inclination angle measured from vec (ranging from 0 to \\pi),     \n");    
+  printf("                      and phi is the azimuthal angle on a plane perpendicular to vec    \n");      
+  printf("                      (ranging from 0 to 2\\pi).\n");        
+  printf("                      The options are:\n");
+  printf("                         '1' : energy-resolved ionization probability (default).\n");
+  printf("                         '2' : angle and energy resolved ionization probability.\n");
+  printf("                               The values are integrated in phi.\n");
+  printf("                         '3' : velocity map on a plane orthogonal to vec.\n");
+  printf("                         '4' : angle and energy resolved on the inclination plane.\n");
+  printf("                               The values are integrated in phi.\n");
+  printf("                      The output is in gnuplot friendly format.\n");
   printf("                      The default is '1'\n");
   printf("  -i, --int=Y/N       Interpolate the output. Default is Yes.\n");
-  printf("  -p, --pol=x:y:z     The polarization axis direction. Default: 1:0:0. \n");
-  printf("  -e, --de            The resolution in energy.\n");
-  printf("  -E,                 Maximum and minimum energy, colon-separated values. \n");
+  printf("  -V, --vec=x,y,z     The polar zenith direction in comma separated format \n");
+  printf("                      (without spaces). Default is the laser polarization. \n");
+  printf("  -C, --center=x,y,z  Center of the coordinates in p-space in comma separated format \n");
+  printf("                      Default: 0,0,0. \n");
+  printf("  -E,                 Maximum and minimum energy in colon separated values. \n");
   printf("   --espan=Emin:Emax                                                  \n");
+  printf("  -e, --de            The resolution in energy.\n");
+  printf("  -T,                 Maximum and minimum theta in colon separated format. \n");
+  printf("   --thspan=thetamin:thetamax                                                  \n");
+  printf("  -t, --dth           The resolution in theta.\n");
+  printf("  -P,                 Maximum and minimum phi in colon separated format. \n");
+  printf("   --phspan=phimin:phimax                                                  \n");
+  printf("  -p, --dph           The resolution in phi.\n");
+
   exit(-1);
 }
 
 void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
-     ( int *m, int *interp, double *estep, double *espan, double *pol)
+     ( int *m, int *interp, double *estep, double *espan, double *thstep, 
+     double *thspan, double *phstep, double *phspan, double *pol, double *center)
 {
   int c;
-  char delims[] = ":";
+  char delims[] = ",:";
   char *tok = NULL;
 
 
-  *interp = 1;
-  *estep  = -1.;
-  espan[0]  = -1.;
-  espan[1]  = -1.;
-  pol[0] = 1;
-  pol[1] = 0;
-  pol[2] = 0;
+  // *interp = 1;
+  // *estep  = -1.;
+  // espan[0]  = -1.;
+  // espan[1]  = -1.;
+  // pol[0] = 1;
+  // pol[1] = 0;
+  // pol[2] = 0;
 
 #if defined(HAVE_GETOPT_LONG)
   static struct option long_options[] =
@@ -867,7 +886,12 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
       {"int", required_argument, 0, 'i'},
       {"de", required_argument, 0, 'e'},
       {"espan", required_argument, 0, 'E'},
-      {"pol", required_argument, 0, 'p'},
+      {"dth", required_argument, 0, 't'},
+      {"thspan", required_argument, 0, 'T'},
+      {"dph", required_argument, 0, 'p'},
+      {"phspan", required_argument, 0, 'P'},
+      {"vec", required_argument, 0, 'V'},
+      {"center", required_argument, 0, 'C'},
       {0, 0, 0, 0}
     };
 #endif
@@ -875,9 +899,9 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
   while (1) {
     int option_index = 0;
 #if defined(HAVE_GETOPT_LONG)
-    c = getopt_long(argc, argv, "hvm:i:e:E:p:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "hvm:i:e:E:p:");
+    c = getopt(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:");
 #endif
     if (c == -1) break;
     switch (c) {
@@ -913,13 +937,47 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
 
     break;
 
+    case 't':
+      *thstep = atof(optarg);
+    break;
+
+    case 'T':
+      tok = strtok(optarg,delims);
+      thspan[0] = atof(tok);
+      tok = strtok(NULL,delims);
+      thspan[1] = atof(tok);     
+
+    break;
+
     case 'p':
+      *phstep = atof(optarg);
+    break;
+
+    case 'P':
+      tok = strtok(optarg,delims);
+      phspan[0] = atof(tok);
+      tok = strtok(NULL,delims);
+      phspan[1] = atof(tok);     
+
+    break;
+
+    case 'V':
       tok = strtok(optarg,delims);
       pol[0] = atof(tok);
       tok = strtok(NULL,delims);
       pol[1] = atof(tok);     
       tok = strtok(NULL,delims);
       pol[2] = atof(tok);     
+
+    break;
+
+    case 'C':
+      tok = strtok(optarg,delims);
+      center[0] = atof(tok);
+      tok = strtok(NULL,delims);
+      center[1] = atof(tok);     
+      tok = strtok(NULL,delims);
+      center[2] = atof(tok);     
 
     break;
 

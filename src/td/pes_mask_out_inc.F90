@@ -419,18 +419,19 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk, dim, dir)
 end subroutine PES_mask_dump_full_mapM
 
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, Emax, Estep)
+subroutine PES_mask_dump_ar_polar_M(PESK, file, Lk, dim, dir, Emax, Estep)
   FLOAT,            intent(in) :: PESK(:,:,:)
   character(len=*), intent(in) :: file
   FLOAT,            intent(in) :: Lk(:)
   integer,          intent(in) :: dim
   FLOAT,            intent(in) :: Emax
   FLOAT,            intent(in) :: Estep
+  FLOAT,            intent(in) :: dir(:) 
 
   integer :: ist, ik, ii, ix, iy, iz, iunit,idim
   FLOAT ::  KK(MAX_DIM),vec
 
-  integer :: nn, nx, ny
+  integer :: nn, ie
   FLOAT  :: step,DE
   FLOAT, allocatable ::  pesM(:,:)
 
@@ -439,8 +440,138 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, Emax, Estep)
   type(qshep_t) :: interp
 
   FLOAT :: Dtheta, Dphi, theta, phi,Ex,Ey, EE
+  integer :: np, Ntheta, Nphi, ith, iph, Nth
+  integer :: ll(1:3)
+  FLOAT :: vref(1:dim), rotation(1:dim,1:dim)
+  FLOAT :: eGrid(3), thGrid(3), phiBounds(2)
+   
+
+
+  type(profile_t), save :: prof
+  call profiling_in(prof, "PESMask_ar_polar")
+
+  PUSH_SUB(PES_mask_dump_ar_polar_M)
+
+  ! we do the calculation assuming the polarization along the x-axis 
+  vref = M_ZERO
+  vref(1) = M_ONE
+  !the rotation matrix from the x-axis to the actual polarization direction
+  call generate_rotation_matrix(rotation, vref, dir)
+  
+  
+  ll = 1
+  do ii = 1, dim
+    ll(ii) = size(PESK,ii) 
+  end do
+
+  step= Estep
+  nn  = int(Emax/step)
+
+  Nth = 300 
+  Dtheta = M_PI/Nth
+
+  Nphi = 360
+  Dphi = M_TWO * M_PI/Nphi
+
+  SAFE_ALLOCATE(pesM(1:Nth,1:nn))
+  pesM = M_ZERO
+
+
+  !in 1D we do not interpolate 
+  if (  (dim .eq. 1) ) then 
+    message(1)="Impossible to obtain angle-dependent quantities in 1D."
+    call messages_fatal(1)
+
+  else
+
+    call PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
+
+    select case(dim)
+    case(2)
+
+  
+
+
+    case(3)
+
+      do ith = 1, Nth
+        theta = (ith - 1) * Dtheta 
+        do ie = 1, nn
+          EE = (ie -1) * step
+
+          do iph = 0, Nphi
+            phi = iph * Dphi
+
+            KK(2) = sqrt(M_TWO*EE)*sin(theta)*cos(phi) 
+            KK(3) = sqrt(M_TWO*EE)*sin(theta)*sin(phi)
+            KK(1) = sqrt(M_TWO*EE)*cos(theta)
+            
+            !sometimes the interpolator gives negative values therefore the abs()  
+            pesM(ith,ie) = pesM(ith,ie) + &
+                          abs(qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) ))
+          end do
+          pesM(ith,ie) = pesM(ith,ie) * sqrt(M_TWO*EE)     
+
+        end do
+      end do
+
+      pesM = pesM * Dphi
+
+    end select
+
+    call PES_mask_interpolator_end(cube_f, interp)
+
+  end if
+
+
+  eGrid(1)= M_ZERO
+  eGrid(2)= Emax
+  eGrid(3)= step
+
+  thGrid(1)= M_ZERO
+  thGrid(2)= M_PI
+  thGrid(3)= Dtheta
+
+  phiBounds(1) = M_ZERO
+  phiBounds(2) = M_TWO * M_PI
+
+  call  PES_mask_write_2D_map(file, pesM, 2, thGrid, eGrid, dir, phiBounds)
+
+  SAFE_DEALLOCATE_A(pesM)
+
+  POP_SUB(PES_mask_dump_ar_polar_M)
+
+  call profiling_out(prof)
+
+end subroutine PES_mask_dump_ar_polar_M
+
+
+! ---------------------------------------------------------
+subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, dir, Emax, Estep)
+  FLOAT,            intent(in) :: PESK(:,:,:)
+  character(len=*), intent(in) :: file
+  FLOAT,            intent(in) :: Lk(:)
+  integer,          intent(in) :: dim
+  FLOAT,            intent(in) :: Emax
+  FLOAT,            intent(in) :: Estep
+  FLOAT,            intent(in) :: dir(:) 
+
+  integer :: ist, ik, ii, ix, iy, iz, iunit,idim
+  FLOAT ::  KK(MAX_DIM),vec
+
+  integer :: nn, nx, ny
+  FLOAT  :: step,DE, eGrid(3)
+  FLOAT, allocatable ::  pesM(:,:)
+
+  ! needed for interpolation in 2D and 3D 
+  FLOAT, pointer :: cube_f(:)
+  type(qshep_t) :: interp
+
+  FLOAT :: Dtheta, Dphi, theta, phi,Ex,Ey, EE, phiBounds(2)
   integer :: np, Ntheta, Nphi, ith, iph
-  integer :: ll(MAX_DIM)
+  integer :: ll(1:3)
+  FLOAT :: vref(1:dim), rotation(1:dim,1:dim)
+   
 
 
   type(profile_t), save :: prof
@@ -448,6 +579,13 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, Emax, Estep)
 
   PUSH_SUB(PES_mask_dump_ar_plane_M)
 
+  ! we do the calculation assuming the polarization along the x-axis 
+  vref = M_ZERO
+  vref(1) = M_ONE
+  !the rotation matrix from the x-axis to the actual polarization direction
+  call generate_rotation_matrix(rotation, vref, dir)
+  
+  
   ll = 1
   do ii = 1, dim
     ll(ii) = size(PESK,ii) 
@@ -461,7 +599,7 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, Emax, Estep)
 
 
   Nphi = 360
-  Dphi = M_PI/Nphi
+  Dphi = M_TWO * M_PI/Nphi
 
   SAFE_ALLOCATE(pesM(1:2*nn,1:nn))
   pesM = M_ZERO
@@ -469,7 +607,7 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, Emax, Estep)
 
   !in 1D we do not interpolate 
   if (  (dim .eq. 1) ) then 
-    message(1)="Impossible to evaluate PES angle in 1D."
+    message(1)="Impossible to obtain angle-dependent quantities in 1D."
     call messages_fatal(1)
 
   else
@@ -510,8 +648,10 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, Emax, Estep)
             KK(2) = sqrt(M_TWO*EE)*sin(theta)*cos(phi) 
             KK(3) = sqrt(M_TWO*EE)*sin(theta)*sin(phi)
             KK(1) = sqrt(M_TWO*EE)*cos(theta)
+            
             !sometimes the interpolator gives negative values therefore the abs()  
-            pesM(ix,iy) = pesM(ix,iy) + abs(qshep_interpolate(interp, cube_f, KK(1:3)))
+            pesM(ix,iy) = pesM(ix,iy) + &
+                          abs(qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) ))
           end do
           pesM(ix,iy) = pesM(ix,iy) * sqrt(M_TWO*EE)     
 
@@ -527,7 +667,14 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, Emax, Estep)
   end if
 
 
-  call PES_mask_write_ar_total(file, pesM, step)
+  eGrid(1)= M_ZERO
+  eGrid(2)= Emax
+  eGrid(3)= step
+  
+  phiBounds(1) = M_ZERO
+  phiBounds(2) = M_TWO * M_PI
+  
+  call PES_mask_write_2D_map(file, pesM, 1, eGrid, eGrid, dir, phiBounds)
 
   SAFE_DEALLOCATE_A(pesM)
 
@@ -538,56 +685,112 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, Emax, Estep)
 end subroutine PES_mask_dump_ar_plane_M
 
 
-! ---------------------------------------------------------
-subroutine PES_mask_write_ar_total(file, pesM, Estep, Thstep)
+! ========================================================================
+!  Common interface to write 2D maps in gnuplot with header files for 
+!  different objects. The modes are:
+!
+!  1 Angle and energy resolved on cartesian coordinates
+!  2 Angle and energy resolved in polar coordinates
+!  3 Velocity map on a plane
+!
+! ========================================================================
+subroutine PES_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
   character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: Estep
-  FLOAT, optional,  intent(in) :: Thstep
   FLOAT,            intent(in) :: pesM(:,:)
+  integer,          intent(in) :: mode
+  FLOAT,            intent(in) :: xGrid(:)   ! max min and step for the x axis
+  FLOAT,            intent(in) :: yGrid(:)   ! max min and step for the y axis
+  FLOAT,            intent(in) :: vv(:)      ! for mode=1,2 indicate the Zenith axis for mode 3 the cutting plane 
+  FLOAT, optional,  intent(in) :: intSpan(:) ! for integrated quantities indicate the integral region    
 
   integer :: nx,ny, iunit, ii,ix,iy
 
-  PUSH_SUB(PES_mask_write_ar_total)
+  PUSH_SUB(PES_mask_write_2D_map)
 
   nx = size(pesM,1)
   ny = size(pesM,2)
 
   iunit = io_open(file, action='write')
 
-  if(present(Thstep)) then
-  !!Angle Energy polar
-    write(iunit, '(a)') '##################################################'
-    write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("Theta", 19),&
-                                          str_center("E", 19),&
-                                          str_center("P(E)", 19)
-    write(iunit, '(a1,a19,2x,a19,2x,a19)') &
-      '#', str_center('[rad]', 19), &
-           str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), & 
-           str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
-    write(iunit, '(a)') '##################################################'
+  select case (mode)
+    case(1)
+      !!Angle Energy Cartesian
+        write(iunit, '(a)') '##################################################'
 
-  else
-  !!Angle Energy Cartesian
-    write(iunit, '(a)') '##################################################'
-    write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("E*cos(th)", 19),&
-                                          str_center("E*sin(th)", 19),&
-                                          str_center("P(E)", 19)
-    write(iunit, '(a1,a19,2x,a19,2x,a19)') &
-      '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), &
-           str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), & 
-           str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
-    write(iunit, '(a)') '##################################################'
-  end if 
+        write(iunit, '(a)') '#'        
+        write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a2,f10.2,a1)')&
+                                              "#"," Zenith axis: ","(",&
+                                              vv(1),", ",vv(2),", ",vv(3),")"
+        write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a1)')&
+                                              "#"," Integrated in phi: ","(",&
+                                              intSpan(1),", ",intSpan(2),")"
+        write(iunit, '(a)') '#'        
+
+
+        write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("E*cos(th)", 19),&
+                                              str_center("E*sin(th)", 19),&
+                                              str_center("P(E)", 19)
+        write(iunit, '(a1,a19,2x,a19,2x,a19)') &
+          '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), &
+               str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), & 
+               str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
+        write(iunit, '(a)') '##################################################'
+    case (2)
+    !!Angle Energy polar
+      write(iunit, '(a)') '##################################################'
+
+      write(iunit, '(a)') '#'        
+      write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a2,f10.2,a1)')&
+                                            "#"," Zenith axis: ","(",&
+                                            vv(1),", ",vv(2),", ",vv(3),")"
+      write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a1)')&
+                                            "#"," Integrated in phi: ","(",&
+                                            intSpan(1),", ",intSpan(2),")"
+      write(iunit, '(a)') '#'        
+      
+      
+      write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("Theta", 19),&
+                                            str_center("E", 19),&
+                                            str_center("P(E)", 19)
+      write(iunit, '(a1,a19,2x,a19,2x,a19)') &
+        '#', str_center('[rad]', 19), &
+             str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), & 
+             str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
+      write(iunit, '(a)') '##################################################'
+
+    case (3)
+    !!Velocity map
+      write(iunit, '(a)') '##################################################'
+      write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("p1", 19),&
+                                            str_center("p2", 19),&
+                                            str_center("P(p)", 19)
+      write(iunit, '(a1,a19,2x,a19,2x,a19)') &
+        '#', str_center('[sqrt('//trim(units_abbrev(units_out%energy)) // ')]', 19), & 
+             str_center('[sqrt('//trim(units_abbrev(units_out%energy)) // ')]', 19), & 
+             str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
+      write(iunit, '(a)') '##################################################'
+    
+  end select
 
   do ix = 1, nx
     do iy = 1, ny
-      if (present(Thstep)) then
-      write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')   (ix - nx/2)  * Thstep,&
-                                                        units_from_atomic(units_out%energy, (iy - 1) * Estep), pesM(ix,iy)
-      else 
-      write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')   units_from_atomic(units_out%energy, (ix -nx/2 - 1) * Estep),&
-                                                        units_from_atomic(units_out%energy, (iy - 1) * Estep), pesM(ix,iy)
-      end if 
+
+      select case (mode)
+        case (1)
+          write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+                  units_from_atomic(units_out%energy, (ix -nx/2 - 1) * xGrid(3) + xGrid(1) ),&
+                  units_from_atomic(units_out%energy, (iy - 1) * yGrid(3) + yGrid(1) ), pesM(ix,iy)
+        case(2)
+          write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &   
+                  (ix - 1) * xGrid(3) + xGrid(1), &
+                  units_from_atomic(units_out%energy, (iy - 1) * yGrid(3) + yGrid(1) ), pesM(ix,iy)
+        case(3)
+          write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &   
+                  (ix - 1) * xGrid(3) + xGrid(1), &
+                  (iy - 1) * yGrid(3) + yGrid(1), pesM(ix,iy)
+    
+      end select
+
     end do
     write(iunit,*) 
   end do
@@ -595,8 +798,8 @@ subroutine PES_mask_write_ar_total(file, pesM, Estep, Thstep)
   call io_close(iunit)
 
 
-  POP_SUB(PES_mask_write_ar_total)
-end subroutine PES_mask_write_ar_total
+  POP_SUB(PES_mask_write_2D_map)
+end subroutine PES_mask_write_2D_map
 
 
 
@@ -1497,6 +1700,10 @@ subroutine PES_mask_restart_map(mask, st, RR)
 
   POP_SUB(PES_mask_restart_map)
 end subroutine PES_mask_restart_map
+
+
+
+
 
 !! Local Variables:
 !! mode: f90
