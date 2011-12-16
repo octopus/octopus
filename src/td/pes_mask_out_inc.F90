@@ -689,8 +689,8 @@ end subroutine PES_mask_dump_ar_plane_M
 !  Common interface to write 2D maps in gnuplot with header files for 
 !  different objects. The modes are:
 !
-!  1 Angle and energy resolved on cartesian coordinates
-!  2 Angle and energy resolved in polar coordinates
+!  1 Angle- and energy-resolved on cartesian coordinates
+!  2 Angle- and energy-resolved in polar coordinates
 !  3 Velocity map on a plane
 !
 ! ========================================================================

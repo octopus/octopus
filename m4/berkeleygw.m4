@@ -1,3 +1,5 @@
+dnl Copyright (c) 2011 David Strubbe
+
 AC_DEFUN([ACX_BERKELEYGW], [
 acx_berkeleygw_ok=no
 

@@ -123,7 +123,7 @@ program photoelectron_spectrum
   call messages_info(1)
 
 
-  ! chose what to calculate
+  ! choose what to calculate
   ! these functions are defined in pes_mask_out_inc.F90
   select case(mode)
   case(1) ! Energy-resolved
@@ -180,6 +180,7 @@ program photoelectron_spectrum
         type(block_t)       :: blk
         integer             :: no_l
         
+        PUSH_SUB(get_laser_polarization)
         
         no_l = 0
         if(parse_block(datasets_check('TDExternalFields'), blk) == 0) then
@@ -199,6 +200,7 @@ program photoelectron_spectrum
           call messages_info(2)
         end if
 
+        POP_SUB(get_laser_polarization)
     end subroutine get_laser_polarizaion
 
 
