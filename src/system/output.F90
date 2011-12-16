@@ -1009,7 +1009,7 @@ contains
     ! ---------------------------------------------------------
     subroutine bgw_write_header(sheader, iunit)
       character(len=3), intent(inout) :: sheader
-      integer,          intent(out)   :: iunit
+      integer,          intent(in)    :: iunit
       
       PUSH_SUB(output_berkeleygw.bgw_write_header)
 
