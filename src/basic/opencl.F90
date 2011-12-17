@@ -733,7 +733,7 @@ module opencl_m
       gsizes(1:dim) = int(globalsizes(1:dim), 8)
       lsizes(1:dim) = int(localsizes(1:dim), 8)
 
-      call clEnqueueNDRangeKernel(opencl%command_queue, kernel, dim, gsizes(1), lsizes(1), ierr)
+      call clEnqueueNDRangeKernel(opencl%command_queue, kernel, gsizes, lsizes, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
 
       call profiling_out(prof_kernel_run)
