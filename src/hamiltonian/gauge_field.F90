@@ -282,13 +282,9 @@ contains
     FLOAT, allocatable :: microcurrent(:, :), symmcurrent(:, :)
     type(profile_t), save :: prof
     type(symmetrizer_t) :: symmetrizer
-    FLOAT, allocatable :: kj(:)
-    integer, save :: iter = 0
 #ifdef HAVE_MPI
     FLOAT :: force_tmp(1:MAX_DIM)
 #endif
-
-    SAFE_ALLOCATE(kj(st%d%kpt%start:st%d%kpt%end))
 
     call profiling_in(prof, "GAUGE_FIELD_FORCE")
     PUSH_SUB(gauge_field_get_force)
@@ -297,11 +293,8 @@ contains
     SAFE_ALLOCATE(gpsi(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%dim))
     SAFE_ALLOCATE(microcurrent(1:gr%mesh%np_part, 1:gr%sb%dim))
 
-    force%vecpot = M_ZERO
-
+    microcurrent = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
-      microcurrent = M_ZERO
-
       do ist = st%st_start, st%st_end
 
         call states_get_state(st, gr%mesh, ist, ik, epsi)
@@ -325,7 +318,7 @@ contains
             end if
           end do
         end do
-
+        
         do idir = 1, gr%sb%dim
           do idim = 1, st%d%dim
             microcurrent(1:gr%mesh%np, idir) = microcurrent(1:gr%mesh%np, idir) + &
@@ -333,31 +326,22 @@ contains
               aimag(conjg(epsi(1:gr%mesh%np, idim))*gpsi(1:gr%mesh%np, idir, idim))
           end do
         end do
-
+        
       end do
-
-      if(st%symmetrize_density) then
-        SAFE_ALLOCATE(symmcurrent(1:gr%mesh%np, 1:gr%sb%dim))
-        call symmetrizer_init(symmetrizer, gr%mesh)
-        call dsymmetrizer_apply_vector(symmetrizer, microcurrent, symmcurrent)
-        microcurrent(1:gr%mesh%np, 1:gr%sb%dim) = symmcurrent(1:gr%mesh%np, 1:gr%sb%dim)
-        call symmetrizer_end(symmetrizer)
-        SAFE_DEALLOCATE_A(symmcurrent)
-      end if
-
-      kj(ik) = dmf_integrate(gr%mesh, microcurrent(:, 1))
-
-      do idir = 1, gr%sb%dim
-        force%vecpot(idir) = force%vecpot(idir) + dmf_integrate(gr%mesh, microcurrent(:, idir))
-      end do
-
     end do
 
-    write(50,*) iter, kj(st%d%kpt%start:st%d%kpt%end)
-    call flush()
-    !    print*, kj(st%d%kpt%start:st%d%kpt%end)
+    if(st%symmetrize_density) then
+      SAFE_ALLOCATE(symmcurrent(1:gr%mesh%np, 1:gr%sb%dim))
+      call symmetrizer_init(symmetrizer, gr%mesh)
+      call dsymmetrizer_apply_vector(symmetrizer, microcurrent, symmcurrent)
+      microcurrent(1:gr%mesh%np, 1:gr%sb%dim) = symmcurrent(1:gr%mesh%np, 1:gr%sb%dim)
+      call symmetrizer_end(symmetrizer)
+      SAFE_DEALLOCATE_A(symmcurrent)
+    end if
 
-    iter = iter + 1
+    do idir = 1, gr%sb%dim
+      force%vecpot(idir) = dmf_integrate(gr%mesh, microcurrent(:, idir))
+    end do
 
 #ifdef HAVE_MPI
     if(st%parallel_in_states) then
