@@ -23,7 +23,9 @@ module density_m
   use blas_m
   use batch_m
   use c_pointer_m
+#ifdef HAVE_OPENCL
   use cl
+#endif
   use comm_m
   use datasets_m
   use derivatives_m
@@ -103,7 +105,7 @@ contains
     PUSH_SUB(density_calc_pack)
 
     this%packed = .true.
-    
+#ifdef HAVE_OPENCL    
     this%pnp = opencl_padded_size(this%gr%mesh%np)
     call opencl_create_buffer(this%buff_density, CL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
     
@@ -111,7 +113,7 @@ contains
     call opencl_set_kernel_arg(set_zero, 0, this%buff_density)
     call opencl_kernel_run(set_zero, (/this%pnp*this%st%d%nspin/), (/opencl_max_workgroup_size()/))
     call opencl_finish()
-
+#endif
     POP_SUB(density_calc_pack)
   end subroutine density_calc_pack
 
@@ -129,8 +131,10 @@ contains
     type(profile_t), save :: prof
     logical :: correct_size
     integer            :: wgsize
+#ifdef HAVE_OPENCL
     type(opencl_mem_t) :: buff_weight
     type(cl_kernel)    :: kernel
+#endif
 
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
@@ -184,6 +188,7 @@ contains
           end do
         end if
       case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
         if(.not. this%packed) call density_calc_pack(this)
 
         if(states_are_real(this%st)) then
@@ -209,6 +214,7 @@ contains
         call opencl_finish()
         
         call opencl_release_buffer(buff_weight)
+#endif
       end select
 
       if(this%gr%have_fine_mesh) then
@@ -268,6 +274,7 @@ contains
     np = this%gr%fine%mesh%np
 
     if(this%packed) then
+#ifdef HAVE_OPENCL
       SAFE_ALLOCATE(tmpdensity(1:np))
       ! the density is in device memory
       do ispin = 1, this%st%d%nspin
@@ -277,6 +284,7 @@ contains
       this%packed = .false.
       call opencl_release_buffer(this%buff_density)
       SAFE_DEALLOCATE_A(tmpdensity)
+#endif
     end if
 
     ! reduce over states and k-points

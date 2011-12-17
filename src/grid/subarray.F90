@@ -21,7 +21,9 @@
 
 module subarray_m
   use batch_m
+#ifdef HAVE_OPENCL
   use cl
+#endif
   use global_m
   use math_m
   use messages_m

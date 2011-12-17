@@ -156,6 +156,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
 
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
 #ifdef R_TREAL
 
     call opencl_set_kernel_arg(kernel_daxpy, 0, aa)
@@ -179,9 +180,8 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
     call opencl_kernel_run(kernel_zaxpy, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
 
 #endif
-
     call opencl_finish()
-
+#endif
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
       call lalg_axpy(xx%pack%size(1), np, aa, xx%pack%zpsi, yy%pack%zpsi)
@@ -218,11 +218,13 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
   type(batch_t),     intent(inout) :: yy
 
   integer :: ist, ip, localsize, effsize
-  type(octcl_kernel_t), save :: kernel
-  type(cl_kernel)         :: kernel_ref
   R_TYPE, allocatable     :: aa_linear(:)
   CMPLX,  allocatable     :: zaa_linear(:)
   type(opencl_mem_t)      :: aa_buffer
+#ifdef HAVE_OPENCL
+  type(octcl_kernel_t), save :: kernel
+  type(cl_kernel)         :: kernel_ref
+#endif
   
   PUSH_SUB(X(batch_axpy_vec))
   call profiling_in(axpy_prof, "BATCH_AXPY")
@@ -246,6 +248,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
 
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
     call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, batch_type(yy), yy%pack%size(1))
 
     if(batch_type(yy) == TYPE_CMPLX) then
@@ -272,7 +275,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
     call opencl_kernel_run(kernel_ref, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
 
     call opencl_finish()
-
+#endif
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
       do ist = 1, yy%pack%size(1)
@@ -348,6 +351,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
       forall(ip = 1:np) this%pack%zpsi(ist, ip) = psi(ip)
     end if
   case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
     call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
 
     call opencl_write_buffer(tmp, np, psi)
@@ -363,6 +367,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
     call opencl_finish()
 
     call opencl_release_buffer(tmp)
+#endif
   end select
 
   call profiling_out(prof)
@@ -421,6 +426,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
       forall(ip = 1:np) psi(ip) = this%pack%zpsi(ist, ip)
     end if
   case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
     call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
 
     call opencl_set_kernel_arg(X(unpack), 0, this%pack%size(1))
@@ -435,6 +441,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     call opencl_read_buffer(tmp, np, psi)
 
     call opencl_release_buffer(tmp)
+#endif
   end select
 
   call profiling_out(prof)

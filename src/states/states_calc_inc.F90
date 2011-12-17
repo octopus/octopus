@@ -347,8 +347,10 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   integer :: idim, block_size, ib, size, sp
   R_TYPE, allocatable :: psicopy(:, :, :)
   type(opencl_mem_t) :: psicopy_buffer, ss_buffer
+#ifdef HAVE_OPENCL
   type(octcl_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
+#endif
 
   PUSH_SUB(X(states_trsm))
 
@@ -396,6 +398,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_trsm for spinors')
 
+#ifdef HAVE_OPENCL
     block_size = 4000
 
     call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
@@ -434,7 +437,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     
     call opencl_release_buffer(ss_buffer)
     call opencl_release_buffer(psicopy_buffer)
-
+#endif
   end if
 
   POP_SUB(X(states_trsm))
@@ -1107,9 +1110,11 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   type(batch_t) :: psib
   integer       :: block_size, sp, idim, size, ib
   R_TYPE, allocatable :: psinew(:, :, :), psicopy(:, :, :)
+#ifdef HAVE_OPENCL
   type(octcl_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
   type(opencl_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
+#endif
 
   PUSH_SUB(X(states_rotate_in_place))
   
@@ -1158,7 +1163,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   else
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_rotate for spinors')
-
+#ifdef HAVE_OPENCL
     block_size = 4000
 
     call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
@@ -1201,7 +1206,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
     call opencl_release_buffer(uu_buffer)
     call opencl_release_buffer(psicopy_buffer)
     call opencl_release_buffer(psinew_buffer)
-
+#endif
   end if
 
   POP_SUB(X(states_rotate_in_place))

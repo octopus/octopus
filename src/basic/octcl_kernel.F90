@@ -20,7 +20,9 @@
 #include "global.h"
 
 module octcl_kernel_m
+#ifdef HAVE_OPENCL
   use cl
+#endif
   use c_pointer_m
   use datasets_m
   use global_m
@@ -33,15 +35,21 @@ module octcl_kernel_m
   private
 
   public ::                             &
-    octcl_kernel_t,                        &
-    octcl_kernel_global_init,              &
-    octcl_kernel_global_end,               &
-    octcl_kernel_start_call,               &
+    octcl_kernel_t,                     &
+    octcl_kernel_global_init,           &
+    octcl_kernel_global_end,            &
+    octcl_kernel_start_call
+
+#ifdef HAVE_OPENCL
+  public ::                             &
     octcl_kernel_get_ref
+#endif
 
   type octcl_kernel_t
     private
+#ifdef HAVE_OPENCL
     type(cl_kernel)               :: kernel
+#endif
     logical                       :: initialized = .false.
     type(octcl_kernel_t), pointer :: next
     integer                       :: arg_count
@@ -86,6 +94,7 @@ contains
     character(len=*),  intent(in)    :: file_name
     character(len=*),  intent(in)    :: kernel_name
 
+#ifdef HAVE_OPENCL
     type(cl_program) :: prog
 
     PUSH_SUB(octcl_kernel_build)
@@ -96,6 +105,7 @@ contains
     this%initialized = .true.
 
     POP_SUB(octcl_kernel_build)
+#endif
   end subroutine octcl_kernel_build
 
   !------------------------------------------------------------
@@ -108,8 +118,8 @@ contains
 
 #ifdef HAVE_OPENCL
       call clReleaseKernel(this%kernel, ierr)
-#endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_kernel")
+#endif
       this%initialized = .false.
 
       POP_SUB(octcl_kernel_end)
@@ -134,13 +144,13 @@ contains
   end subroutine octcl_kernel_start_call
 
   !--------------------------------------------------------------
-
+#ifdef HAVE_OPENCL
   type(cl_kernel) function octcl_kernel_get_ref(this) result(ref)
     type(octcl_kernel_t), intent(in) :: this
     
     ref = this%kernel
   end function octcl_kernel_get_ref
-
+#endif
   !--------------------------------------------------------------
 
 end module octcl_kernel_m

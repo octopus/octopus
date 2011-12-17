@@ -22,7 +22,9 @@
 module batch_m
   use blas_m
   use c_pointer_m
+#ifdef HAVE_OPENCL
   use cl
+#endif
   use octcl_kernel_m
   use datasets_m
   use global_m
@@ -491,10 +493,11 @@ contains
       if(batch_type(this) == TYPE_CMPLX) this%pack%size_real(1) = 2*this%pack%size_real(1)
 
       if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
         this%status = BATCH_CL_PACKED
 
         call opencl_create_buffer(this%pack%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
-
+#endif
       else
         this%status = BATCH_PACKED
         if(batch_type(this) == TYPE_FLOAT) then
@@ -590,9 +593,9 @@ contains
         this%status = BATCH_NOT_PACKED
         
         if(opencl_is_enabled()) then
-
+#ifdef HAVE_OPENCL
           call opencl_release_buffer(this%pack%buffer)
-
+#endif
         else
           SAFE_DEALLOCATE_P(this%pack%dpsi)
           SAFE_DEALLOCATE_P(this%pack%zpsi)
@@ -665,10 +668,11 @@ contains
   subroutine batch_write_to_opencl_buffer(this)
     type(batch_t),      intent(inout)  :: this
 
+#ifdef HAVE_OPENCL
     integer :: ist, ist2, unroll
     type(opencl_mem_t) :: tmp
-    type(cl_kernel) :: kernel
     type(profile_t), save :: prof_pack
+    type(cl_kernel) :: kernel
 
     PUSH_SUB(batch_write_to_opencl_buffer)
 
@@ -734,6 +738,7 @@ contains
     end if
 
     POP_SUB(batch_write_to_opencl_buffer)
+#endif
   end subroutine batch_write_to_opencl_buffer
 
   ! ------------------------------------------------------------------
@@ -741,6 +746,7 @@ contains
   subroutine batch_read_from_opencl_buffer(this)
     type(batch_t),      intent(inout) :: this
 
+#ifdef HAVE_OPENCL
     integer :: ist, ist2, unroll
     type(opencl_mem_t) :: tmp
     type(cl_kernel) :: kernel
@@ -806,6 +812,7 @@ contains
     end if
 
     POP_SUB(batch_read_from_opencl_buffer)
+#endif
   end subroutine batch_read_from_opencl_buffer
 
 
@@ -825,11 +832,13 @@ contains
 
       bsize = product(this%pack%size)
       if(batch_type(this) == TYPE_CMPLX) bsize = bsize*2
-      
+
+#ifdef HAVE_OPENCL      
       call opencl_set_kernel_arg(set_zero, 0, this%pack%buffer)
       call opencl_kernel_run(set_zero, (/bsize/), (/opencl_max_workgroup_size()/))
       call batch_pack_was_modified(this)
       call opencl_finish()
+#endif
 
     else if(batch_is_packed(this) .and. batch_type(this) == TYPE_FLOAT) then
       this%pack%dpsi = M_ZERO
@@ -869,6 +878,8 @@ subroutine batch_copy_data(np, xx, yy)
 
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
+
+#ifdef HAVE_OPENCL
     call opencl_set_kernel_arg(kernel_copy, 0, xx%pack%buffer)
     call opencl_set_kernel_arg(kernel_copy, 1, log2(xx%pack%size_real(1)))
     call opencl_set_kernel_arg(kernel_copy, 2, yy%pack%buffer)
@@ -878,6 +889,7 @@ subroutine batch_copy_data(np, xx, yy)
     call opencl_kernel_run(kernel_copy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
     
     call opencl_finish()
+#endif
 
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_FLOAT) then
@@ -942,9 +954,11 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset
+#ifdef HAVE_OPENCL
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
-  
+#endif
+
   PUSH_SUB(batch_get_points_cl)
 
   select case(batch_status(this))
@@ -956,6 +970,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
     tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
     offset = this%index(1, 1) - 1
 
+#ifdef HAVE_OPENCL
     call octcl_kernel_start_call(kernel, 'points.cl', 'get_points')
 
     kernel_ref = octcl_kernel_get_ref(kernel)
@@ -969,7 +984,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
     call opencl_set_kernel_arg(kernel_ref, 6, ldpsi*tsize)
 
     call opencl_kernel_run(kernel_ref, (/this%nst_linear*tsize, ep - sp + 1/), (/1, 1/))
-
+#endif
   end select
 
   POP_SUB(batch_get_points_cl)
@@ -985,9 +1000,10 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset
+#ifdef HAVE_OPENCL
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
-
+#endif
   PUSH_SUB(batch_set_points_cl)
 
   call batch_pack_was_modified(this)
@@ -1000,7 +1016,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
 
     tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
     offset = this%index(1, 1) - 1
-
+#ifdef HAVE_OPENCL
     call octcl_kernel_start_call(kernel, 'points.cl', 'set_points')
     
     kernel_ref = octcl_kernel_get_ref(kernel)
@@ -1014,7 +1030,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
     call opencl_set_kernel_arg(kernel_ref, 6, this%pack%size_real(1))
 
     call opencl_kernel_run(kernel_ref, (/this%nst_linear*tsize, ep - sp + 1/), (/1, 1/))
-
+#endif
   end select
 
   POP_SUB(batch_set_points_cl)

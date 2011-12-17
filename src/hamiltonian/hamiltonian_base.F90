@@ -23,7 +23,9 @@ module hamiltonian_base_m
   use batch_m
   ! do not include blas, since we pass complex values to dgemm
   ! use blas_m
+#ifdef HAVE_OPENCL
   use cl
+#endif
   use datasets_m
   use derivatives_m
   use epot_m

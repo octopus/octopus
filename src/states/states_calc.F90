@@ -26,7 +26,9 @@ module states_calc_m
   use blacs_proc_grid_m
   use c_pointer_m
   use calc_mode_m
+#ifdef HAVE_OPENCL
   use cl
+#endif
   use octcl_kernel_m
   use comm_m
   use datasets_m

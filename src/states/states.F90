@@ -22,7 +22,9 @@
 module states_m
   use blacs_proc_grid_m
   use calc_mode_m
+#ifdef HAVE_OPENCL
   use cl
+#endif
   use comm_m
   use batch_m
   use blas_m

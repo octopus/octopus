@@ -19,7 +19,9 @@
 ##
 ## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
-noinst_LIBRARIES = libfortrancl.a
+if COMPILE_OPENCL
+  noinst_LIBRARIES = libfortrancl.a
+endif
 
 libfortrancl_a_SOURCES =       \
 	cl_types.F90           \

@@ -23,7 +23,9 @@ module mesh_batch_m
   use batch_m
   use blas_m
   use c_pointer_m
+#ifdef HAVE_OPENCL
   use cl
+#endif
   use octcl_kernel_m
   use comm_m
   use global_m

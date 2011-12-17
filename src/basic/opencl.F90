@@ -20,7 +20,9 @@
 #include "global.h"
 
 module opencl_m
+#ifdef HAVE_OPENCL
   use cl
+#endif
   use datasets_m
   use global_m
   use io_m
@@ -35,18 +37,19 @@ module opencl_m
   private
 
   public ::                       &
-    opencl_is_enabled
-
-  public ::                       &
+    opencl_is_enabled,            &
     opencl_t,                     &
     opencl_init,                  &
     opencl_end,                   &
-    opencl_mem_t,                 &
+    opencl_padded_size,           &
+    opencl_mem_t
+
+#ifdef HAVE_OPENCL
+  public ::                       &
     opencl_create_buffer,         &
     opencl_write_buffer,          &
     opencl_read_buffer,           &
     opencl_release_buffer,        &
-    opencl_padded_size,           &
     opencl_finish,                &
     opencl_set_kernel_arg,        &
     opencl_max_workgroup_size,    &
@@ -57,12 +60,15 @@ module opencl_m
     opencl_release_kernel,        &
     opencl_create_kernel,         &
     opencl_print_error
+#endif
 
   type opencl_t 
+#ifdef HAVE_OPENCL
     type(cl_platform_id)   :: platform_id
     type(cl_context)       :: context
     type(cl_command_queue) :: command_queue
     type(cl_device_id)     :: device
+#endif
     integer                :: max_workgroup_size
     integer                :: local_memory_size
     logical                :: enabled
@@ -70,13 +76,16 @@ module opencl_m
 
   type opencl_mem_t
     private
+#ifdef HAVE_OPENCL
     type(cl_mem)           :: mem
+#endif
     integer(SIZEOF_SIZE_T) :: size
     type(type_t)           :: type
   end type opencl_mem_t
 
   type(opencl_t), public :: opencl
 
+#ifdef HAVE_OPENCL
   ! the kernels
   type(cl_kernel), public :: kernel_vpsi
   type(cl_kernel), public :: kernel_vpsi_spinors
@@ -125,6 +134,8 @@ module opencl_m
       opencl_set_kernel_arg_local
   end interface
 
+#endif
+
   type(profile_t), save :: prof_read, prof_write, prof_kernel_run
 
   integer, parameter  ::      &
@@ -153,13 +164,15 @@ module opencl_m
     subroutine opencl_init(base_grp)
       type(mpi_grp_t),  intent(inout) :: base_grp
 
-      type(cl_program) :: prog
       logical  :: disable, default
       integer  :: device_type
       integer  :: idevice, iplatform, ndevices, idev, cl_status, ret_devices, nplatforms, iplat
       character(len=256) :: device_name
+#ifdef HAVE_OPENCL
+      type(cl_program) :: prog
       type(cl_platform_id), allocatable :: allplatforms(:)
       type(cl_device_id), allocatable :: alldevices(:)
+#endif
 
       PUSH_SUB(opencl_init)
       
@@ -557,6 +570,25 @@ module opencl_m
 
     ! ------------------------------------------
 
+    integer function opencl_padded_size(nn) result(psize)
+      integer,        intent(in) :: nn
+
+#ifdef HAVE_OPENCL
+      integer :: modnn, bsize
+
+      bsize = opencl_max_workgroup_size()
+
+      psize = nn
+      modnn = mod(nn, bsize)
+      if(modnn /= 0) psize = psize + bsize - modnn
+#else
+      psize = nn
+#endif
+    end function opencl_padded_size
+
+#ifdef HAVE_OPENCL
+    ! ------------------------------------------
+
     subroutine opencl_create_buffer_4(this, flags, type, size)
       type(opencl_mem_t), intent(inout) :: this
       integer,            intent(in)    :: flags
@@ -574,9 +606,7 @@ module opencl_m
 
       ASSERT(fsize >= 0)
 
-#ifdef HAVE_OPENCL
       this%mem = clCreateBuffer(opencl%context, flags, fsize, ierr)
-#endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
 
       POP_SUB(opencl_create_buffer_4)
@@ -592,9 +622,8 @@ module opencl_m
         PUSH_SUB(opencl_release_buffer)
 
       this%size = 0
-#ifdef HAVE_OPENCL
+
       call clReleaseMemObject(this%mem, ierr)
-#endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_buffer")
 
       POP_SUB(opencl_release_buffer)
@@ -618,21 +647,6 @@ module opencl_m
 
     ! -----------------------------------------
 
-    integer function opencl_padded_size(nn) result(psize)
-      integer,        intent(in) :: nn
-
-      integer :: modnn, bsize
-
-      bsize = opencl_max_workgroup_size()
-
-      psize = nn
-      modnn = mod(nn, bsize)
-      if(modnn /= 0) psize = psize + bsize - modnn
-
-    end function opencl_padded_size
-
-    ! ------------------------------------------
-
     subroutine opencl_finish()
       integer :: ierr
 
@@ -640,13 +654,10 @@ module opencl_m
 
       call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
 
-#ifdef HAVE_OPENCL
       call clFinish(opencl%command_queue, ierr)
-#endif
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'cl_finish') 
 
       call profiling_out(prof_kernel_run)
-
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'cl_finish') 
       POP_SUB(opencl_finish)
     end subroutine opencl_finish
 
@@ -661,12 +672,8 @@ module opencl_m
 
       PUSH_SUB(opencl_set_kernel_arg_buffer)
 
-#ifdef HAVE_OPENCL
       call clSetKernelArg(kernel, narg, buffer%mem, ierr)
-#endif
-      if(ierr /= CL_SUCCESS) then
-        call opencl_print_error(ierr, "set_kernel_arg_buf")
-      end if
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_buf")
 
       POP_SUB(opencl_set_kernel_arg_buffer)
 
@@ -696,12 +703,8 @@ module opencl_m
         call messages_fatal(1)
       end if
 
-#ifdef HAVE_OPENCL
       call clSetKernelArgLocal(kernel, narg, size_in_bytes, ierr)
-#endif
-      if(ierr /= CL_SUCCESS) then 
-        call opencl_print_error(ierr, "set_kernel_arg_local")
-      end if
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_local")
 
       POP_SUB(opencl_set_kernel_arg_local)
 
@@ -730,15 +733,13 @@ module opencl_m
       gsizes(1:dim) = int(globalsizes(1:dim), 8)
       lsizes(1:dim) = int(localsizes(1:dim), 8)
 
-#ifdef HAVE_OPENCL
       call clEnqueueNDRangeKernel(opencl%command_queue, kernel, dim, gsizes(1), lsizes(1), ierr)
-#endif
-
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
 
       call profiling_out(prof_kernel_run)
       POP_SUB(opencl_kernel_run)
     end subroutine opencl_kernel_run
+
 
     ! -----------------------------------------------
 
@@ -747,19 +748,17 @@ module opencl_m
     end function opencl_max_workgroup_size
 
     ! -----------------------------------------------
+        
     integer function opencl_kernel_workgroup_size(kernel) result(workgroup_size)
       type(cl_kernel), intent(inout) :: kernel
 
       integer(8) :: workgroup_size8
       integer    :: ierr
 
-#ifdef HAVE_OPENCL
       call clKernelWorkGroupInfo(kernel, opencl%device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
       workgroup_size = workgroup_size8
-#else
-      workgroup_size = 0
-#endif
+
     end function opencl_kernel_workgroup_size
 
     ! -----------------------------------------------
@@ -773,8 +772,6 @@ module opencl_m
       integer :: ierr, ierrlog, iunit, irec
 
       PUSH_SUB(opencl_build_program)
-
-#ifdef HAVE_OPENCL
 
       string = ''
 
@@ -832,8 +829,6 @@ module opencl_m
 
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clBuildProgram")
 
-#endif
-
       POP_SUB(opencl_build_program)
     end subroutine opencl_build_program
 
@@ -846,9 +841,7 @@ module opencl_m
 
       PUSH_SUB(opencl_release_program)
 
-#ifdef HAVE_OPENCL
       call clReleaseProgram(prog, ierr)
-#endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseProgram")
 
       POP_SUB(opencl_release_program)
@@ -863,9 +856,7 @@ module opencl_m
 
       PUSH_SUB(opencl_release_kernel)
 
-#ifdef HAVE_OPENCL
       call clReleaseKernel(prog, ierr)
-#endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseKernel")
 
       POP_SUB(opencl_release_kernel)
@@ -881,9 +872,7 @@ module opencl_m
 
       PUSH_SUB(opencl_create_kernel)
 
-#ifdef HAVE_OPENCL
       kernel = clCreateKernel(prog, name, ierr)
-#endif
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateKernel")
 
       POP_SUB(opencl_create_kernel)
@@ -968,9 +957,7 @@ module opencl_m
       integer :: cl_status
       character(len=2048) :: all_extensions
 
-#ifdef HAVE_OPENCL
       call clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, all_extensions, cl_status)
-#endif
 
       has = index(all_extensions, extension) /= 0
 
@@ -987,6 +974,8 @@ module opencl_m
 #include "undef.F90"
 #include "integer.F90"
 #include "opencl_inc.F90"
+
+#endif
 
 end module opencl_m
 
