@@ -343,7 +343,7 @@ module opencl_m
       if(mpi_grp_is_root(base_grp)) call device_info()
 
       ! create the context
-      opencl%context = clCreateContext(opencl%platform_id, 1, alldevices(idevice + 1:), cl_status)
+      opencl%context = clCreateContext(opencl%platform_id, opencl%device, cl_status)
       if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateContext")
 
       SAFE_DEALLOCATE_A(alldevices)
