@@ -250,7 +250,7 @@ module opencl_m
  
       SAFE_ALLOCATE(allplatforms(1:nplatforms))
 
-      call clGetPlatformIDs(nplatforms, allplatforms, iplat, cl_status)
+      call clGetPlatformIDs(allplatforms, iplat, cl_status)
       if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
 
       call messages_write('Info: Available CL platforms: ')
@@ -290,7 +290,7 @@ module opencl_m
 
       ! list all devices
 
-      call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, alldevices, ret_devices, cl_status)
+      call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, alldevices, ret_devices, cl_status)
 
       do idev = 1, ndevices
         call messages_write('      Device ')
@@ -314,7 +314,7 @@ module opencl_m
       end select
 
       ! now get a list of the selected type
-      call clGetDeviceIDs(opencl%platform_id, device_type, ndevices, alldevices, ret_devices, cl_status)
+      call clGetDeviceIDs(opencl%platform_id, device_type, alldevices, ret_devices, cl_status)
 
       ! the number of devices can be smaller
       ndevices = ret_devices
