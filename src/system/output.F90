@@ -860,7 +860,7 @@ contains
     call zcube_function_alloc_rs(cube, cf)
     call cube_function_alloc_fs(cube, cf)
 
-    ! NOTE: in BerkeleyGW, no G-vector may have coordinate equal to the FFT grid size.
+    ! NOTE: in BerkeleyGW, no G-vector may have coordinate equal to the half the FFT grid size.
     ! Instead, they should be minus that.
     call fourier_shell_init(shell, cube, gr%mesh, convention = .false.)
     SAFE_ALLOCATE(field_g(shell%ngvectors, st%d%nspin))
@@ -1015,8 +1015,8 @@ contains
 
       call write_binary_header(iunit, sheader, iflavor = 2, ns = st%d%nspin, ng = shell%ngvectors, &
         ntran = symmetries_number(gr%sb%symm), cell_symmetry = 0, nat = geo%natoms, &
-        nk = gr%sb%kpoints%reduced%npoints, nbands = st%nst, ngkmax = shell%ngvectors, ecutrho = shell%ekin_cutoff / 2,  &
-        ecutwfc = shell%ekin_cutoff / 2, kmax = kmax, kgrid = gr%sb%kpoints%nik_axis, kshift = gr%sb%kpoints%shifts, &
+        nk = gr%sb%kpoints%reduced%npoints, nbands = st%nst, ngkmax = shell%ngvectors, ecutrho = shell%ekin_cutoff * M_TWO,  &
+        ecutwfc = shell%ekin_cutoff * M_TWO, kmax = kmax, kgrid = gr%sb%kpoints%nik_axis, kshift = gr%sb%kpoints%shifts, &
         celvol = gr%sb%rcell_volume, alat = M_ONE, avec = gr%sb%rlattice, adot = adot, recvol = recvol, &
         blat = M_ONE, bvec = gr%sb%klattice, bdot = bdot, mtrx = mtrx, tnp = tnp, atyp = atyp, &
         apos = apos, ngk = ngk, kw = gr%sb%kpoints%reduced%weight, kpt = gr%sb%kpoints%reduced%red_point, &
