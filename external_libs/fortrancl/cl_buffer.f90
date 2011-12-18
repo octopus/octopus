@@ -1,11 +1,11 @@
 !! Copyright (C) 2010-2011 X. Andrade <xavier@tddft.org>
 !! 
-!! This program is free software: you can redistribute it and/or modify
+!! FortranCL is free software: you can redistribute it and/or modify
 !! it under the terms of the GNU Lesser General Public License as published by
 !! the Free Software Foundation, either version 3 of the License, or
 !! (at your option) any later version.
 !!
-!! This program is distributed in the hope that it will be useful,
+!! FortranCL is distributed in the hope that it will be useful,
 !! but WITHOUT ANY WARRANTY; without even the implied warranty of
 !! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !! GNU Lesser General Public License for more details.
@@ -28,13 +28,13 @@ module cl_buffer_m
 
   interface clReleaseMemObject
 
-    subroutine clReleaseMemObject_low(memobj, status)
+    subroutine clReleaseMemObject_low(memobj, errcode_ret)
       use cl_types_m
 
       implicit none
 
       type(cl_mem),           intent(inout) :: memobj
-      integer,                intent(out)   :: status
+      integer,                intent(out)   :: errcode_ret
     end subroutine clReleaseMemObject_low
 
   end interface
