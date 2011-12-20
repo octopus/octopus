@@ -680,16 +680,7 @@ contains
     call dfourier_space_op_apply(coulb, cube, cf)
 
     !now the cube has the potential
-    if(average_to_zero_) then
-      average = cube_function_surface_average(cube, cf)
-      
-#ifdef HAVE_MPI
-      ! Only root has the right average, if PFFT is not used
-      if(mesh%parallel_in_domains .and. cube%fft_library /= FFTLIB_PFFT) then
-        call MPI_Bcast(average, 1, MPI_FLOAT, 0, mesh%mpi_grp%comm, mpi_err)
-      end if
-#endif
-    end if
+    if(average_to_zero_) average = cube_function_surface_average(cube, cf)
     
     ! move the potential back to the mesh
     if(mesh%parallel_in_domains) then
