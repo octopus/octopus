@@ -282,7 +282,7 @@ subroutine X(ionic_perturbation)(this, gr, geo, hm, ik, f_in, f_out, iatom, idir
 
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   vloc(1:gr%mesh%np) = M_ZERO
-  call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc, CNST(0.0))
+  call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc)
 
   SAFE_ALLOCATE(fin(1:gr%mesh%np_part, 1:1))
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
@@ -571,7 +571,7 @@ subroutine X(ionic_perturbation_order_2) (this, gr, geo, hm, ik, f_in, f_out, ia
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
 
   forall(ip = 1:gr%mesh%np) vloc(ip) = M_ZERO
-  call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc, CNST(0.0))
+  call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc)
 
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
    
@@ -645,7 +645,7 @@ subroutine X(ionic_pert_matrix_elements_2)(this, gr, geo, hm, ik, st, psi, vib, 
       idir  = vibrations_get_dir (vib, imat)
 
       forall(ip = 1:gr%mesh%np) vloc(ip) = M_ZERO
-      call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc, CNST(0.0))
+      call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc)
 
       do jdir = 1, gr%sb%dim
         jmat = vibrations_get_index(vib, iatom, jdir)

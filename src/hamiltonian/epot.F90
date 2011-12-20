@@ -521,13 +521,11 @@ contains
   end subroutine epot_end
 
   ! ---------------------------------------------------------
-
-  subroutine epot_generate(ep, gr, geo, st, time)
+  subroutine epot_generate(ep, gr, geo, st)
     type(epot_t),          intent(inout) :: ep
     type(grid_t), target,  intent(in)    :: gr
     type(geometry_t),      intent(in)    :: geo
     type(states_t),        intent(inout) :: st
-    FLOAT,       optional, intent(in)    :: time
 
     FLOAT   :: time_
     integer :: ia, ip
@@ -545,8 +543,6 @@ contains
     sb   => gr%sb
     mesh => gr%mesh
 
-    time_ = optional_default(time, M_ZERO)
-
     SAFE_ALLOCATE(density(1:mesh%np))
     density = M_ZERO
 
@@ -557,10 +553,10 @@ contains
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       if(geo%nlcc) then
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, time_, &
+        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, &
           rho_core = st%rho_core, density = density)
       else
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, time_, density = density)
+        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
       end if
     end do
 
@@ -626,14 +622,13 @@ contains
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, der, dgrid, geo, iatom, vpsl, time, rho_core, density)
+  subroutine epot_local_potential(ep, der, dgrid, geo, iatom, vpsl, rho_core, density)
     type(epot_t),             intent(inout) :: ep
     type(derivatives_t),      intent(in)    :: der
     type(double_grid_t),      intent(in)    :: dgrid
     type(geometry_t),         intent(in)    :: geo
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
-    FLOAT,                    intent(in)    :: time
     FLOAT,          optional, pointer       :: rho_core(:)
     FLOAT,          optional, intent(inout) :: density(:) !< If present, the ionic density will be added here.
 
@@ -709,7 +704,7 @@ contains
 
         SAFE_ALLOCATE(vl(1:der%mesh%np))
 
-        call species_get_local(geo%atom(iatom)%spec, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl, time)
+        call species_get_local(geo%atom(iatom)%spec, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
       end if
 
       if(allocated(vl)) then
@@ -792,11 +787,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine epot_precalc_local_potential(ep, gr, geo, time)
+  subroutine epot_precalc_local_potential(ep, gr, geo)
     type(epot_t),     intent(inout) :: ep
     type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(in)    :: geo
-    FLOAT,            intent(in)    :: time
 
     integer :: iatom
     FLOAT, allocatable :: tmp(:)
@@ -813,7 +807,7 @@ contains
 
     do iatom = 1, geo%natoms
       tmp(1:gr%mesh%np) = M_ZERO
-      call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, tmp, time)
+      call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, tmp)!, time)
       ep%local_potential(1:gr%mesh%np, iatom) = tmp(1:gr%mesh%np)
     end do
 
@@ -1152,7 +1146,7 @@ contains
       v2(1:gr%mesh%np)= M_ZERO
       count_atoms=jatom
       calc_gate_energy=1
-      call epot_local_potential(ep, gr%der, gr%dgrid, geo, jatom, v2, time1)
+      call epot_local_potential(ep, gr%der, gr%dgrid, geo, jatom, v2)
       write(68,*) "time1,", time1
 
       do iatom = jatom-1,1,-1
@@ -1174,7 +1168,7 @@ contains
       SAFE_ALLOCATE(rho2(1:gr%mesh%np))
       v2(1:gr%mesh%np)= M_ZERO
       rho2(1:gr%mesh%np)= M_ZERO
-      call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, v2, time1)
+      call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, v2)
       call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, geo, rho2)
       temp=dmf_dotp(gr%mesh, rho2, v2) 
       sicn2=sicn2+M_HALF*temp

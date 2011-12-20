@@ -178,7 +178,7 @@ module opt_control_propagation_m
     if(target_move_ions(target)) then
       move_ions_ = .true.
     else
-      call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo, time = M_ZERO)
+      call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)
     end if
 
     call target_tdcalc(target, hm, gr, sys%geo, psi, 0)

@@ -670,7 +670,7 @@ module opt_control_target_m
           do iatom=1, geo%natoms
              vl(:) = M_ZERO
              vl_grad(:,:) = M_ZERO
-             call species_get_local(geo%atom(iatom)%spec, gr%mesh, geo%atom(iatom)%x(1:gr%sb%dim), vl, M_ZERO)
+             call species_get_local(geo%atom(iatom)%spec, gr%mesh, geo%atom(iatom)%x(1:gr%sb%dim), vl)
              call dderivatives_grad(gr%der, vl, vl_grad)
              forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
                 target%grad_local_pot(iatom, ist, jst) = vl_grad(ist, jst)

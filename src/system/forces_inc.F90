@@ -86,8 +86,7 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, st, time, gdensity, force
     end if
     
     vloc(1:gr%mesh%np) = M_ZERO
-    
-    call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vloc, time)
+    call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vloc)
 
     forall(ip = 1:gr%mesh%np) zvloc(ip) = vloc(ip)
 

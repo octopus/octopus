@@ -803,15 +803,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_get_local(spec, mesh, x_atom, vl, time)
+  subroutine species_get_local(spec, mesh, x_atom, vl)
     type(species_t), intent(in) :: spec
     type(mesh_t),    intent(in) :: mesh
     FLOAT,           intent(in) :: x_atom(:)
     FLOAT,           intent(out):: vl(:)
-    FLOAT, optional, intent(in) :: time
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(MAX_DIM), r, time_
+    FLOAT :: xx(MAX_DIM), r
     integer :: ip, err, idim
     type(ps_t), pointer :: ps
 
@@ -819,10 +818,6 @@ contains
 
     PUSH_SUB(species_get_local)
     call profiling_in(prof, "SPECIES_GET_LOCAL")
-
-    time_ = M_ZERO
-
-    if (present(time)) time_ = time
 
       select case(species_type(spec))
       case(SPEC_USDEF)
@@ -837,7 +832,7 @@ contains
           ! the units back and forth
           forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
           r = units_from_atomic(units_inp%length, r)
-          vl(ip) = units_to_atomic(units_inp%energy, species_userdef_pot(spec, mesh%sb%dim, xx, r, time_))
+          vl(ip) = units_to_atomic(units_inp%energy, species_userdef_pot(spec, mesh%sb%dim, xx, r))
 
         end do
 

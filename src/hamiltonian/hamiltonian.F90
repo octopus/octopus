@@ -1032,11 +1032,7 @@ contains
       this%ep%vpsl_lead(1:np, RIGHT) = this%lead(RIGHT)%v0(1:np)
     end if
 
-    if(present(time)) then
-      call epot_generate(this%ep, gr, geo, st, time)
-    else
-      call epot_generate(this%ep, gr, geo, st)
-    end if
+    call epot_generate(this%ep, gr, geo, st)
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep, geo)
     call hamiltonian_update(this, gr%mesh, time)
 
