@@ -113,18 +113,40 @@ contains
     real(8), allocatable :: translation(:, :)
     type(symm_op_t) :: tmpop
 
+    interface
+      subroutine symmetries_finite(atoms_count, typs, position, verbosity)
+        integer, intent(in) :: atoms_count
+        integer, intent(in) :: typs
+        real(8), intent(in) :: position
+        integer, intent(in) :: verbosity
+      end subroutine symmetries_finite
+    end interface
+
+
     PUSH_SUB(symmetries_init)
 
     if (periodic_dim == 0) then
 
       ! we only have the identity
-
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
       call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)))
       this%breakdir = M_ZERO
       this%space_group = 1
 
+      SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
+      SAFE_ALLOCATE(typs(1:geo%natoms))
+
+      forall(iatom = 1:geo%natoms)
+        position(1:3, iatom) = M_ZERO
+        position(1:dim, iatom) = geo%atom(iatom)%x(1:dim)
+        typs(iatom) = species_index(geo%atom(iatom)%spec)
+      end forall
+
+      call symmetries_finite(geo%natoms, typs(1), position(1, 1), verbosity = -1)
+
+      SAFE_DEALLOCATE_A(position)
+      SAFE_DEALLOCATE_A(typs)
     else
 
       lattice(1:3, 1:3) = rlattice(1:3, 1:3)
