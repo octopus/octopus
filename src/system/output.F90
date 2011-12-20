@@ -855,7 +855,11 @@ contains
       call zbgw_vxc_dat(bgw, dir, st, gr, hm, vxc)
     endif
 
-    call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type = FFT_COMPLEX, nn_out = kmax)
+    call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = kmax)
+    if(any(gr%mesh%idx%ll(1:3) /= kmax(1:3))) then ! paranoia check
+      message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
+      call messages_fatal(1)
+    endif
     call cube_function_null(cf)
     call zcube_function_alloc_rs(cube, cf)
     call cube_function_alloc_fs(cube, cf)

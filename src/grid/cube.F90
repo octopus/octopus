@@ -64,15 +64,17 @@ module cube_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, nn, sb, fft_type, nn_out)
+  subroutine cube_init(cube, nn, sb, fft_type, dont_optimize, nn_out)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: nn(3)
     type(simul_box_t), intent(in)  :: sb
     integer, optional, intent(in)  :: fft_type  !< Is the cube going to be used to perform FFTs?
+    logical, optional, intent(in)  :: dont_optimize !< if true, do not optimize grid for FFT
     integer, optional, intent(out) :: nn_out(3) !< What are the FFT dims?
                                                 !! If optimized, may be different from input nn.
 
     integer :: mpi_comm, tmp_n(3), fft_type_
+    logical :: optimize
 
     PUSH_SUB(cube_init)
 
@@ -118,8 +120,12 @@ contains
     else
       SAFE_ALLOCATE(cube%fft)
       tmp_n = nn
+      optimize = .not. simul_box_is_periodic(sb)
+      if(present(dont_optimize)) then
+        if(dont_optimize) optimize = .false.
+      endif
       call fft_init(cube%fft, tmp_n, sb%dim, sb%fft_alpha, fft_type_, cube%fft_library, &
-           mpi_comm=mpi_comm, optimize = .not.simul_box_is_periodic(sb))
+           mpi_comm=mpi_comm, optimize = optimize)
       if(present(nn_out)) nn_out(1:3) = tmp_n(1:3)
 
       call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
