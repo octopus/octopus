@@ -1254,6 +1254,14 @@ for( i = 1 ; i < AtomsCount ; i++ ){
 }
 
 void
+destroy_planes(void)
+{
+  int i;
+  for(i = 0; i < PlanesCount; i++) destroy_symmetry_element(Planes[i]);
+  free(Planes);
+}
+
+void
 find_inversion_centers(void)
 {
         SYMMETRY_ELEMENT * center ;
@@ -1263,6 +1271,14 @@ if( ( center = init_inversion_center() ) != NULL ){
     InversionCenters[0]   = center ;
     InversionCentersCount = 1 ;
     }
+}
+
+void
+destroy_inversion_centers(void)
+{
+  int i;
+  for(i = 0; i < InversionCentersCount; i++) destroy_symmetry_element(InversionCenters[i]);
+  free(InversionCenters);
 }
 
 void
@@ -1366,6 +1382,12 @@ for( i = 1 ; i < AtomsCount ; i++ ){
         }
     }
 free( distances ) ;
+}
+
+void destroy_axes(){
+  int i = 0;
+  for(i = 0; i < NormalAxesCount; i++) destroy_symmetry_element(NormalAxes[i]);
+  free(NormalAxes);
 }
 
 void
@@ -1700,7 +1722,7 @@ if( matching_count >  1 ){
  *  Input/Output
  */
 
-void FC_FUNC_(symmetries_finite,SYMMETRIES_FINITE)
+void FC_FUNC_(symmetries_finite_init,SYMMETRIES_FINITE_INIT)
      (const int * natoms, const int * types, const double * positions, const int * verbosity, int * point_group){
   int i ;
   
@@ -1725,8 +1747,7 @@ void FC_FUNC_(symmetries_finite,SYMMETRIES_FINITE)
   if( verbose >= 0 ) report_symmetry_elements_verbose() ;
   report_symmetry_elements_brief() ;
   identify_point_group(point_group);
-  
-  free(Atoms);
+
 }
 
 void FC_FUNC_(symmetries_finite_get_group_name,SYMMETRIES_FINITE_GET_GROUP_NAME)
@@ -1739,4 +1760,15 @@ void FC_FUNC_(symmetries_finite_get_group_elements,SYMMETRIES_FINITE_GET_GROUP_E
      (const int * point_group,  STR_F_TYPE name STR_ARG1){
 
   TO_F_STR1(PointGroups[*point_group].symmetry_code, name);
+}
+
+void FC_FUNC_(symmetries_finite_end,SYMMETRIES_FINITE_END)(){  
+  destroy_inversion_centers();
+  destroy_planes();
+  free(SymmetryCode);
+  free(DistanceFromCenter);
+  destroy_axes();
+  free(NormalAxesCounts);
+  free(ImproperAxesCounts);
+  free(Atoms);
 }

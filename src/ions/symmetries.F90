@@ -116,13 +116,30 @@ contains
     character(len=30) :: group_elements
 
     interface
-      subroutine symmetries_finite(atoms_count, typs, position, verbosity, point_group)
+      subroutine symmetries_finite_init(atoms_count, typs, position, verbosity, point_group)
+        implicit none
+
         integer, intent(in)    :: atoms_count
         integer, intent(in)    :: typs
         real(8), intent(in)    :: position
         integer, intent(in)    :: verbosity
         integer, intent(out)   :: point_group
-      end subroutine symmetries_finite
+      end subroutine symmetries_finite_init
+
+      subroutine symmetry_finite_end()
+        implicit none
+      end subroutine symmetry_finite_end
+
+      subroutine symmetry_finite_get_group_name(point_group, group_name)
+        integer,          intent(in)    :: point_group
+        character(len=*), intent(out)   :: group_name
+      end subroutine symmetry_finite_get_group_name
+
+      subroutine symmetry_finite_get_group_elements(point_group, group_elements)
+        integer,          intent(in)    :: point_group
+        character(len=*), intent(out)   :: group_elements
+      end subroutine symmetry_finite_get_group_elements
+
     end interface
 
     PUSH_SUB(symmetries_init)
@@ -148,9 +165,10 @@ contains
       end forall
 
       verbosity = -1
-      call symmetries_finite(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
+      call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
       call symmetries_finite_get_group_name(point_group, group_name)
       call symmetries_finite_get_group_elements(point_group, group_elements)
+      call symmetries_finite_end()
 
       call messages_write('Symmetry elements : '//trim(group_elements), new_line = .true.)
       call messages_write('Symmetry group    : '//trim(group_name))
