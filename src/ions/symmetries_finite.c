@@ -36,6 +36,8 @@
 #include <string.h>
 #include <math.h>
 
+#include <string_f.h>
+
 #define	DIMENSION 3
 #define MAXPARAM  7
 
@@ -1631,7 +1633,7 @@ if( symmetry_code == NULL ){
 if( PlanesCount + NormalAxesCount + ImproperAxesCount + InversionCentersCount == 0 )
     printf( "Molecule has no symmetry elements\n" ) ;
 else {
-    printf( "Molecule has the following symmetry elements: " ) ;
+  if(verbose > -1) printf( "Molecule has the following symmetry elements: " ) ;
     if( InversionCentersCount > 0 ) strcat( symmetry_code, "(i) " ) ;
     if( NormalAxesCounts[0] == 1 )
          strcat( symmetry_code, "(Cinf) " ) ;
@@ -1649,13 +1651,12 @@ else {
         }
     if( PlanesCount == 1 ) strcat( symmetry_code, "(sigma) " ) ;
     if( PlanesCount >  1 ){ sprintf( buf, "%d*(sigma) ", PlanesCount ) ; strcat( symmetry_code, buf ) ; }
-    printf( "%s\n", symmetry_code ) ;
+    if(verbose > -1) printf( "%s\n", symmetry_code ) ;
     }
 SymmetryCode = symmetry_code ;
 }
 
-void
-identify_point_group( void )
+void identify_point_group(int * point_group)
 {
         int            i ;
         int            last_matching = -1 ;
@@ -1688,9 +1689,11 @@ if( matching_count >  1 ){
             }
         }
     }
-if( matching_count == 1 ){
-    printf( "It seems to be the %s point group\n", PointGroups[last_matching].group_name ) ;
-    }
+ if(verbose > 0 && matching_count == 1){
+   printf( "It seems to be the %s point group\n", PointGroups[last_matching].group_name ) ;
+ }
+
+ *point_group = last_matching;
 }
 
 /*
@@ -1698,7 +1701,7 @@ if( matching_count == 1 ){
  */
 
 void FC_FUNC_(symmetries_finite,SYMMETRIES_FINITE)
-     (const int * natoms, const int * types, const double * positions, const int * verbosity){
+     (const int * natoms, const int * types, const double * positions, const int * verbosity, int * point_group){
   int i ;
   
   verbose = *verbosity;
@@ -1721,6 +1724,19 @@ void FC_FUNC_(symmetries_finite,SYMMETRIES_FINITE)
             "Some symmetry elements may remain unidentified.\n" ) ;
   if( verbose >= 0 ) report_symmetry_elements_verbose() ;
   report_symmetry_elements_brief() ;
-  identify_point_group() ;
+  identify_point_group(point_group);
   
+  free(Atoms);
+}
+
+void FC_FUNC_(symmetries_finite_get_group_name,SYMMETRIES_FINITE_GET_GROUP_NAME)
+     (const int * point_group,  STR_F_TYPE name STR_ARG1){
+
+  TO_F_STR1(PointGroups[*point_group].group_name, name);
+}
+
+void FC_FUNC_(symmetries_finite_get_group_elements,SYMMETRIES_FINITE_GET_GROUP_ELEMENTS)
+     (const int * point_group,  STR_F_TYPE name STR_ARG1){
+
+  TO_F_STR1(PointGroups[*point_group].symmetry_code, name);
 }

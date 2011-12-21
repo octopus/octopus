@@ -104,7 +104,7 @@ contains
     FLOAT,               intent(in)  :: lsize(:)
 
     integer :: max_size, fullnops
-    integer :: idir, iatom, iop
+    integer :: idir, iatom, iop, verbosity, point_group
     real(8) :: lattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)
@@ -112,18 +112,22 @@ contains
     integer, allocatable :: rotation(:, :, :)
     real(8), allocatable :: translation(:, :)
     type(symm_op_t) :: tmpop
+    character(len=6) :: group_name
+    character(len=30) :: group_elements
 
     interface
-      subroutine symmetries_finite(atoms_count, typs, position, verbosity)
-        integer, intent(in) :: atoms_count
-        integer, intent(in) :: typs
-        real(8), intent(in) :: position
-        integer, intent(in) :: verbosity
+      subroutine symmetries_finite(atoms_count, typs, position, verbosity, point_group)
+        integer, intent(in)    :: atoms_count
+        integer, intent(in)    :: typs
+        real(8), intent(in)    :: position
+        integer, intent(in)    :: verbosity
+        integer, intent(out)   :: point_group
       end subroutine symmetries_finite
     end interface
 
-
     PUSH_SUB(symmetries_init)
+
+    call messages_print_stress(stdout, "Symmetries")
 
     if (periodic_dim == 0) then
 
@@ -143,8 +147,15 @@ contains
         typs(iatom) = species_index(geo%atom(iatom)%spec)
       end forall
 
-      call symmetries_finite(geo%natoms, typs(1), position(1, 1), verbosity = -1)
+      verbosity = -1
+      call symmetries_finite(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
+      call symmetries_finite_get_group_name(point_group, group_name)
+      call symmetries_finite_get_group_elements(point_group, group_elements)
 
+      call messages_write('Symmetry elements : '//trim(group_elements), new_line = .true.)
+      call messages_write('Symmetry group    : '//trim(group_name))
+      call messages_info()
+      
       SAFE_DEALLOCATE_A(position)
       SAFE_DEALLOCATE_A(typs)
     else
@@ -222,12 +233,14 @@ contains
       end do
 
       write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'
-      call messages_info(1)
+      call messages_info()
 
       SAFE_DEALLOCATE_A(rotation)
       SAFE_DEALLOCATE_A(translation)
 
     end if
+
+    call messages_print_stress(stdout)
 
     POP_SUB(symmetries_init)
   end subroutine symmetries_init
