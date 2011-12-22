@@ -1258,7 +1258,9 @@ destroy_planes(void)
 {
   int i;
   for(i = 0; i < PlanesCount; i++) destroy_symmetry_element(Planes[i]);
+  PlanesCount = 0;
   free(Planes);
+  Planes = NULL;
 }
 
 void
@@ -1278,7 +1280,9 @@ destroy_inversion_centers(void)
 {
   int i;
   for(i = 0; i < InversionCentersCount; i++) destroy_symmetry_element(InversionCenters[i]);
+  InversionCentersCount = 0;
   free(InversionCenters);
+  InversionCenters = NULL;
 }
 
 void
@@ -1387,7 +1391,9 @@ free( distances ) ;
 void destroy_axes(){
   int i = 0;
   for(i = 0; i < NormalAxesCount; i++) destroy_symmetry_element(NormalAxes[i]);
+  NormalAxesCount = 0;
   free(NormalAxes);
+  NormalAxes = NULL;
 }
 
 void
@@ -1641,41 +1647,39 @@ for( i = 0 ; i < ImproperAxesCount ; i++ )
     ImproperAxesCounts[ ImproperAxes[i]->order ]++ ;
 }
 
-void
-report_symmetry_elements_brief( void )
-{
-        int          i ;
-        char *       symmetry_code = calloc( 1, 10*(PlanesCount+NormalAxesCount+ImproperAxesCount+InversionCentersCount+2) ) ;
-        char         buf[ 100 ] ;
-
-if( symmetry_code == NULL ){
+void report_symmetry_elements_brief(){
+  int    i;
+  char * symmetry_code = calloc( 1, 10*(PlanesCount+NormalAxesCount+ImproperAxesCount+InversionCentersCount+2) );
+  char   buf[100];
+  
+  if( symmetry_code == NULL ){
     fprintf( stderr, "Unable to allocate memory for symmetry ID code in report_symmetry_elements_brief()\n" ) ;
     exit( EXIT_FAILURE ) ;
+  }
+  if( PlanesCount + NormalAxesCount + ImproperAxesCount + InversionCentersCount == 0 )
+    if(verbose > -1) printf( "Molecule has no symmetry elements\n" ) ;
+    else {
+      if(verbose > -1) printf( "Molecule has the following symmetry elements: " ) ;
+      if( InversionCentersCount > 0 ) strcat( symmetry_code, "(i) " ) ;
+      if( NormalAxesCounts[0] == 1 )
+	strcat( symmetry_code, "(Cinf) " ) ;
+      if( NormalAxesCounts[0] >  1 ) {
+	sprintf( buf, "%d*(Cinf) ", NormalAxesCounts[0] ) ;
+	strcat( symmetry_code, buf ) ;
+      }
+      for( i = MaxAxisOrder ; i >= 2 ; i-- ){
+	if( NormalAxesCounts[i] == 1 ){ sprintf( buf, "(C%d) ", i ) ; strcat( symmetry_code, buf ) ; }
+	if( NormalAxesCounts[i] >  1 ){ sprintf( buf, "%d*(C%d) ", NormalAxesCounts[i], i ) ; strcat( symmetry_code, buf ) ; }
+      }
+      for( i = MaxAxisOrder ; i >= 2 ; i-- ){
+	if( ImproperAxesCounts[i] == 1 ){ sprintf( buf, "(S%d) ", i ) ; strcat( symmetry_code, buf ) ; }
+	if( ImproperAxesCounts[i] >  1 ){ sprintf( buf, "%d*(S%d) ", ImproperAxesCounts[i], i ) ; strcat( symmetry_code, buf ) ; }
+      }
+      if( PlanesCount == 1 ) strcat( symmetry_code, "(sigma) " ) ;
+      if( PlanesCount >  1 ){ sprintf( buf, "%d*(sigma) ", PlanesCount ) ; strcat( symmetry_code, buf ) ; }
+      if(verbose > -1) printf( "%s\n", symmetry_code ) ;
     }
-if( PlanesCount + NormalAxesCount + ImproperAxesCount + InversionCentersCount == 0 )
-    printf( "Molecule has no symmetry elements\n" ) ;
-else {
-  if(verbose > -1) printf( "Molecule has the following symmetry elements: " ) ;
-    if( InversionCentersCount > 0 ) strcat( symmetry_code, "(i) " ) ;
-    if( NormalAxesCounts[0] == 1 )
-         strcat( symmetry_code, "(Cinf) " ) ;
-    if( NormalAxesCounts[0] >  1 ) {
-        sprintf( buf, "%d*(Cinf) ", NormalAxesCounts[0] ) ;
-        strcat( symmetry_code, buf ) ;
-        }
-    for( i = MaxAxisOrder ; i >= 2 ; i-- ){
-        if( NormalAxesCounts[i] == 1 ){ sprintf( buf, "(C%d) ", i ) ; strcat( symmetry_code, buf ) ; }
-        if( NormalAxesCounts[i] >  1 ){ sprintf( buf, "%d*(C%d) ", NormalAxesCounts[i], i ) ; strcat( symmetry_code, buf ) ; }
-        }
-    for( i = MaxAxisOrder ; i >= 2 ; i-- ){
-        if( ImproperAxesCounts[i] == 1 ){ sprintf( buf, "(S%d) ", i ) ; strcat( symmetry_code, buf ) ; }
-        if( ImproperAxesCounts[i] >  1 ){ sprintf( buf, "%d*(S%d) ", ImproperAxesCounts[i], i ) ; strcat( symmetry_code, buf ) ; }
-        }
-    if( PlanesCount == 1 ) strcat( symmetry_code, "(sigma) " ) ;
-    if( PlanesCount >  1 ){ sprintf( buf, "%d*(sigma) ", PlanesCount ) ; strcat( symmetry_code, buf ) ; }
-    if(verbose > -1) printf( "%s\n", symmetry_code ) ;
-    }
-SymmetryCode = symmetry_code ;
+  SymmetryCode = symmetry_code ;
 }
 
 void identify_point_group(int * point_group)
@@ -1765,10 +1769,20 @@ void FC_FUNC_(symmetries_finite_get_group_elements,SYMMETRIES_FINITE_GET_GROUP_E
 void FC_FUNC_(symmetries_finite_end,SYMMETRIES_FINITE_END)(){  
   destroy_inversion_centers();
   destroy_planes();
-  free(SymmetryCode);
-  free(DistanceFromCenter);
   destroy_axes();
+
+  free(SymmetryCode);
+  SymmetryCode = NULL;
+
+  free(DistanceFromCenter);
+  DistanceFromCenter = NULL;
+
   free(NormalAxesCounts);
+  NormalAxesCounts = NULL;
+
   free(ImproperAxesCounts);
+  ImproperAxesCounts = NULL;
+
   free(Atoms);
+  Atoms = NULL;
 }
