@@ -262,14 +262,22 @@ void FC_FUNC_(read_binary,READ_BINARY)
   if ( moved != sizeof(header_t) ) { 
     /* we couldn't read the complete header */
     *ierr = 3;
+    free(h);
     return;
   }
 
   *ierr = check_header(h, &correct_endianness);
-  if( *ierr != 0 ) return;
+  if( *ierr != 0 ){
+    free(h);
+    return;
+  }
 
   /* check whether the sizes match */ 
-  if( h->np < *np + *offset ){ *ierr = 4; return; }
+  if( h->np < *np + *offset ){ 
+    *ierr = 4;
+    free(h);
+    return; 
+  }
 
   if( h->type == *output_type){
     /* format is the same, we just read */
@@ -288,6 +296,7 @@ void FC_FUNC_(read_binary,READ_BINARY)
   if ( moved != (*np)*size_of[h->type]) { 
     /* we couldn't read the whole dataset */
     *ierr = 3;
+    free(h);
     return;
   }
     
