@@ -200,12 +200,13 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   TO_C_STR1(fname, filename);
   fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 
 	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+  free(filename);
   if( fd < 0 ) {
     inf_error("octopus.write_binary");
     *ierr = 2;
+    free(h);
     return;
   }
-  free(filename);
 
   /* create header */
   init_header(h);
@@ -218,6 +219,7 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   if(moved < sizeof(header_t)){
     inf_error("octopus.write_binary");
     close(fd);
+    free(h);
     return;
   }
 
