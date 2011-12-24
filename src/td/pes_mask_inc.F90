@@ -358,19 +358,16 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
        units_to_atomic(units_inp%energy, - M_ONE), pCutOff)
   
   nullify(mask%Mk)
+  mask%filter_k = .false.
 
   if(pCutOff > M_ZERO) then       
     call messages_print_var_value(stdout, "PESMaskFilterCutOff",pCutOff)
-    mask%filter_k = .TRUE.
+    mask%filter_k = .true.
     
     SAFE_ALLOCATE(mask%Mk(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
     
     call PES_mask_generate_filter(mask,pCutOff)
-    
-    
   endif
-
-
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !!  Output
