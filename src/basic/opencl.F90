@@ -486,6 +486,12 @@ module opencl_m
         call messages_write(' Mb')
         call messages_new_line()
 
+        call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, val, cl_status)
+        call messages_write('      Max alloc size         :')
+        call messages_write(val/(1024**2))
+        call messages_write(' Mb')
+        call messages_new_line()
+
         call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val, cl_status)
         call messages_write('      Device cache           :')
         call messages_write(val/1024)
@@ -607,7 +613,7 @@ module opencl_m
       ASSERT(fsize >= 0)
 
       this%mem = clCreateBuffer(opencl%context, flags, fsize, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "create_buffer")
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 
       POP_SUB(opencl_create_buffer_4)
     end subroutine opencl_create_buffer_4
@@ -624,7 +630,7 @@ module opencl_m
       this%size = 0
 
       call clReleaseMemObject(this%mem, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_buffer")
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
 
       POP_SUB(opencl_release_buffer)
     end subroutine opencl_release_buffer
@@ -655,7 +661,7 @@ module opencl_m
       call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
 
       call clFinish(opencl%command_queue, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'cl_finish') 
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
 
       call profiling_out(prof_kernel_run)
       POP_SUB(opencl_finish)
@@ -673,7 +679,7 @@ module opencl_m
       PUSH_SUB(opencl_set_kernel_arg_buffer)
 
       call clSetKernelArg(kernel, narg, buffer%mem, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_buf")
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clSetKernelArg_buf")
 
       POP_SUB(opencl_set_kernel_arg_buffer)
 
@@ -755,7 +761,7 @@ module opencl_m
       integer(8) :: workgroup_size8
       integer    :: ierr
 
-      call clKernelWorkGroupInfo(kernel, opencl%device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
+      call clGetKernelWorkGroupInfo(kernel, opencl%device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
       workgroup_size = workgroup_size8
 

@@ -85,7 +85,33 @@ module cl_device_m
   end interface clGetDeviceInfo
 
   ! ---------------------------------------------------
+  ! some auxiliary functions
+  !
+  interface
+    subroutine clgetdeviceids_listall(platform, device_type, num_entries, devices, num_devices, errcode_ret)
+      use cl_types_m
+      
+      implicit none
+      
+      type(cl_platform_id), intent(in)   :: platform
+      integer,              intent(in)   :: device_type
+      integer,              intent(out)  :: num_entries
+      type(cl_device_id),   intent(out)  :: devices
+      integer,              intent(out)  :: num_devices
+      integer,              intent(out)  :: errcode_ret
+    end subroutine clgetdeviceids_listall
 
+    subroutine clgetdeviceids_getdev(alldevices, idevice, device)
+      use cl_types_m
+      
+      implicit none
+      
+      type(cl_device_id),   intent(in)   :: alldevices
+      integer,              intent(in)   :: idevice
+      type(cl_device_id),   intent(out)  :: device
+    end subroutine clgetdeviceids_getdev
+  end interface
+  
 contains
 
   subroutine clgetdeviceids_list(platform, device_type, devices, num_devices, errcode_ret)
@@ -97,31 +123,6 @@ contains
 
     integer                         :: idevice, num_entries
     type(cl_device_id), allocatable :: dev(:)
-
-    interface
-      subroutine clgetdeviceids_listall(platform, device_type, num_entries, devices, num_devices, errcode_ret)
-        use cl_types_m
-
-        implicit none
-
-        type(cl_platform_id), intent(in)   :: platform
-        integer,              intent(in)   :: device_type
-        integer,              intent(out)  :: num_entries
-        type(cl_device_id),   intent(out)  :: devices
-        integer,              intent(out)  :: num_devices
-        integer,              intent(out)  :: errcode_ret
-      end subroutine clgetdeviceids_listall
-
-      subroutine clgetdeviceids_getdev(alldevices, idevice, device)
-        use cl_types_m
-
-        implicit none
-
-        type(cl_device_id),   intent(in)   :: alldevices
-        integer,              intent(in)   :: idevice
-        type(cl_device_id),   intent(out)  :: device
-      end subroutine clgetdeviceids_getdev
-    end interface
 
     ! since our cl_device_id type might be longer than the C
     ! cl_device_id type we need to get all the values in an array
@@ -143,22 +144,23 @@ contains
 
   ! ----------------------------------------------------------
 
-  subroutine clgetdeviceids_single(platform, device_type, device, num_devices, errcode_ret)
+  subroutine clgetdeviceids_single(platform, device_type, devices, num_devices, errcode_ret)
     type(cl_platform_id), intent(in)   :: platform
     integer,              intent(in)   :: device_type
-    type(cl_device_id),   intent(out)  :: device
+    type(cl_device_id),   intent(out)  :: devices
     integer,              intent(out)  :: num_devices
     integer,              intent(out)  :: errcode_ret
 
-    type(cl_device_id) :: devs(1:1)
-    
-    call clgetdeviceids_list(platform, device_type, devs, num_devices, errcode_ret)
-    device = devs(1)
+    integer :: num_entries
+
+    num_entries = 1
+
+    call clgetdeviceids_listall(platform, device_type, num_entries, devices, num_devices, errcode_ret)
 
   end subroutine clgetdeviceids_single
 
 
-  ! ---------------------------------------------------------
+  ! --------------------------------------------------------- 
 
   subroutine clgetdeviceinfo_logical(device, param_name, param_value, errcode_ret)
     type(cl_device_id), intent(in)   :: device
