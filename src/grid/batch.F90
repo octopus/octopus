@@ -474,10 +474,11 @@ contains
     logical, optional,  intent(in)    :: copy
 
     logical :: copy_
-    type(profile_t), save :: prof
+    type(profile_t), save :: prof, prof_copy
 
     PUSH_SUB(batch_pack)
 
+    call profiling_in(prof, "BATCH_PACK")
     ASSERT(batch_is_ok(this))
 
     copy_ = .true.
@@ -508,7 +509,7 @@ contains
       end if
       
       if(copy_) then
-        call profiling_in(prof, "BATCH_PACK")
+        call profiling_in(prof_copy, "BATCH_PACK_COPY")
 
         this%dirty = .false.
         if(opencl_is_enabled()) then
@@ -519,13 +520,15 @@ contains
           call pack_copy()
         end if
 
-        call profiling_out(prof)
+        call profiling_out(prof_copy)
       else
         this%dirty = .true.
       end if
     end if
 
     INCR(this%in_buffer_count, 1)
+
+    call profiling_out(prof)
 
     POP_SUB(batch_pack)
 
@@ -578,8 +581,11 @@ contains
     logical, optional,  intent(in)    :: copy
 
     logical :: copy_
+    type(profile_t), save :: prof
 
     PUSH_SUB(batch_unpack)
+
+    call profiling_in(prof, "BATCH_UNPACK")
 
     if(batch_is_packed(this)) then
 
@@ -605,6 +611,8 @@ contains
       INCR(this%in_buffer_count, -1)
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(batch_unpack)
     
   end subroutine batch_unpack
@@ -619,7 +627,7 @@ contains
     PUSH_SUB(batch_sync)
 
     if(batch_is_packed(this) .and. this%dirty) then
-      call profiling_in(prof, "BATCH_UNPACK")
+      call profiling_in(prof, "BATCH_UNPACK_COPY")
       
       if(opencl_is_enabled()) then
         call batch_read_from_opencl_buffer(this)
