@@ -64,8 +64,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   apply_phase = associated(hm%phase)
 
-  call X(derivatives_batch_set_bc)(der, psib)
-
   pack = hamiltonian_apply_packed(hm, der%mesh) &
     .and. (opencl_is_enabled() .or. nst > 1) &
     .and. terms_ == TERM_ALL
@@ -74,6 +72,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     call batch_pack(psib)
     call batch_pack(hpsib, copy = .false.)
   end if
+
+  call X(derivatives_batch_set_bc)(der, psib)
 
   if(apply_phase) then
     SAFE_ALLOCATE(epsib)
