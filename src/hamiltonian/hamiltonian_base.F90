@@ -101,7 +101,6 @@ module hamiltonian_base_m
 #ifdef HAVE_OPENCL
     type(opencl_mem_t)                :: potential_opencl
     type(opencl_mem_t)                :: buff_offsets
-    type(opencl_mem_t)                :: buff_sizes
     type(opencl_mem_t)                :: buff_matrices
     type(opencl_mem_t)                :: buff_maps
     type(opencl_mem_t)                :: buff_scals
@@ -303,7 +302,6 @@ contains
 
 #ifdef HAVE_OPENCL
       if(opencl_is_enabled()) then
-        call opencl_release_buffer(this%buff_sizes)
         call opencl_release_buffer(this%buff_offsets)
         call opencl_release_buffer(this%buff_matrices)
         call opencl_release_buffer(this%buff_maps)
@@ -440,16 +438,14 @@ contains
     subroutine build_opencl()
 #ifdef HAVE_OPENCL
       integer              :: matrix_size, scal_size
-      integer, allocatable :: sizes(:, :), cnt(:), invmap(:, :), invmap2(:), pos(:)
+      integer, allocatable :: cnt(:), invmap(:, :), invmap2(:), pos(:)
       integer, allocatable :: offsets(:, :)
-      integer, parameter   :: POINTS = 1, PROJS = 2
-      integer, parameter   :: MATRIX = 1, MAP = 2, SCAL = 3
+      integer, parameter   :: POINTS = 1, PROJS = 2, MATRIX = 3, MAP = 4, SCAL = 5
       integer              :: ip, is, ii, ipos
 
       PUSH_SUB(hamiltonian_base_build_proj.build_opencl)
 
-      SAFE_ALLOCATE(offsets(1:4, 1:this%nprojector_matrices))
-      SAFE_ALLOCATE(sizes(1:2, 1:this%nprojector_matrices))
+      SAFE_ALLOCATE(offsets(1:5, 1:this%nprojector_matrices))
       SAFE_ALLOCATE(cnt(1:mesh%np))
 
       cnt = 0
@@ -466,8 +462,8 @@ contains
         this%max_npoints = max(this%max_npoints, pmat%npoints)
         this%max_nprojs = max(this%max_nprojs, pmat%nprojs)
 
-        sizes(POINTS, imat) = pmat%npoints
-        sizes(PROJS, imat) = pmat%nprojs
+        offsets(POINTS, imat) = pmat%npoints
+        offsets(PROJS, imat) = pmat%nprojs
 
         offsets(MATRIX, imat) = matrix_size
         INCR(matrix_size, pmat%npoints*pmat%nprojs)
@@ -524,13 +520,9 @@ contains
         call opencl_write_buffer(this%buff_scals, pmat%nprojs, pmat%scal, offset = offsets(SCAL, imat))
       end do
 
-      ! write the sizes
-      call opencl_create_buffer(this%buff_sizes, CL_MEM_READ_ONLY, TYPE_INTEGER, 2*this%nprojector_matrices)
-      call opencl_write_buffer(this%buff_sizes, 2*this%nprojector_matrices, sizes)
-
       ! write the offsets
-      call opencl_create_buffer(this%buff_offsets, CL_MEM_READ_ONLY, TYPE_INTEGER, 4*this%nprojector_matrices)
-      call opencl_write_buffer(this%buff_offsets, 4*this%nprojector_matrices, offsets)
+      call opencl_create_buffer(this%buff_offsets, CL_MEM_READ_ONLY, TYPE_INTEGER, 5*this%nprojector_matrices)
+      call opencl_write_buffer(this%buff_offsets, 5*this%nprojector_matrices, offsets)
 
       ! the inverse map
       call opencl_create_buffer(this%buff_pos, CL_MEM_READ_ONLY, TYPE_INTEGER, mesh%np + 1)
@@ -540,7 +532,6 @@ contains
       call opencl_write_buffer(this%buff_invmap, ipos, invmap2)
 
       SAFE_DEALLOCATE_A(offsets)
-      SAFE_DEALLOCATE_A(sizes)
       SAFE_DEALLOCATE_A(cnt)
       SAFE_DEALLOCATE_A(invmap)
       SAFE_DEALLOCATE_A(invmap2)
