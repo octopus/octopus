@@ -26,7 +26,6 @@
 #endif
 
 __kernel void projector_bra(const int nmat,
-			    __global int const * restrict sizes,
 			    __global int const * restrict offsets,
 			    __global double const * restrict matrix,
 			    __global int const * restrict map,
@@ -39,11 +38,11 @@ __kernel void projector_bra(const int nmat,
   const int ipj = get_global_id(1);
   const int imat = get_global_id(2);
 
-  const int npoints = sizes[2*imat    ];
-  const int nprojs  = sizes[2*imat + 1];  
-  const int matrix_offset = offsets[4*imat    ];
-  const int map_offset    = offsets[4*imat + 1];
-  const int scal_offset   = offsets[4*imat + 2];
+  const int npoints       = offsets[5*imat + 0];
+  const int nprojs        = offsets[5*imat + 1];
+  const int matrix_offset = offsets[5*imat + 2];
+  const int map_offset    = offsets[5*imat + 3];
+  const int scal_offset   = offsets[5*imat + 4];
 
   const int nppj = npoints*ipj;
 
@@ -58,7 +57,6 @@ __kernel void projector_bra(const int nmat,
 }
 
 __kernel void projector_ket(const int nmat,
-			    __global int const * restrict sizes,
 			    __global int const * restrict offsets,
 			    __global double const * restrict matrix,
 			    __global int const * restrict map,
@@ -70,11 +68,11 @@ __kernel void projector_ket(const int nmat,
   const int ip = get_global_id(1);
   const int imat = get_global_id(2);
 
-  const int npoints = sizes[2*imat    ];
-  const int nprojs  = sizes[2*imat + 1];
-  const int matrix_offset = offsets[4*imat    ];
-  const int map_offset    = offsets[4*imat + 1];
-  const int scal_offset   = offsets[4*imat + 2];
+  const int npoints       = offsets[5*imat + 0];
+  const int nprojs        = offsets[5*imat + 1];
+  const int matrix_offset = offsets[5*imat + 2];
+  const int map_offset    = offsets[5*imat + 3];
+  const int scal_offset   = offsets[5*imat + 4];
 
   if(ip >= npoints) return;
 
