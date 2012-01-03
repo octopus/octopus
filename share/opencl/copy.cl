@@ -25,8 +25,8 @@
 #pragma OPENCL EXTENSION cl_amd_fp64 : enable
 #endif
 
-__kernel void copy(const __global double * xx, const int ldxx,
-		   __global double * yy, const int ldyy){
+__kernel void copy(const __global double * restrict xx, const int ldxx,
+		   __global double * restrict yy, const int ldyy){
   
   int ist = get_global_id(0);
   int ip = get_global_id(1);

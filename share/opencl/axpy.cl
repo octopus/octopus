@@ -26,8 +26,8 @@
 #endif
 
 __kernel void daxpy(const double aa, 
-		    const __global double * xx, const int ldxx,
-		    __global double * yy, const int ldyy){
+		    const __global double * restrict xx, const int ldxx,
+		    __global double * restrict yy, const int ldyy){
 
   int ist = get_global_id(0);
   int ip = get_global_id(1);
@@ -37,8 +37,8 @@ __kernel void daxpy(const double aa,
 }
 
 __kernel void zaxpy(const double re_aa, const double im_aa, 
-		    const __global double2 * xx, const int ldxx,
-		    __global double2 * yy, const int ldyy){
+		    const __global double2 * restrict xx, const int ldxx,
+		    __global double2 * restrict yy, const int ldyy){
   int ist = get_global_id(0);
   int ip = get_global_id(1);
 

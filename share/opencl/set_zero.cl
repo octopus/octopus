@@ -29,7 +29,7 @@ __kernel void set_zero(__global double * aa){
   aa[get_global_id(0)] = 0.0;
 }
 
-__kernel void set_zero_part(const int start, const int end, __global double * aa, const int ldaa){
+__kernel void set_zero_part(const int start, const int end, __global double * restrict aa, const int ldaa){
   int ist = get_global_id(0);
   int ip  = get_global_id(1);
 

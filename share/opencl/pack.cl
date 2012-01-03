@@ -27,8 +27,8 @@
 
 __kernel void dpack(const int nst,
 		    const int ist,
-		    const __global double * __restrict src, 
-		    __global double *  __restrict dest){
+		    const __global double * restrict src, 
+		    __global double *  restrict dest){
   const int ip = get_global_id(0);
   const int ist2 = get_global_id(1);
 
@@ -37,8 +37,8 @@ __kernel void dpack(const int nst,
 
 __kernel void zpack(const int nst,
 		    const int ist,
-		    const __global double2 *  __restrict src, 
-		    __global double2 *  __restrict dest){
+		    const __global double2 *  restrict src, 
+		    __global double2 *  restrict dest){
   const int ip = get_global_id(0);
   const int ist2 = get_global_id(1);
 
@@ -47,8 +47,8 @@ __kernel void zpack(const int nst,
 
 __kernel void dunpack(const int nst,
 		      const int ist,
-		      const __global double * __restrict src, 
-		      __global double *  __restrict dest){
+		      const __global double * restrict src, 
+		      __global double *  restrict dest){
   const int ist2 = get_global_id(0);
   const int ip = get_global_id(1);
 
@@ -57,8 +57,8 @@ __kernel void dunpack(const int nst,
 
 __kernel void zunpack(const int nst,
 		      const int ist,
-		      const __global double2 * __restrict src, 
-		      __global double2 * __restrict dest){
+		      const __global double2 * restrict src, 
+		      __global double2 * restrict dest){
   const int ist2 = get_global_id(0);
   const int ip = get_global_id(1);
 

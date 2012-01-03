@@ -34,7 +34,6 @@ __kernel void vpsi(const int offset,
   int ip  = get_global_id(1);
 
   vpsi[(ip<<ldvpsi) + ist] += vv[offset + ip]*psi[(ip<<ldpsi) + ist];
-  //  vpsi[(ip<<ldvpsi) + ist] += psi[(ip<<ldpsi) + ist];
 
 }
 
