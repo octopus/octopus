@@ -249,16 +249,16 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_OPENCL
-  integer :: padnprojs, wgsize
+  integer :: padnprojs, wgsize, lnprojs
   type(profile_t), save :: cl_prof
 #endif
   if(.not. this%apply_projector_matrices) return
 
-  call profiling_in(prof_vnlpsi, "VNLPSI_MAT")
+  call profiling_in(prof_vnlpsi_start, "VNLPSI_MAT_BRA")
   PUSH_SUB(X(hamiltonian_base_nlocal_start))
 
   nst = psib%nst_linear
-#ifdef R_TCOMPLEX
+ #ifdef R_TCOMPLEX
   nreal = 2*nst
 #else
   nreal = nst
@@ -283,10 +283,11 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     call opencl_set_kernel_arg(kernel_projector_bra, 8, log2(psib%pack%size_real(1)))
 
     padnprojs = pad_pow2(this%max_nprojs)
-    wgsize = min(32, opencl_kernel_workgroup_size(kernel_projector_bra)/(psib%pack%size_real(1)*padnprojs))
+    lnprojs = min(opencl_kernel_workgroup_size(kernel_projector_bra)/psib%pack%size_real(1), padnprojs)
+    wgsize = min(32, opencl_kernel_workgroup_size(kernel_projector_bra)/(psib%pack%size_real(1)*lnprojs))
 
     call opencl_kernel_run(kernel_projector_bra, &
-      (/psib%pack%size_real(1), padnprojs, pad(this%nprojector_matrices, wgsize)/), (/psib%pack%size_real(1), padnprojs, wgsize/))
+      (/psib%pack%size_real(1), padnprojs, pad(this%nprojector_matrices, wgsize)/), (/psib%pack%size_real(1), lnprojs, wgsize/))
 
     do imat = 1, this%nprojector_matrices
       pmat => this%projector_matrices(imat)
@@ -308,7 +309,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     call profiling_out(cl_prof)
 
     POP_SUB(X(hamiltonian_base_nlocal_start))
-    call profiling_out(prof_vnlpsi)
+    call profiling_out(prof_vnlpsi_start)
     return
   end if
 #endif
@@ -373,7 +374,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   end do
 
   POP_SUB(X(hamiltonian_base_nlocal_start))
-  call profiling_out(prof_vnlpsi)
+  call profiling_out(prof_vnlpsi_start)
 end subroutine X(hamiltonian_base_nlocal_start)
 
 ! ---------------------------------------------------------------------------------------
@@ -397,7 +398,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 
   if(.not. this%apply_projector_matrices) return
 
-  call profiling_in(prof_vnlpsi, "VNLPSI_MAT")
+  call profiling_in(prof_vnlpsi_finish, "VNLPSI_MAT_KET")
   PUSH_SUB(X(hamiltonian_base_nlocal_finish))
 
   nst = vpsib%nst_linear
@@ -434,7 +435,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
     call opencl_release_buffer(projection%buff_projection)
 
     POP_SUB(X(hamiltonian_base_nlocal_finish))
-    call profiling_out(prof_vnlpsi)
+    call profiling_out(prof_vnlpsi_finish)
     return
   end if
 #endif
@@ -499,7 +500,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   SAFE_DEALLOCATE_P(projection%X(projection))
   
   POP_SUB(X(hamiltonian_base_nlocal_finish))
-  call profiling_out(prof_vnlpsi)
+  call profiling_out(prof_vnlpsi_finish)
 
 contains
 
