@@ -132,7 +132,7 @@ module hamiltonian_base_m
     FIELD_UNIFORM_MAGNETIC_FIELD   = 8
   
 
-  type(profile_t), save :: prof_vlpsi, prof_magnetic, prof_vnlpsi, prof_gather, prof_scatter
+  type(profile_t), save :: prof_vnlpsi_start, prof_vnlpsi_finish, prof_magnetic, prof_vlpsi, prof_gather, prof_scatter
 
 contains
 
