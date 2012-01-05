@@ -25,6 +25,18 @@
 #include <assert.h>
 #include <vectors.h>
 
+/**
+ * @brief Operates over
+ * @param[in] opn
+ * @param[in] w
+ * @param[in] opnri
+ * @param[in] opri
+ * @param[in] rimap_inv
+ * @param[in] fi
+ * @param[in] ldfp
+ * @param[out] fo
+ *
+ */
 void FC_FUNC_(operate_ri_vec,OPERATE_RI_VEC)(const int * opn, 
 					       const double * restrict w, 
 					       const int * opnri,
