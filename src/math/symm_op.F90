@@ -30,6 +30,8 @@ module symm_op_m
   
   public ::                        &
        symm_op_init,               &
+       symm_op_init_from_dump,     &
+       symm_op_dump,               &
        symm_op_copy,               &
        symm_op_end,                &
        symm_op_apply,              &
@@ -75,7 +77,36 @@ contains
   end subroutine symm_op_init
   
   ! -------------------------------------------------------------------------------
-  
+  subroutine symm_op_init_from_dump(this, iunit)
+    type(symm_op_t), intent(inout) :: this
+    integer,         intent(in)    :: iunit
+    !
+    integer :: gb
+    !
+    PUSH_SUB(symm_op_init_from_dump)
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    read(iunit) this
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    POP_SUB(symm_op_init_from_dump)
+    return
+  end subroutine symm_op_init_from_dump
+
+  ! -------------------------------------------------------------------------------
+  subroutine symm_op_dump(this, iunit)
+    type(symm_op_t), intent(in) :: this
+    integer,         intent(in) :: iunit
+    !
+    PUSH_SUB(symm_op_dump)
+    write(iunit) GUARD_BITS
+    write(iunit) this
+    write(iunit) GUARD_BITS
+    POP_SUB(symm_op_dump)
+    return
+  end subroutine symm_op_dump
+
+  ! -------------------------------------------------------------------------------
   subroutine symm_op_copy(inp, outp)
     type(symm_op_t),     intent(in) :: inp
     type(symm_op_t),     intent(out) :: outp
@@ -89,7 +120,6 @@ contains
   end subroutine symm_op_copy
   
   ! -------------------------------------------------------------------------------
-
   subroutine symm_op_end(this)
     type(symm_op_t),  intent(inout) :: this
 
