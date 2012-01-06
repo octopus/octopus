@@ -28,11 +28,13 @@ module lookup_m
   implicit none
 
   private
-  public ::          &
-    lookup_t,        &
-    lookup_init,     &
-    lookup_end,      &
-    lookup_copy,     &
+  public ::                &
+    lookup_t,              &
+    lookup_init,           &
+    lookup_init_from_dump, &
+    lookup_dump,           &
+    lookup_end,            &
+    lookup_copy,           &
     lookup_get_list
     
   type lookup_t
@@ -62,7 +64,42 @@ contains
   end subroutine lookup_init
 
   ! -----------------------------------------
+  subroutine lookup_init_from_dump(this, iunit)
+    type(lookup_t), intent(inout) :: this
+    integer,        intent(in)    :: iunit
+    !
+    integer :: gb
+    !
+    PUSH_SUB(lookup_init_from_dump)
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    read(iunit) this%dim
+    read(iunit) this%nobjs
+    SAFE_ALLOCATE(this%pos(this%dim,this%nobjs))
+    read(iunit) this%pos
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    POP_SUB(lookup_init_from_dump)
+    return
+  end subroutine lookup_init_from_dump
 
+  ! -----------------------------------------
+  subroutine lookup_dump(this, iunit)
+    type(lookup_t), intent(in) :: this
+    integer,        intent(in) :: iunit
+    !
+    PUSH_SUB(lookup_dump)
+    write(iunit) GUARD_BITS
+    write(iunit) this%dim
+    write(iunit) this%nobjs
+    ASSERT(associated(this%pos))
+    write(iunit) this%pos
+    write(iunit) GUARD_BITS
+    POP_SUB(lookup_dump)
+    return
+  end subroutine lookup_dump
+
+  ! -----------------------------------------
   subroutine lookup_end(this)
     type(lookup_t), intent(inout) :: this
 
