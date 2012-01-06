@@ -31,7 +31,20 @@ module space_m
   public ::                &
     space_t,               &
     space_init,            &
-    space_end
+    space_init_from_dump,  &
+    space_dump,            &
+    space_copy,            &
+    space_end,             &
+    operator(==),          &
+    operator(/=)
+
+  interface operator(==)
+    module procedure space_equal
+  end interface
+
+  interface operator(/=)
+    module procedure space_not_equal
+  end interface
 
   type space_t
     integer :: dim
@@ -40,10 +53,9 @@ module space_m
 contains
 
   ! ---------------------------------------------------------
-
   subroutine space_init(this)
     type(space_t), intent(out) :: this
-    
+
     !%Variable Dimensions
     !%Type integer
     !%Section System
@@ -54,14 +66,72 @@ contains
     !%End
     call parse_integer(datasets_check('Dimensions'), 3, this%dim)
     if( this%dim > MAX_DIM .or. this%dim < 1) call input_error('Dimensions')
-
+    return
   end subroutine space_init
 
   ! ---------------------------------------------------------
+  subroutine space_init_from_dump(this, iunit)
+    type(space_t), intent(inout) :: this
+    integer,       intent(in)    :: iunit
+    !
+    integer :: gb
+    !
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    read(iunit) this
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    return
+  end subroutine space_init_from_dump
 
+  ! ---------------------------------------------------------
+  subroutine space_dump(this, iunit)
+    type(space_t), intent(in) :: this
+    integer,       intent(in) :: iunit
+    !
+    write(iunit) GUARD_BITS
+    write(iunit) this
+    write(iunit) GUARD_BITS
+    return
+  end subroutine space_dump
+
+  ! ---------------------------------------------------------
+  subroutine space_copy(this_out, this_in)
+    type(space_t), intent(inout) :: this_out
+    type(space_t), intent(in)    :: this_in
+    !
+    this_out%dim=this_in%dim
+    return
+  end subroutine space_copy
+
+  ! -----------------------------------------------------
+  elemental function space_equal(sa, sb) result(eqv)
+    type(space_t), intent(in) :: sa
+    type(space_t), intent(in) :: sb
+    !
+    logical :: eqv
+    !
+    eqv=(sa%dim==sb%dim)
+    return
+  end function space_equal
+  
+  ! -----------------------------------------------------
+  elemental function space_not_equal(sa, sb) result(neqv)
+    type(space_t), intent(in) :: sa
+    type(space_t), intent(in) :: sb
+    !
+    logical :: neqv
+    !
+    neqv=(sa%dim/=sb%dim)
+    return
+  end function space_not_equal
+
+  ! ---------------------------------------------------------
   subroutine space_end(this)
     type(space_t), intent(inout) :: this
-
+    !
+    this%dim=0
+    return
   end subroutine space_end
 
 end module space_m
