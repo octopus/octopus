@@ -93,6 +93,8 @@ module global_m
 
   integer, public  :: ifinal_sete = 0
 
+  integer, public, parameter :: GUARD_BITS=-1
+
   ! the standard input and output
   integer, public :: stderr, stdin, stdout
   
