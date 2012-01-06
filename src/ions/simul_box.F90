@@ -49,13 +49,16 @@ module simul_box_m
     simul_box_t,                &
     simul_box_ob_info_t,        &
     simul_box_init,             &
+    simul_box_init_from_dump,   &
+    simul_box_init_from_file,   &
+    simul_box_dump,             &
+    simul_box_write_to_file,    &
     simul_box_end,              &
     simul_box_write_info,       &
     simul_box_is_periodic,      &
     simul_box_has_zero_bc,      &
     simul_box_in_box,           &
     simul_box_in_box_vec,       &
-    simul_box_dump,             &
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
     simul_box_complex_boundaries
@@ -112,7 +115,7 @@ module simul_box_m
   type simul_box_t
     type(symmetries_t) :: symm
     integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
-                            ! 4->parallelepiped (orthonormal, up to now).
+    ! 4->parallelepiped (orthonormal, up to now).
 
     FLOAT :: box_offset(MAX_DIM)  ! shifts of the origin in the respective direction
 
@@ -153,6 +156,84 @@ module simul_box_m
 contains
 
   !--------------------------------------------------------------
+  subroutine interp_init_from_dump(this, iunit)
+    type(interp_t), intent(inout) :: this
+    integer,        intent(in)    :: iunit
+    !
+    integer :: gb
+    !
+    PUSH_SUB(interp_init_from_dump)
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    read(iunit) this%nn, this%order
+    SAFE_ALLOCATE(this%ww(this%nn))
+    read(iunit) this%ww
+    SAFE_ALLOCATE(this%posi(this%nn))
+    read(iunit) this%posi
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    POP_SUB(interp_init_from_dump)
+    return
+  end subroutine interp_init_from_dump
+
+  !--------------------------------------------------------------
+  subroutine interp_dump(this, iunit)
+    type(interp_t), intent(in) :: this
+    integer,        intent(in) :: iunit
+    !
+    PUSH_SUB(interp_dump)
+    write(iunit) GUARD_BITS
+    write(iunit) this%nn, this%order
+    ASSERT(associated(this%ww))
+    write(iunit) this%ww
+    ASSERT(associated(this%posi))
+    write(iunit) this%posi
+    write(iunit) GUARD_BITS
+    POP_SUB(interp_dump)
+    return
+  end subroutine interp_dump
+
+  !--------------------------------------------------------------
+  subroutine multiresolution_init_from_dump(this, iunit)
+    type(multiresolution_t), intent(inout) :: this
+    integer,                 intent(in)    :: iunit
+    !
+    integer :: gb
+    !
+    PUSH_SUB(multiresolution_init_from_dump)
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    call interp_init_from_dump(this%interp, iunit)
+    read(iunit) this%num_areas
+    read(iunit) this%num_radii
+    SAFE_ALLOCATE(this%radius(this%num_radii))
+    read(iunit) this%radius
+    read(iunit) this%center
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    POP_SUB(multiresolution_init_from_dump)
+    return
+  end subroutine multiresolution_init_from_dump
+
+  !--------------------------------------------------------------
+  subroutine multiresolution_dump(this, iunit)
+    type(multiresolution_t), intent(in) :: this
+    integer,                 intent(in) :: iunit
+    !
+    PUSH_SUB(multiresolution_dump)
+    write(iunit) GUARD_BITS
+    call interp_dump(this%interp, iunit)
+    write(iunit) this%num_areas
+    write(iunit) this%num_radii
+    ASSERT(associated(this%radius))
+    write(iunit) this%radius
+    write(iunit) this%center
+    write(iunit) GUARD_BITS
+    POP_SUB(multiresolution_dump)
+    return
+  end subroutine multiresolution_dump
+
+  !--------------------------------------------------------------
   subroutine simul_box_init(sb, geo, space, transport_mode, lead_sb, lead_info)
     type(simul_box_t),                   intent(inout) :: sb
     type(geometry_t),                    intent(inout) :: geo
@@ -169,7 +250,7 @@ contains
     PUSH_SUB(simul_box_init)
 
     sb%transport_dim = 0
-    
+
     call geometry_grid_defaults(geo, def_h, def_rsize)
 
     call read_misc()                       ! Miscellaneous stuff.
@@ -276,11 +357,11 @@ contains
       !%End
 
       if(parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
-        
+
         call messages_experimental('Multi-resolution')
 
         if(sb%dim /= 3) call messages_not_implemented('multi-resolution for dim != 3')
-        
+
         ! number of areas
         sb%hr_area%num_areas = parse_block_n(blk)
 
@@ -291,7 +372,7 @@ contains
 
         ! the central point
         do idir = 1, sb%dim
-           call parse_block_float(blk, 0, idir - 1, sb%hr_area%center(idir))
+          call parse_block_float(blk, 0, idir - 1, sb%hr_area%center(idir))
         end do
 
         if (sb%hr_area%num_areas /= 1) call input_error('MultiResolutionArea')
@@ -463,7 +544,7 @@ contains
 
       sb%lsize = M_ZERO
       if(sb%box_shape == PARALLELEPIPED .or. sb%box_shape == HYPERCUBE .or. &
-         sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
+        sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
 
         !%Variable Lsize
         !%Type block
@@ -504,7 +585,7 @@ contains
             call messages_check_def(def_rsize, sb%lsize(idir), 'Lsize')
         end do
       end if
-     
+
       ! read in image for box_image
       if(sb%box_shape == BOX_IMAGE) then
 
@@ -528,7 +609,7 @@ contains
         message(2) = "with GD library support."
         call messages_fatal(2)
 #endif
-      end if     
+      end if
 
       ! read in box shape for user-defined boxes
       if(sb%box_shape == BOX_USDEF) then
@@ -541,7 +622,7 @@ contains
         !% <tt>BoxShapeUsDef = "(sqrt(x^2+y^2) <= 4) && z>-2 && z<2"</tt> defines a cylinder
         !% with axis parallel to the <i>z</i>-axis.
         !%End
-        
+
         call parse_string(datasets_check("BoxShapeUsDef"), "x^2+y^2+z^2 < 4", sb%user_def)
         call conv_to_C_string(sb%user_def)
       end if
@@ -606,19 +687,67 @@ contains
       PUSH_SUB(simul_box_init.sb_lookup_init)
 
       SAFE_ALLOCATE(pos(1:sb%dim, 1:geo%natoms))
-     
+
       do iatom = 1, geo%natoms
         pos(1:sb%dim, iatom) = geo%atom(iatom)%x(1:sb%dim)
       end do
-      
+
       call lookup_init(sb%atom_lookup, sb%dim, geo%natoms, pos)
-      
+
       SAFE_DEALLOCATE_A(pos)
       POP_SUB(simul_box_init.sb_lookup_init)
     end subroutine sb_lookup_init
 
   end subroutine simul_box_init
 
+  !--------------------------------------------------------------
+  subroutine simul_box_init_from_dump(this, iunit)
+    type(simul_box_t), intent(inout) :: this
+    integer,           intent(in)    :: iunit
+    !
+    integer :: gb
+    !
+    PUSH_SUB(simul_box_init_from_dump)
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    call symmetries_init_from_dump(this%symm, iunit)
+    read(iunit) this%box_shape
+    read(iunit) this%box_offset
+    read(iunit) this%rsize
+    read(iunit) this%xsize
+    read(iunit) this%lsize
+    call lookup_init_from_dump(this%atom_lookup, iunit)
+    ! to implement in the future
+    !call c_ptr_init_from_dump(this%image, iunit)
+    read(iunit) this%user_def
+    read(iunit) this%mr_flag
+    if(this%mr_flag)then
+      call multiresolution_init_from_dump(this%hr_area, iunit)
+    else
+      nullify(this%hr_area%radius)
+      nullify(this%hr_area%interp%ww)
+      nullify(this%hr_area%interp%posi)
+    end if
+    read(iunit) this%rlattice_primitive
+    read(iunit) this%rlattice
+    read(iunit) this%klattice_primitive
+    read(iunit) this%klattice
+    read(iunit) this%volume_element
+    read(iunit) this%rcell_volume
+    call kpoints_init_from_dump(this%kpoints, iunit)
+    read(iunit) this%fft_alpha
+    read(iunit) this%dim
+    read(iunit) this%periodic_dim
+    read(iunit) this%transport_dim
+#ifdef HAVE_GDLIB
+    read(iunit) this%image_size
+#endif
+    read(iunit) this%complex_boundaries
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    POP_SUB(simul_box_init_from_dump)
+    return
+  end subroutine simul_box_init_from_dump
 
   !--------------------------------------------------------------
   subroutine simul_box_build_lattice(sb, rlattice_primitive)
@@ -630,7 +759,7 @@ contains
     integer :: idim, jdim
 
     PUSH_SUB(simul_box_build_lattice)
-    
+
     if(present(rlattice_primitive)) then
       sb%rlattice_primitive(1:sb%dim, 1:sb%dim) = rlattice_primitive(1:sb%dim, 1:sb%dim)
     else
@@ -648,10 +777,10 @@ contains
       !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
       !% <br>%</tt>
       !%End
-      
+
       sb%rlattice_primitive = M_ZERO
       forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
-      
+
       if (parse_block(datasets_check('LatticeVectors'), blk) == 0) then 
         do idim = 1, sb%dim
           do jdim = 1, sb%dim
@@ -669,7 +798,7 @@ contains
         sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
       end forall
     end do
-    
+
     ! this has to be updated for non-orthogonal grids
     select case(sb%dim)
     case(3)
@@ -716,7 +845,7 @@ contains
     FLOAT :: xx(1:MAX_DIM)
 
     PUSH_SUB(simul_box_atoms_in_box)
-    
+
     pd = sb%periodic_dim
 
     do iatom = 1, geo%natoms
@@ -743,9 +872,9 @@ contains
         xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd) 
 
         geo%atom(iatom)%x(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
-        
+
       end if
-      
+
       if(geo%reduced_coordinates) then
         geo%atom(iatom)%x(pd + 1:sb%dim) = M_TWO*sb%lsize(pd + 1:sb%dim)*geo%atom(iatom)%x(pd + 1:sb%dim)
       end if
@@ -758,7 +887,7 @@ contains
         else 
           if(warn_if_not) call messages_warning(1) 
         end if
-      end if 
+      end if
 
     end do
 
@@ -780,7 +909,7 @@ contains
     FLOAT :: cross(1:3), rv3(1:3, 1:3)
 
     PUSH_SUB(reciprocal_lattice)
-    
+
     kv(1:MAX_DIM, 1:MAX_DIM) = M_ZERO
 
     select case(dim)
@@ -822,6 +951,44 @@ contains
     POP_SUB(reciprocal_lattice)
   end subroutine reciprocal_lattice
 
+  !--------------------------------------------------------------
+  subroutine simul_box_dump(this, iunit)
+    type(simul_box_t), intent(in) :: this
+    integer,           intent(in) :: iunit
+    !
+    PUSH_SUB(simul_box_dump)
+    write(iunit) GUARD_BITS
+    call symmetries_dump(this%symm, iunit)
+    write(iunit) this%box_shape
+    write(iunit) this%box_offset
+    write(iunit) this%rsize
+    write(iunit) this%xsize
+    write(iunit) this%lsize
+    call lookup_dump(this%atom_lookup, iunit)
+    ! to implement in the future.
+    !call c_ptr_dump(this%image, iunit)
+    write(iunit) this%user_def
+    write(iunit) this%mr_flag
+    if(this%mr_flag) call multiresolution_dump(this%hr_area, iunit)
+    write(iunit) this%rlattice_primitive
+    write(iunit) this%rlattice
+    write(iunit) this%klattice_primitive
+    write(iunit) this%klattice
+    write(iunit) this%volume_element
+    write(iunit) this%rcell_volume
+    call kpoints_dump(this%kpoints, iunit)
+    write(iunit) this%fft_alpha
+    write(iunit) this%dim
+    write(iunit) this%periodic_dim
+    write(iunit) this%transport_dim
+#ifdef HAVE_GDLIB
+    write(iunit) this%image_size
+#endif
+    write(iunit) this%complex_boundaries
+    write(iunit) GUARD_BITS
+    POP_SUB(simul_box_dump)
+    return
+  end subroutine simul_box_dump
 
   !--------------------------------------------------------------
   subroutine simul_box_end(sb)
@@ -869,7 +1036,7 @@ contains
     call messages_info(2, iunit)
 
     if(sb%box_shape == SPHERE .or. sb%box_shape == CYLINDER &
-       .or. (sb%box_shape == MINIMUM .and. sb%rsize > M_ZERO)) then
+      .or. (sb%box_shape == MINIMUM .and. sb%rsize > M_ZERO)) then
       write(message(1), '(3a,f7.3)') '  Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
         units_from_atomic(units_out%length, sb%rsize)
       call messages_info(1, iunit)
@@ -907,7 +1074,7 @@ contains
       write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
       do idir = 1, sb%dim
         write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, sb%rlattice(idir2, idir)), &
-                                         idir2 = 1, sb%dim) 
+          idir2 = 1, sb%dim) 
       end do
       call messages_info(2+sb%dim, iunit)
 
@@ -919,7 +1086,7 @@ contains
       write(message(1),'(a,3a,a)') '  Reciprocal-Lattice Vectors [', trim(units_abbrev(units_out%length**(-1))), ']'
       do idir = 1, sb%dim
         write(message(1+idir),'(3f12.6)') (units_from_atomic(unit_one / units_out%length, sb%klattice(idir2, idir)), &
-                                           idir2 = 1, sb%dim)
+          idir2 = 1, sb%dim)
       end do
       call messages_info(1+sb%dim, iunit)
     end if
@@ -944,7 +1111,7 @@ contains
 
     call simul_box_in_box_vec(sb, geo, 1, xx, in_box2)
     in_box = in_box2(1)
-    
+
   end function simul_box_in_box
 
 
@@ -979,99 +1146,99 @@ contains
     end forall
 
     select case(sb%box_shape)
-      case(SPHERE)
-        forall(ip = 1:npoints)
-          in_box(ip) = sum(xx(1:sb%dim, ip)**2) <= (sb%rsize+DELTA)**2
-        end forall
+    case(SPHERE)
+      forall(ip = 1:npoints)
+        in_box(ip) = sum(xx(1:sb%dim, ip)**2) <= (sb%rsize+DELTA)**2
+      end forall
 
-      case(CYLINDER)
-        do ip = 1, npoints
-          rr = sqrt(xx(2, ip)**2 + xx(3, ip)**2)
-          in_box(ip) = (rr <= sb%rsize + DELTA .and. abs(xx(1, ip)) <= sb%xsize + DELTA)
+    case(CYLINDER)
+      do ip = 1, npoints
+        rr = sqrt(xx(2, ip)**2 + xx(3, ip)**2)
+        in_box(ip) = (rr <= sb%rsize + DELTA .and. abs(xx(1, ip)) <= sb%xsize + DELTA)
+      end do
+
+    case(MINIMUM)
+
+      if(sb%rsize > M_ZERO) then
+        radius = sb%rsize
+      else
+        radius = M_ZERO
+        do iatom = 1, geo%natoms
+          radius = max(radius, species_def_rsize(geo%atom(iatom)%spec))
         end do
+      end if
 
-      case(MINIMUM)
+      radius = radius + DELTA
 
-        if(sb%rsize > M_ZERO) then
-          radius = sb%rsize
-        else
-          radius = M_ZERO
-          do iatom = 1, geo%natoms
-            radius = max(radius, species_def_rsize(geo%atom(iatom)%spec))
+      SAFE_ALLOCATE(nlist(1:npoints))
+
+      if(sb%rsize > M_ZERO) then
+        nullify(list)
+        call lookup_get_list(sb%atom_lookup, npoints, xx, radius, nlist)
+      else
+        call lookup_get_list(sb%atom_lookup, npoints, xx, radius, nlist, list = list)
+      end if
+
+      if(sb%rsize > M_ZERO) then
+        do ip = 1, npoints
+          in_box(ip) = (nlist(ip) /= 0)
+        end do
+      else
+        do ip = 1, npoints
+          in_box(ip) = .false.
+
+          do ilist = 1, nlist(ip)
+
+            iatom = list(ilist, ip)
+
+            dist2 = sum((xx(1:sb%dim, ip) - geo%atom(iatom)%x(1:sb%dim))**2)
+
+            if(dist2 < species_def_rsize(geo%atom(iatom)%spec)**2) then
+              in_box(ip) = .true.
+              exit
+            end if
+
           end do
-        end if
+        end do
+      end if
 
-        radius = radius + DELTA
+      SAFE_DEALLOCATE_A(nlist)
+      SAFE_DEALLOCATE_P(list)
 
-        SAFE_ALLOCATE(nlist(1:npoints))
+    case(PARALLELEPIPED, HYPERCUBE) 
+      llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
+      ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
+      ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
+      ulimit(1:sb%transport_dim) = sb%lsize(1:sb%transport_dim) - DELTA
 
-        if(sb%rsize > M_ZERO) then
-          nullify(list)
-          call lookup_get_list(sb%atom_lookup, npoints, xx, radius, nlist)
-        else
-          call lookup_get_list(sb%atom_lookup, npoints, xx, radius, nlist, list = list)
-        end if
-
-        if(sb%rsize > M_ZERO) then
-          do ip = 1, npoints
-            in_box(ip) = (nlist(ip) /= 0)
-          end do
-        else
-          do ip = 1, npoints
-            in_box(ip) = .false.
-
-            do ilist = 1, nlist(ip)
-
-              iatom = list(ilist, ip)
-
-              dist2 = sum((xx(1:sb%dim, ip) - geo%atom(iatom)%x(1:sb%dim))**2)
-
-              if(dist2 < species_def_rsize(geo%atom(iatom)%spec)**2) then
-                in_box(ip) = .true.
-                exit
-              end if
-
-            end do
-          end do
-        end if
-
-        SAFE_DEALLOCATE_A(nlist)
-        SAFE_DEALLOCATE_P(list)
-
-      case(PARALLELEPIPED, HYPERCUBE) 
-        llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
-        ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
-        ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
-        ulimit(1:sb%transport_dim) = sb%lsize(1:sb%transport_dim) - DELTA
-
-        forall(ip = 1:npoints)
-          in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
-        end forall
+      forall(ip = 1:npoints)
+        in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
+      end forall
 
 #if defined(HAVE_GDLIB)
-      case(BOX_IMAGE)
-        do ip = 1, npoints
-          ix = nint((xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
-          iy = nint((xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
-          call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
-          in_box(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
-        end do
+    case(BOX_IMAGE)
+      do ip = 1, npoints
+        ix = nint((xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
+        iy = nint((xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
+        call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
+        in_box(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
+      end do
 #endif
 
-      case(BOX_USDEF)
-        ! is it inside the user-given boundaries?
-        do ip = 1, npoints
-          in_box(ip) =  all(xx(1:sb%dim, ip) >= -sb%lsize(1:sb%dim) - DELTA) &
-            .and. all(xx(1:sb%dim, ip) <= sb%lsize(1:sb%dim) + DELTA)
+    case(BOX_USDEF)
+      ! is it inside the user-given boundaries?
+      do ip = 1, npoints
+        in_box(ip) =  all(xx(1:sb%dim, ip) >= -sb%lsize(1:sb%dim) - DELTA) &
+          .and. all(xx(1:sb%dim, ip) <= sb%lsize(1:sb%dim) + DELTA)
 
-          ! and inside the simulation box?
-          do idir = 1, sb%dim
-            xx(idir, ip) = units_from_atomic(units_inp%length, xx(idir, ip))
-          enddo
-          rr = sqrt(sum(xx(1:sb%dim, ip)**2))
-          call parse_expression(re, im, sb%dim, xx(:, ip), rr, M_ZERO, sb%user_def)
-          in_box(ip) = in_box(ip) .and. (re .ne. M_ZERO)
-        end do
+        ! and inside the simulation box?
+        do idir = 1, sb%dim
+          xx(idir, ip) = units_from_atomic(units_inp%length, xx(idir, ip))
+        enddo
+        rr = sqrt(sum(xx(1:sb%dim, ip)**2))
+        call parse_expression(re, im, sb%dim, xx(:, ip), rr, M_ZERO, sb%user_def)
+        in_box(ip) = in_box(ip) .and. (re .ne. M_ZERO)
+      end do
     end select
 
     SAFE_DEALLOCATE_A(xx)
@@ -1091,23 +1258,23 @@ contains
   !--------------------------------------------------------------
   logical pure function simul_box_has_zero_bc(sb)
     type(simul_box_t), intent(in) :: sb
-    
+
     ! this is necessary for the exact boundary conditions for the
     ! poisson solver ( otherwise it should be
     ! .not. simul_box_is_periodic(sb))
     simul_box_has_zero_bc = .false.
-    
+
   end function simul_box_has_zero_bc
 
-  
+
   !--------------------------------------------------------------
-  subroutine simul_box_dump(sb, iunit)
+  subroutine simul_box_write_to_file(sb, iunit)
     type(simul_box_t), intent(in) :: sb
     integer,           intent(in) :: iunit
 
     integer :: idir
 
-    PUSH_SUB(simul_box_dump)
+    PUSH_SUB(simul_box_write_to_file)
 
     write(iunit, '(a)')             dump_tag
     write(iunit, '(a20,i4)')        'box_shape=          ', sb%box_shape
@@ -1146,8 +1313,8 @@ contains
         sb%rlattice_primitive(1:sb%dim, idir)
     end do
 
-    POP_SUB(simul_box_dump)
-  end subroutine simul_box_dump
+    POP_SUB(simul_box_write_to_file)
+  end subroutine simul_box_write_to_file
 
 
   ! --------------------------------------------------------------
@@ -1260,7 +1427,7 @@ contains
     sbout%hr_area%num_areas       = sbin%hr_area%num_areas
     sbout%hr_area%num_radii       = sbin%hr_area%num_radii
     sbout%hr_area%center(1:sbin%dim)=sbin%hr_area%center(1:sbin%dim)
-    
+
     call kpoints_copy(sbin%kpoints, sbout%kpoints)
 
     if(sbout%mr_flag) then
