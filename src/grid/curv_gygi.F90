@@ -26,6 +26,7 @@ module curv_gygi_m
   use datasets_m
   use geometry_m
   use global_m
+  use loct_m
   use parser_m
   use messages_m
   use profiling_m
@@ -37,12 +38,15 @@ module curv_gygi_m
   implicit none
 
   private
-  public ::            &
-    curv_gygi_t,       &
-    curv_gygi_init,    &
-    curv_gygi_end,     &
-    curv_gygi_chi2x,   &
-    curv_gygi_x2chi,   &
+  public ::                   &
+    curv_gygi_t,              &
+    curv_gygi_init,           &
+    curv_gygi_init_from_dump, &
+    curv_gygi_copy,           &
+    curv_gygi_dump,           &
+    curv_gygi_end,            &
+    curv_gygi_chi2x,          &
+    curv_gygi_x2chi,          &
     curv_gygi_jacobian
 
   type curv_gygi_t
@@ -120,6 +124,62 @@ contains
     
     POP_SUB(curv_gygi_init)
   end subroutine curv_gygi_init
+
+  ! ---------------------------------------------------------
+  subroutine curv_gygi_init_from_dump(this, iunit)
+    type(curv_gygi_t), intent(inout) :: this
+    integer,           intent(in)    :: iunit
+    !
+    integer :: gb, dim
+    !
+    PUSH_SUB(curv_gygi_init_from_dump)
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    read(iunit) this%A
+    read(iunit) this%alpha
+    read(iunit) this%beta
+    read(iunit) this%npos
+    read(iunit) dim
+    SAFE_ALLOCATE(this%pos(this%npos,dim))
+    read(iunit) this%pos
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    POP_SUB(curv_gygi_init_from_dump)
+    return
+  end subroutine curv_gygi_init_from_dump
+
+  ! ---------------------------------------------------------
+  subroutine curv_gygi_copy(this_out, this_in)
+    type(curv_gygi_t), intent(inout) :: this_out
+    type(curv_gygi_t), intent(in)    :: this_in
+    !
+    PUSH_SUB(curv_gygi_copy)
+    this_out%A=this_in%A
+    this_out%alpha=this_in%alpha
+    this_out%beta=this_in%beta
+    call loct_pointer_copy(this_out%pos, this_in%pos)
+    this_out%npos=this_in%npos
+    POP_SUB(curv_gygi_copy)
+    return
+  end subroutine curv_gygi_copy
+
+  ! ---------------------------------------------------------
+  subroutine curv_gygi_dump(this, iunit)
+    type(curv_gygi_t), intent(in) :: this
+    integer,           intent(in) :: iunit
+    !
+    PUSH_SUB(curv_gygi_dump)
+    write(iunit) GUARD_BITS
+    write(iunit) this%A
+    write(iunit) this%alpha
+    write(iunit) this%beta
+    write(iunit) this%npos
+    write(iunit) size(this%pos,dim=2)
+    write(iunit) this%pos
+    write(iunit) GUARD_BITS
+    POP_SUB(curv_gygi_dump)
+    return
+  end subroutine curv_gygi_dump
 
   ! ---------------------------------------------------------
   subroutine curv_gygi_end(cv)

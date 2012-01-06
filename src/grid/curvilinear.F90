@@ -39,9 +39,12 @@ module curvilinear_m
   implicit none
 
   private
-  public ::                     &
+  public ::                      &
     curvilinear_t,               &
     curvilinear_init,            &
+    curvilinear_init_from_dump,  &
+    curvilinear_dump,            &
+    curvilinear_copy,            &
     curvilinear_end,             &
     curvilinear_chi2x,           &
     curvilinear_x2chi,           &
@@ -118,6 +121,70 @@ contains
     POP_SUB(curvilinear_init)
   end subroutine curvilinear_init
 
+  ! -------------------------------------------------------------- 
+  subroutine curvilinear_init_from_dump(this, iunit)
+    type(curvilinear_t), intent(inout) :: this
+    integer,             intent(in)    :: iunit
+    !
+    integer :: gb
+    !
+    PUSH_SUB(curvilinear_init_from_dump)
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    read(iunit) this%method
+    select case(this%method)
+    case(CURV_METHOD_GYGI)
+      call curv_gygi_init_from_dump(this%gygi, iunit)
+    case(CURV_METHOD_BRIGGS)
+      call curv_briggs_init_from_dump(this%briggs, iunit)
+    case(CURV_METHOD_MODINE)
+      call curv_modine_init_from_dump(this%modine, iunit)
+    end select
+    read(iunit) gb
+    ASSERT(gb==GUARD_BITS)
+    POP_SUB(curvilinear_init_from_dump)
+    return
+  end subroutine curvilinear_init_from_dump
+
+  ! -------------------------------------------------------------- 
+  subroutine curvilinear_dump(this, iunit)
+    type(curvilinear_t), intent(in) :: this
+    integer,             intent(in) :: iunit
+    !
+    PUSH_SUB(curvilinear_dump)
+    write(iunit) GUARD_BITS
+    write(iunit) this%method
+    select case(this%method)
+    case(CURV_METHOD_GYGI)
+      call curv_gygi_dump(this%gygi, iunit)
+    case(CURV_METHOD_BRIGGS)
+      call curv_briggs_dump(this%briggs, iunit)
+    case(CURV_METHOD_MODINE)
+      call curv_modine_dump(this%modine, iunit)
+    end select
+    write(iunit) GUARD_BITS
+    POP_SUB(curvilinear_dump)
+    return
+  end subroutine curvilinear_dump
+
+  ! -------------------------------------------------------------- 
+  subroutine curvilinear_copy(this_out, this_in)
+    type(curvilinear_t), intent(inout) :: this_out
+    type(curvilinear_t), intent(in)    :: this_in
+    !
+    PUSH_SUB(curvilinear_copy)
+    this_out%method=this_in%method
+    select case(this_in%method)
+    case(CURV_METHOD_GYGI)
+      call curv_gygi_copy(this_out%gygi, this_in%gygi)
+    case(CURV_METHOD_BRIGGS)
+      call curv_briggs_copy(this_out%briggs, this_in%briggs)
+    case(CURV_METHOD_MODINE)
+      call curv_modine_copy(this_out%modine, this_in%modine)
+    end select
+    POP_SUB(curvilinear_copy)
+    return
+  end subroutine curvilinear_copy
 
   ! ---------------------------------------------------------
   subroutine curvilinear_end(cv)
@@ -129,13 +196,14 @@ contains
     case(CURV_METHOD_GYGI)
       call curv_gygi_end(cv%gygi)
     case(CURV_METHOD_BRIGGS)
+      !
     case(CURV_METHOD_MODINE)
       call curv_modine_end(cv%modine)
     end select
 
     POP_SUB(curvilinear_end)
   end subroutine curvilinear_end
-  
+
 
   ! ---------------------------------------------------------
   subroutine curvilinear_chi2x(sb, cv, chi, x)
@@ -169,7 +237,7 @@ contains
     FLOAT,               intent(out) :: chi(MAX_DIM)
 
     PUSH_SUB(curvilinear_x2chi)
-    
+
     chi = M_ZERO
 
     select case(cv%method)
@@ -239,11 +307,11 @@ contains
       write(message(2), '(a)')  '  Gygi Parameters:'
       write(message(3), '(4x,a,f6.3)')  'A = ', cv%gygi%a
       write(message(4), '(4x,3a,f6.3)') 'alpha [', &
-                                      trim(units_abbrev(units_out%length)), '] = ', &
-                                      units_from_atomic(units_out%length, cv%gygi%alpha)
+        trim(units_abbrev(units_out%length)), '] = ', &
+        units_from_atomic(units_out%length, cv%gygi%alpha)
       write(message(5), '(4x,3a,f6.3)') 'beta  [', &
-                                      trim(units_abbrev(units_out%length)), '] = ', &
-                                      units_from_atomic(units_out%length, cv%gygi%beta)
+        trim(units_abbrev(units_out%length)), '] = ', &
+        units_from_atomic(units_out%length, cv%gygi%beta)
       call messages_info(5, unit)
 
     case(CURV_METHOD_BRIGGS)
