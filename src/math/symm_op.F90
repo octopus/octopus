@@ -86,7 +86,8 @@ contains
     PUSH_SUB(symm_op_init_from_dump)
     read(iunit) gb
     ASSERT(gb==GUARD_BITS)
-    read(iunit) this
+    read(iunit) this%rotation
+    read(iunit) this%translation
     read(iunit) gb
     ASSERT(gb==GUARD_BITS)
     POP_SUB(symm_op_init_from_dump)
@@ -100,7 +101,8 @@ contains
     !
     PUSH_SUB(symm_op_dump)
     write(iunit) GUARD_BITS
-    write(iunit) this
+    write(iunit) this%rotation
+    write(iunit) this%translation
     write(iunit) GUARD_BITS
     POP_SUB(symm_op_dump)
     return

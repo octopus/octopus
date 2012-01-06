@@ -77,7 +77,8 @@ contains
     PUSH_SUB(curv_briggs_init_from_dump)
     read(iunit) gb
     ASSERT(gb==GUARD_BITS)
-    read(iunit) this
+    read(iunit) this%L
+    read(iunit) this%beta
     read(iunit) gb
     ASSERT(gb==GUARD_BITS)
     POP_SUB(curv_briggs_init_from_dump)
@@ -103,7 +104,8 @@ contains
     !
     PUSH_SUB(curv_briggs_dump)
     write(iunit) GUARD_BITS
-    write(iunit) this
+    write(iunit) this%L
+    write(iunit) this%beta
     write(iunit) GUARD_BITS
     POP_SUB(curv_briggs_dump)
     return
