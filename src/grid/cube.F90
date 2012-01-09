@@ -87,7 +87,7 @@ contains
     if (fft_type_ /= FFT_NONE) then
       !%Variable FFTLibrary
       !%Type logical
-      !%Section Mesh:FFTs
+      !%Section Mesh::FFTs
       !%Default fftw 
       !%Description
       !% (experimental) You can select the FFT library to use.
