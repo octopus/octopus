@@ -254,7 +254,7 @@ contains
     call messages_info(1)
     cas%type = CASIDA_EPS_DIFF
     call casida_work(sys, hm, cas)
-    call casida_write(cas, 'eps-diff')
+    call casida_write(cas, 'eps_diff')
 
     if (sys%st%d%ispin /= SPINORS) then
       ! Then, calculate the excitation energies by making use of the Petersilka approximation
