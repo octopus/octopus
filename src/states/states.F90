@@ -1592,6 +1592,8 @@ contains
 
     integer :: ist, ik, id, ist_start, ist_end, jst, seed
     CMPLX   :: alpha, beta
+    FLOAT, allocatable :: dpsi(:,  :)
+    CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
 
     PUSH_SUB(states_generate_random)
 
@@ -1611,15 +1613,23 @@ contains
       seed = 0
     end if
 
+    if (states_are_real(st)) then
+      SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
+    else
+      SAFE_ALLOCATE(zpsi(1:mesh%np, 1:st%d%dim))
+    end if
+
     select case(st%d%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = ist_start, ist_end
           if (states_are_real(st)) then
-            call dmf_random(mesh, st%dpsi(:, 1, ist, ik), seed)
+            call dmf_random(mesh, dpsi(:, 1), seed)
+            call states_set_state(st, mesh, ist,  ik, dpsi)
           else
-            call zmf_random(mesh, st%zpsi(:, 1, ist, ik), seed)
+            call zmf_random(mesh, zpsi(:, 1), seed)
+            call states_set_state(st, mesh, ist,  ik, zpsi)
           end if
           st%eigenval(ist, ik) = M_ZERO
         end do
@@ -1633,7 +1643,7 @@ contains
 
         do ik = st%d%kpt%start, st%d%kpt%end
           do ist = ist_start, ist_end
-            call zmf_random(mesh, st%zpsi(:, 1, ist, ik))
+            call zmf_random(mesh, zpsi(:, 1))
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
             ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
             ! determines the spin values. The values of (alpha, beta) can be be obtained
@@ -1642,35 +1652,44 @@ contains
             ! Note that here we orthonormalize the orbital part. This ensures that the spinors
             ! are untouched later in the general orthonormalization, and therefore the spin values
             ! of each spinor remain the same.
+            SAFE_ALLOCATE(zpsi2(1:mesh%np))
             do jst = ist_start, ist - 1
-              st%zpsi(:, 1, ist, ik) = st%zpsi(:, 1, ist, ik) - &
-                                       zmf_dotp(mesh, st%zpsi(:, 1, ist, ik), st%zpsi(:, 1, jst, ik)) * &
-                                       st%zpsi(:, 1, jst, ik)
+              call states_get_state(st, mesh, 1, jst, ik, zpsi2)
+              zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1) - zmf_dotp(mesh, zpsi(:, 1), zpsi2)*zpsi2(1:mesh%np)
             end do
-            st%zpsi(:, 1, ist, ik) = st%zpsi(:, 1, ist, ik) / zmf_nrm2(mesh, st%zpsi(:, 1, ist, ik))
-            st%zpsi(:, 2, ist, ik) = st%zpsi(:, 1, ist, ik)
+            SAFE_DEALLOCATE_A(zpsi2)
+
+            zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1)/zmf_nrm2(mesh, zpsi(:, 1))
+            zpsi(1:mesh%np, 2) = zpsi(1:mesh%np, 1)
+
             alpha = cmplx(sqrt(M_HALF + st%spin(3, ist, ik)), M_ZERO, REAL_PRECISION)
             beta  = cmplx(sqrt(M_ONE - abs(alpha)**2), M_ZERO, REAL_PRECISION)
             if(abs(alpha) > M_ZERO) then
               beta = cmplx(st%spin(1, ist, ik) / abs(alpha), st%spin(2, ist, ik) / abs(alpha), REAL_PRECISION)
             end if
-            st%zpsi(:, 1, ist, ik) = alpha * st%zpsi(:, 1, ist, ik)
-            st%zpsi(:, 2, ist, ik) = beta * st%zpsi(:, 2, ist, ik)
+            zpsi(1:mesh%np, 1) = alpha*zpsi(1:mesh%np, 1)
+            zpsi(1:mesh%np, 2) = beta*zpsi(1:mesh%np, 2)
             st%eigenval(ist, ik) = M_ZERO
+
+            call states_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
       else
         do ik = st%d%kpt%start, st%d%kpt%end
           do ist = ist_start, ist_end
             do id = 1, st%d%dim
-              call zmf_random(mesh, st%zpsi(:, id, ist, ik))
+              call zmf_random(mesh, zpsi(:, id))
             end do
+            call states_set_state(st, mesh, ist,  ik, zpsi)
             st%eigenval(ist, ik) = M_HUGE
           end do
         end do
       end if
 
     end select
+
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(zpsi)
 
     POP_SUB(states_generate_random)
   end subroutine states_generate_random
@@ -1683,6 +1702,7 @@ contains
     ! Local variables.
     integer            :: ist, ik
     FLOAT              :: charge
+    CMPLX, allocatable :: zpsi(:, :)
 #if defined(HAVE_MPI)
     integer            :: jj
     integer            :: tmp
@@ -1710,10 +1730,12 @@ contains
 
     if(st%d%ispin == SPINORS) then
       ASSERT(states_are_complex(st))
-
+      
+      SAFE_ALLOCATE(zpsi(1:mesh%np, st%d%dim))
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
-          st%spin(1:3, ist, ik) = state_spin(mesh, st%zpsi(:, :, ist, ik))
+          call states_get_state(st, mesh, ist, ik, zpsi)
+          st%spin(1:3, ist, ik) = state_spin(mesh, zpsi)
         end do
 #if defined(HAVE_MPI)
         if(st%parallel_in_states) then
@@ -1726,6 +1748,7 @@ contains
         end if
 #endif
       end do
+      SAFE_DEALLOCATE_A(zpsi)
     end if
 
     POP_SUB(states_fermi)
