@@ -638,7 +638,7 @@ contains
       write(out_file, '(a20)', advance = 'no') str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
     end do
     do isp = 1, nspin
-      write(out_file, '(a20)', advance = 'no') str_center('[/' // trim(units_abbrev(units_out%energy)) // ']', 20)
+      write(out_file, '(a20)', advance = 'no') str_center('[' // trim(units_abbrev(unit_one/units_out%energy)) // ']', 20)
     end do
     write(out_file, '(1x)')
 
@@ -649,7 +649,7 @@ contains
                                                     idir = 1, 3)
       end do
       do isp = 1, nspin
-        write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, sf(ie, isp))
+        write(out_file,'(e20.8)', advance = 'no') units_from_atomic(unit_one/units_out%energy, sf(ie, isp))
       end do
       write(out_file, '(1x)')
     end do

@@ -154,7 +154,7 @@ contains
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
     do j1 = 1, nsteps
       write(iunit, '(5es14.6)') units_from_atomic(units_out%energy, cs%min_energy + real(j1 - 1, REAL_PRECISION) &
-        *cs%energy_step), (units_from_atomic(units_out%length**2, spectrum(ii, j1)), ii = 1, 4)
+        *cs%energy_step), (units_from_atomic(unit_one/units_out%energy, spectrum(ii, j1)), ii = 1, 4)
     end do
 
     call io_close(iunit)
