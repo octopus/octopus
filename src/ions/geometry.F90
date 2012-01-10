@@ -197,10 +197,12 @@ contains
     !% <br>&nbsp;&nbsp;'O' | &nbsp;0.56415 | 0.0 | 0.0 | no
     !% <br>%</tt>
     !%
-    !% The first line defines a carbon atom at coordinates ("-0.56415", "0.0", "0.0"),
+    !% The first line defines a carbon atom at coordinates (-0.56415, 0.0, 0.0),
     !% that is <b>not</b> allowed to move during dynamical simulations. The second line has
     !% a similar meaning. This block obviously defines a carbon monoxide molecule, if the
-    !% input units are <tt>eV_Angstrom</tt>. Note that in this way it is possible to fix some of the atoms (this
+    !% input units are <tt>eV_Angstrom</tt>. The number of coordinates for each species
+    !% must be equal to the dimension of your space (generally 3).
+    !% Note that in this way it is possible to fix some of the atoms (this
     !% is not possible when specifying the coordinates through a <tt>PDBCoordinates</tt> or
     !% <tt>XYZCoordinates</tt> file). It is always possible to fix <b>all</b> atoms using the <tt>MoveIons</tt> directive.
     !%End

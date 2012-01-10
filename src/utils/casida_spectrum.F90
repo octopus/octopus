@@ -54,7 +54,7 @@ program casida_spectrum
 
   !%Variable CasidaSpectrumBroadening
   !%Type float
-  !%Default 0.005
+  !%Default 0.005 Ha
   !%Section Utilities::oct-casida_spectrum
   !%Description
   !% Width of the Lorentzian used to broaden the excitations.
@@ -65,7 +65,7 @@ program casida_spectrum
 
   !%Variable CasidaSpectrumEnergyStep
   !%Type float
-  !%Default 0.001
+  !%Default 0.001 Ha
   !%Section Utilities::oct-casida_spectrum
   !%Description
   !% Sampling rate for the spectrum. 
@@ -87,7 +87,7 @@ program casida_spectrum
 
   !%Variable CasidaSpectrumMaxEnergy
   !%Type float
-  !%Default 1.0
+  !%Default 1.0 Ha
   !%Section Utilities::oct-casida_spectrum
   !%Description
   !% The broadening is done for energies smaller than <tt>CasidaSpectrumMaxEnergy</tt>.
@@ -154,7 +154,7 @@ contains
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
     do j1 = 1, nsteps
       write(iunit, '(5es14.6)') units_from_atomic(units_out%energy, cs%min_energy + real(j1 - 1, REAL_PRECISION) &
-        *cs%energy_step), (units_from_atomic(units_out%energy, spectrum(ii, j1)), ii = 1, 4)
+        *cs%energy_step), (units_from_atomic(units_out%length**2, spectrum(ii, j1)), ii = 1, 4)
     end do
 
     call io_close(iunit)
