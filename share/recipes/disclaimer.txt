@@ -1,2 +1,2 @@
 DISCLAIMER: The authors do not guarantee that the implementation of this
-recipe leads to an eatable dish, for it is clearly "system dependent".
+recipe leads to an edible dish, for it is clearly "system-dependent".
