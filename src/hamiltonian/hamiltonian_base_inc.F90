@@ -258,7 +258,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   PUSH_SUB(X(hamiltonian_base_nlocal_start))
 
   nst = psib%nst_linear
- #ifdef R_TCOMPLEX
+#ifdef R_TCOMPLEX
   nreal = 2*nst
 #else
   nreal = nst
