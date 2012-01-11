@@ -45,7 +45,9 @@
 #include "varia.h"
 
 
-/* Gets the name of the machine */
+/**
+ * Gets the name of the machine 
+ */
 void sysname(char **c)
 {
 #ifdef HAVE_UNAME
@@ -63,8 +65,10 @@ void sysname(char **c)
 }
 
 
-/* optimizes the order of the fft
-	 p is the maximum prime allowed in n */
+/**
+ * optimizes the order of the fft
+ * p is the maximum prime allowed in n 
+ */
 void fft_optimize(int *n, int p, int par)
 {
   if(*n <= 2) return;
@@ -86,8 +90,10 @@ void fft_optimize(int *n, int p, int par)
   }
 }
 
-/* returns true if process is in the foreground
-	 copied from openssh scp source */
+/**
+ * returns true if process is in the foreground
+ * copied from openssh scp source 
+ */
 static int foreground_proc(void)
 {
 #if defined(HAVE_TCGETPGRP) || defined(HAVE_IOCTL)
@@ -119,7 +125,9 @@ int getttywidth(void)
     return (80);
 }
 
-/* displays progress bar with a percentage */
+/**
+ * displays progress bar with a percentage 
+ */
 void progress_bar(int actual, int max)
 {
   static struct timeval start;
