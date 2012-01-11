@@ -846,7 +846,7 @@ contains
     !%
     !% If the sum of occupations is not equal to the total charge set by <tt>ExcessCharge</tt>,
     !% an error message is printed.
-    !% If </tt>FromScratch = no</tt> and <tt>RestartFixedOccupations = yes<tt>,
+    !% If </tt>FromScratch = no</tt> and <tt>RestartFixedOccupations = yes</tt>,
     !% this block will be ignored.
     !%End
 
