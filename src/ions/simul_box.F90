@@ -500,9 +500,10 @@ contains
       !%Section Mesh::Simulation Box
       !%Description
       !% Defines the radius for <tt>BoxShape</tt> = <tt>sphere</tt>, <tt>cylinder</tt>, or <tt>minimum</tt>.
-      !% Must be a positive number. If not specified, the code will look for a default value in 
+      !% Must be a positive number. If not specified, the code will look for values in 
       !% the <tt>Species</tt> block, or, if default pseudopotentials are used, the <tt>rsize</tt> column of
-      !% <tt>share/PP/defaults</tt>. For <tt>minimum</tt>, a default radius is chosen separately for each species.
+      !% <tt>share/PP/defaults</tt>. In these cases, for <tt>minimum</tt>, a different radius is used for each species,
+      !% while for other shapes, the maximum radius is used.
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
@@ -1164,6 +1165,12 @@ contains
       else
         radius = M_ZERO
         do iatom = 1, geo%natoms
+          if(species_def_rsize(geo%atom(iatom)%spec) < -M_EPSILON) then
+            write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
+              trim(species_label(geo%atom(iatom)%spec)), ' is negative or undefined.'
+            message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
+            call messages_fatal(2)
+          endif
           radius = max(radius, species_def_rsize(geo%atom(iatom)%spec))
         end do
       end if
