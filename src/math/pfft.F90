@@ -282,17 +282,15 @@ contains
                                                          !! FFTPreparePlan. Default value is FFTW_MEASURE
     integer,                 intent(in)    :: mpi_comm   !< MPI communicator
     
-    integer(ptrdiff_t_kind) :: tmp_n(3), howmany
+    integer(ptrdiff_t_kind) :: tmp_n(3)
+
     PUSH_SUB(pfft_prepare_plan_r2c)
 
     ASSERT(sign == FFTW_FORWARD)
 
-    howmany = 1
     tmp_n(1:3) = n(1:3)
 
-    call PDFFT(plan_many_dft_r2c) (plan, int(3,ptrdiff_t_kind), tmp_n(1), tmp_n(1), &
-         tmp_n(1), howmany, PFFT_DEFAULT_BLOCKS, PFFT_DEFAULT_BLOCKS, &
-         in(1,1,1), out(1,1,1), mpi_comm, sign, PFFT_TRANSPOSED_OUT, flags)
+    call PDFFT(plan_dft_r2c_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, PFFT_TRANSPOSED_OUT, flags) 
 
     POP_SUB(pfft_prepare_plan_r2c)
   end subroutine pfft_prepare_plan_r2c
@@ -308,17 +306,15 @@ contains
                                                          !! FFTPreparePlan. Default value is FFTW_MEASURE
     integer,                 intent(in)    :: mpi_comm   !< MPI communicator
     
-    integer(ptrdiff_t_kind) :: tmp_n(3), tmp_ni(3), tmp_no(3), howmany
+    integer(ptrdiff_t_kind) :: tmp_n(3)
+    
     PUSH_SUB(pfft_prepare_plan_c2r)
 
     ASSERT(sign == FFTW_BACKWARD)
 
-    howmany = 1
     tmp_n(1:3) = n(1:3)
 
-    call PDFFT(plan_many_dft_c2r) (plan, int(3,ptrdiff_t_kind), tmp_n(1), tmp_n(1), &
-         tmp_n(1), howmany, PFFT_DEFAULT_BLOCKS, PFFT_DEFAULT_BLOCKS, &
-         in(1,1,1), out(1,1,1), mpi_comm, sign, PFFT_TRANSPOSED_IN, flags)
+    call PDFFT(plan_dft_c2r_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, PFFT_TRANSPOSED_IN, flags) 
 
     POP_SUB(pfft_prepare_plan_c2r)
   end subroutine pfft_prepare_plan_c2r
@@ -355,11 +351,10 @@ contains
   end subroutine pfft_prepare_plan_c2c
 
   ! ---------------------------------------------------------
-  subroutine pfft_get_dims(rs_n_global, mpi_comm, is_real, fft_alpha, alloc_size, fs_n_global, rs_n, fs_n, rs_istart, fs_istart)
+  subroutine pfft_get_dims(rs_n_global, mpi_comm, is_real, alloc_size, fs_n_global, rs_n, fs_n, rs_istart, fs_istart)
     integer, intent(in)  :: rs_n_global(1:3) !< The general number of elements in each dimension in real space
     integer, intent(in)  :: mpi_comm         !< MPI comunicator
     logical, intent(in)  :: is_real          !< The input is real or complex
-    FLOAT,   intent(in)  :: fft_alpha        !< How many times we have to increase the box. Based on sb%fft_alpha
     integer, intent(out) :: alloc_size       !< Number of elements that has to be allocated locally
     integer, intent(out) :: fs_n_global(1:3) !< The general number of elements in each dimension in Fourier space
     integer, intent(out) :: rs_n(1:3)        !< Local number of elements in each direction in real space
@@ -367,21 +362,18 @@ contains
     integer, intent(out) :: rs_istart(1:3)   !< Where does the local portion of the function start in real space
     integer, intent(out) :: fs_istart(1:3)   !< Where does the local portion of the function start in Fourier space
 
-    integer(ptrdiff_t_kind) :: tmp_alloc_size, tmp_n(3), howmany
+    integer(ptrdiff_t_kind) :: tmp_alloc_size, tmp_n(3)
     integer(ptrdiff_t_kind) :: tmp_rs_n(3), tmp_rs_istart(3)
     integer(ptrdiff_t_kind) :: tmp_fs_n(3), tmp_fs_istart(3)
 
     PUSH_SUB(pfft_get_dims)
 
-    howmany = 1
     fs_n_global(1:3) = rs_n_global(1:3)
     tmp_n(1:3) = rs_n_global(1:3)
 
     if (is_real) then
-      call PDFFT(local_size_many_dft_r2c)(tmp_alloc_size, int(3,ptrdiff_t_kind), tmp_n(1), &
-           tmp_n(1), tmp_n(1), howmany, &
-           PFFT_DEFAULT_BLOCKS, PFFT_DEFAULT_BLOCKS, mpi_comm, PFFT_TRANSPOSED_OUT, &
-           tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1))
+      call PDFFT(local_size_dft_r2c_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
+           tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1)) 
       fs_n_global(1) = rs_n_global(1)/2 + 1
     else
       call PDFFT(local_size_dft_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &

@@ -124,7 +124,7 @@ contains
       if(present(dont_optimize)) then
         if(dont_optimize) optimize = .false.
       endif
-      call fft_init(cube%fft, tmp_n, sb%dim, sb%fft_alpha, fft_type_, cube%fft_library, &
+      call fft_init(cube%fft, tmp_n, sb%dim, fft_type_, cube%fft_library, &
            mpi_comm=mpi_comm, optimize = optimize)
       if(present(nn_out)) nn_out(1:3) = tmp_n(1:3)
 

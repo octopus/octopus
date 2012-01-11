@@ -950,7 +950,7 @@ contains
     func_ = acc
     nn(1:3) = (/ niter, 1, 1 /)
 
-    call fft_init(fft_handler, nn(1:3), 1, M_ONE, FFT_COMPLEX, FFTLIB_FFTW, optimize = .false.)
+    call fft_init(fft_handler, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize = .false.)
     call zfft_forward1(fft_handler, func_(0:niter-1), funcw_(0:niter-1))
     do j = 0, niter - 1
       funcw_(j) = -abs(funcw_(j))**2 * dt**2

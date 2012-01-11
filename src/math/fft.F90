@@ -182,11 +182,10 @@ contains
   end subroutine fft_all_end
 
   ! ---------------------------------------------------------
-  subroutine fft_init(fft, nn, dim, fft_alpha, type, library, mpi_comm, optimize)
+  subroutine fft_init(fft, nn, dim, type, library, mpi_comm, optimize)
     type(fft_t),       intent(out)   :: fft      !< FFT data type
     integer,           intent(inout) :: nn(1:3)  !< Size of the box
     integer,           intent(in)    :: dim      !< Dimensions of the box
-    FLOAT,             intent(in)    :: fft_alpha!< The factor that has to be used to multiply the Fourier space matrix
     integer,           intent(in)    :: type     !< The type of the FFT; real or complex
     integer,           intent(in)    :: library  !< Library of FFT; PFFT or FFTW3
     logical, optional, intent(in)    :: optimize !< Is optimize going to be used? Call FFT optimization functions
@@ -301,7 +300,7 @@ contains
 
     case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT     
-      call pfft_get_dims(fft_array(jj)%rs_n_global, mpi_comm, type == FFT_REAL, fft_alpha, &
+      call pfft_get_dims(fft_array(jj)%rs_n_global, mpi_comm, type == FFT_REAL, &
            alloc_size, fft_array(jj)%fs_n_global, fft_array(jj)%rs_n, &
            fft_array(jj)%fs_n, fft_array(jj)%rs_istart, fft_array(jj)%fs_istart)
 #endif
