@@ -150,6 +150,7 @@ contains
 
     if (periodic_dim == 0) then
 
+      
       ! we only have the identity
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
@@ -157,25 +158,29 @@ contains
       this%breakdir = M_ZERO
       this%space_group = 1
 
-      SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
-      SAFE_ALLOCATE(typs(1:geo%natoms))
+      ! for the moment symmetries are only use for information,  so we compute them only on one node.
+      if(mpi_grp_is_root(mpi_world)) then
 
-      forall(iatom = 1:geo%natoms)
-        position(1:3, iatom) = M_ZERO
-        position(1:dim, iatom) = geo%atom(iatom)%x(1:dim)
-        typs(iatom) = species_index(geo%atom(iatom)%spec)
-      end forall
+        SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
+        SAFE_ALLOCATE(typs(1:geo%natoms))
 
-      verbosity = -1
-      call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
-      call symmetries_finite_get_group_name(point_group, group_name)
-      call symmetries_finite_get_group_elements(point_group, group_elements)
-      call symmetries_finite_end()
+        forall(iatom = 1:geo%natoms)
+          position(1:3, iatom) = M_ZERO
+          position(1:dim, iatom) = geo%atom(iatom)%x(1:dim)
+          typs(iatom) = species_index(geo%atom(iatom)%spec)
+        end forall
 
-      call messages_write('Symmetry elements : '//trim(group_elements), new_line = .true.)
-      call messages_write('Symmetry group    : '//trim(group_name))
-      call messages_info()
-      
+        verbosity = -1
+        call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
+        call symmetries_finite_get_group_name(point_group, group_name)
+        call symmetries_finite_get_group_elements(point_group, group_elements)
+        call symmetries_finite_end()
+
+        call messages_write('Symmetry elements : '//trim(group_elements), new_line = .true.)
+        call messages_write('Symmetry group    : '//trim(group_name))
+        call messages_info()
+      end if
+
       SAFE_DEALLOCATE_A(position)
       SAFE_DEALLOCATE_A(typs)
     else
@@ -200,7 +205,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) then
         call spglib_show_symmetry(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
       endif
-      
+
       this%space_group = spglib_get_group_number(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       max_size = spglib_get_max_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
