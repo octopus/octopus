@@ -269,7 +269,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
     if (.not. this%der%mesh%use_curvilinear .and. (this%der%mesh%spacing(1)==this%der%mesh%spacing(2)) .and. &
       (this%der%mesh%spacing(2)==this%der%mesh%spacing(3)) .and. &
       (this%der%mesh%spacing(1)==this%der%mesh%spacing(3))) then
-      aux = CNST(2.380077363979553356918)*(this%der%mesh%spacing(1)*this%der%mesh%spacing(2)) 
+      aux = CNST(2.417987931)*(this%der%mesh%spacing(1)*this%der%mesh%spacing(2)) 
       do ii = 1, this%der%mesh%np
         pot(ii)=pot(ii)+aux*rho(ii)
       end do
