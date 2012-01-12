@@ -776,8 +776,10 @@ module opencl_m
       
       character(len = OPENCL_MAX_FILE_LENGTH) :: string
       integer :: ierr, ierrlog, iunit, irec
+      type(profile_t), save :: prof
 
       PUSH_SUB(opencl_build_program)
+      call profiling_in(prof, "CL_COMPILE", exclude = .true.)
 
       string = ''
 
@@ -835,6 +837,7 @@ module opencl_m
 
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clBuildProgram")
 
+      call profiling_out(prof)
       POP_SUB(opencl_build_program)
     end subroutine opencl_build_program
 
@@ -875,12 +878,15 @@ module opencl_m
       character(len=*), intent(in)    :: name
 
       integer :: ierr
+      type(profile_t), save :: prof
 
       PUSH_SUB(opencl_create_kernel)
+      call profiling_in(prof, "CL_BUILD_KERNEL", exclude = .true.)
 
       kernel = clCreateKernel(prog, name, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateKernel")
 
+      call profiling_out(prof)
       POP_SUB(opencl_create_kernel)
     end subroutine opencl_create_kernel
 
