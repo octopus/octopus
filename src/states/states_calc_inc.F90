@@ -351,8 +351,10 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   type(octcl_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
 #endif
+  type(profile_t), save :: prof
 
   PUSH_SUB(X(states_trsm))
+  call profiling_in(prof, "STATES_TRSM")
 
   if(associated(st%X(psi))) then
 
@@ -440,6 +442,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 #endif
   end if
 
+  call profiling_out(prof)
   POP_SUB(X(states_trsm))
 end subroutine X(states_trsm)
 
