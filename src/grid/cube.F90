@@ -64,11 +64,12 @@ module cube_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, nn, sb, fft_type, dont_optimize, nn_out)
+  subroutine cube_init(cube, nn, sb, fft_type, fft_library, dont_optimize, nn_out)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: nn(3)
     type(simul_box_t), intent(in)  :: sb
     integer, optional, intent(in)  :: fft_type  !< Is the cube going to be used to perform FFTs?
+    integer, optional, intent(in)  :: fft_library !< What fft library to use
     logical, optional, intent(in)  :: dont_optimize !< if true, do not optimize grid for FFT
     integer, optional, intent(out) :: nn_out(3) !< What are the FFT dims?
                                                 !! If optimized, may be different from input nn.
@@ -85,18 +86,23 @@ contains
     nullify(cube%fft)
 
     if (fft_type_ /= FFT_NONE) then
-      !%Variable FFTLibrary
-      !%Type logical
-      !%Section Mesh::FFTs
-      !%Default fftw 
-      !%Description
-      !% (experimental) You can select the FFT library to use.
-      !%Option fftw 1
-      !% Uses FFTW3 library.
-      !%Option pfft 2
-      !% (experimental) Uses PFFT library, which has to be linked.
-      !%End
-      call parse_integer(datasets_check('FFTLibrary'), FFTLIB_FFTW, cube%fft_library)
+
+      if (present(fft_library)) then
+        cube%fft_library = fft_library
+      else
+        !%Variable FFTLibrary
+        !%Type logical
+        !%Section Mesh::FFTs
+        !%Default fftw 
+        !%Description
+        !% (experimental) You can select the FFT library to use.
+        !%Option fftw 1
+        !% Uses FFTW3 library.
+        !%Option pfft 2
+        !% (experimental) Uses PFFT library, which has to be linked.
+        !%End
+        call parse_integer(datasets_check('FFTLibrary'), FFTLIB_FFTW, cube%fft_library)
+      end if
 #ifndef HAVE_PFFT
       if (cube%fft_library == FFTLIB_PFFT) then
         write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'

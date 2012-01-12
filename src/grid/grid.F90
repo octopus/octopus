@@ -223,11 +223,10 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_2(gr, mc, geo, cube)
+  subroutine grid_init_stage_2(gr, mc, geo)
     type(grid_t), target, intent(inout) :: gr
     type(multicomm_t),    intent(in)    :: mc
     type(geometry_t),     intent(in)    :: geo
-    type(cube_t),         intent(in)    :: cube
 
     integer :: il
     type(mpi_grp_t) :: grp
@@ -236,7 +235,7 @@ contains
 
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
       call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
-      call mesh_init_stage_3(gr%mesh, gr%stencil, grp, cube=cube)
+      call mesh_init_stage_3(gr%mesh, gr%stencil, grp)
     else
       call mesh_init_stage_3(gr%mesh)
     end if

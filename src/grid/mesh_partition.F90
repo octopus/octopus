@@ -23,6 +23,7 @@ module mesh_partition_m
   use cube_m
   use curvilinear_m
   use datasets_m
+  use fft_m
   use geometry_m
   use global_m
   use hypercube_m
@@ -67,11 +68,10 @@ contains
   !! which has to be allocated beforehand.
   !! (mesh_partition_end should be called later.)
   ! ---------------------------------------------------------------
-  subroutine mesh_partition(mesh, lapl_stencil, part, cube)
+  subroutine mesh_partition(mesh, lapl_stencil, part)
     type(mesh_t),    intent(inout)  :: mesh
     type(stencil_t), intent(in)  :: lapl_stencil
     integer,         intent(out) :: part(:) ! 1:mesh%np_part_global
-    type(cube_t), optional, intent(in)  :: cube
 
     integer              :: iv, jp, inb
     integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
@@ -104,6 +104,7 @@ contains
     FLOAT, allocatable   :: xglobal(:, :)
     type(partition_t)    :: partition
     type(partitioner_t)  :: partitioner
+    type(cube_t) :: cube
 
     type(profile_t), save :: prof
     integer :: default
@@ -140,10 +141,6 @@ contains
 
     if(library == GA) call messages_experimental('Genetic algorithm mesh partition')
     if(library == PFFT_PART) call messages_experimental('PFFT mesh partition')
-
-    if (library == PFFT_PART) then
-      ASSERT(present(cube))
-    end if
 
 #ifndef HAVE_METIS
     if(library == METIS) then
@@ -373,14 +370,15 @@ contains
 #endif
 
     case(PFFT_PART)
-#ifdef HAVE_PFFT
+      call cube_init(cube, mesh%idx%ll, mesh%sb, fft_type=FFT_REAL, fft_library=FFTLIB_PFFT)
       part = 0
       do ip = 1, mesh%np_global
         call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix(1:3))
         ix(1:3) = ix(1:3) + cube%center(1:3)
         part(ip) = cube%part(ix(1), ix(2), ix(3))
       end do
-#endif
+      call cube_end(cube)
+
     end select
 
     SAFE_DEALLOCATE_A(istart)

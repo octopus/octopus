@@ -488,12 +488,11 @@ end subroutine mesh_init_stage_2
 !! mpi_grp is the communicator group that will be used for
 !! this mesh.
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent, cube)
+subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   type(mesh_t),              intent(inout) :: mesh
   type(stencil_t), optional, intent(in)    :: stencil
   type(mpi_grp_t), optional, intent(in)    :: mpi_grp
   type(mesh_t),    optional, intent(in)    :: parent
-  type(cube_t),    optional, intent(in)    :: cube
 
   integer :: ip
 
@@ -685,11 +684,7 @@ contains
     if(ierr /= 0) then
       
       if(.not. present(parent)) then
-        if (present(cube)) then
-          call mesh_partition(mesh, stencil, part, cube)
-        else
-          call mesh_partition(mesh, stencil, part)
-        end if
+        call mesh_partition(mesh, stencil, part)
       else
         ! if there is a parent grid, use its partition
         do ip = 1, mesh%np_global
