@@ -28,26 +28,28 @@
 __kernel void get_points(const int sp,
 			 const int ep,
 			 const int offset,
+			 const int nst,
 			 __global double const * restrict psi, const int ldpsi,
 			 __global double * restrict points, const int ldpoints){
   const int ist = get_global_id(0);
   const int ip  = get_global_id(1);
   const int sip = ip + sp - 1;
 
-  points[ldpoints*ip + ist + offset] = psi[ldpsi*sip + ist];
+  if(ist < nst) points[ldpoints*ip + ist + offset] = psi[ldpsi*sip + ist];
 
 }
 
 __kernel void set_points(const int sp,
 			 const int ep,
 			 const int offset,
+			 const int nst,
 			 __global double const * restrict points, const int ldpoints,
 			 __global double * restrict psi, const int ldpsi){
   const int ist = get_global_id(0);
   const int ip  = get_global_id(1);
   const int sip = ip + sp - 1;
 
-  psi[ldpsi*sip + ist] = points[ldpoints*ip + ist + offset];
+  if(ist < nst) psi[ldpsi*sip + ist] = points[ldpoints*ip + ist + offset];
 
 }
 /*

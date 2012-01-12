@@ -171,7 +171,7 @@ module batch_m
     module procedure batch_set_points_cl
   end interface batch_set_points
 
-  type(profile_t), save :: axpy_prof
+  type(profile_t), save :: axpy_prof, get_points_prof, set_points_prof
 
   integer, public, parameter :: &
     BATCH_NOT_PACKED = 0,       &
@@ -968,6 +968,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
 #endif
 
   PUSH_SUB(batch_get_points_cl)
+  call profiling_in(get_points_prof, "GET_POINTS")
 
   select case(batch_status(this))
   case(BATCH_NOT_PACKED, BATCH_PACKED)
@@ -986,14 +987,18 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
     call opencl_set_kernel_arg(kernel_ref, 0, sp)
     call opencl_set_kernel_arg(kernel_ref, 1, ep)
     call opencl_set_kernel_arg(kernel_ref, 2, offset*tsize)
-    call opencl_set_kernel_arg(kernel_ref, 3, this%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 4, this%pack%size_real(1))
-    call opencl_set_kernel_arg(kernel_ref, 5, psi)
-    call opencl_set_kernel_arg(kernel_ref, 6, ldpsi*tsize)
+    call opencl_set_kernel_arg(kernel_ref, 3, this%nst_linear*tsize)
+    call opencl_set_kernel_arg(kernel_ref, 4, this%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 5, this%pack%size_real(1))
+    call opencl_set_kernel_arg(kernel_ref, 6, psi)
+    call opencl_set_kernel_arg(kernel_ref, 7, ldpsi*tsize)
 
-    call opencl_kernel_run(kernel_ref, (/this%nst_linear*tsize, ep - sp + 1/), (/1, 1/))
+    call opencl_kernel_run(kernel_ref, (/this%pack%size_real(1), ep -&
+      & sp + 1/), (/this%pack%size_real(1), 1/))
 #endif
   end select
+
+  call profiling_out(get_points_prof)
 
   POP_SUB(batch_get_points_cl)
 end subroutine batch_get_points_cl
@@ -1012,17 +1017,21 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #endif
+
   PUSH_SUB(batch_set_points_cl)
+  call profiling_in(set_points_prof, "SET_POINTS")
 
   call batch_pack_was_modified(this)
 
   select case(batch_status(this))
   case(BATCH_NOT_PACKED, BATCH_PACKED)
-    call messages_not_implemented('batch_get_points_cl for non-CL batches')
+    call messages_not_implemented('batch_get_points_cl for non-CL&
+      & batches')
 
   case(BATCH_CL_PACKED)
 
-    tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
+    tsize = types_get_size(batch_type(this))&
+      &/types_get_size(TYPE_FLOAT)
     offset = this%index(1, 1) - 1
 #ifdef HAVE_OPENCL
     call octcl_kernel_start_call(kernel, 'points.cl', 'set_points')
@@ -1032,14 +1041,18 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
     call opencl_set_kernel_arg(kernel_ref, 0, sp)
     call opencl_set_kernel_arg(kernel_ref, 1, ep)
     call opencl_set_kernel_arg(kernel_ref, 2, offset*tsize)
-    call opencl_set_kernel_arg(kernel_ref, 3, psi)
-    call opencl_set_kernel_arg(kernel_ref, 4, ldpsi*tsize)
-    call opencl_set_kernel_arg(kernel_ref, 5, this%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 6, this%pack%size_real(1))
+    call opencl_set_kernel_arg(kernel_ref, 3, this%nst_linear*tsize)
+    call opencl_set_kernel_arg(kernel_ref, 4, psi)
+    call opencl_set_kernel_arg(kernel_ref, 5, ldpsi*tsize)
+    call opencl_set_kernel_arg(kernel_ref, 6, this%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 7, this%pack%size_real(1))
 
-    call opencl_kernel_run(kernel_ref, (/this%nst_linear*tsize, ep - sp + 1/), (/1, 1/))
+    call opencl_kernel_run(kernel_ref, (/this%pack%size_real(1), ep -&
+      & sp + 1/), (/this%pack%size_real(1), 1/))
 #endif
   end select
+
+  call profiling_out(set_points_prof)
 
   POP_SUB(batch_set_points_cl)
 end subroutine batch_set_points_cl
