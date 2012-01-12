@@ -660,18 +660,12 @@ contains
     call dcube_function_alloc_RS(cube, cf) ! allocate the cube in real space
 
     ! put the density in the cube
-    if(mesh%parallel_in_domains) then
-      if (cube%fft_library == FFTLIB_PFFT) then
-        !all the data has to be distributed for the PFFT library
-        call dmesh_to_cube_parallel(mesh, rho, cube, cf, local=.true., pfft_part=mesh%partition_library == 5)! 5 == PFFT_PART
-      else 
+    if (cube%parallel_in_domains) then
+      call dmesh_to_cube_parallel(mesh, rho, cube, cf)
+    else
+      if(mesh%parallel_in_domains) then
         call dmesh_to_cube(mesh, rho, cube, cf, local=.true.)
-      end if
-    else !not parallel in domains
-      if (cube%fft_library == FFTLIB_PFFT) then
-        ! Serial execution with PFFT
-        call dmesh_to_cube_parallel(mesh, rho, cube, cf)
-      else
+      else 
         call dmesh_to_cube(mesh, rho, cube, cf)
       end if
     end if
@@ -683,18 +677,11 @@ contains
     if(average_to_zero_) average = cube_function_surface_average(cube, cf)
     
     ! move the potential back to the mesh
-    if(mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
-      if (cube%fft_library == FFTLIB_PFFT) then
-        call dcube_to_mesh_parallel(cube, cf, mesh, pot, local=.true., pfft_part=mesh%partition_library == 5)! 5 == PFFT_PART
-      else
+    if (cube%parallel_in_domains) then
+      call dcube_to_mesh_parallel(cube, cf, mesh, pot)
+    else
+      if(mesh%parallel_in_domains) then
         call dcube_to_mesh(cube, cf, mesh, pot, local=.true.)
-      end if
-#endif
-    else !not parallel in domains
-      if (cube%fft_library == FFTLIB_PFFT) then
-        ! Serial execution with PFFT
-        call dcube_to_mesh_parallel(cube, cf, mesh, pot)
       else
         call dcube_to_mesh(cube, cf, mesh, pot)
       end if
