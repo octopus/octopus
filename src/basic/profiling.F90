@@ -103,6 +103,7 @@ module profiling_m
     integer                  :: count
     logical                  :: initialized = .false.
     logical                  :: active
+    logical                  :: exclude
   end type profile_t
 
   type profile_pointer_t
@@ -454,9 +455,11 @@ contains
   ! ---------------------------------------------------------
   !> Increment in counter and save entry time.
   !!
-  subroutine profiling_in(this, label)
-    type(profile_t), target, intent(inout) :: this
-    character(*), optional,  intent(in)    :: label 
+  subroutine profiling_in(this, label, exclude)
+    type(profile_t), target,    intent(inout) :: this
+    character(*),    optional,  intent(in)    :: label
+    logical,         optional,  intent(in)    :: exclude !< .true. The time spent here is also excluded from the parent total_time.
+                                                         !! Only use it for functions that otherwise would spoil statistics.
 
     real(8) :: now
 #ifdef HAVE_PAPI
@@ -495,6 +498,8 @@ contains
 
     prof_vars%current%p => this
     this%entry_time = now
+
+    this%exclude = optional_default(exclude, .false.)
 
   end subroutine profiling_in
 
@@ -537,6 +542,7 @@ contains
     if(associated(this%parent)) then 
       !remove the spent from the self time of our parent
       this%parent%self_time = this%parent%self_time - time_spent
+      if(this%exclude) this%parent%total_time = this%parent%total_time - time_spent
 
       ! add the operations to the parent
       this%parent%op_count_current = this%parent%op_count_current + this%op_count_current
