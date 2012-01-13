@@ -192,7 +192,8 @@ module hamiltonian_m
     HARTREE               = 1, &
     HARTREE_FOCK          = 3, &
     KOHN_SHAM_DFT         = 4, &
-    CLASSICAL             = 5
+    CLASSICAL             = 5, &
+    DFRT                  = 6
 
   type(profile_t), save :: prof_hamiltonian, prof_vlpsi, prof_kinetic_start, prof_kinetic_finish
 

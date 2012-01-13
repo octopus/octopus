@@ -260,7 +260,7 @@ contains
     type(geometry_t),  intent(in)    :: geo
 
     FLOAT :: excess_charge
-    integer :: nempty, ierr, il, ntot
+    integer :: nempty, ierr, il, ntot, theory_level
     integer, allocatable :: ob_k(:), ob_st(:), ob_d(:)
     character(len=256)   :: restart_dir
 
@@ -295,6 +295,18 @@ contains
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) st%priv%wfs_type = TYPE_CMPLX
+
+    ! Check if we use complex-scaled Hamiltonian (e.g. DFRT)
+    ! OK here I could not include the hamiltonian module has is compiled after the 
+    ! state module. However I just need the definition of the different theory levels from 
+    ! that module so I will just use the numbers associated to them, namely:
+    ! KOHN_SHAM_DFT = 4
+    ! DFRT = 6
+    call parse_integer(datasets_check('TheoryLevel'), 4, theory_level)
+    if(theory_level == 6) then 
+      st%priv%wfs_type = TYPE_CMPLX
+    end if 
+
 
     !%Variable ExcessCharge
     !%Type float
@@ -459,7 +471,7 @@ contains
       st%d%nspin = 4
       st%d%spin_channels = 2
     end select
-
+     
     if(ntot > 0) then
       if(ntot < st%nst) then
         message(1) = 'Error: TotalStates is smaller than the number of states required by the system.'
