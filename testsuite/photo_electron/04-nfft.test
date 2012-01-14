@@ -1,0 +1,16 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Photoelectron - NFFT
+Options    : nfft
+Programs   : octopus_mpi; octopus
+TestGroups : short-run
+Enabled    : Yes
+
+
+# BackAction method with nfft
+Processors : 2
+Input      : 04-nfft.02-ba.inp
+match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 16, 21) ;  6.088526531618E-04
+match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 24, 21) ;  9.046800729322E-04
+match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 30, 21) ;  2.812382682155E-05
+

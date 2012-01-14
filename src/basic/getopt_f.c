@@ -102,6 +102,9 @@ void print_config(){
 #ifdef HAVE_PFFT
   printf("pfft ");
 #endif
+#ifdef HAVE_NFFT
+  printf("nfft ");
+#endif
   printf("\n");
 }
 
