@@ -1,0 +1,82 @@
+# Here we reprodue ATI peaks as from 
+# U. Schwengelbeck and F. Faisal, Phys. Rev. A 50, 632 (1994).
+# PES is not exactly as in the reference since here we use a   
+# considerably shorter pulse of 5 cycles while is 20 in the 
+# paper.
+
+CalculationMode = td
+
+Dimensions = 1
+
+FromScratch = YES
+
+ExperimentalFeatures = yes
+
+#############################
+# 1D HYDROGEN HARD COULOMB
+#############################
+%Coordinates
+"H1D" | 0.0
+%
+
+%Species
+'H1D' | 1.0079400 | spec_user_defined | 1 | '-1.0/(abs(x)+0.002)'
+%
+
+%UserDefinedStates
+  1 | 1 | 1 | formula | "sqrt(2)*x*exp(-abs(x))" | normalize_no
+%
+
+OnlyUserDefinedInitialStates = YES
+
+BoxShape = sphere
+Radius = 20 
+Spacing = 0.2
+
+TheoryLevel = independent_particles
+
+##########################
+# LASER
+##########################
+omega = 1
+amplitude = 1*137
+tc=2*pi/omega
+Ntot=5
+nr=2 
+
+%TDExternalFields
+  vector_potential | 1 | 0 | 0 | omega | "trap"
+%
+
+%TDFunctions
+ "trap" | tdf_trapezoidal| amplitude | (Ntot-2*nr)*tc | Ntot*tc/2 | nr*tc
+%
+
+#############################
+# TD
+#############################
+dt = 0.008
+T = (Ntot+1)*tc
+
+TDTimeStep = dt
+TDMaximumIter = T/TDTimeStep
+
+#############################
+# PHOTOELECTRON
+#############################
+PhotoElectronSpectrum = pes_mask
+
+%PESMaskSize
+  10 | Radius
+%
+
+PESMaskMode = fullmask_mode
+PESMaskPlaneWaveProjection = nfft_map
+
+PESMaskNFFTEnlargeLev = 2
+
+NFFTGuruInterface = YES
+NFFTCutoff = 2
+NFFTOversamplig = 1.1
+NFFTPrecompute = NFFT_PRE_PSI
+
