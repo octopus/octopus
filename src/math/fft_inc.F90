@@ -25,7 +25,7 @@ subroutine X(fft_forward)(fft, in, out)
     R_TYPE,          intent(in)  :: in(:,:,:)
     CMPLX,           intent(out) :: out(:,:,:)
 
-    integer :: ii, jj, kk, slot
+    integer :: ii, jj, kk, slot, n1, n2, n3
     type(profile_t), save :: prof_fw
 
     PUSH_SUB(X(fft_forward))
@@ -40,13 +40,18 @@ subroutine X(fft_forward)(fft, in, out)
       kk = min(1, fft_array(slot)%rs_n(3))
       call fftw_execute_dft(fft_array(slot)%planf, in(ii,jj,kk), out(ii,jj,kk))
     case (FFTLIB_PFFT)
-      ASSERT(fft_array(slot)%X(rs_data)(1,1,1) == in(1,1,1))
-      ASSERT(fft_array(slot)%fs_data(1,1,1) == out(1,1,1))
-#ifdef R_TREAL
+!!      A SSERT(fft_array(slot)%X(rs_data)(1,1,1) == in(1,1,1))
+!!      A SSERT(fft_array(slot)%fs_data(1,1,1) == out(1,1,1))
+#ifdef R_TREAL 
+      
+      n1 = max(1, fft_array(slot)%rs_n(1))
+      n2 = max(1, fft_array(slot)%rs_n(2))
+      n3 = max(1, fft_array(slot)%rs_n(3))
+
       if (fft_array(slot)%rs_n(1) > fft_array(slot)%rs_n_global(1)) then
-        do kk = 1, fft_array(slot)%rs_n(3)
-          do jj = 1, fft_array(slot)%rs_n(2)
-            fft_array(slot)%drs_data(fft_array(slot)%rs_n(1), jj, kk) = M_ZERO
+        do kk = 1, n3
+          do jj = 1, n2
+            fft_array(slot)%drs_data(n1, jj, kk) = M_ZERO
           end do
         end do
       end if
@@ -92,8 +97,8 @@ subroutine X(fft_forward)(fft, in, out)
     case (FFTLIB_FFTW)
       call fftw_execute_dft(fft_array(slot)%planb, in(1,1,1), out(1,1,1))
     case (FFTLIB_PFFT)
-      ASSERT(fft_array(slot)%fs_data(1,1,1) == in(1,1,1))
-      ASSERT(fft_array(slot)%X(rs_data)(1,1,1) == out(1,1,1))
+!!      A SSERT(fft_array(slot)%fs_data(1,1,1) == in(1,1,1))
+!!      A SSERT(fft_array(slot)%X(rs_data)(1,1,1) == out(1,1,1))
 #ifdef HAVE_PFFT
       call pfft_execute(fft_array(slot)%pfft_planb)
 #endif

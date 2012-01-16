@@ -70,15 +70,25 @@ contains
     type(cube_t),          intent(in)    :: cube
     type(cube_function_t), intent(inout) :: cf
     
+    integer :: n1, n2, n3
+
     PUSH_SUB(cube_function_alloc_fs)
     
     ASSERT(.not.associated(cf%fs))
-    
+
+    n1 = max(1, cube%fs_n(1))
+    n2 = max(1, cube%fs_n(2))
+    n3 = max(1, cube%fs_n(3))
+
     if (cube%fft_library /= FFTLIB_PFFT) then
       SAFE_ALLOCATE(cf%fs(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
     else
-      ASSERT(associated(cube%fft))
-      cf%fs => cube%fft%fs_data(1:cube%fs_n(3), 1:cube%fs_n(1), 1:cube%fs_n(2))
+      ASSERT(associated(cube%fft))  
+      if(any(cube%fs_n(1:3) == 0)) then
+        cf%fs => cube%fft%fs_data(1:1,1:1,1:1)
+      else
+        cf%fs => cube%fft%fs_data(1:n3,1:n1,1:n2)
+      end if
     end if
     
     POP_SUB(cube_function_alloc_fs)

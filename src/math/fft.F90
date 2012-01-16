@@ -192,6 +192,7 @@ contains
     integer, optional, intent(out)   :: mpi_comm !< MPI communicator
 
     integer :: ii, jj, fft_dim, idir, column_size, row_size, alloc_size, ierror, n3
+    integer :: n_1, n_2, n_3
     logical :: optimize_
     character(len=100) :: str_tmp
 
@@ -308,8 +309,12 @@ contains
       ! Allocate memory. Note that PFFT may need extra memory space 
       ! and that in fourier space the function will be transposed
       if (type == FFT_REAL) then
-        n3 = ceiling(real(2*alloc_size)/real(fft_array(jj)%rs_n(1)*fft_array(jj)%rs_n(2)))
-        SAFE_ALLOCATE(fft_array(jj)%drs_data(fft_array(jj)%rs_n(1), fft_array(jj)%rs_n(2), n3))
+        n_1 = max(1, fft_array(jj)%rs_n(1))
+        n_2 = max(1, fft_array(jj)%rs_n(2))
+        n_3 = max(1, fft_array(jj)%rs_n(3))
+
+        n3 = ceiling(real(2*alloc_size)/real(n_1*n_2))
+        SAFE_ALLOCATE(fft_array(jj)%drs_data(n_1, n_2, n3))
 
         ! For real functions, PFFT increases the size of rs_n(1) by 1, such that rs_n(1) = nn(1) + 1.
         ! The rest of the code does not need to know about this.
@@ -318,8 +323,13 @@ contains
         n3 = ceiling(real(alloc_size)/real(fft_array(jj)%rs_n(1)*fft_array(jj)%rs_n(2)))
         SAFE_ALLOCATE(fft_array(jj)%zrs_data(fft_array(jj)%rs_n(1), fft_array(jj)%rs_n(2), n3))
       end if
-      n3 = ceiling(real(alloc_size)/real(fft_array(jj)%fs_n(3)*fft_array(jj)%fs_n(1)))
-      SAFE_ALLOCATE(fft_array(jj)%fs_data(fft_array(jj)%fs_n(3), fft_array(jj)%fs_n(1), n3))
+
+      n_1 = max(1, fft_array(jj)%fs_n(1))
+      n_2 = max(1, fft_array(jj)%fs_n(2))
+      n_3 = max(1, fft_array(jj)%fs_n(3))
+
+      n3 = ceiling(real(alloc_size)/real(n_3*n_1))
+      SAFE_ALLOCATE(fft_array(jj)%fs_data(n_3, n_1, n3))
     end select
 
     ! Prepare plans

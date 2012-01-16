@@ -79,7 +79,7 @@ contains
     integer :: ix, iy, iz, ixx(3), db(3), idim
     FLOAT :: temp(3), modg2
     FLOAT :: gg(3)
-    FLOAT, allocatable :: fft_coulb_FS(:,:,:)
+    FLOAT, allocatable :: fft_Coulb_FS(:,:,:)
     
     PUSH_SUB(poisson_fft_build_3d_3d)
 
@@ -329,7 +329,7 @@ contains
     type(cube_t), intent(inout) :: cube
     integer,      intent(in)    :: poisson_solver
 
-    integer :: ix, iy, iz, ixx(3), db(3), idim, lx, ly, lz
+    integer :: ix, iy, iz, ixx(3), db(3), idim, lx, ly, lz, n1, n2, n3
     FLOAT :: temp(3), modg2
     FLOAT :: gx, r_c, gg(3)
     FLOAT :: DELTA_R = CNST(1.0e-12)
@@ -354,20 +354,24 @@ contains
       end if
     end if
 
+    n1 = max(1, cube%fs_n(1))
+    n2 = max(1, cube%fs_n(2))
+    n3 = max(1, cube%fs_n(3))
+
     ! store the fourier transform of the Coulomb interaction
     ! store only the relevant part if PFFT is used
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n(1),1:cube%fs_n(2),1:cube%fs_n(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:n1,1:n2,1:n3))
     fft_Coulb_FS = M_ZERO
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
-    do lx = 1, cube%fs_n(1)
+    do lx = 1, n1
       ix = cube%fs_istart(1) + lx - 1
       ixx(1) = pad_feq(ix, db(1), .true.)
       gx = temp(1)*ixx(1)
-      do ly = 1, cube%fs_n(2)
+      do ly = 1, n2
         iy = cube%fs_istart(2) + ly - 1
         ixx(2) = pad_feq(iy, db(2), .true.)
-        do lz = 1, cube%fs_n(3)
+        do lz = 1, n3
           iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
             
