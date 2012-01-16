@@ -343,7 +343,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf)
 
   call profiling_in(prof_c2m, "CUBE_TO_MESH_PARALLEL")
 
-!   A SSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
+  ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
   if(mesh%parallel_in_domains) then
     SAFE_ALLOCATE(gmf(1:mesh%np_global))
   else
