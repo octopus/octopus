@@ -72,6 +72,7 @@ octopus_LIBS = \
 
 core_LIBS = \
 	$(octopus_LIBS)                               \
+	@LIBS_FFT@                                    \
 	@LIBS_SCALAPACK@ @LIBS_BLACS@                 \
 	@LIBS_LAPACK@ @LIBS_BLAS@                     \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
@@ -104,7 +105,7 @@ if COMPILE_NEWUOA
 endif
 
 # Since ETSF_IO depends on netCDF, it must be first in the list
-all_LIBS = $(core_LIBS) @LIBS_PFFT@ @LIBS_FFT@ @LIBS_SPARSKIT@ \
+all_LIBS = $(core_LIBS) @LIBS_PFFT@ @LIBS_SPARSKIT@ \
   @LIBS_ETSF_IO@ @LIBS_NETCDF@ $(external_LIBS) \
   @LIBS_LIBFM@ @LIBS_MPI@ @LIBS_ZOLTAN@ @LIBS_BERKELEYGW@
 
