@@ -40,8 +40,12 @@ subroutine X(fft_forward)(fft, in, out)
       kk = min(1, fft_array(slot)%rs_n(3))
       call fftw_execute_dft(fft_array(slot)%planf, in(ii,jj,kk), out(ii,jj,kk))
     case (FFTLIB_PFFT)
-      ASSERT(fft_array(slot)%X(rs_data)(1,1,1) == in(1,1,1))
-      ASSERT(fft_array(slot)%fs_data(1,1,1) == out(1,1,1))
+      if (all(fft_array(slot)%rs_n /= 0)) then
+        ASSERT(fft_array(slot)%X(rs_data)(1,1,1) == in(1,1,1))
+      end if
+      if (all(fft_array(slot)%fs_n /= 0)) then
+        ASSERT(fft_array(slot)%fs_data(1,1,1) == out(1,1,1))
+      end if
 #ifdef R_TREAL
       if (fft_array(slot)%rs_n(1) > fft_array(slot)%rs_n_global(1)) then
         do kk = 1, n3
@@ -92,8 +96,12 @@ subroutine X(fft_forward)(fft, in, out)
     case (FFTLIB_FFTW)
       call fftw_execute_dft(fft_array(slot)%planb, in(1,1,1), out(1,1,1))
     case (FFTLIB_PFFT)
-      ASSERT(fft_array(slot)%fs_data(1,1,1) == in(1,1,1))
-      ASSERT(fft_array(slot)%X(rs_data)(1,1,1) == out(1,1,1))
+      if (all(fft_array(slot)%fs_n /= 0)) then
+        ASSERT(fft_array(slot)%fs_data(1,1,1) == in(1,1,1))
+      end if  
+      if (all(fft_array(slot)%rs_n /= 0)) then
+        ASSERT(fft_array(slot)%X(rs_data)(1,1,1) == out(1,1,1))
+      end if
 #ifdef HAVE_PFFT
       call pfft_execute(fft_array(slot)%pfft_planb)
 #endif
