@@ -262,64 +262,81 @@ end subroutine X(cube_to_mesh)
 !> The next two subroutines convert a function between the normal
 !! mesh and the cube in parallel.
 ! ---------------------------------------------------------
-subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf)
+subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, map)
   type(mesh_t),          intent(in)    :: mesh
   R_TYPE,  target,       intent(in)    :: mf(:)  !< mf(mesh%np)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
+  type(mesh_cube_parallel_map_t), intent(in) :: map
 
   integer :: ip, ix, iy, iz
   integer :: im, ii, nn
   integer :: min_x, min_y, min_z, max_x, max_y, max_z
-  R_TYPE, pointer :: gmf(:)
+  R_TYPE, allocatable :: in(:), out(:)
 
   PUSH_SUB(X(mesh_to_cube_parallel))
   call profiling_in(prof_m2c, "MESH_TO_CUBE_PARALLEL")
 
   ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
+
   if (mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(gmf(1:mesh%np_global))
-#ifdef HAVE_MPI
-    call X(vec_allgather)(mesh%vp, gmf, mf)
-#endif
+    SAFE_ALLOCATE(in(map%m2c_nsend))
+    SAFE_ALLOCATE(out(map%m2c_nrec))
+
+    !Put the mesh function data in correct order for transfer
+    do ip = 1, map%m2c_nsend
+      in(ip) = mf(map%m2c_mf_order(ip))
+    end do
+
+    !Transfer the mesh function from the mesh partition to the cube partition
+    call X(partition_transfer)(map%m2c, in, out)
+
+    !Put the transfered mesh function in the cube
+    cf%X(rs) = R_TOTYPE(M_ZERO)
+    do ip = 1, map%m2c_nrec
+      ix = map%m2c_cf_order(ip, 1)
+      iy = map%m2c_cf_order(ip, 2)
+      iz = map%m2c_cf_order(ip, 3)
+      cf%X(rs)(ix, iy, iz) = out(ip)
+    end do
+
+    SAFE_DEALLOCATE_A(in)
+    SAFE_DEALLOCATE_A(out)
+
   else
-    gmf => mf
-  end if
-
-  ! Save the limit values
-  min_x = cube%rs_istart(1)
-  min_y = cube%rs_istart(2)
-  min_z = cube%rs_istart(3)
-  max_x = cube%rs_istart(1) + cube%rs_n(1)
-  max_y = cube%rs_istart(2) + cube%rs_n(2)
-  max_z = cube%rs_istart(3) + cube%rs_n(3)
+    ! Save the limit values
+    min_x = cube%rs_istart(1)
+    min_y = cube%rs_istart(2)
+    min_z = cube%rs_istart(3)
+    max_x = cube%rs_istart(1) + cube%rs_n(1)
+    max_y = cube%rs_istart(2) + cube%rs_n(2)
+    max_z = cube%rs_istart(3) + cube%rs_n(3)
   
-  ! Initialize to zero the input matrix
-  forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%X(rs)(ix, iy, iz) = M_ZERO
+    ! Initialize to zero the input matrix
+    forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%X(rs)(ix, iy, iz) = M_ZERO
 
-  ! Do the actual transform, only for the output values
-  do im = 1, mesh%cube_map%nmap
-    ip = mesh%cube_map%map(MCM_POINT, im)
-    nn = mesh%cube_map%map(MCM_COUNT, im)
+    ! Do the actual transform, only for the output values
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
     
-    ix = mesh%idx%lxyz(ip, 1) + cube%center(1)
-    if (ix >= min_x .and. ix < max_x) then
-      iy = mesh%idx%lxyz(ip, 2) + cube%center(2)
-      if (iy >= min_y .and. iy < max_y) then
-        iz = mesh%idx%lxyz(ip, 3) + cube%center(3)
-        do ii = 0, nn - 1
-          if (iz+ii >= min_z .and. iz+ii < max_z) then
-            cf%X(rs)(ix-min_x+1, iy-min_y+1, iz+ii-min_z+1) = gmf(ip + ii)
-          end if
-        end do
+      ix = mesh%idx%lxyz(ip, 1) + cube%center(1)
+      if (ix >= min_x .and. ix < max_x) then
+        iy = mesh%idx%lxyz(ip, 2) + cube%center(2)
+        if (iy >= min_y .and. iy < max_y) then
+          iz = mesh%idx%lxyz(ip, 3) + cube%center(3)
+          do ii = 0, nn - 1
+            if (iz+ii >= min_z .and. iz+ii < max_z) then
+              cf%X(rs)(ix-min_x+1, iy-min_y+1, iz+ii-min_z+1) = mf(ip + ii)
+            end if
+          end do
+        end if
       end if
-    end if
 
-  end do
-  
-  if(mesh%parallel_in_domains) then
-    SAFE_DEALLOCATE_P(gmf)
+    end do
+
   end if
+
 
   call profiling_count_transfers(mesh%np_global, mf(1))
   call profiling_out(prof_m2c)
@@ -328,63 +345,63 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf)
 end subroutine X(mesh_to_cube_parallel)
 
 ! ---------------------------------------------------------
-subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf)
+subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
   type(cube_t),          intent(in)  :: cube
   type(cube_function_t), intent(in)  :: cf
   type(mesh_t),          intent(in)  :: mesh
-  R_TYPE, target,        intent(out) :: mf(:)  !< mf(mesh%np)
+  R_TYPE,                intent(out) :: mf(:)  !< mf(mesh%np)
+  type(mesh_cube_parallel_map_t), intent(in) :: map
 
-  integer :: ip, im, ii, nn, ixyz(3), lxyz(3)
-  integer :: last, first
-  R_TYPE, pointer :: gmf(:)
+  integer :: ip, ix, iy, iz, im, ii, nn, ixyz(3)
   R_TYPE, allocatable :: gcf(:,:,:)
+  R_TYPE, allocatable :: in(:), out(:)
 
   PUSH_SUB(X(cube_to_mesh_parallel))
-
   call profiling_in(prof_c2m, "CUBE_TO_MESH_PARALLEL")
 
   ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
+
   if(mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(gmf(1:mesh%np_global))
+    SAFE_ALLOCATE(in(map%c2m_nsend))
+    SAFE_ALLOCATE(out(map%c2m_nrec))
+
+    !Put the cube function in the mesh in the correct order for transfer
+    do ip = 1, map%c2m_nsend
+      ix = map%c2m_cf_order(ip, 1)
+      iy = map%c2m_cf_order(ip, 2)
+      iz = map%c2m_cf_order(ip, 3)
+      in(ip) = cf%X(rs)(ix, iy, iz)
+    end do
+
+    !Transfer the mesh function from the cube partition to the mesh partition
+    call X(partition_transfer)(map%c2m, in, out)
+
+    !Put the transfered mesh function data in correct order
+    do ip = 1, map%c2m_nrec
+      mf(map%c2m_mf_order(ip)) = out(ip)
+    end do
+
+    SAFE_DEALLOCATE_A(in)
+    SAFE_DEALLOCATE_A(out)
+
   else
-    gmf => mf
-  end if
-  
-  !collect the data in all processes
-  SAFE_ALLOCATE(gcf(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
+    !collect the data in all processes
+    SAFE_ALLOCATE(gcf(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
 #ifdef HAVE_MPI
-  call X(cube_function_allgather)(cube, gcf, cf%X(rs))
+    call X(cube_function_allgather)(cube, gcf, cf%X(rs))
 #endif
 
-  ! cube to mesh
-  do im = 1, mesh%cube_map%nmap
-    ip = mesh%cube_map%map(MCM_POINT, im)
-    nn = mesh%cube_map%map(MCM_COUNT, im)
+    ! cube to mesh
+    do im = 1, mesh%cube_map%nmap
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
 
-    ixyz(1:3) = mesh%idx%lxyz(ip, 1:3) + cube%center(1:3)
-    do ii = 0, nn - 1
-      if (mpi_world%size == 1) then
-        gmf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
-      else
-        if (mesh%vp%part(ip+ii) == mesh%vp%partno) then
-          gmf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
-        end if
-      end if
+      ixyz(1:3) = mesh%idx%lxyz(ip, 1:3) + cube%center(1:3)
+
+      forall(ii = 0:nn - 1) mf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
     end do
-  end do
 
-  SAFE_DEALLOCATE_A(gcf)
-
-  !Rearrange the output matrix
-  if(mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
-    first = mesh%vp%xlocal(mesh%vp%partno)
-    last = mesh%vp%np_local(mesh%vp%partno)
-    do ii = 1, last
-      mf(ii) = gmf(mesh%vp%local(ii+first-1))
-    end do
-#endif
-    SAFE_DEALLOCATE_P(gmf)
+    SAFE_DEALLOCATE_A(gcf)
   end if
 
   call profiling_count_transfers(mesh%np_global, mf(1))

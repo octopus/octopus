@@ -31,6 +31,7 @@ module poisson_fft_m
   use loct_m
   use loct_math_m
   use math_m
+  use mesh_cube_parallel_map_m
   use mesh_function_m
   use mesh_m
   use messages_m
@@ -643,11 +644,12 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine poisson_fft(mesh, cube, pot, rho, average_to_zero)
+  subroutine poisson_fft(mesh, cube, pot, rho, mesh_cube_map, average_to_zero)
     type(mesh_t),      intent(in)  :: mesh
     type(cube_t),      intent(inout) :: cube
     FLOAT,             intent(out) :: pot(:)
     FLOAT,             intent(in)  :: rho(:)
+    type(mesh_cube_parallel_map_t), intent(in) :: mesh_cube_map
     logical, optional, intent(in)  :: average_to_zero
 
     logical :: average_to_zero_
@@ -665,7 +667,7 @@ contains
 
     ! put the density in the cube
     if (cube%parallel_in_domains) then
-      call dmesh_to_cube_parallel(mesh, rho, cube, cf)
+      call dmesh_to_cube_parallel(mesh, rho, cube, cf, mesh_cube_map)
     else
       if(mesh%parallel_in_domains) then
         call dmesh_to_cube(mesh, rho, cube, cf, local=.true.)
@@ -682,7 +684,7 @@ contains
     
     ! move the potential back to the mesh
     if (cube%parallel_in_domains) then
-      call dcube_to_mesh_parallel(cube, cf, mesh, pot)
+      call dcube_to_mesh_parallel(cube, cf, mesh, pot, mesh_cube_map)
     else
       if(mesh%parallel_in_domains) then
         call dcube_to_mesh(cube, cf, mesh, pot, local=.true.)

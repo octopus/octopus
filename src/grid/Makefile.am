@@ -42,6 +42,7 @@ libgrid_a_SOURCES =       \
 	io_function.F90         \
 	mesh_batch.F90          \
 	mesh_cube_map.F90       \
+	mesh_cube_parallel_map.F90 \
 	mesh.F90                \
 	mesh_function.F90       \
 	mesh_init.F90           \
@@ -98,7 +99,7 @@ depend:
 basins.o : basins.F90 par_vec.o index.o mesh.o 
 batch.o : batch.F90 batch_inc.F90
 boundaries.o : boundaries.F90 boundaries_inc.F90 subarray.o batch.o par_vec.o mesh.o
-cube_function.o : cube_function.F90 cube_function_inc.F90 mesh.o cube.o par_vec.o
+cube_function.o : cube_function.F90 cube_function_inc.F90 mesh_cube_parallel_map.o mesh.o cube.o par_vec.o
 cube.o : cube.F90 index.o par_vec.o
 curv_briggs.o : curv_briggs.F90  
 curv_gygi.o : curv_gygi.F90  
@@ -114,6 +115,7 @@ index.o : index.F90 hypercube.o
 io_function.o : io_function.F90 io_function_inc.F90 par_vec.o mesh.o mesh_function.o cube_function.o 
 mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o mesh_function.o
 mesh_cube_map.o : mesh_cube_map.F90 index.o partition_transfer.o cube.o
+mesh_cube_parallel_map.o : mesh_cube_parallel_map.F90 partition_transfer.o mesh.o cube.o
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o modelmb_1part.o
 mesh_init.o : mesh_init.F90 mesh.o par_vec.o stencil.o ob_grid.o partition.o partitioner.o mesh_partition.o mesh_cube_map.o
 mesh.o : mesh.F90 par_vec.o index.o curvilinear.o mesh_cube_map.o

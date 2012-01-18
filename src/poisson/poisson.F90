@@ -32,6 +32,7 @@ module poisson_m
   use loct_math_m
   use math_m
   use mesh_m
+  use mesh_cube_parallel_map_m
   use mesh_function_m
   use messages_m
   use mpi_m
@@ -107,6 +108,7 @@ module poisson_m
     type(derivatives_t), pointer :: der
     integer           :: method = -99
     type(cube_t)      :: cube
+    type(mesh_cube_parallel_map_t) :: mesh_cube_map
     type(mg_solver_t) :: mg
     FLOAT   :: poisson_soft_coulomb_param = M_ONE
     logical :: all_nodes_default
@@ -375,6 +377,9 @@ contains
     ! Create the cube
     if (need_cube) then
       call cube_init(this%cube, box, der%mesh%sb, fft_type=fft_type)
+      if (der%mesh%parallel_in_domains .and. this%cube%parallel_in_domains) then
+        call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)
+      end if
     end if
 
     select case(der%mesh%sb%dim)
@@ -395,26 +400,33 @@ contains
   subroutine poisson_end(this)
     type(poisson_t), intent(inout) :: this
 
+    logical :: has_cube
+
     PUSH_SUB(poisson_end)
 
-    select case(this%method)
+    has_cube = .false.
 
+    select case(this%method)
     case(POISSON_FFT_SPH,POISSON_FFT_CYL, POISSON_FFT_PLA, POISSON_FFT_NOCUT)
       call poisson_fft_end()
-      call cube_end(this%cube)
+      has_cube = .true.
+
     case(POISSON_FFT_CORRECTED)
       call poisson_fft_end()
       call poisson_corrections_end(this%corrector)
-      call cube_end(this%cube)
+      has_cube = .true.
+
     case(POISSON_CG_CORRECTED, POISSON_CG)
       call poisson_cg_end()
       call poisson_corrections_end(this%corrector)
 
     case(POISSON_MULTIGRID)
       call poisson_multigrid_end(this%mg)
+
     case(POISSON_ISF)
       call poisson_isf_end(this%isf_solver)
-      call cube_end(this%cube)
+      has_cube = .true.
+
     case(POISSON_SETE)
       call poisson_sete_end(this%sete_solver)
 
@@ -423,8 +435,16 @@ contains
     ! call poisson_direct_sum_end
     case(POISSON_FMM)
       call poisson_fmm_end(this%params_fmm)
+
     end select
     this%method = -99
+
+    if (has_cube) then
+      if (this%der%mesh%parallel_in_domains .and. this%cube%parallel_in_domains) then
+        call mesh_cube_parallel_map_end(this%mesh_cube_map)
+      end if
+      call cube_end(this%cube)
+    end if
 
     POP_SUB(poisson_end)
   end subroutine poisson_end
@@ -548,14 +568,14 @@ contains
       call poisson_multigrid_solver(this%mg, der, pot, rho)
 
     case(POISSON_FFT_SPH,POISSON_FFT_CYL,POISSON_FFT_PLA,POISSON_FFT_NOCUT)
-      call poisson_fft(der%mesh, this%cube, pot, rho)
+      call poisson_fft(der%mesh, this%cube, pot, rho, this%mesh_cube_map)
 
     case(POISSON_FFT_CORRECTED)
       SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
       SAFE_ALLOCATE(vh_correction(1:der%mesh%np_part))
 
       call correct_rho(this%corrector, der, rho, rho_corrected, vh_correction)
-      call poisson_fft(der%mesh, this%cube, pot, rho_corrected, average_to_zero = .true.)
+      call poisson_fft(der%mesh, this%cube, pot, rho_corrected, this%mesh_cube_map, average_to_zero = .true.)
 
       pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
       SAFE_DEALLOCATE_A(rho_corrected)
