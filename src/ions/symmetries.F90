@@ -116,6 +116,7 @@ contains
     type(symm_op_t) :: tmpop
     character(len=6) :: group_name
     character(len=30) :: group_elements
+    integer :: natoms
 
     interface
       subroutine symmetries_finite_init(atoms_count, typs, position, verbosity, point_group)
@@ -160,9 +161,10 @@ contains
 
       ! for the moment symmetries are only use for information,  so we compute them only on one node.
       if(mpi_grp_is_root(mpi_world)) then
+        natoms = max(1,geo%natoms)
 
-        SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
-        SAFE_ALLOCATE(typs(1:geo%natoms))
+        SAFE_ALLOCATE(position(1:3, natoms))
+        SAFE_ALLOCATE(typs(1:natoms))
 
         forall(iatom = 1:geo%natoms)
           position(1:3, iatom) = M_ZERO
