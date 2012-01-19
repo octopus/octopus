@@ -168,6 +168,7 @@ contains
 
     integer :: kpoints, dim, nst, ierr
     character(len=80) dir
+    FLOAT, pointer :: new_occ(:,:)
 
     PUSH_SUB(restart_look_and_read)
 
@@ -180,13 +181,19 @@ contains
       call messages_fatal(1)
     end if
 
+    ! Resize st%occ, retaining information there
+    SAFE_ALLOCATE(new_occ(1:nst, 1:st%d%nik))
+    new_occ(:,:) = M_ZERO
+    new_occ(1:min(nst, st%nst),:) = st%occ(1:min(nst, st%nst),:)
+    SAFE_DEALLOCATE_P(st%occ)
+    st%occ => new_occ
+
     ! FIXME: This wrong, one cannot just change the number of states
     ! without updating the internal structures.
     st%nst    = nst
     st%st_end = nst
     SAFE_DEALLOCATE_P(st%eigenval)
-    SAFE_DEALLOCATE_P(st%occ)
-
+    
     if (present(is_complex)) then
       if ( is_complex ) then
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
@@ -199,14 +206,12 @@ contains
     endif
 
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
-    SAFE_ALLOCATE(     st%occ(1:st%nst, 1:st%d%nik))
 
     if(st%d%ispin == SPINORS) then
       SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
       st%spin = M_ZERO
     end if
     st%eigenval = M_HUGE
-    st%occ      = M_ZERO
 
     ! load wavefunctions
     call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr, exact=exact)

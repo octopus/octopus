@@ -122,7 +122,7 @@ contains
     
     SAFE_DEALLOCATE_A(states_read)
 
-    message(1) = "Info:  Starting calculation of unoccupied states."
+    message(1) = "Info: Starting calculation of unoccupied states."
     call messages_info(1)
 
     ! reset this variable, so that the eigensolver passes through all states
@@ -181,6 +181,7 @@ contains
       type(states_t), intent(inout) :: st
 
       integer :: nus
+      FLOAT, pointer :: new_occ(:,:)
 
       PUSH_SUB(unocc_run.init_)
 
@@ -197,21 +198,25 @@ contains
         call messages_fatal(1)
       end if
 
+      ! Resize st%occ, retaining current values
+      SAFE_ALLOCATE(new_occ(1:st%nst + nus, 1:st%d%nik))
+      new_occ(1:st%nst,:) = st%occ(1:st%nst,:)
+      new_occ(st%nst+1:,:) = M_ZERO
+      SAFE_DEALLOCATE_P(st%occ)
+      st%occ => new_occ
+
       ! fix states: THIS IS NOT OK
       st%nst    = st%nst + nus
       st%st_end = st%nst
 
       SAFE_DEALLOCATE_P(st%eigenval)
-      SAFE_DEALLOCATE_P(st%occ)
       call states_allocate_wfns(st, mesh)
       SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
-      SAFE_ALLOCATE(st%occ(1:st%nst, 1:st%d%nik))
       if(st%d%ispin == SPINORS) then
         SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
         st%spin = M_ZERO
       end if
       st%eigenval = huge(st%eigenval)
-      st%occ      = M_ZERO
 
       ! now the eigensolver stuff
       call eigensolver_init(eigens, sys%gr, st)
