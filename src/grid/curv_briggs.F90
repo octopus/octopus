@@ -37,9 +37,7 @@ module curv_briggs_m
   public ::                     &
     curv_briggs_t,              &
     curv_briggs_init,           &
-    curv_briggs_init_from_dump, &
     curv_briggs_copy,           &
-    curv_briggs_dump,           &
     curv_briggs_chi2x,          &
     curv_briggs_jacobian_inv
 
@@ -68,24 +66,6 @@ contains
   end subroutine curv_briggs_init
 
   ! ---------------------------------------------------------
-  subroutine curv_briggs_init_from_dump(this, iunit)
-    type(curv_briggs_t), intent(inout) :: this
-    integer,             intent(in)    :: iunit
-    !
-    integer :: gb
-    !
-    PUSH_SUB(curv_briggs_init_from_dump)
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    read(iunit) this%L
-    read(iunit) this%beta
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    POP_SUB(curv_briggs_init_from_dump)
-    return
-  end subroutine curv_briggs_init_from_dump
- 
-  ! ---------------------------------------------------------
   subroutine curv_briggs_copy(this_out, this_in)
     type(curv_briggs_t), intent(inout) :: this_out
     type(curv_briggs_t), intent(in)    :: this_in
@@ -96,20 +76,6 @@ contains
     POP_SUB(curv_briggs_copy)
     return
   end subroutine curv_briggs_copy
-
-  ! ---------------------------------------------------------
-  subroutine curv_briggs_dump(this, iunit)
-    type(curv_briggs_t), intent(in) :: this
-    integer,             intent(in) :: iunit
-    !
-    PUSH_SUB(curv_briggs_dump)
-    write(iunit) GUARD_BITS
-    write(iunit) this%L
-    write(iunit) this%beta
-    write(iunit) GUARD_BITS
-    POP_SUB(curv_briggs_dump)
-    return
-  end subroutine curv_briggs_dump
 
   ! ---------------------------------------------------------
   subroutine curv_briggs_chi2x(sb, cv, chi, x)

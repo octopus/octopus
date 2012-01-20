@@ -46,9 +46,7 @@ module curv_modine_m
   public ::                     &
     curv_modine_t,              &
     curv_modine_init,           &
-    curv_modine_init_from_dump, &
     curv_modine_copy,           &
-    curv_modine_dump,           &
     curv_modine_end,            &
     curv_modine_chi2x,          &
     curv_modine_jacobian_inv
@@ -261,35 +259,6 @@ contains
   end subroutine curv_modine_init
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_init_from_dump(this, iunit)
-    type(curv_modine_t), intent(inout) :: this
-    integer,             intent(in)    :: iunit
-    !
-    integer :: gb, dim
-    !
-    PUSH_SUB(curv_modine_init_from_dump)
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    read(iunit) this%L
-    read(iunit) this%xbar
-    read(iunit) this%Jbar
-    read(iunit) this%natoms
-    SAFE_ALLOCATE(this%Jlocal(this%natoms))
-    read(iunit) this%Jlocal
-    SAFE_ALLOCATE(this%Jrange(this%natoms))
-    read(iunit) this%Jrange
-    read(iunit) dim
-    SAFE_ALLOCATE(this%chi_atoms(dim,this%natoms))
-    write(iunit) this%chi_atoms
-    SAFE_ALLOCATE(this%csi(dim,this%natoms))
-    write(iunit) this%csi
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    POP_SUB(curv_modine_init_from_dump)
-    return
-  end subroutine curv_modine_init_from_dump
- 
-  ! ---------------------------------------------------------
   subroutine curv_modine_copy(this_out, this_in)
     type(curv_modine_t), intent(inout) :: this_out
     type(curv_modine_t), intent(in)    :: this_in
@@ -306,31 +275,6 @@ contains
     POP_SUB(curv_modine_copy)
     return
   end subroutine curv_modine_copy
-
-  ! ---------------------------------------------------------
-  subroutine curv_modine_dump(this, iunit)
-    type(curv_modine_t), intent(in) :: this
-    integer,             intent(in) :: iunit
-    !
-    PUSH_SUB(curv_modine_dump)
-    write(iunit) GUARD_BITS
-    write(iunit) this%L
-    write(iunit) this%xbar
-    write(iunit) this%Jbar
-    write(iunit) this%natoms
-    ASSERT(associated(this%Jlocal))
-    write(iunit) this%Jlocal
-    ASSERT(associated(this%Jrange))
-    write(iunit) this%Jrange
-    ASSERT(associated(this%chi_atoms))
-    write(iunit) size(this%chi_atoms, dim=1)
-    write(iunit) this%chi_atoms
-    ASSERT(associated(this%csi))
-    write(iunit) this%csi
-    write(iunit) GUARD_BITS
-    POP_SUB(curv_modine_dump)
-    return
-  end subroutine curv_modine_dump
 
   ! ---------------------------------------------------------
   subroutine curv_modine_end(cv)

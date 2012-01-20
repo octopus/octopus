@@ -42,8 +42,6 @@ module curvilinear_m
   public ::                      &
     curvilinear_t,               &
     curvilinear_init,            &
-    curvilinear_init_from_dump,  &
-    curvilinear_dump,            &
     curvilinear_copy,            &
     curvilinear_end,             &
     curvilinear_chi2x,           &
@@ -120,52 +118,6 @@ contains
 
     POP_SUB(curvilinear_init)
   end subroutine curvilinear_init
-
-  ! -------------------------------------------------------------- 
-  subroutine curvilinear_init_from_dump(this, iunit)
-    type(curvilinear_t), intent(inout) :: this
-    integer,             intent(in)    :: iunit
-    !
-    integer :: gb
-    !
-    PUSH_SUB(curvilinear_init_from_dump)
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    read(iunit) this%method
-    select case(this%method)
-    case(CURV_METHOD_GYGI)
-      call curv_gygi_init_from_dump(this%gygi, iunit)
-    case(CURV_METHOD_BRIGGS)
-      call curv_briggs_init_from_dump(this%briggs, iunit)
-    case(CURV_METHOD_MODINE)
-      call curv_modine_init_from_dump(this%modine, iunit)
-    end select
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    POP_SUB(curvilinear_init_from_dump)
-    return
-  end subroutine curvilinear_init_from_dump
-
-  ! -------------------------------------------------------------- 
-  subroutine curvilinear_dump(this, iunit)
-    type(curvilinear_t), intent(in) :: this
-    integer,             intent(in) :: iunit
-    !
-    PUSH_SUB(curvilinear_dump)
-    write(iunit) GUARD_BITS
-    write(iunit) this%method
-    select case(this%method)
-    case(CURV_METHOD_GYGI)
-      call curv_gygi_dump(this%gygi, iunit)
-    case(CURV_METHOD_BRIGGS)
-      call curv_briggs_dump(this%briggs, iunit)
-    case(CURV_METHOD_MODINE)
-      call curv_modine_dump(this%modine, iunit)
-    end select
-    write(iunit) GUARD_BITS
-    POP_SUB(curvilinear_dump)
-    return
-  end subroutine curvilinear_dump
 
   ! -------------------------------------------------------------- 
   subroutine curvilinear_copy(this_out, this_in)
