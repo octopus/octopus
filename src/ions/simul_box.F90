@@ -49,9 +49,9 @@ module simul_box_m
     simul_box_t,                &
     simul_box_ob_info_t,        &
     simul_box_init,             &
-    simul_box_init_from_dump,   &
+    simul_box_lookup_init,      &
+    simul_box_interp_init,      &
     simul_box_init_from_file,   &
-    simul_box_dump,             &
     simul_box_write_to_file,    &
     simul_box_end,              &
     simul_box_write_info,       &
@@ -156,84 +156,6 @@ module simul_box_m
 contains
 
   !--------------------------------------------------------------
-  subroutine interp_init_from_dump(this, iunit)
-    type(interp_t), intent(inout) :: this
-    integer,        intent(in)    :: iunit
-    !
-    integer :: gb
-    !
-    PUSH_SUB(interp_init_from_dump)
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    read(iunit) this%nn, this%order
-    SAFE_ALLOCATE(this%ww(this%nn))
-    read(iunit) this%ww
-    SAFE_ALLOCATE(this%posi(this%nn))
-    read(iunit) this%posi
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    POP_SUB(interp_init_from_dump)
-    return
-  end subroutine interp_init_from_dump
-
-  !--------------------------------------------------------------
-  subroutine interp_dump(this, iunit)
-    type(interp_t), intent(in) :: this
-    integer,        intent(in) :: iunit
-    !
-    PUSH_SUB(interp_dump)
-    write(iunit) GUARD_BITS
-    write(iunit) this%nn, this%order
-    ASSERT(associated(this%ww))
-    write(iunit) this%ww
-    ASSERT(associated(this%posi))
-    write(iunit) this%posi
-    write(iunit) GUARD_BITS
-    POP_SUB(interp_dump)
-    return
-  end subroutine interp_dump
-
-  !--------------------------------------------------------------
-  subroutine multiresolution_init_from_dump(this, iunit)
-    type(multiresolution_t), intent(inout) :: this
-    integer,                 intent(in)    :: iunit
-    !
-    integer :: gb
-    !
-    PUSH_SUB(multiresolution_init_from_dump)
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    call interp_init_from_dump(this%interp, iunit)
-    read(iunit) this%num_areas
-    read(iunit) this%num_radii
-    SAFE_ALLOCATE(this%radius(this%num_radii))
-    read(iunit) this%radius
-    read(iunit) this%center
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    POP_SUB(multiresolution_init_from_dump)
-    return
-  end subroutine multiresolution_init_from_dump
-
-  !--------------------------------------------------------------
-  subroutine multiresolution_dump(this, iunit)
-    type(multiresolution_t), intent(in) :: this
-    integer,                 intent(in) :: iunit
-    !
-    PUSH_SUB(multiresolution_dump)
-    write(iunit) GUARD_BITS
-    call interp_dump(this%interp, iunit)
-    write(iunit) this%num_areas
-    write(iunit) this%num_radii
-    ASSERT(associated(this%radius))
-    write(iunit) this%radius
-    write(iunit) this%center
-    write(iunit) GUARD_BITS
-    POP_SUB(multiresolution_dump)
-    return
-  end subroutine multiresolution_dump
-
-  !--------------------------------------------------------------
   subroutine simul_box_init(sb, geo, space, transport_mode, lead_sb, lead_info)
     type(simul_box_t),                   intent(inout) :: sb
     type(geometry_t),                    intent(inout) :: geo
@@ -255,7 +177,7 @@ contains
 
     call read_misc()                       ! Miscellaneous stuff.
     call read_box()                        ! Parameters defining the simulation box.
-    call sb_lookup_init()
+    call simul_box_lookup_init(sb, geo)
     call read_box_offset()                 ! Parameters defining the offset of the origin.
     if(present(transport_mode)) then
       ASSERT(present(lead_sb) .and. present(lead_info))
@@ -285,9 +207,8 @@ contains
     !--------------------------------------------------------------
     subroutine read_misc()
 
-      integer              :: idir, irad, ii
+      integer              :: idir, irad, order
       type(block_t)        :: blk
-      FLOAT,   allocatable :: pos(:)
 
       PUSH_SUB(simul_box_init.read_misc)
 
@@ -394,24 +315,8 @@ contains
         !% The interpolation order in multiresolution approach. The default is 5.
         !%End
         call messages_obsolete_variable('MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
-        call parse_integer(datasets_check('MultiResolutionInterpolationOrder'), 5, sb%hr_area%interp%order)
-        if(sb%hr_area%interp%order .le. 0) then
-          message(1) = "The value for MultiResolutionInterpolationOrder must be > 0."
-          call messages_fatal(1)
-        end if
-
-        sb%hr_area%interp%nn = 2 * sb%hr_area%interp%order
-        SAFE_ALLOCATE(pos(1:sb%hr_area%interp%nn))
-        SAFE_ALLOCATE(sb%hr_area%interp%ww(1:sb%hr_area%interp%nn))
-        SAFE_ALLOCATE(sb%hr_area%interp%posi(1:sb%hr_area%interp%nn))
-        do ii = 1, sb%hr_area%interp%order
-          sb%hr_area%interp%posi(ii) = 1 + 2 * (ii - 1)
-          sb%hr_area%interp%posi(sb%hr_area%interp%order + ii) = -sb%hr_area%interp%posi(ii)
-          pos(ii) = sb%hr_area%interp%posi(ii)
-          pos(sb%hr_area%interp%order + ii) = -pos(ii)
-        end do
-        call interpolation_coefficients(sb%hr_area%interp%nn, pos, M_ZERO,sb%hr_area%interp%ww)
-        SAFE_DEALLOCATE_A(pos)
+        call parse_integer(datasets_check('MultiResolutionInterpolationOrder'), 5, order)
+        call simul_box_interp_init(sb, order)
 
         sb%mr_flag = .true.
       else
@@ -678,77 +583,60 @@ contains
       POP_SUB(simul_box_init.read_box_offset)
     end subroutine read_box_offset
 
-
-    ! ------------------------------------------------------------
-    subroutine sb_lookup_init()
-
-      FLOAT, allocatable :: pos(:, :)
-      integer :: iatom
-
-      PUSH_SUB(simul_box_init.sb_lookup_init)
-
-      SAFE_ALLOCATE(pos(1:sb%dim, 1:geo%natoms))
-
-      do iatom = 1, geo%natoms
-        pos(1:sb%dim, iatom) = geo%atom(iatom)%x(1:sb%dim)
-      end do
-
-      call lookup_init(sb%atom_lookup, sb%dim, geo%natoms, pos)
-
-      SAFE_DEALLOCATE_A(pos)
-      POP_SUB(simul_box_init.sb_lookup_init)
-    end subroutine sb_lookup_init
-
   end subroutine simul_box_init
 
-  !--------------------------------------------------------------
-  subroutine simul_box_init_from_dump(this, iunit)
+  ! ------------------------------------------------------------
+  subroutine simul_box_lookup_init(this, geo)
     type(simul_box_t), intent(inout) :: this
-    integer,           intent(in)    :: iunit
+    type(geometry_t),  intent(in)    :: geo
     !
-    integer :: gb
+    FLOAT, allocatable :: pos(:, :)
+    integer            :: iatom
     !
-    PUSH_SUB(simul_box_init_from_dump)
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    call symmetries_init_from_dump(this%symm, iunit)
-    read(iunit) this%box_shape
-    read(iunit) this%box_offset
-    read(iunit) this%rsize
-    read(iunit) this%xsize
-    read(iunit) this%lsize
-    call lookup_init_from_dump(this%atom_lookup, iunit)
-    ! to implement in the future
-    !call c_ptr_init_from_dump(this%image, iunit)
-    read(iunit) this%user_def
-    read(iunit) this%mr_flag
-    if(this%mr_flag)then
-      call multiresolution_init_from_dump(this%hr_area, iunit)
-    else
-      nullify(this%hr_area%radius)
-      nullify(this%hr_area%interp%ww)
-      nullify(this%hr_area%interp%posi)
-    end if
-    read(iunit) this%rlattice_primitive
-    read(iunit) this%rlattice
-    read(iunit) this%klattice_primitive
-    read(iunit) this%klattice
-    read(iunit) this%volume_element
-    read(iunit) this%rcell_volume
-    call kpoints_init_from_dump(this%kpoints, iunit)
-    read(iunit) this%fft_alpha
-    read(iunit) this%dim
-    read(iunit) this%periodic_dim
-    read(iunit) this%transport_dim
-#ifdef HAVE_GDLIB
-    read(iunit) this%image_size
-#endif
-    read(iunit) this%complex_boundaries
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    POP_SUB(simul_box_init_from_dump)
+    PUSH_SUB(simul_box_lookup_init)
+
+    SAFE_ALLOCATE(pos(this%dim,geo%natoms))
+
+    do iatom = 1, geo%natoms
+      pos(:,iatom) = geo%atom(iatom)%x(1:this%dim)
+    end do
+
+    call lookup_init(this%atom_lookup, this%dim, geo%natoms, pos)
+
+    SAFE_DEALLOCATE_A(pos)
+    POP_SUB(simul_box_lookup_init)
     return
-  end subroutine simul_box_init_from_dump
+  end subroutine simul_box_lookup_init
+
+  ! ------------------------------------------------------------
+  subroutine simul_box_interp_init(this, order)
+    type(simul_box_t), intent(inout) :: this
+    integer,           intent(in)    :: order
+    !
+    FLOAT, allocatable, dimension(:) :: pos
+    integer                          :: ii
+    !
+    PUSH_SUB(simul_box_interp_init)
+    this%hr_area%interp%order=order
+    if(this%hr_area%interp%order<=0) then
+      message(1) = "The value for MultiResolutionInterpolationOrder must be > 0."
+      call messages_fatal(1)
+    end if
+    this%hr_area%interp%nn=2*this%hr_area%interp%order
+    SAFE_ALLOCATE(pos(this%hr_area%interp%nn))
+    SAFE_ALLOCATE(this%hr_area%interp%ww(this%hr_area%interp%nn))
+    SAFE_ALLOCATE(this%hr_area%interp%posi(this%hr_area%interp%nn))
+    do ii = 1, this%hr_area%interp%order
+      this%hr_area%interp%posi(ii)=1+2*(ii-1)
+      this%hr_area%interp%posi(this%hr_area%interp%order+ii)=-this%hr_area%interp%posi(ii)
+      pos(ii)=this%hr_area%interp%posi(ii)
+      pos(this%hr_area%interp%order+ii)=-pos(ii)
+    end do
+    call interpolation_coefficients(this%hr_area%interp%nn, pos, M_ZERO, this%hr_area%interp%ww)
+    SAFE_DEALLOCATE_A(pos)
+    POP_SUB(simul_box_interp_init)
+    return
+  end subroutine simul_box_interp_init
 
   !--------------------------------------------------------------
   subroutine simul_box_build_lattice(sb, rlattice_primitive)
@@ -951,45 +839,6 @@ contains
 
     POP_SUB(reciprocal_lattice)
   end subroutine reciprocal_lattice
-
-  !--------------------------------------------------------------
-  subroutine simul_box_dump(this, iunit)
-    type(simul_box_t), intent(in) :: this
-    integer,           intent(in) :: iunit
-    !
-    PUSH_SUB(simul_box_dump)
-    write(iunit) GUARD_BITS
-    call symmetries_dump(this%symm, iunit)
-    write(iunit) this%box_shape
-    write(iunit) this%box_offset
-    write(iunit) this%rsize
-    write(iunit) this%xsize
-    write(iunit) this%lsize
-    call lookup_dump(this%atom_lookup, iunit)
-    ! to implement in the future.
-    !call c_ptr_dump(this%image, iunit)
-    write(iunit) this%user_def
-    write(iunit) this%mr_flag
-    if(this%mr_flag) call multiresolution_dump(this%hr_area, iunit)
-    write(iunit) this%rlattice_primitive
-    write(iunit) this%rlattice
-    write(iunit) this%klattice_primitive
-    write(iunit) this%klattice
-    write(iunit) this%volume_element
-    write(iunit) this%rcell_volume
-    call kpoints_dump(this%kpoints, iunit)
-    write(iunit) this%fft_alpha
-    write(iunit) this%dim
-    write(iunit) this%periodic_dim
-    write(iunit) this%transport_dim
-#ifdef HAVE_GDLIB
-    write(iunit) this%image_size
-#endif
-    write(iunit) this%complex_boundaries
-    write(iunit) GUARD_BITS
-    POP_SUB(simul_box_dump)
-    return
-  end subroutine simul_box_dump
 
   !--------------------------------------------------------------
   subroutine simul_box_end(sb)
