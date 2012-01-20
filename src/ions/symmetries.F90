@@ -37,8 +37,6 @@ module symmetries_m
   public ::                           &
        symmetries_t,                  &
        symmetries_init,               &
-       symmetries_init_from_dump,     &
-       symmetries_dump,               &
        symmetries_copy,               &
        symmetries_end,                &
        symmetries_number,             &
@@ -271,49 +269,6 @@ contains
 
     POP_SUB(symmetries_init)
   end subroutine symmetries_init
-
-  ! -------------------------------------------------------------------------------
-  subroutine symmetries_init_from_dump(this, iunit)
-    type(symmetries_t), intent(inout) :: this
-    integer,            intent(in)    :: iunit
-    !
-    integer :: i, j, gb
-    !
-    PUSH_SUB(symmetries_init_from_dump)
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    read(iunit) this%nops
-    SAFE_ALLOCATE(this%ops(this%nops))
-    do i=1, this%nops
-      call symm_op_init_from_dump(this%ops(i), iunit)
-    end do
-    read(iunit) this%breakdir
-    read(iunit) this%space_group
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    POP_SUB(symmetries_init_from_dump)
-    return
-  end subroutine symmetries_init_from_dump
-
-  ! -------------------------------------------------------------------------------
-  subroutine symmetries_dump(this, iunit)
-    type(symmetries_t), intent(in) :: this
-    integer,            intent(in) :: iunit
-    !
-    integer :: i
-    !
-    PUSH_SUB(symmetries_dump)
-    write(iunit) GUARD_BITS
-    write(iunit) this%nops
-    do i=1, this%nops
-      call symm_op_dump(this%ops(i), iunit)
-    end do
-    write(iunit) this%breakdir
-    write(iunit) this%space_group
-    write(iunit) GUARD_BITS
-    POP_SUB(symmetries_dump)
-    return
-  end subroutine symmetries_dump
 
   ! -------------------------------------------------------------------------------
   subroutine symmetries_copy(inp, outp)
