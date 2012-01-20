@@ -31,8 +31,6 @@ module space_m
   public ::                &
     space_t,               &
     space_init,            &
-    space_init_from_dump,  &
-    space_dump,            &
     space_copy,            &
     space_end,             &
     operator(==),          &
@@ -53,50 +51,29 @@ module space_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine space_init(this)
-    type(space_t), intent(out) :: this
-
-    !%Variable Dimensions
-    !%Type integer
-    !%Section System
-    !%Default 3
-    !%Description
-    !% <tt>Octopus</tt> can run in 1, 2 or 3 dimensions, depending on the value of this
-    !% variable. Note that not all input variables may be available in all cases.
-    !%End
-    call parse_integer(datasets_check('Dimensions'), 3, this%dim)
-    if( this%dim > MAX_DIM .or. this%dim < 1) call input_error('Dimensions')
+  subroutine space_init(this, dim)
+    type(space_t),     intent(inout) :: this
+    integer, optional, intent(in)    :: dim
+    !
+    if(present(dim))then
+      this%dim=dim
+    else
+      !%Variable Dimensions
+      !%Type integer
+      !%Section System
+      !%Default 3
+      !%Description
+      !% <tt>Octopus</tt> can run in 1, 2 or 3 dimensions, depending on the value of this
+      !% variable. Note that not all input variables may be available in all cases.
+      !%End
+      call parse_integer(datasets_check('Dimensions'), 3, this%dim)
+    end if
+    if((this%dim>MAX_DIM).or.(this%dim<1)) call input_error('Dimensions')
     return
   end subroutine space_init
 
   ! ---------------------------------------------------------
-  subroutine space_init_from_dump(this, iunit)
-    type(space_t), intent(inout) :: this
-    integer,       intent(in)    :: iunit
-    !
-    integer :: gb
-    !
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    read(iunit) this
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    return
-  end subroutine space_init_from_dump
-
-  ! ---------------------------------------------------------
-  subroutine space_dump(this, iunit)
-    type(space_t), intent(in) :: this
-    integer,       intent(in) :: iunit
-    !
-    write(iunit) GUARD_BITS
-    write(iunit) this
-    write(iunit) GUARD_BITS
-    return
-  end subroutine space_dump
-
-  ! ---------------------------------------------------------
-  subroutine space_copy(this_out, this_in)
+  elemental subroutine space_copy(this_out, this_in)
     type(space_t), intent(inout) :: this_out
     type(space_t), intent(in)    :: this_in
     !
@@ -127,7 +104,7 @@ contains
   end function space_not_equal
 
   ! ---------------------------------------------------------
-  subroutine space_end(this)
+  elemental subroutine space_end(this)
     type(space_t), intent(inout) :: this
     !
     this%dim=0
