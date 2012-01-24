@@ -57,9 +57,9 @@ module io_m
 contains
 
   ! ---------------------------------------------------------
-  ! If the argument defaults is present and set to true, then the routine
-  ! will not try to read anything from the inp file, but set everything
-  ! to the default values.
+  !> If the argument defaults is present and set to true, then the routine
+  !! will not try to read anything from the inp file, but set everything
+  !! to the default values.
   subroutine io_init(defaults)
     logical, optional, intent(in) :: defaults
 
@@ -154,8 +154,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! In this routine we should put all initializations of io
-  ! that require the current_label dataset.
+  !> In this routine we should put all initializations of io
+  !! that require the current_label dataset.
   subroutine io_init_datasets()
     character(len=256) :: node_hook
     logical :: file_exists, mpi_debug_hook
@@ -451,8 +451,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Prints a list of the connected logical units and the names of
-  ! the associated files
+  !> Prints a list of the connected logical units and the names of
+  !! the associated files
   ! ---------------------------------------------------------
   subroutine io_status(iunit)
     integer, intent(in) :: iunit
@@ -522,9 +522,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Given a path, it returns the extension (if it exists) of the file
-  ! (that is, the part of the name that comes after its last point)
-  ! If the filename does not have an extension, it returns the empty string.
+  !> Given a path, it returns the extension (if it exists) of the file
+  !! (that is, the part of the name that comes after its last point)
+  !! If the filename does not have an extension, it returns the empty string.
   character(len=8) function io_get_extension(path) result(ext)
     character(len = * ), intent(in)  :: path
     integer :: i, j
@@ -545,7 +545,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! create status file for asynchronous communication with GUI
+  !> create status file for asynchronous communication with GUI
   subroutine io_switch_status(status)
     character(len=*), intent(in) :: status
     
@@ -570,8 +570,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! check if debug mode or message flushing should be enabled or 
-  ! disabled on the fly
+  !> check if debug mode or message flushing should be enabled or 
+  !! disabled on the fly
   subroutine io_debug_on_the_fly()
 
     PUSH_SUB(io_debug_on_the_fly)
@@ -613,8 +613,8 @@ contains
   end subroutine io_debug_on_the_fly
 
   
-  ! Returns true if a file with name 'filename' exists
-  ! and issues a reminder.
+  !> Returns true if a file with name 'filename' exists
+  !! and issues a reminder.
   ! ---------------------------------------------------------
   logical function io_file_exists(filename, msg) result(file_exists)
     character(len=*), intent(in)  :: filename, msg

@@ -22,6 +22,7 @@
 module messages_m
   use datasets_m
   use global_m
+  use io_m
   use loct_m
   use mpi_m
   use parser_m
@@ -44,6 +45,7 @@ module messages_m
     messages_debug_newlines,    &
     delete_debug_trace,         &
     print_date,                 &
+    print_header,               &
     time_diff,                  &
     time_sum,                   &
     epoch_time_diff,            &
@@ -64,7 +66,7 @@ module messages_m
     messages_write
 
   integer, parameter :: max_lines = 20
-  character(len=256), dimension(max_lines), public :: message    ! to be output by fatal, warning
+  character(len=256), dimension(max_lines), public :: message    !< to be output by fatal, warning
   character(len=68),      parameter, public :: hyphens = &
     '--------------------------------------------------------------------'
   character(len=69),      parameter, public :: shyphens = '*'//hyphens
@@ -82,11 +84,11 @@ module messages_m
 
 
   ! ---------------------------------------------------------
-  ! Prints out to iunit a message in the form:
-  ! ["InputVariable" = value]
-  ! where "InputVariable" is given by var.
-  ! Since the variable can be integer, real, or logical, we
-  ! need a generic interface.
+  !> Prints out to iunit a message in the form:
+  !! ["InputVariable" = value]
+  !! where "InputVariable" is given by var.
+  !! Since the variable can be integer, real, or logical, we
+  !! need a generic interface.
   ! ---------------------------------------------------------
   interface messages_print_var_value
     module procedure messages_print_var_valuei
@@ -764,6 +766,123 @@ end subroutine messages_end
 
   end subroutine print_date
 
+  !> This subroutine prints the logo followed by information about 
+  !! the compilation and the system. It also prints the start time 
+  !! of the execution
+  ! ---------------------------------------------------------
+  subroutine print_header()
+    
+    character(len=256) :: sys_name
+    
+    ! Let us print our logo
+    if(mpi_grp_is_root(mpi_world)) then
+      call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
+    end if
+
+    ! Let us print the version
+    message(1) = ""
+    message(2) = str_center("Running octopus", 70)
+    message(3) = ""
+    call messages_info(3)
+
+    message(1) = &
+         "Version                : " // trim(conf%version)
+    message(2) = &
+         "Revision               : "// trim(conf%latest_svn)
+    message(3) = &
+         "Build time             : "// trim(conf%build_time)
+    call messages_info(3)
+
+    write(message(1), '(a, i1)') &
+         'Configuration options  : max-dim=', MAX_DIM
+!!$
+#ifdef HAVE_OPENMP
+    message(1) = trim(message(1))//' openmp'
+#endif
+#ifdef HAVE_MPI
+    message(1) = trim(message(1))//' mpi'
+#endif
+#ifdef HAVE_OPENCL
+    message(1) = trim(message(1))//' opencl'
+#endif
+#ifdef HAVE_M128D
+    message(1) = trim(message(1))//' sse2'
+#endif
+#ifdef HAVE_M256D
+    message(1) = trim(message(1))//' avx'
+#endif
+#ifdef HAVE_BLUE_GENE
+    message(1) = trim(message(1))//' bluegene'
+#endif
+
+    message(2) = &
+         'Optional libraries     :'
+#ifdef HAVE_MPI2
+    message(2) = trim(message(2))//' mpi2'
+#endif
+#ifdef HAVE_NETCDF
+    message(2) = trim(message(2))//' netcdf'
+#endif
+#ifdef HAVE_METIS
+    message(2) = trim(message(2))//' metis'
+#endif
+#ifdef HAVE_GDLIB
+    message(2) = trim(message(2))//' gdlib'
+#endif
+#ifdef HAVE_PAPI
+    message(2) = trim(message(2))//' papi'
+#endif
+#ifdef HAVE_SPARSKIT
+    message(2) = trim(message(2))//' sparskit'
+#endif
+#ifdef HAVE_ETSF_IO
+    message(2) = trim(message(2))//' etsf_io'
+#endif
+#ifdef HAVE_BERKELEYGW
+    message(2) = trim(message(2))//' berkeleygw'
+#endif
+#ifdef HAVE_PFFT
+    message(2) = trim(message(2))//' pfft'
+#endif
+#ifdef HAVE_NFFT
+    message(2) = trim(message(2))//' nfft'
+#endif
+#ifdef HAVE_SCALAPACK
+    message(2) = trim(message(2))//' scalapack'
+#endif
+#ifdef HAVE_LIBFM
+    message(2) = trim(message(2))//' libfm'
+#endif
+
+    message(3) = &
+         'Architecture           : '// TOSTRING(OCT_ARCH)
+    call messages_info(3)
+
+    message(1) = &
+         "C compiler             : "//trim(conf%cc)
+    message(2) = &
+         "C compiler flags       : "//trim(conf%cflags)
+    message(3) = &
+         "Fortran compiler       : "//trim(conf%fc)
+    message(4) = &
+         "Fortran compiler flags : "//trim(conf%fcflags)
+    call messages_info(4)
+
+    message(1) = ""
+    call messages_info(1)
+
+    ! Let us print where we are running
+    call loct_sysname(sys_name)
+    write(message(1), '(a)') str_center("The octopus is swimming in " // trim(sys_name), 70)
+    message(2) = ""
+    call messages_info(2)
+
+#if defined(HAVE_MPI)
+    call MPI_Barrier(mpi_world%comm, mpi_err)
+#endif
+
+    call print_date("Calculation started on ")
+  end subroutine print_header
 
   ! ---------------------------------------------------------
   subroutine epoch_time_diff(sec, usec)
@@ -777,8 +896,8 @@ end subroutine messages_end
 
 
   ! ---------------------------------------------------------
-  ! Computes t2 <- t2-t1. sec1,2 and usec1,2 are
-  ! seconds,microseconds of t1,2
+  !> Computes t2 <- t2-t1. sec1,2 and usec1,2 are
+  !! seconds,microseconds of t1,2
   subroutine time_diff(sec1, usec1, sec2, usec2)
     integer, intent(in)    :: sec1
     integer, intent(in)    :: usec1
@@ -805,8 +924,8 @@ end subroutine messages_end
 
 
   ! ---------------------------------------------------------
-  ! Computes t2 <- t1+t2. Parameters as in time_diff
-  ! Assert: t1,2 <= 0.
+  !> Computes t2 <- t1+t2. Parameters as in time_diff
+  !! Assert: t1,2 <= 0.
   subroutine time_sum(sec1, usec1, sec2, usec2)
     integer, intent(in)    :: sec1
     integer, intent(in)    :: usec1
