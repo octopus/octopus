@@ -132,6 +132,6 @@ comm.o : comm.F90 comm_inc.F90 mpi.o messages.o global.o profiling.o
 ialist.o : ialist.F90 global.o messages.o profiling.o
 iihash.o : iihash.F90 ialist.o global.o
 lookup.o : lookup.F90 global.o messages.o profiling.o
-utils.o : utils.F90 messages.o global.o unit.o unit_system.o
+utils.o : utils.F90 messages.o global.o unit.o unit_system.o string.o mpi.o loct.o
 
 space.o : space.F90 datasets.o parser.o messages.o
