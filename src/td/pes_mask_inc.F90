@@ -33,7 +33,8 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   FLOAT :: field(MAX_DIM)
   FLOAT :: DeltaE,MaxE,MaxDR, pCutOff
   FLOAT :: width 
-  integer :: dir, defaultMask,k1,k2,st1,st2
+  integer :: dir, defaultMask,k1,k2,st1,st2, optimize_parity(3)
+  logical :: optimize(3)
   FLOAT, allocatable  :: X1(:),X2(:),X3(:)  
 
   PUSH_SUB(PES_mask_init)
@@ -212,7 +213,11 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   if (mask%pw_map_how .ne.  PW_MAP_NFFT) then
 
     ! allocate FFTs in case they are not allocated yet
-    call fft_init(mask%fft,mask%ll,sb%dim,FFT_COMPLEX,FFTLIB_FFTW,optimize = .not.simul_box_is_periodic(sb))
+    optimize(1:sb%periodic_dim) = .false.
+    optimize(sb%periodic_dim+1:sb%dim) = .true.
+    optimize_parity(1:sb%periodic_dim) = 0
+    optimize_parity(sb%periodic_dim+1:sb%dim) = 1
+    call fft_init(mask%fft, mask%ll, sb%dim, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
 
   else
 #if defined(HAVE_NFFT) 

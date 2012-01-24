@@ -170,9 +170,9 @@ void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
 #include "varia.h"
 
 void FC_FUNC_(oct_fft_optimize, OCT_FFT_OPTIMIZE)
-  (int *n, int *p, int *par)
+  (int *n, int *par)
 {
-  fft_optimize(n, *p, *par);
+  fft_optimize(n, *par);
 }
 
 void FC_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)

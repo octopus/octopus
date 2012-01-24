@@ -74,8 +74,8 @@ contains
     integer, optional, intent(out) :: nn_out(3) !< What are the FFT dims?
                                                 !! If optimized, may be different from input nn.
 
-    integer :: mpi_comm, tmp_n(3), fft_type_
-    logical :: optimize
+    integer :: mpi_comm, tmp_n(3), fft_type_, ii, optimize_parity(3)
+    logical :: optimize(3)
 
     PUSH_SUB(cube_init)
 
@@ -126,12 +126,17 @@ contains
     else
       SAFE_ALLOCATE(cube%fft)
       tmp_n = nn
-      optimize = .not. simul_box_is_periodic(sb)
+
+      optimize(1:sb%periodic_dim) = .false.
+      optimize_parity(1:sb%periodic_dim) = 0
+      optimize(sb%periodic_dim+1:sb%dim) = .true.
+      optimize_parity(sb%periodic_dim+1:sb%dim) = 1
+
       if(present(dont_optimize)) then
         if(dont_optimize) optimize = .false.
       endif
-      call fft_init(cube%fft, tmp_n, sb%dim, fft_type_, cube%fft_library, &
-           mpi_comm=mpi_comm, optimize = optimize)
+      call fft_init(cube%fft, tmp_n, sb%dim, fft_type_, cube%fft_library, optimize, optimize_parity, &
+           mpi_comm=mpi_comm)
       if(present(nn_out)) nn_out(1:3) = tmp_n(1:3)
 
       call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &

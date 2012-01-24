@@ -935,7 +935,8 @@ contains
     integer, intent(in)           :: is, ie, niter
     CMPLX,   intent(in)           :: acc(:)
 
-    integer :: nn(3), j
+    integer :: nn(3), j, optimize_parity(3)
+    logical :: optimize(3)
 
     PUSH_SUB(spectrum_hsfunction_init)
 
@@ -949,8 +950,10 @@ contains
     func_ = M_z0
     func_ = acc
     nn(1:3) = (/ niter, 1, 1 /)
+    optimize(1:3) = .false.
+    optimize_parity(1:3) = -1
 
-    call fft_init(fft_handler, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize = .false.)
+    call fft_init(fft_handler, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
     call zfft_forward1(fft_handler, func_(0:niter-1), funcw_(0:niter-1))
     do j = 0, niter - 1
       funcw_(j) = -abs(funcw_(j))**2 * dt**2

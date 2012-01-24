@@ -320,9 +320,9 @@ module loct_math_m
   end interface
 
   interface loct_fft_optimize
-    subroutine oct_fft_optimize(n, p, par)
+    subroutine oct_fft_optimize(n, par)
       integer, intent(inout) :: n
-      integer, intent(in) :: p, par
+      integer, intent(in) :: par
     end subroutine oct_fft_optimize
   end interface
 

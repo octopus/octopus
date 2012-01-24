@@ -369,11 +369,12 @@ contains
     call nfft_guru_options(nfft)
 
 
+    ! Why do we not use the value of the flag optimize here?? -DAS
     if(nfft%guru) then 
 
       do ii = 1, nfft_dim
         my_nn(ii) = nn(ii)*nfft%sigma
-        call loct_fft_optimize(my_nn(ii), 7, 1)
+        call loct_fft_optimize(my_nn(ii), 1) ! ask for an odd number
       end do
       nfft_flags =  nfft_PRE_PHI_HUT  + nfft_MALLOC_X +nfft_MALLOC_F_HAT +&
                     nfft_MALLOC_F + nfft_FFTW_INIT + nfft_FFT_OUT_OF_PLACE

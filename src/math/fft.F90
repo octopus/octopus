@@ -120,11 +120,17 @@ contains
     !%Section Mesh::FFTs
     !%Description
     !% Should <tt>octopus</tt> optimize the FFT dimensions? 
-    !% This means that the cubic mesh to which FFTs are applied is not taken to be as small
+    !% This means that the mesh to which FFTs are applied is not taken to be as small
     !% as possible: some points may be added to each direction in order to get a "good number"
     !% for the performance of the FFT algorithm.
+    !% The best FFT grid dimensions are given by <math>2^a*3^b*5^c*7^d*11^e*13^f</math>
+    !% where <math>a,b,c,d</math> are arbitrary and <math>e,f</math> are 0 or 1.
+    !% (http://www.fftw.org/doc/Complex-DFTs.html)
     !% In some cases, namely when using
     !% the split-operator, or Suzuki-Trotter propagators, this option should be turned off.
+    !% For spatial FFTs in periodic directions, the grid is never optimized, but a warning will
+    !% be written if the number is not good, with a suggestion of a better one to use, so you
+    !% can try a different spacing if you want to get a good number.
     !%End
     call parse_logical(datasets_check('FFTOptimize'), .true., fft_optimize)
     do ii = 1, FFT_MAX
@@ -182,18 +188,19 @@ contains
   end subroutine fft_all_end
 
   ! ---------------------------------------------------------
-  subroutine fft_init(fft, nn, dim, type, library, mpi_comm, optimize)
+  subroutine fft_init(fft, nn, dim, type, library, optimize, optimize_parity, mpi_comm)
     type(fft_t),       intent(out)   :: fft      !< FFT data type
-    integer,           intent(inout) :: nn(1:3)  !< Size of the box
+    integer,           intent(inout) :: nn(3)    !< Size of the box
     integer,           intent(in)    :: dim      !< Dimensions of the box
     integer,           intent(in)    :: type     !< The type of the FFT; real or complex
     integer,           intent(in)    :: library  !< Library of FFT; PFFT or FFTW3
-    logical, optional, intent(in)    :: optimize !< Is optimize going to be used? Call FFT optimization functions
+    logical,           intent(in)    :: optimize(3) !< whether we should optimize grid in each direction
+    integer,           intent(in)    :: optimize_parity(3) !< choose optimized grid in each direction as
+                                                 !! even (0), odd (1), or whatever (negative).
     integer, optional, intent(out)   :: mpi_comm !< MPI communicator
 
     integer :: ii, jj, fft_dim, idir, column_size, row_size, alloc_size, ierror, n3
-    integer :: n_1, n_2, n_3
-    logical :: optimize_
+    integer :: n_1, n_2, n_3, nn_temp(3), parity
     character(len=100) :: str_tmp
 
     PUSH_SUB(fft_init)
@@ -217,24 +224,22 @@ contains
     if(fft_dim < 3 .and. library == FFTLIB_PFFT) &
          call messages_not_implemented('PFFT support for dimension < 3')
 
-    optimize_ = .true.
-    if(present(optimize)) optimize_ = optimize
+    ! FFT optimization
+    if(any(optimize_parity(1:fft_dim) > 1)) then
+      message(1) = "Internal error in fft_init: optimize_parity must be negative, 0, or 1."
+      call messages_fatal(1)
+    endif
 
+    nn_temp(1:fft_dim) = nn(1:fft_dim)
+    do ii = 1, fft_dim
+      call loct_fft_optimize(nn_temp(ii), optimize_parity(ii))
+      if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
+    end do
 
-    ! OLD: I leave it here because maybe I revert to this method later
-    ! optimize dimensions in non-periodic directions
-    !    do i = sb%periodic_dim + 1, sb%dim
-    !      if(nn(i) /= 1 .and. fft_optimize) &
-    !           call loct_fft_optimize(nn(i), 7, 1) ! always ask for an odd number
-    !    end do
-    ! NEW
-    ! optimize dimensions only for finite sys
-    optimize_ = optimize_ .and. fft_optimize
-    if(optimize_) then
-      do ii = 1, fft_dim
-        call loct_fft_optimize(nn(ii), 7, 1)
-      end do
-    end if
+    if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
+      write(message(1),'(a,9i6)') "Inefficient FFT grid. A better grid would be", nn_temp(1:fft_dim)
+      call messages_warning(1)
+    endif
 
     ! find out if fft has already been allocated
     jj = 0

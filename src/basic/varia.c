@@ -66,24 +66,26 @@ void sysname(char **c)
 
 
 /**
- * optimizes the order of the fft
- * p is the maximum prime allowed in n 
+ * Optimizes the order of the FFT grid.
+ * The best FFT grid dimensions are given by 2^a*3^b*5^c*7^d*11^e*13^f
+ * where a,b,c,d are arbitrary and e,f are 0 or 1.
+ * (http://www.fftw.org/doc/Complex-DFTs.html)
+ * par is the parity: the result must satisfy n % 2 == par, provided par >= 0.
  */
-void fft_optimize(int *n, int p, int par)
+void fft_optimize(int *n, int par)
 {
   if(*n <= 2) return;
 
   for(;; (*n)++){
     int i, n2;
 
-    if((par > 0) && (*n % 2 != par)) continue;
+    if((par >= 0) && (*n % 2 != par)) continue;
     
     n2 = *n;
-    for(i = 2; i<=n2; i++){
+    for(i = 2; i <= 13; i++){
       if(n2 % i == 0){
-	if(i > p) break;
-	n2 = n2 / i; 
-	i--; 
+	n2 = n2 / i;
+	if(i != 11 && i != 13) i--;
       }
     }
     if(i > n2) return;

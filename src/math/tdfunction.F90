@@ -508,7 +508,8 @@ module tdfunction_m
     FLOAT, intent(in), optional :: initval
     integer, intent(in), optional :: rep
 
-    integer :: n(3)
+    integer :: n(3), optimize_parity(3)
+    logical :: optimize(3)
     FLOAT :: bigt
 
     PUSH_SUB(tdf_init_numerical)
@@ -534,7 +535,9 @@ module tdfunction_m
     end if
 
     n(1:3) = (/ f%niter, 1, 1 /)
-    call fft_init(f%fft_handler, n, 3, FFT_REAL, FFTLIB_FFTW, optimize=.false.)
+    optimize(1:3) = .false.
+    optimize_parity(1:3) = -1
+    call fft_init(f%fft_handler, n, 1, FFT_REAL, FFTLIB_FFTW, optimize, optimize_parity)
 
     if(present(rep)) then
       select case(rep)

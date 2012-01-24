@@ -22,7 +22,7 @@
 #ifndef _VARIA_H
 #define _VARIA_H
 
-void fft_optimize(int *n, int p, int par);
+void fft_optimize(int *n, int par);
 void progress_bar(int actual, int max);
 void sysname(char **c);
 
