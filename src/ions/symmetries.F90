@@ -115,6 +115,7 @@ contains
     character(len=6) :: group_name
     character(len=30) :: group_elements
     integer :: natoms
+    logical :: any_non_spherical
 
     interface
       subroutine symmetries_finite_init(atoms_count, typs, position, verbosity, point_group)
@@ -149,7 +150,6 @@ contains
 
     if (periodic_dim == 0) then
 
-      
       ! we only have the identity
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
@@ -157,7 +157,7 @@ contains
       this%breakdir = M_ZERO
       this%space_group = 1
 
-      ! for the moment symmetries are only use for information,  so we compute them only on one node.
+      ! for the moment symmetries are only used for information, so we compute them only on one node.
       if(mpi_grp_is_root(mpi_world)) then
         natoms = max(1,geo%natoms)
 
@@ -183,13 +183,14 @@ contains
 
       SAFE_DEALLOCATE_A(position)
       SAFE_DEALLOCATE_A(typs)
+
     else
 
       lattice(1:3, 1:3) = rlattice(1:3, 1:3)
       SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
       SAFE_ALLOCATE(typs(1:geo%natoms))
 
-      ! we have to fix things for low-dimensionality systems
+      ! we have to fix things for low-dimensional systems
       do idir = dim + 1, 3
         lattice(idir, idir) = M_ONE
       end do
@@ -264,6 +265,18 @@ contains
       SAFE_DEALLOCATE_A(translation)
 
     end if
+
+    ! if someone cares, they could try to analyze the symmetry point group of the individual species too
+    any_non_spherical = .false.
+    do iatom = 1, geo%natoms
+      any_non_spherical = any_non_spherical .or. species_type(geo%atom(iatom)%spec) == SPEC_USDEF .or. &
+        species_type(geo%atom(iatom)%spec) == SPEC_JELLI_SLAB .or. species_type(geo%atom(iatom)%spec) == SPEC_CHARGE_DENSITY &
+        .or. species_type(geo%atom(iatom)%spec) == SPEC_FROM_FILE
+    enddo
+    if(any_non_spherical) then
+      message(1) = "Symmetries may be incorrect if non-spherically symmetric species are used."
+      call messages_warning(1)
+    endif
 
     call messages_print_stress(stdout)
 

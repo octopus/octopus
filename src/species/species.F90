@@ -243,7 +243,7 @@ contains
     !%Option spec_jelli_slab  4
     !% Jellium slab: the extra parameters are the charge of the jellium
     !% slab (an equal value of valence charge is assumed) and the thickness of
-    !% the sphere.
+    !% the slab. The slab extends across the simulation box in the <i>xy</i>-plane.
     !%Option spec_ps_psf  100
     !% Troullier Martins pseudopotential in <tt>SIESTA</tt> format: the pseudopotential will be
     !% read from a <tt>.psf</tt> file, either in the working
@@ -440,8 +440,8 @@ contains
     case(SPEC_JELLI_SLAB)
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a jellium slab.'
-        write(message(2),'(a,f11.6)')  '   Valence charge = ', spec%z_val
-        write(message(3),'(a,f11.6)')  '   thikness [a.u] = ', spec%jthick
+        write(message(2),'(a,f11.6)')  '   Valence charge  = ', spec%z_val
+        write(message(3),'(a,f11.6)')  '   Thickness [a.u] = ', spec%jthick
         !write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', ( M_THREE /( M_FOUR *M_PI ) &
         !& *spec%z_val /( *sb%lsize(1) *sb%lsize(2) ) )**(1.0/3.0) 
         call messages_info(4)
@@ -455,7 +455,7 @@ contains
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is an all-electron atom.'
         write(message(2),'(a,f11.6)')  '   Z = ', spec%z_val
-        write(message(3),'(a)')  '   Potential will be calculated solving Poisson equation'
+        write(message(3),'(a)')  '   Potential will be calculated solving the Poisson equation'
         write(message(4),'(a)')  '   for a delta density distribution.'
         call messages_info(4)
       end if

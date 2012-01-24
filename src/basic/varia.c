@@ -87,7 +87,8 @@ void fft_optimize(int *n, int par)
     n2 = *n;
     for(i = 2; i <= n2; i++){
       if(n2 % i == 0){
-	printf("%i ", i);
+        /* For debugging:    */
+	/* printf("%i ", i); */
 	if(i > 13) break;
 	n2 = n2 / i;
 	if(i != 11 && i != 13) i--;

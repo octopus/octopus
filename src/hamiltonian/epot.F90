@@ -845,7 +845,7 @@ contains
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
     if(simul_box_is_periodic(sb)) then
-      ! This depends on the area, but we should check if it's fully consistent.        
+      ! This depends on the area, but we should check if it is fully consistent.        
       spec => geo%atom(1)%spec
       if( species_type(spec).eq.SPEC_JELLI_SLAB ) then
         energy = energy +M_PI *species_zval(spec)**2 /( M_FOUR *sb%lsize(1) *sb%lsize(2) ) &
