@@ -77,6 +77,6 @@ PESMaskNFFTEnlargeLev = 2
 
 NFFTGuruInterface = YES
 NFFTCutoff = 2
-NFFTOversamplig = 1.1
+NFFTOversampling = 1.1
 NFFTPrecompute = NFFT_PRE_PSI
 

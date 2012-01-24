@@ -9,7 +9,7 @@ Enabled    : Yes
 # Mask method with bare fft
 Processors : 2
 Input      : 01-h1d_lin.01-mask.inp
-match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 31, 21) ;  6.528926269698E-04
+match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 31, 21) ;  1.810496419345E-04
 match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 47, 21) ;  1.080437170164E-05
 match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 85, 21) ;  1.162635131303E-06
 

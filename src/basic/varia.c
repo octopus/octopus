@@ -81,14 +81,21 @@ void fft_optimize(int *n, int par)
 
     if((par >= 0) && (*n % 2 != par)) continue;
     
+    /* For debugging:                 */
+    /* printf("%i has factors ", *n); */
+
     n2 = *n;
-    for(i = 2; i <= 13; i++){
+    for(i = 2; i <= n2; i++){
       if(n2 % i == 0){
+	printf("%i ", i);
+	if(i > 13) break;
 	n2 = n2 / i;
 	if(i != 11 && i != 13) i--;
       }
     }
-    if(i > n2) return;
+    /* For debugging: */
+    /* printf("\n");  */
+    if(n2 == 1) return;
   }
 }
 
