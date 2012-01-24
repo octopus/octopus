@@ -32,6 +32,7 @@ program octopus
   use profiling_m
   use run_m
   use string_m
+  use utils_m
   use varinfo_m
 
   implicit none

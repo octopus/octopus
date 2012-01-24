@@ -18,7 +18,7 @@
 !! $Id$
 
 #include "global.h"
-
+ 
   !> Some general things and nomenclature:
   !!
   !! - Points that are stored only on one node are
@@ -75,7 +75,6 @@
   !!
   !! ! Clean up.
   !! deallocate(ul, vl, wl)
-
 module par_vec_m
   use global_m
   use iihash_m
@@ -93,7 +92,7 @@ module par_vec_m
   private
 
   public ::                        &
-    pv_t
+    pv_t !< parallel information
 
 #if defined(HAVE_MPI)
   public ::                        &
@@ -120,7 +119,7 @@ module par_vec_m
     zvec_allgather,                &
     ivec_allgather
 #endif
-
+  !> Parallel information
   type pv_t
     ! The content of these members is node-dependent.
     integer          :: rank                 !< Our rank in the communicator.

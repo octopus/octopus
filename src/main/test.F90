@@ -40,6 +40,7 @@ program oct_test
   use system_m
   use unit_m
   use unit_system_m
+  use utils_m
   use varinfo_m
 
   implicit none
