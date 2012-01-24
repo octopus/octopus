@@ -127,8 +127,8 @@ contains
       SAFE_ALLOCATE(cube%fft)
       tmp_n = nn
 
-      optimize(1:sb%periodic_dim) = .false.
-      optimize_parity(1:sb%periodic_dim) = 0
+      optimize(1:3) = .false.
+      optimize_parity(1:3) = 0
       optimize(sb%periodic_dim+1:sb%dim) = .true.
       optimize_parity(sb%periodic_dim+1:sb%dim) = 1
 

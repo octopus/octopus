@@ -213,7 +213,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   if (mask%pw_map_how .ne.  PW_MAP_NFFT) then
 
     ! allocate FFTs in case they are not allocated yet
-    optimize(1:sb%periodic_dim) = .false.
+    optimize(1:3) = .false.
     optimize(sb%periodic_dim+1:sb%dim) = .true.
     optimize_parity(1:sb%periodic_dim) = 0
     optimize_parity(sb%periodic_dim+1:sb%dim) = 1
