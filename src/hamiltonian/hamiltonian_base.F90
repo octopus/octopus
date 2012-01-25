@@ -79,8 +79,8 @@ module hamiltonian_base_m
     hamiltonian_base_update,                   &
     projection_t
 
-  ! This object stores and applies an electromagnetic potential that
-  ! can be represented by different types of potentials.
+  !> This object stores and applies an electromagnetic potential that
+  !! can be represented by different types of potentials.
 
   type hamiltonian_base_t
     integer                           :: nspin
@@ -174,8 +174,8 @@ contains
 
   ! ---------------------------------------------------------- 
   !
-  ! This functions sets to zero all fields that are currently
-  ! allocated.
+  !> This functions sets to zero all fields that are currently
+  !! allocated.
   !
   subroutine hamiltonian_base_clear(this)
     type(hamiltonian_base_t), intent(inout) :: this
@@ -192,7 +192,7 @@ contains
 
 
   ! ---------------------------------------------------------------
-  ! This function ensures that the corresponding field is allocated.
+  !> This function ensures that the corresponding field is allocated.
   subroutine hamiltonian_base_allocate(this, mesh, field)
     type(hamiltonian_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
@@ -238,9 +238,9 @@ contains
 
   ! ---------------------------------------------------------- 
   !
-  ! If both a uniform and non-uniform vector potentials are allocated,
-  ! this function copies the uniform in the non-uniform one. In the
-  ! future it may perform other internal consistency operations.
+  !> If both a uniform and non-uniform vector potentials are allocated,
+  !! this function copies the uniform in the non-uniform one. In the
+  !! future it may perform other internal consistency operations.
   !
   subroutine hamiltonian_base_update(this, mesh)
     type(hamiltonian_base_t), intent(inout) :: this

@@ -74,44 +74,44 @@ module epot_m
     epot_precalc_local_potential
 
   integer, public, parameter :: &
-    CLASSICAL_NONE     = 0, & ! no classical charges
-    CLASSICAL_POINT    = 1, & ! classical charges treated as point charges
-    CLASSICAL_GAUSSIAN = 2    ! classical charges treated as Gaussian distributions
+    CLASSICAL_NONE     = 0, & !< no classical charges
+    CLASSICAL_POINT    = 1, & !< classical charges treated as point charges
+    CLASSICAL_GAUSSIAN = 2    !< classical charges treated as Gaussian distributions
      
   type epot_t
     ! Classical charges:
-    integer        :: classical_pot ! how to include the classical charges
-    FLOAT, pointer :: Vclassical(:) ! We use it to store the potential of the classical charges
+    integer        :: classical_pot !< how to include the classical charges
+    FLOAT, pointer :: Vclassical(:) !< We use it to store the potential of the classical charges
 
     ! Ions
-    FLOAT,             pointer :: vpsl(:)       ! the local part of the pseudopotentials
-                                                ! plus the potential from static electric fields
-    FLOAT,             pointer :: vpsl_lead(:, :) ! (np, NLEADS) the local part of the leads
-    type(projector_t), pointer :: proj(:)       ! non-local projectors
+    FLOAT,             pointer :: vpsl(:)       !< the local part of the pseudopotentials
+                                                !< plus the potential from static electric fields
+    FLOAT,             pointer :: vpsl_lead(:, :) !< (np, NLEADS) the local part of the leads
+    type(projector_t), pointer :: proj(:)       !< non-local projectors
     logical                    :: non_local
     integer                    :: natoms
 
     ! External e-m fields
-    integer                :: no_lasers            ! number of laser pulses used
-    type(laser_t), pointer :: lasers(:)            ! lasers stuff
-    FLOAT,         pointer :: E_field(:)           ! static electric field
-    FLOAT, pointer         :: v_static(:)          ! static scalar potential
-    FLOAT, pointer         :: B_field(:)           ! static magnetic field
-    FLOAT, pointer         :: A_static(:,:)        ! static vector potential
-    type(gauge_field_t)    :: gfield               ! the time-dependent gauge field
-    integer                :: reltype              ! type of relativistic correction to use
+    integer                :: no_lasers            !< number of laser pulses used
+    type(laser_t), pointer :: lasers(:)            !< lasers stuff
+    FLOAT,         pointer :: E_field(:)           !< static electric field
+    FLOAT, pointer         :: v_static(:)          !< static scalar potential
+    FLOAT, pointer         :: B_field(:)           !< static magnetic field
+    FLOAT, pointer         :: A_static(:,:)        !< static vector potential
+    type(gauge_field_t)    :: gfield               !< the time-dependent gauge field
+    integer                :: reltype              !< type of relativistic correction to use
 
-    ! The possible kick
+    !> The possible kick
     type(kick_t) :: kick
 
-    ! The gyromagnetic ratio (-2.0 for the electron, but different if we treat
-    ! *effective* electrons in a quantum dot. It affects the spin Zeeman term.)
+    !> The gyromagnetic ratio (-2.0 for the electron, but different if we treat
+    !! *effective* electrons in a quantum dot. It affects the spin Zeeman term.)
     FLOAT :: gyromagnetic_ratio
 
-    ! SO prefactor (1.0 = normal SO, 0.0 = no SO)
+    !> SO prefactor (1.0 = normal SO, 0.0 = no SO)
     FLOAT :: so_strength
     
-    ! the ion-ion energy and force
+    !> the ion-ion energy and force
     FLOAT          :: eii
     FLOAT, pointer :: fii(:, :)
     

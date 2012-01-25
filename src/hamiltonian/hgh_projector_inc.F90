@@ -19,13 +19,17 @@
 
 
 !------------------------------------------------------------------------------
-! X(hgh_project) calculates the action of the projector hgh_p on the psi 
-! wavefunction. The action of the projector hgh_p is defined as:
-! \hat{hgh_p} |psi> = \sum_{ij}^3 p%h(i,j) |hgh_p%p(:, i)><hgh_p%p(:, j)|psi>
-! The result is summed up to ppsi.
-!
-! If including the spin-orbit coupling there is another term to be added to ppsi:
-! \sum_{ij}^3\sum{k}^3 p%k(i,j) |hgh_p%p(:, i)><hgh_p%lp(:, k, j)|\hat{S(k)}|psi>
+!> X(hgh_project) calculates the action of the projector hgh_p on the psi 
+!! wavefunction. The action of the projector hgh_p is defined as:
+!! \f[
+!! \hat{hgh_p} |psi> = \sum_{ij}^3 p%h(i,j) |hgh_p%p(:, i)><hgh_p%p(:, j)|psi>
+!! \f]
+!! The result is summed up to ppsi.
+!!
+!! If including the spin-orbit coupling there is another term to be added to ppsi:
+!! \f[
+!! \sum_{ij}^3\sum{k}^3 p%k(i,j) |hgh_p%p(:, i)><hgh_p%lp(:, k, j)|\hat{S(k)}|psi>
+!! \f]
 !------------------------------------------------------------------------------
 subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
   type(mesh_t),          intent(in)    :: mesh
@@ -55,7 +59,7 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
 end subroutine X(hgh_project)
 
 !-------------------------------------------------------------------------
-! THREADSAFE
+!> THREADSAFE
 subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   type(mesh_t),          intent(in)  :: mesh
   type(submesh_t),       intent(in)  :: sm
@@ -106,7 +110,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 end subroutine X(hgh_project_bra)
 
 !-------------------------------------------------------------------------
-! THREADSAFE
+!> THREADSAFE
 subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi)
   type(mesh_t),          intent(in)    :: mesh
   type(submesh_t),       intent(in)    :: sm

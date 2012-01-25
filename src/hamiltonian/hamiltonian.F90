@@ -120,53 +120,53 @@ module hamiltonian_m
     type(states_dim_t)       :: d
     type(hamiltonian_base_t) :: hm_base
     type(energy_t), pointer  :: energy
-    FLOAT, pointer :: vhartree(:) ! Hartree potential
-    FLOAT, pointer :: vxc(:,:)    ! XC potential
-    FLOAT, pointer :: vhxc(:,:)   ! XC potential + Hartree potential + Berry potential
-    FLOAT, pointer :: axc(:,:,:)  ! XC vector potential divided by c
-    FLOAT, pointer :: vtau(:,:)   ! Derivative of e_XC w.r.t. tau
-    FLOAT, pointer :: vberry(:,:) ! Berry phase potential from external E_field
+    FLOAT, pointer :: vhartree(:) !< Hartree potential
+    FLOAT, pointer :: vxc(:,:)    !< XC potential
+    FLOAT, pointer :: vhxc(:,:)   !< XC potential + Hartree potential + Berry potential
+    FLOAT, pointer :: axc(:,:,:)  !< XC vector potential divided by c
+    FLOAT, pointer :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
+    FLOAT, pointer :: vberry(:,:) !< Berry phase potential from external E_field
 
-    FLOAT :: exx_coef ! how much of EXX to mix
+    FLOAT :: exx_coef !< how much of EXX to mix
 
-    ! The self-induced vector potential and magnetic field
+    !> The self-induced vector potential and magnetic field
     logical :: self_induced_magnetic
     FLOAT, pointer :: a_ind(:, :)
     FLOAT, pointer :: b_ind(:, :)
 
-    integer :: theory_level    ! copied from sys%ks
-    integer :: xc_family       ! copied from sys%ks
+    integer :: theory_level    !< copied from sys%ks
+    integer :: xc_family       !< copied from sys%ks
 
-    type(epot_t) :: ep         ! handles the external potential
+    type(epot_t) :: ep         !< handles the external potential
 
-    ! absorbing boundaries
+    !> absorbing boundaries
     logical :: adjoint
-    integer  :: ab                ! do we have absorbing boundaries?
-    FLOAT :: ab_width             ! width of the absorbing boundary
-    FLOAT :: ab_height            ! height of the absorbing boundary
-    FLOAT, pointer :: ab_pot(:)   ! where we store the ab potential
+    integer  :: ab                !< do we have absorbing boundaries?
+    FLOAT :: ab_width             !< width of the absorbing boundary
+    FLOAT :: ab_height            !< height of the absorbing boundary
+    FLOAT, pointer :: ab_pot(:)   !< where we store the ab potential
 
-    ! Open boundaries.
+    !> Open boundaries.
     type(lead_t) :: lead(2*MAX_DIM)
 
-    ! Spectral range
+    !> Spectral range
     FLOAT :: spectral_middle_point
     FLOAT :: spectral_half_span
 
-    ! Mass of the particle (in most cases, mass = 1, electron mass)
+    !> Mass of the particle (in most cases, mass = 1, electron mass)
     FLOAT :: mass
-    ! anisotropic scaling factor for the mass: different along x,y,z etc...
+    !> anisotropic scaling factor for the mass: different along x,y,z etc...
     FLOAT :: mass_scaling(MAX_DIM)
 
-    ! For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
+    !> For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t), pointer :: hf_st
 
-    ! There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
+    !> There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
     logical :: inh_term
     type(states_t) :: inh_st
 
-    ! There may also be a exchange-like term, similar to the one necessary for time-dependent
-    ! Hartree Fock, also useful only for the OCT equations
+    !> There may also be a exchange-like term, similar to the one necessary for time-dependent
+    !! Hartree Fock, also useful only for the OCT equations
     logical :: oct_exchange
     type(states_t), pointer :: oct_st
     FLOAT, pointer :: oct_fxc(:, :, :)
@@ -493,8 +493,8 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! Calculate the blocks of the lead Hamiltonian and read the potential
-    ! of the lead unit cell.
+    !> Calculate the blocks of the lead Hamiltonian and read the potential
+    !! of the lead unit cell.
     subroutine init_lead_h
       integer               :: np, np_part, il, ierr, pot, ix, iy, is
       integer               :: irow, diag, offdiag

@@ -79,16 +79,16 @@ module projector_m
   integer, parameter :: MAX_NPROJECTIONS = 24
   integer, parameter :: MAX_L = 5
 
-  ! The projector data type is intended to hold the local and
-  ! non-local parts of the pseudopotentials. The definition of the
-  ! action of a projector (which is done through the X(project)
-  ! subroutine) depends on the type of the projector. 
-
-  ! There are four different types: 
-  ! local -> a local operator
-  ! HGH projector -> "normal"
-  ! Kleinman-Bylander projector (no spin-orbit) -> "relativistic"
-  ! Kleinman-Bylander projector (includes spin-orbit)
+  !> The projector data type is intended to hold the local and
+  !! non-local parts of the pseudopotentials. The definition of the
+  !! action of a projector (which is done through the X(project)
+  !! subroutine) depends on the type of the projector. 
+  !!
+  !! There are four different types: 
+  !! - local -> a local operator
+  !! - HGH projector -> "normal"
+  !! - Kleinman-Bylander projector (no spin-orbit) -> "relativistic"
+  !! - Kleinman-Bylander projector (includes spin-orbit)
 
   type projector_t
     integer :: type = M_NONE
@@ -101,8 +101,8 @@ module projector_m
     type(submesh_t)  :: sphere
     
 
-    ! Only one of the following structures should be used at once
-    ! The one to be used depends on the value of type variable
+    !> Only one of the following structures should be used at once
+    !! The one to be used depends on the value of type variable
     type(hgh_projector_t), pointer :: hgh_p(:, :) => null()
     type(kb_projector_t),  pointer :: kb_p(:, :)  => null()
     type(rkb_projector_t), pointer :: rkb_p(:, :) => null()

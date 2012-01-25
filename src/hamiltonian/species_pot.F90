@@ -79,7 +79,7 @@ contains
     type(simul_box_t), intent(in)    :: sb
     type(atom_t),      intent(in)    :: atom
     integer,           intent(in)    :: spin_channels
-    FLOAT,             intent(inout) :: rho(:, :) ! (mesh%np, spin_channels)
+    FLOAT,             intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
 
     integer :: isp, ip, in_points, nn, icell
     FLOAT :: rr, x, pos(1:MAX_DIM)

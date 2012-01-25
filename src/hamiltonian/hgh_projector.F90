@@ -51,11 +51,11 @@ module hgh_projector_m
 
   type hgh_projector_t
     private
-    integer        :: n_s         ! number of points inside the sphere
-    FLOAT, pointer :: p(:, :)     ! projectors
-    FLOAT, pointer :: lp(:, :, :) ! angular momentum times projectors
-    FLOAT          :: h(3, 3)     ! parameters
-    FLOAT          :: k(3, 3)     ! spin-orbit parameters
+    integer        :: n_s         !< number of points inside the sphere
+    FLOAT, pointer :: p(:, :)     !< projectors
+    FLOAT, pointer :: lp(:, :, :) !< angular momentum times projectors
+    FLOAT          :: h(3, 3)     !< parameters
+    FLOAT          :: k(3, 3)     !< spin-orbit parameters
   end type hgh_projector_t
 
 

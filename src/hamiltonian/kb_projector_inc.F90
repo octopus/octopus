@@ -19,18 +19,20 @@
 
 
 !------------------------------------------------------------------------------
-! X(kb_project) calculates the action of the projector kb_p on the psi 
-! wavefunction. The action of the projector kb_p is defined as:
-! \hat{kb_p} |psi> = \sum_{i}^kb_p%n_c p%e(i) |kb_p%p(:, i)><kb_p%p(:, i)|psi>
-! The result is summed up to ppsi.
+!> X(kb_project) calculates the action of the projector kb_p on the psi 
+!! wavefunction. The action of the projector kb_p is defined as:
+!! \f[
+!! \hat{kb_p} |psi> = \sum_{i}^kb_p%n_c p%e(i) |kb_p%p(:, i)><kb_p%p(:, i)|psi>
+!! \f]
+!! The result is summed up to ppsi.
 !------------------------------------------------------------------------------
 subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   type(mesh_t),         intent(in)    :: mesh
   type(submesh_t),      intent(in)    :: sm
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim
-  R_TYPE,               intent(in)    :: psi(:, :)  ! psi(kb%n_s, dim)
-  R_TYPE,               intent(inout) :: ppsi(:, :) ! ppsi(kb%n_s, dim)
+  R_TYPE,               intent(in)    :: psi(:, :)  !< psi(kb%n_s, dim)
+  R_TYPE,               intent(inout) :: ppsi(:, :) !< ppsi(kb%n_s, dim)
 
   R_TYPE :: uvpsi(1:2)
 #if defined(HAVE_MPI)
@@ -55,7 +57,7 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
 end subroutine X(kb_project)
 
 !--------------------------------------------------------------
-! THREADSAFE
+!> THREADSAFE
 subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
   type(mesh_t),         intent(in)  :: mesh
   type(submesh_t),      intent(in)  :: sm
@@ -103,7 +105,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 end subroutine X(kb_project_bra)
 
 !--------------------------------------------------------------
-! THREADSAFE
+!> THREADSAFE
 subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
   type(mesh_t),         intent(in)    :: mesh
   type(submesh_t),      intent(in)    :: sm
@@ -135,7 +137,7 @@ subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
 end subroutine X(kb_project_ket)
 
 !--------------------------------------------------------------
-! THREADSAFE
+!> THREADSAFE
 subroutine X(kb_mul_energies)(kb_p, dim, uvpsi)
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim

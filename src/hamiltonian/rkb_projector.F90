@@ -45,12 +45,12 @@ module rkb_projector_m
        rkb_project_ket,    &
        rkb_projector_end
 
-  ! The rkb_projector data type holds the KB projectors build with total angular
-  ! momentum eigenfunctions.
-  ! This way the spin-orbit coupling in straighforwardly included.
+  !> The rkb_projector data type holds the KB projectors build with total angular
+  !! momentum eigenfunctions.
+  !! This way the spin-orbit coupling in straighforwardly included.
   type rkb_projector_t
     private
-    integer          :: n_s ! number of points inside the sphere
+    integer          :: n_s !< number of points inside the sphere
     CMPLX,   pointer :: bra(:, :)
     CMPLX,   pointer :: ket(:, :, :, :)
     FLOAT            :: f(2, 2, 2)
@@ -154,8 +154,8 @@ contains
     type(mesh_t),          intent(in)    :: mesh
     type(submesh_t),       intent(in)    :: sm
     type(rkb_projector_t), intent(in)    :: rkb_p
-    CMPLX,                 intent(in)    :: psi(:, :)  ! psi(kb%n_s, 2)
-    CMPLX,                 intent(inout) :: ppsi(:, :) ! ppsi(kb%n_s, 2)
+    CMPLX,                 intent(in)    :: psi(:, :)  !< psi(kb%n_s, 2)
+    CMPLX,                 intent(inout) :: ppsi(:, :) !< ppsi(kb%n_s, 2)
 
     CMPLX :: uvpsi(1:2, 1:2)
 #ifdef HAVE_MPI
@@ -179,7 +179,7 @@ contains
   end subroutine rkb_project
 
   ! ---------------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   subroutine rkb_project_bra(mesh, sm, rkb_p, psi, uvpsi)
     type(mesh_t),          intent(in)  :: mesh
     type(submesh_t),       intent(in)  :: sm
@@ -220,7 +220,7 @@ contains
   end subroutine rkb_project_bra
 
   ! ---------------------------------------------------------
-  ! THREADSAFE
+  !> THREADSAFE
   subroutine rkb_project_ket(rkb_p, uvpsi, psi)
     type(rkb_projector_t), intent(in)    :: rkb_p
     CMPLX,                 intent(in)    :: uvpsi(1:2, 1:2)

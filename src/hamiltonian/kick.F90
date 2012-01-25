@@ -63,23 +63,27 @@ module kick_m
 
 
   type kick_t
-    ! The time which the kick is applied (normally, this is zero)
+    !> The time which the kick is applied (normally, this is zero)
     FLOAT             :: time
-    ! The strength, and strength "mode".
+    !> The strength, and strength "mode".
     integer           :: delta_strength_mode
     FLOAT             :: delta_strength
-    ! In case we use a normal dipole kick:
+    !> In case we use a normal dipole kick:
     FLOAT             :: pol(MAX_DIM, MAX_DIM)
     integer           :: pol_dir
     integer           :: pol_equiv_axes
     FLOAT             :: wprime(MAX_DIM)
-    ! In case we have a general multipolar kick,
-    ! the form of this "kick" will be (atomic units):
-    ! V(\vec{r}) = sum_{i=1}^{n_multipoles} 
-    !                 weight(i) * (e^2 / a_0^(l+1)) * r^l(i) * Y_{l(i),m(i)} (\vec{r})
-    ! which has units of energy; if we include the time-dependence (delta function):
-    ! V(\vec{r}) = sum_{i=1}^{n_multipoles} 
-    !                 weight(i) * (\hbar / a_0^l) * r^l(i) * Y_{l(i),m(i)} (\vec{r}) * \delta(t)
+    !> In case we have a general multipolar kick,
+    !! the form of this "kick" will be (atomic units):
+    !! \f[
+    !! V(\vec{r}) = sum_{i=1}^{n_multipoles} 
+    !!                weight(i) * (e^2 / a_0^(l+1)) * r^l(i) * Y_{l(i),m(i)} (\vec{r})
+    !! \f]
+    !! which has units of energy; if we include the time-dependence (delta function):
+    !! \f[    
+    !! V(\vec{r}) = sum_{i=1}^{n_multipoles} 
+    !!                 weight(i) * (\hbar / a_0^l) * r^l(i) * Y_{l(i),m(i)} (\vec{r}) * \delta(t)
+    !! \f]
     integer           :: n_multipoles
     integer, pointer  :: l(:), m(:)
     FLOAT, pointer    :: weight(:)

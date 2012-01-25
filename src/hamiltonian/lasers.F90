@@ -71,11 +71,11 @@ module lasers_m
 
   type laser_t
     private
-    integer :: field      = E_FIELD_NONE  ! which kind of external field it is (electric, magnetic...)
-    CMPLX :: pol(MAX_DIM) = M_z0          ! the polarization of the laser.
-    type(tdf_t) :: f                      ! The envelope.
-    type(tdf_t) :: phi                    ! The phase
-    FLOAT :: omega        = M_ZERO        ! The main, "carrier", frequency.
+    integer :: field      = E_FIELD_NONE  !< which kind of external field it is (electric, magnetic...)
+    CMPLX :: pol(MAX_DIM) = M_z0          !< the polarization of the laser.
+    type(tdf_t) :: f                      !< The envelope.
+    type(tdf_t) :: phi                    !< The phase
+    FLOAT :: omega        = M_ZERO        !< The main, "carrier", frequency.
 
     FLOAT, pointer :: v(:)    => NULL()
     FLOAT, pointer :: a(:, :) => NULL()
@@ -191,11 +191,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! The td functions that describe the laser field are transformed to a 
-  ! "numerical" representation (i.e. time grid, values at this time grid).
-  ! The possible phase and carrier frequency are evaluated and put together with
-  ! the envelope, so that the envelope describes the full function (zero phase,
-  ! zero carrier frequency).
+  !> The td functions that describe the laser field are transformed to a 
+  !! "numerical" representation (i.e. time grid, values at this time grid).
+  !!
+  !! The possible phase and carrier frequency are evaluated and put together with
+  !! the envelope, so that the envelope describes the full function (zero phase,
+  !! zero carrier frequency).
   ! ---------------------------------------------------------
   subroutine laser_to_numerical_all(laser, dt, max_iter, omegamax)
     type(laser_t), intent(inout)  :: laser
@@ -225,8 +226,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! The td functions that describe the laser field are transformed to a 
-  ! "numerical" representation (i.e. time grid, values at this time grid).
+  !> The td functions that describe the laser field are transformed to a 
+  !! "numerical" representation (i.e. time grid, values at this time grid).
   ! ---------------------------------------------------------
   subroutine laser_to_numerical(laser, dt, max_iter, omegamax)
     type(laser_t), intent(inout)  :: laser

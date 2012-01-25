@@ -44,13 +44,14 @@ module berry_m
 contains
 
   ! ---------------------------------------------------------
-  ! Uses the single-point Berry`s phase method to calculate dipole moment in a periodic system
-  ! This is only accurate in the limit of a large supercell.
-  ! It is implemented only for an orthogonal unit cell.
-  ! mu = - eL/2*pi Im ln <Psi|exp(-i(2*pi/L)x)|Psi>
-  ! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
-  ! Single-point Berry`s phase method for dipole should not be used when there is more than one k-point.
-  ! in this case, finite differences should be used to construct derivatives with respect to k
+  !> Uses the single-point Berry`s phase method to calculate dipole moment in a periodic system
+  !!
+  !! This is only accurate in the limit of a large supercell.
+  !! It is implemented only for an orthogonal unit cell.
+  !! mu = - eL/2*pi Im ln <Psi|exp(-i(2*pi/L)x)|Psi>
+  !! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
+  !! Single-point Berry`s phase method for dipole should not be used when there is more than one k-point.
+  !! in this case, finite differences should be used to construct derivatives with respect to k
   FLOAT function berry_dipole(st, mesh, dir) result(dipole)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh
@@ -74,13 +75,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Uses the single-point Berry`s phase method to calculate dipole moment in a periodic system
-  ! This is only accurate in the limit of a large supercell.
-  ! It is implemented only for an orthogonal unit cell.
-  ! mu = - eL/2*pi Im ln <Psi|exp(-i(2*pi/L)x)|Psi>
-  ! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
-  ! Single-point Berry`s phase method for dipole should not be used when there is more than one k-point.
-  ! in this case, finite differences should be used to construct derivatives with respect to k
+  !> Uses the single-point Berry`s phase method to calculate dipole moment in a periodic system
+  !!
+  !! This is only accurate in the limit of a large supercell.
+  !! It is implemented only for an orthogonal unit cell.
+  !! mu = - eL/2*pi Im ln <Psi|exp(-i(2*pi/L)x)|Psi>
+  !! E Yaschenko, L Fu, L Resca, R Resta, Phys. Rev. B 58, 1222-1229 (1998)
+  !! Single-point Berry`s phase method for dipole should not be used when there is more than one k-point.
+  !! in this case, finite differences should be used to construct derivatives with respect to k
   CMPLX function berry_phase_det(st, mesh, dir, ik) result(det)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh
@@ -143,9 +145,10 @@ contains
 
  
   ! ---------------------------------------------------------
-  ! local potential for electric enthalpy of uniform field in single-point Berry phase
-  ! P Umari et al., Phys Rev Lett 95, 207602 (2005) eqs (3), (7)
-  ! E * (e L / 2 pi) Im e^(i 2 pi r / L) / z  
+  !> local potential for electric enthalpy of uniform field in single-point Berry phase
+  !!
+  !! P Umari et al., Phys Rev Lett 95, 207602 (2005) eqs (3), (7)
+  !! E * (e L / 2 pi) Im e^(i 2 pi r / L) / z  
   subroutine berry_potential(st, mesh, E_field, pot)
     type(states_t), intent(in)  :: st
     type(mesh_t),   intent(in)  :: mesh

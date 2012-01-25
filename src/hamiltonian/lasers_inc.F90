@@ -22,8 +22,8 @@ subroutine X(vlaser_operator_quadratic) (laser, der, std, psi, hpsi)
   type(laser_t),       intent(in)    :: laser
   type(derivatives_t), intent(in)    :: der
   type(states_dim_t),  intent(in)    :: std
-  R_TYPE,              intent(inout) :: psi(:,:)  ! psi(der%mesh%np_part, h%d%dim)
-  R_TYPE,              intent(inout) :: hpsi(:,:) ! hpsi(der%mesh%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: psi(:,:)  !< psi(der%mesh%np_part, h%d%dim)
+  R_TYPE,              intent(inout) :: hpsi(:,:) !< hpsi(der%mesh%np_part, h%d%dim)
 
   integer :: ip
   logical :: vector_potential, magnetic_field

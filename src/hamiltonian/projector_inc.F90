@@ -18,15 +18,15 @@
 !! $Id$
 
 !------------------------------------------------------------------------------
-! X(project_psi) calculates the action of a projector on the psi wavefunction.
-! The result is summed up to ppsi
+!> X(project_psi) calculates the action of a projector on the psi wavefunction.
+!! The result is summed up to ppsi
 subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: pj(:)
   integer,           intent(in)    :: npj
   integer,           intent(in)    :: dim
-  R_TYPE,            intent(in)    :: psi(:, :)   ! psi(1:mesh%np, dim)
-  R_TYPE,            intent(inout) :: ppsi(:, :)  ! ppsi(1:mesh%np, dim)
+  R_TYPE,            intent(in)    :: psi(:, :)   !< psi(1:mesh%np, dim)
+  R_TYPE,            intent(inout) :: ppsi(:, :)  !< ppsi(1:mesh%np, dim)
   integer,           intent(in)    :: ik
 
   type(batch_t) :: psib, ppsib
@@ -48,6 +48,14 @@ end subroutine X(project_psi)
 
 
 !------------------------------------------------------------------------------
+!> To optimize the application of the non-local operator in parallel,
+!! the projectors are applied in steps. 
+!!
+!! First the <p|psi> is
+!! calculated for all projectors and the result is stored on an array
+!! (reduce_buffer). Then the array is reduced (as it is contiguous
+!! only one reduction is required). Finally |ppsi> += |p><p|psi> is
+!! calculated.
 subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: pj(:)
@@ -65,13 +73,6 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   PUSH_SUB(X(project_psi_batch))
   call profiling_in(prof, "VNLPSI")
-
-  ! To optimize the application of the non-local operator in parallel,
-  ! the projectors are applied in steps. First the <p|psi> is
-  ! calculated for all projectors and the result is stored on an array
-  ! (reduce_buffer). Then the array is reduced (as it is contiguous
-  ! only one reduction is required). Finally |ppsi> += |p><p|psi> is
-  ! calculated.
 
   ! generate the reduce buffer and related structures
   SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L, 1:psib%nst))
@@ -232,7 +233,7 @@ end subroutine X(project_psi_batch)
 
 
 !------------------------------------------------------------------------------
-! X(projector_matrix_element) calculates <psia|projector|psib>
+!> X(projector_matrix_element) calculates <psia|projector|psib>
 R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
   type(projector_t), intent(in)    :: pj
   integer,           intent(in)    :: dim
@@ -339,7 +340,7 @@ end subroutine X(project_sphere)
 
 
 !------------------------------------------------------------------------------
-!This function calculates |cpsi> += [x, V_nl] |psi>
+!> This function calculates |cpsi> += [x, V_nl] |psi>
 subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
   type(projector_t),     intent(in)     :: pj
   type(grid_t),          intent(in)     :: gr

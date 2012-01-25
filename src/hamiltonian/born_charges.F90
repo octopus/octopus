@@ -42,10 +42,10 @@ module born_charges_m
     out_Born_charges
 
   type Born_charges_t
-    CMPLX, pointer :: charge(:, :, :)    ! i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
-    CMPLX :: sum_ideal(MAX_DIM, MAX_DIM) ! the sum of Born charges according to acoustic sum rule 
-    CMPLX :: delta(MAX_DIM, MAX_DIM)     ! discrepancy of sum of Born charge tensors from sum rule
-    logical :: correct                   ! correct according to sum rule?
+    CMPLX, pointer :: charge(:, :, :)    !< i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
+    CMPLX :: sum_ideal(MAX_DIM, MAX_DIM) !< the sum of Born charges according to acoustic sum rule 
+    CMPLX :: delta(MAX_DIM, MAX_DIM)     !< discrepancy of sum of Born charge tensors from sum rule
+    logical :: correct                   !< correct according to sum rule?
   end type Born_charges_t
 
   contains
@@ -98,8 +98,8 @@ module born_charges_m
   end subroutine Born_charges_end
 
   ! ---------------------------------------------------------
-  ! The sum over atoms of a given tensor component of the Born charges
-  !  should be Z delta_ij to satisfy the acoustic sum rule, where Z is total charge of system
+  !> The sum over atoms of a given tensor component of the Born charges
+  !!  should be Z delta_ij to satisfy the acoustic sum rule, where Z is total charge of system
   subroutine correct_Born_charges(this, geo, dim)
     type(Born_charges_t), intent(inout) :: this
     type(geometry_t),     intent(in)    :: geo

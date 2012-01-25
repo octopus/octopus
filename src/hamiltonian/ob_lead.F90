@@ -52,8 +52,8 @@ module ob_lead_m
 contains
 
   ! ---------------------------------------------------------
-  ! Calculate the diagonal block matrix, i.e. the Hamiltonian for
-  ! entries contained in the interface region.
+  !> Calculate the diagonal block matrix, i.e. the Hamiltonian for
+  !! entries contained in the interface region.
   subroutine lead_diag(lapl, vks, intf, diag)
     type(nl_operator_t), intent(in)  :: lapl
     FLOAT,               intent(in)  :: vks(:)
@@ -113,9 +113,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Calculate the off-diagonal block matrix, i.e. the Hamiltonian for
-  ! entries not contained in the interface region, which is the matrix
-  ! V^T_\alpha or H_{C\alpha}.
+  !> Calculate the off-diagonal block matrix, i.e. the Hamiltonian for
+  !! entries not contained in the interface region, which is the matrix
+  !! \f$V^T_\alpha\f$ or \f$H_{C\alpha}\f$.
   subroutine lead_offdiag(lapl, intf, offdiag)
     type(nl_operator_t), intent(in)  :: lapl
     type(interface_t),   intent(in)  :: intf
@@ -205,8 +205,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Calculate res <- offdiag^T matrix offdiag with all matrices np x np.
-  ! If matrix is symmetric, so is the result.
+  !> Calculate res <- offdiag^T matrix offdiag with all matrices np x np.
+  !! If matrix is symmetric, so is the result.
   subroutine apply_coupling(matrix, offdiag, res, np, il)
     CMPLX,   intent(in)    :: matrix(np, np)
     CMPLX,   intent(in)    :: offdiag(np, np)
@@ -229,7 +229,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Calculates the time-dependent lead potential from formula string.
+  !> Calculates the time-dependent lead potential from formula string.
   subroutine lead_td_pot(td_pot, formula, n_steps, tstep)
     integer,          intent(in)  :: n_steps
     FLOAT,            intent(out) :: td_pot(0:n_steps+1, 1:NLEADS)
@@ -269,7 +269,7 @@ contains
   end subroutine lead_td_pot
 
 
-  ! init the potentials of the lead
+  !> init the potentials of the lead
   subroutine lead_init_pot(lead, np, np_part, nspin)
     type(lead_t),        intent(out) :: lead
     integer,             intent(in)  :: np
@@ -287,7 +287,7 @@ contains
     POP_SUB(lead_init_pot)
   end subroutine lead_init_pot
 
-  ! init the kinetic part (diag and offdiag) of the lead
+  !> init the kinetic part (diag and offdiag) of the lead
   subroutine lead_init_kin(lead, np, np_part, dim)
     type(lead_t),        intent(out) :: lead
     integer,             intent(in)  :: np
@@ -346,9 +346,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Resizes the lead unit cell according to the interface size.
-  ! \todo if hamiltonian->lead is an allocatable array then pointers
-  ! are the better choice instead of copying
+  !> Resizes the lead unit cell according to the interface size.
+  !!
+  !! \todo if hamiltonian->lead is an allocatable array then pointers
+  !! are the better choice instead of copying
   subroutine lead_resize(intf, lead, dim, nspin)
     type(interface_t),   intent(in)    :: intf
     type(lead_t),        intent(inout) :: lead
@@ -387,7 +388,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Is the lead potential translationally invariant (in transport direction)?
+  !> Is the lead potential translationally invariant (in transport direction)?
   logical function is_lead_transl_inv(lapl, vks, intf)
     type(nl_operator_t), intent(in)  :: lapl
     FLOAT,               intent(in)  :: vks(:)
