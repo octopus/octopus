@@ -757,7 +757,7 @@ contains
         write(str, '(a,i5)') 'Loading restart information for linear response.'
       end if
       call messages_print_stress(stdout, trim(str))
-      write(message(1),'(a,i4,a,i4,a)') 'Only ', ierr,' files out of ', &
+      write(message(1),'(a,i6,a,i6,a)') 'Only ', ierr,' files out of ', &
         st%nst * st%d%nik * st%d%dim, ' could be read.'
       call messages_info(1)
       call messages_print_stress(stdout)
