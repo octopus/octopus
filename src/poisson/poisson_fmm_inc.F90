@@ -1,4 +1,5 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch, J. Alberdi, P. Garcia Risueño
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch, 
+!! J. Alberdi, P. Garcia Risueño, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -168,7 +169,7 @@ end subroutine poisson_fmm_end
 subroutine poisson_fmm_solve(this, pot, rho)  
   type(poisson_t),     intent(inout) :: this
   FLOAT,               intent(inout) :: pot(:)
-  FLOAT,               intent(in)    :: rho(:)
+  FLOAT,               intent(inout) :: rho(:)
 
 #ifdef HAVE_LIBFM
   integer(8) :: totalcharges
@@ -185,27 +186,28 @@ subroutine poisson_fmm_solve(this, pot, rho)
   real(8) :: periodlength
   real(8) :: st, en
   real(8) :: aux
-  integer :: ii, jj, ierr
+  integer :: ii, jj, ierr, local_j
   integer :: sp, ep
 
-  integer  :: ip, idir, limit
+  integer  :: ip, idir, limit, gip
   integer, allocatable :: ix(:)
   FLOAT :: aux1
   FLOAT :: rho_half_neigh(1:6)
+  type(mesh_t), pointer :: mesh
 
-  
   PUSH_SUB(poisson_fmm_solve)
 
+  mesh => this%der%mesh
   sp = this%params_fmm%sp
   ep = this%params_fmm%ep
-  
-  this%params_fmm%periodic = this%der%mesh%sb%periodic_dim
+
+  this%params_fmm%periodic = mesh%sb%periodic_dim
 
   if(this%params_fmm%periodic /= 0) then
-    if ((this%der%mesh%sb%box_shape == PARALLELEPIPED).and.((this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(2)).and.&
-      (this%der%mesh%sb%lsize(1)==this%der%mesh%sb%lsize(3)).and.&
-      (this%der%mesh%sb%lsize(2)==this%der%mesh%sb%lsize(3)))) then
-      this%params_fmm%periodic_length = this%der%mesh%sb%lsize(1)
+    if ((mesh%sb%box_shape == PARALLELEPIPED).and.((mesh%sb%lsize(1)==mesh%sb%lsize(2)).and.&
+         (mesh%sb%lsize(1)==mesh%sb%lsize(3)).and.&
+         (mesh%sb%lsize(2)==mesh%sb%lsize(3)))) then
+      this%params_fmm%periodic_length = mesh%sb%lsize(1)
     else
       message(1) = "At present, FMM solver for Hartree potential can only deal with cubic boxes. "
       message(2) = " Please, change your Poisson solver or the size or dimensions of your box. "
@@ -221,30 +223,30 @@ subroutine poisson_fmm_solve(this, pot, rho)
   SAFE_ALLOCATE(xyz(1:3, sp:ep))
   SAFE_ALLOCATE(potLibFMM(sp:ep)) 
 
-  totalcharges = this%der%mesh%np_global 
+  totalcharges = mesh%np_global 
 
-  if (.not. this%der%mesh%use_curvilinear) then
+  if (.not. mesh%use_curvilinear) then
     do ii = sp, ep
-      q(ii) = rho(ii)*this%der%mesh%vol_pp(1)
+      q(ii) = rho(ii)*mesh%vol_pp(1)
     end do
   else
     do ii = sp, ep
-      q(ii) = rho(ii)*this%der%mesh%vol_pp(ii)
+      q(ii) = rho(ii)*mesh%vol_pp(ii)
     end do
   end if
 
   ! invert the indices
   do ii = sp, ep
     do jj = 1, MAX_DIM
-      xyz(jj, ii) = this%der%mesh%x(ii, jj)
+      xyz(jj, ii) = mesh%x(ii, jj)
     end do
   end do
 
   absrel = this%params_fmm%abs_rel_fmm
   deltaE = this%params_fmm%delta_E_fmm
   potLibFMM = M_ZERO 
-  this%params_fmm%periodic=this%der%mesh%sb%periodic_dim
-  this%params_fmm%periodic_length= CNST(2.0)*this%der%mesh%sb%lsize(1)
+  this%params_fmm%periodic=mesh%sb%periodic_dim
+  this%params_fmm%periodic_length= CNST(2.0)*mesh%sb%lsize(1)
   periodic = this%params_fmm%periodic
   periodicaxes = 1 
   periodlength = this%params_fmm%periodic_length
@@ -265,25 +267,25 @@ subroutine poisson_fmm_solve(this, pot, rho)
   ! FMM just calculates contributions from other cells. for self-interaction cell integration, we include 
   ! (as traditional in octopus) an approximate integration using a spherical cell whose volume is the volume of the actual cell
   ! Next line is only valid for 3D
-  if (this%der%mesh%sb%dim==3) then
-    if (.not. this%der%mesh%use_curvilinear .and. (this%der%mesh%spacing(1)==this%der%mesh%spacing(2)) .and. &
-      (this%der%mesh%spacing(2)==this%der%mesh%spacing(3)) .and. &
-      (this%der%mesh%spacing(1)==this%der%mesh%spacing(3))) then
-      aux = CNST(2.417987931)*(this%der%mesh%spacing(1)*this%der%mesh%spacing(2)) 
-      do ii = 1, this%der%mesh%np
+  if (mesh%sb%dim==3) then
+    if (.not. mesh%use_curvilinear .and. (mesh%spacing(1)==mesh%spacing(2)) .and. &
+         (mesh%spacing(2)==mesh%spacing(3)) .and. &
+         (mesh%spacing(1)==mesh%spacing(3))) then
+      aux = CNST(2.417987931)*(mesh%spacing(1)*mesh%spacing(2)) 
+      do ii = 1, mesh%np
         pot(ii)=pot(ii)+aux*rho(ii)
       end do
     else
-      do ii = 1, this%der%mesh%np 
-        aux = M_TWO*M_PI*(3.*this%der%mesh%vol_pp(ii)/(M_PI*4.))**(2./3.)
+      do ii = 1, mesh%np 
+        aux = M_TWO*M_PI*(3.*mesh%vol_pp(ii)/(M_PI*4.))**(2./3.)
         pot(ii)=pot(ii)+aux*rho(ii)
       end do
     end if
   end if
 
-  if (this%der%mesh%sb%dim==2) then
-    aux = M_TWO*M_PI*this%der%mesh%spacing(1)
-    do ii = 1, this%der%mesh%np
+  if (mesh%sb%dim==2) then
+    aux = M_TWO*M_PI*mesh%spacing(1)
+    do ii = 1, mesh%np
       pot(ii)=pot(ii)+aux*rho(ii)
     end do
   end if
@@ -291,80 +293,125 @@ subroutine poisson_fmm_solve(this, pot, rho)
   SAFE_DEALLOCATE_A(q)
   SAFE_DEALLOCATE_A(xyz)
   SAFE_DEALLOCATE_A(potLibFMM)
-     
-  SAFE_ALLOCATE(ix(1:this%der%mesh%sb%dim))
+
+  ! Apply the parallel correction
+  SAFE_ALLOCATE(ix(1:mesh%sb%dim))
   
+  if (mesh%parallel_in_domains) then
+#ifdef HAVE_MPI
+    call dvec_ghost_update(mesh%vp, rho)
+#endif
+  end if
+
   ! Corrections for first neighbours obtained with linear interpolation      
   ! First we obtain the densities in neighbouring points ip+1/2
   rho_half_neigh=M_ZERO
-  do ip =1,this%der%mesh%np
-    do idir= 1, this%der%mesh%sb%dim
-      ix(idir) = this%der%mesh%idx%Lxyz(ip, idir)
-    end do
-    
-    limit=this%der%mesh%np_part
-    
-    if ( (this%der%mesh%idx%Lxyz_inv(ix(1)-2, ix(2), ix(3)) <= limit) .and. &
-         (this%der%mesh%idx%Lxyz_inv(ix(1)+2, ix(2), ix(3)) <= limit) .and. &
-         (this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)-2, ix(3)) <= limit) .and. &
-         (this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)+2, ix(3)) <= limit) .and. &
-         (this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)-2) <= limit) .and. &
-         (this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))+2 <= limit) ) then
-
-      rho_half_neigh(1)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1)-1, ix(2), ix(3))) &
-           + (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))))) &
-           - (1.0/16.0)*((rho(this%der%mesh%idx%Lxyz_inv(ix(1)-2, ix(2), ix(3)))&
-           + (rho(this%der%mesh%idx%Lxyz_inv(ix(1)+1, ix(2), ix(3))))))
-
-      rho_half_neigh(2)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))) + &
-           (rho(this%der%mesh%idx%Lxyz_inv(ix(1)+1, ix(2), ix(3))))) &
-           - (1.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1)-1, ix(2), ix(3))) + &
-           (rho(this%der%mesh%idx%Lxyz_inv(ix(1)+2, ix(2), ix(3)))))
-
-      rho_half_neigh(3)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)-1, ix(3))) + &
-           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))))) &
-           - (1.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)-2, ix(3))) + &
-           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)+1, ix(3)))))
-
-      rho_half_neigh(4)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))) + &
-           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)+1, ix(3))))) &
-           - (1.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)-1, ix(3))) + &
-           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)+2, ix(3)))))
-
-      rho_half_neigh(5)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)-1)) + &
-           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))))) &
-           - (1.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)-2)) + &
-           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)+1))))
-
-      rho_half_neigh(6)=(9.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3))) + &
-           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)+1)))) &
-           - (1.0/16.0)*(rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)-1)) + &
-           (rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)+2))))
-
-      aux1=M_ZERO
-      aux1=aux1+(this%der%mesh%spacing(2)*this%der%mesh%spacing(3))*&
-           (rho_half_neigh(1)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1)-1, ix(2), ix(3)))/16.0000)
-      aux1=aux1+(this%der%mesh%spacing(2)*this%der%mesh%spacing(3))*&
-           (rho_half_neigh(2)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1)+1, ix(2), ix(3)))/16.0000)
-      aux1=aux1+(this%der%mesh%spacing(1)*this%der%mesh%spacing(3))*&
-           (rho_half_neigh(3)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)-1, ix(3)))/16.0000)
-      aux1=aux1+(this%der%mesh%spacing(1)*this%der%mesh%spacing(3))*&
-           (rho_half_neigh(4)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2)+1, ix(3)))/16.0000)
-      aux1=aux1+(this%der%mesh%spacing(1)*this%der%mesh%spacing(2))*&
-           (rho_half_neigh(5)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)-1))/16.0000)
-      aux1=aux1+(this%der%mesh%spacing(1)*this%der%mesh%spacing(2))*&
-           (rho_half_neigh(6)/M_FOUR - rho(this%der%mesh%idx%Lxyz_inv(ix(1), ix(2), ix(3)+1))/16.0000)
-
-      aux1=aux1-(M_SIX/22.862)*((this%der%mesh%spacing(1)*&
-           this%der%mesh%spacing(2)*&
-           this%der%mesh%spacing(3))**(2./3.))*&
-           rho(ip)*M_TWO*M_PI*(3./(M_PI*4.))**(2./3.)
-
-      !  if(aux1>0)then
-      pot(ip)=pot(ip)+aux1
-      !  end if
+  ! Iterate over all local points of rho (1 to mesh%np)
+  do ip =1,mesh%np
+    if (mesh%parallel_in_domains) then
+#ifdef HAVE_MPI
+      ! Get the global point from the local point
+      gip = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
+#endif
+    else
+      gip = ip
     end if
+    
+    ! Get x,y,z indexes of the global point
+    call index_to_coords(mesh%idx, mesh%sb%dim, gip, ix)
 
+    ! Correction for the 1st neighbour
+    local_j = vec_index2local(mesh, ix, 1, -1)
+    rho_half_neigh(1)=(9.0/16.0)*(rho(local_j)+rho(ip))
+
+    local_j = vec_index2local(mesh, ix, 1, -2)
+    rho_half_neigh(1)=rho_half_neigh(1)-(1.0/16.0)*rho(local_j)
+
+    local_j = vec_index2local(mesh, ix, 1, 1)
+    rho_half_neigh(1)=rho_half_neigh(1)+(1.0/16.0)*rho(local_j)
+
+    ! Correction for the 2nd neighbour
+    local_j = vec_index2local(mesh, ix, 1, 1)
+    rho_half_neigh(2)=(9.0/16.0)*(rho(local_j)+rho(ip))
+
+    local_j = vec_index2local(mesh, ix, 1, -1)
+    rho_half_neigh(2)=rho_half_neigh(2)-(1.0/16.0)*rho(local_j)
+
+    local_j = vec_index2local(mesh, ix, 1, 2)
+    rho_half_neigh(2)=rho_half_neigh(2)+(1.0/16.0)*rho(local_j)
+
+    ! Correction for the 3rd neighbour
+    local_j = vec_index2local(mesh, ix, 2, -1)
+    rho_half_neigh(3)=(9.0/16.0)*(rho(local_j)+rho(ip))
+
+    local_j = vec_index2local(mesh, ix, 2, -2)
+    rho_half_neigh(3)=rho_half_neigh(3)-(1.0/16.0)*rho(local_j)
+
+    local_j = vec_index2local(mesh, ix, 2, 1)
+    rho_half_neigh(3)=rho_half_neigh(3)+(1.0/16.0)*rho(local_j)
+
+    ! Correction for the 4th neighbour
+    local_j = vec_index2local(mesh, ix, 2, 1)
+    rho_half_neigh(4)=(9.0/16.0)*(rho(local_j)+rho(ip))
+
+    local_j = vec_index2local(mesh, ix, 2, -1)
+    rho_half_neigh(4)=rho_half_neigh(4)-(1.0/16.0)*rho(local_j)
+
+    local_j = vec_index2local(mesh, ix, 2, 2)
+    rho_half_neigh(4)=rho_half_neigh(4)+(1.0/16.0)*rho(local_j)
+
+    ! Correction for the 5th neighbour
+    local_j = vec_index2local(mesh, ix, 3, -1)
+    rho_half_neigh(5)=(9.0/16.0)*(rho(local_j)+rho(ip))
+
+    local_j = vec_index2local(mesh, ix, 3, -2)
+    rho_half_neigh(5)=rho_half_neigh(5)-(1.0/16.0)*rho(local_j)
+
+    local_j = vec_index2local(mesh, ix, 3, 1)
+    rho_half_neigh(5)=rho_half_neigh(5)+(1.0/16.0)*rho(local_j)
+
+    ! Correction for the 6th neighbour
+    local_j = vec_index2local(mesh, ix, 3, 1)
+    rho_half_neigh(6)=(9.0/16.0)*(rho(local_j)+rho(ip))
+
+    local_j = vec_index2local(mesh, ix, 3, -1)
+    rho_half_neigh(6)=rho_half_neigh(6)-(1.0/16.0)*rho(local_j)
+
+    local_j = vec_index2local(mesh, ix, 3, 2)
+    rho_half_neigh(6)=rho_half_neigh(6)+(1.0/16.0)*rho(local_j)
+
+    aux1=M_ZERO  
+
+    local_j = vec_index2local(mesh, ix, 1, -1)
+    aux1=aux1+(mesh%spacing(2)*mesh%spacing(3))*&
+         (rho_half_neigh(1)/M_FOUR - rho(local_j)/16.0000) 
+
+    local_j = vec_index2local(mesh, ix, 1, 1)
+    aux1=aux1+(mesh%spacing(2)*mesh%spacing(3))*&
+         (rho_half_neigh(2)/M_FOUR - rho(local_j)/16.0000)
+
+    local_j = vec_index2local(mesh, ix, 2, -1)
+    aux1=aux1+(mesh%spacing(1)*mesh%spacing(3))*&
+         (rho_half_neigh(3)/M_FOUR - rho(local_j)/16.0000)
+
+    local_j = vec_index2local(mesh, ix, 2, 1)
+    aux1=aux1+(mesh%spacing(1)*mesh%spacing(3))*&
+         (rho_half_neigh(4)/M_FOUR - rho(local_j)/16.0000)
+
+    local_j = vec_index2local(mesh, ix, 3, -1)
+    aux1=aux1+(mesh%spacing(1)*mesh%spacing(2))*&
+         (rho_half_neigh(5)/M_FOUR - rho(local_j)/16.0000)
+
+    local_j = vec_index2local(mesh, ix, 3, 1)
+    aux1=aux1+(mesh%spacing(1)*mesh%spacing(2))*&
+         (rho_half_neigh(6)/M_FOUR - rho(local_j)/16.0000)
+
+    aux1=aux1-(M_SIX/22.862)*((mesh%spacing(1)*mesh%spacing(2)*mesh%spacing(3))**(2./3.))*&
+         rho(ip)*M_TWO*M_PI*(3./(M_PI*4.))**(2./3.)
+
+    ! Apply the correction to the potential
+    pot(ip)=pot(ip)+aux1
+    
   end do
   SAFE_DEALLOCATE_A(ix)
 
@@ -374,6 +421,37 @@ subroutine poisson_fmm_solve(this, pot, rho)
 #endif
 end subroutine poisson_fmm_solve
 
+!> Change the value of one dimension (1=x, 2=y, 3=z) 
+!! according to the given value and return the local point
+integer function vec_index2local(mesh, ix, dim_pad, pad)
+   type(mesh_t), intent(in) :: mesh    !< All the requiered information
+   integer,      intent(in) :: ix(1:3) !< Global x,y,z indexes
+   integer,      intent(in) :: dim_pad !< The dimension that has to be change
+   integer,      intent(in) :: pad     !< 
+   
+   integer :: global_point, local_point
+   integer :: jx(1:3)
+   
+   jx = ix
+   jx(dim_pad) = jx(dim_pad) + pad
+   global_point = index_from_coords(mesh%idx, 3, jx)
+   if (mesh%parallel_in_domains) then
+#ifdef HAVE_MPI
+     local_point = vec_global2local(mesh%vp, global_point, mesh%vp%partno)
+     if (local_point == 0) then
+       write(message(1), '(a)') "You are trying to access to a neighbour that does not exists"
+       write(message(2), '(a, i5)') "Global point = ",global_point
+       write(message(3), '(a, 3i5)') "x,y,z point  = ",jx
+       call messages_warning(3)
+     end if
+#endif
+   else
+     local_point = global_point
+   end if
+
+   vec_index2local = local_point
+
+ end function vec_index2local
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

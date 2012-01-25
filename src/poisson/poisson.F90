@@ -20,6 +20,7 @@
 #include "global.h"
 
 module poisson_m
+  use boundaries_m
   use cube_m
   use datasets_m
   use derivatives_m
@@ -497,7 +498,7 @@ contains
   subroutine dpoisson_solve(this, pot, rho, all_nodes)
     type(poisson_t),      intent(inout) :: this
     FLOAT,                intent(inout) :: pot(:)
-    FLOAT,                intent(in)    :: rho(:)
+    FLOAT,                intent(inout) :: rho(:)
     logical, optional,    intent(in)    :: all_nodes !< Is the Poisson solver allowed to utilise
                                                      !! all nodes or only the domain nodes for
                                                      !! its calculations? (Defaults to .true.)
@@ -656,17 +657,17 @@ contains
 
     n_gaussians = 1 
 
-    SAFE_ALLOCATE(     rho(1:mesh%np))
-    SAFE_ALLOCATE(    rhop(1:mesh%np))
+    SAFE_ALLOCATE(     rho(1:mesh%np_part))
+    SAFE_ALLOCATE(    rhop(1:mesh%np_part))
     SAFE_ALLOCATE(      vh(1:mesh%np))
     SAFE_ALLOCATE(      vh2(1:mesh%np))
     SAFE_ALLOCATE(      vh3(1:mesh%np))
     SAFE_ALLOCATE(vh_exact(1:mesh%np))
     SAFE_ALLOCATE(xx(1:mesh%sb%dim, 1:n_gaussians))
 
-    rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
+    rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO; rhop = M_ZERO
 
-    alpha = CNST(4.0)*mesh%spacing(1)
+    alpha = CNST(4.0)*mesh%spacing(1) * M_FOUR
     write(message(1),'(a,f14.6)')  "Info: The alpha value is ", alpha
     write(message(2),'(a)')        "      Higher values of alpha lead to more physical densities and more reliable results."
     call messages_info(2)
@@ -694,7 +695,9 @@ contains
       norm = dmf_integrate(mesh, rhop)
       
       rhop = (-1)**nn * rhop
-      rho = rho + rhop
+      do ip = 1, mesh%np 
+        rho(ip) = rho(ip) + rhop(ip)
+      end do
     end do
     write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(mesh, rho)
     call messages_info(1)
