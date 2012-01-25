@@ -19,12 +19,12 @@
 
 #include "global.h"
 
-! This module implements the curvilinear coordinates given in
-! N. A. Modine, G. Zumbach, and E. Kaxiras, Phys. Rev. B 55, 10289-10301 (1997) 
-!
-! The local refinement was changed for a simple exponential.
-! I believe that the recipe given by the authors is too complicated
-! for me to sort out.
+!> This module implements the curvilinear coordinates given in
+!! N. A. Modine, G. Zumbach, and E. Kaxiras, Phys. Rev. B 55, 10289-10301 (1997) 
+!!
+!! The local refinement was changed for a simple exponential.
+!! I believe that the recipe given by the authors is too complicated
+!! for me to sort out.
 
 module curv_modine_m
   use datasets_m
@@ -52,12 +52,12 @@ module curv_modine_m
     curv_modine_jacobian_inv
 
   type curv_modine_t
-    FLOAT :: L(MAX_DIM)    ! size of the box
-    FLOAT :: xbar          ! size of central flat region (in units of L)
-    FLOAT :: Jbar          ! increase in density of points is 1/J
+    FLOAT :: L(MAX_DIM)    !< size of the box
+    FLOAT :: xbar          !< size of central flat region (in units of L)
+    FLOAT :: Jbar          !< increase in density of points is 1/J
 
-    FLOAT,            pointer :: Jlocal(:)  ! local (around the atoms) refinement
-    FLOAT,            pointer :: Jrange(:)  ! local refinement range
+    FLOAT,            pointer :: Jlocal(:)  !< local (around the atoms) refinement
+    FLOAT,            pointer :: Jrange(:)  !< local refinement range
 
     FLOAT, pointer :: chi_atoms(:,:)
     FLOAT, pointer :: csi(:,:)
@@ -295,9 +295,9 @@ contains
   subroutine curv_modine_chi2chi2(sb, cv, chi_, chi2, Jac)
     type(simul_box_t),   intent(in)  :: sb
     type(curv_modine_t), intent(in)  :: cv
-    FLOAT,               intent(in)  :: chi_(:)  ! chi_(sb%dim)
-    FLOAT,               intent(out) :: chi2(:)  ! chi2(sb%dim)
-    FLOAT,     optional, intent(out) :: Jac(:)   ! the Jacobian of this transformation is diagonal
+    FLOAT,               intent(in)  :: chi_(:)  !< chi_(sb%dim)
+    FLOAT,               intent(out) :: chi2(:)  !< chi2(sb%dim)
+    FLOAT,     optional, intent(out) :: Jac(:)   !< the Jacobian of this transformation is diagonal
 
     FLOAT :: chibar(MAX_DIM), rr, chi
     logical :: neg
@@ -337,8 +337,8 @@ contains
   subroutine curv_modine_chi2x(sb, cv, chi_, xx)
     type(simul_box_t),   intent(in)  :: sb
     type(curv_modine_t), intent(in)  :: cv
-    FLOAT,               intent(in)  :: chi_(:)  ! chi_(sb%dim)
-    FLOAT,               intent(out) :: xx(:)    ! xx  (sb%dim)
+    FLOAT,               intent(in)  :: chi_(:)  !< chi_(sb%dim)
+    FLOAT,               intent(out) :: xx(:)    !< xx  (sb%dim)
 
     FLOAT :: chi2(MAX_DIM), rr, dd
     integer :: iatom
@@ -363,9 +363,9 @@ contains
   subroutine curv_modine_jacobian_inv(sb, cv, chi_, xx, Jac)
     type(simul_box_t),   intent(in)  :: sb
     type(curv_modine_t), intent(in)  :: cv
-    FLOAT,               intent(in)  :: chi_(:)  ! chi(sb%dim)
-    FLOAT,               intent(out) :: xx(:)    ! xx(sb%dim)
-    FLOAT,               intent(out) :: Jac(:,:) ! Jac(sb%dim,sb%dim), the Jacobian
+    FLOAT,               intent(in)  :: chi_(:)  !< chi(sb%dim)
+    FLOAT,               intent(out) :: xx(:)    !< xx(sb%dim)
+    FLOAT,               intent(out) :: Jac(:,:) !< Jac(sb%dim,sb%dim), the Jacobian
 
     FLOAT :: chi2(MAX_DIM), rr, dd, J2(MAX_DIM)
     integer :: iatom, idim, idim2
@@ -423,8 +423,8 @@ contains
   subroutine curv_modine_x2chi(sb, cv, xx, chi)
     type(simul_box_t),   target, intent(in)  :: sb
     type(curv_modine_t), target, intent(in)  :: cv
-    FLOAT,                       intent(in)  :: xx(:)   ! xx(sb%dim)
-    FLOAT,                       intent(out) :: chi(:)  ! chi(sb%dim)
+    FLOAT,                       intent(in)  :: xx(:)   !< xx(sb%dim)
+    FLOAT,                       intent(out) :: chi(:)  !< chi(sb%dim)
 
     logical :: conv
     type(root_solver_t) :: rs

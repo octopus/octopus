@@ -81,21 +81,21 @@ module nl_operator_m
 
   type nl_operator_t
     type(stencil_t)       :: stencil
-    type(mesh_t), pointer :: mesh      ! pointer to the underlying mesh
-    integer, pointer      :: nn(:)     ! the size of the stencil at each point (for curvilinear coordinates)
-    integer               :: np        ! number of points in mesh
+    type(mesh_t), pointer :: mesh      !< pointer to the underlying mesh
+    integer, pointer      :: nn(:)     !< the size of the stencil at each point (for curvilinear coordinates)
+    integer               :: np        !< number of points in mesh
     ! When running in parallel mode, the next three
     ! arrays are unique on each node.
-    integer, pointer  :: i(:,:)    ! index of the points
-    FLOAT,   pointer  :: w_re(:,:) ! weightsp, real part
-    FLOAT,   pointer  :: w_im(:,:) ! weightsp, imaginary part
+    integer, pointer  :: i(:,:)    !< index of the points
+    FLOAT,   pointer  :: w_re(:,:) !< weightsp, real part
+    FLOAT,   pointer  :: w_im(:,:) !< weightsp, imaginary part
 
-    logical               :: const_w   ! are the weights independent of index i
-    logical               :: cmplx_op  ! .true. if we have also imaginary weights
+    logical               :: const_w   !< are the weights independent of index i
+    logical               :: cmplx_op  !< .true. if we have also imaginary weights
 
     character(len=40) :: label
 
-    !the compressed index of grid points
+    !> the compressed index of grid points
     integer :: nri
     integer, pointer :: ri(:,:)
     integer, pointer :: rimap(:)
@@ -921,8 +921,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Reverse of nl_operator_gather. op is allocated, so
-  ! it is necessary to call nl_operator_end on it some time.
+  !> Reverse of nl_operator_gather. op is allocated, so
+  !! it is necessary to call nl_operator_end on it some time.
   subroutine nl_operator_scatter(op, opg)
     type(nl_operator_t), intent(out) :: op
     type(nl_operator_t), intent(in)  :: opg
@@ -947,9 +947,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Like nl_operator_gather but opg is present on all nodes
-  ! (so do not forget to call nl_operator_end on all nodes
-  ! afterwards).
+  !> Like nl_operator_gather but opg is present on all nodes
+  !! (so do not forget to call nl_operator_end on all nodes
+  !! afterwards).
   subroutine nl_operator_allgather(op, opg)
     type(nl_operator_t), intent(in)  :: op
     type(nl_operator_t), intent(out) :: opg
@@ -989,12 +989,12 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  ! Copies all parts of op to opg that are independent of
-  ! the partitions, i.e. everything except op%i and -- in the
-  ! non-constant case -- op%w_re op%w_im.
-  ! This can be considered as nl_operator_copy and
-  ! reallocating w_re, w_im and i.
-  ! \warning: this should be replaced by a normal copy with a flag.
+  !> Copies all parts of op to opg that are independent of
+  !! the partitions, i.e. everything except op%i and -- in the
+  !! non-constant case -- op%w_re op%w_im.
+  !! This can be considered as nl_operator_copy and
+  !! reallocating w_re, w_im and i.
+  !! \warning: this should be replaced by a normal copy with a flag.
   subroutine nl_operator_common_copy(op, opg)
     type(nl_operator_t), intent(in)  :: op
     type(nl_operator_t), intent(out) :: opg
@@ -1035,8 +1035,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Translates indices in i from local point numbers to
-  ! global point numbers after gathering them.
+  !> Translates indices in i from local point numbers to
+  !! global point numbers after gathering them.
   subroutine nl_operator_translate_indices(opg)
     type(nl_operator_t), intent(inout) :: opg
 
@@ -1083,10 +1083,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! When running in parallel only the root node
-  ! creates the matrix. But all nodes have to
-  ! call this routine because the distributed operator has
-  ! to be collected.
+  !> When running in parallel only the root node
+  !! creates the matrix. But all nodes have to
+  !! call this routine because the distributed operator has
+  !! to be collected.
   subroutine nl_operator_op_to_matrix_cmplx(op, aa)
     type(nl_operator_t), target, intent(in) :: op
     CMPLX, intent(out)                      :: aa(:, :)
@@ -1133,10 +1133,10 @@ contains
   end subroutine nl_operator_op_to_matrix_cmplx
 
   ! ---------------------------------------------------------
-  ! When running in parallel only the root node
-  ! creates the matrix. But all nodes have to
-  ! call this routine because the distributed operator has
-  ! to be collected.
+  !> When running in parallel only the root node
+  !! creates the matrix. But all nodes have to
+  !! call this routine because the distributed operator has
+  !! to be collected.
   subroutine nl_operator_op_to_matrix(op, aa, bb)
     type(nl_operator_t), target, intent(in) :: op
     FLOAT, intent(out)                      :: aa(:, :)
@@ -1212,12 +1212,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Prints the matrix of the non-local operator op to
-  ! a file (unit).
-  ! When running in parallel, only the root node writes
-  ! to the file but all nodes have to call this routine
-  ! simultaneously because the distributed operator has
-  ! to be collected.
+  !> Prints the matrix of the non-local operator op to
+  !! a file (unit).
+  !!
+  !! When running in parallel, only the root node writes
+  !! to the file but all nodes have to call this routine
+  !! simultaneously because the distributed operator has
+  !! to be collected.
   subroutine nl_operator_write(op, filename)
     character(len=*),    intent(in) :: filename
     type(nl_operator_t), intent(in) :: op
@@ -1259,7 +1260,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Same as nl_operator_write but transposed matrix.
+  !> Same as nl_operator_write but transposed matrix.
   subroutine nl_operatorT_write(op, unit)
     type(nl_operator_t), intent(in) :: op
     integer, intent(in)             :: unit

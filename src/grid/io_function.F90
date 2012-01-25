@@ -210,8 +210,8 @@ contains
   end subroutine io_function_read_how
 
   ! -------------------------------------------------------------------
-  ! Use this function to quickly plot functions for debugging purposes:
-  ! call dio_function_output(io_function_fill_how("AxisX_and_PlaneX_and_DX"), &
+  !> Use this function to quickly plot functions for debugging purposes:
+  !! call dio_function_output(io_function_fill_how("AxisX_and_PlaneX_and_DX"), &
   !                       ".", "func", mesh, sb, func, M_ONE, ierr)
   ! -------------------------------------------------------------------
   integer function io_function_fill_how(where) result(how)
@@ -280,8 +280,8 @@ contains
   end subroutine write_xsf_geometry_file
 
   ! ---------------------------------------------------------
-! for format specification see:
-! http://www.xcrysden.org/doc/XSF.html#__toc__11
+  !> for format specification see:
+  !! http://www.xcrysden.org/doc/XSF.html#__toc__11
   subroutine write_xsf_geometry(iunit, geo, mesh, forces, index)
     integer,           intent(in) :: iunit
     type(geometry_t),  intent(in) :: geo

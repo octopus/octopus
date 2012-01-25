@@ -53,8 +53,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns maximum extension of the stencil in spatial direction
-  ! dir = 1, 2, 3 for a given discretization order.
+  !> Returns maximum extension of the stencil in spatial direction
+  !! dir = 1, 2, 3 for a given discretization order.
   integer function stencil_starplus_extent(dir, order)
     integer, intent(in) :: dir
     integer, intent(in) :: order
@@ -237,7 +237,7 @@ contains
   subroutine stencil_starplus_pol_lapl(dim, order, pol)
     integer, intent(in)  :: dim
     integer, intent(in)  :: order
-    integer, intent(out) :: pol(:,:) ! pol(dim, order)
+    integer, intent(out) :: pol(:,:) !< pol(dim, order)
 
     integer :: i, j, n
 
@@ -344,7 +344,7 @@ contains
     integer, intent(in)  :: dim
     integer, intent(in)  :: dir
     integer, intent(in)  :: order
-    integer, intent(out) :: pol(:,:) ! pol(dim, order)
+    integer, intent(out) :: pol(:,:) !< pol(dim, order)
 
     integer :: j, n
 

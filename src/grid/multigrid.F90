@@ -173,7 +173,7 @@ contains
   end subroutine multigrid_init
 
   ! ---------------------------------------------------------
-  ! creates the lookup tables to go between the coarse and fine meshes
+  !> creates the lookup tables to go between the coarse and fine meshes
   subroutine multigrid_get_transfer_tables(tt, fine, coarse)
     type(transfer_table_t), intent(inout) :: tt
     type(mesh_t),           intent(in)    :: fine, coarse
@@ -325,10 +325,10 @@ contains
     POP_SUB(multigrid_get_transfer_tables)
   end subroutine multigrid_get_transfer_tables
 
-  !/*---------------------------------------------------------------------------------
-  ! Creates a mesh that has twice the spacing betwen the points than the in mesh.
-  ! This is used in the multi-grid routines
-  !---------------------------------------------------------------------------------*/
+  !---------------------------------------------------------------------------------
+  !> Creates a mesh that has twice the spacing betwen the points than the in mesh.
+  !! This is used in the multi-grid routines
+  !---------------------------------------------------------------------------------
   subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out, stencil)
     type(geometry_t),   intent(in)    :: geo
     type(curvilinear_t), intent(in)    :: cv

@@ -54,8 +54,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns maximum extension of the stencil in spatial direction
-  ! dir = 1, 2, 3 for a given discretization order.
+  !> Returns maximum extension of the stencil in spatial direction
+  !! dir = 1, 2, 3 for a given discretization order.
   integer function stencil_cube_extent(dir, order)
     integer, intent(in) :: dir
     integer, intent(in) :: order
@@ -162,9 +162,9 @@ contains
   end subroutine stencil_cube_polynomials_lapl
 
 
-  ! Now come the gradient routines. As this stencil is the same for
-  ! the laplacian and the gradient, these routines just call the
-  ! corresponding ones for the laplacian
+  !> Now come the gradient routines. As this stencil is the same for
+  !! the laplacian and the gradient, these routines just call the
+  !! corresponding ones for the laplacian
 
   ! ---------------------------------------------------------
   integer function stencil_cube_size_grad(dim, order)

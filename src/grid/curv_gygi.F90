@@ -19,8 +19,8 @@
 
 #include "global.h"
 
-! This module implements the curvilinear coordinates given in
-! F. Gygi and G. Galli, PRB 52 R2229 (1996).
+!> This module implements the curvilinear coordinates given in
+!! F. Gygi and G. Galli, PRB 52 R2229 (1996).
 
 module curv_gygi_m
   use datasets_m
@@ -48,9 +48,9 @@ module curv_gygi_m
     curv_gygi_jacobian
 
   type curv_gygi_t
-    FLOAT :: A             ! local reduction in grid spacing is 1/(1+A)
-    FLOAT :: alpha         ! range of enhancement of the resolution
-    FLOAT :: beta          ! distance over which Euclidian coordinates are recovered
+    FLOAT :: A             !< local reduction in grid spacing is 1/(1+A)
+    FLOAT :: alpha         !< range of enhancement of the resolution
+    FLOAT :: beta          !< distance over which Euclidian coordinates are recovered
     FLOAT, pointer :: pos(:, :)
     integer :: npos
   end type curv_gygi_t
@@ -167,8 +167,8 @@ contains
   subroutine curv_gygi_chi2x(sb, cv, chi, x)
     type(simul_box_t), target, intent(in)  :: sb
     type(curv_gygi_t), target, intent(in)  :: cv
-    FLOAT,                     intent(in)  :: chi(:)  ! chi(sb%dim)
-    FLOAT,                     intent(out) :: x(:)    ! x(sb%dim)
+    FLOAT,                     intent(in)  :: chi(:)  !< chi(sb%dim)
+    FLOAT,                     intent(out) :: x(:)    !< x(sb%dim)
 
     ! local variables
     integer :: i
@@ -241,9 +241,9 @@ contains
   subroutine curv_gygi_jacobian(sb, cv, x, chi, J, natoms)
     type(simul_box_t), intent(in)  :: sb
     type(curv_gygi_t), intent(in)  :: cv
-    FLOAT,             intent(in)  :: x(:)    ! x(sb%dim)
-    FLOAT,             intent(out) :: chi(:)  ! chi(sb%dim)
-    FLOAT,             intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
+    FLOAT,             intent(in)  :: x(:)    !< x(sb%dim)
+    FLOAT,             intent(out) :: chi(:)  !< chi(sb%dim)
+    FLOAT,             intent(out) :: J(:,:)  !< J(sb%dim,sb%dim), the Jacobian
     integer, optional, intent(in)  :: natoms
 
     integer :: i, ix, iy, natoms_

@@ -19,26 +19,26 @@
 
 #include "global.h"
 ! ---------------------------------------------------------
-! Implements the variational discretization of the Laplacian
-! as proposed by P. Maragakis, J. Soler, and E. Kaxiras, PRB 64, 193101 (2001)
-!
-! However, we have introduced a possible variation: incorporating into
-! the expression of the Laplacian a high-frequency filter. This in fact
-! goes against the spirit of the work of Maragakis et al., which
-! attempts to increase the weight of the high frequencies over the
-! conventional finite-difference scheme. But the mathematical
-! machinery used in that work to generate the coefficient is ideal
-! to add a frequency filter.
-! The filter is decided by the optional parameter alpha: The
-! highest frequency allowed by the filter will be alpha*k, where
-! k is the Nyquist frequency of the grid. Thus alpha = 1 means
-! no filter at all.
-!
-! \todo The coefficients should be calculated, and not hard-coded, in
-! a subroutine similar to weights in the math module. It should also
-! allos to get the coefficients to the gradient.
-! \todo This module should look like stencil_star, allowing for
-! coefficients on non-uniform grids.
+!> Implements the variational discretization of the Laplacian
+!! as proposed by P. Maragakis, J. Soler, and E. Kaxiras, PRB 64, 193101 (2001)
+!!
+!! However, we have introduced a possible variation: incorporating into
+!! the expression of the Laplacian a high-frequency filter. This in fact
+!! goes against the spirit of the work of Maragakis et al., which
+!! attempts to increase the weight of the high frequencies over the
+!! conventional finite-difference scheme. But the mathematical
+!! machinery used in that work to generate the coefficient is ideal
+!! to add a frequency filter.
+!! The filter is decided by the optional parameter alpha: The
+!! highest frequency allowed by the filter will be alpha*k, where
+!! k is the Nyquist frequency of the grid. Thus alpha = 1 means
+!! no filter at all.
+!!
+!! \todo The coefficients should be calculated, and not hard-coded, in
+!! a subroutine similar to weights in the math module. It should also
+!! allos to get the coefficients to the gradient.
+!! \todo This module should look like stencil_star, allowing for
+!! coefficients on non-uniform grids.
 ! ---------------------------------------------------------
 module stencil_variational_m
   use global_m
@@ -133,8 +133,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns maximum extension of the stencil in spatial direction
-  ! dir = 1, 2, 3 for a given discretization order.
+  !> Returns maximum extension of the stencil in spatial direction
+  !! dir = 1, 2, 3 for a given discretization order.
   integer function stencil_variational_extent(dir, order)
     integer, intent(in) :: dir
     integer, intent(in) :: order

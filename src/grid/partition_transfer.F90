@@ -54,13 +54,13 @@ module partition_transfer_m
 contains
 
   ! -----------------------------------------------------------------
-  ! WARNING: Input and output groups may have a different number of
-  ! processes. In that case the transfer will only work if some
-  ! further constraints are met (see sanity checks below). One of the
-  ! cases where it should work is when one of the groups is a subgroup
-  ! of a Cartesian topology created from the other group. This is the
-  ! case when one of the groups is mpi_world, the other is the
-  ! parallelization in domains group, and there are no slaves.
+  !> \warning  Input and output groups may have a different number of
+  !! processes. In that case the transfer will only work if some
+  !! further constraints are met (see sanity checks below). One of the
+  !! cases where it should work is when one of the groups is a subgroup
+  !! of a Cartesian topology created from the other group. This is the
+  !! case when one of the groups is mpi_world, the other is the
+  !! parallelization in domains group, and there are no slaves.
   subroutine partition_transfer_init(this, np, mpi_grp_in, part_in, mpi_grp_out, part_out, nsend, nrec, order_in, order_out)
     type(partition_transfer_t), intent(out) :: this
     integer,                    intent(in)  :: np 

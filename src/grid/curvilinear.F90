@@ -161,8 +161,8 @@ contains
   subroutine curvilinear_chi2x(sb, cv, chi, x)
     type(simul_box_t),   intent(in)  :: sb
     type(curvilinear_t), intent(in)  :: cv
-    FLOAT,               intent(in)  :: chi(MAX_DIM)  ! chi(conf%dim)
-    FLOAT,               intent(out) :: x(MAX_DIM)    ! x(conf%dim)
+    FLOAT,               intent(in)  :: chi(MAX_DIM)  !< chi(conf%dim)
+    FLOAT,               intent(out) :: x(MAX_DIM)    !< x(conf%dim)
 
     ! no push_sub because called too frequently
     x = M_ZERO
@@ -210,8 +210,8 @@ contains
   FLOAT function curvilinear_det_Jac(sb, cv, x, chi) result(jdet)
     type(simul_box_t),   intent(in)  :: sb
     type(curvilinear_t), intent(in)  :: cv
-    FLOAT,               intent(in)  :: x(:)    !   x(sb%dim)
-    FLOAT,               intent(in)  :: chi(:)  ! chi(sb%dim)
+    FLOAT,               intent(in)  :: x(:)    !<   x(sb%dim)
+    FLOAT,               intent(in)  :: chi(:)  !< chi(sb%dim)
 
     FLOAT :: dummy(MAX_DIM)
     FLOAT, allocatable :: Jac(:,:)

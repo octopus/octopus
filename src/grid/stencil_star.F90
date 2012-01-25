@@ -57,8 +57,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns maximum extension of the stencil in spatial direction
-  ! dir = 1, 2, 3 for a given discretization order.
+  !> Returns maximum extension of the stencil in spatial direction
+  !! dir = 1, 2, 3 for a given discretization order.
   integer function stencil_star_extent(dir, order)
     integer, intent(in) :: dir
     integer, intent(in) :: order
@@ -170,7 +170,7 @@ contains
   end subroutine stencil_star_coeff_lapl
 
 
-  ! now come the gradient routines
+  !> now come the gradient routines
 
   ! ---------------------------------------------------------
   integer function stencil_star_size_grad(order)
