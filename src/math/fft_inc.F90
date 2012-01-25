@@ -84,7 +84,8 @@ subroutine X(fft_forward)(fft, in, out)
     CMPLX,       intent(in)  :: in(:,:,:)
     R_TYPE,      intent(out) :: out(:,:,:)
 
-    integer :: ii, jj, kk, scaling_factor, slot
+    integer :: ii, jj, kk, slot
+    FLOAT :: scaling_factor
     type(profile_t), save :: prof_bw
 
     PUSH_SUB(X(fft_backward))
@@ -108,12 +109,12 @@ subroutine X(fft_forward)(fft, in, out)
     end select
 
     ! multiply by 1/(N1*N2*N2)
-    scaling_factor = fft_array(slot)%rs_n_global(1)*fft_array(slot)%rs_n_global(2)*fft_array(slot)%rs_n_global(3)
+    scaling_factor = M_ONE/fft_array(slot)%rs_n_global(1)*fft_array(slot)%rs_n_global(2)*fft_array(slot)%rs_n_global(3)
     !$omp parallel do
     do kk = 1, fft_array(slot)%rs_n(3)
       do jj = 1, fft_array(slot)%rs_n(2)
         do ii = 1, fft_array(slot)%rs_n(1)
-          out(ii, jj, kk) = out(ii, jj, kk)/scaling_factor
+          out(ii, jj, kk) = out(ii, jj, kk)*scaling_factor
         end do
       end do
     end do
