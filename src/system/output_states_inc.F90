@@ -214,7 +214,7 @@
 
   ! ---------------------------------------------------------
   !
-  !  routine for output of model many-body quantities.
+  !> routine for output of model many-body quantities.
   !
   subroutine output_modelmb (dir, gr, st, geo, outp)
     type(states_t),         intent(inout) :: st

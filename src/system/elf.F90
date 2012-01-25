@@ -68,15 +68,16 @@ contains
   end subroutine elf_init
 
   ! ---------------------------------------------------------
-  ! (time-dependent) electron localization function, (TD)ELF.
+  !> (time-dependent) electron localization function, (TD)ELF.
   ! ---------------------------------------------------------
   subroutine elf_calc(st, gr, elf, de)
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(inout) :: gr
-    FLOAT,            intent(inout) :: elf(:,:) ! elf(gr%mesh%np, 1) if st%d%ispin = 1, elf(gr%mesh%np, 3) otherwise.
-                                                ! On output, it should contain the global ELF if st%d%ispin = 1,
-                                                ! otherwise elf(:, 3) contains the global ELF, and 
-                                                ! elf(:, 1) and elf(:, 2) the spin-resolved ELF.
+    !> elf(gr%mesh%np, 1) if st%d%ispin = 1, elf(gr%mesh%np, 3) otherwise.
+    !! On output, it should contain the global ELF if st%d%ispin = 1,
+    !! otherwise elf(:, 3) contains the global ELF, and 
+    !! elf(:, 1) and elf(:, 2) the spin-resolved ELF.
+    FLOAT,            intent(inout) :: elf(:,:) 
     FLOAT,  optional, intent(inout):: de(:,:)
 
     FLOAT :: factor, D0, dens
@@ -187,7 +188,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! ELF function in Fourier space. Not tested.
+  !> ELF function in Fourier space. Not tested.
   ! ---------------------------------------------------------
   subroutine elf_calc_fs(st, gr, elf, de)
     type(states_t),   intent(inout) :: st

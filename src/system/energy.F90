@@ -56,9 +56,9 @@ module energy_m
 contains
 
   ! ---------------------------------------------------------
-  ! This subroutine calculates the total energy of the system. Basically, it
-  ! adds up the KS eigenvalues, and then it subtracts whatever double
-  ! counts exist (see TDDFT theory for details).
+  !> This subroutine calculates the total energy of the system. Basically, it
+  !! adds up the KS eigenvalues, and then it subtracts whatever double
+  !! counts exist (see TDDFT theory for details).
   subroutine total_energy(hm, gr, st, iunit, full)
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr

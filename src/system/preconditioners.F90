@@ -64,7 +64,7 @@ module preconditioners_m
     integer :: which
 
     type(nl_operator_t) :: op
-    FLOAT, pointer      :: diag_lapl(:) ! diagonal of the laplacian
+    FLOAT, pointer      :: diag_lapl(:) !< diagonal of the laplacian
   end type preconditioner_t
   
 contains

@@ -19,7 +19,7 @@
 
 
 ! ---------------------------------------------------------
-! calculates the eigenvalues of the real orbitals
+!> calculates the eigenvalues of the real orbitals
 subroutine X(calculate_eigenvalues)(hm, der, st, time)
   type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(inout) :: der

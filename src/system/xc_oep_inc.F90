@@ -18,13 +18,13 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-! This file handles the evaluation of the OEP potential, in the KLI or full OEP
-! as described in S. Kuemmel and J. Perdew, PRL 90, 043004 (2003)
-
-! This file has to be outside the module xc, for it requires the Hpsi.
-! This is why it needs the xc_functl module. I prefer to put it here since
-! the rest of the Hamiltonian module does not know about the gory details
-! of how xc is defined and calculated.
+!> This file handles the evaluation of the OEP potential, in the KLI or full OEP
+!! as described in S. Kuemmel and J. Perdew, PRL 90, 043004 (2003)
+!!
+!! This file has to be outside the module xc, for it requires the Hpsi.
+!! This is why it needs the xc_functl module. I prefer to put it here since
+!! the rest of the Hamiltonian module does not know about the gory details
+!! of how xc is defined and calculated.
 
 ! ---------------------------------------------------------
 subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
@@ -35,7 +35,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   type(hamiltonian_t), intent(in)    :: hm
   type(states_t),      intent(inout) :: st
   FLOAT,               intent(inout) :: ex, ec
-  FLOAT, optional,     intent(inout) :: vxc(:,:) !vxc(gr%mesh%np, st%d%nspin)
+  FLOAT, optional,     intent(inout) :: vxc(:,:) !< vxc(gr%mesh%np, st%d%nspin)
 
   FLOAT :: eig
   integer :: is, ist, ixc

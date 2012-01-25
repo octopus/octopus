@@ -102,21 +102,21 @@ module output_m
 
   type output_t
     ! General output variables:
-    integer :: what                ! what to output
-    integer :: how                 ! how to output
+    integer :: what                !< what to output
+    integer :: how                 !< how to output
 
-    type(output_me_t) :: me        ! this handles the output of matrix elements
+    type(output_me_t) :: me        !< this handles the output of matrix elements
 
     ! These variables fine-tune the output for some of the possible output options:
-    integer :: iter                ! output every iter
+    integer :: iter                !< output every iter
     logical :: duringscf
 
-    character(len=80) :: wfs_list  ! If output_wfs, this list decides which wavefunctions to print.
+    character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
 
-    type(mesh_plane_t) :: plane    ! This is to calculate the current flow across a plane
-    type(mesh_line_t)  :: line     ! or though a line (in 2D)
+    type(mesh_plane_t) :: plane    !< This is to calculate the current flow across a plane
+    type(mesh_line_t)  :: line     !< or though a line (in 2D)
 
-    type(output_bgw_t) :: bgw      ! parameters for BerkeleyGW output
+    type(output_bgw_t) :: bgw      !< parameters for BerkeleyGW output
 
   end type output_t
 

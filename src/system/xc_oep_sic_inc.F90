@@ -18,7 +18,7 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-! This routine calculates the SIC exchange functional.
+!> This routine calculates the SIC exchange functional.
 subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   type(xc_t),     intent(in)    :: xcs
   type(grid_t),   intent(inout) :: gr

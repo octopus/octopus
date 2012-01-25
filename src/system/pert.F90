@@ -80,7 +80,7 @@ module pert_m
     PERTURBATION_ELECTRIC = 1,  &
     PERTURBATION_MAGNETIC = 2,  &
     PERTURBATION_IONIC    = 3,  &
-    PERTURBATION_KDOTP    = 15, &   ! value chosen for compatibility with calculation mode kdotp
+    PERTURBATION_KDOTP    = 15, &   !< value chosen for compatibility with calculation mode kdotp
     PERTURBATION_NONE     = 0
 
   integer, public, parameter :: &
@@ -89,13 +89,13 @@ module pert_m
 
   type pert_ionic_t
     private
-    !if pure_dir is .false. then the perturbation is a combination of
-    !displacements of atoms
+    !> if pure_dir is .false. then the perturbation is a combination of
+    !! displacements of atoms.
+    !! If pure_dir is .true., next mix1 and mix2 arrays are allocated
+    !! If pure_dir is .false., atom, dir, atom2 and dir2 are used
     logical :: pure_dir
-    !if pure_dir is .true., these arrays are allocated
-    FLOAT, pointer :: mix1(:,:) !mix1(natoms, ndim)
+    FLOAT, pointer :: mix1(:,:) !< mix1(natoms, ndim)
     FLOAT, pointer :: mix2(:,:)
-    !if pure_dir is .false., atom, dir, atom2 and dir2 are used
   end type pert_ionic_t
 
   type pert_t

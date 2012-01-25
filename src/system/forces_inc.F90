@@ -130,10 +130,10 @@ end subroutine X(total_force_from_local_potential)
 
 
 !---------------------------------------------------------------------------
-! Ref: Kikuji Hirose, Tomoya Ono, Yoshitaka Fujimoto, and Shigeru Tsukamoto,
-! First-principles calculations in real-space formalism: Electronic configurations
-! and transport properties of nanostructures, Imperial College Press (2005)
-! Section 1.6, page 12
+!> Ref: Kikuji Hirose, Tomoya Ono, Yoshitaka Fujimoto, and Shigeru Tsukamoto,
+!! First-principles calculations in real-space formalism: Electronic configurations
+!! and transport properties of nanostructures, Imperial College Press (2005)
+!! Section 1.6, page 12
 subroutine X(forces_from_potential)(gr, geo, ep, st, time)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo

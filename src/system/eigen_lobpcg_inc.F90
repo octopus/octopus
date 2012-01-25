@@ -24,9 +24,9 @@
 #define UC uc(1:nuc)
 
 
-! ---------------------------------------------------------
-! Driver for the LOBPCG eigensolver that performs a per-block,
-! per-k-point iteration.
+  ! ---------------------------------------------------------
+  !> Driver for the LOBPCG eigensolver that performs a per-block,
+  !! per-k-point iteration.
   subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size)
     type(grid_t),           intent(in)    :: gr
     type(states_t),         intent(inout) :: st
@@ -107,20 +107,20 @@
 
 
 ! ---------------------------------------------------------
-! Locally optimal block preconditioned conjugate gradient algorithm.
-! For details, see:
-!
-! A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
-! Optimal Block Preconditioned Conjugate Gradient Method. SIAM
-! Journal on Scientific Computing, 23(2):517-541, 2001.
-!
-! A. V. Knyazev, I. Lashuk, M. E. Argentati, and E. Ovchin-
-! nikov. Block Locally Optimal Preconditioned Eigenvalue Xolvers
-! (BLOPEX) in hypre and PETSc. SIAM Journal of Scientific Computing,
-! 2007.
-!
-! There is also a wiki page at
-! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:LOBPCG
+!> Locally optimal block preconditioned conjugate gradient algorithm.
+!! For details, see:
+!!
+!! A. Knyazev. Toward the Optimal Preconditioned Eigensolver: Locally
+!! Optimal Block Preconditioned Conjugate Gradient Method. SIAM
+!! Journal on Scientific Computing, 23(2):517-541, 2001.
+!!
+!! A. V. Knyazev, I. Lashuk, M. E. Argentati, and E. Ovchin-
+!! nikov. Block Locally Optimal Preconditioned Eigenvalue Xolvers
+!! (BLOPEX) in hypre and PETSc. SIAM Journal of Scientific Computing,
+!! 2007.
+!!
+!! There is also a wiki page at
+!! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:LOBPCG
 subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end,  &
   ik, pre, tol, niter, converged, diff, ib, constr)
   type(grid_t),           intent(in)    :: gr
@@ -585,7 +585,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 contains
 
   ! ---------------------------------------------------------
-  ! Calculate residuals
+  !> Calculate residuals
   subroutine X(lobpcg_res)()
     integer :: ist, iev
     integer :: idim, ip
@@ -606,7 +606,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Recalculate set of unconverged eigenvectors.
+  !> Recalculate set of unconverged eigenvectors.
   subroutine X(lobpcg_unconv_ev)()
     integer           :: i, ist, j, new_nuc
     integer           :: new_uc(nuc)
@@ -638,7 +638,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns a mask with mask(i) = .false. for eigenvector i unconverged.
+  !> Returns a mask with mask(i) = .false. for eigenvector i unconverged.
   subroutine X(lobpcg_conv_mask)(mask)
     logical, intent(out) :: mask(:)
 
@@ -652,7 +652,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Orthonormalize the column vectors of vs.
+  !> Orthonormalize the column vectors of vs.
   subroutine X(lobpcg_orth)(v_start, v_end, vs, chol_failure)
     integer,        intent(in)    :: v_start
     integer,        intent(in)    :: v_end

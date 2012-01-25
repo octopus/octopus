@@ -79,8 +79,8 @@ module forces_m
 contains
 
   ! ---------------------------------------------------------
-  ! This computes the total forces on the ions created by the electrons
-  ! (it excludes the force due to possible time-dependent external fields).
+  !> This computes the total forces on the ions created by the electrons
+  !! (it excludes the force due to possible time-dependent external fields).
   subroutine total_force_calculate(gr, geo, ep, st, x)
     type(grid_t),     intent(inout) :: gr
     type(geometry_t), intent(in)    :: geo

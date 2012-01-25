@@ -505,10 +505,10 @@ contains
 
 
   ! --------------------------------------------------------------------------
-  ! d^2/dki dkj (-(1/2) ki kj [ri,[rj,H]])
-  ! for i  = j : 1 - [ri,[rj,Vnl]]
-  ! for i != j : -(1/2) [ri,[rj,Vnl]]
-  ! Ref: Eq. 3 from M Cardona and FH Pollak, Phys. Rev. 142, 530-543 (1966)
+  !> d^2/dki dkj (-(1/2) ki kj [ri,[rj,H]])
+  !! for i  = j : 1 - [ri,[rj,Vnl]]
+  !! for i != j : -(1/2) [ri,[rj,Vnl]]
+  !! Ref: Eq. 3 from M Cardona and FH Pollak, Phys. Rev. 142, 530-543 (1966)
   subroutine kdotp
     integer :: iatom
     R_TYPE, allocatable :: cpsi(:,:)
@@ -675,11 +675,11 @@ subroutine X(ionic_pert_matrix_elements_2)(this, gr, geo, hm, ik, st, psi, vib, 
 end subroutine X(ionic_pert_matrix_elements_2)
 
 ! --------------------------------------------------------------------------
-! This routine includes occupations for psib if pert_order == 2, correct if used
-! as <psi(0)|H(2)|psi(0)>. It does not include occupations if pert_order == 1,
-! correct if used as <psi(0)|H(1)|psi(1)> since the LR wavefunctions include the
-! occupation. This routine must be modified if used differently than these two
-! ways.
+!> This routine includes occupations for psib if pert_order == 2, correct if used
+!! as \f$ <\psi(0)|H(2)|\psi(0)> \f$. It does not include occupations if pert_order == 1,
+!! correct if used as <psi(0)|H(1)|psi(1)> since the LR wavefunctions include the
+!! occupation. This routine must be modified if used differently than these two
+!! ways.
 subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, density, pert_order)
   type(pert_t),         intent(in)    :: this
   type(grid_t),         intent(inout) :: gr

@@ -61,7 +61,7 @@ module eigensolver_m
     eigensolver_run
 
   type eigensolver_t
-    integer :: es_type    ! which eigensolver to use
+    integer :: es_type    !< which eigensolver to use
 
     logical :: subspace_diag
     
@@ -73,12 +73,12 @@ module eigensolver_m
     integer :: arnoldi_vectors
     FLOAT   :: imag_time
 
-    ! Stores information about how well it performed.
+    !> Stores information about how well it performed.
     FLOAT, pointer :: diff(:, :)
     integer        :: matvec
     integer, pointer :: converged(:)
 
-    ! Stores information about the preconditioning.
+    !> Stores information about the preconditioning.
     type(preconditioner_t) :: pre
 
     type(subspace_t) :: sdiag

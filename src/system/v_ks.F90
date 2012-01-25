@@ -68,9 +68,9 @@ module v_ks_m
     v_ks_freeze_hxc
 
   integer, parameter, public :: &
-    SIC_NONE   = 1,     &  ! no self-interaction correction
-    SIC_PZ     = 2,     &  ! Perdew-Zunger SIC (OEP way)
-    SIC_AMALDI = 3         ! Amaldi correction term
+    SIC_NONE   = 1,     &  !< no self-interaction correction
+    SIC_PZ     = 2,     &  !< Perdew-Zunger SIC (OEP way)
+    SIC_AMALDI = 3         !< Amaldi correction term
 
   type v_ks_calc_t
     private
@@ -101,10 +101,10 @@ module v_ks_m
   type v_ks_t
     integer :: theory_level
 
-    logical :: frozen_hxc ! For RPA and SAE calculations.
+    logical :: frozen_hxc !< For RPA and SAE calculations.
 
-    integer                  :: xc_family  ! the XC stuff
-    integer                  :: sic_type   ! what kind of self-interaction correction to apply
+    integer                  :: xc_family  !< the XC stuff
+    integer                  :: sic_type   !< what kind of self-interaction correction to apply
     type(xc_t)               :: xc
     type(xc_OEP_t)           :: oep
     type(xc_ks_inversion_t)  :: ks_inversion
@@ -117,7 +117,7 @@ module v_ks_m
     integer                  :: tc_delay
     type(grid_t), pointer    :: gr
     type(v_ks_calc_t)        :: calc
-    FLOAT                    :: dfrt_theta ! the complex scaling parameter
+    FLOAT                    :: dfrt_theta !< the complex scaling parameter
     
   end type v_ks_t
 
@@ -131,7 +131,7 @@ contains
     type(states_dim_t),   intent(in)    :: dd
     type(geometry_t),     intent(inout) :: geo
     type(multicomm_t),    intent(in)    :: mc  
-    FLOAT,                intent(in)    :: nel ! the total number of electrons
+    FLOAT,                intent(in)    :: nel !< the total number of electrons
 
     PUSH_SUB(v_ks_init)
 
@@ -411,7 +411,7 @@ contains
     type(geometry_t), optional, intent(in)    :: geo
     logical,          optional, intent(in)    :: calc_eigenval
     FLOAT,            optional, intent(in)    :: time
-    logical,          optional, intent(in)    :: calc_berry ! use this before wfns initialized
+    logical,          optional, intent(in)    :: calc_berry !< use this before wfns initialized
     logical,          optional, intent(in)    :: calc_energy
     
     call v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy)
@@ -873,9 +873,9 @@ contains
 
   ! --------------------------------------------------------- 
   !
-  ! Hartree contribution to the KS potential. This function is
-  ! designed to be used by v_ks_calc_finish and it cannot be called
-  ! directly.
+  !> Hartree contribution to the KS potential. This function is
+  !! designed to be used by v_ks_calc_finish and it cannot be called
+  !! directly.
   !
   subroutine v_ks_hartree(ks, hm)
     type(v_ks_t),        intent(inout) :: ks

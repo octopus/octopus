@@ -19,10 +19,11 @@
 
 
 ! ---------------------------------------------------------
-! Prints out the multipole matrix elements between KS states.
-! It prints the states to the file opened in iunit.
-! It prints the (ll,mm) multipole moment, for
-! the Kohn-Sham states in the irreducible subspace ik.
+!> Prints out the multipole matrix elements between KS states.
+!!
+!! It prints the states to the file opened in iunit.
+!! It prints the (ll,mm) multipole moment, for
+!! the Kohn-Sham states in the irreducible subspace ik.
 ! ---------------------------------------------------------
 subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
   character(len=*), intent(in) :: fname

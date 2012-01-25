@@ -61,9 +61,9 @@ module xc_oep_m
     XC_OEP_FULL   = 5
 
   type xc_oep_t
-    integer       :: level      ! 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
-    FLOAT         :: mixing     ! how much of the function S(r) to add to vxc in every iteration
-    type(lr_t)    :: lr         ! to solve the equation H psi = b
+    integer       :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
+    FLOAT         :: mixing     !< how much of the function S(r) to add to vxc in every iteration
+    type(lr_t)    :: lr         !< to solve the equation H psi = b
     type(linear_solver_t) :: solver
     type(scf_tol_t) :: scftol
     integer          :: eigen_n
@@ -197,7 +197,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! A couple of auxiliary functions for oep
+  !> A couple of auxiliary functions for oep
   ! ---------------------------------------------------------
   subroutine xc_oep_SpinFactor(oep, nspin)
     type(xc_oep_t), intent(inout) :: oep

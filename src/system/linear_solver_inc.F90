@@ -19,8 +19,8 @@
 
 
 ! ---------------------------------------------------------
-! This subroutine calculates the solution of (H + shift) x = y
-! Typically shift = - eigenvalue + omega
+!> This subroutine calculates the solution of (H + shift) x = y
+!! Typically shift = - eigenvalue + omega
 ! ---------------------------------------------------------
 subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_response)
   type(linear_solver_t), target, intent(inout) :: this
@@ -29,8 +29,8 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_respo
   type(states_t),        target, intent(in)    :: st
   integer,                       intent(in)    :: ist
   integer,                       intent(in)    :: ik
-  R_TYPE,                        intent(inout) :: x(:,:)   ! x(gr%mesh%np, d%dim)
-  R_TYPE,                        intent(in)    :: y(:,:)   ! y(gr%mesh%np, d%dim)
+  R_TYPE,                        intent(inout) :: x(:,:)   !< x(gr%mesh%np, d%dim)
+  R_TYPE,                        intent(in)    :: y(:,:)   !< y(gr%mesh%np, d%dim)
   R_TYPE,                        intent(in)    :: shift
   FLOAT,                         intent(in)    :: tol
   logical, optional,             intent(in)    :: occ_response
@@ -133,7 +133,7 @@ R_TYPE function X(ls_dotp_qmr)(x,y)
 end function X(ls_dotp_qmr)
 
 ! ---------------------------------------------------------
-!Conjugate gradients
+!> Conjugate gradients
 subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
@@ -141,8 +141,8 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol)
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
   integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(inout) :: x(:,:)   !< x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(in)    :: y(:,:)   !< y(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(in)    :: shift
   FLOAT,                 intent(in)    :: tol
 
@@ -208,8 +208,8 @@ subroutine X(ls_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol)
 end subroutine X(ls_solver_cg)
 
 ! ---------------------------------------------------------
-!BICONJUGATE GRADIENTS STABILIZED
-!see http://math.nist.gov/iml++/bicgstab.h.txt
+!> BICONJUGATE GRADIENTS STABILIZED
+!! see http://math.nist.gov/iml++/bicgstab.h.txt
 subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, occ_response)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
@@ -217,8 +217,8 @@ subroutine X(ls_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, occ
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
   integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(inout) :: x(:,:)   !< x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(in)    :: y(:,:)   !< y(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(in)    :: shift
   FLOAT,                 intent(in)    :: tol
   logical,               intent(in)    :: occ_response
@@ -429,15 +429,15 @@ end subroutine X(ls_solver_multigrid)
 
 
 ! ---------------------------------------------------------
-! This routine applies the operator hx = [H (+ Q) + shift] x
+!> This routine applies the operator hx = [H (+ Q) + shift] x
 subroutine X(ls_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
   type(hamiltonian_t),   intent(in)    :: hm
   type(grid_t),          intent(inout) :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
   integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:,:)   !  x(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(out)   :: Hx(:,:)  ! Hx(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(inout) :: x(:,:)   !<  x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(out)   :: Hx(:,:)  !< Hx(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(in)    :: shift
 
   integer :: idim, jst
@@ -476,10 +476,10 @@ end subroutine X(ls_solver_operator)
 
 
 ! ---------------------------------------------------------
-! applies ls_solver_operator with other arguments implicit as global variables
+!> applies ls_solver_operator with other arguments implicit as global variables
 subroutine X(ls_solver_operator_na) (x, hx)
-  R_TYPE,                intent(in)    :: x(:)   !  x(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(out)   :: Hx(:)  ! Hx(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(in)    :: x(:)   !<  x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(out)   :: Hx(:)  !< Hx(gr%mesh%np, st%d%dim)
 
   R_TYPE, allocatable :: tmpx(:, :)
   R_TYPE, allocatable :: tmpy(:, :)
@@ -498,8 +498,8 @@ end subroutine X(ls_solver_operator_na)
 
 
 ! ---------------------------------------------------------
-! applies transpose of ls_solver_operator with other arguments implicit as global variables
-! (H - shift)^T = H* - shift = (H - shift*)*
+!> applies transpose of ls_solver_operator with other arguments implicit as global variables
+!! \f$ (H - shift)^T = H* - shift = (H - shift*)* \f$ 
 subroutine X(ls_solver_operator_t_na) (x, hx)
   R_TYPE,                intent(in)    :: x(:)   !  x(gr%mesh%np, st%d%dim)
   R_TYPE,                intent(out)   :: Hx(:)  ! Hx(gr%mesh%np, st%d%dim)
@@ -521,10 +521,10 @@ end subroutine X(ls_solver_operator_t_na)
 
 
 ! ---------------------------------------------------------
-! applies ls_solver_operator in symmetrized form: A^T A
+!> applies ls_solver_operator in symmetrized form: \f$  A^T A \f$ 
 subroutine X(ls_solver_operator_sym_na) (x, hx)
-  R_TYPE,                intent(in)    :: x(:)   !  x(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(out)   :: Hx(:)  ! Hx(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(in)    :: x(:)   !<  x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(out)   :: Hx(:)  !< Hx(gr%mesh%np, st%d%dim)
 
   R_TYPE, allocatable :: tmpx(:, :)
   R_TYPE, allocatable :: tmpy(:, :)
@@ -547,8 +547,8 @@ end subroutine X(ls_solver_operator_sym_na)
 
 ! ---------------------------------------------------------
 subroutine X(ls_preconditioner) (x, hx)
-  R_TYPE,                intent(in)    :: x(:)   !  x(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(out)   :: hx(:)  ! Hx(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(in)    :: x(:)   !<  x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(out)   :: hx(:)  !< Hx(gr%mesh%np, st%d%dim)
 
   R_TYPE, allocatable :: tmpx(:, :)
   R_TYPE, allocatable :: tmpy(:, :)
@@ -576,8 +576,8 @@ subroutine X(ls_solver_sos) (ls, hm, gr, st, ist, ik, x, y, shift)
   type(states_t),                 intent(in)    :: st
   integer,                        intent(in)    :: ist
   integer,                        intent(in)    :: ik
-  R_TYPE,                         intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
-  R_TYPE,                         intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
+  R_TYPE,                         intent(inout) :: x(:,:)   !< x(gr%mesh%np, st%d%dim)
+  R_TYPE,                         intent(in)    :: y(:,:)   !< y(gr%mesh%np, st%d%dim)
   R_TYPE,                         intent(in)    :: shift
 
   integer :: jst, idim

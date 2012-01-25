@@ -59,9 +59,9 @@ module exponential_m
     EXP_CHEBYSHEV          = 4
 
   type exponential_t
-    integer     :: exp_method  ! which method is used to apply the exponential
-    FLOAT       :: lanczos_tol ! tolerance for the Lanczos method
-    integer     :: exp_order   ! order to which the propagator is expanded
+    integer     :: exp_method  !< which method is used to apply the exponential
+    FLOAT       :: lanczos_tol !< tolerance for the Lanczos method
+    integer     :: exp_order   !< order to which the propagator is expanded
   end type exponential_t
 
 contains
@@ -192,21 +192,22 @@ contains
   end subroutine exponential_copy
 
   ! ---------------------------------------------------------
-  ! This routine performs the operation:
-  !
-  ! exp{-i*deltat*hm(t)}|zpsi>  <-- |zpsi>
-  !
-  ! If imag_time is present and is set to true, it performa instead:
-  !
-  ! exp{ deltat*hm(t)}|zpsi>  <-- |zpsi>
-  !
-  ! If the Hamiltonian contains an inhomogeneous term, the operation is:
-  !
-  ! exp{-i*deltat*hm(t)}|zpsi> + deltat*phi{-i*deltat*hm(t)}|zpsi>  <-- |zpsi>
-  !
-  ! where:
-  !
-  ! phi(x) = (e^x - 1)/x
+  !> This routine performs the operation:
+  !! \f[
+  !! \exp{-i*\Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
+  !! \f]
+  !! If imag_time is present and is set to true, it performa instead:
+  !! \f[
+  !! \exp{ \Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
+  !! \f]
+  !! If the Hamiltonian contains an inhomogeneous term, the operation is:
+  !! \f[
+  !! \exp{-i*\Delta t*hm(t)}|\psi_z> + \Delta t*\phi{-i*\Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
+  !! \f]
+  !! where:
+  !! \f[
+  !! \phi(x) = (e^x - 1)/x
+  !! \f]
   ! ---------------------------------------------------------
   subroutine exponential_apply(te, der, hm, zpsi, ist, ik, deltat, time, order, vmagnus, imag_time)
     type(exponential_t), intent(inout) :: te
@@ -342,21 +343,24 @@ contains
 
 
     ! ---------------------------------------------------------
+    !> Calculates the exponential of the Hamiltonian through an expansion in 
+    !! Chebyshev polynomials.
+    !!
+    !! For that purposes it uses the closed form of the coefficients[1] and Clenshaw-Gordons[2]
+    !! recursive algorithm.
+    !! [1] H. Tal-Ezer and R. Kosloff, J. Chem. Phys 81, 3967 (1984).
+    !! [2] C. W. Clenshaw, MTAC 9, 118 (1955).
+    !! Since I don't have access to MTAC, I copied next Maple algorithm from Dr. F. G. Lether's
+    !! (University of Georgia) homepage: (www.math.uga.edu/~fglether):
+    !! \verbatim
+    !! twot := t + t; u0 := 0; u1 := 0;
+    !!  for k from n to 0 by -1 do
+    !!    u2 := u1; u1 := u0;
+    !!    u0 := twot*u1 - u2 + c[k];
+    !!  od;
+    !!  ChebySum := 0.5*(u0 - u2);
+    !! \endverbatim
     subroutine cheby()
-      ! Calculates the exponential of the Hamiltonian through an expansion in 
-      ! Chebyshev polynomials.
-      ! For that purposes it uses the closed form of the coefficients[1] and Clenshaw-Gordons[2]
-      ! recursive algorithm.
-      ! [1] H. Tal-Ezer and R. Kosloff, J. Chem. Phys 81, 3967 (1984).
-      ! [2] C. W. Clenshaw, MTAC 9, 118 (1955).
-      ! Since I don't have access to MTAC, I copied next Maple algorithm from Dr. F. G. Lether's
-      ! (University of Georgia) homepage: (www.math.uga.edu/~fglether):
-      ! {twot := t + t; u0 := 0; u1 := 0;
-      !  for k from n to 0 by -1 do
-      !    u2 := u1; u1 := u0;
-      !    u0 := twot*u1 - u2 + c[k];
-      !  od;
-      !  ChebySum := 0.5*(u0 - u2);}
       integer :: j, idim
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:,:)
@@ -648,21 +652,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This routine performs the operation:
-  !
-  ! exp{-i*deltat*hm(t)}|zpsi>  <-- |zpsi>
-  !
-  ! If imag_time is present and is set to true, it performa instead:
-  !
-  ! exp{ deltat*hm(t)}|zpsi>  <-- |zpsi>
-  !
-  ! If the hamiltonian contains an inhomogeneous term, the operation is:
-  !
-  ! exp{-i*deltat*hm(t)}|zpsi> + deltat*phi{-i*deltat*hm(t)}|zpsi>  <-- |zpsi>
-  !
-  ! where:
-  !
-  ! phi(x) = (e^x - 1)/x
+  !> This routine performs the operation:
+  !! \f[
+  !! \exp{-i*\Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
+  !! \f]
+  !! If imag_time is present and is set to true, it performa instead:
+  !! \f[
+  !! \exp{ \Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
+  !! \f]
+  !! If the hamiltonian contains an inhomogeneous term, the operation is:
+  !! \f[
+  !! \exp{-i*\Delta t*hm(t)}|\psi_z> + \Delta t*phi{-i*\Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
+  !! \f]
+  !! where:
+  !! \f[
+  !! \phi(x) = (e^x - 1)/x
+  !! \f]
   ! ---------------------------------------------------------
   subroutine exponential_apply_all(te, der, hm, st, deltat, t, order, vmagnus, imag_time)
     type(exponential_t), intent(inout) :: te

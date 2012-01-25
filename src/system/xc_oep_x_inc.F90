@@ -19,19 +19,20 @@
 
 
 !------------------------------------------------------------
-! The parallelization of this routine is done in the following way:
-! We have to calculate the sum
-!    lxc = sum_{j>i) l_ij
-! where the states i and j are divided in blocks and scattered among
-! the processors. Each processor will calculate a sub-block of the
-! matrix l_ij. Examples of the partitioning (for 3 and 4 blocks/processors)
-!
-! (1  2  1)    (1  2  3  1)
-! (   2  3)    (   2  3  4)
-! (      3)    (      3  4)
-!              (         4)
-!
-!  where the numbers indicate the processor that will do the work
+!> The parallelization of this routine is done in the following way:
+!!
+!! We have to calculate the sum
+!! \f$ lxc = \sum_{j>i} l_i_j \f$
+!! where the states i and j are divided in blocks and scattered among
+!! the processors. Each processor will calculate a sub-block of the
+!! matrix \f$ l_i_j \f$. Examples of the partitioning (for 3 and 4 blocks/processors)
+!! \verbatim
+!! (1  2  1)    (1  2  3  1)
+!! (-  2  3)    (-  2  3  4)
+!! (-  -  3)    (-  -  3  4)
+!!  -  -  -  -  (-  -  -  4)
+!! \endverbatim
+!!  where the numbers indicate the processor that will do the work
 !------------------------------------------------------------
 
 subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
@@ -40,7 +41,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
   integer,        intent(in)    :: is
   type(xc_oep_t), intent(inout) :: oep
   FLOAT,          intent(inout) :: ex
-  FLOAT,          intent(in)    :: exx_coef ! amount of EXX (for hybrids)
+  FLOAT,          intent(in)    :: exx_coef !< amount of EXX (for hybrids)
 
   integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r
   integer, allocatable :: recv_stack(:), send_stack(:)

@@ -48,8 +48,8 @@ contains
   subroutine magnetic_density(mesh, st, rho, md)
     type(mesh_t),   intent(in)  :: mesh
     type(states_t), intent(in)  :: st
-    FLOAT,          intent(in)  :: rho(:,:) ! (np, st%d%nspin)
-    FLOAT,          intent(out) :: md(:,:)  ! (np, 3)
+    FLOAT,          intent(in)  :: rho(:,:) !< (np, st%d%nspin)
+    FLOAT,          intent(out) :: md(:,:)  !< (np, 3)
 
     PUSH_SUB(magnetic_density)
 
@@ -155,9 +155,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This subroutine receives as input a current, and produces
-  ! as an output the vector potential that it induces.
-  ! WARNING: There is probably a problem for 2D. For 1D none of this makes sense?
+  !> This subroutine receives as input a current, and produces
+  !! as an output the vector potential that it induces.
+  !! \warning There is probably a problem for 2D. For 1D none of this makes sense?
   subroutine magnetic_induced(der, st, a_ind, b_ind)
     type(derivatives_t),  intent(in)    :: der
     type(states_t),       intent(inout) :: st
