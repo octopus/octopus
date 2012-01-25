@@ -223,6 +223,7 @@ program dielectric_function
   call io_close(out_file)
 
   SAFE_DEALLOCATE_A(dielectric)
+  SAFE_DEALLOCATE_A(invdielectric)
   SAFE_DEALLOCATE_A(chi)
   SAFE_DEALLOCATE_A(vecpot)
 
