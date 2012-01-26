@@ -317,7 +317,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
       gip = ip
     end if
     
-    ! Get x,y,z indexes of the global point
+    ! Get x,y,z indices of the global point
     call index_to_coords(mesh%idx, mesh%sb%dim, gip, ix)
 
     ! Correction for the 1st neighbour
@@ -424,14 +424,14 @@ end subroutine poisson_fmm_solve
 !> Change the value of one dimension (1=x, 2=y, 3=z) 
 !! according to the given value and return the local point
 integer function vec_index2local(mesh, ix, dim_pad, pad)
-   type(mesh_t), intent(in) :: mesh    !< All the requiered information
-   integer,      intent(in) :: ix(1:3) !< Global x,y,z indexes
-   integer,      intent(in) :: dim_pad !< The dimension that has to be change
+   type(mesh_t), intent(in) :: mesh    !< All the required information
+   integer,      intent(in) :: ix(1:3) !< Global x,y,z indices
+   integer,      intent(in) :: dim_pad !< The dimension that has to be changed
    integer,      intent(in) :: pad     !< 
    
    integer :: global_point, local_point
    integer :: jx(1:3)
-   
+
    jx = ix
    jx(dim_pad) = jx(dim_pad) + pad
    global_point = index_from_coords(mesh%idx, 3, jx)
@@ -439,7 +439,7 @@ integer function vec_index2local(mesh, ix, dim_pad, pad)
 #ifdef HAVE_MPI
      local_point = vec_global2local(mesh%vp, global_point, mesh%vp%partno)
      if (local_point == 0) then
-       write(message(1), '(a)') "You are trying to access to a neighbour that does not exists"
+       write(message(1), '(a)') "You are trying to access a neighbour that does not exist."
        write(message(2), '(a, i5)') "Global point = ",global_point
        write(message(3), '(a, 3i5)') "x,y,z point  = ",jx
        call messages_warning(3)

@@ -196,7 +196,7 @@ contains
   !! \f[
   !! \exp{-i*\Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
   !! \f]
-  !! If imag_time is present and is set to true, it performa instead:
+  !! If imag_time is present and is set to true, it performs instead:
   !! \f[
   !! \exp{ \Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
   !! \f]
@@ -656,7 +656,7 @@ contains
   !! \f[
   !! \exp{-i*\Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
   !! \f]
-  !! If imag_time is present and is set to true, it performa instead:
+  !! If imag_time is present and is set to true, it performs instead:
   !! \f[
   !! \exp{ \Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
   !! \f]
