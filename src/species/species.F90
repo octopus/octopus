@@ -444,7 +444,7 @@ contains
         write(message(3),'(a,f11.6)')  '   Thickness [a.u] = ', spec%jthick
         !write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', ( M_THREE /( M_FOUR *M_PI ) &
         !& *spec%z_val /( *sb%lsize(1) *sb%lsize(2) ) )**(1.0/3.0) 
-        call messages_info(4)
+        call messages_info(3)
       end if
       spec%niwfs = 2*spec%z_val
       spec%omega = CNST(0.1)
