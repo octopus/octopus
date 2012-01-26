@@ -90,7 +90,7 @@ module restart_m
 
 contains
 
-  ! returns true if a file named stop exists
+  !> returns true if a file named stop exists
   function clean_stop()
     logical clean_stop, file_exists
 
@@ -111,7 +111,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! read restart format information
+  !> read restart format information
   subroutine restart_init()
 
     PUSH_SUB(restart_init)
@@ -132,7 +132,7 @@ contains
     if(restart_write_files) then
       restart_format = io_function_fill_how("Binary")
     else
-      message(1) = 'Restart information will not be written'
+      message(1) = 'Restart information will not be written.'
       call messages_warning(1)
     end if
 
@@ -148,7 +148,7 @@ contains
     !% a periodic dataset is required to calculate the extended ground state.
     !%End
     call parse_string(datasets_check('RestartDir'), tmpdir, restart_dir)
-    ! Append "/" if necessary.
+    !> Append "/" if necessary.
     if(scan(restart_dir, '/', .true.).lt.1) then
       restart_dir = trim(restart_dir)//'/'
     end if
@@ -164,7 +164,7 @@ contains
     type(geometry_t),           intent(in)    :: geo
     logical, optional,          intent(in)    :: is_complex
     character(len=*), optional, intent(in)    :: specify_dir
-    logical,          optional, intent(in)    :: exact ! if .true. we need all the wavefunctions and on the exact grid
+    logical,          optional, intent(in)    :: exact !< if .true. we need all the wavefunctions and on the exact grid
 
     integer :: kpoints, dim, nst, ierr
     character(len=80) dir
@@ -174,22 +174,22 @@ contains
 
     dir = trim(optional_default(specify_dir, restart_dir))
 
-    !check how many wfs we have
+    !> check how many wfs we have
     call states_look(trim(dir)//GS_DIR, gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
     if(ierr .ne. 0) then
       message(1) = 'Could not properly read wavefunctions from "'//trim(dir)//GS_DIR//'".'
       call messages_fatal(1)
     end if
 
-    ! Resize st%occ, retaining information there
+    !> Resize st%occ, retaining information there
     SAFE_ALLOCATE(new_occ(1:nst, 1:st%d%nik))
     new_occ(:,:) = M_ZERO
     new_occ(1:min(nst, st%nst),:) = st%occ(1:min(nst, st%nst),:)
     SAFE_DEALLOCATE_P(st%occ)
     st%occ => new_occ
 
-    ! FIXME: This wrong, one cannot just change the number of states
-    ! without updating the internal structures.
+    !> FIXME: This wrong, one cannot just change the number of states
+    !! without updating the internal structures.
     st%nst    = nst
     st%st_end = nst
     SAFE_DEALLOCATE_P(st%eigenval)
@@ -201,7 +201,7 @@ contains
         call states_allocate_wfns(st, gr%mesh, TYPE_FLOAT)
       end if
     else
-      ! allow states_allocate_wfns to decide for itself whether complex or real needed
+      !> allow states_allocate_wfns to decide for itself whether complex or real needed
       call states_allocate_wfns(st, gr%mesh)
     endif
 
@@ -213,7 +213,7 @@ contains
     end if
     st%eigenval = M_HUGE
 
-    ! load wavefunctions
+    !> load wavefunctions
     call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr, exact=exact)
 
     POP_SUB(restart_look_and_read)
@@ -227,7 +227,7 @@ contains
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
     integer,    optional, intent(in)    :: iter
-    !if this next argument is present, the lr wfs are stored instead of the gs wfs
+    !> if this next argument is present, the lr wfs are stored instead of the gs wfs
     type(lr_t), optional, intent(in)    :: lr
 
     integer :: iunit, iunit2, iunit_mesh, iunit_states, iunit_rho
@@ -264,7 +264,7 @@ contains
     end if
 
 #ifdef HAVE_MPI
-    !we need a barrier to wait for the directory to be created
+    !> we need a barrier to wait for the directory to be created
     call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
 #endif
 
@@ -288,7 +288,7 @@ contains
 
       call mesh_write_fingerprint(gr%mesh, trim(dir)//'/grid')
 
-      ! write the lxyz array
+      !> write the lxyz array
       if(gr%mesh%sb%box_shape /= HYPERCUBE) then
         ASSERT(associated(gr%mesh%idx%lxyz))
         call io_binary_write(trim(dir)//'/lxyz.obf', gr%mesh%np_part_global*gr%sb%dim, gr%mesh%idx%lxyz, ierr)
@@ -354,10 +354,10 @@ contains
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(zpsi)
 
-    ! do NOT use st%lnst here as it is not (st%st_end - st%st_start + 1)
-    if(ierr == st%d%kpt%nlocal * (st%st_end - st%st_start + 1) * st%d%dim) ierr = 0 ! All OK
+    !> do NOT use st%lnst here as it is not (st%st_end - st%st_start + 1)
+    if(ierr == st%d%kpt%nlocal * (st%st_end - st%st_start + 1) * st%d%dim) ierr = 0 !< All OK
 
-    !write the densities
+    !> write the densities
     if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
       iunit_rho = io_open(trim(dir)//'/density', action='write', is_tmp=.true.)
       write(iunit_rho,'(a)') '#     #spin    #nspin    filename'
@@ -383,13 +383,13 @@ contains
         rho=>st%rho(:,isp)
       end if
       call drestart_write_function(dir, filename, gr%mesh, rho, err)
-      if(.not.gr%have_fine_mesh)nullify(rho)
+      if(.not.gr%have_fine_mesh) nullify(rho)
       if(err==0) ierr = ierr + 1
     end do
     if(gr%have_fine_mesh)then
       SAFE_DEALLOCATE_P(rho)
     end if
-    if(ierr==st%d%nspin) ierr=0 ! All OK
+    if(ierr==st%d%nspin) ierr = 0 !> All OK
 
     if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
       write(iunit,'(a)') '%'
@@ -413,7 +413,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Reads the interface regions of the wavefunctions
+  !> Reads the interface regions of the wavefunctions
   subroutine restart_get_ob_intf(st, gr)
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(in) :: gr
@@ -426,10 +426,10 @@ contains
     write(message(1), '(a,i5)') 'Info: Reading ground-state interface wavefunctions.'
     call messages_info(1)
 
-    ! Sanity check.
+    !> Sanity check.
     do il = 1, NLEADS
       ASSERT(associated(st%ob_lead(il)%intf_psi))
-      ASSERT(il.le.2) ! FIXME: wrong if non-transport calculation
+      ASSERT(il.le.2) !< FIXME: wrong if non-transport calculation
     end do
 
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
@@ -455,10 +455,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! returns in ierr:
-  ! <0 => Fatal error
-  ! =0 => read all wavefunctions
-  ! >0 => could only read ierr wavefunctions
+  !> returns in ierr:
+  !! <0 => Fatal error
+  !! =0 => read all wavefunctions
+  !! >0 => could only read ierr wavefunctions
   subroutine restart_read(dir, st, gr, geo, ierr, iter, lr, exact, number_read)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
@@ -495,15 +495,15 @@ contains
 
     if(.not. present(lr)) then
       write(message(1), '(a,i5)') 'Info: Loading restart information.'
-      st%fromScratch = .false. ! obviously, we are using restart info
+      st%fromScratch = .false. !< obviously, we are using restart info
     else
       write(message(1), '(a,i5)') 'Info: Loading restart information for linear response.'
     end if
     call messages_info(1)
 
-    ! If one restarts a GS calculation changing the %Occupations block, one
-    ! cannot read the occupations, otherwise these overwrite the ones from
-    ! the input file. restart_fixed_occ makes that we do use the ones in the file.
+    !> If one restarts a GS calculation changing the %Occupations block, one
+    !! cannot read the occupations, otherwise these overwrite the ones from
+    !! the input file. restart_fixed_occ makes that we do use the ones in the file.
     integral_occs = .true. ! only used if restart_fixed_occ
     if(st%restart_fixed_occ) then
       read_occ = .true.
@@ -512,7 +512,7 @@ contains
       read_occ = .not. st%fixed_occ
     endif
 
-    ! sanity check
+    !> sanity check
     if(present(lr)) then
       lr_allocated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
         (associated(lr%zdl_psi) .and. states_are_complex(st))
@@ -521,7 +521,7 @@ contains
 
     ierr = 0
 
-    ! open files to read
+    !> open files to read
     wfns_file  = io_open(trim(dir)//'/wfns', action='read', &
       status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
     if(wfns_file < 0) ierr = -1
@@ -530,28 +530,28 @@ contains
       status='old', die=.false., is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
     if(occ_file < 0) ierr = -1
 
-    ! now read the mesh information
+    !> now read the mesh information
     call mesh_read_fingerprint(gr%mesh, trim(dir)//'/grid', read_np_part, read_np)
 
-    ! For the moment we continue reading if we receive -1 so we can
-    ! read old restart files that do not have a fingerprint file.
-    ! if (read_np < 0) ierr = -1
+    !> For the moment we continue reading if we receive -1 so we can
+    !! read old restart files that do not have a fingerprint file.
+    !! if (read_np < 0) ierr = -1
 
     if (read_np > 0 .and. gr%mesh%sb%box_shape /= HYPERCUBE) then
 
       grid_changed = .true.
 
-      ! perhaps only the order of the points changed, this can only
-      ! happen if the number of points is the same and no points maps
-      ! to zero (this is checked below)
+      !> perhaps only the order of the points changed, this can only
+      !! happen if the number of points is the same and no points maps
+      !! to zero (this is checked below)
       grid_reordered = (read_np == gr%mesh%np_global)
 
-      ! the grid is different, so we read the coordinates.
+      !> the grid is different, so we read the coordinates.
       SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:gr%mesh%sb%dim))
       ASSERT(associated(gr%mesh%idx%lxyz))
       call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*gr%mesh%sb%dim, read_lxyz, read_ierr)
 
-      ! and generate the map
+      !> and generate the map
       SAFE_ALLOCATE(map(1:read_np))
 
       do ip = 1, read_np
@@ -605,7 +605,7 @@ contains
     SAFE_ALLOCATE(restart_file_present(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     restart_file_present = .false.
 
-    ! Skip two lines.
+    !> Skip two lines.
     call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file,  line, err)
     call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file,  line, err)
 
@@ -627,8 +627,8 @@ contains
       end if
 
       call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, line, err)
-      if(.not. present(lr)) then ! do not read eigenvalues or occupations when reading linear response
-        ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
+      if(.not. present(lr)) then !< do not read eigenvalues or occupations when reading linear response
+        !> # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
         read(line, *) my_occ, char, st%eigenval(ist, ik), char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
         if(read_occ) then
           st%occ(ist, ik) = my_occ
@@ -646,12 +646,12 @@ contains
     end do
 
     if(st%restart_fixed_occ) then
-      ! reset to overwrite whatever smearing may have been set earlier
+      !> reset to overwrite whatever smearing may have been set earlier
       call smear_init(st%smear, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs)
     endif
 
-    !now we really read, to avoid serialisation of reads in the
-    !parallel case (io_par works as a barrier)
+    !> now we really read, to avoid serialisation of reads in the
+    !! parallel case (io_par works as a barrier)
 
     SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     filled = .false.
@@ -733,10 +733,10 @@ contains
 #endif
 
     if(.not. present(lr)) call fill_random()
-    ! it is better to initialize lr wfns to zero
+    !> it is better to initialize lr wfns to zero
 
     if(ierr == 0) then
-      ierr = -1 ! no files read
+      ierr = -1 !> no files read
       if(.not. present(lr)) then
         write(str, '(a,i5)') 'Loading restart information'
       else
@@ -776,7 +776,7 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    subroutine fill_random() ! Put random function in orbitals that could not be read.
+    subroutine fill_random() !< Put random function in orbitals that could not be read.
       PUSH_SUB(restart_read.fill_random)
 
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -796,7 +796,7 @@ contains
 
     ! ---------------------------------------------------------
 
-    logical function index_is_wrong() ! .true. if the index (idim, ist, ik) is not present in st structure...
+    logical function index_is_wrong() !< .true. if the index (idim, ist, ik) is not present in st structure...
       PUSH_SUB(restart_read.index_is_wrong)
 
       if(idim > st%d%dim .or. idim < 1 .or.   &
@@ -826,9 +826,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! When doing an open-boundary calculation Octopus needs the
-  ! unscattered states in order to solve the Lippmann-Schwinger
-  ! equation to obtain extended eigenstates.
+  !> When doing an open-boundary calculation Octopus needs the
+  !! unscattered states in order to solve the Lippmann-Schwinger
+  !! equation to obtain extended eigenstates.
   subroutine read_free_states(st, gr)
     type(states_t),       intent(inout) :: st
     type(grid_t), target, intent(inout) :: gr
@@ -868,21 +868,21 @@ contains
       call messages_fatal(1)
     end if
 
-    ! Skip two lines.
+    !> Skip two lines.
     call iopar_read(mpi_grp, wfns, line, err)
     call iopar_read(mpi_grp, wfns, line, err)
 
     call iopar_read(mpi_grp, occs, line, err)
     call iopar_read(mpi_grp, occs, line, err)
 
-    counter  = 0 ! reset counter
+    counter  = 0 !< reset counter
     st%d%kweights(:) = M_ZERO
 
     forall(il = 1:NLEADS) st%ob_lead(il)%rho = M_ZERO
     call mpi_grp_copy(m_lead%mpi_grp, gr%mesh%mpi_grp)
     do
-      ! Check for end of file. Check only one of the two files assuming
-      ! they are written correctly, i.e. of same length.
+      !> Check for end of file. Check only one of the two files assuming
+      !! they are written correctly, i.e. of same length.
       call iopar_read(mpi_grp, wfns, line, err)
       read(line, '(a)') char
       if(char .eq. '%') then
@@ -895,17 +895,17 @@ contains
       read(line, *) ik, char, ist, char, idim, char, fname
 
       call iopar_read(mpi_grp, occs, line, err)
-      !# occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
+      !> # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
       read(line, *) occ, char, eval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), &
         w_k, char, chars, char, ik, char, ist, char, idim
 
-      ! we need the kpoints from the periodic run for the scattering states
-      ! so overwrite the "false" kpoints of the finite center
+      !> we need the kpoints from the periodic run for the scattering states
+      !! so overwrite the "false" kpoints of the finite center
       call kpoints_set_point(gr%sb%kpoints, ik, kpoint(1:gr%sb%dim))
       st%d%kweights(ik) = w_k
       st%occ(ist, ik) = occ
       counter = counter + 1
-      ! if not in the corresponding node cycle
+      !> if not in the corresponding node cycle
       if(ik < st%d%kpt%start .or. ik > st%d%kpt%end .or. ist < st%st_start .or. ist > st%st_end) cycle
 
       call zrestart_read_function(trim(restart_dir), fname, m_lead, tmp(:, idim), err)
@@ -913,7 +913,7 @@ contains
       call lead_dens_accum()
 
 
-      ! Copy the wave-function from the lead to the central region, using periodicity.
+      !> Copy the wave-function from the lead to the central region, using periodicity.
       start(1:3) = m_center%idx%nr(1, 1:3) + m_center%idx%enlarge(1:3)
       end(1:3) = m_center%idx%nr(2, 1:3) - m_center%idx%enlarge(1:3)
 
@@ -924,20 +924,20 @@ contains
       call zmf_add(m_lead, start_lead, end_lead, tmp(:, idim), m_center, start, end, &
                     st%zphi(:, idim, ist, ik), TRANS_DIR)
 
-      ! Apply phase. Here the kpoint read from the file is different
-      ! from the one calculated by octopus, since the box size changed.
-      ! The read kpoints are used for describing the free states of the
-      ! open system, which are mapped 1 to 1 (periodic incoming to scattered)
-      ! with the Lippmann-Schwinger equation.
+      !> Apply phase. Here the kpoint read from the file is different
+      !! from the one calculated by octopus, since the box size changed.
+      !! The read kpoints are used for describing the free states of the
+      !! open system, which are mapped 1 to 1 (periodic incoming to scattered)
+      !! with the Lippmann-Schwinger equation.
 
       do ip = 1, gr%mesh%np
         phase = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim)*kpoint(1:gr%sb%dim)))
         st%zphi(ip, idim, ist, ik) = phase * st%zphi(ip, idim, ist, ik)
       end do
 
-      ! For debugging: write phi in gnuplot format to files.
-      ! Only the z=0 plane is written, so mainly useful for 1D and 2D
-      ! debugging.
+      !> For debugging: write phi in gnuplot format to files.
+      !! Only the z=0 plane is written, so mainly useful for 1D and 2D
+      !! debugging.
       if(in_debug_mode) then
         write(filename, '(a,i3.3,a,i4.4,a,i1.1)') 'phi-', ik, '-', ist, '-', idim
         select case(gr%sb%dim)
@@ -950,7 +950,7 @@ contains
         end select
       end if
 
-    end do ! Loop over all free states.
+    end do !< Loop over all free states.
 
     call io_close(wfns)
     call io_close(occs)
@@ -968,7 +968,7 @@ contains
       integer :: il
 
       PUSH_SUB(read_free_states.lead_dens_accum)
-      !FIXME no spinors yet
+      !> FIXME no spinors yet
       do il = 1, NLEADS
         do ip = 1, np
           st%ob_lead(il)%rho(ip, idim) = st%ob_lead(il)%rho(ip, idim) + w_k * occ * &
@@ -993,8 +993,8 @@ contains
   end subroutine read_free_states
 
   ! ---------------------------------------------------------
-  ! the routine reads formulas for user-defined wavefunctions
-  ! from the input file and fills the respective orbitals
+  !> the routine reads formulas for user-defined wavefunctions
+  !! from the input file and fills the respective orbitals
   subroutine restart_read_user_def_orbitals(mesh, st)
     type(mesh_t),      intent(in) :: mesh
     type(states_t), intent(inout) :: st
@@ -1064,14 +1064,14 @@ contains
 
       call messages_print_stress(stdout, trim('Substitution of orbitals'))
 
-      ! find out how many lines (i.e. states) the block has
+      !> find out how many lines (i.e. states) the block has
       nstates = parse_block_n(blk)
 
       SAFE_ALLOCATE(zpsi(1:mesh%np, 1:st%d%dim))
 
-      ! read all lines
+      !> read all lines
       do ib = 1, nstates
-        ! Check that number of columns is five or six.
+        !> Check that number of columns is five or six.
         ncols = parse_block_cols(blk, ib - 1)
         if(ncols .lt. 5 .or. ncols .gt. 6) then
           message(1) = 'Each line in the UserDefinedStates block must have'
@@ -1083,15 +1083,15 @@ contains
         call parse_block_integer(blk, ib - 1, 1, inst)
         call parse_block_integer(blk, ib - 1, 2, inik)
 
-        ! Calculate from expression or read from file?
+        !> Calculate from expression or read from file?
         call parse_block_integer(blk, ib - 1, 3, state_from)
 
-        ! loop over all states
+        !> loop over all states
         do id = 1, st%d%dim
           do is = 1, st%nst
             do ik = 1, st%d%nik
 
-              ! does the block entry match and is this node responsible?
+              !> does the block entry match and is this node responsible?
               if(.not.(id .eq. idim .and. is .eq. inst .and. ik .eq. inik    &
                 .and. st%st_start .le. is .and. st%st_end .ge. is          &
                 .and. st%d%kpt%start .le. ik .and. st%d%kpt%end .ge. ik) ) cycle
@@ -1099,7 +1099,7 @@ contains
               select case(state_from)
 
               case(state_from_formula)
-                ! parse formula string
+                !> parse formula string
                 call parse_block_string(                            &
                   blk, ib - 1, 4, st%user_def_states(id, is, ik))
 
@@ -1108,24 +1108,24 @@ contains
                 write(message(3), '(2a)') '  ',trim(st%user_def_states(id, is, ik))
                 call messages_info(3)
 
-                ! convert to C string
+                !> convert to C string
                 call conv_to_C_string(st%user_def_states(id, is, ik))
 
-                ! fill states with user-defined formulas
+                !> fill states with user-defined formulas
                 do ip = 1, mesh%np
                   xx = mesh%x(ip, :)
                   rr = sqrt(sum(xx(:)**2))
 
-                  ! parse user-defined expressions
+                  !> parse user-defined expressions
                   call parse_expression(psi_re, psi_im, mesh%sb%dim, xx, rr, M_ZERO, st%user_def_states(id, is, ik))
-                  ! fill state
+                  !> fill state
                   zpsi(ip, 1) = psi_re + M_zI * psi_im
                 end do
 
               case(state_from_file)
-                ! The input format can be coded in column four now. As it is
-                ! not used now, we just say "file".
-                ! Read the filename.
+                !> The input format can be coded in column four now. As it is
+                !! not used now, we just say "file".
+                !! Read the filename.
                 call parse_block_string(blk, ib - 1, 4, filename)
 
                 write(message(1), '(a,3i5)') 'Substituting state of orbital with k, ist, dim = ', ik, is, id
@@ -1133,7 +1133,7 @@ contains
                 write(message(3), '(2a)') '  ',trim(filename)
                 call messages_info(3)
 
-                ! finally read the state
+                !> finally read the state
                 call zio_function_input(filename, mesh, zpsi(:, 1), ierr, .true.)
                 if (ierr > 0) then
                   message(1) = 'Could not read the file!'
@@ -1149,7 +1149,7 @@ contains
 
               call states_set_state(st, mesh, id, is, ik, zpsi(:, 1))
 
-              ! normalize orbital
+              !> normalize orbital
               if(parse_block_cols(blk, ib - 1) .eq. 6) then
                 call parse_block_integer(blk, ib - 1, 5, normalize)
               else
