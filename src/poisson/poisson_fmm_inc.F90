@@ -328,7 +328,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
     rho_half_neigh(1)=rho_half_neigh(1)-(1.0/16.0)*rho(local_j)
 
     local_j = vec_index2local(mesh, ix, 1, 1)
-    rho_half_neigh(1)=rho_half_neigh(1)+(1.0/16.0)*rho(local_j)
+    rho_half_neigh(1)=rho_half_neigh(1)-(1.0/16.0)*rho(local_j)
 
     ! Correction for the 2nd neighbour
     local_j = vec_index2local(mesh, ix, 1, 1)
@@ -338,7 +338,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
     rho_half_neigh(2)=rho_half_neigh(2)-(1.0/16.0)*rho(local_j)
 
     local_j = vec_index2local(mesh, ix, 1, 2)
-    rho_half_neigh(2)=rho_half_neigh(2)+(1.0/16.0)*rho(local_j)
+    rho_half_neigh(2)=rho_half_neigh(2)-(1.0/16.0)*rho(local_j)
 
     ! Correction for the 3rd neighbour
     local_j = vec_index2local(mesh, ix, 2, -1)
@@ -348,7 +348,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
     rho_half_neigh(3)=rho_half_neigh(3)-(1.0/16.0)*rho(local_j)
 
     local_j = vec_index2local(mesh, ix, 2, 1)
-    rho_half_neigh(3)=rho_half_neigh(3)+(1.0/16.0)*rho(local_j)
+    rho_half_neigh(3)=rho_half_neigh(3)-(1.0/16.0)*rho(local_j)
 
     ! Correction for the 4th neighbour
     local_j = vec_index2local(mesh, ix, 2, 1)
@@ -358,7 +358,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
     rho_half_neigh(4)=rho_half_neigh(4)-(1.0/16.0)*rho(local_j)
 
     local_j = vec_index2local(mesh, ix, 2, 2)
-    rho_half_neigh(4)=rho_half_neigh(4)+(1.0/16.0)*rho(local_j)
+    rho_half_neigh(4)=rho_half_neigh(4)-(1.0/16.0)*rho(local_j)
 
     ! Correction for the 5th neighbour
     local_j = vec_index2local(mesh, ix, 3, -1)
@@ -368,7 +368,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
     rho_half_neigh(5)=rho_half_neigh(5)-(1.0/16.0)*rho(local_j)
 
     local_j = vec_index2local(mesh, ix, 3, 1)
-    rho_half_neigh(5)=rho_half_neigh(5)+(1.0/16.0)*rho(local_j)
+    rho_half_neigh(5)=rho_half_neigh(5)-(1.0/16.0)*rho(local_j)
 
     ! Correction for the 6th neighbour
     local_j = vec_index2local(mesh, ix, 3, 1)
@@ -378,7 +378,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
     rho_half_neigh(6)=rho_half_neigh(6)-(1.0/16.0)*rho(local_j)
 
     local_j = vec_index2local(mesh, ix, 3, 2)
-    rho_half_neigh(6)=rho_half_neigh(6)+(1.0/16.0)*rho(local_j)
+    rho_half_neigh(6)=rho_half_neigh(6)-(1.0/16.0)*rho(local_j)
 
     aux1=M_ZERO  
 
