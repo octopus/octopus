@@ -94,11 +94,12 @@ contains
 
     ASSERT(total_states >= occupied_states)
 
-    SAFE_ALLOCATE(states_read(1:sys%st%d%dim, 1:sys%st%d%kpt%nlocal))
+    SAFE_ALLOCATE(states_read(1:sys%st%d%dim, 1:sys%st%d%nik))
 
     call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, number_read = states_read)
 
-    if(any(states_read < occupied_states)) then
+    ! the array needs to hold all states and k-points, but each node is responsible for checking its own states
+    if(any(states_read(1:sys%st%d%dim, sys%st%d%kpt%start:sys%st%d%kpt%end) < occupied_states)) then
       message(1) = "Not all the occupied KS orbitals could be read from '"//trim(restart_dir)//GS_DIR//"'"
       message(2) = "Please run a ground-state calculation first!"
       call messages_fatal(2)

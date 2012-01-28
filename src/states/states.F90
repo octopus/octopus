@@ -122,8 +122,8 @@ module states_m
     type(states_priv_t)      :: priv                  !< the private components
     integer                  :: nst                   !< Number of states in each irreducible subspace
 
-    ! pointers to the wavefunctions
     logical                  :: only_userdef_istates  !< only use user-defined states as initial states in propagation
+    !> pointers to the wavefunctions
     FLOAT, pointer           :: dpsi(:,:,:,:)         !< dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
     CMPLX, pointer           :: zpsi(:,:,:,:)         !< zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
 
@@ -1711,14 +1711,14 @@ contains
     type(states_t), intent(inout) :: st
     type(mesh_t),   intent(in)    :: mesh
 
-    ! Local variables.
+    !> Local variables.
     integer            :: ist, ik
     FLOAT              :: charge
     CMPLX, allocatable :: zpsi(:, :)
 #if defined(HAVE_MPI)
     integer            :: jj
     integer            :: tmp
-    FLOAT, allocatable :: lspin(:, :) ! To exchange spin.
+    FLOAT, allocatable :: lspin(:, :) !< To exchange spin.
 #endif
 
     PUSH_SUB(states_fermi)

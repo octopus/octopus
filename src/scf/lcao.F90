@@ -81,17 +81,17 @@ module lcao_m
     logical           :: alternative
     logical           :: derivative
     
-    ! For the alternative LCAO
+    !> For the alternative LCAO
     logical             :: keep_orb     !< Whether we keep orbitals in memory.
     FLOAT,   pointer    :: radius(:)    !< The localization radius of each atom orbitals
     FLOAT               :: lapdist      !< This is the extra distance that the Laplacian adds to the localization radius.
     integer             :: mult         !< The number of basis per atomic function (with derivatives is 2, 1 otherwise).
     integer             :: maxorb       !< The maximum value of the orbitals over all atoms.
     integer             :: nbasis       !< The total number of basis functions.
-    ! The following functions map between a basis index and atom/orbital index
+    !> The following functions map between a basis index and atom/orbital index
     integer, pointer    :: basis_atom(:) !< The atom that corresponds to a certain basis index
     integer, pointer    :: basis_orb(:)  !< The orbital that corresponds to a certain basis index
-    integer, pointer    :: atom_orb_basis(:, :) !< The basis index that coorrespond to a certain
+    integer, pointer    :: atom_orb_basis(:, :) !< The basis index that corresponds to a certain atom and orbital
     integer, pointer    :: norb_atom(:)  !< The number of orbitals per atom including mult.
     logical             :: parallel      !< Whether the LCAO is done in parallel
     integer             :: lsize(1:2)
@@ -425,7 +425,7 @@ contains
   subroutine lcao_run(sys, hm, st_start)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
-    integer, optional,   intent(in)    :: st_start ! use for unoccupied-states run
+    integer, optional,   intent(in)    :: st_start !< use for unoccupied-states run
 
     integer :: lcao_start_default, lcao_start
     type(lcao_t) :: lcao
@@ -455,7 +455,9 @@ contains
 
       call init_states(sys%st, sys%gr%mesh, sys%geo)
     else
-      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.true.)
+      ! If we are doing unocc calculation, do not mess with the correct eigenvalues
+      ! of the occupied states.
+      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
 
       ASSERT(st_start <= sys%st%nst)
       if(st_start .gt. sys%st%nst) then ! nothing to be done in LCAO
@@ -530,8 +532,10 @@ contains
         message(1) = "Orthogonalizing random wavefunctions."
         call messages_info(1)
         call states_orthogonalize(sys%st, sys%gr%mesh)
-        call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.true.) ! get potentials
-        call states_fermi(sys%st, sys%gr%mesh)                            ! occupations
+        ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
+        ! of the occupied states.
+        call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
+        if(.not. present(st_start)) call states_fermi(sys%st, sys%gr%mesh) ! occupations
 
       else
   
