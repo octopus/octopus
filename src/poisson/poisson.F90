@@ -667,7 +667,7 @@ contains
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO; rhop = M_ZERO
 
-    alpha = CNST(4.0)*mesh%spacing(1) * M_FOUR
+    alpha = CNST(4.0)*mesh%spacing(1)! * M_FOUR
     write(message(1),'(a,f14.6)')  "Info: The alpha value is ", alpha
     write(message(2),'(a)')        "      Higher values of alpha lead to more physical densities and more reliable results."
     call messages_info(2)
