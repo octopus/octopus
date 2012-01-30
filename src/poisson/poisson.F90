@@ -94,8 +94,6 @@ module poisson_m
     FLOAT   :: delta_E_fmm
     integer :: abs_rel_fmm
     integer :: dipole_correction
-    integer :: periodic
-    FLOAT   :: periodic_length
     type(mpi_grp_t) :: all_nodes_grp !< The communicator for all nodes.
     type(mpi_grp_t) :: perp_grp      !< The communicator perpendicular to the mesh communicator.
     integer(8) :: nlocalcharges
@@ -667,7 +665,7 @@ contains
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO; rhop = M_ZERO
 
-    alpha = CNST(4.0)*mesh%spacing(1)! * M_FOUR
+    alpha = CNST(4.0)*mesh%spacing(1)
     write(message(1),'(a,f14.6)')  "Info: The alpha value is ", alpha
     write(message(2),'(a)')        "      Higher values of alpha lead to more physical densities and more reliable results."
     call messages_info(2)

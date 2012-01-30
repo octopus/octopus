@@ -19,16 +19,17 @@
 !! $Id$
 
 ! ---------------------------------------------------------
+!> Initialises the FMM parameters and vectors. Also it calls to 
+!! the library initialisation.
 subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
   type(poisson_fmm_t), intent(out)   :: params_fmm
   type(mesh_t),        intent(in)    :: mesh
   integer,             intent(in)    :: all_nodes_comm
 
 #ifdef HAVE_LIBFM
-  integer :: cdim
   logical, allocatable :: remains(:)
   integer, allocatable :: dend(:)
-  integer :: subcomm
+  integer :: subcomm, cdim
 
   PUSH_SUB(poisson_fmm_init)
 
@@ -52,25 +53,25 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
   !%Description
   !% Sets type of error bound.
   !% 0 = 10^-3 relative error.
-  !% 1 = absolute deltaE error. The error (deltaE) is a fraction of the unity of energy
-  !% 2 = relative deltaE error. The error is the given ratio (deltaE) of the total energy
+  !% 1 = absolute delta_E error. The error (delta_E) is a fraction of the unity of energy
+  !% 2 = relative delta_E error. The error is the given ratio (delta_E) of the total energy
   !% > - Could you explain me what is the difference between considering relative
   !% > or absolute error in the calculations, and why you choose your default as
-  !%  > deltaE=E-3, absrel=relative?
+  !%  > delta_E=E-3, absrel=relative?
   !% The default is just standard error, which fits most situations. It
   !% means, your energy has three significant digits. Lets say the energy of
   !% your system is 1000.0, then the FMM will compute results with a
   !% precision of +-1.
   !% So the result will be
   !% energy=999 ... 1001.
-  !% If you change deltaE to 10^-6 it would be something in between
+  !% If you change delta_E to 10^-6 it would be something in between
   !% energy=999.999 ... 1000.001
   !% If you do know the magnitude of your energy and set absrel to an
-  !% absolute error the situation is different. Setting deltaE to 10^-2 means
+  !% absolute error the situation is different. Setting delta_E to 10^-2 means
   !% you will an energy=999.99..1000.01 which corresponds to 10^5 as
   !% relative error.
   !% Which one you choose is up to you. Since you want to calculate periodic
-  !% systems, you may experience very precise results even if you set deltaE
+  !% systems, you may experience very precise results even if you set delta_E
   !% very low. It is a side effect from the periodicity (totalcharge=0), but
   !% should not bother you at all. You get this kind of extra precision for free.
   !%End
@@ -115,6 +116,7 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
     params_fmm%nlocalcharges = params_fmm%dsize(1)
     
   else 
+
     call MPI_Cartdim_get(params_fmm%all_nodes_grp%comm, cdim, mpi_err)
  
     SAFE_ALLOCATE(remains(1:cdim))
@@ -123,7 +125,6 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
     remains(1) = .false.
     
     call MPI_Cart_sub(params_fmm%all_nodes_grp%comm, remains(1), subcomm, mpi_err)
-    
     call mpi_grp_init(params_fmm%perp_grp, subcomm)
 
     SAFE_ALLOCATE(params_fmm%disps(1:params_fmm%perp_grp%size))
@@ -135,8 +136,8 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
     params_fmm%sp = params_fmm%disps(params_fmm%perp_grp%rank + 1)
     params_fmm%ep = dend(params_fmm%perp_grp%rank + 1)
     params_fmm%nlocalcharges = params_fmm%dsize(params_fmm%perp_grp%rank + 1)
-    
     params_fmm%disps = params_fmm%disps - 1
+
   end if
   call fmm_init()
 
@@ -145,6 +146,7 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
 end subroutine poisson_fmm_init
 
 ! ---------------------------------------------------------
+!> Realese memory and call to end the library
 subroutine poisson_fmm_end(params_fmm)
   type(poisson_fmm_t), intent(inout) :: params_fmm
 
@@ -176,20 +178,17 @@ subroutine poisson_fmm_solve(this, pot, rho)
   integer(8) :: periodic
   integer(8) :: periodicaxes  !< is always 1
   integer(8) :: dipolecorrection
-  integer(8) :: absrel
+  integer(8) :: abs_rel
 
   real(8), allocatable :: q(:)  
-  real(8), allocatable :: potLibFMM(:)
+  real(8), allocatable :: pot_lib_fmm(:)
   real(8), allocatable :: xyz(:, :)
-  real(8) :: deltaE 
-  real(8) :: energyfmm   !< We don`t use it, but we cannot remove energyfmm by the moment
-  real(8) :: periodlength
-  real(8) :: st, en
+  real(8) :: delta_E 
+  real(8) :: energy_fmm   !< We don`t use it, but we cannot remove energy_fmm by the moment
+  real(8) :: periodic_length
   real(8) :: aux
-  integer :: ii, jj
-  integer :: sp, ep
+  integer :: ii, jj, sp, ep, ip, gip
 
-  integer  :: ip, gip
   integer, allocatable :: ix(:)
   FLOAT :: aux1
   FLOAT :: rho_half_neigh(1:6)
@@ -202,14 +201,13 @@ subroutine poisson_fmm_solve(this, pot, rho)
   mesh => this%der%mesh
   sp = this%params_fmm%sp
   ep = this%params_fmm%ep
+  periodic = mesh%sb%periodic_dim
 
-  this%params_fmm%periodic = mesh%sb%periodic_dim
-
-  if(this%params_fmm%periodic /= 0) then
-    if ((mesh%sb%box_shape == PARALLELEPIPED).and.((mesh%sb%lsize(1)==mesh%sb%lsize(2)).and.&
-         (mesh%sb%lsize(1)==mesh%sb%lsize(3)).and.&
-         (mesh%sb%lsize(2)==mesh%sb%lsize(3)))) then
-      this%params_fmm%periodic_length = mesh%sb%lsize(1)
+  if(periodic /= 0) then
+    if ((mesh%sb%box_shape == PARALLELEPIPED) .and. ((mesh%sb%lsize(1) == mesh%sb%lsize(2)) .and. &
+         (mesh%sb%lsize(1) == mesh%sb%lsize(3)) .and. &
+         (mesh%sb%lsize(2) == mesh%sb%lsize(3)))) then
+      periodic_length = mesh%sb%lsize(1)
     else
       message(1) = "At present, FMM solver for Hartree potential can only deal with cubic boxes. "
       message(2) = " Please, change your Poisson solver or the size or dimensions of your box. "
@@ -219,21 +217,20 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
   call profiling_in(poisson_prof, "POISSON_FMM")
 
-
   ! allocate buffers.
   SAFE_ALLOCATE(q(sp:ep))
   SAFE_ALLOCATE(xyz(1:3, sp:ep))
-  SAFE_ALLOCATE(potLibFMM(sp:ep)) 
+  SAFE_ALLOCATE(pot_lib_fmm(sp:ep)) 
 
   totalcharges = mesh%np_global 
 
   if (.not. mesh%use_curvilinear) then
     do ii = sp, ep
-      q(ii) = rho(ii)*mesh%vol_pp(1)
+      q(ii) = rho(ii) * mesh%vol_pp(1)
     end do
   else
     do ii = sp, ep
-      q(ii) = rho(ii)*mesh%vol_pp(ii)
+      q(ii) = rho(ii) * mesh%vol_pp(ii)
     end do
   end if
 
@@ -244,46 +241,43 @@ subroutine poisson_fmm_solve(this, pot, rho)
     end do
   end do
 
-  absrel = this%params_fmm%abs_rel_fmm
-  deltaE = this%params_fmm%delta_E_fmm
-  potLibFMM = M_ZERO 
-  this%params_fmm%periodic=mesh%sb%periodic_dim
-  this%params_fmm%periodic_length= CNST(2.0)*mesh%sb%lsize(1)
-  periodic = this%params_fmm%periodic
-  periodicaxes = 1 
-  periodlength = this%params_fmm%periodic_length
+  abs_rel = this%params_fmm%abs_rel_fmm
+  delta_E = this%params_fmm%delta_E_fmm
+  pot_lib_fmm = M_ZERO 
+  periodic_length = CNST(2.0)*mesh%sb%lsize(1)
+  periodicaxes = 1
   dipolecorrection = this%params_fmm%dipole_correction
 
   call profiling_in(prof_fmm_lib, "FMM_LIB")
-  call fmm(totalcharges, this%params_fmm%nlocalcharges, q(sp), xyz(1, sp), absrel, deltaE, energyfmm, &
-    potLibFMM(sp), periodic, periodicaxes, periodlength, dipolecorrection)
+  call fmm(totalcharges, this%params_fmm%nlocalcharges, q(sp), xyz(1, sp), abs_rel, delta_E, energy_fmm, &
+    pot_lib_fmm(sp), periodic, periodicaxes, periodic_length, dipolecorrection)
   call profiling_out(prof_fmm_lib)
   
   call profiling_in(prof_fmm_gat, "FMM_GATHER")
   if (mpi_world%size > 1) then
     !now we need to allgather the results between "states"
-    call MPI_Allgatherv(potlibFMM(sp), this%params_fmm%nlocalcharges, MPI_FLOAT, &
+    call MPI_Allgatherv(pot_lib_fmm(sp), this%params_fmm%nlocalcharges, MPI_FLOAT, &
          pot(1), this%params_fmm%dsize(1), this%params_fmm%disps(1), MPI_FLOAT, &
          this%params_fmm%perp_grp%comm, mpi_err)
   else
-    pot = potlibFMM
+    pot = pot_lib_fmm
   end if
   call profiling_out(prof_fmm_gat)
 
   ! Correction for cell self-interaction in 2D (cell assumed to be circular)
-  if (mesh%sb%dim==2) then
-    aux = M_TWO*M_PI*mesh%spacing(1)
+  if (mesh%sb%dim == 2) then
+    aux = M_TWO*M_PI * mesh%spacing(1)
     do ii = 1, mesh%np
-      pot(ii)=pot(ii)+aux*rho(ii)
+      pot(ii) = pot(ii) + aux * rho(ii)
     end do
   end if
 
   SAFE_DEALLOCATE_A(q)
   SAFE_DEALLOCATE_A(xyz)
-  SAFE_DEALLOCATE_A(potLibFMM)
+  SAFE_DEALLOCATE_A(pot_lib_fmm)
 
   ! Apply the parallel correction
-  call profiling_in(prof_fmm_corr,"FMM_CORR")
+  call profiling_in(prof_fmm_corr, "FMM_CORR")
   SAFE_ALLOCATE(ix(1:mesh%sb%dim))
   
   if (mesh%parallel_in_domains) then
@@ -295,16 +289,16 @@ subroutine poisson_fmm_solve(this, pot, rho)
   ! FMM just calculates contributions from other cells. for self-interaction cell integration, we include 
   ! (as traditional in octopus) an approximate integration using a spherical cell whose volume is the volume of the actual cell
   ! Next line is only valid for 3D
-  if (mesh%sb%dim==3) then
-    if (.not. mesh%use_curvilinear .and. (mesh%spacing(1)==mesh%spacing(2)) .and. &
-      (mesh%spacing(2)==mesh%spacing(3)) .and. &
-      (mesh%spacing(1)==mesh%spacing(3))) then
+  if (mesh%sb%dim == 3) then
+    if (.not. mesh%use_curvilinear .and. (mesh%spacing(1) == mesh%spacing(2)) .and. &
+      (mesh%spacing(2) == mesh%spacing(3)) .and. &
+      (mesh%spacing(1) == mesh%spacing(3))) then
 
       ! Corrections for first neighbours obtained with linear interpolation      
       ! First we obtain the densities in neighbouring points ip+1/2
-      rho_half_neigh=M_ZERO
+      rho_half_neigh = M_ZERO
       ! Iterate over all local points of rho (1 to mesh%np)
-      do ip =1,mesh%np
+      do ip = 1, mesh%np
         if (mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
           ! Get the global point from the local point
@@ -319,9 +313,9 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
         !!Correction for FMM with semi-neighbours (terms are merged for computational efficiency)
 
-        aux1=M_ZERO  
+        aux1 = M_ZERO  
 
-        aux1=aux1 - rho(vec_index2local(mesh, ix, 1, -2)) - rho(vec_index2local(mesh, ix, 1, 2)) &
+        aux1 = aux1 - rho(vec_index2local(mesh, ix, 1, -2)) - rho(vec_index2local(mesh, ix, 1, 2)) &
           - rho(vec_index2local(mesh, ix, 2, -2)) - rho(vec_index2local(mesh, ix, 2, 2)) &
           - rho(vec_index2local(mesh, ix, 3, -2)) - rho(vec_index2local(mesh, ix, 3, 2)) 
 
@@ -333,19 +327,19 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
         aux1 = aux1/16.0
 
-        aux1= aux1 + rho(ip)*(27.0/32.0 + (M_ONE-M_SIX/22.862)*M_TWO*M_PI*(3./(M_PI*4.))**(2./3.))
+        aux1 = aux1 + rho(ip) * (27.0/32.0 + (M_ONE - M_SIX / 22.862) * M_TWO * M_PI * (3./(M_PI*4.))**(2./3.))
 
-        aux1=aux1*(mesh%spacing(1)*mesh%spacing(2))
+        aux1 = aux1 * (mesh%spacing(1) * mesh%spacing(2))
 
         ! Apply the correction to the potential
-        pot(ip)=pot(ip)+aux1
+        pot(ip) = pot(ip) + aux1
 
       end do
 
     else ! Not common mesh; we add the self-interaction of the cell
       do ii = 1, mesh%np 
-        aux = M_TWO*M_PI*(3.*mesh%vol_pp(ii)/(M_PI*4.))**(2./3.)
-        pot(ii)=pot(ii)+aux*rho(ii)
+        aux = M_TWO * M_PI * (3. * mesh%vol_pp(ii)/(M_PI * 4.))**(2./3.)
+        pot(ii) = pot(ii) + aux * rho(ii)
       end do
     end if
   end if
@@ -361,15 +355,17 @@ end subroutine poisson_fmm_solve
 
 !> Change the value of one dimension (1=x, 2=y, 3=z) 
 !! according to the given value and return the local point
+!! \todo change to a proper site
 integer function vec_index2local(mesh, ix, dim_pad, pad)
    type(mesh_t), intent(in) :: mesh    !< All the required information
    integer,      intent(in) :: ix(1:3) !< Global x,y,z indices
    integer,      intent(in) :: dim_pad !< The dimension that has to be changed
-   integer,      intent(in) :: pad     !< 
+   integer,      intent(in) :: pad     !< How much we want to change that dimension
    
    integer :: global_point, local_point
    integer :: jx(1:3)
 
+   ! no PUSH_SUB, called too often
    jx = ix
    jx(dim_pad) = jx(dim_pad) + pad
    global_point = index_from_coords(mesh%idx, 3, jx)
@@ -378,8 +374,8 @@ integer function vec_index2local(mesh, ix, dim_pad, pad)
      local_point = vec_global2local(mesh%vp, global_point, mesh%vp%partno)
      if (local_point == 0) then
        write(message(1), '(a)') "You are trying to access a neighbour that does not exist."
-       write(message(2), '(a, i5)') "Global point = ",global_point
-       write(message(3), '(a, 3i5)') "x,y,z point  = ",jx
+       write(message(2), '(a, i5)') "Global point = ", global_point
+       write(message(3), '(a, 3i5)') "x,y,z point  = ", jx
        call messages_warning(3)
      end if
 #endif
