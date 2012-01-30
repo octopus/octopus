@@ -49,6 +49,11 @@ module kick_m
     kick_write,           &
     kick_apply
 
+  integer, public, parameter ::        &
+    KICK_FUNCTION_DIPOLE        = 0,   &
+    KICK_FUNCTION_MULTIPOLE     = 1,   &
+    KICK_FUNCTION_USER_DEFINED  = 2
+
   integer, public, parameter ::    &
     KICK_DENSITY_MODE        = 0,  &
     KICK_SPIN_MODE           = 1,  &
@@ -91,6 +96,9 @@ module kick_m
     FLOAT             :: qlength
     integer           :: qkick_mode
     integer           :: qbessel_l, qbessel_m
+    ! In case we use a general function
+    integer           :: function_mode
+    character(len=200):: user_defined_function
   end type kick_t
 
 contains
@@ -183,22 +191,47 @@ contains
     end select
     call messages_print_var_option(stdout, 'TDDeltaStrengthMode', kick%delta_strength_mode)
 
+    nullify(kick%l)
+    nullify(kick%m)
+    nullify(kick%weight)
 
-    !%Variable TDKickFunction
-    !%Type block
-    !%Section Time-Dependent::Response
-    !%Description
-    !% If the block <tt>TDKickFunction</tt> is present in the input file, the kick function to
-    !% be applied at time zero of the time-propagation will not be a "dipole" function
-    !% (<i>i.e.</i> phi => exp(i*k*z) phi), but a general multipole in the form r^l * Y_{lm}(r).
-    !%
-    !% Each line has two columns of integers: the (<i>l</i>,<i>m</i>) pair that defines the
-    !% multipole. Any number of lines may be given, and the kick will be the sum of those
-    !% multipoles.
-    !%
-    !% This feature allows calculation of quadrupole, octupole, etc., response functions.
-    !%End
-    if(parse_block(datasets_check('TDKickFunction'), blk) == 0) then
+    kick%function_mode = KICK_FUNCTION_DIPOLE
+
+    if(parse_isdef(datasets_check('TDDeltaUserDefined')).ne.0) then
+
+      kick%function_mode = KICK_FUNCTION_USER_DEFINED
+      kick%n_multipoles = 0
+
+      !%Variable TDDeltaUserDefined
+      !%Type string
+      !%Section Time-Dependent::Response
+      !%Description
+      !% By default, the kick function will be a dipole. This will change if (1) the variable
+      !% TDDeltaUserDefined is present in the inp file, or (2) if the block TDKickFunction 
+      !% is present in the inp file. If both are present in the inp file, the TDKickFunction
+      !% block will be ignored. The value of TDDeltaUserDefined should be a string describing
+      !% the function that is going to be used as delta perturbation.
+      !%End
+      call parse_string(datasets_check('TDDeltaUserDefined'), "0", kick%user_defined_function)
+
+      !%Variable TDKickFunction
+      !%Type block
+      !%Section Time-Dependent::Response
+      !%Description
+      !% If the block <tt>TDKickFunction</tt> is present in the input file, and the variable
+      !% "TDDeltaUserDefined" is not present in the input file, the kick function to
+      !% be applied at time zero of the time-propagation will not be a "dipole" function
+      !% (<i>i.e.</i> phi => exp(i*k*z) phi), but a general multipole in the form r^l * Y_{lm}(r).
+      !%
+      !% Each line has two columns of integers: the (<i>l</i>,<i>m</i>) pair that defines the
+      !% multipole. Any number of lines may be given, and the kick will be the sum of those
+      !% multipoles.
+      !%
+      !% This feature allows calculation of quadrupole, octupole, etc., response functions.
+      !%End
+    else if(parse_block(datasets_check('TDKickFunction'), blk) == 0) then
+
+      kick%function_mode = KICK_FUNCTION_MULTIPOLE
       n_rows = parse_block_n(blk)
       kick%n_multipoles = n_rows
       SAFE_ALLOCATE(     kick%l(1:n_rows))
@@ -210,11 +243,12 @@ contains
         call parse_block_float(blk, irow - 1, 2, kick%weight(irow))
         if( (kick%l(irow) < 0) .or. (abs(kick%m(irow)) > abs(kick%l(irow))) ) call input_error('TDkickFunction')
       end do
+
     else
+
+      kick%function_mode = KICK_FUNCTION_DIPOLE
       kick%n_multipoles = 0
-      nullify(kick%l)
-      nullify(kick%m)
-      nullify(kick%weight)
+
     end if
     
 
@@ -407,7 +441,9 @@ contains
     read(iunit, '(15x,i2)')     kick%delta_strength_mode
     read(iunit, '(15x,f18.12)') kick%delta_strength
     read(iunit, '(a)') line
-    if(index(line,'multipole').ne.0) then
+    if(index(line,'defined').ne.0) then
+      read(line,'("# User defined:",1x,a)') kick%user_defined_function
+    elseif(index(line,'multipole').ne.0) then
       read(line, '("# N multipoles ",i3)') kick%n_multipoles
       SAFE_ALLOCATE(     kick%l(1:kick%n_multipoles))
       SAFE_ALLOCATE(     kick%m(1:kick%n_multipoles))
@@ -454,7 +490,9 @@ contains
       write(iunit, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
       write(iunit, '(a15,f18.12)')  '# kick strength', kick%delta_strength
        ! if this were to be read by humans, we would want units_from_atomic(units_out%length**(-1))
-      if(kick%n_multipoles > 0) then
+      if(kick%function_mode .eq. KICK_FUNCTION_USER_DEFINED) then
+        write(iunit,'(a15,1x,a)')     '# User defined:', trim(kick%user_defined_function)
+      elseif(kick%n_multipoles > 0) then
         write(iunit, '(a15,i3)')    '# N multipoles ', kick%n_multipoles
         do im = 1, kick%n_multipoles
           write(iunit, '(a15,2i3,f18.12)') '# multipole    ', kick%l(im), kick%m(im), kick%weight(im)
@@ -476,7 +514,11 @@ contains
       write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
       call write_iter_string(out, aux)
       call write_iter_nl(out)
-      if(kick%n_multipoles > 0) then
+      if(kick%function_mode .eq. KICK_FUNCTION_USER_DEFINED) then
+        write(aux,'(a15,1x,a)')     '# User defined:', trim(kick%user_defined_function)
+        call write_iter_string(out, aux)
+        call write_iter_nl(out)
+      elseif(kick%n_multipoles > 0) then
         write(aux, '(a15,i3)')      '# N multipoles ', kick%n_multipoles
         call write_iter_string(out, aux)
         call write_iter_nl(out)
@@ -528,7 +570,7 @@ contains
     integer :: im, iatom
     integer :: iqn, ist, idim, ip, ispin
     CMPLX   :: cc(2), kick_value
-    FLOAT   :: ylm, gylm(1:MAX_DIM), rr
+    FLOAT   :: ylm, gylm(1:MAX_DIM), rr, rkick, ikick
     FLOAT   :: xx(MAX_DIM)
     CMPLX, allocatable :: kick_function(:), psi(:, :)
 
@@ -559,7 +601,7 @@ contains
           end select
           call messages_info(1)
 
-          kick_function = M_ZERO
+          kick_function = M_z0
           do ip = 1, gr%mesh%np
             call mesh_r(gr%mesh, ip, rr, coords = xx)
             select case (kick%qkick_mode)
@@ -578,8 +620,20 @@ contains
           end do
 
         else
-          if(kick%n_multipoles > 0) then
-            kick_function = M_ZERO
+          if(kick%function_mode .eq. KICK_FUNCTION_USER_DEFINED) then
+
+            kick_function = M_z0
+            do ip = 1, gr%mesh%np
+              call mesh_r(gr%mesh, ip, rr, coords = xx)
+              rkick = M_ZERO; ikick = M_ZERO
+              call parse_expression(rkick, ikick, gr%sb%dim, xx, rr, M_ZERO, trim(kick%user_defined_function))
+              kick_function(ip) = rkick
+              !if(abs(rkick) > CNST(1.0e-8)) write(*, *) xx(1:gr%sb%dim), rkick, gr%mesh%spacing(1:gr%sb%dim)
+            end do
+
+          elseif(kick%n_multipoles > 0) then
+
+            kick_function = M_z0
             do im = 1, kick%n_multipoles
               do ip = 1, gr%mesh%np
                 call mesh_r(gr%mesh, ip, rr, coords = xx)
@@ -596,15 +650,23 @@ contains
         end if
 
         write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', kick%delta_strength
+        select case (kick%function_mode)
+        case (KICK_FUNCTION_DIPOLE)
+          message(2) = "Info: kick function: dipole."
+        case (KICK_FUNCTION_MULTIPOLE)
+          message(2) = "Info: kick function: multipoles."
+        case (KICK_FUNCTION_USER_DEFINED)
+          message(2) = "Info: kick function: user defined function."
+        end select
         select case (kick%delta_strength_mode)
         case (KICK_DENSITY_MODE)
-          message(2) = "Info: Delta kick mode: Density mode"
+          message(3) = "Info: Delta kick mode: Density mode"
         case (KICK_SPIN_MODE)
-          message(2) = "Info: Delta kick mode: Spin mode"
+          message(3) = "Info: Delta kick mode: Spin mode"
         case (KICK_SPIN_DENSITY_MODE)
-          message(2) = "Info: Delta kick mode: Density + Spin modes"
+          message(3) = "Info: Delta kick mode: Density + Spin modes"
         end select
-        call messages_info(2)
+        call messages_info(3)
 
         SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
 
