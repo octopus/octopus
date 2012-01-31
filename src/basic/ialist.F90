@@ -58,12 +58,11 @@ contains
   subroutine ialist_init(l)
     type(ialist_t), intent(out) :: l
 
-    PUSH_SUB(ialist_init)
+    ! no push_sub, called too frequently
 
     l%length = 0
     nullify(l%head)
 
-    POP_SUB(ialist_init)
   end subroutine ialist_init
 
 
@@ -74,7 +73,7 @@ contains
 
     type(iacons_t), pointer :: old_head
 
-    PUSH_SUB(ialist_drop)
+    ! no push_sub, called too frequently
 
     if(l%length.gt.0) then
       old_head => l%head
@@ -83,7 +82,6 @@ contains
       l%length = l%length - 1
     end if
 
-    POP_SUB(ialist_drop)
   end subroutine ialist_drop
 
 
@@ -213,7 +211,7 @@ contains
 
     integer :: i
 
-    PUSH_SUB(ialist_end)
+    ! no push_sub, called too frequently
 
     do i = 1, l%length
       call ialist_drop(l)
@@ -221,7 +219,6 @@ contains
     l%length = 0
     nullify(l%head)
 
-    POP_SUB(ialist_end)
   end subroutine ialist_end
 end module ialist_m
 
