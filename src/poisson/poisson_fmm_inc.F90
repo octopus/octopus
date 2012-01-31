@@ -92,6 +92,16 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
   !% Disables dipole correction.
   !%End
   call parse_integer(datasets_check('DipoleCorrection'), 0, params_fmm%dipole_correction)
+  
+  !%Variable AlphaFMM
+  !%Type float
+  !%Default 0.262444231
+  !%Section Hamiltonian::Poisson 
+  !%Description
+  !% Parameter for the correction of the self-interaction of the
+  !% electrostatic Hartree potential. The defaul value is 6 / 22.862
+  !%End
+  call parse_float(datasets_check('AlphaFMM'), CNST(0.262444231), params_fmm%alpha_fmm)
 
   ! FMM: Variable periodic sets periodicity
   ! 0 = open system
@@ -326,8 +336,8 @@ subroutine poisson_fmm_solve(this, pot, rho)
           + rho(vec_index2local(mesh, ix, 3, -1)) + rho(vec_index2local(mesh, ix, 3, 1)) 
 
         aux1 = aux1/16.0
-
-        aux1 = aux1 + rho(ip) * (27.0/32.0 + (M_ONE - M_SIX / 22.862) * M_TWO * M_PI * (3./(M_PI*4.))**(2./3.))
+        
+        aux1 = aux1 + rho(ip) * (27.0/32.0 + (M_ONE - this%params_fmm%alpha_fmm) * M_TWO * M_PI * (3./(M_PI*4.))**(2./3.))
 
         aux1 = aux1 * (mesh%spacing(1) * mesh%spacing(2))
 

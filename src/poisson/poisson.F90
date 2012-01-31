@@ -94,6 +94,7 @@ module poisson_m
     FLOAT   :: delta_E_fmm
     integer :: abs_rel_fmm
     integer :: dipole_correction
+    FLOAT   :: alpha_fmm  !< Alpha for the correction of the FMM
     type(mpi_grp_t) :: all_nodes_grp !< The communicator for all nodes.
     type(mpi_grp_t) :: perp_grp      !< The communicator perpendicular to the mesh communicator.
     integer(8) :: nlocalcharges
