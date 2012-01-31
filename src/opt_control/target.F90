@@ -225,7 +225,7 @@ module opt_control_target_m
     case(oct_tg_groundstate)
       message(1) =  'Info: Using Ground State for TargetOperator'
       call messages_info(1)
-      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr, exact = .true.)
+      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, ierr, exact = .true.)
       
     case(oct_tg_excited) 
 
@@ -250,7 +250,7 @@ module opt_control_target_m
       call states_allocate_wfns(target%st, gr%mesh, TYPE_CMPLX)
       target%st%node(:)  = 0
 
-      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, geo, ierr, exact = .true.)
+      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, ierr, exact = .true.)
       call excited_states_init(target%est, target%st, "oct-excited-state-target") 
 
     case(oct_tg_exclude_state)

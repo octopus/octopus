@@ -214,7 +214,7 @@ contains
     st%eigenval = M_HUGE
 
     ! load wavefunctions
-    call restart_read(trim(dir)//GS_DIR, st, gr, geo, ierr, exact=exact)
+    call restart_read(trim(dir)//GS_DIR, st, gr, ierr, exact=exact)
 
     POP_SUB(restart_look_and_read)
   end subroutine restart_look_and_read
@@ -459,11 +459,10 @@ contains
   !! <0 => Fatal error
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine restart_read(dir, st, gr, geo, ierr, iter, lr, exact, number_read)
+  subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, number_read)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
-    type(geometry_t),     intent(in)    :: geo
     integer,              intent(out)   :: ierr
     integer,    optional, intent(inout) :: iter
     type(lr_t), optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs

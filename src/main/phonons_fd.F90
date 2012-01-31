@@ -66,7 +66,7 @@ contains
     call init_()
 
     ! load wavefunctions
-    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, exact = .true.)
+    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, exact = .true.)
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'

@@ -148,6 +148,8 @@ contains
 
     call messages_print_stress(stdout, "Symmetries")
 
+    ! In all cases, we must check that the grid respects the symmetries. --DAS
+
     if (periodic_dim == 0) then
 
       ! we only have the identity
@@ -186,8 +188,8 @@ contains
 
     else
 
-      lattice(1:3, 1:3) = rlattice(1:3, 1:3)
-      SAFE_ALLOCATE(position(1:3, 1:geo%natoms))
+      lattice(1:3, 1:3) = rlattice(1:3, 1:3)      ! transpose!!
+      SAFE_ALLOCATE(position(1:3, 1:geo%natoms))  ! transpose!!
       SAFE_ALLOCATE(typs(1:geo%natoms))
 
       ! we have to fix things for low-dimensional systems
@@ -211,6 +213,7 @@ contains
 
       max_size = spglib_get_max_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
+      ! spglib returns row-major not column-major matrices!!! --DAS
       SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
       SAFE_ALLOCATE(translation(1:3, 1:max_size))
 

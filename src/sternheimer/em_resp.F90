@@ -160,8 +160,7 @@ contains
         str_tmp = kdotp_wfs_tag(idir)
         write(dirname_restart,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
         ! 1 is the sigma index which is used in em_resp
-        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo, &
-          ierr, lr=kdotp_lr(idir, 1))
+        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
 
         if(ierr .ne. 0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
@@ -379,8 +378,7 @@ contains
                     
                     str_tmp = em_wfs_tag(idir, ifactor)
                     write(dirname_restart,'(2a)') EM_RESP_DIR, trim(wfs_tag_sigma(str_tmp, sigma))
-                    call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo, &
-                      ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
+                    call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
                     
                     if(ierr .ne. 0) then
                       message(1) = "Initializing to zero, could not load response wavefunctions from '" &
@@ -392,8 +390,8 @@ contains
                       do idir2 = 1, gr%sb%periodic_dim
                         str_tmp = em_wfs_tag(idir, ifactor, idir2)
                         write(dirname_restart,'(2a)') EM_RESP_DIR, trim(wfs_tag_sigma(str_tmp, sigma))
-                        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo, &
-                          ierr, lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
+                        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, &
+                          lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
                         
                         if(ierr .ne. 0) then
                           message(1) = "Initializing to zero, could not load second-order response wavefunctions from '" &

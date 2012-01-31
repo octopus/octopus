@@ -65,7 +65,7 @@ contains
 
     ! load wavefunctions
     call states_allocate_wfns(sys%st, sys%gr%mesh)
-    call restart_read(trim(tmpdir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, exact = .true.)
+    call restart_read(trim(tmpdir)//GS_DIR, sys%st, sys%gr, ierr, exact = .true.)
 
     ! generate density
     call density_calc(sys%st, sys%gr, sys%st%rho)

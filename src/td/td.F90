@@ -407,7 +407,7 @@ contains
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
           call ground_state_run(sys, hm, fromScratch)
-          call restart_read(trim(restart_dir)//'td', st, gr, geo, ierr, iter=iter)
+          call restart_read(trim(restart_dir)//'td', st, gr, ierr, iter=iter)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
@@ -441,7 +441,7 @@ contains
       PUSH_SUB(td_run.init_wfs)
 
       if(.not.fromscratch) then
-        call restart_read(trim(tmpdir)//'td', st, gr, geo, ierr, iter=td%iter)
+        call restart_read(trim(tmpdir)//'td', st, gr, ierr, iter=td%iter)
 
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"
@@ -484,7 +484,7 @@ contains
 
       if(fromScratch) then
         if(.not. st%only_userdef_istates) then
-          call restart_read(trim(restart_dir)//GS_DIR, st, gr, geo, ierr, exact = .true.)
+          call restart_read(trim(restart_dir)//GS_DIR, st, gr, ierr, exact = .true.)
           if(ierr.ne.0) then
             write(message(1), '(3a)') 'Unsuccessful read of states.'
             call messages_fatal(1)

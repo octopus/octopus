@@ -280,7 +280,7 @@ contains
       end if
       call states_allocate_wfns(writ%gs_st, gr%mesh, TYPE_CMPLX)
       writ%gs_st%node(:)  = 0
-      call restart_read(trim(restart_dir)//'gs', writ%gs_st, gr, geo, ierr)
+      call restart_read(trim(restart_dir)//'gs', writ%gs_st, gr, ierr)
       if(ierr.ne.0 .and.ierr.ne.(writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
         message(1) = "Could not load "//trim(restart_dir)//"gs"
         call messages_fatal(1)

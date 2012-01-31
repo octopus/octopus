@@ -85,7 +85,7 @@ contains
     call init_()
 
     ! load wavefunctions
-    call restart_read(trim(restart_dir)//GS_DIR, sys%st, gr, sys%geo, ierr, exact = .true.)
+    call restart_read(trim(restart_dir)//GS_DIR, sys%st, gr, ierr, exact = .true.)
 
     if(simul_box_is_periodic(gr%sb)) then
       message(1) = "Electric field cannot be applied to a periodic system (currently)."
@@ -242,7 +242,7 @@ contains
         fromScratch_local = fromScratch
 
         if(.not. fromScratch) then
-          call restart_read(trim(dir_name), sys%st, gr, sys%geo, ierr)
+          call restart_read(trim(dir_name), sys%st, gr, ierr)
           call system_h_setup(sys, hm)
           if(ierr .ne. 0) fromScratch_local = .true.
         endif
@@ -319,7 +319,7 @@ contains
       fromScratch_local = fromScratch
 
       if(.not. fromScratch) then
-        call restart_read(trim(dir_name), sys%st, gr, sys%geo, ierr)
+        call restart_read(trim(dir_name), sys%st, gr, ierr)
         call system_h_setup(sys, hm)
         if(ierr .ne. 0) fromScratch_local = .true.
       endif

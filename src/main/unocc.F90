@@ -96,7 +96,7 @@ contains
 
     SAFE_ALLOCATE(states_read(1:sys%st%d%dim, 1:sys%st%d%nik))
 
-    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, number_read = states_read)
+    call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, number_read = states_read)
 
     ! the array needs to hold all states and k-points, but each node is responsible for checking its own states
     if(any(states_read(1:sys%st%d%dim, sys%st%d%kpt%start:sys%st%d%kpt%end) < occupied_states)) then

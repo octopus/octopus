@@ -834,7 +834,7 @@ module opt_control_propagation_m
      if(prop%iter(j) .eq. iter) then
        call states_copy(stored_st, psi)
        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-       call restart_read(trim(filename), stored_st, gr, geo, ierr)
+       call restart_read(trim(filename), stored_st, gr, ierr)
        prev_overlap = zstates_mpdotp(gr%mesh, stored_st, stored_st)
        overlap = zstates_mpdotp(gr%mesh, stored_st, psi)
        if( abs(overlap - prev_overlap) > WARNING_THRESHOLD ) then
@@ -872,7 +872,7 @@ module opt_control_propagation_m
     do j = 1, prop%number_checkpoints + 2
      if(prop%iter(j) .eq. iter) then
        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-       call restart_read(trim(filename), psi, gr, geo, ierr)
+       call restart_read(trim(filename), psi, gr, ierr)
      end if
     end do
 

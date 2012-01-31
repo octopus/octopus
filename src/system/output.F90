@@ -978,6 +978,7 @@ contains
         mtrx(:,:, itran) = symm_op_rotation_matrix(gr%sb%symm%ops(itran))
         tnp(:, itran) = symm_op_translation_vector(gr%sb%symm%ops(itran))
       enddo
+      ! some further work on conventions of mtrx and tnp is required!
       
       SAFE_ALLOCATE(ifmin(gr%sb%kpoints%reduced%npoints, st%d%nspin))
       SAFE_ALLOCATE(ifmax(gr%sb%kpoints%reduced%npoints, st%d%nspin))

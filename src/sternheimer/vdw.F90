@@ -228,8 +228,7 @@ contains
         ! load wavefunctions
         if(.not.fromScratch) then
           write(dirname,'(a,i1,a)') VDW_DIR//"wfs_", dir, "_1_1"
-          call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, sys%geo, &
-            ierr, lr=lr(dir,1))
+          call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=lr(dir,1))
           
           if(ierr.ne.0) then
             message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//dirname

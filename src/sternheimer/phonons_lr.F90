@@ -178,7 +178,7 @@ contains
         ! load wavefunctions
         str_tmp = kdotp_wfs_tag(idir)
         write(dirname_restart,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
-        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, sys%geo,ierr, lr=kdotp_lr(idir))
+        call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
 
         if(ierr .ne. 0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
@@ -228,7 +228,7 @@ contains
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
         call restart_read(trim(restart_dir)//VIB_MODES_DIR//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1)), &
-          st, gr, geo, ierr, lr = lr(1))
+          st, gr, ierr, lr = lr(1))
       end if
       
       call pert_setup_atom(ionic_pert, iatom)
@@ -444,7 +444,7 @@ contains
             imat = vibrations_get_index(vib, iatom, idir)
 
             dirname = trim(restart_dir)//VIB_MODES_DIR//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))
-            call restart_read(trim(dirname), st, gr, geo, ierr, lr = lrtmp)
+            call restart_read(trim(dirname), st, gr, ierr, lr = lrtmp)
 
             if(ierr .ne. 0) then
               message(1) = "Failed to load response wavefunctions from '"//dirname//"'"

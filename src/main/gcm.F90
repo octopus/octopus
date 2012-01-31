@@ -121,7 +121,7 @@ module gcm_m
     call messages_print_stress(stdout, 'Reading Slater determinants. ')
     ! Read each of the Slater determinants.
     do i = 1, ndeterminants
-      call restart_read (trim(slatdetnames(i)), phi(i), gr, sys%geo, ierr)
+      call restart_read (trim(slatdetnames(i)), phi(i), gr, ierr)
     end do
     call messages_print_stress(stdout)
 
