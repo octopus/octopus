@@ -41,8 +41,8 @@ module datasets_m
 contains
 
   ! ---------------------------------------------------------
-  ! first we read the required information from the input file
-  ! and prompt the user for possible errors in the input
+  !> first we read the required information from the input file
+  !! and prompt the user for possible errors in the input
   subroutine datasets_init(calc_mode, blk)
     integer,                 intent(in) :: calc_mode
     type(block_t), optional, intent(in) :: blk

@@ -21,17 +21,17 @@
 
 ! ---------------------------------------------------------
 !
-! This module:
-!
-! (i) provides an interface to the command line, as defined by the Fortran 2003 routines
-! "get_command_argument", "command_argument_count", and "get_command". These routines
-! may not exist in all compilers (octopus presently does not require Fortran 2003), and
-! in that case they are defined here. But it may happen that the compiler may not be able
-! to access the command line arguments at all, and in that case the utilities that need them
-! are not usable.
-!
-! (ii) provides an interface to the getopt C library, so that the command line arguments
-! can be managed in this "standard" way.
+!> This module:
+!!
+!! (i) provides an interface to the command line, as defined by the Fortran 2003 routines
+!! "get_command_argument", "command_argument_count", and "get_command". These routines
+!! may not exist in all compilers (octopus presently does not require Fortran 2003), and
+!! in that case they are defined here. But it may happen that the compiler may not be able
+!! to access the command line arguments at all, and in that case the utilities that need them
+!! are not usable.
+!!
+!! (ii) provides an interface to the getopt C library, so that the command line arguments
+!! can be managed in this "standard" way.
 !
 ! ---------------------------------------------------------
 module command_line_m
@@ -92,9 +92,9 @@ module command_line_m
   ! First, the public interfaces.
 
 
-  ! Each program/utility that needs to use the getopt features should have
-  ! an interface here -- the definition of the procedure should be given in the
-  ! getopt_f.c file.
+  !> Each program/utility that needs to use the getopt features should have
+  !! an interface here -- the definition of the procedure should be given in the
+  !! getopt_f.c file.
   interface
     subroutine getopt_octopus
     end subroutine getopt_octopus
@@ -158,11 +158,11 @@ module command_line_m
 
   end interface
 
-  ! If Fortran 2003 interface to command line arguments is not
-  ! available, define it using an interface over Fortran 77 API.
-  !
-  ! This cannot be done in case the compiler defines the Fortran 77 API through
-  ! intrinsic procedures. That case is taken care below.
+  !> If Fortran 2003 interface to command line arguments is not
+  !! available, define it using an interface over Fortran 77 API.
+  !!
+  !! This cannot be done in case the compiler defines the Fortran 77 API through
+  !! intrinsic procedures. That case is taken care below.
 #if FC_COMMAND_LINE_ARGUMENTS == 77 && ! defined(FC_COMMAND_LINE_INTRINSIC)
 
   interface command_argument_count
@@ -189,8 +189,8 @@ module command_line_m
 
 
   ! ---------------------------------------------------------
-  ! The following interfaces are private to this module, and should
-  ! not be called from outside.
+  !> The following interfaces are private to this module, and should
+  !! not be called from outside.
 
   interface 
     subroutine set_number_clarg(argc)

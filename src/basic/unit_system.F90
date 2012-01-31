@@ -59,7 +59,7 @@ module unit_system_m
     type(unit_t) :: hyperpolarizability
   end type unit_system_t
 
-  ! the units systems for reading and writing
+  !> the units systems for reading and writing
   type(unit_system_t), public :: units_inp, units_out
 
   ! some special units required for particular quantities

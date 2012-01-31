@@ -40,7 +40,7 @@ module write_iter_m
     write_iter_int
 
   ! ---------------------------------------------------------
-  ! write_iter functions
+  !> write_iter functions
   interface
     subroutine write_iter_init(out,  iter, factor, file)
       use c_pointer_m

@@ -86,32 +86,32 @@ module global_m
   FLOAT, public, parameter :: P_Ang =  M_ONE / P_a_B
   FLOAT, public, parameter :: P_Ry  =  CNST(13.60569193)
   FLOAT, public, parameter :: P_eV  =  M_ONE / P_Ry
-  FLOAT, public, parameter :: P_Kb  =  CNST(8.617343e-5)/(M_TWO*P_Ry)  ! Boltzmann constant in Ha/K
+  FLOAT, public, parameter :: P_Kb  =  CNST(8.617343e-5)/(M_TWO*P_Ry)  !< Boltzmann constant in Ha/K
   FLOAT, public, parameter :: P_c   =  CNST(137.035999679)
-  FLOAT, public, parameter :: P_g   =  CNST(2.0023193043768)   ! Electron gyromagnetic ratio
+  FLOAT, public, parameter :: P_g   =  CNST(2.0023193043768)   !< Electron gyromagnetic ratio
   FLOAT, public, parameter :: P_PROTON_CHARGE = CNST(-1.0)
 
   integer, public  :: ifinal_sete = 0
 
   integer, public, parameter :: GUARD_BITS=-1
 
-  ! the standard input and output
+  !> the standard input and output
   integer, public :: stderr, stdin, stdout
   
-  ! used to store return values of mpi calls
+  !> used to store return values of mpi calls
   integer, public :: mpi_err  
 
-  ! global epoch time (time at startup)
+  !> global epoch time (time at startup)
   integer, public :: s_epoch_sec, s_epoch_usec
 
-  ! The stack.
+  !> The stack.
   character(len=80), public          :: sub_stack(50)
   real(8), public                    :: time_stack(50)
   integer, public                    :: no_sub_stack = 0
 
-  ! should we run in debug mode
+  !> should we run in debug mode
   logical, public :: in_debug_mode = .false.
-  ! Same for profiling mode.
+  !> Same for profiling mode.
   logical, public :: in_profiling_mode = .false.
 
   ! End of declaration of public objects.
@@ -177,7 +177,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This subroutine is called by the assert macro
+  !> This subroutine is called by the assert macro
   ! ---------------------------------------------------------
   subroutine assert_die(s, f, l)
     character(len=*), intent(in) :: s, f

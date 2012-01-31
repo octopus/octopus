@@ -33,7 +33,7 @@ module mpi_lib_m
   private
 
 #if !defined(HAVE_MPI)
-  integer, public :: mpi_lib_dummy ! this avoids compilers complaining about empty module
+  integer, public :: mpi_lib_dummy !< this avoids compilers complaining about empty module
 #else
   public ::              &
     lmpi_gen_allgatherv, &
@@ -48,8 +48,8 @@ contains
 
 #if defined(HAVE_MPI)
   ! ---------------------------------------------------------
-  ! Returns the rank number of the node rank in from_comm for the
-  ! to_comm communicator.
+  !> Returns the rank number of the node rank in from_comm for the
+  !! to_comm communicator.
   integer function lmpi_translate_rank(from_comm, to_comm, rank)
     integer, intent(in) :: from_comm
     integer, intent(in) :: to_comm

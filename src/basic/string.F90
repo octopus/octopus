@@ -38,8 +38,9 @@ module string_m
 contains
 
   ! ---------------------------------------------------------
-  ! Upcases a string
-  !  15-OCT-2000: First version, Fernando Nogueira
+  !> Upcases a string
+  !! \date 15-OCT-2000: First version
+  !! \author Fernando Nogueira
   subroutine upcase(str)
     character(len=*), intent(inout) :: str
 
@@ -54,8 +55,9 @@ contains
   end subroutine upcase
 
   ! ---------------------------------------------------------
-  ! Lowcases a string
-  !  15-OCT-2000: First version, Fernando Nogueira
+  !> Lowcases a string
+  !! \date 15-OCT-2000: First version
+  !! \author Fernando Nogueira
   subroutine  lowcase(str)
     character(len=*), intent(inout) :: str
 
@@ -70,8 +72,9 @@ contains
   end subroutine lowcase
 
   ! ---------------------------------------------------------
-  ! Removes all spaces from a string
-  !  15-OCT-2000: First version, Fernando Nogueira
+  !> Removes all spaces from a string
+  !! \date 15-OCT-2000: First version
+  !! \author Fernando Nogueira
   subroutine compact(str)
     character(len=*), intent(inout) :: str
 
@@ -91,7 +94,7 @@ contains
   end subroutine compact
 
   ! ---------------------------------------------------------
-  ! removes leading spaces from string
+  !> removes leading spaces from string
   subroutine str_trim(str)
     character (len=*), intent(inout) :: str
     integer :: i, j, l
@@ -113,7 +116,7 @@ contains
   end subroutine str_trim
 
   ! ---------------------------------------------------------
-  ! puts space around string, so that it is centered
+  !> puts space around string, so that it is centered
   character(len=80) function str_center(s_in, l_in) result(s_out)
     character(len=*), intent(in) :: s_in
     integer,          intent(in) :: l_in
@@ -141,7 +144,7 @@ contains
   end function str_center
 
   ! ---------------------------------------------------------
-  ! prints the C string given by the pointer str
+  !> prints the C string given by the pointer str
   subroutine print_C_string(iunit, str, pre, advance)
     integer,                    intent(in) :: iunit
     type(c_ptr),                intent(in) :: str
@@ -177,7 +180,7 @@ contains
   end subroutine print_C_string
 
   ! ---------------------------------------------------------
-  ! converts to c string
+  !> converts to c string
   subroutine conv_to_C_string(str)
     character(len=*), intent(out) :: str
     

@@ -19,8 +19,8 @@
 
 #include "global.h"
 
-! This module is intended to contain simple general-purpose utility functions
-! and procedures.
+!> This module is intended to contain simple general-purpose utility functions
+!! and procedures.
 
 module utils_m
   use global_m

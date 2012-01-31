@@ -26,16 +26,20 @@
 !! the algorithm will try to put at least 25000 points in each processor
 !!
 !! Example:
+!! \verbatim
 !! Given 3 indices with ranges
 !!   index_range(1) = 100000, (number of points in the mesh)
 !!   index_range(2) = 15,     (number of states)
 !!   index_range(3) = 2,      (number of k-points)
+!! \endverbatim
 !! and 12 processors, we could get
+!! \verbatim
 !!   mc%group_sizes = (2, 3, 2)
+!! \endverbatim
 !! which means that
-!! * space is divided in 2 domains per state,
-!! * the states are divided in 3 groups, i.e. 5 states per processor, and
-!! * the whole setting is duplicated because of the 2 k-points.
+!! - space is divided in 2 domains per state,
+!! - the states are divided in 3 groups, i.e. 5 states per processor, and
+!! - the whole setting is duplicated because of the 2 k-points.
 !!
 !! To perform collective operations (like a reduce), you can use the communicators
 !! provided in mc%group_comm(:). For example, to sum over states, the communicator

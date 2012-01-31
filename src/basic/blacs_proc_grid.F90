@@ -68,7 +68,7 @@ contains
   !> Initializes a blacs context from an MPI communicator with
   !! topological information.
   !!
-  !! Warning: For the moment this function only works if mpi_grp holds
+  !! \Warning: For the moment this function only works if mpi_grp holds
   !! all the nodes of mpi_world.
   subroutine blacs_proc_grid_init(this, mpi_grp)
     type(blacs_proc_grid_t), intent(out) :: this

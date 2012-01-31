@@ -19,14 +19,15 @@
 
 #include "global.h"
 
-! This module implements a simple hash table for non-negative integer keys
-! and integer values.
-! The collision resolution used is separate chaining (cf. Knuth, 1973, vol. 3)
-! using associative lists. The reason to use separate chaining is that we
-! look up a lot of keys not in the table and, e.g., open addressing is
-! very slow in that case.
-! The hash function is simply (key mod size) but size is taken to be a prime
-! number, i.e. the table is usually slightly larger than the user requests.
+!> This module implements a simple hash table for non-negative integer keys
+!! and integer values.
+!!
+!! The collision resolution used is separate chaining (cf. Knuth, 1973, vol. 3)
+!! using associative lists. The reason to use separate chaining is that we
+!! look up a lot of keys not in the table and, e.g., open addressing is
+!! very slow in that case.
+!! The hash function is simply (key mod size) but size is taken to be a prime
+!! number, i.e. the table is usually slightly larger than the user requests.
 
 module iihash_m
   use ialist_m
@@ -53,11 +54,11 @@ module iihash_m
 contains
 
   ! ---------------------------------------------------------
-  ! Initialize a hash table h with size entries. Since we use separate
-  ! chaining, the number of entries in the hash table is, in
-  ! principle, unlimited. We take the smallest prime number as table
-  ! size that is greater or equal than the requested size to reduce
-  ! collisions.
+  !> Initialize a hash table h with size entries. Since we use separate
+  !! chaining, the number of entries in the hash table is, in
+  !! principle, unlimited. We take the smallest prime number as table
+  !! size that is greater or equal than the requested size to reduce
+  !! collisions.
   subroutine iihash_init(h, size)
     type(iihash_t), intent(out) :: h
     integer,        intent(in)  :: size
@@ -84,7 +85,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Free a hash table.
+  !> Free a hash table.
   subroutine iihash_end(h)
     type(iihash_t), intent(inout) :: h
 
@@ -102,7 +103,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Insert a (key, val) pair into the hash table h.
+  !> Insert a (key, val) pair into the hash table h.
   subroutine iihash_insert(h, key, val)
     type(iihash_t),    intent(inout) :: h
     integer,           intent(in)    :: key
@@ -118,10 +119,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Look up a value in the hash table h. If found is present, it
-  ! indicates if key could be found in the table. If found = .false.,
-  ! the return value of iihash_lookup is meaningless (and essentially
-  ! undefined).
+  !> Look up a value in the hash table h. If found is present, it
+  !! indicates if key could be found in the table. If found = .false.,
+  !! the return value of iihash_lookup is meaningless (and essentially
+  !! undefined).
   integer function iihash_lookup(h, key, found)
     type(iihash_t),    intent(in)  :: h
     integer,           intent(in)  :: key
@@ -136,7 +137,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! The hash function.
+  !> The hash function.
   integer function hash(h, key)
     type(iihash_t), intent(in) :: h
     integer,        intent(in) :: key
@@ -146,8 +147,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns the smallest prime number that is greater than k
-  ! using the Sieve of Eratosthenes.
+  !> Returns the smallest prime number that is greater than k
+  !! using the Sieve of Eratosthenes.
   integer function get_next_prime(k)
     integer, intent(in) :: k
 

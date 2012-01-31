@@ -103,8 +103,8 @@ module calc_mode_m
     end function calc_mode_parallel_mask
 
     ! -----------------------------------------------------
-    ! This function returns the default modes used for a calculation,
-    ! that might be different from the modes available.
+    !> This function returns the default modes used for a calculation,
+    !! that might be different from the modes available.
     integer function calc_mode_default_parallel_mask() result(par_mask)
       PUSH_SUB(calc_mode_default_parallel_mask)
 

@@ -35,7 +35,7 @@ module mpi_m
 include "mpif.h"
 #endif
 
-  ! This is defined even when running serial
+  !> This is defined even when running serial
   type mpi_grp_t
     integer :: comm !< copy of the mpi communicator
     integer :: size !< size of comm (defined also in serial mode)

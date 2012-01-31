@@ -19,8 +19,8 @@
 
 #include "global.h"
 
-! This module implements a simple associative list for integer keys and
-! values. It is used by the separate changing hash-table implementation.
+!> This module implements a simple associative list for integer keys and
+!! values. It is used by the separate changing hash-table implementation.
 
 module ialist_m
   use global_m
@@ -54,7 +54,7 @@ module ialist_m
 contains
 
   ! ---------------------------------------------------------
-  ! Set up an empty associative list.
+  !> Set up an empty associative list.
   subroutine ialist_init(l)
     type(ialist_t), intent(out) :: l
 
@@ -68,7 +68,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Drop the head of the list.
+  !> Drop the head of the list.
   subroutine ialist_drop(l)
     type(ialist_t), intent(inout) :: l
 
@@ -88,7 +88,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Delete the pair with the given key from the list.
+  !> Delete the pair with the given key from the list.
   subroutine ialist_delete(key, l)
     integer,        intent(in)    :: key
     type(ialist_t), intent(inout) :: l
@@ -126,8 +126,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Insert a (key, val) pair in the list. If key is already present,
-  ! its value is updated.
+  !> Insert a (key, val) pair in the list. If key is already present,
+  !! its value is updated.
   subroutine ialist_insert(key, val, l)
     integer,        intent(in) :: key
     integer,        intent(in) :: val
@@ -172,10 +172,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Get the value of key. If found is present and .false. the return
-  ! value of ialist_lookup is meaningless (i.e. undefined). For this reason,
-  ! always pass found if you do not know, for different reasons, that key
-  ! is member of the list.
+  !> Get the value of key. If found is present and .false. the return
+  !! value of ialist_lookup is meaningless (i.e. undefined). For this reason,
+  !! always pass found if you do not know, for different reasons, that key
+  !! is member of the list.
   integer function ialist_lookup(key, l, found)
     integer,           intent(in) :: key
     type(ialist_t),    intent(in) :: l
@@ -207,7 +207,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Deallocate all cons of the list.
+  !> Deallocate all cons of the list.
   subroutine ialist_end(l)
     type(ialist_t), intent(inout) :: l
 

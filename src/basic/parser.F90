@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-! This module is only supposed to be used within this file.
+!> This module is only supposed to be used within this file.
 module block_t_m
   implicit none
   
@@ -209,16 +209,16 @@ module parser_m
   end interface
 
   ! ---------------------------------------------------------
-  ! The public subroutine parse_expression accepts two
-  ! possible interfaces, one which assumes that the variables
-  ! in the expression are "x(:)", "r" and "t", and another
-  ! one which permits to set one variable to whichever string.
-  ! Examples of usage:
-  !
-  ! call parse_expression(f_re, f_im, ndim, x(:), r, t, &
-  !   "0.5*0.01*r^2")
-  !
-  ! call parse_expression(f_re, f_im, "t", t, "cos(0.01*t)")
+  !> The public subroutine parse_expression accepts two
+  !! possible interfaces, one which assumes that the variables
+  !! in the expression are "x(:)", "r" and "t", and another
+  !! one which permits to set one variable to whichever string.
+  !! Examples of usage:
+  !!
+  !! call parse_expression(f_re, f_im, ndim, x(:), r, t, &
+  !!   "0.5*0.01*r^2")
+  !!
+  !! call parse_expression(f_re, f_im, "t", t, "cos(0.01*t)")
   ! ---------------------------------------------------------
 
   interface
@@ -298,7 +298,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! logical is a FORTRAN type, so we emulate the routine with integers
+  !> logical is a FORTRAN type, so we emulate the routine with integers
   subroutine parse_logical(name, def, res)
     character(len=*), intent(in) :: name
     logical, intent(in) :: def
@@ -328,9 +328,9 @@ contains
 
   end subroutine parse_block_logical
 
-  ! The code may want to compile in single-precision mode.
-  ! As I did not want to change the parser library, these
-  ! driver functions just convert their arguments.
+  !> The code may want to compile in single-precision mode.
+  !! As I did not want to change the parser library, these
+  !! driver functions just convert their arguments.
 
   ! ---------------------------------------------------------
   subroutine oct_parse_putsym_double4(sym, d4)

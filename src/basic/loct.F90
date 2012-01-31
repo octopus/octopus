@@ -86,7 +86,7 @@ module loct_m
 
 
   ! ---------------------------------------------------------
-  ! System information (time, memory, sysname)
+  !> System information (time, memory, sysname)
 
   interface loct_strerror
     subroutine oct_strerror(errno, res)
@@ -127,7 +127,7 @@ module loct_m
 
 
   ! ---------------------------------------------------------
-  ! File-handling
+  !> File-handling
   interface loct_mkdir
     subroutine oct_mkdir(name)
       character(len=*), intent(in) :: name
@@ -155,7 +155,7 @@ module loct_m
 
 
   ! ---------------------------------------------------------
-  ! Varia
+  !> Varia
   interface loct_getenv
     subroutine oct_getenv(var, value)
       character(len=*), intent(in)  :: var
@@ -182,7 +182,7 @@ module loct_m
   end interface
 
   ! ---------------------------------------------------------
-  ! GD library
+  !> GD library
 #if defined(HAVE_GDLIB)
   interface loct_gdimage_create_from
     function oct_gdimage_create_from(filename)
