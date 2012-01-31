@@ -146,7 +146,7 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
 end subroutine poisson_fmm_init
 
 ! ---------------------------------------------------------
-!> Realese memory and call to end the library
+!> Release memory and call to end the library
 subroutine poisson_fmm_end(params_fmm)
   type(poisson_fmm_t), intent(inout) :: params_fmm
 
@@ -184,7 +184,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
   real(8), allocatable :: pot_lib_fmm(:)
   real(8), allocatable :: xyz(:, :)
   real(8) :: delta_E 
-  real(8) :: energy_fmm   !< We don`t use it, but we cannot remove energy_fmm by the moment
+  real(8) :: energy_fmm   !< We don`t use it, but we cannot remove energy_fmm for the moment
   real(8) :: periodic_length
   real(8) :: aux
   integer :: ii, jj, sp, ep, ip, gip

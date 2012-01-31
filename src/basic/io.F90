@@ -52,7 +52,7 @@ module io_m
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)
-  character(len=512) :: work_dir    ! name of the output directory
+  character(len=512) :: work_dir    !< name of the output directory
 
 contains
 

@@ -7,21 +7,30 @@ Dependencies:
   BLAS
   LAPACK
   GSL >= 1.9
+  libxc >= 1.1
   Zoltan (internal)
   Spglib (internal)
   Metis (internal/optional)
   Newuoa (internal/optional)
   Qshep (internal/optional)
-  Libnbc (internal/optional)
   GD (optional)
   MPI (optional)
   NetCDF (optional)
   Sparskit (optional)
+  BLACS/ScaLAPACK (optional)
+  PFFT-Chemnitz (optional)
+  NFFT (optional)
+  LibFM (optional)
+  ETSF_IO (optional)
+  BerkeleyGW (optional)
   
 Website:
   http://www.tddft.org/programs/octopus/
 
 New releases:
+  2011/06/19 Version 4.0.0
+  2009/11/24 Version 3.2.0
+  2009/11/04 Version 3.1.1
   2009/04/16 Version 3.1
 
 Bugs & Patches:
