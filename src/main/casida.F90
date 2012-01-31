@@ -131,7 +131,7 @@ contains
     message(1) = 'Info: Starting Casida linear-response calculation.'
     call messages_info(1)
 
-    call restart_look_and_read(sys%st, sys%gr, sys%geo)
+    call restart_look_and_read(sys%st, sys%gr)
 
     cas%el_per_state = sys%st%smear%el_per_state
     cas%nspin = sys%st%d%nspin

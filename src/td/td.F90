@@ -527,7 +527,7 @@ contains
           if(parse_block(datasets_check('TransformStates'), blk) == 0) then
             call states_copy(stin, st)
             SAFE_DEALLOCATE_P(stin%zpsi)
-            call restart_look_and_read(stin, gr, sys%geo)
+            call restart_look_and_read(stin, gr)
             SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
             rotation_matrix = M_z0
             do ist = 1, st%nst

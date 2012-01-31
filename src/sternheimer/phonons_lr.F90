@@ -164,7 +164,7 @@ contains
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    call restart_look_and_read(st, gr, geo)
+    call restart_look_and_read(st, gr)
 
     ! read kdotp wavefunctions if necessary (for IR intensities)
     if (simul_box_is_periodic(gr%sb) .and. do_infrared) then

@@ -133,7 +133,7 @@ contains
     endif
 
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
-    call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
+    call restart_look_and_read(sys%st, sys%gr, is_complex = complex_response)
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'

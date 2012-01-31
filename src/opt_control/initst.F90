@@ -124,7 +124,7 @@ module opt_control_initst_m
         if(parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           call states_copy(tmp_st, initial_state)
           call states_deallocate_wfns(tmp_st)
-          call restart_look_and_read(tmp_st, sys%gr, sys%geo)
+          call restart_look_and_read(tmp_st, sys%gr)
           SAFE_ALLOCATE(rotation_matrix(1:initial_state%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
           do ist = 1, initial_state%nst

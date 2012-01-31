@@ -23,7 +23,6 @@ module restart_m
   use batch_m
   use curvilinear_m
   use datasets_m
-  use geometry_m
   use global_m
   use grid_m
   use io_m
@@ -158,10 +157,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine restart_look_and_read(st, gr, geo, is_complex, specify_dir, exact)
+  subroutine restart_look_and_read(st, gr, is_complex, specify_dir, exact)
     type(states_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
-    type(geometry_t),           intent(in)    :: geo
     logical, optional,          intent(in)    :: is_complex
     character(len=*), optional, intent(in)    :: specify_dir
     logical,          optional, intent(in)    :: exact !< if .true. we need all the wavefunctions and on the exact grid

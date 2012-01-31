@@ -132,7 +132,7 @@ contains
     endif
 
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
-    call restart_look_and_read(sys%st, sys%gr, sys%geo, is_complex = complex_response)
+    call restart_look_and_read(sys%st, sys%gr, is_complex = complex_response)
 
     if (states_are_real(sys%st)) then
       message(1) = 'Info: SCF using real wavefunctions.'
