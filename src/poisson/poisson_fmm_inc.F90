@@ -323,15 +323,15 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
         aux1 = M_ZERO  
 
-        aux1 = aux1 - rho(vec_index2local(mesh, ix, 1, -2)) - rho(vec_index2local(mesh, ix, 1, 2)) &
-          - rho(vec_index2local(mesh, ix, 2, -2)) - rho(vec_index2local(mesh, ix, 2, 2)) &
-          - rho(vec_index2local(mesh, ix, 3, -2)) - rho(vec_index2local(mesh, ix, 3, 2)) 
+        aux1 = aux1 - rho(vec_index2local(mesh%vp,mesh%idx, ix, 1, -2)) - rho(vec_index2local(mesh%vp,mesh%idx, ix, 1, 2)) &
+          - rho(vec_index2local(mesh%vp,mesh%idx, ix, 2, -2)) - rho(vec_index2local(mesh%vp,mesh%idx, ix, 2, 2)) &
+          - rho(vec_index2local(mesh%vp,mesh%idx, ix, 3, -2)) - rho(vec_index2local(mesh%vp,mesh%idx, ix, 3, 2)) 
 
         aux1 = aux1/M_FOUR
 
-        aux1 = aux1 + rho(vec_index2local(mesh, ix, 1, -1)) + rho(vec_index2local(mesh, ix, 1, 1)) &
-          + rho(vec_index2local(mesh, ix, 2, -1)) + rho(vec_index2local(mesh, ix, 2, 1)) &
-          + rho(vec_index2local(mesh, ix, 3, -1)) + rho(vec_index2local(mesh, ix, 3, 1)) 
+        aux1 = aux1 + rho(vec_index2local(mesh%vp,mesh%idx, ix, 1, -1)) + rho(vec_index2local(mesh%vp,mesh%idx, ix, 1, 1)) &
+          + rho(vec_index2local(mesh%vp,mesh%idx, ix, 2, -1)) + rho(vec_index2local(mesh%vp,mesh%idx, ix, 2, 1)) &
+          + rho(vec_index2local(mesh%vp,mesh%idx, ix, 3, -1)) + rho(vec_index2local(mesh%vp,mesh%idx, ix, 3, 1)) 
 
         aux1 = aux1/16.0
         
@@ -361,39 +361,6 @@ subroutine poisson_fmm_solve(this, pot, rho)
 #endif
 end subroutine poisson_fmm_solve
 
-!> Change the value of one dimension (1=x, 2=y, 3=z) 
-!! according to the given value and return the local point
-!! \todo change to a proper site
-integer function vec_index2local(mesh, ix, dim_pad, pad)
-   type(mesh_t), intent(in) :: mesh    !< All the required information
-   integer,      intent(in) :: ix(1:3) !< Global x,y,z indices
-   integer,      intent(in) :: dim_pad !< The dimension that has to be changed
-   integer,      intent(in) :: pad     !< How much we want to change that dimension
-   
-   integer :: global_point, local_point
-   integer :: jx(1:3)
-
-   ! no PUSH_SUB, called too often
-   jx = ix
-   jx(dim_pad) = jx(dim_pad) + pad
-   global_point = index_from_coords(mesh%idx, 3, jx)
-   if (mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
-     local_point = vec_global2local(mesh%vp, global_point, mesh%vp%partno)
-     if (local_point == 0) then
-       write(message(1), '(a)') "You are trying to access a neighbour that does not exist."
-       write(message(2), '(a, i5)') "Global point = ", global_point
-       write(message(3), '(a, 3i5)') "x,y,z point  = ", jx
-       call messages_warning(3)
-     end if
-#endif
-   else
-     local_point = global_point
-   end if
-
-   vec_index2local = local_point
-
- end function vec_index2local
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

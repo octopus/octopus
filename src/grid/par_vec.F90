@@ -99,6 +99,7 @@ module par_vec_m
     vec_init,                      &
     vec_end,                       &
     vec_global2local,              &
+    vec_index2local,               &
     dvec_scatter,                  &
     zvec_scatter,                  &
     ivec_scatter,                  &
@@ -122,9 +123,10 @@ module par_vec_m
   !> Parallel information
   type pv_t
     ! The content of these members is node-dependent.
-    integer          :: rank                 !< Our rank in the communicator.
-    integer          :: partno               !< Partition number of the
-                                             !! current node
+    integer          :: rank                 !< Our rank in the communicator. 
+    !> Partition number of the
+    !! current node
+    integer          :: partno              
     type(subarray_t) :: sendpoints
     integer, pointer :: sendpos(:)
 
@@ -139,24 +141,30 @@ module par_vec_m
     integer                 :: np                   !< Number of points in mesh.
     integer                 :: np_enl               !< Number of points in enlargement.
     integer, pointer        :: part(:)              !< Point -> partition.
-    integer, pointer        :: np_local(:)          !< How many points has partition r?
-    integer, pointer        :: xlocal(:)            !< Points of partition r start at
-                                                    !! xlocal(r) in local. Global start point
-                                                    !! of the local index.    
-    integer, pointer        :: local(:)             !< Partition r has points
-                                                    !! local(xlocal(r):
-                                                    !! xlocal(r)+np_local(r)-1).
+    integer, pointer        :: np_local(:)          !< How many points has partition r? 
+    !> Points of partition r start at
+    !! xlocal(r) in local. Global start point
+    !! of the local index.  
+    integer, pointer        :: xlocal(:)   
+    !> Partition r has points
+    !! local(xlocal(r):
+    !! xlocal(r)+np_local(r)-1).           
+    integer, pointer        :: local(:)            
     integer, pointer        :: np_bndry(:)          !< Number of boundary points.
-    integer, pointer        :: xbndry(:)            !< Index of bndry(:).
-    integer, pointer        :: bndry(:)             !< Global numbers of boundary
-                                                    !! points.
-    type(iihash_t), pointer :: global(:)            !< global(r) contains the global ->
-                                                    !! local mapping for partition r.
-    integer                 :: total                !< Total number of ghost points.
-    integer, pointer        :: np_ghost(:)          !< How many ghost points has
-                                                    !! partition r?
-    integer, pointer        :: np_ghost_neigh(:, :) !< Number of ghost points per
-                                                    !! neighbour per partition.
+    integer, pointer        :: xbndry(:)            !< Index of bndry(:). 
+    !> Global numbers of boundary
+    !! points.
+    integer, pointer        :: bndry(:)    
+    !> global(r) contains the global ->
+    !! local mapping for partition r.        
+    type(iihash_t), pointer :: global(:)           
+    integer                 :: total                !< Total number of ghost points. 
+    !> How many ghost points has
+    !! partition r?
+    integer, pointer        :: np_ghost(:)    
+    !> Number of ghost points per
+    !! neighbour per partition.      
+    integer, pointer        :: np_ghost_neigh(:, :)
     integer, pointer        :: xghost(:)            !< Like xlocal.
     integer, pointer        :: xghost_neigh(:, :)   !< Like xghost for neighbours.
     integer, pointer        :: ghost(:)             !< Global indices of all local
@@ -586,6 +594,40 @@ contains
     end if
 
   end function vec_global2local
+
+  !> Change the value of one dimension (1=x, 2=y, 3=z) 
+  !! according to the given value and return the local point
+  !! \todo doesn't work if only one process is used
+  integer function vec_index2local(vp, idx, ix, dim_pad, pad)
+    type(pv_t),    intent(in) :: vp      !< All the required information
+    type(index_t), intent(in) :: idx     !< Index information
+    integer,       intent(in) :: ix(1:3) !< Global x,y,z indices
+    integer,       intent(in) :: dim_pad !< The dimension that has to be changed
+    integer,       intent(in) :: pad     !< How much we want to change that dimension
+
+    integer :: global_point, local_point
+    integer :: jx(1:3)
+
+    ! no PUSH_SUB, called too often
+    jx = ix
+    jx(dim_pad) = jx(dim_pad) + pad
+    global_point = index_from_coords(idx, 3, jx)
+#ifdef HAVE_MPI
+    local_point = vec_global2local(vp, global_point, vp%partno)
+    if (local_point == 0) then
+      write(message(1), '(a)') "You are trying to access a neighbour that does not exist."
+      write(message(2), '(a, i5)') "Global point = ", global_point
+      write(message(3), '(a, 3i5)') "x,y,z point  = ", jx
+      call messages_warning(3)
+    end if
+#else
+    local_point = global_point
+#endif
+    
+    vec_index2local = local_point
+    
+  end function vec_index2local
+  
 
 #include "undef.F90"
 #include "complex.F90"
