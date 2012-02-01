@@ -201,7 +201,6 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
   integer, allocatable :: ix(:)
   FLOAT :: aux1
-  FLOAT :: rho_half_neigh(1:6)
   type(mesh_t), pointer :: mesh
 
   type(profile_t), save :: prof_fmm_lib, prof_fmm_corr, prof_fmm_gat
@@ -306,7 +305,6 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
       ! Corrections for first neighbours obtained with linear interpolation      
       ! First we obtain the densities in neighbouring points ip+1/2
-      rho_half_neigh = M_ZERO
       ! Iterate over all local points of rho (1 to mesh%np)
       do ip = 1, mesh%np
         if (mesh%parallel_in_domains) then
