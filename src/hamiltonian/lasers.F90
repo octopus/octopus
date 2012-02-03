@@ -476,9 +476,8 @@ contains
     FLOAT,   optional, intent(in) :: dt 
     integer, optional, intent(in) :: max_iter 
 
-    FLOAT :: tt, fluence, max_intensity, intensity, dt_, dval, field(MAX_DIM), Up, maxfield,tmp
+    FLOAT :: tt, fluence, max_intensity, intensity, dt_, field(MAX_DIM), Up, maxfield,tmp
     integer :: il, iter, idir, no_l, max_iter_
-    type(tdf_t) :: df
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 

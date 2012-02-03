@@ -194,7 +194,7 @@ contains
     integer,            intent(in) :: imat
     integer,            intent(in) :: jmat
 
-    integer :: iunit, iatom, idir, jatom, jdir
+    integer :: iatom, idir, jatom, jdir
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 

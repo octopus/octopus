@@ -72,11 +72,11 @@ module messages_m
   logical,                           public :: flush_messages
 
 
-  ! min_lun in io.F90 is equal to 10. We hardwire this here since we
-  ! cannot write "use io" above. Unit 8 and 9 should always be available.
+  !> min_lun in io.F90 is equal to 10. We hardwire this here since we
+  !! cannot write "use io" above. Unit 8 and 9 should always be available.
   integer, parameter, public :: iunit_out = 8
   integer, parameter, public :: iunit_err = 9
-  ! max_lun is currently 99, i.e. we can hardwire unit_offset above 1000
+  !> max_lun is currently 99, i.e. we can hardwire unit_offset above 1000
   integer, parameter, private :: unit_offset = 1000
   character(len=512), private :: msg
 
