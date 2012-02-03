@@ -225,7 +225,7 @@
 
     ! local vars
     integer :: mm, iunit, itype
-    integer :: iyoung
+    integer :: iyoung, ierr
     logical :: symmetries_satisfied, impose_exch_symmetry
     CMPLX, allocatable :: wf(:)
     CMPLX, allocatable :: wf_global(:)
@@ -233,6 +233,8 @@
     character(len=80) :: filename
     type(modelmb_denmat_t) :: denmat
     type(modelmb_density_t) :: den
+    type(unit_t)  :: fn_unit
+
 
     PUSH_SUB(output_modelmb)
 
@@ -305,12 +307,16 @@
       end if
 
       if(iand(outp%what, C_OUTPUT_WFS).ne.0 .and. symmetries_satisfied) then
+        fn_unit = units_out%length**(-gr%mesh%sb%dim)
+        write(filename, '(a,i4.4)') 'wf-st', mm
         if(gr%mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
-          call zio_function_out_text(trim(dirname), gr%mesh, mm, wf_global)
+          call zio_function_output(outp%how, trim(dirname), trim(filename), gr%mesh, wf_global, &
+            fn_unit, ierr, is_tmp = .false., geo = geo)
 #endif
         else 
-          call zio_function_out_text(trim(dirname), gr%mesh, mm, wf)
+          call zio_function_output(outp%how, trim(dirname), trim(filename), gr%mesh, wf, &
+            fn_unit, ierr, is_tmp = .false., geo = geo)
         end if
       end if
 
