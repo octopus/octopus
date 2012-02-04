@@ -222,8 +222,8 @@ contains
     !% The default is yes, unless symmetries are broken in one
     !% direction by the SymmetryBreakDir block.
     !% 
-    !% Warning: For time propagation runs with an external field, the
-    !% time reversal symmetry should not be used.
+    !% Warning: For time propagation runs with an external field,
+    !% time-reversal symmetry should not be used.
     !%
     !%End
     call parse_logical(datasets_check('KPointsUseTimeReversal'), .not. symmetries_have_break_dir(symm), this%use_time_reversal)
