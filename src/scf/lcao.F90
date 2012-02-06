@@ -496,7 +496,7 @@ contains
     call parse_integer(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
     if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
 
-    if(lcao_is_available(lcao)) call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
+    call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
 
     lcao_done = .false.
     if (lcao_start /= LCAO_START_NONE) then
