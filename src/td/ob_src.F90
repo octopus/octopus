@@ -17,8 +17,8 @@
 !!
 !! $Id: td_trans_src.F90 3030 2008-01-03 10:30:05Z nitsche $
 
-! Calculation of the source term for the modified Crank-Nicholson
-! propagator.
+!> Calculation of the source term for the modified Crank-Nicholson
+!! propagator.
 
 #include "global.h"
 

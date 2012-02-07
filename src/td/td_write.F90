@@ -96,12 +96,13 @@ module td_write_m
     private
     type(td_write_prop_t) :: out(OUT_MAX)
 
-    integer        :: lmax     ! maximum multipole moment to output
-    FLOAT          :: lmm_r    ! radius of the sphere used to compute the local magnetic moments
-    type(states_t) :: gs_st    ! The states_type where the ground state is stored, in order to
-                                        ! calculate the projections(s) onto it.
-    integer        :: n_excited_states  ! number of excited states onto which the projections are calculated.
-    type(excited_states_t), pointer :: excited_st(:) ! The excited states.
+    integer        :: lmax     !< maximum multipole moment to output
+    FLOAT          :: lmm_r    !< radius of the sphere used to compute the local magnetic moments
+    !> The states_type where the ground state is stored, in order to
+    !! calculate the projections(s) onto it.
+    type(states_t) :: gs_st    
+    integer        :: n_excited_states  !< number of excited states onto which the projections are calculated.
+    type(excited_states_t), pointer :: excited_st(:) !< The excited states.
   end type td_write_t
 
 contains
@@ -1556,8 +1557,10 @@ contains
 
   contains
     ! ---------------------------------------------------------
-    ! This subroutine calculates:
-    ! p(uist, ist, ik) = < phi0(uist, k) | phi(ist, ik) (t) >
+    !> This subroutine calculates:
+    !! \f[
+    !! p(uist, ist, ik) = < \phi_0(uist, k) | \phi(ist, ik) (t) >
+    !! \f]
     ! ---------------------------------------------------------
     subroutine calc_projections()
       integer :: uist, ist, ik

@@ -17,7 +17,7 @@
 
 
 ! ---------------------------------------------------------
-! Write the photoelectron wavefunctions in real space
+!> Write the photoelectron wavefunctions in real space
 ! ---------------------------------------------------------
 subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
   type(states_t),   intent(in) :: st
@@ -138,9 +138,10 @@ end subroutine PES_mask_output_states
 
 ! ---------------------------------------------------------
 !
-! Calculates the momentum-resolved photoelectron probability
-!            P(k) = \sum_i |\Psi_{B,i}(k)|^2 
-!
+!> Calculates the momentum-resolved photoelectron probability
+!!\f[
+!!            P(k) = \sum_i |\Psi_{B,i}(k)|^2 
+!!\f]
 ! ---------------------------------------------------------
 subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
   type(PES_mask_t), intent(in)  :: mask
@@ -207,9 +208,9 @@ end subroutine PES_mask_create_full_map
 
 ! --------------------------------------------------------
 !
-!  Qshep interpolation helper function initialization.
-!  Generates the linearized version of PESK (cube_f) and the associated
-!  qshep interpolator opbject (interp).
+!>  Qshep interpolation helper function initialization.
+!!  Generates the linearized version of PESK (cube_f) and the associated
+!!  qshep interpolator opbject (interp).
 !
 ! ---------------------------------------------------------
 subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
@@ -292,7 +293,7 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
 end subroutine PES_mask_interpolator_init
 
 ! ---------------------------------------------------------
-!  Destroy the interpolation objects
+!>  Destroy the interpolation objects
 ! ---------------------------------------------------------
 subroutine PES_mask_interpolator_end(cube_f, interp)
   FLOAT, pointer, intent(inout) :: cube_f(:)
@@ -686,22 +687,22 @@ end subroutine PES_mask_dump_ar_plane_M
 
 
 ! ========================================================================
-!  Common interface to write 2D maps in gnuplot with header files for 
-!  different objects. The modes are:
-!
-!  1 Angle- and energy-resolved on cartesian coordinates
-!  2 Angle- and energy-resolved in polar coordinates
-!  3 Velocity map on a plane
+!>  Common interface to write 2D maps in gnuplot with header files for 
+!!  different objects. The modes are:
+!!
+!!  - 1 Angle- and energy-resolved on cartesian coordinates
+!!  - 2 Angle- and energy-resolved in polar coordinates
+!!  - 3 Velocity map on a plane
 !
 ! ========================================================================
 subroutine PES_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
   character(len=*), intent(in) :: file
   FLOAT,            intent(in) :: pesM(:,:)
   integer,          intent(in) :: mode
-  FLOAT,            intent(in) :: xGrid(:)   ! max min and step for the x axis
-  FLOAT,            intent(in) :: yGrid(:)   ! max min and step for the y axis
-  FLOAT,            intent(in) :: vv(:)      ! for mode=1,2 indicate the Zenith axis for mode 3 the cutting plane 
-  FLOAT, optional,  intent(in) :: intSpan(:) ! for integrated quantities indicate the integral region    
+  FLOAT,            intent(in) :: xGrid(:)   !< max min and step for the x axis
+  FLOAT,            intent(in) :: yGrid(:)   !< max min and step for the y axis
+  FLOAT,            intent(in) :: vv(:)      !< for mode=1,2 indicate the Zenith axis for mode 3 the cutting plane 
+  FLOAT, optional,  intent(in) :: intSpan(:) !< for integrated quantities indicate the integral region    
 
   integer :: nx,ny, iunit, ii,ix,iy
 
@@ -1348,8 +1349,8 @@ end subroutine PES_mask_dump_ARPES
   
 ! ---------------------------------------------------------
 !
-! This routine is the main routine dedicated to the output 
-! of PES data
+!> This routine is the main routine dedicated to the output 
+!! of PES data
 !
 ! ---------------------------------------------------------
 subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
@@ -1449,7 +1450,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
 end subroutine PES_mask_output
 
 ! ---------------------------------------------------------
-! Read PES info.
+!> Read PES info.
 ! ---------------------------------------------------------
 subroutine PES_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
   character(len=*), intent(in)  :: dir
@@ -1498,7 +1499,7 @@ end subroutine PES_mask_read_info
 
 
 ! ---------------------------------------------------------
-! Dump PES info
+!> Dump PES info
 ! ---------------------------------------------------------
 subroutine PES_mask_write_info(mask, dir)
   type(PES_mask_t), intent(in) :: mask

@@ -19,7 +19,7 @@
 
 
   ! ---------------------------------------------------------
-  ! Propagator specifically designed for the QOCT+TDDFT problem
+  !> Propagator specifically designed for the QOCT+TDDFT problem
   subroutine td_qoct_tddft_propagator(hm, gr, st, tr, t, dt)!, gauge_force, ions, geo)
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
@@ -42,9 +42,9 @@
 
 
   ! ---------------------------------------------------------
-  ! Propagator specifically designed for the QOCT+TDDFT problem (2nd version)
-  !
-  ! WARNING: This is *not* going to work if parallelization in states is used.
+  !> Propagator specifically designed for the QOCT+TDDFT problem (2nd version)
+  !!
+  !! \warning  This is *not* going to work if parallelization in states is used.
   subroutine td_qoct_tddft_propagator_2(hm, gr, st, tr, t, dt)
     type(hamiltonian_t), target, intent(inout) :: hm
     type(grid_t), target,        intent(inout) :: gr
@@ -128,7 +128,7 @@
 
 
   ! ---------------------------------------------------------
-  ! operator for Crank-Nicholson scheme
+  !> operator for Crank-Nicholson scheme
   subroutine propagator_qmr2_op(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)

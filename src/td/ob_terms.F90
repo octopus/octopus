@@ -33,26 +33,26 @@ module ob_terms_m
     MEM_TERM_FLAG  = 1,         &
     SRC_TERM_FLAG  = 2
 
-  ! source and mem-coeffs
+  !> source and mem-coeffs
   type ob_memsrc_t
-    integer          :: sp_length              ! Length of the sparse array (as 1d array).
-    CMPLX, pointer   :: q(:, :, :)             ! Memory coefficients, for mem_type=1. (i, j, t)
-    CMPLX, pointer   :: p(:, :, :)             ! Memory coefficients, for mem_type=1. (i, j, t)
-    CMPLX, pointer   :: q_sp(:, :)             ! Memory coefficients, for mem_type=2. (sp_length, t)
-    CMPLX, pointer   :: q_s(:, :, :)           ! The matrices to diagonalize coeff0.
-    integer, pointer :: sp2full_map(:)         ! The mapping indices from sparse to full matrices.
-    CMPLX, pointer   :: src_prev(:, :, :, :)   ! Source term of previous iteration. (ip_intf, idim, ist, ik)
-    CMPLX, pointer   :: st_intface(:, :, :, :) ! The memory. (ip_intf, ist, ik, t)
+    integer          :: sp_length              !< Length of the sparse array (as 1d array).
+    CMPLX, pointer   :: q(:, :, :)             !< Memory coefficients, for mem_type=1. (i, j, t)
+    CMPLX, pointer   :: p(:, :, :)             !< Memory coefficients, for mem_type=1. (i, j, t)
+    CMPLX, pointer   :: q_sp(:, :)             !< Memory coefficients, for mem_type=2. (sp_length, t)
+    CMPLX, pointer   :: q_s(:, :, :)           !< The matrices to diagonalize coeff0.
+    integer, pointer :: sp2full_map(:)         !< The mapping indices from sparse to full matrices.
+    CMPLX, pointer   :: src_prev(:, :, :, :)   !< Source term of previous iteration. (ip_intf, idim, ist, ik)
+    CMPLX, pointer   :: st_intface(:, :, :, :) !< The memory. (ip_intf, ist, ik, t)
   end type ob_memsrc_t
 
-  ! Additional source and memory terms.
+  !> Additional source and memory terms.
   type ob_terms_t
-    integer           :: mem_type              ! SAVE_CPU_TIME: fast/lots of memory, SAVE_RAM_USAGE: slow/little memory.
-    integer           :: additional_terms      ! Shall we add source and memory term?
-    integer           :: max_mem_coeffs        ! How many memory coefficients? (for open system)
-    type(ob_memsrc_t) :: lead(2*MAX_DIM)       ! source and memory coefficients for each lead
-    CMPLX, pointer    :: src_mem_u(:, :)       ! Prefactor for source and memory term. (t, il)
-    FLOAT             :: td_pot0(2*MAX_DIM)    ! bias at t=0
+    integer           :: mem_type              !< SAVE_CPU_TIME: fast/lots of memory, SAVE_RAM_USAGE: slow/little memory.
+    integer           :: additional_terms      !< Shall we add source and memory term?
+    integer           :: max_mem_coeffs        !< How many memory coefficients? (for open system)
+    type(ob_memsrc_t) :: lead(2*MAX_DIM)       !< source and memory coefficients for each lead
+    CMPLX, pointer    :: src_mem_u(:, :)       !< Prefactor for source and memory term. (t, il)
+    FLOAT             :: td_pot0(2*MAX_DIM)    !< bias at t=0
   end type ob_terms_t
 
 end module ob_terms_m

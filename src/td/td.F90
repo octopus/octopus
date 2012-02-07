@@ -86,14 +86,14 @@ module td_m
        CP        = 3
 
   type td_t
-    type(propagator_t)   :: tr             ! contains the details of the time-evolution
+    type(propagator_t)   :: tr             !< contains the details of the time-evolution
     type(scf_t)          :: scf
     type(ion_dynamics_t) :: ions
     type(cpmd_t)         :: cp_propagator
-    FLOAT                :: dt             ! time step
-    integer              :: max_iter       ! maximum number of iterations to perform
-    integer              :: iter           ! the actual iteration
-    logical              :: recalculate_gs ! Recalculate ground-state along the evolution.
+    FLOAT                :: dt             !< time step
+    integer              :: max_iter       !< maximum number of iterations to perform
+    integer              :: iter           !< the actual iteration
+    logical              :: recalculate_gs !< Recalculate ground-state along the evolution.
 
     type(PES_t)          :: PESv
 
@@ -626,7 +626,8 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine td_read_coordinates() ! reads the pos and vel from coordinates file
+    !> reads the pos and vel from coordinates file
+    subroutine td_read_coordinates() 
       integer :: iatom, iter, iunit
       PUSH_SUB(td_run.td_read_coordinates)
 

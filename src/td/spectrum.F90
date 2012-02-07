@@ -82,20 +82,20 @@ module spectrum_m
     SPECTRUM_COMPRESSED_SENSING = 2
 
   type spec_t
-    FLOAT   :: start_time          ! start time for the transform
-    FLOAT   :: end_time            ! when to stop the transform
-    FLOAT   :: energy_step         ! step in energy mesh
-    FLOAT   :: max_energy          ! maximum of energy mesh
-    integer :: damp                ! damping type (none, exp or pol)
-    integer :: transform           ! sine, cosine, or exponential transform
-    FLOAT   :: damp_factor         ! factor used in damping
-    integer :: spectype            ! damping type (none, exp or pol)
-    integer :: method              ! fourier transform or compressed sensing 
-    FLOAT   :: noise               ! the level of noise that is assumed in the time series for compressed sensing 
+    FLOAT   :: start_time          !< start time for the transform
+    FLOAT   :: end_time            !< when to stop the transform
+    FLOAT   :: energy_step         !< step in energy mesh
+    FLOAT   :: max_energy          !< maximum of energy mesh
+    integer :: damp                !< damping type (none, exp or pol)
+    integer :: transform           !< sine, cosine, or exponential transform
+    FLOAT   :: damp_factor         !< factor used in damping
+    integer :: spectype            !< damping type (none, exp or pol)
+    integer :: method              !< fourier transform or compressed sensing 
+    FLOAT   :: noise               !< the level of noise that is assumed in the time series for compressed sensing 
   end type spec_t
 
-  ! Module variables, necessary to compute the function hsfunction, called by
-  ! the C function loct_1dminimize
+  !> Module variables, necessary to compute the function hsfunction, called by
+  !! the C function loct_1dminimize
   integer :: niter_
   FLOAT :: time_step_, energy_step_
   CMPLX, allocatable :: func_(:),func_ar_(:,:),pos_(:,:),tret_(:), funcw_(:)
@@ -1890,13 +1890,15 @@ contains
   ! -------------------------------------------------------
 
   ! -------------------------------------------------------
-  ! Computes the sine, cosine, (or "exponential") Fourier transform of the real function given in the
-  ! time_function batch. The initial and final integration times are given by time_start and time_end,
-  ! whereas the initial and final computed energies are given by energy_start and energy_end. The result
-  ! is placed in the energy_function batch. The cosine Fourier function is computed by multiplying the
-  ! real function by cos(w*(t-t0)), the sine Fourier transform is computed by multiplying the real function
-  ! by sin(w*(t-t0)), and the "exponential" transform is computed by multiplying the real function by
-  ! e(-I*w*t0)*e(-w*t).
+  !> Computes the sine, cosine, (or "exponential") Fourier transform of the real function given in the
+  !! time_function batch. 
+  !!
+  !! The initial and final integration times are given by time_start and time_end,
+  !! whereas the initial and final computed energies are given by energy_start and energy_end. The result
+  !! is placed in the energy_function batch. The cosine Fourier function is computed by multiplying the
+  !! real function by \f$ \cos(w*(t-t0)) \f$, the sine Fourier transform is computed by multiplying the real function
+  !! by \f$ \sin(w*(t-t0)) \f$, and the "exponential" transform is computed by multiplying the real function by
+  !! \f$ e(-I*w*t0)*e(-w*t) \f$.
   subroutine fourier_transform(method, transform, noise, time_start, time_end, t0, time_step, time_function, &
     energy_start, energy_end, energy_step, energy_function)
     integer,         intent(in)    :: method

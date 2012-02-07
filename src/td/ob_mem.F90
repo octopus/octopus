@@ -17,8 +17,8 @@
 !!
 !! $Id: td_transport.F90 3030 2007-06-25 16:45:05Z marques $
 
-! Calculation of the memory coefficients for the modified
-! Crank-Nicholson propagator.
+!> Calculation of the memory coefficients for the modified
+!! Crank-Nicholson propagator.
 
 #include "global.h"
 
@@ -65,8 +65,8 @@ module ob_mem_m
 contains
 
   ! ---------------------------------------------------------
-  ! Allocate (machine) memory for the memory coefficents and
-  ! calculate them.
+  !> Allocate (machine) memory for the memory coefficents and
+  !! calculate them.
   subroutine ob_mem_init(intf, hm, ob, delta, max_iter, op, spacing, order, mpi_grp)
     type(interface_t),   intent(in)    :: intf(:)
     type(hamiltonian_t), intent(in)    :: hm
@@ -225,9 +225,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Solve for zeroth memory coefficient by truncating the continued
-  ! matrix fraction. Since the coefficient must be symmetric (non-magnetic),
-  ! a symmetric inversion is used.
+  !> Solve for zeroth memory coefficient by truncating the continued
+  !! matrix fraction. Since the coefficient must be symmetric (non-magnetic),
+  !! a symmetric inversion is used.
   subroutine approx_coeff0(intf, delta, diag, offdiag, coeff0)
     type(interface_t), intent(in)  :: intf
     FLOAT,             intent(in)  :: delta
@@ -301,9 +301,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Solve for zeroth memory coefficient by truncating the continued
-  ! matrix fraction. Since the coefficient must be symmetric (non-magnetic),
-  ! a symmetric inversion is used. Sparse version
+  !> Solve for zeroth memory coefficient by truncating the continued
+  !! matrix fraction. Since the coefficient must be symmetric (non-magnetic),
+  !! a symmetric inversion is used. Sparse version
   subroutine approx_sp_coeff0(intf, delta, diag, offdiag, sp_coeff0, mem_s, order, mapping)
     type(interface_t), intent(in)  :: intf
     FLOAT,             intent(in)  :: delta
@@ -373,16 +373,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! New version of calculating he memory coefficients.
-  ! It now calculates and stores the p-coefficients.
-  ! This method is more general and can even continue if
-  ! the matrices are not invertable. It uses only the memory
-  ! which is needed by the q-matrices (defined by q=v^T.p.v).
-  ! These coefficients have to be calculated after this routine
-  ! is finished and the coefficients are stored on the disk.
-  ! This version cannot handle magnetic fields in the leads, 
-  ! as the assumption of symmetric matrices for multiplications
-  ! is not valid anymore.
+  !> New version of calculating he memory coefficients.
+  !!
+  !! It now calculates and stores the p-coefficients.
+  !! This method is more general and can even continue if
+  !! the matrices are not invertable. It uses only the memory
+  !! which is needed by the q-matrices (defined by \f$q=v^T.p.v\f$).
+  !! These coefficients have to be calculated after this routine
+  !! is finished and the coefficients are stored on the disk.
+  !! This version cannot handle magnetic fields in the leads, 
+  !! as the assumption of symmetric matrices for multiplications
+  !! is not valid anymore.
   subroutine calculate_coeffs_ni(start_iter, iter, delta, intf, diag, offdiag, coeffs)
     integer,           intent(in)    :: start_iter
     integer,           intent(in)    :: iter
@@ -496,10 +497,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Same as calculate_coeffs but with the sparse matrix
-  ! sp_coeffs(:, :, 0) given, calculate the subsequent ones by
-  ! the recursive relation. We can only use the (sparse) mem_q, so use the
-  ! mem_q only recursive relation.
+  !> Same as calculate_coeffs but with the sparse matrix
+  !! sp_coeffs(:, :, 0) given, calculate the subsequent ones by
+  !! the recursive relation. We can only use the (sparse) mem_q, so use the
+  !! mem_q only recursive relation.
   subroutine calculate_sp_coeffs(start_iter, iter, delta, intf, diag, offdiag, &
     sp_coeffs, mem_s, length, order, dim, mapping, spacing)
     integer,           intent(in)    :: start_iter
@@ -623,20 +624,20 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Write memory coefficients to file.
-  ! FIXME: this routine writes compiler- and/or system-dependent binary files.
-  ! It should be changed to a platform-independent format.
+  !> Write memory coefficients to file.
+  !! FIXME: this routine writes compiler- and/or system-dependent binary files.
+  !! It should be changed to a platform-independent format.
   subroutine write_coeffs(dir, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
     character(len=*),    intent(in)    :: dir
     type(ob_terms_t),    intent(inout) :: ob
     type(hamiltonian_t), intent(in)    :: hm
     type(interface_t),   intent(in)    :: intf
-    integer,             intent(in)    :: dim             ! Dimension.
-    integer,             intent(in)    :: iter            ! Number of coefficients.
-    FLOAT,               intent(in)    :: spacing         ! Grid spacing.
-    FLOAT,               intent(in)    :: delta           ! Timestep.
-    integer,             intent(in)    :: op_n            ! Number of operator points.
-    integer,             intent(in)    :: order           ! discretization order
+    integer,             intent(in)    :: dim             !< Dimension.
+    integer,             intent(in)    :: iter            !< Number of coefficients.
+    FLOAT,               intent(in)    :: spacing         !< Grid spacing.
+    FLOAT,               intent(in)    :: delta           !< Timestep.
+    integer,             intent(in)    :: op_n            !< Number of operator points.
+    integer,             intent(in)    :: order           !< Discretization order.
 
     integer :: ntime, ip, iunit, np
 
@@ -689,21 +690,21 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Read memory coefficients from file.
-  ! FIXME: this routine reads compiler- and/or system-dependent binary files.
-  ! It should be chanegd to a platform-independent format.
+  !> Read memory coefficients from file.
+  !! FIXME: this routine reads compiler- and/or system-dependent binary files.
+  !! It should be chanegd to a platform-independent format.
   subroutine read_coeffs(dir, s_iter, ob, hm, intf, dim, iter, spacing, delta, op_n, order)
     character(len=*),    intent(in)    :: dir
-    integer,             intent(out)   :: s_iter       ! Number of saved coefficients.
+    integer,             intent(out)   :: s_iter       !< Number of saved coefficients.
     type(ob_terms_t),    intent(inout) :: ob
     type(hamiltonian_t), intent(in)    :: hm
     type(interface_t),   intent(in)    :: intf
-    integer,             intent(in)    :: dim          ! Dimension of the problem.
-    integer,             intent(in)    :: iter         ! Number of coefficients.
-    FLOAT,               intent(in)    :: spacing      ! Spacing.
-    FLOAT,               intent(in)    :: delta        ! Timestep.
-    integer,             intent(in)    :: op_n         ! Number of operator points.
-    integer,             intent(in)    :: order        ! discretization order
+    integer,             intent(in)    :: dim          !< Dimension of the problem.
+    integer,             intent(in)    :: iter         !< Number of coefficients.
+    FLOAT,               intent(in)    :: spacing      !< Spacing.
+    FLOAT,               intent(in)    :: delta        !< Timestep.
+    integer,             intent(in)    :: op_n         !< Number of operator points.
+    integer,             intent(in)    :: order        !< Discretization order.
 
     integer :: ntime, ip, iunit, s_dim, s_np, s_op_n, s_mem_type, np, il
     FLOAT   :: s_spacing, s_delta, det
@@ -777,9 +778,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Calculate amount of (machine) memory required for
-  ! the memory term (in MBytes).
-  ! Does not consider spin at the moment.
+  !> Calculate amount of (machine) memory required for
+  !! the memory term (in MBytes).
+  !! Does not consider spin at the moment.
   FLOAT function mbytes_memory_term(iter, np, st, mem_type, order)
     integer,        intent(in) :: iter
     integer,        intent(in) :: np(:)
@@ -808,17 +809,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Create sparse matrix out of the full matrix.
-  ! Only 2D case.
-  ! sp = ss^(-1).mm.ss
+  !> Create sparse matrix out of the full matrix.
+  !! Only 2D case.
+  !! sp = ss^(-1).mm.ss
   subroutine make_sparse_matrix(np, order, dim, mm, ss, sp, mapping)
-    integer, intent(in)  :: np            ! Matrix size.
-    integer, intent(in)  :: order         ! Derivative order.
-    integer, intent(in)  :: dim           ! Dimension
-    CMPLX,   intent(in)  :: mm(np, np)    ! Full matrix.
-    CMPLX,   intent(in)  :: ss(np, np, 2) ! Diagonalization matrices.
-    CMPLX,   intent(out) :: sp(:)         ! Sparse matrix.
-    integer, intent(in)  :: mapping(:)    ! Mapping.
+    integer, intent(in)  :: np            !< Matrix size.
+    integer, intent(in)  :: order         !< Derivative order.
+    integer, intent(in)  :: dim           !< Dimension
+    CMPLX,   intent(in)  :: mm(np, np)    !< Full matrix.
+    CMPLX,   intent(in)  :: ss(np, np, 2) !< Diagonalization matrices.
+    CMPLX,   intent(out) :: sp(:)         !< Sparse matrix.
+    integer, intent(in)  :: mapping(:)    !< Mapping.
 
     integer            :: id, ip
     CMPLX, allocatable :: tmp(:, :), tmp2(:, :)
@@ -857,16 +858,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Fast multiplication of the sparse matrix with a dense matrix
-  ! res = sp*mm.
+  !> Fast multiplication of the sparse matrix with a dense matrix
+  !! res = sp*mm.
   subroutine mul_sp(np, order, dim, sp, mm, mapping, res)
-    integer, intent(in)  :: np           ! matrix size (np**2)
-    integer, intent(in)  :: order        ! derivative order
-    integer, intent(in)  :: dim          ! dimension
-    CMPLX,   intent(in)  :: sp(:)        ! sparse matrix (np*order)
-    CMPLX,   intent(in)  :: mm(np, np)   ! the matrix to multipliy
-    integer, intent(in)  :: mapping(:)   ! the mapping
-    CMPLX,   intent(out) :: res(np, np)  ! the full matrix
+    integer, intent(in)  :: np           !< matrix size (np**2)
+    integer, intent(in)  :: order        !< derivative order
+    integer, intent(in)  :: dim          !< dimension
+    CMPLX,   intent(in)  :: sp(:)        !< sparse matrix (np*order)
+    CMPLX,   intent(in)  :: mm(np, np)   !< the matrix to multipliy
+    integer, intent(in)  :: mapping(:)   !< the mapping
+    CMPLX,   intent(out) :: res(np, np)  ! <the full matrix
 
     integer :: ii,ij,ik, ijo
     CMPLX   :: tmp
@@ -889,16 +890,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Create the original matrix out of the sparse matrix.
-  ! mm = ss.sp.ss^(-1)
+  !> Create the original matrix out of the sparse matrix.
+  !! mm = ss.sp.ss^(-1)
   subroutine make_full_matrix(np, order, dim, sp, ss, mm, mapping)
-    integer, intent(in)  :: np            ! matrix size (np**2)
-    integer, intent(in)  :: order         ! derivative order
-    integer, intent(in)  :: dim           ! dimension
-    CMPLX,   intent(in)  :: sp(:)         ! sparse matrix (np*order)
-    CMPLX,   intent(in)  :: ss(np, np, 2) ! diagonalization matrix
-    CMPLX,   intent(out) :: mm(np, np)    ! the full matrix
-    integer, intent(in)  :: mapping(:)    ! the mapping
+    integer, intent(in)  :: np            !< matrix size (np**2)
+    integer, intent(in)  :: order         !< derivative order
+    integer, intent(in)  :: dim           !< dimension
+    CMPLX,   intent(in)  :: sp(:)         !< sparse matrix (np*order)
+    CMPLX,   intent(in)  :: ss(np, np, 2) !< diagonalization matrix
+    CMPLX,   intent(out) :: mm(np, np)    !< the full matrix
+    integer, intent(in)  :: mapping(:)    !< the mapping
 
     CMPLX, allocatable :: tmp(:, :)
     integer            :: id, ip
@@ -932,7 +933,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Free arrays.
+  !> Free arrays.
   subroutine ob_mem_end(ob)
     type(ob_terms_t), intent(inout) :: ob
       

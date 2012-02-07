@@ -67,8 +67,8 @@ module cpmd_m
     FLOAT          :: emass
     FLOAT          :: ecorr
 
-    !for verlet, this stores the previous wfs
-    !for vel_verlet, the time derivative of the wfs
+    !> for verlet, this stores the previous wfs
+    !! for vel_verlet, the time derivative of the wfs
     FLOAT, pointer :: dpsi2(:, :, :, :)
     CMPLX, pointer :: zpsi2(:, :, :, :)
     

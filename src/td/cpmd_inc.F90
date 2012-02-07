@@ -17,9 +17,9 @@
 !!
 !! $Id: cpmd_inc.F90 3694 2008-02-15 13:37:54Z marques $
 
-! This integration is based on Tuckermann and Parrinello, JCP 101
-! 1302 (1994), using the Verlet and velocity Verlet algorithms
-! described on page 1306.
+!> This integration is based on Tuckermann and Parrinello, JCP 101
+!! 1302 (1994), using the Verlet and velocity Verlet algorithms
+!! described on page 1306.
 subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
   type(cpmd_t), target, intent(inout) :: this
   type(grid_t),         intent(inout) :: gr

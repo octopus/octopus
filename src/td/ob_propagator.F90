@@ -17,8 +17,8 @@
 !!
 !! $Id: td_transport.F90 3030 2007-06-25 16:45:05Z marques $
 
-! Implementation of the propagator for open boundaries, i.e. the
-! modified Crank-Nicholson with source and memory terms.
+!> Implementation of the propagator for open boundaries, i.e. the
+!! modified Crank-Nicholson with source and memory terms.
 
 #include "global.h"
 
@@ -57,20 +57,20 @@ module ob_propagator_m
     cn_src_mem_dt,         &
     cn_src_mem_sp_dt
 
-  ! We use 1st order Taylor expansion of exp(-i dt/2 H)|psi>
-  ! to calculate (1 - i dt H)|psi>.
+  !> We use 1st order Taylor expansion of \f$exp(-i dt/2 H)|\psi>\f$
+  !! to calculate \f$(1 - i dt H)|\psi>\f$.
   type(exponential_t) :: taylor_1st
 
-  ! Parameters to the BiCG in Crank-Nicholson.
+  !> Parameters to the BiCG in Crank-Nicholson.
   integer :: qmr_max_iter
   FLOAT   :: qmr_tol
 
-  ! is the effective Hamiltonian complex symmetric?
-  ! true if no magnetic fields or vector potentials are present
-  ! if true some simplifications and speedups are possible
+  !> Is the effective Hamiltonian complex symmetric?
+  !! true if no magnetic fields or vector potentials are present
+  !! if true some simplifications and speedups are possible
   logical :: heff_sym
 
-  ! Pointers for the h_eff_backward(t) operator for the iterative linear solver.
+  !> Pointers for the h_eff_backward(t) operator for the iterative linear solver.
   type(hamiltonian_t), pointer :: hm_p
   type(grid_t), pointer        :: gr_p
   type(ob_memsrc_t), pointer   :: lead_p(:)
@@ -81,7 +81,7 @@ module ob_propagator_m
 contains
 
   ! ---------------------------------------------------------
-  ! Initialize propagator.
+  !> Initialize propagator.
   subroutine ob_propagator_init(st, gr, hm, ob, dt, max_iter)
     type(states_t),      intent(in)  :: st
     type(grid_t),        intent(in)  :: gr
@@ -254,9 +254,9 @@ contains
   end function lambda
 
   ! ---------------------------------------------------------
-  ! Crank-Nicholson timestep with source and memory.
-  ! Only non-interacting electrons for the moment, so no
-  ! predictor-corrector scheme.
+  !> Crank-Nicholson timestep with source and memory.
+  !! Only non-interacting electrons for the moment, so no
+  !! predictor-corrector scheme.
   subroutine cn_src_mem_dt(ob, st, ks, hm, gr, max_iter, dt, t, timestep)
     type(ob_terms_t), target,    intent(inout) :: ob
     type(states_t),              intent(inout) :: st
@@ -397,9 +397,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Crank-Nicholson timestep with source and memory - sparse version.
-  ! Only non-interacting electrons for the moment, so no
-  ! predictor-corrector scheme.
+  !> Crank-Nicholson timestep with source and memory - sparse version.
+  !! Only non-interacting electrons for the moment, so no
+  !! predictor-corrector scheme.
   subroutine cn_src_mem_sp_dt(ob, st, ks, hm, gr, max_iter, dt, t, timestep)
     type(ob_terms_t), target,    intent(inout) :: ob
     type(states_t),              intent(inout) :: st
@@ -525,8 +525,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Progagate backwards with: 1 + i \delta H_{eff}
-  ! Used by the iterative linear solver.
+  !> Progagate backwards with: 1 + i \delta H_{eff}
+  !! Used by the iterative linear solver.
   subroutine h_eff_backward(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
@@ -549,8 +549,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Progagate backwards with: 1 + i \delta H_{eff}
-  ! Used by the iterative linear solver.
+  !> Progagate backwards with: \f$ 1 + i \delta H_{eff} \f$
+  !! Used by the iterative linear solver.
   subroutine h_eff_backward_sp(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
@@ -573,8 +573,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Save the interface part of all states st for timestep into
-  ! the st_intf array.
+  !> Save the interface part of all states st for timestep into
+  !! the st_intf array.
   subroutine save_intf_wf(intf, st, mesh, st_intf)
     type(interface_t), intent(in)    :: intf
     type(states_t),    intent(in)    :: st
@@ -602,7 +602,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Propagate forward/backward with effective Hamiltonian.
+  !> Propagate forward/backward with effective Hamiltonian.
   subroutine apply_h_eff(hm, gr, lead, intf, sign, dt, t, ist, ik, zpsi, transposed)
     type(hamiltonian_t), intent(inout)    :: hm
     type(grid_t),        intent(inout)    :: gr
@@ -654,7 +654,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Propagate forward/backward with effective Hamiltonian.
+  !> Propagate forward/backward with effective Hamiltonian.
   subroutine apply_h_eff_sp(hm, gr, lead, intf, sign, dt, t, ist, ik, zpsi, transposed)
     type(hamiltonian_t), intent(inout)    :: hm
     type(grid_t),        intent(inout)    :: gr
@@ -705,7 +705,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Apply source coefficient: zpsi <- zpsi + src_wf
+  !> Apply source coefficient: \f$ \psi_z <- \psi_z + src_wf \f$
   subroutine apply_src(intf, src_wf, zpsi)
     type(interface_t), intent(in)    :: intf
     CMPLX,             intent(in)    :: src_wf(:)
@@ -726,8 +726,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Apply memory coefficient: zpsi <- zpsi + factor Q intf_wf
-  ! Use symmetric matrix-vector multiply, because Q is symmetric
+  !> Apply memory coefficient: \f$ \psi_z <-  \psi_z + factor Q intf_wf \f$
+  !! Use symmetric matrix-vector multiply, because Q is symmetric
   subroutine apply_mem(mem, intf, intf_wf, zpsi, factor, transposed)
     CMPLX,             intent(in)    :: mem(:, :)
     type(interface_t), intent(in)    :: intf
@@ -762,8 +762,8 @@ contains
   end subroutine apply_mem
 
   ! ---------------------------------------------------------
-  ! Apply memory coefficient: zpsi <- zpsi + factor Q intf_wf
-  ! Use symmetric matrix-vector multiply, because Q is symmetric
+  !> Apply memory coefficient:\f$ \psi_z <-  \psi_z + factor Q intf_wf \f$
+  !! Use symmetric matrix-vector multiply, because Q is symmetric
   subroutine apply_sp_mem(sp_mem, intf, intf_wf, zpsi, factor, mem_s, order, dim, mapping, transposed)
     CMPLX,             intent(in)    :: sp_mem(:)
     type(interface_t), intent(in)    :: intf
@@ -816,7 +816,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Write some status information to stdout.
+  !> Write some status information to stdout.
   subroutine ob_propagator_write_info(ob, st, gr, max_iter, order)
     type(ob_terms_t), intent(in) :: ob
     type(states_t),   intent(in) :: st

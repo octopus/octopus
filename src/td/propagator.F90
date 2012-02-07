@@ -91,13 +91,13 @@ module propagator_m
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
   type propagator_t
-    integer             :: method           ! Which evolution method to use.
-    type(exponential_t) :: te               ! How to apply the propagator (e^{-i H \Delta t}).
+    integer             :: method           !< Which evolution method to use.
+    type(exponential_t) :: te               !< How to apply the propagator \f$ e^{-i H \Delta t} \f$.
     FLOAT, pointer      :: v_old(:, :, :) => null()
-                                            ! Storage of the KS potential of previous iterations.
+                                            !< Storage of the KS potential of previous iterations.
     FLOAT, pointer      :: vmagnus(:, :, :) => null() 
-                                            ! Auxiliary function to store the Magnus potentials.
-    type(ob_terms_t)    :: ob               ! For open boundaries: leads, memory
+                                            !< Auxiliary function to store the Magnus potentials.
+    type(ob_terms_t)    :: ob               !< For open boundaries: leads, memory
     integer             :: scf_propagation_steps 
     logical             :: first
   end type propagator_t
@@ -149,9 +149,10 @@ contains
     type(propagator_t),  intent(inout) :: tr
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: max_iter
-    logical,             intent(in)    :: have_fields ! whether there is an associated "field"
-                                                      ! that must be propagated (currently ions
-                                                      ! or a gauge field).
+    !> whether there is an associated "field"
+    !! that must be propagated (currently ions
+    !! or a gauge field).
+    logical,             intent(in)    :: have_fields 
 
     integer :: default_propagator
 
@@ -413,8 +414,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Propagates st from time - dt to t.
-  ! If dt<0, it propagates *backwards* from t+|dt| to t
+  !> Propagates st from time - dt to t.
+  !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
   subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, max_iter, nt, gauge_force, ions, geo, scsteps)
     type(v_ks_t),                    intent(inout) :: ks
@@ -563,7 +564,7 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    ! Propagator with enforced time-reversal symmetry
+    !> Propagator with enforced time-reversal symmetry
     subroutine td_etrs
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       integer :: ik, ist, ib
@@ -649,7 +650,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! Propagator with approximate enforced time-reversal symmetry
+    !> Propagator with approximate enforced time-reversal symmetry
     subroutine td_aetrs
       integer :: ik, ispin, ip, ist, ib
       type(batch_t) :: zpsib
@@ -778,7 +779,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! Exponential midpoint
+    !> Exponential midpoint
     subroutine exponential_midpoint
       integer :: ib, ik
       type(ion_state_t) :: ions_state
@@ -825,7 +826,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! Crank-Nicholson propagator, linear solver from SPARSKIT.
+    !> Crank-Nicholson propagator, linear solver from SPARSKIT.
     subroutine td_crank_nicholson_sparskit
 #ifdef HAVE_SPARSKIT
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
@@ -930,7 +931,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! Crank-Nicholson propagator, QMR linear solver.
+    !> Crank-Nicholson propagator, QMR linear solver.
     subroutine td_crank_nicholson
       CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:), inhpsi(:)
       integer :: ik, ist, idim, ip, isize, np_part, np, iter
@@ -1015,7 +1016,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! Magnus propagator
+    !> Magnus propagator
     subroutine td_magnus
       integer :: j, is, ist, ik, i
       FLOAT :: atime(2)
@@ -1073,7 +1074,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! Crank-Nicholson scheme with source and memory term.
+    !> Crank-Nicholson scheme with source and memory term.
     subroutine td_crank_nicholson_src_mem()
       PUSH_SUB(propagator_dt.td_crank_nicholson_src_mem)
       
@@ -1092,7 +1093,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! operators for Crank-Nicholson scheme
+  !> operators for Crank-Nicholson scheme
   subroutine propagator_qmr_op(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
@@ -1133,7 +1134,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! operators for Crank-Nicholson scheme
+  !> operators for Crank-Nicholson scheme
   subroutine td_zop(xre, xim, yre, yim)
     FLOAT, intent(in)  :: xre(:)
     FLOAT, intent(in)  :: xim(:)
@@ -1157,7 +1158,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Transpose of H (called e.g. by bi-conjugate gradient solver)
+  !> Transpose of H (called e.g. by bi-conjugate gradient solver)
   subroutine td_zopt(xre, xim, yre, yim)
     FLOAT, intent(in)  :: xre(:)
     FLOAT, intent(in)  :: xim(:)

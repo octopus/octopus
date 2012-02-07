@@ -44,14 +44,15 @@ module td_calc_m
 contains
 
 ! ---------------------------------------------------------
-! Electronic acceleration (to calculate harmonic spectrum...)
-! It is calculated as:
-!
-! d2<x>/dt2 = d<p>/dt + i<[H,[V_nl,x]]> =
-!           = i<[V_l,p]> + i<[V_nl,p]> - E(t)N + i<[H,[V_nl,x]]>
-!
-! WARNING: This subroutine only works if ions are not
-!          allowed to move
+!> Electronic acceleration (to calculate harmonic spectrum...)
+!! It is calculated as:
+!!
+!! \f[
+!! d2<x>/dt2 = d<p>/dt + i<[H,[V_nl,x]]> =
+!!           = i<[V_l,p]> + i<[V_nl,p]> - E(t)N + i<[H,[V_nl,x]]>
+!! \f]
+!! \warning This subroutine only works if ions are not
+!!          allowed to move
 ! ---------------------------------------------------------
 subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
   type(grid_t),        intent(inout) :: gr
@@ -151,10 +152,11 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
 end subroutine td_calc_tacc
 
 ! ---------------------------------------------------------
-! Electronic velocity (to calculate harmonic spectrum...)
-! It is calculated as:
-!
-! d<x>/dt = <p>
+!> Electronic velocity (to calculate harmonic spectrum...)
+!! It is calculated as:
+!! \f[
+!! d<x>/dt = <p>
+!! \f]
 ! ---------------------------------------------------------
 subroutine td_calc_tvel(gr, geo, st, hm, vel, time)
   type(grid_t),        intent(inout) :: gr

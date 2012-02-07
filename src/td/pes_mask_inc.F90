@@ -575,7 +575,7 @@ subroutine PES_mask_generate_Lk(mask)
 end subroutine PES_mask_generate_Lk
 
 ! ======================================
-! = Generate the momentum-space filter =
+!>  Generate the momentum-space filter 
 ! ======================================
 subroutine PES_mask_generate_filter(mask,cutOff)
   type(PES_mask_t), intent(inout) :: mask
@@ -618,8 +618,8 @@ end subroutine PES_mask_generate_filter
 
 
 ! --------------------------------------------------------
-!  Generate the mask function on the cubic mesh containing 
-!  the simulation box
+!>  Generate the mask function on the cubic mesh containing 
+!!  the simulation box
 ! ---------------------------------------------------------
 subroutine PES_mask_generate_mask(mask,mesh)
   type(PES_mask_t), intent(inout) :: mask
@@ -636,8 +636,8 @@ subroutine PES_mask_generate_mask(mask,mesh)
 end subroutine PES_mask_generate_mask
 
 ! --------------------------------------------------------
-!  Generate the mask function on the cubic mesh containing 
-!  the simulation box
+!>  Generate the mask function on the cubic mesh containing 
+!!  the simulation box
 ! ---------------------------------------------------------
 subroutine PES_mask_generate_mask_function(mask,mesh, shape, R, mask_sq, mask_m)
   type(PES_mask_t),     intent(inout)    :: mask
@@ -765,16 +765,16 @@ end subroutine PES_mask_apply_mask
 
 
 ! ---------------------------------------------------------
-!  Propagate in time a wavefunction in momentum space with 
-!  the Volkov Hamiltonian 
-!     
-!     wf(p,t+dt)=exp(-i*Hv*dt)*wf(p,t)
-!
-!  with 
-!
-!     Hv=(p^2-A)^2/2
-!
-! NOTE: velocity gauge is implied 
+!>  Propagate in time a wavefunction in momentum space with 
+!!  the Volkov Hamiltonian 
+!!\f[     
+!!     wf(p,t+dt)=exp(-i*Hv*dt)*wf(p,t)
+!!\f]
+!!  with 
+!!\f[
+!!     Hv=(p^2-A)^2/2
+!!\f]
+!! \note velocity gauge is implied 
 ! ---------------------------------------------------------
 subroutine PES_mask_Volkov_time_evolution_wf(mask, mesh, dt, iter, wf)
   type(PES_mask_t), intent(in)    :: mask
@@ -865,7 +865,7 @@ end subroutine PES_mask_backaction_wf_apply
 
 
 !---------------------------------------------------------
-! Local frontend to similar functions defined in cube_function_inc.F90
+!> Local frontend to similar functions defined in cube_function_inc.F90
 !---------------------------------------------------------
 
 subroutine PES_mask_mesh_to_cube(mask, mf, cf, local)
@@ -1213,7 +1213,7 @@ end subroutine integral_K_to_X
 
 
 !---------------------------------------------------------
-! Project the wavefunction on plane waves
+!> Project the wavefunction on plane waves
 !---------------------------------------------------------
 subroutine PES_mask_X_to_K(mask,mesh,wfin,wfout)
   type(PES_mask_t), intent(in)  :: mask
@@ -1321,7 +1321,7 @@ end subroutine PES_mask_K_to_X
 
 !---------------------------------------------------------
 !
-!            Performs all the dirty work 
+!>            Performs all the dirty work 
 !
 !---------------------------------------------------------
 subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
@@ -1329,7 +1329,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
   type(mesh_t),        intent(in)    :: mesh
   type(states_t),      intent(inout) :: st
   FLOAT,               intent(in)    :: dt
-  FLOAT,               intent(in)    :: mask_fn(:) !namely hm%ab_pot
+  FLOAT,               intent(in)    :: mask_fn(:) !< namely hm%ab_pot
   integer,             intent(in)    :: iter
   type(hamiltonian_t), intent(in)    :: hm
   type(geometry_t),    intent(in)    :: geo
