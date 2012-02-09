@@ -225,7 +225,8 @@
 
     ! local vars
     integer :: mm, iunit, itype
-    integer :: iyoung, ierr
+    integer :: ierr, npptype
+    integer, allocatable :: iyoung(:)
     logical :: symmetries_satisfied, impose_exch_symmetry
     CMPLX, allocatable :: wf(:)
     CMPLX, allocatable :: wf_global(:)
@@ -266,28 +267,30 @@
     iunit = io_open(trim(filename), action='write')
 
     ! just treat particle type 1 for the moment
-    itype = 1
+    itype = 1 
+    npptype = st%modelmbparticles%nparticles_per_type(itype)
+
+    SAFE_ALLOCATE(iyoung(1:floor(npptype/2.)+1))
+    iyoung = 1
+
     call young_write_allspins (iunit, st%modelmbparticles%nparticles_per_type(itype))
 
     ! write header
     write (iunit, '(a)') '  state      eigenvalue   ptype    Young#    nspindown    projection'
 
-    iyoung = 1
     do mm = 1, st%nst
       call states_get_state(st, gr%mesh, 1, mm, 1, wf)
 
       if (impose_exch_symmetry) then
         if (mm > 1) then
-          ! if eigenval is degenerate increment iyoung
-          if (abs(st%eigenval(mm,1) - st%eigenval(mm-1,1)) < 1.e-5) then
-            iyoung = iyoung + 1
-          else
+          ! if eigenval is not degenerate reset iyoung
+          if (abs(st%eigenval(mm,1) - st%eigenval(mm-1,1)) > 1.e-5) then
             iyoung = 1
           end if
         end if
- 
-        call modelmb_sym_state(st%eigenval(mm,1), iyoung, iunit, gr, mm, geo, &
-             st%modelmbparticles, wf, symmetries_satisfied)
+
+        call modelmb_sym_state(st%eigenval(mm,1), iunit, gr, mm, geo, &
+             st%modelmbparticles, itype, iyoung, wf, symmetries_satisfied)
       end if
 
       if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0 .and. symmetries_satisfied) then
