@@ -55,20 +55,21 @@ module modelmb_exchange_syms_m
 contains
 
   ! project out states with proper symmetry for cases which are of symmetry = unknown
-  subroutine modelmb_sym_state(eigenval, iyoungstart, iunit, gr, mm, geo, &
-             modelmbparticles, wf, symmetries_satisfied)
+  subroutine modelmb_sym_state(eigenval, iunit, gr, mm, geo, &
+             modelmbparticles, itype, iyoungstart, wf, symmetries_satisfied)
     FLOAT,                    intent(in)    :: eigenval
-    integer,                  intent(in)    :: iyoungstart
     integer,                  intent(in)    :: iunit
     type(grid_t),             intent(in)    :: gr
     integer,                  intent(in)    :: mm
     type(geometry_t),         intent(in)    :: geo
     type(modelmb_particle_t), intent(in)    :: modelmbparticles
+    integer,                  intent(in)    :: itype
+    integer,                  intent(inout) :: iyoungstart(1:floor(modelmbparticles%nparticles_per_type(itype)/2.)+1)
     CMPLX,                    intent(inout) :: wf(1:gr%mesh%np_part) ! will be antisymmetrized on output
     logical,                  intent(out)   :: symmetries_satisfied
 
-    integer :: itype, ipart1, ipart2, npptype
-    integer :: ip, ipp, iup, idown, iyoung, iyoungstart_eff
+    integer :: ipart1, ipart2, npptype
+    integer :: ip, ipp, iup, idown, iyoung
     integer :: ikeeppart
     integer :: ndimmb
     integer :: nspindown, nspinup, iperm_up, iperm_down
@@ -128,7 +129,7 @@ contains
     SAFE_ALLOCATE(forward_map_exchange(gr%mesh%np_global))
 
     ! for each particle type
-    do itype = 1, modelmbparticles%ntype_of_particle
+    ! do itype = 1, modelmbpartiddcles%ntype_of_particle FIXME: move this loop to output_modelmb
 
       ! FIXME: for multiple particle types this needs to be fixed.
       ! Also, for inequivalent spin configurations this should vary, and we get
@@ -139,7 +140,7 @@ contains
       ! FIXME: boson case is not treated yet
       if (modelmbparticles%bosonfermion(ikeeppart) /= 1) then ! 1 = fermion
         symmetries_satisfied_alltypes(itype) = 1
-        cycle
+        return 
       end if
 
       call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, &
@@ -166,9 +167,8 @@ contains
         call young_init (young, nspinup, nspindown)
 
         ! loop over all Young diagrams for present distribution of spins up and down
-        iyoungstart_eff = iyoungstart
-        if (iyoungstart_eff > young%nyoung) iyoungstart_eff = 1
-        do iyoung = iyoungstart_eff, young%nyoung
+        if (iyoungstart(nspindown+1) > young%nyoung) cycle
+        do iyoung = iyoungstart(nspindown+1), young%nyoung
           antisymwf(:,1,1) = wf(1:gr%mesh%np)
 
           ! first symmetrize over pairs of particles associated in the present
@@ -319,13 +319,14 @@ contains
             norm = TOFLOAT(sum(conjg(antisymwf(:,1,1))*antisymwf(:,1,1))) * normalizer
           end if
 
-          if (norm > CNST(1.e-5)) &
+          if (norm > CNST(1.e-4)) then
             write (iunit, '(I5,3x,E16.6,2x,I4,2x,I7,8x,I3,5x,E14.6)') &
                   mm, eigenval, itype, iyoung, nspindown, norm
-   
-          ! FIXME: this is probably the problem when running in single precision
-          if (norm < CNST(1.e-3)) cycle
-  
+            iyoungstart(nspindown + 1) = iyoungstart(nspindown + 1) + 1
+          else
+            cycle
+          endif
+
           ! we have found a valid Young diagram and antisymmetrized the present
           ! state enough. Loop to next type
           symmetries_satisfied_alltypes(itype) = 1
@@ -349,7 +350,9 @@ contains
       SAFE_DEALLOCATE_A(ofst)
       call modelmb_1part_end(mb_1part)
 
-    end do ! itype
+   ! end do ! itype FIXME: move to output_modelmb
+
+   !FIXME: move this check to after the itype loop in output_modelmb
 
     ! check if all types of particles have been properly symmetrized
     if (sum(symmetries_satisfied_alltypes) == modelmbparticles%ntype_of_particle) then
