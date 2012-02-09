@@ -95,13 +95,13 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
   
   !%Variable AlphaFMM
   !%Type float
-  !%Default 0.262444231
+  !%Default 0.291262136
   !%Section Hamiltonian::Poisson 
   !%Description
   !% Parameter for the correction of the self-interaction of the
-  !% electrostatic Hartree potential. The defaul value is 6 / 22.862
+  !% electrostatic Hartree potential. The defaul value is 0.291262136
   !%End
-  call parse_float(datasets_check('AlphaFMM'), CNST(0.262444231), params_fmm%alpha_fmm)
+  call parse_float(datasets_check('AlphaFMM'), CNST(0.291262136), params_fmm%alpha_fmm)
 
   ! FMM: Variable periodic sets periodicity
   ! 0 = open system
@@ -330,15 +330,15 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
         aux1 = M_ZERO  
 
-        aux1 = aux1 - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -2)) - &
-             rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 2)) &
+        aux1 = aux1 - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -2)) &
+             - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 2)) &
              - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, 2)) &
              - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, 2)) 
 
         aux1 = aux1/M_FOUR
 
-        aux1 = aux1 + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -1)) + &
-             rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 1)) &
+        aux1 = aux1 + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -1)) &
+             + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 1)) &
              + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, 1)) &
              + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, 1)) 
 
