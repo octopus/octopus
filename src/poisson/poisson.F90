@@ -656,8 +656,8 @@ contains
 
     n_gaussians = 1 
 
-    SAFE_ALLOCATE(     rho(1:mesh%np_part))
-    SAFE_ALLOCATE(    rhop(1:mesh%np_part))
+    SAFE_ALLOCATE(     rho(1:mesh%np))
+    SAFE_ALLOCATE(    rhop(1:mesh%np))
     SAFE_ALLOCATE(      vh(1:mesh%np))
     SAFE_ALLOCATE(      vh2(1:mesh%np))
     SAFE_ALLOCATE(      vh3(1:mesh%np))

@@ -181,7 +181,7 @@ end subroutine poisson_fmm_end
 subroutine poisson_fmm_solve(this, pot, rho)  
   type(poisson_t),     intent(inout) :: this
   FLOAT,               intent(inout) :: pot(:)
-  FLOAT,               intent(inout) :: rho(:)
+  FLOAT,               intent(in)    :: rho(:)
 
 #ifdef HAVE_LIBFM
   integer(8) :: totalcharges
@@ -193,6 +193,7 @@ subroutine poisson_fmm_solve(this, pot, rho)
   real(8), allocatable :: q(:)  
   real(8), allocatable :: pot_lib_fmm(:)
   real(8), allocatable :: xyz(:, :)
+  FLOAT,   allocatable :: rho_tmp(:)
   real(8) :: delta_E 
   real(8) :: energy_fmm   !< We don`t use it, but we cannot remove energy_fmm for the moment
   real(8) :: periodic_length
@@ -288,10 +289,16 @@ subroutine poisson_fmm_solve(this, pot, rho)
   ! Apply the parallel correction
   call profiling_in(prof_fmm_corr, "FMM_CORR")
   SAFE_ALLOCATE(ix(1:mesh%sb%dim))
-  
+  SAFE_ALLOCATE(rho_tmp(1:mesh%np_part))
+  do ip = 1, mesh%np
+    rho_tmp(ip) = rho(ip)
+  end do
+  do ip = mesh%np + 1, mesh%np_part
+    rho_tmp(ip) = M_ZERO
+  end do
   if (mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
-    call dvec_ghost_update(mesh%vp, rho)
+    call dvec_ghost_update(mesh%vp, rho_tmp)
 #endif
   end if
   
@@ -323,19 +330,21 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
         aux1 = M_ZERO  
 
-        aux1 = aux1 - rho(vec_index2local(mesh%vp,mesh%idx, ix, 1, -2)) - rho(vec_index2local(mesh%vp,mesh%idx, ix, 1, 2)) &
-          - rho(vec_index2local(mesh%vp,mesh%idx, ix, 2, -2)) - rho(vec_index2local(mesh%vp,mesh%idx, ix, 2, 2)) &
-          - rho(vec_index2local(mesh%vp,mesh%idx, ix, 3, -2)) - rho(vec_index2local(mesh%vp,mesh%idx, ix, 3, 2)) 
+        aux1 = aux1 - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -2)) - &
+             rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 2)) &
+             - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, 2)) &
+             - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, 2)) 
 
         aux1 = aux1/M_FOUR
 
-        aux1 = aux1 + rho(vec_index2local(mesh%vp,mesh%idx, ix, 1, -1)) + rho(vec_index2local(mesh%vp,mesh%idx, ix, 1, 1)) &
-          + rho(vec_index2local(mesh%vp,mesh%idx, ix, 2, -1)) + rho(vec_index2local(mesh%vp,mesh%idx, ix, 2, 1)) &
-          + rho(vec_index2local(mesh%vp,mesh%idx, ix, 3, -1)) + rho(vec_index2local(mesh%vp,mesh%idx, ix, 3, 1)) 
+        aux1 = aux1 + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -1)) + &
+             rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 1)) &
+             + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, 1)) &
+             + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, 1)) 
 
         aux1 = aux1/16.0
         
-        aux1 = aux1 + rho(ip) * (27.0/32.0 + (M_ONE - this%params_fmm%alpha_fmm) * M_TWO * M_PI * (3./(M_PI*4.))**(2./3.))
+        aux1 = aux1 + rho_tmp(ip) * (27.0/32.0 + (M_ONE - this%params_fmm%alpha_fmm) * M_TWO * M_PI * (3./(M_PI*4.))**(2./3.))
 
         aux1 = aux1 * (mesh%spacing(1) * mesh%spacing(2))
 
@@ -347,12 +356,13 @@ subroutine poisson_fmm_solve(this, pot, rho)
     else ! Not common mesh; we add the self-interaction of the cell
       do ii = 1, mesh%np 
         aux = M_TWO * M_PI * (3. * mesh%vol_pp(ii)/(M_PI * 4.))**(2./3.)
-        pot(ii) = pot(ii) + aux * rho(ii)
+        pot(ii) = pot(ii) + aux * rho_tmp(ii)
       end do
     end if
   end if
 
   SAFE_DEALLOCATE_A(ix)
+  SAFE_DEALLOCATE_A(rho_tmp)
 
   call profiling_out(prof_fmm_corr)
   call profiling_out(poisson_prof)
