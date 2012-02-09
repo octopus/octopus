@@ -99,7 +99,7 @@ subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
   !%Section Hamiltonian::Poisson 
   !%Description
   !% Parameter for the correction of the self-interaction of the
-  !% electrostatic Hartree potential. The defaul value is 0.291262136
+  !% electrostatic Hartree potential. The default value is 0.291262136.
   !%End
   call parse_float(datasets_check('AlphaFMM'), CNST(0.291262136), params_fmm%alpha_fmm)
 
