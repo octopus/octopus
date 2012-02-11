@@ -98,6 +98,8 @@ program casida_spectrum
 
   call calc_broad(cs, CASIDA_DIR, 'eps_diff', .true.)
   call calc_broad(cs, CASIDA_DIR, 'petersilka', .true.)
+  call calc_broad(cs, CASIDA_DIR, 'tamm_dancoff', .false.)
+  call calc_broad(cs, CASIDA_DIR, 'variational', .false.)
   call calc_broad(cs, CASIDA_DIR, 'casida', .false.)
 
   call io_end()
@@ -135,9 +137,11 @@ contains
     read(iunit, *) ! skip header
     do
       if(extracols) then
-        read(iunit, *, end=100) j1, j2, energy, ff
+        ! first two columns are occ and unocc states
+        read(iunit, *, end=100) j1, j2, energy, ff(1:4)
       else
-        read(iunit, *, end=100) energy, ff
+        ! first column is the index of the excitation
+        read(iunit, *, end=100) j1, energy, ff(1:4)
       end if
 
       energy = units_to_atomic(units_out%energy, energy)
