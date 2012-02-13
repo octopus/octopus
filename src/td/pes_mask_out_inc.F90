@@ -1562,27 +1562,26 @@ subroutine PES_mask_restart_write(mask, mesh, st)
 
   dir = trim(restart_dir)//'td/'
 
-  itot = 1
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
-        
+
+        itot = ist + (ik-1) * st%nst+  (idim-1) * st%nst*st%d%kpt%nglobal
+
         write(filename,'(i10.10)') itot
-        
+
+               
         path = trim(dir)//'pes_'//trim(filename)//'.obf'
         
-        if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
 
-          call io_binary_write(path,np, mask%k(:,:,:, idim, ist, ik), ierr)
-          if(ierr > 0) then
-            message(1) = "Failed to write file "//trim(path)
-            call messages_fatal(1)
-          end if
-        
+        call io_binary_write(path,np, mask%k(:,:,:, idim, ist, ik), ierr)
+        if(ierr > 0) then
+          message(1) = "Failed to write file "//trim(path)
+          call messages_fatal(1)
         end if
+          
         
-        itot = itot + 1
       end do
     end do
   end do
@@ -1613,10 +1612,10 @@ subroutine PES_mask_restart_read(mask, mesh, st)
 
   dir = trim(restart_dir)//'td/'
 
-  itot = 1
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
+        itot = ist + (ik-1) * st%nst+  (idim-1) * st%nst*st%d%kpt%nglobal
         write(filename,'(i10.10)') itot
         
         path=trim(dir)//'pes_'//trim(filename)//'.obf'
@@ -1628,7 +1627,6 @@ subroutine PES_mask_restart_read(mask, mesh, st)
         end if
 
 
-        itot = itot + 1
       end do
     end do
   end do
