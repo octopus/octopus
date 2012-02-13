@@ -153,7 +153,7 @@ program photoelectron_spectrum
         write(message(1), '(a)') 'Unrecognized plane. Use -V to change.'
         call messages_fatal(1)
       else
-        write(message(1), '(a)') 'Calculating velocity map on a plane '//index2axis(dir)//"=0"
+        write(message(1), '(a)') 'Calculating velocity map on plane '//index2axis(dir)//"=0"
         call messages_info(1)
     end if 
     
