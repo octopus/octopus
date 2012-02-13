@@ -309,62 +309,55 @@ subroutine PES_mask_interpolator_end(cube_f, interp)
 end subroutine PES_mask_interpolator_end
 
 
+
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_full_map(mask, st, outp, file, dir)
-  type(PES_mask_t), intent(in) :: mask
-  type(states_t),   intent(in) :: st
-  type(output_t),   intent(in) :: outp
+subroutine PES_mask_dump_full_mapM(PESK, file, Lk)
+  FLOAT,            intent(in) :: PESK(:,:,:)
+  FLOAT,            intent(in) :: Lk(:)
   character(len=*), intent(in) :: file
-  integer,          intent(in) :: dir
 
-  integer :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT ::  KK(MAX_DIM),temp, scale
+  integer :: ist, ik, ii, ix, iy, iz, iunit
+  FLOAT ::  KK(3)
+  integer :: ll(3)
 
-  PUSH_SUB(PES_mask_dump_full_map)
 
+  PUSH_SUB(PES_mask_dump_full_mapM)
+  
   iunit = io_open(file, action='write')
   
-  scale = M_ONE
-  do idim=1, mask%mesh%sb%dim
-    scale = scale *( mask%spacing(idim)/sqrt(M_TWO*M_PI))**2
+  ll = 1
+  do ii = 1, 3
+    ll(ii) = size(PESK,ii) 
   end do
 
-
-!! INCOMPLETE !!
-  do ix = 1, mask%ll(1)
-    KK(1) = mask%Lk(ix)
-    do iy = 1, mask%ll(2)
-      KK(2) = mask%Lk(iy)
-!      do iz = 1, mask%ll(3)
-!        KK(3) = mask%Lk(iz)
-
-      iz = 1
-      temp = M_ZERO
-      
-      do ik = 1,st%d%nik
-        do ist = 1, st%nst
-          temp = temp + st%occ(ist, ik) * sum(abs(mask%k(ix, iy, iz, :, ist, ik) )**2)
-        end do
-      end do
-      
-      temp = temp * scale
-         
-      write(iunit, '(es18.11,2x,es18.11,2x,es19.12,i10,2x,i10,2x,es19.12,2x,i10)') &
-        KK(1), KK(2), temp, ix , iy,  sum(KK(1:mask%mesh%sb%dim)**2) / M_TWO, &
-        int((sum(KK(1:mask%mesh%sb%dim)**2) / M_TWO) / mask%energyStep) + 1
-
+  do ix = 1, ll(1)
+    KK(1) = Lk(ix)
+    do iy = 1, ll(2)
+      KK(2) = Lk(iy)
+      do iz = 1, ll(3)
+        KK(3) = Lk(iz)
+ 
+          write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12)') &
+                  units_from_atomic(sqrt(units_out%energy), KK(1)),&
+                  units_from_atomic(sqrt(units_out%energy), KK(2)),&
+                  units_from_atomic(sqrt(units_out%energy), KK(3)),&
+                  PESK(ix,iy,iz) 
+                  
+ 
+        end do  
+      end do      
     end do
-    write(iunit, *)  
-    
-  end do
-
-  call io_close(iunit)
   
-  POP_SUB(PES_mask_dump_full_map)
-end subroutine PES_mask_dump_full_map
+    call io_close(iunit)
+  
+
+    POP_SUB(PES_mask_dump_full_mapM)
+
+  
+end subroutine PES_mask_dump_full_mapM
 
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_full_mapM(PESK, file, Lk, dim, dir)
+subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, dir)
   FLOAT,            intent(in) :: PESK(:,:,:)
   FLOAT,            intent(in) :: Lk(:)
   character(len=*), intent(in) :: file
@@ -376,7 +369,7 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk, dim, dir)
   integer :: ll(MAX_DIM)
 
 
-  PUSH_SUB(PES_mask_dump_full_mapM)
+  PUSH_SUB(PES_mask_dump_full_mapM_cut)
   
   iunit = io_open(file, action='write')
   
@@ -386,28 +379,30 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk, dim, dir)
   end do
   
 
-
-!! INCOMPLETE !!
   do ix = 1, ll(1)
     KK(1) = Lk(ix)
     do iy = 1, ll(2)
       KK(2) = Lk(iy)
       
-!      temp = M_ZERO
-!      do iz = 1, ll(3)
-!        KK(3) = Lk(iz)
-!        
-!        temp = temp + PESK(ix,iy,iz)
-!      end do
-!      
-!      temp = temp * abs(lk(2)-lk(1))
- 
-      temp = PESK(ix,iy,ll(3)/2+1)    
- 
-      write(iunit, '(es18.11,2x,es18.11,2x,es19.12,i10,2x,i10,2x,es19.12,2x,i10)') & 
-        KK(1), KK(2), temp , ix , iy,  sum(KK(1:dim)**2) / M_TWO, &
-        int((sum(KK(1:dim)**2) / M_TWO)) + 1
+
+      select case (dir)
+        case (1)
+          temp = PESK(ll(3)/2 + 1,ix, iy)    
+    
+        case (2)
+          temp = PESK(ix,ll(3)/2 + 1,iy)    
       
+        case (3)
+          temp = PESK(ix,iy,ll(3)/2 + 1)    
+    
+      end select
+        
+      write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+              units_from_atomic(sqrt(units_out%energy), KK(1)),&
+              units_from_atomic(sqrt(units_out%energy), KK(2)),&
+              temp
+ 
+       
     end do
     write(iunit, *)  
     
@@ -416,8 +411,8 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk, dim, dir)
   call io_close(iunit)
   
 
-  POP_SUB(PES_mask_dump_full_mapM)
-end subroutine PES_mask_dump_full_mapM
+  POP_SUB(PES_mask_dump_full_mapM_cut)
+end subroutine PES_mask_dump_full_mapM_cut
 
 ! ---------------------------------------------------------
 subroutine PES_mask_dump_ar_polar_M(PESK, file, Lk, dim, dir, Emax, Estep)
@@ -1434,7 +1429,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
 
     ! Dump the k resolved PES on plane kz=0
     write(fn, '(a,a)') trim(dir), '_map.z=0'
-    call PES_mask_dump_full_mapM(PESK, fn, mask%Lk, mask%mesh%sb%dim, dir = 3)
+    call PES_mask_dump_full_mapM_cut(PESK, fn, mask%Lk, mask%mesh%sb%dim, dir = 3)
 
     ! Total power spectrum 
     write(fn, '(a,a)') trim(dir), '_power.sum'

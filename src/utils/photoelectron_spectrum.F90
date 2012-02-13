@@ -30,13 +30,14 @@ program photoelectron_spectrum
   use pes_m
   use unit_m
   use unit_system_m
+  use utils_m
   use varinfo_m
 
   implicit none
 
   integer              :: argc, ierr, mode, interp
 
-  integer              :: dim, ll(MAX_DIM), ii
+  integer              :: dim, ll(MAX_DIM), ii, dir
   FLOAT                :: Emax, Emin,Estep, uEstep,uEspan(2), pol(3)
   FLOAT                :: uThstep,uThspan(2),uPhstep,uPhspan(2) 
   FLOAT                :: ThBatch(3),PhBatch(3), center(3)
@@ -139,9 +140,24 @@ program photoelectron_spectrum
 
 
   case(3) ! On a plane
-    write(message(1), '(a)') 'Calculating velocity map on a plane'
-    call messages_info(1)
-    call PES_mask_dump_full_mapM(PESK, 'td.general/PES_velocity.map.z=0', Lk, dim, dir = 3)    
+    
+    dir = -1
+    if(sum((pol-(/1 ,0 ,0/))**2)  <= 1E-14  )  dir = 1
+    if(sum((pol-(/0 ,1 ,0/))**2)  <= 1E-14  )  dir = 2
+    if(sum((pol-(/0 ,0 ,1/))**2)  <= 1E-14  )  dir = 3
+
+    filename = "td.general/PES_velocity.map."//index2axis(dir)//"=0"
+
+
+    if (dir == -1) then
+        write(message(1), '(a)') 'Unrecognized plane. Use -V to change.'
+        call messages_fatal(1)
+      else
+        write(message(1), '(a)') 'Calculating velocity map on a plane '//index2axis(dir)//"=0"
+        call messages_info(1)
+    end if 
+    
+    call PES_mask_dump_full_mapM_cut(PESK, filename, Lk, dim, dir)    
 
   case(4) ! Angle energy resolved on plane 
     write(message(1), '(a)') 'Calculating angle and energy-resolved PES'
@@ -153,6 +169,11 @@ program photoelectron_spectrum
     end if
 
     call PES_mask_dump_ar_plane_M(PESK,'td.general/PES_energy.map', Lk, dim, pol, Emax, Estep)
+
+  case(5) ! Full momentum resolved matrix 
+    write(message(1), '(a)') 'Calculating full momentum-resolved PES'
+    call messages_info(1)
+    call PES_mask_dump_full_mapM(PESK, 'td.general/PES_fullmap', Lk)        
 
   end select
 
