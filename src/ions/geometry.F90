@@ -43,25 +43,27 @@ module geometry_m
   implicit none
 
   private
-  public ::                &
-    atom_t,                &
-    atom_classical_t,      &
-    geometry_t,            &
-    geometry_init,         &
-    geometry_copy,         &
-    geometry_init_xyz,     &
-    geometry_init_species, &
-    geometry_partition,    &
-    geometry_end,          &
-    geometry_dipole,       &
-    geometry_min_distance, &
-    geometry_mass,         &
-    cm_pos,                &
-    cm_vel,                &
-    atom_write_xyz,        &
-    loadPDB,               &
-    geometry_val_charge,   &
-    geometry_grid_defaults,&
+  public ::                          &
+    atom_t,                          &
+    atom_classical_t,                &
+    atom_classical_add,              &
+    geometry_t,                      &
+    geometry_init,                   &
+    geometry_init_xyz,               &
+    geometry_init_species,           &
+    geometry_partition,              &
+    geometry_add_atom_classical,     &
+    geometry_copy,                   &
+    geometry_end,                    &
+    geometry_dipole,                 &
+    geometry_min_distance,           &
+    geometry_mass,                   &
+    cm_pos,                          &
+    cm_vel,                          &
+    atom_write_xyz,                  &
+    loadPDB,                         &
+    geometry_val_charge,             &
+    geometry_grid_defaults,          &
     geometry_species_time_dependent
 
   integer, parameter, public :: &
@@ -71,7 +73,7 @@ module geometry_m
   integer, parameter, public :: &
     LJ_EPSILON = 1,             &
     LJ_SIGMA   = 2
-  
+
   type atom_t
     character(len=15) :: label
     type(species_t), pointer :: spec             !< pointer to species
@@ -106,7 +108,7 @@ module geometry_m
     logical :: nlcc                 !< does any species have non-local core corrections?
 
     type(distributed_t) :: atoms_dist
-    
+
     integer, pointer :: ionic_interaction_type(:, :)
     FLOAT,   pointer :: ionic_interaction_parameter(:, :, :)
 
@@ -114,6 +116,37 @@ module geometry_m
   end type geometry_t
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine atom_classical_add(n_out, this_out, this_in)
+    integer,                                       intent(inout) :: n_out
+    type(atom_classical_t), pointer, dimension(:), intent(inout) :: this_out
+    type(atom_classical_t),          dimension(:), intent(in)    :: this_in
+    !
+    type(atom_classical_t), pointer, dimension(:) :: this
+    integer                                       :: n, n_in
+    !
+    PUSH_SUB(atom_classical_add)
+    n_in=size(this_in)
+    if(n_in>0)then
+      if(n_out>0)then
+        this=>this_out
+        nullify(this_out)
+        n=n_out+n_in
+        SAFE_ALLOCATE(this_out(n))
+        this_out(1:n_out)=this
+        SAFE_DEALLOCATE_P(this)
+        this_out(n_out+1:n)=this_in
+        n_out=n
+      else
+        SAFE_ALLOCATE(this_out(n_in))
+        this_out=this_in
+        n_out=n_in
+      end if
+    end if
+    POP_SUB(atom_classical_add)
+    return
+  end subroutine atom_classical_add
 
   ! ---------------------------------------------------------
   subroutine geometry_init(geo, space, print_info)
@@ -124,7 +157,7 @@ contains
     PUSH_SUB(geometry_init)
 
     geo%space => space
-    
+
     ! initialize geometry
     call geometry_init_xyz(geo)
     call geometry_init_species(geo, print_info=print_info)
@@ -338,7 +371,7 @@ contains
     if(print_info_) then
       call messages_print_stress(stdout)
     end if
-    
+
     !%Variable SpeciesTimeDependent
     !%Type logical
     !%Default no
@@ -387,7 +420,7 @@ contains
   subroutine geometry_init_interaction(geo, print_info)
     type(geometry_t),  intent(inout) :: geo
     logical, optional, intent(in)    :: print_info
-    
+
     logical :: print_info_
     integer :: nrow, irow, idx1, idx2, ispecies
     type(block_t) :: blk
@@ -443,7 +476,7 @@ contains
         ! get the labels
         call parse_block_string(blk, irow, 0, label1)
         call parse_block_string(blk, irow, 1, label2)
-        
+
         ! and the index that corresponds to each species
         do ispecies = 1, geo%nspecies
           if(species_label(geo%species(ispecies)) == label1) idx1 = ispecies
@@ -455,7 +488,7 @@ contains
 
         ! the interaction is symmetrical
         geo%ionic_interaction_type(idx2, idx1) = geo%ionic_interaction_type(idx1, idx2)
-        
+
         select case(geo%ionic_interaction_type(idx1, idx2))
         case(INTERACTION_COULOMB)
           ! nothing to do
@@ -552,6 +585,16 @@ contains
     POP_SUB(loadPDB)
   end subroutine loadPDB
 
+  ! ---------------------------------------------------------
+  subroutine geometry_add_atom_classical(geo, atoms)
+    type(geometry_t),                     intent(inout) :: geo
+    type(atom_classical_t), dimension(:), intent(in)    :: atoms
+    !
+    PUSH_SUB(geometry_add_atom_classical)
+    call atom_classical_add(geo%ncatoms, geo%catom, atoms)
+    POP_SUB(geometry_add_atom_classical)
+    return
+  end subroutine geometry_add_atom_classical
 
   ! ---------------------------------------------------------
   subroutine geometry_end(geo)
@@ -564,10 +607,13 @@ contains
     SAFE_DEALLOCATE_P(geo%ionic_interaction_type)
     SAFE_DEALLOCATE_P(geo%ionic_interaction_parameter)
     SAFE_DEALLOCATE_P(geo%atom)
+    geo%natoms=0
     SAFE_DEALLOCATE_P(geo%catom)
+    geo%ncatoms=0
 
     call species_end(geo%nspecies, geo%species)
     SAFE_DEALLOCATE_P(geo%species)
+    geo%nspecies=0
 
     POP_SUB(geometry_end)
   end subroutine geometry_end
@@ -583,7 +629,7 @@ contains
 
     POP_SUB(geometry_atoms_are_too_close)
   end function geometry_atoms_are_too_close
-  
+
   ! ---------------------------------------------------------
   logical function geometry_species_time_dependent(geo) result(time_dependent)
     type(geometry_t), intent(in) :: geo
@@ -759,7 +805,7 @@ contains
     do iatom = 1, geo%natoms
       mass = mass + species_weight(geo%atom(iatom)%spec)
     end do
-    
+
   end function geometry_mass
 
   ! ---------------------------------------------------------
@@ -828,7 +874,7 @@ contains
 
     call loct_pointer_copy(geo_out%ionic_interaction_type, geo_in%ionic_interaction_type)
     call loct_pointer_copy(geo_out%ionic_interaction_parameter, geo_in%ionic_interaction_parameter)
-    
+
     call distributed_copy(geo_in%atoms_dist, geo_out%atoms_dist)
 
     POP_SUB(geometry_copy)
