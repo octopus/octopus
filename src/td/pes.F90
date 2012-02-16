@@ -43,6 +43,9 @@ module PES_m
 #if defined(HAVE_NFFT) 
   use nfft_m
 #endif
+#if defined(HAVE_NETCDF)
+  use netcdf
+#endif
   use output_m
   use parser_m
   use profiling_m

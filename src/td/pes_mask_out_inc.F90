@@ -316,45 +316,244 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk)
   FLOAT,            intent(in) :: Lk(:)
   character(len=*), intent(in) :: file
 
-  integer :: ist, ik, ii, ix, iy, iz, iunit
-  FLOAT ::  KK(3)
-  integer :: ll(3)
-
+  integer :: iunit, ierr, sb_dim 
+  character(len=512) :: filename
+ 
+  
 
   PUSH_SUB(PES_mask_dump_full_mapM)
   
-  iunit = io_open(file, action='write')
+  sb_dim = 3 ! tested only in 3D 
   
-  ll = 1
-  do ii = 1, 3
-    ll(ii) = size(PESK,ii) 
-  end do
+#if defined(HAVE_NETCDF)  
+  call out_netcdf()
+#else
+  call out_ascii()
+#endif
+  
 
-  do ix = 1, ll(1)
-    KK(1) = Lk(ix)
-    do iy = 1, ll(2)
-      KK(2) = Lk(iy)
-      do iz = 1, ll(3)
-        KK(3) = Lk(iz)
- 
-          write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12)') &
-                  units_from_atomic(sqrt(units_out%energy), KK(1)),&
-                  units_from_atomic(sqrt(units_out%energy), KK(2)),&
-                  units_from_atomic(sqrt(units_out%energy), KK(3)),&
-                  PESK(ix,iy,iz) 
-                  
- 
-        end do  
-      end do      
+  POP_SUB(PES_mask_dump_full_mapM)
+  
+contains  
+
+! ---------------------------------------------------------
+! Just dump the matrix in ascii form x,y,z, val. As the output
+! can be pretty big is probably better to use netcdf instead.
+! ---------------------------------------------------------
+  subroutine out_ascii()
+
+    integer :: ist, ik, ii, ix, iy, iz
+    FLOAT ::  KK(3)
+    integer :: ll(3)
+
+    PUSH_SUB(PES_mask_dump_full_mapM.out_ascii)
+
+    iunit = io_open(file, action='write')
+
+
+    ll = 1
+    do ii = 1, 3
+      ll(ii) = size(PESK,ii) 
     end do
+
+    do ix = 1, ll(1)
+      KK(1) = Lk(ix)
+      do iy = 1, ll(2)
+        KK(2) = Lk(iy)
+        do iz = 1, ll(3)
+          KK(3) = Lk(iz)
+ 
+            write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12)') &
+                    units_from_atomic(sqrt(units_out%energy), KK(1)),&
+                    units_from_atomic(sqrt(units_out%energy), KK(2)),&
+                    units_from_atomic(sqrt(units_out%energy), KK(3)),&
+                    PESK(ix,iy,iz) 
+ 
+          end do  
+        end do      
+      end do
+
+      call io_close(iunit)
   
-    call io_close(iunit)
+      POP_SUB(PES_mask_dump_full_mapM.out_ascii)
+  end subroutine out_ascii
+
+
+#if defined(HAVE_NETCDF)
+    ! ---------------------------------------------------------
+    subroutine out_netcdf()
+      integer :: ncid, status, data_id, pos_id, dim_min
+      integer :: dim_data_id(3), dim_pos_id(2)
+
+      REAL_SINGLE :: pos(2, 3)
+      FLOAT, allocatable :: xx(:, :, :)
+  #if defined(R_TCOMPLEX)
+      integer :: data_im_id
+  #endif
+      integer :: ll(3), ii
   
 
-    POP_SUB(PES_mask_dump_full_mapM)
+      PUSH_SUB(PES_mask_dump_full_mapM.out_netcdf)
 
+      ierr = 0
+
+
+      ll = 1
+      do ii = 1, 3
+        ll(ii) = size(PESK,ii) 
+      end do
+
+
+      filename = trim(file)//".ncdf"
+
+      status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
+      if(status.ne.NF90_NOERR) then
+        ierr = 2
+        POP_SUB(PES_mask_dump_full_mapM.out_netcdf)
+        return
+      end if
+
+      ! dimensions 
+      ! I am not sure why dim3 and dim1 are swapped in the similar function in io_function_inc.
+      ! Here I decide them to be kx, ky, kz.
+      if(status == NF90_NOERR) then
+        status = nf90_def_dim (ncid, "dim_1", ll(1), dim_data_id(1))
+        call ncdf_error('nf90_def_dim', status, filename, ierr)
+      end if
+
+      if(status == NF90_NOERR) then
+        status = nf90_def_dim (ncid, "dim_2", ll(2), dim_data_id(2))
+        call ncdf_error('nf90_def_dim', status, filename, ierr)
+      end if
+
+      if(status == NF90_NOERR) then
+        status = nf90_def_dim (ncid, "dim_3", ll(3), dim_data_id(3))
+        call ncdf_error('nf90_der_dim', status, filename, ierr)
+      end if
+
+      if(status == NF90_NOERR) then
+        status = nf90_def_dim (ncid, "kpos_1", 2, dim_pos_id(1))
+        call ncdf_error('nf90_def_dim', status, filename, ierr)
+      end if
+
+      if(status == NF90_NOERR) then
+        status = nf90_def_dim (ncid, "kpos_2", 3, dim_pos_id(2))
+        call ncdf_error('nf90_def_dim', status, filename, ierr)
+      end if
+
+      dim_min = 3 - sb_dim + 1
+
+  #if defined(SINGLE_PRECISION)
+      if(status == NF90_NOERR) then
+        status = nf90_def_var (ncid, "pes", NF90_FLOAT, dim_data_id(dim_min:3), data_id)
+        call ncdf_error('nf90_def_var', status, filename, ierr)
+      end if
+  #else
+      if(status == NF90_NOERR) then
+        status = nf90_def_var (ncid, "pes", NF90_DOUBLE, dim_data_id(dim_min:3), data_id)
+        call ncdf_error('nf90_def_var', status, filename, ierr)
+      end if
+  #endif
+
+  
+      if(status == NF90_NOERR) then
+        status = nf90_def_var (ncid, "kgrid", NF90_FLOAT,  dim_pos_id,  pos_id)
+        call ncdf_error('nf90_def_var', status, filename, ierr)
+      end if
+
+      ! attributes
+      if(status == NF90_NOERR) then
+        status = nf90_put_att (ncid, data_id, "pes", "kdata, scalar")
+        call ncdf_error('nf90_put_att', status, filename, ierr)
+      end if
+      if(status == NF90_NOERR) then
+        status = nf90_put_att (ncid, data_id, "kgrid", "kgrid, regular")
+        call ncdf_error('nf90_put_att', status, filename, ierr)
+      end if
+
+      ! end definitions
+      status = nf90_enddef (ncid)
+
+      ! data
+      pos(:,:) = M_ZERO
+      pos(1, 1:sb_dim) = &
+        real(units_from_atomic(sqrt(units_out%energy), Lk(1) ), 4)
+      pos(2, 1:sb_dim) = real(units_from_atomic(sqrt(units_out%energy), abs(Lk(2)-Lk(1)) ), 4)
+
+      if(status == NF90_NOERR) then
+        status = nf90_put_var (ncid, pos_id, pos(:,:))
+        call ncdf_error('nf90_put_var', status, filename, ierr)
+      end if
+
+      if(status == NF90_NOERR) then
+        call write_variable(ncid, data_id, status, PESK)
+        call ncdf_error('nf90_put_var', status, filename, ierr)
+      end if
+
+      SAFE_DEALLOCATE_A(xx)
+
+      ! close
+      status = nf90_close(ncid)
+
+
+      POP_SUB(PES_mask_dump_full_mapM.out_netcdf)
+    end subroutine out_netcdf
+
+
+    !FIXME the following subroutines are just copied verbatim from io_function.F90
+    ! ---------------------------------------------------------
+    subroutine write_variable(ncid, data_id, status, xx)
+      integer, intent(in)  :: ncid, data_id
+      integer, intent(out) :: status
+      FLOAT,   intent(in)  :: xx(:,:,:)
+
+      PUSH_SUB(PES_mask_dump_full_mapM.write_variable)
+
+      select case(sb_dim)
+      case(1)
+        status = nf90_put_var (ncid, data_id, xx(1,1,:))
+      case(2)
+        status = nf90_put_var (ncid, data_id, xx(1,:,:))
+      case(3)
+        status = nf90_put_var (ncid, data_id, xx)
+      end select
+    
+      POP_SUB(PES_mask_dump_full_mapM.write_variable)
+    end subroutine write_variable
+
+    ! ---------------------------------------------------------
+    subroutine ncdf_error(func, status, filename, ierr)
+      character(len=*), intent(in)    :: func
+      integer,          intent(in)    :: status
+      character(len=*), intent(in)    :: filename
+      integer,          intent(inout) :: ierr
+
+      PUSH_SUB(ncdf_error)
+
+      if(status .eq. NF90_NOERR) then
+      POP_SUB(ncdf_error)
+        return
+      endif
+
+      write(message(1),'(3a)') "NETCDF error in function '" , trim(func) , "'"
+      write(message(2),'(3a)') "(reading/writing ", trim(filename) , ")"
+      write(message(3), '(6x,a,a)')'Error code = ', trim(nf90_strerror(status))
+      call messages_warning(3)
+      ierr = 5
+
+      POP_SUB(ncdf_error)
+    end subroutine ncdf_error
+
+
+#endif /*defined(HAVE_NETCDF)*/
+
+    
   
 end subroutine PES_mask_dump_full_mapM
+
+
+
+
 
 ! ---------------------------------------------------------
 subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, dir)

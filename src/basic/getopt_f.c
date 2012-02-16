@@ -843,14 +843,16 @@ void photoelectron_spectrum_help(){
   printf("                      \n");
   printf("                      - 2D\n");
   printf("                         '2' : (theta, E). Angle- and energy-resolved ionization probability.\n");
-  printf("                               The values are integrated in phi.\n");
+  printf("                              The values are integrated in phi.\n");
   printf("                         '3' : (px, py). Velocity map on a plane orthogonal to vec.\n");
   printf("                         '4' : (Ex, Ey). Angle- and energy-resolved on the inclination plane.\n");
-  printf("                               The values are integrated in phi.\n");
+  printf("                              The values are integrated in phi.\n");
   printf("                        Output is in gnuplot-friendly format.\n");
   printf("                      \n");
   printf("                      - 3D\n");
   printf("                         '5' : (px, py, pz). Full momentum-resolved ionization probability.\n");
+  printf("                             If compiled --with-netcdf the output is netcdf format, a simple\n");
+  printf("                             ASCII table otherwise.\n");
   printf("  -i, --int=Y/N       Interpolate the output. Default is Yes.\n");
   printf("  -V, --vec=x,y,z     The polar zenith direction in comma-separated format \n");
   printf("                      (without spaces). Default is the laser polarization. \n");
