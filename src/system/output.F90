@@ -40,7 +40,9 @@ module output_m
   use hamiltonian_m
   use io_m
   use io_function_m
+  use kick_m
   use kpoints_m
+  use lasers_m
   use linear_response_m
   use loct_m
   use loct_math_m
@@ -87,7 +89,10 @@ module output_m
     output_all,          &
     output_current_flow, &
     doutput_lr,          &
-    zoutput_lr
+    zoutput_lr,          &
+    output_kick,         &
+    output_scalar_pot
+
 
   type output_bgw_t
     integer           :: nbands
@@ -147,7 +152,10 @@ module output_m
     C_OUTPUT_PES_WFS         =  8388608,    &
     C_OUTPUT_PES_DENSITY     = 16777216,    &
     C_OUTPUT_PES             = 33554432,    &
-    C_OUTPUT_BERKELEYGW      = 67108864
+    C_OUTPUT_BERKELEYGW      = 67108864,    &
+    C_OUTPUT_KICK_FUNCTION   =134217728,    &
+    C_OUTPUT_TD_POTENTIAL    =268435456
+
 
 contains
 
@@ -276,6 +284,10 @@ contains
     !% Outputs the time-dependent photoelectron spectrum.
     !%Option BerkeleyGW 67108864
     !% Output for a run with BerkeleyGW (<tt>www.berkeleygw.org</tt>). See <tt>Output::BerkeleyGW</tt> for further specification.
+    !%Option delta_perturbation 134217728
+    !% Outputs the "kick", or time-delta perturbation applied to compute linear response in real time.
+    !%Option external_td_potential 268435456
+    !% Outputs the (scalar) time-dependent potential.
     !%End
     call parse_integer(datasets_check('Output'), 0, outp%what)
 
@@ -509,7 +521,7 @@ contains
     FLOAT   :: offset(1:MAX_DIM)
     
     PUSH_SUB(output_all)
-    
+
     call output_states(st, gr, geo, dir, outp)
     call output_hamiltonian(hm, gr%der, dir, outp, geo)
     call output_localization_funct(st, hm, gr, dir, outp, geo)

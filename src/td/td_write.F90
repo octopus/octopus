@@ -67,7 +67,8 @@ module td_write_m
     td_write_init,  &
     td_write_end,   &
     td_write_iter,  &
-    td_write_data
+    td_write_data,  &
+    td_write_kick
 
   type td_write_prop_t
     private
@@ -106,6 +107,25 @@ module td_write_m
   end type td_write_t
 
 contains
+
+
+  ! ---------------------------------------------------------
+  subroutine td_write_kick(gr, hm, outp, geo, iter)
+    type(grid_t),         intent(inout) :: gr
+    type(hamiltonian_t),  intent(inout) :: hm
+    type(output_t),       intent(in)    :: outp
+    type(geometry_t),     intent(in)    :: geo
+    integer,              intent(in)    :: iter
+
+    character(len=256) :: filename
+    PUSH_SUB(td_write_kick)
+
+    write(filename, '(a,i7.7)') "td.", iter  ! name of directory
+    call output_kick(outp, gr, geo, hm, filename)
+
+    POP_SUB(td_write_kick)
+  end subroutine td_write_kick
+
 
   ! ---------------------------------------------------------
   subroutine td_write_init(writ, gr, st, hm, geo, ions_move, with_gauge_field, kick, iter, max_iter, dt)
@@ -529,6 +549,7 @@ contains
     call states_sync(st)
 
     call output_all(outp, gr, geo, st, hm, xc, filename)
+    if(iter.eq.0) call output_scalar_pot(outp, gr, geo, hm, filename)
 
     call profiling_out(prof)
     POP_SUB(td_write_data)

@@ -47,7 +47,9 @@ module kick_m
     kick_init,            &
     kick_read,            &
     kick_write,           &
-    kick_apply
+    kick_apply,           &
+    kick_function_get
+
 
   integer, public, parameter ::        &
     KICK_FUNCTION_DIPOLE        = 0,   &
@@ -558,6 +560,89 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! 
+  subroutine kick_function_get(gr, kick, kick_function)
+    type(grid_t),         intent(in)    :: gr
+    type(kick_t),         intent(in)    :: kick
+    CMPLX,                intent(out)   :: kick_function(:)
+
+    integer :: ip, im
+    FLOAT   :: xx(MAX_DIM)
+    FLOAT   :: rkick, ikick, gylm(1:MAX_DIM), rr, ylm
+
+    PUSH_SUB(kick_function_get)
+
+    if(abs(kick%qlength) > M_EPSILON) then ! q-vector is set
+
+      select case (kick%qkick_mode)
+        case (QKICKMODE_COS)
+           write(message(1), '(a,3F9.5,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(:), ')'
+        case (QKICKMODE_SIN)
+           write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(:), ')'
+        case (QKICKMODE_SIN + QKICKMODE_COS)
+           write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(:), ')'
+        case (QKICKMODE_EXP)
+           write(message(1), '(a,3F9.5,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(:), ')'
+        case (QKICKMODE_BESSEL)
+           write(message(1), '(a,I2,a,I2,a,F9.5)') 'Info: Using j_l(qr)*Y_lm(r) field with (l,m)= (', &
+                                                    kick%qbessel_l, ",", kick%qbessel_m,') and q = ', kick%qlength
+        case default
+           write(message(1), '(a,3F9.6,a)') 'Info: Unknown field type!'
+      end select
+      call messages_info(1)
+
+      kick_function = M_z0
+      do ip = 1, gr%mesh%np
+        call mesh_r(gr%mesh, ip, rr, coords = xx)
+        select case (kick%qkick_mode)
+          case (QKICKMODE_COS)
+            kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:) * xx(:)))
+          case (QKICKMODE_SIN)
+            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)))
+          case (QKICKMODE_SIN+QKICKMODE_COS)
+            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)))
+          case (QKICKMODE_EXP)
+            kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:) * xx(:)))
+          case (QKICKMODE_BESSEL)
+            call grylmr(gr%mesh%x(ip, 1), gr%mesh%x(ip, 2), gr%mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm, gylm)
+              kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
+        end select
+      end do
+
+    else
+      if(kick%function_mode .eq. KICK_FUNCTION_USER_DEFINED) then
+
+        kick_function = M_z0
+        do ip = 1, gr%mesh%np
+          call mesh_r(gr%mesh, ip, rr, coords = xx)
+            rkick = M_ZERO; ikick = M_ZERO
+          call parse_expression(rkick, ikick, gr%sb%dim, xx, rr, M_ZERO, trim(kick%user_defined_function))
+            kick_function(ip) = rkick
+        end do
+
+      elseif(kick%n_multipoles > 0) then
+
+        kick_function = M_z0
+        do im = 1, kick%n_multipoles
+          do ip = 1, gr%mesh%np
+            call mesh_r(gr%mesh, ip, rr, coords = xx)
+            call loct_ylm(1, xx(1), xx(2), xx(3), kick%l(im), kick%m(im), ylm)
+              kick_function(ip) = kick_function(ip) + kick%weight(im) * (rr**kick%l(im)) * ylm
+          end do
+        end do
+      else
+        forall(ip = 1:gr%mesh%np)
+          kick_function(ip) = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * &
+            kick%pol(1:gr%mesh%sb%dim, kick%pol_dir))
+        end forall
+      end if
+    end if
+
+    POP_SUB(kick_apply)
+  end subroutine kick_function_get
+
+
+  ! ---------------------------------------------------------
   ! Applies the delta-function electric field E(t) = E_0 delta(t)
   ! where E_0 = - k \hbar / e, k = kick%delta_strength.
   subroutine kick_apply(gr, st, ions, geo, kick)
@@ -567,11 +652,8 @@ contains
     type(geometry_t),     intent(inout) :: geo
     type(kick_t),         intent(in)    :: kick
 
-    integer :: im, iatom
-    integer :: iqn, ist, idim, ip, ispin
+    integer :: iqn, ist, idim, ip, ispin, iatom
     CMPLX   :: cc(2), kick_value
-    FLOAT   :: ylm, gylm(1:MAX_DIM), rr, rkick, ikick
-    FLOAT   :: xx(MAX_DIM)
     CMPLX, allocatable :: kick_function(:), psi(:, :)
 
     PUSH_SUB(kick_apply)
@@ -581,73 +663,7 @@ contains
     delta_strength: if(kick%delta_strength .ne. M_ZERO) then
 
         SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
-
-        if(abs(kick%qlength) > M_EPSILON) then ! q-vector is set
-
-          select case (kick%qkick_mode)
-            case (QKICKMODE_COS)
-              write(message(1), '(a,3F9.5,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(:), ')'
-            case (QKICKMODE_SIN)
-              write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(:), ')'
-            case (QKICKMODE_SIN + QKICKMODE_COS)
-              write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(:), ')'
-            case (QKICKMODE_EXP)
-              write(message(1), '(a,3F9.5,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(:), ')'
-            case (QKICKMODE_BESSEL)
-              write(message(1), '(a,I2,a,I2,a,F9.5)') 'Info: Using j_l(qr)*Y_lm(r) field with (l,m)= (', &
-                                                      kick%qbessel_l, ",", kick%qbessel_m,') and q = ', kick%qlength
-            case default
-              write(message(1), '(a,3F9.6,a)') 'Info: Unknown field type!'
-          end select
-          call messages_info(1)
-
-          kick_function = M_z0
-          do ip = 1, gr%mesh%np
-            call mesh_r(gr%mesh, ip, rr, coords = xx)
-            select case (kick%qkick_mode)
-              case (QKICKMODE_COS)
-                kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:) * xx(:)))
-              case (QKICKMODE_SIN)
-                kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)))
-              case (QKICKMODE_SIN+QKICKMODE_COS)
-                kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)))
-              case (QKICKMODE_EXP)
-                kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:) * xx(:)))
-              case (QKICKMODE_BESSEL)
-                call grylmr(gr%mesh%x(ip, 1), gr%mesh%x(ip, 2), gr%mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm, gylm)
-                kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
-            end select
-          end do
-
-        else
-          if(kick%function_mode .eq. KICK_FUNCTION_USER_DEFINED) then
-
-            kick_function = M_z0
-            do ip = 1, gr%mesh%np
-              call mesh_r(gr%mesh, ip, rr, coords = xx)
-              rkick = M_ZERO; ikick = M_ZERO
-              call parse_expression(rkick, ikick, gr%sb%dim, xx, rr, M_ZERO, trim(kick%user_defined_function))
-              kick_function(ip) = rkick
-              !if(abs(rkick) > CNST(1.0e-8)) write(*, *) xx(1:gr%sb%dim), rkick, gr%mesh%spacing(1:gr%sb%dim)
-            end do
-
-          elseif(kick%n_multipoles > 0) then
-
-            kick_function = M_z0
-            do im = 1, kick%n_multipoles
-              do ip = 1, gr%mesh%np
-                call mesh_r(gr%mesh, ip, rr, coords = xx)
-                call loct_ylm(1, xx(1), xx(2), xx(3), kick%l(im), kick%m(im), ylm)
-                kick_function(ip) = kick_function(ip) + kick%weight(im) * (rr**kick%l(im)) * ylm
-              end do
-            end do
-          else
-            forall(ip = 1:gr%mesh%np)
-              kick_function(ip) = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * &
-                kick%pol(1:gr%mesh%sb%dim, kick%pol_dir))
-            end forall
-          end if
-        end if
+        call kick_function_get(gr, kick, kick_function)
 
         write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', kick%delta_strength
         select case (kick%function_mode)

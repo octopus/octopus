@@ -1,4 +1,4 @@
-! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -33,10 +33,8 @@ module td_m
   use global_m
   use grid_m
   use ground_state_m
-  use output_m
   use hamiltonian_m
   use io_m
-  use io_function_m
   use ion_dynamics_m
   use kick_m
   use lasers_m
@@ -224,6 +222,7 @@ contains
       if(iter > 1) then
         if( ((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time) ) then
           call kick_apply(gr, st, td%ions, geo, hm%ep%kick)
+          call td_write_kick(gr, hm, sys%outp, geo, iter)
         end if
       end if
 
@@ -618,8 +617,10 @@ contains
       ! dipole matrix elements in write_proj are wrong
       if(hm%ep%kick%time .eq. M_ZERO) then
         call kick_apply(gr, st, td%ions, geo, hm%ep%kick)
+        call td_write_kick(gr, hm, sys%outp, geo, 0)
       end if
       call propagator_run_zero_iter(hm, gr, td%tr)
+      call td_write_data(write_handler, gr, st, hm, sys%ks%xc, sys%outp, geo, 0)
 
       POP_SUB(td_run.td_run_zero_iter)
     end subroutine td_run_zero_iter
