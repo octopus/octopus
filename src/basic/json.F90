@@ -86,7 +86,7 @@ module json_m
     private
     integer                          :: pos=0
     integer                          :: len=0
-    character, dimension(:), pointer :: value=>null()
+    character, dimension(:), pointer :: value
   end type json_string_iterator_t
 
   type, public :: json_string_t
@@ -94,64 +94,64 @@ module json_m
     integer                          :: type=JSON_UNDEF_TYPE
     integer                          :: len=0
     integer                          :: size=0
-    character, dimension(:), pointer :: value=>null()
+    character, dimension(:), pointer :: value
   end type json_string_t
 
   type, public :: json_value_t
     private
     integer                       :: type=JSON_UNDEF_TYPE
-    type(json_null_t),    pointer :: null=>null()
-    type(json_logical_t), pointer :: logical=>null()
-    type(json_integer_t), pointer :: integer=>null()
-    type(json_real_t),    pointer :: real=>null()
-    type(json_string_t),  pointer :: string=>null()
-    type(json_array_t),   pointer :: array=>null()
-    type(json_object_t),  pointer :: object=>null()
+    type(json_null_t),    pointer :: null
+    type(json_logical_t), pointer :: logical
+    type(json_integer_t), pointer :: integer
+    type(json_real_t),    pointer :: real
+    type(json_string_t),  pointer :: string
+    type(json_array_t),   pointer :: array
+    type(json_object_t),  pointer :: object
   end type json_value_t
 
   type :: json_value_node_t
     private
-    type(json_value_t),      pointer :: value=>null()
-    type(json_value_node_t), pointer :: next=>null()
+    type(json_value_t),      pointer :: value
+    type(json_value_node_t), pointer :: next
   end type json_value_node_t
 
   type, public :: json_array_iterator_t
     private
-    type(json_value_node_t), pointer :: node=>null()
+    type(json_value_node_t), pointer :: node
   end type json_array_iterator_t
 
   type, public :: json_array_t
     private
     integer                          :: type=JSON_UNDEF_TYPE
     integer                          :: size=0
-    type(json_value_node_t), pointer :: head=>null()
-    type(json_value_node_t), pointer :: tail=>null()
+    type(json_value_node_t), pointer :: head
+    type(json_value_node_t), pointer :: tail
   end type json_array_t
 
   type, public :: json_member_t
     private
     integer                      :: type=JSON_UNDEF_TYPE
-    type(json_string_t), pointer :: ident=>null()
-    type(json_value_t),  pointer :: value=>null()
+    type(json_string_t), pointer :: ident
+    type(json_value_t),  pointer :: value
   end type json_member_t
 
   type :: json_member_node_t
     private
-    type(json_member_t),      pointer :: member=>null()
-    type(json_member_node_t), pointer :: next=>null()
+    type(json_member_t),      pointer :: member
+    type(json_member_node_t), pointer :: next
   end type json_member_node_t
 
   type :: json_table_node_t
     private
-    type(json_member_node_t), pointer :: head=>null()
+    type(json_member_node_t), pointer :: head
   end type json_table_node_t
 
   type, public :: json_object_iterator_t
     private
     integer                                        :: pos=0
     integer                                        :: size=0
-    type(json_member_node_t),              pointer :: node=>null()
-    type(json_table_node_t), dimension(:), pointer :: table=>null()
+    type(json_member_node_t),              pointer :: node
+    type(json_table_node_t), dimension(:), pointer :: table
   end type json_object_iterator_t
 
   type, public :: json_object_t
@@ -159,14 +159,14 @@ module json_m
     integer                                        :: type=JSON_UNDEF_TYPE
     integer                                        :: size=0
     integer                                        :: used=0
-    type(json_table_node_t), dimension(:), pointer :: table=>null()
+    type(json_table_node_t), dimension(:), pointer :: table
   end type json_object_t
 
   type, public :: json_t
     private
     integer                      :: type=JSON_UNDEF_TYPE
-    type(json_array_t),  pointer :: array=>null()
-    type(json_object_t), pointer :: object=>null()
+    type(json_array_t),  pointer :: array
+    type(json_object_t), pointer :: object
   end type json_t
 
   interface operator(==)
@@ -745,6 +745,15 @@ contains
     return
   end subroutine json_real_write
 
+  elemental subroutine json_string_iterator_nullify(this)
+    type(json_string_iterator_t), intent(out) :: this
+    !
+    this%pos=0
+    this%len=0
+    nullify(this%value)
+    return
+  end subroutine json_string_iterator_nullify
+
   elemental function json_string_iterator_isdef(this) result(is)
     type(json_string_iterator_t), intent(in) :: this
     !
@@ -758,6 +767,7 @@ contains
     type(json_string_iterator_t), intent(out) :: this
     type(json_string_t),          intent(in)  :: string
     !
+    call json_string_iterator_nullify(this)
     nullify(this%value)
     if(json_string_isdef(string))then
       this%pos=1
@@ -787,6 +797,15 @@ contains
     return
   end subroutine json_string_iterator_next
 
+  elemental subroutine json_string_nullify(this)
+    type(json_string_t), intent(out) :: this
+    !
+    this%type=JSON_UNDEF_TYPE
+    this%len=0
+    this%size=0
+    nullify(this%value)
+  end subroutine json_string_nullify
+
   elemental function json_string_isdef(this) result(is)
     type(json_string_t), intent(in) :: this
     !
@@ -800,6 +819,7 @@ contains
     type(json_string_t),        intent(out) :: this
     character(len=*), optional, intent(in)  :: value
     !
+    call json_string_nullify(this)
     this%len=0
     this%size=JSON_STRING_INIT_LEN
     SAFE_ALLOCATE(this%value(this%size))
@@ -1103,6 +1123,13 @@ contains
     return
   end subroutine json_string_extend_string
 
+  elemental subroutine json_array_iterator_nullify(this)
+    type(json_array_iterator_t), intent(out) :: this
+    !
+    nullify(this%node)
+    return
+  end subroutine json_array_iterator_nullify
+
   elemental function json_array_iterator_isdef(this) result(is)
     type(json_array_iterator_t), intent(in) :: this
     !
@@ -1116,6 +1143,7 @@ contains
     type(json_array_iterator_t), intent(out) :: this
     type(json_array_t),          intent(in)  :: array
     !
+    call json_array_iterator_nullify(this)
     nullify(this%node)
     if(json_array_isdef(array).and.(array%size>0)) this%node=>array%head
     return
@@ -1140,6 +1168,16 @@ contains
     return
   end subroutine json_array_iterator_next
 
+  elemental subroutine json_array_nullify(this)
+    type(json_array_t), intent(out) :: this
+    !
+    this%type=JSON_UNDEF_TYPE
+    this%size=0
+    nullify(this%head)
+    nullify(this%tail)
+    return
+  end subroutine json_array_nullify
+
   elemental function json_array_isdef(this) result(is)
     type(json_array_t), intent(in) :: this
     !
@@ -1152,6 +1190,7 @@ contains
   elemental subroutine json_array_init(this)
     type(json_array_t), intent(out) :: this
     !
+    call json_array_nullify(this)
     this%size=0
     nullify(this%head)
     this%type=JSON_ARRAY_TYPE
@@ -2167,6 +2206,15 @@ contains
     return
   end subroutine json_array_pop
 
+  elemental subroutine json_member_nullify(this)
+    type(json_member_t), intent(out) :: this
+    !
+    this%type=JSON_UNDEF_TYPE
+    nullify(this%ident)
+    nullify(this%value)
+    return
+  end subroutine json_member_nullify
+
   elemental function json_member_isdef(this) result(is)
     type(json_member_t), intent(in) :: this
     !
@@ -2181,6 +2229,7 @@ contains
     type(json_string_t), target, intent(in)  :: ident
     type(json_value_t),  target, intent(in)  :: value
     !
+    call json_member_nullify(this)
     this%ident=>ident
     this%value=>value
     this%type=json_value_type(this%value)
@@ -2254,6 +2303,16 @@ contains
     return
   end subroutine json_member_write
 
+  elemental subroutine json_object_iterator_nullify(this)
+    type(json_object_iterator_t), intent(out) :: this
+    !
+    this%pos=0
+    this%size=0
+    nullify(this%node)
+    nullify(this%table)
+    return
+  end subroutine json_object_iterator_nullify
+
   elemental function json_object_iterator_isdef(this) result(is)
     type(json_object_iterator_t), intent(in) :: this
     !
@@ -2269,6 +2328,7 @@ contains
     !
     integer :: i
     !
+    call json_object_iterator_nullify(this)
     if(object%used>0)then
       this%size=object%size
       this%table=>object%table
@@ -2317,6 +2377,16 @@ contains
     return
   end subroutine json_object_iterator_next
 
+  elemental subroutine json_object_nullify(this)
+    type(json_object_t), intent(out) :: this
+    !
+    this%type=JSON_UNDEF_TYPE
+    this%size=0
+    this%used=0
+    nullify(this%table)
+    return
+  end subroutine json_object_nullify
+
   elemental function json_object_isdef(this) result(is)
     type(json_object_t), intent(in) :: this
     !
@@ -2329,6 +2399,7 @@ contains
   subroutine json_object_init(this)
     type(json_object_t), intent(out) :: this
     !
+    call json_object_nullify(this)
     this%used=0
     this%size=JSON_TABLE_INIT_LEN
     SAFE_ALLOCATE(this%table(this%size))
@@ -3043,6 +3114,20 @@ contains
     return
   end subroutine json_object_get_object
 
+  elemental subroutine json_value_nullify(this)
+    type(json_value_t), intent(out) :: this
+    !
+    this%type=JSON_UNDEF_TYPE
+    nullify(this%null)
+    nullify(this%logical)
+    nullify(this%integer)
+    nullify(this%real)
+    nullify(this%string)
+    nullify(this%array)
+    nullify(this%object)
+    return
+  end subroutine json_value_nullify
+
   elemental function json_value_isdef(this) result(is)
     type(json_value_t), intent(in) :: this
     !
@@ -3065,6 +3150,7 @@ contains
     type(json_value_t),        intent(out) :: this
     type(json_null_t), target, intent(in)  :: value
     !
+    call json_value_nullify(this)
     this%null=>value
     this%type=JSON_NULL_TYPE
     return
@@ -3074,6 +3160,7 @@ contains
     type(json_value_t),           intent(out) :: this
     type(json_logical_t), target, intent(in)  :: value
     !
+    call json_value_nullify(this)
     this%logical=>value
     this%type=JSON_LOGICAL_TYPE
     return
@@ -3083,6 +3170,7 @@ contains
     type(json_value_t),           intent(out) :: this
     type(json_integer_t), target, intent(in)  :: value
     !
+    call json_value_nullify(this)
     this%integer=>value
     this%type=JSON_INTEGER_TYPE
     return
@@ -3092,6 +3180,7 @@ contains
     type(json_value_t),        intent(out) :: this
     type(json_real_t), target, intent(in)  :: value
     !
+    call json_value_nullify(this)
     this%real=>value
     this%type=JSON_REAL_TYPE
     return
@@ -3101,6 +3190,7 @@ contains
     type(json_value_t),          intent(out) :: this
     type(json_string_t), target, intent(in)  :: value
     !
+    call json_value_nullify(this)
     this%string=>value
     this%type=JSON_STRING_TYPE
     return
@@ -3110,6 +3200,7 @@ contains
     type(json_value_t),         intent(out) :: this
     type(json_array_t), target, intent(in)  :: value
     !
+    call json_value_nullify(this)
     this%array=>value
     this%type=JSON_ARRAY_TYPE
     return
@@ -3119,6 +3210,7 @@ contains
     type(json_value_t),          intent(out) :: this
     type(json_object_t), target, intent(in)  :: value
     !
+    call json_value_nullify(this)
     this%object=>value
     this%type=JSON_OBJECT_TYPE
     return
@@ -3338,6 +3430,15 @@ contains
     return
   end subroutine json_value_write
 
+  elemental subroutine json_json_nullify(this)
+    type(json_t), intent(out) :: this
+    !
+    this%type=JSON_UNDEF_TYPE
+    nullify(this%array)
+    nullify(this%object)
+    return
+  end subroutine json_json_nullify
+
   elemental function json_json_isdef(this) result(is)
     type(json_t), intent(in) :: this
     !
@@ -3351,6 +3452,7 @@ contains
     type(json_t),               intent(out) :: this
     type(json_array_t), target, intent(in)  :: value
     !
+    call json_json_nullify(this)
     this%array=>value
     this%type=JSON_ARRAY_TYPE
     return
@@ -3360,6 +3462,7 @@ contains
     type(json_t),                intent(out) :: this
     type(json_object_t), target, intent(in)  :: value
     !
+    call json_json_nullify(this)
     this%object=>value
     this%type=JSON_OBJECT_TYPE
     return
