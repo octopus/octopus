@@ -2400,10 +2400,13 @@ contains
   subroutine json_object_init(this)
     type(json_object_t), intent(out) :: this
     !
+    integer :: i
+    !
     call json_object_nullify(this)
     this%used=0
     this%size=JSON_TABLE_INIT_LEN
     SAFE_ALLOCATE(this%table(this%size))
+    forall(i=1:this%size)this%table(i)%head=>null()
     this%type=JSON_OBJECT_TYPE
     return
   end subroutine json_object_init
