@@ -60,7 +60,9 @@ module io_function_m
     dio_function_output,          &
     zio_function_output,          &
     dio_function_out_text,        &
-    zio_function_out_text
+    zio_function_out_text,        &
+    dout_cf_netcdf,               &
+    zout_cf_netcdf
 
   integer, parameter, public ::   &
     C_OUTPUT_HOW_AXIS_X          =      1,    &
@@ -395,6 +397,9 @@ contains
 
     POP_SUB(transpose3)
   end subroutine transpose3
+
+
+
 
 #include "undef.F90"
 #include "real.F90"

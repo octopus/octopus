@@ -1087,20 +1087,14 @@ contains
 #if defined(HAVE_NETCDF)
   ! ---------------------------------------------------------
   subroutine out_netcdf()
-    integer :: ncid, status, data_id, pos_id, dim_min
-    integer :: dim_data_id(3), dim_pos_id(2)
 
-    REAL_SINGLE :: pos(2, 3)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
-    FLOAT, allocatable :: xx(:, :, :)
-#if defined(R_TCOMPLEX)
-    integer :: data_im_id
-#endif
+
+
 
     PUSH_SUB(X(io_function_output_global).out_netcdf)
 
-    ierr = 0
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb)
@@ -1110,10 +1104,98 @@ contains
 
     filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf", is_tmp=is_tmp)
 
+     
+    call X(out_cf_netcdf)(filename, ierr, cf, cube, mesh%sb%dim,& 
+          units_from_atomic(units_out%length, mesh%spacing(1:mesh%sb%dim)), transpose = .false.)
+
+    call cube_end(cube)
+    call X(cube_function_free_RS)(cube, cf)
+
+    POP_SUB(X(io_function_output_global).out_netcdf)
+  end subroutine out_netcdf
+
+
+
+#endif /*defined(HAVE_NETCDF)*/
+
+end subroutine X(io_function_output_global)
+
+!----------------------------------------------------------------------
+! This function prints a function in text format, for the moment it is
+! only used by the modelmb stuff.
+!----------------------------------------------------------------------
+subroutine X(io_function_out_text)(dir, mesh, mm, wf)
+  character(len=*),   intent(in) :: dir
+  type(mesh_t),       intent(in) :: mesh
+  integer,            intent(in) :: mm
+  R_TYPE,             intent(in) :: wf(:)
+
+  integer :: ip, idir, iunit
+  FLOAT   :: xx(1:MAX_DIM)
+  character(len=200) :: filename
+
+  PUSH_SUB(X(io_function_out_text))
+
+  write(filename,'(a,i4.4)') trim(dir)//'/wf_imb', mm
+  iunit = io_open(filename, action='write')
+  write(iunit, '(a)', ADVANCE='no') '#'
+  do idir = 1, mesh%sb%dim
+     write(iunit, '(a)', ADVANCE='no') '      position          '
+  end do
+  write(iunit, '(a)') '         Re(wf)                    Im(wf)'
+
+  ! for each point in whole box, without boundary points
+  do ip = 1, mesh%np_global
+
+    xx = mesh_x_global(mesh, ip)
+    ! print out wavefunction
+    do idir = 1, mesh%sb%dim
+      write(iunit,'(es24.15)', ADVANCE='no') units_from_atomic(units_out%length, xx(idir))
+    end do ! idir
+    write(iunit,'(es24.15,es24.15)') &
+      units_from_atomic(sqrt(units_out%length**(-mesh%sb%dim)), R_REAL(wf(ip))), &
+      units_from_atomic(sqrt(units_out%length**(-mesh%sb%dim)), R_AIMAG(wf(ip)))
+
+  end do ! ip
+
+  call io_close(iunit)
+
+  POP_SUB(X(io_function_out_text))
+end subroutine X(io_function_out_text)
+
+#if defined(HAVE_NETCDF)
+  ! --------------------------------------------------------- 
+  !  Writes a cube_function in netcdf format
+  ! ---------------------------------------------------------
+  subroutine X(out_cf_netcdf)(filename, ierr, cf, cube, sb_dim, spacing, transpose)
+    character(len=*),      intent(in) :: filename        !> the file name
+    integer,               intent(out):: ierr            !> error message   
+    type(cube_function_t), intent(in) :: cf              !> the cube_function to be written 
+    type(cube_t),          intent(in) :: cube            !> the underlying cube mesh
+    integer,               intent(in) :: sb_dim          !> the simulation box dimensions aka sb%dim
+    FLOAT,                 intent(in) :: spacing(:)      !> the mesh spacing already converted to units_out
+    logical,               intent(in) :: transpose       !> whether we want the function cf(x,y,z) to be saved as cf(z,y,x)
+
+
+    integer :: ncid, status, data_id, pos_id, dim_min
+    integer :: dim_data_id(3), dim_pos_id(2)
+
+    REAL_SINGLE :: pos(2, 3)
+    FLOAT, allocatable :: xx(:, :, :)
+    
+#if defined(R_TCOMPLEX)
+    integer :: data_im_id
+#endif
+
+    PUSH_SUB(X(out_cf_netcdf))
+
+    ierr = 0
+
+
     status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
     if(status.ne.NF90_NOERR) then
       ierr = 2
-      POP_SUB(X(io_function_output_global).out_netcdf)
+      POP_SUB(X(out_cf_netcdf))
       return
     end if
 
@@ -1143,7 +1225,7 @@ contains
       call ncdf_error('nf90_def_dim', status, filename, ierr)
     end if
 
-    dim_min = 3 - mesh%sb%dim + 1
+    dim_min = 3 - sb_dim + 1
 
 #if defined(SINGLE_PRECISION)
     if(status == NF90_NOERR) then
@@ -1200,9 +1282,9 @@ contains
 
     ! data
     pos(:,:) = M_ZERO
-    pos(1, 1:mesh%sb%dim) = &
-      real(units_from_atomic(units_out%length, - (cube%rs_n_global(1:mesh%sb%dim) - 1)/2*mesh%spacing(1:mesh%sb%dim)), 4)
-    pos(2, 1:mesh%sb%dim) = real(units_from_atomic(units_out%length, mesh%spacing(1:mesh%sb%dim)), 4)
+    pos(1, 1:sb_dim) = &
+      real( - (cube%rs_n_global(1:sb_dim) - 1)/2*spacing(1:sb_dim), 4)
+    pos(2, 1:sb_dim) = real(spacing(1:sb_dim), 4)
 
     if(status == NF90_NOERR) then
       status = nf90_put_var (ncid, pos_id, pos(:,:))
@@ -1212,19 +1294,31 @@ contains
     SAFE_ALLOCATE(xx(1:cube%rs_n_global(3), 1:cube%rs_n_global(2), 1:cube%rs_n_global(1)))
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
-      call transpose3(real(cf%X(RS), REAL_PRECISION), xx)
-      call write_variable(ncid, data_id, status, xx)
+      if (transpose) then
+        call transpose3(real(cf%X(RS), REAL_PRECISION), xx)
+      else 
+        xx = real(cf%X(RS))
+      end if    
+      call write_variable(ncid, data_id, status, sb_dim, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
     if(status == NF90_NOERR) then
-      call transpose3(aimag(cf%X(RS)), xx)
-      call write_variable(ncid, data_im_id, status, xx)
+      if ( transpose ) then 
+        call transpose3(aimag(cf%X(RS)), xx)
+      else
+        xx = aimag(cf%X(RS))
+      end if
+      call write_variable(ncid, data_im_id, status, sb_dim, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #else
     if(status == NF90_NOERR) then
-      call transpose3(cf%X(RS), xx)
-      call write_variable(ncid, data_id, status, xx)
+      if ( transpose ) then 
+        call transpose3(cf%X(RS), xx)
+      else             
+        xx=cf%X(RS)
+      end if 
+      call write_variable(ncid, data_id, status, sb_dim, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
 #endif
@@ -1232,79 +1326,40 @@ contains
 
     ! close
     status = nf90_close(ncid)
-    call cube_end(cube)
-    call X(cube_function_free_RS)(cube, cf)
 
-    POP_SUB(X(io_function_output_global).out_netcdf)
-  end subroutine out_netcdf
-
-
-  ! ---------------------------------------------------------
-  subroutine write_variable(ncid, data_id, status, xx)
-    integer, intent(in)  :: ncid, data_id
-    integer, intent(out) :: status
-    FLOAT,   intent(in)  :: xx(:,:,:)
-
-    PUSH_SUB(X(io_function_output_global).write_variable)
-
-    select case(mesh%sb%dim)
-    case(1)
-      status = nf90_put_var (ncid, data_id, xx(1,1,:))
-    case(2)
-      status = nf90_put_var (ncid, data_id, xx(1,:,:))
-    case(3)
-      status = nf90_put_var (ncid, data_id, xx)
-    end select
+    POP_SUB(X(out_cf_netcdf))
     
-    POP_SUB(X(io_function_output_global).write_variable)
-  end subroutine write_variable
+    contains
+
+    ! ---------------------------------------------------------
+    subroutine write_variable(ncid, data_id, status, sb_dim, xx)
+      integer, intent(in)  :: ncid, data_id
+      integer, intent(out) :: status
+      integer, intent(in)  :: sb_dim
+      FLOAT,   intent(in)  :: xx(:,:,:)
+
+      PUSH_SUB(X(out_cf_netcdf).write_variable)
+
+      select case(sb_dim)
+      case(1)
+        status = nf90_put_var (ncid, data_id, xx(1,1,:))
+      case(2)
+        status = nf90_put_var (ncid, data_id, xx(1,:,:))
+      case(3)
+        status = nf90_put_var (ncid, data_id, xx)
+      end select
+    
+      POP_SUB(X(out_cf_netcdf).write_variable)
+    end subroutine write_variable
+    
+
+  end subroutine X(out_cf_netcdf)
+
+
 
 #endif /*defined(HAVE_NETCDF)*/
 
-end subroutine X(io_function_output_global)
 
-!----------------------------------------------------------------------
-! This function prints a function in text format, for the moment it is
-! only used by the modelmb stuff.
-!----------------------------------------------------------------------
-subroutine X(io_function_out_text)(dir, mesh, mm, wf)
-  character(len=*),   intent(in) :: dir
-  type(mesh_t),       intent(in) :: mesh
-  integer,            intent(in) :: mm
-  R_TYPE,             intent(in) :: wf(:)
-
-  integer :: ip, idir, iunit
-  FLOAT   :: xx(1:MAX_DIM)
-  character(len=200) :: filename
-
-  PUSH_SUB(X(io_function_out_text))
-
-  write(filename,'(a,i4.4)') trim(dir)//'/wf_imb', mm
-  iunit = io_open(filename, action='write')
-  write(iunit, '(a)', ADVANCE='no') '#'
-  do idir = 1, mesh%sb%dim
-     write(iunit, '(a)', ADVANCE='no') '      position          '
-  end do
-  write(iunit, '(a)') '         Re(wf)                    Im(wf)'
-
-  ! for each point in whole box, without boundary points
-  do ip = 1, mesh%np_global
-
-    xx = mesh_x_global(mesh, ip)
-    ! print out wavefunction
-    do idir = 1, mesh%sb%dim
-      write(iunit,'(es24.15)', ADVANCE='no') units_from_atomic(units_out%length, xx(idir))
-    end do ! idir
-    write(iunit,'(es24.15,es24.15)') &
-      units_from_atomic(sqrt(units_out%length**(-mesh%sb%dim)), R_REAL(wf(ip))), &
-      units_from_atomic(sqrt(units_out%length**(-mesh%sb%dim)), R_AIMAG(wf(ip)))
-
-  end do ! ip
-
-  call io_close(iunit)
-
-  POP_SUB(X(io_function_out_text))
-end subroutine X(io_function_out_text)
 
 !! Local Variables:
 !! mode: f90
