@@ -50,8 +50,8 @@ module json_m
   integer, parameter :: JSON_ARRAY_TYPE   = 5
   integer, parameter :: JSON_OBJECT_TYPE  = 6
 
-  character, parameter :: backslash="\" !"
-  character, parameter :: space=" "
+  character, parameter :: backslash=achar(92)
+  character, parameter :: space=achar(32)
   character, parameter :: bspace=achar(8)
   character, parameter :: tab=achar(9)
   character, parameter :: newline=achar(10)
