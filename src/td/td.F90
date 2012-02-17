@@ -721,7 +721,7 @@ contains
       PUSH_SUB(td_run.td_save_restart)
 
       ! first write resume file
-      call restart_write(trim(tmpdir)//'td', st, gr, ierr, iter)
+      call restart_write(trim(tmpdir)//'td', st, gr, geo, ierr, iter)
       if(ierr.ne.0) then
         message(1) = 'Unsuccessful write of "'//trim(tmpdir)//'td"'
         call messages_fatal(1)

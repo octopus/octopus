@@ -183,13 +183,13 @@ module opt_control_propagation_m
 
     call target_tdcalc(target, hm, gr, sys%geo, psi, 0)
 
-    if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
+    if(present(prop)) call oct_prop_output(prop, 0, psi, gr, sys%geo)
     ii = 1
     do i = 1, td%max_iter
       ! time-iterate wavefunctions
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i)
 
-      if(present(prop)) call oct_prop_output(prop, i, psi, gr)
+      if(present(prop)) call oct_prop_output(prop, i, psi, gr, sys%geo)
 
       ! update
       call density_calc(psi, gr, psi%rho)
@@ -273,10 +273,10 @@ module opt_control_propagation_m
     call v_ks_calc(sys%ks, hm, psi)
     call propagator_run_zero_iter(hm, gr, td%tr)
 
-    call oct_prop_output(prop, td%max_iter, psi, gr)
+    call oct_prop_output(prop, td%max_iter, psi, gr, sys%geo)
     do i = td%max_iter, 1, -1
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, (i-1)*td%dt, -td%dt, td%mu, td%max_iter, i)
-      call oct_prop_output(prop, i-1, psi, gr)
+      call oct_prop_output(prop, i-1, psi, gr, sys%geo)
       call density_calc(psi, gr, psi%rho)
       call v_ks_calc(sys%ks, hm, psi)
     end do
@@ -350,7 +350,7 @@ module opt_control_propagation_m
       call propagator_run_zero_iter(hm, gr, tr_psi2)
     end if
 
-    call oct_prop_output(prop_psi, 0, psi, gr)
+    call oct_prop_output(prop_psi, 0, psi, gr, sys%geo)
     call states_copy(chi, psi)
     call oct_prop_read_state(prop_chi, chi, gr, sys%geo, 0)
 
@@ -367,7 +367,7 @@ module opt_control_propagation_m
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i)
       call target_tdcalc(target, hm, gr, sys%geo, psi, i) 
-      call oct_prop_output(prop_psi, i, psi, gr)
+      call oct_prop_output(prop_psi, i, psi, gr, sys%geo)
       call oct_prop_check(prop_chi, chi, gr, sys%geo, i)
     end do
     call update_field(td%max_iter+1, par, gr, hm, psi, chi, par_chi, dir = 'f')
@@ -437,14 +437,14 @@ module opt_control_propagation_m
     call propagator_run_zero_iter(hm, gr, tr_chi)
 
     td%dt = -td%dt
-    call oct_prop_output(prop_chi, td%max_iter, chi, gr)
+    call oct_prop_output(prop_chi, td%max_iter, chi, gr, sys%geo)
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par_chi, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
-      call oct_prop_output(prop_chi, i-1, chi, gr)
+      call oct_prop_output(prop_chi, i-1, chi, gr, sys%geo)
       call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
@@ -514,7 +514,7 @@ module opt_control_propagation_m
     call propagator_run_zero_iter(hm, gr, td%tr)
     call propagator_run_zero_iter(hm, gr, tr_chi)
     td%dt = -td%dt
-    call oct_prop_output(prop_chi, td%max_iter, chi, gr)
+    call oct_prop_output(prop_chi, td%max_iter, chi, gr, sys%geo)
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
@@ -527,14 +527,14 @@ module opt_control_propagation_m
         call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
         call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
         call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
-        call oct_prop_output(prop_chi, i-1, chi, gr)
+        call oct_prop_output(prop_chi, i-1, chi, gr, sys%geo)
         call states_end(psi_aux)
 
       else
 
         call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, psi)
         call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
-        call oct_prop_output(prop_chi, i-1, chi, gr)
+        call oct_prop_output(prop_chi, i-1, chi, gr, sys%geo)
         call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
         call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
 
@@ -882,11 +882,12 @@ module opt_control_propagation_m
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_output(prop, iter, psi, gr)
-    type(oct_prop_t), intent(in) :: prop
-    integer, intent(in)           :: iter
-    type(states_t), intent(inout) :: psi
-    type(grid_t), intent(inout)   :: gr
+  subroutine oct_prop_output(prop, iter, psi, gr, geo)
+    type(oct_prop_t), intent(in)    :: prop
+    integer,          intent(in)    :: iter
+    type(states_t),   intent(inout) :: psi
+    type(grid_t),     intent(inout) :: gr
+    type(geometry_t), intent(in)    :: geo
 
     integer :: j, ierr
     character(len=100) :: filename
@@ -896,7 +897,7 @@ module opt_control_propagation_m
     do j = 1, prop%number_checkpoints + 2
       if(prop%iter(j) .eq. iter) then
         write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
-        call restart_write(io_workpath(filename), psi, gr, ierr, iter)
+        call restart_write(io_workpath(filename), psi, gr, geo, ierr, iter)
       end if
     end do
 

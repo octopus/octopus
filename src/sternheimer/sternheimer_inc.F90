@@ -238,7 +238,7 @@ subroutine X(sternheimer_solve)(                           &
       if(R_REAL(omega) < M_ZERO) sigma_alt = swap_sigma(sigma)
 
       write(dirname,'(2a)') trim(restart_dir), trim(wfs_tag_sigma(wfs_tag, sigma_alt))
-      call restart_write(trim(tmpdir)//dirname, st, sys%gr, err, iter = iter, lr = lr(sigma))
+      call restart_write(trim(tmpdir)//dirname, st, sys%gr, sys%geo, err, iter = iter, lr = lr(sigma))
     end do
     
     if (.not. states_conv) then

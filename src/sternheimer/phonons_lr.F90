@@ -466,7 +466,7 @@ contains
         end do
         
         call restart_write(io_workpath(trim(tmpdir)//VIB_MODES_DIR//trim(phn_nm_wfs_tag(inm))), &
-          st, gr, ierr, lr = lr(1))
+          st, gr, geo, ierr, lr = lr(1))
 
       end do
 

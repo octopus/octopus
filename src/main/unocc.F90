@@ -141,7 +141,7 @@ contains
     end do
 
     ! write restart information.
-    call restart_write (trim(tmpdir)//GS_DIR, sys%st, sys%gr, ierr)
+    call restart_write (trim(tmpdir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
     if(ierr .ne. 0) then
       message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
       call messages_fatal(1)

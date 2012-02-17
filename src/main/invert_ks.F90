@@ -139,7 +139,7 @@ contains
     call output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, sys%ks%xc, STATIC_DIR)
         
     ! save files in restart format
-    call restart_write(trim(tmpdir) // GS_DIR, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
+    call restart_write(trim(tmpdir) // GS_DIR, sys%ks%ks_inversion%aux_st, sys%gr, sys%geo, err, 0)
 
     SAFE_DEALLOCATE_A(target_rho)
     SAFE_DEALLOCATE_A(rho)

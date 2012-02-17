@@ -23,6 +23,7 @@ module restart_m
   use batch_m
   use curvilinear_m
   use datasets_m
+  use geometry_m
   use global_m
   use grid_m
   use io_m
@@ -219,10 +220,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine restart_write(dir, st, gr, ierr, iter, lr)
+  subroutine restart_write(dir, st, gr, geo, ierr, iter, lr)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
+    type(geometry_t),     intent(in)    :: geo
     integer,              intent(out)   :: ierr
     integer,    optional, intent(in)    :: iter
     !> if this next argument is present, the lr wfs are stored instead of the gs wfs
@@ -295,6 +297,7 @@ contains
       iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
       call states_dump(st, iunit_states)
       call io_close(iunit_states)
+
     end if
 
     if(states_are_real(st)) then
