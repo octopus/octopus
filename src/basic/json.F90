@@ -750,7 +750,7 @@ contains
     !
     this%pos=0
     this%len=0
-    nullify(this%value)
+    this%value=>null()
     return
   end subroutine json_string_iterator_nullify
 
@@ -768,7 +768,7 @@ contains
     type(json_string_t),          intent(in)  :: string
     !
     call json_string_iterator_nullify(this)
-    nullify(this%value)
+    this%value=>null()
     if(json_string_isdef(string))then
       this%pos=1
       this%len=string%len
@@ -782,7 +782,7 @@ contains
     !
     this%pos=0
     this%len=0
-    nullify(this%value)
+    this%value=>null()
     return
   end subroutine json_string_iterator_end
 
@@ -803,7 +803,8 @@ contains
     this%type=JSON_UNDEF_TYPE
     this%len=0
     this%size=0
-    nullify(this%value)
+    this%value=>null()
+    return
   end subroutine json_string_nullify
 
   elemental function json_string_isdef(this) result(is)
@@ -834,7 +835,7 @@ contains
     !
     this%type=JSON_UNDEF_TYPE
     SAFE_DEALLOCATE_P(this%value)
-    nullify(this%value)
+    this%value=>null()
     this%size=0
     this%len=0
     return
@@ -1126,7 +1127,7 @@ contains
   elemental subroutine json_array_iterator_nullify(this)
     type(json_array_iterator_t), intent(out) :: this
     !
-    nullify(this%node)
+    this%node=>null()
     return
   end subroutine json_array_iterator_nullify
 
@@ -1144,7 +1145,7 @@ contains
     type(json_array_t),          intent(in)  :: array
     !
     call json_array_iterator_nullify(this)
-    nullify(this%node)
+    this%node=>null()
     if(json_array_isdef(array).and.(array%size>0)) this%node=>array%head
     return
   end subroutine json_array_iterator_init
@@ -1152,7 +1153,7 @@ contains
   elemental subroutine json_array_iterator_end(this)
     type(json_array_iterator_t), intent(inout) :: this
     !
-    nullify(this%node)
+    this%node=>null()
     return
   end subroutine json_array_iterator_end
 
@@ -1160,7 +1161,7 @@ contains
     type(json_array_iterator_t), intent(inout) :: this
     type(json_value_t),          pointer       :: value
     !
-    nullify(value)
+    value=>null()
     if(associated(this%node))then
       value=>this%node%value
       this%node=>this%node%next
@@ -1173,8 +1174,8 @@ contains
     !
     this%type=JSON_UNDEF_TYPE
     this%size=0
-    nullify(this%head)
-    nullify(this%tail)
+    this%head=>null()
+    this%tail=>null()
     return
   end subroutine json_array_nullify
 
@@ -1192,7 +1193,7 @@ contains
     !
     call json_array_nullify(this)
     this%size=0
-    nullify(this%head)
+    this%head=>null()
     this%type=JSON_ARRAY_TYPE
     return
   end subroutine json_array_init
@@ -1261,12 +1262,12 @@ contains
       this%size=this%size-1
       call json_value_end(node%value)
       SAFE_DEALLOCATE_P(node%value)
-      nullify(node%value)
+      node%value=>null()
       this%head=>node%next
       SAFE_DEALLOCATE_P(node)
     end do
     this%size=0
-    nullify(this%head)
+    this%head=>null()
     return
   end subroutine json_array_end
 
@@ -1813,7 +1814,7 @@ contains
         if(json_array_iterator_isdef(iter))then
           ierr=JSON_OK
           do i = 1, this%size
-            nullify(json_value)
+            json_value=>null()
             call json_array_iterator_next(iter, json_value)
             if(.not.associated(json_value))then
               ierr=JSON_SIZE_ERROR
@@ -1849,7 +1850,7 @@ contains
         if(json_array_iterator_isdef(iter))then
           ierr=JSON_OK
           do i = 1, this%size
-            nullify(json_value)
+            json_value=>null()
             call json_array_iterator_next(iter, json_value)
             if(.not.associated(json_value))then
               ierr=JSON_SIZE_ERROR
@@ -1885,7 +1886,7 @@ contains
         if(json_array_iterator_isdef(iter))then
           ierr=JSON_OK
           do i = 1, this%size
-            nullify(json_value)
+            json_value=>null()
             call json_array_iterator_next(iter, json_value)
             if(.not.associated(json_value))then
               ierr=JSON_SIZE_ERROR
@@ -1921,7 +1922,7 @@ contains
         if(json_array_iterator_isdef(iter))then
           ierr=JSON_OK
           do i = 1, this%size
-            nullify(json_value)
+            json_value=>null()
             call json_array_iterator_next(iter, json_value)
             if(.not.associated(json_value))then
               ierr=JSON_SIZE_ERROR
@@ -1976,10 +1977,10 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this))then
-      nullify(json_value)
+      json_value=>null()
       call json_array_get_value(this, i, json_value, ierr)
       if(ierr==JSON_OK)then
-        nullify(type_value)
+        type_value=>null()
         call json_value_get_null(json_value, type_value, ierr)
         if(ierr==JSON_OK) call json_null_get(type_value, ierr)
       end if
@@ -1998,10 +1999,10 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this))then
-      nullify(json_value)
+      json_value=>null()
       call json_array_get_value(this, i, json_value, ierr)
       if(ierr==JSON_OK)then
-        nullify(json_tpval)
+        json_tpval=>null()
         call json_value_get_logical(json_value, json_tpval, ierr)
         if(ierr==JSON_OK) call json_logical_get(json_tpval, value, ierr)
       end if
@@ -2020,10 +2021,10 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this))then
-      nullify(json_value)
+      json_value=>null()
       call json_array_get_value(this, i, json_value, ierr)
       if(ierr==JSON_OK)then
-        nullify(json_tpval)
+        json_tpval=>null()
         call json_value_get_integer(json_value, json_tpval, ierr)
         if(ierr==JSON_OK) call json_integer_get(json_tpval, value, ierr)
       end if
@@ -2042,10 +2043,10 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this))then
-      nullify(json_value)
+      json_value=>null()
       call json_array_get_value(this, i, json_value, ierr)
       if(ierr==JSON_OK)then
-        nullify(json_tpval)
+        json_tpval=>null()
         call json_value_get_real(json_value, json_tpval, ierr)
         if(ierr==JSON_OK) call json_real_get(json_tpval, value, ierr)
       end if
@@ -2064,10 +2065,10 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this))then
-      nullify(json_value)
+      json_value=>null()
       call json_array_get_value(this, i, json_value, ierr)
       if(ierr==JSON_OK)then
-        nullify(json_tpval)
+        json_tpval=>null()
         call json_value_get_string(json_value, json_tpval, ierr)
         if(ierr==JSON_OK) call json_string_get_string(json_tpval, value, ierr)
       end if
@@ -2085,10 +2086,10 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this))then
-      nullify(json_value)
+      json_value=>null()
       call json_array_get_value(this, i, json_value, ierr)
       if(ierr==JSON_OK)then
-        nullify(value)
+        value=>null()
         call json_value_get_array(json_value, value, ierr)
       end if
     end if
@@ -2105,7 +2106,7 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this))then
-      nullify(json_array)
+      json_array=>null()
       call json_array_get_array(this, i, json_array, ierr)
       if((ierr==JSON_OK).and.json_array_isdef(json_array))&
         call json_array_get_self_logical(json_array, vals, ierr)
@@ -2123,7 +2124,7 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this))then
-      nullify(json_array)
+      json_array=>null()
       call json_array_get_array(this, i, json_array, ierr)
       if((ierr==JSON_OK).and.json_array_isdef(json_array))&
         call json_array_get_self_integer(json_array, vals, ierr)
@@ -2141,7 +2142,7 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this))then
-      nullify(json_array)
+      json_array=>null()
       call json_array_get_array(this, i, json_array, ierr)
       if((ierr==JSON_OK).and.json_array_isdef(json_array))&
         call json_array_get_self_real(json_array, vals, ierr)
@@ -2159,7 +2160,7 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this))then
-      nullify(json_array)
+      json_array=>null()
       call json_array_get_array(this, i, json_array, ierr)
       if((ierr==JSON_OK).and.json_array_isdef(json_array))&
         call json_array_get_self_string(json_array, vals, ierr)
@@ -2177,10 +2178,10 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this))then
-      nullify(json_value)
+      json_value=>null()
       call json_array_get_value(this, i, json_value, ierr)
       if(ierr==JSON_OK)then
-        nullify(value)
+        value=>null()
         call json_value_get_object(json_value, value, ierr)
       end if
     end if
@@ -2201,7 +2202,7 @@ contains
       if(.not.associated(this%head))this%tail=>null()
       SAFE_DEALLOCATE_P(node)
     else
-      nullify(value)
+      value=>null()
     end if
     return
   end subroutine json_array_pop
@@ -2210,8 +2211,8 @@ contains
     type(json_member_t), intent(out) :: this
     !
     this%type=JSON_UNDEF_TYPE
-    nullify(this%ident)
-    nullify(this%value)
+    this%ident=>null()
+    this%value=>null()
     return
   end subroutine json_member_nullify
 
@@ -2243,12 +2244,12 @@ contains
       call json_string_end(this%ident)
       SAFE_DEALLOCATE_P(this%ident)
     end if
-    nullify(this%ident)
+    this%ident=>null()
     if(associated(this%value))then
       call json_value_end(this%value)
       SAFE_DEALLOCATE_P(this%value)
     end if
-    nullify(this%value)
+    this%value=>null()
     this%type=JSON_UNDEF_TYPE
     return
   end subroutine json_member_end
@@ -2308,8 +2309,8 @@ contains
     !
     this%pos=0
     this%size=0
-    nullify(this%node)
-    nullify(this%table)
+    this%node=>null()
+    this%table=>null()
     return
   end subroutine json_object_iterator_nullify
 
@@ -2347,8 +2348,8 @@ contains
     type(json_object_iterator_t), intent(inout) :: this
     !
     this%pos=0
-    nullify(this%node)
-    nullify(this%table)
+    this%node=>null()
+    this%table=>null()
     return
   end subroutine json_object_iterator_end
 
@@ -2358,13 +2359,13 @@ contains
     !
     integer :: i
     !
-    nullify(member)
+    member=>null()
     if(associated(this%node))then
       member=>this%node%member
       if(associated(this%node%next))then
         this%node=>this%node%next
       else
-        nullify(this%node)
+        this%node=>null()
         do i = this%pos+1, this%size
           if(associated(this%table(i)%head))then
             this%pos=i
@@ -2383,7 +2384,7 @@ contains
     this%type=JSON_UNDEF_TYPE
     this%size=0
     this%used=0
-    nullify(this%table)
+    this%table=>null()
     return
   end subroutine json_object_nullify
 
@@ -2420,17 +2421,17 @@ contains
         if(.not.associated(node))exit
         call json_member_end(node%member)
         SAFE_DEALLOCATE_P(node%member)
-        nullify(node%member)
+        node%member=>null()
         this%table(i)%head=>node%next
         this%used=this%used-1
         SAFE_DEALLOCATE_P(node)
-        nullify(node)
+        node=>null()
       end do
     end do
     this%used=0
     this%size=0
     SAFE_DEALLOCATE_P(this%table)
-    nullify(this%table)
+    this%table=>null()
     return
   end subroutine json_object_end
 
@@ -2456,7 +2457,7 @@ contains
           this%table(i)%head=>node%next
           this%used=this%used-1
           SAFE_DEALLOCATE_P(node)
-          nullify(node)
+          node=>null()
         end do
       end do
       this%size=buff%size
@@ -2493,7 +2494,7 @@ contains
         call json_object_iterator_init(iter, this_1)
         call json_object_iterator_next(iter, member)
         do while(associated(member))
-          nullify(value)
+          value=>null()
           call json_object_get_value(this_2, member%ident, value, ierr)
           if(ierr/=JSON_OK)then
             eqv=.false.
@@ -2598,7 +2599,7 @@ contains
     type(json_member_node_t), pointer :: node
     integer                           :: i
     !
-    nullify(member)
+    member=>null()
     do i = 1, this%size
       if(associated(this%table(i)%head))then
         node=>this%table(i)%head
@@ -2606,7 +2607,7 @@ contains
         this%used=this%used-1
         member=>node%member
         SAFE_DEALLOCATE_P(node)
-        nullify(node)
+        node=>null()
         exit
       end if
     end do
@@ -2638,7 +2639,7 @@ contains
             SAFE_ALLOCATE(node%next)
             node=>node%next
             node%member=>member
-            nullify(node%next)
+            node%next=>null()
             this%used=this%used+1
             exit
           end if
@@ -2646,7 +2647,7 @@ contains
       else
         SAFE_ALLOCATE(node)
         node%member=>member
-        nullify(node%next)
+        node%next=>null()
         this%table(n)%head=>node
         this%used=this%used+1
       end if
@@ -2859,7 +2860,7 @@ contains
     !
     type(json_member_node_t), pointer :: node
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this).and.json_string_isdef(ident))then
       ierr=JSON_KEY_ERROR
@@ -2888,11 +2889,11 @@ contains
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this))then
       call json_string_init(json_ident, ident)
-      nullify(json_value)
+      json_value=>null()
       call json_object_get_value(this, json_ident, json_value, ierr)
       call json_string_end(json_ident)
       if(ierr==JSON_OK)then
-        nullify(json_tpval)
+        json_tpval=>null()
         call json_value_get_null(json_value, json_tpval, ierr)
         if(ierr==JSON_OK) call json_null_get(json_tpval, ierr)
       end if
@@ -2913,11 +2914,11 @@ contains
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this))then
       call json_string_init(json_ident, ident)
-      nullify(json_value)
+      json_value=>null()
       call json_object_get_value(this, json_ident, json_value, ierr)
       call json_string_end(json_ident)
       if(ierr==JSON_OK)then
-        nullify(json_tpval)
+        json_tpval=>null()
         call json_value_get_logical(json_value, json_tpval, ierr)
         if(ierr==JSON_OK) call json_logical_get(json_tpval, value, ierr)
       end if
@@ -2938,11 +2939,11 @@ contains
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this))then
       call json_string_init(json_ident, ident)
-      nullify(json_value)
+      json_value=>null()
       call json_object_get_value(this, json_ident, json_value, ierr)
       call json_string_end(json_ident)
       if(ierr==JSON_OK)then
-        nullify(json_tpval)
+        json_tpval=>null()
         call json_value_get_integer(json_value, json_tpval, ierr)
         if(ierr==JSON_OK) call json_integer_get(json_tpval, value, ierr)
       end if
@@ -2963,11 +2964,11 @@ contains
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this))then
       call json_string_init(json_ident, ident)
-      nullify(json_value)
+      json_value=>null()
       call json_object_get_value(this, json_ident, json_value, ierr)
       call json_string_end(json_ident)
       if(ierr==JSON_OK)then
-        nullify(json_tpval)
+        json_tpval=>null()
         call json_value_get_real(json_value, json_tpval, ierr)
         if(ierr==JSON_OK) call json_real_get(json_tpval, value, ierr)
       end if
@@ -2988,11 +2989,11 @@ contains
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this))then
       call json_string_init(json_ident, ident)
-      nullify(json_value)
+      json_value=>null()
       call json_object_get_value(this, json_ident, json_value, ierr)
       call json_string_end(json_ident)
       if(ierr==JSON_OK)then
-        nullify(json_tpval)
+        json_tpval=>null()
         call json_value_get_string(json_value, json_tpval, ierr)
         if(ierr==JSON_OK) call json_string_get_string(json_tpval, value, ierr)
       end if
@@ -3009,11 +3010,11 @@ contains
     type(json_string_t)         :: json_ident
     type(json_value_t), pointer :: json_value
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this))then
       call json_string_init(json_ident, ident)
-      nullify(json_value)
+      json_value=>null()
       call json_object_get_value(this, json_ident, json_value, ierr)
       call json_string_end(json_ident)
       if(ierr==JSON_OK) call json_value_get_array(json_value, value, ierr)
@@ -3031,7 +3032,7 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this))then
-      nullify(json_array)
+      json_array=>null()
       call json_object_get_array(this, ident, json_array, ierr)
       if((ierr==JSON_OK).and.json_array_isdef(json_array))&
         call json_array_get_self_logical(json_array, vals, ierr)
@@ -3049,7 +3050,7 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this))then
-      nullify(json_array)
+      json_array=>null()
       call json_object_get_array(this, ident, json_array, ierr)
       if((ierr==JSON_OK).and.json_array_isdef(json_array))&
         call json_array_get_self_integer(json_array, vals, ierr)
@@ -3067,7 +3068,7 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this))then
-      nullify(json_array)
+      json_array=>null()
       call json_object_get_array(this, ident, json_array, ierr)
       if((ierr==JSON_OK).and.json_array_isdef(json_array))&
         call json_array_get_self_real(json_array, vals, ierr)
@@ -3085,7 +3086,7 @@ contains
     !
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this))then
-      nullify(json_array)
+      json_array=>null()
       call json_object_get_array(this, ident, json_array, ierr)
       if((ierr==JSON_OK).and.json_array_isdef(json_array))&
         call json_array_get_self_string(json_array, vals, ierr)
@@ -3102,11 +3103,11 @@ contains
     type(json_string_t)         :: json_ident
     type(json_value_t), pointer :: json_value
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this))then
       call json_string_init(json_ident, ident)
-      nullify(json_value)
+      json_value=>null()
       call json_object_get_value(this, json_ident, json_value, ierr)
       call json_string_end(json_ident)
       if(ierr==JSON_OK) call json_value_get_object(json_value, value, ierr)
@@ -3118,13 +3119,13 @@ contains
     type(json_value_t), intent(out) :: this
     !
     this%type=JSON_UNDEF_TYPE
-    nullify(this%null)
-    nullify(this%logical)
-    nullify(this%integer)
-    nullify(this%real)
-    nullify(this%string)
-    nullify(this%array)
-    nullify(this%object)
+    this%null=>null()
+    this%logical=>null()
+    this%integer=>null()
+    this%real=>null()
+    this%string=>null()
+    this%array=>null()
+    this%object=>null()
     return
   end subroutine json_value_nullify
 
@@ -3223,31 +3224,31 @@ contains
     case(JSON_NULL_TYPE)
       call json_null_end(this%null)
       SAFE_DEALLOCATE_P(this%null)
-      nullify(this%null)
+      this%null=>null()
     case(JSON_LOGICAL_TYPE)
       call json_logical_end(this%logical)
       SAFE_DEALLOCATE_P(this%logical)
-      nullify(this%logical)
+      this%logical=>null()
     case(JSON_INTEGER_TYPE)
       call json_integer_end(this%integer)
       SAFE_DEALLOCATE_P(this%integer)
-      nullify(this%integer)
+      this%integer=>null()
     case(JSON_REAL_TYPE)
       call json_real_end(this%real)
       SAFE_DEALLOCATE_P(this%real)
-      nullify(this%real)
+      this%real=>null()
     case(JSON_STRING_TYPE)
       call json_string_end(this%string)
       SAFE_DEALLOCATE_P(this%string)
-      nullify(this%string)
+      this%string=>null()
     case(JSON_ARRAY_TYPE)
       call json_array_end(this%array)
       SAFE_DEALLOCATE_P(this%array)
-      nullify(this%array)
+      this%array=>null()
     case(JSON_OBJECT_TYPE)
       call json_object_end(this%object)
       SAFE_DEALLOCATE_P(this%object)
-      nullify(this%object)
+      this%object=>null()
     end select
     this%type=JSON_UNDEF_TYPE
     return
@@ -3311,7 +3312,7 @@ contains
     type(json_null_t),  pointer     :: value
     integer,            intent(out) :: ierr
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_null_isdef(this%null))then
       value=>this%null
@@ -3325,7 +3326,7 @@ contains
     type(json_logical_t), pointer     :: value
     integer,              intent(out) :: ierr
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_logical_isdef(this%logical))then
       value=>this%logical
@@ -3339,7 +3340,7 @@ contains
     type(json_integer_t), pointer     :: value
     integer,              intent(out) :: ierr
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_integer_isdef(this%integer))then
       value=>this%integer
@@ -3353,7 +3354,7 @@ contains
     type(json_real_t),  pointer     :: value
     integer,            intent(out) :: ierr
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_real_isdef(this%real))then
       value=>this%real
@@ -3367,7 +3368,7 @@ contains
     type(json_string_t), pointer     :: value
     integer,             intent(out) :: ierr
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_string_isdef(this%string))then
       value=>this%string
@@ -3381,7 +3382,7 @@ contains
     type(json_array_t), pointer     :: value
     integer,            intent(out) :: ierr
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this%array))then
       value=>this%array
@@ -3395,7 +3396,7 @@ contains
     type(json_object_t), pointer     :: value
     integer,             intent(out) :: ierr
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this%object))then
       value=>this%object
@@ -3434,8 +3435,8 @@ contains
     type(json_t), intent(out) :: this
     !
     this%type=JSON_UNDEF_TYPE
-    nullify(this%array)
-    nullify(this%object)
+    this%array=>null()
+    this%object=>null()
     return
   end subroutine json_json_nullify
 
@@ -3475,11 +3476,11 @@ contains
     case(JSON_ARRAY_TYPE)
       call json_array_end(this%array)
       SAFE_DEALLOCATE_P(this%array)
-      nullify(this%array)
+      this%array=>null()
     case(JSON_OBJECT_TYPE)
       call json_object_end(this%object)
       SAFE_DEALLOCATE_P(this%object)
-      nullify(this%object)
+      this%object=>null()
     end select
     this%type=JSON_UNDEF_TYPE
     return
@@ -3540,7 +3541,7 @@ contains
     type(json_array_t), pointer     :: value
     integer,            intent(out) :: ierr
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this%array))then
       value=>this%array
@@ -3554,7 +3555,7 @@ contains
     type(json_object_t), pointer     :: value
     integer,             intent(out) :: ierr
     !
-    nullify(value)
+    value=>null()
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this%object))then
       value=>this%object
