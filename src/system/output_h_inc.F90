@@ -129,7 +129,6 @@
         write(fname, '(a,i1)') 'scalar_pot-', is
         scalar_pot = M_ZERO
         call laser_potential(hm%ep%lasers(is), gr%mesh, scalar_pot)
-        write(0, *) trim(fname)
         call dio_function_output(outp%how, dir, fname, gr%mesh, scalar_pot, units_out%energy, err, geo = geo)
       end do
       SAFE_DEALLOCATE_A(scalar_pot)
