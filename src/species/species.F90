@@ -23,6 +23,7 @@ module species_m
   use datasets_m
   use global_m
   use io_m
+  use json_m
   use loct_m
   use loct_math_m
   use logrid_m
@@ -41,39 +42,40 @@ module species_m
   implicit none
 
   private
-  public ::                    &
-    species_t,                 &
-    species_set_label,         &
-    species_set_index,         &
-    species_read,              &
-    species_init,              &
-    species_pot_init,          &
-    species_type,              &
-    species_label,             &
-    species_index,             &
-    species_has_nlcc,          &
-    species_has_density,       &
-    species_ps,                &
-    species_zval,              &
-    species_z,                 &
-    species_def_rsize,         &
-    species_def_h,             &
-    species_jradius,           &
-    species_jthick,            &
-    species_sigma,             &
-    species_omega,             &
-    species_weight,            &
-    species_rho_string,        &
-    species_filename,          &
-    species_niwfs,             &
-    species_iwf_ilm,           &
-    species_userdef_pot,       &
-    species_is_ps,             &
-    species_is_full,           &
-    species_is_local,          &
-    species_real_nl_projector, &
-    species_nl_projector,      &
-    species_get_iwf_radius,    &
+  public ::                        &
+    species_t,                     &
+    species_set_label,             &
+    species_set_index,             & 
+    species_read,                  &
+    species_init,                  &
+    species_pot_init,              &
+    species_create_data_object,    &
+    species_type,                  &
+    species_label,                 &
+    species_index,                 &
+    species_has_nlcc,              &
+    species_has_density,           &
+    species_ps,                    &
+    species_zval,                  &
+    species_z,                     &
+    species_def_rsize,             &
+    species_def_h,                 &
+    species_jradius,               &
+    species_jthick,                &
+    species_sigma,                 &
+    species_omega,                 &
+    species_weight,                &
+    species_rho_string,            &
+    species_filename,              &
+    species_niwfs,                 &
+    species_iwf_ilm,               &
+    species_userdef_pot,           &
+    species_is_ps,                 &
+    species_is_full,               &
+    species_is_local,              &
+    species_real_nl_projector,     &
+    species_nl_projector,          &
+    species_get_iwf_radius,        &
     species_end
 
 
@@ -552,6 +554,21 @@ contains
   end subroutine species_pot_init
   ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
+  subroutine species_create_data_object(this, json)
+    type(species_t),     intent(in)  :: this
+    type(json_object_t), intent(out) :: json
+    !
+    PUSH_SUB(species_create_data_object)
+    call json_init(json)
+    call json_set(json, "label", trim(adjustl(this%label)))
+    call json_set(json, "z", this%z)
+    call json_set(json, "z_val", this%z_val)
+    call json_set(json, "def_rsize", this%def_rsize)
+    POP_SUB(species_create_data_object)
+    return
+  end subroutine species_create_data_object
+  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   integer pure function species_type(spec)

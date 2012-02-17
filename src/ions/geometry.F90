@@ -25,6 +25,7 @@ module geometry_m
   use distributed_m
   use global_m
   use io_m
+  use json_m
   use loct_m
   use loct_math_m
   use messages_m
@@ -53,6 +54,7 @@ module geometry_m
     geometry_init_species,           &
     geometry_partition,              &
     geometry_add_atom_classical,     &
+    geometry_create_data_object,     &
     geometry_copy,                   &
     geometry_end,                    &
     geometry_dipole,                 &
@@ -116,6 +118,33 @@ module geometry_m
   end type geometry_t
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine atom_create_data_object(this, json)
+    type(atom_t),        intent(in)  :: this
+    type(json_object_t), intent(out) :: json
+    !
+    PUSH_SUB(atom_create_data_object)
+    call json_init(json)
+    call json_set(json, "label", trim(adjustl(this%label)))
+    call json_set(json, "x", this%x)
+    POP_SUB(atom_create_data_object)
+    return
+  end subroutine atom_create_data_object
+
+  ! ---------------------------------------------------------
+  subroutine atom_classical_create_data_object(this, json)
+    type(atom_classical_t), intent(in)  :: this
+    type(json_object_t),    intent(out) :: json
+    !
+    PUSH_SUB(atom_classical_create_data_object)
+    call json_init(json)
+    call json_set(json, "label", trim(adjustl(this%label)))
+    call json_set(json, "x", this%x)
+    call json_set(json, "charge", this%charge)
+    POP_SUB(atom_classical_create_data_object)
+    return
+  end subroutine atom_classical_create_data_object
 
   ! ---------------------------------------------------------
   subroutine atom_classical_add(n_out, this_out, this_in)
@@ -512,6 +541,60 @@ contains
 
     POP_SUB(geometry_init_interaction)
   end subroutine geometry_init_interaction
+
+  ! ---------------------------------------------------------
+  subroutine geometry_create_data_object(this, json)
+    type(geometry_t),    intent(in)  :: this
+    type(json_object_t), intent(out) :: json
+    !
+    type(json_object_t), pointer :: spec, atom
+    type(json_array_t),  pointer :: species, pair, atoms
+    integer                      :: i, j
+    !
+    PUSH_SUB(geometry_create_data_object)
+    call json_init(json)
+    call json_set(json, "nspecies", this%nspecies)
+    call json_set(json, "natoms", this%natoms)
+    SAFE_ALLOCATE(species)
+    call json_init(species)
+    do i=1, this%nspecies
+      SAFE_ALLOCATE(pair)
+      call json_init(pair)
+      SAFE_ALLOCATE(spec)
+      call species_create_data_object(this%species(i), spec)
+      call json_append(pair, spec)
+      nullify(spec)
+      SAFE_ALLOCATE(atoms)
+      call json_init(atoms)
+      do j=1, this%natoms
+        if(trim(species_label(this%species(i)))==trim(this%atom(j)%label))then
+          SAFE_ALLOCATE(atom)
+          call atom_create_data_object(this%atom(j), atom)
+          call json_append(atoms, atom)
+          nullify(atom)
+        end if
+      end do
+      call json_append(pair, atoms)
+      nullify(atoms)
+      call json_append(species, pair)
+      nullify(pair)
+    end do
+    call json_set(json, "species", species)
+    nullify(species)
+    call json_set(json, "ncatoms", this%ncatoms)
+    SAFE_ALLOCATE(atoms)
+    call json_init(atoms)
+    do i=1, this%ncatoms
+      SAFE_ALLOCATE(atom)
+      call atom_classical_create_data_object(this%catom(i), atom)
+      call json_append(atoms, atom)
+      nullify(atom)
+    end do
+    call json_set(json, "catom", atoms)
+    nullify(atoms)
+    POP_SUB(geometry_init_from_data_object)
+    return
+  end subroutine geometry_create_data_object
 
   ! ---------------------------------------------------------
   subroutine geometry_partition(geo, mc)
