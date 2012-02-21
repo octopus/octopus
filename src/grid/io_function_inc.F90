@@ -1106,7 +1106,7 @@ contains
 
      
     call X(out_cf_netcdf)(filename, ierr, cf, cube, mesh%sb%dim,& 
-          units_from_atomic(units_out%length, mesh%spacing(1:mesh%sb%dim)), transpose = .false.)
+          units_from_atomic(units_out%length, mesh%spacing(1:mesh%sb%dim)), transpose = .true.)
 
     call cube_end(cube)
     call X(cube_function_free_RS)(cube, cf)

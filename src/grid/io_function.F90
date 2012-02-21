@@ -60,9 +60,14 @@ module io_function_m
     dio_function_output,          &
     zio_function_output,          &
     dio_function_out_text,        &
-    zio_function_out_text,        &
+    zio_function_out_text
+
+#if defined(HAVE_NETCDF)
+ public ::                        &
     dout_cf_netcdf,               &
     zout_cf_netcdf
+#endif
+
 
   integer, parameter, public ::   &
     C_OUTPUT_HOW_AXIS_X          =      1,    &
