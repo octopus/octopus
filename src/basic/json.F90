@@ -588,6 +588,16 @@ contains
     return
   end subroutine json_integer_end
 
+  elemental function json_integer_len(this) result(len)
+    type(json_integer_t), intent(in) :: this
+    !
+    integer :: len
+    !
+    len=floor(log10(real(abs(this%value),kind=wp)))+1
+    if(this%value<0)len=len+1
+    return
+  end function json_integer_len
+
   elemental function json_integer_equal(this_1, this_2) result(eqv)
     type(json_integer_t), intent(in) :: this_1
     type(json_integer_t), intent(in) :: this_2
@@ -617,10 +627,12 @@ contains
     type(json_integer_t), intent(in)    :: this
     type(json_string_t),  intent(inout) :: string
     !
-    character(len=range(this%value)+3) :: buff
+    character(len=json_integer_len(this)) :: buff
+    character(len=6)                      :: frmt
     !
     if(json_integer_isdef(this))then
-      write(unit=buff, fmt=*) this%value
+      write(unit=frmt, fmt="(a2,i3.3,a1)") "(i", len(buff), ")"
+      write(unit=buff, fmt=frmt) this%value
       call json_string_extend_char(string, trim(adjustl(buff)))
     end if
     return
@@ -630,10 +642,12 @@ contains
     type(json_integer_t), intent(in) :: this
     integer,    optional, intent(in) :: unit
     !
-    character(len=range(this%value)+3) :: buff
+    character(len=json_integer_len(this)) :: buff
+    character(len=6)                      :: frmt
     !
     if(json_integer_isdef(this))then
-      write(unit=buff, fmt=*) this%value
+      write(unit=frmt, fmt="(a2,i3.3,a1)") "(i", len(buff), ")"
+      write(unit=buff, fmt=frmt) this%value
       call json_write_string(trim(adjustl(buff)), unit)
     end if
     return
@@ -2452,6 +2466,7 @@ contains
       n=max(ceiling((log(need)-log(real(this%size,kind=wp)))/log(JSON_TABLE_GROWTH_FACTOR)),1)
       buff%size=ceiling((JSON_TABLE_GROWTH_FACTOR**n)*real(this%size,kind=wp))
       SAFE_ALLOCATE(buff%table(buff%size))
+      forall(i=1:buff%size)buff%table(i)%head=>null()
       do i = 1, this%size
         do
           node=>this%table(i)%head
