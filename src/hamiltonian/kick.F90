@@ -360,7 +360,7 @@ contains
     !% from <i>pol1</i> to <i>pol2</i>, then <tt>TDPolarizationWprime</tt> 
     !% should be set to the direction defined by <i>A</i>^{-1} <i>pol3</i>.  
     !% For more information see MJT Oliveira
-    !% <i>et al.</i>, <i>J. Nanoscience and Nanotechnology<i> <b>8</b>,
+    !% <i>et al.</i>, <i>J. Nanoscience and Nanotechnology</i> <b>8</b>,
     !% 3392 (2008).
     !%End
     if(parse_block(datasets_check('TDPolarizationWprime'), blk)==0) then
