@@ -381,7 +381,7 @@ contains
     !% When this variable is set, a non-dipole field is applied, and an output file
     !% <tt>ftchd</tt> is created (it contains the Fourier transform of the charge density
     !% at each time). The type of the applied external field can be set by
-    !% an optional last number. Possible options are <tt>qexp</tt> (default), </tt>qcos</tt>,
+    !% an optional last number. Possible options are <tt>qexp</tt> (default), <tt>qcos</tt>,
     !% <tt>qsin</tt>, or <tt>qcos+qsin</tt>.
     !%Option qexp 1
     !% External field is exp(<i>iq.r</i>).
