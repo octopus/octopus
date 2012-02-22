@@ -280,6 +280,8 @@ subroutine X(ionic_perturbation)(this, gr, geo, hm, ik, f_in, f_out, iatom, idir
 
   PUSH_SUB(X(ionic_perturbation))
 
+  ! Formula: grad(V_nl) psi = grad(V_nl psi) - V_nl (grad psi)
+
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   vloc(1:gr%mesh%np) = M_ZERO
   call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc)

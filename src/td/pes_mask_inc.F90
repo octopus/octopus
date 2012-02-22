@@ -354,10 +354,10 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !%Default -1
   !%Section Time-Dependent::PES
   !%Description
-  !% In calculation with <tt>PESMaskMode = fullmask_mode<\tt> and NFFT, spurious frequencies 
+  !% In calculation with <tt>PESMaskMode = fullmask_mode</tt> and NFFT, spurious frequencies 
   !% may lead to numerical instability of the algorithm. This option gives the possibility 
   !% to filter out the unwanted components by setting an energy cut-off. 
-  !% If <tt>PESMaskFilterCutOff = -1<\tt> no filter is applied.
+  !% If <tt>PESMaskFilterCutOff = -1</tt> no filter is applied.
   !%End
   call parse_float(datasets_check('PESMaskFilterCutOff'),&
        units_to_atomic(units_inp%energy, - M_ONE), pCutOff)
