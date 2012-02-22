@@ -593,8 +593,13 @@ contains
     !
     integer :: len
     !
-    len=floor(log10(real(abs(this%value),kind=wp)))+1
-    if(this%value<0)len=len+1
+    if(this%value>0)then
+      len=floor(log10(real(abs(this%value),kind=wp)))+1
+    elseif(this%value<0)then
+      len=floor(log10(real(abs(this%value),kind=wp)))+2
+    else
+      len=1
+    end if
     return
   end function json_integer_len
 
@@ -2304,7 +2309,7 @@ contains
   end subroutine json_member_string
 
   subroutine json_member_write(this, unit, level, separator, count)
-    type(json_member_t), intent(in)    :: this
+    type(json_member_t), intent(in) :: this
     integer,   optional, intent(in) :: unit
     integer,   optional, intent(in) :: level
     character, optional, intent(in) :: separator
