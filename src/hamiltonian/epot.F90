@@ -896,7 +896,7 @@ contains
             if(.not. in_box(jatom)) cycle
           end if
           spcj=>geo%atom(jatom)%spec
-          r=geo%atom(iatom)%x-geo%atom(jatom)%x
+          r=geo%atom(iatom)%x(1:sb%dim)-geo%atom(jatom)%x(1:sb%dim)
           rr=sqrt(sum(r**2))
           iindex=species_index(spci)
           jindex=species_index(spcj)
@@ -931,7 +931,7 @@ contains
           if(ep%ignore_external_ions) then
             if(.not. in_box(geo%natoms+jatom)) cycle
           end if
-          r=geo%atom(iatom)%x-geo%catom(jatom)%x
+          r=geo%atom(iatom)%x(1:sb%dim)-geo%catom(jatom)%x(1:sb%dim)
           rr=sqrt(sum(r**2))
           !INTERACTION_COULOMB
           zi=species_zval(geo%atom(iatom)%spec)
