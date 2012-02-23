@@ -785,7 +785,6 @@ contains
     POP_SUB(epot_generate_classical)
   end subroutine epot_generate_classical
 
-
   ! ---------------------------------------------------------
   subroutine epot_precalc_local_potential(ep, gr, geo)
     type(epot_t),     intent(inout) :: ep
@@ -817,20 +816,21 @@ contains
     POP_SUB(epot_precalc_local_potential)
   end subroutine epot_precalc_local_potential
 
-
   ! ---------------------------------------------------------
   subroutine ion_interaction_calculate(geo, sb, gr, ep, energy, force)
-    type(geometry_t),  target, intent(in)    :: geo
-    type(simul_box_t),         intent(in)    :: sb
-    type(epot_t),              intent(inout) :: ep
-    type(grid_t),              intent(in)    :: gr
-    FLOAT,                     intent(out)   :: energy
-    FLOAT,                     intent(out)   :: force(:, :) ! sb%dim, geo%natoms
-
-    type(species_t), pointer :: spec
-    FLOAT :: rr, dd, zi, zj, epsilon, sigma
-    integer :: iatom, jatom, iindex, jindex
+    type(geometry_t), target, intent(in)    :: geo
+    type(simul_box_t),        intent(in)    :: sb
+    type(epot_t),             intent(inout) :: ep
+    type(grid_t),             intent(in)    :: gr
+    FLOAT,                    intent(out)   :: energy
+    FLOAT,    dimension(:,:), intent(out)   :: force
+    !
     FLOAT, parameter :: alpha = CNST(1.1313708)
+    !
+    FLOAT, dimension(sb%dim) :: r, f
+    FLOAT :: rr, dd, zi, zj, epsilon, sigma
+    integer :: iatom, jatom, natom, iindex, jindex
+    type(species_t), pointer :: spci, spcj
     type(profile_t), save :: ion_ion_prof
     logical,  allocatable :: in_box(:)
 
@@ -842,19 +842,21 @@ contains
     ! for details about this routine.
 
     energy = M_ZERO
-    force(1:sb%dim, 1:geo%natoms) = M_ZERO
+    force(1:sb%dim,1:geo%natoms) = M_ZERO
 
     if(simul_box_is_periodic(sb)) then
+      ASSERT(geo%ncatoms==0)
       ! This depends on the area, but we should check if it is fully consistent.        
-      spec => geo%atom(1)%spec
-      if( species_type(spec).eq.SPEC_JELLI_SLAB ) then
-        energy = energy +M_PI *species_zval(spec)**2 /( M_FOUR *sb%lsize(1) *sb%lsize(2) ) &
-          & *( sb%lsize(3) - species_jthick(spec) /M_THREE ) 
+      spci => geo%atom(1)%spec
+      if( species_type(spci).eq.SPEC_JELLI_SLAB ) then
+        energy = energy +M_PI *species_zval(spci)**2 /( M_FOUR *sb%lsize(1) *sb%lsize(2) ) &
+          & *( sb%lsize(3) - species_jthick(spci) /M_THREE ) 
       else
         call ion_interaction_periodic(geo, sb, energy, force)
       end if
 
     else if(simul_box_complex_boundaries(sb)) then
+      ASSERT(geo%ncatoms==0)
       ! only interaction inside the cell
       write(68,'(a)') "Calling SETE interaction"
       write(6,'(a)') "Calling SETE interaction"
@@ -863,85 +865,90 @@ contains
       call ion_interaction_sete(gr, sb, geo, ep) 
       write(*,*) "energy, ep%eii", energy, ep%eii
     else
-
+      natom=geo%natoms+geo%ncatoms
       if(ep%ignore_external_ions) then
-        SAFE_ALLOCATE(in_box(1:geo%natoms))
+        SAFE_ALLOCATE(in_box(natom))
         do iatom = 1, geo%natoms
           in_box(iatom) = simul_box_in_box(sb, geo, geo%atom(iatom)%x)
         end do
+        do iatom = 1, geo%ncatoms
+          in_box(geo%natoms+iatom) = simul_box_in_box(sb, geo, geo%catom(iatom)%x)
+        end do
       end if
-
       ! only interaction inside the cell
       do iatom = 1, geo%natoms
-        spec => geo%atom(iatom)%spec
-        zi = species_zval(geo%atom(iatom)%spec)
-
         if(ep%ignore_external_ions) then
           if(.not. in_box(iatom)) cycle
         end if
-
-        if(species_type(spec) .eq. SPEC_JELLI) then
-          energy = energy + (M_THREE / M_FIVE) * species_zval(spec)**2 / species_jradius(spec)
+        spci=>geo%atom(iatom)%spec
+        zi=species_zval(spci)
+        select case(species_type(spci))
+        case(SPEC_JELLI)
+          energy=energy+(M_THREE/M_FIVE)*zi**2/species_jradius(spci)
           ! The part depending on the simulation sphere is neglected
-        end if
-
-        if(species_type(spec) .eq. SPEC_JELLI_SLAB) then
-          energy = energy -M_PI *species_zval(spec)**2 /( M_FOUR *sb%lsize(1) *sb%lsize(2) ) &
-            & *species_jthick(spec) /M_THREE
+        case(SPEC_JELLI_SLAB)
+          energy=energy-M_PI*zi**2/(M_FOUR*sb%lsize(1)*sb%lsize(2)) &
+            *species_jthick(spci)/M_THREE
           ! The part depending on the simulation box transverse dimension is neglected
-        end if
-
-        iindex = species_index(geo%atom(iatom)%spec)
-
-        do jatom = 1, geo%natoms
-
-          if(iatom == jatom) cycle
-
+        end select
+        do jatom = iatom+1, geo%natoms
           if(ep%ignore_external_ions) then
-            if(.not. in_box(iatom)) cycle
+            if(.not. in_box(jatom)) cycle
           end if
-          
-          jindex = species_index(geo%atom(jatom)%spec)
-          rr = sqrt(sum((geo%atom(iatom)%x - geo%atom(jatom)%x)**2))
-
-          select case(geo%ionic_interaction_type(iindex, jindex))
+          spcj=>geo%atom(jatom)%spec
+          r=geo%atom(iatom)%x-geo%atom(jatom)%x
+          rr=sqrt(sum(r**2))
+          iindex=species_index(spci)
+          jindex=species_index(spcj)
+          select case(geo%ionic_interaction_type(iindex,jindex))
           case(INTERACTION_COULOMB)
-            zj = species_zval(geo%atom(jatom)%spec)
-            
+            zj=species_zval(spcj)
             !the force
-            dd = zi * zj / rr**3
-            force(1:sb%dim, iatom) = force(1:sb%dim, iatom) + &
-              dd * (geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
-            
+            dd=zi*zj/rr
+            f=(dd/rr**2)*r
+            force(1:sb%dim,iatom)=force(1:sb%dim,iatom)+f
+            force(1:sb%dim,jatom)=force(1:sb%dim,jatom)-f
             !energy
-            if(jatom > iatom) cycle
-            energy = energy + zi * zj / rr
+            energy=energy+dd
           case(INTERACTION_LJ)
-            epsilon = geo%ionic_interaction_parameter(LJ_EPSILON, iindex, jindex)
-            sigma   = geo%ionic_interaction_parameter(LJ_SIGMA, iindex, jindex)
-            
-            dd = sigma/rr
-
+            epsilon=geo%ionic_interaction_parameter(LJ_EPSILON, iindex, jindex)
+            sigma  =geo%ionic_interaction_parameter(LJ_SIGMA,   iindex, jindex)
+            dd = (sigma/rr)**6
             !the force
-            force(1:sb%dim, iatom) = force(1:sb%dim, iatom) &
-              + CNST(24.0)*epsilon*((CNST(2.0)*dd**12 - dd**6)/rr**2)*&
-              (geo%atom(iatom)%x(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))
-            
+            f=(CNST(24.0)*epsilon*(dd/rr**2)*(CNST(2.0)*dd-M_ONE))*r
+            force(1:sb%dim,iatom)=force(1:sb%dim,iatom)+f
+            force(1:sb%dim,jatom)=force(1:sb%dim,jatom)-f
             !energy
-            if(jatom > iatom) cycle
-            energy = energy + CNST(4.0)*epsilon*(dd**12 - dd**6)
+            energy=energy+CNST(4.0)*epsilon*dd*(dd-M_ONE)
           end select
         end do !jatom
       end do !iatom
-      
+      do iatom = 1, geo%natoms
+        if(ep%ignore_external_ions) then
+          if(.not. in_box(iatom)) cycle
+        end if
+        do jatom = 1, geo%ncatoms
+          if(ep%ignore_external_ions) then
+            if(.not. in_box(geo%natoms+jatom)) cycle
+          end if
+          r=geo%atom(iatom)%x-geo%catom(jatom)%x
+          rr=sqrt(sum(r**2))
+          !INTERACTION_COULOMB
+          zi=species_zval(geo%atom(iatom)%spec)
+          zj=geo%catom(jatom)%charge
+          !the force
+          dd=zi*zj/rr
+          force(1:sb%dim,iatom)=force(1:sb%dim,iatom)+(dd/rr*2)*r
+          !energy
+          energy=energy+dd
+        end do !jatom
+      end do !iatom
     end if
-
     SAFE_DEALLOCATE_A(in_box)
-
     call profiling_out(ion_ion_prof)
     POP_SUB(ion_interaction_calculate)
+    return
   end subroutine ion_interaction_calculate
-
 
   ! ---------------------------------------------------------
   subroutine ion_interaction_periodic(geo, sb, energy, force)
