@@ -115,13 +115,30 @@ module propagator_m
 
 contains
 
+  ! ---------------------------------------------------------
+  subroutine propagator_nullify(this)
+    type(propagator_t), intent(out) :: this
+    !
+    PUSH_SUB(propagator_nullify)
+    !this%method
+    !call exponential_nullify(this%te)
+    this%v_old=>null()
+    this%vmagnus=>null() 
+    !call ob_terms_nullify(this%ob)
+    !this%scf_propagation_steps 
+    !this%first
+    POP_SUB(propagator_nullify)
+    return
+  end subroutine propagator_nullify
+  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   subroutine propagator_copy(tro, tri)
     type(propagator_t), intent(inout) :: tro
     type(propagator_t), intent(in)    :: tri
     PUSH_SUB(tr_rti_copy)
-
+    
+    call propagator_nullify(tro)
     tro%method = tri%method
 
     select case(tro%method)
@@ -157,6 +174,8 @@ contains
     integer :: default_propagator
 
     PUSH_SUB(propagator_init)
+    
+    call propagator_nullify(tr)
 
     !%Variable TDPropagator
     !%Type integer
