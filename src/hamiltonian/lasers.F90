@@ -77,8 +77,8 @@ module lasers_m
     type(tdf_t) :: phi                    !< The phase
     FLOAT :: omega        = M_ZERO        !< The main, "carrier", frequency.
 
-    FLOAT, pointer :: v(:)    => NULL()
-    FLOAT, pointer :: a(:, :) => NULL()
+    FLOAT, pointer :: v(:)    !> PGI bug => NULL()
+    FLOAT, pointer :: a(:, :) !> PGI bug => NULL()
   end type laser_t
 
 contains
@@ -243,6 +243,18 @@ contains
   end subroutine laser_to_numerical
   ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
+  elemental subroutine laser_nullify(laser)
+    type(laser_t), intent(out) :: laser
+    !
+    laser%field = E_FIELD_NONE
+    laser%pol   = M_z0
+    laser%omega = M_ZERO
+    laser%v     =>NULL()
+    laser%a     =>NULL()
+    return
+  end subroutine laser_nullify
+  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   subroutine laser_init(no_l, lasers, mesh)
@@ -353,6 +365,7 @@ contains
     if(parse_block(datasets_check('TDExternalFields'), blk) == 0) then
       no_l = parse_block_n(blk)
       SAFE_ALLOCATE(lasers(1:no_l))
+      call laser_nullify(lasers)
 
       do il = 1, no_l
 
