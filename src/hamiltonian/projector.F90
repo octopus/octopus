@@ -103,10 +103,10 @@ module projector_m
 
     !> Only one of the following structures should be used at once
     !! The one to be used depends on the value of type variable
-    type(hgh_projector_t), pointer :: hgh_p(:, :) => null()
-    type(kb_projector_t),  pointer :: kb_p(:, :)  => null()
-    type(rkb_projector_t), pointer :: rkb_p(:, :) => null()
-    CMPLX,                 pointer :: phase(:, :) => null()
+    type(hgh_projector_t), pointer :: hgh_p(:, :) !> PGI bug => null()
+    type(kb_projector_t),  pointer :: kb_p(:, :)  !> PGI bug => null()
+    type(rkb_projector_t), pointer :: rkb_p(:, :) !> PGI bug => null()
+    CMPLX,                 pointer :: phase(:, :) !> PGI bug => null()
   end type projector_t
 
 contains
@@ -117,6 +117,9 @@ contains
     PUSH_SUB(projector_null)
 
     p%type = M_NONE
+    nullify(p%hgh_p)
+    nullify(p%kb_p)
+    nullify(p%rkb_p)
     nullify(p%phase)
     call submesh_null(p%sphere)
 
@@ -151,6 +154,7 @@ contains
     
     PUSH_SUB(projector_init)
 
+    call projector_null(p)
     ps => species_ps(atm%spec)
 
     nullify(p%phase)
