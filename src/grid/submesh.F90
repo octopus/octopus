@@ -62,8 +62,8 @@ module submesh_m
     FLOAT                 :: radius
     integer               :: np = -1        !< number of points inside the submesh
     integer               :: np_part        !< number of points inside the submesh including ghost points
-    integer,      pointer :: map(:) => null() !< index in the mesh of the points inside the sphere
-    FLOAT,        pointer :: x(:,:)  => null()
+    integer,      pointer :: map(:)  !> PGI Bug fix => null() !< index in the mesh of the points inside the sphere
+    FLOAT,        pointer :: x(:,:)  !> PGI Bug fix => null()
     type(mesh_t), pointer :: mesh
     logical               :: has_points
   end type submesh_t
