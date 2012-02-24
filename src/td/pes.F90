@@ -104,26 +104,27 @@ module PES_m
   type PES_mask_t
 
 
-    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
+    CMPLX, pointer :: k(:,:,:,:,:,:) !> PGI bug => NULL() !< The states in momentum space
 
     ! Some mesh-related stuff
     integer          :: ll(MAX_DIM)            !< the size of the square mesh
     integer          :: np                     !< number of mesh points associated with the mesh
                                                !< (either mesh%np or mesh%np_global)
     FLOAT            :: spacing(MAX_DIM)       !< the spacing
-    integer, pointer :: Lxyz_inv(:,:,:)  => NULL()    !< return a point on the main mesh from xyz on the mask square mesh
+    integer, pointer :: Lxyz_inv(:,:,:)  !> PGI bug => NULL()
+    !Lxyz_inv < return a point on the main mesh from xyz on the mask square mesh
     type(mesh_t), pointer  :: mesh             !< a pointer to the mesh
     type(cube_t)     :: cube                   !< the cubic mesh
 
-    FLOAT, pointer :: ext_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
+    FLOAT, pointer :: ext_pot(:,:) !> PGI bug => NULL()   !< external time-dependent potential i.e. the lasers
 
-    FLOAT, pointer :: M(:,:,:)  => NULL()      !< the mask on a cubic mesh containing the simulation box
-    FLOAT, pointer :: Mk(:,:,:)  => NULL()     !< the momentum space filter
+    FLOAT, pointer :: M(:,:,:)  !> PGI bug => NULL()      !< the mask on a cubic mesh containing the simulation box
+    FLOAT, pointer :: Mk(:,:,:)  !> PGI bug => NULL()     !< the momentum space filter
     type(cube_function_t) :: cM                !< the mask cube function
-    FLOAT, pointer :: mask_R(:)  => NULL()     !< the mask inner (component 1) and outer (component 2) radius
+    FLOAT, pointer :: mask_R(:)  !> PGI bug => NULL()     !< the mask inner (component 1) and outer (component 2) radius
     integer        :: shape                    !< which mask function?
 
-    FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to an cube index
+    FLOAT, pointer :: Lk(:) !> PGI bug => NULL()          !< associate a k value to an cube index
                                                !< we implicitly assume k to be the same for all directions
 
     integer          :: resample_lev           !< resampling level
@@ -173,6 +174,77 @@ module PES_m
 contains
 
   ! ---------------------------------------------------------
+  !elemental (PUSH/POP)_SUB are not PURE.
+  subroutine PES_rc_nullify(this)
+    type(pes_rc_t), intent(out) :: this
+    !
+    PUSH_SUB(PES_rc_nullify)
+    !this%npoints  = 0
+    this%points    =>null()
+    this%filenames =>null()
+    this%wf        =>null()
+    this%rankmin   =>null()
+    POP_SUB(PES_rc_nullify)
+    return
+  end subroutine PES_rc_nullify
+
+  ! ---------------------------------------------------------
+  !elemental (PUSH/POP)_SUB are not PURE.
+  subroutine PES_mask_nullify(this)
+    type(pes_mask_t), intent(out) :: this
+    !
+    PUSH_SUB(PES_mask_nullify)
+    this%k=>null()
+    !this%ll=0
+    !this%np=0
+    !this%spacing=M_ZERO
+    this%Lxyz_inv=>null()
+    this%mesh=>null()
+    !call cube_nullify(this%cube)
+    this%ext_pot=>null()
+    this%M=>null()
+    this%Mk=>null()
+    !call cube_function_nullify(this%cM)
+    this%mask_R=>null()
+    !this%shape=0
+    this%Lk=>null()
+    !this%resample_lev
+    !this%enlarge
+    !thisenlarge_nfft
+    !this%llr
+    !this%energyMax 
+    !this%energyStep 
+    !this%sw_evolve
+    !this%back_action
+    !this%add_psia
+    !this%interpolate_out
+    !this%filter_k
+    !this%mode
+    !this%pw_map_how
+    !call fft_nullify(this%fft)
+#if defined(HAVE_NFFT) 
+    !call nfft_nullify(this%nfft)
+#endif
+    !call tdpsf_nullify(this%psf)
+    POP_SUB(PES_mask_nullify)
+    return
+  end subroutine PES_mask_nullify
+
+  ! ---------------------------------------------------------
+  !elemental (PUSH/POP)_SUB are not PURE.
+  subroutine PES_nullify(this)
+    type(pes_t), intent(out) :: this
+    !
+    PUSH_SUB(PES_nullify)
+    !this%calc_rc=.false.
+    call PES_rc_nullify(this%rc)
+    !this%calc_mask=.false.
+    call PES_mask_nullify(this%mask)
+    POP_SUB(PES_nullify)
+    return
+  end subroutine PES_nullify
+
+  ! ---------------------------------------------------------
   subroutine PES_init(pes, mesh, sb, st, save_iter,hm, max_iter,dt,sys)
     type(pes_t),         intent(out)   :: pes
     type(mesh_t),        intent(inout) :: mesh
@@ -188,6 +260,8 @@ contains
     integer :: photoelectron_flags
 
     PUSH_SUB(PES_init)
+    
+    call PES_nullify(pes)
 
     call messages_obsolete_variable('CalcPES_rc', 'PhotoElectronSpectrum')
     call messages_obsolete_variable('CalcPES_mask', 'PhotoElectronSpectrum')
