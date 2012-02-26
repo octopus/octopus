@@ -118,8 +118,8 @@ module controlfunction_m
     FLOAT   :: w0                  = M_ZERO
     integer :: mode                = controlfunction_mode_none
     integer :: no_controlfunctions = 0
-    FLOAT,       pointer :: alpha(:)      => NULL()
-    type(tdf_t), pointer :: td_penalty(:) => NULL()
+    FLOAT,       pointer :: alpha(:)      !> PGI bug => NULL()
+    type(tdf_t), pointer :: td_penalty(:) !> PGI bug => NULL()
 
 
     type(tdf_t)    :: f ! This is the envelope of the laser field, only used in the phase-only
@@ -140,26 +140,44 @@ module controlfunction_m
     integer :: dof           = 0                 ! This is the number of degrees of freedom, or number of parameters, used to represent
                                                  ! a control function (this may be different -- smaller -- than "dim").
     FLOAT   :: intphi        = M_ZERO
-    type(tdf_t), pointer :: f(:) => NULL()
-    FLOAT, pointer :: alpha(:)   => NULL()
+    type(tdf_t), pointer :: f(:) !> PGI bug => NULL()
+    FLOAT, pointer :: alpha(:)   !> PGI bug => NULL()
 
     integer :: current_representation = 0
 
     FLOAT   :: w0       = M_ZERO
-    FLOAT, pointer :: u(:, :) => NULL()
-    FLOAT, pointer :: utransf(:, :)  => NULL()
-    FLOAT, pointer :: utransfi(:, :) => NULL()
+    FLOAT, pointer :: u(:, :) !> PGI bug => NULL()
+    FLOAT, pointer :: utransf(:, :)  !> PGI bug => NULL()
+    FLOAT, pointer :: utransfi(:, :) !> PGI bug => NULL()
 
-    FLOAT, pointer :: theta(:) => NULL()
+    FLOAT, pointer :: theta(:) !> PGI bug => NULL()
   end type controlfunction_t
   
   ! the next variable has to be a pointer to avoid a bug in the IBM compiler
-  type(controlfunction_common_t), pointer :: cf_common => NULL()
+  ! and it can not be properly initialized thanks to a bug in the PGI compiler
+  logical                                 :: cf_common_initialized=.false.
+  type(controlfunction_common_t), pointer :: cf_common !> PGI bug => NULL()
   type(mix_t) :: controlfunction_mix
 
 contains
 
 
+
+  elemental subroutine controlfunction_common_nullify(this)
+    type(controlfunction_common_t), intent(out) :: this
+    !
+    this%representation      = 0
+    this%omegamax            = M_ZERO
+    this%targetfluence       = M_ZERO
+    this%fix_initial_fluence = .false.
+    this%w0                  = M_ZERO
+    this%mode                = controlfunction_mode_none
+    this%no_controlfunctions = 0
+    this%alpha               =>NULL()
+    this%td_penalty          =>NULL()
+    !call tdf_nullify(this%f)
+    return
+  end subroutine controlfunction_common_nullify
 
   !> Initializes the module, should be the first subroutine to be called (the last one
   !! should be controlfunction_mod_close, when the module is no longer to be used.
@@ -184,8 +202,14 @@ contains
 
     PUSH_SUB(controlfunction_mod_init)
 
+    if(.not.cf_common_initialized)then
+      cf_common => NULL()
+      cf_common_initialized=.true.
+    end if
+
     if(.not. associated(cf_common)) then
       SAFE_ALLOCATE(cf_common)
+      call controlfunction_common_nullify(cf_common)
     end if
 
     call messages_print_stress(stdout, "OCT: Info about control functions")
@@ -541,8 +565,24 @@ contains
   end subroutine controlfunction_mod_init
   ! ---------------------------------------------------------
 
-
-
+  elemental subroutine controlfunction_nullify(this)
+    type(controlfunction_t), intent(out) :: this
+    !
+    this%no_controlfunctions    = 0
+    this%dim                    = 0
+    this%dof                    = 0
+    this%intphi                 = M_ZERO
+    this%f                      =>NULL()
+    this%alpha                  =>NULL()
+    this%current_representation = 0
+    this%w0                     = M_ZERO
+    this%u                      =>NULL()
+    this%utransf                =>NULL()
+    this%utransfi               =>NULL()
+    this%theta                  =>NULL()
+    return
+  end subroutine controlfunction_nullify
+  
   !> Before using an controlfunction_t variable, it needs
   !! to be initialized, either by calling controlfunction_init, or
   !! by copying another initialized variable through
@@ -555,6 +595,8 @@ contains
     integer :: ipar
 
     PUSH_SUB(controlfunction_init)
+
+    call controlfunction_nullify(cp)
 
     cp%w0                  = cf_common%w0
     cp%no_controlfunctions = cf_common%no_controlfunctions
@@ -1340,6 +1382,8 @@ contains
     integer :: ipar
 
     PUSH_SUB(controlfunction_copy)
+
+    call controlfunction_nullify(cp_out)
 
     cp_out%no_controlfunctions = cp_in%no_controlfunctions
     cp_out%dim = cp_in%dim
