@@ -17,8 +17,8 @@ match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 30, 21) ;  2.812382682155
 # ATI with nfft
 Processors : 2
 Input      : 04-nfft.02-ati.inp
-match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 30, 21) ;  6.659998738865E-01
-match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 49, 21) ;  4.535793387653E-01
-match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 62, 21) ;  1.831123898194E-01
+match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 30, 21) ;  6.648502538669E-01
+match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 49, 21) ;  4.532980004843E-01
+match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 62, 21) ;  1.826169863608E-01
 
 

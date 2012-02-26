@@ -96,166 +96,6 @@ module nfft_m
   logical      :: nfft_optimize
   integer      :: nfft_prepare_plan
 
-
-interface
-! Direct access to NFFT C-functions
-  subroutine nfft_init_1d(plan, N, M) &
-     bind(C,name='nfft_init_1d')
-      import 
-      type(c_ptr),          intent(inout)   :: plan
-      integer(c_int), value, intent (in)    :: N
-      integer(c_int), value, intent (in)    :: M
-!      integer(c_int),  intent (in)    :: N
-!      integer(c_int),  intent (in)    :: M
-  end subroutine nfft_init_1d
-
-  subroutine nfft_init_2d(plan, N1, N2, M) &
-     bind(C,name='nfft_init_2d')
-      import 
-      type(c_ptr),          intent(inout)   :: plan
-      integer(c_int), value, intent (in)    :: N1
-      integer(c_int), value, intent (in)    :: N2
-      integer(c_int), value, intent (in)    :: M
-  end subroutine nfft_init_2d
-
-  subroutine nfft_init_3d(plan, N1, N2,N3, M) &
-     bind(C,name='nfft_init_3d')
-      import 
-      type(c_ptr),          intent(inout)   :: plan
-      integer(c_int), value, intent (in)    :: N1
-      integer(c_int), value, intent (in)    :: N2
-      integer(c_int), value, intent (in)    :: N3
-      integer(c_int), value, intent (in)    :: M
-  end subroutine nfft_init_3d
-
-!void nfft_init_guru(nfft_plan *ths, int d, int *N, int M_total, int *n,
-!                        int m, unsigned nfft_flags, unsigned fftw_flags)
-
-  subroutine nfft_init_guru(plan, d, N, M_total, nn, mm, nfft_flags, fftw_flags) &
-     bind(C,name='nfft_init_guru')
-      import 
-      type(c_ptr),          intent(inout)   :: plan
-      integer(c_int), value, intent (in)    :: d
-      integer(c_int),        intent (in)    :: N(*)
-      integer(c_int), value, intent (in)    :: M_total
-      integer(c_int),        intent (in)    :: nn(*)
-      integer(c_int), value, intent (in)    :: mm
-      integer(c_int), value, intent (in)    :: nfft_flags
-      integer(c_int), value, intent (in)    :: fftw_flags
-  end subroutine nfft_init_guru
-
-  subroutine nfft_check(plan) &
-     bind(C,name='nfft_check')
-      import 
-      type(c_ptr),          intent(inout)   :: plan
-  end subroutine nfft_check
-
-  subroutine nfft_finalize(plan) &
-    bind(c,name='nfft_finalize')
-      import
-      type(c_ptr),   intent(inout) :: plan
-  end subroutine nfft_finalize
-
-  subroutine nfft_adjoint(plan) &
-    bind(c,name='nfft_adjoint')
-      import
-      type(c_ptr),   intent(in) :: plan
-  end subroutine nfft_adjoint
-
-  subroutine nfft_trafo(plan) &
-    bind(c,name='nfft_trafo')
-      import
-      type(c_ptr),   intent(in) :: plan
-  end subroutine nfft_trafo
-
-! OCTOPUS NFFT C-wrappers and helper functions
-
-  subroutine oct_nfft_precompute_one_psi_1d(plan, M, X1) &
-    bind(c,name='oct_nfft_precompute_one_psi_1d')
-      import
-      type(c_ptr),            intent(inout) :: plan
-      integer(c_int), value,  intent(in)    :: M
-      real(c_double),         intent(in)    :: X1(*)
-  end subroutine oct_nfft_precompute_one_psi_1d
-
-  subroutine oct_nfft_precompute_one_psi_2d(plan, M, X1, X2) &
-    bind(c,name='oct_nfft_precompute_one_psi_2d')
-      import
-      type(c_ptr),            intent(inout) :: plan
-      integer(c_int), value,  intent(in)    :: M
-      real(c_double),         intent(in)    :: X1(*)
-      real(c_double),         intent(in)    :: X2(*)
-  end subroutine oct_nfft_precompute_one_psi_2d
-
-  subroutine oct_nfft_precompute_one_psi_3d(plan, M, X1, X2, X3) &
-    bind(c,name='oct_nfft_precompute_one_psi_3d')
-      import
-      type(c_ptr),            intent(inout) :: plan
-      integer(c_int), value,  intent(in)    :: M
-      real(c_double),         intent(in)    :: X1(*)
-      real(c_double),         intent(in)    :: X2(*)
-      real(c_double),         intent(in)    :: X3(*)
-  end subroutine oct_nfft_precompute_one_psi_3d
-
-  subroutine oct_znfft_forward(plan, M, in, out) &
-    bind(c,name='oct_znfft_forward')
-      import
-      type(c_ptr),                intent(in)  :: plan
-      integer(c_int), value,      intent(in)  :: M
-      complex(c_double_complex),  intent(in)  :: in(*)
-      complex(c_double_complex),  intent(out) :: out(*)
-  end subroutine oct_znfft_forward
-
-  subroutine oct_set_f(plan, M, dim, val, ix, iy, iz) &
-    bind(c,name='oct_set_f')
-      import
-      type(c_ptr),                      intent(in) :: plan
-      integer(c_int), value,            intent(in) :: M
-      integer(c_int), value,            intent(in) :: dim
-      complex(c_double_complex), value, intent(in) :: val
-      integer(c_int), value,            intent(in) :: ix
-      integer(c_int), value,            intent(in) :: iy
-      integer(c_int), value,            intent(in) :: iz
-  end subroutine oct_set_f
-
-  subroutine oct_get_f(plan, M, dim, val, ix, iy, iz) &
-    bind(c,name='oct_get_f')
-      import
-      type(c_ptr),               intent(in) :: plan
-      integer(c_int), value,     intent(in) :: M
-      integer(c_int), value,     intent(in) :: dim
-      complex(c_double_complex), intent(in) :: val
-      integer(c_int), value,     intent(in) :: ix
-      integer(c_int), value,     intent(in) :: iy
-      integer(c_int), value,     intent(in) :: iz
-  end subroutine oct_get_f
-
-  subroutine oct_set_f_hat(plan, M, dim, val, ix, iy, iz) &
-    bind(c,name='oct_set_f_hat')
-      import
-      type(c_ptr),                      intent(in) :: plan
-      integer(c_int), value,            intent(in) :: M
-      integer(c_int), value,            intent(in) :: dim
-      complex(c_double_complex), value, intent(in) :: val
-      integer(c_int), value,            intent(in) :: ix
-      integer(c_int), value,            intent(in) :: iy
-      integer(c_int), value,            intent(in) :: iz
-  end subroutine oct_set_f_hat
-
-  subroutine oct_get_f_hat(plan, M, dim, val, ix, iy, iz) &
-    bind(c,name='oct_get_f_hat')
-      import
-      type(c_ptr),               intent(in) :: plan
-      integer(c_int), value,     intent(in) :: M
-      integer(c_int), value,     intent(in) :: dim
-      complex(c_double_complex), intent(in) :: val
-      integer(c_int), value,     intent(in) :: ix
-      integer(c_int), value,     intent(in) :: iy
-      integer(c_int), value,     intent(in) :: iz
-  end subroutine oct_get_f_hat
-
-end interface
-
 contains
 
   ! ---------------------------------------------------------
@@ -381,18 +221,18 @@ contains
 
       nfft_flags = nfft_flags + nfft%precompute
 
-      call  nfft_init_guru(nfft%plan, nfft_dim, nn, mm**nfft_dim, my_nn, nfft%mm, &
+      call  oct_nfft_init_guru(nfft%plan, nfft_dim, nn, mm**nfft_dim, my_nn, nfft%mm, &
                     nfft_flags, FFTW_MEASURE + FFTW_DESTROY_INPUT)
 
     else
 
       select case(nfft_dim)
       case(3)
-        call nfft_init_3d(nfft%plan, nn(1), nn(2),nn(3), mm*mm*mm)
+        call oct_nfft_init_3d(nfft%plan, nn(1), nn(2),nn(3), mm*mm*mm)
       case(2)
-        call nfft_init_2d(nfft%plan, nn(1), nn(2), mm*mm)
+        call oct_nfft_init_2d(nfft%plan, nn(1), nn(2), mm*mm)
       case(1)
-        call  nfft_init_1d(nfft%plan,nn(1),mm)
+        call oct_nfft_init_1d(nfft%plan,nn(1),mm)
       end select
 
     end if
@@ -455,7 +295,7 @@ contains
 
     PUSH_SUB(nfft_end)
 
-    call nfft_finalize(nfft%plan);
+    call oct_nfft_finalize(nfft%plan);
 
     message(1) = "Info: NFFT deallocated."
     call messages_info(1)
@@ -513,7 +353,7 @@ contains
     end select
 
     ! check the plan
-    call nfft_check(nfft%plan)
+    call oct_nfft_check(nfft%plan)
 
 
     write(message(1), '(a)') "Info: NFFT plan precomputed."
@@ -558,7 +398,9 @@ contains
       end do
     end do
 
-    call nfft_trafo(nfft%plan)
+
+    call oct_nfft_trafo(nfft%plan)
+
 
     do ix = 1, MM(1)
       do iy = 1, MM(2)
@@ -609,7 +451,7 @@ contains
       end do
     end do
 
-    call nfft_adjoint(nfft%plan)
+    call oct_nfft_adjoint(nfft%plan)
 
     do ix = 1,nfft%N(1)
       do iy = 1, nfft%N(2)
