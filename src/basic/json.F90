@@ -1269,7 +1269,7 @@ contains
     return
   end subroutine json_array_init_string
 
-  subroutine json_array_end(this)
+  recursive subroutine json_array_end(this)
     type(json_array_t), intent(inout) :: this
     !
     type(json_value_node_t), pointer :: node
@@ -1299,7 +1299,7 @@ contains
     return
   end function json_array_len
 
-  function json_array_equal(this_1, this_2) result(eqv)
+  recursive function json_array_equal(this_1, this_2) result(eqv)
     type(json_array_t), intent(in) :: this_1
     type(json_array_t), intent(in) :: this_2
     !
@@ -1329,7 +1329,7 @@ contains
     return
   end function json_array_equal
 
-  subroutine json_array_string(this, string)
+  recursive subroutine json_array_string(this, string)
     type(json_array_t),  intent(in)    :: this
     type(json_string_t), intent(inout) :: string
     !
@@ -1354,7 +1354,7 @@ contains
     return
   end subroutine json_array_string
 
-  subroutine json_array_write(this, unit, level, separator, count)
+  recursive subroutine json_array_write(this, unit, level, separator, count)
     type(json_array_t), intent(in) :: this
     integer,   optional, intent(in) :: unit
     integer,   optional, intent(in) :: level
@@ -2256,7 +2256,7 @@ contains
     return
   end subroutine json_member_init
 
-  subroutine json_member_end(this)
+  recursive subroutine json_member_end(this)
     type(json_member_t), intent(inout) :: this
     !
     if(associated(this%ident))then
@@ -2273,30 +2273,21 @@ contains
     return
   end subroutine json_member_end
 
-  function json_member_equal(this_1, this_2) result(eqv)
+  recursive function json_member_equal(this_1, this_2) result(eqv)
     type(json_member_t), intent(in) :: this_1
     type(json_member_t), intent(in) :: this_2
     !
     logical :: eqv
-    integer :: i
     !
     eqv=.false.
     if(json_member_isdef(this_1).and.json_member_isdef(this_2))then
       eqv=json_string_equal(this_1%ident, this_2%ident)
-      do i = 1, this_1%ident%len
-        write(unit=*,fmt="(a1)",advance="no") this_1%ident%value(i)
-      end do
-      write(unit=*,fmt=*)
-      do i = 1, this_2%ident%len
-        write(unit=*,fmt="(a1)",advance="no") this_2%ident%value(i)
-      end do
-      write(unit=*,fmt=*)
       eqv=eqv.and.json_value_equal(this_1%value, this_2%value)
     end if
     return
   end function json_member_equal
 
-  subroutine json_member_string(this, string)
+  recursive subroutine json_member_string(this, string)
     type(json_member_t), intent(in)    :: this
     type(json_string_t), intent(inout) :: string
     !
@@ -2308,7 +2299,7 @@ contains
     return
   end subroutine json_member_string
 
-  subroutine json_member_write(this, unit, level, separator, count)
+  recursive subroutine json_member_write(this, unit, level, separator, count)
     type(json_member_t), intent(in) :: this
     integer,   optional, intent(in) :: unit
     integer,   optional, intent(in) :: level
@@ -2430,7 +2421,7 @@ contains
     return
   end subroutine json_object_init
 
-  subroutine json_object_end(this)
+  recursive subroutine json_object_end(this)
     type(json_object_t), intent(inout) :: this
     !
     type(json_member_node_t), pointer :: node
@@ -2499,7 +2490,7 @@ contains
     return
   end function json_object_len
 
-  function json_object_equal(this_1, this_2) result(eqv)
+  recursive function json_object_equal(this_1, this_2) result(eqv)
     type(json_object_t), intent(in) :: this_1
     type(json_object_t), intent(in) :: this_2
     !
@@ -2552,7 +2543,7 @@ contains
     return
   end function json_object_hash
 
-  subroutine json_object_string(this, string)
+  recursive subroutine json_object_string(this, string)
     type(json_object_t), intent(in)    :: this
     type(json_string_t), intent(inout) :: string
     !
@@ -2575,7 +2566,7 @@ contains
     return
   end subroutine json_object_string
 
-  subroutine json_object_write(this, unit, level, separator, count)
+  recursive subroutine json_object_write(this, unit, level, separator, count)
     type(json_object_t), intent(in) :: this
     integer,   optional, intent(in) :: unit
     integer,   optional, intent(in) :: level
@@ -3240,7 +3231,7 @@ contains
     return
   end subroutine json_value_init_object
 
-  subroutine json_value_end(this)
+  recursive subroutine json_value_end(this)
     type(json_value_t), intent(inout) :: this
     !
     select case(this%type)
@@ -3277,7 +3268,7 @@ contains
     return
   end subroutine json_value_end
 
-  function json_value_equal(this_1, this_2) result(eqv)
+  recursive function json_value_equal(this_1, this_2) result(eqv)
     type(json_value_t), intent(in) :: this_1
     type(json_value_t), intent(in) :: this_2
     !
@@ -3307,7 +3298,7 @@ contains
     return
   end function json_value_equal
 
-  subroutine json_value_string(this, string)
+  recursive subroutine json_value_string(this, string)
     type(json_value_t),  intent(in)    :: this
     type(json_string_t), intent(inout) :: string
     !
@@ -3428,7 +3419,7 @@ contains
     return
   end subroutine json_value_get_object
 
-  subroutine json_value_write(this, unit, level, separator, count)
+  recursive subroutine json_value_write(this, unit, level, separator, count)
     type(json_value_t),  intent(in) :: this
     integer,   optional, intent(in) :: unit
     integer,   optional, intent(in) :: level
