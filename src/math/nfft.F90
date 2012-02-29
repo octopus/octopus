@@ -73,19 +73,21 @@ module nfft_m
 
 
   type nfft_t
-    integer           :: slot       ! in which slot do we have this fft
+    integer           :: slot       !> Which slot do we have this nfft
 
-    integer           :: N(MAX_DIM) ! size of the nfft bandwidths 
-    integer           :: M          ! Number of the nfft nodes 
-    integer           :: is_real    ! is the fft real or complex
-    integer           :: dim        ! the dimension 
+    integer           :: N(MAX_DIM) !> size of the nfft bandwidths 
+    integer           :: M          !> Number of the nfft nodes 
+    integer           :: is_real    !> is the fft real or complex
+    integer           :: dim        !> the dimension 
+    FLOAT             :: norm       !> Normalization  
+
     ! Guru options
-    logical           :: guru       ! use guru options
-    integer           :: precompute ! precompute strategy
-    integer           :: mm         ! Window function cut-off parameter 
-    FLOAT             :: sigma      ! Oversampling factor 
+    logical           :: guru       !> use guru options?
+    integer           :: precompute !> precompute strategy
+    integer           :: mm         !> Window function cut-off parameter 
+    FLOAT             :: sigma      !> Oversampling factor 
 
-    type(c_ptr)       :: plan       ! the plan    
+    type(c_ptr)       :: plan       !> the NFFT plan    
 
   end type nfft_t
 
@@ -315,13 +317,14 @@ contains
     type(nfft_t),    intent(inout) :: nfft
 
 
-    real(c_double) :: x1_(1:nfft%M), x2_(1:nfft%M), x3_(1:nfft%M)
-    FLOAT :: length, cc, eps
+    FLOAT   :: x1_(1:nfft%M), x2_(1:nfft%M), x3_(1:nfft%M)
+    FLOAT   :: length, cc, eps, dX(1:nfft%M-1,1:3)
+    integer :: ii
 
     PUSH_SUB(nfft_precompute)
  
     eps = 1.000001 ! the sample nodes must be in [0.5,0.5)
- 
+      
     select case(nfft%dim)
       case(3)
         length = (maxval(X1)-minval(X1))*eps
@@ -334,6 +337,14 @@ contains
         cc = (minval(X3)+maxval(X3))/M_TWO
         x3_ =(X3-cc)/length
         call oct_nfft_precompute_one_psi_3d(nfft%plan, nfft%M, x1_, x2_, x3_)
+         
+        ! Set the normalization factor  
+        do ii = 1, nfft%M-1
+          dX(ii,1)= abs(x1_(ii+1)-x1_(ii))
+          dX(ii,2)= abs(x2_(ii+1)-x2_(ii))
+          dX(ii,3)= abs(x3_(ii+1)-x3_(ii))
+        end do
+        nfft%norm = M_ONE/(minval(dX(:,1)) * minval(dX(:,2)) * minval(dX(:,3)))
 
       case(2)
         length = (maxval(X1)-minval(X1))*eps
@@ -344,11 +355,25 @@ contains
         x2_ =(X2-cc)/length
         call oct_nfft_precompute_one_psi_2d(nfft%plan, nfft%M, x1_, x2_)
 
+        ! Set the normalization factor  
+        do ii = 1, nfft%M-1
+          dX(ii,1)= abs(x1_(ii+1)-x1_(ii))
+          dX(ii,2)= abs(x2_(ii+1)-x2_(ii))
+        end do
+        nfft%norm = M_ONE/(minval(dX(:,1)) * minval(dX(:,2)))
+
+
       case(1)
         length = (maxval(X1)-minval(X1))*eps
         cc = (minval(X1)+maxval(X1))/M_TWO
         x1_ =(X1-cc)/length
         call oct_nfft_precompute_one_psi_1d(nfft%plan,nfft%M,x1_)
+
+        ! Set the normalization factor  
+        do ii = 1, nfft%M-1
+          dX(ii,1)= abs(x1_(ii+1)-x1_(ii))
+        end do
+        nfft%norm = M_ONE/(minval(dX(:,1)))
  
     end select
 
@@ -461,11 +486,7 @@ contains
       end do
     end do
 
-
-!    call lalg_scal(nfft%N(1), nfft%N(2), nfft%N(3), &
-!      M_z1 / (nfft%N(1)*nfft%N(2)*nfft%N(3)), out)
-
-!   out =out /nfft%N(1)
+    out = out/nfft%norm
 
     POP_SUB(znfft_backward)
 

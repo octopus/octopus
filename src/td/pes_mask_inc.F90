@@ -1304,7 +1304,6 @@ subroutine PES_mask_K_to_X(mask,mesh,wfin,wfout)
 #if defined(HAVE_NFFT) 
     case(PW_MAP_NFFT)
       call znfft_backward(mask%nfft,wfin,wfout)
-      wfout=wfout/(mask%ll(1)*mask%ll(2)*mask%ll(3)* M_TWO**(mask%enlarge_nfft*mask%mesh%sb%dim))
 #endif
       
     case default
@@ -1361,18 +1360,12 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
   call zcube_function_alloc_RS(mask%cube, cf1) 
   call cube_function_null(cf2)    
   call zcube_function_alloc_RS(mask%cube, cf2) 
-  select case(mask%mode) 
-  case(MODE_MASK)
-    if(mask%back_action .eqv. .true.) then
-      call cube_function_null(cf3)    
-      call zcube_function_alloc_RS(mask%cube, cf3) 
-    end if
-  case(MODE_PSF)
+  if (mask%mode == MODE_PSF) then
     call cube_function_null(cf3)    
     call zcube_function_alloc_RS(mask%cube, cf3) 
     call cube_function_null(cf4)    
     call zcube_function_alloc_RS(mask%cube, cf4) 
-  end select
+  end if
   
 
   size = (mask%ll(1))*(mask%ll(2))*(mask%ll(3)) 
@@ -1400,19 +1393,10 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
             if ( mask%filter_k ) then ! apply a filter to the Fourier transform to remove unwanted energies
               
               ASSERT(associated(mask%Mk))
-
               cf2%zRs= cf2%zRs * mask%Mk(:,:,:) 
             end if
             
-            
-            if(mask%back_action .eqv. .true.) then
-              cf3%zRs = mask%k(:,:,:,idim,ist,ik)                                   ! cf3 = \tilde{\Psi}_B(k,t1) 
-              call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf3%zRs)  ! cf3 = \tilde{\Psi}_B(k,t2))
-              call PES_mask_backaction_wf_apply(mask, mesh,cf3%zRs,st%zpsi(:, idim, ist, ik))
-            end if
-            
-            
-            
+
             cf1%zRs = mask%k(:,:,:, idim, ist, ik)                                  ! cf1 = \Psi_B(k,t1)
             mask%k(:,:,:, idim, ist, ik) =  cf2%zRs                                 ! mask%k = \tilde{\Psi}_A(k,t2)          
             call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf1%zRs)    ! cf1 = \tilde{\Psi}_B(k,t2)
@@ -1420,21 +1404,21 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
             
             
             if(mask%back_action .eqv. .true.) then
-              ! Apply correction to \Psi_B that enforces it to have 0 components in  deep region A
-              !-----                                  ----!
+              call PES_mask_backaction_wf_apply(mask, mesh,cf1%zRs,st%zpsi(:, idim, ist, ik))
+              mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&
+                                              + cf1%zRs      ! mask%k = \tilde{\Psi}_A(k,t2) + \tilde{\Psi}_B(k,t2)
+               
               call PES_mask_K_to_X(mask,mesh,cf1%zRs,cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
               cf2%zRs= (mask%M)*cf2%zRs                                             ! cf2 = M*\Psi_B(x,t1)    
-              call PES_mask_X_to_K(mask,mesh,cf2,cf3)                           
-              cf1%zRs=cf1%zRs-cf3%zRs
-              !-----                                  ----!
+              call PES_mask_X_to_K(mask,mesh,cf2,cf1)
+                                         
+              mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%zRs
+
+            else
+
+              mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + cf1%zRs 
+
             end if
-            
-            
-            cf2%zRs=cf1%zRs                                                         ! cf2 = \tilde{\Psi}_B(k,t2)
-            
-            
-            ! and add to our spectrum
-            mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + cf2%zRs 
 
 
      !----------------------------------------- 
@@ -1535,15 +1519,10 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
 
   call zcube_function_free_RS(mask%cube, cf1)
   call zcube_function_free_RS(mask%cube, cf2)
-  select case(mask%mode) 
-  case(MODE_MASK)
-    if(mask%back_action) then
-      call zcube_function_free_RS(mask%cube, cf3)
-    end if
-  case(MODE_PSF)
+  if (mask%mode == MODE_PSF) then
     call zcube_function_free_RS(mask%cube, cf3)
     call zcube_function_free_RS(mask%cube, cf4)
-  end select
+  end if
 
 
 
