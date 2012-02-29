@@ -49,6 +49,7 @@ module species_m
     species_read,                  &
     species_init,                  &
     species_pot_init,              &
+    species_init_from_data_object, &
     species_create_data_object,    &
     species_type,                  &
     species_label,                 &
@@ -78,6 +79,7 @@ module species_m
     species_get_iwf_radius,        &
     species_end
 
+  integer, parameter :: LABEL_LEN=15
 
   integer, public, parameter :: &
     SPEC_USDEF  = 123,          & !< user-defined function
@@ -96,16 +98,16 @@ module species_m
 
   type species_t
     private
-    integer :: index              !< just a counter
+    integer :: index                  !< just a counter
 
-    character(len=15) :: label    !< Identifier for the species
-    integer :: type               !< what type of species
-    FLOAT   :: z                  !< charge of the species
-    FLOAT   :: z_val              !< valence charge of the species -- the total charge
-                                  !< minus the core charge in the case of the pseudopotentials
-    FLOAT   :: weight             !< mass, in atomic mass units (!= atomic units of mass)
+    character(len=LABEL_LEN) :: label !< Identifier for the species
+    integer :: type                   !< what type of species
+    FLOAT   :: z                      !< charge of the species
+    FLOAT   :: z_val                  !< valence charge of the species -- the total charge
+                                      !< minus the core charge in the case of the pseudopotentials
+    FLOAT   :: weight                 !< mass, in atomic mass units (!= atomic units of mass)
 
-    logical :: has_density        !< true if the species has an electronic density
+    logical :: has_density            !< true if the species has an electronic density
 
 
     character(len=1024) :: user_def !< for the user-defined potential
@@ -180,7 +182,7 @@ contains
     type(species_t), intent(inout) :: spec
 
     character(len=256) :: fname
-    character(len=10)  :: lab
+    character(len=LABEL_LEN)  :: lab
     integer :: ib, ispec, row, n_spec_block, n_spec_def, iunit, read_data
     type(block_t) :: blk
 
@@ -192,6 +194,7 @@ contains
     spec%def_rsize = -M_ONE    ! not defined
     spec%user_def  = ""
     read_data   = 0
+
 
     !%Variable Species
     !%Type block
@@ -555,6 +558,48 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
+  subroutine species_init_from_data_object(this, index, json)
+    type(species_t),     intent(out) :: this
+    integer,             intent(in)  :: index
+    type(json_object_t), intent(in)  :: json
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(species_init_from_data_object)
+    this%index=index
+    call json_get(json, "label", this%label, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "label" from species data object.'
+      call messages_fatal(1)
+      return
+    end if
+    call json_get(json, "z_val", this%z_val, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "z_val" from species data object.'
+      call messages_fatal(1)
+      return
+    end if
+    this%has_density=.false.
+    this%user_def=""
+    nullify(this%ps)
+    this%nlcc=.false.
+    call json_get(json, "def_rsize", this%def_rsize, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "def_rsize" from species data object.'
+      call messages_fatal(1)
+      return
+    end if
+    this%def_h=-M_ONE
+    this%niwfs=-1
+    nullify(this%iwf_l)
+    nullify(this%iwf_m)
+    nullify(this%iwf_i)
+    POP_SUB(species_init_from_data_object)
+    return
+  end subroutine species_init_from_data_object
+  ! ---------------------------------------------------------
+
+  ! ---------------------------------------------------------
   subroutine species_create_data_object(this, json)
     type(species_t),     intent(in)  :: this
     type(json_object_t), intent(out) :: json
@@ -562,7 +607,6 @@ contains
     PUSH_SUB(species_create_data_object)
     call json_init(json)
     call json_set(json, "label", trim(adjustl(this%label)))
-    call json_set(json, "z", this%z)
     call json_set(json, "z_val", this%z_val)
     call json_set(json, "def_rsize", this%def_rsize)
     POP_SUB(species_create_data_object)
@@ -579,7 +623,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  character(len=15) pure function species_label(spec)
+  character(len=LABEL_LEN) pure function species_label(spec)
     type(species_t), intent(in) :: spec
     species_label = trim(spec%label)
   end function species_label
@@ -970,7 +1014,7 @@ contains
     integer,         intent(inout) :: read_data
     type(species_t), intent(inout) :: spec
 
-    character(len=10) :: label
+    character(len=LABEL_LEN) :: label
     FLOAT :: weight, z, def_h, def_rsize
     integer :: lloc, lmax
     integer :: type
@@ -1018,12 +1062,14 @@ contains
 
     select case(spec%type)
     case(SPEC_USDEF) ! user-defined
+      spec%Z=M_ZERO
       call parse_block_float (blk, row, 3, spec%Z_val)
       call parse_block_string(blk, row, 4, spec%user_def)
       call conv_to_C_string(spec%user_def)
       read_data = 5
 
     case(SPEC_FROM_FILE)
+      spec%Z=M_ZERO
       call parse_block_float (blk, row, 3, spec%Z_val)
       call parse_block_string(blk, row, 4, spec%filename)
       read_data = 5

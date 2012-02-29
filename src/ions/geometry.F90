@@ -52,6 +52,7 @@ module geometry_m
     geometry_init,                   &
     geometry_init_xyz,               &
     geometry_init_species,           &
+    geometry_init_from_data_object,  &
     geometry_partition,              &
     geometry_add_atom_classical,     &
     geometry_create_data_object,     &
@@ -68,6 +69,8 @@ module geometry_m
     geometry_grid_defaults,          &
     geometry_species_time_dependent
 
+  integer, parameter :: lABEL_LEN=15
+
   integer, parameter, public :: &
     INTERACTION_COULOMB = 1,    &
     INTERACTION_LJ      = 2
@@ -77,14 +80,14 @@ module geometry_m
     LJ_SIGMA   = 2
 
   type atom_t
-    character(len=15) :: label
+    character(len=lABEL_LEN) :: label
     type(species_t), pointer :: spec             !< pointer to species
     FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)  !< position/velocity/force of atom in real space
     logical :: move                              !< should I move this atom in the optimization mode
   end type atom_t
 
   type atom_classical_t
-    character(len=15) :: label
+    character(len=lABEL_LEN) :: label
 
     FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)
     FLOAT :: charge
@@ -120,6 +123,36 @@ module geometry_m
 contains
 
   ! ---------------------------------------------------------
+  subroutine atom_init_from_data_object(this, spec, json)
+    type(atom_t),            intent(out) :: this
+    type(species_t), target, intent(in)  :: spec
+    type(json_object_t),     intent(in)  :: json
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(atom_init_from_data_object)
+    call json_get(json, "label", this%label, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "label" from atom data object.'
+      call messages_fatal(1)
+      return
+    end if
+    ASSERT(trim(this%label)==trim(species_label(spec)))
+    this%spec=>spec
+    call json_get(json, "x", this%x, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "x" (coordinates) from atom data object.'
+      call messages_fatal(1)
+      return
+    end if
+    this%v=M_ZERO
+    this%f=M_ZERO
+    this%move=.false.
+    POP_SUB(atom_init_from_data_object)
+    return
+  end subroutine atom_init_from_data_object
+
+  ! ---------------------------------------------------------
   subroutine atom_create_data_object(this, json)
     type(atom_t),        intent(in)  :: this
     type(json_object_t), intent(out) :: json
@@ -131,6 +164,38 @@ contains
     POP_SUB(atom_create_data_object)
     return
   end subroutine atom_create_data_object
+
+  ! ---------------------------------------------------------
+  subroutine atom_classical_init_from_data_object(this, json)
+    type(atom_classical_t), intent(out) :: this
+    type(json_object_t),    intent(in)  :: json
+    !
+    integer :: ierr
+    !
+    PUSH_SUB(atom_classical_init_from_data_object)
+    call json_get(json, "label", this%label, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "label" from atom classical data object.'
+      call messages_fatal(1)
+      return
+    end if
+    call json_get(json, "x", this%x, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "x" (coordinates) from atom classical data object.'
+      call messages_fatal(1)
+      return
+    end if
+    this%v=M_ZERO
+    this%f=M_ZERO
+    call json_get(json, "charge", this%charge, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "charge" from atom classical data object.'
+      call messages_fatal(1)
+      return
+    end if
+    POP_SUB(atom_classical_init_from_data_object)
+    return
+  end subroutine atom_classical_init_from_data_object
 
   ! ---------------------------------------------------------
   subroutine atom_classical_create_data_object(this, json)
@@ -453,7 +518,7 @@ contains
     logical :: print_info_
     integer :: nrow, irow, idx1, idx2, ispecies
     type(block_t) :: blk
-    character(len=10)  :: label1, label2
+    character(len=LABEL_LEN)  :: label1, label2
 
     PUSH_SUB(geometry_init_interaction)
 
@@ -543,44 +608,145 @@ contains
   end subroutine geometry_init_interaction
 
   ! ---------------------------------------------------------
+  subroutine geometry_init_from_data_object(this, space, json)
+    type(geometry_t),      intent(out) :: this
+    type(space_t), target, intent(in)  :: space
+    type(json_object_t),   intent(in)  :: json
+    !
+    type(json_object_t), pointer :: spec, atom
+    type(json_array_t),  pointer :: species, atoms
+    character(len=lABEL_LEN)     :: label
+    integer                      :: i, j, ierr
+    !
+    PUSH_SUB(geometry_init_from_data_object)
+    this%space=>space
+    call json_get(json, "nspecies", this%nspecies, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "nspecies" from geometry data object.'
+      call messages_fatal(1)
+      return
+    end if
+    SAFE_ALLOCATE(this%species(this%nspecies))
+    call json_get(json, "species", species, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "species" array from geometry data object.'
+      call messages_fatal(1)
+      return
+    end if
+    do i=1, this%nspecies
+      call json_get(species, i, spec, ierr)
+      if(ierr/=JSON_OK)then
+        write(unit=message(1), fmt="(a,i3,a)") &
+          'Could not read the ', i, 'th "species" element from geometry data object.'
+        call messages_fatal(1)
+        return
+      end if
+      call species_init_from_data_object(this%species(i), i, spec)
+    end do
+    call json_get(json, "natoms", this%natoms, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "natoms" from geometry data object.'
+      call messages_fatal(1)
+      return
+    end if
+    SAFE_ALLOCATE(this%atom(this%natoms))
+    call json_get(json, "atom", atoms, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "atom" array from geometry data object.'
+      call messages_fatal(1)
+      return
+    end if
+    do i=1, this%natoms
+      call json_get(atoms, i, atom, ierr)
+      if(ierr/=JSON_OK)then
+        write(unit=message(1), fmt="(a,i3,a)") &
+          'Could not read the ', i, 'th "atom" element from geometry data object.'
+        call messages_fatal(1)
+        return
+      end if
+      do j=1, this%nspecies
+        call json_get(atom, "label", label, ierr)
+        if(ierr/=JSON_OK)then
+          write(unit=message(1), fmt="(a,i3,a)") &
+            'Could not read the ', i, 'th "atom" element "label" from geometry data object.'
+          call messages_fatal(1)
+          return
+        end if
+        if(trim(label)==trim(species_label(this%species(j))))then
+          call atom_init_from_data_object(this%atom(i), this%species(j), atom)
+          exit
+        end if
+      end do
+    end do
+    call json_get(json, "ncatoms", this%ncatoms, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "ncatoms" from geometry data object.'
+      call messages_fatal(1)
+      return
+    end if
+    SAFE_ALLOCATE(this%catom(this%ncatoms))
+    call json_get(json, "catom", atoms, ierr)
+    if(ierr/=JSON_OK)then
+      message(1) = 'Could not read "catom" array from geometry data object.'
+      call messages_fatal(1)
+      return
+    end if
+    do i=1, this%ncatoms
+      call json_get(atoms, i, atom, ierr)
+      if(ierr/=JSON_OK)then
+        write(unit=message(1), fmt="(a,i3,a)") &
+          'Could not read the ', i, 'th "catom" from geometry data object.'
+        call messages_fatal(1)
+        return
+      end if
+      call atom_classical_init_from_data_object(this%catom(i), atom)
+    end do
+    this%only_user_def=.false.
+    this%species_time_dependent=.false.
+    this%kinetic_energy=M_ZERO
+    this%nlpp=.false.
+    this%nlcc=.false.
+    call distributed_nullify(this%atoms_dist, this%natoms)
+    nullify(this%ionic_interaction_type)
+    nullify(this%ionic_interaction_parameter)
+    this%reduced_coordinates=.false.
+    POP_SUB(geometry_init_from_data_object)
+    return
+  end subroutine geometry_init_from_data_object
+
+  ! ---------------------------------------------------------
   subroutine geometry_create_data_object(this, json)
     type(geometry_t),    intent(in)  :: this
     type(json_object_t), intent(out) :: json
     !
     type(json_object_t), pointer :: spec, atom
-    type(json_array_t),  pointer :: species, pair, atoms
-    integer                      :: i, j
+    type(json_array_t),  pointer :: species, atoms
+    integer                      :: i
     !
     PUSH_SUB(geometry_create_data_object)
     call json_init(json)
     call json_set(json, "nspecies", this%nspecies)
-    call json_set(json, "natoms", this%natoms)
     SAFE_ALLOCATE(species)
     call json_init(species)
     do i=1, this%nspecies
-      SAFE_ALLOCATE(pair)
-      call json_init(pair)
       SAFE_ALLOCATE(spec)
       call species_create_data_object(this%species(i), spec)
-      call json_append(pair, spec)
+      call json_append(species, spec)
       nullify(spec)
-      SAFE_ALLOCATE(atoms)
-      call json_init(atoms)
-      do j=1, this%natoms
-        if(trim(species_label(this%species(i)))==trim(this%atom(j)%label))then
-          SAFE_ALLOCATE(atom)
-          call atom_create_data_object(this%atom(j), atom)
-          call json_append(atoms, atom)
-          nullify(atom)
-        end if
-      end do
-      call json_append(pair, atoms)
-      nullify(atoms)
-      call json_append(species, pair)
-      nullify(pair)
     end do
     call json_set(json, "species", species)
     nullify(species)
+    call json_set(json, "natoms", this%natoms)
+    SAFE_ALLOCATE(atoms)
+    call json_init(atoms)
+    do i=1, this%natoms
+      SAFE_ALLOCATE(atom)
+      call atom_create_data_object(this%atom(i), atom)
+      call json_append(atoms, atom)
+      nullify(atom)
+    end do
+    call json_set(json, "atom", atoms)
+    nullify(atoms)
     call json_set(json, "ncatoms", this%ncatoms)
     SAFE_ALLOCATE(atoms)
     call json_init(atoms)
@@ -592,7 +758,7 @@ contains
     end do
     call json_set(json, "catom", atoms)
     nullify(atoms)
-    POP_SUB(geometry_init_from_data_object)
+    POP_SUB(geometry_create_from_data_object)
     return
   end subroutine geometry_create_data_object
 
