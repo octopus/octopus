@@ -1335,6 +1335,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
 
   integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
   type(cube_function_t):: cf1,cf2,cf3,cf4
+  CMPLX, allocatable :: mf(:)
   FLOAT :: temp(MAX_DIM), vec
   FLOAT :: dd
   integer :: il,i
@@ -1359,13 +1360,19 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
   call cube_function_null(cf1)    
   call zcube_function_alloc_RS(mask%cube, cf1) 
   call cube_function_null(cf2)    
-  call zcube_function_alloc_RS(mask%cube, cf2) 
-  if (mask%mode == MODE_PSF) then
+  call zcube_function_alloc_RS(mask%cube, cf2)
+
+  select case(mask%mode) 
+  case(MODE_MASK)
+    if(mask%back_action .eqv. .true.) then
+      SAFE_ALLOCATE(mf(1:mask%mesh%np_part))
+    end if
+  case(MODE_PSF)
     call cube_function_null(cf3)    
     call zcube_function_alloc_RS(mask%cube, cf3) 
     call cube_function_null(cf4)    
     call zcube_function_alloc_RS(mask%cube, cf4) 
-  end if
+  end select
   
 
   size = (mask%ll(1))*(mask%ll(2))*(mask%ll(3)) 
@@ -1400,23 +1407,24 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
             cf1%zRs = mask%k(:,:,:, idim, ist, ik)                                  ! cf1 = \Psi_B(k,t1)
             mask%k(:,:,:, idim, ist, ik) =  cf2%zRs                                 ! mask%k = \tilde{\Psi}_A(k,t2)          
             call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf1%zRs)    ! cf1 = \tilde{\Psi}_B(k,t2)
+
+            mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&
+                                            + cf1%zRs      ! mask%k = \tilde{\Psi}_A(k,t2) + \tilde{\Psi}_B(k,t2)            
             
-            
-            
+
             if(mask%back_action .eqv. .true.) then
-              call PES_mask_backaction_wf_apply(mask, mesh,cf1%zRs,st%zpsi(:, idim, ist, ik))
-              mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&
-                                              + cf1%zRs      ! mask%k = \tilde{\Psi}_A(k,t2) + \tilde{\Psi}_B(k,t2)
-               
+
+! Apply Back-action to wavewunction in A
               call PES_mask_K_to_X(mask,mesh,cf1%zRs,cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
+              call zcube_to_mesh(mask%cube, cf2, mask%mesh, mf, local = .true.)  
+              st%zpsi(:, idim, ist, ik) = st%zpsi(:, idim, ist, ik) + mf
+
+               
+! Apply correction to wavefunciton in B
               cf2%zRs= (mask%M)*cf2%zRs                                             ! cf2 = M*\Psi_B(x,t1)    
               call PES_mask_X_to_K(mask,mesh,cf2,cf1)
                                          
               mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%zRs
-
-            else
-
-              mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + cf1%zRs 
 
             end if
 
@@ -1519,10 +1527,15 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
 
   call zcube_function_free_RS(mask%cube, cf1)
   call zcube_function_free_RS(mask%cube, cf2)
-  if (mask%mode == MODE_PSF) then
+  select case(mask%mode) 
+  case(MODE_MASK)
+    if(mask%back_action .eqv. .true.) then
+      SAFE_DEALLOCATE_A(mf)
+    end if
+  case(MODE_PSF)
     call zcube_function_free_RS(mask%cube, cf3)
     call zcube_function_free_RS(mask%cube, cf4)
-  end if
+  end select
 
 
 
