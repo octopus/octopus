@@ -47,17 +47,18 @@ subroutine X(io_function_input)(filename, mesh, ff, ierr, is_tmp, map)
   integer,           intent(out)   :: ierr
   logical, optional, intent(in)    :: is_tmp
   integer, optional, intent(in)    :: map(:)
-  
-  logical :: is_tmp_ = .false.
+  !
+  logical :: is_tmp_
 
 #if defined(HAVE_MPI)
   R_TYPE, allocatable :: ff_global(:)
 #endif
-
+  !
   PUSH_SUB(X(io_function_input))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
+  is_tmp_ = .false.
   if(present(is_tmp)) is_tmp_ = is_tmp
 
   if(mesh%parallel_in_domains) then
@@ -444,17 +445,18 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, is_tmp,
   logical,          optional, intent(in)  :: is_tmp
   type(geometry_t), optional, intent(in)  :: geo
   type(mpi_grp_t),  optional, intent(in)  :: grp
-
-  logical :: is_tmp_ = .false.
+  !
+  logical :: is_tmp_
 
 #if defined(HAVE_MPI)
   R_TYPE, allocatable :: ff_global(:)
 #endif
-
+  !
   PUSH_SUB(X(io_function_output))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
+  is_tmp_ = .false.
   if(present(is_tmp)) is_tmp_ = is_tmp
 
 #if defined(HAVE_MPI)
@@ -542,7 +544,7 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
   call profiling_in(write_prof, "DISK_WRITE")
   PUSH_SUB(X(io_function_output_global))
 
-  call io_mkdir(dir)
+  call io_mkdir(dir, is_tmp=is_tmp)
 
 ! Define the format; check if code is single precision or double precision
 !  FIXME: this may need to be expanded for MAX_DIM > 3

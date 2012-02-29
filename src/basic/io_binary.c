@@ -217,7 +217,9 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   moved = write(fd, h, sizeof(header_t));
 
   if(moved < sizeof(header_t)){
+    /* we couldn't write the complete header */
     inf_error("octopus.write_binary");
+    *ierr = 3;
     close(fd);
     free(h);
     return;
@@ -227,13 +229,15 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   moved = write(fd, f, (*np)*size_of[(*type)]);
 
   if(moved < (*np)*size_of[(*type)]){
+    /* we couldn't write the whole dataset */
     inf_error("octopus.write_binary");
+    *ierr = 3;
   }
 
   /* close the file */
   close(fd);
   free(h);
-
+  return;
 }
  
 void FC_FUNC_(read_binary,READ_BINARY)
