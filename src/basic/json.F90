@@ -593,12 +593,15 @@ contains
     !
     integer :: len
     !
-    if(this%value>0)then
-      len=floor(log10(real(abs(this%value),kind=wp)))+1
-    elseif(this%value<0)then
-      len=floor(log10(real(abs(this%value),kind=wp)))+2
-    else
-      len=1
+    len=0
+    if(json_integer_isdef(this))then
+      if(this%value>0)then
+        len=floor(log10(real(this%value,kind=wp)))+1
+      elseif(this%value<0)then
+        len=floor(log10(real(abs(this%value),kind=wp)))+2
+      else
+        len=1
+      end if
     end if
     return
   end function json_integer_len
@@ -636,6 +639,7 @@ contains
     character(len=6)                      :: frmt
     !
     if(json_integer_isdef(this))then
+      buff=""
       write(unit=frmt, fmt="(a2,i3.3,a1)") "(i", len(buff), ")"
       write(unit=buff, fmt=frmt) this%value
       call json_string_extend_char(string, trim(adjustl(buff)))
@@ -651,6 +655,7 @@ contains
     character(len=6)                      :: frmt
     !
     if(json_integer_isdef(this))then
+      buff=""
       write(unit=frmt, fmt="(a2,i3.3,a1)") "(i", len(buff), ")"
       write(unit=buff, fmt=frmt) this%value
       call json_write_string(trim(adjustl(buff)), unit)
@@ -705,6 +710,19 @@ contains
     return
   end subroutine json_real_end
 
+  elemental function json_real_len(this) result(len)
+    type(json_real_t), intent(in) :: this
+    !
+    integer :: len
+    !
+    len=0
+    if(json_real_isdef(this))then
+      len=precision(this%value)+floor(log10(real(range(this%value),kind=wp)))+6
+      if(this%value<0.0_wp)len=len+1
+    end if
+    return
+  end function json_real_len
+
   elemental function json_real_equal(this_1, this_2) result(eqv)
     type(json_real_t), intent(in) :: this_1
     type(json_real_t), intent(in) :: this_2
@@ -734,14 +752,16 @@ contains
     type(json_real_t),   intent(in)    :: this
     type(json_string_t), intent(inout) :: string
     !
-    character(len=precision(this%value)+9) :: buff
-    character(len=11)                      :: fmt
-    integer                                :: p
+    character(len=json_real_len(this)) :: buff
+    character(len=13)                  :: frmt
+    integer                            :: p, r
     !
     if(json_real_isdef(this))then
+      buff=""
       p=precision(this%value)
-      write(unit=fmt, fmt="(a3,i3.3,a1,i3.3,a1)") "(es", p+9, ".", p+1, ")"
-      write(unit=buff, fmt=fmt) this%value
+      r=floor(log10(real(range(this%value),kind=wp)))+1
+      write(unit=frmt, fmt="(a3,i3.3,a1,i3.3,a1,i1.1,a1)") "(es", len(buff), ".", p, "e", r, ")"
+      write(unit=buff, fmt=frmt) this%value
       call json_string_extend_char(string, trim(adjustl(buff)))
     end if
     return
@@ -751,14 +771,16 @@ contains
     type(json_real_t), intent(in) :: this
     integer, optional, intent(in) :: unit
     !
-    character(len=precision(this%value)+9) :: buff
-    character(len=11)                      :: fmt
-    integer                                :: p
+    character(len=json_real_len(this)) :: buff
+    character(len=13)                  :: frmt
+    integer                            :: p, r
     !
     if(json_real_isdef(this))then
+      buff=""
       p=precision(this%value)
-      write(unit=fmt, fmt="(a3,i3.3,a1,i3.3,a1)") "(es", p+9, ".", p+1, ")"
-      write(unit=buff, fmt=fmt) this%value
+      r=floor(log10(real(range(this%value),kind=wp)))+1
+      write(unit=frmt, fmt="(a3,i3.3,a1,i3.3,a1,i1.1,a1)") "(es", len(buff), ".", p, "e", r, ")"
+      write(unit=buff, fmt=frmt) this%value
       call json_write_string(trim(adjustl(buff)), unit)
     end if
     return
