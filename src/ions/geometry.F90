@@ -758,7 +758,7 @@ contains
     end do
     call json_set(json, "catom", atoms)
     nullify(atoms)
-    POP_SUB(geometry_create_from_data_object)
+    POP_SUB(geometry_create_data_object)
     return
   end subroutine geometry_create_data_object
 
