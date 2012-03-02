@@ -58,9 +58,7 @@ module io_function_m
     dio_function_input,           &
     zio_function_input,           &
     dio_function_output,          &
-    zio_function_output,          &
-    dio_function_out_text,        &
-    zio_function_out_text
+    zio_function_output         
 
 #if defined(HAVE_NETCDF)
  public ::                        &

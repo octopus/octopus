@@ -1122,49 +1122,6 @@ contains
 
 end subroutine X(io_function_output_global)
 
-!----------------------------------------------------------------------
-! This function prints a function in text format, for the moment it is
-! only used by the modelmb stuff.
-!----------------------------------------------------------------------
-subroutine X(io_function_out_text)(dir, mesh, mm, wf)
-  character(len=*),   intent(in) :: dir
-  type(mesh_t),       intent(in) :: mesh
-  integer,            intent(in) :: mm
-  R_TYPE,             intent(in) :: wf(:)
-
-  integer :: ip, idir, iunit
-  FLOAT   :: xx(1:MAX_DIM)
-  character(len=200) :: filename
-
-  PUSH_SUB(X(io_function_out_text))
-
-  write(filename,'(a,i4.4)') trim(dir)//'/wf_imb', mm
-  iunit = io_open(filename, action='write')
-  write(iunit, '(a)', ADVANCE='no') '#'
-  do idir = 1, mesh%sb%dim
-     write(iunit, '(a)', ADVANCE='no') '      position          '
-  end do
-  write(iunit, '(a)') '         Re(wf)                    Im(wf)'
-
-  ! for each point in whole box, without boundary points
-  do ip = 1, mesh%np_global
-
-    xx = mesh_x_global(mesh, ip)
-    ! print out wavefunction
-    do idir = 1, mesh%sb%dim
-      write(iunit,'(es24.15)', ADVANCE='no') units_from_atomic(units_out%length, xx(idir))
-    end do ! idir
-    write(iunit,'(es24.15,es24.15)') &
-      units_from_atomic(sqrt(units_out%length**(-mesh%sb%dim)), R_REAL(wf(ip))), &
-      units_from_atomic(sqrt(units_out%length**(-mesh%sb%dim)), R_AIMAG(wf(ip)))
-
-  end do ! ip
-
-  call io_close(iunit)
-
-  POP_SUB(X(io_function_out_text))
-end subroutine X(io_function_out_text)
-
 #if defined(HAVE_NETCDF)
   ! --------------------------------------------------------- 
   !  Writes a cube_function in netcdf format
