@@ -18,8 +18,8 @@ module json_parser_m
 
   integer, parameter :: LINE_LEN=1024
 
-  character, parameter :: backslash="\" !"
-  character, parameter :: space=" "
+  character, parameter :: backslash=achar(92)
+  character, parameter :: space=achar(32)
   character, parameter :: bspace=achar(8)
   character, parameter :: tab=achar(9)
   character, parameter :: newline=achar(10)
@@ -594,33 +594,28 @@ contains
     return
   end subroutine json_parser_parse
 
-  subroutine json_parser_error(parser, unit)
+  subroutine json_parser_error(parser, fatal)
     type(json_parser_t), intent(in) :: parser
-    integer,   optional, intent(in) :: unit
+    logical,   optional, intent(in) :: fatal
     !
     character(len=LINE_LEN) :: buff
     integer                 :: ierr
+    logical                 :: ftl
     !
+    ftl=.false.
+    if(present(fatal))ftl=fatal
     if(parser%ierr/=0)then
-      if(present(unit))then
-        write(unit=unit, fmt="(a,i3)") "I/O Error: ", parser%ierr
-      else
-        write(unit=*, fmt="(a,i3)") "I/O Error: ", parser%ierr
-      end if
+      write(unit=message(1), fmt="(a,i3)") "I/O Error: ", parser%ierr
     else
-      if(present(unit))then
-        write(unit=unit, fmt="(a,i3)") "Parsing Error at line: ", parser%line
-      else
-        write(unit=*, fmt="(a,i3)") "Parsing Error at line: ", parser%line
-      end if
+      write(unit=message(1), fmt="(a,i3)") "Parsing Error at line: ", parser%line
     end if
     call json_get(parser%buff, buff, ierr)
-    if(present(unit))then
-      write(unit=unit, fmt="(a)") trim(buff)
-      write(unit=unit, fmt="(a)") repeat("-",parser%bpos-1)//"^"
+    message(2)=trim(buff)
+    message(3)=repeat("-",parser%bpos-1)//"^"
+    if(ftl)then
+      call messages_fatal(3)
     else
-      write(unit=*, fmt="(a)") trim(buff)
-      write(unit=*, fmt="(a)") repeat("-",parser%bpos-1)//"^"
+      call messages_warning(3)
     end if
     return
   end subroutine json_parser_error

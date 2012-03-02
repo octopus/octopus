@@ -41,8 +41,6 @@ module kpoints_m
     kpoints_grid_t,          &
     kpoints_t,               &
     kpoints_init,            &
-    kpoints_init_from_dump,  &
-    kpoints_dump,            &
     kpoints_end,             &
     kpoints_copy,            &
     kpoints_number,          &
@@ -97,50 +95,6 @@ contains
 
     POP_SUB(kpoints_grid_init)
   end subroutine kpoints_grid_init
-
-  ! ---------------------------------------------------------
-  subroutine kpoints_grid_init_from_dump(this, iunit)
-    type(kpoints_grid_t), intent(inout) :: this
-    integer,              intent(in)    :: iunit
-    !
-    integer :: gb
-    !
-    PUSH_SUB(kpoints_grid_init_from_dump)
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    read(iunit) this%dim
-    read(iunit) this%npoints
-    SAFE_ALLOCATE(this%point(this%dim,this%npoints))
-    SAFE_ALLOCATE(this%red_point(this%dim,this%npoints))
-    SAFE_ALLOCATE(this%weight(this%npoints))
-    read(iunit) this%point
-    read(iunit) this%red_point
-    read(iunit) this%weight
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    POP_SUB(kpoints_grid_init_from_dump)
-    return
-  end subroutine kpoints_grid_init_from_dump
-
-  ! ---------------------------------------------------------
-  subroutine kpoints_grid_dump(this, iunit)
-    type(kpoints_grid_t), intent(in) :: this
-    integer,              intent(in) :: iunit
-    !
-    PUSH_SUB(kpoints_grid_dump)
-    write(iunit) GUARD_BITS
-    write(iunit) this%dim
-    write(iunit) this%npoints
-    ASSERT(associated(this%point))
-    write(iunit) this%point
-    ASSERT(associated(this%red_point))
-    write(iunit) this%red_point
-    ASSERT(associated(this%weight))
-    write(iunit) this%weight
-    write(iunit) GUARD_BITS
-    POP_SUB(kpoints_grid_dump)
-    return
-  end subroutine kpoints_grid_dump
 
   ! ---------------------------------------------------------
   subroutine kpoints_grid_end(this)
@@ -457,48 +411,6 @@ contains
     end function read_user_kpoints
 
   end subroutine kpoints_init
-
-  ! ---------------------------------------------------------
-  subroutine kpoints_init_from_dump(this, iunit)
-    type(kpoints_t), intent(inout) :: this
-    integer,         intent(in)    :: iunit
-    !
-    integer :: gb
-    !
-    PUSH_SUB(kpoints_init_from_dump)
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    call kpoints_grid_init_from_dump(this%full, iunit)
-    call kpoints_grid_init_from_dump(this%reduced, iunit)
-    read(iunit) this%method
-    read(iunit) this%use_symmetries
-    read(iunit) this%use_time_reversal
-    read(iunit) this%nik_axis
-    read(iunit) this%shifts
-    read(iunit) gb
-    ASSERT(gb==GUARD_BITS)
-    POP_SUB(kpoints_init_from_dump)
-    return
-  end subroutine kpoints_init_from_dump
-
-  ! ---------------------------------------------------------
-  subroutine kpoints_dump(this, iunit)
-    type(kpoints_t), intent(in) :: this
-    integer,         intent(in) :: iunit
-    !
-    PUSH_SUB(kpoints_dump)
-    write(iunit) GUARD_BITS
-    call kpoints_grid_dump(this%full, iunit)
-    call kpoints_grid_dump(this%reduced, iunit)
-    write(iunit) this%method
-    write(iunit) this%use_symmetries
-    write(iunit) this%use_time_reversal
-    write(iunit) this%nik_axis
-    write(iunit) this%shifts
-    write(iunit) GUARD_BITS
-    POP_SUB(kpoints_dump)
-    return
-  end subroutine kpoints_dump
 
   ! ---------------------------------------------------------
   subroutine kpoints_end(this)

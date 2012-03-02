@@ -38,6 +38,8 @@ module global_m
     assert_die,      &
     optional_default
 
+  integer, public, parameter :: MAX_PATH_LEN=256
+
   type conf_t
     integer :: debug_level   !< How much debug should print
     logical :: devel_version !< If true then allow unstable parts of the code
@@ -92,8 +94,6 @@ module global_m
   FLOAT, public, parameter :: P_PROTON_CHARGE = CNST(-1.0)
 
   integer, public  :: ifinal_sete = 0
-
-  integer, public, parameter :: GUARD_BITS=-1
 
   !> the standard input and output
   integer, public :: stderr, stdin, stdout
