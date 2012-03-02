@@ -648,6 +648,11 @@ contains
 
 
   ! ---------------------------------------------------------
+  !> Retrieves the value of either the electric or the magnetic
+  !! field. If the laser is given by a scalar potential, the field
+  !! should be a function of space (the gradient of the scalar potential
+  !! times the temporal dependence), but in that case the subroutine
+  !! just returns the temporal function.
   subroutine laser_field(laser, field, time)
     type(laser_t),     intent(in)    :: laser
     FLOAT,             intent(inout) :: field(:)
@@ -661,6 +666,10 @@ contains
     dim = size(field)    
     
     if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
+      ! In this case we will just return the value of the time function. The "field", in fact, 
+      ! should be a function of the position in space (thus, a true "field"), given by the 
+      ! gradient of the scalar potential.
+      field(1) = tdf(laser%f, time)
       return
     endif
     if(present(time)) then

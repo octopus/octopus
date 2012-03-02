@@ -52,6 +52,7 @@ module td_write_m
   use states_calc_m
   use states_dim_m
   use td_calc_m
+  use tdfunction_m
   use types_m
   use unit_m
   use unit_system_m
@@ -1283,6 +1284,9 @@ contains
             write(aux, '(a,i1,a)') 'A(', idir, ')'
             call write_iter_header(out_laser, aux)
           end do
+        case(E_FIELD_SCALAR_POTENTIAL)
+          write(aux, '(a,i1,a)') 'e(t)'
+          call write_iter_header(out_laser, aux)
         end select
       end do
       call write_iter_nl(out_laser)
@@ -1305,6 +1309,9 @@ contains
           do idir = 1, gr%mesh%sb%dim
             call write_iter_header(out_laser, aux)
           end do
+        case(E_FIELD_SCALAR_POTENTIAL)
+          aux = '[adim]'
+          call write_iter_header(out_laser, aux)
         end select
       end do
       call write_iter_nl(out_laser)
@@ -1320,10 +1327,13 @@ contains
       select case(laser_kind(hm%ep%lasers(il)))
       case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
         field = units_from_atomic(units_out%force, field)
+        call write_iter_double(out_laser, field, gr%mesh%sb%dim)
       case(E_FIELD_VECTOR_POTENTIAL)
         field = units_from_atomic(units_out%energy, field)
+        call write_iter_double(out_laser, field, gr%mesh%sb%dim)
+      case(E_FIELD_SCALAR_POTENTIAL)
+        call write_iter_double(out_laser, field(1), 1)
       end select
-      call write_iter_double(out_laser, field, gr%mesh%sb%dim)
     end do
 
     call write_iter_nl(out_laser)
