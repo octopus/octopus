@@ -69,7 +69,7 @@ module geometry_m
     geometry_grid_defaults,          &
     geometry_species_time_dependent
 
-  integer, parameter :: lABEL_LEN=15
+  integer, parameter :: LABEL_LEN=15
 
   integer, parameter, public :: &
     INTERACTION_COULOMB = 1,    &
@@ -80,14 +80,14 @@ module geometry_m
     LJ_SIGMA   = 2
 
   type atom_t
-    character(len=lABEL_LEN) :: label
+    character(len=LABEL_LEN) :: label
     type(species_t), pointer :: spec             !< pointer to species
     FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)  !< position/velocity/force of atom in real space
     logical :: move                              !< should I move this atom in the optimization mode
   end type atom_t
 
   type atom_classical_t
-    character(len=lABEL_LEN) :: label
+    character(len=LABEL_LEN) :: label
 
     FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)
     FLOAT :: charge
@@ -615,7 +615,7 @@ contains
     !
     type(json_object_t), pointer :: spec, atom
     type(json_array_t),  pointer :: species, atoms
-    character(len=lABEL_LEN)     :: label
+    character(len=LABEL_LEN)     :: label
     integer                      :: i, j, ierr
     !
     PUSH_SUB(geometry_init_from_data_object)
