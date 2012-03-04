@@ -100,7 +100,7 @@ module json_m
   type, public :: json_value_t
     private
     integer                       :: type=JSON_UNDEF_TYPE
-    type(json_null_t),    pointer :: null
+    type(json_null_t),    pointer :: jnull
     type(json_logical_t), pointer :: logical
     type(json_integer_t), pointer :: integer
     type(json_real_t),    pointer :: real
@@ -3155,7 +3155,7 @@ contains
     type(json_value_t), intent(out) :: this
     !
     this%type=JSON_UNDEF_TYPE
-    this%null=>null()
+    this%jnull=>null()
     this%logical=>null()
     this%integer=>null()
     this%real=>null()
@@ -3188,7 +3188,7 @@ contains
     type(json_null_t), target, intent(in)  :: value
     !
     call json_value_nullify(this)
-    this%null=>value
+    this%jnull=>value
     this%type=JSON_NULL_TYPE
     return
   end subroutine json_value_init_null
@@ -3258,9 +3258,9 @@ contains
     !
     select case(this%type)
     case(JSON_NULL_TYPE)
-      call json_null_end(this%null)
-      SAFE_DEALLOCATE_P(this%null)
-      this%null=>null()
+      call json_null_end(this%jnull)
+      SAFE_DEALLOCATE_P(this%jnull)
+      this%jnull=>null()
     case(JSON_LOGICAL_TYPE)
       call json_logical_end(this%logical)
       SAFE_DEALLOCATE_P(this%logical)
@@ -3301,7 +3301,7 @@ contains
       if(this_1%type==this_2%type)then
         select case(this_1%type)
         case(JSON_NULL_TYPE)
-          eqv=json_null_equal(this_1%null, this_2%null)
+          eqv=json_null_equal(this_1%jnull, this_2%jnull)
         case(JSON_LOGICAL_TYPE)
           eqv=json_logical_equal(this_1%logical, this_2%logical)
         case(JSON_INTEGER_TYPE)
@@ -3326,7 +3326,7 @@ contains
     !
     select case(this%type)
     case(JSON_NULL_TYPE)
-      call json_null_string(this%null, string)
+      call json_null_string(this%jnull, string)
     case(JSON_LOGICAL_TYPE)
       call json_logical_string(this%logical, string)
     case(JSON_INTEGER_TYPE)
@@ -3350,8 +3350,8 @@ contains
     !
     value=>null()
     ierr=JSON_UNDEF_ERROR
-    if(json_null_isdef(this%null))then
-      value=>this%null
+    if(json_null_isdef(this%jnull))then
+      value=>this%jnull
       ierr=JSON_OK
     end if
     return
@@ -3450,7 +3450,7 @@ contains
     !
     select case(this%type)
     case(JSON_NULL_TYPE)
-      call json_null_write(this%null, unit)
+      call json_null_write(this%jnull, unit)
     case(JSON_LOGICAL_TYPE)
       call json_logical_write(this%logical, unit)
     case(JSON_INTEGER_TYPE)
