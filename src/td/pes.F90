@@ -104,27 +104,27 @@ module PES_m
   type PES_mask_t
 
 
-    CMPLX, pointer :: k(:,:,:,:,:,:) !> PGI bug => NULL() !< The states in momentum space
+    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
 
     ! Some mesh-related stuff
     integer          :: ll(MAX_DIM)            !< the size of the square mesh
     integer          :: np                     !< number of mesh points associated with the mesh
                                                !< (either mesh%np or mesh%np_global)
     FLOAT            :: spacing(MAX_DIM)       !< the spacing
-    integer, pointer :: Lxyz_inv(:,:,:)  !> PGI bug => NULL()
+    integer, pointer :: Lxyz_inv(:,:,:) => NULL()
     !Lxyz_inv < return a point on the main mesh from xyz on the mask square mesh
     type(mesh_t), pointer  :: mesh             !< a pointer to the mesh
     type(cube_t)     :: cube                   !< the cubic mesh
 
-    FLOAT, pointer :: ext_pot(:,:) !> PGI bug => NULL()   !< external time-dependent potential i.e. the lasers
+    FLOAT, pointer :: ext_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
 
-    FLOAT, pointer :: M(:,:,:)  !> PGI bug => NULL()      !< the mask on a cubic mesh containing the simulation box
-    FLOAT, pointer :: Mk(:,:,:)  !> PGI bug => NULL()     !< the momentum space filter
+    FLOAT, pointer :: M(:,:,:) => NULL()      !< the mask on a cubic mesh containing the simulation box
+    FLOAT, pointer :: Mk(:,:,:) => NULL()     !< the momentum space filter
     type(cube_function_t) :: cM                !< the mask cube function
-    FLOAT, pointer :: mask_R(:)  !> PGI bug => NULL()     !< the mask inner (component 1) and outer (component 2) radius
+    FLOAT, pointer :: mask_R(:) => NULL()     !< the mask inner (component 1) and outer (component 2) radius
     integer        :: shape                    !< which mask function?
 
-    FLOAT, pointer :: Lk(:) !> PGI bug => NULL()          !< associate a k value to an cube index
+    FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to an cube index
                                                !< we implicitly assume k to be the same for all directions
 
     integer          :: resample_lev           !< resampling level

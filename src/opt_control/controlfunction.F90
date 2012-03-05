@@ -118,8 +118,8 @@ module controlfunction_m
     FLOAT   :: w0                  = M_ZERO
     integer :: mode                = controlfunction_mode_none
     integer :: no_controlfunctions = 0
-    FLOAT,       pointer :: alpha(:)      !> PGI bug => NULL()
-    type(tdf_t), pointer :: td_penalty(:) !> PGI bug => NULL()
+    FLOAT,       pointer :: alpha(:) => NULL()
+    type(tdf_t), pointer :: td_penalty(:) => NULL()
 
 
     type(tdf_t)    :: f ! This is the envelope of the laser field, only used in the phase-only
@@ -140,23 +140,23 @@ module controlfunction_m
     integer :: dof           = 0                 ! This is the number of degrees of freedom, or number of parameters, used to represent
                                                  ! a control function (this may be different -- smaller -- than "dim").
     FLOAT   :: intphi        = M_ZERO
-    type(tdf_t), pointer :: f(:) !> PGI bug => NULL()
-    FLOAT, pointer :: alpha(:)   !> PGI bug => NULL()
+    type(tdf_t), pointer :: f(:) => NULL()
+    FLOAT, pointer :: alpha(:) => NULL()
 
     integer :: current_representation = 0
 
     FLOAT   :: w0       = M_ZERO
-    FLOAT, pointer :: u(:, :) !> PGI bug => NULL()
-    FLOAT, pointer :: utransf(:, :)  !> PGI bug => NULL()
-    FLOAT, pointer :: utransfi(:, :) !> PGI bug => NULL()
+    FLOAT, pointer :: u(:, :) => NULL()
+    FLOAT, pointer :: utransf(:, :) => NULL()
+    FLOAT, pointer :: utransfi(:, :) => NULL()
 
-    FLOAT, pointer :: theta(:) !> PGI bug => NULL()
+    FLOAT, pointer :: theta(:) => NULL()
   end type controlfunction_t
   
   ! the next variable has to be a pointer to avoid a bug in the IBM compiler
   ! and it can not be properly initialized thanks to a bug in the PGI compiler
   logical                                 :: cf_common_initialized=.false.
-  type(controlfunction_common_t), pointer :: cf_common !> PGI bug => NULL()
+  type(controlfunction_common_t), pointer :: cf_common => NULL()
   type(mix_t) :: controlfunction_mix
 
 contains
