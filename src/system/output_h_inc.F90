@@ -110,12 +110,13 @@
 
 
   ! ---------------------------------------------------------
-  subroutine output_scalar_pot(outp, gr, geo, hm, dir)
+  subroutine output_scalar_pot(outp, gr, geo, hm, dir, time)
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(hamiltonian_t),  intent(inout) :: hm
     type(output_t),       intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
+    FLOAT, optional,      intent(in)    :: time
 
     integer :: is, err
     character(len=80) :: fname
@@ -128,7 +129,11 @@
       do is = 1, hm%ep%no_lasers
         write(fname, '(a,i1)') 'scalar_pot-', is
         scalar_pot = M_ZERO
-        call laser_potential(hm%ep%lasers(is), gr%mesh, scalar_pot)
+        if (present(time)) then
+          call laser_potential(hm%ep%lasers(is), gr%mesh, scalar_pot, time)
+        else
+          call laser_potential(hm%ep%lasers(is), gr%mesh, scalar_pot)
+        end if
         call dio_function_output(outp%how, dir, fname, gr%mesh, scalar_pot, units_out%energy, err, geo = geo)
       end do
       SAFE_DEALLOCATE_A(scalar_pot)

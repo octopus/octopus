@@ -398,7 +398,7 @@ contains
         if(iter == td%max_iter) sys%outp%iter = ii - 1
         ii = 1
         call td_save_restart(iter)
-        call td_write_data(write_handler, gr, st, hm, sys%ks%xc, sys%outp, geo, iter)
+        call td_write_data(write_handler, gr, st, hm, sys%ks%xc, sys%outp, geo, iter, td%dt)
 	!Photoelectron output and restart dump
         call PES_output(td%PESv, gr%mesh, st, iter, sys%outp, td%dt,gr,geo)
         call PES_restart_write(td%PESv, gr%mesh, st)

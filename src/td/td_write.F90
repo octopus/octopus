@@ -519,7 +519,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_data(writ, gr, st, hm, xc, outp, geo, iter)
+  subroutine td_write_data(writ, gr, st, hm, xc, outp, geo, iter, dt)
     type(td_write_t),     intent(in)    :: writ
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
@@ -528,6 +528,7 @@ contains
     type(output_t),       intent(in)    :: outp
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: iter
+    FLOAT, optional,      intent(in)    :: dt
 
     character(len=256) :: filename
     integer :: iout
@@ -550,8 +551,12 @@ contains
     call states_sync(st)
 
     call output_all(outp, gr, geo, st, hm, xc, filename)
-    if(iter.eq.0) call output_scalar_pot(outp, gr, geo, hm, filename)
-
+    if(present(dt)) then
+      call output_scalar_pot(outp, gr, geo, hm, filename, iter*dt)
+    else
+      if(iter.eq.0) call output_scalar_pot(outp, gr, geo, hm, filename)
+    end if
+ 
     call profiling_out(prof)
     POP_SUB(td_write_data)
   end subroutine td_write_data
