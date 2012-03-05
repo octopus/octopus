@@ -129,11 +129,7 @@
       do is = 1, hm%ep%no_lasers
         write(fname, '(a,i1)') 'scalar_pot-', is
         scalar_pot = M_ZERO
-        if (present(time)) then
-          call laser_potential(hm%ep%lasers(is), gr%mesh, scalar_pot, time)
-        else
-          call laser_potential(hm%ep%lasers(is), gr%mesh, scalar_pot)
-        end if
+        call laser_potential(hm%ep%lasers(is), gr%mesh, scalar_pot, time=time)
         call dio_function_output(outp%how, dir, fname, gr%mesh, scalar_pot, units_out%energy, err, geo = geo)
       end do
       SAFE_DEALLOCATE_A(scalar_pot)
