@@ -41,6 +41,9 @@
 
 #include "string_f.h"
 
+/* Numerical threshold for oct_bessel_k0 and oct_bessel_k1 */
+#define  BESSEL_K_THRES  1.0e2
+
 /* ---------------------- Interface to GSL functions ------------------------ */
 
 
@@ -103,13 +106,23 @@ double FC_FUNC_(oct_bessel_j1, OCT_BESSEL_J1)
 double FC_FUNC_(oct_bessel_k0, OCT_BESSEL_K0)
      (double *x)
 {
-  return gsl_sf_bessel_K0(*x);
+  if( *x > BESSEL_K_THRES )
+  {
+    return 0.0e0;       
+  } else {
+    return gsl_sf_bessel_K0(*x);
+  }    
 }
 
 double FC_FUNC_(oct_bessel_k1, OCT_BESSEL_K1)
      (double *x)
 {
-  return gsl_sf_bessel_K1(*x);
+  if( *x > BESSEL_K_THRES )
+  {
+    return 0.0e0;       
+  } else {
+    return gsl_sf_bessel_K1(*x);
+  }    
 }
 
 double FC_FUNC_(oct_erfc, OCT_ERFC)
