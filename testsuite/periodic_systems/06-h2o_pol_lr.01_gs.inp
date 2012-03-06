@@ -7,7 +7,7 @@ fromScratch = yes
  'H'  | -1.429937  |  0.553586  |  0.000000
 %
 
-Spacing = 0.6
+Spacing = 0.5
 ConvRelDens = 8.0e-8
 BoxShape = parallelepiped
 Lsize = 10
