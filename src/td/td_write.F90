@@ -142,14 +142,12 @@ contains
     integer,             intent(in)    :: max_iter
     FLOAT,               intent(in)    :: dt
 
-
     FLOAT :: rmin
     integer :: ierr, first, ii, ist, jj, flags, iout, default
     type(block_t) :: blk
     character(len=100) :: filename
 
     PUSH_SUB(td_write_init)
-
 
     !%Variable TDOutput
     !%Type flag
@@ -248,9 +246,8 @@ contains
 
     ! Compatibility test
     if( (writ%out(OUT_ACC)%write) .and. ions_move ) then
-      message(1) = 'Error: If harmonic spectrum is to be calculated,'
-      message(2) = 'atoms should not be allowed to move.'
-      call messages_fatal(2)
+      message(1) = 'If harmonic spectrum is to be calculated, atoms should not be allowed to move.'
+      call messages_fatal(1)
     end if
 
     rmin = geometry_min_distance(geo)
@@ -259,6 +256,11 @@ contains
     call parse_float(datasets_check('LocalMagneticMomentsSphereRadius'), rmin*M_HALF, writ%lmm_r, units_inp%length)
 
     if(writ%out(OUT_PROJ)%write.or.writ%out(OUT_POPULATIONS)%write) then
+      if(st%parallel_in_states) then
+        message(1) = "Options TDOutput = td_occup and populations are not implemented for parallel in states."
+        call messages_fatal(1)
+      endif
+
       call states_copy(writ%gs_st, st)
 
       ! clean up all the stuff we have to reallocate

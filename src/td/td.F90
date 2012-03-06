@@ -562,8 +562,8 @@ contains
       !% calculations (<tt>CalculationMode = td</tt>). Also, the nuclei should not move.
       !% The idea is that all orbitals except the last one are frozen. The orbitals are to
       !% be read from a previous ground-state calculation. The active orbital is then treated
-      !% as independent (whether if it contains one electron or two) -- although it will
-      !% feel the Hartree and exchange-correlation potentials from  the ground-state electronic
+      !% as independent (whether it contains one electron or two) -- although it will
+      !% feel the Hartree and exchange-correlation potentials from the ground-state electronic
       !% configuration.
       !%
       !% It is almost equivalent to setting <tt>TDFreezeOrbitals = N-1</tt>, where <tt>N</tt> is the number
