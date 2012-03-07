@@ -740,6 +740,134 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, dir, Emax, Estep)
 
 end subroutine PES_mask_dump_ar_plane_M
 
+! ---------------------------------------------------------
+subroutine PES_mask_dump_ar_spherical_cut_M(PESK, file, Lk, dim, dir, Emin, Emax, Estep)
+  FLOAT,            intent(in) :: PESK(:,:,:)
+  character(len=*), intent(in) :: file
+  FLOAT,            intent(in) :: Lk(:)
+  integer,          intent(in) :: dim
+  FLOAT,            intent(in) :: Emin
+  FLOAT,            intent(in) :: Emax
+  FLOAT,            intent(in) :: Estep
+  FLOAT,            intent(in) :: dir(:) 
+
+  integer :: ist, ik, ii, ix, iy, iz, iunit,idim
+  FLOAT ::  KK(MAX_DIM),vec
+
+  integer :: nn, ie
+  FLOAT  :: step,DE
+  FLOAT, allocatable ::  pesM(:,:)
+
+  ! needed for interpolation in 2D and 3D 
+  FLOAT, pointer :: cube_f(:)
+  type(qshep_t) :: interp
+
+  FLOAT :: Dtheta, Dphi, theta, phi,Ex,Ey, EE
+  integer :: np, Ntheta, Nphi, ith, iph, Nth
+  integer :: ll(1:3)
+  FLOAT :: vref(1:dim), rotation(1:dim,1:dim)
+  FLOAT :: phGrid(3), thGrid(3), eBounds(2)
+   
+
+
+  type(profile_t), save :: prof
+  call profiling_in(prof, "PESMask_ar_spherical_cut")
+
+  PUSH_SUB(PES_mask_dump_ar_spherical_cut_M)
+
+  ! by default the polarization is along the z-axis 
+  vref = M_ZERO
+  vref(3) = M_ONE
+  !the rotation matrix from the x-axis to the actual polarization direction
+  call generate_rotation_matrix(rotation, vref, dir)
+  
+  
+  ll = 1
+  do ii = 1, dim
+    ll(ii) = size(PESK,ii) 
+  end do
+
+  step= Estep
+  nn  = int(abs(Emax-Emin)/step)
+
+  Nth = 300 
+  Dtheta = M_PI/Nth
+
+  Nphi = 360
+  Dphi = M_TWO * M_PI/Nphi
+
+  SAFE_ALLOCATE(pesM(1:Nphi,1:Nth))
+  pesM = M_ZERO
+
+
+  !in 1D we do not interpolate 
+  if (  (dim .eq. 1) ) then 
+    message(1)="Impossible to obtain angle-dependent quantities in 1D."
+    call messages_fatal(1)
+
+  else
+
+    call PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
+
+    select case(dim)
+    case(2)
+  
+
+
+    case(3)
+
+      do iph = 1, Nphi
+        phi = (iph - 1) * Dphi
+
+        do ith = 1, Nth
+          theta = (ith - 1) * Dtheta 
+
+          do ie = 0, nn
+            EE = Emin + ie * step
+
+            KK(1) = sqrt(M_TWO*EE)*sin(theta)*cos(phi) 
+            KK(2) = sqrt(M_TWO*EE)*sin(theta)*sin(phi)
+            KK(3) = sqrt(M_TWO*EE)*cos(theta)
+            
+            !sometimes the interpolator gives negative values therefore the abs()  
+            pesM(iph,ith) = pesM(iph,ith) + &
+                          abs(qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) ))
+          end do
+          pesM(iph,ith) = pesM(iph,ith) * sqrt(M_TWO*EE)     
+
+        end do
+      end do
+
+      pesM = pesM * Dphi
+
+    end select
+
+    call PES_mask_interpolator_end(cube_f, interp)
+
+  end if
+
+
+  phGrid(1)= M_ZERO
+  phGrid(2)= M_TWO * M_PI
+  phGrid(3)= Dphi
+
+  thGrid(1)= M_ZERO
+  thGrid(2)= M_PI
+  thGrid(3)= Dtheta
+
+  eBounds(1) = Emin
+  eBounds(2) = Emax
+
+  call  PES_mask_write_2D_map(file, pesM, 4, phGrid, thGrid, dir, eBounds)
+
+  SAFE_DEALLOCATE_A(pesM)
+
+  POP_SUB(PES_mask_dump_ar_spherical_cut_M)
+
+  call profiling_out(prof)
+
+end subroutine PES_mask_dump_ar_spherical_cut_M
+
 
 ! ========================================================================
 !>  Common interface to write 2D maps in gnuplot with header files for 
@@ -748,6 +876,7 @@ end subroutine PES_mask_dump_ar_plane_M
 !!  - 1 Angle- and energy-resolved on cartesian coordinates
 !!  - 2 Angle- and energy-resolved in polar coordinates
 !!  - 3 Velocity map on a plane
+!!  - 4 Velocity map on a plane
 !
 ! ========================================================================
 subroutine PES_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
@@ -825,6 +954,31 @@ subroutine PES_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
              str_center('[sqrt('//trim(units_abbrev(units_out%energy)) // ')]', 19), & 
              str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
       write(iunit, '(a)') '##################################################'
+
+      case (4)
+      !!Spherical Cut
+        write(iunit, '(a)') '##################################################'
+
+        write(iunit, '(a)') '#'        
+        write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a2,f10.2,a1)')&
+                                              "#"," Zenith axis: ","(",&
+                                              vv(1),", ",vv(2),", ",vv(3),")"
+        write(iunit, '(a1,a20,a1,es19.12,a2,es19.12,a1,a19)')&
+                                              "#"," Integrated in E: ","(",&
+                                              intSpan(1),", ",intSpan(2),")",&
+                      str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19)
+        write(iunit, '(a)') '#'        
+      
+      
+        write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("Phi", 19),&
+                                              str_center("Theta", 19),&
+                                              str_center("P(Phi,Theta)", 19)
+        write(iunit, '(a1,a19,2x,a19,2x,a19)') &
+          '#', str_center('[rad]', 19), &
+               str_center('[rad]', 19), & 
+               str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
+        write(iunit, '(a)') '##################################################'
+
     
   end select
 
@@ -841,6 +995,11 @@ subroutine PES_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
                   (ix - 1) * xGrid(3) + xGrid(1), &
                   units_from_atomic(units_out%energy, (iy - 1) * yGrid(3) + yGrid(1) ), pesM(ix,iy)
         case(3)
+          write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &   
+                  (ix - 1) * xGrid(3) + xGrid(1), &
+                  (iy - 1) * yGrid(3) + yGrid(1), pesM(ix,iy)
+
+        case(4)
           write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &   
                   (ix - 1) * xGrid(3) + xGrid(1), &
                   (iy - 1) * yGrid(3) + yGrid(1), pesM(ix,iy)

@@ -83,6 +83,9 @@ program photoelectron_spectrum
   uPhstep = -1
   uPhspan = (/-1,-1/)
   center = (/0,0,0/)
+  Emin = M_ZERO
+  Emax = M_ZERO
+  
   
   call get_laser_polarizaion(pol)
   
@@ -131,13 +134,13 @@ program photoelectron_spectrum
   case(1) ! Energy-resolved
     write(message(1), '(a)') 'Calculating energy-resolved PES'
     call messages_info(1)
-    call PES_mask_dump_power_totalM(PESK,'td.general/PES_power.sum', Lk, dim, Emax, Estep, interpol)
+    call PES_mask_dump_power_totalM(PESK,'./PES_power.sum', Lk, dim, Emax, Estep, interpol)
  
  
   case(2) ! Angle and energy resolved
     write(message(1), '(a)') 'Calculating angle- and energy-resolved PES'
     call messages_info(1)
-    call PES_mask_dump_ar_polar_M(PESK,'td.general/PES_angle_energy.map', Lk, dim, pol, Emax, Estep)
+    call PES_mask_dump_ar_polar_M(PESK,'./PES_angle_energy.map', Lk, dim, pol, Emax, Estep)
 
 
   case(3) ! On a plane
@@ -147,7 +150,7 @@ program photoelectron_spectrum
     if(sum((pol-(/0 ,1 ,0/))**2)  <= 1E-14  )  dir = 2
     if(sum((pol-(/0 ,0 ,1/))**2)  <= 1E-14  )  dir = 3
 
-    filename = "td.general/PES_velocity.map."//index2axis(dir)//"=0"
+    filename = "./PES_velocity.map."//index2axis(dir)//"=0"
 
 
     if (dir == -1) then
@@ -169,13 +172,29 @@ program photoelectron_spectrum
       Estep = Emax/size(Lk,1)
     end if
 
-    call PES_mask_dump_ar_plane_M(PESK,'td.general/PES_energy.map', Lk, dim, pol, Emax, Estep)
+    call PES_mask_dump_ar_plane_M(PESK,'./PES_energy.map', Lk, dim, pol, Emax, Estep)
 
   case(5) ! Full momentum resolved matrix 
+
+
+    write(message(1), '(a,es19.12,a2,es19.12,2x,a19)') &
+          'Calculating PES on a spherical cut at E= ',Emin,", ",Emax, & 
+           str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19) 
+    call messages_info(1)
+
+    if(uEstep >  0 .and. uEstep > Estep) then
+     Estep = uEstep
+    else
+     Estep = Emax/size(Lk,1)
+    end if
+ 
+    call PES_mask_dump_ar_spherical_cut_M(PESK,'./PES_sphere.map', Lk, dim, pol, Emin, Emax, Estep)       
+
+  case(6) ! Full momentum resolved matrix 
     write(message(1), '(a)') 'Calculating full momentum-resolved PES'
     call messages_info(1)
  
-    call PES_mask_dump_full_mapM(PESK, 'td.general/PES_fullmap', Lk)        
+    call PES_mask_dump_full_mapM(PESK, './PES_fullmap', Lk)        
 
   end select
 

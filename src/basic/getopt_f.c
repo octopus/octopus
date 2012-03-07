@@ -847,10 +847,12 @@ void photoelectron_spectrum_help(){
   printf("                         '3' : (px, py). Velocity map on a plane orthogonal to vec.\n");
   printf("                         '4' : (Ex, Ey). Angle- and energy-resolved on the inclination plane.\n");
   printf("                              The values are integrated in phi.\n");
+  printf("                         '5' : (theta, phi). Ionization probability integrated on spherical cuts with\n");
+  printf("                              energy bounds given by -E.\n");  
   printf("                        Output is in gnuplot-friendly format.\n");
   printf("                      \n");
   printf("                      - 3D\n");
-  printf("                         '5' : (px, py, pz). Full momentum-resolved ionization probability.\n");
+  printf("                         '6' : (px, py, pz). Full momentum-resolved ionization probability.\n");
   printf("                             If compiled --with-netcdf the output is netcdf format, a simple\n");
   printf("                             ASCII table otherwise.\n");
   printf("  -i, --int=Y/N       Interpolate the output. Default is Yes.\n");
