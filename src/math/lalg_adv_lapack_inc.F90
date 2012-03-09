@@ -996,19 +996,19 @@ end subroutine zsym_inverter
 ! ---------------------------------------------------------
 !> compute the solution to a real system of linear equations A*X = B,
 !!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
-subroutine dlinsyssolve(n, nhrs, a, b, x)
-  integer, intent(in)    :: n, nhrs
-  FLOAT,   intent(inout) :: a(n, n), b(n, nhrs)
-  FLOAT,   intent(out)   :: x(n, nhrs)
+subroutine dlinsyssolve(n, nrhs, a, b, x)
+  integer, intent(in)    :: n, nrhs
+  FLOAT,   intent(inout) :: a(n, n), b(n, nrhs)
+  FLOAT,   intent(out)   :: x(n, nrhs)
 
   interface
-    subroutine DLAPACK(gesvx) (fact, trans, n, nhrs, a, lda, af, ldaf, ipiv, equed, r, &
+    subroutine DLAPACK(gesvx) (fact, trans, n, nrhs, a, lda, af, ldaf, ipiv, equed, r, &
       c, b, ldb, x, ldx, rcond, ferr, berr, work, iwork, info)
       character(1), intent(in)    :: fact, trans
-      integer,      intent(in)    :: n, nhrs, lda, ldaf, ldb, ldx
-      FLOAT,        intent(inout) :: a, af, r, c, b      ! a(lda,n), af(ldaf,n), r(n), c(n), b(ldb,nhrs)
+      integer,      intent(in)    :: n, nrhs, lda, ldaf, ldb, ldx
+      FLOAT,        intent(inout) :: a, af, r, c, b      ! a(lda,n), af(ldaf,n), r(n), c(n), b(ldb,nrhs)
       integer,      intent(inout) :: ipiv                ! ipiv(n)
-      FLOAT,        intent(out)   :: x, ferr, berr, work ! x(ldx,nhrs), ferr(nhrs), berr(nhrs), work(4*n)
+      FLOAT,        intent(out)   :: x, ferr, berr, work ! x(ldx,nrhs), ferr(nrhs), berr(nrhs), work(4*n)
       FLOAT,        intent(out)   :: rcond
       character(1), intent(inout) :: equed
       integer,      intent(out)   :: iwork               ! iwork(n)
@@ -1026,14 +1026,14 @@ subroutine dlinsyssolve(n, nhrs, a, b, x)
 
   SAFE_ALLOCATE(ipiv(1:n))
   SAFE_ALLOCATE(iwork(1:n))
-  SAFE_ALLOCATE(ferr(1:nhrs))
-  SAFE_ALLOCATE(berr(1:nhrs))
+  SAFE_ALLOCATE(ferr(1:nrhs))
+  SAFE_ALLOCATE(berr(1:nrhs))
   SAFE_ALLOCATE(work(1:4*n))
   SAFE_ALLOCATE(r(1:n))
   SAFE_ALLOCATE(c(1:n))
   SAFE_ALLOCATE(af(1:n, 1:n))
 
-  call DLAPACK(gesvx) ("N", "N", n, nhrs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
+  call DLAPACK(gesvx) ("N", "N", n, nrhs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
     rcond, ferr(1), berr(1), work(1), iwork(1), info)
 
   if(info /= 0) then
@@ -1060,22 +1060,22 @@ end subroutine dlinsyssolve
 ! ---------------------------------------------------------
 !> compute the solution to a complex system of linear equations A*X = B,
 !!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
-subroutine zlinsyssolve(n, nhrs, a, b, x)
-  integer, intent(in)    :: n, nhrs
-  CMPLX,   intent(inout) :: a(n, n), b(n, nhrs)
-  CMPLX,   intent(out)   :: x(n, nhrs)
+subroutine zlinsyssolve(n, nrhs, a, b, x)
+  integer, intent(in)    :: n, nrhs
+  CMPLX,   intent(inout) :: a(n, n), b(n, nrhs)
+  CMPLX,   intent(out)   :: x(n, nrhs)
 
   interface
-    subroutine ZLAPACK(gesvx) (fact, trans, n, nhrs, a, lda, af, ldaf, ipiv, equed, r, &
+    subroutine ZLAPACK(gesvx) (fact, trans, n, nrhs, a, lda, af, ldaf, ipiv, equed, r, &
       c, b, ldb, x, ldx, rcond, ferr, berr, work, rwork, info)
       character(1), intent(in)    :: fact, trans
-      integer,      intent(in)    :: n, nhrs, lda, ldaf, ldb, ldx
-      CMPLX,        intent(inout) :: a, af, b            ! a(lda, n), af(ldaf, n), b(ldb, nhrs)
+      integer,      intent(in)    :: n, nrhs, lda, ldaf, ldb, ldx
+      CMPLX,        intent(inout) :: a, af, b            ! a(lda, n), af(ldaf, n), b(ldb, nrhs)
       FLOAT,        intent(inout) :: r, c                ! r(n), c(n)
       integer,      intent(inout) :: ipiv                ! ipiv(n)
-      FLOAT,        intent(out)   :: ferr, berr          ! ferr(nhrs), berr(nhrs)
+      FLOAT,        intent(out)   :: ferr, berr          ! ferr(nrhs), berr(nrhs)
       FLOAT,        intent(out)   :: rcond
-      CMPLX,        intent(out)   :: x, work             ! x(ldx, nhrs), work(2*n)
+      CMPLX,        intent(out)   :: x, work             ! x(ldx, nrhs), work(2*n)
       character(1), intent(inout) :: equed
       FLOAT,        intent(out)   :: rwork               ! rwork(2*n)
       integer,      intent(out)   :: info
@@ -1093,8 +1093,8 @@ subroutine zlinsyssolve(n, nhrs, a, b, x)
 
   SAFE_ALLOCATE(ipiv(1:n))
   SAFE_ALLOCATE(rwork(1:2*n))
-  SAFE_ALLOCATE(ferr(1:nhrs))
-  SAFE_ALLOCATE(berr(1:nhrs))
+  SAFE_ALLOCATE(ferr(1:nrhs))
+  SAFE_ALLOCATE(berr(1:nrhs))
   SAFE_ALLOCATE(work(1:2*n))
   SAFE_ALLOCATE(r(1:n))
   SAFE_ALLOCATE(c(1:n))
@@ -1102,7 +1102,7 @@ subroutine zlinsyssolve(n, nhrs, a, b, x)
 
   equed = 'N'
 
-  call ZLAPACK(gesvx) ("N", "N", n, nhrs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
+  call ZLAPACK(gesvx) ("N", "N", n, nrhs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
     rcond, ferr(1), berr(1), work(1), rwork(1), info)
   if(info /= 0) then
     write(message(1), '(3a, i3)') 'In zlinsyssolve, LAPACK ', TOSTRING(ZLAPACK(gesvx)), ' returned info = ', info

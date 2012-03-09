@@ -179,11 +179,11 @@ module states_m
     !> This is stuff needed for the parallelization in states.
     logical                     :: parallel_in_states !< Am I parallel in states?
     type(mpi_grp_t)             :: mpi_grp            !< The MPI group related to the parallelization in states.
-    type(mpi_grp_t)             :: dom_st_mpi_grp     !< The MPI group related to the domain-states "plane".
+    type(mpi_grp_t)             :: dom_st_mpi_grp     !< The MPI group related to the domains-states "plane".
     type(mpi_grp_t)             :: st_kpt_mpi_grp     !< The MPI group related to the states-kpoints "plane".
     type(mpi_grp_t)             :: dom_st_kpt_mpi_grp !< The MPI group related to the domains-states-kpoints "cube".
 #ifdef HAVE_SCALAPACK
-    type(blacs_proc_grid_t)     :: dom_st_proc_grid   !< The BLACS process grid for the domains states plane
+    type(blacs_proc_grid_t)     :: dom_st_proc_grid   !< The BLACS process grid for the domains-states plane
 #endif
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
@@ -1519,7 +1519,6 @@ contains
     stout%parallel_in_states = stin%parallel_in_states
     call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
     stout%dom_st_kpt_mpi_grp = stin%dom_st_kpt_mpi_grp
-    stout%st_kpt_mpi_grp     = stin%st_kpt_mpi_grp
     stout%st_kpt_mpi_grp     = stin%st_kpt_mpi_grp
 
 #ifdef HAVE_SCALAPACK
