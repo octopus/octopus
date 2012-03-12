@@ -218,13 +218,13 @@ contains
     integer,           intent(in) :: unit
     !
     character(len=19) :: frmt
-    integer           :: dim_
+    integer           :: i, dim_
     !
     PUSH_SUB(atom_write_xyz)
     dim_=MAX_DIM
     if(present(dim))dim_=dim
     write(unit=frmt, fmt="(a5,i2.2,a4,i2.2,a6)") "(6x,a", LABEL_LEN, ",2x,", dim_,"f12.6)"
-    write(unit=unit, fmt=frmt) this%label, units_from_atomic(units_out%length, this%x)
+    write(unit=unit, fmt=frmt) this%label, (units_from_atomic(units_out%length, this%x(i)), i=1, dim_)
     POP_SUB(atom_write_xyz)
     return
   end subroutine atom_write_xyz
@@ -309,13 +309,14 @@ contains
     integer,                intent(in) :: unit
     !
     character(len=27) :: frmt
-    integer           :: dim_
+    integer           :: i, dim_
     !
     PUSH_SUB(atom_classical_write_xyz)
     dim_=MAX_DIM
     if(present(dim))dim_=dim
     write(unit=frmt, fmt="(a10,i2.2,a15)") "(6x,a1,2x,", dim_, "f12.6,a3,f12.6)"
-    write(unit=unit, fmt=frmt) this%label(1:1), units_from_atomic(units_out%length, this%x), " # ", this%charge
+    write(unit=unit, fmt=frmt) this%label(1:1), &
+      (units_from_atomic(units_out%length, this%x(i)), i=1, dim_), " # ", this%charge
     POP_SUB(atom_classical_write_xyz)
     return
   end subroutine atom_classical_write_xyz
