@@ -20,6 +20,7 @@
 #include "global.h"
 
 module geometry_m
+  use atom_m
   use c_pointer_m
   use datasets_m
   use distributed_m
@@ -45,16 +46,12 @@ module geometry_m
 
   private
   public ::                          &
-    atom_t,                          &
-    atom_classical_t,                &
-    atom_classical_add,              &
     geometry_t,                      &
     geometry_init,                   &
     geometry_init_xyz,               &
     geometry_init_species,           &
     geometry_init_from_data_object,  &
     geometry_partition,              &
-    geometry_add_atom_classical,     &
     geometry_create_data_object,     &
     geometry_copy,                   &
     geometry_end,                    &
@@ -63,13 +60,11 @@ module geometry_m
     geometry_mass,                   &
     cm_pos,                          &
     cm_vel,                          &
-    atom_write_xyz,                  &
+    geometry_write_xyz,              &
     loadPDB,                         &
     geometry_val_charge,             &
     geometry_grid_defaults,          &
     geometry_species_time_dependent
-
-  integer, parameter :: LABEL_LEN=15
 
   integer, parameter, public :: &
     INTERACTION_COULOMB = 1,    &
@@ -78,20 +73,6 @@ module geometry_m
   integer, parameter, public :: &
     LJ_EPSILON = 1,             &
     LJ_SIGMA   = 2
-
-  type atom_t
-    character(len=LABEL_LEN) :: label
-    type(species_t), pointer :: spec             !< pointer to species
-    FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)  !< position/velocity/force of atom in real space
-    logical :: move                              !< should I move this atom in the optimization mode
-  end type atom_t
-
-  type atom_classical_t
-    character(len=LABEL_LEN) :: label
-
-    FLOAT :: x(MAX_DIM), v(MAX_DIM), f(MAX_DIM)
-    FLOAT :: charge
-  end type atom_classical_t
 
   type geometry_t
     type(space_t), pointer :: space
@@ -123,126 +104,6 @@ module geometry_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine atom_init_from_data_object(this, spec, json)
-    type(atom_t),            intent(out) :: this
-    type(species_t), target, intent(in)  :: spec
-    type(json_object_t),     intent(in)  :: json
-    !
-    integer :: ierr
-    !
-    PUSH_SUB(atom_init_from_data_object)
-    call json_get(json, "label", this%label, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "label" from atom data object.'
-      call messages_fatal(1)
-      return
-    end if
-    ASSERT(trim(this%label)==trim(species_label(spec)))
-    this%spec=>spec
-    call json_get(json, "x", this%x, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "x" (coordinates) from atom data object.'
-      call messages_fatal(1)
-      return
-    end if
-    this%v=M_ZERO
-    this%f=M_ZERO
-    this%move=.false.
-    POP_SUB(atom_init_from_data_object)
-    return
-  end subroutine atom_init_from_data_object
-
-  ! ---------------------------------------------------------
-  subroutine atom_create_data_object(this, json)
-    type(atom_t),        intent(in)  :: this
-    type(json_object_t), intent(out) :: json
-    !
-    PUSH_SUB(atom_create_data_object)
-    call json_init(json)
-    call json_set(json, "label", trim(adjustl(this%label)))
-    call json_set(json, "x", this%x)
-    POP_SUB(atom_create_data_object)
-    return
-  end subroutine atom_create_data_object
-
-  ! ---------------------------------------------------------
-  subroutine atom_classical_init_from_data_object(this, json)
-    type(atom_classical_t), intent(out) :: this
-    type(json_object_t),    intent(in)  :: json
-    !
-    integer :: ierr
-    !
-    PUSH_SUB(atom_classical_init_from_data_object)
-    call json_get(json, "label", this%label, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "label" from atom classical data object.'
-      call messages_fatal(1)
-      return
-    end if
-    call json_get(json, "x", this%x, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "x" (coordinates) from atom classical data object.'
-      call messages_fatal(1)
-      return
-    end if
-    this%v=M_ZERO
-    this%f=M_ZERO
-    call json_get(json, "charge", this%charge, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "charge" from atom classical data object.'
-      call messages_fatal(1)
-      return
-    end if
-    POP_SUB(atom_classical_init_from_data_object)
-    return
-  end subroutine atom_classical_init_from_data_object
-
-  ! ---------------------------------------------------------
-  subroutine atom_classical_create_data_object(this, json)
-    type(atom_classical_t), intent(in)  :: this
-    type(json_object_t),    intent(out) :: json
-    !
-    PUSH_SUB(atom_classical_create_data_object)
-    call json_init(json)
-    call json_set(json, "label", trim(adjustl(this%label)))
-    call json_set(json, "x", this%x)
-    call json_set(json, "charge", this%charge)
-    POP_SUB(atom_classical_create_data_object)
-    return
-  end subroutine atom_classical_create_data_object
-
-  ! ---------------------------------------------------------
-  subroutine atom_classical_add(n_out, this_out, this_in)
-    integer,                                       intent(inout) :: n_out
-    type(atom_classical_t), pointer, dimension(:), intent(inout) :: this_out
-    type(atom_classical_t),          dimension(:), intent(in)    :: this_in
-    !
-    type(atom_classical_t), pointer, dimension(:) :: this
-    integer                                       :: n, n_in
-    !
-    PUSH_SUB(atom_classical_add)
-    n_in=size(this_in)
-    if(n_in>0)then
-      if(n_out>0)then
-        this=>this_out
-        nullify(this_out)
-        n=n_out+n_in
-        SAFE_ALLOCATE(this_out(n))
-        this_out(1:n_out)=this
-        SAFE_DEALLOCATE_P(this)
-        this_out(n_out+1:n)=this_in
-        n_out=n
-      else
-        SAFE_ALLOCATE(this_out(n_in))
-        this_out=this_in
-        n_out=n_in
-      end if
-    end if
-    POP_SUB(atom_classical_add)
-    return
-  end subroutine atom_classical_add
-
-  ! ---------------------------------------------------------
   subroutine geometry_init(geo, space, print_info)
     type(geometry_t),           intent(inout) :: geo
     type(space_t),    target,   intent(in)    :: space
@@ -265,12 +126,12 @@ contains
   !> initializes the xyz positions of the atoms in the structure geo
   subroutine geometry_init_xyz(geo)
     type(geometry_t), intent(inout) :: geo
-
-    integer :: ia
+    !
     type(xyz_file_info) :: xyz
-
+    integer             :: ia
+    logical             :: move
+    !
     PUSH_SUB(geometry_init_xyz)
-
     ! load positions of the atoms
     call xyz_file_init(xyz)
 
@@ -355,17 +216,14 @@ contains
     ! copy information from xyz to geo
     geo%natoms = xyz%n
     nullify(geo%atom)
-    SAFE_ALLOCATE(geo%atom(1:geo%natoms))
-    do ia = 1, geo%natoms
-      geo%atom(ia)%label = xyz%atom(ia)%label
-      geo%atom(ia)%x     = xyz%atom(ia)%x
-      geo%atom(ia)%f     = M_ZERO
-      if(iand(xyz%flags, XYZ_FLAGS_MOVE) .ne. 0) then
-        geo%atom(ia)%move = xyz%atom(ia)%move
-      else
-        geo%atom(ia)%move = .true.
-      end if
-    end do
+    if(geo%natoms>0)then
+      SAFE_ALLOCATE(geo%atom(1:geo%natoms))
+      do ia = 1, geo%natoms
+        move=.true.
+        if(iand(xyz%flags, XYZ_FLAGS_MOVE).ne.0)move=xyz%atom(ia)%move
+        call atom_init(geo%atom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, move=move)
+      end do
+    end if
 
     geo%reduced_coordinates = xyz%file_type == XYZ_FILE_REDUCED
 
@@ -385,15 +243,12 @@ contains
       geo%ncatoms = xyz%n
       write(message(1), '(a,i8)') 'Info: Number of classical atoms = ', geo%ncatoms
       call messages_info(1)
-
-      SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
-      do ia = 1, geo%ncatoms
-        geo%catom(ia)%label  = xyz%atom(ia)%label
-        geo%catom(ia)%x      = xyz%atom(ia)%x
-        geo%catom(ia)%v      = M_ZERO
-        geo%catom(ia)%f      = M_ZERO
-        geo%catom(ia)%charge = xyz%atom(ia)%charge
-      end do
+      if(geo%ncatoms>0)then
+        SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
+        do ia = 1, geo%ncatoms
+          call atom_classical_init(geo%catom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, xyz%atom(ia)%charge)
+        end do
+      end if
       call xyz_file_end(xyz)
     end if
 
@@ -402,7 +257,7 @@ contains
       write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
       write(message(2), '(a)') "Please review your input files and the output geometry."
       ! then write out the geometry, whether asked for or not in Output variable
-      call atom_write_xyz(STATIC_DIR, "geometry", geo, geo%space%dim)
+      call geometry_write_xyz(STATIC_DIR, "geometry", geo, geo%space%dim)
       call messages_fatal(2)
     end if
 
@@ -428,7 +283,7 @@ contains
     geo%nspecies = 0
     atoms1:  do i = 1, geo%natoms
       do j = 1, i - 1
-        if(trim(geo%atom(j)%label) == trim(geo%atom(i)%label)) cycle atoms1
+        if(atom_same_species(geo%atom(j), geo%atom(i))) cycle atoms1
       end do
       geo%nspecies = geo%nspecies + 1
     end do atoms1
@@ -441,10 +296,10 @@ contains
     geo%only_user_def = .true.
     atoms2: do i = 1, geo%natoms
       do j = 1, i - 1
-        if(trim(geo%atom(j)%label) == trim(geo%atom(i)%label)) cycle atoms2
+        if(atom_same_species(geo%atom(j), geo%atom(i))) cycle atoms2
       end do
       k = k + 1
-      call species_set_label(geo%species(k), geo%atom(j)%label)
+      call species_set_label(geo%species(k), atom_get_label(geo%atom(j)))
       call species_set_index(geo%species(k), k)
       call species_read(geo%species(k))
       geo%only_user_def = (geo%only_user_def .and. (species_type(geo%species(k)) == SPEC_USDEF))
@@ -489,8 +344,8 @@ contains
     !  assign species
     do i = 1, geo%natoms
       do j = 1, geo%nspecies
-        if(trim(geo%atom(i)%label) == trim(species_label(geo%species(j)))) then
-          geo%atom(i)%spec => geo%species(j)
+        if(atom_same_species(geo%atom(i), geo%species(j)))then
+          call atom_set_species(geo%atom(i), geo%species(j))
           exit
         end if
       end do
@@ -780,11 +635,13 @@ contains
     integer,          intent(in)    :: iunit
     type(geometry_t), intent(inout) :: geo
 
-    character(len=80) :: record
-    character(len=6)  :: record_name
-    character(len=4)  :: atm
-    character(len=3)  :: res
-    integer :: na, nca
+    FLOAT, dimension(3) :: x
+    FLOAT               :: charge
+    character(len=80)   :: record
+    character(len=6)    :: record_name
+    character(len=4)    :: atm
+    character(len=3)    :: res
+    integer             :: na, nca, ierr
 
     PUSH_SUB(loadPDB)
 
@@ -793,7 +650,8 @@ contains
     geo%natoms = 0
     geo%ncatoms = 0
     do
-      read(iunit, '(a80)', err=990, end=990) record
+      read(iunit, '(a80)', iostat=ierr) record
+      if(ierr/=0)exit
       read(record, '(a6)') record_name
       if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
         read(record, '(17x,a3)') res
@@ -804,7 +662,6 @@ contains
         end if
       end if
     end do
-990 continue
 
     SAFE_ALLOCATE(geo%atom(1:geo%natoms))
     SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
@@ -813,37 +670,26 @@ contains
     rewind(iunit)
     na = 1; nca = 1
     do
-      read(iunit, '(a80)', err=991, end=991) record
+      read(iunit, '(a80)', iostat=ierr) record
+      if(ierr/=0)exit
       read(record, '(a6)') record_name
       if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
         read(record, '(12x,a4,1x,a3)') atm, res
         call str_trim(atm)
         if(trim(res) == 'QM') then
-          read(record, '(30x,3f8.3)') geo%atom(na)%x
-          geo%atom(na)%label = atm(1:1)
+          read(record, '(30x,3f8.3)') x
+          call atom_init(geo%atom(na), atm(1:1), x)
           na = na + 1
         else
-          geo%catom(nca)%label = atm
-          read(record, '(30x,3f8.3,6x,f6.2)') geo%catom(nca)%x, geo%catom(nca)%charge
+          read(record, '(30x,3f8.3,6x,f6.2)') x, charge
+          call atom_classical_init(geo%catom(nca), atm, x, charge)
           nca = nca + 1
         end if
       end if
     end do
-991 continue
 
     POP_SUB(loadPDB)
   end subroutine loadPDB
-
-  ! ---------------------------------------------------------
-  subroutine geometry_add_atom_classical(geo, atoms)
-    type(geometry_t),                     intent(inout) :: geo
-    type(atom_classical_t), dimension(:), intent(in)    :: atoms
-    !
-    PUSH_SUB(geometry_add_atom_classical)
-    call atom_classical_add(geo%ncatoms, geo%catom, atoms)
-    POP_SUB(geometry_add_atom_classical)
-    return
-  end subroutine geometry_add_atom_classical
 
   ! ---------------------------------------------------------
   subroutine geometry_end(geo)
@@ -901,7 +747,8 @@ contains
 
     dipole(1:geo%space%dim) = M_ZERO
     do ia = 1, geo%natoms
-      dipole(1:geo%space%dim) = dipole(1:geo%space%dim) + species_zval(geo%atom(ia)%spec)*geo%atom(ia)%x(1:geo%space%dim)
+      dipole(1:geo%space%dim) = dipole(1:geo%space%dim) + &
+        species_zval(geo%atom(ia)%spec)*geo%atom(ia)%x(1:geo%space%dim)
     end do
     dipole = P_PROTON_CHARGE*dipole
 
@@ -921,7 +768,7 @@ contains
     rmin = huge(rmin)
     do i = 1, geo%natoms
       do j = i + 1, geo%natoms
-        r = sqrt(sum((geo%atom(i)%x-geo%atom(j)%x)**2))
+        r = atom_distance(geo%atom(i), geo%atom(j))
         if(r < rmin) then
           rmin = r
         end if
@@ -976,7 +823,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine atom_write_xyz(dir, fname, geo, sbdim, append, comment)
+  subroutine geometry_write_xyz(dir, fname, geo, sbdim, append, comment)
     character(len=*),    intent(in) :: dir, fname
     type(geometry_t),    intent(in) :: geo
     integer,             intent(in) :: sbdim
@@ -1004,8 +851,7 @@ contains
       write(iunit, '(1x,a,a)') 'units: ', trim(units_abbrev(units_out%length))
     endif
     do iatom = 1, geo%natoms
-      write(iunit, '(6x,a,2x,99f12.6)') geo%atom(iatom)%label, &
-        (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir)), idir = 1, sbdim)
+      call atom_write_xyz(geo%atom(iatom), sbdim, iunit)
     end do
     call io_close(iunit)
 
@@ -1014,15 +860,13 @@ contains
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
       do iatom = 1, geo%ncatoms
-        write(iunit, '(6x,a1,2x,99f12.6)',advance='no') geo%catom(iatom)%label(1:1), &
-          (units_from_atomic(units_out%length, geo%catom(iatom)%x(idir)), idir = 1, sbdim)
-        write(iunit, '(a,f12.6)') " # ", geo%catom(iatom)%charge
+        call atom_classical_write_xyz(geo%catom(iatom), sbdim, iunit)
       end do
       call io_close(iunit)
     end if
 
     POP_SUB(atom_write_xyz)
-  end subroutine atom_write_xyz
+  end subroutine geometry_write_xyz
 
 
   ! ---------------------------------------------------------
@@ -1075,25 +919,6 @@ contains
 
     POP_SUB(geometry_grid_defaults)
   end subroutine geometry_grid_defaults
-
-
-  !--------------------------------------------------------------
-  subroutine atom_copy(aout, ain)
-    type(atom_t), intent(out) :: aout
-    type(atom_t), intent(in)  :: ain
-
-    PUSH_SUB(atom_copy)
-
-    aout%label = ain%label
-    aout%spec  => ain%spec
-    aout%x     = ain%x
-    aout%v     = ain%v
-    aout%f     = ain%f
-    aout%move  = ain%move
-
-    POP_SUB(atom_copy)
-  end subroutine atom_copy
-
 
   !--------------------------------------------------------------
   subroutine geometry_copy(geo_out, geo_in)

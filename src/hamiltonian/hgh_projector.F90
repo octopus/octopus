@@ -20,6 +20,7 @@
 #include "global.h"
 
 module hgh_projector_m
+  use atom_m
   use global_m
   use grid_m
   use lalg_basic_m

@@ -23,6 +23,7 @@ noinst_LIBRARIES = libions.a
 
 libions_a_SOURCES =         \
 	xyz_file.F90        \
+	atom.F90            \
 	geometry.F90        \
 	xyz_adjust.F90      \
 	kpoints.F90         \
@@ -42,7 +43,8 @@ depend:
 	@makedepf90 $(libions_a_SOURCES)
 
 xyz_file.o : xyz_file.F90 
-geometry.o : geometry.F90 xyz_file.o
+atom.o : atom.F90
+geometry.o : geometry.F90 atom.o xyz_file.o
 xyz_adjust.o : xyz_adjust.F90 geometry.o 
 kpoints.o : geometry.o symmetries.o
 simul_box.o : simul_box.F90 geometry.o kpoints.o symmetries.o

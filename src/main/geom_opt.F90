@@ -138,7 +138,7 @@ contains
 
     ! print out geometry
     call from_coords(g_opt, coords)
-    call atom_write_xyz(".", "min", g_opt%geo, g_opt%dim)
+    call geometry_write_xyz(".", "min", g_opt%geo, g_opt%dim)
 
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
@@ -322,7 +322,7 @@ contains
 
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .true.)
 
-    call atom_write_xyz(".", "work-geom", g_opt%geo, g_opt%dim, append = .true.)
+    call geometry_write_xyz(".", "work-geom", g_opt%geo, g_opt%dim, append = .true.)
 
     call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
@@ -389,7 +389,7 @@ contains
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10)') units_from_atomic(units_out%energy, energy)
-    call atom_write_xyz("geom", trim(c_geom_iter), g_opt%geo, g_opt%dim, comment=trim(title))
+    call geometry_write_xyz("geom", trim(c_geom_iter), g_opt%geo, g_opt%dim, comment=trim(title))
 
     call from_coords(g_opt, coords)
 

@@ -20,6 +20,7 @@
 #include "global.h"
 
 module epot_m
+  use atom_m
   use comm_m
   use datasets_m
   use derivatives_m

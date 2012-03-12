@@ -20,6 +20,7 @@
 #include "global.h"
 
 module projector_m
+  use atom_m
   use batch_m
   use comm_m
   use double_grid_m

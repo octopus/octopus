@@ -79,7 +79,7 @@ module species_m
     species_get_iwf_radius,        &
     species_end
 
-  integer, parameter :: LABEL_LEN=15
+  integer, public, parameter :: LABEL_LEN=15
 
   integer, public, parameter :: &
     SPEC_USDEF  = 123,          & !< user-defined function

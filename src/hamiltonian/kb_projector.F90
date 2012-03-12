@@ -20,6 +20,7 @@
 #include "global.h"
 
 module kb_projector_m
+  use atom_m
   use double_grid_m
   use geometry_m
   use global_m

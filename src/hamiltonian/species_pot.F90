@@ -20,6 +20,7 @@
 #include "global.h"
 
 module species_pot_m
+  use atom_m
   use curvilinear_m
   use datasets_m
   use double_grid_m
