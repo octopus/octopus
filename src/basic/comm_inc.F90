@@ -76,7 +76,7 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
   R_TYPE,                           intent(inout) :: aa(:, :)
   integer, optional,                intent(in)    :: dim(1:2)
 
-  integer :: dim_(1:2)
+  integer :: dim_(1:2), ii
   R_TYPE, allocatable :: aac(:, :)
   
   PUSH_SUB(X(comm_allreduce_2))
@@ -129,7 +129,7 @@ subroutine X(comm_allreduce_4)(comm, aa)
   R_TYPE,                           intent(inout) :: aa(:, :, :, :)
 
   integer :: dim_(1:4)
-  R_TYPE, allocatable :: aac(:, :)
+  R_TYPE, allocatable :: aac(:, :, :, :)
   
   PUSH_SUB(X(comm_allreduce_4))
 
