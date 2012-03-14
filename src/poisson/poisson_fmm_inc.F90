@@ -222,8 +222,8 @@ subroutine poisson_fmm_solve(this, pot, rho)
       message(1) = "At present, FMM solver for Hartree potential can only deal with cubic boxes. "
       message(2) = " Please, change your Poisson solver or the size or dimensions of your box. "
       call messages_fatal(2)
-    endif
-  endif
+    end if
+  end if
 
   call profiling_in(poisson_prof, "POISSON_FMM")
 
@@ -288,20 +288,18 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
   ! Apply the parallel correction
   call profiling_in(prof_fmm_corr, "FMM_CORR")
+
   SAFE_ALLOCATE(ix(1:mesh%sb%dim))
   SAFE_ALLOCATE(rho_tmp(1:mesh%np_part))
-  do ip = 1, mesh%np
-    rho_tmp(ip) = rho(ip)
-  end do
-  do ip = mesh%np + 1, mesh%np_part
-    rho_tmp(ip) = M_ZERO
-  end do
-  if (mesh%parallel_in_domains) then
+
+  call lalg_copy(mesh%np, rho, rho_tmp)
+
+  call dderivatives_set_bc(this%der, rho_tmp)
+
 #ifdef HAVE_MPI
-    call dvec_ghost_update(mesh%vp, rho_tmp)
+  if (mesh%parallel_in_domains) call dvec_ghost_update(mesh%vp, rho_tmp)
 #endif
-  end if
-  
+
   ! FMM just calculates contributions from other cells. for self-interaction cell integration, we include 
   ! (as traditional in octopus) an approximate integration using a spherical cell whose volume is the volume of the actual cell
   ! Next line is only valid for 3D
@@ -330,23 +328,24 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
         aux1 = M_ZERO  
 
-        aux1 = aux1 - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -2)) &
-             - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 2)) &
-             - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, 2)) &
-             - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, 2)) 
+        aux1 = aux1 &
+          - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 2)) &
+          - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, 2)) &
+          - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, 2)) 
 
-        aux1 = aux1/M_FOUR
+        aux1 = aux1*CNST(0.25) !1/4
 
-        aux1 = aux1 + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -1)) &
-             + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 1)) &
-             + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, 1)) &
-             + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, 1)) 
+        aux1 = aux1 &
+          + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 1)) &
+          + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, 1)) &
+          + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, 1)) 
 
-        aux1 = aux1/16.0
+        aux1 = aux1*CNST(0.0625) !1/16
         
-        aux1 = aux1 + rho_tmp(ip) * (27.0/32.0 + (M_ONE - this%params_fmm%alpha_fmm) * M_TWO * M_PI * (3./(M_PI*4.))**(2./3.))
+        aux1 = aux1 + rho_tmp(ip)*(CNST(27.0)/CNST(32.0) + &
+          (M_ONE - this%params_fmm%alpha_fmm)*M_TWO*M_PI*(CNST(3.0)/(M_PI*CNST(4.0)))**(CNST(2.0)/CNST(3.0)))
 
-        aux1 = aux1 * (mesh%spacing(1) * mesh%spacing(2))
+        aux1 = aux1*(mesh%spacing(1)*mesh%spacing(2))
 
         ! Apply the correction to the potential
         pot(ip) = pot(ip) + aux1
@@ -355,8 +354,8 @@ subroutine poisson_fmm_solve(this, pot, rho)
 
     else ! Not common mesh; we add the self-interaction of the cell
       do ii = 1, mesh%np 
-        aux = M_TWO * M_PI * (3. * mesh%vol_pp(ii)/(M_PI * 4.))**(2./3.)
-        pot(ii) = pot(ii) + aux * rho_tmp(ii)
+        aux = M_TWO*M_PI*(CNST(3.0)*mesh%vol_pp(ii)/(M_PI*CNST(4.0)))**(CNST(2.0)/CNST(3.0))
+        pot(ii) = pot(ii) + aux*rho_tmp(ii)
       end do
     end if
   end if

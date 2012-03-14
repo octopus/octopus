@@ -30,6 +30,7 @@ module poisson_m
   use index_m
   use io_m
   use io_function_m
+  use lalg_basic_m
   use loct_math_m
   use math_m
   use mesh_m
