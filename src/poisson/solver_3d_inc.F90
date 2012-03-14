@@ -93,9 +93,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
 
   select case(this%method)
   case(POISSON_FMM)
-#ifdef HAVE_LIBFM
     call poisson_fmm_init(this%params_fmm, this%der%mesh, all_nodes_comm)
-#endif
 
   case(POISSON_CG)
     call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 4, maxl)

@@ -30,7 +30,6 @@ module poisson_m
   use index_m
   use io_m
   use io_function_m
-  use lalg_basic_m
   use loct_math_m
   use math_m
   use mesh_m
@@ -45,6 +44,7 @@ module poisson_m
   use poisson_corrections_m
   use poisson_isf_m
   use poisson_fft_m
+  use poisson_fmm_m
   use poisson_multigrid_m
   use poisson_sete_m
   use profiling_m
@@ -77,8 +77,6 @@ module poisson_m
     dpoisson_solve_finish,       &
     poisson_is_async
 
-
-  
   integer, public, parameter ::         &
     POISSON_DIRECT_SUM_1D = -1,         &
     POISSON_DIRECT_SUM_2D = -2,         &
@@ -90,20 +88,6 @@ module poisson_m
     POISSON_ISF           =  8,         &
     POISSON_SETE          =  9
   ! the FFT solvers are defined in its own module
-
-  type poisson_fmm_t
-    FLOAT   :: delta_E_fmm
-    integer :: abs_rel_fmm
-    integer :: dipole_correction
-    FLOAT   :: alpha_fmm  !< Alpha for the correction of the FMM
-    type(mpi_grp_t) :: all_nodes_grp !< The communicator for all nodes.
-    type(mpi_grp_t) :: perp_grp      !< The communicator perpendicular to the mesh communicator.
-    integer(8) :: nlocalcharges
-    integer    :: sp !< Local start point
-    integer    :: ep !< Local end point
-    integer, pointer :: disps(:)
-    integer, pointer :: dsize(:) !< Local size
-  end type poisson_fmm_t
   
   type poisson_t
     type(derivatives_t), pointer :: der
@@ -547,7 +531,7 @@ contains
       call poisson3D_solve_direct(this, pot, rho)
 
     case(POISSON_FMM)
-      call poisson_fmm_solve(this, pot, rho)
+      call poisson_fmm_solve(this%params_fmm, this%der, pot, rho)
      
     case(POISSON_CG)
       call poisson_cg1(der, this%corrector, pot, rho)
@@ -1002,7 +986,6 @@ contains
 #include "solver_1d_inc.F90"
 #include "solver_2d_inc.F90"
 #include "solver_3d_inc.F90"
-#include "poisson_fmm_inc.F90"   
 
 end module poisson_m
 
