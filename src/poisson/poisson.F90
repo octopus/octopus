@@ -116,8 +116,6 @@ module poisson_m
     CMD_FINISH = 1,                 &
     CMD_POISSON_SOLVE = 2
 
-  type(profile_t), save :: poisson_prof
-
 contains
 
   !-----------------------------------------------------------------

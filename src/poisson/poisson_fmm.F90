@@ -259,7 +259,7 @@ contains
     FLOAT :: aux1
     type(mesh_t), pointer :: mesh
 
-    type(profile_t), save :: prof_fmm_lib, prof_fmm_corr, prof_fmm_gat
+    type(profile_t), save :: poisson_prof, prof_fmm_lib, prof_fmm_corr, prof_fmm_gat
 
     PUSH_SUB(poisson_fmm_solve)
 
