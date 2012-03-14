@@ -638,7 +638,7 @@ contains
       end if
     end if
 
-    POP_SUB(kick_apply)
+    POP_SUB(kick_function_get)
   end subroutine kick_function_get
 
 
