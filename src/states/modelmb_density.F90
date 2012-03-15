@@ -179,7 +179,8 @@ contains
         do idir = 1, ndim1part
           write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir) * mb_1part%h_1part(idir) + mb_1part%origin(idir)
         end do
-        write(iunit,'(es18.10)') real(density(jj))
+!!$        write(iunit,'(es18.10)') real(density(jj))
+        write(iunit,'(es23.14E3)') density(jj)
       end do
       call io_close(iunit)
 

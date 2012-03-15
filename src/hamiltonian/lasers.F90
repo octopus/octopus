@@ -651,20 +651,20 @@ contains
     !no PUSH SUB, called too often
 
     dim = size(field)    
-    
-    if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
-      ! In this case we will just return the value of the time function. The "field", in fact, 
-      ! should be a function of the position in space (thus, a true "field"), given by the 
-      ! gradient of the scalar potential.
-      field(1) = tdf(laser%f, time)
-      return
-    endif
+
     if(present(time)) then
       amp = tdf(laser%f, time) * exp(M_zI * ( laser%omega * time + tdf(laser%phi, time) ) )
     else
       amp = M_z1
     end if
-    field(1:dim) = field(1:dim) + real(amp*laser%pol(1:dim))
+    if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
+      ! In this case we will just return the value of the time function. The "field", in fact, 
+      ! should be a function of the position in space (thus, a true "field"), given by the 
+      ! gradient of the scalar potential.
+      field(1) = field(1) + real(amp)
+    else
+      field(1:dim) = field(1:dim) + real(amp*laser%pol(1:dim))
+    end if
 
   end subroutine laser_field
 
