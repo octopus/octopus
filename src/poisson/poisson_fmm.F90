@@ -40,10 +40,12 @@ module poisson_fmm_m
   use messages_m
   use mpi_m
   use multicomm_m
+  use nl_operator_m
   use par_vec_m
   use parser_m
   use profiling_m
   use simul_box_m
+  use stencil_star_m
   use varinfo_m
 
   implicit none
@@ -68,6 +70,8 @@ module poisson_fmm_m
     integer    :: ep !< Local end point
     integer, pointer :: disps(:)
     integer, pointer :: dsize(:) !< Local size
+    type(nl_operator_t) :: corrector
+    type(derivatives_t), pointer :: der
   end type poisson_fmm_t
 
 contains
@@ -75,12 +79,12 @@ contains
   ! ---------------------------------------------------------
   !> Initialises the FMM parameters and vectors. Also it calls to 
   !! the library initialisation.
-  subroutine poisson_fmm_init(params_fmm, mesh, all_nodes_comm)
-    type(poisson_fmm_t), intent(out)   :: params_fmm
-    type(mesh_t),        intent(in)    :: mesh
-    integer,             intent(in)    :: all_nodes_comm
-
-#ifdef HAVE_LIBFM
+  subroutine poisson_fmm_init(this, der, all_nodes_comm)
+    type(poisson_fmm_t),         intent(out)   :: this
+    type(derivatives_t), target, intent(in)    :: der
+    integer,                     intent(in)    :: all_nodes_comm
+    
+    integer :: is
     logical, allocatable :: remains(:)
     integer, allocatable :: dend(:)
     integer :: subcomm, cdim
@@ -98,7 +102,7 @@ contains
     !% For inhomogeneous systems we have an error-controlled sequential version available
     !% (from Ivo Kabadshow).
     !%End
-    call parse_float(datasets_check('DeltaEFMM'), CNST(1e-4), params_fmm%delta_E_fmm)
+    call parse_float(datasets_check('DeltaEFMM'), CNST(1e-4), this%delta_E_fmm)
 
     !%Variable AbsRelFMM 
     !%Type integer
@@ -129,7 +133,7 @@ contains
     !% very low. It is a side effect from the periodicity (totalcharge=0), but
     !% should not bother you at all. You get this kind of extra precision for free.
     !%End
-    call parse_integer(datasets_check('AbsRelFMM'), 2, params_fmm%abs_rel_fmm)
+    call parse_integer(datasets_check('AbsRelFMM'), 2, this%abs_rel_fmm)
 
     !%Variable DipoleCorrection 
     !%Type integer
@@ -145,7 +149,7 @@ contains
     !%Option -1
     !% Disables dipole correction.
     !%End
-    call parse_integer(datasets_check('DipoleCorrection'), 0, params_fmm%dipole_correction)
+    call parse_integer(datasets_check('DipoleCorrection'), 0, this%dipole_correction)
 
     !%Variable AlphaFMM
     !%Type float
@@ -155,7 +159,7 @@ contains
     !% Parameter for the correction of the self-interaction of the
     !% electrostatic Hartree potential. The default value is 0.291262136.
     !%End
-    call parse_float(datasets_check('AlphaFMM'), CNST(0.291262136), params_fmm%alpha_fmm)
+    call parse_float(datasets_check('AlphaFMM'), CNST(0.291262136), this%alpha_fmm)
 
     ! FMM: Variable periodic sets periodicity
     ! 0 = open system
@@ -163,63 +167,90 @@ contains
     ! 2 = 2D periodic system
     ! 3 = 3D periodic system
 
-    call mpi_grp_init(params_fmm%all_nodes_grp, all_nodes_comm)
+    call mpi_grp_init(this%all_nodes_grp, all_nodes_comm)
+
+    this%der => der
 
     if (mpi_world%size == 1) then
       cdim = 1
 
-      SAFE_ALLOCATE(params_fmm%disps(1))
+      SAFE_ALLOCATE(this%disps(1))
       SAFE_ALLOCATE(dend(1))
-      SAFE_ALLOCATE(params_fmm%dsize(1))
+      SAFE_ALLOCATE(this%dsize(1))
 
-      dend = mesh%np
-      params_fmm%sp = 1 
-      params_fmm%ep = mesh%np
-      params_fmm%dsize(1) = mesh%np
-      params_fmm%disps = 0
-      params_fmm%nlocalcharges = params_fmm%dsize(1)
+      dend = der%mesh%np
+      this%sp = 1 
+      this%ep = der%mesh%np
+      this%dsize(1) = der%mesh%np
+      this%disps = 0
+      this%nlocalcharges = this%dsize(1)
 
     else 
-
-      call MPI_Cartdim_get(params_fmm%all_nodes_grp%comm, cdim, mpi_err)
+#ifdef HAVE_MPI
+      call MPI_Cartdim_get(this%all_nodes_grp%comm, cdim, mpi_err)
 
       SAFE_ALLOCATE(remains(1:cdim))
 
       remains = .true.
       remains(1) = .false.
 
-      call MPI_Cart_sub(params_fmm%all_nodes_grp%comm, remains(1), subcomm, mpi_err)
-      call mpi_grp_init(params_fmm%perp_grp, subcomm)
+      call MPI_Cart_sub(this%all_nodes_grp%comm, remains(1), subcomm, mpi_err)
+      call mpi_grp_init(this%perp_grp, subcomm)
 
-      SAFE_ALLOCATE(params_fmm%disps(1:params_fmm%perp_grp%size))
-      SAFE_ALLOCATE(dend(1:params_fmm%perp_grp%size))
-      SAFE_ALLOCATE(params_fmm%dsize(1:params_fmm%perp_grp%size))
+      SAFE_ALLOCATE(this%disps(1:this%perp_grp%size))
+      SAFE_ALLOCATE(dend(1:this%perp_grp%size))
+      SAFE_ALLOCATE(this%dsize(1:this%perp_grp%size))
 
-      call multicomm_divide_range(mesh%np, params_fmm%perp_grp%size, params_fmm%disps, dend, params_fmm%dsize)
+      call multicomm_divide_range(der%mesh%np, this%perp_grp%size, this%disps, dend, this%dsize)
 
-      params_fmm%sp = params_fmm%disps(params_fmm%perp_grp%rank + 1)
-      params_fmm%ep = dend(params_fmm%perp_grp%rank + 1)
-      params_fmm%nlocalcharges = params_fmm%dsize(params_fmm%perp_grp%rank + 1)
-      params_fmm%disps = params_fmm%disps - 1
-
+      this%sp = this%disps(this%perp_grp%rank + 1)
+      this%ep = dend(this%perp_grp%rank + 1)
+      this%nlocalcharges = this%dsize(this%perp_grp%rank + 1)
+      this%disps = this%disps - 1
+#endif
     end if
+
+#ifdef HAVE_LIBFM
     call fmm_init()
+#endif
+      
+    call nl_operator_init(this%corrector, "FMM Correction")
+    call stencil_star_get_lapl(this%corrector%stencil, der%mesh%sb%dim, 2)
+    call nl_operator_build(this%der%mesh, this%corrector, der%mesh%np, const_w = .not. this%der%mesh%use_curvilinear)
+
+    do is = 1, this%corrector%stencil%size
+
+      select case(sum(abs(this%corrector%stencil%points(1:MAX_DIM, is))))
+      case(0)
+        this%corrector%w_re(is, 1) = CNST(27.0)/CNST(32.0) + &
+          (M_ONE - this%alpha_fmm)*M_TWO*M_PI*(CNST(3.0)/(M_PI*CNST(4.0)))**(CNST(2.0)/CNST(3.0))
+      case(1)
+        this%corrector%w_re(is, 1) = CNST(0.0625)
+      case(2)
+        this%corrector%w_re(is, 1) = -CNST(0.0625)*CNST(0.25)
+      end select
+
+      this%corrector%w_re(is, 1) = this%corrector%w_re(is, 1)*der%mesh%spacing(1)*der%mesh%spacing(2)
+    end do
+
+    call nl_operator_update_weights(this%corrector)
 
     POP_SUB(poisson_fmm_init)
-#endif
   end subroutine poisson_fmm_init
 
   ! ---------------------------------------------------------
   !> Release memory and call to end the library
-  subroutine poisson_fmm_end(params_fmm)
-    type(poisson_fmm_t), intent(inout) :: params_fmm
+  subroutine poisson_fmm_end(this)
+    type(poisson_fmm_t), intent(inout) :: this
 
 #ifdef HAVE_LIBFM
     PUSH_SUB(poisson_fmm_end)
 
-    if (mpi_world%size > 1) call MPI_Comm_free(params_fmm%perp_grp%comm, mpi_err)
-    SAFE_DEALLOCATE_P(params_fmm%disps)
-    SAFE_DEALLOCATE_P(params_fmm%dsize)
+    call nl_operator_end(this%corrector)
+
+    if (mpi_world%size > 1) call MPI_Comm_free(this%perp_grp%comm, mpi_err)
+    SAFE_DEALLOCATE_P(this%disps)
+    SAFE_DEALLOCATE_P(this%dsize)
     call fmm_finalize()
 
     POP_SUB(poisson_fmm_end)
@@ -248,7 +279,7 @@ contains
     real(8), allocatable :: q(:)  
     real(8), allocatable :: pot_lib_fmm(:)
     real(8), allocatable :: xyz(:, :)
-    FLOAT,   allocatable :: rho_tmp(:)
+    FLOAT,   allocatable :: rho_tmp(:), pot_tmp(:)
     real(8) :: delta_E 
     real(8) :: energy_fmm   !< We don`t use it, but we cannot remove energy_fmm for the moment
     real(8) :: periodic_length
@@ -285,7 +316,7 @@ contains
     ! allocate buffers.
     SAFE_ALLOCATE(q(sp:ep))
     SAFE_ALLOCATE(xyz(1:3, sp:ep))
-    SAFE_ALLOCATE(pot_lib_fmm(sp:ep)) 
+    SAFE_ALLOCATE(pot_lib_fmm(sp:ep))
 
     totalcharges = mesh%np_global 
 
@@ -333,7 +364,7 @@ contains
     if (mesh%sb%dim == 2) then
       aux = M_TWO*M_PI * mesh%spacing(1)
       do ii = 1, mesh%np
-        pot(ii) = pot(ii) + aux * rho(ii)
+        pot(ii) = pot(ii) + aux*rho(ii)
       end do
     end if
 
@@ -346,14 +377,9 @@ contains
 
     SAFE_ALLOCATE(ix(1:mesh%sb%dim))
     SAFE_ALLOCATE(rho_tmp(1:mesh%np_part))
+    SAFE_ALLOCATE(pot_tmp(1:mesh%np)) 
 
     call lalg_copy(mesh%np, rho, rho_tmp)
-
-    call dderivatives_set_bc(der, rho_tmp)
-
-#ifdef HAVE_MPI
-    if (mesh%parallel_in_domains) call dvec_ghost_update(mesh%vp, rho_tmp)
-#endif
 
     ! FMM just calculates contributions from other cells. for self-interaction cell integration, we include 
     ! (as traditional in octopus) an approximate integration using a spherical cell whose volume is the volume of the actual cell
@@ -363,48 +389,10 @@ contains
         (mesh%spacing(2) == mesh%spacing(3)) .and. &
         (mesh%spacing(1) == mesh%spacing(3))) then
 
-        ! Corrections for first neighbours obtained with linear interpolation      
-        ! First we obtain the densities in neighbouring points ip+1/2
-        ! Iterate over all local points of rho (1 to mesh%np)
+        call dderivatives_perform(this%corrector, der, rho_tmp, pot_tmp)
+
         do ip = 1, mesh%np
-          if (mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
-            ! Get the global point from the local point
-            gip = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
-#endif
-          else
-            gip = ip
-          end if
-
-          ! Get x,y,z indices of the global point
-          call index_to_coords(mesh%idx, mesh%sb%dim, gip, ix)
-
-          !!Correction for FMM with semi-neighbours (terms are merged for computational efficiency)
-
-          aux1 = M_ZERO  
-
-          aux1 = aux1 &
-            - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 2)) &
-            - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, 2)) &
-            - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, -2)) - rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, 2)) 
-
-          aux1 = aux1*CNST(0.25) !1/4
-
-          aux1 = aux1 &
-            + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 1, 1)) &
-            + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 2, 1)) &
-            + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, -1)) + rho_tmp(vec_index2local(mesh%vp,mesh%idx, ix, 3, 1)) 
-
-          aux1 = aux1*CNST(0.0625) !1/16
-
-          aux1 = aux1 + rho_tmp(ip)*(CNST(27.0)/CNST(32.0) + &
-            (M_ONE - this%alpha_fmm)*M_TWO*M_PI*(CNST(3.0)/(M_PI*CNST(4.0)))**(CNST(2.0)/CNST(3.0)))
-
-          aux1 = aux1*(mesh%spacing(1)*mesh%spacing(2))
-
-          ! Apply the correction to the potential
-          pot(ip) = pot(ip) + aux1
-
+          pot(ip) = pot(ip) + pot_tmp(ip)
         end do
 
       else ! Not common mesh; we add the self-interaction of the cell
@@ -417,6 +405,7 @@ contains
 
     SAFE_DEALLOCATE_A(ix)
     SAFE_DEALLOCATE_A(rho_tmp)
+    SAFE_DEALLOCATE_A(pot_tmp)
 
     call profiling_out(prof_fmm_corr)
     call profiling_out(poisson_prof)

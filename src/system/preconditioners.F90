@@ -155,6 +155,8 @@ contains
         end do
       end do
       
+      call nl_operator_update_weights(this%op)
+
     case(PRE_JACOBI, PRE_MULTIGRID)
       SAFE_ALLOCATE(this%diag_lapl(1:gr%mesh%np))
       call derivatives_lapl_diag(gr%der, this%diag_lapl)
