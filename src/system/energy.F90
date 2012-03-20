@@ -76,6 +76,7 @@ contains
 
     hm%energy%eigenvalues = states_eigenvalues_sum(st)
 
+    evxctau = M_ZERO
     if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK).and.(hm%theory_level.ne.CLASSICAL)) then
       if(states_are_real(st)) then
         hm%energy%kinetic  = delectronic_energy(hm, gr%der, st, terms = TERM_KINETIC)
