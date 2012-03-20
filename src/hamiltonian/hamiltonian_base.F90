@@ -123,7 +123,8 @@ module hamiltonian_base_m
     TERM_LOCAL_POTENTIAL     =   2,      & 
     TERM_NON_LOCAL_POTENTIAL =   4,      &
     TERM_OTHERS              =   8,      &
-    TERM_LOCAL_EXTERNAL      =  16
+    TERM_LOCAL_EXTERNAL      =  16,      &
+    TERM_MGGA                =  32
 
   integer, public ::                       &
     FIELD_POTENTIAL                = 1,    &

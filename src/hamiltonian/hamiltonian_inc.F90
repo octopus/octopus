@@ -164,10 +164,14 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
     do ii = 1, nst
       call set_pointers()
+      if(present(time)) call X(vborders)(der, hm, epsi, hpsi)      
+    end do
+  end if
 
-      if(present(time)) call X(vborders)(der, hm, epsi, hpsi)
-      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) call X(h_mgga_terms)(hm, der, epsi, hpsi, ik)
-      
+  if (iand(TERM_MGGA, terms_) /= 0) then
+    do ii = 1, nst
+      call set_pointers()
+      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) call X(h_mgga_terms)(hm, der, epsi, hpsi, ik)     
     end do
   end if
 

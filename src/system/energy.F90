@@ -67,6 +67,7 @@ contains
     logical, optional,   intent(in)    :: full
 
     logical :: full_
+    FLOAT :: evxctau
 
     PUSH_SUB(total_energy)
 
@@ -79,9 +80,11 @@ contains
       if(states_are_real(st)) then
         hm%energy%kinetic  = delectronic_energy(hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%extern   = delectronic_energy(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
+        evxctau = delectronic_energy(hm, gr%der, st, terms = TERM_MGGA)
       else
         hm%energy%kinetic  = zelectronic_energy(hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%extern   = zelectronic_energy(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
+        evxctau = zelectronic_energy(hm, gr%der, st, terms = TERM_MGGA)
       end if
     end if
 
@@ -95,11 +98,11 @@ contains
 
     case(HARTREE_FOCK)
       hm%energy%total = hm%ep%eii + &
-        M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc) + hm%energy%correlation
+        M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc - evxctau) + hm%energy%correlation
 
     case(KOHN_SHAM_DFT)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
-        - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc
+        - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc - evxctau
 
     case(CLASSICAL)
       st%eigenval           = M_ZERO
@@ -137,7 +140,7 @@ contains
       write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', units_from_atomic(units_out%energy, hm%ep%eii)
       write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', units_from_atomic(units_out%energy, hm%energy%eigenvalues)
       write(message(3), '(6x,a, f18.8)')'Hartree     = ', units_from_atomic(units_out%energy, hm%energy%hartree)
-      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%energy%intnvxc)
+      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%energy%intnvxc + evxctau)
       write(message(5), '(6x,a, f18.8)')'Exchange    = ', units_from_atomic(units_out%energy, hm%energy%exchange)
       write(message(6), '(6x,a, f18.8)')'Correlation = ', units_from_atomic(units_out%energy, hm%energy%correlation)
       write(message(7), '(6x,a, f18.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
