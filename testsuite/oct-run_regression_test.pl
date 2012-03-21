@@ -156,6 +156,7 @@ $exec_suffix = "";
 if($opt_s)  { $exec_suffix = $opt_s; }
 
 $aexec = $ENV{EXEC};
+$global_np = $ENV{OCT_TEST_NPROCESSORS};
 
 # MPI stuff
 $mpiexec = $ENV{MPIEXEC};
@@ -278,6 +279,9 @@ foreach my $octopus_exe (@executables){
 
 	    # serial or MPI run?
 	    if ( $command_suffix =~ /mpi$/) {
+              if("$global_np" ne "") {
+                    $np = $global_np;
+              }
 	      if( -x "$mpiexec_raw") {
 		if ("$mpiexec" =~ /ibrun/) {
 		    $specify_np = "";
