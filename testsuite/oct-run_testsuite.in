@@ -158,7 +158,7 @@ for y in $tests; do
 	suffix_opt=""
     fi
     if [ -d "${bin_directory}" ]; then
-	if [ $OCT_TEST_NPROCS -gt 1 ]
+	if [ $OCT_TEST_NJOBS -gt 1 ]
 	then
 	    echo Running test: $test_name
 	fi
@@ -168,7 +168,7 @@ for y in $tests; do
 	ppid=$!
 	queue $ppid $test_name
 	
-	if [ $NUM -ge $OCT_TEST_NPROCS ]
+	if [ $NUM -ge $OCT_TEST_NJOBS ]
 	then
 	    checkqueue
 	fi
@@ -276,11 +276,11 @@ else
     # Get epoch seconds at testsuite start.
     testsuite_start=$(date +%s) 
 
-    if [ -z $OCT_TEST_NPROCS ]; then
-	OCT_TEST_NPROCS=1
+    if [ -z $OCT_TEST_NJOBS ]; then
+	OCT_TEST_NJOBS=1
     fi
 
-    # trap signals, so we kill all childs before dying
+    # trap signals, so we kill all children before dying
     trap "trap_kill" TERM INT
 
     # Run testsuite.

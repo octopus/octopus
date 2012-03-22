@@ -156,7 +156,7 @@ $exec_suffix = "";
 if($opt_s)  { $exec_suffix = $opt_s; }
 
 $aexec = $ENV{EXEC};
-$global_np = $ENV{OCT_TEST_NPROCESSORS};
+$global_np = $ENV{OCT_TEST_MPI_NPROCS};
 
 # MPI stuff
 $mpiexec = $ENV{MPIEXEC};

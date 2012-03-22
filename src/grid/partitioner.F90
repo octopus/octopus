@@ -93,7 +93,7 @@ contains
     type(partition_t),   intent(inout) :: best
 
     integer :: ipop, igen, childnum, iparent(1:2), ibest, istep
-    type(partition_t), pointer :: parents(:), childs(:), ptmp(:)
+    type(partition_t), pointer :: parents(:), children(:), ptmp(:)
     FLOAT, allocatable :: fitness(:), probability(:)
     FLOAT :: fsum, psum, random
     FLOAT, parameter :: mutation_rate = 0.2
@@ -105,11 +105,11 @@ contains
     call messages_info(1)
 
     SAFE_ALLOCATE(parents(1:this%npop))
-    SAFE_ALLOCATE(childs(1:this%npop))
+    SAFE_ALLOCATE(children(1:this%npop))
     
     do ipop = 1, this%npop
       call partition_init(parents(ipop), mesh)
-      call partition_init(childs(ipop), mesh)
+      call partition_init(children(ipop), mesh)
       call partition_randomize(parents(ipop), this%rng)
     end do
 
@@ -137,10 +137,10 @@ contains
 
       ! elitism: copy the two best partitions
       ibest = maxloc(fitness, dim = 1)
-      call partition_copy(parents(ibest), childs(1))
+      call partition_copy(parents(ibest), children(1))
       fitness(ibest) = M_ZERO
       ibest = maxloc(fitness, dim = 1)
-      call partition_copy(parents(ibest), childs(2))      
+      call partition_copy(parents(ibest), children(2))      
       childnum = 2
 
       do while(childnum < this%npop)
@@ -158,7 +158,8 @@ contains
           end do
         end do
         
-        call partition_crossover(parents(iparent(1)), parents(iparent(2)), this%rng, childs(childnum + 1), childs(childnum + 2))
+        call partition_crossover(parents(iparent(1)), parents(iparent(2)), &
+          this%rng, children(childnum + 1), children(childnum + 2))
 
         INCR(childnum, 2)
 
@@ -166,13 +167,13 @@ contains
 
       do ipop = 2, this%npop
         random = loct_ran_flat(this%rng, M_ZERO, M_ONE)
-        if(random < mutation_rate) call partition_mutate(childs(ipop), this%rng, mesh, stencil) ! my son is a mutant!!!
+        if(random < mutation_rate) call partition_mutate(children(ipop), this%rng, mesh, stencil) ! my son is a mutant!!!
       end do
 
-      ! now childs become parents (we recycle the parents array)
+      ! now children become parents (we recycle the parents array)
       ptmp => parents
-      parents => childs
-      childs => ptmp
+      parents => children
+      children => ptmp
 
     end do
     
@@ -180,7 +181,7 @@ contains
 
     SAFE_DEALLOCATE_A(fitness)
     SAFE_DEALLOCATE_P(parents)
-    SAFE_DEALLOCATE_P(childs)
+    SAFE_DEALLOCATE_P(children)
 
     POP_SUB(partitioner_perform)
 
