@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 #

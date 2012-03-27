@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # script to generate the atomic occupations block for
 # octopus input files.

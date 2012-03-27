@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # Copyright (C) 2005-2008 H. Appel, M. Marques, X. Andrade
 #
@@ -199,7 +199,7 @@ foreach my $octopus_exe (@executables){
   # create script for cleanups in the current workdir
   $mscript = "$workdir/clean.sh";
   open(SCRIPT, ">$mscript") or die "could not create script file\n";
-  print SCRIPT "#\!/bin/bash\n\n";
+  print SCRIPT "#\!/usr/bin/env bash\n\n";
   print SCRIPT "rm -rf tmp static exec *_tmp *_static out.oct out ds* td.* \n";
   close(SCRIPT);
   chmod 0755, $mscript;
@@ -340,7 +340,7 @@ foreach my $octopus_exe (@executables){
 	$mscript = "$workdir/$input_base/matches.sh";
 	open(SCRIPT, ">$mscript") or die "could not create script file\n";
 	# write skeleton for script
-	print SCRIPT "#\!/bin/bash\n\n";
+	print SCRIPT "#\!/usr/bin/env bash\n\n";
 	close(SCRIPT);
 	chmod 0755, $mscript;
       }
