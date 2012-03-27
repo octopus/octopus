@@ -188,7 +188,7 @@ contains
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = sum(cmplx(wre(1:nn), wim(1:nn)) * &
+          fo%states_linear(ist)%X(psi)(ii) = sum(TOCMPLX(wre(1:nn), wim(1:nn)) * &
             fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
         end forall
       end do
@@ -237,7 +237,7 @@ contains
       do ll = 1, nri
         nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(cmplx(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
+          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(TOCMPLX(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
             fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
         end forall
       end do
@@ -419,9 +419,9 @@ subroutine X(nl_operator_operate_diag)(op, fo)
   if(op%cmplx_op) then
 #ifdef R_TCOMPLEX
     if(op%const_w) then
-      fo(1:op%np) = cmplx(op%w_re(op%stencil%center, 1), op%w_im(op%stencil%center, 1))
+      fo(1:op%np) = TOCMPLX(op%w_re(op%stencil%center, 1), op%w_im(op%stencil%center, 1))
     else
-      fo(1:op%np) = cmplx(op%w_re(op%stencil%center, 1:op%np), op%w_im(op%stencil%center, 1:op%np))
+      fo(1:op%np) = TOCMPLX(op%w_re(op%stencil%center, 1:op%np), op%w_im(op%stencil%center, 1:op%np))
     end if
 #endif
   else

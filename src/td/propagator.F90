@@ -749,7 +749,7 @@ contains
             case(BATCH_NOT_PACKED)
               do ip = 1, gr%mesh%np
                 vv = vold(ip, ispin)
-                phase = cmplx(cos(vv), -sin(vv), kind = REAL_PRECISION)
+                phase = TOCMPLX(cos(vv), -sin(vv))
                 forall(ist = 1:st%psib(ib, ik)%nst_linear)
                   st%psib(ib, ik)%states_linear(ist)%zpsi(ip) = st%psib(ib, ik)%states_linear(ist)%zpsi(ip)*phase
                 end forall
@@ -757,7 +757,7 @@ contains
             case(BATCH_PACKED)
               do ip = 1, gr%mesh%np
                 vv = vold(ip, ispin)
-                phase = cmplx(cos(vv), -sin(vv), kind = REAL_PRECISION)
+                phase = TOCMPLX(cos(vv), -sin(vv))
                 forall(ist = 1:st%psib(ib, ik)%nst_linear)
                   st%psib(ib, ik)%pack%zpsi(ist, ip) = st%psib(ib, ik)%pack%zpsi(ist, ip)*phase
                 end forall

@@ -1673,10 +1673,10 @@ contains
             zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1)/zmf_nrm2(mesh, zpsi(:, 1))
             zpsi(1:mesh%np, 2) = zpsi(1:mesh%np, 1)
 
-            alpha = cmplx(sqrt(M_HALF + st%spin(3, ist, ik)), M_ZERO, REAL_PRECISION)
-            beta  = cmplx(sqrt(M_ONE - abs(alpha)**2), M_ZERO, REAL_PRECISION)
+            alpha = TOCMPLX(sqrt(M_HALF + st%spin(3, ist, ik)), M_ZERO)
+            beta  = TOCMPLX(sqrt(M_ONE - abs(alpha)**2), M_ZERO)
             if(abs(alpha) > M_ZERO) then
-              beta = cmplx(st%spin(1, ist, ik) / abs(alpha), st%spin(2, ist, ik) / abs(alpha), REAL_PRECISION)
+              beta = TOCMPLX(st%spin(1, ist, ik) / abs(alpha), st%spin(2, ist, ik) / abs(alpha))
             end if
             zpsi(1:mesh%np, 1) = alpha*zpsi(1:mesh%np, 1)
             zpsi(1:mesh%np, 2) = beta*zpsi(1:mesh%np, 2)

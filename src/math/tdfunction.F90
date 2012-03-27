@@ -628,8 +628,7 @@ module tdfunction_m
     tmp = M_z0
     tmp(1) = f%valww(1)
     do j = 2, f%nfreqs
-      tmp(j) = cmplx( (sqrt(M_TWO)/M_TWO)*f%valww(j) , &
-                         -(sqrt(M_TWO)/M_TWO)*f%valww(j+f%nfreqs-1) , REAL_PRECISION)
+      tmp(j) = TOCMPLX((sqrt(M_TWO)/M_TWO)*f%valww(j), -(sqrt(M_TWO)/M_TWO)*f%valww(j+f%nfreqs-1))
     end do
     SAFE_ALLOCATE(f%val(1:f%niter+1))
     call dfft_backward1(f%fft_handler, tmp, f%val(1:f%niter))
@@ -885,7 +884,7 @@ module tdfunction_m
     case(TDF_FROM_EXPR)
       tcu = units_from_atomic(units_inp%time, t)
       call parse_expression(fre, fim, 't', tcu, f%expression)
-      y = cmplx(fre, fim, REAL_PRECISION)
+      y = TOCMPLX(fre, fim)
 
     case default
       y = M_z0

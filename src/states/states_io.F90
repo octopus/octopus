@@ -465,8 +465,8 @@ return
         ! matrix elements <f|exp(iq.r)|i> -> dynamic structure factor
         if (use_qvector) then
 
-          cff(1:gr%mesh%np) = cmplx(st%dpsi(1:gr%mesh%np,1,tpa_initialst,tpa_initialk)) * &
-                       &   cmplx(st%dpsi(1:gr%mesh%np,1,ist,tpa_initialk))
+          cff(1:gr%mesh%np) = TOCMPLX(st%dpsi(1:gr%mesh%np,1,tpa_initialst,tpa_initialk), M_ZERO) * &
+                       &   TOCMPLX(st%dpsi(1:gr%mesh%np,1,ist,tpa_initialk), M_ZERO)
           do icoord=1,gr%mesh%sb%dim    ! for x,y,z
             cff(1:gr%mesh%np) = cff(1:gr%mesh%np) * exp(M_zI*gr%mesh%x(1:gr%mesh%np,icoord)*qvector(icoord))
           end do

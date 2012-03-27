@@ -1071,7 +1071,7 @@ contains
             zi = species_zval(geo%atom(iatom)%spec)
             xi(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim)
             gx = sum(gg(1:sb%dim)*xi(1:sb%dim))
-            phase(iatom) = zi*cmplx(cos(gx), sin(gx), REAL_PRECISION)
+            phase(iatom) = zi*TOCMPLX(cos(gx), sin(gx))
             sumatoms = sumatoms + phase(iatom)
           end do
           

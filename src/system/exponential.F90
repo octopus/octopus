@@ -241,7 +241,7 @@ contains
 
     ! If we want to use imaginary time, timestep = i*deltat
     ! Otherwise, timestep is simply equal to deltat.
-    timestep = cmplx(deltat, M_ZERO, REAL_PRECISION)
+    timestep = TOCMPLX(deltat, M_ZERO)
     if(present(imag_time)) then
       if(imag_time) then
         select case(te%exp_method)
@@ -694,7 +694,7 @@ contains
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
 
-    timestep = cmplx(deltat, M_ZERO, REAL_PRECISION)
+    timestep = TOCMPLX(deltat, M_ZERO)
     if(present(imag_time)) then
       if(imag_time) timestep = M_zI * deltat
     end if

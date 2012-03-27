@@ -271,7 +271,7 @@ contains
 
     ! if l=0, no calculations are required
     if (li == 0) then
-      ylm = cmplx(CNST(0.282094791773878), M_ZERO, REAL_PRECISION)
+      ylm = TOCMPLX(CNST(0.282094791773878), M_ZERO)
       return
     end if
 
@@ -303,7 +303,7 @@ contains
     end do
 
     !And now ylm
-    ylm = plm*cmplx(cosm, sinm, REAL_PRECISION)
+    ylm = plm*TOCMPLX(cosm, sinm)
 
     if (mi < 0) then
       ylm = conjg(ylm)

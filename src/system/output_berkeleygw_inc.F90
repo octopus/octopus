@@ -174,7 +174,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
 
   do is = 1, nspin
 #ifdef R_TREAL
-    zfield_r(1:gr%mesh%np) = cmplx(field_r(1:gr%mesh%np, is), M_ZERO, REAL_PRECISION)
+    zfield_r(1:gr%mesh%np) = TOCMPLX(field_r(1:gr%mesh%np, is), M_ZERO)
 #else
     zfield_r => field_r(:, is)
 #endif
