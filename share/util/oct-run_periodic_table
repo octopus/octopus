@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Simple script to run octopus for all atoms in the 
-# periodic table for which pseudopoentials are available.
+# periodic table for which pseudopotentials are available.
 #
 # $Id$
 
