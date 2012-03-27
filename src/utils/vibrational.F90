@@ -259,20 +259,20 @@ contains
 
   subroutine read_vaf(vaf)
     implicit none
-    
+
     FLOAT, intent(out) :: vaf(0:)
 
     FLOAT, allocatable :: vsys(:,:), norm(:)
-    
+
     integer:: nvelocities
-    
+
     FLOAT:: summand
-    
+
     ! Opens the coordinates files.
     iunit = io_open('td.general/coordinates', action='read')
 
     call io_skip_header(iunit)
-  
+
     nvelocities=3*geo%natoms
 
     SAFE_ALLOCATE(vsys(1:ntime, 1:nvelocities))
@@ -280,41 +280,41 @@ contains
     !reading in data    
     iter = 0
     ntime = 0
-        
-    do
-        read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
-          & ((geo%atom(ii)%x(jj), jj = 1, 3), ii = 1, geo%natoms),&
-          & ((geo%atom(ii)%v(jj), jj = 1, 3), ii = 1, geo%natoms)
-      
-        time(iter) =  units_to_atomic(units_out%time, time(iter))
-        forall( jj = 1: 3, ii = 1: geo%natoms) geo%atom(ii)%x(jj)=units_to_atomic( units_out%length,   geo%atom(ii)%x(jj))
-        forall( jj = 1: 3, ii = 1: geo%natoms) geo%atom(ii)%v(jj)=units_to_atomic( units_out%velocity, geo%atom(ii)%v(jj))  
-      
-  
-        if(ierr.ne.0) then
-	  iter = iter - 1	! last iteration is not valid
-          exit
-        end if
 
-        ASSERT(iter == read_iter)
-          
-        if (time(iter) >= end_time) exit
-                        
-        iter = iter + 1 !counts number of timesteps (lines in coordinatefile)
-                        
-        if (time(iter)>=start_time) then  
-           ntime = ntime + 1 
-           kk=1
-           do while (kk<=nvelocities)
-		do ii = 1,geo%natoms
-		  do jj = 1, 3
-		      vsys(ntime, kk) = geo%atom(ii)%v(jj)
-		      kk = kk + 1 
-                  end do
-                end do  
-           end do
-        end if
- 
+    do
+      read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
+        & ((geo%atom(ii)%x(jj), jj = 1, 3), ii = 1, geo%natoms),&
+        & ((geo%atom(ii)%v(jj), jj = 1, 3), ii = 1, geo%natoms)
+
+      time(iter) =  units_to_atomic(units_out%time, time(iter))
+      forall( jj = 1: 3, ii = 1: geo%natoms) geo%atom(ii)%x(jj)=units_to_atomic( units_out%length,   geo%atom(ii)%x(jj))
+      forall( jj = 1: 3, ii = 1: geo%natoms) geo%atom(ii)%v(jj)=units_to_atomic( units_out%velocity, geo%atom(ii)%v(jj))  
+
+
+      if(ierr.ne.0) then
+        iter = iter - 1	! last iteration is not valid
+        exit
+      end if
+
+      ASSERT(iter == read_iter)
+
+      if (time(iter) >= end_time) exit
+
+      iter = iter + 1 !counts number of timesteps (lines in coordinatefile)
+
+      if (time(iter)>=start_time) then  
+        ntime = ntime + 1 
+        kk=1
+        do while (kk<=nvelocities)
+          do ii = 1,geo%natoms
+            do jj = 1, 3
+              vsys(ntime, kk) = geo%atom(ii)%v(jj)
+              kk = kk + 1 
+            end do
+          end do
+        end do
+      end if
+
     end do
 
     call io_close(iunit)
@@ -325,26 +325,26 @@ contains
 
     !calculating the vaf
     vaf=M_ZERO
-    
+
     SAFE_ALLOCATE(norm(1:nvaf))
-    
+
     norm = M_ZERO
     do ii = 1, nvaf
       do kk = 1, nvelocities
-         norm(ii) = norm(ii) + vsys(ii,kk)*vsys(ii,kk)
-      end do   
+        norm(ii) = norm(ii) + vsys(ii,kk)*vsys(ii,kk)
+      end do
     end do
-    
+
     do ntime = 0, nvaf
       do ii = 1, nvaf
-       summand = M_ZERO
-       do kk = 1,nvelocities
-        summand = summand + vsys(ii,kk)*vsys(ii+ntime,kk)
+        summand = M_ZERO
+        do kk = 1,nvelocities
+          summand = summand + vsys(ii,kk)*vsys(ii+ntime,kk)
 	end do
 	vaf(ntime) = vaf(ntime) + summand/norm(ii)
       end do
     end do
-    
+
     SAFE_DEALLOCATE_A(norm)
     SAFE_DEALLOCATE_A(vsys)
 
