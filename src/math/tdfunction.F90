@@ -885,7 +885,7 @@ module tdfunction_m
     case(TDF_FROM_EXPR)
       tcu = units_from_atomic(units_inp%time, t)
       call parse_expression(fre, fim, 't', tcu, f%expression)
-      y = cmplx(fre, fim)
+      y = cmplx(fre, fim, REAL_PRECISION)
 
     case default
       y = M_z0

@@ -241,7 +241,7 @@ contains
 
     ! If we want to use imaginary time, timestep = i*deltat
     ! Otherwise, timestep is simply equal to deltat.
-    timestep = cmplx(deltat, M_ZERO)
+    timestep = cmplx(deltat, M_ZERO, REAL_PRECISION)
     if(present(imag_time)) then
       if(imag_time) then
         select case(te%exp_method)
@@ -317,7 +317,7 @@ contains
 
         if(zfact_is_real) then
           do idim = 1, hm%d%dim
-            call lalg_axpy(der%mesh%np, real(zfact), hzpsi1(:, idim), zpsi(:, idim))
+            call lalg_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hzpsi1(:, idim), zpsi(:, idim))
           end do
         else
           do idim = 1, hm%d%dim
@@ -694,7 +694,7 @@ contains
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
 
-    timestep = cmplx(deltat, M_ZERO)
+    timestep = cmplx(deltat, M_ZERO, REAL_PRECISION)
     if(present(imag_time)) then
       if(imag_time) timestep = M_zI * deltat
     end if
@@ -718,7 +718,7 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%block_start, st%block_end
           if(zfact_is_real) then
-            call batch_axpy(der%mesh%np, real(zfact), hst1%psib(ib, ik), st%psib(ib, ik))
+            call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hst1%psib(ib, ik), st%psib(ib, ik))
           else
             call batch_axpy(der%mesh%np, zfact, hst1%psib(ib, ik), st%psib(ib, ik))
           end if

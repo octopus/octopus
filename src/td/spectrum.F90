@@ -725,7 +725,7 @@ contains
     do it = 0, time_steps
       read(in_file_sin, *) trash, dump, dummy1, dummy2
       read(in_file_cos, *) trash, dump, dummy3, dummy4
-      ftchd(it) = cmplx(dummy3-dummy2, dummy4+dummy1)
+      ftchd(it) = cmplx(dummy3-dummy2, dummy4+dummy1, REAL_PRECISION)
     end do
 
     ! Now subtract the initial value.
@@ -879,7 +879,7 @@ contains
     do ie = 0, no_e
       energy = ie * spectrum%energy_step
 
-      sp = cmplx(resp(ie), imsp(ie))
+      sp = cmplx(resp(ie), imsp(ie), REAL_PRECISION)
 
       sp = sp*M_ZI/(M_TWO*P_c*kick%delta_strength)
 
