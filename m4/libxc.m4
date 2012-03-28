@@ -39,7 +39,7 @@ if test x"$acx_libxc_ok" = xyes; then
   AC_DEFINE(HAVE_LIBXC,1,[Defined if you have the LIBXC library.])
   $1
 else
-  AC_MSG_ERROR([Could not find required libxc library (v 1.1.0).])
+  AC_MSG_ERROR([Could not find required libxc library ( >= v 1.1.0).])
   FCFLAGS_LIBXC=""
   LIBS_LIBXC=""
   $2
