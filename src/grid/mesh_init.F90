@@ -320,12 +320,20 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     end do
   end do
 
+where(mesh%idx%lxyz_inv < 0 .or. mesh%idx%lxyz_inv > 10)
+ mesh%idx%lxyz_inv = 0
+end where
+write (*,*) 'sum (lxyz_inv) = ', sum(mesh%idx%lxyz_inv)
+
 #if defined(HAVE_MPI) && defined(HAVE_MPI2)
   call profiling_in(prof_reduce, "MESH_LABEL_REDUCE")
 
   npoints = product(nr(2, 1:3) - nr(1, 1:3) + 1)
+write (*,*) 'npoints = ', npoints, MPI_IN_PLACE, mpi_world%comm
+
   call MPI_Allreduce(MPI_IN_PLACE, mesh%idx%lxyz_inv(nr(1, 1), nr(1, 2), nr(1, 3)), npoints, &
     MPI_INTEGER, MPI_BOR, mpi_world%comm, mpi_err)
+write (*,*) 'mpi_err = ', mpi_err
 
   call profiling_out(prof_reduce)
 
@@ -333,6 +341,10 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   SAFE_DEALLOCATE_A(end)
 #endif
 
+where(mesh%idx%lxyz_inv < 0 .or. mesh%idx%lxyz_inv > 10)
+mesh%idx%lxyz_inv = 0
+end where
+write (*,*) 'sum (lxyz_inv) aft allreduce = ', sum(mesh%idx%lxyz_inv)
   call profiling_out(prof)
 
   SAFE_DEALLOCATE_A(xx)
@@ -418,6 +430,10 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     end do
   end if
 
+where(mesh%idx%lxyz_inv < 0 .or. mesh%idx%lxyz_inv > 10)
+ mesh%idx%lxyz_inv = 0
+end where
+write (*,*) 'sum (lxyz_inv) before counting = ', sum(mesh%idx%lxyz_inv)
   ! count the points
   il = 0
   ik = 0
@@ -431,6 +447,11 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   end do
   mesh%np_part_global = il
   mesh%np_global      = ik
+write (*,*) 'np_part, np ', mesh%np_part_global, mesh%np_global
+where(mesh%idx%lxyz_inv < 0 .or. mesh%idx%lxyz_inv > 10)
+ mesh%idx%lxyz_inv = 0
+end where
+write (*,*) 'sum (lxyz_inv) before counting = ', sum(mesh%idx%lxyz_inv)
 
 
   ! Errors occur during actual calculation if resolution interfaces are too close to each other. The
@@ -590,6 +611,10 @@ contains
       end if
     end if
     
+where(mesh%idx%lxyz_inv < 0 .or. mesh%idx%lxyz_inv > 10)
+ mesh%idx%lxyz_inv = 0
+end where
+write (*,*) 'sum (lxyz_inv) before fatal assert = ', sum(mesh%idx%lxyz_inv)
     ! first we fill the points in the inner mesh
     iin = 0
     ien = mesh%np_global
@@ -641,7 +666,9 @@ contains
 
     call checksum_calculate(1, mesh%np_part_global*mesh%sb%dim, mesh%idx%lxyz(1, 1), mesh%idx%checksum)
 
+write (*,*) ' iin, mesh%np_global ', iin, mesh%np_global
     ASSERT(iin == mesh%np_global)
+write (*,*) ' ien, mesh%np_part_global ', ien, mesh%np_part_global
     ASSERT(ien == mesh%np_part_global)
     
     POP_SUB(mesh_init_stage_3.create_x_lxyz)
