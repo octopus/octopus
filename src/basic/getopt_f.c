@@ -721,61 +721,6 @@ void FC_FUNC_(getopt_rotatory_strength, GETOPT_ROTATORY_STRENGTH)
 
 /***************************************************************/
 
-
-/* FUNCTIONS TO BE USED BY THE PROGRAM oct-vibrational */
-void vibrational_help(){
-  printf("Usage: oct-vibrational [options] \n");
-  printf("\n");
-  printf("Options:\n");
-  printf("  -h, --help            Prints this help and exits.\n");
-  printf("  -v, --version         Prints octopus version.\n");
-  printf("  -m, --mode            Run mode: 1 to obtain the vibrational spectrum, .\n");
-  printf("                        through the velocity autocorrelation function, 2 to\n");
-  printf("                        obtain the infrared spectrum through the dipole.\n");
-  exit(-1);
-}
-
-void FC_FUNC_(getopt_vibrational, GETOPT_VIBRATIONAL)
-     (int *mode)
-{
-  int c;
-#if defined(HAVE_GETOPT_LONG)
-  static struct option long_options[] =
-    {
-      {"help", no_argument, 0, 'h'},
-      {"version", no_argument, 0, 'v'},
-      {"mode", required_argument, 0, 'm'},
-      {0, 0, 0, 0}
-    };
-#endif
-
-  while (1) {
-    int option_index = 0;
-#if defined(HAVE_GETOPT_LONG)
-    c = getopt_long(argc, argv, "hvm:", long_options, &option_index);
-#else
-    c = getopt(argc, argv, "hvm:");
-#endif
-    if (c == -1) break;
-    switch (c) {
-    case 'h':
-      vibrational_help();
-      break;
-    case 'v':
-      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
-      exit(0);
-    case 'm':
-      *mode = (int)atoi(optarg);
-      break;
-    }
-  }
-  if (optind < argc) vibrational_help();
-
-}
-
-/***************************************************************/
-
-
 /* FUNCTIONS TO BE USED BY THE PROGRAM oct-xyz-anim */
 void xyz_anim_help(){
   printf("Usage: oct-xyz-anim [options] \n");

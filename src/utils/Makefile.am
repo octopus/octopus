@@ -24,7 +24,10 @@ include $(srcdir)/../common-rules.make
 EXEEXT =
 
 EXTRA_PROGRAMS = oct-propagation_spectrum oct-rotatory_strength oct-harmonic-spectrum \
-                 oct-casida_spectrum oct-vibrational oct-xyz-anim oct-center-geom oct-help \
+                 oct-casida_spectrum      \
+                 oct-vibrational_spectrum \
+                 oct-infrared_spectrum    \
+                 oct-xyz-anim oct-center-geom oct-help \
                  oct-oscillator-strength \
 		 oct-dielectric-function \
 		 oct-liquid \
@@ -56,8 +59,11 @@ oct_xyz_anim_LDADD   = $(all_LIBS)
 oct_casida_spectrum_SOURCES = casida_spectrum.F90
 oct_casida_spectrum_LDADD =  $(core_LIBS) $(external_LIBS)
 
-oct_vibrational_SOURCES = vibrational.F90
-oct_vibrational_LDADD =  $(all_LIBS)
+oct_vibrational_spectrum_SOURCES = vibrational.F90
+oct_vibrational_spectrum_LDADD =  $(all_LIBS)
+
+oct_infrared_spectrum_SOURCES = infrared.F90
+oct_infrared_spectrum_LDADD =  $(all_LIBS)
 
 oct_center_geom_SOURCES = centergeom.F90
 oct_center_geom_LDADD = $(all_LIBS)
@@ -69,7 +75,7 @@ oct_help_SOURCES = help.F90
 oct_help_LDADD =  $(core_LIBS)
 
 depend:
-	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_rotatory_strength_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES)
+	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_rotatory_strength_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_spectrum_SOURCES) $(oct_infrared_spectrum_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES)
 
 propagation_spectrum.o : propagation_spectrum.F90 
 rotatory_strength.o : rotatory_strength.F90 
