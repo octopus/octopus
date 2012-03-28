@@ -35,6 +35,7 @@ module spectrum_m
   use parser_m
   use profiling_m
   use string_m
+  use types_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -1926,6 +1927,8 @@ contains
     ASSERT(time_function%nst_linear == energy_function%nst_linear)
     ASSERT(batch_status(time_function) == batch_status(energy_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
+    ASSERT(batch_type(time_function) == TYPE_FLOAT)
+    ASSERT(batch_type(energy_function) == TYPE_FLOAT)
 
     select case(method)
 
@@ -1934,7 +1937,10 @@ contains
       do ienergy = energy_start, energy_end
 
         energy = energy_step*(ienergy - energy_start)
-        forall(ii = 1:energy_function%nst_linear) energy_function%states_linear(ii)%dpsi(ienergy) = 0.0
+
+        do ii = 1, energy_function%nst_linear
+          energy_function%states_linear(ii)%dpsi(ienergy) = 0.0
+        end do
 
         select case(transform)
 

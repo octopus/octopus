@@ -20,6 +20,7 @@
 #include "global.h"
 
   program vibrational
+    use batch_m
     use command_line_m
     use datasets_m
     use geometry_m
@@ -31,6 +32,7 @@
     use profiling_m
     use simul_box_m
     use space_m
+    use spectrum_m
     use unit_m
     use unit_system_m
     use varinfo_m
@@ -43,12 +45,13 @@
 
     integer :: iunit, ierr, ii, jj, kk, iter, read_iter, max_iter, ini_iter, end_iter, ntime, nvaf, nvel, ivel
     FLOAT :: start_time, end_time
-    FLOAT, allocatable :: vaf(:), time(:), dipole(:,:), velocities(:, :)
-    CMPLX, allocatable :: ftvaf(:), ftdipole(:,:)
+    FLOAT, allocatable :: vaf(:), time(:), dipole(:,:), velocities(:, :), ftvaf(:)
+    CMPLX, allocatable :: ftdipole(:,:)
     type(geometry_t)  :: geo 
     type(space_t)     :: space
     type(simul_box_t) :: sb
-
+    type(spec_t) :: spectrum
+    type(batch_t) :: vafb, ftvafb
     FLOAT :: ww, av, irtotal
     FLOAT :: dw, max_energy, curtime
     integer :: ifreq, idir
@@ -202,26 +205,45 @@
       call io_close(iunit)
 
 
-      av = maxval(abs(vaf))
-
-
-      if( av < CNST(1e-12)) then 
-        write (message(1), '(a)') "Error: Velocity autocorrelation function is zero."
-        call messages_fatal(1)
-      end if
-
-      vaf = vaf/av
-
-
       SAFE_ALLOCATE(ftvaf(1:max_freq))
+      
+      call spectrum_init(spectrum)
 
-      !ini_iter and end_iter are nessesary to apply the envelope
-      !function for the fouriertransform, in the case of mode=vib
-      !spectrum they refer to the indices of vaf which goes from 1 to
-      !nvaf
+      call batch_init(vafb, 1)
+      call batch_add_state(vafb, vaf)
 
-      call fourier(vaf, ftvaf)
+      call signal_damp(spectrum%damp, spectrum%damp_factor, 1, ntime, time(2) - time(1), vafb)
 
+      call batch_init(ftvafb, 1)
+      call batch_add_state(ftvafb, ftvaf)
+
+      call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+        1, ntime, M_ZERO, time(2) - time(1), vafb, 1, max_freq, dw, ftvafb)
+
+      call batch_end(vafb)
+      call batch_end(ftvafb)
+
+
+      !print the vaf
+      iunit = io_open('td.general/velocity_autocorrelation', action='write')
+
+      write(unit = iunit, iostat = ierr, fmt = "(80('#'))") 
+      write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
+      write(unit = iunit, iostat = ierr, fmt = '(a1,4x,a6,a7,a1,10x,a10)') '#', &
+        &  'time [',units_out%time%abbrev,']', 'VAF [a.u.]'
+      write(unit = iunit, iostat = ierr, fmt = 800) 
+
+      do jj = ini_iter, end_iter
+        write(unit = iunit, iostat = ierr, fmt = *) units_from_atomic(units_out%time, time(jj)), vaf(jj)
+      end do
+
+      !print again to see the matching
+      do jj = ini_iter, end_iter
+        write(unit = iunit, iostat = ierr, fmt = *) &
+          units_from_atomic(units_out%time, (time(end_iter)-time(ini_iter)) + time(jj)), vaf(jj)
+      end do
+
+      call io_close(iunit)
 
       !print the vaf
       iunit = io_open('td.general/velocity_autocorrelation', action='write')
@@ -231,13 +253,12 @@
       write(unit = iunit, iostat = ierr, fmt = 800) 
       write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
       write(unit = iunit, iostat = ierr, fmt = '(a17,8x,a15,5x,a13,5x,a13)') &
-        & '#   Energy [1/cm]', 'Spectrum [a.u.]', 'Re(FT of vaf)', 'Im(FT of vaf)'      
+        '#   Energy [1/cm]', 'Spectrum [a.u.]', 'Re(FT of vaf)', 'Im(FT of vaf)'      
       write(unit = iunit, iostat = ierr, fmt = 800 ) 
 
       do ifreq = 1, max_freq
         ww = dw * ifreq
-        write(unit = iunit, iostat = ierr, fmt = '(4e20.10)') &
-          & units_from_atomic(unit_invcm, ww), abs(ftvaf(ifreq)), real(ftvaf(ifreq)), aimag(ftvaf(ifreq))
+        write(unit = iunit, iostat = ierr, fmt = '(2e20.10)') units_from_atomic(unit_invcm, ww), ftvaf(ifreq)
       end do
 
       call io_close(iunit)
