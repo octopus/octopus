@@ -107,8 +107,12 @@ module spectrum_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine spectrum_init(spectrum)
-    type(spec_t), intent(inout) :: spectrum
+  subroutine spectrum_init(spectrum, default_energy_step, default_max_energy)
+    type(spec_t),           intent(inout) :: spectrum
+    FLOAT,        optional, intent(in)    :: default_energy_step
+    FLOAT,        optional, intent(in)    :: default_max_energy
+
+    FLOAT :: fdefault
 
     PUSH_SUB(spectrum_init)
 
@@ -237,10 +241,10 @@ contains
     !% Sampling rate for the spectrum. If you supply a number equal or smaller than zero, then
     !% the sampling rate will be (2 * pi / T), where T is the total propagation time.
     !%End
-    call parse_float(datasets_check('PropagationSpectrumEnergyStep'), CNST(0.01) / (M_TWO * P_Ry), &
-      spectrum%energy_step, units_inp%energy)
+    fdefault = CNST(0.01)/(M_TWO*P_Ry)
+    if(present(default_energy_step)) fdefault = default_energy_step
+    call parse_float(datasets_check('PropagationSpectrumEnergyStep'), fdefault, spectrum%energy_step, units_inp%energy)
     
-
     !%Variable PropagationSpectrumMaxEnergy
     !%Type float
     !%Default 20 eV
@@ -248,8 +252,9 @@ contains
     !%Description
     !% The Fourier transform is calculated for energies smaller than this value.
     !%End
-    call parse_float(datasets_check('PropagationSpectrumMaxEnergy'), CNST(20.0) / (M_TWO * P_Ry), &
-      spectrum%max_energy, units_inp%energy)
+    fdefault = CNST(20.0)/(M_TWO*P_Ry)
+    if(present(default_max_energy)) fdefault = default_max_energy
+    call parse_float(datasets_check('PropagationSpectrumMaxEnergy'), fdefault, spectrum%max_energy, units_inp%energy)
 
     !%Variable PropagationSpectrumDampFactor
     !%Type float

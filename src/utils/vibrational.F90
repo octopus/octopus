@@ -39,18 +39,15 @@
 
     implicit none
 
-    integer :: iunit, ierr, ii, jj, iter, read_iter, max_iter, ini_iter, end_iter, ntime, nvaf, nvel, ivel
-    FLOAT :: start_time, end_time
+    integer :: iunit, ierr, ii, jj, iter, read_iter, ini_iter, end_iter, ntime, nvaf, nvel, ivel
     FLOAT, allocatable :: vaf(:), time(:), velocities(:, :), ftvaf(:)
     type(geometry_t)  :: geo 
     type(space_t)     :: space
     type(simul_box_t) :: sb
     type(spec_t) :: spectrum
     type(batch_t) :: vafb, ftvafb
-    FLOAT :: ww
-    FLOAT :: dw, max_energy, curtime
-    integer :: ifreq
-    integer, parameter :: max_freq = 10000
+    FLOAT :: ww, curtime
+    integer :: ifreq, max_freq
 
     ! Initialize stuff
     call global_init()		 
@@ -66,16 +63,13 @@
 
     call unit_system_init()
 
-    !These variables are documented in src/td/spectrum.F90
-    call parse_integer(datasets_check('TDMaximumIter'), 1500, max_iter)
-    call parse_float(datasets_check('PropagationSpectrumStartTime'),  M_ZERO, start_time, units_inp%time)
-    call parse_float(datasets_check('PropagationSpectrumEndTime'),  -M_ONE, end_time, units_inp%time)
-    call parse_float(datasets_check('PropagationSpectrumMaxEnergy'), &
-      units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy, units_inp%energy)
+    call spectrum_init(spectrum, &
+      default_energy_step = units_to_atomic(unit_invcm, CNST(0.2)), &
+      default_max_energy  = units_to_atomic(unit_invcm, CNST(5000.0)))
+ 
+    max_freq = 1 + nint(spectrum%max_energy/spectrum%energy_step)
 
-    dw = max_energy/(max_freq-M_ONE) !Initializes the wavevector step dw
-
-    if (end_time < M_ZERO) end_time = huge(end_time)
+    if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
     call space_init(space)
     call geometry_init(geo, space)
@@ -97,7 +91,7 @@
 
       curtime = units_to_atomic(units_out%time, curtime)
 
-      if(ierr /= 0 .or. curtime >= end_time) then
+      if(ierr /= 0 .or. curtime >= spectrum%end_time) then
         iter = iter - 1	! last iteration is not valid
         ntime = ntime - 1
         exit
@@ -105,7 +99,7 @@
 
       ASSERT(iter == read_iter + 1)
 
-      if (curtime >= start_time) ntime = ntime + 1 ! ntime counts how many steps are gonna be used
+      if (curtime >= spectrum%start_time) ntime = ntime + 1 ! ntime counts how many steps are gonna be used
 
       iter = iter + 1 !counts number of timesteps (with time larger than zero up to SpecEndTime)
     end do
@@ -132,7 +126,7 @@
 
       curtime = units_to_atomic(units_out%time, curtime)
 
-      if(ierr /= 0 .or. curtime >= end_time) then
+      if(ierr /= 0 .or. curtime >= spectrum%end_time) then
         iter = iter - 1	! last iteration is not valid
         ntime = ntime - 1
         exit
@@ -140,7 +134,7 @@
 
       ASSERT(iter == read_iter + 1)
 
-      if (curtime >= start_time) then
+      if (curtime >= spectrum%start_time) then
 
         time(ntime) = curtime
         ivel = 1
@@ -187,8 +181,6 @@
 
     SAFE_ALLOCATE(ftvaf(1:max_freq))
 
-    call spectrum_init(spectrum)
-
     call batch_init(vafb, 1)
     call batch_add_state(vafb, vaf)
 
@@ -198,7 +190,7 @@
     call batch_add_state(ftvafb, ftvaf)
 
     call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-      1, ntime, M_ZERO, time(2) - time(1), vafb, 1, max_freq, dw, ftvafb)
+      1, ntime, M_ZERO, time(2) - time(1), vafb, 1, max_freq, spectrum%energy_step, ftvafb)
 
     call batch_end(vafb)
     call batch_end(ftvafb)
@@ -214,7 +206,7 @@
     write(unit = iunit, iostat = ierr, fmt = 800 ) 
 
     do ifreq = 1, max_freq
-      ww = dw * ifreq
+      ww = spectrum%energy_step*ifreq
       write(unit = iunit, iostat = ierr, fmt = '(2e20.10)') units_from_atomic(unit_invcm, ww), ftvaf(ifreq)
     end do
 
