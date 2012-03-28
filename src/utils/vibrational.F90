@@ -107,15 +107,13 @@
 
         curtime = units_to_atomic(units_out%time, curtime)
 
-        if(ierr.ne.0) then
+        if(ierr /= 0 .or. curtime >= end_time) then
           iter = iter - 1	! last iteration is not valid
           ntime = ntime - 1
           exit
         end if
 
         ASSERT(iter == read_iter + 1)
-
-        if (curtime >= end_time) exit
 
         if (curtime >= start_time) ntime = ntime + 1 ! ntime counts how many steps are gonna be used
 
@@ -144,15 +142,13 @@
 
         curtime = units_to_atomic(units_out%time, curtime)
 
-        if(ierr.ne.0) then
+        if(ierr /= 0 .or. curtime >= end_time) then
           iter = iter - 1	! last iteration is not valid
           ntime = ntime - 1
           exit
         end if
 
         ASSERT(iter == read_iter + 1)
-
-        if (curtime >= end_time) exit
 
         if (curtime >= start_time) then
 
@@ -188,18 +184,12 @@
 800   FORMAT(80('#'))      
       write(unit = iunit, iostat = ierr, fmt = 800) 
       write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
-      write(unit = iunit, iostat = ierr, fmt = '(a1,4x,a6,a7,a1,10x,a10)') '#', &
-        &  'time [',units_out%time%abbrev,']', 'VAF [a.u.]'
+      write(unit = iunit, iostat = ierr, fmt = '(a,4x,a6,a7,a1,10x,a10)') &
+        '#       Iter', 'time [',units_out%time%abbrev,']', 'VAF [a.u.]'
       write(unit = iunit, iostat = ierr, fmt = 800) 
 
       do jj = ini_iter, end_iter
-        write(unit = iunit, iostat = ierr, fmt = *) units_from_atomic(units_out%time, time(jj)), vaf(jj)
-      end do
-
-      !print again to see the matching
-      do jj = ini_iter, end_iter
-        write(unit = iunit, iostat = ierr, fmt = *) &
-          units_from_atomic(units_out%time, (time(end_iter)-time(ini_iter)) + time(jj)), vaf(jj)
+        write(unit = iunit, iostat = ierr, fmt = *) jj, units_from_atomic(units_out%time, time(jj)), vaf(jj)
       end do
 
       call io_close(iunit)
@@ -224,29 +214,6 @@
       call batch_end(ftvafb)
 
 
-      !print the vaf
-      iunit = io_open('td.general/velocity_autocorrelation', action='write')
-
-      write(unit = iunit, iostat = ierr, fmt = "(80('#'))") 
-      write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
-      write(unit = iunit, iostat = ierr, fmt = '(a1,4x,a6,a7,a1,10x,a10)') '#', &
-        &  'time [',units_out%time%abbrev,']', 'VAF [a.u.]'
-      write(unit = iunit, iostat = ierr, fmt = 800) 
-
-      do jj = ini_iter, end_iter
-        write(unit = iunit, iostat = ierr, fmt = *) units_from_atomic(units_out%time, time(jj)), vaf(jj)
-      end do
-
-      !print again to see the matching
-      do jj = ini_iter, end_iter
-        write(unit = iunit, iostat = ierr, fmt = *) &
-          units_from_atomic(units_out%time, (time(end_iter)-time(ini_iter)) + time(jj)), vaf(jj)
-      end do
-
-      call io_close(iunit)
-
-      !print the vaf
-      iunit = io_open('td.general/velocity_autocorrelation', action='write')
       !and print the spectrum
       iunit = io_open('td.general/vibrational_spectrum', action='write')
 

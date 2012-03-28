@@ -362,6 +362,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
       ! multiply by the inverse of ss
       call blas_trsm('R', 'U', 'N', 'N', mesh%np, st%nst, R_TOTYPE(M_ONE), ss(1, 1), st%nst, &
         st%X(psi)(1, idim, 1, ik), ubound(st%X(psi), dim = 1)*st%d%dim)
+
+      call profiling_count_operations(mesh%np*dble(st%nst)*(st%nst + 1)*CNST(0.5)*(R_ADD + R_MUL))
     end do
 
   else if(.not. states_are_packed(st) .or. .not. opencl_is_enabled()) then
