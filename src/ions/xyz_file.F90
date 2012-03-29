@@ -164,7 +164,6 @@ contains
       do ia = 1, gf%n
         ncol = parse_block_cols(blk, ia - 1)
         if((ncol .lt. space%dim + 1) .or. (ncol .gt. space%dim + 2)) then
-print *, "ia, ncol, space%dim, gf%n ", ia, ncol, space%dim, gf%n
           write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
           call messages_fatal(1)
         end if
