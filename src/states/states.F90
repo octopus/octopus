@@ -142,7 +142,7 @@ module states_m
     CMPLX, pointer           :: zpsi(:,:,:,:)         !< zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
    
     !> Pointers to complexified quantities. 
-    !! When we use complex scaling the Hamilonian is no longer hermitian.
+    !! When we use complex scaling the Hamiltonian is no longer hermitian.
     !! In this case we have to distinguish between left and right eigenstates of H and
     !! both density and eigenvalues become complex.
     !! In order to modify the code to include this changes we allocate the general structures and 
@@ -561,9 +561,9 @@ contains
     !%Default false
     !%Section Hamiltonian
     !%Description
-    !% (experimental) If set to yes, a complex scaled Hmiltonian will be used. 
+    !% (experimental) If set to yes, a complex scaled Hamiltonian will be used. 
     !% When <tt>TheoryLevel=DFT</tt> Density functional resonance theory DFRT is employed.  
-    !% In order to reveal resonances <tt>ComplexScalingAngle</tt> bigger than zero shold be set.
+    !% In order to reveal resonances <tt>ComplexScalingAngle</tt> bigger than zero should be set.
     !% D. L. Whitenack and A. Wasserman, Phys. Rev. Lett. 107, 163002 (2011).
     !%End
     call parse_logical(datasets_check('ComplexScaling'), .false., st%d%cmplxscl)
@@ -573,7 +573,7 @@ contains
       call messages_experimental('Complex Scaling')
       call messages_print_var_value(stdout, "ComplexScaling", st%d%cmplxscl)
 
-      !Even for gs calcualtions it requires complex wavefunctions
+      !Even for gs calculations it requires complex wavefunctions
       st%priv%wfs_type = TYPE_CMPLX
       !Allocate imaginary parts of the eigenvalues
       SAFE_ALLOCATE(st%zeigenval%Im(1:st%nst, 1:st%d%nik))
@@ -1693,7 +1693,7 @@ contains
     SAFE_DEALLOCATE_P(st%user_def_states)
 
     !cmplxscl
-    !FIXME: sometimes this objects are allocated outside this module
+    !FIXME: sometimes these objects are allocated outside this module
     ! and therefore the correspondence with val => val%Re is broken.
     ! In this case we check the pointer address with loc().
     if(loc(st%zrho%Re) .eq. loc(st%rho)) then 
