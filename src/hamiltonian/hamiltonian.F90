@@ -112,6 +112,10 @@ module hamiltonian_m
     FLOAT :: entropy
     FLOAT :: ts          !< TS
     FLOAT :: berry       !< Berry energy correction = -mu.E - <Vberry>
+    
+    !Complex-scaled quantities 
+    CMPLX :: ztotal
+    CMPLX :: zeigenvalues
   end type energy_t
 
   type hamiltonian_t
@@ -175,6 +179,10 @@ module hamiltonian_m
 
     FLOAT :: current_time
     logical :: apply_packed  !< This is initialized by the StatesPack variable.
+    
+    !> If we use a complex-scaled Hamiltonian by complexifying the spatial coordinate with 
+    !> the transformation r -> r*exp(i*theta)  
+    FLOAT                    :: cmplxscl_th !< the complex scaling angle
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -192,8 +200,7 @@ module hamiltonian_m
     HARTREE               = 1, &
     HARTREE_FOCK          = 3, &
     KOHN_SHAM_DFT         = 4, &
-    CLASSICAL             = 5, &
-    DFRT                  = 6
+    CLASSICAL             = 5
 
   type(profile_t), save :: prof_hamiltonian, prof_vlpsi, prof_kinetic_start, prof_kinetic_finish
 
@@ -280,6 +287,22 @@ contains
 
     !Static magnetic field requires complex wavefunctions
     if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield)) call states_set_complex(st)
+
+    !%Variable ComplexScalingAngle
+    !%Type float 
+    !%Default 0.3
+    !%Section Hamiltonian
+    !%Description
+    !% The complex scaling parameter theta in DFRT.
+    !% It should be bound to 0 <= theta < pi/4. 
+    !%End
+    call parse_float(datasets_check('ComplexScalingAngle'), CNST(0.3), hm%cmplxscl_th)
+    if (states_dim%cmplxscl) then
+      call messages_print_stress(stdout, "Complex Scaling")
+      write(message(1), '(a,f12.3)') 'Complex scaling angle theta = ', hm%cmplxscl_th
+      call messages_info(1)
+      call messages_print_stress(stdout)
+    end if
 
     call parse_logical(datasets_check('CalculateSelfInducedMagneticField'), .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
@@ -386,6 +409,8 @@ contains
         end do
         call parse_block_end(blk)
     end if
+
+
 
     if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
       SAFE_ALLOCATE(hm%hf_st)
@@ -724,7 +749,9 @@ contains
     type(hamiltonian_t), intent(in) :: hm
 
     PUSH_SUB(hamiltonian_hermitian)
-    hamiltonian_hermitian = .not.((hm%ab .eq. IMAGINARY_ABSORBING) .or. hamiltonian_oct_exchange(hm))
+    hamiltonian_hermitian = .not.((hm%ab .eq. IMAGINARY_ABSORBING) .or. &
+                                  hamiltonian_oct_exchange(hm)     .or. &
+                                  hm%d%cmplxscl)
 
     POP_SUB(hamiltonian_hermitian)
   end function hamiltonian_hermitian
@@ -1086,6 +1113,9 @@ contains
     eout%ts = ein%ts
     eout%berry = ein%berry
 
+    eout%ztotal = ein%ztotal
+    eout%zeigenvalues = ein%zeigenvalues
+    
     POP_SUB(energy_copy)
   end subroutine energy_copy
 

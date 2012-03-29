@@ -266,7 +266,8 @@ contains
       ! clean up all the stuff we have to reallocate
       call states_deallocate_wfns(writ%gs_st)
       SAFE_DEALLOCATE_P(writ%gs_st%occ)
-      SAFE_DEALLOCATE_P(writ%gs_st%eigenval)
+      SAFE_DEALLOCATE_P(writ%gs_st%zeigenval%Re)
+      nullify(writ%gs_st%zeigenval%Re)
       SAFE_DEALLOCATE_P(writ%gs_st%node)
       if(writ%gs_st%d%ispin == SPINORS) then
         SAFE_DEALLOCATE_P(writ%gs_st%spin)
@@ -295,7 +296,8 @@ contains
 
       ! allocate memory
       SAFE_ALLOCATE(writ%gs_st%occ(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
-      SAFE_ALLOCATE(writ%gs_st%eigenval(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
+      SAFE_ALLOCATE(writ%gs_st%zeigenval%Re(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
+      writ%gs_st%eigenval => writ%gs_st%zeigenval%Re
       SAFE_ALLOCATE(writ%gs_st%node(1:writ%gs_st%nst))
       writ%gs_st%eigenval = huge(writ%gs_st%eigenval)
       writ%gs_st%occ      = M_ZERO

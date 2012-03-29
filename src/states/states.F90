@@ -103,7 +103,21 @@ module states_m
     states_set_zero,                  &
     states_block_min,                 &
     states_block_max,                 &
-    states_block_size
+    states_block_size,                &
+    states_resize_unocc
+
+
+  type states_wfs_t    !cmplxscl: Left and Right eigenstates
+    CMPLX, pointer     :: zL(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
+    CMPLX, pointer     :: zR(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
+    FLOAT, pointer     :: dL(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
+    FLOAT, pointer     :: dR(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
+  end type states_wfs_t
+
+  type cmplx_array2_t    !cmplxscl: complex 2 matrices 
+    FLOAT, pointer     :: Re(:, :) !< Real components 
+    FLOAT, pointer     :: Im(:, :) !< Imaginary components
+  end type cmplx_array2_t
 
   type states_lead_t
     CMPLX, pointer     :: intf_psi(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
@@ -126,6 +140,22 @@ module states_m
     !> pointers to the wavefunctions
     FLOAT, pointer           :: dpsi(:,:,:,:)         !< dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
     CMPLX, pointer           :: zpsi(:,:,:,:)         !< zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
+   
+    !> Pointers to complexified quantities. 
+    !! When we use complex scaling the Hamilonian is no longer hermitian.
+    !! In this case we have to distinguish between left and right eigenstates of H and
+    !! both density and eigenvalues become complex.
+    !! In order to modify the code to include this changes we allocate the general structures and 
+    !! make the restricted quantities point to a part of the structure.
+    ! For instance for the orbitals we allocate psi and make zpsi to point only to Right states as follows:
+    !! zpsi => psi%zR
+    !! Similarly for density and eigenvalues we make the old quantities to point to the real part:
+    !! rho => zrho%Re
+    !! eigenval => zeigenval%Re  
+    type(states_wfs_t)       :: psi          !< cmplxscl: Left psi%zL(:,:,:,:) and Right psi%zR(:,:,:,:) orbitals    
+    type(cmplx_array2_t)     :: zrho         !< cmplxscl: the complexified density <psi%zL(:,:,:,:)|psi%zR(:,:,:,:)>
+    type(cmplx_array2_t)     :: zeigenval    !< cmplxscl: the complexified eigenvalues 
+
 
     type(batch_t), pointer   :: psib(:, :)            !< A set of wave-functions blocks
     integer                  :: nblocks               !< The number of blocks
@@ -152,6 +182,7 @@ module states_m
     !> the densities and currents (after all we are doing DFT :)
     FLOAT, pointer :: rho(:,:)         !< rho(gr%mesh%np_part, st%d%nspin)
     FLOAT, pointer :: current(:, :, :) !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
+
 
     FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
     logical        :: current_in_tau   !< are we using in tau the term which depends on the paramagnetic current?
@@ -223,11 +254,19 @@ contains
     call modelmb_particles_nullify(st%modelmbparticles)
     st%priv%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
 
+    !cmplxscl
+    nullify(st%psi%dL, st%psi%dR)
+    nullify(st%psi%zL, st%psi%zR)     
+    nullify(st%zeigenval%Re, st%zeigenval%Im) 
+    nullify(st%zrho%Re, st%zrho%Im)
+
+
     nullify(st%dpsi, st%zpsi)
     nullify(st%psib, st%iblock, st%block_is_local)
     nullify(st%block_range)
     st%block_initialized = .false.
 
+    
     nullify(st%zphi, st%ob_eigenval, st%ob_occ)
     st%open_boundaries = .false.
     call states_dim_null(st%ob_d)
@@ -295,17 +334,6 @@ contains
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) st%priv%wfs_type = TYPE_CMPLX
-
-    ! Check if we use complex-scaled Hamiltonian (e.g. DFRT)
-    ! OK here I could not include the hamiltonian module has is compiled after the 
-    ! state module. However I just need the definition of the different theory levels from 
-    ! that module so I will just use the numbers associated to them, namely:
-    ! KOHN_SHAM_DFT = 4
-    ! DFRT = 6
-    call parse_integer(datasets_check('TheoryLevel'), 4, theory_level)
-    if(theory_level == 6) then 
-      st%priv%wfs_type = TYPE_CMPLX
-    end if 
 
 
     !%Variable ExcessCharge
@@ -528,6 +556,34 @@ contains
       call messages_info(1)
     end if
 
+    !%Variable ComplexScaling
+    !%Type logical
+    !%Default false
+    !%Section Hamiltonian
+    !%Description
+    !% (experimental) If set to yes, a complex scaled Hmiltonian will be used. 
+    !% When <tt>TheoryLevel=DFT</tt> Density functional resonance theory DFRT is employed.  
+    !% In order to reveal resonances <tt>ComplexScalingAngle</tt> bigger than zero shold be set.
+    !% D. L. Whitenack and A. Wasserman, Phys. Rev. Lett. 107, 163002 (2011).
+    !%End
+    call parse_logical(datasets_check('ComplexScaling'), .false., st%d%cmplxscl)
+
+
+    if (st%d%cmplxscl) then
+      call messages_experimental('Complex Scaling')
+      call messages_print_var_value(stdout, "ComplexScaling", st%d%cmplxscl)
+
+      !Even for gs calcualtions it requires complex wavefunctions
+      st%priv%wfs_type = TYPE_CMPLX
+      !Allocate imaginary parts of the eigenvalues
+      SAFE_ALLOCATE(st%zeigenval%Im(1:st%nst, 1:st%d%nik))
+      st%zeigenval%Im = huge(st%zeigenval%Im)      
+    end if
+    SAFE_ALLOCATE(st%zeigenval%Re(1:st%nst, 1:st%d%nik))
+    st%zeigenval%Re = huge(st%zeigenval%Re)
+    st%eigenval => st%zeigenval%Re(1:st%nst, 1:st%d%nik) 
+
+
     ! Periodic systems require complex wavefunctions
     ! but not if it is Gamma-point only
     if(simul_box_is_periodic(gr%sb)) then
@@ -562,8 +618,6 @@ contains
 
     ! we now allocate some arrays
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
-    SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
-    st%eigenval = huge(st%eigenval)
     st%occ      = M_ZERO
     ! allocate space for formula strings that define user-defined states
     SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
@@ -1106,8 +1160,12 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(st%dpsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
-      else
-        SAFE_ALLOCATE(st%zpsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
+      else        
+        SAFE_ALLOCATE(st%psi%zR(1:np_part, 1:st%d%dim, st1:st2, k1:k2))  
+        st%zpsi => st%psi%zR
+        if(st%d%cmplxscl) then
+          SAFE_ALLOCATE(st%psi%zL(1:np_part, 1:st%d%dim, st1:st2, k1:k2))  
+        end if          
       end if
       
       if(optional_default(alloc_zphi, .false.)) then
@@ -1310,7 +1368,9 @@ contains
     if (states_are_real(st)) then
       SAFE_DEALLOCATE_P(st%dpsi)
     else
-      SAFE_DEALLOCATE_P(st%zpsi)
+      SAFE_DEALLOCATE_P(st%psi%zL) ! cmplxscl
+      SAFE_DEALLOCATE_P(st%psi%zR) ! cmplxscl      
+      nullify(st%zpsi)
     end if
 
     if(st%open_boundaries) then
@@ -1332,9 +1392,16 @@ contains
 
     PUSH_SUB(states_densities_init)
 
-    ! allocate arrays for charge and current densities
-    SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
-    st%rho  = M_ZERO
+
+    SAFE_ALLOCATE(st%zrho%Re(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+    st%zrho%Re = M_ZERO    
+    st%rho => st%zrho%Re 
+    if( st%d%cmplxscl) then
+      SAFE_ALLOCATE(st%zrho%Im(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+      st%zrho%Im = M_ZERO
+    end if
+
+    
     if(st%d%cdft) then
       SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
       st%current = M_ZERO
@@ -1463,7 +1530,50 @@ contains
 
     POP_SUB(states_exec_init)
   end subroutine states_exec_init
+
+
+
   !---------------------------------------------------------------------
+  subroutine states_resize_unocc(st, nus)
+    type(states_t), intent(inout) :: st
+    integer,        intent(in)    :: nus
+
+    FLOAT, pointer :: new_occ(:,:)
+
+    PUSH_SUB(states_resize_unocc)
+
+    ! Resize st%occ, retaining current values
+    SAFE_ALLOCATE(new_occ(1:st%nst + nus, 1:st%d%nik))
+    new_occ(1:st%nst,:) = st%occ(1:st%nst,:)
+    new_occ(st%nst+1:,:) = M_ZERO
+    SAFE_DEALLOCATE_P(st%occ)
+    st%occ => new_occ
+
+    ! fix states: THIS IS NOT OK
+    st%nst    = st%nst + nus
+    st%st_end = st%nst
+
+    !cmplxscl
+    SAFE_DEALLOCATE_P(st%zeigenval%Re)
+    SAFE_DEALLOCATE_P(st%zeigenval%Im)
+    nullify(st%eigenval)
+    if (st%d%cmplxscl) then      
+      SAFE_ALLOCATE(st%zeigenval%Im(1:st%nst, 1:st%d%nik))
+      st%zeigenval%Im = huge(st%zeigenval%Im)      
+    end if
+    SAFE_ALLOCATE(st%zeigenval%Re(1:st%nst, 1:st%d%nik))
+    st%zeigenval%Re = huge(st%zeigenval%Re)
+    st%eigenval => st%zeigenval%Re 
+  
+
+    if(st%d%ispin == SPINORS) then
+      SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
+      st%spin = M_ZERO
+    end if
+    
+    POP_SUB(states_resize_unocc)
+    
+  end subroutine states_resize_unocc
 
 
   ! ---------------------------------------------------------
@@ -1482,8 +1592,21 @@ contains
 
     stout%only_userdef_istates = stin%only_userdef_istates
     call loct_pointer_copy(stout%dpsi, stin%dpsi)
-    call loct_pointer_copy(stout%zpsi, stin%zpsi)
 
+    !cmplxscl
+    call loct_pointer_copy(stout%psi%zR, stin%psi%zR)         
+    stout%zpsi => stout%psi%zR
+    call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)           
+    stout%rho => stout%zrho%Re
+    call loct_pointer_copy(stout%zeigenval%Re, stin%zeigenval%Re) 
+    stout%eigenval => stout%zeigenval%Re
+    if(stin%d%cmplxscl) then
+      call loct_pointer_copy(stout%psi%zL, stin%psi%zL)         
+      call loct_pointer_copy(stout%zrho%Im, stin%zrho%Im)           
+      call loct_pointer_copy(stout%zeigenval%Im, stin%zeigenval%Im) 
+    end if
+
+    
     ! the call to init_block is done at the end of this subroutine
     ! it allocates iblock, psib, block_is_local
     stout%nblocks = stin%nblocks
@@ -1493,7 +1616,6 @@ contains
 
     call loct_pointer_copy(stout%user_def_states, stin%user_def_states)
 
-    call loct_pointer_copy(stout%rho, stin%rho)
     call loct_pointer_copy(stout%current, stin%current)
 
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
@@ -1501,7 +1623,6 @@ contains
 
     call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
 
-    call loct_pointer_copy(stout%eigenval, stin%eigenval)
     stout%fixed_occ = stin%fixed_occ
     stout%restart_fixed_occ = stin%restart_fixed_occ
 
@@ -1571,12 +1692,32 @@ contains
 
     SAFE_DEALLOCATE_P(st%user_def_states)
 
-    SAFE_DEALLOCATE_P(st%rho)
+    !cmplxscl
+    !FIXME: sometimes this objects are allocated outside this module
+    ! and therefore the correspondence with val => val%Re is broken.
+    ! In this case we check the pointer address with loc().
+    if(loc(st%zrho%Re) .eq. loc(st%rho)) then 
+      SAFE_DEALLOCATE_P(st%zrho%Re)       
+      nullify(st%rho)
+    else
+      SAFE_DEALLOCATE_P(st%rho)
+    end if
+    if(loc(st%zeigenval%Re) .eq. loc(st%eigenval)) then 
+      SAFE_DEALLOCATE_P(st%zeigenval%Re)
+      nullify(st%eigenval)
+    else
+      SAFE_DEALLOCATE_P(st%eigenval)
+    end if
+    if(st%d%cmplxscl) then
+      SAFE_DEALLOCATE_P(st%zrho%Im)
+      SAFE_DEALLOCATE_P(st%zeigenval%Im)
+    end if
+    
+
     SAFE_DEALLOCATE_P(st%current)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
 
-    SAFE_DEALLOCATE_P(st%eigenval)
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%spin)
 

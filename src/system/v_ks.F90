@@ -117,7 +117,7 @@ module v_ks_m
     integer                  :: tc_delay
     type(grid_t), pointer    :: gr
     type(v_ks_calc_t)        :: calc
-    FLOAT                    :: dfrt_theta !< the complex scaling parameter
+
     
   end type v_ks_t
 
@@ -163,10 +163,6 @@ contains
     !%Option classical 5
     !% (Experimental) Only the classical interaction between ions is
     !% considered. This is mainly for testing.
-    !%Option dfrt 5
-    !% (Experimental) Density functional resonance theory. This is the complex-scaled version of 
-    !% DFT. In order to reveal resonances <tt>ComplexScalingAngle</tt> bigger than zero shold be set.
-    !% D. L. Whitenack and A. Wasserman, Phys. Rev. Lett. 107, 163002 (2011).
     !%End
     call parse_integer(datasets_check('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
     if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
@@ -292,19 +288,6 @@ contains
         call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, dd, mc)
       endif
       
-      case (DFRT)
-      call messages_experimental("DFRT level")
-
-      !%Variable ComplexScalingAngle
-      !%Type float 
-      !%Default 0
-      !%Section Hamiltonian
-      !%Description
-      !% The complex scaling parameter theta in DFRT.
-      !% It should be bound to 0 <= theta < pi/4. 
-      !%End
-      call parse_float(datasets_check('ComplexScalingAngle'), M_ZERO, ks%dfrt_theta)
-
     end select
 
     ks%frozen_hxc = .false.
@@ -390,9 +373,7 @@ contains
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
         call xc_ks_inversion_write_info(ks%ks_inversion, iunit)
       end if
-    
-    case(DFRT)  
-    
+        
 
     end select
 
