@@ -103,7 +103,7 @@ contains
     FLOAT,               intent(in)  :: rlattice(:, :)
     FLOAT,               intent(in)  :: lsize(:)
 
-    integer :: max_size, fullnops
+    integer :: max_size, fullnops, dim4syms
     integer :: idir, iatom, iop, verbosity, point_group
     real(8) :: lattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
@@ -150,6 +150,8 @@ contains
 
     ! In all cases, we must check that the grid respects the symmetries. --DAS
 
+    dim4syms = min(3,dim)
+
     if (periodic_dim == 0) then
 
       ! we only have the identity
@@ -168,7 +170,7 @@ contains
 
         forall(iatom = 1:geo%natoms)
           position(1:3, iatom) = M_ZERO
-          position(1:dim, iatom) = geo%atom(iatom)%x(1:dim)
+          position(1:dim4syms, iatom) = geo%atom(iatom)%x(1:dim4syms)
           typs(iatom) = species_index(geo%atom(iatom)%spec)
         end forall
 
@@ -200,7 +202,7 @@ contains
       forall(iatom = 1:geo%natoms)
         !this has to be fixed for non-orthogonal cells. So does everything else!
         position(1:3, iatom) = M_HALF
-        position(1:dim, iatom) = geo%atom(iatom)%x(1:dim)/(M_TWO*lsize(1:dim)) + M_HALF
+        position(1:dim4syms, iatom) = geo%atom(iatom)%x(1:dim4syms)/(M_TWO*lsize(1:dim4syms)) + M_HALF
         typs(iatom) = species_index(geo%atom(iatom)%spec)
       end forall
 
@@ -237,7 +239,7 @@ contains
 
       if(parse_block(datasets_check('SymmetryBreakDir'), blk) == 0) then
 
-        do idir = 1, dim
+        do idir = 1, dim4syms
           call parse_block_float(blk, 0, idir - 1, this%breakdir(idir))
         end do
 

@@ -59,15 +59,17 @@ contains
     FLOAT,                 intent(in)  :: pos(:)
     FLOAT,                 intent(in)  :: range
 
-    integer :: pd
+    integer :: pd, dim4syms
     integer :: icell1, icell2, icell3, jj
 
     PUSH_SUB(periodic_copy_init)
 
     ASSERT(range >= M_ZERO)
 
+    dim4syms = min(3, sb%dim)
+
     this%range = range
-    this%pos(1:sb%dim) = pos(1:sb%dim)
+    this%pos(1:dim4syms) = pos(1:dim4syms)
     nullify(this%icell)
 
     if(.not. simul_box_is_periodic(sb)) then
