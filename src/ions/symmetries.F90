@@ -163,7 +163,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) then
         natoms = max(1,geo%natoms)
 
-        SAFE_ALLOCATE(position(1:MAX_DIM, natoms))
+        SAFE_ALLOCATE(position(1:3, natoms))
         SAFE_ALLOCATE(typs(1:natoms))
 
         forall(iatom = 1:geo%natoms)
