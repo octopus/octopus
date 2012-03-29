@@ -44,10 +44,10 @@ module solids_m
   ! parts of this module explicitly work on for 3 dimensions
   type periodic_copy_t
     private
-    FLOAT :: pos(1:3)
-    FLOAT :: pos_chi(1:3)
+    FLOAT :: pos(1:MAX_DIM)
+    FLOAT :: pos_chi(1:MAX_DIM)
     FLOAT :: range
-    integer :: nbmax(3), nbmin(3)
+    integer :: nbmax(MAX_DIM), nbmin(MAX_DIM)
     integer, pointer :: icell(:, :)
   end type periodic_copy_t
 
