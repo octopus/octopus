@@ -104,7 +104,8 @@ module states_m
     states_block_min,                 &
     states_block_max,                 &
     states_block_size,                &
-    states_resize_unocc
+    states_resize_unocc,              &
+    cmplx_array2_t
 
 
   type states_wfs_t    !cmplxscl: Left and Right eigenstates
@@ -114,7 +115,7 @@ module states_m
     FLOAT, pointer     :: dR(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
   end type states_wfs_t
 
-  type cmplx_array2_t    !cmplxscl: complex 2 matrices 
+  type cmplx_array2_t    !cmplxscl: complex 2D matrices 
     FLOAT, pointer     :: Re(:, :) !< Real components 
     FLOAT, pointer     :: Im(:, :) !< Imaginary components
   end type cmplx_array2_t

@@ -101,16 +101,26 @@ contains
         write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4,5x,a5)')   &
           '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>', 'Error'
       else
-        write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x,a10)')   &
-          '#st',' Spin',' Eigenvalue', 'Occupation ', 'Error'
+        if(st%d%cmplxscl) then
+          write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12,1x,a10)')   &
+            '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation ', 'Error'
+        else
+          write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x,a10)')   &
+            '#st',' Spin',' Eigenvalue', 'Occupation ', 'Error'
+        end if
       end if
     else
       if(st%d%ispin .eq. SPINORS) then
         write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
           '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
       else
-        write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x)')       &
-          '#st',' Spin',' Eigenvalue', 'Occupation '
+        if(st%d%cmplxscl) then
+          write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12,1x)')   &
+            '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation '
+        else
+          write(message(1), '(a4,1x,a5,1x,a12,4x,a12,1x)')       &
+            '#st',' Spin',' Eigenvalue', 'Occupation '
+        end if
       end if
     end if
     call messages_info(1, iunit)
@@ -158,8 +168,14 @@ contains
                 units_from_atomic(units_out%energy, st%eigenval(ist, ik)), occ, st%spin(1:3, ist, ik)
               if(present(error)) write(tmp_str(3), '(a3,es8.1,a1)')'  (', error(ist, ik+is), ')'
             else
-              write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
-                units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), occ
+              if(st%d%cmplxscl) then !cmplxscl
+                write(tmp_str(2), '(1x,f12.6,3x,f12.6,3x,f12.6)') &
+                  units_from_atomic(units_out%energy, st%zeigenval%Re(ist, ik+is)), &
+                  units_from_atomic(units_out%energy, st%zeigenval%Im(ist, ik+is)), occ
+              else
+                write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
+                  units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), occ
+              end if
               if(present(error)) write(tmp_str(3), '(a7,es8.1,a1)')'      (', error(ist, ik), ')'
             end if
           end if
