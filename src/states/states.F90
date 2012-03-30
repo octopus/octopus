@@ -105,7 +105,8 @@ module states_m
     states_block_max,                 &
     states_block_size,                &
     states_resize_unocc,              &
-    cmplx_array2_t
+    cmplx_array2_t,                   &
+    states_wfs_t
 
 
   type states_wfs_t    !cmplxscl: Left and Right eigenstates
