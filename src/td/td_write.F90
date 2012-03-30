@@ -267,7 +267,7 @@ contains
       call states_deallocate_wfns(writ%gs_st)
       SAFE_DEALLOCATE_P(writ%gs_st%occ)
       SAFE_DEALLOCATE_P(writ%gs_st%zeigenval%Re)
-      nullify(writ%gs_st%zeigenval%Re)
+      nullify(writ%gs_st%eigenval)
       SAFE_DEALLOCATE_P(writ%gs_st%node)
       if(writ%gs_st%d%ispin == SPINORS) then
         SAFE_DEALLOCATE_P(writ%gs_st%spin)

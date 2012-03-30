@@ -192,7 +192,8 @@ contains
     ! without updating the internal structures.
     st%nst    = nst
     st%st_end = nst
-    SAFE_DEALLOCATE_P(st%eigenval)
+    SAFE_DEALLOCATE_P(st%zeigenval%Re)
+    nullify(st%eigenval)
     
     if (present(is_complex)) then
       if ( is_complex ) then
@@ -205,7 +206,8 @@ contains
       call states_allocate_wfns(st, gr%mesh)
     endif
 
-    SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(st%zeigenval%Re(1:st%nst, 1:st%d%nik))
+    st%eigenval => st%zeigenval%Re
 
     if(st%d%ispin == SPINORS) then
       SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
