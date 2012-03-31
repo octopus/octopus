@@ -1167,6 +1167,8 @@ contains
         st%zpsi => st%psi%zR
         if(st%d%cmplxscl) then
           SAFE_ALLOCATE(st%psi%zL(1:np_part, 1:st%d%dim, st1:st2, k1:k2))  
+        else
+          st%psi%zL => st%psi%zR  
         end if          
       end if
       
@@ -1370,9 +1372,13 @@ contains
     if (states_are_real(st)) then
       SAFE_DEALLOCATE_P(st%dpsi)
     else
-      SAFE_DEALLOCATE_P(st%psi%zL) ! cmplxscl
-      SAFE_DEALLOCATE_P(st%psi%zR) ! cmplxscl      
       nullify(st%zpsi)
+      if(associated(st%psi%zL,target=st%psi%zR )) then
+        nullify(st%psi%zL)
+      else          
+        SAFE_DEALLOCATE_P(st%psi%zL) ! cmplxscl
+      end if
+      SAFE_DEALLOCATE_P(st%psi%zR) ! cmplxscl      
     end if
 
     if(st%open_boundaries) then
@@ -1695,18 +1701,18 @@ contains
     SAFE_DEALLOCATE_P(st%user_def_states)
 
     !cmplxscl
-    !FIXME: sometimes these objects are allocated outside this module
+    !NOTE: sometimes these objects are allocated outside this module
     ! and therefore the correspondence with val => val%Re is broken.
-    ! In this case we check the pointer address with loc().
-    if(loc(st%zrho%Re) .eq. loc(st%rho)) then 
-      SAFE_DEALLOCATE_P(st%zrho%Re)       
+    ! In this case we check if the pointer val is associated to zval%Re.
+    if(associated(st%rho, target=st%zrho%Re)) then 
       nullify(st%rho)
+      SAFE_DEALLOCATE_P(st%zrho%Re)       
     else
       SAFE_DEALLOCATE_P(st%rho)
     end if
-    if(loc(st%zeigenval%Re) .eq. loc(st%eigenval)) then 
-      SAFE_DEALLOCATE_P(st%zeigenval%Re)
+    if(associated(st%eigenval, target=st%zeigenval%Re)) then 
       nullify(st%eigenval)
+      SAFE_DEALLOCATE_P(st%zeigenval%Re)
     else
       SAFE_DEALLOCATE_P(st%eigenval)
     end if
