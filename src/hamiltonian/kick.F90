@@ -444,8 +444,10 @@ contains
     read(iunit, '(15x,f18.12)') kick%delta_strength
     read(iunit, '(a)') line
     if(index(line,'defined').ne.0) then
+      kick%function_mode = KICK_FUNCTION_USER_DEFINED
       read(line,'("# User defined:",1x,a)') kick%user_defined_function
     elseif(index(line,'multipole').ne.0) then
+      kick%function_mode = KICK_FUNCTION_MULTIPOLE
       read(line, '("# N multipoles ",i3)') kick%n_multipoles
       SAFE_ALLOCATE(     kick%l(1:kick%n_multipoles))
       SAFE_ALLOCATE(     kick%m(1:kick%n_multipoles))
@@ -454,6 +456,7 @@ contains
         read(iunit, '("# multipole    ",2i3,f18.12)') kick%l(im), kick%m(im), kick%weight(im)
       end do
     else
+      kick%function_mode = KICK_FUNCTION_DIPOLE
       kick%n_multipoles = 0
       nullify(kick%l)
       nullify(kick%m)
@@ -665,7 +668,7 @@ contains
         SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
         call kick_function_get(gr, kick, kick_function)
 
-        write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', kick%delta_strength
+        write(message(1),'(a,f11.6)') 'Info: Applying delta kick: k = ', kick%delta_strength
         select case (kick%function_mode)
         case (KICK_FUNCTION_DIPOLE)
           message(2) = "Info: kick function: dipole."
