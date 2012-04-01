@@ -125,6 +125,9 @@ if test x"${enable_opencl}" == x"yes" ; then
 	Experimental OpenCL support enabled.
   ])
   AX_CHECK_CL
+  if test "X$no_cl" == "Xyes"; then
+    AC_MSG_FAILURE([Cannot find the OpenCL library.])
+  fi
   AC_DEFINE(HAVE_OPENCL, 1, [defined if opencl support is enabled])
 fi
 AM_CONDITIONAL(COMPILE_OPENCL, test x"${enable_opencl}" == x"yes")
