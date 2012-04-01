@@ -344,7 +344,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(in)    :: ss(:, :)
 
-  integer :: idim, block_size, ib, size, sp
+  integer :: idim, block_size, ib, size, sp, ierr
   R_TYPE, allocatable :: psicopy(:, :, :)
   type(opencl_mem_t) :: psicopy_buffer, ss_buffer
 #ifdef HAVE_OPENCL
@@ -355,6 +355,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
   PUSH_SUB(X(states_trsm))
   call profiling_in(prof, "STATES_TRSM")
+
+  call states_pack(st)
 
   if(associated(st%X(psi))) then
 
@@ -399,7 +401,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     end do 
 
   else
-    
+
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_trsm for spinors')
 
 #ifdef HAVE_OPENCL
@@ -418,6 +420,17 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
+#if defined(HAVE_CLAMDBLAS) && defined(R_TREAL)
+
+      call clAmdBlasDtrsmEx(order = clAmdBlasColumnMajor, side = clAmdBlasLeft, &
+        uplo = clAmdBlasUpper, transA = clAmdBlasTrans, diag = clAmdBlasNonUnit, &
+        M = int(st%nst, 8), N = int(size, 8), alpha = M_ONE, &
+        A = ss_buffer%mem, offA = 0_8, lda = int(ubound(ss, dim = 1), 8), &
+        B = psicopy_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), &
+        CommandQueue = opencl%command_queue, status = ierr)
+
+#else
+
       if(states_are_real(st)) then
         call octcl_kernel_start_call(dkernel, 'trsm.cl', 'dtrsm')
         kernel_ref = octcl_kernel_get_ref(dkernel)
@@ -434,6 +447,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
       
       call opencl_kernel_run(kernel_ref, (/size/), (/1/))
 
+#endif
+
       do ib = st%block_start, st%block_end
         call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
@@ -443,6 +458,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     call opencl_release_buffer(psicopy_buffer)
 #endif
   end if
+
+  call states_unpack(st)
 
   call profiling_out(prof)
   POP_SUB(X(states_trsm))

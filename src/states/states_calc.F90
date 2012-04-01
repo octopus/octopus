@@ -28,6 +28,9 @@ module states_calc_m
   use calc_mode_m
 #ifdef HAVE_OPENCL
   use cl
+#ifdef HAVE_CLAMDBLAS
+  use clAmdBlas
+#endif
 #endif
   use octcl_kernel_m
   use comm_m

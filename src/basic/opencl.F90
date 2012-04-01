@@ -23,6 +23,9 @@ module opencl_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
+#ifdef HAVE_CLAMDBLAS
+  use clAmdBlas
+#endif
   use datasets_m
   use global_m
   use io_m
@@ -75,7 +78,6 @@ module opencl_m
   end type opencl_t
 
   type opencl_mem_t
-    private
 #ifdef HAVE_OPENCL
     type(cl_mem)           :: mem
 #endif
@@ -411,6 +413,14 @@ module opencl_m
 #endif
       call messages_print_stress(stdout)
 
+#ifdef HAVE_CLAMDBLAS
+      call clAmdBlasSetup(cl_status)
+      if(cl_status /= clAmdBlasSuccess) then
+        call messages_write('Error initializing clAmdBlas')
+        call messages_fatal()
+      end if
+#endif
+
       POP_SUB(opencl_init)
 
     contains
@@ -537,6 +547,10 @@ module opencl_m
       integer :: ierr
 
       PUSH_SUB(opencl_end)
+
+#ifdef HAVE_CLAMDBLAS
+      call clAmdBlasTearDown()
+#endif
 
       if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
