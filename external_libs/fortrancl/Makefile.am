@@ -23,6 +23,8 @@ if COMPILE_OPENCL
   noinst_LIBRARIES = libfortrancl.a
 endif
 
+AM_CFLAGS = @CL_CFLAGS@
+
 libfortrancl_a_SOURCES =       \
 	cl_types.f90           \
 	cl_buffer.f90          \
@@ -47,7 +49,8 @@ if COMPILE_OPENCL
 endif
 
 noinst_HEADERS =               \
-	string_f.h
+	string_f.h             \
+	localcl.h
 
 cl_types.o     : cl_types.f90
 cl_constants.o : cl_constants.f90

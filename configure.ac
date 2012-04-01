@@ -124,9 +124,7 @@ if test x"${enable_opencl}" == x"yes" ; then
   
 	Experimental OpenCL support enabled.
   ])
-  AC_CHECK_HEADER(CL/cl.h, [], [AC_MSG_ERROR([Cannot find the OpenCL header.])], [])
-  AC_CHECK_FUNC(clGetPlatformIDs, [], [LIBS=$LIBS" -lOpenCL"])
-  AC_CHECK_FUNC(clFinish, [], [AC_MSG_ERROR([Cannot find the OpenCL library.])])
+  AX_CHECK_CL
   AC_DEFINE(HAVE_OPENCL, 1, [defined if opencl support is enabled])
 fi
 AM_CONDITIONAL(COMPILE_OPENCL, test x"${enable_opencl}" == x"yes")

@@ -84,7 +84,7 @@ external_LIBS = \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a
 
 if COMPILE_OPENCL
-  external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a
+  external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @CL_LIBS@
   AM_FCFLAGS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/fortrancl
 endif
 
