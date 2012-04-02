@@ -184,10 +184,11 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     call opencl_finish()
 
 #endif
-#endif
 
     call opencl_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
     call opencl_release_buffer(dot_buffer)
+
+#endif
 
     forall(ist = 1:aa%nst, jst = 1:bb%nst) dd(ist, jst) = mesh%volume_element*dd(ist, jst)
 
