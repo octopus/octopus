@@ -31,6 +31,7 @@
 
 #undef X
 #undef pX
+#undef aX
 #undef TS
 #undef R_TYPE
 #undef R_TYPE_VAL
