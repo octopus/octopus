@@ -21,8 +21,6 @@ void FC_FUNC_(clamdblasteardown_low, CLAMDBLASTEARDOWN_LOW)(){
   clAmdBlasTeardown();
 }
 
-
-
 void FC_FUNC_(clamdblasdtrsmex_low, CLAMDBLASDTRSMEX_LOW)(int * order,
 							  int * side,
 							  int * uplo,
@@ -42,6 +40,34 @@ void FC_FUNC_(clamdblasdtrsmex_low, CLAMDBLASDTRSMEX_LOW)(int * order,
 
 
   *status = clAmdBlasDtrsmEx((clAmdBlasOrder) *order, (clAmdBlasSide) *side, (clAmdBlasUplo) *uplo, 
+			     (clAmdBlasTranspose) *transA, (clAmdBlasDiag) *diag,
+			     (size_t) *M, (size_t) *N, *alpha, 
+			     *A, (size_t) *offA, (size_t) *lda, 
+			     *B, (size_t) *offB, (size_t) *ldb, 
+			     1, commandQueue, 
+			     0, NULL, NULL);
+}
+
+
+void FC_FUNC_(clamdblasztrsmex_low, CLAMDBLASZTRSMEX_LOW)(int * order,
+							  int * side,
+							  int * uplo,
+							  int * transA,
+							  int * diag,
+							  cl_long * M,
+							  cl_long * N,
+							  DoubleComplex * alpha,
+							  const cl_mem * A,
+							  size_t * offA,
+							  size_t * lda,
+							  cl_mem * B,
+							  size_t * offB,
+							  size_t * ldb, 
+							  cl_command_queue * commandQueue, 
+							  int * status){
+
+
+  *status = clAmdBlasZtrsmEx((clAmdBlasOrder) *order, (clAmdBlasSide) *side, (clAmdBlasUplo) *uplo, 
 			     (clAmdBlasTranspose) *transA, (clAmdBlasDiag) *diag,
 			     (size_t) *M, (size_t) *N, *alpha, 
 			     *A, (size_t) *offA, (size_t) *lda, 

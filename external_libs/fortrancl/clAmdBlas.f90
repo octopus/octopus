@@ -9,7 +9,8 @@ module clAmdBlas
     clAmdBlasGetVersion,     &
     clAmdBlasSetup,          &
     clAmdBlasTeardown,       &
-    clAmdBlasDtrsmEx
+    clAmdBlasDtrsmEx,        &
+    clAmdBlasZtrsmEx
 
   integer, public, parameter ::     &
     clAmdBlasRowMajor        = 0,   &
@@ -113,8 +114,33 @@ module clAmdBlas
       integer(8),             intent(in)    :: offB
       integer(8),             intent(in)    :: ldb 
       type(cl_command_queue), intent(inout) :: CommandQueue 
-      integer,                intent(in)    :: status
+      integer,                intent(out)   :: status
     end subroutine clamdblasdtrsmex_low
   end interface clAmdBlasDtrsmEx
   
+  interface clAmdBlasZtrsmEx
+    subroutine clamdblasztrsmex_low(order, side, uplo, transA, diag, M, N, alpha, A, offA, lda, B, offB, ldb, commandQueue, status)
+      use cl
+
+      implicit none
+
+      integer,                intent(in)    :: order
+      integer,                intent(in)    :: side
+      integer,                intent(in)    :: uplo
+      integer,                intent(in)    :: transA
+      integer,                intent(in)    :: diag
+      integer(8),             intent(in)    :: M
+      integer(8),             intent(in)    :: N
+      real(8),                intent(in)    :: alpha
+      type(cl_mem),           intent(inout) :: A
+      integer(8),             intent(in)    :: offA
+      integer(8),             intent(in)    :: lda
+      type(cl_mem),           intent(inout) :: B
+      integer(8),             intent(in)    :: offB
+      integer(8),             intent(in)    :: ldb 
+      type(cl_command_queue), intent(inout) :: CommandQueue 
+      integer,                intent(out)   :: status
+    end subroutine clamdblasztrsmex_low
+  end interface clAmdBlasZtrsmEx
+
 end module clAmdBlas

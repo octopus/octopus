@@ -45,7 +45,8 @@ module opencl_m
     opencl_init,                  &
     opencl_end,                   &
     opencl_padded_size,           &
-    opencl_mem_t
+    opencl_mem_t,                 &
+    clblas_print_error
 
 #ifdef HAVE_OPENCL
   public ::                       &
@@ -973,6 +974,59 @@ module opencl_m
   
       POP_SUB(opencl_print_error)
     end subroutine opencl_print_error
+
+    ! ----------------------------------------------------
+
+    subroutine clblas_print_error(ierr, name)
+      integer,          intent(in) :: ierr
+      character(len=*), intent(in) :: name
+
+      character(len=40) :: errcode
+    
+      PUSH_SUB(opencl_print_error)
+#ifdef HAVE_CLAMDBLAS
+      select case(ierr)
+      case(clAmdBlasSuccess);                    errcode = 'clAmdBlasSuccess'
+      case(clAmdBlasInvalidValue);               errcode = 'clAmdBlasInvalidValue'
+      case(clAmdBlasInvalidCommandQueue);        errcode = 'clAmdBlasInvalidCommandQueue'
+      case(clAmdBlasInvalidContext);             errcode = 'clAmdBlasInvalidContext'
+      case(clAmdBlasInvalidMemObject);           errcode = 'clAmdBlasInvalidMemObject'
+      case(clAmdBlasInvalidDevice);              errcode = 'clAmdBlasInvalidDevice'
+      case(clAmdBlasInvalidEventWaitList);       errcode = 'clAmdBlasInvalidEventWaitList'
+      case(clAmdBlasOutOfResources);             errcode = 'clAmdBlasOutOfResources'
+      case(clAmdBlasOutOfHostMemory);            errcode = 'clAmdBlasOutOfHostMemory'
+      case(clAmdBlasInvalidOperation);           errcode = 'clAmdBlasInvalidOperation'
+      case(clAmdBlasCompilerNotAvailable);       errcode = 'clAmdBlasCompilerNotAvailable'
+      case(clAmdBlasBuildProgramFailure );       errcode = 'clAmdBlasBuildProgramFailure'
+      case(clAmdBlasNotImplemented);             errcode = 'clAmdBlasNotImplemented'
+      case(clAmdBlasNotInitialized);             errcode = 'clAmdBlasNotInitialized'
+      case(clAmdBlasInvalidMatA);                errcode = 'clAmdBlasInvalidMatA'
+      case(clAmdBlasInvalidMatB);                errcode = 'clAmdBlasInvalidMatB'
+      case(clAmdBlasInvalidMatC);                errcode = 'clAmdBlasInvalidMatC'
+      case(clAmdBlasInvalidVecX);                errcode = 'clAmdBlasInvalidVecX'
+      case(clAmdBlasInvalidVecY);                errcode = 'clAmdBlasInvalidVecY'
+      case(clAmdBlasInvalidDim);                 errcode = 'clAmdBlasInvalidDim'
+      case(clAmdBlasInvalidLeadDimA);            errcode = 'clAmdBlasInvalidLeadDimA'
+      case(clAmdBlasInvalidLeadDimB);            errcode = 'clAmdBlasInvalidLeadDimB'
+      case(clAmdBlasInvalidLeadDimC);            errcode = 'clAmdBlasInvalidLeadDimC'
+      case(clAmdBlasInvalidIncX);                errcode = 'clAmdBlasInvalidIncX'
+      case(clAmdBlasInvalidIncY);                errcode = 'clAmdBlasInvalidIncY'
+      case(clAmdBlasInsufficientMemMatA);        errcode = 'clAmdBlasInsufficientMemMatA'
+      case(clAmdBlasInsufficientMemMatB);        errcode = 'clAmdBlasInsufficientMemMatB'
+      case(clAmdBlasInsufficientMemMatC);        errcode = 'clAmdBlasInsufficientMemMatC'
+      case(clAmdBlasInsufficientMemVecX);        errcode = 'clAmdBlasInsufficientMemVecX'
+      case(clAmdBlasInsufficientMemVecY);        errcode = 'clAmdBlasInsufficientMemVecY'
+      case default
+        write(errcode, '(i10)') ierr
+        errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
+      end select
+#endif
+
+      message(1) = 'Error: clAmdBlas '//trim(name)//' '//trim(errcode)
+      call messages_fatal(1)
+  
+      POP_SUB(opencl_print_error)
+    end subroutine clblas_print_error
 
     ! ----------------------------------------------------
 

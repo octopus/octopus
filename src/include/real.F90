@@ -34,6 +34,7 @@
 
 #define X(x)        d ## x
 #define pX(x)       pd ## x
+#define aX(x,y)     x ## d ## y
 
 #define R_SIZEOF    8
 #define R_ADD       1

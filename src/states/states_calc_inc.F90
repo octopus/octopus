@@ -356,8 +356,6 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   PUSH_SUB(X(states_trsm))
   call profiling_in(prof, "STATES_TRSM")
 
-  call states_pack(st)
-
   if(associated(st%X(psi))) then
 
     do idim = 1, st%d%dim
@@ -422,12 +420,13 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
 #if defined(HAVE_CLAMDBLAS) && defined(R_TREAL)
 
-      call clAmdBlasDtrsmEx(order = clAmdBlasColumnMajor, side = clAmdBlasLeft, &
+      call aX(clAmdblas,trsmEx)(order = clAmdBlasColumnMajor, side = clAmdBlasLeft, &
         uplo = clAmdBlasUpper, transA = clAmdBlasTrans, diag = clAmdBlasNonUnit, &
-        M = int(st%nst, 8), N = int(size, 8), alpha = M_ONE, &
+        M = int(st%nst, 8), N = int(size, 8), alpha = R_TOTYPE(M_ONE), &
         A = ss_buffer%mem, offA = 0_8, lda = int(ubound(ss, dim = 1), 8), &
         B = psicopy_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), &
         CommandQueue = opencl%command_queue, status = ierr)
+      if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlastrsmEx')
 
 #else
 
@@ -458,8 +457,6 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     call opencl_release_buffer(psicopy_buffer)
 #endif
   end if
-
-  call states_unpack(st)
 
   call profiling_out(prof)
   POP_SUB(X(states_trsm))

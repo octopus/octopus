@@ -38,6 +38,7 @@
 
 #define X(x)        z ## x
 #define pX(x)        pz ## x
+#define aX(x,y)        x ## z ## y
 
 #if defined(DISABLE_DEBUG)
 #define TS(x)       x
