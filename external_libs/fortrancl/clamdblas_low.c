@@ -35,7 +35,7 @@ void FC_FUNC_(clamdblasdtrsmex_low, CLAMDBLASDTRSMEX_LOW)(int * order,
 							  cl_mem * B,
 							  size_t * offB,
 							  size_t * ldb, 
-							  cl_command_queue * commandQueue, 
+							  cl_command_queue * CommandQueue, 
 							  int * status){
 
 
@@ -44,8 +44,7 @@ void FC_FUNC_(clamdblasdtrsmex_low, CLAMDBLASDTRSMEX_LOW)(int * order,
 			     (size_t) *M, (size_t) *N, *alpha, 
 			     *A, (size_t) *offA, (size_t) *lda, 
 			     *B, (size_t) *offB, (size_t) *ldb, 
-			     1, commandQueue, 
-			     0, NULL, NULL);
+			     1, CommandQueue, 0, NULL, NULL);
 }
 
 
@@ -63,7 +62,7 @@ void FC_FUNC_(clamdblasztrsmex_low, CLAMDBLASZTRSMEX_LOW)(int * order,
 							  cl_mem * B,
 							  size_t * offB,
 							  size_t * ldb, 
-							  cl_command_queue * commandQueue, 
+							  cl_command_queue * CommandQueue, 
 							  int * status){
 
 
@@ -72,8 +71,63 @@ void FC_FUNC_(clamdblasztrsmex_low, CLAMDBLASZTRSMEX_LOW)(int * order,
 			     (size_t) *M, (size_t) *N, *alpha, 
 			     *A, (size_t) *offA, (size_t) *lda, 
 			     *B, (size_t) *offB, (size_t) *ldb, 
-			     1, commandQueue, 
-			     0, NULL, NULL);
+			     1, CommandQueue, 0, NULL, NULL);
+}
+
+void FC_FUNC_(clamdblasdgemmex_low, CLAMDBLASDGEMMEX_LOW)(int * order,
+							  int * transA, 
+							  int * transB, 
+							  cl_long * M,
+							  cl_long * N,
+							  cl_long * K,
+							  double * alpha,
+							  const cl_mem * A,
+							  cl_long * offA,
+							  cl_long * lda,
+							  const cl_mem * B,
+							  cl_long * offB,
+							  cl_long * ldb, 
+							  double * beta, 
+							  cl_mem * C, 
+							  cl_long * offC, 
+							  cl_long * ldc, 
+							  cl_command_queue * CommandQueue,
+							  int * status){
+
+  *status = clAmdBlasDgemmEx((clAmdBlasOrder) *order, (clAmdBlasTranspose) *transA, (clAmdBlasTranspose) *transB, 
+			     (size_t) *M, (size_t) *N, (size_t) *K, *alpha, 
+			     *A, (size_t) *offA, (size_t) *lda, 
+			     *B, (size_t) *offB, (size_t) *ldb, *beta, 
+			     *C, (size_t) *offC, (size_t) *ldc, 
+			     1, CommandQueue, 0, NULL, NULL);
+}
+
+void FC_FUNC_(clamdblaszgemmex_low, CLAMDBLASDGEMMEX_LOW)(int * order,
+							  int * transA, 
+							  int * transB, 
+							  cl_long * M,
+							  cl_long * N,
+							  cl_long * K,
+							  DoubleComplex * alpha,
+							  const cl_mem * A,
+							  cl_long * offA,
+							  cl_long * lda,
+							  const cl_mem * B,
+							  cl_long * offB,
+							  cl_long * ldb, 
+							  DoubleComplex * beta, 
+							  cl_mem * C, 
+							  cl_long * offC, 
+							  cl_long * ldc, 
+							  cl_command_queue * CommandQueue,
+							  int * status){
+
+  *status = clAmdBlasZgemmEx((clAmdBlasOrder) *order, (clAmdBlasTranspose) *transA, (clAmdBlasTranspose) *transB, 
+			     (size_t) *M, (size_t) *N, (size_t) *K, *alpha, 
+			     *A, (size_t) *offA, (size_t) *lda, 
+			     *B, (size_t) *offB, (size_t) *ldb, *beta, 
+			     *C, (size_t) *offC, (size_t) *ldc, 
+			     1, CommandQueue, 0, NULL, NULL);
 }
 
 #endif

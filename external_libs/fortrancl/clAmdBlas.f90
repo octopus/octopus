@@ -10,7 +10,9 @@ module clAmdBlas
     clAmdBlasSetup,          &
     clAmdBlasTeardown,       &
     clAmdBlasDtrsmEx,        &
-    clAmdBlasZtrsmEx
+    clAmdBlasZtrsmEx,        &
+    clAmdBlasDgemmEx,        &
+    clAmdBlasZgemmEx
 
   integer, public, parameter ::     &
     clAmdBlasRowMajor        = 0,   &
@@ -93,6 +95,8 @@ module clAmdBlas
     end subroutine clamdblasteardown_low
   end interface clAmdBlasTeardown
 
+  ! -------------------------------------------------
+
   interface clAmdBlasDtrsmEx
     subroutine clamdblasdtrsmex_low(order, side, uplo, transA, diag, M, N, alpha, A, offA, lda, B, offB, ldb, commandQueue, status)
       use cl
@@ -118,6 +122,8 @@ module clAmdBlas
     end subroutine clamdblasdtrsmex_low
   end interface clAmdBlasDtrsmEx
   
+  ! -------------------------------------------------
+
   interface clAmdBlasZtrsmEx
     subroutine clamdblasztrsmex_low(order, side, uplo, transA, diag, M, N, alpha, A, offA, lda, B, offB, ldb, commandQueue, status)
       use cl
@@ -131,7 +137,7 @@ module clAmdBlas
       integer,                intent(in)    :: diag
       integer(8),             intent(in)    :: M
       integer(8),             intent(in)    :: N
-      real(8),                intent(in)    :: alpha
+      complex(8),             intent(in)    :: alpha
       type(cl_mem),           intent(inout) :: A
       integer(8),             intent(in)    :: offA
       integer(8),             intent(in)    :: lda
@@ -142,5 +148,67 @@ module clAmdBlas
       integer,                intent(out)   :: status
     end subroutine clamdblasztrsmex_low
   end interface clAmdBlasZtrsmEx
+
+  ! -------------------------------------------------
+
+  interface clAmdBlasDgemmEx
+    subroutine clAmdBlasDgemmEx_low(order, transA, transB, M, N, K, &
+      alpha, A, offA, lda, B, offB, ldb, beta, C, offC, ldc, commandQueue, status)
+      use cl
+
+      implicit none
+
+      integer,                intent(in)    :: order
+      integer,                intent(in)    :: transA
+      integer,                intent(in)    :: transB
+      integer(8),             intent(in)    :: M
+      integer(8),             intent(in)    :: N
+      integer(8),             intent(in)    :: K
+      real(8),                intent(in)    :: alpha
+      type(cl_mem),           intent(in)    :: A
+      integer(8),             intent(in)    :: offA
+      integer(8),             intent(in)    :: lda
+      type(cl_mem),           intent(in)    :: B
+      integer(8),             intent(in)    :: offB
+      integer(8),             intent(in)    :: ldb
+      real(8),                intent(in)    :: beta
+      type(cl_mem),           intent(inout) :: C
+      integer(8),             intent(in)    :: offC
+      integer(8),             intent(in)    :: ldc
+      type(cl_command_queue), intent(inout) :: CommandQueue 
+      integer,                intent(out)   :: status
+    end subroutine clAmdBlasDgemmEx_low
+  end interface clAmdBlasDgemmEx
+
+  ! -------------------------------------------------
+
+  interface clAmdBlasZgemmEx
+    subroutine clAmdBlasZgemmEx_low(order, transA, transB, M, N, K, &
+      alpha, A, offA, lda, B, offB, ldb, beta, C, offC, ldc, commandQueue, status)
+      use cl
+
+      implicit none
+
+      integer,                intent(in)    :: order
+      integer,                intent(in)    :: transA
+      integer,                intent(in)    :: transB
+      integer(8),             intent(in)    :: M
+      integer(8),             intent(in)    :: N
+      integer(8),             intent(in)    :: K
+      complex(8),             intent(in)    :: alpha
+      type(cl_mem),           intent(in)    :: A
+      integer(8),             intent(in)    :: offA
+      integer(8),             intent(in)    :: lda
+      type(cl_mem),           intent(in)    :: B
+      integer(8),             intent(in)    :: offB
+      integer(8),             intent(in)    :: ldb
+      complex(8),             intent(in)    :: beta
+      type(cl_mem),           intent(inout) :: C
+      integer(8),             intent(in)    :: offC
+      integer(8),             intent(in)    :: ldc
+      type(cl_command_queue), intent(inout) :: CommandQueue 
+      integer,                intent(out)   :: status
+    end subroutine clAmdBlasZgemmEx_low
+  end interface clAmdBlasZgemmEx
 
 end module clAmdBlas

@@ -36,6 +36,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #ifdef HAVE_OPENCL
   type(opencl_mem_t) :: dot_buffer
   type(cl_kernel)    :: kernel
+  integer            :: ierr
 #endif
 
   PUSH_SUB(X(mesh_batch_dotp_matrix))
@@ -146,6 +147,20 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     ASSERT(.not. mesh%use_curvilinear)
 #ifdef HAVE_OPENCL
 
+    call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
+
+#ifdef HAVE_CLAMDBLAS
+    
+    call aX(clAmdblas,gemmEx)(order = clAmdBlasColumnMajor, transA = clAmdBlasNoTrans, transB = clAmdBlasTrans, &
+      M = int(aa%nst, 8), N = int(aa%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
+      A = aa%pack%buffer%mem, offA = 0_8, lda = int(aa%pack%size(1), 8), &
+      B = bb%pack%buffer%mem, offB = 0_8, ldb = int(bb%pack%size(1), 8), beta = R_TOTYPE(M_ZERO), &
+      C = dot_buffer%mem, offC = 0_8, ldc = int(aa%nst, 8), &
+      CommandQueue = opencl%command_queue, status = ierr)
+    if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXgemmEx')
+
+#else
+
     kernel = X(kernel_dot_matrix)
 #ifdef R_TCOMPLEX
     if(aa%dim > 1) then
@@ -155,8 +170,6 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     ASSERT(aa%dim == 1)
 #endif
 
-    call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
-    
     call opencl_set_kernel_arg(kernel, 0, mesh%np)
     call opencl_set_kernel_arg(kernel, 1, aa%pack%buffer)
     call opencl_set_kernel_arg(kernel, 2, log2(aa%pack%size(1)/aa%dim))
@@ -170,11 +183,13 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     
     call opencl_finish()
 
+#endif
+#endif
+
     call opencl_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
     call opencl_release_buffer(dot_buffer)
 
     forall(ist = 1:aa%nst, jst = 1:bb%nst) dd(ist, jst) = mesh%volume_element*dd(ist, jst)
-#endif
 
   end select
 
