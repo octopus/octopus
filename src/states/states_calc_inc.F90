@@ -356,7 +356,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   PUSH_SUB(X(states_trsm))
   call profiling_in(prof, "STATES_TRSM")
 
-  if(associated(st%X(psi))) then
+  if(associated(st%X(psi)) .and. .not. states_are_packed(st)) then
 
     do idim = 1, st%d%dim
       ! multiply by the inverse of ss
@@ -366,7 +366,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
       call profiling_count_operations(mesh%np*dble(st%nst)*(st%nst + 1)*CNST(0.5)*(R_ADD + R_MUL))
     end do
 
-  else if(.not. states_are_packed(st) .or. .not. opencl_is_enabled()) then
+  else if(.not. opencl_is_enabled()) then
 
 #ifdef R_TREAL  
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
@@ -426,7 +426,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         A = ss_buffer%mem, offA = 0_8, lda = int(ubound(ss, dim = 1), 8), &
         B = psicopy_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), &
         CommandQueue = opencl%command_queue, status = ierr)
-      if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlastrsmEx')
+      if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXtrsmEx')
 
 #else
 
@@ -1024,7 +1024,11 @@ subroutine X(states_calc_orth_test)(st, mc, mesh)
   message(2) = ''
   call messages_info(2)
 
+  if(st%d%pack_states) call states_pack(st)
+
   call X(states_orthogonalization_full)(st, mesh, 1)
+
+  if(st%d%pack_states) call states_unpack(st)
 
   call print_results()
   
@@ -1245,7 +1249,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
   
   PUSH_SUB(X(states_calc_overlap))
   
-  if(associated(st%X(psi))) then
+  if(associated(st%X(psi)) .and. .not. states_are_packed(st)) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
 
