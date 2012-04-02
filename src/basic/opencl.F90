@@ -45,8 +45,7 @@ module opencl_m
     opencl_init,                  &
     opencl_end,                   &
     opencl_padded_size,           &
-    opencl_mem_t,                 &
-    clblas_print_error
+    opencl_mem_t
 
 #ifdef HAVE_OPENCL
   public ::                       &
@@ -63,7 +62,8 @@ module opencl_m
     opencl_release_program,       &
     opencl_release_kernel,        &
     opencl_create_kernel,         &
-    opencl_print_error
+    opencl_print_error,           &
+    clblas_print_error
 #endif
 
   type opencl_t 
@@ -983,7 +983,7 @@ module opencl_m
 
       character(len=40) :: errcode
     
-      PUSH_SUB(opencl_print_error)
+      PUSH_SUB(clblas_print_error)
 #ifdef HAVE_CLAMDBLAS
       select case(ierr)
       case(clAmdBlasSuccess);                    errcode = 'clAmdBlasSuccess'
@@ -1025,7 +1025,7 @@ module opencl_m
       message(1) = 'Error: clAmdBlas '//trim(name)//' '//trim(errcode)
       call messages_fatal(1)
   
-      POP_SUB(opencl_print_error)
+      POP_SUB(clblas_print_error)
     end subroutine clblas_print_error
 
     ! ----------------------------------------------------
