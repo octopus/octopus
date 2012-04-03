@@ -91,11 +91,9 @@ module v_ks_m
     FLOAT,                pointer :: b_ind(:, :)
     logical                       :: calc_energy
     !complex quantities 
-    CMPLX,                pointer :: zdensity(:, :)
-    CMPLX,                pointer :: ztotal_density(:)
-    CMPLX,                pointer :: zvxc(:, :)
-    
-    
+    !CMPLX,                pointer :: zdensity(:, :)
+    !CMPLX,                pointer :: ztotal_density(:)
+    !CMPLX,                pointer :: zvxc(:, :)
   end type v_ks_calc_t
 
   type v_ks_t
@@ -117,13 +115,10 @@ module v_ks_m
     integer                  :: tc_delay
     type(grid_t), pointer    :: gr
     type(v_ks_calc_t)        :: calc
-
-    
   end type v_ks_t
 
 contains
 
-  
   ! ---------------------------------------------------------
   subroutine v_ks_init(ks, gr, dd, geo, mc, nel)
     type(v_ks_t),         intent(out)   :: ks
@@ -170,6 +165,10 @@ contains
     call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
     call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
     if(ks%theory_level == CLASSICAL) call messages_experimental('Classical theory level')
+
+    ks%xc_family = XC_FAMILY_NONE
+    ks%sic_type  = SIC_NONE
+    ks%tail_correction = .false.
     
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
@@ -209,7 +208,7 @@ contains
 
         ! Perdew-Zunger corrections
         if(ks%sic_type == SIC_PZ) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
-      
+
       else
         ks%sic_type = SIC_NONE
       end if
@@ -227,12 +226,12 @@ contains
       !% in the zones where the density is lower then <tt>XCTailCorrectionTol</tt>.
       !%End
       call parse_logical(datasets_check('XCTailCorrection'), .false., ks%tail_correction)
-      
+
       if(ks%tail_correction) then 
         call messages_experimental("XC tail correction")
         write(message(1),'(a)') 'This correction shouldn''t be used with systems having nodal points of the electron density.'
         call messages_info(1)
-        
+
         !%Variable XCTailCorrectionTol
         !%Type float
         !%Default 5e-12
@@ -243,8 +242,8 @@ contains
         !%The value is always assumed to be in atomic units.
         !%End
         call parse_float(datasets_check('XCTailCorrectionTol'), CNST(5e-12), ks%tail_correction_tol)
-      
-        
+
+
         !%Variable XCTailCorrectionLinkFactor
         !%Type float
         !%Default 1
@@ -257,7 +256,7 @@ contains
         !% the value of <tt>XCTailCorrectionTol</tt>.
         !%End
         call parse_float(datasets_check('XCTailCorrectionLinkFactor'), CNST(1.0), ks%tc_link_factor)
-      
+
         !%Variable XCTailCorrectionDelay
         !%Type integer 
         !%Default 0
@@ -280,14 +279,14 @@ contains
         !%End
         call parse_float(datasets_check('XCTailCorrectionCMDistance'), M_ZERO, ks%tc_distance)
       end if
-      
+
       if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
         call xc_oep_init(ks%oep, ks%xc_family, gr, dd)
       endif
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
         call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, dd, mc)
       endif
-      
+
     end select
 
     ks%frozen_hxc = .false.
@@ -304,10 +303,10 @@ contains
       else
         ks%hartree_solver => psolver
       end if
-     end if
-     
-     ks%gr => gr
-     ks%calc%calculating = .false.
+    end if
+
+    ks%gr => gr
+    ks%calc%calculating = .false.
 
     POP_SUB(v_ks_init)
   end subroutine v_ks_init
@@ -446,6 +445,7 @@ contains
     if(present(time)) ks%calc%time = time
     ks%calc%calc_energy = optional_default(calc_energy, .true.)
 
+    nullify(ks%calc%vberry)
     if(associated(hm%vberry)) then
       SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
       if(optional_default(calc_berry, .true.)) then
@@ -473,6 +473,8 @@ contains
     ks%calc%amaldi_factor = M_ONE
     if(ks%sic_type == SIC_AMALDI) ks%calc%amaldi_factor = (st%qtot - M_ONE)/st%qtot
 
+    nullify(ks%calc%density, ks%calc%total_density)
+    nullify(ks%calc%vxc, ks%calc%vtau, ks%calc%axc)
     if(ks%theory_level /= INDEPENDENT_PARTICLES .and. ks%calc%amaldi_factor /= M_ZERO) then
 
       call calculate_density()
@@ -484,6 +486,7 @@ contains
       if(ks%theory_level .ne. HARTREE) call v_a_xc(geo)
     end if
 
+    nullify(ks%calc%hf_st)
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
       SAFE_ALLOCATE(ks%calc%hf_st)
       call states_null(ks%calc%hf_st)
@@ -494,6 +497,7 @@ contains
     ! WARNING: calculating the self-induced magnetic field here only makes
     ! sense if it is going to be used in the Hamiltonian, which does not happen
     ! now. Otherwise one could just calculate it at the end of the calculation.
+    nullify(ks%calc%a_ind, ks%calc%b_ind)
     if(hm%self_induced_magnetic) then
       SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
       SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
@@ -515,11 +519,10 @@ contains
       call states_total_density(st, ks%gr%fine%mesh, ks%calc%density)
 
       ! Amaldi correction
-      if(ks%sic_type == SIC_AMALDI) then
-        ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin) = &
-          ks%calc%amaldi_factor*ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin)
-      end if
+      if(ks%sic_type == SIC_AMALDI) &
+        ks%calc%density = ks%calc%amaldi_factor*ks%calc%density
 
+      nullify(ks%calc%total_density)
       if(associated(st%rho_core) .or. hm%d%spin_channels > 1) then
         ks%calc%total_density_alloc = .true.
 
@@ -559,6 +562,7 @@ contains
       SAFE_ALLOCATE(ks%calc%vxc(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
       ks%calc%vxc = M_ZERO
 
+      nullify(ks%calc%vtau)
       if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
         SAFE_ALLOCATE(ks%calc%vtau(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
         ks%calc%vtau = M_ZERO
@@ -568,11 +572,25 @@ contains
       if(hm%d%cdft) then
         call messages_not_implemented('Current-DFT')
       else if(ks%calc%calc_energy) then
-        call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, &
-          ex = energy%exchange, ec = energy%correlation, vxc = ks%calc%vxc, vtau = ks%calc%vtau)
+        if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+            ex = energy%exchange, ec = energy%correlation, vxc = ks%calc%vxc, vtau = ks%calc%vtau)
+        else
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+            st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+            ex = energy%exchange, ec = energy%correlation, vxc = ks%calc%vxc)
+        end if
       else
-        call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, &
-          vxc = ks%calc%vxc, vtau = ks%calc%vtau)
+        if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+            st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+            vxc = ks%calc%vxc, vtau = ks%calc%vtau)
+        else
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+            st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+            vxc = ks%calc%vxc)
+        end if
       end if
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
@@ -627,7 +645,6 @@ contains
     end subroutine v_a_xc
 
     !---------------------------------------------
-
     subroutine tail_correction(vxc,geo)
       FLOAT,            intent(inout) :: vxc(:, :) 
       type(geometry_t), intent(in)    :: geo
@@ -700,10 +717,10 @@ contains
                 
                 if (ks%calc%total_density(ip) .gt. ks%tail_correction_tol ) then 
                   smooth_ratio =  ks%calc%total_density(ip)/ks%tail_correction_tol
-                  vnew = - 1/distance_cm
+                  vnew = - M_ONE/distance_cm
                   vxcc(ip) = ( smooth_ratio*vxcc(ip) + (ks%tc_link_factor-smooth_ratio)*vnew ) / ks%tc_link_factor
                 else 
-                  vxcc(ip) = -1/distance_cm
+                  vxcc(ip) = -M_ONE/distance_cm
                 end if
               end if
             end do
@@ -726,7 +743,6 @@ contains
       POP_SUB(v_ks_calc_start.tail_correction)
       
     end subroutine tail_correction
-    
     
   end subroutine v_ks_calc_start
   ! ---------------------------------------------------------
@@ -848,6 +864,7 @@ contains
     if(ks%calc%total_density_alloc) then
       SAFE_DEALLOCATE_P(ks%calc%total_density)
     end if
+    nullify(ks%calc%total_density)
 
     POP_SUB(v_ks_calc_finish)
   end subroutine v_ks_calc_finish

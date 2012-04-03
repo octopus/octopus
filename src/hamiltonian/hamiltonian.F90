@@ -252,28 +252,25 @@ contains
     SAFE_ALLOCATE(hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin))
     hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
 
+    nullify(hm%vxc, hm%vtau, hm%axc)
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
+
       SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np))
+      hm%vhartree=M_ZERO
+
       SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
+      hm%vxc=M_ZERO
+
       if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
         SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
-      else
-        nullify(hm%vtau)
+        hm%vtau=M_ZERO
       end if
-
-      hm%vhartree(1:gr%mesh%np) = M_ZERO
-
-      do ispin = 1, hm%d%nspin
-        hm%vxc(1:gr%mesh%np, ispin) = M_ZERO
-        if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) hm%vtau(1:gr%mesh%np, ispin) = M_ZERO
-      end do
 
       if (hm%d%cdft) then
         SAFE_ALLOCATE(hm%axc(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:hm%d%nspin))
         hm%axc = M_ZERO
-      else
-        nullify(hm%axc)
       end if
+
     end if
 
     !Initialize external potential
@@ -525,9 +522,8 @@ contains
     !> Calculate the blocks of the lead Hamiltonian and read the potential
     !! of the lead unit cell.
     subroutine init_lead_h
-      integer               :: np, np_part, il, ierr, pot, ix, iy, is
+      integer               :: np, np_part, il, is
       integer               :: irow, diag, offdiag
-      character             :: channel
       character(len=256)    :: fname, fmt, static_dir
       character(len=6)      :: name
       type(mesh_t), pointer :: mesh
@@ -913,6 +909,7 @@ contains
     PUSH_SUB(hamiltonian_update)
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
 
+    this%current_time = M_ZERO
     if(present(time)) this%current_time = time
 
     ! set everything to zero
@@ -963,7 +960,8 @@ contains
     ! the gauge field
     if(gauge_field_is_applied(this%ep%gfield)) then
       call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL)
-      this%hm_base%uniform_vector_potential = this%hm_base%uniform_vector_potential + gauge_field_get_vec_pot(this%ep%gfield)/P_c
+      this%hm_base%uniform_vector_potential = &
+        this%hm_base%uniform_vector_potential + gauge_field_get_vec_pot(this%ep%gfield)/P_c
     end if
 
     ! the vector potential of a static magnetic field

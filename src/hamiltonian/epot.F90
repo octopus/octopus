@@ -79,6 +79,10 @@ module epot_m
     CLASSICAL_POINT    = 1, & !< classical charges treated as point charges
     CLASSICAL_GAUSSIAN = 2    !< classical charges treated as Gaussian distributions
      
+  integer, public, parameter :: &
+    NOREL      = 0,             &
+    SPIN_ORBIT = 1
+
   type epot_t
     ! Classical charges:
     integer        :: classical_pot !< how to include the classical charges
@@ -123,10 +127,6 @@ module epot_m
     logical                  :: have_density
     type(poisson_t), pointer :: poisson_solver
   end type epot_t
-
-  integer, public, parameter :: &
-    NOREL      = 0,             &
-    SPIN_ORBIT = 1
 
 contains
 
@@ -176,12 +176,14 @@ contains
 
     ep%vpsl(1:gr%mesh%np) = M_ZERO
 
+    nullify(ep%vpsl_lead)
     if (gr%ob_grid%open_boundaries) then
       SAFE_ALLOCATE(ep%vpsl_lead(1:maxval(gr%ob_grid%lead(1:NLEADS)%mesh%np), 1:NLEADS))
       ep%vpsl_lead(1:maxval(gr%ob_grid%lead(1:NLEADS)%mesh%np), 1:NLEADS) = M_ZERO
     end if
     
     ep%classical_pot = 0
+    nullify(ep%Vclassical)
     if(geo%ncatoms > 0) then
 
       !%Variable ClassicalPotential
@@ -433,7 +435,9 @@ contains
     ep%natoms = geo%natoms
     ep%non_local = .false.
 
+    ep%eii = M_ZERO
     SAFE_ALLOCATE(ep%fii(1:gr%sb%dim, 1:geo%natoms))
+    ep%fii = M_ZERO
 
     call gauge_field_nullify(ep%gfield)
 

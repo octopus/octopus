@@ -339,8 +339,8 @@ contains
     alpha = CNST(0.1)
     beta  = CNST(0.1)
     convergence = CNST(0.1)
-    alphascale = 10
-    betascale = 100
+    alphascale = CNST(10.0)
+    betascale = CNST(100.0)
  
     if(verbosity == 2) then
       write(alpha_str, '(f8.4)') alpha
@@ -392,7 +392,7 @@ contains
         if(verbosity == 2) then
           write(iunit2,*) counter, diffdensity
         end if
-        convergence = convergence / CNST(10)
+        convergence = convergence / CNST(10.0)
       endif
       beta = min(M_ONE, diffdensity*betascale)
       alpha = M_ONE - diffdensity
@@ -505,7 +505,7 @@ contains
     
     vol_element = M_ONE
     do jdim = 1, MAX_DIM
-      if (mesh%spacing(jdim) > 1.e-10) vol_element = vol_element*mesh%spacing(jdim)
+      if (mesh%spacing(jdim) > CNST(1.e-10)) vol_element = vol_element*mesh%spacing(jdim)
     end do
     
     do iprime = 1, np
