@@ -183,6 +183,8 @@ module hamiltonian_m
     !> If we use a complex-scaled Hamiltonian by complexifying the spatial coordinate with 
     !> the transformation r -> r*exp(i*theta)  
     FLOAT                    :: cmplxscl_th !< the complex scaling angle
+    logical                  :: cmplxscl
+    
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -297,11 +299,13 @@ contains
     !% It should be bound to 0 <= theta < pi/4. 
     !%End
     call parse_float(datasets_check('ComplexScalingAngle'), CNST(0.3), hm%cmplxscl_th)
+    hm%cmplxscl=.false.
     if (states_dim%cmplxscl) then
       call messages_print_stress(stdout, "Complex Scaling")
       write(message(1), '(a,f12.3)') 'Complex scaling angle theta = ', hm%cmplxscl_th
       call messages_info(1)
       call messages_print_stress(stdout)
+      hm%cmplxscl=.true. 
     end if
 
     call parse_logical(datasets_check('CalculateSelfInducedMagneticField'), .false., hm%self_induced_magnetic)

@@ -26,7 +26,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: profile
   integer, optional,   intent(in)    :: points
-  FLOAT,   optional,   intent(in)    :: factor
+  R_TYPE,   optional,   intent(in)    :: factor
 
   integer :: ist, points_
   real(8) :: cop

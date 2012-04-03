@@ -39,7 +39,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
   type(projection_t) :: projection
-
+  R_TYPE :: scale_factor  
+    
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   PUSH_SUB(X(hamiltonian_apply_batch))
 
@@ -111,8 +112,16 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
     ASSERT(associated(hm%hm_base%kinetic))
+  
+     scale_factor = R_TOTYPE(-M_HALF/hm%mass)  
+#ifdef R_TCOMPLEX
+     if(hm%cmplxscl) then !cmplxscl
+       scale_factor = scale_factor * exp(-M_TWO*M_zI*hm%cmplxscl_th) !complex scale factor for the laplacian 
+     end if
+#endif     
+     
     call profiling_in(prof_kinetic_start, "KINETIC_START")
-    call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
+      call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, hpsib, handle, set_bc = .false., factor = scale_factor)
     call profiling_out(prof_kinetic_start)
   end if
 
