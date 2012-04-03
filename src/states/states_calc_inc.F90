@@ -366,7 +366,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
       call profiling_count_operations(mesh%np*dble(st%nst)*(st%nst + 1)*CNST(0.5)*(R_ADD + R_MUL))
     end do
 
-  else if(.not. opencl_is_enabled()) then
+  else if(.not. (states_are_packed(st) .and. opencl_is_enabled())) then
 
 #ifdef R_TREAL  
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
@@ -1137,11 +1137,12 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   type(octcl_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
   type(opencl_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
+  integer :: ierr
 #endif
 
   PUSH_SUB(X(states_rotate_in_place))
   
-  if(associated(st%X(psi))) then
+  if(associated(st%X(psi)) .and. .not. states_are_packed(st)) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
     call X(mesh_batch_rotate)(mesh, psib, uu)
@@ -1202,6 +1203,18 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
         call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
+#ifdef HAVE_CLAMDBLAS
+
+      call aX(clAmdblas,gemmEx)(order = clAmdBlasColumnMajor, transA = clAmdBlasTrans, transB = clAmdBlasNoTrans, &
+        M = int(st%nst, 8), N = int(size, 8), K = int(st%nst, 8), alpha = R_TOTYPE(M_ONE), &
+        A = uu_buffer%mem, offA = 0_8, lda = int(ubound(uu, dim = 1), 8), &
+        B = psicopy_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(M_ZERO), &
+        C = psinew_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
+        CommandQueue = opencl%command_queue, status = ierr)
+      if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXgemmEx')
+      
+#else
+
       if(states_are_real(st)) then
         call octcl_kernel_start_call(dkernel, 'rotate.cl', 'drotate_states')
         kernel_ref = octcl_kernel_get_ref(dkernel)
@@ -1221,6 +1234,8 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
       
       call opencl_kernel_run(kernel_ref, (/st%nst, size/), (/1, 1/))
 
+#endif
+
       do ib = st%block_start, st%block_end
         call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psinew_buffer, st%nst)
       end do
@@ -1231,7 +1246,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
     call opencl_release_buffer(psinew_buffer)
 #endif
   end if
-
+    
   POP_SUB(X(states_rotate_in_place))
 end subroutine X(states_rotate_in_place)
 
