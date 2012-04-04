@@ -36,7 +36,7 @@ libfortrancl_a_SOURCES =       \
 	cl_platform.f90        \
 	cl_program.f90         \
 	cl.f90                 \
-	clAmdBlas.f90          \
+	clamdblas.f90          \
 	clamdfft.f90
 
 if COMPILE_OPENCL
