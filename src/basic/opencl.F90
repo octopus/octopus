@@ -66,7 +66,8 @@ module opencl_m
     opencl_release_kernel,        &
     opencl_create_kernel,         &
     opencl_print_error,           &
-    clblas_print_error
+    clblas_print_error,           &
+    clfft_print_error
 #endif
 
   type opencl_t 
@@ -419,20 +420,13 @@ module opencl_m
 
 #ifdef HAVE_CLAMDBLAS
       call clAmdBlasSetup(cl_status)
-      if(cl_status /= clAmdBlasSuccess) then
-        call messages_write('Error initializing clAmdBlas')
-        call messages_fatal()
-      end if
+      if(cl_status /= clAmdBlasSuccess) call clblas_print_error(cl_status, 'clAmdBlasSetup')
 #endif
 
 #ifdef HAVE_CLAMDFFT
       call clAmdFftSetup(cl_status)
-      if(cl_status /= CLFFT_SUCCESS) then
-        call messages_write('Error initializing clAmdBlas')
-        call messages_fatal()
-      end if
+      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftSetup')
 #endif
-
 
       POP_SUB(opencl_init)
 
@@ -1043,6 +1037,83 @@ module opencl_m
   
       POP_SUB(clblas_print_error)
     end subroutine clblas_print_error
+
+    ! ----------------------------------------------------
+    subroutine clfft_print_error(ierr, name)
+      integer,          intent(in) :: ierr
+      character(len=*), intent(in) :: name
+
+      character(len=40) :: errcode
+
+      PUSH_SUB(clfft_print_error)
+#ifdef HAVE_CLAMDFFT
+      select case(ierr)
+      case(CLFFT_INVALID_GLOBAL_WORK_SIZE);          errcode = 'CLFFT_INVALID_GLOBAL_WORK_SIZE' 
+      case(CLFFT_INVALID_MIP_LEVEL);                 errcode = 'CLFFT_INVALID_MIP_LEVEL' 
+      case(CLFFT_INVALID_BUFFER_SIZE);               errcode = 'CLFFT_INVALID_BUFFER_SIZE' 
+      case(CLFFT_INVALID_GL_OBJECT);                 errcode = 'CLFFT_INVALID_GL_OBJECT' 
+      case(CLFFT_INVALID_OPERATION);                 errcode = 'CLFFT_INVALID_OPERATION' 
+      case(CLFFT_INVALID_EVENT);                     errcode = 'CLFFT_INVALID_EVENT' 
+      case(CLFFT_INVALID_EVENT_WAIT_LIST);           errcode = 'CLFFT_INVALID_EVENT_WAIT_LIST' 
+      case(CLFFT_INVALID_GLOBAL_OFFSET);             errcode = 'CLFFT_INVALID_GLOBAL_OFFSET' 
+      case(CLFFT_INVALID_WORK_ITEM_SIZE);            errcode = 'CLFFT_INVALID_WORK_ITEM_SIZE' 
+      case(CLFFT_INVALID_WORK_GROUP_SIZE);           errcode = 'CLFFT_INVALID_WORK_GROUP_SIZE' 
+      case(CLFFT_INVALID_WORK_DIMENSION);            errcode = 'CLFFT_INVALID_WORK_DIMENSION' 
+      case(CLFFT_INVALID_KERNEL_ARGS);               errcode = 'CLFFT_INVALID_KERNEL_ARGS' 
+      case(CLFFT_INVALID_ARG_SIZE);                  errcode = 'CLFFT_INVALID_ARG_SIZE' 
+      case(CLFFT_INVALID_ARG_VALUE);                 errcode = 'CLFFT_INVALID_ARG_VALUE' 
+      case(CLFFT_INVALID_ARG_INDEX);                 errcode = 'CLFFT_INVALID_ARG_INDEX' 
+      case(CLFFT_INVALID_KERNEL);                    errcode = 'CLFFT_INVALID_KERNEL' 
+      case(CLFFT_INVALID_KERNEL_DEFINITION);         errcode = 'CLFFT_INVALID_KERNEL_DEFINITION' 
+      case(CLFFT_INVALID_KERNEL_NAME);               errcode = 'CLFFT_INVALID_KERNEL_NAME' 
+      case(CLFFT_INVALID_PROGRAM_EXECUTABLE);        errcode = 'CLFFT_INVALID_PROGRAM_EXECUTABLE' 
+      case(CLFFT_INVALID_PROGRAM);                   errcode = 'CLFFT_INVALID_PROGRAM' 
+      case(CLFFT_INVALID_BUILD_OPTIONS);             errcode = 'CLFFT_INVALID_BUILD_OPTIONS' 
+      case(CLFFT_INVALID_BINARY);                    errcode = 'CLFFT_INVALID_BINARY' 
+      case(CLFFT_INVALID_SAMPLER);                   errcode = 'CLFFT_INVALID_SAMPLER' 
+      case(CLFFT_INVALID_IMAGE_SIZE);                errcode = 'CLFFT_INVALID_IMAGE_SIZE' 
+      case(CLFFT_INVALID_IMAGE_FORMAT_DESCRIPTOR);   errcode = 'CLFFT_INVALID_IMAGE_FORMAT_DESCRIPTOR' 
+      case(CLFFT_INVALID_MEM_OBJECT);                errcode = 'CLFFT_INVALID_MEM_OBJECT' 
+      case(CLFFT_INVALID_HOST_PTR);                  errcode = 'CLFFT_INVALID_HOST_PTR' 
+      case(CLFFT_INVALID_COMMAND_QUEUE);             errcode = 'CLFFT_INVALID_COMMAND_QUEUE' 
+      case(CLFFT_INVALID_QUEUE_PROPERTIES);          errcode = 'CLFFT_INVALID_QUEUE_PROPERTIES' 
+      case(CLFFT_INVALID_CONTEXT);                   errcode = 'CLFFT_INVALID_CONTEXT' 
+      case(CLFFT_INVALID_DEVICE);                    errcode = 'CLFFT_INVALID_DEVICE' 
+      case(CLFFT_INVALID_PLATFORM);                  errcode = 'CLFFT_INVALID_PLATFORM' 
+      case(CLFFT_INVALID_DEVICE_TYPE);               errcode = 'CLFFT_INVALID_DEVICE_TYPE' 
+      case(CLFFT_INVALID_VALUE);                     errcode = 'CLFFT_INVALID_VALUE' 
+      case(CLFFT_MAP_FAILURE);                       errcode = 'CLFFT_MAP_FAILURE' 
+      case(CLFFT_BUILD_PROGRAM_FAILURE);             errcode = 'CLFFT_BUILD_PROGRAM_FAILURE' 
+      case(CLFFT_IMAGE_FORMAT_NOT_SUPPORTED);        errcode = 'CLFFT_IMAGE_FORMAT_NOT_SUPPORTED' 
+      case(CLFFT_IMAGE_FORMAT_MISMATCH);             errcode = 'CLFFT_IMAGE_FORMAT_MISMATCH' 
+      case(CLFFT_MEM_COPY_OVERLAP);                  errcode = 'CLFFT_MEM_COPY_OVERLAP' 
+      case(CLFFT_PROFILING_INFO_NOT_AVAILABLE);      errcode = 'CLFFT_PROFILING_INFO_NOT_AVAILABLE' 
+      case(CLFFT_OUT_OF_HOST_MEMORY);                errcode = 'CLFFT_OUT_OF_HOST_MEMORY' 
+      case(CLFFT_OUT_OF_RESOURCES);                  errcode = 'CLFFT_OUT_OF_RESOURCES' 
+      case(CLFFT_MEM_OBJECT_ALLOCATION_FAILURE);     errcode = 'CLFFT_MEM_OBJECT_ALLOCATION_FAILURE' 
+      case(CLFFT_COMPILER_NOT_AVAILABLE);            errcode = 'CLFFT_COMPILER_NOT_AVAILABLE' 
+      case(CLFFT_DEVICE_NOT_AVAILABLE);              errcode = 'CLFFT_DEVICE_NOT_AVAILABLE' 
+      case(CLFFT_DEVICE_NOT_FOUND);                  errcode = 'CLFFT_DEVICE_NOT_FOUND' 
+      case(CLFFT_SUCCESS);                           errcode = 'CLFFT_SUCCESS' 
+      case(CLFFT_BUGCHECK);                          errcode = 'CLFFT_BUGCHECK' 
+      case(CLFFT_NOTIMPLEMENTED);                    errcode = 'CLFFT_NOTIMPLEMENTED' 
+      case(CLFFT_FILE_NOT_FOUND);                    errcode = 'CLFFT_FILE_NOT_FOUND' 
+      case(CLFFT_FILE_CREATE_FAILURE);               errcode = 'CLFFT_FILE_CREATE_FAILURE' 
+      case(CLFFT_VERSION_MISMATCH);                  errcode = 'CLFFT_VERSION_MISMATCH' 
+      case(CLFFT_INVALID_PLAN);                      errcode = 'CLFFT_INVALID_PLAN'
+      case(CLFFT_DEVICE_NO_DOUBLE);                  errcode = 'CLFFT_DEVICE_NO_DOUBLE' 
+      case(CLFFT_ENDSTATUS);                         errcode = 'CLFFT_ENDSTATUS' 
+      case default
+        write(errcode, '(i10)') ierr
+        errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
+      end select
+#endif
+
+      message(1) = 'Error: clAmdFft '//trim(name)//' '//trim(errcode)
+      call messages_fatal(1)
+
+      POP_SUB(clfft_print_error)
+    end subroutine clfft_print_error
 
     ! ----------------------------------------------------
 

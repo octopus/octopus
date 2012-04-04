@@ -1,14 +1,26 @@
+module clAmdFft_types
+  type clAmdFftPlanHandle
+    private
+
+    integer, pointer :: p
+  end type clAmdFftPlanHandle
+end module clAmdFft_types
+
 module clAmdFft
   use cl
+  use clAmdFft_types
 
   implicit none
 
   private
 
-  public ::                   & 
-    clAmdFftGetVersion,       &
-    clAmdFftSetup,           &
-    clAmdFftTeardown
+  public ::                      & 
+    clAmdFftGetVersion,          &
+    clAmdFftSetup,               &
+    clAmdFftTeardown,            &
+    clAmdFftPlanHandle,          &
+    clAmdFftCreateDefaultPlan,   &
+    clAmdFftDestroyPlan
 
   integer, public, parameter ::                                                   &
     CLFFT_INVALID_GLOBAL_WORK_SIZE         = CL_INVALID_GLOBAL_WORK_SIZE,         &
@@ -96,6 +108,7 @@ module clAmdFft
     CLFFT_INPLACE                 = 1, &
     CLFFT_OUTOFPLACE              = 2, &
     ENDPLACE                      = 3
+  ! ---------------------------------------------------------
 
   interface clAmdFftGetVersion 
     subroutine clamdfftgetversion_low(major, minor, patch, status)
@@ -108,6 +121,8 @@ module clAmdFft
     end subroutine clamdfftgetversion_low
   end interface clAmdFftGetVersion
 
+  ! ---------------------------------------------------------
+
   interface clAmdFftSetup
     subroutine clamdfftsetup_low(status)
       implicit none
@@ -116,9 +131,43 @@ module clAmdFft
     end subroutine clamdfftsetup_low
   end interface clAmdFftSetup
 
+  ! ---------------------------------------------------------
+
   interface clAmdFftTeardown
     subroutine clamdfftteardown_low()
     end subroutine clamdfftteardown_low
   end interface clAmdFftTeardown
+
+  ! ---------------------------------------------------------
+
+  interface clAmdFftCreateDefaultPlan
+    subroutine clamdfftcreatedefaultplan_low(plHandle, context, dim, clLengths, status)
+      use cl
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(out)   :: plHandle
+      type(cl_context),         intent(inout) :: context
+      integer,                  intent(in)    :: dim
+      integer(8),               intent(in)    :: clLengths(1:dim)
+      integer,                  intent(out)   :: status      
+    end subroutine clamdfftcreatedefaultplan_low
+  end interface clAmdFftCreateDefaultPlan
+
+  ! ---------------------------------------------------------
+
+  interface clAmdFftDestroyPlan
+    subroutine clamdfftdestroyplan_low(plHandle, status)
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
+      integer,                  intent(out)   :: status    
+    end subroutine clamdfftdestroyplan_low
+  end interface clAmdFftDestroyPlan
+
+  ! ---------------------------------------------------------
 
 end module clAmdFft
