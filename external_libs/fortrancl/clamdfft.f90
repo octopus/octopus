@@ -5,7 +5,12 @@ module clAmdFft
 
   private
 
-  integer, parameter ::                                                           &
+  public ::                   & 
+    clAmdFftGetVersion,       &
+    clAmdFftSetup,           &
+    clAmdFftTeardown
+
+  integer, public, parameter ::                                                   &
     CLFFT_INVALID_GLOBAL_WORK_SIZE         = CL_INVALID_GLOBAL_WORK_SIZE,         &
     CLFFT_INVALID_MIP_LEVEL                = CL_INVALID_MIP_LEVEL,                &
     CLFFT_INVALID_BUFFER_SIZE              = CL_INVALID_BUFFER_SIZE,              &
@@ -30,7 +35,7 @@ module clAmdFft
     CLFFT_INVALID_BINARY                   = CL_INVALID_BINARY,                   &
     CLFFT_INVALID_SAMPLER                  = CL_INVALID_SAMPLER
 
-  integer, parameter ::                                                           &
+  integer, public, parameter ::                                                   &
     CLFFT_INVALID_IMAGE_SIZE               = CL_INVALID_IMAGE_SIZE,               &
     CLFFT_INVALID_IMAGE_FORMAT_DESCRIPTOR  = CL_INVALID_IMAGE_FORMAT_DESCRIPTOR,  &
     CLFFT_INVALID_MEM_OBJECT               = CL_INVALID_MEM_OBJECT,               &
@@ -56,7 +61,7 @@ module clAmdFft
     CLFFT_DEVICE_NOT_FOUND                 = CL_DEVICE_NOT_FOUND,                 &
     CLFFT_SUCCESS                          = CL_SUCCESS
 
-  integer, parameter ::                                                           &
+  integer, public, parameter ::                                                   &
     CLFFT_BUGCHECK                         = 4*1024    ,                          &
     CLFFT_NOTIMPLEMENTED                   = 4*1024 + 1,                          &
     CLFFT_FILE_NOT_FOUND                   = 4*1024 + 2,                          &
@@ -66,13 +71,13 @@ module clAmdFft
     CLFFT_DEVICE_NO_DOUBLE                 = 4*1024 + 6,                          &     
     CLFFT_ENDSTATUS                        = 4*1024 + 7
 
-  integer, parameter ::                &
+  integer, public, parameter ::        &
     CLFFT_1D                      = 1, &
     CLFFT_2D                      = 2, &
     CLFFT_3D                      = 3, &
     ENDDIMENSION                  = 4
 
-  integer, parameter ::                &
+  integer, public, parameter ::        &
     CLFFT_COMPLEX_INTERLEAVED     = 1, &
     CLFFT_COMPLEX_PLANAR          = 2, &
     CLFFT_HERMITIAN_INTERLEAVED   = 4, &
@@ -80,14 +85,14 @@ module clAmdFft
     CLFFT_REAL                    = 6, &
     ENDLAYOUT                     = 7
 
-  integer, parameter ::                &
+  integer, public, parameter ::        &
     CLFFT_SINGLE                  = 1, &
     CLFFT_DOUBLE                  = 2, &
     CLFFT_SINGLE_FAST             = 3, &
     CLFFT_DOUBLE_FAST             = 4, &
     ENDPRECISION                  = 5
 
-  integer, parameter ::                &
+  integer, public, parameter ::        &
     CLFFT_INPLACE                 = 1, &
     CLFFT_OUTOFPLACE              = 2, &
     ENDPLACE                      = 3
@@ -102,6 +107,14 @@ module clAmdFft
       integer, intent(out) :: status
     end subroutine clamdfftgetversion_low
   end interface clAmdFftGetVersion
+
+  interface clAmdFftSetup
+    subroutine clamdfftsetup_low(status)
+      implicit none
+
+      integer, intent(out) :: status
+    end subroutine clamdfftsetup_low
+  end interface clAmdFftSetup
 
   interface clAmdFftTeardown
     subroutine clamdfftteardown_low()

@@ -26,6 +26,9 @@ module opencl_m
 #ifdef HAVE_CLAMDBLAS
   use clAmdBlas
 #endif
+#ifdef HAVE_CLAMDFFT
+  use clAmdFft
+#endif
   use datasets_m
   use global_m
   use io_m
@@ -422,6 +425,15 @@ module opencl_m
       end if
 #endif
 
+#ifdef HAVE_CLAMDFFT
+      call clAmdFftSetup(cl_status)
+      if(cl_status /= CLFFT_SUCCESS) then
+        call messages_write('Error initializing clAmdBlas')
+        call messages_fatal()
+      end if
+#endif
+
+
       POP_SUB(opencl_init)
 
     contains
@@ -551,6 +563,10 @@ module opencl_m
 
 #ifdef HAVE_CLAMDBLAS
       call clAmdBlasTearDown()
+#endif
+
+#ifdef HAVE_CLAMDFFT
+      call clAmdFftTearDown()
 #endif
 
       if(opencl_is_enabled()) then

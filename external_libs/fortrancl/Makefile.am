@@ -66,8 +66,8 @@ cl_context.o   : cl_context.f90 cl_types.o
 cl_command_queue.o : cl_command_queue.f90 cl_types.o
 cl_buffer.o    : cl_buffer.f90  cl_types.o
 cl.o : cl.f90 cl_constants.o cl_types.o cl_device.o cl_kernel.o cl_program.o cl_platform.o cl_context.o cl_command_queue.o cl_buffer.o
-clAmdBlas.o    : clAmdBlas.f90 cl.o
-clAmdfft.o     : clamdfft.f90 cl.o
+clamdblas.o    : clamdblas.f90 cl.o
+clamdfft.o     : clamdfft.f90 cl.o
 
 CLEANFILES = *~ *.bak *.mod *.MOD *.il *.d *.pc* ifc*
 

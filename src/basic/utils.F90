@@ -192,8 +192,8 @@ contains
 #ifdef HAVE_OPENCL
     message(1) = trim(message(1))//' opencl'
 #endif
-#ifdef HAVE_CLAMDBLAS
-    message(1) = trim(message(1))//' clamdblas'
+#ifdef HAVE_CLAMDFFT
+    message(1) = trim(message(1))//' clamdfft'
 #endif
 #ifdef HAVE_M128D
     message(1) = trim(message(1))//' sse2'

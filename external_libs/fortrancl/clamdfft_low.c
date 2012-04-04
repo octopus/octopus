@@ -13,6 +13,12 @@ void FC_FUNC_(clamdfftgetversion_low, CLAMDFFTGETVERSION_LOW)(int * major, int *
   *patch = cl_patch;
 }
 
+void FC_FUNC_(clamdfftsetup_low, CLAMDFFTSETUP_LOW)(int * status){
+  clAmdFftSetupData setup_data;
+
+  *status = clAmdFftSetup(&setup_data);
+}
+
 void FC_FUNC_(clamdfftteardown_low, CLAMDFFTTEARDOWN_LOW)(){
   clAmdFftTeardown();
 }
