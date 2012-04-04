@@ -39,7 +39,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
   type(projection_t) :: projection
-  R_TYPE :: scale_factor  
     
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   PUSH_SUB(X(hamiltonian_apply_batch))
@@ -90,7 +89,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   end if
 
   bs = hardware%X(block_size)
-
+ 
   if(apply_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
 
     call profiling_in(phase_prof, "PBC_PHASE_APPLY")
@@ -112,16 +111,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
     ASSERT(associated(hm%hm_base%kinetic))
-  
-     scale_factor = R_TOTYPE(-M_HALF/hm%mass)  
-#ifdef R_TCOMPLEX
-     if(hm%cmplxscl) then !cmplxscl
-       scale_factor = scale_factor * exp(-M_TWO*M_zI*hm%cmplxscl_th) !complex scale factor for the laplacian 
-     end if
-#endif     
-     
     call profiling_in(prof_kinetic_start, "KINETIC_START")
-      call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, hpsib, handle, set_bc = .false., factor = scale_factor)
+    call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
     call profiling_out(prof_kinetic_start)
   end if
 
@@ -135,6 +126,23 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     call profiling_in(prof_kinetic_finish, "KINETIC_FINISH")
     call X(derivatives_batch_finish)(handle)
     call profiling_out(prof_kinetic_finish)
+
+    if(hm%cmplxscl) then !cmplxscl
+    !complex scale the laplacian 
+      do sp = 1, der%mesh%np, bs   
+        if(batch_is_packed(hpsib)) then
+          forall (ist = 1:hpsib%nst_linear, ip = sp:min(sp + bs - 1, der%mesh%np))
+            hpsib%pack%X(psi)(ist, ip) = exp(-M_TWO*M_zI*hm%cmplxscl_th)*hpsib%pack%X(psi)(ist, ip)
+          end forall
+        else
+          do ii = 1, nst
+            call set_pointers()
+            forall(ip = sp:min(sp + bs - 1, der%mesh%np)) hpsi(ip) = exp(-M_TWO*M_zI*hm%cmplxscl_th)*hpsi(ip)
+          end do
+        end if
+      end do    
+    end if
+    
   else
     call batch_set_zero(hpsib)
   end if

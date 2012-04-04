@@ -261,7 +261,7 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
   type(derivatives_handle_batch_t), intent(out)   :: handle
   logical,                optional, intent(in)    :: ghost_update
   logical,                optional, intent(in)    :: set_bc
-  R_TYPE,                 optional, intent(in)    :: factor
+  FLOAT,                  optional, intent(in)    :: factor
 
   PUSH_SUB(X(derivatives_batch_start))
 
@@ -274,7 +274,7 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
 
   if(present(factor)) then
     handle%factor_present = .true.
-    handle%X(factor) = factor
+    handle%factor = factor
   else
     handle%factor_present = .false.
   end if
@@ -312,7 +312,7 @@ subroutine X(derivatives_batch_finish)(handle)
 
       if(handle%factor_present) then
         call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
-          ghost_update=.false., points=OP_INNER, factor = handle%X(factor))
+          ghost_update=.false., points=OP_INNER, factor = handle%factor)
       else
         call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update=.false., points=OP_INNER)
       end if
@@ -323,7 +323,7 @@ subroutine X(derivatives_batch_finish)(handle)
     if(batch_status(handle%ff) /= BATCH_CL_PACKED) then
       if(handle%factor_present) then
         call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
-          ghost_update = .false., points = OP_OUTER, factor = handle%X(factor))
+          ghost_update = .false., points = OP_OUTER, factor = handle%factor)
       else
         call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false., points = OP_OUTER)
       end if
@@ -337,7 +337,7 @@ subroutine X(derivatives_batch_finish)(handle)
   if(.not. done) then
     if(handle%factor_present) then
       call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
-        ghost_update = handle%ghost_update, factor = handle%X(factor))
+        ghost_update = handle%ghost_update, factor = handle%factor)
     else
       call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = handle%ghost_update)
     end if

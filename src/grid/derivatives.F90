@@ -138,8 +138,7 @@ module derivatives_m
     type(batch_t),       pointer :: opff
     logical                      :: ghost_update
     logical                      :: factor_present
-    FLOAT                        :: dfactor
-    CMPLX                        :: zfactor
+    FLOAT                        :: factor
   end type derivatives_handle_batch_t
 
   type(profile_t), save :: gradient_prof, divergence_prof, curl_prof
