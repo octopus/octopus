@@ -192,7 +192,8 @@ contains
     !% must be equal to the dimension of your space (generally 3).
     !% Note that in this way it is possible to fix some of the atoms (this
     !% is not possible when specifying the coordinates through a <tt>PDBCoordinates</tt> or
-    !% <tt>XYZCoordinates</tt> file). It is always possible to fix <b>all</b> atoms using the <tt>MoveIons</tt> directive.
+    !% <tt>XYZCoordinates</tt> file). The last column is optional, and the default is yes.
+    !% It is always possible to fix <b>all</b> atoms using the <tt>MoveIons</tt> directive.
     !%End
 
     !%Variable ReducedCoordinates

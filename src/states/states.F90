@@ -256,6 +256,7 @@ contains
     call modelmb_particles_nullify(st%modelmbparticles)
     st%priv%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
 
+    st%d%cmplxscl = .false.
     !cmplxscl
     nullify(st%psi%dL, st%psi%dR)
     nullify(st%psi%zL, st%psi%zR)     
