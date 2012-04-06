@@ -419,8 +419,19 @@ contains
       SAFE_DEALLOCATE_A(stride)
       SAFE_DEALLOCATE_A(stride_inv)
 
-      call clAmdFftSetPlanScale(fft_array(jj)%cl_plan, 1, 1.0_8, status)
+      ! set the scaling factors
+
+      call clAmdFftSetPlanScale(fft_array(jj)%cl_plan, CLFFT_FORWARD, 1.0_8, status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')
+
+      scale = 1.0_8/(product(real(fft_array(jj)%rs_n_global(1:3), 8)))
+
+      call clAmdFftSetPlanScale(fft_array(jj)%cl_plan, CLFFT_BACKWARD, scale, status)
+      if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')
+
+      ! now 'bake' the plan, this signals that the plan is ready to use
+      call clAmdFftBakePlan(fft_array(jj)%cl_plan, opencl%command_queue, status)
+      if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftBakePlan')
 
 #endif
     case default

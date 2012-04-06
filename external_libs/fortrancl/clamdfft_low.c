@@ -209,4 +209,12 @@ void FC_FUNC_(clamdfftgetplanscale_low, CLAMDFFTGETPLANSCALE_LOW)(clAmdFftPlanHa
 
 /**************************************************/
 
+void FC_FUNC_(clamdfftbakeplan_low, CLAMDFFTBAKEPLAN_LOW)(clAmdFftPlanHandle ** plHandle,
+							  cl_command_queue * commQueue,
+							  int * status){
+
+  *status = clAmdFftBakePlan(**plHandle, 1, commQueue, NULL, NULL);
+
+}
+
 #endif

@@ -122,6 +122,7 @@ subroutine X(fft_forward)(fft, in, out)
     integer :: ii, jj, kk, slot
     FLOAT :: scaling_factor
     type(profile_t), save :: prof_bw
+    logical :: scale
 #ifdef HAVE_CLAMDFFT
     CMPLX, allocatable :: cout(:, :, :)
     type(opencl_mem_t) :: rsbuffer, fsbuffer
@@ -130,6 +131,8 @@ subroutine X(fft_forward)(fft, in, out)
     PUSH_SUB(X(fft_backward))
     
     call profiling_in(prof_bw,"FFT_BW")
+
+    scale = .true.
 
     slot = fft%slot
     select case (fft_array(slot)%library)
@@ -172,23 +175,27 @@ subroutine X(fft_forward)(fft, in, out)
 
       call opencl_release_buffer(rsbuffer)
       call opencl_release_buffer(fsbuffer)
+      
+      scale = .false. ! scaling is done by the library
 #endif
     case default
       call messages_write('Invalid FFT library.')
       call messages_fatal()
     end select
 
-    ! multiply by 1/(N1*N2*N2)
-    scaling_factor = M_ONE/(fft_array(slot)%rs_n_global(1)*fft_array(slot)%rs_n_global(2)*fft_array(slot)%rs_n_global(3))
-    !$omp parallel do
-    do kk = 1, fft_array(slot)%rs_n(3)
-      do jj = 1, fft_array(slot)%rs_n(2)
-        do ii = 1, fft_array(slot)%rs_n(1)
-          out(ii, jj, kk) = out(ii, jj, kk)*scaling_factor
+    if(scale) then
+      ! multiply by 1/(N1*N2*N2)
+      scaling_factor = M_ONE/(fft_array(slot)%rs_n_global(1)*fft_array(slot)%rs_n_global(2)*fft_array(slot)%rs_n_global(3))
+      !$omp parallel do
+      do kk = 1, fft_array(slot)%rs_n(3)
+        do jj = 1, fft_array(slot)%rs_n(2)
+          do ii = 1, fft_array(slot)%rs_n(1)
+            out(ii, jj, kk) = out(ii, jj, kk)*scaling_factor
+          end do
         end do
       end do
-    end do
-    !$omp end parallel do
+      !$omp end parallel do
+    end if
 
     call profiling_out(prof_bw)
 
