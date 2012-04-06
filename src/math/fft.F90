@@ -206,7 +206,7 @@ contains
     integer,           intent(inout) :: nn(3)    !< Size of the box
     integer,           intent(in)    :: dim      !< Dimensions of the box
     integer,           intent(in)    :: type     !< The type of the FFT; real or complex
-    integer,           intent(in)    :: library  !< Library of FFT; PFFT or FFTW3
+    integer,           intent(in)    :: library  !< Library of FFT
     logical,           intent(in)    :: optimize(3) !< whether we should optimize grid in each direction
     integer,           intent(in)    :: optimize_parity(3) !< choose optimized grid in each direction as
                                                  !! even (0), odd (1), or whatever (negative).
@@ -240,22 +240,40 @@ contains
     if(fft_dim < 3 .and. library == FFTLIB_PFFT) &
          call messages_not_implemented('PFFT support for dimension < 3')
 
-    ! FFT optimization
-    if(any(optimize_parity(1:fft_dim) > 1)) then
-      message(1) = "Internal error in fft_init: optimize_parity must be negative, 0, or 1."
-      call messages_fatal(1)
-    endif
+    if(library == FFTLIB_PFFT) then
+      ! FFT optimization
+      if(any(optimize_parity(1:fft_dim) > 1)) then
+        message(1) = "Internal error in fft_init: optimize_parity must be negative, 0, or 1."
+        call messages_fatal(1)
+      endif
+      
+      nn_temp(1:fft_dim) = nn(1:fft_dim)
+      do ii = 1, fft_dim
+        call loct_fft_optimize(nn_temp(ii), optimize_parity(ii))
+        if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
+      end do
+      
+      if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
+        write(message(1),'(a,9i6)') "Inefficient FFT grid. A better grid would be", nn_temp(1:fft_dim)
+        call messages_warning(1)
+      endif
+    
+    else
 
-    nn_temp(1:fft_dim) = nn(1:fft_dim)
-    do ii = 1, fft_dim
-      call loct_fft_optimize(nn_temp(ii), optimize_parity(ii))
-      if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
-    end do
+      nn_temp(1:fft_dim) = nn(1:fft_dim)
+      do ii = 1, fft_dim
+        ! the AMD OpenCL FFT only supports sizes 2, 3 and 5
+        nn_temp(ii) = fft_size(nn(ii), (/2, 3, 5/))
+        if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
+      end do 
+      
+      ! if we can't optimize, in some cases we can't use the library
+      if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
+        call messages_write('Invalid grid size for clAmdFft.')
+        call messages_fatal()
+      endif
 
-    if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
-      write(message(1),'(a,9i6)') "Inefficient FFT grid. A better grid would be", nn_temp(1:fft_dim)
-      call messages_warning(1)
-    endif
+    end if
 
     ! find out if fft has already been allocated
     jj = 0
@@ -578,6 +596,54 @@ contains
 
     return
   end function pad_feq
+
+  ! -------------------------------------------------------
+
+  integer function fft_size(size, factors)
+    integer, intent(in) :: size
+    integer, intent(in) :: factors(:)
+
+    integer :: nfactors
+    integer :: ii, jj, new_size, nondiv
+    integer, allocatable :: exponents(:)
+
+    nfactors = ubound(factors, dim = 1)
+
+    SAFE_ALLOCATE(exponents(1:nfactors))
+
+    fft_size = size
+    do 
+      call get_exponents(fft_size, nfactors, factors, exponents, nondiv)
+      if(nondiv == 1) exit
+      fft_size = fft_size + 1
+    end do
+
+    SAFE_DEALLOCATE_A(exponents)
+
+  end function fft_size
+
+  ! -------------------------------------------------------
+
+  subroutine get_exponents(num, nfactors, factors, exponents, nondiv)
+    integer, intent(in)  :: num
+    integer, intent(in)  :: nfactors
+    integer, intent(in)  :: factors(:)
+    integer, intent(out) :: exponents(:)
+    integer, intent(out) :: nondiv
+
+    integer :: ifactor
+
+    nondiv = num
+    do ifactor = 1, nfactors
+      exponents(ifactor) = 0
+      do
+        if(mod(nondiv, factors(ifactor)) /= 0) exit
+        nondiv = nondiv/factors(ifactor)
+        exponents(ifactor) = exponents(ifactor) + 1
+      end do
+    end do
+    
+  end subroutine get_exponents
 
 #include "undef.F90"
 #include "real.F90"
