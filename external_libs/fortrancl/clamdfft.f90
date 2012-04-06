@@ -20,7 +20,15 @@ module clAmdFft
     clAmdFftTeardown,            &
     clAmdFftPlanHandle,          &
     clAmdFftCreateDefaultPlan,   &
-    clAmdFftDestroyPlan
+    clAmdFftDestroyPlan,         &
+    clAmdFftEnqueueTransform,    &
+    clAmdFftSetPlanPrecision,    &
+    clAmdFftSetPlanBatchSize,    &
+    clAmdFftSetLayout,           &
+    clAmdFftSetResultLocation,   &
+    clAmdFftSetPlanInStride,     &
+    clAmdFftSetPlanOutStride,    &
+    clAmdFftGetPlanInStride
 
   integer, public, parameter ::                                                   &
     CLFFT_INVALID_GLOBAL_WORK_SIZE         = CL_INVALID_GLOBAL_WORK_SIZE,         &
@@ -104,6 +112,13 @@ module clAmdFft
     CLFFT_DOUBLE_FAST             = 4, &
     ENDPRECISION                  = 5
 
+  integer, public, parameter ::         &
+    CLFFT_FORWARD                 = -1, &
+    CLFFT_BACKWARD                =  1, &
+    CLFFT_MINUS                   = -1, &
+    CLFFT_PLUS                    =  1, &
+    ENDDIRECTION                  =  2
+
   integer, public, parameter ::        &
     CLFFT_INPLACE                 = 1, &
     CLFFT_OUTOFPLACE              = 2, &
@@ -169,5 +184,123 @@ module clAmdFft
   end interface clAmdFftDestroyPlan
 
   ! ---------------------------------------------------------
+
+  interface clAmdFftEnqueueTransform
+    subroutine clamdfftenqueuetransform_low(plHandle, dir, commQueues, inputBuffers, outputBuffers, status)
+      use cl
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(out)   :: plHandle
+      integer,                  intent(in)    :: dir
+      type(cl_command_queue),   intent(inout) :: commQueues
+      type(cl_mem),             intent(inout) :: inputBuffers
+      type(cl_mem),             intent(inout) :: outputBuffers
+      integer,                  intent(out)   :: status      
+    end subroutine clamdfftenqueuetransform_low
+  end interface clAmdFftEnqueueTransform
+
+  ! ---------------------------------------------------------
+
+  interface clAmdFftSetPlanPrecision
+    subroutine clAmdFftSetPlanPrecision_low(plHandle, precision, status)
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
+      integer,                  intent(in)    :: precision
+      integer,                  intent(out)   :: status    
+    end subroutine clAmdFftSetPlanPrecision_low
+  end interface clAmdFftSetPlanPrecision
+
+  ! ---------------------------------------------------------
+
+  interface clAmdFftSetPlanBatchSize
+    subroutine clAmdFftSetPlanBatchSize_low(plHandle, batchSize, status)
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
+      integer(8),               intent(in)    :: batchSize
+      integer,                  intent(out)   :: status    
+    end subroutine clAmdFftSetPlanBatchSize_low
+  end interface clAmdFftSetPlanBatchSize
+
+  ! ---------------------------------------------------------
+
+  interface clAmdFftSetLayout
+    subroutine clAmdFftSetLayout_low(plHandle, iLayout, oLayout, status)
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
+      integer,                  intent(in)    :: iLayout
+      integer,                  intent(in)    :: oLayout
+      integer,                  intent(out)   :: status    
+    end subroutine clAmdFftSetLayout_low
+  end interface clAmdFftSetLayout
+  
+  ! ---------------------------------------------------------
+
+  interface clAmdFftSetResultLocation
+    subroutine clAmdFftSetResultLocation_low(plHandle, placeness, status)
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
+      integer,                  intent(in)    :: placeness
+      integer,                  intent(out)   :: status    
+    end subroutine clAmdFftSetResultLocation_low
+  end interface clAmdFftSetResultLocation
+  
+  ! ---------------------------------------------------------
+
+  interface clAmdFftSetPlanInStride
+    subroutine clAmdFftSetPlanInStride_low(plHandle, dim, clStrides, status)
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
+      integer,                  intent(in)    :: dim
+      integer(8),               intent(in)    :: clStrides(1:dim)
+      integer,                  intent(out)   :: status    
+    end subroutine clAmdFftSetPlanInStride_low
+  end interface clAmdFftSetPlanInStride
+  
+  ! ---------------------------------------------------------
+
+  interface clAmdFftSetPlanOutStride
+    subroutine clAmdFftSetPlanOutStride_low(plHandle, dim, clStrides, status)
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
+      integer,                  intent(in)    :: dim
+      integer(8),               intent(in)    :: clStrides(1:dim)
+      integer,                  intent(out)   :: status    
+    end subroutine clAmdFftSetPlanOutStride_low
+  end interface clAmdFftSetPlanOutStride
+  
+  ! ---------------------------------------------------------
+
+  interface clAmdFftGetPlanInStride
+    subroutine clAmdFftGetPlanInStride_low(plHandle, dim, clStrides, status)
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
+      integer,                  intent(in)    :: dim
+      integer(8),               intent(out)   :: clStrides(1:dim)
+      integer,                  intent(out)   :: status    
+    end subroutine clAmdFftGetPlanInStride_low
+  end interface clAmdFftGetPlanInStride
 
 end module clAmdFft
