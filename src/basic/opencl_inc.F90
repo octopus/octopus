@@ -27,6 +27,7 @@ subroutine X(opencl_write_buffer_1)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
 
+  PUSH_SUB(X(opencl_write_buffer_1))
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
   fsize = int(size,8)*R_SIZEOF
@@ -44,6 +45,7 @@ subroutine X(opencl_write_buffer_1)(this, size, data, offset)
   call profiling_count_transfers(size, data(1))
   call opencl_finish()
   call profiling_out(prof_write)
+  POP_SUB(X(opencl_write_buffer_1))
 
 end subroutine X(opencl_write_buffer_1)
 
@@ -58,6 +60,7 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
 
+  PUSH_SUB(X(opencl_write_buffer_2))
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
   fsize = int(size, 8)*R_SIZEOF
@@ -73,6 +76,7 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   call profiling_count_transfers(size, data(1, 1))
   call opencl_finish()
   call profiling_out(prof_write)
+  POP_SUB(X(opencl_write_buffer_2))
 
 end subroutine X(opencl_write_buffer_2)
 
@@ -87,6 +91,7 @@ subroutine X(opencl_write_buffer_3)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
 
+  PUSH_SUB(X(opencl_write_buffer_3))
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
   fsize = int(size, 8)*R_SIZEOF
@@ -102,6 +107,7 @@ subroutine X(opencl_write_buffer_3)(this, size, data, offset)
   call profiling_count_transfers(size, data(1, 1, 1))
   call opencl_finish()
   call profiling_out(prof_write)
+  POP_SUB(X(opencl_write_buffer_3))
 
 end subroutine X(opencl_write_buffer_3)
 
@@ -116,6 +122,7 @@ subroutine X(opencl_read_buffer_1)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
 
+  PUSH_SUB(X(opencl_read_buffer_1))
   call profiling_in(prof_read, "CL_READ_BUFFER")
 
   fsize = size*R_SIZEOF
@@ -130,6 +137,7 @@ subroutine X(opencl_read_buffer_1)(this, size, data, offset)
   call profiling_count_transfers(size, data(1))
   call opencl_finish()
   call profiling_out(prof_read)
+  PUSH_SUB(X(opencl_read_buffer_1))
 
 end subroutine X(opencl_read_buffer_1)
 
@@ -144,6 +152,7 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
   
+  PUSH_SUB(X(opencl_read_buffer_2))
   call profiling_in(prof_read, "CL_READ_BUFFER")
 
   fsize = size*R_SIZEOF
@@ -158,6 +167,7 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   call profiling_count_transfers(size, data(1, 1))
   call opencl_finish()
   call profiling_out(prof_read)
+  PUSH_SUB(X(opencl_read_buffer_2))
   
 end subroutine X(opencl_read_buffer_2)
 
@@ -172,6 +182,7 @@ subroutine X(opencl_read_buffer_3)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
   
+  PUSH_SUB(X(opencl_read_buffer_3))
   call profiling_in(prof_read, "CL_READ_BUFFER")
 
   fsize = size*R_SIZEOF
@@ -186,6 +197,7 @@ subroutine X(opencl_read_buffer_3)(this, size, data, offset)
   call profiling_count_transfers(size, data(1, 1, 1))
   call opencl_finish()
   call profiling_out(prof_read)
+  PUSH_SUB(X(opencl_read_buffer_3))
   
 end subroutine X(opencl_read_buffer_3)
 
@@ -200,11 +212,14 @@ subroutine X(opencl_set_kernel_arg_data)(kernel, narg, data)
   
   integer :: ierr
 
+  PUSH_SUB(X(opencl_set_kernel_arg_data))
+
 #ifdef HAVE_OPENCL
   call clSetKernelArg(kernel, narg, data, ierr)
 #endif
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_data")
 
+  POP_SUB(X(opencl_set_kernel_arg_data))
 end subroutine X(opencl_set_kernel_arg_data)
 
 #endif
