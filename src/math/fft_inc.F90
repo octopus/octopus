@@ -27,6 +27,10 @@ subroutine X(fft_forward)(fft, in, out)
 
     integer :: ii, jj, kk, slot, n1, n2, n3
     type(profile_t), save :: prof_fw
+#ifdef HAVE_CLAMDFFT
+    CMPLX, allocatable :: cin(:, :, :)
+    type(opencl_mem_t) :: rsbuffer, fsbuffer
+#endif
 
     PUSH_SUB(X(fft_forward))
 
@@ -58,6 +62,37 @@ subroutine X(fft_forward)(fft, in, out)
 #ifdef HAVE_PFFT
       call pfft_execute(fft_array(slot)%pfft_planf)
 #endif
+    case(FFTLIB_CLAMD)
+#ifdef HAVE_CLAMDFFT
+
+      SAFE_ALLOCATE(cin(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)))
+
+      cin(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)) = &
+        in(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3))
+
+      call opencl_create_buffer(rsbuffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%rs_n(1:3)))
+      call opencl_create_buffer(fsbuffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%fs_n(1:3)))
+
+      call opencl_write_buffer(rsbuffer, product(fft_array(slot)%rs_n(1:3)), cin)
+
+      call opencl_finish()
+
+      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan, CLFFT_FORWARD, opencl%command_queue, &
+        rsbuffer%mem, fsbuffer%mem, cl_status)
+      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
+
+      call opencl_finish()
+
+      call opencl_read_buffer(fsbuffer, product(fft_array(slot)%fs_n(1:3)), out)
+
+      call opencl_finish()
+
+      call opencl_release_buffer(rsbuffer)
+      call opencl_release_buffer(fsbuffer)
+#endif
+    case default
+      call messages_write('Invalid FFT library.')
+      call messages_fatal()
     end select
 
     call profiling_out(prof_fw)
@@ -87,6 +122,10 @@ subroutine X(fft_forward)(fft, in, out)
     integer :: ii, jj, kk, slot
     FLOAT :: scaling_factor
     type(profile_t), save :: prof_bw
+#ifdef HAVE_CLAMDFFT
+    CMPLX, allocatable :: cout(:, :, :)
+    type(opencl_mem_t) :: rsbuffer, fsbuffer
+#endif
 
     PUSH_SUB(X(fft_backward))
     
@@ -106,6 +145,37 @@ subroutine X(fft_forward)(fft, in, out)
 #ifdef HAVE_PFFT
       call pfft_execute(fft_array(slot)%pfft_planb)
 #endif
+    case(FFTLIB_CLAMD)
+#ifdef HAVE_CLAMDFFT
+
+      call opencl_create_buffer(rsbuffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%rs_n(1:3)))
+      call opencl_create_buffer(fsbuffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%fs_n(1:3)))
+
+      call opencl_write_buffer(fsbuffer, product(fft_array(slot)%fs_n(1:3)), in)
+
+      call opencl_finish()
+
+      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan, CLFFT_BACKWARD, opencl%command_queue, &
+        fsbuffer%mem, rsbuffer%mem, cl_status)
+      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
+
+      call opencl_finish()
+
+      SAFE_ALLOCATE(cout(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)))
+
+      call opencl_read_buffer(rsbuffer, product(fft_array(slot)%rs_n(1:3)), cout)
+
+      call opencl_finish()
+
+      out(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)) = &
+        cout(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3))
+
+      call opencl_release_buffer(rsbuffer)
+      call opencl_release_buffer(fsbuffer)
+#endif
+    case default
+      call messages_write('Invalid FFT library.')
+      call messages_fatal()
     end select
 
     ! multiply by 1/(N1*N2*N2)

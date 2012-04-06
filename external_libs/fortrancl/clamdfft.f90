@@ -28,7 +28,9 @@ module clAmdFft
     clAmdFftSetResultLocation,   &
     clAmdFftSetPlanInStride,     &
     clAmdFftSetPlanOutStride,    &
-    clAmdFftGetPlanInStride
+    clAmdFftGetPlanInStride,     &
+    clAmdFftSetPlanScale,        &
+    clAmdFftGetPlanScale
 
   integer, public, parameter ::                                                   &
     CLFFT_INVALID_GLOBAL_WORK_SIZE         = CL_INVALID_GLOBAL_WORK_SIZE,         &
@@ -303,4 +305,34 @@ module clAmdFft
     end subroutine clAmdFftGetPlanInStride_low
   end interface clAmdFftGetPlanInStride
 
+  ! ---------------------------------------------------------
+
+  interface clAmdFftSetPlanScale
+    subroutine clAmdFftSetPlanScale_low(plHandle, dir, scale, status)
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
+      integer,                  intent(in)    :: dir
+      real(8),                  intent(in)    :: scale
+      integer,                  intent(out)   :: status    
+    end subroutine clAmdFftSetPlanScale_low
+  end interface clAmdFftSetPlanScale
+  
+  ! ---------------------------------------------------------
+
+  interface clAmdFftGetPlanScale
+    subroutine clAmdFftGetPlanScale_low(plHandle, dir, scale, status)
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
+      integer,                  intent(in)    :: dir
+      real(8),                  intent(out)    :: scale
+      integer,                  intent(out)   :: status    
+    end subroutine clAmdFftGetPlanScale_low
+  end interface clAmdFftGetPlanScale
+  
 end module clAmdFft

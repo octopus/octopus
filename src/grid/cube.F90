@@ -27,6 +27,7 @@ module cube_m
   use messages_m
   use mpi_m
   use fft_m
+  use opencl_m
   use pfft_m
   use parser_m
   use profiling_m
@@ -100,6 +101,8 @@ contains
         !% Uses FFTW3 library.
         !%Option pfft 2
         !% (experimental) Uses PFFT library, which has to be linked.
+        !%Option clfft 3
+        !% (experimental) Uses clAmdFft (GPU) library, which has to be linked.
         !%End
         call parse_integer(datasets_check('FFTLibrary'), FFTLIB_FFTW, cube%fft_library)
       end if
@@ -109,6 +112,19 @@ contains
         call messages_fatal(1)
       end if
 #endif
+
+      if (cube%fft_library == FFTLIB_CLAMD) then
+#ifndef HAVE_CLAMDFFT
+        call messages_write('You have selected the OpenCL FFT, but Octopus was compiled', new_line = .true.)
+        call messages_write('without clAmdFft (or OpenCL) support.')
+        call messages_fatal()
+#endif
+        if(.not. opencl_is_enabled()) then
+          call messages_write('You have selected the OpenCL FFT, but OpenCL is disabled.')
+          call messages_fatal()
+        end if
+      end if
+
     else
       cube%fft_library = FFTLIB_NONE
     end if

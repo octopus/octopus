@@ -182,5 +182,31 @@ void FC_FUNC_(clamdfftgetplaninstride_low, CLAMDFFTGETPLANINSTRIDE_LOW)(clAmdFft
 
 }
 
+/**************************************************/
+
+void FC_FUNC_(clamdfftsetplanscale_low, CLAMDFFTSETPLANSCALE_LOW)(clAmdFftPlanHandle ** plHandle, 
+								  const int * dir, 
+								  const double * scale,
+								  int * status){
+
+  *status = clAmdFftSetPlanScale(**plHandle, *dir, (cl_float) *scale);
+
+}
+
+/**************************************************/
+
+void FC_FUNC_(clamdfftgetplanscale_low, CLAMDFFTGETPLANSCALE_LOW)(clAmdFftPlanHandle ** plHandle, 
+								  const int * dir, 
+								  double * scale,
+								  int * status){
+
+  cl_float fscale;
+
+  *status = clAmdFftGetPlanScale(**plHandle, *dir, &fscale);
+  *scale = fscale;
+
+}
+
+/**************************************************/
 
 #endif

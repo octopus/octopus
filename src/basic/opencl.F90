@@ -124,13 +124,15 @@ module opencl_m
   end interface
 
   interface opencl_write_buffer
-    module procedure iopencl_write_buffer, dopencl_write_buffer, zopencl_write_buffer, &
-      iopencl_write_buffer_2, dopencl_write_buffer_2, zopencl_write_buffer_2
+    module procedure iopencl_write_buffer_1, dopencl_write_buffer_1, zopencl_write_buffer_1
+    module procedure iopencl_write_buffer_2, dopencl_write_buffer_2, zopencl_write_buffer_2
+    module procedure iopencl_write_buffer_3, dopencl_write_buffer_3, zopencl_write_buffer_3
   end interface
 
   interface opencl_read_buffer
-    module procedure iopencl_read_buffer, dopencl_read_buffer, zopencl_read_buffer, &
-      iopencl_read_buffer_2, dopencl_read_buffer_2, zopencl_read_buffer_2
+    module procedure iopencl_read_buffer_1, dopencl_read_buffer_1, zopencl_read_buffer_1
+    module procedure iopencl_read_buffer_2, dopencl_read_buffer_2, zopencl_read_buffer_2
+    module procedure iopencl_read_buffer_3, dopencl_read_buffer_3, zopencl_read_buffer_3
   end interface
 
   interface opencl_set_kernel_arg

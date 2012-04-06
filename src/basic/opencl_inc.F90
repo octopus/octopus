@@ -18,7 +18,7 @@
 !! $Id: opencl_inc.F90 3587 2007-11-22 16:43:00Z xavier $
 
 
-subroutine X(opencl_write_buffer)(this, size, data, offset)
+subroutine X(opencl_write_buffer_1)(this, size, data, offset)
   type(opencl_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:)
@@ -45,7 +45,7 @@ subroutine X(opencl_write_buffer)(this, size, data, offset)
   call opencl_finish()
   call profiling_out(prof_write)
 
-end subroutine X(opencl_write_buffer)
+end subroutine X(opencl_write_buffer_1)
 
 ! -----------------------------------------------------------------------------
 
@@ -78,7 +78,36 @@ end subroutine X(opencl_write_buffer_2)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(opencl_read_buffer)(this, size, data, offset)
+subroutine X(opencl_write_buffer_3)(this, size, data, offset)
+  type(opencl_mem_t),               intent(inout) :: this
+  integer,                          intent(in)    :: size
+  R_TYPE,                           intent(in)    :: data(:, :, :)
+  integer,                optional, intent(in)    :: offset
+
+  integer(8) :: fsize, offset_
+  integer :: ierr
+
+  call profiling_in(prof_write, "CL_WRITE_BUFFER")
+
+  fsize = int(size, 8)*R_SIZEOF
+  offset_ = 0
+  if(present(offset)) offset_ = int(offset, 8)*R_SIZEOF
+
+#ifdef HAVE_OPENCL
+  call clEnqueueWriteBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1, 1), ierr)
+#endif
+
+  if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
+  
+  call profiling_count_transfers(size, data(1, 1, 1))
+  call opencl_finish()
+  call profiling_out(prof_write)
+
+end subroutine X(opencl_write_buffer_3)
+
+! -----------------------------------------------------------------------------
+
+subroutine X(opencl_read_buffer_1)(this, size, data, offset)
   type(opencl_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:)
@@ -102,7 +131,7 @@ subroutine X(opencl_read_buffer)(this, size, data, offset)
   call opencl_finish()
   call profiling_out(prof_read)
 
-end subroutine X(opencl_read_buffer)
+end subroutine X(opencl_read_buffer_1)
 
 ! ---------------------------------------------------------------------------
 
@@ -131,6 +160,34 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   call profiling_out(prof_read)
   
 end subroutine X(opencl_read_buffer_2)
+
+! ---------------------------------------------------------------------------
+
+subroutine X(opencl_read_buffer_3)(this, size, data, offset)
+  type(opencl_mem_t),               intent(inout) :: this
+  integer,                          intent(in)    :: size
+  R_TYPE,                           intent(out)   :: data(:, :, :)
+  integer,                optional, intent(in)    :: offset
+
+  integer(8) :: fsize, offset_
+  integer :: ierr
+  
+  call profiling_in(prof_read, "CL_READ_BUFFER")
+
+  fsize = size*R_SIZEOF
+  offset_ = 0
+  if(present(offset)) offset_ = offset*R_SIZEOF
+
+#ifdef HAVE_OPENCL
+  call clEnqueueReadBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1, 1), ierr)
+#endif
+  if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
+
+  call profiling_count_transfers(size, data(1, 1, 1))
+  call opencl_finish()
+  call profiling_out(prof_read)
+  
+end subroutine X(opencl_read_buffer_3)
 
 ! ---------------------------------------------------------------------------
 
