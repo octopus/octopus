@@ -26,22 +26,32 @@ subroutine X(cube_function_alloc_rs)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
+  logical :: allocated
+
   PUSH_SUB(X(cube_function_alloc_rs))
 
   ASSERT(.not.associated(cf%X(rs)))
 
-  select case(cube%fft%library)
-  case(FFTLIB_PFFT)
-    ASSERT(associated(cube%fft))
-    cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
-  case(FFTLIB_CLAMD)
-    cf%in_device_memory = .true.
+  allocated = .false.
+
+  if(associated(cube%fft)) then
+    select case(cube%fft%library)
+    case(FFTLIB_PFFT)
+      allocated = .true.
+      ASSERT(associated(cube%fft))
+      cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
+    case(FFTLIB_CLAMD)
+      allocated = .true.
+      cf%in_device_memory = .true.
 #ifdef HAVE_OPENCL
-    call opencl_create_buffer(cf%real_space_buffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%rs_n(1:3)))
+      call opencl_create_buffer(cf%real_space_buffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%rs_n(1:3)))
 #endif
-  case default
+    end select
+  end if
+
+  if(.not. allocated) then
     SAFE_ALLOCATE(cf%X(rs)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
-  end select
+  end if
 
   POP_SUB(X(cube_function_alloc_rs))
 end subroutine X(cube_function_alloc_rs)
@@ -53,22 +63,30 @@ subroutine X(cube_function_free_rs)(cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
+  logical :: deallocated
+
   PUSH_SUB(X(cube_function_free_rs))
 
-  select case(cube%fft%library)
-  case(FFTLIB_PFFT)
-    nullify(cf%X(rs))
-  case(FFTLIB_CLAMD)
+  deallocated = .false.
+
+  if(associated(cube%fft)) then
+    select case(cube%fft%library)
+    case(FFTLIB_PFFT)
+      deallocated = .true.
+      nullify(cf%X(rs))
+    case(FFTLIB_CLAMD)
 #ifdef HAVE_OPENCL
-    ASSERT(cf%in_device_memory)
-    call opencl_release_buffer(cf%real_space_buffer)
-    cf%in_device_memory = .false.
+      deallocated = .true.
+      ASSERT(cf%in_device_memory)
+      call opencl_release_buffer(cf%real_space_buffer)
+      cf%in_device_memory = .false.
 #endif
-  case default
-    if (cube%fft%library /= FFTLIB_PFFT) then
-      SAFE_DEALLOCATE_P(cf%X(rs))
-    end if
-  end select
+    end select
+  end if
+
+  if(.not. deallocated) then
+    SAFE_DEALLOCATE_P(cf%X(rs))
+  end if
 
   POP_SUB(X(cube_function_free_rs))
 end subroutine X(cube_function_free_rs)
