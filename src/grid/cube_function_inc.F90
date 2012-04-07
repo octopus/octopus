@@ -225,18 +225,21 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   type(cube_function_t), intent(in)  :: cf
   type(mesh_t),          intent(in)  :: mesh
   R_TYPE,  target,       intent(out) :: mf(:) !< function defined on the mesh. Can be 
-                                              !< mf(mesh%np) or mf(mesh%np_global), depending if it is a local or global function
+  !< mf(mesh%np) or mf(mesh%np_global), depending if it is a local or global function
   logical, optional,     intent(in)  :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
 
-  integer :: ip, ix, iy, iz, ixyz(1:3)
+  integer :: ip, ix, iy, iz
   integer :: im, ii, nn
 #ifdef HAVE_MPI
   integer :: first, last
 #endif
   logical :: local_
-  R_TYPE, pointer :: gmf(:), realspace(:, :, :)
+  R_TYPE, pointer :: gmf(:)
 #ifdef HAVE_OPENCL
-  CMPLX, pointer :: zrealspace(:, :, :)
+  integer                    :: bsize
+  type(opencl_mem_t)         :: mf_buffer
+  type(octcl_kernel_t), save :: kernel
+  type(cl_kernel)            :: kernel_ref
 #endif
 
   PUSH_SUB(X(cube_to_mesh))
@@ -244,7 +247,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   call profiling_in(prof_c2m, "CUBE_TO_MESH")
 
   local_ = optional_default(local, .false.) .and. mesh%parallel_in_domains
-  
+
   if(local_) then
     ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
     SAFE_ALLOCATE(gmf(1:mesh%np_global))
@@ -253,40 +256,50 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
     gmf => mf
   end if
 
-  if(cf%in_device_memory) then
-    SAFE_ALLOCATE(realspace(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
-#ifdef HAVE_OPENCL
-#ifdef R_TREAL
-    SAFE_ALLOCATE(zrealspace(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
-#else
-    zrealspace => realspace
-#endif
-    call opencl_read_buffer(cf%real_space_buffer, product(cube%rs_n(1:3)), zrealspace)
-#ifdef R_TREAL
-    realspace(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)) = zrealspace(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
-    SAFE_DEALLOCATE_P(zrealspace)
-#endif
-#endif
-  else
+  if(.not. cf%in_device_memory) then
+
     ASSERT(associated(cf%X(rs)))
-    realspace => cf%X(rs)
-  end if
+    ASSERT(associated(mesh%cube_map%map))
 
-  ASSERT(associated(mesh%cube_map%map))
+    do im = 1, mesh%cube_map%nmap
+      ix = mesh%cube_map%map(1, im) + cube%center(1)
+      iy = mesh%cube_map%map(2, im) + cube%center(2)
+      iz = mesh%cube_map%map(3, im) + cube%center(3)
 
-  do im = 1, mesh%cube_map%nmap
-    ix = mesh%cube_map%map(1, im) + cube%center(1)
-    iy = mesh%cube_map%map(2, im) + cube%center(2)
-    iz = mesh%cube_map%map(3, im) + cube%center(3)
+      ip = mesh%cube_map%map(MCM_POINT, im)
+      nn = mesh%cube_map%map(MCM_COUNT, im)
+
+      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(rs)(ix, iy, iz + ii)
+    end do
+
+  else
+
+#ifdef HAVE_OPENCL    
+    call opencl_create_buffer(mf_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, mesh%np_global)
+
+    call octcl_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(cube_to_mesh)))
+    kernel_ref = octcl_kernel_get_ref(kernel)
     
-    ip = mesh%cube_map%map(MCM_POINT, im)
-    nn = mesh%cube_map%map(MCM_COUNT, im)
-    
-    forall(ii = 0:nn - 1) gmf(ip + ii) = realspace(ix, iy, iz + ii)
-  end do
+    call opencl_set_kernel_arg(kernel_ref, 0, mesh%cube_map%nmap)
+    call opencl_set_kernel_arg(kernel_ref, 1, cube%rs_n(3)*cube%rs_n(2))
+    call opencl_set_kernel_arg(kernel_ref, 2, cube%rs_n(3))
+    call opencl_set_kernel_arg(kernel_ref, 3, 1)
+    call opencl_set_kernel_arg(kernel_ref, 4, cube%center(1))
+    call opencl_set_kernel_arg(kernel_ref, 5, cube%center(2))
+    call opencl_set_kernel_arg(kernel_ref, 6, cube%center(3))
+    call opencl_set_kernel_arg(kernel_ref, 7, mesh%cube_map%map_buffer)
+    call opencl_set_kernel_arg(kernel_ref, 8, cf%real_space_buffer)
+    call opencl_set_kernel_arg(kernel_ref, 9, mf_buffer)
 
-  if(cf%in_device_memory) then
-    SAFE_DEALLOCATE_P(realspace)
+    bsize = opencl_kernel_workgroup_size(kernel_ref)
+
+    call opencl_kernel_run(kernel_ref, (/pad(mesh%cube_map%nmap, bsize)/), (/bsize/))
+    call opencl_finish()
+
+    call opencl_read_buffer(mf_buffer, mesh%np_global, gmf)
+    call opencl_release_buffer(mf_buffer)
+#endif
+
   end if
 
   if(local_) then
@@ -299,7 +312,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 #endif
     SAFE_DEALLOCATE_P(gmf)
   end if
-
+  
   call profiling_count_transfers(mesh%np_global, mf(1))
 
   call profiling_out(prof_c2m)

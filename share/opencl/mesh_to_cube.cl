@@ -58,6 +58,34 @@ __kernel void dmesh_to_cube(const int nmap,
 
 }
 
+__kernel void dcube_to_mesh(const int nmap,
+			    const int stridex,
+			    const int stridey,
+			    const int stridez,
+			    const int centerx,
+			    const int centery,
+			    const int centerz,
+			    __global int const * restrict map,
+			    __global double2 const * restrict cube_function,
+			    __global double * restrict mesh_function){
+  
+  const int imap = get_global_id(0);
+  
+  if(imap >= nmap) return;
+
+  const int ix = centerx + map[5*imap + 0] - 1;
+  const int iy = centery + map[5*imap + 1] - 1;
+  const int iz = centerz + map[5*imap + 2] - 1;
+  const int ip = map[5*imap + MCM_POINT] - 1;
+  const int count = map[5*imap + MCM_COUNT];
+
+  for(int ii = 0; ii < count; ii++){
+    double2 aa = cube_function[ix*stridex + iy*stridey + (iz + ii)*stridez];
+    mesh_function[ip + ii] = aa.s0;
+  }
+
+}
+
 /*
  Local Variables:
  mode: c
