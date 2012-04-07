@@ -34,6 +34,7 @@ module cube_function_m
   use messages_m
   use mpi_m
   use mpi_debug_m
+  use octcl_kernel_m
   use opencl_m
   use parser_m
   use partition_transfer_m

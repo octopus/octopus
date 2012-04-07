@@ -20,13 +20,18 @@
 #include "global.h"
 
 module mesh_cube_map_m
+#ifdef HAVE_OPENCL
+  use cl
+#endif
   use datasets_m
   use global_m
   use index_m
   use messages_m
   use mpi_m
+  use opencl_m
   use profiling_m
   use simul_box_m
+  use types_m
 
   implicit none
 
@@ -37,8 +42,9 @@ module mesh_cube_map_m
     mesh_cube_map_end
 
   type mesh_cube_map_t
-    integer          :: nmap      !< The number of maps
-    integer, pointer :: map(:, :)
+    integer            :: nmap      !< The number of maps
+    integer, pointer   :: map(:, :)
+    type(opencl_mem_t) :: map_buffer
   end type mesh_cube_map_t
 
   integer, public, parameter :: MCM_POINT = 4, MCM_COUNT = 5
@@ -84,6 +90,14 @@ contains
           i2 = i1
         end do
       end do
+
+      if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
+        call opencl_create_buffer(this%map_buffer, CL_MEM_READ_ONLY, TYPE_INTEGER, this%nmap*5)
+        call opencl_write_buffer(this%map_buffer, this%nmap*5, this%map)
+#endif
+      end if
+
     else
       nullify(this%map)
     end if
@@ -99,6 +113,12 @@ contains
     PUSH_SUB(mesh_cube_map_end)
 
     SAFE_DEALLOCATE_P(this%map)
+
+    if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
+      call opencl_release_buffer(this%map_buffer)
+#endif
+    end if
 
     POP_SUB(mesh_cube_map_end)
   end subroutine mesh_cube_map_end
