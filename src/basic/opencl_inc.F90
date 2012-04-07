@@ -114,7 +114,7 @@ end subroutine X(opencl_write_buffer_3)
 ! -----------------------------------------------------------------------------
 
 subroutine X(opencl_read_buffer_1)(this, size, data, offset)
-  type(opencl_mem_t),               intent(inout) :: this
+  type(opencl_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:)
   integer,                optional, intent(in)    :: offset
@@ -144,7 +144,7 @@ end subroutine X(opencl_read_buffer_1)
 ! ---------------------------------------------------------------------------
 
 subroutine X(opencl_read_buffer_2)(this, size, data, offset)
-  type(opencl_mem_t),               intent(inout) :: this
+  type(opencl_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:, :)
   integer,                optional, intent(in)    :: offset
@@ -174,7 +174,7 @@ end subroutine X(opencl_read_buffer_2)
 ! ---------------------------------------------------------------------------
 
 subroutine X(opencl_read_buffer_3)(this, size, data, offset)
-  type(opencl_mem_t),               intent(inout) :: this
+  type(opencl_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:, :, :)
   integer,                optional, intent(in)    :: offset

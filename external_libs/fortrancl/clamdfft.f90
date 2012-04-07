@@ -198,7 +198,7 @@ module clAmdFft
       type(clAmdFftPlanHandle), intent(out)   :: plHandle
       integer,                  intent(in)    :: dir
       type(cl_command_queue),   intent(inout) :: commQueues
-      type(cl_mem),             intent(inout) :: inputBuffers
+      type(cl_mem),             intent(in)    :: inputBuffers
       type(cl_mem),             intent(inout) :: outputBuffers
       integer,                  intent(out)   :: status      
     end subroutine clamdfftenqueuetransform_low
