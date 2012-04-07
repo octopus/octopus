@@ -106,7 +106,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   integer :: bsize
 #endif
 
-  type(profile_t), save :: prof_g, rs2fs_prof, fs2rs_prof, prof
+  type(profile_t), save :: prof_g, prof
 
   PUSH_SUB(X(fourier_space_op_apply))
 
@@ -115,10 +115,8 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   call cube_function_alloc_fs(cube, cf)
 
   call profiling_in(prof, "OP_APPLY")
-  call profiling_in(rs2fs_prof, "rs2fs")
-  call X(cube_function_rs2fs)(cube, cf)
-  call profiling_out(rs2fs_prof)
-  
+   call X(cube_function_rs2fs)(cube, cf)
+   
   call profiling_in(prof_g,"G_APPLY")
 
   select case(cube%fft_library)
@@ -162,9 +160,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
 
   call profiling_out(prof_g)
   
-  call profiling_in(fs2rs_prof, "fs2rs")
   call X(cube_function_fs2rs)(cube, cf)
-  call profiling_out(fs2rs_prof)
   call cube_function_free_fs(cube, cf)
   call profiling_out(prof)
 

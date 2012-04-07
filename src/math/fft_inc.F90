@@ -34,7 +34,7 @@ subroutine X(fft_forward)(fft, in, out)
 
     PUSH_SUB(X(fft_forward))
 
-    call profiling_in(prof_fw, "FFT_FW")
+    call profiling_in(prof_fw, "FFT_FORWARD")
 
     slot = fft%slot
     select case (fft_array(slot)%library)
@@ -111,7 +111,7 @@ subroutine X(fft_forward)(fft, in, out)
 
     PUSH_SUB(X(fft_forward_cl))
 
-    call profiling_in(prof_fw, "FFT_FW")
+    call profiling_in(prof_fw, "FFT_FORWARD_CL")
 
     slot = fft%slot
     ASSERT(fft_array(slot)%library == FFTLIB_CLAMD)
@@ -160,7 +160,7 @@ subroutine X(fft_forward)(fft, in, out)
 
     PUSH_SUB(X(fft_backward))
     
-    call profiling_in(prof_bw,"FFT_BW")
+    call profiling_in(prof_bw,"FFT_BACKWARD")
 
     scale = .true.
 
@@ -248,7 +248,7 @@ subroutine X(fft_forward)(fft, in, out)
 
     PUSH_SUB(X(fft_backward))
     
-    call profiling_in(prof_bw,"FFT_BW")
+    call profiling_in(prof_bw,"FFT_BACKWARD_CL")
 
     slot = fft%slot
     ASSERT(fft_array(slot)%library == FFTLIB_CLAMD)
