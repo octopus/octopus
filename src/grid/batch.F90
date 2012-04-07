@@ -830,24 +830,15 @@ contains
     type(batch_t),     intent(inout) :: this
 
     integer :: ist_linear
-    integer :: bsize
 
     PUSH_SUB(batch_set_zero)
 
     call batch_pack_was_modified(this)
 
     if(batch_is_packed(this) .and. opencl_is_enabled()) then
-
-      bsize = product(this%pack%size)
-      if(batch_type(this) == TYPE_CMPLX) bsize = bsize*2
-
-#ifdef HAVE_OPENCL      
-      call opencl_set_kernel_arg(set_zero, 0, this%pack%buffer)
-      call opencl_kernel_run(set_zero, (/bsize/), (/opencl_max_workgroup_size()/))
-      call batch_pack_was_modified(this)
-      call opencl_finish()
+#ifdef HAVE_OPENCL
+      call opencl_set_buffer_to_zero(this%pack%buffer, batch_type(this), product(this%pack%size))
 #endif
-
     else if(batch_is_packed(this) .and. batch_type(this) == TYPE_FLOAT) then
       this%pack%dpsi = M_ZERO
     else if(batch_is_packed(this) .and. batch_type(this) == TYPE_CMPLX) then

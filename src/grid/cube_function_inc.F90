@@ -132,7 +132,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   type(cube_function_t), intent(inout) :: cf
   logical, optional,     intent(in)    :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
 
-  integer :: ip, ix, iy, iz, ixyz(1:3)
+  integer :: ip, ix, iy, iz
   integer :: im, ii, nn, bsize
   logical :: local_
   R_TYPE, pointer :: gmf(:)
@@ -181,9 +181,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   else
 #ifdef HAVE_OPENCL
 
-    call opencl_set_kernel_arg(set_zero, 0, cf%real_space_buffer)
-    call opencl_kernel_run(set_zero, (/2*product(cube%rs_n(1:3))/), (/1/))
-    call opencl_finish()
+    call opencl_set_buffer_to_zero(cf%real_space_buffer, TYPE_CMPLX, product(cube%rs_n(1:3)))
 
     call opencl_create_buffer(mf_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, mesh%np_global)
     call opencl_write_buffer(mf_buffer, mesh%np_global, gmf)

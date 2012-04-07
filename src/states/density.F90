@@ -110,9 +110,7 @@ contains
     call opencl_create_buffer(this%buff_density, CL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
     
     ! set to zero
-    call opencl_set_kernel_arg(set_zero, 0, this%buff_density)
-    call opencl_kernel_run(set_zero, (/this%pnp*this%st%d%nspin/), (/opencl_max_workgroup_size()/))
-    call opencl_finish()
+    call opencl_set_buffer_to_zero(this%buff_density, TYPE_FLOAT, this%pnp*this%st%d%nspin)
 #endif
     POP_SUB(density_calc_pack)
   end subroutine density_calc_pack

@@ -67,7 +67,8 @@ module opencl_m
     opencl_create_kernel,         &
     opencl_print_error,           &
     clblas_print_error,           &
-    clfft_print_error
+    clfft_print_error,            &
+    opencl_set_buffer_to_zero
 #endif
 
   type opencl_t 
@@ -96,7 +97,6 @@ module opencl_m
   ! the kernels
   type(cl_kernel), public :: kernel_vpsi
   type(cl_kernel), public :: kernel_vpsi_spinors
-  type(cl_kernel), public :: set_zero
   type(cl_kernel), public :: set_zero_part
   type(cl_kernel), public :: kernel_daxpy
   type(cl_kernel), public :: kernel_zaxpy
@@ -120,6 +120,9 @@ module opencl_m
   type(cl_kernel), public :: kernel_nrm2_vector
   type(cl_kernel), public :: dzmul
   type(cl_kernel), public :: zzmul
+
+  ! kernels used locally
+  type(cl_kernel)         :: set_zero
 
   interface opencl_create_buffer
     module procedure opencl_create_buffer_4
@@ -1140,6 +1143,26 @@ module opencl_m
 
     end function f90_cl_device_has_extension
 
+    ! ----------------------------------------------------
+    
+    subroutine opencl_set_buffer_to_zero(buffer, type, nval)
+      type(opencl_mem_t), intent(inout) :: buffer
+      type(type_t),       intent(in)    :: type
+      integer,            intent(in)    :: nval
+      
+      PUSH_SUB(opencl_set_buffer_to_zero)
+
+      ASSERT(type == TYPE_CMPLX .or. type == TYPE_FLOAT)
+      
+      call opencl_set_kernel_arg(set_zero, 0, buffer)
+      call opencl_kernel_run(set_zero, (/ nval*types_get_size(type)/8 /), (/ 1 /))
+      call opencl_finish()
+      
+      POP_SUB(opencl_set_buffer_to_zero)
+    end subroutine opencl_set_buffer_to_zero
+
+    ! ----------------------------------------------------
+    
 #include "undef.F90"
 #include "real.F90"
 #include "opencl_inc.F90"
