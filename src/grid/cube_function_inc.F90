@@ -30,12 +30,18 @@ subroutine X(cube_function_alloc_rs)(cube, cf)
 
   ASSERT(.not.associated(cf%X(rs)))
 
-  if (cube%fft_library /= FFTLIB_PFFT) then
-    SAFE_ALLOCATE(cf%X(rs)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
-  else
+  select case(cube%fft_library)
+  case(FFTLIB_PFFT)
     ASSERT(associated(cube%fft))
     cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
-  end if
+  case(FFTLIB_CLAMD)
+    cf%in_device_memory = .true.
+#ifdef HAVE_OPENCL
+    call opencl_create_buffer(cf%real_space_buffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%rs_n(1:3)))
+#endif
+  case default
+    SAFE_ALLOCATE(cf%X(rs)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
+  end select
 
   POP_SUB(X(cube_function_alloc_rs))
 end subroutine X(cube_function_alloc_rs)
@@ -49,11 +55,20 @@ subroutine X(cube_function_free_rs)(cube, cf)
 
   PUSH_SUB(X(cube_function_free_rs))
 
-  if (cube%fft_library /= FFTLIB_PFFT) then
-    SAFE_DEALLOCATE_P(cf%X(rs))
-  else
+  select case(cube%fft_library)
+  case(FFTLIB_PFFT)
     nullify(cf%X(rs))
-  end if
+  case(FFTLIB_CLAMD)
+#ifdef HAVE_OPENCL
+    ASSERT(cf%in_device_memory)
+    call opencl_release_buffer(cf%real_space_buffer)
+    cf%in_device_memory = .false.
+#endif
+  case default
+    if (cube%fft_library /= FFTLIB_PFFT) then
+      SAFE_DEALLOCATE_P(cf%X(rs))
+    end if
+  end select
 
   POP_SUB(X(cube_function_free_rs))
 end subroutine X(cube_function_free_rs)
@@ -138,6 +153,10 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     gmf => mf
   end if
 
+  if(cf%in_device_memory) then
+    SAFE_ALLOCATE(cf%X(rs)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
+  end if
+
   ASSERT(associated(cf%X(rs)))
 
   cf%X(rs) = M_ZERO
@@ -175,6 +194,20 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     SAFE_DEALLOCATE_P(gmf)
   end if
 
+  if(cf%in_device_memory) then
+#ifdef HAVE_OPENCL
+#ifdef R_TREAL
+    SAFE_ALLOCATE(cf%zrs(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
+    cf%zrs(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)) = cf%drs(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
+#endif
+    call opencl_write_buffer(cf%real_space_buffer, product(cube%rs_n(1:3)), cf%zrs)
+#ifdef R_TREAL
+    SAFE_DEALLOCATE_P(cf%zrs)
+#endif
+#endif
+    SAFE_DEALLOCATE_P(cf%X(rs))
+  end if
+
   call profiling_count_transfers(mesh%np_global, mf(1))
 
   call profiling_out(prof_m2c)
@@ -191,9 +224,15 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   logical, optional,     intent(in)  :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
 
   integer :: ip, ix, iy, iz, ixyz(1:3)
-  integer :: im, ii, nn, last, first
+  integer :: im, ii, nn
+#ifdef HAVE_MPI
+  integer :: first, last
+#endif
   logical :: local_
-  R_TYPE, pointer :: gmf(:)
+  R_TYPE, pointer :: gmf(:), realspace(:, :, :)
+#ifdef HAVE_OPENCL
+  CMPLX, pointer :: zrealspace(:, :, :)
+#endif
 
   PUSH_SUB(X(cube_to_mesh))
 
@@ -209,7 +248,25 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
     gmf => mf
   end if
 
-  ASSERT(associated(cf%X(rs)))
+  if(cf%in_device_memory) then
+    SAFE_ALLOCATE(realspace(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
+#ifdef HAVE_OPENCL
+#ifdef R_TREAL
+    SAFE_ALLOCATE(zrealspace(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
+#else
+    zrealspace => realspace
+#endif
+    call opencl_read_buffer(cf%real_space_buffer, product(cube%rs_n(1:3)), zrealspace)
+#ifdef R_TREAL
+    realspace(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)) = zrealspace(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
+    SAFE_DEALLOCATE_P(zrealspace)
+#endif
+#endif
+  else
+    ASSERT(associated(cf%X(rs)))
+    realspace => cf%X(rs)
+  end if
+
   ASSERT(associated(mesh%cube_map%map))
 
   if(associated(mesh%idx%lxyz)) then
@@ -220,7 +277,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
       ix = mesh%idx%lxyz(ip, 1) + cube%center(1)
       iy = mesh%idx%lxyz(ip, 2) + cube%center(2)
       iz = mesh%idx%lxyz(ip, 3) + cube%center(3)
-      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(rs)(ix, iy, iz + ii)
+      forall(ii = 0:nn - 1) gmf(ip + ii) = realspace(ix, iy, iz + ii)
     end do
 
   else
@@ -234,9 +291,13 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
       ixyz = ixyz + cube%center
 
-      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(rs)(ixyz(1), ixyz(2), ixyz(3) + ii)
+      forall(ii = 0:nn - 1) gmf(ip + ii) = realspace(ixyz(1), ixyz(2), ixyz(3) + ii)
     end do
 
+  end if
+
+  if(cf%in_device_memory) then
+    SAFE_DEALLOCATE_P(realspace)
   end if
 
   if(local_) then
@@ -359,6 +420,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
   PUSH_SUB(X(cube_to_mesh_parallel))
   call profiling_in(prof_c2m, "CUBE_TO_MESH_PARALLEL")
 
+  ASSERT(.not. cf%in_device_memory)
   ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
 
   if(mesh%parallel_in_domains) then

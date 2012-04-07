@@ -21,6 +21,9 @@
 
 module cube_function_m
   use cube_m
+#ifdef HAVE_OPENCL
+  use cl
+#endif
   use datasets_m
   use fft_m
   use global_m
@@ -31,12 +34,14 @@ module cube_function_m
   use messages_m
   use mpi_m
   use mpi_debug_m
+  use opencl_m
   use parser_m
   use partition_transfer_m
   use par_vec_m
   use pfft_m
   use profiling_m
   use simul_box_m
+  use types_m
 
   implicit none
   private
@@ -62,6 +67,9 @@ module cube_function_m
     FLOAT, pointer :: dRS(:, :, :)  !< real-space grid
     CMPLX, pointer :: zRS(:, :, :)  !< real-space grid, complex numbers
     CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid
+    logical            :: in_device_memory
+    type(opencl_mem_t) :: real_space_buffer
+    type(opencl_mem_t) :: fourier_space_buffer
   end type cube_function_t
 
   type(profile_t), save :: prof_m2c, prof_c2m
@@ -162,6 +170,7 @@ contains
     nullify(cf%zRS)
     nullify(cf%dRS)
     nullify(cf%FS)
+    cf%in_device_memory = .false.
 
     POP_SUB(cube_function_null) 
   end subroutine cube_function_null

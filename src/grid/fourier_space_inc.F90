@@ -28,10 +28,15 @@ subroutine X(cube_function_rs2fs)(cube, cf)
   PUSH_SUB(X(cube_function_rs2fs))
 
   ASSERT(cube%fft_library /= FFTLIB_NONE)
-  ASSERT(associated(cf%X(rs)))
-  ASSERT(associated(cf%fs))
 
-  call X(fft_forward)(cube%fft, cf%X(rs), cf%fs)
+  if(cf%in_device_memory) then
+    call X(fft_forward_cl)(cube%fft, cf%real_space_buffer, cf%fourier_space_buffer)
+  else
+    ASSERT(associated(cf%X(rs)))
+    ASSERT(associated(cf%fs))
+    
+    call X(fft_forward)(cube%fft, cf%X(rs), cf%fs)
+  end if
 
   POP_SUB(X(cube_function_rs2fs))
 end subroutine X(cube_function_rs2fs)
@@ -44,10 +49,15 @@ subroutine X(cube_function_fs2rs)(cube, cf)
   PUSH_SUB(X(cube_function_fs2rs))
 
   ASSERT(cube%fft_library /= FFTLIB_NONE)
-  ASSERT(associated(cf%X(rs)))
-  ASSERT(associated(cf%fs))
 
-  call X(fft_backward)(cube%fft, cf%fs, cf%X(rs))
+  if(cf%in_device_memory) then
+    call X(fft_backward_cl)(cube%fft, cf%fourier_space_buffer, cf%real_space_buffer)
+  else
+    ASSERT(associated(cf%X(rs)))
+    ASSERT(associated(cf%fs))
+
+    call X(fft_backward)(cube%fft, cf%fs, cf%X(rs))
+  end if
 
   POP_SUB(X(cube_function_fs2rs))
 end subroutine X(cube_function_fs2rs)
@@ -66,10 +76,19 @@ subroutine X(fourier_space_op_init)(this, cube, op)
 
   nullify(this%dop)
   nullify(this%zop)
-  SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
-  forall (kk = 1:cube%fs_n(3), jj = 1:cube%fs_n(2), ii = 1:cube%fs_n(1)) 
-    this%X(op)(ii, jj, kk) = op(ii, jj, kk)
-  end forall
+
+  if(cube%fft_library /= FFTLIB_CLAMD) then
+    SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
+    forall (kk = 1:cube%fs_n(3), jj = 1:cube%fs_n(2), ii = 1:cube%fs_n(1)) 
+      this%X(op)(ii, jj, kk) = op(ii, jj, kk)
+    end forall
+  else
+    this%in_device_memory = .true.
+#ifdef HAVE_OPENCL
+    call opencl_create_buffer(this%op_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, product(cube%rs_n(1:3)))
+    call opencl_write_buffer(this%op_buffer, product(cube%rs_n(1:3)), op)
+#endif
+  end if
 
   POP_SUB(X(fourier_space_op_init))
 end subroutine X(fourier_space_op_init)
@@ -83,6 +102,9 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   type(cube_function_t),    intent(inout)  :: cf
   
   integer :: ii, jj, kk
+#ifdef HAVE_OPENCL
+  integer :: bsize
+#endif
 
   type(profile_t), save :: prof_g, rs2fs_prof, fs2rs_prof, prof
 
@@ -98,7 +120,9 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   call profiling_out(rs2fs_prof)
   
   call profiling_in(prof_g,"G_APPLY")
-  if (cube%fft_library == FFTLIB_PFFT) then
+
+  select case(cube%fft_library)
+  case(FFTLIB_PFFT)
     !Note that the function in fourier space returned by PFFT is transposed
     !$omp parallel do
     do kk = 1, cube%fs_n(3)
@@ -109,7 +133,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
       end do
     end do
     !$omp end parallel do
-  else
+  case(FFTLIB_FFTW)
     !$omp parallel do
     do kk = 1, cube%fs_n(3)
       do jj = 1, cube%fs_n(2)
@@ -119,7 +143,23 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
       end do
     end do
     !$omp end parallel do
-  end if
+  case(FFTLIB_CLAMD)
+#ifdef HAVE_OPENCL
+    call opencl_set_kernel_arg(X(zmul), 0, product(cube%fs_n(1:3)))
+    call opencl_set_kernel_arg(X(zmul), 1, this%op_buffer)
+    call opencl_set_kernel_arg(X(zmul), 2, cf%fourier_space_buffer)
+    bsize = opencl_kernel_workgroup_size(X(zmul))
+    call opencl_kernel_run(X(zmul), (/pad(product(cube%fs_n(1:3)), bsize)/), (/bsize/))
+    call opencl_finish()
+#endif
+  end select
+
+#ifdef R_TREAL
+  call profiling_count_operations(2*R_MUL*product(cube%fs_n(1:3)))
+#else
+  call profiling_count_operations(R_MUL*product(cube%fs_n(1:3)))
+#endif
+
   call profiling_out(prof_g)
   
   call profiling_in(fs2rs_prof, "fs2rs")

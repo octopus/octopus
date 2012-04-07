@@ -100,7 +100,37 @@ subroutine X(fft_forward)(fft, in, out)
     POP_SUB(X(fft_forward))
   end subroutine X(fft_forward)
 
+! ---------------------------------------------------------
+  subroutine X(fft_forward_cl)(fft, in, out)
+    type(fft_t),        intent(in)    :: fft
+    type(opencl_mem_t), intent(in)    :: in
+    type(opencl_mem_t), intent(inout) :: out
+
+    integer :: slot
+    type(profile_t), save :: prof_fw
+
+    PUSH_SUB(X(fft_forward_cl))
+
+    call profiling_in(prof_fw, "FFT_FW")
+
+    slot = fft%slot
+    ASSERT(fft_array(slot)%library == FFTLIB_CLAMD)
+
+#ifdef HAVE_CLAMDFFT
+    call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan, CLFFT_FORWARD, opencl%command_queue, &
+      in%mem, out%mem, cl_status)
+    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
+
+    call opencl_finish()
+#endif
+
+    call profiling_out(prof_fw)
+
+    POP_SUB(X(fft_forward))
+  end subroutine X(fft_forward_cl)
+
   ! ---------------------------------------------------------
+
   subroutine X(fft_forward1)(fft, in, out)
     type(fft_t), intent(in)  :: fft
     R_TYPE,      intent(in)  :: in(:)
@@ -201,6 +231,40 @@ subroutine X(fft_forward)(fft, in, out)
 
     POP_SUB(X(fft_backward))
   end subroutine X(fft_backward)
+
+  ! ---------------------------------------------------------
+
+  subroutine X(fft_backward_cl)(fft, in, out)
+    type(fft_t),        intent(in)    :: fft
+    type(opencl_mem_t), intent(in)    :: in
+    type(opencl_mem_t), intent(inout) :: out
+
+    integer :: slot
+    type(profile_t), save :: prof_bw
+#ifdef HAVE_CLAMDFFT
+    CMPLX, allocatable :: cout(:, :, :)
+    type(opencl_mem_t) :: rsbuffer, fsbuffer
+#endif
+
+    PUSH_SUB(X(fft_backward))
+    
+    call profiling_in(prof_bw,"FFT_BW")
+
+    slot = fft%slot
+    ASSERT(fft_array(slot)%library == FFTLIB_CLAMD)
+
+#ifdef HAVE_CLAMDFFT
+      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan, CLFFT_BACKWARD, opencl%command_queue, &
+        in%mem, out%mem, cl_status)
+      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
+
+      call opencl_finish()
+#endif
+
+    call profiling_out(prof_bw)
+
+    POP_SUB(X(fft_backward))
+  end subroutine X(fft_backward_cl)
 
   ! ---------------------------------------------------------
   subroutine X(fft_backward1)(fft, in, out)

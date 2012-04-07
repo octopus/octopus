@@ -52,22 +52,26 @@ module fft_m
   implicit none
 
   private
-  public ::         &
-    fft_t,          &
-    fft_all_init,   &
-    fft_all_end,    &
-    fft_init,       &
-    fft_end,        &
-    fft_copy,       &
-    fft_get_dims,   &
-    pad_feq,        &
-    dfft_forward,   &
-    zfft_forward,   &
-    dfft_backward,  &
-    zfft_backward,  &
-    dfft_forward1,  &
-    zfft_forward1,  &
-    dfft_backward1, &
+  public ::            &
+    fft_t,             &
+    fft_all_init,      &
+    fft_all_end,       &
+    fft_init,          &
+    fft_end,           &
+    fft_copy,          &
+    fft_get_dims,      &
+    pad_feq,           &
+    dfft_forward,      &
+    zfft_forward,      &
+    dfft_backward,     &
+    zfft_backward,     &
+    dfft_forward_cl,   &
+    zfft_forward_cl,   &
+    dfft_backward_cl,  &
+    zfft_backward_cl,  &
+    dfft_forward1,     &
+    zfft_forward1,     &
+    dfft_backward1,    &
     zfft_backward1
 
 

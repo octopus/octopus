@@ -118,6 +118,8 @@ module opencl_m
   type(cl_kernel), public :: dkernel_dot_vector
   type(cl_kernel), public :: zkernel_dot_vector
   type(cl_kernel), public :: kernel_nrm2_vector
+  type(cl_kernel), public :: dzmul
+  type(cl_kernel), public :: zzmul
 
   interface opencl_create_buffer
     module procedure opencl_create_buffer_4
@@ -417,6 +419,11 @@ module opencl_m
       call opencl_create_kernel(zkernel_dot_matrix_spinors, prog, "zdot_matrix_spinors")
       call opencl_create_kernel(kernel_nrm2_vector, prog, "nrm2_vector")
       call opencl_release_program(prog)
+
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/mul.cl')
+      call opencl_create_kernel(dzmul, prog, "dzmul")
+      call opencl_create_kernel(zzmul, prog, "zzmul")
+      call opencl_release_program(prog)
 #endif
       call messages_print_stress(stdout)
 
@@ -590,6 +597,7 @@ module opencl_m
         call opencl_release_kernel(dkernel_dot_vector)
         call opencl_release_kernel(zkernel_dot_vector)
         call opencl_release_kernel(zkernel_dot_matrix_spinors)
+
         
         call clReleaseCommandQueue(opencl%command_queue, ierr)
 
