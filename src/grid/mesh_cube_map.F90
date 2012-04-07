@@ -38,15 +38,15 @@ module mesh_cube_map_m
 
   type mesh_cube_map_t
     integer          :: nmap      !< The number of maps
-    integer, pointer :: map(:, :) !< DOCUMENTATION NEEDED
+    integer, pointer :: map(:, :)
   end type mesh_cube_map_t
 
-  integer, public, parameter :: MCM_POINT = 1, MCM_COUNT = 2
+  integer, public, parameter :: MCM_POINT = 4, MCM_COUNT = 5
 
 contains
 
   ! ---------------------------------------------------------
-  !>  DOCUMENTATION NEEDED
+
   subroutine mesh_cube_map_init(this, idx, np_global)
     type(mesh_cube_map_t),         intent(out) :: this
     type(index_t),                 intent(in)  :: idx
@@ -60,7 +60,7 @@ contains
     if (idx%sb%dim <= 3) then
       do step = 1, 2
         if(step == 2) then
-          SAFE_ALLOCATE(this%map(1:2, 1:this%nmap))
+          SAFE_ALLOCATE(this%map(1:5, 1:this%nmap))
         end if
 
         this%nmap = 0
@@ -73,6 +73,8 @@ contains
           if(any(i1(1:2) /= i2(1:2)) .or. i1(3) /= i2(3) + 1) then
             INCR(this%nmap, 1)
             if(step == 2) then
+              this%map(1:3, this%nmap) = 0
+              call index_to_coords(idx, idx%sb%dim, ip, this%map(1:, this%nmap))
               this%map(MCM_POINT, this%nmap) = ip
               this%map(MCM_COUNT, this%nmap) = 1
             end if

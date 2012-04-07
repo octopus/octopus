@@ -164,31 +164,15 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   ASSERT(associated(mesh%cube_map%map))
   ASSERT(mesh%sb%dim <= 3)
 
-  if(associated(mesh%idx%lxyz)) then
-
-    do im = 1, mesh%cube_map%nmap
-      ip = mesh%cube_map%map(MCM_POINT, im)
-      nn = mesh%cube_map%map(MCM_COUNT, im)
-
-      ix = mesh%idx%lxyz(ip, 1) + cube%center(1)
-      iy = mesh%idx%lxyz(ip, 2) + cube%center(2)
-      iz = mesh%idx%lxyz(ip, 3) + cube%center(3)
-      forall(ii = 0:nn - 1) cf%X(rs)(ix, iy, iz + ii) = gmf(ip + ii)
-    end do
-
-  else
-
-    ixyz = 0
-    do im = 1, mesh%cube_map%nmap
-      ip = mesh%cube_map%map(MCM_POINT, im)
-      nn = mesh%cube_map%map(MCM_COUNT, im)
-
-      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
-      ixyz = ixyz + cube%center
-      forall(ii = 0:nn - 1) cf%X(rs)(ixyz(1), ixyz(2), ixyz(3) + ii) = gmf(ip + ii)
-    end do
-
-  end if
+  do im = 1, mesh%cube_map%nmap
+    ix = mesh%cube_map%map(1, im) + cube%center(1)
+    iy = mesh%cube_map%map(2, im) + cube%center(2)
+    iz = mesh%cube_map%map(3, im) + cube%center(3)
+    
+    ip = mesh%cube_map%map(MCM_POINT, im)
+    nn = mesh%cube_map%map(MCM_COUNT, im)
+    forall(ii = 0:nn - 1) cf%X(rs)(ix, iy, iz + ii) = gmf(ip + ii)
+  end do
 
   if(local_) then
     SAFE_DEALLOCATE_P(gmf)
@@ -269,32 +253,16 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
   ASSERT(associated(mesh%cube_map%map))
 
-  if(associated(mesh%idx%lxyz)) then
-
-    do im = 1, mesh%cube_map%nmap
-      ip = mesh%cube_map%map(MCM_POINT, im)
-      nn = mesh%cube_map%map(MCM_COUNT, im)
-      ix = mesh%idx%lxyz(ip, 1) + cube%center(1)
-      iy = mesh%idx%lxyz(ip, 2) + cube%center(2)
-      iz = mesh%idx%lxyz(ip, 3) + cube%center(3)
-      forall(ii = 0:nn - 1) gmf(ip + ii) = realspace(ix, iy, iz + ii)
-    end do
-
-  else
-
-    ixyz = 0
-
-    do im = 1, mesh%cube_map%nmap
-      ip = mesh%cube_map%map(MCM_POINT, im)
-      nn = mesh%cube_map%map(MCM_COUNT, im)
-
-      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
-      ixyz = ixyz + cube%center
-
-      forall(ii = 0:nn - 1) gmf(ip + ii) = realspace(ixyz(1), ixyz(2), ixyz(3) + ii)
-    end do
-
-  end if
+  do im = 1, mesh%cube_map%nmap
+    ix = mesh%cube_map%map(1, im) + cube%center(1)
+    iy = mesh%cube_map%map(2, im) + cube%center(2)
+    iz = mesh%cube_map%map(3, im) + cube%center(3)
+    
+    ip = mesh%cube_map%map(MCM_POINT, im)
+    nn = mesh%cube_map%map(MCM_COUNT, im)
+    
+    forall(ii = 0:nn - 1) gmf(ip + ii) = realspace(ix, iy, iz + ii)
+  end do
 
   if(cf%in_device_memory) then
     SAFE_DEALLOCATE_P(realspace)
@@ -381,11 +349,11 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, map)
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
     
-      ix = mesh%idx%lxyz(ip, 1) + cube%center(1)
+      ix = mesh%cube_map%map(1, im) + cube%center(1)
       if (ix >= min_x .and. ix < max_x) then
-        iy = mesh%idx%lxyz(ip, 2) + cube%center(2)
+        iy = mesh%cube_map%map(2, im) + cube%center(2)
         if (iy >= min_y .and. iy < max_y) then
-          iz = mesh%idx%lxyz(ip, 3) + cube%center(3)
+          iz = mesh%cube_map%map(3, im) + cube%center(3)
           do ii = 0, nn - 1
             if (iz+ii >= min_z .and. iz+ii < max_z) then
               cf%X(rs)(ix-min_x+1, iy-min_y+1, iz+ii-min_z+1) = mf(ip + ii)
@@ -458,7 +426,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
-      ixyz(1:3) = mesh%idx%lxyz(ip, 1:3) + cube%center(1:3)
+      ixyz(1:3) = mesh%cube_map%map(1:3, im) + cube%center(1:3)
 
       forall(ii = 0:nn - 1) mf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
     end do
