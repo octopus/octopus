@@ -210,7 +210,7 @@ contains
     integer,           intent(inout) :: nn(3)    !< Size of the box
     integer,           intent(in)    :: dim      !< Dimensions of the box
     integer,           intent(in)    :: type     !< The type of the FFT; real or complex
-    integer,           intent(in)    :: library  !< Library of FFT
+    integer,           intent(in)    :: library  !< FFT library to be used. Can be overridden.
     logical,           intent(in)    :: optimize(3) !< whether we should optimize grid in each direction
     integer,           intent(in)    :: optimize_parity(3) !< choose optimized grid in each direction as
                                                  !! even (0), odd (1), or whatever (negative).
@@ -218,6 +218,7 @@ contains
 
     integer :: ii, jj, fft_dim, idir, column_size, row_size, alloc_size, ierror, n3
     integer :: n_1, n_2, n_3, nn_temp(3), parity, status
+    integer :: library_
     character(len=100) :: str_tmp
 #ifdef HAVE_CLAMDFFT
     integer(8), allocatable :: stride(:), stride_inv(:)
@@ -241,10 +242,31 @@ contains
     end if
 
     if(fft_dim > 3) call messages_not_implemented('FFT for dimension > 3')
-    if(fft_dim < 3 .and. library == FFTLIB_PFFT) &
+
+    library_ = library
+
+    if(library_ == FFTLIB_CLAMD) then
+
+      nn_temp(1:fft_dim) = nn(1:fft_dim)
+      do ii = 1, fft_dim
+        ! the AMD OpenCL FFT only supports sizes 2, 3 and 5
+        nn_temp(ii) = fft_size(nn(ii), (/2, 3, 5/))
+        if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
+      end do 
+      
+      ! if we can't optimize, in some cases we can't use the library
+      if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
+        call messages_write('Invalid grid size for clAmdFft. FFTW will be used instead.')
+        call messages_warning()
+        library_ = FFTLIB_FFTW
+      endif
+      
+    end if
+
+    if(fft_dim < 3 .and. library_ == FFTLIB_PFFT) &
          call messages_not_implemented('PFFT support for dimension < 3')
 
-    if(library /= FFTLIB_CLAMD) then
+    if(library_ /= FFTLIB_CLAMD) then
       ! FFT optimization
       if(any(optimize_parity(1:fft_dim) > 1)) then
         message(1) = "Internal error in fft_init: optimize_parity must be negative, 0, or 1."
@@ -262,21 +284,6 @@ contains
         call messages_warning(1)
       endif
     
-    else
-
-      nn_temp(1:fft_dim) = nn(1:fft_dim)
-      do ii = 1, fft_dim
-        ! the AMD OpenCL FFT only supports sizes 2, 3 and 5
-        nn_temp(ii) = fft_size(nn(ii), (/2, 3, 5/))
-        if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
-      end do 
-      
-      ! if we can't optimize, in some cases we can't use the library
-      if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
-        call messages_write('Invalid grid size for clAmdFft.')
-        call messages_fatal()
-      endif
-
     end if
 
     ! find out if fft has already been allocated
@@ -284,7 +291,7 @@ contains
     do ii = FFT_MAX, 1, -1
       if(fft_refs(ii) /= FFT_NULL) then
         if(all(nn(1:dim) == fft_array(ii)%rs_n_global(1:dim)) .and. type == fft_array(ii)%type &
-             .and. library == fft_array(ii)%library) then
+             .and. library_ == fft_array(ii)%library) then
           this = fft_array(ii)              ! return a copy
           fft_refs(ii) = fft_refs(ii) + 1  ! increment the ref count
           if (present(mpi_comm)) mpi_comm = fft_array(ii)%comm ! also return the MPI communicator
@@ -306,7 +313,7 @@ contains
     fft_refs(jj) = 1
     fft_array(jj)%slot     = jj
     fft_array(jj)%type     = type
-    fft_array(jj)%library  = library
+    fft_array(jj)%library  = library_
     fft_array(jj)%rs_n_global(1:dim) = nn(1:dim)
     fft_array(jj)%rs_n_global(dim+1:) = 1
     nullify(fft_array(jj)%drs_data)
@@ -314,7 +321,7 @@ contains
     nullify(fft_array(jj)%fs_data)
 
     ! Initialize parallel communicator
-    if (library == FFTLIB_PFFT) then
+    if (library_ == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
       call dpfft_init()
 
@@ -334,7 +341,7 @@ contains
     if (present(mpi_comm)) mpi_comm = fft_array(jj)%comm
 
     ! Get dimentions of arrays
-    select case (library)
+    select case (library_)
     case (FFTLIB_FFTW)
       call fftw_get_dims(fft_array(jj)%rs_n_global, type == FFT_REAL, fft_array(jj)%fs_n_global)
       fft_array(jj)%rs_n = fft_array(jj)%rs_n_global
@@ -383,7 +390,7 @@ contains
     end select
 
     ! Prepare plans
-    select case (library)
+    select case (library_)
     case (FFTLIB_FFTW)
       call fftw_prepare_plan(fft_array(jj)%planf, fft_dim, fft_array(jj)%rs_n_global, &
            type == FFT_REAL, FFTW_FORWARD, fft_prepare_plan+FFTW_UNALIGNED)
@@ -475,7 +482,7 @@ contains
     enddo
     write(str_tmp, '(i2)') jj
     message(1) = trim(message(1)) // trim(str_tmp)
-    select case (library)
+    select case (library_)
     case (FFTLIB_FFTW)
       message(2) = "Info: FFT library = FFTW3"
       call messages_info(2)

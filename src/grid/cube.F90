@@ -58,7 +58,6 @@ module cube_m
     integer, pointer :: xlocal(:)   !< where does each process start when gathering a function
     integer, pointer :: local(:,:)  !< local to global map used when gathering a function
 
-    integer :: fft_library      !< library used to perform the fft
     type(fft_t), pointer :: fft !< the fft object
   end type cube_t
 
@@ -75,7 +74,7 @@ contains
     integer, optional, intent(out) :: nn_out(3) !< What are the FFT dims?
                                                 !! If optimized, may be different from input nn.
 
-    integer :: mpi_comm, tmp_n(3), fft_type_, ii, optimize_parity(3)
+    integer :: mpi_comm, tmp_n(3), fft_type_, ii, optimize_parity(3), default_lib, fft_library_
     logical :: optimize(3)
 
     PUSH_SUB(cube_init)
@@ -89,7 +88,7 @@ contains
     if (fft_type_ /= FFT_NONE) then
 
       if (present(fft_library)) then
-        cube%fft_library = fft_library
+        fft_library_ = fft_library
       else
         !%Variable FFTLibrary
         !%Type logical
@@ -104,16 +103,20 @@ contains
         !%Option clfft 3
         !% (experimental) Uses clAmdFft (GPU) library, which has to be linked.
         !%End
-        call parse_integer(datasets_check('FFTLibrary'), FFTLIB_FFTW, cube%fft_library)
+        default_lib = FFTLIB_FFTW
+#ifdef HAVE_CLAMDFFT
+        if(opencl_is_enabled()) default_lib = FFTLIB_CLAMD
+#endif
+        call parse_integer(datasets_check('FFTLibrary'), default_lib, fft_library_)
       end if
 #ifndef HAVE_PFFT
-      if (cube%fft_library == FFTLIB_PFFT) then
+      if (fft_library_ == FFTLIB_PFFT) then
         write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
         call messages_fatal(1)
       end if
 #endif
 
-      if (cube%fft_library == FFTLIB_CLAMD) then
+      if (fft_library_ == FFTLIB_CLAMD) then
 #ifndef HAVE_CLAMDFFT
         call messages_write('You have selected the OpenCL FFT, but Octopus was compiled', new_line = .true.)
         call messages_write('without clAmdFft (or OpenCL) support.')
@@ -126,11 +129,11 @@ contains
       end if
 
     else
-      cube%fft_library = FFTLIB_NONE
+      fft_library_ = FFTLIB_NONE
     end if
 
-    cube%parallel_in_domains = cube%fft_library == FFTLIB_PFFT
-    if (cube%fft_library == FFTLIB_NONE) then
+    cube%parallel_in_domains = fft_library_ == FFTLIB_PFFT
+    if (fft_library_ == FFTLIB_NONE) then
       cube%rs_n_global = nn
       cube%fs_n_global = nn
       cube%rs_n = cube%rs_n_global
@@ -151,7 +154,7 @@ contains
       if(present(dont_optimize)) then
         if(dont_optimize) optimize = .false.
       endif
-      call fft_init(cube%fft, tmp_n, sb%dim, fft_type_, cube%fft_library, optimize, optimize_parity, &
+      call fft_init(cube%fft, tmp_n, sb%dim, fft_type_, fft_library_, optimize, optimize_parity, &
            mpi_comm=mpi_comm)
       if(present(nn_out)) nn_out(1:3) = tmp_n(1:3)
 

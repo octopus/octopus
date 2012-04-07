@@ -30,7 +30,7 @@ subroutine X(cube_function_alloc_rs)(cube, cf)
 
   ASSERT(.not.associated(cf%X(rs)))
 
-  select case(cube%fft_library)
+  select case(cube%fft%library)
   case(FFTLIB_PFFT)
     ASSERT(associated(cube%fft))
     cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
@@ -55,7 +55,7 @@ subroutine X(cube_function_free_rs)(cube, cf)
 
   PUSH_SUB(X(cube_function_free_rs))
 
-  select case(cube%fft_library)
+  select case(cube%fft%library)
   case(FFTLIB_PFFT)
     nullify(cf%X(rs))
   case(FFTLIB_CLAMD)
@@ -65,7 +65,7 @@ subroutine X(cube_function_free_rs)(cube, cf)
     cf%in_device_memory = .false.
 #endif
   case default
-    if (cube%fft_library /= FFTLIB_PFFT) then
+    if (cube%fft%library /= FFTLIB_PFFT) then
       SAFE_DEALLOCATE_P(cf%X(rs))
     end if
   end select

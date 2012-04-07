@@ -88,7 +88,7 @@ contains
     n2 = max(1, cube%fs_n(2))
     n3 = max(1, cube%fs_n(3))
 
-    select case(cube%fft_library)
+    select case(cube%fft%library)
     case(FFTLIB_PFFT)
       ASSERT(associated(cube%fft))  
       if(any(cube%fs_n(1:3) == 0)) then
@@ -116,7 +116,7 @@ contains
     
     PUSH_SUB(cube_function_free_fs)
 
-    select case(cube%fft_library)
+    select case(cube%fft%library)
     case(FFTLIB_PFFT)
       nullify(cf%fs)
     case(FFTLIB_CLAMD)
