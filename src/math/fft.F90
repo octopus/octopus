@@ -244,7 +244,7 @@ contains
     if(fft_dim < 3 .and. library == FFTLIB_PFFT) &
          call messages_not_implemented('PFFT support for dimension < 3')
 
-    if(library == FFTLIB_PFFT) then
+    if(library /= FFTLIB_CLAMD) then
       ! FFT optimization
       if(any(optimize_parity(1:fft_dim) > 1)) then
         message(1) = "Internal error in fft_init: optimize_parity must be negative, 0, or 1."
