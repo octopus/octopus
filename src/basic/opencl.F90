@@ -1143,19 +1143,43 @@ module opencl_m
 
     end function f90_cl_device_has_extension
 
+    ! ---------------------------------------------------------
+    
+    integer pure function opencl_pad(size, blk) result(pad)
+      integer, intent(in) :: size
+      integer, intent(in) :: blk
+      
+      integer :: mm
+      
+      mm = mod(size, blk)
+      if(mm == 0) then
+        pad = size
+      else
+        pad = size + blk - mm
+      end if
+    end function opencl_pad
+    
     ! ----------------------------------------------------
     
     subroutine opencl_set_buffer_to_zero(buffer, type, nval)
       type(opencl_mem_t), intent(inout) :: buffer
       type(type_t),       intent(in)    :: type
       integer,            intent(in)    :: nval
+
+      integer :: nval_real, bsize
       
       PUSH_SUB(opencl_set_buffer_to_zero)
 
       ASSERT(type == TYPE_CMPLX .or. type == TYPE_FLOAT)
       
-      call opencl_set_kernel_arg(set_zero, 0, buffer)
-      call opencl_kernel_run(set_zero, (/ nval*types_get_size(type)/8 /), (/ 1 /))
+      nval_real = nval*types_get_size(type)/8
+
+      call opencl_set_kernel_arg(set_zero, 0, nval_real)
+      call opencl_set_kernel_arg(set_zero, 1, buffer)
+
+      bsize = opencl_kernel_workgroup_size(set_zero)
+
+      call opencl_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
       call opencl_finish()
       
       POP_SUB(opencl_set_buffer_to_zero)

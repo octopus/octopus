@@ -25,8 +25,10 @@
 #pragma OPENCL EXTENSION cl_amd_fp64 : enable
 #endif
 
-__kernel void set_zero(__global double * aa){
-  aa[get_global_id(0)] = 0.0;
+__kernel void set_zero(const int np, __global double * aa){
+  int ip = get_global_id(0);
+
+  if(ip < np) aa[ip] = 0.0;
 }
 
 __kernel void set_zero_part(const int start, const int end, __global double * restrict aa, const int ldaa){
