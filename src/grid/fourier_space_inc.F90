@@ -27,6 +27,7 @@ subroutine X(cube_function_rs2fs)(cube, cf)
 
   PUSH_SUB(X(cube_function_rs2fs))
 
+  ASSERT(associated(cube%fft))
   ASSERT(cube%fft%library /= FFTLIB_NONE)
 
   if(cf%in_device_memory) then
@@ -48,6 +49,7 @@ subroutine X(cube_function_fs2rs)(cube, cf)
 
   PUSH_SUB(X(cube_function_fs2rs))
 
+  ASSERT(associated(cube%fft))
   ASSERT(cube%fft%library /= FFTLIB_NONE)
 
   if(cf%in_device_memory) then
@@ -72,6 +74,7 @@ subroutine X(fourier_space_op_init)(this, cube, op)
 
   PUSH_SUB(X(fourier_space_op_init))
 
+  ASSERT(associated(cube%fft))
   ASSERT(cube%fft%library /= FFTLIB_NONE)
 
   nullify(this%dop)
@@ -110,6 +113,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
 
   PUSH_SUB(X(fourier_space_op_apply))
 
+  ASSERT(associated(cube%fft))
   ASSERT(cube%fft%library /= FFTLIB_NONE)
 
   call cube_function_alloc_fs(cube, cf)
@@ -185,6 +189,7 @@ subroutine X(mesh_to_fourier) (mesh, mf, cube, cf)
 
   PUSH_SUB(X(mesh_to_fourier))
 
+  ASSERT(associated(cube%fft))
   ASSERT(associated(cf%fs))
 
   cf%fs = M_z0
@@ -213,6 +218,7 @@ subroutine X(fourier_to_mesh) (cube, cf, mesh, mf)
 
   PUSH_SUB(X(fourier_to_mesh))
 
+  ASSERT(associated(cube%fft))
   ASSERT(associated(cf%fs))
 
   do ip = 1, mesh%np_global

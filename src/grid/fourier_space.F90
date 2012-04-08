@@ -82,7 +82,8 @@ contains
 
     PUSH_SUB(cube_function_alloc_fs)
     
-    ASSERT(.not.associated(cf%fs))
+    ASSERT(.not. associated(cf%fs))
+    ASSERT(associated(cube%fft))
 
     n1 = max(1, cube%fs_n(1))
     n2 = max(1, cube%fs_n(2))
@@ -115,6 +116,8 @@ contains
     type(cube_function_t), intent(inout) :: cf
     
     PUSH_SUB(cube_function_free_fs)
+
+    ASSERT(associated(cube%fft))
 
     select case(cube%fft%library)
     case(FFTLIB_PFFT)
