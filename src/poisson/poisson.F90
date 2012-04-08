@@ -97,6 +97,7 @@ module poisson_m
     type(cube_t)      :: cube
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
     type(mg_solver_t) :: mg
+    type(poisson_fft_t) :: fft_solver
     FLOAT   :: poisson_soft_coulomb_param = M_ONE
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
@@ -428,7 +429,7 @@ contains
 
     select case(this%method)
     case(POISSON_FFT)
-      call poisson_fft_end()
+      call poisson_fft_end(this%fft_solver)
       if(this%kernel == POISSON_FFT_KERNEL_CORRECTED) call poisson_corrections_end(this%corrector)
       has_cube = .true.
 
@@ -585,13 +586,14 @@ contains
 
     case(POISSON_FFT)
       if(this%kernel /= POISSON_FFT_KERNEL_CORRECTED) then
-        call poisson_fft_solve(der%mesh, this%cube, pot, rho, this%mesh_cube_map)
+        call poisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
       else
         SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
         SAFE_ALLOCATE(vh_correction(1:der%mesh%np_part))
         
         call correct_rho(this%corrector, der, rho, rho_corrected, vh_correction)
-        call poisson_fft_solve(der%mesh, this%cube, pot, rho_corrected, this%mesh_cube_map, average_to_zero = .true.)
+        call poisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho_corrected, this%mesh_cube_map, &
+          average_to_zero = .true.)
         
         pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
         SAFE_DEALLOCATE_A(rho_corrected)

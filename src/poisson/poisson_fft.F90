@@ -49,15 +49,8 @@ module poisson_fft_m
 
   private
   public ::                  &
-    poisson_fft_build_1d_0d, &
-    poisson_fft_build_1d_1d, &
-    poisson_fft_build_2d_0d, &
-    poisson_fft_build_2d_1d, &
-    poisson_fft_build_2d_2d, &
-    poisson_fft_build_3d_0d, &
-    poisson_fft_build_3d_1d, &
-    poisson_fft_build_3d_2d, &
-    poisson_fft_build_3d_3d, &
+    poisson_fft_t,           &
+    poisson_fft_init,        &
     poisson_fft_end,         &
     poisson_fft_solve
 
@@ -69,14 +62,65 @@ module poisson_fft_m
        POISSON_FFT_KERNEL_NOCUT     =  3,      &
        POISSON_FFT_KERNEL_CORRECTED =  4
 
-  type(fourier_space_op_t) :: coulb
-
+  type poisson_fft_t
+    type(fourier_space_op_t) :: coulb
+  end type poisson_fft_t
 contains
 
+  subroutine poisson_fft_init(this, mesh, cube, kernel, soft_coulb_param)
+    type(poisson_fft_t), intent(out)   :: this
+    type(mesh_t),        intent(inout) :: mesh
+    type(cube_t),        intent(inout) :: cube
+    integer,             intent(in)    :: kernel
+    FLOAT, optional,     intent(in)    :: soft_coulb_param
+
+    PUSH_SUB(poisson_fft_init)
+    
+    select case(mesh%sb%dim)
+    case(1)
+      ASSERT(present(soft_coulb_param))
+      select case(kernel)
+      case(POISSON_FFT_KERNEL_SPH)
+        call poisson_fft_build_1d_0d(this, mesh, cube, soft_coulb_param)
+      case(POISSON_FFT_KERNEL_NOCUT)
+        call poisson_fft_build_1d_1d(this, mesh, cube, soft_coulb_param)
+      end select
+
+    case(2)
+      select case(kernel)
+      case(POISSON_FFT_KERNEL_SPH)
+        call poisson_fft_build_2d_0d(this, mesh, cube)
+      case(POISSON_FFT_KERNEL_CYL)
+        call poisson_fft_build_2d_1d(this, mesh, cube)
+      case(POISSON_FFT_KERNEL_NOCUT)
+        call poisson_fft_build_2d_2d(this, mesh, cube)
+      end select
+      
+    case(3)
+      select case(kernel)
+      case(POISSON_FFT_KERNEL_SPH, POISSON_FFT_KERNEL_CORRECTED)
+        call poisson_fft_build_3d_0d(this, mesh, cube, kernel)
+        
+      case(POISSON_FFT_KERNEL_CYL)
+        call poisson_fft_build_3d_1d(this, mesh, cube)
+        
+      case(POISSON_FFT_KERNEL_PLA)
+        call poisson_fft_build_3d_2d(this, mesh, cube)
+        
+      case(POISSON_FFT_KERNEL_NOCUT)
+        call poisson_fft_build_3d_3d(this, mesh, cube)
+        
+      end select
+    end select
+
+    POP_SUB(poisson_fft_init)
+  end subroutine poisson_fft_init
+
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_3d_3d(mesh, cube)
-    type(mesh_t), intent(inout) :: mesh
-    type(cube_t), intent(inout) :: cube
+  subroutine poisson_fft_build_3d_3d(this, mesh, cube)
+    type(poisson_fft_t), intent(inout) :: this
+    type(mesh_t),        intent(inout) :: mesh
+    type(cube_t),        intent(inout) :: cube
 
     integer :: ix, iy, iz, ixx(3), db(3), idim
     FLOAT :: temp(3), modg2
@@ -121,7 +165,7 @@ contains
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
-    call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
+    call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     POP_SUB(poisson_fft_build_3d_3d)
@@ -130,9 +174,10 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_3d_2d(mesh, cube)
-    type(mesh_t), intent(inout) :: mesh
-    type(cube_t), intent(inout) :: cube
+  subroutine poisson_fft_build_3d_2d(this, mesh, cube)
+    type(poisson_fft_t), intent(inout) :: this
+    type(mesh_t),        intent(inout) :: mesh
+    type(cube_t),        intent(inout) :: cube
 
     integer :: ix, iy, iz, ixx(3), db(3), idim
     FLOAT :: temp(3), modg2
@@ -196,7 +241,7 @@ contains
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
-    call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
+    call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     POP_SUB(poisson_fft_build_3d_2d)
@@ -205,9 +250,10 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_3d_1d(mesh, cube)
-    type(mesh_t), intent(inout) :: mesh
-    type(cube_t), intent(inout) :: cube
+  subroutine poisson_fft_build_3d_1d(this, mesh, cube)
+    type(poisson_fft_t), intent(inout) :: this
+    type(mesh_t),        intent(inout) :: mesh
+    type(cube_t),        intent(inout) :: cube
 
     type(spline_t)     :: cylinder_cutoff_f
     FLOAT, allocatable :: x(:), y(:)
@@ -315,7 +361,7 @@ contains
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
-    call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
+    call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     SAFE_DEALLOCATE_A(x)
@@ -326,10 +372,11 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_3d_0d(mesh, cube, kernel)
-    type(mesh_t), intent(inout) :: mesh
-    type(cube_t), intent(inout) :: cube
-    integer,      intent(in)    :: kernel
+  subroutine poisson_fft_build_3d_0d(this, mesh, cube, kernel)
+    type(poisson_fft_t), intent(inout) :: this
+    type(mesh_t),        intent(inout) :: mesh
+    type(cube_t),        intent(inout) :: cube
+    integer,             intent(in)    :: kernel
 
     integer :: ix, iy, iz, ixx(3), db(3), idim, lx, ly, lz, n1, n2, n3
     FLOAT :: temp(3), modg2
@@ -407,7 +454,7 @@ contains
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
-    call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
+    call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     POP_SUB(poisson_fft_build_3d_0d)
@@ -416,9 +463,10 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_2d_0d(mesh, cube)
-    type(mesh_t), intent(in) :: mesh
-    type(cube_t), intent(inout) :: cube
+  subroutine poisson_fft_build_2d_0d(this, mesh, cube)
+    type(poisson_fft_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(cube_t),        intent(inout) :: cube
 
     type(spline_t) :: besselintf
     integer :: i, ix, iy, ixx(2), db(2), npoints
@@ -476,7 +524,7 @@ contains
       end do
     end do
 
-    call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
+    call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     SAFE_DEALLOCATE_A(x)
@@ -488,9 +536,10 @@ contains
     
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_2d_1d(mesh, cube)
-    type(mesh_t), intent(in) :: mesh
-    type(cube_t), intent(inout) :: cube
+  subroutine poisson_fft_build_2d_1d(this, mesh, cube)
+    type(poisson_fft_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(cube_t),        intent(inout) :: cube
 
     integer :: ix, iy, ixx(2), db(2)
     FLOAT :: temp(2), vec, r_c, gx, gy
@@ -526,7 +575,7 @@ contains
       end do
     end do
 
-    call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
+    call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
 
@@ -536,9 +585,10 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_2d_2d(mesh, cube)
-    type(mesh_t), intent(in) :: mesh
-    type(cube_t), intent(inout) :: cube
+  subroutine poisson_fft_build_2d_2d(this, mesh, cube)
+    type(poisson_fft_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(cube_t),        intent(inout) :: cube
 
     integer :: ix, iy, ixx(2), db(2)
     FLOAT :: temp(2), vec
@@ -562,7 +612,7 @@ contains
       end do
     end do
 
-    call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
+    call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS)
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     POP_SUB(poisson_fft_build_2d_2d)
@@ -571,10 +621,11 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_1d_1d(mesh, cube, poisson_soft_coulomb_param)
-    type(mesh_t), intent(in) :: mesh
-    type(cube_t), intent(inout) :: cube
-    FLOAT,        intent(in) :: poisson_soft_coulomb_param
+  subroutine poisson_fft_build_1d_1d(this, mesh, cube, poisson_soft_coulomb_param)
+    type(poisson_fft_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(cube_t),        intent(inout) :: cube
+    FLOAT,               intent(in)    :: poisson_soft_coulomb_param
 
     integer            :: ix
     FLOAT              :: g
@@ -591,7 +642,7 @@ contains
       fft_coulb_fs(ix, 1, 1) = M_TWO * loct_bessel_k0(poisson_soft_coulomb_param*g)
     end do
 
-    call dfourier_space_op_init(coulb, cube, fft_coulb_fs)
+    call dfourier_space_op_init(this%coulb, cube, fft_coulb_fs)
     SAFE_DEALLOCATE_A(fft_coulb_fs)
     
     POP_SUB(poisson_fft_build_1d_1d)
@@ -600,10 +651,11 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_1d_0d(mesh, cube, poisson_soft_coulomb_param)
-    type(mesh_t), intent(in) :: mesh
-    type(cube_t), intent(inout) :: cube
-    FLOAT,        intent(in) :: poisson_soft_coulomb_param
+  subroutine poisson_fft_build_1d_0d(this, mesh, cube, poisson_soft_coulomb_param)
+    type(poisson_fft_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(cube_t),        intent(inout) :: cube
+    FLOAT,               intent(in)    :: poisson_soft_coulomb_param
 
     integer            :: box(1), ixx(1), ix
     FLOAT              :: temp(1), g, r_c
@@ -626,7 +678,7 @@ contains
       fft_coulb_fs(ix, 1, 1) = poisson_cutoff_1D_0D(g, poisson_soft_coulomb_param, r_c)
     end do
 
-    call dfourier_space_op_init(coulb, cube, fft_coulb_fs)
+    call dfourier_space_op_init(this%coulb, cube, fft_coulb_fs)
     SAFE_DEALLOCATE_A(fft_coulb_fs)
     
     POP_SUB(poisson_fft_build_1d_0d)
@@ -635,23 +687,26 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_end()
+  subroutine poisson_fft_end(this)
+    type(poisson_fft_t), intent(inout) :: this
+
     PUSH_SUB(poisson_fft.end)
 
-    call fourier_space_op_end(coulb)
+    call fourier_space_op_end(this%coulb)
 
     POP_SUB(poisson_fft.end)
   end subroutine poisson_fft_end
 
   !-----------------------------------------------------------------
 
-  subroutine poisson_fft_solve(mesh, cube, pot, rho, mesh_cube_map, average_to_zero)
-    type(mesh_t),      intent(in)  :: mesh
-    type(cube_t),      intent(inout) :: cube
-    FLOAT,             intent(out) :: pot(:)
-    FLOAT,             intent(in)  :: rho(:)
-    type(mesh_cube_parallel_map_t), intent(in) :: mesh_cube_map
-    logical, optional, intent(in)  :: average_to_zero
+  subroutine poisson_fft_solve(this, mesh, cube, pot, rho, mesh_cube_map, average_to_zero)
+    type(poisson_fft_t),            intent(inout) :: this
+    type(mesh_t),                   intent(in)    :: mesh
+    type(cube_t),                   intent(inout) :: cube
+    FLOAT,                          intent(out)   :: pot(:)
+    FLOAT,                          intent(in)    :: rho(:)
+    type(mesh_cube_parallel_map_t), intent(in)    :: mesh_cube_map
+    logical, optional, intent(in)                 :: average_to_zero
 
     logical :: average_to_zero_
     FLOAT :: average
@@ -678,7 +733,7 @@ contains
     end if
 
     ! apply the Couloumb term in Fourier space
-    call dfourier_space_op_apply(coulb, cube, cf)
+    call dfourier_space_op_apply(this%coulb, cube, cf)
 
     !now the cube has the potential
     if(average_to_zero_) average = cube_function_surface_average(cube, cf)
