@@ -38,6 +38,7 @@ module poisson_m
   use messages_m
   use mpi_m
   use multicomm_m
+  use opencl_m
   use par_vec_m
   use parser_m
   use poisson_cg_m
@@ -210,7 +211,7 @@ contains
 
       if(der%mesh%use_curvilinear.and.this%method.ne.POISSON_DIRECT_SUM_1D) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
-        message(2) = 'Poisson solver is -1 ("direct summation in one dimension").'
+        message(2) = 'Poisson solver is <tt>direct1D</tt>.'
         call messages_fatal(2)
       end if
 
@@ -236,7 +237,7 @@ contains
 
       if(der%mesh%use_curvilinear .and. (this%method .ne. -der%mesh%sb%dim) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
-        message(2) = 'Poisson solver is -2 ("direct summation in two dimensions").'
+        message(2) = 'Poisson solver is <tt>direct2D</tt>.'
         call messages_fatal(2)
       end if
 
@@ -246,6 +247,9 @@ contains
       default_solver = POISSON_ISF
 #else
       default_solver = POISSON_FFT_SPH
+#endif
+#ifdef HAVE_CLAMDFFT
+      if(opencl_is_enabled()) default_solver = POISSON_FFT_SPH
 #endif
 
       if (der%mesh%use_curvilinear) default_solver = POISSON_CG_CORRECTED
