@@ -27,12 +27,14 @@ subroutine poisson1d_init(this)
   call parse_float(datasets_check('Poisson1DSoftCoulombParam'), &
     M_ONE, this%poisson_soft_coulomb_param)
 
-  select case(this%method)
-  case(POISSON_FFT_SPH)
-    call poisson_fft_build_1d_0d(this%der%mesh, this%cube, this%poisson_soft_coulomb_param)
-  case(POISSON_FFT_NOCUT)
-    call poisson_fft_build_1d_1d(this%der%mesh, this%cube, this%poisson_soft_coulomb_param)
-  end select
+  if(this%method == POISSON_FFT) then
+    select case(this%kernel)
+    case(POISSON_FFT_KERNEL_SPH)
+      call poisson_fft_build_1d_0d(this%der%mesh, this%cube, this%poisson_soft_coulomb_param)
+    case(POISSON_FFT_KERNEL_NOCUT)
+      call poisson_fft_build_1d_1d(this%der%mesh, this%cube, this%poisson_soft_coulomb_param)
+    end select
+  end if
 
   POP_SUB(poisson1d_init)
 end subroutine poisson1d_init

@@ -23,14 +23,16 @@ subroutine poisson2D_init(this)
 
   PUSH_SUB(poisson2D_init)
 
-  select case(this%method)
-  case(POISSON_FFT_SPH)
-    call poisson_fft_build_2d_0d(this%der%mesh, this%cube)
-  case(POISSON_FFT_CYL)
-    call poisson_fft_build_2d_1d(this%der%mesh, this%cube)
-  case(POISSON_FFT_NOCUT)
-    call poisson_fft_build_2d_2d(this%der%mesh, this%cube)
-  end select
+  if(this%method == POISSON_FFT) then
+    select case(this%kernel)
+    case(POISSON_FFT_KERNEL_SPH)
+      call poisson_fft_build_2d_0d(this%der%mesh, this%cube)
+    case(POISSON_FFT_KERNEL_CYL)
+      call poisson_fft_build_2d_1d(this%der%mesh, this%cube)
+    case(POISSON_FFT_KERNEL_NOCUT)
+      call poisson_fft_build_2d_2d(this%der%mesh, this%cube)
+    end select
+  end if
 
   POP_SUB(poisson2D_init)
 

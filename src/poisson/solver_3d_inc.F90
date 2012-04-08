@@ -32,8 +32,14 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
 
   PUSH_SUB(poisson3D_init)
 
-  valid_solver = (this%method >= POISSON_FFT_SPH .and. this%method<=POISSON_SETE) &
-    .or. this%method == POISSON_DIRECT_SUM_3D .or. this%method == POISSON_FMM
+  select case(this%method)
+  case(POISSON_DIRECT_SUM_3D, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
+      valid_solver = .true.
+  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_SETE)
+    valid_solver = .true.
+  case default
+    valid_solver = .false.
+  end select
 
   ASSERT(valid_solver)
 
@@ -124,24 +130,28 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   case(POISSON_ISF)
     call poisson_isf_init(this%isf_solver, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
 
-  case(POISSON_FFT_SPH)
-    call poisson_fft_build_3d_0d(this%der%mesh, this%cube, this%method)
+  case(POISSON_FFT)
 
-  case(POISSON_FFT_CYL)
-    call poisson_fft_build_3d_1d(this%der%mesh, this%cube)
+    select case(this%kernel)
+    case(POISSON_FFT_KERNEL_SPH)
+      call poisson_fft_build_3d_0d(this%der%mesh, this%cube, this%kernel)
+      
+    case(POISSON_FFT_KERNEL_CYL)
+      call poisson_fft_build_3d_1d(this%der%mesh, this%cube)
 
-  case(POISSON_FFT_PLA)
-    call poisson_fft_build_3d_2d(this%der%mesh, this%cube)
-
-  case(POISSON_FFT_NOCUT)
-    call poisson_fft_build_3d_3d(this%der%mesh, this%cube)
-
-  case(POISSON_FFT_CORRECTED)
-    call poisson_fft_build_3d_0d(this%der%mesh, this%cube, this%method)
-    call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
-    write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
-    call messages_info(1)
-    call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+    case(POISSON_FFT_KERNEL_PLA)
+      call poisson_fft_build_3d_2d(this%der%mesh, this%cube)
+      
+    case(POISSON_FFT_KERNEL_NOCUT)
+      call poisson_fft_build_3d_3d(this%der%mesh, this%cube)
+      
+    case(POISSON_FFT_KERNEL_CORRECTED)
+      call poisson_fft_build_3d_0d(this%der%mesh, this%cube, this%kernel)
+      call parse_integer(datasets_check('PoissonSolverMaxMultipole'), 2, maxl)
+      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
+      call messages_info(1)
+      call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+    end select
 
   case(POISSON_SETE)
     nx = this%der%mesh%idx%ll(1) 

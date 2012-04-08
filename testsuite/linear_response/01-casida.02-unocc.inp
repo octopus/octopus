@@ -36,4 +36,5 @@ EigenSolverMaxIter = 20
 
 NumberUnoccStates = 9
 
-PoissonSolver = fft_corrected
+PoissonSolver = fft
+PoissonFFTKernel = multipole_correction

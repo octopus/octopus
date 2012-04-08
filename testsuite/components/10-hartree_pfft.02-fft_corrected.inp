@@ -8,7 +8,8 @@ BoxShape = sphere
 Radius  = 8.0
 Spacing = 0.3
 
-PoissonSolver = fft_corrected
+PoissonSolver = fft
+PoissonFFTKernel = multipole_correction
 
 FFTLibrary = pfft
 

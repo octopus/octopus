@@ -48,7 +48,8 @@ EigenSolverFinalTolerance = 1e-5
 EigenSolverFinalToleranceIteration = 6
 EigenSolverMaxIter = 25
 
-PoissonSolver = fft_corrected
+PoissonSolver = fft
+PoissonFFTKernel = multipole_correction
 
 ExperimentalFeatures = yes
 ConvRelDens = 4e-6

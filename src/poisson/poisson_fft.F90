@@ -59,14 +59,15 @@ module poisson_fft_m
     poisson_fft_build_3d_2d, &
     poisson_fft_build_3d_3d, &
     poisson_fft_end,         &
-    poisson_fft
+    poisson_fft_solve
 
-  integer, public, parameter :: &
-       POISSON_FFT_SPH       =  0,      &
-       POISSON_FFT_CYL       =  1,      &
-       POISSON_FFT_PLA       =  2,      &
-       POISSON_FFT_NOCUT     =  3,      &
-       POISSON_FFT_CORRECTED =  4
+  integer, public, parameter ::                &
+       POISSON_FFT_KERNEL_NONE      = -1,      &
+       POISSON_FFT_KERNEL_SPH       =  0,      &
+       POISSON_FFT_KERNEL_CYL       =  1,      &
+       POISSON_FFT_KERNEL_PLA       =  2,      &
+       POISSON_FFT_KERNEL_NOCUT     =  3,      &
+       POISSON_FFT_KERNEL_CORRECTED =  4
 
   type(fourier_space_op_t) :: coulb
 
@@ -325,10 +326,10 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_3d_0d(mesh, cube, poisson_solver)
+  subroutine poisson_fft_build_3d_0d(mesh, cube, kernel)
     type(mesh_t), intent(inout) :: mesh
     type(cube_t), intent(inout) :: cube
-    integer,      intent(in)    :: poisson_solver
+    integer,      intent(in)    :: kernel
 
     integer :: ix, iy, iz, ixx(3), db(3), idim, lx, ly, lz, n1, n2, n3
     FLOAT :: temp(3), modg2
@@ -340,7 +341,7 @@ contains
 
     db(1:3) = cube%rs_n_global(1:3)
 
-    if (poisson_solver .ne. POISSON_FFT_CORRECTED) then
+    if (kernel .ne. POISSON_FFT_KERNEL_CORRECTED) then
       call parse_float(datasets_check('PoissonCutoffRadius'),&
         maxval(db(1:3)*mesh%spacing(1:3)/M_TWO), r_c, units_inp%length)
 
@@ -384,17 +385,17 @@ contains
           modg2 = sum(gg(1:3)**2)
             
           if(abs(modg2) > M_EPSILON) then
-            select case(poisson_solver)
-            case(POISSON_FFT_SPH)
+            select case(kernel)
+            case(POISSON_FFT_KERNEL_SPH)
               fft_Coulb_FS(lx, ly, lz) = poisson_cutoff_3D_0D(sqrt(modg2),r_c)/modg2
-            case(POISSON_FFT_CORRECTED)
+            case(POISSON_FFT_KERNEL_CORRECTED)
               fft_Coulb_FS(lx, ly, lz) = M_ONE/modg2
             end select
           else
-            select case(poisson_solver)
-            case(POISSON_FFT_SPH)
+            select case(kernel)
+            case(POISSON_FFT_KERNEL_SPH)
               fft_Coulb_FS(lx, ly, lz) = r_c**2/M_TWO
-            case (POISSON_FFT_CORRECTED)
+            case (POISSON_FFT_KERNEL_CORRECTED)
               fft_Coulb_FS(lx, ly, lz) = M_ZERO
             end select
           end if
@@ -644,7 +645,7 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine poisson_fft(mesh, cube, pot, rho, mesh_cube_map, average_to_zero)
+  subroutine poisson_fft_solve(mesh, cube, pot, rho, mesh_cube_map, average_to_zero)
     type(mesh_t),      intent(in)  :: mesh
     type(cube_t),      intent(inout) :: cube
     FLOAT,             intent(out) :: pot(:)
@@ -698,8 +699,8 @@ contains
     call dcube_function_free_RS(cube, cf) ! memory is no longer needed
 
     POP_SUB(poisson_fft)
-  end subroutine poisson_fft
-
+  end subroutine poisson_fft_solve
+  
 end module poisson_fft_m
 
 !! Local Variables:

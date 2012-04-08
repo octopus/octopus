@@ -35,5 +35,7 @@ EigenSolverMaxIter = 25
 
 ConvRelDens = 1e-6
 
-PoissonSolver = fft_corrected
+PoissonSolver = fft
+PoissonFFTKernel = multipole_correction
+
 
