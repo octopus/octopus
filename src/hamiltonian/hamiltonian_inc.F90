@@ -151,6 +151,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   if (iand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
     call X(hamiltonian_base_local)(hm%hm_base, der%mesh, hm%d, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
+    ASSERT(.not. batch_is_packed(hpsib))
     do ii = 1, nst
       call set_pointers()
       hpsi(1:der%mesh%np) = hpsi(1:der%mesh%np) + hm%ep%vpsl(1:der%mesh%np)*epsi(1:der%mesh%np)
@@ -162,6 +163,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     if(hm%hm_base%apply_projector_matrices) then
       call X(hamiltonian_base_nlocal_finish)(hm%hm_base, der%mesh, hm%d, ik, projection, hpsib)
     else
+      ASSERT(.not. batch_is_packed(hpsib))
       call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
     end if
   end if
@@ -171,24 +173,29 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   end if
 
   if (iand(TERM_OTHERS, terms_) /= 0) then
-    do ii = 1, psib%nst
-      
-      if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
+
+    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
+      ASSERT(.not. batch_is_packed(hpsib))
+      do ii = 1, psib%nst
         call X(exchange_operator)(hm, der, epsib%states(ii)%X(psi), hpsib%states(ii)%X(psi), psib%states(ii)%ist, ik, hm%exx_coef)
-      end if
+      end do
+    end if
 
-    end do
+    if(hm%ab == IMAGINARY_ABSORBING) then
+      ASSERT(.not. batch_is_packed(hpsib))
+      do ii = 1, nst
+        call set_pointers()
+        if(present(time)) call X(vborders)(der, hm, epsi, hpsi)      
+      end do
+    end if
 
-    do ii = 1, nst
-      call set_pointers()
-      if(present(time)) call X(vborders)(der, hm, epsi, hpsi)      
-    end do
   end if
 
-  if (iand(TERM_MGGA, terms_) /= 0) then
+  if (iand(TERM_MGGA, terms_) /= 0 .and. iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
+    ASSERT(.not. batch_is_packed(hpsib))
     do ii = 1, nst
       call set_pointers()
-      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) call X(h_mgga_terms)(hm, der, epsi, hpsi, ik)     
+      call X(h_mgga_terms)(hm, der, epsi, hpsi, ik)
     end do
   end if
 
