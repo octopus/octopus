@@ -137,7 +137,7 @@ subroutine X(opencl_read_buffer_1)(this, size, data, offset)
   call profiling_count_transfers(size, data(1))
   call opencl_finish()
   call profiling_out(prof_read)
-  PUSH_SUB(X(opencl_read_buffer_1))
+  POP_SUB(X(opencl_read_buffer_1))
 
 end subroutine X(opencl_read_buffer_1)
 
@@ -166,8 +166,9 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
 
   call profiling_count_transfers(size, data(1, 1))
   call opencl_finish()
+  
   call profiling_out(prof_read)
-  PUSH_SUB(X(opencl_read_buffer_2))
+  POP_SUB(X(opencl_read_buffer_2))
   
 end subroutine X(opencl_read_buffer_2)
 
@@ -197,7 +198,7 @@ subroutine X(opencl_read_buffer_3)(this, size, data, offset)
   call profiling_count_transfers(size, data(1, 1, 1))
   call opencl_finish()
   call profiling_out(prof_read)
-  PUSH_SUB(X(opencl_read_buffer_3))
+  POP_SUB(X(opencl_read_buffer_3))
   
 end subroutine X(opencl_read_buffer_3)
 
