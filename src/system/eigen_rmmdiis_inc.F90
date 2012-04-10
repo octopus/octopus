@@ -72,10 +72,14 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     bsize = maxst - minst + 1
 
     call batch_init(psib(1), st%d%dim, minst, maxst, psi(:, :, 1, :))
+    call batch_init(resb(1), st%d%dim, minst, maxst, res(:, :, 1, :))
+
+    if(batch_is_packed(st%psib(ib, ik))) then 
+      call batch_pack(psib(1), copy = .false.)
+      call batch_pack(resb(1), copy = .false.)
+    end if
 
     call batch_copy_data(gr%mesh%np, st%psib(ib, ik), psib(1))
-
-    call batch_init(resb(1), st%d%dim, minst, maxst, res(:, :, 1, :))
 
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(1), resb(1), ik)
     nops = nops + bsize
@@ -93,6 +97,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     done = 0
 
     call mesh_batch_nrm2(gr%mesh, resb(1), nrm)
+
+    if(batch_is_packed(st%psib(ib, ik))) then 
+      call batch_unpack(psib(1))
+      call batch_unpack(resb(1))
+    end if
 
     do ii = 1, bsize
       if(nrm(ii) < tol) done(ii) = 1
@@ -256,7 +265,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     minst = states_block_min(st, ib)
     maxst = states_block_max(st, ib)
 
-    call batch_init(resb(1), st%d%dim, minst, maxst, res(:, :, 1, :))
+    call batch_copy(st%psib(ib, ik), resb(1), reference = .false.)
 
     call X(hamiltonian_apply_batch)(hm, gr%der, st%psib(ib, ik), resb(1), ik)
     call X(mesh_batch_dotp_vector)(gr%der%mesh, st%psib(ib, ik), resb(1), eigen(minst:maxst))
@@ -269,7 +278,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     diff(minst:maxst) = sqrt(abs(eigen(minst:maxst)))
 
-    call batch_end(resb(1))
+    call batch_end(resb(1), copy = .false.)
 
     nops = nops + maxst - minst + 1
   end do
