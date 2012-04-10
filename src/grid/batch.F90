@@ -392,7 +392,7 @@ contains
         call zbatch_new(bout, 1, bin%nst, np)
       end if
 
-!      if(batch_is_packed(bin)) call batch_pack(bout, copy = .false.)
+      if(batch_is_packed(bin)) call batch_pack(bout, copy = .false.)
 
     end if
 

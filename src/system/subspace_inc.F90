@@ -56,7 +56,7 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
         call X(mesh_batch_dotp_matrix)(der%mesh, hpsib, st%psib(jb, ik), hmss)
       end do
 
-      call batch_end(hpsib)
+      call batch_end(hpsib, copy = .false.)
      
     end do
 
@@ -85,7 +85,7 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
         call batch_axpy(der%mesh%np, -eigenval, st%psib(ib, ik), hpsib)
         call X(mesh_batch_dotp_vector)(der%mesh, hpsib, hpsib, rdiff(minst:maxst))
 
-        call batch_end(hpsib)
+        call batch_end(hpsib, copy = .false.)
 
         diff(minst:maxst) = sqrt(abs(rdiff(minst:maxst)))
 
