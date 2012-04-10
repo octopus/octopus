@@ -126,7 +126,7 @@ subroutine X(fft_forward)(fft, in, out)
 
     call profiling_out(prof_fw)
 
-    POP_SUB(X(fft_forward))
+    POP_SUB(X(fft_forward_cl))
   end subroutine X(fft_forward_cl)
 
   ! ---------------------------------------------------------
@@ -246,7 +246,7 @@ subroutine X(fft_forward)(fft, in, out)
     type(opencl_mem_t) :: rsbuffer, fsbuffer
 #endif
 
-    PUSH_SUB(X(fft_backward))
+    PUSH_SUB(X(fft_backward_cl))
     
     call profiling_in(prof_bw,"FFT_BACKWARD_CL")
 
@@ -263,7 +263,7 @@ subroutine X(fft_forward)(fft, in, out)
 
     call profiling_out(prof_bw)
 
-    POP_SUB(X(fft_backward))
+    POP_SUB(X(fft_backward_cl))
   end subroutine X(fft_backward_cl)
 
   ! ---------------------------------------------------------
