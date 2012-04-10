@@ -35,7 +35,6 @@ module global_m
     conf_t,          &
     global_init,     &
     global_end,      & 
-    assert_die,      &
     optional_default
 
   integer, public, parameter :: MAX_PATH_LEN=256
@@ -121,6 +120,15 @@ module global_m
     module procedure doptional_default, zoptional_default, ioptional_default, loptional_default, soptional_default
   end interface optional_default
 
+
+  ! This function is defined in messages.F90
+  interface 
+    subroutine assert_die(s, f, l)
+      character(len=*), intent(in) :: s, f
+      integer, intent(in) :: l
+    end subroutine assert_die
+  end interface
+
 contains
 
   ! ---------------------------------------------------------
@@ -174,18 +182,6 @@ contains
     call varinfo_end()
 
   end subroutine global_end
-
-
-  ! ---------------------------------------------------------
-  !> This subroutine is called by the assert macro
-  ! ---------------------------------------------------------
-  subroutine assert_die(s, f, l)
-    character(len=*), intent(in) :: s, f
-    integer, intent(in) :: l
-
-    write(stderr, '(a,i5,3a,i5,3a)') 'Node ', mpi_world%rank, ': Assertion "', trim(s), '" failed in line ', l, ' in file "', f, '"'
-    stop
-  end subroutine assert_die
 
   !----------------------------------------------------------
 

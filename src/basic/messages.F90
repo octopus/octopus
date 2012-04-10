@@ -1143,6 +1143,38 @@ end subroutine messages_end
 
 end module messages_m
 
+! ---------------------------------------------------------
+!> This subroutine is called by the assert macro, it is not in a
+!> module so it can be called from any file. The interface is declared
+!> in global_m.
+subroutine assert_die(s, f, l)
+  use global_m
+  use messages_m
+  use mpi_m
+
+  implicit none
+
+  character(len=*), intent(in) :: s, f
+  integer, intent(in) :: l
+   
+  call messages_write('Node ')
+  call messages_write(mpi_world%rank)
+  call messages_write(':')
+  call messages_new_line()
+
+  call messages_write(' Assertion "'//trim(s)//'"')
+  call messages_new_line()
+
+  call messages_write(' failed in line ')
+  call messages_write(l)
+  call messages_write(' of file "'//trim(f)//'".')
+
+  call messages_fatal()
+
+end subroutine assert_die
+
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
