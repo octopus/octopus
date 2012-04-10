@@ -772,13 +772,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function species_userdef_pot(spec, dim, xx, r)
-    type(species_t), intent(in) :: spec
-    integer, intent(in) :: dim
-    FLOAT, intent(in) :: xx(1:MAX_DIM), r
+  FLOAT function species_userdef_pot(spec, dim, xx, r, Im)
+    type(species_t),   intent(in) :: spec
+    integer,           intent(in) :: dim
+    FLOAT,             intent(in) :: xx(1:MAX_DIM), r
+    logical, optional, intent(in) :: Im
+    
     FLOAT :: pot_re, pot_im
     call parse_expression(pot_re, pot_im, dim, xx, r, M_ZERO, spec%user_def)
-    species_userdef_pot = pot_re
+    if(present(Im)) then !cmplxscl
+      species_userdef_pot = pot_im  
+    else
+      species_userdef_pot = pot_re
+    end if
   end function species_userdef_pot
   ! ---------------------------------------------------------
 

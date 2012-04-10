@@ -804,11 +804,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_get_local(spec, mesh, x_atom, vl)
+  subroutine species_get_local(spec, mesh, x_atom, vl, Imvl)
     type(species_t), intent(in) :: spec
     type(mesh_t),    intent(in) :: mesh
     FLOAT,           intent(in) :: x_atom(:)
     FLOAT,           intent(out):: vl(:)
+    FLOAT, optional, intent(out):: Imvl(:) !cmplxscl: imaginary part of the potential
 
     FLOAT :: a1, a2, Rb2 ! for jellium
     FLOAT :: xx(MAX_DIM), r
@@ -834,6 +835,9 @@ contains
           forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
           r = units_from_atomic(units_inp%length, r)
           vl(ip) = units_to_atomic(units_inp%energy, species_userdef_pot(spec, mesh%sb%dim, xx, r))
+          if(present(Imvl)) then!cmplxscl
+            Imvl(ip) = units_to_atomic(units_inp%energy, species_userdef_pot(spec, mesh%sb%dim, xx, r, Im = .true.))
+          end if
 
         end do
 

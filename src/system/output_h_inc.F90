@@ -28,14 +28,22 @@
     integer :: is, err, idir
     character(len=80) :: fname
     FLOAT, allocatable :: v0(:,:), nxc(:)
+    CMPLX, allocatable :: zv0(:,:)
     
     PUSH_SUB(output_hamiltonian)
 
     if(iand(outp%what, C_OUTPUT_POTENTIAL).ne.0) then
-      SAFE_ALLOCATE(v0(1:der%mesh%np, 1:hm%d%dim))
-      v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
-      call dio_function_output(outp%how, dir, "v0", der%mesh, v0(:, 1), units_out%energy, err, geo = geo)
-      SAFE_DEALLOCATE_A(v0)
+      if(hm%cmplxscl) then
+        SAFE_ALLOCATE(zv0(1:der%mesh%np, 1:hm%d%dim))
+        zv0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np) + M_zI*hm%ep%Imvpsl(1:der%mesh%np)
+        call zio_function_output(outp%how, dir, "v0", der%mesh, zv0(:, 1), units_out%energy, err, geo = geo)
+        SAFE_DEALLOCATE_A(zv0)
+      else  
+        SAFE_ALLOCATE(v0(1:der%mesh%np, 1:hm%d%dim))
+        v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
+        call dio_function_output(outp%how, dir, "v0", der%mesh, v0(:, 1), units_out%energy, err, geo = geo)
+        SAFE_DEALLOCATE_A(v0)
+      end if
 
       if(hm%ep%classical_pot > 0) then
         call dio_function_output(outp%how, dir, "vc", der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo)

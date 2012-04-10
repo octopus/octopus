@@ -28,7 +28,8 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   integer :: ist, ip
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
   R_TYPE  :: psi1, psi2
-  FLOAT   :: vv
+  FLOAT   :: vv, Imvv
+  logical :: cmplxscl
 #ifdef HAVE_OPENCL
   integer :: pnp, iprange
 #endif
@@ -36,6 +37,9 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   if(.not. associated(this%potential)) then
     return
   end if
+  
+  cmplxscl = .false.
+  if(associated(this%Impotential)) cmplxscl = .true.
 
   call profiling_in(prof_vlpsi, "VLPSI")
   PUSH_SUB(X(hamiltonian_base_local))
@@ -90,13 +94,22 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       !$omp parallel do private(vv, ist)
-      do ip = 1, mesh%np
-        vv = this%potential(ip, ispin)
-        forall (ist = 1:psib%nst_linear)
-          vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + vv*psib%pack%X(psi)(ist, ip)
-        end forall
-      end do
-
+      if(cmplxscl)then
+        do ip = 1, mesh%np
+          vv = this%potential(ip, ispin)
+          Imvv= this%impotential(ip, ispin)
+          forall (ist = 1:psib%nst_linear)
+            vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + (vv+M_zI*Imvv)*psib%pack%X(psi)(ist, ip)
+          end forall
+        end do
+      else  
+        do ip = 1, mesh%np
+          vv = this%potential(ip, ispin)
+          forall (ist = 1:psib%nst_linear)
+            vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + vv*psib%pack%X(psi)(ist, ip)
+          end forall
+        end do
+      end if
       call profiling_count_operations((2*R_ADD*psib%nst_linear)*mesh%np)
       call profiling_count_transfers(mesh%np, M_ONE)
       call profiling_count_transfers(mesh%np*psib%nst_linear, R_TOTYPE(M_ONE))
@@ -126,12 +139,21 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       !$omp parallel do private(ip)
-      do ist = 1, psib%nst
-        forall (ip = 1:mesh%np)
-          vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + &
-            this%potential(ip, ispin) * psib%states(ist)%X(psi)(ip, 1)
-        end forall
-      end do
+      if(cmplxscl)then
+        do ist = 1, psib%nst
+          forall (ip = 1:mesh%np)
+            vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + &
+              (this%potential(ip, ispin)+ M_zI*this%Impotential(ip, ispin)) * psib%states(ist)%X(psi)(ip, 1) 
+          end forall
+        end do
+      else
+        do ist = 1, psib%nst
+          forall (ip = 1:mesh%np)
+            vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + &
+              this%potential(ip, ispin) * psib%states(ist)%X(psi)(ip, 1)
+          end forall
+        end do
+      end if
       !$omp end parallel do
 
       call profiling_count_operations((2*R_ADD*psib%nst)*mesh%np)

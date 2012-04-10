@@ -87,6 +87,7 @@ module hamiltonian_base_m
     type(nl_operator_t),      pointer :: kinetic
     type(projector_matrix_t), pointer :: projector_matrices(:) 
     FLOAT,                    pointer :: potential(:, :)
+    FLOAT,                    pointer :: Impotential(:, :)!cmplxscl
     FLOAT,                    pointer :: uniform_magnetic_field(:)
     FLOAT,                    pointer :: uniform_vector_potential(:)
     FLOAT,                    pointer :: vector_potential(:, :)
@@ -148,6 +149,7 @@ contains
     this%nspin = nspin
 
     nullify(this%potential)
+    nullify(this%Impotential)!cmplxscl
     nullify(this%uniform_magnetic_field)
     nullify(this%uniform_vector_potential)
     nullify(this%vector_potential)
@@ -165,6 +167,7 @@ contains
     PUSH_SUB(hamiltonian_base_end)
 
     SAFE_DEALLOCATE_P(this%potential)
+    SAFE_DEALLOCATE_P(this%Impotential)!cmplxscl
     SAFE_DEALLOCATE_P(this%vector_potential)
     SAFE_DEALLOCATE_P(this%uniform_vector_potential)
     SAFE_DEALLOCATE_P(this%uniform_magnetic_field)
@@ -184,6 +187,7 @@ contains
     PUSH_SUB(hamiltonian_clear)
 
     if(associated(this%potential))                this%potential = M_ZERO
+    if(associated(this%Impotential))              this%Impotential = M_ZERO!cmplxscl
     if(associated(this%uniform_vector_potential)) this%uniform_vector_potential = M_ZERO
     if(associated(this%vector_potential))         this%vector_potential = M_ZERO
     if(associated(this%uniform_magnetic_field))   this%uniform_magnetic_field = M_ZERO
@@ -194,10 +198,11 @@ contains
 
   ! ---------------------------------------------------------------
   !> This function ensures that the corresponding field is allocated.
-  subroutine hamiltonian_base_allocate(this, mesh, field)
+  subroutine hamiltonian_base_allocate(this, mesh, field, cmplxscl)
     type(hamiltonian_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
     integer,                  intent(in)    :: field
+    logical,                  intent(in)    :: cmplxscl
 
     PUSH_SUB(hamiltonian_base_allocate)
 
@@ -205,6 +210,10 @@ contains
       if(.not. associated(this%potential)) then
         SAFE_ALLOCATE(this%potential(1:mesh%np, 1:this%nspin))
         this%potential = M_ZERO
+        if(cmplxscl) then
+          SAFE_ALLOCATE(this%Impotential(1:mesh%np, 1:this%nspin))
+          this%Impotential = M_ZERO
+        end if
 #ifdef HAVE_OPENCL
         if(opencl_is_enabled()) then
           call opencl_create_buffer(this%potential_opencl, CL_MEM_READ_ONLY, TYPE_FLOAT, opencl_padded_size(mesh%np)*this%nspin)
