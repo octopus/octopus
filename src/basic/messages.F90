@@ -61,7 +61,8 @@ module messages_m
     messages_check_def,         &
     messages_not_implemented,   &
     messages_new_line,          &
-    messages_write
+    messages_write,             &
+    messages_clean_path
 
   integer, parameter :: max_lines = 20
   character(len=256), dimension(max_lines), public :: message    !< to be output by fatal, warning
@@ -845,7 +846,7 @@ end subroutine messages_end
       call messages_fatal(1)
     end if
 
-    sub_stack(no_sub_stack)  = trim(sub_name)
+    sub_stack(no_sub_stack)  = trim(messages_clean_path(sub_name))
     time_stack(no_sub_stack) = loct_clock()
 
     if(conf%debug_level .ge. 99) then
@@ -873,7 +874,7 @@ end subroutine messages_end
       do ii = no_sub_stack - 1, 1, -1
         write(tmpstr, '(2a)') trim(tmpstr), "..|"
       end do
-      write(tmpstr, '(2a)') trim(tmpstr), trim(sub_name)
+      write(tmpstr, '(2a)') trim(tmpstr), trim(messages_clean_path(sub_name))
       call flush_msg(iunit_out, tmpstr)
 
     end subroutine push_sub_write
@@ -903,7 +904,7 @@ end subroutine messages_end
 
     ! the name might be truncated in sub_stack, so we copy to a string
     ! of the same size
-    sub_name_short = sub_name
+    sub_name_short = messages_clean_path(sub_name)
 
     if(sub_name_short .ne. sub_stack(no_sub_stack)) then
       write (message(1),'(a)') 'Wrong sub name on pop_sub :'
@@ -1141,6 +1142,17 @@ end subroutine messages_end
 
   end subroutine messages_write_logical
 
+  ! -----------------------------------------------------------
+
+  character(len=256) function messages_clean_path(filename) result(clean_path)
+    character(len=*), intent(in) :: filename
+
+    integer :: pos
+
+    pos = index(filename, 'src/', back = .true.)
+    clean_path = filename(pos + 4:)
+  end function messages_clean_path
+
 end module messages_m
 
 ! ---------------------------------------------------------
@@ -1156,7 +1168,7 @@ subroutine assert_die(s, f, l)
 
   character(len=*), intent(in) :: s, f
   integer, intent(in) :: l
-   
+    
   call messages_write('Node ')
   call messages_write(mpi_world%rank)
   call messages_write(':')
@@ -1167,7 +1179,7 @@ subroutine assert_die(s, f, l)
 
   call messages_write(' failed in line ')
   call messages_write(l)
-  call messages_write(' of file "'//trim(f)//'".')
+  call messages_write(' of file "'//trim(messages_clean_path(f))//'".')
 
   call messages_fatal()
 
