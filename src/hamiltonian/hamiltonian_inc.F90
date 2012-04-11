@@ -151,11 +151,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   if (iand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
     call X(hamiltonian_base_local)(hm%hm_base, der%mesh, hm%d, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
-    ASSERT(.not. batch_is_packed(hpsib))
-    do ii = 1, nst
-      call set_pointers()
-      hpsi(1:der%mesh%np) = hpsi(1:der%mesh%np) + hm%ep%vpsl(1:der%mesh%np)*epsi(1:der%mesh%np)
-    end do
+    call X(hamiltonian_external)(hm, der%mesh, epsib, hpsib)
   end if
 
   ! and the non-local one 
@@ -244,6 +240,57 @@ contains
   end subroutine set_pointers
 
 end subroutine X(hamiltonian_apply_batch)
+
+! ---------------------------------------------------------
+
+subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
+  type(hamiltonian_t),         intent(in)    :: this
+  type(mesh_t),                intent(in)    :: mesh
+  type(batch_t),               intent(in)    :: psib
+  type(batch_t),               intent(inout) :: vpsib
+
+  integer :: ii, ip, pnp, iprange
+  type(opencl_mem_t) :: vext_buff
+
+  PUSH_SUB(X(hamiltonian_external))
+
+  select case(batch_status(psib))
+  case(BATCH_NOT_PACKED)
+    do ii = 1, psib%nst
+      vpsib%states_linear(ii)%X(psi)(1:mesh%np) = vpsib%states_linear(ii)%X(psi)(1:mesh%np) + &
+        this%ep%vpsl(1:mesh%np)*psib%states_linear(ii)%X(psi)(1:mesh%np)
+    end do
+  case(BATCH_PACKED)
+    do ip = 1, mesh%np
+      do ii = 1, psib%nst
+        vpsib%pack%X(psi)(ii, ip) = vpsib%pack%X(psi)(ii, ip) + this%ep%vpsl(ip)*psib%pack%X(psi)(ii, ip)
+      end do
+    end do
+  case(BATCH_CL_PACKED)
+    pnp = opencl_padded_size(mesh%np)
+
+    call opencl_create_buffer(vext_buff, CL_MEM_READ_ONLY, TYPE_FLOAT, pnp)
+
+    call opencl_write_buffer(vext_buff, mesh%np, this%ep%vpsl)
+
+    call opencl_set_kernel_arg(kernel_vpsi, 0, 0)
+    call opencl_set_kernel_arg(kernel_vpsi, 1, vext_buff)
+    call opencl_set_kernel_arg(kernel_vpsi, 2, psib%pack%buffer)
+    call opencl_set_kernel_arg(kernel_vpsi, 3, log2(psib%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_vpsi, 4, vpsib%pack%buffer)
+    call opencl_set_kernel_arg(kernel_vpsi, 5, log2(vpsib%pack%size_real(1)))
+    
+    iprange = opencl_max_workgroup_size()/psib%pack%size_real(1)
+    
+    call opencl_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), iprange/))
+
+    call opencl_finish()
+
+    call opencl_release_buffer(vext_buff)
+  end select
+
+  POP_SUB(X(hamiltonian_external))
+end subroutine X(hamiltonian_external)
 
 ! ---------------------------------------------------------
 

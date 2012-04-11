@@ -22,6 +22,9 @@
 module hamiltonian_m
   use batch_m
   use blas_m
+#ifdef HAVE_OPENCL
+  use cl
+#endif  
   use datasets_m
   use derivatives_m
   use hamiltonian_base_m
@@ -36,11 +39,13 @@ module hamiltonian_m
   use kpoints_m
   use lalg_basic_m
   use lasers_m
+  use math_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m
   use mpi_lib_m
+  use opencl_m
   use ob_interface_m
   use ob_lead_m
   use opencl_m
@@ -52,6 +57,7 @@ module hamiltonian_m
   use smear_m
   use states_m
   use states_dim_m
+  use types_m
   use unit_m
   use unit_system_m
   use varinfo_m
