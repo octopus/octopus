@@ -79,6 +79,7 @@ subroutine X(fourier_space_op_init)(this, cube, op)
 
   nullify(this%dop)
   nullify(this%zop)
+  this%in_device_memory = .false.
 
   if(cube%fft%library /= FFTLIB_CLAMD) then
     SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
