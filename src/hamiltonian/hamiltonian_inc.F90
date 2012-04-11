@@ -249,8 +249,11 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
 
-  integer :: ii, ip, pnp, iprange
+  integer :: ii, ip
+#ifdef HAVE_OPENCL
+  integer :: pnp, iprange
   type(opencl_mem_t) :: vext_buff
+#endif
 
   PUSH_SUB(X(hamiltonian_external))
 
@@ -267,6 +270,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
       end do
     end do
   case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
     pnp = opencl_padded_size(mesh%np)
 
     call opencl_create_buffer(vext_buff, CL_MEM_READ_ONLY, TYPE_FLOAT, pnp)
@@ -287,6 +291,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
     call opencl_finish()
 
     call opencl_release_buffer(vext_buff)
+#endif
   end select
 
   POP_SUB(X(hamiltonian_external))
