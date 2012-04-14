@@ -326,7 +326,7 @@ contains
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
       maxiter = eigens%es_maxiter
       
-      if(eigens%subspace_diag .and. eigens%converged(ik) == 0) then
+      if(eigens%subspace_diag .and. eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
         if (states_are_real(st)) then
           call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         else
