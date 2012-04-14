@@ -62,9 +62,7 @@ ConvAbsDens = 1e-12
 LCAOStart = no
 
 EigenSolver = cg_new
-EigenSolverInitTolerance = 1.0e-8
-EigenSolverFinalTolerance = 1.0e-8
-EigenSolverFinalToleranceIteration = 6
+EigenSolverTolerance = 1.0e-8
 EigenSolverMaxIter = 1000
 
 ExtraStates = 1

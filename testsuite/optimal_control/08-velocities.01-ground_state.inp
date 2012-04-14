@@ -44,9 +44,7 @@ a = 0.758
 SCFCalculateForces = yes
 
 EigenSolver = cg_new
-EigenSolverInitTolerance = 1.0e-12
-EigenSolverFinalTolerance = 1.0e-12
-EigenSolverFinalToleranceIteration = 6
+EigenSolverTolerance = 1.0e-12
 EigenSolverMaxIter = 1000
 ConvRelDens = 1.0e-12
 

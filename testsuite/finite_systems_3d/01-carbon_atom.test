@@ -22,7 +22,7 @@ Enabled    : Yes
 # It would be nice to investigate the reason for the small
 # discrepancy...
 Input: 01-carbon_atom.01-ground_state.inp
-match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.74149007
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.74133256
 match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.461702
 match ; Occupation   [1up] ; GREP(static/info, '1   up', 28) ;   1.000000
 match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.682119
@@ -32,9 +32,9 @@ match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
 # of the pseudopotencial to build the local component.
 Input: 01-carbon_atom.02-ground_state.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.81362567
-match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.466667
+match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.466513
 match ; Occupation   [1up] ; GREP(static/info, '1   up', 28) ;   1.000000
-match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.683497
+match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.683360
 match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
 
 #The same using double grid

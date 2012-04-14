@@ -32,9 +32,6 @@ GuessMagnetDensity = user_defined
 %
 
 EigenSolver = lobpcg
-EigenSolverInitTolerance = 1e-2
-EigenSolverFinalTolerance = 1e-6
-EigenSolverFinalToleranceIteration = 6
-EigenSolverMaxIter = 25
+EigenSolverMaxIter = 10
 
 ConvRelDens = 1e-4

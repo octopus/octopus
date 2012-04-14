@@ -45,11 +45,8 @@ ConvRelDens = 8e-6
 
 LCAOStart = lcao_none
 
-EigenSolver = cg
-EigenSolverInitTolerance = 1e-2
-EigenSolverFinalTolerance = 1e-5
-EigenSolverFinalToleranceIteration = 6
-EigenSolverMaxIter = 25
+EigenSolverTolerance = 1e-5
+
 Preconditioner = no
 
 MixField = potential

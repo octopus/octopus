@@ -27,8 +27,7 @@ ConvRelDens = 1e-4
 LCAOStart = lcao_none
 
 EigenSolver = plan
-EigenSolverInitTolerance = 1e-7
-EigenSolverFinalTolerance = 1e-7
+EigenSolverTolerance = 1e-7
 EigenSolverMaxIter = 5000
 
 magfield = 3.0

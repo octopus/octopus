@@ -68,7 +68,7 @@ KPointsUseSymmetries = false
 
 #PoissonSolver = fft
 well_EigenSolverMaxiter = 6000
-EigensolverFinalTolerance = 1e-9
+EigensolverTolerance = 1e-9
 Eigensolver = plan
 
 Output = wfs + wfs_sqmod + potential

@@ -9,7 +9,7 @@ ExperimentalFeatures = yes
 
 ParallelizationStrategy = par_kpoints
 Eigensolver = plan
-EigensolverFinalTolerance = 1e-9
+EigensolverTolerance = 1e-9
 
 %MeshBlockSize
  1 | 1 | 1

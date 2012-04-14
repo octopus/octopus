@@ -79,7 +79,7 @@ well_OpenBoundariesQMRMaxIter = 1000
 %
 
 well_EigenSolverMaxiter = 6000
-EigensolverFinalTolerance = 1e-9
+EigensolverTolerance = 1e-9
 
 %well_CurrentThroughPlane
    0.0 # origin

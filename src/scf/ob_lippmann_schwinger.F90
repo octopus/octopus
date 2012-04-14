@@ -76,7 +76,7 @@ contains
     integer                    :: il, iter, np, np_part, lead_np, idim, dim
     integer, target            :: ist, ik
     FLOAT, target              :: energy
-    FLOAT                      :: tol, res
+    FLOAT                      :: res
     CMPLX, allocatable         :: rhs2(:, :), rhs(:), psi(:)
     type(p_se_t), target       :: lead(2*MAX_DIM)
     logical                    :: conv
@@ -145,15 +145,14 @@ contains
 
         ! Solve linear system lhs psi = rhs.
         iter = eigens%es_maxiter
-        tol  = eigens%final_tol
 
         conv = .false.
         if (associated(hm%ep%A_static)) then ! magnetic gs
           call zqmr_sym(dim*np, psi, rhs, lhs_symmetrized, dotu, &
-            nrm2, precond, iter, residue=res, threshold=tol, converged=conv, showprogress=in_debug_mode)
+            nrm2, precond, iter, residue = res, threshold = eigens%tolerance, converged = conv, showprogress = in_debug_mode)
         else
           call zqmr_sym(dim*np, psi, rhs, lhs, dotu, nrm2, precond, &
-            iter, residue=res, threshold=tol, converged=conv, showprogress=in_debug_mode)
+            iter, residue=res, threshold = eigens%tolerance, converged = conv, showprogress = in_debug_mode)
         end if
         do idim = 1, dim
           call states_set_state(st, gr%mesh, idim, ist, ik, psi((idim-1)*np+1:idim*np))
@@ -211,7 +210,7 @@ contains
     CMPLX, intent(inout)          :: rhs(:, :)
     logical, optional, intent(in) :: transposed ! needed only for the non hermitian part
 
-    integer :: ip, idim, il, iy, iz, np
+    integer :: ip, idim, il, np
     integer :: start(1:3), finish(1:3), start_lead(1:3), finish_lead(1:3)
     logical :: transposed_
     CMPLX, allocatable :: tmp(:, :)

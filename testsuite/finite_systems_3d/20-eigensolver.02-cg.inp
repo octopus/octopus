@@ -19,8 +19,5 @@ Spacing = 0.25
 %
 
 EigenSolver = cg
-EigenSolverMaxiter = 25
-EigenSolverInitTolerance = 1e-2
-EigenSolverFinalTolerance = 1e-5
 
 ParallelizationStrategy = par_domains

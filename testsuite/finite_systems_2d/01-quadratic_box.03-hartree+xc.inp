@@ -35,9 +35,6 @@ DerivativesOrder = 1
 
 XCFunctional = lda_x_2d + lda_c_2d_amgb
 
-EigenSolver = cg
-EigenSolverInitTolerance = 1e-6
-EigenSolverFinalTolerance = 1e-6
 EigenSolverMaxIter = 50
 
 PoissonSolver = fft

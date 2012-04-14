@@ -23,6 +23,5 @@ Spacing = 0.14
 
 TheoryLevel = independent_particles
 
-EigenSolverInitTolerance = 1.0e-4
-EigenSolverFinalTolerance = 1.0e-4
+EigenSolverTolerance = 1.0e-4
 

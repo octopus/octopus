@@ -26,12 +26,6 @@ LCAOStart = no
 
 ConvAbsDens = 1e-10
 
-EigenSolver = cg
-EigenSolverInitTolerance = 1e-2
-EigenSolverFinalTolerance = 1e-6
-EigenSolverFinalToleranceIteration = 3
-EigenSolverMaxIter = 25
-
 PoissonSolver = cg_corrected
 
 #for the moment OpenCL is not supported

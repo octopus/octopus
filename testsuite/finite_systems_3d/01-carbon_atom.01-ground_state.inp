@@ -38,11 +38,7 @@ ExtraStates = 2
 
 XCFunctional = lda_x + lda_c_pz
 
-EigenSolver = cg
-EigenSolverInitTolerance = 1e-2
-EigenSolverFinalTolerance = 1e-5
-EigenSolverFinalToleranceIteration = 6
-EigenSolverMaxIter = 25
+#EigenSolverTolerance = 1e-5
 
 ConvRelDens = 4e-6
 

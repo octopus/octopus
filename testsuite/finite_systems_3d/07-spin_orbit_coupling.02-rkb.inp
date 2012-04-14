@@ -24,10 +24,8 @@ SpinComponents = non_collinear
 RelativisticCorrection = spin_orbit
 
 MaximumIter = 2
-EigenSolver = cg
-EigenSolverInitTolerance = 1e-3
-EigenSolverFinalTolerance = 1e-5
-EigenSolverFinalToleranceIteration = 2
+
+EigenSolverTolerance = 1e-5
 EigenSolverMaxIter = 2000
 
 GuessMagnetDensity = user_defined

@@ -29,7 +29,7 @@ match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.201113
 
 # Now, EXX/KLI for Li, 8 electrons (restarting from the previous run)
 Input: 04-oep.02-jellium-exx_kli.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.33253805
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.33269873
 match ; Exchange     ; GREP(static/info, 'Exchange    =', 20) ; -1.03286631
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.251965
 

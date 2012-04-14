@@ -37,9 +37,7 @@ DerivativesOrder = 4
 
 TheoryLevel = independent_particles
 
-EigenSolver = cg
-EigenSolverInitTolerance = 1e-6
-EigenSolverFinalTolerance = 1e-6
+EigenSolverTolerance = 1e-6
 EigenSolverMaxIter = 250
 
 # P_c is the speed of light in atomic units.

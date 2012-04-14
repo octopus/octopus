@@ -157,7 +157,7 @@ contains
       else
         write(iunit,'(a)') 'Some of the unoccupied states are not fully converged!'
       end if
-      write(iunit,'(a, e17.6)') 'Criterion = ', eigens%final_tol
+      write(iunit,'(a, e17.6)') 'Criterion = ', eigens%tolerance
       write(iunit,'(1x)')
       call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
       call io_close(iunit)
@@ -205,9 +205,6 @@ contains
       ! now the eigensolver stuff
       call eigensolver_init(eigens, sys%gr, st)
 
-      ! Having initial and final tolerance does not make sense in this case:
-      eigens%init_tol       = eigens%final_tol
-      eigens%final_tol_iter = 2
       eigens%converged(1:st%d%nik) = st%nst - nus
 
       POP_SUB(unocc_run.init_)

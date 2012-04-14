@@ -65,9 +65,7 @@ module eigensolver_m
 
     logical :: subspace_diag
     
-    FLOAT   :: init_tol
-    FLOAT   :: final_tol
-    integer :: final_tol_iter
+    FLOAT   :: tolerance
     integer :: es_maxiter
 
     integer :: arnoldi_vectors
@@ -214,37 +212,18 @@ contains
     end select
     call messages_print_var_option(stdout, "Eigensolver", eigens%es_type)
 
-    !%Variable EigensolverInitTolerance
+    call messages_obsolete_variable('EigensolverInitTolerance', 'EigensolverTolerance')
+    call messages_obsolete_variable('EigensolverFinalTolerance', 'EigensolverTolerance')
+    call messages_obsolete_variable('EigensolverFinalToleranceIteration')
+
+    !%Variable EigensolverTolerance
     !%Type float
     !%Default 1.0e-6
     !%Section SCF::Eigensolver
     !%Description
-    !% This is the initial tolerance for the eigenvectors.
+    !% This is the tolerance for the eigenvectors. The default is 1e-6.
     !%End
-    call parse_float(datasets_check('EigensolverInitTolerance'), CNST(1.0e-6), eigens%init_tol)
-    if(eigens%init_tol < 0) call input_error('EigensolverInitTolerance')
-
-    !%Variable EigensolverFinalTolerance
-    !%Type float
-    !%Default 1.0e-6
-    !%Section SCF::Eigensolver
-    !%Description
-    !% This is the final tolerance for the eigenvectors. Must be smaller than <tt>EigensolverInitTolerance</tt>.
-    !%End
-    call parse_float(datasets_check('EigensolverFinalTolerance'), CNST(1.0e-6), eigens%final_tol)
-    if(eigens%final_tol < 0 .or. eigens%final_tol > eigens%init_tol) call input_error('EigensolverFinalTolerance')
-
-    !%Variable EigensolverFinalToleranceIteration
-    !%Type integer
-    !%Default 7
-    !%Section SCF::Eigensolver
-    !%Description
-    !% Determines how many iterations are needed 
-    !% to go from <tt>EigensolverInitTolerance</tt> to <tt>EigensolverFinalTolerance</tt>.
-    !% Must be larger than 1.
-    !%End
-    call parse_integer(datasets_check('EigensolverFinalToleranceIteration'), 7, eigens%final_tol_iter)
-    if(eigens%final_tol_iter <= 1) call input_error('EigensolverFinalToleranceIteration')
+    call parse_float(datasets_check('EigensolverTolerance'), CNST(1.0e-6), eigens%tolerance)
 
     !%Variable EigensolverMaxIter
     !%Type integer
@@ -310,7 +289,7 @@ contains
     logical,    optional, intent(inout) :: conv
 
     integer :: maxiter, ik, ns, idir
-    FLOAT :: tol, kpoint(1:MAX_DIM)
+    FLOAT :: kpoint(1:MAX_DIM)
 #ifdef HAVE_MPI
     logical :: conv_reduced
     integer :: outcount, ist
@@ -321,14 +300,6 @@ contains
 
     call profiling_in(prof, "EIGEN_SOLVER")
     PUSH_SUB(eigensolver_run)
-
-    if(iter < eigens%final_tol_iter) then
-      tol = log(eigens%final_tol/eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
-           log(eigens%init_tol)
-      tol = exp(tol)
-    else
-      tol = eigens%final_tol
-    end if
 
     if(present(conv)) conv = .false.
 
@@ -357,26 +328,27 @@ contains
         
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call deigensolver_cg2_new(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-          call deigensolver_cg2(gr, st, hm, eigens%pre, tol, maxiter, &
+          call deigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PLAN)
-          call deigensolver_plan(gr, st, hm, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call deigensolver_evolution(gr, st, hm, tol, maxiter, &
+          call deigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
-          call deigensolver_lobpcg(gr, st, hm, eigens%pre, tol, maxiter, &
+          call deigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_MG)
-          call deigensolver_mg(gr%der, st, hm, eigens%sdiag, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_mg(gr%der, st, hm, eigens%sdiag, eigens%tolerance, maxiter, &
+            eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
-            call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, tol, maxiter, &
+            call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik, hm%d%block_size)
           else
-            call deigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
+            call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
           end if
         end select
@@ -389,26 +361,27 @@ contains
 
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call zeigensolver_cg2_new(gr, st, hm, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-          call zeigensolver_cg2(gr, st, hm, eigens%pre, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PLAN)
-          call zeigensolver_plan(gr, st, hm, eigens%pre, tol, maxiter, &
+          call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call zeigensolver_evolution(gr, st, hm, tol, maxiter, &
+          call zeigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
-          call zeigensolver_lobpcg(gr, st, hm, eigens%pre, tol, maxiter, &
+          call zeigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_MG)
-          call zeigensolver_mg(gr%der, st, hm, eigens%sdiag, tol, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_mg(gr%der, st, hm, eigens%sdiag, eigens%tolerance, maxiter, &
+            eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
-            call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, tol, maxiter, &
+            call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik, hm%d%block_size)
           else
-            call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, tol, maxiter, &
+            call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik,  eigens%diff(:, ik), hm%d%block_size)
           end if
         end select

@@ -19,9 +19,7 @@ spacing = 0.40
 ConvRelDens = 1e-7
 
 EigenSolver = cg_new
-EigenSolverInitTolerance = 1e-2
-EigenSolverFinalTolerance = 1e-4
-EigenSolverFinalToleranceIteration = 6
+EigenSolverTolerance = 1e-4
 EigenSolverMaxIter = 20
 
 ParallelizationStrategy=par_domains

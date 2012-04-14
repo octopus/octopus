@@ -32,10 +32,6 @@ SpinComponents = spin_polarized
 ConvRelDens = 5e-5
 LCAOStart = lcao_none
 
-EigenSolver = cg
-EigenSolverInitTolerance = 1e-2
-EigenSolverFinalTolerance = 1e-6
-EigenSolverMaxIter = 25
 TypeOfMixing = linear
 Mixing = 1.0
 

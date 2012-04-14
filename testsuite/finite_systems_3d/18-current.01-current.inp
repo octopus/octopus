@@ -30,9 +30,7 @@ ConvAbsDens = 1e-4
 TheoryLevel = independent_particles
 
 EigenSolver = cg_new
-EigenSolverInitTolerance = 1e-4
-EigenSolverFinalTolerance = 1e-4
-EigenSolverFinalToleranceIteration = 2
+EigenSolverTolerance = 1e-4
 EigenSolverMaxIter = 300
 
 %StaticMagneticField

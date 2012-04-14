@@ -20,7 +20,7 @@ spacing = 0.2
 
 ConvRelDens = 2e-12
 ConvAbsEv = 1e-16
-EigensolverFinalTolerance = 1e-8
+EigensolverTolerance = 1e-8
 EigensolverMaxIter = 50
 
 

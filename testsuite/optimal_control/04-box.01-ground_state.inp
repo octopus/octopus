@@ -36,8 +36,6 @@ TheoryLevel = independent_particles
 "Box1D" | 0
 %
 
-EigenSolverInitTolerance = 1.0e-6
-EigenSolverFinalTolerance = 1.0e-6
 EigenSolverMaxIter = 1000
 
 NumberUnoccStates = 5

@@ -20,10 +20,7 @@ TheoryLevel = independent_particles
 
 ConvRelDens = 5.0e-4
 
-EigenSolver = cg
-EigenSolverInitTolerance = 1e-7
-EigenSolverFinalTolerance = 1e-7
-EigenSolverFinalToleranceIteration = 6
+EigenSolverTolerance = 1e-7
 EigenSolverMaxIter = 200
 
-ParallelizationStrategy=par_domains
+ParallelizationStrategy = par_domains

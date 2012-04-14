@@ -36,7 +36,5 @@ ExtraStates = 1
 # Ground state.
 # ------------------
 
-EigenSolverInitTolerance = 1.0e-6
-EigenSolverFinalTolerance = 1.0e-6
 EigenSolverMaxIter = 1000
 

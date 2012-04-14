@@ -21,9 +21,11 @@ Spacing = 0.5
 DerivativesOrder = 4
 
 EigenSolver = cg_new
-EigenSolverInitTolerance = 1e-10
-EigenSolverFinalTolerance = 1e-10
+
+EigenSolverTolerance = 1e-10
+
 EigenSolverMaxIter = 250
+
 TypeOfMixing = broyden
 Mixing = 0.5
 

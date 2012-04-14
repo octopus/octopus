@@ -28,14 +28,11 @@ ExtraStates = 2
 XCFunctional = lda_x + lda_c_pz
 
 EigenSolver = lobpcg
-EigenSolverInitTolerance = 1e-2
-EigenSolverFinalTolerance = 1e-6
-EigenSolverFinalToleranceIteration = 6
-EigenSolverMaxIter = 25
 
 ConvRelDens = 1e-6
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
+
 
 
