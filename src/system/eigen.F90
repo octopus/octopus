@@ -238,6 +238,16 @@ contains
     call parse_integer(datasets_check('EigensolverMaxIter'), default_iter, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) call input_error('EigensolverMaxIter')
 
+    if(eigens%es_maxiter > default_iter) then
+      call messages_write('You have specified a large number of eigensolver iterations (')
+      call messages_write(eigens%es_maxiter)
+      call messages_write(').', new_line = .true.)
+      call messages_write('This is not a good idea as it might slow down convergence, even for', new_line = .true.)
+      call messages_write('independent particles, as subspace diagonalization will not be used', new_line = .true.)
+      call messages_write('often enough.')
+      call messages_warning()
+    end if
+    
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
       call preconditioner_init(eigens%pre, gr)
