@@ -191,7 +191,7 @@ contains
     PUSH_SUB(batch_end)
 
     if(batch_is_packed(this)) then
-      call batch_unpack(this, copy)
+      call batch_unpack(this, copy, force = .true.)
     end if
 
     if(this%is_allocated) then
@@ -576,9 +576,10 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine batch_unpack(this, copy)
+  subroutine batch_unpack(this, copy, force)
     type(batch_t),      intent(inout) :: this
     logical, optional,  intent(in)    :: copy
+    logical, optional,  intent(in)    :: force  !< if force = .true., unpack independently of the counter
 
     logical :: copy_
     type(profile_t), save :: prof
@@ -589,7 +590,7 @@ contains
 
     if(batch_is_packed(this)) then
 
-      if(this%in_buffer_count == 1) then
+      if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
         copy_ = .true.
         if(present(copy)) copy_ = copy
         
@@ -597,7 +598,8 @@ contains
         
         ! now deallocate
         this%status = BATCH_NOT_PACKED
-        
+        this%in_buffer_count = 1
+
         if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
           call opencl_release_buffer(this%pack%buffer)
