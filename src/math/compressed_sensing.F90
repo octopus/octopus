@@ -138,7 +138,12 @@ contains
     ! to avoid numerical problems we work with a normalized rhs
     nrm = dnrm2(this%ntime, time_function(1), 1)
 
-    tf_normalized(1:this%ntime) = time_function(1:this%ntime)/nrm
+    if(nrm > CNST(1e-8)) then
+      tf_normalized(1:this%ntime) = time_function(1:this%ntime)/nrm
+    else
+      tf_normalized(1:this%ntime) = time_function(1:this%ntime)
+      nrm = M_ONE
+    end if
 
     call bpdn(this%ntime, this%nfreq, this%fourier_matrix, tf_normalized, this%sigma, freq_function, ierr)
 
