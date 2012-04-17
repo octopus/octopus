@@ -18,6 +18,7 @@
 #include <global.h>
 
 module compressed_sensing_m
+  use blas_m
   use bpdn_m
   use global_m
   use messages_m
@@ -86,22 +87,19 @@ contains
       case(SPECTRUM_TRANSFORM_EXP)
         do itime = 1, this%ntime
           time = (itime - 1)*this%dtime + this%stime
-          
-          this%fourier_matrix(itime, ifreq) = exp(-freq*time)*dfreq*M_TWO/M_PI
+          this%fourier_matrix(itime, ifreq) = exp(-freq*time)
         end do
         
       case(SPECTRUM_TRANSFORM_SIN)
         do itime = 1, this%ntime
           time = (itime - 1)*this%dtime + this%stime
-          
-          this%fourier_matrix(itime, ifreq) = sin(freq*time)*dfreq*M_TWO/M_PI
+          this%fourier_matrix(itime, ifreq) = sin(freq*time)
         end do
 
       case(SPECTRUM_TRANSFORM_COS)
         do itime = 1, this%ntime
           time = (itime - 1)*this%dtime + this%stime
-          
-          this%fourier_matrix(itime, ifreq) = cos(freq*time)*dfreq*M_TWO/M_PI
+          this%fourier_matrix(itime, ifreq) = cos(freq*time)
         end do
       end select
 
@@ -130,11 +128,25 @@ contains
     FLOAT,                       intent(out) :: freq_function(:)
 
     integer :: ierr
+    FLOAT, allocatable :: tf_normalized(:)
+    FLOAT :: nrm
     
     PUSH_SUB(compressed_sensing_spectral_analysis)
 
-    call bpdn(this%ntime, this%nfreq, this%fourier_matrix, time_function, this%sigma, freq_function, ierr)
-    
+    SAFE_ALLOCATE(tf_normalized(1:this%ntime))
+
+    ! to avoid numerical problems we work with a normalized rhs
+    nrm = dnrm2(this%ntime, time_function(1), 1)
+
+    tf_normalized(1:this%ntime) = time_function(1:this%ntime)/nrm
+
+    call bpdn(this%ntime, this%nfreq, this%fourier_matrix, tf_normalized, this%sigma, freq_function, ierr)
+
+    SAFE_DEALLOCATE_A(tf_normalized)
+
+    ! scale by the missing factors
+    freq_function(1:this%ntime) = nrm/(this%dfreq*M_TWO/M_PI)*freq_function(1:this%ntime)
+
     if(ierr < 0) then
       message(1) = 'The Basis Pursuit Denoising process failed to converge.'
       call messages_warning(1)

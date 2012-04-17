@@ -107,3 +107,4 @@ pblas.o : pblas.F90
 matrix.o : matrix.F90 matrix_inc.F90
 nfft_f.o : nfft_f.c
 nfft.o : nfft.F90 nfft_f.o lalg_basic.o fftw.o loct_math.o
+compressed_sensing.o : compressed_sensing.F90 blas.o
