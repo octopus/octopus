@@ -1150,7 +1150,7 @@ end subroutine messages_end
     integer :: pos
 
     pos = index(filename, 'src/', back = .true.)
-    clean_path = filename(pos + 4:)
+    clean_path = filename(pos + 1:)
   end function messages_clean_path
 
 end module messages_m
