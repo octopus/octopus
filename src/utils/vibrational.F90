@@ -48,6 +48,7 @@
     type(batch_t) :: vafb, ftvafb
     FLOAT :: ww, curtime
     integer :: ifreq, max_freq
+    integer :: skip
 
     ! Initialize stuff
     call global_init()		 
@@ -67,6 +68,21 @@
       default_energy_step = units_to_atomic(unit_invcm, CNST(0.2)), &
       default_max_energy  = units_to_atomic(unit_invcm, CNST(5000.0)))
  
+    !%Variable PropagationSpectrumTimeStepFactor
+    !%Type integer
+    !%Default 10
+    !%Section Utilities::oct-propagation_spectrum
+    !%Description
+    !% In the calculation of the vibrational spectrum it not necessary
+    !% to read the velocity at every time step. This variable controls
+    !% the integer factor between the simulation time step and the
+    !% time step used to calculate the vibrational spectrum. The
+    !% default is 10.
+    !%End
+
+    call parse_integer(datasets_check('PropagationSpectrumTimeStepFactor'), 10, skip)
+    if(skip <= 0) call input_error('PropagationSpectruTimeStepFactor')
+
     max_freq = 1 + nint(spectrum%max_energy/spectrum%energy_step)
 
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
@@ -99,7 +115,8 @@
 
       ASSERT(iter == read_iter + 1)
 
-      if (curtime >= spectrum%start_time) ntime = ntime + 1 ! ntime counts how many steps are gonna be used
+      ! ntime counts how many steps are gonna be used
+      if (curtime >= spectrum%start_time .and. mod(iter, skip) == 0) ntime = ntime + 1 
 
       iter = iter + 1 !counts number of timesteps (with time larger than zero up to SpecEndTime)
     end do
@@ -133,8 +150,8 @@
       end if
 
       ASSERT(iter == read_iter + 1)
-
-      if (curtime >= spectrum%start_time) then
+      
+      if (curtime >= spectrum%start_time .and. mod(iter, skip) == 0) then
 
         time(ntime) = curtime
         ivel = 1
@@ -145,7 +162,7 @@
           end do
         end do
 
-        ntime = ntime + 1 ! ntime counts how many steps are gonna be used
+        ntime = ntime + 1 
       end if
 
       iter = iter + 1 !counts number of timesteps (with time larger than zero up to SpecEndTime)
@@ -162,7 +179,8 @@
     ini_iter=1
     end_iter=nvaf
 
-    !print the vaf
+
+   !print the vaf
     iunit = io_open('td.general/velocity_autocorrelation', action='write')
 
 800 FORMAT(80('#'))      
@@ -180,6 +198,8 @@
 
 
     SAFE_ALLOCATE(ftvaf(1:max_freq))
+
+    ftvaf = M_ONE
 
     call batch_init(vafb, 1)
     call batch_add_state(vafb, vaf)
@@ -206,7 +226,7 @@
     write(unit = iunit, iostat = ierr, fmt = 800 ) 
 
     do ifreq = 1, max_freq
-      ww = spectrum%energy_step*ifreq
+      ww = spectrum%energy_step*(ifreq - 1)
       write(unit = iunit, iostat = ierr, fmt = '(2e20.10)') units_from_atomic(unit_invcm, ww), ftvaf(ifreq)
     end do
 
