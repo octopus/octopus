@@ -48,6 +48,9 @@ module states_m
   use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_lib_m
   use multicomm_m
+#ifdef HAVE_OPENMP
+  use omp_lib
+#endif
   use opencl_m
   use parser_m
   use profiling_m
@@ -302,7 +305,7 @@ contains
     type(geometry_t),  intent(in)    :: geo
 
     FLOAT :: excess_charge
-    integer :: nempty, ierr, il, ntot, theory_level
+    integer :: nempty, ierr, il, ntot, theory_level, default, nthreads
     integer, allocatable :: ob_k(:), ob_st(:), ob_d(:)
     character(len=256)   :: restart_dir
 
@@ -310,6 +313,40 @@ contains
 
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_null(st)
+
+    !%Variable StatesBlockSize
+    !%Type integer
+    !%Section Execution::Optimization
+    !%Description
+    !% Some routines work over blocks of eigenfunctions, which
+    !% generally improves performance at the expense of increased
+    !% memory consumption. This variable selects the size of the
+    !% blocks to be used. If OpenCl is enabled, the default is 32;
+    !% otherwise it is max(4, 2*nthreads).
+    !%End
+
+    nthreads = 1
+#ifdef HAVE_OPENMP
+    !$omp parallel
+    !$omp master
+    nthreads = omp_get_num_threads()
+    !$omp end master
+    !$omp end parallel
+#endif    
+
+    if(opencl_is_enabled()) then
+      default = 32
+    else
+      default = max(4, 2*nthreads)
+    end if
+
+    call parse_integer(datasets_check('StatesBlockSize'), default, st%d%block_size)
+    if(st%d%block_size < 1) then
+      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
+      call messages_fatal(1)
+    end if
+
+    ASSERT(st%d%block_size > 0)
 
     !%Variable SpinComponents
     !%Type integer
@@ -1437,31 +1474,6 @@ contains
 
     PUSH_SUB(states_exec_init)
 
-    !%Variable StatesBlockSize
-    !%Type integer
-    !%Section Execution::Optimization
-    !%Description
-    !% Some routines work over blocks of eigenfunctions, which
-    !% generally improves performance at the expense of increased
-    !% memory consumption. This variable selects the size of the
-    !% blocks to be used. If OpenCl is enabled, the default is 32;
-    !% otherwise it is max(4, 2*nthreads).
-    !%End
-
-    if(opencl_is_enabled()) then
-      default = 32
-    else
-      default = max(4, 2*mc%nthreads)
-    end if
-
-    call parse_integer(datasets_check('StatesBlockSize'), default, st%d%block_size)
-    if(st%d%block_size < 1) then
-      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
-      call messages_fatal(1)
-    end if
-
-    st%d%block_size = min(st%d%block_size, st%nst)
-
     !%Variable StatesPack
     !%Type logical
     !%Default no
@@ -2503,7 +2515,8 @@ contains
 
     write(message(1), '(a,f12.3)') 'Total electronic charge  = ', st%qtot
     write(message(2), '(a,i8)')    'Number of states         = ', st%nst
-    call messages_info(2)
+    write(message(3), '(a,i8)')    'States block-size        = ', st%d%block_size
+    call messages_info(3)
 
     call messages_print_stress(stdout)
 
