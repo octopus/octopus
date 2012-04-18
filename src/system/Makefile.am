@@ -81,7 +81,7 @@ eigen_rmmdiis.o: eigen_rmmdiis.F90 eigen_rmmdiis_inc.F90 subspace.o
 xc_oep.o : xc_oep.F90 xc_oep_inc.F90 xc_oep_sic_inc.F90 xc_oep_x_inc.F90 xc_kli_inc.F90 linear_solver.o 
 xc_ks_inversion.o : eigen.o
 v_ks.o : v_ks.F90 xc_oep.o energy.o magnetic.o xc_ks_inversion.o
-system.o : system.F90 v_ks.o energy.o elf.o
+system.o : system.F90 v_ks.o energy.o elf.o output.o
 pert.o : pert.F90 pert_inc.F90
 output.o : output.F90 output_states_inc.F90 output_h_inc.F90 output_linear_response_inc.F90 output_etsf_inc.F90 output_berkeleygw_inc.F90 output_me.o elf.o magnetic.o
 output_me.o: output_me_inc.F90
