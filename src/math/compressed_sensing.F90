@@ -150,7 +150,7 @@ contains
     SAFE_DEALLOCATE_A(tf_normalized)
 
     ! scale by the missing factors
-    freq_function(1:this%ntime) = nrm/(this%dfreq*M_TWO/M_PI)*freq_function(1:this%ntime)
+    freq_function(1:this%nfreq) = nrm/(this%dfreq*M_TWO/M_PI)*freq_function(1:this%nfreq)
 
     if(ierr < 0) then
       message(1) = 'The Basis Pursuit Denoising process failed to converge.'
