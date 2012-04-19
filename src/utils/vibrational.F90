@@ -39,14 +39,14 @@
 
     implicit none
 
-    integer :: iunit, ierr, ii, jj, iter, read_iter, ini_iter, end_iter, ntime, nvaf, nvel, ivel
+    integer :: iunit, ierr, ii, jj, iter, read_iter, ntime, nvaf, nvel, ivel
     FLOAT, allocatable :: vaf(:), time(:), velocities(:, :), ftvaf(:)
     type(geometry_t)  :: geo 
     type(space_t)     :: space
     type(simul_box_t) :: sb
     type(spec_t) :: spectrum
     type(batch_t) :: vafb, ftvafb
-    FLOAT :: ww, curtime
+    FLOAT :: ww, curtime, vaftime, deltat
     integer :: ifreq, max_freq
     integer :: skip
 
@@ -170,15 +170,23 @@
 
     call io_close(iunit)
 
-    nvaf = ntime
+    deltat = time(2) - time(1)
+
+    !%Variable VibrationalSpectrumTime
+    !%Type integer
+    !%Section Utilities::oct-vibrational_spectrum
+    !%Description
+    !% This variable controls the maximum time for the calculation of
+    !% the velocity autocorrelation function. The default is the total
+    !% propagation time.
+    !%End
+    call parse_float(datasets_check('VibrationalSpectrumTime'), ntime*deltat, vaftime)
+
+    nvaf = int(vaftime/deltat)
 
     SAFE_ALLOCATE(vaf(1:ntime))
 
-    call read_vaf(vaf)
-
-    ini_iter=1
-    end_iter=nvaf
-
+    call calculate_vaf(vaf)
 
    !print the vaf
     iunit = io_open('td.general/velocity_autocorrelation', action='write')
@@ -190,8 +198,8 @@
       '#       Iter', 'time [',units_out%time%abbrev,']', 'VAF [a.u.]'
     write(unit = iunit, iostat = ierr, fmt = 800) 
 
-    do jj = ini_iter, end_iter
-      write(unit = iunit, iostat = ierr, fmt = *) jj, units_from_atomic(units_out%time, time(jj)), vaf(jj)
+    do jj = 1, nvaf
+      write(unit = iunit, iostat = ierr, fmt = *) jj, units_from_atomic(units_out%time, (jj - 1)*deltat), vaf(jj)
     end do
 
     call io_close(iunit)
@@ -204,13 +212,13 @@
     call batch_init(vafb, 1)
     call batch_add_state(vafb, vaf)
 
-    call signal_damp(spectrum%damp, spectrum%damp_factor, 1, ntime, time(2) - time(1), vafb)
+    call signal_damp(spectrum%damp, spectrum%damp_factor, 1, nvaf, deltat, vafb)
 
     call batch_init(ftvafb, 1)
     call batch_add_state(ftvafb, ftvaf)
 
     call fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-      1, ntime, M_ZERO, time(2) - time(1), vafb, 1, max_freq, spectrum%energy_step, ftvafb)
+      1, nvaf, M_ZERO, deltat, vafb, 1, max_freq, spectrum%energy_step, ftvafb)
 
     call batch_end(vafb)
     call batch_end(ftvafb)
@@ -221,8 +229,7 @@
 
     write(unit = iunit, iostat = ierr, fmt = 800) 
     write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
-    write(unit = iunit, iostat = ierr, fmt = '(a17,8x,a15,5x,a13,5x,a13)') &
-      '#   Energy [1/cm]', 'Spectrum [a.u.]', 'Re(FT of vaf)', 'Im(FT of vaf)'      
+    write(unit = iunit, iostat = ierr, fmt = '(a17,6x,a15)') '#   Energy [1/cm]', 'Spectrum [a.u.]'
     write(unit = iunit, iostat = ierr, fmt = 800 ) 
 
     do ifreq = 1, max_freq
@@ -250,7 +257,7 @@
 
   contains
 
-    subroutine read_vaf(vaf)
+    subroutine calculate_vaf(vaf)
       FLOAT, intent(out) :: vaf(:)
       integer :: itm, itn
 
@@ -283,7 +290,7 @@
       end do
       vaf(1) = M_ONE
 
-    end subroutine read_vaf
+    end subroutine calculate_vaf
 
   end program vibrational
 
