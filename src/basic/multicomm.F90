@@ -110,21 +110,21 @@ module multicomm_m
 
   !> Stores all communicators and groups
   type multicomm_t
-    integer          :: n_node         !< Total number of nodes.
-    integer          :: n_index        !< Number of parallel indices.
+    integer          :: n_node           !< Total number of nodes.
+    integer          :: n_index          !< Number of parallel indices.
 
-    integer          :: par_strategy   !< What kind of parallelization strategy should we use?
+    integer          :: par_strategy     !< What kind of parallelization strategy should we use?
 
-    integer, pointer :: group_sizes(:)  !< Number of processors in each group.
-    integer, pointer :: who_am_i(:)     !< Rank in the "line"-communicators.
-    integer, pointer :: group_comm(:)   !< "Line"-communicators I belong to.
-    integer          :: dom_st_comm     !< States-domain plane communicator.
-    integer          :: st_kpt_comm     !< Kpoints-states plane communicator.
-    integer          :: dom_st_kpt_comm !< Kpoints-states-domain cube communicator.
+    integer, pointer :: group_sizes(:)   !< Number of processors in each group.
+    integer, pointer :: who_am_i(:)      !< Rank in the "line"-communicators.
+    integer, pointer :: group_comm(:)    !< "Line"-communicators I belong to.
+    integer          :: dom_st_comm      !< States-domain plane communicator.
+    integer          :: st_kpt_comm      !< Kpoints-states plane communicator.
+    integer          :: dom_st_kpt_comm  !< Kpoints-states-domain cube communicator.
 
-    integer          :: nthreads        !< Number of OMP threads
-    integer          :: node_type       !< Is this node a P_MASTER or a P_SLAVE?
-    logical          :: have_slaves     !< are slaves available?
+    integer          :: nthreads         !< Number of OMP threads
+    integer          :: node_type        !< Is this node a P_MASTER or a P_SLAVE?
+    logical          :: have_slaves      !< are slaves available?
     
     integer          :: full_comm        !< The base communicator.
     integer          :: full_comm_rank   !< The rank in the base communicator.
@@ -187,6 +187,8 @@ contains
       call messages_info(1)
     end if
 
+    nullify(mc%group_sizes)
+    mc%have_slaves = .false.
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
       SAFE_ALLOCATE(mc%group_sizes(1:mc%n_index))
       mc%group_sizes(:) = 1
@@ -281,7 +283,7 @@ contains
 
       ! default is set in calc_mode_default_parallel_mask()
 
-      if(base_grp%size > 1) then
+     if(base_grp%size > 1) then
 
         par_mask = parallel_mask
 
@@ -311,7 +313,7 @@ contains
         mc%par_strategy = P_STRATEGY_SERIAL
       end if
 
-      mc%nthreads = 1
+       mc%nthreads = 1
 #if defined(HAVE_OPENMP)
       !$omp parallel
       !$omp master
@@ -518,6 +520,8 @@ contains
       SAFE_ALLOCATE(mc%group_comm(1:mc%n_index))
       SAFE_ALLOCATE(mc%who_am_i(1:mc%n_index))
 
+      mc%full_comm = MPI_COMM_NULL
+      mc%slave_intercomm = MPI_COMM_NULL
 #if defined(HAVE_MPI)
       if(mc%par_strategy /= P_STRATEGY_SERIAL) then
         ! Multilevel parallelization is organized in a hypercube. We
