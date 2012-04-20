@@ -520,9 +520,9 @@ contains
       SAFE_ALLOCATE(mc%group_comm(1:mc%n_index))
       SAFE_ALLOCATE(mc%who_am_i(1:mc%n_index))
 
+#if defined(HAVE_MPI)
       mc%full_comm = MPI_COMM_NULL
       mc%slave_intercomm = MPI_COMM_NULL
-#if defined(HAVE_MPI)
       if(mc%par_strategy /= P_STRATEGY_SERIAL) then
         ! Multilevel parallelization is organized in a hypercube. We
         ! use an MPI Cartesian topology to generate the communicators
@@ -610,10 +610,12 @@ contains
 #else
       mc%group_comm = -1
       mc%who_am_i   = 0
+      mc%full_comm = -1
       mc%master_comm = -1
       mc%dom_st_comm = -1
       mc%st_kpt_comm = -1
       mc%dom_st_kpt_comm = -1
+      mc%slave_intercomm = -1
 #endif
 
       POP_SUB(multicomm_init.group_comm_create)
