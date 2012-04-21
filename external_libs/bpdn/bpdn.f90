@@ -75,7 +75,7 @@ module bpdn_m
 
 contains
   
-  subroutine bpdn(nn, mm, aa, bb, sigma, xx, ierr)
+  subroutine bpdn(nn, mm, aa, bb, sigma, xx, ierr, activesetit)
     integer,           intent(in)    :: nn
     integer,           intent(in)    :: mm
     real(8),           intent(in)    :: aa(:, :) !(1:nn, 1:mm)
@@ -83,9 +83,9 @@ contains
     real(8),           intent(in)    :: sigma
     real(8),           intent(out)   :: xx(:)    !(1:mm)
     integer, optional, intent(out)   :: ierr     ! < 0 : some error occurred. >= 0 : solution found
+    integer, optional, intent(in)    :: activesetit
 
     integer, parameter :: nprevvals = 3
-    integer, parameter :: activesetit = huge(1)
     real(8), parameter :: stepmin = 1.0e-16_8, stepmax = 1.0e+5_8
     real(8), parameter :: bptol = 1.0e-6_8
     real(8), parameter :: dectol = 1.0e-4_8
@@ -182,9 +182,11 @@ contains
         nnziter = 0;
       else
         nnziter = nnziter + 1;
-        if(nnziter >= activesetit) then
-          done = .true.
-          status = EXIT_ACTIVE_SET
+        if(present(activesetit)) then
+          if(nnziter >= activesetit) then
+            done = .true.
+            status = EXIT_ACTIVE_SET
+          end if
         end if
       end if
 
