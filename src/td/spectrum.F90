@@ -150,15 +150,15 @@ contains
 
     !%Variable SpectrumSignalNoise
     !%Type float
-    !%Default 3e-4 au
+    !%Default 0.0
     !%Section Utilities::oct-propagation_spectrum
     !%Description
     !% For compressed sensing, the signal to process, the
     !% time-dependent dipole in this case, is assumed to have some
     !% noise that is given by this quantity. The default value is
-    !% 3.0e-4. This value is always assumed to be in atomic units.
+    !% 0.0, this value is unitless.
     !%End
-    call parse_float(datasets_check('SpectrumSignalNoise'), CNST(3.0e-4), spectrum%noise)
+    call parse_float(datasets_check('SpectrumSignalNoise'), CNST(0.0), spectrum%noise)
 
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) then
       call messages_experimental('compressed sensing')
@@ -1851,18 +1851,23 @@ contains
 
   ! -------------------------------------------------------
 
-  subroutine signal_damp(damp_type, damp_factor, time_start, time_end, time_step, time_function)
-    integer,         intent(in)    :: damp_type
-    FLOAT,           intent(in)    :: damp_factor    
-    integer,         intent(in)    :: time_start
-    integer,         intent(in)    :: time_end
-    FLOAT,           intent(in)    :: time_step
-    type(batch_t),   intent(inout) :: time_function
+  subroutine signal_damp(damp_type, damp_factor, time_start, time_end, time_step, time_function, window)
+    integer,            intent(in)    :: damp_type
+    FLOAT,              intent(in)    :: damp_factor    
+    integer,            intent(in)    :: time_start
+    integer,            intent(in)    :: time_end
+    FLOAT,              intent(in)    :: time_step
+    type(batch_t),      intent(inout) :: time_function
+    logical, optional,  intent(in)    :: window
 
     integer :: itime, ii
     FLOAT   :: total_time, time, weight
+    logical :: window_
+
 
     PUSH_SUB(signal_damp)
+
+    window_ = optional_default(window, .false.)
 
     ASSERT(batch_is_ok(time_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
@@ -1871,6 +1876,8 @@ contains
 
     do itime = time_start, time_end
       time = time_step*(itime - time_start)
+
+      if(window_) time = abs(2*time - total_time)
 
       ! Gets the damp function
       select case(damp_type)
@@ -2007,7 +2014,7 @@ contains
     case(SPECTRUM_COMPRESSED_SENSING)
 
       call compressed_sensing_init(cs, transform, &
-        time_end -time_start + 1, time_step, time_step*(time_start - 1) - t0, &
+        time_end - time_start + 1, time_step, time_step*(time_start - 1) - t0, &
         energy_end - energy_start + 1, energy_step, energy_step*(energy_start - 1), noise)
 
       do ii = 1, time_function%nst_linear

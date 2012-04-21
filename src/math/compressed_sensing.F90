@@ -145,7 +145,7 @@ contains
       nrm = M_ONE
     end if
 
-    call bpdn(this%ntime, this%nfreq, this%fourier_matrix, tf_normalized, this%sigma, freq_function, ierr)
+    call bpdn(this%ntime, this%nfreq, this%fourier_matrix, tf_normalized, this%sigma, freq_function, ierr, activesetit = 50)
 
     SAFE_DEALLOCATE_A(tf_normalized)
 
