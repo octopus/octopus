@@ -108,12 +108,13 @@ module scf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, gr, geo, st, hm)
+  subroutine scf_init(scf, gr, geo, st, hm, conv_force)
     type(scf_t),         intent(inout) :: scf
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
     type(states_t),      intent(in)    :: st
     type(hamiltonian_t), intent(inout) :: hm
+    FLOAT, optional,     intent(in)    :: conv_force
 
     FLOAT :: rmin
     integer :: mixdefault
@@ -208,11 +209,13 @@ contains
     !%Default 0.0
     !%Section SCF::Convergence
     !%Description
-    !% Absolute convergence of the forces: 
-    !% maximum variation of any component of the ionic forces in consecutive iterations.
-    !% A zero value (the default) means do not use this criterion.
+    !% Absolute convergence of the forces: maximum variation of any
+    !% component of the ionic forces in consecutive iterations.  A
+    !% zero value means do not use this criterion. The default is
+    !% zero, except for geometry optimization, that has a default of
+    !% 1e-8.
     !%End
-    call parse_float(datasets_check('ConvForce'), M_ZERO, scf%conv_abs_force)
+    call parse_float(datasets_check('ConvForce'), optional_default(conv_force, M_ZERO), scf%conv_abs_force)
     scf%conv_abs_force = units_to_atomic(units_inp%force, scf%conv_abs_force)
 
     if(scf%max_iter < 0 .and. &
