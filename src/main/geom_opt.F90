@@ -225,13 +225,13 @@ contains
       !% of all species change less than <tt>GOMinimumMove</tt>.  Used
       !% in conjunction with <tt>GOTolerance</tt>. If
       !% <tt>GOMinimumMove = 0</tt>, this criterion is ignored. The
-      !% default is 0. 
+      !% default is 0.001 [b]. 
       !%
       !% Note that if you use <tt>GOMethod =
       !% simplex</tt>, then you must supply a non-zero
       !% <tt>GOMinimumMove</tt>.
       !%End
-      call parse_float(datasets_check('GOMinimumMove'), CNST(0.0), g_opt%toldr, units_inp%length)
+      call parse_float(datasets_check('GOMinimumMove'), CNST(0.001), g_opt%toldr, units_inp%length)
 
       if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call input_error('GOMinimumMove')
       
