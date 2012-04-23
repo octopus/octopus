@@ -175,7 +175,7 @@ contains
       !%Description
       !% (Experimental) If set to yes, Octopus centers the geometry at
       !% every optimization step. It also reduces the degrees of
-      !% freedom of the optimization by using the traslational
+      !% freedom of the optimization by using the translational
       !% invariance. The default is no.
       !%End
       call parse_logical(datasets_check('GOCenter'), .false.,  center)

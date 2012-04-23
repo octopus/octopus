@@ -212,7 +212,7 @@ contains
     !% Absolute convergence of the forces: maximum variation of any
     !% component of the ionic forces in consecutive iterations.  A
     !% zero value means do not use this criterion. The default is
-    !% zero, except for geometry optimization, that has a default of
+    !% zero, except for geometry optimization, which sets a default of
     !% 1e-8.
     !%End
     call parse_float(datasets_check('ConvForce'), optional_default(conv_force, M_ZERO), scf%conv_abs_force)

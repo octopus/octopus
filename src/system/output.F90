@@ -119,7 +119,7 @@ module output_m
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
 
     type(mesh_plane_t) :: plane    !< This is to calculate the current flow across a plane
-    type(mesh_line_t)  :: line     !< or though a line (in 2D)
+    type(mesh_line_t)  :: line     !< or through a line (in 2D)
 
     type(output_bgw_t) :: bgw      !< parameters for BerkeleyGW output
 
