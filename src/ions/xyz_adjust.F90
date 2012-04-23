@@ -38,13 +38,14 @@ module xyz_adjust_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xyz_adjust_it(geo)
-    type(geometry_t), intent(inout) :: geo
+  subroutine xyz_adjust_it(geo, rotate)
+    type(geometry_t),           intent(inout) :: geo
+    logical,          optional, intent(in)    :: rotate
 
     integer, parameter :: &
-         INERTIA = 1,     &
-         PSEUDO  = 2,     &
-         LARGE   = 3
+      INERTIA = 1,     &
+      PSEUDO  = 2,     &
+      LARGE   = 3
 
     FLOAT :: center(MAX_DIM), x1(MAX_DIM), x2(MAX_DIM), to(MAX_DIM)
     integer :: axis_type
@@ -53,73 +54,77 @@ contains
     ! is there something to do
     if(geo%natoms <= 1) return
 
-    ! get to axis
-    if(parse_block(datasets_check('MainAxis'), blk)==0) then
-      call parse_block_float(blk, 0, 0, to(1))
-      call parse_block_float(blk, 0, 1, to(2))
-      call parse_block_float(blk, 0, 2, to(3))
-      call parse_block_end(blk)
-    else
-      to(1) = M_ONE; to(2) = M_ZERO; to(3) = M_ZERO
-    end if
-    to = to / sqrt(sum(to**2))
+    if(optional_default(rotate, .true.)) then
 
-    !%Variable MainAxis
-    !%Type block
-    !%Section Utilities::oct-center-geometry
-    !%Description 
-    !% A vector of three reals defining the axis to which the molecule
-    !% should be aligned. If not present, the default value will
-    !% be:
-    !% <tt>%MainAxis
-    !% <br> 1 | 0 | 1 
-    !% <br>%</tt>
-    !%End
-
-    !%Variable AxisType
-    !%Type integer
-    !%Default inertia
-    !%Section Utilities::oct-center-geometry
-    !%Description
-    !% After the structure is centered, it is also aligned to a set of orthogonal axes.
-    !% This variable decides which set of axes to use.
-    !%Option inertia 1
-    !% The axis of inertia.
-    !%Option pseudo_inertia 2
-    !% Pseudo-axis of inertia, calculated considering all species to have equal mass.
-    !%Option large_axis 3
-    !% The larger axis of the molecule.
-    !%End
-    call parse_integer(datasets_check('AxisType'), INERTIA, axis_type)
-
-    select case(axis_type)
-    case(INERTIA, PSEUDO)
-      call find_center_of_mass(geo, center, pseudo = (axis_type==PSEUDO))
-      call translate(geo, -center)
-      call axis_inertia(geo, x1, x2, pseudo = (axis_type==PSEUDO))
-    case(LARGE)
-      call find_center(geo, center)
-      call translate(geo, -center)
-      call axis_large(geo, x1, x2)
-    case default
-      write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
-      call messages_fatal(1)
-    end select
-
-    ! check if the axes are OK
-    if(sum(x2**2) == M_ZERO) then ! linear molecule
-      if(x1(1) == M_ZERO) then
-        x2(1) = x1(1); x2(2) = -x1(3); x2(3) = x1(2)
-      else if(x1(2) == M_ZERO) then
-        x2(2) = x1(2); x2(1) = -x1(3); x2(3) = x1(1)
+      ! get to axis
+      if(parse_block(datasets_check('MainAxis'), blk)==0) then
+        call parse_block_float(blk, 0, 0, to(1))
+        call parse_block_float(blk, 0, 1, to(2))
+        call parse_block_float(blk, 0, 2, to(3))
+        call parse_block_end(blk)
       else
-        x2(3) = x1(3); x2(1) = -x1(2); x2(2) = x1(1)
+        to(1) = M_ONE; to(2) = M_ZERO; to(3) = M_ZERO
       end if
-    end if
-    x2 = x2/sqrt(sum(x2**2))
+      to = to / sqrt(sum(to**2))
 
-    ! rotate to main axis
-    call geometry_rotate(geo, x1, x2, to)
+      !%Variable MainAxis
+      !%Type block
+      !%Section Utilities::oct-center-geometry
+      !%Description 
+      !% A vector of three reals defining the axis to which the molecule
+      !% should be aligned. If not present, the default value will
+      !% be:
+      !% <tt>%MainAxis
+      !% <br> 1 | 0 | 1 
+      !% <br>%</tt>
+      !%End
+
+      !%Variable AxisType
+      !%Type integer
+      !%Default inertia
+      !%Section Utilities::oct-center-geometry
+      !%Description
+      !% After the structure is centered, it is also aligned to a set of orthogonal axes.
+      !% This variable decides which set of axes to use.
+      !%Option inertia 1
+      !% The axis of inertia.
+      !%Option pseudo_inertia 2
+      !% Pseudo-axis of inertia, calculated considering all species to have equal mass.
+      !%Option large_axis 3
+      !% The larger axis of the molecule.
+      !%End
+      call parse_integer(datasets_check('AxisType'), INERTIA, axis_type)
+
+      select case(axis_type)
+      case(INERTIA, PSEUDO)
+        call find_center_of_mass(geo, center, pseudo = (axis_type==PSEUDO))
+        call translate(geo, -center)
+        call axis_inertia(geo, x1, x2, pseudo = (axis_type==PSEUDO))
+      case(LARGE)
+        call find_center(geo, center)
+        call translate(geo, -center)
+        call axis_large(geo, x1, x2)
+      case default
+        write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
+        call messages_fatal(1)
+      end select
+
+      ! check if the axes are OK
+      if(sum(x2**2) == M_ZERO) then ! linear molecule
+        if(x1(1) == M_ZERO) then
+          x2(1) = x1(1); x2(2) = -x1(3); x2(3) = x1(2)
+        else if(x1(2) == M_ZERO) then
+          x2(2) = x1(2); x2(1) = -x1(3); x2(3) = x1(1)
+        else
+          x2(3) = x1(3); x2(1) = -x1(2); x2(2) = x1(1)
+        end if
+      end if
+      x2 = x2/sqrt(sum(x2**2))
+
+      ! rotate to main axis
+      call geometry_rotate(geo, x1, x2, to)
+
+    end if
 
     ! recenter
     call find_center(geo, center)

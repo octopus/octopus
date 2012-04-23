@@ -45,6 +45,7 @@ module geom_opt_m
   use unit_system_m
   use v_ks_m
   use varinfo_m
+  use xyz_adjust_m
 
   implicit none
 
@@ -68,6 +69,7 @@ module geom_opt_m
     type(states_t),      pointer :: st
     integer                      :: dim
     integer                      :: size
+    integer                      :: fixed_atom
   end type geom_opt_t
 
   type(geom_opt_t) :: g_opt
@@ -149,6 +151,9 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_()
+
+      logical :: center
+
       PUSH_SUB(geom_opt_run.init_)
 
       call states_allocate_wfns(sys%st, sys%gr%mesh)
@@ -163,6 +168,24 @@ contains
 
       g_opt%size = g_opt%dim*g_opt%geo%natoms
 
+      !%Variable GOCenter
+      !%Type logical
+      !%Default no
+      !%Section Calculation Modes::Geometry Optimization
+      !%Description
+      !% (Experimental) If set to yes, Octopus centers the geometry at
+      !% every optimization step. It also reduces the degrees of
+      !% freedom of the optimization by using the traslational
+      !% invariance. The default is no.
+      !%End
+      call parse_logical(datasets_check('GOCenter'), .false.,  center)
+
+      if(center) then
+        g_opt%fixed_atom = 1
+        g_opt%size = g_opt%size  - g_opt%dim
+        call messages_experimental('GOCenter')
+      end if
+      
       !%Variable GOMethod
       !%Type integer
       !%Default steep
@@ -320,6 +343,8 @@ contains
 
     call from_coords(g_opt, coords)
 
+    if(g_opt%fixed_atom /= 0) call xyz_adjust_it(g_opt%geo, rotate = .false.)
+
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .true.)
 
     call geometry_write_xyz(".", "work-geom", g_opt%geo, g_opt%dim, append = .true.)
@@ -417,13 +442,19 @@ contains
     type(geom_opt_t), intent(in)  :: gopt
     REAL_DOUBLE,            intent(out) :: coords(:)
 
-    integer :: iatom, idir
+    integer :: iatom, idir, icoord
 
     PUSH_SUB(to_coords)
 
-    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
-      coords(g_opt%dim*iatom + idir) = g_opt%geo%atom(iatom + 1)%x(idir)
-    end forall
+    icoord = 1
+    do iatom = 1, g_opt%geo%natoms
+      if(g_opt%fixed_atom == iatom) cycle
+      do idir = 1, g_opt%dim
+        coords(icoord) = g_opt%geo%atom(iatom)%x(idir)
+        if(g_opt%fixed_atom /= 0) coords(icoord) = coords(icoord) - g_opt%geo%atom(g_opt%fixed_atom)%x(idir)
+        icoord = icoord + 1
+      end do
+    end do
 
     POP_SUB(to_coords)
   end subroutine to_coords
@@ -434,13 +465,19 @@ contains
     type(geom_opt_t), intent(in)  :: gopt
     REAL_DOUBLE,            intent(out) :: grad(:)
 
-    integer :: iatom, idir
+    integer :: iatom, idir, icoord
 
     PUSH_SUB(to_grad)
 
-    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
-      grad(g_opt%dim*iatom + idir) = -g_opt%geo%atom(iatom + 1)%f(idir)
-    end forall
+    icoord = 1
+    do iatom = 1, g_opt%geo%natoms
+      if(g_opt%fixed_atom == iatom) cycle
+      do idir = 1, g_opt%dim
+        grad(icoord) = -g_opt%geo%atom(iatom)%f(idir)
+        if(g_opt%fixed_atom /= 0) grad(icoord) = grad(icoord) + g_opt%geo%atom(g_opt%fixed_atom)%f(idir)
+        icoord = icoord + 1
+      end do
+    end do
 
     POP_SUB(to_grad)
   end subroutine to_grad
@@ -451,13 +488,21 @@ contains
     type(geom_opt_t), intent(inout) :: gopt
     REAL_DOUBLE,            intent(in)    :: coords(:)
 
-    integer :: iatom, idir
+    integer :: iatom, idir, icoord
 
     PUSH_SUB(from_coords)
 
-    forall(iatom = 0:g_opt%geo%natoms - 1, idir = 1:g_opt%dim)
-      g_opt%geo%atom(iatom + 1)%x(idir) = coords(g_opt%dim*iatom + idir) 
-    end forall
+    icoord = 1
+    do iatom = 1, g_opt%geo%natoms
+      if(g_opt%fixed_atom == iatom) cycle      
+      do idir = 1, g_opt%dim
+        g_opt%geo%atom(iatom)%x(idir) = coords(icoord)
+        if(g_opt%fixed_atom /= 0) then
+          g_opt%geo%atom(iatom)%x(idir) = g_opt%geo%atom(iatom)%x(idir) + g_opt%geo%atom(g_opt%fixed_atom)%x(idir)
+        end if
+        icoord = icoord + 1
+      end do
+    end do
 
     POP_SUB(from_coords)
   end subroutine from_coords
