@@ -118,6 +118,18 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   if(.not.varinfo_valid_option('PESMaskPropagator',mask%sw_evolve)) call input_error('PESMaskPropagator')
   call messages_print_var_option(stdout, "PESMaskPropagator",mask%sw_evolve)
 
+  !%Variable PESMaskStartTime 
+  !%Type float
+  !%Default -1.0
+  !%Section Time-Dependent::PES
+  !%Description
+  !% The time photoelectrons start to be recorded. In pump-probe simulations this allow to 
+  !% get rid of unwanted ionization signal coming from the pump.
+  !% NOTE: this will enforce the mask boundary conditions for all the times. 
+  !%End
+  call parse_float(datasets_check('PESMaskStartTime'),&
+       units_to_atomic(units_inp%time, - M_ONE), mask%start_time)
+
 
 
 ! ========================================
@@ -1340,7 +1352,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
   FLOAT :: dd
   integer :: il,i
 
-  FLOAT :: dmin
+  FLOAT :: dmin,time
   integer :: rankmin,ip_local,size
 
 #if defined(HAVE_MPI)
@@ -1356,186 +1368,192 @@ subroutine PES_mask_calc(mask, mesh, st, dt, mask_fn,hm,geo,iter)
   PUSH_SUB(PES_mask_calc)
 
 
+  time = iter *dt
+  
+  if (time > mask%start_time) then ! record photoelectrons only after mask%start_time
+    
+    call cube_function_null(cf1)    
+    call zcube_function_alloc_RS(mask%cube, cf1) 
+    call cube_function_null(cf2)    
+    call zcube_function_alloc_RS(mask%cube, cf2)
 
-  call cube_function_null(cf1)    
-  call zcube_function_alloc_RS(mask%cube, cf1) 
-  call cube_function_null(cf2)    
-  call zcube_function_alloc_RS(mask%cube, cf2)
-
-  select case(mask%mode) 
-  case(MODE_MASK)
-    if(mask%back_action .eqv. .true.) then
-      SAFE_ALLOCATE(mf(1:mask%mesh%np_part))
-    end if
-  case(MODE_PSF)
-    call cube_function_null(cf3)    
-    call zcube_function_alloc_RS(mask%cube, cf3) 
-    call cube_function_null(cf4)    
-    call zcube_function_alloc_RS(mask%cube, cf4) 
-  end select
+    select case(mask%mode) 
+    case(MODE_MASK)
+      if(mask%back_action .eqv. .true.) then
+        SAFE_ALLOCATE(mf(1:mask%mesh%np_part))
+      end if
+    case(MODE_PSF)
+      call cube_function_null(cf3)    
+      call zcube_function_alloc_RS(mask%cube, cf3) 
+      call cube_function_null(cf4)    
+      call zcube_function_alloc_RS(mask%cube, cf4) 
+    end select
   
 
-  size = (mask%ll(1))*(mask%ll(2))*(mask%ll(3)) 
+    size = (mask%ll(1))*(mask%ll(2))*(mask%ll(3)) 
 
 
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ist = st%st_start, st%st_end
-      do idim = 1, st%d%dim
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        do idim = 1, st%d%dim
 
-        cf1%zRs = M_z0
-        cf2%zRS = M_z0
+          cf1%zRs = M_z0
+          cf2%zRS = M_z0
        
-        call zmesh_to_cube(mask%mesh, st%zpsi(:, idim, ist, ik), mask%cube, cf1, local=.true.)
+          call zmesh_to_cube(mask%mesh, st%zpsi(:, idim, ist, ik), mask%cube, cf1, local=.true.)
 
-        select case(mask%mode)
-     !----------------------------------------- 
-     ! Mask Method
-     !----------------------------------------
-          case(MODE_MASK)
+          select case(mask%mode)
+       !----------------------------------------- 
+       ! Mask Method
+       !----------------------------------------
+            case(MODE_MASK)
            
             
-            cf1%zRs = (M_ONE-mask%M)*cf1%zRs                                        ! cf1 =(1-M)*U(t2,t1)*\Psi_A(x,t1)
-            call PES_mask_X_to_K(mask,mesh,cf1,cf2)                                 ! cf2 = \tilde{\Psi}_A(k,t2)
+              cf1%zRs = (M_ONE-mask%M)*cf1%zRs                                        ! cf1 =(1-M)*U(t2,t1)*\Psi_A(x,t1)
+              call PES_mask_X_to_K(mask,mesh,cf1,cf2)                                 ! cf2 = \tilde{\Psi}_A(k,t2)
 
-            if ( mask%filter_k ) then ! apply a filter to the Fourier transform to remove unwanted energies
+              if ( mask%filter_k ) then ! apply a filter to the Fourier transform to remove unwanted energies
               
-              ASSERT(associated(mask%Mk))
-              cf2%zRs= cf2%zRs * mask%Mk(:,:,:) 
-            end if
+                ASSERT(associated(mask%Mk))
+                cf2%zRs= cf2%zRs * mask%Mk(:,:,:) 
+              end if
             
 
-            cf1%zRs = mask%k(:,:,:, idim, ist, ik)                                  ! cf1 = \Psi_B(k,t1)
-            mask%k(:,:,:, idim, ist, ik) =  cf2%zRs                                 ! mask%k = \tilde{\Psi}_A(k,t2)          
-            call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf1%zRs)    ! cf1 = \tilde{\Psi}_B(k,t2)
+              cf1%zRs = mask%k(:,:,:, idim, ist, ik)                                  ! cf1 = \Psi_B(k,t1)
+              mask%k(:,:,:, idim, ist, ik) =  cf2%zRs                                 ! mask%k = \tilde{\Psi}_A(k,t2)          
+              call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf1%zRs)    ! cf1 = \tilde{\Psi}_B(k,t2)
 
-            mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&
-                                            + cf1%zRs      ! mask%k = \tilde{\Psi}_A(k,t2) + \tilde{\Psi}_B(k,t2)            
+              mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&
+                                              + cf1%zRs      ! mask%k = \tilde{\Psi}_A(k,t2) + \tilde{\Psi}_B(k,t2)            
             
 
-            if(mask%back_action .eqv. .true.) then
+              if(mask%back_action .eqv. .true.) then
 
-! Apply Back-action to wavewunction in A
-              call PES_mask_K_to_X(mask,mesh,cf1%zRs,cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
-              call zcube_to_mesh(mask%cube, cf2, mask%mesh, mf, local = .true.)  
-              st%zpsi(:, idim, ist, ik) = st%zpsi(:, idim, ist, ik) + mf
+  ! Apply Back-action to wavewunction in A
+                call PES_mask_K_to_X(mask,mesh,cf1%zRs,cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
+                call zcube_to_mesh(mask%cube, cf2, mask%mesh, mf, local = .true.)  
+                st%zpsi(:, idim, ist, ik) = st%zpsi(:, idim, ist, ik) + mf
 
                
-! Apply correction to wavefunciton in B
-              cf2%zRs= (mask%M)*cf2%zRs                                             ! cf2 = M*\Psi_B(x,t1)    
-              call PES_mask_X_to_K(mask,mesh,cf2,cf1)
+  ! Apply correction to wavefunciton in B
+                cf2%zRs= (mask%M)*cf2%zRs                                             ! cf2 = M*\Psi_B(x,t1)    
+                call PES_mask_X_to_K(mask,mesh,cf2,cf1)
                                          
-              mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%zRs
+                mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%zRs
 
-            end if
+              end if
 
 
-     !----------------------------------------- 
-     ! Passive Mask method
-     !----------------------------------------
-          case(MODE_PASSIVE)
+       !----------------------------------------- 
+       ! Passive Mask method
+       !----------------------------------------
+            case(MODE_PASSIVE)
             
 
-            cf1%zRs = (M_ONE-mask%M)*cf1%zRs
-            call PES_mask_X_to_K(mask,mesh,cf1,cf2) 
+              cf1%zRs = (M_ONE-mask%M)*cf1%zRs
+              call PES_mask_X_to_K(mask,mesh,cf1,cf2) 
             
-            mask%k(:,:,:, idim, ist, ik) = cf2%zRs(:,:,:)
+              mask%k(:,:,:, idim, ist, ik) = cf2%zRs(:,:,:)
 
 
-     !----------------------------------------- 
-     ! Phase Space Filter
-     !----------------------------------------
+       !----------------------------------------- 
+       ! Phase Space Filter
+       !----------------------------------------
      
-          case(MODE_PSF)
-! !          if (MOD(iter*dt,mask%psf%Tstep) .eq. M_ZERO) then 
-! !            write (*,*) "APPLY TDPSF!!"
-! !!            call tdpsf_filter_out(mask%psf,wf1,wf2)
-! !            call PES_mask_X_to_K(mask,mesh,wf1,wf3)
-! !            call PES_mask_K_to_X(mask,mesh,wf3,wf2)
-! 
-!             call tdpsf_X_to_K(mask%psf,wf1,wf3)
-!             call tdpsf_K_to_X(mask%psf,wf3,wf2)
-! 
-!             wf2 = wf1 - wf2
-!             
-!             
-!             if(mask%back_action) then
-!               wf1 = mask%k(:,:,:, idim, ist, ik) - wf4
-!               call PES_mask_K_to_X(mask,mesh,wf1,mask%k(:,:,:, idim, ist, ik))
-!               wf2 = wf2 + mask%k(:,:,:, idim, ist, ik)
-!             end if
-! 
-!             !substitute the KS wf with the filtered one
-!             call PES_mask_square_to_mesh(mask,mesh,st%zpsi(:, idim, ist, ik),wf2,MaskHow = 3,Const = M_ONE)
-! 
-!             !the out-going part of the wf
-!             wf4 = wf1 - wf2
-!             call PES_mask_X_to_K(mask,mesh,wf4,wf3) 
-! 
-! !            do ix=1,mask%ll(1)
-! !              write (*,*) ix, wf1(ix,1,1),wf2(ix,1,1),wf3(ix,1,1)
-! !            end do             
-! !!            call PES_mask_X_to_K(mask,mesh,wf3,wf1)
-! !            call PES_mask_K_to_X(mask,mesh,mask%k(:,:,:, idim, ist, ik),wf3)
-! !            call PES_mask_X_to_K(mask,mesh,wf3,mask%k(:,:,:, idim, ist, ik))
-! 
-!             call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter,mask%k(:,:,:, idim, ist, ik) )
-!             wf4 = mask%k(:,:,:, idim, ist, ik)            
-! 
-! !            mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + wf1(:,:,:)
-!             mask%k(:,:,:, idim, ist, ik) =  wf4 + wf3
-!             
-! !          end if 
+            case(MODE_PSF)
+  ! !          if (MOD(iter*dt,mask%psf%Tstep) .eq. M_ZERO) then 
+  ! !            write (*,*) "APPLY TDPSF!!"
+  ! !!            call tdpsf_filter_out(mask%psf,wf1,wf2)
+  ! !            call PES_mask_X_to_K(mask,mesh,wf1,wf3)
+  ! !            call PES_mask_K_to_X(mask,mesh,wf3,wf2)
+  ! 
+  !             call tdpsf_X_to_K(mask%psf,wf1,wf3)
+  !             call tdpsf_K_to_X(mask%psf,wf3,wf2)
+  ! 
+  !             wf2 = wf1 - wf2
+  !             
+  !             
+  !             if(mask%back_action) then
+  !               wf1 = mask%k(:,:,:, idim, ist, ik) - wf4
+  !               call PES_mask_K_to_X(mask,mesh,wf1,mask%k(:,:,:, idim, ist, ik))
+  !               wf2 = wf2 + mask%k(:,:,:, idim, ist, ik)
+  !             end if
+  ! 
+  !             !substitute the KS wf with the filtered one
+  !             call PES_mask_square_to_mesh(mask,mesh,st%zpsi(:, idim, ist, ik),wf2,MaskHow = 3,Const = M_ONE)
+  ! 
+  !             !the out-going part of the wf
+  !             wf4 = wf1 - wf2
+  !             call PES_mask_X_to_K(mask,mesh,wf4,wf3) 
+  ! 
+  ! !            do ix=1,mask%ll(1)
+  ! !              write (*,*) ix, wf1(ix,1,1),wf2(ix,1,1),wf3(ix,1,1)
+  ! !            end do             
+  ! !!            call PES_mask_X_to_K(mask,mesh,wf3,wf1)
+  ! !            call PES_mask_K_to_X(mask,mesh,mask%k(:,:,:, idim, ist, ik),wf3)
+  ! !            call PES_mask_X_to_K(mask,mesh,wf3,mask%k(:,:,:, idim, ist, ik))
+  ! 
+  !             call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter,mask%k(:,:,:, idim, ist, ik) )
+  !             wf4 = mask%k(:,:,:, idim, ist, ik)            
+  ! 
+  ! !            mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) + wf1(:,:,:)
+  !             mask%k(:,:,:, idim, ist, ik) =  wf4 + wf3
+  !             
+  ! !          end if 
 
-            call tdpsf_X_to_K(mask%psf,cf1%zRs,cf3%zRs)
-            call tdpsf_K_to_X(mask%psf,cf3%zRs,cf2%zRs)
+              call tdpsf_X_to_K(mask%psf,cf1%zRs,cf3%zRs)
+              call tdpsf_K_to_X(mask%psf,cf3%zRs,cf2%zRs)
 
-            cf2%zRs = cf1%zRs - cf2%zRs
+              cf2%zRs = cf1%zRs - cf2%zRs
 
-            if(mask%back_action) then
-              cf1%zRs = mask%k(:,:,:, idim, ist, ik) - cf4%zRs
-              call PES_mask_K_to_X(mask,mesh,cf1%zRs,mask%k(:,:,:, idim, ist, ik))
-              cf2%zRs = cf2%zRs + mask%k(:,:,:, idim, ist, ik)
-            end if
+              if(mask%back_action) then
+                cf1%zRs = mask%k(:,:,:, idim, ist, ik) - cf4%zRs
+                call PES_mask_K_to_X(mask,mesh,cf1%zRs,mask%k(:,:,:, idim, ist, ik))
+                cf2%zRs = cf2%zRs + mask%k(:,:,:, idim, ist, ik)
+              end if
 
-            !substitute the KS wf with the filtered one
-            call zcube_to_mesh(mask%cube, cf2, mask%mesh, st%zpsi(:, idim, ist, ik), local = .true.)
-            !the out-going part of the wf
-            cf4%zRs = cf1%zRs - cf2%zRs
-            call PES_mask_X_to_K(mask,mesh,cf4,cf3) 
+              !substitute the KS wf with the filtered one
+              call zcube_to_mesh(mask%cube, cf2, mask%mesh, st%zpsi(:, idim, ist, ik), local = .true.)
+              !the out-going part of the wf
+              cf4%zRs = cf1%zRs - cf2%zRs
+              call PES_mask_X_to_K(mask,mesh,cf4,cf3) 
 
-            call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter,mask%k(:,:,:, idim, ist, ik) )
-            cf4%zRs = mask%k(:,:,:, idim, ist, ik)            
+              call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter,mask%k(:,:,:, idim, ist, ik) )
+              cf4%zRs = mask%k(:,:,:, idim, ist, ik)            
 
-            mask%k(:,:,:, idim, ist, ik) =  cf4%zRs + cf3%zRs
+              mask%k(:,:,:, idim, ist, ik) =  cf4%zRs + cf3%zRs
 
 
-          case default
-           !Program should die before coming here
-            write(message(1),'(a)') "PhotoElectroSpectrum = pes_mask. Unrecognized calculation mode." 
-            call messages_fatal(1)
+            case default
+             !Program should die before coming here
+              write(message(1),'(a)') "PhotoElectroSpectrum = pes_mask. Unrecognized calculation mode." 
+              call messages_fatal(1)
  
-       end select
+         end select
 
 
+        end do
       end do
     end do
-  end do
 
+    call zcube_function_free_RS(mask%cube, cf1)
+    call zcube_function_free_RS(mask%cube, cf2)
+    select case(mask%mode) 
+    case(MODE_MASK)
+      if(mask%back_action .eqv. .true.) then
+        SAFE_DEALLOCATE_A(mf)
+      end if
+    case(MODE_PSF)
+      call zcube_function_free_RS(mask%cube, cf3)
+      call zcube_function_free_RS(mask%cube, cf4)
+    end select
+
+  end if ! time > mask%start_time
 
   if(mask%mode .eq. MODE_MASK ) call PES_mask_apply_mask(mask,st,mesh)  !apply the mask to all the KS orbitals
 
 
-  call zcube_function_free_RS(mask%cube, cf1)
-  call zcube_function_free_RS(mask%cube, cf2)
-  select case(mask%mode) 
-  case(MODE_MASK)
-    if(mask%back_action .eqv. .true.) then
-      SAFE_DEALLOCATE_A(mf)
-    end if
-  case(MODE_PSF)
-    call zcube_function_free_RS(mask%cube, cf3)
-    call zcube_function_free_RS(mask%cube, cf4)
-  end select
+
 
 
 

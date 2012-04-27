@@ -132,6 +132,7 @@ module PES_m
     integer          :: enlarge_nfft           !< NFFT space enlargement
     integer          :: llr(MAX_DIM)           !< the size of the rescaled cubic mesh
        
+    FLOAT :: start_time              !< the time we switch on the photoelectron detector   
     FLOAT :: energyMax 
     FLOAT :: energyStep 
 
