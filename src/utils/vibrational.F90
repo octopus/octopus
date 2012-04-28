@@ -186,6 +186,14 @@
 
     SAFE_ALLOCATE(vaf(1:ntime))
 
+    call messages_write('Time step = ')
+    call messages_write(deltat, units = units_out%time)
+    call messages_info()
+    
+    call messages_new_line()
+    call messages_write('Calculating the velocity autocorrelation function')
+    call messages_info()
+
     call calculate_vaf(vaf)
 
    !print the vaf
