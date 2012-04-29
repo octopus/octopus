@@ -61,6 +61,7 @@ contains
     call calc_mode_set_parallelization(P_STRATEGY_STATES, default = .false.)
 #endif
     call calc_mode_set_scalapack_compat()
+    call calc_mode_set_extra_states(.true.)
 
     POP_SUB(ground_state_run_init)
   end subroutine ground_state_run_init
