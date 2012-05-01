@@ -646,7 +646,7 @@ contains
     type(unit_system_t) :: file_units, ref_file_units
     type(batch_t) :: dipoleb, sigmab
 
-    PUSH_SUB(spectrum_cross_section)
+    PUSH_SUB(spectrum_read_dipole)
 
     ! This function gives us back the unit connected to the "multipoles" file, the header information,
     ! the number of time steps, and the time step.
@@ -669,6 +669,8 @@ contains
       dipole(it, 1:3, 1:nspin) = units_to_atomic(file_units%length, dipole(it, 1:3, 1:nspin))
 
     end do
+
+    POP_SUB(spectrum_read_dipole)
 
   end subroutine spectrum_read_dipole
   
