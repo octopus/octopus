@@ -78,10 +78,10 @@ module ion_dynamics_m
 
     FLOAT, pointer   :: oldforce(:, :)
 
-    ! the old positions for Verlet (used for the Nose-Hoover)
+    !> the old positions for Verlet (used for the Nose-Hoover)
     FLOAT, pointer :: old_pos(:, :)    
 
-    ! variables for the Nose-Hoover thermostat
+    !> variables for the Nose-Hoover thermostat
     type(nose_hoover_t) :: nh(1:2)
     type(tdf_t) :: temperature_function
   end type ion_dynamics_t
@@ -581,7 +581,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This function returns the ionic temperature in energy units.
+  !> This function returns the ionic temperature in energy units.
   FLOAT pure function ion_dynamics_temperature(geo) result(temperature)
     type(geometry_t),      intent(in) :: geo
 

@@ -715,7 +715,7 @@ contains
   end subroutine geometry_end
 
   ! ---------------------------------------------------------
-  ! This function returns .true. if two atoms are too close.
+  !> This function returns .true. if two atoms are too close.
   logical function geometry_atoms_are_too_close(geo) result(too_close)
     type(geometry_t), intent(in) :: geo
 

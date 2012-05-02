@@ -69,7 +69,7 @@ module kpoints_m
     logical        :: use_time_reversal
 
     ! For the modified Monkhorst-Pack scheme
-    integer        :: nik_axis(MAX_DIM)    ! number of MP divisions
+    integer        :: nik_axis(MAX_DIM)    !< number of MP divisions
     FLOAT          :: shifts(MAX_DIM)      ! 
   end type kpoints_t
 
@@ -426,7 +426,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! sets the kpoints to zero (only to be used in transport mode)
+  !> sets the kpoints to zero (only to be used in transport mode)
   subroutine kpoints_set_transport_mode(this)
     type(kpoints_t), intent(inout) :: this
 
@@ -524,7 +524,7 @@ contains
   end function kpoints_get_point
 
   ! ----------------------------------------------------------
-  ! sets the ik-th kpoint to a given value (only to be used in transport mode)
+  !> sets the ik-th kpoint to a given value (only to be used in transport mode)
   subroutine kpoints_set_point(this, ik, point)
     type(kpoints_t), intent(inout) :: this
     integer,         intent(in)    :: ik
@@ -549,13 +549,13 @@ contains
 
 
   ! ----------------------------------------------------------
-  ! Generates the k-points grid.
-  ! Sets up a uniform array of k-points. Use a modification of the normal Monkhorst-Pack scheme, 
-  ! which is equivalent to the normal MP scheme in the case of even number of kpoints (i.e. naxis (i) even)  
-  ! used with a shift of (1/2, 1/2, 1/2).
-  ! For the original MP scheme, see (PRB 13, 518 (1976)) and (PRB 16, 1748 (1977))
-  ! naxis(i) are the number of points in the three directions determined by the lattice vectors.
-  ! shift(i) and sz shift the grid of integration points from the origin.
+  !> Generates the k-points grid.
+  !! Sets up a uniform array of k-points. Use a modification of the normal Monkhorst-Pack scheme, 
+  !! which is equivalent to the normal MP scheme in the case of even number of kpoints (i.e. naxis (i) even)  
+  !! used with a shift of (1/2, 1/2, 1/2).
+  !! For the original MP scheme, see (PRB 13, 518 (1976)) and (PRB 16, 1748 (1977))
+  !! naxis(i) are the number of points in the three directions determined by the lattice vectors.
+  !! shift(i) and sz shift the grid of integration points from the origin.
   subroutine kpoints_grid_generate(dim, naxis, shift, kpoints)  
     integer,           intent(in)  :: dim
     integer,           intent(in)  :: naxis(:)

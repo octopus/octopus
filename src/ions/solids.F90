@@ -41,7 +41,7 @@ module solids_m
     periodic_copy_num,        &
     periodic_write_crystal
 
-  ! parts of this module explicitly work on for 3 dimensions
+  !> parts of this module explicitly work on for 3 dimensions
   type periodic_copy_t
     private
     FLOAT :: pos(1:3)
@@ -155,8 +155,8 @@ contains
   end function periodic_copy_position
 
   ! ----------------------------------------------------------------
-  ! This subroutine creates a crystal by replicating the geometry and
-  ! writes the result to dir//'crystal.xyz'
+  !> This subroutine creates a crystal by replicating the geometry and
+  !! writes the result to dir//'crystal.xyz'
   subroutine periodic_write_crystal(sb, geo, dir)
     type(simul_box_t), intent(in) :: sb
     type(geometry_t),  intent(in) :: geo 

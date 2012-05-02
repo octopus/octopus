@@ -210,8 +210,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This subroutine assumes that the origin of the coordinates is the
-  ! center of mass of the system
+  !> This subroutine assumes that the origin of the coordinates is the
+  !! center of mass of the system
   subroutine axis_inertia(geo, x, x2, pseudo)
     type(geometry_t), intent(in) :: geo
     FLOAT,  intent(out) :: x(MAX_DIM), x2(MAX_DIM)
@@ -260,9 +260,9 @@ contains
   ! ---------------------------------------------------------
   subroutine geometry_rotate(geo, from, from2, to)
     type(geometry_t), intent(inout) :: geo
-    FLOAT,            intent(in)    :: from(MAX_DIM)   ! assumed to be normalized
-    FLOAT,            intent(in)    :: from2(MAX_DIM)  ! assumed to be normalized
-    FLOAT,            intent(in)    :: to(MAX_DIM)     ! assumed to be normalized
+    FLOAT,            intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
+    FLOAT,            intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
+    FLOAT,            intent(in)    :: to(MAX_DIM)     !< assumed to be normalized
 
     integer :: iatom, idim
     FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)

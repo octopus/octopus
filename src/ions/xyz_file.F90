@@ -54,19 +54,19 @@ module xyz_file_m
     XYZ_FLAGS_MOVE    = 4
 
   type xyz_file_atom
-    character(len=15) :: label  ! stuff that is always known
+    character(len=15) :: label  !< stuff that is always known
     FLOAT             :: x(MAX_DIM)
 
-    FLOAT             :: charge ! stuff specific to PDB files
+    FLOAT             :: charge !< stuff specific to PDB files
     character(len=3)  :: residue
-    logical           :: move   ! stuff specific to the inp file
+    logical           :: move   !< stuff specific to the inp file
   end type xyz_file_atom
 
   type xyz_file_info
     integer :: file_type
     integer :: flags
 
-    integer :: n                ! number of atoms in file
+    integer :: n                !< number of atoms in file
     type(xyz_file_atom), pointer :: atom(:)
   end type xyz_file_info
 

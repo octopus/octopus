@@ -83,64 +83,65 @@ module simul_box_m
     AFTER     = 8,              & !
     TRANS_DIR = 1                 ! Transport is in x-direction.
 
-  integer, public :: NLEADS  ! Number of leads.
+  integer, public :: NLEADS  !< Number of leads.
 
-  ! the lead-names of the open boundaries, maximum 4D
+  !> the lead-names of the open boundaries, maximum 4D
   character(len=6), dimension(2*4), parameter, public :: LEAD_NAME = &
     (/'left  ', 'right ', 'bottom', 'top   ', 'rear  ', 'front ', 'before', 'after '/)
 
-  ! open boundaries stuff
+  !> open boundaries stuff
   type simul_box_ob_info_t
-    integer             :: ucells         ! Number of additional unit cells.
-    character(len=32)   :: dataset        ! Dataset name of the periodic lead calculation.
-    character(len=32)   :: restart_dir    ! Directory where to find the lead restart files.
-    character(len=32)   :: static_dir     ! Static directory of the lead ground state.
+    integer             :: ucells         !< Number of additional unit cells.
+    character(len=32)   :: dataset        !< Dataset name of the periodic lead calculation.
+    character(len=32)   :: restart_dir    !< Directory where to find the lead restart files.
+    character(len=32)   :: static_dir     !< Static directory of the lead ground state.
   end type simul_box_ob_info_t
 
   type, public :: interp_t
-    integer          :: nn, order  ! interpolation points and order
-    FLOAT,   pointer :: ww(:)      ! weights
-    integer, pointer :: posi(:)    ! positions
+    integer          :: nn, order  !< interpolation points and order
+    FLOAT,   pointer :: ww(:)      !< weights
+    integer, pointer :: posi(:)    !< positions
   end type interp_t
 
 
   type, public :: multiresolution_t
-    type(interp_t) :: interp          ! interpolation points
-    integer        :: num_areas       ! number of multiresolution areas
-    integer        :: num_radii       ! number of radii (resolution borders)
-    FLOAT, pointer :: radius(:)       ! radius of the high-resolution area
-    FLOAT          :: center(MAX_DIM) ! central point
+    type(interp_t) :: interp          !< interpolation points
+    integer        :: num_areas       !< number of multiresolution areas
+    integer        :: num_radii       !< number of radii (resolution borders)
+    FLOAT, pointer :: radius(:)       !< radius of the high-resolution area
+    FLOAT          :: center(MAX_DIM) !< central point
   end type multiresolution_t
 
   type simul_box_t
     type(symmetries_t) :: symm
-    integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
-    ! 4->parallelepiped (orthonormal, up to now).
+    !> 1->sphere, 2->cylinder, 3->sphere around each atom,
+    !! 4->parallelepiped (orthonormal, up to now).
+    integer  :: box_shape   
 
-    FLOAT :: box_offset(MAX_DIM)  ! shifts of the origin in the respective direction
+    FLOAT :: box_offset(MAX_DIM)  !< shifts of the origin in the respective direction
 
-    FLOAT :: rsize          ! the radius of the sphere or of the cylinder
-    FLOAT :: xsize          ! the length of the cylinder in the x-direction
-    FLOAT :: lsize(MAX_DIM) ! half of the length of the parallelepiped in each direction.
+    FLOAT :: rsize          !< the radius of the sphere or of the cylinder
+    FLOAT :: xsize          !< the length of the cylinder in the x-direction
+    FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
 
     type(lookup_t)        :: atom_lookup
 
-    type(c_ptr)         :: image    ! for the box defined through an image
-    character(len=1024) :: user_def ! for the user-defined box
+    type(c_ptr)         :: image    !< for the box defined through an image
+    character(len=1024) :: user_def !< for the user-defined box
 
-    logical :: mr_flag                 ! .true. when using multiresolution
-    type(multiresolution_t) :: hr_area ! high-resolution areas
+    logical :: mr_flag                 !< .true. when using multiresolution
+    type(multiresolution_t) :: hr_area !< high-resolution areas
 
-    FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   ! lattice primitive vectors
-    FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   ! lattice vectors
-    FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   ! reciprocal-lattice primitive vectors
-    FLOAT :: klattice          (MAX_DIM,MAX_DIM)   ! reciprocal-lattice vectors
-    FLOAT :: volume_element                      ! the volume element in real space
-    FLOAT :: rcell_volume                        ! the volume of the cell in real space
+    FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
+    FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
+    FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
+    FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
+    FLOAT :: volume_element                      !< the volume element in real space
+    FLOAT :: rcell_volume                        !< the volume of the cell in real space
 
-    type(kpoints_t) :: kpoints                   ! the k-points
+    type(kpoints_t) :: kpoints                   !< the k-points
 
-    FLOAT :: fft_alpha      ! enlargement factor for double box
+    FLOAT :: fft_alpha      !< enlargement factor for double box
 
     integer :: dim
     integer :: periodic_dim
@@ -1351,7 +1352,7 @@ contains
 
 
   !--------------------------------------------------------------
-  ! Read the simulation boxes of the leads
+  !> Read the simulation boxes of the leads
   subroutine ob_read_lead_unit_cells(sb, lead_sb, dir)
     type(simul_box_t), intent(inout) :: sb
     type(simul_box_t), intent(inout) :: lead_sb(:)
@@ -1409,8 +1410,8 @@ contains
 
 
   !--------------------------------------------------------------
-  ! Read the coordinates of the leads atoms and add them to the
-  ! simulation box
+  !> Read the coordinates of the leads atoms and add them to the
+  !! simulation box
   subroutine ob_simul_box_add_lead_atoms(sb, lead_sb, space, ucells, lead_dataset, geo)
     type(simul_box_t), intent(inout) :: sb
     type(simul_box_t), intent(inout) :: lead_sb(:)
