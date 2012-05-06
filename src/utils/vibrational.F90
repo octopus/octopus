@@ -113,8 +113,16 @@
         exit
       end if
 
-      ASSERT(iter == read_iter + 1)
-
+      if(iter /= read_iter + 1) then
+        call messages_write("Error while reading file 'td.general/coordinates',", new_line = .true.)
+        call messages_write('expected iteration ')
+        call messages_write(iter - 1)
+        call messages_write(', got iteration ')
+        call messages_write(read_iter)
+        call messages_write('.')
+        call messages_fatal()
+      end if
+      
       ! ntime counts how many steps are gonna be used
       if (curtime >= spectrum%start_time .and. mod(iter, skip) == 0) ntime = ntime + 1 
 
