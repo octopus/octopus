@@ -92,7 +92,9 @@ module eigensolver_m
        RS_CG_NEW  =  6,         &
        RS_EVO     =  9,         &
        RS_LOBPCG  =  8,         &
-       RS_RMMDIIS = 10
+       RS_RMMDIIS = 10,         &
+       RS_ARPACK  = 12,         &  
+       RS_DIRECT  = 14
 
 contains
 
@@ -141,6 +143,9 @@ contains
     !% are required (around 10-20% of the number of occupied states).
     !%Option multigrid 7
     !% (Experimental) Multigrid eigensolver.
+    !%Option arpack 12
+    !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package. 
+    !% method.
     !%End
 
     if(st%parallel_in_states) then
@@ -177,6 +182,7 @@ contains
     case(RS_MG)
     case(RS_CG)
     case(RS_PLAN)
+    case(RS_DIRECT)
     case(RS_EVO)
       !%Variable EigensolverImaginaryTime
       !%Type float
@@ -207,6 +213,31 @@ contains
       call parse_integer(datasets_check('EigensolverMinimizationIter'), 5, eigens%rmmdiis_minimization_iter)
 
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
+
+#if defined(HAVE_ARPACK) 
+    case(RS_ARPACK) 
+      	 	 
+      !%Variable EigenSolverArnoldiVectors 
+      !%Type integer 
+      !%Default 20 
+      !%Section SCF::EigenSolver 
+      !%Description 
+      !% This indicates how many Arnoldi vectors are generated 
+      !% It must satisfy EigenSolverArnoldiVectors - Number Of Eigenvectors >= 2. 
+      !% See the ARPACK documentation for more details. It will default to  
+      !% twice the number of eigenvectors (which is the number of states) 
+      !%End 
+      call parse_integer(datasets_check('EigenSolverArnoldiVectors'), 2*st%nst, eigens%arnoldi_vectors) 
+      if(eigens%arnoldi_vectors-st%nst < 2) call input_error('EigenSolverArnoldiVectors') 
+      	 	 
+      ! Arpack is not working in some cases, so let us check. 
+      if(st%d%ispin .eq. SPINORS) then 
+        write(message(1), '(a)') 'The ARPACK diagonalizer does not handle spinors (yet).' 
+        write(message(2), '(a)') 'Please provide a different EigenSolver.' 
+        call messages_fatal(2) 
+      end if 
+#endif 
+
     case default
       call input_error('Eigensolver')
     end select
@@ -249,7 +280,7 @@ contains
     end if
     
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
+    case(RS_PLAN, RS_CG, RS_DIRECT, RS_LOBPCG, RS_RMMDIIS)
       call preconditioner_init(eigens%pre, gr)
     case default
       call preconditioner_null(eigens%pre)
@@ -326,7 +357,8 @@ contains
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
       maxiter = eigens%es_maxiter
       
-      if(eigens%subspace_diag .and. eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
+      if(eigens%subspace_diag .and. eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES &
+       .and. eigens%es_type /= RS_DIRECT) then
         if (states_are_real(st)) then
           call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         else
@@ -361,9 +393,14 @@ contains
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
           end if
+#if defined(HAVE_ARPACK) 
+ 	      case(RS_ARPACK) 
+ 	        call deigen_solver_arpack(gr, st, hm, eigens%tolerance, maxiter, eigens%arnoldi_vectors, & 
+ 	             eigens%converged(ik), ik, eigens%diff(:,ik)) 
+#endif 
         end select
 
-        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then
+        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK) then
           call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
 
@@ -374,6 +411,8 @@ contains
           call zeigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
           call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+        case(RS_DIRECT)
+           call eigensolver_direct(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik))
@@ -393,18 +432,33 @@ contains
           else
             call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik,  eigens%diff(:, ik), hm%d%block_size)
-          end if
+          end if         
+#if defined(HAVE_ARPACK) 
+       	case(RS_ARPACK) 
+ 	        call zeigen_solver_arpack(gr, st, hm, eigens%tolerance, maxiter, eigens%arnoldi_vectors, & 
+ 	             eigens%converged(ik), ik, eigens%diff(:,ik)) 
+#endif 
         end select
 
-        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS) then
-          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK &
+          .and. eigens%es_type /= RS_DIRECT ) then
+        
+          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))  
         end if
 
       end if
 
       eigens%matvec = eigens%matvec + maxiter
     end do ik_loop
-
+    
+    ! If we complex scale H the eigenstates need to be otrhonormalized with respect to the c-product.
+    ! Moreover the eigenvalues ordering need to be imposed as there is no eigensolver 
+    ! supporting this ordering (yet).
+    if(hm%cmplxscl) then !cmplxscl
+      call states_orthogonalize_cproduct(st, gr%mesh)
+      call states_sort_complex(st, gr%mesh)
+    end if
+    
     if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then
       write(stdout, '(1x)')
     end if
@@ -485,6 +539,15 @@ contains
 #include "eigen_mg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
+
+#if defined(HAVE_ARPACK) 
+#include "undef.F90" 
+#include "real.F90" 
+#include "eigen_arpack_inc.F90" 
+#include "undef.F90" 
+#include "complex.F90" 
+#include "eigen_arpack_inc.F90" 
+#endif 
 
 end module eigensolver_m
 

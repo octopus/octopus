@@ -112,7 +112,7 @@ module math_m
   !   end subroutine sort
   interface sort
     module procedure shellsort, dshellsort1, zshellsort1, &
-      dshellsort2, zshellsort2, ishellsort
+      dshellsort2, zshellsort2, ishellsort, sort_complex
   end interface
   !------------------------------------------------------------------------------
 
@@ -165,7 +165,7 @@ module math_m
   end interface
 
   interface matrix_sort
-    module procedure dmatrix_sort, zmatrix_sort
+    module procedure dmatrix_sort, zmatrix_sort, matrix_sort_complex
   end interface
 
   interface log2
@@ -1136,6 +1136,133 @@ subroutine generate_rotation_matrix(M, u, v)
 
   POP_SUB(generate_rotation_matrix)  
 end subroutine generate_rotation_matrix
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Sort a complex vector vec(:)+i*Imvec(:) and put the ordering in reorder(:)
+! according to the following order:
+!
+! 1. values with zero imaginary part sorted by increasing real part
+! 2. values with negative imaginary part sorted by decreasing imaginary part
+! 3. values with positive imaginary part unsorted
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine sort_complex(vec, Imvec, reorder)
+  FLOAT,     intent(inout)  :: vec(:)
+  FLOAT,     intent(inout)  :: Imvec(:)
+  integer,   intent(out)    :: reorder(:)
+  
+  integer              :: dim, n0, n1, n2, i
+  integer, allocatable :: table(:),idx0(:)
+  FLOAT,   allocatable :: temp(:),tempI(:)
+  
+  PUSH_SUB(sort_complex)
+  
+  dim = size(vec, 1)
+  ASSERT(dim == size(Imvec,1) .and. dim == size(reorder,1))
+  
+  SAFE_ALLOCATE(table(dim))
+  SAFE_ALLOCATE(temp(dim))
+  SAFE_ALLOCATE(tempI(dim))
+    
+  tempI = Imvec
+  call sort(tempI,table)
+  
+  n0 = 0
+  n1 = 0
+  temp = vec
+  do i = 1, dim
+    if (abs(Imvec(i)) <= CNST(1E-13)) then
+      n0 = n0 + 1 
+    else if (Imvec(i) <  0) then 
+      n1 = n1 + 1
+    end if
+    print *, "---", i ,vec(i), Imvec(i)
+    vec(i)     = temp(table(dim - i + 1))
+    Imvec(i)   = tempI(dim - i + 1)
+    reorder(i) = table(dim - i + 1)
+  end do
+  n2 = dim - n0 - n1 
+  print *,n1, n0, n2 
+  
+  temp = vec
+  tempI = Imvec
+  table = reorder
+
+  !first zero img parts
+  if (n0 > 0) then
+     SAFE_ALLOCATE(idx0(n0))
+     call sort(temp(n2+1:n0),idx0(:))
+  end if
+  
+  do i = 1, n0
+    vec  (i) = temp (n2 + i)
+    Imvec(i) = tempI(table(n2 + idx0(i)))
+    reorder(i) = table(n2 + idx0(i))
+!     print *, "zero", reorder(i)
+  end do
+  SAFE_DEALLOCATE_A(idx0)
+  
+  !negative Img parts
+  do i =  1, n1
+    vec  (n0 + i) = temp (n2 + n0 + i)
+    Imvec(n0 + i) = tempI(n2 + n0 + i)
+    reorder(n0 + i) = table(n2 + n0 + i)
+!     print *, "neg", reorder(i)
+  end do 
+  
+  ! positive img parts
+  do i = 1, n2
+    vec  (n0 + n1 + i) = temp (n2 + 1 -i)
+    Imvec(n0 + n1 + i) = tempI(n2 + 1 -i)
+    reorder(n0 + n1 + i) = table(n2 + 1 -i)
+!     print *, "pos", reorder(i)
+  end do
+  
+  
+  do i = 1, dim
+    print *, "--->", i ,vec(i), Imvec(i), reorder(i)
+  end do
+  
+
+  
+  
+  
+  SAFE_DEALLOCATE_A(tempI)  
+  SAFE_DEALLOCATE_A(temp)
+  SAFE_DEALLOCATE_A(table)
+  
+  POP_SUB(sort_complex)
+end subroutine sort_complex
+
+
+! ---------------------------------------------------------
+! sort the eigenvectors according to eigenvalues complex 
+! ordering
+subroutine matrix_sort_complex(np, matrix, eigenvals, Imeigenvals)
+  integer, intent(in)    :: np
+  CMPLX,  intent(inout)  :: matrix(:, :)
+  FLOAT,  intent(inout)  :: eigenvals(:)
+  FLOAT,  intent(inout)  :: Imeigenvals(:)
+
+  integer              :: i
+  CMPLX, allocatable  :: unsorted_matrix(:, :)
+  integer, allocatable :: index(:)
+
+  PUSH_SUB(matrix_sort_complex)
+
+  SAFE_ALLOCATE( index(1:np) )
+  SAFE_ALLOCATE( unsorted_matrix(1:np, 1:np) )
+
+  unsorted_matrix(:, :) = matrix(:, :)
+  call sort_complex(eigenvals, Imeigenvals, index)
+  do i=1, np
+    matrix(:, i) = unsorted_matrix(:, index(i))
+  end do
+  SAFE_DEALLOCATE_A(index)
+  SAFE_DEALLOCATE_A(unsorted_matrix)
+
+  POP_SUB(matrix_sort_complex)
+end subroutine matrix_sort_complex
 
 
 #include "undef.F90"

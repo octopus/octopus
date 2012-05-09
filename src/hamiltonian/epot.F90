@@ -565,6 +565,7 @@ contains
 
     ! Local part
     ep%vpsl = M_ZERO
+    if(associated(ep%Imvpsl)) ep%Imvpsl = M_ZERO
     if(geo%nlcc) st%rho_core = M_ZERO
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end

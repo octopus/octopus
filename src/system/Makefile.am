@@ -64,7 +64,8 @@ noinst_HEADERS =                        \
 	output_states_inc.F90           \
 	output_etsf_inc.F90             \
 	output_berkeleygw_inc.F90       \
-	forces_inc.F90
+	forces_inc.F90                  \
+  eigen_arpack_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -76,7 +77,7 @@ subspace.o : preconditioners.o subspace_inc.F90
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 
 eigen_cg.o: eigen_cg.F90 eigen_cg_inc.F90 preconditioners.o
 eigen_lobpcg.o: eigen_cg.F90 eigen_lobpcg_inc.F90 preconditioners.o
-eigen.o: eigen.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 eigen_mg_inc.F90 eigen_cg.o subspace.o eigen_lobpcg.o eigen_rmmdiis.o exponential.o
+eigen.o: eigen.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 eigen_mg_inc.F90 eigen_arpack_inc.F90 eigen_cg.o subspace.o eigen_lobpcg.o eigen_rmmdiis.o exponential.o
 eigen_rmmdiis.o: eigen_rmmdiis.F90 eigen_rmmdiis_inc.F90 subspace.o
 xc_oep.o : xc_oep.F90 xc_oep_inc.F90 xc_oep_sic_inc.F90 xc_oep_x_inc.F90 xc_kli_inc.F90 linear_solver.o 
 xc_ks_inversion.o : eigen.o

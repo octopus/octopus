@@ -32,6 +32,7 @@ module scf_m
   use output_m
   use hamiltonian_m
   use io_m
+  use io_function_m
   use kpoints_m
   use lcao_m
   use loct_m
@@ -411,11 +412,13 @@ contains
     FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
     character(len=8) :: dirname
-    logical :: finish, forced_finish, gs_run_, berry_conv
+    logical :: finish, forced_finish, gs_run_, berry_conv, cmplxscl
     integer :: verbosity_
 
     PUSH_SUB(scf_run)
-
+    
+    cmplxscl = hm%cmplxscl
+  
     gs_run_ = .true.
     if(present(gs_run)) gs_run_ = gs_run
     
@@ -540,8 +543,14 @@ contains
       call states_fermi(st, gr%mesh)
 
       ! compute output density, potential (if needed) and eigenvalues sum
-      call density_calc(st, gr, st%rho)
-
+      if(cmplxscl) then
+        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+        print *,"Density integral", sum(st%zrho%Re(:,1) + M_zI * st%zrho%Im(:,1))*gr%mesh%volume_element
+      else
+        call density_calc(st, gr, st%rho)
+      end if
+      
+      
       rhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
       if (hm%d%cdft) then
         call calc_physical_current(gr%der, st, st%current)

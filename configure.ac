@@ -350,6 +350,9 @@ dnl check for SCALAPACK/BLACS
 ACX_BLACS
 ACX_SCALAPACK
 
+dnl check for ARPACK
+ACX_ARPACK
+
 dnl check for Libfm
 ACX_LIBFM
 

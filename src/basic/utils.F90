@@ -240,6 +240,9 @@ contains
 #ifdef HAVE_SCALAPACK
     message(2) = trim(message(2))//' scalapack'
 #endif
+#ifdef HAVE_ARPACK
+    message(2) = trim(message(2))//' arpack'
+#endif
 #ifdef HAVE_LIBFM
     message(2) = trim(message(2))//' libfm'
 #endif

@@ -52,6 +52,7 @@ module smear_m
     integer :: method       !< which smearing function to take
     FLOAT   :: dsmear       !< the parameter defining this function
     FLOAT   :: e_fermi      !< the Fermi energy
+    FLOAT   :: Ime_fermi    !< imaginary part of the fermi energy
     
     FLOAT   :: el_per_state !< How many electrons can we put in each state
     FLOAT   :: ef_occ       !< Occupancy of the level at the Fermi energy
@@ -166,21 +167,27 @@ contains
 
   !--------------------------------------------------
   subroutine smear_find_fermi_energy(this, eigenvalues, occupations, &
-    qtot, nik, nst, kweights)
-    type(smear_t), intent(inout) :: this
-    FLOAT,         intent(in)    :: eigenvalues(:,:), occupations(:,:)
-    FLOAT,         intent(in)    :: qtot, kweights(:)
-    integer,       intent(in)    :: nik, nst
+    qtot, nik, nst, kweights, Imeigenvalues)
+    type(smear_t),   intent(inout) :: this
+    FLOAT,           intent(in)    :: eigenvalues(:,:), occupations(:,:)
+    FLOAT,           intent(in)    :: qtot, kweights(:)
+    integer,         intent(in)    :: nik, nst
+    FLOAT, optional, intent(in)    :: Imeigenvalues(:,:)
 
     integer, parameter :: nitmax = 200
     FLOAT, parameter   :: tol = CNST(1.0e-10)
     integer            :: ist, ik, iter
     FLOAT              :: drange, xx, emin, emax, sumq, dsmear
-    logical            :: conv
+    logical            :: conv, cmplxscl
     FLOAT,   allocatable :: eigenval_list(:)
+    FLOAT,   allocatable :: Imeigenval_list(:)
     integer, allocatable :: k_list(:), reorder(:)
 
     PUSH_SUB(smear_find_fermi_energy)
+
+    cmplxscl = .false.
+    if(present(Imeigenvalues)) cmplxscl = .true.
+    this%Ime_fermi = M_ZERO
 
     ! Initializations
     emin = minval(eigenvalues)
@@ -212,6 +219,8 @@ contains
       sumq = qtot
       ! first we sort the eigenvalues
       SAFE_ALLOCATE(eigenval_list(1:nst * nik))
+      if (cmplxscl) SAFE_ALLOCATE(Imeigenval_list(1:nst * nik))
+
       SAFE_ALLOCATE(       k_list(1:nst * nik))
       SAFE_ALLOCATE(      reorder(1:nst * nik))
 
@@ -219,17 +228,23 @@ contains
       do ist = 1, nst
         do ik = 1, nik
           eigenval_list(iter) = eigenvalues(ist, ik)
+          if(cmplxscl) Imeigenval_list(iter) = Imeigenvalues(ist, ik)
           k_list(iter) = ik
+          reorder(iter) = iter
           iter = iter + 1
         end do
       end do
       
-      call sort(eigenval_list, reorder)
-
+      if (cmplxscl) then
+        call sort(eigenval_list, Imeigenval_list, reorder)
+      else
+        call sort(eigenval_list, reorder)
+      end if
+      
       do iter = 1, nst * nik
         xx = kweights(k_list(reorder(iter)))
-
         this%e_fermi = eigenval_list(iter)
+        if(cmplxscl) this%Ime_fermi = Imeigenval_list(iter)
         this%ef_occ  = sumq / (xx * this%el_per_state)
 
         if(sumq - xx * this%el_per_state <= CNST(1e-10)) then
@@ -239,6 +254,7 @@ contains
         sumq = sumq - xx * this%el_per_state
       end do
 
+      SAFE_DEALLOCATE_A(Imeigenval_list)    
       SAFE_DEALLOCATE_A(eigenval_list)
       SAFE_DEALLOCATE_A(k_list)
       SAFE_DEALLOCATE_A(reorder)
@@ -283,32 +299,55 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine smear_fill_occupations(this, eigenvalues, occupations, nik, nst)
-    type(smear_t), intent(in)  :: this
-    FLOAT,         intent(in)  :: eigenvalues(:,:)
-    FLOAT,         intent(out) :: occupations(:,:)
-    integer,       intent(in)  :: nik, nst
+  subroutine smear_fill_occupations(this, eigenvalues, occupations, nik, nst, Imeigenvalues)
+    type(smear_t),   intent(in)  :: this
+    FLOAT,           intent(in)  :: eigenvalues(:,:)
+    FLOAT,           intent(out) :: occupations(:,:)
+    integer,         intent(in)  :: nik, nst
+    FLOAT, optional, intent(in)  :: Imeigenvalues(:,:)
 
     integer :: ik, ist
-    FLOAT   :: dsmear, xx
+    FLOAT   :: dsmear, xx, ixx
+    logical :: cmplxscl
 
     PUSH_SUB(smear_fill_occupations)
 
+    cmplxscl = .false.
+    if(present(Imeigenvalues)) cmplxscl = .true. 
+    ixx = M_ONE
+    
     if(this%method == SMEAR_FIXED_OCC) then
       ! do nothing
     else if(this%method == SMEAR_SEMICONDUCTOR) then
-      do ik = 1, nik
-        do ist = 1, nst
-          xx = eigenvalues(ist, ik) - this%e_fermi
-          if(xx < M_ZERO) then
-            occupations(ist, ik) = this%el_per_state
-          else if(xx == M_ZERO) then
-            occupations(ist, ik) = this%ef_occ * this%el_per_state
-          else
-            occupations(ist, ik) = M_ZERO
-          end if
+      if(cmplxscl) then ! fill states with Im(E_F) <= Im(e) <= 0 and Re(e) <= Re(E_F)
+        do ik = 1, nik
+          do ist = 1, nst
+            xx = eigenvalues(ist, ik) - this%e_fermi
+            ixx = Imeigenvalues(ist,ik) - this%Ime_fermi
+            if(xx < M_ZERO .and. (ixx > M_ZERO .and. Imeigenvalues(ist,ik) <= M_ZERO .or. &
+                abs(Imeigenvalues(ist,ik)) <= CNST(1e-13)) ) then
+              occupations(ist, ik) = this%el_per_state
+            else if(xx == M_ZERO .and. ixx == M_ZERO ) then 
+              occupations(ist, ik) = this%ef_occ * this%el_per_state
+            else
+              occupations(ist, ik) = M_ZERO
+            end if
+          end do
         end do
-      end do
+      else
+        do ik = 1, nik
+          do ist = 1, nst
+            xx = eigenvalues(ist, ik) - this%e_fermi
+            if(xx < M_ZERO) then
+              occupations(ist, ik) = this%el_per_state
+            else if(xx == M_ZERO) then
+              occupations(ist, ik) = this%ef_occ * this%el_per_state
+            else
+              occupations(ist, ik) = M_ZERO
+            end if
+          end do
+        end do
+      end if
 
     else 
       dsmear = max(CNST(1e-14), this%dsmear)

@@ -91,9 +91,9 @@ module v_ks_m
     FLOAT,                pointer :: b_ind(:, :)
     logical                       :: calc_energy
     !complex quantities 
-    !CMPLX,                pointer :: zdensity(:, :)
-    !CMPLX,                pointer :: ztotal_density(:)
-    !CMPLX,                pointer :: zvxc(:, :)
+    FLOAT,                pointer :: Imdensity(:, :)
+    FLOAT,                pointer :: Imtotal_density(:)
+    FLOAT,                pointer :: Imvxc(:, :)
   end type v_ks_calc_t
 
   type v_ks_t

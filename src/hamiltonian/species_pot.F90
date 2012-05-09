@@ -815,6 +815,7 @@ contains
     FLOAT :: xx(MAX_DIM), r
     integer :: ip, err, idim
     type(ps_t), pointer :: ps
+    CMPLX :: zpot
 
     type(profile_t), save :: prof
 
@@ -834,9 +835,10 @@ contains
           ! the units back and forth
           forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
           r = units_from_atomic(units_inp%length, r)
-          vl(ip) = units_to_atomic(units_inp%energy, species_userdef_pot(spec, mesh%sb%dim, xx, r))
+          zpot = species_userdef_pot(spec, mesh%sb%dim, xx, r)
+          vl(ip)   = units_to_atomic(units_inp%energy, real(zpot))
           if(present(Imvl)) then!cmplxscl
-            Imvl(ip) = units_to_atomic(units_inp%energy, species_userdef_pot(spec, mesh%sb%dim, xx, r, Im = .true.))
+            Imvl(ip) = units_to_atomic(units_inp%energy, aimag(zpot))            
           end if
 
         end do

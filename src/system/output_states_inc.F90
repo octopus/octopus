@@ -43,8 +43,16 @@
         else
           write(fname, '(a,i1)') 'density-sp', is
         endif
-        call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-          st%rho(:, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+        if(associated(st%zrho%Im)) then !cmplxscl
+          SAFE_ALLOCATE(ztmp(1:gr%fine%mesh%np))
+          forall (ip = 1:gr%fine%mesh%np) ztmp(ip) = st%zrho%Re(ip, is) + M_zI * st%zrho%Im(ip, is)
+          call zio_function_output(outp%how, dir, fname, gr%fine%mesh, &
+            ztmp(:), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+          SAFE_DEALLOCATE_A(ztmp)
+        else
+          call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
+            st%rho(:, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+        end if
       end do
     end if
 

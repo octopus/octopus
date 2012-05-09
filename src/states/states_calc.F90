@@ -99,7 +99,9 @@ module states_calc_m
     dstates_matrix,                 &
     zstates_matrix,                 &
     dstates_calc_overlap,           &
-    zstates_calc_overlap
+    zstates_calc_overlap,           &
+    states_orthogonalize_cproduct,  &
+    states_sort_complex
 
 contains
 
@@ -155,6 +157,82 @@ contains
 
     POP_SUB(states_orthogonalize)
   end subroutine states_orthogonalize
+
+  ! ---------------------------------------------------------
+
+  subroutine states_orthogonalize_cproduct(st, mesh)
+    type(states_t),    intent(inout) :: st
+    type(mesh_t),      intent(in)    :: mesh
+
+    integer            :: ik,ist
+    CMPLX              :: cnorm
+    CMPLX, allocatable :: psi(:,:)
+
+    PUSH_SUB(states_orthogonalize_cproduct)
+    SAFE_ALLOCATE(  psi(1:mesh%np_part, 1:st%d%dim))
+   
+    ASSERT(st%d%cmplxscl .eqv. .true.)
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = 1, st%nst
+        call states_get_state(st, mesh, ist, ik, psi)
+
+        ! Orthogonalize eigenstates according to cproduct - this implies st%cmplxscl = .true. 
+        if(ist > 1) then
+           call zstates_orthogonalize_single(st, mesh, ist - 1, ik, psi, normalize = .true.,  norm = cnorm)
+        else
+        ! Normalize the first eigenstate  
+          cnorm = sqrt(zmf_dotp(mesh, st%d%dim, psi, psi, dotu = .true.))
+          st%psi%zR(:,:,ist,ik) = st%psi%zR(:,:,ist,ik)/cnorm
+        end if    
+
+        print *,"cnorm", ist, cnorm, abs(cnorm), atan2 (aimag(cnorm), real(cnorm) )
+        
+      end do
+    end do
+    SAFE_DEALLOCATE_A(psi)
+
+    POP_SUB(states_orthogonalize_cproduct)
+  end subroutine states_orthogonalize_cproduct
+
+  ! ---------------------------------------------------------
+
+  subroutine states_sort_complex(st, mesh)
+    type(states_t),    intent(inout) :: st
+    type(mesh_t),      intent(in)    :: mesh
+
+    integer              :: ik, ist, idim
+    integer, allocatable :: index(:)
+    type(states_t) :: st_copy
+    
+    PUSH_SUB(states_sort_complex)
+    
+    SAFE_ALLOCATE(index(st%nst))
+
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+
+    call sort(st%zeigenval%Re(:, ik), st%zeigenval%Im(:, ik), index)
+    
+    call states_copy(st_copy, st)  !OK This is very unefficient 
+      
+      do idim =1, st%d%dim
+        do ist = 1 , st%nst - 1
+!           I keep this here as reference for the implemention of some in-place sorting 
+!           call lalg_swap(mesh%np, st%psi%zR(:, idim, ist, ik), st%psi%zR(:, idim, index(ist), ik))
+!           call lalg_swap(mesh%np, st%psi%zL(:, idim, ist, ik), st%psi%zL(:, idim, index(ist), ik))
+           st%psi%zR(:, idim, ist, ik) =  st_copy%psi%zR(:, idim, index(ist), ik)          
+        end do
+      end do
+    end do
+    
+    call states_end(st_copy)
+    
+    SAFE_DEALLOCATE_A(index)
+    
+    POP_SUB(states_sort_complex)
+  end subroutine states_sort_complex
+
 
   ! -------------------------------------------------------
   subroutine states_degeneracy_matrix(sb, st)

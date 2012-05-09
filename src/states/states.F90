@@ -617,7 +617,7 @@ contains
       st%priv%wfs_type = TYPE_CMPLX
       !Allocate imaginary parts of the eigenvalues
       SAFE_ALLOCATE(st%zeigenval%Im(1:st%nst, 1:st%d%nik))
-      st%zeigenval%Im = huge(st%zeigenval%Im)      
+      st%zeigenval%Im = M_ZERO
     end if
     SAFE_ALLOCATE(st%zeigenval%Re(1:st%nst, 1:st%d%nik))
     st%zeigenval%Re = huge(st%zeigenval%Re)
@@ -1900,6 +1900,8 @@ contains
     integer            :: ist, ik
     FLOAT              :: charge
     CMPLX, allocatable :: zpsi(:, :)
+    FLOAT, allocatable :: cmplxsclevals(:,:)
+    FLOAT              :: emin
 #if defined(HAVE_MPI)
     integer            :: jj
     integer            :: tmp
@@ -1908,12 +1910,23 @@ contains
 
     PUSH_SUB(states_fermi)
 
-    call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
-      st%d%nik, st%nst, st%d%kweights)
+    if(st%d%cmplxscl) then
+!       print *, "remember that I am here"
+      call smear_find_fermi_energy(st%smear, st%zeigenval%Re, st%occ, st%qtot, &
+        st%d%nik, st%nst, st%d%kweights, st%zeigenval%Im)
+        print *, "Efermi", st%smear%e_fermi, st%smear%Ime_fermi
+      call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
+        st%d%nik, st%nst, st%zeigenval%Im)
+    else
+      
+      call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
+        st%d%nik, st%nst, st%d%kweights)
 
-    call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
-      st%d%nik, st%nst)
-
+      call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
+        st%d%nik, st%nst)
+        
+    end if
+    
     ! check if everything is OK
     charge = M_ZERO
     do ist = 1, st%nst
