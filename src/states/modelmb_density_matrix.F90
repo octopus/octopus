@@ -75,14 +75,14 @@ contains
 
     PUSH_SUB(modelmb_density_matrix_init)
 
-    !%Variable DensityMatricestoCalc
+    !%Variable DensitytoCalc
     !%Type block
     !%Section States
     !%Description
-    !% choice of which particle density matrices will be calculated and output, in the
-    !%  modelmb particles scheme (the corresponding density is also output)
+    !% choice of which particle density (event. matrices) will be calculated and output, in the
+    !%  modelmb particles scheme
     !%
-    !% <tt>%DensityMatricestoCalc
+    !% <tt>%DensitytoCalc
     !% <br>&nbsp;&nbsp; proton   | 1 | 10
     !% <br>&nbsp;&nbsp; electron | 2 | 15
     !% <br>%</tt>
@@ -93,21 +93,34 @@ contains
     !% (electron with dimensions ndim_modelmb+1 to 2*ndim_modelmb), printing
     !% 10 natural orbitals for the first and 15 for the second.
     !%
+    !% <tt>%DensitytoCalc
+    !% <br>&nbsp;&nbsp; proton   | 1 | -1
+    !% <br>&nbsp;&nbsp; electron | 2 | -1
+    !% <br>%</tt>
+    !%
+    !% would ask octopus to print out just the densities for particles 1 and 2
+    !% without any density matrix output.
+    !%
     !%End
    
-    if(parse_block(datasets_check('DensityMatricestoCalc'), blk)/=0) then
-     message(1) = 'To print out density matrices, you must specify the DensityMatricestoCalc block in input'
+    if(parse_block(datasets_check('DensityMatrixtoCalc'), blk)==0) then
+     message(1) = 'DensityMatrixtoCalc is obsolete - use DensitytoCalc'
+     call messages_fatal(1)
+    end if
+
+    if(parse_block(datasets_check('DensitytoCalc'), blk)/=0) then
+     message(1) = 'To print out density (matrices), you must specify the DensitytoCalc block in input'
      call messages_fatal(1)
     end if
    
     ncols = parse_block_cols(blk, 0)
     if(ncols /= 3 ) then
-      call input_error("DensityMatricestoCalc")
+      call input_error("DensitytoCalc")
     end if
     denmat%ndensmat_to_calculate=parse_block_n(blk)
     if (denmat%ndensmat_to_calculate < 0 .or. &
         denmat%ndensmat_to_calculate > st%modelmbparticles%nparticle) then
-      call input_error("DensityMatricestoCalc")
+      call input_error("DensitytoCalc")
     end if
 
     SAFE_ALLOCATE(denmat%labels(1:denmat%ndensmat_to_calculate))
@@ -125,7 +138,7 @@ contains
       call messages_info(3)
     end do
     call parse_block_end(blk)
-    ! END reading in of input var block DensityMatricestoCalc
+    ! END reading in of input var block DensitytoCalc
 
     denmat%dirname = trim(dir)
 

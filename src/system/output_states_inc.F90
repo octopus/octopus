@@ -211,7 +211,7 @@
       call states_write_tpa (trim(dir), gr, st)
     end if
 
-    if(iand(outp%what, C_OUTPUT_MODELMB).ne.0) then
+    if(iand(outp%what, C_OUTPUT_MMB).ne.0) then
       call output_modelmb (trim(dir), gr, st, geo, outp)
     end if
 
@@ -234,13 +234,14 @@
     ! local vars
     integer :: mm, iunit, itype
     integer :: ierr, npptype
-    integer, allocatable :: iyoung(:)
+    integer :: ncombo
+    integer, allocatable :: ndiagrams(:)
+    integer, allocatable :: young_used(:)
     logical :: symmetries_satisfied, impose_exch_symmetry
     CMPLX, allocatable :: wf(:)
     character(len=80) :: dirname
     character(len=80) :: filename
     type(modelmb_denmat_t) :: denmat
-    type(modelmb_density_t) :: den
     type(unit_t)  :: fn_unit
 
 
@@ -254,16 +255,11 @@
     dirname = trim(dir)//'modelmb'
     call io_mkdir(trim(dirname))
 
-    SAFE_ALLOCATE(wf(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(wf(1:gr%mesh%np))
 
     call modelmb_density_matrix_nullify(denmat)
-    if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0) then
+    if(iand(outp%what, C_OUTPUT_MMB_DEN).ne.0) then
       call modelmb_density_matrix_init(dirname, st, denmat)
-    end if
- 
-    call modelmb_density_nullify(den)
-    if(iand(outp%what, C_OUTPUT_DENSITY).ne.0) then
-      call modelmb_density_init (dirname, st, den)
     end if
  
     ! open file for Young diagrams and projection info
@@ -271,46 +267,48 @@
     iunit = io_open(trim(filename), action='write')
 
     ! just treat particle type 1 for the moment
-    itype = 1 
-    npptype = st%modelmbparticles%nparticles_per_type(itype)
+    SAFE_ALLOCATE(ndiagrams(1:st%modelmbparticles%ntype_of_particle))
+    ndiagrams = 1
+    do itype = 1, st%modelmbparticles%ntype_of_particle
+      write (iunit, '(a, i6)') '  Young diagrams for particle type ', itype
+      call young_write_allspins (iunit, st%modelmbparticles%nparticles_per_type(itype))
+      call young_ndiagrams (st%modelmbparticles%nparticles_per_type(itype), ndiagrams(itype))
+    end do
+ 
+    ncombo = product(ndiagrams)
+    write (iunit, '(a, I6)') ' # of possible combinations of Young diagrams for all types = ',&
+        ncombo
 
-    SAFE_ALLOCATE(iyoung(1:floor(npptype/2.)+1))
-    iyoung = 1
+    SAFE_ALLOCATE(young_used(1:ncombo))
+    young_used = 0
 
-    call young_write_allspins (iunit, st%modelmbparticles%nparticles_per_type(itype))
 
     ! write header
-    write (iunit, '(a)') '  state      eigenvalue   ptype    Young#    nspindown    projection'
+    write (iunit, '(a)') '  state      eigenvalue   projection   nspindown Young# for each type'
 
     do mm = 1, st%nst
       call states_get_state(st, gr%mesh, 1, mm, 1, wf)
 
       if (impose_exch_symmetry) then
         if (mm > 1) then
-          ! if eigenval is not degenerate reset iyoung
+          ! if eigenval is not degenerate reset young_used
           if (abs(st%eigenval(mm,1) - st%eigenval(mm-1,1)) > 1.e-5) then
-            iyoung = 1
+            young_used = 0
           end if
         end if
 
         call modelmb_sym_state(st%eigenval(mm,1), iunit, gr, mm, geo, &
-             st%modelmbparticles, itype, iyoung, wf, symmetries_satisfied)
+             st%modelmbparticles, ndiagrams, young_used, wf, symmetries_satisfied)
       end if
 
-      if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0 .and. symmetries_satisfied) then
+      if(iand(outp%what, C_OUTPUT_MMB_DEN).ne.0 .and. symmetries_satisfied) then
         call modelmb_density_matrix_write(gr, st, wf, mm, denmat)
-      end if
-
-      if(      iand(outp%what, C_OUTPUT_DENSITY).ne.0 .and. &
-         .not. iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0 .and. &
-         symmetries_satisfied) then
-        call modelmb_density_write(gr, st, wf, mm, den)
       end if
 
       if(gr%mesh%parallel_in_domains) then
       end if
 
-      if(iand(outp%what, C_OUTPUT_WFS).ne.0 .and. symmetries_satisfied) then
+      if(iand(outp%what, C_OUTPUT_MMB_WFS).ne.0 .and. symmetries_satisfied) then
         fn_unit = units_out%length**(-gr%mesh%sb%dim)
         write(filename, '(a,i4.4)') 'wf-st', mm
           call zio_function_output(outp%how, trim(dirname), trim(filename), gr%mesh, wf, &
@@ -321,14 +319,13 @@
 
     call io_close(iunit)
 
+    SAFE_DEALLOCATE_A(ndiagrams)
+    SAFE_DEALLOCATE_A(young_used)
+
     SAFE_DEALLOCATE_A(wf)
 
-    if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX).ne.0) then
+    if(iand(outp%what, C_OUTPUT_MMB_DEN).ne.0) then
       call modelmb_density_matrix_end (denmat)
-    end if
-
-    if(iand(outp%what, C_OUTPUT_DENSITY).ne.0) then
-      call modelmb_density_end (den)
     end if
  
     POP_SUB(output_modelmb)

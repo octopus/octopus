@@ -34,6 +34,7 @@ module young_m
             young_write,          &
             young_write_one,      &
             young_copy,           &
+            young_ndiagrams,      &
             young_nullify,        &
             young_end,            &
             young_t
@@ -256,6 +257,28 @@ module young_m
     POP_SUB(young_write_allspins)
 
   end subroutine young_write_allspins 
+
+  !------------------------------------------------------------
+  subroutine young_ndiagrams (nparticles, ndiagrams)
+    integer, intent(in) :: nparticles
+    integer, intent(out) :: ndiagrams
+    integer :: nup, ndown
+    type(young_t) :: this
+
+    PUSH_SUB(young_ndiagrams)
+
+    ndiagrams = 0
+    call young_nullify (this)
+    do ndown = 0, floor(nparticles * 0.5)
+      nup = nparticles - ndown
+      call young_init (this, nup, ndown)
+      ndiagrams = ndiagrams + this%nyoung
+      call young_end (this)
+    end do
+
+    POP_SUB(young_ndiagrams)
+
+  end subroutine young_ndiagrams
 
 
   !------------------------------------------------------------

@@ -41,13 +41,9 @@ k=1.0
  "electron"  | 1 | 1.    | 1. | fermion
 %
 
-%DensitiestoCalc
-"electron"      | 1
-%
-
-%DensityMatricestoCalc
+%DensitytoCalc
 "electron"      | 1 | 3
 %
 
-Output = modelmb + density_matrix
+Output = mmb + mmb_den + mmb_wfs
 OutputHow = plane_z + axis_x

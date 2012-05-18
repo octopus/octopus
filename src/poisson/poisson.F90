@@ -161,6 +161,8 @@ contains
     !% Defines which method to use to solve the Poisson equation. Defaults:
     !% <br> 1D and 2D: <tt>fft</tt>.
     !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
+    !%Option NoPoisson -999
+    !% do not use a Poisson solver at all
     !%Option FMM -4
     !% Fast multipole method.                                  
     !%Option direct3D -3                                      

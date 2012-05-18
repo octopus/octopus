@@ -144,18 +144,18 @@ module output_m
     C_OUTPUT_J_FLOW          =    32768,    &
     C_OUTPUT_DOS             =    65536,    &
     C_OUTPUT_TPA             =   131072,    &
-    C_OUTPUT_DENSITY_MATRIX  =   262144,    &
-    C_OUTPUT_MODELMB         =   524288,    &
-    C_OUTPUT_FORCES          =  1048576,    &
-    C_OUTPUT_WFS_FOURIER     =  2097152,    &
-    C_OUTPUT_XC_DENSITY      =  4194304,    &
-    C_OUTPUT_PES_WFS         =  8388608,    &
-    C_OUTPUT_PES_DENSITY     = 16777216,    &
-    C_OUTPUT_PES             = 33554432,    &
-    C_OUTPUT_BERKELEYGW      = 67108864,    &
-    C_OUTPUT_KICK_FUNCTION   =134217728,    &
-    C_OUTPUT_TD_POTENTIAL    =268435456
-
+    C_OUTPUT_FORCES          =   262144,    &
+    C_OUTPUT_WFS_FOURIER     =   524288,    &
+    C_OUTPUT_XC_DENSITY      =  1048576,    &
+    C_OUTPUT_PES_WFS         =  2097152,    &
+    C_OUTPUT_PES_DENSITY     =  4194304,    &
+    C_OUTPUT_PES             =  8388608,    &
+    C_OUTPUT_BERKELEYGW      = 16777216,    &
+    C_OUTPUT_KICK_FUNCTION   = 33554432,    &
+    C_OUTPUT_TD_POTENTIAL    = 67108864,    &
+    C_OUTPUT_MMB             =134217728,    &
+    C_OUTPUT_MMB_WFS         =268435456,    &
+    C_OUTPUT_MMB_DEN         =536870912
 
 contains
 
@@ -170,6 +170,8 @@ contains
 
     PUSH_SUB(output_init)
 
+! TODO: make this list automatically coherent with the values defined above in C_OUTPUT_XXX
+! double definition is crappy
     !%Variable Output
     !%Type flag
     !%Default no
@@ -194,10 +196,6 @@ contains
     !% Outputs wavefunctions. Which wavefunctions are to be printed is specified
     !% by the variable <tt>OutputWfsNumber</tt> -- see below. The output file is called
     !% <tt>wf-</tt>, or <tt>lr_wf-</tt> in linear response.
-    !%Option wfs_fourier 2097152
-    !% (Experimental) Outputs wavefunctions in Fourier space. This is
-    !% only implemented for the ETSF file format output. The file will
-    !% be called <tt>static/wfs-pw-etsf.nc</tt>.  
     !%Option wfs_sqmod 8
     !% Outputs modulus squared of the wavefunctions. 
     !% The output file is called <tt>sqm-wf-</tt>. For linear response, the filename is <tt>sqm_lr_wf-</tt>.
@@ -256,38 +254,42 @@ contains
     !% Outputs density of states.
     !%Option tpa 131072
     !% Outputs transition-potential approximation (TPA) matrix elements.
-    !%Option density_matrix 262144
-    !% Calculates, and outputs, the reduced density
-    !% matrix. For the moment the trace is made over the second dimension, and
-    !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
-    !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
-    !%Option modelmb 524288
-    !% This flag turns on the output for model many-body calculations, and
-    !% triggers the density, wavefunctions, or density matrix to be output for the
-    !% particles described in the <tt>DescribeParticlesModelMB</tt> block. Which
-    !% quantities will be output depends on the simultaneous presence of <tt>wfs</tt>,
-    !% <tt>density</tt>, etc.
-    !%Option forces 1048576
+    !%Option forces 262144
     !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
     !% a vector associated with each atom, which can be visualized with XCrySDen.
-    !%Option xc_density 4194304
+    !%Option wfs_fourier 524288
+    !% (Experimental) Outputs wavefunctions in Fourier space. This is
+    !% only implemented for the ETSF file format output. The file will
+    !% be called <tt>static/wfs-pw-etsf.nc</tt>.  
+    !%Option xc_density 1048576
     !% Outputs the XC density, which is the charge density that
     !% generates the XC potential. (This is <math>-1/4\pi</math> times
     !% the Laplacian of the XC potential). The files are called <tt>nxc</tt>.
-    !%Option PES_wfs 8388608
+    !%Option PES_wfs 2097152
     !% Outputs the photoelectron wavefunctions. The file name is <tt>pes_wfs-</tt>  
     !% plus the orbital number.
-    !%Option PES_density 16777216
+    !%Option PES_density 4194304
     !% Outputs the photolectron density. Output file is <tt>pes_dens-</tt> plus spin species if
     !% spin-polarized calculation is performed. 
-    !%Option PES 33554432   
+    !%Option PES 8388608   
     !% Outputs the time-dependent photoelectron spectrum.
-    !%Option BerkeleyGW 67108864
+    !%Option BerkeleyGW 16777216
     !% Output for a run with BerkeleyGW (<tt>www.berkeleygw.org</tt>). See <tt>Output::BerkeleyGW</tt> for further specification.
-    !%Option delta_perturbation 134217728
+    !%Option delta_perturbation 33554432
     !% Outputs the "kick", or time-delta perturbation applied to compute linear response in real time.
-    !%Option external_td_potential 268435456
+    !%Option external_td_potential 67108864
     !% Outputs the (scalar) time-dependent potential.
+    !%Option mmb 134217728
+    !% This flag turns on the output for model many-body calculations, for
+    !% particles described in the <tt>DescribeParticlesModelMB</tt> block.
+    !%Option mmb_wfs 268435456
+    !% Triggers the ModelMB wavefunctions to be output for each state
+    !%Option mmb_den 536870912
+    !% triggers the ModeMB density or density matrix to be output for each state, and the particles
+    !% speficied by the DensitytoCalc block. In the latter case, calculates, and outputs, the reduced density
+    !% matrix. For the moment the trace is made over the second dimension, and
+    !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
+    !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
     !%End
     call parse_integer(datasets_check('Output'), 0, outp%what)
 
@@ -313,24 +315,16 @@ contains
       call input_error('Output')
     end if
 
-    if(iand(outp%what, C_OUTPUT_MODELMB) .ne. 0 .or. iand(outp%what, C_OUTPUT_DENSITY_MATRIX) .ne. 0) then
-      call messages_experimental("Model many-body and density matrix")
-    endif
-
-    if(iand(outp%what, C_OUTPUT_MODELMB) .ne. 0) then
-      write(message(1),'(a)') 'Model many-body quantities will be output, according to the presence of'
-      write(message(2),'(a)') '  wfs, density, or density_matrix in Output.'
-      call messages_info(2)
+    if(iand(outp%what, C_OUTPUT_MMB) .ne. 0) then
+      call messages_experimental("Model many-body state analysis will be output")
     end if
 
-    if(iand(outp%what, C_OUTPUT_DENSITY_MATRIX) .ne. 0) then
-      write(message(1),'(a)') 'Info: The density matrix will be calculated, traced'
-      write(message(2),'(a)') 'over the second dimension, diagonalized, and output.'
-      call messages_info(2)
-      if(iand(outp%what, C_OUTPUT_MODELMB) .eq. 0) then
-        write(message(1),'(a)') 'Note that density matrix only works for model MB calculations for the moment.'
-        call messages_info(1)
-      end if
+    if(iand(outp%what, C_OUTPUT_MMB_WFS) .ne. 0) then
+      call messages_experimental("Model many-body wfs will be output")
+    end if
+
+    if(iand(outp%what, C_OUTPUT_MMB_DEN) .ne. 0) then
+      call messages_experimental("Model many-body density and/or density matrix will be output")
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
       !   in principle all combinations are interesting, but this means we need to

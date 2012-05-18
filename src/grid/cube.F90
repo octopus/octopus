@@ -75,6 +75,7 @@ contains
                                                 !! If optimized, may be different from input nn.
 
     integer :: mpi_comm, tmp_n(3), fft_type_, ii, optimize_parity(3), default_lib, fft_library_
+    integer :: effdim_fft
     logical :: optimize(3)
 
     PUSH_SUB(cube_init)
@@ -82,6 +83,8 @@ contains
     ASSERT(all(nn(1:3) > 0))
 
     fft_type_ = optional_default(fft_type, FFT_NONE)
+
+    effdim_fft = min (3, sb%dim)
 
     nullify(cube%fft)
 
@@ -148,8 +151,8 @@ contains
 
       optimize(1:3) = .false.
       optimize_parity(1:3) = 0
-      optimize(sb%periodic_dim+1:sb%dim) = .true.
-      optimize_parity(sb%periodic_dim+1:sb%dim) = 1
+      optimize(sb%periodic_dim+1:effdim_fft) = .true.
+      optimize_parity(sb%periodic_dim+1:effdim_fft) = 1
 
       if(present(dont_optimize)) then
         if(dont_optimize) optimize = .false.
