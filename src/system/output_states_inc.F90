@@ -266,7 +266,7 @@
     write (filename,'(a,a)') trim(dirname), '/youngprojections'
     iunit = io_open(trim(filename), action='write')
 
-    ! just treat particle type 1 for the moment
+    ! treat all particle types
     SAFE_ALLOCATE(ndiagrams(1:st%modelmbparticles%ntype_of_particle))
     ndiagrams = 1
     do itype = 1, st%modelmbparticles%ntype_of_particle
@@ -298,7 +298,7 @@
         end if
 
         call modelmb_sym_state(st%eigenval(mm,1), iunit, gr, mm, geo, &
-             st%modelmbparticles, ndiagrams, young_used, wf, symmetries_satisfied)
+             st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied)
       end if
 
       if(iand(outp%what, C_OUTPUT_MMB_DEN).ne.0 .and. symmetries_satisfied) then

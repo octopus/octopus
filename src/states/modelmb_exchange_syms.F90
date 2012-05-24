@@ -56,15 +56,15 @@ contains
 
   ! project out states with proper symmetry for cases which are of symmetry = unknown
   subroutine modelmb_sym_state(eigenval, iunit, gr, mm, geo, &
-             modelmbparticles, ndiagrams, young_used, wf, symmetries_satisfied)
+             modelmbparticles, ncombo, young_used, wf, symmetries_satisfied)
     FLOAT,                    intent(in)    :: eigenval
     integer,                  intent(in)    :: iunit
     type(grid_t),             intent(in)    :: gr
     integer,                  intent(in)    :: mm
     type(geometry_t),         intent(in)    :: geo
     type(modelmb_particle_t), intent(in)    :: modelmbparticles
-    integer,                  intent(in)    :: ndiagrams(modelmbparticles%ntype_of_particle)
-    integer,                  intent(inout) :: young_used(1:product(ndiagrams))
+    integer,                  intent(in)    :: ncombo
+    integer,                  intent(inout) :: young_used(1:ncombo)
     CMPLX,                    intent(inout) :: wf(1:gr%mesh%np) ! will be antisymmetrized on output
     logical,                  intent(out)   :: symmetries_satisfied
 
@@ -73,14 +73,13 @@ contains
     integer :: itype
     integer :: ikeeppart
     integer :: nspindown, nspinup
-    integer :: ncombo, idiagram_combo
+    integer :: idiagram_combo
 
     type(modelmb_1part_t) :: mb_1part
     type(young_t) :: young
 
     integer, allocatable :: dg_combo_iy(:,:)
     integer, allocatable :: dg_combo_ndown(:,:)
-    integer, allocatable :: nyoung_by_type(:)
     integer, allocatable :: sym_ok_alltypes(:)
  
     FLOAT :: norm
@@ -98,26 +97,7 @@ contains
 
     SAFE_ALLOCATE(sym_ok_alltypes(1:modelmbparticles%ntype_of_particle))
 
-! determine number of young diagrams for each type
-    SAFE_ALLOCATE(nyoung_by_type(1:modelmbparticles%ntype_of_particle))
-    nyoung_by_type = 0
-    do itype = 1, modelmbparticles%ntype_of_particle
-      ikeeppart = modelmbparticles%particles_of_type(1,itype)
-      if (modelmbparticles%bosonfermion(ikeeppart) /= 1) then
-        nyoung_by_type(itype) = 1
-        cycle
-      end if
-      npptype = modelmbparticles%nparticles_per_type(itype)
-      do nspindown = 0, floor(npptype/2.)
-        nspinup = npptype - nspindown
-        call young_init (young, nspinup, nspindown)
-        nyoung_by_type(itype) = nyoung_by_type(itype) + young%nyoung
-        call young_end (young)
-      end do
-    end do
-
 ! set up combinations of young diagrams (1 for each type)
-    ncombo = product(nyoung_by_type)
 
     SAFE_ALLOCATE(dg_combo_ndown(1:modelmbparticles%ntype_of_particle, 1:ncombo))
     dg_combo_ndown = 0
@@ -127,9 +107,10 @@ contains
     idiagram_combo = 1
     do itype = 1, modelmbparticles%ntype_of_particle
       ikeeppart = modelmbparticles%particles_of_type(1,itype)
-      if (modelmbparticles%bosonfermion(ikeeppart) /= 1) then
+      if (modelmbparticles%bosonfermion(ikeeppart) /= 1) then ! 1 is for fermion - might introduce a parameter in modelmb_particles
         dg_combo_ndown(itype, idiagram_combo) = 0
         dg_combo_iy(itype, idiagram_combo) = 1
+        idiagram_combo = idiagram_combo + 1
         cycle
       end if
       npptype = modelmbparticles%nparticles_per_type(itype)
@@ -150,6 +131,8 @@ contains
     ! index for combination of Young diagrams 
     do idiagram_combo = 1, ncombo
       antisymwf(:,1,1) = wf(1:gr%mesh%np)
+      ! skip diagram combinations already used in present degenerate subspace
+      if (young_used (idiagram_combo) > 0) cycle
 
       call modelmb_sym_state_1diag(eigenval, iunit, gr, mm, geo, &
          modelmbparticles, dg_combo_ndown(:, idiagram_combo), &
@@ -161,6 +144,7 @@ contains
       if (sum(sym_ok_alltypes) == modelmbparticles%ntype_of_particle .and. abs(norm) > 1.e-6) then
         wf(:) = antisymwf(:,1,1) / sqrt(norm)
         symmetries_satisfied = .true.
+        young_used (idiagram_combo) = 1
         ! eventually exit the combo loop
         exit
       end if
@@ -171,7 +155,6 @@ contains
 
     SAFE_DEALLOCATE_A(sym_ok_alltypes)
     SAFE_DEALLOCATE_A(antisymwf)
-    SAFE_DEALLOCATE_A(nyoung_by_type)
     SAFE_DEALLOCATE_A(dg_combo_ndown)
     SAFE_DEALLOCATE_A(dg_combo_iy)
 
