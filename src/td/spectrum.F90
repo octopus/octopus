@@ -548,7 +548,8 @@ contains
     call batch_init(dipoleb, 3, 1, nspin, dipole)
     call batch_init(sigmab, 3, 1, nspin, sigma)
 
-    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, dipoleb)
+    call signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, dt, dipoleb, &
+					 kick_time=kick%time)
     call fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
       istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
 
@@ -1861,7 +1862,8 @@ contains
 
   ! -------------------------------------------------------
 
-  subroutine signal_damp(damp_type, damp_factor, time_start, time_end, time_step, time_function, window)
+  subroutine signal_damp(damp_type, damp_factor, time_start, time_end, time_step, time_function, window, &
+						 kick_time)
     integer,            intent(in)    :: damp_type
     FLOAT,              intent(in)    :: damp_factor    
     integer,            intent(in)    :: time_start
@@ -1869,15 +1871,19 @@ contains
     FLOAT,              intent(in)    :: time_step
     type(batch_t),      intent(inout) :: time_function
     logical, optional,  intent(in)    :: window
+    FLOAT, optional, 	intent(in)	  :: kick_time
+	
 
     integer :: itime, ii
     FLOAT   :: total_time, time, weight
+    FLOAT   :: kick_time_
     logical :: window_
 
 
     PUSH_SUB(signal_damp)
 
     window_ = optional_default(window, .false.)
+    kick_time_ = optional_default(kick_time, M_ZERO)
 
     ASSERT(batch_is_ok(time_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
@@ -1894,11 +1900,24 @@ contains
       case(SPECTRUM_DAMP_NONE)
         weight = M_ONE
       case(SPECTRUM_DAMP_LORENTZIAN)
-        weight = exp(-time*damp_factor)
+		if (time < kick_time_) then
+			weight = M_ONE
+		else
+			weight = exp(-(time-kick_time_)*damp_factor)
+		endif
       case(SPECTRUM_DAMP_POLYNOMIAL)
-        weight = M_ONE - M_THREE*(time/total_time)**2 + M_TWO*(time/total_time)**3
+		if (time < kick_time_) then
+			weight = M_ONE
+		else
+			weight = M_ONE - M_THREE*( (time-kick_time_)/(total_time-kick_time_) )**2 + &
+					 M_TWO*( (time-kick_time_)/(total_time-kick_time_) )**3
+		endif
       case(SPECTRUM_DAMP_GAUSSIAN)
-        weight = exp(-time**2*damp_factor**2)
+		if (time < kick_time_) then
+			weight = M_ONE
+		else
+			weight = exp(-(time-kick_time_)**2*damp_factor**2)
+		endif
       end select
             
       do ii = 1, time_function%nst_linear
