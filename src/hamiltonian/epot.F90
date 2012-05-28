@@ -159,7 +159,7 @@ contains
     !% very useful to decrease the egg-box effect, and so should be used in
     !% all instances where atoms move (<i>e.g.</i> geometry optimization,
     !% molecular dynamics, and vibrational modes).
-    !%Option filter_none 1
+    !%Option filter_none 0
     !% Do not filter.
     !%Option filter_TS 2
     !% The filter of M. Tafipolsky and R. Schmid, <i>J. Chem. Phys.</i> <b>124</b>, 174102 (2006).

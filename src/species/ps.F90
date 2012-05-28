@@ -59,7 +59,7 @@ module ps_m
     PS_TYPE_UPF = 104
 
   integer, parameter, public :: &
-    PS_FILTER_NONE = 1,         &
+    PS_FILTER_NONE = 0,         &
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
