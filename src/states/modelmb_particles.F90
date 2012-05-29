@@ -269,51 +269,6 @@ subroutine modelmb_particles_init (this,gr)
   SAFE_ALLOCATE (this%exchange_symmetry(1:itmp, 1:itmp, 1:jtmp))
   this%exchange_symmetry = 0
 
-  !%Variable DensitiestoCalc
-  !%Type block
-  !%Section States
-  !%Description
-  !% Choice of which particle densities will be calculated and output, in the
-  !%  modelmb particles scheme.
-  !%
-  !% <tt>%DensitiestoCalc
-  !% <br>&nbsp;&nbsp; proton   | 1
-  !% <br>&nbsp;&nbsp; electron | 2
-  !% <br>%</tt>
-  !%
-  !% would ask <tt>Octopus</tt> to calculate the density corresponding to the 1st
-  !% particle (whose coordinates correspond to dimensions 1 to <tt>NDimModelmb</tt>),
-  !% which is an electron, then that corresponding to the 2nd particle
-  !% (dimensions <tt>NDimModelmb</tt>+1 to 2*<tt>NDimModelmb</tt>).
-  !%End
-  this%ndensities_to_calculate = 0
-
-  if(parse_block(datasets_check('DensitiestoCalc'), blk)==0) then
-    ncols = parse_block_cols(blk, 0)
-    if(ncols /= 2 ) then
-      call input_error("DensitiestoCalc")
-    end if
-    this%ndensities_to_calculate = parse_block_n(blk)
-    if (this%ndensities_to_calculate < 0 .or. &
-      this%ndensities_to_calculate > this%nparticle) then
-      call input_error("DensitiestoCalc")
-    end if
-    SAFE_ALLOCATE (this%labels_densities(1:this%ndensities_to_calculate))
-    SAFE_ALLOCATE (this%particle_kept_densities(1:this%ndensities_to_calculate))
-    do ipart = 1,this%ndensities_to_calculate
-      call parse_block_string(blk, ipart-1, 0, this%labels_densities(ipart))
-      call parse_block_integer(blk, ipart-1, 1, this%particle_kept_densities(ipart))
-
-      write (message(1),'(a,a)') 'labels_densities = ', this%labels_densities(ipart)
-      write (message(2),'(a,i6)') 'particle_kept_densities = ', this%particle_kept_densities(ipart)
-      call messages_info(2)
-    end do
-    call parse_block_end(blk)
-  else
-    nullify(this%labels_densities)
-    nullify(this%particle_kept_densities)
-  end if
-
   POP_SUB(modelmb_particles_init)
 
 end subroutine modelmb_particles_init
