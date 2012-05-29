@@ -20,5 +20,8 @@ SpinComponents = spin_polarized
 
 TheoryLevel = hartree_fock
 
+TypeOfMixing = linear
+Mixing = 0.5
+
 EigenSolverTolerance = 1.0e-8
 ConvRelDens = 1e-10
