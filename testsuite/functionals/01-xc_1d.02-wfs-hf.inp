@@ -20,4 +20,5 @@ SpinComponents = spin_polarized
 
 TheoryLevel = hartree_fock
 
-ConvRelDens = 1e-4
+EigenSolverTolerance = 1.0e-8
+ConvRelDens = 1e-10
