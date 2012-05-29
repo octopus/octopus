@@ -50,7 +50,6 @@ module output_m
   use mesh_m
   use mesh_function_m
   use messages_m
-  use modelmb_density_m
   use modelmb_density_matrix_m
   use modelmb_exchange_syms_m
   use mpi_m
