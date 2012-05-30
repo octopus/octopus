@@ -103,15 +103,8 @@ contains
     !%
     !%End
    
-    if(parse_block(datasets_check('DensityMatrixtoCalc'), blk)==0) then
-     message(1) = 'DensityMatrixtoCalc is obsolete - use DensitytoCalc'
-     call messages_fatal(1)
-    end if
-
-    if(parse_block(datasets_check('DensitiestoCalc'), blk)==0) then
-     message(1) = 'DensitiestoCalc is obsolete - use DensitytoCalc'
-     call messages_fatal(1)
-    end if
+    call messages_obsolete_variable('DensityMatrixtoCalc', 'DensitytoCalc')
+    call messages_obsolete_variable('DensitiestoCalc', 'DensitytoCalc')
 
     if(parse_block(datasets_check('DensitytoCalc'), blk)/=0) then
      message(1) = 'To print out density (matrices), you must specify the DensitytoCalc block in input'
