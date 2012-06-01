@@ -118,7 +118,8 @@ module hamiltonian_m
     FLOAT :: entropy
     FLOAT :: ts          !< TS
     FLOAT :: berry       !< Berry energy correction = -mu.E - <Vberry>
-    
+    FLOAT :: delta_xc    !< the XC derivative discontinuity
+
     !Complex-scaled quantities 
     CMPLX :: ztotal
     CMPLX :: zeigenvalues

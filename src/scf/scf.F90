@@ -605,7 +605,7 @@ contains
 
       etime = loct_clock() - itime
       itime = etime + itime
-      call scf_write_iter
+      call scf_write_iter()
 
       ! mixing
       select case (scf%mix_field)
@@ -724,7 +724,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine scf_write_iter
+    subroutine scf_write_iter()
       character(len=50) :: str
       FLOAT :: mem
 #ifdef HAVE_MPI
