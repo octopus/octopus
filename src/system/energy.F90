@@ -74,8 +74,6 @@ contains
     full_ = .false.
     if(present(full)) full_ = full
 
-    hm%energy%delta_xc = M_ZERO
-
     hm%energy%eigenvalues = states_eigenvalues_sum(st)
 
     evxctau = M_ZERO

@@ -254,6 +254,7 @@ contains
     hm%energy%intnvxc = M_ZERO
     hm%energy%exchange = M_ZERO
     hm%energy%correlation = M_ZERO
+    hm%energy%delta_xc = M_ZERO
     hm%energy%total = M_ZERO
     hm%energy%kinetic = M_ZERO
 

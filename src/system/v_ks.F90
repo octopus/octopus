@@ -575,11 +575,11 @@ contains
         if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            ex = energy%exchange, ec = energy%correlation, vxc = ks%calc%vxc, vtau = ks%calc%vtau)
+            ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vxc = ks%calc%vxc, vtau = ks%calc%vtau)
         else
           call xc_get_vxc(ks%gr%fine%der, ks%xc, &
             st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            ex = energy%exchange, ec = energy%correlation, vxc = ks%calc%vxc)
+            ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vxc = ks%calc%vxc)
         end if
       else
         if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
