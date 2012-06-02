@@ -185,8 +185,8 @@ contains
 
     PUSH_SUB(smear_find_fermi_energy)
 
-    cmplxscl = .false.
-    if(present(Imeigenvalues)) cmplxscl = .true.
+    cmplxscl = present(Imeigenvalues)
+
     this%Ime_fermi = M_ZERO
 
     ! Initializations

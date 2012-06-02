@@ -428,7 +428,7 @@ contains
         write(message(1),'(a)') 'Species read from file "'//trim(spec%filename)//'".'
         call messages_info(1)
       end if
-      spec%niwfs = 2*spec%z_val
+      spec%niwfs = 2*nint(spec%z_val)
       spec%omega = CNST(0.1)
 
     case(SPEC_JELLI, SPEC_POINT)
@@ -439,7 +439,7 @@ contains
         write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', spec%jradius * spec%z_val ** (-M_ONE/M_THREE)
         call messages_info(4)
       end if
-      spec%niwfs = 2*spec%z_val
+      spec%niwfs = 2*nint(spec%z_val)
       spec%omega = CNST(0.1)
 
     case(SPEC_JELLI_SLAB)
@@ -451,11 +451,11 @@ contains
         !& *spec%z_val /( *sb%lsize(1) *sb%lsize(2) ) )**(1.0/3.0) 
         call messages_info(3)
       end if
-      spec%niwfs = 2*spec%z_val
+      spec%niwfs = 2*nint(spec%z_val)
       spec%omega = CNST(0.1)
 
     case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN)
-      spec%niwfs = 2*spec%z_val
+      spec%niwfs = 2*nint(spec%z_val)
       spec%has_density = .true.
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is an all-electron atom.'

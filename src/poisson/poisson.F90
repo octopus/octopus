@@ -663,7 +663,6 @@ contains
   !! This only makes sense for finite systems.
   subroutine poisson_test(mesh)
     type(mesh_t), intent(inout) :: mesh
-    FLOAT :: aux1, aux2
     FLOAT, allocatable :: rho(:), vh(:), vh2(:), vh3(:), vh_exact(:), rhop(:), xx(:, :)
     FLOAT :: alpha, beta, rr, delta, norm, ralpha, range, hartree_nrg_num, &
          hartree_nrg_analyt, lcl_hartree_nrg 

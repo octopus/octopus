@@ -182,7 +182,6 @@ contains
       type(states_t), intent(inout) :: st
 
       integer :: nus
-      FLOAT, pointer :: new_occ(:,:)
 
       PUSH_SUB(unocc_run.init_)
 

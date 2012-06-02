@@ -831,7 +831,7 @@ contains
     logical,             intent(in), optional :: append
     character(len=*),    intent(in), optional :: comment
 
-    integer iatom, idir, iunit
+    integer :: iatom, iunit
     character(len=6) position
 
     if( .not. mpi_grp_is_root(mpi_world)) return

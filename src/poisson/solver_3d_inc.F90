@@ -27,7 +27,6 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   integer :: nx, ny, nz
   FLOAT   :: xl, yl, zl
 
-  type(poisson_fmm_t) :: fmm_params
   logical :: valid_solver
 
   PUSH_SUB(poisson3D_init)

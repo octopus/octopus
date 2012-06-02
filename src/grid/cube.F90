@@ -74,7 +74,7 @@ contains
     integer, optional, intent(out) :: nn_out(3) !< What are the FFT dims?
                                                 !! If optimized, may be different from input nn.
 
-    integer :: mpi_comm, tmp_n(3), fft_type_, ii, optimize_parity(3), default_lib, fft_library_
+    integer :: mpi_comm, tmp_n(3), fft_type_, optimize_parity(3), default_lib, fft_library_
     integer :: effdim_fft
     logical :: optimize(3)
 

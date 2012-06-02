@@ -79,7 +79,7 @@ contains
     PUSH_SUB(cread_csv)
 
     ierr = 1
-    ff(:) = M_ZERO
+    ff(:) = (0.0_4, 0.0_4)
 
     POP_SUB(cread_csv)
   end subroutine cread_csv
@@ -95,7 +95,7 @@ contains
     PUSH_SUB(zread_csv)
 
     ierr = 1
-    ff(:) = M_ZERO
+    ff(:) = (0.0_8, 0.0_8)
 
     POP_SUB(zread_csv)
   end subroutine zread_csv
@@ -109,7 +109,7 @@ contains
     PUSH_SUB(iread_csv)
 
     ierr = 1
-    ff(:) = M_ZERO
+    ff(:) = 0_4
 
     POP_SUB(iread_csv)
   end subroutine iread_csv
@@ -123,7 +123,7 @@ contains
     PUSH_SUB(lread_csv)
 
     ierr = 1
-    ff(:) = M_ZERO
+    ff(:) = 0_8
 
     POP_SUB(lread_csv)
   end subroutine lread_csv

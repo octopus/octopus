@@ -112,7 +112,9 @@ contains
 
   subroutine octcl_kernel_end(this)
     type(octcl_kernel_t), intent(inout) :: this
-      integer :: ierr
+#ifdef HAVE_OPENCL
+    integer :: ierr
+#endif
 
       PUSH_SUB(octcl_kernel_end)
 
