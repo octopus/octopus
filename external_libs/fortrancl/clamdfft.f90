@@ -103,10 +103,10 @@ module clAmdFft
   integer, public, parameter ::        &
     CLFFT_COMPLEX_INTERLEAVED     = 1, &
     CLFFT_COMPLEX_PLANAR          = 2, &
-    CLFFT_HERMITIAN_INTERLEAVED   = 4, &
-    CLFFT_HERMITIAN_PLANAR        = 5, &
-    CLFFT_REAL                    = 6, &
-    ENDLAYOUT                     = 7
+    CLFFT_HERMITIAN_INTERLEAVED   = 3, &
+    CLFFT_HERMITIAN_PLANAR        = 4, &
+    CLFFT_REAL                    = 5, &
+    ENDLAYOUT                     = 6
 
   integer, public, parameter ::        &
     CLFFT_SINGLE                  = 1, &
