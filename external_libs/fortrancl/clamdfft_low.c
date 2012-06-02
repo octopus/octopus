@@ -184,6 +184,28 @@ void FC_FUNC_(clamdfftgetplaninstride_low, CLAMDFFTGETPLANINSTRIDE_LOW)(clAmdFft
 
 /**************************************************/
 
+void FC_FUNC_(clamdfftgetplanoutstride_low, CLAMDFFTGETPLANOUTSTRIDE_LOW)(clAmdFftPlanHandle ** plHandle, 
+									  const int * dim, 
+									  cl_long * clStrides, 
+									  int * status){
+  size_t * strides;
+  int i;
+
+  strides = (size_t *) malloc(sizeof(size_t)*(*dim));
+
+  *status = clAmdFftGetPlanOutStride(**plHandle, *dim, strides);
+
+  for(i = 0; i < *dim; i++){
+    clStrides[i] = (cl_long) strides[i];
+    /*    printf("%d %d\n", clStrides[i], strides[i]);*/
+  }
+
+  free(strides);
+
+}
+
+/**************************************************/
+
 void FC_FUNC_(clamdfftsetplanscale_low, CLAMDFFTSETPLANSCALE_LOW)(clAmdFftPlanHandle ** plHandle, 
 								  const int * dir, 
 								  const double * scale,

@@ -29,6 +29,7 @@ module clAmdFft
     clAmdFftSetPlanInStride,     &
     clAmdFftSetPlanOutStride,    &
     clAmdFftGetPlanInStride,     &
+    clAmdFftGetPlanOutStride,    &
     clAmdFftSetPlanScale,        &
     clAmdFftGetPlanScale,        &
     clAmdFftBakePlan
@@ -306,6 +307,20 @@ module clAmdFft
     end subroutine clAmdFftGetPlanInStride_low
   end interface clAmdFftGetPlanInStride
 
+  ! ---------------------------------------------------------
+
+  interface clAmdFftGetPlanOutStride
+    subroutine clAmdFftGetPlanOutStride_low(plHandle, dim, clStrides, status)
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
+      integer,                  intent(in)    :: dim
+      integer(8),               intent(out)   :: clStrides(1:dim)
+      integer,                  intent(out)   :: status    
+    end subroutine clAmdFftGetPlanOutStride_low
+  end interface clAmdFftGetPlanOutStride
   ! ---------------------------------------------------------
 
   interface clAmdFftSetPlanScale
