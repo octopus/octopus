@@ -79,7 +79,8 @@ contains
     type(cube_function_t), intent(inout) :: cf
     
     integer :: n1, n2, n3
-
+    logical :: allocated
+    
     PUSH_SUB(cube_function_alloc_fs)
     
     ASSERT(.not. associated(cf%fs))
@@ -89,8 +90,11 @@ contains
     n2 = max(1, cube%fs_n(2))
     n3 = max(1, cube%fs_n(3))
 
+    allocated = .false.
+
     select case(cube%fft%library)
     case(FFTLIB_PFFT)
+      allocated = .true.
       ASSERT(associated(cube%fft))  
       if(any(cube%fs_n(1:3) == 0)) then
         cf%fs => cube%fft%fs_data(1:1,1:1,1:1)
@@ -99,11 +103,16 @@ contains
       end if
     case(FFTLIB_CLAMD)
 #ifdef HAVE_OPENCL
-      call opencl_create_buffer(cf%fourier_space_buffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%fs_n(1:3)))
+      if(cf%in_device_memory) then
+        allocated = .true.
+        call opencl_create_buffer(cf%fourier_space_buffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%fs_n(1:3)))
+      end if
 #endif
-    case default
-      SAFE_ALLOCATE(cf%fs(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
     end select
+
+    if(.not. allocated) then
+      SAFE_ALLOCATE(cf%fs(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
+    end if
     
     POP_SUB(cube_function_alloc_fs)
   end subroutine cube_function_alloc_fs
@@ -115,20 +124,28 @@ contains
     type(cube_t),          intent(in)    :: cube
     type(cube_function_t), intent(inout) :: cf
     
+    logical :: deallocated
+
     PUSH_SUB(cube_function_free_fs)
 
     ASSERT(associated(cube%fft))
 
+    deallocated = .false.
+
     select case(cube%fft%library)
     case(FFTLIB_PFFT)
+      deallocated = .true.
       nullify(cf%fs)
     case(FFTLIB_CLAMD)
 #ifdef HAVE_OPENCL
-      call opencl_release_buffer(cf%fourier_space_buffer)
+      if(cf%in_device_memory) then
+        deallocated = .true.
+        call opencl_release_buffer(cf%fourier_space_buffer)
+      end if
 #endif
-    case default
-      SAFE_DEALLOCATE_P(cf%fs)
     end select
+
+    SAFE_DEALLOCATE_P(cf%fs)
     
     POP_SUB(cube_function_free_fs)
   end subroutine cube_function_free_fs

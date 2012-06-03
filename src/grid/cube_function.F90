@@ -87,6 +87,8 @@ contains
     integer :: ii, jj, kk, ix, iy, iz, npoints
     FLOAT :: tmp_x
 
+    ASSERT(.not. cf%in_device_memory)
+
     PUSH_SUB(cube_function_surface_average)
 
     tmp_x = M_ZERO

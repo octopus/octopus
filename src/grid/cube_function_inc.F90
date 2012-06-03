@@ -22,9 +22,10 @@
 !> Allocates locally the real space grid, if PFFT library is not used.
 !! Otherwise, it assigns the PFFT real space grid to the cube real space grid,
 !! via pointer.
-subroutine X(cube_function_alloc_rs)(cube, cf)
+subroutine X(cube_function_alloc_rs)(cube, cf, in_device)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
+  logical, optional,     intent(in)    :: in_device
 
   logical :: allocated
 
@@ -41,11 +42,13 @@ subroutine X(cube_function_alloc_rs)(cube, cf)
       ASSERT(associated(cube%fft))
       cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
     case(FFTLIB_CLAMD)
-      allocated = .true.
-      cf%in_device_memory = .true.
+      if(optional_default(in_device, .true.)) then
+        allocated = .true.
+        cf%in_device_memory = .true.
 #ifdef HAVE_OPENCL
-      call opencl_create_buffer(cf%real_space_buffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%rs_n(1:3)))
+        call opencl_create_buffer(cf%real_space_buffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%rs_n(1:3)))
 #endif
+      end if
     end select
   end if
 
@@ -76,10 +79,12 @@ subroutine X(cube_function_free_rs)(cube, cf)
       nullify(cf%X(rs))
     case(FFTLIB_CLAMD)
 #ifdef HAVE_OPENCL
-      deallocated = .true.
-      ASSERT(cf%in_device_memory)
-      call opencl_release_buffer(cf%real_space_buffer)
-      cf%in_device_memory = .false.
+      if(cf%in_device_memory) then
+        deallocated = .true.
+        ASSERT(cf%in_device_memory)
+        call opencl_release_buffer(cf%real_space_buffer)
+        cf%in_device_memory = .false.
+      end if
 #endif
     end select
   end if

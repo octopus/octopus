@@ -64,6 +64,7 @@ module poisson_fft_m
 
   type poisson_fft_t
     type(fourier_space_op_t) :: coulb
+    integer                  :: kernel
   end type poisson_fft_t
 contains
 
@@ -75,6 +76,8 @@ contains
     FLOAT, optional,     intent(in)    :: soft_coulb_param
 
     PUSH_SUB(poisson_fft_init)
+
+    this%kernel = kernel
     
     select case(mesh%sb%dim)
     case(1)
@@ -454,7 +457,7 @@ contains
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
 
-    call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS)
+    call dfourier_space_op_init(this%coulb, cube, fft_coulb_fs, in_device = (kernel /= POISSON_FFT_KERNEL_CORRECTED))
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     POP_SUB(poisson_fft_build_3d_0d)
@@ -719,14 +722,14 @@ contains
     average = M_ZERO !this avoids a non-initialized warning
 
     call cube_function_null(cf)    
-    call dcube_function_alloc_RS(cube, cf) ! allocate the cube in real space
+    call dcube_function_alloc_RS(cube, cf, in_device = (this%kernel /= POISSON_FFT_KERNEL_CORRECTED)) 
 
     ! put the density in the cube
     if (cube%parallel_in_domains) then
       call dmesh_to_cube_parallel(mesh, rho, cube, cf, mesh_cube_map)
     else
       if(mesh%parallel_in_domains) then
-        call dmesh_to_cube(mesh, rho, cube, cf, local=.true.)
+        call dmesh_to_cube(mesh, rho, cube, cf, local = .true.)
       else 
         call dmesh_to_cube(mesh, rho, cube, cf)
       end if
