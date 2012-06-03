@@ -158,6 +158,14 @@ module opencl_m
     OPENCL_ACCELERATOR = -3,  &
     OPENCL_DEFAULT     = -4
 
+
+  integer, parameter  ::      &
+    CL_PLAT_INVALID   = -1,   &
+    CL_PLAT_AMD       = -2,   &
+    CL_PLAT_NVIDIA    = -3,   &
+    CL_PLAT_ATI       = -4,   &
+    CL_PLAT_INTEL     = -5
+
   ! a "convenience" public variable
   integer, public :: cl_status
 
@@ -226,7 +234,17 @@ module opencl_m
       !%Section Execution::OpenCL
       !%Description
       !% This variable selects the OpenCL platform that Octopus will
-      !% use. Platform 0 is used by default.
+      !% use. You can give an explicit platform number or use one of
+      !% the options that select a particular vendor
+      !% implementation. Platform 0 is used by default.
+      !%Option amd -2
+      !% Use the AMD OpenCL platform.
+      !%Option nvidia -3
+      !% Use the Nvidia OpenCL platform.
+      !%Option ati -4
+      !% Use the ATI (old AMD) OpenCL platform.
+      !%Option intel -5
+      !% Use the Intel OpenCL platform.
       !%End
       call parse_integer(datasets_check('OpenCLPlatform'), 0, iplatform)
 
@@ -272,9 +290,20 @@ module opencl_m
       call messages_info()
 
       do iplat = 1, nplatforms
-        call messages_write('      Platform ')
-        call messages_write(iplat - 1)
+
         call clGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_NAME, device_name, cl_status)
+
+        if(iplatform < 0) then
+          if(iplatform == get_platform_id(device_name)) iplatform = iplat - 1
+        end if
+
+        if(iplatform == iplat - 1) then
+          call messages_write('    * Platform ')
+        else
+          call messages_write('      Platform ')
+        end if
+
+        call messages_write(iplat - 1)
         call messages_write(' : '//device_name)
         call clGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_VERSION, device_name, cl_status)
         call messages_write(' ('//trim(device_name)//')')
@@ -283,10 +312,13 @@ module opencl_m
 
       call messages_info()
 
-      if(iplatform >= nplatforms) then
-        call messages_write('Requested CL platform does not exist (platform = ')
-        call messages_write(iplatform)
-        call messages_write(').')
+      if(iplatform >= nplatforms .or. iplatform < 0) then
+        call messages_write('Requested CL platform does not exist')
+        if(iplatform > 0) then 
+          call messages_write('(platform = ')
+          call messages_write(iplatform)
+          call messages_write(').')
+        end if
         call messages_fatal()
       end if
 
@@ -559,6 +591,18 @@ module opencl_m
       end subroutine device_info
 
     end subroutine opencl_init
+
+    ! ------------------------------------------
+
+    integer function get_platform_id(platform_name) result(platform_id)
+      character(len=*), intent(in) :: platform_name
+
+      platform_id = CL_PLAT_INVALID
+      if(index(platform_name, 'AMD') > 0)    platform_id = CL_PLAT_AMD
+      if(index(platform_name, 'ATI') > 0)    platform_id = CL_PLAT_ATI
+      if(index(platform_name, 'NVIDIA') > 0) platform_id = CL_PLAT_NVIDIA
+      if(index(platform_name, 'Intel') > 0)  platform_id = CL_PLAT_INTEL
+    end function get_platform_id
 
     ! ------------------------------------------
 
