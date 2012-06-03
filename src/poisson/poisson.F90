@@ -196,7 +196,9 @@ contains
 #endif
 
 #ifdef HAVE_CLAMDFFT
-    if(opencl_is_enabled()) default_solver = POISSON_FFT
+    ! this is disabled, since the difference between solvers are big
+    ! enough to cause problems with the tests.
+    ! if(opencl_is_enabled()) default_solver = POISSON_FFT
 #endif
 
     if(der%mesh%use_curvilinear) then
