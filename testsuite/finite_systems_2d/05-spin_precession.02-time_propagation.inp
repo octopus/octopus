@@ -50,3 +50,5 @@ TDTimeStep = dt
 
 OutputEvery = 25
 TDOutput = energy + multipoles + spin
+
+ExperimentalFeatures = yes

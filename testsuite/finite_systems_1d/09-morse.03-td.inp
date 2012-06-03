@@ -111,3 +111,6 @@ scalar_potential | "amp*mu0*(x+r0)*exp(-(x+r0)/xp)" | 0.0 | "envelope_function"
 %TDFunctions
 "envelope_function" | tdf_from_expr | "sin(pi*t/picosecond)^2*cos(omega0*t)"
 %
+
+ExperimentalFeatures = yes
+

@@ -154,28 +154,38 @@ contains
     !%Default multipoles + geometry + temperature + energy
     !%Section Time-Dependent::TD Output
     !%Description
-    !% Defines what should be output during the time-dependent simulation.
+    !% Defines what should be output during the time-dependent
+    !% simulation. Many of the options can increase the computational
+    !% cost of the simulation, so only use the ones that you need. In
+    !% most cases the default value is enough, as it is adapted to the
+    !% details of the TD run. The energy and multipoles are always
+    !% calculated. If the ions are allowed to be moved, additionally
+    !% the geometry and the temperature are output. If a laser is
+    !% included it will output by default.
     !%Option multipoles 1
     !% Outputs the multipole moments of the density to the file <tt>td.general/multipoles</tt>.
     !% This is required to, <i>e.g.</i>, calculate optical absorption spectra of finite systems. The
     !% maximum value of <math>l</math> can be set with the variable <tt>TDDipoleLmax</tt>.
     !%Option angular 2
     !% Outputs the angular momentum of the system that can be used to calculate circular
-    !% dichroism (EXPERIMENTAL).
+    !% dichroism.
     !%Option spin 4
-    !% Outputs the expectation value of the spin, that can be used to calculate magnetic
-    !% cicular dichroism (EXPERIMENTAL).
+    !% (Experimental) Outputs the expectation value of the spin, that can be used to calculate magnetic
+    !% cicular dichroism.
     !%Option populations 8
-    !% Outputs the projection of the time-dependent Kohn-Sham Slater determinant
-    !% onto the ground-state (or approximations to the excited states) to the file 
-    !% <tt>td.general/populations</tt>.
+    !% (Experimental) Outputs the projection of the time-dependent
+    !% Kohn-Sham Slater determinant onto the ground-state (or
+    !% approximations to the excited states) to the file
+    !% <tt>td.general/populations</tt>. Note that the calculation of
+    !% populations is expensive in memory and computer time, so it
+    !% should only be used if it is really needed.
     !%Option geometry 16
     !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
     !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>.
-    !%Option acceleration 32
-    !% When set, outputs the acceleration, calculated from Ehrenfest theorem,
+    !%Option dipole_acceleration 32
+    !% When set, outputs the acceleration of the electronic dipole, calculated from Ehrenfest theorem,
     !% in the file <tt>td.general/acceleration</tt>. This file can then be
-    !% processed by the utility <tt>hs-from-acc</tt> in order to obtain the harmonic spectrum.
+    !% processed by the utility <tt>oct-harmonic-spectrum</tt> in order to obtain the harmonic spectrum.
     !%Option laser 64
     !% If set, and if there are lasers defined in <tt>TDLasers</tt>,
     !% <tt>octopus</tt> outputs the laser field to the file <tt>td.general/laser</tt>.
@@ -183,9 +193,11 @@ contains
     !% If <tt>set</tt>, <tt>octopus</tt> outputs the different components of the energy
     !% to the file <tt>td.general/el_energy</tt>.
     !%Option td_occup 256
-    !% If set, outputs the projections of the time-dependent Kohn-Sham
-    !% wavefunctions onto the static (zero-time) wavefunctions to the
-    !% file <tt>td.general/projections.XXX</tt>.
+    !% (Experimental) If set, outputs the projections of the
+    !% time-dependent Kohn-Sham wavefunctions onto the static
+    !% (zero-time) wavefunctions to the file
+    !% <tt>td.general/projections.XXX</tt>. Only use this option if
+    !% you really need it, as it might be computationally expensive.
     !%Option local_mag_moments 512
     !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
     !% The radius of the sphere can be set with <tt>LocalMagneticMomentsSphereRadius</tt>.
@@ -200,10 +212,10 @@ contains
     !% This is needed for calculating the dynamic structure factor.
     !% In the case that the kick mode is qbessel, the written quantity is integral over
     !% density, multiplied by spherical Bessel function times real spherical harmonic.
-    !%Option velocity    8192
-    !% When set, outputs the velocity, calculated from Ehrenfest theorem,
+    !%Option dipole_velocity    8192
+    !% When set, outputs the dipole velocity, calculated from Ehrenfest theorem,
     !% in the file <tt>td.general/velocity</tt>. This file can then be
-    !% processed by the utility <tt>hs-from-vel</tt> in order to obtain the harmonic spectrum.
+    !% processed by the utility <tt>oct-harmonic-spectrum</tt> in order to obtain the harmonic spectrum.
     !%End
 
     default = &
@@ -212,7 +224,8 @@ contains
          2**(OUT_COORDS - 1) +      &
          2**(OUT_TEMPERATURE - 1) + &
          2**(OUT_ENERGY - 1) +      &
-         2**(OUT_GAUGE_FIELD - 1)
+         2**(OUT_GAUGE_FIELD - 1) + &
+         2**(OUT_LASER - 1)
 
     call parse_integer(datasets_check('TDOutput'), default, flags)
 
@@ -228,6 +241,11 @@ contains
     writ%out(OUT_GAUGE_FIELD)%write = writ%out(OUT_GAUGE_FIELD)%write .and. with_gauge_field
     writ%out(OUT_LASER)%write = writ%out(OUT_LASER)%write .and. (hm%ep%no_lasers > 0)
     writ%out(OUT_FTCHD)%write = writ%out(OUT_FTCHD)%write .and. (kick%qkick_mode /= QKICKMODE_NONE)
+
+    ! experimental stuff
+    if(writ%out(OUT_SPIN)%write) call messages_experimental('TDOutput = spin')
+    if(writ%out(OUT_POPULATIONS)%write) call messages_experimental('TDOutput = populations')
+    if(writ%out(OUT_PROJ)%write) call messages_experimental('TDOutput = td_occup')
 
     !%Variable TDDipoleLmax
     !%Type integer
