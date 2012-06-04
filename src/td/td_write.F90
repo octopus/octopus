@@ -167,14 +167,14 @@ contains
     !% This is required to, <i>e.g.</i>, calculate optical absorption spectra of finite systems. The
     !% maximum value of <math>l</math> can be set with the variable <tt>TDDipoleLmax</tt>.
     !%Option angular 2
-    !% Outputs the angular momentum of the system that can be used to calculate circular
+    !% Outputs the angular momentum of the system, which can be used to calculate circular
     !% dichroism.
     !%Option spin 4
-    !% (Experimental) Outputs the expectation value of the spin, that can be used to calculate magnetic
-    !% cicular dichroism.
+    !% (Experimental) Outputs the expectation value of the spin, which can be used to calculate magnetic
+    !% circular dichroism.
     !%Option populations 8
     !% (Experimental) Outputs the projection of the time-dependent
-    !% Kohn-Sham Slater determinant onto the ground-state (or
+    !% Kohn-Sham Slater determinant onto the ground state (or
     !% approximations to the excited states) to the file
     !% <tt>td.general/populations</tt>. Note that the calculation of
     !% populations is expensive in memory and computer time, so it
@@ -183,7 +183,7 @@ contains
     !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
     !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>.
     !%Option dipole_acceleration 32
-    !% When set, outputs the acceleration of the electronic dipole, calculated from Ehrenfest theorem,
+    !% When set, outputs the acceleration of the electronic dipole, calculated from the Ehrenfest theorem,
     !% in the file <tt>td.general/acceleration</tt>. This file can then be
     !% processed by the utility <tt>oct-harmonic-spectrum</tt> in order to obtain the harmonic spectrum.
     !%Option laser 64
@@ -213,7 +213,7 @@ contains
     !% In the case that the kick mode is qbessel, the written quantity is integral over
     !% density, multiplied by spherical Bessel function times real spherical harmonic.
     !%Option dipole_velocity    8192
-    !% When set, outputs the dipole velocity, calculated from Ehrenfest theorem,
+    !% When set, outputs the dipole velocity, calculated from the Ehrenfest theorem,
     !% in the file <tt>td.general/velocity</tt>. This file can then be
     !% processed by the utility <tt>oct-harmonic-spectrum</tt> in order to obtain the harmonic spectrum.
     !%End
