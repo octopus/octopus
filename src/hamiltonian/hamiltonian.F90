@@ -1147,20 +1147,21 @@ contains
 
     PUSH_SUB(energy_copy)
 
-    eout%total = ein%total
-    eout%eigenvalues = ein%eigenvalues
-    eout%exchange = ein%exchange
-    eout%correlation = ein%correlation
-    eout%xc_j = ein%xc_j
-    eout%intnvxc = ein%intnvxc
-    eout%hartree = ein%hartree
-    eout%kinetic = ein%kinetic
-    eout%extern = ein%extern
-    eout%entropy = ein%entropy
-    eout%ts = ein%ts
-    eout%berry = ein%berry
+    eout%total        = ein%total
+    eout%eigenvalues  = ein%eigenvalues
+    eout%exchange     = ein%exchange
+    eout%correlation  = ein%correlation
+    eout%xc_j         = ein%xc_j
+    eout%intnvxc      = ein%intnvxc
+    eout%hartree      = ein%hartree
+    eout%kinetic      = ein%kinetic
+    eout%extern       = ein%extern
+    eout%entropy      = ein%entropy
+    eout%ts           = ein%ts
+    eout%berry        = ein%berry
+    eout%delta_xc     = ein%delta_xc
 
-    eout%ztotal = ein%ztotal
+    eout%ztotal       = ein%ztotal
     eout%zeigenvalues = ein%zeigenvalues
     
     POP_SUB(energy_copy)

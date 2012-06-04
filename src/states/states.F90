@@ -1911,10 +1911,9 @@ contains
     PUSH_SUB(states_fermi)
 
     if(st%d%cmplxscl) then
-!       print *, "remember that I am here"
       call smear_find_fermi_energy(st%smear, st%zeigenval%Re, st%occ, st%qtot, &
         st%d%nik, st%nst, st%d%kweights, st%zeigenval%Im)
-        print *, "Efermi", st%smear%e_fermi, st%smear%Ime_fermi
+
       call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
         st%d%nik, st%nst, st%zeigenval%Im)
     else
