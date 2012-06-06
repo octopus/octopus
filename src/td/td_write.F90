@@ -43,6 +43,8 @@ module td_write_m
   use mesh_m
   use messages_m
   use mpi_m
+  use mpi_debug_m
+  use mpi_lib_m
   use parser_m
   use pert_m
   use profiling_m
@@ -92,7 +94,8 @@ module td_write_m
     OUT_TEMPERATURE = 12, &
     OUT_FTCHD       = 13, &
     OUT_VEL         = 14, &
-    OUT_MAX         = 14
+    OUT_EIGS        = 15, &
+    OUT_MAX         = 15
   
   type td_write_t
     private
@@ -216,6 +219,8 @@ contains
     !% When set, outputs the dipole velocity, calculated from the Ehrenfest theorem,
     !% in the file <tt>td.general/velocity</tt>. This file can then be
     !% processed by the utility <tt>oct-harmonic-spectrum</tt> in order to obtain the harmonic spectrum.
+    !%Option eigenvalues    16384
+    !% Write the KS eigenvalues. 
     !%End
 
     default = &
@@ -443,6 +448,11 @@ contains
       if(writ%out(OUT_GAUGE_FIELD)%write) &
         call write_iter_init(writ%out(OUT_GAUGE_FIELD)%handle, &
         first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/gauge_field")))
+        
+      if(writ%out(OUT_EIGS)%write) &
+        call write_iter_init(writ%out(OUT_EIGS)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/eigenvalues")))
+        
     end if
 
     POP_SUB(td_write_init)
@@ -534,6 +544,9 @@ contains
 
     if(writ%out(OUT_GAUGE_FIELD)%write) &
       call td_write_gauge_field(writ%out(OUT_GAUGE_FIELD)%handle, hm, gr, iter)
+
+    if(writ%out(OUT_EIGS)%write) &
+      call td_write_eigs(writ%out(OUT_EIGS)%handle, st, iter)
 
     call profiling_out(prof)
     POP_SUB(td_write_iter)
@@ -1421,6 +1434,90 @@ contains
 
     POP_SUB(td_write_energy)
   end subroutine td_write_energy
+
+  ! ---------------------------------------------------------
+  subroutine td_write_eigs(out_eigs, st, iter)
+    type(c_ptr),         intent(in) :: out_eigs
+    type(states_t),      intent(in) :: st
+    integer,             intent(in) :: iter
+
+    integer             :: ii, is
+    character(len=68)   :: buf
+    FLOAT, allocatable  :: eigs(:,:)
+#if defined(HAVE_MPI) 
+    integer :: outcount, ik, mpi_err
+    integer, allocatable :: sendcnts(:), sdispls(:), recvcnts(:), rdispls(:)
+#endif
+
+    PUSH_SUB(td_write_eigs)
+
+    SAFE_ALLOCATE(eigs(1:st%nst,1:st%d%kpt%nglobal)) 
+           
+    eigs(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
+      st%eigenval(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
+
+#if defined(HAVE_MPI) 
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      call lmpi_gen_allgatherv(st%lnst, st%eigenval(st%st_start:st%st_end,ik), outcount, &
+                             eigs(:, ik), st%mpi_grp)
+    end do
+
+#endif
+  
+    if(.not.mpi_grp_is_root(mpi_world)) then 
+      SAFE_DEALLOCATE_A(eigs)
+      POP_SUB(td_write_eigs)
+      return ! only first node outputs        
+    end if
+
+
+    if(iter == 0) then
+      call td_write_print_header_init(out_eigs)
+
+      write(buf, '(a15,i2)')      '# nst          ', st%nst
+      call write_iter_string(out_eigs, buf)
+      call write_iter_nl(out_eigs)
+
+      write(buf, '(a15,i2)')      '# nspin        ', st%d%nspin
+      call write_iter_string(out_eigs, buf)
+      call write_iter_nl(out_eigs)
+      
+
+      ! first line -> column names
+      call write_iter_header_start(out_eigs)
+      do is = 1, st%d%nspin
+        do ii = 1, st%nst
+          write(buf, '(a,i4)') 'Eigenvalue ',ii
+          call write_iter_header(out_eigs, buf)
+        end do
+      end do
+      call write_iter_nl(out_eigs)
+
+      ! second line: units
+      call write_iter_string(out_eigs, '#[Iter n.]')
+      call write_iter_header(out_eigs, '[' // trim(units_abbrev(units_out%time)) // ']')
+      do is = 1, st%d%nspin
+        do ii = 1, st%nst
+          call write_iter_header(out_eigs, '[' // trim(units_abbrev(units_out%energy)) // ']')
+        end do
+      end do
+      call write_iter_nl(out_eigs)
+      call td_write_print_header_end(out_eigs)
+    end if
+
+    call write_iter_start(out_eigs)
+    do is = 1, st%d%nspin
+      do ii =1 , st%nst
+        call write_iter_double(out_eigs, units_from_atomic(units_out%energy, eigs(ii,is)), 1)
+      end do
+    end do
+    call write_iter_nl(out_eigs)
+
+    SAFE_DEALLOCATE_A(eigs)
+
+    POP_SUB(td_write_eigs)
+  end subroutine td_write_eigs
 
   ! ---------------------------------------------------------
   subroutine td_write_gauge_field(out_gauge, hm, gr, iter)
