@@ -1125,7 +1125,7 @@ module opt_control_target_m
     type(states_t), intent(inout)   :: psi
     type(geometry_t), intent(in), optional :: geo
 
-    integer :: ip, ist, jj, maxiter, ik
+    integer :: is, ip, ist, jj, maxiter, ik
     FLOAT :: omega, aa, maxhh, ww, currfunc_tmp
     FLOAT, allocatable :: local_function(:)
     CMPLX, allocatable :: ddipole(:)
@@ -1147,27 +1147,10 @@ module opt_control_target_m
       SAFE_DEALLOCATE_A(local_function)
 
     case(oct_tg_local)
-
-      select case(psi%d%ispin)
-      case(UNPOLARIZED)
-        ASSERT(psi%d%nik .eq. 1)
-        SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
-        opsi = M_z0
-        j1 = M_ZERO
-        do ist = psi%st_start, psi%st_end
-          do ip = 1, gr%mesh%np
-            opsi(ip, 1) = target%rho(ip) * psi%zpsi(ip, 1, ist, 1)
-          end do
-          j1 = j1 + psi%occ(ist, 1) * zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :))
-        end do
-        SAFE_DEALLOCATE_A(opsi)
-      case(SPIN_POLARIZED)
-        message(1) = 'Error in target.target_j1: spin_polarized.'
-        call messages_fatal(1)
-      case(SPINORS)
-        message(1) = 'Error in target.target_j1: spinors.'
-        call messages_fatal(1)
-      end select
+      j1 = M_ZERO
+      do is = 1, psi%d%spin_channels
+        j1 = j1 + dmf_dotp(gr%mesh, target%rho, psi%rho(:, is))
+      end do
 
     case(oct_tg_td_local)
       maxiter = size(target%td_fitness) - 1
@@ -1314,22 +1297,15 @@ module opt_control_target_m
       end select
 
     case(oct_tg_local)
-
-      select case(psi_in%d%ispin)
-      case(UNPOLARIZED)
-        ASSERT(psi_in%d%nik .eq. 1)
-        do ist = psi_in%st_start, psi_in%st_end
-          do ip = 1, gr%mesh%np
-            chi_out%zpsi(ip, 1, ist, 1) = target%rho(ip) * psi_in%zpsi(ip, 1, ist, 1)
+      do ik = 1, psi_in%d%nik
+        do idim = 1, psi_in%d%dim
+          do ist = psi_in%st_start, psi_in%st_end
+            do ip = 1, gr%mesh%np
+              chi_out%zpsi(ip, idim, ist, ik) = target%rho(ip) * psi_in%zpsi(ip, idim, ist, ik)
+            end do
           end do
         end do
-      case(SPIN_POLARIZED)
-         message(1) = 'Error in target.target_chi: spin_polarized.'
-         call messages_fatal(1)
-      case(SPINORS)
-         message(1) = 'Error in target.target_chi: spinors.'
-         call messages_fatal(1)
-      end select
+      end do
 
     case(oct_tg_td_local)
       !We assume that there is no time-independent operator.
