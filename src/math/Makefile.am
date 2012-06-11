@@ -80,9 +80,11 @@ blas.o : blas.F90
 checksum.o : checksum.c
 checksum_interface.o : checksum_interface.F90
 dablas.o : dablas.c 
-fft.o : fft.F90 fft_inc.F90 fftw.o pfft.o lalg_basic.o loct_math.o
+fft.o : fft.F90 fft_inc.F90 fftw.o pfft.o nfft.o lalg_basic.o loct_math.o
 fftw.o : fftw.F90
 pfft.o : pfft.F90 fftw.o math.o
+nfft_f.o : nfft_f.c
+nfft.o : nfft.F90 nfft_inc.F90 nfft_f.o lalg_basic.o fftw.o loct_math.o
 spline_filter.o: spline_filter.F90 splines.o
 gauss_legendre.o : gauss_legendre.F90 
 lalg_basic.o : lalg_basic.F90 lalg_basic_blas_inc.F90 blas.o 
@@ -105,6 +107,4 @@ young.o : young.F90 math.o
 scalapack.o : scalapack.F90
 pblas.o : pblas.F90
 matrix.o : matrix.F90 matrix_inc.F90
-nfft_f.o : nfft_f.c
-nfft.o : nfft.F90 nfft_f.o lalg_basic.o fftw.o loct_math.o
 compressed_sensing.o : compressed_sensing.F90 blas.o

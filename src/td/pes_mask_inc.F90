@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
-  type(PES_mask_t),         intent(out) :: mask
+  type(PES_mask_t), target, intent(out) :: mask
   type(mesh_t),target,      intent(in)  :: mesh
   type(simul_box_t),        intent(in)  :: sb
   type(states_t),           intent(in)  :: st
@@ -35,7 +35,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   FLOAT :: width 
   integer :: dir, defaultMask,k1,k2,st1,st2, optimize_parity(3)
   logical :: optimize(3)
-  FLOAT, allocatable  :: X1(:),X2(:),X3(:)  
+  FLOAT, allocatable  ::  XX(:,:)  
 
   PUSH_SUB(PES_mask_init)
 
@@ -59,7 +59,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   if(sb%box_shape /= SPHERE) then
      message(1) = 'PhotoElectronSpectrum = pes_mask requires BoxShape = sphere'
      message(2) = 'Modify the parameter and rerun.'
-     call messages_warning(1)
+     call messages_fatal(2)
    end if 
 
 
@@ -229,41 +229,56 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
     optimize(sb%periodic_dim+1:sb%dim) = .true.
     optimize_parity(1:sb%periodic_dim) = 0
     optimize_parity(sb%periodic_dim+1:sb%dim) = 1
+
     call fft_init(mask%fft, mask%ll, sb%dim, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
 
-  else
-#if defined(HAVE_NFFT) 
-
-
-    !NFFT initialization
-
-
+  else    !NFFT initialization
+    
     ! we just add 2 points for the enlarged region
     if (mask%enlarge_nfft .ne. 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
+
+#ifdef HAVE_NFFT    
+    !Set NFFT defaults to values that are optimal for PES (at least for the cases I have tested)
+    !These values are overridden by the NFFT options in the input file 
+    mask%fft%nfft%set_defaults = .true.
+    mask%fft%nfft%guru = .true.
+    mask%fft%nfft%mm = 2 
+    mask%fft%nfft%sigma = CNST(1.1)
+    mask%fft%nfft%precompute = NFFT_PRE_PSI
+#endif
+      
+    ! These options should not affect NFFT scheme  
+    optimize(1:3) = .false.
+    optimize(sb%periodic_dim+1:sb%dim) = .true.
+    optimize_parity(1:sb%periodic_dim) = 0
+    optimize_parity(sb%periodic_dim+1:sb%dim) = 1
+
+    call fft_init(mask%fft, mask%ll, sb%dim, FFT_COMPLEX, FFTLIB_NFFT, optimize, optimize_parity )
     
-    call nfft_init(mask%ll,sb%dim,mask%ll(1) ,nfft_complex, mask%nfft,optimize = .true.)
     
-    SAFE_ALLOCATE(X1(1:mask%ll(1)))
+    SAFE_ALLOCATE(XX(1:mask%ll(1),3))
     
-    !generate the grid
+    !Generate the NFFT-enlarged node grid
     if (mask%enlarge_nfft .gt. 0) then
       do ii=2, mask%ll(1)-1 
-        X1(ii)= (ii - int(mask%ll(1)/2) -1)*mask%spacing(1)
+        XX(ii,1)= (ii - int(mask%ll(1)/2) -1)*mask%spacing(1)
       end do
-      X1(1)= (-int(mask%ll(1)/2))*mask%spacing(1)*M_TWO**mask%enlarge_nfft 
-      X1(mask%ll(1))= (int(mask%ll(1)/2))*mask%spacing(1)*M_TWO**mask%enlarge_nfft 
+      XX(1,1)= (-int(mask%ll(1)/2))*mask%spacing(1)*M_TWO**mask%enlarge_nfft 
+      XX(mask%ll(1),1)= (int(mask%ll(1)/2))*mask%spacing(1)*M_TWO**mask%enlarge_nfft 
       
     else
       do ii=1, mask%ll(1) 
-        X1(ii)= (ii - int(mask%ll(1)/2) -1)*mask%spacing(1)
+        XX(ii,1)= (ii - int(mask%ll(1)/2) -1)*mask%spacing(1)
       end do
     end if
     
-    !!Set the node points and precompute the NFFT plan
-    call nfft_precompute(mask%nfft, X1,X1,X1)
+    XX(:,2) = XX(:,1)
+    XX(:,3) = XX(:,1)
+    
+    !Set the node points and precompute the NFFT plan
+    call fft_init_stage1(mask%fft, XX)
 
-    SAFE_DEALLOCATE_A(X1)
-#endif
+    SAFE_DEALLOCATE_A(XX)
   end if
 
   !!ALLOCATIONS
@@ -289,7 +304,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   mask%k = M_z0
 
 
-  ! generate the map between mesh and square mesh
+  ! generate the map between mesh and cube
   call  PES_mask_generate_Lxyz_inv(mask)
   call  PES_mask_generate_Lk(mask)
 
@@ -496,13 +511,13 @@ subroutine PES_mask_end(mask)
     SAFE_DEALLOCATE_P(mask%Lxyz_inv)
     SAFE_DEALLOCATE_P(mask%Lk)
     
-    if(mask%pw_map_how .ne. PW_MAP_NFFT)then
+!      if(mask%pw_map_how .ne. PW_MAP_NFFT)then
       call fft_end(mask%fft)
-    else
-#if defined(HAVE_NFFT) 
-      call nfft_end(mask%nfft)
-#endif
-    end if 
+!      else
+! #if defined(HAVE_NFFT) 
+!       call nfft_end(mask%nfft)
+! #endif
+!     end if 
 
     if(mask%mode == MODE_PSF) then 
       call tdpsf_end(mask%psf)
@@ -1262,7 +1277,9 @@ subroutine PES_mask_X_to_K(mask,mesh,wfin,wfout)
       
 #if defined(HAVE_NFFT) 
     case(PW_MAP_NFFT)
-      call znfft_forward(mask%nfft,wfin%zRs,wfout%zRs)
+!       call znfft_forward(mask%fft%nfft,wfin%zRs,wfout%zRs)
+      call zfft_forward(mask%fft, wfin%zRs,wfout%zRs)
+
 #endif
 
 
@@ -1315,7 +1332,8 @@ subroutine PES_mask_K_to_X(mask,mesh,wfin,wfout)
 
 #if defined(HAVE_NFFT) 
     case(PW_MAP_NFFT)
-      call znfft_backward(mask%nfft,wfin,wfout)
+!       call znfft_backward(mask%fft%nfft,wfin,wfout)
+      call zfft_backward(mask%fft, wfin,wfout)
 #endif
       
     case default

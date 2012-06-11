@@ -32,7 +32,6 @@
 #include "nfft3util.h"
 #include "nfft3.h"
 
-#include "string_f.h"
 
 
 // NFFT FUNCTIONS
@@ -139,8 +138,12 @@ void FC_FUNC(oct_nfft_precompute_one_psi_3d, OCT_NFFT_PRECOMPUTE_ONE_PSI_3D)
      nfft_precompute_one_psi(plan);
 }
 
+// Type dependent functions 
+// This is done the "stupid" way copying and modifying the functions for double and complex types  
 
-void FC_FUNC(oct_set_f, OCT_SET_F)
+
+// ********** COMPLEX ************
+void FC_FUNC(zoct_set_f, ZOCT_SET_F)
     (nfft_plan *plan, int *m, int *DIM, double complex *VAL, int *IX, int *IY, int *IZ)
 {
   int M = *m;
@@ -165,7 +168,7 @@ void FC_FUNC(oct_set_f, OCT_SET_F)
 
 }
 
-void FC_FUNC(oct_get_f, OCT_GET_F)
+void FC_FUNC(zoct_get_f, ZOCT_GET_F)
     (nfft_plan *plan, int *m, int *DIM, double complex *val, int *IX, int *IY, int *IZ)
 {
   int M = *m;
@@ -190,7 +193,7 @@ void FC_FUNC(oct_get_f, OCT_GET_F)
 }
 
 
-void FC_FUNC(oct_set_f_hat, OCT_SET_F_HAT)
+void FC_FUNC(zoct_set_f_hat, ZOCT_SET_F_HAT)
     (nfft_plan *plan, int *m, int *DIM, double complex *VAL, int *IX, int *IY, int *IZ)
 {
   int M = *m;
@@ -214,7 +217,7 @@ void FC_FUNC(oct_set_f_hat, OCT_SET_F_HAT)
 
 }
 
-void FC_FUNC(oct_get_f_hat, OCT_GET_F_HAT)
+void FC_FUNC(zoct_get_f_hat, ZOCT_GET_F_HAT)
     (nfft_plan *plan, int *m, int *DIM, double complex *val, int *IX, int *IY, int *IZ)
 {
   int M = *m;
@@ -237,5 +240,106 @@ void FC_FUNC(oct_get_f_hat, OCT_GET_F_HAT)
    }
 
 }
+
+// ********** DOUBLE ************
+void FC_FUNC(doct_set_f, DOCT_SET_F)
+    (nfft_plan *plan, int *m, int *DIM, double *VAL, int *IX, int *IY, int *IZ)
+{
+  int M = *m;
+  int dim = *DIM;
+  int ix = *IX;
+  int iy = *IY;
+  int iz = *IZ;
+  double val = *VAL;
+  
+
+   switch (dim){
+     case 1:
+       plan->f[ix-1] = val;
+     break;
+     case 2:
+       plan->f[(ix-1)*M + (iy-1)] = val;
+     break;
+     case 3:
+       plan->f[(ix-1)*M*M + (iy-1)*M + (iz-1)] = val;
+     break;
+   }
+
+}
+
+void FC_FUNC(doct_get_f, DOCT_GET_F)
+    (nfft_plan *plan, int *m, int *DIM, double *val, int *IX, int *IY, int *IZ)
+{
+  int M = *m;
+  int dim = *DIM;
+  int ix = *IX;
+  int iy = *IY;
+  int iz = *IZ;
+   
+
+   switch (dim){
+     case 1:
+       *val = plan->f[ix-1];
+     break;
+     case 2:
+       *val = plan->f[(ix-1)*M + (iy-1)];
+     break;
+     case 3:
+       *val = plan->f[(ix-1)*M*M + (iy-1)*M + (iz-1)];
+     break;
+   }
+
+}
+
+
+void FC_FUNC(doct_set_f_hat, DOCT_SET_F_HAT)
+    (nfft_plan *plan, int *m, int *DIM, double *VAL, int *IX, int *IY, int *IZ)
+{
+  int M = *m;
+  int dim = *DIM;
+  int ix = *IX;
+  int iy = *IY;
+  int iz = *IZ;
+  double  val = *VAL;
+
+   switch (dim){
+     case 1:
+       plan->f_hat[ix-1] = val;
+     break;
+     case 2:
+       plan->f_hat[(ix-1)*plan->N[1] + (iy-1)] = val;
+     break;
+     case 3:
+       plan->f_hat[(ix-1)*plan->N[1]*plan->N[2] + (iy-1)*plan->N[2] + (iz-1)] = val;
+     break;
+   }
+
+}
+
+void FC_FUNC(doct_get_f_hat, DOCT_GET_F_HAT)
+    (nfft_plan *plan, int *m, int *DIM, double *val, int *IX, int *IY, int *IZ)
+{
+  int M = *m;
+  int dim = *DIM;
+  int ix = *IX;
+  int iy = *IY;
+  int iz = *IZ;
+
+
+   switch (dim){
+     case 1:
+       *val = plan->f_hat[ix-1];
+     break;
+     case 2:
+       *val = plan->f_hat[(ix-1)*plan->N[1] + (iy-1)];
+     break;
+     case 3:
+       *val = plan->f_hat[(ix-1)*plan->N[1]*plan->N[2] + (iy-1)*plan->N[1] + (iz-1)];
+     break;
+   }
+
+}
+
+
 
 #endif 

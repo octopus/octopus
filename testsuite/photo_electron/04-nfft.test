@@ -10,15 +10,15 @@ Enabled    : Yes
 # BackAction method with nfft
 Processors : 2
 Input      : 04-nfft.01-ba.inp
-match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 16, 21) ;  6.088526531618E-04
-match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 24, 21) ;  9.046800729322E-04
-match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 30, 21) ;  2.812382682155E-05
+match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 16, 21) ;  4.260305239600E-04
+match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 24, 21) ;  3.877742093471E-04
+match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 33, 21) ;  1.148317495884E-03 
 
 # ATI with nfft
 Processors : 2
 Input      : 04-nfft.02-ati.inp
-match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 30, 21) ;  6.648502538669E-01
-match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 49, 21) ;  4.532980004843E-01
-match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 62, 21) ;  1.826169863608E-01
+match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 30, 21) ;  7.712860539470E-01 
+match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 49, 21) ;  4.279529338508E-01
+match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 62, 21) ;  1.822702335571E-01
 
 

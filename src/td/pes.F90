@@ -146,9 +146,6 @@ module PES_m
     integer :: pw_map_how            !< how to perform projection on plane waves
 
     type(fft_t)    :: fft            !< FFT plan
-#if defined(HAVE_NFFT) 
-    type(nfft_t)   :: nfft           !< NFFT plan
-#endif
 
     type(tdpsf_t) :: psf             !< Phase-space filter struct reference
 

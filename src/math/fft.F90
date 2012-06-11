@@ -41,6 +41,9 @@ module fft_m
   use loct_math_m
   use messages_m
   use mpi_m
+#if defined(HAVE_NFFT)
+  use nfft_m
+#endif   
   use opencl_m
   use parser_m
   use pfft_m
@@ -57,6 +60,7 @@ module fft_m
     fft_all_init,      &
     fft_all_end,       &
     fft_init,          &
+    fft_init_stage1,   &
     fft_end,           &
     fft_copy,          &
     fft_get_dims,      &
@@ -85,7 +89,9 @@ module fft_m
        FFTLIB_NONE  = 0, &
        FFTLIB_FFTW  = 1, &
        FFTLIB_PFFT  = 2, &
-       FFTLIB_CLAMD = 3
+       FFTLIB_CLAMD = 3, &
+       FFTLIB_NFFT  = 4
+       
 
   type fft_t
     integer     :: slot    !< in which slot do we have this fft
@@ -115,12 +121,15 @@ module fft_m
     ! data for clAmdFft
     type(clAmdFftPlanHandle) :: cl_plan
 #endif
+#ifdef HAVE_NFFT
+    type(nfft_t) :: nfft 
+#endif
   end type fft_t
 
-  integer     :: fft_refs(FFT_MAX)
-  type(fft_t) :: fft_array(FFT_MAX)
-  logical     :: fft_optimize
-  integer     :: fft_prepare_plan
+  integer, save     :: fft_refs(FFT_MAX)
+  type(fft_t), save :: fft_array(FFT_MAX)
+  logical           :: fft_optimize
+  integer           :: fft_prepare_plan
 
 contains
 
@@ -206,7 +215,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fft_init(this, nn, dim, type, library, optimize, optimize_parity, mpi_comm)
-    type(fft_t),       intent(out)   :: this     !< FFT data type
+    type(fft_t),       intent(inout) :: this     !< FFT data type
     integer,           intent(inout) :: nn(3)    !< Size of the box
     integer,           intent(in)    :: dim      !< Dimensions of the box
     integer,           intent(in)    :: type     !< The type of the FFT; real or complex
@@ -245,8 +254,9 @@ contains
 
     library_ = library
 
-    if(library_ == FFTLIB_CLAMD) then
-
+    select case (library_)
+    case (FFTLIB_CLAMD)
+    
       nn_temp(1:fft_dim) = nn(1:fft_dim)
       do ii = 1, fft_dim
         ! the AMD OpenCL FFT only supports sizes 2, 3 and 5
@@ -261,12 +271,19 @@ contains
         library_ = FFTLIB_FFTW
       endif
       
-    end if
+    case (FFTLIB_NFFT)
+            
+      do ii = 1, fft_dim
+        !NFFT likes even grids
+        !The undelying FFT grids are optimized inside the nfft_init routine
+        if(int(nn(ii)/2)*2 .ne. nn(ii)) nn(ii)=nn(ii)+1 
+      end do 
+          
+    case default
 
-    if(fft_dim < 3 .and. library_ == FFTLIB_PFFT) &
-         call messages_not_implemented('PFFT support for dimension < 3')
+      if(fft_dim < 3 .and. library_ == FFTLIB_PFFT) &
+           call messages_not_implemented('PFFT support for dimension < 3')
 
-    if(library_ /= FFTLIB_CLAMD) then
       ! FFT optimization
       if(any(optimize_parity(1:fft_dim) > 1)) then
         message(1) = "Internal error in fft_init: optimize_parity must be negative, 0, or 1."
@@ -284,14 +301,16 @@ contains
         call messages_warning(1)
       endif
     
-    end if
+    end select
 
     ! find out if fft has already been allocated
     jj = 0
     do ii = FFT_MAX, 1, -1
       if(fft_refs(ii) /= FFT_NULL) then
         if(all(nn(1:dim) == fft_array(ii)%rs_n_global(1:dim)) .and. type == fft_array(ii)%type &
-             .and. library_ == fft_array(ii)%library) then
+             .and. library_ == fft_array(ii)%library .and. library_ /= FFTLIB_NFFT) then
+             !FIXME: For the moment NFFT plans are always allocated from scratch since they 
+             ! are very likely to be different
           this = fft_array(ii)              ! return a copy
           fft_refs(ii) = fft_refs(ii) + 1  ! increment the ref count
           if (present(mpi_comm)) mpi_comm = fft_array(ii)%comm ! also return the MPI communicator
@@ -387,6 +406,14 @@ contains
       fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
       fft_array(jj)%rs_istart = 1
       fft_array(jj)%fs_istart = 1
+
+    case(FFTLIB_NFFT)
+      fft_array(jj)%fs_n_global = fft_array(jj)%rs_n_global
+      fft_array(jj)%rs_n = fft_array(jj)%rs_n_global
+      fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
+      fft_array(jj)%rs_istart = 1
+      fft_array(jj)%fs_istart = 1
+      
     end select
 
     ! Prepare plans
@@ -397,6 +424,12 @@ contains
       call fftw_prepare_plan(fft_array(jj)%planb, fft_dim, fft_array(jj)%rs_n_global, &
            type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan+FFTW_UNALIGNED)
 
+    case(FFTLIB_NFFT)
+#ifdef HAVE_NFFT
+     call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
+     call nfft_init(fft_array(jj)%nfft, fft_array(jj)%rs_n_global, &
+                    fft_dim, fft_array(jj)%rs_n_global(1) , type, optimize = .true.)
+#endif
 
     case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT     
@@ -463,13 +496,16 @@ contains
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftBakePlan')
 
 #endif
+
+
+
     case default
       call messages_write('Invalid FFT library.')
       call messages_fatal()
     end select
-
+    
     this = fft_array(jj)
-
+    
     ! Write information
     write(message(1), '(a)') "Info: FFT allocated with size ("
     do idir = 1, dim
@@ -494,11 +530,54 @@ contains
       write(message(6),'(a, i9)') " No. of rows    in the proc. grid = ", row_size
       write(message(7),'(a, i9)') " The size of integer is = ", ptrdiff_t_kind
       call messages_info(7)
+    case (FFTLIB_NFFT)
+      message(2) = "Info: FFT library = NFFT"
+      call messages_info(2)
+#ifdef HAVE_NFFT
+      call nfft_write_info(fft_array(jj)%nfft)
+#endif
     end select
 
     POP_SUB(fft_init)
   end subroutine fft_init
+  
+  ! ---------------------------------------------------------
+  ! Some fft-libary (only NFFT for the moment) needs an additional 
+  ! precomputation stage that depends on the spatial grid whose size 
+  ! may change after fft_init
+  ! ---------------------------------------------------------
+  subroutine fft_init_stage1(this, XX)
+    type(fft_t),       intent(inout) :: this     !< FFT data type
+    FLOAT, optional,   intent(in)    :: XX(:,:)  !< NFFT spatial nodes on x-axis XX(:,1), y-axis XX(:,2),
+                                                 !! and z-axis XX(:,3) 
+ 
+    integer :: slot
 
+    PUSH_SUB(fft_init_stage1)
+
+    ASSERT(size(XX,2) == 3)
+
+    slot = this%slot
+    select case (fft_array(slot)%library)
+    case (FFTLIB_FFTW)
+    !Do nothing 
+    case (FFTLIB_NFFT)
+#ifdef HAVE_NFFT
+      call nfft_precompute(fft_array(slot)%nfft, XX(:,1),XX(:,2),XX(:,3)) 
+#endif
+    case (FFTLIB_PFFT)
+    !Do nothing 
+    case(FFTLIB_CLAMD)
+    !Do nothing 
+    case default
+      call messages_write('Invalid FFT library.')
+      call messages_fatal()
+    end select
+
+
+
+    POP_SUB(fft_init_stage1)
+  end subroutine fft_init_stage1
   ! ---------------------------------------------------------
   subroutine fft_end(this)
     type(fft_t), intent(inout) :: this
@@ -530,6 +609,11 @@ contains
 #ifdef HAVE_CLAMDFFT
         case(FFTLIB_CLAMD)
           call clAmdFftDestroyPlan(fft_array(ii)%cl_plan, status)
+#endif
+
+#ifdef HAVE_NFFT
+        case(FFTLIB_NFFT)
+        call nfft_end(fft_array(ii)%nfft)
 #endif
         end select
         fft_refs(ii) = FFT_NULL

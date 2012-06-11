@@ -43,6 +43,10 @@ subroutine X(fft_forward)(fft, in, out)
       jj = min(1, fft_array(slot)%rs_n(2))
       kk = min(1, fft_array(slot)%rs_n(3))
       call fftw_execute_dft(fft_array(slot)%planf, in(ii,jj,kk), out(ii,jj,kk))
+    case (FFTLIB_NFFT)
+#ifdef HAVE_NFFT
+      call X(nfft_forward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
+#endif
     case (FFTLIB_PFFT)
       if (all(fft_array(slot)%rs_n /= 0)) then
         ASSERT(fft_array(slot)%X(rs_data)(1,1,1) == in(1,1,1))
@@ -168,6 +172,10 @@ subroutine X(fft_forward)(fft, in, out)
     select case (fft_array(slot)%library)
     case (FFTLIB_FFTW)
       call fftw_execute_dft(fft_array(slot)%planb, in(1,1,1), out(1,1,1))
+    case (FFTLIB_NFFT)
+#ifdef HAVE_NFFT    
+      call X(nfft_backward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
+#endif
     case (FFTLIB_PFFT)
       if (all(fft_array(slot)%fs_n /= 0)) then
         ASSERT(fft_array(slot)%fs_data(1,1,1) == in(1,1,1))

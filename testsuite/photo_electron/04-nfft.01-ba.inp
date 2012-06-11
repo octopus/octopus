@@ -25,7 +25,7 @@ ExperimentalFeatures = YES
 OnlyUserDefinedInitialStates = YES
 
 BoxShape = sphere
-Radius = 10  
+Radius = 15  
 Spacing = 0.2
 
 TheoryLevel = independent_particles
@@ -50,14 +50,12 @@ TDMaximumIter = T/TDTimeStep
 PhotoElectronSpectrum = pes_mask
 
 %PESMaskSize
-  3 | Radius
+  5 | Radius
 %
 
 PESMaskMode = fullmask_mode
 PESMaskPlaneWaveProjection = nfft_map
 PESMaskNFFTEnlargeLev = 2
-PESMaskSpectEnergyMax = 123.4
-PESMaskSpectEnergyStep = 0.6672E-03
 
 NFFTGuruInterface = YES
 NFFTCutoff = 2
