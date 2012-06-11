@@ -173,6 +173,7 @@ subroutine X(fft_forward)(fft, in, out)
     case (FFTLIB_FFTW)
       call fftw_execute_dft(fft_array(slot)%planb, in(1,1,1), out(1,1,1))
     case (FFTLIB_NFFT)
+      scale = .false. ! the result is already scaled
 #ifdef HAVE_NFFT    
       call X(nfft_backward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
 #endif
