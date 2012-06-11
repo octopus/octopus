@@ -275,7 +275,7 @@ contains
             
       do ii = 1, fft_dim
         !NFFT likes even grids
-        !The undelying FFT grids are optimized inside the nfft_init routine
+        !The underlying FFT grids are optimized inside the nfft_init routine
         if(int(nn(ii)/2)*2 .ne. nn(ii)) nn(ii)=nn(ii)+1 
       end do 
           
