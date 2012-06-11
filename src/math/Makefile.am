@@ -51,7 +51,7 @@ libmath_a_SOURCES =                      \
 	young.F90                        \
 	scalapack.F90                    \
         nfft.F90			 \
-        nfft_f.c                         \
+ 	nfft_f.c                         \
 	pblas.F90                        \
 	sgfft.F90                        \
 	matrix.F90                       \
@@ -69,7 +69,8 @@ noinst_HEADERS =                         \
 	solvers_inc.F90                  \
 	sparskit_inc.F90                 \
 	symm_op_inc.F90                  \
-	matrix_inc.F90
+	matrix_inc.F90                   \
+        nfft_inc.F90
 
 include $(srcdir)/../common-rules.make
 
