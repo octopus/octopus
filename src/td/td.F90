@@ -570,6 +570,9 @@ contains
       !% of orbitals, but not completely.
       !%End
       call parse_integer(datasets_check('TDFreezeOrbitals'), 0, freeze_orbitals)
+
+      if(freeze_orbitals /= 0) call messages_experimental('TDFreezeOrbitals')
+
       if(freeze_orbitals > 0) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
         call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)
