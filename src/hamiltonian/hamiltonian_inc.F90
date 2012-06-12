@@ -466,6 +466,7 @@ subroutine X(oct_exchange_operator_all) (hm, der, st, hst)
       do ist = st%st_start, st%st_end
 
         call states_get_state(hst, der%mesh, ist, ik, hpsi)
+        call states_get_state(hm%oct_st, der%mesh, ist, ik, psi2)
 
         forall(ip = 1:der%mesh%np)
           hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(pot(ip) + hm%oct_fxc(ip, 1, 1)*rho(ip))
