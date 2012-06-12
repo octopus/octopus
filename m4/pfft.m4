@@ -23,7 +23,7 @@ AC_REQUIRE([ACX_FFT])
 acx_pfft_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--pfft-prefix=DIR], [http://www-user.tu-chemnitz.de/~mpip/software.php])])
+AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--with-pfft-prefix=DIR], [http://www-user.tu-chemnitz.de/~mpip/software.php])])
 case $with_pfft_prefix in
   no) acx_pfft_ok=disable ;;
   *) LIBS_PFFT="-L$with_pfft_prefix/lib -lpfft"; 
