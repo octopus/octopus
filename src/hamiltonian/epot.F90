@@ -242,6 +242,7 @@ contains
 
     !%Variable StaticElectricField
     !%Type block
+    !%Default 0
     !%Section Hamiltonian
     !%Description
     !% A static constant electric field may be added to the usual Hamiltonian,
