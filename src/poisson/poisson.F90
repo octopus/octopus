@@ -401,7 +401,7 @@ contains
 
     ! Create the cube
     if (need_cube) then
-      call cube_init(this%cube, box, der%mesh%sb, fft_type=fft_type)
+      call cube_init(this%cube, box, der%mesh%sb, fft_type = fft_type, verbose = .true.)
       if (der%mesh%parallel_in_domains .and. this%cube%parallel_in_domains) then
         call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)
       end if

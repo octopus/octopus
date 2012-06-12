@@ -486,7 +486,7 @@ contains
       call clAmdFftSetPlanScale(fft_array(jj)%cl_plan, CLFFT_FORWARD, 1.0_8, status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')
 
-      scale = 1.0_8/(product(real(fft_array(jj)%rs_n_global(1:3), 8)))
+      scale = 1.0_8/(product(real(fft_array(jj)%rs_n_global(1:fft_dim), 8)))
 
       call clAmdFftSetPlanScale(fft_array(jj)%cl_plan, CLFFT_BACKWARD, scale, status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')

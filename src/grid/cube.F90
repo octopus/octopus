@@ -64,7 +64,7 @@ module cube_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, nn, sb, fft_type, fft_library, dont_optimize, nn_out)
+  subroutine cube_init(cube, nn, sb, fft_type, fft_library, dont_optimize, nn_out, verbose)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: nn(3)
     type(simul_box_t), intent(in)  :: sb
@@ -73,6 +73,7 @@ contains
     logical, optional, intent(in)  :: dont_optimize !< if true, do not optimize grid for FFT
     integer, optional, intent(out) :: nn_out(3) !< What are the FFT dims?
                                                 !! If optimized, may be different from input nn.
+    logical, optional, intent(in)  :: verbose   !< Print info to the screen.
 
     integer :: mpi_comm, tmp_n(3), fft_type_, optimize_parity(3), default_lib, fft_library_
     integer :: effdim_fft
@@ -108,9 +109,11 @@ contains
         !%End
         default_lib = FFTLIB_FFTW
 #ifdef HAVE_CLAMDFFT
-        if(opencl_is_enabled()) default_lib = FFTLIB_CLAMD
+        ! disabled by default since there are some problems for dim != 3
+        ! if(opencl_is_enabled() .and. sb%dim == 3) default_lib = FFTLIB_CLAMD
 #endif
         call parse_integer(datasets_check('FFTLibrary'), default_lib, fft_library_)
+        if(optional_default(verbose, .false.)) call messages_print_var_option(stdout, 'FFTLibrary', fft_library_)
       end if
 #ifndef HAVE_PFFT
       if (fft_library_ == FFTLIB_PFFT) then
