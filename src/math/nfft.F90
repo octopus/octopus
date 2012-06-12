@@ -179,6 +179,7 @@ contains
 
     PUSH_SUB(nfft_init)
 
+    optimize_ = optional_default(optimize, .true.)
 
     nfft%dim = dim
     nfft%M = mm
@@ -197,7 +198,7 @@ contains
     my_nn = 0
     do ii = 1, dim
       my_nn(ii) = nn(ii)*nfft%sigma
-      call loct_fft_optimize(my_nn(ii), 1) ! ask for an odd number
+      if(optimize_ .or. (.not. nfft%guru)) call loct_fft_optimize(my_nn(ii), 1) ! ask for an odd number
     end do
     
     nfft%fftN(1:dim) = my_nn(1:dim)
