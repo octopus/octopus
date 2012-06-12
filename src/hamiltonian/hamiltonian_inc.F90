@@ -446,38 +446,54 @@ subroutine X(oct_exchange_operator_all) (hm, der, st, hst)
 
   select case(hm%d%ispin)
   case(UNPOLARIZED)
+    ASSERT(st%d%nik .eq. 1)
 
-    do ik = st%d%kpt%start, st%d%kpt%end
-
-      pot = M_ZERO
-      rho = M_ZERO
-      do jst = 1, hm%oct_st%nst
-        
-        call states_get_state(st, der%mesh, jst, ik, psi)
-        call states_get_state(hm%oct_st, der%mesh, jst, ik, psi2)
-
-        forall (ip = 1:der%mesh%np)
-          rho(ip) = rho(ip) + hm%oct_st%occ(jst, 1)*R_AIMAG(R_CONJ(psi2(ip, 1))*psi(ip, 1))
-        end forall
-      end do
-
-      call dpoisson_solve(psolver, pot, rho)
-
-      do ist = st%st_start, st%st_end
-
-        call states_get_state(hst, der%mesh, ist, ik, hpsi)
-        call states_get_state(hm%oct_st, der%mesh, ist, ik, psi2)
-
-        forall(ip = 1:der%mesh%np)
-          hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(pot(ip) + hm%oct_fxc(ip, 1, 1)*rho(ip))
-        end forall
-          
-        call states_set_state(hst, der%mesh, ist, ik, hpsi)
-      end do
-
+    pot = M_ZERO
+    rho = M_ZERO
+    do jst = 1, hm%oct_st%nst
+      call states_get_state(st, der%mesh, jst, 1, psi)
+      call states_get_state(hm%oct_st, der%mesh, jst, 1, psi2)
+      forall (ip = 1:der%mesh%np)
+        rho(ip) = rho(ip) + hm%oct_st%occ(jst, 1)*R_AIMAG(R_CONJ(psi2(ip, 1))*psi(ip, 1))
+      end forall
+    end do
+    call dpoisson_solve(psolver, pot, rho)
+    do ist = st%st_start, st%st_end
+      call states_get_state(hst, der%mesh, ist, 1, hpsi)
+      call states_get_state(hm%oct_st, der%mesh, ist, 1, psi2)
+      forall(ip = 1:der%mesh%np)
+        hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(pot(ip) + hm%oct_fxc(ip, 1, 1)*rho(ip))
+      end forall
+      call states_set_state(hst, der%mesh, ist, 1, hpsi)
     end do
 
-  case(SPIN_POLARIZED, SPINORS)
+  case(SPIN_POLARIZED)
+    ASSERT(st%d%nik .eq. 2)
+
+    pot = M_ZERO
+    rho = M_ZERO
+    do ik = 1, 2
+      do jst = 1, hm%oct_st%nst
+        call states_get_state(st, der%mesh, jst, ik, psi)
+        call states_get_state(hm%oct_st, der%mesh, jst, ik, psi2)
+        forall (ip = 1:der%mesh%np)
+          rho(ip) = rho(ip) + hm%oct_st%occ(jst, ik)*R_AIMAG(R_CONJ(psi2(ip, 1))*psi(ip, 1))
+        end forall
+      end do
+    end do
+    call dpoisson_solve(psolver, pot, rho)
+    do ik = 1, 2
+      do ist = st%st_start, st%st_end
+        call states_get_state(hst, der%mesh, ist, ik, hpsi)
+        call states_get_state(hm%oct_st, der%mesh, ist, ik, psi2)
+        forall(ip = 1:der%mesh%np)
+          hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(pot(ip) + hm%oct_fxc(ip, ik, ik)*rho(ip))
+        end forall
+        call states_set_state(hst, der%mesh, ist, ik, hpsi)
+      end do
+    end do
+
+  case(SPINORS)
     call messages_not_implemented("Function oct_exchange_operator_all for spin_polarized or spinors")
   end select
 
