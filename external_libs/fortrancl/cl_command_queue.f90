@@ -37,7 +37,7 @@ module cl_command_queue_m
   ! called, but no type checking will be done by the compiler.
   
   !  interface
-  !    subroutine clEnqueueWriteBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+  !    subroutine clEnqueueWriteBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
   !      type(cl_command_queue), intent(inout) :: command_queue
   !      type(cl_mem),           intent(inout) :: buffer
   !      integer,                intent(in)    :: blocking_write
@@ -45,9 +45,9 @@ module cl_command_queue_m
   !      integer(8),             intent(in)    :: cb
   !      type(any),              intent(inout) :: ptr
   !      integer,                intent(out)   :: errcode_ret
-  !    end subroutine clEnqueueWriteBufferImplicit
+  !    end subroutine clEnqueueWriteBufferImpl
   
-  !    subroutine clEnqueueReadBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+  !    subroutine clEnqueueReadBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
   !      type(cl_command_queue), intent(inout) :: command_queue
   !      type(cl_mem),           intent(inout) :: buffer
   !      integer,                intent(in)    :: blocking_write
@@ -55,7 +55,7 @@ module cl_command_queue_m
   !      integer(8),             intent(in)    :: cb
   !      type(any),              intent(inout) :: ptr
   !      integer,                intent(out)   :: errcode_ret
-  !    end subroutine clEnqueueReadBufferImplicit
+  !    end subroutine clEnqueueReadBufferImpl
   
   !  end interface
 
@@ -194,7 +194,7 @@ contains
     integer(4),             intent(in)    :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueWriteBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueWriteBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueWriteBuffer_integer4
 
@@ -209,7 +209,7 @@ contains
     integer(8),             intent(in)    :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueWriteBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueWriteBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueWriteBuffer_integer8
 
@@ -224,7 +224,7 @@ contains
     real(4),                intent(in)    :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueWriteBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueWriteBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueWriteBuffer_real4
 
@@ -239,7 +239,7 @@ contains
     real(8),                intent(in)    :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueWriteBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueWriteBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueWriteBuffer_real8
 
@@ -254,7 +254,7 @@ contains
     complex(4),             intent(in)    :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueWriteBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueWriteBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueWriteBuffer_complex4
 
@@ -269,7 +269,7 @@ contains
     complex(8),             intent(in)    :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueWriteBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueWriteBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueWriteBuffer_complex8
 
@@ -284,7 +284,7 @@ contains
     integer(4),             intent(out)   :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueReadBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueReadBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueReadBuffer_integer4
 
@@ -299,7 +299,7 @@ contains
     integer(8),             intent(out)   :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueReadBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueReadBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueReadBuffer_integer8
 
@@ -314,7 +314,7 @@ contains
     real(4),                intent(out)   :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueReadBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueReadBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueReadBuffer_real4
 
@@ -329,7 +329,7 @@ contains
     real(8),                intent(out)   :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueReadBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueReadBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueReadBuffer_real8
 
@@ -344,7 +344,7 @@ contains
     complex(4),             intent(out)   :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueReadBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueReadBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueReadBuffer_complex4
 
@@ -359,7 +359,7 @@ contains
     complex(8),             intent(out)   :: ptr
     integer,                intent(out)   :: errcode_ret
     
-    call clEnqueueReadBufferImplicit(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
+    call clEnqueueReadBufferImpl(command_queue, buffer, blocking_write, offset, cb, ptr, errcode_ret)
 
   end subroutine clEnqueueReadBuffer_complex8
 
