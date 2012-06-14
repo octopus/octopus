@@ -597,7 +597,7 @@ contains
 
   !> Change the value of one dimension (1=x, 2=y, 3=z) 
   !! according to the given value and return the local point
-  !! \todo doesn't work if only one process is used
+  !! \todo does not work if only one process is used
   integer function vec_index2local(vp, idx, ix, dim_pad, pad)
     type(pv_t),    intent(in) :: vp      !< All the required information
     type(index_t), intent(in) :: idx     !< Index information
