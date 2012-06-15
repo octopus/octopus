@@ -36,14 +36,14 @@ __kernel void daxpy(const double aa,
 
 }
 
-__kernel void zaxpy(const double re_aa, const double im_aa, 
+__kernel void zaxpy(const double2 aa,
 		    const __global double2 * restrict xx, const int ldxx,
 		    __global double2 * restrict yy, const int ldyy){
   int ist = get_global_id(0);
   int ip = get_global_id(1);
 
   double2 xxi = xx[ip*ldxx + ist];
-  yy[ip*ldyy + ist] += (double2)(re_aa*xxi.x - im_aa*xxi.y, re_aa*xxi.y + im_aa*xxi.x);
+  yy[ip*ldyy + ist] += (double2)(aa.x*xxi.x - aa.y*xxi.y, aa.x*xxi.y + aa.y*xxi.x);
 
 }
 

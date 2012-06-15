@@ -204,8 +204,6 @@ end subroutine X(opencl_read_buffer_3)
 
 ! ---------------------------------------------------------------------------
 
-#ifndef R_TCOMPLEX
-
 subroutine X(opencl_set_kernel_arg_data)(kernel, narg, data)
   type(cl_kernel),    intent(inout) :: kernel
   integer,            intent(in)    :: narg
@@ -223,7 +221,6 @@ subroutine X(opencl_set_kernel_arg_data)(kernel, narg, data)
   POP_SUB(X(opencl_set_kernel_arg_data))
 end subroutine X(opencl_set_kernel_arg_data)
 
-#endif
 
 !! Local Variables:
 !! mode: f90

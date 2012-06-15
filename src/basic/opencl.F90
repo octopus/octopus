@@ -145,6 +145,7 @@ module opencl_m
       opencl_set_kernel_arg_buffer,  &
       iopencl_set_kernel_arg_data,   &
       dopencl_set_kernel_arg_data,   &
+      zopencl_set_kernel_arg_data,   &
       opencl_set_kernel_arg_local
   end interface
 
