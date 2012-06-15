@@ -74,6 +74,19 @@ module cl_kernel_m
 
     ! ----------------------------------------------------
 
+    subroutine clsetkernelarg_long(kernel, arg_index, arg_value, errcode_ret)
+      use cl_types_m
+
+      implicit none
+
+      type(cl_kernel), intent(inout) :: kernel
+      integer,         intent(in)    :: arg_index
+      integer(8),      intent(in)    :: arg_value
+      integer,         intent(out)   :: errcode_ret
+    end subroutine clsetkernelarg_long
+
+    ! ----------------------------------------------------
+
     subroutine clsetkernelarg_float(kernel, arg_index, arg_value, errcode_ret)
       use cl_types_m
 

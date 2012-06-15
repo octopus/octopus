@@ -57,9 +57,17 @@ void FC_FUNC_(clsetkernelarg_buf, CLSETKERNELARG_BUF)
 /* -----------------------------------------------------------------------*/
 
 void FC_FUNC_(clsetkernelarg_int, CLSETKERNELARG_INT)
-     (cl_kernel * kernel, const int * arg_index, const int * arg_value, int * status){
+     (cl_kernel * kernel, const int * arg_index, const cl_int * arg_value, int * status){
 
-  *status = (int) clSetKernelArg(*kernel, (cl_uint) *arg_index, (size_t) sizeof(int), arg_value);
+  *status = (int) clSetKernelArg(*kernel, (cl_uint) *arg_index, (size_t) sizeof(cl_int), arg_value);
+}
+
+/* -----------------------------------------------------------------------*/
+
+void FC_FUNC_(clsetkernelarg_long, CLSETKERNELARG_LONG)
+     (cl_kernel * kernel, const int * arg_index, const cl_long * arg_value, int * status){
+
+  *status = (int) clSetKernelArg(*kernel, (cl_uint) *arg_index, (size_t) sizeof(cl_long), arg_value);
 }
 
 /* -----------------------------------------------------------------------*/
