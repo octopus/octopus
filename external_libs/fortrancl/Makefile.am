@@ -35,6 +35,7 @@ libfortrancl_a_SOURCES =       \
 	cl_kernel.f90          \
 	cl_platform.f90        \
 	cl_program.f90         \
+	cl_event.f90           \
 	cl.f90                 \
 	clamdblas.f90          \
 	clamdfft.f90
@@ -48,6 +49,7 @@ if COMPILE_OPENCL
 	cl_kernel_low.c              \
 	cl_platform_low.c            \
 	cl_program_low.c             \
+	cl_event_low.f90             \
 	clamdblas_low.c              \
 	clamdfft_low.c
 endif
@@ -65,6 +67,7 @@ cl_device.o    : cl_device.f90 cl_types.o
 cl_context.o   : cl_context.f90 cl_types.o
 cl_command_queue.o : cl_command_queue.f90 cl_types.o
 cl_buffer.o    : cl_buffer.f90  cl_types.o
+cl_event.o     : cl_event.f90  cl_types.o
 cl.o : cl.f90 cl_constants.o cl_types.o cl_device.o cl_kernel.o cl_program.o cl_platform.o cl_context.o cl_command_queue.o cl_buffer.o
 clamdblas.o    : clamdblas.f90 cl.o
 clamdfft.o     : clamdfft.f90 cl.o
