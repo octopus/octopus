@@ -28,6 +28,12 @@ void FC_FUNC_(clreleasecontext_low, CLRELEASECONTEXT_LOW)(cl_context * context, 
 
 /* -----------------------------------------------------------------------*/
 
+void FC_FUNC_(clretaincontext_low, CLRETAINCONTEXT_LOW)(cl_context * context, int * status){
+  *status = (int) clRetainContext(*context);
+}
+
+/* -----------------------------------------------------------------------*/
+
 void FC_FUNC_(clcreatecontext_low, CLCREATECONTEXT_LOW)
      (const cl_platform_id * platform, const int * num_devices, const cl_device_id * devices, int * errcode_ret, cl_context * context){
   cl_int errcode_ret_cl;

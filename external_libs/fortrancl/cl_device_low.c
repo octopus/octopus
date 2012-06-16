@@ -171,4 +171,24 @@ void FC_FUNC_(clgetdeviceinfo_int, CLGETDEVICEINFO_INT)
   *param_value = (cl_int) param_value64;
 }
 
+#ifdef  CL_VERSION_1_2
+
 /* -----------------------------------------------------------------------*/
+
+void FC_FUNC_(clreleasedevice_low, CLRELEASEDEVICE_LOW)
+     (const cl_device_id * device, int * errcode_ret){
+  
+  *errcode_ret = clReleaseDevice(*device);
+}
+
+/* -----------------------------------------------------------------------*/
+
+void FC_FUNC_(clretaindevice_low, CLRETAINDEVICE_LOW)
+     (const cl_device_id * device, int * errcode_ret){
+  
+  *errcode_ret = clRetainDevice(*device);
+}
+
+/* -----------------------------------------------------------------------*/
+
+#endif
