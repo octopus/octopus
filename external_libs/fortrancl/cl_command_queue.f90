@@ -30,8 +30,8 @@ module cl_command_queue_m
     clEnqueueNDRangeKernel,          &
     clEnqueueWriteBuffer,            &
     clEnqueueReadBuffer,             &
-    clFinish
-
+    clFinish,                        &
+    clFlush
   
   ! The following functions are not declared since they are
   ! polymorphic beyond the capabilities of Fortran. They can be
@@ -109,8 +109,23 @@ module cl_command_queue_m
 
   ! ----------------------------------------------------
 
+  interface clFlush    
+    subroutine clFlush_low(command_queue, errcode_ret)
+      use cl_types_m
+
+      implicit none
+      
+      type(cl_command_queue), intent(inout) :: command_queue
+      integer,                intent(out)   :: errcode_ret
+    end subroutine clFlush_low
+
+  end interface clFlush
+
+  ! ----------------------------------------------------
+
   interface clEnqueueNDRangeKernel
     module procedure clEnqueueNDRangeKernel_simple
+    module procedure clEnqueueNDRangeKernel_event
   end interface clEnqueueNDRangeKernel
 
   ! ---------------------------------------------------
@@ -142,7 +157,23 @@ module cl_command_queue_m
     module procedure clEnqueueReadBuffer_complex8
     module procedure clEnqueueReadBuffer_character
   end interface clEnqueueReadBuffer
-
+  
+  interface
+    subroutine clEnqueueNDRangeKernel_low(command_queue, kernel, work_dim, globalsizes, localsizes, event, errcode_ret)
+      use cl_types_m
+      
+      implicit none
+      
+      type(cl_command_queue), intent(inout) :: command_queue
+      type(cl_kernel),        intent(inout) :: kernel
+      integer,                intent(in)    :: work_dim
+      integer(8),             intent(in)    :: globalsizes
+      integer(8),             intent(in)    :: localsizes
+      type(cl_event),         intent(out)   :: event
+      integer,                intent(out)   :: errcode_ret
+    end subroutine clEnqueueNDRangeKernel_low
+  end interface
+  
 contains
 
   ! --------------------------------------------------------
@@ -172,6 +203,8 @@ contains
 
   end function clCreateCommandQueue_full
 
+  ! ---------------------------------------
+
   subroutine clEnqueueNDRangeKernel_simple(command_queue, kernel, globalsizes, localsizes, errcode_ret)
     type(cl_command_queue), intent(inout) :: command_queue
     type(cl_kernel),        intent(inout) :: kernel
@@ -179,28 +212,34 @@ contains
     integer(8),             intent(in)    :: localsizes(:)
     integer,                intent(out)   :: errcode_ret
 
-    interface
-      subroutine clEnqueueNDRangeKernel_low(command_queue, kernel, work_dim, globalsizes, localsizes, errcode_ret)
-        use cl_types_m
+    integer :: work_dim
+    type(cl_event) :: null_event
+    
+    work_dim = min(ubound(globalsizes, dim = 1), ubound(localsizes, dim = 1))
 
-        implicit none
+    call fortrancl_set_null(null_event)
+    
+    call clEnqueueNDRangeKernel_low(command_queue, kernel, work_dim, globalsizes(1), localsizes(1), null_event, errcode_ret)
 
-        type(cl_command_queue), intent(inout) :: command_queue
-        type(cl_kernel),        intent(inout) :: kernel
-        integer,                intent(in)    :: work_dim
-        integer(8),             intent(in)    :: globalsizes
-        integer(8),             intent(in)    :: localsizes
-        integer,                intent(out)   :: errcode_ret
-      end subroutine clEnqueueNDRangeKernel_low
-    end interface
+  end subroutine clEnqueueNDRangeKernel_simple
+
+  ! ---------------------------------------
+
+  subroutine clEnqueueNDRangeKernel_event(command_queue, kernel, globalsizes, localsizes, event, errcode_ret)
+    type(cl_command_queue), intent(inout) :: command_queue
+    type(cl_kernel),        intent(inout) :: kernel
+    integer(8),             intent(in)    :: globalsizes(:)
+    integer(8),             intent(in)    :: localsizes(:)
+    type(cl_event),         intent(out)   :: event
+    integer,                intent(out)   :: errcode_ret
 
     integer :: work_dim
 
     work_dim = min(ubound(globalsizes, dim = 1), ubound(localsizes, dim = 1))
 
-    call clEnqueueNDRangeKernel_low(command_queue, kernel, work_dim, globalsizes(1), localsizes(1), errcode_ret)
+    call clEnqueueNDRangeKernel_low(command_queue, kernel, work_dim, globalsizes(1), localsizes(1), event, errcode_ret)
 
-  end subroutine clEnqueueNDRangeKernel_simple
+  end subroutine clEnqueueNDRangeKernel_event
 
   ! ---------------------------------------
 

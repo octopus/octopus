@@ -18,41 +18,32 @@
 */
 
 #include <config.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "localcl.h"
 
 #include <string_f.h>
 
+typedef void* ptrtype;
 
-void FC_FUNC_(clgetplatformids_num, CLGETPLATFORMIDS_NUM)(int * num_platforms, int * status){
-  cl_uint ret_platform;
+/* -----------------------------------------------------------------------*/
 
-  *status = (int) clGetPlatformIDs(0, NULL, &ret_platform);
-  *num_platforms = (int) ret_platform;
+void FC_FUNC_(fortrancl_get_component, FORTRANCL_GET_COMPONENT)
+     (const ptrtype * array, const int * index, ptrtype * component){
+  *component = array[*index];
 }
 
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(clgetplatformids_listall, CLGETPLATFORMIDS_LISTALL)
-     (const int * num_entries, cl_platform_id * platforms, int * num_platforms, int * status){
-
-  cl_uint unum_platforms;
-
-  *status = (int) clGetPlatformIDs((cl_uint) *num_entries, platforms, &unum_platforms);
-  *num_platforms = (int) unum_platforms;
+void FC_FUNC_(fortrancl_set_component, FORTRANCL_SET_COMPONENT)
+     (ptrtype * array, const int * index, const ptrtype * component){
+  array[*index] = *component;
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(clgetplatforminfo_str, CLGETPLATFORMINFO_STR)
-     (const cl_platform_id * platform, const int * param_name, STR_F_TYPE param_value, int * status STR_ARG1){
-  char info[2048];
-
-  *status = (int) clGetPlatformInfo(*platform, (cl_platform_info) *param_name, sizeof(info), info, NULL);
-
-  TO_F_STR1(info, param_value);
+void FC_FUNC_(fortrancl_set_null, FORTRANCL_SET_NULL)
+     (ptrtype * ptr){
+  *ptr = NULL;
 }
-
-
-
-

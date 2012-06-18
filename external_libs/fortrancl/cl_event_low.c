@@ -22,17 +22,24 @@
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(clreleaseevent_low, CLRELEASEEVENT_LOW)(cl_event * memobj, int * status){
+void FC_FUNC_(clreleaseevent_low, CLRELEASEEVENT_LOW)(cl_event * event, int * status){
 
-  *status = (int)clReleaseEvent(*memobj);
+  *status = (int)clReleaseEvent(*event);
 }
 
 /* -----------------------------------------------------------------------*/
 
-void FC_FUNC_(clretainevent_low, CLRETAINEVENT_LOW)(cl_event * memobj, int * status){
+void FC_FUNC_(clretainevent_low, CLRETAINEVENT_LOW)(cl_event * event, int * status){
 
-  *status = (int)clRetainEvent(*memobj);
+  *status = (int)clRetainEvent(*event);
 }
 
 /* -----------------------------------------------------------------------*/
 
+void FC_FUNC_(clwaitforevents_low, CLWAITFOREVENTS_ARRAY_LOW)
+     (const int * numevents, const cl_event * event, int * status){
+
+  *status = (int)clWaitForEvents(*numevents, event);
+}
+
+/* -----------------------------------------------------------------------*/

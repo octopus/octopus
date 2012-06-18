@@ -23,7 +23,6 @@
 
 /* -----------------------------------------------------------------------*/
 
-/* clCreateCommandQueue */
 void FC_FUNC_(clcreatecommandqueue_low, CLCREATECOMMANDQUEUE_LOW)
      (cl_context * context, cl_device_id * device, const int * properties, int * status, cl_command_queue * command_queue){
   cl_int status_cl;
@@ -51,10 +50,15 @@ void FC_FUNC_(clfinish_low, CLFINISH_LOW)(cl_command_queue * command_queue, int 
 
 /* -----------------------------------------------------------------------*/
 
-/* clEnqueueNDRangeKernel*/
+void FC_FUNC_(clflush_low, CLFLUSH_LOW)(cl_command_queue * command_queue, int * status){
+  *status = (int) clFlush(*command_queue);
+}
+
+/* -----------------------------------------------------------------------*/
+
 void FC_FUNC_(clenqueuendrangekernel_low, CLENQUEUENDRANGEKERNEL_LOW)
      (cl_command_queue * command_queue, cl_kernel * kernel, const int * work_dim, 
-      const cl_long * global_work_size, const cl_long * local_work_size, int * status){
+      const cl_long * global_work_size, const cl_long * local_work_size, cl_event * event, int * status){
 
   int ii;
   size_t * gsizes = (size_t *) malloc((*work_dim)*sizeof(size_t));
@@ -65,9 +69,14 @@ void FC_FUNC_(clenqueuendrangekernel_low, CLENQUEUENDRANGEKERNEL_LOW)
     lsizes[ii] = (size_t) local_work_size[ii];
   }
 
-  *status = (int) clEnqueueNDRangeKernel(*command_queue, *kernel, (cl_uint) *work_dim,
-					 NULL,  gsizes, lsizes, 0, NULL, NULL);
-
+  if(*event == NULL){
+    *status = (int) clEnqueueNDRangeKernel(*command_queue, *kernel, (cl_uint) *work_dim,
+					   NULL,  gsizes, lsizes, 0, NULL, NULL);
+  } else {
+    *status = (int) clEnqueueNDRangeKernel(*command_queue, *kernel, (cl_uint) *work_dim,
+					   NULL,  gsizes, lsizes, 0, NULL, event);
+  }
+  
   free(gsizes);
   free(lsizes);
 
@@ -75,7 +84,6 @@ void FC_FUNC_(clenqueuendrangekernel_low, CLENQUEUENDRANGEKERNEL_LOW)
 
 /* -----------------------------------------------------------------------*/
 
-/* clEnqueueWriteBuffer */
 void FC_FUNC(clenqueuewritebufferimpl, CLENQUEUEWRITEBUFFERIMPL)
      (cl_command_queue * command_queue, cl_mem * buffer, const int * blocking_write, 
       const cl_long * offset, const cl_long * cb, const void * ptr, int * status){
@@ -87,7 +95,6 @@ void FC_FUNC(clenqueuewritebufferimpl, CLENQUEUEWRITEBUFFERIMPL)
 
 /* -----------------------------------------------------------------------*/
 
-/* clEnqueueReadBuffer */
 void FC_FUNC(clenqueuereadbufferimpl, CLENQUEUEREADBUFFERIMPL)
      (cl_command_queue * command_queue, cl_mem * buffer, const int * blocking_read, 
       const cl_long * offset, const cl_long * cb, void * ptr, int * status){
@@ -95,3 +102,4 @@ void FC_FUNC(clenqueuereadbufferimpl, CLENQUEUEREADBUFFERIMPL)
   *status = (int) clEnqueueReadBuffer(*command_queue, *buffer, (cl_bool) *blocking_read, 
 				      (size_t) *offset, (size_t) *cb, ptr, 0, NULL, NULL);
 }
+
