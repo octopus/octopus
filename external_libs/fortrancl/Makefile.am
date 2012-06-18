@@ -50,7 +50,7 @@ if COMPILE_OPENCL
 	cl_kernel_low.c              \
 	cl_platform_low.c            \
 	cl_program_low.c             \
-	cl_event_low.f90             \
+	cl_event_low.c               \
 	clamdblas_low.c              \
 	clamdfft_low.c
 endif
