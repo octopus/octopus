@@ -1130,7 +1130,7 @@ contains
     PUSH_SUB(zpoisson_solve_finish)
     call profiling_in(prof, "ZPOISSON_FINISH")
 
-    call MPI_Bcast(pot(1), this%der%mesh%np, MPI_CMPLz, 0, this%intercomm, mpi_err)
+    call MPI_Bcast(pot(1), this%der%mesh%np, MPI_CMPLX, 0, this%intercomm, mpi_err)
 
     call profiling_out(prof)
     POP_SUB(zpoisson_solve_finish)

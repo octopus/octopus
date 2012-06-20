@@ -233,8 +233,8 @@ contains
              jst = args(kst)
              if (jst.eq.ist) then
                call states_set_state(st, mesh, rank(jst), ik, buf)
-                ok(rank(jst)) = .true.
-                exit
+               ok(rank(jst)) = .true.
+               exit
              end if
              call states_get_state(st, mesh, jst, ik, buf1)
              call states_set_state(st, mesh, kst, ik, buf1)             
