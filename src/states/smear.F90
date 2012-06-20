@@ -325,7 +325,7 @@ contains
             xx = eigenvalues(ist, ik) - this%e_fermi
             ixx = Imeigenvalues(ist,ik) - this%Ime_fermi
             if(xx < M_ZERO .and. (ixx > M_ZERO .and. Imeigenvalues(ist,ik) <= M_ZERO .or. &
-                abs(Imeigenvalues(ist,ik)) <= CNST(1e-13)) ) then
+                abs(Imeigenvalues(ist,ik)) < CNST(1E-6)) ) then
               occupations(ist, ik) = this%el_per_state
             else if(xx == M_ZERO .and. ixx == M_ZERO ) then 
               occupations(ist, ik) = this%ef_occ * this%el_per_state

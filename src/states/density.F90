@@ -182,13 +182,10 @@ contains
           end do
         else
           if(calc_cmplx) then
-
             do ist = 1, psib%nst
               forall(ip = 1:this%gr%mesh%np)
-                crho(ip) = crho(ip) + weight(ist)* &
-                  (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 - aimag(psib%states(ist)%zpsi(ip, 1))**2)
-                Imcrho(ip) = Imcrho(ip) + weight(ist) * M_TWO * &
-                  (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION) * aimag(psib%states(ist)%zpsi(ip, 1)))
+                crho(ip)   = crho(ip)   + weight(ist) * real( psib%states(ist)%zpsi(ip, 1)**2)
+                Imcrho(ip) = Imcrho(ip) + weight(ist) * aimag(psib%states(ist)%zpsi(ip, 1)**2)
               end forall
             end do
           else
@@ -211,10 +208,8 @@ contains
           if(calc_cmplx) then
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
-                crho(ip) = crho(ip) + weight(ist)* &
-                  (real(psib%pack%zpsi(ist, ip), REAL_PRECISION)**2 - aimag(psib%pack%zpsi(ist, ip))**2)
-                Imcrho(ip) = Imcrho(ip) + weight(ist)* M_TWO* &
-                  (real(psib%pack%zpsi(ist, ip), REAL_PRECISION) * aimag(psib%pack%zpsi(ist, ip)))
+                crho(ip)   = crho(ip)   + weight(ist) * real( psib%pack%zpsi(ist, ip)**2 )
+                Imcrho(ip) = Imcrho(ip) + weight(ist) * aimag(psib%pack%zpsi(ist, ip)**2 )
               end do
             end do
           else  
@@ -507,30 +502,63 @@ contains
   !> this routine calculates the total electronic density,
   !! which is the sum of the part coming from the orbitals, the
   !! non-linear core corrections and the frozen orbitals
-  subroutine states_total_density(st, mesh, rho)
-    type(states_t), intent(in)  :: st
-    type(mesh_t),   intent(in)  :: mesh
-    FLOAT,          intent(out) :: rho(:,:)
+  subroutine states_total_density(st, mesh, rho, Imrho)
+    type(states_t),  intent(in)  :: st
+    type(mesh_t),    intent(in)  :: mesh
+    FLOAT,           intent(out) :: rho(:,:)
+    FLOAT, optional, pointer, intent(out) :: Imrho(:,:)
 
     integer :: is, ip
+    logical :: cmplxscl
+    
+    cmplxscl = .false.
+    if(present(Imrho)) then
+      ASSERT(associated(Imrho))
+      cmplxscl = .true.
+    end if
 
     PUSH_SUB(states_total_density)
 
-    forall(ip = 1:mesh%np, is = 1:st%d%nspin)
-      rho(ip, is) = st%rho(ip, is)
-    end forall
-
-    if(associated(st%rho_core)) then
-      forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-        rho(ip, is) = rho(ip, is) + st%rho_core(ip)/st%d%nspin
+    if(.not. cmplxscl) then
+      forall(ip = 1:mesh%np, is = 1:st%d%nspin)
+        rho(ip, is) = st%rho(ip, is)
       end forall
-    end if
 
-    ! Add, if it exists, the frozen density from the inner orbitals.
-    if(associated(st%frozen_rho)) then
-      forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-        rho(ip, is) = rho(ip, is) + st%frozen_rho(ip, is)
+      if(associated(st%rho_core)) then
+        forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
+          rho(ip, is) = rho(ip, is) + st%rho_core(ip)/st%d%nspin
+        end forall
+      end if
+
+      ! Add, if it exists, the frozen density from the inner orbitals.
+      if(associated(st%frozen_rho)) then
+        forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
+          rho(ip, is) = rho(ip, is) + st%frozen_rho(ip, is)
+        end forall
+      end if
+  
+    else
+
+      forall(ip = 1:mesh%np, is = 1:st%d%nspin)
+        rho(ip, is)   = st%zrho%Re(ip, is)
+        Imrho(ip, is) = st%zrho%Im(ip, is)
       end forall
+
+      if(associated(st%rho_core)) then
+        forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
+          rho(ip, is)   = rho(ip, is)   + st%rho_core(ip)/st%d%nspin
+          Imrho(ip, is) = Imrho(ip, is) + st%Imrho_core(ip)/st%d%nspin          
+        end forall
+      end if
+
+      ! Add, if it exists, the frozen density from the inner orbitals.
+      if(associated(st%frozen_rho)) then
+        forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
+          rho(ip, is) = rho(ip, is) + st%frozen_rho(ip, is)
+          Imrho(ip, is) = Imrho(ip, is) + st%Imfrozen_rho(ip, is)
+        end forall
+      end if
+      
     end if
 
     POP_SUB(states_total_density)
