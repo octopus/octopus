@@ -120,9 +120,20 @@ module hamiltonian_m
     FLOAT :: berry       !< Berry energy correction = -mu.E - <Vberry>
     FLOAT :: delta_xc    !< the XC derivative discontinuity
 
-    !Complex-scaled quantities 
-    CMPLX :: ztotal
-    CMPLX :: zeigenvalues
+    !cmplxscl 
+    FLOAT :: Imtotal       
+    FLOAT :: Imeigenvalues 
+    FLOAT :: Imexchange
+    FLOAT :: Imcorrelation
+    FLOAT :: Imxc_j
+    FLOAT :: Imintnvxc    
+    FLOAT :: Imhartree     
+    FLOAT :: Imkinetic     
+    FLOAT :: Imextern      
+    FLOAT :: Imentropy
+    FLOAT :: Imts          
+    FLOAT :: Imberry       
+    
   end type energy_t
 
   type hamiltonian_t
@@ -257,6 +268,12 @@ contains
     hm%energy%delta_xc = M_ZERO
     hm%energy%total = M_ZERO
     hm%energy%kinetic = M_ZERO
+    !cmplxscl
+    hm%energy%Imintnvxc = M_ZERO
+    hm%energy%Imexchange = M_ZERO
+    hm%energy%Imcorrelation = M_ZERO
+    hm%energy%Imtotal = M_ZERO
+    hm%energy%Imkinetic = M_ZERO
 
     nullify(hm%oct_fxc)
 
@@ -269,6 +286,7 @@ contains
     !% It should be bound to 0 <= theta < pi/4. 
     !%End
     call parse_float(datasets_check('ComplexScalingAngle'), CNST(0.3), hm%cmplxscl_th)
+    if(hm%cmplxscl_th < M_ZERO .or. hm%cmplxscl_th > M_PI/CNST(4.0)) call input_error('ComplexScalingAngle')
     hm%cmplxscl=states_dim%cmplxscl
     if (states_dim%cmplxscl) then
       call messages_print_stress(stdout, "Complex Scaling")
@@ -1161,8 +1179,19 @@ contains
     eout%berry        = ein%berry
     eout%delta_xc     = ein%delta_xc
 
-    eout%ztotal       = ein%ztotal
-    eout%zeigenvalues = ein%zeigenvalues
+    eout%Imtotal = ein%Imtotal
+    eout%Imeigenvalues = ein%Imeigenvalues
+    eout%Imexchange = ein%Imexchange
+    eout%Imcorrelation = ein%Imcorrelation
+    eout%Imxc_j = ein%Imxc_j
+    eout%Imintnvxc = ein%Imintnvxc
+    eout%Imhartree = ein%Imhartree
+    eout%Imkinetic = ein%Imkinetic
+    eout%Imextern = ein%Imextern
+    eout%Imentropy = ein%Imentropy
+    eout%Imts = ein%Imts
+    eout%Imberry = ein%Imberry
+
     
     POP_SUB(energy_copy)
   end subroutine energy_copy

@@ -91,15 +91,19 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
 end subroutine X(calculate_eigenvalues)
 
 ! ---------------------------------------------------------
-FLOAT function X(electronic_energy)(hm, der, st, terms) result(energy)
+R_TYPE function X(electronic_energy)(hm, der, st, terms, cproduct) result(energy)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
   integer,             intent(in)    :: terms
+  logical, optional,   intent(in)    :: cproduct
 
   integer :: ik, ist, ib, minst, maxst
   type(batch_t) :: hpsib
   R_TYPE, allocatable  :: tt(:, :)
+  logical :: cproduct_
+  
+  cproduct_ = optional_default(cproduct, .false.)
  
   PUSH_SUB(X(electronic_energy))
 
@@ -115,14 +119,18 @@ FLOAT function X(electronic_energy)(hm, der, st, terms) result(energy)
       call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
 
       call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik, terms = terms)
-      call X(mesh_batch_dotp_vector)(der%mesh, st%psib(ib, ik), hpsib, tt(minst:maxst, ik))
+      call X(mesh_batch_dotp_vector)(der%mesh, st%psib(ib, ik), hpsib, tt(minst:maxst, ik), cproduct = cproduct_)
 
       call batch_end(hpsib, copy = .false.)
 
     end do
   end do
   
+#ifdef R_TCOMPLEX
+  energy = zstates_eigenvalues_sum(st, tt)
+#else  
   energy = states_eigenvalues_sum(st, real(tt, REAL_PRECISION))
+#endif  
   
   SAFE_DEALLOCATE_A(tt)
   POP_SUB(X(electronic_energy))

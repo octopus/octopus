@@ -66,44 +66,66 @@ contains
     integer,             intent(in)    :: iunit
     logical, optional,   intent(in)    :: full
 
-    logical :: full_
-    FLOAT :: evxctau
+    logical :: full_, cmplxscl
+    FLOAT :: evxctau, Imevxctau
+    CMPLX :: etmp
 
     PUSH_SUB(total_energy)
 
+    cmplxscl = hm%cmplxscl
+    
     full_ = .false.
     if(present(full)) full_ = full
 
     hm%energy%eigenvalues = states_eigenvalues_sum(st)
+    if(cmplxscl) hm%energy%Imeigenvalues = aimag(zstates_eigenvalues_sum(st))
 
+    etmp = M_z0
     evxctau = M_ZERO
+    Imevxctau = M_ZERO
     if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK).and.(hm%theory_level.ne.CLASSICAL)) then
       if(states_are_real(st)) then
         hm%energy%kinetic  = delectronic_energy(hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%extern   = delectronic_energy(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
         evxctau = delectronic_energy(hm, gr%der, st, terms = TERM_MGGA)
       else
-        hm%energy%kinetic  = zelectronic_energy(hm, gr%der, st, terms = TERM_KINETIC)
-        hm%energy%extern   = zelectronic_energy(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
-        evxctau = zelectronic_energy(hm, gr%der, st, terms = TERM_MGGA)
+        etmp  = zelectronic_energy(hm, gr%der, st, terms = TERM_KINETIC, cproduct = hm%cmplxscl)
+        hm%energy%kinetic   = real(etmp)
+        hm%energy%Imkinetic = aimag(etmp)
+         
+        etmp  = zelectronic_energy(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL, cproduct = hm%cmplxscl)
+        hm%energy%extern   =  real(etmp)
+        hm%energy%Imextern =  aimag(etmp)
+        
+        etmp = zelectronic_energy(hm, gr%der, st, terms = TERM_MGGA, cproduct = hm%cmplxscl)
+        
+        evxctau   = real(etmp)
+        Imevxctau = aimag(etmp)
       end if
     end if
 
 
     select case(hm%theory_level)
     case(INDEPENDENT_PARTICLES)
-      hm%energy%total   = hm%ep%eii + hm%energy%eigenvalues
-
+      hm%energy%total = hm%ep%eii + hm%energy%eigenvalues
+      if(cmplxscl) hm%energy%Imtotal = hm%energy%Imeigenvalues
+       
     case(HARTREE)
       hm%energy%total = hm%ep%eii + M_HALF * (hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern)
-
+      if (cmplxscl) hm%energy%Imtotal = M_HALF * (hm%energy%Imeigenvalues + hm%energy%Imkinetic + hm%energy%Imextern)
+      
     case(HARTREE_FOCK)
       hm%energy%total = hm%ep%eii + &
         M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc - evxctau) + hm%energy%correlation
+      if (cmplxscl) hm%energy%Imtotal =  M_HALF*(hm%energy%Imeigenvalues + hm%energy%Imkinetic + & 
+        hm%energy%Imextern - hm%energy%Imintnvxc - Imevxctau) + hm%energy%Imcorrelation
 
     case(KOHN_SHAM_DFT)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc - evxctau
+      if (cmplxscl) hm%energy%Imtotal = hm%energy%Imeigenvalues &
+        - hm%energy%Imhartree + hm%energy%Imexchange + hm%energy%Imcorrelation - hm%energy%Imintnvxc - Imevxctau
+
 
     case(CLASSICAL)
       st%eigenval           = M_ZERO
@@ -119,6 +141,7 @@ contains
     else
       hm%energy%TS = st%smear%dsmear * hm%energy%entropy
     endif
+    hm%energy%ImTS = M_ZERO
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       hm%energy%total = hm%energy%total + gauge_field_get_energy(hm%ep%gfield, gr%sb)
@@ -133,25 +156,39 @@ contains
     endif
 
     if (iunit > 0) then
+      if(cmplxscl) then 
+        write(message(1), '(20x,a,a)') '       Real       ','    Imaginary     '
+        call messages_info(1, iunit)
+      end if
       write(message(1), '(6x,a, f18.8)')'Total       = ', units_from_atomic(units_out%energy, hm%energy%total)
+      if(cmplxscl) write(message(1), '(a, es18.6)') trim(message(1)), units_from_atomic(units_out%energy, hm%energy%Imtotal)
       write(message(2), '(6x,a, f18.8)')'Free        = ', units_from_atomic(units_out%energy, hm%energy%total - hm%energy%TS)
+      if(cmplxscl) write(message(2), '(a, es18.6)') trim(message(2)), units_from_atomic(units_out%energy,&
+         hm%energy%Imtotal - hm%energy%Imts)
       write(message(3), '(6x,a)') '-----------'
       call messages_info(3, iunit)
 
       write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', units_from_atomic(units_out%energy, hm%ep%eii)
       write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', units_from_atomic(units_out%energy, hm%energy%eigenvalues)
+      if(cmplxscl) write(message(2), '(a, es18.6)') trim(message(2)), units_from_atomic(units_out%energy, hm%energy%Imeigenvalues)
       write(message(3), '(6x,a, f18.8)')'Hartree     = ', units_from_atomic(units_out%energy, hm%energy%hartree)
+      if(cmplxscl) write(message(3), '(a, es18.6)') trim(message(3)), units_from_atomic(units_out%energy, hm%energy%Imhartree)
       write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%energy%intnvxc + evxctau)
+      if(cmplxscl) write(message(4), '(a, es18.6)') trim(message(4)),&
+                     units_from_atomic(units_out%energy, hm%energy%Imintnvxc + Imevxctau)
       write(message(5), '(6x,a, f18.8)')'Exchange    = ', units_from_atomic(units_out%energy, hm%energy%exchange)
+      if(cmplxscl) write(message(5), '(a, es18.6)') trim(message(5)), units_from_atomic(units_out%energy, hm%energy%Imexchange)
       write(message(6), '(6x,a, f18.8)')'Correlation = ', units_from_atomic(units_out%energy, hm%energy%correlation)
+      if(cmplxscl) write(message(6), '(a, es18.6)') trim(message(6)), units_from_atomic(units_out%energy, hm%energy%Imcorrelation)
       write(message(7), '(6x,a, f18.8)')'Delta XC    = ', units_from_atomic(units_out%energy, hm%energy%delta_xc)
       write(message(8), '(6x,a, f18.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
       write(message(9), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
       call messages_info(9, iunit)
-
       if(full_) then
         write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%energy%kinetic)
+        if(cmplxscl) write(message(1), '(a, es18.6)') trim(message(1)), units_from_atomic(units_out%energy, hm%energy%Imkinetic)
         write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%energy%extern)
+        if(cmplxscl) write(message(2), '(a, es18.6)') trim(message(2)), units_from_atomic(units_out%energy, hm%energy%Imextern)
         call messages_info(2, iunit)
       end if
       if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then

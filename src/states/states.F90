@@ -108,6 +108,7 @@ module states_m
     states_block_max,                 &
     states_block_size,                &
     states_resize_unocc,              &
+    zstates_eigenvalues_sum,          &
     cmplx_array2_t,                   &
     states_wfs_t
 
@@ -160,6 +161,8 @@ module states_m
     type(states_wfs_t)       :: psi          !< cmplxscl: Left psi%zL(:,:,:,:) and Right psi%zR(:,:,:,:) orbitals    
     type(cmplx_array2_t)     :: zrho         !< cmplxscl: the complexified density <psi%zL(:,:,:,:)|psi%zR(:,:,:,:)>
     type(cmplx_array2_t)     :: zeigenval    !< cmplxscl: the complexified eigenvalues 
+    FLOAT,           pointer :: Imrho_core(:)  
+    FLOAT,           pointer :: Imfrozen_rho(:, :)   
 
 
     type(batch_t), pointer   :: psib(:, :)            !< A set of wave-functions blocks
@@ -265,6 +268,7 @@ contains
     nullify(st%psi%zL, st%psi%zR)     
     nullify(st%zeigenval%Re, st%zeigenval%Im) 
     nullify(st%zrho%Re, st%zrho%Im)
+    nullify(st%Imrho_core, st%Imfrozen_rho)
 
 
     nullify(st%dpsi, st%zpsi)
@@ -1479,6 +1483,10 @@ contains
     if(geo%nlcc) then
       SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
       st%rho_core(:) = M_ZERO
+      if(st%d%cmplxscl) then
+        SAFE_ALLOCATE(st%Imrho_core(1:gr%fine%mesh%np))
+        st%Imrho_core(:) = M_ZERO
+      end if
     end if
 
     POP_SUB(states_densities_init)
@@ -1649,6 +1657,8 @@ contains
       call loct_pointer_copy(stout%psi%zL, stin%psi%zL)         
       call loct_pointer_copy(stout%zrho%Im, stin%zrho%Im)           
       call loct_pointer_copy(stout%zeigenval%Im, stin%zeigenval%Im) 
+      call loct_pointer_copy(stout%Imrho_core, stin%Imrho_core)
+      call loct_pointer_copy(stout%Imfrozen_rho, stin%Imfrozen_rho)
     end if
 
     
@@ -1756,6 +1766,8 @@ contains
     if(st%d%cmplxscl) then
       SAFE_DEALLOCATE_P(st%zrho%Im)
       SAFE_DEALLOCATE_P(st%zeigenval%Im)
+      SAFE_DEALLOCATE_P(st%Imrho_core)
+      SAFE_DEALLOCATE_P(st%Imfrozen_rho)
     end if
     
 
@@ -1990,6 +2002,33 @@ contains
 
     POP_SUB(states_eigenvalues_sum)
   end function states_eigenvalues_sum
+
+  ! ---------------------------------------------------------
+  !> Same as states_eigenvalues_sum but suitable for cmplxscl
+  function zstates_eigenvalues_sum(st, alt_eig) result(tot)
+    type(states_t), intent(in)  :: st
+    CMPLX, optional, intent(in) :: alt_eig(st%st_start:st%st_end, 1:st%d%nik)
+    CMPLX                       :: tot
+
+    integer :: ik
+
+    PUSH_SUB(zstates_eigenvalues_sum)
+
+    tot = M_ZERO
+    do ik = st%d%kpt%start, st%d%kpt%end
+      if(present(alt_eig)) then
+        tot = tot + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik) * &
+          (alt_eig(st%st_start:st%st_end, ik)))
+      else
+        tot = tot + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik) * &
+          (st%zeigenval%Re(st%st_start:st%st_end, ik) + M_zI * st%zeigenval%Im(st%st_start:st%st_end, ik)))
+      end if
+    end do
+
+    if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp%comm, tot)
+
+    POP_SUB(zstates_eigenvalues_sum)
+  end function zstates_eigenvalues_sum
 
   ! -------------------------------------------------------
   integer pure function states_spin_channel(ispin, ik, dim)
