@@ -401,15 +401,16 @@ end subroutine X(mesh_batch_rotate)
 
 ! --------------------------------------------------------------------------
 
-subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
+subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   type(mesh_t),      intent(in)    :: mesh
   type(batch_t),     intent(in)    :: aa
   type(batch_t),     intent(in)    :: bb
   R_TYPE,            intent(inout) :: dot(:)
   logical, optional, intent(in)    :: reduce
+  logical, optional, intent(in)    :: cproduct
 
   integer :: ist, indb, idim, ip
-  logical :: reduce_
+  logical :: reduce_, cproduct_
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:)
 #ifdef HAVE_OPENCL
@@ -424,6 +425,8 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
   reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
   
+  cproduct_ = optional_default(cproduct, .false.)
+  
   ASSERT(aa%nst == bb%nst)
   ASSERT(aa%dim == bb%dim)
 
@@ -433,7 +436,8 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = batch_linear_index(aa, (/ist, idim/))
-        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), bb%states_linear(indb)%X(psi), reduce = .false.)
+        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), bb%states_linear(indb)%X(psi),& 
+           reduce = .false., dotu = cproduct_)
       end do
     end do
 
@@ -444,17 +448,33 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce)
     tmp = M_ZERO
     
     if(mesh%use_curvilinear) then
-      do ip = 1, mesh%np
-        do ist = 1, aa%nst_linear
-          tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
+      if(.not. cproduct_) then
+        do ip = 1, mesh%np
+          do ist = 1, aa%nst_linear
+            tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
+          end do
         end do
-      end do
+      else
+        do ip = 1, mesh%np
+          do ist = 1, aa%nst_linear
+            tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*aa%pack%X(psi)(ist, ip)*bb%pack%X(psi)(ist, ip)
+          end do
+        end do
+      end if
     else
-      do ip = 1, mesh%np
-        do ist = 1, aa%nst_linear
-          tmp(ist) = tmp(ist) + R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
+      if(.not. cproduct_) then
+        do ip = 1, mesh%np
+          do ist = 1, aa%nst_linear
+            tmp(ist) = tmp(ist) + R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
+          end do
         end do
-      end do
+      else
+        do ip = 1, mesh%np
+          do ist = 1, aa%nst_linear
+            tmp(ist) = tmp(ist) + aa%pack%X(psi)(ist, ip)*bb%pack%X(psi)(ist, ip)
+          end do
+        end do
+      end if
     end if
 
     do ist = 1, aa%nst
