@@ -142,7 +142,7 @@ contains
    
     cR_rr = h_rr
     
-    call zmout(6, st%nst, st%nst, h_rr, gr%mesh%np, -6, 'HRR')
+!     call zmout(6, st%nst, st%nst, h_rr, gr%mesh%np, -6, 'HRR')
     
     call lalg_eigensolve_nonh(gr%mesh%np, cR_rr, manyzeigenval, errcode, 'R')
     if (errcode.ne.0) then
