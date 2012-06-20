@@ -39,24 +39,24 @@ module xc_functl_m
   ! This adds to the constants defined in lib_xc. But since in that module
   ! the OEP functionals are not included, it is better to put it here.
   integer, public, parameter :: &
-    XC_KS_INVERSION = 801,      &  ! inversion of Kohn-Sham potential
-    XC_OEP_X = 901,             &  ! Exact exchange
-    XC_LDA_XC_CMPLX = 701,      &  ! complex scales LDA exchange-correlation 
+    XC_KS_INVERSION = 801,      &  !< inversion of Kohn-Sham potential
+    XC_OEP_X = 901,             &  !< Exact exchange
+    XC_LDA_XC_CMPLX = 701,      &  !< complex scaled LDA exchange-correlation 
     XC_FAMILY_KS_INVERSION = 64
 
   type xc_functl_t
-    integer         :: family            ! LDA, GGA, etc.
-    integer         :: type              ! exchange, correlation, or exchange-correlation
-    integer         :: id                ! identifier
+    integer         :: family            !< LDA, GGA, etc.
+    integer         :: type              !< exchange, correlation, or exchange-correlation
+    integer         :: id                !< identifier
 
-    integer         :: spin_channels     ! XC_UNPOLARIZED | XC_POLARIZED
-    integer         :: flags             ! XC_FLAGS_HAVE_EXC + XC_FLAGS_HAVE_VXC + ...
+    integer         :: spin_channels     !< XC_UNPOLARIZED | XC_POLARIZED
+    integer         :: flags             !< XC_FLAGS_HAVE_EXC + XC_FLAGS_HAVE_VXC + ...
 
-    type(XC_F90(pointer_t)) :: conf         ! the pointer used to call the library
-    type(XC_F90(pointer_t)) :: info         ! information about the functional
+    type(XC_F90(pointer_t)) :: conf         !< the pointer used to call the library
+    type(XC_F90(pointer_t)) :: info         !< information about the functional
 
-    integer         :: LB94_modified     ! should I use a special version of LB94 that
-    FLOAT           :: LB94_threshold    ! needs to be handled specially
+    integer         :: LB94_modified     !< should I use a special version of LB94 that
+    FLOAT           :: LB94_threshold    !< needs to be handled specially
   end type xc_functl_t
 
 contains

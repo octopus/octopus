@@ -971,7 +971,7 @@ subroutine zxc_complex_lda(mesh, rho, vxc, ex, ec, Imrho, Imvxc, Imex, Imec, cmp
      zvxc = -Cx * 4.0 / 3.0 * (zrho * dimphase)**(1.0 / 3.0)
 
      ! Among the three cube roots, choose the one closest to that of
-     ! the last iteration.  This choise is quite arbitrary and
+     ! the last iteration.  This choice is quite arbitrary and
      ! probably wrong.  We will correct it later since it only rotates
      ! the potential by a specific phase.
      vtrial2 = zvxc * exp(M_TWO * M_PI * M_zI / M_THREE)
@@ -1061,7 +1061,7 @@ subroutine zxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, v
   type(xc_functl_t), pointer :: functl(:)
   logical         :: calc_energy
 
-  PUSH_SUB('zxc_get_vxc')
+  PUSH_SUB(zxc_get_vxc)
 
   print *, "LDA calc energy exc"
   ASSERT(present(ex) .eqv. present(ec))
@@ -1127,7 +1127,7 @@ subroutine zxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, v
     call messages_fatal(2)     
   end if
 
-  POP_SUB('zxc_get_vxc')
+  POP_SUB(zxc_get_vxc)
 end subroutine zxc_get_vxc
 
 

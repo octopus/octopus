@@ -212,6 +212,8 @@ contains
     CMPLX,   allocatable :: buf(:,:),buf1(:,:)
     logical, allocatable :: ok(:)
     integer, allocatable :: rank(:)
+    
+    PUSH_SUB(reorder_states_by_args)
 
     SAFE_ALLOCATE(ok(st%nst))
     SAFE_ALLOCATE(rank(st%nst))
@@ -247,6 +249,7 @@ contains
     SAFE_DEALLOCATE_A(buf)
     SAFE_DEALLOCATE_A(buf1)
     
+    POP_SUB(reorder_states_by_args)
   end subroutine reorder_states_by_args
 
 ! ---------------------------------------------------------
