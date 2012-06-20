@@ -76,6 +76,8 @@ module poisson_m
     poisson_async_end,           &
     dpoisson_solve_start,        &
     dpoisson_solve_finish,       &
+    zpoisson_solve_start,        &
+    zpoisson_solve_finish,       &
     poisson_is_async
 
   integer, public, parameter ::         &
@@ -472,7 +474,7 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine zpoisson_solve(this, pot, rho, all_nodes)
+  subroutine zpoisson_solve_1(this, pot, rho, all_nodes)
     type(poisson_t),      intent(inout) :: this
     CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
     CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
@@ -484,7 +486,7 @@ contains
 
     der => this%der
 
-    PUSH_SUB(zpoisson_solve)
+    PUSH_SUB(zpoisson_solve_1)
 
     if(present(all_nodes)) then
       all_nodes_value = all_nodes
@@ -509,6 +511,86 @@ contains
 
     SAFE_DEALLOCATE_A(aux1)
     SAFE_DEALLOCATE_A(aux2)
+
+    POP_SUB(zpoisson_solve_1)
+  end subroutine zpoisson_solve_1
+
+  !-----------------------------------------------------------------
+
+  subroutine zpoisson_solve(this, pot, rho, all_nodes, theta)
+    type(poisson_t),      intent(inout) :: this
+    CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
+    CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
+    logical, optional,    intent(in)    :: all_nodes
+    FLOAT, optional,      intent(in)    :: theta   !< complex scaling angle
+
+    logical :: all_nodes_value, cmplxscl
+    FLOAT :: theta_
+
+    PUSH_SUB(zpoisson_solve)
+
+    if(present(all_nodes)) then
+      all_nodes_value = all_nodes
+    else
+      all_nodes_value = this%all_nodes_default
+    end if
+
+    cmplxscl = .false.
+    theta_ = M_ZERO
+    if(present(theta))  then
+      cmplxscl = .true.
+      theta_ = theta
+    end if
+
+    ASSERT(this%method.ne.-99)
+      
+    select case(this%method)
+
+    case(POISSON_DIRECT_SUM_1D)
+      call zpoisson1D_solve(this, pot, rho, theta_)
+
+    case(POISSON_DIRECT_SUM_2D)
+      call zpoisson_solve_1(this, pot, rho, all_nodes)
+      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
+
+    case(POISSON_DIRECT_SUM_3D)
+      call zpoisson_solve_1(this, pot, rho, all_nodes)
+      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
+
+    case(POISSON_FMM)
+      call zpoisson_solve_1(this, pot, rho, all_nodes)
+      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
+
+    case(POISSON_CG)
+      call zpoisson_solve_1(this, pot, rho, all_nodes)
+      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
+
+    case(POISSON_CG_CORRECTED)
+      call zpoisson_solve_1(this, pot, rho, all_nodes)
+      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
+
+    case(POISSON_MULTIGRID)
+      call zpoisson_solve_1(this, pot, rho, all_nodes)
+      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
+
+    case(POISSON_FFT)
+      if(this%der%mesh%sb%dim == 1 .and. cmplxscl) then
+        call messages_not_implemented('Complex scaled 1D soft coulomb and FFT poisson solver')
+      end if
+      call zpoisson_solve_1(this, pot, rho, all_nodes)
+      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
+
+    case(POISSON_ISF)
+      call zpoisson_solve_1(this, pot, rho, all_nodes)
+      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
+
+    case(POISSON_SETE)
+      call zpoisson_solve_1(this, pot, rho, all_nodes)
+      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
+
+    end select
+
+
 
     POP_SUB(zpoisson_solve)
   end subroutine zpoisson_solve
@@ -1011,6 +1093,52 @@ contains
   end subroutine dpoisson_solve_finish
 
   !----------------------------------------------------------------
+
+  !------------------------------------------------------------------
+
+  subroutine zpoisson_solve_start(this, rho)
+    type(poisson_t),      intent(inout) :: this
+    CMPLX,                intent(in)    :: rho(:)
+
+#ifdef HAVE_MPI2    
+    integer :: islave
+    type(profile_t), save :: prof
+
+    PUSH_SUB(zpoisson_solve_start)
+    call profiling_in(prof, "ZPOISSON_START")
+
+    ! we assume all nodes have a copy of the density
+    do islave = this%local_grp%rank, this%nslaves - 1, this%local_grp%size !all nodes are used for communication
+      call MPI_Send(rho(1), this%der%mesh%np, MPI_CMPLX, islave, CMD_POISSON_SOLVE, this%intercomm, mpi_err)
+    end do
+    
+    call profiling_out(prof)
+    POP_SUB(zpoisson_solve_start)
+#endif
+    
+  end subroutine zpoisson_solve_start
+  
+  !----------------------------------------------------------------
+
+  subroutine zpoisson_solve_finish(this, pot)
+    type(poisson_t),  intent(inout) :: this
+    CMPLX,            intent(inout) :: pot(:)
+
+#ifdef HAVE_MPI2
+    type(profile_t), save :: prof
+
+    PUSH_SUB(zpoisson_solve_finish)
+    call profiling_in(prof, "ZPOISSON_FINISH")
+
+    call MPI_Bcast(pot(1), this%der%mesh%np, MPI_CMPLz, 0, this%intercomm, mpi_err)
+
+    call profiling_out(prof)
+    POP_SUB(zpoisson_solve_finish)
+#endif
+  end subroutine zpoisson_solve_finish
+
+  !----------------------------------------------------------------
+
 
   logical pure function poisson_is_async(this) result(async)
     type(poisson_t),  intent(in) :: this
