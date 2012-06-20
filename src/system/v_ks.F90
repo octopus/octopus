@@ -90,10 +90,15 @@ module v_ks_m
     FLOAT,                pointer :: a_ind(:, :)
     FLOAT,                pointer :: b_ind(:, :)
     logical                       :: calc_energy
-    !complex quantities 
+
+    !cmplxscl
     FLOAT,                pointer :: Imdensity(:, :)
     FLOAT,                pointer :: Imtotal_density(:)
     FLOAT,                pointer :: Imvxc(:, :)
+    FLOAT,                pointer :: Imvtau(:, :)
+    FLOAT,                pointer :: Imaxc(:, :, :)
+    FLOAT,                pointer :: Imvberry(:, :)
+    
   end type v_ks_calc_t
 
   type v_ks_t
@@ -429,10 +434,13 @@ contains
     
     type(profile_t), save :: prof
     type(energy_t), pointer :: energy
+    logical  :: cmplxscl
 
     PUSH_SUB(v_ks_calc_start)
     call profiling_in(prof, "KOHN_SHAM_CALC")
 
+    cmplxscl = hm%cmplxscl
+   
     ASSERT(.not. ks%calc%calculating)
     ks%calc%calculating = .true.
 
@@ -446,13 +454,16 @@ contains
     ks%calc%calc_energy = optional_default(calc_energy, .true.)
 
     nullify(ks%calc%vberry)
+    nullify(ks%calc%Imvberry) !cmplxscl
     if(associated(hm%vberry)) then
       SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
+      SAFE_ALLOCATE(ks%calc%Imvberry(1:ks%gr%mesh%np, 1:hm%d%nspin)) !cmplxscl
       if(optional_default(calc_berry, .true.)) then
         call berry_potential(st, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
       else
         ! before wfns are initialized, cannot calculate this term
         ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO
+        ks%calc%Imvberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO !cmplxscl
       endif
     endif
 
@@ -468,22 +479,32 @@ contains
     call energy_copy(hm%energy, ks%calc%energy)
     
     energy%intnvxc = M_ZERO
-
+    energy%Imintnvxc = M_ZERO !cmplxscl
+    
     ! check whether we should introduce the Amaldi SIC correction
     ks%calc%amaldi_factor = M_ONE
     if(ks%sic_type == SIC_AMALDI) ks%calc%amaldi_factor = (st%qtot - M_ONE)/st%qtot
 
     nullify(ks%calc%density, ks%calc%total_density)
     nullify(ks%calc%vxc, ks%calc%vtau, ks%calc%axc)
+    !cmplxscl
+    nullify(ks%calc%Imdensity, ks%calc%Imtotal_density)
+    nullify(ks%calc%Imvxc, ks%calc%Imvtau, ks%calc%Imaxc)
+    
+    
     if(ks%theory_level /= INDEPENDENT_PARTICLES .and. ks%calc%amaldi_factor /= M_ZERO) then
 
       call calculate_density()
 
       if(poisson_is_async(ks%hartree_solver)) then
-        call dpoisson_solve_start(ks%hartree_solver, ks%calc%total_density)
+        if(.not. cmplxscl) then
+          call dpoisson_solve_start(ks%hartree_solver, ks%calc%total_density)
+        else
+          call zpoisson_solve_start(ks%hartree_solver, ks%calc%total_density + M_zI * ks%calc%total_density)          
+        end if
       end if
 
-      if(ks%theory_level .ne. HARTREE) call v_a_xc(geo)
+      if(ks%theory_level .ne. HARTREE) call v_a_xc(geo, hm)
     end if
 
     nullify(ks%calc%hf_st)
@@ -516,8 +537,13 @@ contains
 
       ! get density taking into account non-linear core corrections
       SAFE_ALLOCATE(ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-      call states_total_density(st, ks%gr%fine%mesh, ks%calc%density)
-
+      if (.not. cmplxscl) then
+        call states_total_density(st, ks%gr%fine%mesh, ks%calc%density)
+      else 
+        SAFE_ALLOCATE(ks%calc%Imdensity(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+        call states_total_density(st, ks%gr%fine%mesh, ks%calc%density, ks%calc%Imdensity)
+      end if
+      
       ! Amaldi correction
       if(ks%sic_type == SIC_AMALDI) &
         ks%calc%density = ks%calc%amaldi_factor*ks%calc%density
@@ -527,6 +553,7 @@ contains
         ks%calc%total_density_alloc = .true.
 
         SAFE_ALLOCATE(ks%calc%total_density(1:ks%gr%fine%mesh%np))
+        if(cmplxscl) SAFE_ALLOCATE(ks%calc%Imtotal_density(1:ks%gr%fine%mesh%np))
 
         forall(ip = 1:ks%gr%fine%mesh%np)
           ks%calc%total_density(ip) = sum(ks%calc%density(ip, 1:hm%d%spin_channels))
@@ -541,31 +568,50 @@ contains
       else
         ks%calc%total_density_alloc = .false.
         ks%calc%total_density => ks%calc%density(:, 1)
+        if (cmplxscl) ks%calc%Imtotal_density => ks%calc%Imdensity(:, 1)
       end if
 
       POP_SUB(v_ks_calc_start.calculate_density)
     end subroutine calculate_density
 
     ! ---------------------------------------------------------
-    subroutine v_a_xc(geo)
-      type(geometry_t), optional, intent(in) :: geo
-      type(profile_t), save :: prof
-      
+    subroutine v_a_xc(geo, hm)
+      type(geometry_t),     intent(in) :: geo
+      type(hamiltonian_t),  intent(in) :: hm 
 
+      type(profile_t), save :: prof
+      logical :: cmplxscl
+      CMPLX :: ctmp
+      
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
 
+      cmplxscl = hm%cmplxscl
+      
       energy%exchange = M_ZERO
       energy%correlation = M_ZERO
       energy%xc_j = M_ZERO
+      !cmplxscl
+      energy%Imexchange = M_ZERO
+      energy%Imcorrelation = M_ZERO
+      energy%Imxc_j = M_ZERO
+
 
       SAFE_ALLOCATE(ks%calc%vxc(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
       ks%calc%vxc = M_ZERO
+      if(cmplxscl) then
+        SAFE_ALLOCATE(ks%calc%Imvxc(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+        ks%calc%Imvxc = M_ZERO
+      end if
 
       nullify(ks%calc%vtau)
       if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
         SAFE_ALLOCATE(ks%calc%vtau(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
         ks%calc%vtau = M_ZERO
+        if(cmplxscl) then
+          SAFE_ALLOCATE(ks%calc%Imvtau(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+          ks%calc%Imvtau = M_ZERO
+        end if
       end if
 
       ! Get the *local* XC term
@@ -573,29 +619,47 @@ contains
         call messages_not_implemented('Current-DFT')
       else if(ks%calc%calc_energy) then
         if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+          if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_MGGA')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
             ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vxc = ks%calc%vxc, vtau = ks%calc%vtau)
         else
+          if(.not. cmplxscl) then
           call xc_get_vxc(ks%gr%fine%der, ks%xc, &
             st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
             ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vxc = ks%calc%vxc)
+          else
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+              st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+              ex = energy%exchange, ec = energy%correlation, vxc = ks%calc%vxc, & 
+              Imrho = ks%calc%Imdensity, Imex = energy%Imexchange, Imec = energy%Imcorrelation, &
+              Imvxc = ks%calc%Imvxc, cmplxscl_th = hm%cmplxscl_th)
+          end if
         end if
       else
         if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+          if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_MGGA')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, &
             st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
             vxc = ks%calc%vxc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-            st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            vxc = ks%calc%vxc)
+          if(.not. cmplxscl) then
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+              st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+              vxc = ks%calc%vxc)
+          else
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+              st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+              vxc = ks%calc%vxc, Imrho = ks%calc%Imdensity, Imvxc = ks%calc%Imvxc,&
+              cmplxscl_th = hm%cmplxscl_th )
+          end if
         end if
       end if
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
         ! The OEP family has to be handled specially
         if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
+          if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_OEP')
           if (states_are_real(st)) then
             call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
               ks%gr, hm, st, energy%exchange, energy%correlation, vxc = ks%calc%vxc)
@@ -606,7 +670,7 @@ contains
         endif
 
         if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
-
+          if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_KS_INVERSION')
         ! Also treat KS inversion separately (not part of libxc)
         if(present(time)) then
            call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st,  &
@@ -620,7 +684,7 @@ contains
       end if
 
       if(ks%tail_correction) then 
-        ASSERT(present(geo))
+        if (cmplxscl) call messages_not_implemented('Complex Scaling with tail_correction')
         call tail_correction(ks%calc%vxc, geo)
       end if
       
@@ -628,11 +692,28 @@ contains
         ! Now we calculate Int[n vxc] = energy%intnvxc
         select case(hm%d%ispin)
         case(UNPOLARIZED)
-          energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1))
+          if (.not. cmplxscl) then
+            energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1))
+          else
+            ctmp = zmf_dotp(ks%gr%fine%mesh, st%zrho%Re(:, 1) + M_zI * st%zrho%Im(:, 1) , &
+              ks%calc%vxc(:, 1) + M_zI * ks%calc%Imvxc(:, 1)  , dotu = .true.)
+            energy%intnvxc = energy%intnvxc + real(ctmp)
+            energy%Imintnvxc = energy%Imintnvxc + aimag(ctmp)          
+          end if
         case(SPIN_POLARIZED)
-          energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1)) &
-            + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), ks%calc%vxc(:, 2))
+          if(.not. cmplxscl) then
+            energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1)) &
+              + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), ks%calc%vxc(:, 2))
+          else
+            ctmp  = ctmp + zmf_dotp(ks%gr%fine%mesh, st%zrho%Re(:, 1) + M_zI * st%zrho%Im(:, 1), &
+                             ks%calc%vxc(:, 1) + M_zI * ks%calc%Imvxc(:, 1), dotu = .true.) &
+                         + zmf_dotp(ks%gr%fine%mesh, st%zrho%Re(:, 2) + M_zI * st%zrho%Im(:, 2), &
+                             ks%calc%vxc(:, 2) + M_zI * ks%calc%Imvxc(:, 2), dotu = .true. )
+            energy%intnvxc = energy%intnvxc + real(ctmp)
+            energy%Imintnvxc = energy%Imintnvxc + aimag(ctmp)        
+          end if
         case(SPINORS)
+          if (cmplxscl) call messages_not_implemented('Complex Scaling with SPINORS')
           energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1)) &
             + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), ks%calc%vxc(:, 2)) &
             + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 3), ks%calc%vxc(:, 3)) &
@@ -787,7 +868,14 @@ contains
       hm%energy%hartree     = M_ZERO
       hm%energy%exchange    = M_ZERO
       hm%energy%correlation = M_ZERO
-
+      !cmplxscl
+      if(hm%cmplxscl) then
+        hm%Imvhxc = M_ZERO
+        hm%energy%Imintnvxc     = M_ZERO
+        hm%energy%Imhartree     = M_ZERO
+        hm%energy%Imexchange    = M_ZERO
+        hm%energy%Imcorrelation = M_ZERO
+      end if
     else
 
       if(ks%theory_level /= HARTREE) then
@@ -799,35 +887,52 @@ contains
             !          call dio_function_output(1, "./", "vxc_fine", ks%gr%fine%mesh, vxc(:, ispin), unit_one, ierr)
             !          call dio_function_output(1, "./", "vxc_coarse", ks%gr%mesh, hm%vxc(:, ispin), unit_one, ierr)
           end do
+          if(hm%cmplxscl) then
+            do ispin = 1, hm%d%nspin
+              call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, &
+                ks%calc%Imvxc(:, ispin), hm%Imvxc(:, ispin), INJECTION)
+            end do            
+          end if
           SAFE_DEALLOCATE_P(ks%calc%vxc)
+          SAFE_DEALLOCATE_P(ks%calc%Imvxc) !cmplxscl
         else
           ! just change the pointer to avoid the copy
           SAFE_DEALLOCATE_P(hm%vxc)
           hm%vxc => ks%calc%vxc
+          if(hm%cmplxscl) then
+            SAFE_DEALLOCATE_P(hm%Imvxc)
+            hm%Imvxc => ks%calc%Imvxc
+          end if
         end if
 
         if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
           do ispin = 1, hm%d%nspin
             call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
+            if(hm%cmplxscl) call lalg_copy(ks%gr%fine%mesh%np, ks%calc%Imvtau(:, ispin), hm%Imvtau(:, ispin))
           end do
           SAFE_DEALLOCATE_P(ks%calc%vtau)
+          SAFE_DEALLOCATE_P(ks%calc%Imvtau)          
         end if
 
       else
         hm%vxc = M_ZERO
+        if(hm%cmplxscl) hm%Imvxc = M_ZERO
       end if
 
       hm%energy%hartree = M_ZERO
+      hm%energy%Imhartree = M_ZERO
       call v_ks_hartree(ks, hm)
 
       ! Build Hartree + XC potential
       forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
+      if (hm%cmplxscl) forall(ip = 1:ks%gr%mesh%np) hm%Imvhxc(ip, 1) = hm%Imvxc(ip, 1) + hm%Imvhartree(ip)
       if(associated(hm%vberry)) then
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
       endif
       
       if(hm%d%ispin > UNPOLARIZED) then
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
+        if (hm%cmplxscl) forall(ip = 1:ks%gr%mesh%np) hm%Imvhxc(ip, 2) = hm%Imvxc(ip, 2) + hm%Imvhartree(ip)
         if(associated(hm%vberry)) then
           forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vhxc(ip, 2) + hm%vberry(ip, 2)
         endif
@@ -835,6 +940,7 @@ contains
       
       if(hm%d%ispin == SPINORS) then
         forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
+        if (hm%cmplxscl) forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%Imvhxc(ip, ispin) = hm%Imvxc(ip, ispin)
       end if
 
       if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
@@ -861,8 +967,10 @@ contains
     end if
 
     SAFE_DEALLOCATE_P(ks%calc%density)
+    SAFE_DEALLOCATE_P(ks%calc%Imdensity)
     if(ks%calc%total_density_alloc) then
       SAFE_DEALLOCATE_P(ks%calc%total_density)
+      SAFE_DEALLOCATE_P(ks%calc%Imtotal_density)
     end if
     nullify(ks%calc%total_density)
 
@@ -879,51 +987,98 @@ contains
     type(v_ks_t),        intent(inout) :: ks
     type(hamiltonian_t), intent(inout) :: hm
 
-    FLOAT, pointer :: pot(:)
+    FLOAT, pointer :: pot(:), Impot(:), aux(:)
+    CMPLX, pointer :: zpot(:)
+    CMPLX :: ztmp
 
     PUSH_SUB(v_ks_hartree)
 
     ASSERT(associated(ks%hartree_solver))
 
+    
     if(.not. ks%gr%have_fine_mesh) then
       pot => hm%vhartree
+      if (hm%cmplxscl) then 
+        Impot => hm%Imvhartree
+        SAFE_ALLOCATE(zpot(1:size(Impot,1)))
+      end if
     else
-      SAFE_ALLOCATE(pot(1:ks%gr%fine%mesh%np_part))
-      pot = M_ZERO
+      if(.not. hm%cmplxscl) then
+        SAFE_ALLOCATE(pot(1:ks%gr%fine%mesh%np_part))
+        pot = M_ZERO
+      else
+        SAFE_ALLOCATE(aux(1:ks%gr%fine%mesh%np_part))
+        SAFE_ALLOCATE(zpot(1:ks%gr%fine%mesh%np_part))
+        zpot = M_z0
+      end if
     end if
 
     if(.not. poisson_is_async(ks%hartree_solver)) then
-      ! solve the Poisson equation
-      call dpoisson_solve(ks%hartree_solver, pot, ks%calc%total_density)
+      if (.not. hm%cmplxscl) then 
+        ! solve the Poisson equation
+        call dpoisson_solve(ks%hartree_solver, pot, ks%calc%total_density)
+      else
+        ! Solve the Poisson equation for the scaled density and coulomb potential
+        call zpoisson_solve(ks%hartree_solver, zpot,&
+               ks%calc%total_density + M_zI * ks%calc%Imtotal_density, theta = hm%cmplxscl_th)
+        pot   =   real(zpot)
+        Impot =  aimag(zpot)
+      end if
     else
       ! The calculation was started by v_ks_calc_start.
-      call dpoisson_solve_finish(ks%hartree_solver, pot)
+      if(.not. hm%cmplxscl) then
+        call dpoisson_solve_finish(ks%hartree_solver, pot)
+      else
+        call zpoisson_solve_finish(ks%hartree_solver, zpot)
+        pot   =   real(zpot)
+        Impot =  aimag(zpot)
+      end if
     end if
 
     if(ks%calc%calc_energy) then
       ! Get the Hartree energy
-      hm%energy%hartree = M_HALF*dmf_dotp(ks%gr%fine%mesh, ks%calc%total_density, pot)
+      if(.not. hm%cmplxscl) then
+        hm%energy%hartree = M_HALF*dmf_dotp(ks%gr%fine%mesh, ks%calc%total_density, pot)
+      else
+        ztmp = M_HALF*zmf_dotp(ks%gr%fine%mesh,&
+           ks%calc%total_density + M_zI * ks%calc%Imtotal_density, zpot, dotu = .true.)
+        hm%energy%hartree   = real(ztmp)
+        hm%energy%Imhartree = aimag(ztmp)
+      end if
     end if
 
     if(ks%gr%have_fine_mesh) then
       ! we use injection to transfer to the fine grid, we cannot use
       ! restriction since the boundary conditions are not zero for the
       ! Hartree potential (and for some XC functionals).
-      call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, pot, hm%vhartree, INJECTION)
+      if(.not. hm%cmplxscl) then
+        call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, pot, hm%vhartree, INJECTION)
+      else
+        aux = real(zpot)
+        call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, aux, hm%vhartree, INJECTION)
+        aux = aimag(zpot)
+        call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, aux, hm%Imvhartree, INJECTION)
+      end if
       ! some debugging output that I will keep here for the moment, XA
       !      call dio_function_output(1, "./", "vh_fine", ks%gr%fine%mesh, pot, unit_one, is)
       !      call dio_function_output(1, "./", "vh_coarse", ks%gr%mesh, hm%vhartree, unit_one, is)
       SAFE_DEALLOCATE_P(pot)
+      SAFE_DEALLOCATE_P(aux)
     end if
 
     if (ks%calc%calc_energy .and. poisson_get_solver(ks%hartree_solver) == POISSON_SETE) then !SEC
       hm%energy%hartree = hm%energy%hartree + poisson_energy(ks%hartree_solver)
+      ASSERT(.not. hm%cmplxscl) ! Don't know how to procede here with cmplxscl
       ! can not find any reference to unit 89 anywhere else in the code forgotten debug write?
       !write(89,*) hm%energy%hartree*CNST(2.0)*CNST(13.60569193), &
       !  poisson_energy(ks%hartree_solver)*CNST(2.0)*CNST(13.60569193), &
       !  hm%ep%eii*CNST(2.0)*CNST(13.60569193)
     endif
 
+    if (hm%cmplxscl) then
+      SAFE_DEALLOCATE_P(zpot)
+    end if
+    
     POP_SUB(v_ks_hartree)
   end subroutine v_ks_hartree
   ! ---------------------------------------------------------
