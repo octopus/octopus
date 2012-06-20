@@ -318,6 +318,8 @@
 !% Inversion of KS potential
 !%Option oep_x                    901
 !% OEP: Exact exchange
+!%Option lda_xc_cmplx             701
+!% LDA complex scaled exchange-correlation.
 !%Option none                       0
 !% Exchange and correlation set to zero.
 !%End

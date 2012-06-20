@@ -17,8 +17,7 @@
 !!
 !! $Id$
 
-! ---------------------------------------------------------
-subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc, vxc, vtau)
+subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc, vxc, vtau)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
@@ -69,8 +68,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
   type(xc_functl_t), pointer :: functl(:)
   type(symmetrizer_t) :: symmetrizer
 
-  PUSH_SUB(xc_get_vxc)
-  call profiling_in(prof, "XC_LOCAL")
+  PUSH_SUB(dxc_get_vxc)
+  call profiling_in(prof, "dXC_LOCAL")
 
   ASSERT(present(ex) .eqv. present(ec))
   calc_energy = present(ex)
@@ -384,7 +383,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
   if(gga .or. xcs%xc_density_correction == LR_X) call  gga_end()
   if(mgga) call mgga_end()
 
-  POP_SUB(xc_get_vxc)
+  POP_SUB(dxc_get_vxc)
   call profiling_out(prof)
 
 contains
@@ -692,7 +691,7 @@ contains
     POP_SUB(xc_get_vxc.mgga_process)
   end subroutine mgga_process
 
-end subroutine xc_get_vxc
+end subroutine dxc_get_vxc
 
 ! -----------------------------------------------------
 
@@ -909,6 +908,228 @@ FLOAT function get_qxc(mesh, nxc, density, ncutoff)  result(qxc)
 
   POP_SUB('vxc_inc.get_qxc')
 end function get_qxc
+
+subroutine zxc_complex_lda(mesh, rho, vxc, ex, ec, Imrho, Imvxc, Imex, Imec, cmplxscl_th)
+  type(mesh_t), intent(in) :: mesh
+  FLOAT, intent(in)        :: rho(:, :)
+  FLOAT, intent(inout)     :: vxc(:, :)
+  FLOAT, intent(inout)     :: ex
+  FLOAT, intent(inout)     :: ec
+  FLOAT, intent(in)        :: Imrho(:, :)
+  FLOAT, intent(inout)     :: Imvxc(:, :)
+  FLOAT, intent(inout)     :: Imex
+  FLOAT, intent(inout)     :: Imec
+  FLOAT, intent(in)        :: cmplxscl_th
+  
+  CMPLX :: zex, zec, zrho, zvxc, eps_c, last_zvxc
+  INTEGER :: i, N
+  CMPLX :: rs, rtrs, Q0, Q1, dQ1drs, dedrs, tmpphase, dimphase, vtrial2, vtrial3
+  CMPLX, allocatable :: zvxc_arr(:)
+
+  FLOAT :: C0I, C1, CC1, CC2, IF2, gamma, alpha1, beta1, beta2, beta3, beta4, Cx
+
+  ! LDA constants.
+  ! Only C0I is used for spin-paired calculations among these five
+  C0I = 0.238732414637843
+  C1 = -0.45816529328314287
+  CC1 = 1.9236610509315362
+  CC2 = 2.5648814012420482
+  IF2 = 0.58482236226346462
+  
+  gamma = 0.031091
+  alpha1 = 0.21370
+  beta1 = 7.5957
+  beta2 = 3.5876
+  beta3 = 1.6382
+  beta4 = 0.49294
+
+  N = size(rho, 1)
+  SAFE_ALLOCATE(zvxc_arr(1:N))
+
+  zex = M_z0
+  zec = M_z0
+
+  dimphase = exp(-mesh%sb%dim * M_zI * cmplxscl_th)
+
+  !Cx = -3.0 / 4.0 * (3.0 / M_PI)**(1.0 / 3.0)
+  Cx = 0.73855876638202234 
+
+  last_zvxc = M_ONE ! entirely arbitrary
+
+  do i=1, N
+     zrho = rho(i, 1) + M_zI * Imrho(i, 1)
+
+     ! "simplified", linear exchange potential
+     !zex = zex + 0.5 * lda_exchange_prefactor * zrho * zrho * dimphase
+     !zvxc = lda_exchange_prefactor * zrho * dimphase !+ 2.0 * 3.1415926535897931 * M_zI
+
+     ! quadratic positive exchange potential
+     !zex = zex - lda_exchange_prefactor * (zrho * dimphase)**3.0 / dimphase / 10.
+     !zvxc = -3.0 * lda_exchange_prefactor * (zrho * dimphase)**2.0 / 10.
+
+     ! 3d exchange
+     zvxc = -Cx * 4.0 / 3.0 * (zrho * dimphase)**(1.0 / 3.0)
+
+     ! Among the three cube roots, choose the one closest to that of
+     ! the last iteration.  This choise is quite arbitrary and
+     ! probably wrong.  We will correct it later since it only rotates
+     ! the potential by a specific phase.
+     vtrial2 = zvxc * exp(M_TWO * M_PI * M_zI / M_THREE)
+     vtrial3 = zvxc / exp(M_TWO * M_PI * M_zI / M_THREE)
+     if (abs(vtrial2 - last_zvxc).lt.abs(zvxc - last_zvxc)) then
+        zvxc = vtrial2
+     end if
+     if (abs(vtrial3 - last_zvxc).lt.abs(zvxc - last_zvxc)) then
+        zvxc = vtrial3
+     end if
+     last_zvxc = zvxc
+     
+     zex = zex + 3.0 / 4.0 * zvxc * zrho
+
+     ! 2d exchange
+     !zex = zex - (4./3.) * sqrt(2./3.1415926535897931) * zrho**(3.0/2.0)
+     !zvxc = -1.5 * (4./3.) * sqrt(2./3.1415926535897931) * zrho**(3.0/2.0)
+
+     ! correlation
+     !rs = (C0I / zrho)**(1.0 / 3.0)
+     !rtrs = sqrt(rs)
+     !Q0 = -2.0 * gamma * (1.0 + alpha1 * rs)
+     !Q1 = 2.0 * gamma * rtrs * (beta1 + rtrs * (beta2 + rtrs * (beta3 + rtrs * beta4)))
+     !eps_c = Q0 * log(1.0 + 1.0 / Q1)
+     zec = M_z0 !!!!zec + eps_c * zrho
+     !dQ1drs = gamma * (beta1 / rtrs + 2.0 * beta2 + rtrs * (3.0 * beta3 + 4.0 * beta4 * rtrs))
+     !dedrs = -2.0 * gamma * alpha1 * eps_c / Q0 - Q0 * dQ1drs / (Q1 * (Q1 + 1.0))
+     !zvxc = zvxc + eps_c - rs * dedrs / 3.0
+     
+     zvxc_arr(i) = zvxc
+  end do
+  
+  tmpphase = exp(M_TWO * M_PI * M_zI / M_THREE)
+  do i=1, 2 ! multiply by the phase up to two times
+     if (real(zex * tmpphase).lt.real(zex)) then
+        zex = zex * tmpphase
+        zvxc_arr(:) = zvxc_arr(:) * tmpphase
+     end if
+  end do
+
+  vxc(:, 1) = real(zvxc_arr)
+  Imvxc(:, 1) = aimag(zvxc_arr)
+
+  zex = zex * mesh%volume_element
+  zec = zec * mesh%volume_element
+
+  ex = real(zex)
+  ec = real(zec)
+  Imex = aimag(zex)
+  Imec = aimag(zec)
+
+  SAFE_DEALLOCATE_A(zvxc_arr)
+  
+  print*, 'lda exchange', zex
+  print*, 'lda correlation', zec
+
+  
+end subroutine zxc_complex_lda
+
+! ----------------------------------------------------------------------------- 
+! This is the complex scaled interface for xc functionals.
+! It will eventually be merged with the other one dxc_get_vxc after some test
+! -----------------------------------------------------------------------------
+subroutine zxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vtau, Imrho, Imex, Imec, Imvxc, Imvtau, cmplxscl_th)
+  type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
+  type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
+  type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
+  FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
+  integer,              intent(in)    :: ispin           !< Number of spin channels 
+  FLOAT,                intent(in)    :: ioniz_pot
+  FLOAT,                intent(in)    :: qtot 
+  FLOAT, optional,      intent(inout) :: ex              !< Exchange energy.
+  FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
+  FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
+  FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
+  FLOAT,                intent(in)    :: Imrho(:, :)     !< cmplxscl: Electronic density 
+  FLOAT, optional,      intent(inout) :: Imex            !< cmplxscl: Exchange energy.
+  FLOAT, optional,      intent(inout) :: Imec            !< cmplxscl: Correlation energy
+  FLOAT, optional,      intent(inout) :: Imvxc(:,:)      !< cmplxscl: XC potential
+  FLOAT, optional,      intent(inout) :: Imvtau(:,:)     !< cmplxscl: Derivative wrt (two times kinetic energy density)
+  FLOAT,                intent(in)    :: cmplxscl_th     !< complex scaling angle
+
+  
+  CMPLX, pointer :: zpot(:), zrho_tot(:)
+  CMPLX          :: ztmp
+  Integer        :: isp
+  type(xc_functl_t), pointer :: functl(:)
+  logical         :: calc_energy
+
+  PUSH_SUB('zxc_get_vxc')
+
+  print *, "LDA calc energy exc"
+  ASSERT(present(ex) .eqv. present(ec))
+  calc_energy = present(ex)
+
+  !Pointer-shortcut for xcs%functl
+  !It helps to remember that for xcs%functl(:,:)
+  ! (1,:) => exchange,    (2,:) => correlation
+  ! (:,1) => unpolarized, (:,2) => polarized
+  if(ispin == UNPOLARIZED) then
+    functl => xcs%functl(:, 1)
+  else
+    functl => xcs%functl(:, 2)
+  end if
+
+
+  
+  if(functl(1)%id == XC_LDA_XC_CMPLX) then
+    
+    call zxc_complex_lda(der%mesh, rho, vxc, ex, ec, Imrho, Imvxc, Imex, Imec, cmplxscl_th)
+
+    ! Exact exchange for 2 particles [vxc(r) = 1/2 * vh(r)]
+    ! we keep it here for debug purposes
+    if(.false.) then
+      SAFE_ALLOCATE(zpot(1:size(vxc,1)))
+      SAFE_ALLOCATE(zrho_tot(1:size(vxc,1)))
+
+      zrho_tot = M_z0
+      do isp = 1, ispin
+        zrho_tot(:) = zrho_tot(:)+ rho(:,isp) +M_zI * Imrho(:,isp)
+      end do
+
+      call zpoisson_solve(psolver, zpot, zrho_tot, theta = cmplxscl_th)
+
+      zpot = - zpot /CNST(2.0)
+      vxc(:,1) = real(zpot(:)) 
+      Imvxc(:,1) = aimag(zpot(:))
+  
+      if(calc_energy) then
+        ztmp = M_HALF *zmf_dotp(der%mesh, zrho_tot, zpot, dotu = .true. )
+        ex =  real(ztmp)
+        Imex = aimag(ztmp)
+        ec   = M_ZERO
+        Imec = M_ZERO    
+      end if
+      SAFE_DEALLOCATE_P(zrho_tot)
+      SAFE_DEALLOCATE_P(zpot)
+    end if
+    
+  else if(functl(1)%family == XC_FAMILY_NONE) then
+
+    vxc = M_ZERO
+    if(calc_energy) then
+      ex   = M_ZERO
+      Imex = M_ZERO
+      ec   = M_ZERO
+      Imec = M_ZERO
+    end if
+
+  else  
+    write(message(1), '(a)') 'The selected XCFunctional will not work with ComplexScaling = yes.'
+    write(message(2), '(a)') 'Use XCFunctional = lda_xc_cmplx.'
+    call messages_fatal(2)     
+  end if
+
+  POP_SUB('zxc_get_vxc')
+end subroutine zxc_get_vxc
+
 
 !! Local Variables:
 !! mode: f90

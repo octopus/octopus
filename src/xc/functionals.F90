@@ -41,6 +41,7 @@ module xc_functl_m
   integer, public, parameter :: &
     XC_KS_INVERSION = 801,      &  ! inversion of Kohn-Sham potential
     XC_OEP_X = 901,             &  ! Exact exchange
+    XC_LDA_XC_CMPLX = 701,      &  ! complex scales LDA exchange-correlation 
     XC_FAMILY_KS_INVERSION = 64
 
   type xc_functl_t
@@ -107,6 +108,8 @@ contains
           functl%family = XC_FAMILY_OEP
         else if (functl%id == XC_KS_INVERSION) then
           functl%family = XC_FAMILY_KS_INVERSION
+        else if (functl%id == XC_LDA_XC_CMPLX) then
+            functl%family = XC_FAMILY_LDA  
         else
           call input_error('XCFunctional')
         end if
@@ -119,6 +122,9 @@ contains
     else if(functl%family == XC_FAMILY_KS_INVERSION) then
       functl%type = XC_EXCHANGE_CORRELATION
 
+    else if(functl%id == XC_LDA_XC_CMPLX) then
+      functl%type = XC_EXCHANGE_CORRELATION
+      
     else if(functl%family .eq. XC_FAMILY_NONE) then
       functl%type = -1
 
@@ -219,7 +225,8 @@ contains
     PUSH_SUB(xc_functl_end)
 
     if(functl%family.ne.XC_FAMILY_NONE .and. functl%family.ne.XC_FAMILY_OEP .and.  &
-         functl%family.ne.XC_FAMILY_KS_INVERSION ) then
+         functl%family.ne.XC_FAMILY_KS_INVERSION .and. &
+         functl%id .ne. XC_LDA_XC_CMPLX) then
       call XC_F90(func_end)(functl%conf)
     end if
 
@@ -256,7 +263,15 @@ contains
         write(message(2), '(4x,a)') '  KS Inversion'
         call messages_info(2, iunit)
       end select
-
+      
+    else if(functl%id == XC_LDA_XC_CMPLX) then
+        ! this is handled separately for the moment
+        ! we will include it in libxc when done with the tests
+        write(message(1), '(2x,a)') 'Exchange-Correlation:'
+        write(message(2), '(4x,a)') 'Complex-scaled LDA'
+        write(message(3), '(4x,a)') 'WARNING: under development'
+        call messages_info(3, iunit)
+        
     else if(functl%family .ne. XC_FAMILY_NONE) then ! all the other families
       select case(functl%type)
       case(XC_EXCHANGE)

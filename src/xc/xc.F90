@@ -81,6 +81,10 @@ module xc_m
     LR_X    = 1,        &
     LR_XC   = 2
 
+  interface xc_get_vxc
+    module procedure dxc_get_vxc, zxc_get_vxc
+  end interface
+
 contains
 
   ! ---------------------------------------------------------
