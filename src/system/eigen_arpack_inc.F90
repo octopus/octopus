@@ -29,8 +29,9 @@ subroutine X(eigen_solver_arpack)(gr, st, hm, tol_, niter, ncv, converged, ik, d
   FLOAT,     optional, intent(out)   :: diff(1:st%nst)
 	
   logical, allocatable :: select(:)
-  R_TYPE, allocatable :: ax(:),  resid(:), v(:, :),   &
-                         workd(:), workev(:), workl(:), zd(:)
+  R_TYPE, allocatable  :: ax(:),  resid(:), v(:, :),   &
+                          workd(:), workev(:), workl(:), zd(:), &
+                          psi(:,:)
                      
   integer :: ldv, nev, iparam(11), ipntr(14), ido, n, lworkl, info, ierr, &
              i, j, ishfts, maxitr, mode1, ist
@@ -64,6 +65,9 @@ subroutine X(eigen_solver_arpack)(gr, st, hm, tol_, niter, ncv, converged, ik, d
   SAFE_ALLOCATE(workev(3*ncv))
   SAFE_ALLOCATE(workl(lworkl))
   SAFE_ALLOCATE(select(ncv))
+  
+  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
+  
 #if defined(R_TCOMPLEX)
   SAFE_ALLOCATE(rwork(ncv))
   SAFE_ALLOCATE(zd(ncv+1))
@@ -138,11 +142,16 @@ subroutine X(eigen_solver_arpack)(gr, st, hm, tol_, niter, ncv, converged, ik, d
 
   ! This sets niter to the number of matrix-vector operations.
   niter = iparam(9)
-  do j = 1, min(st%nst, converged)
+  do j = 1, converged
     do i = 1, gr%mesh%np
-      st%X(psi)(i, 1, j, ik) = v(i, j)/sqrt(gr%mesh%vol_pp(1))
+!       st%X(psi)(i, 1, j, ik) = v(i, j)/sqrt(gr%mesh%vol_pp(1))
+      psi(i,1) = v(i, j)/sqrt(gr%mesh%volume_element) 
     end do
-
+    call states_set_state(st, gr%mesh, j, ik, psi)
+    
+    print *,"st", j, "norm", sqrt(X(mf_dotp)(gr%mesh, st%d%dim, psi, psi, dotu = .true.))!,&
+!      sqrt(sum(psi(:, 1)*psi(:, 1))*gr%mesh%volume_element), sqrt(X(mf_integrate)(gr%mesh,psi(:,1)**2))
+        
     st%eigenval(j, ik) = d(j, 1)
     if(associated(st%zeigenval%Im))then 
       st%zeigenval%Im(j, ik) = d(j, 2)
@@ -155,6 +164,22 @@ subroutine X(eigen_solver_arpack)(gr, st, hm, tol_, niter, ncv, converged, ik, d
     end if
   end do
 
+  !Fill unconverged states
+  do j = converged + 1, st%nst
+    do i = 1, gr%mesh%np
+!       st%X(psi)(i, 1, j, ik) = R_TOTYPE(M_ONE)
+      psi(i,1) = R_TOTYPE(M_ONE) 
+    end do
+    call states_set_state(st, gr%mesh, j, ik, psi)
+
+    st%eigenval(j, ik) = M_HUGE
+    if(associated(st%zeigenval%Im))then 
+      st%zeigenval%Im(j, ik) = M_HUGE
+    end if
+    diff(j) = M_HUGE
+  end do
+
+
   SAFE_DEALLOCATE_A(ax)
   SAFE_DEALLOCATE_A(d)
   SAFE_DEALLOCATE_A(resid)
@@ -163,6 +188,9 @@ subroutine X(eigen_solver_arpack)(gr, st, hm, tol_, niter, ncv, converged, ik, d
   SAFE_DEALLOCATE_A(workev)
   SAFE_DEALLOCATE_A(workl)
   SAFE_DEALLOCATE_A(select)
+  
+  SAFE_DEALLOCATE_A(psi)
+  
 #if defined(R_TCOMPLEX)
   SAFE_DEALLOCATE_A(rwork)
   SAFE_DEALLOCATE_A(zd)  

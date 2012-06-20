@@ -140,25 +140,9 @@ contains
     end if
 
    
-    cL_rr (1,1) = M_z0 
-    cL_rr (2,2) = M_z0
-    cL_rr (1,2) = M_z1 * kinetic_phase
-    cL_rr (2,1) = M_z1 * kinetic_phase
-        
-!     call zmout(6, 2, 2, cL_rr, 2, -6, 'pauli scaled')
-    
-    call lalg_eigensolve_nonh(2, cL_rr, manyzeigenval, errcode, 'R')
-    if (errcode.ne.0) then
-       print*, 'something went wrong, errcode', errcode
-    end if
-    
-    print *,"eigs", manyzeigenval(1:2)
-!     call zmout(6, 2, 2, cL_rr, 2, -6, 'pauli scaled vecs')
-
-!     cL_rr = h_rr
     cR_rr = h_rr
     
-!     call zmout(6, st%nst, st%nst, h_rr, gr%mesh%np, -6, 'HRR')
+    call zmout(6, st%nst, st%nst, h_rr, gr%mesh%np, -6, 'HRR')
     
     call lalg_eigensolve_nonh(gr%mesh%np, cR_rr, manyzeigenval, errcode, 'R')
     if (errcode.ne.0) then
@@ -174,9 +158,9 @@ contains
     tmp = sum(manyzeigenval(:))
     print *, "the trace vals!!", tmp, "the trace H", tmp2
 
-    !sortkey(:) = -imag(manyzeigenval(:))
+    sortkey(:) = -imag(manyzeigenval(:))
     !sortkey(:) = real(manyzeigenval(:)) - imag(manyzeigenval(:))
-    sortkey(:) = real(manyzeigenval(:))
+!     sortkey(:) = real(manyzeigenval(:))
 !     sortkey(:) = abs(manyzeigenval(:))
 
     call sort(sortkey, sortindices)

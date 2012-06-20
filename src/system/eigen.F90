@@ -228,7 +228,7 @@ contains
       !% twice the number of eigenvectors (which is the number of states) 
       !%End 
       call parse_integer(datasets_check('EigenSolverArnoldiVectors'), 2*st%nst, eigens%arnoldi_vectors) 
-      if(eigens%arnoldi_vectors-st%nst < 2) call input_error('EigenSolverArnoldiVectors') 
+      if(eigens%arnoldi_vectors-st%nst < (M_TWO - st%nst)) call input_error('EigenSolverArnoldiVectors') 
       	 	 
       ! Arpack is not working in some cases, so let us check. 
       if(st%d%ispin .eq. SPINORS) then 
@@ -440,10 +440,10 @@ contains
 #endif 
         end select
 
-        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK &
-          .and. eigens%es_type /= RS_DIRECT ) then
-        
-          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))  
+        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS .and.eigens%es_type /= RS_ARPACK &
+          .and.eigens%es_type /= RS_DIRECT ) then
+          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+         
         end if
 
       end if
@@ -455,8 +455,8 @@ contains
     ! Moreover the eigenvalues ordering need to be imposed as there is no eigensolver 
     ! supporting this ordering (yet).
     if(hm%cmplxscl) then !cmplxscl
+      call states_sort_complex(gr%mesh, st, eigens%diff )
       call states_orthogonalize_cproduct(st, gr%mesh)
-      call states_sort_complex(st, gr%mesh)
     end if
     
     if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens)) then
