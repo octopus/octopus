@@ -125,7 +125,7 @@ subroutine zpoisson1D_solve(this, pot, rho, theta)
         pvec(jp) = rho(jp)/sqrt(this%poisson_soft_coulomb_param**2 +&
          (xx-yy)**2 * exp(M_zI*M_TWO*theta))
       end do
-      tmp = dmf_integrate(this%der%mesh, pvec)
+      tmp = zmf_integrate(this%der%mesh, pvec)
       if (this%der%mesh%vp%part(ip).eq.this%der%mesh%vp%partno) then
         pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
       end if
