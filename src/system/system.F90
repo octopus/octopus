@@ -211,8 +211,11 @@ contains
     calc_eigenval_ = optional_default(calc_eigenval, .true.)
 
     call states_fermi(sys%st, sys%gr%mesh)
-    call density_calc(sys%st, sys%gr, sys%st%rho)
-
+    if(hm%cmplxscl) then
+      call density_calc(sys%st, sys%gr, sys%st%zrho%Re, sys%st%zrho%Im)
+    else
+      call density_calc(sys%st, sys%gr, sys%st%rho)
+    end if
     call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_) ! get potentials
 
     if(sys%st%restart_reorder_occs .and. .not. sys%st%fromScratch) then
