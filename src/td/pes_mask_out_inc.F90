@@ -421,8 +421,8 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, dir)
   integer              :: ist, ik, ii, ix, iy, iz, iunit,idim
   FLOAT                ::  KK(3),temp, scale
   integer              :: ll(3)
-  integer, allocatable :: idx(:)
-  FLOAT, allocatable   :: Lk_(:)
+  integer, allocatable :: idx(:,:)
+  FLOAT, allocatable   :: Lk_(:,:)
 
 
   PUSH_SUB(PES_mask_dump_full_mapM_cut)
@@ -434,27 +434,30 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, dir)
     ll(ii) = size(PESK,ii) 
   end do
   
-  SAFE_ALLOCATE(idx(maxval(ll(:))))
-  SAFE_ALLOCATE(Lk_(size(Lk,1)))
+  SAFE_ALLOCATE(idx(maxval(ll(:)), 3))
+  SAFE_ALLOCATE(Lk_(size(Lk,1), 3))
   
-  Lk_= Lk
-  call sort(Lk_, idx) !We need to sort the k-vectors in order to dump in gnuplot format
-  
+
+  do ii = 1, 3
+    Lk_(:,ii) = Lk(:)
+    call sort(Lk_(1:ll(ii), ii), idx(1:ll(ii), ii)) !We need to sort the k-vectors in order to dump in gnuplot format
+  end do  
+    
   do ix = 1, ll(1)
-    KK(1) = Lk_(ix)
+    KK(1) = Lk_(ix, 1)
     do iy = 1, ll(2)
-      KK(2) = Lk_(iy)
+      KK(2) = Lk_(iy, 2)
       
 
       select case (dir)
         case (1)
-          temp = PESK(idx(ll(dir)/2 + 1), idx(ix), idx(iy))    
+          temp = PESK(idx(ll(dir)/2 + 1, 1), idx(ix, 2), idx(iy, 3))    
     
         case (2)
-          temp = PESK(idx(ix), idx(ll(dir)/2 + 1), idx(iy))    
+          temp = PESK(idx(ix, 1), idx(ll(dir)/2 + 1, 2), idx(iy, 3))    
       
         case (3)
-          temp = PESK(idx(ix), idx(iy), idx(ll(dir)/2 + 1))    
+          temp = PESK(idx(ix, 1), idx(iy, 2), idx(ll(dir)/2 + 1, 3))    
     
       end select
         
