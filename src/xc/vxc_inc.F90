@@ -90,7 +90,7 @@ subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltax
   ! is there anything to do ?
   families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA
   if(iand(xcs%family, families) == 0) then
-    POP_SUB(xc_get_vxc)
+    POP_SUB(dxc_get_vxc)
     call profiling_out(prof)
     return
   endif
