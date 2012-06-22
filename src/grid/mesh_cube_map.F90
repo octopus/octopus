@@ -79,8 +79,8 @@ contains
           if(any(i1(1:2) /= i2(1:2)) .or. i1(3) /= i2(3) + 1) then
             INCR(this%nmap, 1)
             if(step == 2) then
-              this%map(1:3, this%nmap) = 0
               call index_to_coords(idx, idx%sb%dim, ip, this%map(1:, this%nmap))
+              this%map(idx%sb%dim + 1:3, this%nmap) = 0
               this%map(MCM_POINT, this%nmap) = ip
               this%map(MCM_COUNT, this%nmap) = 1
             end if
