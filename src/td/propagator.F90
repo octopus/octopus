@@ -88,7 +88,7 @@ module propagator_m
     PROP_QOCT_TDDFT_PROPAGATOR_2 = 11, &
     PROP_CAETRS                  = 12
 
-  FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
+  FLOAT :: scf_threshold = CNST(1.0e-3)
 
   type propagator_t
     integer             :: method           !< Which evolution method to use.
@@ -369,9 +369,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_set_scf_prop(tr)
+  subroutine propagator_set_scf_prop(tr, threshold)
     type(propagator_t), intent(inout) :: tr
+    FLOAT, intent(in), optional :: threshold
     tr%scf_propagation_steps = huge(1)
+    if(present(threshold)) then
+      scf_threshold = threshold
+    end if
   end subroutine propagator_set_scf_prop
   ! ---------------------------------------------------------
 
@@ -485,6 +489,9 @@ contains
       end if
     end if
 
+    SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin))
+    vaux(1:gr%mesh%np, 1:st%d%nspin) = hm%vhxc(1:gr%mesh%np, 1:st%d%nspin)
+
     if(.not. propagator_requires_vks(tr)) then
       SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
       call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), vold)
@@ -512,7 +519,6 @@ contains
     if(present(scsteps)) scsteps = 1
 
     if(self_consistent) then
-      SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin))
 
       ! First, compare the new potential to the extrapolated one.
       call density_calc(st, gr, st%rho)
@@ -572,10 +578,10 @@ contains
       end if
 
       SAFE_DEALLOCATE_A(zpsi1)
-      SAFE_DEALLOCATE_A(vaux)
     end if
     
     SAFE_DEALLOCATE_A(vold)
+    SAFE_DEALLOCATE_A(vaux)
     
     POP_SUB(propagator_dt)
     call profiling_out(prof)

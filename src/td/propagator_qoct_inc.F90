@@ -30,7 +30,7 @@
     PUSH_SUB(td_qoct_tddft_propagator)
     
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
-      call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t-dt/M_TWO, hm%vhxc(:, :))
+      call interpolate( (/t, t-dt/), tr%v_old(:, :, 0:1), t-dt/M_TWO, hm%vhxc(:, :))
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = t-dt/M_TWO)
