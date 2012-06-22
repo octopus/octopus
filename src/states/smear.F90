@@ -228,7 +228,10 @@ contains
       do ist = 1, nst
         do ik = 1, nik
           eigenval_list(iter) = eigenvalues(ist, ik)
-          if(cmplxscl) Imeigenval_list(iter) = Imeigenvalues(ist, ik)
+          if(cmplxscl) then
+            Imeigenval_list(iter) = M_ZERO ! this is only necessary to keep valgrind and gfortran-4.4 happy
+            Imeigenval_list(iter) = Imeigenvalues(ist, ik)
+          end if
           k_list(iter) = ik
           reorder(iter) = iter
           iter = iter + 1
