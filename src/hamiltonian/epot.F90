@@ -545,7 +545,6 @@ contains
     type(states_t),        intent(inout) :: st
     logical,               intent(in)    :: cmplxscl  
 
-    FLOAT   :: time_
     integer :: ia, ip
     type(atom_t),      pointer :: atm
     type(mesh_t),      pointer :: mesh

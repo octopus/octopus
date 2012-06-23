@@ -243,11 +243,6 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
 
   integer ::  ns, idim, ll, mm, nc, is
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
-  R_TYPE, allocatable :: uvpsi(:, :, :, :)
-#if defined(HAVE_MPI)
-  integer :: size
-  R_TYPE, allocatable :: uvpsi_tmp(:, :, :, :)
-#endif
   type(mesh_t), pointer :: mesh
 
   PUSH_SUB(X(projector_matrix_element))
