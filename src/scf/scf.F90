@@ -24,7 +24,7 @@ module scf_m
   use datasets_m
   use density_m
   use eigensolver_m
-  use energy_m
+  use energy_calc_m
   use forces_m
   use geometry_m
   use global_m
@@ -600,7 +600,7 @@ contains
       evsum_out = states_eigenvalues_sum(st)
 
       ! recalculate total energy
-      call total_energy(hm, gr, st, iunit = 0)
+      call energy_calc_total(hm, gr, st, iunit = 0)
 
       ! compute convergence criteria
       scf%abs_dens = M_ZERO
@@ -933,7 +933,7 @@ contains
         iunit = 0
       end if
 
-      call total_energy(hm, gr, st, iunit, full = .true.)
+      call energy_calc_total(hm, gr, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then

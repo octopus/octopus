@@ -23,7 +23,7 @@ module gcm_m
   use global_m
   use datasets_m
   use density_m
-  use energy_m
+  use energy_calc_m
   use messages_m
   use parser_m
   use unit_m
@@ -137,8 +137,8 @@ module gcm_m
       call density_calc(phi(i), gr, phi(i)%rho)
 
       ! First, the one-body part of the total energy:
-      etot(i) = delectronic_energy(hm, gr%der, phi(i), TERM_KINETIC) + &
-        delectronic_energy(hm, gr%der, phi(i), TERM_LOCAL_POTENTIAL + TERM_NON_LOCAL_POTENTIAL)
+      etot(i) = denergy_calc_electronic(hm, gr%der, phi(i), TERM_KINETIC) + &
+        denergy_calc_electronic(hm, gr%der, phi(i), TERM_LOCAL_POTENTIAL + TERM_NON_LOCAL_POTENTIAL)
 
       ! Coulomb contribution.
       do j = 1, gr%mesh%np

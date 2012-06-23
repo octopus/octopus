@@ -24,7 +24,7 @@ module v_ks_m
   use datasets_m
   use density_m
   use derivatives_m
-  use energy_m
+  use energy_calc_m
   use geometry_m
   use global_m
   use grid_m
@@ -408,7 +408,7 @@ contains
         ! We know the eigenvalues.
         st%eigenval(1:st%nst, 1:st%d%nik) = st%ob_eigenval(1:st%nst, 1:st%d%nik)
       else
-        call energy_calculate_eigenvalues(hm, ks%gr%der, st)
+        call energy_calc_eigenvalues(hm, ks%gr%der, st)
       end if
       
     end if

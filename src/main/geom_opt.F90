@@ -22,7 +22,7 @@
 module geom_opt_m
   use datasets_m
   use density_m
-  use energy_m
+  use energy_calc_m
   use epot_m
   use geometry_m
   use global_m
@@ -352,7 +352,7 @@ contains
     call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%ks, g_opt%hm, g_opt%st, calc_eigenval = .true.)
-    call total_energy(g_opt%hm, g_opt%syst%gr, g_opt%st, -1)
+    call energy_calc_total(g_opt%hm, g_opt%syst%gr, g_opt%st)
 
     ! do SCF calculation
     call scf_run(g_opt%scfv, g_opt%syst%gr, g_opt%geo, g_opt%st, &

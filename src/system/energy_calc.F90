@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module energy_m
+module energy_calc_m
   use batch_m
   use berry_m
   use datasets_m
@@ -48,10 +48,10 @@ module energy_m
 
   private
   public ::                      &
-    total_energy,                &
-    delectronic_energy,          &
-    zelectronic_energy,          &
-    energy_calculate_eigenvalues
+    energy_calc_total,           &
+    denergy_calc_electronic,     &
+    zenergy_calc_electronic,     &
+    energy_calc_eigenvalues
 
 contains
 
@@ -59,18 +59,18 @@ contains
   !> This subroutine calculates the total energy of the system. Basically, it
   !! adds up the KS eigenvalues, and then it subtracts whatever double
   !! counts exist (see TDDFT theory for details).
-  subroutine total_energy(hm, gr, st, iunit, full)
+  subroutine energy_calc_total(hm, gr, st, iunit, full)
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
-    integer,             intent(in)    :: iunit
+    integer, optional,   intent(in)    :: iunit
     logical, optional,   intent(in)    :: full
 
     logical :: full_, cmplxscl
     FLOAT :: evxctau, Imevxctau
     CMPLX :: etmp
 
-    PUSH_SUB(total_energy)
+    PUSH_SUB(energy_calc_total)
 
     cmplxscl = hm%cmplxscl
     
@@ -85,19 +85,20 @@ contains
     Imevxctau = M_ZERO
     if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK).and.(hm%theory_level.ne.CLASSICAL)) then
       if(states_are_real(st)) then
-        hm%energy%kinetic  = delectronic_energy(hm, gr%der, st, terms = TERM_KINETIC)
-        hm%energy%extern   = delectronic_energy(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
-        evxctau = delectronic_energy(hm, gr%der, st, terms = TERM_MGGA)
+        hm%energy%kinetic  = denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
+        hm%energy%extern   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
+        evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       else
-        etmp  = zelectronic_energy(hm, gr%der, st, terms = TERM_KINETIC, cproduct = hm%cmplxscl)
+        etmp  = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC, cproduct = hm%cmplxscl)
         hm%energy%kinetic   = real(etmp)
         hm%energy%Imkinetic = aimag(etmp)
          
-        etmp  = zelectronic_energy(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL, cproduct = hm%cmplxscl)
+        etmp  = zenergy_calc_electronic(hm, gr%der, st, &
+          terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL, cproduct = hm%cmplxscl)
         hm%energy%extern   =  real(etmp)
         hm%energy%Imextern =  aimag(etmp)
         
-        etmp = zelectronic_energy(hm, gr%der, st, terms = TERM_MGGA, cproduct = hm%cmplxscl)
+        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA, cproduct = hm%cmplxscl)
         
         evxctau   = real(etmp)
         Imevxctau = aimag(etmp)
@@ -155,7 +156,7 @@ contains
       hm%energy%berry = M_ZERO
     endif
 
-    if (iunit > 0) then
+    if (optional_default(iunit, -1) > 0) then
       if(cmplxscl) then 
         write(message(1), '(20x,a,a)') '       Real       ','    Imaginary     '
         call messages_info(1, iunit)
@@ -197,18 +198,18 @@ contains
       endif  
     end if
 
-    POP_SUB(total_energy)
-  end subroutine total_energy
+    POP_SUB(energy_calc_total)
+  end subroutine energy_calc_total
 
   ! --------------------------------------------------------------------
   
-  subroutine energy_calculate_eigenvalues(hm, der, st, time)
+  subroutine energy_calc_eigenvalues(hm, der, st, time)
     type(hamiltonian_t), intent(inout) :: hm
     type(derivatives_t), intent(inout) :: der
     type(states_t),      intent(inout) :: st
     FLOAT,   optional,   intent(in)    :: time
     
-    PUSH_SUB(energy_calculate_eigenvalues)
+    PUSH_SUB(energy_calc_eigenvalues)
 
     if(states_are_real(st)) then
       call dcalculate_eigenvalues(hm, der, st, time)
@@ -216,18 +217,18 @@ contains
       call zcalculate_eigenvalues(hm, der, st, time)
     end if
 
-    POP_SUB(energy_calculate_eigenvalues)
-  end subroutine energy_calculate_eigenvalues
+    POP_SUB(energy_calc_eigenvalues)
+  end subroutine energy_calc_eigenvalues
 
 #include "undef.F90"
 #include "real.F90"
-#include "energy_inc.F90"
+#include "energy_calc_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "energy_inc.F90"
+#include "energy_calc_inc.F90"
 
-end module energy_m
+end module energy_calc_m
 
 !! Local Variables:
 !! mode: f90

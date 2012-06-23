@@ -25,7 +25,7 @@ module td_m
   use cpmd_m
   use datasets_m
   use density_m
-  use energy_m
+  use energy_calc_m
   use epot_m
   use forces_m
   use gauge_field_m
@@ -293,7 +293,7 @@ contains
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval = update_energy, time = iter*td%dt, calc_energy = update_energy)
 
         ! Get the energies.
-        if(update_energy) call total_energy(hm, sys%gr, st, iunit = -1)
+        if(update_energy) call energy_calc_total(hm, sys%gr, st, iunit = -1)
 
         if (td%dynamics == CP) then
           if(states_are_real(st)) then
@@ -604,7 +604,7 @@ contains
       end if
 #endif
       call hamiltonian_span(hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
-      call total_energy(hm, gr, st, -1)
+      call energy_calc_total(hm, gr, st)
 
       POP_SUB(td_run.init_wfs)
     end subroutine init_wfs

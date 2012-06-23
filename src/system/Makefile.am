@@ -22,7 +22,7 @@
 noinst_LIBRARIES = libsystem.a
 
 libsystem_a_SOURCES =         \
-	energy.F90            \
+	energy_calc.F90       \
 	preconditioners.F90   \
 	linear_solver.F90     \
 	eigen_cg.F90          \
@@ -43,7 +43,7 @@ libsystem_a_SOURCES =         \
 	magnetic.F90
 
 noinst_HEADERS =                        \
-	energy_inc.F90                  \
+	energy_calc_inc.F90             \
 	xc_kli_inc.F90                  \
 	xc_oep_x_inc.F90                \
 	xc_oep_sic_inc.F90              \
@@ -81,13 +81,13 @@ eigen.o: eigen.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 eigen_mg_inc.F90 e
 eigen_rmmdiis.o: eigen_rmmdiis.F90 eigen_rmmdiis_inc.F90 subspace.o
 xc_oep.o : xc_oep.F90 xc_oep_inc.F90 xc_oep_sic_inc.F90 xc_oep_x_inc.F90 xc_kli_inc.F90 linear_solver.o 
 xc_ks_inversion.o : eigen.o
-v_ks.o : v_ks.F90 xc_oep.o energy.o magnetic.o xc_ks_inversion.o
-system.o : system.F90 v_ks.o energy.o elf.o output.o
+v_ks.o : v_ks.F90 xc_oep.o energy_calc.o magnetic.o xc_ks_inversion.o
+system.o : system.F90 v_ks.o energy_calc.o elf.o output.o
 pert.o : pert.F90 pert_inc.F90
 output.o : output.F90 output_states_inc.F90 output_h_inc.F90 output_linear_response_inc.F90 output_etsf_inc.F90 output_berkeleygw_inc.F90 output_me.o elf.o magnetic.o
 output_me.o: output_me_inc.F90
 exponential.o : exponential.F90
-energy.o : energy.F90 energy_inc.F90
+energy_calc.o : energy_calc.F90 energy_calc_inc.F90
 forces.o : forces.F90 forces_inc.F90
 elf.o : elf.F90
 magnetic.o : magnetic.F90

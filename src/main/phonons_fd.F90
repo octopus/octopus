@@ -22,7 +22,7 @@
 module phonons_fd_m
   use datasets_m
   use density_m
-  use energy_m
+  use energy_calc_m
   use epot_m
   use geometry_m
   use global_m
@@ -161,7 +161,7 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, hm, st, calc_eigenval=.true.)
-        call total_energy (hm, gr, st, -1)
+        call energy_calc_total (hm, gr, st)
         call scf_run(scf, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces0(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
@@ -173,7 +173,7 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, hm, st, calc_eigenval=.true.)
-        call total_energy(hm, gr, st, -1)
+        call energy_calc_total(hm, gr, st)
         call scf_run(scf, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)

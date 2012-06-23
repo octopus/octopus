@@ -22,7 +22,7 @@
 module one_shot_m
   use datasets_m
   use density_m
-  use energy_m
+  use energy_calc_m
   use epot_m
   use geometry_m
   use global_m
@@ -81,11 +81,11 @@ contains
     case(KOHN_SHAM_DFT)
       ! kinetic energy + local potential + Hartree + xc
       if(states_are_real(sys%st)) then
-        e_t     = delectronic_energy(hm, sys%gr%der, sys%st, terms = TERM_KINETIC)
-        e_ext   = delectronic_energy(hm, sys%gr%der, sys%st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
+        e_t     = denergy_calc_electronic(hm, sys%gr%der, sys%st, terms = TERM_KINETIC)
+        e_ext   = denergy_calc_electronic(hm, sys%gr%der, sys%st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
       else
-        e_t     = zelectronic_energy(hm, sys%gr%der, sys%st, terms = TERM_KINETIC)
-        e_ext   = zelectronic_energy(hm, sys%gr%der, sys%st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
+        e_t     = zenergy_calc_electronic(hm, sys%gr%der, sys%st, terms = TERM_KINETIC)
+        e_ext   = zenergy_calc_electronic(hm, sys%gr%der, sys%st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
       end if
 
     case(INDEPENDENT_PARTICLES)

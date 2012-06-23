@@ -22,7 +22,7 @@
 module ground_state_m
   use calc_mode_m
   use datasets_m
-  use energy_m
+  use energy_calc_m
   use global_m
   use grid_m
   use hamiltonian_m

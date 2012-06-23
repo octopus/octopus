@@ -23,7 +23,7 @@ module opt_control_propagation_m
   use controlfunction_m
   use datasets_m
   use density_m
-  use energy_m
+  use energy_calc_m
   use epot_m
   use excited_states_m
   use forces_m
@@ -194,7 +194,7 @@ module opt_control_propagation_m
       ! update
       call density_calc(psi, gr, psi%rho)
       call v_ks_calc(sys%ks, hm, psi, time = i*td%dt)
-      call total_energy(hm, sys%gr, psi, -1)
+      call energy_calc_total(hm, sys%gr, psi)
 
       if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, psi)
 

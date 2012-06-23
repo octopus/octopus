@@ -91,7 +91,7 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
 end subroutine X(calculate_eigenvalues)
 
 ! ---------------------------------------------------------
-R_TYPE function X(electronic_energy)(hm, der, st, terms, cproduct) result(energy)
+R_TYPE function X(energy_calc_electronic)(hm, der, st, terms, cproduct) result(energy)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
@@ -105,7 +105,7 @@ R_TYPE function X(electronic_energy)(hm, der, st, terms, cproduct) result(energy
   
   cproduct_ = optional_default(cproduct, .false.)
  
-  PUSH_SUB(X(electronic_energy))
+  PUSH_SUB(X(energy_calc_electronic))
 
   SAFE_ALLOCATE(tt(st%st_start:st%st_end, 1:st%d%nik))
 
@@ -133,8 +133,8 @@ R_TYPE function X(electronic_energy)(hm, der, st, terms, cproduct) result(energy
 #endif  
   
   SAFE_DEALLOCATE_A(tt)
-  POP_SUB(X(electronic_energy))
-end function X(electronic_energy)
+  POP_SUB(X(energy_calc_electronic))
+end function X(energy_calc_electronic)
 
 !! Local Variables:
 !! mode: f90

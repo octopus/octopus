@@ -24,7 +24,7 @@ module unocc_m
   use density_m
   use derivatives_m
   use eigensolver_m
-  use energy_m
+  use energy_calc_m
   use epot_m
   use global_m
   use grid_m
