@@ -24,6 +24,7 @@ module energy_calc_m
   use berry_m
   use datasets_m
   use derivatives_m
+  use energy_m
   use gauge_field_m
   use geometry_m
   use global_m
