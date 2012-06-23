@@ -56,7 +56,7 @@ Usage: oct-run_testsuite [options]
      -c            delete all .log files and work directories after the run
      -m ADDRESS    mail report to address
 
-Report bugs to <appel@physik.fu-berlin.de>.
+Report bugs to <octopus-devel@tddft.org>.
 EOF
  exit 0;
 }
@@ -92,7 +92,12 @@ function queue {
 }
 
 function inqueue {
-   printf "In execution: $OUTLIST\n\n"
+  if [ $OCT_TEST_NJOBS -gt 1 ]
+  then
+    printf "In execution: $OUTLIST\n\n"
+  else
+    printf "\n"
+  fi
 }
 
 
@@ -141,6 +146,8 @@ else
     preserve_opt="-p"
 fi
 
+test_index=0
+
 for y in $tests; do
     total_tests=$((total_tests + 1))
     test_name=`echo $y | sed "s|$testsuite/||"`
@@ -158,10 +165,9 @@ for y in $tests; do
 	suffix_opt=""
     fi
     if [ -d "${bin_directory}" ]; then
-	if [ $OCT_TEST_NJOBS -gt 1 ]
-	then
-	    echo Running test: $test_name
-	fi
+        test_index=$(($test_index + 1))
+	echo Starting test $test_index: $test_name
+
 	CMD $runtest_directory/oct-run_regression_test.pl -l \
 	    $preserve_opt $suffix_opt -D $bin_directory -f $y \
 	    > ${ybase}.log 2>&1 &
