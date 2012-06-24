@@ -54,6 +54,9 @@ subroutine FNAME(swap_1)(n1, dx, dy)
 
   if (n1 < 1) return
 
+  ASSERT(ubound(dx, dim = 1) >= n1)
+  ASSERT(ubound(dy, dim = 1) >= n1)
+
   call blas_swap(n1, dx(1), 1, dy(1), 1)
 
 end subroutine FNAME(swap_1)
@@ -66,6 +69,8 @@ subroutine FNAME(swap_2)(n1, n2, dx, dy)
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
+  ASSERT(ubound(dx, dim = 2) >= n2)
+  ASSERT(ubound(dy, dim = 2) >= n2)
 
   call blas_swap(n1*n2, dx(1,1), 1, dy(1,1), 1)
 
@@ -81,6 +86,8 @@ subroutine FNAME(swap_3)(n1, n2, n3, dx, dy)
   ASSERT(ubound(dy, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) == n2)
   ASSERT(ubound(dy, dim = 2) == n2)
+  ASSERT(ubound(dx, dim = 3) >= n3)
+  ASSERT(ubound(dy, dim = 3) >= n3)
 
   call blas_swap(n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
 
@@ -98,6 +105,8 @@ subroutine FNAME(swap_4)(n1, n2, n3, n4, dx, dy)
   ASSERT(ubound(dy, dim = 2) == n2)
   ASSERT(ubound(dx, dim = 3) == n3)
   ASSERT(ubound(dy, dim = 3) == n3)
+  ASSERT(ubound(dx, dim = 4) >= n4)
+  ASSERT(ubound(dy, dim = 4) >= n4)
 
   call blas_swap(n1*n2*n3*n4, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
@@ -111,6 +120,8 @@ subroutine FNAME(scal_1)(n1, da, dx)
   integer, intent(in)    :: n1
   TYPE1,   intent(in)    :: da
   TYPE1,   intent(inout) :: dx(:)
+
+  ASSERT(ubound(dx, dim = 1) >= n1)
 
   if (n1 < 1) return
 
@@ -126,6 +137,7 @@ subroutine FNAME(scal_2)(n1, n2, da, dx)
   if (n1*n2 < 1) return
 
   ASSERT(ubound(dx, dim = 1) == n1)
+  ASSERT(ubound(dx, dim = 2) >= n2)
 
   call blas_scal(n1*n2, da, dx(1,1), 1)
 
@@ -140,6 +152,7 @@ subroutine FNAME(scal_3)(n1, n2, n3, da, dx)
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) == n2)
+  ASSERT(ubound(dx, dim = 3) >= n3)
 
   call blas_scal(n1*n2*n3, da, dx(1,1,1), 1)
 
@@ -155,6 +168,7 @@ subroutine FNAME(scal_4)(n1, n2, n3, n4, da, dx)
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) == n2)
   ASSERT(ubound(dx, dim = 3) == n3)
+  ASSERT(ubound(dx, dim = 4) >= n4)
 
   call blas_scal(n1*n2*n3*n4, da, dx(1,1,1,1), 1)
 
@@ -165,6 +179,8 @@ subroutine FNAME(scal_5)(n1, da, dx)
   integer, intent(in)    :: n1
   TYPE2,   intent(in)    :: da
   TYPE1,   intent(inout) :: dx(:)
+
+  ASSERT(ubound(dx, dim = 1) >= n1)
 
   if (n1 < 1) return
 
@@ -182,6 +198,9 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
   TYPE1,   intent(in)    :: da
   TYPE1,   intent(in)    :: dx(:)
   TYPE1,   intent(inout) :: dy(:)
+
+  ASSERT(ubound(dx, dim = 1) >= n1)
+  ASSERT(ubound(dy, dim = 1) >= n1)
 
   if (n1 < 1) return
   
@@ -211,6 +230,8 @@ subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
+  ASSERT(ubound(dx, dim = 2) >= n2)
+  ASSERT(ubound(dy, dim = 2) >= n2)
 
   call blas_axpy(n1*n2, da, dx(1,1), 1, dy(1,1), 1)
 
@@ -237,7 +258,9 @@ subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
   ASSERT(ubound(dy, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) == n2)
   ASSERT(ubound(dy, dim = 2) == n2)
-  
+  ASSERT(ubound(dx, dim = 3) >= n3)
+  ASSERT(ubound(dy, dim = 3) >= n3)
+
   call blas_axpy(n1*n2*n3, da, dx(1,1,1), 1, dy(1,1,1), 1)
 
 #if TYPE == 1 || TYPE == 2
@@ -265,6 +288,8 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   ASSERT(ubound(dy, dim = 2) == n2)
   ASSERT(ubound(dx, dim = 3) == n3)
   ASSERT(ubound(dy, dim = 3) == n3)
+  ASSERT(ubound(dx, dim = 4) >= n4)
+  ASSERT(ubound(dy, dim = 4) >= n4)
 
   call blas_axpy(n1*n2*n3*n4, da, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
@@ -284,6 +309,9 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
   TYPE2,   intent(in)    :: da
   TYPE1,   intent(in)    :: dx(:)
   TYPE1,   intent(inout) :: dy(:)
+
+  ASSERT(ubound(dx, dim = 1) >= n1)
+  ASSERT(ubound(dy, dim = 1) >= n1)
 
   if (n1 < 1) return
   
@@ -310,6 +338,8 @@ subroutine FNAME(axpy_6)(n1, n2, da, dx, dy)
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
+  ASSERT(ubound(dx, dim = 2) >= n2)
+  ASSERT(ubound(dy, dim = 2) >= n2)
 
   call blas_axpy(n1*n2, da, dx(1, 1), dy(1, 1))
 
@@ -332,6 +362,9 @@ subroutine FNAME(copy_1)(n1, dx, dy)
 #ifdef HAVE_OPENMP
   integer :: ini, nn_loc
 #endif
+
+  ASSERT(ubound(dx, dim = 1) >= n1)
+  ASSERT(ubound(dy, dim = 1) >= n1)
 
   if (n1 < 1) return
 
@@ -356,6 +389,8 @@ subroutine FNAME(copy_2)(n1, n2, dx, dy)
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
+  ASSERT(ubound(dx, dim = 2) >= n2)
+  ASSERT(ubound(dy, dim = 2) >= n2)
 
   call blas_copy(n1*n2, dx(1,1), 1, dy(1,1), 1)
 
@@ -374,6 +409,10 @@ subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
+  ASSERT(ubound(dx, dim = 2) == n2)
+  ASSERT(ubound(dy, dim = 2) == n2)
+  ASSERT(ubound(dx, dim = 3) >= n3)
+  ASSERT(ubound(dy, dim = 3) >= n3)
 
   call blas_copy (n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
 
@@ -392,6 +431,12 @@ subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
  
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
+  ASSERT(ubound(dx, dim = 2) == n2)
+  ASSERT(ubound(dy, dim = 2) == n2)
+  ASSERT(ubound(dx, dim = 3) == n3)
+  ASSERT(ubound(dy, dim = 3) == n3)
+  ASSERT(ubound(dx, dim = 4) >= n4)
+  ASSERT(ubound(dy, dim = 4) >= n4)
 
   call blas_copy (n1*n2*n3*n4, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
@@ -406,6 +451,8 @@ end subroutine FNAME(copy_4)
 TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   integer, intent(in) :: n
   TYPE1,   intent(in) :: dx(:)
+
+  ASSERT(ubound(dx, dim = 1) >= n)
 
   nrm2 = CNST(0.0)
   if (n < 1) return

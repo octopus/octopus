@@ -317,9 +317,9 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     call messages_warning(1)
   end if
   call X(block_matr_mul)(psi, ritz_vec, tmp, xpsi=all_ev, xres=all_ev)
-  call lalg_copy(nps*lnst, tmp(:, 1, st_start), psi(:, 1, st_start))
+  call lalg_copy(gr%mesh%np_part, st%d%dim, lnst, tmp(:, :, st_start:), psi(:, :, st_start:))
   call X(block_matr_mul)(h_psi, ritz_vec, tmp, xpsi=all_ev, xres=all_ev)
-  call lalg_copy(nps*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
+  call lalg_copy(gr%mesh%np_part, st%d%dim, lnst, tmp(:, :, st_start:), h_psi(:, :, st_start:))
   SAFE_DEALLOCATE_A(ritz_vec)
 
   ! This is the big iteration loop.
@@ -357,7 +357,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     do i = 1, lnuc
       ist = luc(i)
       call X(preconditioner_apply)(pre, gr, hm, ik, res(:, :, ist), tmp(:, :, ist))
-      call lalg_copy(nps, tmp(:, 1, ist), res(:, 1, ist))
+      call lalg_copy(gr%mesh%np_part, st%d%dim, tmp(:, :, ist), res(:, :, ist))
     end do
 
     ! Apply the constraints to the residuals.
@@ -429,11 +429,11 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
         end do
         call X(block_matr_mul)(dir, nuc_tmp, tmp, xpsi=UC, xres=UC)
         do i = 1, lnuc
-          call lalg_copy(nps, tmp(:, 1, luc(i)), dir(:, 1, luc(i)))
+          call lalg_copy(gr%mesh%np_part, st%d%dim, tmp(:, :, luc(i)), dir(:, :, luc(i)))
         end do
         call X(block_matr_mul)(h_dir, nuc_tmp, tmp, xpsi=UC, xres=UC)
         do i = 1, lnuc
-          call lalg_copy(nps, tmp(:, 1, luc(i)), h_dir(:, 1, luc(i)))
+          call lalg_copy(gr%mesh%np_part, st%d%dim, tmp(:, :, luc(i)), h_dir(:, :, luc(i)))
         end do
       end if
     end if
@@ -509,9 +509,9 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! h_dir <- (H res) ritz_res + (H dir) ritz_dir
     if(iter > 1) then
       call X(block_matr_mul)(dir, ritz_dir, tmp, xpsi=UC, xres=all_ev)
-      call lalg_copy(nps*lnst, tmp(:, 1, st_start), dir(:, 1, st_start))
+      call lalg_copy(gr%mesh%np_part, st%d%dim, lnst, tmp(:, :, st_start:), dir(:, :, st_start:))
       call X(block_matr_mul)(h_dir, ritz_dir, tmp, xpsi=UC, xres=all_ev)
-      call lalg_copy(nps*lnst, tmp(:, 1, st_start), h_dir(:, 1, st_start))
+      call lalg_copy(gr%mesh%np_part, st%d%dim, lnst, tmp(:, :, st_start:), h_dir(:, :, st_start:))
       beta = R_TOTYPE(M_ONE)
     else
       beta = R_TOTYPE(M_ZERO)
@@ -523,13 +523,13 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! |psi> <- |psi> ritz_psi + dir
     ! h_psi <- (H |psi>) ritz_psi + H dir
     call X(block_matr_mul)(psi(:, :, :), ritz_psi, tmp, xpsi=all_ev, xres=all_ev)
-    call lalg_copy(nps*lnst, tmp(:, 1, st_start), psi(:, 1, st_start))
+    call lalg_copy(gr%mesh%np_part, st%d%dim, lnst, tmp(:, :, st_start:), psi(:, :, st_start:))
     do ist = st_start, st_end ! Leave this loop, otherwise xlf90 crashes.
-      call lalg_axpy(nps, M_ONE, dir(:, 1, ist), psi(:, 1, ist))
+      call lalg_axpy(gr%mesh%np_part, st%d%dim, M_ONE, dir(:, :, ist), psi(:, :, ist))
     end do
     call X(block_matr_mul)(h_psi, ritz_psi, tmp, xpsi=all_ev, xres=all_ev)
-    call lalg_copy(nps*lnst, tmp(:, 1, st_start), h_psi(:, 1, st_start))
-    call lalg_axpy(nps*lnst, M_ONE, h_dir(:, 1, st_start), h_psi(:, 1, st_start))
+    call lalg_copy(gr%mesh%np_part, st%d%dim, lnst, tmp(:, :, st_start:), h_psi(:, :, st_start:))
+    call lalg_axpy(gr%mesh%np_part, st%d%dim, lnst, R_TOTYPE(M_ONE), h_dir(:, :, st_start:), h_psi(:, :, st_start:))
 
     ! Gram matrices have to be reallocated later (because nuc changes).
     SAFE_DEALLOCATE_A(nuc_tmp)
@@ -684,7 +684,7 @@ contains
 
     call X(block_matr_mul)(vs, vv, tmp, xpsi=UC, xres=UC)
     do i = 1, lnuc
-      call lalg_copy(gr%mesh%np_part*st%d%dim, tmp(:, 1, luc(i)), vs(:, 1, luc(i)))
+      call lalg_copy(gr%mesh%np_part, st%d%dim, tmp(:, :, luc(i)), vs(:, :, luc(i)))
     end do
     SAFE_DEALLOCATE_A(vv)
 
