@@ -30,9 +30,8 @@ TDPolarizationDirection = 1
 TDPolarizationEquivAxes = 3
 
 PropagationSpectrumMaxEnergy = 40.0
-PropagationSpectrumEnergyStep = 0.1
 
 SpectrumMethod = compressed_sensing
-PropagationSpectrumDampMode = no
 
 ExperimentalFeatures = yes
+
