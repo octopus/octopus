@@ -600,11 +600,6 @@ module opt_control_propagation_m
         call controlfunction_to_h_val(par_chi, hm%ep, j+1)
       end if
     end do
-    if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
-      call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, hm, st)
-      call hamiltonian_update(hm, gr%mesh)
-    end if
 
     POP_SUB(update_hamiltonian_chi)
   end subroutine update_hamiltonian_chi
