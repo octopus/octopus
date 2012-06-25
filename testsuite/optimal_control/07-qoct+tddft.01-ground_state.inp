@@ -1,3 +1,4 @@
+#CalculationMode = opt_control
 CalculationMode = gs
 FromScratch = yes
 Dimensions = 2
@@ -5,10 +6,8 @@ Dimensions = 2
 omega = 0.25
 
 %Species
-"qd" | 1.0 | spec_user_defined | 2 | "0.5*omega^2*(x^2+0.9*y^2)"
+"qd" | 1.0 | spec_user_defined | 4 | "0.5*omega^2*(0.7*x^2+1.3*y^2)"
 %
-
-ExtraStates = 2
 
 %Coordinates
 "qd" | 0 | 0
@@ -20,13 +19,79 @@ Spacing = 0.5
 
 DerivativesOrder = 4
 
+# ------------------
+# GS RUN Parameters
+# ------------------
+
 EigenSolver = cg_new
-
 EigenSolverTolerance = 1e-10
-
 EigenSolverMaxIter = 250
-
 TypeOfMixing = broyden
 Mixing = 0.5
-
 ConvRelDens = 1.0e-7
+
+
+# ------------------
+# TD RUN Parameters
+# ------------------
+
+stime  = 2.0
+dt = 0.005
+TDPropagator = qoct_tddft_propagator
+TDExponentialMethod = taylor
+TDExponentialOrder = 4
+TDMaximumIter = stime/dt
+TDTimeStep = dt
+
+# Absorbing boundaries are probably not very meaningful in this calculation;
+# however I put them in order to have them in the testsuite.
+AbsorbingBoundaries = sin2
+ABWidth = 12.0
+ABHeight = -8.0
+
+
+#----------------------------
+# Laser field = Initial guess
+#-----------------------------
+
+freq = 0.0
+%TDExternalFields
+electric_field | 1 | 0 | 0 | freq | "envelope_function" 
+%
+
+%TDFunctions
+"envelope_function" | tdf_from_expr | "0.5*sqrt(2/stime)*sin((2*pi/stime)*1*t)"
+%
+
+# --------------
+# OCT parameters
+# --------------
+
+OCTControlRepresentation = control_function_parametrized
+
+OCTPenalty = 1.0
+OCTEps = 1.0e-3
+OCTMaxIter = 1
+
+OCTInitialState = oct_is_groundstate
+#OCTTargetOperator = oct_tg_gstransformation
+#%OCTTargetTransformStates
+#0 | 0 | 1
+#%
+OCTTargetOperator = oct_tg_local
+OCTLocalTarget = "step(x)"
+
+#%OCTTargetTransformStates
+#1 | 0 | 0
+#0 | 0 | 0
+#0 | 0 | 1
+#%
+
+OCTDirectStep = 0.1
+OCTNumberCheckPoints = 10
+OCTScheme = oct_algorithm_cg
+#OCTCheckGradient = 0.0001
+OCTControlFunctionOmegaMax = 8.0
+OCTControlFunctionRepresentation = control_fourier_series
+
+OCTDoubleCheck = no

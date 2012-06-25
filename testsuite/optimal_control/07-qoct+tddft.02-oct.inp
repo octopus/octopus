@@ -1,11 +1,12 @@
 CalculationMode = opt_control
+#CalculationMode = gs
 FromScratch = yes
 Dimensions = 2
 
 omega = 0.25
 
 %Species
-"qd" | 1.0 | spec_user_defined | 2 | "0.5*omega^2*(x^2+0.9*y^2)"
+"qd" | 1.0 | spec_user_defined | 4 | "0.5*omega^2*(0.7*x^2+1.3*y^2)"
 %
 
 %Coordinates
@@ -17,6 +18,18 @@ Radius = 15.0
 Spacing = 0.5
 
 DerivativesOrder = 4
+
+# ------------------
+# GS RUN Parameters
+# ------------------
+
+EigenSolver = cg_new
+EigenSolverTolerance = 1e-10
+EigenSolverMaxIter = 250
+TypeOfMixing = broyden
+Mixing = 0.5
+ConvRelDens = 1.0e-7
+
 
 # ------------------
 # TD RUN Parameters
@@ -61,10 +74,18 @@ OCTEps = 1.0e-3
 OCTMaxIter = 1
 
 OCTInitialState = oct_is_groundstate
-OCTTargetOperator = oct_tg_gstransformation
-%OCTTargetTransformStates
-0 | 0 | 1
-%
+#OCTTargetOperator = oct_tg_gstransformation
+#%OCTTargetTransformStates
+#0 | 0 | 1
+#%
+OCTTargetOperator = oct_tg_local
+OCTLocalTarget = "step(x)"
+
+#%OCTTargetTransformStates
+#1 | 0 | 0
+#0 | 0 | 0
+#0 | 0 | 1
+#%
 
 OCTDirectStep = 0.1
 OCTNumberCheckPoints = 10
