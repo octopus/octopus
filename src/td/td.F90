@@ -226,7 +226,7 @@ contains
         end if
       end if
 
-      !Apply mask absorbing boudaires
+      !Apply mask absorbing boundaries
       if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st) 
 
       ! time iterate wavefunctions
