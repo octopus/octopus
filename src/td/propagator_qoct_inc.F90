@@ -53,16 +53,15 @@
     FLOAT,                       intent(in)    :: t, dt
 
     CMPLX, allocatable :: zpsi(:), rhs(:)
-    integer :: ik, ist, idim, isize, np_part, np, iter
+    integer :: ik, ist, idim, np_part, np, iter
     FLOAT :: dres
-    FLOAT :: cgtol = CNST(1.0e-8)
+    FLOAT :: cgtol = CNST(1.0e-14)
     logical :: converged
 
     PUSH_SUB(td_qoct_tddft_propagator_2)
 
     np_part = gr%mesh%np_part
-    np = gr%mesh%np
-    isize = np_part*st%lnst*st%d%kpt%nlocal*st%d%dim
+    np = gr%mesh%np_part
 
     ! define pointer and variables for usage in td_zop, td_zopt routines
     grid_p    => gr
@@ -82,10 +81,11 @@
     SAFE_ALLOCATE(zpsi(1:np*st%d%dim*st%nst))
     SAFE_ALLOCATE(rhs(1:np*st%d%dim*st%nst))
         
-    call interpolate( (/t, t-dt, t-2*dt/), tr%v_old(:, :, 0:2), t - dt/M_TWO, hm%vhxc(:, :))
+    call interpolate( (/t, t-dt/), tr%v_old(:, :, 0:1), t-dt/M_TWO, hm%vhxc(:, :))
+
     call hamiltonian_update(hm, gr%mesh, time = t - dt/M_TWO)
 
-    call exponential_apply_all(tr%te, gr%der, hm, st_op, dt/M_TWO, t-dt)
+    call exponential_apply_all(tr%te, gr%der, hm, st_op, dt/M_TWO, t-dt/M_TWO)
 
     ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -134,13 +134,13 @@
     CMPLX, intent(out) :: y(:)
     integer :: idim, ist, np
 
-    np = grid_p%mesh%np
+    np = grid_p%mesh%np_part
     forall(ist = 1:nst_op, idim = 1:dim_op)
       st_op%zpsi(1:np, idim, ist, ik_op)= x((ist-1)*np*dim_op + (idim-1)*np+1: &
                                             (ist-1)*np*dim_op + (idim-1)*np+np)
     end forall
 
-    call exponential_apply_all(tr_p%te, grid_p%der, hm_p, st_op, -dt_op/M_TWO, t_op)
+    call exponential_apply_all(tr_p%te, grid_p%der, hm_p, st_op, -dt_op/M_TWO, t_op+dt_op/M_TWO)
 
     forall(ist = 1:nst_op, idim = 1:dim_op)
       y((ist-1)*np*dim_op + (idim-1)*np+1:(ist-1)*np*dim_op + (idim-1)*np+np) = &
