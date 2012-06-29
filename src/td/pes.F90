@@ -281,7 +281,7 @@ contains
     !% A. Pohl, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. Lett.</i> <b>84</b>, 5090 (2000).
     !%Option pes_mask 4
     !% Calculate the photo-electron spectrum using the mask method.
-    !% U. De Giovannini, D. Varsano, M. A. L. Marques, H. Appel, E. K. U. Gross,5 and A. Rubio,
+    !% U. De Giovannini, D. Varsano, M. A. L. Marques, H. Appel, E. K. U. Gross, and A. Rubio,
     !% <i>Phys. Rev. A</i> <b>85</b>, 062515 (2012).
     !%End
 
