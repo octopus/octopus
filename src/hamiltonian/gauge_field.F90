@@ -119,6 +119,9 @@ contains
     !% a periodic system. An optional second row specifies the initial
     !% value for the time derivative of the gauge field (which is set
     !% to zero by default). By default this field is not included.
+    !% This is used with utility <tt>oct-dielectric_function</tt>
+    !% according to GF Bertsch, J-I Iwata, A Rubio, and K Yabana,
+    !% <i>Phys. Rev. B</i> <b>62</b>, 7998-8002 (2000).
     !%End
     
     ! Read the initial gauge vector field
