@@ -746,7 +746,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  at this point, we have just set the bottom of the bisection range;         !
-!  if the top is also set, we procede.  if the top of the range has not       !
+!  if the top is also set, we proceed.  if the top of the range has not       !
 !  been set, it means that we have yet to find an e greater than the          !
 !  desired energy.  the upper end of the range is extended.                   !
 !                                                                             !
@@ -766,7 +766,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  at this point, we have just set the top of the bisection range;            !
-!  if the top is also set, we procede.  if the top of the range has           !
+!  if the top is also set, we proceed.  if the top of the range has           !
 !  not been set, it means that we have yet to find an e less than the         !
 !  desired energy.  the lower end of the range is extended.                   !
 !                                                                             !
