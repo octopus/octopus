@@ -125,10 +125,10 @@ contains
     SAFE_ALLOCATE(spectrum(1:4, 1:nsteps))
     spectrum = M_ZERO
 
-    iunit = io_open(trim(dir)//"/"// fname, action='read', status='old', die = .false.)
+    iunit = io_open(trim(dir)// fname, action='read', status='old', die = .false.)
 
     if(iunit < 0) then
-      message(1) = 'Cannot open file "'//trim(dir)//'/'//trim(fname)//'".'
+      message(1) = 'Cannot open file "'//trim(dir)//trim(fname)//'".'
       message(2) = 'The '//trim(fname)//' spectrum was not generated.'
       call messages_warning(2)
       return
@@ -151,7 +151,7 @@ contains
         spectrum(1:4, j1) = spectrum(1:4, j1) + ff(1:4)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
     end do
-100   continue
+100 continue
     call io_close(iunit)
 
     ! print spectra
