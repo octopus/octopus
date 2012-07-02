@@ -110,6 +110,7 @@ contains
     type(em_resp_t)         :: em_vars
     type(sternheimer_t)     :: sh, sh_kdotp, sh2
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
+    type(lr_t)              :: kdotp_lr2(MAX_DIM, MAX_DIM, 1)
     type(lr_t), allocatable :: kdotp_em_lr2(:, :, :, :)
     type(pert_t)            :: pert_kdotp, pert2_none
 
@@ -202,6 +203,29 @@ contains
       call sternheimer_init(sh_kdotp, sys, hm, "EM", complex_response, set_ham_var = 0, &
         set_last_occ_response = .true.)
       em_vars%occ_response = .true.
+
+      message(1) = "Reading 2nd-order kdotp wavefunctions for periodic directions."
+      call messages_info(1)
+
+      do idir = 1, gr%sb%periodic_dim
+        do idir2 = 1, gr%sb%periodic_dim
+          call lr_init(kdotp_lr2(idir, idir2, 1))
+          call lr_allocate(kdotp_lr2(idir, idir2, 1), sys%st, sys%gr%mesh)
+
+          ! load wavefunctions
+          str_tmp = kdotp_wfs_tag(idir, idir2)
+          write(dirname_restart,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
+          ! 1 is the sigma index which is used in em_resp
+          call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr2(idir, idir2, 1))
+          
+          if(ierr .ne. 0) then
+            message(1) = "Could not load 2nd-order kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
+            message(2) = "Previous kdotp calculation required."
+            call messages_fatal(2)
+          end if
+        end do
+      end do
+
     endif
 
     SAFE_ALLOCATE(em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
@@ -697,6 +721,7 @@ contains
       call pert_end(pert2_none)
       do idir = 1, gr%sb%periodic_dim
         do idir2 = 1, gr%sb%periodic_dim
+          call lr_dealloc(kdotp_lr2(idir, idir2, 1))
           do sigma = 1, em_vars%nsigma
             do ifactor = 1, em_vars%nfactor
               call lr_dealloc(kdotp_em_lr2(idir, idir2, sigma, ifactor))
