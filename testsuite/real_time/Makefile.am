@@ -53,6 +53,7 @@ dist_share_DATA =                      \
 	09-angular_momentum.01-gs.inp          \
 	09-angular_momentum.02-td_gipaw.inp    \
 	09-angular_momentum.03-td_icl.inp      \
+        09-angular_momentum.04-rotatory_strength.inp \
 	10-bomd.test                           \
 	10-bomd.01-gs.inp                      \
 	10-bomd.02-td.inp                      \
@@ -66,10 +67,12 @@ dist_share_DATA =                      \
 	12-absorption.02-td.inp                \
 	12-absorption.03-td-restart.inp        \
 	12-absorption.04-spectrum.inp          \
+        12-absorption.05-spectrum_compressed_sensing.inp \
 	13-absorption-spin.test                \
 	13-absorption-spin.01-gs.inp           \
 	13-absorption-spin.02-td.inp           \
 	13-absorption-spin.03-td-restart.inp   \
-	13-absorption-spin.04-spectrum.inp
+	13-absorption-spin.04-spectrum.inp     \
+        13-absorption-spin.05-spectrum_compressed_sensing.inp
 
 CLEANFILES = *~ *.bak

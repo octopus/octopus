@@ -38,6 +38,7 @@ dist_share_DATA =                                \
 	05-lithium.01-gs.inp                     \
 	05-lithium.02-td.inp                     \
 	05-lithium.03-td-restart.inp             \
+        05-lithium.04-dielectric_function.inp    \
 	06-h2o_pol_lr.01_gs.inp                  \
 	06-h2o_pol_lr.02_kdotp.inp               \
 	06-h2o_pol_lr.03_emresp.inp              \

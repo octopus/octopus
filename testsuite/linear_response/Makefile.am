@@ -37,6 +37,7 @@ dist_share_DATA = \
 	03-vdw_sternheimer.test                  \
 	04-vib_modes.01-ground_state.inp         \
 	04-vib_modes.02-vib_modes.inp            \
+	04-vib_modes.03-vib_modes_fd.inp         \
 	04-vib_modes.test                        \
 	05-polarizability.01-gs.inp              \
 	05-polarizability.02-sternheimer.inp     \
