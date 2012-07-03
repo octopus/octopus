@@ -25,8 +25,12 @@ module bpdn_m
   
   private
 
-  public ::    &
-    bpdn
+  public ::                 &
+    bpdn,                   &
+    bpdn_matrix,            &
+    bpdn_matrix_init,       &
+    bpdn_matrix_end,        &
+    bpdn_matrix_set_delta
 
   interface
     subroutine spgl1_projector(xx, cc, tau, nn)
@@ -72,13 +76,63 @@ module bpdn_m
   end interface
 
   real(8), parameter :: opttol = 1.0e-6_8
+  
+  integer, parameter, public ::    &
+    EXPLICIT_MATRIX = 1,           &
+    COS_MATRIX      = 2,           &
+    SIN_MATRIX      = 3,           &
+    EXP_MATRIX      = 4
+
+  type bpdn_matrix
+    integer          :: type
+    integer          :: nn
+    integer          :: mm
+    real(8), pointer :: matrix(:, :) !(1:nn, 1:mm)
+    real(8)          :: dnn
+    real(8)          :: dmm
+  end type bpdn_matrix
 
 contains
-  
-  subroutine bpdn(nn, mm, aa, bb, sigma, xx, ierr, activesetit)
+
+  subroutine bpdn_matrix_init(this, nn, mm, type)
+    type(bpdn_matrix), intent(out)   :: this
     integer,           intent(in)    :: nn
     integer,           intent(in)    :: mm
-    real(8),           intent(in)    :: aa(:, :) !(1:nn, 1:mm)
+    integer,           intent(in)    :: type
+
+    this%nn = nn
+    this%mm = mm
+    this%type = type
+
+    nullify(this%matrix)
+    
+    if(this%type == EXPLICIT_MATRIX) then
+      allocate(this%matrix(1:this%nn, 1:this%mm))
+    end if
+
+  end subroutine bpdn_matrix_init
+
+  subroutine bpdn_matrix_end(this)
+    type(bpdn_matrix), intent(inout)   :: this
+    
+    if(this%type == EXPLICIT_MATRIX) then
+      deallocate(this%matrix)
+    end if
+    this%type = 0
+
+  end subroutine bpdn_matrix_end
+  
+  subroutine bpdn_matrix_set_delta(this, dnn, dmm)
+    type(bpdn_matrix), intent(out)   :: this
+    real(8),           intent(in)    :: dnn
+    real(8),           intent(in)    :: dmm
+
+    this%dnn = dnn
+    this%dmm = dmm
+  end subroutine bpdn_matrix_set_delta
+
+  subroutine bpdn(nn, mm, aa, bb, sigma, xx, ierr, activesetit)
+    type(bpdn_matrix), intent(in)    :: aa
     real(8),           intent(in)    :: bb(:)    !(1:nn)
     real(8),           intent(in)    :: sigma
     real(8),           intent(out)   :: xx(:)    !(1:mm)
@@ -98,6 +152,10 @@ contains
     integer :: nnziter, iter, maxits, lserr, status, maxlineerrors, nnzdiff, nnzg, nnzx
     logical :: done, testrelchange1, testrelchange2, testupdatetau, singletau
     logical, allocatable :: nnzidx(:)
+    integer :: nn, mm
+
+    nn = aa%nn
+    mm = aa%mm
 
     allocate(res(1:nn))
     allocate(grad(1:mm))
@@ -132,8 +190,8 @@ contains
     ! Project the starting point and evaluate function and gradient.
     tmp(1:mm) = 1.0_8 ! some starting point
     call spgl1_projector(xx(1), tmp(1), tau, mm)
-    call residual(mm, nn, aa, bb, xx, res)
-    call calc_grad(mm, nn, aa, res, grad)
+    call residual(aa, bb, xx, res)
+    call calc_grad(aa, res, grad)
     ff = dotp(nn, res, res)/2.0_8
 
     ! Required for nonmonotone strategy.
@@ -253,7 +311,7 @@ contains
 
       ffold = ff
 
-      call spg_line_curvy(mm, nn, aa, bb, xx, grad, maxval(lastffv), gstep, tau, xxnew, res, ff, lserr)
+      call spg_line_curvy(aa, bb, xx, grad, maxval(lastffv), gstep, tau, xxnew, res, ff, lserr)
 
       if(lserr /= EXIT_CONVERGED) then
         if(maxlineerrors <= 0) then
@@ -273,7 +331,7 @@ contains
       end if
 
       ! Update gradient and compute new step length.
-      call calc_grad(mm, nn, aa, res, gradnew)
+      call calc_grad(aa, res, gradnew)
       ss(1:mm) = xxnew(1:mm) - xx(1:mm)
       yy(1:mm) = gradnew(1:mm) - grad(1:mm)
       xx(1:mm) = xxnew(1:mm)
@@ -292,8 +350,8 @@ contains
       resnorm = sqrt(2.0_8*ffbest)
       print*, 'Restoring best iterate to objective ', resnorm
       xx(1:mm) = xxbest(1:mm)
-      call residual(mm, nn, aa, bb, xx, res)
-      call calc_grad(mm, nn, aa, res, grad)
+      call residual(aa, bb, xx, res)
+      call calc_grad(aa, res, grad)
     end if
 
     print*, 'Iterations        = ', iter
@@ -339,26 +397,29 @@ contains
 
   !----------------------------------------------------------
 
-  subroutine spg_line_curvy(mm, nn, aa, bb, xx, gg, fmax, stepmax, tau, xxnew, resnew, fnew, ierr)
-    integer, intent(in)    :: mm
-    integer, intent(in)    :: nn
-    real(8), intent(in)    :: aa(:, :) !(1:nn, 1:mm)
-    real(8), intent(in)    :: bb(:)    !(1:nn)
-    real(8), intent(in)    :: xx(:)    !(1:mm)
-    real(8), intent(in)    :: gg(:)    !(1:mm)
-    real(8), intent(in)    :: fmax
-    real(8), intent(in)    :: stepmax
-    real(8), intent(in)    :: tau
-    real(8), intent(out)   :: xxnew(:)  !(1:mm)
-    real(8), intent(out)   :: resnew(:) !(1:nn)
-    real(8), intent(out)   :: fnew
-    integer, intent(out)   :: ierr
+  subroutine spg_line_curvy(aa, bb, xx, gg, fmax, stepmax, tau, xxnew, resnew, fnew, ierr)
+    type(bpdn_matrix), intent(in) :: aa
+    real(8),           intent(in)    :: bb(:)    !(1:nn)
+    real(8),           intent(in)    :: xx(:)    !(1:mm)
+    real(8),           intent(in)    :: gg(:)    !(1:mm)
+    real(8),           intent(in)    :: fmax
+    real(8),           intent(in)    :: stepmax
+    real(8),           intent(in)    :: tau
+    real(8),           intent(out)   :: xxnew(:)  !(1:mm)
+    real(8),           intent(out)   :: resnew(:) !(1:nn)
+    real(8),           intent(out)   :: fnew
+    integer,           intent(out)   :: ierr
 
     real(8), parameter :: gamma  = 1.0e-4_8
     integer, parameter :: maxiter = 10
     integer :: iter, nsafe
     real(8) ::  gts, ssnorm, ssnormold, step, scale, ggnorm
     real(8), allocatable :: ss(:)
+
+    integer :: nn, mm
+    
+    nn = aa%nn
+    mm = aa%mm
 
     allocate(ss(1:mm))
 
@@ -373,7 +434,7 @@ contains
     do
       ss(1:mm) = xx(1:mm) - step*scale*gg(1:mm)
       call spgl1_projector(xxnew(1), ss(1), tau, mm)
-      call residual(mm, nn, aa, bb, xxnew, resnew)
+      call residual(aa, bb, xxnew, resnew)
       fnew = dotp(nn, resnew, resnew)/2.0_8
       ss(1:mm) = xxnew(1:mm) - xx(1:mm)
       gts = scale*dotp(mm, gg, ss)
@@ -503,31 +564,76 @@ contains
 
   ! -------------------------------------------
   
-  subroutine residual(mm, nn, aa, bb, xx, res)
-    integer, intent(in)    :: mm
-    integer, intent(in)    :: nn
-    real(8), intent(in)    :: aa(:, :) !(1:nn, 1:mm)
-    real(8), intent(in)    :: bb(:)    !(1:nn)
-    real(8), intent(in)    :: xx(:)    !(1:mm)
-    real(8), intent(out)   :: res(:)   !(1:nn)
+  subroutine residual(aa, bb, xx, res)
+    type(bpdn_matrix), intent(in)    :: aa
+    real(8),           intent(in)    :: bb(:)    !(1:aa%nn)
+    real(8),           intent(in)    :: xx(:)    !(1:aa%mm)
+    real(8),           intent(out)   :: res(:)   !(1:nn)
 
-    res(1:nn) = bb(1:nn)
-    call dgemv(trans = 'n', m = nn, n = mm, alpha = -1.0_8, a = aa(1, 1), lda = ubound(aa, dim = 1), &
-      x = xx(1), incx = 1, beta = 1.0_8, y = res(1), incy = 1)
+    integer :: inn, imm
+    real(8) :: tt
+    complex(8) :: dexp, aexp
+
+    select case(aa%type)
+    case(EXPLICIT_MATRIX)
+      res(1:aa%nn) = bb(1:aa%nn)
+      call dgemv(trans = 'n', m = aa%nn, n = aa%mm, alpha = -1.0_8, a = aa%matrix(1, 1), lda = ubound(aa%matrix, dim = 1), &
+        x = xx(1), incx = 1, beta = 1.0_8, y = res(1), incy = 1)
+
+    case(SIN_MATRIX)
+      do inn = 1, aa%nn
+        dexp = exp(cmplx(0.0_8, aa%dnn*(inn - 1)*aa%dmm, 8))
+        aexp = 1.0_8
+        tt = 0.0_8
+        do imm = 1, aa%mm
+!          tt = tt + sin((inn - 1)*aa%dnn*(imm - 1)*aa%dmm)*xx(imm)
+          tt = tt + aimag(aexp)*xx(imm)
+          aexp = aexp*dexp
+        end do
+        res(inn) = bb(inn) - tt
+      end do
+
+    case(COS_MATRIX)
+      stop 1
+    case(EXP_MATRIX)
+      stop 1
+    end select
+
   end subroutine residual
 
   ! -------------------------------------------
 
-  subroutine calc_grad(mm, nn, aa, res, grad)
-    integer, intent(in)    :: mm
-    integer, intent(in)    :: nn
-    real(8), intent(in)    :: aa(:, :) !(1:nn, 1:mm)
-    real(8), intent(in)    :: res(:)   !(1:nn)
-    real(8), intent(out)   :: grad(:)  !(1:mm)
+  subroutine calc_grad(aa, res, grad)
+    type(bpdn_matrix), intent(in)    :: aa
+    real(8),           intent(in)    :: res(:)   !(1:aa%nn)
+    real(8),           intent(out)   :: grad(:)  !(1:aa%mm)
 
-    grad = 0.0_8
-    call dgemv(trans = 't', m = nn, n = mm, alpha = -1.0_8, a = aa(1, 1), lda = ubound(aa, dim = 1), &
-      x = res(1), incx = 1, beta = 0.0_8, y = grad(1), incy = 1)
+    integer :: inn, imm
+    real(8) :: tt
+    complex(8) :: dexp, aexp
+
+    select case(aa%type)
+    case(EXPLICIT_MATRIX)
+      grad = 0.0_8
+      call dgemv(trans = 't', m = aa%nn, n = aa%mm, alpha = -1.0_8, a = aa%matrix(1, 1), lda = ubound(aa%matrix, dim = 1), &
+        x = res(1), incx = 1, beta = 0.0_8, y = grad(1), incy = 1)
+
+    case(SIN_MATRIX)
+      do imm = 1, aa%mm
+        dexp = exp(cmplx(0.0_8, aa%dnn*(imm - 1)*aa%dmm, 8))
+        aexp = 1.0_8
+        tt = 0.0_8
+        do inn = 1, aa%nn
+          tt = tt + aimag(aexp)*res(inn)
+          aexp = aexp*dexp
+        end do
+        grad(imm) = -tt
+      end do
+    case(COS_MATRIX)
+      stop 1
+    case(EXP_MATRIX)
+      stop 1
+    end select
 
   end subroutine calc_grad
 

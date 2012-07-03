@@ -48,7 +48,7 @@ module compressed_sensing_m
     integer :: nfreq
     FLOAT   :: dfreq
     FLOAT   :: sfreq
-    FLOAT, pointer :: fourier_matrix(:, :)
+    type(bpdn_matrix) :: fourier_matrix
   end type compressed_sensing_t
 
 contains
@@ -64,7 +64,7 @@ contains
     FLOAT,                       intent(in)  :: sfreq
     FLOAT,                       intent(in)  :: noise
 
-    integer :: itime, ifreq
+    integer :: itime, ifreq, type
     FLOAT   :: time, freq
 
     PUSH_SUB(compressed_sensing_init)
@@ -78,32 +78,50 @@ contains
     this%dfreq = dfreq
     this%sfreq = sfreq
     
-    SAFE_ALLOCATE(this%fourier_matrix(1:this%ntime, 1:this%nfreq))
+    if(transform_type == SPECTRUM_TRANSFORM_EXP .or. transform_type == SPECTRUM_TRANSFORM_COS) then
+      
+      call bpdn_matrix_init(this%fourier_matrix, this%ntime, this%nfreq, EXPLICIT_MATRIX)
+      
+      do ifreq = 1, this%nfreq
+        freq = (ifreq - 1)*this%dfreq + this%sfreq
+        
+        select case(transform_type)
+        case(SPECTRUM_TRANSFORM_EXP)
+          do itime = 1, this%ntime
+            time = (itime - 1)*this%dtime + this%stime
+            this%fourier_matrix%matrix(itime, ifreq) = exp(-freq*time)
+          end do
+          
+        case(SPECTRUM_TRANSFORM_SIN)
+          do itime = 1, this%ntime
+            time = (itime - 1)*this%dtime + this%stime
+            this%fourier_matrix%matrix(itime, ifreq) = sin(freq*time)
+          end do
+          
+        case(SPECTRUM_TRANSFORM_COS)
+          do itime = 1, this%ntime
+            time = (itime - 1)*this%dtime + this%stime
+            this%fourier_matrix%matrix(itime, ifreq) = cos(freq*time)
+          end do
+        end select
+        
+      end do
 
-    do ifreq = 1, this%nfreq
-      freq = (ifreq - 1)*this%dfreq + this%sfreq
+    else
 
       select case(transform_type)
       case(SPECTRUM_TRANSFORM_EXP)
-        do itime = 1, this%ntime
-          time = (itime - 1)*this%dtime + this%stime
-          this%fourier_matrix(itime, ifreq) = exp(-freq*time)
-        end do
-        
+        type = EXP_MATRIX        
       case(SPECTRUM_TRANSFORM_SIN)
-        do itime = 1, this%ntime
-          time = (itime - 1)*this%dtime + this%stime
-          this%fourier_matrix(itime, ifreq) = sin(freq*time)
-        end do
-
+        type = SIN_MATRIX
       case(SPECTRUM_TRANSFORM_COS)
-        do itime = 1, this%ntime
-          time = (itime - 1)*this%dtime + this%stime
-          this%fourier_matrix(itime, ifreq) = cos(freq*time)
-        end do
+        type = COS_MATRIX
       end select
 
-    end do
+    call bpdn_matrix_init(this%fourier_matrix, this%ntime, this%nfreq, type)
+    call bpdn_matrix_set_delta(this%fourier_matrix, this%dtime, this%dfreq)
+
+  endif
     
     POP_SUB(compressed_sensing_init)
   end subroutine compressed_sensing_init
@@ -115,7 +133,7 @@ contains
 
     PUSH_SUB(compressed_sensing_end)
 
-    SAFE_DEALLOCATE_P(this%fourier_matrix)
+    call bpdn_matrix_end(this%fourier_matrix)
 
     POP_SUB(compressed_sensing_end)
   end subroutine compressed_sensing_end
