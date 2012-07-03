@@ -250,6 +250,7 @@ contains
       write(message(1),'(a,f12.6)') "Norm of relative density variation = ", errornorm / sys%st%qtot
       call messages_info(1)
 
+      ! TODO: use equality of mixed partials to calculate fewer of these
       if(calc_2nd_order) then
         do idir2 = 1, pdim
           write(message(1), '(3a)') 'Info: Calculating second-order response in the ', index2axis(idir2), &

@@ -550,7 +550,8 @@ contains
                       em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, M_z0, &
                       em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:1, ifactor), &
                       pert2_none, EM_RESP_DIR, &
-                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true.)
+                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
+                      give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%zdl_psi)
                     kdotp_em_lr2(idir2, idir, 2, ifactor)%zdl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%zdl_psi
                   else
                     call dsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:1, ifactor), &
@@ -558,7 +559,8 @@ contains
                       em_vars%freq_factor(ifactor)*em_vars%omega(iomega), M_ZERO, &
                       em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:1, ifactor), &
                       pert2_none, EM_RESP_DIR, &
-                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true.)
+                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
+                      give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%ddl_psi)
                     kdotp_em_lr2(idir2, idir, 2, ifactor)%ddl_psi = kdotp_em_lr2(idir2, idir, 1, ifactor)%ddl_psi
                   end if
                 else
@@ -568,14 +570,16 @@ contains
                       em_vars%freq_factor(ifactor)*em_vars%omega(iomega) + M_zI * em_vars%eta, M_z0, &
                       em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:em_vars%nsigma, ifactor), &
                       pert2_none, EM_RESP_DIR, &
-                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true.)
+                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
+                      give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%zdl_psi)
                   else
                     call dsternheimer_solve_order2(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:em_vars%nsigma, ifactor), &
                       kdotp_lr(idir2, 1:1), em_vars%nsigma, &
                       em_vars%freq_factor(ifactor)*em_vars%omega(iomega), M_ZERO, &
                       em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:em_vars%nsigma, ifactor), &
                       pert2_none, EM_RESP_DIR, &
-                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true.)
+                      "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
+                      give_pert1psi2 = kdotp_lr2(idir2, idir, 1)%ddl_psi)
                   end if
                 endif
 

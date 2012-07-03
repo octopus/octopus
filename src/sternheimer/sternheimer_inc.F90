@@ -424,7 +424,8 @@ end subroutine X(sternheimer_set_inhomog)
 !--------------------------------------------------------------
 subroutine X(sternheimer_solve_order2)( &
      sh1, sh2, sh_2ndorder, sys, hm, lr1, lr2, nsigma, omega1, omega2, pert1, pert2,       &
-     lr_2ndorder, pert_2ndorder, restart_dir, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
+     lr_2ndorder, pert_2ndorder, restart_dir, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
+     give_pert1psi2)
   type(sternheimer_t),    intent(inout) :: sh1
   type(sternheimer_t),    intent(inout) :: sh2
   type(sternheimer_t),    intent(inout) :: sh_2ndorder
@@ -444,6 +445,7 @@ subroutine X(sternheimer_solve_order2)( &
   character(len=*),       intent(in)    :: wfs_tag
   logical,      optional, intent(in)    :: have_restart_rho
   logical,      optional, intent(in)    :: have_exact_freq
+  R_TYPE,       optional, intent(in)    :: give_pert1psi2(:,:,:,:)
 
   integer :: isigma, ik, ist, idim, ispin
   R_TYPE :: dl_eig1, dl_eig2, proj
@@ -487,7 +489,11 @@ subroutine X(sternheimer_solve_order2)( &
 
         call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, psi, pert1psi)
         call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, psi, pert2psi)
-        call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
+        if(present(give_pert1psi2)) then
+          pert1psi2(:,:) = give_pert1psi2(:, :, ist, ik)
+        else
+          call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
+        endif
         call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1)
 
         ! derivative of the eigenvalues
