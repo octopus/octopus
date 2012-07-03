@@ -115,7 +115,7 @@ function checkqueue {
     else
 	failed_tests=$((failed_tests + 1))
 	name_length=`echo -n $test_name | wc -m`
-	space_length=$((50 - name_length))
+	space_length=$((60 - name_length))
 	spaces=`for((i = 1; i <= space_length; i++)); do echo -n ' '; done`
 	failure_report="$failure_report    $test_name$spaces$failures\n"
     fi
@@ -298,8 +298,8 @@ else
     if [ $failed_tests -gt 0 ]; then
 	echo "    Failed:  $failed_tests / $total_tests"
 	echo
-	echo "    testfile                                          # failed testcases"
-	echo "    --------------------------------------------------------------------"
+	echo "    testfile                                                    # failed testcases"
+	echo "    ------------------------------------------------------------------------------"
 	echo -e "$failure_report"
     else
 	if [ $passed_tests -gt 0 ]; then
