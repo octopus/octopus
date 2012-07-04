@@ -105,6 +105,7 @@ contains
     type(partition_t)    :: partition
     type(partitioner_t)  :: partitioner
     type(cube_t) :: cube
+    integer, allocatable :: cube_part(:,:,:)
 
     type(profile_t), save :: prof
     integer :: default
@@ -371,12 +372,14 @@ contains
 
     case(PFFT_PART)
       call cube_init(cube, mesh%idx%ll, mesh%sb, fft_type=FFT_REAL, fft_library=FFTLIB_PFFT)
+      SAFE_ALLOCATE(cube_part(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
       part = 0
       do ip = 1, mesh%np_global
         call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix(1:3))
         ix(1:3) = ix(1:3) + cube%center(1:3)
-        part(ip) = cube%part(ix(1), ix(2), ix(3))
+        part(ip) = cube_part(ix(1), ix(2), ix(3))
       end do
+      SAFE_DEALLOCATE_A(cube_part)
       call cube_end(cube)
 
     end select

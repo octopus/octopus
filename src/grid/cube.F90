@@ -38,6 +38,7 @@ module cube_m
   public ::             &
     cube_t,             &
     cube_init,          &
+    cube_partition,     &
     cube_global2local,  &
     cube_end
 
@@ -53,7 +54,6 @@ module cube_m
     integer :: fs_istart(1:3)   !< where does the local portion of the cube start in fourier space
     integer :: center(1:3)      !< the coordinates of the center of the cube
 
-    integer, pointer :: part(:,:,:) !< point -> partition
     integer, pointer :: np_local(:) !< Number of points in each partition
     integer, pointer :: xlocal(:)   !< where does each process start when gathering a function
     integer, pointer :: local(:,:)  !< local to global map used when gathering a function
@@ -189,7 +189,6 @@ contains
       SAFE_DEALLOCATE_P(cube%fft)
     end if
 
-    SAFE_DEALLOCATE_P(cube%part)
     SAFE_DEALLOCATE_P(cube%np_local)
     SAFE_DEALLOCATE_P(cube%xlocal)
     SAFE_DEALLOCATE_P(cube%local)
@@ -249,7 +248,6 @@ contains
 
     call profiling_in(prof_map,"CUBE_MAP")
 
-    SAFE_ALLOCATE(cube%part(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
     SAFE_ALLOCATE(cube%xlocal(cube%mpi_grp%size))
     SAFE_ALLOCATE(cube%np_local(cube%mpi_grp%size))
     SAFE_ALLOCATE(cube%local(cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), 3))
@@ -271,7 +269,6 @@ contains
       do iz = local_sizes(position+2), local_sizes(position+2)+local_sizes(position+5)-1
         do iy = local_sizes(position+1), local_sizes(position+1)+local_sizes(position+4)-1
           do ix = local_sizes(position), local_sizes(position)+local_sizes(position+3)-1
-            cube%part(ix, iy, iz) = process
             cube%local(index, 1) = ix
             cube%local(index, 2) = iy
             cube%local(index, 3) = iz
@@ -289,13 +286,58 @@ contains
   end subroutine cube_do_mapping
 
   ! ---------------------------------------------------------
+  subroutine cube_partition(cube, part)
+    type(cube_t), intent(in)  :: cube
+    integer,      intent(out) :: part(:,:,:)
+
+    integer :: tmp_local(6), position, process, ix, iy, iz
+    integer, allocatable :: local_sizes(:)
+
+    PUSH_SUB(cube_partition)
+
+    !!gather the local information into a unique vector.
+    tmp_local(1) = cube%rs_istart(1)
+    tmp_local(2) = cube%rs_istart(2)
+    tmp_local(3) = cube%rs_istart(3)
+    tmp_local(4) = cube%rs_n(1)
+    tmp_local(5) = cube%rs_n(2)
+    tmp_local(6) = cube%rs_n(3)
+
+    if (cube%parallel_in_domains) then
+      SAFE_ALLOCATE(local_sizes(6*cube%mpi_grp%size))
+#ifdef HAVE_MPI
+      call MPI_Allgather(tmp_local, 6, MPI_INTEGER, local_sizes, 6, MPI_INTEGER,&
+                         cube%mpi_grp%comm, mpi_err)
+#endif
+    else
+      SAFE_ALLOCATE(local_sizes(6))
+      local_sizes = tmp_local
+    end if
+
+    do process = 1, cube%mpi_grp%size
+      position = ((process-1)*6)+1
+
+      do iz = local_sizes(position+2), local_sizes(position+2)+local_sizes(position+5)-1
+        do iy = local_sizes(position+1), local_sizes(position+1)+local_sizes(position+4)-1
+          do ix = local_sizes(position), local_sizes(position)+local_sizes(position+3)-1
+            part(ix, iy, iz) = process
+          end do
+        end do
+      end do
+    end do
+
+    POP_SUB(cube_partition)
+  end subroutine cube_partition
+
+  ! ---------------------------------------------------------
   subroutine cube_partition_messages_debug(cube)
-    type(cube_t), intent(in)    :: cube
+    type(cube_t), intent(in) :: cube
 
     integer          :: nn, ii, jj, kk ! Counters.
     integer          :: npart
     integer          :: iunit          ! For debug output to files.
     character(len=3) :: filenum
+    integer, allocatable :: part(:,:,:)
 
     PUSH_SUB(cube_partition_messages_debug)
 
@@ -304,6 +346,8 @@ contains
       call io_mkdir('debug/cube_partition')
 
       npart = cube%mpi_grp%size
+      SAFE_ALLOCATE(part(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
+      call cube_partition(cube, part)
 
       ! Debug output. Write points of each partition in a different file.
       do nn = 1, npart
@@ -315,12 +359,15 @@ contains
         do kk = 1, cube%rs_n_global(3)
           do jj = 1, cube%rs_n_global(2)
             do ii = 1, cube%rs_n_global(1)
-              if(cube%part(ii, jj, kk) .eq. nn) write(iunit, '(3i8)') ii, jj, kk
+              if(part(ii, jj, kk) .eq. nn) write(iunit, '(3i8)') ii, jj, kk
             end do
           end do
         end do
         call io_close(iunit)
       end do
+
+    SAFE_DEALLOCATE_A(part)
+
     end if
 
 #ifdef HAVE_MPI

@@ -74,13 +74,17 @@ contains
     type(cube_t),                   intent(in)  :: cube
 
     integer :: im, ip, nn, ixyz(3), lxyz(3), ii, cube_np
-    integer, allocatable :: cube_part(:)
+    integer, allocatable :: cube_part(:), part(:,:,:)
     integer, pointer :: mf_order(:), cf_order(:)
 
     PUSH_SUB(mesh_cube_parallel_map_init)
 
     !Get the cube partition on the mesh
+    SAFE_ALLOCATE(part(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
+    call cube_partition(cube, part)
+
     SAFE_ALLOCATE(cube_part(mesh%np_global))
+    
     ixyz = 0
     do im = 1, mesh%cube_map%nmap
       ip = mesh%cube_map%map(MCM_POINT, im)
@@ -89,8 +93,10 @@ contains
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
       ixyz = ixyz + cube%center
 
-      forall(ii = 0:nn - 1) cube_part(ip + ii) = cube%part(ixyz(1), ixyz(2), ixyz(3) + ii)
+      forall(ii = 0:nn - 1) cube_part(ip + ii) = part(ixyz(1), ixyz(2), ixyz(3) + ii)
     end do
+
+    SAFE_DEALLOCATE_A(part)
 
     !Init mesh to cube partition transfer
     call partition_transfer_init(this%m2c, mesh%np_global, &
