@@ -115,6 +115,7 @@ dist_share_DATA =                                  \
         03-xc.gga_x_rpbe.inp                       \
         03-xc.gga_x_wc.inp                         \
         03-xc.gga_x_xpbe.inp                       \
+        03-xc.sic_pz.inp                           \
 	04-oep.01-jellium-lsda.inp                 \
 	04-oep.02-jellium-exx_kli.inp              \
 	04-oep.03-jellium-full_exx.inp             \

@@ -1,0 +1,21 @@
+CalculationMode = one_shot
+
+%Coordinates
+ 'H' |  0.717157 | 0 | 0
+ 'H' | -0.717157 | 0 | 0
+%
+
+FromScratch = yes
+
+SpinComponents = spin_polarized
+
+ExcessCharge = 1
+
+Spacing = 0.5
+
+SICCorrection = sic_pz
+OEPLevel = oep_kli
+%Occupations
+0.8
+0.2
+%

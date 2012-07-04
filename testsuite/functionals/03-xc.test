@@ -239,3 +239,7 @@ match ; OEP KLI Exchange                       ; GREP(out, 'Exchange    =', 20) 
 
 Input: 03-xc.exx.inp
 match ; OEP exact exchange                     ; GREP(out, 'Exchange    =', 20)   ; -0.25285983
+
+Input: 03-xc.sic_pz.inp
+match ; OEP SIC exchange                       ; GREP(out, 'Exchange    =', 20)   ; -0.25286090
+match ; OEP SIC correlation                    ; GREP(out, 'Correlation =', 20)   ; -0.01534592
