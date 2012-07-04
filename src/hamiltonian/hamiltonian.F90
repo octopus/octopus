@@ -225,21 +225,9 @@ contains
     hm%hm_base%kinetic => gr%der%lapl
 
     SAFE_ALLOCATE(hm%energy)
+    call energy_nullify(hm%energy)
 
     ! initialize variables
-    hm%energy%intnvxc = M_ZERO
-    hm%energy%exchange = M_ZERO
-    hm%energy%correlation = M_ZERO
-    hm%energy%delta_xc = M_ZERO
-    hm%energy%total = M_ZERO
-    hm%energy%kinetic = M_ZERO
-    !cmplxscl
-    hm%energy%Imintnvxc = M_ZERO
-    hm%energy%Imexchange = M_ZERO
-    hm%energy%Imcorrelation = M_ZERO
-    hm%energy%Imtotal = M_ZERO
-    hm%energy%Imkinetic = M_ZERO
-
     nullify(hm%oct_fxc)
 
     !%Variable ComplexScalingAngle
