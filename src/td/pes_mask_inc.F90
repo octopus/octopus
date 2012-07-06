@@ -952,14 +952,14 @@ subroutine PES_mask_Volkov_time_evolution_cf(mask, mesh, dt, iter, cf)
     end do
   end do
   
-  call zfourier_space_op_init(evol, mask%cube, gop)
-  SAFE_DEALLOCATE_A(gop)
+!  call zfourier_space_op_init(evol, mask%cube, gop)
 
   if (mask%cube%fft%library == FFTLIB_PFFT) then 
     do ix = 1, mask%fs_n(1)
       do iy = 1, mask%fs_n(2)
         do iz = 1, mask%fs_n(3)
-          cf%fs(iz, ix, iy) = cf%fs(iz, ix, iy)*evol%zop(ix, iy, iz)
+!          cf%fs(iz, ix, iy) = cf%fs(iz, ix, iy)*evol%zop(ix, iy, iz)
+          cf%fs(iz, ix, iy) = cf%fs(iz, ix, iy)*gop(ix, iy, iz)
         end do
       end do
     end do
@@ -967,14 +967,16 @@ subroutine PES_mask_Volkov_time_evolution_cf(mask, mesh, dt, iter, cf)
     do ix = 1, mask%fs_n(1)
       do iy = 1, mask%fs_n(2)
         do iz = 1, mask%fs_n(3)
-          cf%fs(ix, iy, iz) = cf%fs(ix, iy, iz)*evol%zop(ix, iy, iz)        
+!          cf%fs(ix, iy, iz) = cf%fs(ix, iy, iz)*evol%zop(ix, iy, iz)        
+          cf%fs(ix, iy, iz) = cf%fs(ix, iy, iz)*gop(ix, iy, iz)
         end do
       end do
     end do
   end if  
 !   call zfourier_space_op_apply(evol, mask%cube, cf)
   
-  call fourier_space_op_end(evol)
+!  call fourier_space_op_end(evol)
+  SAFE_DEALLOCATE_A(gop)
 
   POP_SUB(PES_mask_Volkov_time_evolution_cf)
 end subroutine PES_mask_Volkov_time_evolution_cf
