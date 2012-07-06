@@ -74,10 +74,11 @@ contains
   !> Allocates locally the Fourier space grid, if PFFT library is not used.
   !! Otherwise, it assigns the PFFT Fourier space grid to the cube Fourier space grid,
   !! via pointer.
-  subroutine cube_function_alloc_fs(cube, cf)
+  subroutine cube_function_alloc_fs(cube, cf, force_alloc)
     type(cube_t),          intent(in)    :: cube
     type(cube_function_t), intent(inout) :: cf
-    
+    logical, optional,     intent(in)    :: force_alloc  
+      
     integer :: n1, n2, n3
     logical :: allocated
     
@@ -85,6 +86,8 @@ contains
     
     ASSERT(.not. associated(cf%fs))
     ASSERT(associated(cube%fft))
+    
+    cf%forced_alloc = optional_default(force_alloc, .false.)
 
     n1 = max(1, cube%fs_n(1))
     n2 = max(1, cube%fs_n(2))
@@ -94,12 +97,14 @@ contains
 
     select case(cube%fft%library)
     case(FFTLIB_PFFT)
-      allocated = .true.
-      ASSERT(associated(cube%fft))  
-      if(any(cube%fs_n(1:3) == 0)) then
-        cf%fs => cube%fft%fs_data(1:1,1:1,1:1)
-      else
-        cf%fs => cube%fft%fs_data(1:n3,1:n1,1:n2)
+      if(.not. cf%forced_alloc) then 
+        allocated = .true.
+        ASSERT(associated(cube%fft))  
+        if(any(cube%fs_n(1:3) == 0)) then
+          cf%fs => cube%fft%fs_data(1:1,1:1,1:1)
+        else
+          cf%fs => cube%fft%fs_data(1:n3,1:n1,1:n2)
+        end if
       end if
     case(FFTLIB_CLAMD)
 #ifdef HAVE_OPENCL
@@ -134,8 +139,10 @@ contains
 
     select case(cube%fft%library)
     case(FFTLIB_PFFT)
-      deallocated = .true.
-      nullify(cf%fs)
+      if(.not. cf%forced_alloc) then
+        deallocated = .true.
+        nullify(cf%fs)
+      end if
     case(FFTLIB_CLAMD)
 #ifdef HAVE_OPENCL
       if(cf%in_device_memory) then
