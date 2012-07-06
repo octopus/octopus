@@ -224,8 +224,8 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
     mask%spacing(1:sb%dim) = mesh%spacing(1:sb%dim)*2**(sb%hr_area%num_radii)       
     mask%ll(1:sb%dim) = int(M_TWO*sb%rsize/mask%spacing(1:sb%dim)) + 1
   else 
-    mask%spacing = mesh%spacing
-    mask%ll = mesh%idx%ll    
+    mask%spacing(1:3) = mesh%spacing(1:3)
+    mask%ll(1:3) = mesh%idx%ll(1:3)    
   end if 
 
   !Enlarge the bounding box region
@@ -343,6 +343,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   SAFE_ALLOCATE(mask%Lk(1:mask%fs_n_global(1)))
 
   print *,"cube%fs_n",mask%cube%fs_n
+  print *,"cube%fft%fs_n",mask%cube%fft%fs_n
   print *,"fs_istart(1:3)", mask%cube%fs_istart
   print *,"cube%rs_n",mask%cube%rs_n
   print *,"rs_istart(1:3)", mask%cube%rs_istart
@@ -735,7 +736,7 @@ subroutine PES_mask_generate_mask_function(mask,mesh, shape, R, mask_sq)
   integer :: ip, ix3(3)
   integer :: ip_local
   FLOAT   :: dd1,dd2,width
-  FLOAT   :: xx(1:3), rr, dd, radius
+  FLOAT   :: xx(1:MAX_DIM), rr, dd, radius
   integer :: ix,iy,iz, ii
   CMPLX,allocatable :: mask_fn(:)
   logical :: local_
@@ -1382,6 +1383,8 @@ subroutine PES_mask_X_to_K(mask,mesh,wfin,wfout)
       call cube_function_alloc_fs(mask%cube, cf_tmp)
       cf_tmp%zRs = wfin
       call zfft_forward(mask%fft, cf_tmp%zRs, cf_tmp%fs)
+    print *,"wfout", size(wfout,1),size(wfout,2),size(wfout,3)
+    print *,"cf_tmp%fs", size(cf_tmp%fs,1),size(cf_tmp%fs,2),size(cf_tmp%fs,3)
       wfout = cf_tmp%fs
       call zcube_function_free_RS(mask%cube, cf_tmp)
       call cube_function_free_fs(mask%cube, cf_tmp)
@@ -1435,6 +1438,8 @@ subroutine PES_mask_K_to_X(mask,mesh,wfin,wfout)
       call cube_function_alloc_fs(mask%cube, cf_tmp)
       cf_tmp%fs = wfin
       call zfft_backward(mask%fft, cf_tmp%fs, cf_tmp%zRs)
+      print *,"wfout", size(wfout,1),size(wfout,2),size(wfout,3)
+      print *,"cf_tmp%zRs", size(cf_tmp%zRs,1),size(cf_tmp%zRs,2),size(cf_tmp%zRs,3)
       wfout = cf_tmp%zRs
       call zcube_function_free_RS(mask%cube, cf_tmp)
       call cube_function_free_fs(mask%cube, cf_tmp)
