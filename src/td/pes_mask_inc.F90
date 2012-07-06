@@ -525,7 +525,7 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
   !!  Set external fields 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  SAFE_ALLOCATE(mask%ext_pot(0:max_iter,1:MAX_DIM))
+  SAFE_ALLOCATE(mask%ext_pot(0:max_iter,1:3))
   mask%ext_pot=M_ZERO
 
   if(mask%sw_evolve .eq. VOLKOV) then
@@ -597,8 +597,8 @@ subroutine PES_mask_generate_Lxyz_inv(mask)
   type(PES_mask_t), intent(inout) :: mask
   
   integer :: ix,iy,iz,ip,rankmin,dir
-  FLOAT :: dmin! , ixx(MAX_DIM)
-  integer :: ixx(MAX_DIM)
+  FLOAT :: dmin! , ixx(3)
+  integer :: ixx(3)
 
   PUSH_SUB(PES_mask_generate_Lxyz_inv)
 
@@ -732,10 +732,10 @@ subroutine PES_mask_generate_mask_function(mask,mesh, shape, R, mask_sq)
   FLOAT,            intent(in)    :: R(2)
   FLOAT, optional,  intent(out)   :: mask_sq(:,:,:)
 
-  integer :: ip, ix3(MAX_DIM)
+  integer :: ip, ix3(3)
   integer :: ip_local
   FLOAT   :: dd1,dd2,width
-  FLOAT   :: xx(1:MAX_DIM), rr, dd, radius
+  FLOAT   :: xx(1:3), rr, dd, radius
   integer :: ix,iy,iz, ii
   CMPLX,allocatable :: mask_fn(:)
   logical :: local_
@@ -886,8 +886,8 @@ subroutine PES_mask_Volkov_time_evolution_wf(mask, mesh, dt, iter, wf)
   integer,          intent(in)    :: iter
   CMPLX,            intent(inout) :: wf(:,:,:)
 
-  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
-  FLOAT :: temp(MAX_DIM), vec
+  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
+  FLOAT :: temp(3), vec
   FLOAT :: dd, KK(1:3), KK_(1:3)
 
   PUSH_SUB(PES_mask_Volkov_time_evolution_wf)
@@ -990,12 +990,12 @@ end subroutine PES_mask_Volkov_time_evolution_cf
 !   CMPLX,            intent(inout) :: state(:)
 !   CMPLX,            intent(in)    :: wfB(:,:,:)
 ! 
-!   integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
+!   integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
 !   type(cube_function_t) :: cf
 !   CMPLX, allocatable :: mf(:)
-!   FLOAT :: temp(MAX_DIM), vec
+!   FLOAT :: temp(3), vec
 !   FLOAT :: dd
-!   integer :: il,ll(MAX_DIM)
+!   integer :: il,ll(3)
 ! 
 !   integer:: ip_local
 ! 
@@ -1006,7 +1006,7 @@ end subroutine PES_mask_Volkov_time_evolution_cf
 !   cPUSH_SUB(PES_mask_backaction_wf_apply)
 ! 
 ! 
-!   ll(1:MAX_DIM) = mask%ll(1:MAX_DIM)
+!   ll(1:3) = mask%ll(1:3)
 !   call cube_function_null(cf)    
 !   call zcube_function_alloc_RS(mask%cube, cf, force_alloc = .true.) 
 !   cSAFE_ALLOCATE(mf(1:mask%mesh%np_part))
@@ -1038,10 +1038,10 @@ subroutine fft_X_to_K(mask, mesh, wfin, wfout)
   CMPLX,            intent(in)  :: wfin(:,:,:)
   CMPLX,            intent(out) :: wfout(:,:,:)
 
-  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
-  FLOAT   :: temp(MAX_DIM), vec
+  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
+  FLOAT   :: temp(3), vec
   FLOAT   :: dd
-  integer :: il,ll(MAX_DIM)
+  integer :: il,ll(3)
   CMPLX, allocatable :: wftmp(:,:,:),wfPlus(:,:,:),wfMinus(:,:,:) 
   integer :: ip_local
 
@@ -1049,7 +1049,7 @@ subroutine fft_X_to_K(mask, mesh, wfin, wfout)
   PUSH_SUB(fft_X_to_K)
 
 
-  ll(1:MAX_DIM) = mask%ll(1:MAX_DIM)
+  ll(1:3) = mask%ll(1:3)
   SAFE_ALLOCATE(wftmp(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
   SAFE_ALLOCATE(wfPlus(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
   SAFE_ALLOCATE(wfMinus(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
@@ -1123,10 +1123,10 @@ subroutine fft_K_to_X(mask,mesh,wfin,wfout,inout)
   integer,          intent(in)  :: inout
 
 
-  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
-  FLOAT   :: temp(MAX_DIM), vec
+  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
+  FLOAT   :: temp(3), vec
   FLOAT   :: dd
-  integer :: il,ll(MAX_DIM)
+  integer :: il,ll(3)
   CMPLX, allocatable :: wftmp(:,:,:),wfPlus(:,:,:),wfMinus(:,:,:) 
   integer :: ip_local
 
@@ -1134,7 +1134,7 @@ subroutine fft_K_to_X(mask,mesh,wfin,wfout,inout)
   PUSH_SUB(fft_K_to_X)
 
 
-  ll(1:MAX_DIM) = mask%ll(1:MAX_DIM)
+  ll(1:3) = mask%ll(1:3)
   SAFE_ALLOCATE(wftmp(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
   SAFE_ALLOCATE(wfPlus(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
   SAFE_ALLOCATE(wfMinus(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
@@ -1229,11 +1229,11 @@ subroutine integral_X_to_K(mask,mesh,wfin,wfout)
   CMPLX,            intent(in)  :: wfin(:,:,:)
   CMPLX,            intent(out) :: wfout(:,:,:)
 
-  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
-  FLOAT   :: temp(MAX_DIM), vec
+  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
+  FLOAT   :: temp(3), vec
   FLOAT   :: k_dot_r
-  integer :: il,ll(MAX_DIM)
-  integer :: ip_local,kx,ky,kz,ikk(MAX_DIM)
+  integer :: il,ll(3)
+  integer :: ip_local,kx,ky,kz,ikk(3)
 
 
   PUSH_SUB(integral_X_to_K)
@@ -1287,11 +1287,11 @@ subroutine integral_K_to_X(mask,mesh,wfin,wfout)
   CMPLX,            intent(in)  :: wfin(:,:,:)
   CMPLX,            intent(out) :: wfout(:,:,:)
 
-  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
-  FLOAT   :: temp(MAX_DIM), vec
+  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
+  FLOAT   :: temp(3), vec
   FLOAT   :: dd,k_dot_r
-  integer :: il,ll(MAX_DIM)
-  integer :: ip_local,kx,ky,kz,ikk(MAX_DIM)
+  integer :: il,ll(3)
+  integer :: ip_local,kx,ky,kz,ikk(3)
 
 
   PUSH_SUB(integral_K_to_X)
@@ -1402,8 +1402,6 @@ subroutine PES_mask_K_to_X(mask,mesh,wfin,wfout)
   type(mesh_t),     intent(in)  :: mesh
   CMPLX,            intent(in)  :: wfin(:,:,:)
   CMPLX,            intent(out) :: wfout(:,:,:)
-
-  CMPLX :: DK(MAX_DIM)
 
   type(profile_t), save :: prof
   type(cube_function_t) :: cf_tmp
@@ -1516,10 +1514,10 @@ subroutine PES_mask_calc(mask, mesh, st, dt, hm, geo, iter)
   type(hamiltonian_t), intent(in)    :: hm
   type(geometry_t),    intent(in)    :: geo
 
-  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
+  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
   type(cube_function_t):: cf1,cf2,cf3,cf4
   CMPLX, allocatable :: mf(:)
-  FLOAT :: temp(MAX_DIM), vec
+  FLOAT :: temp(3), vec
   FLOAT :: dd
   integer :: il,i
 

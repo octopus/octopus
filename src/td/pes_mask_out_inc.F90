@@ -31,11 +31,11 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
   character(len=80) :: fname
   type(unit_t) :: fn_unit
 
-  integer :: ip_local, ix, iy, iz, ix3(MAX_DIM), ixx(MAX_DIM)
+  integer :: ip_local, ix, iy, iz, ix3(3), ixx(3)
   CMPLX, allocatable :: PsiAB(:,:,:,:)
   FLOAT,allocatable :: RhoAB(:,:) 
   type(cube_function_t) :: cf
-  FLOAT :: temp(MAX_DIM), vec
+  FLOAT :: temp(3), vec
   FLOAT :: dd
   integer :: il
   type(mesh_t):: mesh   
@@ -201,7 +201,7 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
 #endif
   
   if (mask%cube%parallel_in_domains) then
-    call dcube_function_allgather(mask%cube, PESK, PESKloc)    
+!     call dcube_function_allgather(mask%cube, PESK, PESKloc)    
     if(mask%cube%fft%library == FFTLIB_PFFT) then !PFFT FS is transposed
       SAFE_ALLOCATE(gcf(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3)))
       gcf = PESK
@@ -241,8 +241,8 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
   FLOAT, pointer, intent(inout) :: cube_f(:)
   type(qshep_t),  intent(out)   :: interp
   
-  integer :: np, ii, ll(MAX_DIM), ix, iy, iz
-  FLOAT   :: KK(MAX_DIM)
+  integer :: np, ii, ll(3), ix, iy, iz
+  FLOAT   :: KK(3)
   FLOAT, allocatable ::  kx(:),ky(:),kz(:)
 
   PUSH_SUB(PES_mask_interpolator_init)
@@ -514,7 +514,7 @@ subroutine PES_mask_dump_ar_polar_M(PESK, file, Lk, dim, dir, Emax, Estep)
   FLOAT,            intent(in) :: dir(:) 
 
   integer :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT ::  KK(MAX_DIM),vec
+  FLOAT ::  KK(3),vec
 
   integer :: nn, ie
   FLOAT  :: step,DE
@@ -642,7 +642,7 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, dir, Emax, Estep)
   FLOAT,            intent(in) :: dir(:) 
 
   integer :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT ::  KK(MAX_DIM),vec
+  FLOAT ::  KK(3),vec
 
   integer :: nn, nx, ny
   FLOAT  :: step,DE, eGrid(3)
@@ -781,7 +781,7 @@ subroutine PES_mask_dump_ar_spherical_cut_M(PESK, file, Lk, dim, dir, Emin, Emax
   FLOAT,            intent(in) :: dir(:) 
 
   integer :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT ::  KK(MAX_DIM),vec
+  FLOAT ::  KK(3),vec
 
   integer :: nn, ie
   FLOAT  :: step,DE
@@ -1059,7 +1059,7 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
   logical,          intent(in) :: interpolate
 
   integer :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT ::  KK(MAX_DIM),vec
+  FLOAT ::  KK(3),vec
 
   integer :: nn
   FLOAT  :: step,DE
@@ -1071,7 +1071,7 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
 
   FLOAT :: Dtheta, Dphi, theta, phi,EE
   integer :: np, Ntheta, Nphi, ith, iph
-  integer :: ll(MAX_DIM)
+  integer :: ll(3)
 
 
   type(profile_t), save :: prof
@@ -1210,7 +1210,7 @@ subroutine PES_mask_dump_power_total(mask, st, file, wfAk)
   CMPLX, optional,  intent(in) :: wfAk(:,:,:,:,:,:)
 
   integer :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT ::  KK(MAX_DIM),vec
+  FLOAT ::  KK(3),vec
 
   integer :: nn
   FLOAT  :: step,DE
@@ -1494,7 +1494,7 @@ subroutine PES_mask_dump_ARPES(mask, st, file, wfAk)
   CMPLX, optional,  intent(in) :: wfAk(:,:,:,:,:,:)
 
   integer :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT ::  KK(MAX_DIM),vec
+  FLOAT ::  KK(3),vec
   
   integer :: nn
   FLOAT  :: step,DE
@@ -1750,7 +1750,7 @@ subroutine PES_mask_write_info(mask, dir)
   character(len=256) :: filename
 
   integer :: iunit,ii
-  integer :: ll(MAX_DIM)
+  integer :: ll(3)
 
 
   PUSH_SUB(PES_mask_write_info)
@@ -1840,7 +1840,7 @@ subroutine PES_mask_restart_read(mask, mesh, st)
   character(len=80) :: filename, dir ,path
 
   integer :: itot, ik, ist, idim , np, ierr,idummy
-  integer :: ll(MAX_DIM)
+  integer :: ll(3)
   FLOAT   :: fdummy
   FLOAT, pointer :: afdummy(:),RR(:)
 
@@ -1848,7 +1848,7 @@ subroutine PES_mask_restart_read(mask, mesh, st)
   PUSH_SUB(PES_mask_restart_read)
 
 
-  ll(1:MAX_DIM) = mask%ll(1:MAX_DIM)
+  ll(1:3) = mask%ll(1:3)
   np =ll(1)*ll(2)*ll(3) 
 
 
@@ -1896,7 +1896,7 @@ subroutine PES_mask_restart_map(mask, st, RR)
 
 
   integer :: itot, ik, ist, idim , np, ierr,idummy
-  integer :: ll(MAX_DIM)
+  integer :: ll(3)
 !   CMPLX, allocatable :: wf1(:,:,:),wf2(:,:,:)
   FLOAT, allocatable :: M_old(:,:,:)
   type(cube_function_t):: cf1,cf2
@@ -1906,7 +1906,7 @@ subroutine PES_mask_restart_map(mask, st, RR)
   PUSH_SUB(PES_mask_restart_map)
 
 
-  ll(1:MAX_DIM) = mask%ll(1:MAX_DIM)
+  ll(1:3) = mask%ll(1:3)
   np =ll(1)*ll(2)*ll(3)
 
   SAFE_ALLOCATE(M_old(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
