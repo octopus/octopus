@@ -51,7 +51,7 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
   SAFE_ALLOCATE(RhoAB(1:mesh%np_part,1:st%d%nspin))
 
   call cube_function_null(cf)    
-  call zcube_function_alloc_RS(mask%cube, cf)
+  call zcube_function_alloc_RS(mask%cube, cf, force_alloc = .true.)
 
   RhoAB= M_ZERO
   
@@ -66,7 +66,7 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
 
         call PES_mask_K_to_X(mask,mesh,mask%k(:,:,:, idim, ist, ik),cf%zRs)
 
-        call zcube_to_mesh(mask%cube, cf, mask%mesh, PsiAB(:, idim, ist, ik), local = .true.)        
+        call PES_mask_cube_to_mesh(mask, cf, PsiAB(:, idim, ist, ik))        
 
         if (mask%mode .ne. MODE_PASSIVE) then 
           PsiAB(:, idim, ist, ik) = PsiAB(:, idim, ist, ik) + st%zpsi(:, idim, ist, ik) 
@@ -149,29 +149,34 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
   FLOAT,            intent(out) :: PESK(:,:,:)
   CMPLX, optional,  intent(in)  :: wfAk(:,:,:,:,:,:)
 
-  integer :: ist, ik, ii, kx, ky, kz,idim
-  FLOAT   :: scale
-   FLOAT, allocatable :: PESKsum(:,:,:)
+  integer :: ist, ik, ii, kx, ky, kz, kkx, kky, kkz, idim
+  FLOAT   :: scale, temp
+  FLOAT, pointer :: gcf(:,:,:)
+  FLOAT, allocatable ::  buf(:,:,:), PESKloc(:,:,:)
+  logical :: local
   
 
   PUSH_SUB(PES_mask_create_full_map)
 
   PESK = M_ZERO
 
+  SAFE_ALLOCATE(PESKloc(1:mask%fs_n(1),1:mask%fs_n(2),1:mask%fs_n(3)))
+  PESKloc = M_ZERO
+
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
-      do kx = 1, mask%ll(1)
-        do ky = 1, mask%ll(2)
-          do kz = 1, mask%ll(3)
+      do kx = 1, mask%fs_n(1)
+        do ky = 1, mask%fs_n(2)
+          do kz = 1, mask%fs_n(3)
 
             if(present(wfAk))then
-              PESK(kx,ky,kz) = PESK(kx,ky,kz) + st%occ(ist, ik) * &
+              PESKloc(kx, ky, kz) = PESKloc(kx, ky, kz) + st%occ(ist, ik) * &
                 sum(abs(mask%k(kx, ky, kz, :, ist, ik) + wfAk(kx,ky,kz,:, ist, ik)  )**2)
             else
-              PESK(kx,ky,kz) = PESK(kx,ky,kz) + st%occ(ist, ik) * sum(abs(mask%k(kx, ky, kz, :, ist, ik)  )**2)
+              PESKloc(kx, ky, kz) = PESKloc(kx, ky, kz) + st%occ(ist, ik) * sum(abs(mask%k(kx, ky, kz, :, ist, ik)  )**2)
             end if
-
+            
           end do
         end do
       end do
@@ -181,19 +186,35 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
 
 #ifdef HAVE_MPI
   if(st%parallel_in_states) then
-    SAFE_ALLOCATE(PESKsum(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
+    SAFE_ALLOCATE(buf(1:mask%fs_n(1),1:mask%fs_n(2),1:mask%fs_n(3)))
 
-    call MPI_Reduce(PESK, PESKsum, mask%ll(1)*mask%ll(2)*mask%ll(3), &
+    call MPI_Reduce(PESKloc, buf, mask%fs_n(1)*mask%fs_n(2)*mask%fs_n(3), &
         MPI_FLOAT, MPI_SUM, 0, st%dom_st_kpt_mpi_grp%comm, mpi_err)
     if(mpi_err .ne. 0) then
       write(*,*)"MPI error"
     end if
-    if(mpi_grp_is_root(mpi_world)) PESK = PESKsum 
 
+    PESKloc = buf 
 
-    SAFE_DEALLOCATE_A(PESKsum) 
+    SAFE_DEALLOCATE_A(buf) 
   end if  
 #endif
+  
+  if (mask%cube%parallel_in_domains) then
+    call dcube_function_allgather(mask%cube, PESK, PESKloc)    
+    if(mask%cube%fft%library == FFTLIB_PFFT) then !PFFT FS is transposed
+      SAFE_ALLOCATE(gcf(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3)))
+      gcf = PESK
+      forall(kx = 1:mask%fs_n_global(1), ky = 1:mask%fs_n_global(2), kz = 1:mask%fs_n_global(3))& 
+      PESK(kx,ky,kz) = gcf(kz,kx,ky)
+      SAFE_DEALLOCATE_P(gcf) 
+    end if
+  else 
+    PESK = PESKloc 
+  end if
+
+  
+  SAFE_DEALLOCATE_A(PESKloc) 
 
 
   ! This is needed in order to normalize the Fourier integral 
@@ -341,7 +362,7 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk)
    
   call cube_init(cube, ll, sb)
   call cube_function_null(cf)
-  call dcube_function_alloc_RS(cube, cf)
+  call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
   cf%dRS = PESK
 
   dk= abs(Lk(2)-Lk(1))
@@ -431,9 +452,11 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, dir)
   
   ll = 1
   do ii = 1, dim
-    ll(ii) = size(PESK,ii) 
+    ll(ii) = size(PESK, ii) 
   end do
   
+  ASSERT(size(PESK, 1) == size(Lk,1))
+
   SAFE_ALLOCATE(idx(maxval(ll(:)), 3))
   SAFE_ALLOCATE(Lk_(size(Lk,1), 3))
   
@@ -1584,7 +1607,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   integer,           intent(in)    :: iter
 
   CMPLX, allocatable :: wf(:,:,:),wfAk(:,:,:,:,:,:) 
-  FLOAT :: PESK(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3))
+  FLOAT :: PESK(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3))
   integer :: ist, ik, ii,  iunit, idim, ierr, st1, st2, k1, k2
   character(len=100) :: fn
   character(len=256) :: dir
@@ -1594,8 +1617,8 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
 
   PUSH_SUB(PES_mask_output)
 
-!   !Dump info for easy post-process
-    if(mpi_grp_is_root(mpi_world)) call PES_mask_write_info(mask, tmpdir)
+  !Dump info for easy post-process
+  if(mpi_grp_is_root(mpi_world)) call PES_mask_write_info(mask, tmpdir)
  
 
   !Photoelectron wavefunction and density in real space
@@ -1616,41 +1639,40 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
     st2 = st%st_end
     k1 = st%d%kpt%start
     k2 = st%d%kpt%end
-    SAFE_ALLOCATE(wfAk(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3),1:st%d%dim,st1:st2,k1:k2))
+    SAFE_ALLOCATE(wfAk(1:mask%fs_n(1), 1:mask%fs_n(2), 1:mask%fs_n(3),1:st%d%dim,st1:st2,k1:k2))
     wfAk = M_z0
   
     call cube_function_null(cf1)    
-    call zcube_function_alloc_RS(mask%cube, cf1) 
-    call cube_function_null(cf2)    
-    call zcube_function_alloc_RS(mask%cube, cf2)    
+    call zcube_function_alloc_RS(mask%cube, cf1, force_alloc = .true.) 
+    call  cube_function_alloc_FS(mask%cube, cf1, force_alloc = .true.) 
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist =  st%st_start, st%st_end
         do idim = 1, st%d%dim
-          call zmesh_to_cube(mask%mesh, st%zpsi(:, idim, ist, ik), mask%cube, cf1, local=.true.)
-          cf1%zRs = (M_ONE-mask%M**10)*cf1%zRs ! mask^10 is practically a box function
-          call PES_mask_X_to_K(mask,mesh,cf1,cf2)
-          wfAk(:,:,:,idim, ist, ik) = cf2%zRs
+          call PES_mask_mesh_to_cube(mask, st%zpsi(:, idim, ist, ik), cf1)
+          cf1%zRs = (M_ONE - mask%cM%zRs**10) * cf1%zRs ! mask^10 is practically a box function
+          call PES_mask_X_to_K(mask,mesh,cf1%zRs,cf1%Fs)
+          wfAk(:,:,:,idim, ist, ik) = cf1%Fs
         end do
       end do
     end do
 
     call zcube_function_free_RS(mask%cube, cf1)
-    call zcube_function_free_RS(mask%cube, cf2)
+    call  cube_function_free_FS(mask%cube, cf1)
   end if 
 
   !Create the full momentum-resolved PES matrix
   PESK = M_ZERO
   if(mask%add_psia) then 
-    call PES_mask_create_full_map(mask,st,PESK,wfAk)
+    call PES_mask_create_full_map(mask, st, PESK, wfAk)
   else 
-    call PES_mask_create_full_map(mask,st,PESK)
+    call PES_mask_create_full_map(mask, st, PESK)
   end if
   
   if(mpi_grp_is_root(mpi_world)) then ! only root node writes the output
     ! Dump the full matrix in binary format for subsequent post-processing 
     write(fn, '(a,a)') trim(dir), '_map.obf'
-    call io_binary_write(io_workpath(fn),mask%ll(1)*mask%ll(2)*mask%ll(3),PESK, ierr)
+    call io_binary_write(io_workpath(fn), mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), PESK, ierr)
 
     ! Dump the k resolved PES on plane kz=0
     write(fn, '(a,a)') trim(dir), '_map.z=0'
@@ -1770,13 +1792,13 @@ subroutine PES_mask_restart_write(mask, mesh, st)
   character(len=80) :: filename, dir ,path
 
   integer :: itot, ik, ist, idim , np, ierr, i
-  integer :: ll(MAX_DIM)
+  integer :: ll(3)
 
 
   PUSH_SUB(PES_mask_restart_write)
 
 
-  ll(1:MAX_DIM) = mask%ll(1:MAX_DIM)
+  ll(1:3) = mask%ll(1:3)
   np = ll(1)*ll(2)*ll(3) 
 
 
@@ -1875,7 +1897,7 @@ subroutine PES_mask_restart_map(mask, st, RR)
 
   integer :: itot, ik, ist, idim , np, ierr,idummy
   integer :: ll(MAX_DIM)
-  CMPLX, allocatable :: wf1(:,:,:),wf2(:,:,:)
+!   CMPLX, allocatable :: wf1(:,:,:),wf2(:,:,:)
   FLOAT, allocatable :: M_old(:,:,:)
   type(cube_function_t):: cf1,cf2
 
@@ -1889,9 +1911,10 @@ subroutine PES_mask_restart_map(mask, st, RR)
 
   SAFE_ALLOCATE(M_old(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
   call cube_function_null(cf1)    
-  call zcube_function_alloc_RS(mask%cube, cf1) 
+  call zcube_function_alloc_RS(mask%cube, cf1, force_alloc = .true.) 
+  call  cube_function_alloc_FS(mask%cube, cf1, force_alloc = .true.) 
   call cube_function_null(cf2)    
-  call zcube_function_alloc_RS(mask%cube, cf2)
+  call zcube_function_alloc_RS(mask%cube, cf2, force_alloc = .true.)
 
 
   call PES_mask_generate_mask_function(mask,mask%mesh,mask%shape, RR, M_old)
@@ -1901,20 +1924,21 @@ subroutine PES_mask_restart_map(mask, st, RR)
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
         cf1%zRs = M_z0
-        call PES_mask_K_to_X(mask, mask%mesh, mask%k(:,:,:, idim, ist, ik),cf1%zRs)
-        call zmesh_to_cube(mask%mesh, st%zpsi(:, idim, ist, ik), mask%cube, cf2, local=.true.)
+        call PES_mask_K_to_X(mask, mask%mesh, mask%k(:,:,:, idim, ist, ik), cf1%zRs)
+        call PES_mask_mesh_to_cube(mask, st%zpsi(:, idim, ist, ik), cf2)
         cf2%zRs = cf1%zRs + cf2%zRs ! the whole pes orbital in real space 
-        cf1%zRs = cf2%zRs* mask%M !modify the orbital in A
-        call zcube_to_mesh(mask%cube, cf1, mask%mesh, st%zpsi(:, idim, ist, ik), local = .true.)
-        cf2%zRs = cf2%zRs * (mask%M-M_old) ! modify the k-orbital in B 
-        call PES_mask_X_to_K(mask, mask%mesh, cf2, cf1)
-        mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%zRs
+        cf1%zRs = cf2%zRs* mask%cM%zRs !modify the orbital in A
+        call PES_mask_cube_to_mesh(mask, cf1, st%zpsi(:, idim, ist, ik))
+        cf2%zRs = cf2%zRs * (mask%cM%zRs-M_old) ! modify the k-orbital in B 
+        call PES_mask_X_to_K(mask, mask%mesh, cf2%zRs, cf1%Fs)
+        mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%Fs
       end do
     end do
   end do
   SAFE_DEALLOCATE_A(M_old)
   
   call zcube_function_free_RS(mask%cube, cf1)
+  call  cube_function_free_FS(mask%cube, cf1)
   call zcube_function_free_RS(mask%cube, cf2)
 
   POP_SUB(PES_mask_restart_map)
