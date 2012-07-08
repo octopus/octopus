@@ -19,4 +19,4 @@ match ; 2nd state    ; GREP(static/eigenvalues, '2   --', 12) ; -0.525874
 
 # Then, run the optimization.
 Input: 02-sym_doublewell.03-oct.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.51481998
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.51482022

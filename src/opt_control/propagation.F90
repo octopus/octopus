@@ -529,19 +529,17 @@ module opt_control_propagation_m
         call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
         call oct_prop_output(prop_chi, i-1, chi, gr, sys%geo)
         call states_end(psi_aux)
-
       else
-
+        call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
+        call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
         call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, psi)
         call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
         call oct_prop_output(prop_chi, i-1, chi, gr, sys%geo)
-        call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
-        call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
-
       end if
 
     end do
     td%dt = -td%dt
+    call update_hamiltonian_psi(0, gr, sys%ks, hm, td, target, par, psi)
     call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
 
     call density_calc(psi, gr, psi%rho)

@@ -12,5 +12,5 @@ Input: 10-current.02-oct.inp
 
 
 Precision : 0.0000001
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  -0.01809413
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  -0.01809415
 match ; J2 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 60) ;  -0.01841484

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 mode: shell-script -*-
+n# -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
 Test       : Asymmetric Double Well
@@ -19,13 +19,13 @@ match ; 2th state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -
 
 # Then, run the optimization for one iteration and compare the convergence.
 Input: 01-asym_doublewell.02-oct_run.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.21725772
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.21725817
 
 # Now we run the same system, but with a time-dependent penalty
 Input: 01-asym_doublewell.03-oct_run.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.21549659
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.21549678
 
 # The same system but with a user-defined target wavefunction
 Input: 01-asym_doublewell.04-oct_run.inp
 Precision : 0.0000001
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.14447116
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ;  0.14447115

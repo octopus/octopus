@@ -35,4 +35,4 @@ match ; Eigenvalue 2 ; GREP(static/info, '2   --' , 13) ; -0.173229
 # iterations depends on numerical noise.
 Input: 06-zbr98.02-oct.inp
 Precision : 0.01
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.98872445
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.98888600

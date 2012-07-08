@@ -31,7 +31,7 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -0.49521
 # Now, we define the target as a time-dependent target. Also, we use
 # the conjugate gradients method for optimization.
 Input: 03-localtarget.03-tdoct.inp
-match ; J 1st iteration  ; GREP(opt-control/convergence, '##        1', 20) ;  0.36745495
+match ; J 1st iteration  ; GREP(opt-control/convergence, '##        1', 20) ;  0.36745475
 
 
 # Now we check that the many-particle version of the QOCT optimization of
@@ -42,4 +42,4 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.16891047
 
 # Now once again we run for only one iteration and check the convergence.
 Input: 03-localtarget.05-oct-mp.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -4.18554478
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -4.18554382
