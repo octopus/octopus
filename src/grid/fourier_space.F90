@@ -94,7 +94,7 @@ contains
     n3 = max(1, cube%fs_n(3))
 
     allocated = .false.
-
+    
     select case(cube%fft%library)
     case(FFTLIB_PFFT)
       if(.not. cf%forced_alloc) then 
@@ -105,6 +105,9 @@ contains
         else
           cf%fs => cube%fft%fs_data(1:n3,1:n1,1:n2)
         end if
+      else ! force allocate transposed with PFFT  
+        allocated = .true.
+        SAFE_ALLOCATE(cf%fs(1:n3, 1:n1, 1:n2))
       end if
     case(FFTLIB_CLAMD)
 #ifdef HAVE_OPENCL
