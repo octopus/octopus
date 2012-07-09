@@ -241,7 +241,9 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
       
     case(PW_MAP_PFFT)
       call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_PFFT, nn_out = ll)
-      mask%ll = mask%cube%fs_n 
+      mask%ll(1) = mask%cube%fs_n(3)
+      mask%ll(2) = mask%cube%fs_n(1)
+      mask%ll(3) = mask%cube%fs_n(2)
       mask%fft = mask%cube%fft
       mask%np = mesh%np_part ! the mask is local
       if(mask%cube%mpi_grp%size > 1) then 
@@ -342,12 +344,11 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 
   SAFE_ALLOCATE(mask%Lk(1:mask%fs_n_global(1)))
 
-  print *,"cube%fs_n",mask%cube%fs_n
-  print *,"cube%fft%fs_n",mask%cube%fft%fs_n
-  print *,"fs_istart(1:3)", mask%cube%fs_istart
-  print *,"cube%rs_n",mask%cube%rs_n
-  print *,"rs_istart(1:3)", mask%cube%rs_istart
-  print *,"mask%ll",mask%ll
+!   print *,mpi_world%rank,"cube%fs_n",mask%cube%fs_n
+!   print *,mpi_world%rank,"cube%fft%fs_n",mask%cube%fft%fs_n
+!   print *,mpi_world%rank,"cube%fft%fs_data", &
+!   size(mask%cube%fft%fs_data,1), size(mask%cube%fft%fs_data,2), size(mask%cube%fft%fs_data,3)
+
 
   st1 = st%st_start
   st2 = st%st_end
@@ -895,27 +896,40 @@ subroutine PES_mask_Volkov_time_evolution_wf(mask, mesh, dt, iter, wf)
 
 
   ! propagate wavefunction in momentum space in presence of a td field (in the velocity gauge)
-  do ix = 1, mask%fs_n(1)
-    KK_(1) = mask%Lk(ix + mask%fs_istart(1) - 1)
-    do iy = 1, mask%fs_n(2)
-      KK_(2) = mask%Lk(iy + mask%fs_istart(2) - 1)
-      do iz = 1, mask%fs_n(3)
-        KK_(3) = mask%Lk(iz + mask%fs_istart(3) - 1)
+  if(mask%cube%fft%library == FFTLIB_PFFT) then !PFFT FS indices are transposed
 
-        if(mask%cube%fft%library == FFTLIB_PFFT) then !PFFT FS indices are transposed
-          KK(1) = KK_(3)
-          KK(2) = KK_(1)  
-          KK(3) = KK_(2)
-        else
-          KK(:) = KK_(:)        
-        end if
+    do ix = 1, mask%fs_n(1)
+      KK(3) = mask%Lk(ix + mask%fs_istart(1) - 1)
+      do iy = 1, mask%fs_n(2)
+        KK(1) = mask%Lk(iy + mask%fs_istart(2) - 1)
+        do iz = 1, mask%fs_n(3)
+          KK(2) = mask%Lk(iz + mask%fs_istart(3) - 1)
 
-        vec = sum(( KK(1:mesh%sb%dim) - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
-        wf(ix, iy, iz) = wf(ix, iy, iz) * exp(-M_zI * dt * vec)
+!             KK(1) = KK_(3)
+!             KK(2) = KK_(1)  
+!             KK(3) = KK_(2)
+            vec = sum(( KK(1:mesh%sb%dim) - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
+            wf(iz, ix, iy) = wf(iz, ix, iy) * exp(-M_zI * dt * vec)
+
         
+        end do
       end do
     end do
-  end do
+  else
+
+    do ix = 1, mask%ll(1)
+      KK(1) = mask%Lk(ix + mask%fs_istart(1) - 1)
+      do iy = 1, mask%ll(2)
+        KK(2) = mask%Lk(iy + mask%fs_istart(2) - 1)
+        do iz = 1, mask%ll(3)
+          KK(3) = mask%Lk(iz + mask%fs_istart(3) - 1)
+          vec = sum(( KK(1:mesh%sb%dim) - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
+          wf(ix, iy, iz) = wf(ix, iy, iz) * exp(-M_zI * dt * vec)
+        end do
+      end do
+    end do
+
+  end if
 
 
   POP_SUB(PES_mask_Volkov_time_evolution_wf)
@@ -1369,22 +1383,22 @@ subroutine PES_mask_X_to_K(mask,mesh,wfin,wfout)
       call fft_X_to_K(mask,mesh,wfin, wfout)
       
     case(PW_MAP_BARE_FFT)
-      call zfft_forward(mask%fft, wfin, wfout)
+      call zfft_forward(mask%cube%fft, wfin, wfout)
       
     case(PW_MAP_TDPSF)
       call tdpsf_X_to_K(mask%psf, wfin, wfout)
       
     case(PW_MAP_NFFT)
-      call zfft_forward(mask%fft, wfin, wfout)
+      call zfft_forward(mask%cube%fft, wfin, wfout)
 
     case(PW_MAP_PFFT)
       call cube_function_null(cf_tmp)    
       call zcube_function_alloc_RS(mask%cube, cf_tmp)
       call cube_function_alloc_fs(mask%cube, cf_tmp)
       cf_tmp%zRs = wfin
-      call zfft_forward(mask%fft, cf_tmp%zRs, cf_tmp%fs)
-    print *,"wfout", size(wfout,1),size(wfout,2),size(wfout,3)
-    print *,"cf_tmp%fs", size(cf_tmp%fs,1),size(cf_tmp%fs,2),size(cf_tmp%fs,3)
+      call zfft_forward(mask%cube%fft, cf_tmp%zRs, cf_tmp%fs)
+!     print *,mpi_world%rank,"wfout",size(wfout,1),size(wfout,2),size(wfout,3)
+!     print *,mpi_world%rank,"cf_tmp%fs", size(cf_tmp%fs,1),size(cf_tmp%fs,2),size(cf_tmp%fs,3)
       wfout = cf_tmp%fs
       call zcube_function_free_RS(mask%cube, cf_tmp)
       call cube_function_free_fs(mask%cube, cf_tmp)
@@ -1423,13 +1437,13 @@ subroutine PES_mask_K_to_X(mask,mesh,wfin,wfout)
       call fft_K_to_X(mask,mesh,wfin,wfout,OUT)
       
     case(PW_MAP_BARE_FFT)
-      call zfft_backward(mask%fft, wfin,wfout)
+      call zfft_backward(mask%cube%fft, wfin,wfout)
 
     case(PW_MAP_TDPSF)
       call tdpsf_K_to_X(mask%psf, wfin,wfout)
 
     case(PW_MAP_NFFT)
-      call zfft_backward(mask%fft, wfin,wfout)
+      call zfft_backward(mask%cube%fft, wfin,wfout)
 
     case(PW_MAP_PFFT)
 
@@ -1437,9 +1451,9 @@ subroutine PES_mask_K_to_X(mask,mesh,wfin,wfout)
       call zcube_function_alloc_RS(mask%cube, cf_tmp)
       call cube_function_alloc_fs(mask%cube, cf_tmp)
       cf_tmp%fs = wfin
-      call zfft_backward(mask%fft, cf_tmp%fs, cf_tmp%zRs)
-      print *,"wfout", size(wfout,1),size(wfout,2),size(wfout,3)
-      print *,"cf_tmp%zRs", size(cf_tmp%zRs,1),size(cf_tmp%zRs,2),size(cf_tmp%zRs,3)
+      call zfft_backward(mask%cube%fft, cf_tmp%fs, cf_tmp%zRs)
+!       print *,"wfout", size(wfout,1),size(wfout,2),size(wfout,3)
+!       print *,"cf_tmp%zRs", size(cf_tmp%zRs,1),size(cf_tmp%zRs,2),size(cf_tmp%zRs,3)
       wfout = cf_tmp%zRs
       call zcube_function_free_RS(mask%cube, cf_tmp)
       call cube_function_free_fs(mask%cube, cf_tmp)
@@ -1579,6 +1593,7 @@ subroutine PES_mask_calc(mask, mesh, st, dt, hm, geo, iter)
             case(MODE_MASK)
            
               cf1%zRs = (M_ONE - mask%cM%zRs) * cf1%zRs                               ! cf1 =(1-M)*U(t2,t1)*\Psi_A(x,t1)
+!         print *,mpi_world%rank,"cf2%Fs", size(cf2%Fs,1),size(cf2%Fs,2),size(cf2%Fs,3)
               call PES_mask_X_to_K(mask,mesh,cf1%zRs,cf2%Fs)                          ! cf2 = \tilde{\Psi}_A(k,t2)
 
               if ( mask%filter_k ) then ! apply a filter to the Fourier transform to remove unwanted energies

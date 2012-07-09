@@ -118,7 +118,7 @@ module PES_m
     integer          :: fs_n(1:3)              !< the dimensions of the local portion of the cube in fourier space
     integer          :: fs_istart(1:3)         !< where does the local portion of the cube start in fourier space
     
-    FLOAT            :: spacing(3)             !< the spacing
+    FLOAT            :: spacing(3)       !< the spacing
     integer, pointer :: Lxyz_inv(:,:,:) => NULL()
     !< Lxyz_inv return a point on the main mesh from xyz on the mask square mesh
     type(mesh_t), pointer  :: mesh             !< a pointer to the mesh

@@ -160,15 +160,15 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
 
   PESK = M_ZERO
 
-  SAFE_ALLOCATE(PESKloc(1:mask%fs_n(1),1:mask%fs_n(2),1:mask%fs_n(3)))
+  SAFE_ALLOCATE(PESKloc(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
   PESKloc = M_ZERO
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
-      do kx = 1, mask%fs_n(1)
-        do ky = 1, mask%fs_n(2)
-          do kz = 1, mask%fs_n(3)
+      do kx = 1, mask%ll(1)
+        do ky = 1, mask%ll(2)
+          do kz = 1, mask%ll(3)
 
             if(present(wfAk))then
               PESKloc(kx, ky, kz) = PESKloc(kx, ky, kz) + st%occ(ist, ik) * &
@@ -186,9 +186,9 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
 
 #ifdef HAVE_MPI
   if(st%parallel_in_states) then
-    SAFE_ALLOCATE(buf(1:mask%fs_n(1),1:mask%fs_n(2),1:mask%fs_n(3)))
+    SAFE_ALLOCATE(buf(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
 
-    call MPI_Reduce(PESKloc, buf, mask%fs_n(1)*mask%fs_n(2)*mask%fs_n(3), &
+    call MPI_Reduce(PESKloc, buf, mask%ll(1)*mask%ll(2)*mask%ll(3), &
         MPI_FLOAT, MPI_SUM, 0, st%dom_st_kpt_mpi_grp%comm, mpi_err)
     if(mpi_err .ne. 0) then
       write(*,*)"MPI error"
@@ -201,7 +201,7 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
 #endif
   
   if (mask%cube%parallel_in_domains) then
-!     call dcube_function_allgather(mask%cube, PESK, PESKloc)    
+    call dcube_function_allgather(mask%cube, PESK, PESKloc)    
     if(mask%cube%fft%library == FFTLIB_PFFT) then !PFFT FS is transposed
       SAFE_ALLOCATE(gcf(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3)))
       gcf = PESK
@@ -1639,7 +1639,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
     st2 = st%st_end
     k1 = st%d%kpt%start
     k2 = st%d%kpt%end
-    SAFE_ALLOCATE(wfAk(1:mask%fs_n(1), 1:mask%fs_n(2), 1:mask%fs_n(3),1:st%d%dim,st1:st2,k1:k2))
+    SAFE_ALLOCATE(wfAk(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3),1:st%d%dim,st1:st2,k1:k2))
     wfAk = M_z0
   
     call cube_function_null(cf1)    
