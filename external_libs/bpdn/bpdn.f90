@@ -80,8 +80,7 @@ module bpdn_m
   integer, parameter, public ::    &
     EXPLICIT_MATRIX = 1,           &
     COS_MATRIX      = 2,           &
-    SIN_MATRIX      = 3,           &
-    EXP_MATRIX      = 4
+    SIN_MATRIX      = 3
 
   type bpdn_matrix
     integer          :: type
@@ -570,9 +569,7 @@ contains
     real(8),           intent(in)    :: xx(:)    !(1:aa%mm)
     real(8),           intent(out)   :: res(:)   !(1:nn)
 
-    integer :: inn, imm
-    real(8) :: tt
-    complex(8) :: dexp, aexp
+    integer :: inn, imm, comp
 
     select case(aa%type)
     case(EXPLICIT_MATRIX)
@@ -580,23 +577,17 @@ contains
       call dgemv(trans = 'n', m = aa%nn, n = aa%mm, alpha = -1.0_8, a = aa%matrix(1, 1), lda = ubound(aa%matrix, dim = 1), &
         x = xx(1), incx = 1, beta = 1.0_8, y = res(1), incy = 1)
 
-    case(SIN_MATRIX)
+    case(SIN_MATRIX, COS_MATRIX)
+
+      comp = 0
+      if(aa%type == SIN_MATRIX) comp = 1
+
+      call expmm(aa%mm, aa%nn, xx(1), res(1), aa%dmm, aa%dnn,  1)
+        
       do inn = 1, aa%nn
-        dexp = exp(cmplx(0.0_8, aa%dnn*(inn - 1)*aa%dmm, 8))
-        aexp = 1.0_8
-        tt = 0.0_8
-        do imm = 1, aa%mm
-!          tt = tt + sin((inn - 1)*aa%dnn*(imm - 1)*aa%dmm)*xx(imm)
-          tt = tt + aimag(aexp)*xx(imm)
-          aexp = aexp*dexp
-        end do
-        res(inn) = bb(inn) - tt
+        res(inn) = bb(inn) + res(inn)
       end do
 
-    case(COS_MATRIX)
-      stop 1
-    case(EXP_MATRIX)
-      stop 1
     end select
 
   end subroutine residual
@@ -608,9 +599,7 @@ contains
     real(8),           intent(in)    :: res(:)   !(1:aa%nn)
     real(8),           intent(out)   :: grad(:)  !(1:aa%mm)
 
-    integer :: inn, imm
-    real(8) :: tt
-    complex(8) :: dexp, aexp
+    integer :: inn, imm, comp
 
     select case(aa%type)
     case(EXPLICIT_MATRIX)
@@ -618,21 +607,12 @@ contains
       call dgemv(trans = 't', m = aa%nn, n = aa%mm, alpha = -1.0_8, a = aa%matrix(1, 1), lda = ubound(aa%matrix, dim = 1), &
         x = res(1), incx = 1, beta = 0.0_8, y = grad(1), incy = 1)
 
-    case(SIN_MATRIX)
-      do imm = 1, aa%mm
-        dexp = exp(cmplx(0.0_8, aa%dnn*(imm - 1)*aa%dmm, 8))
-        aexp = 1.0_8
-        tt = 0.0_8
-        do inn = 1, aa%nn
-          tt = tt + aimag(aexp)*res(inn)
-          aexp = aexp*dexp
-        end do
-        grad(imm) = -tt
-      end do
-    case(COS_MATRIX)
-      stop 1
-    case(EXP_MATRIX)
-      stop 1
+    case(SIN_MATRIX, COS_MATRIX)
+      comp = 0
+      if(aa%type == SIN_MATRIX) comp = 1
+
+      call expmm(aa%nn, aa%mm, res(1), grad(1), aa%dnn, aa%dmm, comp)
+      
     end select
 
   end subroutine calc_grad

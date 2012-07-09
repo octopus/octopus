@@ -24,7 +24,8 @@ libbpdn_a_SOURCES =            \
 	heap.c                 \
 	oneProjectorCore.c     \
 	spgl1_projector.c      \
-	bpdn.f90
+	bpdn.f90               \
+	expmm.c
 
 noinst_HEADERS =               \
 	heap.h                 \

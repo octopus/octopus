@@ -78,7 +78,7 @@ contains
     this%dfreq = dfreq
     this%sfreq = sfreq
     
-    if(transform_type == SPECTRUM_TRANSFORM_EXP .or. transform_type == SPECTRUM_TRANSFORM_COS) then
+    if(transform_type == SPECTRUM_TRANSFORM_EXP) then
       
       call bpdn_matrix_init(this%fourier_matrix, this%ntime, this%nfreq, EXPLICIT_MATRIX)
       
@@ -110,8 +110,6 @@ contains
     else
 
       select case(transform_type)
-      case(SPECTRUM_TRANSFORM_EXP)
-        type = EXP_MATRIX        
       case(SPECTRUM_TRANSFORM_SIN)
         type = SIN_MATRIX
       case(SPECTRUM_TRANSFORM_COS)
