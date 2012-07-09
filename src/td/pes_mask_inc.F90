@@ -327,28 +327,17 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 
   end select
   
-  !Indexes  
+  !Indices  
  
   mask%fs_istart = mask%cube%fs_istart 
   mask%fs_n = mask%cube%fs_n 
   mask%fs_n_global = mask%cube%fs_n_global 
-  
 
-
-
-!   cSAFE_ALLOCATE(mask%Lxyz_inv(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
-  
-!!ALLOCATIONS
+  !Allocations
 	call cube_function_null(mask%cM)    
 	call zcube_function_alloc_RS(mask%cube, mask%cM, force_alloc = .true.)
 
   SAFE_ALLOCATE(mask%Lk(1:mask%fs_n_global(1)))
-
-!   print *,mpi_world%rank,"cube%fs_n",mask%cube%fs_n
-!   print *,mpi_world%rank,"cube%fft%fs_n",mask%cube%fft%fs_n
-!   print *,mpi_world%rank,"cube%fft%fs_data", &
-!   size(mask%cube%fft%fs_data,1), size(mask%cube%fft%fs_data,2), size(mask%cube%fft%fs_data,3)
-
 
   st1 = st%st_start
   st2 = st%st_end
@@ -359,7 +348,6 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 
 
   ! generate the map between mesh and cube
-!   call  PES_mask_generate_Lxyz_inv(mask)
   call  PES_mask_generate_Lk(mask) ! generate the physical momentum vector
 
 
@@ -563,19 +551,9 @@ subroutine PES_mask_end(mask)
   SAFE_DEALLOCATE_P(mask%k)
 
   SAFE_DEALLOCATE_P(mask%ext_pot)
-!     cSAFE_DEALLOCATE_P(mask%M)
   SAFE_DEALLOCATE_P(mask%mask_R)
-!     cSAFE_DEALLOCATE_P(mask%Lxyz_inv)
   SAFE_DEALLOCATE_P(mask%Lk)
     
-!      if(mask%pw_map_how .ne. PW_MAP_NFFT)then
-!       call fft_end(mask%fft)
-!      else
-! #if defined(HAVE_NFFT) 
-!       call nfft_end(mask%nfft)
-! #endif
-!     end if 
-
   if(mask%mode == MODE_PSF) then 
     call tdpsf_end(mask%psf)
   end if
@@ -594,47 +572,6 @@ subroutine PES_mask_end(mask)
   POP_SUB(PES_mask_end)
 end subroutine PES_mask_end
 
-! ---------------------------------------------------------
-subroutine PES_mask_generate_Lxyz_inv(mask)
-  type(PES_mask_t), intent(inout) :: mask
-  
-  integer :: ix,iy,iz,ip,rankmin,dir
-  FLOAT :: dmin! , ixx(3)
-  integer :: ixx(3)
-
-  PUSH_SUB(PES_mask_generate_Lxyz_inv)
-
-
-  mask%Lxyz_inv = -1
-
-
-  do ix = 1, mask%ll(1)
-    ixx(1)= ix - int(mask%ll(1)/2) -1  
-    do iy= 1, mask%ll(2) 
-      ixx(2)= iy - int(mask%ll(2)/2) -1  
-      do iz = 1, mask%ll(3)
-        ixx(3)= iz - int(mask%ll(3)/2) -1 
-        
-         
-        !!Support multiresolution
-        if( all(ixx(1:mask%mesh%sb%dim) >  mask%mesh%idx%nr(1,1:mask%mesh%sb%dim) &
-                              + mask%mesh%idx%enlarge(1:mask%mesh%sb%dim) ) .and. &
-            all(ixx(1:mask%mesh%sb%dim) <  mask%mesh%idx%nr(2,1:mask%mesh%sb%dim) &
-                               - mask%mesh%idx%enlarge(1:mask%mesh%sb%dim) ) ) then
-
-          ip = mask%mesh%idx%Lxyz_inv(ixx(1),ixx(2),ixx(3)) 
-          if (ip > 0 .and. ip < mask%mesh%np_global) then
-            mask%Lxyz_inv(ix,iy,iz) = mask%mesh%idx%Lxyz_inv(ixx(1),ixx(2),ixx(3))
-          end if 
-        end if
-      
-      end do
-    end do
-  end do
-
-
-  POP_SUB(PES_mask_generate_Lxyz_inv)
-end subroutine PES_mask_generate_Lxyz_inv
 
 ! --------------------------------------------------------
 subroutine PES_mask_generate_Lk(mask)
@@ -805,18 +742,6 @@ subroutine PES_mask_generate_mask_function(mask,mesh, shape, R, mask_sq)
  
   call PES_mask_mesh_to_cube(mask, mask_fn, mask%cM, local = local_)
 
-!   if(mpi_grp_is_root(mpi_world)) then 
-!     do ip = 1, mask%cube%rs_n(1)
-!       print  *,ip, abs(mask%cM%zRS(ip, mask%cube%rs_n(2)/2, mask%cube%rs_n(3)/2))
-!     end do
-!     do ip = 1, mask%cube%rs_n(2)
-!       print  *,ip, abs(mask%cM%zRS( mask%cube%rs_n(1)/2,ip, mask%cube%rs_n(3)/2))
-!     end do
-!     do ip = 1, mask%cube%rs_n(3)
-!       print  *,ip, abs(mask%cM%zRS( mask%cube%rs_n(1)/2, mask%cube%rs_n(2)/2, ip))
-!     end do
-!   end if
-
   if(present(mask_sq)) mask_sq = real(mask%cM%zRS)
 
 
@@ -840,21 +765,12 @@ subroutine PES_mask_apply_mask(mask,st,mesh)
   PUSH_SUB(PES_mask_apply_mask)
   SAFE_ALLOCATE(mmask(1:mask%mesh%np_part))
 
-
   call PES_mask_cube_to_mesh(mask, mask%cM, mmask)
-  
-  
-!   if(mpi_grp_is_root(mpi_world)) then
-!     do ip=1, mask%mesh%np_part
-!       print *, ip, mmask(ip)
-!     end do
-!   end if
   
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
-           st%zpsi(1:mask%mesh%np_part, idim, ist, ik) = st%zpsi(1:mask%mesh%np_part, idim, ist, ik)*mmask(1:mask%mesh%np_part)
-!            st%zpsi(:, idim, ist, ik) = st%zpsi(:, idim, ist, ik)*mmask(:)
+         st%zpsi(1:mask%mesh%np_part, idim, ist, ik) = st%zpsi(1:mask%mesh%np_part, idim, ist, ik)*mmask(1:mask%mesh%np_part)
       end do
     end do
   end do
@@ -888,9 +804,9 @@ subroutine PES_mask_Volkov_time_evolution_wf(mask, mesh, dt, iter, wf)
   integer,          intent(in)    :: iter
   CMPLX,            intent(inout) :: wf(:,:,:)
 
-  integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
+  integer ::  ix, iy, iz
   FLOAT :: temp(3), vec
-  FLOAT :: dd, KK(1:3), KK_(1:3)
+  FLOAT :: dd, KK(1:3)
 
   PUSH_SUB(PES_mask_Volkov_time_evolution_wf)
 
@@ -905,9 +821,6 @@ subroutine PES_mask_Volkov_time_evolution_wf(mask, mesh, dt, iter, wf)
         do iz = 1, mask%fs_n(3)
           KK(2) = mask%Lk(iz + mask%fs_istart(3) - 1)
 
-!             KK(1) = KK_(3)
-!             KK(2) = KK_(1)  
-!             KK(3) = KK_(2)
             vec = sum(( KK(1:mesh%sb%dim) - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
             wf(iz, ix, iy) = wf(iz, ix, iy) * exp(-M_zI * dt * vec)
 
@@ -934,115 +847,6 @@ subroutine PES_mask_Volkov_time_evolution_wf(mask, mesh, dt, iter, wf)
 
   POP_SUB(PES_mask_Volkov_time_evolution_wf)
 end subroutine PES_mask_Volkov_time_evolution_wf
-
-!-------------------------------------------------
-subroutine PES_mask_Volkov_time_evolution_cf(mask, mesh, dt, iter, cf)
-  type(PES_mask_t),      intent(inout) :: mask
-  type(mesh_t),          intent(in)    :: mesh
-  FLOAT,                 intent(in)    :: dt
-  integer,               intent(in)    :: iter
-  type(cube_function_t), intent(inout) :: cf
-
-  integer :: ik, ix, iy, iz 
-  FLOAT :: vec, KK(1:3)
-  CMPLX, allocatable :: gop(:,:,:) 
-  type(fourier_space_op_t) :: evol
-
-  PUSH_SUB(PES_mask_Volkov_time_evolution_cf)
-
-  SAFE_ALLOCATE(gop(1:mask%fs_n_global(1), 1:mask%fs_n_global(2), 1:mask%fs_n_global(3)))
-
-  ! propagate wavefunction in momentum space in presence of a td field (in the velocity gauge)
-  do ix = 1, mask%fs_n_global(1)
-    KK(1) = mask%Lk(ix)
-    do iy = 1, mask%fs_n_global(2)
-      KK(2) = mask%Lk(iy)
-      do iz = 1, mask%fs_n_global(3)
-        KK(3) = mask%Lk(iz)
-
-        vec = sum(( KK(1:mesh%sb%dim) - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
-        gop(ix, iy, iz) =  exp(-M_zI * dt * vec)
-        
-      end do
-    end do
-  end do
-  
-!  call zfourier_space_op_init(evol, mask%cube, gop)
-
-  if (mask%cube%fft%library == FFTLIB_PFFT) then 
-    do ix = 1, mask%fs_n(1)
-      do iy = 1, mask%fs_n(2)
-        do iz = 1, mask%fs_n(3)
-!          cf%fs(iz, ix, iy) = cf%fs(iz, ix, iy)*evol%zop(ix, iy, iz)
-          cf%fs(iz, ix, iy) = cf%fs(iz, ix, iy)*gop(ix, iy, iz)
-        end do
-      end do
-    end do
-  else 
-    do ix = 1, mask%fs_n(1)
-      do iy = 1, mask%fs_n(2)
-        do iz = 1, mask%fs_n(3)
-!          cf%fs(ix, iy, iz) = cf%fs(ix, iy, iz)*evol%zop(ix, iy, iz)        
-          cf%fs(ix, iy, iz) = cf%fs(ix, iy, iz)*gop(ix, iy, iz)
-        end do
-      end do
-    end do
-  end if  
-!   call zfourier_space_op_apply(evol, mask%cube, cf)
-  
-!  call fourier_space_op_end(evol)
-  SAFE_DEALLOCATE_A(gop)
-
-  POP_SUB(PES_mask_Volkov_time_evolution_cf)
-end subroutine PES_mask_Volkov_time_evolution_cf
-
-
-
-! ! ---------------------------------------------------------
-! subroutine PES_mask_backaction_wf_apply(mask, mesh, wfB,state)
-!   type(PES_mask_t), intent(in)    :: mask
-!   type(mesh_t),     intent(in)    :: mesh
-!   CMPLX,            intent(inout) :: state(:)
-!   CMPLX,            intent(in)    :: wfB(:,:,:)
-! 
-!   integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
-!   type(cube_function_t) :: cf
-!   CMPLX, allocatable :: mf(:)
-!   FLOAT :: temp(3), vec
-!   FLOAT :: dd
-!   integer :: il,ll(3)
-! 
-!   integer:: ip_local
-! 
-!   type(profile_t), save :: prof
-!   call profiling_in(prof, "PESMASK_back_action")
-! 
-! 
-!   cPUSH_SUB(PES_mask_backaction_wf_apply)
-! 
-! 
-!   ll(1:3) = mask%ll(1:3)
-!   call cube_function_null(cf)    
-!   call zcube_function_alloc_RS(mask%cube, cf, force_alloc = .true.) 
-!   cSAFE_ALLOCATE(mf(1:mask%mesh%np_part))
-! 
-!   
-!   cf%zRS = M_z0
-!   call PES_mask_K_to_X(mask,mesh, wfB , cf%zRs)
-!   
-!   call zcube_to_mesh(mask%cube, cf, mask%mesh, mf, local = .true.)  
-!   state = state + mf    
-! 
-!  
-!   cSAFE_DEALLOCATE_A(mf)
-!   call zcube_function_free_RS(mask%cube,cf)
-!  
-!   cPOP_SUB(PES_mask_backaction_wf_apply)
-!  
-!   call profiling_out(prof)
-!   
-! end subroutine PES_mask_backaction_wf_apply
-
 
 
 
@@ -1397,8 +1201,6 @@ subroutine PES_mask_X_to_K(mask,mesh,wfin,wfout)
       call cube_function_alloc_fs(mask%cube, cf_tmp)
       cf_tmp%zRs = wfin
       call zfft_forward(mask%cube%fft, cf_tmp%zRs, cf_tmp%fs)
-!     print *,mpi_world%rank,"wfout",size(wfout,1),size(wfout,2),size(wfout,3)
-!     print *,mpi_world%rank,"cf_tmp%fs", size(cf_tmp%fs,1),size(cf_tmp%fs,2),size(cf_tmp%fs,3)
       wfout = cf_tmp%fs
       call zcube_function_free_RS(mask%cube, cf_tmp)
       call cube_function_free_fs(mask%cube, cf_tmp)
@@ -1452,8 +1254,6 @@ subroutine PES_mask_K_to_X(mask,mesh,wfin,wfout)
       call cube_function_alloc_fs(mask%cube, cf_tmp)
       cf_tmp%fs = wfin
       call zfft_backward(mask%cube%fft, cf_tmp%fs, cf_tmp%zRs)
-!       print *,"wfout", size(wfout,1),size(wfout,2),size(wfout,3)
-!       print *,"cf_tmp%zRs", size(cf_tmp%zRs,1),size(cf_tmp%zRs,2),size(cf_tmp%zRs,3)
       wfout = cf_tmp%zRs
       call zcube_function_free_RS(mask%cube, cf_tmp)
       call cube_function_free_fs(mask%cube, cf_tmp)
@@ -1593,7 +1393,6 @@ subroutine PES_mask_calc(mask, mesh, st, dt, hm, geo, iter)
             case(MODE_MASK)
            
               cf1%zRs = (M_ONE - mask%cM%zRs) * cf1%zRs                               ! cf1 =(1-M)*U(t2,t1)*\Psi_A(x,t1)
-!         print *,mpi_world%rank,"cf2%Fs", size(cf2%Fs,1),size(cf2%Fs,2),size(cf2%Fs,3)
               call PES_mask_X_to_K(mask,mesh,cf1%zRs,cf2%Fs)                          ! cf2 = \tilde{\Psi}_A(k,t2)
 
               if ( mask%filter_k ) then ! apply a filter to the Fourier transform to remove unwanted energies
@@ -1605,7 +1404,6 @@ subroutine PES_mask_calc(mask, mesh, st, dt, hm, geo, iter)
               cf1%Fs(:,:,:) = mask%k(:,:,:, idim, ist, ik)                            ! cf1 = \Psi_B(k,t1)
               mask%k(:,:,:, idim, ist, ik) =  cf2%Fs(:,:,:)                           ! mask%k = \tilde{\Psi}_A(k,t2)
               call PES_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf1%Fs)     ! cf1 = \tilde{\Psi}_B(k,t2)
-!               call PES_mask_Volkov_time_evolution_cf(mask, mesh, dt, iter-1, cf1)     ! cf1 = \tilde{\Psi}_B(k,t2)
 
               mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&
                                               + cf1%Fs(:,:,:)      ! mask%k = \tilde{\Psi}_A(k,t2) + \tilde{\Psi}_B(k,t2)

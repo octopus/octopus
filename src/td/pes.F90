@@ -119,8 +119,7 @@ module PES_m
     integer          :: fs_istart(1:3)         !< where does the local portion of the cube start in fourier space
     
     FLOAT            :: spacing(3)       !< the spacing
-    integer, pointer :: Lxyz_inv(:,:,:) => NULL()
-    !< Lxyz_inv return a point on the main mesh from xyz on the mask square mesh
+    
     type(mesh_t), pointer  :: mesh             !< a pointer to the mesh
     type(cube_t)     :: cube                   !< the cubic mesh
 
@@ -205,7 +204,6 @@ contains
     !this%ll=0
     !this%np=0
     !this%spacing=M_ZERO
-    this%Lxyz_inv=>null()
     this%mesh=>null()
     !call cube_nullify(this%cube)
     this%ext_pot=>null()
@@ -388,7 +386,7 @@ contains
 
     PUSH_SUB(PES_restart_write)
 
-      if(pes%calc_mask) call PES_mask_restart_write (pes%mask, mesh, st)
+      if(pes%calc_mask) call PES_mask_restart_write (pes%mask, st)
 
     POP_SUB(PES_restart_write)
   end subroutine PES_restart_write

@@ -1782,24 +1782,54 @@ end subroutine PES_mask_write_info
 
 
 ! ---------------------------------------------------------
+subroutine PES_mask_write_orbital(mask, filename, wf)
+  type(PES_mask_t),  intent(in) :: mask
+  character(len=80), intent(in) :: filename
+  CMPLX,             intent(in) :: wf(:,:,:)
+
+  integer :: ll(3), np, ierr
+  CMPLX, allocatable :: gwf(:,:,:)
+
+
+  PUSH_SUB(PES_mask_write_orbital)
+
+
+  ll(1:3) = mask%fs_n_global(1:3)
+  np = ll(1)*ll(2)*ll(3) 
+  
+  if (mask%cube%parallel_in_domains) then
+    SAFE_ALLOCATE(gwf(1:ll(1),1:ll(2),1:ll(3))) 
+    call zcube_function_allgather(mask%cube, gwf, wf)    
+    call io_binary_write(filename, np, gwf(:,:,:), ierr)
+    SAFE_DEALLOCATE_A(gwf)
+  else
+    call io_binary_write(filename, np, wf(:,:,:), ierr)    
+  end if
+
+  
+  if(ierr > 0) then
+    message(1) = "Failed to write file "//trim(filename)
+    call messages_fatal(1)
+  end if
+
+
+
+  POP_SUB(PES_mask_write_orbital)  
+end subroutine PES_mask_write_orbital
+
+
+! ---------------------------------------------------------
 !
 ! ---------------------------------------------------------
-subroutine PES_mask_restart_write(mask, mesh, st)
+subroutine PES_mask_restart_write(mask, st)
   type(PES_mask_t), intent(in) :: mask
-  type(mesh_t),     intent(in) :: mesh
   type(states_t),   intent(in) :: st
 
   character(len=80) :: filename, dir ,path
 
-  integer :: itot, ik, ist, idim , np, ierr, i
-  integer :: ll(3)
-
+  integer :: itot, ik, ist, idim 
 
   PUSH_SUB(PES_mask_restart_write)
-
-
-  ll(1:3) = mask%ll(1:3)
-  np = ll(1)*ll(2)*ll(3) 
 
 
   dir = trim(restart_dir)//'td/'
@@ -1816,17 +1846,13 @@ subroutine PES_mask_restart_write(mask, mesh, st)
                
         path = trim(dir)//'pes_'//trim(filename)//'.obf'
         
-
-        call io_binary_write(path,np, mask%k(:,:,:, idim, ist, ik), ierr)
-        if(ierr > 0) then
-          message(1) = "Failed to write file "//trim(path)
-          call messages_fatal(1)
-        end if
-          
+        call PES_mask_write_orbital(mask, path, mask%k(:,:,:, idim, ist, ik))
         
       end do
     end do
   end do
+
+
 
   POP_SUB(PES_mask_restart_write)
 end subroutine PES_mask_restart_write
