@@ -219,7 +219,9 @@ contains
       sumq = qtot
       ! first we sort the eigenvalues
       SAFE_ALLOCATE(eigenval_list(1:nst * nik))
-      if (cmplxscl) SAFE_ALLOCATE(Imeigenval_list(1:nst * nik))
+      if (cmplxscl) then
+        SAFE_ALLOCATE(Imeigenval_list(1:nst * nik))
+      end if
 
       SAFE_ALLOCATE(       k_list(1:nst * nik))
       SAFE_ALLOCATE(      reorder(1:nst * nik))
