@@ -49,13 +49,6 @@ subroutine PES_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
 
 
 
-  if(mesh%parallel_in_domains .and. st%parallel_in_states) then
-    write(message(1),'(a)') "PES_mask: simultaneous parallelization on mesh and states not supported"
-    write(message(2),'(a)') "Modify ParallelizationStrategy and rerun." 
-    call messages_fatal(2) 
-  end if    
-
-
   if(sb%box_shape /= SPHERE) then
      message(1) = 'PhotoElectronSpectrum = pes_mask requires BoxShape = sphere'
      message(2) = 'Modify the parameter and rerun.'
@@ -1200,6 +1193,7 @@ subroutine PES_mask_X_to_K(mask,mesh,wfin,wfout)
       call zcube_function_alloc_RS(mask%cube, cf_tmp)
       call cube_function_alloc_fs(mask%cube, cf_tmp)
       cf_tmp%zRs = wfin
+      cf_tmp%fs  = wfout
       call zfft_forward(mask%cube%fft, cf_tmp%zRs, cf_tmp%fs)
       wfout = cf_tmp%fs
       call zcube_function_free_RS(mask%cube, cf_tmp)
@@ -1252,7 +1246,8 @@ subroutine PES_mask_K_to_X(mask,mesh,wfin,wfout)
       call cube_function_null(cf_tmp)    
       call zcube_function_alloc_RS(mask%cube, cf_tmp)
       call cube_function_alloc_fs(mask%cube, cf_tmp)
-      cf_tmp%fs = wfin
+      cf_tmp%fs  = wfin
+      cf_tmp%zRs = wfout
       call zfft_backward(mask%cube%fft, cf_tmp%fs, cf_tmp%zRs)
       wfout = cf_tmp%zRs
       call zcube_function_free_RS(mask%cube, cf_tmp)
@@ -1284,7 +1279,7 @@ subroutine PES_mask_mesh_to_cube(mask, mf, cf, local)
   local_ = optional_default(local, .true.)
   
   if (mask%cube%parallel_in_domains .and. mask%cube%mpi_grp%size > 1) then
-    call zmesh_to_cube_parallel(mask%mesh, mf, mask%cube, cf, mask% mesh_cube_map)
+    call zmesh_to_cube_parallel(mask%mesh, mf, mask%cube, cf, mask%mesh_cube_map)
   else
     if(mask%mesh%parallel_in_domains) then
       call zmesh_to_cube(mask%mesh, mf, mask%cube, cf, local = local_)
@@ -1306,7 +1301,7 @@ subroutine PES_mask_cube_to_mesh(mask, cf, mf)
   PUSH_SUB(PES_mask_cube_to_mesh)
 
   if (mask%cube%parallel_in_domains .and. mask%cube%mpi_grp%size > 1) then
-    call zcube_to_mesh_parallel(mask%cube, cf, mask%mesh, mf, mask% mesh_cube_map)
+    call zcube_to_mesh_parallel(mask%cube, cf, mask%mesh, mf, mask%mesh_cube_map)
   else
     if(mask%mesh%parallel_in_domains) then
       call zcube_to_mesh(mask%cube, cf, mask%mesh, mf, local = .true.)
@@ -1383,6 +1378,8 @@ subroutine PES_mask_calc(mask, mesh, st, dt, hm, geo, iter)
 
           cf1%zRs(:,:,:) = M_z0
           cf2%zRS(:,:,:) = M_z0
+          cf1%Fs(:,:,:) = M_z0
+          cf2%Fs(:,:,:) = M_z0
        
           call PES_mask_mesh_to_cube(mask, st%zpsi(:, idim, ist, ik), cf1)
 
