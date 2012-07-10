@@ -28,27 +28,64 @@ void FC_FUNC(expmm, EXPMM)(const int * restrict nx, const int * restrict ny,
 			   const double * restrict dx, const double * restrict dy,
 			   const int * restrict component){
   int ix, iy;
-  double dexpr, dexpi;
-  double aexpr, aexpi;
-  double aexp[2];
-  double tt;
+  double dexpr0, dexpi0;
+  double aexpr0, aexpi0;
+  double dexpr1, dexpi1;
+  double aexpr1, aexpi1;
+  double aexp0[2];
+  double aexp1[2];
+  double xx, tt0, tt1;
 
-  for(iy = 0; iy < *ny; iy++){
-    dexpr = cos((*dx)*(*dy)*iy);
-    dexpi = sin((*dx)*(*dy)*iy);
-    aexp[0] = 1.0;
-    aexp[1] = 0.0;
-    tt = 0.0;
+  for(iy = 0; iy < (*ny) - 2 + 1; iy += 2){
+    dexpr0 = cos((*dx)*(*dy)*iy);
+    dexpr1 = cos((*dx)*(*dy)*(iy + 1));
+    dexpi0 = sin((*dx)*(*dy)*iy);
+    dexpi1 = sin((*dx)*(*dy)*(iy + 1));
+
+    aexp0[0] = 1.0;
+    aexp1[0] = 1.0;
+    aexp0[1] = 0.0;
+    aexp1[1] = 0.0;
+
+    tt0 = 0.0;
+    tt1 = 0.0;
 
     for(ix = 0; ix < *nx; ix++){
-      tt += aexp[*component]*x[ix];
+      xx = x[ix];
 
-      aexpr = aexp[0];
-      aexpi = aexp[1];
-      aexp[0] = dexpr*aexpr - dexpi*aexpi;
-      aexp[1] = dexpr*aexpi + dexpi*aexpr;
+      tt0 += aexp0[*component]*xx;
+      tt1 += aexp1[*component]*xx;
+
+      aexpr0 = aexp0[0];
+      aexpi0 = aexp0[1];
+      aexpr1 = aexp1[0];
+      aexpi1 = aexp1[1];
+
+      aexp0[0] = dexpr0*aexpr0 - dexpi0*aexpi0;
+      aexp0[1] = dexpr0*aexpi0 + dexpi0*aexpr0;
+      aexp1[0] = dexpr1*aexpr1 - dexpi1*aexpi1;
+      aexp1[1] = dexpr1*aexpi1 + dexpi1*aexpr1;
     }
-    y[iy] = -tt;
+    y[iy    ] = -tt0;
+    y[iy + 1] = -tt1;
+  }
+
+  for(; iy < *ny; iy++){
+    dexpr0 = cos((*dx)*(*dy)*iy);
+    dexpi0 = sin((*dx)*(*dy)*iy);
+    aexp0[0] = 1.0;
+    aexp0[1] = 0.0;
+    tt0 = 0.0;
+
+    for(ix = 0; ix < *nx; ix++){
+      tt0 += aexp0[*component]*x[ix];
+
+      aexpr0 = aexp0[0];
+      aexpi0 = aexp0[1];
+      aexp0[0] = dexpr0*aexpr0 - dexpi0*aexpi0;
+      aexp0[1] = dexpr0*aexpi0 + dexpi0*aexpr0;
+    }
+    y[iy] = -tt0;
   }
   
 }
