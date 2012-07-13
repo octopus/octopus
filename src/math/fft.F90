@@ -43,7 +43,10 @@ module fft_m
   use mpi_m
 #if defined(HAVE_NFFT)
   use nfft_m
-#endif   
+#endif
+#if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
+  use omp_lib
+#endif
   use opencl_m
   use parser_m
   use pfft_m
@@ -136,7 +139,7 @@ contains
   ! ---------------------------------------------------------
   !> initialize the table
   subroutine fft_all_init()
-    integer :: ii
+    integer :: ii, iret
 
     PUSH_SUB(fft_all_init)
 
@@ -188,6 +191,22 @@ contains
     call parse_integer(datasets_check('FFTPreparePlan'), FFTW_MEASURE, fft_prepare_plan)
     if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call input_error('FFTPreparePlan')
 
+#if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
+    if(omp_get_max_threads() > 1) then
+
+      call messages_write('Initializing Multi-threaded FFTW')
+      call messages_info()
+      
+      call fftw_init_threads(iret)
+      if (iret == 0) then 
+        call messages_write('Initialization of FFTW3 threads failed.')
+        call messages_fatal()
+      end if
+      call fftw_plan_with_nthreads(omp_get_max_threads())
+
+    end if
+#endif
+
     POP_SUB(fft_all_init)
   end subroutine fft_all_init
 
@@ -208,7 +227,12 @@ contains
 #ifdef HAVE_PFFT
     call pfft_cleanup
 #endif
-    call fftw_cleanup
+
+#if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
+    call fftw_cleanup_threads()
+#else
+    call fftw_cleanup()
+#endif
 
     POP_SUB(fft_all_end)
   end subroutine fft_all_end

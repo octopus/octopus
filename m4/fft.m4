@@ -78,6 +78,8 @@ esac
       fi
     done
 
+AC_CHECK_FUNC(dfftw_init_threads, AC_DEFINE(HAVE_FFTW3_THREADS, 1,[Define if the threaded version of FFTW3 is available.]))
+
 AC_SUBST(LIBS_FFT)
 LIBS="$acx_fft_save_LIBS"
 
@@ -88,4 +90,5 @@ if test x"$acx_fft_ok" != xyes; then
   fi
   $2
 fi
+
 ])
