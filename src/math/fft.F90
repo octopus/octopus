@@ -194,7 +194,7 @@ contains
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
     if(omp_get_max_threads() > 1) then
 
-      call messages_write('Initializing Multi-threaded FFTW')
+      call messages_write('Info: Initializing Multi-threaded FFTW')
       call messages_info()
       
       call fftw_init_threads(iret)

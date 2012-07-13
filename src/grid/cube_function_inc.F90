@@ -202,6 +202,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     ASSERT(associated(mesh%cube_map%map))
     ASSERT(mesh%sb%dim <= 3)
 
+    !$omp parallel do private(ix, iy, iz, ip, nn, ii)
     do im = 1, mesh%cube_map%nmap
       ix = mesh%cube_map%map(1, im) + cube%center(1)
       iy = mesh%cube_map%map(2, im) + cube%center(2)
@@ -211,6 +212,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
       nn = mesh%cube_map%map(MCM_COUNT, im)
       forall(ii = 0:nn - 1) cf%X(rs)(ix, iy, iz + ii) = gmf(ip + ii)
     end do
+    !$omp end parallel do
 
   else
 #ifdef HAVE_OPENCL
@@ -295,6 +297,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
     ASSERT(associated(cf%X(rs)))
     ASSERT(associated(mesh%cube_map%map))
 
+    !$omp parallel do private(ix, iy, iz, ip, nn, ii)
     do im = 1, mesh%cube_map%nmap
       ix = mesh%cube_map%map(1, im) + cube%center(1)
       iy = mesh%cube_map%map(2, im) + cube%center(2)
@@ -305,6 +308,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
       forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(rs)(ix, iy, iz + ii)
     end do
+    !$omp end parallel do
 
   else
 
