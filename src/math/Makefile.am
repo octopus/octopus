@@ -51,11 +51,12 @@ libmath_a_SOURCES =                      \
 	young.F90                        \
 	scalapack.F90                    \
         nfft.F90			 \
- 	nfft_f.c                         \
+	nfft_f.c                         \
 	pblas.F90                        \
 	sgfft.F90                        \
 	matrix.F90                       \
-	compressed_sensing.F90
+	compressed_sensing.F90           \
+	fftw_low.c
 
 noinst_HEADERS =                         \
 	fft_inc.F90                      \

@@ -64,42 +64,6 @@ void sysname(char **c)
 #endif
 }
 
-
-/**
- * Optimizes the order of the FFT grid.
- * The best FFT grid dimensions are given by 2^a*3^b*5^c*7^d*11^e*13^f
- * where a,b,c,d are arbitrary and e,f are 0 or 1.
- * (http://www.fftw.org/doc/Complex-DFTs.html)
- * par is the parity: the result must satisfy n % 2 == par, provided par >= 0.
- */
-void fft_optimize(int *n, int par)
-{
-  if(*n <= 2) return;
-
-  for(;; (*n)++){
-    int i, n2;
-
-    if((par >= 0) && (*n % 2 != par)) continue;
-    
-    /* For debugging:                 */
-    /* printf("%i has factors ", *n); */
-
-    n2 = *n;
-    for(i = 2; i <= n2; i++){
-      if(n2 % i == 0){
-        /* For debugging:    */
-	/* printf("%i ", i); */
-	if(i > 13) break;
-	n2 = n2 / i;
-	if(i != 11 && i != 13) i--;
-      }
-    }
-    /* For debugging: */
-    /* printf("\n");  */
-    if(n2 == 1) return;
-  }
-}
-
 /**
  * returns true if process is in the foreground
  * copied from openssh scp source 
