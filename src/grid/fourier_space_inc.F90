@@ -128,17 +128,18 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
 
   if(cube%fft%library == FFTLIB_PFFT) then
     !Note that the function in fourier space returned by PFFT is transposed
-    !$omp parallel do
-    do kk = 1, cube%fs_n(3)
+    ! Probably in this case this%X(op) should be also transposed
+    !$omp parallel do private(ii, jj, kk)
+    do ii = 1, cube%fs_n(1)
       do jj = 1, cube%fs_n(2)
-        do ii = 1, cube%fs_n(1)
+        do kk = 1, cube%fs_n(3)
           cf%fs(kk, ii, jj) = cf%fs(kk, ii, jj)*this%X(op) (ii, jj, kk)
         end do
       end do
     end do
     !$omp end parallel do
   else if(cube%fft%library == FFTLIB_FFTW .or. .not. this%in_device_memory) then
-    !$omp parallel do
+    !$omp parallel do private(ii, jj, kk)
     do kk = 1, cube%fs_n(3)
       do jj = 1, cube%fs_n(2)
         do ii = 1, cube%fs_n(1)
