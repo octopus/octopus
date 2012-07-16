@@ -341,33 +341,35 @@ contains
 
     PUSH_SUB(cube_partition_messages_debug)
 
-    if(in_debug_mode .and. mpi_grp_is_root(mpi_world)) then
-
-      call io_mkdir('debug/cube_partition')
-
-      npart = cube%mpi_grp%size
+    if(in_debug_mode) then
       SAFE_ALLOCATE(part(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
       call cube_partition(cube, part)
+  
+      if(mpi_grp_is_root(mpi_world)) then
+        call io_mkdir('debug/cube_partition')
+        npart = cube%mpi_grp%size
+      
+        ! Debug output. Write points of each partition in a different file.
+        do nn = 1, npart
 
-      ! Debug output. Write points of each partition in a different file.
-      do nn = 1, npart
+          write(filenum, '(i3.3)') nn
 
-        write(filenum, '(i3.3)') nn
-
-        iunit = io_open('debug/cube_partition/cube_partition.'//filenum, &
-             action='write')
-        do kk = 1, cube%rs_n_global(3)
-          do jj = 1, cube%rs_n_global(2)
-            do ii = 1, cube%rs_n_global(1)
-              if(part(ii, jj, kk) .eq. nn) write(iunit, '(3i8)') ii, jj, kk
+          iunit = io_open('debug/cube_partition/cube_partition.'//filenum, &
+               action='write')
+          do kk = 1, cube%rs_n_global(3)
+            do jj = 1, cube%rs_n_global(2)
+              do ii = 1, cube%rs_n_global(1)
+                if(part(ii, jj, kk) .eq. nn) write(iunit, '(3i8)') ii, jj, kk
+              end do
             end do
           end do
+          call io_close(iunit)
         end do
-        call io_close(iunit)
-      end do
 
-    SAFE_DEALLOCATE_A(part)
 
+      end if
+
+      SAFE_DEALLOCATE_A(part)
     end if
 
 #ifdef HAVE_MPI
