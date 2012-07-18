@@ -32,6 +32,7 @@ module ground_state_m
   use mpi_m
   use multicomm_m
   use parser_m
+  use rdmft_m
   use restart_m
   use scf_m
   use simul_box_m
@@ -97,7 +98,11 @@ contains
 
     if(.not. fromScratch) then
       ! load wavefunctions
-      call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr)
+      if (sys%ks%theory_level == RDMFT) then ! in RDMFT we need the exact number of states from either HF or DFT
+        call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr, rdmft = .true.)
+      else
+        call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr)
+      endif      
 
       if(ierr .ne. 0) then
         call messages_write("Could not load wavefunctions from '"//trim(restart_dir)//GS_DIR//"'")
@@ -109,7 +114,14 @@ contains
     end if
 
     if(fromScratch) then
-      call lcao_run(sys, hm)
+      if(sys%ks%theory_level == RDMFT) then
+        call messages_write("RDMFT calculations cannot be started FromScratch")
+        call messages_new_line()
+        call messages_write("Run a DFT or HF calculation first")
+        call messages_fatal()
+      else
+        call lcao_run(sys, hm)
+      endif
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
@@ -124,6 +136,11 @@ contains
       call messages_write('Info: SCF using complex wavefunctions.')
     end if
     call messages_info()
+
+    ! self-consistency for occupation numbers in RDMFT
+    if(sys%ks%theory_level == RDMFT) then 
+      call scf_occ(sys%gr, sys%geo, hm, sys%st,sys)
+    endif
 
     call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
     call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)

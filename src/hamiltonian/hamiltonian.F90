@@ -191,7 +191,8 @@ module hamiltonian_m
     HARTREE               = 1, &
     HARTREE_FOCK          = 3, &
     KOHN_SHAM_DFT         = 4, &
-    CLASSICAL             = 5
+    CLASSICAL             = 5, &
+    RDMFT                 = 7
 
   type(profile_t), save :: prof_hamiltonian, prof_vlpsi, prof_kinetic_start, prof_kinetic_finish
 
@@ -421,7 +422,7 @@ contains
 
 
 
-    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
+    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK .or. hm%theory_level == RDMFT) then
       SAFE_ALLOCATE(hm%hf_st)
       call states_null(hm%hf_st)
     else

@@ -231,6 +231,11 @@ contains
 
       call unit_system_init()
       call system_init(sys)
+      if(sys%ks%theory_level == RDMFT .and. sys%st%nst < M_FIVE*sys%st%qtot) then
+        message(1) = "Too few states to run RDMFT calculation"
+        message(2) = "Number of states should be at least five times the number of electrons"
+        call messages_fatal(2)
+      endif
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
       
       call messages_print_stress(stdout, 'Approximate memory requirements')

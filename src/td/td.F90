@@ -438,10 +438,8 @@ contains
       CMPLX, allocatable :: rotation_matrix(:, :)
 
       PUSH_SUB(td_run.init_wfs)
-
       if(.not.fromscratch) then
         call restart_read(trim(tmpdir)//'td', st, gr, ierr, iter=td%iter)
-
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"
           call messages_warning(1)

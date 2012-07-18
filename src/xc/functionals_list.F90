@@ -320,6 +320,8 @@
 !% OEP: Exact exchange
 !%Option lda_xc_cmplx             701
 !% LDA complex scaled exchange-correlation.
+!%Option rdmft_xc_m               601
+!% RDMFT Mueller functional
 !%Option none                       0
 !% Exchange and correlation set to zero.
 !%End

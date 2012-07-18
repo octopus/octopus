@@ -42,7 +42,9 @@ module xc_functl_m
     XC_KS_INVERSION = 801,      &  !< inversion of Kohn-Sham potential
     XC_OEP_X = 901,             &  !< Exact exchange
     XC_LDA_XC_CMPLX = 701,      &  !< complex scaled LDA exchange-correlation 
-    XC_FAMILY_KS_INVERSION = 64
+    XC_RDMFT_XC_M = 601,        &  !< RDMFT Mueller functional
+    XC_FAMILY_KS_INVERSION = 64,&
+    XC_FAMILY_RDMFT = 128          !< family for RDMFT functionals
 
   type xc_functl_t
     integer         :: family            !< LDA, GGA, etc.
@@ -109,7 +111,9 @@ contains
         else if (functl%id == XC_KS_INVERSION) then
           functl%family = XC_FAMILY_KS_INVERSION
         else if (functl%id == XC_LDA_XC_CMPLX) then
-            functl%family = XC_FAMILY_LDA  
+            functl%family = XC_FAMILY_LDA
+        else if (functl%id == XC_RDMFT_XC_M) then
+          functl%family = XC_FAMILY_RDMFT  
         else
           call input_error('XCFunctional')
         end if
@@ -119,7 +123,7 @@ contains
     if(functl%family == XC_FAMILY_OEP) then
       functl%type = XC_EXCHANGE
 
-    else if(functl%family == XC_FAMILY_KS_INVERSION) then
+    else if(functl%family == XC_FAMILY_KS_INVERSION .or. functl%family == XC_FAMILY_RDMFT) then
       functl%type = XC_EXCHANGE_CORRELATION
 
     else if(functl%id == XC_LDA_XC_CMPLX) then

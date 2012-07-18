@@ -164,6 +164,8 @@ contains
     !%Option classical 5
     !% (Experimental) Only the classical interaction between ions is
     !% considered. This is mainly for testing.
+    !%Option rdmft 7 
+    !% (Not fully implemented) Reduced Density Matrix functional theory
     !%End
     call parse_integer(datasets_check('TheoryLevel'), KOHN_SHAM_DFT, ks%theory_level)
     if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call input_error('TheoryLevel')
@@ -171,7 +173,8 @@ contains
     call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
     call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
     if(ks%theory_level == CLASSICAL) call messages_experimental('Classical theory level')
-
+    if(ks%theory_level == RDMFT ) call messages_experimental('RDMFT theory level')
+    
     ks%xc_family = XC_FAMILY_NONE
     ks%sic_type  = SIC_NONE
     ks%tail_correction = .false.
@@ -292,7 +295,9 @@ contains
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
         call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, dd, mc)
       endif
-
+    case(RDMFT)
+      call xc_init(ks%xc, gr%mesh%sb%dim, nel, dd%spin_channels, dd%cdft, hartree_fock=.false.)
+      ks%xc_family = ks%xc%family
     end select
 
     ks%frozen_hxc = .false.
