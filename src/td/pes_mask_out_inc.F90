@@ -146,22 +146,27 @@ end subroutine PES_mask_output_states
 subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
   type(PES_mask_t), intent(in)  :: mask
   type(states_t),   intent(in)  :: st
-  FLOAT,            intent(out) :: PESK(:,:,:)
+  FLOAT, target,    intent(out) :: PESK(:,:,:)
   CMPLX, optional,  intent(in)  :: wfAk(:,:,:,:,:,:)
 
-  integer :: ist, ik, ii, kx, ky, kz, kkx, kky, kkz, idim
+  integer :: ist, ik, ii, kx, ky, kz, idim
   FLOAT   :: scale, temp
-  FLOAT, pointer :: gcf(:,:,:)
-  FLOAT, allocatable ::  buf(:,:,:), PESKloc(:,:,:)
+  FLOAT, pointer :: PESKloc(:,:,:)
   logical :: local
+! #ifdef HAVE_MPI
+!   type(profile_t), save :: reduce_prof
+! #endif
   
 
   PUSH_SUB(PES_mask_create_full_map)
 
   PESK = M_ZERO
-
-  SAFE_ALLOCATE(PESKloc(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
-  PESKloc = M_ZERO
+  if (mask%cube%parallel_in_domains) then
+    SAFE_ALLOCATE(PESKloc(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
+    PESKloc = M_ZERO
+  else 
+    PESKloc => PESK
+  end if
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
@@ -184,38 +189,18 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
     end do
   end do
 
-#ifdef HAVE_MPI
-  if(st%parallel_in_states) then
-    SAFE_ALLOCATE(buf(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
 
-    call MPI_Reduce(PESKloc, buf, mask%ll(1)*mask%ll(2)*mask%ll(3), &
-        MPI_FLOAT, MPI_SUM, 0, st%dom_st_kpt_mpi_grp%comm, mpi_err)
-    if(mpi_err .ne. 0) then
-      write(*,*)"MPI error"
-    end if
-
-    PESKloc = buf 
-
-    SAFE_DEALLOCATE_A(buf) 
+  if(st%parallel_in_states .or. st%d%kpt%parallel) then
+!     call profiling_in(reduce_prof, "PES_DENSITY_REDUCE")
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, PESKloc)
+!     call profiling_out(reduce_prof)
   end if  
-#endif
+
   
   if (mask%cube%parallel_in_domains) then
-    call dcube_function_allgather(mask%cube, PESK, PESKloc)    
-    if(mask%cube%fft%library == FFTLIB_PFFT) then !PFFT FS is transposed
-      SAFE_ALLOCATE(gcf(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3)))
-      gcf = PESK
-      forall(kx = 1:mask%fs_n_global(1), ky = 1:mask%fs_n_global(2), kz = 1:mask%fs_n_global(3))& 
-      PESK(kx,ky,kz) = gcf(kz,kx,ky)
-      SAFE_DEALLOCATE_P(gcf) 
-    end if
-  else 
-    PESK = PESKloc 
+    call dcube_function_allgather(mask%cube, PESK, PESKloc, transpose = .true.)
+    SAFE_DEALLOCATE_P(PESKloc) 
   end if
-
-  
-  SAFE_DEALLOCATE_A(PESKloc) 
-
 
   ! This is needed in order to normalize the Fourier integral 
   scale = M_ONE
@@ -1074,8 +1059,7 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
   integer :: ll(3)
 
 
-  type(profile_t), save :: prof
-  call profiling_in(prof, "PESMASK_dump")
+
 
   PUSH_SUB(PES_mask_dump_power_totalM)
 
@@ -1197,7 +1181,6 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
 
   POP_SUB(PES_mask_dump_power_totalM)
 
-  call profiling_out(prof)
 
 end subroutine PES_mask_dump_power_totalM
 
@@ -1613,10 +1596,11 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   character(len=256) :: dir
   type(cube_function_t) :: cf1,cf2  
 
-
+  type(profile_t), save :: prof
 
   PUSH_SUB(PES_mask_output)
-
+  call profiling_in(prof, "PESMASK_out")
+  
   !Dump info for easy post-process
   if(mpi_grp_is_root(mpi_world)) call PES_mask_write_info(mask, tmpdir)
  
@@ -1687,7 +1671,8 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   if(mask%add_psia) then 
    SAFE_DEALLOCATE_A(wfAk)
   end if
-
+  call profiling_out(prof)
+  
   POP_SUB(PES_mask_output)
 end subroutine PES_mask_output
 
@@ -1799,8 +1784,10 @@ subroutine PES_mask_write_orbital(mask, filename, wf)
   
   if (mask%cube%parallel_in_domains) then
     SAFE_ALLOCATE(gwf(1:ll(1),1:ll(2),1:ll(3))) 
-    call zcube_function_allgather(mask%cube, gwf, wf)    
-    call io_binary_write(filename, np, gwf(:,:,:), ierr)
+    call zcube_function_allgather(mask%cube, gwf, wf, transpose = .true.)
+    if(mpi_grp_is_root(mask%cube%mpi_grp)) then !only root writes the output   
+      call io_binary_write(filename, np, gwf(:,:,:), ierr)
+    end if
     SAFE_DEALLOCATE_A(gwf)
   else
     call io_binary_write(filename, np, wf(:,:,:), ierr)    
@@ -1826,11 +1813,11 @@ subroutine PES_mask_restart_write(mask, st)
   type(states_t),   intent(in) :: st
 
   character(len=80) :: filename, dir ,path
-
   integer :: itot, ik, ist, idim 
-
+  type(profile_t), save :: prof  
+   
   PUSH_SUB(PES_mask_restart_write)
-
+  call profiling_in(prof, "PESMASK_restw")
 
   dir = trim(restart_dir)//'td/'
 
@@ -1847,13 +1834,12 @@ subroutine PES_mask_restart_write(mask, st)
         path = trim(dir)//'pes_'//trim(filename)//'.obf'
         
         call PES_mask_write_orbital(mask, path, mask%k(:,:,:, idim, ist, ik))
-        
+
       end do
     end do
   end do
 
-
-
+  call profiling_out(prof)
   POP_SUB(PES_mask_restart_write)
 end subroutine PES_mask_restart_write
 

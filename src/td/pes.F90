@@ -21,6 +21,7 @@
 
 module PES_m
   use batch_m
+  use comm_m
   use cube_function_m
   use cube_m
   use datasets_m
