@@ -124,6 +124,35 @@ end subroutine X(comm_allreduce_2)
 
 ! -----------------------------------------------------------------------------
 
+subroutine X(comm_allreduce_3)(comm, aa)
+  integer,                          intent(in)    :: comm
+  R_TYPE,                           intent(inout) :: aa(:, :, :)
+
+  integer :: dim_(1:3)
+  R_TYPE, allocatable :: aac(:, :, :)
+  
+  PUSH_SUB(X(comm_allreduce_3))
+
+  dim_ = ubound(aa)
+
+#if defined(HAVE_MPI2)
+
+    call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+
+#elif defined(HAVE_MPI)
+    SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3)))
+    aac(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3))
+    call MPI_Allreduce(aac(1, 1, 1, 1), aa(1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+#endif
+
+  SAFE_DEALLOCATE_A(aac)
+
+  POP_SUB(X(comm_allreduce_3))
+end subroutine X(comm_allreduce_3)
+
+
+! -----------------------------------------------------------------------------
+
 subroutine X(comm_allreduce_4)(comm, aa)
   integer,                          intent(in)    :: comm
   R_TYPE,                           intent(inout) :: aa(:, :, :, :)
