@@ -64,7 +64,7 @@ module cube_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, nn, sb, fft_type, fft_library, dont_optimize, nn_out, verbose)
+  subroutine cube_init(cube, nn, sb, fft_type, fft_library, dont_optimize, nn_out, verbose, mpi_grp)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: nn(3)
     type(simul_box_t), intent(in)  :: sb
@@ -74,10 +74,12 @@ contains
     integer, optional, intent(out) :: nn_out(3) !< What are the FFT dims?
                                                 !! If optimized, may be different from input nn.
     logical, optional, intent(in)  :: verbose   !< Print info to the screen.
+    type(mpi_grp_t), optional, intent(in) :: mpi_grp !< The mpi group to be use for cube parallelization
 
     integer :: mpi_comm, tmp_n(3), fft_type_, optimize_parity(3), default_lib, fft_library_
     integer :: effdim_fft
     logical :: optimize(3)
+    type(mpi_grp_t) :: mpi_grp_
 
     PUSH_SUB(cube_init)
 
@@ -88,6 +90,9 @@ contains
     effdim_fft = min (3, sb%dim)
 
     nullify(cube%fft)
+    
+    mpi_grp_ = mpi_world
+    if (present(mpi_grp)) mpi_grp_ = mpi_grp
 
     if (fft_type_ /= FFT_NONE) then
 
@@ -161,7 +166,7 @@ contains
         if(dont_optimize) optimize = .false.
       endif
       call fft_init(cube%fft, tmp_n, sb%dim, fft_type_, fft_library_, optimize, optimize_parity, &
-           mpi_comm=mpi_comm)
+           mpi_comm=mpi_comm, mpi_grp = mpi_grp_)
       if(present(nn_out)) nn_out(1:3) = tmp_n(1:3)
 
       call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &

@@ -238,7 +238,7 @@ contains
   end subroutine fft_all_end
 
   ! ---------------------------------------------------------
-  subroutine fft_init(this, nn, dim, type, library, optimize, optimize_parity, mpi_comm)
+  subroutine fft_init(this, nn, dim, type, library, optimize, optimize_parity, mpi_comm, mpi_grp)
     type(fft_t),       intent(inout) :: this     !< FFT data type
     integer,           intent(inout) :: nn(3)    !< Size of the box
     integer,           intent(in)    :: dim      !< Dimensions of the box
@@ -248,11 +248,14 @@ contains
     integer,           intent(in)    :: optimize_parity(3) !< choose optimized grid in each direction as
                                                  !! even (0), odd (1), or whatever (negative).
     integer, optional, intent(out)   :: mpi_comm !< MPI communicator
+    type(mpi_grp_t), optional, intent(in) :: mpi_grp !< the mpi_group we whant to use for the parallelization
 
     integer :: ii, jj, fft_dim, idir, column_size, row_size, alloc_size, ierror, n3
     integer :: n_1, n_2, n_3, nn_temp(3), parity, status
     integer :: library_
     character(len=100) :: str_tmp
+    type(mpi_grp_t) :: mpi_grp_
+
 #ifdef HAVE_CLAMDFFT
     integer(8), allocatable :: stride(:), stride_inv(:)
     real(8) :: scale
@@ -261,6 +264,9 @@ contains
     PUSH_SUB(fft_init)
 
     ASSERT(type == FFT_REAL .or. type == FFT_COMPLEX)
+
+    mpi_grp_ = mpi_world
+    if(present(mpi_grp)) mpi_grp_ = mpi_grp
 
     ! First, figure out the dimensionality of the FFT.
     fft_dim = 0
@@ -367,10 +373,11 @@ contains
     if (library_ == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
       call dpfft_init()
-
-      call pfft_decompose(mpi_world%size, column_size, row_size)
  
-      call pfft_create_procmesh_2d(ierror, MPI_COMM_WORLD, column_size, row_size, fft_array(jj)%comm)
+      call pfft_decompose(mpi_grp_%size, column_size, row_size)
+ 
+      call pfft_create_procmesh_2d(ierror, mpi_grp_%comm, column_size, row_size, fft_array(jj)%comm)        
+   
       if (ierror .ne. 0) then
         message(1) = "The number of rows and columns in PFFT processor grid is not equal to "
         message(2) = "the number of processor in the MPI communicator."
@@ -549,7 +556,7 @@ contains
     case (FFTLIB_PFFT)
       write(message(2),'(a)') "Info: FFT library = PFFT"
       write(message(3),'(a)') "Info: PFFT processor grid"
-      write(message(4),'(a, i9)') " No. of processors                = ", mpi_world%size
+      write(message(4),'(a, i9)') " No. of processors                = ", mpi_grp_%size
       write(message(5),'(a, i9)') " No. of columns in the proc. grid = ", column_size
       write(message(6),'(a, i9)') " No. of rows    in the proc. grid = ", row_size
       write(message(7),'(a, i9)') " The size of integer is = ", ptrdiff_t_kind
