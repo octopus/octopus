@@ -125,7 +125,7 @@ contains
     rdmft_opt%hm     => hm
     rdmft_opt%sys    => sys
     rdmft_opt%dim    =  sys%gr%mesh%sb%dim
-    rdmft_opt%size = rdmft_opt%st%nst
+    rdmft_opt%size   =  rdmft_opt%st%nst*rdmft_opt%st%d%nik
 
   end subroutine rdmft_init
 
@@ -133,9 +133,10 @@ contains
 ! This subroutine finds the optimum chemical potential for the occupation numbers to sum to the correct particle number
 ! occupation number optimization is called from here
 ! NOTE: this part of the code is under development, i.e. it does not work yet.
-  subroutine mu_optimize(states,theta,mu)
+  subroutine mu_optimize(states, size, theta, mu)
     type(states_t),       intent(inout) :: states
-    REAL_DOUBLE,          intent(inout) :: theta(states%nst,1)
+    integer,              intent(in)    :: size
+    REAL_DOUBLE,          intent(inout) :: theta(size)
     FLOAT,                intent(inout) :: mu
    
     integer :: ierr, ist
@@ -144,10 +145,9 @@ contains
     
     rdmft_opt%mu = mu 
  
-!FIXME: there seems to be something wrong with the variables in this call
-!    ierr =loct_minimize(2, states%nst, theta(1,1), real(M_HALF, 8),&
-!           real(CNST(0.001), 8), real(CNST(0.001), 8), 50 , &
-!           calc_point_rdmft, write_iter_info_rdmft, energy)
+    ierr = loct_minimize(2, states%nst, theta(1), real(M_HALF, 8),&
+           real(CNST(0.001), 8), real(CNST(0.001), 8), 50 , &
+           calc_point_rdmft, write_iter_info_rdmft, energy)
 
   
    
@@ -165,7 +165,7 @@ contains
 
   subroutine calc_point_rdmft(size, theta, objective, getgrad, df)
     integer,     intent(in)    :: size
-    REAL_DOUBLE, intent(in)    :: theta(size,1)
+    REAL_DOUBLE, intent(in)    :: theta(size)
     REAL_DOUBLE, intent(inout) :: objective
     integer,     intent(in)    :: getgrad
     REAL_DOUBLE, intent(inout) :: df(size)
@@ -177,13 +177,21 @@ contains
     
     PUSH_SUB(calc_point_rdmft)
     ASSERT(size == rdmft_opt%size)
-    rdmft_opt%st%occ(:,1)=M_TWO*sin(theta(:,1)*M_PI*M_HALF)**2
+    
+    do ik = 1, rdmft_opt%st%d%nik
+      do ist = 1, rdmft_opt%st%nst
+        rdmft_opt%st%occ(ist,ik) = M_TWO*sin(theta(ist + (ik-1)*rdmft_opt%st%nst)*M_PI*M_HALF)**2
+      enddo
+    enddo
+    
     call density_calc(rdmft_opt%st, rdmft_opt%gr, rdmft_opt%st%rho)
     call energy_calc_total(rdmft_opt%hm, rdmft_opt%gr,rdmft_opt%st) 
     
     occsum = M_ZERO
-    do ist = 1, rdmft_opt%st%nst
-      occsum = occsum + rdmft_opt%st%occ(ist, 1)
+    do ik = 1, rdmft_opt%st%d%nik
+      do ist = 1, rdmft_opt%st%nst
+        occsum = occsum + rdmft_opt%st%occ(ist, ik)
+      enddo
     enddo
     
     objective = rdmft_opt%hm%energy%total - rdmft_opt%mu*(occsum - rdmft_opt%st%qtot) 
@@ -246,7 +254,12 @@ contains
       call messages_fatal ()
     endif
 
-    df(:) = M_PI*sin(theta(:,1)*M_PI)*(dE_dn(:,1) - rdmft_opt%mu)
+    do ik = 1, rdmft_opt%st%d%nik
+      do ist = 1, rdmft_opt%st%nst
+        df(ist + (ik-1)*rdmft_opt%st%nst) = M_PI*sin(theta(ist + (ik-1)*rdmft_opt%st%nst)*M_PI) & 
+	                                   *(dE_dn(ist, ik) - rdmft_opt%mu)
+      enddo
+    enddo
 
     SAFE_DEALLOCATE_A(hpsi)
     SAFE_DEALLOCATE_A(eone)
@@ -294,9 +307,9 @@ contains
     type(system_t),       intent(inout) :: sys
 
     FLOAT :: conv_abs_occ, conv_rel_occ, conv_mu, abs_occ, rel_occ, mu, mu_old
-    FLOAT :: smallocc !smallocc the minimum value occ can have for numerical stability
-    FLOAT, allocatable :: occout(:,:), occin(:,:), occnew(:,:),theta(:,:)
-    integer :: ist, jst, ik, ip
+    FLOAT :: smallocc !the minimum value occ can have for numerical stability
+    FLOAT, allocatable :: occout(:,:), occin(:,:), occnew(:,:), theta(:)
+    integer :: ist, jst, ik, ip, size
     logical :: finish
 
 
@@ -327,62 +340,71 @@ contains
     !%End
     call parse_float(datasets_check('ConvRelOcc'), CNST(1e-5), conv_rel_occ)
 
+    size = st%nst*st%d%nik
+
     SAFE_ALLOCATE(occout(1:st%nst, 1:st%d%nik))
     SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
     SAFE_ALLOCATE(occnew(1:st%nst, 1:st%d%nik))
-    SAFE_ALLOCATE(theta(1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(theta(1:size))
+    
     !Initialize the occin. Smallocc should be no less than 1d-8 for numerical stability
-     smallocc = 1d-8
+    smallocc = 1d-8
     occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
-    where(occin(:,:) < smallocc) occin(:,:)=smallocc !isws na allaksw to where se kati allo an den uparxei allou
+    where(occin(:,:) < smallocc) occin(:,:)=smallocc 
     where(occin(:,:) > 2.0-smallocc) occin(:,:)=2.0-smallocc
     occout = M_ZERO
     occnew = M_ZERO
     theta  = M_ZERO
 
-
-   st%occ=occin
-
+    st%occ=occin
 
     call rdmft_init(sys,hm)
-
-    theta(:,1)=asin(sqrt(occin(:,1)*M_HALF))*M_TWO/M_PI
-
+    
+    do ik = 1, st%d%nik
+      do ist = 1, st%nst
+        theta(ist + (ik-1)*st%nst) = asin(sqrt(occin(ist, ik)*M_HALF))*M_TWO/M_PI
+      enddo
+    enddo
+    
     mu = -CNST(1e-2)
    ! scf cycle for mu the chemical potential 
-     do
-        mu_old=mu
-        call mu_optimize (st,theta,mu)
-        conv_mu=abs(mu - mu_old)
-        if ((conv_mu).lt.real(CNST(1e-10)))  exit
-     end do
-     occout(:,1)=M_TWO*sin(theta(:,1)*M_PI*M_HALF)**2
-     print*,'occout(:,1)=',occout(:,1)
-
-     !compute convergence criteria
-     abs_occ = M_ZERO
+    do
+      mu_old=mu
+      call mu_optimize (st, size, theta,mu)
+      conv_mu=abs(mu - mu_old)
+      if ((conv_mu).lt.real(CNST(1e-10)))  exit
+    end do
+    
+    do ik = 1, st%d%nik
       do ist = 1, st%nst
-        do ik =1 , st%d%nik
-          abs_occ = abs_occ + abs( occout(ist,ik) - occin(ist, ik))
-        end do
+        occout(ist, ik) = M_TWO*sin(theta(ist + (ik-1)*st%nst)*M_PI*M_HALF)**2
+      enddo
+    enddo
+     
+    !compute convergence criteria
+    abs_occ = M_ZERO
+    do ist = 1, st%nst
+      do ik =1 , st%d%nik
+        abs_occ = abs_occ + abs(occout(ist, ik) - occin(ist, ik))
       end do
+    end do
 
-     rel_occ = abs_occ / st%qtot
-     ! are we finished?
-     finish = &
+    rel_occ = abs_occ / st%qtot
+    ! are we finished?
+    finish = &
            (conv_abs_occ  <= M_ZERO .or. abs_occ  <= conv_abs_occ)  .and. &
            (conv_rel_occ  <= M_ZERO .or. rel_occ  <= conv_rel_occ)
 
 
 
-   SAFE_DEALLOCATE_A(occout)
-   SAFE_DEALLOCATE_A(occin)
-   SAFE_DEALLOCATE_A(occnew)
+    SAFE_DEALLOCATE_A(occout)
+    SAFE_DEALLOCATE_A(occin)
+    SAFE_DEALLOCATE_A(occnew)
 
-   POP_SUB(scf_occ)
- end subroutine scf_occ
+    POP_SUB(scf_occ)
+  end subroutine scf_occ
  
- end module rdmft_m
+end module rdmft_m
 
 
 !! Local Variables:
