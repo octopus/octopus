@@ -1,5 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch, 
-!! J. Alberdi, P. Garcia Risueño, M. Oliveira
+!! J. Alberdi, P. Garcia RisueÃ±o, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
 !! $Id$
 
 #include "global.h"
+#ifdef HAVE_LIBFM
+#include "fcs_fconfig.h"
+#endif
 
 module poisson_fmm_m
   use boundaries_m
@@ -48,6 +51,14 @@ module poisson_fmm_m
   use stencil_star_m
   use varinfo_m
 
+#ifdef HAVE_LIBFM
+  use fcs_module
+#else
+#define fcs_integer_kind_isoc 4
+#endif
+  use iso_fortran_env
+  use iso_c_binding
+    
   implicit none
 
   private
@@ -65,13 +76,14 @@ module poisson_fmm_m
     FLOAT   :: alpha_fmm  !< Alpha for the correction of the FMM
     type(mpi_grp_t) :: all_nodes_grp !< The communicator for all nodes.
     type(mpi_grp_t) :: perp_grp      !< The communicator perpendicular to the mesh communicator.
-    integer(8) :: nlocalcharges
+    integer(kind = fcs_integer_kind_isoc) :: nlocalcharges
     integer    :: sp !< Local start point
     integer    :: ep !< Local end point
     integer, pointer :: disps(:)
     integer, pointer :: dsize(:) !< Local size
     type(nl_operator_t) :: corrector
     type(derivatives_t), pointer :: der
+    type(c_ptr) ::  handle !< The FMM identifier
   end type poisson_fmm_t
 
 contains
@@ -83,14 +95,36 @@ contains
     type(poisson_fmm_t),         intent(out)   :: this
     type(derivatives_t), target, intent(in)    :: der
     integer,                     intent(in)    :: all_nodes_comm
-    
+
+#ifdef HAVE_LIBFM    
     integer :: is
     logical, allocatable :: remains(:)
     integer, allocatable :: dend(:)
     integer :: subcomm, cdim
+    character(len = 8) ::  method
+    type(c_ptr) ::  ret
+    type(mesh_t), pointer :: mesh
+
+    real(kind = fcs_real_kind), parameter           ::  BOX_SIZE = 1.00d0
+    logical ::  short_range_flag = .true.
+    real(kind = fcs_real_kind_isoc), dimension(3)   ::  box_a !! = (/BOX_SIZE,0.0d0,0.0d0/)
+    real(kind = fcs_real_kind_isoc), dimension(3)   ::  box_b !!= (/0.0d0,BOX_SIZE,0.0d0/)
+    real(kind = fcs_real_kind_isoc), dimension(3)   ::  box_c !! = (/0.0d0,0.0d0,BOX_SIZE/)
+    real(kind = fcs_real_kind_isoc), dimension(3)   ::  offset = (/M_ZERO,M_ZERO,M_ZERO/)
+    logical, dimension(3)                           ::  periodicity = (/.false.,.false.,.false./)
+    integer(kind = fcs_integer_kind_isoc)           ::  total_particles
+
+    integer(kind = fcs_integer_kind_isoc)           ::  local_particle_count = -1
+    real(kind = fcs_real_kind_isoc), dimension(8)   ::  local_charges
+    real(kind = fcs_real_kind_isoc), dimension(24)  ::  local_coordinates
+
+    integer(8) :: periodic
+    integer(8) :: periodicaxes  !< is always 1
+    real(8) :: periodic_length
 
     PUSH_SUB(poisson_fmm_init)
 
+    method = "fmm"
     !%Variable DeltaEFMM
     !%Type float
     !%Default 0.0001 
@@ -206,14 +240,40 @@ contains
       this%sp = this%disps(this%perp_grp%rank + 1)
       this%ep = dend(this%perp_grp%rank + 1)
       this%nlocalcharges = this%dsize(this%perp_grp%rank + 1)
+      this%nlocalcharges = der%mesh%np
       this%disps = this%disps - 1
+
 #endif
     end if
 
-#ifdef HAVE_LIBFM
-    call fmm_init()
-#endif
-      
+    mesh => der%mesh
+    periodic = mesh%sb%periodic_dim
+
+    if(periodic /= 0) then
+      if ((mesh%sb%box_shape == PARALLELEPIPED) .and. ((mesh%sb%lsize(1) == mesh%sb%lsize(2)) .and. &
+        (mesh%sb%lsize(1) == mesh%sb%lsize(3)) .and. &
+        (mesh%sb%lsize(2) == mesh%sb%lsize(3)))) then
+        periodic_length = mesh%sb%lsize(1)
+      else
+        message(1) = "At present, FMM solver for Hartree potential can only deal with cubic boxes. "
+        message(2) = " Please, change your Poisson solver or the size or dimensions of your box. "
+        call messages_fatal(2)
+      end if
+    end if
+
+    total_particles = mesh%np_part_global !! mesh%np_globla
+    total_particles = mesh%np_global
+    ret = fcs_init(this%handle, trim(adjustl(method)) // c_null_char, subcomm)
+
+    box_a = (/mesh%sb%lsize(1)*2+1,M_ZERO,M_ZERO/)
+    box_b = (/M_ZERO,mesh%sb%lsize(2)*2+1,M_ZERO/)
+    box_c = (/M_ZERO,M_ZERO,mesh%sb%lsize(3)*2+1/)
+
+    ret = fcs_common_set(this%handle, short_range_flag, box_a, box_b, box_c, offset, periodicity, total_particles)
+
+    ! this is how you set a relative error in scafacos for the FMM
+    ret = fcs_fmm_set_tolerance_energy( this%handle, this%delta_E_fmm );
+
     call nl_operator_init(this%corrector, "FMM Correction")
     call stencil_star_get_lapl(this%corrector%stencil, der%mesh%sb%dim, 2)
     call nl_operator_build(this%der%mesh, this%corrector, der%mesh%np, const_w = .not. this%der%mesh%use_curvilinear)
@@ -234,15 +294,16 @@ contains
     end do
 
     call nl_operator_update_weights(this%corrector)
-
     POP_SUB(poisson_fmm_init)
+#endif
   end subroutine poisson_fmm_init
 
   ! ---------------------------------------------------------
   !> Release memory and call to end the library
   subroutine poisson_fmm_end(this)
     type(poisson_fmm_t), intent(inout) :: this
-
+    type(c_ptr) ::  ret
+    
 #ifdef HAVE_LIBFM
     PUSH_SUB(poisson_fmm_end)
 
@@ -251,7 +312,7 @@ contains
     if (mpi_world%size > 1) call MPI_Comm_free(this%perp_grp%comm, mpi_err)
     SAFE_DEALLOCATE_P(this%disps)
     SAFE_DEALLOCATE_P(this%dsize)
-    call fmm_finalize()
+!!$    ret = fcs_destroy(this%handle)
 
     POP_SUB(poisson_fmm_end)
 #endif
@@ -276,16 +337,18 @@ contains
     integer(8) :: dipolecorrection
     integer(8) :: abs_rel
 
-    real(8), allocatable :: q(:)  
-    real(8), allocatable :: pot_lib_fmm(:)
-    real(8), allocatable :: xyz(:, :)
+    real(kind = fcs_real_kind_isoc), allocatable :: q(:)  
+    real(kind = fcs_real_kind_isoc), allocatable :: pot_lib_fmm(:)
+    real(kind = fcs_real_kind_isoc), allocatable :: xyz(:)
     FLOAT,   allocatable :: rho_tmp(:), pot_tmp(:)
     real(8) :: delta_E 
     real(8) :: energy_fmm   !< We don`t use it, but we cannot remove energy_fmm for the moment
     real(8) :: periodic_length
     real(8) :: aux
-    integer :: ii, jj, sp, ep, ip, gip
-
+    integer :: ii, jj, ip, gip
+    type(c_ptr) ::  ret
+    real(kind = fcs_real_kind_isoc), allocatable         ::  fields(:)
+    integer(kind = fcs_integer_kind_isoc)           ::  index
     integer, allocatable :: ix(:)
     FLOAT :: aux1
     type(mesh_t), pointer :: mesh
@@ -295,64 +358,57 @@ contains
     PUSH_SUB(poisson_fmm_solve)
 
     mesh => der%mesh
-    sp = this%sp
-    ep = this%ep
-    periodic = mesh%sb%periodic_dim
-
-    if(periodic /= 0) then
-      if ((mesh%sb%box_shape == PARALLELEPIPED) .and. ((mesh%sb%lsize(1) == mesh%sb%lsize(2)) .and. &
-        (mesh%sb%lsize(1) == mesh%sb%lsize(3)) .and. &
-        (mesh%sb%lsize(2) == mesh%sb%lsize(3)))) then
-        periodic_length = mesh%sb%lsize(1)
-      else
-        message(1) = "At present, FMM solver for Hartree potential can only deal with cubic boxes. "
-        message(2) = " Please, change your Poisson solver or the size or dimensions of your box. "
-        call messages_fatal(2)
-      end if
-    end if
 
     call profiling_in(poisson_prof, "POISSON_FMM")
 
     ! allocate buffers.
-    SAFE_ALLOCATE(q(sp:ep))
-    SAFE_ALLOCATE(xyz(1:3, sp:ep))
-    SAFE_ALLOCATE(pot_lib_fmm(sp:ep))
+    SAFE_ALLOCATE(q(this%sp:this%ep))
+    SAFE_ALLOCATE(xyz(3 * (this%nlocalcharges)))
+    SAFE_ALLOCATE(pot_lib_fmm(this%sp:this%ep))
+    SAFE_ALLOCATE(fields(3 * (this%nlocalcharges)))
 
     totalcharges = mesh%np_global 
 
     if (.not. mesh%use_curvilinear) then
-      do ii = sp, ep
+      do ii = this%sp, this%ep
         q(ii) = rho(ii) * mesh%vol_pp(1)
       end do
     else
-      do ii = sp, ep
+      do ii = this%sp, this%ep
         q(ii) = rho(ii) * mesh%vol_pp(ii)
       end do
     end if
 
     ! invert the indices
-    do ii = sp, ep
+    index = 0
+    do ii = this%sp, this%ep
       do jj = 1, MAX_DIM
-        xyz(jj, ii) = mesh%x(ii, jj)
+         index = index + 1 
+         xyz(index) = mesh%x(ii, jj)
       end do
     end do
 
     abs_rel = this%abs_rel_fmm
     delta_E = this%delta_E_fmm
     pot_lib_fmm = M_ZERO 
+    fields = M_ZERO
     periodic_length = CNST(2.0)*mesh%sb%lsize(1)
     periodicaxes = 1
     dipolecorrection = this%dipole_correction
 
     call profiling_in(prof_fmm_lib, "FMM_LIB")
-    call fmm(totalcharges, this%nlocalcharges, q(sp), xyz(1, sp), abs_rel, delta_E, energy_fmm, &
-      pot_lib_fmm(sp), periodic, periodicaxes, periodic_length, dipolecorrection)
+
+    ret = fcs_tune(this%handle, this%nlocalcharges, this%nlocalcharges, xyz(1), q(this%sp))
+
+    ret = fcs_run(this%handle, this%nlocalcharges, this%nlocalcharges, xyz(1), q(this%sp), fields(1), &
+         pot_lib_fmm(this%sp))
+
     call profiling_out(prof_fmm_lib)
 
     call profiling_in(prof_fmm_gat, "FMM_GATHER")
     if (mpi_world%size > 1) then
       !now we need to allgather the results between "states"
-      call MPI_Allgatherv(pot_lib_fmm(sp), this%nlocalcharges, MPI_FLOAT, &
+      call MPI_Allgatherv(pot_lib_fmm(this%sp), this%nlocalcharges, MPI_FLOAT, &
         pot(1), this%dsize(1), this%disps(1), MPI_FLOAT, &
         this%perp_grp%comm, mpi_err)
     else
@@ -420,3 +476,4 @@ end module poisson_fmm_m
 !! mode: f90
 !! coding: utf-8
 !! End:
+

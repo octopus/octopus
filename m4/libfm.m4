@@ -11,7 +11,7 @@ fi
 
 dnl Get fortran linker name of LIBFM function to check for.
 dnl if not compiling with fortran, convert the names
-m4_if(_AC_LANG, Fortran, [fmm_init=fmm_init], [AC_FC_FUNC(fmm_init)])
+m4_if(_AC_LANG, Fortran, [fmm_init=fcs_run], [AC_FC_FUNC(fmm_init)])
 
 dnl Check if the library was given in the command line
 if test $acx_libfm_ok = no; then
@@ -41,14 +41,22 @@ fi
 
 dnl Generic LIBFM library?
 for libfm in fm_r64; do
+  if test $acx_libfm_ok = no; then
+    AC_CHECK_LIB($libfm , $fmm_init,
+      [acx_libfm_ok=yes; LIBS_LIBFM="$LIBS_LIBFM -l$libfm"], [], [$FLIBS])
+  fi
+done
+
+dnl Generic LIBFM library?
+for libfm in fm_r64; do
   dnl if test x"$libfm" = xlibfm-openmpi; then       
   dnl   libfmCinit="libfmCinit-openmpi"
   dnl else
   dnl libfm="fm_r64"
   dnl fi
   if test $acx_libfm_ok = no; then
-    AC_CHECK_LIB($libfm -larmci -lsl_r64, $fmm_init,
-      [acx_libfm_ok=yes; LIBS_LIBFM="$LIBS_LIBFM -l$armci -l$sl_r64 -l$libfm"], [], [$FLIBS])
+    AC_CHECK_LIB($libfm, $fmm_init,
+      [acx_libfm_ok=yes; LIBS_LIBFM="$LIBS_LIBFM -l$libfm"], [], [$FLIBS])
   fi
 done
 
