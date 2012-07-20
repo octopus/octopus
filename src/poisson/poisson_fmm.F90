@@ -24,7 +24,8 @@
 #endif
 
 module poisson_fmm_m
-  use boundaries_m
+  use boundaries_m 
+  use c_pointer_m
   use cube_m
   use datasets_m
   use derivatives_m
@@ -312,7 +313,7 @@ contains
     if (mpi_world%size > 1) call MPI_Comm_free(this%perp_grp%comm, mpi_err)
     SAFE_DEALLOCATE_P(this%disps)
     SAFE_DEALLOCATE_P(this%dsize)
-!!$    ret = fcs_destroy(this%handle)
+    ret = fcs_destroy(this%handle)
 
     POP_SUB(poisson_fmm_end)
 #endif
