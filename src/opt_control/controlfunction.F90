@@ -264,7 +264,7 @@ contains
         write(message(3), '(a)') '      and  (ii) the sum of all the cosine coefficients are zero, so that'
         write(message(4), '(a)') '      the control function starts and ends at zero.'
         write(message(5), '(a)') '      Then, a transformation to hyperspherical coordinates will be made.'
-        call messages_info(6)
+        call messages_info(5)
       case(ctr_fourier_series)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
         call messages_info(1)
