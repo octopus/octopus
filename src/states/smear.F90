@@ -305,11 +305,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine smear_fill_occupations(this, eigenvalues, occupations, nik, nst, Imeigenvalues)
-    type(smear_t),   intent(in)  :: this
-    FLOAT,           intent(in)  :: eigenvalues(:,:)
-    FLOAT,           intent(out) :: occupations(:,:)
-    integer,         intent(in)  :: nik, nst
-    FLOAT, optional, intent(in)  :: Imeigenvalues(:,:)
+    type(smear_t),   intent(in)    :: this
+    FLOAT,           intent(in)    :: eigenvalues(:,:)
+    FLOAT,           intent(inout) :: occupations(:,:)
+    integer,         intent(in)    :: nik, nst
+    FLOAT, optional, intent(in)    :: Imeigenvalues(:,:)
 
     integer :: ik, ist
     FLOAT   :: dsmear, xx, ixx
