@@ -58,7 +58,6 @@ subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltax
   !respect to the laplacian of the density.
   FLOAT, allocatable :: symmtmp(:, :)  ! Temporary vector for the symmetrizer
   FLOAT, allocatable :: vx(:)
-  FLOAT, allocatable :: gf(:,:)
   FLOAT, allocatable :: unp_dens(:), unp_dedd(:)
 
   integer :: ib, ib2, ip, isp, families, ixc, spin_channels, is
@@ -369,17 +368,14 @@ subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltax
     call xc_density_correction_calc(xcs, der, spin_channels, rho, vx, dedd, deltaxc = deltaxc)
 
     if(calc_energy) then
-      ! get the energy density from Levy-Perdew
-      SAFE_ALLOCATE(gf(1:der%mesh%np, 1:3))
-
+      ! correct the energy density from Levy-Perdew, note that vx now
+      ! contains the correction applied to the xc potential.
       do is = 1, spin_channels
         do ip = 1, der%mesh%np
-          ex_per_vol(ip) = vx(ip)/spin_channels*(CNST(3.0)*rho(ip, is) &
-            + sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*gdens(ip, 1:der%mesh%sb%dim, is)))
+          ex_per_vol(ip) = ex_per_vol(ip) &
+            + vx(ip)*(CNST(3.0)*rho(ip, is) + sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*gdens(ip, 1:der%mesh%sb%dim, is)))
         end do
       end do
-
-      SAFE_DEALLOCATE_A(gf)
     end if
   end if
 
@@ -718,7 +714,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: nspin
   FLOAT,               intent(in)    :: density(:, :)
-  FLOAT,               intent(in)    :: refvx(:)
+  FLOAT,               intent(inout) :: refvx(:)
   FLOAT,               intent(inout) :: vxc(:, :)
   FLOAT, optional,     intent(out)   :: deltaxc
 
@@ -857,7 +853,10 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   call dio_function_output(C_OUTPUT_HOW_PLANE_Y, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
   call dio_function_output(C_OUTPUT_HOW_PLANE_Z, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
 
-  forall(ip = 1:der%mesh%np) vxc(ip, 1:nspin) = vxc(ip, 1:nspin) + lrvxc(ip)
+  forall(ip = 1:der%mesh%np) 
+    vxc(ip, 1:nspin) = vxc(ip, 1:nspin) + lrvxc(ip)
+    refvx(ip) = lrvxc(ip)
+  end forall
 
   maxdd = -HUGE(maxdd)
   mindd =  HUGE(maxdd)
