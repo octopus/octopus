@@ -78,8 +78,7 @@ module xc_m
 
   integer, parameter :: &
     LR_NONE = 0,        &
-    LR_X    = 1,        &
-    LR_XC   = 2
+    LR_X    = 1
 
   interface xc_get_vxc
     module procedure dxc_get_vxc, zxc_get_vxc
@@ -269,9 +268,6 @@ contains
       !% No correction is applied.
       !%Option long_range_x 1
       !% The correction is applied to the exchange potential.
-      !%Option long_range_xc 2
-      !% The correction is applied to the combined exchange and
-      !% correlation potential.
       !%End
       call parse_integer('XCDensityCorrection', LR_NONE, xcs%xc_density_correction)
 
