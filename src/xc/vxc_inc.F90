@@ -316,6 +316,8 @@ subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltax
           case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
             l_vsigma = M_ZERO
 
+            call messages_not_implemented('XC density correction for GGA/mGGA')
+
             if(functl(ixc)%id == XC_GGA_X_LB) then
               call mesh_r(der%mesh, ip, rr)
               call XC_F90(gga_lb_modified)(xcs%functl(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
@@ -331,6 +333,8 @@ subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltax
             vx(ib2) = unp_dedd(ib)
             ib2 = ib2 + 1
           end do
+
+          ! GGA terms are missing here
 
           SAFE_DEALLOCATE_A(unp_dens)
           SAFE_DEALLOCATE_A(unp_dedd)
