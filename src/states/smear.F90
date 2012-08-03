@@ -58,6 +58,7 @@ module smear_m
     FLOAT   :: ef_occ       !< Occupancy of the level at the Fermi energy
     logical :: integral_occs !< for fixed_occ, are they all integers?
     integer :: MP_n         !< order of Methfessel-Paxton smearing
+    integer :: fermi_count  !< The number of occupied states at the fermi level
   end type smear_t
 
   integer, parameter, public ::       &
@@ -160,6 +161,7 @@ contains
     to%el_per_state = from%el_per_state
     to%ef_occ       = from%ef_occ
     to%MP_n         = from%MP_n
+    to%fermi_count  = from%fermi_count
 
     POP_SUB(smear_copy)
   end subroutine smear_copy
@@ -253,8 +255,19 @@ contains
         this%ef_occ  = sumq / (xx * this%el_per_state)
 
         if(sumq - xx * this%el_per_state <= CNST(1e-10)) then
+
+          ! count how many occuppied states are at the fermi level,
+          ! this is required later to fill the states
+          this%fermi_count = 1
+          do
+            if(iter - this%fermi_count < 1) exit
+            if(this%e_fermi /= eigenval_list(iter - this%fermi_count)) exit
+            this%fermi_count = this%fermi_count + 1
+          end do
+          
           exit
         end if
+
 
         sumq = sumq - xx * this%el_per_state
       end do
@@ -311,7 +324,7 @@ contains
     integer,         intent(in)    :: nik, nst
     FLOAT, optional, intent(in)    :: Imeigenvalues(:,:)
 
-    integer :: ik, ist
+    integer :: ik, ist, ifermi
     FLOAT   :: dsmear, xx, ixx
     logical :: cmplxscl
 
@@ -340,16 +353,24 @@ contains
           end do
         end do
       else
+
+        ASSERT(this%fermi_count > 0 .and. this%fermi_count <= nik*nst)
+
+        ifermi = 0
         do ik = 1, nik
           do ist = 1, nst
             xx = eigenvalues(ist, ik) - this%e_fermi
             if(xx < M_ZERO) then
               occupations(ist, ik) = this%el_per_state
-            else if(xx == M_ZERO) then
+            else if(xx == M_ZERO .and. ifermi < this%fermi_count) then
               occupations(ist, ik) = this%ef_occ * this%el_per_state
+              ifermi = ifermi + 1
             else
               occupations(ist, ik) = M_ZERO
             end if
+                        
+            print*, ik, ist, xx, occupations(ist, ik)
+
           end do
         end do
       end if
