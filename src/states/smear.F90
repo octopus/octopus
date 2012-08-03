@@ -369,8 +369,6 @@ contains
               occupations(ist, ik) = M_ZERO
             end if
                         
-            print*, ik, ist, xx, occupations(ist, ik)
-
           end do
         end do
       end if
