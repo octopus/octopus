@@ -58,7 +58,7 @@ module xc_m
   type xc_t
     integer :: family                   ! the families present
     integer :: kernel_family
-    type(xc_functl_t) :: functl(2,2)    ! (1,:) => exchange,    (2,:) => correlation
+    type(xc_functl_t) :: functl(2,2)    ! (FUNC_X,:) => exchange,    (FUNC_C,:) => correlation
                                         ! (:,1) => unpolarized, (:,2) => polarized
 
     type(xc_functl_t) :: kernel(2,2)
@@ -80,6 +80,10 @@ module xc_m
     LR_NONE = 0,        &
     LR_X    = 1
 
+  integer, parameter :: &
+    FUNC_X = 1,         &
+    FUNC_C = 2
+
   interface xc_get_vxc
     module procedure dxc_get_vxc, zxc_get_vxc
   end interface
@@ -91,17 +95,17 @@ contains
     type(xc_t), intent(in) :: xcs
     integer,    intent(in) :: iunit
 
-    integer :: isp
+    integer :: ifunc
 
     PUSH_SUB(xc_write_info)
 
     write(message(1), '(a)') "Exchange-correlation:"
     call messages_info(1, iunit)
 
-    do isp = 1, 2
-      call xc_functl_write_info(xcs%functl(isp, 1), iunit)
+    do ifunc = FUNC_X, FUNC_C
+      call xc_functl_write_info(xcs%functl(ifunc, 1), iunit)
     end do
-
+    
     if(xcs%exx_coef.ne.M_ZERO) then
       write(message(1), '(1x)')
       write(message(2), '(a,f8.5)') "Exact exchange mixing = ", xcs%exx_coef
@@ -135,43 +139,43 @@ contains
     !get both spin-polarized and unpolarized
     do isp = 1, 2
 
-      call xc_functl_init_functl(xcs%functl(1,isp),  x_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%functl(2,isp),  c_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functl(FUNC_X, isp),  x_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functl(FUNC_C, isp),  c_id, ndim, nel, isp)
 
-      call xc_functl_init_functl(xcs%kernel(1,isp), xk_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%kernel(2,isp), ck_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%kernel(FUNC_X, isp), xk_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%kernel(FUNC_C, isp), ck_id, ndim, nel, isp)
 
     end do
 
-    xcs%family = ior(xcs%family, xcs%functl(1,1)%family)
-    xcs%family = ior(xcs%family, xcs%functl(2,1)%family)
+    xcs%family = ior(xcs%family, xcs%functl(FUNC_X,1)%family)
+    xcs%family = ior(xcs%family, xcs%functl(FUNC_C,1)%family)
 
-    xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(1,1)%family)
-    xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(2,1)%family)
+    xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(FUNC_X,1)%family)
+    xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(FUNC_C,1)%family)
 
     ! Take care of hybrid functionals (they appear in the correlation functional)
     xcs%exx_coef = M_ZERO
     ll =  (hartree_fock) &
-      .or.(xcs%functl(1,1)%id.eq.XC_OEP_X) &
-      .or.(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0)
+      .or.(xcs%functl(FUNC_X,1)%id.eq.XC_OEP_X) &
+      .or.(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA).ne.0)
     if(ll) then
-      if((xcs%functl(1,1)%id.ne.0).and.(xcs%functl(1,1)%id.ne.XC_OEP_X)) then
+      if((xcs%functl(FUNC_X,1)%id.ne.0).and.(xcs%functl(FUNC_X,1)%id.ne.XC_OEP_X)) then
         message(1) = "You cannot use an exchange functional when performing"
         message(2) = "a Hartree-Fock calculation or using a hybrid functional."
         call messages_fatal(2)
       end if
 
       ! get the mixing coefficient for hybrids
-      if(iand(xcs%functl(2,1)%family, XC_FAMILY_HYB_GGA).ne.0) then
-        call XC_F90(hyb_exx_coef)(xcs%functl(2,1)%conf, xcs%exx_coef)
+      if(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA).ne.0) then
+        call XC_F90(hyb_exx_coef)(xcs%functl(FUNC_C,1)%conf, xcs%exx_coef)
       else
         ! we are doing Hartree-Fock plus possibly a correlation functional
         xcs%exx_coef = M_ONE
       end if
 
       ! reset certain variables
-      xcs%functl(1,1)%family = XC_FAMILY_OEP
-      xcs%functl(1,1)%id     = XC_OEP_X
+      xcs%functl(FUNC_X,1)%family = XC_FAMILY_OEP
+      xcs%functl(FUNC_X,1)%id     = XC_OEP_X
       xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
     end if
 
@@ -338,10 +342,10 @@ contains
     PUSH_SUB(xc_end)
 
     do isp = 1, 2
-      call xc_functl_end(xcs%functl(1,isp))
-      call xc_functl_end(xcs%functl(2,isp))
-      call xc_functl_end(xcs%kernel(1,isp))
-      call xc_functl_end(xcs%kernel(2,isp))
+      call xc_functl_end(xcs%functl(FUNC_X, isp))
+      call xc_functl_end(xcs%functl(FUNC_C, isp))
+      call xc_functl_end(xcs%kernel(FUNC_X, isp))
+      call xc_functl_end(xcs%kernel(FUNC_C, isp))
     end do
     xcs%family = 0
 

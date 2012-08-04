@@ -103,9 +103,8 @@ subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltax
   mgga = iand(xcs%family, XC_FAMILY_MGGA).ne.0
 
   !Read the spin channels
-  !Index 1 refers to "exchange mode" of type "xc_functl_t". For this purpose using 1 or 2 makes no difference. 
-  spin_channels = functl(1)%spin_channels
-
+  spin_channels = functl(FUNC_X)%spin_channels
+  
   if(xcs%xc_density_correction == LR_X) then
     SAFE_ALLOCATE(vx(1:der%mesh%np))
   end if
@@ -156,7 +155,7 @@ subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltax
       SAFE_DEALLOCATE_A(symmtmp)
     end if
 
-    if(functl(1)%id == XC_MGGA_X_TB09 .and. der%mesh%sb%periodic_dim == 3) then
+    if(functl(FUNC_X)%id == XC_MGGA_X_TB09 .and. der%mesh%sb%periodic_dim == 3) then
       call calc_tb09_c()
     end if
 
@@ -198,7 +197,7 @@ subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltax
     end if
 
     ! Calculate the potential/gradient density in local reference frame.
-    functl_loop: do ixc = 1, 2
+    functl_loop: do ixc = FUNC_X, FUNC_C
 
       if(.not. present(vxc)) then ! get only the xc energy
 
@@ -298,7 +297,7 @@ subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltax
           ib2 = ib2 + 1
         end do
 
-        ! calculate the exchange potential
+        ! calculate the spin unpolarized exchange potential for the long range correction
         if(xcs%xc_density_correction == LR_X .and. &
           (functl(ixc)%type == XC_EXCHANGE .or. functl(ixc)%type == XC_EXCHANGE_CORRELATION)) then
 
