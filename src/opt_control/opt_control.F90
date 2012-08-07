@@ -380,6 +380,8 @@ contains
         return
       end if
 
+      if(oct%random_initial_guess) call controlfunction_randomize(par)
+
       ! Set the module pointers, so that the direct_opt_calc and direct_opt_write_info routines
       ! can use them.
       call controlfunction_copy(par_, par)

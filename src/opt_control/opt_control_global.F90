@@ -61,16 +61,28 @@ module opt_control_global_m
   !! is done: which algorithm, how the control funtion is stored, should the
   !! intermediate results be stored for debugging, etc.
   type oct_t
-    integer :: ctr_function_rep
-    logical :: mode_fixed_fluence
-    integer :: algorithm
-    FLOAT   :: eta, delta
-    FLOAT   :: direct_step
-    logical :: use_mixing
-    logical :: oct_double_check
-    FLOAT   :: check_gradient
-    integer :: number_checkpoints
-    logical :: random_initial_guess
+    integer :: ctr_function_rep     ! This is set by the OCTControlRepresentation variable in the inp file.
+                                    ! The control functions may be represented in "real time" (i.e. by setting
+                                    ! its values in a discretized time grid), or by a set of parameters
+    integer :: algorithm            ! The algorithm to optimize depends on whether the control function is
+                                    ! represented in real time, or is parametrized. Filled by the OCTScheme input variable.
+    logical :: mode_fixed_fluence   ! Whether or not the optimization is performed in the subspace of external fields
+                                    ! of equal fluence. This is filled by the controlfunction_mod_init subroutine.
+    FLOAT   :: eta, delta           ! "Technical" variables, that complete the definition of some algorithms
+    FLOAT   :: direct_step          ! The "initial step" of the optimization search, used by some algorithms. Filled
+                                    ! by the OCTDirectStep input variable.
+    logical :: use_mixing           ! Some algorithms can be "improved" by appling a mixing strategy. This is filled by
+                                    ! the OCTMixing input variable.
+    logical :: oct_double_check     ! At the end of the optimization, a final run can be performed in order to make sure
+                                    ! that, indeed, the optimized field produces the optimal value.
+    FLOAT   :: check_gradient       ! If using the conjugate gradients algorithm, one may make sure that the forward-backward
+                                    ! propagation is indeed computing the gradient of the functional, by computing this
+                                    ! gradient numerically. This is sent by the OCTCheckGradient input variable.
+    integer :: number_checkpoints   ! When propagating backwards, the code may check that the evolution is preserving
+                                    ! time-reversal symmetry by checking that the state is equal to a number of previously
+                                    ! stored "check-points", saved during the forward propagation.
+    logical :: random_initial_guess ! Can be used only with some algorithms; instead of using the field described in the input
+                                    ! file as initial guess, the code may generate a random field.
   end type oct_t
 
   contains
