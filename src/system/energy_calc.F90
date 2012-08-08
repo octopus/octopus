@@ -84,7 +84,7 @@ contains
     etmp = M_z0
     evxctau = M_ZERO
     Imevxctau = M_ZERO
-    if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK.or.hm%theory_level==RDMFT) & 
+    if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK) & 
       & .and.(hm%theory_level.ne.CLASSICAL)) then
       if(states_are_real(st)) then
         hm%energy%kinetic  = denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
@@ -136,10 +136,7 @@ contains
       hm%energy%kinetic     = M_ZERO
       hm%energy%extern      = hm%ep%eii
       hm%energy%total       = hm%ep%eii
-    
-    case(RDMFT)
-      hm%energy%total = hm%ep%eii + M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern)
-    end select
+   end select 
     
     hm%energy%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights, st%occ)
     if(st%smear%method == SMEAR_FIXED_OCC) then ! no temperature available
