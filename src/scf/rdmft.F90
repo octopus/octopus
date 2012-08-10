@@ -90,6 +90,7 @@
     df=M_ZERO
 
     do icycle=1,rdmft_opt%max_iter
+
       if(objective_new.lt.objective) then
          u = 1.3*u
          objective = objective_new
@@ -150,13 +151,15 @@
      
       iexit=M_ZERO
       do ist=1,rdmft_opt%st%nst 
-         if  (abs(df(ist)).lt.1d-10)  iexit=iexit+1 
+         if  (abs(df(ist)).lt.0.5d-5)  iexit=iexit+1 
       end do
-
       if (iexit==rdmft_opt%st%nst)  exit
     cycle
   end do
-
+  if (iexit.ne.rdmft_opt%st%nst) then
+   write(message(1),'(a)'), 'did not manage to minimize the energy for this mu'
+   call messages_info(1)
+  end if
     SAFE_DEALLOCATE_A(V_h)
     SAFE_DEALLOCATE_A(V_x)
     SAFE_DEALLOCATE_A(de_dn)
@@ -281,7 +284,7 @@
 
   !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
   !bisection to find the root of sumocc-st%qtot=M_ZERO
-   rdmft_opt%max_iter=1000
+   rdmft_opt%max_iter=2500
    getgrad=1
    mu1=2.0d0*st%eigenval(int(st%qtot*M_HALF),1)   !initial guess for mu in the neighbourhood of homo
    mu2=0.1d0*st%eigenval(int(st%qtot*M_HALF),1) 
@@ -320,11 +323,11 @@
   
      sumgi2=occsum-st%qtot
 
-     if (icycle ==1.and. sumgi1*sumgi2.gt.M_ZERO) then !broaden interval if the root is not in the initial one
+     if (icycle ==1.and. sumgi1*sumgi2.gt.M_ZERO) then
+      !broaden interval if the root is not in the initial one
        mu1=1.5d0*mu1
        mu2=0.3d0*mu2
      end if      
-
 
      objective=M_ZERO
      mum=(mu1+mu2)*M_HALF
@@ -350,32 +353,33 @@
        mu1=mum
      end if
 
-     if (abs(sumgim).lt.1d-10.or.abs((mu1-mu2)*M_HALF).lt.1d-10)  exit
+     if (abs(sumgim).lt.1d-7.or.abs((mu1-mu2)*M_HALF).lt.1d-7)  exit
      cycle
    end do
 
+   write(message(1),'(a,1x,f11.6)'), 'Occupations sum', occsum
+   call messages_info(1)
    write(message(1),'(a,es15.8)') ' etot RDMFT= ',   units_from_atomic(units_out%energy,objective+rdmft_opt%hm%ep%eii) 
    write(message(2),'(a4,1x,a12)')'#st','Occupation'
    call messages_info(2)   
 
-   do ist = 1,st%nst
-     write(message(ist),'(i4,3x,f8.6)'), ist, occout(ist,1)
+   do ist = 1, st%nst
+     write(message(1),'(i4,3x,f11.6)'), ist, occout(ist, 1)
+     call messages_info(1)  
    end do
-   call messages_info(st%nst)
-   write(message(1),'(a,1x,f8.6)'), 'Occupations sum', occsum
-   call messages_info(1)
-
+   
+STOP
    !compute convergence criteria
-     abs_occ = M_ZERO
-      do ist = 1, st%nst
-        do ik =1 , st%d%nik
-          abs_occ = abs_occ + abs( occout(ist,ik) - occin(ist, ik))
-        end do
-      end do
+   abs_occ = M_ZERO
+   do ist = 1, st%nst
+     do ik =1 , st%d%nik
+       abs_occ = abs_occ + abs( occout(ist,ik) - occin(ist, ik))
+     end do
+   end do
 
-     rel_occ = abs_occ / st%qtot
-     ! are we finished?
-     finish = &
+   rel_occ = abs_occ / st%qtot
+   ! are we finished?
+   finish = &
            (conv_abs_occ  <= M_ZERO .or. abs_occ  <= conv_abs_occ)  .and. &
            (conv_rel_occ  <= M_ZERO .or. rel_occ  <= conv_rel_occ)
 
