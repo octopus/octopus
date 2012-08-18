@@ -264,9 +264,12 @@ contains
     integer(8) :: local_mem_size
     type(opencl_mem_t) :: buff_weights
     type(profile_t), save :: prof
+    type(cl_kernel) :: kernel_operate
 
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
+
+    kernel_operate = octcl_kernel_get_ref(op%kernel)
 
     ASSERT(points_ == OP_ALL)
 

@@ -36,6 +36,7 @@ module nl_operator_m
   use messages_m
   use multicomm_m
   use mpi_m
+  use octcl_kernel_m
   use opencl_m
   use par_vec_m
   use parser_m
@@ -108,6 +109,7 @@ module nl_operator_m
     type(nl_operator_index_t) :: outer
 
 #ifdef HAVE_OPENCL
+    type(octcl_kernel_t) :: kernel
     type(opencl_mem_t) :: buff_imin
     type(opencl_mem_t) :: buff_imax
     type(opencl_mem_t) :: buff_ri
@@ -148,18 +150,12 @@ module nl_operator_m
   type(profile_t), save :: nl_operate_profile
   type(profile_t), save :: operate_batch_prof
 
-#ifdef HAVE_OPENCL
-  type(cl_kernel), public :: kernel_operate
-#endif
 
 contains
   
   ! ---------------------------------------------------------
   subroutine nl_operator_global_init()
     integer :: default
-#ifdef HAVE_OPENCL
-    type(cl_program) :: prog
-#endif
 
     PUSH_SUB(nl_operator_global_init)
 
@@ -228,18 +224,6 @@ contains
       if(function_opencl == OP_MAP_SPLIT) then
         call messages_experimental('split non-local operator')
       end if
-
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/operate.cl')
-      select case(function_opencl)
-      case(OP_MAP)
-        call opencl_create_kernel(kernel_operate, prog, "operate_map")
-      case(OP_MAP_SPLIT)
-        call opencl_create_kernel(kernel_operate, prog, "operate4")
-      case(OP_INVMAP)
-        call opencl_create_kernel(kernel_operate, prog, "operate")
-      end select
-      call opencl_release_program(prog)
-    
     end if
 #endif
 
@@ -250,12 +234,6 @@ contains
 
   subroutine nl_operator_global_end()
     PUSH_SUB(nl_operator_global_end)
-
-#ifdef HAVE_OPENCL
-    if(opencl_is_enabled()) then
-      call opencl_release_kernel(kernel_operate)
-    end if
-#endif
 
     POP_SUB(nl_operator_global_end)
   end subroutine nl_operator_global_end
@@ -378,15 +356,19 @@ contains
       if (op%cmplx_op) then
         SAFE_ALLOCATE(op%w_im(1:op%stencil%size, 1:1))
       end if
-      message(1) = 'Info: nl_operator_build: working with constant weights.'
-      if(in_debug_mode) call messages_info(1)
+      if(in_debug_mode) then
+        message(1) = 'Info: nl_operator_build: working with constant weights.'
+        call messages_info(1)
+      end if
     else
       SAFE_ALLOCATE(op%w_re(1:op%stencil%size, 1:op%np))
       if (op%cmplx_op) then
         SAFE_ALLOCATE(op%w_im(1:op%stencil%size, 1:op%np))
       end if
-      message(1) = 'Info: nl_operator_build: working with non-constant weights.'
-      if(in_debug_mode) call messages_info(1)
+      if(in_debug_mode) then
+        message(1) = 'Info: nl_operator_build: working with non-constant weights.'
+        call messages_info(1)
+      end if
     end if
 
     ! set initially to zero
@@ -613,6 +595,16 @@ contains
 
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled() .and. op%const_w) then
+
+      select case(function_opencl)
+      case(OP_MAP)
+        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate_map')
+      case(OP_MAP_SPLIT)
+        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate4')
+      case(OP_INVMAP)
+        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate')
+      end select
+
       call opencl_create_buffer(op%buff_ri, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri*op%stencil%size)
       call opencl_write_buffer(op%buff_ri, op%nri*op%stencil%size, op%ri)
 
@@ -1291,6 +1283,7 @@ contains
 
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled() .and. op%const_w) then
+
       call opencl_release_buffer(op%buff_ri)
       select case(function_opencl)
       case(OP_INVMAP)

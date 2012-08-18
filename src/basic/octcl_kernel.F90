@@ -38,7 +38,8 @@ module octcl_kernel_m
     octcl_kernel_t,                     &
     octcl_kernel_global_init,           &
     octcl_kernel_global_end,            &
-    octcl_kernel_start_call
+    octcl_kernel_start_call,            &
+    octcl_kernel_build
 
 #ifdef HAVE_OPENCL
   public ::                             &
