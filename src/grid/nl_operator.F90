@@ -215,17 +215,21 @@ contains
       !%Description
       !% This variable selects the subroutine used to apply non-local
       !% operators over the grid when opencl is used. The default is
-      !% split.
+      !% map.
       !%Option invmap 1
       !% The standard implementation ported to OpenCL.
       !%Option map 2
       !% A different version, more suitable for GPUs.
       !%Option split 3
-      !% This operator uses two different paths, one for points where
+      !% (Experimental) This operator uses two different paths, one for points where
       !% the operator can be applied in blocks and other for single
       !% points.
       !%End
-      call parse_integer(datasets_check('OperateOpenCL'),  OP_MAP_SPLIT, function_opencl)
+      call parse_integer(datasets_check('OperateOpenCL'),  OP_MAP, function_opencl)
+
+      if(function_opencl == OP_MAP_SPLIT) then
+        call messages_experimental('split non-local operator')
+      end if
 
       !%Variable OperateOpenCLVecSize
       !%Type integer
