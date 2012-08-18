@@ -264,25 +264,19 @@ contains
     integer(8) :: local_mem_size
     type(opencl_mem_t) :: buff_weights
     type(profile_t), save :: prof
-    FLOAT, allocatable :: vecw(:, :)
 
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
 
     ASSERT(points_ == OP_ALL)
 
-    call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size*vecsize_opencl)
+    call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
 
-    SAFE_ALLOCATE(vecw(1:vecsize_opencl, 1:op%stencil%size))
-    do ist = 1, op%stencil%size
-      vecw(1:vecsize_opencl, ist) = wre(ist)
-    end do
-    call opencl_write_buffer(buff_weights, op%stencil%size*vecsize_opencl, vecw)
-    SAFE_DEALLOCATE_A(vecw)
+    call opencl_write_buffer(buff_weights, op%stencil%size, wre)
 
     ASSERT(fi%pack%size_real(1) == fo%pack%size_real(1))
 
-    eff_size = fi%pack%size_real(1)/vecsize_opencl
+    eff_size = fi%pack%size_real(1)
 
     select case(function_opencl)
     case(OP_INVMAP)
@@ -310,7 +304,7 @@ contains
 
       isize = min(isize, opencl_kernel_workgroup_size(kernel_operate)/eff_size)
 
-      if(eff_size*isize < fi%pack%size_real(1)/vecsize_opencl) then
+      if(eff_size*isize < fi%pack%size_real(1)) then
         message(1) = "The value of StatesBlockSize is too large for this OpenCL implementation."
         call messages_fatal(1)
       end if
