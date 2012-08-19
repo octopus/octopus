@@ -331,6 +331,7 @@ contains
     integer :: ir, maxp, iinner, iouter
 #endif
     logical :: change, force_change, iter_done
+    character(len=20) :: flags
 
     PUSH_SUB(nl_operator_build)
 
@@ -596,13 +597,16 @@ contains
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled() .and. op%const_w) then
 
+      write(flags, '(i5)') op%stencil%size
+      flags='-DSTENCIL_SIZE='//trim(adjustl(flags))
+
       select case(function_opencl)
       case(OP_MAP)
-        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate_map')
+        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate_map', flags)
       case(OP_MAP_SPLIT)
-        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate4')
+        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate4', flags)
       case(OP_INVMAP)
-        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate')
+        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate', flags)
       end select
 
       call opencl_create_buffer(op%buff_ri, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri*op%stencil%size)

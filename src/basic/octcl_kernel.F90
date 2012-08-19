@@ -90,17 +90,18 @@ contains
 
   !------------------------------------------------------------
 
-  subroutine octcl_kernel_build(this, file_name, kernel_name)
-    type(octcl_kernel_t), intent(inout) :: this
-    character(len=*),  intent(in)    :: file_name
-    character(len=*),  intent(in)    :: kernel_name
+  subroutine octcl_kernel_build(this, file_name, kernel_name, flags)
+    type(octcl_kernel_t),        intent(inout) :: this
+    character(len=*),            intent(in)    :: file_name
+    character(len=*),            intent(in)    :: kernel_name
+    character(len=*), optional,  intent(in)    :: flags
 
 #ifdef HAVE_OPENCL
     type(cl_program) :: prog
 
     PUSH_SUB(octcl_kernel_build)
 
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/'//trim(file_name))
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/'//trim(file_name), flags = flags)
     call opencl_create_kernel(this%kernel, prog, trim(kernel_name))
     call opencl_release_program(prog)
     this%initialized = .true.
