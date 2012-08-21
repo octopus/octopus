@@ -342,9 +342,14 @@ contains
 
     integer :: iatom, iproj, ll, lmax, lloc, mm, ic
     integer :: nmat, imat, ip
+    integer :: nregion, jatom, katom, iregion
+    integer, allocatable :: order(:), head(:), region_count(:)
+    logical, allocatable :: atom_counted(:)
+    logical :: overlap
     type(ps_t), pointer :: ps
     type(projector_matrix_t), pointer :: pmat
     type(kb_projector_t),     pointer :: kb_p
+    type(profile_t), save :: color_prof
 
     PUSH_SUB(hamiltonian_base_build_proj)
 
@@ -377,6 +382,89 @@ contains
     SAFE_ALLOCATE(this%projector_matrices(1:this%nprojector_matrices))
     SAFE_ALLOCATE(this%projector_to_atom(1:epot%natoms))
 
+    call profiling_in(color_prof, "ATOM_COLORING")
+
+    ! this is most likely a very unefficient algorithm, O(natom**2) or
+    ! O(natom**3), probably it should be replaced by something better.
+
+    SAFE_ALLOCATE(order(1:epot%natoms))
+    SAFE_ALLOCATE(head(1:epot%natoms + 1))
+    SAFE_ALLOCATE(region_count(1:epot%natoms))
+    SAFE_ALLOCATE(atom_counted(1:epot%natoms))
+
+    atom_counted = .false.
+    order = -1
+
+    head(1) = 1
+    nregion = 0
+    do 
+      nregion = nregion + 1
+      ASSERT(nregion <= epot%natoms)
+
+      region_count(nregion) = 0
+
+      do iatom = 1, epot%natoms
+        if(atom_counted(iatom)) cycle
+
+        overlap = .false.
+        
+        if(projector_is(epot%proj(iatom), M_KB)) then
+          do jatom = 1, region_count(nregion)
+            katom = order(head(nregion) + jatom - 1)
+            overlap = submesh_overlap(epot%proj(iatom)%sphere, epot%proj(katom)%sphere)
+!            overlap = .true.
+            if(overlap) exit
+          end do
+        end if
+
+!        print*, "overlap", overlap, jatom
+        
+        if(.not. overlap) then
+          INCR(region_count(nregion), 1)
+          order(head(nregion) - 1 + region_count(nregion)) = iatom
+          atom_counted(iatom) = .true.
+        end if
+        
+      end do
+
+!      print*, nregion, atom_counted
+!      print*, nregion, head(nregion), region_count(nregion)
+
+      head(nregion + 1) = head(nregion) + region_count(nregion)
+
+      if(all(atom_counted)) exit
+      
+    end do
+
+!    print*, head(nregion + 1)
+
+    call messages_write('The atoms can be separated in ')
+    call messages_write(nregion)
+    call messages_write(' non-overlapping groups.')
+    call messages_info()
+
+!    print*, "REGIONS", nregion
+!    print*, "COUNT", region_count(1:nregion)
+!    print*, atom_counted
+
+    do iregion = 1, nregion
+!      print*, "REG", iregion, head(iregion), "-", head(iregion + 1) - 1, region_count(iregion)
+      do iatom = head(iregion), head(iregion + 1) - 1
+      if(.not. projector_is(epot%proj(order(iatom)), M_KB)) cycle
+        do jatom = head(iregion), iatom - 1
+!          print*, projector_is(epot%proj(order(iatom)), M_KB), projector_is(epot%proj(order(jatom)), M_KB)
+          if(.not. projector_is(epot%proj(order(jatom)), M_KB)) cycle
+!          print*, order(iatom), order(jatom)
+!          print*, "check", iatom, jatom, submesh_overlap(epot%proj(order(iatom))%sphere, epot%proj(order(jatom))%sphere)
+          ASSERT(.not. submesh_overlap(epot%proj(order(iatom))%sphere, epot%proj(order(jatom))%sphere))
+        end do
+      end do
+    end do
+    
+    call profiling_out(color_prof)
+
+!    print*, "ORDER", order
+!    stop
 
     this%full_projection_size = 0
     iproj = 0
