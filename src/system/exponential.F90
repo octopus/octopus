@@ -652,38 +652,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> This routine performs the operation:
-  !! \f[
-  !! \exp{-i*\Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
-  !! \f]
-  !! If imag_time is present and is set to true, it performs instead:
-  !! \f[
-  !! \exp{ \Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
-  !! \f]
-  !! If the hamiltonian contains an inhomogeneous term, the operation is:
-  !! \f[
-  !! \exp{-i*\Delta t*hm(t)}|\psi_z> + \Delta t*phi{-i*\Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
-  !! \f]
-  !! where:
-  !! \f[
-  !! \phi(x) = (e^x - 1)/x
-  !! \f]
-  ! ---------------------------------------------------------
-  subroutine exponential_apply_all(te, der, hm, st, deltat, t, order, vmagnus, imag_time)
+  subroutine exponential_apply_all(te, der, hm, st, deltat, t, order)
     type(exponential_t), intent(inout) :: te
     type(derivatives_t), intent(inout) :: der
     type(hamiltonian_t), intent(inout) :: hm
     type(states_t),      intent(inout) :: st
     FLOAT,               intent(in)    :: deltat, t
     integer, optional,   intent(inout) :: order
-    FLOAT,   optional,   intent(in)    :: vmagnus(der%mesh%np, hm%d%nspin, 2)
-    logical, optional,   intent(in)    :: imag_time
 
     integer :: ik, ib, i
-    CMPLX   :: timestep
-    logical :: apply_magnus
-    CMPLX :: zfact
-    logical :: zfact_is_real
+    FLOAT :: zfact
 
     type(states_t) :: st1, hst1
 
@@ -691,23 +669,12 @@ contains
 
     ASSERT(te%exp_method .eq. EXP_TAYLOR)
 
-    apply_magnus = .false.
-    if(present(vmagnus)) apply_magnus = .true.
-
-    timestep = TOCMPLX(deltat, M_ZERO)
-    if(present(imag_time)) then
-      if(imag_time) timestep = M_zI * deltat
-    end if
-
     call states_copy(st1, st)
     call states_copy(hst1, st)
 
-    zfact = M_z1
-    zfact_is_real = .true.
-
+    zfact = M_ONE
     do i = 1, te%exp_order
-      zfact = zfact*(-M_zI*timestep)/i
-      zfact_is_real = .not. zfact_is_real
+      zfact = zfact * deltat / i
       
       if (i == 1) then
         call zhamiltonian_apply_all(hm, der, st, hst1, t)
@@ -717,21 +684,11 @@ contains
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%block_start, st%block_end
-          if(zfact_is_real) then
-            call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hst1%psib(ib, ik), st%psib(ib, ik))
-          else
-            call batch_axpy(der%mesh%np, zfact, hst1%psib(ib, ik), st%psib(ib, ik))
-          end if
+            call batch_set_zero(st1%psib(ib, ik))
+            call batch_axpy(der%mesh%np, -M_zI, hst1%psib(ib, ik), st1%psib(ib, ik))
+            call batch_axpy(der%mesh%np, zfact, st1%psib(ib, ik), st%psib(ib, ik))
         end do
       end do
-
-      if(i /= te%exp_order) then
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do ib = st%block_start, st%block_end
-            call batch_copy_data(der%mesh%np, hst1%psib(ib, ik), st1%psib(ib, ik))
-          end do
-        end do
-      end if
 
     end do
     ! End of Taylor expansion loop.
