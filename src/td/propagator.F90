@@ -68,7 +68,6 @@ module propagator_m
     td_zop,                   &
     td_zopt,                  &
     propagator_qmr_op,            &
-    propagator_qmr2_op,           &
     propagator_qmr_prec,          &
     propagator_set_scf_prop,      &
     propagator_remove_scf_prop,   &
@@ -85,7 +84,6 @@ module propagator_m
     PROP_MAGNUS                  = 7,  &
     PROP_CRANK_NICHOLSON_SRC_MEM = 8,  &
     PROP_QOCT_TDDFT_PROPAGATOR   = 10, &
-    PROP_QOCT_TDDFT_PROPAGATOR_2 = 11, &
     PROP_CAETRS                  = 12
 
   FLOAT :: scf_threshold = CNST(1.0e-3)
@@ -274,8 +272,6 @@ contains
     !% calculations.
     !%Option qoct_tddft_propagator 10
     !% WARNING: EXPERIMENTAL
-    !%Option qoct_tddft_propagator_2 11
-    !% WARNING: EXPERIMENTAL
     !%End
     call messages_obsolete_variable('TDEvolutionMethod', 'TDPropagator')
 
@@ -317,7 +313,6 @@ contains
     case(PROP_CRANK_NICHOLSON_SRC_MEM)
       call ob_propagator_init(st, gr, hm, tr%ob, dt, max_iter)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
-    case(PROP_QOCT_TDDFT_PROPAGATOR_2)
     case default
       call input_error('TDPropagator')
     end select
@@ -512,8 +507,6 @@ contains
     case(PROP_CRANK_NICHOLSON_SRC_MEM);  call td_crank_nicholson_src_mem
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
-    case(PROP_QOCT_TDDFT_PROPAGATOR_2)
-      call td_qoct_tddft_propagator_2(hm, gr, st, tr, time, dt)
     end select
 
     if(present(scsteps)) scsteps = 1
@@ -557,8 +550,6 @@ contains
           case(PROP_CRANK_NICHOLSON_SRC_MEM);  call td_crank_nicholson_src_mem
           case(PROP_QOCT_TDDFT_PROPAGATOR)
             call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
-          case(PROP_QOCT_TDDFT_PROPAGATOR_2)
-            call td_qoct_tddft_propagator_2(hm, gr, st, tr, time, dt)
           end select
 
           call density_calc(st, gr, st%rho)
