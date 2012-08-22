@@ -384,7 +384,7 @@ contains
 
     call profiling_in(color_prof, "ATOM_COLORING")
 
-    ! this is most likely a very unefficient algorithm, O(natom**2) or
+    ! this is most likely a very inefficient algorithm, O(natom**2) or
     ! O(natom**3), probably it should be replaced by something better.
 
     SAFE_ALLOCATE(order(1:epot%natoms))

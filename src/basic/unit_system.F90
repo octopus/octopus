@@ -93,7 +93,7 @@ contains
     !% Atomic units seem to be the preferred system in the atomic and
     !% molecular physics community. Internally, the code works in
     !% atomic units. However, for input or output, some people like
-    !% to use a system based in eV for energies and <math>\AA</math>
+    !% to use a system based on eV for energies and <math>\AA</math>
     !% for length. The default is atomic units.
     !%
     !% Normally time units are derived from energy and length units,

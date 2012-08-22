@@ -204,12 +204,11 @@ contains
 
       !%Variable OperateOpenCL
       !%Type integer
-      !%Default split
+      !%Default map
       !%Section Execution::Optimization
       !%Description
       !% This variable selects the subroutine used to apply non-local
-      !% operators over the grid when opencl is used. The default is
-      !% map.
+      !% operators over the grid when OpenCL is used.
       !%Option invmap 1
       !% The standard implementation ported to OpenCL.
       !%Option map 2

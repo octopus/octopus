@@ -118,7 +118,7 @@ module controlfunction_m
                                                                    !! OCTControlFunctionRepresentation, unless 
                                                                    !! OCTControlRepresentation == control_function_real_time, 
                                                                    !! in which case the representation is obviously ctr_real_time.
-    FLOAT   :: omegamax            = M_ZERO                        !< The representations based in Fourier expansions (all the 
+    FLOAT   :: omegamax            = M_ZERO                        !< The representations based on Fourier expansions (all the 
                                                                    !! "parametrized" ones) contain Fourier expansion coefficients 
                                                                    !! corresponding to frequencies up to this cut-off frequency.
     FLOAT   :: targetfluence       = M_ZERO                        !< This is the fluence that should be conserved when doing 
