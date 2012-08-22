@@ -12,7 +12,7 @@ AC_DEFUN([ACX_ZDOTC], [
   acx_zdotc_ok=yes
   rm -f conf.zdotc
 
-  AC_TRY_RUN([
+  AC_RUN_IFELSE([
 program testzdotc
 
 implicit none

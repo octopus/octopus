@@ -55,7 +55,7 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
       LIBS="$LIBS $GSL_LIBS"
 
       rm -f conf.gsltest
-      AC_TRY_RUN([
+      AC_RUN_IFELSE([
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
