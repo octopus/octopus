@@ -66,7 +66,7 @@ _mm256_storeu_pd(d, a);
 printf("",  *d);
 changequote([, ])
  ])], 
- [acx_m256d=yes], [acx_m256d=no], [cross compiling; assumed OK... $ac_c])
+ [acx_m256d=yes], [acx_m256d=no], [acx_m256d="cross compiling; assumed OK... $ac_c"])
 CFLAGS="$acx_save_CFLAGS"
 AC_MSG_RESULT($acx_m256d)])
 
@@ -86,7 +86,7 @@ __m128d c __attribute__((aligned(16)));
 __m128d d __attribute__((aligned(16)));
 d =  _mm_macc_pd(a, b, c);
  ])], 
- [acx_fma4=yes], [acx_fma4=no], [cross compiling; assumed OK... $ac_c])
+ [acx_fma4=yes], [acx_fma4=no], [acx_fma4="cross compiling; assumed OK... $ac_c"])
 CFLAGS="$acx_save_CFLAGS"
 AC_MSG_RESULT($acx_fma4)])
 
@@ -131,7 +131,7 @@ vector_type="(sse2)"
 
 #FMA4
 ACX_FMA4 
-if test x$acx_fma4 = xyes ; then
+if test "x$acx_fma4" = "xyes" ; then
  AC_DEFINE(HAVE_FMA4, 1, [compiler and hardware supports the FMA4 instructions])
 fi
 
@@ -139,19 +139,19 @@ fi
 ac_enable_avx=yes
 AC_ARG_ENABLE(avx, AS_HELP_STRING([--disable-avx], [Disable the use of AVX vectorial instructions (x86_64)]), 
 	[ac_enable_avx=${enableval}])
-if test x$vector = xno ; then
+if test "x$vector" = "xno" ; then
  ac_enable_avx=no
 fi
-if test x$ac_enable_avx = xyes ; then
+if test "x$ac_enable_avx" = "xyes" ; then
   ACX_M256D
-  if test x$acx_m256d = xyes ; then
+  if test "x$acx_m256d" = "xyes" ; then
     ACX_AVX
   fi
 else
   AC_MSG_NOTICE([AVX instruction support disabled])
   acx_m256d=no
 fi
-if test x$acx_m256d = xyes ; then
+if test "x$acx_m256d" = "xyes" ; then
   AC_DEFINE(HAVE_M256D, 1, [compiler supports the m256d type])
   vector=$acx_m256d
   vector_type="(avx)"
@@ -163,7 +163,7 @@ ACX_M128D
 vector=$acx_m128d
 oct_arch=x86
 vector_type="(sse2)"
-if test x$vector = xyes ; then
+if test "x$vector" = "xyes" ; then
 # We allow explicit disabling of SSE2
 ac_enable_vectors=no
 AC_ARG_ENABLE(vectors, AS_HELP_STRING([--enable-vectors], [Enable the use of vectorial instructions (x86)]), 
@@ -220,9 +220,9 @@ fi
 
 AC_DEFINE_UNQUOTED(OCT_ARCH, $oct_arch, [The architecture of this system])
 
-AM_CONDITIONAL(COMPILE_VEC, test x$vector = xyes)
+AM_CONDITIONAL(COMPILE_VEC, test "x$vector" = "xyes")
 
-if test x$vector = xyes ; then
+if test "x$vector = xyes" ; then
 AC_DEFINE(HAVE_VEC, 1, [Define to 1 if vectorial routines are to be compiled])
 fi
 
