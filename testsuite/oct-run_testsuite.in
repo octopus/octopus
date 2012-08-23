@@ -26,7 +26,7 @@ pkgdatadir=@datadir@/@PACKAGE@
 testsuite="$pkgdatadir/testsuite"
 # we do not care about this one, but without it we get a warning from configure:
 # config.status: WARNING:  'testsuite/oct-run_testsuite.in' seems to ignore the --datarootdir setting
-datarootdir = @datarootdir@
+datarootdir=@datarootdir@
 
 # Architecture.
 arch=`echo "$MACHTYPE" | awk -F- '{print $1}'`
