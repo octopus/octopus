@@ -72,7 +72,7 @@ module geom_opt_m
     integer                      :: fixed_atom
   end type geom_opt_t
 
-  type(geom_opt_t) :: g_opt
+  type(geom_opt_t), save :: g_opt
 
   integer, parameter :: &
     MINWHAT_ENERGY = 1, &
