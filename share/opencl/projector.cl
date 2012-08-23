@@ -57,16 +57,17 @@ __kernel void projector_bra(const int nmat,
 }
 
 __kernel void projector_ket(const int nmat,
+			    const int imat_offset,
 			    __global int const * restrict offsets,
 			    __global double const * restrict matrix,
 			    __global int const * restrict map,
 			    __global double const * restrict projection, const int ldprojection,
-			    __global double * restrict lpsi, const int ldlpsi
+			    __global double * restrict psi, const int ldpsi
 			    ){
   
   const int ist = get_global_id(0);
   const int ip = get_global_id(1);
-  const int imat = get_global_id(2);
+  const int imat = get_global_id(2) + imat_offset;
 
   const int npoints       = offsets[5*imat + 0];
   const int nprojs        = offsets[5*imat + 1];
@@ -81,28 +82,8 @@ __kernel void projector_ket(const int nmat,
     aa += matrix[matrix_offset + ip + npoints*ipj]*projection[ist + ((scal_offset + ipj)<<ldprojection)];
   }
 
-  lpsi[((map_offset + ip)<<ldlpsi) + ist] = aa;
-}
+  psi[((map[map_offset + ip] - 1)<<ldpsi) + ist] += aa;
 
-__kernel void projector_ket_copy(const int np,
-				 __global int const * restrict pos,
-				 __global int const * restrict invmap,
-				 __global double const * restrict lpsi, const int ldlpsi,
-				 __global double * restrict psi, const int ldpsi
-				 ){
-  const int ist = get_global_id(0);
-  const int ip = get_global_id(1);
-
-  if(ip >= np) return;
-
-  double aa = 0.0;
-
-  for(int ii = pos[ip]; ii < pos[ip + 1]; ii++){
-    aa += lpsi[(invmap[ii]<<ldpsi) + ist];
-  }
-
-  psi[(ip<<ldpsi) + ist] += aa;
-  
 }
 
 /*

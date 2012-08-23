@@ -103,7 +103,6 @@ module opencl_m
   type(cl_kernel), public :: kernel_copy
   type(cl_kernel), public :: kernel_projector_bra
   type(cl_kernel), public :: kernel_projector_ket
-  type(cl_kernel), public :: kernel_projector_ket_copy
   type(cl_kernel), public :: dpack
   type(cl_kernel), public :: zpack
   type(cl_kernel), public :: dunpack
@@ -420,7 +419,6 @@ module opencl_m
       call opencl_build_program(prog, trim(conf%share)//'/opencl/projector.cl')
       call opencl_create_kernel(kernel_projector_bra, prog, "projector_bra")
       call opencl_create_kernel(kernel_projector_ket, prog, "projector_ket")
-      call opencl_create_kernel(kernel_projector_ket_copy, prog, "projector_ket_copy")
       call opencl_release_program(prog)
 
       call opencl_build_program(prog, trim(conf%share)//'/opencl/pack.cl')
@@ -631,7 +629,6 @@ module opencl_m
         call opencl_release_kernel(kernel_copy)
         call opencl_release_kernel(kernel_projector_bra)
         call opencl_release_kernel(kernel_projector_ket)
-        call opencl_release_kernel(kernel_projector_ket_copy)
         call opencl_release_kernel(dpack)
         call opencl_release_kernel(zpack)
         call opencl_release_kernel(dunpack)
