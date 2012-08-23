@@ -888,15 +888,22 @@ module opencl_m
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateProgramWithSource")
 
       ! build the compilation flags
-      string=''
-
+      string='-w'
+      ! full optimization
+      string=trim(string)//' -cl-denorms-are-zero'
+      string=trim(string)//' -cl-strict-aliasing'
+      string=trim(string)//' -cl-mad-enable'
+      string=trim(string)//' -cl-unsafe-math-optimizations'
+      string=trim(string)//' -cl-finite-math-only'
+      string=trim(string)//' -cl-fast-relaxed-math'
+      
       if (f90_cl_device_has_extension(opencl%device, "cl_amd_fp64")) then
-        string = trim(string)//'-DEXT_AMD_FP64'
+        string = trim(string)//' -DEXT_AMD_FP64'
       else if(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64")) then
-        string = trim(string)//'-DEXT_KHR_FP64 -cl-mad-enable'
+        string = trim(string)//' -DEXT_KHR_FP64'
       else
-        message(1) = 'Octopus requires an OpenCL device with double-precision support.' 
-        call messages_fatal(1)
+        call messages_write('Octopus requires an OpenCL device with double-precision support.')
+        call messages_fatal()
       end if
 
       if(present(flags)) then
