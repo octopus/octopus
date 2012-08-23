@@ -541,10 +541,10 @@ contains
 
     call profiling_in(cl_prof, "CL_PROJ_KET")
 
-    do iregion = 1, this%nprojector_matrices
+    do iregion = 1, this%nregions
       
       call opencl_set_kernel_arg(kernel_projector_ket, 0, this%nprojector_matrices)
-      call opencl_set_kernel_arg(kernel_projector_ket, 1, iregion - 1)
+      call opencl_set_kernel_arg(kernel_projector_ket, 1, this%regions(iregion) - 1)
       call opencl_set_kernel_arg(kernel_projector_ket, 2, this%buff_offsets)
       call opencl_set_kernel_arg(kernel_projector_ket, 3, this%buff_matrices)
       call opencl_set_kernel_arg(kernel_projector_ket, 4, this%buff_maps)
@@ -553,10 +553,10 @@ contains
       call opencl_set_kernel_arg(kernel_projector_ket, 7, vpsib%pack%buffer)
       call opencl_set_kernel_arg(kernel_projector_ket, 8, log2(vpsib%pack%size_real(1)))
       
-      wgsize = opencl_max_workgroup_size()/vpsib%pack%size_real(1)    
+      wgsize = opencl_kernel_workgroup_size(kernel_projector_ket)/vpsib%pack%size_real(1)    
 
       call opencl_kernel_run(kernel_projector_ket, &
-        (/vpsib%pack%size_real(1), pad(this%max_npoints, wgsize), 1/), &
+        (/vpsib%pack%size_real(1), pad(this%max_npoints, wgsize), this%regions(iregion + 1) - this%regions(iregion)/), &
         (/vpsib%pack%size_real(1), wgsize, 1/))
       
       call opencl_finish()
