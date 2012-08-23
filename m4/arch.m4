@@ -122,7 +122,7 @@ x86_64*)
 
 oct_arch=x86_64
 assembler=no
-AC_DEFINE(OCT_ARCH_X86_64, 1, [This an x86_64 system])
+AC_DEFINE(OCT_ARCH_X86_64, 1, [This is an x86_64 system])
 
 #SSE2
 ACX_M128D
@@ -173,32 +173,32 @@ if test x"${ac_enable_vectors}" = x"no"; then
 vector=disabled
 fi
 fi
-AC_DEFINE(OCT_ARCH_X86_64, 1, [This an x86 system])
+AC_DEFINE(OCT_ARCH_X86_64, 1, [This is an x86 system])
 ;;	
 ##########################################
 ia64*)
 oct_arch=ia64
-AC_DEFINE(OCT_ARCH_IA64, 1, [This an Itanium system])
+AC_DEFINE(OCT_ARCH_IA64, 1, [This is an Itanium system])
 ;;
 ##########################################
 sparc*)
 oct_arch=sparc
-AC_DEFINE(OCT_ARCH_SPARC, 1, [This a Sparc system])
+AC_DEFINE(OCT_ARCH_SPARC, 1, [This is a Sparc system])
 ;;
 ##########################################
 alphaev*)
 oct_arch=alpha
-AC_DEFINE(OCT_ARCH_ALPHA, 1, [This an Alpha system])
+AC_DEFINE(OCT_ARCH_ALPHA, 1, [This is an Alpha system])
 ;;
 ##########################################
 mips*)
 oct_arch=mips
-AC_DEFINE(OCT_ARCH_MIPS, 1, [This a MIPS system])
+AC_DEFINE(OCT_ARCH_MIPS, 1, [This is a MIPS system])
 ;;
 ##########################################
 powerpc*)
 oct_arch=powerpc
-AC_DEFINE(OCT_ARCH_POWERPC, 1, [This a PowerPC system])
+AC_DEFINE(OCT_ARCH_POWERPC, 1, [This is a PowerPC system])
 ACX_BLUE_GENE
 blue_gene=$acx_blue_gene
 vector=$acx_blue_gene
