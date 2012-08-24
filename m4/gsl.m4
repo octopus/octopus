@@ -114,7 +114,7 @@ int main (void)
     }
 }
 
-],, no_gsl=yes,[echo $ac_n "cross compiling; assumed OK... $ac_c"])
+],, no_gsl=yes,[echo -n "cross-compiling; assuming... "])
        CFLAGS="$ac_save_CFLAGS"
        LIBS="$ac_save_LIBS"
      fi

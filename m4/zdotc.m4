@@ -49,7 +49,7 @@ end program
       # program didn't crash, but gave wrong answer
     fi
   fi
-], [acx_zdotc_ok=no], [acx_zdotc_ok="cross compiling; assumed OK... $ac_c"])
+], [acx_zdotc_ok=no], [acx_zdotc_ok=yes;echo -n "cross-compiling; assuming... "])
 
 
   rm -f conf.zdotc

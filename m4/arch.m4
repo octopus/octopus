@@ -66,7 +66,7 @@ _mm256_storeu_pd(d, a);
 printf("",  *d);
 changequote([, ])
  ])], 
- [acx_m256d=yes], [acx_m256d=no], [acx_m256d="cross compiling; assumed OK... $ac_c"])
+ [acx_m256d=yes], [acx_m256d=no], [acx_m256d=no;echo -n "cross-compiling; assuming... "])
 CFLAGS="$acx_save_CFLAGS"
 AC_MSG_RESULT($acx_m256d)])
 
@@ -86,7 +86,7 @@ __m128d c __attribute__((aligned(16)));
 __m128d d __attribute__((aligned(16)));
 d =  _mm_macc_pd(a, b, c);
  ])], 
- [acx_fma4=yes], [acx_fma4=no], [acx_fma4="cross compiling; assumed OK... $ac_c"])
+ [acx_fma4=yes], [acx_fma4=no], [acx_fma4=no;echo -n "cross-compiling; assuming... "])
 CFLAGS="$acx_save_CFLAGS"
 AC_MSG_RESULT($acx_fma4)])
 
