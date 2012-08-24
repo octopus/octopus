@@ -348,19 +348,20 @@ end subroutine X(derivatives_batch_finish)
 
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc)
+subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc, factor)
   type(nl_operator_t), intent(in)    :: op
   type(derivatives_t), intent(in)    :: der
   type(batch_t),       intent(inout) :: ff
   type(batch_t),       intent(inout) :: opff
   logical,   optional, intent(in)    :: ghost_update
   logical,   optional, intent(in)    :: set_bc
+  FLOAT,     optional, intent(in)    :: factor
 
   type(derivatives_handle_batch_t) :: handle
 
   PUSH_SUB(X(derivatives_batch_perform))
 
-  call X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc)
+  call X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc, factor)
   call X(derivatives_batch_finish)(handle)
 
   POP_SUB(X(derivatives_batch_perform))
@@ -370,13 +371,14 @@ end subroutine X(derivatives_batch_perform)
 
 ! ---------------------------------------------------------
 ! Now the simplified interfaces
-subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc)
+subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc, factor)
   type(nl_operator_t), target, intent(in)    :: op
   type(derivatives_t),         intent(in)    :: der
   R_TYPE,                      intent(inout) :: ff(:)     ! ff(der%mesh%np_part)
   R_TYPE,                      intent(out)   :: op_ff(:)  ! op_ff(der%mesh%np)
   logical, optional,           intent(in)    :: ghost_update
   logical, optional,           intent(in)    :: set_bc
+  FLOAT,   optional,           intent(in)    :: factor
 
   type(batch_t) :: batch_ff, batch_op_ff
 
@@ -391,7 +393,7 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc)
   ASSERT(batch_is_ok(batch_ff))
   ASSERT(batch_is_ok(batch_op_ff))
 
-  call X(derivatives_batch_perform) (op, der, batch_ff, batch_op_ff, ghost_update, set_bc)
+  call X(derivatives_batch_perform) (op, der, batch_ff, batch_op_ff, ghost_update, set_bc, factor)
 
   call batch_end(batch_ff)
   call batch_end(batch_op_ff)
@@ -602,7 +604,7 @@ subroutine X(derivatives_test)(this)
 
     stime = loct_clock()
     do itime = 1, times
-      call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false.)
+      call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false., factor = CNST(0.5))
     end do
     etime = (loct_clock() - stime)/dble(times)
 
@@ -612,7 +614,7 @@ subroutine X(derivatives_test)(this)
     end if
 
     forall(ip = 1:this%mesh%np) 
-      opffb%states_linear(blocksize)%X(psi)(ip) = opffb%states_linear(blocksize)%X(psi)(ip) - &
+      opffb%states_linear(blocksize)%X(psi)(ip) = CNST(2.0)*opffb%states_linear(blocksize)%X(psi)(ip) - &
         (M_FOUR*aa**2*bb*sum(this%mesh%x(ip, :)**2)*exp(-aa*sum(this%mesh%x(ip, :)**2)) &
         - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
     end forall

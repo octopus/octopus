@@ -579,7 +579,7 @@ contains
     integer,                intent(in)    :: n
     FLOAT,                  intent(inout) :: rhs(:,:)
     type(nl_operator_t),    intent(inout) :: op(:)
-    character*32,           intent(in)    :: name
+    character(len=32),      intent(in)    :: name
 
     integer :: p, p_max, i, j, k, pow_max
     FLOAT   :: x(MAX_DIM)
