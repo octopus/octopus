@@ -118,7 +118,7 @@ blue_gene=no
 
 case "${host}" in
 ##########################################
-x86_64*)
+x86_64*|*apple-darwin*) #workaround for a bug in autoconf/OS X
 
 oct_arch=x86_64
 assembler=no
@@ -165,7 +165,7 @@ oct_arch=x86
 vector_type="(sse2)"
 if test "x$vector" = "xyes" ; then
 # We allow explicit disabling of SSE2
-ac_enable_vectors=yes
+ac_enable_vectors=no
 AC_ARG_ENABLE(vectors, AS_HELP_STRING([--enable-vectors], [Enable the use of vectorial instructions (x86)]), 
 	[ac_enable_vectors=${enableval}])
 
@@ -173,7 +173,7 @@ if test x"${ac_enable_vectors}" = x"no"; then
 vector=disabled
 fi
 fi
-AC_DEFINE(OCT_ARCH_X86_64, 1, [This is an x86 system])
+AC_DEFINE(OCT_ARCH_X86, 1, [This is an x86 system])
 ;;	
 ##########################################
 ia64*)
