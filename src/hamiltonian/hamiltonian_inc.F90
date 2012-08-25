@@ -296,11 +296,12 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
     call opencl_write_buffer(vext_buff, mesh%np, this%ep%vpsl)
 
     call opencl_set_kernel_arg(kernel_vpsi, 0, 0)
-    call opencl_set_kernel_arg(kernel_vpsi, 1, vext_buff)
-    call opencl_set_kernel_arg(kernel_vpsi, 2, psib%pack%buffer)
-    call opencl_set_kernel_arg(kernel_vpsi, 3, log2(psib%pack%size_real(1)))
-    call opencl_set_kernel_arg(kernel_vpsi, 4, vpsib%pack%buffer)
-    call opencl_set_kernel_arg(kernel_vpsi, 5, log2(vpsib%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_vpsi, 1, mesh%np)
+    call opencl_set_kernel_arg(kernel_vpsi, 2, vext_buff)
+    call opencl_set_kernel_arg(kernel_vpsi, 3, psib%pack%buffer)
+    call opencl_set_kernel_arg(kernel_vpsi, 4, log2(psib%pack%size_real(1)))
+    call opencl_set_kernel_arg(kernel_vpsi, 5, vpsib%pack%buffer)
+    call opencl_set_kernel_arg(kernel_vpsi, 6, log2(vpsib%pack%size_real(1)))
     
     iprange = opencl_max_workgroup_size()/psib%pack%size_real(1)
     
