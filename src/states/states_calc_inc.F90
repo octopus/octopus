@@ -350,6 +350,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 #ifdef HAVE_OPENCL
   type(octcl_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
+  type(profile_t), save :: prof_copy
 #endif
   type(profile_t), save :: prof
 
@@ -408,7 +409,12 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
     call opencl_create_buffer(ss_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(ss)))
+
+    call profiling_in(prof_copy, 'STATES_TRSM_COPY')
     call opencl_write_buffer(ss_buffer, product(ubound(ss)), ss)
+    call profiling_count_transfers(product(ubound(ss)), ss(1, 1))
+    call opencl_finish()
+    call profiling_out(prof_copy)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)

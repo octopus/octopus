@@ -37,6 +37,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   type(opencl_mem_t) :: dot_buffer
   type(cl_kernel)    :: kernel
   integer            :: ierr
+  type(profile_t), save :: prof_copy, prof_gemmcl
 #endif
 
   PUSH_SUB(X(mesh_batch_dotp_matrix))
@@ -126,6 +127,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
         a = aa%pack%X(psi)(1, 1), lda = ldaa, &
         b = bb%pack%X(psi)(1, 1), ldb = ldbb, &
         beta = R_TOTYPE(M_ZERO), c = dd(1, 1), ldc = aa%nst)
+      
     else
 
       do ist = 1, aa%nst
@@ -148,6 +150,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #ifdef HAVE_OPENCL
 
     call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
+
+    call profiling_in(prof_gemmcl, "DOTP_BATCH_CL_GEMM")
 
 #ifdef HAVE_CLAMDBLAS
     
@@ -180,12 +184,19 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     
     call opencl_kernel_run(kernel, (/aa%pack%size(1)/aa%dim, bb%nst/), &
       (/aa%pack%size(1)/aa%dim, 1/))
-    
-    call opencl_finish()
-
 #endif
 
+    call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
+
+    call opencl_finish()
+    call profiling_out(prof_gemmcl)
+
+    call profiling_in(prof_copy, 'DOTP_BATCH_COPY')
     call opencl_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
+    call profiling_count_transfers(aa%nst*bb%nst, dd(1, 1))
+    call opencl_finish()
+    call profiling_out(prof_copy)
+
     call opencl_release_buffer(dot_buffer)
 
 #endif
@@ -194,10 +205,12 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
   end select
 
-  if(mesh%use_curvilinear) then
-    call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
-  else
-    call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
+  if(batch_status(aa) /= BATCH_CL_PACKED) then
+    if(mesh%use_curvilinear) then
+      call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
+    else
+      call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
+    end if
   end if
 
   if(use_blas) call profiling_out(profgemm)
@@ -417,6 +430,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
   type(opencl_mem_t)  :: dot_buffer
+  type(profile_t), save :: prof_copy
 #endif
 
   PUSH_SUB(X(mesh_batch_dotp_vector))
@@ -504,7 +518,12 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     
     call opencl_finish()
 
+    call profiling_in(prof_copy, 'DOTPV_BATCH_COPY')
     call opencl_read_buffer(dot_buffer, aa%nst_linear, tmp)
+    call profiling_count_transfers(aa%nst_linear, tmp(1))
+    call opencl_finish()
+    call profiling_out(prof_copy)
+
     call opencl_release_buffer(dot_buffer)
 #endif
     

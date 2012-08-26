@@ -194,6 +194,7 @@ module opencl_m
       type(cl_program) :: prog
       type(cl_platform_id), allocatable :: allplatforms(:)
       type(cl_device_id), allocatable :: alldevices(:)
+      type(profile_t), save :: prof_init
 #endif
 
       PUSH_SUB(opencl_init)
@@ -276,7 +277,8 @@ module opencl_m
       call messages_print_stress(stdout, "OpenCL")
 
 #ifdef HAVE_OPENCL
-
+      call profiling_in(prof_init, 'CL_INIT')
+      
       call clGetPlatformIDs(nplatforms, cl_status)
       if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
  
@@ -458,8 +460,6 @@ module opencl_m
       call opencl_create_kernel(dzmul, prog, "dzmul")
       call opencl_create_kernel(zzmul, prog, "zzmul")
       call opencl_release_program(prog)
-#endif
-      call messages_print_stress(stdout)
 
 #ifdef HAVE_CLAMDBLAS
       call clAmdBlasSetup(cl_status)
@@ -470,6 +470,11 @@ module opencl_m
       call clAmdFftSetup(cl_status)
       if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftSetup')
 #endif
+
+      call profiling_out(prof_init)
+#endif
+
+      call messages_print_stress(stdout)
 
       POP_SUB(opencl_init)
 
