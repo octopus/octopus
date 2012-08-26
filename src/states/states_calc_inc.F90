@@ -1146,9 +1146,12 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   type(opencl_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
   integer :: ierr
 #endif
+  type(profile_t), save :: prof
 
   PUSH_SUB(X(states_rotate_in_place))
   
+  call profiling_in(prof, "STATES_ROTATE")
+
   if(associated(st%X(psi)) .and. .not. states_are_packed(st)) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
@@ -1253,7 +1256,8 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
     call opencl_release_buffer(psinew_buffer)
 #endif
   end if
-    
+
+  call profiling_out(prof)
   POP_SUB(X(states_rotate_in_place))
 end subroutine X(states_rotate_in_place)
 
@@ -1268,9 +1272,12 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
   
   integer       :: ib, jb
   type(batch_t) :: psib, psi2b
-  
+  type(profile_t), save :: prof
+
   PUSH_SUB(X(states_calc_overlap))
-  
+
+  call profiling_in(prof, "STATES_OVERLAP")
+
   if(associated(st%X(psi)) .and. .not. states_are_packed(st)) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
@@ -1304,6 +1311,8 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
     end do
     
   end if
+
+  call profiling_out(prof)
 
   POP_SUB(X(states_calc_overlap))
 end subroutine X(states_calc_overlap)
