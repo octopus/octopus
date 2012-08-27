@@ -33,8 +33,11 @@ AC_DEFUN([ACX_GDLIB],
     acx_save_CFLAGS="$CFLAGS"
     CFLAGS="$CFLAGS $GD_CFLAGS"
 
-    AC_MSG_CHECKING([whether gdlib works])
-    AC_TRY_LINK([#include <gd.h>],[gdImagePtr im;],[], [acx_gdlib_ok=no])
+    AC_MSG_CHECKING([whether gdlib can be linked])
+    AC_LINK_IFELSE([AC_LANG_PROGRAM(
+[#include <gd.h>],
+[gdImagePtr im;]
+)],[], [acx_gdlib_ok=no])
     AC_MSG_RESULT([$acx_gdlib_ok])
 
     LIBS="$acx_save_LIBS"
