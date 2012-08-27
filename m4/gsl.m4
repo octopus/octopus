@@ -1,5 +1,6 @@
 # Configure path for the GNU Scientific Library
 # Christopher R. Gabriel <cgabriel@linux.it>, April 2000
+# extensively rewritten, D Strubbe 2012
 
 AC_DEFUN([AX_GSL_TEST_PROG],
 [
@@ -30,8 +31,6 @@ int main (void)
   int major = 0, minor = 0, micro = 0;
   int n;
   char *tmp_version;
-
-  system ("touch conf.gsltest");
 
   /* HP/UX 9 (%@#!) writes to sscanf strings */
   tmp_version = my_strdup("$min_gsl_version");
@@ -82,17 +81,15 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
 
   AC_PATH_PROG(GSL_CONFIG, gsl-config, no)
   min_gsl_version=ifelse([$1], ,0.2.5,$1)
-  AC_MSG_CHECKING(for GSL - version >= $min_gsl_version)
-  no_gsl=""
   if test "$GSL_CONFIG" = "no" ; then
     no_gsl=yes
-    AC_MSG_RESULT(no)
     echo "*** The gsl-config script installed by GSL could not be found"
     echo "*** If GSL was installed in PREFIX, make sure PREFIX/bin is in"
     echo "*** your path, or set the GSL_CONFIG environment variable to the"
     echo "*** full path to gsl-config."
   else
-    AC_MSG_RESULT(yes)
+#    AC_MSG_CHECKING(for GSL - version >= $min_gsl_version)
+    no_gsl=""
     GSL_CFLAGS=`$GSL_CONFIG --cflags`
     GSL_LIBS=`$GSL_CONFIG --libs`
 
@@ -114,34 +111,29 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
        gsl_micro_version=0
     fi
 
-    if test "x$enable_gsltest" = "xyes" ; then
-      AC_MSG_CHECKING(whether GSL works)
+      AC_MSG_CHECKING(whether GSL can be linked)
       ac_save_CFLAGS="$CFLAGS"
       ac_save_LIBS="$LIBS"
       CFLAGS="$CFLAGS $GSL_CFLAGS"
       LIBS="$LIBS $GSL_LIBS"
 
-      rm -f conf.gsltest
-      AC_RUN_IFELSE([AC_LANG_SOURCE([AX_GSL_TEST_PROG])],,no_gsl=yes,[echo -n "cross-compiling; assuming... "])
+      AC_LINK_IFELSE([AC_LANG_SOURCE([AX_GSL_TEST_PROG])],,[
+          no_gsl=yes
+          echo "*** The test program failed to link. See the file config.log for the"
+          echo "*** exact error that occured. This usually means GSL was incorrectly installed"
+          echo "*** or that you have moved GSL since it was installed. In the latter case, you"
+          echo "*** may want to edit the gsl-config script: $GSL_CONFIG" ])
        CFLAGS="$ac_save_CFLAGS"
        LIBS="$ac_save_LIBS"
-     fi
-  fi
-  if test "x$no_gsl" = x ; then
+
+    if test "x$no_gsl" = "x" ; then
      AC_MSG_RESULT(yes)
-     ifelse([$2], , :, [$2])
-  else
-     AC_MSG_RESULT(no)
-       if test -f conf.gsltest ; then
-        :
-       else
-          echo "*** Could not run GSL test program, checking why..."
-          CFLAGS="$CFLAGS $GSL_CFLAGS"
-          LIBS="$LIBS $GSL_LIBS"
-          AC_LINK_IFELSE([AC_LANG_PROGRAM(
-[#include <stdio.h>],
-[ return 0; ])],
-        [ echo "*** The test program compiled, but did not run. This usually means"
+    if test "x$enable_gsltest" = "xyes" ; then
+      AC_MSG_CHECKING(whether GSL works)
+      AC_RUN_IFELSE([AC_LANG_SOURCE([AX_GSL_TEST_PROG])],AC_MSG_RESULT(yes),[
+          AC_MSG_RESULT(no)
+          no_gsl=yes
+          echo "*** The test program compiled, but did not run. This usually means"
           echo "*** that the run-time linker is not finding GSL or finding the wrong"
           echo "*** version of GSL. If it is not finding GSL, you'll need to set your"
           echo "*** LD_LIBRARY_PATH environment variable, or edit /etc/ld.so.conf to point"
@@ -150,20 +142,21 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
 	  echo "***"
           echo "*** If you have an old version installed, it is best to remove it, although"
           echo "*** you may also be able to get things to work by modifying LD_LIBRARY_PATH"],
-        [ echo "*** The test program failed to compile or link. See the file config.log for the"
-          echo "*** exact error that occured. This usually means GSL was incorrectly installed"
-          echo "*** or that you have moved GSL since it was installed. In the latter case, you"
-          echo "*** may want to edit the gsl-config script: $GSL_CONFIG" ])
-          CFLAGS="$ac_save_CFLAGS"
-          LIBS="$ac_save_LIBS"
-       fi
-#     GSL_CFLAGS=""
-#     GSL_LIBS=""
+         [echo -n "cross-compiling; assuming... "])
+    fi
+       CFLAGS="$ac_save_CFLAGS"
+       LIBS="$ac_save_LIBS"
+     else
+     AC_MSG_RESULT(no)
+    fi
+  fi
+  if test "x$no_gsl" = x ; then
+     ifelse([$2], , :, [$2])
+  else
      ifelse([$3], , :, [$3])
   fi
   AC_SUBST(GSL_CFLAGS)
   AC_SUBST(GSL_LIBS)
-  rm -f conf.gsltest
 ])
 
 AU_ALIAS([AM_PATH_GSL], [AX_PATH_GSL])
