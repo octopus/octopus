@@ -72,12 +72,13 @@ contains
     select case(batch_status(ffb))
 #ifdef HAVE_OPENCL
     case(BATCH_CL_PACKED)
+
       call opencl_set_kernel_arg(set_zero_part, 0, bndry_start - 1)
-      call opencl_set_kernel_arg(set_zero_part, 1, bndry_end - 1)
+      call opencl_set_kernel_arg(set_zero_part, 1, bndry_end)
       call opencl_set_kernel_arg(set_zero_part, 2, ffb%pack%buffer)
       call opencl_set_kernel_arg(set_zero_part, 3, log2(ffb%pack%size_real(1)))
 
-      localsize = opencl_max_workgroup_size()/ffb%pack%size_real(1)
+      localsize = opencl_kernel_workgroup_size(set_zero_part)/ffb%pack%size_real(1)
       globalsize = pad(bndry_end - bndry_start + 1, localsize)
       
       call opencl_kernel_run(set_zero_part, (/ffb%pack%size_real(1), globalsize/), (/ffb%pack%size_real(1), localsize/))
