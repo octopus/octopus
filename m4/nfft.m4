@@ -64,7 +64,7 @@ if test $acx_nfft_ok = no; then
     nfft_libs="$LIBS_NFFT"
     CFLAGS="$nfft_cflags "
     LIBS="$nfft_libs $LIBS_FFT"
-AC_LINK_IFELSE([
+AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include "nfft3util.h"
 #include "nfft3.h"
  int main(void)
@@ -74,7 +74,7 @@ AC_LINK_IFELSE([
    nfft_finalize(&p);   
    return 1;
  }
-    ],
+    ])],
 [acx_nfft_ok=yes; CFLAGS_NFFT="$nfft_cflags"; LIBS_NFFT="$nfft_libs"], [])
 
   fi
