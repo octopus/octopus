@@ -26,7 +26,9 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
   no_gsl=""
   if test "$GSL_CONFIG" = "no" ; then
     no_gsl=yes
+    AC_MSG_RESULT(no)
   else
+    AC_MSG_RESULT(yes)
     GSL_CFLAGS=`$GSL_CONFIG --cflags`
     GSL_LIBS=`$GSL_CONFIG --libs`
 
@@ -49,6 +51,7 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
     fi
 
     if test "x$enable_gsltest" = "xyes" ; then
+      AC_MSG_CHECKING(whether GSL works)
       ac_save_CFLAGS="$CFLAGS"
       ac_save_LIBS="$LIBS"
       CFLAGS="$CFLAGS $GSL_CFLAGS"
@@ -121,7 +124,7 @@ int main (void)
   fi
   if test "x$no_gsl" = x ; then
      AC_MSG_RESULT(yes)
-     ifelse([$2], , :, [$2])     
+     ifelse([$2], , :, [$2])
   else
      AC_MSG_RESULT(no)
      if test "$GSL_CONFIG" = "no" ; then
@@ -136,9 +139,9 @@ int main (void)
           echo "*** Could not run GSL test program, checking why..."
           CFLAGS="$CFLAGS $GSL_CFLAGS"
           LIBS="$LIBS $GSL_LIBS"
-          AC_TRY_LINK([
-#include <stdio.h>
-],      [ return 0; ],
+          AC_LINK_IFELSE([AC_LANG_PROGRAM(
+[#include <stdio.h>],
+[ return 0; ])],
         [ echo "*** The test program compiled, but did not run. This usually means"
           echo "*** that the run-time linker is not finding GSL or finding the wrong"
           echo "*** version of GSL. If it is not finding GSL, you'll need to set your"
