@@ -54,12 +54,11 @@ module poisson_fmm_m
 
 #ifdef HAVE_LIBFM
   use fcs_module
+  use iso_fortran_env
 #else
 #define fcs_integer_kind_isoc 4
 #endif
-  use iso_fortran_env
-  use iso_c_binding
-    
+
   implicit none
 
   private
