@@ -27,6 +27,10 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
   if test "$GSL_CONFIG" = "no" ; then
     no_gsl=yes
     AC_MSG_RESULT(no)
+    echo "*** The gsl-config script installed by GSL could not be found"
+    echo "*** If GSL was installed in PREFIX, make sure PREFIX/bin is in"
+    echo "*** your path, or set the GSL_CONFIG environment variable to the"
+    echo "*** full path to gsl-config."
   else
     AC_MSG_RESULT(yes)
     GSL_CFLAGS=`$GSL_CONFIG --cflags`
@@ -127,12 +131,6 @@ int main (void)
      ifelse([$2], , :, [$2])
   else
      AC_MSG_RESULT(no)
-     if test "$GSL_CONFIG" = "no" ; then
-       echo "*** The gsl-config script installed by GSL could not be found"
-       echo "*** If GSL was installed in PREFIX, make sure PREFIX/bin is in"
-       echo "*** your path, or set the GSL_CONFIG environment variable to the"
-       echo "*** full path to gsl-config."
-     else
        if test -f conf.gsltest ; then
         :
        else
@@ -158,7 +156,6 @@ int main (void)
           CFLAGS="$ac_save_CFLAGS"
           LIBS="$ac_save_LIBS"
        fi
-     fi
 #     GSL_CFLAGS=""
 #     GSL_LIBS=""
      ifelse([$3], , :, [$3])
