@@ -80,7 +80,10 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
   fi
 
   AC_PATH_PROG(GSL_CONFIG, gsl-config, no)
-  min_gsl_version=ifelse([$1], ,0.2.5,$1)
+  min_gsl_major_version=ifelse([$1], ,0.2.5,$1)
+  min_gsl_minor_version=ifelse([$2], ,0.2.5,$2)
+  min_gsl_version="$min_gsl_major_version.$min_gsl_minor_version"
+
   if test "$GSL_CONFIG" = "no" ; then
     no_gsl=yes
     echo "*** The gsl-config script installed by GSL could not be found"
@@ -88,7 +91,7 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
     echo "*** your path, or set the GSL_CONFIG environment variable to the"
     echo "*** full path to gsl-config."
   else
-#    AC_MSG_CHECKING(for GSL - version >= $min_gsl_version)
+    AC_MSG_CHECKING(for GSL - version >= $min_gsl_major_version.$min_gsl_minor_version)
     no_gsl=""
     GSL_CFLAGS=`$GSL_CONFIG --cflags`
     GSL_LIBS=`$GSL_CONFIG --libs`
@@ -109,6 +112,11 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
            sed 's/^\([[0-9]]*\)\.\{0,1\}\([[0-9]]*\)\.\{0,1\}\([[0-9]]*\).*/\3/'`
     if test "x${gsl_micro_version}" = "x" ; then
        gsl_micro_version=0
+    fi
+
+    AC_MSG_RESULT($gsl_major_version.$gsl_minor_version.$gsl_micro_version)
+    if test $gsl_major_version -lt $min_gsl_major_version -o $gsl_minor_version -lt $min_gsl_minor_version; then
+      ifelse([$4], , :, [$4])
     fi
 
       AC_MSG_CHECKING(whether GSL can be linked)
@@ -151,9 +159,9 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
     fi
   fi
   if test "x$no_gsl" = x ; then
-     ifelse([$2], , :, [$2])
-  else
      ifelse([$3], , :, [$3])
+  else
+     ifelse([$4], , :, [$4])
   fi
   AC_SUBST(GSL_CFLAGS)
   AC_SUBST(GSL_LIBS)
