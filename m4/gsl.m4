@@ -7,6 +7,8 @@ AC_DEFUN([AX_GSL_TEST_PROG],
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_spline.h>
 
 char* my_strdup (const char *str);
 
@@ -28,6 +30,9 @@ my_strdup (const char *str)
 
 int main (void)
 {
+  gsl_spline x;
+  gsl_asinh(1.0);
+
   int major = 0, minor = 0, micro = 0;
   int n;
   char *tmp_version;
@@ -123,7 +128,8 @@ AC_ARG_WITH(gsl-exec-prefix,[  --with-gsl-exec-prefix=PFX Exec prefix where GSL 
       CFLAGS="$CFLAGS $GSL_CFLAGS"
       LIBS="$LIBS $GSL_LIBS"
 
-      AC_LINK_IFELSE([AC_LANG_SOURCE([AX_GSL_TEST_PROG])],,[
+      AC_LINK_IFELSE([AC_LANG_SOURCE([AX_GSL_TEST_PROG])],AC_MSG_RESULT(yes),[
+          AC_MSG_RESULT(no)
           no_gsl=yes
           echo "*** The test program failed to link. See the file config.log for the"
           echo "*** exact error that occured. This usually means GSL was incorrectly installed"
@@ -131,14 +137,6 @@ AC_ARG_WITH(gsl-exec-prefix,[  --with-gsl-exec-prefix=PFX Exec prefix where GSL 
           echo "*** may want to edit the gsl-config script: $GSL_CONFIG" ])
        CFLAGS="$ac_save_CFLAGS"
        LIBS="$ac_save_LIBS"
-
-    if test "x$no_gsl" = "x" ; then
-     AC_MSG_RESULT(yes)
-       CFLAGS="$ac_save_CFLAGS"
-       LIBS="$ac_save_LIBS"
-     else
-     AC_MSG_RESULT(no)
-    fi
   fi
   if test "x$no_gsl" = x ; then
      ifelse([$3], , :, [$3])
