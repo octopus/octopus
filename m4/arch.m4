@@ -130,29 +130,44 @@ vector=$acx_m128d
 vector_type="(sse2)"
 
 #FMA4
-ACX_FMA4 
+AC_ARG_ENABLE(fma4, AS_HELP_STRING([--enable-fma4], [Enable the use of FMA4 vectorial instructions (x86_64)]), 
+	[ac_enable_fma4=${enableval}])
+if test "x$vector" = "xno" ; then
+ ac_enable_fma4=no
+fi
+if test "x$ac_enable_fma4" = "x" ; then
+  ACX_FMA4
+elif test "x$ac_enable_fma4" = "xyes" ; then
+  AC_MSG_NOTICE([FMA4 instruction support enabled])
+  acx_fma4=yes
+else # no
+  AC_MSG_NOTICE([FMA4 instruction support disabled])
+  acx_fma4=no
+fi
 if test "x$acx_fma4" = "xyes" ; then
- AC_DEFINE(HAVE_FMA4, 1, [compiler and hardware supports the FMA4 instructions])
+  AC_DEFINE(HAVE_FMA4, 1, [compiler and hardware supports the FMA4 instructions])
 fi
 
 #AVX
-ac_enable_avx=yes
-AC_ARG_ENABLE(avx, AS_HELP_STRING([--disable-avx], [Disable the use of AVX vectorial instructions (x86_64)]), 
+AC_ARG_ENABLE(avx, AS_HELP_STRING([--enable-avx], [Enable the use of AVX vectorial instructions (x86_64)]), 
 	[ac_enable_avx=${enableval}])
 if test "x$vector" = "xno" ; then
  ac_enable_avx=no
 fi
-if test "x$ac_enable_avx" = "xyes" ; then
+if test "x$ac_enable_avx" = "x" ; then
   ACX_M256D
   if test "x$acx_m256d" = "xyes" ; then
     ACX_AVX
   fi
-else
+elif test "x$ac_enable_avx" = "xyes" ; then
+  AC_MSG_NOTICE([AVX instruction support enabled])
+  acx_m256d=yes
+else # no
   AC_MSG_NOTICE([AVX instruction support disabled])
   acx_m256d=no
 fi
 if test "x$acx_m256d" = "xyes" ; then
-  AC_DEFINE(HAVE_M256D, 1, [compiler supports the m256d type])
+  AC_DEFINE(HAVE_M256D, 1, [compiler and hardware support the m256d type and AVX instructions])
   vector=$acx_m256d
   vector_type="(avx)"
 fi
@@ -226,7 +241,7 @@ if test "x$vector = xyes" ; then
 AC_DEFINE(HAVE_VEC, 1, [Define to 1 if vectorial routines are to be compiled])
 fi
 
-AC_MSG_NOTICE([ Architecture-specific code:
+AC_MSG_NOTICE([Architecture-specific code:
 ***************************
 This is a $oct_arch processor:
 vectorial code: $vector $vector_type
