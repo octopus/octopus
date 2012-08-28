@@ -2,18 +2,6 @@
 # Christopher R. Gabriel <cgabriel@linux.it>, April 2000
 # extensively rewritten, D Strubbe 2012
 
-AC_DEFUN([AX_GSL_TEST_PROG],
-[
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_spline.h>
-
-int main()
-{
-  gsl_spline x;
-  gsl_asinh(1.0);
-}
-])
-
 AC_DEFUN([AX_PATH_GSL],
 [
 AC_ARG_WITH(gsl-prefix,[  --with-gsl-prefix=PFX   Prefix where GSL is installed (optional)],
@@ -33,7 +21,6 @@ AC_ARG_WITH(gsl-exec-prefix,[  --with-gsl-exec-prefix=PFX Exec prefix where GSL 
   AC_PATH_PROG(GSL_CONFIG, gsl-config, no)
   min_gsl_major_version=ifelse([$1], ,0.2.5,$1)
   min_gsl_minor_version=ifelse([$2], ,0.2.5,$2)
-  min_gsl_version="$min_gsl_major_version.$min_gsl_minor_version"
 
   if test "$GSL_CONFIG" = "no" ; then
     no_gsl=yes
@@ -76,7 +63,14 @@ AC_ARG_WITH(gsl-exec-prefix,[  --with-gsl-exec-prefix=PFX Exec prefix where GSL 
       CFLAGS="$CFLAGS $GSL_CFLAGS"
       LIBS="$LIBS $GSL_LIBS"
 
-      AC_LINK_IFELSE([AC_LANG_SOURCE([AX_GSL_TEST_PROG])],AC_MSG_RESULT(yes),[
+      AC_LINK_IFELSE([AC_LANG_PROGRAM([
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_spline.h>
+],[
+  gsl_spline x;
+  gsl_asinh(1.0);
+])],
+          AC_MSG_RESULT(yes),[
           AC_MSG_RESULT(no)
           no_gsl=yes
           echo "*** The test program failed to link. See the file config.log for the"
