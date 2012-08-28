@@ -4,65 +4,13 @@
 
 AC_DEFUN([AX_GSL_TEST_PROG],
 [
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_spline.h>
 
-char* my_strdup (const char *str);
-
-char*
-my_strdup (const char *str)
-{
-  char *new_str;
-  
-  if (str)
-    {
-      new_str = (char *)malloc ((strlen (str) + 1) * sizeof(char));
-      strcpy (new_str, str);
-    }
-  else
-    new_str = NULL;
-  
-  return new_str;
-}
-
-int main (void)
+int main()
 {
   gsl_spline x;
   gsl_asinh(1.0);
-
-  int major = 0, minor = 0, micro = 0;
-  int n;
-  char *tmp_version;
-
-  /* HP/UX 9 (%@#!) writes to sscanf strings */
-  tmp_version = my_strdup("$min_gsl_version");
-
-  n = sscanf(tmp_version, "%d.%d.%d", &major, &minor, &micro) ;
-
-  if (n != 2 && n != 3) {
-     printf("%s, bad version string\n", "$min_gsl_version");
-     exit(1);
-   }
-
-   if (($gsl_major_version > major) ||
-      (($gsl_major_version == major) && ($gsl_minor_version > minor)) ||
-      (($gsl_major_version == major) && ($gsl_minor_version == minor) && ($gsl_micro_version >= micro)))
-    {
-      exit(0);
-    }
-  else
-    {
-      printf("\n*** 'gsl-config --version' returned %d.%d.%d, but the minimum version\n", $gsl_major_version, $gsl_minor_version, $gsl_micro_version);
-      printf("*** of GSL required is %d.%d.%d. If gsl-config is correct, then it is\n", major, minor, micro);
-      printf("*** best to upgrade to the required version.\n");
-      printf("*** If gsl-config was wrong, set the environment variable GSL_CONFIG\n");
-      printf("*** to point to the correct copy of gsl-config, and remove the file\n");
-      printf("*** config.cache before re-running configure\n");
-      exit(1);
-    }
 }
 ])
 
