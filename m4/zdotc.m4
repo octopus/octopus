@@ -4,6 +4,7 @@
 AC_DEFUN([ACX_ZDOTC], [
 
 dnl may be needed for cross-compiling, when compilation and compute nodes are different in architecture (yet report the same for host and build)
+  acx_enable_zdotc_test=yes
   AC_ARG_ENABLE(zdotc-test, [AS_HELP_STRING([--disable-zdotc-test], [Assume zdotc works and do not perform a test.])], [acx_enable_zdotc_test=${enableval}])
 
   if test "x$acx_enable_zdotc_test" = "xyes"; then
