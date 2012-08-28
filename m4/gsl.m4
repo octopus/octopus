@@ -67,8 +67,6 @@ AC_ARG_WITH(gsl-prefix,[  --with-gsl-prefix=PFX   Prefix where GSL is installed 
             gsl_prefix="$withval", gsl_prefix="")
 AC_ARG_WITH(gsl-exec-prefix,[  --with-gsl-exec-prefix=PFX Exec prefix where GSL is installed (optional)],
             gsl_exec_prefix="$withval", gsl_exec_prefix="")
-AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run a test GSL program],
-		    , enable_gsltest=yes)
 
   if test "x${GSL_CONFIG+set}" != xset ; then
      if test "x$gsl_prefix" != x ; then
@@ -136,22 +134,6 @@ AC_ARG_ENABLE(gsltest, [  --disable-gsltest       Do not try to compile and run 
 
     if test "x$no_gsl" = "x" ; then
      AC_MSG_RESULT(yes)
-    if test "x$enable_gsltest" = "xyes" ; then
-      AC_MSG_CHECKING(whether GSL works)
-      AC_RUN_IFELSE([AC_LANG_SOURCE([AX_GSL_TEST_PROG])],AC_MSG_RESULT(yes),[
-          AC_MSG_RESULT(no)
-          no_gsl=yes
-          echo "*** The test program compiled, but did not run. This usually means"
-          echo "*** that the run-time linker is not finding GSL or finding the wrong"
-          echo "*** version of GSL. If it is not finding GSL, you'll need to set your"
-          echo "*** LD_LIBRARY_PATH environment variable, or edit /etc/ld.so.conf to point"
-          echo "*** to the installed location  Also, make sure you have run ldconfig if that"
-          echo "*** is required on your system"
-	  echo "***"
-          echo "*** If you have an old version installed, it is best to remove it, although"
-          echo "*** you may also be able to get things to work by modifying LD_LIBRARY_PATH"],
-         [echo -n "cross-compiling; assuming... "])
-    fi
        CFLAGS="$ac_save_CFLAGS"
        LIBS="$ac_save_LIBS"
      else
