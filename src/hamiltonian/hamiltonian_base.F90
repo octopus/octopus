@@ -404,10 +404,12 @@ contains
       if(all(atom_counted)) exit
     end do
 
-    call messages_write('The atoms can be separated in ')
-    call messages_write(nregion)
-    call messages_write(' non-overlapping groups.')
-    call messages_info()
+    if(in_debug_mode) then
+      call messages_write('The atoms can be separated in ')
+      call messages_write(nregion)
+      call messages_write(' non-overlapping groups.')
+      call messages_info()
+    end if
 
     do iregion = 1, nregion
       do iatom = head(iregion), head(iregion + 1) - 1
