@@ -156,7 +156,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #ifdef HAVE_CLAMDBLAS
     
     call aX(clAmdblas,gemmEx)(order = clAmdBlasColumnMajor, transA = clAmdBlasNoTrans, transB = clAmdBlasTrans, &
-      M = int(aa%nst, 8), N = int(aa%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
+      M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
       A = aa%pack%buffer%mem, offA = 0_8, lda = int(aa%pack%size(1), 8), &
       B = bb%pack%buffer%mem, offB = 0_8, ldb = int(bb%pack%size(1), 8), beta = R_TOTYPE(M_ZERO), &
       C = dot_buffer%mem, offC = 0_8, ldc = int(aa%nst, 8), &
