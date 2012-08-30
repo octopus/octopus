@@ -219,6 +219,8 @@ contains
 
 end subroutine X(preconditioner_apply)
 
+! ----------------------------------------
+
 subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
   type(preconditioner_t), intent(in)    :: pre
   type(grid_t),           intent(in)    :: gr
@@ -229,8 +231,10 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
   R_TYPE,       optional, intent(in)    :: omega
 
   integer :: ii
+  type(profile_t), save :: prof
 
   PUSH_SUB(X(preconditioner_apply_batch))
+  call profiling_in(prof, 'PRECONDITIONER_BATCH')
 
   if(pre%which == PRE_FILTER .and. .not. associated(hm%phase)) then
     call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
@@ -240,6 +244,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
     end do
   end if
 
+  call profiling_out(prof)
   POP_SUB(X(preconditioner_apply_batch))
 end subroutine X(preconditioner_apply_batch)
 !! Local Variables:
