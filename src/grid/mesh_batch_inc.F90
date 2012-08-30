@@ -422,12 +422,12 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   logical, optional, intent(in)    :: reduce
   logical, optional, intent(in)    :: cproduct
 
-  integer :: ist, indb, idim, ip
+  integer :: ist, indb, idim, ip, bsize
   logical :: reduce_, cproduct_
   type(profile_t), save :: prof, profcomm
-  R_TYPE, allocatable :: tmp(:)
+  R_TYPE, allocatable :: tmp(:), cltmp(:, :)
 #ifdef HAVE_OPENCL
-  integer :: bsize, wgsize, local_mem_size
+  integer :: wgsize, local_mem_size
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
   type(opencl_mem_t)  :: dot_buffer
@@ -503,48 +503,54 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     SAFE_DEALLOCATE_A(tmp)
 
   case(BATCH_CL_PACKED)
+
+    bsize = 500
     
-    SAFE_ALLOCATE(tmp(1:aa%nst_linear))
+    SAFE_ALLOCATE(cltmp(1:aa%pack%size(1), 1:bsize))
 #ifdef HAVE_OPENCL
 
-    call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
-
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 0, mesh%np)
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 1, aa%pack%buffer)
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 2, log2(aa%pack%size(1)))
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 3, bb%pack%buffer)
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 4, log2(bb%pack%size(1)))
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 5, dot_buffer)
-
+    call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1)*bsize)
 
     call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
     wgsize = local_mem_size/types_get_size(R_TYPE_VAL)
     wgsize = min(wgsize, opencl_kernel_workgroup_size(X(kernel_dot_vector))/aa%pack%size(1))
 
-    call opencl_set_kernel_arg(X(kernel_dot_vector), 6, R_TYPE_VAL, wgsize*aa%pack%size(1))
+    call opencl_set_kernel_arg(X(kernel_dot_vector), 0, mesh%np)
+    call opencl_set_kernel_arg(X(kernel_dot_vector), 1, mesh%np/bsize + 1)
+    call opencl_set_kernel_arg(X(kernel_dot_vector), 2, aa%pack%buffer)
+    call opencl_set_kernel_arg(X(kernel_dot_vector), 3, log2(aa%pack%size(1)))
+    call opencl_set_kernel_arg(X(kernel_dot_vector), 4, bb%pack%buffer)
+    call opencl_set_kernel_arg(X(kernel_dot_vector), 5, log2(bb%pack%size(1)))
+    call opencl_set_kernel_arg(X(kernel_dot_vector), 6, dot_buffer)
+    call opencl_set_kernel_arg(X(kernel_dot_vector), 7, R_TYPE_VAL, wgsize*aa%pack%size(1))
     
-    call opencl_kernel_run(X(kernel_dot_vector), (/aa%pack%size(1), wgsize/), (/aa%pack%size(1), wgsize/))
+    call opencl_kernel_run(X(kernel_dot_vector), (/aa%pack%size(1), wgsize, bsize/), (/aa%pack%size(1), wgsize, 1/))
     
     call opencl_finish()
 
     call profiling_in(prof_copy, 'DOTPV_BATCH_COPY')
-    call opencl_read_buffer(dot_buffer, aa%nst_linear, tmp)
-    call profiling_count_transfers(aa%nst_linear, tmp(1))
+    call opencl_read_buffer(dot_buffer, aa%pack%size(1)*bsize, cltmp)
+    call profiling_count_transfers(aa%pack%size(1)*bsize, cltmp(1, 1))
     call opencl_finish()
+
     call profiling_out(prof_copy)
 
     call opencl_release_buffer(dot_buffer)
 #endif
-    
+
+    do ip = 2, bsize
+      forall(ist = 1:aa%nst) cltmp(ist, 1) = cltmp(ist, 1) + cltmp(ist, ip)
+    end do
+
     do ist = 1, aa%nst
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = batch_linear_index(aa, (/ist, idim/))
-        dot(ist) = dot(ist) + mesh%volume_element*tmp(indb)
+        dot(ist) = dot(ist) + mesh%volume_element*cltmp(indb, 1)
       end do
     end do
 
-    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(cltmp)
   end select
 
   if(mesh%parallel_in_domains .and. reduce_) then

@@ -26,6 +26,7 @@
 #endif
 
 __kernel void ddot_vector(const int np,
+			  const int npblock,
 			  const __global double * xx, const int ldxx,
 			  const __global double * yy, const int ldyy,
 			  __global double * dot,
@@ -34,11 +35,13 @@ __kernel void ddot_vector(const int np,
   const int ist = get_global_id(0);
   const int lip = get_local_id(1);
   const int nlp = get_local_size(1);
+  const int startp = npblock*get_global_id(2);
+  const int endp = (startp + npblock < np)?startp + npblock:np;
 
   double tmp;
 
   tmp = 0.0;
-  for(int ip = lip; ip < np; ip += nlp){
+  for(int ip = lip + startp; ip < endp; ip += nlp){
     tmp += xx[(ip<<ldxx) + ist]*yy[(ip<<ldyy) + ist];
   }
 
@@ -49,11 +52,12 @@ __kernel void ddot_vector(const int np,
   if(lip == 0){
     tmp = 0.0;
     for(int ip = 0; ip < nlp; ip++) tmp += lsum[(ip<<ldyy) + ist];
-    dot[ist] = tmp;
+    dot[ist + (get_global_id(2)<<ldyy)] = tmp;
   }
 }
 
 __kernel void zdot_vector(const int np,
+			  const int npblock,
 			  const __global double2 * xx, const int ldxx,
 			  const __global double2 * yy, const int ldyy,
 			  __global double2 * dot,
@@ -62,11 +66,13 @@ __kernel void zdot_vector(const int np,
   const int ist = get_global_id(0);
   const int lip = get_local_id(1);
   const int nlp = get_local_size(1);
+  const int startp = npblock*get_global_id(2);
+  const int endp = (startp + npblock < np)?startp + npblock:np;
 
   double2 tmp;
 
   tmp = 0.0;
-  for(int ip = lip; ip < np; ip += nlp){
+  for(int ip = lip + startp; ip < endp; ip += nlp){
     tmp += xx[(ip<<ldxx) + ist]*yy[(ip<<ldyy) + ist];
   }
 
@@ -77,7 +83,7 @@ __kernel void zdot_vector(const int np,
   if(lip == 0){
     tmp = 0.0;
     for(int ip = 0; ip < nlp; ip++) tmp += lsum[(ip<<ldyy) + ist];
-    dot[ist] = tmp;
+    dot[ist + (get_global_id(2)<<ldyy)] = tmp;
   }
 }
 
