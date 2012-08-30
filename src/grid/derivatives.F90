@@ -428,11 +428,15 @@ contains
     ! need non-constant weights for curvilinear and scattering meshes
     if(mesh%use_curvilinear) const_w_ = .false.
 
+    der%np_zero_bc = 0
+
     ! build operators
     do i = 1, der%dim+1
       call nl_operator_build(mesh, der%op(i), der%mesh%np, const_w = const_w_, cmplx_op = cmplx_op_)
       der%np_zero_bc = max(der%np_zero_bc, nl_operator_np_zero_bc(der%op(i)))
     end do
+
+    ASSERT(der%np_zero_bc > mesh%np .and. der%np_zero_bc <= mesh%np_part)
 
     select case(der%stencil_type)
 
