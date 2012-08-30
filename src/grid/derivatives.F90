@@ -105,6 +105,7 @@ module derivatives_m
 
     FLOAT                 :: masses(MAX_DIM)     !< we can have different weights (masses) per space direction
 
+    integer               :: np_zero_bc
     logical               :: zero_bc
     logical               :: periodic_bc
 
@@ -430,6 +431,7 @@ contains
     ! build operators
     do i = 1, der%dim+1
       call nl_operator_build(mesh, der%op(i), der%mesh%np, const_w = const_w_, cmplx_op = cmplx_op_)
+      der%np_zero_bc = max(der%np_zero_bc, nl_operator_np_zero_bc(der%op(i)))
     end do
 
     select case(der%stencil_type)

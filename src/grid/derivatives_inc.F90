@@ -46,7 +46,7 @@ subroutine X(derivatives_batch_set_bc)(der, ffb)
     bndry_end   = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost(pp) + der%mesh%vp%np_bndry(pp)
   else
     bndry_start = der%mesh%np + 1
-    bndry_end   = der%mesh%np_part
+    bndry_end   = der%np_zero_bc
   end if
 
   if(der%zero_bc)         call zero_boundaries()
