@@ -427,6 +427,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:)
 #ifdef HAVE_OPENCL
+  integer :: bsize, wgsize, local_mem_size
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
   type(opencl_mem_t)  :: dot_buffer
@@ -502,9 +503,10 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     SAFE_DEALLOCATE_A(tmp)
 
   case(BATCH_CL_PACKED)
+    
     SAFE_ALLOCATE(tmp(1:aa%nst_linear))
 #ifdef HAVE_OPENCL
-    
+
     call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
 
     call opencl_set_kernel_arg(X(kernel_dot_vector), 0, mesh%np)
@@ -513,8 +515,15 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     call opencl_set_kernel_arg(X(kernel_dot_vector), 3, bb%pack%buffer)
     call opencl_set_kernel_arg(X(kernel_dot_vector), 4, log2(bb%pack%size(1)))
     call opencl_set_kernel_arg(X(kernel_dot_vector), 5, dot_buffer)
+
+
+    call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
+    wgsize = local_mem_size/types_get_size(R_TYPE_VAL)
+    wgsize = min(wgsize, opencl_kernel_workgroup_size(X(kernel_dot_vector))/aa%pack%size(1))
+
+    call opencl_set_kernel_arg(X(kernel_dot_vector), 6, R_TYPE_VAL, wgsize*aa%pack%size(1))
     
-    call opencl_kernel_run(X(kernel_dot_vector), (/aa%pack%size(1)/), (/aa%pack%size(1)/))
+    call opencl_kernel_run(X(kernel_dot_vector), (/aa%pack%size(1), wgsize/), (/aa%pack%size(1), wgsize/))
     
     call opencl_finish()
 
