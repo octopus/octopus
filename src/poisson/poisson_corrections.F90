@@ -29,6 +29,7 @@ module poisson_corrections_m
   use mesh_function_m
   use mesh_m
   use messages_m
+  use nl_operator_m
   use parser_m
   use profiling_m
   use simul_box_m
@@ -248,7 +249,7 @@ contains
         vh_correction(ip) = der%mesh%volume_element*vv
       end do
 
-      ASSERT(.not. simul_box_has_zero_bc(der%mesh%sb))
+      ASSERT(.not. nl_operator_compact_boundaries(der%lapl))
 
       call dderivatives_lapl(der, vh_correction, rho_corrected, set_bc = .false.)
  

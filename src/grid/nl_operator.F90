@@ -70,7 +70,9 @@ module nl_operator_m
     nl_operator_get_index,      &
     nl_operator_write,          &
     nl_operator_update_weights, &
-    nl_operator_op_to_matrix_cmplx
+    nl_operator_op_to_matrix_cmplx, &
+    nl_operator_np_zero_bc,         &
+    nl_operator_compact_boundaries
 
   type nl_operator_index_t
     private
@@ -134,6 +136,7 @@ module nl_operator_m
   integer, public, parameter :: OP_ALL = 3, OP_INNER = 1, OP_OUTER = 2
 
   logical :: initialized = .false.
+  logical :: compact_boundaries
 
   interface
     integer function op_is_available(opid, type)
@@ -226,6 +229,23 @@ contains
     end if
 #endif
 
+    !%Variable NLOperatorCompactBoundaries
+    !%Type logical
+    !%Default no
+    !%Section Execution::Optimization
+    !%Description
+    !% (Experimental) When set to yes, for finite systems Octopus will
+    !% map boundary points for finite-differences operators to a few
+    !% memory locations. This increases performance, however it is
+    !% experimental and has not been thoroughly tested.
+    !%End
+
+    call parse_logical(datasets_check('NLOperatorCompactBoundaries'), .false., compact_boundaries)
+
+    if(compact_boundaries) then
+      call messages_experimental('NLOperatorCompactBoundaries')
+    end if
+      
     POP_SUB(nl_operator_global_init)
   end subroutine nl_operator_global_init
 
@@ -413,7 +433,7 @@ contains
           ! points to reduce memory accesses. We cannot do this for the
           ! first point, since it is used to build the weights, so it
           ! has to have the positions right
-          if(ii > 1 .and. mesh_compact_boundaries(mesh)) then
+          if(ii > 1 .and. compact_boundaries .and. mesh_compact_boundaries(mesh)) then
             st1(jj) = min(st1(jj), mesh%np + 1)
           end if
           ASSERT(st1(jj) > 0)
@@ -427,7 +447,7 @@ contains
         !have boundary points as neighbours to one that has
         force_change = any(st1 + ii > mesh%np) .and. all(st2 + ii - 1 <= mesh%np) 
 
-        if(change .and. mesh_compact_boundaries(mesh)) then 
+        if(change .and. compact_boundaries .and. mesh_compact_boundaries(mesh)) then 
           !try to repair it by changing the boundary points
           do jj = 1, op%stencil%size
             if(st1(jj) + ii > mesh%np .and. st2(jj) + ii - 1 > mesh%np .and. st2(jj) + ii <= mesh%np_part) then
@@ -499,6 +519,7 @@ contains
       op%n4 = op%n4 + nn/4
       op%n1 = op%n1 + mod(nn, 4)
     end do
+
 
     SAFE_ALLOCATE(op%map_split(1:2, 1:op%n1 + op%n4))
 
@@ -1334,6 +1355,30 @@ contains
     
     res = ip + op%ri(is, op%rimap(ip))
   end function nl_operator_get_index
+
+  ! ---------------------------------------------------------
+  
+  integer pure function nl_operator_np_zero_bc(op) result(np_bc)
+    type(nl_operator_t), intent(in)   :: op
+
+    integer :: jj, ii
+
+    np_bc = 0
+    do jj = 1, op%nri
+      ii = op%rimap_inv(jj + 1) + maxval(op%ri(1:op%stencil%size, jj))
+      np_bc = max(np_bc, ii)
+    end do
+
+  end function nl_operator_np_zero_bc
+
+  ! ------------------------------------------------------
+
+  logical pure function nl_operator_compact_boundaries(op)
+    type(nl_operator_t), intent(in)   :: op
+
+    nl_operator_compact_boundaries = compact_boundaries
+  end function nl_operator_compact_boundaries
+
 
 #include "undef.F90"
 #include "real.F90"
