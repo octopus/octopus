@@ -98,11 +98,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     call mesh_batch_nrm2(gr%mesh, resb(1), nrm)
 
-    if(batch_is_packed(st%psib(ib, ik))) then 
-      call batch_unpack(psib(1))
-      call batch_unpack(resb(1))
-    end if
-
     do ii = 1, bsize
       if(nrm(ii) < tol) done(ii) = 1
     end do
@@ -120,6 +115,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         call batch_add_state(resb(iter), ist, res(:, :, iter, ii))
       end do
     end do
+
+    if(batch_is_packed(st%psib(ib, ik))) then 
+      call batch_pack(psib(2), copy = .false.)
+      call batch_pack(resb(2), copy = .false.)
+    end if
     
     ! get lambda 
     call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(1), psib(2))
@@ -130,6 +130,13 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1), psib(2), fr(2, :), reduce = .false.)
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(2), resb(2), fr(3, :), reduce = .false.)
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1), resb(2), fr(4, :), reduce = .false.)
+
+    if(batch_is_packed(st%psib(ib, ik))) then 
+      call batch_unpack(psib(1))
+      call batch_unpack(resb(1))
+      call batch_unpack(psib(2))
+      call batch_unpack(resb(2))
+    end if
 
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, fr)
 
