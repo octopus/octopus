@@ -27,6 +27,7 @@ module states_m
 #endif
   use comm_m
   use batch_m
+  use batch_ops_m
   use blas_m
   use datasets_m
   use derivatives_m

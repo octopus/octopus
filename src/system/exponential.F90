@@ -21,6 +21,7 @@
 
 module exponential_m
   use batch_m
+  use batch_ops_m
   use blas_m
   use cube_function_m
   use datasets_m

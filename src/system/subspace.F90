@@ -21,6 +21,7 @@
 
 module subspace_m
   use batch_m
+  use batch_ops_m
   use blas_m
   use blacs_proc_grid_m
   use datasets_m

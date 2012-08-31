@@ -21,6 +21,7 @@
 
 module hamiltonian_m
   use batch_m
+  use batch_ops_m
   use blas_m
 #ifdef HAVE_OPENCL
   use cl

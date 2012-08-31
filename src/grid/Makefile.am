@@ -25,6 +25,7 @@ noinst_LIBRARIES = libgrid.a
 libgrid_a_SOURCES =       \
 	basins.F90              \
 	batch.F90               \
+	batch_ops.F90          \
 	boundaries.F90          \
 	cube.F90                \
 	cube_function.F90       \
@@ -98,6 +99,7 @@ depend:
 
 basins.o : basins.F90 par_vec.o index.o mesh.o 
 batch.o : batch.F90 batch_inc.F90
+batch_ops.o : batch_ops.F90 batch_ops.F90 batch.o
 boundaries.o : boundaries.F90 boundaries_inc.F90 subarray.o batch.o par_vec.o mesh.o
 cube_function.o : cube_function.F90 cube_function_inc.F90 mesh_cube_parallel_map.o mesh.o cube.o par_vec.o
 cube.o : cube.F90 index.o par_vec.o
