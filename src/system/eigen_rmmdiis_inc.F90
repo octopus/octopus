@@ -37,7 +37,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   R_TYPE, allocatable :: eigen(:)
   FLOAT,  allocatable :: eval(:, :)
   FLOAT, allocatable :: lambda(:), nrm(:)
-  integer :: ist, minst, idim, ip, ii, iter, nops, maxst, jj, bsize, ib
+  integer :: ist, minst, idim, ip, ii, iter, nops, maxst, jj, bsize, ib, jter, kter
   R_TYPE :: ca, cb, cc
   R_TYPE, allocatable :: fr(:, :)
   type(profile_t), save :: prof
@@ -154,6 +154,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       if(abs(lambda(ist)) < CNST(0.1)) lambda(ist) = CNST(0.1)*lambda(ist)/abs(lambda(ist))
     end do
 
+    SAFE_ALLOCATE(mm(1:niter, 1:niter, 1:2, 1:bsize))
+    
     do iter = 2, niter
 
       ! for iter == 2 the preconditioning was done already
@@ -172,31 +174,29 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       call X(hamiltonian_apply_batch)(hm, gr%der, psib(iter), resb(iter), ik)
       nops = nops + bsize
 
-      SAFE_ALLOCATE(mm(1:iter, 1:iter, 1:2, 1:bsize))
-      SAFE_ALLOCATE(evec(1:iter, 1:1, 1:blocksize))
-      SAFE_ALLOCATE(eval(1:iter, 1:blocksize))
-
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter), resb(iter))
 
-      do ist = minst, maxst
-        ii = ist - minst + 1
-        
-        ! perform the diis correction
+      ! calculate the matrix elements between iterations
+      do jter = 1, iter
+        do kter = 1, jter
+          if(jter < iter - 1 .and. kter < iter - 1) cycle ! it was calculated on the previous iteration
+          call X(mesh_batch_dotp_vector)(gr%mesh, resb(jter), resb(kter), mm(jter, kter, 1, :), reduce = .false.)
+          call X(mesh_batch_dotp_vector)(gr%mesh, psib(jter), psib(kter), mm(jter, kter, 2, :), reduce = .false.)
+        end do
+      end do
 
-        !  mm_1(i, j) = <res_i|res_j>
-        call batch_init(resbit, st%d%dim, 1, iter, res(:, :, :, ii))
-        call X(mesh_batch_dotp_matrix)(gr%mesh, resbit, resbit, mm(:, :, 1, ii), symm = .true., reduce = .false.)
-        call batch_end(resbit)
-
-        !  mm_2(i, j) = <psi_i|psi_j>
-        call batch_init(psibit, st%d%dim, 1, iter, psi(:, :, :, ii))
-        call X(mesh_batch_dotp_self)(gr%mesh, psibit, mm(:, :, 2, ii), reduce = .false.)
-        call batch_end(psibit)
-
+      ! symmetrize
+      do jter = 1, iter
+        do kter = jter + 1, iter
+          mm(jter, kter, 1:2, 1:bsize) = mm(kter, jter, 1:2, 1:bsize)
+        end do
       end do
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, mm)
 
+      SAFE_ALLOCATE(evec(1:iter, 1:1, 1:blocksize))
+      SAFE_ALLOCATE(eval(1:iter, 1:blocksize))
+      
       do ist = minst, maxst
         ii = ist - minst + 1
 
@@ -224,11 +224,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       end do
 
-      SAFE_DEALLOCATE_A(mm)
       SAFE_DEALLOCATE_A(eval)      
       SAFE_DEALLOCATE_A(evec)
 
     end do
+
+    SAFE_DEALLOCATE_A(mm)
 
     ! end with a trial move
     call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(niter), resb(niter - 1))
