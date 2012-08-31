@@ -206,7 +206,10 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
           last(ii) = iter - 1
           cycle
         end if
+      end do
 
+      do ist = minst, maxst
+        ii = ist - minst + 1
         ! generate the new vector and the new residual (the residual
         ! might be recalculated instead but that seems to be a bit
         ! slower).
@@ -214,14 +217,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
           call lalg_scal(gr%mesh%np, evec(iter, 1, ii), psi(:, idim, iter, ii))
           call lalg_scal(gr%mesh%np, evec(iter, 1, ii), res(:, idim, iter, ii))
         end do
+      end do
 
-        do jj = 1, iter - 1
-          do idim = 1, st%d%dim
-            call lalg_axpy(gr%mesh%np, evec(jj, 1, ii), psi(:, idim, jj, ii), psi(:, idim, iter, ii))
-            call lalg_axpy(gr%mesh%np, evec(jj, 1, ii), res(:, idim, jj, ii), res(:, idim, iter, ii))
-          end do
-        end do
-
+      do jj = 1, iter - 1
+        call batch_axpy(gr%mesh%np, evec(jj, 1, :), psib(jj), psib(iter), a_start = minst)
+        call batch_axpy(gr%mesh%np, evec(jj, 1, :), resb(jj), resb(iter), a_start = minst)
       end do
 
       SAFE_DEALLOCATE_A(eval)      

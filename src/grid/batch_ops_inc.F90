@@ -115,11 +115,12 @@ end subroutine X(batch_axpy_const)
 
 ! --------------------------------------------------------------
 
-subroutine X(batch_axpy_vec)(np, aa, xx, yy)
+subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa(:)
   type(batch_t),     intent(in)    :: xx
   type(batch_t),     intent(inout) :: yy
+  integer, optional, intent(in)    :: a_start
 
   integer :: ist, ip, localsize, effsize
   R_TYPE, allocatable     :: aa_linear(:)
@@ -147,7 +148,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy)
 
   aa_linear = M_ZERO
   do ist = 1, yy%nst_linear
-    aa_linear(ist) = aa(yy%index(ist, 1))
+    aa_linear(ist) = aa(yy%index(ist, 1) - (optional_default(a_start, 1) - 1))
   end do
 
   select case(batch_status(xx))
