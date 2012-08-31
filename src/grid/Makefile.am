@@ -89,7 +89,8 @@ noinst_HEADERS =                   \
 	par_vec_inc.F90            \
 	subarray_inc.F90           \
 	submesh_inc.F90            \
-	symmetrizer_inc.F90
+	symmetrizer_inc.F90        \
+	batch_ops_inc.F90
 
 
 include $(srcdir)/../common-rules.make
