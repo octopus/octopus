@@ -22,6 +22,7 @@
 opencldir = $(pkgdatadir)/opencl
 
 dist_opencl_DATA =              \
+	cl_global.h             \
 	vpsi.cl                 \
 	set_zero.cl             \
 	operate.cl              \

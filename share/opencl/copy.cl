@@ -19,11 +19,7 @@
  $Id: copy.cl 2146 2006-05-23 17:36:00Z xavier $
 */
 
-#ifdef EXT_KHR_FP64
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#elif EXT_AMD_FP64
-#pragma OPENCL EXTENSION cl_amd_fp64 : enable
-#endif
+#include <cl_global.h>
 
 __kernel void copy(const __global double * restrict xx, const int ldxx,
 		   __global double * restrict yy, const int ldyy){

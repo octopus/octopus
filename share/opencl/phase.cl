@@ -20,10 +20,7 @@
 */
 
 #ifdef EXT_KHR_FP64
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #define HAVE_SINCOS
-#elif EXT_AMD_FP64
-#pragma OPENCL EXTENSION cl_amd_fp64 : enable
 #endif
 
 __kernel void phase(const int offset, 

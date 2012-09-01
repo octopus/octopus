@@ -886,7 +886,7 @@ module opencl_m
       close(unit = iunit)
       call io_free(iunit)
 
-      call messages_write('Building CL program '//trim(filename)//'.')
+      call messages_write("Building CL program '"//trim(filename)//"'.")
       call messages_info()
 
       prog = clCreateProgramWithSource(opencl%context, string, ierr)
@@ -901,6 +901,8 @@ module opencl_m
       string=trim(string)//' -cl-unsafe-math-optimizations'
       string=trim(string)//' -cl-finite-math-only'
       string=trim(string)//' -cl-fast-relaxed-math'
+
+      string=trim(string)//' -I'//trim(conf%share)//'/opencl/'
       
       if (f90_cl_device_has_extension(opencl%device, "cl_amd_fp64")) then
         string = trim(string)//' -DEXT_AMD_FP64'

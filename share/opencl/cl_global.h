@@ -16,25 +16,21 @@
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  02111-1307, USA.
 
- $Id: pack.cl 2146 2006-05-23 17:36:00Z xavier $
+ $Id: cl_global.h 2146 2006-05-23 17:36:00Z xavier $
 */
 
-#include <cl_global.h>
+#ifndef __CL_GLOBAL_H__
+#define __CL_GLOBAL_H__
 
-__kernel void complex_to_double(const int np, __global const double2 * __restrict src, __global double * __restrict dest){
-  int ip = get_global_id(0);
-  
-  if(ip < np) dest[ip] = src[ip].s0;
+#ifdef EXT_KHR_FP64
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#elif EXT_AMD_FP64
+#pragma OPENCL EXTENSION cl_amd_fp64 : enable
+// We can use to printf from OpenCL, useful for debugging
+//#pragma OPENCL EXTENSION cl_amd_printf:enable
+#endif
 
-}
-
-__kernel void double_to_complex(const int np, __global const double * __restrict src, __global double2 * __restrict dest){
-  int ip = get_global_id(0);
-  
-  if(ip < np) dest[ip].s0 = src[ip];
-  if(ip < np) dest[ip].s1 = 0.0;
-
-}
+#endif
 
 /*
  Local Variables:
