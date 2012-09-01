@@ -16,20 +16,31 @@
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  02111-1307, USA.
 
- $Id: pack.cl 2146 2006-05-23 17:36:00Z xavier $
+ $Id: cl_global.h 2146 2006-05-23 17:36:00Z xavier $
 */
 
-#include <cl_global.h>
-#include <cl_complex.h>
-#include <cl_rtype.h>
+#ifndef __CL_RTYPE_H__
+#define __CL_RTYPE_H__
 
-__kernel void X(zmul)(const int np,
-		      __global rtype const * restrict op,
-		      __global double2 * restrict ff){
-  
-  const int ip = get_global_id(0);
-  if(ip < np) ff[ip] = MUL(op[ip], ff[ip]);
-}
+#include <cl_global.h>
+
+#if defined(RTYPE_DOUBLE)
+
+typedef double rtype;
+#define X(x)        d ## x
+#define MUL(x, y)   ((x)*(y))
+
+#elif defined(RTYPE_COMPLEX)
+
+typedef double2 rtype;
+#define X(x)        z ## x
+#define MUL(x, y)   complex_mul(x, y)
+
+#else
+#error Type not defined
+#endif
+
+#endif
 
 /*
  Local Variables:

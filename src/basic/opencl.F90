@@ -456,8 +456,11 @@ module opencl_m
       call opencl_create_kernel(kernel_nrm2_vector, prog, "nrm2_vector")
       call opencl_release_program(prog)
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/mul.cl')
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/mul.cl', '-DRTYPE_DOUBLE')
       call opencl_create_kernel(dzmul, prog, "dzmul")
+      call opencl_release_program(prog)
+
+      call opencl_build_program(prog, trim(conf%share)//'/opencl/mul.cl', '-DRTYPE_COMPLEX')
       call opencl_create_kernel(zzmul, prog, "zzmul")
       call opencl_release_program(prog)
 
