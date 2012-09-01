@@ -131,15 +131,16 @@ contains
 
   !------------------------------------------------------------
 
-  subroutine octcl_kernel_start_call(this, file_name, kernel_name)
+  subroutine octcl_kernel_start_call(this, file_name, kernel_name, flags)
     type(octcl_kernel_t), target, intent(inout) :: this
-    character(len=*),          intent(in)    :: file_name
-    character(len=*),          intent(in)    :: kernel_name
+    character(len=*),             intent(in)    :: file_name
+    character(len=*),             intent(in)    :: kernel_name
+    character(len=*), optional,   intent(in)    :: flags
 
     PUSH_SUB(octcl_kernel_start_call)
 
     if(.not. this%initialized) then
-      call octcl_kernel_build(this, file_name, kernel_name)
+      call octcl_kernel_build(this, file_name, kernel_name, flags)
       this%next => head
       head => this
     end if

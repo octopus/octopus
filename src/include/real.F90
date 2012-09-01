@@ -24,6 +24,7 @@
 #define R_DOUBLE    real(8)
 #define R_MPITYPE   MPI_FLOAT
 #define R_TYPE_VAL  TYPE_FLOAT
+#define R_TYPE_CL   'RTYPE_DOUBLE'
 #define R_TOTYPE(x) real(x, REAL_PRECISION)
 #define R_TOPREC(x) real(x, REAL_PRECISION)
 

@@ -20,54 +20,29 @@
 */
 
 #include <cl_global.h>
+#include <cl_complex.h>
+#include <cl_rtype.h>
 
-__kernel void daxpy(const double aa, 
-		    const __global double * restrict xx, const int ldxx,
-		    __global double * restrict yy, const int ldyy){
+__kernel void X(axpy)(const rtype aa,
+		      const __global rtype * restrict xx, const int ldxx,
+		      __global rtype * restrict yy, const int ldyy){
+  int ist = get_global_id(0);
+  int ip = get_global_id(1);
 
+  yy[ip*ldyy + ist] += MUL(aa, xx[ip*ldxx + ist]);
+
+}
+
+__kernel void X(axpy_vec)(const __constant rtype * restrict aa, 
+			  const __global rtype * restrict xx, const int ldxx,
+			  __global rtype * restrict yy, const int ldyy){
+  
   int ist = get_global_id(0);
   int ip = get_global_id(1);
   
-  yy[(ip<<ldyy) + ist] += aa*xx[(ip<<ldxx) + ist];
+  yy[(ip<<ldyy) + ist] += MUL(aa[ist], xx[(ip<<ldxx) + ist]);
 
 }
-
-__kernel void zaxpy(const double2 aa,
-		    const __global double2 * restrict xx, const int ldxx,
-		    __global double2 * restrict yy, const int ldyy){
-  int ist = get_global_id(0);
-  int ip = get_global_id(1);
-
-  double2 xxi = xx[ip*ldxx + ist];
-  yy[ip*ldyy + ist] += (double2)(aa.x*xxi.x - aa.y*xxi.y, aa.x*xxi.y + aa.y*xxi.x);
-
-}
-
-__kernel void daxpy_vec(const __constant double * restrict aa, 
-			const __global double * restrict xx, const int ldxx,
-			__global double * restrict yy, const int ldyy){
-
-  int ist = get_global_id(0);
-  int ip = get_global_id(1);
-  
-  yy[(ip<<ldyy) + ist] += aa[ist]*xx[(ip<<ldxx) + ist];
-
-}
-
-__kernel void zaxpy_vec(const __constant double2 * restrict aa, 
-			const __global double2 * restrict xx, const int ldxx,
-			__global double2 * restrict yy, const int ldyy){
-
-  int ist = get_global_id(0);
-  int ip = get_global_id(1);
-
-  double2 aai = aa[ist];
-  double2 xxi = xx[(ip<<ldxx) + ist];
-
-  yy[(ip<<ldyy) + ist] += (double2)(aai.x*xxi.x - aai.y*xxi.y, aai.x*xxi.y + aai.y*xxi.x);
-
-}
-
 
 /*
  Local Variables:

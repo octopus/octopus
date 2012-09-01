@@ -24,6 +24,7 @@
 #define R_DOUBLE    complex(8)
 #define R_MPITYPE   MPI_CMPLX
 #define R_TYPE_VAL  TYPE_CMPLX
+#define R_TYPE_CL   'RTYPE_COMPLEX'
 #define R_TOTYPE(x) cmplx(x, M_ZERO, REAL_PRECISION)
 #define R_TOPREC(x) cmplx(real(x), aimag(x), REAL_PRECISION)
 

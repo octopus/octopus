@@ -166,7 +166,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
       call opencl_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
     end if
 
-    call octcl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)))
+    call octcl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)), flags = '-D'//R_TYPE_CL)
   
     kernel_ref = octcl_kernel_get_ref(kernel)
 
