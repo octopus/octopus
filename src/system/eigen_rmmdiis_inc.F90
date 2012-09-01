@@ -205,8 +205,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         if(failed(ii)) then
           last(ii) = iter - 1
           ! we shouldn't do anything
-          evec(1, 1, ii) = CNST(1.0)
-          evec(2:iter, 1, ii) = CNST(0.0)
+          evec(1:iter - 1, 1, ii) = CNST(0.0)
+          evec(iter, 1, ii) = CNST(1.0)
           cycle
         end if
       end do
