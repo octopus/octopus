@@ -20,10 +20,7 @@
 */
 
 #include <cl_global.h>
-
-inline double2 complex_mul(const double2 a, const double2 b){
-  return (double2) (a.x*b.x - a.y*b.y, a.y*b.x + a.x*b.y);
-}
+#include <cl_complex.h>
 
 __kernel void dzmul(const int np,
 		    __global double const * restrict op,

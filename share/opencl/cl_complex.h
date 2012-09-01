@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2011 X. Andrade
+ Copyright (C) 2012 X. Andrade
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -16,37 +16,28 @@
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  02111-1307, USA.
 
- $Id: phase.cl $
+ $Id: cl_global.h 2146 2006-05-23 17:36:00Z xavier $
 */
+
+#ifndef __CL_COMPLEX_H__
+#define __CL_COMPLEX_H__
 
 #include <cl_global.h>
 
-#ifdef EXT_KHR_FP64
-#define HAVE_SINCOS
-#endif
-
-__kernel void phase(const int offset, 
-		    const __global double * phase, 
-		    __global double2 * psi, const int ldpsi){
-
-  const int ist = get_global_id(0);
-  const int ip  = get_global_id(1);
-
-#ifdef HAVE_SINCOS
-  double cc;
-  double ss = sincos(phase[offset + ip], &cc);
-#else
-#warning "Using single-precision sincos functions."
-  float fcc;
-  double ss = (double) sincos((float) phase[offset + ip], &fcc);
-  double cc = (double) fcc;
-#endif
-
-  double2 ff = psi[(ip<<ldpsi) + ist];
-
-  psi[(ip<<ldpsi) + ist] = (double2)(cc*ff.x + ss*ff.y, cc*ff.y - ss*ff.x);
-
+static inline double2 complex_mul(const double2 a, const double2 b){
+  return (double2) (a.x*b.x - a.y*b.y, a.y*b.x + a.x*b.y);
 }
+
+static inline double2 complex_conj_mul(const double2 a, const double2 b){
+  return (double2) (a.x*b.x + a.y*b.y, a.y*b.x - a.x*b.y);
+}
+
+static inline double2 complex_div(const double2 a, const double2 b){
+  double2 c = b*b;
+  return complex_conj_mul(a, b)/(c.x + c.y);
+}
+
+#endif
 
 /*
  Local Variables:
