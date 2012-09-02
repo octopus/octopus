@@ -179,7 +179,13 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       ! calculate the matrix elements between iterations
       do jter = 1, iter
         do kter = 1, jter
-          if(jter < iter - 1 .and. kter < iter - 1) cycle ! it was calculated on the previous iteration
+          if(jter < iter - 1 .and. kter < iter - 1) then
+            ! it was calculated on the previous iteration
+            ! in parallel this was already reduced, so we set it to zero in non-root ranks
+            if(gr%mesh%parallel_in_domains .and. gr%mesh%mpi_grp%rank /= 0) mm(jter, kter, 1:2, 1:bsize) = CNST(0.0)
+            cycle
+          endif
+
           call X(mesh_batch_dotp_vector)(gr%mesh, resb(jter), resb(kter), mm(jter, kter, 1, :), reduce = .false.)
           call X(mesh_batch_dotp_vector)(gr%mesh, psib(jter), psib(kter), mm(jter, kter, 2, :), reduce = .false.)
         end do
