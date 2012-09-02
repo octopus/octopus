@@ -47,6 +47,7 @@ module batch_ops_m
     batch_set,                      &
     batch_set_zero,                 &
     batch_axpy,                     &
+    batch_scal,                     &
     batch_copy_data,                &
     batch_set_state,                &
     batch_get_state,                &
@@ -63,6 +64,11 @@ module batch_ops_m
     module procedure zbatch_axpy_const
     module procedure dbatch_axpy_vec
     module procedure zbatch_axpy_vec
+  end interface
+
+  interface batch_scal
+    module procedure dbatch_scal_vec
+    module procedure zbatch_scal_vec
   end interface
 
   interface batch_set_state
