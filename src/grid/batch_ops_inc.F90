@@ -236,8 +236,8 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start)
   type(cl_kernel)         :: kernel_ref
 #endif
   
-  PUSH_SUB(X(batch_axpy_vec))
-  call profiling_in(axpy_prof, "BATCH_AXPY")
+  PUSH_SUB(X(batch_scal_vec))
+  call profiling_in(scal_prof, "BATCH_SCAL")
 
 #ifdef R_TCMPLX
   !if aa is complex, the functions must be complex
@@ -314,10 +314,118 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start)
 
   SAFE_DEALLOCATE_A(aa_linear)
 
-  call profiling_out(axpy_prof)
-  POP_SUB(X(batch_axpy_vec))
+  call profiling_out(scal_prof)
+  POP_SUB(X(batch_scal_vec))
 end subroutine X(batch_scal_vec)
 
+! --------------------------------------------------------------
+
+subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start)
+  integer,           intent(in)    :: np
+  type(batch_t),     intent(in)    :: xx
+  R_TYPE,            intent(in)    :: aa(:)
+  type(batch_t),     intent(inout) :: yy
+  integer, optional, intent(in)    :: a_start
+
+  integer :: ist, ip, localsize, effsize
+  R_TYPE, allocatable     :: aa_linear(:)
+  CMPLX,  allocatable     :: zaa_linear(:)
+  type(opencl_mem_t)      :: aa_buffer
+#ifdef HAVE_OPENCL
+  type(octcl_kernel_t), save :: kernel
+  type(cl_kernel)         :: kernel_ref
+#endif
+  
+  PUSH_SUB(X(batch_xpay_vec))
+  call profiling_in(xpay_prof, "BATCH_XPAY")
+
+  ASSERT(batch_type(yy) == batch_type(xx))
+#ifdef R_TCMPLX
+  !if aa is complex, the functions must be complex
+  ASSERT(batch_type(yy) == TYPE_CMPLX)
+#endif
+  ASSERT(xx%nst_linear == yy%nst_linear)
+  ASSERT(batch_status(xx) == batch_status(yy))
+
+  effsize = yy%nst_linear
+  if(batch_is_packed(yy)) effsize = yy%pack%size(1)
+  SAFE_ALLOCATE(aa_linear(1:effsize))
+
+  aa_linear = M_ZERO
+  do ist = 1, yy%nst_linear
+    aa_linear(ist) = aa(yy%index(ist, 1) - (optional_default(a_start, 1) - 1))
+  end do
+
+  select case(batch_status(xx))
+  case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
+    call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, batch_type(yy), yy%pack%size(1))
+
+    if(batch_type(yy) == TYPE_CMPLX) then
+      ! convert aa_linear to complex
+      SAFE_ALLOCATE(zaa_linear(1:yy%pack%size(1)))
+      zaa_linear(1:yy%pack%size(1)) = aa_linear(1:yy%pack%size(1))
+      call opencl_write_buffer(aa_buffer, yy%pack%size(1), zaa_linear)
+      SAFE_DEALLOCATE_A(zaa_linear)
+    else
+      call opencl_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
+    end if
+
+    call octcl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(xpay_vec)), flags = '-D'//R_TYPE_CL)
+  
+    kernel_ref = octcl_kernel_get_ref(kernel)
+
+    call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
+    call opencl_set_kernel_arg(kernel_ref, 1, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 2, log2(xx%pack%size(1)))
+    call opencl_set_kernel_arg(kernel_ref, 3, yy%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 4, log2(yy%pack%size(1)))
+
+    localsize = opencl_max_workgroup_size()
+    call opencl_kernel_run(kernel_ref, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
+
+    call opencl_finish()
+#endif
+  case(BATCH_PACKED)
+    if(batch_type(yy) == TYPE_CMPLX) then
+      do ist = 1, yy%pack%size(1)
+        do ip = 1, np
+          yy%pack%zpsi(ist, ip) = xx%pack%zpsi(ist, ip) + aa_linear(ist)*yy%pack%zpsi(ist, ip)
+        end do
+      end do
+    else
+#ifdef R_TREAL
+      do ist = 1, yy%pack%size(1)
+        do ip = 1, np
+          yy%pack%dpsi(ist, ip) = xx%pack%dpsi(ist, ip) + aa_linear(ist)*yy%pack%dpsi(ist, ip)
+        end do
+      end do
+#endif
+    end if
+    
+  case(BATCH_NOT_PACKED)
+    do ist = 1, yy%nst_linear
+      if(batch_type(yy) == TYPE_CMPLX) then
+        do ip = 1, np
+          yy%states_linear(ist)%zpsi(ip) = xx%states_linear(ist)%zpsi(ip) + aa_linear(ist)*yy%states_linear(ist)%zpsi(ip)
+        end do
+      else
+#ifdef R_TREAL
+        do ip = 1, np
+          yy%states_linear(ist)%dpsi(ip) = xx%states_linear(ist)%dpsi(ip) + aa_linear(ist)*yy%states_linear(ist)%dpsi(ip)
+        end do
+#endif
+      end if
+    end do
+  end select
+
+  call batch_pack_was_modified(yy)
+
+  SAFE_DEALLOCATE_A(aa_linear)
+
+  call profiling_out(xpay_prof)
+  POP_SUB(X(batch_xpay_vec))
+end subroutine X(batch_xpay_vec)
 
 ! --------------------------------------------------------------
 

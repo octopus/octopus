@@ -161,14 +161,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       ! for iter == 2 the preconditioning was done already
       if(iter > 2) call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(iter - 1), psib(iter))
 
-      do ist = minst, maxst
-        ii = ist - minst + 1
-
-        ! predict by jacobi
-        forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          psi(ip, idim, iter, ii) = lambda(ist)*psi(ip, idim, iter, ii) + psi(ip, idim, iter - 1, ii)
-        end forall
-      end do
+      ! predict by jacobi
+      call batch_xpay(gr%mesh%np, psib(iter - 1), lambda, psib(iter))
 
       ! calculate the residual
       call X(hamiltonian_apply_batch)(hm, gr%der, psib(iter), resb(iter), ik)
@@ -235,15 +229,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     ! end with a trial move
     call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(niter), resb(niter - 1))
 
+    call batch_xpay(gr%mesh%np, psib(niter), lambda, resb(niter - 1))
+
     do ist = minst, maxst
       ii = ist - minst + 1
 
-      if(.not. failed(ii)) then
-
-        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          res(ip, idim, niter - 1, ii) = psi(ip, idim, niter, ii) + lambda(ist)*res(ip, idim, niter - 1, ii)
-        end forall
-        
+      if(.not. failed(ii)) then        
         call states_set_state(st, gr%mesh, ist, ik, res(:, :, niter - 1, ii))
       else
         call states_set_state(st, gr%mesh, ist, ik, psi(:, :, last(ii), ii))

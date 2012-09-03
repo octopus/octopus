@@ -48,6 +48,7 @@ module batch_ops_m
     batch_set_zero,                 &
     batch_axpy,                     &
     batch_scal,                     &
+    batch_xpay,                     &
     batch_copy_data,                &
     batch_set_state,                &
     batch_get_state,                &
@@ -69,6 +70,11 @@ module batch_ops_m
   interface batch_scal
     module procedure dbatch_scal_vec
     module procedure zbatch_scal_vec
+  end interface
+
+  interface batch_xpay
+    module procedure dbatch_xpay_vec
+    module procedure zbatch_xpay_vec
   end interface
 
   interface batch_set_state
@@ -97,7 +103,7 @@ module batch_ops_m
     module procedure batch_set_points_cl
   end interface batch_set_points
 
-  type(profile_t), save :: axpy_prof, get_points_prof, set_points_prof
+  type(profile_t), save :: scal_prof, xpay_prof, axpy_prof, get_points_prof, set_points_prof
 
 contains
 

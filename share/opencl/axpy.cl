@@ -54,6 +54,16 @@ __kernel void X(scal_vec)(const __constant rtype * restrict aa,
 
 }
 
+__kernel void X(xpay_vec)(const __constant rtype * restrict aa, 
+			  const __global rtype * restrict xx, const int ldxx,
+			  __global rtype * restrict yy, const int ldyy){
+  
+  int ist = get_global_id(0);
+  int ip = get_global_id(1);
+  
+  yy[(ip<<ldyy) + ist] = xx[(ip<<ldxx) + ist] + MUL(aa[ist], yy[(ip<<ldyy) + ist]);
+
+}
 
 /*
  Local Variables:
