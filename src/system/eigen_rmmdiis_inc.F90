@@ -33,7 +33,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   R_TYPE, allocatable :: res(:, :, :, :), tmp(:, :)
   R_TYPE, allocatable :: psi(:, :, :, :)
-  R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :, :)
+  R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :, :), finalpsi(:, :)
   R_TYPE, allocatable :: eigen(:)
   FLOAT,  allocatable :: eval(:, :)
   FLOAT, allocatable :: lambda(:), nrm(:)
@@ -231,20 +231,30 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     call batch_xpay(gr%mesh%np, psib(niter), lambda, resb(niter - 1))
 
+    SAFE_ALLOCATE(finalpsi(1:gr%mesh%np, 1:st%d%dim))
+
     do ist = minst, maxst
       ii = ist - minst + 1
 
       if(.not. failed(ii)) then        
-        call states_set_state(st, gr%mesh, ist, ik, res(:, :, niter - 1, ii))
+        do idim = 1, st%d%dim
+          call batch_get_state(resb(niter - 1), (/ist, idim/), gr%mesh%np, finalpsi(:, idim))
+        end do
       else
-        call states_set_state(st, gr%mesh, ist, ik, psi(:, :, last(ii), ii))
+        do idim = 1, st%d%dim
+          call batch_get_state(psib(last(ii)), (/ist, idim/), gr%mesh%np, finalpsi(:, idim))
+        end do
       end if
+
+      call states_set_state(st, gr%mesh, ist, ik, finalpsi)
 
       if(mpi_grp_is_root(mpi_world)) then
         call loct_progress_bar(st%nst * (ik - 1) +  ist, st%nst*st%d%nik)
       end if
 
     end do
+
+    SAFE_DEALLOCATE_A(finalpsi)
 
     do iter = 1, niter
       call batch_end(psib(iter))
