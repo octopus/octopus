@@ -37,12 +37,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   R_TYPE, allocatable :: eigen(:)
   FLOAT,  allocatable :: eval(:, :)
   FLOAT, allocatable :: lambda(:), nrm(:)
-  integer :: ist, minst, idim, ip, ii, iter, nops, maxst, jj, bsize, ib, jter, kter
+  integer :: ist, minst, idim, ii, iter, nops, maxst, jj, bsize, ib, jter, kter
   R_TYPE :: ca, cb, cc
   R_TYPE, allocatable :: fr(:, :)
   type(profile_t), save :: prof
   type(batch_t), allocatable :: psib(:), resb(:)
-  type(batch_t) :: psibit, resbit, stpsib
   integer, allocatable :: done(:), last(:)
   logical, allocatable :: failed(:)
 
@@ -293,6 +292,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     nops = nops + maxst - minst + 1
   end do
 
+  converged = converged + count(diff(:) <= tol)
+
   SAFE_DEALLOCATE_A(eigen)
 
   niter = nops
@@ -328,7 +329,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
   integer, parameter :: sweeps = 5
   integer, parameter :: sd_steps = 2
 
-  integer :: isd, ist, sst, est, ib, ii
+  integer :: isd, ist, minst, maxst, ib, ii
   R_TYPE  :: ca, cb, cc
   R_TYPE, allocatable :: res(:, :, :), lambda(:)
   R_TYPE, allocatable :: kres(:, :, :)
@@ -347,8 +348,8 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
   niter = 0
 
   do ib = st%block_start, st%block_end
-    sst = states_block_min(st, ib)
-    est = states_block_max(st, ib)
+    minst = states_block_min(st, ib)
+    maxst = states_block_max(st, ib)
 
     call batch_copy(st%psib(ib, ik), resb, reference= .false.)
     call batch_copy(st%psib(ib, ik), kresb, reference= .false.)
@@ -362,7 +363,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me1, (/2, st%d%block_size/))
 
-      forall(ist = sst:est) st%eigenval(ist, ik) = me1(1, ist - sst + 1)/me1(2, ist - sst + 1)
+      forall(ist = minst:maxst) st%eigenval(ist, ik) = me1(1, ist - minst + 1)/me1(2, ist - minst + 1)
  
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%psib(ib, ik), resb)
 
@@ -370,7 +371,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
 
       call X(hamiltonian_apply_batch)(hm, gr%der, kresb, resb, ik)
 
-      niter = niter + 2*(est - sst + 1)
+      niter = niter + 2*(maxst - minst + 1)
 
       call X(mesh_batch_dotp_vector)(gr%mesh, kresb, kresb, me2(1, :), reduce = .false.)
       call X(mesh_batch_dotp_vector)(gr%mesh, st%psib(ib, ik),  kresb, me2(2, :), reduce = .false.)
@@ -379,8 +380,8 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me2, (/4, st%d%block_size/))
 
-      do ist = sst, est
-        ii = ist - sst + 1
+      do ist = minst, maxst
+        ii = ist - minst + 1
 
         ca = me2(1, ii) * me2(4, ii) - me2(3, ii) * me2(2, ii)
         cb = me1(2, ii) * me2(3, ii) - me1(1, ii) * me2(1, ii)
@@ -398,12 +399,14 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
     call batch_end(kresb, copy = .false.)
 
     if(mpi_grp_is_root(mpi_world)) then
-      call loct_progress_bar(st%nst*(ik - 1) +  est, st%nst*st%d%nik)
+      call loct_progress_bar(st%nst*(ik - 1) +  maxst, st%nst*st%d%nik)
     end if
 
   end do
 
   call X(states_orthogonalization_full)(st, gr%mesh, ik)
+
+  converged = 0
 
   SAFE_DEALLOCATE_A(lambda)
   SAFE_DEALLOCATE_A(me1)
