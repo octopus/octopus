@@ -19,7 +19,7 @@
 
 ! ---------------------------------------------------------
 !> See http://prola.aps.org/abstract/PRB/v54/i16/p11169_1
-subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff, blocksize)
+subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -29,14 +29,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
   FLOAT,                  intent(out)   :: diff(1:st%nst)
-  integer,                intent(in)    :: blocksize
 
-  R_TYPE, allocatable :: res(:, :, :, :), tmp(:, :)
-  R_TYPE, allocatable :: psi(:, :, :, :)
   R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :, :), finalpsi(:, :)
   R_TYPE, allocatable :: eigen(:)
   FLOAT,  allocatable :: eval(:, :)
-  FLOAT, allocatable :: lambda(:), nrm(:)
+  FLOAT,  allocatable :: lambda(:), nrm(:)
   integer :: ist, minst, idim, ii, iter, nops, maxst, jj, bsize, ib, jter, kter
   R_TYPE :: ca, cb, cc
   R_TYPE, allocatable :: fr(:, :)
@@ -50,17 +47,14 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   pack = hamiltonian_apply_packed(hm, gr%mesh)
 
-  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, 1:niter, 1:blocksize))
-  SAFE_ALLOCATE(res(1:gr%mesh%np_part, 1:st%d%dim, 1:niter, 1:blocksize))
-  SAFE_ALLOCATE(tmp(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(lambda(1:st%nst))
   SAFE_ALLOCATE(psib(1:niter))
   SAFE_ALLOCATE(resb(1:niter))
-  SAFE_ALLOCATE(done(1:blocksize))
-  SAFE_ALLOCATE(last(1:blocksize))
-  SAFE_ALLOCATE(failed(1:blocksize))
-  SAFE_ALLOCATE(fr(1:4, 1:blocksize))
-  SAFE_ALLOCATE(nrm(1:blocksize))
+  SAFE_ALLOCATE(done(1:st%d%block_size))
+  SAFE_ALLOCATE(last(1:st%d%block_size))
+  SAFE_ALLOCATE(failed(1:st%d%block_size))
+  SAFE_ALLOCATE(fr(1:4, 1:st%d%block_size))
+  SAFE_ALLOCATE(nrm(1:st%d%block_size))
 
   nops = 0
 
@@ -177,8 +171,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, mm)
 
-      SAFE_ALLOCATE(evec(1:iter, 1:1, 1:blocksize))
-      SAFE_ALLOCATE(eval(1:iter, 1:blocksize))
+      SAFE_ALLOCATE(evec(1:iter, 1:1, 1:bsize))
+      SAFE_ALLOCATE(eval(1:iter, 1:bsize))
       
       do ist = minst, maxst
         ii = ist - minst + 1
@@ -282,9 +276,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   niter = nops
 
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(res)
-  SAFE_DEALLOCATE_A(tmp)
   SAFE_DEALLOCATE_A(lambda)
   SAFE_DEALLOCATE_A(psib)
   SAFE_DEALLOCATE_A(resb)
@@ -299,7 +290,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 end subroutine X(eigensolver_rmmdiis)
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, ik, blocksize)
+subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, ik)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -308,7 +299,6 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, i
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
-  integer,                intent(in)    :: blocksize
 
   integer, parameter :: sweeps = 5
   integer, parameter :: sd_steps = 2

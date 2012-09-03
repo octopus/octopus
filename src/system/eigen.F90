@@ -388,10 +388,10 @@ contains
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik, hm%d%block_size)
+              eigens%converged(ik), ik)
           else
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
+              eigens%converged(ik), ik, eigens%diff(:, ik))
           end if
 #if defined(HAVE_ARPACK) 
  	      case(RS_ARPACK) 
@@ -428,10 +428,10 @@ contains
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik, hm%d%block_size)
+              eigens%converged(ik), ik)
           else
             call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik,  eigens%diff(:, ik), hm%d%block_size)
+              eigens%converged(ik), ik,  eigens%diff(:, ik))
           end if         
 #if defined(HAVE_ARPACK) 
        	case(RS_ARPACK) 
