@@ -16,13 +16,8 @@ dnl may be needed for cross-compiling, when compilation and compute nodes are di
   LIBS="$LIBS $LIBS_BLAS"
 
   acx_zdotc_ok=yes
-  rm -f conf.zdotc
 
-  AC_RUN_IFELSE([
-program testzdotc
-
-implicit none
-
+  AC_RUN_IFELSE([AC_LANG_PROGRAM([],[
 complex*16, allocatable :: f1(:), f2(:)
 complex*16 :: result1, result2
 complex*16, external :: zdotc
@@ -42,15 +37,13 @@ end do
 result2 = cmplx(0.0d0,0.0d0)
 result2 = zdotc(nn,f1,1,f2,1)
 
-open(1, file='conf.zdotc')
+open(1, file='conftest.out')
 if(abs(result1-result2) .lt. 1d-6) then
   write(1, '(a)') 'success'
 endif
-
-end program
-], [  
+])], [  
   if test "x$acx_zdotc_ok" = "xyes"; then
-    if test "x`cat conf.zdotc`" != "xsuccess"; then
+    if test "x`cat conftest.out`" != "xsuccess"; then
       acx_zdotc_ok=no
       # program didn't crash, but gave wrong answer
     fi
@@ -58,7 +51,6 @@ end program
 ], [acx_zdotc_ok=no], [acx_zdotc_ok=yes;echo -n "cross-compiling; assuming... "])
 
 
-  rm -f conf.zdotc
   AC_MSG_RESULT([$acx_zdotc_ok])
   LIBS="$acx_blas_save_LIBS"
 

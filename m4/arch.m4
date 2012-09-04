@@ -52,7 +52,7 @@ AC_DEFUN([ACX_AVX],
 [AC_MSG_CHECKING([whether AVX instructions can be used])
 acx_save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS"
-AC_RUN_IFELSE([AC_LANG_PROGRAM( [
+AC_RUN_IFELSE([AC_LANG_PROGRAM([
 #include <immintrin.h>
 ], [
 changequote(,)
