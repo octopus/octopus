@@ -270,7 +270,7 @@ contains
         if(ll == p%lloc) cycle
         do mm = -ll, ll
           call hgh_projector_null(p%hgh_p(ll, mm))
-          call hgh_projector_init(p%hgh_p(ll, mm), p%sphere, gr, a, ll, mm, so_strength)
+          call hgh_projector_init(p%hgh_p(ll, mm), p%sphere, a, ll, mm, so_strength)
         end do
       end do
 

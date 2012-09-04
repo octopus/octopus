@@ -182,19 +182,17 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
           select case(pj(ipj)%type)
           case(M_KB)
-            call X(kb_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, &
-              reduce_buffer(ii:), lpsi(1:ns, 1:dim))
+            call X(kb_project_ket)(pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(ii:), lpsi(1:ns, 1:dim))
           case(M_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
               call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(ii:), lpsi(1:ns, 1:dim))
             else
-              call zkb_project_ket(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, &
-                reduce_buffer(ii:), lpsi(1:ns, 1:dim))
+              call zkb_project_ket(pj(ipj)%kb_p(1, 1), dim, reduce_buffer(ii:), lpsi(1:ns, 1:dim))
             end if
 #endif
           case(M_HGH)
-            call X(hgh_project_ket)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, &
+            call X(hgh_project_ket)(pj(ipj)%hgh_p(ll, mm), dim, &
               pj(ipj)%reltype, reduce_buffer(ii:), lpsi(1:ns, 1:dim))
           end select
           

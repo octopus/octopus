@@ -22,7 +22,6 @@
 module hgh_projector_m
   use atom_m
   use global_m
-  use grid_m
   use lalg_basic_m
   use mesh_m
   use messages_m
@@ -77,10 +76,9 @@ contains
   end subroutine hgh_projector_null
 
   ! ---------------------------------------------------------
-  subroutine hgh_projector_init(hgh_p, sm, gr, a, l, lm, so_strength)
+  subroutine hgh_projector_init(hgh_p, sm, a, l, lm, so_strength)
     type(hgh_projector_t), intent(inout) :: hgh_p
     type(submesh_t),       intent(in)    :: sm
-    type(grid_t),          intent(in)    :: gr
     type(atom_t),          intent(in)    :: a
     integer,               intent(in)    :: l, lm
     FLOAT,                 intent(in)    :: so_strength

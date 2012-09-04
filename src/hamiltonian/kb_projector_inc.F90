@@ -50,7 +50,7 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   end if
 #endif
 
-  call X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, ppsi)
+  call X(kb_project_ket)(kb_p, dim, uvpsi, ppsi)
 
   POP_SUB(X(kb_project))
 
@@ -106,15 +106,14 @@ end subroutine X(kb_project_bra)
 
 !--------------------------------------------------------------
 !> THREADSAFE
-subroutine X(kb_project_ket)(mesh, sm, kb_p, dim, uvpsi, psi)
-  type(mesh_t),         intent(in)    :: mesh
-  type(submesh_t),      intent(in)    :: sm
+subroutine X(kb_project_ket)(kb_p, dim, uvpsi, psi)
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim
   R_TYPE,               intent(inout) :: uvpsi(1:kb_p%n_c, 1:dim)
-  R_TYPE,               intent(inout) :: psi(:, :) ! psi(1:ns, 1:dim)
+  R_TYPE,               intent(inout) :: psi(:, :) !< psi(1:ns, 1:dim)
 
   integer :: ic, idim, ns, is
+
 #ifndef HAVE_OPENMP
   PUSH_SUB(X(kb_project_ket))
 #endif

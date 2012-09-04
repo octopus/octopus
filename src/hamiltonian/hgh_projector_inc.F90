@@ -54,7 +54,7 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
   end if
 #endif
 
-  call X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi)
+  call X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
   
 end subroutine X(hgh_project)
 
@@ -111,9 +111,7 @@ end subroutine X(hgh_project_bra)
 
 !-------------------------------------------------------------------------
 !> THREADSAFE
-subroutine X(hgh_project_ket)(mesh, sm, hgh_p, dim, reltype, uvpsi, ppsi)
-  type(mesh_t),          intent(in)    :: mesh
-  type(submesh_t),       intent(in)    :: sm
+subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
   type(hgh_projector_t), intent(in)    :: hgh_p
   integer,               intent(in)    :: dim
   integer,               intent(in)    :: reltype

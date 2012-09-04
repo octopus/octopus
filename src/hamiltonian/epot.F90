@@ -686,7 +686,7 @@ contains
       if(local_potential_has_density(ep, der%mesh%sb, geo%atom(iatom))) then
         SAFE_ALLOCATE(rho(1:der%mesh%np))
 
-        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, der%mesh, geo, rho)
+        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, der%mesh, rho)
 
         if(present(density)) then
           forall(ip = 1:der%mesh%np) density(ip) = density(ip) + rho(ip)
@@ -773,7 +773,7 @@ contains
       species_has_nlcc(geo%atom(iatom)%spec) .and. &
       species_is_ps(geo%atom(iatom)%spec)) then
       SAFE_ALLOCATE(rho(1:der%mesh%np))
-      call species_get_nlcc(geo%atom(iatom)%spec, geo%atom(iatom)%x, der%mesh, geo, rho)
+      call species_get_nlcc(geo%atom(iatom)%spec, geo%atom(iatom)%x, der%mesh, rho)
       forall(ip = 1:der%mesh%np) rho_core(ip) = rho_core(ip) + rho(ip)
       SAFE_DEALLOCATE_A(rho)
     end if
@@ -1186,7 +1186,7 @@ contains
     sqrtalphapi=sqrt(M_HALF*(CNST(1.6)**2)/M_PI)
 !    do iatom=1,geo%natoms
 !      call epot_local_potential(ep, gr%der, gr%dgrid, ep%poisson_solver, geo, iatom, v2, time1)
-!      call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, geo, rho2)
+!      call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, rho2)
 !      v3(1:gr%mesh%np)=v3(1:gr%mesh%np)+v2(1:gr%mesh%np)
 !      rho3(1:gr%mesh%np)=rho3(1:gr%mesh%np)+rho2(1:gr%mesh%np)
 !      !Substract this from total energy
@@ -1215,7 +1215,7 @@ contains
 
       do iatom = jatom-1,1,-1
         SAFE_ALLOCATE(rho1(1:gr%mesh%np))
-        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, geo, rho1)
+        call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, rho1)
         temp=dmf_dotp(gr%mesh, rho1, v2) 
         ep%eii = ep%eii + temp 
         SAFE_DEALLOCATE_A(rho1)
@@ -1233,7 +1233,7 @@ contains
       v2(1:gr%mesh%np)= M_ZERO
       rho2(1:gr%mesh%np)= M_ZERO
       call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, v2)
-      call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, geo, rho2)
+      call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, gr%mesh, rho2)
       temp=dmf_dotp(gr%mesh, rho2, v2) 
       sicn2=sicn2+M_HALF*temp
       chargeion=species_zval(geo%atom(iatom)%spec)
