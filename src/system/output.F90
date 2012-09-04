@@ -654,7 +654,7 @@ contains
       PUSH_SUB(output_localization_funct.out_basins)
 
       call basins_init(basins, gr%mesh)
-      call basins_analyze(basins, gr%mesh, st%d%nspin, ff(:), st%rho, CNST(0.01))
+      call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
       call dio_function_output(outp%how, dir, trim(filename), gr%mesh, &
         real(basins%map, REAL_PRECISION), unit_one, ierr, is_tmp = .false., geo = geo)

@@ -85,10 +85,9 @@ contains
 
 
   !----------------------------------------------------------------
-  subroutine basins_analyze(this, mesh, nspin, f, rho, threshold)
+  subroutine basins_analyze(this, mesh, f, rho, threshold)
     type(basins_t), intent(inout) :: this
     type(mesh_t),   intent(in)    :: mesh
-    integer,        intent(in)    :: nspin
     FLOAT,          intent(in)    :: f(:)
     FLOAT,          intent(in)    :: rho(:, :)
     FLOAT,          intent(in)    :: threshold
@@ -118,6 +117,7 @@ contains
     call analyze()
 
     POP_SUB(basins_analyze)
+
   contains
 
     !----------------------------------------------------------------

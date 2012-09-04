@@ -666,9 +666,6 @@ contains
     logical, intent(in), optional :: is_lead
 
     logical :: is_lead_
-#ifdef HAVE_MPI
-    integer :: ipart
-#endif
 
     PUSH_SUB(mesh_end)
 

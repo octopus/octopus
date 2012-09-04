@@ -253,7 +253,7 @@ contains
     type(mpi_grp_t), optional, intent(in) :: mpi_grp !< the mpi_group we whant to use for the parallelization
 
     integer :: ii, jj, fft_dim, idir, column_size, row_size, alloc_size, ierror, n3
-    integer :: n_1, n_2, n_3, nn_temp(3), parity, status
+    integer :: n_1, n_2, n_3, nn_temp(3), status
     integer :: library_
     character(len=100) :: str_tmp
     type(mpi_grp_t) :: mpi_grp_
@@ -752,7 +752,7 @@ contains
     integer, intent(in) :: factors(:)
 
     integer :: nfactors
-    integer :: ii, jj, new_size, nondiv
+    integer :: nondiv
     integer, allocatable :: exponents(:)
 
     nfactors = ubound(factors, dim = 1)

@@ -276,7 +276,7 @@ subroutine X(mixing_grpulay)(smix, vin, vout, vnew, iter, dotp)
     
     ! extrapolate new vector
     iter_used = min(iter/2, smix%ns + 1)
-    call X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, &
+    call X(pulay_extrapolation)(d2, d3, vin, vout, vnew, iter_used, f, &
          smix%X(df)(1:d1, 1:d2, 1:d3, 1:iter_used), &
          smix%X(dv)(1:d1, 1:d2, 1:d3, 1:iter_used), dotp)
 
@@ -289,8 +289,8 @@ end subroutine X(mixing_grpulay)
 
 
 ! ---------------------------------------------------------
-subroutine X(pulay_extrapolation)(d1, d2, d3, vin, vout, vnew, iter_used, f, df, dv, dotp)
-  integer, intent(in) :: d1, d2, d3
+subroutine X(pulay_extrapolation)(d2, d3, vin, vout, vnew, iter_used, f, df, dv, dotp)
+  integer, intent(in) :: d2, d3
   integer, intent(in)   :: iter_used
   R_TYPE,  intent(in)  :: vin(:, :, :), vout(:, :, :), f(:, :, :), df(:, :, :, :), dv(:, :, :, :)
   R_TYPE,  intent(out) :: vnew(:, :, :)
