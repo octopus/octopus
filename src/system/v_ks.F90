@@ -1074,7 +1074,7 @@ contains
 
     if (ks%calc%calc_energy .and. poisson_get_solver(ks%hartree_solver) == POISSON_SETE) then !SEC
       hm%energy%hartree = hm%energy%hartree + poisson_energy(ks%hartree_solver)
-      ASSERT(.not. hm%cmplxscl) ! Don't know how to proceed here with cmplxscl
+      ASSERT(.not. hm%cmplxscl) ! Don`t know how to proceed here with cmplxscl
       ! can not find any reference to unit 89 anywhere else in the code forgotten debug write?
       !write(89,*) hm%energy%hartree*CNST(2.0)*CNST(13.60569193), &
       !  poisson_energy(ks%hartree_solver)*CNST(2.0)*CNST(13.60569193), &
