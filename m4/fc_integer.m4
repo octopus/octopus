@@ -56,41 +56,35 @@ AC_DEFUN([ACX_FC_INTEGER_SIZE],[
 ################################################
 # Check which C type corresponds to Fortran int
 # ----------------------------------
-AC_DEFUN([ACX_CC_FORTRAN_INT],
-[AC_MSG_CHECKING([for which C type corresponds to Fortran integer])
+AC_DEFUN([ACX_CC_FORTRAN_INT],[
+  AC_MSG_CHECKING([for which C type corresponds to Fortran integer])
   AC_REQUIRE([ACX_FC_INTEGER_SIZE])
   AC_REQUIRE([AC_PROG_CC])
   if test -z "$CC_FORTRAN_INT"; then
-  cat >ccfortranint.c <<EOF
+    AC_LANG_PUSH([C])
+    AC_RUN_IFELSE([AC_LANG_PROGRAM([
 #include <stdio.h>
-
-int main(void)
-{
+],[
+  FILE* fp;
+  fp = fopen("conftest.out", "w");
   if(${ac_fcintegersize} == sizeof(char))
-    printf("char");
+    fprintf(fp, "char");
   else if(${ac_fcintegersize} == sizeof(short))
-    printf("short");
+    fprintf(fp, "short");
   else if(${ac_fcintegersize} == sizeof(int))
-    printf("int");
+    fprintf(fp, "int");
   else if(${ac_fcintegersize} == sizeof(long))
-    printf("long");
-  return 1;
-}
-EOF
-  ac_try='$CC $CFLAGS $LDFLAGS -o ccfortranint.x ccfortranint.c 1>&AC_FD_CC'
-  if AC_TRY_EVAL(ac_try); then
-    ac_try=""
+    fprintf(fp, "long");
   else
-    echo "configure: failed program was:" >&AC_FD_CC
-    cat ccfortranint.c >&AC_FD_CC
-    rm -rf ccfortranint*
-    AC_MSG_ERROR(failed to compile C program to find the C type of a Fortran integer)
+    return 1;
+])],
+      [ac_ccfortranint=`cat conftest.out`],
+      [AC_MSG_FAILURE(C program failed to find the C type of a Fortran integer)],
+      [ac_ccfortranint="int"; echo -n "cross-compiling; assuming... "])
+    AC_LANG_POP([C])
+    AC_MSG_RESULT([${ac_ccfortranint}])
+  else
+    ac_ccfortranint=$CC_FORTRAN_INT
   fi
-  ac_ccfortranint=`./ccfortranint.x`;
-  rm -rf ccfortranint*
-else
- ac_ccfortranint=$CC_FORTRAN_INT
-fi
-AC_DEFINE_UNQUOTED(CC_FORTRAN_INT, ${ac_ccfortranint}, [The C type of a Fortran integer])
-AC_MSG_RESULT([${ac_ccfortranint}])
+  AC_DEFINE_UNQUOTED(CC_FORTRAN_INT, ${ac_ccfortranint}, [The C type of a Fortran integer])
 ])
