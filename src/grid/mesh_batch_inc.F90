@@ -25,12 +25,9 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   logical, optional, intent(in)    :: symm         !for the moment it is ignored
   logical, optional, intent(in)    :: reduce
 
-  integer :: ist, jst, idim, sp, block_size, ep, ip, ldaa, ldbb, indb, jndb, eff_size
+  integer :: ist, jst, idim, sp, block_size, ep, ip, ldaa, ldbb, indb, jndb
   R_TYPE :: ss, tmp1, tmp2
   R_TYPE, allocatable :: dd(:, :)
-#ifdef HAVE_MPI
-  R_TYPE, allocatable :: ddtmp(:, :)
-#endif
   type(profile_t), save :: prof, profgemm, profcomm
   logical :: use_blas, reduce_, conj
 #ifdef HAVE_OPENCL

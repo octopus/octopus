@@ -124,9 +124,9 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
 
   integer :: ist, ip, localsize, effsize
   R_TYPE, allocatable     :: aa_linear(:)
-  CMPLX,  allocatable     :: zaa_linear(:)
-  type(opencl_mem_t)      :: aa_buffer
 #ifdef HAVE_OPENCL
+  type(opencl_mem_t)      :: aa_buffer
+  CMPLX,  allocatable     :: zaa_linear(:)
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #endif
@@ -229,9 +229,9 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start)
 
   integer :: ist, ip, localsize, effsize
   R_TYPE, allocatable     :: aa_linear(:)
+#ifdef HAVE_OPENCL
   CMPLX,  allocatable     :: zaa_linear(:)
   type(opencl_mem_t)      :: aa_buffer
-#ifdef HAVE_OPENCL
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #endif
@@ -329,9 +329,9 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start)
 
   integer :: ist, ip, localsize, effsize
   R_TYPE, allocatable     :: aa_linear(:)
+#ifdef HAVE_OPENCL
   CMPLX,  allocatable     :: zaa_linear(:)
   type(opencl_mem_t)      :: aa_buffer
-#ifdef HAVE_OPENCL
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #endif

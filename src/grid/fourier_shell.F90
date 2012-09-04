@@ -55,7 +55,7 @@ contains
     type(mesh_t),          intent(in)    :: mesh
     logical,               intent(in)    :: convention
 
-    integer :: ig, ng, ix, iy, iz, ixx(1:3), imap
+    integer :: ig, ix, iy, iz, ixx(1:3), imap
     FLOAT :: dg(1:3), gmax2, gvec(1:3)
     FLOAT, allocatable :: modg2(:)
     integer, allocatable :: map(:), ucoords(:, :), ured_gvec(:, :)

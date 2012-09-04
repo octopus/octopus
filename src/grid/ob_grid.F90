@@ -58,9 +58,8 @@ contains
 
   ! ---------------------------------------------------------
   ! reads the open boundary information and allocates accordingly
-  subroutine ob_grid_init(ob_grid, geo)
+  subroutine ob_grid_init(ob_grid)
     type(ob_grid_t),               intent(out) :: ob_grid
-    type(geometry_t),              intent(in)  :: geo
 
     integer            :: nr, tag, nrows, ncols
     type(block_t)      :: blk

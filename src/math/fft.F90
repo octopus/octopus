@@ -250,7 +250,7 @@ contains
     integer,           intent(in)    :: optimize_parity(3) !< choose optimized grid in each direction as
                                                  !! even (0), odd (1), or whatever (negative).
     integer, optional, intent(out)   :: mpi_comm !< MPI communicator
-    type(mpi_grp_t), optional, intent(in) :: mpi_grp !< the mpi_group we whant to use for the parallelization
+    type(mpi_grp_t), optional, intent(in) :: mpi_grp !< the mpi_group we want to use for the parallelization
 
     integer :: ii, jj, fft_dim, idir, column_size, row_size, alloc_size, ierror, n3
     integer :: n_1, n_2, n_3, nn_temp(3), status

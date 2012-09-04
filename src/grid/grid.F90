@@ -86,7 +86,7 @@ contains
 
     PUSH_SUB(grid_init_stage_0)
 
-    call ob_grid_init(gr%ob_grid, geo)
+    call ob_grid_init(gr%ob_grid)
     if(gr%ob_grid%open_boundaries) then
       call simul_box_init(gr%sb, geo, space, gr%ob_grid%transport_mode, &
         gr%ob_grid%lead(:)%sb, gr%ob_grid%lead(:)%info)

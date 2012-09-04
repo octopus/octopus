@@ -94,8 +94,7 @@ contains
 #endif
 
     type(stencil_t) :: stencil
-    integer :: ip
-    integer :: im, ii, nn
+    integer :: ip, ii
     integer :: stencil_to_use, default_method, method
     integer :: library
     integer, parameter   :: METIS = 2, ZOLTAN = 3, GA = 4, PFFT_PART = 5
