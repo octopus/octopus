@@ -1070,7 +1070,7 @@ subroutine generate_rotation_matrix(M, u, v)
   FLOAT,   intent(in)   :: u(:)
   FLOAT,   intent(in)   :: v(:)
 
-  integer            :: dim, ii, jj
+  integer            :: dim, ii
   FLOAT              :: phi
   FLOAT, allocatable :: axis(:), uu(:), vv(:)
 

@@ -4022,7 +4022,7 @@ contains
   ! ----------------------------------------------------------------------------
 
   subroutine mpiswitch_upcorn(j3,nfft,Jp2stb,J2stb,lot,n1,md2,nd3,nproc,zmpi1,zw)
-    integer :: n1, nd2, nd3, nproc, lot, mfft, jp2, jp2stb, j2
+    integer :: n1, nd3, nproc, lot, mfft, jp2, jp2stb, j2
     integer :: j2stb, nfft, i1, j3, md2
     real(8) :: zmpi1(2,n1/2,md2/nproc,nd3/nproc,nproc),zw(2,lot,n1)
     

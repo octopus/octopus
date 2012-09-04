@@ -32,11 +32,10 @@ subroutine X(eigensolve_scalapack)(n, a, eigenvalues, bof, proc_grid, err_code)
 #ifdef HAVE_SCALAPACK
   logical              :: bof_
   integer              :: info, lwork, blockrow, blockcol, begining_row, begining_col, &
-       psi_desc(BLACS_DLEN), blacs_info, i_loc, j_loc, liwork, eigenvectors_failing, &
+       psi_desc(BLACS_DLEN), blacs_info, liwork, eigenvectors_failing, &
        eigenvalues_size, eigenvectors_computed, nn,np0, mq0, neig
   R_TYPE, allocatable  :: work(:), orthonormal_eigenvectors(:,:)
   FLOAT                :: upper_bound, lower_bound, error, gap
-  R_TYPE               :: a_loc(n,n)
   integer, allocatable :: iwork(:), eigenvectors_cluster(:)
   
 #ifdef R_TCOMPLEX

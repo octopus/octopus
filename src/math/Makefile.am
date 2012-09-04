@@ -90,7 +90,7 @@ nfft.o : nfft.F90 nfft_inc.F90 nfft_f.o lalg_basic.o fftw.o loct_math.o
 spline_filter.o: spline_filter.F90 splines.o
 gauss_legendre.o : gauss_legendre.F90 
 lalg_basic.o : lalg_basic.F90 lalg_basic_blas_inc.F90 blas.o 
-lalg_adv.o : lalg_adv.F90  lalg_adv_lapack_inc.F90 lapack.o scalapack.o
+lalg_adv.o : lalg_adv.F90 lalg_adv_lapack_inc.F90 lalg_adv_scalapack_inc.F90 lapack.o scalapack.o
 lapack.o : lapack.F90
 loct_math.o : loct_math.F90
 math.o : math.F90 math_inc.F90 lalg_basic.o lalg_adv.o loct_math.o
