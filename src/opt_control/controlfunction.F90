@@ -1608,7 +1608,7 @@ contains
     type(controlfunction_t), intent(in)    :: par, par_output
     FLOAT,                   intent(inout) :: grad(:)
 
-    integer :: dim, jj, mm, kk, ss, tt
+    integer :: dim, jj
     FLOAT :: rr
     FLOAT, allocatable :: theta(:), grad_matrix(:,:), gradb(:)
 

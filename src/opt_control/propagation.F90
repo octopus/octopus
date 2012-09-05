@@ -352,7 +352,7 @@ module opt_control_propagation_m
 
     call oct_prop_output(prop_psi, 0, psi, gr, sys%geo)
     call states_copy(chi, psi)
-    call oct_prop_read_state(prop_chi, chi, gr, sys%geo, 0)
+    call oct_prop_read_state(prop_chi, chi, gr, 0)
 
     do i = 1, td%max_iter
       call update_field(i, par, gr, hm, psi, chi, par_chi, dir = 'f')
@@ -368,7 +368,7 @@ module opt_control_propagation_m
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i)
       call target_tdcalc(target, hm, gr, sys%geo, psi, i) 
       call oct_prop_output(prop_psi, i, psi, gr, sys%geo)
-      call oct_prop_check(prop_chi, chi, gr, sys%geo, i)
+      call oct_prop_check(prop_chi, chi, gr, i)
     end do
     call update_field(td%max_iter+1, par, gr, hm, psi, chi, par_chi, dir = 'f')
 
@@ -428,7 +428,7 @@ module opt_control_propagation_m
     call propagator_remove_scf_prop(tr_chi)
 
     call states_copy(psi, chi)
-    call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
+    call oct_prop_read_state(prop_psi, psi, gr, td%max_iter)
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi)
@@ -439,7 +439,7 @@ module opt_control_propagation_m
     td%dt = -td%dt
     call oct_prop_output(prop_chi, td%max_iter, chi, gr, sys%geo)
     do i = td%max_iter, 1, -1
-      call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
+      call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par_chi, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
@@ -508,7 +508,7 @@ module opt_control_propagation_m
     call propagator_remove_scf_prop(tr_chi)
 
     call states_copy(psi, chi)
-    call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
+    call oct_prop_read_state(prop_psi, psi, gr, td%max_iter)
 
     SAFE_ALLOCATE(vhxc(gr%mesh%np, hm%d%nspin))
 
@@ -523,7 +523,7 @@ module opt_control_propagation_m
     call states_copy(st_ref, psi)
 
     do i = td%max_iter, 1, -1
-      call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
+      call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
       if(target_mode(target) == oct_targetmode_td) then
         call states_copy(psi_aux, psi)
@@ -823,11 +823,10 @@ module opt_control_propagation_m
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_check(prop, psi, gr, geo, iter)
+  subroutine oct_prop_check(prop, psi, gr, iter)
     type(oct_prop_t),  intent(in)    :: prop
     type(states_t),    intent(inout) :: psi
     type(grid_t),      intent(in)    :: gr
-    type(geometry_t),  intent(in)    :: geo
     integer,           intent(in)    :: iter
 
     type(states_t) :: stored_st
@@ -847,7 +846,7 @@ module opt_control_propagation_m
        overlap = zstates_mpdotp(gr%mesh, stored_st, psi)
        if( abs(overlap - prev_overlap) > WARNING_THRESHOLD ) then
           write(message(1), '(a,es13.4)') &
-            "WARNING: forward-backward propagation produced an error of", abs(overlap-prev_overlap)
+            "Forward-backward propagation produced an error of", abs(overlap-prev_overlap)
           write(message(2), '(a,i8)') "Iter = ", iter
           call messages_warning(2)
        end if
@@ -865,11 +864,10 @@ module opt_control_propagation_m
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_read_state(prop, psi, gr, geo, iter)
+  subroutine oct_prop_read_state(prop, psi, gr, iter)
     type(oct_prop_t),  intent(in)    :: prop
     type(states_t),    intent(inout) :: psi
     type(grid_t),      intent(in)    :: gr
-    type(geometry_t),  intent(in)    :: geo
     integer,           intent(in)    :: iter
 
     character(len=100) :: filename

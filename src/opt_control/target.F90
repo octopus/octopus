@@ -1129,7 +1129,6 @@ module opt_control_target_m
     FLOAT :: omega, aa, maxhh, ww, currfunc_tmp
     FLOAT, allocatable :: local_function(:)
     CMPLX, allocatable :: ddipole(:)
-    CMPLX, allocatable :: opsi(:, :)
     FLOAT :: f_re, dummy(3)
     character(len=4096) :: inp_string
 
