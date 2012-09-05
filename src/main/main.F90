@@ -39,7 +39,6 @@ program octopus
 
   integer :: ns, inp_calc_mode, ierr
   type(block_t) :: blk
-  character(len=256) :: sys_name
 
   call getopt_init(ierr)
   if(ierr .eq. 0) call getopt_octopus()

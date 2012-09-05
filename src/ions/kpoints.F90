@@ -128,12 +128,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine kpoints_init(this, symm, dim, rlattice, klattice, geo, only_gamma)
+  subroutine kpoints_init(this, symm, dim, rlattice, klattice, only_gamma)
     type(kpoints_t),    intent(out) :: this
     type(symmetries_t), intent(in)  :: symm
     integer,            intent(in)  :: dim
     FLOAT,              intent(in)  :: rlattice(:,:), klattice(:,:)
-    type(geometry_t),   intent(in)  :: geo
     logical,            intent(in)  :: only_gamma
 
     integer :: ik, idir

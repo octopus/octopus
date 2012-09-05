@@ -239,7 +239,7 @@ contains
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
       
       call messages_print_stress(stdout, 'Approximate memory requirements')
-      call memory_run(sys, hm)
+      call memory_run(sys)
       call messages_print_stress(stdout)
 
       if(calc_mode_id /= CM_DUMMY) then

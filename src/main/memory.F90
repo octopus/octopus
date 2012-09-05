@@ -35,9 +35,8 @@ module memory_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine memory_run(sys, hm)
+  subroutine memory_run(sys)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
 
     real(8) :: mesh_global, mesh_local, wfns
 

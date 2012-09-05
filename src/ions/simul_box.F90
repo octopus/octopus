@@ -191,7 +191,7 @@ contains
 
     ! we need k-points for periodic systems or for open boundaries
     only_gamma_kpoint = sb%periodic_dim == 0 .and. .not. present(transport_mode)
-    call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%rlattice, sb%klattice, geo, only_gamma_kpoint)
+    call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
 
     ! With open boundaries we have a different situation than in a periodic system.
     ! We set them here to zero to mimic a Gamma-point-only calculation.
