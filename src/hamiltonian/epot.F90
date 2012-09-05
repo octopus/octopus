@@ -457,7 +457,7 @@ contains
 
     ep%have_density = .false.
     do ia = 1, geo%natoms
-      if(local_potential_has_density(ep, gr%mesh%sb, geo%atom(ia))) then
+      if(local_potential_has_density(gr%mesh%sb, geo%atom(ia))) then
         ep%have_density = .true.
         exit
       end if
@@ -636,8 +636,7 @@ contains
 
   ! ---------------------------------------------------------
 
-  logical pure function local_potential_has_density(ep, sb, atom) result(has_density)
-    type(epot_t),             intent(in)    :: ep
+  logical pure function local_potential_has_density(sb, atom) result(has_density)
     type(simul_box_t),        intent(in)    :: sb
     type(atom_t),             intent(in)    :: atom
     
@@ -683,7 +682,7 @@ contains
       !(for all-electron species or pseudopotentials in periodic
       !systems) or by applying it directly to the grid
 
-      if(local_potential_has_density(ep, der%mesh%sb, geo%atom(iatom))) then
+      if(local_potential_has_density(der%mesh%sb, geo%atom(iatom))) then
         SAFE_ALLOCATE(rho(1:der%mesh%np))
 
         call species_get_density(geo%atom(iatom)%spec, geo%atom(iatom)%x, der%mesh, rho)

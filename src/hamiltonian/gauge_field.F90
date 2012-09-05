@@ -251,12 +251,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_init_vec_pot(this, mesh, sb, st, dt)
+  subroutine gauge_field_init_vec_pot(this, sb, st)
     type(gauge_field_t),  intent(inout) :: this
-    type(mesh_t),         intent(in)    :: mesh
     type(simul_box_t),    intent(in)    :: sb
     type(states_t),       intent(in)    :: st
-    FLOAT,                intent(in)    :: dt
     
     PUSH_SUB(gauge_field_init_vec_pot)
 
@@ -271,8 +269,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_get_force(this, gr, geo, pj, phases, st, force)
-    type(gauge_field_t),  intent(inout) :: this
+  subroutine gauge_field_get_force(gr, geo, pj, phases, st, force)
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(projector_t),    intent(in)    :: pj(:)

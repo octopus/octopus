@@ -236,10 +236,10 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
   type(projector_t), intent(in)    :: pj
   integer,           intent(in)    :: dim
   integer,           intent(in)    :: ik
-  R_TYPE,            intent(in)    :: psia(:, :)  ! psia(1:mesh%np, dim)
-  R_TYPE,            intent(in)    :: psib(:, :)  ! psib(1:mesh%np, dim)
+  R_TYPE,            intent(in)    :: psia(:, :)  !< psia(1:mesh%np, dim)
+  R_TYPE,            intent(in)    :: psib(:, :)  !< psib(1:mesh%np, dim)
 
-  integer ::  ns, idim, ll, mm, nc, is
+  integer ::  ns, idim, is
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
   type(mesh_t), pointer :: mesh
 

@@ -181,12 +181,12 @@ contains
       if(td%iter > 0) then
         call td_read_gauge_field()
       else
-        call gauge_field_init_vec_pot(hm%ep%gfield, gr%mesh, gr%sb, st, td%dt)
+        call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
       end if
 
       call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
 
-      call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
+      call gauge_field_get_force(gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
     end if
 
     call td_write_init(write_handler, gr, st, hm, geo, &
@@ -326,7 +326,7 @@ contains
       end if
 
       if(gauge_field_is_applied(hm%ep%gfield)) then
-        if(td%dynamics /= BO) call gauge_field_get_force(hm%ep%gfield, gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
+        if(td%dynamics /= BO) call gauge_field_get_force(gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
         call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, td%dt)
       end if
 

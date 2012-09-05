@@ -23,7 +23,6 @@ subroutine td_init(td, sys, hm)
   type(system_t),        intent(inout) :: sys
   type(hamiltonian_t),   intent(inout) :: hm
 
-  integer :: dummy
   FLOAT   :: spacing, default_dt
 
   PUSH_SUB(td_init)
