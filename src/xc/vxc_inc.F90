@@ -91,7 +91,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
   ! is there anything to do ?
   families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA
   if(iand(xcs%family, families) == 0) then
-    POP_SUB(dxc_get_vxc)
+    POP_SUB(xc_get_vxc)
     call profiling_out(prof)
     return
   endif
@@ -732,7 +732,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   type(profile_t), save :: prof
   FLOAT, parameter :: thres = CNST(1e-6)
 
-  PUSH_SUB('vxc_inc.xc_density_correction_calc')
+  PUSH_SUB(xc_density_correction_calc)
 
   call profiling_in(prof, "XC_DENSITY_CORRECTION")
 
@@ -893,7 +893,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   SAFE_DEALLOCATE_A(lrvxc)
   SAFE_DEALLOCATE_A(nxc)
 
-  POP_SUB('vxc_inc.xc_density_correction_calc')
+  POP_SUB(xc_density_correction_calc)
 end subroutine xc_density_correction_calc
 
 ! -----------------------------------------------------
@@ -907,7 +907,7 @@ FLOAT function get_qxc(mesh, nxc, density, ncutoff)  result(qxc)
   integer :: ip
   FLOAT, allocatable :: nxc2(:)
 
-  PUSH_SUB('vxc_inc.get_qxc')
+  PUSH_SUB(get_qxc)
 
   SAFE_ALLOCATE(nxc2(1:mesh%np))
 
@@ -923,7 +923,7 @@ FLOAT function get_qxc(mesh, nxc, density, ncutoff)  result(qxc)
 
   SAFE_DEALLOCATE_A(nxc2)
 
-  POP_SUB('vxc_inc.get_qxc')
+  POP_SUB(get_qxc)
 end function get_qxc
 
 subroutine zxc_complex_lda(mesh, rho, vxc, ex, ec, Imrho, Imvxc, Imex, Imec, cmplxscl_th)
@@ -944,6 +944,8 @@ subroutine zxc_complex_lda(mesh, rho, vxc, ex, ec, Imrho, Imvxc, Imex, Imec, cmp
   CMPLX, allocatable :: zvxc_arr(:)
 
   FLOAT :: C0I, C1, CC1, CC2, IF2, gamma, alpha1, beta1, beta2, beta3, beta4, Cx
+
+  PUSH_SUB(zxc_complex_lda)
 
   ! LDA constants.
   ! Only C0I is used for spin-paired calculations among these five
@@ -1045,6 +1047,7 @@ subroutine zxc_complex_lda(mesh, rho, vxc, ex, ec, Imrho, Imvxc, Imex, Imec, cmp
   print*, 'lda exchange', zex
   print*, 'lda correlation', zec
 
+  POP_SUB(zxc_complex_lda)
   
 end subroutine zxc_complex_lda
 
