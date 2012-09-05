@@ -141,9 +141,8 @@ module hamiltonian_base_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_base_init(this, mesh, nspin)
+  subroutine hamiltonian_base_init(this, nspin)
     type(hamiltonian_base_t), intent(inout) :: this
-    type(mesh_t),             intent(in)    :: mesh
     integer,                  intent(in)    :: nspin
 
     PUSH_SUB(hamiltonian_base_init)

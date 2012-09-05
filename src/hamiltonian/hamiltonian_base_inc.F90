@@ -413,7 +413,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   type(projection_t),          intent(inout) :: projection
   type(batch_t),               intent(inout) :: vpsib
 
-  integer :: ist, ip, iproj, imat, nreal, iprojection
+  integer :: ist, ip, imat, nreal, iprojection
   integer :: npoints, nprojs, nst, d1
   R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
@@ -535,6 +535,8 @@ contains
     integer :: wgsize, imat, iregion
     type(profile_t), save :: cl_prof
 
+    PUSH_SUB(X(hamiltonian_base_nlocal_finish).finish_opencl)
+
     ! In this case we run one kernel per projector, since all write to
     ! the wave-function. Otherwise we would need to do atomic
     ! operations.
@@ -576,6 +578,7 @@ contains
 
     call profiling_out(cl_prof)
 
+    POP_SUB(X(hamiltonian_base_nlocal_finish).finish_opencl)
 #endif
   end subroutine finish_opencl
 

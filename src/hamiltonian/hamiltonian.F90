@@ -222,7 +222,7 @@ contains
     hm%xc_family    = xc_family
     call states_dim_copy(hm%d, states_dim)
 
-    call hamiltonian_base_init(hm%hm_base, gr%mesh, hm%d%nspin)
+    call hamiltonian_base_init(hm%hm_base, hm%d%nspin)
     ASSERT(associated(gr%der%lapl))
     hm%hm_base%kinetic => gr%der%lapl
 
