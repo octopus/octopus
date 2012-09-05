@@ -28,6 +28,7 @@ module cube_function_m
   use fft_m
   use global_m
   use index_m
+  use math_m
   use mesh_m
   use mesh_cube_map_m
   use mesh_cube_parallel_map_m
