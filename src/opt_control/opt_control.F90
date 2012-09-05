@@ -757,7 +757,7 @@ contains
   end subroutine f_iter
   ! ---------------------------------------------------------
 
-#include "opt_control_c.F90"
+#include "opt_control_c_inc.F90"
 #include "check_input_inc.F90"
 #include "finalcheck_inc.F90"
 
