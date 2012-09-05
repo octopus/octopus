@@ -491,6 +491,8 @@ module opt_control_propagation_m
     type(propagator_t) :: tr_chi
     type(states_t) :: psi
     type(states_t) :: psi_aux
+    type(states_t) :: st_ref
+    FLOAT, allocatable :: vhxc(:, :)
 
     PUSH_SUB(bwd_step_2)
 
@@ -508,6 +510,8 @@ module opt_control_propagation_m
     call states_copy(psi, chi)
     call oct_prop_read_state(prop_psi, psi, gr, sys%geo, td%max_iter)
 
+    SAFE_ALLOCATE(vhxc(gr%mesh%np, hm%d%nspin))
+
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi)
     call hamiltonian_update(hm, gr%mesh)
@@ -515,10 +519,12 @@ module opt_control_propagation_m
     call propagator_run_zero_iter(hm, gr, tr_chi)
     td%dt = -td%dt
     call oct_prop_output(prop_chi, td%max_iter, chi, gr, sys%geo)
+
+    call states_copy(st_ref, psi)
+
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, sys%geo, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
-
       if(target_mode(target) == oct_targetmode_td) then
         call states_copy(psi_aux, psi)
         call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi_aux)
@@ -531,13 +537,21 @@ module opt_control_propagation_m
         call states_end(psi_aux)
       else
         call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
+        st_ref%zpsi = psi%zpsi
+        vhxc(:, :) = hm%vhxc(:, :)
         call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
-        call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, psi)
+        st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
+        hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
+        call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, st_ref)
         call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+        hm%vhxc(:, :) = vhxc(:, :)
         call oct_prop_output(prop_chi, i-1, chi, gr, sys%geo)
       end if
-
     end do
+
+    call states_end(st_ref)
+
+
     td%dt = -td%dt
     call update_hamiltonian_psi(0, gr, sys%ks, hm, td, target, par, psi)
     call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
@@ -548,6 +562,7 @@ module opt_control_propagation_m
 
     call propagator_end(tr_chi)
 
+    SAFE_DEALLOCATE_A(vhxc)
     if(target_mode(target) == oct_targetmode_td) call states_end(psi_aux)
     call states_end(psi)
 

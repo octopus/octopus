@@ -29,7 +29,8 @@
 
     PUSH_SUB(td_qoct_tddft_propagator)
     
-    if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
+    if( (hm%theory_level .ne. INDEPENDENT_PARTICLES) .and. &
+        (.not.hamiltonian_oct_exchange(hm)) ) then
       call interpolate( (/t, t-dt/), tr%v_old(:, :, 0:1), t-dt/M_TWO, hm%vhxc(:, :))
     end if
 
