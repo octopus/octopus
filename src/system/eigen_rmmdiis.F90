@@ -52,6 +52,10 @@ module eigen_rmmdiis_m
     deigensolver_rmmdiis_min,   &
     zeigensolver_rmmdiis_min
 
+  type batch_pointer_t
+    type(batch_t), pointer :: batch
+  end type batch_pointer_t
+
   contains
 
 #include "real.F90"
