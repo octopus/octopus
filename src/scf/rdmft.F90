@@ -90,7 +90,7 @@ contains
     integer,     intent(in)    :: getgrad
     REAL_DOUBLE, intent(inout) :: df(size)
      
-    FLOAT, allocatable :: V_h(:), dpsi2(:,:), V_x(:), dE_dn(:)  
+    FLOAT, allocatable :: V_h(:), V_x(:), dE_dn(:)  
     FLOAT :: occsum,u, objective_new
     integer :: ist, jst, icycle, iexit
     FLOAT ::  theta_new(size)
@@ -189,18 +189,17 @@ contains
    
 
   ! ---------------------------------------------------------
-  subroutine scf_occ(gr, geo, hm, st, sys ) 
-    type(geometry_t),     intent(in)    :: geo
+  subroutine scf_occ(gr, hm, st, sys)
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
     type(states_t),       intent(inout) :: st
     type(system_t),       intent(inout) :: sys
 
     
-    FLOAT :: conv_abs_occ, conv_rel_occ, conv_mu, abs_occ, rel_occ, mu, mu_old, energy,objective
+    FLOAT :: conv_abs_occ, conv_rel_occ, abs_occ, rel_occ, objective
     FLOAT :: occsum, smallocc, sumgi1, sumgi2, sumgim, mu1, mu2, mum
     FLOAT, allocatable :: occout(:,:), occin(:,:),theta(:),hpsi(:,:),pot(:),rho(:),dpsi2(:,:)
-    integer :: ist, jst, ik, ip, ierr, getgrad, icycle
+    integer :: ist, jst, ik, ip, getgrad, icycle
     FLOAT :: df(st%nst) 
     logical :: finish
 

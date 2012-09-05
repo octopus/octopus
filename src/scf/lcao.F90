@@ -720,10 +720,9 @@ contains
   !> This function generates the set of an atomic orbitals for an atom
   !! and stores it in the batch orbitalb. It can be called when the
   !! orbitals are already stored. In that case it does not do anything.
-  subroutine lcao_get_orbital(orbitalb, sphere, st, geo, ispin, iatom, norbs)
+  subroutine lcao_get_orbital(orbitalb, sphere, geo, ispin, iatom, norbs)
     type(batch_t),     intent(inout) :: orbitalb
     type(submesh_t),   intent(in)    :: sphere
-    type(states_t),    intent(in)    :: st
     type(geometry_t),  intent(in)    :: geo
     integer,           intent(in)    :: ispin
     integer,           intent(in)    :: iatom

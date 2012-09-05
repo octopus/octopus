@@ -22,11 +22,10 @@
 !> This routine fills state psi with an atomic orbital -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(lcao_atomic_orbital) (this, iorb, mesh, hm, geo, sb, psi, spin_channel)
+subroutine X(lcao_atomic_orbital) (this, iorb, mesh, hm, geo, psi, spin_channel)
   type(lcao_t),             intent(in)    :: this
   integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: mesh
-  type(simul_box_t),        intent(in)    :: sb
   type(hamiltonian_t),      intent(in)    :: hm
   type(geometry_t), target, intent(in)    :: geo
   R_TYPE,                   intent(inout) :: psi(:, :)
@@ -249,7 +248,7 @@ contains
         cst(iorb, ispin) = ist
         ck(iorb, ispin) = ik
 
-        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, ao, ispin)
+        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, ao, ispin)
         call states_set_state(st, gr%mesh, ist, ik, ao)
 
         if(ispin < st%d%spin_channels) then
@@ -277,7 +276,7 @@ contains
       
       do iorb = iorb, this%norbs
         do ispin = 1, st%d%spin_channels
-          call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, ao, ispin)
+          call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, ao, ispin)
           buff(1:gr%mesh%np, 1:st%d%dim, iorb, ispin) = ao(1:gr%mesh%np, 1:st%d%dim)
         end do
       end do
@@ -298,8 +297,6 @@ contains
     R_TYPE,  intent(out)   :: ao(:, :)
     logical, intent(in)    :: use_psi
 
-    integer :: idim
-
     PUSH_SUB(X(lcao_wf).get_ao)
 
     if(ck(iorb, ispin) == 0) then
@@ -308,7 +305,7 @@ contains
       if(use_psi) then
         call states_get_state(st, gr%mesh, cst(iorb, ispin), ck(iorb, ispin), ao)
       else
-        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, gr%sb, ao, ispin)
+        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, hm, geo, ao, ispin)
       end if
     end if
 
@@ -329,7 +326,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: start
 
-  integer :: iatom, jatom, ik, ist, idim, ip, ispin, nev, ib
+  integer :: iatom, jatom, ik, ist, ispin, nev, ib
   integer :: ibasis, jbasis, iorb, jorb, norbs, dof
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
   integer :: prow, pcol, ilbasis, jlbasis
@@ -435,7 +432,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       do iatom = 1, geo%natoms
         norbs = this%norb_atom(iatom)
 
-        call lcao_get_orbital(orbitals(iatom), sphere(iatom), st, geo, ispin, iatom, this%norb_atom(iatom))
+        call lcao_get_orbital(orbitals(iatom), sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
 
         psii = M_ZERO
 
@@ -454,7 +451,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
           if(dist2 > (this%radius(iatom) + this%radius(jatom) + this%lapdist)**2) cycle
 
-          call lcao_get_orbital(orbitals(jatom), sphere(jatom), st, geo, ispin, jatom, this%norb_atom(jatom))
+          call lcao_get_orbital(orbitals(jatom), sphere(jatom), geo, ispin, jatom, this%norb_atom(jatom))
 
           ibasis = this%atom_orb_basis(iatom, 1)
           jbasis = this%atom_orb_basis(jatom, 1)
@@ -538,7 +535,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       do iatom = 1, geo%natoms
         norbs = this%norb_atom(iatom)
 
-        call lcao_get_orbital(orbitals(iatom), sphere(iatom), st, geo, ispin, iatom, this%norb_atom(iatom))
+        call lcao_get_orbital(orbitals(iatom), sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
 
         do ib = st%block_start, st%block_end
           call X(submesh_batch_add_matrix)(sphere(iatom), evec(ibasis:, states_block_min(st, ib):), &
