@@ -631,11 +631,11 @@ contains
             ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vxc = ks%calc%vxc, vtau = ks%calc%vtau)
         else
           if(.not. cmplxscl) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-            st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vxc = ks%calc%vxc)
-          else
             call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+              st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+              ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vxc = ks%calc%vxc)
+          else
+            call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, &
               st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
               ex = energy%exchange, ec = energy%correlation, vxc = ks%calc%vxc, & 
               Imrho = ks%calc%Imdensity, Imex = energy%Imexchange, Imec = energy%Imcorrelation, &
@@ -654,7 +654,7 @@ contains
               st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
               vxc = ks%calc%vxc)
           else
-            call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+            call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, &
               st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
               vxc = ks%calc%vxc, Imrho = ks%calc%Imdensity, Imvxc = ks%calc%Imvxc,&
               cmplxscl_th = hm%cmplxscl_th )
@@ -684,7 +684,7 @@ contains
         else
            call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, &
              energy%exchange, energy%correlation, vxc = ks%calc%vxc)
-        end if
+         end if
 
         endif
       end if

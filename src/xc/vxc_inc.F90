@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc, vxc, vtau)
+subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc, vxc, vtau)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
@@ -69,8 +69,8 @@ subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltax
   type(xc_functl_t), pointer :: functl(:)
   type(symmetrizer_t) :: symmetrizer
 
-  PUSH_SUB(dxc_get_vxc)
-  call profiling_in(prof, "dXC_LOCAL")
+  PUSH_SUB(xc_get_vxc)
+  call profiling_in(prof, "XC_LOCAL")
 
   ASSERT(present(ex) .eqv. present(ec))
   calc_energy = present(ex)
@@ -400,7 +400,7 @@ subroutine dxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltax
   if(gga .or. xcs%xc_density_correction == LR_X) call  gga_end()
   if(mgga) call mgga_end()
 
-  POP_SUB(dxc_get_vxc)
+  POP_SUB(xc_get_vxc)
   call profiling_out(prof)
 
 contains
@@ -708,7 +708,7 @@ contains
     POP_SUB(xc_get_vxc.mgga_process)
   end subroutine mgga_process
 
-end subroutine dxc_get_vxc
+end subroutine xc_get_vxc
 
 ! -----------------------------------------------------
 
@@ -1052,7 +1052,8 @@ end subroutine zxc_complex_lda
 ! This is the complex scaled interface for xc functionals.
 ! It will eventually be merged with the other one dxc_get_vxc after some test
 ! -----------------------------------------------------------------------------
-subroutine zxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, vtau, Imrho, Imex, Imec, Imvxc, Imvtau, cmplxscl_th)
+subroutine xc_get_vxc_cmplx(der, xcs, st, rho, ispin, ioniz_pot, qtot, &
+  ex, ec, vxc, vtau, Imrho, Imex, Imec, Imvxc, Imvtau, cmplxscl_th)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
@@ -1078,7 +1079,7 @@ subroutine zxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, v
   type(xc_functl_t), pointer :: functl(:)
   logical         :: calc_energy
 
-  PUSH_SUB(zxc_get_vxc)
+  PUSH_SUB(xc_get_vxc_cmplx)
 
   print *, "LDA calc energy exc"
   ASSERT(present(ex) .eqv. present(ec))
@@ -1144,8 +1145,8 @@ subroutine zxc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, vxc, v
     call messages_fatal(2)     
   end if
 
-  POP_SUB(zxc_get_vxc)
-end subroutine zxc_get_vxc
+  POP_SUB(xc_get_vxc_cmplx)
+end subroutine xc_get_vxc_cmplx
 
 
 !! Local Variables:

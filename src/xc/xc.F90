@@ -51,6 +51,7 @@ module xc_m
     xc_end,             &
     xc_write_info,      &
     xc_get_vxc,         &
+    xc_get_vxc_cmplx,   &
     xc_get_fxc,         &
     xc_get_kxc
 
@@ -83,10 +84,6 @@ module xc_m
   integer, parameter :: &
     FUNC_X = 1,         &
     FUNC_C = 2
-
-  interface xc_get_vxc
-    module procedure dxc_get_vxc, zxc_get_vxc
-  end interface
 
 contains
 
