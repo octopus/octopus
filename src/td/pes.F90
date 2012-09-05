@@ -72,6 +72,8 @@ module PES_m
 
   public ::                             &
     pes_t,                              &
+    pes_rc_t,                           &
+    pes_mask_t,                         &
     pes_end,                            &
     pes_init,                           &
     pes_init_write,                     &
@@ -177,9 +179,6 @@ module PES_m
 
 
   end type PES_mask_t
-
-
-
 
   type PES_t
     logical :: calc_rc
