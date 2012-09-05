@@ -328,6 +328,8 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! Note: you might think it would be better to change the arguments with '(size)' below to '(:)'.
+  ! However, if you do that, then you will (portably) get a segmentation fault.
   subroutine calc_point(size, coords, objective, getgrad, df)
     integer,     intent(in)    :: size
     REAL_DOUBLE, intent(in)    :: coords(size)

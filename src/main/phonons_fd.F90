@@ -89,7 +89,7 @@ contains
     vib%disp = units_to_atomic(units_inp%length, vib%disp)
 
     ! calculate dynamical matrix
-    call get_dyn_matrix(sys%gr, sys%geo, sys%mc, sys%st, sys%ks, hm, sys%outp, vib)
+    call get_dyn_matrix(sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, vib)
 
     call vibrations_output(vib)
     
@@ -122,10 +122,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_dyn_matrix(gr, geo, mc, st, ks, hm, outp, vib)
+  subroutine get_dyn_matrix(gr, geo, st, ks, hm, outp, vib)
     type(grid_t), target, intent(inout) :: gr
     type(geometry_t),     intent(inout) :: geo
-    type(multicomm_t),    intent(in)    :: mc
     type(states_t),       intent(inout) :: st
     type(v_ks_t),         intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: hm

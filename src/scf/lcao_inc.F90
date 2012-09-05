@@ -159,7 +159,7 @@ subroutine X(lcao_wf) (this, st, gr, geo, hm, start)
 
   do ik =  kstart, kend
     ispin = states_dim_get_spin_index(st%d, ik)
-    call lalg_geneigensolve(this%norbs, hamilt(1:this%norbs, 1:this%norbs, ik), overlap(:, :, ispin), ev)
+    call lalg_geneigensolve(this%norbs, hamilt(:, :, ik), overlap(:, :, ispin), ev)
 
     st%eigenval(lcao_start:nst, ik) = ev(lcao_start:nst)
 
