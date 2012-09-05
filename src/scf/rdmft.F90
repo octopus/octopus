@@ -176,8 +176,8 @@ contains
       cycle
     end do
     if (iexit.ne.rdmft_opt%st%nst) then
-      write(message(1),'(a)'), 'did not manage to minimize the energy for this mu'
-      call messages_info(1)
+      call messages_write('Info: Unable to minimize the energy for this mu.')
+      call messages_info()
     end if
     SAFE_DEALLOCATE_A(V_h)
     SAFE_DEALLOCATE_A(V_x)
@@ -376,14 +376,14 @@ contains
       cycle
     end do
     
-    write(message(1),'(a,1x,f11.6)'), 'Occupations sum', occsum
+    write(message(1),'(a,1x,f11.6)') 'Occupations sum', occsum
     call messages_info(1)
-    write(message(1),'(a,es15.8)') ' etot RDMFT= ',   units_from_atomic(units_out%energy,objective+rdmft_opt%hm%ep%eii) 
+    write(message(1),'(a,es15.8)') ' etot RDMFT= ',   units_from_atomic(units_out%energy, objective + rdmft_opt%hm%ep%eii)
     write(message(2),'(a4,1x,a12)')'#st','Occupation'
     call messages_info(2)   
     
     do ist = 1, st%nst
-      write(message(1),'(i4,3x,f11.6)'), ist, occout(ist, 1)
+      write(message(1),'(i4,3x,f11.6)') ist, occout(ist, 1)
       call messages_info(1)  
     end do
     
