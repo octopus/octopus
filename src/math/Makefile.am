@@ -82,7 +82,7 @@ blas.o : blas.F90
 checksum.o : checksum.c
 checksum_interface.o : checksum_interface.F90
 dablas.o : dablas.c 
-fft.o : fft.F90 fft_inc.F90 fftw.o pfft.o nfft.o lalg_basic.o loct_math.o
+fft.o : fft.F90 fft_inc.F90 fftw.o pfft.o nfft.o lalg_basic.o loct_math.o math.o
 fftw.o : fftw.F90
 pfft.o : pfft.F90 fftw.o math.o
 nfft_f.o : nfft_f.c
