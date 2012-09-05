@@ -212,10 +212,9 @@ contains
   end subroutine kpoints_distribute
   
   ! ---------------------------------------------------------
-  subroutine states_choose_kpoints(dd, sb, geo)
+  subroutine states_choose_kpoints(dd, sb)
     type(states_dim_t), intent(inout) :: dd
     type(simul_box_t),  intent(in)    :: sb
-    type(geometry_t),   intent(in)    :: geo
 
     integer :: ik, iq
 

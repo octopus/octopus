@@ -310,7 +310,7 @@ contains
     type(geometry_t),  intent(in)    :: geo
 
     FLOAT :: excess_charge
-    integer :: nempty, ierr, il, ntot, theory_level, default, nthreads
+    integer :: nempty, ierr, il, ntot, default, nthreads
     integer, allocatable :: ob_k(:), ob_st(:), ob_d(:)
     character(len=256)   :: restart_dir
 
@@ -347,7 +347,7 @@ contains
 
     call parse_integer(datasets_check('StatesBlockSize'), default, st%d%block_size)
     if(st%d%block_size < 1) then
-      message(1) = "Error: The variable 'StatesBlockSize' must be greater than 0."
+      message(1) = "The variable 'StatesBlockSize' must be greater than 0."
       call messages_fatal(1)
     end if
 
@@ -447,12 +447,12 @@ contains
     st%extrastates = (nempty > 0)
 
     if(ntot > 0 .and. nempty > 0) then
-      message(1) = 'Error: You cannot set TotalStates and ExtraStates at the same time.'
+      message(1) = 'You cannot set TotalStates and ExtraStates at the same time.'
       call messages_fatal(1)
     end if
 
     ! For non-periodic systems this should just return the Gamma point
-    call states_choose_kpoints(st%d, gr%sb, geo)
+    call states_choose_kpoints(st%d, gr%sb)
 
     call geometry_val_charge(geo, st%val_charge)
 
@@ -547,7 +547,7 @@ contains
      
     if(ntot > 0) then
       if(ntot < st%nst) then
-        message(1) = 'Error: TotalStates is smaller than the number of states required by the system.'
+        message(1) = 'TotalStates is smaller than the number of states required by the system.'
         call messages_fatal(1)
       end if
 
@@ -1187,7 +1187,7 @@ contains
     type(type_t), optional, intent(in)      :: wfs_type
     logical,      optional, intent(in)      :: alloc_zphi ! only needed for gs transport
 
-    integer :: ip, ik, il, ist, idim, st1, st2, k1, k2, np_part
+    integer :: ip, ik, ist, idim, st1, st2, k1, k2, np_part
     logical :: force
 
     PUSH_SUB(states_allocate_wfns)
@@ -1257,12 +1257,12 @@ contains
   end subroutine states_allocate_wfns
 
   ! ---------------------------------------------------------
-  ! Allocates the interface wavefunctions defined within a states_t structure.
+  !> Allocates the interface wavefunctions defined within a states_t structure.
   subroutine states_allocate_intf_wfns(st, ob_mesh)
     type(states_t),         intent(inout)   :: st
     type(mesh_t),           intent(in)      :: ob_mesh(:)
 
-    integer :: ip, ik, ist, idim, st1, st2, k1, k2, il
+    integer :: ip, idim, st1, st2, k1, k2, il
 
     PUSH_SUB(states_allocate_intf_wfns)
 
@@ -1459,11 +1459,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_densities_init(st, gr, geo, mc)
+  subroutine states_densities_init(st, gr, geo)
     type(states_t),    intent(inout) :: st
     type(grid_t),      intent(in)    :: gr
     type(geometry_t),  intent(in)    :: geo
-    type(multicomm_t), intent(in)    :: mc
 
     PUSH_SUB(states_densities_init)
 
@@ -1913,8 +1912,6 @@ contains
     integer            :: ist, ik
     FLOAT              :: charge
     CMPLX, allocatable :: zpsi(:, :)
-    FLOAT, allocatable :: cmplxsclevals(:,:)
-    FLOAT              :: emin
 #if defined(HAVE_MPI)
     integer            :: jj
     integer            :: tmp
