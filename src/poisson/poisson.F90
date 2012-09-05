@@ -613,7 +613,6 @@ contains
     FLOAT :: xl, yl, zl
 
     FLOAT, allocatable :: vh0(:,:,:), rh0(:,:,:)
-    integer :: icase = 1, icalc = 1
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
@@ -716,7 +715,7 @@ contains
         rh0(conversion(1),conversion(2),conversion(3))=rho(counter)
       end do
 
-      call poisson_sete_solve(this%sete_solver, icase, rh0, vh0, nx, ny, nz, xl, yl, zl, icalc)
+      call poisson_sete_solve(this%sete_solver, rh0, vh0, nx, ny, nz)
 
       do counter = 1, der%mesh%np
 

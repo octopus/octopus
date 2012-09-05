@@ -879,21 +879,15 @@ contains
 
   !---------------------------------------
 
-  subroutine poisson_sete_solve(this, icase, rho, vh, nx, ny, nz, xl, yl, zl, icalc)
+  subroutine poisson_sete_solve(this, rho, vh, nx, ny, nz)
     type(poisson_sete_t), intent(inout) :: this
-    integer,              intent(in)    :: icase
     FLOAT,                intent(in)    :: rho(:, :, :)
     FLOAT,                intent(inout) :: vh(:, :, :)
     integer,              intent(in)    :: nx
     integer,              intent(in)    :: ny
     integer,              intent(in)    :: nz
-    FLOAT,                intent(in)    :: xl
-    FLOAT,                intent(in)    :: yl
-    FLOAT,                intent(in)    :: zl
-    integer,              intent(in)    :: icalc
 
     ! Input: NX, NY, NZ -> No. of octopus grid points in each dimension
-    ! Input: XL, YL, ZL -> Size of the octopus box
 
     FLOAT        :: bohrnm, angsnm, err
     integer      :: j1, k1, m, i, j, k, i1,idum
