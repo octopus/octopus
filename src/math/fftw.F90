@@ -31,11 +31,25 @@ module fftw_m
   use global_m
   use messages_m
   use profiling_m
+
   implicit none
+
+  private
+
+  public :: &
+    fftw_execute_dft,        &
+    fftw_destroy_plan,       &
+    fftw_cleanup,            &
+    fftw_init_threads,       &
+    fftw_plan_with_nthreads, &
+    fftw_cleanup_threads,    &
+    fftw_prepare_plan_r2c,   &
+    fftw_prepare_plan,       &
+    fftw_get_dims
 
   ! fftw constants. this is just a copy from file fftw3.f,
   ! distributed with fftw package.
-  integer, parameter ::                &
+  integer, public, parameter ::        &
     FFTW_R2HC                =      0, &
     FFTW_HC2R                =      1, &
     FFTW_DHT                 =      2, &

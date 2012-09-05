@@ -27,6 +27,8 @@ module energy_m
 
   implicit none
 
+  private
+
   public ::         &
     energy_t,       &
     energy_nullify, &
