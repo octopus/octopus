@@ -28,6 +28,7 @@
 !> The includes for the PFFT
 module pfft_params_m
   use fftw_m
+
   implicit none
 
 #ifdef HAVE_PFFT
@@ -42,10 +43,25 @@ end module pfft_params_m
 module pfft_m
   use global_m
   use math_m
+  use messages_m
   use pfft_params_m
+
   implicit none
 
+  private
+
 #ifdef HAVE_PFFT
+  public ::                    &
+    pfft_decompose,            &
+    pfft_prepare_plan_r2c,     &
+    pfft_prepare_plan_c2r,     &
+    pfft_prepare_plan_c2c,     &
+    pfft_get_dims,             &
+    pfft_create_procmesh_2d,   &
+    pfft_execute,              &
+    pfft_destroy_plan,         &
+    pfft_cleanup
+
   !> PFFT initialization routines
   interface pfft_init
     subroutine PDFFT(init)
@@ -60,6 +76,7 @@ module pfft_m
   end interface pfft_create_procmesh_2d
 
   interface
+    ! ---------------------------------------------------------
     !> PFFT basic interface to get the local size of input and output arrays. Real to complex version
     subroutine PDFFT(local_size_dft_r2c_3d)(alloc_size, n, mpi_comm, pfft_flags, &
          local_ni, local_i_start, local_no, local_o_start)
@@ -73,6 +90,7 @@ module pfft_m
       integer(ptrdiff_t_kind), intent(inout) :: local_o_start !< Local start point of the output matrix. Rank = 3
     end subroutine PDFFT(local_size_dft_r2c_3d)
     
+    ! ---------------------------------------------------------
     !> PFFT advanced interface to get the local size of input and output arrays. Real to complex version
     subroutine PDFFT(local_size_many_dft_r2c)(alloc_size, rank_n, n, ni, no, howmany, iblock, oblock, &
          mpi_comm, pfft_flags, local_ni, local_i_start, local_no, local_o_start)
@@ -97,6 +115,7 @@ module pfft_m
       integer(ptrdiff_t_kind), intent(inout) :: local_o_start !< Local start point of the output matrix. Rank = 3
     end subroutine PDFFT(local_size_many_dft_r2c)
 
+    ! ---------------------------------------------------------
     !> PFFT basic interface to get the local size of input and output arrays. Complex to complex version
     subroutine PDFFT(local_size_dft_3d)(alloc_size, n, mpi_comm, pfft_flags, &
          local_ni, local_i_start, local_no, local_o_start)
@@ -110,6 +129,7 @@ module pfft_m
       integer(ptrdiff_t_kind), intent(inout) :: local_o_start !< Local start point of the output matrix. Rank = 3
     end subroutine PDFFT(local_size_dft_3d)
 
+    ! ---------------------------------------------------------
     !> PFFT advanced interface to get the local size of input and output arrays
     subroutine PDFFT(local_size_many_dft)(alloc_size, rank_n, n, ni, no, howmany, iblock, oblock, &
          mpi_comm, pfft_flags, &
@@ -135,6 +155,7 @@ module pfft_m
       integer(ptrdiff_t_kind), intent(inout) :: local_o_start !< Local start point of the output matrix. Rank = 3
     end subroutine PDFFT(local_size_many_dft)
 
+    ! ---------------------------------------------------------
     !> PFFT simple interface to create plan from real to complex
     subroutine PDFFT(plan_dft_r2c_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags, fftw_flags)
       use pfft_params_m
@@ -145,6 +166,7 @@ module pfft_m
       integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
     end subroutine PDFFT(plan_dft_r2c_3d)
 
+    ! ---------------------------------------------------------
     !> PFFT simple interface to create plan from complex to real
     subroutine PDFFT(plan_dft_c2r_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags, fftw_flags)
       use pfft_params_m
@@ -155,6 +177,7 @@ module pfft_m
       integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
     end subroutine PDFFT(plan_dft_c2r_3d)
 
+    ! ---------------------------------------------------------
     !> Advanced interface for creating plan of FFT from real to complex
     subroutine PDFFT(plan_many_dft_r2c)(plan, rank_n, n, ni, no, howmany, &
          iblock, oblock, in, out, mpi_comm, sign, pfft_flags, fftw_flags)
@@ -177,6 +200,7 @@ module pfft_m
       integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
     end subroutine PDFFT(plan_many_dft_r2c) 
 
+    ! ---------------------------------------------------------
     !> Advanced interface for creating plan of FFT from complex to real
     subroutine PDFFT(plan_many_dft_c2r)(plan, rank_n, n, ni, no, howmany, &
          iblock, oblock, in, out, mpi_comm, sign, pfft_flags, fftw_flags)
@@ -199,6 +223,7 @@ module pfft_m
       integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
     end subroutine PDFFT(plan_many_dft_c2r)
 
+  ! ---------------------------------------------------------
     !> Advanced interface for creating plan of FFT
     subroutine PDFFT(plan_dft_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags, fftw_flags)
       use pfft_params_m
@@ -231,6 +256,7 @@ module pfft_m
 
 contains
 
+  ! ---------------------------------------------------------
   !> Decompose all available processors in 2D processor grid, most equally possible
   subroutine pfft_decompose(n_proc, dim1, dim2)
     integer, intent(in)  :: n_proc !< Number of processors
@@ -271,6 +297,7 @@ contains
     POP_SUB(pfft_decompose)
   end subroutine pfft_decompose
 
+  ! ---------------------------------------------------------
   !> Octopus subroutine to prepare a PFFT plan real to complex
   subroutine pfft_prepare_plan_r2c(plan, n, in, out, sign, flags, mpi_comm)
     integer(ptrdiff_t_kind), intent(out)   :: plan       !< The plan that is created by PFFT
@@ -295,6 +322,7 @@ contains
     POP_SUB(pfft_prepare_plan_r2c)
   end subroutine pfft_prepare_plan_r2c
 
+  ! ---------------------------------------------------------
   !> Octopus subroutine to prepare a PFFT plan real to complex
   subroutine pfft_prepare_plan_c2r(plan, n, in, out, sign, flags, mpi_comm)
     integer(ptrdiff_t_kind), intent(out)   :: plan       !< The plan that is created by PFFT
@@ -319,7 +347,7 @@ contains
     POP_SUB(pfft_prepare_plan_c2r)
   end subroutine pfft_prepare_plan_c2r
 
-  
+  ! ---------------------------------------------------------  
   !> Octopus subroutine to prepare a PFFT plan real to complex
   subroutine pfft_prepare_plan_c2c(plan, n, in, out, sign, flags, mpi_comm)
     integer(ptrdiff_t_kind), intent(out)   :: plan       !< The plan that is created by PFFT
