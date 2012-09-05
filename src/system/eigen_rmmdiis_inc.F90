@@ -57,7 +57,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_ALLOCATE(nrm(1:st%d%block_size))
 
   do iter = 1, niter
-    SAFE_ALLOCATE(psib(iter)%batch)
+    if(iter /= 1) then
+      SAFE_ALLOCATE(psib(iter)%batch)
+    end if
     SAFE_ALLOCATE(resb(iter)%batch)
   end do
 
@@ -75,10 +77,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     if(pack) call batch_pack(st%psib(ib, ik))
 
-    call batch_copy(st%psib(ib, ik), psib(1)%batch, reference = .false.)
+    psib(1)%batch => st%psib(ib, ik)
     call batch_copy(st%psib(ib, ik), resb(1)%batch, reference = .false.)
-
-    call batch_copy_data(gr%mesh%np, st%psib(ib, ik), psib(1)%batch)
 
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(1)%batch, resb(1)%batch, ik)
     nops = nops + bsize
@@ -229,7 +229,13 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       SAFE_DEALLOCATE_A(finalpsi)
     end if
 
-    call batch_copy_data(gr%mesh%np, resb(niter - 1)%batch, st%psib(ib, ik))
+    ! psib(1) points to st%psib(ib, ik), so we can store the result there
+    call batch_copy_data(gr%mesh%np, resb(niter - 1)%batch, psib(1)%batch)
+
+    do iter = 1, niter
+      if(iter /= 1) call batch_end(psib(iter)%batch, copy = .false.)
+      call batch_end(resb(iter)%batch, copy = .false.)
+    end do
 
     if(pack) call batch_unpack(st%psib(ib, ik))
 
@@ -237,12 +243,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     if(mpi_grp_is_root(mpi_world)) then
       call loct_progress_bar(st%nst*(ik - 1) + prog, st%nst*st%d%nik)
     end if
-      
-    do iter = 1, niter
-      call batch_end(psib(iter)%batch, copy = .false.)
-      call batch_end(resb(iter)%batch, copy = .false.)
-    end do
-
+    
   end do
 
   call profiling_out(prof)
@@ -280,7 +281,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(eigen)
 
   do iter = 1, niter
-    SAFE_DEALLOCATE_P(psib(iter)%batch)
+    if(iter /= 1) then
+      SAFE_DEALLOCATE_P(psib(iter)%batch)
+    end if
     SAFE_DEALLOCATE_P(resb(iter)%batch)
   end do
 
