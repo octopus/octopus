@@ -30,11 +30,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   integer,                intent(in)    :: ik
   FLOAT,                  intent(out)   :: diff(1:st%nst)
 
-  R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :, :), finalpsi(:, :)
+  R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :, :), finalpsi(:)
   R_TYPE, allocatable :: eigen(:)
   FLOAT,  allocatable :: eval(:, :)
   FLOAT,  allocatable :: lambda(:), nrm(:)
-  integer :: ist, minst, idim, ii, iter, nops, maxst, jj, bsize, ib, jter, kter
+  integer :: ist, minst, idim, ii, iter, nops, maxst, jj, bsize, ib, jter, kter, prog
   R_TYPE :: ca, cb, cc
   R_TYPE, allocatable :: fr(:, :)
   type(profile_t), save :: prof
@@ -66,6 +66,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   call profiling_in(prof, "RMMDIIS")
 
   failed = .false.
+  prog = 0
 
   do ib = st%block_start, st%block_end
     minst = states_block_min(st, ib)
@@ -78,8 +79,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     call batch_copy(st%psib(ib, ik), resb(1)%batch, reference = .false.)
 
     call batch_copy_data(gr%mesh%np, st%psib(ib, ik), psib(1)%batch)
-
-    if(pack) call batch_unpack(st%psib(ib, ik))
 
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(1)%batch, resb(1)%batch, ik)
     nops = nops + bsize
@@ -109,7 +108,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       call batch_copy(psib(1)%batch, psib(iter)%batch, reference = .false.)
       call batch_copy(resb(1)%batch, resb(iter)%batch, reference = .false.)
     end do
-    
+
     ! get lambda 
     call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(1)%batch, psib(2)%batch)
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(2)%batch, resb(2)%batch, ik)
@@ -137,7 +136,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end do
 
     SAFE_ALLOCATE(mm(1:niter, 1:niter, 1:2, 1:bsize))
-    
+
     do iter = 2, niter
 
       ! for iter == 2 the preconditioning was done already
@@ -178,7 +177,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       SAFE_ALLOCATE(evec(1:iter, 1:1, 1:bsize))
       SAFE_ALLOCATE(eval(1:iter, 1:bsize))
-      
+
       do ist = minst, maxst
         ii = ist - minst + 1
 
@@ -213,31 +212,32 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     call batch_xpay(gr%mesh%np, psib(niter)%batch, lambda, resb(niter - 1)%batch)
 
-    SAFE_ALLOCATE(finalpsi(1:gr%mesh%np, 1:st%d%dim))
+    if(any(failed(1:bsize))) then 
+      SAFE_ALLOCATE(finalpsi(1:gr%mesh%np))
 
-    do ist = minst, maxst
-      ii = ist - minst + 1
+      do ist = minst, maxst
+        ii = ist - minst + 1
+        
+        if(failed(ii)) then
+          do idim = 1, st%d%dim
+            call batch_get_state(psib(last(ii))%batch, (/ist, idim/), gr%mesh%np, finalpsi)
+            call batch_set_state(resb(niter - 1)%batch, (/ist, idim/), gr%mesh%np, finalpsi)
+          end do
+        end if
+      end do
 
-      if(.not. failed(ii)) then        
-        do idim = 1, st%d%dim
-          call batch_get_state(resb(niter - 1)%batch, (/ist, idim/), gr%mesh%np, finalpsi(:, idim))
-        end do
-      else
-        do idim = 1, st%d%dim
-          call batch_get_state(psib(last(ii))%batch, (/ist, idim/), gr%mesh%np, finalpsi(:, idim))
-        end do
-      end if
+      SAFE_DEALLOCATE_A(finalpsi)
+    end if
 
-      call states_set_state(st, gr%mesh, ist, ik, finalpsi)
+    call batch_copy_data(gr%mesh%np, resb(niter - 1)%batch, st%psib(ib, ik))
 
-      if(mpi_grp_is_root(mpi_world)) then
-        call loct_progress_bar(st%nst * (ik - 1) +  ist, st%nst*st%d%nik)
-      end if
+    if(pack) call batch_unpack(st%psib(ib, ik))
 
-    end do
-
-    SAFE_DEALLOCATE_A(finalpsi)
-
+    prog = prog + bsize
+    if(mpi_grp_is_root(mpi_world)) then
+      call loct_progress_bar(st%nst*(ik - 1) + prog, st%nst*st%d%nik)
+    end if
+      
     do iter = 1, niter
       call batch_end(psib(iter)%batch, copy = .false.)
       call batch_end(resb(iter)%batch, copy = .false.)
