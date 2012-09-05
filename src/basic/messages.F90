@@ -1152,10 +1152,17 @@ end subroutine messages_end
   character(len=256) function messages_clean_path(filename) result(clean_path)
     character(len=*), intent(in) :: filename
 
-    integer :: pos
+    integer :: pos, start
 
     pos = index(filename, 'src/', back = .true.)
-    clean_path = filename(pos + 1:)
+    if(pos == 0) then
+       ! 'src/' does not occur
+       start = pos + 1
+    else
+       ! remove 'src/'
+       start = pos + 4
+    endif
+    clean_path = filename(start:)
   end function messages_clean_path
 
 end module messages_m
