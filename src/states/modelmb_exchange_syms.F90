@@ -54,18 +54,17 @@ module modelmb_exchange_syms_m
 
 contains
 
-  ! project out states with proper symmetry for cases which are of symmetry = unknown
-  subroutine modelmb_sym_state(eigenval, iunit, gr, mm, geo, &
+  !> project out states with proper symmetry for cases which are of symmetry = unknown
+  subroutine modelmb_sym_state(eigenval, iunit, gr, mm, &
              modelmbparticles, ncombo, young_used, wf, symmetries_satisfied)
     FLOAT,                    intent(in)    :: eigenval
     integer,                  intent(in)    :: iunit
     type(grid_t),             intent(in)    :: gr
     integer,                  intent(in)    :: mm
-    type(geometry_t),         intent(in)    :: geo
     type(modelmb_particle_t), intent(in)    :: modelmbparticles
     integer,                  intent(in)    :: ncombo
     integer,                  intent(inout) :: young_used(1:ncombo)
-    CMPLX,                    intent(inout) :: wf(1:gr%mesh%np) ! will be antisymmetrized on output
+    CMPLX,                    intent(inout) :: wf(1:gr%mesh%np) !< will be antisymmetrized on output
     logical,                  intent(out)   :: symmetries_satisfied
 
     integer :: npptype
@@ -134,7 +133,7 @@ contains
       ! skip diagram combinations already used in present degenerate subspace
       if (young_used (idiagram_combo) > 0) cycle
 
-      call modelmb_sym_state_1diag(eigenval, iunit, gr, mm, geo, &
+      call modelmb_sym_state_1diag(eigenval, iunit, gr, mm, &
          modelmbparticles, dg_combo_ndown(:, idiagram_combo), &
          dg_combo_iy(:, idiagram_combo), &
          antisymwf, sym_ok_alltypes, norm)
@@ -163,8 +162,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! project out states for a single combination of Young diagrams (1 diagram for each particle type)
-  subroutine modelmb_sym_state_1diag(eigenval, iunit, gr, mm, geo, &
+  !> project out states for a single combination of Young diagrams (1 diagram for each particle type)
+  subroutine modelmb_sym_state_1diag(eigenval, iunit, gr, mm, &
              modelmbparticles, nspindown_in, iyoung_in, &
              antisymwf, sym_ok_alltypes, norm)
     FLOAT,                    intent(in)    :: eigenval
@@ -172,17 +171,15 @@ contains
     type(modelmb_particle_t), intent(in)    :: modelmbparticles
     type(grid_t),             intent(in)    :: gr
     integer,                  intent(in)    :: mm
-    type(geometry_t),         intent(in)    :: geo
     integer,                  intent(in)    :: nspindown_in(1:modelmbparticles%ntype_of_particle)
     integer,                  intent(in)    :: iyoung_in(1:modelmbparticles%ntype_of_particle)
 
-    CMPLX,                    intent(inout) :: antisymwf(1:gr%mesh%np,1,1) ! will be antisymmetrized on output
+    CMPLX,                    intent(inout) :: antisymwf(1:gr%mesh%np,1,1) !< will be antisymmetrized on output
     integer,                  intent(out)   :: sym_ok_alltypes(1:modelmbparticles%ntype_of_particle)
     FLOAT,                    intent(out)   :: norm
 
 ! local vars
     integer :: ipart1, ipart2, npptype
-    integer :: ip, ipp, iup, idown
     integer :: ikeeppart, itype
     integer :: ndimmb
     integer :: ofst_so_far
@@ -268,7 +265,7 @@ contains
       p_of_type_up   = modelmbparticles%particles_of_type(young%young_up  (1:nspindown_in(itype), iyoung_in(itype)), itype)
       p_of_type_down = modelmbparticles%particles_of_type(young%young_down(1:nspindown_in(itype), iyoung_in(itype)), itype)
 
-      call modelmb_sym_down (iyoung_in(itype), ndimmb, npptype, modelmbparticles%nparticle, &
+      call modelmb_sym_down (ndimmb, npptype, modelmbparticles%nparticle, &
              ofst, young, p_of_type_up, p_of_type_down, gr, normalizer, antisymwf)
 
       SAFE_DEALLOCATE_A(p_of_type_up)
@@ -309,12 +306,9 @@ contains
   ! ---------------------------------------------------------
 
 !
-! input 1 wave function, and symetrize wrt spin down labeled particles, according to the given young diagramsp
-!
-  subroutine modelmb_sym_down(iyoung_in, ndimmb, npptype, nparticle, &
+!> input 1 wave function, and symetrize wrt spin down labeled particles, according to the given young diagrams
+  subroutine modelmb_sym_down(ndimmb, npptype, nparticle, &
              ofst, young, p_of_type_up, p_of_type_down, gr, normalizer, antisymwf)
-! arguments
-    integer, intent(in) :: iyoung_in
     integer, intent(in) :: ndimmb
     integer, intent(in) :: npptype
     integer, intent(in) :: nparticle

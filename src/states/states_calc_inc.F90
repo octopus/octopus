@@ -344,10 +344,11 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(in)    :: ss(:, :)
 
-  integer :: idim, block_size, ib, size, sp, ierr
+  integer :: idim, block_size, ib, size, sp
   R_TYPE, allocatable :: psicopy(:, :, :)
-  type(opencl_mem_t) :: psicopy_buffer, ss_buffer
 #ifdef HAVE_OPENCL
+  integer :: ierr
+  type(opencl_mem_t) :: psicopy_buffer, ss_buffer
   type(octcl_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
   type(profile_t), save :: prof_copy
@@ -1022,9 +1023,8 @@ end subroutine X(states_matrix)
 
 ! -----------------------------------------------------------
 
-subroutine X(states_calc_orth_test)(st, mc, mesh)
+subroutine X(states_calc_orth_test)(st, mesh)
   type(states_t),    intent(inout) :: st
-  type(multicomm_t), intent(in)    :: mc
   type(mesh_t),      intent(in)    :: mesh
   
   PUSH_SUB(X(states_calc_orth_test))
@@ -1050,6 +1050,7 @@ subroutine X(states_calc_orth_test)(st, mc, mesh)
   POP_SUB(X(states_calc_orth_test))
 
 contains
+
   subroutine print_results()
     integer :: ist, jst
     FLOAT :: dd

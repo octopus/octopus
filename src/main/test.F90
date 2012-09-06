@@ -204,13 +204,13 @@ program oct_test
     if(test_type == TEST_ALL .or. test_type == TEST_REAL) then
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
-      call dstates_calc_orth_test(sys%st, sys%mc, sys%gr%mesh)
+      call dstates_calc_orth_test(sys%st, sys%gr%mesh)
     end if
 
     if(test_type == TEST_ALL .or. test_type == TEST_COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
-      call zstates_calc_orth_test(sys%st, sys%mc, sys%gr%mesh)
+      call zstates_calc_orth_test(sys%st, sys%gr%mesh)
     end if
 
     call system_end(sys)

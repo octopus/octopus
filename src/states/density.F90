@@ -138,8 +138,8 @@ contains
     FLOAT, allocatable :: frho(:), weight(:)
     type(profile_t), save :: prof
     logical :: correct_size, calc_cmplx
-    integer            :: wgsize
 #ifdef HAVE_OPENCL
+    integer            :: wgsize
     type(opencl_mem_t) :: buff_weight
     type(cl_kernel)    :: kernel
 #endif

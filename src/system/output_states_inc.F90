@@ -297,7 +297,7 @@
           end if
         end if
 
-        call modelmb_sym_state(st%eigenval(mm,1), iunit, gr, mm, geo, &
+        call modelmb_sym_state(st%eigenval(mm,1), iunit, gr, mm, &
              st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied)
       end if
 
