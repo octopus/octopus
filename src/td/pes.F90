@@ -51,6 +51,7 @@ module PES_m
 #endif
   use output_m
   use parser_m
+  use pes_rc_m
   use poisson_m
   use profiling_m
   use qshepmod_m
@@ -72,7 +73,6 @@ module PES_m
 
   public ::                             &
     pes_t,                              &
-    pes_rc_t,                           &
     pes_mask_t,                         &
     pes_end,                            &
     pes_init,                           &
@@ -118,14 +118,6 @@ module PES_m
   integer, parameter ::      &
     IN                =  1,  &  
     OUT               =  2
-
-  type PES_rc_t
-    integer          :: npoints                 !< how many points we store the wf
-    integer, pointer :: points(:)               !< which points to use
-    character(len=30), pointer :: filenames(:)  !< filenames
-    CMPLX, pointer :: wf(:,:,:,:,:)
-    integer, pointer :: rankmin(:)              !<partition of the mesh containing the points
-  end type PES_rc_t
 
   type PES_mask_t
     CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
@@ -441,8 +433,6 @@ contains
     POP_SUB(PES_init_write)
   end subroutine PES_init_write
 
-
-#include "pes_rc_inc.F90"
 #include "pes_mask_inc.F90"
 #include "pes_mask_out_inc.F90"
 
