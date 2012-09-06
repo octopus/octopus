@@ -144,14 +144,14 @@ contains
 
 #ifndef HAVE_METIS
     if(library == METIS) then
-      message(1) = 'Error: METIS was requested, but Octopus was compiled without it.'
+      message(1) = 'METIS was requested, but Octopus was compiled without it.'
       call messages_fatal(1)
     end if
 #endif
 
 #ifndef HAVE_PFFT
     if(library == PFFT_PART) then
-      message(1) = 'Error: PFFT was requested, but Octopus was compiled without it.'
+      message(1) = 'PFFT was requested, but Octopus was compiled without it.'
       call messages_fatal(1)
     end if
 #endif
@@ -313,7 +313,7 @@ contains
         call oct_metis_part_graph_kway(nv, xadj, adjncy, &
           0, 0, 0, 1, npart, options, edgecut, part)
       case default
-        message(1) = 'Error: Selected partition method is not available in METIS.'
+        message(1) = 'Selected partition method is not available in METIS.'
         call messages_fatal(1)
       end select
 #endif

@@ -322,19 +322,18 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   call read_ot(nspin, order_in_file, nw_subtracted)
 
   if(order_in_file.ne.order) then
-    write(message(1), '(a)') 'Error: The ot file should contain the second-order response'
-    write(message(2), '(a)') '       in this run mode.'
-    call messages_fatal(2)
+    write(message(1), '(a)') 'The ot file should contain the second-order response in this run mode.'
+    call messages_fatal(1)
   end if
 
   if(final_time > M_ZERO) then
     total_time = units_to_atomic(units%time, final_time)
     if(total_time > dt*time_steps) then
       total_time = dt*time_steps
-      write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
-      write(0, '(a)')        '*          available in the input file.'
-      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', &
+      write(message(1), '(a)')        'The requested total time to process is larger than the time available in the input file.'
+      write(message(2), '(a,f8.4,a)') 'The time has been adjusted to ', &
         units_from_atomic(units%time, total_time), units_abbrev(units%time)
+      call messages_warning(2)
     end if
     time_steps = int(total_time / dt)
     total_time = time_steps * dt
@@ -448,10 +447,10 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
     total_time = units_to_atomic(units%time, final_time)
     if(total_time > dt*time_steps) then
       total_time = dt*time_steps
-      write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
-      write(0, '(a)')        '*          available in the input file.'
-      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', &
+      write(message(1), '(a)')        'The requested total time to process is larger than the time available in the input file.'
+      write(message(2), '(a,f8.4,a)') 'The time has been adjusted to ', &
         units_from_atomic(units%time, total_time), units_abbrev(units%time)
+      call messages_warning(2)
     end if
     time_steps = int(total_time / dt)
     total_time = time_steps * dt
@@ -1259,10 +1258,10 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
     total_time = units_to_atomic(units%time, final_time)
     if(total_time > dt*time_steps) then
       total_time = dt*time_steps
-      write(0, '(a)')        '* WARNING: The requested total time to process is larger than the time'
-      write(0, '(a)')        '*          available in the input file.'
-      write(0, '(a,f8.4,a)') '           The time has been adjusted to ', &
-           units_from_atomic(units_out%time, total_time), trim(units_abbrev(units_out%time))
+      write(message(1), '(a)')        'The requested total time to process is larger than the time available in the input file.'
+      write(message(2), '(a,f8.4,a)') 'The time has been adjusted to ', &
+        units_from_atomic(units_out%time, total_time), trim(units_abbrev(units_out%time))
+      call messages_warning(2)
     end if
     time_steps = int(total_time / dt)
     total_time = time_steps * dt

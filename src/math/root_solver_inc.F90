@@ -51,7 +51,7 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, coeff)
 !!$    call droot_bisection()
 !!$#endif
 !!$#ifdef R_TCOMPLEX
-!!$    message(1) = 'Error: root_solver: Simple line bisection not defined for complex arithmetic'
+!!$    message(1) = 'root_solver: Simple line bisection not defined for complex arithmetic'
 !!$    call messages_fatal(1)
 !!$#endif
 !!$
@@ -63,12 +63,12 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, coeff)
 !!$      call messages_info(1)
 !!$!!        call droot_brent(rs, func, root(1), interval)
 !!$    else
-!!$      message(1) = 'Error: root_solver: search interval required for Brent method.'
+!!$      message(1) = 'root_solver: search interval required for Brent method.'
 !!$      call messages_fatal(1)
 !!$    end if
 !!$#endif
 !!$#ifdef R_TCOMPLEX
-!!$    message(1) = 'Error: root_solver: Brent method not defined for complex arithmetic'
+!!$    message(1) = 'root_solver: Brent method not defined for complex arithmetic'
 !!$    call messages_fatal(1)
 !!$#endif
 !!$
@@ -87,13 +87,13 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, coeff)
 !!$      ! pass root(1): only a single root will be returned
 !!$      call X(root_laguerre)(rs, root(1), startval, coeff)
 !!$    else
-!!$      message(1) = 'Error: root_solver: Laguerre method only valid for polynomials.'
+!!$      message(1) = 'root_solver: Laguerre method only valid for polynomials.'
 !!$      call messages_fatal(1)
 !!$    end if
 !!$
   case(ROOT_WATTERSTROM)
 #ifdef R_TREAL
-    message(1) = 'Error: root_solver: Watterstrom method not defined for pure real arithmetic'
+    message(1) = 'root_solver: Watterstrom method not defined for pure real arithmetic'
     call messages_fatal(1)
 #endif
 #ifdef R_TCOMPLEX
@@ -102,7 +102,7 @@ subroutine X(root_solver_run)(rs, func, root, success, startval, coeff)
       call messages_info(1)
       call zroot_watterstrom(rs, root, coeff)
     else
-      message(1) = 'Error: root_solver: Watterstrom method only valid for polynomials.'
+      message(1) = 'root_solver: Watterstrom method only valid for polynomials.'
       call messages_fatal(1)
     end if
 #endif

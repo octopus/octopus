@@ -389,7 +389,7 @@ contains
     call messages_info(1)
 
     if(cas%n_pairs < 1) then
-      message(1) = "Error: Maybe there are no unoccupied states?"
+      message(1) = "No Casida pairs -- maybe there are no unoccupied states?"
       call messages_fatal(1)
     end if
 

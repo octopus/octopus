@@ -320,29 +320,28 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
       ! successful exit of solver
       exit solver_iter
     case(-1)
-!      message(1) = 'Warning: Maximum iteration number "SPARSKITMaxIter" exceeded.'
+!      message(1) = 'Maximum iteration number "SPARSKITMaxIter" exceeded.'
 !      call messages_warning(1)
       exit solver_iter
     case(-2)
-      message(1) = 'Error: Insufficient work space.'
+      message(1) = 'Insufficient work space.'
       call messages_fatal(1)
     case(-3)
-      message(1) = 'Error: Anticipated break-down / divide by zero.'
+      message(1) = 'Anticipated break-down / divide by zero.'
       call messages_fatal(1)
     case(-4)
-      message(1) = 'Error: "SPARSKITRelTolerance" and "SPARSKITAbsTolerance" are'
-      message(2) = '       both <= 0. Valid ranges are 0 <= SPARSKITRelTolerance < 1,'
-      message(3) = '       0 <= SPARSKITAbsTolerance.'
+      message(1) = '"SPARSKITRelTolerance" and "SPARSKITAbsTolerance" are'
+      message(2) = 'both <= 0. Valid ranges are 0 <= SPARSKITRelTolerance < 1,'
+      message(3) = '0 <= SPARSKITAbsTolerance.'
       call messages_fatal(3)
     case(-9)
-      message(1) = 'Error: while trying to detect a break-down, an abnormal number is detected.'
+      message(1) = 'While trying to detect a break-down, an abnormal number is detected.'
       call messages_fatal(1)
     case(-10)
-      message(1) = 'Error: return due to some non-numerical reasons, e.g. invalid'
-      message(2) = 'floating-point numbers etc.'
-      call messages_fatal(2)
+      message(1) = 'Return due to some non-numerical reasons, e.g. invalid floating-point numbers etc.'
+      call messages_fatal(1)
     case default
-      message(1) = 'Error: Unknown SPARSKIT return value. Exiting ...'
+      message(1) = 'Unknown SPARSKIT return value. Exiting ...'
       call messages_fatal(1)
     end select
 
@@ -358,7 +357,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 
 
   if(iter .gt.sk%maxiter) then
-!    message(1) = 'Warning: Maxiter reached'
+!    message(1) = 'Maxiter reached'
 !    call messages_warning(1)
   end if
 

@@ -373,7 +373,7 @@ contains
       if(iunit<0) then
         if(die_) then
           write(stderr, '(a)') '*** IO Error: Too many files open'
-          message(1) = 'Error: io_open.'
+          message(1) = 'io_open.'
           call messages_fatal(1)
         end if
         POP_SUB(io_open)
@@ -398,7 +398,7 @@ contains
         if(die_) then
           write(*, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
             '" for action="', trim(action), '"'
-          message(1) = 'Error: io_open.'
+          message(1) = 'io_open.'
           call messages_fatal(1)
         end if
       end if

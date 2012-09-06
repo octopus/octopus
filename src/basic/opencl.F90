@@ -881,7 +881,7 @@ module opencl_m
         read(unit = iunit, rec = irec, iostat = ierr) string(irec:irec) 
         if (ierr /= 0) exit
         if(irec == OPENCL_MAX_FILE_LENGTH) then
-          call messages_write('Error: CL source file is too big: '//trim(filename)//'.')
+          call messages_write('CL source file is too big: '//trim(filename)//'.')
           call messages_new_line()
           call messages_write("       Increase 'OPENCL_MAX_FILE_LENGTH'.")
           call messages_fatal()
@@ -1054,7 +1054,7 @@ module opencl_m
         errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
       end select
 
-      message(1) = 'Error: OpenCL '//trim(name)//' '//trim(errcode)
+      message(1) = 'OpenCL '//trim(name)//' '//trim(errcode)
       call messages_fatal(1)
   
       POP_SUB(opencl_print_error)
@@ -1107,7 +1107,7 @@ module opencl_m
       end select
 #endif
 
-      message(1) = 'Error: clAmdBlas '//trim(name)//' '//trim(errcode)
+      message(1) = 'clAmdBlas '//trim(name)//' '//trim(errcode)
       call messages_fatal(1)
   
       POP_SUB(clblas_print_error)
@@ -1184,7 +1184,7 @@ module opencl_m
       end select
 #endif
 
-      message(1) = 'Error: clAmdFft '//trim(name)//' '//trim(errcode)
+      message(1) = 'clAmdFft '//trim(name)//' '//trim(errcode)
       call messages_fatal(1)
 
       POP_SUB(clfft_print_error)

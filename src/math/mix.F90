@@ -277,7 +277,7 @@ contains
     if(smix%type_of_mixing == MIX_LINEAR) then
       smix%alpha = newmixing
     else
-    !  message(1) = "Error: Mixing can only be adjusted in linear mixing scheme."
+    !  message(1) = "Mixing can only be adjusted in linear mixing scheme."
     !  call messages_fatal(1)
     endif
     

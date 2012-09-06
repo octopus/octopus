@@ -70,7 +70,7 @@
     end select
 
     if(abs(sys%st%qtot - real(no_electrons, REAL_PRECISION) ) > CNST(1.0e-8)) then
-      write(message(1), '(a)') 'Error inv check_faulty_runmodes'
+      write(message(1), '(a)') 'Error in check_faulty_runmodes'
       call messages_fatal(1)
     end if
 

@@ -363,7 +363,7 @@ contains
       do ii = 1, mc%n_index
         if(mc%group_sizes(ii) == -1) then
           if(fill_used) then
-            message(1) = "Error: The 'fill' value can be used only once in ParallelizationGroupRanks."
+            message(1) = "The 'fill' value can be used only once in ParallelizationGroupRanks."
             call messages_fatal(1, only_root_writes = .true.)
           end if
           mc%group_sizes(ii) = -base_grp%size / product(mc%group_sizes)

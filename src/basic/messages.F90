@@ -978,7 +978,7 @@ end subroutine messages_end
     INCR(experimentals, 1)
 
     if(.not. conf%devel_version) then
-      write(message(1), '(a)') 'Error: '//trim(name)//' is under development.'
+      write(message(1), '(a)') trim(name)//' is under development.'
       write(message(2), '(a)') 'To use it (at your own risk) set the variable ExperimentalFeatures to yes.'
       call messages_fatal(2, only_root_writes = .true.)
     else

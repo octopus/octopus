@@ -200,7 +200,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
     call io_csv_get_info(filename, dims, ierr)
     
     if (ierr .ne. 0) then
-      message(1) = "Error: Could not read file "//trim(filename)//""
+      message(1) = "Could not read file "//trim(filename)//""
       call messages_fatal(1)
     end if
     
@@ -208,7 +208,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
     call io_csv_read(filename, dims(1)*dims(2)*dims(3), read_ff, ierr)
 
     if (ierr .ne. 0) then
-      message(1) = "Error: Could not read file "//trim(filename)//""
+      message(1) = "Could not read file "//trim(filename)//""
       call messages_fatal(1)
     end if
 

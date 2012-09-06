@@ -99,7 +99,7 @@ module opt_control_initst_m
       call restart_read(trim(restart_dir)//GS_DIR, initial_state, sys%gr, ierr, exact = .true.)
 
     case(oct_is_excited)  
-      message(1) = 'Error: Using an excited state as the starting state for an '
+      message(1) = 'Using an excited state as the starting state for an '
       message(2) = 'optimal-control run is not possible yet.'
       message(3) = 'Try using "OCTInitialState = oct_is_transformation" instead.'
       call messages_fatal(3)

@@ -442,16 +442,16 @@ contains
     select case(cf_common%representation)
     case(ctr_fourier_series_h, ctr_zero_fourier_series_h)
       if(cf_common%targetfluence .eq. M_ZERO) then
-        write(message(1), '(a)') 'Error: If you set "OCTControlFunctionRepresentation" to either'
-        write(message(2), '(a)') '       "control_fourier_series_h", or "control_zero_fourier_series_h", then the run'
-        write(message(3), '(a)') '       must be done in fixed fluence mode.'
+        write(message(1), '(a)') 'If you set "OCTControlFunctionRepresentation" to either'
+        write(message(2), '(a)') '"control_fourier_series_h", or "control_zero_fourier_series_h", then the run'
+        write(message(3), '(a)') 'must be done in fixed fluence mode.'
         call messages_fatal(3)
       end if
       mode_fixed_fluence = .true.
     case(ctr_fourier_series, ctr_zero_fourier_series)
       if(cf_common%targetfluence .ne. M_ZERO) then
-        write(message(1), '(a)') 'Error: If you set "OCTControlFunctionRepresentation" to "control_fourier_series",'
-        write(message(2), '(a)') '       then you cannot run in fixed fluence mode.'
+        write(message(1), '(a)') 'If you set "OCTControlFunctionRepresentation" to "control_fourier_series",'
+        write(message(2), '(a)') 'then you cannot run in fixed fluence mode.'
         call messages_fatal(2)
       end if
       mode_fixed_fluence = .false.
@@ -681,8 +681,8 @@ contains
 
 
     if(cp%dof <= 0) then
-      write(message(1),'(a)') 'Error: The number of degrees of freedom used to describe the control function'
-      write(message(2),'(a)') '       is less than or equal to zero. This should not happen. Please review your input file.'
+      write(message(1),'(a)') 'The number of degrees of freedom used to describe the control function'
+      write(message(2),'(a)') 'is less than or equal to zero. This should not happen. Please review your input file.'
       call messages_fatal(2)
     else
       if(cf_common%representation .ne. ctr_real_time) then

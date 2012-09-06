@@ -45,7 +45,7 @@ subroutine X(eigen_solver_arpack)(gr, st, hm, tol_, niter, ncv, converged, ik, d
 	
 #if defined(HAVE_MPI)
   if(gr%mesh%parallel_in_domains) then
-    message(1) = 'Error: Arpack-Solver not parallelized for domain decomposition.'
+    message(1) = 'Arpack-Solver not parallelized for domain decomposition.'
     call messages_fatal(1)
     !  FIXME: Need to adjust mesh%x and mesh%vol_pp occurences in the code below
     !         appropriately for domain decomposition. Also parallelization
