@@ -1278,7 +1278,7 @@ module opt_control_target_m
           do ist = psi_in%st_start, psi_in%st_end
             do ip = 1, gr%mesh%np
               if(psi_in%rho(ip, 1) > CNST(1.0e-8)) then
-                chi_out%zpsi(ip, 1, ist, 1) = sqrt(target%rho(ip) / psi_in%rho(ip, 1)) * &
+                chi_out%zpsi(ip, 1, ist, 1) = psi_in%occ(ist, 1) * sqrt(target%rho(ip) / psi_in%rho(ip, 1)) * &
                   psi_in%zpsi(ip, 1, ist, 1)
               else
                 chi_out%zpsi(ip, 1, ist, 1) = M_ZERO !sqrt(target%rho(ip))
@@ -1300,7 +1300,7 @@ module opt_control_target_m
         do idim = 1, psi_in%d%dim
           do ist = psi_in%st_start, psi_in%st_end
             do ip = 1, gr%mesh%np
-              chi_out%zpsi(ip, idim, ist, ik) = target%rho(ip) * psi_in%zpsi(ip, idim, ist, ik)
+              chi_out%zpsi(ip, idim, ist, ik) = psi_in%occ(ist, ik) * target%rho(ip) * psi_in%zpsi(ip, idim, ist, ik)
             end do
           end do
         end do
