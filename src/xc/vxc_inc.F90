@@ -1055,24 +1055,19 @@ end subroutine zxc_complex_lda
 ! This is the complex scaled interface for xc functionals.
 ! It will eventually be merged with the other one dxc_get_vxc after some test
 ! -----------------------------------------------------------------------------
-subroutine xc_get_vxc_cmplx(der, xcs, st, rho, ispin, ioniz_pot, qtot, &
-  ex, ec, vxc, vtau, Imrho, Imex, Imec, Imvxc, Imvtau, cmplxscl_th)
+subroutine xc_get_vxc_cmplx(der, xcs, rho, ispin, &
+  ex, ec, vxc, Imrho, Imex, Imec, Imvxc, cmplxscl_th)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
-  type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
   FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
   integer,              intent(in)    :: ispin           !< Number of spin channels 
-  FLOAT,                intent(in)    :: ioniz_pot
-  FLOAT,                intent(in)    :: qtot 
   FLOAT, optional,      intent(inout) :: ex              !< Exchange energy.
   FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
   FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
-  FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
   FLOAT,                intent(in)    :: Imrho(:, :)     !< cmplxscl: Electronic density 
   FLOAT, optional,      intent(inout) :: Imex            !< cmplxscl: Exchange energy.
   FLOAT, optional,      intent(inout) :: Imec            !< cmplxscl: Correlation energy
   FLOAT, optional,      intent(inout) :: Imvxc(:,:)      !< cmplxscl: XC potential
-  FLOAT, optional,      intent(inout) :: Imvtau(:,:)     !< cmplxscl: Derivative wrt (two times kinetic energy density)
   FLOAT,                intent(in)    :: cmplxscl_th     !< complex scaling angle
 
   

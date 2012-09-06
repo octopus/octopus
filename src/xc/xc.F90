@@ -114,12 +114,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_init(xcs, ndim, nel, spin_channels, cdft, hartree_fock)
+  subroutine xc_init(xcs, ndim, nel, hartree_fock)
     type(xc_t), intent(out) :: xcs
     integer,    intent(in)  :: ndim
     FLOAT,      intent(in)  :: nel
-    integer,    intent(in)  :: spin_channels
-    logical,    intent(in)  :: cdft
     logical,    intent(in)  :: hartree_fock
 
     integer :: isp, x_id, c_id, xk_id, ck_id

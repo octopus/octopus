@@ -28,7 +28,7 @@ program oct_help
 
   implicit none
 
-  integer :: argc, ierr
+  integer :: ierr
   character(len=32) :: mode
   character(len=100) :: varname
 
@@ -65,3 +65,8 @@ program oct_help
   call global_end()
     
 end program oct_help
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

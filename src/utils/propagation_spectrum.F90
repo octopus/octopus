@@ -36,10 +36,10 @@ program propagation_spectrum
   implicit none
 
   integer :: in_file(3), out_file(3), ref_file, eq_axes, nspin, &
-             ref_nspin, lmax, ref_lmax, time_steps, ref_time_steps, ierr
+    lmax, time_steps, ierr
   logical :: calculate_tensor, reference_multipoles
   type(spec_t) :: spectrum
-  type(unit_system_t) :: file_units, ref_file_units
+  type(unit_system_t) :: file_units
   character(len=80) :: refmultipoles
 
   ! Initialize stuff
@@ -116,8 +116,8 @@ program propagation_spectrum
       character(len=*), intent(in) :: fname
       character(len=*), intent(in) :: reffname
 
-      type(kick_t) :: kick, ref_kick
-      FLOAT :: dt, ref_dt
+      type(kick_t) :: kick
+      FLOAT :: dt
 
       PUSH_SUB(read_files)
       

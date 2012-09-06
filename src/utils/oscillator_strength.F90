@@ -953,7 +953,7 @@ subroutine generate_signal(order, observable)
 
   ot = ot / lambda**order
 
-  call write_ot(nspin, time_steps, dt, kick, units, order, ot(0:time_steps), observable)
+  call write_ot(nspin, time_steps, dt, kick, order, ot(0:time_steps), observable)
 
   ! Close files and exit.
   do j = 1, nfiles
@@ -1014,7 +1014,7 @@ end subroutine modify_ot
 
 
 ! ---------------------------------------------------------
-subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
+subroutine write_ot(nspin, time_steps, dt, kick, order, ot, observable)
   use global_m
   use io_m
   use kick_m
@@ -1029,7 +1029,6 @@ subroutine write_ot(nspin, time_steps, dt, kick, units, order, ot, observable)
   integer,             intent(in) :: nspin, time_steps
   FLOAT,               intent(in) :: dt
   type(kick_t),        intent(in) :: kick
-  type(unit_system_t), intent(in) :: units
   integer,             intent(in) :: order
   FLOAT,               intent(in) :: ot(0:time_steps)
   integer,             intent(in) :: observable(2)

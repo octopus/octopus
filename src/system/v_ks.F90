@@ -186,13 +186,13 @@ contains
       call messages_experimental("Hartree theory level")
     case(HARTREE_FOCK)
       ! initialize XC modules
-      call xc_init(ks%xc, gr%mesh%sb%dim, nel, dd%spin_channels, dd%cdft, hartree_fock=.true.)
+      call xc_init(ks%xc, gr%mesh%sb%dim, nel, hartree_fock=.true.)
       ks%xc_family = ks%xc%family
       ks%sic_type = SIC_NONE
 
     case(KOHN_SHAM_DFT)
       ! initialize XC modules
-      call xc_init(ks%xc, gr%mesh%sb%dim, nel, dd%spin_channels, dd%cdft, hartree_fock=.false.)
+      call xc_init(ks%xc, gr%mesh%sb%dim, nel, hartree_fock=.false.)
       ks%xc_family = ks%xc%family
 
       ! check for SIC
@@ -296,7 +296,7 @@ contains
         call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, mc)
       endif
     case(RDMFT)
-      call xc_init(ks%xc, gr%mesh%sb%dim, nel, dd%spin_channels, dd%cdft, hartree_fock=.false.)
+      call xc_init(ks%xc, gr%mesh%sb%dim, nel, hartree_fock=.false.)
       ks%xc_family = ks%xc%family
     end select
 
@@ -635,8 +635,7 @@ contains
               st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
               ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vxc = ks%calc%vxc)
           else
-            call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, &
-              st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+            call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, ks%calc%density, st%d%ispin, &
               ex = energy%exchange, ec = energy%correlation, vxc = ks%calc%vxc, & 
               Imrho = ks%calc%Imdensity, Imex = energy%Imexchange, Imec = energy%Imcorrelation, &
               Imvxc = ks%calc%Imvxc, cmplxscl_th = hm%cmplxscl_th)
@@ -654,8 +653,7 @@ contains
               st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
               vxc = ks%calc%vxc)
           else
-            call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, &
-              st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+            call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, ks%calc%density, st%d%ispin, &
               vxc = ks%calc%vxc, Imrho = ks%calc%Imdensity, Imvxc = ks%calc%Imvxc,&
               cmplxscl_th = hm%cmplxscl_th )
           end if
