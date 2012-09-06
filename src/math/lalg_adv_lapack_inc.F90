@@ -273,8 +273,8 @@ end subroutine zgeneigensolve
 !! (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
 subroutine zeigensolve_nonh(n, a, e, err_code, side)
   integer,           intent(in)      :: n
-  CMPLX,             intent(inout)   :: a(n,n)
-  CMPLX,             intent(out)     :: e(n)
+  CMPLX,             intent(inout)   :: a(:, :)
+  CMPLX,             intent(out)     :: e(:)
   integer, optional, intent(out)     :: err_code
   character(1), optional, intent(in) :: side ! which eigenvectors ('L' or 'R')
 
@@ -298,9 +298,9 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   ! is below the matrix dimension.
   SAFE_ALLOCATE(work(n))
   SAFE_ALLOCATE(vl(1, 1))
-  SAFE_ALLOCATE(vr(1, 1))
+  SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
   SAFE_ALLOCATE(rwork(1))
-  call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
+  call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1, 1), LD(vr), work(1), lwork, rwork(1), info)
 
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
@@ -313,13 +313,13 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   if (side_.eq.'L'.or.side_.eq.'l') then
       SAFE_ALLOCATE(vl(1:n, 1:n))
       SAFE_ALLOCATE(vr(1, 1))
-      call lapack_geev('V', 'N', n, a(1, 1), n, e(1), vl(1, 1), n, vr(1,1), 1, work(1), lwork, rwork(1), info)
-      a(:, :) = vl(:, :)
+      call lapack_geev('V', 'N', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), work(1), lwork, rwork(1), info)
+      a(1:n, 1:n) = vl(1:n, 1:n)
   else
       SAFE_ALLOCATE(vl(1, 1))
       SAFE_ALLOCATE(vr(1:n, 1:n))
-      call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
-      a(:, :) = vr(:, :)
+      call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), work(1), lwork, rwork(1), info)
+      a(1:n, 1:n) = vr(1:n, 1:n)
   end if
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
@@ -343,8 +343,8 @@ end subroutine zeigensolve_nonh
 !! generalized (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
 subroutine deigensolve_nonh(n, a, e, err_code, side)
   integer,           intent(in)      :: n
-  FLOAT,             intent(inout)   :: a(n,n)
-  FLOAT,             intent(out)     :: e(n)
+  FLOAT,             intent(inout)   :: a(:, :)
+  FLOAT,             intent(out)     :: e(:)
   integer, optional, intent(out)     :: err_code
   character(1), optional, intent(in) :: side ! which eigenvectors ('L' or 'R')
 
@@ -367,9 +367,9 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   ! is below the matrix dimension.
   SAFE_ALLOCATE(work(n))
   SAFE_ALLOCATE(vl(1, 1))
-  SAFE_ALLOCATE(vr(1, 1))
+  SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
   SAFE_ALLOCATE(rwork(1))
-  call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1, 1), n, work(1), lwork, rwork(1), info)
+  call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), LD(vl), vr(1, 1), LD(vr), work(1), lwork, rwork(1), info)
 
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
@@ -382,13 +382,13 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   if (side_.eq.'L'.or.side_.eq.'l') then
       SAFE_ALLOCATE(vl(1:n, 1:n))
       SAFE_ALLOCATE(vr(1, 1))
-      call lapack_geev('V', 'N', n, a(1, 1), n, e(1), vl(1, 1), n, vr(1,1), 1, work(1), lwork, rwork(1), info)
-      a(:, :) = vl(:, :)
+      call lapack_geev('V', 'N', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), work(1), lwork, rwork(1), info)
+      a(1:n, 1:n) = vl(1:n, 1:n)
   else
       SAFE_ALLOCATE(vl(1, 1))
       SAFE_ALLOCATE(vr(1:n, 1:n))
-      call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), 1, vr(1,1), n, work(1), lwork, rwork(1), info)
-      a(:, :) = vr(:, :)
+      call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), work(1), lwork, rwork(1), info)
+      a(1:n, 1:n) = vr(1:n, 1:n)
   end if
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
