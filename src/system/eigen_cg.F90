@@ -48,28 +48,27 @@ module eigen_cg_m
     deigensolver_cg2_new,   &
     zeigensolver_cg2_new,   &
     eigensolver_direct
+
 contains
 
-  subroutine eigensolver_direct(gr, st, hm, pre, tol, niter, converged, ik, diff)
+  subroutine eigensolver_direct(gr, st, hm, niter, converged, ik, diff)
     type(grid_t),           intent(in)    :: gr
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
-    type(preconditioner_t), intent(in)    :: pre
-    FLOAT,                  intent(in)    :: tol
     integer,                intent(inout) :: niter
     integer,                intent(inout) :: converged
     integer,                intent(in)    :: ik
     FLOAT,        optional, intent(out)   :: diff(1:st%nst)
         
     CMPLX, allocatable :: psi(:, :), h_psi(:,:), h_rr(:,:), cL_rr(:,:), cR_rr(:,:), zeigenval(:), manyzeigenval(:)
-    FLOAT, allocatable :: eigenval(:), manyeigenval(:), sortkey(:)
+    FLOAT, allocatable :: manyeigenval(:), sortkey(:)
     integer, allocatable :: sortindices(:)
     FLOAT :: spacingsquared
     CMPLX :: kinetic_phase, tmp, tmp2
     logical :: fdkinetic
+    integer :: ib, jb, p, errcode
 
-    integer       :: ib, jb, p, errcode
-    
+    PUSH_SUB(eigensolver_direct)    
 
     SAFE_ALLOCATE(  psi(1:gr%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(h_psi(1:gr%mesh%np, 1:st%d%dim))
@@ -194,12 +193,9 @@ contains
     SAFE_DEALLOCATE_A(sortindices)
     SAFE_DEALLOCATE_A(cL_rr)
     SAFE_DEALLOCATE_A(cR_rr)
+
+    POP_SUB(eigensolver_direct)
   end subroutine eigensolver_direct
-
-
- 
-
-
 
 #include "real.F90"
 #include "eigen_cg_inc.F90"

@@ -293,7 +293,7 @@ contains
         call xc_oep_init(ks%oep, ks%xc_family, gr, dd)
       endif
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, dd, mc)
+        call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, mc)
       endif
     case(RDMFT)
       call xc_init(ks%xc, gr%mesh%sb%dim, nel, dd%spin_channels, dd%cdft, hartree_fock=.false.)
@@ -679,11 +679,9 @@ contains
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_KS_INVERSION')
         ! Also treat KS inversion separately (not part of libxc)
         if(present(time)) then
-           call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st,  &
-             energy%exchange, energy%correlation, vxc = ks%calc%vxc, time=ks%calc%time)
+           call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, vxc = ks%calc%vxc, time=ks%calc%time)
         else
-           call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, &
-             energy%exchange, energy%correlation, vxc = ks%calc%vxc)
+           call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, vxc = ks%calc%vxc)
          end if
 
         endif

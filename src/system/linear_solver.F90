@@ -88,12 +88,11 @@ module linear_solver_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, gr, prefix, def_solver, tol_scheme)
+  subroutine linear_solver_init(this, gr, prefix, def_solver)
     type(linear_solver_t),  intent(out)   :: this
     type(grid_t),           intent(inout) :: gr
     character(len=*),       intent(in)    :: prefix
     integer, optional,      intent(in)    :: def_solver
-    integer, optional,      intent(in)    :: tol_scheme
 
     integer :: fsolver
     integer :: defsolver_ 

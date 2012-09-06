@@ -98,7 +98,7 @@ R_TYPE function X(energy_calc_electronic)(hm, der, st, terms, cproduct) result(e
   integer,             intent(in)    :: terms
   logical, optional,   intent(in)    :: cproduct
 
-  integer :: ik, ist, ib, minst, maxst
+  integer :: ik, ib, minst, maxst
   type(batch_t) :: hpsib
   R_TYPE, allocatable  :: tt(:, :)
   logical :: cproduct_

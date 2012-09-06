@@ -78,11 +78,11 @@
       if(constr_end >= constr_start) then
         call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
            constr_start, constr_end, &
-           ik, pre, tol, n_matvec, conv, diff, iblock, &
+           ik, pre, tol, n_matvec, conv, diff, &
            constr = st%X(psi)(:, :, constr_start:constr_end, ik))
       else
         call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
-           constr_start, constr_end, ik, pre, tol, n_matvec, conv, diff, iblock)
+           constr_start, constr_end, ik, pre, tol, n_matvec, conv, diff)
       end if
 
       niter         = niter + n_matvec
@@ -122,7 +122,7 @@
 !! There is also a wiki page at
 !! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:LOBPCG
 subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end,  &
-  ik, pre, tol, niter, converged, diff, ib, constr)
+  ik, pre, tol, niter, converged, diff, constr)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -137,7 +137,6 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   integer,                intent(inout) :: niter
   integer,                intent(out)   :: converged
   FLOAT,                  intent(inout) :: diff(1:st%nst)
-  integer,                intent(in)    :: ib
   R_TYPE, optional,       intent(in)    :: constr(gr%mesh%np_part, st%d%dim, constr_start:constr_end)
 
   integer :: nps   ! Number of points per state.

@@ -30,7 +30,6 @@ module eigensolver_m
   use global_m
   use grid_m
   use hamiltonian_m
-  use kpoints_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
@@ -329,15 +328,13 @@ contains
     integer,              intent(in)    :: iter
     logical,    optional, intent(inout) :: conv
 
-    integer :: maxiter, ik, ns, idir
-    FLOAT :: kpoint(1:MAX_DIM)
+    integer :: maxiter, ik, ns
 #ifdef HAVE_MPI
     logical :: conv_reduced
     integer :: outcount, ist
     FLOAT, allocatable :: ldiff(:), leigenval(:)
 #endif
     type(profile_t), save :: prof
-    character(len=100) :: str_tmp
 
     call profiling_in(prof, "EIGEN_SOLVER")
     PUSH_SUB(eigensolver_run)
@@ -383,8 +380,7 @@ contains
           call deigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_MG)
-          call deigensolver_mg(gr%der, st, hm, eigens%sdiag, eigens%tolerance, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_mg(gr%der, st, hm, eigens%sdiag, maxiter, ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
@@ -412,7 +408,7 @@ contains
         case(RS_CG)
           call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_DIRECT)
-           call eigensolver_direct(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+           call eigensolver_direct(gr, st, hm, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik))
@@ -423,8 +419,7 @@ contains
           call zeigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_MG)
-          call zeigensolver_mg(gr%der, st, hm, eigens%sdiag, eigens%tolerance, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_mg(gr%der, st, hm, eigens%sdiag, maxiter, ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &

@@ -18,14 +18,12 @@
 !! $Id: eigen_mg_inc.F90 4195 2008-05-25 18:15:35Z xavier $
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_mg) (der, st, hm, sdiag, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_mg) (der, st, hm, sdiag, niter, ik, diff)
   type(derivatives_t),    intent(in)    :: der
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
   type(subspace_t),       intent(in)    :: sdiag
-  FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
-  integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
   FLOAT,                  intent(out)   :: diff(1:st%nst)
 
