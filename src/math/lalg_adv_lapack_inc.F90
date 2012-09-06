@@ -45,8 +45,8 @@ end function sfmin
 !! matrix.
 subroutine dcholesky(n, a, bof, err_code)
   integer,           intent(in)    :: n
-  FLOAT,             intent(inout) :: a(:, :)
-  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  FLOAT,             intent(inout) :: a(:,:)   !< (n,n)
+  logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
   integer :: info
@@ -90,8 +90,8 @@ end subroutine dcholesky
 !! matrix.
 subroutine zcholesky(n, a, bof, err_code)
   integer,           intent(in)    :: n
-  CMPLX,             intent(inout) :: a(:, :)
-  logical, optional, intent(inout) :: bof     ! Bomb on failure.
+  CMPLX,             intent(inout) :: a(:,:)  !< (n,n)
+  logical, optional, intent(inout) :: bof     !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
   integer :: info
@@ -136,10 +136,10 @@ end subroutine zcholesky
 !! Here A and B are assumed to be symmetric and B is also positive definite.
 subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
-  FLOAT,             intent(inout) :: a(:, :)
-  FLOAT,             intent(inout) :: b(:, :)
-  FLOAT,             intent(out)   :: e(:)
-  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  FLOAT,             intent(inout) :: a(:,:)   !< (n,n)
+  FLOAT,             intent(inout) :: b(:,:)   !< (n,n)
+  FLOAT,             intent(out)   :: e(:)     !< (n)
+  logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
   integer :: info, lwork, ii, jj
@@ -204,10 +204,10 @@ end subroutine dgeneigensolve
 !! Here A and B are assumed to be Hermitian and B is also positive definite.
 subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
-  CMPLX,             intent(inout) :: a(:, :)
-  CMPLX,             intent(inout) :: b(:, :)
-  FLOAT,             intent(out)   :: e(:)
-  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  CMPLX,             intent(inout) :: a(:,:)   !< (n,n)
+  CMPLX,             intent(inout) :: b(:,:)   !< (n,n)
+  FLOAT,             intent(out)   :: e(:)     !< (n)
+  logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
   integer            :: info, lwork, ii, jj
@@ -276,7 +276,7 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   CMPLX,             intent(inout)   :: a(:, :)
   CMPLX,             intent(out)     :: e(:)
   integer, optional, intent(out)     :: err_code
-  character(1), optional, intent(in) :: side ! which eigenvectors ('L' or 'R')
+  character(1), optional, intent(in) :: side     !< which eigenvectors ('L' or 'R')
 
   integer            :: info, lwork
   FLOAT, allocatable :: rwork(:)
@@ -349,7 +349,7 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   FLOAT,             intent(inout)   :: a(:, :)
   FLOAT,             intent(out)     :: e(:)
   integer, optional, intent(out)     :: err_code
-  character(1), optional, intent(in) :: side ! which eigenvectors ('L' or 'R')
+  character(1), optional, intent(in) :: side     !< which eigenvectors ('L' or 'R')
 
   integer            :: info, lwork
   FLOAT, allocatable :: rwork(:), work(:), vl(:, :) ,vr(:, :)
@@ -418,11 +418,11 @@ end subroutine deigensolve_nonh
 !! Here A and B are assumed to be symmetric and B is also positive definite.
 subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   integer,           intent(in)    :: k, n
-  FLOAT,             intent(in)    :: a(:, :)
-  FLOAT,             intent(in)    :: b(:, :)
-  FLOAT,             intent(out)   :: e(:)
-  FLOAT,             intent(out)   :: v(:, :)
-  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  FLOAT,             intent(in)    :: a(:,:)   !< (n, n)
+  FLOAT,             intent(in)    :: b(:,:)   !< (n, n)
+  FLOAT,             intent(out)   :: e(:)     !< (n)
+  FLOAT,             intent(out)   :: v(:,:)   !< (n, n)
+  logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
   interface
@@ -493,11 +493,11 @@ end subroutine dlowest_geneigensolve
 !! Here A and B are assumed to be Hermitian and B is also positive definite.
 subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   integer,           intent(in)    :: k, n
-  CMPLX,             intent(in)    :: a(:, :)
-  CMPLX,             intent(in)    :: b(:, :)
-  FLOAT,             intent(out)   :: e(:)
-  CMPLX,             intent(out)   :: v(:, :)
-  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  CMPLX,             intent(in)    :: a(:,:)   !< (n,n)
+  CMPLX,             intent(in)    :: b(:,:)   !< (n,n)
+  FLOAT,             intent(out)   :: e(:)     !< (n)
+  CMPLX,             intent(out)   :: v(:,:)   !< (n)
+  logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
   interface
@@ -566,8 +566,8 @@ end subroutine zlowest_geneigensolve
 !> Computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
 subroutine deigensolve(n, a, e, bof, err_code)
   integer, intent(in)              :: n
-  FLOAT,   intent(inout)           :: a(n,n)
-  FLOAT,   intent(out)             :: e(n)
+  FLOAT,   intent(inout)           :: a(n,n)   !< (n,n)
+  FLOAT,   intent(out)             :: e(n)     !< (n)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
@@ -613,10 +613,10 @@ end subroutine deigensolve
 ! ---------------------------------------------------------
 !> Computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
 subroutine zeigensolve(n, a, e, bof, err_code)
-  integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: a(n,n)
-  FLOAT,   intent(out)   :: e(n)
-  logical, optional, intent(inout) :: bof      ! Bomb on failure.
+  integer,           intent(in)    :: n
+  CMPLX,             intent(inout) :: a(n,n)   !< (n,n)
+  FLOAT,             intent(out)   :: e(n)     !< (n)
+  logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
   integer            :: info, lwork
@@ -1132,9 +1132,9 @@ end subroutine zlinsyssolve
 !> computes the singular value decomposition of a complex NxN matrix a(:,:)
 subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
   integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: a(n, n)  
-  CMPLX,   intent(out)   :: u(n, n), vt(n, n)  
-  FLOAT,   intent(out)   :: sg_values(n)
+  CMPLX,   intent(inout) :: a(:,:)          !< (n,n)
+  CMPLX,   intent(out)   :: u(:,:), vt(:,:) !< (n,n)  
+  FLOAT,   intent(out)   :: sg_values(:)    !< (n)
 
   interface
     subroutine ZLAPACK(gesvd) ( jobu, jobvt, m, n, a, lda, s, u, ldu, &
@@ -1183,7 +1183,7 @@ end subroutine zsingular_value_decomp
 !> computes inverse of a complex NxN matrix a(:,:) using the SVD decomposition 
 subroutine zsvd_inverse(n, a, threshold)
   integer, intent(in)           :: n
-  CMPLX,   intent(inout)        :: a(n, n)    ! a will be replaced by its inverse
+  CMPLX,   intent(inout)        :: a(:,:)    !< (n,n); a will be replaced by its inverse
   FLOAT,   intent(in), optional :: threshold
 
   CMPLX, allocatable :: u(:,:), vt(:,:)
@@ -1233,7 +1233,7 @@ end subroutine zsvd_inverse
 !! unpacked storage).
 subroutine dinvert_upper_triangular(n, a)
   integer, intent(in)    :: n
-  FLOAT,   intent(inout) :: a(n, n)
+  FLOAT,   intent(inout) :: a(:,:) !< (n,n)
 
   integer :: info
 
@@ -1267,7 +1267,7 @@ end subroutine dinvert_upper_triangular
 !! unpacked storage).
 subroutine zinvert_upper_triangular(n, a)
   integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: a(n, n)
+  CMPLX,   intent(inout) :: a(:,:) !< (n,n)
 
   integer :: info
 
@@ -1300,7 +1300,7 @@ end subroutine zinvert_upper_triangular
 !! unpacked storage).
 subroutine dinvert_lower_triangular(n, a)
   integer, intent(in)    :: n
-  FLOAT,   intent(inout) :: a(n, n)
+  FLOAT,   intent(inout) :: a(:,:) !< (n,n)
 
   integer :: info
 
@@ -1333,7 +1333,7 @@ end subroutine dinvert_lower_triangular
 !! unpacked storage).
 subroutine zinvert_lower_triangular(n, a)
   integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: a(n, n)
+  CMPLX,   intent(inout) :: a(:,:) !< (n,n)
 
   integer :: info
 
