@@ -666,7 +666,7 @@ contains
 
     chol_failure = .false.
     SAFE_ALLOCATE(vv(1:nuc, 1:nuc))
-    call states_blockt_mul(gr%mesh, st, v_start, v_end, v_start, v_end, vs, vs, vv, xpsi1=UC, xpsi2=UC, symm=.true.)
+    call states_blockt_mul(gr%mesh, st, v_start, v_start, vs, vs, vv, xpsi1=UC, xpsi2=UC, symm=.true.)
     call profiling_in(C_PROFILING_LOBPCG_CHOL)
     call lalg_cholesky(nuc, vv, bof=chol_failure)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -711,10 +711,10 @@ contains
     SAFE_ALLOCATE(tmp2(1:nconstr, 1:nidx))
     SAFE_ALLOCATE(tmp3(1:nconstr, 1:nidx))
 
-    call states_blockt_mul(gr%mesh, st, constr_start, constr_end, constr_start, constr_end, &
+    call states_blockt_mul(gr%mesh, st, constr_start, constr_start, &
       constr, constr, tmp1, xpsi1=all_constr, xpsi2=all_constr)
     det = lalg_inverter(nconstr, tmp1, invert=.true.)
-    call states_blockt_mul(gr%mesh, st, constr_start, constr_end, vs_start, vs_end, &
+    call states_blockt_mul(gr%mesh, st, constr_start, vs_start, &
       constr, vs, tmp2, xpsi1=all_constr, xpsi2=idx(1:nidx))
     call lalg_gemm(nconstr, nidx, nconstr, R_TOTYPE(M_ONE), tmp1, tmp2, R_TOTYPE(M_ZERO), tmp3)
     call states_block_matr_mul_add(gr%mesh, st, -R_TOTYPE(M_ONE), constr_start, constr_end, vs_start, vs_end, &
@@ -740,7 +740,7 @@ contains
 
     PUSH_SUB(X(lobpcg).X(blockt_mul))
 
-    call states_blockt_mul(gr%mesh, st, st_start, st_end, st_start, st_end, &
+    call states_blockt_mul(gr%mesh, st, st_start, st_start, &
       psi1, psi2, res, xpsi1=xpsi1, xpsi2=xpsi2, symm=symm)
 
     POP_SUB(X(lobpcg).X(blockt_mul))

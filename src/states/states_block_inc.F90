@@ -21,14 +21,12 @@
 ! ---------------------------------------------------------
 ! Multiplication of two blocks of states:
 ! res <- psi1(xpsi1)^+ * psi2(xpsi2) with the index sets xpsi1 and xpsi2.
-subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2_end, &
+subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   psi1, psi2, res, xpsi1, xpsi2, symm)
   type(mesh_t),      intent(in)  :: mesh
   type(states_t),    intent(in)  :: st
   integer,           intent(in)  :: psi1_start
-  integer,           intent(in)  :: psi1_end
   integer,           intent(in)  :: psi2_start
-  integer,           intent(in)  :: psi2_end
   R_TYPE, target,    intent(in)  :: psi1(:, :, psi1_start:)
   R_TYPE, target,    intent(in)  :: psi2(:, :, psi2_start:)
   R_TYPE,            intent(out) :: res(:, :)
@@ -50,7 +48,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi1_end, psi2_start, psi2
   integer, pointer     :: xpsi1_count(:), xpsi2_count(:), xpsi1_node(:, :), xpsi2_node(:, :)
   R_TYPE, pointer      :: sendbuf(:, :, :), recvbuf(:, :, :), tmp_ptr(:, :, :)
   R_TYPE, allocatable  :: res_tmp(:, :)
-  R_TYPE, allocatable  :: psi1_block(:, :, :), psi2_block(:, :, :), res_local(:, :)
+  R_TYPE, allocatable  :: psi1_block(:, :, :), res_local(:, :)
 #endif
 
   call profiling_in(C_PROFILING_BLOCKT)

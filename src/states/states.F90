@@ -1262,7 +1262,7 @@ contains
     type(states_t),         intent(inout)   :: st
     type(mesh_t),           intent(in)      :: ob_mesh(:)
 
-    integer :: ip, idim, st1, st2, k1, k2, il
+    integer :: st1, st2, k1, k2, il
 
     PUSH_SUB(states_allocate_intf_wfns)
 
