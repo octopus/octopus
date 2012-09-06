@@ -43,8 +43,6 @@ module tdpsf_m
     PLUS           =  1,  &   
     MINUS          =  2 
 
-
-
   type tdpsf_t
     
     type(fft_t)  :: fft
@@ -70,11 +68,10 @@ module tdpsf_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine tdpsf_init(psf, fft, mesh, max_iter, dt, width)
+  subroutine tdpsf_init(psf, fft, mesh, dt, width)
     type(tdpsf_t),        intent(out)  :: psf
     type(fft_t),          intent(in)   :: fft
     type(mesh_t), target, intent(in)   :: mesh
-    integer,              intent(in)   :: max_iter
     FLOAT,                intent(in)   :: dt
     FLOAT,                intent(in)   :: width
 
@@ -194,7 +191,6 @@ contains
     FLOAT,         intent(in)    :: kmin
     FLOAT,         intent(in)    :: sigma
 
-
     INTEGER :: ii,idir,dim
     FLOAT   :: xx,kk
     FLOAT   :: normX,normK
@@ -250,7 +246,7 @@ contains
     integer,       intent(in)    :: axis
     integer,       intent(in)    :: direction 
 
-    integer :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
+    integer :: ix,iy,iz, ivec(MAX_DIM)
     CMPLX,allocatable :: wftmp(:,:,:)
 
 
@@ -316,7 +312,6 @@ contains
     CMPLX,         intent(in)    :: wfin(:,:,:)  
     CMPLX,         intent(out)   :: wfout(:,:,:)
 
-    integer :: idir, ii, dim
     CMPLX, allocatable :: wftmp(:,:,:)
 
 
@@ -366,7 +361,7 @@ contains
     integer,       intent(in)  :: axis
     integer,       intent(in)  :: direction 
 
-    integer :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
+    integer :: ix,iy,iz, ivec(MAX_DIM)
     CMPLX, allocatable :: wftmp(:,:,:)
 
 
@@ -417,9 +412,7 @@ contains
     CMPLX,         intent(in)  :: wfin(:,:,:)
     CMPLX,         intent(out) :: wfout(:,:,:)
 
-    integer :: idir, ii, dim
     CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:), wffltrd(:,:,:)
-
 
     PUSH_SUB(tdpsf_X_to_K)
       
@@ -488,11 +481,10 @@ contains
     integer,       intent(in)  :: axis
     integer,       intent(in)  :: direction 
 
-    integer :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
+    integer :: ix,iy,iz, ivec(MAX_DIM)
 
 
     PUSH_SUB(tdpsf_project_K_to_X)
-
 
     wfout =  M_z0
     call zfft_backward(psf%fft, wfin,wfout)
@@ -508,8 +500,6 @@ contains
       end do
     end do
 
-
-
     POP_SUB(tdpsf_project_K_to_X)
   end subroutine tdpsf_project_K_to_X
 
@@ -520,9 +510,7 @@ contains
     CMPLX,         intent(in)    :: wfin(:,:,:)  
     CMPLX,         intent(out)   :: wfout(:,:,:)
 
-    integer :: idir, ii, dim
     CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:), wffltrd(:,:,:)
-
 
     PUSH_SUB(tdpsf_K_to_X)
       
@@ -592,7 +580,7 @@ contains
     integer,       intent(in)    :: axis
     integer,       intent(in)    :: direction 
 
-    integer :: idir, ix,iy,iz, dim,ivec(MAX_DIM)
+    integer :: ix,iy,iz, ivec(MAX_DIM)
     CMPLX, allocatable :: wftmp(:,:,:)
 
 
@@ -660,9 +648,7 @@ contains
     CMPLX,         intent(in)    :: wfin(:,:,:)  
     CMPLX,         intent(out)   :: wfout(:,:,:)
 
-    integer :: idir, ii, dim
     CMPLX, allocatable :: wftmp(:,:,:)
-
 
     PUSH_SUB(tdpsf_filter_out_K)
       

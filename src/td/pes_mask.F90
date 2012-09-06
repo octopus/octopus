@@ -175,12 +175,11 @@
 
       integer :: il, it, ii, ll(3)
       FLOAT :: field(3)
-      FLOAT :: DeltaE,MaxE,MaxDR, pCutOff
+      FLOAT :: DeltaE, MaxE, pCutOff
       FLOAT :: width 
-      integer :: dir, defaultMask,k1,k2,st1,st2, optimize_parity(3)
+      integer :: defaultMask,k1,k2,st1,st2, optimize_parity(3)
       logical :: optimize(3)
       FLOAT, allocatable  ::  XX(:,:)  
-      type(mpi_grp_t) :: mpi_grp
 
       PUSH_SUB(PES_mask_init)
 
@@ -562,7 +561,7 @@
 
       if (mask%mode .eq. PES_MASK_MODE_PSF ) then 
         width = mask%mask_R(2)-mask%mask_R(1)
-        call tdpsf_init(mask%psf,mask%fft, mesh, max_iter,dt,width)
+        call tdpsf_init(mask%psf,mask%fft, mesh, dt,width)
       else
         call PES_mask_generate_mask(mask,mesh)
       end if
@@ -820,11 +819,9 @@
       FLOAT,            intent(in)    :: R(2)
       FLOAT, optional,  intent(out)   :: mask_sq(:,:,:)
 
-      integer :: ip, ix3(3)
-      integer :: ip_local
-      FLOAT   :: dd1,dd2,width
-      FLOAT   :: xx(1:MAX_DIM), rr, dd, radius
-      integer :: ix,iy,iz, ii
+      integer :: ip
+      FLOAT   :: width
+      FLOAT   :: xx(1:MAX_DIM), rr, dd
       CMPLX,allocatable :: mask_fn(:)
       logical :: local_
 
@@ -903,12 +900,11 @@
 
 
     ! --------------------------------------------------------
-    subroutine PES_mask_apply_mask(mask,st,mesh)
+    subroutine PES_mask_apply_mask(mask, st)
       type(states_t),   intent(inout) :: st
       type(PES_mask_t), intent(in)    :: mask
-      type(mesh_t),     intent(in)    :: mesh
 
-      integer :: ik, ist, idim, ip
+      integer :: ik, ist, idim
       CMPLX, allocatable :: mmask(:)
 
       PUSH_SUB(PES_mask_apply_mask)
@@ -954,8 +950,8 @@
       CMPLX,            intent(inout) :: wf(:,:,:)
 
       integer ::  ix, iy, iz
-      FLOAT :: temp(3), vec
-      FLOAT :: dd, KK(1:3)
+      FLOAT :: vec
+      FLOAT :: KK(1:3)
 
       PUSH_SUB(PES_mask_Volkov_time_evolution_wf)
 
@@ -1000,19 +996,14 @@
 
 
     !---------------------------------------------------------
-    subroutine fft_X_to_K(mask, mesh, wfin, wfout)
+    subroutine fft_X_to_K(mask, wfin, wfout)
       type(PES_mask_t), intent(in)  :: mask
-      type(mesh_t),     intent(in)  :: mesh
       CMPLX,            intent(in)  :: wfin(:,:,:)
       CMPLX,            intent(out) :: wfout(:,:,:)
 
-      integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
-      FLOAT   :: temp(3), vec
-      FLOAT   :: dd
-      integer :: il,ll(3)
+      integer :: ix, iy, iz, ixx(3)
+      integer :: ll(3)
       CMPLX, allocatable :: wftmp(:,:,:),wfPlus(:,:,:),wfMinus(:,:,:) 
-      integer :: ip_local
-
 
       PUSH_SUB(fft_X_to_K)
 
@@ -1083,21 +1074,15 @@
     end subroutine fft_X_to_K
 
     ! ------------------------------------------------
-    subroutine fft_K_to_X(mask,mesh,wfin,wfout,inout)
+    subroutine fft_K_to_X(mask,wfin,wfout,inout)
       type(PES_mask_t), intent(in)  :: mask
-      type(mesh_t),     intent(in)  :: mesh
       CMPLX,            intent(in)  :: wfin(:,:,:)
       CMPLX,            intent(out) :: wfout(:,:,:)
       integer,          intent(in)  :: inout
 
-
-      integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
-      FLOAT   :: temp(3), vec
-      FLOAT   :: dd
-      integer :: il,ll(3)
+      integer :: ix, iy, iz, ixx(3)
+      integer :: ll(3)
       CMPLX, allocatable :: wftmp(:,:,:),wfPlus(:,:,:),wfMinus(:,:,:) 
-      integer :: ip_local
-
 
       PUSH_SUB(fft_K_to_X)
 
@@ -1197,19 +1182,14 @@
       CMPLX,            intent(in)  :: wfin(:,:,:)
       CMPLX,            intent(out) :: wfout(:,:,:)
 
-      integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
-      FLOAT   :: temp(3), vec
+      integer :: ix, iy, iz, ixx(3)
+      FLOAT   :: temp(3)
       FLOAT   :: k_dot_r
-      integer :: il,ll(3)
-      integer :: ip_local,kx,ky,kz,ikk(3)
-
+      integer :: kx,ky,kz,ikk(3)
 
       PUSH_SUB(integral_X_to_K)
 
-
-
       wfout = M_z0
-
 
       temp(:) = M_TWO * M_PI / (mask%ll(:) * mask%spacing(:))
       do kx = 1, mask%ll(1)
@@ -1255,12 +1235,10 @@
       CMPLX,            intent(in)  :: wfin(:,:,:)
       CMPLX,            intent(out) :: wfout(:,:,:)
 
-      integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
-      FLOAT   :: temp(3), vec
-      FLOAT   :: dd,k_dot_r
-      integer :: il,ll(3)
-      integer :: ip_local,kx,ky,kz,ikk(3)
-
+      integer :: ix, iy, iz, ixx(3)
+      FLOAT   :: temp(3)
+      FLOAT   :: k_dot_r
+      integer :: kx,ky,kz,ikk(3)
 
       PUSH_SUB(integral_K_to_X)
 
@@ -1313,27 +1291,21 @@
       CMPLX,              intent(in):: wfin(:,:,:)
       CMPLX,             intent(out):: wfout(:,:,:)
 
-      FLOAT :: Norm1,Norm2
       type(profile_t), save :: prof
       type(cube_function_t) :: cf_tmp
 
-      integer ::i
-
-
       call profiling_in(prof, "PESMASK_X_to_K")
-
 
       PUSH_SUB(PES_mask_X_to_K)
 
       wfout=M_z0
-
 
       select case(mask%pw_map_how)
       case(PW_MAP_INTEGRAL)
         call integral_X_to_K(mask,mesh,wfin, wfout)
 
       case(PW_MAP_FFT)
-        call fft_X_to_K(mask,mesh,wfin, wfout)
+        call fft_X_to_K(mask, wfin, wfout)
 
       case(PW_MAP_BARE_FFT)
         call zfft_forward(mask%cube%fft, wfin, wfout)
@@ -1385,7 +1357,7 @@
         call integral_K_to_X(mask,mesh,wfin,wfout)
 
       case(PW_MAP_FFT)
-        call fft_K_to_X(mask,mesh,wfin,wfout,OUT)
+        call fft_K_to_X(mask,wfin,wfout,OUT)
 
       case(PW_MAP_BARE_FFT)
         call zfft_backward(mask%cube%fft, wfin,wfout)
@@ -1473,29 +1445,22 @@
     !            Performs all the dirty work 
     !
     !---------------------------------------------------------
-    subroutine PES_mask_calc(mask, mesh, st, dt, hm, geo, iter)
+    subroutine PES_mask_calc(mask, mesh, st, dt, iter)
       type(PES_mask_t),    intent(inout) :: mask
       type(mesh_t),        intent(in)    :: mesh
       type(states_t),      intent(inout) :: st
       FLOAT,               intent(in)    :: dt
       integer,             intent(in)    :: iter
-      type(hamiltonian_t), intent(in)    :: hm
-      type(geometry_t),    intent(in)    :: geo
 
-      integer :: ip, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
+      integer :: idim, ist, ik
       type(cube_function_t):: cf1,cf2,cf3,cf4
       CMPLX, allocatable :: mf(:)
-      FLOAT :: temp(3), vec
-      FLOAT :: dd
-      integer :: il,i
 
-      FLOAT :: dmin,time
-      integer :: rankmin,ip_local
+      FLOAT :: time
 
       type(profile_t), save :: prof
 
       call profiling_in(prof, "PESMASK_calc")
-
 
       PUSH_SUB(PES_mask_calc)
 
@@ -1649,7 +1614,7 @@
       end if ! time > mask%start_time
 
 
-      if(mask%mode .eq. PES_MASK_MODE_MASK ) call PES_mask_apply_mask(mask,st,mesh)  !apply the mask to all the KS orbitals
+      if(mask%mode .eq. PES_MASK_MODE_MASK ) call PES_mask_apply_mask(mask, st)  !apply the mask to all the KS orbitals
 
 
 

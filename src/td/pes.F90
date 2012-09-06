@@ -269,7 +269,7 @@ contains
     PUSH_SUB(PES_calc)
 
     if(pes%calc_rc)   call PES_rc_calc  (pes%rc, st, mesh, ii)
-    if(pes%calc_mask) call PES_mask_calc(pes%mask, mesh, st, dt, hm, geo, iter)
+    if(pes%calc_mask) call PES_mask_calc(pes%mask, mesh, st, dt, iter)
 
     POP_SUB(PES_calc)
   end subroutine PES_calc
