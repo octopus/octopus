@@ -136,9 +136,9 @@ end subroutine zcholesky
 !! Here A and B are assumed to be symmetric and B is also positive definite.
 subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
-  FLOAT,             intent(inout) :: a(n,n)
-  FLOAT,             intent(inout) :: b(n,n)
-  FLOAT,             intent(out)   :: e(n)
+  FLOAT,             intent(inout) :: a(:, :)
+  FLOAT,             intent(inout) :: b(:, :)
+  FLOAT,             intent(out)   :: e(:)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
@@ -161,7 +161,7 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
 
   lwork = 5*n
   SAFE_ALLOCATE(work(1:lwork))
-  call lapack_sygv(1, 'V', 'U', n, a(1, 1), n, b(1, 1), n, e(1), work(1), lwork, info)
+  call lapack_sygv(1, 'V', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), e(1), work(1), lwork, info)
   SAFE_DEALLOCATE_A(work)
 
   ! b was destroyed, so we rebuild it
@@ -204,9 +204,9 @@ end subroutine dgeneigensolve
 !! Here A and B are assumed to be Hermitian and B is also positive definite.
 subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
-  CMPLX,             intent(inout) :: a(n,n)
-  CMPLX,             intent(inout) :: b(n,n)
-  FLOAT,             intent(out)   :: e(n)
+  CMPLX,             intent(inout) :: a(:, :)
+  CMPLX,             intent(inout) :: b(:, :)
+  FLOAT,             intent(out)   :: e(:)
   logical, optional, intent(inout) :: bof      ! Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
@@ -231,7 +231,7 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   lwork = 5*n
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 3*n-2)))
-  call lapack_hegv(1, 'V', 'U', n, a(1, 1), n, b(1, 1), n, e(1), work(1), lwork, rwork(1), info)
+  call lapack_hegv(1, 'V', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), e(1), work(1), lwork, rwork(1), info)
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
 
