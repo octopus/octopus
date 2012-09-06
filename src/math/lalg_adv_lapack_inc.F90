@@ -300,7 +300,8 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   SAFE_ALLOCATE(vl(1, 1))
   SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
   SAFE_ALLOCATE(rwork(1))
-  call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1, 1), LD(vr), work(1), lwork, rwork(1), info)
+  call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1, 1), LD(vr), &
+    work(1), lwork, rwork(1), info)
 
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
@@ -313,12 +314,14 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   if (side_.eq.'L'.or.side_.eq.'l') then
       SAFE_ALLOCATE(vl(1:n, 1:n))
       SAFE_ALLOCATE(vr(1, 1))
-      call lapack_geev('V', 'N', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), work(1), lwork, rwork(1), info)
+      call lapack_geev('V', 'N', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), &
+        work(1), lwork, rwork(1), info)
       a(1:n, 1:n) = vl(1:n, 1:n)
   else
       SAFE_ALLOCATE(vl(1, 1))
       SAFE_ALLOCATE(vr(1:n, 1:n))
-      call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), work(1), lwork, rwork(1), info)
+      call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), &
+        work(1), lwork, rwork(1), info)
       a(1:n, 1:n) = vr(1:n, 1:n)
   end if
   SAFE_DEALLOCATE_A(work)
@@ -369,7 +372,8 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   SAFE_ALLOCATE(vl(1, 1))
   SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
   SAFE_ALLOCATE(rwork(1))
-  call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), LD(vl), vr(1, 1), LD(vr), work(1), lwork, rwork(1), info)
+  call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), LD(vl), vr(1, 1), LD(vr), &
+     work(1), lwork, rwork(1), info)
 
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
@@ -382,12 +386,14 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   if (side_.eq.'L'.or.side_.eq.'l') then
       SAFE_ALLOCATE(vl(1:n, 1:n))
       SAFE_ALLOCATE(vr(1, 1))
-      call lapack_geev('V', 'N', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), work(1), lwork, rwork(1), info)
+      call lapack_geev('V', 'N', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), &
+        work(1), lwork, rwork(1), info)
       a(1:n, 1:n) = vl(1:n, 1:n)
   else
       SAFE_ALLOCATE(vl(1, 1))
       SAFE_ALLOCATE(vr(1:n, 1:n))
-      call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), work(1), lwork, rwork(1), info)
+      call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), &
+        work(1), lwork, rwork(1), info)
       a(1:n, 1:n) = vr(1:n, 1:n)
   end if
   SAFE_DEALLOCATE_A(work)
