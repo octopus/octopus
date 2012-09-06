@@ -668,9 +668,9 @@ end subroutine zeigensolve
 !! Here A is assumed to be symmetric.
 subroutine dlowest_eigensolve(k, n, a, e, v)
   integer, intent(in)  :: k, n
-  FLOAT,   intent(in)  :: a(n, n)
-  FLOAT,   intent(out) :: e(n)
-  FLOAT,   intent(out) :: v(n, k)
+  FLOAT,   intent(in)  :: a(:,:) !< (n, n)
+  FLOAT,   intent(out) :: e(:)   !< (n)
+  FLOAT,   intent(out) :: v(:,:) !< (n, k)
 
   interface
     subroutine DLAPACK(syevx)(jobz, range, uplo, n, a, lda, &
@@ -720,9 +720,9 @@ end subroutine dlowest_eigensolve
 !! Here A is assumed to be Hermitian.
 subroutine zlowest_eigensolve(k, n, a, e, v)
   integer, intent(in)  :: k, n
-  CMPLX,   intent(in)  :: a(n, n)
-  FLOAT,   intent(out) :: e(n)
-  CMPLX,   intent(out) :: v(n, k)
+  CMPLX,   intent(in)  :: a(:,:) !< (n, n)
+  FLOAT,   intent(out) :: e(:)   !< (n)
+  CMPLX,   intent(out) :: v(:,:) !< (n, k)
 
   interface
     subroutine ZLAPACK(heevx)(jobz, range, uplo, n, a, lda, &
@@ -771,7 +771,7 @@ end subroutine zlowest_eigensolve
 !> Invert a real symmetric square matrix a
 FLOAT function ddeterminant(n, a, invert) result(d)
   integer, intent(in)           :: n
-  FLOAT,   intent(inout)        :: a(n,n)
+  FLOAT,   intent(inout)        :: a(:,:) !< (n,n)
   logical, intent(in), optional :: invert
 
   interface
@@ -835,7 +835,7 @@ end function ddeterminant
 !> Invert a complex Hermitian square matrix a
 CMPLX function zdeterminant(n, a, invert) result(d)
   integer, intent(in)           :: n
-  CMPLX,   intent(inout)        :: a(n,n)
+  CMPLX,   intent(inout)        :: a(:,:) !< (n,n)
   logical, intent(in), optional :: invert
 
   interface
@@ -899,7 +899,7 @@ end function zdeterminant
 subroutine dsym_inverter(uplo, n, a)
   character(1), intent(in)      :: uplo
   integer, intent(in)           :: n
-  FLOAT,   intent(inout)        :: a(n,n)
+  FLOAT,   intent(inout)        :: a(:,:) !< (n,n)
 
   interface
     subroutine DLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
@@ -952,7 +952,7 @@ end subroutine dsym_inverter
 subroutine zsym_inverter(uplo, n, a)
   character(1), intent(in)      :: uplo
   integer, intent(in)           :: n
-  CMPLX,   intent(inout)        :: a(n,n)
+  CMPLX,   intent(inout)        :: a(:,:) !< (n,n)
 
   interface
     subroutine ZLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
@@ -1004,8 +1004,9 @@ end subroutine zsym_inverter
 !!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
 subroutine dlinsyssolve(n, nrhs, a, b, x)
   integer, intent(in)    :: n, nrhs
-  FLOAT,   intent(inout) :: a(n, n), b(n, nrhs)
-  FLOAT,   intent(out)   :: x(n, nrhs)
+  FLOAT,   intent(inout) :: a(:,:) !< (n, n)
+  FLOAT,   intent(inout) :: b(:,:) !< (n, nrhs)
+  FLOAT,   intent(out)   :: x(:,:) !< (n, nrhs)
 
   interface
     subroutine DLAPACK(gesvx) (fact, trans, n, nrhs, a, lda, af, ldaf, ipiv, equed, r, &
@@ -1068,8 +1069,9 @@ end subroutine dlinsyssolve
 !!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
 subroutine zlinsyssolve(n, nrhs, a, b, x)
   integer, intent(in)    :: n, nrhs
-  CMPLX,   intent(inout) :: a(n, n), b(n, nrhs)
-  CMPLX,   intent(out)   :: x(n, nrhs)
+  CMPLX,   intent(inout) :: a(:,:) !< (n, n)
+  CMPLX,   intent(inout) :: b(:,:) !< (n, nrhs)
+  CMPLX,   intent(out)   :: x(:,:) !< (n, nrhs)
 
   interface
     subroutine ZLAPACK(gesvx) (fact, trans, n, nrhs, a, lda, af, ldaf, ipiv, equed, r, &
