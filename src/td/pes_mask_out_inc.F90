@@ -68,7 +68,7 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
 
         call PES_mask_cube_to_mesh(mask, cf, PsiAB(:, idim, ist, ik))        
 
-        if (mask%mode .ne. MODE_PASSIVE) then 
+        if (mask%mode .ne. PES_MASK_MODE_PASSIVE) then 
           PsiAB(:, idim, ist, ik) = PsiAB(:, idim, ist, ik) + st%zpsi(:, idim, ist, ik) 
         end if
         

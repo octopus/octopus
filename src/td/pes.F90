@@ -37,7 +37,6 @@ module PES_m
   use io_binary_m
   use io_function_m
   use io_m
-  use lasers_m
   use math_m
   use mesh_m
   use mesh_cube_parallel_map_m
@@ -51,8 +50,8 @@ module PES_m
 #endif
   use output_m
   use parser_m
+  use pes_mask_m
   use pes_rc_m
-  use poisson_m
   use profiling_m
   use qshepmod_m
   use restart_m
@@ -61,10 +60,8 @@ module PES_m
   use states_m
   use string_m
   use system_m
-  use tdpsf_m
   use unit_m
   use unit_system_m
-  use varinfo_m
   use varinfo_m
     
   implicit none
@@ -73,7 +70,6 @@ module PES_m
 
   public ::                             &
     pes_t,                              &
-    pes_mask_t,                         &
     pes_end,                            &
     pes_init,                           &
     pes_init_write,                     &
@@ -88,89 +84,6 @@ module PES_m
     pes_mask_dump_ar_polar_m,           &
     pes_mask_dump_full_mapm_cut,        &
     pes_mask_dump_power_totalm
-
-  integer, parameter ::   &
-    FREE           =  1,  &    !< The scattering waves evolve in time as free plane waves
-    VOLKOV         =  2,  &    !< The scattering waves evolve with exp(i(p-A(t)/c)^2*dt/2)
-    CORRECTED1D    =  3,  &
-    EMBEDDING1D    =  4,  &     
-    VOLKOV_CORRECTED= 5
-
-  integer, parameter ::       &
-    PW_MAP_INTEGRAL    =  1,  &    !< projection on outgoing waves by direct integration
-    PW_MAP_FFT         =  2,  &    !< FFT on outgoing waves (1D only)
-    PW_MAP_BARE_FFT    =  3,  &    !< FFT - normally from fftw3
-    PW_MAP_TDPSF       =  4,  &    !< time-dependent phase-space filter
-    PW_MAP_NFFT        =  5,  &    !< non-equispaced fft (NFFT)
-    PW_MAP_PFFT        =  6        !< use PFFT
-
-  integer, parameter ::      &
-    M_SIN2            =  1,  &  
-    M_STEP            =  2,  & 
-    M_ERF             =  3    
-
-  integer, parameter ::       &
-    MODE_MASK         =   1,  &  
-    MODE_BACKACTION   =   2,  &  
-    MODE_PASSIVE      =   3,  &
-    MODE_PSF          =   4
-
-  integer, parameter ::      &
-    IN                =  1,  &  
-    OUT               =  2
-
-  type PES_mask_t
-    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
-
-    ! mesh- and cube-related stuff      
-    integer          :: np                     !< number of mesh points associated with the mesh
-                                               !< (either mesh%np or mesh%np_global)
-    integer          :: ll(3)                  !< the size of the square mesh
-    integer          :: fs_n_global(1:3)       !< the dimensions of the cube in fourier space
-    integer          :: fs_n(1:3)              !< the dimensions of the local portion of the cube in fourier space
-    integer          :: fs_istart(1:3)         !< where does the local portion of the cube start in fourier space
-    
-    FLOAT            :: spacing(3)       !< the spacing
-    
-    type(mesh_t), pointer  :: mesh             !< a pointer to the mesh
-    type(cube_t)     :: cube                   !< the cubic mesh
-
-    FLOAT, pointer :: ext_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
-
-    FLOAT, pointer :: Mk(:,:,:) => NULL()      !< the momentum space filter
-    type(cube_function_t) :: cM                !< the mask cube function
-    FLOAT, pointer :: mask_R(:) => NULL()      !< the mask inner (component 1) and outer (component 2) radius
-    integer        :: shape                    !< which mask function?
-
-    FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to an cube index
-                                               !< we implicitly assume k to be the same for all directions
-
-    integer          :: resample_lev           !< resampling level
-    integer          :: enlarge                !< Fourier space enlargement
-    integer          :: enlarge_nfft           !< NFFT space enlargement
-!     integer          :: llr(MAX_DIM)           !< the size of the rescaled cubic mesh
-       
-    FLOAT :: start_time              !< the time we switch on the photoelectron detector   
-    FLOAT :: energyMax 
-    FLOAT :: energyStep 
-
-    integer :: sw_evolve             !< choose the time propagator for the continuum wfs
-    logical :: back_action           !< whether to enable back action from B to A
-    logical :: add_psia              !< add the contribution of Psi_A in the buffer region to the output
-    logical :: interpolate_out       !< whether to apply interpolation on the output files
-    logical :: filter_k              !< whether to filter the wavefunctions in momentum space
-
-    integer :: mode                  !< calculation mode
-    integer :: pw_map_how            !< how to perform projection on plane waves
-
-    type(fft_t)    :: fft            !< FFT plan
-
-    type(tdpsf_t) :: psf             !< Phase-space filter struct reference
-
-    type(mesh_cube_parallel_map_t) :: mesh_cube_map  !< The parallel map
-
-
-  end type PES_mask_t
 
   type PES_t
     logical :: calc_rc
@@ -433,7 +346,6 @@ contains
     POP_SUB(PES_init_write)
   end subroutine PES_init_write
 
-#include "pes_mask_inc.F90"
 #include "pes_mask_out_inc.F90"
 
 end module PES_m
