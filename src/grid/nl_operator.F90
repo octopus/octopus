@@ -103,9 +103,6 @@ module nl_operator_m
     integer, pointer :: ri(:,:)
     integer, pointer :: rimap(:)
     integer, pointer :: rimap_inv(:)
-    integer, pointer :: map_split(:, :)
-    integer          :: n4
-    integer          :: n1
     
     type(nl_operator_index_t) :: inner
     type(nl_operator_index_t) :: outer
@@ -116,7 +113,6 @@ module nl_operator_m
     type(opencl_mem_t) :: buff_imax
     type(opencl_mem_t) :: buff_ri
     type(opencl_mem_t) :: buff_map
-    type(opencl_mem_t) :: buff_map_split
 #endif
   end type nl_operator_t
 
@@ -129,8 +125,7 @@ module nl_operator_m
 #ifdef HAVE_OPENCL
   integer, parameter ::  &
     OP_INVMAP    = 1,       &
-    OP_MAP       = 2,       &
-    OP_MAP_SPLIT = 3
+    OP_MAP       = 2
 #endif
 
   integer, public, parameter :: OP_ALL = 3, OP_INNER = 1, OP_OUTER = 2
@@ -211,21 +206,14 @@ contains
       !%Section Execution::Optimization
       !%Description
       !% This variable selects the subroutine used to apply non-local
-      !% operators over the grid when OpenCL is used.
+      !% operators over the grid when OpenCL is used. The default is map.
       !%Option invmap 1
       !% The standard implementation ported to OpenCL.
       !%Option map 2
       !% A different version, more suitable for GPUs.
-      !%Option split 3
-      !% (Experimental) This operator uses two different paths, one for points where
-      !% the operator can be applied in blocks and other for single
-      !% points.
       !%End
       call parse_integer(datasets_check('OperateOpenCL'),  OP_MAP, function_opencl)
 
-      if(function_opencl == OP_MAP_SPLIT) then
-        call messages_experimental('split non-local operator')
-      end if
     end if
 #endif
 
@@ -512,47 +500,10 @@ contains
     SAFE_DEALLOCATE_A(st1r)
     SAFE_DEALLOCATE_A(st2)
 
-    op%n1 = 0
-    op%n4 = 0
     do jj = 1, op%nri
       nn = op%rimap_inv(jj + 1) - op%rimap_inv(jj)
-      op%n4 = op%n4 + nn/4
-      op%n1 = op%n1 + mod(nn, 4)
     end do
 
-
-    SAFE_ALLOCATE(op%map_split(1:2, 1:op%n1 + op%n4))
-
-    bl1 = 1
-    bl4 = 1
-    ii = 1
-    do
-      iter_done = .false.
-
-      if(ii + 3 <= op%np) then
-        if(op%rimap(ii) == op%rimap(ii + 3)) then
-          op%map_split(1, op%n1 + bl4) = ii - 1
-          op%map_split(2, op%n1 + bl4) = (op%rimap(ii) - 1)*op%stencil%size
-
-          bl4 = bl4 + 1
-          ii = ii + 4
-          iter_done = .true.
-        end if
-      end if
-
-      if(.not. iter_done) then
-        op%map_split(1, bl1) = ii - 1
-        op%map_split(2, bl1) = (op%rimap(ii) - 1)*op%stencil%size
-
-        bl1 = bl1 + 1
-        ii = ii + 1
-      end if
-
-      if(ii > op%np) exit
-    end do
-
-    ASSERT(op%n4 == bl4 - 1)
-    ASSERT(op%n1 == bl1 - 1)
 
 #ifdef HAVE_MPI
     if(op%mesh%parallel_in_domains) then
@@ -623,8 +574,6 @@ contains
       select case(function_opencl)
       case(OP_MAP)
         call octcl_kernel_build(op%kernel, 'operate.cl', 'operate_map', flags)
-      case(OP_MAP_SPLIT)
-        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate4', flags)
       case(OP_INVMAP)
         call octcl_kernel_build(op%kernel, 'operate.cl', 'operate', flags)
       end select
@@ -639,19 +588,12 @@ contains
         call opencl_create_buffer(op%buff_imax, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
         call opencl_write_buffer(op%buff_imax, op%nri, op%rimap_inv(2:))
 
-      case(OP_MAP_SPLIT)
-        nn = pad(op%n4 + op%n1, opencl_max_workgroup_size())*2
-        call opencl_create_buffer(op%buff_map_split, CL_MEM_READ_ONLY, TYPE_INTEGER, nn)
-        call opencl_write_buffer(op%buff_map_split, (op%n1 + op%n4)*2, op%map_split)
-
       case(OP_MAP)
         call opencl_create_buffer(op%buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
         call opencl_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
       end select
     end if
 #endif
-
-    SAFE_DEALLOCATE_P(op%map_split)
 
     POP_SUB(nl_operator_build)
 
@@ -1313,9 +1255,6 @@ contains
       case(OP_INVMAP)
         call opencl_release_buffer(op%buff_imin)
         call opencl_release_buffer(op%buff_imax)
-
-      case(OP_MAP_SPLIT)
-        call opencl_release_buffer(op%buff_map_split)
 
       case(OP_MAP)
         call opencl_release_buffer(op%buff_map)
