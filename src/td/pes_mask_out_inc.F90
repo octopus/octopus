@@ -27,17 +27,13 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
   type(output_t),   intent(in) :: outp
   type(PES_mask_t), intent(in) :: mask
 
-  integer :: ik, ist, idim, idir, is, ierr, ip
+  integer :: ik, ist, idim, is, ierr
   character(len=80) :: fname
   type(unit_t) :: fn_unit
 
-  integer :: ip_local, ix, iy, iz, ix3(3), ixx(3)
   CMPLX, allocatable :: PsiAB(:,:,:,:)
   FLOAT,allocatable :: RhoAB(:,:) 
   type(cube_function_t) :: cf
-  FLOAT :: temp(3), vec
-  FLOAT :: dd
-  integer :: il
   type(mesh_t):: mesh   
   
   type(batch_t)        :: psib
@@ -149,10 +145,9 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
   FLOAT, target,    intent(out) :: PESK(:,:,:)
   CMPLX, optional,  intent(in)  :: wfAk(:,:,:,:,:,:)
 
-  integer :: ist, ik, ii, kx, ky, kz, idim
-  FLOAT   :: scale, temp
+  integer :: ist, ik, kx, ky, kz, idim
+  FLOAT   :: scale
   FLOAT, pointer :: PESKloc(:,:,:)
-  logical :: local
 ! #ifdef HAVE_MPI
 !   type(profile_t), save :: reduce_prof
 ! #endif
@@ -376,7 +371,7 @@ contains
 ! ---------------------------------------------------------
   subroutine out_ascii()
 
-    integer :: ist, ik, ii, ix, iy, iz
+    integer :: ii, ix, iy, iz
     FLOAT ::  KK(3)
     integer :: ll(3)
 
@@ -424,8 +419,8 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, dir)
   integer,          intent(in) :: dim
   integer,          intent(in) :: dir
 
-  integer              :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT                ::  KK(3),temp, scale
+  integer              :: ii, ix, iy, iunit
+  FLOAT                :: KK(3),temp
   integer              :: ll(3)
   integer, allocatable :: idx(:,:)
   FLOAT, allocatable   :: Lk_(:,:)
@@ -498,26 +493,24 @@ subroutine PES_mask_dump_ar_polar_M(PESK, file, Lk, dim, dir, Emax, Estep)
   FLOAT,            intent(in) :: Estep
   FLOAT,            intent(in) :: dir(:) 
 
-  integer :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT ::  KK(3),vec
+  integer :: ii
+  FLOAT ::  KK(3)
 
   integer :: nn, ie
-  FLOAT  :: step,DE
+  FLOAT  :: step
   FLOAT, allocatable ::  pesM(:,:)
 
   ! needed for interpolation in 2D and 3D 
   FLOAT, pointer :: cube_f(:)
   type(qshep_t) :: interp
 
-  FLOAT :: Dtheta, Dphi, theta, phi,Ex,Ey, EE
-  integer :: np, Ntheta, Nphi, ith, iph, Nth
+  FLOAT :: Dtheta, Dphi, theta, phi, EE
+  integer :: Nphi, ith, iph, Nth
   integer :: ll(1:3)
   FLOAT :: vref(1:dim), rotation(1:dim,1:dim)
   FLOAT :: eGrid(3), thGrid(3), phiBounds(2)
-   
-
-
   type(profile_t), save :: prof
+
   call profiling_in(prof, "PESMask_ar_polar")
 
   PUSH_SUB(PES_mask_dump_ar_polar_M)
@@ -626,25 +619,23 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, dir, Emax, Estep)
   FLOAT,            intent(in) :: Estep
   FLOAT,            intent(in) :: dir(:) 
 
-  integer :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT ::  KK(3),vec
+  integer :: ii, ix, iy
+  FLOAT ::  KK(3)
 
   integer :: nn, nx, ny
-  FLOAT  :: step,DE, eGrid(3)
+  FLOAT  :: step, eGrid(3)
   FLOAT, allocatable ::  pesM(:,:)
 
   ! needed for interpolation in 2D and 3D 
   FLOAT, pointer :: cube_f(:)
   type(qshep_t) :: interp
 
-  FLOAT :: Dtheta, Dphi, theta, phi,Ex,Ey, EE, phiBounds(2)
-  integer :: np, Ntheta, Nphi, ith, iph
+  FLOAT :: Dphi, theta, phi, Ex, Ey, EE, phiBounds(2)
+  integer :: Nphi, iph
   integer :: ll(1:3)
   FLOAT :: vref(1:dim), rotation(1:dim,1:dim)
-   
-
-
   type(profile_t), save :: prof
+
   call profiling_in(prof, "PESMask_ar_plane")
 
   PUSH_SUB(PES_mask_dump_ar_plane_M)
@@ -765,26 +756,24 @@ subroutine PES_mask_dump_ar_spherical_cut_M(PESK, file, Lk, dim, dir, Emin, Emax
   FLOAT,            intent(in) :: Estep
   FLOAT,            intent(in) :: dir(:) 
 
-  integer :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT ::  KK(3),vec
+  integer :: ii
+  FLOAT ::  KK(3)
 
   integer :: nn, ie
-  FLOAT  :: step,DE
+  FLOAT  :: step
   FLOAT, allocatable ::  pesM(:,:)
 
   ! needed for interpolation in 2D and 3D 
   FLOAT, pointer :: cube_f(:)
   type(qshep_t) :: interp
 
-  FLOAT :: Dtheta, Dphi, theta, phi,Ex,Ey, EE
-  integer :: np, Ntheta, Nphi, ith, iph, Nth
+  FLOAT :: Dtheta, Dphi, theta, phi, EE
+  integer :: Nphi, ith, iph, Nth
   integer :: ll(1:3)
   FLOAT :: vref(1:dim), rotation(1:dim,1:dim)
   FLOAT :: phGrid(3), thGrid(3), eBounds(2)
-   
-
-
   type(profile_t), save :: prof
+
   call profiling_in(prof, "PESMask_ar_spherical_cut")
 
   PUSH_SUB(PES_mask_dump_ar_spherical_cut_M)
@@ -902,7 +891,7 @@ subroutine PES_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
   FLOAT,            intent(in) :: vv(:)      !< for mode=1,2 indicate the Zenith axis for mode 3 the cutting plane 
   FLOAT, optional,  intent(in) :: intSpan(:) !< for integrated quantities indicate the integral region    
 
-  integer :: nx,ny, iunit, ii,ix,iy
+  integer :: nx,ny, iunit, ix,iy
 
   PUSH_SUB(PES_mask_write_2D_map)
 
@@ -1043,11 +1032,11 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
   FLOAT,            intent(in) :: Estep
   logical,          intent(in) :: interpolate
 
-  integer :: ist, ik, ii, ix, iy, iz, iunit,idim
+  integer :: ii, ix, iy, iz
   FLOAT ::  KK(3),vec
 
   integer :: nn
-  FLOAT  :: step,DE
+  FLOAT  :: step
   FLOAT, allocatable :: npoints(:), pes(:)
 
   ! needed for interpolation in 2D and 3D 
@@ -1055,11 +1044,8 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
   type(qshep_t) :: interp
 
   FLOAT :: Dtheta, Dphi, theta, phi,EE
-  integer :: np, Ntheta, Nphi, ith, iph
+  integer :: Ntheta, Nphi, ith, iph
   integer :: ll(3)
-
-
-
 
   PUSH_SUB(PES_mask_dump_power_totalM)
 
@@ -1192,7 +1178,7 @@ subroutine PES_mask_dump_power_total(mask, st, file, wfAk)
   character(len=*), intent(in) :: file
   CMPLX, optional,  intent(in) :: wfAk(:,:,:,:,:,:)
 
-  integer :: ist, ik, ii, ix, iy, iz, iunit,idim
+  integer :: ist, ik, ii, ix, iy, iz, idim
   FLOAT ::  KK(3),vec
 
   integer :: nn
@@ -1484,10 +1470,8 @@ subroutine PES_mask_dump_ARPES(mask, st, file, wfAk)
   FLOAT, allocatable :: npoints(:), arpes(:)
 
   ! needed for interpolation in 2D and 3D 
-  FLOAT, allocatable :: cube_f(:), kx(:),ky(:),kz(:)
-  FLOAT :: Dtheta, Dphi, theta, phi,EE
-  type(qshep_t) :: interp
-  integer :: np, Ntheta, Nphi, ith, iph
+  FLOAT :: Dtheta, Dphi
+  integer :: np, Ntheta, Nphi
 
 
   type(profile_t), save :: prof
@@ -1589,12 +1573,12 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   type(geometry_t),  intent(in)    :: geo
   integer,           intent(in)    :: iter
 
-  CMPLX, allocatable :: wf(:,:,:),wfAk(:,:,:,:,:,:) 
+  CMPLX, allocatable :: wfAk(:,:,:,:,:,:) 
   FLOAT :: PESK(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3))
-  integer :: ist, ik, ii,  iunit, idim, ierr, st1, st2, k1, k2
+  integer :: ist, ik, idim, ierr, st1, st2, k1, k2
   character(len=100) :: fn
   character(len=256) :: dir
-  type(cube_function_t) :: cf1,cf2  
+  type(cube_function_t) :: cf1
 
   type(profile_t), save :: prof
 
@@ -1735,11 +1719,8 @@ subroutine PES_mask_write_info(mask, dir)
   character(len=256) :: filename
 
   integer :: iunit,ii
-  integer :: ll(3)
-
 
   PUSH_SUB(PES_mask_write_info)
-
 
   filename = trim(dir)//'td/pes'
 
@@ -1759,8 +1740,6 @@ subroutine PES_mask_write_info(mask, dir)
 
 
   call io_close(iunit)       
-
-
 
   POP_SUB(PES_mask_write_info)
 end subroutine PES_mask_write_info
@@ -1844,9 +1823,8 @@ subroutine PES_mask_restart_write(mask, st)
 end subroutine PES_mask_restart_write
 
 ! ---------------------------------------------------------
-subroutine PES_mask_restart_read(mask, mesh, st)
+subroutine PES_mask_restart_read(mask, st)
   type(PES_mask_t), intent(inout) :: mask
-  type(mesh_t),     intent(in)    :: mesh
   type(states_t),   intent(inout) :: st
 
   character(len=80) :: filename, dir ,path
@@ -1907,7 +1885,7 @@ subroutine PES_mask_restart_map(mask, st, RR)
   FLOAT,            intent(in)    :: RR(2)
 
 
-  integer :: itot, ik, ist, idim , np, ierr,idummy
+  integer :: itot, ik, ist, idim, np
   integer :: ll(3)
 !   CMPLX, allocatable :: wf1(:,:,:),wf2(:,:,:)
   FLOAT, allocatable :: M_old(:,:,:)
@@ -1955,10 +1933,6 @@ subroutine PES_mask_restart_map(mask, st, RR)
 
   POP_SUB(PES_mask_restart_map)
 end subroutine PES_mask_restart_map
-
-
-
-
 
 !! Local Variables:
 !! mode: f90

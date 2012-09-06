@@ -204,7 +204,7 @@ contains
        if (fromScratch) then
           call PES_init_write(td%PESv,gr%mesh,st)
        else
-          call PES_restart_read(td%PESv,gr%mesh,st)
+          call PES_restart_read(td%PESv, st)
        endif
     endif
 
@@ -332,7 +332,7 @@ contains
 
       !Photoelectron stuff 
       if(td%PESv%calc_rc .or. td%PESv%calc_mask ) &
-           call PES_calc(td%PESv, gr%mesh, st, ii, td%dt, hm%ab_pot,hm,geo,iter)
+           call PES_calc(td%PESv, gr%mesh, st, ii, td%dt, iter)
 
       call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
 
@@ -403,7 +403,7 @@ contains
         call td_write_data(write_handler, gr, st, hm, sys%ks%xc, sys%outp, geo, iter, td%dt)
 	!Photoelectron output and restart dump
         call PES_output(td%PESv, gr%mesh, st, iter, sys%outp, td%dt,gr,geo)
-        call PES_restart_write(td%PESv, gr%mesh, st)
+        call PES_restart_write(td%PESv, st)
         if( (ion_dynamics_ions_move(td%ions)) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.

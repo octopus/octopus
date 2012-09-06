@@ -171,7 +171,7 @@ contains
   end subroutine PES_nullify
 
   ! ---------------------------------------------------------
-  subroutine PES_init(pes, mesh, sb, st, save_iter,hm, max_iter,dt,sys)
+  subroutine PES_init(pes, mesh, sb, st, save_iter, hm, max_iter, dt)
     type(pes_t),         intent(out)   :: pes
     type(mesh_t),        intent(inout) :: mesh
     type(simul_box_t),   intent(in)    :: sb
@@ -180,7 +180,6 @@ contains
     type(hamiltonian_t), intent(in)    :: hm
     integer,             intent(in)    :: max_iter
     FLOAT,               intent(in)    :: dt
-    type(system_t),      intent(in)    :: sys
 
     character(len=50)    :: str
     integer :: photoelectron_flags
@@ -255,16 +254,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine PES_calc(pes, mesh, st, ii, dt, mask,hm,geo,iter)
+  subroutine PES_calc(pes, mesh, st, ii, dt, iter)
     type(PES_t),         intent(inout) :: pes
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
     FLOAT,               intent(in)    :: dt
-    FLOAT,               intent(in)    :: mask(:)
     integer,             intent(in)    :: ii
     integer,             intent(in)    :: iter
-    type(hamiltonian_t), intent(in)    :: hm
-    type(geometry_t),    intent(in)    :: geo
 
     PUSH_SUB(PES_calc)
 
@@ -301,28 +297,25 @@ contains
   end subroutine PES_output
 
   ! ---------------------------------------------------------
-  subroutine PES_restart_write(pes, mesh, st)
+  subroutine PES_restart_write(pes, st)
     type(PES_t),    intent(in) :: pes
-    type(mesh_t),   intent(in) :: mesh
     type(states_t), intent(in) :: st
 
     PUSH_SUB(PES_restart_write)
 
-      if(pes%calc_mask) call PES_mask_restart_write (pes%mask, st)
+    if(pes%calc_mask) call PES_mask_restart_write (pes%mask, st)
 
     POP_SUB(PES_restart_write)
   end subroutine PES_restart_write
 
   ! ---------------------------------------------------------
-  subroutine PES_restart_read(pes, mesh, st)
+  subroutine PES_restart_read(pes, st)
     type(PES_t),    intent(inout) :: pes
-    type(mesh_t),   intent(in)    :: mesh
     type(states_t), intent(inout) :: st
 
     PUSH_SUB(PES_restart_read)
 
-      if(pes%calc_mask) call PES_mask_restart_read (pes%mask, mesh, st)
-
+    if(pes%calc_mask) call PES_mask_restart_read (pes%mask, st)
 
     POP_SUB(PES_restart_read)
   end subroutine PES_restart_read
