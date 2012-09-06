@@ -496,7 +496,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   do ifreq = 1, 3
     do idir = 1, ndir
       do idim = 1, st%d%dim
-        call X(sternheimer_calc_hvar)(sh, sys, hm, em_lr(idir, :, ifreq), 2, hvar(:, :, :, idim, idir, ifreq))
+        call X(sternheimer_calc_hvar)(sh, sys, em_lr(idir, :, ifreq), 2, hvar(:, :, :, idim, idir, ifreq))
       end do !idim
     end do !idir
   end do !ifreq
@@ -715,8 +715,7 @@ contains
 end subroutine X(lr_calc_beta)
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pert3, val)
-  type(sternheimer_t),     intent(inout) :: sh
+subroutine X(lr_calc_2np1) (hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, val)
   type(hamiltonian_t),     intent(inout) :: hm
   type(states_t),          intent(in)    :: st
   type(geometry_t),        intent(in)    :: geo
@@ -726,7 +725,6 @@ subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pe
   type(lr_t),              intent(in)    :: lr3
   type(pert_t),            intent(in)    :: pert1
   type(pert_t),            intent(in)    :: pert2
-  type(pert_t),            intent(in)    :: pert3
   R_TYPE,                  intent(out)   :: val
 
   integer :: ik, ist, jst
@@ -770,15 +768,15 @@ subroutine X(lr_calc_2np1) (sh, hm, st, geo, gr, lr1, lr2, lr3, pert1, pert2, pe
   POP_SUB(X(lr_calc_2np1))
 end subroutine X(lr_calc_2np1)
 
-subroutine X(post_orthogonalize)(sys, nfactor, nsigma, freq_factor, omega, kdotp_lr, em_lr, kdotp_em_lr)
+! ---------------------------------------------------------
+subroutine X(post_orthogonalize)(sys, nfactor, nsigma, freq_factor, omega, em_lr, kdotp_em_lr)
   type(system_t), intent(in)    :: sys
   integer,        intent(in)    :: nfactor
   integer,        intent(in)    :: nsigma
   FLOAT,          intent(in)    :: freq_factor(:)
   R_TYPE,         intent(in)    :: omega
-  type(lr_t),     intent(inout) :: kdotp_lr(:)          ! kdotp dir
-  type(lr_t),     intent(inout) :: em_lr(:,:,:)         ! em dir, sigma, factor
-  type(lr_t),     intent(inout) :: kdotp_em_lr(:,:,:,:) ! kdotp dir, em dir, sigma, factor
+  type(lr_t),     intent(inout) :: em_lr(:,:,:)         !< em dir, sigma, factor
+  type(lr_t),     intent(inout) :: kdotp_em_lr(:,:,:,:) !< kdotp dir, em dir, sigma, factor
 
   integer :: kdotp_dir, em_dir, isigma, ifactor
   R_TYPE :: omega_factor

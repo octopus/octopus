@@ -674,12 +674,12 @@ contains
         if(use_kdotp) then
           if(states_are_complex(sys%st)) then
             call zpost_orthogonalize(sys, em_vars%nfactor, em_vars%nsigma, em_vars%freq_factor(:), &
-              em_vars%omega(iomega) + M_zI * em_vars%eta, kdotp_lr(:, 1), em_vars%lr, kdotp_em_lr2)
+              em_vars%omega(iomega) + M_zI * em_vars%eta, em_vars%lr, kdotp_em_lr2)
             call zlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, &
               kdotp_lr = kdotp_lr(:, 1), kdotp_em_lr = kdotp_em_lr2, occ_response = .false.)
           else
             call dpost_orthogonalize(sys, em_vars%nfactor, em_vars%nsigma, em_vars%freq_factor(:), &
-              em_vars%omega(iomega), kdotp_lr(:, 1), em_vars%lr, kdotp_em_lr2)
+              em_vars%omega(iomega), em_vars%lr, kdotp_em_lr2)
             call dlr_calc_beta(sh, sys, hm, em_vars%lr, em_vars%perturbation, em_vars%beta, &
               kdotp_lr = kdotp_lr(:, 1), kdotp_em_lr = kdotp_em_lr2, occ_response = .false.)
           end if

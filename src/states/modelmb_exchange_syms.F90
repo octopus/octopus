@@ -179,11 +179,11 @@ contains
     FLOAT,                    intent(out)   :: norm
 
 ! local vars
-    integer :: ipart1, ipart2, npptype
+    integer :: ipart1, npptype
     integer :: ikeeppart, itype
     integer :: ndimmb
     integer :: ofst_so_far
-    integer :: nspinup, iperm_up, iperm_down
+    integer :: nspinup
 
     type(permutations_t) :: perms_up, perms_down
     type(modelmb_1part_t) :: mb_1part
@@ -191,7 +191,7 @@ contains
 
     type(batch_t) :: antisymwfbatch
 
-    integer, allocatable :: ix(:), ixp(:), ofst(:)
+    integer, allocatable :: ix(:), ofst(:)
     integer, allocatable :: p_of_type_up(:), p_of_type_down(:)
     character(len=500) :: tmpstring, youngstring
  
@@ -265,7 +265,7 @@ contains
       p_of_type_up   = modelmbparticles%particles_of_type(young%young_up  (1:nspindown_in(itype), iyoung_in(itype)), itype)
       p_of_type_down = modelmbparticles%particles_of_type(young%young_down(1:nspindown_in(itype), iyoung_in(itype)), itype)
 
-      call modelmb_sym_down (ndimmb, npptype, modelmbparticles%nparticle, &
+      call modelmb_sym_down (ndimmb, npptype, &
              ofst, young, p_of_type_up, p_of_type_down, gr, normalizer, antisymwf)
 
       SAFE_DEALLOCATE_A(p_of_type_up)
@@ -307,11 +307,10 @@ contains
 
 !
 !> input 1 wave function, and symetrize wrt spin down labeled particles, according to the given young diagrams
-  subroutine modelmb_sym_down(ndimmb, npptype, nparticle, &
+  subroutine modelmb_sym_down(ndimmb, npptype, &
              ofst, young, p_of_type_up, p_of_type_down, gr, normalizer, antisymwf)
     integer, intent(in) :: ndimmb
     integer, intent(in) :: npptype
-    integer, intent(in) :: nparticle
     integer, intent(in) :: ofst(1:npptype)
 
     type(young_t), intent(in) :: young
@@ -403,7 +402,6 @@ contains
   ! ---------------------------------------------------------
 
   subroutine modelmb_antisym_up(iyoung_in, perms_up, ndimmb, npptype, ofst, young, gr, normalizer, antisymwf)
-!args
     integer, intent(in) :: iyoung_in
     integer, intent(in) :: ndimmb
     integer, intent(in) :: npptype
@@ -416,7 +414,7 @@ contains
 
 ! local vars
     integer :: iperm_up, iup
-    integer :: ipart1, ipart2, ip, ipp
+    integer :: ipart1, ipart2, ip
     CMPLX :: wfdotp(1,1)
     FLOAT :: norm
     integer, allocatable :: forward_map_exchange(:)
@@ -497,7 +495,6 @@ contains
   ! ---------------------------------------------------------
 
   subroutine modelmb_antisym_down (iyoung_in, perms_down, ndimmb, npptype, ofst, young, gr, antisymwf)
-!args
     integer, intent(in) :: iyoung_in
     integer, intent(in) :: ndimmb
     integer, intent(in) :: npptype
@@ -509,15 +506,13 @@ contains
 
 ! local vars
     integer :: iperm_down, idown
-    integer :: ipart1, ipart2, ip, ipp
-    CMPLX :: wfdotp(1,1)
+    integer :: ipart1, ipart2, ip
 
     integer, allocatable :: forward_map_exchange(:)
     integer, allocatable :: ix(:), ixp(:)
-    CMPLX, allocatable  :: antisymwf_swap(:,:,:) ! single wf term, with correct permutation of particles
+    CMPLX, allocatable  :: antisymwf_swap(:,:,:) !< single wf term, with correct permutation of particles
     CMPLX, allocatable  :: antisymwf_acc(:,:,:)
     type(batch_t) :: antisymwfbatch
-    logical :: debug_antisym = .false.
 
     PUSH_SUB(modelmb_antisym_down)
 
