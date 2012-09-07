@@ -209,7 +209,7 @@ contains
     call build_ionic_dyn_matrix()
 
     !the  <phi0 | v2 | phi0> term
-    call dionic_pert_matrix_elements_2(ionic_pert, sys%gr, sys%geo, hm, 1, st, st%dpsi(:, :, :, 1), vib, CNST(-1.0), vib%dyn_matrix)
+    call dionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, st%dpsi(:, :, :, 1), vib, CNST(-1.0), vib%dyn_matrix)
 
     call pert_init(ionic_pert, PERTURBATION_IONIC, gr, geo)
 
@@ -252,7 +252,7 @@ contains
         jatom = vibrations_get_atom(vib, jmat)
         jdir  = vibrations_get_dir (vib, jmat)
 
-        call dforces_derivative(gr, geo, hm%ep, st, M_ZERO, lr(1), lr(1), force_deriv)
+        call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
 
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) + TOFLOAT(force_deriv(jdir, jatom))
         vib%dyn_matrix(imat, jmat) = vib%dyn_matrix(imat, jmat) * vibrations_norm_factor(vib, geo, iatom, jatom)

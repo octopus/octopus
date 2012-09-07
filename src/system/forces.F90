@@ -88,8 +88,6 @@ contains
     type(states_t),   intent(inout) :: st
     FLOAT, intent(inout)            :: x(MAX_DIM)
 
-    integer :: i, j
-    FLOAT :: field(1:MAX_DIM)
     type(profile_t), save :: forces_prof
 
     call profiling_in(forces_prof, "FORCES")
@@ -133,9 +131,9 @@ contains
     end do
     
     if (states_are_real(st) ) then 
-      call dforces_from_potential(gr, geo, ep, st, time)
+      call dforces_from_potential(gr, geo, ep, st)
     else
-      call zforces_from_potential(gr, geo, ep, st, time)
+      call zforces_from_potential(gr, geo, ep, st)
     end if
     
     !\todo forces due to the magnetic fields (static and time-dependent)

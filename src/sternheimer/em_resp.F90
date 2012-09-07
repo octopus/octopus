@@ -627,21 +627,21 @@ contains
               ! time = M_ZERO
               if(states_are_complex(sys%st)) then
                 if(em_vars%nsigma == 2) then
-                  call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                  call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
                     lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 else
-                  call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                  call zforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
                     lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 endif
               else
                 if(em_vars%nsigma == 2) then
-                  call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                  call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 2, ifactor), &
                     lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 else
-                  call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, M_ZERO, &
+                  call dforces_born_charges(sys%gr, sys%geo, hm%ep, sys%st, &
                     lr = em_vars%lr(idir, 1, ifactor), lr2 = em_vars%lr(idir, 1, ifactor), &
                     lr_dir = idir, Born_charges = em_vars%Born_charges(ifactor))
                 endif

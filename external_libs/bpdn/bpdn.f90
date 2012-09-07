@@ -569,7 +569,7 @@ contains
     real(8),           intent(in)    :: xx(:)    !(1:aa%mm)
     real(8),           intent(out)   :: res(:)   !(1:nn)
 
-    integer :: inn, imm, comp
+    integer :: inn, comp
 
     select case(aa%type)
     case(EXPLICIT_MATRIX)
@@ -599,7 +599,7 @@ contains
     real(8),           intent(in)    :: res(:)   !(1:aa%nn)
     real(8),           intent(out)   :: grad(:)  !(1:aa%mm)
 
-    integer :: inn, imm, comp
+    integer :: comp
 
     select case(aa%type)
     case(EXPLICIT_MATRIX)

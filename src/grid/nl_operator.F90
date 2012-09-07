@@ -327,17 +327,17 @@ contains
   subroutine nl_operator_build(mesh, op, np, const_w, cmplx_op)
     type(mesh_t), target, intent(in)    :: mesh
     type(nl_operator_t),  intent(inout) :: op
-    integer,              intent(in)    :: np       ! Number of (local) points.
-    logical, optional,    intent(in)    :: const_w  ! are the weights constant (independent of the point)
-    logical, optional,    intent(in)    :: cmplx_op ! do we have complex weights?
+    integer,              intent(in)    :: np       !< Number of (local) points.
+    logical, optional,    intent(in)    :: const_w  !< are the weights constant (independent of the point)
+    logical, optional,    intent(in)    :: cmplx_op !< do we have complex weights?
 
     integer :: ii, jj, p1(MAX_DIM), time, current
     integer, allocatable :: st1(:), st2(:), st1r(:)
-    integer :: nn, bl4, bl1
+    integer :: nn
 #ifdef HAVE_MPI
     integer :: ir, maxp, iinner, iouter
 #endif
-    logical :: change, force_change, iter_done
+    logical :: change, force_change
     character(len=20) :: flags
 
     PUSH_SUB(nl_operator_build)
