@@ -122,15 +122,15 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call output_etsf_geometry_dims(geo, gr%sb, pw_dims, pw_flags)
     call output_etsf_kpoints_dims(gr%sb, pw_dims, pw_flags)
     call output_etsf_electrons_dims(st, pw_dims, pw_flags)
-    call output_etsf_basisdata_dims(st, pw_flags)
-    call output_etsf_wfs_pw_dims(st, shell, pw_dims, pw_flags)
+    call output_etsf_basisdata_dims(pw_flags)
+    call output_etsf_wfs_pw_dims(shell, pw_dims, pw_flags)
 
     call output_etsf_file_init(dir//"/wfs-pw-etsf.nc", "Wavefunctions file", pw_dims, pw_flags, ncid)
 
     call output_etsf_electrons_write(st, ncid)
     call output_etsf_geometry_write(geo, gr%sb, ncid)
     call output_etsf_kpoints_write(gr%sb, ncid)
-    call output_etsf_basisdata_write(st, gr%mesh, shell, ncid)
+    call output_etsf_basisdata_write(gr%mesh, shell, ncid)
     call output_etsf_wfs_pw_write(st, gr%mesh, zcube, cf, shell, ncid)
 
     call etsf_io_low_close(ncid, lstat, error_data = error_data)
@@ -586,8 +586,7 @@ end subroutine output_etsf_wfs_rsp_write
 
 ! --------------------------------------------------
 
-subroutine output_etsf_basisdata_dims(st, flags)
-  type(states_t),          intent(in)    :: st
+subroutine output_etsf_basisdata_dims(flags)
   type(etsf_groups_flags), intent(inout) :: flags
 
   PUSH_SUB(output_etsf_basisdata_dims)
@@ -601,8 +600,7 @@ end subroutine output_etsf_basisdata_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_basisdata_write(st, mesh, shell, ncid)
-  type(states_t),        intent(in)    :: st
+subroutine output_etsf_basisdata_write(mesh, shell, ncid)
   type(mesh_t),          intent(in)    :: mesh
   type(fourier_shell_t), intent(in)    :: shell
   integer,               intent(in)    :: ncid
@@ -610,7 +608,7 @@ subroutine output_etsf_basisdata_write(st, mesh, shell, ncid)
   type(etsf_basisdata) :: basisdata
   type(etsf_io_low_error) :: error_data
   logical :: lstat
-  integer :: ig, ng, ix, iy, iz, ixx(1:3)
+  integer :: ng
  
   PUSH_SUB(output_etsf_basisdata_write)
 
@@ -647,8 +645,7 @@ end subroutine output_etsf_basisdata_write
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_wfs_pw_dims(st, shell, dims, flags)
-  type(states_t),          intent(in)    :: st
+subroutine output_etsf_wfs_pw_dims(shell, dims, flags)
   type(fourier_shell_t),   intent(in)    :: shell
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
@@ -681,7 +678,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
   CMPLX, allocatable :: zpsi(:)
   integer :: nkpoints, nspin, zdim
   integer :: idim, ist, iq, ikpoint, ispin
-  integer :: ig, ng, ix, iy, iz, ixx(1:3)
+  integer :: ig, ng, ix, iy, iz
 
   PUSH_SUB(output_etsf_wfs_pw_write)
 

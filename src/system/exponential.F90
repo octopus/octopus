@@ -68,9 +68,8 @@ module exponential_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine exponential_init(te, der)
+  subroutine exponential_init(te)
     type(exponential_t), intent(out) :: te
-    type(derivatives_t), intent(in)  :: der
 
     PUSH_SUB(exponential_init)
 

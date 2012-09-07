@@ -303,12 +303,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 end subroutine X(eigensolver_rmmdiis)
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, tol, niter, converged, ik)
+subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
   type(preconditioner_t), intent(in)    :: pre
-  FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik

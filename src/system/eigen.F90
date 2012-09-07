@@ -383,8 +383,7 @@ contains
           call deigensolver_mg(gr%der, st, hm, eigens%sdiag, maxiter, ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
-            call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik)
+            call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik, eigens%diff(:, ik))
@@ -422,8 +421,7 @@ contains
           call zeigensolver_mg(gr%der, st, hm, eigens%sdiag, maxiter, ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
-            call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik)
+            call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
             call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik,  eigens%diff(:, ik))
@@ -446,7 +444,7 @@ contains
       eigens%matvec = eigens%matvec + maxiter
     end do ik_loop
     
-    ! If we complex scale H the eigenstates need to be otrhonormalized with respect to the c-product.
+    ! If we complex scale H the eigenstates need to be orthonormalized with respect to the c-product.
     ! Moreover the eigenvalues ordering need to be imposed as there is no eigensolver 
     ! supporting this ordering (yet).
     if(hm%cmplxscl) then !cmplxscl

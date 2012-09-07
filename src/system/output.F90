@@ -105,13 +105,13 @@ module output_m
   end type output_bgw_t
 
   type output_t
-    ! General output variables:
+    !> General output variables:
     integer :: what                !< what to output
     integer :: how                 !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
-    ! These variables fine-tune the output for some of the possible output options:
+    !> These variables fine-tune the output for some of the possible output options:
     integer :: iter                !< output every iter
     logical :: duringscf
 
@@ -510,15 +510,12 @@ contains
     type(output_t),       intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
 
-    integer :: idir
-    FLOAT   :: offset(1:MAX_DIM)
-    
     PUSH_SUB(output_all)
 
     call output_states(st, gr, geo, dir, outp)
     call output_hamiltonian(hm, gr%der, dir, outp, geo)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
-    call output_current_flow(gr, st, dir, outp, geo)
+    call output_current_flow(gr, st, dir, outp)
 
     if(iand(outp%what, C_OUTPUT_GEOMETRY) .ne. 0) then
       if(iand(outp%how, C_OUTPUT_HOW_XCRYSDEN) .ne. 0) then        
@@ -828,7 +825,7 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     type(geometry_t),    intent(in)    :: geo
 
-    integer :: ik, is, ikk, ist, itran, iunit, iatom, mtrx(3, 3, 48), ig, ix, iy, iz, FFTgrid(3)
+    integer :: ik, is, ikk, ist, itran, iunit, iatom, mtrx(3, 3, 48), FFTgrid(3)
     integer, pointer :: ifmin(:,:), ifmax(:,:), atyp(:), ngk(:)
     character*3 :: sheader
     FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48)

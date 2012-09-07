@@ -331,7 +331,7 @@ contains
     ! Allocate memory to store the old KS potentials
     SAFE_ALLOCATE(tr%v_old(1:gr%mesh%np, 1:st%d%nspin, 0:3))
     tr%v_old(:, :, :) = M_ZERO
-    call exponential_init(tr%te, gr%der) ! initialize propagator
+    call exponential_init(tr%te) ! initialize propagator
 
     call messages_obsolete_variable('TDSelfConsistentSteps', 'TDStepsWithSelfConsistency')
 

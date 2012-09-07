@@ -231,9 +231,8 @@
     type(geometry_t),       intent(in)    :: geo
     type(output_t),         intent(in)    :: outp
 
-    ! local vars
     integer :: mm, iunit, itype
-    integer :: ierr, npptype
+    integer :: ierr
     integer :: ncombo
     integer, allocatable :: ndiagrams(:)
     integer, allocatable :: young_used(:)
@@ -334,12 +333,11 @@
 
 
   ! ---------------------------------------------------------
-  subroutine output_current_flow(gr, st, dir, outp, geo)
+  subroutine output_current_flow(gr, st, dir, outp)
     type(grid_t),         intent(inout) :: gr
     type(states_t),       intent(inout) :: st
     character(len=*),     intent(in)    :: dir
     type(output_t),       intent(in)    :: outp
-    type(geometry_t),     intent(in)    :: geo
 
     integer :: iunit, ip, idir, rankmin
     FLOAT   :: flow, dmin
