@@ -273,14 +273,14 @@ end subroutine zgeneigensolve
 !! (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
 subroutine zeigensolve_nonh(n, a, e, err_code, side)
   integer,           intent(in)      :: n
-  CMPLX,             intent(inout)   :: a(:, :)
-  CMPLX,             intent(out)     :: e(:)
+  CMPLX,             intent(inout)   :: a(n,n)   !< (n,n)
+  CMPLX,             intent(out)     :: e(n)     !< (n)
   integer, optional, intent(out)     :: err_code
   character(1), optional, intent(in) :: side     !< which eigenvectors ('L' or 'R')
 
   integer            :: info, lwork
   FLOAT, allocatable :: rwork(:)
-  CMPLX, allocatable :: work(:), vl(:, :) ,vr(:, :)
+  CMPLX, allocatable :: work(:), vl(:, :), vr(:, :)
   character(1)       :: side_
 
   PUSH_SUB(zeigensolve_nonh)
@@ -346,13 +346,13 @@ end subroutine zeigensolve_nonh
 !! generalized (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
 subroutine deigensolve_nonh(n, a, e, err_code, side)
   integer,           intent(in)      :: n
-  FLOAT,             intent(inout)   :: a(:, :)
-  FLOAT,             intent(out)     :: e(:)
+  FLOAT,             intent(inout)   :: a(:,:)   !< (n,n)
+  FLOAT,             intent(out)     :: e(:)     !< (n)
   integer, optional, intent(out)     :: err_code
   character(1), optional, intent(in) :: side     !< which eigenvectors ('L' or 'R')
 
   integer            :: info, lwork
-  FLOAT, allocatable :: rwork(:), work(:), vl(:, :) ,vr(:, :)
+  FLOAT, allocatable :: rwork(:), work(:), vl(:, :), vr(:, :)
   character(1)       :: side_
 
   PUSH_SUB(deigensolve_nonh)
