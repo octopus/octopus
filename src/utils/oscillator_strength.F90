@@ -24,6 +24,7 @@ module oscillator_strength_m
   use global_m
   use io_m
   use kick_m
+  use lalg_adv_m
   use loct_m
   use loct_math_m
   use parser_m
@@ -141,20 +142,6 @@ module oscillator_strength_m
 
 ! ---------------------------------------------------------
 subroutine read_resonances_file(order, ffile, search_interval, final_time, nfrequencies)
-  use global_m
-  use messages_m
-  use datasets_m
-  use loct_m
-  use parser_m
-  use io_m
-  use unit_m
-  use unit_system_m
-  use spectrum_m
-  use lalg_adv_m
-  use profiling_m
-
-  implicit none
-
   integer, intent(inout)       :: order
   character(len=*), intent(in) :: ffile
   FLOAT,   intent(inout)       :: search_interval
@@ -282,20 +269,6 @@ end subroutine read_resonances_file
 
 ! ---------------------------------------------------------
 subroutine analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping)
-  use global_m
-  use messages_m
-  use datasets_m
-  use loct_m
-  use parser_m
-  use io_m
-  use unit_m
-  use unit_system_m
-  use spectrum_m
-  use lalg_adv_m
-  use profiling_m
-
-  implicit none
-
   integer, intent(inout) :: order
   FLOAT,   intent(inout) :: omega
   FLOAT,   intent(inout) :: search_interval
@@ -417,14 +390,6 @@ end subroutine analyze_signal
 ! of the dynamical polarizability.
 ! ---------------------------------------------------------
 subroutine write_polarizability(nfrequencies, nresonances, dw, w, c0I2, gamma)
-  use global_m
-  use messages_m
-  use datasets_m
-  use io_m
-  use profiling_m
-
-  implicit none
-
   integer, intent(in) :: nfrequencies, nresonances
   FLOAT, intent(in)   :: dw
   FLOAT, intent(in)   :: w(nresonances), c0I2(nresonances)
@@ -462,19 +427,6 @@ end subroutine write_polarizability
 ! ---------------------------------------------------------
 ! \todo This subroutine should be simplified.
 subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
-  use global_m
-  use messages_m
-  use datasets_m
-  use loct_m
-  use parser_m
-  use io_m
-  use unit_m
-  use unit_system_m
-  use spectrum_m
-  use profiling_m
-
-  implicit none
-
   FLOAT, intent(inout) :: omega
   FLOAT, intent(in)    :: leftbound, rightbound
   integer, intent(in)  :: nfrequencies
@@ -530,19 +482,6 @@ end subroutine find_resonance
 
 ! ---------------------------------------------------------
 subroutine resonance_first_order(omega, power, nw_subtracted, dw, leftbound, rightbound)
-  use global_m
-  use messages_m
-  use datasets_m
-  use loct_m
-  use parser_m
-  use io_m
-  use unit_m
-  use unit_system_m
-  use spectrum_m
-  use profiling_m
-
-  implicit none
-
   FLOAT, intent(in)               :: omega
   FLOAT, intent(out)              :: power
   integer, intent(in)             :: nw_subtracted
@@ -584,19 +523,6 @@ end subroutine resonance_first_order
 
 ! ---------------------------------------------------------
 subroutine resonance_second_order(omega, power, nw_subtracted, leftbound, rightbound, c01, c02)
-  use global_m
-  use messages_m
-  use datasets_m
-  use loct_m
-  use parser_m
-  use io_m
-  use unit_m
-  use unit_system_m
-  use spectrum_m
-  use profiling_m
-
-  implicit none
-
   FLOAT, intent(in)               :: omega
   FLOAT, intent(out)              :: power
   integer, intent(in)             :: nw_subtracted
@@ -641,21 +567,6 @@ end subroutine resonance_second_order
 
 ! ---------------------------------------------------------
 subroutine generate_signal(order, observable)
-  use global_m
-  use messages_m
-  use datasets_m
-  use kick_m
-  use loct_m
-  use parser_m
-  use io_m
-  use unit_m
-  use unit_system_m
-  use spectrum_m
-  use lalg_adv_m
-  use profiling_m
-
-  implicit none
-
   integer, intent(in) :: order
   integer, intent(in) :: observable(2)
 
@@ -875,16 +786,6 @@ end subroutine generate_signal
 
 ! ---------------------------------------------------------
 subroutine modify_ot(time_steps, dt, order, ot, omega, power)
-  use global_m
-  use io_m
-  use unit_m
-  use unit_system_m
-  use spectrum_m
-  use string_m
-  use profiling_m
-
-  implicit none
-
   integer,             intent(in)    :: time_steps
   FLOAT,               intent(in)    :: dt
   integer,             intent(in)    :: order
@@ -917,17 +818,6 @@ end subroutine modify_ot
 
 ! ---------------------------------------------------------
 subroutine write_ot(nspin, time_steps, dt, kick, order, ot, observable)
-  use global_m
-  use io_m
-  use kick_m
-  use profiling_m
-  use spectrum_m
-  use string_m
-  use unit_m
-  use unit_system_m
-
-  implicit none
-
   integer,             intent(in) :: nspin, time_steps
   FLOAT,               intent(in) :: dt
   type(kick_t),        intent(in) :: kick
@@ -985,18 +875,6 @@ end subroutine write_ot
 
 ! ---------------------------------------------------------
 subroutine read_ot(nspin, order, nw_subtracted)
-  use global_m
-  use io_m
-  use messages_m
-  use datasets_m
-  use unit_m
-  use unit_system_m
-  use spectrum_m
-  use string_m
-  use profiling_m
-
-  implicit none
-
   integer, intent(out) :: nspin
   integer, intent(out) :: order
   integer, intent(out) :: nw_subtracted
@@ -1088,20 +966,6 @@ end subroutine read_ot
 
 ! ---------------------------------------------------------
 subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
-  use global_m
-  use messages_m
-  use datasets_m
-  use loct_m
-  use parser_m
-  use io_m
-  use unit_m
-  use unit_system_m
-  use spectrum_m
-  use lalg_adv_m
-  use profiling_m
-
-  implicit none
-
   FLOAT,   intent(inout) :: omega
   FLOAT,   intent(inout) :: search_interval
   FLOAT,   intent(inout) :: final_time
@@ -1204,18 +1068,11 @@ end module oscillator_strength_m
 ! ---------------------------------------------------------
 ! ---------------------------------------------------------
 program oscillator_strength
-  use global_m
-  use messages_m
-  use datasets_m
-  use loct_m
-  use parser_m
-  use io_m
-  use unit_m
-  use unit_system_m
-  use spectrum_m
-  use loct_m
-  use profiling_m
   use command_line_m
+  use datasets_m
+  use global_m
+  use io_m
+  use messages_m
   use oscillator_strength_m
 
   implicit none
