@@ -50,6 +50,7 @@ program dielectric_function
   type(geometry_t)  :: geo
   type(simul_box_t) :: sb
   type(batch_t)     :: vecpotb, ftrealb, ftimagb
+  character(len=120) :: header
 
   ! Initialize stuff
   call global_init()
@@ -191,7 +192,10 @@ program dielectric_function
 
   SAFE_DEALLOCATE_A(fullmat)
 
+  write(header, '(7a15)') 'energy', 'Re x', 'Im x', 'Re y', 'Im y', 'Re z', 'Im z'
+
   out_file = io_open('td.general/inverse_dielectric_function', action='write')
+  write(out_file,'(a)') trim(header)
   do kk = 0, energy_steps
     ww = kk*spectrum%energy_step
     write(out_file, '(7e15.6)') ww,                                         &
@@ -202,6 +206,7 @@ program dielectric_function
   call io_close(out_file)
  
   out_file = io_open('td.general/dielectric_function', action='write')
+  write(out_file,'(a)') trim(header)
   do kk = 0, energy_steps
     ww = kk*spectrum%energy_step
     write(out_file, '(7e15.6)') ww,                                         &
@@ -212,6 +217,7 @@ program dielectric_function
   call io_close(out_file)
 
   out_file = io_open('td.general/chi', action='write')
+  write(out_file,'(a)') trim(header)
   do kk = 0, energy_steps
     dielectric(1:3, kk) = (dielectric(1:3, kk) - M_ONE)/(CNST(4.0)*M_PI)
     ww = kk*spectrum%energy_step
