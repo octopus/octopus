@@ -54,9 +54,7 @@ module oscillator_strength_m
   integer             :: mode
   FLOAT               :: dt
 
-
   contains
-
 
     ! ---------------------------------------------------------
     subroutine ft(omega, power)
@@ -141,94 +139,6 @@ module oscillator_strength_m
 
     end subroutine local_operator_copy
 
-end module oscillator_strength_m
-
-
-
-! ---------------------------------------------------------
-! ---------------------------------------------------------
-! ---------------------------------------------------------
-program oscillator_strength
-  use global_m
-  use messages_m
-  use datasets_m
-  use loct_m
-  use parser_m
-  use io_m
-  use unit_m
-  use unit_system_m
-  use spectrum_m
-  use loct_m
-  use profiling_m
-  use command_line_m
-  use oscillator_strength_m
-
-  implicit none
-
-  integer :: run_mode, order, nfrequencies, ierr, nresonances
-  FLOAT :: omega, search_interval, final_time, damping
-  integer, parameter :: ANALYZE_NTHORDER_SIGNAL           = 1, &
-                        GENERATE_NTHORDER_SIGNAL          = 2, &
-                        READ_RESONANCES_FROM_FILE         = 3, &
-                        GENERATE_OMEGA_FILE               = 4
-  character(len=100) :: ffile
-
-  ! Reads the information passed through the command line options (if available).
-  call getopt_init(ierr)
-  if(ierr.ne.0) then
-    message(1) = "Your Fortran compiler doesn't support command-line arguments;"
-    message(2) = "the oct-oscillator-strength command is not available."
-    call messages_fatal(2)
-  end if
-
-  ! Set the default values
-  run_mode        = ANALYZE_NTHORDER_SIGNAL
-  omega           = - M_ONE
-  search_interval = - M_ONE
-  order           = 1
-  nfrequencies    = 1000
-  final_time      = - M_ONE
-  nresonances     = 1
-  observable(1)   = -1
-  observable(2)   = 0
-  ffile           = ""
-  damping         = CNST(0.1)/CNST(27.2114) ! This is the usual damping factor used in the literature.
-
-  ! Get the parameters from the command line.
-  call getopt_oscillator_strength(run_mode, omega, search_interval,             &
-                                  order, nresonances, nfrequencies, final_time, &
-                                  observable(1), observable(2), damping, ffile)
-  call getopt_end()
-
-  ! Initialize stuff
-  call global_init()
-  in_debug_mode = .false.
-  call io_init(defaults = .true.)
-  call datasets_init(1)
-  if(in_debug_mode) then
-     call io_mkdir('debug')
-  end if
-
-  select case(run_mode)
-  case(GENERATE_NTHORDER_SIGNAL)
-    call generate_signal(order, observable)
-  case(ANALYZE_NTHORDER_SIGNAL)
-    call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping)
-  case(READ_RESONANCES_FROM_FILE)
-    call read_resonances_file(order, ffile, search_interval, final_time, nfrequencies)
-  case(GENERATE_OMEGA_FILE)
-    call print_omega_file(omega, search_interval, final_time, nfrequencies)
-  case default
-  end select
-
-  call io_end()
-  call datasets_end()
-  call global_end()
-
-end program oscillator_strength
-! ---------------------------------------------------------
-
-
 ! ---------------------------------------------------------
 subroutine read_resonances_file(order, ffile, search_interval, final_time, nfrequencies)
   use global_m
@@ -241,7 +151,6 @@ subroutine read_resonances_file(order, ffile, search_interval, final_time, nfreq
   use unit_system_m
   use spectrum_m
   use lalg_adv_m
-  use oscillator_strength_m
   use profiling_m
 
   implicit none
@@ -383,7 +292,6 @@ subroutine analyze_signal(order, omega, search_interval, final_time, nresonances
   use unit_system_m
   use spectrum_m
   use lalg_adv_m
-  use oscillator_strength_m
   use profiling_m
 
   implicit none
@@ -563,7 +471,6 @@ subroutine find_resonance(omega, leftbound, rightbound, nfrequencies)
   use unit_m
   use unit_system_m
   use spectrum_m
-  use oscillator_strength_m
   use profiling_m
 
   implicit none
@@ -632,7 +539,6 @@ subroutine resonance_first_order(omega, power, nw_subtracted, dw, leftbound, rig
   use unit_m
   use unit_system_m
   use spectrum_m
-  use oscillator_strength_m
   use profiling_m
 
   implicit none
@@ -687,7 +593,6 @@ subroutine resonance_second_order(omega, power, nw_subtracted, leftbound, rightb
   use unit_m
   use unit_system_m
   use spectrum_m
-  use oscillator_strength_m
   use profiling_m
 
   implicit none
@@ -747,9 +652,6 @@ subroutine generate_signal(order, observable)
   use unit_system_m
   use spectrum_m
   use lalg_adv_m
-
-  use oscillator_strength_m, only : local_operator_t, &
-                                    local_operator_copy
   use profiling_m
 
   implicit none
@@ -1091,7 +993,6 @@ subroutine read_ot(nspin, order, nw_subtracted)
   use unit_system_m
   use spectrum_m
   use string_m
-  use oscillator_strength_m
   use profiling_m
 
   implicit none
@@ -1197,7 +1098,6 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   use unit_system_m
   use spectrum_m
   use lalg_adv_m
-  use oscillator_strength_m
   use profiling_m
 
   implicit none
@@ -1296,6 +1196,91 @@ subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
   SAFE_DEALLOCATE_A(warray)
   SAFE_DEALLOCATE_A(tarray)
 end subroutine print_omega_file
+! ---------------------------------------------------------
+
+end module oscillator_strength_m
+
+! ---------------------------------------------------------
+! ---------------------------------------------------------
+! ---------------------------------------------------------
+program oscillator_strength
+  use global_m
+  use messages_m
+  use datasets_m
+  use loct_m
+  use parser_m
+  use io_m
+  use unit_m
+  use unit_system_m
+  use spectrum_m
+  use loct_m
+  use profiling_m
+  use command_line_m
+  use oscillator_strength_m
+
+  implicit none
+
+  integer :: run_mode, order, nfrequencies, ierr, nresonances
+  FLOAT :: omega, search_interval, final_time, damping
+  integer, parameter :: ANALYZE_NTHORDER_SIGNAL           = 1, &
+                        GENERATE_NTHORDER_SIGNAL          = 2, &
+                        READ_RESONANCES_FROM_FILE         = 3, &
+                        GENERATE_OMEGA_FILE               = 4
+  character(len=100) :: ffile
+
+  ! Reads the information passed through the command line options (if available).
+  call getopt_init(ierr)
+  if(ierr.ne.0) then
+    message(1) = "Your Fortran compiler doesn't support command-line arguments;"
+    message(2) = "the oct-oscillator-strength command is not available."
+    call messages_fatal(2)
+  end if
+
+  ! Set the default values
+  run_mode        = ANALYZE_NTHORDER_SIGNAL
+  omega           = - M_ONE
+  search_interval = - M_ONE
+  order           = 1
+  nfrequencies    = 1000
+  final_time      = - M_ONE
+  nresonances     = 1
+  observable(1)   = -1
+  observable(2)   = 0
+  ffile           = ""
+  damping         = CNST(0.1)/CNST(27.2114) ! This is the usual damping factor used in the literature.
+
+  ! Get the parameters from the command line.
+  call getopt_oscillator_strength(run_mode, omega, search_interval,             &
+                                  order, nresonances, nfrequencies, final_time, &
+                                  observable(1), observable(2), damping, ffile)
+  call getopt_end()
+
+  ! Initialize stuff
+  call global_init()
+  in_debug_mode = .false.
+  call io_init(defaults = .true.)
+  call datasets_init(1)
+  if(in_debug_mode) then
+     call io_mkdir('debug')
+  end if
+
+  select case(run_mode)
+  case(GENERATE_NTHORDER_SIGNAL)
+    call generate_signal(order, observable)
+  case(ANALYZE_NTHORDER_SIGNAL)
+    call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping)
+  case(READ_RESONANCES_FROM_FILE)
+    call read_resonances_file(order, ffile, search_interval, final_time, nfrequencies)
+  case(GENERATE_OMEGA_FILE)
+    call print_omega_file(omega, search_interval, final_time, nfrequencies)
+  case default
+  end select
+
+  call io_end()
+  call datasets_end()
+  call global_end()
+
+end program oscillator_strength
 ! ---------------------------------------------------------
 
 !! Local Variables:
