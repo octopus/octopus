@@ -860,10 +860,9 @@ contains
   ! ---------------------------------------------------------
   !> Fast multiplication of the sparse matrix with a dense matrix
   !! res = sp*mm.
-  subroutine mul_sp(np, order, dim, sp, mm, mapping, res)
+  subroutine mul_sp(np, order, sp, mm, mapping, res)
     integer, intent(in)  :: np           !< matrix size (np**2)
     integer, intent(in)  :: order        !< derivative order
-    integer, intent(in)  :: dim          !< dimension
     CMPLX,   intent(in)  :: sp(:)        !< sparse matrix (np*order)
     CMPLX,   intent(in)  :: mm(np, np)   !< the matrix to multipliy
     integer, intent(in)  :: mapping(:)   !< the mapping
@@ -922,7 +921,7 @@ contains
       ! FIXME (not yet done)
     end select
     ! now calculate [ss*sp*ss^(-1)] to get the dense matrix
-    call mul_sp(np, order, dim, sp, ss(:,:,2), mapping, tmp)
+    call mul_sp(np, order, sp, ss(:,:,2), mapping, tmp)
 !    call lalg_gemm(np, np, np, M_z1, mm, ss(:,:,2), M_z0, tmp)
     call lalg_gemm(np, np, np, M_z1, ss(:,:,1), tmp, M_z0, mm)
     call matrix_symmetric_average(mm, np)

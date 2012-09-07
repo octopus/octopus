@@ -210,8 +210,8 @@ contains
     !%Option temperature 2048
     !% If set, the ionic temperature at each step is printed.
     !%Option ftchd       4096
-    !% Write Fourier transform of the electron density to the file <tt>ftchds.X</tt>,
-    !% where X depends on the kick (e.g. with sin-shaped perturbation X=qsin).
+    !% Write Fourier transform of the electron density to the file <tt>ftchd.X</tt>,
+    !% where X depends on the kick (e.g. with sin-shaped perturbation X=sin).
     !% This is needed for calculating the dynamic structure factor.
     !% In the case that the kick mode is qbessel, the written quantity is integral over
     !% density, multiplied by spherical Bessel function times real spherical harmonic.
@@ -506,7 +506,7 @@ contains
       call td_write_multipole(writ%out(OUT_MULTIPOLES)%handle, gr, geo, st, writ%lmax, kick, iter)
     
     if(writ%out(OUT_FTCHD)%write) &
-      call td_write_ftchd(writ%out(OUT_FTCHD)%handle, gr, geo, st, kick, iter)
+      call td_write_ftchd(writ%out(OUT_FTCHD)%handle, gr, st, kick, iter)
 
     if(writ%out(OUT_ANGULAR)%write) &
       call td_write_angular(writ%out(OUT_ANGULAR)%handle, gr, geo, hm, st, kick, iter)
@@ -534,7 +534,7 @@ contains
       call td_write_acc(writ%out(OUT_ACC)%handle, gr, geo, st, hm, dt, iter)
       
     if(writ%out(OUT_VEL)%write) &
-      call td_write_vel(writ%out(OUT_VEL)%handle, gr, geo, st, hm, dt, iter)
+      call td_write_vel(writ%out(OUT_VEL)%handle, gr, st, iter)
 
     ! td_write_laser no longer called here, because the whole laser is printed
     ! out at the beginning.
@@ -883,10 +883,9 @@ contains
   end subroutine td_write_multipole
 
   ! ---------------------------------------------------------
-  subroutine td_write_ftchd(out_ftchd, gr, geo, st, kick, iter)
+  subroutine td_write_ftchd(out_ftchd, gr, st, kick, iter)
     type(c_ptr),        intent(in) :: out_ftchd
     type(grid_t),       intent(in) :: gr
-    type(geometry_t),   intent(in) :: geo
     type(states_t),     intent(in) :: st
     type(kick_t),       intent(in) :: kick
     integer,            intent(in) :: iter
@@ -1232,13 +1231,10 @@ contains
   end subroutine td_write_acc
   
   ! ---------------------------------------------------------
-  subroutine td_write_vel(out_vel, gr, geo, st, hm, dt, iter)
+  subroutine td_write_vel(out_vel, gr, st, iter)
     type(c_ptr),         intent(in)    :: out_vel
     type(grid_t),        intent(inout) :: gr
-    type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: st
-    type(hamiltonian_t), intent(inout) :: hm
-    FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
 
     integer :: idim
@@ -1270,7 +1266,7 @@ contains
       call td_write_print_header_end(out_vel)
     end if
 
-    call td_calc_tvel(gr, geo, st, hm, vel, dt*iter)
+    call td_calc_tvel(gr, st, vel)
 
     call write_iter_start(out_vel)
     vel = units_from_atomic(units_out%velocity, vel)
@@ -1445,8 +1441,7 @@ contains
     character(len=68)   :: buf
     FLOAT, allocatable  :: eigs(:,:)
 #if defined(HAVE_MPI) 
-    integer :: outcount, ik, mpi_err
-    integer, allocatable :: sendcnts(:), sdispls(:), recvcnts(:), rdispls(:)
+    integer :: outcount, ik
 #endif
 
     PUSH_SUB(td_write_eigs)

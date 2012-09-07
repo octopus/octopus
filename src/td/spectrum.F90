@@ -644,8 +644,7 @@ contains
     integer :: nspin, lmax, time_steps, trash, it
     FLOAT   :: dt,  dump
     type(kick_t) :: kick
-    type(unit_system_t) :: file_units, ref_file_units
-    type(batch_t) :: dipoleb, sigmab
+    type(unit_system_t) :: file_units
 
     PUSH_SUB(spectrum_read_dipole)
 
@@ -996,8 +995,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hsfunction_min(aa, bb, omega, omega_min, func_min)
-    FLOAT, intent(in)  :: aa, bb, omega
+  subroutine spectrum_hsfunction_min(aa, bb, omega_min, func_min)
+    FLOAT, intent(in)  :: aa, bb
     FLOAT, intent(out) :: omega_min, func_min
 
     integer :: ierr, ie
@@ -1570,21 +1569,6 @@ contains
   end subroutine spectrum_hs_from_acc
   ! ---------------------------------------------------------
 
-
-  ! ---------------------------------------------------------
-  subroutine spectrum_hs_fourier_transform(spectrum, no_e, time_steps, acc, sp)
-    type(spec_t),     intent(inout) :: spectrum
-    integer,          intent(in)    :: no_e, time_steps
-    FLOAT,            intent(in)    :: acc(0:time_steps)
-    FLOAT,            intent(inout) :: sp(0:no_e)
-
-    PUSH_SUB(spectrum_hs_fourier_transform)
-
-    POP_SUB(spectrum_hs_fourier_transform)
-  end subroutine spectrum_hs_fourier_transform
-  ! ---------------------------------------------------------
-
-
   ! ---------------------------------------------------------
   subroutine spectrum_hs(out_file, spectrum, pol, w0)
     character(len=*), intent(in)    :: out_file
@@ -1610,7 +1594,7 @@ contains
       ! output
       omega = w0
       do while(omega <= spectrum%max_energy)
-        call spectrum_hsfunction_min(omega - w0, omega + w0, omega, xx, hsval)
+        call spectrum_hsfunction_min(omega - w0, omega + w0, xx, hsval)
 
         write(iunit, '(1x,2e20.8)') units_from_atomic(units_out%energy, xx), &
           units_from_atomic((units_out%length / units_out%time)**2, -hsval)

@@ -77,22 +77,20 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Calculates the source-wavefunction for the source-term (recursive version)
-  ! S(m) = f*u(m)*u(m-1)*S(m-1) + dt**2/2*lambda(m,0)/u(m)*f0*(Q(m)+Q(m-1))*psi_c(0)
-  subroutine calc_source_wf(maxiter, m, np, il, offdiag, mem, dt, psi0, u, f0, factor, lambda, src)
+  !> Calculates the source-wavefunction for the source-term (recursive version)
+  !! S(m) = f*u(m)*u(m-1)*S(m-1) + dt**2/2*lambda(m,0)/u(m)*f0*(Q(m)+Q(m-1))*psi_c(0)
+  subroutine calc_source_wf(maxiter, m, np, mem, dt, psi0, u, f0, factor, lambda, src)
     integer, intent(in)    :: maxiter
-    integer, intent(in)    :: m             ! m-th timestep.
-    integer, intent(in)    :: np            ! intf%np, the size of the wavefunctions.
-    integer, intent(in)    :: il            ! Which lead.
-    CMPLX,   intent(in)    :: offdiag(:, :) ! Matrix V^T.
-    CMPLX,   intent(in)    :: mem(np, np)   ! the effective memory coefficient
-    FLOAT,   intent(in)    :: dt            ! Timestep.
-    CMPLX,   intent(in)    :: psi0(:)       ! (np).
+    integer, intent(in)    :: m             !< m-th timestep.
+    integer, intent(in)    :: np            !< intf%np, the size of the wavefunctions.
+    CMPLX,   intent(in)    :: mem(np, np)   !< the effective memory coefficient
+    FLOAT,   intent(in)    :: dt            !< Timestep.
+    CMPLX,   intent(in)    :: psi0(:)       !< (np).
     CMPLX,   intent(in)    :: u(0:)
     CMPLX,   intent(in)    :: f0
     CMPLX,   intent(in)    :: factor
     CMPLX,   intent(in)    :: lambda
-    CMPLX,   intent(inout) :: src(np)        ! Old wavefunction in, the new one out.
+    CMPLX,   intent(inout) :: src(np)        !< Old wavefunction in, the new one out.
     
     CMPLX   :: tmp, alpha
 
@@ -118,27 +116,25 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Calculates the source-wavefunction for the source-term (for sparse
-  ! mem-coefficients).
-  subroutine calc_source_wf_sp(maxiter, m, np, il, offdiag, sp_mem, dt, order, dim, psi0, &
+  !> Calculates the source-wavefunction for the source-term (for sparse
+  !! mem-coefficients).
+  subroutine calc_source_wf_sp(maxiter, m, np, sp_mem, dt, order, dim, psi0, &
     mem_s, mapping, u, f0, factor, lambda, src)
-    integer, intent(in)    :: maxiter        ! Maximum timestep.
-    integer, intent(in)    :: m              ! m-th timestep
-    integer, intent(in)    :: np             ! intf%np, the size of the wavefunctions.
+    integer, intent(in)    :: maxiter        !< Maximum timestep.
+    integer, intent(in)    :: m              !< m-th timestep
+    integer, intent(in)    :: np             !< intf%np, the size of the wavefunctions.
     integer, intent(in)    :: order
     integer, intent(in)    :: dim
-    integer, intent(in)    :: il             ! Which lead.
-    CMPLX,   intent(in)    :: offdiag(:, :)  ! matrix V^T.
     CMPLX,   intent(in)    :: sp_mem(:)
-    FLOAT,   intent(in)    :: dt             ! Timestep.
-    CMPLX,   intent(in)    :: psi0(:)        ! (np)
+    FLOAT,   intent(in)    :: dt             !< Timestep.
+    CMPLX,   intent(in)    :: psi0(:)        !< (np)
     CMPLX,   intent(in)    :: mem_s(:, :, :)
     integer, intent(in)    :: mapping(:)
     CMPLX,   intent(in)    :: u(0:maxiter)
     CMPLX,   intent(in)    :: f0
     CMPLX,   intent(in)    :: factor
     CMPLX,   intent(in)    :: lambda
-    CMPLX,   intent(inout) :: src(:)         ! Old wavefunction in, the new one out.
+    CMPLX,   intent(inout) :: src(:)         !< Old wavefunction in, the new one out.
     
     CMPLX,   allocatable :: tmem(:, :)
 
@@ -146,7 +142,7 @@ contains
 
     SAFE_ALLOCATE(tmem(1:np, 1:np))
     call make_full_matrix(np, order, dim, sp_mem, mem_s, tmem, mapping)
-    call calc_source_wf(maxiter, m, np, il, offdiag, tmem, dt, psi0, u, f0, factor, lambda, src)
+    call calc_source_wf(maxiter, m, np, tmem, dt, psi0, u, f0, factor, lambda, src)
     SAFE_DEALLOCATE_A(tmem)
 
     POP_SUB(calc_source_wf_sp)
@@ -154,7 +150,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Free arrays.
+  !> Free arrays.
   subroutine ob_src_end(ob)
     type(ob_terms_t), intent(inout) :: ob
 

@@ -45,7 +45,6 @@ module ob_propagator_m
   use solvers_m
   use states_m
   use states_io_m
-  use v_ks_m
   use varinfo_m
 
   implicit none
@@ -204,7 +203,7 @@ contains
     SAFE_DEALLOCATE_A(um)
     SAFE_DEALLOCATE_A(td_pot)
 
-    call ob_propagator_write_info(ob, st, gr, max_iter, order)
+    call ob_propagator_write_info(ob, st, gr, order)
 
     ! Initialize source and memory terms.
     call ob_mem_init(gr%intf, hm, ob, dt/M_TWO, ob%max_mem_coeffs, gr%der%lapl, &
@@ -257,10 +256,9 @@ contains
   !> Crank-Nicholson timestep with source and memory.
   !! Only non-interacting electrons for the moment, so no
   !! predictor-corrector scheme.
-  subroutine cn_src_mem_dt(ob, st, ks, hm, gr, max_iter, dt, t, timestep)
+  subroutine cn_src_mem_dt(ob, st, hm, gr, max_iter, dt, t, timestep)
     type(ob_terms_t), target,    intent(inout) :: ob
     type(states_t),              intent(inout) :: st
-    type(v_ks_t),                intent(in)    :: ks
     type(hamiltonian_t), target, intent(inout) :: hm
     type(grid_t), target,        intent(inout) :: gr
     integer,                     intent(in)    :: max_iter
@@ -331,7 +329,7 @@ contains
               tmp_mem(1:np, 1:np) = ob%lead(il)%q(1:np, 1:np, m)
               if(m.gt.0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-1)
             end if
-            call calc_source_wf(ob%max_mem_coeffs, m, np, il, hm%lead(il)%h_offdiag, tmp_mem(1:np, 1:np), dt, &
+            call calc_source_wf(ob%max_mem_coeffs, m, np, tmp_mem(1:np, 1:np), dt, &
               st%ob_lead(il)%intf_psi(:, 1, ist, ik), ob%src_mem_u(:, il), f0, fac,              &
               lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
             call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), psi)
@@ -400,10 +398,9 @@ contains
   !> Crank-Nicholson timestep with source and memory - sparse version.
   !! Only non-interacting electrons for the moment, so no
   !! predictor-corrector scheme.
-  subroutine cn_src_mem_sp_dt(ob, st, ks, hm, gr, max_iter, dt, t, timestep)
+  subroutine cn_src_mem_sp_dt(ob, st, hm, gr, max_iter, dt, t, timestep)
     type(ob_terms_t), target,    intent(inout) :: ob
     type(states_t),              intent(inout) :: st
-    type(v_ks_t),                intent(in)    :: ks
     type(hamiltonian_t), target, intent(inout) :: hm
     type(grid_t), target,        intent(inout) :: gr
     integer,                     intent(in)    :: max_iter
@@ -417,7 +414,7 @@ contains
     CMPLX, allocatable :: tmp(:, :), tmp_wf(:), tmp_mem(:), psi(:, :)
     FLOAT              :: dres
     
-    PUSH_SUB(cn_src_mem_dt)
+    PUSH_SUB(cn_src_mem_sp_dt)
 
     np = maxval(gr%intf(1:NLEADS)%np_intf)
 
@@ -427,7 +424,7 @@ contains
     SAFE_ALLOCATE(tmp_mem(1:np*order))
     SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
 
-    ! Set pointers to communicate with with backward propagator passed
+    ! Set pointers to communicate with backward propagator passed
     ! to iterative linear solver.
     hm_p       => hm
     gr_p       => gr
@@ -471,7 +468,7 @@ contains
             fac = (M_z1-M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))*f0
             tmp_mem(1:npo) = ob%lead(il)%q_sp(1:npo, m)
             if(m.gt.0) tmp_mem(1:npo) = tmp_mem(1:npo) + ob%lead(il)%q_sp(1:npo, m-1)
-            call calc_source_wf_sp(max_iter, m, np, il, hm%lead(il)%h_offdiag(:, :),     &
+            call calc_source_wf_sp(max_iter, m, np, &
               tmp_mem(1:npo), dt, order, gr%sb%dim, st%ob_lead(il)%intf_psi(:, 1, ist, ik), &
               ob%lead(il)%q_s(:, :, :), ob%lead(il)%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
               lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
@@ -520,7 +517,7 @@ contains
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_wf)
     SAFE_DEALLOCATE_A(tmp_mem)
-    POP_SUB(cn_src_mem_dt)
+    POP_SUB(cn_src_mem_sp_dt)
   end subroutine cn_src_mem_sp_dt
 
 
@@ -817,11 +814,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Write some status information to stdout.
-  subroutine ob_propagator_write_info(ob, st, gr, max_iter, order)
+  subroutine ob_propagator_write_info(ob, st, gr, order)
     type(ob_terms_t), intent(in) :: ob
     type(states_t),   intent(in) :: st
     type(grid_t),     intent(in) :: gr
-    integer,          intent(in) :: max_iter
     integer,          intent(in) :: order
 
     character(len=64) :: terms, mem_type_name
