@@ -61,9 +61,12 @@ contains
   subroutine ft(omega, power)
     FLOAT, intent(in)   :: omega
     FLOAT, intent(out)  :: power
+
     integer :: j
     FLOAT :: x
     power = M_ZERO
+
+    PUSH_SUB(ft)
 
     select case(mode)
 
@@ -85,6 +88,7 @@ contains
 
     end select
 
+    POP_SUB(ft)
   end subroutine ft
 
 
@@ -92,9 +96,12 @@ contains
   subroutine ft2(omega, power)
     FLOAT, intent(in)   :: omega
     FLOAT, intent(out)  :: power
+
     integer :: j
     FLOAT :: x
     power = M_ZERO
+
+    PUSH_SUB(ft2)
 
     select case(mode)
 
@@ -118,6 +125,7 @@ contains
 
     end select
 
+    POP_SUB(ft2)
   end subroutine ft2
 
 
@@ -125,7 +133,10 @@ contains
   subroutine local_operator_copy(o, i)
     type(local_operator_t), intent(inout) :: o
     type(local_operator_t), intent(inout) :: i
+
     integer :: j
+
+    PUSH_SUB(local_operator_copy)
 
     o%n_multipoles = i%n_multipoles
     SAFE_ALLOCATE(     o%l(1:o%n_multipoles))
@@ -138,6 +149,7 @@ contains
       o%weight(j) = i%weight(j)
     end do
 
+    POP_SUB(local_operator_copy)
   end subroutine local_operator_copy
 
   ! ---------------------------------------------------------
@@ -153,6 +165,8 @@ contains
     logical :: file_exists
     FLOAT, allocatable :: wij(:), omega(:), c0i(:)
   
+    PUSH_SUB(read_resonances_file)
+
     if(order.ne.2) then
       write(message(1),'(a)') 'The run mode #3 is only compatible with the analysis of the'
       write(message(2),'(a)') 'second-order response.'
@@ -263,6 +277,8 @@ contains
     SAFE_DEALLOCATE_A(c0i)
     SAFE_DEALLOCATE_A(omega)
     call io_close(iunit)
+
+    POP_SUB(read_resonances_file)
   end subroutine read_resonances_file
   ! ---------------------------------------------------------
   
@@ -282,6 +298,8 @@ contains
     integer :: nspin, i, ierr, order_in_file, nw_subtracted
     logical :: file_exists
   
+    PUSH_SUB(analyze_signal)
+
     ! First, let us check that the file "ot" exists.
     inquire(file="ot", exist  = file_exists)
     if(.not.file_exists) then
@@ -380,6 +398,8 @@ contains
     SAFE_DEALLOCATE_A(ot)
     SAFE_DEALLOCATE_A(w)
     SAFE_DEALLOCATE_A(c0I2)
+
+    POP_SUB(analyze_signal)
   end subroutine analyze_signal
   ! ---------------------------------------------------------
   
@@ -399,6 +419,8 @@ contains
     FLOAT :: e
     CMPLX :: pol
   
+    PUSH_SUB(write_polarizability)
+
     iunit = io_open('polarizability', status='replace', action = 'write', die=.false.)
     write(iunit, '(a)') '# Polarizability file. Generated using the SOS formula with the following data:'
     write(iunit, '(a)') '#'
@@ -420,6 +442,8 @@ contains
     end do 
   
     call io_close(iunit)
+
+    POP_SUB(write_polarizability)
   end subroutine write_polarizability
   ! ---------------------------------------------------------
   
@@ -435,6 +459,8 @@ contains
     FLOAT :: dw, w, aw, min_aw, min_w, omega_orig
     FLOAT, allocatable :: warray(:), tarray(:)
   
+    PUSH_SUB(find_resonance)
+
     SAFE_ALLOCATE(warray(1:nfrequencies))
     SAFE_ALLOCATE(tarray(1:nfrequencies))
   
@@ -462,7 +488,8 @@ contains
   #ifndef SINGLE_PRECISION
     call loct_1dminimize(min_w - 2*dw, min_w + 2*dw, omega, ft2, ierr)
   #else
-    stop "FIXME: cannot work in single-precision."
+    message(1) = "FIXME: cannot work in single-precision."
+    call messages_fatal(1)
   #endif
     if(ierr.ne.0) then
       write(message(1),'(a)') 'Could not find a maximum.'
@@ -476,6 +503,8 @@ contains
   
     SAFE_DEALLOCATE_A(warray)
     SAFE_DEALLOCATE_A(tarray)
+
+    POP_SUB(find_resonance)
   end subroutine find_resonance
   ! ---------------------------------------------------------
   
@@ -487,6 +516,8 @@ contains
     integer, intent(in)             :: nw_subtracted
     FLOAT, intent(in)               :: dw, leftbound, rightbound
   
+    PUSH_SUB(resonance_first_order)
+
     call ft(omega, power)
   
     select case(mode)
@@ -496,26 +527,25 @@ contains
       ! WARNING: Something should go here.
     end select
   
-    write(*, '(a)')                 '******************************************************************'
-    write(*, '(a,i3)')              'Resonance #', nw_subtracted + 1
-    write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', units_from_atomic(units_out%energy, omega), &
-                                    ' '//trim(units_abbrev(units_out%energy))//' = ',      &
-                                    omega, ' Ha'
-    write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', units_from_atomic(units_out%length**2, power), &
-                                    ' '//trim(units_abbrev(units_out%length**2))//' =',        &
-                                    power, ' b^2'
-    write(*, '(a,f12.8,a,f12.8,a)') '<0|P|I>  = ', units_from_atomic(units_out%length, sqrt(abs(power))), &
-                                    ' '//trim(units_abbrev(units_out%length))//' = ',                 &
-                                    sqrt(abs(power)),' b'
-    write(*, '(a,f12.8)')           'f[O->I]  = ', M_TWO*omega*power
-    write(*, '(a)')
-    write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', units_from_atomic(units_out%energy, leftbound), ',', &
-                                                              units_from_atomic(units_out%energy, rightbound), ']'
-    write(*, '(a,f12.4,a)')         '   Search discretization = ', units_from_atomic(units_out%energy, dw), &
-                                    ' '//trim(units_abbrev(units_out%energy))
-    write(*, '(a)')                 '******************************************************************'
-    write(*, '(a)')
+    write(message(1), '(a)')                 '******************************************************************'
+    write(message(2), '(a,i3)')              'Resonance #', nw_subtracted + 1
+    write(message(3), '(a,f12.8,a,f12.8,a)') 'omega    = ', units_from_atomic(units_out%energy, omega), &
+                                             ' '//trim(units_abbrev(units_out%energy))//' = ',  omega, ' Ha'
+    write(message(4), '(a,f12.8,a,f12.8,a)') 'C(omega) = ', units_from_atomic(units_out%length**2, power), &
+                                             ' '//trim(units_abbrev(units_out%length**2))//' =', power, ' b^2'
+    write(message(5), '(a,f12.8,a,f12.8,a)') '<0|P|I>  = ', units_from_atomic(units_out%length, sqrt(abs(power))), &
+                                             ' '//trim(units_abbrev(units_out%length))//' = ', sqrt(abs(power)),' b'
+    write(message(6), '(a,f12.8)')           'f[O->I]  = ', M_TWO*omega*power
+    write(message(7), '(a)')
+    write(message(8), '(a,f12.8,a,f12.8,a)') '   Search interval = [', units_from_atomic(units_out%energy, leftbound), ',', &
+                                             units_from_atomic(units_out%energy, rightbound), ']'
+    write(message(9), '(a,f12.4,a)')         '   Search discretization = ', units_from_atomic(units_out%energy, dw), &
+                                             ' '//trim(units_abbrev(units_out%energy))
+    write(message(10), '(a)')                '******************************************************************'
+    write(message(11), '(a)')
+    call messages_info(11)
   
+    POP_SUB(resonance_first_order)
   
   end subroutine resonance_first_order
   ! ---------------------------------------------------------
@@ -529,6 +559,8 @@ contains
     FLOAT, intent(in)               :: leftbound, rightbound
     FLOAT, intent(in)               :: c01, c02
   
+    PUSH_SUB(resonance_second_order)
+
     call ft(omega, power)
     select case(mode)
     case(SINE_TRANSFORM)
@@ -542,25 +574,27 @@ contains
       end if
     end select
   
-    write(*, '(a)')                 '******************************************************************'
-    write(*, '(a,i3)')              'Resonance #', nw_subtracted + 1
-    write(*, '(a,f12.8,a,f12.8,a)') 'omega    = ', units_from_atomic(units_out%energy, omega), &
-                                    ' '//trim(units_abbrev(units_out%energy))//' = ',      &
-                                    omega, ' Ha'
-    write(*, '(a,f12.8,a,f12.8,a)') 'C(omega) = ', units_from_atomic(units_out%length**3, power), &
-                                    ' '//trim(units_abbrev(units_out%length**3))//' = ',       &
-                                    power, ' b^3'
-  
+    write(message(1), '(a)')                 '******************************************************************'
+    write(message(2), '(a,i3)')              'Resonance #', nw_subtracted + 1
+    write(message(3), '(a,f12.8,a,f12.8,a)') 'omega    = ', units_from_atomic(units_out%energy, omega), &
+                                             ' '//trim(units_abbrev(units_out%energy))//' = ', omega, ' Ha'
+    write(message(4), '(a,f12.8,a,f12.8,a)') 'C(omega) = ', units_from_atomic(units_out%length**3, power), &
+                                             ' '//trim(units_abbrev(units_out%length**3))//' = ', power, ' b^3'
+    call messages_info(4)
+
     if(c01*c02 .ne. M_ZERO) then
-      write(*, '(a,f12.8)')         '    C(omega)/(C0i*C0j) = ', power / (c01 * c02)
-    end if
+      write(message(1), '(a,f12.8)')         '    C(omega)/(C0i*C0j) = ', power / (c01 * c02)
+      call messages_info(1)
+   end if
   
-    write(*, '(a)')
-    write(*, '(a,f12.8,a,f12.8,a)') '   Search interval = [', units_from_atomic(units_out%energy, leftbound), ',', &
-                                                              units_from_atomic(units_out%energy, rightbound), ']'
-    write(*, '(a)')                 '******************************************************************'
-    write(*, '(a)')
+    write(message(1), '(a)')
+    write(message(2), '(a,f12.8,a,f12.8,a)') '   Search interval = [', units_from_atomic(units_out%energy, leftbound), ',', &
+                                             units_from_atomic(units_out%energy, rightbound), ']'
+    write(message(3), '(a)')                 '******************************************************************'
+    write(message(4), '(a)')
+    call messages_info(4)
   
+    POP_SUB(resonance_second_order)
   end subroutine resonance_second_order
   ! ---------------------------------------------------------
   
@@ -582,6 +616,8 @@ contains
     FLOAT, allocatable :: multipole(:, :, :), ot(:), dipole(:, :)
     type(local_operator_t) :: kick_operator
     type(local_operator_t) :: obs
+
+    PUSH_SUB(generate_signal)
   
     ! Find out how many files do we have
     nfiles = 0
@@ -780,6 +816,8 @@ contains
     SAFE_DEALLOCATE_A(ot)
     SAFE_DEALLOCATE_A(multipole)
     SAFE_DEALLOCATE_A(dipole)
+
+    POP_SUB(generate_signal)
   end subroutine generate_signal
   ! ---------------------------------------------------------
   
@@ -795,6 +833,8 @@ contains
   
     integer :: i
   
+    PUSH_SUB(modify_ot)
+
     select case(mod(order, 2))
     case(1)
       do i = 0, time_steps
@@ -812,6 +852,7 @@ contains
       end if
     end select
   
+    POP_SUB(modify_ot)
   end subroutine modify_ot
   ! ---------------------------------------------------------
   
@@ -829,6 +870,8 @@ contains
     character(len=20) :: header_string
     type(unit_t) :: ot_unit
   
+    PUSH_SUB(write_ot)
+
     iunit = io_open('ot', action='write', status='replace')
   
     write(iunit, '(a15,i2)')      '# nspin        ', nspin
@@ -870,6 +913,7 @@ contains
     end do
   
     call io_close(iunit)
+    POP_SUB(write_ot)
   end subroutine write_ot
   
   
@@ -885,6 +929,8 @@ contains
     FLOAT :: dummy, t1, t2
     type(unit_t) :: ot_unit
   
+    PUSH_SUB(read_ot)
+
     iunit = io_open('ot', action='read', status='old')
     if(iunit .eq. 0) then
       write(message(1),'(a)') 'A file called ot should be present and was not found.'
@@ -961,6 +1007,7 @@ contains
       ot(i) = units_to_atomic(ot_unit, ot(i))
     end do
   
+    POP_SUB(read_ot)
   end subroutine read_ot
   
   
@@ -977,6 +1024,8 @@ contains
     FLOAT, allocatable :: warray(:), tarray(:)
     FLOAT :: leftbound, rightbound, dw, w, aw
   
+    PUSH_SUB(print_omega_file)
+
     ! First, let us check that the file "ot" exists.
     inquire(file="ot", exist  = file_exists)
     if(.not.file_exists) then
@@ -1059,6 +1108,8 @@ contains
   
     SAFE_DEALLOCATE_A(warray)
     SAFE_DEALLOCATE_A(tarray)
+
+    POP_SUB(print_omega_file)
   end subroutine print_omega_file
   ! ---------------------------------------------------------
   
