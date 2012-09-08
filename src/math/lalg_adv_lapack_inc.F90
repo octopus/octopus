@@ -273,8 +273,8 @@ end subroutine zgeneigensolve
 !! (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
 subroutine zeigensolve_nonh(n, a, e, err_code, side)
   integer,           intent(in)      :: n
-  CMPLX,             intent(inout)   :: a(n,n)   !< (n,n)
-  CMPLX,             intent(out)     :: e(n)     !< (n)
+  CMPLX,             intent(inout)   :: a(:, :)   !< (n,n)
+  CMPLX,             intent(out)     :: e(:)     !< (n)
   integer, optional, intent(out)     :: err_code
   character(1), optional, intent(in) :: side     !< which eigenvectors ('L' or 'R')
 
