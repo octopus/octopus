@@ -60,7 +60,7 @@ subroutine dcholesky(n, a, bof, err_code)
     bof_ = bof
   end if
 
-  call lapack_potrf('U', n, a(1, 1), LD(a), info)
+  call lapack_potrf('U', n, a(1, 1), lead_dim(a), info)
   if(info.ne.0) then
     if(bof_) then
       write(message(1), '(3a,i5)') 'In dcholesky, LAPACK ', TOSTRING(DLAPACK(potrf)), ' returned error message ', info
@@ -104,7 +104,7 @@ subroutine zcholesky(n, a, bof, err_code)
     bof_ = bof
   end if
 
-  call lapack_potrf('U', n, a(1, 1), LD(a), info)
+  call lapack_potrf('U', n, a(1, 1), lead_dim(a), info)
 
   if(info.ne.0) then
     if(bof_) then
@@ -161,7 +161,7 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
 
   lwork = 5*n
   SAFE_ALLOCATE(work(1:lwork))
-  call lapack_sygv(1, 'V', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), e(1), work(1), lwork, info)
+  call lapack_sygv(1, 'V', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), e(1), work(1), lwork, info)
   SAFE_DEALLOCATE_A(work)
 
   ! b was destroyed, so we rebuild it
@@ -231,7 +231,7 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   lwork = 5*n
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 3*n-2)))
-  call lapack_hegv(1, 'V', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), e(1), work(1), lwork, rwork(1), info)
+  call lapack_hegv(1, 'V', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), e(1), work(1), lwork, rwork(1), info)
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
 
@@ -300,7 +300,7 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   SAFE_ALLOCATE(vl(1, 1))
   SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
   SAFE_ALLOCATE(rwork(1))
-  call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1, 1), LD(vr), &
+  call lapack_geev('N', 'V', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1, 1), lead_dim(vr), &
     work(1), lwork, rwork(1), info)
 
   lwork = int(work(1))
@@ -314,13 +314,13 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   if (side_.eq.'L'.or.side_.eq.'l') then
       SAFE_ALLOCATE(vl(1:n, 1:n))
       SAFE_ALLOCATE(vr(1, 1))
-      call lapack_geev('V', 'N', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), &
+      call lapack_geev('V', 'N', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
         work(1), lwork, rwork(1), info)
       a(1:n, 1:n) = vl(1:n, 1:n)
   else
       SAFE_ALLOCATE(vl(1, 1))
       SAFE_ALLOCATE(vr(1:n, 1:n))
-      call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), &
+      call lapack_geev('N', 'V', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
         work(1), lwork, rwork(1), info)
       a(1:n, 1:n) = vr(1:n, 1:n)
   end if
@@ -372,7 +372,7 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   SAFE_ALLOCATE(vl(1, 1))
   SAFE_ALLOCATE(vr(1:n, 1:n)) ! even in query mode, the size of vr is checked, so we allocate it
   SAFE_ALLOCATE(rwork(1))
-  call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), LD(vl), vr(1, 1), LD(vr), &
+  call lapack_geev('N', 'V', n, a(1, 1), n, e(1), vl(1, 1), lead_dim(vl), vr(1, 1), lead_dim(vr), &
      work(1), lwork, rwork(1), info)
 
   lwork = int(work(1))
@@ -386,13 +386,13 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   if (side_.eq.'L'.or.side_.eq.'l') then
       SAFE_ALLOCATE(vl(1:n, 1:n))
       SAFE_ALLOCATE(vr(1, 1))
-      call lapack_geev('V', 'N', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), &
+      call lapack_geev('V', 'N', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
         work(1), lwork, rwork(1), info)
       a(1:n, 1:n) = vl(1:n, 1:n)
   else
       SAFE_ALLOCATE(vl(1, 1))
       SAFE_ALLOCATE(vr(1:n, 1:n))
-      call lapack_geev('N', 'V', n, a(1, 1), LD(a), e(1), vl(1, 1), LD(vl), vr(1,1), LD(vr), &
+      call lapack_geev('N', 'V', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
         work(1), lwork, rwork(1), info)
       a(1:n, 1:n) = vr(1:n, 1:n)
   end if
@@ -453,15 +453,15 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
 
   ! Work size query.
   SAFE_ALLOCATE(work(1))
-  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), LD(v), work(1), -1, iwork(1), ifail(1), info)
+  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, iwork(1), ifail(1), info)
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
 
   SAFE_ALLOCATE(work(1:lwork))
 
-  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), LD(v), work(1), lwork, iwork(1), ifail(1), info)
+  call DLAPACK(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), lwork, iwork(1), ifail(1), info)
 
   SAFE_DEALLOCATE_A(work)
 
@@ -530,14 +530,14 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
 
   ! Work size query.
   SAFE_ALLOCATE(work(1))
-  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), LD(v), work(1), -1, rwork(1), iwork(1), ifail(1), info)
+  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, rwork(1), iwork(1), ifail(1), info)
   lwork = int(real(work(1)))
   SAFE_DEALLOCATE_A(work)
 
   SAFE_ALLOCATE(work(1:lwork))
-  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), LD(a), b(1, 1), LD(b), M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), LD(v), work(1), lwork, rwork(1), iwork(1), ifail(1), info)
+  call ZLAPACK(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), lwork, rwork(1), iwork(1), ifail(1), info)
   SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
@@ -566,8 +566,8 @@ end subroutine zlowest_geneigensolve
 !> Computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
 subroutine deigensolve(n, a, e, bof, err_code)
   integer, intent(in)              :: n
-  FLOAT,   intent(inout)           :: a(n,n)   !< (n,n)
-  FLOAT,   intent(out)             :: e(n)     !< (n)
+  FLOAT,   intent(inout)           :: a(:, :)   !< (n,n)
+  FLOAT,   intent(out)             :: e(:)     !< (n)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
@@ -585,7 +585,7 @@ subroutine deigensolve(n, a, e, bof, err_code)
 
   lwork = 6*n
   SAFE_ALLOCATE(work(1:lwork))
-  call lapack_syev('V', 'U', n, a(1, 1), LD(a), e(1), work(1), lwork, info)
+  call lapack_syev('V', 'U', n, a(1, 1), lead_dim(a), e(1), work(1), lwork, info)
   SAFE_DEALLOCATE_A(work)
 
   if(info.ne.0) then
@@ -614,8 +614,8 @@ end subroutine deigensolve
 !> Computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
 subroutine zeigensolve(n, a, e, bof, err_code)
   integer,           intent(in)    :: n
-  CMPLX,             intent(inout) :: a(n,n)   !< (n,n)
-  FLOAT,             intent(out)   :: e(n)     !< (n)
+  CMPLX,             intent(inout) :: a(:, :)   !< (n,n)
+  FLOAT,             intent(out)   :: e(:)     !< (n)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
@@ -635,7 +635,7 @@ subroutine zeigensolve(n, a, e, bof, err_code)
   lwork = 6*n
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 3*n-2)))
-  call lapack_heev('V','U', n, a(1, 1), LD(a), e(1), work(1), lwork, rwork(1), info)
+  call lapack_heev('V','U', n, a(1, 1), lead_dim(a), e(1), work(1), lwork, rwork(1), info)
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
 
@@ -930,13 +930,13 @@ subroutine dsym_inverter(uplo, n, a)
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
 
-  call DLAPACK(sytrf)(uplo, n, a(1, 1), LD(a), ipiv(1), work(1), n, info)
+  call DLAPACK(sytrf)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
   if(info < 0) then
     write(message(1), '(3a, i3)') 'In dsym_inverter, LAPACK ', TOSTRING(DLAPACK(sytrf)), ' returned info = ', info
     call messages_fatal(1)
   end if
 
-  call DLAPACK(sytri)(uplo, n, a(1, 1), LD(a), ipiv(1), work(1), info)
+  call DLAPACK(sytri)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), info)
   if(info /= 0) then
     write(message(1), '(3a, i3)') 'In dsym_inverter, LAPACK ', TOSTRING(DLAPACK(sytri)), ' returned info = ', info
     call messages_fatal(1)
@@ -982,13 +982,13 @@ subroutine zsym_inverter(uplo, n, a)
 
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
-  call ZLAPACK(sytrf)(uplo, n, a(1, 1), LD(a), ipiv(1), work(1), n, info)
+  call ZLAPACK(sytrf)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
   if(info < 0) then
     write(message(1), '(3a, i3)') 'In zsym_inverter, LAPACK ', TOSTRING(ZLAPACK(sytrf)), ' returned info = ', info
     call messages_fatal(1)
   end if
 
-  call ZLAPACK(sytri)(uplo, n, a(1, 1), LD(a), ipiv(1), work(1), info)
+  call ZLAPACK(sytri)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), info)
   if(info /= 0) then
     write(message(1), '(3a, i3)') 'In zsym_inverter, LAPACK ', TOSTRING(ZLAPACK(zsytri)), ' returned info = ', info
     call messages_fatal(1)

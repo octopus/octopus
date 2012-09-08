@@ -35,13 +35,22 @@ module utils_m
   implicit none
 
   private
-  public ::              &
-    get_divisors,        &
-    index2axis,          &
-    output_tensor,       &
-    output_dipole,       &
-    print_header
+  public ::                       &
+    get_divisors,                 &
+    index2axis,                   &
+    output_tensor,                &
+    output_dipole,                &
+    print_header,                 &
+    leading_dimension_is_known,   &
+    lead_dim
 
+  interface leading_dimension_is_known
+    module procedure dleading_dimension_is_known, zleading_dimension_is_known
+  end interface leading_dimension_is_known
+
+  interface lead_dim
+    module procedure dlead_dim, zlead_dim
+  end interface lead_dim
 
 contains
 
@@ -276,6 +285,57 @@ contains
 
     call print_date("Calculation started on ")
   end subroutine print_header
+
+  ! ---------------------------------------------------------
+  
+  logical function dleading_dimension_is_known(array) result(known)
+    FLOAT, intent(in) :: array(:, :)
+    
+    known = .true.
+
+#if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
+    if(ubound(array, dim = 2) > 1) then
+      known = ubound(array, dim = 1) == (loc(array(1, 2)) - loc(array(1, 1)))/sizeof(array(1, 1))
+    end if
+#endif
+
+  end function dleading_dimension_is_known
+
+
+  ! ---------------------------------------------------------
+  
+  logical function zleading_dimension_is_known(array) result(known)
+    CMPLX, intent(in) :: array(:, :)
+    
+    known = .true.
+
+#if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
+    if(ubound(array, dim = 2) > 1) then
+      known = ubound(array, dim = 1) == (loc(array(1, 2)) - loc(array(1, 1)))/sizeof(array(1, 1))
+    end if
+#endif
+    
+  end function zleading_dimension_is_known
+
+  ! ---------------------------------------------------------
+
+  integer function dlead_dim(array) result(lead_dim)
+    FLOAT, intent(in) :: array(:, :)
+    
+    ASSERT(leading_dimension_is_known(array))
+    
+    lead_dim = ubound(array, dim = 1)
+  end function dlead_dim
+
+  ! ---------------------------------------------------------
+
+  integer function zlead_dim(array) result(lead_dim)
+    CMPLX, intent(in) :: array(:, :)
+    
+    ASSERT(leading_dimension_is_known(array))
+    
+    lead_dim = ubound(array, dim = 1)
+  end function zlead_dim
 
 end module utils_m
 

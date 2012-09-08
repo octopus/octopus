@@ -196,7 +196,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
 
       ! Diagonalization in the subspace, using LAPACK.
       hevec(1:d2, 1:d2) = ham(1:d2, 1:d2)
-      call lalg_eigensolve(d2, hevec(1:d2, 1:d2), tmp(1:d2))
+      call lalg_eigensolve(d2, hevec, tmp)
 
       ! Store the Ritz values as approximate eigenvalues.
       call lalg_copy(winsiz, tmp, eigenval(nec + 1:nec + winsiz))
