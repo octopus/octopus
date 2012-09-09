@@ -73,6 +73,7 @@ module lcao_m
 
   type lcao_t
     private
+    integer           :: mode
     logical           :: initialized !< are k, s and v1 matrices filled?
     integer           :: norbs !< number of orbitals
     integer           :: maxorbs
@@ -120,6 +121,7 @@ contains
     type(states_t),       intent(in)    :: st
 
     integer :: ia, n, ii, jj, maxj, idim
+    integer :: mode_default
 
     PUSH_SUB(lcao_init)
 
@@ -136,6 +138,42 @@ contains
     
     this%initialized = .true.
 
+    ! The initial LCAO calculation is done by default if we have pseudopotentials.
+    ! Otherwise, it is not the default value and has to be enforced in the input file.
+    mode_default = LCAO_START_FULL
+    if(geo%only_user_def) mode_default = LCAO_START_NONE
+    
+    !%Variable LCAOStart
+    !%Type integer
+    !%Section SCF
+    !%Description
+    !% Before starting a SCF calculation, <tt>Octopus</tt> can perform
+    !% a LCAO calculation. These can provide <tt>Octopus</tt> with a good set
+    !% of initial wavefunctions and with a new guess for the density.
+    !% (Up to the current version, only a minimal basis set is used.)
+    !% The default is <tt>lcao_full</tt> unless all species are user-defined, in which case
+    !% the default is <tt>lcao_none</tt>.
+    !%Option lcao_none 0
+    !% Do not perform a LCAO calculation before the SCF cycle. Instead use random wavefunctions.
+    !%Option lcao_states 2
+    !% Do a LCAO calculation before the SCF cycle and use the resulting wavefunctions as 
+    !% initial wavefunctions without changing the guess density.
+    !% This will speed up the convergence of the eigensolver during the first SCF iterations.
+    !%Option lcao_full 3
+    !% Do a LCAO calculation before the SCF cycle and use the LCAO wavefunctions to build a new
+    !% guess density and a new KS potential.
+    !% Using the LCAO density as a new guess density may improve the convergence, but can
+    !% also slow it down or yield wrong results (especially for spin-polarized calculations).
+    !%End
+    call parse_integer(datasets_check('LCAOStart'), mode_default, this%mode)
+    if(.not.varinfo_valid_option('LCAOStart', this%mode)) call input_error('LCAOStart')
+
+    call messages_print_var_option(stdout, 'LCAOStart', this%mode)
+
+    if(this%mode == LCAO_START_NONE) then
+      POP_SUB(lcao_init)
+    end if
+    
     !%Variable LCAOAlternative
     !%Type logical
     !%Default false
@@ -268,8 +306,8 @@ contains
 #endif
       PUSH_SUB(lcao_init.lcao2_init)
 
-      message(1) = "Info: Using LCAO alternative implementation."
-      call messages_info(1)
+      call messages_write('Info: Using LCAO alternative implementation.')
+      call messages_info()
 
       call messages_experimental('LCAO alternative implementation')
 
@@ -433,7 +471,6 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     integer, optional,   intent(in)    :: st_start !< use for unoccupied-states run
 
-    integer :: lcao_start_default, lcao_start
     type(lcao_t) :: lcao
     integer :: s1, s2, k1, k2, is, ik, ip, idim
     logical :: lcao_done
@@ -453,12 +490,10 @@ contains
 
       ASSERT(st_start <= sys%st%nst)
       if(st_start .gt. sys%st%nst) then ! nothing to be done in LCAO
-        call profiling_out(prof)
         POP_SUB(lcao_run)
         return
       endif
     endif
-
 
     call profiling_in(prof, 'LCAO_RUN')
     
@@ -477,71 +512,35 @@ contains
     
     call init_states(sys%st, sys%gr%mesh, sys%geo)
 
-    ! The initial LCAO calculation is done by default if we have pseudopotentials.
-    ! Otherwise, it is not the default value and has to be enforced in the input file.
-    lcao_start_default = LCAO_START_FULL
-    if(sys%geo%only_user_def) lcao_start_default = LCAO_START_NONE
-    
-    !%Variable LCAOStart
-    !%Type integer
-    !%Section SCF
-    !%Description
-    !% Before starting a SCF calculation, <tt>Octopus</tt> can perform
-    !% a LCAO calculation. These can provide <tt>Octopus</tt> with a good set
-    !% of initial wavefunctions and with a new guess for the density.
-    !% (Up to the current version, only a minimal basis set is used.)
-    !% The default is <tt>lcao_full</tt> unless all species are user-defined, in which case
-    !% the default is <tt>lcao_none</tt>.
-    !%Option lcao_none 0
-    !% Do not perform a LCAO calculation before the SCF cycle. Instead use random wavefunctions.
-    !%Option lcao_states 2
-    !% Do a LCAO calculation before the SCF cycle and use the resulting wavefunctions as 
-    !% initial wavefunctions without changing the guess density.
-    !% This will speed up the convergence of the eigensolver during the first SCF iterations.
-    !%Option lcao_full 3
-    !% Do a LCAO calculation before the SCF cycle and use the LCAO wavefunctions to build a new
-    !% guess density and a new KS potential.
-    !% Using the LCAO density as a new guess density may improve the convergence, but can
-    !% also slow it down or yield wrong results (especially for spin-polarized calculations).
-    !%End
-    call parse_integer(datasets_check('LCAOStart'), lcao_start_default, lcao_start)
-    if(.not.varinfo_valid_option('LCAOStart', lcao_start)) call input_error('LCAOStart')
-
-    call messages_print_var_option(stdout, 'LCAOStart', lcao_start)
+    call lcao_init(lcao, sys%gr, sys%geo, sys%st)
 
     lcao_done = .false.
-    if (lcao_start /= LCAO_START_NONE) then
-      call lcao_init(lcao, sys%gr, sys%geo, sys%st)
 
-      ! after initialized, can check that LCAO is possible
-      if(lcao_is_available(lcao)) then
-        lcao_done = .true.
+    ! after initialized, can check that LCAO is possible
+    if(lcao_is_available(lcao)) then
+      lcao_done = .true.
+      
+      call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
+      
+      if (.not. present(st_start)) then
+        call states_fermi(sys%st, sys%gr%mesh)
+        call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
         
-        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
-
-        if (.not. present(st_start)) then
-          !Just populate again the states, so that the eigenvalues are properly written
-          call states_fermi(sys%st, sys%gr%mesh)
-          call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
-
-          ! Update the density and the Hamiltonian
-          if (lcao_start == LCAO_START_FULL) call system_h_setup(sys, hm, calc_eigenval = .false.)
-        endif
+        ! Update the density and the Hamiltonian
+        if (lcao%mode == LCAO_START_FULL) call system_h_setup(sys, hm, calc_eigenval = .false.)
       endif
-
-      call lcao_end(lcao)
-
     endif
-
+    
     if(.not. lcao_done) then
-
 
       if(.not. sys%gr%ob_grid%open_boundaries) then
 
         ! Randomly generate the initial wavefunctions.
         call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start)
-        message(1) = "Orthogonalizing random wavefunctions."
-        call messages_info(1)
+
+        call messages_write('Orthogonalizing random wavefunctions.')
+        call messages_info()
+
         call states_orthogonalize(sys%st, sys%gr%mesh)
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
@@ -570,6 +569,8 @@ contains
       end if
 
     end if
+
+    call lcao_end(lcao)
 
     call profiling_out(prof)
     POP_SUB(lcao_run)
@@ -687,7 +688,8 @@ contains
     type(lcao_t), intent(in) :: this
 
     PUSH_SUB(lcao_is_available)
-    available = this%initialized
+
+    available = this%initialized .and. this%mode /= LCAO_START_NONE
 
     POP_SUB(lcao_is_available)
   end function lcao_is_available
