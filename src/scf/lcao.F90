@@ -172,6 +172,7 @@ contains
 
     if(this%mode == LCAO_START_NONE) then
       POP_SUB(lcao_init)
+      return
     end if
     
     !%Variable LCAOAlternative
@@ -496,21 +497,23 @@ contains
     endif
 
     call profiling_in(prof, 'LCAO_RUN')
+
+    if (.not. present(st_start)) then
+      call lcao_guess_density(sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+        sys%st%d%spin_channels, sys%st%rho)
+      
+      ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
+      ! overwrite the guess density)
+      message(1) = 'Info: Setting up Hamiltonian.'
+      call messages_info(1)
     
-    call lcao_guess_density(sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
-      sys%st%d%spin_channels, sys%st%rho)
-    
-    ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
-    ! overwrite the guess density)
-    message(1) = 'Info: Setting up Hamiltonian.'
-    call messages_info(1)
-    
-    ! get the effective potential (we don`t need the eigenvalues yet)
-    call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
-    ! eigenvalues have nevertheless to be initialized to something
-    sys%st%eigenval = M_ZERO
-    
-    call init_states(sys%st, sys%gr%mesh, sys%geo)
+      ! get the effective potential (we don`t need the eigenvalues yet)
+      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
+      ! eigenvalues have nevertheless to be initialized to something
+      sys%st%eigenval = M_ZERO
+      
+      call init_states(sys%st, sys%gr%mesh, sys%geo)
+    end if
 
     call lcao_init(lcao, sys%gr, sys%geo, sys%st)
 
