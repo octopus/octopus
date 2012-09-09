@@ -86,7 +86,6 @@ contains
     !%End
     call parse_integer(datasets_check('UnoccMaximumIter'), 50, max_iter)
     if(max_iter < 0) max_iter = huge(max_iter)
-    call messages_obsolete_variable('MaximumIter', 'UnoccMaximumIter')
 
     occupied_states = sys%st%nst
     call init_(sys%gr%mesh, sys%st)
