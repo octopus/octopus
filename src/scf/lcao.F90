@@ -20,6 +20,7 @@
 #include "global.h"
 
 module lcao_m
+  use atom_m
   use batch_m
   use blacs_proc_grid_m
   use datasets_m
@@ -82,7 +83,7 @@ module lcao_m
     integer, pointer  :: ddim(:)
     logical           :: alternative
     logical           :: derivative
-    
+
     !> For the alternative LCAO
     logical             :: keep_orb     !< Whether we keep orbitals in memory.
     FLOAT,   pointer    :: radius(:)    !< The localization radius of each atom orbitals
@@ -498,8 +499,10 @@ contains
 
     call profiling_in(prof, 'LCAO_RUN')
 
+    call lcao_init(lcao, sys%gr, sys%geo, sys%st)
+
     if (.not. present(st_start)) then
-      call lcao_guess_density(sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+      call lcao_guess_density(lcao, sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)
       
       ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
@@ -515,7 +518,6 @@ contains
       call init_states(sys%st, sys%gr%mesh, sys%geo)
     end if
 
-    call lcao_init(lcao, sys%gr, sys%geo, sys%st)
 
     lcao_done = .false.
 
@@ -794,9 +796,22 @@ contains
 
   ! ---------------------------------------------------------
 
+  subroutine lcao_atom_density(this, mesh, sb, atom, spin_channels, rho)
+    type(lcao_t),      intent(in)    :: this
+    type(mesh_t),      intent(in)    :: mesh
+    type(simul_box_t), intent(in)    :: sb
+    type(atom_t),      intent(in)    :: atom
+    integer,           intent(in)    :: spin_channels
+    FLOAT,             intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
+    
+    call species_atom_density(mesh, sb, atom, spin_channels, rho)
+    
+  end subroutine lcao_atom_density
+
   ! ---------------------------------------------------------
   !> builds a density which is the sum of the atomic densities
-  subroutine lcao_guess_density(mesh, sb, geo, qtot, nspin, spin_channels, rho)
+  subroutine lcao_guess_density(this, mesh, sb, geo, qtot, nspin, spin_channels, rho)
+    type(lcao_t),      intent(in)  :: this
     type(mesh_t),      intent(in)  :: mesh
     type(simul_box_t), intent(in)  :: sb
     type(geometry_t),  intent(in)  :: geo
@@ -856,7 +871,7 @@ contains
       parallelized_in_atoms = .true.
 
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call species_atom_density(mesh, sb, geo%atom(ia), 1, atom_rho)
+        call lcao_atom_density(this, mesh, sb, geo%atom(ia), 1, atom_rho)
         rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + atom_rho(1:mesh%np, 1)
       end do
 
@@ -873,14 +888,14 @@ contains
       atom_rho = M_ZERO
       rho = M_ZERO
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call species_atom_density(mesh, sb, geo%atom(ia), 2, atom_rho(1:mesh%np, 1:2))
+        call lcao_atom_density(this, mesh, sb, geo%atom(ia), 2, atom_rho(1:mesh%np, 1:2))
         rho(1:mesh%np, 1:2) = rho(1:mesh%np, 1:2) + atom_rho(1:mesh%np, 1:2)
       end do
 
     case (INITRHO_RANDOM) ! Randomly oriented spins
       SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:2))
       do ia = 1, geo%natoms
-        call species_atom_density(mesh, sb, geo%atom(ia), 2, atom_rho)
+        call lcao_atom_density(this, mesh, sb, geo%atom(ia), 2, atom_rho)
 
         if (nspin == 2) then
           call quickrnd(iseed, rnd)
@@ -951,7 +966,7 @@ contains
         end if
 
         !Get atomic density
-        call species_atom_density(mesh, sb, geo%atom(ia), 2, atom_rho)
+        call lcao_atom_density(this, mesh, sb, geo%atom(ia), 2, atom_rho)
 
         !Scale magnetization density
         n1 = dmf_integrate(mesh, atom_rho(:, 1))
