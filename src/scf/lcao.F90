@@ -83,6 +83,10 @@ module lcao_m
     integer, pointer  :: ddim(:)
     logical           :: alternative
     logical           :: derivative
+    integer, pointer  :: cst(:, :)
+    integer, pointer  :: ck(:, :)
+    real(4), pointer  :: dbuff(:, :, :, :)
+    real(8), pointer  :: zbuff(:, :, :, :)
 
     !> For the alternative LCAO
     logical             :: keep_orb     !< Whether we keep orbitals in memory.
@@ -130,6 +134,11 @@ contains
     nullify(this%atom)
     nullify(this%level)
     nullify(this%ddim)
+    nullify(this%cst)
+    nullify(this%ck)
+    nullify(this%dbuff)
+    nullify(this%zbuff)
+
     nullify(this%radius)
     nullify(this%basis_atom)
     nullify(this%basis_orb)
@@ -501,6 +510,8 @@ contains
 
     call lcao_init(lcao, sys%gr, sys%geo, sys%st)
 
+    call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
+
     if (.not. present(st_start)) then
       call lcao_guess_density(lcao, sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)
@@ -515,7 +526,6 @@ contains
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
       
-      call init_states(sys%st, sys%gr%mesh, sys%geo)
     end if
 
 
@@ -534,7 +544,9 @@ contains
         ! Update the density and the Hamiltonian
         if (lcao%mode == LCAO_START_FULL) call system_h_setup(sys, hm, calc_eigenval = .false.)
       endif
-    endif
+    else
+      if(.not. present(st_start)) call init_states(sys%st, sys%gr%mesh, sys%geo)
+    end if
     
     if(.not. lcao_done) then
 
@@ -644,6 +656,10 @@ contains
     SAFE_DEALLOCATE_P(this%atom)
     SAFE_DEALLOCATE_P(this%level)
     SAFE_DEALLOCATE_P(this%ddim)
+    SAFE_DEALLOCATE_P(this%cst)
+    SAFE_DEALLOCATE_P(this%ck)
+    SAFE_DEALLOCATE_P(this%dbuff)
+    SAFE_DEALLOCATE_P(this%zbuff)
 
     this%initialized = .false.
     POP_SUB(lcao_end)
@@ -1071,6 +1087,29 @@ contains
 
   ! ---------------------------------------------------------
 
+  subroutine lcao_init_orbitals(this, st, gr, geo, hm, start)
+    type(lcao_t),        intent(inout) :: this
+    type(states_t),      intent(inout) :: st
+    type(grid_t),        intent(inout) :: gr
+    type(geometry_t),    intent(in)    :: geo
+    type(hamiltonian_t), intent(in)    :: hm
+    integer, optional,   intent(in)    :: start
+
+    if(.not. lcao_is_available(this)) return
+  
+    PUSH_SUB('lcao_init_orbitals')
+        
+    if(.not. this%alternative) then
+      if(states_are_real(st)) then
+        call dinit_orbitals(this, st, gr, geo, hm, start)
+      else
+        call zinit_orbitals(this, st, gr, geo, hm, start)
+      end if
+    end if
+
+    POP_SUB('lcao_init_orbitals')
+  end subroutine lcao_init_orbitals
+  
 #include "undef.F90"
 #include "real.F90"
 #include "lcao_inc.F90"
