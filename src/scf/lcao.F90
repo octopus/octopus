@@ -762,7 +762,7 @@ contains
   !> This function generates the set of an atomic orbitals for an atom
   !! and stores it in the batch orbitalb. It can be called when the
   !! orbitals are already stored. In that case it does not do anything.
-  subroutine lcao_get_orbital(orbitalb, sphere, geo, ispin, iatom, norbs)
+  subroutine lcao_alt_get_orbital(orbitalb, sphere, geo, ispin, iatom, norbs)
     type(batch_t),     intent(inout) :: orbitalb
     type(submesh_t),   intent(in)    :: sphere
     type(geometry_t),  intent(in)    :: geo
@@ -772,7 +772,7 @@ contains
 
     integer :: iorb
 
-    PUSH_SUB(lcao_get_orbital)
+    PUSH_SUB(lcao_alt_get_orbital)
 
     if(.not. batch_is_ok(orbitalb)) then
 
@@ -795,27 +795,27 @@ contains
       call profiling_out(prof_orbitals)
     end if
 
-    POP_SUB(lcao_get_orbital)
+    POP_SUB(lcao_alt_get_orbital)
 
-  end subroutine lcao_get_orbital
+  end subroutine lcao_alt_get_orbital
 
   ! ---------------------------------------------------------
 
   !> This function deallocates a set of an atomic orbitals for an
   !! atom. It can be called when the batch is empty, in that case it
   !! does not do anything.
-  subroutine lcao_end_orbital(orbitalb)
+  subroutine lcao_alt_end_orbital(orbitalb)
     type(batch_t),   intent(inout) :: orbitalb
 
-    PUSH_SUB(lcao_end_orbital)
+    PUSH_SUB(lcao_alt_end_orbital)
 
     if(batch_is_ok(orbitalb)) then
       call batch_delete(orbitalb)
     end if
 
-    POP_SUB(lcao_end_orbital)
+    POP_SUB(lcao_alt_end_orbital)
 
-  end subroutine lcao_end_orbital
+  end subroutine lcao_alt_end_orbital
 
   ! ---------------------------------------------------------
 
