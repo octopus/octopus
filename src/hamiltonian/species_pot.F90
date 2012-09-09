@@ -53,17 +53,12 @@ module species_pot_m
 
   private
   public ::                      &
-    guess_density,               &
     species_get_density,         &
     species_get_nlcc,            &
     species_get_orbital,         &
     species_get_orbital_submesh, &
-    species_get_local
-
-  integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
-                        INITRHO_FERROMAGNETIC = 2, &
-                        INITRHO_RANDOM        = 3, &
-                        INITRHO_USERDEF       = 77
+    species_get_local,           &
+    species_atom_density
 
   type(mesh_t), pointer :: mesh_p
   FLOAT, allocatable :: rho_p(:)
@@ -75,7 +70,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine atom_density(mesh, sb, atom, spin_channels, rho)
+  subroutine species_atom_density(mesh, sb, atom, spin_channels, rho)
     type(mesh_t),      intent(in)    :: mesh
     type(simul_box_t), intent(in)    :: sb
     type(atom_t),      intent(in)    :: atom
@@ -249,272 +244,9 @@ contains
     end select
 
     POP_SUB(atom_density)
-  end subroutine atom_density
+  end subroutine species_atom_density
   ! ---------------------------------------------------------
 
-
-  ! ---------------------------------------------------------
-  !> builds a density which is the sum of the atomic densities
-  subroutine guess_density(mesh, sb, geo, qtot, nspin, spin_channels, rho)
-    type(mesh_t),      intent(in)  :: mesh
-    type(simul_box_t), intent(in)  :: sb
-    type(geometry_t),  intent(in)  :: geo
-    FLOAT,             intent(in)  :: qtot  ! the total charge of the system
-    integer,           intent(in)  :: nspin, spin_channels
-    FLOAT,             intent(out) :: rho(:, :)
-
-    integer :: ia, is, idir, gmd_opt
-    integer, save :: iseed = 321
-    type(block_t) :: blk
-    FLOAT :: rr, rnd, phi, theta, mag(1:3), lmag, n1, n2
-    FLOAT, allocatable :: atom_rho(:,:)
-    logical :: parallelized_in_atoms
-
-
-    PUSH_SUB(guess_density)
-
-    parallelized_in_atoms = .false.
-
-    if (spin_channels == 1) then
-      gmd_opt = INITRHO_PARAMAGNETIC
-    else
-      !%Variable GuessMagnetDensity
-      !%Type integer
-      !%Default ferromagnetic
-      !%Section SCF
-      !%Description
-      !% The guess density for the SCF cycle is just the sum of all the atomic densities.
-      !% When performing spin-polarized or non-collinear-spin calculations this option sets 
-      !% the guess magnetization density.
-      !%
-      !% For anti-ferromagnetic configurations, the <tt>user_defined</tt> option should be used.
-      !%
-      !% Note that if the <tt>paramagnetic</tt> option is used, the final ground state will also be
-      !% paramagnetic, but the same is not true for the other options.
-      !%Option paramagnetic 1
-      !% Magnetization density is zero.
-      !%Option ferromagnetic 2
-      !% Magnetization density is the sum of the atomic magnetization densities.
-      !%Option random 3
-      !% Each atomic magnetization density is randomly rotated.
-      !%Option user_defined 77
-      !% The atomic magnetization densities are rotated so that the magnetization 
-      !% vector has the same direction as a vector provided by the user. In this case,
-      !% the <tt>AtomsMagnetDirection</tt> block has to be set.
-      !%End
-      call parse_integer(datasets_check('GuessMagnetDensity'), INITRHO_FERROMAGNETIC, gmd_opt)
-      if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call input_error('GuessMagnetDensity')
-      call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
-    end if
-
-    rho = M_ZERO
-    select case (gmd_opt)
-    case (INITRHO_PARAMAGNETIC)
-      SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:1))
-
-      parallelized_in_atoms = .true.
-
-      do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call atom_density(mesh, sb, geo%atom(ia), 1, atom_rho)
-        rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + atom_rho(1:mesh%np, 1)
-      end do
-
-      if (spin_channels == 2) then
-        rho(1:mesh%np, 1) = M_HALF*rho(1:mesh%np, 1)
-        rho(1:mesh%np, 2) = rho(1:mesh%np, 1)
-      end if
-
-    case (INITRHO_FERROMAGNETIC)
-      SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:2))
-
-      parallelized_in_atoms = .true.
-
-      atom_rho = M_ZERO
-      rho = M_ZERO
-      do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call atom_density(mesh, sb, geo%atom(ia), 2, atom_rho(1:mesh%np, 1:2))
-        rho(1:mesh%np, 1:2) = rho(1:mesh%np, 1:2) + atom_rho(1:mesh%np, 1:2)
-      end do
-
-    case (INITRHO_RANDOM) ! Randomly oriented spins
-      SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:2))
-      do ia = 1, geo%natoms
-        call atom_density(mesh, sb, geo%atom(ia), 2, atom_rho)
-
-        if (nspin == 2) then
-          call quickrnd(iseed, rnd)
-          rnd = rnd - M_HALF
-          if (rnd > M_ZERO) then
-            rho(1:mesh%np, 1:2) = rho(1:mesh%np, 1:2) + atom_rho(1:mesh%np, 1:2)
-          else
-            rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + atom_rho(1:mesh%np, 2)
-            rho(1:mesh%np, 2) = rho(1:mesh%np, 2) + atom_rho(1:mesh%np, 1)
-          end if
-        elseif (nspin == 4) then
-          call quickrnd(iseed, phi)
-          call quickrnd(iseed, theta)
-          phi = phi*M_TWO*M_PI
-          theta = theta*M_PI
-          rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:mesh%np, 1) &
-            + sin(theta/M_TWO)**2*atom_rho(1:mesh%np, 2)
-          rho(1:mesh%np, 2) = rho(1:mesh%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:mesh%np, 1) &
-            + cos(theta/M_TWO)**2*atom_rho(1:mesh%np, 2)
-          rho(1:mesh%np, 3) = rho(1:mesh%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
-            (atom_rho(1:mesh%np, 1) - atom_rho(1:mesh%np, 2))
-          rho(1:mesh%np, 4) = rho(1:mesh%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
-            (atom_rho(1:mesh%np, 1) - atom_rho(1:mesh%np, 2))
-        end if
-      end do
-
-    case (INITRHO_USERDEF) ! User-defined
-      
-      !%Variable AtomsMagnetDirection
-      !%Type block
-      !%Section Hamiltonian
-      !%Description
-      !% This option is only used when <tt>GuessMagnetDensity</tt> is
-      !% set to <tt>user_defined</tt>. It provides a direction for the
-      !% magnetization vector of each atom when building the guess
-      !% density. In order to do that, the user should specify the
-      !% coordinates of a vector that has the desired direction and
-      !% norm.  Note that it is necessary to maintain the ordering in
-      !% which the species were defined in the coordinates
-      !% specifications.
-      !%
-      !% For spin-polarized calculations, the vectors should have only
-      !% one component; for non-collinear-spin calculations, they
-      !% should have three components.
-      !%End
-      if(parse_block(datasets_check('AtomsMagnetDirection'), blk) < 0) then
-        message(1) = "AtomsMagnetDirection block is not defined."
-        call messages_fatal(1)
-      end if
-
-      if (parse_block_n(blk) /= geo%natoms) then
-        message(1) = "AtomsMagnetDirection block has the wrong number of rows."
-        call messages_fatal(1)
-      end if
-
-      SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:2))
-      do ia = 1, geo%natoms
-        !Read from AtomsMagnetDirection block 
-        if (nspin == 2) then
-          call parse_block_float(blk, ia-1, 0, mag(1))
-          lmag = abs(mag(1))
-        elseif (nspin == 4) then
-          do idir = 1, 3
-            call parse_block_float(blk, ia-1, idir-1, mag(idir))
-            if (abs(mag(idir)) < CNST(1.0e-20)) mag(idir) = M_ZERO
-          end do
-          lmag = sqrt(dot_product(mag(1:3), mag(1:3)))
-        end if
-
-        !Get atomic density
-        call atom_density(mesh, sb, geo%atom(ia), 2, atom_rho)
-
-        !Scale magnetization density
-        n1 = dmf_integrate(mesh, atom_rho(:, 1))
-        n2 = dmf_integrate(mesh, atom_rho(:, 2))
-        if (lmag > n1 + n2) then
-          mag = mag*(n1 + n2)/lmag
-          lmag = n1 + n2
-        elseif (lmag == M_ZERO) then
-          if (n1 - n2 == M_ZERO) then
-            rho(1:mesh%np, 1:2) = rho(1:mesh%np, 1:2) + atom_rho(1:mesh%np, 1:2)
-          else
-            atom_rho(:, 1) = (atom_rho(:, 1) + atom_rho(:, 2))/M_TWO
-            rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + atom_rho(1:mesh%np, 1)
-            rho(1:mesh%np, 2) = rho(1:mesh%np, 2) + atom_rho(1:mesh%np, 1)
-          end if
-          cycle
-        end if
-        if (n1 - n2 /= lmag .and. n2 /= M_ZERO) then
-          if (n1 - n2 < lmag) then
-            atom_rho(:, 1) = atom_rho(:, 1) + (lmag - n1 + n2)/M_TWO/n2*atom_rho(:, 2)
-            atom_rho(:, 2) = (n1 + n2 - lmag)/M_TWO/n2*atom_rho(:, 2)
-          elseif (n1 - n2 > lmag) then
-            atom_rho(:, 2) = atom_rho(:, 2) + (n1 - n2 - lmag)/M_TWO/n1*atom_rho(:, 1)
-            atom_rho(:, 1) = (lmag + n1 + n2)/M_TWO/n1*atom_rho(:, 1)
-          end if
-        end if
-
-        !Rotate magnetization density
-        if (nspin == 2) then
-          if (mag(1) > M_ZERO) then
-            rho(1:mesh%np, 1:2) = rho(1:mesh%np, 1:2) + atom_rho(1:mesh%np, 1:2)
-          else
-            rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + atom_rho(1:mesh%np, 2)
-            rho(1:mesh%np, 2) = rho(1:mesh%np, 2) + atom_rho(1:mesh%np, 1)
-          end if
-
-        elseif (nspin == 4) then
-          theta = acos(mag(3)/lmag)
-          if (mag(1) == M_ZERO) then
-            if (mag(2) == M_ZERO) then
-              phi = M_ZERO
-            elseif (mag(2) < M_ZERO) then
-              phi = M_PI*M_TWOTHIRD
-            elseif (mag(2) > M_ZERO) then
-              phi = M_PI*M_HALF
-            end if
-          else
-            if (mag(2) < M_ZERO) then
-              phi = M_TWO*M_PI - acos(mag(1)/sin(theta)/lmag)
-            elseif (mag(2) >= M_ZERO) then
-              phi = acos(mag(1)/sin(theta)/lmag)
-            end if
-          end if
-
-          rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:mesh%np, 1) &
-            + sin(theta/M_TWO)**2*atom_rho(1:mesh%np, 2)
-          rho(1:mesh%np, 2) = rho(1:mesh%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:mesh%np, 1) &
-               + cos(theta/M_TWO)**2*atom_rho(1:mesh%np, 2)
-          rho(1:mesh%np, 3) = rho(1:mesh%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
-            (atom_rho(1:mesh%np, 1) - atom_rho(1:mesh%np, 2))
-          rho(1:mesh%np, 4) = rho(1:mesh%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
-            (atom_rho(1:mesh%np, 1) - atom_rho(1:mesh%np, 2))
-        end if
-      end do
-
-      call parse_block_end(blk)
-
-    end select
-
-
-#ifdef HAVE_MPI
-    if(geo%atoms_dist%parallel .and. parallelized_in_atoms) then
-      do is = 1, spin_channels
-        atom_rho(1:mesh%np, 1) = rho(1:mesh%np, is)
-        call MPI_Allreduce(atom_rho(1, 1), rho(1, is), mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
-      end do
-    end if
-#endif
-
-    ! we now renormalize the density (necessary if we have a charged system)
-    rr = M_ZERO
-    do is = 1, spin_channels
-      rr = rr + dmf_integrate(mesh, rho(:, is))
-    end do
-
-    write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', rr
-    call messages_info(1)
-
-    rr = qtot / rr
-    rho = rr * rho
-    rr = M_ZERO
-    do is = 1, spin_channels
-      rr = rr + dmf_integrate(mesh, rho(:, is))
-    end do
-
-    write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', rr
-    call messages_info(1)
-
-    SAFE_DEALLOCATE_A(atom_rho)
-    POP_SUB(guess_density)
-  end subroutine guess_density
-
-
-  ! ---------------------------------------------------------
   subroutine species_get_density(spec, pos, mesh, rho)
     type(species_t),            intent(in)  :: spec
     FLOAT,                      intent(in)  :: pos(:)
