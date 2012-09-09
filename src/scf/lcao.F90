@@ -107,6 +107,8 @@ module lcao_m
     integer             :: desc(1:BLACS_DLEN)
     logical, pointer    :: calc_atom(:)
     FLOAT               :: diag_tol
+    type(submesh_t), pointer :: sphere(:)
+    type(batch_t),   pointer :: orbitals(:)
   end type lcao_t
   
   type(profile_t), save :: prof_orbitals
@@ -145,7 +147,9 @@ contains
     nullify(this%atom_orb_basis)
     nullify(this%norb_atom)
     nullify(this%calc_atom)
-    
+    nullify(this%sphere)
+    nullify(this%orbitals)
+
     this%initialized = .true.
 
     ! The initial LCAO calculation is done by default if we have pseudopotentials.
@@ -653,6 +657,9 @@ contains
     SAFE_DEALLOCATE_P(this%basis_orb)
     SAFE_DEALLOCATE_P(this%atom_orb_basis)
     SAFE_DEALLOCATE_P(this%radius)
+    SAFE_DEALLOCATE_P(this%sphere)
+    SAFE_DEALLOCATE_P(this%orbitals)
+
     SAFE_DEALLOCATE_P(this%atom)
     SAFE_DEALLOCATE_P(this%level)
     SAFE_DEALLOCATE_P(this%ddim)
@@ -688,9 +695,9 @@ contains
 
     if(this%alternative) then
       if (states_are_real(st)) then
-        call dlcao_wf2(this, st, gr, geo, hm, start_)
+        call dlcao_alt_wf(this, st, gr, geo, hm, start_)
       else
-        call zlcao_wf2(this, st, gr, geo, hm, start_)
+        call zlcao_alt_wf(this, st, gr, geo, hm, start_)
       end if
     else
       if (states_are_real(st)) then
@@ -1105,6 +1112,13 @@ contains
       else
         call zinit_orbitals(this, st, gr, geo, hm, start)
       end if
+    else
+      if(states_are_real(st)) then
+        call dlcao_alt_init_orbitals(this, st, gr, geo, hm, start)
+      else
+        call zlcao_alt_init_orbitals(this, st, gr, geo, hm, start)
+      end if
+
     end if
 
     POP_SUB('lcao_init_orbitals')

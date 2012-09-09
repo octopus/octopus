@@ -107,8 +107,6 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(hamilt(this%norbs, this%norbs, kstart:kend))
   SAFE_ALLOCATE(overlap(this%norbs, this%norbs, st%d%spin_channels))
 
-!  call X(init_orbitals)(this, st, gr, geo, hm, start)
-
   ie = 0
   max = this%norbs * (this%norbs + 1)/2
 
@@ -326,31 +324,22 @@ subroutine X(get_ao)(this, st, gr, geo, hm, iorb, ispin, ao, use_psi)
 end subroutine X(get_ao)
 
 ! ---------------------------------------------------------
-! The alternative implementation.
-subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
+
+subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, hm, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: hm
-  integer,             intent(in)    :: start
+  integer, optional,   intent(in)    :: start
 
-  integer :: iatom, jatom, ik, ist, ispin, nev, ib
-  integer :: ibasis, jbasis, iorb, jorb, norbs, dof
-  R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
-  integer :: prow, pcol, ilbasis, jlbasis
-  R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
-  type(submesh_t), allocatable :: sphere(:)
-  type(batch_t) :: hpsib, psib
-  type(batch_t), allocatable :: orbitals(:)
-  FLOAT, allocatable :: eval(:)
-  R_TYPE, allocatable :: evec(:, :), levec(:, :)  
-  FLOAT :: dist2
-  type(profile_t), save :: prof_matrix, prof_wavefunction
+  integer :: iatom, norbs, dof
 
-  PUSH_SUB(X(lcao_wf2))
+  PUSH_SUB(X(lcao_alt_init_orbitals))
 
-  ASSERT(start == 1)
+  if(present(start)) then
+    ASSERT(start == 1)
+  end if
 
   write(message(1), '(a,i6,a)') 'Info: Performing LCAO calculation with ', this%nbasis, ' orbitals.'
   write(message(2), '(a)') ' '
@@ -368,29 +357,17 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     end if
   end if
 
-  if(.not. this%parallel) then
-    SAFE_ALLOCATE(hamiltonian(1:this%nbasis, 1:this%nbasis))
-    SAFE_ALLOCATE(overlap(1:this%nbasis, 1:this%nbasis))
-  else
-    SAFE_ALLOCATE(hamiltonian(1:this%lsize(1), 1:this%lsize(2)))
-    SAFE_ALLOCATE(overlap(1:this%lsize(1), 1:this%lsize(2)))
-  end if
-  SAFE_ALLOCATE(aa(1:this%maxorb, 1:this%maxorb))
-  SAFE_ALLOCATE(bb(1:this%maxorb, 1:this%maxorb))  
-  SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim, this%maxorb))
-  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, this%maxorb))
-  SAFE_ALLOCATE(sphere(1:geo%natoms))
-  SAFE_ALLOCATE(orbitals(1:geo%natoms))
-
+  SAFE_ALLOCATE(this%sphere(1:geo%natoms))
+  SAFE_ALLOCATE(this%orbitals(1:geo%natoms))
 
   dof = 0
   do iatom = 1, geo%natoms
     norbs = species_niwfs(geo%atom(iatom)%spec)
 
     ! initialize the radial grid
-    call submesh_init_sphere(sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
-    INCR(dof, sphere(iatom)%np*this%mult*norbs)
-    call batch_init(orbitals(iatom), 1, this%mult*norbs)
+    call submesh_init_sphere(this%sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
+    INCR(dof, this%sphere(iatom)%np*this%mult*norbs)
+    call batch_init(this%orbitals(iatom), 1, this%mult*norbs)
   end do
 
   if(this%keep_orb) then
@@ -398,6 +375,47 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       'Info: LCAO requires', nint(dof*CNST(8.0)/CNST(1024.0)**2), ' Mb of memory for atomic orbitals.'
     call messages_info(1)
   end if
+
+  POP_SUB(X(lcao_alt_init_orbitals))
+end subroutine X(lcao_alt_init_orbitals)
+
+! ---------------------------------------------------------
+! The alternative implementation.
+subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
+  type(lcao_t),        intent(inout) :: this
+  type(states_t),      intent(inout) :: st
+  type(grid_t),        intent(inout) :: gr
+  type(geometry_t),    intent(in)    :: geo
+  type(hamiltonian_t), intent(in)    :: hm
+  integer,             intent(in)    :: start
+
+  integer :: iatom, jatom, ik, ist, ispin, nev, ib
+  integer :: ibasis, jbasis, iorb, jorb, norbs, dof
+  R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
+  integer :: prow, pcol, ilbasis, jlbasis
+  R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
+  type(batch_t) :: hpsib, psib
+  FLOAT, allocatable :: eval(:)
+  R_TYPE, allocatable :: evec(:, :), levec(:, :)  
+  FLOAT :: dist2
+  type(profile_t), save :: prof_matrix, prof_wavefunction
+
+  PUSH_SUB(X(lcao_alt_wf))
+
+  ASSERT(start == 1)
+
+  if(.not. this%parallel) then
+    SAFE_ALLOCATE(hamiltonian(1:this%nbasis, 1:this%nbasis))
+    SAFE_ALLOCATE(overlap(1:this%nbasis, 1:this%nbasis))
+  else
+    SAFE_ALLOCATE(hamiltonian(1:this%lsize(1), 1:this%lsize(2)))
+    SAFE_ALLOCATE(overlap(1:this%lsize(1), 1:this%lsize(2)))
+  end if
+
+  SAFE_ALLOCATE(aa(1:this%maxorb, 1:this%maxorb))
+  SAFE_ALLOCATE(bb(1:this%maxorb, 1:this%maxorb))  
+  SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim, this%maxorb))
+  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, this%maxorb))
 
   call states_set_zero(st)
 
@@ -413,7 +431,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
     if(ispin > 1) then
       ! we need to deallocate previous orbitals
       do iatom = 1, geo%natoms
-        call lcao_end_orbital(orbitals(iatom))
+        call lcao_end_orbital(this%orbitals(iatom))
       end do
     end if
 
@@ -441,14 +459,14 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       do iatom = 1, geo%natoms
         norbs = this%norb_atom(iatom)
 
-        call lcao_get_orbital(orbitals(iatom), sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+        call lcao_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
 
         psii = M_ZERO
 
         call batch_init( psib, st%d%dim, this%atom_orb_basis(iatom, 1), this%atom_orb_basis(iatom, norbs), psii)
         call batch_init(hpsib, st%d%dim, this%atom_orb_basis(iatom, 1), this%atom_orb_basis(iatom, norbs), hpsi)
 
-        call X(submesh_batch_add)(sphere(iatom), orbitals(iatom), psib)
+        call X(submesh_batch_add)(this%sphere(iatom), this%orbitals(iatom), psib)
         call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
 
         do jatom = 1, geo%natoms
@@ -460,20 +478,20 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
 
           if(dist2 > (this%radius(iatom) + this%radius(jatom) + this%lapdist)**2) cycle
 
-          call lcao_get_orbital(orbitals(jatom), sphere(jatom), geo, ispin, jatom, this%norb_atom(jatom))
+          call lcao_get_orbital(this%orbitals(jatom), this%sphere(jatom), geo, ispin, jatom, this%norb_atom(jatom))
 
           ibasis = this%atom_orb_basis(iatom, 1)
           jbasis = this%atom_orb_basis(jatom, 1)
 
-          call X(submesh_batch_dotp_matrix)(sphere(jatom), hpsib, orbitals(jatom), aa)
+          call X(submesh_batch_dotp_matrix)(this%sphere(jatom), hpsib, this%orbitals(jatom), aa)
 
           if(dist2 > (this%radius(iatom) + this%radius(jatom))**2) then 
             bb = M_ZERO
           else
-            call X(submesh_batch_dotp_matrix)(sphere(jatom), psib, orbitals(jatom), bb)
+            call X(submesh_batch_dotp_matrix)(this%sphere(jatom), psib, this%orbitals(jatom), bb)
           end if
 
-          if(.not. this%keep_orb) call lcao_end_orbital(orbitals(jatom))
+          if(.not. this%keep_orb) call lcao_end_orbital(this%orbitals(jatom))
 
           !now, store the result in the matrix
 
@@ -503,7 +521,7 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
         call batch_end(psib)
         call batch_end(hpsib)
 
-        if(.not. this%keep_orb) call lcao_end_orbital(orbitals(iatom))
+        if(.not. this%keep_orb) call lcao_end_orbital(this%orbitals(iatom))
 
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(iatom, geo%natoms)
       end do
@@ -544,14 +562,14 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
       do iatom = 1, geo%natoms
         norbs = this%norb_atom(iatom)
 
-        call lcao_get_orbital(orbitals(iatom), sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
+        call lcao_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
 
         do ib = st%block_start, st%block_end
-          call X(submesh_batch_add_matrix)(sphere(iatom), evec(ibasis:, states_block_min(st, ib):), &
-            orbitals(iatom), st%psib(ib, ik))
+          call X(submesh_batch_add_matrix)(this%sphere(iatom), evec(ibasis:, states_block_min(st, ib):), &
+            this%orbitals(iatom), st%psib(ib, ik))
         end do
 
-        if(.not. this%keep_orb) call lcao_end_orbital(orbitals(iatom))
+        if(.not. this%keep_orb) call lcao_end_orbital(this%orbitals(iatom))
 
         ibasis = ibasis + norbs
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis, this%nbasis)
@@ -573,18 +591,17 @@ subroutine X(lcao_wf2) (this, st, gr, geo, hm, start)
   end do
 
   do iatom = 1, geo%natoms
-    call submesh_end(sphere(iatom))
-    call lcao_end_orbital(orbitals(iatom))
-    call batch_end(orbitals(iatom))
+    call submesh_end(this%sphere(iatom))
+    call lcao_end_orbital(this%orbitals(iatom))
+    call batch_end(this%orbitals(iatom))
   end do
 
   SAFE_DEALLOCATE_A(psii)
   SAFE_DEALLOCATE_A(hpsi)  
   SAFE_DEALLOCATE_A(hamiltonian)
   SAFE_DEALLOCATE_A(overlap)
-  SAFE_DEALLOCATE_A(sphere)
 
-  POP_SUB(X(lcao_wf2))
+  POP_SUB(X(lcao_alt_wf))
 
 contains
 
@@ -611,7 +628,7 @@ contains
 #endif
     type(profile_t), save :: prof
 
-    PUSH_SUB(X(lcao_wf2).diagonalization)
+    PUSH_SUB(X(lcao_alt_wf).diagonalization)
 
     SAFE_ALLOCATE(ifail(1:this%nbasis))
 
@@ -852,10 +869,10 @@ contains
 
     call profiling_out(prof)
 
-    POP_SUB(X(lcao_wf2).diagonalization)
+    POP_SUB(X(lcao_alt_wf).diagonalization)
   end subroutine diagonalization
 
-end subroutine X(lcao_wf2)
+end subroutine X(lcao_alt_wf)
 
 !! Local Variables:
 !! mode: f90
