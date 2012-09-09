@@ -40,6 +40,7 @@ module lcao_m
   use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use parser_m
   use profiling_m
+  use ps_m
   use simul_box_m
   use scalapack_m
   use solids_m
@@ -517,7 +518,7 @@ contains
     call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
 
     if (.not. present(st_start)) then
-      call lcao_guess_density(lcao, sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+      call lcao_guess_density(lcao, sys%st, sys%gr%fine%mesh, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)
       
       ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
@@ -819,28 +820,76 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine lcao_atom_density(this, mesh, sb, atom, spin_channels, rho)
-    type(lcao_t),      intent(in)    :: this
+  subroutine lcao_atom_density(this, st, mesh, sb, geo, iatom, spin_channels, rho)
+    type(lcao_t),      intent(inout) :: this
+    type(states_t),    intent(in)    :: st
     type(mesh_t),      intent(in)    :: mesh
     type(simul_box_t), intent(in)    :: sb
-    type(atom_t),      intent(in)    :: atom
+    type(geometry_t),  intent(in)    :: geo
+    integer,           intent(in)    :: iatom
     integer,           intent(in)    :: spin_channels
     FLOAT,             intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
     
-    call species_atom_density(mesh, sb, atom, spin_channels, rho)
-    
+    FLOAT, allocatable :: dorbital(:, :)
+    FLOAT, allocatable :: zorbital(:, :)
+    FLOAT, allocatable :: rho2(:, :)
+    FLOAT :: factor
+    integer :: iorb, ip, ii, ll, mm
+    type(ps_t), pointer :: ps
+    logical :: use_stored_orbitals
+
+    SAFE_ALLOCATE(rho2(1:mesh%np, 1:spin_channels))
+    rho = M_ZERO
+
+    use_stored_orbitals = species_is_ps(geo%atom(iatom)%spec) &
+      .and. states_are_real(st) .and. spin_channels == 1 .and. lcao_is_available(this) &
+      .and. st%d%dim == 1
+
+    ! we can use the orbitals we already calculated
+    if(use_stored_orbitals .and. .not. this%alternative) then
+
+      if(states_are_real(st)) then
+        SAFE_ALLOCATE(dorbital(1:mesh%np, 1:st%d%dim))
+      else
+        SAFE_ALLOCATE(zorbital(1:mesh%np, 1:st%d%dim))
+      end if
+
+      ps => species_ps(geo%atom(iatom)%spec)
+      
+      do iorb = 1, this%maxorbs
+        if(iatom /= this%atom(iorb)) cycle
+
+        call species_iwf_ilm(geo%atom(iatom)%spec, this%level(iorb), 1, ii, ll, mm)
+
+        if(states_are_real(st)) then
+          call dget_ao(this, st, mesh, geo, iorb, 1, dorbital, use_psi = .true.)
+          factor = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
+          do ip = 1, mesh%np
+            rho(ip, 1) = rho(ip, 1) + factor*dorbital(ip, 1)**2
+          end do
+        end if
+
+      end do
+      
+      SAFE_DEALLOCATE_A(dorbital)
+      SAFE_DEALLOCATE_A(zorbital)
+    else
+      call species_atom_density(mesh, sb, geo%atom(iatom), spin_channels, rho)
+    end if
+
   end subroutine lcao_atom_density
 
   ! ---------------------------------------------------------
   !> builds a density which is the sum of the atomic densities
-  subroutine lcao_guess_density(this, mesh, sb, geo, qtot, nspin, spin_channels, rho)
-    type(lcao_t),      intent(in)  :: this
-    type(mesh_t),      intent(in)  :: mesh
-    type(simul_box_t), intent(in)  :: sb
-    type(geometry_t),  intent(in)  :: geo
-    FLOAT,             intent(in)  :: qtot  ! the total charge of the system
-    integer,           intent(in)  :: nspin, spin_channels
-    FLOAT,             intent(out) :: rho(:, :)
+  subroutine lcao_guess_density(this, st, mesh, sb, geo, qtot, nspin, spin_channels, rho)
+    type(lcao_t),      intent(inout) :: this
+    type(states_t),    intent(in)    :: st
+    type(mesh_t),      intent(in)    :: mesh
+    type(simul_box_t), intent(in)    :: sb
+    type(geometry_t),  intent(in)    :: geo
+    FLOAT,             intent(in)    :: qtot  ! the total charge of the system
+    integer,           intent(in)    :: nspin, spin_channels
+    FLOAT,             intent(out)   :: rho(:, :)
 
     integer :: ia, is, idir, gmd_opt
     integer, save :: iseed = 321
@@ -894,7 +943,7 @@ contains
       parallelized_in_atoms = .true.
 
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, mesh, sb, geo%atom(ia), 1, atom_rho)
+        call lcao_atom_density(this, st, mesh, sb, geo, ia, 1, atom_rho)
         rho(1:mesh%np, 1) = rho(1:mesh%np, 1) + atom_rho(1:mesh%np, 1)
       end do
 
@@ -911,14 +960,14 @@ contains
       atom_rho = M_ZERO
       rho = M_ZERO
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, mesh, sb, geo%atom(ia), 2, atom_rho(1:mesh%np, 1:2))
+        call lcao_atom_density(this, st, mesh, sb, geo, ia, 2, atom_rho(1:mesh%np, 1:2))
         rho(1:mesh%np, 1:2) = rho(1:mesh%np, 1:2) + atom_rho(1:mesh%np, 1:2)
       end do
 
     case (INITRHO_RANDOM) ! Randomly oriented spins
       SAFE_ALLOCATE(atom_rho(1:mesh%np, 1:2))
       do ia = 1, geo%natoms
-        call lcao_atom_density(this, mesh, sb, geo%atom(ia), 2, atom_rho)
+        call lcao_atom_density(this, st, mesh, sb, geo, ia, 2, atom_rho)
 
         if (nspin == 2) then
           call quickrnd(iseed, rnd)
@@ -989,7 +1038,7 @@ contains
         end if
 
         !Get atomic density
-        call lcao_atom_density(this, mesh, sb, geo%atom(ia), 2, atom_rho)
+        call lcao_atom_density(this, st, mesh, sb, geo, ia, 2, atom_rho)
 
         !Scale magnetization density
         n1 = dmf_integrate(mesh, atom_rho(:, 1))
