@@ -125,13 +125,18 @@ R_TYPE function X(energy_calc_electronic)(hm, der, st, terms, cproduct) result(e
 
     end do
   end do
-  
+
+  if(hm%cmplxscl) then
 #ifdef R_TCOMPLEX
-  energy = zstates_eigenvalues_sum(st, tt)
-#else  
-  energy = states_eigenvalues_sum(st, real(tt, REAL_PRECISION))
-#endif  
-  
+    energy = zstates_eigenvalues_sum(st, tt)
+#else
+    message(1) = "Internal error in energy_calc_electronic, real states but complex scaling."
+    call messages_fatal(1)
+#endif
+  else
+    energy = states_eigenvalues_sum(st, real(tt, REAL_PRECISION))
+  endif
+
   SAFE_DEALLOCATE_A(tt)
   POP_SUB(X(energy_calc_electronic))
 end function X(energy_calc_electronic)
