@@ -115,7 +115,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   PUSH_SUB(X(submesh_batch_add_matrix))
   call profiling_in(prof, 'SUBMESH_ADD_MATRIX')
 
-  !$omp parallel do private(ist, idim, jdim, jst, is, aa)
+  !$omp parallel do private(ist, idim, jdim, jst, is)
   do ist =  1, mm%nst
     do idim = 1, mm%dim
       jdim = min(idim, ss%dim)
