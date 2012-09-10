@@ -313,6 +313,7 @@ contains
     POP_SUB(lcao_init)
 
   contains
+
     subroutine lcao2_init()
       integer :: iatom, iorb, norbs
       FLOAT   :: maxradius
@@ -922,7 +923,7 @@ contains
     type(mesh_t),      intent(in)    :: mesh
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(in)    :: geo
-    FLOAT,             intent(in)    :: qtot  ! the total charge of the system
+    FLOAT,             intent(in)    :: qtot  !< the total charge of the system
     integer,           intent(in)    :: nspin, spin_channels
     FLOAT,             intent(out)   :: rho(:, :)
 
@@ -934,7 +935,7 @@ contains
     logical :: parallelized_in_atoms
 
 
-    PUSH_SUB(guess_density)
+    PUSH_SUB(lcao_guess_density)
 
     parallelized_in_atoms = .false.
 
@@ -1173,7 +1174,7 @@ contains
     call messages_info(1)
 
     SAFE_DEALLOCATE_A(atom_rho)
-    POP_SUB(guess_density)
+    POP_SUB(lcao_guess_density)
   end subroutine lcao_guess_density
 
   ! ---------------------------------------------------------
@@ -1188,7 +1189,7 @@ contains
 
     if(.not. lcao_is_available(this)) return
   
-    PUSH_SUB('lcao_init_orbitals')
+    PUSH_SUB(lcao_init_orbitals)
         
     if(.not. this%alternative) then
       if(states_are_real(st)) then
@@ -1205,7 +1206,7 @@ contains
 
     end if
 
-    POP_SUB('lcao_init_orbitals')
+    POP_SUB(lcao_init_orbitals)
   end subroutine lcao_init_orbitals
   
 #include "undef.F90"

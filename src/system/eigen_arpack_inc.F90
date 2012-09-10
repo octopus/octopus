@@ -39,9 +39,8 @@ subroutine X(eigen_solver_arpack)(gr, st, hm, tol_, niter, ncv, converged, ik, d
   FLOAT, allocatable :: rwork(:), d(:, :) 
   CMPLX :: sigma 	
 	!!!!WARNING: No support for spinors, yet. No support for complex wavefunctions.
-  PUSH_SUB('eigen_arpack.eigen_solver_arpack')
-	
 
+  PUSH_SUB(X(eigen_solver_arpack))
 	
 #if defined(HAVE_MPI)
   if(gr%mesh%parallel_in_domains) then
@@ -196,9 +195,8 @@ subroutine X(eigen_solver_arpack)(gr, st, hm, tol_, niter, ncv, converged, ik, d
   SAFE_DEALLOCATE_A(zd)  
 #endif
 
+   POP_SUB(X(eigen_solver_arpack))
 
-
-   POP_SUB('eigen_arpack.eigen_solver_arpack')
 contains
 
   ! ---------------------------------------------------------
@@ -208,6 +206,8 @@ contains
     integer :: i, NP, NP_PART
     R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
     
+    PUSH_SUB(X(eigen_solver_arpack).av)
+
     NP = gr%mesh%np
     NP_PART = gr%mesh%np_part
 
@@ -237,6 +237,7 @@ contains
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(hpsi)
 
+    POP_SUB(X(eigen_solver_arpack).av)
   end subroutine av
 
 end subroutine X(eigen_solver_arpack)

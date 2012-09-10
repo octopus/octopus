@@ -88,7 +88,7 @@ contains
 #endif
     type(periodic_copy_t) :: pp
 
-    PUSH_SUB(atom_density)
+    PUSH_SUB(species_atom_density)
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
 
@@ -243,7 +243,7 @@ contains
 
     end select
 
-    POP_SUB(atom_density)
+    POP_SUB(species_atom_density)
   end subroutine species_atom_density
   ! ---------------------------------------------------------
 
@@ -477,7 +477,7 @@ contains
     type(periodic_copy_t) :: pp
     type(ps_t), pointer :: ps
 
-    PUSH_SUB(species_get_density)
+    PUSH_SUB(species_get_nlcc)
 
     ! only for 3D pseudopotentials, please
     if(species_is_ps(spec)) then
@@ -492,7 +492,7 @@ contains
       rho_core = M_ZERO
     end if
 
-    POP_SUB(species_get_density)
+    POP_SUB(species_get_nlcc)
   end subroutine species_get_nlcc
 
   ! ---------------------------------------------------------

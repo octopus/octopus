@@ -379,7 +379,7 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, hm, start)
 end subroutine X(lcao_alt_init_orbitals)
 
 ! ---------------------------------------------------------
-! The alternative implementation.
+!> The alternative implementation.
 subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
