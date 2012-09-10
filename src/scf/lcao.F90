@@ -831,52 +831,87 @@ contains
     FLOAT,             intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
     
     FLOAT, allocatable :: dorbital(:, :)
-    FLOAT, allocatable :: zorbital(:, :)
-    FLOAT, allocatable :: rho2(:, :)
-    FLOAT :: factor
+    CMPLX, allocatable :: zorbital(:, :)
+    FLOAT, allocatable :: factors(:)
+    FLOAT :: factor, aa
     integer :: iorb, ip, ii, ll, mm
     type(ps_t), pointer :: ps
     logical :: use_stored_orbitals
 
-    SAFE_ALLOCATE(rho2(1:mesh%np, 1:spin_channels))
+    PUSH_SUB(lcao_atom_density)
+
     rho = M_ZERO
 
     use_stored_orbitals = species_is_ps(geo%atom(iatom)%spec) &
       .and. states_are_real(st) .and. spin_channels == 1 .and. lcao_is_available(this) &
       .and. st%d%dim == 1
 
-    ! we can use the orbitals we already calculated
-    if(use_stored_orbitals .and. .not. this%alternative) then
+    ps => species_ps(geo%atom(iatom)%spec)
 
-      if(states_are_real(st)) then
-        SAFE_ALLOCATE(dorbital(1:mesh%np, 1:st%d%dim))
+    ! we can use the orbitals we already have calculated
+    if(use_stored_orbitals) then
+      if(.not. this%alternative) then
+        
+        if(states_are_real(st)) then
+          SAFE_ALLOCATE(dorbital(1:mesh%np, 1:st%d%dim))
+        else
+          SAFE_ALLOCATE(zorbital(1:mesh%np, 1:st%d%dim))
+        end if
+        
+        do iorb = 1, this%maxorbs
+          if(iatom /= this%atom(iorb)) cycle
+          
+          call species_iwf_ilm(geo%atom(iatom)%spec, this%level(iorb), 1, ii, ll, mm)
+          factor = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
+         
+          if(states_are_real(st)) then
+            call dget_ao(this, st, mesh, geo, iorb, 1, dorbital, use_psi = .true.)
+            !$omp parallel do
+            do ip = 1, mesh%np
+              rho(ip, 1) = rho(ip, 1) + factor*dorbital(ip, 1)**2
+            end do
+          else
+            call zget_ao(this, st, mesh, geo, iorb, 1, zorbital, use_psi = .true.)
+            !$omp parallel do
+            do ip = 1, mesh%np
+              rho(ip, 1) = rho(ip, 1) + factor*abs(zorbital(ip, 1))**2
+            end do
+          end if
+
+        end do
+
+        SAFE_DEALLOCATE_A(dorbital)
+        SAFE_DEALLOCATE_A(zorbital)
+
       else
-        SAFE_ALLOCATE(zorbital(1:mesh%np, 1:st%d%dim))
+
+        call lcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, 1, iatom, this%norb_atom(iatom))
+
+        SAFE_ALLOCATE(factors(1:this%norb_atom(iatom)))
+
+        do iorb = 1, this%norb_atom(iatom)
+          call species_iwf_ilm(geo%atom(iatom)%spec, iorb, 1, ii, ll, mm)
+          factors(iorb) = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
+        end do
+
+        !$omp parallel do private(ip, aa)
+        do ip = 1, this%sphere(iatom)%np
+          aa = CNST(0.0)
+          do iorb = 1, this%norb_atom(iatom)
+            aa = aa + factors(iorb)*this%orbitals(iatom)%states_linear(iorb)%dpsi(ip)**2
+          end do
+          rho(this%sphere(iatom)%map(ip), 1) = aa
+        end do
+
+        SAFE_DEALLOCATE_A(factors)
+
       end if
 
-      ps => species_ps(geo%atom(iatom)%spec)
-      
-      do iorb = 1, this%maxorbs
-        if(iatom /= this%atom(iorb)) cycle
-
-        call species_iwf_ilm(geo%atom(iatom)%spec, this%level(iorb), 1, ii, ll, mm)
-
-        if(states_are_real(st)) then
-          call dget_ao(this, st, mesh, geo, iorb, 1, dorbital, use_psi = .true.)
-          factor = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
-          do ip = 1, mesh%np
-            rho(ip, 1) = rho(ip, 1) + factor*dorbital(ip, 1)**2
-          end do
-        end if
-
-      end do
-      
-      SAFE_DEALLOCATE_A(dorbital)
-      SAFE_DEALLOCATE_A(zorbital)
     else
       call species_atom_density(mesh, sb, geo%atom(iatom), spin_channels, rho)
     end if
 
+    POP_SUB(lcao_atom_density)
   end subroutine lcao_atom_density
 
   ! ---------------------------------------------------------

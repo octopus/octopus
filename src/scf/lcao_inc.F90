@@ -389,7 +389,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   integer,             intent(in)    :: start
 
   integer :: iatom, jatom, ik, ist, ispin, nev, ib
-  integer :: ibasis, jbasis, iorb, jorb, norbs, dof
+  integer :: ibasis, jbasis, iorb, jorb, norbs
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
   integer :: prow, pcol, ilbasis, jlbasis
   R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
