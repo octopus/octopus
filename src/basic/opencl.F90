@@ -734,7 +734,7 @@ module opencl_m
 
       integer :: ierr
 
-        PUSH_SUB(opencl_release_buffer)
+      PUSH_SUB(opencl_release_buffer)
 
       call clReleaseMemObject(this%mem, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
