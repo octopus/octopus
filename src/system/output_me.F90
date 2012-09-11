@@ -348,9 +348,9 @@ contains
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(zpsi)
 
-    angular(1) =  states_eigenvalues_sum(st, ang (st%st_start:st%st_end, :, 1))
-    angular(2) =  states_eigenvalues_sum(st, ang (st%st_start:st%st_end, :, 2))
-    angular(3) =  states_eigenvalues_sum(st, ang (st%st_start:st%st_end, :, 3))
+    angular(1) =  states_eigenvalues_sum(st, ang (:, :, 1))
+    angular(2) =  states_eigenvalues_sum(st, ang (:, :, 2))
+    angular(3) =  states_eigenvalues_sum(st, ang (:, :, 3))
     lsquare    =  states_eigenvalues_sum(st, ang2(st%st_start:st%st_end, :))
 
     do ik = 1, st%d%nik, ns
