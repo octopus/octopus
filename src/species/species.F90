@@ -525,25 +525,26 @@ contains
         orbital_radius = max(orbital_radius, species_get_iwf_radius(this, iorb, is = 1))
       end do
 
-      write(message(1), '(3a)') "Info: Pseudopotential for ", trim(this%label), ". Radii for localized parts:"
-      write(message(2), '(a,f5.1, 3a)') "     local part     = ", &
-        units_from_atomic(units_out%length, local_radius), " [", trim(units_abbrev(units_out%length)), "] "
-      write(message(3), '(a,f5.1,3a)')  "     non-local part = ", &
-        units_from_atomic(units_out%length, this%ps%rc_max), " [", trim(units_abbrev(units_out%length)), "] "
-      write(message(4), '(a,f5.1,3a)')  "     orbitals       = ", &
-        units_from_atomic(units_out%length, orbital_radius), " [", trim(units_abbrev(units_out%length)), "] "
-      call messages_info(4)
+      call messages_write('Info: Pseudopotential for '//trim(this%label), new_line = .true.)
+      call messages_write('  Radii for localized parts:', new_line = .true.)
+      call messages_write('    local part     = ')
+      call messages_write(local_radius, fmt = 'f5.1', units = units_out%length, new_line = .true.)
+      call messages_write('    non-local part = ')
+      call messages_write(this%ps%rc_max, fmt = 'f5.1', units = units_out%length, new_line = .true.)
+      call messages_write('    orbitals       = ')
+      call messages_write(orbital_radius, fmt = 'f5.1', units = units_out%length, new_line = .true.)
+      call messages_info()
 
       if(max(local_radius, this%ps%rc_max) > CNST(6.0)) then
-        message(1) = "One of the radii of your pseudopotential's localized parts seems"
-        message(2) = "unusually large; check that your pseudopotential is correct."
-        call messages_warning(2)
+        call messages_write("One of the radii of your pseudopotential's localized parts seems", new_line = .true.)
+        call messages_write("unusually large; check that your pseudopotential is correct.")
+        call messages_warning()
       end if
 
       if(orbital_radius > CNST(20.0)) then
-        message(1) = "The radius of the atomic orbitals given by your pseudopotential seems"
-        message(2) = "unusually large; check that your pseudopotential is correct."
-        call messages_warning(2)
+        call messages_write("The radius of the atomic orbitals given by your pseudopotential seems", new_line = .true.)
+        call messages_write("unusually large; check that your pseudopotential is correct.")
+        call messages_warning()
       end if
 
       if(in_debug_mode) then

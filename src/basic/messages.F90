@@ -1069,7 +1069,7 @@ end subroutine messages_end
 
     write(message(current_line), '(a, a)') trim(message(current_line)), trim(number)
 
-    if(present(units) .and. optional_default(print_units, .false.)) then
+    if(present(units) .and. optional_default(print_units, .true.)) then
       write(message(current_line), '(a, a, a)') trim(message(current_line)), ' ', trim(units_abbrev(units))
     end if
 
