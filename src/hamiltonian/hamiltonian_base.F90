@@ -168,6 +168,12 @@ contains
 
     PUSH_SUB(hamiltonian_base_end)
 
+#ifdef HAVE_OPENCL
+    if(associated(this%potential) .and. opencl_is_enabled()) then
+      call opencl_release_buffer(this%potential_opencl)
+    end if
+#endif
+    
     SAFE_DEALLOCATE_P(this%potential)
     SAFE_DEALLOCATE_P(this%Impotential)!cmplxscl
     SAFE_DEALLOCATE_P(this%vector_potential)

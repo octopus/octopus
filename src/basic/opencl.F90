@@ -736,13 +736,13 @@ module opencl_m
 
         PUSH_SUB(opencl_release_buffer)
 
-      this%size = 0
-
       call clReleaseMemObject(this%mem, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
 
       INCR(buffer_alloc_count, -1)
       INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
+
+      this%size = 0
 
       POP_SUB(opencl_release_buffer)
     end subroutine opencl_release_buffer

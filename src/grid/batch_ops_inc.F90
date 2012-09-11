@@ -180,6 +180,8 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
     call opencl_kernel_run(kernel_ref, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
 
     call opencl_finish()
+
+    call opencl_release_buffer(aa_buffer)
 #endif
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
@@ -280,6 +282,8 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start)
     call opencl_kernel_run(kernel_ref, (/xx%pack%size(1), pad(np, localsize)/), (/xx%pack%size(1), localsize/xx%pack%size(1)/))
 
     call opencl_finish()
+
+    call opencl_release_buffer(aa_buffer)
 #endif
   case(BATCH_PACKED)
     if(batch_type(xx) == TYPE_CMPLX) then
@@ -385,6 +389,8 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start)
     call opencl_kernel_run(kernel_ref, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
 
     call opencl_finish()
+
+    call opencl_release_buffer(aa_buffer)
 #endif
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
