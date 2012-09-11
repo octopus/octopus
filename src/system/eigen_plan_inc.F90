@@ -36,10 +36,8 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   integer,                     intent(inout) :: niter
   integer,                     intent(out)   :: converged
   integer,                     intent(in)    :: ik
-  FLOAT,             optional, intent(out)   :: diff(1:st%nst)
+  FLOAT,             optional, intent(out)   :: diff(:) !< (1:st%nst)
 
-
-  ! Local stuff
   !  integer :: n       ! Dimension of the problem.
   integer :: ned        ! Number of smallest eigenpairs desired
   integer :: nec        ! number of eigen-pairs converged, if initially

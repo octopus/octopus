@@ -566,7 +566,7 @@ end subroutine zlowest_geneigensolve
 !> Computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
 subroutine deigensolve(n, a, e, bof, err_code)
   integer, intent(in)              :: n
-  FLOAT,   intent(inout)           :: a(:, :)   !< (n,n)
+  FLOAT,   intent(inout)           :: a(:,:)   !< (n,n)
   FLOAT,   intent(out)             :: e(:)     !< (n)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
