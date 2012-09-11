@@ -97,7 +97,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   kend = st%d%kpt%end
 
   lcao_start = optional_default(start, 1)
-  if(st%parallel_in_states .and. st%st_start > start) lcao_start = st%st_start
+  if(st%parallel_in_states .and. st%st_start > lcao_start) lcao_start = st%st_start
 
   ! Allocation of variables
 
@@ -230,7 +230,7 @@ subroutine X(init_orbitals)(this, st, gr, geo, hm, start)
   kend = st%d%kpt%end
 
   lcao_start = optional_default(start, 1)
-  if(st%parallel_in_states .and. st%st_start > start) lcao_start = st%st_start
+  if(st%parallel_in_states .and. st%st_start > lcao_start) lcao_start = st%st_start
 
   ! We calculate the atomic orbitals first. To save memory we put
   ! all the orbitals we can in the part of st%Xpsi that we are going
