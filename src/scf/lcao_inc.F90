@@ -223,7 +223,7 @@ subroutine X(init_orbitals)(this, st, gr, geo, hm, start)
   integer :: nst, kstart, kend, lcao_start
   R_TYPE, allocatable :: ao(:, :)
 
-  PUSH_SUB(X(lcao_wf).init_orbitals)
+  PUSH_SUB(X(init_orbitals))
 
   nst = st%nst
   kstart = st%d%kpt%start
@@ -290,7 +290,7 @@ subroutine X(init_orbitals)(this, st, gr, geo, hm, start)
 
   SAFE_DEALLOCATE_A(ao)
 
-  POP_SUB(X(lcao_wf).init_orbitals)
+  POP_SUB(X(init_orbitals))
 
 end subroutine X(init_orbitals)
 
@@ -306,7 +306,7 @@ subroutine X(get_ao)(this, st, mesh, geo, iorb, ispin, ao, use_psi)
   R_TYPE,              intent(out)   :: ao(:, :)
   logical,             intent(in)    :: use_psi
   
-  PUSH_SUB(X(lcao_wf).get_ao)
+  PUSH_SUB(X(get_ao))
   
   if(this%ck(iorb, ispin) == 0) then
     ao(1:mesh%np, 1:st%d%dim) = this%X(buff)(1:mesh%np, 1:st%d%dim, iorb, ispin)
@@ -318,7 +318,7 @@ subroutine X(get_ao)(this, st, mesh, geo, iorb, ispin, ao, use_psi)
     end if
   end if
 
-  POP_SUB(X(lcao_wf).get_ao)
+  POP_SUB(X(get_ao))
   
 end subroutine X(get_ao)
 

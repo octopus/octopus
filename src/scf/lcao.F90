@@ -77,8 +77,8 @@ module lcao_m
     private
     integer           :: mode
     logical           :: initialized !< are k, s and v1 matrices filled?
-    integer           :: norbs !< number of orbitals
-    integer           :: maxorbs
+    integer           :: norbs   !< number of orbitals used
+    integer           :: maxorbs !< largest number of orbitals that could be used
     integer, pointer  :: atom(:)
     integer, pointer  :: level(:)
     integer, pointer  :: ddim(:)
@@ -295,12 +295,16 @@ contains
       call parse_integer(datasets_check('LCAODimension'), 0, n)
 
       if(n > 0 .and. n <= st%nst) then
+        ! n was made too small
         this%norbs = st%nst
       else if(n > st%nst .and. n <= this%maxorbs) then
+        ! n is a reasonable value
         this%norbs = n
       else if(n == 0) then
+        ! using the default
         this%norbs = min(this%maxorbs, 2*st%nst)
       else
+        ! n was negative, or greater than maxorbs
         this%norbs = this%maxorbs
       end if
 
@@ -625,7 +629,7 @@ contains
           INCR(ist, 1)
           if(ist < st%st_start .or. ist > st%st_end) cycle
 
-          do ispin = 1, st%d%spin_channels ! we have to iterate over spinors dimensions or spin
+          do ispin = 1, st%d%spin_channels ! we have to iterate over spinor dimensions or spin
             idim = min(st%d%dim, ispin)
 
             call species_get_orbital(geo%atom(iatom)%spec, mesh, iorb, 1, geo%atom(iatom)%x, aorbital)
@@ -859,7 +863,7 @@ contains
           SAFE_ALLOCATE(zorbital(1:mesh%np, 1:st%d%dim))
         end if
         
-        do iorb = 1, this%maxorbs
+        do iorb = 1, this%norbs
           if(iatom /= this%atom(iorb)) cycle
           
           call species_iwf_ilm(geo%atom(iatom)%spec, this%level(iorb), 1, ii, ll, mm)
