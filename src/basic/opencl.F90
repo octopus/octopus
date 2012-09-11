@@ -37,6 +37,7 @@ module opencl_m
   use types_m
   use parser_m
   use profiling_m
+  use unit_system_m
 
   implicit none 
 
@@ -171,6 +172,9 @@ module opencl_m
 
   integer, parameter :: OPENCL_MAX_FILE_LENGTH = 10000
 
+  integer :: buffer_alloc_count
+  integer(8) :: allocated_mem
+
   contains
 
     pure logical function opencl_is_enabled() result(enabled)
@@ -198,7 +202,9 @@ module opencl_m
 #endif
 
       PUSH_SUB(opencl_init)
-      
+
+      buffer_alloc_count = 0
+
       !%Variable DisableOpenCL
       !%Type logical
       !%Default yes
@@ -659,6 +665,15 @@ module opencl_m
 
         if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
         call clReleaseContext(opencl%context, cl_status)
+
+        if(buffer_alloc_count /= 0) then
+          call messages_write('OpenCL:')
+          call messages_write(real(allocated_mem, REAL_PRECISION), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
+          call messages_write(' in ')
+          call messages_write(buffer_alloc_count)
+          call messages_write(' buffers were not deallocated.')
+          call messages_warning()
+        end if
 #endif
       end if
 
@@ -698,13 +713,16 @@ module opencl_m
       PUSH_SUB(opencl_create_buffer_4)
 
       this%type = type
-      this%size = size      
+      this%size = size
       fsize = int(size, 8)*types_get_size(type)
 
       ASSERT(fsize >= 0)
 
       this%mem = clCreateBuffer(opencl%context, flags, fsize, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
+
+      INCR(buffer_alloc_count, 1)
+      INCR(allocated_mem, fsize)
 
       POP_SUB(opencl_create_buffer_4)
     end subroutine opencl_create_buffer_4
@@ -722,6 +740,9 @@ module opencl_m
 
       call clReleaseMemObject(this%mem, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
+
+      INCR(buffer_alloc_count, -1)
+      INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
 
       POP_SUB(opencl_release_buffer)
     end subroutine opencl_release_buffer

@@ -1053,7 +1053,7 @@ end subroutine messages_end
     logical,          optional, intent(in) :: align_left
     logical,          optional, intent(in) :: print_units
 
-    character(len=10) :: number
+    character(len=30) :: number
     FLOAT            :: tval
 
     tval = val

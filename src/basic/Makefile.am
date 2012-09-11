@@ -122,7 +122,7 @@ io_csv_f.o : io_csv_f.F90 io_csv.h messages.o
 json.o : json.F90 io.o messages.o profiling.o global.o
 json_parser.o : json_parser.F90 json.o io.o messages.o profiling.o global.o
 
-opencl.o : opencl.F90 opencl_inc.F90 global.o types.o profiling.o messages.o parser.o mpi.o io.o
+opencl.o : opencl.F90 opencl_inc.F90 global.o types.o profiling.o messages.o parser.o mpi.o io.o unit_system.o
 octcl_kernel.o : octcl_kernel.F90 opencl.o c_pointer.o global.o
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
