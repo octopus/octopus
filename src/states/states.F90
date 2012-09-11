@@ -1079,8 +1079,8 @@ contains
 
     if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC &
        .and. st%nst * st%smear%el_per_state .le. st%qtot) then
-      message(1) = "Smearing needs unoccupied states (via ExtraStates) to be useful."
-      call messages_warning(1)
+      call messages_write('Smearing needs unoccupied states (via ExtraStates) to be useful.')
+      call messages_warning()
     endif
 
     ! sanity check
@@ -1193,8 +1193,8 @@ contains
     PUSH_SUB(states_allocate_wfns)
 
     if(associated(st%dpsi).or.associated(st%zpsi)) then
-      message(1) = "Trying to allocate wavefunctions that are already allocated."
-      call messages_fatal(1)
+      call messages_write('Trying to allocate wavefunctions that are already allocated.')
+      call messages_fatal()
     end if
 
     if (present(wfs_type)) then
@@ -1464,6 +1464,8 @@ contains
     type(grid_t),      intent(in)    :: gr
     type(geometry_t),  intent(in)    :: geo
 
+    FLOAT :: size
+
     PUSH_SUB(states_densities_init)
 
 
@@ -1475,7 +1477,6 @@ contains
       st%zrho%Im = M_ZERO
     end if
 
-    
     if(st%d%cdft) then
       SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
       st%current = M_ZERO
@@ -1488,6 +1489,12 @@ contains
         st%Imrho_core(:) = M_ZERO
       end if
     end if
+
+    size = gr%mesh%np_part*CNST(8.0)*st%d%block_size
+
+    call messages_write('Info: states-block size = ')
+    call messages_write(size, fmt = '(f10.1)', align_left = .true., units = unit_megabytes, print_units = .true.)
+    call messages_info()
 
     POP_SUB(states_densities_init)
   end subroutine states_densities_init

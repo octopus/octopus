@@ -1045,29 +1045,35 @@ end subroutine messages_end
 
   ! ------------------------------------------------------------
 
-  subroutine messages_write_float(val, fmt, new_line, units)
+  subroutine messages_write_float(val, fmt, new_line, units, align_left, print_units)
     FLOAT,                      intent(in) :: val
     character(len=*), optional, intent(in) :: fmt
     logical,          optional, intent(in) :: new_line
-    type(unit_t),     optional, intent(in) :: units 
+    type(unit_t),     optional, intent(in) :: units
+    logical,          optional, intent(in) :: align_left
+    logical,          optional, intent(in) :: print_units
 
-    character(len=5) :: fmt_
+    character(len=10) :: number
     FLOAT            :: tval
-
-    if(present(fmt)) then
-      fmt_ = trim(fmt)
-    else
-      fmt_ = 'f12.6'
-    end if
 
     tval = val
     if(present(units)) tval = units_from_atomic(units, val)
     
-    write(message(current_line), '(a, '//trim(fmt_)//')') trim(message(current_line)), tval
-
-    if(present(new_line)) then
-      if(new_line) call messages_new_line()
+    if(present(fmt)) then
+      write(number, '('//trim(fmt)//')') tval
+    else
+      write(number, '(f12.6)') tval
     end if
+
+    if(optional_default(align_left, .false.)) number = ' '//adjustl(number)
+
+    write(message(current_line), '(a, a)') trim(message(current_line)), trim(number)
+
+    if(present(units) .and. optional_default(print_units, .false.)) then
+      write(message(current_line), '(a, a, a)') trim(message(current_line)), ' ', trim(units_abbrev(units))
+    end if
+
+    if(optional_default(new_line, .false.)) call messages_new_line()
 
   end subroutine messages_write_float
 
