@@ -156,7 +156,7 @@ contains
     end select
 
     if(.not. deallocated) then
-      ASSERT(.not. associated(cf%fs, target=cube%fft%fs_data))
+      ASSERT(associated(cf%fs))
       SAFE_DEALLOCATE_P(cf%fs)
     end if
     
