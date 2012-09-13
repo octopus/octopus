@@ -989,11 +989,9 @@ contains
     ! no push_sub because this function is called very frequently
     SAFE_ALLOCATE(xx(1:sb%dim, 1:npoints))
 
-    forall(idir = 1:sb%dim, ip = 1:npoints)  xx(idir, ip) = point(idir, ip) - sb%box_offset(idir)
-
     !convert to the orthogonal space
     forall(ip = 1:npoints)
-      xx(1:sb%dim, ip) = matmul(xx(1:sb%dim, ip), sb%klattice_primitive(1:sb%dim, 1:sb%dim))
+      xx(1:sb%dim, ip) = matmul(point(1:sb%dim, ip), sb%klattice_primitive(1:sb%dim, 1:sb%dim)) - sb%box_offset(1:sb%dim)
     end forall
 
     select case(sb%box_shape)
