@@ -47,11 +47,9 @@ module index_m
 
 contains
 
-  !
   !> This function takes care of the boundary conditions for a given
   !! vector of integer coordinates it returns the true _global_ index
   !! of the point.
-  !
   integer function index_from_coords(idx, dim, ix) result(index)
     type(index_t),      intent(in)    :: idx
     integer,            intent(in)    :: dim
@@ -94,10 +92,8 @@ contains
     
   end subroutine index_from_coords_vec
 
-  !
   !> Given a _global_ point index, this function returns the set of
   !! integer coordinates of the point.
-  !
   pure subroutine index_to_coords(idx, dim, ip, ix)
     type(index_t),      intent(in)    :: idx
     integer,            intent(in)    :: dim
@@ -116,10 +112,8 @@ contains
     end if
   end subroutine index_to_coords
 
-  !
   !> This function returns .true. if the coordinates are inside the
   !! inner cube (without the enlargement).
-  !
   logical pure function coords_in_inner_cube(idx, dim, ix) result(inside)
     type(index_t),      intent(in)    :: idx
     integer,            intent(in)    :: dim

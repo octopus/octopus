@@ -87,8 +87,7 @@ module nl_operator_m
     type(mesh_t), pointer :: mesh      !< pointer to the underlying mesh
     integer, pointer      :: nn(:)     !< the size of the stencil at each point (for curvilinear coordinates)
     integer               :: np        !< number of points in mesh
-    ! When running in parallel mode, the next three
-    ! arrays are unique on each node.
+    !> When running in parallel mode, the next three arrays are unique on each node.
     integer, pointer  :: i(:,:)    !< index of the points
     FLOAT,   pointer  :: w_re(:,:) !< weightsp, real part
     FLOAT,   pointer  :: w_im(:,:) !< weightsp, imaginary part
@@ -417,7 +416,7 @@ contains
             st1(jj) = vec_global2local(mesh%vp, st1(jj), mesh%vp%partno)
           end if
 #endif
-          ! if boundary conditions are zero, we can remap boundry
+          ! if boundary conditions are zero, we can remap boundary
           ! points to reduce memory accesses. We cannot do this for the
           ! first point, since it is used to build the weights, so it
           ! has to have the positions right
@@ -665,7 +664,7 @@ contains
   end subroutine nl_operator_transpose
 
   ! ---------------------------------------------------------
-  ! opt has to be initialised and built.
+  !> opt has to be initialised and built.
   subroutine nl_operator_skewadjoint(op, opt, mesh)
     type(nl_operator_t), target, intent(in)  :: op
     type(nl_operator_t), target, intent(out) :: opt
@@ -821,12 +820,12 @@ contains
 
 #if defined(HAVE_MPI)
   ! ---------------------------------------------------------
-  ! Collects a distributed non-local operator op into opg
-  ! on the root node. nl_operator_end has to be called
-  ! on opg when no longer needed.
+  !> Collects a distributed non-local operator op into opg
+  !! on the root node. nl_operator_end has to be called
+  !! on opg when no longer needed.
   subroutine nl_operator_gather(op, opg)
-    type(nl_operator_t), intent(in)  :: op  ! Local operator.
-    type(nl_operator_t), intent(out) :: opg ! Global operator.
+    type(nl_operator_t), intent(in)  :: op  !< Local operator.
+    type(nl_operator_t), intent(out) :: opg !< Global operator.
 
     integer :: ip
 
