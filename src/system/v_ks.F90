@@ -997,7 +997,6 @@ contains
 
     ASSERT(associated(ks%hartree_solver))
 
-    
     if(.not. ks%gr%have_fine_mesh) then
       pot => hm%vhartree
       if (hm%cmplxscl) then 
@@ -1060,12 +1059,12 @@ contains
         call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, aux, hm%vhartree, INJECTION)
         aux = aimag(zpot)
         call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, aux, hm%Imvhartree, INJECTION)
+        SAFE_DEALLOCATE_P(aux)
       end if
       ! some debugging output that I will keep here for the moment, XA
       !      call dio_function_output(1, "./", "vh_fine", ks%gr%fine%mesh, pot, unit_one, is)
       !      call dio_function_output(1, "./", "vh_coarse", ks%gr%mesh, hm%vhartree, unit_one, is)
       SAFE_DEALLOCATE_P(pot)
-      SAFE_DEALLOCATE_P(aux)
     end if
 
     if (ks%calc%calc_energy .and. poisson_get_solver(ks%hartree_solver) == POISSON_SETE) then !SEC
