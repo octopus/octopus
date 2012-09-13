@@ -93,7 +93,7 @@ lalg_basic.o : lalg_basic.F90 lalg_basic_blas_inc.F90 blas.o
 lalg_adv.o : lalg_adv.F90 lalg_adv_lapack_inc.F90 lalg_adv_scalapack_inc.F90 lapack.o scalapack.o
 lapack.o : lapack.F90
 loct_math.o : loct_math.F90
-math.o : math.F90 math_inc.F90 lalg_basic.o lalg_adv.o loct_math.o
+math.o : math.F90 math_inc.F90 lalg_basic.o lalg_adv.o loct_math.o blas.o
 mix.o : mix.F90 mix_inc.F90 lalg_basic.o lalg_adv.o
 oct_gsl_f.o : oct_gsl_f.c
 ode_solver.o : ode_solver.F90 ode_solver_inc.F90 
@@ -101,7 +101,7 @@ permutations.o : permutations.F90 math.o
 root_solver.o : root_solver.F90 root_solver_inc.F90 ode_solver.o lalg_adv.o 
 solvers.o : solvers.F90 solvers_inc.F90 lalg_adv.o lalg_basic.o blas.o loct_math.o
 splines.o : splines.F90 loct_math.o
-sparskit.o : sparskit.F90
+sparskit.o : sparskit.F90 blas.o
 symm_op.o : symm_op.F90 symm_op_inc.F90
 tdfunction.o : tdfunction.F90 splines.o fft.o
 ylm.o : ylm.c
