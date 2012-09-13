@@ -619,9 +619,11 @@ contains
       ! now copy
       do imat = 1, this%nprojector_matrices
         pmat => this%projector_matrices(imat)
-
-        call opencl_write_buffer(this%buff_matrices, pmat%nprojs*pmat%npoints, pmat%projectors, offset = offsets(MATRIX, imat))
-        call opencl_write_buffer(this%buff_maps, pmat%npoints, pmat%map, offset = offsets(MAP, imat))
+        ! in parallel some spheres might not have points
+        if(pmat%npoints > 0) then
+          call opencl_write_buffer(this%buff_matrices, pmat%nprojs*pmat%npoints, pmat%projectors, offset = offsets(MATRIX, imat))
+          call opencl_write_buffer(this%buff_maps, pmat%npoints, pmat%map, offset = offsets(MAP, imat))
+        end if
         call opencl_write_buffer(this%buff_scals, pmat%nprojs, pmat%scal, offset = offsets(SCAL, imat))
       end do
 
