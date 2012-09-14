@@ -22,7 +22,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   type(batch_t),     intent(in)    :: aa
   type(batch_t),     intent(in)    :: bb
   R_TYPE,            intent(inout) :: dot(:, :)
-  logical, optional, intent(in)    :: symm         !for the moment it is ignored
+  logical, optional, intent(in)    :: symm         !< for the moment it is ignored
   logical, optional, intent(in)    :: reduce
 
   integer :: ist, jst, idim, sp, block_size, ep, ip, ldaa, ldbb, indb, jndb

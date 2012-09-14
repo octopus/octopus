@@ -586,7 +586,7 @@ subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
   call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1, 1), lead_dim(a), &
     b(1, 1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
 
-  PUSH_SUB(FNAME(gemmt_2))
+  POP_SUB(FNAME(gemmt_2))
 end subroutine FNAME(gemmt_2)
 
 !> The following matrix multiplications all expect upper triangular matrices for a.
