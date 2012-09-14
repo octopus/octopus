@@ -268,7 +268,7 @@ contains
       !%Option long_range_x 1
       !% The correction is applied to the exchange potential.
       !%End
-      call parse_integer('XCDensityCorrection', LR_NONE, xcs%xc_density_correction)
+      call parse_integer(datasets_check('XCDensityCorrection'), LR_NONE, xcs%xc_density_correction)
 
       if(xcs%xc_density_correction /= LR_NONE) then 
         call messages_experimental('XC density correction')
@@ -284,7 +284,7 @@ contains
         !% the cutoff must be given by the XCDensityCorrectionCutoff
         !% variable.
         !%End
-        call parse_logical('XCDensityCorrectionOptimize', .true., xcs%xcd_optimize_cutoff)
+        call parse_logical(datasets_check('XCDensityCorrectionOptimize'), .true., xcs%xcd_optimize_cutoff)
 
         !%Variable XCDensityCorrectionCutoff
         !%Type float
@@ -293,7 +293,7 @@ contains
         !%Description
         !% The value of the cutoff applied to the XC density. The default value is 0.
         !%End
-        call parse_float('XCDensityCorrectionCutoff', CNST(0.0), xcs%xcd_ncutoff)
+        call parse_float(datasets_check('XCDensityCorrectionCutoff'), CNST(0.0), xcs%xcd_ncutoff)
 
         !%Variable XCDensityCorrectionMinimum
         !%Type logical
@@ -306,7 +306,7 @@ contains
         !% for details). This is required for atoms or small
         !% molecules, but may cause numerical problems.
         !%End
-        call parse_logical('XCDensityCorrectionMinimum', .true., xcs%xcd_minimum)
+        call parse_logical(datasets_check('XCDensityCorrectionMinimum'), .true., xcs%xcd_minimum)
 
         !%Variable XCDensityCorrectionNormalize
         !%Type logical
@@ -317,7 +317,7 @@ contains
         !% normalized to reproduce the exact boundary conditions of
         !% the XC potential.
         !%End
-        call parse_logical('XCDensityCorrectionNormalize', .true., xcs%xcd_normalize)
+        call parse_logical(datasets_check('XCDensityCorrectionNormalize'), .true., xcs%xcd_normalize)
   
       end if
 

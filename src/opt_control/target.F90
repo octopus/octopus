@@ -412,7 +412,7 @@ module opt_control_target_m
       if(parse_isdef('OCTTargetDensity').ne.0) then
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
         target%rho = M_ZERO
-        call parse_string('OCTTargetDensity', "0", expression)
+        call parse_string(datasets_check('OCTTargetDensity'), "0", expression)
 
 
         if(trim(expression) .eq. 'OCTTargetDensityFromState') then
@@ -475,7 +475,7 @@ module opt_control_target_m
       if(parse_isdef('OCTLocalTarget') .ne. 0) then
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
         target%rho = M_ZERO
-        call parse_string('OCTLocalTarget', "0", expression)
+        call parse_string(datasets_check('OCTLocalTarget'), "0", expression)
         call conv_to_C_string(expression)
         do ip = 1, gr%mesh%np
           call mesh_r(gr%mesh, ip, rr, coords = xx)
@@ -643,7 +643,7 @@ module opt_control_target_m
           message(2) = 'the variable "OCTMoveIons".'
           call messages_fatal(2)
        else
-          call parse_logical('OCTMoveIons', .false., target%move_ions)
+          call parse_logical(datasets_check('OCTMoveIons'), .false., target%move_ions)
        end if
        
        if(oct%algorithm .eq. oct_algorithm_cg) then
