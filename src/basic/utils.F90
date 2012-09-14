@@ -47,10 +47,13 @@ module utils_m
   interface leading_dimension_is_known
     module procedure dleading_dimension_is_known, zleading_dimension_is_known
     module procedure sleading_dimension_is_known, cleading_dimension_is_known
+    module procedure dleading_dimension_is_known2, zleading_dimension_is_known2
+    module procedure sleading_dimension_is_known2, cleading_dimension_is_known2
   end interface leading_dimension_is_known
 
   interface lead_dim
     module procedure dlead_dim, zlead_dim, slead_dim, clead_dim
+    module procedure dlead_dim2, zlead_dim2, slead_dim2, clead_dim2
   end interface lead_dim
 
 contains
@@ -333,7 +336,6 @@ contains
 
   end function sleading_dimension_is_known
 
-
   ! ---------------------------------------------------------
   
   logical function cleading_dimension_is_known(array) result(known)
@@ -348,6 +350,68 @@ contains
 #endif
     
   end function cleading_dimension_is_known
+
+  ! ---------------------------------------------------------
+  
+  logical function dleading_dimension_is_known2(array) result(known)
+    real(8), intent(in) :: array(:, :, :)
+    
+    known = .true.
+
+#if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
+    if(ubound(array, dim = 2) > 1) then
+      known = ubound(array, dim = 1) == (loc(array(1, 2, 1)) - loc(array(1, 1, 1)))/sizeof(array(1, 1, 1))
+    end if
+#endif
+
+  end function dleading_dimension_is_known2
+
+
+  ! ---------------------------------------------------------
+  
+  logical function zleading_dimension_is_known2(array) result(known)
+    complex(8), intent(in) :: array(:, :, :)
+    
+    known = .true.
+
+#if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
+    if(ubound(array, dim = 2) > 1) then
+      known = ubound(array, dim = 1) == (loc(array(1, 2, 1)) - loc(array(1, 1, 1)))/sizeof(array(1, 1, 1))
+    end if
+#endif
+    
+  end function zleading_dimension_is_known2
+
+  ! ---------------------------------------------------------
+  
+  logical function sleading_dimension_is_known2(array) result(known)
+    real(4), intent(in) :: array(:, :, :)
+    
+    known = .true.
+
+#if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
+    if(ubound(array, dim = 2) > 1) then
+      known = ubound(array, dim = 1) == (loc(array(1, 2, 1)) - loc(array(1, 1, 1)))/sizeof(array(1, 1, 1))
+    end if
+#endif
+
+  end function sleading_dimension_is_known2
+
+
+  ! ---------------------------------------------------------
+  
+  logical function cleading_dimension_is_known2(array) result(known)
+    complex(4), intent(in) :: array(:, :, :)
+    
+    known = .true.
+
+#if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
+    if(ubound(array, dim = 2) > 1) then
+      known = ubound(array, dim = 1) == (loc(array(1, 2, 1)) - loc(array(1, 1, 1)))/sizeof(array(1, 1, 1))
+    end if
+#endif
+    
+  end function cleading_dimension_is_known2
 
   ! ---------------------------------------------------------
 
@@ -388,6 +452,46 @@ contains
     
     lead_dim = ubound(array, dim = 1)
   end function clead_dim
+
+  ! ---------------------------------------------------------
+
+  integer function dlead_dim2(array) result(lead_dim)
+    real(8), intent(in) :: array(:, :, :)
+    
+    ASSERT(leading_dimension_is_known(array))
+    
+    lead_dim = ubound(array, dim = 1) * ubound(array, dim = 2)
+  end function dlead_dim2
+
+  ! ---------------------------------------------------------
+
+  integer function zlead_dim2(array) result(lead_dim)
+    complex(8), intent(in) :: array(:, :, :)
+    
+    ASSERT(leading_dimension_is_known(array))
+    
+    lead_dim = ubound(array, dim = 1) * ubound(array, dim = 2)
+  end function zlead_dim2
+
+  ! ---------------------------------------------------------
+
+  integer function slead_dim2(array) result(lead_dim)
+    real(4), intent(in) :: array(:, :, :)
+    
+    ASSERT(leading_dimension_is_known(array))
+    
+    lead_dim = ubound(array, dim = 1) * ubound(array, dim = 2)
+  end function slead_dim2
+
+  ! ---------------------------------------------------------
+
+  integer function clead_dim2(array) result(lead_dim)
+    complex(4), intent(in) :: array(:, :, :)
+    
+    ASSERT(leading_dimension_is_known(array))
+    
+    lead_dim = ubound(array, dim = 1) * ubound(array, dim = 2)
+  end function clead_dim2
 
 end module utils_m
 

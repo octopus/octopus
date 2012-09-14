@@ -523,60 +523,74 @@ end subroutine FNAME(gemv_2)
 
 
 ! ------------------------------------------------------------------
-! BLAS level III
+!> BLAS level III
 ! ------------------------------------------------------------------
 
 ! ------------------------------------------------------------------
-! Matrix-matrix multiplication plus matrix.
+!> Matrix-matrix multiplication plus matrix.
 ! ------------------------------------------------------------------
 
 subroutine FNAME(gemm_1)(m, n, k, alpha, a, b, beta, c)
   integer, intent(in)    :: m, n, k
   TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
-  TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
-  TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
+  TYPE1,   intent(in)    :: a(:,:)  !< a(m, k)
+  TYPE1,   intent(in)    :: b(:,:)  !< b(k, n)
+  TYPE1,   intent(inout) :: c(:,:)  !< c(m, n)
 
-  call blas_gemm('N', 'N', m, n, k, alpha, a(1, 1), m, b(1, 1), k, beta, c(1, 1), m)
+  PUSH_SUB(FNAME(gemm_1))
 
+  call blas_gemm('N', 'N', m, n, k, alpha, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
+
+  POP_SUB(FNAME(gemm_1))
 end subroutine FNAME(gemm_1)
 
 subroutine FNAME(gemm_2)(m, n, k, alpha, a, b, beta, c)
   integer, intent(in)    :: m, n, k
   TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:, :, :)  ! a(m, k)
-  TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
-  TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
+  TYPE1,   intent(in)    :: a(:, :, :)  !< a(m, k)
+  TYPE1,   intent(in)    :: b(:, :)     !< b(k, n)
+  TYPE1,   intent(inout) :: c(:, :, :)  !< c(m, n)
 
-  call blas_gemm('N', 'N', m, n, k, alpha, a(1, 1, 1), m, b(1, 1), k, beta, c(1, 1, 1), m)
+  PUSH_SUB(FNAME(gemm_2))
 
+  call blas_gemm('N', 'N', m, n, k, alpha, a(1, 1, 1), lead_dim(a), &
+    b(1, 1), lead_dim(b), beta, c(1, 1, 1), lead_dim(c))
+
+  POP_SUB(FNAME(gemm_2))
 end subroutine FNAME(gemm_2)
 
-! The same as above but with (Hermitian) transposed of a.
-
+!> The same as above but with (Hermitian) transpose of a.
 subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
   integer, intent(in)    :: m, n, k
   TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
-  TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
-  TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
+  TYPE1,   intent(in)    :: a(:,:)  !< a(k, m)
+  TYPE1,   intent(in)    :: b(:,:)  !< b(k, n)
+  TYPE1,   intent(inout) :: c(:,:)  !< c(m, n)
 
-  call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1), k, b(1, 1), k, beta, c(1, 1), m)
+  PUSH_SUB(FNAME(gemmt_1))
+
+  call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
+
+  POP_SUB(FNAME(gemmt_1))
 end subroutine FNAME(gemmt_1)
 
 subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
   integer, intent(in)    :: m, n, k
   TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:, :, :)  ! a(m, k)
-  TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
-  TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
+  TYPE1,   intent(in)    :: a(:, :, :)  !< a(k, m)
+  TYPE1,   intent(in)    :: b(:, :)     !< b(k, n)
+  TYPE1,   intent(inout) :: c(:, :, :)  !< c(m, n)
 
-  call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1, 1), k, b(1, 1), k, beta, c(1, 1, 1), m)
+  PUSH_SUB(FNAME(gemmt_2))
+
+  call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1, 1), lead_dim(a), &
+    b(1, 1), lead_dim(b), beta, c(1, 1, 1), lead_dim(c))
+
+  PUSH_SUB(FNAME(gemmt_2))
 end subroutine FNAME(gemmt_2)
 
-! The following matrix multiplications all expect upper triangular matrices for a.
-! For real matrices, a = a^T, for complex matrices a = a^H.
-
+!> The following matrix multiplications all expect upper triangular matrices for a.
+!! For real matrices, a = a^T, for complex matrices a = a^H.
 subroutine FNAME(symm_1)(m, n, side, alpha, a, b, beta, c)
   integer,      intent(in)    :: m, n
   character(1), intent(in)    :: side
@@ -584,6 +598,8 @@ subroutine FNAME(symm_1)(m, n, side, alpha, a, b, beta, c)
   TYPE1,        intent(inout) :: c(:, :)
 
   integer :: lda
+
+  PUSH_SUB(FNAME(symm_1))
 
   select case(side)
   case('l', 'L')
@@ -593,6 +609,8 @@ subroutine FNAME(symm_1)(m, n, side, alpha, a, b, beta, c)
   end select
   
   call blas_symm(side, 'U', m, n, alpha, a(1, 1), lda, b(1, 1), m, beta, c(1, 1), m)
+
+  POP_SUB(FNAME(symm_1))
 end subroutine FNAME(symm_1)
 
 
@@ -604,6 +622,8 @@ subroutine FNAME(symm_2)(m, n, side, alpha, a, b, beta, c)
 
   integer :: lda
 
+  PUSH_SUB(FNAME(symm_2))
+
   select case(side)
   case('l', 'L')
     lda = max(1, m)
@@ -612,6 +632,8 @@ subroutine FNAME(symm_2)(m, n, side, alpha, a, b, beta, c)
   end select
   
   call blas_symm(side, 'U', m, n, alpha, a(1, 1, 1), lda, b(1, 1), m, beta, c(1, 1, 1), m)
+
+  POP_SUB(FNAME(symm_2))
 end subroutine FNAME(symm_2)
 
 ! ------------------------------------------------------------------
@@ -627,6 +649,8 @@ subroutine FNAME(trmm_1)(m, n, uplo, transa, side, alpha, a, b)
 
   integer :: lda
 
+  PUSH_SUB(FNAME(trmm_1))
+
   select case(side)
     case('L', 'l')
       lda = max(1, m)
@@ -635,6 +659,8 @@ subroutine FNAME(trmm_1)(m, n, uplo, transa, side, alpha, a, b)
   end select
       
   call blas_trmm(side, uplo, transa, 'N', m, n, alpha, a(1, 1), lda, b(1, 1), m)
+
+  POP_SUB(FNAME(trmm_1))
 end subroutine FNAME(trmm_1)
 
 

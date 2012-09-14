@@ -139,7 +139,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
 
           call profiling_in(C_PROFILING_BLOCKT_MM)
           call lalg_gemmt(xpsi1_count(rank), sendcnt, mesh%np*st%d%dim, R_TOTYPE(mesh%vol_pp(1)), &
-            psi1_block(:, :, 1), sendbuf(:, :, 1), R_TOTYPE(M_ZERO), res_local)
+            psi1_block, sendbuf, R_TOTYPE(M_ZERO), res_local)
           call profiling_out(C_PROFILING_BLOCKT_MM)
 
           call profiling_in(C_PROFILING_BLOCKT_CP)
@@ -421,7 +421,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
         call profiling_out(C_PROFILING_BLOCK_MATR_CP)
         call profiling_in(C_PROFILING_BLOCK_MATR_MM)
         call lalg_gemm(mesh%np * st%d%dim, xres_count(rank), sendcnt, alpha, &
-          sendbuf(:, :, 1), matr_block, R_TOTYPE(M_ONE), res_block(:, :, 1))
+          sendbuf, matr_block, R_TOTYPE(M_ONE), res_block)
         call profiling_out(C_PROFILING_BLOCK_MATR_MM)
       end if
       SAFE_DEALLOCATE_A(matr_block)
@@ -459,7 +459,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
     SAFE_ALLOCATE(matr_block(1:psi_col, 1:matr_col))
     matr_block = matr
     call lalg_gemm(mesh%np * st%d%dim, matr_col, psi_col, alpha, &
-      psi_block(:, :, 1), matr_block, beta, res_block(:, :, 1))
+      psi_block, matr_block, beta, res_block)
     SAFE_DEALLOCATE_A(matr_block)
 
     ! Copy result.

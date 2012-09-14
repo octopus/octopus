@@ -22,8 +22,10 @@
 module lalg_basic_m
   use blas_m
   use global_m
+  use messages_m
   use multicomm_m
   use profiling_m
+  use utils_m
 
   implicit none
 
