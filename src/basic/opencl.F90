@@ -98,7 +98,6 @@ module opencl_m
   ! the kernels
   type(cl_kernel), public :: kernel_vpsi
   type(cl_kernel), public :: kernel_vpsi_spinors
-  type(cl_kernel), public :: set_zero_part
   type(cl_kernel), public :: kernel_daxpy
   type(cl_kernel), public :: kernel_zaxpy
   type(cl_kernel), public :: kernel_copy
@@ -411,7 +410,6 @@ module opencl_m
       ! now initialize the kernels
       call opencl_build_program(prog, trim(conf%share)//'/opencl/set_zero.cl')
       call opencl_create_kernel(set_zero, prog, "set_zero")
-      call opencl_create_kernel(set_zero_part, prog, "set_zero_part")
       call opencl_release_program(prog)
       
       call opencl_build_program(prog, trim(conf%share)//'/opencl/vpsi.cl')
@@ -640,7 +638,6 @@ module opencl_m
         call opencl_release_kernel(kernel_vpsi)
         call opencl_release_kernel(kernel_vpsi_spinors)
         call opencl_release_kernel(set_zero)
-        call opencl_release_kernel(set_zero_part)
         call opencl_release_kernel(kernel_daxpy)
         call opencl_release_kernel(kernel_zaxpy)
         call opencl_release_kernel(kernel_copy)
@@ -1244,10 +1241,11 @@ module opencl_m
     
     ! ----------------------------------------------------
     
-    subroutine opencl_set_buffer_to_zero(buffer, type, nval)
+    subroutine opencl_set_buffer_to_zero(buffer, type, nval, offset)
       type(opencl_mem_t), intent(inout) :: buffer
       type(type_t),       intent(in)    :: type
       integer,            intent(in)    :: nval
+      integer, optional,  intent(in)    :: offset
 
       integer :: nval_real, bsize
       
@@ -1258,7 +1256,8 @@ module opencl_m
       nval_real = nval*types_get_size(type)/8
 
       call opencl_set_kernel_arg(set_zero, 0, nval_real)
-      call opencl_set_kernel_arg(set_zero, 1, buffer)
+      call opencl_set_kernel_arg(set_zero, 1, optional_default(offset, 0))
+      call opencl_set_kernel_arg(set_zero, 2, buffer)
 
       bsize = opencl_kernel_workgroup_size(set_zero)
 

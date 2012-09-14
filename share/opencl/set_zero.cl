@@ -21,21 +21,11 @@
 
 #include <cl_global.h>
 
-__kernel void set_zero(const int np, __global double * aa){
+__kernel void set_zero(const int np, const int offset, __global double * restrict aa){
   int ip = get_global_id(0);
 
-  if(ip < np) aa[ip] = 0.0;
+  if(ip < np) aa[offset + ip] = 0.0;
 }
-
-__kernel void set_zero_part(const int start, const int end, __global double * restrict aa, const int ldaa){
-  int ist = get_global_id(0);
-  int ip  = get_global_id(1) + start;
-
-  if(ip < end){
-    aa[ist + (ip<<ldaa)] = 0.0;
-  }
-}
-
 
 /*
  Local Variables:
