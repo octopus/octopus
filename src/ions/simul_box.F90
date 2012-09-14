@@ -20,6 +20,7 @@
 #include "global.h"
 
 module simul_box_m
+  use blas_m
   use c_pointer_m
   use datasets_m
   use geometry_m
@@ -976,7 +977,7 @@ contains
 
     real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: rr, re, im, dist2, radius
-    real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
+    real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM), offset_latt(MAX_DIM)
     FLOAT, allocatable :: xx(:, :)
     integer :: ip, idir, iatom, ilist
     integer, allocatable :: nlist(:)
@@ -989,10 +990,14 @@ contains
     ! no push_sub because this function is called very frequently
     SAFE_ALLOCATE(xx(1:sb%dim, 1:npoints))
 
-    !convert to the orthogonal space
-    forall(ip = 1:npoints)
-      xx(1:sb%dim, ip) = matmul(point(1:sb%dim, ip), sb%klattice_primitive(1:sb%dim, 1:sb%dim)) - sb%box_offset(1:sb%dim)
-    end forall
+    !convert from lattice to Cartesian
+    offset_latt(1:sb%dim) = matmul(sb%box_offset(1:sb%dim), sb%klattice_primitive(1:sb%dim, 1:sb%dim))
+    forall(ip = 1:npoints) xx(1:sb%dim, ip) = offset_latt(1:sb%dim)
+    if(npoints == 1) then
+      xx(1:sb%dim, 1) = matmul(point(1:sb%dim, 1), sb%klattice_primitive(1:sb%dim, 1:sb%dim)) - sb%box_offset(1:sb%dim)
+    else
+      call lalg_gemm(sb%dim, npoints, sb%dim, M_ONE, sb%klattice_primitive, point, -M_ONE, xx)
+    endif
 
     select case(sb%box_shape)
     case(SPHERE)
