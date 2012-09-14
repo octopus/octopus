@@ -36,43 +36,55 @@ EXTRA_PROGRAMS = oct-propagation_spectrum oct-rotatory_strength oct-harmonic-spe
 bin_PROGRAMS = @UTILITY_PROGRAMS@
 
 oct_propagation_spectrum_SOURCES = propagation_spectrum.F90
-oct_propagation_spectrum_LDADD   = $(all_LIBS)
+oct_propagation_spectrum_LDADD   = $(top_builddir)/src/basic/libbasic.a $(top_builddir)/src/hamiltonian/libhamiltonian.a $(top_builddir)/src/states/libstates.a $(top_builddir)/src/math/libmath.a $(top_builddir)/src/td/libtd.a \
+$(top_builddir)/src/ions/libions.a $(top_builddir)/src/species/libspecies.a $(top_builddir)/src/grid/libgrid.a $(other_LIBS)
 
 oct_oscillator_strength_SOURCES = oscillator_strength.F90
-oct_oscillator_strength_LDADD   = $(all_LIBS)
+oct_oscillator_strength_LDADD   = $(top_builddir)/src/basic/libbasic.a $(top_builddir)/src/hamiltonian/libhamiltonian.a $(top_builddir)/src/states/libstates.a $(top_builddir)/src/math/libmath.a $(top_builddir)/src/td/libtd.a \
+$(top_builddir)/src/ions/libions.a $(top_builddir)/src/species/libspecies.a $(top_builddir)/src/grid/libgrid.a $(other_LIBS)
 
 oct_dielectric_function_SOURCES = dielectric_function.F90
-oct_dielectric_function_LDADD   = $(all_LIBS)
+oct_dielectric_function_LDADD   = $(top_builddir)/src/basic/libbasic.a $(top_builddir)/src/hamiltonian/libhamiltonian.a $(top_builddir)/src/states/libstates.a $(top_builddir)/src/math/libmath.a $(top_builddir)/src/td/libtd.a \
+$(top_builddir)/src/ions/libions.a $(top_builddir)/src/species/libspecies.a $(top_builddir)/src/grid/libgrid.a $(other_LIBS)
 
 oct_rotatory_strength_SOURCES = rotatory_strength.F90
-oct_rotatory_strength_LDADD   = $(all_LIBS)
+oct_rotatory_strength_LDADD   = $(top_builddir)/src/basic/libbasic.a $(top_builddir)/src/hamiltonian/libhamiltonian.a $(top_builddir)/src/states/libstates.a $(top_builddir)/src/math/libmath.a $(top_builddir)/src/td/libtd.a \
+$(top_builddir)/src/ions/libions.a $(top_builddir)/src/species/libspecies.a $(top_builddir)/src/grid/libgrid.a $(other_LIBS)
 
 oct_harmonic_spectrum_SOURCES = harmonic_spectrum.F90
-oct_harmonic_spectrum_LDADD   = $(all_LIBS)
+oct_harmonic_spectrum_LDADD   = $(top_builddir)/src/basic/libbasic.a $(top_builddir)/src/hamiltonian/libhamiltonian.a $(top_builddir)/src/states/libstates.a $(top_builddir)/src/math/libmath.a $(top_builddir)/src/td/libtd.a \
+$(top_builddir)/src/ions/libions.a $(top_builddir)/src/species/libspecies.a $(top_builddir)/src/grid/libgrid.a $(other_LIBS)
 
 oct_photoelectron_spectrum_SOURCES = photoelectron_spectrum.F90
-oct_photoelectron_spectrum_LDADD   =  $(all_LIBS)
+oct_photoelectron_spectrum_LDADD   = $(top_builddir)/src/basic/libbasic.a $(top_builddir)/src/hamiltonian/libhamiltonian.a $(top_builddir)/src/states/libstates.a $(top_builddir)/src/math/libmath.a $(top_builddir)/src/td/libtd.a \
+$(top_builddir)/src/ions/libions.a $(top_builddir)/src/species/libspecies.a $(top_builddir)/src/grid/libgrid.a $(other_LIBS)
 
 oct_xyz_anim_SOURCES = xyzanim.F90
-oct_xyz_anim_LDADD   = $(all_LIBS)
+oct_xyz_anim_LDADD   = $(top_builddir)/src/basic/libbasic.a $(top_builddir)/src/math/libmath.a \
+$(top_builddir)/src/ions/libions.a $(top_builddir)/src/species/libspecies.a $(other_LIBS)
 
 oct_casida_spectrum_SOURCES = casida_spectrum.F90
-oct_casida_spectrum_LDADD =  $(core_LIBS) $(external_LIBS)
+oct_casida_spectrum_LDADD = $(top_builddir)/src/basic/libbasic.a $(other_LIBS)
 
 oct_vibrational_spectrum_SOURCES = vibrational.F90
-oct_vibrational_spectrum_LDADD =  $(all_LIBS)
+oct_vibrational_spectrum_LDADD = $(top_builddir)/src/basic/libbasic.a $(top_builddir)/src/math/libmath.a \
+$(top_builddir)/src/ions/libions.a $(top_builddir)/src/species/libspecies.a $(top_builddir)/src/grid/libgrid.a \
+$(top_builddir)/src/td/libtd.a $(top_builddir)/src/hamiltonian/libhamiltonian.a $(top_builddir)/src/states/libstates.a $(other_LIBS)
 
 oct_infrared_spectrum_SOURCES = infrared.F90
-oct_infrared_spectrum_LDADD =  $(all_LIBS)
+oct_infrared_spectrum_LDADD = $(top_builddir)/src/basic/libbasic.a $(top_builddir)/src/math/libmath.a \
+$(top_builddir)/src/ions/libions.a $(top_builddir)/src/species/libspecies.a $(other_LIBS)
 
 oct_center_geom_SOURCES = centergeom.F90
-oct_center_geom_LDADD = $(all_LIBS)
+oct_center_geom_LDADD = $(top_builddir)/src/basic/libbasic.a $(top_builddir)/src/math/libmath.a \
+$(top_builddir)/src/ions/libions.a $(top_builddir)/src/species/libspecies.a $(other_LIBS)
 
 oct_liquid_SOURCES = liquid.F90
-oct_liquid_LDADD = $(all_LIBS)
+oct_liquid_LDADD = $(top_builddir)/src/basic/libbasic.a $(top_builddir)/src/math/libmath.a \
+$(top_builddir)/src/ions/libions.a $(top_builddir)/src/species/libspecies.a $(other_LIBS)
 
 oct_help_SOURCES = help.F90
-oct_help_LDADD =  $(core_LIBS)
+oct_help_LDADD = $(top_builddir)/src/basic/libbasic.a $(other_LIBS)
 
 depend:
 	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_rotatory_strength_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_spectrum_SOURCES) $(oct_infrared_spectrum_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES)

@@ -71,11 +71,10 @@ octopus_LIBS = \
 	$(top_builddir)/src/basic/libbasic.a
 
 core_LIBS = \
-	$(octopus_LIBS)                               \
 	@LIBS_SCALAPACK@ @LIBS_BLACS@                 \
 	@LIBS_LAPACK@ @LIBS_BLAS@                     \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
-	@GSL_LIBS@ @GD_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@
+	@GSL_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@
 
 external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a            \
@@ -104,10 +103,12 @@ if COMPILE_NEWUOA
 endif
 
 # Since ETSF_IO depends on netCDF, it must be first in the list
-all_LIBS = $(core_LIBS) @LIBS_PSPIO@ @LIBS_NFFT@ @LIBS_PFFT@ @LIBS_FFT@ @LIBS_SPARSKIT@ \
-  @LIBS_ETSF_IO@ @LIBS_NETCDF@ $(external_LIBS) \
-  @LIBS_LIBFM@ @LIBS_MPI@ @LIBS_ZOLTAN@ @LIBS_BERKELEYGW@ @LIBS_ARPACK@
+outside_LIBS = @LIBS_PSPIO@ @LIBS_NFFT@ @LIBS_PFFT@ @LIBS_FFT@ @LIBS_SPARSKIT@ \
+  @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ @LIBS_MPI@ \
+  @LIBS_ZOLTAN@ @LIBS_BERKELEYGW@ @LIBS_ARPACK@ @GD_LIBS@
 
+other_LIBS = $(core_LIBS) $(external_LIBS) $(outside_LIBS)
+all_LIBS = $(octopus_LIBS) $(other_LIBS)
 
 # ---------------------------------------------------------------
 # How to compile F90 files.
