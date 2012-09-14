@@ -259,6 +259,9 @@ contains
 #ifdef HAVE_LIBFM
     message(2) = trim(message(2))//' libfm'
 #endif
+#ifdef HAVE_PSPIO
+    message(2) = trim(message(2))//' pspio'
+#endif
 
     message(3) = &
          'Architecture           : '// TOSTRING(OCT_ARCH)

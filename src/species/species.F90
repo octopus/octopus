@@ -1163,7 +1163,7 @@ contains
 
     case(SPEC_PSPIO) ! a pseudopotential file to be handled by the pspio library
 
-      !for the moment we will read lmax and lloc, event if they are not necessary,
+      !for the moment we will read lmax and lloc, even if they are not necessary,
       !and we will not get any data from the default values
       call parse_block_float (blk, row, 3, spec%z)
       call parse_block_string(blk, row, 4, spec%filename)
