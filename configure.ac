@@ -359,6 +359,9 @@ ACX_LIBFM
 dnl check for PFFT
 ACX_PFFT
 
+dnl check for PSPIO
+ACX_PSPIO
+
 dnl now I run configure for the internal libraries
 AC_CONFIG_SUBDIRS([external_libs/spglibs])
 

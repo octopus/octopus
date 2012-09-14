@@ -209,7 +209,7 @@ contains
         end if
       end if
 
-    case (SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_UPF) ! ...from pseudopotential
+    case (SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_UPF, SPEC_PSPIO) ! ...from pseudopotential
 
       ! the outer loop sums densities over atoms in neighbour cells
       pos(1:MAX_DIM) = M_ZERO
@@ -278,7 +278,7 @@ contains
 
     select case(species_type(spec))
 
-    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+    case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PSPIO)
       ps => species_ps(spec)
 
       call submesh_init_sphere(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
@@ -616,7 +616,7 @@ contains
 
         end do
 
-      case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
+      case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PSPIO)
         ps => species_ps(spec)
         do ip = 1, mesh%np
           vl(ip) = sum((mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim))**2)

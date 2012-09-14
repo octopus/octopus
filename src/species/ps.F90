@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2012 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -33,6 +33,10 @@ module ps_m
   use ps_fhi_m
   use ps_hgh_m
   use ps_in_grid_m
+#if HAVE_PSPIO
+  use pspio_f90_lib_m
+  use pspio_f90_types_m
+#endif
   use ps_psf_m
   use ps_upf_m
   use splines_m
@@ -43,6 +47,7 @@ module ps_m
   public ::                     &
     ps_t,                       &
     ps_init,                    &
+    ps_pspio_init,              &
     ps_separate,                &
     ps_filter,                  &
     ps_getradius,               &
@@ -888,7 +893,7 @@ contains
         if(l <= ps%l_max) ps_niwfs = ps_niwfs + (2*l+1)
       end do
 
-    case(PS_TYPE_HGH, PS_TYPE_UPF)
+    case default
       do i = 1, ps%conf%p
         l = ps%conf%l(i)
         ps_niwfs = ps_niwfs + (2*l+1)
@@ -897,6 +902,8 @@ contains
 
   end function ps_niwfs
   ! ---------------------------------------------------------
+
+#include "ps_pspio_inc.F90"
 
 end module ps_m
 
