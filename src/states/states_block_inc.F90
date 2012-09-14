@@ -19,8 +19,8 @@
 
 
 ! ---------------------------------------------------------
-! Multiplication of two blocks of states:
-! res <- psi1(xpsi1)^+ * psi2(xpsi2) with the index sets xpsi1 and xpsi2.
+!> Multiplication of two blocks of states:
+!! res <- psi1(xpsi1)^+ * psi2(xpsi2) with the index sets xpsi1 and xpsi2.
 subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   psi1, psi2, res, xpsi1, xpsi2, symm)
   type(mesh_t),      intent(in)  :: mesh
@@ -32,8 +32,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   R_TYPE,            intent(out) :: res(:, :)
   integer, optional, intent(in)  :: xpsi1(:)
   integer, optional, intent(in)  :: xpsi2(:)
-  logical, optional, intent(in)  :: symm    ! Indicates if res(j, i) can be calculated as
-                                            ! res(i, j)*.
+  logical, optional, intent(in)  :: symm    !< Indicates if res(j, i) can be calculated as res(i, j)*.
 
   logical              :: symm_
   integer              :: ii
@@ -215,7 +214,7 @@ end subroutine X(states_blockt_mul)
 
 
 ! ---------------------------------------------------------
-! Gather all states on all nodes. out has to be of sufficient size.
+!> Gather all states on all nodes. out has to be of sufficient size.
 #if defined(HAVE_MPI)
 subroutine X(states_gather)(mesh, st, in, out)
   type(states_t), intent(in)  :: st
@@ -257,9 +256,9 @@ end subroutine X(states_gather)
 
 
 ! ---------------------------------------------------------
-! Multiplication of block of states with indices idxp by matrix and
-! update columns with idxr in the result.
-! res(xres) <- psi(xpsi) * matr.
+!> Multiplication of block of states with indices idxp by matrix and
+!! update columns with idxr in the result.
+!! res(xres) <- psi(xpsi) * matr.
 subroutine X(states_block_matr_mul)(mesh, st, psi_start, psi_end, res_start, res_end, &
   psi, matr, res, xpsi, xres)
   type(mesh_t),      intent(in)  :: mesh
@@ -294,9 +293,9 @@ end subroutine X(states_block_matr_mul)
 
 
 ! ---------------------------------------------------------
-! Multiplication of block of states by matrix plus block of states
-! (with the corresponding column indices):
-! res(xres) <- alpha * psi(xpsi) * matr + beta * res(xres).
+!> Multiplication of block of states by matrix plus block of states
+!! (with the corresponding column indices):
+!! res(xres) <- alpha * psi(xpsi) * matr + beta * res(xres).
 subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res_start, res_end, &
   psi, matr, beta, res, xpsi, xres)
   type(mesh_t),      intent(in)    :: mesh
@@ -480,7 +479,7 @@ end subroutine X(states_block_matr_mul_add)
 
 
 ! ---------------------------------------------------------
-! Copy in(:, :, idx) to out out(:, :, 1:ubound(idx, 1)).
+!> Copy in(:, :, idx) to out out(:, :, 1:ubound(idx, 1)).
 subroutine X(states_compactify)(dim, mesh, in_start, idx, in, out)
   integer,      intent(in)  :: dim
   type(mesh_t), intent(in)  :: mesh
@@ -509,9 +508,9 @@ end subroutine X(states_compactify)
 
 
 ! ---------------------------------------------------------
-! Undo the effect of X(states_compactify), i.e.
-! X(states_compactify)(st, mesh, idx, in, out) followed by
-! X(states_uncompactify)(st, mesh, idx, out, in) is identity.
+!> Undo the effect of X(states_compactify), i.e.
+!! X(states_compactify)(st, mesh, idx, in, out) followed by
+!! X(states_uncompactify)(st, mesh, idx, out, in) is identity.
 subroutine X(states_uncompactify)(dim, mesh, out_start, idx, in, out)
   integer,      intent(in)  :: dim
   type(mesh_t), intent(in)  :: mesh
