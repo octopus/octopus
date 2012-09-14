@@ -139,14 +139,14 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   FLOAT,                  intent(inout) :: diff(1:st%nst)
   R_TYPE, optional,       intent(in)    :: constr(gr%mesh%np_part, st%d%dim, constr_start:constr_end)
 
-  integer :: nps   ! Number of points per state.
-  integer :: nst   ! Number of eigenstates (i.e. the blocksize).
-  integer :: lnst  ! Number of local eigenstates.
+  integer :: nps   !< Number of points per state.
+  integer :: nst   !< Number of eigenstates (i.e. the blocksize).
+  integer :: lnst  !< Number of local eigenstates.
 
   integer :: ist, i, j, iter, blks, maxiter, nconstr
 
-  integer, target      :: nuc                 ! Index set of unconverged eigenpairs.
-  integer, pointer     :: uc(:), lnuc, luc(:) ! Index set of local unconverged eigenpairs.
+  integer, target      :: nuc                 !< Index set of unconverged eigenpairs.
+  integer, pointer     :: uc(:), lnuc, luc(:) !< Index set of local unconverged eigenpairs.
   integer, allocatable :: all_ev(:), all_constr(:)
 
 #ifdef HAVE_MPI
@@ -161,18 +161,18 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   type(iihash_t)    :: all_ev_inv
 
   R_TYPE, pointer             :: ritz_psi(:, :), ritz_res(:, :), ritz_dir(:, :)
-  R_TYPE, allocatable         :: tmp(:, :, :)     ! Temporary storage of wavefunction size.
-  R_TYPE, allocatable         :: nuc_tmp(:, :)    ! Temporary storage of Gram block size.
-  R_TYPE, allocatable         :: res(:, :, :)     ! Residuals.
-  R_TYPE, allocatable         :: h_res(:, :, :)   ! H res.
-  R_TYPE, allocatable         :: dir(:, :, :)     ! Conjugate directions.
-  R_TYPE, allocatable         :: h_dir(:, :, :)   ! H dir.
-  R_TYPE, allocatable         :: h_psi(:, :, :)   ! H |psi>.
-  FLOAT,  allocatable          :: eval(:)         ! The eigenvalues of the current block.
-  R_TYPE, allocatable         :: gram_h(:, :)     ! Gram matrix for Hamiltonian.
-  R_TYPE, allocatable         :: gram_i(:, :)     ! Gram matrix for unit matrix.
-  R_TYPE, allocatable         :: gram_block(:, :) ! Space to construct the Gram matrix blocks.
-  R_TYPE, allocatable, target :: ritz_vec(:, :)   ! Ritz-vectors.
+  R_TYPE, allocatable         :: tmp(:, :, :)     !< Temporary storage of wavefunction size.
+  R_TYPE, allocatable         :: nuc_tmp(:, :)    !< Temporary storage of Gram block size.
+  R_TYPE, allocatable         :: res(:, :, :)     !< Residuals.
+  R_TYPE, allocatable         :: h_res(:, :, :)   !< H res.
+  R_TYPE, allocatable         :: dir(:, :, :)     !< Conjugate directions.
+  R_TYPE, allocatable         :: h_dir(:, :, :)   !< H dir.
+  R_TYPE, allocatable         :: h_psi(:, :, :)   !< H |psi>.
+  FLOAT,  allocatable          :: eval(:)         !< The eigenvalues of the current block.
+  R_TYPE, allocatable         :: gram_h(:, :)     !< Gram matrix for Hamiltonian.
+  R_TYPE, allocatable         :: gram_i(:, :)     !< Gram matrix for unit matrix.
+  R_TYPE, allocatable         :: gram_block(:, :) !< Space to construct the Gram matrix blocks.
+  R_TYPE, allocatable, target :: ritz_vec(:, :)   !< Ritz-vectors.
   type(batch_t) :: psib, hpsib
   logical :: there_are_constraints
   
@@ -655,7 +655,7 @@ contains
   subroutine X(lobpcg_orth)(v_start, v_end, vs, chol_failure)
     integer,        intent(in)    :: v_start
     integer,        intent(in)    :: v_end
-    R_TYPE,         intent(inout) :: vs(gr%mesh%np_part, st%d%dim, v_start:v_end)
+    R_TYPE,         intent(inout) :: vs(:, :, v_start:) !< (gr%mesh%np_part, st%d%dim, v_start:v_end)
     logical,        intent(out)   :: chol_failure
 
     integer             :: i
@@ -695,7 +695,7 @@ contains
   subroutine X(lobpcg_apply_constraints)(vs_start, vs_end, vs, nidx, idx)
     integer, intent(in)    :: vs_start
     integer, intent(in)    :: vs_end
-    R_TYPE,  intent(inout) :: vs(gr%mesh%np_part, st%d%dim, vs_start:vs_end)
+    R_TYPE,  intent(inout) :: vs(:, :, vs_start:) !< (gr%mesh%np_part, st%d%dim, vs_start:vs_end)
     integer, intent(in)    :: nidx
     integer, intent(in)    :: idx(:)
     
@@ -730,8 +730,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine X(blockt_mul)(psi1, psi2, res, xpsi1, xpsi2, symm)
-    R_TYPE,            intent(in)  :: psi1(gr%mesh%np_part, st%d%dim, st_start:st_end)
-    R_TYPE,            intent(in)  :: psi2(gr%mesh%np_part, st%d%dim, st_start:st_end)
+    R_TYPE,            intent(in)  :: psi1(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
+    R_TYPE,            intent(in)  :: psi2(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
     R_TYPE,            intent(out) :: res(:, :)
     integer,           intent(in)  :: xpsi1(:)
     integer,           intent(in)  :: xpsi2(:)
@@ -749,10 +749,10 @@ contains
   ! ---------------------------------------------------------
   subroutine X(block_matr_mul_add)(alpha, psi, matr, beta, res, xpsi, xres)
     R_TYPE,  intent(in)    :: alpha
-    R_TYPE,  intent(in)    :: psi(gr%mesh%np_part, st%d%dim, st_start:st_end)
+    R_TYPE,  intent(in)    :: psi(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
     R_TYPE,  intent(in)    :: matr(:, :)
     R_TYPE,  intent(in)    :: beta
-    R_TYPE,  intent(inout) :: res(gr%mesh%np_part, st%d%dim, st_start:st_end)
+    R_TYPE,  intent(inout) :: res(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
     integer, intent(in)    :: xpsi(:)
     integer, intent(in)    :: xres(:)
 
@@ -767,9 +767,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine X(block_matr_mul)(psi, matr, res, xpsi, xres)
-    R_TYPE,  intent(in)  :: psi(gr%mesh%np_part, st%d%dim, st_start:st_end)
+    R_TYPE,  intent(in)  :: psi(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
     R_TYPE,  intent(in)  :: matr(:, :)
-    R_TYPE,  intent(out) :: res(gr%mesh%np_part, st%d%dim, st_start:st_end)
+    R_TYPE,  intent(out) :: res(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
     integer, intent(in)  :: xpsi(:)
     integer, intent(in)  :: xres(:)
 

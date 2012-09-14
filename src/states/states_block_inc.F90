@@ -267,7 +267,7 @@ subroutine X(states_block_matr_mul)(mesh, st, psi_start, psi_end, res_start, res
   integer,           intent(in)  :: psi_end
   integer,           intent(in)  :: res_start
   integer,           intent(in)  :: res_end
-  R_TYPE,            intent(in)  :: psi(mesh%np_part, st%d%dim, psi_start:psi_end)
+  R_TYPE,            intent(in)  :: psi(:, :, psi_start:) !< (mesh%np_part, st%d%dim, psi_start:psi_end)
   R_TYPE,            intent(in)  :: matr(:, :)
   R_TYPE,            intent(out) :: res(:, :, :)
   integer, optional, intent(in)  :: xpsi(:), xres(:)
@@ -305,10 +305,10 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
   integer,           intent(in)    :: psi_end
   integer,           intent(in)    :: res_start
   integer,           intent(in)    :: res_end
-  R_TYPE,            intent(in)    :: psi(mesh%np_part, st%d%dim, psi_start:psi_end)
+  R_TYPE,            intent(in)    :: psi(:, :, psi_start:) !< (mesh%np_part, st%d%dim, psi_start:psi_end)
   R_TYPE,            intent(in)    :: matr(:, :)
   R_TYPE,            intent(in)    :: beta
-  R_TYPE,            intent(inout) :: res(mesh%np_part, st%d%dim, res_start:res_end)
+  R_TYPE,            intent(inout) :: res(:, :, res_start:) !< (mesh%np_part, st%d%dim, res_start:res_end)
   integer, optional, intent(in)    :: xpsi(:), xres(:)
 
   integer              :: res_col, psi_col, matr_col
@@ -323,7 +323,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
 #endif
 
   call profiling_in(C_PROFILING_BLOCK_MATR)
-  PUSH_SUB(X(states_block_matr_add))
+  PUSH_SUB(X(states_block_matr_mul_add))
 
   ! Calculate global index sets of state block psi and res.
   if(present(xpsi)) then
@@ -473,7 +473,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, psi_end, res
   SAFE_DEALLOCATE_P(xpsi_)
   SAFE_DEALLOCATE_P(xres_)
 
-  POP_SUB(X(states_block_matr_add))
+  POP_SUB(X(states_block_matr_mul_add))
   call profiling_out(C_PROFILING_BLOCK_MATR)
 end subroutine X(states_block_matr_mul_add)
 
