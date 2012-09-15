@@ -358,7 +358,6 @@ contains
 
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
-  ! ---------------------------------------------------------
   subroutine density_calc(st, gr, density, Imdensity)
     type(states_t),          intent(inout)  :: st
     type(grid_t),            intent(in)     :: gr
@@ -511,13 +510,13 @@ contains
     integer :: is, ip
     logical :: cmplxscl
     
+    PUSH_SUB(states_total_density)
+
     cmplxscl = .false.
     if(present(Imrho)) then
       ASSERT(associated(Imrho))
       cmplxscl = .true.
     end if
-
-    PUSH_SUB(states_total_density)
 
     if(.not. cmplxscl) then
       forall(ip = 1:mesh%np, is = 1:st%d%nspin)

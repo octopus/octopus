@@ -182,7 +182,7 @@ subroutine X(sternheimer_solve)(                           &
             ! project RHS onto the unoccupied states
             call X(lr_orth_vector)(mesh, st, rhs(:, :, sigma), ist, ik, omega_sigma)
           endif
-        
+
           !solve the Sternheimer equation
           call X(solve_HXeY)(this%solver, hm, sys%gr, sys%st, ist, ik, &
                lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), &
@@ -348,7 +348,7 @@ subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
   type(system_t),         intent(inout) :: sys
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
-  R_TYPE,                 intent(out)   :: hvar(:,:,:)
+  R_TYPE,                 intent(out)   :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
 
   R_TYPE, allocatable :: tmp(:), hartree(:)
   integer :: np, ip, ispin, ispin2

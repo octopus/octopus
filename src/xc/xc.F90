@@ -57,15 +57,15 @@ module xc_m
 
 
   type xc_t
-    integer :: family                   ! the families present
+    integer :: family                   !< the families present
     integer :: kernel_family
-    type(xc_functl_t) :: functl(2,2)    ! (FUNC_X,:) => exchange,    (FUNC_C,:) => correlation
-                                        ! (:,1) => unpolarized, (:,2) => polarized
+    type(xc_functl_t) :: functl(2,2)    !< (FUNC_X,:) => exchange,    (FUNC_C,:) => correlation
+                                        !< (:,1) => unpolarized, (:,2) => polarized
 
     type(xc_functl_t) :: kernel(2,2)
 
-    FLOAT   :: exx_coef                 ! amount of EXX to add for the hybrids
-    integer :: mGGA_implementation      ! how to implement the MGGAs
+    FLOAT   :: exx_coef                 !< amount of EXX to add for the hybrids
+    integer :: mGGA_implementation      !< how to implement the MGGAs
 
     integer :: xc_density_correction
     logical :: xcd_optimize_cutoff
@@ -75,7 +75,7 @@ module xc_m
   end type xc_t
 
   FLOAT, parameter :: tiny      = CNST(1.0e-12)
-  FLOAT, parameter :: denom_eps = CNST(1.0e-20) ! added to denominators to avoid overflows...
+  FLOAT, parameter :: denom_eps = CNST(1.0e-20) !< added to denominators to avoid overflows...
 
   integer, parameter :: &
     LR_NONE = 0,        &
