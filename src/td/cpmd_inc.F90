@@ -176,11 +176,15 @@ contains
 
     call X(states_calc_overlap)(st, gr%mesh, ik, aa)
     call X(states_calc_overlap)(st, gr%mesh, ik, bb, psi2 = oldpsi)
+    do ist1 = 1, st%nst
+      aa(ist1, ist1) = aa(ist1, ist1) - M_ONE
+      bb(ist1, ist1) = bb(ist1, ist1) - M_ONE
+    end do    
 
-    xx = M_HALF*(ii - aa) !(4.6)
+    xx = -M_HALF * aa !(4.6)
 
     do it = 1, 10
-      xxi = M_HALF*(ii - aa + matmul(xx, ii - bb) + matmul(ii - R_CONJ(transpose(bb)), xx) - matmul(xx, xx)) !(4.5)
+      xxi = M_HALF*(- aa - matmul(xx, bb) - matmul(R_CONJ(transpose(bb)), xx) - matmul(xx, xx)) !(4.5)
       res = maxval(abs(xxi - xx))
       xx = xxi
       if (res < CNST(1e-5)) exit
