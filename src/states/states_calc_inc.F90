@@ -413,7 +413,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     call profiling_in(prof_copy, 'STATES_TRSM_COPY')
     call opencl_write_buffer(ss_buffer, product(ubound(ss)), ss)
     call profiling_count_transfers(product(ubound(ss)), ss(1, 1))
-    call opencl_finish()
+
     call profiling_out(prof_copy)
 
     do sp = 1, mesh%np, block_size
@@ -453,6 +453,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
       call opencl_kernel_run(kernel_ref, (/size/), (/1/))
 
 #endif
+      call opencl_finish()
 
       do ib = st%block_start, st%block_end
         call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
