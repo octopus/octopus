@@ -225,26 +225,26 @@ end subroutine X(bi_conjugate_gradients)
 
   ! ---------------------------------------------------------
   subroutine X(qmr_sym_spec_dotu)(np, x, b, op, prec, iter, residue, threshold, showprogress, converged)
-    integer, target,   intent(in)    :: np    ! number of points
-    R_TYPE,             intent(inout) :: x(:)  ! initial guess and result
-    R_TYPE,             intent(in)    :: b(:)  ! the right side
+    integer, target, intent(in)    :: np    !< number of points
+    R_TYPE,          intent(inout) :: x(:)  !< initial guess and result
+    R_TYPE,          intent(in)    :: b(:)  !< the right side
     interface
-      subroutine op(x, y)                     ! the matrix A as operator, y <- Ax
+      subroutine op(x, y)                   !< the matrix A as operator, y <- Ax
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
     interface
-      subroutine prec(x, y)                   ! preconditioner
+      subroutine prec(x, y)                 !< preconditioner
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
-    integer,           intent(inout) :: iter         ! [in] number of max iterations, [out] used iterations
-    FLOAT, optional,   intent(out)   :: residue      ! residue = abs(Ax-b)
-    FLOAT, optional,   intent(in)    :: threshold    ! convergence threshold
-    logical, optional, intent(in)    :: showprogress ! show progress bar
-    logical, optional, intent(out)   :: converged    ! is the algorithm converged
+    integer,           intent(inout) :: iter         !< [in] number of max iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue      !< residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
+    logical, optional, intent(in)    :: showprogress !< show progress bar
+    logical, optional, intent(out)   :: converged    !< is the algorithm converged
 
     PUSH_SUB(X(qmr_sym_spec_dotu))
 
@@ -257,38 +257,38 @@ end subroutine X(bi_conjugate_gradients)
 
   ! ---------------------------------------------------------
   subroutine X(qmr_spec_dotu)(np, x, b, op, opt, prec, prect, iter, residue, threshold, showprogress, converged)
-    integer, target, intent(in)    :: np     ! number of points
-    R_TYPE,          intent(inout) :: x(:)   ! initial guess and the result
-    R_TYPE,          intent(in)    :: b(:)   ! the right side
+    integer, target, intent(in)    :: np     !< number of points
+    R_TYPE,          intent(inout) :: x(:)   !< initial guess and the result
+    R_TYPE,          intent(in)    :: b(:)   !< the right side
     interface
-      subroutine op(x, y)                    ! the matrix A as operator y <- A*x
+      subroutine op(x, y)                    !< the matrix A as operator y <- A*x
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
     interface
-      subroutine opt(x, y)                   ! the transposed matrix A as operator y <- A^T*x
+      subroutine opt(x, y)                   !< the transposed matrix A as operator y <- A^T*x
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine opt
     end interface
     interface
-      subroutine prec(x, y)                  ! the preconditioner
+      subroutine prec(x, y)                  !< the preconditioner
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
     interface
-      subroutine prect(x, y)                 ! the transposed preconditioner
+      subroutine prect(x, y)                 !< the transposed preconditioner
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prect
     end interface
-    integer,           intent(inout) :: iter         ! [in] number of max iterations, [out] used iterations
-    FLOAT, optional,   intent(out)   :: residue      ! residue = abs(Ax-b)
-    FLOAT, optional,   intent(in)    :: threshold    ! convergence threshold
-    logical, optional, intent(in)    :: showprogress ! show progress bar
-    logical, optional, intent(out)   :: converged    ! is the algorithm converged
+    integer,           intent(inout) :: iter         !< [in] number of max iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue      !< residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
+    logical, optional, intent(in)    :: showprogress !< show progress bar
+    logical, optional, intent(out)   :: converged    !< is the algorithm converged
 
     PUSH_SUB(X(qmr_spec_dotu))
 
@@ -313,41 +313,41 @@ end subroutine X(bi_conjugate_gradients)
 
 
   ! ---------------------------------------------------------
-  ! for complex symmetric matrices
-  ! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
+  !> for complex symmetric matrices
+  !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
   subroutine X(qmr_sym_gen_dotu)(np, x, b, op, dotu, nrm2, prec, iter, &
     residue, threshold, showprogress, converged)
-    integer,           intent(in)     :: np    ! number of points
-    R_TYPE,             intent(inout) :: x(:)  ! the initial guess and the result
-    R_TYPE,             intent(in)    :: b(:)  ! the right side
+    integer, intent(in)    :: np    !< number of points
+    R_TYPE,  intent(inout) :: x(:)  !< the initial guess and the result
+    R_TYPE,  intent(in)    :: b(:)  !< the right side
     interface
-      subroutine op(x, y)             ! the matrix A as operator
+      subroutine op(x, y)           !< the matrix A as operator
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
     interface
-      R_TYPE function dotu(x, y)      ! the dot product (must be x^T*y, not daggered)
+      R_TYPE function dotu(x, y)    !< the dot product (must be x^T*y, not daggered)
         R_TYPE, intent(in) :: x(:)
         R_TYPE, intent(in) :: y(:)
       end function dotu
     end interface
     interface
-      FLOAT function nrm2(x)          ! the 2-norm of the vector x
+      FLOAT function nrm2(x)        !< the 2-norm of the vector x
         R_TYPE, intent(in) :: x(:)
       end function nrm2
     end interface
     interface
-      subroutine prec(x, y)           ! the preconditioner
+      subroutine prec(x, y)         !< the preconditioner
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
-    integer,           intent(inout) :: iter         ! [in] the maximum number of iterations, [out] used iterations
-    FLOAT, optional,   intent(out)   :: residue      ! the residue = abs(Ax-b)
-    FLOAT, optional,   intent(in)    :: threshold    ! convergence threshold
-    logical, optional, intent(in)    :: showprogress ! should there be a progress bar
-    logical, optional, intent(out)   :: converged    ! has the algorithm converged
+    integer,           intent(inout) :: iter         !< [in] the maximum number of iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue      !< the residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
+    logical, optional, intent(in)    :: showprogress !< should there be a progress bar
+    logical, optional, intent(out)   :: converged    !< has the algorithm converged
 
     R_TYPE, allocatable :: r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
     R_TYPE              :: eta, delta, epsilon, beta, rtmp
@@ -542,55 +542,55 @@ end subroutine X(bi_conjugate_gradients)
   end subroutine X(qmr_sym_gen_dotu)
 
   ! ---------------------------------------------------------
-  ! for general complex matrices
-  ! taken from 'An Implementation of the QMR Method based on Coupled Two-Term Recurrences' by
-  ! R. W. Freund and N. M. Nachtigal (page 25)
-  ! http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19950017192_1995117192.pdf
+  !> for general complex matrices
+  !! taken from 'An Implementation of the QMR Method based on Coupled Two-Term Recurrences' by
+  !! R. W. Freund and N. M. Nachtigal (page 25)
+  !! http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19950017192_1995117192.pdf
   subroutine X(qmr_gen_dotu)(np, x, b, op, opt, dotu, nrm2, prec, prect, iter, &
     residue, threshold, showprogress, converged)
-    integer, intent(in)    :: np      ! number of points
-    R_TYPE,  intent(inout) :: x(:)    ! initial guess and result
-    R_TYPE,  intent(in)    :: b(:)    ! right side
+    integer, intent(in)    :: np      !< number of points
+    R_TYPE,  intent(inout) :: x(:)    !< initial guess and result
+    R_TYPE,  intent(in)    :: b(:)    !< right side
     interface
-      subroutine op(x, y)             ! the matrix A as operator: y <- A*x
+      subroutine op(x, y)             !< the matrix A as operator: y <- A*x
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine op
     end interface
     interface
-      subroutine opt(x, y)            ! the transposed matrix A as operator: y <- A^T*x
+      subroutine opt(x, y)            !< the transposed matrix A as operator: y <- A^T*x
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine opt
     end interface
     interface
-      R_TYPE function dotu(x, y)      ! the dot product
+      R_TYPE function dotu(x, y)      !< the dot product
         R_TYPE, intent(in) :: x(:)
         R_TYPE, intent(in) :: y(:)
       end function dotu
     end interface
     interface
-      FLOAT function nrm2(x)          ! the 2-norm of a vector
+      FLOAT function nrm2(x)          !< the 2-norm of a vector
         R_TYPE, intent(in) :: x(:)
       end function nrm2
     end interface
     interface
-      subroutine prec(x, y)           ! preconditioner
+      subroutine prec(x, y)           !< preconditioner
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
     interface
-      subroutine prect(x, y)          ! transposed preconditioner
+      subroutine prect(x, y)          !< transposed preconditioner
         R_TYPE, intent(in)  :: x(:)
         R_TYPE, intent(out) :: y(:)
       end subroutine prect
     end interface
-    integer,           intent(inout) :: iter         ! [in] the maximum number of iterations, [out] used iterations
-    FLOAT, optional,   intent(out)   :: residue      ! the residue = abs(Ax-b)
-    FLOAT, optional,   intent(in)    :: threshold    ! convergence threshold
-    logical, optional, intent(in)    :: showprogress ! should there be a progress bar
-    logical, optional, intent(out)   :: converged    ! has the algorithm converged
+    integer,           intent(inout) :: iter         !< [in] the maximum number of iterations, [out] used iterations
+    FLOAT, optional,   intent(out)   :: residue      !< the residue = abs(Ax-b)
+    FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
+    logical, optional, intent(in)    :: showprogress !< should there be a progress bar
+    logical, optional, intent(out)   :: converged    !< has the algorithm converged
 
     R_TYPE, allocatable :: r(:), v(:), w(:), z(:), q(:), p(:), deltax(:), tmp(:)
     R_TYPE              :: eta, delta, epsilon, beta
