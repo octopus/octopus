@@ -31,7 +31,18 @@ octopus_SOURCES = \
 octopus_LDADD = $(all_LIBS)
 
 oct_test_SOURCES = test.F90
-oct_test_LDADD = $(all_LIBS)
+oct_test_LDADD = \
+        $(top_builddir)/src/system/libsystem.a           \
+        $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+        $(top_builddir)/src/xc/libxc.a                   \
+        $(top_builddir)/src/poisson/libpoisson.a         \
+        $(top_builddir)/src/states/libstates.a           \
+        $(top_builddir)/src/grid/libgrid.a               \
+        $(top_builddir)/src/ions/libions.a               \
+        $(top_builddir)/src/species/libspecies.a         \
+        $(top_builddir)/src/math/libmath.a               \
+        $(top_builddir)/src/basic/libbasic.a \
+        $(other_LIBS)
 
 noinst_HEADERS = \
 	casida_inc.F90
