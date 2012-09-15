@@ -93,8 +93,8 @@ oct_harmonic_spectrum_LDADD      = $(top_builddir)/src/td/libtd.a \
 oct_photoelectron_spectrum_SOURCES = photoelectron_spectrum.F90
 oct_photoelectron_spectrum_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/system/libsystem.a \
-                                   $(top_builddir)/src/xc/libxc.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/xc/libxc.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/grid/libgrid.a \
