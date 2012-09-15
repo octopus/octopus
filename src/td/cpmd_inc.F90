@@ -177,8 +177,12 @@ contains
     xx = -M_HALF * aa !(4.6)
 
     do it = 1, 10
-      xb = matmul(xx, bb)
-      xxi = M_HALF*(- aa - xb - R_CONJ(transpose(xb)) - matmul(xx, xx)) !(4.5)
+      xxi = aa
+      call lalg_gemm(st%nst, st%nst, st%nst, R_TOTYPE(-M_HALF), xx, xx, R_TOTYPE(-M_HALF), xxi)
+      call lalg_gemm(st%nst, st%nst, st%nst, R_TOTYPE(-M_HALF), xx, bb, R_TOTYPE(M_ZERO), xb)
+      xxi = xxi + xb + R_CONJ(transpose(xb))
+    ! from eq. 4.5 in the paper, where we redefined aa and bb here to include the delta function, and rearranged to optimize
+    ! xxi = M_HALF*(ii - aa + matmul(xx, ii - bb) + matmul(ii - R_CONJ(transpose(bb)), xx) - matmul(xx, xx)) !(4.5)
       res = maxval(abs(xxi - xx))
       xx = xxi
       if (res < CNST(1e-5)) exit
