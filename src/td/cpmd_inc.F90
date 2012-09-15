@@ -180,7 +180,7 @@ contains
     xx = M_HALF*(ii - aa) !(4.6)
 
     do it = 1, 10
-      xxi = M_HALF*(ii - aa + matmul(xx, ii - bb) + matmul(ii - transpose(bb), xx) - matmul(xx, xx)) !(4.5)
+      xxi = M_HALF*(ii - aa + matmul(xx, ii - bb) + matmul(ii - R_CONJ(transpose(bb)), xx) - matmul(xx, xx)) !(4.5)
       res = maxval(abs(xxi - xx))
       xx = xxi
       if (res < CNST(1e-5)) exit
@@ -270,7 +270,7 @@ contains
 
     call X(states_calc_overlap)(st, gr%mesh, ik, cc, psi2 = this%X(psi2)(:, :, :, ik))
 
-    yy = -M_HALF*(cc + transpose(cc))
+    yy = -M_HALF*(cc + R_CONJ(transpose(cc))) !(4.12)
 
     SAFE_DEALLOCATE_A(cc)
     POP_SUB(X(cpmd_propagate_vel).calc_yy)
