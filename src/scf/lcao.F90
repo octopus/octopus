@@ -1155,7 +1155,8 @@ contains
     if(geo%atoms_dist%parallel .and. parallelized_in_atoms) then
       do is = 1, spin_channels
         atom_rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, is)
-        call MPI_Allreduce(atom_rho(1, 1), rho(1, is), gr%fine%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
+        call MPI_Allreduce(atom_rho(1, 1), rho(1, is), gr%fine%mesh%np, &
+          MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
       end do
     end if
 #endif
