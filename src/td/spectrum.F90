@@ -1179,7 +1179,7 @@ contains
     do istep = 0, time_steps-1
       aa = M_ZERO
       read(iunit, '(28x,e20.12)', advance = 'no', iostat = ierr) aa(1)
-      ! What on earth is the point of this with jj??
+      ! FIXME: parsing of file depends on how code was compiled (MAX_DIM)!!!
       jj = 2
       do while( (ierr.eq.0) .and. (jj <= MAX_DIM) )
        read(iunit, '(e20.12)', advance = 'no', iostat = ierr) aa(jj)
@@ -1495,7 +1495,7 @@ contains
     do istep = 1, time_steps
       aa = M_ZERO
       read(iunit, '(28x,e20.12)', advance = 'no', iostat = ierr) aa(1)
-      ! What on earth is the point of this with jj??
+      ! FIXME: parsing of file depends on how code was compiled (MAX_DIM)!!!
       jj = 2
       do while( (ierr.eq.0) .and. (jj <= MAX_DIM) )
         read(iunit, '(e20.12)', advance = 'no', iostat = ierr) aa(jj)
