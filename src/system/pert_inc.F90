@@ -386,7 +386,7 @@ contains
 
     do idim = 1, hm%d%dim
       do ip = 1, gr%mesh%np
-        rdelta = sum(gr%mesh%x(ip, 1:MAX_DIM)**2)*ddelta(this%dir, this%dir2)
+        rdelta = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)**2)*ddelta(this%dir, this%dir2)
         f_out(ip, idim) = M_FOURTH*(rdelta - gr%mesh%x(ip, this%dir)*gr%mesh%x(ip, this%dir2))*f_in_copy(ip, idim)
       end do
     end do
@@ -402,7 +402,7 @@ contains
       SAFE_ALLOCATE(  dnl(1:gr%mesh%np, 1:hm%d%dim, 1:gr%mesh%sb%dim))
       SAFE_ALLOCATE(   xf(1:gr%mesh%np, 1:hm%d%dim))
 
-      f_in2  = R_TOTYPE(M_ZERO)
+      f_in2 = R_TOTYPE(M_ZERO)
       atoms: do iatom = 1, geo%natoms
 
         ! This calculates f_in2 = (B x r) f_in_copy

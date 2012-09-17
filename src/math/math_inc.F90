@@ -200,11 +200,10 @@ end subroutine X(shellsort2)
 
 
 ! ---------------------------------------------------------
-! These routines compare numbers or arrays of numbers to
-! within a certain threshold (to avoid considering differences
-! due to rounding as significant). They are not to be
-! accessed directly, but through the .app. operator.
-! ---------------------------------------------------------
+!> These routines compare numbers or arrays of numbers to
+!! within a certain threshold (to avoid considering differences
+!! due to rounding as significant). They are not to be
+!! accessed directly, but through the .app. operator.
 logical function X(approximately_equal)(a, b) result(app)
   R_TYPE, intent(in) :: a, b
   
@@ -297,21 +296,20 @@ end function X(approximately_equal_3)
 
 
 ! ---------------------------------------------------------
-! This is an implementation of the Parker-Traub algorithm
-! for the inversion of Vandermonde matrices. 
-!   F. Parker, Inverses of Vandermonde matrices, Amer. Math. 
-!   Monthly, 71, 1964, p410-411
-!   J. Traub, Associated polynomials and uniform methods for 
-!   the solution of linear problems
-!   SIAM Review, 8, No. 3, 1966, p277-301
-! The algorithm inverts a Vandermonde matrix in O(N^2) operations
-! 
-! 2006-08-02 Heiko Appel
-! ---------------------------------------------------------
+!> This is an implementation of the Parker-Traub algorithm
+!! for the inversion of Vandermonde matrices. 
+!!   F. Parker, Inverses of Vandermonde matrices, Amer. Math. 
+!!   Monthly, 71, 1964, p410-411
+!!   J. Traub, Associated polynomials and uniform methods for 
+!!   the solution of linear problems
+!!   SIAM Review, 8, No. 3, 1966, p277-301
+!! The algorithm inverts a Vandermonde matrix in O(N^2) operations
+!! 
+!! 2006-08-02 Heiko Appel
 subroutine X(parker_traub)(nsize, vdm_base, vdm_inverse)
   integer, intent(in)  :: nsize
-  R_TYPE,  intent(in)  :: vdm_base(:)       ! Vandermonde base
-  R_TYPE,  intent(out) :: vdm_inverse(:,:)  ! Inverse of Vandermonde matrix
+  R_TYPE,  intent(in)  :: vdm_base(:)       !< Vandermonde base
+  R_TYPE,  intent(out) :: vdm_inverse(:,:)  !< Inverse of Vandermonde matrix
   
   integer :: j, k
   R_TYPE, allocatable :: ap(:), an(:), q(:, :), pp(:)
@@ -374,16 +372,15 @@ end subroutine X(parker_traub)
 
 
 ! ---------------------------------------------------------
-! Newton-Raphson method for matrices. Starting from a 
-! sufficiently good initial guess, this routine can be used 
-! to polish inverse matrices.
-! 
-! 2006-08-02 Heiko Appel
-! ---------------------------------------------------------
+!> Newton-Raphson method for matrices. Starting from a 
+!! sufficiently good initial guess, this routine can be used 
+!! to polish inverse matrices.
+!! 
+!! 2006-08-02 Heiko Appel
 subroutine X(matrix_newton_raphson)(nsteps, nsize, a, b)
   integer, intent(in)    :: nsteps, nsize
-  R_TYPE,  intent(in)    :: a(:,:)  ! matrix whose inverse to improve
-  R_TYPE,  intent(inout) :: b(:,:)  ! initial guess for the inverse
+  R_TYPE,  intent(in)    :: a(:,:)  !< matrix whose inverse to improve
+  R_TYPE,  intent(inout) :: b(:,:)  !< initial guess for the inverse
   
   integer :: is
   R_TYPE, allocatable :: ab(:,:), bab(:,:)
@@ -413,10 +410,10 @@ end subroutine X(matrix_newton_raphson)
 
 
 ! ---------------------------------------------------------
-! gives a measure for the quality of the inverse
+!> gives a measure for the quality of the inverse
 FLOAT function X(matrix_inv_residual)(nsize, a, b) result(residual)
   integer, intent(in) :: nsize
-  R_TYPE,  intent(in) :: a(:,:), b(:,:) ! matrix and approximate inverse
+  R_TYPE,  intent(in) :: a(:,:), b(:,:) !< matrix and approximate inverse
 
   integer :: i, j
   R_TYPE, allocatable :: ab(:,:)
@@ -445,8 +442,9 @@ end function X(matrix_inv_residual)
 
 ! ---------------------------------------------------------
 pure function X(cross_product)(a, b) result(c)
-  R_TYPE, intent(in) :: a(1:3)
-  R_TYPE, intent(in) :: b(1:3)
+  R_TYPE, intent(in) :: a(:) !< (3)
+  R_TYPE, intent(in) :: b(:) !< (3)
+
   R_TYPE :: c(1:3)
 
   c(1) = a(2)*b(3) - a(3)*b(2)
@@ -457,7 +455,7 @@ end function X(cross_product)
 
 
 ! ---------------------------------------------------------
-! Calculate infinity-norm of matrix.
+!> Calculate infinity-norm of matrix.
 FLOAT function X(infinity_norm)(matrix)
   R_TYPE, intent(in) :: matrix(:, :)
 
@@ -483,7 +481,7 @@ end function X(infinity_norm)
 
 
 ! ---------------------------------------------------------
-! Takes the average of the matrix and its transpose.
+!> Takes the average of the matrix and its transpose.
 subroutine X(matrix_symmetric_average)(matrix, np)
   R_TYPE,  intent(inout) :: matrix(:, :)
   integer, intent(in)    :: np
@@ -508,7 +506,7 @@ end subroutine X(matrix_symmetric_average)
 
 
 ! ---------------------------------------------------------
-! Copies the upper triangular matrix into the lower part
+!> Copies the upper triangular matrix into the lower part
 subroutine X(matrix_symmetrize)(matrix, np)
   R_TYPE,  intent(inout) :: matrix(:, :)
   integer, intent(in)    :: np
@@ -526,8 +524,8 @@ end subroutine X(matrix_symmetrize)
 
 
 ! ---------------------------------------------------------
-! sort the eigenvectors according to eigenvalues
-! with increasing absolute value
+!> sort the eigenvectors according to eigenvalues
+!! with increasing absolute value
 subroutine X(matrix_sort)(np, matrix, eigenvals)
   integer, intent(in)    :: np
   R_TYPE,  intent(inout) :: matrix(:, :)
