@@ -1150,10 +1150,11 @@ contains
     FLOAT,  optional, intent(in)    :: w0
 
     integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax, ierr, jj
-    FLOAT :: dt, dump,aa(MAX_DIM)
+    FLOAT :: dt, dump, aa(MAX_DIM)
+    CMPLX :: nn(MAX_DIM)
     type(kick_t) :: kick
     FLOAT, allocatable :: dd(:,:)
-    CMPLX, allocatable :: acc(:,:),PP(:,:),pos(:,:),nn(:,:),tret(:)
+    CMPLX, allocatable :: acc(:,:),PP(:,:),pos(:,:),tret(:)
     FLOAT :: vv(1:MAX_DIM)   
     type(unit_system_t) :: file_units
 
@@ -1166,7 +1167,6 @@ contains
     SAFE_ALLOCATE(acc(1:MAX_DIM,0:time_steps))
     SAFE_ALLOCATE(PP(1:MAX_DIM,0:time_steps))
     SAFE_ALLOCATE(pos(1:MAX_DIM,0:time_steps))
-    SAFE_ALLOCATE(nn(1:MAX_DIM,0:time_steps))
     SAFE_ALLOCATE(tret(0:time_steps))
 
     acc = M_ZERO
@@ -1231,21 +1231,20 @@ contains
 
     PP(:,0) = M_ZERO
     do istep = 0, time_steps - 1
-       nn(:,istep) = vv(:)-pos(:,istep)
-       nn(:,istep) = nn(:,istep)/sqrt(sum(nn(:,istep)**2 ))
-       tret(istep) = ddot_product(vv(:),Real(pos(:,istep)) )/P_C 
+       nn(:) = vv(:)-pos(:,istep)
+       nn(:) = nn(:)/sqrt(sum(nn(:)**2 ))
+       tret(istep) = ddot_product(vv(:),real(pos(:,istep),REAL_PRECISION))/P_C 
        PP(:,istep) = zcross_product(nn, zcross_product(nn, acc(:,istep))) 
 !       write (*,*) istep, Real(PP(:,istep)),"acc", Real (acc(:,istep))
     end do
 
-    call spectrum_hsfunction_ar_init(dt, istart, iend, time_steps, PP, pos,tret)
+    call spectrum_hsfunction_ar_init(dt, istart, iend, time_steps, PP, pos, tret)
     call spectrum_hs(out_file, spectrum, 'a', w0)
     call spectrum_hsfunction_end()
 
     SAFE_DEALLOCATE_A(acc)
     SAFE_DEALLOCATE_A(PP)
     SAFE_DEALLOCATE_A(pos)
-    SAFE_DEALLOCATE_A(nn)
     SAFE_DEALLOCATE_A(tret)
 
     POP_SUB(spectrum_hs_ar_from_acc)
