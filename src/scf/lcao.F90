@@ -833,7 +833,7 @@ contains
     type(geometry_t),  intent(in)    :: geo
     integer,           intent(in)    :: iatom
     integer,           intent(in)    :: spin_channels
-    FLOAT,             intent(inout) :: rho(:, :) !< (gr%fine%mesh%np, spin_channels)
+    FLOAT,             intent(inout) :: rho(:, :) !< (gr[%fine]%mesh%np, spin_channels)
     
     FLOAT, allocatable :: dorbital(:, :)
     CMPLX, allocatable :: zorbital(:, :)
@@ -874,7 +874,7 @@ contains
           if(states_are_real(st)) then
             call dget_ao(this, st, gr%mesh, geo, iorb, 1, dorbital, use_psi = .true.)
             !$omp parallel do
-            do ip = 1, gr%fine%mesh%np
+            do ip = 1, gr%mesh%np
               rho(ip, 1) = rho(ip, 1) + factor*dorbital(ip, 1)**2
             end do
           else
