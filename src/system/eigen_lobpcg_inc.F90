@@ -716,7 +716,7 @@ contains
     call states_blockt_mul(gr%mesh, st, constr_start, vs_start, &
       constr, vs, tmp2, xpsi1=all_constr, xpsi2=idx(1:nidx))
     call lalg_gemm(nconstr, nidx, nconstr, R_TOTYPE(M_ONE), tmp1, tmp2, R_TOTYPE(M_ZERO), tmp3)
-    call states_block_matr_mul_add(gr%mesh, st, -R_TOTYPE(M_ONE), constr_start, constr_end, vs_start, vs_end, &
+    call states_block_matr_mul_add(gr%mesh, st, -R_TOTYPE(M_ONE), constr_start, vs_start, &
       constr, tmp3, R_TOTYPE(M_ONE), vs, xpsi=all_constr, xres=idx(1:nidx))
 
     SAFE_DEALLOCATE_A(tmp1)
@@ -758,7 +758,7 @@ contains
 
     PUSH_SUB(X(lobpcg).X(block_matr_mul_add))
 
-    call states_block_matr_mul_add(gr%mesh, st, alpha, st_start, st_end, st_start, st_end, &
+    call states_block_matr_mul_add(gr%mesh, st, alpha, st_start, st_start, &
       psi, matr, beta, res, xpsi=xpsi, xres=xres)
 
     POP_SUB(X(lobpcg).X(block_matr_mul_add))
@@ -775,7 +775,7 @@ contains
 
     PUSH_SUB(X(lobpcg).X(block_matr_mul))
 
-    call states_block_matr_mul(gr%mesh, st, st_start, st_end, st_start, st_end, &
+    call states_block_matr_mul(gr%mesh, st, st_start, st_start, &
       psi, matr, res, xpsi=xpsi, xres=xres)
 
     POP_SUB(X(lobpcg).X(block_matr_mul))

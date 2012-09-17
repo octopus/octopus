@@ -88,7 +88,7 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
       call calc_xx()
 
       ! psi <= psi + X * psi2
-      call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
+      call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_start, &
         this%X(psi2)(:, :, :, ik), xx, one, st%X(psi)(:, :, :, ik)) !(4.3)
 
       call profiling_out(cpmd_orth)
@@ -245,7 +245,7 @@ subroutine X(cpmd_propagate_vel)(this, gr, hm, st, dt)
     call calc_yy()
 
     ! psi2 <= psi2 + Y * psi
-    call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_end, st%st_start, st%st_end, &
+    call states_block_matr_mul_add(gr%mesh, st, one, st%st_start, st%st_start, &
       st%X(psi)(:, :, :, ik), yy, one, this%X(psi2)(:, :, :, ik)) !(4.11)
 
     call calc_yy()
