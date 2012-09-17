@@ -1575,16 +1575,16 @@ contains
     !%Variable StatesCLDeviceMemory
     !%Type float
     !%Section Execution::Optimization
+    !%Default -512
     !%Description
-    !% This variable select the amount of OpenCL device memory that
-    !% would be used by Octopus to store the states. 
+    !% This variable selects the amount of OpenCL device memory that
+    !% will be used by Octopus to store the states. 
     !%
-    !% A number smaller than 1 indicates a fraction of the total
+    !% A positive number smaller than 1 indicates a fraction of the total
     !% device memory. A number larger than one indicates an absolute
     !% amount of memory in megabytes. A negative number indicates an
     !% amount of memory in megabytes that would be substracted from
-    !% the total device memory. The default is -512.
-    !%
+    !% the total device memory.
     !%End
     call parse_float(datasets_check('StatesCLDeviceMemory'), CNST(-512.0), st%d%cl_states_mem)
 

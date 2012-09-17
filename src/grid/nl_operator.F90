@@ -158,12 +158,11 @@ contains
 
     !%Variable OperateDouble
     !%Type integer
-    !%Default autodetect
     !%Section Execution::Optimization
     !%Description
     !% This variable selects the subroutine used to apply non-local
     !% operators over the grid for real functions.
-    !% By default the optimized version is used.
+    !% By default the optimized version is used (except in single-precision build).
     !%Option fortran 0
     !% The standard Fortran function.
     !%Option optimized 1
@@ -172,12 +171,11 @@ contains
 
     !%Variable OperateComplex
     !%Type integer
-    !%Default autodetect
     !%Section Execution::Optimization
     !%Description
     !% This variable selects the subroutine used to apply non-local
     !% operators over the grid for complex functions. 
-    !% By default the optimized version is used.
+    !% By default the optimized version is used (except in single-precision build).
     !%Option fortran 0
     !% The standard Fortran function.
     !%Option optimized 1
