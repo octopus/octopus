@@ -980,17 +980,18 @@ contains
     rho = M_ZERO
     select case (gmd_opt)
     case (INITRHO_PARAMAGNETIC)
-      SAFE_ALLOCATE(atom_rho(1:gr%fine%mesh%np, 1:1))
+      SAFE_ALLOCATE(atom_rho(1:gr%fine%mesh%np, 1:spin_channels))
 
       parallelized_in_atoms = .true.
 
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, st, gr, sb, geo, ia, 1, atom_rho)
-        rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, 1) + atom_rho(1:gr%fine%mesh%np, 1)
+        call lcao_atom_density(this, st, gr, sb, geo, ia, spin_channels, atom_rho)
+        rho(1:gr%fine%mesh%np, 1:spin_channels) = rho(1:gr%fine%mesh%np, 1:spin_channels) + &
+                                                  atom_rho(1:gr%fine%mesh%np, 1:spin_channels)
       end do
 
       if (spin_channels == 2) then
-        rho(1:gr%fine%mesh%np, 1) = M_HALF*rho(1:gr%fine%mesh%np, 1)
+        rho(1:gr%fine%mesh%np, 1) = M_HALF*(sum(rho(1:gr%fine%mesh%np, 1:2), dim=2))
         rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 1)
       end if
 
