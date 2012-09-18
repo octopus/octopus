@@ -45,8 +45,7 @@ module states_block_m
 
   public ::                    &
     states_blockt_mul,         &
-    states_block_matr_mul_add, &
-    states_block_matr_mul
+    states_block_matr_mul_add
 
 
 #if defined(HAVE_MPI)
@@ -74,10 +73,6 @@ module states_block_m
 
   interface states_blockt_mul
     module procedure dstates_blockt_mul, zstates_blockt_mul
-  end interface
-
-  interface states_block_matr_mul
-    module procedure dstates_block_matr_mul, zstates_block_matr_mul
   end interface
 
   interface states_block_matr_mul_add

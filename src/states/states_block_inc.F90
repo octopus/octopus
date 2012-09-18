@@ -256,41 +256,6 @@ end subroutine X(states_gather)
 
 
 ! ---------------------------------------------------------
-!> Multiplication of block of states with indices idxp by matrix and
-!! update columns with idxr in the result.
-!! res(xres) <- psi(xpsi) * matr.
-subroutine X(states_block_matr_mul)(mesh, st, psi_start, res_start, &
-  psi, matr, res, xpsi, xres)
-  type(mesh_t),      intent(in)  :: mesh
-  type(states_t),    intent(in)  :: st
-  integer,           intent(in)  :: psi_start
-  integer,           intent(in)  :: res_start
-  R_TYPE,            intent(in)  :: psi(:, :, psi_start:) !< (mesh%np_part, st%d%dim, psi_start:psi_end)
-  R_TYPE,            intent(in)  :: matr(:, :)
-  R_TYPE,            intent(out) :: res(:, :, :)
-  integer, optional, intent(in)  :: xpsi(:), xres(:)
-
-  PUSH_SUB(X(states_block_matr_mul))
-
-  if(present(xpsi).and.present(xres)) then
-    call X(states_block_matr_mul_add)(mesh, st, R_TOTYPE(M_ONE), psi_start, &
-      res_start, psi, matr, R_TOTYPE(M_ZERO), res, xpsi, xres)
-  else if(present(xpsi)) then
-    call X(states_block_matr_mul_add)(mesh, st, R_TOTYPE(M_ONE), psi_start, &
-      res_start, psi, matr, R_TOTYPE(M_ZERO), res, xpsi=xpsi)
-  else if(present(xres)) then
-    call X(states_block_matr_mul_add)(mesh, st, R_TOTYPE(M_ONE), psi_start, &
-      res_start, psi, matr, R_TOTYPE(M_ZERO), res, xres=xres)
-  else
-    call X(states_block_matr_mul_add)(mesh, st, R_TOTYPE(M_ONE), psi_start, &
-      res_start, psi, matr, R_TOTYPE(M_ZERO), res)
-  end if
-
-  POP_SUB(X(states_block_matr_mul))
-end subroutine X(states_block_matr_mul)
-
-
-! ---------------------------------------------------------
 !> Multiplication of block of states by matrix plus block of states
 !! (with the corresponding column indices):
 !! res(xres) <- alpha * psi(xpsi) * matr + beta * res(xres).

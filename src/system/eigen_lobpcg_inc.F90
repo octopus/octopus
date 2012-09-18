@@ -775,8 +775,8 @@ contains
 
     PUSH_SUB(X(lobpcg).X(block_matr_mul))
 
-    call states_block_matr_mul(gr%mesh, st, st_start, st_start, &
-      psi, matr, res, xpsi=xpsi, xres=xres)
+    call states_block_matr_mul_add(gr%mesh, st, R_TOTYPE(M_ONE), st_start, st_start, &
+      psi, matr, R_TOTYPE(M_ZERO), res, xpsi=xpsi, xres=xres)
 
     POP_SUB(X(lobpcg).X(block_matr_mul))
   end subroutine X(block_matr_mul)
