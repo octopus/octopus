@@ -174,6 +174,9 @@ contains
   end subroutine select_op
 
 
+!pgi$r novector
+!This is a pragma for the PGI compiler, preventing vector optimization for this subroutine
+
   ! ---------------------------------------------------------
   subroutine operate_const_weights()
     integer :: nn, ll, ii, ist
