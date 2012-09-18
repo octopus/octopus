@@ -791,8 +791,8 @@ contains
 
   !--------------------------------------------------------------
   subroutine reciprocal_lattice(rv, kv, volume, dim)
-    FLOAT,   intent(in)  :: rv(1:MAX_DIM, 1:MAX_DIM)
-    FLOAT,   intent(out) :: kv(1:MAX_DIM, 1:MAX_DIM)
+    FLOAT,   intent(in)  :: rv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
+    FLOAT,   intent(out) :: kv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
     FLOAT,   intent(out) :: volume
     integer, intent(in)  :: dim
 
@@ -801,7 +801,7 @@ contains
 
     PUSH_SUB(reciprocal_lattice)
 
-    kv(1:MAX_DIM, 1:MAX_DIM) = M_ZERO
+    kv(:,:) = M_ZERO
 
     select case(dim)
     case(3)
