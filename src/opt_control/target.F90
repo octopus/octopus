@@ -1075,7 +1075,7 @@ module opt_control_target_m
     case(oct_tg_velocity)
       ! set -(dF/dn)*psi_j as inhomogenous term --> !!! D_KS(r,t) is not implemented yet !!!
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
-         inh%zpsi(ip, idim, ist, ik) = -target%rho(ip) * psi%zpsi(ip, idim, ist, ik)
+         inh%zpsi(ip, idim, ist, ik) = - psi%occ(ist, ik) * target%rho(ip) * psi%zpsi(ip, idim, ist, ik)
       end forall
    
     case(oct_tg_current, oct_tg_density)
