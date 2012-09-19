@@ -652,6 +652,9 @@ contains
 
 
   ! ---------------------------------------------------------
+  !> Note that this routine not only computes the exponential, but
+  !! also an extra term if there is a inhomogeneous term in the
+  !! Hamiltonian hm.
   subroutine exponential_apply_all(te, der, hm, st, deltat, t, order)
     type(exponential_t), intent(inout) :: te
     type(derivatives_t), intent(inout) :: der
@@ -695,6 +698,45 @@ contains
 
     call states_end(st1)
     call states_end(hst1)
+
+    ! We now add the inhomogeneous part, if present.
+    if(hamiltonian_inh_term(hm)) then
+      !write(*, *) 'Now we apply the inhomogeneous term...'
+
+      call states_copy(st1, hm%inh_st)
+      call states_copy(hst1, hm%inh_st)
+
+
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%block_start, st%block_end
+          call batch_axpy(der%mesh%np, deltat, st1%psib(ib, ik), st%psib(ib, ik))
+        end do
+      end do
+
+      zfact = M_ONE
+      do i = 1, te%exp_order
+        zfact = zfact * deltat / (i+1)
+      
+        if (i == 1) then
+          call zhamiltonian_apply_all(hm, der, hm%inh_st, hst1, t)
+        else
+          call zhamiltonian_apply_all(hm, der, st1, hst1, t)
+        end if
+
+        do ik = st%d%kpt%start, st%d%kpt%end
+          do ib = st%block_start, st%block_end
+            call batch_set_zero(st1%psib(ib, ik))
+            call batch_axpy(der%mesh%np, -M_zI, hst1%psib(ib, ik), st1%psib(ib, ik))
+            call batch_axpy(der%mesh%np, deltat * zfact, st1%psib(ib, ik), st%psib(ib, ik))
+          end do
+        end do
+
+      end do
+
+      call states_end(st1)
+      call states_end(hst1)
+
+    end if
 
     if(present(order)) order = te%exp_order*st%d%nik*st%nst ! This should be the correct number
 

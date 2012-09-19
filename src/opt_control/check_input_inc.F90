@@ -106,28 +106,32 @@
       end if
     end if
     
+!!!!NEW
     ! the inh term in the bwd evolution of chi is taken into
     ! consideration only for certain propagators
     if(.not.oct_algorithm_is_direct(oct)) then
       if(target_mode(target) .eq. oct_targetmode_td) then
         select case(tr%method)
         case(PROP_CRANK_NICHOLSON)
-       ! for the moment exp mid point with lanczos is broken. needs to be fixed.  
-       ! case(PROP_EXPONENTIAL_MIDPOINT)
-       !   if(tr%te%exp_method .ne. EXP_LANCZOS) then
-       !     WRITE(message(1), '(a)') 'If you use time-dependent target, and you set'
-       !     write(message(2), '(a)') '"TDPropagator = exp_mid", then you must set'
-       !     write(message(3), '(a)') '"TDExponentialMethod = lanczos".'
-       !     call messages_fatal(3)
-       !   end if
+        case(PROP_QOCT_TDDFT_PROPAGATOR)
+          select case(tr%te%exp_method)
+            case(EXP_TAYLOR)
+            case default
+              write(message(1), '(a)') 'If you use time-dependent target, and you set'
+              write(message(2), '(a)') '"TDPropagator = qoct_tddft_propagator", '
+              write(message(3), '(a)') 'then you must set "TDExponentialMethod = taylor".'
+              call messages_fatal(3)
+          end select
         case default
           write(message(1), '(a)') 'If you use time-dependent target, then you must set'
-          write(message(2), '(a)') '"TDPropagator = crank_nicholson"'
-       !   write(message(3), '(a)') '"TDPropagator = exp_mid".'
-          call messages_fatal(3)
+          write(message(2), '(a)') '"TDPropagator = crank_nicholson", or'
+          write(message(3), '(a)') '"TDPropagator = qoct_tddft_propagator", '
+          call messages_fatal(4)
         end select
       end if
     end if
+!!!!ENDOFNEW
+
 
     if(target_type(target) .eq. oct_tg_excited) then
       if(sys%st%d%ispin .eq. UNPOLARIZED) then

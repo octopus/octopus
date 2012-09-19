@@ -1069,7 +1069,7 @@ module opt_control_target_m
     case(oct_tg_td_local)
       call target_build_tdlocal(target, gr, time)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
-        inh%zpsi(ip, idim, ist, ik) = -target%rho(ip) * psi%zpsi(ip, idim, ist, ik)
+        inh%zpsi(ip, idim, ist, ik) = - psi%occ(ist, ik) * target%rho(ip) * psi%zpsi(ip, idim, ist, ik)
       end forall
       
     case(oct_tg_velocity)
