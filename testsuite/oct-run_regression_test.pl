@@ -252,7 +252,7 @@ foreach my $octopus_exe (@executables){
 	if( ! -x "$command") {
 	  print "\nCannot find utility : $1 . Skipping utilities test \n";
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-	  exit 0;
+	  exit $failures;
 	}
       }
 
