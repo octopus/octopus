@@ -168,6 +168,14 @@ chomp($mpiexec);
 $mpiexec_raw = $mpiexec;
 $mpiexec_raw =~ s/\ (.*)//;
 
+if ("$mpiexec_raw" ne "") {
+    if(!( -e "$mpiexec_raw")) {
+	print "mpiexec ($mpiexec_raw) does not exist\n";
+    } elsif(!( -x "$mpiexec_raw")) {
+	print "mpiexec ($mpiexec_raw) is not executable\n";
+    }
+}
+
 # default number of processors for MPI runs is 2
 $np = 2;
 
