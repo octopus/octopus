@@ -25,5 +25,5 @@ Input: 09-density+current.03-tdoct.inp
 
 Precision : 0.000001
 
-match ; J1 1st iteration ; GREP(opt-control/convergence, '##        1 ', 40) ; -1.44007164
-match ; J2 1st iteration ; GREP(opt-control/convergence, '##        1 ', 60) ; -0.06420485
+match ; J1 1st iteration ; GREP(opt-control/convergence, '##        1 ', 40) ; -1.44008364
+match ; J2 1st iteration ; GREP(opt-control/convergence, '##        1 ', 60) ; -0.06420280

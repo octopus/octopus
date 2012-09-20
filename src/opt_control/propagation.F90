@@ -490,7 +490,6 @@ module opt_control_propagation_m
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
     type(states_t) :: psi
-    type(states_t) :: psi_aux
     type(states_t) :: st_ref
     FLOAT, allocatable :: vhxc(:, :)
 
@@ -525,28 +524,20 @@ module opt_control_propagation_m
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
-      if(target_mode(target) == oct_targetmode_td) then
-        call states_copy(psi_aux, psi)
-        call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi_aux)
-        call propagator_dt(sys%ks, hm, gr, psi_aux, td%tr, abs((i-1)*td%dt), td%dt*M_HALF, td%mu, td%max_iter, i)
-        call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, psi, st_aux = psi_aux)
-        call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
-        call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
-        call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
-        call oct_prop_output(prop_chi, i-1, chi, gr, sys%geo)
-        call states_end(psi_aux)
-      else
-        call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
-        st_ref%zpsi = psi%zpsi
-        vhxc(:, :) = hm%vhxc(:, :)
-        call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
-        st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
-        hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
-        call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, st_ref)
-        call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
-        hm%vhxc(:, :) = vhxc(:, :)
-        call oct_prop_output(prop_chi, i-1, chi, gr, sys%geo)
-      end if
+
+      ! Here propagate psi one full step, and then simply interpolate to get the state
+      ! at half the time interval. Perhaps one could gain some accuracy by performing two
+      ! successive propagations of half time step.
+      call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
+      st_ref%zpsi = psi%zpsi
+      vhxc(:, :) = hm%vhxc(:, :)
+      call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+      st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
+      hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
+      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, st_ref)
+      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+      hm%vhxc(:, :) = vhxc(:, :)
+      call oct_prop_output(prop_chi, i-1, chi, gr, sys%geo)
     end do
 
     call states_end(st_ref)
@@ -563,7 +554,6 @@ module opt_control_propagation_m
     call propagator_end(tr_chi)
 
     SAFE_DEALLOCATE_A(vhxc)
-    if(target_mode(target) == oct_targetmode_td) call states_end(psi_aux)
     call states_end(psi)
 
     POP_SUB(bwd_step_2)
@@ -574,7 +564,7 @@ module opt_control_propagation_m
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, target, par_chi, st, st_aux)
+  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, target, par_chi, st)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
     type(v_ks_t), intent(inout)                :: ks
@@ -583,7 +573,6 @@ module opt_control_propagation_m
     type(target_t), intent(inout)              :: target
     type(controlfunction_t), intent(in)        :: par_chi
     type(states_t), intent(inout)              :: st
-    type(states_t), optional, intent(inout)    :: st_aux
 
     type(states_t)                             :: inh
     integer :: j
@@ -591,13 +580,8 @@ module opt_control_propagation_m
     PUSH_SUB(update_hamiltonian_chi)
 
     if(target_mode(target) == oct_targetmode_td) then
-      if(present(st_aux)) then
-        call states_copy(inh, st_aux)
-        call target_inh(st_aux, gr, target, td%dt*iter, inh)
-      else
-        call states_copy(inh, st)
-        call target_inh(st, gr, target, td%dt*iter, inh)
-      end if
+      call states_copy(inh, st)
+      call target_inh(st, gr, target, td%dt*iter, inh)
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)
     end if
