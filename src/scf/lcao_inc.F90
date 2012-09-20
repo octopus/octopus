@@ -79,7 +79,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   R_TYPE, allocatable :: hpsi(:, :, :), overlap(:, :, :)
   FLOAT, allocatable :: ev(:)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :)
-  integer :: kstart, kend, ispin
+  integer :: kstart, kend, ispin, iunit_h, iunit_s
 
 #ifdef HAVE_MPI
   FLOAT, allocatable :: tmp(:, :)
@@ -115,6 +115,13 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 
   if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
 
+  if(this%write_matrices) then
+    iunit_h = io_open(trim(STATIC_DIR)//'lcao_hamiltonian', action='write')
+    write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
+    iunit_s = io_open(trim(STATIC_DIR)//'lcao_overlap', action='write')
+    write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
+  endif
+
   do n1 = 1, this%norbs
     
     do ispin = 1, st%d%spin_channels
@@ -133,10 +140,14 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 
         overlap(n1, n2, ispin) = X(mf_dotp)(gr%mesh, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2)
         overlap(n2, n1, ispin) = R_CONJ(overlap(n1, n2, ispin))
+        write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2, ispin)
+
         do ik = kstart, kend
           if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
           hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2)
           hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
+
+          write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamilt(n1, n2, ik))
         end do
       end do
       
@@ -147,6 +158,11 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   end do
 
   if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
+
+  if(this%write_matrices) then
+    call io_close(iunit_h)
+    call io_close(iunit_s)
+  endif
 
   SAFE_DEALLOCATE_A(hpsi)
 

@@ -28,6 +28,7 @@ module lcao_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use io_m
   use output_m
   use lalg_adv_m
   use lalg_basic_m
@@ -53,6 +54,8 @@ module lcao_m
   use states_io_m
   use submesh_m
   use system_m
+  use unit_m
+  use unit_system_m
   use v_ks_m
   use varinfo_m
 
@@ -76,6 +79,7 @@ module lcao_m
   type lcao_t
     private
     integer           :: mode
+    logical           :: write_matrices !< whether to output H and S to file
     logical           :: initialized !< are k, s and v1 matrices filled?
     integer           :: norbs   !< number of orbitals used
     integer           :: maxorbs !< largest number of orbitals that could be used
@@ -93,7 +97,7 @@ module lcao_m
     logical             :: keep_orb     !< Whether we keep orbitals in memory.
     FLOAT,   pointer    :: radius(:)    !< The localization radius of each atom orbitals
     FLOAT               :: lapdist      !< This is the extra distance that the Laplacian adds to the localization radius.
-    integer             :: mult         !< The number of basis per atomic function (with derivatives is 2, 1 otherwise).
+    integer             :: mult         !< The number of basis orbitals per atomic function (with derivatives is 2, 1 otherwise).
     integer             :: maxorb       !< The maximum value of the orbitals over all atoms.
     integer             :: nbasis       !< The total number of basis functions.
     !> The following functions map between a basis index and atom/orbital index
@@ -200,6 +204,16 @@ contains
     !% large systems and parallel in states.
     !%End
     call parse_logical(datasets_check('LCAOAlternative'), .false., this%alternative)
+
+    !%Variable LCAOWriteMatrices
+    !%Type logical
+    !%Default false
+    !%Section SCF::LCAO
+    !%Description
+    !% If this variable is set, the LCAO Hamiltonian and overlap matrices will be written to files
+    !% <tt>lcao_hamiltonian</tt> and <tt>lcao_overlap</tt> in the <tt>static</tt> directory.
+    !%End
+    call parse_logical(datasets_check('LCAOWriteMatrices'), .false., this%write_matrices)
 
     if(.not. this%alternative) then
 
