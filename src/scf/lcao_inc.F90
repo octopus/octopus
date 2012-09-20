@@ -211,12 +211,11 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 end subroutine X(lcao_wf)
 
 ! ---------------------------------------------------------
-subroutine X(init_orbitals)(this, st, gr, geo, hm, start)
+subroutine X(init_orbitals)(this, st, gr, geo, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(in)    :: hm
   integer, optional,   intent(in)    :: start
 
   integer :: iorb, ispin, ist, ik, size
@@ -324,12 +323,11 @@ end subroutine X(get_ao)
 
 ! ---------------------------------------------------------
 
-subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, hm, start)
+subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(in)    :: hm
   integer, optional,   intent(in)    :: start
 
   integer :: iatom, norbs, dof

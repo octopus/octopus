@@ -520,7 +520,7 @@ contains
 
     call lcao_init(lcao, sys%gr, sys%geo, sys%st)
 
-    call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
+    call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, start = st_start)
 
     if (.not. present(st_start)) then
       call lcao_guess_density(lcao, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
@@ -1187,12 +1187,11 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine lcao_init_orbitals(this, st, gr, geo, hm, start)
+  subroutine lcao_init_orbitals(this, st, gr, geo, start)
     type(lcao_t),        intent(inout) :: this
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
-    type(hamiltonian_t), intent(in)    :: hm
     integer, optional,   intent(in)    :: start
 
     if(.not. lcao_is_available(this)) return
@@ -1201,15 +1200,15 @@ contains
         
     if(.not. this%alternative) then
       if(states_are_real(st)) then
-        call dinit_orbitals(this, st, gr, geo, hm, start)
+        call dinit_orbitals(this, st, gr, geo, start)
       else
-        call zinit_orbitals(this, st, gr, geo, hm, start)
+        call zinit_orbitals(this, st, gr, geo, start)
       end if
     else
       if(states_are_real(st)) then
-        call dlcao_alt_init_orbitals(this, st, gr, geo, hm, start)
+        call dlcao_alt_init_orbitals(this, st, gr, geo, start)
       else
-        call zlcao_alt_init_orbitals(this, st, gr, geo, hm, start)
+        call zlcao_alt_init_orbitals(this, st, gr, geo, start)
       end if
 
     end if
