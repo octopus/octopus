@@ -144,7 +144,6 @@ contains
     !% (Experimental) Multigrid eigensolver.
     !%Option arpack 12
     !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package. 
-    !% method.
     !%End
 
     if(st%parallel_in_states) then
@@ -216,23 +215,23 @@ contains
 #if defined(HAVE_ARPACK) 
     case(RS_ARPACK) 
       	 	 
-      !%Variable EigenSolverArnoldiVectors 
+      !%Variable EigensolverArnoldiVectors 
       !%Type integer 
       !%Default 20 
-      !%Section SCF::EigenSolver 
+      !%Section SCF::Eigensolver
       !%Description 
-      !% This indicates how many Arnoldi vectors are generated 
-      !% It must satisfy EigenSolverArnoldiVectors - Number Of Eigenvectors >= 2. 
+      !% For <tt>Eigensolver = arpack</tt>, this indicates how many Arnoldi vectors are generated.
+      !% It must satisfy <tt>EigensolverArnoldiVectors</tt> - Number Of Eigenvectors >= 2. 
       !% See the ARPACK documentation for more details. It will default to  
       !% twice the number of eigenvectors (which is the number of states) 
       !%End 
-      call parse_integer(datasets_check('EigenSolverArnoldiVectors'), 2*st%nst, eigens%arnoldi_vectors) 
-      if(eigens%arnoldi_vectors-st%nst < (M_TWO - st%nst)) call input_error('EigenSolverArnoldiVectors') 
+      call parse_integer(datasets_check('EigensolverArnoldiVectors'), 2*st%nst, eigens%arnoldi_vectors) 
+      if(eigens%arnoldi_vectors-st%nst < (M_TWO - st%nst)) call input_error('EigensolverArnoldiVectors') 
       	 	 
       ! Arpack is not working in some cases, so let us check. 
       if(st%d%ispin .eq. SPINORS) then 
         write(message(1), '(a)') 'The ARPACK diagonalizer does not handle spinors (yet).' 
-        write(message(2), '(a)') 'Please provide a different EigenSolver.' 
+        write(message(2), '(a)') 'Please provide a different Eigensolver.' 
         call messages_fatal(2) 
       end if 
 #endif 
