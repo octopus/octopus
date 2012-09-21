@@ -27,7 +27,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
   FLOAT,                intent(in)    :: qtot 
   FLOAT, optional,      intent(inout) :: ex              !< Exchange energy.
   FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
-  FLOAT, optional,      intent(inout) :: deltaxc         !< The XC derivative descontinuity
+  FLOAT, optional,      intent(inout) :: deltaxc         !< The XC derivative discontinuity
   FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
   FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
 
