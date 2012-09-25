@@ -190,7 +190,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
     if(mgga) then
       ib2 = ip
       do ib = 1, n_block
-        l_tau  (1:spin_channels, ib) =   tau(ib2, 1:spin_channels)
+        ! we adjust for the different definition of tau in libxc
+        l_tau  (1:spin_channels, ib) =   tau(ib2, 1:spin_channels) / M_TWO
         l_ldens(1:spin_channels, ib) = ldens(ib2, 1:spin_channels)
         ib2 = ib2 + 1
       end do
@@ -356,7 +357,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
           ib2 = ip
           do ib = 1, n_block
             dedldens(ib2, 1:spin_channels) = dedldens(ib2, 1:spin_channels) + l_dedldens(1:spin_channels, ib)
-            vtau    (ib2, 1:spin_channels) = vtau    (ib2, 1:spin_channels) + l_dedtau  (1:spin_channels, ib)
+            ! we adjust for the different definition of tau in libxc
+            vtau    (ib2, 1:spin_channels) = vtau    (ib2, 1:spin_channels) + l_dedtau  (1:spin_channels, ib)/M_TWO
             ib2 = ib2 + 1
           end do
         end if
