@@ -1,6 +1,25 @@
- #include "global.h"
+!! Copyright (C) 2012 I. Theophilou, N. Helbig 
+!! 
+!! This program is free software; you can redistribute it and/or modify 
+!! it under the terms of the GNU General Public License as published by 
+!! the Free Software Foundation; either version 2, or (at your option) 
+!! any later version. 
+!! 
+!! This program is distributed in the hope that it will be useful, 
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+!! GNU General Public License for more details. 
+!! 
+!! You should have received a copy of the GNU General Public License 
+!! along with this program; if not, write to the Free Software 
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
+!! 02111-1307, USA. 
+!! 
+!! $Id: scf.F90 9160 2012-06-23 20:38:20Z xavier $ 
 
-  module rdmft_m
+#include "global.h"
+
+module rdmft_m
   use datasets_m
   use density_m
   use eigensolver_m
@@ -20,13 +39,13 @@
   use unit_m
   use unit_system_m
  
- implicit none
+  implicit none
 
   private
-  public ::                   &
-       rdmft_init,            &
-       rdmft_end,             &
-       scf_occ
+  public ::                &
+    rdmft_init,            &
+    rdmft_end,             &
+    scf_occ
 
 
   type rdm_t
@@ -50,11 +69,12 @@
   type(rdm_t) :: rdm  
   
 
-  contains
+contains
    
   subroutine rdmft_init(sys, hm)
     type(system_t), target,      intent(inout) :: sys
     type(hamiltonian_t), target, intent(inout) :: hm
+
     PUSH_SUB(rdmft_init)  
 
     rdm%gr     => sys%gr
