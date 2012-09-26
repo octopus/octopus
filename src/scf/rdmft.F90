@@ -66,7 +66,7 @@ module rdmft_m
     integer                      :: size
   end type rdm_t
 
-  type(rdm_t) :: rdm  
+  type(rdm_t), save :: rdm  
   
 
 contains
