@@ -1,29 +1,10 @@
-!! Copyright (C) 2012 I. Theophilou, N. Helbig
-!!
-!! This program is free software; you can redistribute it and/or modify
-!! it under the terms of the GNU General Public License as published by
-!! the Free Software Foundation; either version 2, or (at your option)
-!! any later version.
-!!
-!! This program is distributed in the hope that it will be useful,
-!! but WITHOUT ANY WARRANTY; without even the implied warranty of
-!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!! GNU General Public License for more details.
-!!
-!! You should have received a copy of the GNU General Public License
-!! along with this program; if not, write to the Free Software
-!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-!! 02111-1307, USA.
-!!
-!! $Id: scf.F90 9160 2012-06-23 20:38:20Z xavier $
-
  #include "global.h"
 
-module rdmft_m
+  module rdmft_m
   use datasets_m
   use density_m
+  use eigensolver_m
   use energy_m
-  use geometry_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -39,377 +20,345 @@ module rdmft_m
   use unit_m
   use unit_system_m
  
-  implicit none
+ implicit none
 
   private
-  public ::                &
-    rdmft_init,            &
-    calc_point_rdmft,      &
-    scf_occ
+  public ::                   &
+       rdmft_init,            &
+       rdmft_end,             &
+       scf_occ
 
 
-  type rdmft_opt_t
+  type rdm_t
     integer  :: max_iter
     FLOAT    :: mu
-    FLOAT, ALLOCATABLE :: eone(:), hartree(:,:), exchange(:,:)   
+    FLOAT, ALLOCATABLE :: eone(:)
+    FLOAT, ALLOCATABLE :: hartree(:,:)
+    FLOAT, ALLOCATABLE :: exchange(:,:)
+    FLOAT, ALLOCATABLE :: V_h(:)
+    FLOAT, ALLOCATABLE :: V_x(:)
+    
+    type(eigensolver_t) :: eigens
     ! shortcuts
     type(hamiltonian_t), pointer :: hm
     type(grid_t),        pointer :: gr
     type(states_t),      pointer :: st
     integer                      :: dim
     integer                      :: size
-  end type rdmft_opt_t
+  end type rdm_t
 
-  type(rdmft_opt_t) :: rdmft_opt  
+  type(rdm_t) :: rdm  
   
 
-contains
+  contains
    
-  subroutine rdmft_init(sys,hm)
+  subroutine rdmft_init(sys, hm)
     type(system_t), target,      intent(inout) :: sys
     type(hamiltonian_t), target, intent(inout) :: hm
-
     PUSH_SUB(rdmft_init)  
 
-    rdmft_opt%gr     => sys%gr
-    rdmft_opt%st     => sys%st
-    rdmft_opt%hm     => hm
-    rdmft_opt%dim    =  sys%gr%mesh%sb%dim
-    rdmft_opt%size = rdmft_opt%st%nst
+    rdm%gr     => sys%gr
+    rdm%st     => sys%st
+    rdm%hm     => hm
+    rdm%dim    =  sys%gr%mesh%sb%dim
+    rdm%size = rdm%st%nst
+    
+    SAFE_ALLOCATE(rdm%eone(1:rdm%st%nst))
+    SAFE_ALLOCATE(rdm%hartree(1:rdm%st%nst, 1:rdm%st%nst))
+    SAFE_ALLOCATE(rdm%exchange(1:rdm%st%nst, 1:rdm%st%nst))
+    SAFE_ALLOCATE(rdm%V_h(1:rdm%st%nst))
+    SAFE_ALLOCATE(rdm%V_x(1:rdm%st%nst))
+
+    rdm%eone = M_ZERO
+    rdm%hartree = M_ZERO
+    rdm%exchange = M_ZERO
     
     POP_SUB(rdmft_init)
 
   end subroutine rdmft_init
 
-! Calculation of the energy and the derivative wrt. the occupation numbers
-   
-  subroutine calc_point_rdmft(size, theta, objective, getgrad, df)
-    integer,     intent(in)    :: size
-    REAL_DOUBLE, intent(inout) :: theta(size)
-    REAL_DOUBLE, intent(inout) :: objective
-    integer,     intent(in)    :: getgrad
-    REAL_DOUBLE, intent(inout) :: df(size)
-     
-    FLOAT, allocatable :: V_h(:), V_x(:), dE_dn(:)  
-    FLOAT :: occsum,u, objective_new
-    integer :: ist, jst, icycle, iexit
-    FLOAT ::  theta_new(size)
+  subroutine rdmft_end()
 
-    PUSH_SUB(calc_point_rdmft)
+    PUSH_SUB(rdmft_end)
 
-    ASSERT(size == rdmft_opt%size)
-    
-    SAFE_ALLOCATE(V_h(1:rdmft_opt%st%nst))
-    SAFE_ALLOCATE(V_x(1:rdmft_opt%st%nst))
-    SAFE_ALLOCATE(dE_dn(1:rdmft_opt%st%nst))
+    SAFE_DEALLOCATE_A(rdm%eone)
+    SAFE_DEALLOCATE_A(rdm%hartree)
+    SAFE_DEALLOCATE_A(rdm%exchange)
+    SAFE_DEALLOCATE_A(rdm%V_h)
+    SAFE_DEALLOCATE_A(rdm%V_x)
 
-    objective_new=-1d-8
-    u=0.01
-    theta_new=theta
-    df=M_ZERO
+    POP_SUB(rdmft_end)
 
-    do icycle=1,rdmft_opt%max_iter
 
-      if(objective_new.lt.objective) then
-        u = 1.3*u
-        objective = objective_new
-        theta = theta_new
-      else
-        u = 0.9*u
-      end if
-      
-      do ist=1,rdmft_opt%st%nst
-        theta_new(ist)=theta(ist)-u*df(ist)
-      end do
-      
-      do ist=1,rdmft_opt%st%nst
-        rdmft_opt%st%occ(ist,1)=M_TWO*sin(theta_new(ist)*M_PI*M_TWO)**2
-      end do
+  end subroutine rdmft_end
 
-   !Calculate hartree contribution 
-      V_h = M_ZERO
-      do ist= 1,rdmft_opt%st%nst
-        do jst= 1,rdmft_opt%st%nst
-          V_h(ist) = V_h(ist)+rdmft_opt%st%occ(jst,1)*rdmft_opt%hartree(jst,ist)
-        enddo
-      end do
-
-   !Calculate exchange contribution
-      V_x=M_ZERO
-      do ist= 1,rdmft_opt%st%nst 
-        V_x(ist)=M_ZERO
-        do jst=1,rdmft_opt%st%nst
-          V_x(ist)=V_x(ist)-sqrt(rdmft_opt%st%occ(jst,1))*rdmft_opt%exchange(ist,jst)
-        end do
-        V_x(ist)=V_x(ist)*M_HALF/max(sqrt(rdmft_opt%st%occ(ist,1)),1d-16)
-      end do
-
-      occsum = M_ZERO
-      do ist = 1, rdmft_opt%st%nst
-        occsum = occsum + rdmft_opt%st%occ(ist, 1)
-      end do
-
-  !Calculate the energy derivative with respect to the occupation numbers
-      dE_dn=M_ZERO
-      if (getgrad.eq.1) then
-        dE_dn(:)=rdmft_opt%eone(:)+V_h(:)+V_x(:)
-        do ist=1,rdmft_opt%st%nst
-          df(ist)=M_FOUR*M_PI*sin(M_FOUR*theta_new(ist)*M_PI)*(dE_dn(ist) - rdmft_opt%mu)
-        end do
-      end if
-
-  !Total energy calculation without nuclei interaction  
-      rdmft_opt%hm%energy%total=M_ZERO
-      do ist=1,rdmft_opt%st%nst
-        rdmft_opt%hm%energy%total=rdmft_opt%hm%energy%total+rdmft_opt%st%occ(ist,1)*rdmft_opt%eone(ist)+&
-          M_HALF*rdmft_opt%st%occ(ist,1)*V_h(ist)+&
-          rdmft_opt%st%occ(ist,1)*V_x(ist)
-      end do
-
-      objective_new = rdmft_opt%hm%energy%total -rdmft_opt%mu*(occsum - rdmft_opt%st%qtot) 
-     
-      iexit=M_ZERO
-      do ist=1,rdmft_opt%st%nst 
-        if  (abs(df(ist)).lt.0.5d-5)  iexit=iexit+1 
-      end do
-      if (iexit==rdmft_opt%st%nst)  exit
-      cycle
-    end do
-    if (iexit.ne.rdmft_opt%st%nst) then
-      call messages_write('Info: Unable to minimize the energy for this mu.')
-      call messages_info()
-    end if
-    SAFE_DEALLOCATE_A(V_h)
-    SAFE_DEALLOCATE_A(V_x)
-    SAFE_DEALLOCATE_A(de_dn)
-
-    POP_SUB(calc_point_rdmft)
-
-  end subroutine calc_point_rdmft
-   
-
-  ! ---------------------------------------------------------
-  subroutine scf_occ(gr, hm, st, sys)
+  ! optimization of occupation numbers according to arXiv:1208.4699
+  ! ----------------------------------------------------------------
+  subroutine scf_occ(gr, hm, st, sys) 
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
     type(states_t),       intent(inout) :: st
     type(system_t),       intent(inout) :: sys
-
     
-    FLOAT :: conv_abs_occ, conv_rel_occ, abs_occ, rel_occ, objective
-    FLOAT :: occsum, smallocc, sumgi1, sumgi2, sumgim, mu1, mu2, mum
-    FLOAT, allocatable :: occout(:,:), occin(:,:),theta(:),hpsi(:,:),pot(:),rho(:),dpsi2(:,:)
-    integer :: ist, jst, ik, ip, getgrad, icycle
-    FLOAT :: df(st%nst) 
-    logical :: finish
+    integer :: ist, jst, ik, ip, ierr
+    integer :: icycle, iter, n_unpinned, iexit
+    FLOAT :: abs_occ, occsum,  sumgi1, sumgi2, sumgim, mu1, mu2, mum, muinitial, muhat, dinterv 
+    FLOAT :: el_per_state ! maximum number of electrons in each state
+    FLOAT, allocatable :: occin(:,:), occout(:,:)
+    FLOAT, allocatable :: hpsi(:,:), hpsi2(:,:), pot(:)
+    FLOAT, allocatable :: rho(:), dpsi2(:,:)
+    FLOAT, allocatable :: dE_dn(:), dE_dn2(:), ksmear(:), sigma(:)
+
+    FLOAT, parameter :: conv = CNST(0.00001)
+    FLOAT, parameter :: smallocc = CNST(0.001)
 
     PUSH_SUB(scf_occ)
-    
-    !%ConvAbsOcc
-    !%Type float
-    !%Default 0.0
-    !%Section SCF::Convergence
-    !%Description
-    !% Absolute convergence of the occupation numbers <math> n_j </math> in a RDMFT calculation:
-    !%
-    !% <math> \epsilon = \sum_{j=1}^{M} \vert n_j^{out} - n_j^{inp} \vert </math>
-    !%
-    !% where <math> M </math> is the number of natural orbitals in the calculation.
-    !% A zero value (the default) means do not use this criterion.
-    !%End
-    call parse_float(datasets_check('ConvAbsOcc'), M_ZERO, conv_abs_occ)
-    !%ConvRelOcc
-    !%Type float
-    !%Default 1e-5
-    !%Section SCF::Convergence
-    !%Description
-    !% Relative convergence of the occupation numbers <math> n_j </math> in a RDMFT calculation:
-    !%
-    !% <math> \epsilon = {1\over N} ConvAbsOcc</math>.
-    !%
-    !%End
-    call parse_float(datasets_check('ConvRelOcc'), CNST(1e-5), conv_rel_occ)
-
-    SAFE_ALLOCATE(occout(1:st%nst, 1:st%d%nik))
-    SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
-    SAFE_ALLOCATE(theta(1:st%nst))
-    SAFE_ALLOCATE(rdmft_opt%eone(1:st%nst))
-    SAFE_ALLOCATE(rdmft_opt%hartree(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(rdmft_opt%exchange(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
-    SAFE_ALLOCATE(pot (1:gr%mesh%np))
-    SAFE_ALLOCATE(rho (1:gr%mesh%np))
-    SAFE_ALLOCATE(dpsi2(1:gr%mesh%np ,1:st%d%dim))
-
-    !Initialize the occin. Smallocc should be no less than 1d-7 for numerical stability
-    smallocc = 1d-7 
-    occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
-    where(occin(:,:) < smallocc) occin(:,:)=smallocc
-    where(occin(:,:) > M_TWO-smallocc) occin(:,:)=M_TWO-smallocc
-    occout = M_ZERO
-    theta  = M_ZERO
-    rdmft_opt%eone = M_ZERO
-    hpsi = M_ZERO
-    rdmft_opt%hartree = M_ZERO
-
-    st%occ=occin
 
     call rdmft_init(sys,hm)
     
-    if (rdmft_opt%hm%d%ispin.ne.1) then
-      call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
+    SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(occout(1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(hpsi2(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(pot (1:gr%mesh%np))
+    SAFE_ALLOCATE(rho (1:gr%mesh%np))
+    SAFE_ALLOCATE(dpsi2(1:gr%mesh%np ,1:st%d%dim))
+    SAFE_ALLOCATE(dE_dn(1:st%nst))
+    SAFE_ALLOCATE(dE_dn2(1:st%nst))
+    SAFE_ALLOCATE(ksmear(1:st%nst))
+    SAFE_ALLOCATE(sigma(1:st%nst))
+
+    occout = M_ZERO
+    hpsi = M_ZERO
+    sigma = M_ZERO
+    dE_dn = M_ZERO 
+    dE_dn2 = M_ZERO
+    ksmear = 0.5
+ 
+    if(hm%d%ispin == 1) & ! unpolarized
+      el_per_state = M_TWO
+    if (hm%d%ispin ==2) & 
+     el_per_state = M_ONE
+ 
+    occout(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
+    where(occout(:,:) < smallocc) occout(:,:)=smallocc 
+    where(occout(:,:) > el_per_state-smallocc) occout(:,:)=el_per_state-smallocc
+
+    if (rdm%hm%d%ispin.ne.1) then
+      call messages_not_implemented("RDMFT  not yet implemented for spin_polarized or spinors")
     end if
-  
-   !derivative of one electron energy with respect to the natural orbitals occupation number
-    do ist = 1, rdmft_opt%st%nst
-      call dhamiltonian_apply(rdmft_opt%hm,rdmft_opt%gr%der,rdmft_opt%st%dpsi(:,:,ist, 1), hpsi, ist, 1, &
-                              terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
-      rdmft_opt%eone(ist) = dmf_dotp(rdmft_opt%gr%mesh,rdmft_opt%st%dpsi(:,1,ist,1), hpsi(:,1))
+
+
+    !derivative of one electron energy with respect to the natural orbitals occupation number
+    do ist = 1, st%nst
+      call dhamiltonian_apply(hm,gr%der,st%dpsi(:,:,ist, 1), hpsi, ist, 1, &
+                            & terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
+      rdm%eone(ist) = dmf_dotp(gr%mesh,st%dpsi(:,1,ist,1), hpsi(:,1))
     enddo
 
-    !calculates the integrals used for the hartree part of the total energy and ist derivative
-    pot=M_ZERO
-    rho=M_ZERO
-    do ist=1,rdmft_opt%st%nst
-      pot=M_ZERO
-      rho(:)=rdmft_opt%st%dpsi(:,1,ist,1)**2
-      call dpoisson_solve (psolver, pot , rho)
-      do jst=ist,rdmft_opt%st%nst
-        rdmft_opt%hartree(jst,ist) = dmf_dotp(rdmft_opt%gr%mesh,rdmft_opt%st%dpsi(:,1,jst,1)**2, pot(:))
-        rdmft_opt%hartree(ist,jst) = rdmft_opt%hartree(jst,ist)  
+    !calculates the integrals used for the hartree part of the total energy and its derivative
+    do ist = 1, st%nst
+      pot = M_ZERO
+      rho = M_ZERO
+      rho(:) = st%dpsi(:, 1, ist, 1)*st%dpsi(:, 1, ist, 1)
+      call dpoisson_solve (psolver, pot, rho)
+      do jst = ist, st%nst
+        rdm%hartree(jst, ist) = dmf_dotp(gr%mesh,st%dpsi(:,1,jst,1)**2 , pot)
+        rdm%hartree(ist, jst) = rdm%hartree(jst, ist)  
       enddo
     enddo
- 
-  !calculates the integrals used for the exchange part of the total energy and ist derivative
-    do ist= 1, rdmft_opt%st%nst 
-      do jst = ist, rdmft_opt%st%nst
-        pot = M_ZERO
-        rho = M_ZERO
-        dpsi2 = M_ZERO
-
-        rdmft_opt%exchange(ist,jst) = M_ZERO
-        call states_get_state(rdmft_opt%st,rdmft_opt%gr%mesh, jst, 1, dpsi2)
-
-        forall (ip = 1:rdmft_opt%gr%mesh%np)
-          rho(ip) = rho(ip) + dpsi2(ip, 1)*rdmft_opt%st%dpsi(ip, 1,ist,1)
-        end forall
-
+    !calculates the integrals used for the exchange part of the total energy and its derivative
+    do ist= 1, st%nst 
+      pot=M_ZERO
+      rho=M_ZERO
+      call states_get_state(st, gr%mesh, ist, 1, dpsi2)
+      do jst = ist, st%nst
+        rho(:) = dpsi2(:, 1)*st%dpsi(:, 1, jst, 1)
         call dpoisson_solve(psolver, pot, rho)
-        rdmft_opt%exchange(ist,jst)=dmf_dotp(rdmft_opt%gr%mesh, rdmft_opt%st%dpsi(:,1,ist,1)*dpsi2(:,1),pot)
-        rdmft_opt%exchange(jst,ist)=rdmft_opt%exchange(ist,jst)
+        rdm%exchange(ist, jst) = dmf_dotp(gr%mesh, rho , pot)
+        rdm%exchange(jst, ist) = rdm%exchange(ist, jst)
       end do
     end do
 
-  !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
-  !bisection to find the root of sumocc-st%qtot=M_ZERO
-    rdmft_opt%max_iter=2500
-    getgrad=1
-    mu1=M_TWO*st%eigenval(int(st%qtot*M_HALF),1)   !initial guess for mu in the neighbourhood of homo
-    mu2=CNST(0.1)*st%eigenval(int(st%qtot*M_HALF),1) 
-    do icycle=1,rdmft_opt%max_iter
-      objective=M_ZERO
-      getgrad=1
-      rdmft_opt%mu=mu1
-      
-      do ist=1,st%nst
-        theta(ist)=asin(sqrt(occin(ist,1)*M_HALF))*M_HALF/M_PI
+    dinterv = M_HALF
+    muinitial = rdm%st%eigenval(int(st%qtot*M_HALF), 1) !initial guess for mu
+    rdm%max_iter = 1000
+    do icycle = 1, rdm%max_iter  !finding the eigenvalues of the effective diagonal hamiltonian
+      rdm%st%occ = occout
+      rdm%mu = mum
+      call energy_derivatives(dE_dn, dE_dn2)
+      sigma(:) = (log(max(el_per_state - rdm%st%occ(:, 1), 1d-16)/max(rdm%st%occ(:, 1), 1d-16)))
+      do ist = 1, st%nst
+        rdm%st%eigenval(ist, 1) = dE_dn(ist) + sigma(ist)*ksmear(ist)
       end do
-      
-      call calc_point_rdmft(rdmft_opt%size, theta, objective, getgrad, df)
-      
-      occsum=M_ZERO
-      do ist=1,st%nst 
-        occout(ist,1)=M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
-        occsum=occsum+occout(ist,1)
+      mu1 = muinitial
+      mu2 = -smallocc
+      !check if initial interval contains the root, and broaden interval if necessary
+      call fill_occupations(rdm%st%eigenval, mu1, ksmear, el_per_state, occout, occsum, sumgi1)
+      call fill_occupations(rdm%st%eigenval, mu2, ksmear, el_per_state, occout, occsum, sumgi2)
+      do while (sumgi1*sumgi2.gt.M_ZERO)
+        if(sumgi2.gt.M_ZERO) then
+          mu2 = mu1
+          sumgi2 = sumgi1
+          mu1 = mu1 - dinterv
+          call fill_occupations(rdm%st%eigenval, mu1, ksmear, el_per_state, occout, occsum, sumgi1)
+        else
+          mu1 = mu2
+          sumgi1 = sumgi2
+          mu2 = mu2 + dinterv
+          call fill_occupations(rdm%st%eigenval, mu2, ksmear, el_per_state, occout, occsum, sumgi2)
+        endif
+      enddo
+
+      do iter = 1, rdm%max_iter !bisection to find the root of sumocc-st%qtot=M_ZERO, for fixed set of occupation numbers find mu
+        mum = (mu1 + mu2)*M_HALF
+        call fill_occupations(rdm%st%eigenval, mum, ksmear, el_per_state, occout, occsum, sumgim)        
+        if (sumgi1*sumgim.lt.M_ZERO) then
+          mu2 = mum
+        else
+          mu1 = mum
+          sumgi1=sumgim
+        end if
+        if (abs(sumgim).lt.conv.or.abs((mu1-mu2)*M_HALF).lt.conv)  exit
+        cycle
       end do
-      
-      sumgi1=occsum-st%qtot
-      
-      objective=M_ZERO
-      rdmft_opt%mu=mu2
-      do ist=1,st%nst
-        theta(ist)=asin(sqrt(occin(ist,1)*M_HALF))*M_HALF/M_PI
+      abs_occ = M_ZERO
+      n_unpinned = M_ZERO
+      muhat = M_ZERO
+      do ist = 1, rdm%st%nst
+        if (occout(ist, 1).lt.el_per_state-conv .and. occout(ist, 1).gt.conv) then
+          muhat = muhat + dE_dn(ist)
+          n_unpinned = n_unpinned + 1
+        end if
       end do
-      
-      call calc_point_rdmft(rdmft_opt%size, theta, objective, getgrad, df)
-      
-      occsum=M_ZERO
-      do ist=1,st%nst 
-        occout(ist,1)=M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
-        occsum=occsum+occout(ist,1)
+      muhat = muhat/n_unpinned
+
+      do ist = 1, rdm%st%nst
+        if (occout(ist,1).lt.el_per_state-conv .and. occout(ist,1).gt.conv) then
+          abs_occ = abs_occ + (dE_dn(ist)-muhat)**2
+        end if
       end do
-      
-      sumgi2=occsum-st%qtot
-      
-      if (icycle ==1.and. sumgi1*sumgi2.gt.M_ZERO) then
-        !broaden interval if the root is not in the initial one
-        mu1=1.5d0*mu1
-        mu2=0.3d0*mu2
-      end if
-      
-      objective=M_ZERO
-      mum=(mu1+mu2)*M_HALF
-      rdmft_opt%mu=mum
-      
-      do ist=1,st%nst
-        theta(ist)=asin(sqrt(occin(ist,1)*M_HALF))*M_HALF/M_PI
-      end do
-      
-      call calc_point_rdmft(rdmft_opt%size, theta, objective, getgrad, df)
-      
-      occsum=M_ZERO
-      do ist=1,st%nst 
-        occout(ist,1)=M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
-        occsum=occsum+occout(ist,1)
-      end do
-      
-      sumgim=occsum-st%qtot
-      
-      if (sumgi1*sumgim.lt.M_ZERO) then
-        mu2=mum
-      else
-        mu1=mum
-      end if
-      
-      if (abs(sumgim).lt.1d-7.or.abs((mu1-mu2)*M_HALF).lt.1d-7)  exit
-      cycle
+      abs_occ=abs_occ/n_unpinned
+      if (abs_occ.lt.conv) exit
+        cycle
+    end do !iteration to find optimal occupation numbers
+
+    !total energy without nuclei interaction  
+    rdm%hm%energy%total = M_ZERO
+    do ist = 1, rdm%st%nst
+      rdm%hm%energy%total = rdm%hm%energy%total + rdm%st%occ(ist,1)*rdm%eone(ist) &
+                                 & + M_HALF*rdm%st%occ(ist, 1)*rdm%V_h(ist) &
+                                 & + rdm%st%occ(ist,1)*rdm%V_x(ist)
     end do
+
     
-    write(message(1),'(a,1x,f11.6)') 'Occupations sum', occsum
+    write(message(1),'(a,1x,f11.5)'), 'Occupations sum', occsum
     call messages_info(1)
-    write(message(1),'(a,es15.8)') ' etot RDMFT= ',   units_from_atomic(units_out%energy, objective + rdmft_opt%hm%ep%eii)
+    write(message(1),'(a,es15.8)') ' etot RDMFT= ',   units_from_atomic(units_out%energy,rdm%hm%energy%total+rdm%hm%ep%eii) 
     write(message(2),'(a4,1x,a12)')'#st','Occupation'
     call messages_info(2)   
-    
-    do ist = 1, st%nst
-      write(message(1),'(i4,3x,f11.6)') ist, occout(ist, 1)
-      call messages_info(1)  
+    do ist = 1,st%nst
+      write(message(1),'(i4,3x,f11.5)'), ist, occout(ist,1)
+      call messages_info(1)
     end do
-    
-    STOP
-    !compute convergence criteria
-    abs_occ = M_ZERO
-    do ist = 1, st%nst
-      do ik =1 , st%d%nik
-        abs_occ = abs_occ + abs( occout(ist,ik) - occin(ist, ik))
-      end do
-    end do
-    
-    rel_occ = abs_occ / st%qtot
-    ! are we finished?
-    finish = &
-      (conv_abs_occ  <= M_ZERO .or. abs_occ  <= conv_abs_occ)  .and. &
-      (conv_rel_occ  <= M_ZERO .or. rel_occ  <= conv_rel_occ)
-    
-    SAFE_DEALLOCATE_A(occout)
-    SAFE_DEALLOCATE_A(occin)
-    POP_SUB(scf_occ)
+
+   call rdmft_end()
+
+   SAFE_DEALLOCATE_A(occout)
+   SAFE_DEALLOCATE_A(occin)
+   SAFE_DEALLOCATE_A(hpsi)
+   SAFE_DEALLOCATE_A(hpsi2)
+   SAFE_DEALLOCATE_A(pot)
+   SAFE_DEALLOCATE_A(rho)
+   SAFE_DEALLOCATE_A(dpsi2)
+   SAFE_DEALLOCATE_A(dE_dn)
+   SAFE_DEALLOCATE_A(dE_dn2)
+   SAFE_DEALLOCATE_A(ksmear)
+   SAFE_DEALLOCATE_A(sigma)
+STOP
+   POP_SUB(scf_occ)
   end subroutine scf_occ
   
+  subroutine fill_occupations(eigenval, mu, ksmear, el_per_state, occ, occsum, sumgi)  
+    FLOAT,                intent(in)    :: eigenval(rdm%st%nst,rdm%st%d%nik)
+    FLOAT,                intent(in)    :: mu
+    FLOAT,                intent(inout) :: ksmear(1:rdm%st%nst)
+    FLOAT,                intent(in)    :: el_per_state    
+    FLOAT,                intent(out)   :: occ(1:rdm%st%nst,1)
+    FLOAT,                intent(out)   :: occsum
+    FLOAT,                intent(out)   :: sumgi
+   
+    INTEGER :: ik, ist 
+    FLOAT :: xx, stepf
+
+    PUSH_SUB(fill_occupations)
+
+    do ik = 1, rdm%st%d%nik 
+      do ist = 1, rdm%st%nst
+        xx = (eigenval(ist, ik)-mu)/ksmear(ist)
+        stepf = M_ONE/(M_ONE + exp(xx))
+        occ(ist, ik) = stepf * el_per_state
+      end do
+    end do
+
+    occsum = M_ZERO
+    do ist = 1, rdm%st%nst
+      occsum = occsum + occ(ist, 1)
+    end do
+    sumgi = occsum - rdm%st%qtot
+
+    POP_SUB(fill_occupations)
+  end subroutine fill_occupations
+
+  subroutine energy_derivatives(dE_dn, dE_dn2) 
+    FLOAT, intent(inout)         :: dE_dn(1:rdm%st%nst)             
+    FLOAT, intent(inout)         :: dE_dn2(1:rdm%st%nst)
+  
+    INTEGER :: ist, jst
+    FLOAT :: dVx2, density(1:rdm%gr%mesh%np,rdm%dim),pot(1:rdm%gr%mesh%np)
+       
+    PUSH_SUB(energy_derivatives)
+             
+    !Calculate hartree contribution 
+    rdm%V_h = M_ZERO
+    do ist = 1, rdm%st%nst
+      do jst = 1, rdm%st%nst
+        rdm%V_h(ist) = rdm%V_h(ist) + rdm%st%occ(jst,1)*rdm%hartree(jst,ist)
+      enddo
+    end do
+  
+    !Calcualate exchange contribution
+    rdm%V_x = M_ZERO
+    do ist = 1, rdm%st%nst 
+      do jst=1, rdm%st%nst
+        rdm%V_x(ist) = rdm%V_x(ist) - sqrt(rdm%st%occ(jst,1))*rdm%exchange(ist,jst)
+      end do
+      rdm%V_x(ist) = rdm%V_x(ist)*M_HALF/max(sqrt(rdm%st%occ(ist,1)),1d-16)
+    end do
+ 
+    dE_dn(:) = rdm%eone(:) + rdm%V_h(:) + rdm%V_x(:)
+
+    do ist = 1, rdm%st%nst
+      dE_dn2(ist) = rdm%hartree(ist, ist)
+    end do
+
+    do ist = 1, rdm%st%nst
+      dVx2 = M_ZERO
+      do jst = 1, ist-1
+        dVx2 = dVx2 + sqrt(rdm%st%occ(jst, 1))*rdm%exchange(ist, jst)
+      end do
+      do jst = ist+1, rdm%st%nst
+        dVx2 = dVx2 + sqrt(rdm%st%occ(jst, 1))*rdm%exchange(ist, jst)
+      end do
+      dE_dn2(ist) = dE_dn2(ist) + (M_ONE/max((M_FOUR*rdm%st%occ(ist, 1)**1.5), 1d-16))*dVx2
+    end do
+
+    POP_SUB(energy_derivatives)
+  end subroutine energy_derivatives
+
 end module rdmft_m
-
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
 !! End:
+

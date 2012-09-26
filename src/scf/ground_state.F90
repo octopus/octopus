@@ -140,7 +140,7 @@ contains
 
     ! self-consistency for occupation numbers in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call scf_occ(sys%gr, hm, sys%st,sys)
+      call scf_occ(sys%gr, hm, sys%st, sys)
     endif
 
     if(sys%st%d%pack_states) call states_pack(sys%st)
