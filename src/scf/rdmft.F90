@@ -165,7 +165,7 @@ contains
     where(occout(:,:) > el_per_state-smallocc) occout(:,:)=el_per_state-smallocc
 
     if (rdm%hm%d%ispin.ne.1) then
-      call messages_not_implemented("RDMFT  not yet implemented for spin_polarized or spinors")
+      call messages_not_implemented("RDMFT not yet implemented for spin_polarized or spinors")
     end if
 
 
@@ -260,7 +260,7 @@ contains
       end do
       abs_occ=abs_occ/n_unpinned
       if (abs_occ.lt.conv) exit
-        cycle
+      cycle
     end do !iteration to find optimal occupation numbers
 
     !total energy without nuclei interaction  
@@ -272,13 +272,13 @@ contains
     end do
 
     
-    write(message(1),'(a,1x,f11.5)'), 'Occupations sum', occsum
+    write(message(1),'(a,1x,f11.5)') 'Occupations sum', occsum
     call messages_info(1)
-    write(message(1),'(a,es15.8)') ' etot RDMFT= ',   units_from_atomic(units_out%energy,rdm%hm%energy%total+rdm%hm%ep%eii) 
-    write(message(2),'(a4,1x,a12)')'#st','Occupation'
+    write(message(1),'(a,es15.8)') ' etot RDMFT= ', units_from_atomic(units_out%energy,rdm%hm%energy%total+rdm%hm%ep%eii) 
+    write(message(2),'(a4,1x,a12)') '#st','Occupation'
     call messages_info(2)   
     do ist = 1,st%nst
-      write(message(1),'(i4,3x,f11.5)'), ist, occout(ist,1)
+      write(message(1),'(i4,3x,f11.5)') ist, occout(ist,1)
       call messages_info(1)
     end do
 
@@ -377,8 +377,8 @@ STOP
   end subroutine energy_derivatives
 
 end module rdmft_m
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
 !! End:
-
