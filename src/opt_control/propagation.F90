@@ -181,7 +181,7 @@ module opt_control_propagation_m
       call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)
     end if
 
-    call target_tdcalc(target, hm, gr, sys%geo, psi, 0)
+    call target_tdcalc(target, hm, gr, sys%geo, psi, 0, td%max_iter)
 
     if(present(prop)) call oct_prop_output(prop, 0, psi, gr, sys%geo)
     ii = 1
@@ -199,10 +199,10 @@ module opt_control_propagation_m
       if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, psi)
 
       ! if td_target
-      call target_tdcalc(target, hm, gr, sys%geo, psi, i)
+      call target_tdcalc(target, hm, gr, sys%geo, psi, i, td%max_iter)
 
       ! calculate velocity and new position of each atom
-      if(vel_target_) then
+      if(move_ions_) then
          call forces_calculate(gr, sys%geo, hm%ep, psi, i*td%dt)
          do iatom=1, sys%geo%natoms
            if(i.ne.td%max_iter) then
@@ -212,10 +212,8 @@ module opt_control_propagation_m
              sys%geo%atom(iatom)%v(1:MAX_DIM) = sys%geo%atom(iatom)%v(1:MAX_DIM) + &
                M_HALF * sys%geo%atom(iatom)%f(1:MAX_DIM)*td%dt/species_weight(sys%geo%atom(iatom)%spec)
            end if
-           if(move_ions_) then
-             sys%geo%atom(iatom)%x(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM) + &
-               sys%geo%atom(iatom)%v(1:MAX_DIM)*td%dt
-           end if
+           sys%geo%atom(iatom)%x(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM) + &
+           sys%geo%atom(iatom)%v(1:MAX_DIM)*td%dt
          end do
          call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = i*td%dt)
       end if
@@ -366,7 +364,7 @@ module opt_control_propagation_m
       call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par, psi)
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i)
-      call target_tdcalc(target, hm, gr, sys%geo, psi, i) 
+      call target_tdcalc(target, hm, gr, sys%geo, psi, i, td%max_iter) 
       call oct_prop_output(prop_psi, i, psi, gr, sys%geo)
       call oct_prop_check(prop_chi, chi, gr, i)
     end do

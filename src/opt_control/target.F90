@@ -24,6 +24,7 @@ module opt_control_target_m
   use density_m
   use derivatives_m
   use excited_states_m
+  use forces_m
   use geometry_m
   use global_m
   use grid_m
@@ -694,6 +695,10 @@ module opt_control_target_m
              end do
           end do
        end if
+
+       target%dt = td%dt
+       SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
+       target%td_fitness = M_ZERO
        
     case(oct_tg_current)
       message(1) =  'Info: Target is a current.'
@@ -985,19 +990,20 @@ module opt_control_target_m
   !> Calculates, at a given point in time marked by the integer
   !! index, the integrand of the target functional:
   !! <Psi(t)|\hat{O}(t)|Psi(t)>.
-  subroutine target_tdcalc(target, hm, gr, geo, psi, time)
+  subroutine target_tdcalc(target, hm, gr, geo, psi, time, max_time)
     type(target_t),      intent(inout) :: target
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: psi
     integer,             intent(in)    :: time
+    integer,             intent(in)    :: max_time
 
     CMPLX, allocatable :: opsi(:, :)
     integer :: ist, ip
-    FLOAT :: acc(MAX_DIM)
+    FLOAT :: acc(MAX_DIM), dt
+    integer :: iatom, idim, ik
 
-    if(target_type(target)  .eq. oct_tg_velocity) return
     if(target_mode(target)  .ne. oct_targetmode_td) return
 
     PUSH_SUB(target_tdcalc)
@@ -1005,6 +1011,37 @@ module opt_control_target_m
     target%td_fitness(time) = M_ZERO
 
     select case(target%type)
+    case(oct_tg_velocity)
+
+      ! If the ions move, the target is computed in the propagation routine.
+      if(.not.target_move_ions(target)) then
+
+      SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
+      opsi = M_z0
+      ! WARNING This does not work for spinors.
+      do iatom = 1, geo%natoms
+        geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
+        do ik = 1, psi%d%nik
+          do ist = 1, psi%nst
+            do idim = 1, gr%sb%dim
+              opsi(1:gr%mesh%np, 1) = target%grad_local_pot(iatom, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
+              geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) + psi%occ(ist, ik) * &
+                zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik))
+            end do
+          end do
+        end do
+      end do
+      SAFE_DEALLOCATE_A(opsi)
+
+      end if
+
+      dt = target%dt
+      if( (time .eq. 0) .or. (time .eq. max_time) ) dt = target%dt * M_HALF
+      do iatom = 1, geo%natoms
+         geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) + &
+           geo%atom(iatom)%f(1:MAX_DIM) * dt / species_weight(geo%atom(iatom)%spec)
+      end do
+
     case(oct_tg_td_local)
 
       !!!! WARNING Here one should build the time-dependent target.
