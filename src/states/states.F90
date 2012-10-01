@@ -1952,6 +1952,10 @@ contains
       message(1) = 'Occupations do not integrate to total charge.'
       write(message(2), '(6x,f12.8,a,f12.8)') charge, ' != ', st%qtot
       call messages_warning(2)
+      if(charge < M_EPSILON) then
+        message(1) = "There don't seem to be any electrons at all!"
+        call messages_fatal(1)
+      endif
     end if
 
     if(st%d%ispin == SPINORS) then
