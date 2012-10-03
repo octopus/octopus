@@ -75,13 +75,15 @@ module command_line_m
             getopt_octopus,              &
             getopt_casida_spectrum,      &
             getopt_center_geom,          &
+            getopt_dielectric_function,  &
             getopt_propagation_spectrum, &
             getopt_rotatory_strength,    &
             getopt_vibrational,          &
             getopt_xyz_anim,             &
             getopt_oscillator_strength,  &
             getopt_harmonic_spectrum,    &
-            getopt_help
+            getopt_help,                 &
+            getopt_photoelectron_spectrum
 #if FC_COMMAND_LINE_ARGUMENTS != 2003
   public :: command_argument_count,     &
             get_command_argument
@@ -94,7 +96,7 @@ module command_line_m
 
   !> Each program/utility that needs to use the getopt features should have
   !! an interface here -- the definition of the procedure should be given in the
-  !! getopt_f.c file.
+  !! getopt_f.c file. And they MUST be listed under public above, or they have no effect!
   interface
     subroutine getopt_octopus
     end subroutine getopt_octopus
@@ -151,9 +153,18 @@ module command_line_m
       character(len=*) :: name
     end subroutine getopt_help
     
-    subroutine getopt_photoelectron_spectrum(mode,interp)
+    subroutine getopt_photoelectron_spectrum(mode, interp, estep, espan, &
+      thstep, thspan, phstep, phspan, pol, center)
       integer          :: mode
       integer          :: interp
+      real(8)          :: estep
+      real(8)          :: espan(2)
+      real(8)          :: thstep
+      real(8)          :: thspan(2)
+      real(8)          :: phstep
+      real(8)          :: phspan(2)
+      real(8)          :: pol(3)
+      real(8)          :: center(3)
     end subroutine getopt_photoelectron_spectrum
 
   end interface
@@ -196,10 +207,12 @@ module command_line_m
     subroutine set_number_clarg(argc)
       integer :: argc
     end subroutine set_number_clarg
+
     subroutine set_clarg(i, argstring)
       integer :: i
       character(len=*) :: argstring
     end subroutine set_clarg
+
     subroutine clean_clarg()
     end subroutine clean_clarg
   end interface

@@ -112,25 +112,26 @@ module lalg_adv_m
   interface lalg_lowest_eigensolve
     module procedure dlowest_eigensolve, zlowest_eigensolve
   end interface
+
 contains
 
-  !-------------------------------------------------
-  !
-  ! This routine calculates the exponential of a matrix by using an
-  ! eigenvalue decomposition.
-  !
-  ! For the hermitian case:
-  !
-  !   A = V D V^T => exp(A) = V exp(D) V^T
-  !
-  ! and in general
-  !
-  !   A = V D V^-1 => exp(A) = V exp(D) V^-1
-  !
-  ! This is slow but it is simple to implement, and for the moment it
-  ! does not affect performance.
-  !
-  !---------------------------------------------
+  !>-------------------------------------------------
+  !!
+  !! This routine calculates the exponential of a matrix by using an
+  !! eigenvalue decomposition.
+  !!
+  !! For the hermitian case:
+  !!
+  !!   A = V D V^T => exp(A) = V exp(D) V^T
+  !!
+  !! and in general
+  !!
+  !!   A = V D V^-1 => exp(A) = V exp(D) V^-1
+  !!
+  !! This is slow but it is simple to implement, and for the moment it
+  !! does not affect performance.
+  !!
+  !!---------------------------------------------
   subroutine zlalg_exp(nn, pp, aa, ex, hermitian)
     integer,           intent(in)      :: nn
     CMPLX,             intent(in)      :: pp
@@ -192,22 +193,22 @@ contains
   end subroutine zlalg_exp
 
 
-  !-------------------------------------------------
-  !
-  ! This routine calculates phi(pp*A), where A is a matrix,
-  ! pp is any complex number, and phi is the function:
-  ! 
-  ! phi(x) = (e^x - 1)/x
-  !
-  ! For the Hermitian case, for any function f:
-  !
-  !   A = V D V^T => f(A) = V f(D) V^T
-  !
-  ! and in general
-  !
-  !   A = V D V^-1 => f(A) = V f(D) V^-1
-  !
-  !---------------------------------------------
+  !>-------------------------------------------------
+  !!
+  !! This routine calculates phi(pp*A), where A is a matrix,
+  !! pp is any complex number, and phi is the function:
+  !! 
+  !! phi(x) = (e^x - 1)/x
+  !!
+  !! For the Hermitian case, for any function f:
+  !!
+  !!   A = V D V^T => f(A) = V f(D) V^T
+  !!
+  !! and in general
+  !!
+  !!   A = V D V^-1 => f(A) = V f(D) V^-1
+  !!
+  !!---------------------------------------------
   subroutine zlalg_phi(nn, pp, aa, ex, hermitian)
     integer,           intent(in)      :: nn
     CMPLX,             intent(in)      :: pp
@@ -283,7 +284,6 @@ contains
 #endif
 
 end module lalg_adv_m
-
 
 !! Local Variables:
 !! mode: f90
