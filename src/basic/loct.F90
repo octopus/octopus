@@ -176,10 +176,10 @@ module loct_m
     end subroutine oct_printRecipe
   end interface loct_printRecipe
 
-  interface loct_exit_failure
+  interface
     subroutine loct_exit_failure()
     end subroutine loct_exit_failure
-  end interface loct_exit_failure
+  end interface
 
   ! ---------------------------------------------------------
   !> GD library
@@ -218,10 +218,10 @@ module loct_m
   end interface loct_gdimage_get_pixel_rgb
 #endif
 
- interface get_memory_usage
+ interface
    integer(SIZEOF_VOIDP) function get_memory_usage()
    end function get_memory_usage
- end interface get_memory_usage
+ end interface
 
 contains
 
