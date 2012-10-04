@@ -58,38 +58,38 @@ module batch_ops_m
   interface batch_set
     module procedure dbatch_set
     module procedure zbatch_set
-  end interface
+  end interface batch_set
 
   interface batch_axpy
     module procedure dbatch_axpy_const
     module procedure zbatch_axpy_const
     module procedure dbatch_axpy_vec
     module procedure zbatch_axpy_vec
-  end interface
+  end interface batch_axpy
 
   interface batch_scal
     module procedure dbatch_scal_vec
     module procedure zbatch_scal_vec
-  end interface
+  end interface batch_scal
 
   interface batch_xpay
     module procedure dbatch_xpay_vec
     module procedure zbatch_xpay_vec
-  end interface
+  end interface batch_xpay
 
   interface batch_set_state
     module procedure dbatch_set_state1
     module procedure zbatch_set_state1
     module procedure dbatch_set_state2
     module procedure zbatch_set_state2
-  end interface
+  end interface batch_set_state
 
   interface batch_get_state
     module procedure dbatch_get_state1
     module procedure zbatch_get_state1
     module procedure dbatch_get_state2
     module procedure zbatch_get_state2
-  end interface
+  end interface batch_get_state
 
   interface batch_get_points
     module procedure dbatch_get_points

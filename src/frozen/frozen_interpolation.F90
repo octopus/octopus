@@ -36,12 +36,12 @@ module frozen_interpolation_m
   interface frozen_interpolation_init
     module procedure frozen_intrp_init_1d
     module procedure frozen_intrp_init_md
-  end interface
+  end interface frozen_interpolation_init
 
   interface frozen_interpolation
     module procedure frozen_intrp_1d
     module procedure frozen_intrp_md
-  end interface
+  end interface frozen_interpolation
 
 contains
 

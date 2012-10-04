@@ -72,11 +72,11 @@ module submesh_m
 
   interface submesh_add_to_mesh
     module procedure ddsubmesh_add_to_mesh, zdsubmesh_add_to_mesh
-  end interface
+  end interface submesh_add_to_mesh
 
   interface submesh_to_mesh_dotp
     module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp
-  end interface
+  end interface submesh_to_mesh_dotp
 
 contains
   

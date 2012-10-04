@@ -38,11 +38,11 @@ module space_m
 
   interface operator(==)
     module procedure space_equal
-  end interface
+  end interface operator(==)
 
   interface operator(/=)
     module procedure space_not_equal
-  end interface
+  end interface operator(/=)
 
   type space_t
     integer :: dim

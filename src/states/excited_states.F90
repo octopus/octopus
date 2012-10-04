@@ -54,19 +54,19 @@ module excited_states_m
 
   interface dstates_mpdotp
     module procedure dstates_mpdotp_g, dstates_mpdotp_x
-  end interface
+  end interface dstates_mpdotp
 
   interface zstates_mpdotp
     module procedure zstates_mpdotp_g, zstates_mpdotp_x
-  end interface
+  end interface zstates_mpdotp
 
   interface dstates_mpmatrixelement
     module procedure dstates_mpmatrixelement_g
-  end interface
+  end interface dstates_mpmatrixelement
 
   interface zstates_mpmatrixelement
     module procedure zstates_mpmatrixelement_g
-  end interface
+  end interface zstates_mpmatrixelement
 
   type states_pair_t
     integer :: i

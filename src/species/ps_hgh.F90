@@ -20,9 +20,9 @@
 #include "global.h"
 
 module ps_hgh_m
-  ! For information about the Hartwinger-Goedecker-Hutter pseudopotentials, take a look at:
-  !  (1) S. Goedecker, M. Teter and J. Hutter, Phys. Rev. B 54, 1703 (1996).
-  !  (2) C. Hartwinger, S. Goedecker and J. Hutter, Phys. Rev. B 58, 3641 (1998).
+  !< For information about the Hartwinger-Goedecker-Hutter pseudopotentials, take a look at:
+  !!  (1) S. Goedecker, M. Teter and J. Hutter, Phys. Rev. B 54, 1703 (1996).
+  !!  (2) C. Hartwinger, S. Goedecker and J. Hutter, Phys. Rev. B 58, 3641 (1998).
   use atomic_m
   use global_m
   use io_m
@@ -41,11 +41,11 @@ module ps_hgh_m
     hgh_debug,    &
     hgh_end
 
-  ! The following data type contains:
-  !   (a) the pseudopotential parameters, as read from a *.hgh file,
-  !   (b) auxiliary intermediate functions, to store stuff before passing it to the "ps" variable.
+  !> The following data type contains:
+  !!   (a) the pseudopotential parameters, as read from a *.hgh file,
+  !!   (b) auxiliary intermediate functions, to store stuff before passing it to the "ps" variable.
   type hgh_t
-    ! HGH parameters.
+    !< HGH parameters.
     character(len=5) :: atom_name
     integer          :: z_val
     FLOAT            :: rlocal
@@ -55,14 +55,14 @@ module ps_hgh_m
     FLOAT            :: k(0:3, 1:3, 1:3)
 
     type(valconf_t)  :: conf
-    integer          :: l_max     ! Maximum l for the Kleinman-Bylander component.
+    integer          :: l_max     !< Maximum l for the Kleinman-Bylander component.
 
-    FLOAT, pointer   :: vlocal(:) ! Local potential
-    FLOAT, pointer   :: kb(:,:,:) ! KB projectors
-    FLOAT, pointer   :: kbr(:)    ! KB radii
+    FLOAT, pointer   :: vlocal(:) !< Local potential
+    FLOAT, pointer   :: kb(:,:,:) !< KB projectors
+    FLOAT, pointer   :: kbr(:)    !< KB radii
     FLOAT, pointer   :: rphi(:,:), eigen(:)
 
-    ! Logarithmic grid parameters
+    !> Logarithmic grid parameters
     type(logrid_t) :: g
   end type hgh_t
 
@@ -70,10 +70,11 @@ module ps_hgh_m
 
   interface vlocalr
     module procedure vlocalr_scalar, vlocalr_vector
-  end interface
+  end interface vlocalr
+
   interface projectorr
     module procedure projectorr_scalar, projectorr_vector
-  end interface
+  end interface projectorr
 
 contains
 

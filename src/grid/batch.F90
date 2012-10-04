@@ -116,14 +116,14 @@ module batch_m
     module procedure  batch_init_empty_linear
     module procedure dbatch_init_contiguous
     module procedure zbatch_init_contiguous
-  end interface
+  end interface batch_init
 
   interface batch_add_state
     module procedure dbatch_add_state
     module procedure zbatch_add_state
     module procedure dbatch_add_state_linear
     module procedure zbatch_add_state_linear
-  end interface
+  end interface batch_add_state
 
   integer, public, parameter :: &
     BATCH_NOT_PACKED = 0,       &

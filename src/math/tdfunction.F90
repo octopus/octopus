@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-!--------------------------------------------------------------
-! This module defines "time-dependent functions", to be used by
-! the lasers module, or in the future in order to define time-dependent
-! magnetic fields.
-!--------------------------------------------------------------
+!>--------------------------------------------------------------
+!! This module defines "time-dependent functions", to be used by
+!! the lasers module, or in the future in order to define time-dependent
+!! magnetic fields.
+!!--------------------------------------------------------------
 module tdfunction_m
   use c_pointer_m
   use datasets_m
@@ -89,12 +89,12 @@ module tdfunction_m
   type tdf_t
     private
     integer :: mode        = TDF_EMPTY
-    FLOAT   :: t0          = M_ZERO  ! the time at the maximum of the pulse
-    FLOAT   :: tau0        = M_ZERO  ! the width of the pulse
-    FLOAT   :: tau1        = M_ZERO  ! for the ramped shape, the length of the "ramping" intervals
+    FLOAT   :: t0          = M_ZERO  !< the time at the maximum of the pulse
+    FLOAT   :: tau0        = M_ZERO  !< the width of the pulse
+    FLOAT   :: tau1        = M_ZERO  !< for the ramped shape, the length of the "ramping" intervals
     FLOAT   :: a0          = M_ZERO
     FLOAT   :: omega0      = M_ZERO
-    FLOAT   :: dt          = M_ZERO ! the time-discretization value.
+    FLOAT   :: dt          = M_ZERO !< the time-discretization value.
     FLOAT   :: init_time   = M_ZERO
     FLOAT   :: final_time  = M_ZERO
     integer :: niter       = 0
@@ -111,11 +111,11 @@ module tdfunction_m
   interface tdf_set_numerical
     module procedure tdf_set_numericalr, &
                      tdf_set_numericalr1
-  end interface
+  end interface tdf_set_numerical
 
   interface tdf
     module procedure tdfi, tdft
-  end interface
+  end interface tdf
 
   contains
 

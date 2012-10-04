@@ -36,12 +36,12 @@ module io_binary_m
   interface io_binary_write
     module procedure swrite_binary, dwrite_binary, cwrite_binary, zwrite_binary, iwrite_binary, lwrite_binary
     module procedure iwrite_binary2, lwrite_binary2, zwrite_binary3, cwrite_binary3, dwrite_binary3
-  end interface
+  end interface io_binary_write
 
   interface io_binary_read
     module procedure sread_binary, dread_binary, cread_binary, zread_binary, iread_binary, lread_binary
     module procedure iread_binary2, lread_binary2, zread_binary3, cread_binary3, dread_binary3
-  end interface
+  end interface io_binary_read
 
 contains
 

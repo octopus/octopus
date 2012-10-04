@@ -59,29 +59,29 @@ module unit_m
 
   interface operator (*)
     module procedure units_multiply
-  end interface
+  end interface operator (*)
 
   interface operator (/)
     module procedure units_divide
-  end interface
+  end interface operator (/)
 
   interface operator (**)
     module procedure units_pow
-  end interface
+  end interface operator (**)
 
   interface units_to_atomic
     module procedure dunits_to_atomic, zunits_to_atomic, &
       dunits_to_atomic_4, zunits_to_atomic_4
-  end interface
+  end interface units_to_atomic
 
   interface units_from_atomic
     module procedure dunits_from_atomic, zunits_from_atomic, &
       dunits_from_atomic_4, zunits_from_atomic_4
-  end interface
+  end interface units_from_atomic
   
   interface sqrt
     module procedure units_sqrt
-  end interface
+  end interface sqrt
 
 contains
 

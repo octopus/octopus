@@ -41,11 +41,11 @@ module types_m
 
   interface operator(==)
     module procedure types_equal
-  end interface
+  end interface operator(==)
 
   interface operator(/=)
     module procedure types_not_equal
-  end interface
+  end interface operator(/=)
 
 #ifdef SINGLE_PRECISION
   integer :: sizes(3) = (/4, 8, 4/)

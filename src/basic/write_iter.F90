@@ -110,7 +110,8 @@ module write_iter_m
       integer   :: n
       real(4)   :: d(n)
     end subroutine write_iter_float_n
-  end interface
+  end interface write_iter_double
+
   interface write_iter_int
     subroutine write_iter_int_1(out, i, n)
       use c_pointer_m
@@ -124,7 +125,7 @@ module write_iter_m
       integer   :: n
       integer   :: i(n)
     end subroutine write_iter_int_n
-  end interface
+  end interface write_iter_int
 
 end module write_iter_m
 

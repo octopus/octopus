@@ -73,7 +73,7 @@ module parser_m
       character(len=*), intent(in)  :: file_out
       integer, intent(in) :: mpiv_node
     end function oct_parse_init
-  end interface
+  end interface parse_init
 
   interface parse_putsym
     subroutine oct_parse_putsym_int(sym, i)
@@ -85,24 +85,24 @@ module parser_m
       real(8), intent(in) :: d
     end subroutine oct_parse_putsym_double
     module procedure oct_parse_putsym_double4
-  end interface
+  end interface parse_putsym
 
   interface parse_input_file
     integer function oct_parse_input(file_in)
       character(len=*), intent(in)  :: file_in
     end function oct_parse_input
-  end interface
+  end interface parse_input_file
 
   interface parse_end
     subroutine oct_parse_end()
     end subroutine oct_parse_end
-  end interface
+  end interface parse_end
 
   interface parse_isdef
     integer function oct_parse_isdef(name)
       character(len=*), intent(in) :: name
     end function oct_parse_isdef
-  end interface
+  end interface parse_isdef
 
   interface parse_integer
     subroutine oct_parse_int(name, def, res)
@@ -110,7 +110,7 @@ module parser_m
       integer, intent(in)          :: def
       integer, intent(out)         :: res
     end subroutine oct_parse_int
-  end interface
+  end interface parse_integer
 
   interface parse_float
     subroutine oct_parse_double(name, def, res)
@@ -120,7 +120,7 @@ module parser_m
     end subroutine oct_parse_double
     module procedure oct_parse_double4_unit
     module procedure oct_parse_double8_unit
-  end interface
+  end interface parse_float
 
   interface parse_cmplx
     subroutine oct_parse_complex(name, def, res)
@@ -129,7 +129,7 @@ module parser_m
       complex(8), intent(out)      :: res
     end subroutine oct_parse_complex
     module procedure oct_parse_complex4
-  end interface
+  end interface parse_cmplx
 
   interface parse_string
     subroutine oct_parse_string(name, def, res)
@@ -144,21 +144,21 @@ module parser_m
       character(len=*), intent(in) :: name
       type(block_t), intent(out) :: blk
     end function oct_parse_block
-  end interface
+  end interface parse_block
 
   interface parse_block_end
     subroutine oct_parse_block_end(blk)
       use block_t_m
       type(block_t), intent(in) :: blk
     end subroutine oct_parse_block_end
-  end interface
+  end interface parse_block_end
 
   interface parse_block_n
     integer function oct_parse_block_n(blk)
       use block_t_m
       type(block_t), intent(in) :: blk
     end function oct_parse_block_n
-  end interface
+  end interface parse_block_n
 
   interface parse_block_cols
     integer function oct_parse_block_cols(blk, line)
@@ -166,7 +166,7 @@ module parser_m
       type(block_t), intent(in) :: blk
       integer, intent(in) :: line
     end function oct_parse_block_cols
-  end interface
+  end interface parse_block_cols
 
   interface parse_block_integer
     subroutine oct_parse_block_int(blk, l, c, res)
@@ -175,7 +175,7 @@ module parser_m
       integer, intent(in)          :: l, c
       integer, intent(out)         :: res
     end subroutine oct_parse_block_int
-  end interface
+  end interface parse_block_integer
 
   interface parse_block_float
     subroutine oct_parse_block_double(blk, l, c, res)
@@ -187,7 +187,7 @@ module parser_m
     module procedure oct_parse_block_double4
     module procedure oct_parse_block_double4_unit
     module procedure oct_parse_block_double8_unit
-  end interface
+  end interface parse_block_float
 
   interface parse_block_cmplx
     subroutine oct_parse_block_complex(blk, l, c, res)
@@ -197,7 +197,7 @@ module parser_m
       complex(8), intent(out)      :: res
     end subroutine oct_parse_block_complex
     module procedure oct_parse_block_complex4
-  end interface
+  end interface parse_block_cmplx
 
   interface parse_block_string
     subroutine oct_parse_block_string(blk, l, c, res)
@@ -206,7 +206,7 @@ module parser_m
       integer, intent(in)          :: l, c
       character(len=*), intent(out):: res
     end subroutine oct_parse_block_string
-  end interface
+  end interface parse_block_string
 
   ! ---------------------------------------------------------
   !> The public subroutine parse_expression accepts two

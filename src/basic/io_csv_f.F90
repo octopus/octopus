@@ -34,7 +34,7 @@ module io_csv_m
 
   interface io_csv_read
     module procedure sread_csv, dread_csv,  cread_csv, zread_csv, iread_csv, lread_csv
-  end interface
+  end interface io_csv_read
 
 contains
 

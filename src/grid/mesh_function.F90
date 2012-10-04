@@ -77,28 +77,28 @@ module mesh_function_m
   interface mf_surface_integral
     module procedure dmf_surface_integral_scalar, dmf_surface_integral_vector, &
                      zmf_surface_integral_scalar, zmf_surface_integral_vector
-  end interface
+  end interface mf_surface_integral
 
   interface mf_line_integral
     module procedure dmf_line_integral_scalar, dmf_line_integral_vector, &
                      zmf_line_integral_scalar, zmf_line_integral_vector
-  end interface
+  end interface mf_line_integral
 
   interface dmf_dotp
     module procedure dmf_dotp_1, dmf_dotp_2
-  end interface
+  end interface dmf_dotp
 
   interface zmf_dotp
     module procedure zmf_dotp_1, zmf_dotp_2
-  end interface
+  end interface zmf_dotp
 
   interface dmf_nrm2
     module procedure dmf_nrm2_1, dmf_nrm2_2
-  end interface
+  end interface dmf_nrm2
 
   interface zmf_nrm2
     module procedure zmf_nrm2_1, zmf_nrm2_2
-  end interface
+  end interface zmf_nrm2
 
   type(mesh_t), pointer :: mesh_aux
 

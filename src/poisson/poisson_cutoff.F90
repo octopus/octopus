@@ -80,7 +80,12 @@ contains
   ! ---------------------------------------------------------
   real(4) function poisson_cutoff_intcoslog4(mu, gx, gy)
     real(4), intent(in) :: mu, gx, gy
-    poisson_cutoff_intcoslog4 = intcoslog(real(mu, 8), real(gx, 8), real(gy, 8))  
+
+    PUSH_SUB(poisson_cutoff_intcoslog4)
+
+    poisson_cutoff_intcoslog4 = intcoslog(real(mu, 8), real(gx, 8), real(gy, 8))
+
+    PUSH_SUB(poisson_cutoff_intcoslog4)
   end function poisson_cutoff_intcoslog4
   ! ---------------------------------------------------------
 
@@ -88,9 +93,15 @@ contains
   ! ---------------------------------------------------------
   real(4) function poisson_cutoff_2d_0d4(x, y)
     real(4), intent(in) :: x, y
+
     real(8) :: res8
+
+    PUSH_SUB(poisson_cutoff_2d_0d4)
+
     res8 = c_poisson_cutoff_2d_0d(real(x, 8), real(y, 8))
     poisson_cutoff_2d_0d4 = real(res8, 4)
+
+    POP_SUB(poisson_cutoff_2d_0d4)
   end function poisson_cutoff_2d_0d4
   ! ---------------------------------------------------------
 
@@ -98,9 +109,15 @@ contains
   ! ---------------------------------------------------------
   real(4) function poisson_cutoff_2d_1d4(gy, gx, r_c)
     real(4), intent(in) :: gy, gx, r_c
+
     real(8) :: res8
+
+    PUSH_SUB(poisson_cutoff_2d_1d4)
+
     res8 = c_poisson_cutoff_2d_1d(real(gy, 8), real(gx, 8), real(r_c, 8))
     poisson_cutoff_2d_1d4 = real(res8, 4)
+
+    POP_SUB(poisson_cutoff_2d_1d4)
   end function poisson_cutoff_2d_1d4
   ! ---------------------------------------------------------
 
@@ -108,9 +125,15 @@ contains
   ! ---------------------------------------------------------
   real(4) function poisson_cutoff_1d_0d4(g, a, r_c)
     real(4), intent(in) :: g, a, r_c
+
     real(8) :: res8
+
+    PUSH_SUB(poisson_cutoff_1d_0d4)
+
     res8 = c_poisson_cutoff_1d_0d(real(g, 8), real(a, 8), real(r_c, 8))
     poisson_cutoff_1d_0d4 = real(res8, 4)
+
+    POP_SUB(poisson_cutoff_1d_0d4)
   end function poisson_cutoff_1d_0d4
   ! ---------------------------------------------------------
 
@@ -118,9 +141,15 @@ contains
   ! ---------------------------------------------------------
   real(4) function poisson_cutoff_3d_1d_finite4(gx, gperp, xsize, rsize)
     real(4), intent(in) :: gx, gperp, rsize, xsize
+
     real(8) :: res8
+
+    PUSH_SUB(poisson_cutoff_3d_1d_finite4)
+
     res8 = c_poisson_cutoff_3d_1d_finite(real(gx, 8), real(gperp, 8), real(xsize, 8), real(rsize, 8))
     poisson_cutoff_3d_1d_finite4 = real(res8, 4)
+
+    POP_SUB(poisson_cutoff_3d_1d_finite4)
   end function poisson_cutoff_3d_1d_finite4
   ! ---------------------------------------------------------
   
@@ -128,7 +157,12 @@ contains
   ! ---------------------------------------------------------
   FLOAT function poisson_cutoff_3D_0D(x, r) result(cutoff)
     FLOAT, intent(in) ::  x, r
+
+    PUSH_SUB(poisson_cutoff_3D_0D)
+
     cutoff = M_ONE - cos(x*r)
+
+    POP_SUB(poisson_cutoff_3D_0D)
   end function poisson_cutoff_3D_0D
   ! ---------------------------------------------------------
 

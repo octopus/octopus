@@ -19,8 +19,8 @@
 
 #include "global.h"
 
-! This module contains routines to multiply blocks of states by
-! blocks of states and general dense matrices.
+!> This module contains routines to multiply blocks of states by
+!! blocks of states and general dense matrices.
 
 module states_block_m
   use batch_m
@@ -73,28 +73,28 @@ module states_block_m
 
   interface states_blockt_mul
     module procedure dstates_blockt_mul, zstates_blockt_mul
-  end interface
+  end interface states_blockt_mul
 
   interface states_block_matr_mul_add
     module procedure dstates_block_matr_mul_add, zstates_block_matr_mul_add
-  end interface
+  end interface states_block_matr_mul_add
 
 !   interface states_block_wrap
 !     module procedure dstates_block_wrap, zstates_block_wrap
-!   end interface
+!   end interface states_block_wrap
 
 #if defined(HAVE_MPI)
   interface states_gather
     module procedure dstates_gather, zstates_gather
-  end interface
+  end interface states_gather
 #endif
 
 contains
 
   ! ---------------------------------------------------------
-  ! From the global state number index set global_idx(1:length)
-  ! create the local sets idx(1:cnt(rank), rank), for rank=0, ..., comm_size-1
-  ! using the states distribution stored in st.
+  !> From the global state number index set global_idx(1:length)
+  !! create the local sets idx(1:cnt(rank), rank), for rank=0, ..., comm_size-1
+  !! using the states distribution stored in st.
   subroutine states_block_local_idx(st, global_idx, length, cnt, idx)
     type(states_t), intent(in) :: st
     integer,        intent(in) :: global_idx(:)
