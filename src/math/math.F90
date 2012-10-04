@@ -19,9 +19,8 @@
 
 #include "global.h"
 
-! This module is intended to contain "only mathematical" functions
-! and procedures.
-
+!> This module is intended to contain "only mathematical" functions
+!! and procedures.
 module math_m
   use blas_m
   use global_m
@@ -79,44 +78,44 @@ module math_m
     is_prime,                   &
      generate_rotation_matrix
 
-  !------------------------------------------------------------------------------
-  ! This is the common interface to a simple-minded polynomical interpolation
-  ! procedure (simple use of the classical formula of Lagrange).
+  !>------------------------------------------------------------------------------
+  !! This is the common interface to a simple-minded polynomical interpolation
+  !! procedure (simple use of the classical formula of Lagrange).
   interface interpolate
     module procedure dinterpolate_0, dinterpolate_1, dinterpolate_2
     module procedure zinterpolate_0, zinterpolate_1, zinterpolate_2
-  end interface
+  end interface interpolate
   !------------------------------------------------------------------------------
 
-  !------------------------------------------------------------------------------
-  ! This is the common interface to a sorting routine.
-  ! It performs the shell algorithm, not as fast as the quicksort for large numbers,
-  ! but it seems that better for moderate numbers (around 100).
-  ! Their possible interfaces are:
-  !   subroutine sort(a [, ind] )
-  !     FLOAT_OR_INTEGER, intent(inout) :: a(:)
-  !     integer, intent(inout), optional :: ind(:)
-  !     ! This routine sorts, from smallest to largest, the array a.
-  !     ! If the integer array ind is present, it puts in it the indexing
-  !     ! of the sorting, so that other arrays can be sorted according to
-  !     ! the sorting of a.
-  !   end subroutine sort
-  !
-  !   subroutine sort(a, x)
-  !     FLOAT, intent(inout) :: a(:)
-  !     FLOAT_OR_COMPLEX, intent(inout) :: x(:, : [, :])
-  !     ! This routine sorts, from smallest to largest, the array a.
-  !     ! The real or complex array x, which may be two or three dimensional,
-  !     ! is sorted according to the ordering of a. The last dimension of x
-  !     ! must have the same size as a.
-  !   end subroutine sort
+  !>------------------------------------------------------------------------------
+  !! This is the common interface to a sorting routine.
+  !! It performs the shell algorithm, not as fast as the quicksort for large numbers,
+  !! but it seems that better for moderate numbers (around 100).
+  !! Their possible interfaces are:
+  !!   subroutine sort(a [, ind] )
+  !!     FLOAT_OR_INTEGER, intent(inout) :: a(:)
+  !!     integer, intent(inout), optional :: ind(:)
+  !!     ! This routine sorts, from smallest to largest, the array a.
+  !!     ! If the integer array ind is present, it puts in it the indexing
+  !!     ! of the sorting, so that other arrays can be sorted according to
+  !!     ! the sorting of a.
+  !!   end subroutine sort
+  !!
+  !!   subroutine sort(a, x)
+  !!     FLOAT, intent(inout) :: a(:)
+  !!     FLOAT_OR_COMPLEX, intent(inout) :: x(:, : [, :])
+  !!     ! This routine sorts, from smallest to largest, the array a.
+  !!     ! The real or complex array x, which may be two or three dimensional,
+  !!     ! is sorted according to the ordering of a. The last dimension of x
+  !!     ! must have the same size as a.
+  !!   end subroutine sort
   interface sort
     module procedure shellsort, dshellsort1, zshellsort1, &
       dshellsort2, zshellsort2, ishellsort, sort_complex
-  end interface
+  end interface sort
   !------------------------------------------------------------------------------
 
-  ! Euler McLaurin Integration constants
+  !> Euler McLaurin Integration constants
   FLOAT, public, parameter :: EMcLCoeff(1:5) =  &
     (/                                          &
     CNST(    95.0)/CNST(288.0),                 &
@@ -127,10 +126,10 @@ module math_m
     /)
 
 
-  ! This operator is .true. if the two operands are approximately
-  ! equal (i.e. equal to within APP_THRESHOLD). For arrays, all
-  ! elements have to be approximately equal.
-  ! The subroutine set_app_threshold changes APP_THRESHOLD.
+  !> This operator is .true. if the two operands are approximately
+  !! equal (i.e. equal to within APP_THRESHOLD). For arrays, all
+  !! elements have to be approximately equal.
+  !! The subroutine set_app_threshold changes APP_THRESHOLD.
   FLOAT :: APP_THRESHOLD = CNST(1.0e-10)
   interface operator(.app.)
     module procedure dapproximately_equal
@@ -141,7 +140,7 @@ module math_m
     module procedure zapproximately_equal_1
     module procedure zapproximately_equal_2
     module procedure zapproximately_equal_3
-  end interface
+  end interface operator(.app.)
 
   interface hypot
     real(8) function oct_hypotd(x, y)
@@ -150,27 +149,27 @@ module math_m
     real(4) function oct_hypotf(x, y)
       real(4), intent(in) :: x, y
     end function oct_hypotf
-  end interface
+  end interface hypot
 
   interface infinity_norm
     module procedure dinfinity_norm, zinfinity_norm
-  end interface
+  end interface infinity_norm
 
   interface matrix_symmetric_average
     module procedure dmatrix_symmetric_average, zmatrix_symmetric_average
-  end interface
+  end interface matrix_symmetric_average
 
   interface matrix_symmetrize
     module procedure dmatrix_symmetrize, zmatrix_symmetrize
-  end interface
+  end interface matrix_symmetrize
 
   interface matrix_sort
     module procedure dmatrix_sort, zmatrix_sort
-  end interface
+  end interface matrix_sort
 
   interface log2
     module procedure dlog2, ilog2
-  end interface
+  end interface log2
 
 contains
 

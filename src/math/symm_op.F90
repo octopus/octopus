@@ -48,11 +48,11 @@ module symm_op_m
   
   interface symm_op_apply
     module procedure isymm_op_apply, dsymm_op_apply, zsymm_op_apply
-  end interface
+  end interface symm_op_apply
 
   interface symm_op_apply_inv
     module procedure isymm_op_apply_inv, dsymm_op_apply_inv, zsymm_op_apply_inv
-  end interface
+  end interface symm_op_apply_inv
 
 contains
   

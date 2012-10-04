@@ -43,47 +43,48 @@ module solvers_m
     zqmr,                       &
     dqmr
 
-  ! ---------------------------------------------------------
-  ! QMR (quasi-minimal residual) algorithm for complex symmetric matrices
-  ! algorithm taken from:
-  ! Parallel implementation of efficient preconditioned linear solver for
-  ! grid-based applications in chemical physics. II: QMR linear solver
-  ! Appendix A. Simplified QMR algorithm
-  ! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
+  !> ---------------------------------------------------------
+  !! QMR (quasi-minimal residual) algorithm for complex symmetric matrices
+  !! algorithm taken from:
+  !! Parallel implementation of efficient preconditioned linear solver for
+  !! grid-based applications in chemical physics. II: QMR linear solver
+  !! Appendix A. Simplified QMR algorithm
+  !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
   interface zqmr_sym
     module procedure zqmr_sym_spec_dotu, zqmr_sym_gen_dotu
-  end interface
+  end interface zqmr_sym
 
   interface dqmr_sym
     module procedure dqmr_sym_spec_dotu, dqmr_sym_gen_dotu
-  end interface
+  end interface dqmr_sym
+
   integer, pointer :: np_p
 
-  ! ---------------------------------------------------------
-  ! QMR (quasi-minimal residual) algorithm for complex matrices
-  ! algorithm taken from: An Implementation of the QMR Method based on
-  ! Coupled Two-Term Recurrences by R. W. Freund and N. M. Nachtigal (page 25)
-  ! http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19950017192_1995117192.pdf
+  !> ---------------------------------------------------------
+  !! QMR (quasi-minimal residual) algorithm for complex matrices
+  !! algorithm taken from: An Implementation of the QMR Method based on
+  !! Coupled Two-Term Recurrences by R. W. Freund and N. M. Nachtigal (page 25)
+  !! http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19950017192_1995117192.pdf
   interface zqmr
     module procedure zqmr_spec_dotu, zqmr_gen_dotu
-  end interface
+  end interface zqmr
 
   interface dqmr
     module procedure dqmr_spec_dotu, dqmr_gen_dotu
-  end interface
+  end interface dqmr
 
   interface dconjugate_gradients
     module procedure dsym_conjugate_gradients, dbi_conjugate_gradients
-  end interface
+  end interface dconjugate_gradients
 
   interface zconjugate_gradients
     module procedure zsym_conjugate_gradients, zbi_conjugate_gradients
-  end interface
+  end interface zconjugate_gradients
 
 contains
 
   ! ---------------------------------------------------------
-  ! the complex dot product without conjugated vector
+  !> the complex dot product without conjugated vector
   CMPLX function zdotu_qmr(x, y)
     CMPLX, intent(in) :: x(:)
     CMPLX, intent(in) :: y(:)

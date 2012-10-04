@@ -232,52 +232,54 @@ module splines_m
     spline_mult,     & 
     spline_cutoff_radius
 
-  ! the basic spline datatype
+  !> the basic spline datatype
   type spline_t
     real(8)     :: x_limit(2)
     type(c_ptr) :: spl, acc
   end type spline_t
 
-  ! Both the filling of the function, and the retrieval of the values
-  ! may be done using single- or double-precision values.
+  !> Both the filling of the function, and the retrieval of the values
+  !! may be done using single- or double-precision values.
   interface spline_fit
     module procedure spline_fit4
     module procedure spline_fit8
-  end interface
+  end interface spline_fit
 
   interface spline_eval
     module procedure spline_eval4
     module procedure spline_eval8
-  end interface
+  end interface spline_eval
 
   interface spline_eval_vec
     module procedure spline_eval4_array
     module procedure spline_eval8_array
-  end interface
+  end interface spline_eval_vec
 
-  ! The integral may be done with or without integration limits, but
-  ! we want the interface to be common.
+  !> The integral may be done with or without integration limits, but
+  !! we want the interface to be common.
   interface spline_integral
     module procedure spline_integral_full
     module procedure spline_integral_limits
-  end interface
+  end interface spline_integral
 
-  ! Some operations may be done for one spline-function, or for an array of them
+  !> Some operations may be done for one spline-function, or for an array of them
   interface spline_init
     module procedure spline_init_0
     module procedure spline_init_1
     module procedure spline_init_2
-  end interface
+  end interface spline_init
+
   interface spline_end
     module procedure spline_end_0
     module procedure spline_end_1
     module procedure spline_end_2
-  end interface
+  end interface spline_end
+
   interface spline_print
     module procedure spline_print_0
     module procedure spline_print_1
     module procedure spline_print_2
-  end interface
+  end interface spline_print
 
   ! These are interfaces to functions defined in oct_gsl_f.c, which in turn
   ! take care of calling the GSL library.

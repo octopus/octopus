@@ -56,7 +56,6 @@ module pblas_m
   end interface
 
   interface pblas_herk
-
     subroutine pdsyrk(uplo, trans, n, k, alpha, a, ia, ja, desca, beta, c, ic, jc, descc)
       implicit none
       
@@ -98,7 +97,6 @@ module pblas_m
   end interface pblas_herk
 
   interface pblas_trsm
-
     subroutine pdtrsm(side, uplo, transa, diag, m, n, alpha, a, ia, ja, desca, b, ib, jb, descb)
       implicit none
 
@@ -140,7 +138,6 @@ module pblas_m
     end subroutine pztrsm
 
   end interface pblas_trsm
-
 
 end module pblas_m
 
