@@ -60,7 +60,7 @@ module lalg_basic_m
     module procedure swap_2_4
     module procedure swap_3_4
     module procedure swap_4_4
-  end interface
+  end interface lalg_swap
 
   interface lalg_scal
     module procedure scal_1_1
@@ -81,7 +81,7 @@ module lalg_basic_m
     module procedure scal_4_4
     module procedure scal_5_3
     module procedure scal_5_4
-  end interface
+  end interface lalg_scal
 
   interface lalg_axpy
     module procedure axpy_1_1
@@ -104,7 +104,7 @@ module lalg_basic_m
     module procedure axpy_5_4
     module procedure axpy_6_3
     module procedure axpy_6_4
-  end interface
+  end interface lalg_axpy
 
   interface lalg_copy
     module procedure copy_1_1
@@ -123,14 +123,14 @@ module lalg_basic_m
     module procedure copy_2_4
     module procedure copy_3_4
     module procedure copy_4_4
-  end interface
+  end interface lalg_copy
 
   interface lalg_nrm2
     module procedure nrm2_1
     module procedure nrm2_2
     module procedure nrm2_3
     module procedure nrm2_4
-  end interface
+  end interface lalg_nrm2
 
   interface lalg_gemm
     module procedure gemm_1_1
@@ -141,7 +141,7 @@ module lalg_basic_m
     module procedure gemm_2_2
     module procedure gemm_2_3
     module procedure gemm_2_4
-  end interface
+  end interface lalg_gemm
 
   interface lalg_gemmt
     module procedure gemmt_1_1
@@ -152,14 +152,14 @@ module lalg_basic_m
     module procedure gemmt_2_2
     module procedure gemmt_2_3
     module procedure gemmt_2_4
-  end interface
+  end interface lalg_gemmt
 
   interface lalg_trmm
     module procedure trmm_1_1
     module procedure trmm_1_2
     module procedure trmm_1_3
     module procedure trmm_1_4
-  end interface
+  end interface lalg_trmm
 
   interface lalg_symm
     module procedure symm_1_1
@@ -170,7 +170,7 @@ module lalg_basic_m
     module procedure symm_2_2
     module procedure symm_2_3
     module procedure symm_2_4
-  end interface
+  end interface lalg_symm
   
   interface lalg_symv
     module procedure symv_1_1
@@ -181,7 +181,7 @@ module lalg_basic_m
     module procedure symv_2_2
     module procedure symv_2_3
     module procedure symv_2_4
-  end interface
+  end interface lalg_symv
   
   interface lalg_gemv
     module procedure gemv_1_1
@@ -192,18 +192,7 @@ module lalg_basic_m
     module procedure gemv_2_2
     module procedure gemv_2_3
     module procedure gemv_2_4
-  end interface
-
-#ifdef HAVE_OPENMP
-  interface hypot
-    real(8) function oct_hypotd(x, y)
-      real(8) :: x, y
-    end function oct_hypotd
-    real(4) function oct_hypotf(x, y)
-      real(4) :: x, y
-    end function oct_hypotf
-  end interface
-#endif
+  end interface lalg_gemv
 
   type(profile_t), save :: axpy_profile, copy_profile, gemv_profile, symv_profile
 

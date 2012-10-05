@@ -24,7 +24,10 @@
 !! You should not use these routines directly. Please use the lalg_XXXX
 !! -----------------------------------------------------------------------
 module blas_m
+
   implicit none
+
+  public ! only interfaces in this module
 
   ! ---------------------------------------------------------------------
   ! BLAS level I
@@ -51,7 +54,7 @@ module blas_m
       integer,    intent(in)    :: n, incx, incy
       complex(8), intent(inout) :: dx, dy !< dx(n), dy(n)
     end subroutine zswap
-  end interface
+  end interface blas_swap
 
   !> ----------------- scal ------------------
   interface blas_scal
@@ -90,7 +93,7 @@ module blas_m
       real(4),    intent(in)    :: da
       complex(4), intent(inout) :: dx !< dx(n)
     end subroutine sazscal
-  end interface
+  end interface blas_scal
 
   !> ----------------- axpy ------------------
   interface blas_axpy
@@ -131,7 +134,7 @@ module blas_m
       complex(4), intent(in)    :: dx     !< dx(n)
       complex(4), intent(inout) :: dy     !< dy(n)
     end subroutine sazaxpy
-  end interface
+  end interface blas_axpy
 
   !> ----------------- copy ------------------
   interface blas_copy
@@ -158,7 +161,7 @@ module blas_m
       complex(8), intent(in)  :: dx !< dx(n)
       complex(8), intent(out) :: dy !< dy(n)
     end subroutine zcopy
-  end interface
+  end interface blas_copy
 
   !> ----------------- dot  ------------------
   interface blas_dot
@@ -181,7 +184,7 @@ module blas_m
       integer,    intent(in) :: n, incx, incy
       complex(8), intent(in) :: dx, dy !< dx(n), dy(n)
     end function zdotc
-  end interface
+  end interface blas_dot
 
   interface blas_dotu
     complex(4) function cdotu(n, dx, incx, dy, incy)
@@ -193,7 +196,7 @@ module blas_m
       integer,    intent(in) :: n, incx, incy
       complex(8), intent(in) :: dx, dy !< dx(n), dy(n)
     end function zdotu
-  end interface
+  end interface blas_dotu
 
   !> ----------------- nrm2 ------------------
   interface blas_nrm2
@@ -216,7 +219,7 @@ module blas_m
       integer,    intent(in) :: n, incx
       complex(8), intent(in) :: dx !< dx(n)
     end function dznrm2
-  end interface
+  end interface blas_nrm2
 
 
   ! ------------------------------------------------------------------
@@ -260,7 +263,7 @@ module blas_m
       complex(8),   intent(in)    :: x !< x(:)
       complex(8),   intent(inout) :: y !< y(:)
     end subroutine zsymv
-  end interface
+  end interface blas_symv
   
   !> ----------------- gemv ------------------
   interface blas_gemv
@@ -299,7 +302,7 @@ module blas_m
       complex(8),   intent(in)    :: x !< x(:)
       complex(8),   intent(inout) :: y !< y(:)
     end subroutine zgemv
-  end interface
+  end interface blas_gemv
 
 
   ! ------------------------------------------------------------------
@@ -343,7 +346,7 @@ module blas_m
       complex(8),   intent(in)    :: b !< b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
       complex(8),   intent(inout) :: c !< c(ldc,n)
     end subroutine zgemm
-  end interface
+  end interface blas_gemm
 
   !> ----------------- trmm ------------------
   interface blas_trmm
@@ -374,7 +377,7 @@ module blas_m
       complex(8),   intent(in)    :: a, alpha
       complex(8),   intent(inout) :: b
     end subroutine ztrmm
-  end interface
+  end interface blas_trmm
 
   !> ----------------- symm, hemm ------------------
   interface blas_symm
@@ -405,7 +408,7 @@ module blas_m
       complex(8),   intent(in)    :: alpha, beta, a, b
       complex(8),   intent(inout) :: c
     end subroutine zsymm
-  end interface
+  end interface blas_symm
 
   !> ----------------- syrk, herk ------------------
   interface blas_herk
@@ -446,7 +449,7 @@ module blas_m
       complex(8),   intent(in)    :: a
       complex(8),   intent(inout) :: c
     end subroutine zherk
-  end interface
+  end interface blas_herk
 
   !> -----------------------trsm-------------------------
   interface blas_trsm
@@ -505,8 +508,7 @@ module blas_m
       complex(8),   intent(inout) :: b
       integer,      intent(in)    :: ldb
     end subroutine ztrsm
-
-  end interface
+  end interface blas_trsm
 
 end module blas_m
 

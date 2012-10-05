@@ -26,6 +26,8 @@
 module lapack_m
   implicit none
 
+  public ! only interfaces in this module
+
   interface lapack_potrf
     subroutine spotrf(uplo, n, a, lda, info)
       implicit none
@@ -62,7 +64,7 @@ module lapack_m
       integer,      intent(in)    :: lda
       integer,      intent(out)   :: info
     end subroutine zpotrf
-  end interface
+  end interface lapack_potrf
 
   interface lapack_sygv
     subroutine ssygv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
@@ -80,7 +82,7 @@ module lapack_m
       real(8),      intent(out)   :: w, work !< w(n), work(lwork)
       integer,      intent(out)   :: info
     end subroutine dsygv
-  end interface
+  end interface lapack_sygv
 
   interface lapack_hegv
     subroutine chegv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
@@ -100,7 +102,7 @@ module lapack_m
       complex(8),   intent(out)   :: work     !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine zhegv
-  end interface
+  end interface lapack_hegv
 
   interface lapack_geev
     subroutine sgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
@@ -142,7 +144,7 @@ module lapack_m
       complex(8),        intent(out)   :: work  !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine zgeev
-  end interface
+  end interface lapack_geev
 
 
   interface lapack_syev
@@ -161,7 +163,7 @@ module lapack_m
       real(8),      intent(out)   :: w, work !< w(n), work(lwork)
       integer,      intent(out)   :: info
     end subroutine dsyev
-  end interface
+  end interface lapack_syev
 
   interface lapack_heev
     subroutine cheev(jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
@@ -181,7 +183,7 @@ module lapack_m
       complex(8),   intent(out)   :: work     !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine zheev
-  end interface
+  end interface lapack_heev
 
   interface lapack_geqrf
     subroutine sgeqrf( m, n, a, lda, tau, work, lwork, info )
@@ -350,7 +352,6 @@ module lapack_m
   end interface lapack_hegvx
 
 end module lapack_m
-
 
 !! Local Variables:
 !! mode: f90

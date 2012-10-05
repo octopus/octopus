@@ -61,7 +61,7 @@ module loct_math_m
     MINMETHOD_NMSIMPLEX        = 6
 
   ! ---------------------------------------------------------
-  ! Numerical derivative.
+  !> Numerical derivative.
   interface loct_numerical_derivative
     subroutine oct_numerical_derivative(x, h, result, abserr, f)
       real(8) :: x, h, result, abserr
@@ -72,18 +72,18 @@ module loct_math_m
         end subroutine f
       end interface
     end subroutine oct_numerical_derivative
-  end interface
+  end interface loct_numerical_derivative
 
 
   ! ---------------------------------------------------------
-  ! Special functions
+  !> Special functions
   interface loct_gamma
     function oct_gamma(x)
       real(8) :: oct_gamma
       real(8), intent(in) :: x
     end function oct_gamma
     module procedure oct_gamma4
-  end interface
+  end interface loct_gamma
 
   interface loct_incomplete_gamma
     function oct_incomplete_gamma(a, x)
@@ -91,7 +91,7 @@ module loct_math_m
       real(8), intent(in) :: a, x
     end function oct_incomplete_gamma
     module procedure oct_incomplete_gamma4
-  end interface
+  end interface loct_incomplete_gamma
 
   interface loct_hypergeometric
     function oct_hypergeometric(a, b, x)
@@ -99,7 +99,7 @@ module loct_math_m
       real(8), intent(in) :: a, b, x
     end function oct_hypergeometric
     module procedure oct_hypergeometric4
-  end interface
+  end interface loct_hypergeometric
 
   interface loct_bessel
     function oct_bessel(n, x)
@@ -108,7 +108,7 @@ module loct_math_m
       real(8), intent(in)  :: x
     end function oct_bessel
     module procedure oct_bessel4
-  end interface
+  end interface loct_bessel
 
   interface loct_bessel_in
     function oct_bessel_in(n, x)
@@ -117,7 +117,7 @@ module loct_math_m
       real(8), intent(in)  :: x
     end function oct_bessel_in
     module procedure oct_bessel_in4
-  end interface
+  end interface loct_bessel_in
 
   interface loct_sph_bessel
     function oct_sph_bessel(l, x)
@@ -126,7 +126,7 @@ module loct_math_m
       real(8), intent(in)  :: x
     end function oct_sph_bessel
     module procedure oct_sph_bessel4
-  end interface
+  end interface loct_sph_bessel
 
   interface loct_bessel_j0
     function oct_bessel_j0(x)
@@ -134,7 +134,7 @@ module loct_math_m
       real(8), intent(in)  :: x
     end function oct_bessel_j0
     module procedure oct_bessel_j04
-  end interface
+  end interface loct_bessel_j0
 
   interface loct_bessel_j1
     function oct_bessel_j1(x)
@@ -142,7 +142,7 @@ module loct_math_m
       real(8), intent(in)  :: x
     end function oct_bessel_j1
     module procedure oct_bessel_j14
-  end interface
+  end interface loct_bessel_j1
 
   interface loct_bessel_k0
     function oct_bessel_k0(x)
@@ -150,7 +150,7 @@ module loct_math_m
       real(8), intent(in)  :: x
     end function oct_bessel_k0
     module procedure oct_bessel_k04
-  end interface
+  end interface loct_bessel_k0
 
   interface loct_bessel_k1
     function oct_bessel_k1(x)
@@ -158,7 +158,7 @@ module loct_math_m
       real(8), intent(in)  :: x
     end function oct_bessel_k1
     module procedure oct_bessel_k14
-  end interface
+  end interface loct_bessel_k1
 
   interface loct_asinh
     function oct_asinh(x)
@@ -166,7 +166,7 @@ module loct_math_m
       real(8), intent(in) :: x
     end function oct_asinh
     module procedure oct_asinh4
-  end interface
+  end interface loct_asinh
 
   interface loct_erf
     function oct_erf(x)
@@ -174,7 +174,7 @@ module loct_math_m
       real(8), intent(in) :: x
     end function oct_erf
     module procedure oct_erf4
-  end interface
+  end interface loct_erf
 
   interface loct_erfc
     function oct_erfc(x)
@@ -182,7 +182,7 @@ module loct_math_m
       real(8), intent(in) :: x
     end function oct_erfc
     module procedure oct_erfc4
-  end interface
+  end interface loct_erfc
 
   interface loct_legendre_sphplm
     function oct_legendre_sphplm(l, m, x)
@@ -191,7 +191,7 @@ module loct_math_m
       real(8), intent(in) :: x
     end function oct_legendre_sphplm
     module procedure oct_legendre_sphplm4
-  end interface
+  end interface loct_legendre_sphplm
 
   interface loct_sine_integral
     function oct_sine_integral(x)
@@ -209,23 +209,23 @@ module loct_math_m
       real(8), intent(out) :: ylm
     end subroutine oct_ylm
     module procedure oct_ylm4
-  end interface
+  end interface loct_ylm
 
   ! ---------------------------------------------------------
-  ! Functions to generate random numbers
+  !> Functions to generate random numbers
   interface loct_ran_init
     subroutine oct_ran_init(r)
       use c_pointer_m
       type(c_ptr), intent(out) :: r
     end subroutine oct_ran_init
-  end interface
+  end interface loct_ran_init
 
   interface loct_ran_end
     subroutine oct_ran_end(r)
       use c_pointer_m
       type(c_ptr), intent(inout) :: r
     end subroutine oct_ran_end
-  end interface
+  end interface loct_ran_end
 
   interface loct_ran_gaussian
     function oct_ran_gaussian(r, sigma)
@@ -235,7 +235,7 @@ module loct_math_m
       real(8),   intent(in) :: sigma
     end function oct_ran_gaussian
     module procedure oct_ran_gaussian4
-  end interface
+  end interface loct_ran_gaussian
 
   interface loct_ran_flat
     function oct_ran_flat(r, a, b)
@@ -246,7 +246,7 @@ module loct_math_m
       real(8),     intent(in) :: b
     end function oct_ran_flat
     module procedure oct_ran_flat4
-  end interface
+  end interface loct_ran_flat
 
   interface loct_1dminimize
     subroutine oct_1dminimize(a, b, m, f, status)
@@ -259,7 +259,7 @@ module loct_math_m
       end interface
       integer, intent(inout) :: status
     end subroutine oct_1dminimize
-  end interface
+  end interface loct_1dminimize
 
   interface loct_minimize
     function oct_minimize(method, dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
@@ -290,7 +290,7 @@ module loct_math_m
         end subroutine write_iter_info
       end interface
     end function oct_minimize
-  end interface
+  end interface loct_minimize
 
   interface loct_minimize_direct
     function oct_minimize_direct(method, dim, x, step, toldr, maxiter, f, write_iter_info, minimum)
@@ -317,14 +317,14 @@ module loct_math_m
         end subroutine write_iter_info
       end interface
     end function oct_minimize_direct
-  end interface
+  end interface loct_minimize_direct
 
   interface loct_fft_optimize
     subroutine oct_fft_optimize(n, par)
       integer, intent(inout) :: n
       integer, intent(in) :: par
     end subroutine oct_fft_optimize
-  end interface
+  end interface loct_fft_optimize
 
 contains
 

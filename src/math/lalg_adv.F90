@@ -54,64 +54,64 @@ module lalg_adv_m
 
   interface lalg_cholesky
     module procedure dcholesky, zcholesky
-  end interface
+  end interface lalg_cholesky
 
   interface lalg_geneigensolve
     module procedure dgeneigensolve, zgeneigensolve
-  end interface
+  end interface lalg_geneigensolve
 
   interface lalg_eigensolve_nonh
     module procedure zeigensolve_nonh, deigensolve_nonh
-  end interface
+  end interface lalg_eigensolve_nonh
 
   interface lalg_eigensolve
     module procedure deigensolve, zeigensolve
 #ifdef HAVE_SCALAPACK
     module procedure deigensolve_scalapack, zeigensolve_scalapack
 #endif
-  end interface
+  end interface lalg_eigensolve
 
-  ! Note that lalg_determinant and lalg_inverter are just wrappers
-  ! over the same routine.
+  !> Note that lalg_determinant and lalg_inverter are just wrappers
+  !! over the same routine.
   interface lalg_determinant
     module procedure ddeterminant, zdeterminant
-  end interface
+  end interface lalg_determinant
 
   interface lalg_inverter
     module procedure ddeterminant, zdeterminant
-  end interface
+  end interface lalg_inverter
 
   interface lalg_sym_inverter
     module procedure dsym_inverter, zsym_inverter
-  end interface
+  end interface lalg_sym_inverter
 
   interface lalg_linsyssolve
     module procedure dlinsyssolve, zlinsyssolve
-  end interface
+  end interface lalg_linsyssolve
 
   interface lalg_singular_value_decomp
     module procedure zsingular_value_decomp
-  end interface
+  end interface lalg_singular_value_decomp
 
   interface lalg_svd_inverse
     module procedure zsvd_inverse
-  end interface
+  end interface lalg_svd_inverse
 
   interface lalg_invert_upper_triangular
     module procedure dinvert_upper_triangular, zinvert_upper_triangular
-  end interface
+  end interface lalg_invert_upper_triangular
   
   interface lalg_invert_lower_triangular
     module procedure dinvert_lower_triangular, zinvert_lower_triangular
-  end interface
+  end interface lalg_invert_lower_triangular
   
   interface lalg_lowest_geneigensolve
     module procedure dlowest_geneigensolve, zlowest_geneigensolve
-  end interface
+  end interface lalg_lowest_geneigensolve
 
   interface lalg_lowest_eigensolve
     module procedure dlowest_eigensolve, zlowest_eigensolve
-  end interface
+  end interface lalg_lowest_eigensolve
 
 contains
 
