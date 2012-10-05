@@ -101,7 +101,7 @@ module scalapack_m
     end subroutine pzgesv
   end interface
 
-  interface
+  interface scalapack_syev
     subroutine pdsyev(jobz, uplo, n, a, ia, ja, desca, w, z, iz, jz, descz, work, lwork, info)
       implicit none
       
@@ -143,9 +143,9 @@ module scalapack_m
       integer,          intent(in)    :: lrwork
       integer,          intent(out)   :: info
     end subroutine pzheev
-  end interface
+  end interface scalapack_syev
 
-  interface scalapack_syev
+  interface scalapack_syevx
     subroutine pdsyevx( jobz, range, uplo, n, a, ia, ja, desca, vl, vu, il, iu, abstol, &
          m, nz, w, orfac, z, iz, jz, descz, work, lwork, iwork, liwork, ifail, iclustr, gap, info )
       
@@ -215,7 +215,7 @@ module scalapack_m
       real(8),      intent(out)   :: gap      
       integer,      intent(out)   :: info    
     end subroutine pzheevx
-  end interface scalapack_syev
+  end interface scalapack_syevx
   
   interface scalapack_sygvx
     subroutine pdsygvx(ibtype, jobz, range, uplo, n, a, ia, ja,       &
@@ -333,7 +333,6 @@ module scalapack_m
       integer,      intent(in)    :: desca
       integer,      intent(out)   :: info
     end subroutine pzpotrf
-    
   end interface scalapack_potrf
 
 #endif

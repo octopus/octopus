@@ -52,6 +52,7 @@ module pfft_m
 
 #ifdef HAVE_PFFT
   public ::                    &
+    pfft_init,                 &
     pfft_decompose,            &
     pfft_prepare_plan_r2c,     &
     pfft_prepare_plan_c2r,     &

@@ -375,7 +375,7 @@ contains
     ! Initialize parallel communicator
     if (library_ == FFTLIB_PFFT) then
 #ifdef HAVE_PFFT
-      call dpfft_init()
+      call pfft_init()
  
       call pfft_decompose(mpi_grp_%size, column_size, row_size)
  

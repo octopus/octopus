@@ -79,14 +79,14 @@ subroutine X(eigensolve_scalapack)(n, a, eigenvalues, bof, proc_grid, err_code)
   call pcelset(a,begining_row,begining_col,psi_desc,a(1,1))
 
 #ifdef R_TREAL
-  call scalapack_syev('V','A','U', n, a(1,1), begining_row,begining_col, psi_desc(1), lower_bound, upper_bound,    &
+  call scalapack_syevx('V','A','U', n, a(1,1), begining_row,begining_col, psi_desc(1), lower_bound, upper_bound,    &
        0, 0, error, eigenvalues_size, eigenvectors_computed, eigenvalues(1), M_ZERO, orthonormal_eigenvectors(1,1),&
        begining_row, begining_col, psi_desc(1), work(1), lwork, iwork(1), liwork, eigenvectors_failing,            &
        eigenvectors_cluster(1),gap,info)
 #else
   lrwork = 4 * n + max(5*nn, np0 * mq0) + iceil(neig, proc_grid%nprow * proc_grid%npcol)*nn
   SAFE_ALLOCATE(rwork(1:lrwork))
-  call scalapack_syev( jobz = 'V', &
+  call scalapack_syevx( jobz = 'V', &
        range = 'A', &
        uplo = 'U', &
        n = n, &
