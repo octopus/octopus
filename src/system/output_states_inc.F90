@@ -233,6 +233,7 @@
 
     integer :: mm, iunit, itype
     integer :: ierr
+    integer :: tdrun
     integer :: ncombo
     integer, allocatable :: ndiagrams(:)
     integer, allocatable :: young_used(:)

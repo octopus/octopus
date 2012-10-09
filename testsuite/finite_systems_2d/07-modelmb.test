@@ -23,7 +23,7 @@ match ; Energy         [step 100]; LINE(td.general/energy, -101, 30) ; -1.261322
 match ; Energy         [step 150]; LINE(td.general/energy,  -51, 30) ; -1.261322168663e+00
 match ; Energy         [step 200]; LINE(td.general/energy,   -1, 30) ; -1.261322168663e+00
 match ; Density matrix [step  50]; LINE(td.0000050modelmb/densmatr_ip001_imb01, 5151, 23) ; 8.223E-01
-match ; Density matrix [step 100]; LINE(td.0000150modelmb/densmatr_ip001_imb01, 5151, 23) ; 8.210E-01
+match ; Density matrix [step 100]; LINE(td.0000100modelmb/densmatr_ip001_imb01, 5151, 23) ; 8.215E-01
 match ; Density matrix [step 150]; LINE(td.0000150modelmb/densmatr_ip001_imb01, 5151, 23) ; 8.210E-01
 match ; Density matrix [step 200]; LINE(td.0000200modelmb/densmatr_ip001_imb01, 5151, 23) ; 8.206E-01
 
