@@ -283,7 +283,7 @@ contains
       SAFE_DEALLOCATE_A(ofst)
       call modelmb_1part_end(mb_1part)
 
-      write (tmpstring, '(3x,I4,1x,I4)') iyoung_in(itype), nspindown_in(itype)
+      write (tmpstring, '(3x,I4,1x,I4)') nspindown_in(itype), iyoung_in(itype)
       youngstring = trim(youngstring) // trim(tmpstring)
 
       if (gr%mesh%parallel_in_domains) then
