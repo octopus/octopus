@@ -288,7 +288,7 @@
 
 
     ! write header
-    write (iunit, '(a)') '  state      eigenvalue   projection   nspindown Young# for each type'
+    write (iunit, '(a)') '  state        eigenvalue         projection   nspindown Young# for each type'
 
     do mm = 1, st%nst
       call states_get_state(st, gr%mesh, 1, mm, 1, wf)
