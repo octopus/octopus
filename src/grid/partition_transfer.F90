@@ -103,7 +103,7 @@ contains
 
     ! We need to know the partition number of all the processes in
     ! both groups
-    SAFE_ALLOCATE(partno_list(2, grp1%size))
+    SAFE_ALLOCATE(partno_list(1:2, 1:grp1%size))
     tmp_partno(1) = grp1%rank + 1
     tmp_partno(2) = grp2%rank + 1
 #ifdef HAVE_MPI
@@ -117,7 +117,7 @@ contains
     ! with the same number as the line number. The number of columns
     ! for each line should be exactly equal to grp1%size/grp2%size in
     ! all cases and there should be no repeated values.
-    SAFE_ALLOCATE(part_map(grp2%size, n12))
+    SAFE_ALLOCATE(part_map(1:grp2%size, 1:n12))
     part_map = 0
     do ipart = 1, grp2%size
       pcount = 0
@@ -184,9 +184,9 @@ contains
     end do
 
     ! List of points to be send
-    SAFE_ALLOCATE(this%sdispls(grp1%size))
-    SAFE_ALLOCATE(this%scounts(grp1%size))
-    SAFE_ALLOCATE(order_in(nsend))
+    SAFE_ALLOCATE(this%sdispls(1:grp1%size))
+    SAFE_ALLOCATE(this%scounts(1:grp1%size))
+    SAFE_ALLOCATE(order_in(1:nsend))
 
     ipos = 0
     ! Loop over all possible receivers
@@ -217,9 +217,9 @@ contains
     end do
 
     ! Displacements and number of points to be received 
-    SAFE_ALLOCATE(this%rdispls(grp1%size))
-    SAFE_ALLOCATE(this%rcounts(grp1%size))
-    SAFE_ALLOCATE(order_out(nrec))
+    SAFE_ALLOCATE(this%rdispls(1:grp1%size))
+    SAFE_ALLOCATE(this%rcounts(1:grp1%size))
+    SAFE_ALLOCATE(order_out(1:nrec))
 
     ipos = 0
     ! Loop over all possible senders

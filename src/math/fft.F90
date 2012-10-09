@@ -417,14 +417,14 @@ contains
         n_3 = max(1, fft_array(jj)%rs_n(3))
 
         n3 = ceiling(real(2*alloc_size)/real(n_1*n_2))
-        SAFE_ALLOCATE(fft_array(jj)%drs_data(n_1, n_2, n3))
+        SAFE_ALLOCATE(fft_array(jj)%drs_data(1:n_1, 1:n_2, 1:n3))
 
         ! For real functions, PFFT increases the size of rs_n(1) by 1, such that rs_n(1) = nn(1) + 1.
         ! The rest of the code does not need to know about this.
         fft_array(jj)%rs_n(1) = fft_array(jj)%rs_n(1) - 1
       else
         n3 = ceiling(real(alloc_size)/real(fft_array(jj)%rs_n(1)*fft_array(jj)%rs_n(2)))
-        SAFE_ALLOCATE(fft_array(jj)%zrs_data(fft_array(jj)%rs_n(1), fft_array(jj)%rs_n(2), n3))
+        SAFE_ALLOCATE(fft_array(jj)%zrs_data(1:fft_array(jj)%rs_n(1), 1:fft_array(jj)%rs_n(2), 1:n3))
       end if
 
       n_1 = max(1, fft_array(jj)%fs_n(1))
@@ -432,7 +432,7 @@ contains
       n_3 = max(1, fft_array(jj)%fs_n(3))
 
       n3 = ceiling(real(alloc_size)/real(n_3*n_1))
-      SAFE_ALLOCATE(fft_array(jj)%fs_data(n_3, n_1, n3))
+      SAFE_ALLOCATE(fft_array(jj)%fs_data(1:n_3, 1:n_1, 1:n3))
 
     case(FFTLIB_CLAMD)
       fft_array(jj)%cl_use_real = .false.

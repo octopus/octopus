@@ -67,8 +67,8 @@ contains
     this%ekin_cutoff = gmax2/M_TWO
 
     SAFE_ALLOCATE(modg2(1:product(cube%rs_n_global(1:3))))
-    SAFE_ALLOCATE(ucoords(1:3, product(cube%rs_n_global(1:3))))
-    SAFE_ALLOCATE(ured_gvec(1:3, product(cube%rs_n_global(1:3))))
+    SAFE_ALLOCATE(ucoords(1:3, 1:product(cube%rs_n_global(1:3))))
+    SAFE_ALLOCATE(ured_gvec(1:3, 1:product(cube%rs_n_global(1:3))))
     
     ig = 0
     do ix = 1, cube%rs_n_global(1)
@@ -95,8 +95,8 @@ contains
 
     this%ngvectors = ig
 
-    SAFE_ALLOCATE(this%coords(1:3, this%ngvectors))
-    SAFE_ALLOCATE(this%red_gvec(1:3, this%ngvectors))
+    SAFE_ALLOCATE(this%coords(1:3, 1:this%ngvectors))
+    SAFE_ALLOCATE(this%red_gvec(1:3, 1:this%ngvectors))
     SAFE_ALLOCATE(map(1:this%ngvectors))
 
     do ig = 1, this%ngvectors

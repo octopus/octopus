@@ -78,17 +78,17 @@ module math_m
     is_prime,                   &
      generate_rotation_matrix
 
-  !>------------------------------------------------------------------------------
-  !! This is the common interface to a simple-minded polynomical interpolation
+  ! ------------------------------------------------------------------------------
+  !> This is the common interface to a simple-minded polynomical interpolation
   !! procedure (simple use of the classical formula of Lagrange).
   interface interpolate
     module procedure dinterpolate_0, dinterpolate_1, dinterpolate_2
     module procedure zinterpolate_0, zinterpolate_1, zinterpolate_2
   end interface interpolate
-  !------------------------------------------------------------------------------
+  ! ------------------------------------------------------------------------------
 
-  !>------------------------------------------------------------------------------
-  !! This is the common interface to a sorting routine.
+  ! ------------------------------------------------------------------------------
+  !> This is the common interface to a sorting routine.
   !! It performs the shell algorithm, not as fast as the quicksort for large numbers,
   !! but it seems that better for moderate numbers (around 100).
   !! Their possible interfaces are:
@@ -175,7 +175,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Checks if a divides b.
+  !> Checks if a divides b.
   logical function divides(a, b)
     integer, intent(in) :: a, b
 
@@ -240,7 +240,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! a simple congruent random number generator
+  !> a simple congruent random number generator
   subroutine quickrnd(iseed, rnd)
     integer, intent(inout) :: iseed
     FLOAT,   intent(inout) :: rnd
@@ -257,7 +257,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Computes spherical harmonics ylm in the direction of vector r
+  !> Computes spherical harmonics ylm in the direction of vector r
   subroutine ylmr(x, y, z, li, mi, ylm)
     integer, intent(in) :: li, mi
     FLOAT, intent(in) :: x, y, z
@@ -315,11 +315,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! This is a Numerical Recipes-based subroutine
-  ! computes real spherical harmonics ylm in the direction of vector r:
-  !    ylm = c * plm( cos(theta) ) * sin(m*phi)   for   m <  0
-  !    ylm = c * plm( cos(theta) ) * cos(m*phi)   for   m >= 0
-  ! with (theta,phi) the polar angles of r, c a positive normalization
+  !> This is a Numerical Recipes-based subroutine
+  !! computes real spherical harmonics ylm in the direction of vector r:
+  !!    ylm = c * plm( cos(theta) ) * sin(m*phi)   for   m <  0
+  !!    ylm = c * plm( cos(theta) ) * cos(m*phi)   for   m >= 0
+  !! with (theta,phi) the polar angles of r, c a positive normalization
   subroutine grylmr(x, y, z, li, mi, ylm, grylm)
     integer, intent(in) :: li, mi
     FLOAT, intent(in) :: x, y, z
@@ -494,15 +494,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Compute the weights for finite-difference calculations:
-  !
-  !  N -> highest order of the derivative to be approximated
-  !  M -> number of grid points to be used in the approximation.
-  !
-  !  c(j,k,i) -> ith order derivative at kth-order approximation
-  !              j=0,k: the coefficients acting of each point
-  !
-  !  side -> -1 left-sided, +1 right-sided, 0 centered (default)
+  !> Compute the weights for finite-difference calculations:
+  !!
+  !!  N -> highest order of the derivative to be approximated
+  !!  M -> number of grid points to be used in the approximation.
+  !!
+  !!  c(j,k,i) -> ith order derivative at kth-order approximation
+  !!              j=0,k: the coefficients acting of each point
+  !!
+  !!  side -> -1 left-sided, +1 right-sided, 0 centered (default)
   subroutine weights(N, M, cc, side)
     integer, intent(in) :: N, M
     FLOAT, intent(out) :: cc(0:M, 0:M, 0:N)
@@ -655,7 +655,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Shell sort for integer arrays.
+  !> Shell sort for integer arrays.
   subroutine ishellsort(a, ind)
     integer, intent(inout)           :: a(:)
     integer, intent(inout), optional :: ind(:)
@@ -749,8 +749,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Construct out(1:length) = (/1, ..., n/) if in is not present,
-  ! out(1:length) = in otherwise.
+  !> Construct out(1:length) = (/1, ..., n/) if in is not present,
+  !! out(1:length) = in otherwise.
   subroutine make_idx_set(n, out, length, in)
     integer,           intent(in)  :: n
     integer,           pointer     :: out(:)
@@ -778,8 +778,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Considers a(1:ubound(a, 1)) as an integer set and checks
-  ! if n is a member of it.
+  !> Considers a(1:ubound(a, 1)) as an integer set and checks
+  !! if n is a member of it.
   logical function member(n, a)
     integer, intent(in) :: n
     integer, intent(in) :: a(:)
@@ -825,7 +825,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns if n is even.
+  !> Returns if n is even.
   logical pure function even(n)
     integer, intent(in) :: n
 
@@ -835,7 +835,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Returns if n is odd.
+  !> Returns if n is odd.
   logical pure function odd(n)
     integer, intent(in) :: n
 
@@ -844,9 +844,8 @@ contains
   end function odd
 
   ! ---------------------------------------------------------
-  ! Performs a transformation of an n-dimensional vector
-  ! from Cartesian coordinates to hyperspherical coordinates
-  ! ---------------------------------------------------------
+  !> Performs a transformation of an n-dimensional vector
+  !! from Cartesian coordinates to hyperspherical coordinates
   subroutine cartesian2hyperspherical(x, u)
     FLOAT, intent(in)  :: x(:)
     FLOAT, intent(out) :: u(:)
@@ -862,7 +861,7 @@ contains
     ASSERT(size(u).eq.n-1)
 
     ! These lines make the code less machine-dependent.
-    SAFE_ALLOCATE(xx(n))
+    SAFE_ALLOCATE(xx(1:n))
     do j = 1, n
       if(abs(x(j))<CNST(1.0e-8)) then
         xx(j) = M_ZERO
@@ -886,9 +885,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Performs the inverse transformation of
-  ! cartesian2hyperspherical
-  ! ---------------------------------------------------------
+  !> Performs the inverse transformation of
+  !! cartesian2hyperspherical
   subroutine hyperspherical2cartesian(u, x)
     FLOAT, intent(in)  :: u(:)
     FLOAT, intent(out) :: x(:)
@@ -932,14 +930,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Gives the hyperspherical gradient matrix, which contains
-  ! the derivatives of the Cartesian coordinates with respect
-  ! to the hyperspherical angles.
-  ! ---------------------------------------------------------
+  !> Gives the hyperspherical gradient matrix, which contains
+  !! the derivatives of the Cartesian coordinates with respect
+  !! to the hyperspherical angles.
   subroutine  hypersphere_grad_matrix(grad_matrix, r, x)
     FLOAT, intent(out)  :: grad_matrix(:,:)
-    FLOAT, intent(in)   :: r     ! radius of hypersphere
-    FLOAT, intent(in)   :: x(:)  ! array of hyperspherical angles
+    FLOAT, intent(in)   :: r     !< radius of hypersphere
+    FLOAT, intent(in)   :: x(:)  !< array of hyperspherical angles
     
     integer :: n, l, m
     
@@ -1061,50 +1058,49 @@ contains
     POP_SUB(is_prime)
   end function is_prime
 
-! ====================================================================
-!  Generates a rotation matrix M from direction u to direction v. 
-! ====================================================================
-subroutine generate_rotation_matrix(M, u, v)
-  FLOAT,   intent(out)  :: M(:,:)
-  FLOAT,   intent(in)   :: u(:)
-  FLOAT,   intent(in)   :: v(:)
+  ! ---------------------------------------------------------
+  !>  Generates a rotation matrix M from direction u to direction v. 
+  subroutine generate_rotation_matrix(M, u, v)
+    FLOAT,   intent(out)  :: M(:,:)
+    FLOAT,   intent(in)   :: u(:)
+    FLOAT,   intent(in)   :: v(:)
 
-  integer            :: dim, ii
-  FLOAT              :: phi
-  FLOAT, allocatable :: axis(:), uu(:), vv(:)
+    integer            :: dim, ii
+    FLOAT              :: phi
+    FLOAT, allocatable :: axis(:), uu(:), vv(:)
 
-  PUSH_SUB(generate_rotation_matrix)
+    PUSH_SUB(generate_rotation_matrix)
 
-  dim = size(u,1)  
- 
-  ASSERT((dim < 3) .or. (dim > 2))
-  ASSERT(size(v,1) .eq. dim)
-  ASSERT((size(M,1) .eq. dim) .and. (size(M,2) .eq. dim))
-  
-  SAFE_ALLOCATE(uu(1:dim))
-  SAFE_ALLOCATE(vv(1:dim))
+    dim = size(u,1)  
 
-  
-  vv = v /dot_product(v,v)
-  uu = u /dot_product(u,u)
+    ASSERT((dim < 3) .or. (dim > 2))
+    ASSERT(size(v,1) .eq. dim)
+    ASSERT((size(M,1) .eq. dim) .and. (size(M,2) .eq. dim))
 
-  phi = acos(dot_product(uu,vv))
+    SAFE_ALLOCATE(uu(1:dim))
+    SAFE_ALLOCATE(vv(1:dim))
 
-  if(phi > M_ZERO) then
-    select case (dim)
+
+    vv = v /dot_product(v,v)
+    uu = u /dot_product(u,u)
+
+    phi = acos(dot_product(uu,vv))
+
+    if(phi > M_ZERO) then
+      select case (dim)
       case (2)
         M(1,1) = cos(phi)
         M(1,2) = -sin(phi)
 
         M(2,1) = sin(phi)
         M(2,2) = cos(phi)
-  
+
       case (3)
         SAFE_ALLOCATE(axis(1:dim))
-
+        
         axis = dcross_product(uu,vv)    
         axis = axis / dot_product(axis, axis)
-    
+
         M(1,1) = cos(phi) + axis(1)**2 * (1 - cos(phi))    
         M(1,2) = axis(1)*axis(2)*(1-cos(phi)) - axis(3)*sin(phi)
         M(1,3) = axis(1)*axis(3)*(1-cos(phi)) + axis(2)*sin(phi)
@@ -1116,122 +1112,120 @@ subroutine generate_rotation_matrix(M, u, v)
         M(3,1) = axis(3)*axis(1)*(1-cos(phi)) - axis(2)*sin(phi)
         M(3,2) = axis(3)*axis(2)*(1-cos(phi)) + axis(1)*sin(phi)
         M(3,3) = cos(phi) + axis(3)**2 * (1 - cos(phi))          
-    
+
         SAFE_DEALLOCATE_A(axis)
-    end select
+      end select
 
-  else
-    
-    M = M_ZERO
-    do ii=1,dim
-      M(ii,ii) = M_ONE 
+    else
+
+      M = M_ZERO
+      do ii=1,dim
+        M(ii,ii) = M_ONE 
+      end do
+
+    endif
+
+
+    SAFE_DEALLOCATE_A(uu)
+    SAFE_DEALLOCATE_A(vv)
+
+    POP_SUB(generate_rotation_matrix)  
+  end subroutine generate_rotation_matrix
+
+  ! ---------------------------------------------------------
+  !> Sort a complex vector vec(:)+i*Imvec(:) and put the ordering in reorder(:)
+  !! according to the following order:
+  !!
+  !! 1. values with zero imaginary part sorted by increasing real part
+  !! 2. values with negative imaginary part sorted by decreasing imaginary part
+  !! 3. values with positive imaginary part unsorted
+  subroutine sort_complex(vec, Imvec, reorder, imthr)
+    FLOAT,           intent(inout)  :: vec(:)
+    FLOAT,           intent(inout)  :: Imvec(:)
+    integer,         intent(out)    :: reorder(:)
+    FLOAT, optional, intent(in)     :: imthr !< the threshold for zero imaginary part
+
+    integer              :: dim, n0, n1, n2, i
+    integer, allocatable :: table(:),idx0(:)
+    FLOAT,   allocatable :: temp(:),tempI(:)
+    FLOAT                :: imthr_
+
+    PUSH_SUB(sort_complex)
+
+    dim = size(vec, 1)
+    ASSERT(dim == size(Imvec,1) .and. dim == size(reorder,1))
+
+    imthr_ = CNST(1E-6)
+    if(present(imthr)) imthr_ = imthr
+
+    SAFE_ALLOCATE(table(dim))
+    SAFE_ALLOCATE(temp(dim))
+    SAFE_ALLOCATE(tempI(dim))
+
+    tempI = Imvec
+    call sort(tempI,table)
+
+    n0 = 0
+    n1 = 0
+    temp = vec
+    do i = 1, dim
+      if (abs(Imvec(i)) < imthr_) then
+        n0 = n0 + 1 
+      else if (Imvec(i) < -imthr_) then 
+        n1 = n1 + 1
+      end if
+      vec(i)     = temp(table(dim - i + 1))
+      Imvec(i)   = tempI(dim - i + 1)
+      reorder(i) = table(dim - i + 1)
+      print *, "---", i ,vec(i), Imvec(i), reorder(i)
     end do
-  
-  endif
+    n2 = dim - n0 - n1 
+    print *,n1, n0, n2 
 
+    temp = vec
+    tempI = Imvec
+    table = reorder
 
-  SAFE_DEALLOCATE_A(uu)
-  SAFE_DEALLOCATE_A(vv)
-
-  POP_SUB(generate_rotation_matrix)  
-end subroutine generate_rotation_matrix
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Sort a complex vector vec(:)+i*Imvec(:) and put the ordering in reorder(:)
-! according to the following order:
-!
-! 1. values with zero imaginary part sorted by increasing real part
-! 2. values with negative imaginary part sorted by decreasing imaginary part
-! 3. values with positive imaginary part unsorted
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine sort_complex(vec, Imvec, reorder, imthr)
-  FLOAT,           intent(inout)  :: vec(:)
-  FLOAT,           intent(inout)  :: Imvec(:)
-  integer,         intent(out)    :: reorder(:)
-  FLOAT, optional, intent(in)     :: imthr ! the threshold for zero imaginary part
-  
-  integer              :: dim, n0, n1, n2, i
-  integer, allocatable :: table(:),idx0(:)
-  FLOAT,   allocatable :: temp(:),tempI(:)
-  FLOAT                :: imthr_
-  
-  PUSH_SUB(sort_complex)
-  
-  dim = size(vec, 1)
-  ASSERT(dim == size(Imvec,1) .and. dim == size(reorder,1))
-  
-  imthr_ = CNST(1E-6)
-  if(present(imthr)) imthr_ = imthr
-  
-  SAFE_ALLOCATE(table(dim))
-  SAFE_ALLOCATE(temp(dim))
-  SAFE_ALLOCATE(tempI(dim))
-    
-  tempI = Imvec
-  call sort(tempI,table)
-  
-  n0 = 0
-  n1 = 0
-  temp = vec
-  do i = 1, dim
-    if (abs(Imvec(i)) < imthr_) then
-      n0 = n0 + 1 
-    else if (Imvec(i) < -imthr_) then 
-      n1 = n1 + 1
+    !first zero img parts
+    if (n0 > 0) then
+      SAFE_ALLOCATE(idx0(n0))
+      call sort(temp(n2+1:n2+n0),idx0(:))
     end if
-    vec(i)     = temp(table(dim - i + 1))
-    Imvec(i)   = tempI(dim - i + 1)
-    reorder(i) = table(dim - i + 1)
-    print *, "---", i ,vec(i), Imvec(i), reorder(i)
-  end do
-  n2 = dim - n0 - n1 
-   print *,n1, n0, n2 
-  
-  temp = vec
-  tempI = Imvec
-  table = reorder
 
-  !first zero img parts
-  if (n0 > 0) then
-     SAFE_ALLOCATE(idx0(n0))
-     call sort(temp(n2+1:n2+n0),idx0(:))
-  end if
-  
-  do i = 1, n0
-    vec  (i) = temp (n2 + i)
-    Imvec  (i) = tempI(n2 + idx0(i))
-    reorder(i) = table(n2 + idx0(i))
-    print *, i , n0 , n2 ,idx0(i), Imvec(i),reorder(i)
-  end do
-  SAFE_DEALLOCATE_A(idx0)
-  
-  !negative Img parts
-  do i =  1, n1
-    vec    (n0 + i) = temp (n2 + n0 + i)
-    Imvec  (n0 + i) = tempI(n2 + n0 + i)
-    reorder(n0 + i) = table(n2 + n0 + i)
-  end do 
-  
-  ! positive img parts
-  do i = 1, n2
-    vec    (n0 + n1 + i) = temp (n2 + 1 -i)
-    Imvec  (n0 + n1 + i) = tempI(n2 + 1 -i)
-    reorder(n0 + n1 + i) = table(n2 + 1 -i)
-  end do
-  
-  
-  do i = 1, dim
-     print *, "--->", i ,vec(i), Imvec(i), reorder(i)
-  end do
-  
-  
-  SAFE_DEALLOCATE_A(tempI)  
-  SAFE_DEALLOCATE_A(temp)
-  SAFE_DEALLOCATE_A(table)
-  
-  POP_SUB(sort_complex)
-end subroutine sort_complex
+    do i = 1, n0
+      vec  (i) = temp (n2 + i)
+      Imvec  (i) = tempI(n2 + idx0(i))
+      reorder(i) = table(n2 + idx0(i))
+      print *, i , n0 , n2 ,idx0(i), Imvec(i),reorder(i)
+    end do
+    SAFE_DEALLOCATE_A(idx0)
+
+    !negative Img parts
+    do i =  1, n1
+      vec    (n0 + i) = temp (n2 + n0 + i)
+      Imvec  (n0 + i) = tempI(n2 + n0 + i)
+      reorder(n0 + i) = table(n2 + n0 + i)
+    end do
+
+    ! positive img parts
+    do i = 1, n2
+      vec    (n0 + n1 + i) = temp (n2 + 1 -i)
+      Imvec  (n0 + n1 + i) = tempI(n2 + 1 -i)
+      reorder(n0 + n1 + i) = table(n2 + 1 -i)
+    end do
+
+
+    do i = 1, dim
+      print *, "--->", i ,vec(i), Imvec(i), reorder(i)
+    end do
+
+
+    SAFE_DEALLOCATE_A(tempI)  
+    SAFE_DEALLOCATE_A(temp)
+    SAFE_DEALLOCATE_A(table)
+
+    POP_SUB(sort_complex)
+  end subroutine sort_complex
 
 
 

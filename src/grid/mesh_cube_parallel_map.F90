@@ -80,10 +80,10 @@ contains
     PUSH_SUB(mesh_cube_parallel_map_init)
 
     !Get the cube partition on the mesh
-    SAFE_ALLOCATE(part(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
+    SAFE_ALLOCATE(part(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
     call cube_partition(cube, part)
 
-    SAFE_ALLOCATE(cube_part(mesh%np_global))
+    SAFE_ALLOCATE(cube_part(1:mesh%np_global))
     
     ixyz = 0
     do im = 1, mesh%cube_map%nmap
@@ -103,8 +103,8 @@ contains
                                  mesh%mpi_grp, mesh%vp%part, cube%mpi_grp, cube_part, &
                                  this%m2c_nsend, this%m2c_nrec, mf_order, cf_order)
 
-    SAFE_ALLOCATE(this%m2c_mf_order(this%m2c_nsend))
-    SAFE_ALLOCATE(this%m2c_cf_order(this%m2c_nrec, 3))    
+    SAFE_ALLOCATE(this%m2c_mf_order(1:this%m2c_nsend))
+    SAFE_ALLOCATE(this%m2c_cf_order(1:this%m2c_nrec, 1:3))    
     do ip = 1, this%m2c_nsend
 #ifdef HAVE_MPI
       this%m2c_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
@@ -136,8 +136,8 @@ contains
                                  cube%mpi_grp, cube_part, mesh%mpi_grp, mesh%vp%part, &
                                  this%c2m_nsend, this%c2m_nrec, cf_order, mf_order)
 
-    SAFE_ALLOCATE(this%c2m_cf_order(this%c2m_nsend, 3))
-    SAFE_ALLOCATE(this%c2m_mf_order(this%c2m_nrec))
+    SAFE_ALLOCATE(this%c2m_cf_order(1:this%c2m_nsend, 1:3))
+    SAFE_ALLOCATE(this%c2m_mf_order(1:this%c2m_nrec))
     do ip = 1, this%c2m_nrec
 #ifdef HAVE_MPI
       this%c2m_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)

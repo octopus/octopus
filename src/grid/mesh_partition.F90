@@ -371,7 +371,7 @@ contains
 
     case(PFFT_PART)
       call cube_init(cube, mesh%idx%ll, mesh%sb, fft_type=FFT_REAL, fft_library=FFTLIB_PFFT)
-      SAFE_ALLOCATE(cube_part(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
+      SAFE_ALLOCATE(cube_part(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
       part = 0
       do ip = 1, mesh%np_global
         call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix(1:3))

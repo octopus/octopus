@@ -239,7 +239,7 @@ contains
     tmp_local(6) = cube%rs_n(3)
 
     if (cube%parallel_in_domains) then
-      SAFE_ALLOCATE(local_sizes(6*cube%mpi_grp%size))
+      SAFE_ALLOCATE(local_sizes(1:6*cube%mpi_grp%size))
       call profiling_in(prof_gt,"CUBE_GAT")
 #ifdef HAVE_MPI
       call MPI_Allgather(tmp_local, 6, MPI_INTEGER, local_sizes, 6, MPI_INTEGER,&
@@ -247,15 +247,15 @@ contains
 #endif
       call profiling_out(prof_gt)
     else
-      SAFE_ALLOCATE(local_sizes(6))
+      SAFE_ALLOCATE(local_sizes(1:6))
       local_sizes = tmp_local
     end if
 
     call profiling_in(prof_map,"CUBE_MAP")
 
-    SAFE_ALLOCATE(cube%xlocal(cube%mpi_grp%size))
-    SAFE_ALLOCATE(cube%np_local(cube%mpi_grp%size))
-    SAFE_ALLOCATE(cube%local(cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), 3))
+    SAFE_ALLOCATE(cube%xlocal(1:cube%mpi_grp%size))
+    SAFE_ALLOCATE(cube%np_local(1:cube%mpi_grp%size))
+    SAFE_ALLOCATE(cube%local(1:cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), 3))
 
     index = 1
     do process = 1, cube%mpi_grp%size
@@ -309,13 +309,13 @@ contains
     tmp_local(6) = cube%rs_n(3)
 
     if (cube%parallel_in_domains) then
-      SAFE_ALLOCATE(local_sizes(6*cube%mpi_grp%size))
+      SAFE_ALLOCATE(local_sizes(1:6*cube%mpi_grp%size))
 #ifdef HAVE_MPI
       call MPI_Allgather(tmp_local, 6, MPI_INTEGER, local_sizes, 6, MPI_INTEGER,&
                          cube%mpi_grp%comm, mpi_err)
 #endif
     else
-      SAFE_ALLOCATE(local_sizes(6))
+      SAFE_ALLOCATE(local_sizes(1:6))
       local_sizes = tmp_local
     end if
 
@@ -347,7 +347,7 @@ contains
     PUSH_SUB(cube_partition_messages_debug)
 
     if(in_debug_mode) then
-      SAFE_ALLOCATE(part(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
+      SAFE_ALLOCATE(part(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
       call cube_partition(cube, part)
   
       if(mpi_grp_is_root(mpi_world)) then
