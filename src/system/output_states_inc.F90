@@ -249,7 +249,7 @@
 
     impose_exch_symmetry = .true.
     ! this is ugly, but no other way to tell if we are in td run.
-    ! other option is to extract present routine and call explicitly from outside output_all. Don't wanna.
+    ! other option is to extract present routine and call explicitly from outside output_all. Don`t wanna.
     tdrun = index(dir, 'td.')
     if (tdrun > 0) impose_exch_symmetry = .false.
 
