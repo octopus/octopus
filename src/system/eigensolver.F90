@@ -118,10 +118,12 @@ contains
     !%Option cg 5
     !% Conjugate-gradients algorithm.
     !%Option plan 11
-    !% Preconditioned Lanczos scheme.
+    !% Preconditioned Lanczos scheme. Ref: Y. Saad, A. Stathopoulos, J. Chelikowsky, K. Wu and S. Ogut,
+    !% "Solution of Large Eigenvalue Problems in Electronic Structure Calculations", <i>BIT</i> <b>36</b>, 1 (1996).
     !%Option cg_new 6
     !% An alternative conjugate-gradients eigensolver, faster for
     !% larger systems but less mature.
+    !% Ref: Jiang et al., <i>Phys. Rev. B</i> <b>68</b>, 165337 (2003)
     !%Option evolution 9
     !% Propagation in imaginary time. WARNING: Sometimes it misbehaves. Use with 
     !% caution.
