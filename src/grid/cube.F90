@@ -63,18 +63,18 @@ module cube_m
     type(fft_t), pointer :: fft !< the fft object
   end type cube_t
 
-  !> It is intented to be used within a vector.
+  !> It is intended to be used within a vector.
   !!
-  !! Each index of the vector correspond to a MPI processes.  A
+  !! Each index of the vector corresponds to an MPI process.  A
   !! mapping between x,y,z index and process is saved, in a compact
   !! way.
   type part_to_process_t
-    integer :: start_x !< First index X, which actual process has 
-    integer :: start_y !< First index Y, which actual process has 
-    integer :: start_z !< First index Z, which actual process has 
-    integer :: end_x   !< Last  index X, which actual process has 
-    integer :: end_y   !< Last  index Y, which actual process has 
-    integer :: end_z   !< Last  index Z, which actual process has 
+    integer :: start_x !< First index X, which this process has 
+    integer :: start_y !< First index Y, which this process has 
+    integer :: start_z !< First index Z, which this process has 
+    integer :: end_x   !< Last  index X, which this process has 
+    integer :: end_y   !< Last  index Y, which this process has 
+    integer :: end_z   !< Last  index Z, which this process has 
   end type part_to_process_t
 
 contains
