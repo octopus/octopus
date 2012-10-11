@@ -32,12 +32,13 @@ module cube_m
   use parser_m
   use profiling_m
   use simul_box_m
+  use varinfo_m
 
   implicit none
   private
   public ::             &
     cube_t,             &
-    part_to_process_t,  &
+    dimensions_t,       &
     cube_init,          & 
     cube_point_to_process, &
     cube_partition,     &
@@ -61,6 +62,7 @@ module cube_m
     integer, pointer :: local(:,:)  !< local to global map used when gathering a function
 
     type(fft_t), pointer :: fft !< the fft object
+    logical :: pes !< Saves if it is going to use Photo Electron Spectrum
   end type cube_t
 
   !> It is intended to be used within a vector.
@@ -68,14 +70,14 @@ module cube_m
   !! Each index of the vector corresponds to an MPI process.  A
   !! mapping between x,y,z index and process is saved, in a compact
   !! way.
-  type part_to_process_t
+  type dimensions_t
     integer :: start_x !< First index X, which this process has 
     integer :: start_y !< First index Y, which this process has 
     integer :: start_z !< First index Z, which this process has 
     integer :: end_x   !< Last  index X, which this process has 
     integer :: end_y   !< Last  index Y, which this process has 
     integer :: end_z   !< Last  index Z, which this process has 
-  end type part_to_process_t
+  end type dimensions_t
 
 contains
 
@@ -95,6 +97,7 @@ contains
     integer :: mpi_comm, tmp_n(3), fft_type_, optimize_parity(3), default_lib, fft_library_
     integer :: effdim_fft
     logical :: optimize(3)
+    integer :: photoelectron_flags
     type(mpi_grp_t) :: mpi_grp_
 
     PUSH_SUB(cube_init)
@@ -192,8 +195,38 @@ contains
 
     call mpi_grp_init(cube%mpi_grp, mpi_comm)
 
-    call cube_do_mapping(cube)
-
+    !Initialize mapping only if PES is going to be used    
+    
+    !%Variable PhotoElectronSpectrum
+    !%Type flag
+    !%Default no
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !%This variable controls the method used for the calculation of
+    !%the photoelectron spectrum. You can specify more than one value
+    !%by giving them as a sum, for example:
+    !% <tt>PhotoElectronSpectrum = pes_rc + pes_mask</tt>
+    !%Option none 0
+    !% The photoelectron spectrum is not calculated. This is the default.
+    !%Option pes_rc 2
+    !% Store the wavefunctions at specific points in order to 
+    !% calculate the photoelectron spectrum at a point far in the box as proposed in 
+    !% A. Pohl, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. Lett.</i> <b>84</b>, 5090 (2000).
+    !%Option pes_mask 4
+    !% Calculate the photo-electron spectrum using the mask method.
+    !% U. De Giovannini, D. Varsano, M. A. L. Marques, H. Appel, E. K. U. Gross, and A. Rubio,
+    !% <i>Phys. Rev. A</i> <b>85</b>, 062515 (2012).
+    !%End
+    call parse_integer(datasets_check('PhotoElectronSpectrum'), 0, photoelectron_flags)
+    if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
+      call input_error('PhotoElectronSpectrum')
+    end if
+    if (photoelectron_flags /= 0) then
+      cube%pes = .true.
+      call cube_do_mapping(cube)
+    else
+      cube%pes = .false.
+    end if
     if (cube%parallel_in_domains) call cube_partition_messages_debug(cube)
 
     POP_SUB(cube_init)
@@ -210,10 +243,11 @@ contains
       SAFE_DEALLOCATE_P(cube%fft)
     end if
 
-    SAFE_DEALLOCATE_P(cube%np_local)
-    SAFE_DEALLOCATE_P(cube%xlocal)
-    SAFE_DEALLOCATE_P(cube%local)
-
+    if (cube%pes) then
+      SAFE_DEALLOCATE_P(cube%np_local)
+      SAFE_DEALLOCATE_P(cube%xlocal)
+      SAFE_DEALLOCATE_P(cube%local)
+    end if
     POP_SUB(cube_end)
   end subroutine cube_end
 
@@ -233,6 +267,19 @@ contains
               lxyz(3) >= 1 .and. lxyz(3) <= cube%rs_n(3)
     
   end function cube_global2local
+
+  ! ---------------------------------------------------------
+  !>
+  type(point_t) pure function cube_global2index(cube,index) result(point)  
+    type(cube_t), intent(in) :: cube
+    integer,      intent(in) :: index
+
+    !!cube%rs_n_global(1)
+    
+    !!point = -1
+
+    
+  end function cube_global2index
 
   ! ---------------------------------------------------------
   !> do the mapping between global and local points of the cube
@@ -271,6 +318,8 @@ contains
 
     SAFE_ALLOCATE(cube%xlocal(1:cube%mpi_grp%size))
     SAFE_ALLOCATE(cube%np_local(1:cube%mpi_grp%size))
+
+    ! Run this only if PES is going to be used
     SAFE_ALLOCATE(cube%local(1:cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), 3))
 
     index = 1
@@ -287,18 +336,24 @@ contains
 
       ! save the mapping between the global x,y,z and the global index
       ! and determine which partition the point belongs to
+      if (mpi_world%rank == 0) then
+        open (17, file="local")
+      end if
       do iz = local_sizes(position+2), local_sizes(position+2)+local_sizes(position+5)-1
         do iy = local_sizes(position+1), local_sizes(position+1)+local_sizes(position+4)-1
           do ix = local_sizes(position), local_sizes(position)+local_sizes(position+3)-1
             cube%local(index, 1) = ix
             cube%local(index, 2) = iy
             cube%local(index, 3) = iz
+            write(17,*)cube%local(index,1:3),index 
             index = index + 1
           end do
         end do
       end do
     end do
-
+    if (mpi_world%rank == 0) then
+      close(17)
+    end if
     call profiling_out(prof_map)
 
     SAFE_DEALLOCATE_A(local_sizes)
@@ -313,7 +368,7 @@ contains
     integer, intent(in)   :: xx
     integer, intent(in)   :: yy
     integer, intent(in)   :: zz
-    type(part_to_process_t), intent(in) :: part(:)
+    type(dimensions_t), intent(in) :: part(:)
     integer, intent(in) :: last_found
     
     integer :: ix, iy, iz, proc
@@ -363,7 +418,7 @@ contains
   ! ---------------------------------------------------------
   subroutine cube_partition(cube, part)
     type(cube_t),            intent(in)  :: cube
-    type(part_to_process_t), intent(out) :: part(:)
+    type(dimensions_t), intent(out) :: part(:)
 
     integer :: tmp_local(6), position, process, ix, iy, iz
     integer, allocatable :: local_sizes(:)
@@ -412,7 +467,7 @@ contains
     integer          :: npart
     integer          :: iunit          ! For debug output to files.
     character(len=3) :: filenum
-    type(part_to_process_t), allocatable :: part(:)
+    type(dimensions_t), allocatable :: part(:)
     integer :: last_found_proc
     
     PUSH_SUB(cube_partition_messages_debug)

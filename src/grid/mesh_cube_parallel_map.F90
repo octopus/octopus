@@ -76,7 +76,7 @@ contains
     integer :: im, ip, nn, ixyz(3), lxyz(3), ii
     integer, allocatable :: cube_part(:)
     integer, pointer :: mf_order(:), cf_order(:)
-    type(part_to_process_t), allocatable :: part(:)
+    type(dimensions_t), allocatable :: part(:)
 
     integer :: last_found_proc
     PUSH_SUB(mesh_cube_parallel_map_init)
