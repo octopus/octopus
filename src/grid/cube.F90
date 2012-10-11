@@ -269,19 +269,6 @@ contains
   end function cube_global2local
 
   ! ---------------------------------------------------------
-  !>
-  type(point_t) pure function cube_global2index(cube,index) result(point)  
-    type(cube_t), intent(in) :: cube
-    integer,      intent(in) :: index
-
-    !!cube%rs_n_global(1)
-    
-    !!point = -1
-
-    
-  end function cube_global2index
-
-  ! ---------------------------------------------------------
   !> do the mapping between global and local points of the cube
   subroutine cube_do_mapping(cube)
     type(cube_t), intent(inout) :: cube
@@ -318,8 +305,6 @@ contains
 
     SAFE_ALLOCATE(cube%xlocal(1:cube%mpi_grp%size))
     SAFE_ALLOCATE(cube%np_local(1:cube%mpi_grp%size))
-
-    ! Run this only if PES is going to be used
     SAFE_ALLOCATE(cube%local(1:cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), 3))
 
     index = 1
@@ -336,24 +321,18 @@ contains
 
       ! save the mapping between the global x,y,z and the global index
       ! and determine which partition the point belongs to
-      if (mpi_world%rank == 0) then
-        open (17, file="local")
-      end if
       do iz = local_sizes(position+2), local_sizes(position+2)+local_sizes(position+5)-1
         do iy = local_sizes(position+1), local_sizes(position+1)+local_sizes(position+4)-1
           do ix = local_sizes(position), local_sizes(position)+local_sizes(position+3)-1
             cube%local(index, 1) = ix
             cube%local(index, 2) = iy
             cube%local(index, 3) = iz
-            write(17,*)cube%local(index,1:3),index 
             index = index + 1
           end do
         end do
       end do
     end do
-    if (mpi_world%rank == 0) then
-      close(17)
-    end if
+
     call profiling_out(prof_map)
 
     SAFE_DEALLOCATE_A(local_sizes)
