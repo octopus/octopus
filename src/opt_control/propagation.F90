@@ -585,6 +585,7 @@ module opt_control_propagation_m
     end if
 
     if( hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
+      call density_calc(st, gr, st%rho)
       call hamiltonian_set_oct_exchange(hm, st, gr, ks%xc)
     end if
 
