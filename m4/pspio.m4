@@ -80,7 +80,6 @@ if test x"$acx_pspio_ok" = xyes; then
   AC_DEFINE(HAVE_PSPIO,1,[Defined if you have the PSPIO library.])
   $1
 else
-  AC_DEFINE(HAVE_PSPIO,0,[Defined if you have the PSPIO library.])
   LIBS_PSPIO=""
   FCFLAGS_PSPIO=""
   $2
