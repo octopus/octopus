@@ -46,7 +46,7 @@ if test $acx_sparskit_ok = no; then
   if test $acx_sparskit_ok = no; then
     AC_MSG_RESULT([$acx_sparskit_ok])
   else
-    AC_MSG_RESULT([$acx_sparskit_ok($LIBS_SPARSKIT)])
+    AC_MSG_RESULT([$acx_sparskit_ok ($LIBS_SPARSKIT)])
   fi
 fi
 
