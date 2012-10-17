@@ -225,7 +225,7 @@ contains
   ! ---------------------------------------------------------
   subroutine restart_write(dir, st, gr, geo, ierr, iter, lr)
     character(len=*),     intent(in)    :: dir
-    type(states_t),       intent(in)    :: st
+    type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(out)   :: ierr
