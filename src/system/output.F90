@@ -315,15 +315,15 @@ contains
     end if
 
     if(iand(outp%what, C_OUTPUT_MMB) .ne. 0) then
-      call messages_experimental("Model many-body state analysis will be output")
+      call messages_experimental("Model many-body state analysis")
     end if
 
     if(iand(outp%what, C_OUTPUT_MMB_WFS) .ne. 0) then
-      call messages_experimental("Model many-body wfs will be output")
+      call messages_experimental("Model many-body wfs")
     end if
 
     if(iand(outp%what, C_OUTPUT_MMB_DEN) .ne. 0) then
-      call messages_experimental("Model many-body density and/or density matrix will be output")
+      call messages_experimental("Model many-body density and/or density matrix")
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
       !   in principle all combinations are interesting, but this means we need to
