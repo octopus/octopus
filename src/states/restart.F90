@@ -225,7 +225,7 @@ contains
   ! ---------------------------------------------------------
   subroutine restart_write(dir, st, gr, geo, ierr, iter, lr)
     character(len=*),     intent(in)    :: dir
-    type(states_t),       intent(inout) :: st
+    type(states_t),       intent(in)    :: st
     type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(out)   :: ierr
@@ -374,10 +374,8 @@ contains
       write(iunit_rho,'(a)') '#     #spin    #nspin    filename'
       write(iunit_rho,'(a)') '%densities'
     end if
-    if(gr%have_fine_mesh)then
+    if(gr%have_fine_mesh) then
       SAFE_ALLOCATE(rho(1:gr%mesh%np))
-    else
-      nullify(rho)
     end if
     do isp = 1, st%d%nspin
       if(st%d%nspin==1) then
@@ -390,11 +388,10 @@ contains
       end if
       if(gr%have_fine_mesh)then
         call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, st%rho(:,isp), rho, INJECTION)
+        call drestart_write_function(dir, filename, gr%mesh, rho, err)
       else
-        rho=>st%rho(:,isp)
+        call drestart_write_function(dir, filename, gr%mesh, st%rho(:,isp), err)
       end if
-      call drestart_write_function(dir, filename, gr%mesh, rho, err)
-      if(.not.gr%have_fine_mesh)nullify(rho)
       if(err==0) ierr = ierr + 1
     end do
     if(gr%have_fine_mesh)then
