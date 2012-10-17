@@ -353,6 +353,7 @@ contains
       !%Default yes
       !%Section SCF::LCAO
       !%Description
+      !% Only applies if <tt>LCAOAlternative = true</tt>.
       !% If set to yes (the default) Octopus keeps atomic orbitals in
       !% memory during the LCAO procedure. If set to no, the orbitals
       !% are generated each time that they are needed, increasing
@@ -369,6 +370,7 @@ contains
       !%Default false
       !%Section SCF::LCAO
       !%Description
+      !% Only applies if <tt>LCAOAlternative = true</tt>.
       !% (experimental) If this variable is set to yes, the LCAO
       !% procedure will add an extra set of numerical orbitals (by
       !% using the derivative of the radial part of the original
@@ -383,6 +385,7 @@ contains
       !%Default 1e-10
       !%Section SCF::LCAO
       !%Description
+      !% Only applies if <tt>LCAOAlternative = true</tt>.
       !% The tolerance for the diagonalization of the LCAO Hamiltonian. The default is 1e-10.
       !%End
       call parse_float(datasets_check('LCAODiagTol'), CNST(1e-10), this%diag_tol)

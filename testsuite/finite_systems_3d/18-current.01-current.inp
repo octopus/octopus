@@ -10,6 +10,8 @@ CalculationMode = gs
 "H" | 1.0079400 | spec_ps_psf | 1 | 1 | 0
 %
 
+# not enough states for LCAO
+LCAOStart = none
 ExtraStates = 1
 
 %Occupations
