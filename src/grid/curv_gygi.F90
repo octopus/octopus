@@ -154,12 +154,11 @@ contains
     FLOAT, intent(in)    :: y(:)
     FLOAT, intent(out)   :: f(:), jf(:, :)
 
-    PUSH_SUB(getf)
+    ! no push_sub, called too frequently
 
     call curv_gygi_jacobian(sb_p, cv_p, y, f, jf, i_p)
     f(1:sb_p%dim) = f(1:sb_p%dim) - chi_p(1:sb_p%dim)
 
-    POP_SUB(getf)
   end subroutine getf 
 
 
@@ -170,12 +169,11 @@ contains
     FLOAT,                     intent(in)  :: chi(:)  !< chi(sb%dim)
     FLOAT,                     intent(out) :: x(:)    !< x(sb%dim)
 
-    ! local variables
     integer :: i
     logical :: conv
     type(root_solver_t) :: rs
 
-    PUSH_SUB(curv_gygi_chi2x)
+    ! no push_sub, called too frequently
 
     call root_solver_init(rs, sb%dim,  &
       solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
@@ -206,7 +204,6 @@ contains
       call messages_fatal(5)
     end if
 
-    POP_SUB(curv_gygi_chi2x)
   end subroutine curv_gygi_chi2x
 
 
@@ -250,7 +247,7 @@ contains
     FLOAT :: r, f_alpha, df_alpha
     FLOAT :: th, ex, ar
 
-    PUSH_SUB(curv_gygi_jacobian)
+    ! no push_sub, called too frequently
 
     J(1:sb%dim,1:sb%dim) = M_ZERO
     do ix = 1, sb%dim
@@ -281,7 +278,6 @@ contains
       end do
     end do
 
-    POP_SUB(curv_gygi_jacobian)
   end subroutine curv_gygi_jacobian
 
 end module curv_gygi_m
