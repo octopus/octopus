@@ -466,11 +466,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, is_tmp,
     call X(vec_gather)(mesh%vp, mesh%vp%root, ff_global, ff)
 
     if(mesh%vp%rank.eq.mesh%vp%root) then
-      if (present(geo)) then
-        call X(io_function_output_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_, geo = geo)
-      else
-        call X(io_function_output_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_)
-      end if
+      call X(io_function_output_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_, geo = geo)
     end if
 
     ! I have to broadcast the error code
@@ -484,11 +480,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, is_tmp,
 
     if(present(grp)) then ! only root writes output
       if(grp%rank.eq.0) then
-        if (present(geo)) then
-          call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
-        else
-          call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
-        end if
+        call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
       end if
       ! I have to broadcast the error code
       if(grp%size > 1) then
