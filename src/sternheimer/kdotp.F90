@@ -68,7 +68,7 @@ module kdotp_m
     type(pert_t) :: perturbation2
 
     FLOAT, pointer :: eff_mass_inv(:,:,:,:)  ! inverse effective-mass tensor
-                                                ! (ik, ist, idir1, idir2)
+                                                ! (idir1, idir2, ist, ik)
     FLOAT, pointer :: velocity(:,:,:) ! group velocity vector (ik, ist, idir)
 
     type(lr_t), pointer :: lr(:,:) ! linear response for (sys%gr%sb%periodic_dim,1)
@@ -116,7 +116,7 @@ contains
        call messages_fatal(1)
     endif
 
-    SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:sys%st%d%nik, 1:sys%st%nst, 1:pdim, 1:pdim))
+    SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:pdim, 1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
     SAFE_ALLOCATE(kdotp_vars%velocity(1:sys%st%d%nik, 1:sys%st%nst, 1:pdim))
     kdotp_vars%eff_mass_inv(:,:,:,:) = 0 
     kdotp_vars%velocity(:,:,:) = 0 
@@ -492,7 +492,8 @@ contains
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-        call output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%sb%periodic_dim, unit_one)
+        write(0,*) 'inv eff mass ist = ', ist
+        call output_tensor(iunit, kdotp_vars%eff_mass_inv(:, :, ist, ik), gr%sb%periodic_dim, unit_one)
       enddo
       
       write(iunit,'(a)')
@@ -502,8 +503,9 @@ contains
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-        determinant = lalg_inverter(gr%sb%periodic_dim, kdotp_vars%eff_mass_inv(ik, ist, :, :), .true.)
-        call output_tensor(iunit, kdotp_vars%eff_mass_inv(ik, ist, :, :), gr%sb%periodic_dim, unit_one)
+        determinant = lalg_inverter(gr%sb%periodic_dim, kdotp_vars%eff_mass_inv(:, :, ist, ik), .true.)
+        write(0,*) 'eff mass ist = ', ist
+        call output_tensor(iunit, kdotp_vars%eff_mass_inv(:, :, ist, ik), gr%sb%periodic_dim, unit_one)
       enddo
 
       call io_close(iunit)
