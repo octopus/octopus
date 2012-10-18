@@ -190,6 +190,8 @@ contains
       else
         call parse_integer(datasets_check('HamiltonianVariation'), 3, ham_var)
       end if
+    else
+      ham_var = 0
     end if
 
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then

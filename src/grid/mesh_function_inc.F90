@@ -19,10 +19,10 @@
 
 
 ! ---------------------------------------------------------
-! integrates a function
+!> integrates a function
 R_TYPE function X(mf_integrate) (mesh, ff) result(dd)
   type(mesh_t), intent(in) :: mesh
-  R_TYPE,       intent(in) :: ff(:)  ! ff(mesh%np)
+  R_TYPE,       intent(in) :: ff(:)  !< (mesh%np)
 
   integer :: ip
 
@@ -56,14 +56,14 @@ R_TYPE function X(mf_integrate) (mesh, ff) result(dd)
 end function X(mf_integrate)
 
 
-! ---------------------------------------------------------
-! This function returns the dot product between two vectors,
-! but using the mesh_aux defined as a global object in this
-! module. This way it can be called by external libraries,
-! passing only the two vectors. First, one has to 
-! make sure that mesh_aux is pointing to some defined
-! mesh data structure, by calling mesh_init_mesh_aux.
-! ---------------------------------------------------------
+!> ---------------------------------------------------------
+!! This function returns the dot product between two vectors,
+!! but using the mesh_aux defined as a global object in this
+!! module. This way it can be called by external libraries,
+!! passing only the two vectors. First, one has to 
+!! make sure that mesh_aux is pointing to some defined
+!! mesh data structure, by calling mesh_init_mesh_aux.
+!! ---------------------------------------------------------
 R_TYPE function X(mf_dotp_aux)(f1, f2) result(dotp)
   R_TYPE,            intent(in) :: f1(:), f2(:)
 
@@ -74,15 +74,15 @@ R_TYPE function X(mf_dotp_aux)(f1, f2) result(dotp)
 end function X(mf_dotp_aux)
 
 ! ---------------------------------------------------------
-! this function returns the dot product between two vectors
+!> this function returns the dot product between two vectors
 R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
   type(mesh_t),      intent(in) :: mesh
   R_TYPE,            intent(in) :: f1(:), f2(:)
   logical, optional, intent(in) :: reduce
   logical, optional, intent(in) :: dotu
-     ! if true, use lalg_dotu instead of lalg_dot;
-     ! no complex conjugation.  Default is false.
-     ! has no effect if working with real version
+     !< if true, use lalg_dotu instead of lalg_dot;
+     !! no complex conjugation.  Default is false.
+     !! has no effect if working with real version
 
 #ifdef R_TCOMPLEX
   logical             :: dotu_
@@ -151,8 +151,8 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
   R_TYPE,            intent(in) :: f1(:,:), f2(:,:)
   logical, optional, intent(in) :: reduce
   logical, optional, intent(in) :: dotu
-     ! if true, use lalg_dotu instead of lalg_dot;
-     ! no complex conjugation.  Default is false.
+     !< if true, use lalg_dotu instead of lalg_dot;
+     !! no complex conjugation.  Default is false.
 
   integer :: idim
 
@@ -174,7 +174,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
 end function X(mf_dotp_2)
 
 ! ---------------------------------------------------------
-! this function returns the the norm of a vector
+!> this function returns the the norm of a vector
 FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
   type(mesh_t),      intent(in) :: mesh
   R_TYPE,            intent(in) :: ff(:)
@@ -231,7 +231,7 @@ FLOAT function X(mf_nrm2_2)(mesh, dim, ff, reduce) result(nrm2)
 end function X(mf_nrm2_2)
 
 ! ---------------------------------------------------------
-! This function calculates the "order" moment of the function ff
+!> This function calculates the "order" moment of the function ff
 R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
   type(mesh_t), intent(in) :: mesh
   R_TYPE,       intent(in) :: ff(:)
@@ -254,8 +254,8 @@ end function X(mf_moment)
 
 
 ! ---------------------------------------------------------
-! This subroutine generates a Gaussian wavefunction at a
-! random position in space.
+!> This subroutine generates a Gaussian wavefunction at a
+!! random position in space.
 subroutine X(mf_random)(mesh, ff, seed)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(out) :: ff(:)
@@ -296,22 +296,22 @@ subroutine X(mf_random)(mesh, ff, seed)
 end subroutine X(mf_random)
 
 ! ---------------------------------------------------------
-! Does a partial integration of a function: i.e. in N
-! dimensions, it integrates over N-1 dimensions. The
-! argument jj is the dimension which is not integrated.
-! The input function f_in is a normal function defined on
-! the mesh, whereas the output function f_out is a 1D array
-! of mesh%idx%ll(jj) + 2*mesh%enlarge(jj) elements.
-!
-! In order to retrieve the coordinate v of u(n), one needs
-! to do:
-!  k = gr%mesh%idx%nr(1, j) + n - 1
-!  i = gr%mesh%idx%lxyz_inv(k, 0, 0) ! Assuming j = 1
-!  if(i>0) v = gr%mesh%x(i, j)   ! I do not understand why
-!                                ! we need i>0 ...
-!
-! \warning: It will stop if one is using curvilinear
-! coordinates, or real-space domain parallelization.
+!> Does a partial integration of a function: i.e. in N
+!! dimensions, it integrates over N-1 dimensions. The
+!! argument jj is the dimension which is not integrated.
+!! The input function f_in is a normal function defined on
+!! the mesh, whereas the output function f_out is a 1D array
+!! of mesh%idx%ll(jj) + 2*mesh%enlarge(jj) elements.
+!!
+!! In order to retrieve the coordinate v of u(n), one needs
+!! to do:
+!!  k = gr%mesh%idx%nr(1, j) + n - 1
+!!  i = gr%mesh%idx%lxyz_inv(k, 0, 0) ! Assuming j = 1
+!!  if(i>0) v = gr%mesh%x(i, j)   ! I do not understand why
+!!                                ! we need i>0 ...
+!!
+!! \warning: It will stop if one is using curvilinear
+!! coordinates, or real-space domain parallelization.
 subroutine X(mf_partial_integrate)(mesh, jj, f_in, f_out)
   type(mesh_t), intent(in)  :: mesh
   integer,      intent(in)  :: jj
@@ -342,8 +342,8 @@ end subroutine X(mf_partial_integrate)
 subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, f_in, f_out)
   type(mesh_t),         intent(in)  :: mesh_in, mesh_out
   logical,              intent(in)  :: full_interpolation
-  R_TYPE,               intent(in)  :: f_in(:)    ! f_in(mesh_in%np_global)
-  R_TYPE,               intent(out) :: f_out(:)   ! f_out(mesh%np)
+  R_TYPE,               intent(in)  :: f_in(:)    !< (mesh_in%np_global)
+  R_TYPE,               intent(out) :: f_out(:)   !< (mesh%np)
 
   integer :: ix, iy, iz
   R_TYPE, allocatable :: f_global(:)
@@ -391,16 +391,16 @@ end subroutine X(mf_interpolate)
 
 
 ! --------------------------------------------------------- 
-! This function receives a function f_in defined in a mesh, and returns
-! the interpolated values of the function over the npoints_in defined
-! by x_in.
+!> This function receives a function f_in defined in a mesh, and returns
+!! the interpolated values of the function over the npoints_in defined
+!! by x_in.
 
 subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, x_out, f_out)
   integer,              intent(in)  :: ndim, npoints_in, npoints_out
-  R_TYPE, target,       intent(in)  :: f_in(:)    ! f_in(npoints_in)
+  R_TYPE, target,       intent(in)  :: f_in(:)    !< (npoints_in)
   FLOAT,  target,       intent(in)  :: x_in(:, :)
   FLOAT,                intent(in)  :: x_out(:,:)
-  R_TYPE,               intent(out) :: f_out(:)   ! f_out(npoints_out)
+  R_TYPE,               intent(out) :: f_out(:)   !< (npoints_out)
 
   real(8) :: pp(MAX_DIM)
   R_DOUBLE, pointer :: rf_in(:)
@@ -464,9 +464,9 @@ end subroutine X(mf_interpolate_points)
 
 
 ! ---------------------------------------------------------
-! Given a function ff defined on mesh, and a plane, it gives 
-! back the values of ff on the plane, by doing the appropriate
-! interpolation.
+!> Given a function ff defined on mesh, and a plane, it gives 
+!! back the values of ff on the plane, by doing the appropriate
+!! interpolation.
 subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
   type(mesh_t),       intent(in)  :: mesh
   type(mesh_plane_t), intent(in)  :: plane
@@ -513,9 +513,9 @@ end subroutine X(mf_interpolate_on_plane)
 
 
 ! ---------------------------------------------------------
-! Given a function ff defined on mesh, and a line, it gives 
-! back the values of ff on the line, by doing the appropriate
-! interpolation.
+!> Given a function ff defined on mesh, and a line, it gives 
+!! back the values of ff on the line, by doing the appropriate
+!! interpolation.
 subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   type(mesh_t),       intent(in)  :: mesh
   type(mesh_line_t),  intent(in)  :: line
@@ -558,11 +558,11 @@ end subroutine X(mf_interpolate_on_line)
 
 
 ! ---------------------------------------------------------
-! This subroutine calculates the surface integral of a scalar
-! function on a given plane.
+!> This subroutine calculates the surface integral of a scalar
+!! function on a given plane.
 R_TYPE function X(mf_surface_integral_scalar) (mesh, ff, plane) result(dd)
   type(mesh_t),       intent(in) :: mesh
-  R_TYPE,             intent(in) :: ff(:)  ! ff(mesh%np)
+  R_TYPE,             intent(in) :: ff(:)  ! (mesh%np)
   type(mesh_plane_t), intent(in) :: plane
 
   R_TYPE, allocatable :: f_in_plane(:, :)
@@ -586,11 +586,11 @@ end function X(mf_surface_integral_scalar)
 
 
 ! ---------------------------------------------------------
-! This subroutine calculates the surface integral of a vector
-! function on a given plane.
+!> This subroutine calculates the surface integral of a vector
+!! function on a given plane.
 R_TYPE function X(mf_surface_integral_vector) (mesh, ff, plane) result(dd)
   type(mesh_t), intent(in)       :: mesh
-  R_TYPE,       intent(in)       :: ff(:, :)  ! ff(mesh%np, MAX_DIM)
+  R_TYPE,       intent(in)       :: ff(:, :)  !< (mesh%np, MAX_DIM)
   type(mesh_plane_t), intent(in) :: plane
 
   R_TYPE, allocatable :: fn(:)
@@ -611,11 +611,11 @@ end function X(mf_surface_integral_vector)
 
 
 ! ---------------------------------------------------------
-! This subroutine calculates the line integral of a scalar
-! function on a given line.
+!> This subroutine calculates the line integral of a scalar
+!! function on a given line.
 R_TYPE function X(mf_line_integral_scalar) (mesh, ff, line) result(dd)
   type(mesh_t), intent(in)       :: mesh
-  R_TYPE,       intent(in)       :: ff(:)  ! ff(mesh%np)
+  R_TYPE,       intent(in)       :: ff(:)  !< (mesh%np)
   type(mesh_line_t), intent(in) :: line
 
   R_TYPE, allocatable :: f_in_line(:)
@@ -639,11 +639,11 @@ end function X(mf_line_integral_scalar)
 
 
 ! ---------------------------------------------------------
-! This subroutine calculates the line integral of a vector
-! function on a given line.
+!> This subroutine calculates the line integral of a vector
+!! function on a given line.
 R_TYPE function X(mf_line_integral_vector) (mesh, ff, line) result(dd)
   type(mesh_t), intent(in)       :: mesh
-  R_TYPE,       intent(in)       :: ff(:, :)  ! ff(mesh%np, MAX_DIM)
+  R_TYPE,       intent(in)       :: ff(:, :)  !< (mesh%np, MAX_DIM)
   type(mesh_line_t), intent(in) :: line
 
   R_TYPE, allocatable :: fn(:)
@@ -664,7 +664,7 @@ end function X(mf_line_integral_vector)
 
 
 ! ---------------------------------------------------------
-! Converts a spline that represents a radial function into a mesh.
+!> Converts a spline that represents a radial function into a mesh.
 subroutine X(mf_put_radial_spline)(mesh, spl, center, ff, add)
   type(mesh_t),        intent(in)    :: mesh
   type(spline_t),      intent(in)    :: spl
@@ -705,21 +705,21 @@ end subroutine X(mf_put_radial_spline)
 
 
 ! -----------------------------------------------------------------------------
-! This routine calculates the multipoles of a function ff,
-! defined in the following way:
-! multipole(1) is the trace of ff (defined to be positive; integral
-!   of ff).
-! multipole(2:4) contains the dipole: integral of ff times x, y or z.
-! multipole(5:9, is) contains the quadrupole, defined in the usual way using
-!   the spherical harmonics: multipole(5) = Integral [ ff * Y_{2,-2} ],
-!   multipole(6, is) = Integral [ f * Y_{2, -1} ].
-! And so on.
-! -----------------------------------------------------------------------------
+!> This routine calculates the multipoles of a function ff,
+!! defined in the following way:
+!! multipole(1) is the trace of ff (defined to be positive; integral
+!!   of ff).
+!! multipole(2:4) contains the dipole: integral of ff times x, y or z.
+!! multipole(5:9, is) contains the quadrupole, defined in the usual way using
+!!   the spherical harmonics: multipole(5) = Integral [ ff * Y_{2,-2} ],
+!!   multipole(6, is) = Integral [ f * Y_{2, -1} ].
+!! And so on.
+!! -----------------------------------------------------------------------------
 subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
   type(mesh_t),   intent(in)  :: mesh
   R_TYPE,         intent(in)  :: ff(:)
   integer,        intent(in)  :: lmax
-  R_TYPE,         intent(out) :: multipole(:) ! multipole((lmax + 1)**2)
+  R_TYPE,         intent(out) :: multipole(:) !< ((lmax + 1)**2)
 
   integer :: idim, ip, ll, lm, add_lm
   FLOAT   :: xx(MAX_DIM), rr, ylm
@@ -762,18 +762,18 @@ end subroutine X(mf_multipoles)
 
 
 !--------------------------------------------------------------
-! add some part of the function in mesh1 to mesh2 (index based, so same spacing is assumed)
+!> add some part of the function in mesh1 to mesh2 (index based, so same spacing is assumed)
 subroutine X(mf_add)(mesh1, start1, end1, func1, mesh2, start2, end2, func2, per_dim, include_bounds)
   type(mesh_t),      intent(in)    :: mesh1
-  integer,           intent(in)    :: start1(1:3)    ! starting point in mesh1
-  integer,           intent(in)    :: end1(1:3)      ! end point in mesh1
-  R_TYPE,            intent(in)    :: func1(:)       ! copy from this
+  integer,           intent(in)    :: start1(1:3)    !< starting point in mesh1
+  integer,           intent(in)    :: end1(1:3)      !< end point in mesh1
+  R_TYPE,            intent(in)    :: func1(:)       !< copy from this
   type(mesh_t),      intent(in)    :: mesh2
-  integer,           intent(in)    :: start2(1:3)    ! starting point in mesh2
-  integer,           intent(in)    :: end2(1:3)      ! end point in mesh2
-  R_TYPE,            intent(inout) :: func2(:)       ! add to this
-  integer,           intent(in)    :: per_dim        ! the periodic dimension
-  logical, optional, intent(in)    :: include_bounds ! also use the points outside the box?
+  integer,           intent(in)    :: start2(1:3)    !< starting point in mesh2
+  integer,           intent(in)    :: end2(1:3)      !< end point in mesh2
+  R_TYPE,            intent(inout) :: func2(:)       !< add to this
+  integer,           intent(in)    :: per_dim        !< the periodic dimension
+  logical, optional, intent(in)    :: include_bounds !< also use the points outside the box?
 
   integer :: np1, np2, ip1, ip2, ix2, iy2, iz2
   integer :: ix1(1:3)
@@ -822,18 +822,18 @@ end subroutine X(mf_add)
 
 
 !--------------------------------------------------------------
-! copies some part of the function in mesh1 to another mesh (index based, so same spacing is assumed)
+!> copies some part of the function in mesh1 to another mesh (index based, so same spacing is assumed)
 subroutine X(mf_copy)(mesh1, start1, end1, func1, mesh2, start2, end2, func2, per_dim, include_bounds)
   type(mesh_t),      intent(in)  :: mesh1
-  integer,           intent(in)  :: start1(1:3)    ! starting point in mesh1
-  integer,           intent(in)  :: end1(1:3)      ! end point in mesh1
-  R_TYPE,            intent(in)  :: func1(:)       ! copy from this
+  integer,           intent(in)  :: start1(1:3)    !< starting point in mesh1
+  integer,           intent(in)  :: end1(1:3)      !< end point in mesh1
+  R_TYPE,            intent(in)  :: func1(:)       !< copy from this
   type(mesh_t),      intent(in)  :: mesh2
-  integer,           intent(in)  :: start2(1:3)    ! starting point in mesh2
-  integer,           intent(in)  :: end2(1:3)      ! end point in mesh2
-  R_TYPE,            intent(out) :: func2(:)       ! copy into this
-  integer,           intent(in)  :: per_dim        ! the periodic dimension
-  logical, optional, intent(in)  :: include_bounds ! also use the points outside the box?
+  integer,           intent(in)  :: start2(1:3)    !< starting point in mesh2
+  integer,           intent(in)  :: end2(1:3)      !< end point in mesh2
+  R_TYPE,            intent(out) :: func2(:)       !< copy into this
+  integer,           intent(in)  :: per_dim        !< the periodic dimension
+  logical, optional, intent(in)  :: include_bounds !< also use the points outside the box?
 
   integer :: np1, np2, ip1, ip2, ix2, iy2, iz2
   integer :: ix1(1:3)
