@@ -148,7 +148,7 @@ contains
 
     ! Figure out the starting wavefunction(s), and the target.
     call initial_state_init(sys, hm, initial_st)
-    call target_init(sys%gr, sys%geo, initial_st, td, controlfunction_w0(par), target, oct)
+    call target_init(sys%gr, sys%geo, initial_st, td, controlfunction_w0(par), target, oct, hm%ep)
 
     ! Sanity checks.
     call check_faulty_runmodes(sys, hm, td%tr)

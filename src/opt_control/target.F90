@@ -23,6 +23,7 @@ module opt_control_target_m
   use datasets_m
   use density_m
   use derivatives_m
+  use epot_m
   use excited_states_m
   use forces_m
   use geometry_m
@@ -142,7 +143,7 @@ module opt_control_target_m
 
   ! ----------------------------------------------------------------------
   !> The target is initialized, mainly by reading from the inp file.
-  subroutine target_init(gr, geo, stin, td, w0, target, oct)
+  subroutine target_init(gr, geo, stin, td, w0, target, oct, ep)
     type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(in)    :: geo
     type(states_t),   intent(inout) :: stin 
@@ -150,6 +151,7 @@ module opt_control_target_m
     FLOAT,            intent(in)    :: w0
     type(target_t),   intent(inout) :: target
     type(oct_t),      intent(in)    :: oct
+    type(epot_t),     intent(inout) :: ep
 
     integer             :: ierr, ip, ist, jst, jj, iatom, ib, idim, inst, inik, &
                            id, ik, no_states, no_constraint, no_ptpair, cstr_dim(MAX_DIM)
@@ -671,7 +673,7 @@ module opt_control_target_m
           do iatom=1, geo%natoms
              vl(:) = M_ZERO
              vl_grad(:,:) = M_ZERO
-             call species_get_local(geo%atom(iatom)%spec, gr%mesh, geo%atom(iatom)%x(1:gr%sb%dim), vl)
+             call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vl)
              call dderivatives_grad(gr%der, vl, vl_grad)
              forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
                 target%grad_local_pot(iatom, ist, jst) = vl_grad(ist, jst)
