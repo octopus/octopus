@@ -293,6 +293,7 @@
     do mm = 1, st%nst
       call states_get_state(st, gr%mesh, 1, mm, 1, wf)
 
+      symmetries_satisfied = .true.
       if (impose_exch_symmetry) then
         if (mm > 1) then
           ! if eigenval is not degenerate reset young_used
