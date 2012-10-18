@@ -69,7 +69,7 @@ module kdotp_m
 
     FLOAT, pointer :: eff_mass_inv(:,:,:,:)  ! inverse effective-mass tensor
                                                 ! (idir1, idir2, ist, ik)
-    FLOAT, pointer :: velocity(:,:,:) ! group velocity vector (ik, ist, idir)
+    FLOAT, pointer :: velocity(:,:,:) ! group velocity vector (idir, ist, ik)
 
     type(lr_t), pointer :: lr(:,:) ! linear response for (sys%gr%sb%periodic_dim,1)
                                    ! second index is dummy; should only be 1
@@ -117,7 +117,7 @@ contains
     endif
 
     SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:pdim, 1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
-    SAFE_ALLOCATE(kdotp_vars%velocity(1:sys%st%d%nik, 1:sys%st%nst, 1:pdim))
+    SAFE_ALLOCATE(kdotp_vars%velocity(1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
     kdotp_vars%eff_mass_inv(:,:,:,:) = 0 
     kdotp_vars%velocity(:,:,:) = 0 
 
@@ -452,7 +452,7 @@ contains
 
       do ist = 1, st%nst
         write(iunit,'(i5,f12.5,3f12.5)') ist, units_from_atomic(units_out%energy, st%eigenval(ist, ik)), &
-          velocity(ik, ist, 1:periodic_dim)
+          velocity(1:periodic_dim, ist, ik)
       enddo
     enddo
 

@@ -93,7 +93,7 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
       do idir = 1, sys%gr%sb%periodic_dim
         call pert_setup_dir(pert, idir)
         call zpert_apply(pert, sys%gr, sys%geo, hm, ik, psi, pertpsi)
-        velocity(ik, ist, idir) = -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, psi, pertpsi))
+        velocity(idir, ist, ik) = -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, psi, pertpsi))
       end do
     end do
   end do
@@ -103,9 +103,9 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
 
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states .or. sys%st%d%kpt%parallel) then
-    SAFE_ALLOCATE(vel_temp(1:sys%st%d%nik, 1:sys%st%nst, 1:sys%gr%sb%periodic_dim))
+    SAFE_ALLOCATE(vel_temp(1:sys%gr%sb%periodic_dim, 1:sys%st%nst, 1:sys%st%d%nik))
 
-    call MPI_Allreduce(velocity, vel_temp, sys%st%d%nik*sys%st%nst*sys%gr%sb%periodic_dim, &
+    call MPI_Allreduce(velocity, vel_temp, sys%gr%sb%periodic_dim * sys%st%nst * sys%st%d%nik, &
       MPI_FLOAT, MPI_SUM, sys%st%st_kpt_mpi_grp%comm, mpi_err)
 
     velocity(:,:,:) = vel_temp(:,:,:)
