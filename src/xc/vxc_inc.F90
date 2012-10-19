@@ -408,9 +408,9 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
 contains
 
   ! ---------------------------------------------------------
-  ! Takes care of the initialization of the LDA part of the functionals
-  !   *) allocates density and dedd, and their local variants
-  !   *) calculates the density taking into account nlcc and non-collinear spin
+  !> Takes care of the initialization of the LDA part of the functionals
+  !!   *) allocates density and dedd, and their local variants
+  !!   *) calculates the density taking into account nlcc and non-collinear spin
   subroutine lda_init()
     integer :: ii
     FLOAT   :: d(2), dtot, dpol
@@ -460,7 +460,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! deallocate variables allocated in lda_init
+  !> deallocate variables allocated in lda_init
   subroutine lda_end()
     PUSH_SUB(xc_get_vxc.lda_end)
 
@@ -480,7 +480,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! calculates the LDA part of vxc, taking into account non-collinear spin
+  !> calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
     integer :: ip
     FLOAT :: d(2), dpol, vpol
@@ -513,9 +513,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! initialize GGAs
-  !   *) allocates gradient of the density (gdens), dedgd, and its local variants
-
+  !> initialize GGAs
+  !!   *) allocates gradient of the density (gdens), dedgd, and its local variants
   subroutine gga_init()
     integer :: ii
 
@@ -547,7 +546,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! cleans up memory allocated in gga_init
+  !> cleans up memory allocated in gga_init
   subroutine gga_end()
     PUSH_SUB(xc_get_vxc.gga_end)
 
@@ -563,7 +562,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! calculates the GGA contribution to vxc
+  !> calculates the GGA contribution to vxc
   subroutine gga_process()
     integer :: ip, is
     FLOAT, allocatable :: gf(:,:)
@@ -599,9 +598,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! initialize meta-GGAs
-  !   *) allocate the kinetic-energy density, dedtau, and local variants
-
+  !> initialize meta-GGAs
+  !!   *) allocate the kinetic-energy density, dedtau, and local variants
   subroutine mgga_init()
     PUSH_SUB(xc_get_vxc.mgga_init)
 
@@ -647,7 +645,7 @@ contains
 
       if (n <= CNST(1e-7)) then 
         gnon(ii) = CNST(0.0)
-        ! here you will have to print the true gnon(ii) with the correspondent mesh point ii
+        ! here you will have to print the true gnon(ii) with the corresponding mesh point ii
       else
         gnon(ii) = sqrt(sum((gn(1:der%mesh%sb%dim)/n)**2))
       end if
@@ -667,7 +665,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! clean up memory allocates in mgga_init
+  !> clean up memory allocated in mgga_init
   subroutine mgga_end()
     PUSH_SUB(xc_get_vxc.mgga_end)
 
@@ -690,7 +688,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! calculate the mgga contribution to vxc
+  !> calculate the mgga contribution to vxc
   subroutine mgga_process()
     integer :: is
     FLOAT, allocatable :: lf(:,:)
@@ -1054,9 +1052,9 @@ subroutine zxc_complex_lda(mesh, rho, vxc, ex, ec, Imrho, Imvxc, Imex, Imec, cmp
 end subroutine zxc_complex_lda
 
 ! ----------------------------------------------------------------------------- 
-! This is the complex scaled interface for xc functionals.
-! It will eventually be merged with the other one dxc_get_vxc after some test
-! -----------------------------------------------------------------------------
+!> This is the complex scaled interface for xc functionals.
+!! It will eventually be merged with the other one dxc_get_vxc after some test
+!! -----------------------------------------------------------------------------
 subroutine xc_get_vxc_cmplx(der, xcs, rho, ispin, &
   ex, ec, vxc, Imrho, Imex, Imec, Imvxc, cmplxscl_th)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
