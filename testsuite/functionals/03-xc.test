@@ -33,7 +33,7 @@ Input: 03-xc.lda_c_vwn.inp
 match ; lda_c_vwn                              ; GREP(out, 'Correlation =', 20) ; -0.03869312
 
 Input: 03-xc.lda_c_vwn_rpa.inp
-match ; lda_c_vwn_rpa                          ; GREP(out, 'Correlation =', 20) ; -0.05643197
+match ; lda_c_vwn_rpa                          ; GREP(out, 'Correlation =', 20) ; -0.05551530
 
 Input: 03-xc.lda_c_pz.inp
 match ; lda_c_pz                               ; GREP(out, 'Correlation =', 20) ; -0.03787715
