@@ -20,7 +20,6 @@
 #include "global.h"
 
 module run_m
-  use calc_mode_m
   use casida_m
   use datasets_m
   use em_resp_m
