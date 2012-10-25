@@ -184,8 +184,7 @@ contains
           call messages_fatal(4)
         end if
       end if
-      if(def_rsize > M_ZERO) call messages_check_def(units_from_atomic(units_out%length, grid_spacing(idir)), &
-        units_from_atomic(units_out%length, def_rsize), 'Spacing')
+      if(def_rsize > M_ZERO) call messages_check_def(grid_spacing(idir), def_rsize, 'Spacing', units_out%length)
     end do
 
 #if defined(HAVE_GDLIB)

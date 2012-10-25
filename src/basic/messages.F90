@@ -994,16 +994,22 @@ end subroutine messages_end
   
 
   !--------------------------------------------------------------
-  subroutine messages_check_def(var, def, text)
-    FLOAT,            intent(in) :: var
-    FLOAT,            intent(in) :: def
-    character(len=*), intent(in) :: text
+  subroutine messages_check_def(var, def, name, unit)
+    FLOAT,                     intent(in) :: var
+    FLOAT,                     intent(in) :: def
+    character(len=*),          intent(in) :: name
+    type(unit_t), optional, intent(in) :: unit
 
     PUSH_SUB(messages_check_def)
 
     if(var > def) then
-      write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value."
-      write(message(2), '(f8.3,a,f8.3)') var, ' > ', def
+      write(message(1), '(3a)') "The value for '", name, "' does not match the recommended value."
+      if(present(unit)) then
+        write(message(2), '(f8.3,a,a,a,f8.3,a,a)') units_from_atomic(unit, var), ' ', trim(units_abbrev(unit)), &
+          ' > ', units_from_atomic(unit, def), ' ', trim(units_abbrev(unit))
+      else
+        write(message(2), '(f8.3,a,f8.3)') var, ' > ', def
+      endif
       call messages_warning(2)
     end if
 
