@@ -994,21 +994,33 @@ end subroutine messages_end
   
 
   !--------------------------------------------------------------
-  subroutine messages_check_def(var, def, name, unit)
-    FLOAT,                     intent(in) :: var
-    FLOAT,                     intent(in) :: def
-    character(len=*),          intent(in) :: name
+  subroutine messages_check_def(var, should_be_less, def, name, unit)
+    FLOAT,                  intent(in) :: var
+    logical,                intent(in) :: should_be_less
+    FLOAT,                  intent(in) :: def
+    character(len=*),       intent(in) :: name
     type(unit_t), optional, intent(in) :: unit
+
+    logical :: is_bad
+    character(len=3) :: op_str
 
     PUSH_SUB(messages_check_def)
 
-    if(var > def) then
-      write(message(1), '(3a)') "The value for '", name, "' does not match the recommended value."
+    if(should_be_less) then
+      is_bad = var > def
+      op_str = ' > '
+    else
+      is_bad = var < def
+      op_str = ' < '
+    endif
+
+    if(is_bad) then
+      write(message(1), '(3a)') "The value for '", name, "' is inconsistent with the recommended value."
       if(present(unit)) then
-        write(message(2), '(f8.3,a,a,a,f8.3,a,a)') units_from_atomic(unit, var), ' ', trim(units_abbrev(unit)), &
-          ' > ', units_from_atomic(unit, def), ' ', trim(units_abbrev(unit))
+        write(message(2), '(a,f8.3,4a,f8.3,a,a)') 'given ', units_from_atomic(unit, var), ' ', trim(units_abbrev(unit)), &
+          op_str, 'recommended ', units_from_atomic(unit, def), ' ', trim(units_abbrev(unit))
       else
-        write(message(2), '(f8.3,a,f8.3)') var, ' > ', def
+        write(message(2), '(a,f8.3,2a,f8.3)') 'given ', var, op_str, 'recommended ', def
       endif
       call messages_warning(2)
     end if
