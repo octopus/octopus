@@ -165,7 +165,7 @@ contains
     if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
         call td_read_coordinates()
-        call hamiltonian_epot_generate(hm, gr, geo, st)
+        call hamiltonian_epot_generate(hm, gr, geo, st, time = td%iter*td%dt)
       end if
 
       call forces_calculate(gr, geo, hm%ep, st, td%iter*td%dt)
