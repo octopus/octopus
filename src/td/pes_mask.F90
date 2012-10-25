@@ -207,7 +207,7 @@
       !%Variable PESMaskMode
       !%Type integer
       !%Default mask_mode
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% PES calculation mode.
       !%Option mask_mode 1
@@ -243,7 +243,7 @@
       !%Variable PESMaskPropagator 
       !%Type integer
       !%Default volkov
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% Photoelectron waves time-propagation operator in momentum space.
       !%Option volkov 2
@@ -258,7 +258,7 @@
       !%Variable PESMaskStartTime 
       !%Type float
       !%Default -1.0
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% The time photoelectrons start to be recorded. In pump-probe simulations this allow to 
       !% get rid of unwanted ionization signal coming from the pump.
@@ -275,7 +275,7 @@
       !%Variable PESMaskPlaneWaveProjection
       !%Type integer
       !%Default fft_map
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% With the mask method, wavefunctions in the continuum are treated as plane waves.
       !% This variable sets how to calculate the plane-wave projection in the buffer 
@@ -329,7 +329,7 @@
       !%Variable PESMaskEnlargeLev
       !%Type integer
       !%Default 0
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% Mask box enlargement level. Enlarges the mask bounding box by a factor 2**<tt>PESMaskEnlargeLev</tt>.
       !% This will avoid wavefunction wrapping at the boundaries.
@@ -344,7 +344,7 @@
       !%Variable PESMaskNFFTEnlargeLev
       !%Type integer
       !%Default 0
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% Mask box enlargement level. Enlarges the mask box by a factor 2**<tt>PESMaskEnlargeLev</tt>
       !% using NFFT. This way we add two points in each direction at a distance
@@ -509,7 +509,7 @@
       !%Variable PESMaskShape
       !%Type integer
       !%Default m_sin2
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% The mask function shape.
       !%Option m_sin2 1
@@ -525,7 +525,7 @@
 
       !%Variable PESMaskSize
       !%Type block
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% Set the size of the mask function. 
       !% Here you can set the inner (R1) and outer (R2) radius by setting
@@ -572,7 +572,7 @@
       !%Variable PESMaskFilterCutOff 
       !%Type float
       !%Default -1
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% In calculation with <tt>PESMaskMode = fullmask_mode</tt> and NFFT, spurious frequencies 
       !% may lead to numerical instability of the algorithm. This option gives the possibility 
@@ -601,7 +601,7 @@
       !%Variable PESMaskIncludePsiA
       !%Type logical
       !%Default false
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% Add the contribution of \Psi_A in the mask region to the photo-electron spectrum.
       !% Literally adds the Fourier components of: 
@@ -622,7 +622,7 @@
       !%Variable PESMaskSpectEnergyMax 
       !%Type float
       !%Default maxval(mask%Lk)**2/2
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% The maximum energy for the PES spectrum.
       !%End
@@ -635,7 +635,7 @@
 
       !%Variable PESMaskSpectEnergyStep 
       !%Type float
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% The PES spectrum energy step.
       !%End
@@ -647,10 +647,10 @@
       !%Variable PESMaskOutputInterpolate 
       !%Type logical
       !%Default false
-      !%Section Time-Dependent::PES
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% Use interpolation to evaluate the quantities in polar coordinates.
-      !% NOTE: In 3D this is practically prohibitive in the present implemetation.
+      !% NOTE: In 3D this is practically prohibitive in the present implementation.
       !% We suggest to use the postprocessing tool <tt>oct-photoelectron_spectrum</tt> in this case. 
       !%End
       call parse_logical(datasets_check('PESMaskOutputInterpolate'),.false.,mask%interpolate_out)
