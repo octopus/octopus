@@ -17,5 +17,5 @@ Input: 08-velocities.01-ground_state.inp
 Input: 08-velocities.02-oct.inp
 
 Precision : 0.1
-match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1 ', 35) ; 2118.92728464
+match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1 ', 35) ; 2118.92730449
 

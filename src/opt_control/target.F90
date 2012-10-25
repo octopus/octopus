@@ -681,21 +681,13 @@ module opt_control_target_m
           end do
           SAFE_DEALLOCATE_A(vl)
           SAFE_DEALLOCATE_A(vl_grad)
+
+          ! Note that the calculation of the gradient of the potential
+          ! is wrong at the borders of the box, since it assumes zero boundary
+          ! conditions. The best way to solve this problems is to define the 
+          ! target making use of the definition of the forces based on the gradient
+          ! of the density, rather than on the gradient of the potential.
           
-          ! fix gradient jump on boundary - PRELIMINARY
-          stencil_size = (real(gr%der%order+1)*gr%mesh%spacing(1))**2
-          do ist=1, gr%mesh%np
-             do jst=gr%mesh%np, gr%mesh%np_part
-                point_dist = M_ZERO
-                do ip=1, MAX_DIM
-                   point_dist = point_dist +(gr%mesh%x(ist,ip)-gr%mesh%x(jst,ip))**2
-                end do
-                if(point_dist < stencil_size) then
-                   target%grad_local_pot(1:geo%natoms, ist, 1:gr%sb%dim) = M_ZERO
-                   exit
-                end if
-             end do
-          end do
        end if
 
        target%dt = td%dt
