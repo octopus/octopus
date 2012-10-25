@@ -416,7 +416,8 @@ contains
       case(SPHERE, CYLINDER)
         call parse_float(datasets_check('Radius'), def_rsize, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO) call input_error('radius')
-        if(def_rsize>M_ZERO) call messages_check_def(def_rsize, sb%rsize, 'radius')
+        if(def_rsize>M_ZERO) call messages_check_def(units_from_atomic(units_out%length, def_rsize), &
+          units_from_atomic(units_out%length, sb%rsize), 'radius')
       case(MINIMUM)
 
         if(geo%reduced_coordinates) then
@@ -447,7 +448,8 @@ contains
         call parse_float(datasets_check('xlength'), default, sb%xsize, units_inp%length)
         sb%lsize(1) = sb%xsize
         if(def_rsize > M_ZERO .and. sb%periodic_dim == 0) &
-          call messages_check_def(def_rsize, sb%xsize, 'xlength')
+          call messages_check_def(units_from_atomic(units_out%length, def_rsize), &
+          units_from_atomic(units_out%length, sb%xsize), 'xlength')
       end if
 
       sb%lsize = M_ZERO
@@ -490,7 +492,8 @@ contains
 
         do idir = 1, sb%dim
           if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
-            call messages_check_def(def_rsize, sb%lsize(idir), 'Lsize')
+            call messages_check_def(units_from_atomic(units_out%length, def_rsize), &
+            units_from_atomic(units_out%length, sb%lsize(idir)), 'Lsize')
         end do
       end if
 
