@@ -197,26 +197,7 @@ contains
 
     !Initialize mapping only if PES is going to be used    
     
-    !%Variable PhotoElectronSpectrum
-    !%Type flag
-    !%Default no
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !%This variable controls the method used for the calculation of
-    !%the photoelectron spectrum. You can specify more than one value
-    !%by giving them as a sum, for example:
-    !% <tt>PhotoElectronSpectrum = pes_rc + pes_mask</tt>
-    !%Option none 0
-    !% The photoelectron spectrum is not calculated. This is the default.
-    !%Option pes_rc 2
-    !% Store the wavefunctions at specific points in order to 
-    !% calculate the photoelectron spectrum at a point far in the box as proposed in 
-    !% A. Pohl, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. Lett.</i> <b>84</b>, 5090 (2000).
-    !%Option pes_mask 4
-    !% Calculate the photo-electron spectrum using the mask method.
-    !% U. De Giovannini, D. Varsano, M. A. L. Marques, H. Appel, E. K. U. Gross, and A. Rubio,
-    !% <i>Phys. Rev. A</i> <b>85</b>, 062515 (2012).
-    !%End
+    ! variable definition appears in src/td/pes.F90
     call parse_integer(datasets_check('PhotoElectronSpectrum'), 0, photoelectron_flags)
     if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
       call input_error('PhotoElectronSpectrum')

@@ -90,6 +90,7 @@
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% List of points at which to calculate the photoelectron spectrum by Suraud method.
+      !% Required when <tt>PhotoElectronSpectrum = pes_rc</tt>.
       !% The exact syntax is:
       !%
       !% <tt>%PhotoElectronSpectrumPoints
@@ -99,7 +100,7 @@
       !%End
       call messages_obsolete_variable('PES_rc_points', 'PhotoElectronSpectrumPoints')
       if (parse_block(datasets_check('PhotoElectronSpectrumPoints'), blk) < 0) then
-        message(1) = 'The PhotoElectronSpectrumPoints block is required PhotoElectronSpectrum = pes_rc'
+        message(1) = 'The PhotoElectronSpectrumPoints block is required when PhotoElectronSpectrum = pes_rc'
         call messages_fatal(1)
       end if
 

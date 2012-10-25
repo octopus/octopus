@@ -193,7 +193,7 @@ contains
 
     !%Variable PhotoElectronSpectrum
     !%Type flag
-    !%Default no
+    !%Default none
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !%This variable controls the method used for the calculation of
