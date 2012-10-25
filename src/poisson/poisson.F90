@@ -197,6 +197,8 @@ contains
     if(der%mesh%sb%dim == 3 .and. der%mesh%sb%periodic_dim == 0) default_solver = POISSON_ISF
 #endif
 
+    if(der%mesh%sb%dim > 3) default_solver = POISSON_CG_CORRECTED
+
 #ifdef HAVE_CLAMDFFT
     ! this is disabled, since the difference between solvers are big
     ! enough to cause problems with the tests.
