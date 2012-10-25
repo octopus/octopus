@@ -273,7 +273,7 @@ contains
         !%Description
         !% (Experimental) This variable skips the application of the tail correction during the first calls of the
         !% subroutine that build the exchange-correlation potential (<tt>XCTailCorrectionDelay</tt> = number of calls skipped):
-        !%this can avoid problems caused by initial guess wavefunctions.
+        !% this can avoid problems caused by initial guess wavefunctions.
         !%End
         call parse_integer(datasets_check('XCTailCorrectionDelay'), 0, ks%tc_delay)
 
