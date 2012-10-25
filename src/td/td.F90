@@ -706,7 +706,7 @@ contains
 
       call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
       call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh, time = td%iter*td%dt)
 
       call io_close(iunit)
       POP_SUB(td_run.td_read_gauge_field)
