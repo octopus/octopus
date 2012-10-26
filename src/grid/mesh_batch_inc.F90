@@ -50,6 +50,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   ASSERT(batch_status(aa) == batch_status(bb))
 
   SAFE_ALLOCATE(dd(1:aa%nst, 1:bb%nst))
+  ! This has to be set to zero by hand since NaN * 0 = NaN.
+  dd(1:aa%nst, 1:bb%nst) = R_TOTYPE(CNST(0.0))
 
   select case(batch_status(aa))
   case(BATCH_NOT_PACKED)
@@ -60,15 +62,11 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
       ldaa = size(aa%X(psicont), dim = 1)
       ldbb = size(bb%X(psicont), dim = 1)
-      call blas_gemm('c', 'n', aa%nst, bb%nst, mesh%np, &
-        R_TOTYPE(mesh%volume_element), &
-        aa%X(psicont)(1, 1, 1), ldaa, &
-        bb%X(psicont)(1, 1, 1), ldbb, &
-        R_TOTYPE(M_ZERO), dd(1, 1), aa%nst)
+
+      call lalg_gemmt(aa%nst, bb%nst, mesh%np, R_TOTYPE(mesh%volume_element), &
+        aa%X(psicont), bb%X(psicont), R_TOTYPE(M_ZERO), dd)
 
     else
-
-      dd = R_TOTYPE(M_ZERO)
 
       block_size = hardware%X(block_size)
 
@@ -263,16 +261,13 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   use_blas = associated(aa%X(psicont)) .and. (.not. mesh%use_curvilinear)
 
   SAFE_ALLOCATE(dd(1:aa%nst, 1:aa%nst))
+  ! This has to be set to zero by hand since NaN * 0 = NaN.
+  dd(1:aa%nst, 1:aa%nst) = R_TOTYPE(CNST(0.0))
 
   call profiling_in(prof, "BATCH_DOTP_SELF")
 
   if(use_blas) then
     call profiling_in(profgemm, "BATCH_HERK")
-
-    ! For some reason this has to be set to zero by hand (a bug in
-    ! some Blas libraries?). Otherwise NaNs might contaminate the
-    ! result.
-    dd(1:aa%nst, 1:aa%nst) = R_TOTYPE(CNST(0.0))
 
     lda = size(aa%X(psicont), dim = 1)*aa%dim
 
@@ -285,8 +280,6 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
     end if
 
   else
-
-    dd = R_TOTYPE(M_ZERO)
 
     block_size = hardware%X(block_size)
 
@@ -386,11 +379,8 @@ subroutine X(mesh_batch_rotate)(mesh, aa, transf)
         call blas_copy(size, aa%states_linear(indb)%X(psi)(sp), 1, psicopy(1, ist), 1)
       end do
       
-      call blas_gemm('N', 'N', &
-        size, aa%nst, aa%nst, &
-        R_TOTYPE(M_ONE), psicopy(1, 1), block_size, &
-        transf(1, 1), aa%nst, &
-        R_TOTYPE(M_ZERO), psinew(1, 1), block_size)
+      call lalg_gemm(size, aa%nst, aa%nst, R_TOTYPE(M_ONE), psicopy, &
+        transf, R_TOTYPE(M_ZERO), psinew)
       
       do ist = 1, aa%nst
         indb = batch_linear_index(aa, (/ist, idim/))
