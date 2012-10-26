@@ -1,4 +1,4 @@
-!! Copyright (C) 2005-2006 M. Marques, X. Andrade
+!! Copyright (C) 2005-2012 M. Marques, X. Andrade, David Strubbe
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -18,9 +18,8 @@
 !! $Id: sternheimer_inc.F90 2663 2007-01-25 09:04:29Z lorenzen $
 
 !--------------------------------------------------------------
-! This routine calculates the first-order variations of the wavefunctions 
-! for an applied perturbation.
-!--------------------------------------------------------------
+!> This routine calculates the first-order variations of the wavefunctions 
+!! for an applied perturbation.
 subroutine X(sternheimer_solve)(                           &
      this, sys, hm, lr, nsigma, omega, perturbation,       &
      restart_dir, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)

@@ -1,4 +1,4 @@
-!! Copyright (C) 2007 Xavier Andrade
+!! Copyright (C) 2007-2012 Xavier Andrade, David Strubbe
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -333,8 +333,8 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    ! this formulation is only valid for finite systems, or an Ewald sum is required
-    ! as in Baroni et al. RMP 2001, Appendix B.
+    !> this formulation is only valid for finite systems, or an Ewald sum is required
+    !! as in Baroni et al. RMP 2001, Appendix B.
     subroutine build_ionic_dyn_matrix()
 
       FLOAT :: ac, xi(1:MAX_DIM), xj(1:MAX_DIM), xk(1:MAX_DIM), r2
@@ -392,12 +392,12 @@ contains
     end subroutine build_ionic_dyn_matrix
 
     ! ---------------------------------------------------------
+    !> calculate infrared intensities
     subroutine calc_infrared()
 
       FLOAT :: lir(1:MAX_DIM+1)
 
       PUSH_SUB(phonons_lr_run.calc_infrared)
-      !calculate infrared intensities
 
       iunit = io_open(VIB_MODES_DIR//'infrared', action='write')
 
@@ -422,8 +422,8 @@ contains
     end subroutine calc_infrared
 
     ! ---------------------------------------------------------
+    !> now calculate the wavefunction associated with each normal mode
     subroutine vib_modes_wavefunctions()
-      ! now calculate the wavefunction associated with each normal mode
 
       type(lr_t) :: lrtmp
       integer :: ik, ist, idim, inm
@@ -517,7 +517,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! output eigenvectors as animated XSF file, one per frame, displacements as forces
+  !> output eigenvectors as animated XSF file, one per frame, displacements as forces
   subroutine axsf_mode_output(this, geo, mesh)
     type(vibrations_t), intent(in) :: this
     type(geometry_t),   intent(in) :: geo

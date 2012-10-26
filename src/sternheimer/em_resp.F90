@@ -1,4 +1,4 @@
-!! Copyright (C) 2004 Xavier Andrade, Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca)
+!! Copyright (C) 2004-2012 Xavier Andrade, Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca), David Strubbe
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -69,32 +69,32 @@ module em_resp_m
   type em_resp_t
     type(pert_t) :: perturbation
 
-    integer :: nsigma ! 1: consider only positive values of the frequency
-                      ! 2: consider both positive and negative
-    integer :: nfactor! 1: only one frequency needed
-                      ! 3: three frequencies (for the hyperpolarizabilities)
-    integer :: nomega ! number of frequencies to consider
+    integer :: nsigma !< 1: consider only positive values of the frequency
+                      !! 2: consider both positive and negative
+    integer :: nfactor!< 1: only one frequency needed
+                      !! 3: three frequencies (for the hyperpolarizabilities)
+    integer :: nomega !< number of frequencies to consider
 
-    FLOAT :: eta                     ! small imaginary part to add to the frequency
+    FLOAT :: eta                     !< small imaginary part to add to the frequency
     FLOAT :: freq_factor(3)
-    FLOAT,      pointer :: omega(:)  ! the frequencies to consider
-    type(lr_t), pointer :: lr(:,:,:) ! linear response for (gr%sb%dim, nsigma, nfactor)
+    FLOAT,      pointer :: omega(:)  !< the frequencies to consider
+    type(lr_t), pointer :: lr(:,:,:) !< linear response for (gr%sb%dim, nsigma, nfactor)
 
     logical :: calc_hyperpol
-    CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        ! the linear polarizability
-    CMPLX   :: beta (MAX_DIM, MAX_DIM, MAX_DIM)  ! first hyperpolarizability
+    CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability
+    CMPLX   :: beta (MAX_DIM, MAX_DIM, MAX_DIM)  !< first hyperpolarizability
 
-    CMPLX   :: chi_para(MAX_DIM, MAX_DIM, 3)     ! The paramagnetic part of the susceptibility
-    CMPLX   :: chi_dia (MAX_DIM, MAX_DIM, 3)     ! The diamagnetic  part of the susceptibility
+    CMPLX   :: chi_para(MAX_DIM, MAX_DIM, 3)     !< The paramagnetic part of the susceptibility
+    CMPLX   :: chi_dia (MAX_DIM, MAX_DIM, 3)     !< The diamagnetic  part of the susceptibility
 
-    logical :: ok(1:3)                           ! whether calculation is converged
-    logical :: force_no_kdotp                    ! whether to use kdotp run for periodic system
+    logical :: ok(1:3)                           !< whether calculation is converged
+    logical :: force_no_kdotp                    !< whether to use kdotp run for periodic system
 
-    logical :: calc_rotatory                     ! whether to calculate rotatory response
-    logical :: calc_Born                         ! whether to calculate Born effective charges
-    type(Born_charges_t) :: Born_charges(3)      ! one set for each frequency factor
-    logical :: occ_response                      ! whether to calculate full response in Sternheimer eqn.
-    logical :: wfns_from_scratch                 ! whether to ignore restart LR wfns and initialize to zero
+    logical :: calc_rotatory                     !< whether to calculate rotatory response
+    logical :: calc_Born                         !< whether to calculate Born effective charges
+    type(Born_charges_t) :: Born_charges(3)      !< one set for each frequency factor
+    logical :: occ_response                      !< whether to calculate full response in Sternheimer eqn.
+    logical :: wfns_from_scratch                 !< whether to ignore restart LR wfns and initialize to zero
     
   end type em_resp_t
 
@@ -1082,7 +1082,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! Note: this should be in spectrum.F90
+    !> Note: this should be in spectrum.F90
     subroutine cross_section_header(out_file)
       integer, intent(in) :: out_file
 
@@ -1176,7 +1176,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! epsilon = 1 + 4 * pi * alpha/volume
+    !> epsilon = 1 + 4 * pi * alpha/volume
     subroutine out_dielectric_constant()
       CMPLX epsilon(MAX_DIM, MAX_DIM) 
       integer idir
@@ -1343,8 +1343,8 @@ contains
     
 
   ! ---------------------------------------------------------
-  ! See D Varsano, LA Espinosa Leal, Xavier Andrade, MAL Marques, Rosa di Felice, Angel Rubio,
-  ! Phys. Chem. Chem. Phys. 11, 4481 (2009)
+  !> See D Varsano, LA Espinosa Leal, Xavier Andrade, MAL Marques, Rosa di Felice, Angel Rubio,
+  !! Phys. Chem. Chem. Phys. 11, 4481 (2009)
     subroutine out_circular_dichroism
       type(pert_t) :: angular_momentum
       integer :: idir
@@ -1396,9 +1396,9 @@ contains
   end subroutine em_resp_output
 
   ! ---------------------------------------------------------
-  ! Ref: David M Bishop, Rev Mod Phys 62, 343 (1990)
-  ! beta // and _L are eqn (154), beta  k is eqn (155)
-  ! generalized to lack of Kleinman symmetry
+  !> Ref: David M Bishop, Rev Mod Phys 62, 343 (1990)
+  !! beta // and _L are eqn (154), beta  k is eqn (155)
+  !! generalized to lack of Kleinman symmetry
   subroutine out_hyperpolarizability(sb, beta, freq_factor, converged, dirname)
     type(simul_box_t),  intent(in) :: sb
     CMPLX,              intent(in) :: beta(:, :, :)
@@ -1491,10 +1491,10 @@ contains
     contains
 
       ! ---------------------------------------------------------
-      ! calculate hyper-Rayleigh scattering hyperpolarizabilities
-      ! SJ Cyvin, JE Rauch, and JC Decius, J Chem Phys 43, 4083 (1965)
-      ! generalized to avoid assumption of Kleinman symmetry (permutation of indices)
-      ! as in R Bersohn, Y-H Pao, and HL Frisch, J Chem Phys 45, 3184 (1966)
+      !> calculate hyper-Rayleigh scattering hyperpolarizabilities
+      !! SJ Cyvin, JE Rauch, and JC Decius, J Chem Phys 43, 4083 (1965)
+      !! generalized to avoid assumption of Kleinman symmetry (permutation of indices)
+      !! as in R Bersohn, Y-H Pao, and HL Frisch, J Chem Phys 45, 3184 (1966)
       subroutine calc_beta_HRS(sb, beta, HRS_VV, HRS_HV)
         type(simul_box_t), intent(in)  :: sb
         CMPLX,             intent(in)  :: beta(:, :, :)

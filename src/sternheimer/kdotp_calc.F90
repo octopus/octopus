@@ -64,8 +64,8 @@ contains
   end function kdotp_wfs_tag
 
 ! ---------------------------------------------------------
-! v = (dE_nk/dk)/hbar = -Im < u_nk | -i grad | u_nk >
-! This is identically zero for real wavefunctions.
+!> v = (dE_nk/dk)/hbar = -Im < u_nk | -i grad | u_nk >
+!! This is identically zero for real wavefunctions.
 subroutine zcalc_band_velocity(sys, hm, pert, velocity)
   type(system_t),      intent(inout) :: sys
   type(hamiltonian_t), intent(inout) :: hm
@@ -117,8 +117,10 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
 end subroutine zcalc_band_velocity
 
 ! ---------------------------------------------------------
-! This routine cannot be used with d/dk wavefunctions calculated
-! by perturbation theory.
+!> This routine cannot be used with d/dk wavefunctions calculated
+!! by perturbation theory.
+!! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
+!!      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
 subroutine zcalc_dipole_periodic(sys, lr, dipole)
   type(system_t),         intent(inout) :: sys
   type(lr_t),             intent(in)    :: lr(:,:)
@@ -128,9 +130,6 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
   type(mesh_t), pointer :: mesh
   CMPLX :: term, moment
   mesh => sys%gr%mesh
-
-  ! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
-  !      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
 
   PUSH_SUB(zcalc_dipole_periodic)
 

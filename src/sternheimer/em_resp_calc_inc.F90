@@ -1,4 +1,4 @@
-!! Copyright (C) 2004 Xavier Andrade, Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca)
+!! Copyright (C) 2004-2012 Xavier Andrade, Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca), David Strubbe
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
   type(states_t),       intent(inout) :: st
   type(grid_t),         intent(inout) :: gr
   type(lr_t),           intent(inout) :: lr
-  type(lr_t), optional, intent(inout) :: lr_m !when this argument is present, we are doing dynamical response
+  type(lr_t), optional, intent(inout) :: lr_m !< when this argument is present, we are doing dynamical response
 
   integer :: ip, idir, is, ist, idim, ik
 
@@ -251,6 +251,7 @@ end subroutine X(lr_calc_elf)
 
 
 ! ---------------------------------------------------------
+!> alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|-id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
 subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, ndir)
   type(system_t),         intent(inout) :: sys
   type(lr_t),             intent(inout) :: em_lr(:,:)
@@ -272,8 +273,6 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
 
   ndir_ = mesh%sb%periodic_dim
   if(present(ndir)) ndir_ = ndir
-
-  ! alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|-id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
 
   do dir1 = 1, ndir_
     do dir2 = 1, sys%gr%sb%dim
@@ -322,6 +321,8 @@ end subroutine X(calc_polarizability_periodic)
 
 
 ! ---------------------------------------------------------
+!> alpha_ij(w) = - sum(m occ) [<psi_m(0)|r_i|psi_mj(1)(w)> + <psi_mj(1)(-w)|r_i|psi_m(0)>]
+!! minus sign is from electronic charge -e
 subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol, doalldirs, ndir)
   type(system_t),         intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
@@ -343,9 +344,6 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
   if(present(doalldirs)) then
     if(doalldirs) startdir = 1
   endif
-
-  ! alpha_ij(w) = - sum(m occ) [<psi_m(0)|r_i|psi_mj(1)(w)> + <psi_mj(1)(-w)|r_i|psi_m(0)>]
-  ! minus sign is from electronic charge -e
 
   do dir1 = startdir, ndir_
     do dir2 = 1, sys%gr%sb%dim
@@ -423,13 +421,13 @@ subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para
 end subroutine X(lr_calc_susceptibility)
 
 ! ---------------------------------------------------------
+!> See (16) in X Andrade et al., J. Chem. Phys. 126, 184106 (2006) for finite systems
+!! and (10) in A Dal Corso et al., Phys. Rev. B 15, 15638 (1996) for periodic systems
+!! Supply only em_lr for finite systems, and both kdotp_lr and kdotp_em_lr for periodic
+!! em_lr(dir, sigma, omega) = electric perturbation of ground-state wavefunctions
+!! kdotp_lr(dir) = kdotp perturbation of ground-state wavefunctions
+!! kdotp_em_lr(dir1, dir2, sigma, omega) = kdotp perturbation of electric-perturbed wfns
 subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr, occ_response)
-! See (16) in X Andrade et al., J. Chem. Phys. 126, 184106 (2006) for finite systems
-! and (10) in A Dal Corso et al., Phys. Rev. B 15, 15638 (1996) for periodic systems
-! Supply only em_lr for finite systems, and both kdotp_lr and kdotp_em_lr for periodic
-! em_lr(dir, sigma, omega) = electric perturbation of ground-state wavefunctions
-! kdotp_lr(dir) = kdotp perturbation of ground-state wavefunctions
-! kdotp_em_lr(dir1, dir2, sigma, omega) = kdotp perturbation of electric-perturbed wfns
   type(sternheimer_t),     intent(inout) :: sh
   type(system_t), target,  intent(inout) :: sys
   type(hamiltonian_t),     intent(inout) :: hm
@@ -437,13 +435,12 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
   type(pert_t),            intent(inout) :: dipole
   CMPLX,                   intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
   type(lr_t),    optional, intent(in)    :: kdotp_lr(:)
-  type(lr_t),    optional, intent(in)    :: kdotp_em_lr(:,:,:,:) ! kdotp dir, em dir, sigma, factor
-  logical,       optional, intent(in)    :: occ_response ! do the wfns include the occ subspace?
-
-  ! occ_response = yes is based on Baroni et al., RMP 73, 515 (2001), eqn 122
-  ! occ_response = no  is based on Baroni et al., RMP 73, 515 (2001), eqn 123
-  !   The occ_response = no version can be used even if the wfns do include the
-  !   occupied subspace, it is just more efficient to use the other formula.
+  type(lr_t),    optional, intent(in)    :: kdotp_em_lr(:,:,:,:) !< kdotp dir, em dir, sigma, factor
+  logical,       optional, intent(in)    :: occ_response !< do the wfns include the occ subspace?
+  !< occ_response = yes is based on Baroni et al., RMP 73, 515 (2001), eqn 122
+  !! occ_response = no  is based on Baroni et al., RMP 73, 515 (2001), eqn 123
+  !!   The occ_response = no version can be used even if the wfns do include the
+  !!   occupied subspace, it is just more efficient to use the other formula.
 
   type(states_t), pointer :: st
   type(mesh_t),   pointer :: mesh

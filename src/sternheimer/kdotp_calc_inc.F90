@@ -18,6 +18,9 @@
 !! $Id: kdotp_calc.F90 2548 2006-11-06 21:42:27Z xavier $
 
 ! ---------------------------------------------------------
+!> m^-1[ij] = <psi0|H2ij|psi0> + 2*Re<psi0|H'i|psi'j>
+!! for each state, spin, and k-point
+!! The off-diagonal elements are not correct in a degenerate subspace
 subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   occ_solution_method, degen_thres)
   type(system_t),         intent(inout) :: sys
@@ -27,10 +30,6 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, &
   FLOAT,                  intent(out)   :: eff_mass_inv(:,:,:,:)
   integer,                intent(in)    :: occ_solution_method
   FLOAT,                  intent(in)    :: degen_thres
-
-! m^-1[ij] = <psi0|H2ij|psi0> + 2*Re<psi0|H'i|psi'j>
-! for each state, spin, and k-point
-! The off-diagonal elements are not correct in a degenerate subspace
 
   integer :: ik, ist, ist2, idir1, idir2, pdim
   R_TYPE :: term

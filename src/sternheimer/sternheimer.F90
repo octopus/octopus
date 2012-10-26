@@ -1,4 +1,4 @@
-!! Copyright (C) 2004 Xavier Andrade, Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca)
+!! Copyright (C) 2004-2012 Xavier Andrade, Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca), David Strubbe
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -82,17 +82,18 @@ module sternheimer_m
        sternheimer_unset_inhomog, &
        sternheimer_has_converged, &
        swap_sigma,                &
-       wfs_tag_sigma,                     &
+       wfs_tag_sigma,             &
        sternheimer_obsolete_variables
+
   type sternheimer_t
      private
      type(linear_solver_t) :: solver
      type(mix_t)           :: mixer
      type(scf_tol_t)       :: scf_tol
-     FLOAT, pointer        :: fxc(:,:,:)    ! linear change of the XC potential (fxc)
-     FLOAT, pointer        :: drhs(:, :, :, :) ! precomputed bare perturbation on RHS
+     FLOAT, pointer        :: fxc(:,:,:)    !< linear change of the XC potential (fxc)
+     FLOAT, pointer        :: drhs(:, :, :, :) !< precomputed bare perturbation on RHS
      CMPLX, pointer        :: zrhs(:, :, :, :)
-     FLOAT, pointer        :: dinhomog(:, :, :, :, :) ! fixed inhomogeneous term on RHS
+     FLOAT, pointer        :: dinhomog(:, :, :, :, :) !< fixed inhomogeneous term on RHS
      CMPLX, pointer        :: zinhomog(:, :, :, :, :)
      logical               :: add_fxc
      logical               :: add_hartree

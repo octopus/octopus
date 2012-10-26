@@ -67,22 +67,21 @@ module kdotp_m
     type(pert_t) :: perturbation
     type(pert_t) :: perturbation2
 
-    FLOAT, pointer :: eff_mass_inv(:,:,:,:)  ! inverse effective-mass tensor
-                                                ! (idir1, idir2, ist, ik)
-    FLOAT, pointer :: velocity(:,:,:) ! group velocity vector (idir, ist, ik)
+    FLOAT, pointer :: eff_mass_inv(:,:,:,:)  !< inverse effective-mass tensor
+                                             !! (idir1, idir2, ist, ik)
+    FLOAT, pointer :: velocity(:,:,:) !< group velocity vector (idir, ist, ik)
 
-    type(lr_t), pointer :: lr(:,:) ! linear response for (sys%gr%sb%periodic_dim,1)
-                                   ! second index is dummy; should only be 1
-                                   ! for compatibility with em_resp routines
+    type(lr_t), pointer :: lr(:,:) !< linear response for (sys%gr%sb%periodic_dim,1)
+                                   !! second index is dummy; should only be 1
+                                   !! for compatibility with em_resp routines
 
-    type(lr_t), pointer :: lr2(:,:,:) ! second-order response for 
-                                      ! (sys%gr%sb%periodic_dim,sys%gr%sb%periodic_dim,1)
+    type(lr_t), pointer :: lr2(:,:,:) !< second-order response for 
+                                      !! (sys%gr%sb%periodic_dim,sys%gr%sb%periodic_dim,1)
 
-    logical :: ok                   ! is converged?
-    integer :: occ_solution_method  ! how to get occupied components of response
-    FLOAT   :: degen_thres          ! maximum energy difference to be considered
-                                    ! degenerate
-    FLOAT   :: eta                  ! imaginary freq. added to Sternheimer eqn.
+    logical :: ok                   !< is converged?
+    integer :: occ_solution_method  !< how to get occupied components of response
+    FLOAT   :: degen_thres          !< maximum energy difference to be considered degenerate
+    FLOAT   :: eta                  !< imaginary freq. added to Sternheimer eqn.
   end type kdotp_t
 
 contains
@@ -326,7 +325,6 @@ contains
     subroutine parse_input()
 
       PUSH_SUB(kdotp_lr_run.parse_input)
-
 
       !%Variable KdotPOccupiedSolutionMethod
       !%Type integer
