@@ -30,7 +30,7 @@ module global_m
   private
 
   ! ---------------------------------------------------------
-  ! Public types, variables and procedures.
+  !> Public types, variables and procedures.
   public ::          &
     conf_t,          &
     global_init,     &
@@ -57,7 +57,7 @@ module global_m
    
   FLOAT, public, parameter :: r_small = CNST(0.0001)
 
-  ! some mathematical constants
+  !> some mathematical constants
   FLOAT, public, parameter :: M_Pi        = CNST(3.1415926535897932384626433832795029)
   FLOAT, public, parameter :: M_E         = CNST(2.7182818284590452353602874713526625)  
   FLOAT, public, parameter :: M_TWO       = CNST(2.0)
@@ -82,7 +82,7 @@ module global_m
   FLOAT, public, parameter :: M_EPSILON   =  epsilon(M_ONE)
   FLOAT, public, parameter :: M_HUGE      =  huge(M_ONE)
 
-  ! some physical constants
+  !> some physical constants
   FLOAT, public, parameter :: P_a_B =  CNST(0.52917720859)
   FLOAT, public, parameter :: P_Ang =  M_ONE / P_a_B
   FLOAT, public, parameter :: P_Ry  =  CNST(13.60569193)
@@ -121,7 +121,7 @@ module global_m
   end interface optional_default
 
 
-  ! This function is defined in messages.F90
+  !> This function is defined in messages.F90
   interface 
     subroutine assert_die(s, f, l)
       character(len=*), intent(in) :: s, f
@@ -156,17 +156,12 @@ contains
     conf%build_time = BUILD_TIME
     conf%version    = PACKAGE_VERSION
     conf%cc         = CC
-#if defined (LONG_LINES)
-    conf%cflags     = CFLAGS
-#else
-    conf%cflags     = "No flags information available."
-#endif
+    ! not indented to have the whole line in case it is long
+    conf%cflags     = &
+CFLAGS
     conf%fc         = FC
-#if defined (LONG_LINES)
-    conf%fcflags    = FCFLAGS
-#else
-    conf%fcflags    = "No flags information available."
-#endif
+    conf%fcflags    = &
+FCFLAGS
 
     ! initialize info for the input variables
     call varinfo_init(trim(conf%share)//'/varinfo');

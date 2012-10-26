@@ -40,8 +40,9 @@ AC_DEFINE_UNQUOTED([LATEST_SVN], ["$rev"], [subversion revision number])
 AC_DEFINE_UNQUOTED([BUILD_TIME], ["$date"], [date when configure was launched])
 AC_DEFINE_UNQUOTED([CC], ["$CC $truecc"], [C compiler])
 AC_DEFINE_UNQUOTED([FC], ["$FC $truefc"], [Fortran compiler])
-AC_DEFINE_UNQUOTED([CFLAGS], ["$CFLAGS"], [C compiler])
-AC_DEFINE_UNQUOTED([FCFLAGS], ["$FCFLAGS $FCFLAGS_f90"], [Fortran compiler])
+# 132 characters is max in std fortran, and two are for the quotes
+AC_DEFINE_UNQUOTED([CFLAGS], ["${CFLAGS:0:130}"], [C compiler])
+AC_DEFINE_UNQUOTED([FCFLAGS], ["${FCFLAGS:0:130}"], [Fortran compiler])
 
 ]
 )
