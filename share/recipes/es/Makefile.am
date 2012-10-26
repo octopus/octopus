@@ -21,4 +21,5 @@
 
 tm2dir = $(pkgdatadir)/recipes/es
 
-dist_tm2_DATA = pulpo_a_feira.txt
+dist_tm2_DATA = pulpo_a_feira.txt \
+		pulpo_asado.txt
