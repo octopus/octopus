@@ -111,7 +111,7 @@ Input: 03-xc.gga_x_wc.inp
 match ; gga_x_wc                               ; GREP(out, 'Exchange    =', 20)   ; -0.30960897
 
 Input: 03-xc.gga_x_mpw91.inp
-match ; gga_x_mpw91                            ; GREP(out, 'Exchange    =', 20)   ; -0.32242669
+match ; gga_x_mpw91                            ; GREP(out, 'Exchange    =', 20)   ; -0.32036364
 
 Input: 03-xc.gga_x_am05.inp
 match ; gga_x_am05                             ; GREP(out, 'Exchange    =', 20)   ; -0.28774147
@@ -211,7 +211,7 @@ Input: 03-xc.gga_xc_pbe1w.inp
 match ; gga_xc_pbe1w                           ; GREP(out, 'Correlation =', 20)   ; -0.33761061
 
 Input: 03-xc.gga_xc_mpwlyp1w.inp
-match ; gga_xc_mpwlyp1w                        ; GREP(out, 'Correlation =', 20)   ; -0.33648566
+match ; gga_xc_mpwlyp1w                        ; GREP(out, 'Correlation =', 20)   ; -0.33442261
 
 Input: 03-xc.gga_xc_pbelyp1w.inp
 match ; gga_xc_pbelyp1w                        ; GREP(out, 'Correlation =', 20)   ; -0.33476946
