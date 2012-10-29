@@ -101,7 +101,9 @@ contains
 
     ! No PUSH SUB, called too often.
 
-    if(present(list)) SAFE_ALLOCATE(list(1:this%nobjs, 1:npoint))
+    if(present(list)) then
+      SAFE_ALLOCATE(list(1:this%nobjs, 1:npoint))
+    end if
 
     nlist(1:npoint) = 0    
 
