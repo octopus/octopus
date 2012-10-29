@@ -93,12 +93,13 @@ module mesh_m
     integer  :: np_part          !< Local points plus ghost points plus boundary points.
     integer  :: np_global        !< Global number of points in mesh.
     integer  :: np_part_global   !< Global number of inner points and boundary points.
-    
-    logical         :: parallel_in_domains !< will I run parallel in domains?
+    !> will I run parallel in domains?
+    !! yes or no??
+    logical         :: parallel_in_domains 
     type(mpi_grp_t) :: mpi_grp             !< the mpi group describing parallelization in domains
     type(pv_t)      :: vp                  !< describes parallel vectors defined on the mesh.
 
-    FLOAT, pointer :: x(:,:)            !< The (local) points,
+    FLOAT, pointer :: x(:,:)            !< The (local) \b points
     integer, pointer :: resolution(:, :, :)
     FLOAT            :: volume_element    !< The global volume element.
     FLOAT, pointer   :: vol_pp(:)         !< Element of volume for curvilinear coordinates.

@@ -599,13 +599,19 @@ contains
 
   !-----------------------------------------------------------------
 
+  !> Calculates the Poisson equation.
+  !! Given the density returns the corresponding potential.
+  !!
+  !! Different solvers are available that could be choosen in the input file
+  !! with the "PoissonSolver" parameter
   subroutine dpoisson_solve(this, pot, rho, all_nodes)
     type(poisson_t),      intent(inout) :: this
     FLOAT,                intent(inout) :: pot(:)
     FLOAT,                intent(inout) :: rho(:)
-    logical, optional,    intent(in)    :: all_nodes !< Is the Poisson solver allowed to utilise
-                                                     !! all nodes or only the domain nodes for
-                                                     !! its calculations? (Defaults to .true.)
+    !> Is the Poisson solver allowed to utilise
+    !! all nodes or only the domain nodes for
+    !! its calculations? (Defaults to .true.)
+    logical, optional,    intent(in)    :: all_nodes 
     type(derivatives_t), pointer :: der
     integer :: counter
     integer :: nx_half, nx

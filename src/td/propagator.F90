@@ -92,10 +92,10 @@ module propagator_m
   type propagator_t
     integer             :: method           !< Which evolution method to use.
     type(exponential_t) :: te               !< How to apply the propagator \f$ e^{-i H \Delta t} \f$.
+    !> Storage of the KS potential of previous iterations.
     FLOAT, pointer      :: v_old(:, :, :) => null()
-                                            !< Storage of the KS potential of previous iterations.
+    !> Auxiliary function to store the Magnus potentials.
     FLOAT, pointer      :: vmagnus(:, :, :) => null() 
-                                            !< Auxiliary function to store the Magnus potentials.
     type(ob_terms_t)    :: ob               !< For open boundaries: leads, memory
     integer             :: scf_propagation_steps 
     logical             :: first

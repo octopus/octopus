@@ -113,15 +113,16 @@ module states_m
     cmplx_array2_t,                   &
     states_wfs_t
 
-
-  type states_wfs_t    !cmplxscl: Left and Right eigenstates
+  !> cmplxscl: Left and Right eigenstates
+  type states_wfs_t    
     CMPLX, pointer     :: zL(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
     CMPLX, pointer     :: zR(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
     FLOAT, pointer     :: dL(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
     FLOAT, pointer     :: dR(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
   end type states_wfs_t
-
-  type cmplx_array2_t    !cmplxscl: complex 2D matrices 
+  
+  !>cmplxscl: complex 2D matrices 
+  type cmplx_array2_t    
     FLOAT, pointer     :: Re(:, :) !< Real components 
     FLOAT, pointer     :: Im(:, :) !< Imaginary components
   end type cmplx_array2_t
@@ -228,12 +229,14 @@ module states_m
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
-    integer, pointer            :: st_range(:, :)     !< Node r manages states st_range(1, r) to
-                                                      !! st_range(2, r) for r = 0, ..., mpi_grp%size-1,
-                                                      !! i. e. st_start = st_range(1, r) and
-                                                      !! st_end = st_range(2, r) on node r.
-    integer, pointer            :: st_num(:)          !< Number of states on node r, i. e.
-                                                      !! st_num(r) = st_num(2, r)-st_num(1, r).
+    !> Node r manages states st_range(1, r) to
+    !! st_range(2, r) for r = 0, ..., mpi_grp%size-1,
+    !! i. e. st_start = st_range(1, r) and
+    !! st_end = st_range(2, r) on node r.
+    integer, pointer            :: st_range(:, :)  
+    !> Number of states on node r, i. e.
+    !! st_num(r) = st_num(2, r)-st_num(1, r).
+    integer, pointer            :: st_num(:)         
     type(multicomm_all_pairs_t) :: ap                 !< All-pairs schedule.
 
     logical                     :: symmetrize_density
@@ -843,7 +846,7 @@ contains
   end subroutine states_look
 
   ! ---------------------------------------------------------
-  ! Allocate the lead densities.
+  !> Allocate the lead densities.
   subroutine states_lead_densities_init(st, gr)
     type(states_t), intent(inout) :: st
     type(grid_t),   intent(in)    :: gr
@@ -864,7 +867,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Deallocate the lead density.
+  !> Deallocate the lead density.
   subroutine states_lead_densities_end(st, gr)
     type(states_t), intent(inout) :: st
     type(grid_t),   intent(in)    :: gr
@@ -888,8 +891,9 @@ contains
   !! block "Occupations" is present. Otherwise, it makes an initial
   !! guess for the occupations, maybe using the "Smearing"
   !! variable.
-  !! The resulting occupations are placed on the st%occ variable. The
-  !! boolean st%fixed_occ is also set to .true., if the occupations are
+  !!
+  !! The resulting occupations are placed on the st\%occ variable. The
+  !! boolean st\%fixed_occ is also set to .true., if the occupations are
   !! set by the user through the "Occupations" block; false otherwise.
   subroutine states_read_initial_occs(st, excess_charge)
     type(states_t), intent(inout) :: st
@@ -1101,8 +1105,8 @@ contains
   ! ---------------------------------------------------------
   !> Reads, if present, the "InitialSpins" block. This is only
   !! done in spinors mode; otherwise the routine does nothing. The
-  !! resulting spins are placed onto the st%spin pointer. The boolean
-  !! st%fixed_spins is set to true if (and only if) the InitialSpins
+  !! resulting spins are placed onto the st\%spin pointer. The boolean
+  !! st\%fixed_spins is set to true if (and only if) the InitialSpins
   !! block is present.
   subroutine states_read_initial_spins(st)
     type(states_t), intent(inout) :: st
@@ -1291,19 +1295,19 @@ contains
   !> Initializes the data components in st that describe how the states
   !! are distributed in blocks:
   !!
-  !! st%nblocks: this is the number of blocks in which the states are divided. Note that
+  !! st\%nblocks: this is the number of blocks in which the states are divided. Note that
   !!   this number is the total number of blocks, regardless of how many are actually stored
   !!   in each node.
   !! block_start: in each node, the index of the first block.
   !! block_end: in each node, the index of the last block.
-  !!   If the states are not parallelized, then block_start is 1 and block_end is st%nblocks.
-  !! st%iblock(1:st%nst, 1:st%d%nik): it points, for each state, to the block that contains it.
-  !! st%block_is_local(): st%block_is_local(ib) is .true. if block ib is stored in the running node.
-  !! st%block_range(1:st%nblocks, 1:2): Block ib contains states fromn st%block_range(ib, 1) to st%block_range(ib, 2)
-  !! st%block_size(1:st%nblocks): Block ib contains a number st%block_size(ib) of states.
-  !! st%block_initialized: it should be .false. on entry, and .true. after exiting this routine.
+  !!   If the states are not parallelized, then block_start is 1 and block_end is st\%nblocks.
+  !! st\%iblock(1:st\%nst, 1:st\%d\%nik): it points, for each state, to the block that contains it.
+  !! st\%block_is_local(): st\%block_is_local(ib) is .true. if block ib is stored in the running node.
+  !! st\%block_range(1:st\%nblocks, 1:2): Block ib contains states fromn st\%block_range(ib, 1) to st\%block_range(ib, 2)
+  !! st\%block_size(1:st\%nblocks): Block ib contains a number st\%block_size(ib) of states.
+  !! st\%block_initialized: it should be .false. on entry, and .true. after exiting this routine.
   !!
-  !! The set of batches st%psib(1:st%nblocks) contains the blocks themselves.
+  !! The set of batches st\%psib(1:st\%nblocks) contains the blocks themselves.
   subroutine states_init_block(st, mesh)
     type(states_t),           intent(inout) :: st
     type(mesh_t),   optional, intent(in)    :: mesh
@@ -1502,9 +1506,9 @@ contains
 
 
   !---------------------------------------------------------------------
-  !> This subroutine: (i) Fills in the block size (st%d%block_size);
-  !! (ii) Finds out whether or not to pack the states (st%d%pack_states);
-  !! (iii) Finds out the orthogonalization method (st%d%orth_method).
+  !> This subroutine: (i) Fills in the block size (st\%d\%block_size);
+  !! (ii) Finds out whether or not to pack the states (st\%d\%pack_states);
+  !! (iii) Finds out the orthogonalization method (st\%d\%orth_method).
   subroutine states_exec_init(st, mc)
     type(states_t),    intent(inout) :: st
     type(multicomm_t), intent(in)    :: mc

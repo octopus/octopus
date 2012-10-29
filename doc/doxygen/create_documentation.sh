@@ -47,3 +47,4 @@ do
     fi
 done
 cd ..
+echo "Doxygen documentation created in doc/doxygen/index.html"

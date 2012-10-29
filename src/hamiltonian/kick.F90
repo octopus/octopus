@@ -98,7 +98,7 @@ module kick_m
     FLOAT             :: qlength
     integer           :: qkick_mode
     integer           :: qbessel_l, qbessel_m
-    ! In case we use a general function
+    !> In case we use a general function
     integer           :: function_mode
     character(len=200):: user_defined_function
   end type kick_t
@@ -646,8 +646,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Applies the delta-function electric field E(t) = E_0 delta(t)
-  ! where E_0 = - k \hbar / e, k = kick%delta_strength.
+  !> Applies the delta-function electric field \f$E(t) = E_0 \Delta(t)\f$
+  !! where \f$E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
   subroutine kick_apply(gr, st, ions, geo, kick)
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
