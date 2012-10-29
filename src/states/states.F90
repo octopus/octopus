@@ -2190,7 +2190,9 @@ contains
 
     SAFE_ALLOCATE( wf_psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
-    if(present(density_laplacian)) SAFE_ALLOCATE(lwf_psi(1:der%mesh%np, 1:st%d%dim))
+    if(present(density_laplacian)) then
+      SAFE_ALLOCATE(lwf_psi(1:der%mesh%np, 1:st%d%dim))
+    endif
 
     sp = 1
     if(st%d%ispin == SPIN_POLARIZED) sp = 2

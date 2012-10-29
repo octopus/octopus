@@ -559,7 +559,9 @@ contains
         ks%calc%total_density_alloc = .true.
 
         SAFE_ALLOCATE(ks%calc%total_density(1:ks%gr%fine%mesh%np))
-        if(cmplxscl) SAFE_ALLOCATE(ks%calc%Imtotal_density(1:ks%gr%fine%mesh%np))
+        if(cmplxscl) then
+          SAFE_ALLOCATE(ks%calc%Imtotal_density(1:ks%gr%fine%mesh%np))
+        endif
 
         forall(ip = 1:ks%gr%fine%mesh%np)
           ks%calc%total_density(ip) = sum(ks%calc%density(ip, 1:hm%d%spin_channels))
