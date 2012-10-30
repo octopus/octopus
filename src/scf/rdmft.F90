@@ -112,7 +112,7 @@ contains
 
   end subroutine rdmft_end
 
-  ! optimization of occupation numbers according to arXiv:1208.4699
+  !> optimization of occupation numbers according to arXiv:1208.4699
   ! ----------------------------------------------------------------
   subroutine scf_occ(gr, hm, st, sys) 
     type(grid_t),         intent(inout) :: gr
@@ -120,8 +120,8 @@ contains
     type(states_t),       intent(inout) :: st
     type(system_t),       intent(inout) :: sys
     
-    integer :: ist, jst, ik, ip, ierr
-    integer :: icycle, iter, n_unpinned, iexit
+    integer :: ist, jst
+    integer :: icycle, iter, n_unpinned
     FLOAT :: abs_occ, occsum,  sumgi1, sumgi2, sumgim, mu1, mu2, mum, muinitial, muhat, dinterv 
     FLOAT :: el_per_state ! maximum number of electrons in each state
     FLOAT, allocatable :: occin(:,:), occout(:,:)
@@ -335,7 +335,7 @@ STOP
     FLOAT, intent(inout)         :: dE_dn2(1:rdm%st%nst)
   
     INTEGER :: ist, jst
-    FLOAT :: dVx2, density(1:rdm%gr%mesh%np,rdm%dim),pot(1:rdm%gr%mesh%np)
+    FLOAT :: dVx2
        
     PUSH_SUB(energy_derivatives)
              

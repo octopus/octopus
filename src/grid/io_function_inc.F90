@@ -19,25 +19,25 @@
 
 ! ---------------------------------------------------------
 !
-! Reads a mesh function from file filename, and puts it into ff. If
-! the map argument is passed, the subroutine will reorder the values
-! in the file according to it, missing values will be filled with
-! zeros. (For the moment this is only implemented for the obf format.)
-!
-! On output, ierr signals how everything went:
-! ierr > 0 => Error. The function ff was not read:
-!              1 : illegal filename (must have ".obf" or ".ncdf" extension).
-!              2 : file could not be successfully opened.
-!              3 : file opened, but error reading.
-!              4 : The number of points/mesh dimensions do not coincide.
-!              5 : Format or NetCDF error (one or several warnings are written)
-! ierr = 0 => Success.
-! ierr < 0 => Success, but some kind of type conversion was necessary. The value
-!             of ierr is then:
-!             -1 : function in file is real, sp.
-!             -2 : function in file is complex, sp.
-!             -3 : function in file is real, dp.
-!             -4 : function in file is complex, dp.
+!> Reads a mesh function from file filename, and puts it into ff. If
+!! the map argument is passed, the subroutine will reorder the values
+!! in the file according to it, missing values will be filled with
+!! zeros. (For the moment this is only implemented for the obf format.)
+!!
+!! On output, ierr signals how everything went:
+!! ierr > 0 => Error. The function ff was not read: \n
+!!              1 : illegal filename (must have ".obf" or ".ncdf" extension). \n
+!!              2 : file could not be successfully opened. \n
+!!              3 : file opened, but error reading. \n
+!!              4 : The number of points/mesh dimensions do not coincide. \n
+!!              5 : Format or NetCDF error (one or several warnings are written) \n
+!! ierr = 0 => Success. \n
+!! ierr < 0 => Success, but some kind of type conversion was necessary. The value
+!!             of ierr is then: \n
+!!             -1 : function in file is real, sp. \n
+!!             -2 : function in file is complex, sp. \n
+!!             -3 : function in file is real, dp. \n
+!!             -4 : function in file is complex, dp. \n
 ! ---------------------------------------------------------
 
 subroutine X(io_function_input)(filename, mesh, ff, ierr, is_tmp, map)
@@ -838,7 +838,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Writes real and imaginary parts
+  !> Writes real and imaginary parts
   subroutine out_dx()
     integer :: ix, iy, iz, idir
     FLOAT   :: offset(MAX_DIM)
@@ -904,8 +904,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! see http://local.wasp.uwa.edu.au/~pbourke/dataformats/cube/
-  ! Writes only real part
+  !> see http://local.wasp.uwa.edu.au/~pbourke/dataformats/cube/
+  !! Writes only real part
   subroutine out_cube()
     integer :: ix, iy, iz, idir, idir2, iatom
     FLOAT   :: offset(MAX_DIM)
@@ -963,11 +963,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! For format specification see:
-  ! http://www.xcrysden.org/doc/XSF.html#__toc__11
-  ! XCrySDen can only read 3D output, though it could be
-  ! extended to plot a function on a 2D plane.
-  ! Writes real part unless write_real = false and called in complex version
+  !> For format specification see:
+  !! http://www.xcrysden.org/doc/XSF.html#__toc__11
+  !! XCrySDen can only read 3D output, though it could be
+  !! extended to plot a function on a 2D plane.
+  !! Writes real part unless write_real = false and called in complex version
   subroutine out_xcrysden(write_real)
     logical, intent(in) :: write_real
 
@@ -1116,16 +1116,16 @@ end subroutine X(io_function_output_global)
 
 #if defined(HAVE_NETCDF)
   ! --------------------------------------------------------- 
-  !  Writes a cube_function in netcdf format
+  !>  Writes a cube_function in netcdf format
   ! ---------------------------------------------------------
   subroutine X(out_cf_netcdf)(filename, ierr, cf, cube, sb_dim, spacing, transpose)
-    character(len=*),      intent(in) :: filename        !> the file name
-    integer,               intent(out):: ierr            !> error message   
-    type(cube_function_t), intent(in) :: cf              !> the cube_function to be written 
-    type(cube_t),          intent(in) :: cube            !> the underlying cube mesh
-    integer,               intent(in) :: sb_dim          !> the simulation box dimensions aka sb%dim
-    FLOAT,                 intent(in) :: spacing(:)      !> the mesh spacing already converted to units_out
-    logical,               intent(in) :: transpose       !> whether we want the function cf(x,y,z) to be saved as cf(z,y,x)
+    character(len=*),      intent(in) :: filename        !< the file name
+    integer,               intent(out):: ierr            !< error message   
+    type(cube_function_t), intent(in) :: cf              !< the cube_function to be written 
+    type(cube_t),          intent(in) :: cube            !< the underlying cube mesh
+    integer,               intent(in) :: sb_dim          !< the simulation box dimensions aka sb%dim
+    FLOAT,                 intent(in) :: spacing(:)      !< the mesh spacing already converted to units_out
+    logical,               intent(in) :: transpose       !< whether we want the function cf(x,y,z) to be saved as cf(z,y,x)
 
 
     integer :: ncid, status, data_id, pos_id, dim_min

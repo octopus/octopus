@@ -380,7 +380,7 @@ contains
     type(cube_t),            intent(in)  :: cube
     type(dimensions_t), intent(out) :: part(:)
 
-    integer :: tmp_local(6), position, process, ix, iy, iz
+    integer :: tmp_local(6), position, process
     integer, allocatable :: local_sizes(:)
 
     PUSH_SUB(cube_partition)
