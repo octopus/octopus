@@ -77,12 +77,12 @@ contains
     integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
     integer              :: ne             !< Number of edges.
     integer              :: nv             !< Number of vertices.
-    ! Number of vertices (nv) is equal to number of
-    ! points np_global and maximum number of edges (ne) is 2*mesh%sb%dim*np_global
-    ! (there are a little fewer because points on the border have fewer
-    ! than two neighbours per dimension).
-    ! xadj has nv+1 entries because last entry contains the total
-    ! number of edges.
+    !! Number of vertices (nv) is equal to number of
+    !! points np_global and maximum number of edges (ne) is 2*mesh%sb%dim*np_global
+    !! (there are a little fewer because points on the border have fewer
+    !! than two neighbours per dimension).
+    !! xadj has nv+1 entries because last entry contains the total
+    !! number of edges.
     integer              :: npart          !< Number of partitions.
     integer              :: ipart          !< number of the current partition
     integer, allocatable :: xadj(:)        !< Indices of adjacency list in adjncy.
@@ -525,40 +525,35 @@ contains
     integer,         intent(inout) :: part(:)
 
     integer              :: ii, jj         ! Counter.
-    integer              :: npart
     integer              :: iunit          ! For debug output to files.
     character(len=3)     :: filenum
 
+    if(.not. in_debug_mode) return
+
     PUSH_SUB(mesh_partition_messages_debug)
 
-    if(in_debug_mode .and. mpi_grp_is_root(mpi_world)) then
+    call io_mkdir('debug/mesh_partition')
 
-      call io_mkdir('debug/mesh_partition')
+    ! Debug output. Write points of each partition in a different file.
+    write(filenum, '(i3.3)') mesh%mpi_grp%rank+1
 
-      npart = mesh%mpi_grp%size
+    iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
+      action='write')
+    do jj = 1, mesh%np_global
+      if(part(jj) .eq. mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
+    end do
+    call io_close(iunit)
 
-      ! Debug output. Write points of each partition in a different file.
-      do ii = 1, npart
+    iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
+      action='write')
+    do jj = 1, mesh%np_part_global
+      if(part(jj) .eq. mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
+    end do
+    call io_close(iunit)
 
-        write(filenum, '(i3.3)') ii
-
-        iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-          action='write')
-        do jj = 1, mesh%np_global
-          if(part(jj) .eq. ii) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
-        end do
-        call io_close(iunit)
-
-        iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
-          action='write')
-        do jj = 1, mesh%np_part_global
-          if(part(jj) .eq. ii) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
-        end do
-        call io_close(iunit)
-
-      end do
+    if(mpi_grp_is_root(mpi_world)) then
       ! Write points from enlargement to file with number p+1.
-      write(filenum, '(i3.3)') npart+1
+      write(filenum, '(i3.3)') mesh%mpi_grp%size+1
       iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
         action='write')
       do ii = mesh%np_global+1, mesh%np_part_global
@@ -566,10 +561,6 @@ contains
       end do
       call io_close(iunit)
     end if
-
-#ifdef HAVE_MPI
-    call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
-#endif
 
     POP_SUB(mesh_partition_messages_debug)
 
