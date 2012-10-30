@@ -83,12 +83,12 @@ module kick_m
     !> In case we have a general multipolar kick,
     !! the form of this "kick" will be (atomic units):
     !! \f[
-    !! V(\vec{r}) = sum_{i=1}^{n_multipoles} 
+    !! V(\vec{r}) = sum_{i=1}^{n\_multipoles} 
     !!                weight(i) * (e^2 / a_0^(l+1)) * r^l(i) * Y_{l(i),m(i)} (\vec{r})
     !! \f]
     !! which has units of energy; if we include the time-dependence (delta function):
     !! \f[    
-    !! V(\vec{r}) = sum_{i=1}^{n_multipoles} 
+    !! V(\vec{r}) = sum_{i=1}^{n\_multipoles} 
     !!                 weight(i) * (\hbar / a_0^l) * r^l(i) * Y_{l(i),m(i)} (\vec{r}) * \delta(t)
     !! \f]
     integer           :: n_multipoles
@@ -646,8 +646,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Applies the delta-function electric field \f$E(t) = E_0 \Delta(t)\f$
-  !! where \f$E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
+  !> Applies the delta-function electric field \f$ E(t) = E_0 \Delta(t) \f$
+  !! where \f$ E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
   subroutine kick_apply(gr, st, ions, geo, kick)
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st

@@ -22,13 +22,13 @@
 !> X(hgh_project) calculates the action of the projector hgh_p on the psi 
 !! wavefunction. The action of the projector hgh_p is defined as:
 !! \f[
-!! \hat{hgh_p} |psi> = \sum_{ij}^3 p%h(i,j) |hgh_p%p(:, i)><hgh_p%p(:, j)|psi>
+!! \hat{hgh_p} |psi> = \sum_{ij}^3 p\%h(i,j) |hgh_p\%p(:, i)><hgh_p\%p(:, j)|psi>
 !! \f]
 !! The result is summed up to ppsi.
 !!
 !! If including the spin-orbit coupling there is another term to be added to ppsi:
 !! \f[
-!! \sum_{ij}^3\sum{k}^3 p%k(i,j) |hgh_p%p(:, i)><hgh_p%lp(:, k, j)|\hat{S(k)}|psi>
+!! \sum_{ij}^3\sum{k}^3 p\%k(i,j) |hgh_p\%p(:, i)><hgh_p\%lp(:, k, j)|\hat{S(k)}|psi>
 !! \f]
 !------------------------------------------------------------------------------
 subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
@@ -36,8 +36,8 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
   type(submesh_t),       intent(in)    :: sm
   type(hgh_projector_t), intent(in)    :: hgh_p
   integer,               intent(in)    :: dim
-  R_TYPE,                intent(in)    :: psi(:, :)  ! psi(hgh%n_s, dim)
-  R_TYPE,                intent(inout) :: ppsi(:, :) ! ppsi(hgh%n_s, dim)
+  R_TYPE,                intent(in)    :: psi(:, :)  !< psi(hgh\%n_s, dim)
+  R_TYPE,                intent(inout) :: ppsi(:, :) !< ppsi(hgh\%n_s, dim)
   integer,               intent(in)    :: reltype
 
   R_TYPE :: uvpsi(1:2, 1:4, 1:3)

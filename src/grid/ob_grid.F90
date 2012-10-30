@@ -42,22 +42,22 @@ module ob_grid_m
 
   type ob_grid_lead_t
     type(simul_box_ob_info_t) :: info
-    type(simul_box_t)         :: sb          ! The simulation box of the lead.
-    type(mesh_t)              :: mesh        ! The mesh of the lead.
-    type(interface_t)         :: intf        ! The interface (reduced unit cell) of the lead.
-    character(len=2000)       :: td_bias     ! Td-potential of lead.
+    type(simul_box_t)         :: sb          !< The simulation box of the lead.
+    type(mesh_t)              :: mesh        !< The mesh of the lead.
+    type(interface_t)         :: intf        !< The interface (reduced unit cell) of the lead.
+    character(len=2000)       :: td_bias     !< Td-potential of lead.
   end type ob_grid_lead_t
 
   type ob_grid_t
-    logical           :: open_boundaries     ! Use open boundaries?
-    logical           :: transport_mode      ! transport mode switched on (during open boundaries)
-    type(ob_grid_lead_t), pointer :: lead(:) ! leads(1:NLEADS)
+    logical           :: open_boundaries     !< Use open boundaries?
+    logical           :: transport_mode      !< transport mode switched on (during open boundaries)
+    type(ob_grid_lead_t), pointer :: lead(:) !< leads(1:NLEADS)
   end type ob_grid_t
 
 contains
 
   ! ---------------------------------------------------------
-  ! reads the open boundary information and allocates accordingly
+  !> reads the open boundary information and allocates accordingly
   subroutine ob_grid_init(ob_grid)
     type(ob_grid_t),               intent(out) :: ob_grid
 

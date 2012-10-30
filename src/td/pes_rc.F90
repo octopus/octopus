@@ -1,4 +1,3 @@
-
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -60,7 +59,7 @@
       integer, pointer :: points(:)               !< which points to use
       character(len=30), pointer :: filenames(:)  !< filenames
       CMPLX, pointer :: wf(:,:,:,:,:)
-      integer, pointer :: rankmin(:)              !<partition of the mesh containing the points
+      integer, pointer :: rankmin(:)              !< partition of the mesh containing the points
     end type PES_rc_t
 
 
@@ -76,8 +75,7 @@
       type(block_t) :: blk
       integer  :: ip
       FLOAT :: xx(MAX_DIM)
-
-      FLOAT :: dmin                                                                                                   
+      FLOAT :: dmin
       integer :: rankmin
 
       PUSH_SUB(PES_rc_init)
@@ -255,17 +253,11 @@
       type(states_t), intent(in)  :: st
 
       integer  :: ip,ik,ist,idim,iunit
-
       FLOAT :: xx(MAX_DIM)
-
-
 
       PUSH_SUB(PES_rc_init_write)
 
-
       if(mpi_grp_is_root(mpi_world)) then
-
-
         do ip = 1, pesrc%npoints
           iunit = io_open('td.general/'//pesrc%filenames(ip), action='write')
           xx(:)=mesh%idx%lxyz(pesrc%points(ip),:)
@@ -290,8 +282,6 @@
 
           call io_close(iunit)
         end do
-        !!  end if
-
       endif
 
       POP_SUB(PES_rc_init_write)

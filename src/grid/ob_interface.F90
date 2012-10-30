@@ -17,11 +17,10 @@
 !!
 !! $Id: td_transport.F90 3030 2007-06-25 16:45:05Z marques $
 
-! Management of the mesh points in the interface regions
-! for open boundary calculations.
-
 #include "global.h"
 
+!> Management of the mesh points in the interface regions
+!! for open boundary calculations.
 module ob_interface_m
   use derivatives_m
   use global_m
@@ -46,30 +45,30 @@ module ob_interface_m
     put_intf_wf,            &
     member_of_interface
 
-  ! Describes the points belonging to the left and right interface in an
-  ! open boundaries calculation.
-  ! (Important: the point numbers of the interface are dense and
-  ! sorted in increasing order.)
+  !> Describes the points belonging to the left and right interface in an
+  !! open boundaries calculation.
+  !! (Important: the point numbers of the interface are dense and
+  !! sorted in increasing order.)
   type interface_t
-    integer          :: extent_uc  ! extent of the lead unit cell
-    integer          :: np_intf    ! number of interface points
-    integer          :: np_uc      ! number of unit cell points
-    integer          :: np_part_uc ! number of unit cell points including all points
-    integer          :: nblocks    ! number of interfaces in a unit cell
-    integer          :: il         ! which lead (1..NLEADS)
-    integer, pointer :: index(:)   ! (np_uc)
-    integer          :: index_range(2) ! min and and max index
-    logical          :: reducible  ! is the lead unit cell a integer multiple of the interface
+    integer          :: extent_uc  !< extent of the lead unit cell
+    integer          :: np_intf    !< number of interface points
+    integer          :: np_uc      !< number of unit cell points
+    integer          :: np_part_uc !< number of unit cell points including all points
+    integer          :: nblocks    !< number of interfaces in a unit cell
+    integer          :: il         !< which lead (1..NLEADS)
+    integer, pointer :: index(:)   !< (np_uc)
+    integer          :: index_range(2) !< min and and max index
+    logical          :: reducible  !< is the lead unit cell a integer multiple of the interface
   end type interface_t
 
   type lead_t
-    integer        :: np              ! number of points in the lead unit cell
-    integer        :: np_part         ! as np including ghost and boundary points
-    CMPLX, pointer :: h_diag(:, :, :) ! Diagonal block of the lead Hamiltonian.
-    CMPLX, pointer :: h_offdiag(:, :) ! Offdiagonal block of the lead Hamiltonian.
-    FLOAT, pointer :: vks(:, :)       ! (np_uc, nspin) Kohn-Sham potential of the leads.
-    FLOAT, pointer :: vh(:)           ! (np_uc) electron Hartree potential of the leads.
-    FLOAT, pointer :: v0(:)           ! (np_uc) static local potential of the leads
+    integer        :: np              !< number of points in the lead unit cell
+    integer        :: np_part         !< as np including ghost and boundary points
+    CMPLX, pointer :: h_diag(:, :, :) !< Diagonal block of the lead Hamiltonian.
+    CMPLX, pointer :: h_offdiag(:, :) !< Offdiagonal block of the lead Hamiltonian.
+    FLOAT, pointer :: vks(:, :)       !< (np_uc, nspin) Kohn-Sham potential of the leads.
+    FLOAT, pointer :: vh(:)           !< (np_uc) electron Hartree potential of the leads.
+    FLOAT, pointer :: v0(:)           !< (np_uc) static local potential of the leads
 !    FLOAT, pointer :: A_static(:,:)   ! static vector potential
 !    CMPLX, pointer :: grad_diag(:, :, :)    ! diagonal block of the gradient operator
 !    CMPLX, pointer :: grad_offdiag(:, :, :) ! offdiagonal block of the gradient operator
@@ -78,13 +77,13 @@ module ob_interface_m
 contains
 
   ! ---------------------------------------------------------
-  ! Calculate the member points of the interface region.
+  !> Calculate the member points of the interface region.
   subroutine interface_init(der, intf, il, lsize, extent_uc)
     type(derivatives_t), intent(in)  :: der
     type(interface_t),   intent(out) :: intf
     integer,             intent(in)  :: il
     FLOAT,               intent(in)  :: lsize(:)
-    integer, optional,   intent(in)  :: extent_uc ! new reduced extent of the unit cell
+    integer, optional,   intent(in)  :: extent_uc !< new reduced extent of the unit cell
 
     integer :: from(MAX_DIM), to(MAX_DIM), ll(MAX_DIM), dir, tdir
 
@@ -162,7 +161,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Checks if point number idx is an interface point of interface.
+  !> Checks if point number idx is an interface point of interface.
   logical function member_of_interface(idx, intf, index)
     integer,           intent(in)  :: idx
     type(interface_t), intent(in)  :: intf
@@ -195,8 +194,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Get wavefunction points of interface intf.
-  ! intf_wf must be of dimension intf%np_uc.
+  !> Get wavefunction points of interface intf.
+  !! intf_wf must be of dimension intf\%np_uc.
   subroutine get_intf_wf(intf, zpsi, intf_wf)
     type(interface_t), intent(in)  :: intf
     CMPLX,             intent(in)  :: zpsi(:)
@@ -211,8 +210,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Put wavefunction points of interface intf.
-  ! intf_wf must be of dimension intf%np_uc.
+  !! Put wavefunction points of interface intf.
+  !! intf_wf must be of dimension intf\%np_uc.
   subroutine put_intf_wf(intf, intf_wf, zpsi)
     type(interface_t), intent(in)     :: intf
     CMPLX,             intent(in)     :: intf_wf(:)
@@ -227,8 +226,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Apply an np x np operator op to the interface region of the wavefunction.
-  ! np is the number of points in the interface: wf <- wf + alpha op wf
+  !> Apply an np x np operator op to the interface region of the wavefunction.
+  !! np is the number of points in the interface: wf <- wf + alpha op wf
   subroutine interface_apply_op(intf, alpha, op, wf, res)
     type(interface_t), intent(in)    :: intf
     CMPLX,             intent(in)    :: alpha
@@ -256,7 +255,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Write number of interface points.
+  !> Write number of interface points.
   subroutine interface_write_info(intf, iunit)
     type(interface_t), intent(in) :: intf
     integer,           intent(in) :: iunit
@@ -272,7 +271,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Free memory.
+  !> Free memory.
   subroutine interface_end(intf)
     type(interface_t), intent(inout) :: intf
 

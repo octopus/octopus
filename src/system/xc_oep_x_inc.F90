@@ -22,10 +22,10 @@
 !> The parallelization of this routine is done in the following way:
 !!
 !! We have to calculate the sum
-!! \f$ lxc = \sum_{j>i} l_i_j \f$
+!! \f$ lxc = \sum_{j>i} l_{ij} \f$
 !! where the states i and j are divided in blocks and scattered among
 !! the processors. Each processor will calculate a sub-block of the
-!! matrix \f$ l_i_j \f$. Examples of the partitioning (for 3 and 4 blocks/processors)
+!! matrix \f$ l_{ij} \f$. Examples of the partitioning (for 3 and 4 blocks/processors)
 !! \verbatim
 !! (1  2  1)    (1  2  3  1)
 !! (-  2  3)    (-  2  3  4)

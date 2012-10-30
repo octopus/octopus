@@ -195,8 +195,8 @@ contains
   FLOAT function berry_energy_correction(st, mesh, E_field, vberry) result(delta)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh
-    FLOAT,          intent(in) :: E_field(:)  ! mesh%sb%periodic_dim
-    FLOAT,          intent(in) :: vberry(:,:) ! mesh%np, st%d%nspin
+    FLOAT,          intent(in) :: E_field(:)  !< mesh\%sb\%periodic_dim
+    FLOAT,          intent(in) :: vberry(:,:) !< mesh\%np, st\%d\%nspin
 
     integer :: ispin, idir
 
