@@ -335,7 +335,7 @@ contains
     !% <math> \vec{B} = \vec{\nabla} \times \vec{A}</math>
     !%
     !% If <tt>CalculateSelfInducedMagneticField</tt> is set to yes, this <i>B</i> field is
-    !% calculated at the end of a <tt>gs</tt> calculation (nothing is done -- yet -- in the <tt>td </tt>case)
+    !% calculated at the end of a <tt>gs</tt> calculation (nothing is done -- yet -- in the <tt>td</tt>case)
     !% and printed out, if the <tt>Output</tt> variable contains the <tt>potential</tt> keyword (the prefix
     !% of the output files is <tt>Bind</tt>).
     !%End

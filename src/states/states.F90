@@ -369,7 +369,7 @@ contains
     !% Spin-restricted calculations.
     !%Option polarized 2
     !%Option spin_polarized 2
-    !% Spin unrestricted, also known as spin-DFT, SDFT. This mode will double the number of
+    !% Spin-unrestricted, also known as spin-DFT, SDFT. This mode will double the number of
     !% wavefunctions necessary for a spin-unpolarized calculation.
     !%Option non_collinear 3
     !%Option spinors 3
@@ -963,7 +963,7 @@ contains
     !%
     !% If the sum of occupations is not equal to the total charge set by <tt>ExcessCharge</tt>,
     !% an error message is printed.
-    !% If </tt>FromScratch = no</tt> and <tt>RestartFixedOccupations = yes</tt>,
+    !% If <tt>FromScratch = no</tt> and <tt>RestartFixedOccupations = yes</tt>,
     !% this block will be ignored.
     !%End
 

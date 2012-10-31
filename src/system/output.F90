@@ -365,7 +365,7 @@ contains
       !% width of the portion of the plane, in units of <tt>spacing</tt>.
       !% Thus, the grid points included in the plane are
       !% <tt>x_ij = origin + i*spacing*u + j*spacing*v</tt>,
-      !% for <tt>nu <= i <= mu </tt> and <tt>nv <= j <= mv</tt>.
+      !% for <tt>nu <= i <= mu</tt> and <tt>nv <= j <= mv</tt>.
       !% Analogously, in the 2D case, the current flow is calculated through a line;
       !% in the 1D case, the current flow is calculated through a point.
       !%

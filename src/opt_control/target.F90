@@ -575,7 +575,7 @@ module opt_control_target_m
       !%Description
       !% If <tt>OCTTargetOperator = oct_tg_velocity</tt>, then one must supply the 
       !% target to optimize in terms of the ionic velocities. This is done by 
-      !% supplying a string trough the block <tt>OCTVelocityTarget</tt>.
+      !% supplying a string through the block <tt>OCTVelocityTarget</tt>.
       !% Each velocity component is supplied by <tt>"v[n_atom,vec_comp]"</tt>,
       !% while "n_atom" is the respective atom number, corresponding to the 
       !% <tt>Coordinates</tt> block and "vec_comp" is the corresponding
@@ -599,7 +599,7 @@ module opt_control_target_m
       !% <tt>OCTScheme = oct_algorithm_cg</tt> then you must supply 
       !% the target in terms of the ionic velocities AND the derivatives
       !% of the target with respect to the ionic velocity components.
-      !% The derivatives are supplied via strings trough the block
+      !% The derivatives are supplied via strings through the block
       !% <tt>OCTVelocityDerivatives</tt>.
       !% Each velocity component is supplied by <tt>"v[n_atom,vec_comp]"</tt>,
       !% while "n_atom" is the atom number, corresponding to the 
@@ -731,12 +731,12 @@ module opt_control_target_m
       !% Maximizes the current of a quantum ring in one direction. The functional maximizes the z projection of the 
       !% outer product between the position \vec{r} and the current \vec{j}: 
       !% J1[j] = <tt>OCTCurrentWeight</tt>*\int (\vec{r} \times \vec{j}) \hat{z} dr. For <tt>OCTCurrentWeight</tt> .GT. 0. the
-      !% current flows in counter clockwise direction, while for <tt>OCTCurrentWeight</tt> .LT. 0 the current is clockwise.
+      !% current flows in counter-clockwise direction, while for <tt>OCTCurrentWeight</tt> .LT. 0 the current is clockwise.
       !%Option oct_curr_square_td 3
       !% The time dependent version of <tt>oct_curr_square</tt>. In fact, calculates the 
       !% square of current in time interval [<tt>OCTStartTimeCurrTg</tt>, 
       !% total time = <tt>TDMaximumIter</tt> * <tt>TDTimeStep</tt>]. 
-      !% Set <tt>TDPropagator </tt> = <tt>crank_nicholson</tt>  
+      !% Set <tt>TDPropagator</tt> = <tt>crank_nicholson</tt>  
       !%End 
 
       !%Variable OCTCurrentWeight

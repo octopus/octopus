@@ -112,8 +112,8 @@ contains
     !%Option oep_slater 2
     !% Slater approximation.
     !%Option oep_kli 3
-    !% Krieger-Li-Iafrate (KLI) approximation
-    !% (JB Krieger, Y Li, GJ Iafrate, <i>Phys. Rev. Lett. A</i> <b>146</b>, 256 (1990).
+    !% Krieger-Li-Iafrate (KLI) approximation. Ref:
+    !% JB Krieger, Y Li, GJ Iafrate, <i>Phys. Rev. A</i> <b>146</b>, 256 (1990).
     !%Option oep_full 5
     !% (Experimental) Full solution of OEP equation using the Sternheimer approach.
     !%End
