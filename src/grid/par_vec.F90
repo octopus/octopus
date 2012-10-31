@@ -192,7 +192,7 @@ contains
     integer,         intent(in)  :: comm         !< Communicator to use.
     integer,         intent(in)  :: root         !< The master node.
 
-    ! The next seven entries come from the mesh.
+    !> The next seven entries come from the mesh.
     integer,         intent(in)  :: part(:)      !< Point -> partition.
     integer,         intent(in)  :: np           !< mesh%np_global
     integer,         intent(in)  :: np_part      !< mesh%np_part_global
@@ -218,6 +218,7 @@ contains
     logical                     :: found
     integer                     :: np_ghost_partno  !< Number of ghost point of the actual process
     integer, allocatable        :: np_ghost_neigh_partno(:) !< Number of the neighbours ghost points of the actual process
+
     PUSH_SUB(vec_init)
 
     ! Shortcuts.
@@ -347,7 +348,7 @@ contains
         end if
       end do
     end do
-    
+   
     tmp=0
     call MPI_Allreduce(vp%total, tmp, 1, MPI_INTEGER, MPI_SUM, comm, mpi_err)
     vp%total = tmp
@@ -409,22 +410,19 @@ contains
     end do
 
     if(in_debug_mode) then
-      ! Write numbers and coordinates of each nodes ghost points
+      ! Write numbers and coordinates of each node`s ghost points
       ! to a single file (like in mesh_partition_init) called
       ! debug/mesh_partition/ghost_points.###.
-      if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir('debug/mesh_partition')
-        do inode = 1, npart
-          write(filenum, '(i3.3)') inode
-          iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, &
-            action='write')
-          do ip = 1, vp%np_ghost(inode)
-            jp = vp%ghost(vp%xghost(inode) + ip - 1)
-            write(iunit, '(4i8)') jp, idx%lxyz(jp, :)
-          end do
-          call io_close(iunit)
-        end do
-      end if
+      call io_mkdir('debug/mesh_partition')
+      
+      write(filenum, '(i3.3)') rank+1
+      iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, action='write')
+      do ip = 1, vp%np_ghost(rank+1)
+        jp = vp%ghost(vp%xghost(rank+1) + ip - 1)
+        write(iunit, '(4i8)') jp, idx%lxyz(jp, :)
+      end do
+
+      call io_close(iunit)
     end if
 
     ! Set up the global-to-local point number mapping
@@ -441,6 +439,7 @@ contains
         end if
       end do
     end if
+
     do inode = ip, jp
       ! Create hash table.
       call iihash_init(vp%global(inode), vp%np_local(inode) + vp%np_ghost(inode) + vp%np_bndry(inode))
@@ -457,6 +456,7 @@ contains
         call iihash_insert(vp%global(inode), vp%bndry(vp%xbndry(inode) + kp - 1), kp + vp%np_local(inode) + vp%np_ghost(inode))
       end do
     end do
+
     ! Complete entries in vp.
     vp%comm   = comm
     vp%root   = root
