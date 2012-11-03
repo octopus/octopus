@@ -519,7 +519,7 @@ contains
         write(message(1),'(a)') 'Info: Starting SCF iteration.'
       else
         write(message(1),'(a)') 'Info: No SCF iterations will be done.'
-        finish = .true.
+        finish = .false.
       endif
       call messages_info(1)
     end if
