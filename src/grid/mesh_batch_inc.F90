@@ -564,6 +564,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 #ifdef HAVE_MPI
   integer :: ip, ipg, npart, ipart, ist, pos, nstl
   integer, allocatable :: send_count(:), recv_count(:), send_disp(:), recv_disp(:)
+  integer, allocatable :: send_count_nstl(:), recv_count_nstl(:), send_disp_nstl(:), recv_disp_nstl(:)
   R_TYPE, allocatable  :: send_buffer(:, :), recv_buffer(:, :)
 #endif
 
@@ -586,6 +587,10 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
     SAFE_ALLOCATE(recv_count(1:npart))
     SAFE_ALLOCATE(send_disp(1:npart))
     SAFE_ALLOCATE(recv_disp(1:npart))
+    SAFE_ALLOCATE(send_count_nstl(1:npart))
+    SAFE_ALLOCATE(recv_count_nstl(1:npart))
+    SAFE_ALLOCATE(send_disp_nstl(1:npart))
+    SAFE_ALLOCATE(recv_disp_nstl(1:npart))
     SAFE_ALLOCATE(send_buffer(1:nstl, mesh%np))
 
     if(present(forward_map)) then
@@ -636,8 +641,12 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       SAFE_ALLOCATE(recv_buffer(1:nstl, mesh%np))
 
-      call MPI_Alltoallv(send_buffer(1, 1), send_count*nstl, send_disp*nstl, R_MPITYPE, &
-        recv_buffer(1, 1), recv_count*nstl, recv_disp*nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
+      send_count_nstl = send_count * nstl
+      send_disp_nstl = send_disp * nstl
+      recv_count_nstl = recv_count * nstl
+      recv_disp_nstl = recv_disp * nstl
+      call MPI_Alltoallv(send_buffer(1, 1), send_count_nstl, send_disp_nstl, R_MPITYPE, &
+        recv_buffer(1, 1), recv_count_nstl, recv_disp_nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
 
       SAFE_DEALLOCATE_A(send_buffer)
 
@@ -701,8 +710,12 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       SAFE_ALLOCATE(recv_buffer(1:nstl, mesh%np))
 
-      call MPI_Alltoallv(send_buffer(1, 1), send_count*nstl, send_disp*nstl, R_MPITYPE, &
-        recv_buffer(1, 1), recv_count*nstl, recv_disp*nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
+      send_count_nstl = send_count * nstl
+      send_disp_nstl = send_disp * nstl
+      recv_count_nstl = recv_count * nstl
+      recv_disp_nstl = recv_disp * nstl
+      call MPI_Alltoallv(send_buffer(1, 1), send_count_nstl, send_disp_nstl, R_MPITYPE, &
+        recv_buffer(1, 1), recv_count_nstl, recv_disp_nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
 
       SAFE_DEALLOCATE_A(send_buffer)
 
@@ -723,6 +736,10 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
     SAFE_DEALLOCATE_A(recv_count)
     SAFE_DEALLOCATE_A(send_disp)
     SAFE_DEALLOCATE_A(recv_disp)
+    SAFE_DEALLOCATE_A(send_count_nstl)
+    SAFE_DEALLOCATE_A(recv_count_nstl)
+    SAFE_DEALLOCATE_A(send_disp_nstl)
+    SAFE_DEALLOCATE_A(recv_disp_nstl)
 #endif
   end if
 
