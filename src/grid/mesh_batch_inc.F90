@@ -213,7 +213,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #ifdef HAVE_MPI
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "DOTP_BATCH_REDUCE")
-    call comm_allreduce(mesh%mpi_grp%comm, dd, dim = (/aa%nst, bb%nst/))
+    call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(profcomm)
   end if
 #endif
@@ -328,7 +328,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
 
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "BATCH_SELF_REDUCE")
-    call comm_allreduce(mesh%mpi_grp%comm, dd, dim = (/aa%nst, aa%nst/))
+    call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(profcomm)
   end if
 

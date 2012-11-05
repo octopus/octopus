@@ -213,8 +213,8 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
 #if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force, dim = (/gr%mesh%sb%dim, geo%natoms/))
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho, dim = (/np, gr%mesh%sb%dim/))
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, force)
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
     call profiling_out(prof_comm)
   end if
 #endif
@@ -319,8 +319,8 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
 #if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force, dim = (/gr%mesh%sb%dim, geo%natoms/))
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho, dim = (/np, gr%mesh%sb%dim/))
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, force)
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
     call profiling_out(prof_comm)
   end if
 #endif
@@ -446,7 +446,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, "FORCES_COMM")
     call comm_allreduce(st%st_kpt_mpi_grp%comm, force_deriv, dim = (/gr%mesh%sb%dim, geo%natoms/))
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho, dim = (/np, gr%mesh%sb%dim/))
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
     call profiling_out(prof_comm)
   end if
 #endif

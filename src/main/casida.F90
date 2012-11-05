@@ -605,7 +605,7 @@ contains
 
       ! sum all matrix elements
       if(cas%parallel_in_eh_pairs) then
-        call comm_allreduce(cas%mpi_grp%comm, cas%w, dim = cas%n_pairs)
+        call comm_allreduce(cas%mpi_grp%comm, cas%w)
       end if
 
       SAFE_ALLOCATE(xx(1:cas%n_pairs))
@@ -685,7 +685,7 @@ contains
 
       ! sum all matrix elements
       if(cas%parallel_in_eh_pairs) then
-        call comm_allreduce(cas%mpi_grp%comm, cas%mat, dim = (/cas%n_pairs, cas%n_pairs/))
+        call comm_allreduce(cas%mpi_grp%comm, cas%mat)
       end if
       !if(mpi_grp_is_root(cas%mpi_grp)) print *, "mat =", cas%mat
 
