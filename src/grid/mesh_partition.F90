@@ -71,7 +71,7 @@ contains
   subroutine mesh_partition(mesh, lapl_stencil, part)
     type(mesh_t),    intent(inout)  :: mesh
     type(stencil_t), intent(in)  :: lapl_stencil
-    integer,         intent(out) :: part(:) ! 1:mesh%np_part_global
+    integer,         intent(out) :: part(:) !< 1:mesh%np_part_global
 
     integer              :: iv, jp, inb
     integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
@@ -520,10 +520,9 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine mesh_partition_messages_debug(mesh, part)
+  subroutine mesh_partition_messages_debug(mesh)
     type(mesh_t),    intent(in)    :: mesh
-    integer,         intent(inout) :: part(:)
-
+    
     integer              :: ii, jj         ! Counter.
     integer              :: iunit          ! For debug output to files.
     character(len=3)     :: filenum
@@ -540,14 +539,14 @@ contains
     iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
       action='write')
     do jj = 1, mesh%np_global
-      if(part(jj) .eq. mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
+      if(mesh%vp%part(jj) .eq. mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
     end do
     call io_close(iunit)
 
     iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
       action='write')
     do jj = 1, mesh%np_part_global
-      if(part(jj) .eq. mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
+      if(mesh%vp%part(jj) .eq. mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
     end do
     call io_close(iunit)
 

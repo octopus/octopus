@@ -188,19 +188,18 @@ contains
   !! from how it is in the rest of the code (for historical reasons
   !! and also because the vec_init has more a global than local point
   !! of view on the mesh): See the comments in the parameter list.
-  subroutine vec_init(comm, root, part, np, np_part, idx, stencil, dim, periodic_dim, vp)
+  subroutine vec_init(comm, root, np, np_part, idx, stencil, dim, periodic_dim, vp)
     integer,         intent(in)  :: comm         !< Communicator to use.
     integer,         intent(in)  :: root         !< The master node.
 
     !> The next seven entries come from the mesh.
-    integer,         intent(in)  :: part(:)      !< Point -> partition.
     integer,         intent(in)  :: np           !< mesh%np_global
     integer,         intent(in)  :: np_part      !< mesh%np_part_global
     type(index_t),   intent(in)  :: idx
     type(stencil_t), intent(in)  :: stencil      !< The stencil for which to calculate ghost points.
     integer,         intent(in)  :: dim          !< Number of dimensions.
     integer,         intent(in)  :: periodic_dim !< Number of periodic dimensions
-    type(pv_t),      intent(out) :: vp           !< Description of partition.
+    type(pv_t),      intent(inout) :: vp         !< Description of partition.
 
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
@@ -234,7 +233,6 @@ contains
     SAFE_ALLOCATE(ghost_flag(1:npart))
     SAFE_ALLOCATE(ir(1:npart))
     SAFE_ALLOCATE(irr(1:npart, 1:npart))
-    SAFE_ALLOCATE(vp%part(1:np+np_enl))
     SAFE_ALLOCATE(vp%np_local(1:npart))
     SAFE_ALLOCATE(vp%xlocal(1:npart))
     SAFE_ALLOCATE(vp%local(1:np))
@@ -252,12 +250,12 @@ contains
     ! Local points.
     vp%np_local = 0
     do ip = 1, np
-      vp%np_local(part(ip)) = vp%np_local(part(ip)) + 1
+      vp%np_local(vp%part(ip)) = vp%np_local(vp%part(ip)) + 1
     end do
     ! Boundary points.
     vp%np_bndry = 0
     do ip = 1, np_enl
-      vp%np_bndry(part(ip + np)) = vp%np_bndry(part(ip + np)) + 1
+      vp%np_bndry(vp%part(ip + np)) = vp%np_bndry(vp%part(ip + np)) + 1
     end do
 
     ! Set up local-to-global index table for local points
@@ -272,13 +270,13 @@ contains
     ! Set the local and boundary points
     ir = 0
     do ip = 1, np
-      vp%local(vp%xlocal(part(ip)) + ir(part(ip))) = ip
-      ir(part(ip))                                 = ir(part(ip)) + 1 ! increment the counter
+      vp%local(vp%xlocal(vp%part(ip)) + ir(vp%part(ip))) = ip
+      ir(vp%part(ip))                                 = ir(vp%part(ip)) + 1 ! increment the counter
     end do
     ir = 0
     do ip = np+1, np+np_enl
-      vp%bndry(vp%xbndry(part(ip)) + ir(part(ip))) = ip
-      ir(part(ip))                                 = ir(part(ip)) + 1 ! increment the counter
+      vp%bndry(vp%xbndry(vp%part(ip)) + ir(vp%part(ip))) = ip
+      ir(vp%part(ip))                                 = ir(vp%part(ip)) + 1 ! increment the counter
     end do
 
     ! Format of ghost:
@@ -330,16 +328,16 @@ contains
         ! If this index does not belong to partition of node "inode",
         ! then index is a ghost point for "inode" with part(index) now being
         ! a neighbour of "inode".
-        if(part(index).ne.inode) then
+        if(vp%part(index).ne.inode) then
           ! Only mark and count this ghost point, if it is not
           ! done yet. Otherwise, points would possibly be registered
           ! more than once.
           tmp = iihash_lookup(ghost_flag(inode), index, found)
           if(.not.found) then
             ! Mark point ip as ghost point for inode from part(index).
-            call iihash_insert(ghost_flag(inode), index, part(index))
+            call iihash_insert(ghost_flag(inode), index, vp%part(index))
             ! Increase number of ghost points of inode from part(index).
-            np_ghost_neigh_partno(part(index)) = np_ghost_neigh_partno(part(index))+1
+            np_ghost_neigh_partno(vp%part(index)) = np_ghost_neigh_partno(vp%part(index))+1
             ! Increase total number of ghostpoints of inode.
             np_ghost_partno                       = np_ghost_partno + 1
             ! One more ghost point.
@@ -463,7 +461,6 @@ contains
     vp%np     = np
     vp%np_enl = np_enl
     vp%npart  = npart
-    vp%part   = part
 
     call init_send_points
 
