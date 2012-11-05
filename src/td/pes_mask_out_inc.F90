@@ -317,21 +317,23 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk)
   FLOAT,            intent(in) :: Lk(:)
   character(len=*), intent(in) :: file
 
-  integer :: iunit, ierr, sb_dim 
+  integer :: iunit
+#if defined(HAVE_NETCDF)
+  integer :: ierr, sb_dim 
   character(len=512) :: filename
-
   type(cube_t) :: cube
   type(cube_function_t) :: cf
   integer :: ll(3),ii
   type(simul_box_t) :: sb 
   FLOAT :: dk(3)  
+#endif
 
   PUSH_SUB(PES_mask_dump_full_mapM)
   
-  sb_dim = 3 ! tested only in 3D 
-  
 #if defined(HAVE_NETCDF)  
 
+  sb_dim = 3 ! tested only in 3D 
+  
   ll = 1
   do ii = 1, 3
     ll(ii) = size(PESK,ii) 
