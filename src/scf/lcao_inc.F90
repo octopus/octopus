@@ -185,7 +185,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   end do
 
 !  if(this%write_matrices) then
-!    SAFE_ALLOCATE(maxcoeff(1:this%norbs, kstart:kend))
+!    SAFE!_ALLOCATE(maxcoeff(1:this%norbs, kstart:kend))
 !    maxcoeff = maxloc(abs(hamilt), 1)
 !    do ik =  kstart, kend
 !      do n2 = 1, this%norbs
@@ -198,7 +198,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 !        endif
 !      enddo
 !    enddo
-!    SAFE_DEALLOCATE_A(maxcoeff)
+!    SAFE!_DEALLOCATE_A(maxcoeff)
 !
 !    call io_close(iunit_h)
 !    call io_close(iunit_s)
