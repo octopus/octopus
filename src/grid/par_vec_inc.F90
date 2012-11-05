@@ -246,7 +246,7 @@ end subroutine X(vec_allgather)
 !--------------------------------------------------------
 
 !> This function collects points from the array src in nodes and puts
-!! them in the arrat dst in the node with MPI rank root, the points to
+!! them in the array dst in the node with MPI rank root, the points to
 !! collect are given by a list of global indices (of size nn).
 subroutine X(vec_selective_gather)(this, nn, list, root, src, dst)
   type(pv_t),       intent(in)    :: this    !< The par_vec_t object.

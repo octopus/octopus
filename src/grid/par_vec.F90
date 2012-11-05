@@ -217,6 +217,7 @@ contains
     logical                     :: found
     integer                     :: np_ghost_partno  !< Number of ghost point of the actual process
     integer, allocatable        :: np_ghost_neigh_partno(:) !< Number of the neighbours ghost points of the actual process
+    integer                     :: idir
 
     PUSH_SUB(vec_init)
 
@@ -417,7 +418,7 @@ contains
       iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, action='write')
       do ip = 1, vp%np_ghost(rank+1)
         jp = vp%ghost(vp%xghost(rank+1) + ip - 1)
-        write(iunit, '(4i8)') jp, idx%lxyz(jp, :)
+        write(iunit, '(4i8)') jp, (idx%lxyz(jp, idir), idir = 1, MAX_DIM)
       end do
 
       call io_close(iunit)
