@@ -705,7 +705,6 @@ contains
     end if
 
     call partition_init(partition, mesh)
-    partition%point_to_part = mesh%vp%part
     call partition_build(partition, mesh, stencil)
     call partition_write_info(partition)      
     call partition_end(partition)
