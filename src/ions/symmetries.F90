@@ -148,9 +148,31 @@ contains
 
     call messages_print_stress(stdout, "Symmetries")
 
-    ! In all cases, we must check that the grid respects the symmetries. --DAS
+    ! if someone cares, they could try to analyze the symmetry point group of the individual species too
+    any_non_spherical = .false.
+    do iatom = 1, geo%natoms
+      any_non_spherical = any_non_spherical .or. species_type(geo%atom(iatom)%spec) == SPEC_USDEF .or. &
+        species_type(geo%atom(iatom)%spec) == SPEC_JELLI_SLAB .or. species_type(geo%atom(iatom)%spec) == SPEC_CHARGE_DENSITY &
+        .or. species_type(geo%atom(iatom)%spec) == SPEC_FROM_FILE
+    enddo
+    if(any_non_spherical) then
+      message(1) = "Symmetries are disabled since non-spherically symmetric species are present."
+      call messages_info(1)
+      call messages_print_stress(stdout)
+
+      ! we only use the identity
+      SAFE_ALLOCATE(this%ops(1:1))
+      this%nops = 1
+      call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)))
+      this%breakdir = M_ZERO
+      this%space_group = 1
+
+      POP_SUB(symmetries_init)
+      return
+    endif
 
     dim4syms = min(3,dim)
+    ! In all cases, we must check that the grid respects the symmetries. --DAS
 
     if (periodic_dim == 0) then
 
@@ -270,18 +292,6 @@ contains
       SAFE_DEALLOCATE_A(translation)
 
     end if
-
-    ! if someone cares, they could try to analyze the symmetry point group of the individual species too
-    any_non_spherical = .false.
-    do iatom = 1, geo%natoms
-      any_non_spherical = any_non_spherical .or. species_type(geo%atom(iatom)%spec) == SPEC_USDEF .or. &
-        species_type(geo%atom(iatom)%spec) == SPEC_JELLI_SLAB .or. species_type(geo%atom(iatom)%spec) == SPEC_CHARGE_DENSITY &
-        .or. species_type(geo%atom(iatom)%spec) == SPEC_FROM_FILE
-    enddo
-    if(any_non_spherical) then
-      message(1) = "Symmetries may be incorrect if non-spherically symmetric species are used."
-      call messages_warning(1)
-    endif
 
     call messages_print_stress(stdout)
 
