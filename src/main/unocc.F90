@@ -146,6 +146,11 @@ contains
       call messages_fatal(1)
     end if
 
+    if(.not. converged) then
+      write(message(1),'(a)') 'Some of the unoccupied states are not fully converged!'
+      call messages_warning(1)
+    endif
+
     ! write output file
     if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir(STATIC_DIR)
