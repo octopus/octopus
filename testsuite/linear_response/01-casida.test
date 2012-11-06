@@ -37,11 +37,13 @@ Enabled    : Yes
 
 Input: 01-casida.01-gs.inp
 match ; Total energy   ; GREP(static/info, 'Total       =', 20) ; -19.92968467
+match ; HOMO-1         ; GREP(static/info, '4   --', 12) ;  -0.440481
 match ; HOMO           ; GREP(static/info, '5   --', 12) ;  -0.384524
 
 Input: 01-casida.02-unocc.inp
 match ; LUMO           ; LINE(static/eigenvalues, -8, 12) ; -0.085106
 match ; LUMO+2         ; LINE(static/eigenvalues, -6, 12) ;  0.042278
+match ; LUMO+4         ; LINE(static/eigenvalues, -5, 12) ;  0.045205
 match ; LUMO+8         ; LINE(static/eigenvalues, -1, 12) ;  0.153188
 
 Input: 01-casida.03-casida.inp
