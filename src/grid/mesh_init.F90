@@ -705,8 +705,10 @@ contains
     end if
 
     call partition_init(partition, mesh)
-    partition%point_to_part = mesh%vp%part
-    call partition_build(partition, mesh, stencil)
+    if (partition%library == GA .or. partition%box_shape == HYPERCUBE)  then
+      partition%point_to_part = mesh%vp%part
+    end if
+    call partition_build(partition, mesh, stencil, mesh%vp%part)
     call partition_write_info(partition)      
     call partition_end(partition)
     call mesh_partition_messages_debug(mesh)

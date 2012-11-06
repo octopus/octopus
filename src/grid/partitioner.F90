@@ -192,7 +192,7 @@ contains
       PUSH_SUB(partitioner_perform.get_fitness)
 
       do ipop = 1, this%npop
-        call partition_build(parents(ipop), mesh, stencil)
+        call partition_build(parents(ipop), mesh, stencil, parents(ipop)%point_to_part)
         fitness(ipop) = partition_quality(parents(ipop))
       end do
       ipop = maxloc(fitness, dim = 1)

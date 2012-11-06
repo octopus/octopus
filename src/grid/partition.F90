@@ -22,6 +22,7 @@
 module partition_m
   use batch_m
   use c_pointer_m
+  use datasets_m
   use global_m
   use iihash_m
   use index_m
@@ -29,8 +30,10 @@ module partition_m
   use loct_math_m
   use mesh_m
   use messages_m
+  use parser_m
   use mpi_m
   use profiling_m
+  use simul_box_m
   use stencil_m
 
   implicit none
@@ -57,8 +60,15 @@ module partition_m
     integer, pointer :: nneigh(:)
     integer          :: npart
     integer          :: npoints
+    integer          :: library
+    integer          :: box_shape
   end type partition_t
 
+  integer, parameter, public :: &
+       METIS     = 2,           &
+       ZOLTAN    = 3,           &
+       GA        = 4,           &
+       PFFT_PART = 5
 
 contains
 
@@ -66,13 +76,26 @@ contains
     type(partition_t), intent(out) :: this
     type(mesh_t),      intent(in)  :: mesh
 
+    integer :: default
+    
     PUSH_SUB(partition_init)
     
     this%npart = mesh%mpi_grp%size
     this%npoints = mesh%np_part_global
 
-    SAFE_ALLOCATE(this%point_to_part(1:this%npoints))
+    default = ZOLTAN
+#ifdef HAVE_METIS
+    default = METIS
+#endif
+    call parse_integer(datasets_check('MeshPartitionPackage'), default, this%library)
 
+    call parse_integer(datasets_check('BoxShape'), MINIMUM, this%box_shape)
+    
+    if (this%library == GA .or. this%box_shape == HYPERCUBE) then
+      SAFE_ALLOCATE(this%point_to_part(1:this%npoints))
+      this%point_to_part = mesh%vp%part
+    end if
+    
     SAFE_ALLOCATE(this%nghost(1:this%npart))
     SAFE_ALLOCATE(this%nbound(1:this%npart))
     SAFE_ALLOCATE(this%nlocal(1:this%npart))
@@ -82,10 +105,11 @@ contains
   end subroutine partition_init
   ! ----------------------------------------------------------------------
 
-  subroutine partition_build(this, mesh, stencil)
+  subroutine partition_build(this, mesh, stencil, point_to_part)
     type(partition_t), intent(out) :: this
     type(mesh_t),      intent(in)  :: mesh
     type(stencil_t),   intent(in)  :: stencil
+    integer,           intent(in)  :: point_to_part(:)
 
     integer :: ip, ipcoords(1:MAX_DIM)
     integer, allocatable :: jpcoords(:, :), jp(:)
@@ -113,7 +137,7 @@ contains
     do ipart = 1, this%npart
       gotit = .false.
       do ip = 1, mesh%np_global
-        if(ipart /= this%point_to_part(ip)) cycle
+        if(ipart /= point_to_part(ip)) cycle
 
         INCR(this%nlocal(ipart), 1)
         call index_to_coords(mesh%idx, mesh%sb%dim, ip, ipcoords)
@@ -128,8 +152,8 @@ contains
           if(stencil%center == istencil) cycle
 
           if(.not. gotit(jp(istencil))) then
-            jpart = this%point_to_part(jp(istencil))
-            
+            jpart = point_to_part(jp(istencil))
+         
             if(jpart /= ipart) then
               INCR(this%nghost(ipart), 1)
               is_a_neigh(ipart, jpart) = .true.
@@ -213,8 +237,9 @@ contains
     type(partition_t), intent(inout) :: this
 
     PUSH_SUB(partition_end)
-
-    SAFE_DEALLOCATE_P(this%point_to_part)
+    if (this%library == GA .or. this%box_shape == HYPERCUBE) then
+      SAFE_DEALLOCATE_P(this%point_to_part)
+    end if
     SAFE_DEALLOCATE_P(this%nghost)
     SAFE_DEALLOCATE_P(this%nbound)
     SAFE_DEALLOCATE_P(this%nlocal)

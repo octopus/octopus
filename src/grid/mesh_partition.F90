@@ -97,7 +97,6 @@ contains
     integer :: ip, ii
     integer :: stencil_to_use, default_method, method
     integer :: library
-    integer, parameter   :: METIS = 2, ZOLTAN = 3, GA = 4, PFFT_PART = 5
     integer, parameter   :: STAR = 1, LAPLACIAN = 2
     integer, allocatable :: istart(:), ifinal(:), lsize(:)
     FLOAT, allocatable   :: xglobal(:, :)
