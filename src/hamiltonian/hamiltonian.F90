@@ -369,7 +369,7 @@ contains
     !% sides there is a lead connected. No outgoing density is reflected within the leads,
     !% but some minor reflection will occur on the corners of the box.
     !% This is due to the setup of semi-infinite finite width leads connected to the sides.
-    !% Warning: This scheme works only with the special Cranck-Nicholson propagator and has
+    !% Warning: This scheme works only with the special Crack-Nicholson propagator and has
     !% quadratic scaling with time. It may be tuned with the parameter <tt>OpenBoundariesMaxMemCoeffs</tt>.
     !%End
     call parse_integer(datasets_check('AbsorbingBoundaries'), NOT_ABSORBING, hm%ab)

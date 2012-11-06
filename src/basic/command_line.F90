@@ -36,28 +36,28 @@
 ! ---------------------------------------------------------
 module command_line_m
 
-  ! ---------------------------------------------------------
-  ! The compilation depends on several macros defined at configure time (the m4 code that
-  ! takes care of testing the compiler in order to build this macros is in m4/fc_command_line_m4):
-  !
-  ! FC_COMMAND_LINE_ARGUMENTS maybe be "2003", "77", or undefined. In the first case, 
-  !   the "get_command_argument", "command_argument_count", and "get_command" routines
-  !   are defined. In the second case, they are coded here, by accessing the non-standard
-  !   FORTRAN 77 "getarg" and "iargc", present in many compiler extensions. If this macro
-  !   is undefined, then the command line arguments cannot be accessed at all.
-  ! FC_COMMAND_LINE_MODULE is the module that should be used in order to have access to
-  !   the getarg and iargc procedures, in case "FC_COMMAND_LINE_ARGUMENTS = 77".  This 
-  !   module depends on the compiler, and in some cases it is none at all.
-  ! FC_COMMAND_LINE_INCLUDE is the file to be included in order to have access to the getarg
-  !   and iargc procedures, in case "FC_COMMAND_LINE_ARGUMENTS = 77". This file depends on
-  !   the compiler, and in some case it is none at all.
-  ! FC_COMMAND_LINE_INTRINSIC is defined if "FC_COMMAND_LINE_ARGUMENTS = 77", and the 
-  !   procedures iargc and getarg are intrinsi, i.e. there is no need to use any module,
-  !   include any file, or declare them.
-  ! FC_COMMAND_LINE_IMPLICIT is defined if "FC_COMMAND_LINE_ARGUMENTS = 77", and the procedures
-  !   iargc and getarg are implicit, i.e. there is no need to use any module or include any
-  !   file, but have to be declared.
-  ! ---------------------------------------------------------
+  !< ---------------------------------------------------------
+  !! The compilation depends on several macros defined at configure time (the m4 code that
+  !! takes care of testing the compiler in order to build this macros is in m4/fc_command_line_m4):
+  !!
+  !! FC_COMMAND_LINE_ARGUMENTS maybe be "2003", "77", or undefined. In the first case, 
+  !!   the "get_command_argument", "command_argument_count", and "get_command" routines
+  !!   are defined. In the second case, they are coded here, by accessing the non-standard
+  !!   FORTRAN 77 "getarg" and "iargc", present in many compiler extensions. If this macro
+  !!   is undefined, then the command line arguments cannot be accessed at all.
+  !! FC_COMMAND_LINE_MODULE is the module that should be used in order to have access to
+  !!   the getarg and iargc procedures, in case "FC_COMMAND_LINE_ARGUMENTS = 77".  This 
+  !!   module depends on the compiler, and in some cases it is none at all.
+  !! FC_COMMAND_LINE_INCLUDE is the file to be included in order to have access to the getarg
+  !!   and iargc procedures, in case "FC_COMMAND_LINE_ARGUMENTS = 77". This file depends on
+  !!   the compiler, and in some case it is none at all.
+  !! FC_COMMAND_LINE_INTRINSIC is defined if "FC_COMMAND_LINE_ARGUMENTS = 77", and the 
+  !!   procedures iargc and getarg are intrinsi, i.e. there is no need to use any module,
+  !!   include any file, or declare them.
+  !! FC_COMMAND_LINE_IMPLICIT is defined if "FC_COMMAND_LINE_ARGUMENTS = 77", and the procedures
+  !!   iargc and getarg are implicit, i.e. there is no need to use any module or include any
+  !!   file, but have to be declared.
+  !! ---------------------------------------------------------
 
 #ifdef FC_COMMAND_LINE_MODULE
   use FC_COMMAND_LINE_MODULE

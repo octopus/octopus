@@ -58,7 +58,7 @@ end function X(ks_matrix_elements)
 R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
   type(casida_t), intent(in) :: cas
   integer,        intent(in) :: ia
-  R_TYPE,         intent(in) :: xx(:) ! these are KS matrix elements
+  R_TYPE,         intent(in) :: xx(:) !< these are KS matrix elements
 
   integer :: jb
 

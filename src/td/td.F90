@@ -432,6 +432,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_wfs()
+
       integer :: i, is, ierr, ist, jst, freeze_orbitals
       character(len=50) :: filename
       FLOAT :: x
@@ -440,6 +441,7 @@ contains
       CMPLX, allocatable :: rotation_matrix(:, :)
 
       PUSH_SUB(td_run.init_wfs)
+
       if(.not.fromscratch) then
         call restart_read(trim(tmpdir)//'td', st, gr, ierr, iter=td%iter)
         if(ierr.ne.0) then
