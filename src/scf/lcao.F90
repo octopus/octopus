@@ -1190,8 +1190,10 @@ contains
     write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', rr
     call messages_info(1)
 
-    rr = qtot / rr
-    rho = rr * rho
+    if (abs(rr) > M_EPSILON) then ! We only renormalize if the density is not zero
+      rr = qtot / rr
+      rho = rr * rho
+    end if
     rr = M_ZERO
     do is = 1, spin_channels
       rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is))
