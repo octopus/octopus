@@ -1557,9 +1557,6 @@ contains
     !% (Experimental) Orthogonalization is performed based on a QR
     !% decomposition based on Lapack routines _getrf and _orgqr.
     !% Compatible with states parallelization.
-    !%Option old_gram_schmidt 5
-    !% Old Gram-Schmidt implementation, compatible with states
-    !% parallelization.
     !%End
 
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
