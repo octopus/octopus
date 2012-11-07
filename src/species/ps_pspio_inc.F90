@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: ps_upf.F90 8448 2011-11-01 13:35:20Z xavier $
+!! $Id$
 
   ! ---------------------------------------------------------
   subroutine ps_pspio_init(ps, z, lmax, lloc, ispin, filename)
@@ -28,7 +28,7 @@
 #if HAVE_PSPIO
 
     logical :: found, has_kb
-    integer :: ierr, idir, ip
+    integer :: ierr, idir
     character(len=3) :: psp_dir(3) = (/"PSF", "FHI", "UPF"/)
     character(len=256) :: filename2
     type(pspio_f90_pspdata_t)   :: pspdata
@@ -75,20 +75,20 @@
     call messages_info(1)
 
     ! Mesh
-    call ps_pspio_read_mesh(ps, pspdata, ip)
+    call ps_pspio_read_mesh(ps, pspdata)
 
     ! XC
-    call ps_pspio_read_xc(ps, pspdata, ip)
+    call ps_pspio_read_xc(ps, pspdata)
 
     ! We will first try to read the KB projectors
-    call ps_pspio_read_kb_projectors(ps, pspdata, has_kb, ip)
+    call ps_pspio_read_kb_projectors(ps, pspdata, has_kb)
 
     ! States
-    call ps_pspio_read_states(ps, pspdata, ip)
+    call ps_pspio_read_states(ps, pspdata)
 
     ! If we do not have KB projectors, then we read the pseudopotentials
     if (.not. has_kb) then
-      call ps_pspio_read_potentials(ps, pspdata, ip)
+      call ps_pspio_read_potentials(ps, pspdata)
     end if
 
     !No variable description, as it is already in ps.F90
@@ -133,12 +133,11 @@
   end subroutine ps_pspio_read_info
 
   ! ---------------------------------------------------------
-  subroutine ps_pspio_read_mesh(ps, pspdata, ip)
+  subroutine ps_pspio_read_mesh(ps, pspdata)
     type(ps_t),                intent(inout) :: ps
     type(pspio_f90_pspdata_t), intent(in)    :: pspdata
-    integer, intent(out) :: ip
 
-    integer :: ierr
+    integer :: ierr, ip
     type(pspio_f90_mesh_t) :: mesh
     FLOAT, allocatable :: r_tmp(:)
 
@@ -176,10 +175,9 @@
   end subroutine ps_pspio_read_mesh
 
   ! ---------------------------------------------------------
-  subroutine ps_pspio_read_states(ps, pspdata, ip)
+  subroutine ps_pspio_read_states(ps, pspdata)
     type(ps_t),                intent(inout) :: ps
     type(pspio_f90_pspdata_t), intent(in)    :: pspdata
-    integer, intent(in) :: ip
 
     integer :: ierr, ir, is, ist, l
     FLOAT :: x, j
@@ -213,12 +211,10 @@
 
       !Wavefunctions
       SAFE_ALLOCATE(wfs(ps%g%nrval))
-      do ir = 0, ps%g%nrval - ip
-        ierr = pspio_f90_state_wf_eval(state, ps%g%rofi(ip+ir), wfs(ip+ir))
+      do ir = 1, ps%g%nrval
+        ierr = pspio_f90_state_wf_eval(state, ps%g%rofi(ir), wfs(ir))
         call check_error(ierr)
       end do
-      if (ip == 2) wfs(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), &
-           ps%g%rofi(3), wfs(2), wfs(3))
       do is = 1, ps%ispin
         call spline_fit(ps%g%nrval, ps%g%rofi, wfs, ps%ur(ist, is))
       end do
@@ -232,13 +228,12 @@
   end subroutine ps_pspio_read_states
 
   ! ---------------------------------------------------------
-  subroutine ps_pspio_read_kb_projectors(ps, pspdata, has_kb, ip)
+  subroutine ps_pspio_read_kb_projectors(ps, pspdata, has_kb)
     type(ps_t),                intent(inout) :: ps
     type(pspio_f90_pspdata_t), intent(in)    :: pspdata
     logical,                   intent(out)   :: has_kb
-    integer, intent(in) :: ip
 
-    integer :: ierr, ir, n_kbproj, wave_eq, ikb, ikbc, nrc, l
+    integer :: ierr, ir, n_kbproj, wave_eq, ikb, ikbc, l
     FLOAT :: J
     FLOAT, parameter :: threshold = CNST(0.5e-7)
     type(pspio_f90_potential_t) :: vlocal
@@ -264,12 +259,10 @@
     ierr = pspio_f90_pspdata_get_vlocal(pspdata, vlocal)
     call check_error(ierr)
     SAFE_ALLOCATE(v_local(ps%g%nrval))
-    do ir = 0, ps%g%nrval - ip
-      ierr = pspio_f90_potential_eval(vlocal, ps%g%rofi(ip+ir), v_local(ip+ir))
+    do ir = 1, ps%g%nrval
+      ierr = pspio_f90_potential_eval(vlocal, ps%g%rofi(ir), v_local(ir))
       call check_error(ierr)
     end do
-    if (ip == 2) v_local(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), &
-         ps%g%rofi(3), v_local(2), v_local(3))
     do ir = ps%g%nrval-1, 2, -1
       if(abs(v_local(ir)*ps%g%rofi(ir) + ps%z_val) > threshold) exit
     end do
@@ -313,12 +306,10 @@
       ierr = pspio_f90_projector_get_energy(kb_projector, ps%h(l, ikbc, ikbc))
       call check_error(ierr)
 
-      do ir = 0, ps%g%nrval - ip
-        ierr = pspio_f90_projector_eval(kb_projector, ps%g%rofi(ip+ir), proj(ip+ir))
+      do ir = 1, ps%g%nrval
+        ierr = pspio_f90_projector_eval(kb_projector, ps%g%rofi(ir), proj(ir))
         call check_error(ierr)
       end do
-      if (ip == 2) proj(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), &
-           ps%g%rofi(3), proj(2), proj(3))
       do ir = ps%g%nrval-1, 2, -1
         if(abs(proj(ir)) > threshold) exit
       end do
@@ -348,10 +339,9 @@
   end subroutine ps_pspio_read_kb_projectors
 
   ! ---------------------------------------------------------
-  subroutine ps_pspio_read_potentials(ps, pspdata, ip)
+  subroutine ps_pspio_read_potentials(ps, pspdata)
     type(ps_t),                intent(inout) :: ps
     type(pspio_f90_pspdata_t), intent(in)    :: pspdata
-    integer, intent(in) :: ip
 
     integer :: ierr
 
@@ -364,10 +354,9 @@
   end subroutine ps_pspio_read_potentials
 
   ! ---------------------------------------------------------
-  subroutine ps_pspio_read_xc(ps, pspdata, ip)
+  subroutine ps_pspio_read_xc(ps, pspdata)
     type(ps_t),                intent(inout) :: ps
     type(pspio_f90_pspdata_t), intent(in)    :: pspdata
-    integer, intent(in) :: ip
 
     logical :: has_nlcc
     integer :: ierr, ir, nrc
@@ -389,12 +378,10 @@
 
       ! get core density
       SAFE_ALLOCATE(rho(ps%g%nrval))
-      do ir = 0, ps%g%nrval - ip
-        ierr = pspio_f90_xc_nlcc_eval(xc, ps%g%rofi(ip+ir), rho(ip+ir))
+      do ir = 1, ps%g%nrval
+        ierr = pspio_f90_xc_nlcc_eval(xc, ps%g%rofi(ir), rho(ir))
         call check_error(ierr)
       end do
-      if (ip == 2) rho(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), &
-           ps%g%rofi(3), rho(2), rho(3))
 
       ! find cutoff radius
       do ir = ps%g%nrval-1, 1, -1
