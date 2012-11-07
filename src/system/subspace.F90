@@ -126,7 +126,7 @@ contains
       end if
 
       if(st%d%kpt%parallel) then
-        message(1) = 'Currently the scalapack subspace diagonalization cannot work with subspace diagonalization.'
+        message(1) = 'Currently the scalapack subspace diagonalization does not use k-point parallelization.'
         call messages_warning(1)
       end if
 #endif
