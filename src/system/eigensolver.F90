@@ -145,7 +145,10 @@ contains
     !%Option multigrid 7
     !% (Experimental) Multigrid eigensolver.
     !%Option arpack 12
-    !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package. 
+    !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
+    !%Option direct 14
+    !% Direct eigensolver. Experimental, and only implemented for complex
+    !% wavefunctions.
     !%End
 
     if(st%parallel_in_states) then
@@ -183,6 +186,8 @@ contains
     case(RS_CG)
     case(RS_PLAN)
     case(RS_DIRECT)
+      if(states_are_real(st)) call messages_not_implemented("direct eigensolver for real wavefunctions")
+      call messages_experimental("direct eigensolver")
     case(RS_EVO)
       !%Variable EigensolverImaginaryTime
       !%Type float
@@ -372,6 +377,8 @@ contains
         case(RS_CG)
           call deigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik))
+        case(RS_DIRECT)
+          call messages_not_implemented("direct eigensolver for real wavefunctions")
         case(RS_PLAN)
           call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
@@ -390,9 +397,9 @@ contains
               eigens%converged(ik), ik, eigens%diff(:, ik))
           end if
 #if defined(HAVE_ARPACK) 
- 	      case(RS_ARPACK) 
- 	        call deigen_solver_arpack(gr, st, hm, eigens%tolerance, maxiter, eigens%arnoldi_vectors, & 
- 	             eigens%converged(ik), ik, eigens%diff(:,ik)) 
+        case(RS_ARPACK) 
+          call deigen_solver_arpack(gr, st, hm, eigens%tolerance, maxiter, eigens%arnoldi_vectors, & 
+            zeigens%converged(ik), ik, eigens%diff(:,ik)) 
 #endif 
         end select
 
@@ -429,8 +436,8 @@ contains
           end if         
 #if defined(HAVE_ARPACK) 
        	case(RS_ARPACK) 
- 	        call zeigen_solver_arpack(gr, st, hm, eigens%tolerance, maxiter, eigens%arnoldi_vectors, & 
- 	             eigens%converged(ik), ik, eigens%diff(:,ik)) 
+          call zeigen_solver_arpack(gr, st, hm, eigens%tolerance, maxiter, eigens%arnoldi_vectors, & 
+            eigens%converged(ik), ik, eigens%diff(:,ik)) 
 #endif 
         end select
 
