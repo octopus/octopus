@@ -41,9 +41,10 @@ match ; HOMO-1         ; GREP(static/info, '4   --', 12) ;  -0.440481
 match ; HOMO           ; GREP(static/info, '5   --', 12) ;  -0.384524
 
 Input: 01-casida.02-unocc.inp
-match ; LUMO           ; LINE(static/eigenvalues, -8, 12) ; -0.085106
-match ; LUMO+2         ; LINE(static/eigenvalues, -6, 12) ;  0.042278
-match ; LUMO+4         ; LINE(static/eigenvalues, -5, 12) ;  0.045205
+match ; LUMO           ; LINE(static/eigenvalues, -9, 12) ; -0.085106
+match ; LUMO+2         ; LINE(static/eigenvalues, -7, 12) ;  0.013016
+match ; LUMO+3         ; LINE(static/eigenvalues, -6, 12) ;  0.042278
+match ; LUMO+6         ; LINE(static/eigenvalues, -4, 12) ;  0.045205
 match ; LUMO+8         ; LINE(static/eigenvalues, -1, 12) ;  0.153188
 
 Input: 01-casida.03-casida.inp
@@ -53,7 +54,7 @@ match ; 3rd eps-diff   ; LINE(casida/eps_diff, 5, 9) ; 3.55375584E-01
 
 match ; 1st Petersilka ; LINE(casida/petersilka, 2, 9) ; 3.43091004E-01
 # owing to degeneracy and the gauge-dependence of Petersilka, the 2nd is not well defined
-match ; 3rd Petersilka ; LINE(casida/petersilka, 6, 9) ; 4.25114758E-01
+match ; 3rd Petersilka ; LINE(casida/petersilka, 6, 9) ; 4.11090328E-01
 
 match ; 1st excitation ; LINE(casida/casida, 2, 7) ; 3.37393747E-01
 match ; 2nd excitation ; LINE(casida/casida, 4, 7) ; 3.55373946E-01
