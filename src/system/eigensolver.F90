@@ -329,10 +329,10 @@ contains
     integer,              intent(in)    :: iter
     logical,    optional, intent(inout) :: conv
 
-    integer :: maxiter, ik, ns
+    integer :: maxiter, ik, ns, ist
 #ifdef HAVE_MPI
     logical :: conv_reduced
-    integer :: outcount, ist
+    integer :: outcount
     FLOAT, allocatable :: ldiff(:), leigenval(:)
 #endif
     type(profile_t), save :: prof
@@ -437,10 +437,19 @@ contains
         if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS .and.eigens%es_type /= RS_ARPACK &
           .and.eigens%es_type /= RS_DIRECT ) then
           call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
-         
         end if
 
       end if
+
+      ! recheck convergence after subspace diagonalization, since states may have reordered
+      eigens%converged(ik) = 0
+      do ist = 1, st%nst
+        if(eigens%diff(ist, ik) < eigens%tolerance) then
+          eigens%converged(ik) = ist
+        else
+          exit
+        endif
+      enddo
 
       eigens%matvec = eigens%matvec + maxiter
     end do ik_loop
