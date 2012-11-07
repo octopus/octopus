@@ -36,7 +36,7 @@
     integer,                intent(inout) :: niter
     integer,                intent(in)    :: ik
     integer,                intent(inout) :: converged
-    FLOAT,                  intent(out)   :: diff(1:st%nst)
+    FLOAT,                  intent(out)   :: diff(:) !< (1:st%nst)
     integer,                intent(in)    :: block_size
 
     integer            :: ib, psi_start, psi_end, constr_start, constr_end, bs
@@ -136,7 +136,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
   integer,                intent(out)   :: converged
-  FLOAT,                  intent(inout) :: diff(1:st%nst)
+  FLOAT,                  intent(inout) :: diff(:) !< (1:st%nst)
   R_TYPE, optional,       intent(in)    :: constr(gr%mesh%np_part, st%d%dim, constr_start:constr_end)
 
   integer :: nps   !< Number of points per state.

@@ -25,7 +25,7 @@ subroutine X(eigensolver_mg) (der, st, hm, sdiag, niter, ik, diff)
   type(subspace_t),       intent(in)    :: sdiag
   integer,                intent(inout) :: niter
   integer,                intent(in)    :: ik
-  FLOAT,                  intent(out)   :: diff(1:st%nst)
+  FLOAT,                  intent(out)   :: diff(:) !< (1:st%nst)
 
   integer  :: ist, ist2, iter
   R_TYPE, allocatable :: cc(:, :), aa(:)

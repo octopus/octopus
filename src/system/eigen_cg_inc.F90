@@ -28,7 +28,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
-  FLOAT,        optional, intent(out)   :: diff(1:st%nst)
+  FLOAT,        optional, intent(out)   :: diff(:) !< (1:st%nst)
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:), psi(:, :)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
@@ -235,7 +235,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
   integer,             intent(inout) :: niter
   integer,             intent(inout) :: converged
   integer,             intent(in)    :: ik
-  FLOAT,     optional, intent(out)   :: diff(1:st%nst)
+  FLOAT,     optional, intent(out)   :: diff(:) !< (1:st%nst)
 
   integer :: nst, dim, ist, maxter, i, conv, ip, idim
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)

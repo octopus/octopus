@@ -58,7 +58,7 @@ contains
     integer,                intent(inout) :: niter
     integer,                intent(inout) :: converged
     integer,                intent(in)    :: ik
-    FLOAT,        optional, intent(out)   :: diff(1:st%nst)
+    FLOAT,        optional, intent(out)   :: diff(:) !< (1:st%nst)
         
     CMPLX, allocatable :: psi(:, :), h_psi(:,:), h_rr(:,:), cL_rr(:,:), cR_rr(:,:), zeigenval(:), manyzeigenval(:)
     FLOAT, allocatable :: manyeigenval(:), sortkey(:)

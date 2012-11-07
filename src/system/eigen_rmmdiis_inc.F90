@@ -28,7 +28,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
-  FLOAT,                  intent(out)   :: diff(1:st%nst)
+  FLOAT,                  intent(out)   :: diff(:) !< (1:st%nst)
 
   R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :, :), finalpsi(:)
   R_TYPE, allocatable :: eigen(:)
