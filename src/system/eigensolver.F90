@@ -399,7 +399,7 @@ contains
 #if defined(HAVE_ARPACK) 
         case(RS_ARPACK) 
           call deigen_solver_arpack(gr, st, hm, eigens%tolerance, maxiter, eigens%arnoldi_vectors, & 
-            zeigens%converged(ik), ik, eigens%diff(:,ik)) 
+            eigens%converged(ik), ik, eigens%diff(:,ik)) 
 #endif 
         end select
 
