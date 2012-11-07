@@ -228,7 +228,6 @@ end subroutine X(eigensolver_cg2)
 ! ---------------------------------------------------------
 !> The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
 subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
-  intrinsic :: present
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in)    :: hm
@@ -309,7 +308,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
       res = X(states_residue)(gr%mesh, dim, phi, lambda, psi)
       if(present(diff)) diff(ist) = res
       if(res < tol) then
-        conv = conv + 1
+        if(conv == ist - 1) conv = ist
         exit band
       end if
 

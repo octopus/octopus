@@ -251,7 +251,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
       blk = 1
 
       ! Convergence test, and reordering of the eigenpairs. Starts checking
-      ! the convergece of the eigenpairs of the window, and stops checking
+      ! the convergence of the eigenpairs of the window, and stops checking
       ! whenever it finds one not converged. Then, for each converged eigenpair,
       ! compares its eigenvalue to the previous one, swapping them if
       ! necessary.
