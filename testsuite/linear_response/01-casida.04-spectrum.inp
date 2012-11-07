@@ -36,4 +36,3 @@ NumberUnoccStates = 9
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
-

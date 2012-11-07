@@ -33,4 +33,3 @@ EigenSolverMaxIter = 20
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
-
