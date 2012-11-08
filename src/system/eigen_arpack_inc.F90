@@ -201,8 +201,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine av (n, v, w)
-    integer :: n
-    R_TYPE :: v(n), w(n)
+    integer, intent(in) :: n
+    R_TYPE, intent(in) :: v(n)
+    R_TYPE, intent(out) :: w(n)
+
     integer :: i, NP, NP_PART
     R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
     
