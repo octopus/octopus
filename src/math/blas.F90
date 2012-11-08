@@ -22,7 +22,7 @@
 ! -----------------------------------------------------------------------
 !> This module contains interfaces for BLAS routines
 !! You should not use these routines directly. Please use the lalg_XXXX
-!! -----------------------------------------------------------------------
+! -----------------------------------------------------------------------
 module blas_m
 
   implicit none
@@ -34,6 +34,7 @@ module blas_m
   ! ---------------------------------------------------------------------
 
   !> ----------------- swap ------------------
+  !! Interchanges two vectors.
   interface blas_swap
     subroutine sswap(n, dx, incx, dy, incy)
       integer,    intent(in)    :: n, incx, incy
@@ -57,6 +58,7 @@ module blas_m
   end interface blas_swap
 
   !> ----------------- scal ------------------
+  !! Scales a vector by a constant.
   interface blas_scal
     subroutine sscal(n, da, dx, incx)
       integer,    intent(in)    :: n, incx
@@ -96,6 +98,7 @@ module blas_m
   end interface blas_scal
 
   !> ----------------- axpy ------------------
+  !! Constant times a vector plus a vector.
   interface blas_axpy
     subroutine saxpy (n, da, dx, incx, dy, incy)
       integer,    intent(in)    :: n, incx, incy
@@ -137,6 +140,7 @@ module blas_m
   end interface blas_axpy
 
   !> ----------------- copy ------------------
+  !! Copies a vector, x, to a vector, y.
   interface blas_copy
     subroutine scopy(n, dx, incx, dy, incy)
       integer,    intent(in)  :: n, incx, incy
@@ -164,6 +168,7 @@ module blas_m
   end interface blas_copy
 
   !> ----------------- dot  ------------------
+  !! Forms the dot product of two vectors.
   interface blas_dot
     real(4) function sdot(n, dx, incx, dy, incy)
       integer,    intent(in) :: n, incx, incy
@@ -199,6 +204,11 @@ module blas_m
   end interface blas_dotu
 
   !> ----------------- nrm2 ------------------
+  !! Returns the euclidean norm of a vector via the function
+  !! name, so that
+  !! \f[
+  !! SNRM2 := sqrt( x'*x )
+  !! \f]
   interface blas_nrm2
     real(4) function snrm2(n, dx, incx)
       integer,    intent(in) :: n, incx
@@ -227,6 +237,14 @@ module blas_m
   ! ------------------------------------------------------------------
 
   !> ----------------- symv ------------------
+  !! performs the matrix-vector  operation
+  !!
+  !! \f[
+  !!     y := \alpha A x + \beta y
+  !! \f]
+  !!
+  !!  where \f$\alpha\f$ and \f$\beta\f$ are scalars, x and y are n
+  !!  element vectors and A is an \f$n\times n\f$ symmetric matrix.
   interface blas_symv
     subroutine ssymv(uplo, n, alpha, a, lda, x, incx, beta, y, incy)
       character(1), intent(in)    :: uplo
@@ -266,6 +284,18 @@ module blas_m
   end interface blas_symv
   
   !> ----------------- gemv ------------------
+  !! SGEMV  performs one of the matrix-vector operations
+  !!
+  !! \f[
+  !!     y := \alpha A x + \beta y,   
+  !! \f]
+  !! or 
+  !! \f[
+  !!     y := \alpha A^Tx + \beta y
+  !! \f]
+  !!  
+  !!  where \f$\alpha\f$ and \f$\beta\f$ are scalars, x and y are
+  !!  vectors and A is an \f$m\times n\f$ matrix.
   interface blas_gemv
     subroutine sgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
       character(1), intent(in)    :: trans
@@ -310,6 +340,20 @@ module blas_m
   ! ------------------------------------------------------------------
 
   !> ----------------- gemm ------------------
+  !! performs one of the matrix-matrix operations
+  !!
+  !! \f[
+  !!     C := \alpha op( A ) op( B ) + \beta C,
+  !! \f]
+  !!
+  !!  where  op(X) is one of
+  !!
+  !! \f[
+  !!     op( X ) = X   \mbox{ or }   op( X ) = X^T,
+  !! \f]
+  !!
+  !!  alpha and beta are scalars, and A, B and C are matrices, with op(A)
+  !!  an m by k matrix,  op(B)  a  k by n matrix and  C an m by n matrix.
   interface blas_gemm
     subroutine sgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
       character(1), intent(in)    :: transa, transb
@@ -348,7 +392,20 @@ module blas_m
     end subroutine zgemm
   end interface blas_gemm
 
-  !> ----------------- trmm ------------------
+  !> ----------------- trmm ------------------ 
+  !! Performs one of the matrix-matrix operations
+  !!
+  !! \f[
+  !!     B := \alpha op( A )B,  \mbox{ or }  B := \alpha B op( A ),
+  !! \f]
+  !!
+  !!  where \f$\alpha\f$ is a scalar, B is an \f$m\times n\f$matrix, A
+  !!  is a unit, or non-unit, upper or lower triangular matrix and op(
+  !!  A ) is one of
+  !!
+  !! \f[
+  !!     op( A ) = A   \mbox{ or }   op( A ) = A^T.
+  !! \f]
   interface blas_trmm
     subroutine strmm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
       character(1), intent(in)    :: side, uplo, transa, diag
@@ -380,6 +437,20 @@ module blas_m
   end interface blas_trmm
 
   !> ----------------- symm, hemm ------------------
+  !! performs one of the matrix-matrix operations
+  !!
+  !! \f[
+  !!     C := \alpha A B + \beta C,
+  !! \f]
+  !!
+  !!  or
+  !!
+  !! \f[
+  !!     C := \alpha  B A + \beta C
+  !! \f]
+  !!
+  !!  where \f$\alpha\f$ and \f$\beta\f$ are scalars, A is a symmetric
+  !!  matrix and B and C are \f$m\times n\f$ matrices.
   interface blas_symm
     subroutine ssymm(side, uplo, m, n, alpha, a, lda, b, ldb, beta, c, ldc)
       character(1), intent(in)    :: side, uplo
@@ -411,6 +482,21 @@ module blas_m
   end interface blas_symm
 
   !> ----------------- syrk, herk ------------------
+  !! performs one of the symmetric rank k operations
+  !!
+  !! \f[
+  !!     C := \alpha A A^T + \beta C,
+  !!
+  !! \f]
+  !! or 
+  !! \f[
+  !!     C := alpha A^T A + \beta*C
+  !! \f]
+  !!
+  !!  where \f$\alpha\f$ and \f$\beta\f$ are scalars, C is an
+  !!  \f$n\times n\f$ symmetric matrix and A is an \f$n\times k\f$
+  !!  matrix in the first case and a \f$k\times n\f$ matrix in the
+  !!  second case.
   interface blas_herk
     subroutine ssyrk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
       implicit none
@@ -452,6 +538,25 @@ module blas_m
   end interface blas_herk
 
   !> -----------------------trsm-------------------------
+  !! Solves one of the matrix equations
+  !!
+  !! \f[
+  !!     op( A )X = \alpha B, 
+  !! \f]
+  !! or 
+  !! \f[
+  !! X op( A ) = \alpha B,
+  !! \f]
+  !!
+  !!  where \f$\alpha\f$ is a scalar, X and B are \f$m\times n\f$
+  !!  matrices, A is a unit, or non-unit, upper or lower triangular
+  !!  matrix and op(A) is one of
+  !!
+  !! \f[
+  !!     op( A ) = A   \mbox{ or }   op( A ) = A^T
+  !! \f]
+  !!
+  !!  The matrix X is overwritten on B.
   interface blas_trsm
     subroutine strsm(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
       character(1), intent(in)    :: side
