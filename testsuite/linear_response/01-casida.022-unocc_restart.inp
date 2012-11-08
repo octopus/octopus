@@ -1,0 +1,37 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+CalculationMode = unocc
+
+bond_length = 2.0744
+
+%Coordinates
+"N" |  -bond_length/2 |  0.0 |  0.0 
+"N" |   bond_length/2 |  0.0 |  0.0 
+%
+
+%Species
+"N" | 14.0067000 | spec_ps_psf | 7 | 2 | 0 
+%
+
+BoxShape = sphere
+
+Radius = 12.0
+Spacing = 0.36
+
+XCFunctional = lda_x + lda_c_vwn
+
+ConvRelDens = 1e-9
+
+LCAODimension = 18
+
+EigenSolver = cg_new
+EigenSolverTolerance = 1e-5
+
+EigenSolverMaxIter = 20
+
+UnoccMaximumIter = 1
+NumberUnoccStates = 9
+
+PoissonSolver = fft
+PoissonFFTKernel = multipole_correction

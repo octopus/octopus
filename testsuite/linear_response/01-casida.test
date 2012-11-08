@@ -41,6 +41,17 @@ match ; HOMO-1         ; GREP(static/info, '4   --', 12) ;  -0.440481
 match ; HOMO           ; GREP(static/info, '5   --', 12) ;  -0.384524
 
 Input: 01-casida.02-unocc.inp
+match ; HOMO-1         ; LINE(static/eigenvalues, -11, 12); -0.440481
+match ; HOMO           ; LINE(static/eigenvalues, -10, 12); -0.384524
+match ; LUMO           ; LINE(static/eigenvalues, -9, 12) ; -0.085106
+match ; LUMO+2         ; LINE(static/eigenvalues, -7, 12) ;  0.013016
+match ; LUMO+3         ; LINE(static/eigenvalues, -6, 12) ;  0.042278
+match ; LUMO+6         ; LINE(static/eigenvalues, -4, 12) ;  0.045205
+match ; LUMO+8         ; LINE(static/eigenvalues, -1, 12) ;  0.153188
+
+Input: 01-casida.022-unocc_restart.inp
+match ; HOMO-1         ; LINE(static/eigenvalues, -11, 12); -0.440481
+match ; HOMO           ; LINE(static/eigenvalues, -10, 12); -0.384524
 match ; LUMO           ; LINE(static/eigenvalues, -9, 12) ; -0.085106
 match ; LUMO+2         ; LINE(static/eigenvalues, -7, 12) ;  0.013016
 match ; LUMO+3         ; LINE(static/eigenvalues, -6, 12) ;  0.042278
