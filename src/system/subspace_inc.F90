@@ -65,6 +65,13 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
     ! Diagonalize the Hamiltonian in the subspace.
     call lalg_eigensolve(st%nst, hmss, eigenval(:))
 
+#ifdef HAVE_MPI
+    ! the eigenvectors are not unique due to phases and degenerate subspaces, but
+    ! they must be consistent among processors in domain parallelization
+    if(der%mesh%parallel_in_domains) &
+      call MPI_Bcast(hmss, st%nst**2, R_MPITYPE, 0, der%mesh%mpi_grp%comm, mpi_err)
+#endif
+
     ! Calculate the new eigenfunctions as a linear combination of the
     ! old ones.
     call X(states_rotate_in_place)(der%mesh, st, hmss, ik)
