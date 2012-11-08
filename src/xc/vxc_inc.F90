@@ -1079,7 +1079,6 @@ subroutine xc_get_vxc_cmplx(der, xcs, rho, ispin, &
 
   PUSH_SUB(xc_get_vxc_cmplx)
 
-  print *, "LDA calc energy exc"
   ASSERT(present(ex) .eqv. present(ec))
   calc_energy = present(ex)
 
