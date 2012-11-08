@@ -155,8 +155,8 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
           hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2)
           hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
 
-!        if(this%write_matrices .and. mpi_grp_is_root(mpi_world)) &
-!          write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamilt(n1, n2, ik))
+!          if(this%write_matrices .and. mpi_grp_is_root(mpi_world)) &
+!            write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamilt(n1, n2, ik))
         end do
       end do
       
@@ -172,9 +172,16 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 
   SAFE_ALLOCATE(ev(1:this%norbs))
 
-  do ik =  kstart, kend
+  do ik = kstart, kend
     ispin = states_dim_get_spin_index(st%d, ik)
     call lalg_geneigensolve(this%norbs, hamilt(:, :, ik), overlap(:, :, ispin), ev)
+
+#ifdef HAVE_MPI
+    ! the eigenvectors are not unique due to phases and degenerate subspaces, but
+    ! they must be consistent among processors in domain parallelization
+    if(gr%mesh%parallel_in_domains) &
+      call MPI_Bcast(hamilt(1, 1, ik), this%norbs**2, R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+#endif
 
     st%eigenval(lcao_start:nst, ik) = ev(lcao_start:nst)
 
@@ -897,6 +904,13 @@ contains
         write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. LAPACK returned info code ', info, '.'
         call messages_warning(1)
       end if
+
+#ifdef HAVE_MPI
+    ! the eigenvectors are not unique due to phases and degenerate subspaces, but 
+    ! they must be consistent among processors in domain parallelization
+    if(gr%mesh%parallel_in_domains) &
+      call MPI_Bcast(hamiltonian(1, 1), this%lsize(1)*this%lsize(2), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+#endif
 
     end if
 
