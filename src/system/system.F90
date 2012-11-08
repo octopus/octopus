@@ -199,7 +199,7 @@ contains
   subroutine system_h_setup(sys, hm, calc_eigenval)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
-    logical,   optional, intent(in)    :: calc_eigenval ! default is true
+    logical,   optional, intent(in)    :: calc_eigenval !< default is true
 
     integer, allocatable :: ind(:)
     integer :: ist, ik
@@ -237,7 +237,7 @@ contains
       SAFE_DEALLOCATE_A(copy_occ)
     endif
 
-    call states_fermi(sys%st, sys%gr%mesh)                              ! occupations
+    call states_fermi(sys%st, sys%gr%mesh) ! occupations
     call energy_calc_total(hm, sys%gr, sys%st)
 
     POP_SUB(system_h_setup)

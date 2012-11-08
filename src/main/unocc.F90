@@ -118,6 +118,8 @@ contains
         nst_calculated = occupied_states
       end if
       call lcao_run(sys, hm, st_start = nst_calculated + 1)
+    else
+      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .false.)
     end if
     
     SAFE_DEALLOCATE_A(states_read)
