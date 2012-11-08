@@ -296,9 +296,14 @@ contains
 
     SAFE_ALLOCATE(eigens%converged(1:st%d%nik))
     eigens%converged(1:st%d%nik) = 0
-    eigens%matvec    = 0
+    eigens%matvec = 0
     
-    call subspace_init(eigens%sdiag, st)
+    if(eigens%subspace_diag) then
+      call subspace_init(eigens%sdiag, st)
+    else
+      message(1) = "No subspace diagonalization will be done."
+      call messages_info(1)
+    endif
         
     POP_SUB(eigensolver_init)
 
