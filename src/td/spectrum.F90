@@ -166,7 +166,6 @@ contains
 
     !%Variable PropagationSpectrumDampMode
     !%Type integer
-    !%Default polynomial
     !%Section Utilities::oct-propagation_spectrum
     !%Description
     !% Decides which damping/filtering is to be applied in order to
@@ -1739,7 +1738,7 @@ contains
     integer, intent(out)          :: nspin
     type(kick_t), intent(out)     :: kick
     integer, intent(out)          :: energy_steps
-    FLOAT,   intent(out)          :: dw            ! energy step
+    FLOAT,   intent(out)          :: dw            !< energy step
 
     FLOAT :: dummy, e1, e2
 
@@ -1854,8 +1853,7 @@ contains
     FLOAT,              intent(in)    :: time_step
     type(batch_t),      intent(inout) :: time_function
     logical, optional,  intent(in)    :: window
-    FLOAT, optional, 	intent(in)	  :: kick_time
-	
+    FLOAT, optional, 	intent(in)    :: kick_time
 
     integer :: itime, ii
     FLOAT   :: total_time, time, weight
