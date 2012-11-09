@@ -29,6 +29,21 @@ module pblas_m
     pblas_herk,        &
     pblas_trsm
   
+
+  !> Performs any one of the following combined matrix computations:
+  !!
+  !! \f[
+  !!   C := \alpha A B + \beta C
+  !! \f]
+  !! \f[
+  !!  C := \alpha A B^T + \beta C
+  !! \f]
+  !! \f[
+  !!  C := \alpha A^T B + \beta C
+  !! \f]
+  !! \f[
+  !!  C := \alpha A^T B^T + \beta C
+  !! \f]
   interface pblas_gemm
     subroutine pdgemm ( transa, transb, m, n, k, alpha, & 
       a, ia, ja, desca, b, ib, jb, descb, &
@@ -54,7 +69,21 @@ module pblas_m
       integer          :: desca, descb, descc
     end subroutine pzgemm
   end interface
-
+  
+  !>  Performs one of the symmetric rank k operations
+  !!
+  !! \f[
+  !!     C := \alpha A A^T + \beta C,
+  !! \f]
+  !!  or
+  !! \f[
+  !!     C := \alpha A^T A + \beta C
+  !! \f]
+  !!
+  !!  where \f$\alpha\f$ and \f$\beta\f$ are scalars, C is an
+  !!  \f$n\times n\f$ symmetric matrix and A is an \f$n\times k\f$
+  !!  matrix in the first case and A \f$k \times n\f$ matrix in the
+  !!  second case.
   interface pblas_herk
     subroutine pdsyrk(uplo, trans, n, k, alpha, a, ia, ja, desca, beta, c, ic, jc, descc)
       implicit none
@@ -95,7 +124,26 @@ module pblas_m
     end subroutine pzherk
  
   end interface pblas_herk
-
+  
+  !> Solves one of the matrix equations
+  !!
+  !! \f[
+  !!     op( A )X = \alpha B, 
+  !! \f]
+  !! or 
+  !! \f[
+  !! X op( A ) = \alpha B,
+  !! \f]
+  !!
+  !!  where \f$\alpha\f$ is a scalar, X and B are \f$m\times n\f$
+  !!  matrices, A is a unit, or non-unit, upper or lower triangular
+  !!  matrix and op(A) is one of
+  !!
+  !! \f[
+  !!     op( A ) = A   \mbox{ or }   op( A ) = A^T
+  !! \f]
+  !!
+  !!  The matrix X is overwritten on B.
   interface pblas_trsm
     subroutine pdtrsm(side, uplo, transa, diag, m, n, alpha, a, ia, ja, desca, b, ib, jb, descb)
       implicit none

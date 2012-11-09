@@ -28,6 +28,20 @@ module lapack_m
 
   public ! only interfaces in this module
 
+  !> computes the Cholesky factorization of a real symmetric
+  !!  positive definite matrix A.
+  !!
+  !!  The factorization has the form
+  !! \f[
+  !!     A = U^T  U,  \mbox{ if UPLO} = 'U', 
+  !! \f]
+  !! or
+  !! \f[
+  !!     A = L   L^T, \mbox{ if UPLO} = 'L',
+  !! \f]
+  !!  where U is an upper triangular matrix and L is lower triangular.
+  !!
+  !!  This is the block version of the algorithm, calling Level 3 BLAS.
   interface lapack_potrf
     subroutine spotrf(uplo, n, a, lda, info)
       implicit none
@@ -65,7 +79,12 @@ module lapack_m
       integer,      intent(out)   :: info
     end subroutine zpotrf
   end interface lapack_potrf
-
+  
+  !>  Computes all the eigenvalues, and optionally, the eigenvectors
+  !!  of a real generalized symmetric-definite eigenproblem, of the form
+  !!  \f$Ax=(\lambda)Bx,  ABx=(\lambda)x, \mbox{ or } BAx=(\lambda)x \f$.
+  !!  Here A and B are assumed to be symmetric and B is also
+  !!  positive definite.
   interface lapack_sygv
     subroutine ssygv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
       character(1), intent(in)    :: jobz, uplo
@@ -84,6 +103,11 @@ module lapack_m
     end subroutine dsygv
   end interface lapack_sygv
 
+  !>  Computes all the eigenvalues, and optionally, the eigenvectors
+  !!  of a complex generalized Hermitian-definite eigenproblem, of the form
+  !!  \f$Ax=(\lambda)Bx,  ABx=(\lambda)x, \mbox{ or } BAx=(\lambda)x \f$.
+  !!  Here A and B are assumed to be Hermitian and B is also
+  !!  positive definite.
   interface lapack_hegv
     subroutine chegv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
       character(1), intent(in)    :: jobz, uplo
@@ -103,7 +127,23 @@ module lapack_m
       integer,      intent(out)   :: info
     end subroutine zhegv
   end interface lapack_hegv
-
+  
+  !>  Computes for an \f$ N \times N \f$ complex nonsymmetric matrix A, the
+  !!  eigenvalues and, optionally, the left and/or right eigenvectors.
+  !!
+  !!  The right eigenvector v(j) of A satisfies
+  !! \f[
+  !!                   A v(j) = \lambda(j)  v(j)
+  !! \f]
+  !!  where \f$ \lambda(j) \f$ is its eigenvalue.
+  !!  The left eigenvector u(j) of A satisfies
+  !! \f[
+  !!                u(j)^H A = \lambda(j) u(j)^H
+  !! \f]
+  !!  where \f$ u(j)^H \f$ denotes the conjugate transpose of u(j).
+  !!
+  !!  The computed eigenvectors are normalized to have Euclidean norm
+  !!  equal to 1 and largest component real.
   interface lapack_geev
     subroutine sgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
       character(1), intent(in)    :: jobvl, jobvr
@@ -146,7 +186,8 @@ module lapack_m
     end subroutine zgeev
   end interface lapack_geev
 
-
+  !>  Computes all eigenvalues and, optionally, eigenvectors of a
+  !!  real symmetric matrix A.
   interface lapack_syev
     subroutine ssyev(jobz, uplo, n, a, lda, w, work, lwork, info)
       character(1), intent(in)    :: jobz, uplo
@@ -165,6 +206,8 @@ module lapack_m
     end subroutine dsyev
   end interface lapack_syev
 
+  !>  Computes all eigenvalues and, optionally, eigenvectors of a
+  !!  complex Hermitian matrix A.
   interface lapack_heev
     subroutine cheev(jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
       character(1), intent(in)    :: jobz, uplo
@@ -185,6 +228,10 @@ module lapack_m
     end subroutine zheev
   end interface lapack_heev
 
+  !>  Computes a QR factorization of a real \f$m \times n\f$ matrix A:
+  !! \f[
+  !!  A = Q R.
+  !! \f]
   interface lapack_geqrf
     subroutine sgeqrf( m, n, a, lda, tau, work, lwork, info )
       integer            info, lda, lwork, m, n
@@ -207,6 +254,15 @@ module lapack_m
     end subroutine zgeqrf
   end interface lapack_geqrf
   
+  !>  Generates an \f$ M \times N \f$ real matrix Q with orthonormal columns,
+  !!  which is defined as the first N columns of a product of K elementary
+  !!  reflectors of order M
+  !!
+  !! \f[
+  !!        Q  =  H(1) H(2) . . . H(k)
+  !! \f]
+  !!
+  !!  as returned by DGEQRF.
   interface lapack_orgqr 
     subroutine dorgqr( m, n, k, a, lda, tau, work, lwork, info )
       integer            info, k, lda, lwork, m, n
@@ -229,6 +285,12 @@ module lapack_m
     end subroutine cungqr
   end interface lapack_orgqr
 
+  !>  Computes selected eigenvalues, and optionally, eigenvectors
+  !!  of a real generalized symmetric-definite eigenproblem, of the form
+  !!  \f$Ax=(\lambda)Bx,  ABx=(\lambda)x, \mbox{ or } BAx=(\lambda)x \f$.  Here A
+  !!  and B are assumed to be symmetric and B is also positive definite.
+  !!  Eigenvalues and eigenvectors can be selected by specifying either a
+  !!  range of values or a range of indices for the desired eigenvalues.
   interface lapack_sygvx
     subroutine dsygvx(itype, jobz, range, uplo, n, a, lda, b, ldb, vl, vu, il, iu, abstol, &
       m, w, z, ldz, work, lwork, iwork, ifail, info)
@@ -289,6 +351,12 @@ module lapack_m
     end subroutine ssygvx
   end interface lapack_sygvx
 
+  !>  Computes selected eigenvalues, and optionally, eigenvectors
+  !!  of a complex generalized Hermitian-definite eigenproblem, of the form
+  !!  \f$Ax=(\lambda)Bx,  ABx=(\lambda)x, \mbox{ or } BAx=(\lambda)x \f$.  Here A and
+  !!  B are assumed to be Hermitian and B is also positive definite.
+  !!  Eigenvalues and eigenvectors can be selected by specifying either a
+  !!  range of values or a range of indices for the desired eigenvalues.
   interface lapack_hegvx
     subroutine zhegvx(itype, jobz, range, uplo, n, a, lda, b, ldb, vl, vu, il, iu, abstol, &
       m, w, z, ldz, work, lwork, rwork, iwork, ifail, info)

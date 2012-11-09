@@ -658,7 +658,7 @@ IMAGE_PATH             =
 # If FILTER_PATTERNS is specified, this tag will be
 # ignored.
 
-INPUT_FILTER           = "cpp -C -ansi  -I. -I../include -I../../external_libs/spglib/src -I../../liboct_parser -I../../external_libs/fortrancl -DHAVE_PFFT -DHAVE_MPI -DHAVE_ETSF_IO -DHAVE_NETCDF -DHAVE_LAPACK -DHAVE_BLAS -DHAVE_LIBXC -DHAVE_OPENCL -DHAVE_OPENMP -DHAVE_LIBFM -DSHARE_OCTOPUS='share/octopus'"
+INPUT_FILTER           = "cpp -C -ansi  -I. -I../include -I../../external_libs/spglib/src -I../../liboct_parser -I../../external_libs/fortrancl -DHAVE_PFFT -DHAVE_MPI -DHAVE_ETSF_IO -DHAVE_NETCDF -DHAVE_LAPACK -DHAVE_BLAS -DHAVE_SCALAPACK -DHAVE_LIBXC -DHAVE_OPENCL -DHAVE_OPENMP -DHAVE_LIBFM -DSHARE_OCTOPUS='share/octopus'"
 
 # The FILTER_PATTERNS tag can be used to specify filters on a per file pattern
 # basis.

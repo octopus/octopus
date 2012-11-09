@@ -352,8 +352,9 @@ module blas_m
   !!     op( X ) = X   \mbox{ or }   op( X ) = X^T,
   !! \f]
   !!
-  !!  alpha and beta are scalars, and A, B and C are matrices, with op(A)
-  !!  an m by k matrix,  op(B)  a  k by n matrix and  C an m by n matrix.
+  !!  \f$ \alpha \f$ and \f$ \beta \f$ are scalars, and A, B and C are
+  !!  matrices, with op(A) an \f$ m \times k \f$ matrix, op(B) a \f$ k
+  !!  \times n \f$ matrix and C an \f$ m \times n \f$m matrix.
   interface blas_gemm
     subroutine sgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
       character(1), intent(in)    :: transa, transb
@@ -490,7 +491,7 @@ module blas_m
   !! \f]
   !! or 
   !! \f[
-  !!     C := alpha A^T A + \beta*C
+  !!     C := \alpha A^T A + \beta*C
   !! \f]
   !!
   !!  where \f$\alpha\f$ and \f$\beta\f$ are scalars, C is an
