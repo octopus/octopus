@@ -270,7 +270,7 @@ end subroutine messages_end
     call switch_status('aborted')
 
 #ifdef HAVE_MPI
-    call MPI_Abort(mpi_world%comm, mpi_err)
+    call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
 
     call loct_exit_failure()
@@ -553,7 +553,7 @@ end subroutine messages_end
     call switch_status('aborted')
 
 #ifdef HAVE_MPI
-    call MPI_Abort(mpi_world%comm, mpi_err)
+    call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
 
     call loct_exit_failure()
