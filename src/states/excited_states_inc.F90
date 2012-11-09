@@ -19,11 +19,10 @@
 
 
 ! -------------------------------------------------------------
-! Returns the dot product of two many-body states; the first
-! one is an "excited_state".
-!
-! WARNING!!!!: periodic systems are not considered in these expressions.
-! -------------------------------------------------------------
+!> Returns the dot product of two many-body states; the first
+!! one is an "excited_state".
+!!
+!! WARNING!!!!: periodic systems are not considered in these expressions.
 R_TYPE function X(states_mpdotp_x)(mesh, excited_state, st, mat) result(dotp)
   type(mesh_t),           intent(in) :: mesh
   type(excited_states_t), intent(in) :: excited_state
@@ -59,15 +58,14 @@ end function X(states_mpdotp_x)
 
 
 ! -------------------------------------------------------------
-! The matrix mat should contain the dot products between two 
-! states. One of them (the one operating on the left) is an
-! excited state. The pair_t pair indicates the substitution
-! of one the occupied spin-orbitals by one unoccupied one
-! (electron-hole excitation). This routine returns then the
-! matrix that would correspond to the dot products between
-! this excited state (on the left) and the same ground state
-! (on the right)
-! -------------------------------------------------------------
+!> The matrix mat should contain the dot products between two 
+!! states. One of them (the one operating on the left) is an
+!! excited state. The pair_t pair indicates the substitution
+!! of one the occupied spin-orbitals by one unoccupied one
+!! (electron-hole excitation). This routine returns then the
+!! matrix that would correspond to the dot products between
+!! this excited state (on the left) and the same ground state
+!! (on the right)
 subroutine X(states_matrix_swap)(mat, pair)
   R_TYPE,              intent(inout) :: mat(:, :, :)
   type(states_pair_t), intent(in)    :: pair
@@ -94,17 +92,16 @@ end subroutine X(states_matrix_swap)
 
 
 ! -------------------------------------------------------------
-! Returns <st1 | O | st2>, where both st1 and st2 are Slater
-! determinants represented by states_t st1 and st2. O is a
-! one-body operator.
-!
-! The auxiliary Slater determinant opst2 is formed by the
-! orbitals that result of applying operator O on each of the
-! spin-orbitals of st2.
-!
-! The routine directly applies Lowdin`s formula [P.-O. Lowdin,
-! Phys. Rev. 97, 1474; Eq. 49].
-! -------------------------------------------------------------
+!> Returns <st1 | O | st2>, where both st1 and st2 are Slater
+!! determinants represented by states_t st1 and st2. O is a
+!! one-body operator.
+!!
+!! The auxiliary Slater determinant opst2 is formed by the
+!! orbitals that result of applying operator O on each of the
+!! spin-orbitals of st2.
+!!
+!! The routine directly applies Lowdin`s formula [P.-O. Lowdin,
+!! Phys. Rev. 97, 1474; Eq. 49].
 R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1opst2)
   type(mesh_t),     intent(in) :: mesh
   type(states_t),   intent(in) :: st1, st2, opst2
@@ -268,8 +265,8 @@ end function X(states_mpmatrixelement_g)
 
 
 ! -------------------------------------------------------------
-! Returns the dot product of two many-body states st1 and st2.
-! \warning: it does not permit fractional occupation numbers.
+!> Returns the dot product of two many-body states st1 and st2.
+!! \warning: it does not permit fractional occupation numbers.
 ! -------------------------------------------------------------
 R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
   type(mesh_t),     intent(in) :: mesh

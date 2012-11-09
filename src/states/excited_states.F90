@@ -84,19 +84,19 @@ module excited_states_m
 contains
 
   ! ---------------------------------------------------------
-  ! Returns information about which single-particle orbitals are
-  ! occupied or not in a _many-particle_ state st:
-  !   n_filled are the number of orbitals that are totally filled
-  !            (the occupation number is two, if ispin = UNPOLARIZED,
-  !            or it is one in the other cases).
-  !   n_half_filled is only meaningful if ispin = UNPOLARIZED. It 
-  !            is the number of orbitals where there is only one 
-  !            electron in the orbital.
-  !   n_partially_filled is the number of orbitals that are neither filled,
-  !            half-filled, nor empty.
-  ! The integer arrays filled, partially_filled and half_filled point
-  !   to the indices where the filled, partially filled and half_filled
-  !   orbitals are, respectively.
+  !> Returns information about which single-particle orbitals are
+  !! occupied or not in a _many-particle_ state st:
+  !!   n_filled are the number of orbitals that are totally filled
+  !!            (the occupation number is two, if ispin = UNPOLARIZED,
+  !!            or it is one in the other cases).
+  !!   n_half_filled is only meaningful if ispin = UNPOLARIZED. It 
+  !!            is the number of orbitals where there is only one 
+  !!            electron in the orbital.
+  !!   n_partially_filled is the number of orbitals that are neither filled,
+  !!            half-filled, nor empty.
+  !! The integer arrays filled, partially_filled and half_filled point
+  !!   to the indices where the filled, partially filled and half_filled
+  !!   orbitals are, respectively.
   subroutine occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled, &
                              filled, partially_filled, half_filled)
     type(states_t),    intent(in)  :: st
@@ -153,30 +153,30 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Fills in an excited_state structure, by reading a file called
-  ! "filename". This file describes the "promotions" from occupied
-  ! to unoccupied levels that change the initial Slater determinant
-  ! structure specified in ground_state. These promotions are a set
-  ! of electron-hole pairs. The structure of the file is thus four
-  ! columns:
-  !
-  ! i  a  sigma  weight
-  ! 
-  ! where i should be an occupied state, a an unoccupied one, and sigma
-  ! the spin state of the corresponding orbital, if the calculation is
-  ! of spin-polarized type. This pair is then associated with a
-  ! creation-annihilation pair a^t_{a,sigma} a_{i,sigma}, so that the
-  ! excited state will be a linear combination in the form:
-  ! 
-  ! |ExcitedState> = Sum [ weight(i,a,sigma) a^t_{a,sigma} a_{i,sigma} |GroundState> ]
-  !
-  ! where weight is the number in the fourth column.
-  ! These weights should be normalized to one; otherwise the routine
-  ! will normalize them, and write a warning.
-  !
-  ! This file structure is the one written by the casida module, in the files
-  ! in the directory "excitations".
-  ! ---------------------------------------------------------
+  !> Fills in an excited_state structure, by reading a file called
+  !! "filename". This file describes the "promotions" from occupied
+  !! to unoccupied levels that change the initial Slater determinant
+  !! structure specified in ground_state. These promotions are a set
+  !! of electron-hole pairs. The structure of the file is thus four
+  !! columns:
+  !!
+  !! i  a  sigma  weight
+  !! 
+  !! where i should be an occupied state, a an unoccupied one, and sigma
+  !! the spin state of the corresponding orbital, if the calculation is
+  !! of spin-polarized type. This pair is then associated with a
+  !! creation-annihilation pair a^t_{a,sigma} a_{i,sigma}, so that the
+  !! excited state will be a linear combination in the form:
+  !! 
+  !! |ExcitedState> = Sum [ weight(i,a,sigma) a^t_{a,sigma} a_{i,sigma} |GroundState> ]
+  !!
+  !! where weight is the number in the fourth column.
+  !! These weights should be normalized to one; otherwise the routine
+  !! will normalize them, and write a warning.
+  !!
+  !! This file structure is the one written by the casida module, in the files
+  !! in the directory "excitations".
+  !! ---------------------------------------------------------
   subroutine excited_states_init(excited_state, ground_state, filename) 
     type(excited_states_t), intent(inout) :: excited_state
     type(states_t), target, intent(in)    :: ground_state
@@ -370,8 +370,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Kills an excited_state structure.
-  ! ---------------------------------------------------------
+  !> Kills an excited_state structure.
   subroutine excited_states_kill(excited_state)
     type(excited_states_t), intent(inout) :: excited_state
 
