@@ -657,8 +657,8 @@ contains
     integer, allocatable ::  nnb(:), gindex(:), gedges(:)
     logical, allocatable :: nb(:, :)
     integer              :: idx(1:MAX_DIM), jx(1:MAX_DIM)
-    integer              :: graph_comm, iedge, reorder
-    logical              :: use_topo
+    integer              :: graph_comm, iedge
+    logical              :: use_topo, reorder
     type(partition_t)    :: partition
     integer              :: ierr
 
@@ -763,7 +763,7 @@ contains
 
       ASSERT(iedge == count(nb))
 
-      reorder = 1
+      reorder = .true.
       call MPI_Graph_create(mpi_grp%comm, mpi_grp%size, gindex(1), gedges(1), reorder, graph_comm, mpi_err)
 
       SAFE_DEALLOCATE_A(nb)
