@@ -241,6 +241,10 @@ contains
     end if
 
     call nl_operator_global_init()
+    if(gr%have_fine_mesh) then
+      message(1) = "Info: coarse mesh"
+      call messages_info(1)
+    endif
     call derivatives_build(gr%der, gr%mesh)
 
     ! we need the derivative for the interface, therefore do the initialization here
@@ -275,6 +279,8 @@ contains
       
       call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
       
+      message(1) = "Info: fine mesh"
+      call messages_info(1)
       call derivatives_build(gr%fine%der, gr%fine%mesh)
 
       gr%fine%der%coarser => gr%der
@@ -440,7 +446,7 @@ contains
       grout%sb%rsize = sqrt( sum(grout%sb%lsize(:)**2) )
       grout%sb%lsize(1:grout%sb%dim) = grout%sb%rsize
     case default
-      write(message(1),'(a)') 'Internal octopus error.'
+      write(message(1),'(a)') 'grid_create_largergrid: Internal octopus error -- unsupported box shape for this routine.'
       call messages_fatal(1)
     end select
 
