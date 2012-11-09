@@ -55,6 +55,8 @@ subroutine dcholesky(n, a, bof, err_code)
   call profiling_in(cholesky_prof, "CHOLESKY")
   PUSH_SUB(dcholesky)
 
+  ASSERT(n > 0)
+
   bof_ = .true.
   if(present(bof)) then
     bof_ = bof
@@ -98,6 +100,8 @@ subroutine zcholesky(n, a, bof, err_code)
   logical :: bof_
   call profiling_in(cholesky_prof, "CHOLESKY")
   PUSH_SUB(zcholesky)
+
+  ASSERT(n > 0)
 
   bof_ = .true.
   if(present(bof)) then
@@ -148,6 +152,8 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
   PUSH_SUB(dgeneigensolve)
+
+  ASSERT(n > 0)
 
   bof_ = .true.
   if(present(bof)) then
@@ -218,6 +224,8 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
   PUSH_SUB(zgeneigensolve)
 
+  ASSERT(n > 0)
+
   bof_ = .true.
   if(present(bof)) then
     bof_ = bof
@@ -284,6 +292,8 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   character(1)       :: side_
 
   PUSH_SUB(zeigensolve_nonh)
+
+  ASSERT(n > 0)
 
   if (present(side)) then
     side_ = side
@@ -356,6 +366,8 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   character(1)       :: side_
 
   PUSH_SUB(deigensolve_nonh)
+
+  ASSERT(n > 0)
 
   if (present(side)) then
     side_ = side
@@ -444,6 +456,8 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   
   PUSH_SUB(dlowest_geneigensolve)
 
+  ASSERT(n > 0)
+
   bof_ = .true.
   if(present(bof)) then
     bof_ = bof
@@ -521,6 +535,8 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
 
   PUSH_SUB(zlowest_geneigensolve)
 
+  ASSERT(n > 0)
+
   bof_ = .true.
   if(present(bof)) then
     bof_ = bof
@@ -583,6 +599,8 @@ subroutine deigensolve(n, a, e, bof, err_code)
     bof_ = bof
   end if
 
+  ASSERT(n > 0)
+
   lwork = 6*n
   SAFE_ALLOCATE(work(1:lwork))
   call lapack_syev('V', 'U', n, a(1, 1), lead_dim(a), e(1), work(1), lwork, info)
@@ -626,6 +644,8 @@ subroutine zeigensolve(n, a, e, bof, err_code)
 
   PUSH_SUB(zeigensolve)
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
+
+  ASSERT(n > 0)
 
   bof_ = .true.
   if(present(bof)) then
@@ -690,6 +710,8 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
   
   PUSH_SUB(dlowest_eigensolve)
 
+  ASSERT(n > 0)
+
   abstol = 2*sfmin()
 
   ! Work size query.
@@ -742,6 +764,8 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
   CMPLX, allocatable :: work(:)
    
   PUSH_SUB(zlowest_eigensolve)
+
+  ASSERT(n > 0)
 
   abstol = 2*sfmin()
 
@@ -797,6 +821,8 @@ FLOAT function ddeterminant(n, a, invert) result(d)
   logical :: invert_
 
   ! No PUSH_SUB, called too often
+
+  ASSERT(n > 0)
 
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
@@ -861,6 +887,8 @@ CMPLX function zdeterminant(n, a, invert) result(d)
   logical :: invert_
 
   PUSH_SUB(zdeterminant)
+
+  ASSERT(n > 0)
 
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
@@ -927,6 +955,8 @@ subroutine dsym_inverter(uplo, n, a)
 
   PUSH_SUB(dsym_inverter)
 
+  ASSERT(n > 0)
+
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
 
@@ -980,6 +1010,8 @@ subroutine zsym_inverter(uplo, n, a)
 
   PUSH_SUB(zsym_inverter)
 
+  ASSERT(n > 0)
+
   SAFE_ALLOCATE(work(1:n))
   SAFE_ALLOCATE(ipiv(1:n))
   call ZLAPACK(sytrf)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
@@ -1030,6 +1062,8 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   character(1) :: equed
 
   ! no PUSH_SUB, called too often
+
+  ASSERT(n > 0)
 
   SAFE_ALLOCATE(ipiv(1:n))
   SAFE_ALLOCATE(iwork(1:n))
@@ -1099,6 +1133,8 @@ subroutine zlinsyssolve(n, nrhs, a, b, x)
 
   PUSH_SUB(zlinsyssolve)
 
+  ASSERT(n > 0)
+
   SAFE_ALLOCATE(ipiv(1:n))
   SAFE_ALLOCATE(rwork(1:2*n))
   SAFE_ALLOCATE(ferr(1:nrhs))
@@ -1158,6 +1194,8 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
 
   PUSH_SUB(zsingular_value_decomp)
 
+  ASSERT(n > 0)
+
   ! for now we treat only square matrices
   m = n 
 
@@ -1193,6 +1231,8 @@ subroutine zsvd_inverse(n, a, threshold)
   CMPLX   :: tmp
   FLOAT   :: sg_inverse, threshold_
   integer :: j, k, l
+
+  ASSERT(n > 0)
 
   SAFE_ALLOCATE( u(1:n, 1:n))
   SAFE_ALLOCATE(vt(1:n, 1:n))
@@ -1252,6 +1292,8 @@ subroutine dinvert_upper_triangular(n, a)
   
   PUSH_SUB(dinvert_upper_triangular)
 
+  ASSERT(n > 0)
+
   call DLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
 
   if(info.ne.0) then
@@ -1286,6 +1328,8 @@ subroutine zinvert_upper_triangular(n, a)
   
   PUSH_SUB(zinvert_upper_triangular)
 
+  ASSERT(n > 0)
+
   call ZLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
 
   if(info.ne.0) then
@@ -1319,6 +1363,8 @@ subroutine dinvert_lower_triangular(n, a)
   
   PUSH_SUB(dinvert_lower_triangular)
 
+  ASSERT(n > 0)
+
   call DLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
 
   if(info.ne.0) then
@@ -1351,6 +1397,8 @@ subroutine zinvert_lower_triangular(n, a)
   end interface
   
   PUSH_SUB(zinvert_lower_triangular)
+
+  ASSERT(n > 0)
 
   call ZLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
 
