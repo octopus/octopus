@@ -289,15 +289,15 @@ contains
 
       !%Variable LCAODimension
       !%Type integer
-      !%Default 0
       !%Section SCF::LCAO
       !%Description
+      !% (Only applies if <tt>LCAOAlternative = no</tt>.)
       !% Before starting the SCF cycle, an initial LCAO calculation can be performed
       !% in order to obtain reasonable initial guesses for spin-orbitals and densities.
       !% For this purpose, the code calculates a number of atomic orbitals -- this
       !% number depends on the given species. The default dimension for the LCAO basis
-      !% set will be the sum of all these numbers, unless this dimension is larger than
-      !% twice the number of required orbitals for the full calculation. 
+      !% set will be the sum of all these numbers, or twice the number of required orbitals
+      !% for the full calculation, whichever is less.
       !%
       !% This dimension however can be changed by making use of this
       !% variable. Note that <tt>LCAODimension</tt> cannot be smaller than the
