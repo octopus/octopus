@@ -89,7 +89,7 @@ contains
     !%Description
     !% Enables or disables the use of a double-grid technique to
     !% increase the precision of the application of the
-    !% pseudopotentials.
+    !% pseudopotentials. This is experimental, especially in parallel.
     !%End
     if (sb%dim == 3) then 
       call parse_logical(datasets_check('DoubleGrid'), .false., this%use_double_grid)

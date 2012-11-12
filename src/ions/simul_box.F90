@@ -276,7 +276,7 @@ contains
       !% point of the region, and the following ones set
       !% the radii where resolution changes (measured from the
       !% central point).
-      !% NOTE: currently, only one area can be set up, and only works in 3D.
+      !% NOTE: currently, only one area can be set up, and only works in 3D, and in serial.
       !%End
 
       if(parse_block(datasets_check('MultiResolutionArea'), blk) == 0) then
