@@ -92,8 +92,6 @@ module global_m
   FLOAT, public, parameter :: P_g   =  CNST(2.0023193043768)   !< Electron gyromagnetic ratio
   FLOAT, public, parameter :: P_PROTON_CHARGE = CNST(-1.0)
 
-  integer, public  :: ifinal_sete = 0
-
   !> the standard input and output
   integer, public :: stderr, stdin, stdout
   

@@ -120,7 +120,7 @@ module hamiltonian_base_m
 #endif
   end type projection_t
 
-  integer, public ::                     &
+  integer, parameter, public ::          &
     TERM_ALL                 = HUGE(1),  &
     TERM_KINETIC             =   1,      &
     TERM_LOCAL_POTENTIAL     =   2,      & 
@@ -129,7 +129,7 @@ module hamiltonian_base_m
     TERM_LOCAL_EXTERNAL      =  16,      &
     TERM_MGGA                =  32
 
-  integer, public ::                       &
+  integer, parameter, public ::            &
     FIELD_POTENTIAL                = 1,    &
     FIELD_VECTOR_POTENTIAL         = 2,    &
     FIELD_UNIFORM_VECTOR_POTENTIAL = 4,    &
