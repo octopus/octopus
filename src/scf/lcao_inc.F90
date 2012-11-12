@@ -909,7 +909,7 @@ contains
     ! the eigenvectors are not unique due to phases and degenerate subspaces, but 
     ! they must be consistent among processors in domain parallelization
     if(gr%mesh%parallel_in_domains) &
-      call MPI_Bcast(hamiltonian(1, 1), this%lsize(1)*this%lsize(2), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+      call MPI_Bcast(hamiltonian(1, 1), size(hamiltonian), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
 #endif
 
     end if
