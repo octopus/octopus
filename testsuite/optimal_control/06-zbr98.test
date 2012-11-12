@@ -2,7 +2,7 @@
 # $Id: 06-adw.test $
 
 Test       : ZBR98
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : long-run, oct
 Enabled    : Yes
 

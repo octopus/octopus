@@ -1,5 +1,5 @@
 Test       : current
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : long-run, oct
 Enabled    : Yes
 

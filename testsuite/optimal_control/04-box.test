@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : 1D Box
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : long-run, oct
 Enabled    : Yes
 

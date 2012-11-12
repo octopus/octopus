@@ -2,7 +2,7 @@
 # $Id: 03-asym_doublewell.test 2999 2007-06-16 12:56:04Z lorenzen $
 
 Test       : Symmetric Double Well
-Programs   : octopus; octopus_single
+Programs   : octopus; octopus_single; octopus_mpi
 TestGroups : long-run, oct
 Enabled    : Yes
 

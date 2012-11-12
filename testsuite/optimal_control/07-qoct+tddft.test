@@ -2,7 +2,7 @@
 # $Id: 06-adw.test $
 
 Test       : QOCT+TDDFT
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : long-run, oct
 Enabled    : Yes
 
