@@ -65,7 +65,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
     call lalg_cholesky(nst, ss, bof = bof)
 
     if(bof) then
-      message(1) = "Orthogonalization failed; probably your eigenvectors are not independent."
+      message(1) = "Gram-Schmidt orthogonalization failed in Cholesky decomposition; probably eigenvectors are not independent."
       call messages_warning(1)
     end if
 
@@ -128,7 +128,7 @@ contains
 
     if(info /= 0) then
       write(message(1),'(a,i6)') "descinit for psi failed in states_orthogonalization_full.par_gs with error ", info
-      call messages_warning(1)
+      call messages_fatal(1)
     end if
 
     nbl = min(32, st%nst)
@@ -141,7 +141,7 @@ contains
 
     if(info /= 0) then
       write(message(1),'(a,i6)') "descinit for ss failed in states_orthogonalization_full.par_gs with error ", info
-      call messages_warning(1)
+      call messages_fatal(1)
     end if
 
     ss = M_ZERO
@@ -154,9 +154,9 @@ contains
     call scalapack_potrf(uplo = 'U', n = st%nst, a = ss(1, 1), ia = 1, ja = 1, desca = ss_desc(1), info = info)
 
     if(info /= 0) then
-      write(message(1),'(a,i6,a)') &
-        "Orthogonalization with potrf failed with error ", info, "; probably your eigenvectors are not independent."
-      call messages_warning(1)
+      write(message(1),'(a,i6)') &
+        "Parallel Gram-Schmidt orthogonalization with " // TOSTRING(pX(potrf)) // " failed with error ", info
+      call messages_fatal(1)
     end if
 
     call pblas_trsm(side = 'R', uplo = 'U', transa = 'N', diag = 'N', m = total_np, n = st%nst, &
@@ -208,33 +208,51 @@ contains
       call descinit(psi_desc(1), total_np, nst, psi_block(1), psi_block(2), 0, 0, &
         st%dom_st_proc_grid%context, mesh%np_part*st%d%dim, blacs_info)
 
+      if(blacs_info /= 0) then
+        write(message(1),'(a,i6)') 'descinit failed with error code: ', blacs_info
+        call messages_fatal(1)
+      end if
+
       nref = min(nst, total_np)
       SAFE_ALLOCATE(tau(1:nref))
       tau = M_ZERO
 
       ! calculate the QR decomposition
       call scalapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
+      if(blacs_info /= 0) then
+        write(message(1),'(a,i6)') 'scalapack geqrf workspace query failed with error code: ', blacs_info
+        call messages_fatal(1)
+      end if
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
       call scalapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), 1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
+      if(blacs_info /= 0) then
+        write(message(1),'(a,i6)') 'scalapack geqrf call failed with error code: ', blacs_info
+        call messages_fatal(1)
+      end if
       SAFE_DEALLOCATE_A(work)
 
       ! now calculate Q
       call scalapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
+      if(blacs_info /= 0) then
+        write(message(1),'(a,i6)') 'scalapack orgqr workspace query failed with error code: ', blacs_info
+        call messages_fatal(1)
+      end if
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
       call scalapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), &
         1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
+      if(blacs_info /= 0) then
+        write(message(1),'(a,i6)') 'scalapack orgqr call failed with error code: ', blacs_info
+        call messages_fatal(1)
+      end if
       SAFE_DEALLOCATE_A(work)
 
-      if(blacs_info /= 0) then
-        write(message(1),'(a,I6)') 'ScaLAPACK execution failed. Failed code: ', blacs_info
-        call messages_warning(1)
-      end if
 #else
       message(1) = 'The QR orthogonalization in parallel requires ScaLAPACK.'
       call messages_fatal(1)
 #endif 
+
     else
 
       total_np = mesh%np + mesh%np_part*(st%d%dim - 1)
@@ -246,20 +264,36 @@ contains
 
       ! get the optimal size of the work array
       call lapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
+      if(info /= 0) then
+        write(message(1),'(a,i6)') 'lapack geqrf workspace query failed with error code: ', info
+        call messages_fatal(1)
+      end if
       wsize = nint(R_REAL(tmp))
 
       ! calculate the QR decomposition
       SAFE_ALLOCATE(work(1:wsize))
       call lapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
+      if(info /= 0) then
+        write(message(1),'(a,i6)') 'lapack geqrf call failed with error code: ', info
+        call messages_fatal(1)
+      end if
       SAFE_DEALLOCATE_A(work)
 
       ! get the optimal size of the work array
       call lapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
+      if(info /= 0) then
+        write(message(1),'(a,i6)') 'lapack orgqr workspace query failed with error code: ', info
+        call messages_fatal(1)
+      end if
       wsize = nint(R_REAL(tmp))
 
       ! now calculate Q
       SAFE_ALLOCATE(work(1:wsize))
       call lapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
+      if(info /= 0) then
+        write(message(1),'(a,i6)') 'lapack orgqr call failed with error code: ', info
+        call messages_fatal(1)
+      end if
       SAFE_DEALLOCATE_A(work)
     end if
 
