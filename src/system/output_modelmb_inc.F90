@@ -1,3 +1,22 @@
+!! Copyright (C) 2009 N. Helbig and M. Verstraete
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: states.F90 5022 2009-03-03 17:47:58Z nitsche $
+
   ! ---------------------------------------------------------
   !
   !> routine for output of model many-body quantities.
@@ -58,8 +77,8 @@
     end do
  
     ncombo = product(ndiagrams)
-    write (iunit, '(a, I6)') ' # of possible combinations of Young diagrams for all types = ',&
-        ncombo
+    write (iunit, '(a, i6)') ' # of possible combinations of Young diagrams for all types = ', &
+      ncombo
 
     SAFE_ALLOCATE(young_used(1:ncombo))
     young_used = 0
@@ -81,13 +100,13 @@
         end if
 
         call X(modelmb_sym_state)(st%eigenval(mm,1), iunit, gr, mm, &
-             st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied, .true.)
-write (iunit,'(a,l)') "symmetries_satisfied1 ", symmetries_satisfied
+          st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied, .true.)
+        write (iunit,'(a,l1)') "symmetries_satisfied1 ", symmetries_satisfied
         young_used = 0
 
         call X(modelmb_sym_state)(st%eigenval(mm,1), iunit, gr, mm, &
-             st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied, .true.)
-write (iunit,'(a,l)') "symmetries_satisfied2 ", symmetries_satisfied
+          st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied, .true.)
+        write (iunit,'(a,l1)') "symmetries_satisfied2 ", symmetries_satisfied
       end if
 
       if(iand(outp%what, C_OUTPUT_MMB_DEN).ne.0 .and. symmetries_satisfied) then
@@ -121,3 +140,7 @@ write (iunit,'(a,l)') "symmetries_satisfied2 ", symmetries_satisfied
 
   end subroutine X(output_modelmb)
 
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
