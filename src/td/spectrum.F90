@@ -450,9 +450,14 @@ contains
     do ie = 0, energy_steps
 
       pp = M_ZERO
-      do is = 1, min(2, nspin) ! we add spin up with spin down
-        pp(:, :) = pp(:, :) + sigma(:, :, ie, is)
-      end do
+      pp(:, :) = pp(:, :) + sigma(:, :, ie, 1)
+      if (nspin >= 2) then
+        if (kick%delta_strength_mode == KICK_SPIN_MODE) then
+          pp(:, :) = pp(:, :) - sigma(:, :, ie, 2)
+        else
+          pp(:, :) = pp(:, :) + sigma(:, :, ie, 2)
+        end if
+      end if
       average = M_THIRD * ( pp(1, 1) + pp(2, 2) + pp(3, 3) )
       ip = matmul(pp, pp)
       anisotropy = M_THIRD * ( M_THREE * ( ip(1, 1) + ip(2, 2) + ip(3, 3) ) - (M_THREE * average)**2 )
