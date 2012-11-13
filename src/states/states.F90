@@ -213,7 +213,6 @@ module states_m
     FLOAT          :: qtot          !< (-) The total charge in the system (used in Fermi)
     FLOAT          :: val_charge    !< valence charge
 
-    logical        :: extrastates   ! are there extra states?
     logical        :: fromScratch
     type(smear_t)  :: smear         ! smearing of the electronic occupations
 
@@ -447,8 +446,6 @@ contains
       call messages_fatal(2)
     end if
 
-    st%extrastates = (nempty > 0)
-
     if(ntot > 0 .and. nempty > 0) then
       message(1) = 'You cannot set TotalStates and ExtraStates at the same time.'
       call messages_fatal(1)
@@ -554,7 +551,6 @@ contains
         call messages_fatal(1)
       end if
 
-      st%extrastates = (ntot > st%nst)
       st%nst = ntot
     end if
 
@@ -1697,7 +1693,6 @@ contains
     stout%qtot       = stin%qtot
     stout%val_charge = stin%val_charge
 
-    stout%extrastates = stin%extrastates
     call smear_copy(stout%smear, stin%smear)
 
     stout%parallel_in_states = stin%parallel_in_states
