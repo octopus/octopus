@@ -374,11 +374,27 @@ contains
       !% (experimental) If this variable is set to yes, the LCAO
       !% procedure will add an extra set of numerical orbitals (by
       !% using the derivative of the radial part of the original
-      !% orbitals).
+      !% orbitals). Note that this corresponds roughly to adding orbitals
+      !% with higher principal quantum numbers, but the same angular momentum.
+      !% This option may cause problems for unoccupied states since you may miss
+      !% some lower-lying states which correspond to higher angular momenta instead
+      !% of higher principal quantum number.
       !%End
       call parse_logical(datasets_check('LCAOExtraOrbitals'), .false., this%derivative)
 
-      if(this%derivative) call messages_experimental('LCAO extra orbitals')
+      ! DAS: if you calculate the Na atom this way, spin-polarized, with just one unoccupied state,
+      ! you will obtain states (up and down) which are actually the 10th states if you start with
+      ! random wavefunctions! We really need to implement taking the derivative of the angular part
+      ! instead to be sure of getting decent results!
+
+      if(this%derivative) then
+        call messages_experimental('LCAO extra orbitals')
+
+        if(st%nst * st%smear%el_per_state > st%qtot) then
+          message(1) = "Lower-lying empty states may be missed with LCAOExtraOrbitals."
+          call messages_warning(1)
+        endif
+      endif
 
       !%Variable LCAODiagTol
       !%Type float
