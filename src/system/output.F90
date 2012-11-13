@@ -83,7 +83,8 @@ module output_m
     output_bgw_t,        &
     output_init,         &
     output_states,       &
-    output_modelmb,      &
+    doutput_modelmb,     &
+    zoutput_modelmb,     &
     output_hamiltonian,  &
     output_all,          &
     output_current_flow, &
@@ -1041,6 +1042,7 @@ contains
 #include "output_etsf_inc.F90"
 
 #include "output_states_inc.F90"
+
 #include "output_h_inc.F90"
 
 #include "undef.F90"
@@ -1049,6 +1051,7 @@ contains
 #ifdef HAVE_BERKELEYGW
 #include "output_berkeleygw_inc.F90"
 #endif
+#include "output_modelmb_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
@@ -1056,6 +1059,7 @@ contains
 #ifdef HAVE_BERKELEYGW
 #include "output_berkeleygw_inc.F90"
 #endif
+#include "output_modelmb_inc.F90"
 
 end module output_m
 

@@ -149,6 +149,184 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   POP_SUB(X(mf_calculate_gamma))
 end subroutine X(mf_calculate_gamma)
 
+
+! ---------------------------------------------------------
+subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
+  type(grid_t),           intent(in) :: gr
+  type(states_t),         intent(in) :: st
+  R_TYPE,                 intent(in) :: wf(1:gr%mesh%np_part)
+  integer,                intent(in) :: mm
+  type(modelmb_denmat_t), intent(in) :: denmat
+
+  integer :: jj, ll, j, err_code, iunit, ndims, ndim1part
+  integer :: ikeeppart, idir
+  integer :: idensmat, nparticles
+  integer, allocatable :: npoints(:)
+  integer, allocatable :: ix_1part(:), ix_1part_p(:)
+  logical :: bof
+  character(len=200) :: filename
+  R_TYPE, allocatable :: densmatr(:, :), evectors(:, :)
+  R_TYPE, allocatable :: densmatr_tmp(:, :)
+  FLOAT, allocatable :: evalues(:), density(:)
+
+  type(modelmb_1part_t) :: mb_1part
+  FLOAT, allocatable :: dipole_moment(:)
+
+  PUSH_SUB(X(modelmb_density_matrix_write))
+
+
+  ! The algorithm should consider how many dimensions the wavefunction has (ndims),
+  ! and how many (and which) dimensions should be integrated away.
+  ndims = gr%sb%dim
+
+  ndim1part=st%modelmbparticles%ndim
+
+  call modelmb_1part_nullify(mb_1part)
+  SAFE_ALLOCATE(  ix_1part(1:ndim1part))
+  SAFE_ALLOCATE(ix_1part_p(1:ndim1part))
+  SAFE_ALLOCATE(dipole_moment(1:ndim1part))
+
+  ! Allocation of the arrays that store the limiting indices for each direction
+  SAFE_ALLOCATE(npoints(1:ndims))
+  do j = 1, ndims
+    npoints(j) = gr%mesh%idx%ll(j)
+  end do
+
+
+  ! loop over desired density matrices
+  densmat_loop: do idensmat = 1, denmat%ndensmat_to_calculate
+    ikeeppart = denmat%particle_kept(idensmat)
+    nparticles = st%modelmbparticles%nparticles_per_type(st%modelmbparticles%particletype(ikeeppart))
+
+    call modelmb_1part_init(mb_1part, gr%mesh, ikeeppart, ndim1part, gr%sb%box_offset)
+
+    SAFE_ALLOCATE(densmatr(1:mb_1part%npt, 1:mb_1part%npt))
+    SAFE_ALLOCATE(evectors(1:mb_1part%npt, 1:mb_1part%npt))
+    SAFE_ALLOCATE(evalues(1:mb_1part%npt))
+    SAFE_ALLOCATE(density(1:mb_1part%npt))
+
+    
+    densmatr  = R_TOTYPE(M_ZERO)
+
+    !   calculate the 1-particle density matrix for this many-body state, and for the chosen
+    !   particle being the free coordinate
+    call X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles, &
+          gr%mesh, wf, densmatr)
+
+    ! Only node zero writes.
+    ! mjv 14/3/2009: is this still at the right place in the file? None of
+    ! this works in parallel yet...
+    if(.not. mpi_grp_is_root(mpi_world)) cycle
+
+    !Diagonalize the density matrix
+    bof=.true.
+    SAFE_ALLOCATE(densmatr_tmp(1:mb_1part%npt, 1:mb_1part%npt))
+    densmatr_tmp=densmatr
+    ! CHECK: should we only be diagonalizing the main grid points, as
+    ! opposed to the full mb_1part%npt?
+    evectors = densmatr_tmp
+    call lalg_eigensolve(mb_1part%npt, evectors, evalues, bof, err_code)
+    SAFE_DEALLOCATE_A(densmatr_tmp)
+  
+    !NOTE: The highest eigenvalues are the last ones not the first!!!
+    !      Writing is therefore in reverse order
+    evectors = evectors/sqrt(mb_1part%vol_elem_1part)
+    evalues  = evalues*mb_1part%vol_elem_1part
+
+    !Write everything into files
+    write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/occnumb_ip',ikeeppart,'_imb',mm
+    iunit = io_open(trim(filename), action='write')
+
+    do jj = mb_1part%npt, 1, -1
+      write(iunit,'(i4.4,es11.3)') mb_1part%npt-jj+1, evalues(jj)
+    end do
+        
+    call io_close(iunit)
+
+    do jj = mb_1part%npt-denmat%nnatorb_prt(idensmat)+1, mb_1part%npt
+      write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(denmat%dirname)//'/natorb_ip', &
+            ikeeppart,'_imb', mm, '_', mb_1part%npt-jj+1
+      iunit = io_open(filename, action='write')
+      do ll = 1, mb_1part%npt
+        call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+             mb_1part%enlarge_1part(1), ll, ix_1part)
+        do idir=1,ndim1part
+          write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
+        end do
+        write(iunit,'(es11.3,es11.3)') evectors(ll,jj) 
+        !), aimag(evectors(ll,jj)) ! format is too long for real wf case, but should be ok for most compilers
+      end do
+    call io_close(iunit)
+    end do
+
+    write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/densmatr_ip', ikeeppart,'_imb', mm
+    iunit = io_open(filename,action='write')
+    do jj = 1, mb_1part%npt
+      call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+           mb_1part%enlarge_1part(1), jj, ix_1part)
+      do ll = 1, mb_1part%npt
+        call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+             mb_1part%enlarge_1part(1), ll, ix_1part_p)
+        do idir=1,ndim1part
+          write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
+        end do
+        do idir=1,ndim1part
+          write(iunit,'(es11.3)', ADVANCE='no') ix_1part_p(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
+        end do
+        write(iunit,'(es11.3,es11.3)') densmatr(jj,ll)
+        !), aimag(densmatr(jj,ll)) ! format is too long for real wf case, but should be ok for most compilers
+      end do
+      write(iunit,*)
+    end do
+    call io_close(iunit)
+
+    write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/density_ip', ikeeppart,'_imb', mm
+    iunit = io_open(filename,action='write')
+    do jj = 1, mb_1part%npt
+      call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+           mb_1part%enlarge_1part(1), jj, ix_1part)
+      do idir=1,ndim1part
+        write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
+      end do
+      write(iunit,'(es18.10)') real(densmatr(jj,jj))
+    end do
+    call io_close(iunit)
+
+
+    ! calculate dipole moment from density for this particle
+    dipole_moment(:) = M_ZERO
+    do jj = 1,mb_1part%npt
+      call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
+           mb_1part%enlarge_1part(1), jj, ix_1part)
+      dipole_moment = dipole_moment+(ix_1part(:)*mb_1part%h_1part(:)+mb_1part%origin(:))&
+                    *TOFLOAT(densmatr(jj,jj))&
+                    *st%modelmbparticles%charge_particle(ikeeppart)
+    end do
+    ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
+    write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
+    write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
+    write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*mb_1part%npt
+    call messages_info(3)
+
+    SAFE_DEALLOCATE_A(evectors)
+    SAFE_DEALLOCATE_A(evalues)
+    SAFE_DEALLOCATE_A(density)
+    SAFE_DEALLOCATE_A(densmatr)
+  
+    call modelmb_1part_end(mb_1part)
+  
+  end do densmat_loop ! loop over densmats to output
+
+
+  SAFE_DEALLOCATE_A(ix_1part)
+  SAFE_DEALLOCATE_A(ix_1part_p)
+  SAFE_DEALLOCATE_A(npoints)
+  SAFE_DEALLOCATE_A(dipole_moment)
+
+  POP_SUB(X(modelmb_density_matrix_write))
+end subroutine X(modelmb_density_matrix_write)
+! ---------------------------------------------------------
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
