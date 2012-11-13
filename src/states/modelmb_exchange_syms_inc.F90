@@ -181,7 +181,7 @@ subroutine X(modelmb_sym_state_1diag)(eigenval, gr, mm, &
 
   type(batch_t) :: antisymwfbatch
 
-  integer, allocatable :: ix(:), ofst(:)
+  integer, allocatable :: ofst(:)
   integer, allocatable :: p_of_type_up(:), p_of_type_down(:)
   character(len=500) :: tmpstring
 
@@ -195,8 +195,6 @@ subroutine X(modelmb_sym_state_1diag)(eigenval, gr, mm, &
   call young_nullify (young)
 
   call modelmb_1part_nullify(mb_1part)
-
-  SAFE_ALLOCATE(ix(1:MAX_DIM))
 
   sym_ok_alltypes = 0
 
