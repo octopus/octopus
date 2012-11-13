@@ -65,7 +65,8 @@ noinst_HEADERS =                        \
 	output_etsf_inc.F90             \
 	output_berkeleygw_inc.F90       \
 	forces_inc.F90                  \
-  eigen_arpack_inc.F90
+	eigen_arpack_inc.F90            \
+	output_modelmb_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -84,7 +85,7 @@ xc_ks_inversion.o : eigensolver.o
 v_ks.o : v_ks.F90 xc_oep.o energy_calc.o magnetic.o xc_ks_inversion.o
 system.o : system.F90 v_ks.o energy_calc.o elf.o output.o
 pert.o : pert.F90 pert_inc.F90
-output.o : output.F90 output_states_inc.F90 output_h_inc.F90 output_linear_response_inc.F90 output_etsf_inc.F90 output_berkeleygw_inc.F90 output_me.o elf.o magnetic.o
+output.o : output.F90 output_states_inc.F90 output_h_inc.F90 output_linear_response_inc.F90 output_etsf_inc.F90 output_berkeleygw_inc.F90 output_modelmb_inc.F90 output_me.o elf.o magnetic.o
 output_me.o: output_me_inc.F90
 exponential.o : exponential.F90
 energy_calc.o : energy_calc.F90 energy_calc_inc.F90

@@ -80,7 +80,6 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   FLOAT, allocatable :: ev(:)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :)
   integer :: kstart, kend, ispin, iunit_h, iunit_s, iunit_e
-  integer, allocatable :: maxcoeff(:, :)
 
 #ifdef HAVE_MPI
   FLOAT, allocatable :: tmp(:, :)
@@ -191,21 +190,14 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
     end if
   end do
 
-!  if(this%write_matrices) then
-!    SAFE!_ALLOCATE(maxcoeff(1:this%norbs, kstart:kend))
-!    maxcoeff = maxloc(abs(hamilt), 1)
+!  if(this%write_matrices .and. mpi_grp_is_root(mpi_world)) then
 !    do ik =  kstart, kend
 !      do n2 = 1, this%norbs
-!        ! choose a specific phase
-!        hamilt(:, n2, ik) = hamilt(:, n2, ik) * abs(hamilt(maxcoeff(n2, ik), n2, ik)) / hamilt(maxcoeff(n2, ik), n2, ik)
-!        if(mpi_grp_is_root(mpi_world)) then
-!          do n1 = 1, this%norbs
-!            write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, hamilt(n1, n2, ik)
-!          enddo
-!        endif
+!        do n1 = 1, this%norbs
+!          write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, hamilt(n1, n2, ik)
+!        enddo
 !      enddo
 !    enddo
-!    SAFE!_DEALLOCATE_A(maxcoeff)
 !
 !    call io_close(iunit_h)
 !    call io_close(iunit_s)
