@@ -449,10 +449,16 @@ contains
           call messages_warning(1)
 
           fromScratch = .true.
+          td%iter = 0
         end if
         ! extract the interface wave function
         if(st%open_boundaries) call restart_get_ob_intf(st, gr)
       end if
+
+      if(td%iter >= td%max_iter) then
+        message(1) = "All requested iterations have already been done. Use FromScratch = yes if you want to redo them."
+        call messages_info(1)
+      endif
 
       if(.not. fromscratch .and. td%dynamics == CP) then
         call cpmd_restart_read(td%cp_propagator, gr, st, ierr)
