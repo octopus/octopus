@@ -524,8 +524,7 @@ contains
       endif
       if(iand(outp%how, C_OUTPUT_HOW_XYZ) .ne. 0) then
         call geometry_write_xyz(dir, "geometry", geo, gr%sb%dim)
-        if(simul_box_is_periodic(gr%sb)) &
-          call periodic_write_crystal(gr%sb, geo, dir)
+        if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
       endif
     end if
 
