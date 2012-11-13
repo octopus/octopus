@@ -913,9 +913,10 @@ contains
 
         call lcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, 1, iatom, this%norb_atom(iatom))
 
-        SAFE_ALLOCATE(factors(1:this%norb_atom(iatom)))
+        ! the extra orbitals with the derivative are not relevant here, hence we divide by this%mult
+        SAFE_ALLOCATE(factors(1:this%norb_atom(iatom)/this%mult))
 
-        do iorb = 1, this%norb_atom(iatom)
+        do iorb = 1, this%norb_atom(iatom)/this%mult
           call species_iwf_ilm(geo%atom(iatom)%spec, iorb, 1, ii, ll, mm)
           factors(iorb) = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
         end do
@@ -923,7 +924,7 @@ contains
         !$omp parallel do private(ip, aa)
         do ip = 1, this%sphere(iatom)%np
           aa = CNST(0.0)
-          do iorb = 1, this%norb_atom(iatom)
+          do iorb = 1, this%norb_atom(iatom)/this%mult
             aa = aa + factors(iorb)*this%orbitals(iatom)%states_linear(iorb)%dpsi(ip)**2
           end do
           rho(this%sphere(iatom)%map(ip), 1) = aa
