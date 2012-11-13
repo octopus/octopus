@@ -140,6 +140,8 @@ contains
 
     PUSH_SUB(kpoints_init)
 
+    ASSERT(dim <= MAX_DIM)
+
     !%Variable KPointsUseSymmetries
     !%Type logical
     !%Default no
@@ -240,7 +242,7 @@ contains
       logical, intent(in) :: gamma_only
 
       logical       :: gamma_only_
-      integer       :: ii
+      integer       :: ii, ncols
       type(block_t) :: blk
 
       PUSH_SUB(kpoints_init.read_MP)
@@ -255,13 +257,15 @@ contains
       !% When this block is given (and the <tt>KPoints</tt> block is not present),
       !% <i>k</i>-points are distributed in a uniform grid.
       !%
-      !% The first row of the block is a triplet of integers defining
+      !% The first row of the block is a set of integers defining
       !% the number of <i>k</i>-points to be used along each direction
       !% in reciprocal space. The numbers refer to the whole Brillouin
       !% zone, and the actual number of <i>k</i>-points is usually
       !% reduced exploiting the symmetries of the system.  By default
       !% the grid will always include the Gamma point. An optional
       !% second row can specify a shift in the <i>k</i>-points.
+      !% The number of columns should be equal to <tt>Dimensions</tt>,
+      !% but the grid and shift numbers should be 1 and zero in finite directions.
       !%
       !% For example, the following input samples the BZ with 100 points in the 
       !% <i>xy</i>-plane of reciprocal space:
@@ -276,10 +280,15 @@ contains
       if(.not. gamma_only_) &
         gamma_only_ = (parse_block(datasets_check('KPointsGrid'), blk) .ne. 0)
 
-      this%nik_axis(1:dim) = 1
-      this%shifts(1:dim)   = M_ZERO
+      this%nik_axis(1:MAX_DIM) = 1
+      this%shifts(1:MAX_DIM) = M_ZERO
 
       if(.not. gamma_only_) then
+        ncols = parse_block_cols(blk, 0)
+        if(ncols /= dim) then
+          write(message(1),'(a,i3,a,i3)') 'KPointsGrid first row has ', ncols, ' columns but must have ', dim
+          call messages_fatal(1)
+        endif
         do ii = 1, dim
           call parse_block_integer(blk, 0, ii - 1, this%nik_axis(ii))
         end do
@@ -290,6 +299,11 @@ contains
         end if
 
         if(parse_block_n(blk) > 1) then ! we have a shift
+          ncols = parse_block_cols(blk, 1)
+          if(ncols /= dim) then
+            write(message(1),'(a,i3,a,i3)') 'KPointsGrid second row has ', ncols, ' columns but must have ', dim
+            call messages_fatal(1)
+          endif
           do ii = 1, dim
             call parse_block_float(blk, 1, ii - 1, this%shifts(ii))
           end do
