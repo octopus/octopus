@@ -354,7 +354,7 @@ static int parse_block_work(sym_block *blk, int l, int col, parse_result *r)
   assert(col>=0);
 
   if(col >= blk->lines[l].n){
-    fprintf(stderr, "%s\n", "Error: Value not defined in block.");
+    fprintf(stderr, "%s\n", "Input error: not enough columns found when parsing block.");
     exit(1);
   }
   
