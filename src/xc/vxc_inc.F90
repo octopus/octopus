@@ -31,6 +31,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
   FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
   FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
 
+  integer, parameter :: N_BLOCK_MAX = 1000
   integer :: n_block
 
   FLOAT, allocatable :: l_zk(:)        ! Local block of the energy functional (with the correct memory order for libxc)
@@ -96,8 +97,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
     return
   endif
 
-  n_block = 1000
-
   ! initialize a couple of handy variables
   gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA).ne.0
   mgga = iand(xcs%family, XC_FAMILY_MGGA).ne.0
@@ -161,11 +160,15 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
 
   end if
 
-  space_loop: do ip = 1, der%mesh%np, n_block
+  space_loop: do ip = 1, der%mesh%np, N_BLOCK_MAX
 
     !Resize the dimension of the last block when the number of the mesh points
-    !it is not a perfect divider of the dimension of the blocks.
-    if(ip + n_block > der%mesh%np) n_block = der%mesh%np - ip + 1 
+    !it is not a perfect divisor of the dimension of the blocks.
+    if(ip + N_BLOCK_MAX > der%mesh%np) then
+      n_block = der%mesh%np - ip + 1
+    else
+      n_block = N_BLOCK_MAX
+    endif
 
     ! make a local copy with the correct memory order for libxc
     ib2 = ip
@@ -418,8 +421,8 @@ contains
     PUSH_SUB(xc_get_vxc.lda_init)
 
     ! allocate some general arrays
-    SAFE_ALLOCATE(l_dens(1:spin_channels, 1:n_block))
-    SAFE_ALLOCATE(l_zk(1:n_block))
+    SAFE_ALLOCATE(l_dens(1:spin_channels, 1:N_BLOCK_MAX))
+    SAFE_ALLOCATE(l_zk(1:N_BLOCK_MAX))
 
     SAFE_ALLOCATE(dens(1:der%mesh%np_part, 1:spin_channels))
     dens       = M_ZERO
@@ -432,7 +435,7 @@ contains
     end if
 
     if(present(vxc)) then
-      SAFE_ALLOCATE(l_dedd(1:spin_channels, 1:n_block))
+      SAFE_ALLOCATE(l_dedd(1:spin_channels, 1:N_BLOCK_MAX))
       SAFE_ALLOCATE(dedd(1:der%mesh%np_part, 1:spin_channels))
       dedd = M_ZERO
     end if
@@ -524,12 +527,12 @@ contains
     if(ispin /= UNPOLARIZED) ii = 3
 
     ! allocate variables
-    SAFE_ALLOCATE(l_sigma(1:ii, 1:n_block))
+    SAFE_ALLOCATE(l_sigma(1:ii, 1:N_BLOCK_MAX))
     SAFE_ALLOCATE(gdens(1:der%mesh%np, 1:3, 1:spin_channels))
     gdens = M_ZERO
 
     if(present(vxc)) then
-      SAFE_ALLOCATE(l_vsigma(1:ii, 1:n_block))
+      SAFE_ALLOCATE(l_vsigma(1:ii, 1:N_BLOCK_MAX))
       SAFE_ALLOCATE(dedgd(1:der%mesh%np_part, 1:3, 1:spin_channels))
       dedgd = M_ZERO
     end if
@@ -608,15 +611,15 @@ contains
     SAFE_ALLOCATE( current (1:der%mesh%np, 1:der%mesh%sb%dim, 1:spin_channels) )
     SAFE_ALLOCATE(ldens(1:der%mesh%np, 1:spin_channels))
 
-    SAFE_ALLOCATE(l_tau  (1:spin_channels, 1:n_block))
-    SAFE_ALLOCATE(l_ldens(1:spin_channels, 1:n_block))
+    SAFE_ALLOCATE(l_tau  (1:spin_channels, 1:N_BLOCK_MAX))
+    SAFE_ALLOCATE(l_ldens(1:spin_channels, 1:N_BLOCK_MAX))
 
     if(present(vxc)) then
       SAFE_ALLOCATE(dedldens(1:der%mesh%np_part, 1:spin_channels))
       dedldens = M_ZERO
 
-      SAFE_ALLOCATE(l_dedtau  (1:spin_channels, 1:n_block))
-      SAFE_ALLOCATE(l_dedldens(1:spin_channels, 1:n_block))
+      SAFE_ALLOCATE(l_dedtau  (1:spin_channels, 1:N_BLOCK_MAX))
+      SAFE_ALLOCATE(l_dedldens(1:spin_channels, 1:N_BLOCK_MAX))
     end if
 
     POP_SUB(xc_get_vxc.mgga_init)
