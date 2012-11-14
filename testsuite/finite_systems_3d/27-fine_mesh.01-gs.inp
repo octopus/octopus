@@ -28,7 +28,6 @@ ExperimentalFeatures = yes
 ProfilingMode = yes
 
 LCAOAlternative = yes
-LCAOExtraStates = yes
 
 EigenSolver = rmmdiis
 ParallelizationStrategy = par_states
