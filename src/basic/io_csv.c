@@ -97,8 +97,6 @@ typedef unsigned long uint64_t;
 typedef char byte;
 
 static const int size_of[6]      = {4, 8, 8, 16, 4, 8};
-static const int base_size_of[6] = {4, 8, 4, 8, 4, 8};
-static const int is_integer[6]   = {0, 0, 0, 0, 1, 1};
 
 void FC_FUNC_(read_csv,READ_CSV)
      (unsigned long * np, byte * f, int * output_type, int * ierr, STR_F_TYPE fname STR_ARG1)
