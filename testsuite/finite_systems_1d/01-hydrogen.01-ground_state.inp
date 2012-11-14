@@ -37,3 +37,4 @@ TheoryLevel = independent_particles
 %
 
 NumberUnoccStates = 9
+EigenSolverTolerance = 1e-5
