@@ -626,6 +626,12 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
+#if defined(HAVE_MPI)
+      if(cas%parallel_in_eh_pairs) then
+        call MPI_Barrier(cas%mpi_grp%comm, mpi_err)
+      end if
+#endif
+
       ! close restart file
       call io_close(iunit)
       POP_SUB(casida_work.solve_petersilka)
