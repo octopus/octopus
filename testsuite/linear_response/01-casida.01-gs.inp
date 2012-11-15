@@ -28,7 +28,7 @@ ConvRelDens = 1e-9
 LCAODimension = 18
 
 EigenSolver = cg_new
-EigenSolverTolerance = 1e-5
+EigenSolverTolerance = 1e-6
 EigenSolverMaxIter = 20
 
 PoissonSolver = fft

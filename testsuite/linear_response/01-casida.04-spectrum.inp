@@ -23,16 +23,5 @@ Spacing = 0.36
 
 XCFunctional = lda_x + lda_c_vwn
 
-ConvRelDens = 1e-9
-
-LCAODimension = 18
-
-EigenSolver = cg_new
-EigenSolverTolerance = 1e-5
-
-EigenSolverMaxIter = 20
-
-NumberUnoccStates = 9
-
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
