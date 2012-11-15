@@ -37,10 +37,9 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   PUSH_SUB(X(subspace_diag))
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
 
-  psi => st%X(psi)(:, :, :, ik)
-
   select case(this%method)
   case(SD_SCALAPACK)
+    psi => st%X(psi)(:, :, :, ik)
     call X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   case(SD_STANDARD)
     ASSERT(.not. st%parallel_in_states)
