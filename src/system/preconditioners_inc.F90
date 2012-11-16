@@ -20,7 +20,7 @@
 ! --------------------------------------------------------- 
 subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
   type(preconditioner_t), intent(in)    :: pre
-  type(grid_t),           intent(in)    :: gr
+  type(grid_t), target,   intent(in)    :: gr
   type(hamiltonian_t),    intent(in)    :: hm
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(inout) :: a(:,:)

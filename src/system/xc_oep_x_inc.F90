@@ -36,12 +36,12 @@
 !------------------------------------------------------------
 
 subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
-  type(grid_t),   intent(inout) :: gr
-  type(states_t), intent(in)    :: st
-  integer,        intent(in)    :: is
-  type(xc_oep_t), intent(inout) :: oep
-  FLOAT,          intent(inout) :: ex
-  FLOAT,          intent(in)    :: exx_coef !< amount of EXX (for hybrids)
+  type(grid_t),           intent(inout) :: gr
+  type(states_t), target, intent(in)    :: st
+  integer,                intent(in)    :: is
+  type(xc_oep_t),         intent(inout) :: oep
+  FLOAT,                  intent(inout) :: ex
+  FLOAT,                  intent(in)    :: exx_coef !< amount of EXX (for hybrids)
 
   integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r
   integer, allocatable :: recv_stack(:), send_stack(:)

@@ -21,7 +21,7 @@
 !> See http://prola.aps.org/abstract/PRB/v54/i16/p11169_1
 subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   type(grid_t),           intent(in)    :: gr
-  type(states_t),         intent(inout) :: st
+  type(states_t), target, intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
   type(preconditioner_t), intent(in)    :: pre
   FLOAT,                  intent(in)    :: tol

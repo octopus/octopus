@@ -545,13 +545,13 @@ contains
   end subroutine exponential_apply
 
   subroutine exponential_apply_batch(te, der, hm, psib, ik, deltat, time)
-    type(exponential_t), intent(inout) :: te
-    type(derivatives_t), intent(inout) :: der
-    type(hamiltonian_t), intent(inout) :: hm
-    integer,             intent(in)    :: ik
-    type(batch_t),       intent(inout) :: psib
-    FLOAT,               intent(in)    :: deltat
-    FLOAT,               intent(in)    :: time
+    type(exponential_t),   intent(inout) :: te
+    type(derivatives_t),   intent(inout) :: der
+    type(hamiltonian_t),   intent(inout) :: hm
+    integer,               intent(in)    :: ik
+    type(batch_t), target, intent(inout) :: psib
+    FLOAT,                 intent(in)    :: deltat
+    FLOAT,                 intent(in)    :: time
     
     integer :: ii, ist
     CMPLX, pointer :: psi(:, :)
