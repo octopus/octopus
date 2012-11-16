@@ -63,9 +63,9 @@ match ; 1st eps-diff   ; LINE(casida/eps_diff, 2, 9) ; 2.99416473E-01
 match ; 2nd eps-diff   ; LINE(casida/eps_diff, 4, 9) ; 3.55375584E-01
 match ; 3rd eps-diff   ; LINE(casida/eps_diff, 5, 9) ; 3.55375584E-01
 
-match ; 1st Petersilka ; LINE(casida/petersilka, 2, 9) ; 3.43091004E-01
+match ; 1st Petersilka ; GREP(casida/petersilka, '  5   7', 9); 3.43091004E-01
 # owing to degeneracy and the gauge-dependence of Petersilka, the 2nd is not well defined
-match ; 3rd Petersilka ; LINE(casida/petersilka, 6, 9) ; 4.11090328E-01
+match ; 3rd Petersilka ; GREP(casida/petersilka, '  5   8', 9); 4.11090328E-01
 
 match ; 1st excitation ; LINE(casida/casida, 2, 7) ; 3.37393747E-01
 match ; 2nd excitation ; LINE(casida/casida, 4, 7) ; 3.55373946E-01
