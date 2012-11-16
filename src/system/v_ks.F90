@@ -436,7 +436,6 @@ contains
     FLOAT,                   optional, intent(in)    :: time 
     logical,                 optional, intent(in)    :: calc_berry !< Use this before wfns initialized.
     logical,                 optional, intent(in)    :: calc_energy
-
     
     type(profile_t), save :: prof
     type(energy_t), pointer :: energy
@@ -589,7 +588,9 @@ contains
 
       type(profile_t), save :: prof
       logical :: cmplxscl
+      FLOAT :: factor
       CMPLX :: ctmp
+      integer :: ispin
       
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
@@ -694,35 +695,23 @@ contains
       
       if(ks%calc%calc_energy) then
         ! Now we calculate Int[n vxc] = energy%intnvxc
-        select case(hm%d%ispin)
-        case(UNPOLARIZED)
-          if (.not. cmplxscl) then
-            energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1))
+        if(hm%d%ispin == SPINORS .and. cmplxscl) &
+          call messages_not_implemented('Complex Scaling with SPINORS')
+        do ispin = 1, hm%d%nspin
+          if(ispin <= 2) then
+            factor = M_ONE
           else
-            ctmp = zmf_dotp(ks%gr%fine%mesh, st%zrho%Re(:, 1) + M_zI * st%zrho%Im(:, 1) , &
-              ks%calc%vxc(:, 1) + M_zI * ks%calc%Imvxc(:, 1)  , dotu = .true.)
+            factor = M_TWO
+          endif
+          if (.not. cmplxscl) then
+            energy%intnvxc = energy%intnvxc + factor * dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
+          else
+            ctmp = factor * zmf_dotp(ks%gr%fine%mesh, st%zrho%Re(:, ispin) + M_zI * st%zrho%Im(:, ispin), &
+              ks%calc%vxc(:, ispin) + M_zI * ks%calc%Imvxc(:, ispin), dotu = .true.)
             energy%intnvxc = energy%intnvxc + real(ctmp)
             energy%Imintnvxc = energy%Imintnvxc + aimag(ctmp)          
           end if
-        case(SPIN_POLARIZED)
-          if(.not. cmplxscl) then
-            energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1)) &
-              + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), ks%calc%vxc(:, 2))
-          else
-            ctmp  = ctmp + zmf_dotp(ks%gr%fine%mesh, st%zrho%Re(:, 1) + M_zI * st%zrho%Im(:, 1), &
-                             ks%calc%vxc(:, 1) + M_zI * ks%calc%Imvxc(:, 1), dotu = .true.) &
-                         + zmf_dotp(ks%gr%fine%mesh, st%zrho%Re(:, 2) + M_zI * st%zrho%Im(:, 2), &
-                             ks%calc%vxc(:, 2) + M_zI * ks%calc%Imvxc(:, 2), dotu = .true. )
-            energy%intnvxc = energy%intnvxc + real(ctmp)
-            energy%Imintnvxc = energy%Imintnvxc + aimag(ctmp)        
-          end if
-        case(SPINORS)
-          if (cmplxscl) call messages_not_implemented('Complex Scaling with SPINORS')
-          energy%intnvxc = energy%intnvxc + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 1), ks%calc%vxc(:, 1)) &
-            + dmf_dotp(ks%gr%fine%mesh, st%rho(:, 2), ks%calc%vxc(:, 2)) &
-            + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 3), ks%calc%vxc(:, 3)) &
-            + M_TWO*dmf_dotp(ks%gr%fine%mesh, st%rho(:, 4), ks%calc%vxc(:, 4))
-        end select
+        enddo
       end if
 
       call profiling_out(prof)
