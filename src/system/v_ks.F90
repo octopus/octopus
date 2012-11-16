@@ -695,6 +695,9 @@ contains
       
       if(ks%calc%calc_energy) then
         ! Now we calculate Int[n vxc] = energy%intnvxc
+        energy%intnvxc = M_ZERO
+        energy%Imintnvxc = M_ZERO !cmplxscl
+
         if(hm%d%ispin == SPINORS .and. cmplxscl) &
           call messages_not_implemented('Complex Scaling with SPINORS')
         do ispin = 1, hm%d%nspin
