@@ -202,7 +202,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family)
     type(hamiltonian_t),    intent(out)   :: hm
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),   target, intent(inout) :: gr
     type(geometry_t),       intent(inout) :: geo
     type(states_t), target, intent(inout) :: st
     integer,                intent(in)    :: theory_level

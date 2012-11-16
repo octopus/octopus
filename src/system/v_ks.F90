@@ -429,7 +429,7 @@ contains
   !! can be modified after the function have been used.
 
   subroutine v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy) 
-    type(v_ks_t),                      intent(inout) :: ks 
+    type(v_ks_t),            target,   intent(inout) :: ks 
     type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
     type(geometry_t) ,       optional, intent(in)    :: geo
@@ -833,8 +833,8 @@ contains
   ! ---------------------------------------------------------
 
   subroutine v_ks_calc_finish(ks, hm)
-    type(v_ks_t),        intent(inout) :: ks
-    type(hamiltonian_t), intent(inout) :: hm
+    type(v_ks_t), target, intent(inout) :: ks
+    type(hamiltonian_t),  intent(inout) :: hm
 
     integer :: ip, ispin
 
@@ -988,8 +988,8 @@ contains
   !! directly.
   !
   subroutine v_ks_hartree(ks, hm)
-    type(v_ks_t),        intent(inout) :: ks
-    type(hamiltonian_t), intent(inout) :: hm
+    type(v_ks_t),                intent(inout) :: ks
+    type(hamiltonian_t), target, intent(inout) :: hm
 
     FLOAT, pointer :: pot(:), Impot(:), aux(:)
     CMPLX, pointer :: zpot(:)
@@ -1022,8 +1022,8 @@ contains
         call dpoisson_solve(ks%hartree_solver, pot, ks%calc%total_density)
       else
         ! Solve the Poisson equation for the scaled density and coulomb potential
-        call zpoisson_solve(ks%hartree_solver, zpot,&
-               ks%calc%total_density + M_zI * ks%calc%Imtotal_density, theta = hm%cmplxscl_th)
+        call zpoisson_solve(ks%hartree_solver, zpot, &
+          ks%calc%total_density + M_zI * ks%calc%Imtotal_density, theta = hm%cmplxscl_th)
         pot   =   real(zpot)
         Impot =  aimag(zpot)
       end if
