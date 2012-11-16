@@ -307,9 +307,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_init(st, gr, geo)
-    type(states_t),    intent(inout) :: st
-    type(grid_t),      intent(in)    :: gr
-    type(geometry_t),  intent(in)    :: geo
+    type(states_t), target, intent(inout) :: st
+    type(grid_t),           intent(in)    :: gr
+    type(geometry_t),       intent(in)    :: geo
 
     FLOAT :: excess_charge
     integer :: nempty, ierr, il, ntot, default, nthreads
@@ -1460,9 +1460,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_densities_init(st, gr, geo)
-    type(states_t),    intent(inout) :: st
-    type(grid_t),      intent(in)    :: gr
-    type(geometry_t),  intent(in)    :: geo
+    type(states_t), target, intent(inout) :: st
+    type(grid_t),           intent(in)    :: gr
+    type(geometry_t),       intent(in)    :: geo
 
     FLOAT :: size
 
@@ -1635,8 +1635,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_copy(stout, stin)
-    type(states_t), intent(inout) :: stout
-    type(states_t), intent(in)    :: stin
+    type(states_t), target, intent(inout) :: stout
+    type(states_t),         intent(in)    :: stin
 
     PUSH_SUB(states_copy)
 

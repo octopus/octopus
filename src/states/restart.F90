@@ -160,9 +160,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine restart_look_and_read(st, gr, is_complex, specify_dir, exact)
-    type(states_t),             intent(inout) :: st
+    type(states_t),     target, intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
-    logical, optional,          intent(in)    :: is_complex
+    logical,          optional, intent(in)    :: is_complex
     character(len=*), optional, intent(in)    :: specify_dir
     logical,          optional, intent(in)    :: exact !< if .true. we need all the wavefunctions and on the exact grid
 

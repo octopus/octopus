@@ -127,9 +127,9 @@ contains
   ! ---------------------------------------------------
 
   subroutine density_calc_accumulate(this, ik, psib)
-    type(density_calc_t), intent(inout) :: this
-    integer,              intent(in)    :: ik
-    type(batch_t),        intent(inout) :: psib
+    type(density_calc_t), target, intent(inout) :: this
+    integer,                      intent(in)    :: ik
+    type(batch_t),                intent(inout) :: psib
 
     integer :: ist, ip, ispin
     CMPLX   :: term, psi1, psi2
