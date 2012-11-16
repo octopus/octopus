@@ -71,11 +71,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine species_atom_density(mesh, sb, atom, spin_channels, rho)
-    type(mesh_t),      intent(in)    :: mesh
-    type(simul_box_t), intent(in)    :: sb
-    type(atom_t),      intent(in)    :: atom
-    integer,           intent(in)    :: spin_channels
-    FLOAT,             intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
+    type(mesh_t),         intent(in)    :: mesh
+    type(simul_box_t),    intent(in)    :: sb
+    type(atom_t), target, intent(in)    :: atom
+    integer,              intent(in)    :: spin_channels
+    FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
 
     integer :: isp, ip, in_points, nn, icell
     FLOAT :: rr, x, pos(1:MAX_DIM)
@@ -248,7 +248,7 @@ contains
   ! ---------------------------------------------------------
 
   subroutine species_get_density(spec, pos, mesh, rho)
-    type(species_t),            intent(in)  :: spec
+    type(species_t),    target, intent(in)  :: spec
     FLOAT,                      intent(in)  :: pos(:)
     type(mesh_t),       target, intent(in)  :: mesh
     FLOAT,                      intent(out) :: rho(:)
@@ -468,10 +468,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine species_get_nlcc(spec, pos, mesh, rho_core)
-    type(species_t),  intent(in)  :: spec
-    FLOAT,            intent(in)  :: pos(MAX_DIM)
-    type(mesh_t),     intent(in)  :: mesh
-    FLOAT,            intent(out) :: rho_core(:)
+    type(species_t), target, intent(in)  :: spec
+    FLOAT,                   intent(in)  :: pos(MAX_DIM)
+    type(mesh_t),            intent(in)  :: mesh
+    FLOAT,                   intent(out) :: rho_core(:)
 
     integer :: icell
     type(periodic_copy_t) :: pp
@@ -535,11 +535,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine species_get_local(spec, mesh, x_atom, vl, Imvl)
-    type(species_t), intent(in) :: spec
-    type(mesh_t),    intent(in) :: mesh
-    FLOAT,           intent(in) :: x_atom(:)
-    FLOAT,           intent(out):: vl(:)
-    FLOAT, optional, intent(out):: Imvl(:) !cmplxscl: imaginary part of the potential
+    type(species_t), target, intent(in)  :: spec
+    type(mesh_t),            intent(in)  :: mesh
+    FLOAT,                   intent(in)  :: x_atom(:)
+    FLOAT,                   intent(out) :: vl(:)
+    FLOAT,         optional, intent(out) :: Imvl(:) !< cmplxscl: imaginary part of the potential
 
     FLOAT :: a1, a2, Rb2 ! for jellium
     FLOAT :: xx(MAX_DIM), r
@@ -647,12 +647,12 @@ contains
   !! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine species_get_orbital(spec, mesh, iorb, ispin, pos, orb)
-    type(species_t),   intent(in)     :: spec
-    type(mesh_t),      intent(in)     :: mesh
-    integer,           intent(in)     :: iorb
-    integer,           intent(in)     :: ispin   !< The spin index.
-    FLOAT,             intent(in)     :: pos(:)  !< The position of the atom.
-    FLOAT,             intent(out)    :: orb(:)  !< The function defined in the mesh where the orbitals is returned.
+    type(species_t), target, intent(in)     :: spec
+    type(mesh_t),            intent(in)     :: mesh
+    integer,                 intent(in)     :: iorb
+    integer,                 intent(in)     :: ispin   !< The spin index.
+    FLOAT,                   intent(in)     :: pos(:)  !< The position of the atom.
+    FLOAT,                   intent(out)    :: orb(:)  !< The function defined in the mesh where the orbitals is returned.
 
     integer :: i, l, m, ip, icell
     FLOAT :: r2, x(1:MAX_DIM), radius
@@ -728,13 +728,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine species_get_orbital_submesh(spec, submesh, iorb, ispin, pos, phi, derivative)
-    type(species_t),   intent(in)  :: spec       !< The species.
-    type(submesh_t),   intent(in)  :: submesh    !< The submesh descriptor where the orbital will be calculated.
-    integer,           intent(in)  :: iorb       !< The index of the orbital to return.
-    integer,           intent(in)  :: ispin      !< The spin index.
-    FLOAT,             intent(in)  :: pos(:)     !< The position of the atom.
-    FLOAT,             intent(out) :: phi(:)     !< The function defined in the mesh where the orbitals is returned.
-    logical, optional, intent(in)  :: derivative !< If present and .true. returns the derivative of the orbital.
+    type(species_t), target, intent(in)  :: spec       !< The species.
+    type(submesh_t),         intent(in)  :: submesh    !< The submesh descriptor where the orbital will be calculated.
+    integer,                 intent(in)  :: iorb       !< The index of the orbital to return.
+    integer,                 intent(in)  :: ispin      !< The spin index.
+    FLOAT,                   intent(in)  :: pos(:)     !< The position of the atom.
+    FLOAT,                   intent(out) :: phi(:)     !< The function defined in the mesh where the orbitals is returned.
+    logical,       optional, intent(in)  :: derivative !< If present and .true. returns the derivative of the orbital.
 
     integer :: i, l, m, ip
     FLOAT :: r2, x(1:MAX_DIM), sqrtw, ww

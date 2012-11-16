@@ -539,11 +539,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine epot_generate(ep, gr, geo, st, cmplxscl)
-    type(epot_t),          intent(inout) :: ep
-    type(grid_t), target,  intent(in)    :: gr
-    type(geometry_t),      intent(in)    :: geo
-    type(states_t),        intent(inout) :: st
-    logical,               intent(in)    :: cmplxscl  
+    type(epot_t),             intent(inout) :: ep
+    type(grid_t),     target, intent(in)    :: gr
+    type(geometry_t), target, intent(in)    :: geo
+    type(states_t),           intent(inout) :: st
+    logical,                  intent(in)    :: cmplxscl  
 
     integer :: ia, ip
     type(atom_t),      pointer :: atm
@@ -873,6 +873,8 @@ contains
   end subroutine epot_precalc_local_potential
 
   ! ---------------------------------------------------------
+  !> For details about this routine, see
+  !! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
   subroutine ion_interaction_calculate(geo, sb, gr, ep, energy, force)
     type(geometry_t), target, intent(in)    :: geo
     type(simul_box_t),        intent(in)    :: sb
@@ -892,10 +894,6 @@ contains
 
     call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
     PUSH_SUB(ion_interaction_calculate)
-
-    ! see
-    ! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
-    ! for details about this routine.
 
     energy = M_ZERO
     force(1:sb%dim,1:geo%natoms) = M_ZERO
@@ -1011,7 +1009,7 @@ contains
     type(geometry_t),  target, intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(out)   :: energy
-    FLOAT,                     intent(out)   :: force(:, :) ! sb%dim, geo%natoms
+    FLOAT,                     intent(out)   :: force(:, :) !< sb%dim, geo%natoms
 
     type(species_t), pointer :: spec
     FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut

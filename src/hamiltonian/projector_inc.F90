@@ -233,11 +233,11 @@ end subroutine X(project_psi_batch)
 !------------------------------------------------------------------------------
 !> X(projector_matrix_element) calculates <psia|projector|psib>
 R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
-  type(projector_t), intent(in)    :: pj
-  integer,           intent(in)    :: dim
-  integer,           intent(in)    :: ik
-  R_TYPE,            intent(in)    :: psia(:, :)  !< psia(1:mesh%np, dim)
-  R_TYPE,            intent(in)    :: psib(:, :)  !< psib(1:mesh%np, dim)
+  type(projector_t), target, intent(in)    :: pj
+  integer,                   intent(in)    :: dim
+  integer,                   intent(in)    :: ik
+  R_TYPE,                    intent(in)    :: psia(:, :)  !< psia(1:mesh%np, dim)
+  R_TYPE,                    intent(in)    :: psib(:, :)  !< psib(1:mesh%np, dim)
 
   integer ::  ns, idim, is
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
@@ -335,13 +335,13 @@ end subroutine X(project_sphere)
 !------------------------------------------------------------------------------
 !> This function calculates |cpsi> += [x, V_nl] |psi>
 subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
-  type(projector_t),     intent(in)     :: pj
-  type(grid_t),          intent(in)     :: gr
-  integer,               intent(in)     :: dim
-  integer,               intent(in)     :: idir
-  integer,               intent(in)     :: ik
-  R_TYPE,                intent(in)     :: psi(:, :)
-  R_TYPE,                intent(inout)  :: cpsi(:,:)
+  type(projector_t), target, intent(in)     :: pj
+  type(grid_t),              intent(in)     :: gr
+  integer,                   intent(in)     :: dim
+  integer,                   intent(in)     :: idir
+  integer,                   intent(in)     :: ik
+  R_TYPE,                    intent(in)     :: psi(:, :)
+  R_TYPE,                    intent(inout)  :: cpsi(:,:)
 
   integer ::  ns, idim
   R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:,:)

@@ -76,7 +76,7 @@ contains
   subroutine rkb_projector_init(rkb_p, sm, a, l, lm, so_strength)
     type(rkb_projector_t), intent(inout) :: rkb_p
     type(submesh_t),       intent(in)    :: sm
-    type(atom_t),          intent(in)    :: a
+    type(atom_t), target,  intent(in)    :: a
     integer,               intent(in)    :: l, lm
     FLOAT,                 intent(in)    :: so_strength
  

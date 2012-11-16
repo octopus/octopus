@@ -78,7 +78,7 @@ contains
     type(kb_projector_t), intent(inout) :: kb_p
     type(submesh_t),      intent(in)    :: sm
     type(grid_t),         intent(in)    :: gr
-    type(atom_t),         intent(in)    :: a
+    type(atom_t), target, intent(in)    :: a
     integer,              intent(in)    :: l, lm
 
     integer :: n_c, ic

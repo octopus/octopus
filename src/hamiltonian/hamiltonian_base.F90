@@ -344,10 +344,10 @@ contains
   !-----------------------------------------------------------------
     
   subroutine hamiltonian_base_build_proj(this, mesh, epot, geo)
-    type(hamiltonian_base_t), intent(inout) :: this
-    type(mesh_t),             intent(in)    :: mesh
-    type(epot_t),             intent(in)    :: epot
-    type(geometry_t),         intent(in)    :: geo
+    type(hamiltonian_base_t), target, intent(inout) :: this
+    type(mesh_t),                     intent(in)    :: mesh
+    type(epot_t),             target, intent(in)    :: epot
+    type(geometry_t),         target, intent(in)    :: geo
 
     integer :: iatom, iproj, ll, lmax, lloc, mm, ic
     integer :: nmat, imat, ip, iorder
@@ -538,6 +538,7 @@ contains
 #endif
 
     POP_SUB(hamiltonian_base_build_proj)
+
   contains
 
     subroutine build_opencl()

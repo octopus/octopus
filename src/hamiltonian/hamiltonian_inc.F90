@@ -22,7 +22,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
   type(hamiltonian_t),   intent(in)    :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
-  type(batch_t),         intent(inout) :: hpsib
+  type(batch_t), target, intent(inout) :: hpsib
   integer,               intent(in)    :: ik
   FLOAT, optional,       intent(in)    :: time
   integer, optional,     intent(in)    :: terms

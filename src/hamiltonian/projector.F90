@@ -141,11 +141,11 @@ contains
 
   !---------------------------------------------------------
   subroutine projector_init(p, mesh, atm, dim, reltype)
-    type(projector_t), intent(inout) :: p
-    type(mesh_t),      intent(in)    :: mesh
-    type(atom_t),      intent(in)    :: atm
-    integer,           intent(in)    :: dim
-    integer,           intent(in)    :: reltype
+    type(projector_t),    intent(inout) :: p
+    type(mesh_t),         intent(in)    :: mesh
+    type(atom_t), target, intent(in)    :: atm
+    integer,              intent(in)    :: dim
+    integer,              intent(in)    :: reltype
 
     type(ps_t), pointer :: ps
     

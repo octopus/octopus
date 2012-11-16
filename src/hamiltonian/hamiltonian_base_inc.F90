@@ -22,8 +22,8 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   type(mesh_t),                intent(in)    :: mesh
   type(states_dim_t),          intent(in)    :: std
   integer,                     intent(in)    :: ispin
-  type(batch_t),               intent(in)    :: psib
-  type(batch_t),               intent(inout) :: vpsib
+  type(batch_t), target,       intent(in)    :: psib
+  type(batch_t), target,       intent(inout) :: vpsib
 
   integer :: ist, ip
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
@@ -197,8 +197,8 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   type(states_dim_t),          intent(in)    :: std
   type(epot_t),                intent(in)    :: ep
   integer,                     intent(in)    :: ispin
-  type(batch_t),               intent(in)    :: psib
-  type(batch_t),               intent(inout) :: vpsib
+  type(batch_t), target,       intent(in)    :: psib
+  type(batch_t), target,       intent(inout) :: vpsib
 
   integer :: ist, idim, ip
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
@@ -263,12 +263,12 @@ end subroutine X(hamiltonian_base_magnetic)
 ! ---------------------------------------------------------------------------------------
 
 subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projection)
-  type(hamiltonian_base_t),    intent(in)    :: this
-  type(mesh_t),                intent(in)    :: mesh
-  type(states_dim_t),          intent(in)    :: std
-  integer,                     intent(in)    :: ik
-  type(batch_t),               intent(in)    :: psib
-  type(projection_t),          intent(out)   :: projection
+  type(hamiltonian_base_t), target, intent(in)    :: this
+  type(mesh_t),                     intent(in)    :: mesh
+  type(states_dim_t),               intent(in)    :: std
+  integer,                          intent(in)    :: ik
+  type(batch_t),                    intent(in)    :: psib
+  type(projection_t),               intent(out)   :: projection
 
   integer :: ist, ip, iproj, imat, nreal, iprojection
   integer :: npoints, nprojs, nst
@@ -406,12 +406,12 @@ end subroutine X(hamiltonian_base_nlocal_start)
 ! ---------------------------------------------------------------------------------------
 
 subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vpsib)
-  type(hamiltonian_base_t),    intent(in)    :: this
-  type(mesh_t),                intent(in)    :: mesh
-  type(states_dim_t),          intent(in)    :: std
-  integer,                     intent(in)    :: ik
-  type(projection_t),          intent(inout) :: projection
-  type(batch_t),               intent(inout) :: vpsib
+  type(hamiltonian_base_t), target, intent(in)    :: this
+  type(mesh_t),                     intent(in)    :: mesh
+  type(states_dim_t),               intent(in)    :: std
+  integer,                          intent(in)    :: ik
+  type(projection_t),               intent(inout) :: projection
+  type(batch_t),                    intent(inout) :: vpsib
 
   integer :: ist, ip, imat, nreal, iprojection
   integer :: npoints, nprojs, nst, d1
