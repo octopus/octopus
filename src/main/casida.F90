@@ -97,6 +97,7 @@ module casida_m
 
     logical           :: parallel_in_eh_pairs
     type(mpi_grp_t)   :: mpi_grp
+    logical           :: fromScratch
   end type casida_t
 
 contains
@@ -307,7 +308,8 @@ contains
     cas%restart_file = trim(tmpdir)//'casida-restart'
     if(cas%triplet) cas%restart_file = trim(cas%restart_file)//'-triplet'
 
-    if(fromScratch) call loct_rm(trim(cas%restart_file)) ! restart
+    cas%fromScratch = fromScratch
+    if(cas%fromScratch) call loct_rm(trim(cas%restart_file)) ! restart
 
     ! First, print the differences between KS eigenvalues (first approximation to the
     ! excitation energies, or rather, to the DOS).
@@ -662,6 +664,7 @@ contains
       actual = 0
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
 
+      ! only root retains the saved values
       if(.not.mpi_grp_is_root(mpi_world)) cas%mat = M_ZERO
 
       ! calculate the matrix elements of (v + fxc)
@@ -935,29 +938,40 @@ contains
 
       PUSH_SUB(casida_work.load_saved)
 
-      iunit = io_open(trim(cas%restart_file), action='read', &
-        status='old', die=.false., is_tmp=.true.)
-      if( iunit <= 0) then
-        POP_SUB(casida_work.load_saved)
-        return
-      end if
+      if(mpi_grp_is_root(mpi_world)) then
+        iunit = io_open(trim(cas%restart_file), action='read', &
+          status='old', die=.false., is_tmp=.true.)
 
-      do
-        read(iunit, fmt=*, iostat=err) ii, aa, is, jj, bb, js, val
-        if(err.ne.0) exit
-
-        ia = cas%index(ii, aa, is)
-        jb = cas%index(jj, bb, js)
-
-        if(ia > 0 .and. jb > 0) then
-          cas%mat(ia, jb) = val
-          saved_K(ia, jb) = .true.
-          cas%mat(jb, ia) = val
-          saved_K(jb, ia) = .true.
+        if( iunit > 0) then
+          do
+            read(iunit, fmt=*, iostat=err) ii, aa, is, jj, bb, js, val
+            if(err.ne.0) exit
+            
+            ia = cas%index(ii, aa, is)
+            jb = cas%index(jj, bb, js)
+            
+            if(ia > 0 .and. jb > 0) then
+              cas%mat(ia, jb) = val
+              saved_K(ia, jb) = .true.
+              cas%mat(jb, ia) = val
+              saved_K(jb, ia) = .true.
+            endif
+          end do
+        
+          call io_close(iunit)
+        else if(.not. cas%fromScratch) then
+          message(1) = "Could not find Casida restart file. Starting from scratch."
+          call messages_warning(1)
         endif
-      end do
+      endif
 
-      if(iunit > 0) call io_close(iunit)
+      ! if no file found, root has no new information to offer the others
+#ifdef HAVE_MPI
+      call MPI_Bcast(saved_K(1, 1), cas%n_pairs**2, MPI_LOGICAL, 0, mpi_world, mpi_err)
+! No need to bcast these, since they will be obtained from a reduction
+!      call MPI_Bcast(cas%mat(1, 1), cas%npairs**2, MPI_FLOAT,   0, mpi_world, mpi_err)
+#endif
+
       POP_SUB(casida_work.load_saved)
     end subroutine load_saved
 
