@@ -563,7 +563,7 @@ contains
     ! ---------------------------------------------------------
     !> Despite the name, this routine does eps_diff also. 
     subroutine solve_petersilka
-      integer :: ia, iunit, idir
+      integer :: ia, iunit, idir, actual
       FLOAT   :: ff
       FLOAT, allocatable :: deltav(:), xx(:)
 
@@ -576,7 +576,11 @@ contains
       iunit = io_open(trim(cas%restart_file), action='write', &
         position='append', is_tmp=.true.)
 
+      actual = 0
       do ia = 1, cas%n_pairs
+        actual = actual + 1
+        if(mod(actual, cas%mpi_grp%size) .ne. cas%mpi_grp%rank) cycle
+
         cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
                     st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma)
         if(cas%w(ia) < -M_EPSILON) then
@@ -600,6 +604,11 @@ contains
 
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
       end do
+
+      ! sum all matrix elements
+      if(cas%parallel_in_eh_pairs) then
+        call comm_allreduce(cas%mpi_grp%comm, cas%w)
+      end if
 
       SAFE_ALLOCATE(xx(1:cas%n_pairs))
       SAFE_ALLOCATE(deltav(1:mesh%np))
