@@ -20,13 +20,13 @@
 ! ---------------------------------------------------------
 
 subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, points, factor)
-  type(nl_operator_t), intent(in)    :: op
-  type(batch_t),       intent(inout) :: fi
-  type(batch_t),       intent(inout) :: fo
-  logical, optional,   intent(in)    :: ghost_update
-  logical, optional,   intent(in)    :: profile
-  integer, optional,   intent(in)    :: points
-  FLOAT,   optional,   intent(in)    :: factor
+  type(nl_operator_t), target, intent(in)    :: op
+  type(batch_t),       target, intent(inout) :: fi
+  type(batch_t),       target, intent(inout) :: fo
+  logical,         optional,   intent(in)    :: ghost_update
+  logical,         optional,   intent(in)    :: profile
+  integer,         optional,   intent(in)    :: points
+  FLOAT,           optional,   intent(in)    :: factor
 
   integer :: ist, points_
   real(8) :: cop

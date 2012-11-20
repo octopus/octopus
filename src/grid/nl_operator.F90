@@ -277,8 +277,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_copy(opo, opi)
-    type(nl_operator_t), intent(out) :: opo
-    type(nl_operator_t), intent(in)  :: opi
+    type(nl_operator_t),         intent(out) :: opo
+    type(nl_operator_t), target, intent(in)  :: opi
 
     PUSH_SUB(nl_operator_copy)
 
@@ -666,7 +666,7 @@ contains
   subroutine nl_operator_skewadjoint(op, opt, mesh)
     type(nl_operator_t), target, intent(in)  :: op
     type(nl_operator_t), target, intent(out) :: opt
-    type(mesh_t),        intent(in)  :: mesh
+    type(mesh_t),        target, intent(in)  :: mesh
 
     integer          :: ip, jp, kp, lp, index
     FLOAT, pointer   :: vol_pp(:)
@@ -742,7 +742,7 @@ contains
   subroutine nl_operator_selfadjoint(op, opt, mesh)
     type(nl_operator_t), target, intent(in)  :: op
     type(nl_operator_t), target, intent(out) :: opt
-    type(mesh_t),        intent(in)  :: mesh
+    type(mesh_t),        target, intent(in)  :: mesh
 
     integer          :: ip, jp, kp, lp, index
     FLOAT, pointer   :: vol_pp(:)
@@ -940,8 +940,8 @@ contains
   !! reallocating w_re, w_im and i.
   !! \warning: this should be replaced by a normal copy with a flag.
   subroutine nl_operator_common_copy(op, opg)
-    type(nl_operator_t), intent(in)  :: op
-    type(nl_operator_t), intent(out) :: opg
+    type(nl_operator_t), target, intent(in)  :: op
+    type(nl_operator_t),         intent(out) :: opg
 
     PUSH_SUB(nl_operator_common_copy)
 
@@ -961,7 +961,7 @@ contains
         SAFE_ALLOCATE(opg%w_im(1:op%stencil%size, 1:op%mesh%np_global))
       end if
     end if
-    opg%mesh        => op%mesh
+    opg%mesh     => op%mesh
     opg%np       =  op%mesh%np_global
     opg%cmplx_op =  op%cmplx_op
     opg%const_w  =  op%const_w

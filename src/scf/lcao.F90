@@ -861,14 +861,14 @@ contains
   ! ---------------------------------------------------------
 
   subroutine lcao_atom_density(this, st, gr, sb, geo, iatom, spin_channels, rho)
-    type(lcao_t),      intent(inout) :: this
-    type(states_t),    intent(in)    :: st
-    type(grid_t),      intent(in)    :: gr
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(in)    :: geo
-    integer,           intent(in)    :: iatom
-    integer,           intent(in)    :: spin_channels
-    FLOAT,             intent(inout) :: rho(:, :) !< (gr[%fine]%mesh%np, spin_channels)
+    type(lcao_t),             intent(inout) :: this
+    type(states_t),           intent(in)    :: st
+    type(grid_t),             intent(in)    :: gr
+    type(simul_box_t),        intent(in)    :: sb
+    type(geometry_t), target, intent(in)    :: geo
+    integer,                  intent(in)    :: iatom
+    integer,                  intent(in)    :: spin_channels
+    FLOAT,                    intent(inout) :: rho(:, :) !< (gr[%fine]%mesh%np, spin_channels)
     
     FLOAT, allocatable :: dorbital(:, :)
     CMPLX, allocatable :: zorbital(:, :)

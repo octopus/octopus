@@ -144,8 +144,8 @@ end subroutine mesh_init_stage_1
 
 ! ---------------------------------------------------------
 subroutine mesh_read_lead(ob_grid, mesh)
-  type(ob_grid_t),  intent(in)    :: ob_grid
-  type(mesh_t),     intent(in)    :: mesh
+  type(ob_grid_t), target, intent(in)    :: ob_grid
+  type(mesh_t),    target, intent(in)    :: mesh
 
   integer :: il, iunit
 

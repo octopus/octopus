@@ -79,9 +79,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multigrid_init(mgrid, geo, cv, mesh, der, stencil)
-    type(multigrid_t),             intent(out) :: mgrid
+    type(multigrid_t),     target, intent(out) :: mgrid
     type(geometry_t),              intent(in)  :: geo
-    type(curvilinear_t),            intent(in)  :: cv
+    type(curvilinear_t),           intent(in)  :: cv
     type(mesh_t),          target, intent(in)  :: mesh
     type(derivatives_t),   target, intent(in)  :: der
     type(stencil_t),               intent(in)  :: stencil
@@ -330,11 +330,11 @@ contains
   !! This is used in the multi-grid routines
   !---------------------------------------------------------------------------------
   subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out, stencil)
-    type(geometry_t),   intent(in)    :: geo
-    type(curvilinear_t), intent(in)    :: cv
-    type(mesh_t),       intent(in)    :: mesh_in
-    type(mesh_t),       intent(inout) :: mesh_out
-    type(stencil_t),    intent(in)    :: stencil
+    type(geometry_t),           intent(in)    :: geo
+    type(curvilinear_t),        intent(in)    :: cv
+    type(mesh_t),       target, intent(in)    :: mesh_in
+    type(mesh_t),               intent(inout) :: mesh_out
+    type(stencil_t),            intent(in)    :: stencil
 
     PUSH_SUB(multigrid_mesh_half)
 
@@ -355,11 +355,11 @@ contains
   end subroutine multigrid_mesh_half
 
   subroutine multigrid_mesh_double(geo, cv, mesh_in, mesh_out, stencil)    
-    type(geometry_t),   intent(in)    :: geo
-    type(curvilinear_t), intent(in)    :: cv
-    type(mesh_t),       intent(in)    :: mesh_in
-    type(mesh_t),       intent(inout) :: mesh_out
-    type(stencil_t),    intent(in)    :: stencil
+    type(geometry_t),           intent(in)    :: geo
+    type(curvilinear_t),        intent(in)    :: cv
+    type(mesh_t),       target, intent(in)    :: mesh_in
+    type(mesh_t),               intent(inout) :: mesh_out
+    type(stencil_t),            intent(in)    :: stencil
 
     PUSH_SUB(multigrid_mesh_double)
 
@@ -381,7 +381,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multigrid_end(mgrid)
-    type(multigrid_t), intent(inout) :: mgrid
+    type(multigrid_t), target, intent(inout) :: mgrid
 
     integer :: i
     type(multigrid_level_t), pointer :: level

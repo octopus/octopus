@@ -18,9 +18,9 @@
 !! $Id: symmetrizer_inc.F90 5918 2009-09-25 21:43:56Z dstrubbe $
 
 subroutine X(symmetrizer_apply)(this, field, symmfield)
-  type(symmetrizer_t), intent(in)    :: this
-  R_TYPE, target,      intent(in)    :: field(:)
-  R_TYPE,              intent(out)   :: symmfield(:)
+  type(symmetrizer_t), target, intent(in)    :: this
+  R_TYPE,              target, intent(in)    :: field(:)
+  R_TYPE,                      intent(out)   :: symmfield(:)
 
   integer :: ip, iop, nops, ipsrc, idir
   integer :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
@@ -102,9 +102,9 @@ end subroutine X(symmetrizer_apply)
 ! ----------------------------------------------------------------------------------
 
 subroutine X(symmetrizer_apply_vector)(this, field, symmfield)
-  type(symmetrizer_t), intent(in)    :: this
-  R_TYPE, target,      intent(in)    :: field(:, :)
-  R_TYPE,              intent(out)   :: symmfield(:, :)
+  type(symmetrizer_t), target, intent(in)    :: this
+  R_TYPE,              target, intent(in)    :: field(:, :)
+  R_TYPE,                      intent(out)   :: symmfield(:, :)
 
   integer :: ip, iop, nops, ipsrc, idir
   integer :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
