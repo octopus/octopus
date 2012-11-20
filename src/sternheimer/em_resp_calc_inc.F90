@@ -253,7 +253,7 @@ end subroutine X(lr_calc_elf)
 ! ---------------------------------------------------------
 !> alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|-id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
 subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, ndir)
-  type(system_t),         intent(inout) :: sys
+  type(system_t), target, intent(inout) :: sys
   type(lr_t),             intent(inout) :: em_lr(:,:)
   type(lr_t),             intent(inout) :: kdotp_lr(:)
   integer,                intent(in)    :: nsigma

@@ -133,17 +133,17 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_init(writ, gr, st, hm, geo, ions_move, with_gauge_field, kick, iter, max_iter, dt)
-    type(td_write_t),    intent(out)   :: writ
-    type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(in)    :: st
-    type(hamiltonian_t), intent(inout) :: hm
-    type(geometry_t),    intent(in)    :: geo
-    logical,             intent(in)    :: ions_move
-    logical,             intent(in)    :: with_gauge_field
-    type(kick_t),        intent(in)    :: kick
-    integer,             intent(in)    :: iter
-    integer,             intent(in)    :: max_iter
-    FLOAT,               intent(in)    :: dt
+    type(td_write_t), target, intent(out)   :: writ
+    type(grid_t),             intent(in)    :: gr
+    type(states_t),           intent(in)    :: st
+    type(hamiltonian_t),      intent(inout) :: hm
+    type(geometry_t),         intent(in)    :: geo
+    logical,                  intent(in)    :: ions_move
+    logical,                  intent(in)    :: with_gauge_field
+    type(kick_t),             intent(in)    :: kick
+    integer,                  intent(in)    :: iter
+    integer,                  intent(in)    :: max_iter
+    FLOAT,                    intent(in)    :: dt
 
     FLOAT :: rmin
     integer :: ierr, first, ii, ist, jj, flags, iout, default

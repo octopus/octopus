@@ -122,7 +122,7 @@ end subroutine zcalc_band_velocity
 !! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
 !!      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
 subroutine zcalc_dipole_periodic(sys, lr, dipole)
-  type(system_t),         intent(inout) :: sys
+  type(system_t), target, intent(inout) :: sys
   type(lr_t),             intent(in)    :: lr(:,:)
   FLOAT,                  intent(out)   :: dipole(:)
 
