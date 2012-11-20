@@ -397,7 +397,7 @@ exit $failures;
 sub find_executables(){
   my $name;
 
-  open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file\n";
+  open(TESTSUITE, "<".$opt_f ) or die "cannot open testsuite file '$opt_f'.\n";
   while ($_ = <TESTSUITE>) {
 
     if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
