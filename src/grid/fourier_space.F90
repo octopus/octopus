@@ -75,7 +75,7 @@ contains
   !! Otherwise, it assigns the PFFT Fourier space grid to the cube Fourier space grid,
   !! via pointer.
   subroutine cube_function_alloc_fs(cube, cf, force_alloc)
-    type(cube_t),          intent(in)    :: cube
+    type(cube_t), target,  intent(in)    :: cube
     type(cube_function_t), intent(inout) :: cf
     logical, optional,     intent(in)    :: force_alloc  
       

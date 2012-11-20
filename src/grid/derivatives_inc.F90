@@ -29,8 +29,8 @@
 !! boundary conditions for the derivatives, in finite system;
 !! or set according to periodic boundary conditions.
 subroutine X(derivatives_batch_set_bc)(der, ffb)
-  type(derivatives_t), intent(in)    :: der
-  type(batch_t),       intent(inout) :: ffb
+  type(derivatives_t),   intent(in)    :: der
+  type(batch_t), target, intent(inout) :: ffb
 
   integer :: pp, bndry_start, bndry_end
 

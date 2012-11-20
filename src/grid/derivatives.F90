@@ -152,9 +152,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_init(der, sb, use_curvilinear)
-    type(derivatives_t), intent(out) :: der
-    type(simul_box_t),   intent(in)  :: sb
-    logical,             intent(in)  :: use_curvilinear
+    type(derivatives_t), target, intent(out) :: der
+    type(simul_box_t),           intent(in)  :: sb
+    logical,                     intent(in)  :: use_curvilinear
 
     integer :: idir
 

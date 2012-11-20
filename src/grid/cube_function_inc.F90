@@ -24,7 +24,7 @@
 !! Otherwise, it assigns the PFFT real space grid to the cube real space grid,
 !! via pointer.
 subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
-  type(cube_t),          intent(in)    :: cube
+  type(cube_t), target,  intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
   logical, optional,     intent(in)    :: in_device
   logical, optional,     intent(in)    :: force_alloc

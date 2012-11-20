@@ -169,7 +169,7 @@ contains
 
   FLOAT function double_grid_get_rmax(this, spec, mesh) result(rmax)
     type(double_grid_t),     intent(in) :: this
-    type(species_t),         intent(in) :: spec
+    type(species_t), target, intent(in) :: spec
     type(mesh_t),            intent(in) :: mesh
 
     type(ps_t), pointer :: ps

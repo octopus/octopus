@@ -18,16 +18,15 @@
 !! $Id: double_grid_apply.F90 2711 2007-02-13 17:36:18Z xavier $
 
 subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
-  type(double_grid_t),    intent(in)    :: this
-  type(species_t),        intent(in)    :: spec
-  type(mesh_t),           intent(in)    :: mesh
-  type(submesh_t),        intent(in)    :: sm
-  FLOAT,                  intent(in)    :: x_atom(1:MAX_DIM)
-  FLOAT,                  intent(out)   :: vl(:)
-
-  integer, optional,      intent(in)    :: l
-  integer, optional,      intent(in)    :: lm
-  integer, optional,      intent(in)    :: ic
+  type(double_grid_t),     intent(in)    :: this
+  type(species_t), target, intent(in)    :: spec
+  type(mesh_t),            intent(in)    :: mesh
+  type(submesh_t),         intent(in)    :: sm
+  FLOAT,                   intent(in)    :: x_atom(1:MAX_DIM)
+  FLOAT,                   intent(out)   :: vl(:)
+  integer, optional,       intent(in)    :: l
+  integer, optional,       intent(in)    :: lm
+  integer, optional,       intent(in)    :: ic
 
   FLOAT :: r, xx(1:MAX_DIM)
   FLOAT :: vv

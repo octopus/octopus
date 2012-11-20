@@ -292,7 +292,7 @@ contains
   !--------------------------------------------------------------
 
   subroutine batch_copy(bin, bout, reference)
-    type(batch_t),           intent(in)    :: bin
+    type(batch_t), target,   intent(in)    :: bin
     type(batch_t),           intent(out)   :: bout
     logical,       optional, intent(in)    :: reference !< If .true. (the default) the copy points to the same memory.
                                                         !! If .false. new memory is allocated.
