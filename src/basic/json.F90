@@ -2351,7 +2351,7 @@ contains
   subroutine json_array_get_array(this, i, value, ierr)
     type(json_array_t),          intent(in)    :: this
     integer,                     intent(in)    :: i
-    type(json_array_t), pointer, intent(inout) :: value
+    type(json_array_t), pointer :: value !< chum_intel objects to intent(inout)
     integer,                     intent(out)   :: ierr
 
     type(json_value_t),  pointer :: json_value
@@ -2463,7 +2463,7 @@ contains
   subroutine json_array_get_object(this, i, value, ierr)
     type(json_array_t),           intent(in)    :: this
     integer,                      intent(in)    :: i
-    type(json_object_t), pointer, intent(inout) :: value
+    type(json_object_t), pointer :: value !< chum_intel objects to intent(inout)
     integer,                      intent(out)   :: ierr
 
     type(json_value_t), pointer :: json_value
@@ -3535,10 +3535,10 @@ contains
   end subroutine json_object_get_array_string
 
   subroutine json_object_get_object(this, ident, value, ierr)
-    type(json_object_t), intent(in)  :: this
-    character(len=*),    intent(in)  :: ident
-    type(json_object_t), pointer     :: value
-    integer,             intent(out) :: ierr
+    type(json_object_t),          intent(in)  :: this
+    character(len=*),             intent(in)  :: ident
+    type(json_object_t), pointer, intent(out) :: value
+    integer,                      intent(out) :: ierr
 
     type(json_string_t)         :: json_ident
     type(json_value_t), pointer :: json_value
