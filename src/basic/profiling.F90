@@ -160,7 +160,7 @@ module profiling_m
     logical                  :: all_nodes
   end type profile_vars_t
 
-  type(profile_vars_t), public :: prof_vars
+  type(profile_vars_t), target, public :: prof_vars
 
   !For the moment we will have the profiler objects here, but they
   !should be moved to their respective modules.

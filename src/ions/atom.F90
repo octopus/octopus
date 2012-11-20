@@ -157,7 +157,7 @@ contains
   
   ! ---------------------------------------------------------
   subroutine atom_get_species(this, spec)
-    type(atom_t),             intent(in)  :: this
+    type(atom_t),    target,  intent(in)  :: this
     type(species_t), pointer, intent(out) :: spec
     !
     PUSH_SUB(atom_get_species)

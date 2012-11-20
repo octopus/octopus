@@ -69,7 +69,7 @@ contains
   ! ---------------------------------------------------------
   !> Drop the head of the list.
   subroutine ialist_drop(l)
-    type(ialist_t), intent(inout) :: l
+    type(ialist_t), target, intent(inout) :: l
 
     type(iacons_t), pointer :: old_head
 
@@ -88,8 +88,8 @@ contains
   ! ---------------------------------------------------------
   !> Delete the pair with the given key from the list.
   subroutine ialist_delete(key, l)
-    integer,        intent(in)    :: key
-    type(ialist_t), intent(inout) :: l
+    integer,                intent(in)    :: key
+    type(ialist_t), target, intent(inout) :: l
 
     integer                 :: i
     type(iacons_t), pointer :: ptr
@@ -127,9 +127,9 @@ contains
   !> Insert a (key, val) pair in the list. If key is already present,
   !! its value is updated.
   subroutine ialist_insert(key, val, l)
-    integer,        intent(in) :: key
-    integer,        intent(in) :: val
-    type(ialist_t), intent(inout) :: l
+    integer,                intent(in)    :: key
+    integer,                intent(in)    :: val
+    type(ialist_t), target, intent(inout) :: l
   
     integer                 :: i
     logical                 :: found
@@ -175,9 +175,9 @@ contains
   !! always pass found if you do not know, for different reasons, that key
   !! is member of the list.
   integer function ialist_lookup(key, l, found)
-    integer,           intent(in) :: key
-    type(ialist_t),    intent(in) :: l
-    logical, optional, intent(out) :: found
+    integer,                intent(in) :: key
+    type(ialist_t), target, intent(in) :: l
+    logical,     optional, intent(out) :: found
 
     integer                 :: i
     type(iacons_t), pointer :: ptr
