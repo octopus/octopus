@@ -835,7 +835,7 @@ contains
 
   subroutine json_string_iterator_init(this, string)
     type(json_string_iterator_t), intent(out) :: this
-    type(json_string_t),          intent(in)  :: string
+    type(json_string_t), target,  intent(in)  :: string
 
     PUSH_SUB(json_string_iterator_init)
 
@@ -1241,7 +1241,7 @@ contains
 
   subroutine json_array_iterator_init(this, array)
     type(json_array_iterator_t), intent(out) :: this
-    type(json_array_t),          intent(in)  :: array
+    type(json_array_t), target,  intent(in)  :: array
 
     PUSH_SUB(json_array_iterator_init)
 
@@ -1261,8 +1261,8 @@ contains
   end subroutine json_array_iterator_end
 
   subroutine json_array_iterator_next(this, value)
-    type(json_array_iterator_t), intent(inout) :: this
-    type(json_value_t),          pointer       :: value
+    type(json_array_iterator_t), target, intent(inout) :: this
+    type(json_value_t), pointer,         intent(out)   :: value
 
     PUSH_SUB(json_array_iterator_next)
 
@@ -1373,7 +1373,7 @@ contains
   end subroutine json_array_init_string
 
   recursive subroutine json_array_end(this)
-    type(json_array_t), intent(inout) :: this
+    type(json_array_t), target, intent(inout) :: this
 
     type(json_value_node_t), pointer :: node
 
@@ -1749,7 +1749,7 @@ contains
   end subroutine json_array_append_object
 
   subroutine json_array_set_value(this, i, value, ierr)
-    type(json_array_t),         intent(inout) :: this
+    type(json_array_t), target, intent(inout) :: this
     integer,                    intent(in)    :: i
     type(json_value_t), target, intent(in)    :: value
     integer,                    intent(out)   :: ierr
@@ -2189,10 +2189,10 @@ contains
   end subroutine json_array_get_self_string
 
   subroutine json_array_get_value(this, i, value, ierr)
-    type(json_array_t), intent(in)  :: this
-    integer,            intent(in)  :: i
-    type(json_value_t), pointer     :: value
-    integer,            intent(out) :: ierr
+    type(json_array_t), target,  intent(in)    :: this
+    integer,                     intent(in)    :: i
+    type(json_value_t), pointer, intent(inout) :: value
+    integer,                     intent(out)   :: ierr
 
     type(json_value_node_t), pointer :: node
     integer                          :: idx
@@ -2349,10 +2349,10 @@ contains
   end subroutine json_array_get_string
 
   subroutine json_array_get_array(this, i, value, ierr)
-    type(json_array_t), intent(in)  :: this
-    integer,            intent(in)  :: i
-    type(json_array_t), pointer     :: value
-    integer,            intent(out) :: ierr
+    type(json_array_t),          intent(in)    :: this
+    integer,                     intent(in)    :: i
+    type(json_array_t), pointer, intent(inout) :: value
+    integer,                     intent(out)   :: ierr
 
     type(json_value_t),  pointer :: json_value
 
@@ -2461,10 +2461,10 @@ contains
   end subroutine json_array_get_array_string
 
   subroutine json_array_get_object(this, i, value, ierr)
-    type(json_array_t),  intent(in)  :: this
-    integer,             intent(in)  :: i
-    type(json_object_t), pointer     :: value
-    integer,             intent(out) :: ierr
+    type(json_array_t),           intent(in)    :: this
+    integer,                      intent(in)    :: i
+    type(json_object_t), pointer, intent(inout) :: value
+    integer,                      intent(out)   :: ierr
 
     type(json_value_t), pointer :: json_value
 
@@ -2485,8 +2485,8 @@ contains
   end subroutine json_array_get_object
 
   subroutine json_array_pop(this, value)
-    type(json_array_t),     intent(inout) :: this
-    type(json_value_t),     pointer       :: value
+    type(json_array_t), target,  intent(inout) :: this
+    type(json_value_t), pointer, intent(out)   :: value
 
     type(json_value_node_t), pointer :: node
 
@@ -2633,7 +2633,7 @@ contains
 
   subroutine json_object_iterator_init(this, object)
     type(json_object_iterator_t), intent(out) :: this
-    type(json_object_t),          intent(in)  :: object
+    type(json_object_t), target,  intent(in)  :: object
 
     integer :: i
 
@@ -2666,8 +2666,8 @@ contains
   end subroutine json_object_iterator_end
 
   subroutine json_object_iterator_next(this, member)
-    type(json_object_iterator_t), intent(inout) :: this
-    type(json_member_t),          pointer       :: member
+    type(json_object_iterator_t), target, intent(inout) :: this
+    type(json_member_t),         pointer, intent(out)   :: member
 
     integer :: i
 
@@ -2731,7 +2731,7 @@ contains
   end subroutine json_object_init
 
   recursive subroutine json_object_end(this)
-    type(json_object_t), intent(inout) :: this
+    type(json_object_t), target, intent(inout) :: this
 
     type(json_member_node_t), pointer :: node
     integer                           :: i
@@ -2762,7 +2762,7 @@ contains
   end subroutine json_object_end
 
   subroutine json_object_reallocate(this)
-    type(json_object_t), intent(inout) :: this
+    type(json_object_t), target, intent(inout) :: this
 
     type(json_object_t)               :: buff
     type(json_member_node_t), pointer :: node
@@ -2862,8 +2862,8 @@ contains
   end function json_object_hash
 
   recursive subroutine json_object_string(this, string)
-    type(json_object_t), intent(in)    :: this
-    type(json_string_t), intent(inout) :: string
+    type(json_object_t), target, intent(in)    :: this
+    type(json_string_t),         intent(inout) :: string
 
     type(json_member_node_t), pointer :: node
     integer                           :: i
@@ -2933,8 +2933,8 @@ contains
   end subroutine json_object_write
 
   subroutine json_object_pop(this, member)
-    type(json_object_t), intent(inout) :: this
-    type(json_member_t), pointer       :: member
+    type(json_object_t),          intent(inout) :: this
+    type(json_member_t), pointer, intent(out)   :: member
 
     type(json_member_node_t), pointer :: node
     integer                           :: i
@@ -3249,10 +3249,10 @@ contains
   end subroutine json_object_set_object
 
   subroutine json_object_get_value(this, ident, value, ierr)
-    type(json_object_t), intent(in)  :: this
-    type(json_string_t), intent(in)  :: ident
-    type(json_value_t),  pointer     :: value
-    integer,             intent(out) :: ierr
+    type(json_object_t), target,  intent(in)  :: this
+    type(json_string_t),          intent(in)  :: ident
+    type(json_value_t),  pointer, intent(out) :: value
+    integer,                      intent(out) :: ierr
 
     type(json_member_node_t), pointer :: node
 
@@ -3422,10 +3422,10 @@ contains
   end subroutine json_object_get_string
 
   subroutine json_object_get_array(this, ident, value, ierr)
-    type(json_object_t), intent(in)  :: this
-    character(len=*),    intent(in)  :: ident
-    type(json_array_t),  pointer     :: value
-    integer,             intent(out) :: ierr
+    type(json_object_t),          intent(in)  :: this
+    character(len=*),             intent(in)  :: ident
+    type(json_array_t),  pointer, intent(out) :: value
+    integer,                      intent(out) :: ierr
 
     type(json_string_t)         :: json_ident
     type(json_value_t), pointer :: json_value
@@ -3789,9 +3789,9 @@ contains
   end subroutine json_value_string
 
   subroutine json_value_get_null(this, value, ierr)
-    type(json_value_t), intent(in)  :: this
-    type(json_null_t),  pointer     :: value
-    integer,            intent(out) :: ierr
+    type(json_value_t), target,  intent(in)  :: this
+    type(json_null_t),  pointer, intent(out) :: value
+    integer,                     intent(out) :: ierr
 
     PUSH_SUB(json_value_get_null)
 
@@ -3807,9 +3807,9 @@ contains
   end subroutine json_value_get_null
 
   subroutine json_value_get_logical(this, value, ierr)
-    type(json_value_t),   intent(in)  :: this
-    type(json_logical_t), pointer     :: value
-    integer,              intent(out) :: ierr
+    type(json_value_t),            intent(in)  :: this
+    type(json_logical_t), pointer, intent(out) :: value
+    integer,                       intent(out) :: ierr
 
     PUSH_SUB(json_value_get_logical)
 
@@ -3825,9 +3825,9 @@ contains
   end subroutine json_value_get_logical
 
   subroutine json_value_get_integer(this, value, ierr)
-    type(json_value_t),   intent(in)  :: this
-    type(json_integer_t), pointer     :: value
-    integer,              intent(out) :: ierr
+    type(json_value_t),   target,  intent(in)  :: this
+    type(json_integer_t), pointer, intent(out) :: value
+    integer,                       intent(out) :: ierr
 
     PUSH_SUB(json_value_get_integer)
 
@@ -3843,9 +3843,9 @@ contains
   end subroutine json_value_get_integer
 
   subroutine json_value_get_real(this, value, ierr)
-    type(json_value_t), intent(in)  :: this
-    type(json_real_t),  pointer     :: value
-    integer,            intent(out) :: ierr
+    type(json_value_t), target,  intent(in)  :: this
+    type(json_real_t),  pointer, intent(out) :: value
+    integer,                     intent(out) :: ierr
 
     PUSH_SUB(json_value_get_real)
 
@@ -3861,9 +3861,9 @@ contains
   end subroutine json_value_get_real
 
   subroutine json_value_get_string(this, value, ierr)
-    type(json_value_t),  intent(in)  :: this
-    type(json_string_t), pointer     :: value
-    integer,             intent(out) :: ierr
+    type(json_value_t),  target,  intent(in)  :: this
+    type(json_string_t), pointer, intent(out) :: value
+    integer,                      intent(out) :: ierr
 
     PUSH_SUB(json_value_get_string)
 
@@ -3879,9 +3879,9 @@ contains
   end subroutine json_value_get_string
 
   subroutine json_value_get_array(this, value, ierr)
-    type(json_value_t), intent(in)  :: this
-    type(json_array_t), pointer     :: value
-    integer,            intent(out) :: ierr
+    type(json_value_t), target,  intent(in)  :: this
+    type(json_array_t), pointer, intent(out) :: value
+    integer,                     intent(out) :: ierr
 
     PUSH_SUB(json_value_get_array)
 
@@ -3897,9 +3897,9 @@ contains
   end subroutine json_value_get_array
 
   subroutine json_value_get_object(this, value, ierr)
-    type(json_value_t),  intent(in)  :: this
-    type(json_object_t), pointer     :: value
-    integer,             intent(out) :: ierr
+    type(json_value_t),  target,  intent(in)  :: this
+    type(json_object_t), pointer, intent(out) :: value
+    integer,                      intent(out) :: ierr
 
     PUSH_SUB(json_value_get_object)
 
@@ -4071,9 +4071,9 @@ contains
   end subroutine json_json_write
 
   subroutine json_json_get_array(this, value, ierr)
-    type(json_t),       intent(in)  :: this
-    type(json_array_t), pointer     :: value
-    integer,            intent(out) :: ierr
+    type(json_t),       target,  intent(in)  :: this
+    type(json_array_t), pointer, intent(out) :: value
+    integer,                     intent(out) :: ierr
 
     PUSH_SUB(json_json_get_array)
 
@@ -4089,9 +4089,9 @@ contains
   end subroutine json_json_get_array
 
   subroutine json_json_get_object(this, value, ierr)
-    type(json_t),        intent(in)  :: this
-    type(json_object_t), pointer     :: value
-    integer,             intent(out) :: ierr
+    type(json_t),        target,  intent(in)  :: this
+    type(json_object_t), pointer, intent(out) :: value
+    integer,                      intent(out) :: ierr
 
     PUSH_SUB(json_json_get_object)
 
