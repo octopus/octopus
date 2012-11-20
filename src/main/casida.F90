@@ -312,7 +312,7 @@ contains
     if(cas%fromScratch) call loct_rm(trim(cas%restart_file)) ! restart
 
     ! First, print the differences between KS eigenvalues (first approximation to the
-    ! excitation energies, or rather, to the DOS).
+    ! excitation energies, or rather, to the JDOS).
     if(iand(theorylevel, CASIDA_EPS_DIFF) /= 0) then
       message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
       call messages_info(1)

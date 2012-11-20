@@ -1202,7 +1202,7 @@ contains
         do is = 1, ispin
           radius = max(radius, spline_cutoff_radius(spec%ps%ur(i, is), threshold = CNST(0.001)))
         end do
-        ! we consider as bound a state that localized to less than half the radius of the radial grid
+        ! we consider as bound a state that is localized to less than half the radius of the radial grid
         bound(i) = radius < CNST(0.5)*logrid_radius(spec%ps%g)
       end do
       
