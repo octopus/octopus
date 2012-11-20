@@ -181,6 +181,7 @@ contains
     !% The Petersilka approximation uses only the diagonal part of the Tamm-Dancoff matrix.
     !% This is acceptable if there is little mixing between single-particle transitions.
     !% Ref: M Petersilka, UJ Gossmann, and EKU Gross, <i>Phys. Rev. Lett.</i> <b>76</b>, 1212 (1996).
+    !% (Diagonalization in degenerate subspaces is not implemented here.)
     !%Option tamm_dancoff 4
     !% The Tamm-Dancoff approximation uses only occupied-unoccupied transitions and not
     !% unoccupied-occupied transitions.
@@ -599,7 +600,7 @@ contains
           end if
 
           cas%w(ia) = cas%w(ia) + cas%el_per_state * ff
-          ! note that Petersilka is probably inappropriate for spin-polarized system due to degenerate transitions!
+          ! note that the correct "single-pole approximation" requires diagonalization in degenerate subspaces
         end if
 
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
