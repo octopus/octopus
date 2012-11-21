@@ -99,10 +99,10 @@ contains
       return
     end if
 
-#if defined(HAVE_MPI)
-    message(1) = "KS Inversion currently not available in parallel. Stopping octopus."
-    call messages_fatal(1)
-#endif
+    if(mc%n_node > 1) then
+      message(1) = "KS Inversion currently not available in parallel. Stopping octopus."
+      call messages_fatal(1)
+    endif
 
     call messages_experimental("Kohn-Sham inversion")
     

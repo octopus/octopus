@@ -1,5 +1,5 @@
 Test       : density+current
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : long-run, oct
 Enabled    : Yes
 
@@ -21,6 +21,9 @@ match ; J2 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 60) ;  -0.2263
 # optimize overlap of density and minimize
 # the current of final state during certain 
 # time before final time. Uses CG.
+Processors: 1
+# does not converge in parallel
+
 Input: 09-density+current.03-tdoct.inp
 
 Precision : 0.000001

@@ -2,7 +2,7 @@
 # $Id: 08-velocities.test $
 
 Test       : QOCT, velocity target
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : oct
 Enabled    : Yes
 
@@ -13,6 +13,9 @@ Enabled    : Yes
 # iterations, the field, although not converged, is already good enough to break the bond.
 
 Input: 08-velocities.01-ground_state.inp
+
+Processors : 1
+# does not converge in parallel
 
 Input: 08-velocities.02-oct.inp
 

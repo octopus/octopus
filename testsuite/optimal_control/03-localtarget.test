@@ -2,7 +2,7 @@
 # $Id: 03-asym_doublewell.test 3193 2007-09-09 23:14:17Z acastro $
 
 Test       : OCT with local target
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : long-run, oct
 Enabled    : Yes
 
@@ -30,16 +30,19 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -0.49521
 
 # Now, we define the target as a time-dependent target. Also, we use
 # the conjugate gradients method for optimization.
+Processors : 1
+# does not converge in parallel
 Input: 03-localtarget.03-tdoct.inp
 match ; J 1st iteration  ; GREP(opt-control/convergence, '##        1', 20) ;  0.36745451
 
 
 # Now we check that the many-particle version of the QOCT optimization of
 # local targets also works.
-
+Processors : 2
 Input: 03-localtarget.04-gs-mp.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.16891047
 
 # Now once again we run for only one iteration and check the convergence.
+Processors : 2
 Input: 03-localtarget.05-oct-mp.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -4.18554382
