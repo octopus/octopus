@@ -143,6 +143,7 @@ contains
   !> initialize the table
   subroutine fft_all_init()
     integer :: ii, iret
+    FLOAT   :: time_limit
 
     PUSH_SUB(fft_all_init)
 
@@ -193,6 +194,20 @@ contains
     !%End
     call parse_integer(datasets_check('FFTPreparePlan'), FFTW_MEASURE, fft_prepare_plan)
     if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call input_error('FFTPreparePlan')
+     
+    !%Variable FFTPlanTimeLimit
+    !%Type float
+    !%Default -1
+    !%Section Mesh::FFTs
+    !%Description
+    !% Sometimes the FFTW_MEASURE takes a lot of time to compute
+    !% many different plans. With this variable is possible to limit
+    !% the time (in seconds) that has roughly going to use for the
+    !% creation of the plan. If a negative value (default one) is
+    !% assigned, there is no restriction.
+    !%End   
+    call parse_float(datasets_check('FFTPlanTimeLimit'), -M_ONE, time_limit)    
+    call fftw_set_timelimit(time_limit)
 
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
     if(omp_get_max_threads() > 1) then
@@ -596,14 +611,14 @@ contains
   end subroutine fft_init
   
   ! ---------------------------------------------------------
-  ! Some fft-libary (only NFFT for the moment) needs an additional 
-  ! precomputation stage that depends on the spatial grid whose size 
-  ! may change after fft_init
-  ! ---------------------------------------------------------
+  !> Some fft-libary (only NFFT for the moment) needs an additional 
+  !! precomputation stage that depends on the spatial grid whose size 
+  !! may change after fft_init
   subroutine fft_init_stage1(this, XX)
     type(fft_t),       intent(inout) :: this     !< FFT data type
-    FLOAT, optional,   intent(in)    :: XX(:,:)  !< NFFT spatial nodes on x-axis XX(:,1), y-axis XX(:,2),
-                                                 !! and z-axis XX(:,3) 
+    !> NFFT spatial nodes on x-axis XX(:,1), y-axis XX(:,2),
+    !! and z-axis XX(:,3) 
+    FLOAT, optional,   intent(in)    :: XX(:,:)  
  
     integer :: slot
 

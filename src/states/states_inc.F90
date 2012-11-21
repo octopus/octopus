@@ -20,8 +20,8 @@
 subroutine X(states_get_state2)(st, mesh, ist, iqn, psi)
   type(states_t), intent(in)    :: st
   type(mesh_t),   intent(in)    :: mesh
-  integer,        intent(in)    :: ist
-  integer,        intent(in)    :: iqn
+  integer,        intent(in)    :: ist       !< current state
+  integer,        intent(in)    :: iqn       !< current k-point
   R_TYPE,         intent(out)   :: psi(:, :)
   
   integer :: idim
@@ -40,9 +40,9 @@ end subroutine X(states_get_state2)
 subroutine X(states_get_state1)(st, mesh, idim, ist, iqn, psi)
   type(states_t), intent(in)    :: st
   type(mesh_t),   intent(in)    :: mesh
-  integer,        intent(in)    :: idim
-  integer,        intent(in)    :: ist
-  integer,        intent(in)    :: iqn
+  integer,        intent(in)    :: idim   !< current dimension
+  integer,        intent(in)    :: ist    !< current state
+  integer,        intent(in)    :: iqn    !< current k-point
   R_TYPE,         intent(out)   :: psi(:)
 
   PUSH_SUB(X(states_get_state1))
@@ -57,8 +57,8 @@ end subroutine X(states_get_state1)
 subroutine X(states_set_state2)(st, mesh, ist, iqn, psi)
   type(states_t), intent(inout) :: st
   type(mesh_t),   intent(in)    :: mesh
-  integer,        intent(in)    :: ist
-  integer,        intent(in)    :: iqn
+  integer,        intent(in)    :: ist        !< current dimension
+  integer,        intent(in)    :: iqn        !< current k-point
   R_TYPE,         intent(in)    :: psi(:, :)
   
   integer :: idim
@@ -77,9 +77,9 @@ end subroutine X(states_set_state2)
 subroutine X(states_set_state1)(st, mesh, idim, ist, iqn, psi)
   type(states_t), intent(inout) :: st
   type(mesh_t),   intent(in)    :: mesh
-  integer,        intent(in)    :: idim
-  integer,        intent(in)    :: ist
-  integer,        intent(in)    :: iqn
+  integer,        intent(in)    :: idim   !< current dimension
+  integer,        intent(in)    :: ist    !< current state
+  integer,        intent(in)    :: iqn    !< current k-point
   R_TYPE,         intent(in)    :: psi(:)
 
   PUSH_SUB(X(states_set_state1))
