@@ -64,6 +64,7 @@ contains
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
+
     type(scf_t)             :: scfv
     type(grid_t),   pointer :: gr    ! shortcuts
     type(states_t), pointer :: st
@@ -95,7 +96,7 @@ contains
     ! set up Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup (sys, hm)
+    call system_h_setup (sys, hm, calc_eigenval = .false.) ! we read them from restart
 
     call io_mkdir(trim(tmpdir)//EM_RESP_FD_DIR) ! restart
 

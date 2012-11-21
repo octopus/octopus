@@ -1,5 +1,6 @@
 CalculationMode = em_resp
 Units = eV_Angstrom
+FromScratch = yes
 
 ResponseMethod = finite_differences
 EMStaticElectricField = 0.01
