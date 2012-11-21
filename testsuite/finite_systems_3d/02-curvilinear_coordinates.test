@@ -2,11 +2,13 @@
 # $Id$
 
 Test       : Curvilinear Coordinates
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : short-run
 Enabled    : Yes
 
-
+#Processors : 1
+# curvilinear not compatible with domain parallelization
+# there is only one state, so we cannot use state parallelization
 Input: 02-curvilinear_coordinates.01-gygi.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.86805481
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.576032

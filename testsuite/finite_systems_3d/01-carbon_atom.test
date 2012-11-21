@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : Carbon
-Programs   : octopus
+Programs   : octopus; octopus_mpi
 TestGroups : long-run
 Enabled    : Yes
 
@@ -39,6 +39,8 @@ match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ;  -3.683360
 match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;   0.000000
 
 #The same using double grid
+Processors: 1
+# double grid not implemented in parallel
 Input: 01-carbon_atom.03-ground_state_double_grid.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -146.66216092
 match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -14.418842
