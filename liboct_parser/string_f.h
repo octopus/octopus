@@ -60,23 +60,23 @@
 #else
 
 #define to_c_str(f, c, l) {		   \
-  int i, ll;                               \
+  int ii, ll;                              \
   ll = (int)l;                             \
   for(ll--; ll>=0; ll--)                   \
     if(f[ll] != ' ') break;                \
   ll++;                                    \
   c = (char *)malloc((ll+1)*sizeof(char)); \
-  for(i=0; i<ll; i++) c[i] = f[i];         \
-  c[i] = '\0';                             \
+  for(ii=0; ii<ll; ii++) c[ii] = f[ii];    \
+  c[ii] = '\0';                            \
 }
 
 #define to_f_str(c, f, l) {                \
-  int i, ll;                               \
+  int ii, ll;                              \
   ll = (int)l;                             \
-  for(i=0; i<ll && c[i]!='\0'; i++)        \
-    f[i] = c[i];                           \
-  for(; i<ll; i++)                         \
-    f[i] = ' ';                            \
+  for(ii=0; ii<ll && c[ii]!='\0'; ii++)    \
+    f[ii] = c[ii];                         \
+  for(; ii<ll; ii++)                       \
+    f[ii] = ' ';                           \
 }
 
 
