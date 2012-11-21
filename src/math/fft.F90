@@ -84,7 +84,7 @@ module fft_m
     zfft_backward1
 
 
-  ! global constants
+  !> global constants
   integer, public, parameter :: &
        FFT_NONE    = 0,         &
        FFT_REAL    = 1,         &
@@ -117,14 +117,13 @@ module fft_m
     integer(ptrdiff_t_kind) :: pfft_planf !< PFFT plan for forward transform
     integer(ptrdiff_t_kind) :: pfft_planb !< PFFT plan for backward transform
 
-    ! The next arrays have to be stored here and allocated in the initialization routine because
-    ! PFFT 
+    !> The following arrays have to be stored here and allocated in the initialization routine because of PFFT 
     FLOAT, pointer :: drs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
     CMPLX, pointer :: zrs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
     CMPLX, pointer ::  fs_data(:,:,:) !< array used to store the function in fourier space that is passed to PFFT
     logical        :: cl_use_real
 #ifdef HAVE_CLAMDFFT
-    ! data for clAmdFft
+    !> data for clAmdFft
     type(clAmdFftPlanHandle) :: cl_plan
 #endif
 #ifdef HAVE_NFFT
@@ -611,7 +610,7 @@ contains
   end subroutine fft_init
   
   ! ---------------------------------------------------------
-  !> Some fft-libary (only NFFT for the moment) needs an additional 
+  !> Some fft-libraries (only NFFT for the moment) need an additional 
   !! precomputation stage that depends on the spatial grid whose size 
   !! may change after fft_init
   subroutine fft_init_stage1(this, XX)

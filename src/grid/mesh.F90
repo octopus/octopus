@@ -508,7 +508,7 @@ contains
 
   ! -----------------------------------------------------------------------
   !> This function reads the fingerprint of a mesh written in
-  !! filename. If the mesh are equal (same fingerprint) return values
+  !! filename. If the meshes are equal (same fingerprint) return values
   !! are 0, otherwise it returns the size of the mesh stored. If the
   !! fingerprint cannot be read, it returns -1.
 
