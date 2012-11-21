@@ -17,7 +17,8 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -87.55795211
 
 Input      : 02-neon_mpi.02-ground_state-kli_par_domains.inp
 Precision  : 0.0002
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -61.0380
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -61.03815
+# serial g95 has a disturbingly large run-to-run variation of this number
 
 
 # now we start a td calculation parallel in states on 5 processors
