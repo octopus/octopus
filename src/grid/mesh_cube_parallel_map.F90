@@ -77,10 +77,11 @@ contains
     integer, allocatable :: cube_part(:)
     integer, pointer :: mf_order(:), cf_order(:)
     type(dimensions_t), allocatable :: part(:)
+    type(profile_t), save :: prof
 
     integer :: last_found_proc
     PUSH_SUB(mesh_cube_parallel_map_init)
-
+    call profiling_in(prof,"MC_PAR_INIT")
     !Get the cube partition on the mesh
     SAFE_ALLOCATE(part(1:cube%mpi_grp%size))
     call cube_partition(cube, part)
@@ -166,7 +167,8 @@ contains
     SAFE_DEALLOCATE_P(cf_order)
 
     SAFE_DEALLOCATE_A(cube_part)
-
+    
+    call profiling_out(prof)
     POP_SUB(mesh_cube_parallel_map_init)
   end subroutine mesh_cube_parallel_map_init
 

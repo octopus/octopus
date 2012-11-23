@@ -73,8 +73,10 @@ contains
   subroutine system_init(sys)
     type(system_t), intent(out) :: sys
 
+    type(profile_t), save :: prof
     PUSH_SUB(system_init)
-
+    call profiling_in(prof,"SYSTEM_INIT")
+    
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
 
@@ -114,6 +116,7 @@ contains
     !print the mesh information if it is required
     call print_r()
 
+    call profiling_out(prof)
     POP_SUB(system_init)
 
   contains

@@ -65,9 +65,9 @@ contains
     type(partition_transfer_t), intent(out) :: this
     integer,                    intent(in)  :: np 
     type(mpi_grp_t), target,    intent(in)  :: mpi_grp_in
-    integer,                    intent(in)  :: part_in(:)
+    integer,                    intent(in)  :: part_in(:)  !< point -> partition
     type(mpi_grp_t), target,    intent(in)  :: mpi_grp_out
-    integer,                    intent(in)  :: part_out(:)
+    integer,                    intent(in)  :: part_out(:) !< point -> partition
     integer,                    intent(out) :: nsend
     integer,                    intent(out) :: nrec
     integer, pointer,           intent(out) :: order_in(:)
@@ -78,9 +78,11 @@ contains
     type(iihash_t) :: map_out, map_in
     type(mpi_grp_t), pointer :: grp1, grp2
     integer, allocatable :: partno_list(:,:), part_map(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(partition_transfer_init)
-
+   call profiling_in(prof,"P_TRANS_INIT")
+   
     ! In order to avoid unnecessary communications, all the data
     ! transfer is going to be made from the point of view of the group
     ! that has more processes.
@@ -177,12 +179,8 @@ contains
 
     ! Total number of points to be sent
     nsend = 0
-    do irec = 1, grp1%size
-      opart = iihash_lookup(map_out, irec, found)
-      if (.not. found) cycle
-      nsend = nsend + count(part_in(1:np) == mpi_grp_in%rank + 1 .and. part_out(1:np) == opart)
-    end do
-
+    nsend = nsend + count(part_in(1:np) == mpi_grp_in%rank + 1)
+  
     ! List of points to be send
     SAFE_ALLOCATE(this%sdispls(1:grp1%size))
     SAFE_ALLOCATE(this%scounts(1:grp1%size))
@@ -210,12 +208,7 @@ contains
 
     ! Total number of points to be received
     nrec = 0
-    do isend = 1, grp1%size
-      ipart = iihash_lookup(map_in, isend, found)
-      if (.not. found) cycle
-      nrec = nrec + count(part_in(1:np) == ipart .and. part_out(1:np) ==  mpi_grp_out%rank + 1)
-    end do
-
+    nrec = nrec + count(part_out(1:np) == mpi_grp_out%rank + 1)
     ! Displacements and number of points to be received 
     SAFE_ALLOCATE(this%rdispls(1:grp1%size))
     SAFE_ALLOCATE(this%rcounts(1:grp1%size))
@@ -246,6 +239,7 @@ contains
     call iihash_end(map_out)
     call iihash_end(map_in)
 
+    call profiling_out(prof)
     POP_SUB(partition_transfer_init)
   end subroutine partition_transfer_init
 
