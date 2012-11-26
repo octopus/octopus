@@ -179,8 +179,12 @@ contains
 
     ! Total number of points to be sent
     nsend = 0
-    nsend = nsend + count(part_in(1:np) == mpi_grp_in%rank + 1)
-  
+    do irec = 1, grp1%size
+      opart = iihash_lookup(map_out, irec, found)
+      if (.not. found) cycle
+      nsend = nsend + count(part_in(1:np) == mpi_grp_in%rank + 1 .and. part_out(1:np) == opart)
+    end do
+
     ! List of points to be send
     SAFE_ALLOCATE(this%sdispls(1:grp1%size))
     SAFE_ALLOCATE(this%scounts(1:grp1%size))
@@ -208,7 +212,12 @@ contains
 
     ! Total number of points to be received
     nrec = 0
-    nrec = nrec + count(part_out(1:np) == mpi_grp_out%rank + 1)
+    do isend = 1, grp1%size
+      ipart = iihash_lookup(map_in, isend, found)
+      if (.not. found) cycle
+      nrec = nrec + count(part_in(1:np) == ipart .and. part_out(1:np) ==  mpi_grp_out%rank + 1)
+    end do
+
     ! Displacements and number of points to be received 
     SAFE_ALLOCATE(this%rdispls(1:grp1%size))
     SAFE_ALLOCATE(this%rcounts(1:grp1%size))
