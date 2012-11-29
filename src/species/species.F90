@@ -287,7 +287,7 @@ contains
     !%Option spec_pspio  110
     !% (experimental) PSPIO library: the pseudopotential will be read from a file,
     !% either in the working directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> 
-    !% directory, using the PSPIO library
+    !% directory, using the PSPIO library.
     !% Column 4 is the atomic number. Columns 5 and 6 are 
     !% ignored, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
