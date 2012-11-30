@@ -270,7 +270,7 @@ contains
 
 #ifdef HAVE_MPI
     !we need a barrier to wait for the directory to be created, only if we are in parallel
-    if(st%dom_st_kpt_mpi_grp%comm > -1) call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
+    if(st%dom_st_kpt_mpi_grp%comm > 0) call MPI_Barrier(st%dom_st_kpt_mpi_grp%comm, mpi_err)
 #endif
 
     if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
