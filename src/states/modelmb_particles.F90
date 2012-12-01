@@ -15,12 +15,12 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!
-!  general module for modelmb particles (e.g. 4 electrons in 1D equiv to
-!  1 in 4D). Also calculate different densities on request.
-!
+!! $Id: states_dim.F90 9343 2012-09-05 23:07:49Z dstrubbe $
+
 #include "global.h"
 
+!>  general module for modelmb particles (e.g. 4 electrons in 1D equiv to
+!!  1 in 4D). Also calculate different densities on request.
 module modelmb_particles_m
 
   use datasets_m
@@ -44,28 +44,28 @@ module modelmb_particles_m
             modelmb_copy_masses,         &
             modelmb_particle_t
 
-!==============================================================
-!  container type for input vars concerning modelmb particles
-!==============================================================
+!>==============================================================
+!!  container type for input vars concerning modelmb particles
+!!==============================================================
 type modelmb_particle_t
-   integer :: ndim              ! dimensionality of modelmb space each
-                                         !  particle lives in
+   integer :: ndim              !< dimensionality of modelmb space each
+                                         !!  particle lives in
 
-   integer :: ntype_of_particle ! number of different types of particles
-                                        !  modelmb in MAX_DIM dimensional space
-   integer :: max_particles_per_type    ! max number of different particle
+   integer :: ntype_of_particle !< number of different types of particles
+                                        !!  modelmb in MAX_DIM dimensional space
+   integer :: max_particles_per_type    !< max number of different particle
 
-   integer :: nparticle         ! number of particles 
+   integer :: nparticle         !< number of particles 
 
    integer :: ndensities_to_calculate
 
-   !   %block describe_particles_modelmb
-   !   label1(char) | particletype1(integer) | mass1 | charge1 | fermion or boson or anyon
-   !   label2(char) | particletype2(integer) | mass2 | charge2 | fermion or boson or anyon
-   !   label3(char) | particletype3(integer) | mass3 | charge3 | fermion or boson or anyon
-   !   ...
-   !   nparticle_modelmb lines (fixed)
-   !   %
+   !>   %block describe_particles_modelmb
+   !!   label1(char) | particletype1(integer) | mass1 | charge1 | fermion or boson or anyon
+   !!   label2(char) | particletype2(integer) | mass2 | charge2 | fermion or boson or anyon
+   !!   label3(char) | particletype3(integer) | mass3 | charge3 | fermion or boson or anyon
+   !!   ...
+   !!   nparticle_modelmb lines (fixed)
+   !!   %
    character(80), pointer :: labels_particles(:)
 
    integer, pointer :: particletype(:)
@@ -73,20 +73,20 @@ type modelmb_particle_t
    integer, pointer :: particles_of_type(:,:)
    integer, pointer :: bosonfermion(:)
 
-   integer, pointer :: exchange_symmetry(:,:,:) ! (max_particles_per_type**2, ntype_of_particle)
+   integer, pointer :: exchange_symmetry(:,:,:) !< (max_particles_per_type**2, ntype_of_particle)
 
    FLOAT, pointer :: mass_particle(:)
 
    FLOAT, pointer :: charge_particle(:)
 
 
-   !   %block densitiestocalc
-   !   label1 |  particletokeep1(integer in [1:nparticle])
-   !   label2 |  particletokeep2(integer)
-   !   label3 |  particletokeep3(integer)
-   !   ...
-   !   however many lines wanted (up to nparticle_modelmb)
-   !   %
+   !>   %block densitiestocalc
+   !!   label1 |  particletokeep1(integer in [1:nparticle])
+   !!   label2 |  particletokeep2(integer)
+   !!   label3 |  particletokeep3(integer)
+   !!   ...
+   !!   however many lines wanted (up to nparticle_modelmb)
+   !!   %
    character(80), pointer :: labels_densities(:)
 
    integer, pointer :: particle_kept_densities(:)
@@ -116,9 +116,9 @@ subroutine modelmb_particles_nullify(this)
 end subroutine modelmb_particles_nullify
 
 
-!==============================================================
-!  initialization function for modelmb particles information
-!==============================================================
+!>==============================================================
+!!  initialization function for modelmb particles information
+!!==============================================================
 subroutine modelmb_particles_init (this,gr)
   type(modelmb_particle_t), intent(inout) :: this
   type(grid_t),             intent(in)    :: gr
@@ -323,9 +323,9 @@ subroutine modelmb_particles_copy(modelmb_out, modelmb_in)
 
 end subroutine modelmb_particles_copy
 
-!==============================================================
-!  Copy masses for particles to the derivative object
-!==============================================================
+!>==============================================================
+!!  Copy masses for particles to the derivative object
+!!==============================================================
 subroutine modelmb_copy_masses (this,masses)
   type(modelmb_particle_t), intent(in)    :: this
   FLOAT,                    intent(inout) :: masses(MAX_DIM)
@@ -347,9 +347,7 @@ subroutine modelmb_copy_masses (this,masses)
 
 end subroutine modelmb_copy_masses
 
-
 end module modelmb_particles_m
-
 
 !! Local Variables:
 !! mode: f90
