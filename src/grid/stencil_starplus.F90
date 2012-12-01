@@ -210,7 +210,7 @@ contains
 
     integer :: i, n, j
 
-    PUSH_SUB(stencil_star_get_grad)
+    PUSH_SUB(stencil_starplus_get_grad)
 
     call stencil_allocate(this, stencil_starplus_size_grad(dim, order))
 
@@ -229,7 +229,7 @@ contains
 
     call stencil_init_center(this)
 
-    POP_SUB(stencil_star_get_grad)
+    POP_SUB(stencil_starplus_get_grad)
   end subroutine stencil_starplus_get_grad
 
 

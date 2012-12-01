@@ -57,11 +57,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine stencil_variational_coeff_lapl(dim, order, h, lapl, alpha)
-    integer,                intent(in)    :: dim
-    integer,                intent(in)    :: order
-    FLOAT,                  intent(in)    :: h(:)   ! h(dim)
+    integer,             intent(in)    :: dim
+    integer,             intent(in)    :: order
+    FLOAT,               intent(in)    :: h(:)   !< h(dim)
     type(nl_operator_t), intent(inout) :: lapl
-    FLOAT, optional,        intent(in)    :: alpha
+    FLOAT, optional,     intent(in)    :: alpha
 
     integer :: i, j, k
     FLOAT :: alpha_, kmax

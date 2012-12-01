@@ -48,12 +48,15 @@ contains
     type(stencil_t), intent(out) :: this
     integer,         intent(in)  :: size
 
+    PUSH_SUB(stencil_allocate)
+
     this%size = size
 
     SAFE_ALLOCATE(this%points(1:MAX_DIM, 1:size))
 
     this%points = 0
 
+    POP_SUB(stencil_allocate)
   end subroutine stencil_allocate
 
   !-------------------------------------------------------  
@@ -61,10 +64,13 @@ contains
     type(stencil_t), intent(in)  :: input
     type(stencil_t), intent(out) :: output
     
+    PUSH_SUB(stencil_copy)
+
     call stencil_allocate(output, input%size)
     output%points(1:MAX_DIM, 1:output%size) = input%points(1:MAX_DIM, 1:output%size)
     output%center = input%center
 
+    POP_SUB(stencil_copy)
   end subroutine stencil_copy
 
 
@@ -72,7 +78,11 @@ contains
   subroutine stencil_end(this)
     type(stencil_t), intent(inout) :: this
 
-    SAFE_DEALLOCATE_P(this%points)   
+    PUSH_SUB(stencil_end)
+
+    SAFE_DEALLOCATE_P(this%points)
+
+    POP_SUB(stencil_end)
   end subroutine stencil_end
 
   
@@ -85,6 +95,8 @@ contains
 
     integer :: idir, ii, jj, nstu
     logical :: not_in_st1
+
+    PUSH_SUB(stencil_union)
 
     call stencil_allocate(stu, st1%size + st2%size)
 
@@ -118,6 +130,7 @@ contains
 
     call stencil_init_center(stu)
 
+    POP_SUB(stencil_union)
   end subroutine stencil_union
 
 
@@ -127,12 +140,15 @@ contains
 
     integer :: ii
 
+    PUSH_SUB(stencil_init_center)
+
     this%center = -1
 
     do ii = 1, this%size
       if(all(this%points(1:MAX_DIM, ii) == 0)) this%center = ii
     end do
     
+    POP_SUB(stencil_init_center)
   end subroutine stencil_init_center
 
 end module stencil_m
