@@ -1,5 +1,21 @@
-
-
+!! Copyright (C) 2009 M. J. Verstraete
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: loct_math.F90 9483 2012-10-05 16:19:43Z dstrubbe $
 
 #include "global.h"
 
@@ -26,16 +42,12 @@ module permutations_m
    integer :: nn, npermutations, npairs
    integer, pointer :: allpermutations(:,:)
    integer, pointer :: permsign(:)
-
   end type permutations_t 
 
-
-
-  contains
+contains
 
   subroutine permutations_init (nn, this)
-
-    integer, intent(in)                 :: nn
+    integer,              intent(in)    :: nn
     type(permutations_t), intent(inout) :: this
 
     integer :: i1, order, oldperm, iperm, newpos
@@ -73,7 +85,9 @@ module permutations_m
 
   subroutine permutations_write (this)
     type(permutations_t), intent(inout) :: this
+
     integer :: iperm
+
     PUSH_SUB(permutations_write)
     
     do iperm = 1, this%npermutations
@@ -87,9 +101,12 @@ module permutations_m
 
   subroutine permutations_nullify (this)
     type(permutations_t), intent(inout) :: this
+
     PUSH_SUB(permutations_nullify)
+
     nullify(this%allpermutations)
     nullify(this%permsign)
+
     POP_SUB(permutations_nullify)
   end subroutine permutations_nullify
 
@@ -104,6 +121,7 @@ module permutations_m
 
     call loct_pointer_copy(perm_out%allpermutations,perm_in%allpermutations)
     call loct_pointer_copy(perm_out%permsign,perm_in%permsign)
+
     POP_SUB(permutations_copy)
   end subroutine permutations_copy
 
@@ -111,9 +129,16 @@ module permutations_m
     type(permutations_t), intent(inout) :: this
 
     PUSH_SUB(permutations_end)
+
     SAFE_DEALLOCATE_P (this%allpermutations)
     SAFE_DEALLOCATE_P (this%permsign)
+
     POP_SUB(permutations_end)
   end subroutine permutations_end
 
 end module permutations_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
