@@ -49,26 +49,26 @@
 
 /* Mathematical Functions */
 double FC_FUNC_(oct_asinh, OCT_ASINH)
-		 (double *x)
+     (double *x)
 {
   return gsl_asinh(*x);
 }
 
 /* Special Functions */
 double FC_FUNC_(oct_gamma, OCT_GAMMA)
-		 (double *x)
+     (double *x)
 {
   return gsl_sf_gamma(*x);
 }
 
 double FC_FUNC_(oct_hypergeometric, OCT_HYPERGEOMETRIC)
-                 (double *a, double*b, double *x)
+     (double *a, double*b, double *x)
 {
   return gsl_sf_hyperg_U(*a, *b, *x);
 }
 
 double FC_FUNC_(oct_incomplete_gamma, OCT_INCOMPLETE_GAMMA)
-		 (double *a, double *x)
+     (double *a, double *x)
 {
   return gsl_sf_gamma_inc_Q(*a, *x);
 }
@@ -126,27 +126,27 @@ double FC_FUNC_(oct_bessel_k1, OCT_BESSEL_K1)
 }
 
 double FC_FUNC_(oct_erfc, OCT_ERFC)
-		 (double *x)
+     (double *x)
 {
   /* avoid floating invalids in the asymptotic limit */
   if(*x >  20.0) return  0.0;
-	if(*x < -20.0) return  2.0;
-	/* otherwise call gsl */
-	return gsl_sf_erfc(*x);
+  if(*x < -20.0) return  2.0;
+  /* otherwise call gsl */
+  return gsl_sf_erfc(*x);
 }
 
 double FC_FUNC_(oct_erf, OCT_ERF)
-		 (double *x)
+     (double *x)
 {
   /* avoid floating invalids in the asymptotic limit */
   if(*x >  20.0) return  1.0;
-	if(*x < -20.0) return -1.0;
-	/* otherwise call gsl */
-	return gsl_sf_erf(*x);
+  if(*x < -20.0) return -1.0;
+  /* otherwise call gsl */
+  return gsl_sf_erf(*x);
 }
 
 double FC_FUNC_(oct_legendre_sphplm, OCT_LEGENDRE_SPHPLM)
-		 (int *l, int *m, double *x)
+     (int *l, int *m, double *x)
 {
   return gsl_sf_legendre_sphPlm(*l, *m, *x);
 }
@@ -184,7 +184,7 @@ void FC_FUNC_(oct_ran_end, OCT_RAN_END)
 
 /* Random Number Distributions */ 
 double FC_FUNC_(oct_ran_gaussian, OCT_RAN_GAUSSIAN)
-		(gsl_rng **r, double *sigma)
+     (gsl_rng **r, double *sigma)
 {
   return gsl_ran_gaussian(*r, *sigma);
 }
@@ -199,30 +199,30 @@ double FC_FUNC_(oct_ran_flat, OCT_RAN_FLAT)
 
 /* Interpolation */
 void FC_FUNC_(oct_spline_end, OCT_SPLINE_END)
-		 (void **spl, void **acc)
+     (void **spl, void **acc)
 {
-	gsl_spline_free((gsl_spline *)(*spl));
-	gsl_interp_accel_free((gsl_interp_accel *)(*acc));
+  gsl_spline_free((gsl_spline *)(*spl));
+  gsl_interp_accel_free((gsl_interp_accel *)(*acc));
 }
 
 void FC_FUNC_(oct_spline_fit, OCT_SPLINE_FIT)
 		 (int *nrc, double *x, double *y, void **spl, void **acc)
 {
-	*acc = (void *)gsl_interp_accel_alloc();
-	*spl = (void *)gsl_spline_alloc(gsl_interp_cspline, *nrc);	
-	gsl_spline_init((gsl_spline *)(*spl), x, y, *nrc);
-	fflush(stdout);
+  *acc = (void *)gsl_interp_accel_alloc();
+  *spl = (void *)gsl_spline_alloc(gsl_interp_cspline, *nrc);	
+  gsl_spline_init((gsl_spline *)(*spl), x, y, *nrc);
+  fflush(stdout);
 }
 
 double FC_FUNC_(oct_spline_eval, OCT_SPLINE_EVAL)
-		 (double *x, void **spl, void **acc)
+     (double *x, void **spl, void **acc)
 {
-	return gsl_spline_eval((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
+  return gsl_spline_eval((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
 }
 
 
 void FC_FUNC_(oct_spline_eval_array, OCT_SPLINE_EVAL_ARRAY)
-  (int * nn, double *xf, void **spl, void **acc)
+     (int * nn, double *xf, void **spl, void **acc)
 {
   int ii;
   for(ii = 0; ii < *nn; ii++){
@@ -231,7 +231,7 @@ void FC_FUNC_(oct_spline_eval_array, OCT_SPLINE_EVAL_ARRAY)
 }
 
 void FC_FUNC_(oct_spline_eval_array4, OCT_SPLINE_EVAL_ARRAY)
-  (int * nn, float *xf, void **spl, void **acc)
+     (int * nn, float *xf, void **spl, void **acc)
 {
   int ii;
   for(ii = 0; ii < *nn; ii++){
@@ -242,9 +242,9 @@ void FC_FUNC_(oct_spline_eval_array4, OCT_SPLINE_EVAL_ARRAY)
 /* This function returns the number of points with which a spline
 	 was constructed (the size component of the gsl_spline struct). */
 int FC_FUNC_(oct_spline_npoints, OCT_SPLINE_NPOINTS)
-		 (void **spl)
+     (void **spl)
 {
-	return (int)((gsl_spline *)(*spl))->size;
+  return (int)((gsl_spline *)(*spl))->size;
 }
 
 /* This function places in the x array the x values of a given spline spl*/ 
@@ -255,7 +255,7 @@ void FC_FUNC_(oct_spline_x, OCT_SPLINE_X)
 	
   size = (int)((gsl_spline *)(*spl))->size;
   for(i=0; i<size; i++)
-		x[i] = ((gsl_spline *)(*spl))->x[i];
+    x[i] = ((gsl_spline *)(*spl))->x[i];
 }
 
 /* This function places in the y array the y values of a given spline spl*/ 
@@ -266,7 +266,7 @@ void FC_FUNC_(oct_spline_y, OCT_SPLINE_Y)
 	
   size = (int)((gsl_spline *)(*spl))->size;
   for(i=0; i<size; i++)
-		y[i] = ((gsl_spline *)(*spl))->y[i];
+    y[i] = ((gsl_spline *)(*spl))->y[i];
 }
 
 /* Returns the integral of the spline stored in spl, between a and b */
