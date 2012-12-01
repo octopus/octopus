@@ -19,7 +19,9 @@
 
 ! ---------------------------------------------------------
 subroutine SUBNAME(loct_pointer_copy_1)(o, i)
-  TYPE, pointer :: o(:), i(:)
+  TYPE, pointer, intent(out) :: o(:)
+  TYPE, pointer, intent(in)  :: i(:)
+
   integer :: nl1, nu1
   integer :: i1
 
@@ -37,7 +39,9 @@ end subroutine SUBNAME(loct_pointer_copy_1)
 
 ! ---------------------------------------------------------
 subroutine SUBNAME(loct_pointer_copy_2)(o, i)
-  TYPE, pointer :: o(:, :), i(:, :)
+  TYPE, pointer, intent(out) :: o(:, :)
+  TYPE, pointer, intent(in)  :: i(:, :)
+
   integer :: nl1, nu1, nl2, nu2
   integer :: i1, i2
 
@@ -57,7 +61,9 @@ end subroutine SUBNAME(loct_pointer_copy_2)
 
 ! ---------------------------------------------------------
 subroutine SUBNAME(loct_pointer_copy_3)(o, i)
-  TYPE, pointer :: o(:, :, :), i(:, :, :)
+  TYPE, pointer, intent(out) :: o(:, :, :)
+  TYPE, pointer, intent(in)  :: i(:, :, :)
+
   integer :: nl1, nu1, nl2, nu2, nl3, nu3
   integer :: i1, i2, i3
 
@@ -79,7 +85,9 @@ end subroutine SUBNAME(loct_pointer_copy_3)
 
 ! ---------------------------------------------------------
 subroutine SUBNAME(loct_pointer_copy_4)(o, i)
-  TYPE, pointer :: o(:, :, :, :), i(:, :, :, :)
+  TYPE, pointer, intent(out) :: o(:, :, :, :)
+  TYPE, pointer, intent(in)  :: i(:, :, :, :)
+
   integer :: nl1, nu1, nl2, nu2, nl3, nu3, nl4, nu4
   integer :: i1, i2, i3, i4
   

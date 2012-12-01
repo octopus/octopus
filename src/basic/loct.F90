@@ -23,7 +23,7 @@ module loct_m
 
   implicit none
 
-  ! Define which routines can be seen from the outside
+  !> Define which routines can be seen from the outside
   private
   public ::                  &
     loct_clock,              &
@@ -212,8 +212,8 @@ module loct_m
     subroutine oct_gdimage_get_pixel_rgb(im, x, y, r, g, b)
       use c_pointer_m
       type(c_ptr), intent(in)  :: im
-      integer,   intent(in)  :: x, y
-      integer,   intent(out) :: r, g, b
+      integer,     intent(in)  :: x, y
+      integer,     intent(out) :: r, g, b
     end subroutine oct_gdimage_get_pixel_rgb
   end interface loct_gdimage_get_pixel_rgb
 #endif
