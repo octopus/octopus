@@ -25,15 +25,18 @@ subroutine SUBNAME(loct_pointer_copy_1)(o, i)
   integer :: nl1, nu1
   integer :: i1
 
+  PUSH_SUB(SUBNAME(loct_pointer_copy_1))
+
   if(associated(i)) then
     nl1 = lbound(i, 1)
     nu1 = ubound(i, 1)
-    allocate(o(nl1:nu1))
+    SAFE_ALLOCATE(o(nl1:nu1))
     forall (i1 = nl1:nu1) o(i1) = i(i1)
   else
     nullify(o)
   end if
 
+  POP_SUB(SUBNAME(loct_pointer_copy_1))
 end subroutine SUBNAME(loct_pointer_copy_1)
 
 
@@ -45,17 +48,20 @@ subroutine SUBNAME(loct_pointer_copy_2)(o, i)
   integer :: nl1, nu1, nl2, nu2
   integer :: i1, i2
 
+  PUSH_SUB(SUBNAME(loct_pointer_copy_2))
+
   if(associated(i)) then
     nl1 = lbound(i, 1)
     nu1 = ubound(i, 1)
     nl2 = lbound(i, 2)
     nu2 = ubound(i, 2)
-    allocate(o(nl1:nu1, nl2:nu2))
+    SAFE_ALLOCATE(o(nl1:nu1, nl2:nu2))
     forall (i1 = nl1:nu1, i2 = nl2:nu2) o(i1, i2) = i(i1, i2)
   else
     nullify(o)
   end if
 
+  POP_SUB(SUBNAME(loct_pointer_copy_2))
 end subroutine SUBNAME(loct_pointer_copy_2)
 
 
@@ -67,6 +73,8 @@ subroutine SUBNAME(loct_pointer_copy_3)(o, i)
   integer :: nl1, nu1, nl2, nu2, nl3, nu3
   integer :: i1, i2, i3
 
+  PUSH_SUB(SUBNAME(loct_pointer_copy_3))
+
   if(associated(i)) then
     nl1 = lbound(i, 1)
     nu1 = ubound(i, 1)
@@ -74,12 +82,13 @@ subroutine SUBNAME(loct_pointer_copy_3)(o, i)
     nu2 = ubound(i, 2)
     nl3 = lbound(i, 3)
     nu3 = ubound(i, 3)
-    allocate(o(nl1:nu1, nl2:nu2, nl3:nu3))
+    SAFE_ALLOCATE(o(nl1:nu1, nl2:nu2, nl3:nu3))
     forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3) o(i1, i2, i3) = i(i1, i2, i3)
   else
     nullify(o)
   end if
 
+  POP_SUB(SUBNAME(loct_pointer_copy_3))
 end subroutine SUBNAME(loct_pointer_copy_3)
 
 
@@ -91,6 +100,8 @@ subroutine SUBNAME(loct_pointer_copy_4)(o, i)
   integer :: nl1, nu1, nl2, nu2, nl3, nu3, nl4, nu4
   integer :: i1, i2, i3, i4
   
+  PUSH_SUB(SUBNAME(loct_pointer_copy_4))
+
   if(associated(i)) then
     nl1 = lbound(i, 1)
     nu1 = ubound(i, 1)
@@ -100,12 +111,13 @@ subroutine SUBNAME(loct_pointer_copy_4)(o, i)
     nu3 = ubound(i, 3)
     nl4 = lbound(i, 4)
     nu4 = ubound(i, 4)
-    allocate(o(nl1:nu1, nl2:nu2, nl3:nu3, nl4:nu4))
+    SAFE_ALLOCATE(o(nl1:nu1, nl2:nu2, nl3:nu3, nl4:nu4))
     forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3, i4 = nl4:nu4) o(i1, i2, i3, i4) = i(i1, i2, i3, i4)
   else
     nullify(o)
   end if
 
+  POP_SUB(SUBNAME(loct_pointer_copy_4))
 end subroutine SUBNAME(loct_pointer_copy_4)
 
 !! Local Variables:

@@ -106,7 +106,7 @@ c_pointer.o : c_pointer.F90
 varinfo.o : varinfo.F90 string.o c_pointer.o
 string.o : string.F90 c_pointer.o
 loct.o : loct.F90 c_pointer.o
-loct_pointer.o : loct_pointer.F90 loct_pointer_inc.F90
+loct_pointer.o : loct_pointer.F90 loct_pointer_inc.F90 global.o messages.o
 global.o : global.F90 mpi.o loct.o hardware.o varinfo.o Makefile
 unit.o : unit.F90 global.o
 parser.o : parser.F90 mpi.o loct.o global.o c_pointer.o unit.o
