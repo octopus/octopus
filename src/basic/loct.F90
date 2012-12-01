@@ -42,8 +42,7 @@ module loct_m
     loct_printRecipe,        &
     loct_strerror,           &
     get_memory_usage,        &
-    loct_exit_failure,       &
-    loct_pointer_copy
+    loct_exit_failure
 
 #if defined(HAVE_GDLIB)
   public ::                    &
@@ -52,38 +51,6 @@ module loct_m
     loct_gdimage_sy,           &
     loct_gdimage_get_pixel_rgb
 #endif
-
-  interface loct_pointer_copy
-    module procedure sloct_pointer_copy_1
-    module procedure sloct_pointer_copy_2
-    module procedure sloct_pointer_copy_3
-    module procedure sloct_pointer_copy_4
-    module procedure dloct_pointer_copy_1
-    module procedure dloct_pointer_copy_2
-    module procedure dloct_pointer_copy_3
-    module procedure dloct_pointer_copy_4
-    module procedure cloct_pointer_copy_1
-    module procedure cloct_pointer_copy_2
-    module procedure cloct_pointer_copy_3
-    module procedure cloct_pointer_copy_4
-    module procedure zloct_pointer_copy_1
-    module procedure zloct_pointer_copy_2
-    module procedure zloct_pointer_copy_3
-    module procedure zloct_pointer_copy_4
-    module procedure iloct_pointer_copy_1
-    module procedure iloct_pointer_copy_2
-    module procedure iloct_pointer_copy_3
-    module procedure iloct_pointer_copy_4
-    module procedure aloct_pointer_copy_1
-    module procedure aloct_pointer_copy_2
-    module procedure aloct_pointer_copy_3
-    module procedure aloct_pointer_copy_4
-    module procedure lloct_pointer_copy_1
-    module procedure lloct_pointer_copy_2
-    module procedure lloct_pointer_copy_3
-    module procedure lloct_pointer_copy_4
-  end interface loct_pointer_copy
-
 
   ! ---------------------------------------------------------
   !> System information (time, memory, sysname)
@@ -249,48 +216,6 @@ contains
     call loct_rm('exec/'//trim(current_label)//'oct-status-aborted')
 
   end subroutine loct_rm_status_files
-
-#  define TYPE real(4)
-#  define SUBNAME(x) s ## x
-#  include "loct_inc.F90"
-#  undef SUBNAME
-#  undef TYPE
-
-#  define TYPE real(8)
-#  define SUBNAME(x) d ## x
-#  include "loct_inc.F90"
-#  undef SUBNAME
-#  undef TYPE
-
-#  define TYPE complex(4)
-#  define SUBNAME(x) c ## x
-#  include "loct_inc.F90"
-#  undef SUBNAME
-#  undef TYPE
-
-#  define TYPE complex(8)
-#  define SUBNAME(x) z ## x
-#  include "loct_inc.F90"
-#  undef SUBNAME
-#  undef TYPE
-
-#  define TYPE  integer
-#  define SUBNAME(x) i ## x
-#  include "loct_inc.F90"
-#  undef SUBNAME
-#  undef TYPE
-
-#  define TYPE  character(len=*)
-#  define SUBNAME(x) a ## x
-#  include "loct_inc.F90"
-#  undef SUBNAME
-#  undef TYPE
-
-#  define TYPE  logical
-#  define SUBNAME(x) l ## x
-#  include "loct_inc.F90"
-#  undef SUBNAME
-#  undef TYPE
 
 end module loct_m
 

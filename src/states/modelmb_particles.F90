@@ -27,7 +27,7 @@ module modelmb_particles_m
   use global_m
   use grid_m
   use hypercube_m
-  use loct_m
+  use loct_pointer_m
   use parser_m
   use mesh_m
   use messages_m

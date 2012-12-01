@@ -30,7 +30,7 @@ module states_dim_m
   use io_m
   use kpoints_m
   use lalg_basic_m
-  use loct_m
+  use loct_pointer_m
   use math_m
   use messages_m
   use mesh_m

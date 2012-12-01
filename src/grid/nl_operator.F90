@@ -29,7 +29,7 @@ module nl_operator_m
   use datasets_m
   use global_m
   use io_m
-  use loct_m
+  use loct_pointer_m
   use math_m
   use index_m
   use mesh_m

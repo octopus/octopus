@@ -22,7 +22,7 @@
 module permutations_m
 
   use global_m
-  use loct_m
+  use loct_pointer_m
   use math_m
   use messages_m
   use profiling_m

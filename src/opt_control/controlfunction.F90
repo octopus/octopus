@@ -31,8 +31,8 @@ module controlfunction_m
   use io_m
   use lalg_adv_m
   use lasers_m
-  use loct_m
   use loct_math_m
+  use loct_pointer_m
   use math_m
   use mesh_m
   use messages_m

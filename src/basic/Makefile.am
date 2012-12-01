@@ -24,6 +24,7 @@ noinst_LIBRARIES = libbasic.a
 libbasic_a_SOURCES =     \
 	io_csv.c         \
 	loct.F90         \
+	loct_pointer.F90 \
 	string.F90       \
 	varinfo.F90      \
 	mpi.F90          \
@@ -77,7 +78,7 @@ endif
 noinst_HEADERS =               \
 	mpi_debug_inc.F90      \
 	mpi_lib_inc.F90        \
-	loct_inc.F90           \
+	loct_pointer_inc.F90   \
 	varia.h                \
 	io_binary.h            \
 	io_csv.h               \
@@ -104,7 +105,8 @@ hardware.o : hardware.F90
 c_pointer.o : c_pointer.F90
 varinfo.o : varinfo.F90 string.o c_pointer.o
 string.o : string.F90 c_pointer.o
-loct.o : loct.F90 loct_inc.F90 c_pointer.o
+loct.o : loct.F90 c_pointer.o
+loct_pointer.o : loct_pointer.F90 loct_pointer_inc.F90
 global.o : global.F90 mpi.o loct.o hardware.o varinfo.o Makefile
 unit.o : unit.F90 global.o
 parser.o : parser.F90 mpi.o loct.o global.o c_pointer.o unit.o
@@ -135,7 +137,7 @@ comm.o : comm.F90 comm_inc.F90 mpi.o messages.o global.o profiling.o
 
 ialist.o : ialist.F90 global.o messages.o profiling.o
 iihash.o : iihash.F90 ialist.o global.o
-lookup.o : lookup.F90 global.o messages.o profiling.o
+lookup.o : lookup.F90 global.o messages.o profiling.o loct_pointer.o
 utils.o : utils.F90 messages.o global.o unit.o unit_system.o string.o mpi.o loct.o
 
 space.o : space.F90 datasets.o parser.o messages.o

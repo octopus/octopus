@@ -27,7 +27,7 @@ module geometry_m
   use global_m
   use io_m
   use json_m
-  use loct_m
+  use loct_pointer_m
   use loct_math_m
   use messages_m
   use multicomm_m

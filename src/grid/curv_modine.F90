@@ -31,7 +31,7 @@ module curv_modine_m
   use geometry_m
   use geometry_m
   use global_m
-  use loct_m
+  use loct_pointer_m
   use parser_m
   use messages_m
   use root_solver_m

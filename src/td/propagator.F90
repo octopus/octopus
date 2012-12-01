@@ -38,7 +38,7 @@ module propagator_m
   use ion_dynamics_m
   use lalg_basic_m
   use lasers_m
-  use loct_m
+  use loct_pointer_m
   use parser_m
   use math_m
   use mesh_function_m
