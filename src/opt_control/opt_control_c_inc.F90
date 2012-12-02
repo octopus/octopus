@@ -17,13 +17,11 @@
 !!
 !! $Id: opt_control.F90 6950 2010-08-19 22:19:34Z dstrubbe $
 
-  ! ---------------------------------------------------------
-  ! The following routines are to be called by C routines, which in turn
-  ! are called by the main procedure of this module, opt_control_run, which
-  ! is below.
-  ! ---------------------------------------------------------
-
-
+  !> ---------------------------------------------------------
+  !! The following routines are to be called by C routines, which in turn
+  !! are called by the main procedure of this module, opt_control_run, which
+  !! is below.
+  !! ---------------------------------------------------------
   subroutine opt_control_function_forward(x, f)
     REAL_DOUBLE, intent(in)    :: x
     REAL_DOUBLE, intent(inout) :: f 
@@ -56,11 +54,11 @@
 
   ! ---------------------------------------------------------
   subroutine opt_control_cg_calc(n, x, f, getgrad, df)
-    integer,         intent(in)  :: n
-    REAL_DOUBLE,     intent(in)  :: x(n)
-    REAL_DOUBLE,     intent(inout) :: f
-    integer,         intent(in)  :: getgrad
-    REAL_DOUBLE,     intent(inout) :: df(n)
+    integer,     intent(in)    :: n
+    REAL_DOUBLE, intent(in)    :: x(n)
+    REAL_DOUBLE, intent(inout) :: f
+    integer,     intent(in)    :: getgrad
+    REAL_DOUBLE, intent(inout) :: df(n)
 
     integer :: j
     type(controlfunction_t) :: par_new
@@ -173,6 +171,8 @@
 
 
   ! ---------------------------------------------------------
+  !> No intents here is unfortunately required because this will be passed to newuoa
+  !! routines as a dummy function, whose interface has no intents.
   subroutine opt_control_direct_calc(n, x, f)
     integer      :: n
     REAL_DOUBLE  :: x(n)

@@ -60,7 +60,7 @@ module opt_control_m
   private
   public :: opt_control_run,                  &
             opt_control_cg_calc,              &
-            opt_control_cg_write_info,     &
+            opt_control_cg_write_info,        &
             opt_control_direct_calc,          &
             opt_control_direct_message_info,  &
             opt_control_function_forward
@@ -382,7 +382,7 @@ contains
 
       if(oct%random_initial_guess) call controlfunction_randomize(par)
 
-      ! Set the module pointers, so that the direct_opt_calc and direct_opt_write_info routines
+      ! Set the module pointers, so that the opt_control_cg_calc and opt_control_cg_write_info routines
       ! can use them.
       call controlfunction_copy(par_, par)
       sys_      => sys
@@ -451,7 +451,7 @@ contains
 
       if(oct%random_initial_guess) call controlfunction_randomize(par)
 
-      ! Set the module pointers, so that the direct_opt_calc and direct_opt_write_info routines
+      ! Set the module pointers, so that the opt_control_direct_calc and opt_control_direct_message_info routines
       ! can use them.
       call controlfunction_copy(par_, par)
       sys_      => sys
