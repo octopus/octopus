@@ -130,7 +130,7 @@ contains
     
     !%Variable NDimModelmb
     !%Type integer
-    !%Section States
+    !%Section States::ModelMB
     !%Default -1
     !%Description
     !% Number of dimensions for modelmb space.
@@ -142,7 +142,7 @@ contains
     
     !%Variable NParticleModelmb
     !%Type integer
-    !%Section States
+    !%Section States::ModelMB
     !%Default 0
     !%Description
     !% Number of particles in modelmb space. 
@@ -153,7 +153,7 @@ contains
     
     !%Variable NTypeParticleModelmb
     !%Type integer
-    !%Section States
+    !%Section States::ModelMB
     !%Default 1
     !%Description
     !% Number of different types of particles in modelmb space.
@@ -175,7 +175,7 @@ contains
     
     !%Variable DescribeParticlesModelmb
     !%Type block
-    !%Section States
+    !%Section States::ModelMB
     !%Description
     !% Characterization of different modelmb particles in gr%mesh%sb%dim dimensional space.
     !%

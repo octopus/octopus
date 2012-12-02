@@ -17,19 +17,19 @@
 !!
 !! $Id$
 
-!------------------------------------------------------------
-! This routine calculates the one-body density matrix gamma 
-! for particle ikeeppart, used in higher dimensional model
-! hamiltonian calculations (MJV, NH) 
-!------------------------------------------------------------
+!>------------------------------------------------------------
+!! This routine calculates the one-body density matrix gamma 
+!! for particle ikeeppart, used in higher dimensional model
+!! hamiltonian calculations (MJV, NH) 
+!!------------------------------------------------------------
 subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
      mesh, psi, gamma)
-  integer, intent(in)      :: ikeeppart
-  integer, intent(in)      :: nparticles_densmat
-  type(modelmb_1part_t), intent(in) :: mb_1part
-  type(mesh_t), intent(in) :: mesh
-  R_TYPE, intent(in)       :: psi(:)
-  R_TYPE, intent(out)       :: gamma(:, :)
+  integer,               intent(in)  :: ikeeppart
+  integer,               intent(in)  :: nparticles_densmat
+  type(modelmb_1part_t), intent(in)  :: mb_1part
+  type(mesh_t),          intent(in)  :: mesh
+  R_TYPE,                intent(in)  :: psi(:)
+  R_TYPE,                intent(out) :: gamma(:, :)
 
   integer :: icoord, icoordp, icoord_diff
   integer :: jdim, ip_global, ip, ipp_global

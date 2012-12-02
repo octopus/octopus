@@ -78,7 +78,7 @@ contains
 
     !%Variable DensitytoCalc
     !%Type block
-    !%Section States
+    !%Section States::ModelMB
     !%Description
     !% choice of which particle density (event. matrices) will be calculated and output, in the
     !%  modelmb particles scheme
