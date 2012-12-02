@@ -78,7 +78,7 @@ gdImagePtr FC_FUNC_(oct_gdimage_create_from, OCT_GDIMAGE_CREATE_FROM)
 }
 
 int FC_FUNC_(oct_gdimage_sx, OCT_GDIMAGE_SX)
-  (gdImagePtr *im)
+  (const gdImagePtr *im)
 {
   assert(*im != NULL);
 
@@ -86,7 +86,7 @@ int FC_FUNC_(oct_gdimage_sx, OCT_GDIMAGE_SX)
 }
 
 int FC_FUNC_(oct_gdimage_sy, OCT_GDIMAGE_SY)
-  (gdImagePtr *im)
+  (const gdImagePtr *im)
 {
   assert(*im != NULL);
 
@@ -94,7 +94,7 @@ int FC_FUNC_(oct_gdimage_sy, OCT_GDIMAGE_SY)
 }
 
 void FC_FUNC_(oct_gdimage_get_pixel_rgb, OCT_GDIMAGE_GET_PIXEL_RGB)
-  (gdImagePtr *im, int *x, int *y, int *r, int *g, int *b)
+  (const gdImagePtr *im, const int *x, const int *y, int *r, int *g, int *b)
 {
   int color;
 
