@@ -22,7 +22,7 @@
 module loct_math_m
   implicit none
 
-  ! Define which routines can be seen from the outside.
+  !> Define which routines can be seen from the outside.
   private
   public ::                  &
     loct_gamma,              &
@@ -64,10 +64,11 @@ module loct_math_m
   !> Numerical derivative.
   interface loct_numerical_derivative
     subroutine oct_numerical_derivative(x, h, result, abserr, f)
-      real(8) :: x, h, result, abserr
+      real(8), intent(in)  :: x, h
+      real(8), intent(out) :: result, abserr
       interface
         subroutine f(x, fx)
-          real(8), intent(in) :: x
+          real(8), intent(inout) :: x
           real(8), intent(inout) :: fx
         end subroutine f
       end interface
@@ -105,7 +106,7 @@ module loct_math_m
     function oct_bessel(n, x)
       real(8) :: oct_bessel
       integer, intent(in) :: n
-      real(8), intent(in)  :: x
+      real(8), intent(in) :: x
     end function oct_bessel
     module procedure oct_bessel4
   end interface loct_bessel
@@ -114,7 +115,7 @@ module loct_math_m
     function oct_bessel_in(n, x)
       real(8) :: oct_bessel_in
       integer, intent(in) :: n
-      real(8), intent(in)  :: x
+      real(8), intent(in) :: x
     end function oct_bessel_in
     module procedure oct_bessel_in4
   end interface loct_bessel_in
@@ -123,7 +124,7 @@ module loct_math_m
     function oct_sph_bessel(l, x)
       real(8) :: oct_sph_bessel
       integer, intent(in) :: l
-      real(8), intent(in)  :: x
+      real(8), intent(in) :: x
     end function oct_sph_bessel
     module procedure oct_sph_bessel4
   end interface loct_sph_bessel
@@ -131,7 +132,7 @@ module loct_math_m
   interface loct_bessel_j0
     function oct_bessel_j0(x)
       real(8) :: oct_bessel_j0
-      real(8), intent(in)  :: x
+      real(8), intent(in) :: x
     end function oct_bessel_j0
     module procedure oct_bessel_j04
   end interface loct_bessel_j0
@@ -139,7 +140,7 @@ module loct_math_m
   interface loct_bessel_j1
     function oct_bessel_j1(x)
       real(8) :: oct_bessel_j1
-      real(8), intent(in)  :: x
+      real(8), intent(in) :: x
     end function oct_bessel_j1
     module procedure oct_bessel_j14
   end interface loct_bessel_j1
@@ -147,7 +148,7 @@ module loct_math_m
   interface loct_bessel_k0
     function oct_bessel_k0(x)
       real(8) :: oct_bessel_k0
-      real(8), intent(in)  :: x
+      real(8), intent(in) :: x
     end function oct_bessel_k0
     module procedure oct_bessel_k04
   end interface loct_bessel_k0
@@ -155,7 +156,7 @@ module loct_math_m
   interface loct_bessel_k1
     function oct_bessel_k1(x)
       real(8) :: oct_bessel_k1
-      real(8), intent(in)  :: x
+      real(8), intent(in) :: x
     end function oct_bessel_k1
     module procedure oct_bessel_k14
   end interface loct_bessel_k1
@@ -196,7 +197,7 @@ module loct_math_m
   interface loct_sine_integral
     function oct_sine_integral(x)
       real(8) :: oct_sine_integral
-      real(8) :: x
+      real(8), intent(in) :: x
     end function oct_sine_integral
     module procedure oct_sine_integral4
   end interface loct_sine_integral
@@ -232,7 +233,7 @@ module loct_math_m
       use c_pointer_m
       real(8) :: oct_ran_gaussian
       type(c_ptr), intent(in) :: r
-      real(8),   intent(in) :: sigma
+      real(8),     intent(in) :: sigma
     end function oct_ran_gaussian
     module procedure oct_ran_gaussian4
   end interface loct_ran_gaussian
@@ -250,14 +251,14 @@ module loct_math_m
 
   interface loct_1dminimize
     subroutine oct_1dminimize(a, b, m, f, status)
-      real(8), intent(in) :: a, b, m
+      real(8), intent(inout) :: a, b, m
       interface
         subroutine f(x, fx)
-          real(8), intent(in) :: x
-          real(8), intent(out) :: fx
+          real(8), intent(inout) :: x
+          real(8), intent(inout) :: fx
         end subroutine f
       end interface
-      integer, intent(inout) :: status
+      integer, intent(out) :: status
     end subroutine oct_1dminimize
   end interface loct_1dminimize
 
@@ -268,16 +269,15 @@ module loct_math_m
       integer, intent(in)    :: dim
       real(8), intent(inout) :: x
       real(8), intent(in)    :: step
-      integer, intent(in)    :: maxiter
       real(8), intent(in)    :: tolgrad
       real(8), intent(in)    :: toldr
-      real(8), intent(out)   :: minimum
+      integer, intent(in)    :: maxiter
       interface
         subroutine f(n, x, val, getgrad, grad)
-          integer, intent(in) :: n
-          real(8), intent(in) :: x(n)
+          integer, intent(inout) :: n
+          real(8), intent(inout) :: x(n)
           real(8), intent(inout) :: val
-          integer, intent(in)  :: getgrad
+          integer, intent(inout) :: getgrad
           real(8), intent(inout) :: grad(n)
         end subroutine f
         subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
@@ -289,6 +289,7 @@ module loct_math_m
           real(8), intent(in) :: x(n)
         end subroutine write_iter_info
       end interface
+      real(8), intent(out)   :: minimum
     end function oct_minimize
   end interface loct_minimize
 
@@ -299,14 +300,13 @@ module loct_math_m
       integer, intent(in)    :: dim
       real(8), intent(inout) :: x
       real(8), intent(in)    :: step
-      integer, intent(in)    :: maxiter
       real(8), intent(in)    :: toldr
-      real(8), intent(out)   :: minimum
+      integer, intent(in)    :: maxiter
       interface
         subroutine f(n, x, val)
-          integer :: n
-          real(8) :: x(n)
-          real(8) :: val
+          integer, intent(inout) :: n
+          real(8), intent(inout) :: x(n)
+          real(8), intent(inout) :: val
         end subroutine f
         subroutine write_iter_info(iter, n, val, maxdr, x)
           integer, intent(in) :: iter
@@ -316,13 +316,14 @@ module loct_math_m
           real(8), intent(in) :: x(n)
         end subroutine write_iter_info
       end interface
+      real(8), intent(out)   :: minimum
     end function oct_minimize_direct
   end interface loct_minimize_direct
 
   interface loct_fft_optimize
     subroutine oct_fft_optimize(n, par)
       integer, intent(inout) :: n
-      integer, intent(in) :: par
+      integer, intent(in)    :: par
     end subroutine oct_fft_optimize
   end interface loct_fft_optimize
 
@@ -350,45 +351,45 @@ contains
 
   real(4) function oct_bessel4(n, x)
     integer, intent(in) :: n
-    real(4), intent(in)  :: x
+    real(4), intent(in) :: x
 
     oct_bessel4 = real(oct_bessel(n, real(x, kind=8)), kind=4)
   end function oct_bessel4
 
   real(4) function oct_bessel_in4(n, x)
     integer, intent(in) :: n
-    real(4), intent(in)  :: x
+    real(4), intent(in) :: x
 
     oct_bessel_in4 = real(oct_bessel_in(n, real(x, kind=8)), kind=4)
   end function oct_bessel_In4
 
   real(4) function oct_sph_bessel4(l, x)
     integer, intent(in) :: l
-    real(4), intent(in)  :: x
+    real(4), intent(in) :: x
 
     oct_sph_bessel4 = real(oct_sph_bessel(l, real(x, kind=8)), kind=4)
   end function oct_sph_bessel4
 
   real(4) function oct_bessel_j04(x)
-    real(4), intent(in)  :: x
+    real(4), intent(in) :: x
 
     oct_bessel_j04 = real(oct_bessel_j0(real(x, kind=8)), kind=4)
   end function oct_bessel_j04
 
   real(4) function oct_bessel_j14(x)
-    real(4), intent(in)  :: x
+    real(4), intent(in) :: x
 
     oct_bessel_j14 = real(oct_bessel_j1(real(x, kind=8)), kind=4)
   end function oct_bessel_j14
 
   real(4) function oct_bessel_k04(x)
-    real(4), intent(in)  :: x
+    real(4), intent(in) :: x
 
     oct_bessel_k04 = real(oct_bessel_k0(real(x, kind=8)), kind=4)
   end function oct_bessel_k04
 
   real(4) function oct_bessel_k14(x)
-    real(4), intent(in)  :: x
+    real(4), intent(in) :: x
 
     oct_bessel_k14 = real(oct_bessel_k1(real(x, kind=8)), kind=4)
   end function oct_bessel_k14
@@ -400,13 +401,13 @@ contains
   end function oct_asinh4
 
   real(4) function oct_erf4(x)
-    real(4), intent(in)  :: x
+    real(4), intent(in) :: x
 
     oct_erf4 = real(oct_erf(real(x, kind=8)), kind=4)
   end function oct_erf4
 
   real(4) function oct_erfc4(x)
-    real(4), intent(in)  :: x
+    real(4), intent(in) :: x
 
     oct_erfc4 = real(oct_erfc(real(x, kind=8)), kind=4)
   end function oct_erfc4
@@ -438,7 +439,7 @@ contains
   real(4) function oct_ran_gaussian4(r, sigma)
     use c_pointer_m
     type(c_ptr), intent(in) :: r
-    real(4),   intent(in) :: sigma
+    real(4),     intent(in) :: sigma
 
     oct_ran_gaussian4 = real(oct_ran_gaussian(r, real(sigma, kind=8)), kind=4)
   end function oct_ran_gaussian4

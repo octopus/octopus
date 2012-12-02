@@ -49,62 +49,62 @@
 
 /* Mathematical Functions */
 double FC_FUNC_(oct_asinh, OCT_ASINH)
-     (double *x)
+     (const double *x)
 {
   return gsl_asinh(*x);
 }
 
 /* Special Functions */
 double FC_FUNC_(oct_gamma, OCT_GAMMA)
-     (double *x)
+     (const double *x)
 {
   return gsl_sf_gamma(*x);
 }
 
 double FC_FUNC_(oct_hypergeometric, OCT_HYPERGEOMETRIC)
-     (double *a, double*b, double *x)
+     (const double *a, const double*b, const double *x)
 {
   return gsl_sf_hyperg_U(*a, *b, *x);
 }
 
 double FC_FUNC_(oct_incomplete_gamma, OCT_INCOMPLETE_GAMMA)
-     (double *a, double *x)
+     (const double *a, const double *x)
 {
   return gsl_sf_gamma_inc_Q(*a, *x);
 }
 
 double FC_FUNC_(oct_sph_bessel, OCT_SPH_BESSEL)
-     (int *l, double*x)
+     (const int *l, const double*x)
 {
   return gsl_sf_bessel_jl(*l, *x);
 }
 
 double FC_FUNC_(oct_bessel, OCT_BESSEL)
-     (int *n, double *x)
+     (const int *n, const double *x)
 {
   return gsl_sf_bessel_Jn(*n, *x);
 }
 
 double FC_FUNC_(oct_bessel_in, OCT_BESSEL_IN)
-     (int *n, double *x)
+     (const int *n, const double *x)
 {
   return gsl_sf_bessel_In(*n, *x);
 }
 
 double FC_FUNC_(oct_bessel_j0, OCT_BESSEL_J0)
-     (double *x)
+     (const double *x)
 {
   return gsl_sf_bessel_J0(*x);
 }
 
 double FC_FUNC_(oct_bessel_j1, OCT_BESSEL_J1)
-     (double *x)
+     (const double *x)
 {
   return gsl_sf_bessel_J1(*x);
 }
 
 double FC_FUNC_(oct_bessel_k0, OCT_BESSEL_K0)
-     (double *x)
+     (const double *x)
 {
   if( *x > BESSEL_K_THRES )
   {
@@ -115,7 +115,7 @@ double FC_FUNC_(oct_bessel_k0, OCT_BESSEL_K0)
 }
 
 double FC_FUNC_(oct_bessel_k1, OCT_BESSEL_K1)
-     (double *x)
+     (const double *x)
 {
   if( *x > BESSEL_K_THRES )
   {
@@ -125,8 +125,9 @@ double FC_FUNC_(oct_bessel_k1, OCT_BESSEL_K1)
   }    
 }
 
+/* the GSL headers specify double x, not const double x */
 double FC_FUNC_(oct_erfc, OCT_ERFC)
-     (double *x)
+     (const double *x)
 {
   /* avoid floating invalids in the asymptotic limit */
   if(*x >  20.0) return  0.0;
@@ -135,8 +136,9 @@ double FC_FUNC_(oct_erfc, OCT_ERFC)
   return gsl_sf_erfc(*x);
 }
 
+/* the GSL headers specify double x, not const double x */
 double FC_FUNC_(oct_erf, OCT_ERF)
-     (double *x)
+     (const double *x)
 {
   /* avoid floating invalids in the asymptotic limit */
   if(*x >  20.0) return  1.0;
@@ -146,13 +148,13 @@ double FC_FUNC_(oct_erf, OCT_ERF)
 }
 
 double FC_FUNC_(oct_legendre_sphplm, OCT_LEGENDRE_SPHPLM)
-     (int *l, int *m, double *x)
+     (const int *l, const int *m, const double *x)
 {
   return gsl_sf_legendre_sphPlm(*l, *m, *x);
 }
 
 double FC_FUNC_(oct_sine_integral, OCT_SINE_INTEGRAL)
-     (double *x)
+     (const double *x)
 {
   return gsl_sf_Si(*x);
 }
@@ -184,14 +186,14 @@ void FC_FUNC_(oct_ran_end, OCT_RAN_END)
 
 /* Random Number Distributions */ 
 double FC_FUNC_(oct_ran_gaussian, OCT_RAN_GAUSSIAN)
-     (gsl_rng **r, double *sigma)
+     (const gsl_rng **r, const double *sigma)
 {
   return gsl_ran_gaussian(*r, *sigma);
 }
 
 
 double FC_FUNC_(oct_ran_flat, OCT_RAN_FLAT)
-     (gsl_rng **r, double *a, double *b)
+     (const gsl_rng **r, const double *a, const double *b)
 {
   return gsl_ran_flat(*r, *a, *b);
 }
@@ -206,8 +208,9 @@ void FC_FUNC_(oct_spline_end, OCT_SPLINE_END)
 }
 
 void FC_FUNC_(oct_spline_fit, OCT_SPLINE_FIT)
-		 (int *nrc, double *x, double *y, void **spl, void **acc)
+		 (const int *nrc, const double *x, const double *y, void **spl, void **acc)
 {
+  /* the GSL headers actually specify size_t instead of const int for nrc */
   *acc = (void *)gsl_interp_accel_alloc();
   *spl = (void *)gsl_spline_alloc(gsl_interp_cspline, *nrc);	
   gsl_spline_init((gsl_spline *)(*spl), x, y, *nrc);
@@ -215,14 +218,15 @@ void FC_FUNC_(oct_spline_fit, OCT_SPLINE_FIT)
 }
 
 double FC_FUNC_(oct_spline_eval, OCT_SPLINE_EVAL)
-     (double *x, void **spl, void **acc)
+     (const double *x, const void **spl, void **acc)
 {
+  /* the GSL headers specify double x instead of const double x */
   return gsl_spline_eval((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
 }
 
 
 void FC_FUNC_(oct_spline_eval_array, OCT_SPLINE_EVAL_ARRAY)
-     (int * nn, double *xf, void **spl, void **acc)
+     (const int * nn, double *xf, const void **spl, void **acc)
 {
   int ii;
   for(ii = 0; ii < *nn; ii++){
@@ -231,7 +235,7 @@ void FC_FUNC_(oct_spline_eval_array, OCT_SPLINE_EVAL_ARRAY)
 }
 
 void FC_FUNC_(oct_spline_eval_array4, OCT_SPLINE_EVAL_ARRAY)
-     (int * nn, float *xf, void **spl, void **acc)
+     (const int * nn, float *xf, const void **spl, void **acc)
 {
   int ii;
   for(ii = 0; ii < *nn; ii++){
@@ -242,14 +246,14 @@ void FC_FUNC_(oct_spline_eval_array4, OCT_SPLINE_EVAL_ARRAY)
 /* This function returns the number of points with which a spline
 	 was constructed (the size component of the gsl_spline struct). */
 int FC_FUNC_(oct_spline_npoints, OCT_SPLINE_NPOINTS)
-     (void **spl)
+     (const void **spl)
 {
   return (int)((gsl_spline *)(*spl))->size;
 }
 
 /* This function places in the x array the x values of a given spline spl*/ 
 void FC_FUNC_(oct_spline_x, OCT_SPLINE_X)
-     (void **spl, double *x)
+     (const void **spl, double *x)
 {
   int size, i;
 	
@@ -260,7 +264,7 @@ void FC_FUNC_(oct_spline_x, OCT_SPLINE_X)
 
 /* This function places in the y array the y values of a given spline spl*/ 
 void FC_FUNC_(oct_spline_y, OCT_SPLINE_Y)
-     (void **spl, double *y)
+     (const void **spl, double *y)
 {
   int size, i;
 	
@@ -271,27 +275,30 @@ void FC_FUNC_(oct_spline_y, OCT_SPLINE_Y)
 
 /* Returns the integral of the spline stored in spl, between a and b */
 double FC_FUNC_(oct_spline_eval_integ, OCT_SPLINE_EVAL_INTEG)
-     (void **spl, double *a, double *b, void **acc)
+     (const void **spl, const double *a, const double *b, void **acc)
 {
+  /* the GSL headers specify double a, double b */
   return gsl_spline_eval_integ((gsl_spline *)(*spl), *a, *b, (gsl_interp_accel *)(* acc));
 }
 
 /* Performs the derivative of a spline */
 double FC_FUNC_(oct_spline_eval_der, OCT_SPLINE_EVAL_DER)
-     (double *x, void **spl, void **acc)
+     (const double *x, const void **spl, void **acc)
 {
+  /* the GSL headers specify double x */
   return gsl_spline_eval_deriv((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
 }
 
 /* Performs the second derivative of a spline */
 double FC_FUNC_(oct_spline_eval_der2, OCT_SPLINE_EVAL_DER2)
-     (double *x, void **spl, void **acc)
+     (const double *x, const void **spl, void **acc)
 {
+  /* the GSL headers specify double x */
   return gsl_spline_eval_deriv2((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
 }
 
 void FC_FUNC_(oct_strerror, OCT_STRERROR)
-     (int *err, STR_F_TYPE res STR_ARG1)
+     (const int *err, STR_F_TYPE res STR_ARG1)
 {
   const char *c;
 
@@ -352,14 +359,15 @@ double function_oct_numerical_derivative (double x, void * params)
  /* This is the function that should be called by Fortran. The interface is defined
     in loct_math.F90 file. */
 void FC_FUNC_(oct_numerical_derivative, OCT_NUMERICAL_DERIVATIVE)
-     (double *x, double *h, double *result, double *abserr, func_nd f)
+     (const double *x, const double *h, double *result, double *abserr, const func_nd f)
 {
-  gsl_function  F;
+  gsl_function F;
   param_nd_t p;
 
   p.func = f;
   F.function = &function_oct_numerical_derivative;
   F.params = (void *) &p;
+  /* the GSL headers specify double x, double h */
   gsl_deriv_central (&F, *x, *h, result, abserr);
   return;
 }
