@@ -17,6 +17,9 @@
 !!
 !! $Id: loct.F90 4640 2008-10-10 08:56:33Z xavier $
 
+! SAFE ALLOCATE in this file causes the PGI compiler to crash:
+! Lowering Error: bad ast optype in expression [ast=1125,asttype=12,datatype=0]
+! PGF90-F-0000-Internal compiler error. Errors in Lowering       1 (../../../src/basic/loct_pointer_inc.F90: 33)
 ! ---------------------------------------------------------
 subroutine SUBNAME(loct_pointer_copy_1)(o, i)
   TYPE, pointer, intent(out) :: o(:)
@@ -30,7 +33,7 @@ subroutine SUBNAME(loct_pointer_copy_1)(o, i)
   if(associated(i)) then
     nl1 = lbound(i, 1)
     nu1 = ubound(i, 1)
-    SAFE_ALLOCATE(o(nl1:nu1))
+    allocate(o(nl1:nu1))
     forall (i1 = nl1:nu1) o(i1) = i(i1)
   else
     nullify(o)
@@ -55,7 +58,7 @@ subroutine SUBNAME(loct_pointer_copy_2)(o, i)
     nu1 = ubound(i, 1)
     nl2 = lbound(i, 2)
     nu2 = ubound(i, 2)
-    SAFE_ALLOCATE(o(nl1:nu1, nl2:nu2))
+    allocate(o(nl1:nu1, nl2:nu2))
     forall (i1 = nl1:nu1, i2 = nl2:nu2) o(i1, i2) = i(i1, i2)
   else
     nullify(o)
@@ -82,7 +85,7 @@ subroutine SUBNAME(loct_pointer_copy_3)(o, i)
     nu2 = ubound(i, 2)
     nl3 = lbound(i, 3)
     nu3 = ubound(i, 3)
-    SAFE_ALLOCATE(o(nl1:nu1, nl2:nu2, nl3:nu3))
+    allocate(o(nl1:nu1, nl2:nu2, nl3:nu3))
     forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3) o(i1, i2, i3) = i(i1, i2, i3)
   else
     nullify(o)
@@ -111,7 +114,7 @@ subroutine SUBNAME(loct_pointer_copy_4)(o, i)
     nu3 = ubound(i, 3)
     nl4 = lbound(i, 4)
     nu4 = ubound(i, 4)
-    SAFE_ALLOCATE(o(nl1:nu1, nl2:nu2, nl3:nu3, nl4:nu4))
+    allocate(o(nl1:nu1, nl2:nu2, nl3:nu3, nl4:nu4))
     forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3, i4 = nl4:nu4) o(i1, i2, i3, i4) = i(i1, i2, i3, i4)
   else
     nullify(o)
