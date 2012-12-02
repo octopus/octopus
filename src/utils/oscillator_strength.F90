@@ -456,7 +456,7 @@ contains
     integer, intent(in)  :: nfrequencies
   
     integer :: i, ierr
-    FLOAT :: dw, w, aw, min_aw, min_w, omega_orig
+    FLOAT :: dw, w, aw, min_aw, min_w, omega_orig, min_w1, min_w2
     FLOAT, allocatable :: warray(:), tarray(:)
   
     PUSH_SUB(find_resonance)
@@ -485,8 +485,10 @@ contains
   
     omega_orig = omega
     omega = min_w
+    min_w1 = min_w - 2*dw
+    min_w2 = min_w + 2*dw
   #ifndef SINGLE_PRECISION
-    call loct_1dminimize(min_w - 2*dw, min_w + 2*dw, omega, ft2, ierr)
+    call loct_1dminimize(min_w1, min_w2, omega, ft2, ierr)
   #else
     message(1) = "FIXME: cannot work in single-precision."
     call messages_fatal(1)

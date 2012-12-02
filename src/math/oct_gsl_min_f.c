@@ -39,7 +39,7 @@
 /* This is a type used to communicate with Fortran; func_d is the type of the
    interface to a Fortran subroutine that calculates the function and its
    gradient. */
-typedef void (*func_d)(int*, double*, double*, int*, double*);
+typedef void (*func_d)(const int*, const double*, double*, const int*, double*);
 typedef struct{
   func_d func;
 } param_fdf_t;
@@ -207,7 +207,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 /* This is a type used to communicate with Fortran; func1 is the type of the
    interface to a Fortran subroutine that calculates the function and its
    gradient. */
-typedef void (*func1)(double*, double*);
+typedef void (*func1)(const double*, double*);
 typedef struct{
   func1 func;
 } param_f1_t;

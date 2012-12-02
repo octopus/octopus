@@ -254,8 +254,8 @@ module loct_math_m
       real(8), intent(inout) :: a, b, m
       interface
         subroutine f(x, fx)
-          real(8), intent(inout) :: x
-          real(8), intent(inout) :: fx
+          real(8), intent(in)  :: x
+          real(8), intent(out) :: fx
         end subroutine f
       end interface
       integer, intent(out) :: status
@@ -274,10 +274,10 @@ module loct_math_m
       integer, intent(in)    :: maxiter
       interface
         subroutine f(n, x, val, getgrad, grad)
-          integer, intent(inout) :: n
-          real(8), intent(inout) :: x(n)
+          integer, intent(in)    :: n
+          real(8), intent(in)    :: x(n)
           real(8), intent(inout) :: val
-          integer, intent(inout) :: getgrad
+          integer, intent(in)    :: getgrad
           real(8), intent(inout) :: grad(n)
         end subroutine f
         subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
@@ -302,11 +302,13 @@ module loct_math_m
       real(8), intent(in)    :: step
       real(8), intent(in)    :: toldr
       integer, intent(in)    :: maxiter
+      !> No intents here is unfortunately required because the same dummy function will be passed
+      !! also to newuoa routines in opt_control, and there the interface has no intents.
       interface
         subroutine f(n, x, val)
-          integer, intent(inout) :: n
-          real(8), intent(inout) :: x(n)
-          real(8), intent(inout) :: val
+          integer :: n
+          real(8) :: x(n)
+          real(8) :: val
         end subroutine f
         subroutine write_iter_info(iter, n, val, maxdr, x)
           integer, intent(in) :: iter
