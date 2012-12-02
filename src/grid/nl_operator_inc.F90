@@ -102,7 +102,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #endif
       
       if(batch_is_packed(fi) .and. batch_is_packed(fo)) then
-        call operate_ri_vec(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
+        call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
           fi%pack%X(psi)(1, 1), log2(fi%pack%size_real(1)), fo%pack%X(psi)(1, 1))
       else
         do ist = 1, fi%nst_linear
@@ -114,7 +114,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #else
 #define LOGLDF 1
 #endif
-          call operate_ri_vec(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), LOGLDF, pfo(1))
+          call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), LOGLDF, pfo(1))
 #undef LOGLDF
         end do
       end if

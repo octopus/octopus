@@ -38,6 +38,7 @@ module nl_operator_m
   use mpi_m
   use octcl_kernel_m
   use opencl_m
+  use operate_f_m
   use par_vec_m
   use parser_m
   use profiling_m

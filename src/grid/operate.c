@@ -37,15 +37,15 @@
  * @param[out] fo
  *
  */
-void FC_FUNC_(operate_ri_vec,OPERATE_RI_VEC)(const int * opn, 
-					       const double * restrict w, 
-					       const int * opnri,
-					       const int * opri,
-					       const int * rimap_inv,
-					       const int * rimap_inv_max,
-					       const double * restrict fi,
-					       const int * ldfp,
-					       double * restrict fo){
+void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opn, 
+                                               const double * restrict w, 
+                                               const int * opnri,
+                                               const int * opri,
+                                               const int * rimap_inv,
+                                               const int * rimap_inv_max,
+                                               const double * restrict fi,
+                                               const int * ldfp,
+                                               double * restrict fo) {
   const int ldf = ldfp[0];
 
   /* check whether we got aligned vectors or not */
@@ -66,15 +66,29 @@ void FC_FUNC_(operate_ri_vec,OPERATE_RI_VEC)(const int * opn,
 
 }
 
+/* the same as doperate_ri_vec, but allows giving each an appropriate Fortan interface
+   in which fi and fo are actually complex in Fortran */
+inline void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn, 
+                                                      const double * restrict w, 
+                                                      const int * opnri,
+                                                      const int * opri,
+                                                      const int * rimap_inv,
+                                                      const int * rimap_inv_max,
+                                                      const double * restrict fi,
+                                                      const int * ldfp,
+                                                      double * restrict fo) {
+  FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(opn, w, opnri, opri, rimap_inv, rimap_inv_max, fi, ldfp, fo);
+}
+
 void FC_FUNC_(dgauss_seidel,DGAUSS_SEIDEL)(const int * opn, 
 				           const double * restrict w, 
 				           const int * opnri,
 				           const int * opri,
 				           const int * rimap_inv,
 				           const int * rimap_inv_max,
-					   double * restrict factor,
+					   const double * restrict factor,
 				           double * pot, 
-				           double * restrict rho){
+				           const double * restrict rho){
 
   const int n = opn[0];
   const int nri = opnri[0];
@@ -97,4 +111,3 @@ void FC_FUNC_(dgauss_seidel,DGAUSS_SEIDEL)(const int * opn,
   }
 
 }
-

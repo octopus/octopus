@@ -55,6 +55,7 @@ libgrid_a_SOURCES =       \
 	ob_grid.F90             \
 	ob_interface.F90        \
 	operate.c               \
+	operate_f.F90           \
 	partitioner.F90         \
 	partition.F90           \
 	partition_transfer.F90  \
@@ -125,7 +126,7 @@ mesh.o : mesh.F90 par_vec.o index.o curvilinear.o mesh_cube_map.o
 mesh_partition.o : mesh_partition.F90 mesh.o zoltan.o stencil_star.o stencil.o partition.o partitioner.o 
 modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o
 multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o transfer_table.o boundaries.o
-nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o boundaries.o
+nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o boundaries.o operate_f.o
 ob_grid.o : ob_grid.F90 mesh.o ob_interface.o
 ob_interface.o : ob_interface.F90 derivatives.o mesh.o
 operate.o : operate.c operate_inc.c
