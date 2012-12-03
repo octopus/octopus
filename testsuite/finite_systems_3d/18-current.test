@@ -31,6 +31,9 @@ Processors: 1
 # curvilinear + domain parallelization is not implemented
 # curvilinear + state parallelization crashes on this test
 Input: 18-current.01-current.inp
+match ; Eigenvalue 1                  ; GREP(static/info, ' 1   -- ', 12); -0.499865
+match ; Eigenvalue 2                  ; GREP(static/info, ' 2   -- ', 12); -0.126562
+match ; Total energy                  ; GREP(static/info, 'Total       =', 20) ;  -0.12656241
 match ; Current flow                  ; GREP(static/current-flow, '# Flow', 20) ; 0.200964249215E-01
 match ; Magnetic Field at loop center ; LINE(static/Bind_z.x=0\,z=0, 34, 24) ; 3.06863991178469E-004
 
