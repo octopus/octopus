@@ -115,18 +115,20 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 
   if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
 
+#ifdef LCAO_DEBUG
 ! This code (and related below) is commented out because it causes mysterious optimization
 ! problems with PGI 12.4.0 -- LAPACK fails in diagonalization, only if mesh partition from scratch!
-  !if(this%write_matrices) then
-  !  iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', action='write')
-  !  iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', action='write')
-  !  iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', action='write')
-  !  if(mpi_grp_is_root(mpi_world)) then
-  !    write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
-  !    write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
-  !    write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
-  !  endif
-  !endif
+  if(this%write_matrices) then
+    iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', action='write')
+    iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', action='write')
+    iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', action='write')
+    if(mpi_grp_is_root(mpi_world)) then
+      write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
+      write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
+      write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
+    endif
+  endif
+#endif
 
   do n1 = 1, this%norbs
     
@@ -146,16 +148,20 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 
         overlap(n1, n2, ispin) = X(mf_dotp)(gr%mesh, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2)
         overlap(n2, n1, ispin) = R_CONJ(overlap(n1, n2, ispin))
-!        if(this%write_matrices .and. mpi_grp_is_root(mpi_world)) &
-!          write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2, ispin)
+#ifdef LCAO_DEBUG
+        if(this%write_matrices .and. mpi_grp_is_root(mpi_world)) &
+          write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2, ispin)
+#endif
 
         do ik = kstart, kend
           if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
           hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2)
           hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
 
-!          if(this%write_matrices .and. mpi_grp_is_root(mpi_world)) &
-!            write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamilt(n1, n2, ik))
+#ifdef LCAO_DEBUG
+          if(this%write_matrices .and. mpi_grp_is_root(mpi_world)) &
+            write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamilt(n1, n2, ik))
+#endif
         end do
       end do
       
@@ -190,19 +196,21 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
     end if
   end do
 
-!  if(this%write_matrices .and. mpi_grp_is_root(mpi_world)) then
-!    do ik =  kstart, kend
-!      do n2 = 1, this%norbs
-!        do n1 = 1, this%norbs
-!          write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, hamilt(n1, n2, ik)
-!        enddo
-!      enddo
-!    enddo
-!
-!    call io_close(iunit_h)
-!    call io_close(iunit_s)
-!    call io_close(iunit_e)
-!  endif
+#ifdef LCAO_DEBUG
+  if(this%write_matrices .and. mpi_grp_is_root(mpi_world)) then
+    do ik =  kstart, kend
+      do n2 = 1, this%norbs
+        do n1 = 1, this%norbs
+          write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, hamilt(n1, n2, ik)
+        enddo
+      enddo
+    enddo
+
+    call io_close(iunit_h)
+    call io_close(iunit_s)
+    call io_close(iunit_e)
+  endif
+#endif
 
 #ifdef HAVE_MPI
   if(st%d%kpt%parallel) then

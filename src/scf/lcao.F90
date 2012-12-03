@@ -205,6 +205,9 @@ contains
     !%End
     call parse_logical(datasets_check('LCAOAlternative'), .false., this%alternative)
 
+! uncomment below to use LCAOWriteMatrices
+!#define LCAO_DEBUG
+
     !!%Variable LCAOWriteMatrices
     !!%Type logical
     !!%Default false
@@ -213,9 +216,11 @@ contains
     !!% If this variable is set, the LCAO Hamiltonian and overlap matrices will be written to files
     !!% <tt>lcao_hamiltonian</tt> and <tt>lcao_overlap</tt> in the <tt>static</tt> directory.
     !!%End
-    !call parse_logical(datasets_check('LCAOWriteMatrices'), .false., this%write_matrices)
-! The code to do this exists but is commented out, in src/scf/lcao_inc.F90, because it causes
+#ifdef LCAO_DEBUG
+    call parse_logical(datasets_check('LCAOWriteMatrices'), .false., this%write_matrices)
+! The code to do this exists but is hidden by ifdefs, in src/scf/lcao_inc.F90, because it causes
 ! mysterious problems with optimization on PGI 12.4.0.
+#endif
 
     if(.not. this%alternative) then
 
