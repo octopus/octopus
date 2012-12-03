@@ -355,9 +355,9 @@ end subroutine X(nl_operator_operate_batch)
 
 ! ---------------------------------------------------------
 subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
-  R_TYPE,              intent(inout) :: fi(:)  ! fi(op%np_part)
+  R_TYPE,              intent(inout) :: fi(:)  !< fi(op%np_part)
   type(nl_operator_t), intent(in)    :: op
-  R_TYPE,              intent(out)   :: fo(:)  ! fo(op%np)
+  R_TYPE,              intent(out)   :: fo(:)  !< fo(op%np)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: profile
   integer, optional,   intent(in)    :: points
