@@ -36,7 +36,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
 
   FLOAT, allocatable :: l_zk(:)        ! Local block of the energy functional (with the correct memory order for libxc)
   FLOAT, allocatable :: l_dens(:,:)    ! Local block for the density 
-  FLOAT, allocatable :: l_dedd(:,:)    ! Local block of the exchange or correl. potential(with the correct memory order for libxc)
+  FLOAT, allocatable :: l_dedd(:,:)    ! Local block of the exchange or correl. potential (with the correct memory order for libxc)
   FLOAT, allocatable :: l_sigma(:,:)   
   FLOAT, allocatable :: l_vsigma(:,:)  
   FLOAT, allocatable :: l_tau(:,:)
@@ -109,7 +109,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
   end if
 
   call lda_init()
-  if(gga .or. xcs%xc_density_correction == LR_X) call  gga_init()
+  if(gga .or. xcs%xc_density_correction == LR_X) call gga_init()
   if(mgga) call mgga_init()
 
   ! Get the gradient and the Laplacian of the density and the kinetic-energy density

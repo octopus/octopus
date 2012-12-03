@@ -130,7 +130,7 @@ contains
   subroutine dwrite_binary3(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    real(8),          intent(in)  :: ff(:,:,:)
+    real(8),             intent(in)  :: ff(:,:,:)
     integer,             intent(out) :: ierr
 
     integer, parameter :: type = TYPE_DOUBLE
