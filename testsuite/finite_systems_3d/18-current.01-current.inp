@@ -19,7 +19,7 @@ ExtraStates = 1
 %
 
 BoxShape = sphere
-Radius  = 15.0
+Radius  = 8.0
 Spacing = 0.46
 CurvMethod = curv_gygi
 CurvGygiA = 0.80
