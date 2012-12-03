@@ -67,8 +67,9 @@ void FC_FUNC_(doperate_ri_vec,DOPERATE_RI_VEC)(const int * opn,
 }
 
 /* the same as doperate_ri_vec, but allows giving each an appropriate Fortan interface
-   in which fi and fo are actually complex in Fortran */
-inline void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn, 
+   in which fi and fo are actually complex in Fortran 
+   Could be inline, but in that case pgcc will not put it in the symbol table. */
+void FC_FUNC_(zoperate_ri_vec,ZOPERATE_RI_VEC)(const int * opn, 
                                                       const double * restrict w, 
                                                       const int * opnri,
                                                       const int * opri,
