@@ -97,15 +97,15 @@ void FC_FUNC_(dgauss_seidel,DGAUSS_SEIDEL)(const int * opn,
   int l, i, j;
   const int * index;
   register double a0;
-  register const double fac = factor[0];
+  register const double fac = *factor;
 
   for (l = 0; l < nri ; l++) {
-    index  = opri + n*l;
+    index = opri + n*l;
     i = rimap_inv[l];
 
     for (; i < rimap_inv_max[l]; i++){
       a0 = 0.0;
-      for(j = 0; j < n; j++) a0 += w[j]*(pot + index[j])[i];
+      for(j = 0; j < n; j++) a0 += w[j]*pot[i + index[j]];
       pot[i] += fac*(a0 - rho[i]);
     }
 
