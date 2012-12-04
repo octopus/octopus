@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc, vxc, vtau)
+subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
@@ -25,11 +25,14 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
   integer,              intent(in)    :: ispin           !< Number of spin channels 
   FLOAT,                intent(in)    :: ioniz_pot
   FLOAT,                intent(in)    :: qtot 
+  FLOAT,                intent(inout) :: vxc(:,:)        !< XC potential
   FLOAT, optional,      intent(inout) :: ex              !< Exchange energy.
   FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
   FLOAT, optional,      intent(inout) :: deltaxc         !< The XC derivative discontinuity
-  FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
   FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
+
+  ! Formerly vxc was optional, but I removed this since we always pass vxc, and this simplifies the routine
+  ! and avoids some optimization problems. --DAS
 
   integer, parameter :: N_BLOCK_MAX = 1000
   integer :: n_block
@@ -203,34 +206,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = FUNC_X, FUNC_C
 
-      if(.not. present(vxc)) then ! get only the xc energy
-
-        if(iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC).ne.0) then
-          select case(functl(ixc)%family)
-
-          case(XC_FAMILY_LDA)
-            call XC_F90(lda_exc)(functl(ixc)%conf, n_block, l_dens(1,1), l_zk(1))
-
-          case(XC_FAMILY_GGA)
-            call XC_F90(gga_exc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_zk(1))
-
-          case(XC_FAMILY_HYB_GGA)
-            message(1) = 'Hyb-GGAs are currently disabled.'
-            call messages_fatal(1)
-
-          case(XC_FAMILY_MGGA)
-            call XC_F90(mgga_exc)(functl(ixc)%conf, n_block, &
-              l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), l_zk(1))
-
-          case default
-            cycle
-          end select
-
-        else ! Do not have an energy functional
-          l_zk(:) = M_ZERO
-        end if
-
-      else if(calc_energy .and. iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC).ne.0) then
+      if(calc_energy .and. iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC).ne.0) then
         ! we get the xc energy and potential
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA)
@@ -293,55 +269,52 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
       end if
 
       ! store results
-      if(present(vxc)) then
-
+      ib2 = ip
+      do ib = 1, n_block
+        dedd(ib2, 1:spin_channels) = dedd(ib2, 1:spin_channels) + l_dedd(1:spin_channels, ib)
+        ib2 = ib2 + 1
+      end do
+      
+      ! calculate the spin unpolarized exchange potential for the long range correction
+      if(xcs%xc_density_correction == LR_X .and. &
+        (functl(ixc)%type == XC_EXCHANGE .or. functl(ixc)%type == XC_EXCHANGE_CORRELATION)) then
+        
+        SAFE_ALLOCATE(unp_dens(1:n_block))
+        SAFE_ALLOCATE(unp_dedd(1:n_block))
+        
+        do ib = 1, n_block
+          unp_dens(ib) = sum(l_dens(1:spin_channels, ib))
+        end do
+        
+        select case(functl(ixc)%family)
+        case(XC_FAMILY_LDA)
+          call XC_F90(lda_vxc)(xcs%functl(ixc, 1)%conf, n_block, unp_dens(1), unp_dedd(1))
+          
+        case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
+          l_vsigma = M_ZERO
+          
+          call messages_not_implemented('XC density correction for GGA/mGGA')
+          
+          if(functl(ixc)%id == XC_GGA_X_LB) then
+            call mesh_r(der%mesh, ip, rr)
+            call XC_F90(gga_lb_modified)(xcs%functl(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
+              rr, unp_dedd(1))
+          else
+            call XC_F90(gga_vxc)(xcs%functl(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
+              unp_dedd(1), l_vsigma(1,1))
+          end if
+        end select
+        
         ib2 = ip
         do ib = 1, n_block
-          dedd(ib2, 1:spin_channels) = dedd(ib2, 1:spin_channels) + l_dedd(1:spin_channels, ib)
+          vx(ib2) = unp_dedd(ib)
           ib2 = ib2 + 1
         end do
-
-        ! calculate the spin unpolarized exchange potential for the long range correction
-        if(xcs%xc_density_correction == LR_X .and. &
-          (functl(ixc)%type == XC_EXCHANGE .or. functl(ixc)%type == XC_EXCHANGE_CORRELATION)) then
-
-          SAFE_ALLOCATE(unp_dens(1:n_block))
-          SAFE_ALLOCATE(unp_dedd(1:n_block))
-
-          do ib = 1, n_block
-            unp_dens(ib) = sum(l_dens(1:spin_channels, ib))
-          end do
-
-          select case(functl(ixc)%family)
-          case(XC_FAMILY_LDA)
-            call XC_F90(lda_vxc)(xcs%functl(ixc, 1)%conf, n_block, unp_dens(1), unp_dedd(1))
-
-          case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-            l_vsigma = M_ZERO
-
-            call messages_not_implemented('XC density correction for GGA/mGGA')
-
-            if(functl(ixc)%id == XC_GGA_X_LB) then
-              call mesh_r(der%mesh, ip, rr)
-              call XC_F90(gga_lb_modified)(xcs%functl(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
-                rr, unp_dedd(1))
-            else
-              call XC_F90(gga_vxc)(xcs%functl(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
-                unp_dedd(1), l_vsigma(1,1))
-            end if
-          end select
-
-          ib2 = ip
-          do ib = 1, n_block
-            vx(ib2) = unp_dedd(ib)
-            ib2 = ib2 + 1
-          end do
-
-          ! GGA terms are missing here
-
-          SAFE_DEALLOCATE_A(unp_dens)
-          SAFE_DEALLOCATE_A(unp_dedd)
-        end if
+        
+        ! GGA terms are missing here
+        
+        SAFE_DEALLOCATE_A(unp_dens)
+        SAFE_DEALLOCATE_A(unp_dedd)
 
         if((functl(ixc)%family == XC_FAMILY_GGA).or.(functl(ixc)%family == XC_FAMILY_MGGA)) then
           ib2 = ip
@@ -388,11 +361,9 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, ex, ec, deltaxc
   end if
 
   ! this has to be done in inverse order
-  if(present(vxc)) then
-    if(mgga) call mgga_process()
-    if( gga) call  gga_process()
-    call lda_process()
-  end if
+  if(mgga) call mgga_process()
+  if( gga) call  gga_process()
+  call lda_process()
 
   if(calc_energy) then
     ! integrate energies per unit volume
@@ -434,12 +405,10 @@ contains
       ec_per_vol = M_ZERO
     end if
 
-    if(present(vxc)) then
-      SAFE_ALLOCATE(l_dedd(1:spin_channels, 1:N_BLOCK_MAX))
-      SAFE_ALLOCATE(dedd(1:der%mesh%np_part, 1:spin_channels))
-      dedd = M_ZERO
-    end if
-
+    SAFE_ALLOCATE(l_dedd(1:spin_channels, 1:N_BLOCK_MAX))
+    SAFE_ALLOCATE(dedd(1:der%mesh%np_part, 1:spin_channels))
+    dedd = M_ZERO
+    
     do ii = 1, der%mesh%np
       d(1:spin_channels) = rho(ii, 1:spin_channels)
 
@@ -473,10 +442,8 @@ contains
     SAFE_DEALLOCATE_A(dens)
     SAFE_DEALLOCATE_A(ex_per_vol)
     SAFE_DEALLOCATE_A(ec_per_vol)
-    if(present(vxc)) then
-      SAFE_DEALLOCATE_A(l_dedd)
-      SAFE_DEALLOCATE_A(dedd)
-    end if
+    SAFE_DEALLOCATE_A(l_dedd)
+    SAFE_DEALLOCATE_A(dedd)
 
     POP_SUB(xc_get_vxc.lda_end)
   end subroutine lda_end
@@ -531,11 +498,9 @@ contains
     SAFE_ALLOCATE(gdens(1:der%mesh%np, 1:3, 1:spin_channels))
     gdens = M_ZERO
 
-    if(present(vxc)) then
-      SAFE_ALLOCATE(l_vsigma(1:ii, 1:N_BLOCK_MAX))
-      SAFE_ALLOCATE(dedgd(1:der%mesh%np_part, 1:3, 1:spin_channels))
-      dedgd = M_ZERO
-    end if
+    SAFE_ALLOCATE(l_vsigma(1:ii, 1:N_BLOCK_MAX))
+    SAFE_ALLOCATE(dedgd(1:der%mesh%np_part, 1:3, 1:spin_channels))
+    dedgd = M_ZERO
 
     do ii = 1, 2
       if(functl(ii)%id == XC_GGA_X_LB) then
@@ -555,10 +520,8 @@ contains
 
     SAFE_DEALLOCATE_A(l_sigma)
     SAFE_DEALLOCATE_A(gdens)
-    if(present(vxc)) then
-      SAFE_DEALLOCATE_A(l_vsigma)
-      SAFE_DEALLOCATE_A(dedgd)
-    end if
+    SAFE_DEALLOCATE_A(l_vsigma)
+    SAFE_DEALLOCATE_A(dedgd)
 
     POP_SUB(xc_get_vxc.gga_end)
   end subroutine gga_end
@@ -614,13 +577,11 @@ contains
     SAFE_ALLOCATE(l_tau  (1:spin_channels, 1:N_BLOCK_MAX))
     SAFE_ALLOCATE(l_ldens(1:spin_channels, 1:N_BLOCK_MAX))
 
-    if(present(vxc)) then
-      SAFE_ALLOCATE(dedldens(1:der%mesh%np_part, 1:spin_channels))
-      dedldens = M_ZERO
+    SAFE_ALLOCATE(dedldens(1:der%mesh%np_part, 1:spin_channels))
+    dedldens = M_ZERO
 
-      SAFE_ALLOCATE(l_dedtau  (1:spin_channels, 1:N_BLOCK_MAX))
-      SAFE_ALLOCATE(l_dedldens(1:spin_channels, 1:N_BLOCK_MAX))
-    end if
+    SAFE_ALLOCATE(l_dedtau  (1:spin_channels, 1:N_BLOCK_MAX))
+    SAFE_ALLOCATE(l_dedldens(1:spin_channels, 1:N_BLOCK_MAX))
 
     POP_SUB(xc_get_vxc.mgga_init)
   end subroutine mgga_init
@@ -679,12 +640,10 @@ contains
     SAFE_DEALLOCATE_A(l_tau)
     SAFE_DEALLOCATE_A(l_ldens)
 
-    if(present(vxc)) then
-      SAFE_DEALLOCATE_A(dedldens)
+    SAFE_DEALLOCATE_A(dedldens)
 
-      SAFE_DEALLOCATE_A(l_dedtau)
-      SAFE_DEALLOCATE_A(l_dedldens)
-    end if
+    SAFE_DEALLOCATE_A(l_dedtau)
+    SAFE_DEALLOCATE_A(l_dedldens)
 
     POP_SUB(xc_get_vxc.mgga_end)
   end subroutine mgga_end
@@ -1059,18 +1018,18 @@ end subroutine zxc_complex_lda
 !! It will eventually be merged with the other one dxc_get_vxc after some test
 !! -----------------------------------------------------------------------------
 subroutine xc_get_vxc_cmplx(der, xcs, rho, ispin, &
-  ex, ec, vxc, Imrho, Imex, Imec, Imvxc, cmplxscl_th)
+  vxc, Imrho, Imvxc, ex, ec, Imex, Imec, cmplxscl_th)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
   integer,              intent(in)    :: ispin           !< Number of spin channels 
+  FLOAT,                intent(inout) :: vxc(:,:)        !< XC potential
+  FLOAT,                intent(inout) :: Imvxc(:,:)      !< cmplxscl: XC potential
+  FLOAT,                intent(in)    :: Imrho(:, :)     !< cmplxscl: Electronic density 
   FLOAT, optional,      intent(inout) :: ex              !< Exchange energy.
   FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
-  FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
-  FLOAT,                intent(in)    :: Imrho(:, :)     !< cmplxscl: Electronic density 
   FLOAT, optional,      intent(inout) :: Imex            !< cmplxscl: Exchange energy.
   FLOAT, optional,      intent(inout) :: Imec            !< cmplxscl: Correlation energy
-  FLOAT, optional,      intent(inout) :: Imvxc(:,:)      !< cmplxscl: XC potential
   FLOAT,                intent(in)    :: cmplxscl_th     !< complex scaling angle
 
   
@@ -1083,6 +1042,8 @@ subroutine xc_get_vxc_cmplx(der, xcs, rho, ispin, &
   PUSH_SUB(xc_get_vxc_cmplx)
 
   ASSERT(present(ex) .eqv. present(ec))
+  ASSERT(present(ex) .eqv. present(Imex))
+  ASSERT(present(ec) .eqv. present(Imec))
   calc_energy = present(ex)
 
   !Pointer-shortcut for xcs%functl
@@ -1099,6 +1060,7 @@ subroutine xc_get_vxc_cmplx(der, xcs, rho, ispin, &
   
   if(functl(1)%id == XC_LDA_XC_CMPLX) then
     
+    ! this line will seg-fault if ex, ec, etc. are not present!
     call zxc_complex_lda(der%mesh, rho, vxc, ex, ec, Imrho, Imvxc, Imex, Imec, cmplxscl_th)
 
     ! Exact exchange for 2 particles [vxc(r) = 1/2 * vh(r)]

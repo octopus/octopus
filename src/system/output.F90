@@ -842,7 +842,7 @@ contains
     SAFE_ALLOCATE(vxc(gr%mesh%np, st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc = vxc)
+    call xc_get_vxc(gr%der, xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
 
     if(bgw%calc_exchange) then
       message(1) = "BerkeleyGW output: vxc.dat and x.dat"

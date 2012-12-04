@@ -630,18 +630,18 @@ contains
         if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_MGGA')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vxc = ks%calc%vxc, vtau = ks%calc%vtau)
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
+            ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vtau = ks%calc%vtau)
         else
           if(.not. cmplxscl) then
             call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-              st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-              ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc, vxc = ks%calc%vxc)
+              st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
+              ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc)
           else
-            call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, ks%calc%density, st%d%ispin, &
-              ex = energy%exchange, ec = energy%correlation, vxc = ks%calc%vxc, & 
-              Imrho = ks%calc%Imdensity, Imex = energy%Imexchange, Imec = energy%Imcorrelation, &
-              Imvxc = ks%calc%Imvxc, cmplxscl_th = hm%cmplxscl_th)
+            call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, ks%calc%density, st%d%ispin, ks%calc%vxc, &
+              ks%calc%Imvxc, ks%calc%Imdensity, &
+              ex = energy%exchange, ec = energy%correlation, Imex = energy%Imexchange, Imec = energy%Imcorrelation, &
+              cmplxscl_th = hm%cmplxscl_th)
           end if
         end if
       else
@@ -649,16 +649,16 @@ contains
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_MGGA')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, &
             st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            vxc = ks%calc%vxc, vtau = ks%calc%vtau)
+            ks%calc%vxc, vtau = ks%calc%vtau)
         else
           if(.not. cmplxscl) then
             call xc_get_vxc(ks%gr%fine%der, ks%xc, &
               st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-              vxc = ks%calc%vxc)
+              ks%calc%vxc)
           else
             call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, ks%calc%density, st%d%ispin, &
-              vxc = ks%calc%vxc, Imrho = ks%calc%Imdensity, Imvxc = ks%calc%Imvxc,&
-              cmplxscl_th = hm%cmplxscl_th )
+              ks%calc%vxc, ks%calc%Imvxc, ks%calc%Imdensity, &
+              cmplxscl_th = hm%cmplxscl_th)
           end if
         end if
       end if
