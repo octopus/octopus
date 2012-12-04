@@ -368,6 +368,21 @@ module opencl_m
 
       ! now get a list of the selected type
       call clGetDeviceIDs(opencl%platform_id, device_type, alldevices, ret_devices, cl_status)
+      
+      if(ret_devices < 1) then
+        ! we didnt find a device of the selected type, we ask for the default device
+        call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_DEFAULT, alldevices, ret_devices, cl_status)
+
+        if(ret_devices < 1) then
+          ! if this does not work, we ask for all devices
+          call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, alldevices, ret_devices, cl_status)
+        end if
+        
+        if(ret_devices < 1) then
+          call messages_write('Cannot find an OpenCL device')
+          call messages_fatal()
+        end if
+      end if
 
       ! the number of devices can be smaller
       ndevices = ret_devices
