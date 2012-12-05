@@ -34,6 +34,7 @@ module lcao_m
   use lalg_basic_m
   use lapack_m
   use loct_m
+  use magnetic_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -528,10 +529,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_run(sys, hm, st_start)
+  subroutine lcao_run(sys, hm, st_start, lmm_r)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
     integer, optional,   intent(in)    :: st_start !< use for unoccupied-states run
+    FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
     integer :: s1, s2, k1, k2, is, ik, ip, idim
@@ -566,6 +568,11 @@ contains
     if (.not. present(st_start)) then
       call lcao_guess_density(lcao, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)
+
+      if(sys%st%d%ispin > UNPOLARIZED) then
+        ASSERT(present(lmm_r))
+        call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
+      endif
       
       ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
       ! overwrite the guess density)

@@ -251,7 +251,7 @@ contains
             sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
             call system_h_setup(sys, hm)
           else
-            call lcao_run(sys, hm)
+            call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
           endif
         endif
 
@@ -328,7 +328,7 @@ contains
           sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
           call system_h_setup(sys, hm)
         else
-          call lcao_run(sys, hm)
+          call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
         endif
       endif
 

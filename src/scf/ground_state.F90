@@ -123,7 +123,7 @@ contains
         call messages_write("Run a DFT or HF calculation first")
         call messages_fatal()
       else
-        call lcao_run(sys, hm)
+        call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
       endif
     else
       ! setup Hamiltonian

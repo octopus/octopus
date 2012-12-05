@@ -108,7 +108,7 @@ contains
     call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, hm, conv_force = CNST(1e-8))
 
     if(fromScratch) then
-      call lcao_run(sys, hm)
+      call lcao_run(sys, hm, lmm_r = g_opt%scfv%lmm_r)
     else
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
