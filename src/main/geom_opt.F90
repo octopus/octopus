@@ -105,6 +105,8 @@ contains
       end if
     end if
 
+    call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, hm, conv_force = CNST(1e-8))
+
     if(fromScratch) then
       call lcao_run(sys, hm)
     else
@@ -113,8 +115,6 @@ contains
       call messages_info(1)
       call system_h_setup(sys, hm)
     end if
-
-    call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, hm, conv_force = CNST(1e-8))
 
     !Initial point
     SAFE_ALLOCATE(coords(1:g_opt%size))

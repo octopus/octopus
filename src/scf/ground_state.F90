@@ -114,6 +114,8 @@ contains
       end if
     end if
 
+    call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
+
     if(fromScratch) then
       if(sys%ks%theory_level == RDMFT) then
         call messages_write("RDMFT calculations cannot be started FromScratch")
@@ -145,7 +147,6 @@ contains
 
     if(sys%st%d%pack_states) call states_pack(sys%st)
 
-    call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
     call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
     call scf_end(scfv)
 
