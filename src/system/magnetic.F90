@@ -27,10 +27,13 @@ module magnetic_m
   use mesh_m
   use messages_m
   use mpi_m
+  use poisson_m
   use profiling_m
+  use species_m
   use states_m
   use states_dim_m
-  use poisson_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 
@@ -38,6 +41,7 @@ module magnetic_m
   public ::                    &
     magnetic_density,          &
     magnetic_moment,           &
+    write_magnetic_moments,    &
     magnetic_local_moments,    &
     calc_physical_current,     &
     magnetic_induced
@@ -94,6 +98,54 @@ contains
     POP_SUB(states_magnetic_moment)
   end subroutine magnetic_moment
 
+
+  ! ---------------------------------------------------------
+  subroutine write_magnetic_moments(iunit, mesh, st, geo, lmm_r)
+    integer,          intent(in) :: iunit
+    type(mesh_t),     intent(in) :: mesh
+    type(states_t),   intent(in) :: st
+    type(geometry_t), intent(in) :: geo
+    FLOAT,            intent(in) :: lmm_r
+    
+    integer :: ia
+    FLOAT :: mm(max(mesh%sb%dim, 3))
+    FLOAT, allocatable :: lmm(:,:)
+    
+    PUSH_SUB(write_magnetic_moments)
+    
+    call magnetic_moment(mesh, st, st%rho, mm)
+    SAFE_ALLOCATE(lmm(1:max(mesh%sb%dim, 3), 1:geo%natoms))
+    call magnetic_local_moments(mesh, st, geo, st%rho, lmm_r, lmm)
+    
+    if(mpi_grp_is_root(mpi_world)) then
+      
+      write(iunit, '(a)') 'Total Magnetic Moment:'
+      if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
+        write(iunit, '(a,f10.6)') ' mz = ', mm(3)
+      else if(st%d%ispin == SPINORS) then ! non-collinear
+        write(iunit, '(1x,3(a,f10.6,3x))') 'mx = ', mm(1),'my = ', mm(2),'mz = ', mm(3)
+      end if
+      
+      write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
+        trim(units_abbrev(units_out%length)),'] = ', units_from_atomic(units_out%length, lmm_r), '):'
+      if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
+        write(iunit,'(a,6x,14x,a)') ' Ion','mz'
+        do ia = 1, geo%natoms
+          write(iunit,'(i4,a10,f15.6)') ia, trim(species_label(geo%atom(ia)%spec)), lmm(3, ia)
+        end do
+      else if(st%d%ispin == SPINORS) then ! non-collinear
+        write(iunit,'(a,8x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
+        do ia = 1, geo%natoms
+          write(iunit,'(i4,a10,9f15.6)') ia, trim(species_label(geo%atom(ia)%spec)), lmm(1:mesh%sb%dim, ia)
+        end do
+      end if
+      
+    end if
+    
+    SAFE_DEALLOCATE_A(lmm)
+    
+    POP_SUB(write_magnetic_moments)
+  end subroutine write_magnetic_moments
 
   ! ---------------------------------------------------------
   subroutine magnetic_local_moments(mesh, st, geo, rho, rr, lmm)
