@@ -1205,6 +1205,7 @@ contains
 
 #ifdef HAVE_MPI
     if(geo%atoms_dist%parallel .and. parallelized_in_atoms) then
+      ! NOTE: if random or user_defined are made parallelized in atoms, below should be st%d%nspin instead of spin_channels
       do is = 1, spin_channels
         atom_rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, is)
         call MPI_Allreduce(atom_rho(1, 1), rho(1, is), gr%fine%mesh%np, &

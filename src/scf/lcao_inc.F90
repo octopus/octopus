@@ -608,6 +608,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
       ! set the eigenvalues
       st%eigenval(1:nev, ik) = eval(1:nev)
       st%eigenval(this%nbasis + 1:st%nst, ik) = HUGE(M_ONE)
+      ! FIXME: we should calculate expectation values of the Hamiltonian here.
+      ! The output will show ******* for the eigenvalues which looks like something horrible has gone wrong.
 
       ibasis = 1
       do iatom = 1, geo%natoms
