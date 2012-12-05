@@ -206,17 +206,17 @@ contains
     call parse_logical(datasets_check('LCAOAlternative'), .false., this%alternative)
 
 ! uncomment below to use LCAODebug
-#define LCAO_DEBUG
+!#define LCAO_DEBUG
 
-    !%Variable LCAODebug
-    !%Type logical
-    !%Default false
-    !%Section SCF::LCAO
-    !%Description
-    !% If this variable is set, detailed information about LCAO will be written to the <tt>static</tt>
-    !% directory: Hamiltonian matrix (<tt>lcao_hamiltonian</tt>), overlap matrix (<tt>lcao_overlap</tt>),
-    !% eigenvectors after diagonalization (<tt>lcao_eigenvectors</tt>), and orbital indices (<tt>lcao_orbitals</tt>).
-    !%End
+    !!%Variable LCAODebug
+    !!%Type logical
+    !!%Default false
+    !!%Section SCF::LCAO
+    !!%Description
+    !!% If this variable is set, detailed information about LCAO will be written to the <tt>static</tt>
+    !!% directory: Hamiltonian matrix (<tt>lcao_hamiltonian</tt>), overlap matrix (<tt>lcao_overlap</tt>),
+    !!% eigenvectors after diagonalization (<tt>lcao_eigenvectors</tt>), and orbital indices (<tt>lcao_orbitals</tt>).
+    !!%End
 #ifdef LCAO_DEBUG
     call parse_logical(datasets_check('LCAODebug'), .false., this%debug)
 ! The code to do this exists but is hidden by ifdefs, in src/scf/lcao_inc.F90, because it causes
