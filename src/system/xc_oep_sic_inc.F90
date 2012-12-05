@@ -60,7 +60,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
       edummy = M_ZERO
-      call xc_get_vxc(gr%fine%der, xcs, st, rho, SPIN_POLARIZED, edummy, edummy, ex=ex2, ec=ec2, vxc=vxc)
+      call xc_get_vxc(gr%fine%der, xcs, st, rho, SPIN_POLARIZED, edummy, edummy, vxc, ex=ex2, ec=ec2)
 
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2
