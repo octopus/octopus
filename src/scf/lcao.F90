@@ -79,7 +79,7 @@ module lcao_m
   type lcao_t
     private
     integer           :: mode
-    logical           :: write_matrices !< whether to output H and S to file
+    logical           :: debug !< whether to output extra info to file
     logical           :: initialized !< are k, s and v1 matrices filled?
     integer           :: norbs   !< number of orbitals used
     integer           :: maxorbs !< largest number of orbitals that could be used
@@ -205,19 +205,20 @@ contains
     !%End
     call parse_logical(datasets_check('LCAOAlternative'), .false., this%alternative)
 
-! uncomment below to use LCAOWriteMatrices
-!#define LCAO_DEBUG
+! uncomment below to use LCAODebug
+#define LCAO_DEBUG
 
-    !!%Variable LCAOWriteMatrices
-    !!%Type logical
-    !!%Default false
-    !!%Section SCF::LCAO
-    !!%Description
-    !!% If this variable is set, the LCAO Hamiltonian and overlap matrices will be written to files
-    !!% <tt>lcao_hamiltonian</tt> and <tt>lcao_overlap</tt> in the <tt>static</tt> directory.
-    !!%End
+    !%Variable LCAODebug
+    !%Type logical
+    !%Default false
+    !%Section SCF::LCAO
+    !%Description
+    !% If this variable is set, detailed information about LCAO will be written to the <tt>static</tt>
+    !% directory: Hamiltonian matrix (<tt>lcao_hamiltonian</tt>), overlap matrix (<tt>lcao_overlap</tt>),
+    !% eigenvectors after diagonalization (<tt>lcao_eigenvectors</tt>), and orbital indices (<tt>lcao_orbitals</tt>).
+    !%End
 #ifdef LCAO_DEBUG
-    call parse_logical(datasets_check('LCAOWriteMatrices'), .false., this%write_matrices)
+    call parse_logical(datasets_check('LCAODebug'), .false., this%debug)
 ! The code to do this exists but is hidden by ifdefs, in src/scf/lcao_inc.F90, because it causes
 ! mysterious problems with optimization on PGI 12.4.0.
 #endif
@@ -1095,7 +1096,9 @@ contains
       !%
       !% For spin-polarized calculations, the vectors should have only
       !% one component; for non-collinear-spin calculations, they
-      !% should have three components.
+      !% should have three components. If the norm of the vector is greater
+      !% than the number of valence electrons in the atom, it will be rescaled
+      !% to this number, which is the maximum possible magnetization.
       !%End
       if(parse_block(datasets_check('AtomsMagnetDirection'), blk) < 0) then
         message(1) = "AtomsMagnetDirection block is not defined."
