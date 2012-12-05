@@ -164,7 +164,7 @@ contains
     
     !%Variable LCAOStart
     !%Type integer
-    !%Section SCF
+    !%Section SCF::LCAO
     !%Description
     !% Before starting a SCF calculation, <tt>Octopus</tt> can perform
     !% a LCAO calculation. These can provide <tt>Octopus</tt> with a good set
@@ -992,7 +992,7 @@ contains
       !%Variable GuessMagnetDensity
       !%Type integer
       !%Default ferromagnetic
-      !%Section SCF
+      !%Section SCF::LCAO
       !%Description
       !% The guess density for the SCF cycle is just the sum of all the atomic densities.
       !% When performing spin-polarized or non-collinear-spin calculations this option sets 
@@ -1082,7 +1082,7 @@ contains
       
       !%Variable AtomsMagnetDirection
       !%Type block
-      !%Section Hamiltonian
+      !%Section SCF::LCAO
       !%Description
       !% This option is only used when <tt>GuessMagnetDensity</tt> is
       !% set to <tt>user_defined</tt>. It provides a direction for the
