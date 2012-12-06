@@ -148,10 +148,10 @@ contains
 
     do iatom = 1, geo%natoms
       do alpha = 1, mesh%sb%dim
-        write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the ', index2axis(alpha), '-direction.'
-        call messages_info(1)
-
         imat = vibrations_get_index(vib, iatom, alpha)
+
+        write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the +', index2axis(alpha), '-direction.'
+        call messages_info(1)
 
         ! move atom iatom in direction alpha by dist
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
@@ -165,6 +165,9 @@ contains
         do jatom = 1, geo%natoms
           forces0(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
         end do
+
+        write(message(1), '(a,i3,3a)') 'Info: Moving atom ', iatom, ' in the -', index2axis(alpha), '-direction.'
+        call messages_info(1)
 
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) - M_TWO*vib%disp
 
