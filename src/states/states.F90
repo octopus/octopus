@@ -2406,7 +2406,7 @@ contains
 
     spin(1) = M_TWO*z
     spin(2) = M_TWO*aimag(z)
-    spin(3) = zmf_dotp(mesh, f1(:, 1), f1(:, 1)) - zmf_dotp(mesh, f1(:, 2), f1(:, 2))
+    spin(3) = zmf_nrm2(mesh, f1(:, 1))**2 - zmf_nrm2(mesh, f1(:, 2))**2
     spin = M_HALF*spin ! spin is half the sigma matrix.
 
     POP_SUB(state_spin)

@@ -26,4 +26,5 @@ Precision : 0.00021
 match ; mx           ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ; 0.394958
 match ; my           ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ; 0.394958
 match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.829468
-
+# This differs significantly from the initial magnetization.
+# It is due to the small radius and large spacing.
