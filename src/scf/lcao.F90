@@ -600,7 +600,13 @@ contains
         call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb)
         
         ! Update the density and the Hamiltonian
-        if (lcao%mode == LCAO_START_FULL) call system_h_setup(sys, hm, calc_eigenval = .false.)
+        if (lcao%mode == LCAO_START_FULL) then
+          call system_h_setup(sys, hm, calc_eigenval = .false.)
+          if(sys%st%d%ispin > UNPOLARIZED) then
+            ASSERT(present(lmm_r))
+            call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
+          endif
+        endif
       endif
     else
       if(.not. present(st_start)) call init_states(sys%st, sys%gr%mesh, sys%geo)
