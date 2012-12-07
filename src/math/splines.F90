@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2012 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -30,6 +30,11 @@
 ! WARNINGS:
 !  * The problem of precision has been disregarded, so it probably does not
 !    work if the code is compiled with single precision. To be fixed.
+!
+!  * Since version 1.15, GSL returns an error if one tries to interpolate
+!    outside the interpolation range. As such, the spline_eval functions
+!    will return zero when the function is evaluated outside the interpolation
+!    range.
 !
 ! To define a function, one must supply a set {x(i),y(i)} of pairs of values
 ! -- the abscissa and the value of the function.
@@ -543,7 +548,11 @@ contains
     type(spline_t), intent(in) :: spl
     real(8),        intent(in) :: x
 
-    spline_eval8 = oct_spline_eval(x, spl%spl, spl%acc)
+    if (x < spl%x_limit(1) .or. x > spl%x_limit(2)) then
+      spline_eval8 = 0.0_8
+    else
+      spline_eval8 = oct_spline_eval(x, spl%spl, spl%acc)
+    end if
   end function spline_eval8
 
 
@@ -552,7 +561,11 @@ contains
     type(spline_t), intent(in) :: spl
     real(4),        intent(in) :: x
 
-    spline_eval4 = real(oct_spline_eval(real(x, kind=8), spl%spl, spl%acc), kind=4)
+    if (x < spl%x_limit(1) .or. x > spl%x_limit(2)) then
+      spline_eval4 = 0.0_4
+    else
+      spline_eval4 = real(oct_spline_eval(real(x, kind=8), spl%spl, spl%acc), kind=4)
+    end if
   end function spline_eval4
 
 
@@ -562,7 +575,15 @@ contains
     integer,        intent(in)    :: nn
     real(8),        intent(inout) :: xf(:)
 
-    call oct_spline_eval_array(nn, xf(1), spl%spl, spl%acc)
+    integer :: ii
+
+    do ii = 1, nn
+      if (xf(ii) < spl%x_limit(1) .or. xf(ii) > spl%x_limit(2)) then
+        xf(ii) = 0.0_8
+      else
+        xf(ii) = oct_spline_eval(xf(ii), spl%spl, spl%acc)
+      end if
+    end do
   end subroutine spline_eval8_array
 
 
@@ -572,7 +593,15 @@ contains
     integer,        intent(in)    :: nn
     real(4),        intent(inout) :: xf(:)
 
-    call oct_spline_eval_array4(nn, xf(1), spl%spl, spl%acc)
+    integer :: ii
+
+    do ii = 1, nn
+      if (xf(ii) < spl%x_limit(1) .or. xf(ii) > spl%x_limit(2)) then
+        xf(ii) = 0.0_4
+      else
+        xf(ii) = real(oct_spline_eval(real(xf(ii), kind=8), spl%spl, spl%acc), kind=4)
+      end if
+    end do
   end subroutine spline_eval4_array
 
 
