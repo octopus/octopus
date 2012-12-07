@@ -190,7 +190,7 @@ contains
     !% in the file <tt>td.general/acceleration</tt>. This file can then be
     !% processed by the utility <tt>oct-harmonic-spectrum</tt> in order to obtain the harmonic spectrum.
     !%Option laser 64
-    !% If set, and if there are lasers defined in <tt>TDLasers</tt>,
+    !% If set, and if there are lasers defined in <tt>TDExternalFields</tt>,
     !% <tt>octopus</tt> outputs the laser field to the file <tt>td.general/laser</tt>.
     !%Option energy 128
     !% If <tt>set</tt>, <tt>octopus</tt> outputs the different components of the energy
