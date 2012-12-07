@@ -174,11 +174,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     endif
 
     ! make a local copy with the correct memory order for libxc
-    ib2 = ip
-    do ib = 1, n_block
-      l_dens(1:spin_channels, ib) = dens(ib2, 1:spin_channels)
-      ib2 = ib2 + 1
-    end do
+    call copy_global_to_local(dens, l_dens, n_block, spin_channels, ip)
 
     if(gga) then
       ib2 = ip
@@ -194,13 +190,10 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     end if
 
     if(mgga) then
-      ib2 = ip
-      do ib = 1, n_block
-        ! we adjust for the different definition of tau in libxc
-        l_tau  (1:spin_channels, ib) =   tau(ib2, 1:spin_channels) / M_TWO
-        l_ldens(1:spin_channels, ib) = ldens(ib2, 1:spin_channels)
-        ib2 = ib2 + 1
-      end do
+      call copy_global_to_local(tau, l_tau, n_block, spin_channels, ip)
+      ! we adjust for the different definition of tau in libxc
+      l_tau = l_tau / M_TWO
+      call copy_global_to_local(ldens, l_ldens, n_block, spin_channels, ip)
     end if
 
     ! Calculate the potential/gradient density in local reference frame.
@@ -268,12 +261,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         end if
       end if
 
-      ! store results
-      ib2 = ip
-      do ib = 1, n_block
-        dedd(ib2, 1:spin_channels) = dedd(ib2, 1:spin_channels) + l_dedd(1:spin_channels, ib)
-        ib2 = ib2 + 1
-      end do
+      call copy_local_to_global(l_dedd, dedd, n_block, spin_channels, ip)
       
       ! calculate the spin unpolarized exchange potential for the long range correction
       if(xcs%xc_density_correction == LR_X .and. &
@@ -330,13 +318,9 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         end if
 
         if(functl(ixc)%family == XC_FAMILY_MGGA) then
-          ib2 = ip
-          do ib = 1, n_block
-            dedldens(ib2, 1:spin_channels) = dedldens(ib2, 1:spin_channels) + l_dedldens(1:spin_channels, ib)
-            ! we adjust for the different definition of tau in libxc
-            vtau    (ib2, 1:spin_channels) = vtau    (ib2, 1:spin_channels) + l_dedtau  (1:spin_channels, ib)/M_TWO
-            ib2 = ib2 + 1
-          end do
+          call copy_local_to_global(l_dedldens, dedldens, n_block, spin_channels, ip)
+          call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
+          vtau = vtau / M_TWO
         end if
       end if
 
@@ -380,6 +364,39 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   call profiling_out(prof)
 
 contains
+
+  ! ---------------------------------------------------------
+  !> make a local copy with the correct memory order for libxc
+  subroutine copy_global_to_local(global, local, n_block, spin_channels, ip)
+    FLOAT,   intent(in)  :: global(:,:)
+    FLOAT,   intent(out) :: local(:,:)
+    integer, intent(in)  :: n_block
+    integer, intent(in)  :: spin_channels
+    integer, intent(in)  :: ip
+
+    integer :: ib, ib2
+    ib2 = ip
+    do ib = 1, n_block
+      local(1:spin_channels, ib) = global(ib2, 1:spin_channels)
+      ib2 = ib2 + 1
+    end do
+  end subroutine copy_global_to_local
+
+  ! ---------------------------------------------------------
+  subroutine copy_local_to_global(local, global, n_block, spin_channels, ip)
+    FLOAT,   intent(in)    :: local(:,:)
+    FLOAT,   intent(inout) :: global(:,:)
+    integer, intent(in)    :: n_block
+    integer, intent(in)    :: spin_channels
+    integer, intent(in)    :: ip
+
+    integer :: ib, ib2
+    ib2 = ip
+    do ib = 1, n_block
+      global(ib2, 1:spin_channels) = global(ib2, 1:spin_channels) + local(1:spin_channels, ib)
+      ib2 = ib2 + 1
+    end do
+  end subroutine copy_local_to_global
 
   ! ---------------------------------------------------------
   !> Takes care of the initialization of the LDA part of the functionals
