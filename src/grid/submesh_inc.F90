@@ -118,6 +118,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   !$omp parallel do private(ist, idim, jdim, jst, is)
   do ist =  1, mm%nst
     do idim = 1, mm%dim
+      ! FIXME: this line should instead be assert(mm%dim == ss%dim)!!
       jdim = min(idim, ss%dim)
       do jst = 1, ss%nst
         if(associated(ss%states(jst)%dpsi)) then

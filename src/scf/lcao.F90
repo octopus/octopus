@@ -202,9 +202,15 @@ contains
     !%Description
     !% If this variable is set, the LCAO procedure will use an
     !% alternative (and experimental) implementation. It is faster for
-    !% large systems and parallel in states.
+    !% large systems and parallel in states. It is not working for spinors, however.
     !%End
     call parse_logical(datasets_check('LCAOAlternative'), .false., this%alternative)
+    ! DAS: For spinors, you will always get magnetization in (1, 0, 0) direction, and the
+    ! eigenvalues will be incorrect.
+    if(st%d%ispin == SPINORS .and. this%alternative) then
+      message(1) = "LCAOAlternative is not working for spinors."
+      call messages_fatal(1)
+    endif
 
 ! uncomment below to use LCAODebug
 !#define LCAO_DEBUG

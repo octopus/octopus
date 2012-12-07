@@ -132,6 +132,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   endif
 #endif
 
+  ! FIXME: these loops should not be over st%d%spin_channels but rather 1 unless spin-polarized in which case 2.
   do n1 = 1, this%norbs
     
     do ispin = 1, st%d%spin_channels
@@ -418,6 +419,7 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
     ! initialize the radial grid
     call submesh_init_sphere(this%sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
     INCR(dof, this%sphere(iatom)%np*this%mult*norbs)
+    ! FIXME: the second argument should be dim = st%d%dim, not 1!
     call batch_init(this%orbitals(iatom), 1, this%mult*norbs)
   end do
 
@@ -618,6 +620,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         call lcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
 
         do ib = st%block_start, st%block_end
+          ! FIXME: this call handles spinors incorrectly.
           call X(submesh_batch_add_matrix)(this%sphere(iatom), evec(ibasis:, states_block_min(st, ib):), &
             this%orbitals(iatom), st%psib(ib, ik))
         end do
