@@ -163,10 +163,9 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   end if
 
-  n_block = N_BLOCK_MAX
   space_loop: do ip = 1, der%mesh%np, N_BLOCK_MAX
 
-    call space_loop_init() 
+    call space_loop_init(n_block)
 
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = FUNC_X, FUNC_C
@@ -371,21 +370,20 @@ contains
   end subroutine copy_local_to_global
 
   ! ---------------------------------------------------------
-  subroutine space_loop_init()
+  subroutine space_loop_init(nblock)
+    integer, intent(out) :: nblock
 
     PUSH_SUB(xc_get_vxc.space_loop_init)
 
     !Resize the dimension of the last block when the number of the mesh points
     !it is not a perfect divisor of the dimension of the blocks.
-    if(ip + N_BLOCK_MAX > der%mesh%np) then
-      n_block = der%mesh%np - ip + 1
-    endif
+    nblock = min(der%mesh%np - ip + 1, N_BLOCK_MAX)
 
     ! make a local copy with the correct memory order for libxc
-    call copy_global_to_local(dens, l_dens, n_block, spin_channels, ip)
+    call copy_global_to_local(dens, l_dens, nblock, spin_channels, ip)
 
     if(gga) then
-      do ib = 1, n_block
+      do ib = 1, nblock
         l_sigma(1, ib) = sum(gdens(ib + ip - 1, 1:der%mesh%sb%dim, 1)**2)
         if(ispin /= UNPOLARIZED) then
           ! memo: please check the following indices
@@ -396,10 +394,10 @@ contains
     end if
 
     if(mgga) then
-      call copy_global_to_local(tau, l_tau, n_block, spin_channels, ip)
+      call copy_global_to_local(tau, l_tau, nblock, spin_channels, ip)
       ! we adjust for the different definition of tau in libxc
       l_tau = l_tau / M_TWO
-      call copy_global_to_local(ldens, l_ldens, n_block, spin_channels, ip)
+      call copy_global_to_local(ldens, l_ldens, nblock, spin_channels, ip)
     end if
 
     POP_SUB(xc_get_vxc.space_loop_init)
