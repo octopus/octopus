@@ -64,7 +64,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   FLOAT, allocatable :: vx(:)
   FLOAT, allocatable :: unp_dens(:), unp_dedd(:)
 
-  integer :: ib, ib2, ip, isp, families, ixc, spin_channels, is
+  integer :: ib, ip, isp, families, ixc, spin_channels, is
   integer, save :: xc_get_vxc_counter = 0
   FLOAT   :: rr,ipot_to_pass
   logical :: gga, mgga
@@ -177,15 +177,13 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     call copy_global_to_local(dens, l_dens, n_block, spin_channels, ip)
 
     if(gga) then
-      ib2 = ip
       do ib = 1, n_block
-        l_sigma(1, ib) = sum(gdens(ib2, 1:der%mesh%sb%dim, 1)*gdens(ib2, 1:der%mesh%sb%dim, 1))
+        l_sigma(1, ib) = sum(gdens(ib + ip - 1, 1:der%mesh%sb%dim, 1)*gdens(ib + ip - 1, 1:der%mesh%sb%dim, 1))
         if(ispin /= UNPOLARIZED) then
           ! memo: please check the following indices
-          l_sigma(2, ib) = sum(gdens(ib2, 1:der%mesh%sb%dim, 1)*gdens(ib2, 1:der%mesh%sb%dim, 2)) 
-          l_sigma(3, ib) = sum(gdens(ib2, 1:der%mesh%sb%dim, 2)*gdens(ib2, 1:der%mesh%sb%dim, 2))
+          l_sigma(2, ib) = sum(gdens(ib + ip - 1, 1:der%mesh%sb%dim, 1)*gdens(ib + ip - 1, 1:der%mesh%sb%dim, 2)) 
+          l_sigma(3, ib) = sum(gdens(ib + ip - 1, 1:der%mesh%sb%dim, 2)*gdens(ib + ip - 1, 1:der%mesh%sb%dim, 2))
         end if
-        ib2 = ib2 + 1
       end do
     end if
 
@@ -247,16 +245,13 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       end if
 
       if(calc_energy) then
-        ib2 = ip
         if(functl(ixc)%type == XC_EXCHANGE) then
           do ib = 1, n_block
-            ex_per_vol(ib2) = ex_per_vol(ib2) + sum(l_dens(1:spin_channels, ib)) * l_zk(ib)
-            ib2 = ib2 + 1
+            ex_per_vol(ib + ip - 1) = ex_per_vol(ib + ip - 1) + sum(l_dens(1:spin_channels, ib)) * l_zk(ib)
           end do
         else
           do ib = 1, n_block
-            ec_per_vol(ib2) = ec_per_vol(ib2) + sum(l_dens(1:spin_channels, ib)) * l_zk(ib)
-            ib2 = ib2 + 1
+            ec_per_vol(ib + ip - 1) = ec_per_vol(ib + ip - 1) + sum(l_dens(1:spin_channels, ib)) * l_zk(ib)
           end do
         end if
       end if
@@ -293,10 +288,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
           end if
         end select
         
-        ib2 = ip
         do ib = 1, n_block
-          vx(ib2) = unp_dedd(ib)
-          ib2 = ib2 + 1
+          vx(ib + ip - 1) = unp_dedd(ib)
         end do
         
         ! GGA terms are missing here
@@ -305,15 +298,13 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         SAFE_DEALLOCATE_A(unp_dedd)
 
         if((functl(ixc)%family == XC_FAMILY_GGA).or.(functl(ixc)%family == XC_FAMILY_MGGA)) then
-          ib2 = ip
           do ib = 1, n_block
-            dedgd(ib2,:,1) = dedgd(ib2,:,1) + M_TWO*l_vsigma(1, ib)*gdens(ib2,:,1)
+            dedgd(ib + ip - 1,:,1) = dedgd(ib + ip - 1,:,1) + M_TWO*l_vsigma(1, ib)*gdens(ib + ip - 1,:,1)
             if(ispin /= UNPOLARIZED) then
-              dedgd(ib2,:,1) = dedgd(ib2,:,1) + l_vsigma(2, ib)*gdens(ib2,:,2)
-              dedgd(ib2,:,2) = dedgd(ib2,:,2) +  &
-                M_TWO*l_vsigma(3, ib)*gdens(ib2,:,2) + l_vsigma(2, ib)*gdens(ib2,:,1)
+              dedgd(ib + ip - 1,:,1) = dedgd(ib + ip - 1,:,1) + l_vsigma(2, ib)*gdens(ib + ip - 1,:,2)
+              dedgd(ib + ip - 1,:,2) = dedgd(ib + ip - 1,:,2) +  &
+                M_TWO*l_vsigma(3, ib)*gdens(ib + ip - 1,:,2) + l_vsigma(2, ib)*gdens(ib + ip - 1,:,1)
             end if
-            ib2 = ib2 + 1
           end do
         end if
 
@@ -374,12 +365,15 @@ contains
     integer, intent(in)  :: spin_channels
     integer, intent(in)  :: ip
 
-    integer :: ib, ib2
-    ib2 = ip
+    integer :: ib
+
+    PUSH_SUB(xc_get_vxc.copy_global_to_local)
+
     do ib = 1, n_block
-      local(1:spin_channels, ib) = global(ib2, 1:spin_channels)
-      ib2 = ib2 + 1
+      local(1:spin_channels, ib) = global(ib + ip - 1, 1:spin_channels)
     end do
+
+    POP_SUB(xc_get_vxc.copy_global_to_local)
   end subroutine copy_global_to_local
 
   ! ---------------------------------------------------------
@@ -390,12 +384,15 @@ contains
     integer, intent(in)    :: spin_channels
     integer, intent(in)    :: ip
 
-    integer :: ib, ib2
-    ib2 = ip
+    integer :: ib
+
+    PUSH_SUB(xc_get_vxc.copy_local_to_global)
+
     do ib = 1, n_block
-      global(ib2, 1:spin_channels) = global(ib2, 1:spin_channels) + local(1:spin_channels, ib)
-      ib2 = ib2 + 1
+      global(ib + ip - 1, 1:spin_channels) = global(ib + ip - 1, 1:spin_channels) + local(1:spin_channels, ib)
     end do
+
+    POP_SUB(xc_get_vxc.copy_local_to_global)
   end subroutine copy_local_to_global
 
   ! ---------------------------------------------------------
