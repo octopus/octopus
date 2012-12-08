@@ -61,7 +61,7 @@ rkb_projector.o : rkb_projector.F90 species_pot.o
 kb_projector.o : kb_projector.F90 kb_projector_inc.F90 species_pot.o 
 hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90 species_pot.o 
 projector.o : projector.F90 projector_inc.F90 rkb_projector.o kb_projector.o hgh_projector.o species_pot.o
-epot.o : epot.F90 projector.o lasers.o species_pot.o gauge_field.o
+epot.o : epot.F90 projector.o lasers.o species_pot.o gauge_field.o kick.o
 hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 lasers.o projector.o epot.o gauge_field.o ob_lead.o hamiltonian_base.o
 scf_tol.o : scf_tol.F90 
 hamiltonian_base.o : hamiltonian_base.F90 hamiltonian_base_inc.F90 projector.o epot.o projector_matrix.o
