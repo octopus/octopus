@@ -101,7 +101,10 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       if(nrm(ii) < tol) done(ii) = 1
     end do
 
-    if(all(done(1:bsize) /= 0)) cycle
+    if(all(done(1:bsize) /= 0)) then
+       if(pack) call batch_unpack(st%psib(ib, ik))
+       cycle
+    end if
 
     ! initialize the remaining batch objects
     do iter = 2, niter
