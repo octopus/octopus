@@ -1,3 +1,22 @@
+!! Copyright (C) 2012 J. R. F. de Sousa
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: global.F90 3856 2008-03-10 14:52:36Z marques $
+
 #include "global.h"
 
 module json_parser_m
@@ -48,23 +67,31 @@ contains
     type(json_parser_t), intent(inout) :: parser
     integer,             intent(in)    :: unit
     integer,             intent(out)   :: iostat
-    !
+
+    PUSH_SUB(json_parser_init)
+
     parser%unit=unit
     parser%line=1
     parser%bpos=1
     parser%ierr=0
     call json_parser_readline(parser, iostat)
+
+    POP_SUB(json_parser_init)
     return
   end subroutine json_parser_init
 
   subroutine json_parser_end(parser)
     type(json_parser_t), intent(inout) :: parser
-    !
+
+    PUSH_SUB(json_parser_end)
+
     parser%unit=-1
     parser%line=0
     parser%bpos=0
     parser%ierr=0
     call json_end(parser%buff)
+
+    PUSH_SUB(json_parser_end)
     return
   end subroutine json_parser_end
 
@@ -112,9 +139,11 @@ contains
   subroutine json_parser_readline(parser, iostat)
     type(json_parser_t), intent(inout) :: parser
     integer,             intent(out)   :: iostat
-    !
+
     character(len=LINE_LEN) :: buff
-    !
+
+    PUSH_SUB(json_parser_readline)
+
     read(unit=parser%unit,fmt="(a)",iostat=iostat) buff
     parser%ierr=iostat
     if(iostat==0)then
@@ -123,6 +152,8 @@ contains
       parser%line=parser%line+1
       parser%bpos=1
     end if
+
+    POP_SUB(json_parser_readline)
     return
   end subroutine json_parser_readline
 
@@ -130,14 +161,18 @@ contains
     type(json_parser_t), intent(inout) :: parser
     character,           intent(out)   :: char
     integer,             intent(out)   :: iostat
-    !
+
     integer :: ierr
-    !
+
+    PUSH_SUB(json_parser_get_char)
+
     if(parser%bpos>json_len(parser%buff)) call json_parser_readline(parser, iostat)
     if(iostat==0)then
       call json_get(parser%buff, parser%bpos, char, ierr)
       parser%bpos=parser%bpos+1
     end if
+
+    POP_SUB(json_parser_get_char)
     return
   end subroutine json_parser_get_char
 
@@ -145,9 +180,13 @@ contains
     type(json_parser_t), intent(inout) :: parser
     character,           intent(out)   :: char
     integer,             intent(out)   :: iostat
-    !
+
+    PUSH_SUB(json_parser_peek_char)
+
     call json_parser_get_char(parser, char, iostat)
     if(iostat==0)parser%bpos=parser%bpos-1
+
+    POP_SUB(json_parser_peek_char)
     return
   end subroutine json_parser_peek_char
 
@@ -155,12 +194,16 @@ contains
     type(json_parser_t), intent(inout) :: parser
     character,           intent(out)   :: char
     integer,             intent(out)   :: iostat
-    !
+
+    PUSH_SUB(json_parser_get_nonblank_char)
+
     do
       call json_parser_get_char(parser, char, iostat)
       if(iostat/=0)exit
       if(.not.json_parser_is_space(char))exit
     end do
+
+    POP_SUB(json_parser_get_nonblank_char)
     return
   end subroutine json_parser_get_nonblank_char
 
@@ -168,9 +211,13 @@ contains
     type(json_parser_t), intent(inout) :: parser
     character,           intent(out)   :: char
     integer,             intent(out)   :: iostat
-    !
+
+    PUSH_SUB(json_parser_peek_nonblank_char)
+
     call json_parser_get_nonblank_char(parser, char, iostat)
     if(iostat==0)parser%bpos=parser%bpos-1
+
+    POP_SUB(json_parser_peek_nonblank_char)
     return
   end subroutine json_parser_peek_nonblank_char
 
@@ -179,10 +226,12 @@ contains
     character(len=*),    intent(in)    :: string
     logical,             intent(out)   :: ok
     integer,             intent(out)   :: iostat
-    !
+
     character :: char
     integer   :: i
-    !
+
+    PUSH_SUB(json_parser_parse_literal)
+
     ok=.false.
     call json_parser_get_nonblank_char(parser, char, iostat)
     if((iostat==0).and.(json_parser_to_lower(char)==string(1:1)))then
@@ -195,6 +244,8 @@ contains
         end if
       end do
     end if
+
+    POP_SUB(json_parser_parse_literal)
     return
   end subroutine json_parser_parse_literal
 
@@ -202,14 +253,17 @@ contains
     type(json_parser_t), intent(inout) :: parser
     type(json_null_t),   intent(out)   :: value
     integer,             intent(out)   :: iostat
-    !
+
     character(len=*), parameter :: data="null"
-    !
     logical :: ok
-    !
+
+    PUSH_SUB(json_parser_parse_null)
+
     call json_end(value)
     call json_parser_parse_literal(parser, data, ok, iostat)
     if((iostat==0).and.(ok)) call json_init(value)
+
+    POP_SUB(json_parser_parse_null)
     return
   end subroutine json_parser_parse_null
 
@@ -217,14 +271,17 @@ contains
     type(json_parser_t),  intent(inout) :: parser
     type(json_logical_t), intent(inout) :: value
     integer,              intent(out)   :: iostat
-    !
+
     character(len=*), parameter :: data="false"
-    !
     logical :: ok
-    !
+
+    PUSH_SUB(json_parser_parse_false)
+
     call json_end(value)
     call json_parser_parse_literal(parser, data, ok, iostat)
     if((iostat==0).and.(ok)) call json_init(value, .false.)
+
+    POP_SUB(json_parser_parse_false)
     return
   end subroutine json_parser_parse_false
 
@@ -232,14 +289,17 @@ contains
     type(json_parser_t),  intent(inout) :: parser
     type(json_logical_t), intent(inout) :: value
     integer,              intent(out)   :: iostat
-    !
+
     character(len=*), parameter :: data="true"
-    !
     logical :: ok
-    !
+
+    PUSH_SUB(json_parser_parse_true)
+
     call json_end(value)
     call json_parser_parse_literal(parser, data, ok, iostat)
     if((iostat==0).and.(ok)) call json_init(value, .true.)
+
+    POP_SUB(json_parser_parse_true)
     return
   end subroutine json_parser_parse_true
 
@@ -247,9 +307,11 @@ contains
     type(json_parser_t), intent(inout) :: parser
     type(json_string_t), intent(out)   :: string
     integer,             intent(out)   :: iostat
-    !
+
     character :: char
-    !
+
+    PUSH_SUB(json_parser_parse_number)
+
     call json_end(string)
     call json_parser_peek_nonblank_char(parser, char, iostat)
     if((iostat==0).and.(scan(numbers,char)/=0))then
@@ -263,6 +325,8 @@ contains
       end do
       if(iostat/=0)call json_end(string)
     end if
+
+    POP_SUB(json_parser_parse_number)
     return
   end subroutine json_parser_parse_number
 
@@ -270,9 +334,11 @@ contains
     type(json_parser_t), intent(inout) :: parser
     character,           intent(out)   :: char
     integer,             intent(out)   :: iostat
-    !
+
     character :: ichr
-    !
+
+    PUSH_SUB(json_parser_handle_special)
+
     call json_parser_peek_char(parser, ichr, iostat)
     if(iostat==0)then
       select case(ichr)
@@ -305,6 +371,8 @@ contains
         char=backslash
       end select
     end if
+
+    POP_SUB(json_parser_handle_special)
     return
   end subroutine json_parser_handle_special
 
@@ -312,9 +380,11 @@ contains
     type(json_parser_t), intent(inout) :: parser
     type(json_string_t), intent(out)   :: string
     integer,             intent(out)   :: iostat
-    !
+
     character :: char
-    !
+
+    PUSH_SUB(json_parser_parse_string)
+
     call json_end(string)
     call json_parser_peek_nonblank_char(parser, char, iostat)
     if((iostat==0).and.(char=='"'))then
@@ -334,6 +404,8 @@ contains
       end do
       if((iostat/=0).or.(char/='"'))call json_end(string)
     end if
+
+    POP_SUB(json_parser_parse_string)
     return
   end subroutine json_parser_parse_string
 
@@ -341,7 +413,7 @@ contains
     type(json_parser_t), intent(inout) :: parser
     type(json_value_t),  intent(out)   :: value
     integer,             intent(out)   :: iostat
-    !
+
     type(json_null_t),    pointer :: nvalue
     type(json_logical_t), pointer :: lvalue
     type(json_integer_t), pointer :: ivalue
@@ -350,7 +422,9 @@ contains
     type(json_array_t),   pointer :: array
     type(json_object_t),  pointer :: object
     character                     :: char
-    !
+
+    PUSH_SUB(json_parser_parse_value)
+
     call json_end(value)
     call json_parser_peek_nonblank_char(parser, char, iostat)
     if(iostat==0)then
@@ -444,6 +518,8 @@ contains
         nullify(object)
       end select
     end if
+
+    POP_SUB(json_parser_parse_value)
     return
   end subroutine json_parser_parse_value
 
@@ -451,10 +527,12 @@ contains
     type(json_parser_t), intent(inout) :: parser
     type(json_array_t),  intent(out)   :: array
     integer,             intent(out)   :: iostat
-    !
+
     type(json_value_t), pointer :: value
     character                   :: char
-    !
+
+    PUSH_SUB(json_parser_parse_array)
+
     call json_end(array)
     call json_parser_peek_nonblank_char(parser, char, iostat)
     if((iostat==0).and.(char=="["))then
@@ -484,6 +562,8 @@ contains
         if((.not.json_isdef(array)).or.(iostat/=0).or.(char/="]"))call json_end(array)
       end if
     end if
+
+    POP_SUB(json_parser_parse_value)
     return
   end subroutine json_parser_parse_array
 
@@ -491,11 +571,13 @@ contains
     type(json_parser_t), intent(inout) :: parser
     type(json_member_t), intent(out)   :: member
     integer,             intent(out)   :: iostat
-    !
+
     type(json_string_t), pointer :: string
     type(json_value_t),  pointer :: value
     character                    :: char
-    !
+
+    PUSH_SUB(json_parser_parse_member)
+
     call json_end(member)
     SAFE_ALLOCATE(string)
     call json_parser_parse_string(parser, string, iostat)
@@ -518,6 +600,8 @@ contains
       SAFE_DEALLOCATE_P(string)
     end if
     nullify(string)
+
+    POP_SUB(json_parser_parse_member)
     return
   end subroutine json_parser_parse_member
 
@@ -525,10 +609,12 @@ contains
     type(json_parser_t), intent(inout) :: parser
     type(json_object_t), intent(out)   :: object
     integer,             intent(out)   :: iostat
-    !
+
     type(json_member_t), pointer :: member
     character                    :: char
-    !
+
+    PUSH_SUB(json_parser_parse_object)
+
     call json_end(object)
     call json_parser_peek_nonblank_char(parser, char, iostat)
     if((iostat==0).and.(char=="{"))then
@@ -558,6 +644,8 @@ contains
         if((.not.json_isdef(object)).or.(iostat/=0).or.(char/="}")) call json_end(object)
       end if
     end if
+
+    POP_SUB(json_parser_parse_object)
     return
   end subroutine json_parser_parse_object
 
@@ -565,11 +653,13 @@ contains
     type(json_parser_t), intent(inout) :: parser
     type(json_t),        intent(out)   :: json
     integer,             intent(out)   :: iostat
-    !
+
     type(json_array_t),  pointer :: array
     type(json_object_t), pointer :: object
     character                    :: char
-    !
+
+    PUSH_SUB(json_parser_parse)
+
     call json_end(json)
     call json_parser_peek_nonblank_char(parser, char, iostat)
     if((iostat==0).and.(char=="["))then
@@ -591,17 +681,21 @@ contains
       end if
       nullify(object)
     end if
+
+    POP_SUB(json_parser_parse)
     return
   end subroutine json_parser_parse
 
   subroutine json_parser_error(parser, fatal)
     type(json_parser_t), intent(in) :: parser
     logical,   optional, intent(in) :: fatal
-    !
+
     character(len=LINE_LEN) :: buff
     integer                 :: ierr
     logical                 :: ftl
-    !
+
+    PUSH_SUB(json_parser_error)
+
     ftl=.false.
     if(present(fatal))ftl=fatal
     if(parser%ierr/=0)then
@@ -617,6 +711,8 @@ contains
     else
       call messages_warning(3)
     end if
+
+    POP_SUB(json_parser_error)
     return
   end subroutine json_parser_error
 
