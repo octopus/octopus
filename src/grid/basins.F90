@@ -42,7 +42,7 @@ module basins_m
 
     integer          :: number
     integer, pointer :: position(:)
-    FLOAT,   pointer :: value(:)
+    FLOAT,   pointer :: val(:)
     FLOAT,   pointer :: volume(:)
 
     FLOAT,   pointer :: population(:)
@@ -75,7 +75,7 @@ contains
 
     if(associated(this%position)) then
       SAFE_DEALLOCATE_P(this%position)
-      SAFE_DEALLOCATE_P(this%value)
+      SAFE_DEALLOCATE_P(this%val)
       SAFE_DEALLOCATE_P(this%volume)
       SAFE_DEALLOCATE_P(this%population)
     end if
@@ -215,12 +215,12 @@ contains
       end if
 
       SAFE_ALLOCATE(this%position  (1:this%number))
-      SAFE_ALLOCATE(this%value     (1:this%number))
+      SAFE_ALLOCATE(this%val       (1:this%number))
       SAFE_ALLOCATE(this%volume    (1:this%number))
       SAFE_ALLOCATE(this%population(1:this%number))
 
       this%position(:) = -1
-      this%value(:)    = M_ZERO
+      this%val(:)    = M_ZERO
       this%volume(:)   = M_ZERO
       this%population(:)   = M_ZERO
       do ii = 1, this%number
@@ -238,7 +238,7 @@ contains
         end do
         
         this%position(ii) = ii_max
-        this%value(ii)    = f_max
+        this%val(ii)      = f_max
       end do
 
       POP_SUB(basins_analyze.analyze)
@@ -266,7 +266,7 @@ contains
          mesh%x(this%position(ii), 1), ',', &
          mesh%x(this%position(ii), 2), ',', &
          mesh%x(this%position(ii), 3), ')'
-      write(iunit, '(a,f12.6)') '  value = ', this%value(ii)
+      write(iunit, '(a,f12.6)') '  value = ', this%val(ii)
       write(iunit, '(a,f12.6)') '  volume = ', this%volume(ii)
       write(iunit, '(a,f12.6)') '  population = ', this%population(ii)
     end do
