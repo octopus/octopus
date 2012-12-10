@@ -33,7 +33,7 @@ module json_m
     json_isdef,  &
     json_init,   &
     json_end,    &
-    scan,        &
+    json_scan,   &
     json_len,    &
     json_string, &
     json_write,  &
@@ -201,11 +201,11 @@ module json_m
     module procedure json_json_equal
   end interface operator(==)
 
-  interface scan
+  interface json_scan
     module procedure json_string_scan_char_string
     module procedure json_string_scan_string_char
     module procedure json_string_scan_string_string
-  end interface scan
+  end interface json_scan
 
   interface json_isdef
     module procedure json_null_isdef

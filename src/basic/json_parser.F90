@@ -463,7 +463,7 @@ contains
         SAFE_ALLOCATE(string)
         call json_parser_parse_number(parser, string, iostat)
         if((iostat==0).and.(json_isdef(string)))then
-          if(scan(string,".eE")==0)then
+          if(json_scan(string,".eE")==0)then
             SAFE_ALLOCATE(ivalue)
             call json_init(ivalue, string)
             if(json_isdef(ivalue))then
