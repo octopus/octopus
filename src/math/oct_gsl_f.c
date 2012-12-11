@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2002-2012 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
+ Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -224,6 +224,24 @@ double FC_FUNC_(oct_spline_eval, OCT_SPLINE_EVAL)
   return gsl_spline_eval((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
 }
 
+
+void FC_FUNC_(oct_spline_eval_array, OCT_SPLINE_EVAL_ARRAY)
+     (const int * nn, double *xf, const void **spl, void **acc)
+{
+  int ii;
+  for(ii = 0; ii < *nn; ii++){
+    xf[ii] = gsl_spline_eval((gsl_spline *)(*spl), xf[ii], (gsl_interp_accel *)(*acc));
+  }
+}
+
+void FC_FUNC_(oct_spline_eval_array4, OCT_SPLINE_EVAL_ARRAY)
+     (const int * nn, float *xf, const void **spl, void **acc)
+{
+  int ii;
+  for(ii = 0; ii < *nn; ii++){
+    xf[ii] = (float) gsl_spline_eval((gsl_spline *)(*spl), (double) xf[ii], (gsl_interp_accel *)(*acc));
+  }
+}
 
 /* This function returns the number of points with which a spline
 	 was constructed (the size component of the gsl_spline struct). */
