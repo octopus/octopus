@@ -207,7 +207,7 @@ module blas_m
   !! Returns the euclidean norm of a vector via the function
   !! name, so that
   !! \f[
-  !! SNRM2 := sqrt( x'*x )
+  !! SNRM2 := sqrt( x`*x )
   !! \f]
   interface blas_nrm2
     real(4) function snrm2(n, dx, incx)

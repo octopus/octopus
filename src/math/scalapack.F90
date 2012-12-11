@@ -380,11 +380,11 @@ module scalapack_m
   !!  The factorization has the form
   !!
   !! \f[
-  !!            sub( A ) = U' U , \mbox{ if UPLO }= 'U'
+  !!            sub( A ) = U` U , \mbox{ if UPLO }= 'U'
   !! \f]
   !! or
   !! \f[
-  !!            sub( A ) = L L' , \mbox{ if UPLO }= 'L',
+  !!            sub( A ) = L L` , \mbox{ if UPLO }= 'L',
   !! \f]
   !!
   !!  where U is an upper triangular matrix and L is lower triangular.
