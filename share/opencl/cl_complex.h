@@ -24,15 +24,15 @@
 
 #include <cl_global.h>
 
-static inline double2 complex_mul(const double2 a, const double2 b){
+inline double2 complex_mul(const double2 a, const double2 b){
   return (double2) (a.x*b.x - a.y*b.y, a.y*b.x + a.x*b.y);
 }
 
-static inline double2 complex_conj_mul(const double2 a, const double2 b){
+inline double2 complex_conj_mul(const double2 a, const double2 b){
   return (double2) (a.x*b.x + a.y*b.y, a.y*b.x - a.x*b.y);
 }
 
-static inline double2 complex_div(const double2 a, const double2 b){
+inline double2 complex_div(const double2 a, const double2 b){
   double2 c = b*b;
   return complex_conj_mul(a, b)/(c.x + c.y);
 }
