@@ -1,0 +1,15 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test       : Big box
+Programs   : octopus; octopus_mpi
+TestGroups : short-run
+Enabled    : Yes
+
+Input: 28-carbon_big_box.01-ground_state.inp
+Precision: 0.0001
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -4.60602482
+match ; Eigenvalue   [1up] ; GREP(static/info, '1   up', 13) ; -1.767015
+match ; Occupation   [1up] ; GREP(static/info, '1   up', 28) ;  1.000000
+match ; Eigenvalue [4down] ; GREP(static/info, '4   dn', 13) ; -0.035482
+match ; Occupation [4down] ; GREP(static/info, '4   dn', 28) ;  0.000000

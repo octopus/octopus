@@ -226,9 +226,14 @@ contains
           do nn = 1, ps%conf%p
             select case(spin_channels)
             case(1)
+              if(rr >= spline_range_max(ps%Ur(nn, 1))) cycle
+
               psi1 = spline_eval(ps%Ur(nn, 1), rr)
               rho(ip, 1) = rho(ip, 1) + ps%conf%occ(nn, 1)*psi1*psi1 /(M_FOUR*M_PI)
             case(2)
+              if(rr >= spline_range_max(ps%Ur(nn, 1))) cycle
+              if(rr >= spline_range_max(ps%Ur(nn, 2))) cycle
+
               psi1 = spline_eval(ps%Ur(nn, 1), rr)
               psi2 = spline_eval(ps%Ur(nn, 2), rr)
               rho(ip, 1) = rho(ip, 1) + ps%conf%occ(nn, 1)*psi1*psi1 /(M_FOUR*M_PI)
