@@ -542,7 +542,7 @@ contains
     FLOAT,         optional, intent(out) :: Imvl(:) !< cmplxscl: imaginary part of the potential
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(MAX_DIM), r
+    FLOAT :: xx(MAX_DIM), r, r2
     integer :: ip, err, idim
     type(ps_t), pointer :: ps
     CMPLX :: zpot
@@ -617,11 +617,18 @@ contains
         end do
 
       case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PSPIO)
+       
         ps => species_ps(spec)
+
         do ip = 1, mesh%np
-          vl(ip) = sum((mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim))**2)
+          r2 = sum((mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim))**2)
+          if(r2 < spline_range_max(ps%vlr_sq)) then
+            vl(ip) = spline_eval(ps%vlr_sq, r2)
+          else
+            vl(ip) = P_PROTON_CHARGE*species_zval(spec)/sqrt(r2)
+          end if
         end do
-        call spline_eval_vec(ps%vlr_sq, mesh%np, vl)
+
         nullify(ps)
         
       case(SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN, SPEC_CHARGE_DENSITY)

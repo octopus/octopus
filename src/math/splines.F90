@@ -230,6 +230,8 @@ module splines_m
     spline_der2,     &
     spline_div,      & 
     spline_mult,     & 
+    spline_range_min, &
+    spline_range_max, &
     spline_cutoff_radius
 
   !> the basic spline datatype
@@ -1129,6 +1131,24 @@ contains
 
   end function spline_cutoff_radius
 
+  ! -------------------------------------------------------
+
+  FLOAT pure function spline_range_min(this) result(range)
+    type(spline_t), intent(in) :: this
+
+    range = this%x_limit(1)
+
+  end function spline_range_min
+
+  ! -------------------------------------------------------
+
+  FLOAT pure function spline_range_max(this) result(range)
+    type(spline_t), intent(in) :: this
+
+    range = this%x_limit(2)
+
+  end function spline_range_max
+    
 end module splines_m
 
 !! Local Variables:
