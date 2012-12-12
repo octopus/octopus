@@ -689,11 +689,17 @@ contains
 
         do ip = 1, mesh%np
           x(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell)
-          lorb(ip) = sum(x(1:mesh%sb%dim)**2)
+          r2 = sum(x(1:mesh%sb%dim)**2)
           xf(ip, 1:mesh%sb%dim) = x(1:mesh%sb%dim)
+          
+          if(r2 < spline_range_max(ps%ur_sq(i, ispin))) then
+            lorb(ip) = spline_eval(ps%ur_sq(i, ispin), r2)
+          else
+            lorb(ip) = M_ZERO
+          end if
+
         end do
 
-        call spline_eval_vec(ps%ur_sq(i, ispin), mesh%np, lorb)
         call loct_ylm(mesh%np, xf(1, 1), xf(1, 2), xf(1, 3), l, m, ylm(1))
 
         do ip = 1, mesh%np
