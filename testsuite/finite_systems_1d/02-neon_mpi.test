@@ -16,7 +16,7 @@ Input      : 02-neon_mpi.01-ground_state-IP_par_domains.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -87.55795211
 
 Input      : 02-neon_mpi.02-ground_state-kli_par_domains.inp
-Precision  : 0.0003
+Precision  : 0.0004
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -61.03815
 # there can be disturbingly large run-to-run variation of this number
 
