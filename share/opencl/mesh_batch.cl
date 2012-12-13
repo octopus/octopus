@@ -20,6 +20,7 @@
 */
 
 #include <cl_global.h>
+#include <cl_complex.h>
 
 __kernel void ddot_vector(const int np,
 			  const int npblock,
@@ -69,7 +70,7 @@ __kernel void zdot_vector(const int np,
 
   tmp = 0.0;
   for(int ip = lip + startp; ip < endp; ip += nlp){
-    tmp += xx[(ip<<ldxx) + ist]*yy[(ip<<ldyy) + ist];
+    tmp += complex_conj_mul(xx[(ip<<ldxx) + ist], yy[(ip<<ldyy) + ist]);
   }
 
   lsum[(lip<<ldyy) + ist] = tmp;
