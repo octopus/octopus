@@ -117,7 +117,7 @@ __kernel void zdot_matrix(const int np,
   for(int ip = 0; ip < np; ip++){
     double2 a1 = xx[(ip<<ldxx) + ist];
     double2 a2 = yy[(ip<<ldyy) + jst];
-    tmp += (double2)(a1.s0*a2.s0 + a1.s1*a2.s1, a1.s0*a2.s1 - a1.s1*a2.s0);
+    tmp += complex_mul(complex_conj(a1), a2);
   }
   dot[ist + lddot*jst] = tmp;
 }
@@ -137,8 +137,8 @@ __kernel void zdot_matrix_spinors(const int np,
   for(int ip = 0; ip < np; ip++){
     double4 a1 = xx[(ip<<ldxx) + ist];
     double4 a2 = yy[(ip<<ldyy) + jst];
-    tmp1 += (double2)(a1.s0*a2.s0 + a1.s1*a2.s1, a1.s0*a2.s1 - a1.s1*a2.s0);
-    tmp2 += (double2)(a1.s2*a2.s2 + a1.s3*a2.s3, a1.s2*a2.s3 - a1.s3*a2.s2);
+    tmp1 += complex_mul(complex_conj((double2)(a1.s0, a1.s1)), (double2)(a2.s0, a2.s1));
+    tmp2 += complex_mul(complex_conj((double2)(a1.s2, a1.s3)), (double2)(a2.s2, a2.s3));
   }
   dot[ist + lddot*jst] = tmp1 + tmp2;
 }
