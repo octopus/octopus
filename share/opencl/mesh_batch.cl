@@ -70,7 +70,7 @@ __kernel void zdot_vector(const int np,
 
   tmp = 0.0;
   for(int ip = lip + startp; ip < endp; ip += nlp){
-    tmp += complex_conj_mul(xx[(ip<<ldxx) + ist], yy[(ip<<ldyy) + ist]);
+    tmp += complex_mul(complex_conj(xx[(ip<<ldxx) + ist]), yy[(ip<<ldyy) + ist]);
   }
 
   lsum[(lip<<ldyy) + ist] = tmp;
