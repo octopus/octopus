@@ -1271,7 +1271,7 @@ module opencl_m
       nval_real = nval*types_get_size(type)/8
 
       call opencl_set_kernel_arg(set_zero, 0, nval_real)
-      call opencl_set_kernel_arg(set_zero, 1, optional_default(offset, 0))
+      call opencl_set_kernel_arg(set_zero, 1, optional_default(offset, 0)*types_get_size(type)/8)
       call opencl_set_kernel_arg(set_zero, 2, buffer)
 
       bsize = opencl_kernel_workgroup_size(set_zero)
