@@ -526,7 +526,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 #endif
 
     do ip = 2, bsize
-      forall(ist = 1:aa%nst) cltmp(ist, 1) = cltmp(ist, 1) + cltmp(ist, ip)
+      forall(ist = 1:aa%nst_linear) cltmp(ist, 1) = cltmp(ist, 1) + cltmp(ist, ip)
     end do
 
     do ist = 1, aa%nst
