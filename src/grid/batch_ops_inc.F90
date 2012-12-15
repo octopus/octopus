@@ -240,7 +240,8 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start)
   integer :: ist, ip, localsize, effsize
   R_TYPE, allocatable     :: aa_linear(:)
 #ifdef HAVE_OPENCL
-  CMPLX,  allocatable     :: zaa_linear(:)
+  integer :: size_factor
+  FLOAT,  allocatable     :: aa_linear_double(:)
   type(opencl_mem_t)      :: aa_buffer
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
@@ -266,15 +267,20 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start)
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
-    call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, batch_type(xx), xx%pack%size(1))
 
-    if(batch_type(xx) == TYPE_CMPLX) then
-      ! convert aa_linear to complex
-      SAFE_ALLOCATE(zaa_linear(1:xx%pack%size(1)))
-      zaa_linear(1:xx%pack%size(1)) = aa_linear(1:xx%pack%size(1))
-      call opencl_write_buffer(aa_buffer, xx%pack%size(1), zaa_linear)
-      SAFE_DEALLOCATE_A(zaa_linear)
+    if(batch_type(xx) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
+      size_factor = 2
+      SAFE_ALLOCATE(aa_linear_double(1:2*xx%pack%size(1)))
+      do ist = 1, xx%pack%size(1)
+        aa_linear_double(2*ist - 1) = aa_linear(ist)
+        aa_linear_double(2*ist) = aa_linear(ist)
+      end do
+      call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, TYPE_FLOAT, 2*xx%pack%size(1))
+      call opencl_write_buffer(aa_buffer, 2*xx%pack%size(1), aa_linear_double)
+      SAFE_DEALLOCATE_A(aa_linear_double)
     else
+      size_factor = 1
+      call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, xx%pack%size(1))
       call opencl_write_buffer(aa_buffer, xx%pack%size(1), aa_linear)
     end if
 
@@ -284,10 +290,11 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start)
 
     call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
     call opencl_set_kernel_arg(kernel_ref, 1, xx%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 2, log2(xx%pack%size(1)))
+    call opencl_set_kernel_arg(kernel_ref, 2, log2(xx%pack%size(1)*size_factor))
 
     localsize = opencl_max_workgroup_size()
-    call opencl_kernel_run(kernel_ref, (/xx%pack%size(1), pad(np, localsize)/), (/xx%pack%size(1), localsize/xx%pack%size(1)/))
+    call opencl_kernel_run(kernel_ref, (/xx%pack%size(1)*size_factor, pad(np, localsize)/), &
+      (/xx%pack%size(1)*size_factor, localsize/(xx%pack%size(1)*size_factor)/))
 
     call opencl_finish()
 
@@ -342,7 +349,8 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start)
   integer :: ist, ip, localsize, effsize
   R_TYPE, allocatable     :: aa_linear(:)
 #ifdef HAVE_OPENCL
-  CMPLX,  allocatable     :: zaa_linear(:)
+  integer :: size_factor
+  FLOAT,  allocatable     :: aa_linear_double(:)
   type(opencl_mem_t)      :: aa_buffer
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
@@ -371,15 +379,20 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start)
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
-    call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, batch_type(yy), yy%pack%size(1))
 
-    if(batch_type(yy) == TYPE_CMPLX) then
-      ! convert aa_linear to complex
-      SAFE_ALLOCATE(zaa_linear(1:yy%pack%size(1)))
-      zaa_linear(1:yy%pack%size(1)) = aa_linear(1:yy%pack%size(1))
-      call opencl_write_buffer(aa_buffer, yy%pack%size(1), zaa_linear)
-      SAFE_DEALLOCATE_A(zaa_linear)
+    if(batch_type(yy) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
+      size_factor = 2
+      SAFE_ALLOCATE(aa_linear_double(1:2*yy%pack%size(1)))
+      do ist = 1, yy%pack%size(1)
+        aa_linear_double(2*ist - 1) = aa_linear(ist)
+        aa_linear_double(2*ist) = aa_linear(ist)
+      end do
+      call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, TYPE_FLOAT, 2*yy%pack%size(1))
+      call opencl_write_buffer(aa_buffer, 2*yy%pack%size(1), aa_linear_double)
+      SAFE_DEALLOCATE_A(aa_linear_double)
     else
+      size_factor = 1
+      call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, yy%pack%size(1))
       call opencl_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
     end if
 
@@ -389,12 +402,13 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start)
 
     call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
     call opencl_set_kernel_arg(kernel_ref, 1, xx%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 2, log2(xx%pack%size(1)))
+    call opencl_set_kernel_arg(kernel_ref, 2, log2(xx%pack%size(1)*size_factor))
     call opencl_set_kernel_arg(kernel_ref, 3, yy%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 4, log2(yy%pack%size(1)))
+    call opencl_set_kernel_arg(kernel_ref, 4, log2(yy%pack%size(1)*size_factor))
 
     localsize = opencl_max_workgroup_size()
-    call opencl_kernel_run(kernel_ref, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
+    call opencl_kernel_run(kernel_ref, (/yy%pack%size(1)*size_factor, pad(np, localsize)/), &
+      (/yy%pack%size(1)*size_factor, localsize/(yy%pack%size(1)*size_factor)/))
 
     call opencl_finish()
 
