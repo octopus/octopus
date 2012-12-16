@@ -1,0 +1,17 @@
+CalculationMode = gs
+
+Units = ev_angstrom
+
+%Coordinates
+'Na'  | -1.4646408 | 0 | 0 | yes
+'Na'  |  1.4646408 | 0 | 0 | yes
+%
+
+ExcessCharge = 1
+
+FromScratch = yes
+
+Spacing = 0.32
+Radius = 6.0
+
+SpinComponents = spinors
