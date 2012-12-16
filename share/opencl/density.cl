@@ -57,10 +57,10 @@ __kernel void density_complex(const int nst,
   for(int ist = 0; ist < nst; ist ++){
     double2 ff = psi[(ip<<ldpsi) + ist];
     ff = ff*ff;
-    dd += weights[offset + ist]*(ff.x + ff.y);
+    dd += weights[ist]*(ff.x + ff.y);
   }
 
-  density[ip] += dd;
+  density[offset + ip] += dd;
 
 }
 
