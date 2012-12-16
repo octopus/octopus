@@ -34,7 +34,7 @@ Input      : 14-absorption-spinors.04-spectrum.inp
 match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.960936
 match ; Polarizability sum rule ; GREP(cross_section_vector.1, 'Polarizability (sum rule)', 30) ; 15.598254
 
-Precision : 1e-7
+Precision : 1e-6
 
 match ; Energy      1 ; LINE(cross_section_tensor,  -91, 1) ; 1.0
 match ; Sigma       1 ; LINE(cross_section_tensor,  -91, 21) ; 0.56294923E-01
