@@ -235,11 +235,12 @@ contains
         call opencl_write_buffer(buff_weight, psib%nst, weight)
 
         call opencl_set_kernel_arg(kernel, 0, psib%nst)
-        call opencl_set_kernel_arg(kernel, 1, this%pnp*(ispin - 1))
-        call opencl_set_kernel_arg(kernel, 2, buff_weight)
-        call opencl_set_kernel_arg(kernel, 3, psib%pack%buffer)
-        call opencl_set_kernel_arg(kernel, 4, log2(psib%pack%size(1)))
-        call opencl_set_kernel_arg(kernel, 5, this%buff_density)
+        call opencl_set_kernel_arg(kernel, 1, this%gr%mesh%np)
+        call opencl_set_kernel_arg(kernel, 2, this%pnp*(ispin - 1))
+        call opencl_set_kernel_arg(kernel, 3, buff_weight)
+        call opencl_set_kernel_arg(kernel, 4, psib%pack%buffer)
+        call opencl_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+        call opencl_set_kernel_arg(kernel, 6, this%buff_density)
 
         wgsize = opencl_kernel_workgroup_size(kernel)
         
