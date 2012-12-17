@@ -312,8 +312,11 @@ contains
 
     type(symmetrizer_t) :: symmetrizer
     FLOAT,  allocatable :: tmpdensity(:)
-    integer :: ispin, np, ip
+    integer :: ispin, np
     type(profile_t), save :: reduce_prof
+#ifdef HAVE_OPENCL
+    integer :: ip
+#endif
 
     PUSH_SUB(density_calc_end)
 

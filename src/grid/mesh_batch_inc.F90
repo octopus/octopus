@@ -415,8 +415,6 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   R_TYPE, allocatable :: tmp(:), cltmp(:, :)
 #ifdef HAVE_OPENCL
   integer :: wgsize, local_mem_size
-  type(octcl_kernel_t), save :: kernel
-  type(cl_kernel)         :: kernel_ref
   type(opencl_mem_t)  :: dot_buffer
   type(profile_t), save :: prof_copy
 #endif

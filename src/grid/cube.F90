@@ -331,7 +331,7 @@ contains
     type(dimensions_t), intent(in) :: part(:)
     integer, intent(in) :: last_found
     
-    integer :: ix, iy, iz, proc
+    integer :: proc
     logical :: found
 
     ! No PUSH/POP because it is a PURE function
