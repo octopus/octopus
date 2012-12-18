@@ -68,7 +68,7 @@ contains
   ! Solve the Lippmann-Schwinger equation for the open boundary
   ! system. Use convergence criteria in eigens.
   subroutine lippmann_schwinger(eigens, hm, gr, st)
-    type(eigensolver_t),         intent(out)   :: eigens
+    type(eigensolver_t),         intent(inout) :: eigens
     type(hamiltonian_t), target, intent(inout) :: hm
     type(grid_t), target,        intent(inout) :: gr
     type(states_t), target,      intent(inout) :: st
