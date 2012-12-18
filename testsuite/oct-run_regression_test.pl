@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright (C) 2005-2008 H. Appel, M. Marques, X. Andrade
+# Copyright (C) 2005-2012 H. Appel, M. Marques, X. Andrade, D. Strubbe
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -291,10 +291,13 @@ foreach my $octopus_exe (@executables){
                     $np = $global_np;
               }
 	      if( -x "$mpiexec_raw") {
-		if ("$mpiexec" =~ /ibrun/) {
+		if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
 		    $specify_np = "";
 		    $my_nslots = "MY_NSLOTS=$np";
-		} else {
+		} elsif ("$mpiexec" =~ /runjob/) { # used by BlueGene
+		    $specify_np = "--np $np --exec";
+		    $my_nslots = "";
+		} else { # for mpirun and Cray's aprun
 		    $specify_np = "-n $np";
 		    $my_nslots = "";
 		}
