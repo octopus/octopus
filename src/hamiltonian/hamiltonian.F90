@@ -277,13 +277,14 @@ contains
       end if
 
     end if
-    
+
+    nullify(hm%Imvhxc, hm%Imvhartree, hm%Imvxc, hm%Imvtau)
+
     if(hm%cmplxscl) then
       
       SAFE_ALLOCATE(hm%Imvhxc(1:gr%mesh%np, 1:hm%d%nspin))
       hm%Imvhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
 
-      nullify(hm%Imvxc, hm%Imvtau)
       if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
 
         SAFE_ALLOCATE(hm%Imvhartree(1:gr%mesh%np))
