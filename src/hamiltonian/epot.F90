@@ -178,6 +178,9 @@ contains
     ! Local part of the pseudopotentials
     SAFE_ALLOCATE(ep%vpsl(1:gr%mesh%np))
     ep%vpsl(1:gr%mesh%np) = M_ZERO
+
+    nullify(ep%Imvpsl)
+
     if(cmplxscl) then
       SAFE_ALLOCATE(ep%Imvpsl(1:gr%mesh%np))
       ep%Imvpsl(1:gr%mesh%np) = M_ZERO

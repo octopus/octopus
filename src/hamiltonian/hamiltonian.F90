@@ -257,7 +257,7 @@ contains
     SAFE_ALLOCATE(hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin))
     hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
 
-    nullify(hm%vxc, hm%vtau, hm%axc)
+    nullify(hm%vhartree, hm%vxc, hm%vtau, hm%axc)
     if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
 
       SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np))
