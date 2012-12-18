@@ -92,4 +92,3 @@ OutputEvery = 100
 
 TDEnergyUpdateIter = 100
 
-DisableOpenCL = yes

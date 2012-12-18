@@ -79,5 +79,3 @@ Eigensolver = plan
 
 Output = potential
 OutputHow = binary
-
-DisableOpenCL = yes

@@ -90,5 +90,3 @@ well_OutputHow = binary
 well_OutputEvery = 100
 
 TDEnergyUpdateIter = 100
-
-DisableOpenCL = yes

@@ -99,5 +99,4 @@ OutputEvery = 25
 
 TDEnergyUpdateIter = 1
 
-DisableOpenCL = yes
 
