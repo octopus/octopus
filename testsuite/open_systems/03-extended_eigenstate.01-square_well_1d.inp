@@ -74,3 +74,4 @@ Eigensolver = plan
 Output = wfs + wfs_sqmod + potential
 OutputHow = axis_x + binary
 
+DisableOpenCL = yes
