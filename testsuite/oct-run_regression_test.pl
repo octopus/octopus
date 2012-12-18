@@ -295,7 +295,7 @@ foreach my $octopus_exe (@executables){
 		    $specify_np = "";
 		    $my_nslots = "MY_NSLOTS=$np";
 		} elsif ("$mpiexec" =~ /runjob/) { # used by BlueGene
-		    $specify_np = "--np $np --exec";
+		    $specify_np = "--np $np --exe";
 		    $my_nslots = "";
 		} else { # for mpirun and Cray's aprun
 		    $specify_np = "-n $np";
