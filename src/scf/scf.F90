@@ -454,6 +454,7 @@ contains
         message(1) = 'LCAO is not available. Cannot do SCF in LCAO.'
         call messages_fatal(1)
       end if
+      call lcao_init_orbitals(lcao, st, gr, geo)
     end if
 
     nspin = st%d%nspin
