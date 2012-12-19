@@ -28,9 +28,9 @@ LIBS="$libxc_libs $acx_libxc_save_LIBS"
 AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
   use xc_f90_lib_m
   implicit none
-  type(xc_f90_pointer_t) :: info
-  integer :: i
-  i = xc_f90_info_number(info) + XC_GGA_X_LB
+  integer :: major
+  integer :: minor
+  call xc_f90_version(major, minor)
 ]), [acx_libxc_ok=yes; FCFLAGS_LIBXC="$libxc_fcflags"; LIBS_LIBXC="$libxc_libs"], [])
 AC_MSG_RESULT([$acx_libxc_ok ($FCFLAGS_LIBXC $LIBS_LIBXC)])
 
@@ -39,7 +39,7 @@ if test x"$acx_libxc_ok" = xyes; then
   AC_DEFINE(HAVE_LIBXC,1,[Defined if you have the LIBXC library.])
   $1
 else
-  AC_MSG_ERROR([Could not find required libxc library ( >= v 1.1.0).])
+  AC_MSG_ERROR([Could not find required libxc library ( >= v 2.0.0).])
   FCFLAGS_LIBXC=""
   LIBS_LIBXC=""
   $2

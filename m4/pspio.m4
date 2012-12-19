@@ -51,8 +51,7 @@ if test "$acx_pspio_ok" = no; then
     use pspio_f90_lib_m
 
     type(pspio_f90_pspdata_t) :: pspdata
-    integer :: i
-    i = pspio_f90_pspdata_free(pspdata)
+    call pspio_f90_pspdata_free(pspdata)
 ]), [acx_pspio_ok=yes; FCFLAGS_PSPIO="$pspio_fcflags"; LIBS_PSPIO="$pspio_libs"], [])
   else
     pspio_libs="-lpspio_fortran -lpspio"
@@ -63,8 +62,7 @@ if test "$acx_pspio_ok" = no; then
     use pspio_f90_lib_m
 
     type(pspio_f90_pspdata_t) :: pspdata
-    integer :: i
-    i = pspio_f90_pspdata_free(pspdata)
+    call pspio_f90_pspdata_free(pspdata)
 ]), [acx_pspio_ok=yes; FCFLAGS_PSPIO="$pspio_fcflags"; LIBS_PSPIO="$pspio_libs"], [])
   fi
   AC_MSG_RESULT([$acx_pspio_ok ($LIBS_PSPIO)])
