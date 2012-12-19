@@ -744,7 +744,7 @@ contains
           write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
           call dio_function_output(restart_format, trim(tmpdir)//"td", &
             filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), unit_one, ierr, &
-            is_tmp = .true., grp = st%mpi_grp)
+            is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
           ! the unit is energy actually, but this only for restart, and can be kept in atomic units
           ! for simplicity
           if(ierr.ne.0) then

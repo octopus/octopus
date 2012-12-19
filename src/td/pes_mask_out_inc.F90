@@ -89,7 +89,7 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
         write(fname, '(a,i1)') 'pes_den-sp', is
       endif
       call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-        RhoAB(:, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+        RhoAB(:, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
 
@@ -115,7 +115,7 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
             endif
               
             call zio_function_output(outp%how, dir, fname, gr%mesh, &
-              PsiAB(1:, idim, ist, ik), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+              PsiAB(1:, idim, ist, ik), fn_unit, ierr, is_tmp = .false., geo = geo)
 
           end do
         end do

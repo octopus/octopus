@@ -47,11 +47,11 @@
           SAFE_ALLOCATE(ztmp(1:gr%fine%mesh%np))
           forall (ip = 1:gr%fine%mesh%np) ztmp(ip) = st%zrho%Re(ip, is) + M_zI * st%zrho%Im(ip, is)
           call zio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-            ztmp(:), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+            ztmp(:), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
           SAFE_DEALLOCATE_A(ztmp)
         else
           call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-            st%rho(:, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+            st%rho(:, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
         end if
       end do
     end if
@@ -68,7 +68,7 @@
             write(fname, '(a,i1,2a)') 'dipole_density-sp', is, '-', index2axis(idir)
           endif
           call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-            dtmp(:), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+            dtmp(:), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
         end do
       end do
       SAFE_DEALLOCATE_A(dtmp)
@@ -88,7 +88,7 @@
               write(fname, '(a,i1,2a)') 'current-sp', is, '-', index2axis(idir)
             endif
             call dio_function_output(outp%how, dir, fname, gr%mesh, &
-              current(:, idir, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+              current(:, idir, is), fn_unit, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
           end do
         end do
         SAFE_DEALLOCATE_A(current)
@@ -192,12 +192,12 @@
         case(UNPOLARIZED)
           write(fname, '(a)') 'tau'
           call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-            elf(:,1), unit_one, ierr, is_tmp = .false., geo = geo)
+            elf(:,1), unit_one, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
         case(SPIN_POLARIZED, SPINORS)
           do is = 1, 2
             write(fname, '(a,i1)') 'tau-sp', is
             call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-              elf(:, is), unit_one, ierr, is_tmp = .false., geo = geo, grp = st%mpi_grp)
+              elf(:, is), unit_one, ierr, is_tmp = .false., geo = geo, grp = st%dom_st_kpt_mpi_grp)
           end do
       end select
       SAFE_DEALLOCATE_A(elf)

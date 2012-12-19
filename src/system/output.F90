@@ -564,9 +564,7 @@ contains
 
     PUSH_SUB(output_localization_funct)
     
-    mpi_grp = gr%mesh%mpi_grp
-    if(st%parallel_in_states) mpi_grp = st%mpi_grp
-    if(st%d%kpt%parallel) mpi_grp = st%d%kpt%mpi_grp
+    mpi_grp = st%dom_st_kpt_mpi_grp
 
     ! if SPIN_POLARIZED, the ELF contains one extra channel: the total ELF
     imax = st%d%nspin

@@ -437,19 +437,20 @@ end subroutine X(io_function_input_global)
 ! ---------------------------------------------------------
 subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, is_tmp, geo, grp)
   integer,                    intent(in)  :: how
-  character(len=*),           intent(in)  :: dir, fname
+  character(len=*),           intent(in)  :: dir
+  character(len=*),           intent(in)  :: fname
   type(mesh_t),               intent(in)  :: mesh
-  R_TYPE,                     intent(in)  :: ff(:)
+  R_TYPE,           target,   intent(in)  :: ff(:)
   type(unit_t),               intent(in)  :: unit
   integer,                    intent(out) :: ierr
   logical,          optional, intent(in)  :: is_tmp
   type(geometry_t), optional, intent(in)  :: geo
-  type(mpi_grp_t),  optional, intent(in)  :: grp
+  type(mpi_grp_t),  optional, intent(in)  :: grp !< the group that shares the same data, must contain the domains group
   !
-  logical :: is_tmp_
-
+  logical :: is_tmp_, i_am_root
+  integer :: comm
 #if defined(HAVE_MPI)
-  R_TYPE, allocatable :: ff_global(:)
+  R_TYPE, pointer :: ff_global(:)
 #endif
   !
   PUSH_SUB(X(io_function_output))
@@ -460,57 +461,53 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, is_tmp,
   if(present(is_tmp)) is_tmp_ = is_tmp
 
 #if defined(HAVE_MPI)
+
+  i_am_root = .true.
+  comm = MPI_COMM_NULL
+
   if(mesh%parallel_in_domains) then
     SAFE_ALLOCATE(ff_global(1:mesh%np_global))
 
-    call X(vec_gather)(mesh%vp, mesh%vp%root, ff_global, ff)
+    !note: here we are gathering data that we won't write if grp is
+    !present), but to avoid it we will have to find out all if the
+    !process is a member of the domain line where the root of grp
+    !lives
+    call X(vec_gather)(mesh%vp, 0, ff_global, ff)
 
-    if(mesh%vp%rank.eq.mesh%vp%root) then
-      call X(io_function_output_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_, geo = geo)
-    end if
-
-    ! I have to broadcast the error code
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, mesh%vp%root, mesh%vp%comm, mpi_err)
-
-    if(in_debug_mode) call messages_debug_newlines(2)
-
-    SAFE_DEALLOCATE_A(ff_global)
-
+    i_am_root = (mesh%vp%rank == 0)
+    comm = mesh%vp%comm
   else
+    ff_global => ff
+  end if
 
-    if(present(grp)) then ! only root writes output
-      if(grp%rank.eq.0) then
-        call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
-      end if
-      ! I have to broadcast the error code
-      if(grp%size > 1) then
-        call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp%comm, mpi_err)
-      end if
+  if(present(grp)) then
+    i_am_root = i_am_root .and. (grp%rank == 0)
+    comm = grp%comm
+  end if
 
-      if(in_debug_mode) call messages_debug_newlines(2)
+  if(i_am_root) then
+    call X(io_function_output_global)(how, dir, fname, mesh, ff_global, unit, ierr, is_tmp = is_tmp_, geo = geo)
+  end if
 
-    else ! all nodes write output
+  if(comm /= MPI_COMM_NULL) then
+    ! I have to broadcast the error code
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
+    ! Add a barrier to ensure that the process are synchronized
+    call MPI_Barrier(comm, mpi_err)
+  end if
 
-      if (present(geo)) then
-        call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
-      else
-        call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
-      end if !present(geo)
-    end if !present(grp)
-
-  end if !mesh%parallel_in_domains
+  if(mesh%parallel_in_domains) then
+    SAFE_DEALLOCATE_P(ff_global)
+  else
+    nullify(ff_global)
+  end if
 
 #else
 
   ! serial mode
-  if(mesh%parallel_in_domains) then
-    ASSERT(.false.)
-  end if
-   if (present(geo)) then
-     call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
-   else
-     call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_)
-   endif
+  ASSERT(.not. mesh%parallel_in_domains)
+  call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, is_tmp = is_tmp_, geo = geo)
+
 #endif
 
   POP_SUB(X(io_function_output))
