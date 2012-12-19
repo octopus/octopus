@@ -318,9 +318,11 @@ contains
     !%End
     call parse_logical(datasets_check('SCFinLCAO'), .false., scf%lcao_restricted)
     if(scf%lcao_restricted) then
+      call messages_experimental('SCFinLCAO')
       message(1) = 'Info: SCF restricted to LCAO subspace.'
       call messages_info(1)
     end if
+
 
     !%Variable SCFCalculateForces
     !%Type logical
