@@ -63,13 +63,14 @@ module lcao_m
   implicit none
 
   private
-  public ::            &
-    lcao_t,            &
-    lcao_init,         &
-    lcao_wf,           &
-    lcao_run,          &
-    lcao_end,          &
-    lcao_is_available, &
+  public ::             &
+    lcao_t,             &
+    lcao_init,          &
+    lcao_init_orbitals, &
+    lcao_wf,            &
+    lcao_run,           &
+    lcao_end,           &
+    lcao_is_available,  &
     lcao_num_orbitals
 
   integer, public, parameter ::     &
