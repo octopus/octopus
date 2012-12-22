@@ -57,6 +57,7 @@ contains
 
     PUSH_SUB(swrite_binary)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -77,6 +78,7 @@ contains
 
     PUSH_SUB(dwrite_binary)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -97,6 +99,7 @@ contains
 
     PUSH_SUB(cwrite_binary)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -117,6 +120,7 @@ contains
 
     PUSH_SUB(zwrite_binary)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -137,6 +141,7 @@ contains
 
     PUSH_SUB(dwrite_binary3)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -144,6 +149,8 @@ contains
 
     POP_SUB(dwrite_binary3)
   end subroutine dwrite_binary3
+
+  !------------------------------------------------------
 
   subroutine zwrite_binary3(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -155,6 +162,7 @@ contains
 
     PUSH_SUB(zwrite_binary3)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -162,6 +170,8 @@ contains
 
     POP_SUB(zwrite_binary3)
   end subroutine zwrite_binary3
+
+  !------------------------------------------------------
 
   subroutine cwrite_binary3(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -173,6 +183,7 @@ contains
 
     PUSH_SUB(cwrite_binary3)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -193,6 +204,7 @@ contains
 
     PUSH_SUB(iwrite_binary)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -213,6 +225,7 @@ contains
 
     PUSH_SUB(lwrite_binary)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -233,6 +246,7 @@ contains
 
     PUSH_SUB(iwrite_binary2)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -253,6 +267,7 @@ contains
 
     PUSH_SUB(lwrite_binary2)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -274,6 +289,7 @@ contains
 
     PUSH_SUB(sread_binary)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -295,6 +311,7 @@ contains
 
     PUSH_SUB(dread_binary)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -316,6 +333,9 @@ contains
 
     PUSH_SUB(cread_binary)
 
+    ASSERT(np > 0)
+    ASSERT(product(ubound(ff)) >= np)
+
     ierr = 0
     call read_binary(np, optional_default(offset, 0), ff(1), type, ierr, trim(fname))
 
@@ -335,6 +355,7 @@ contains
 
     PUSH_SUB(zread_binary)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -344,6 +365,7 @@ contains
   end subroutine zread_binary
 
   !------------------------------------------------------
+
   subroutine dread_binary3(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
@@ -354,6 +376,7 @@ contains
 
     PUSH_SUB(dread_binary3)
    
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -361,6 +384,8 @@ contains
 
     POP_SUB(dread_binary3)
   end subroutine dread_binary3
+
+  !------------------------------------------------------
 
   subroutine zread_binary3(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -372,6 +397,7 @@ contains
 
     PUSH_SUB(zread_binary3)
    
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -379,6 +405,8 @@ contains
 
     POP_SUB(zread_binary3)
   end subroutine zread_binary3
+
+  !------------------------------------------------------
 
   subroutine cread_binary3(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
@@ -390,6 +418,7 @@ contains
 
     PUSH_SUB(cread_binary3)
    
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -411,6 +440,7 @@ contains
 
     PUSH_SUB(iread_binary)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -432,6 +462,7 @@ contains
 
     PUSH_SUB(lread_binary)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -452,6 +483,7 @@ contains
 
     PUSH_SUB(iread_binary2)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
@@ -472,6 +504,7 @@ contains
 
     PUSH_SUB(lread_binary2)
 
+    ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
 
     ierr = 0
