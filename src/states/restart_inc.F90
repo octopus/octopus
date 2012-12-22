@@ -65,14 +65,20 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
 
   if(present(map)) then
     call io_binary_get_info(trim(dir)//'/'//trim(filename)//'.obf', np, ierr)
+
+    if(ierr /= 0) then
+      POP_SUB(X(restart_read_function))
+      return
+    end if
+
+    ASSERT(np > 0)
     SAFE_ALLOCATE(read_ff(1:np))
-    offset = 0
   else
     np = mesh%np
     read_ff => ff
-    offset = 0
   end if
 
+  offset = 0
   !in the parallel case, each node reads a part of the file
   if(mesh%parallel_in_domains) then
     offset = mesh%vp%xlocal(mesh%vp%partno) - 1

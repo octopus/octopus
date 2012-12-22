@@ -517,7 +517,7 @@ contains
 
   subroutine io_binary_get_info(fname, np, ierr)
     character(len=*),    intent(in)    :: fname
-    integer,             intent(inout) :: np
+    integer,             intent(out)   :: np
     integer,             intent(out)   :: ierr
 
     integer :: type
