@@ -137,13 +137,15 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
   type(geometry_t),               intent(inout) :: geo
   type(epot_t),                   intent(inout) :: ep
   type(states_t),                 intent(inout) :: st
- 
-  integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
-  FLOAT :: ff, kpoint(1:MAX_DIM)
+
+  type(symmetrizer_t) :: symmetrizer
+  integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint, iop, ii
+  FLOAT :: ff, kpoint(1:MAX_DIM), kpoint_tran(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
-  FLOAT,  allocatable :: grad_rho(:, :), force(:, :)
+  FLOAT,  allocatable :: grad_rho(:, :), force(:, :), force_psi(:), force_tmp(:)
   CMPLX :: phase
+  FLOAT, allocatable :: symmtmp(:, :)
 
   PUSH_SUB(X(forces_from_potential))
 
@@ -153,7 +155,11 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
   SAFE_ALLOCATE(grad_psi(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
   SAFE_ALLOCATE(grad_rho(1:np, 1:gr%mesh%sb%dim))
   grad_rho = M_ZERO
+
   SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
+  SAFE_ALLOCATE(force_psi(1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(force_tmp(1:gr%mesh%sb%dim))
+
   force = M_ZERO
 
   ! even if there is no fine mesh, we need to make another copy
@@ -161,6 +167,11 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
 
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
+
+    ikpoint = states_dim_get_kpoint_index(st%d, iq)
+    kpoint = M_ZERO
+    kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
+    
     do ist = st%st_start, st%st_end
 
       call states_get_state(st, gr%mesh, ist, iq, psi)
@@ -168,11 +179,7 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
       do idim = 1, st%d%dim
         call X(derivatives_set_bc)(gr%der, psi(:, idim))
 
-        ikpoint = states_dim_get_kpoint_index(st%d, iq)
         if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
-
-          kpoint = M_ZERO
-          kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
 
           do ip = 1, np_part
             phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
@@ -196,12 +203,31 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
       ! iterate over the projectors
       do iatom = 1, geo%natoms
         if(projector_is_null(ep%proj(iatom))) cycle
+
         do idir = 1, gr%mesh%sb%dim
-
-          force(idir, iatom) = force(idir, iatom) - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
+          force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
             R_REAL(X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
-
         end do
+        
+        if(st%symmetrize_density .and. gr%sb%kpoints%use_symmetries) then
+
+          do ii = 1, kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+
+            iop = kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii)
+            force_tmp = symm_op_apply_inv(gr%sb%symm%ops(iop), force_psi)
+
+            force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
+              force_tmp(1:gr%mesh%sb%dim)/(kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint) + CNST(1.0))
+
+          end do
+          
+          force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
+            force_psi(1:gr%mesh%sb%dim)/(kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint) + CNST(1.0))
+
+        else
+          force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
+        end if
+
       end do
 
     end do
@@ -223,6 +249,17 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
     geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) + force(1:gr%mesh%sb%dim, iatom)
   end do
 
+  if(st%symmetrize_density) then
+    call symmetrizer_init(symmetrizer, gr%mesh)
+    SAFE_ALLOCATE(symmtmp(1:gr%mesh%np, 1:3))
+
+    call dsymmetrizer_apply_vector(symmetrizer, grad_rho, symmtmp)
+    grad_rho(1:gr%mesh%np, 1:3) = symmtmp(1:gr%mesh%np, 1:3)
+
+    SAFE_DEALLOCATE_A(symmtmp)
+    call symmetrizer_end(symmetrizer)
+  end if
+
   call dforces_from_local_potential(gr, geo, ep, grad_rho, force)
 
   do iatom = 1, geo%natoms
@@ -231,6 +268,8 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
     end do
   end do
 
+  SAFE_DEALLOCATE_A(force_tmp)
+  SAFE_DEALLOCATE_A(force_psi)
   SAFE_DEALLOCATE_A(force)
   POP_SUB(X(forces_from_potential))
 end subroutine X(forces_from_potential)

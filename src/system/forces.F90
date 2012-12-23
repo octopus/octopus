@@ -58,6 +58,9 @@ module forces_m
   use spline_filter_m
   use states_m
   use states_dim_m
+  use symm_op_m
+  use symmetries_m
+  use symmetrizer_m
   use submesh_m
   use varinfo_m
 

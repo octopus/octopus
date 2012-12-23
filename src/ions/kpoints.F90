@@ -47,9 +47,11 @@ module kpoints_m
     kpoints_get_weight,      &
     kpoints_get_point,       &
     kpoints_set_point,       &
-    kpoints_set_transport_mode,&
-    kpoints_write_info,      &
-    kpoints_point_is_gamma
+    kpoints_set_transport_mode,   &
+    kpoints_write_info,           &
+    kpoints_point_is_gamma,       &
+    kpoints_get_symmetry_ops,     &
+    kpoints_get_num_symmetry_ops
 
   type kpoints_grid_t
     FLOAT, pointer :: point(:, :)
@@ -802,6 +804,34 @@ contains
     is_gamma = (maxval(abs(kpoints_get_point(this, ik))) < M_EPSILON)
     
   end function kpoints_point_is_gamma
+
+  !--------------------------------------------------------
+
+  integer pure function kpoints_get_num_symmetry_ops(this, ik) result(num)
+    type(kpoints_t),    intent(in) :: this
+    integer,            intent(in) :: ik
+
+   if(this%use_symmetries) then
+     num = this%num_symmetry_ops(ik)
+   else
+     num = 0
+   end if
+
+  end function kpoints_get_num_symmetry_ops
+  !--------------------------------------------------------
+
+  integer pure function kpoints_get_symmetry_ops(this, ik, index) result(iop)
+    type(kpoints_t),    intent(in) :: this
+    integer,            intent(in) :: ik
+    integer,            intent(in) :: index
+
+    if(this%use_symmetries) then
+      iop = this%symmetry_ops(ik, index)
+    else
+      iop = -1
+    end if
+
+  end function kpoints_get_symmetry_ops
 
 end module kpoints_m
 
