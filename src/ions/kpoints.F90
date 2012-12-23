@@ -71,6 +71,8 @@ module kpoints_m
     ! For the modified Monkhorst-Pack scheme
     integer        :: nik_axis(MAX_DIM)    !< number of MP divisions
     FLOAT          :: shifts(MAX_DIM)      ! 
+    integer, pointer :: symmetry_ops(:, :)
+    integer, pointer :: num_symmetry_ops(:)
   end type kpoints_t
 
   integer, parameter ::                &
@@ -141,6 +143,9 @@ contains
     PUSH_SUB(kpoints_init)
 
     ASSERT(dim <= MAX_DIM)
+
+    nullify(this%symmetry_ops)
+    nullify(this%num_symmetry_ops)
 
     !%Variable KPointsUseSymmetries
     !%Type logical
@@ -244,6 +249,8 @@ contains
       logical       :: gamma_only_
       integer       :: ii, ncols
       type(block_t) :: blk
+      integer, allocatable :: symm_ops(:, :), num_symm_ops(:)
+      
 
       PUSH_SUB(kpoints_init.read_MP)
 
@@ -320,11 +327,29 @@ contains
 
       call kpoints_grid_copy(this%full, this%reduced)
 
-      if(this%use_symmetries) then
-        call kpoints_grid_reduce(symm, this%use_time_reversal, &
-          this%reduced%npoints, dim, this%reduced%red_point, this%reduced%weight)
-      end if
 
+      if(this%use_symmetries) then
+
+        SAFE_ALLOCATE(num_symm_ops(1:this%full%npoints))
+        SAFE_ALLOCATE(symm_ops(1:this%full%npoints, 1:symmetries_number(symm)))
+        
+        call kpoints_grid_reduce(symm, this%use_time_reversal, &
+          this%reduced%npoints, dim, this%reduced%red_point, this%reduced%weight, symm_ops, num_symm_ops)
+        
+        ASSERT(maxval(num_symm_ops) >= 0)
+        ASSERT(maxval(num_symm_ops) <= symmetries_number(symm))
+        
+        SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
+        SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:maxval(num_symm_ops)))
+        
+        this%num_symmetry_ops(1:this%reduced%npoints) = num_symm_ops(1:this%reduced%npoints)
+        this%symmetry_ops(1:this%reduced%npoints, 1:maxval(num_symm_ops)) = &
+          symm_ops(1:this%reduced%npoints, 1:maxval(num_symm_ops))
+        
+        SAFE_DEALLOCATE_A(num_symm_ops)
+        SAFE_DEALLOCATE_A(symm_ops)
+      end if
+      
       do ik = 1, this%full%npoints
         call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
       end do
@@ -433,6 +458,9 @@ contains
 
     call kpoints_grid_end(this%full)
     call kpoints_grid_end(this%reduced)
+
+    SAFE_DEALLOCATE_P(this%symmetry_ops)
+    SAFE_DEALLOCATE_P(this%num_symmetry_ops)
 
     POP_SUB(kpoints_end)
   end subroutine kpoints_end
@@ -625,13 +653,15 @@ contains
 
   
   ! --------------------------------------------------------------------------------------------
-  subroutine kpoints_grid_reduce(symm, time_reversal, nkpoints, dim, kpoints, weights)
+  subroutine kpoints_grid_reduce(symm, time_reversal, nkpoints, dim, kpoints, weights, symm_ops, num_symm_ops)
     type(symmetries_t), intent(in)    :: symm
     logical,            intent(in)    :: time_reversal
     integer,            intent(inout) :: nkpoints
     integer,            intent(in)    :: dim
     FLOAT,              intent(inout) :: kpoints(:, :)
     FLOAT,              intent(out)   :: weights(:)
+    integer,            intent(out)   :: symm_ops(:, :)
+    integer,            intent(out)   :: num_symm_ops(:)
 
     integer :: nreduced
     FLOAT, allocatable :: reduced(:, :)
@@ -657,11 +687,13 @@ contains
 
     nreduced = 0
 
+    num_symm_ops = 0
+
     do ik = 1, nkpoints
       if (kmap(ik) /= ik) cycle
       
       ! new irreducible point
-      ! mareduced with negative kmap
+      ! mark reduced with negative kmap
       
       nreduced = nreduced + 1
       reduced(1:dim, nreduced) = kpoints(1:dim, ik)
@@ -686,6 +718,8 @@ contains
           if (all( abs(tran(1:dim) - kpoints(1:dim, ik2)) <= CNST(1.0e-5))) then
             weights(nreduced) = weights(nreduced) + dw
             kmap(ik2) = nreduced
+            INCR(num_symm_ops(nreduced), 1)
+            symm_ops(nreduced, num_symm_ops(nreduced)) = iop
             cycle
           end if
 
@@ -693,6 +727,8 @@ contains
           if (time_reversal .and. all(abs(tran_inv(1:dim) - kpoints(1:dim, ik2)) <= CNST(1.0e-5)) ) then
             weights(nreduced) = weights(nreduced) + dw
             kmap(ik2) = nreduced
+            INCR(num_symm_ops(nreduced), 1)
+            symm_ops(nreduced, num_symm_ops(nreduced)) = iop
           end if
           
         end do
