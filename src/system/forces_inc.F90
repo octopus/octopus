@@ -217,13 +217,10 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
             force_tmp = symm_op_apply_inv(gr%sb%symm%ops(iop), force_psi)
 
             force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
-              force_tmp(1:gr%mesh%sb%dim)/(kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint) + CNST(1.0))
+              force_tmp(1:gr%mesh%sb%dim)/kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
 
           end do
           
-          force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
-            force_psi(1:gr%mesh%sb%dim)/(kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint) + CNST(1.0))
-
         else
           force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
         end if

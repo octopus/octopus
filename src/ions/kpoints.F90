@@ -338,9 +338,16 @@ contains
         call kpoints_grid_reduce(symm, this%use_time_reversal, &
           this%reduced%npoints, dim, this%reduced%red_point, this%reduced%weight, symm_ops, num_symm_ops)
         
-        ASSERT(maxval(num_symm_ops) >= 0)
+        ! sanity checks
+        ASSERT(maxval(num_symm_ops) >= 1)
         ASSERT(maxval(num_symm_ops) <= symmetries_number(symm))
-        
+        ! the total number of symmetry operations in the list has to be equal to the number of k-points
+        ASSERT(sum(num_symm_ops(1:this%reduced%npoints)) == this%full%npoints)
+
+        do ik = 1, this%reduced%npoints
+          ASSERT(all(symm_ops(ik, 1:num_symm_ops(ik)) < symm%nops))
+        end do
+
         SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
         SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:maxval(num_symm_ops)))
         
@@ -689,7 +696,8 @@ contains
 
     nreduced = 0
 
-    num_symm_ops = 0
+    num_symm_ops = 1
+    symm_ops(:, 1) = symmetries_identity_index(symm)
 
     do ik = 1, nkpoints
       if (kmap(ik) /= ik) cycle
@@ -814,7 +822,7 @@ contains
    if(this%use_symmetries) then
      num = this%num_symmetry_ops(ik)
    else
-     num = 0
+     num = 1
    end if
 
   end function kpoints_get_num_symmetry_ops
@@ -828,7 +836,7 @@ contains
     if(this%use_symmetries) then
       iop = this%symmetry_ops(ik, index)
     else
-      iop = -1
+      iop = 1
     end if
 
   end function kpoints_get_symmetry_ops
