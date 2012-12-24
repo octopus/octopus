@@ -29,6 +29,7 @@ module symm_op_m
   private
   
   public ::                        &
+       symm_op_t,                  &
        symm_op_init,               &
        symm_op_copy,               &
        symm_op_end,                &
@@ -38,7 +39,7 @@ module symm_op_m
        symm_op_has_translation,    &
        symm_op_rotation_matrix,    &
        symm_op_translation_vector, &
-       symm_op_t
+       symm_op_is_identity
 
   type symm_op_t
     private
@@ -139,6 +140,20 @@ contains
     vector(1:3) = this%translation(1:3)
 
   end function symm_op_translation_vector
+
+  ! -------------------------------------------------------------------------------
+
+  logical pure function symm_op_is_identity(this) result(is_identity)
+    type(symm_op_t),  intent(in)  :: this
+
+    is_identity = .true.
+    is_identity = is_identity .and. all(abs(this%translation) < CNST(1.0e-5))
+    is_identity = is_identity .and. all(abs(this%rotation(:, 1) - (/ CNST(1.0), CNST(0.0), CNST(0.0)/)) < CNST(1.0e-5))
+    is_identity = is_identity .and. all(abs(this%rotation(:, 2) - (/ CNST(0.0), CNST(1.0), CNST(0.0)/)) < CNST(1.0e-5))
+    is_identity = is_identity .and. all(abs(this%rotation(:, 3) - (/ CNST(0.0), CNST(0.0), CNST(1.0)/)) < CNST(1.0e-5))
+
+  end function symm_op_is_identity
+
 
 #include "undef.F90"
 #include "integer.F90"

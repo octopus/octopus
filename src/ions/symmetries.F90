@@ -42,7 +42,8 @@ module symmetries_m
        symmetries_number,             &
        symmetries_apply_kpoint,       &
        symmetries_space_group_number, &
-       symmetries_have_break_dir
+       symmetries_have_break_dir,     &
+       symmetries_identity_index
 
   type symmetries_t
     type(symm_op_t), pointer :: ops(:)
@@ -376,6 +377,22 @@ contains
 
     have = any(abs(this%breakdir(1:3)) > M_EPSILON)
   end function symmetries_have_break_dir
+
+  ! -------------------------------------------------------------------------------
+
+  integer pure function symmetries_identity_index(this) result(index)
+    type(symmetries_t),  intent(in)  :: this
+
+    integer :: iop
+    
+    do iop = 1, this%nops
+      if(symm_op_is_identity(this%ops(iop))) then
+        index = iop
+        cycle
+      end if
+    end do
+
+  end function symmetries_identity_index
 
 end module symmetries_m
 
