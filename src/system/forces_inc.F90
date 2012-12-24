@@ -139,8 +139,8 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
   type(states_t),                 intent(inout) :: st
 
   type(symmetrizer_t) :: symmetrizer
-  integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint, iop, ii
-  FLOAT :: ff, kpoint(1:MAX_DIM), kpoint_tran(1:MAX_DIM)
+  integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint, iop, ii, iatom_symm
+  FLOAT :: ff, kpoint(1:MAX_DIM), ratom(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
   FLOAT,  allocatable :: grad_rho(:, :), force(:, :), force_psi(:), force_tmp(:)
@@ -200,32 +200,65 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
 
       call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
 
-      ! iterate over the projectors
-      do iatom = 1, geo%natoms
-        if(projector_is_null(ep%proj(iatom))) cycle
+      if(st%symmetrize_density .and. gr%sb%kpoints%use_symmetries) then
 
-        do idir = 1, gr%mesh%sb%dim
-          force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
-            R_REAL(X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+        ! We use that
+        !
+        ! \int dr f(Rr) V_iatom(r) \nabla f(R(v)) = R\int dr f(r) V_iatom(R*r) f(r)
+        !
+        ! and that the operator R should map the position of atom
+        ! iatom to the position of some other atom iatom_symm, so that
+        !
+        ! V_iatom(R*r) = V_iatom_symm(r)
+        !
+        do ii = 1, kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+          
+          iop = kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii)
+
+          do iatom = 1, geo%natoms
+            if(projector_is_null(ep%proj(iatom))) cycle
+            
+            ratom = symm_op_apply_inv(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+
+            call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
+
+            ! find iatom_symm
+            do iatom_symm = 1, geo%natoms
+              if(all(abs(ratom(1:gr%sb%dim) - geo%atom(iatom_symm)%x(1:gr%sb%dim)) < CNST(1.0e-5))) exit
+            end do
+            
+            ASSERT(iatom_symm <= geo%natoms)
+
+            do idir = 1, gr%mesh%sb%dim
+              force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
+                R_REAL(X(projector_matrix_element)(ep%proj(iatom_symm), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+            end do
+            
+            
+            force_tmp = symm_op_apply(gr%sb%symm%ops(iop), force_psi)
+            
+            force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
+            force_tmp(1:gr%mesh%sb%dim)/kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+          
+          end do
+
         end do
         
-        if(st%symmetrize_density .and. gr%sb%kpoints%use_symmetries) then
+      else
 
-          do ii = 1, kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
-
-            iop = kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii)
-            force_tmp = symm_op_apply_inv(gr%sb%symm%ops(iop), force_psi)
-
-            force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
-              force_tmp(1:gr%mesh%sb%dim)/kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
-
+        ! iterate over the projectors
+        do iatom = 1, geo%natoms
+          if(projector_is_null(ep%proj(iatom))) cycle
+          
+          do idir = 1, gr%mesh%sb%dim
+            force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
+              R_REAL(X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
           end do
           
-        else
           force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
-        end if
+        end do
 
-      end do
+      end if
 
     end do
   end do

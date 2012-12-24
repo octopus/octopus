@@ -62,7 +62,8 @@ module simul_box_m
     simul_box_in_box_vec,       &
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
-    simul_box_complex_boundaries
+    simul_box_complex_boundaries,   &
+    simul_box_periodic_atom_in_box 
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -788,6 +789,44 @@ contains
     POP_SUB(simul_box_atoms_in_box)
   end subroutine simul_box_atoms_in_box
 
+  ! --------------------------------------------------------
+  
+  subroutine simul_box_periodic_atom_in_box(sb, geo, ratom)
+    type(simul_box_t), intent(in)    :: sb
+    type(geometry_t),  intent(inout) :: geo
+    FLOAT,             intent(inout) :: ratom(:)
+
+    FLOAT :: xx(1:MAX_DIM)
+    integer :: pd, idir
+
+    pd = sb%periodic_dim
+
+    if (simul_box_is_periodic(sb)) then
+      if(.not. geo%reduced_coordinates) then
+        !convert the position to the orthogonal space
+        xx(1:pd) = matmul(ratom(1:pd) - sb%box_offset(1:pd), sb%klattice_primitive(1:pd, 1:pd))
+        xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
+      else
+        ! in this case coordinates are already in reduced space
+        xx(1:pd) = ratom(1:pd)
+      end if
+      
+      xx(1:pd) = xx(1:pd) + M_HALF
+      do idir = 1, pd
+        if(xx(idir) >= M_ZERO) then
+          xx(idir) = xx(idir) - aint(xx(idir))
+        else
+          xx(idir) = xx(idir) - aint(xx(idir)) + M_ONE
+        end if
+      end do
+      ASSERT(all(xx(1:pd) >= M_ZERO))
+      xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd) 
+
+      ratom(1:pd) = matmul(sb%klattice_primitive(1:pd, 1:pd), xx(1:pd) + sb%box_offset(1:pd))
+
+    end if
+
+  end subroutine simul_box_periodic_atom_in_box
 
   !--------------------------------------------------------------
   subroutine reciprocal_lattice(rv, kv, volume, dim)
