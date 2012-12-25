@@ -217,8 +217,9 @@ subroutine X(forces_from_potential)(gr, geo, ep, st)
 
           do iatom = 1, geo%natoms
             if(projector_is_null(ep%proj(iatom))) cycle
-            
-            ratom = symm_op_apply_inv(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+
+            ratom = M_ZERO
+            ratom(1:gr%sb%dim) = symm_op_apply_inv(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
 
             call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
 
