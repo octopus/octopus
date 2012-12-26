@@ -922,9 +922,9 @@ subroutine zxc_complex_lda(mesh, rho, vxc, ex, ec, Imrho, Imvxc, Imex, Imec, cmp
   FLOAT, intent(inout)     :: Imec
   FLOAT, intent(in)        :: cmplxscl_th
   
-  CMPLX :: zex, zec, zrho, zvxc, eps_c, last_zvxc
+  CMPLX :: zex, zec, zrho, zvxc, last_zvxc
   INTEGER :: i, N
-  CMPLX :: rs, rtrs, Q0, Q1, dQ1drs, dedrs, tmpphase, dimphase, vtrial2, vtrial3
+  CMPLX :: tmpphase, dimphase, vtrial2, vtrial3
   CMPLX, allocatable :: zvxc_arr(:)
 
   FLOAT :: C0I, C1, CC1, CC2, IF2, gamma, alpha1, beta1, beta2, beta3, beta4, Cx
@@ -933,18 +933,18 @@ subroutine zxc_complex_lda(mesh, rho, vxc, ex, ec, Imrho, Imvxc, Imex, Imec, cmp
 
   ! LDA constants.
   ! Only C0I is used for spin-paired calculations among these five
-  C0I = 0.238732414637843
-  C1 = -0.45816529328314287
-  CC1 = 1.9236610509315362
-  CC2 = 2.5648814012420482
-  IF2 = 0.58482236226346462
+  C0I = CNST(0.238732414637843)
+  C1 = CNST(-0.45816529328314287)
+  CC1 = CNST(1.9236610509315362)
+  CC2 = CNST(2.5648814012420482)
+  IF2 = CNST(0.58482236226346462)
   
-  gamma = 0.031091
-  alpha1 = 0.21370
-  beta1 = 7.5957
-  beta2 = 3.5876
-  beta3 = 1.6382
-  beta4 = 0.49294
+  gamma = CNST(0.031091)
+  alpha1 = CNST(0.21370)
+  beta1 = CNST(7.5957)
+  beta2 = CNST(3.5876)
+  beta3 = CNST(1.6382)
+  beta4 = CNST(0.49294)
 
   N = size(rho, 1)
   SAFE_ALLOCATE(zvxc_arr(1:N))
@@ -955,7 +955,7 @@ subroutine zxc_complex_lda(mesh, rho, vxc, ex, ec, Imrho, Imvxc, Imex, Imec, cmp
   dimphase = exp(-mesh%sb%dim * M_zI * cmplxscl_th)
 
   !Cx = -3.0 / 4.0 * (3.0 / M_PI)**(1.0 / 3.0)
-  Cx = 0.73855876638202234 
+  Cx = CNST(0.73855876638202234)
 
   last_zvxc = M_ONE ! entirely arbitrary
 
