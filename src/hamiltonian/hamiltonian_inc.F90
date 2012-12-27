@@ -463,14 +463,16 @@ subroutine X(oct_exchange_operator_all) (hm, der, st, hst)
   type(states_t),      intent(inout) :: hst
 
   integer :: ik, ist
-  FLOAT,  allocatable :: rho(:), pot(:)
+  integer :: ik2
+  FLOAT,  allocatable :: rho(:, :), pot(:, :)
   R_TYPE, allocatable :: psi(:, :), psi2(:, :), hpsi(:, :)
   integer :: jst, ip
 
   PUSH_SUB(X(oct_exchange_operator_all))
 
-  SAFE_ALLOCATE(rho(1:der%mesh%np))
-  SAFE_ALLOCATE(pot(1:der%mesh%np))
+
+  SAFE_ALLOCATE(rho(1:der%mesh%np, 1:st%d%nspin))
+  SAFE_ALLOCATE(pot(1:der%mesh%np, 1:st%d%nspin))
   SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))
@@ -485,15 +487,15 @@ subroutine X(oct_exchange_operator_all) (hm, der, st, hst)
       call states_get_state(st, der%mesh, jst, 1, psi)
       call states_get_state(hm%oct_st, der%mesh, jst, 1, psi2)
       forall (ip = 1:der%mesh%np)
-        rho(ip) = rho(ip) + hm%oct_st%occ(jst, 1)*R_AIMAG(R_CONJ(psi2(ip, 1))*psi(ip, 1))
+        rho(ip, 1) = rho(ip, 1) + hm%oct_st%occ(jst, 1)*R_AIMAG(R_CONJ(psi2(ip, 1))*psi(ip, 1))
       end forall
     end do
-    call dpoisson_solve(psolver, pot, rho)
+    call dpoisson_solve(psolver, pot(:, 1), rho(:, 1))
     do ist = st%st_start, st%st_end
       call states_get_state(hst, der%mesh, ist, 1, hpsi)
       call states_get_state(hm%oct_st, der%mesh, ist, 1, psi2)
       forall(ip = 1:der%mesh%np)
-        hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(pot(ip) + hm%oct_fxc(ip, 1, 1)*rho(ip))
+        hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(pot(ip, 1) + hm%oct_fxc(ip, 1, 1)*rho(ip, 1))
       end forall
       call states_set_state(hst, der%mesh, ist, 1, hpsi)
     end do
@@ -508,18 +510,27 @@ subroutine X(oct_exchange_operator_all) (hm, der, st, hst)
         call states_get_state(st, der%mesh, jst, ik, psi)
         call states_get_state(hm%oct_st, der%mesh, jst, ik, psi2)
         forall (ip = 1:der%mesh%np)
-          rho(ip) = rho(ip) + hm%oct_st%occ(jst, ik)*R_AIMAG(R_CONJ(psi2(ip, 1))*psi(ip, 1))
+          rho(ip, ik) = rho(ip, ik) + hm%oct_st%occ(jst, ik) * R_AIMAG(R_CONJ(psi2(ip, 1))*psi(ip, 1))
         end forall
       end do
     end do
-    call dpoisson_solve(psolver, pot, rho)
+
+    do ik = 1, 2
+      call dpoisson_solve(psolver, pot(:, ik), rho(:, ik))
+    end do
+
     do ik = 1, 2
       do ist = st%st_start, st%st_end
         call states_get_state(hst, der%mesh, ist, ik, hpsi)
         call states_get_state(hm%oct_st, der%mesh, ist, ik, psi2)
-        forall(ip = 1:der%mesh%np)
-          hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(pot(ip) + hm%oct_fxc(ip, ik, ik)*rho(ip))
-        end forall
+
+        do ik2 = 1, 2
+          forall(ip = 1:der%mesh%np)
+            hpsi(ip, 1) = hpsi(ip, 1) + M_TWO * M_zI * hm%oct_st%occ(ist, ik) * &
+              psi2(ip, 1) * (pot(ip, ik2) + hm%oct_fxc(ip, ik, ik2)*rho(ip, ik2))
+          end forall
+        end do
+
         call states_set_state(hst, der%mesh, ist, ik, hpsi)
       end do
     end do
@@ -528,6 +539,9 @@ subroutine X(oct_exchange_operator_all) (hm, der, st, hst)
     call messages_not_implemented("Function oct_exchange_operator_all for spin_polarized or spinors")
   end select
 
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(psi2)
+  SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
   POP_SUB(X(oct_exchange_operator_all))
