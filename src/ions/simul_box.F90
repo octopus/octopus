@@ -256,6 +256,13 @@ contains
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > MAX_DIM) .or. (sb%periodic_dim > sb%dim)) &
         call input_error('PeriodicDimensions')
 
+      if(sb%periodic_dim == 1 .or. sb%periodic_dim == 2) then
+        call messages_write('For systems that  are periodic in 1D and  2D, interaction between', new_line = .true.)
+        call messages_write('ions is asumed to be periodic in 3D. This affects the calculation', new_line = .true.)
+        call messages_write('of total energy and forces.')
+        call messages_warning()
+      end if
+
       !%Variable ComplexBoundaries
       !%Type logical
       !%Default no
