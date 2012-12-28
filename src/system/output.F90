@@ -823,15 +823,17 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     type(geometry_t),    intent(in)    :: geo
 
+#ifdef HAVE_BERKELEYGW
     integer :: ik, is, ikk, ist, itran, iunit, iatom, mtrx(3, 3, 48), FFTgrid(3)
     integer, pointer :: ifmin(:,:), ifmax(:,:), atyp(:), ngk(:)
-    character*3 :: sheader
+    character(len=3) :: sheader
     FLOAT :: adot(3,3), bdot(3,3), recvol, tnp(3, 48)
     FLOAT, pointer :: energies(:,:,:), occupations(:,:,:), apos(:,:), vxc(:,:), dpsi(:,:)
     CMPLX, pointer :: field_g(:,:), zpsi(:,:)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     type(fourier_shell_t) :: shell
+#endif
 
     PUSH_SUB(output_berkeleygw)
 

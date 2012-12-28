@@ -50,7 +50,7 @@ module pblas_m
       beta, c, ic, jc, descc )
       implicit none
 
-      character*1      :: transa, transb
+      character(len=1) :: transa, transb
       integer          :: m, n, k, ia, ja, ib, jb, ic, jc
       real(8)          :: alpha, beta
       real(8)          :: a, b, c
@@ -62,7 +62,7 @@ module pblas_m
       beta, c, ic, jc, descc )
       implicit none
 
-      character*1      :: transa, transb
+      character(len=1) :: transa, transb
       integer          :: m, n, k, ia, ja, ib, jb, ic, jc
       complex(8)       :: alpha, beta
       complex(8)       :: a, b, c

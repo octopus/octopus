@@ -79,7 +79,7 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
 
     end do
     
-    st%eigenval(st%st_start:st%st_end, ik) = eigen(st%st_start:st%st_end)
+    st%eigenval(st%st_start:st%st_end, ik) = real(eigen(st%st_start:st%st_end), REAL_PRECISION)
 
   end do
 

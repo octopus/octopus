@@ -887,7 +887,7 @@ module tdfunction_m
       y = TOCMPLX(fre, fim)
 
     case default
-      y = M_z0
+      y = M_ZERO
 
     end select
 
@@ -1078,7 +1078,7 @@ module tdfunction_m
 
     PUSH_SUB(tdf_dot_product)
 
-    fg = M_z0
+    fg = M_ZERO
 
     ! For the moment, we will just assume that f and g are of the same type.
     ASSERT(f%mode .eq. g%mode)

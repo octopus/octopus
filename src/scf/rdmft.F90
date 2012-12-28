@@ -243,7 +243,7 @@ contains
         cycle
       end do
       abs_occ = M_ZERO
-      n_unpinned = M_ZERO
+      n_unpinned = 0
       muhat = M_ZERO
       do ist = 1, rdm%st%nst
         if (occout(ist, 1).lt.el_per_state-conv .and. occout(ist, 1).gt.conv) then

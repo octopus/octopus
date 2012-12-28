@@ -584,7 +584,7 @@ contains
     !> Propagator with enforced time-reversal symmetry
     subroutine td_etrs
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
-      integer :: ik, ist, ib
+      integer :: ik, ib
       type(batch_t) :: zpsib_save
       type(density_calc_t) :: dens_calc
 
@@ -670,7 +670,6 @@ contains
     !> Propagator with approximate enforced time-reversal symmetry
     subroutine td_aetrs
       integer :: ik, ispin, ip, ist, ib
-      type(batch_t) :: zpsib
       FLOAT :: vv
       CMPLX :: phase
       type(density_calc_t)  :: dens_calc
