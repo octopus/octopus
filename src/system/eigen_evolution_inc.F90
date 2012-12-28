@@ -80,7 +80,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
     ! Get the eigenvalues and the residues.
     do ist = conv + 1, st%nst
       call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
-      st%eigenval(ist, ik) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi)
+      st%eigenval(ist, ik) = real(X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi), REAL_PRECISION)
       diff(ist) = X(states_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
     end do
 
@@ -123,7 +123,7 @@ contains
 #endif
     call exponential_apply(te, gr%der, hm, zpsi, ist, ik, -tau, M_ZERO, order = order, imag_time = .true.)
 #if defined(R_TREAL)
-    psi(1:gr%mesh%np, 1:st%d%dim) = zpsi(1:gr%mesh%np, 1:st%d%dim)
+    psi(1:gr%mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:gr%mesh%np, 1:st%d%dim))
     SAFE_DEALLOCATE_P(zpsi)
 #else
     nullify(zpsi)

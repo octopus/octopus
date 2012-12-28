@@ -264,8 +264,10 @@ contains
     type(hamiltonian_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
 
+#ifdef HAVE_OPENCL
     integer :: ispin
     integer :: offset
+#endif
 
     PUSH_SUB(hamiltonian_base_update)
 

@@ -423,7 +423,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
   SAFE_ALLOCATE(antisymwf_acc(1:gr%mesh%np, 1, 1))
   ! for each permutation of particles of this type
   !  antisymmetrize the up labeled spins, amongst themselves
-  antisymwf_acc = M_z0
+  antisymwf_acc = R_TOTYPE(M_ZERO)
   do iperm_1spin = 1, perms_1spin%npermutations
 
     do ip = 1, gr%mesh%np_global

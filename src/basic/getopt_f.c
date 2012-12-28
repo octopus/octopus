@@ -830,13 +830,14 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
   char *tok = NULL;
 
 
-  // *interp = 1;
-  // *estep  = -1.;
-  // espan[0]  = -1.;
-  // espan[1]  = -1.;
-  // pol[0] = 1;
-  // pol[1] = 0;
-  // pol[2] = 0;
+  /* *interp = 1;
+   *estep  = -1.;
+   espan[0]  = -1.;
+   espan[1]  = -1.;
+   pol[0] = 1;
+   pol[1] = 0;
+   pol[2] = 0;
+  */
 
 #if defined(HAVE_GETOPT_LONG)
   static struct option long_options[] =

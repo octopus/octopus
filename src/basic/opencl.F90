@@ -636,7 +636,9 @@ module opencl_m
     ! ------------------------------------------
 
     subroutine opencl_end()
+#ifdef HAVE_OPENCL
       integer :: ierr
+#endif
 
       PUSH_SUB(opencl_end)
 

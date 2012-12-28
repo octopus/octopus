@@ -78,7 +78,7 @@ static int foreground_proc(void)
   
 #if defined(HAVE_TCGETPGRP)
   return ((ctty_pgrp = tcgetpgrp(STDOUT_FILENO)) != -1 && ctty_pgrp == pgrp);
-#else defined(HAVE_IOCTL)
+#elif defined(HAVE_IOCTL)
   return ((ioctl(STDOUT_FILENO, TIOCGPGRP, &ctty_pgrp) != -1 && ctty_pgrp == pgrp));
 #endif
 

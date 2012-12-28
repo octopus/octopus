@@ -726,14 +726,12 @@ contains
       FLOAT,            intent(inout) :: vxc(:, :) 
       type(geometry_t), intent(in)    :: geo
       
-      FLOAT :: pos(MAX_DIM), distance_origin, distance_cm
+      FLOAT :: pos(MAX_DIM), distance_cm
       FLOAT, allocatable :: vxcc(:)
       FLOAT ::  s_dens,vnew 
       FLOAT  :: smooth_ratio
       integer :: nspin, is, ip, idim, ik, ist, ik_tmp  
-      integer :: ierr, itmp
       integer , save :: counter = 0
-      character(len=10) :: vxc_name
       logical :: to_calc   
 
       PUSH_SUB(v_ks_calc_start.tail_correction)

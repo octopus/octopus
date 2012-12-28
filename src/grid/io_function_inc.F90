@@ -468,7 +468,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, is_tmp,
   if(mesh%parallel_in_domains) then
     SAFE_ALLOCATE(ff_global(1:mesh%np_global))
 
-    !note: here we are gathering data that we won't write if grp is
+    !note: here we are gathering data that we won`t write if grp is
     !present), but to avoid it we will have to find out all if the
     !process is a member of the domain line where the root of grp
     !lives
@@ -973,7 +973,7 @@ contains
     FLOAT :: offset(3)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
-    character*80 :: fname_ext
+    character(len=80) :: fname_ext
 
     if(mesh%sb%dim .ne. 3) then
       write(message(1), '(a)') 'Cannot output function in XCrySDen format except in 3D.'

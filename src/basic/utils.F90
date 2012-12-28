@@ -132,7 +132,7 @@ contains
     write_average_ = .true.
     if(present(write_average)) write_average_ = write_average
 
-    trace = M_z0
+    trace = M_ZERO
     do jj = 1, ndim
       write(iunit, '(3f20.6)') (units_from_atomic(unit, tensor(jj, kk)), kk=1,ndim)
       trace = trace + tensor(jj, jj)

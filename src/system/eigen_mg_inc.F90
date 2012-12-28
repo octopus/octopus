@@ -35,7 +35,7 @@ subroutine X(eigensolver_mg) (der, st, hm, sdiag, niter, ik, diff)
   SAFE_ALLOCATE(cc(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(aa(1:st%nst))
 
-  cc = M_Z0
+  cc = R_TOTYPE(M_ZERO)
 
   do iter = 1, niter
 
@@ -105,7 +105,7 @@ subroutine X(coordinate_relaxation)(der, hm, nst, steps, ik, psi, aa, cc)
     do ip = 1, der%mesh%np
       
       vv = sqrt(der%mesh%vol_pp(ip))
-      dh = hdiag(ip, 1)
+      dh = real(hdiag(ip, 1), REAL_PRECISION)
       pot = hm%vhxc(ip, 1) + hm%ep%vpsl(ip)
       
       do ist = 1, nst
