@@ -424,9 +424,10 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
   end do
 
   if(this%keep_orb) then
-    write(message(1), '(a,f10.2,a)') &
-      'Info: LCAO requires', dof*CNST(8.0)/CNST(1024.0)**2, ' Mb of memory for atomic orbitals.'
-    call messages_info(1)
+    call messages_write('Info: LCAO requires')
+    call messages_write(dof*CNST(8.0), units = unit_megabytes, fmt = '(f10.1)')
+    call messages_write(' of memory for atomic orbitals.')
+    call messages_info()
   end if
 
   POP_SUB(X(lcao_alt_init_orbitals))

@@ -1097,18 +1097,29 @@ end subroutine messages_end
 
   ! ------------------------------------------------------------
 
-  subroutine messages_write_integer8(val, fmt, new_line)
+  subroutine messages_write_integer8(val, fmt, new_line, units, print_units)
     integer(8),                 intent(in) :: val
     character(len=*), optional, intent(in) :: fmt
     logical,          optional, intent(in) :: new_line
+    type(unit_t),     optional, intent(in) :: units
+    logical,          optional, intent(in) :: print_units
 
     character(len=10) :: number
+    integer(8) :: val_conv
+
+    val_conv = val
+    if(present(units)) val_conv = int(nint(units_from_atomic(units, dble(val))), 8)
 
     if(present(fmt)) then
-      write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val
+      write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val_conv
     else
-      write(number, '(i10)') val
+      write(number, '(i10)') val_conv
       write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+    end if
+
+
+    if(present(units) .and. optional_default(print_units, .true.)) then
+      write(message(current_line), '(a, a, a)') trim(message(current_line)), ' ', trim(units_abbrev(units))
     end if
 
     if(present(new_line)) then
@@ -1119,23 +1130,14 @@ end subroutine messages_end
 
   ! ------------------------------------------------------------
 
-  subroutine messages_write_integer(val, fmt, new_line)
+  subroutine messages_write_integer(val, fmt, new_line, units, print_units)
     integer,                    intent(in) :: val
     character(len=*), optional, intent(in) :: fmt
     logical,          optional, intent(in) :: new_line
+    type(unit_t),     optional, intent(in) :: units
+    logical,          optional, intent(in) :: print_units
 
-    character(len=10) :: number
-
-    if(present(fmt)) then
-      write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val
-    else
-      write(number, '(i10)') val
-      write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
-    end if
-
-    if(present(new_line)) then
-      if(new_line) call messages_new_line()
-    end if
+    call messages_write_integer8(int(val, 8), fmt, new_line, units, print_units)
 
   end subroutine messages_write_integer
 

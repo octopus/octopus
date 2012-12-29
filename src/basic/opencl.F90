@@ -572,32 +572,27 @@ module opencl_m
 
         call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_SIZE, val, cl_status)
         call messages_write('      Device memory          :')
-        call messages_write(val/(1024**2))
-        call messages_write(' Mb')
+        call messages_write(val, units = unit_megabytes)
         call messages_new_line()
 
         call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, val, cl_status)
         call messages_write('      Max alloc size         :')
-        call messages_write(val/(1024**2))
-        call messages_write(' Mb')
+        call messages_write(val, units = unit_megabytes)
         call messages_new_line()
 
         call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val, cl_status)
         call messages_write('      Device cache           :')
-        call messages_write(val/1024)
-        call messages_write(' Kb')
+        call messages_write(val, units = unit_kilobytes)
         call messages_new_line()
 
         call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, val, cl_status)
         call messages_write('      Local memory           :')
-        call messages_write(val/1024)
-        call messages_write(' Kb')
+        call messages_write(val, units = unit_kilobytes)
         call messages_new_line()
 
         call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val, cl_status)
         call messages_write('      Constant memory        :')
-        call messages_write(val/1024)
-        call messages_write(' Kb')
+        call messages_write(val, units = unit_kilobytes)
         call messages_new_line()
 
         call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val, cl_status)

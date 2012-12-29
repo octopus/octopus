@@ -26,6 +26,7 @@ module memory_m
   use messages_m
   use states_m
   use system_m
+  use unit_system_m
   
   implicit none
 
@@ -40,21 +41,42 @@ contains
 
     real(8) :: mesh_global, mesh_local, wfns
 
-    mesh_global = mesh_global_memory(sys%gr%mesh)/CNST(1024.0)**2
-    mesh_local  = mesh_local_memory(sys%gr%mesh)/CNST(1024.0)**2
+    mesh_global = mesh_global_memory(sys%gr%mesh)
+    mesh_local  = mesh_local_memory(sys%gr%mesh)
 
-    write(message(1), '(a)')        "Mesh"
-    write(message(2), '(a,f10.1,a)') "  global  ", mesh_global, " [Mb]"
-    write(message(3), '(a,f10.1,a)') "  local   ", mesh_local,  " [Mb] (par_domains)"
-    write(message(4), '(a,f10.1,a)') "  total   ", mesh_global + mesh_local,  " [Mb]"
-    call messages_info(4)
+    call messages_write('Mesh')
+    call messages_new_line()
 
-    wfns = states_wfns_memory(sys%st, sys%gr%mesh)/CNST(1024.0)**2
+    call messages_write('  global  :')
+    call messages_write(mesh_global, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
 
-    write(message(1), '(a)')        "States"
-    write(message(2), '(a,f10.1,a)') "  real    ", wfns,       " [Mb] (par_kpoints + par_states + par_domains)"
-    write(message(3), '(a,f10.1,a)') "  complex ", M_TWO*wfns, " [Mb] (par_kpoints + par_states + par_domains)"
-    call messages_info(3)
+    call messages_write('  local   :')
+    call messages_write(mesh_local, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+
+    call messages_write('  total   :')
+    call messages_write(mesh_global + mesh_local, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+
+    call messages_info()
+
+    wfns = states_wfns_memory(sys%st, sys%gr%mesh)
+
+    call messages_write('States')
+    call messages_new_line()
+
+    call messages_write('  real    :')
+    call messages_write(wfns, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_write(' (par_kpoints + par_states + par_domains)')
+    call messages_new_line()    
+
+    call messages_write('  complex :')
+    call messages_write(2.0_8*wfns, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_write(' (par_kpoints + par_states + par_domains)')
+    call messages_new_line()
+
+    call messages_info()
 
   end subroutine memory_run
 

@@ -193,17 +193,17 @@ contains
     unit_femtosecond%abbrev = 'fs'
     unit_femtosecond%name   = 'femtoseconds'
 
-    unit_kilobytes%factor = CNST(1024.0)**2
-    unit_kilobytes%abbrev = 'kb'
-    unit_kilobytes%name   = 'kilobytes'
+    unit_kilobytes%factor = CNST(2.0)**10
+    unit_kilobytes%abbrev = 'KiB'
+    unit_kilobytes%name   = 'kibibytes'
 
-    unit_megabytes%factor = CNST(1024.0)**2
-    unit_megabytes%abbrev = 'Mb'
-    unit_megabytes%name   = 'megabytes'
+    unit_megabytes%factor = CNST(2.0)**20
+    unit_megabytes%abbrev = 'MiB'
+    unit_megabytes%name   = 'mebibytes'
 
-    unit_gigabytes%factor = CNST(1024.0)**2
-    unit_gigabytes%abbrev = 'Gb'
-    unit_gigabytes%name   = 'gigabytes'
+    unit_gigabytes%factor = CNST(2.0)**30
+    unit_gigabytes%abbrev = 'GiB'
+    unit_gigabytes%name   = 'gibibytes'
 
     call unit_system_get(units_inp, mod(cinp, 2))
     call unit_system_get(units_out, mod(cout, 2))
