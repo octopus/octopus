@@ -45,80 +45,80 @@ module json_m
 
   FLOAT, parameter :: kind_parm=CNST(1.0)
 
-  integer, public, parameter :: wp=kind(kind_parm)
+  integer, public, parameter :: wp = kind(kind_parm)
 
-  real(kind=wp), parameter :: JSON_STRING_GROWTH_FACTOR = 1.1_wp
+  real(kind=wp), parameter :: JSON_STRING_GROWTH_FACTOR = CNST(1.1)
   integer,       parameter :: JSON_STRING_INIT_LEN      = 63
 
-  real(kind=wp), parameter :: JSON_TABLE_GROWTH_FACTOR = 1.5_wp
+  real(kind=wp), parameter :: JSON_TABLE_GROWTH_FACTOR = CNST(1.5)
   integer,       parameter :: JSON_TABLE_INIT_LEN=127
 
-  integer, public, parameter :: JSON_OK          = 0
-  integer, public, parameter :: JSON_UNDEF_ERROR =-1
-  integer, public, parameter :: JSON_TYPE_ERROR  =-2
-  integer, public, parameter :: JSON_SIZE_ERROR  =-3
-  integer, public, parameter :: JSON_INDEX_ERROR =-4
-  integer, public, parameter :: JSON_KEY_ERROR   =-5
+  integer, public, parameter :: JSON_OK          =  0
+  integer, public, parameter :: JSON_UNDEF_ERROR = -1
+  integer, public, parameter :: JSON_TYPE_ERROR  = -2
+  integer, public, parameter :: JSON_SIZE_ERROR  = -3
+  integer, public, parameter :: JSON_INDEX_ERROR = -4
+  integer, public, parameter :: JSON_KEY_ERROR   = -5
 
-  integer, parameter :: JSON_UNDEF_TYPE   =-1
-  integer, parameter :: JSON_NULL_TYPE    = 0
-  integer, parameter :: JSON_LOGICAL_TYPE = 1
-  integer, parameter :: JSON_INTEGER_TYPE = 2
-  integer, parameter :: JSON_REAL_TYPE    = 3
-  integer, parameter :: JSON_STRING_TYPE  = 4
-  integer, parameter :: JSON_ARRAY_TYPE   = 5
-  integer, parameter :: JSON_OBJECT_TYPE  = 6
+  integer, parameter :: JSON_UNDEF_TYPE   = -1
+  integer, parameter :: JSON_NULL_TYPE    =  0
+  integer, parameter :: JSON_LOGICAL_TYPE =  1
+  integer, parameter :: JSON_INTEGER_TYPE =  2
+  integer, parameter :: JSON_REAL_TYPE    =  3
+  integer, parameter :: JSON_STRING_TYPE  =  4
+  integer, parameter :: JSON_ARRAY_TYPE   =  5
+  integer, parameter :: JSON_OBJECT_TYPE  =  6
 
-  character, parameter :: backslash=achar(92)
-  character, parameter :: space=achar(32)
-  character, parameter :: bspace=achar(8)
-  character, parameter :: tab=achar(9)
-  character, parameter :: newline=achar(10)
-  character, parameter :: vt=achar(11)
-  character, parameter :: formfeed=achar(12)
-  character, parameter :: creturn=achar(13)
+  character, parameter :: backslash = achar(92)
+  character, parameter :: space = achar(32)
+  character, parameter :: bspace = achar(8)
+  character, parameter :: tab = achar(9)
+  character, parameter :: newline = achar(10)
+  character, parameter :: vt = achar(11)
+  character, parameter :: formfeed = achar(12)
+  character, parameter :: creturn = achar(13)
 
   type, public :: json_null_t
     private
-    integer :: type=JSON_UNDEF_TYPE
+    integer :: type = JSON_UNDEF_TYPE
   end type json_null_t
 
   type, public :: json_logical_t
     private
-    integer :: type=JSON_UNDEF_TYPE
-    logical :: val=.false.
+    integer :: type = JSON_UNDEF_TYPE
+    logical :: val = .false.
   end type json_logical_t
 
   type, public :: json_integer_t
     private
-    integer :: type=JSON_UNDEF_TYPE
-    integer :: val=0
+    integer :: type = JSON_UNDEF_TYPE
+    integer :: val = 0
   end type json_integer_t
 
   type, public :: json_real_t
     private
-    integer       :: type=JSON_UNDEF_TYPE
-    real(kind=wp) :: val=0.0_wp
+    integer       :: type = JSON_UNDEF_TYPE
+    real(kind=wp) :: val = CNST(0.0)
   end type json_real_t
 
   type, public :: json_string_iterator_t
     private
-    integer                          :: pos=0
-    integer                          :: len=0
+    integer                          :: pos = 0
+    integer                          :: len = 0
     character, dimension(:), pointer :: val
   end type json_string_iterator_t
 
   type, public :: json_string_t
     private
-    integer                          :: type=JSON_UNDEF_TYPE
-    integer                          :: len=0
-    integer                          :: size=0
+    integer                          :: type = JSON_UNDEF_TYPE
+    integer                          :: len = 0
+    integer                          :: size = 0
     character, dimension(:), pointer :: val
   end type json_string_t
 
   type, public :: json_value_t
     private
-    integer                       :: type=JSON_UNDEF_TYPE
+    integer                       :: type = JSON_UNDEF_TYPE
     type(json_null_t),    pointer :: jnull
     type(json_logical_t), pointer :: logical
     type(json_integer_t), pointer :: integer
@@ -141,15 +141,15 @@ module json_m
 
   type, public :: json_array_t
     private
-    integer                          :: type=JSON_UNDEF_TYPE
-    integer                          :: size=0
+    integer                          :: type = JSON_UNDEF_TYPE
+    integer                          :: size = 0
     type(json_value_node_t), pointer :: head
     type(json_value_node_t), pointer :: tail
   end type json_array_t
 
   type, public :: json_member_t
     private
-    integer                      :: type=JSON_UNDEF_TYPE
+    integer                      :: type = JSON_UNDEF_TYPE
     type(json_string_t), pointer :: ident
     type(json_value_t),  pointer :: val
   end type json_member_t
@@ -167,23 +167,23 @@ module json_m
 
   type, public :: json_object_iterator_t
     private
-    integer                                        :: pos=0
-    integer                                        :: size=0
+    integer                                        :: pos = 0
+    integer                                        :: size = 0
     type(json_member_node_t),              pointer :: node
     type(json_table_node_t), dimension(:), pointer :: table
   end type json_object_iterator_t
 
   type, public :: json_object_t
     private
-    integer                                        :: type=JSON_UNDEF_TYPE
-    integer                                        :: size=0
-    integer                                        :: used=0
+    integer                                        :: type = JSON_UNDEF_TYPE
+    integer                                        :: size = 0
+    integer                                        :: used = 0
     type(json_table_node_t), dimension(:), pointer :: table
   end type json_object_t
 
   type, public :: json_t
     private
-    integer                      :: type=JSON_UNDEF_TYPE
+    integer                      :: type = JSON_UNDEF_TYPE
     type(json_array_t),  pointer :: array
     type(json_object_t), pointer :: object
   end type json_t
@@ -723,7 +723,7 @@ contains
     type(json_real_t), intent(inout) :: this
 
     this%type=JSON_UNDEF_TYPE
-    this%val=0.0_wp
+    this%val = CNST(0.0)
 
   end subroutine json_real_end
 
@@ -734,7 +734,7 @@ contains
     len=0
     if(json_real_isdef(this)) then
       len=precision(this%val)+floor(log10(real(range(this%val),kind=wp)))+6
-      if(this%val<0.0_wp)len=len+1
+      if(this%val < CNST(0.0)) len = len + 1
     end if
 
   end function json_real_len
@@ -746,7 +746,7 @@ contains
 
     eqv=.false.
     if(json_real_isdef(this_1).and.json_real_isdef(this_2))&
-      eqv=abs(this_1%val-this_2%val)<2.0_wp*spacing(max(abs(this_1%val),abs(this_2%val)))
+      eqv=abs(this_1%val-this_2%val) < CNST(2.0)*spacing(max(abs(this_1%val),abs(this_2%val)))
 
   end function json_real_equal
 
