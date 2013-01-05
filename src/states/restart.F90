@@ -29,7 +29,6 @@ module restart_m
   use io_m
   use io_binary_m
   use io_function_m
-  use json_m
   use kpoints_m
   use lalg_basic_m
   use linear_response_m
@@ -238,7 +237,6 @@ contains
     integer :: err, ik, idir, ist, idim, isp, itot
     character(len=80) :: filename
     logical :: lr_wfns_are_associated, should_write
-    type(json_object_t) :: json
     FLOAT   :: kpoint(1:MAX_DIM)
     FLOAT,  allocatable :: dpsi(:)
     CMPLX,  allocatable :: zpsi(:)
@@ -302,12 +300,6 @@ contains
       iunit_states = io_open(trim(dir)//'/states', action='write', is_tmp=.true.)
       call states_dump(st, iunit_states)
       call io_close(iunit_states)
-
-      iunit_geo = io_open(trim(dir)//'/geometry.json', action='write', is_tmp=.true.)
-      call geometry_create_data_object(geo, json)
-      call json_write(json, iunit_geo)
-      call json_end(json)
-      call io_close(iunit_geo)
 
     end if
 
