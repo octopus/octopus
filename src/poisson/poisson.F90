@@ -757,6 +757,7 @@ contains
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), xx(:, :)
     FLOAT :: alpha, beta, rr, delta, norm, ralpha, hartree_nrg_num, &
          hartree_nrg_analyt, lcl_hartree_nrg 
+    FLOAT :: total_charge
     integer :: ip, idir, ierr, iunit, nn, n_gaussians
 
     PUSH_SUB(poisson_test)
@@ -805,7 +806,10 @@ contains
         rho(ip) = rho(ip) + rhop(ip)
       end do
     end do
-    write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', dmf_integrate(mesh, rho)
+
+    total_charge = dmf_integrate(mesh, rho)
+
+    write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', total_charge
     call messages_info(1)
 
     ! This builds analytically its potential

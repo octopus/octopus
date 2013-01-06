@@ -1161,10 +1161,8 @@ contains
   end subroutine write_K_term
 
   ! ---------------------------------------------------------
-  character*80 function theory_name(cas)
+  character(len=80) pure function theory_name(cas)
     type(casida_t), intent(in) :: cas
-
-    PUSH_SUB(theory_name)
 
     select case(cas%type)
       case(CASIDA_EPS_DIFF)
@@ -1178,11 +1176,9 @@ contains
       case(CASIDA_CASIDA)
         theory_name = "casida"
       case default
-        write(message(1),'(a,i6)') 'Unknown Casida theory level ', cas%type
-        call messages_fatal(1)
+        theory_name = "unknown"
     end select
 
-    POP_SUB(theory_name)
   end function theory_name
 
   ! ---------------------------------------------------------

@@ -1245,7 +1245,7 @@ contains
      !Add off-diagonal, self-interaction and its correction
      ep%eii=ep%eii+sicn2-sicn
 
-    write(68,*) "ep%eii values very bottom", ep%eii * CNST(2.0*13.60569193)
+    write(68,*) "ep%eii values very bottom", ep%eii * CNST(2.0)*CNST(13.60569193)
 
     do iatom = 1, geo%natoms
       zi = species_zval(geo%atom(iatom)%spec)
