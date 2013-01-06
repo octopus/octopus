@@ -93,10 +93,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  character function index2axis(idir) result(ch)
+  character pure function index2axis(idir) result(ch)
     integer, intent(in) :: idir
-    
-    PUSH_SUB(index2axis)
 
     select case(idir)
       case(1)
@@ -111,9 +109,7 @@ contains
         write(ch,'(i1)') idir
     end select
 
-    POP_SUB(index2axis)
   end function index2axis
-
 
   ! ---------------------------------------------------------
   subroutine output_tensor(iunit, tensor, ndim, unit, write_average)

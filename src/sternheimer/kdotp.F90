@@ -563,15 +563,12 @@ contains
   end subroutine kdotp_write_degeneracies
 
   ! ---------------------------------------------------------
-  character(len=12) function int2str(ii) result(str)
+  character(len=12) pure function int2str(ii) result(str)
     integer, intent(in) :: ii
     
-    PUSH_SUB(int2str)
-
     write(str, '(i11)') ii
     str = trim(adjustl(str))
 
-    POP_SUB(int2str)
   end function int2str
             
 end module kdotp_m
