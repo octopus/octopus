@@ -410,8 +410,8 @@ contains
           call parse_block_integer(blk, 0, idir + 0, kick%qbessel_l)
           call parse_block_integer(blk, 0, idir + 1, kick%qbessel_m)
         else
-          kick%qbessel_l = M_ZERO
-          kick%qbessel_m = M_ZERO
+          kick%qbessel_l = 0
+          kick%qbessel_m = 0
         end if
 
       else

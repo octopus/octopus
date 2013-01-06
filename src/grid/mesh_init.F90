@@ -849,7 +849,7 @@ contains
     SAFE_ALLOCATE(mesh%vol_pp(1:np))
 
     forall(ip = 1:np) mesh%vol_pp(ip) = product(mesh%spacing(1:sb%dim))
-    jj(sb%dim + 1:MAX_DIM) = M_ZERO
+    jj(sb%dim + 1:MAX_DIM) = 0
 
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
