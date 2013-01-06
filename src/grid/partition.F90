@@ -250,12 +250,10 @@ contains
 
   ! ----------------------------------------------------------------------
 
-  FLOAT function partition_quality(this) result(quality)
+  FLOAT pure function partition_quality(this) result(quality)
     type(partition_t), intent(in) :: this
     
     FLOAT :: scal
-
-    PUSH_SUB(partition_quality)
 
     scal = real(this%npart, REAL_PRECISION)/this%npoints
 
@@ -266,7 +264,6 @@ contains
 
     quality = M_ONE/(M_ONE + quality)
 
-    POP_SUB(partition_quality)
   end function partition_quality
 
   ! -----------------------------------------------------------------------
