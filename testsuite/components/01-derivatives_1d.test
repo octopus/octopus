@@ -30,7 +30,7 @@ Precision : 3.0e-11
 match ; Real gradient; GREP(out, 'Gradient real', 20, 0) ; 1.1709414428E-11
 match ; Complex gradient; GREP(out, 'Gradient complex', 23, 0) ; 1.4055457659E-11
 
-Precision : 3.0e-9
+Precision : 1.0e-8
 Input: 01-derivatives_1d.02-fortran.inp
 match ; Real Laplacian (blocksize =   1); GREP(out, 'Laplacian real bsize =   1', 37, 0) ; 2.7801274971E-09
 match ; Real Laplacian (blocksize =   2); GREP(out, 'Laplacian real bsize =   2', 37, 0) ; 2.7801274971E-09
