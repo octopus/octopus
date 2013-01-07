@@ -52,19 +52,20 @@ subroutine X(comm_allreduce_1)(comm, aa, dim)
   if(present(dim)) dim1 = dim  
 
   ASSERT(ubound(aa, dim = 1) >= dim1)
-  
+
+  if(dim1 > 0) then
+
 #if defined(HAVE_MPI2)
-
-  call MPI_Allreduce(MPI_IN_PLACE, aa(1), dim1, R_MPITYPE, MPI_SUM, comm, mpi_err)
-
+     call MPI_Allreduce(MPI_IN_PLACE, aa(1), dim1, R_MPITYPE, MPI_SUM, comm, mpi_err)
 #elif defined(HAVE_MPI)
-
-  SAFE_ALLOCATE(aac(1:dim1))
-  aac(1:dim1) = aa(1:dim1)
-  call MPI_Allreduce(aac(1), aa(1), dim1, R_MPITYPE, MPI_SUM, comm, mpi_err)
-  SAFE_DEALLOCATE_A(aac)
-
+     
+     SAFE_ALLOCATE(aac(1:dim1))
+     aac(1:dim1) = aa(1:dim1)
+     call MPI_Allreduce(aac(1), aa(1), dim1, R_MPITYPE, MPI_SUM, comm, mpi_err)
+     SAFE_DEALLOCATE_A(aac)
+     
 #endif
+  end if
 
   POP_SUB(X(comm_allreduce_1))
 end subroutine X(comm_allreduce_1)

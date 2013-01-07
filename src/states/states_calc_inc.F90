@@ -347,7 +347,7 @@ contains
         aa(jst) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, jst, ik), st%X(psi)(:, :, ist, ik), reduce = .false.)
       end do
 
-      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
+      if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
 
       ! substract the projections
       do jst = 1, ist - 1
