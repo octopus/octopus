@@ -87,7 +87,7 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
 
   ASSERT(all(ubound(aa) >= dim_))
 
-  if(any(dim(1:2) < 1)) then
+  if(any(dim_(1:2) < 1)) then
     POP_SUB(X(comm_allreduce_2))
     return
   end if
