@@ -314,7 +314,7 @@ contains
     integer(ptrdiff_t_kind) :: tmp_n(3)
     type(profile_t), save   :: prof
     PUSH_SUB(pfft_prepare_plan_r2c)
-    call profiling_in(prof,"PFFT_PREPARE_PLAN_R2C")
+    call profiling_in(prof,"PFFT_PLAN_R2C")
 
     ASSERT(sign == FFTW_FORWARD)
 
@@ -341,7 +341,7 @@ contains
     integer(ptrdiff_t_kind) :: tmp_n(3)
     type(profile_t), save   :: prof
     PUSH_SUB(pfft_prepare_plan_c2r)
-    call profiling_in(prof,"PFFT_PREPARE_PLAN_C2R")
+    call profiling_in(prof,"PFFT_PLAN_C2R")
 
     ASSERT(sign == FFTW_BACKWARD)
 
