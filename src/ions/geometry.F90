@@ -214,6 +214,11 @@ contains
 
     call xyz_file_read('Coordinates', xyz, geo%space)
 
+    if(xyz%n < 1) then
+      message(1) = "Coordinates have not been defined."
+      call messages_fatal(1)
+    endif
+
     ! copy information from xyz to geo
     geo%natoms = xyz%n
     nullify(geo%atom)

@@ -272,7 +272,7 @@ contains
       !% zone, and the actual number of <i>k</i>-points is usually
       !% reduced exploiting the symmetries of the system.  By default
       !% the grid will always include the Gamma point. An optional
-      !% second row can specify a shift in the <i>k</i>-points.
+      !% second row can specify a shift in the <i>k</i>-points (between 0 and 1).
       !% The number of columns should be equal to <tt>Dimensions</tt>,
       !% but the grid and shift numbers should be 1 and zero in finite directions.
       !%
