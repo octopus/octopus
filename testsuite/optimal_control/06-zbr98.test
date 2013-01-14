@@ -3,7 +3,7 @@
 
 Test       : ZBR98
 Programs   : octopus; octopus_mpi
-TestGroups : long-run, oct, optimal_control
+TestGroups : long-run, optimal_control
 Enabled    : Yes
 
 # This test demonstrates how the code [svn revision #4473] permits to replicate

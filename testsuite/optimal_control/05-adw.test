@@ -3,10 +3,10 @@
 
 Test       : 1D Asymmetric Double Well
 Programs   : octopus; octopus_mpi
-TestGroups : long-run, oct, optimal_control
+TestGroups : long-run, optimal_control
 Enabled    : Yes
 
-# The test ensures a number features of the optimal control implementation in octopus.
+# The test ensures a number of features of the optimal control implementation in octopus.
 # It replicates some of the results given in:
 # J. Werschnik and E. K. U. Gross, J. Opt. B: Quantum Semiclass. Opt 7, S300 (2005).
 #

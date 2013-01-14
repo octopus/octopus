@@ -3,7 +3,7 @@
 
 Test       : Asymmetric Double Well
 Programs   : octopus; octopus_single; octopus_mpi
-TestGroups : short-run, oct, optimal_control
+TestGroups : short-run, optimal_control
 Enabled    : Yes
 
 # The test verifies the optimal-control algorithm ZBR98. It calculates the optimal laser field that transfers the ground-state to the first excited state. 

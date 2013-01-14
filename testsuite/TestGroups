@@ -8,6 +8,17 @@ reference to avoid a jungle of groups.
 
 Group tag       Description
 ------------------------------------------------------------------------
-short-run       Formerly known as -s flag.
-long-run        Matches all test.
-oct             QOCT tests.
+short-run       Formerly known as -s flag. Run by 'make check'.
+long-run        Should include everything not in 'short-run'.
+
+components             Each below is for the corresponding directory.
+finite_systems_1d
+finite_systems_2d
+finite_systems_3d
+functionals
+linear_response
+open_systems
+optimal_control
+periodic_systems
+photo_electron
+real_time
