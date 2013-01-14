@@ -243,6 +243,8 @@ contains
       !%Description
       !% Define how many directions are to be considered periodic. It has to be a number
       !% between zero and <tt>Dimensions</tt>.
+      !% (WARNING: For systems that are periodic in 1D and  2D, interaction between ions is assumed to be periodic in 3D.
+      !% This affects the calculation of total energy and forces.)
       !%Option 0
       !% No direction is periodic (molecule).
       !%Option 1
@@ -258,7 +260,7 @@ contains
 
       if(sb%periodic_dim == 1 .or. sb%periodic_dim == 2) then
         call messages_write('For systems that  are periodic in 1D and  2D, interaction between', new_line = .true.)
-        call messages_write('ions is asumed to be periodic in 3D. This affects the calculation', new_line = .true.)
+        call messages_write('ions is assumed to be periodic in 3D. This affects the calculation', new_line = .true.)
         call messages_write('of total energy and forces.')
         call messages_warning()
       end if

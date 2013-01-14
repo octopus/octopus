@@ -469,8 +469,8 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, is_tmp,
     SAFE_ALLOCATE(ff_global(1:mesh%np_global))
 
     !note: here we are gathering data that we won`t write if grp is
-    !present), but to avoid it we will have to find out all if the
-    !process is a member of the domain line where the root of grp
+    !present, but to avoid it we will have to find out all if the
+    !processes are members of the domain line where the root of grp
     !lives
     call X(vec_gather)(mesh%vp, 0, ff_global, ff)
 
