@@ -3,7 +3,7 @@
 
 Test       : Van der Waals coefficient; Sternheimer method
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, linear_response
 Enabled    : Yes
 
 # This test is the calculation of the C6 Hamaker coefficient for the

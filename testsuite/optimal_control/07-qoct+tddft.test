@@ -3,7 +3,7 @@
 
 Test       : QOCT+TDDFT
 Programs   : octopus; octopus_mpi
-TestGroups : long-run, oct
+TestGroups : long-run, oct, optimal_control
 Enabled    : Yes
 
 

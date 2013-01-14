@@ -3,7 +3,7 @@
 
 Test       : QOCT, velocity target
 Programs   : octopus; octopus_mpi
-TestGroups : oct
+TestGroups : oct, optimal_control
 Enabled    : Yes
 
 # This is the test for the velocities target option. The target is defined to break a H2 molecule,

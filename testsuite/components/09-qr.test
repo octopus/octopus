@@ -6,7 +6,7 @@ Options    : scalapack
 Programs   : oct-test_mpi
 Options    : 
 Programs   : oct-test
-TestGroups : long-run
+TestGroups : long-run, components
 Enabled    : Yes
 
 Precision : 5.0e-14

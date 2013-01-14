@@ -3,7 +3,7 @@
 
 Test       : Time-dependent angular momentum
 Programs   : octopus_mpi; octopus
-TestGroups : long-run
+TestGroups : long-run, real_time
 Enabled    : Yes
 
 Input      : 09-angular_momentum.01-gs.inp

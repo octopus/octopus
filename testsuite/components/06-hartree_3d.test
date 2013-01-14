@@ -3,7 +3,7 @@
 
 Test       : Hartree
 Programs   : oct-test; oct-test_mpi
-TestGroups : short-run
+TestGroups : short-run, components
 Enabled    : Yes
 
 Precision : 0.005

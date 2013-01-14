@@ -3,7 +3,7 @@
 
 Test       : Derivatives 1D
 Programs   : oct-test; oct-test_mpi
-TestGroups : short-run
+TestGroups : short-run, components
 Enabled    : Yes
 
 Precision : 3.0e-9

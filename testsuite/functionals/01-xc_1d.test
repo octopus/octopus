@@ -3,7 +3,7 @@
 
 Test       : XC Functionals 1D
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, functionals
 Enabled    : Yes
 
 Input: 01-xc_1d.01-wfs-lda.inp

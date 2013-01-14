@@ -3,7 +3,7 @@
 
 Test       : Eigensolver
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 # This test checks the eigensolvers lobpcg, cg, cg_new, plan, evolution and rmmdiis with a simple

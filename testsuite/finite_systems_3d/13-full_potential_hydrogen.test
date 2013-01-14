@@ -3,7 +3,7 @@
 
 Test       : Full-Potential Hydrogen
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 Input: 13-full_potential_hydrogen.01-gs.inp

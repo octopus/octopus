@@ -3,7 +3,7 @@
 
 Test       : Lithium
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, periodic_systems
 Enabled    : Yes
 
 # ground state

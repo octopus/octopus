@@ -3,7 +3,7 @@
 
 Test       : Free Electron Bands in 1D
 Programs   : octopus; octopus_single; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, periodic_systems
 Enabled    : Yes
 
 Input: 01-free_electrons.01-ground_state.inp

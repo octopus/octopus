@@ -3,7 +3,7 @@
 
 Test       : Diamond TB09 functional
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, periodic_systems
 Enabled    : Yes
 
 # ground state

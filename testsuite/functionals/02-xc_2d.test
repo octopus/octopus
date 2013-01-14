@@ -3,7 +3,7 @@
 
 Test       : XC 2D
 Programs   : octopus; octopus_single; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, functionals
 Enabled    : Yes
 
 Input: 02-xc_2d.00-hartree.inp

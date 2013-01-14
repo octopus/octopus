@@ -3,7 +3,7 @@
 
 Test       : Fock-Darwin spectrum
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, finite_systems_2d
 Enabled    : Yes
 
 

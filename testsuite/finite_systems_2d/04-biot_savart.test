@@ -3,7 +3,7 @@
 
 Test       : Biot-Savart law
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, finite_systems_2d
 Enabled    : Yes
 
 # The code calculates the Lz=1 state of one electron sitting in a

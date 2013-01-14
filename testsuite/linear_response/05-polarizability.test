@@ -3,7 +3,7 @@
 
 Test       : Sodium static polarizability
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, linear_response
 Enabled    : Yes
 
 

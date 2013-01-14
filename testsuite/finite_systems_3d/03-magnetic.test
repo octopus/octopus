@@ -3,7 +3,7 @@
 
 Test       : Static magnetic field
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
 Input: 03-magnetic.01-gs-unpolarized.inp

@@ -3,7 +3,7 @@
 
 Test       : KS Inversion
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, functionals
 Enabled    : Yes
 
 Processors: 1

@@ -3,7 +3,7 @@
 
 Test       : Fullerene
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
 Processors: 4

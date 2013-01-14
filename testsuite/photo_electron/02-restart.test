@@ -2,7 +2,7 @@
 
 Test       : Photoelectron restart
 Programs   : octopus_mpi;octopus
-TestGroups : short-run
+TestGroups : short-run, photo_electron
 Enabled    : Yes
 
 

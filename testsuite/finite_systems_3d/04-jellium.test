@@ -3,7 +3,7 @@
 
 Test       : Jellium
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
 # This test calculates the ground-state of a Na8 cluster, described by

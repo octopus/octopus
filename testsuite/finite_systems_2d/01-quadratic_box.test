@@ -3,7 +3,7 @@
 
 Test       : Quadratic Box
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, finite_systems_2d
 Enabled    : Yes
 
 # The following tests reproduced some basic results from:

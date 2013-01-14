@@ -3,7 +3,7 @@
 
 Test       : Carbon
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
 # The purpose of this test is making sure that spin-polarized

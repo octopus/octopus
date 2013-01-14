@@ -3,7 +3,7 @@
 
 Test       : Current
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
 # Calculation of a Hydrogen atom placed on a very small magnetic field (in order

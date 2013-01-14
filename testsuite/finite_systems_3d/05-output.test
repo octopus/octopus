@@ -3,7 +3,7 @@
 
 Test       : Output
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 Input: 05-output.01-gs.inp

@@ -3,7 +3,7 @@
 
 Test       : XC Functionals
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, functionals
 Enabled    : Yes
 
 Input: 03-xc.01-gs.inp

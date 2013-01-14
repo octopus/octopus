@@ -2,7 +2,7 @@
 # $Id$
 Test       : Forces
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 # This is a calculation of the ground-state of a Nitrogen at different

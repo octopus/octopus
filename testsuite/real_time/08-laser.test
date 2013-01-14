@@ -3,7 +3,7 @@
 
 Test       : Lasers
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, real_time
 Enabled    : Yes
 
 # This test obtains the electronic ground state of a Na_2^+ molecule (the

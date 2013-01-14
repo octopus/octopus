@@ -3,7 +3,7 @@
 
 Test       : Open boundaries 2D
 Programs   : octopus; octopus_mpi
-TestGroups : short-run, open-systems
+TestGroups : short-run, open-systems, open_systems
 Enabled    : Yes
 
 # We check the transparent boundary conditions in 2D for second-order

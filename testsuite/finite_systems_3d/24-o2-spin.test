@@ -3,7 +3,7 @@
 
 Test       : O2 - Spin
 Programs   : octopus_mpi; octopus
-TestGroups : short-run
+TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 Input      : 24-o2-spin.01-gs.inp

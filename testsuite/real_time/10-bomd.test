@@ -3,7 +3,7 @@
 
 Test       : Born-Oppenheimer Molecular Dynamics
 Programs   : octopus_mpi; octopus
-TestGroups : short-run
+TestGroups : short-run, real_time
 Enabled    : Yes
 
 # ground state

@@ -6,7 +6,7 @@ Options    : scalapack
 Programs   : octopus_mpi
 Options    : 
 Programs   : octopus
-TestGroups : short-run
+TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 # Depending on the context, the LOBPCG routine takes different branches, which

@@ -3,7 +3,7 @@
 
 Test       : Water in Supercell
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, periodic_systems
 Enabled    : Yes
 
 Input: 06-h2o_pol_lr.01_gs.inp

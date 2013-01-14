@@ -3,7 +3,7 @@
 
 Test       : Casida linear response TDDFT
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, linear_response
 Enabled    : Yes
 
 # Calculation of the excitations of the Nitrogen molecule within the

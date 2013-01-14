@@ -3,7 +3,7 @@
 
 Test       : Symmetric Double Well
 Programs   : octopus; octopus_single; octopus_mpi
-TestGroups : long-run, oct
+TestGroups : long-run, oct, optimal_control
 Enabled    : Yes
 
 # The test ensures the optimal control algorithm ZBR98. 

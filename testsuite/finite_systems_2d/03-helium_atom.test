@@ -3,7 +3,7 @@
 
 Test       : 1D-Helium
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, finite_systems_2d
 Enabled    : Yes
 
 # The following tests do not describe the calculation of a two-dimensional

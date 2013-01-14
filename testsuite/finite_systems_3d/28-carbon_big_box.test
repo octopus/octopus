@@ -3,7 +3,7 @@
 
 Test       : Big box
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 Input: 28-carbon_big_box.01-ground_state.inp

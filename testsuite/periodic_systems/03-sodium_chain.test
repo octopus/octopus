@@ -3,7 +3,7 @@
 
 Test       : Sodium chain
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, periodic_systems
 Enabled    : Yes
 
 

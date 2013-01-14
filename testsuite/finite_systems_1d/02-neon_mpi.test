@@ -3,7 +3,7 @@
 
 Test       : 1D-Neon - MPI
 Programs   : octopus_mpi; octopus
-TestGroups : short-run
+TestGroups : short-run, finite_systems_1d
 Enabled    : Yes
 
 # This test calculates a one-dimensional model of the Neon atom (soft Coulomb 

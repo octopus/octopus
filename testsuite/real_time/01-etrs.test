@@ -3,7 +3,7 @@
 
 Test       : Enforced time-reversal symmetry propagator
 Programs   : octopus_mpi; octopus
-TestGroups : short-run
+TestGroups : short-run, real_time
 Enabled    : Yes
 
 #This test checks the time propagation

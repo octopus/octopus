@@ -3,7 +3,7 @@
 
 Test       : Spin-orbit coupling
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 

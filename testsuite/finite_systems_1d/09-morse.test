@@ -4,7 +4,7 @@
 Test       : Morse potential
 Arch       : Linux alberto-laptop 2.6.22-13-generic
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, finite_systems_1d
 Enabled    : Yes
 
 # This test replicates one of the calculations reported in the paper:

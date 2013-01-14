@@ -3,7 +3,7 @@
 
 Test       : LiH vibrational frequency
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, linear_response
 Enabled    : Yes
 
 Processors : 4

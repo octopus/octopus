@@ -3,7 +3,7 @@
 
 Test       : LDA+SIC/OEP-KLI Functional
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
 # This test performs the calculation of an argon atom making

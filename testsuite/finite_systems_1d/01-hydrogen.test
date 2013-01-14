@@ -3,7 +3,7 @@
 
 Test       : 1D-Hydrogen
 Programs   : octopus; octopus_single; octopus_mpi
-TestGroups : short-run; daily
+TestGroups : short-run; daily, finite_systems_1d
 Enabled    : Yes
 
 # This test calculates a one-dimensional model for Hydrogen, considering

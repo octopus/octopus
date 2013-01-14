@@ -3,7 +3,7 @@
 
 Test     : Spinors
 Programs : octopus; octopus_mpi
-TestGroups  : short-run
+TestGroups  : short-run, finite_systems_3d
 Enabled  : Yes
 
 Input: 09-spinors.01-ground_state.inp

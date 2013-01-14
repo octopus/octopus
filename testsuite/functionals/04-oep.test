@@ -3,7 +3,7 @@
 
 Test       : OEP
 Programs   : octopus; octopus_mpi
-TestGroups : long-run
+TestGroups : long-run, functionals
 Enabled    : Yes
 
 # This input files reproduces results from:

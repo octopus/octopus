@@ -3,7 +3,7 @@
 
 Test       : Linear-Response Polarizabilities
 Programs   : octopus; octopus_mpi
-TestGroups : short-run
+TestGroups : short-run, linear_response
 Enabled    : Yes
 
 Input: 02-h2o_pol_lr.01_h2o_gs.inp
