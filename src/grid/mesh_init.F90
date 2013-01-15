@@ -658,7 +658,7 @@ contains
     logical, allocatable :: nb(:, :)
     integer              :: idx(1:MAX_DIM), jx(1:MAX_DIM)
     integer              :: graph_comm, iedge
-    logical              :: use_topo, reorder
+    logical              :: use_topo, reorder, partition_print
     type(partition_t)    :: partition
     integer              :: ierr
 
@@ -708,10 +708,24 @@ contains
     if (partition%library == GA .or. partition%box_shape == HYPERCUBE)  then
       partition%point_to_part = mesh%vp%part
     end if
-    call partition_build(partition, mesh, stencil, mesh%vp%part)
-    call partition_write_info(partition)      
-    call partition_end(partition)
-    call mesh_partition_messages_debug(mesh)
+    
+    !%Variable PartitionPrint
+    !%Type logical
+    !%Default true
+    !%Section Execution::Parallelization
+    !%Description
+    !% (experimental) If disabled, <tt>Octopus</tt> will not compute
+    !% nor print the partition information, such as local points,
+    !% no. of neighbours, ghost points and boundary points.
+    !%End
+    call parse_logical(datasets_check('PartitionPrint'), .true., partition_print)
+    
+    if (partition_print) then
+      call partition_build(partition, mesh, stencil, mesh%vp%part)
+      call partition_write_info(partition)      
+      call partition_end(partition)
+      call mesh_partition_messages_debug(mesh)
+    end if
 
     !%Variable MeshUseTopology
     !%Type logical

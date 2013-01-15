@@ -116,7 +116,7 @@ contains
     character(len=6) :: group_name
     character(len=30) :: group_elements
     integer :: natoms
-    logical :: any_non_spherical
+    logical :: any_non_spherical, symmetries_compute
 
     interface
       subroutine symmetries_finite_init(atoms_count, typs, position, verbosity, point_group)
@@ -198,14 +198,27 @@ contains
         end forall
 
         verbosity = -1
-        call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
-        call symmetries_finite_get_group_name(point_group, group_name)
-        call symmetries_finite_get_group_elements(point_group, group_elements)
-        call symmetries_finite_end()
+        
+        !%Variable SymmetriesCompute
+        !%Type logical
+        !%Default true
+        !%Section Execution::Symmetries
+        !%Description
+        !% (experimental) If disabled, <tt>Octopus</tt> will not compute
+        !% nor print the symmetries.
+        !%End
+        call parse_logical(datasets_check('SymmetriesCompute'), .true., symmetries_compute)
 
-        call messages_write('Symmetry elements : '//trim(group_elements), new_line = .true.)
-        call messages_write('Symmetry group    : '//trim(group_name))
-        call messages_info()
+        if (symmetries_compute) then
+          call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
+          call symmetries_finite_get_group_name(point_group, group_name)
+          call symmetries_finite_get_group_elements(point_group, group_elements)
+          call symmetries_finite_end()
+
+          call messages_write('Symmetry elements : '//trim(group_elements), new_line = .true.)
+          call messages_write('Symmetry group    : '//trim(group_name))
+          call messages_info()
+        end if
       end if
 
       SAFE_DEALLOCATE_A(position)
