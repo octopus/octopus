@@ -324,7 +324,7 @@ contains
 
   !!> Given a x, y, z point of the cube, it returns the corresponding process
   !!
-  !! lasf_found is used to speed-up the search
+  !! last_found is used to speed-up the search
   integer pure function cube_point_to_process(xx, yy, zz, part, last_found) result(process)
     integer, intent(in)   :: xx
     integer, intent(in)   :: yy
@@ -332,7 +332,7 @@ contains
     type(dimensions_t), intent(in) :: part(:)
     integer, intent(in) :: last_found
     
-    integer :: ix, iy, iz, proc
+    integer :: proc
     logical :: found
 
     ! No PUSH/POP because it is a PURE function

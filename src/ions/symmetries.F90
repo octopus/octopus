@@ -160,7 +160,24 @@ contains
       message(1) = "Symmetries are disabled since non-spherically symmetric species are present."
       call messages_info(1)
       call messages_print_stress(stdout)
+    endif
 
+    !%Variable SymmetriesCompute
+    !%Type logical
+    !%Default true
+    !%Section Execution::Symmetries
+    !%Description
+    !% If disabled, <tt>Octopus</tt> will not compute
+    !% nor print the symmetries.
+    !%End
+    call parse_logical(datasets_check('SymmetriesCompute'), .true., symmetries_compute)
+    if(.not. symmetries_compute) then
+      message(1) = "Symmetries have been disabled by SymmetriesCompute = false."
+      call messages_info(1)
+      call messages_print_stress(stdout)
+    endif
+
+    if(any_non_spherical .or. .not. symmetries_compute) then
       ! we only use the identity
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
@@ -199,16 +216,6 @@ contains
 
         verbosity = -1
         
-        !%Variable SymmetriesCompute
-        !%Type logical
-        !%Default true
-        !%Section Execution::Symmetries
-        !%Description
-        !% (experimental) If disabled, <tt>Octopus</tt> will not compute
-        !% nor print the symmetries.
-        !%End
-        call parse_logical(datasets_check('SymmetriesCompute'), .true., symmetries_compute)
-
         if (symmetries_compute) then
           call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
           call symmetries_finite_get_group_name(point_group, group_name)
