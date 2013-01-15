@@ -92,14 +92,12 @@ contains
 
     !%Variable MultigridLevels
     !%Type integer
-    !%Default 0 
+    !%Default max_levels
     !%Section Mesh
     !%Description
     !% Number of levels in the grid hierarchy used for multigrid. Positive
     !% numbers indicate an absolute number of levels, negative
-    !% numbers are subtracted to maximum number of levels possible for
-    !% the grid been used. Default is the maximum number of levels for
-    !% the grid.
+    !% numbers are subtracted from the maximum number of levels possible.
     !%Option max_levels 0
     !% Calculate the optimal number of levels for the grid.
     !%End
@@ -354,6 +352,7 @@ contains
     POP_SUB(multigrid_mesh_half)
   end subroutine multigrid_mesh_half
 
+  !---------------------------------------------------------------------------------
   subroutine multigrid_mesh_double(geo, cv, mesh_in, mesh_out, stencil)    
     type(geometry_t),           intent(in)    :: geo
     type(curvilinear_t),        intent(in)    :: cv
@@ -415,6 +414,7 @@ contains
     POP_SUB(multigrid_end)
   end subroutine multigrid_end
 
+  !---------------------------------------------------------------------------------
   integer function multigrid_number_of_levels(base_der) result(number)
     type(derivatives_t), target, intent(in)  :: base_der
 
