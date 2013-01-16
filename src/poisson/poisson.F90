@@ -161,11 +161,13 @@ contains
     !%Type integer
     !%Section Hamiltonian::Poisson
     !%Description
-    !% Defines which method to use to solve the Poisson equation. Defaults:
+    !% Defines which method to use to solve the Poisson equation.
+    !% For comparison of accuracy and performance of the methods in Octopus, see http://arxiv.org/abs/1211.2092. 
+    !% Defaults:
     !% <br> 1D and 2D: <tt>fft</tt>.
     !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
     !%Option NoPoisson -999
-    !% do not use a Poisson solver at all
+    !% Do not use a Poisson solver at all.
     !%Option FMM -4
     !% Fast multipole method.                                  
     !%Option direct3D -3                                      
@@ -178,7 +180,7 @@ contains
     !% The Poisson equation is solved using FFTs. A cutoff technique
     !% for the Poisson kernel is selected so the proper boundary
     !% conditions are imposed according to the periodicity of the
-    !% system. This can be overridden by the PoissonFFTKernel
+    !% system. This can be overridden by the <tt>PoissonFFTKernel</tt>
     !% variable.
     !%Option cg 5
     !% Conjugate gradients.
@@ -307,7 +309,7 @@ contains
       end if
 
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
-        write(message(1), '(a,i1,a)')'FMM is not ready to deal with periodic boundaries at present, '
+        write(message(1), '(a,i1,a)')'FMM is not ready to deal with periodic boundaries at present.'
         call messages_warning(1)
       end if
 
