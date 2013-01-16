@@ -83,15 +83,17 @@ contains
     !%Variable PoissonSolverBoundaries
     !%Type integer
     !%Section Hamiltonian::Poisson
+    !%Default multipole
     !%Description
     !% For finite systems, some Poisson solvers (<tt>multigrid</tt>,
-    !% <tt>cg_corrected</tt> and <tt>fft_corrected</tt>) require the calculation of the
-    !% boundary conditions with an auxiliary method. This variable
-    !% selects that method. The default is <tt>multipole</tt>.
+    !% <tt>cg_corrected</tt>, and <tt>fft</tt> with <tt>PoissonFFTKernel = multipole_correction</tt>)
+    !% require the calculation of the
+    !% boundary conditions with an auxiliary method. This variable selects that method.
     !%Option multipole 1
     !% A multipole expansion of the density is used to approximate the potential on the boundaries.
     !%Option exact 3
-    !% An exact integration of the Poisson equation is done over the boundaries.
+    !% An exact integration of the Poisson equation is done over the boundaries. This option is
+    !% experimental, and not implemented for domain parallelization.
     !%End
     call parse_integer(datasets_check('PoissonSolverBoundaries'), CORR_MULTIPOLE, this%method)
 
@@ -314,8 +316,8 @@ contains
   subroutine boundary_conditions(this, mesh, rho, pot)
     type(poisson_corr_t), intent(in)    :: this    
     type(mesh_t),         intent(in)    :: mesh
-    FLOAT,                intent(in)    :: rho(:)  ! rho(mesh%np)
-    FLOAT,                intent(inout) :: pot(:)  ! pot(mesh%np_part)
+    FLOAT,                intent(in)    :: rho(:)  !< rho(mesh%np)
+    FLOAT,                intent(inout) :: pot(:)  !< pot(mesh%np_part)
 
     integer :: ip, add_lm, ll, mm, bp_lower
     FLOAT   :: xx(MAX_DIM), rr, s1, sa, gylm(1:MAX_DIM)

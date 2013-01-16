@@ -47,8 +47,8 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   !%Section Hamiltonian::Poisson
   !%Description
   !% Order of the multipolar expansion for boundary
-  !% corrections. Default is 4 for <tt>PoissonSolver = cg_corrected</tt> and <tt>multigrid</tt> and 2
-  !% for <tt>fft_corrected</tt>.
+  !% corrections. Default is 4 for <tt>PoissonSolver = cg_corrected</tt> and <tt>multigrid</tt>, and 2
+  !% for <tt>fft</tt> with <tt>PoissonFFTKernel = multipole_correction</tt>.
   !%End
 
   !%Variable PoissonSolverMaxIter

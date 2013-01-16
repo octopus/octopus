@@ -185,13 +185,14 @@ contains
     !%Option cg 5
     !% Conjugate gradients.
     !%Option cg_corrected 6
-    !% Corrected conjugate gradients.
+    !% Conjugate gradients, corrected for boundary conditions.
+    !% Further specification occurs with variables <tt>PoissonSolverBoundaries</tt> and <tt>PoissonSolverMaxMultipole</tt>.
     !%Option multigrid 7
     !% Multigrid method.
     !%Option isf 8
     !% Interpolating Scaling Functions Poisson solver.
     !%Option sete 9
-    !% (Experimental) SETE solver.
+    !% (Experimental) SETE solver. Complex boundaries are required.
     !%End
 
     default_solver = POISSON_FFT
@@ -245,7 +246,8 @@ contains
       !%Option fft_nocut 3
       !% FFTs without using a cutoff (in 3D).
       !%Option multipole_correction 4
-      !% The boundary conditions are imposed by using a multipole expansion.
+      !% The boundary conditions are imposed by using a multipole expansion. Only appropriate for finite systems.
+      !% Further specification occurs with variables <tt>PoissonSolverBoundaries</tt> and <tt>PoissonSolverMaxMultipole</tt>.
       !%End
 
       select case(der%mesh%sb%dim)
@@ -319,11 +321,16 @@ contains
       end if
 
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
-        this%kernel /= der%mesh%sb%periodic_dim) then
+        this%kernel /= der%mesh%sb%periodic_dim .and. this%kernel >=0 .and. this%kernel <=3) then
         write(message(1), '(a,i1,a)')'The system is periodic in ', der%mesh%sb%periodic_dim ,' dimension(s),'
         write(message(2), '(a,i1,a)')'but Poisson solver is set for ', this%kernel, ' dimensions.'
-        message(3) =                 'You know what you are doing, right?'
-        call messages_warning(3)
+        call messages_warning(2)
+      end if
+
+      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
+        this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
+        write(message(1), '(a,i1,a)')'PoissonFFTKernel = multipole_correction cannot be used for periodic systems.'
+        call messages_fatal(1)
       end if
 
       if(der%mesh%use_curvilinear .and. (this%method/=POISSON_CG_CORRECTED)) then
@@ -344,14 +351,14 @@ contains
         call messages_experimental('SETE poisson solver')
 
         if(.not. simul_box_complex_boundaries(der%mesh%sb)) then
-          message(1) = 'Complex boundaries must be enabled to use the SETE poisson solver.'
+          message(1) = 'Complex boundaries must be enabled to use the SETE Poisson solver.'
           message(2) = 'Use ComplexBoundaries = yes in your input file.'
           call messages_fatal(2)
         end if
       end if
 
       if (this%method == POISSON_FMM) then
-        call messages_experimental('FMM poisson solver')
+        call messages_experimental('FMM Poisson solver')
       end if
 
     end select
