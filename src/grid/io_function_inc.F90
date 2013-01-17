@@ -975,13 +975,23 @@ contains
     type(cube_function_t) :: cf
     character(len=80) :: fname_ext
 
+    PUSH_SUB(X(io_function_output_global).out_xcrysden)
+
+#ifdef R_TCOMPLEX
+    if(write_real) then
+      fname_ext = trim(fname) // '.real'
+    else
+      fname_ext = trim(fname) // '.imag'
+    endif
+#else
+    fname_ext = trim(fname)
+#endif
+
     if(mesh%sb%dim .ne. 3) then
-      write(message(1), '(a)') 'Cannot output function in XCrySDen format except in 3D.'
+      write(message(1), '(a)') 'Cannot output function '//trim(fname_ext)//' in XCrySDen format except in 3D.'
       call messages_warning(1)
       return
     endif
-
-    PUSH_SUB(X(io_function_output_global).out_xcrysden)
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb)
@@ -1003,15 +1013,6 @@ contains
       enddo
     enddo
     
-#ifdef R_TCOMPLEX
-    if(write_real) then
-      fname_ext = trim(fname) // '.real'
-    else
-      fname_ext = trim(fname) // '.imag'
-    endif
-#else
-    fname_ext = trim(fname)
-#endif
     iunit = io_open(trim(dir)//'/'//trim(fname_ext)//".xsf", action='write', is_tmp=is_tmp)
 
     ASSERT(present(geo))
