@@ -486,21 +486,23 @@ contains
         if(parse_block(datasets_check('Lsize'), blk) == 0) then
           if(parse_block_cols(blk,0) < sb%dim) call input_error('Lsize')
           do idir = 1, sb%dim
-            call parse_block_float(blk, 0, idir - 1, sb%lsize(idir))
+            call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
+            if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
+              call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
           end do
           call parse_block_end(blk)
         else
-          call parse_float(datasets_check('Lsize'), -M_ONE, sb%lsize(1))
+          call parse_float(datasets_check('Lsize'), -M_ONE, sb%lsize(1), units_inp%length)
           if(sb%lsize(1) .eq. -M_ONE) then
             call input_error('Lsize')
           end if
+          if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
+            call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
           sb%lsize(1:sb%dim) = sb%lsize(1)
         end if
-        sb%lsize = units_to_atomic(units_inp%length, sb%lsize)
 
         do idir = 1, sb%dim
-          if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
-            call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
+
         end do
       end if
 

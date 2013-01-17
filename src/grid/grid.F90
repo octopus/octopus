@@ -161,11 +161,13 @@ contains
       if(parse_block_cols(blk,0) < gr%sb%dim) call input_error('Spacing')
       do idir = 1, gr%sb%dim
         call parse_block_float(blk, 0, idir - 1, grid_spacing(idir), units_inp%length)
+        if(def_h > M_ZERO) call messages_check_def(grid_spacing(idir), .true., def_h, 'Spacing', units_out%length)
       end do
       call parse_block_end(blk)
     else
       call parse_float(datasets_check('Spacing'), -M_ONE, grid_spacing(1), units_inp%length)
       grid_spacing(1:gr%sb%dim) = grid_spacing(1)
+      if(def_h > M_ZERO) call messages_check_def(grid_spacing(1), .true., def_h, 'Spacing', units_out%length)
     end if
 
     do idir = 1, gr%sb%dim
@@ -176,6 +178,7 @@ contains
             ") [", trim(units_abbrev(units_out%length)), "] = ",                        &
             units_from_atomic(units_out%length, grid_spacing(idir))
           call messages_info(1)
+        ! Note: the default automatically matches the 'recommended' value compared by messages_check_def above.
         else
           message(1) = 'Either:'
           message(2) = "   *) variable 'Spacing' is not defined and"
@@ -184,7 +187,6 @@ contains
           call messages_fatal(4)
         end if
       end if
-      if(def_h > M_ZERO) call messages_check_def(grid_spacing(idir), .true., def_h, 'Spacing', units_out%length)
     end do
 
 #if defined(HAVE_GDLIB)
