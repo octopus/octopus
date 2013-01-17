@@ -1077,10 +1077,12 @@ contains
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs)
 
-    if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC &
-       .and. st%nst * st%smear%el_per_state .le. st%qtot) then
-      call messages_write('Smearing needs unoccupied states (via ExtraStates) to be useful.')
-      call messages_warning()
+    if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC) then
+      if((st%d%ispin /= SPINORS .and. st%nst * 2 .le. st%qtot) .or. &
+         (st%d%ispin == SPINORS .and. st%nst .le. st%qtot)) then
+        call messages_write('Smearing needs unoccupied states (via ExtraStates) to be useful.')
+        call messages_warning()
+      endif
     endif
 
     ! sanity check

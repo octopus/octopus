@@ -157,7 +157,7 @@ contains
         .or. species_type(geo%atom(iatom)%spec) == SPEC_FROM_FILE
     enddo
     if(any_non_spherical) then
-      message(1) = "Symmetries are disabled since non-spherically symmetric species are present."
+      message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
       call messages_info(1)
       call messages_print_stress(stdout)
     endif
