@@ -234,17 +234,21 @@ contains
       !%Section Hamiltonian::Poisson
       !%Description
       !% Defines which kernel is used to impose the correct boundary
-      !% condition when using FFTs to solve the Poisson equation. The
+      !% conditions when using FFTs to solve the Poisson equation. The
       !% default is selected depending on the dimensionality and
-      !% periodicity of the system.
+      !% periodicity of the system:
+      !% <br>In 1D, <tt>spherical</tt> if finite, <tt>fft_nocut</tt> if periodic.
+      !% <br>In 2D, <tt>spherical</tt> if finite, <tt>cylindrical</tt> if 1D-periodic, <tt>fft_nocut</tt> if 2D-periodic.
+      !% <br>In 3D, <tt>spherical</tt> if finite, <tt>cylindrical</tt> if 1D-periodic, <tt>planar</tt> if 2D-periodic,
+      !% <tt>fft_nocut</tt> if 3D-periodic.
       !%Option spherical 0
       !% FFTs using spherical cutoff (in 2D or 3D).
       !%Option cylindrical 1
-      !% FFTs using cylindrical cutoff (in 3D).
+      !% FFTs using cylindrical cutoff (in 2D or 3D).
       !%Option planar 2
       !% FFTs using planar cutoff (in 3D).
       !%Option fft_nocut 3
-      !% FFTs without using a cutoff (in 3D).
+      !% FFTs without using a cutoff (for fully periodic systems).
       !%Option multipole_correction 4
       !% The boundary conditions are imposed by using a multipole expansion. Only appropriate for finite systems.
       !% Further specification occurs with variables <tt>PoissonSolverBoundaries</tt> and <tt>PoissonSolverMaxMultipole</tt>.
@@ -258,7 +262,9 @@ contains
           default_kernel = POISSON_FFT_KERNEL_NOCUT
         end if
       case(2)
-        if (der%mesh%sb%periodic_dim > 0) then 
+        if (der%mesh%sb%periodic_dim == 2) then
+          default_kernel = POISSON_FFT_KERNEL_NOCUT
+        else if (der%mesh%sb%periodic_dim > 0) then
           default_kernel = der%mesh%sb%periodic_dim
         else
           default_kernel = POISSON_FFT_KERNEL_SPH
@@ -288,7 +294,7 @@ contains
 
       if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM_1D) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
-        message(2) = 'Poisson solver is <tt>direct1D</tt>.'
+        message(2) = 'Poisson solver is direct1D.'
         call messages_fatal(2)
       end if
 
@@ -300,7 +306,7 @@ contains
 
       if(der%mesh%use_curvilinear .and. (this%method /= POISSON_DIRECT_SUM_2D) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
-        message(2) = 'Poisson solver is <tt>direct2D</tt>.'
+        message(2) = 'Poisson solver is direct2D.'
         call messages_fatal(2)
       end if
 
