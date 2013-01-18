@@ -496,7 +496,7 @@ contains
           if(sb%lsize(1) .eq. -M_ONE) then
             call input_error('Lsize')
           end if
-          if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
+          if(def_rsize > M_ZERO .and. sb%periodic_dim < sb%dim) &
             call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
           sb%lsize(1:sb%dim) = sb%lsize(1)
         end if
