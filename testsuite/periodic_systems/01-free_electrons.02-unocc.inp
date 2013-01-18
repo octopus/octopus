@@ -10,7 +10,6 @@ PeriodicDimensions = 1
 
 NumberUnoccStates = 4
 
-OnlyUserDef = yes
 TheoryLevel = independent_particles
 
 %Species

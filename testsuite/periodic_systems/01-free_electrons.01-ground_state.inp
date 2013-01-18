@@ -8,7 +8,6 @@ FromScratch = yes
 Dimensions = 1
 PeriodicDimensions = 1
 
-OnlyUserDef = yes
 TheoryLevel = independent_particles
 
 %Species

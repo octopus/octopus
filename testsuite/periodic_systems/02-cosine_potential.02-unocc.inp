@@ -11,7 +11,6 @@ PeriodicDimensions = 1
 NumberUnoccStates = 4
 ConvAbsDens = 1e-12
 
-OnlyUserDef = yes
 TheoryLevel = independent_particles
 
 %Species
