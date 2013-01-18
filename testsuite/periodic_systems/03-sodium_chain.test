@@ -8,6 +8,16 @@ Enabled    : Yes
 
 
 Input: 03-sodium_chain.01-ground_state.inp
+
+match ; Total energy       ; GREP(gs_static/info, 'Total       =', 20) ;   0.38776805
+match ; Ion-ion energy     ; GREP(gs_static/info, 'Ion-ion     =', 20) ;  -1.63295519
+match ; Eigenvalues sum    ; GREP(gs_static/info, 'Eigenvalues =', 20) ;  -3.45698891
+match ; Hartree energy     ; GREP(gs_static/info, 'Hartree     =', 20) ;  -4.55118351
+match ; Exchange energy    ; GREP(gs_static/info, 'Exchange    =', 20) ;  -2.35937646
+match ; Correlation energy ; GREP(gs_static/info, 'Correlation =', 20) ;  -0.73525307
+match ; Kinetic energy     ; GREP(gs_static/info, 'Kinetic     =', 20) ;   1.63712718
+match ; External energy    ; GREP(gs_static/info, 'External    =', 20) ;   8.02940548
+
 match ; Bands n=1,k=1; GREP(unocc_static/eigenvalues, '#k =   1', 12, 1) ; -3.648593
 match ; Bands n=1,k=2; GREP(unocc_static/eigenvalues, '#k =   2', 12, 1) ; -3.552608
 match ; Bands n=1,k=3; GREP(unocc_static/eigenvalues, '#k =   3', 12, 1) ; -3.265539
