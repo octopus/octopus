@@ -161,7 +161,8 @@ contains
     !%Type integer
     !%Section Hamiltonian::Poisson
     !%Description
-    !% Defines which method to use to solve the Poisson equation.
+    !% Defines which method to use to solve the Poisson equation. Some incompatibilities apply depending on
+    !% dimensionality, periodicity, etc.
     !% For comparison of accuracy and performance of the methods in Octopus, see http://arxiv.org/abs/1211.2092. 
     !% Defaults:
     !% <br> 1D and 2D: <tt>fft</tt>.
@@ -286,10 +287,12 @@ contains
       select case(der%mesh%sb%periodic_dim)
       case(0)
         if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM_1D)) then
-          call input_error('PoissonSolver')
+          message(1) = 'A finite 1D system may only use fft or direct1D Poisson solvers.'
+          call messages_fatal(1)
         end if
       case(1)
-        if( (this%method /= POISSON_FFT) ) call input_error('PoissonSolver')
+        message(1) = 'A periodic 1D system may only use the fft Poisson solver.'
+        call messages_fatal(1)
       end select
 
       if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM_1D) then
@@ -301,7 +304,8 @@ contains
     case(2)
 
       if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM_2D) ) then
-        call input_error('PoissonSolver')
+        message(1) = 'A 2D system may only use fft or direct2D Poisson solvers.'
+        call messages_fatal(1)
       end if
 
       if(der%mesh%use_curvilinear .and. (this%method /= POISSON_DIRECT_SUM_2D) ) then
@@ -313,7 +317,8 @@ contains
     case(3)
       
       if(this%method == POISSON_DIRECT_SUM_1D .or. this%method == POISSON_DIRECT_SUM_2D) then
-        call input_error('PoissonSolver')
+        message(1) = 'A 3D system may not use the direct1D or direct2D Poisson solvers.'
+        call messages_fatal(1)
       end if
 
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
