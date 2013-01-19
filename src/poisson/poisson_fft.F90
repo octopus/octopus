@@ -185,7 +185,6 @@ contains
     integer :: ix, iy, iz, ixx(3), db(3), idim
     FLOAT :: temp(3), modg2
     FLOAT :: gpar, gx, gz, r_c, gg(3)
-    FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_3d_2d)
@@ -199,7 +198,7 @@ contains
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
     call messages_info(1)
-    if ( r_c > maxval(db(1:3)*mesh%spacing(1:3)/M_TWO) + DELTA_R) then
+    if ( r_c > maxval(db(1:3)*mesh%spacing(1:3)/M_TWO) + M_EPSILON) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in neighboring cell(s).'
       call messages_warning(2)
@@ -263,7 +262,6 @@ contains
     integer :: ix, iy, iz, ixx(3), db(3), k, ngp, idim
     FLOAT :: temp(3), modg2, xmax
     FLOAT :: gperp, gx, gy, gz, r_c, gg(3)
-    FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_3d_1d)
@@ -277,7 +275,7 @@ contains
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
     call messages_info(1)
-    if ( r_c > maxval(db(1:3)*mesh%spacing(1:3)/M_TWO) + DELTA_R) then
+    if ( r_c > maxval(db(1:3)*mesh%spacing(1:3)/M_TWO) + M_EPSILON) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in neighboring cell(s).'
       call messages_warning(2)
@@ -384,7 +382,6 @@ contains
     integer :: ix, iy, iz, ixx(3), db(3), idim, lx, ly, lz, n1, n2, n3
     FLOAT :: temp(3), modg2
     FLOAT :: gx, r_c, gg(3)
-    FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_3d_0d)
@@ -399,7 +396,7 @@ contains
         trim(units_abbrev(units_out%length)), '] = ',       &
         units_from_atomic(units_out%length, r_c)
       call messages_info(1)
-      if ( r_c > maxval(db(1:3)*mesh%spacing(1:3)/M_TWO) + DELTA_R) then
+      if ( r_c > maxval(db(1:3)*mesh%spacing(1:3)/M_TWO) + M_EPSILON) then
         message(1) = 'Poisson cutoff radius is larger than cell size.'
         message(2) = 'You can see electrons in neighboring cell(s).'
         call messages_warning(2)
@@ -474,7 +471,6 @@ contains
     type(spline_t) :: besselintf
     integer :: i, ix, iy, ixx(2), db(2), npoints
     FLOAT :: temp(2), vec, r_c, maxf, dk
-    FLOAT :: DELTA_R = CNST(1.0e-12)
     FLOAT, allocatable :: x(:), y(:)
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
@@ -489,7 +485,7 @@ contains
       trim(units_abbrev(units_out%length)), '] = ',       &
       units_from_atomic(units_out%length, r_c)
     call messages_info(1)
-    if ( r_c > maxval(db(1:2)*mesh%spacing(1:2)/M_TWO) + DELTA_R) then
+    if ( r_c > maxval(db(1:2)*mesh%spacing(1:2)/M_TWO) + M_EPSILON) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in neighboring cell(s).'
       call messages_warning(2)
