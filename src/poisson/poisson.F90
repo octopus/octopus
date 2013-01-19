@@ -291,8 +291,10 @@ contains
           call messages_fatal(1)
         end if
       case(1)
-        message(1) = 'A periodic 1D system may only use the fft Poisson solver.'
-        call messages_fatal(1)
+        if(this%method /= POISSON_FFT) then
+          message(1) = 'A periodic 1D system may only use the fft Poisson solver.'
+          call messages_fatal(1)
+        endif
       end select
 
       if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM_1D) then
