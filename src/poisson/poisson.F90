@@ -569,53 +569,17 @@ contains
 
     ASSERT(this%method.ne.-99)
       
-    select case(this%method)
+    if(this%der%mesh%sb%dim == 1 .and. cmplxscl .and. this%method == POISSON_FFT) then
+      call messages_not_implemented('Complex scaled 1D soft coulomb and FFT poisson solver')
+    end if
 
-    case(POISSON_DIRECT_SUM_1D)
+    ! why handle the first one separately?
+    if(this%method == POISSON_DIRECT_SUM_1D) then
       call zpoisson1D_solve(this, pot, rho, theta_)
-
-    case(POISSON_DIRECT_SUM_2D)
+    else
       call zpoisson_solve_1(this, pot, rho, all_nodes)
       if(cmplxscl) pot = pot * exp(- M_zI * theta_)
-
-    case(POISSON_DIRECT_SUM_3D)
-      call zpoisson_solve_1(this, pot, rho, all_nodes)
-      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
-
-    case(POISSON_FMM)
-      call zpoisson_solve_1(this, pot, rho, all_nodes)
-      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
-
-    case(POISSON_CG)
-      call zpoisson_solve_1(this, pot, rho, all_nodes)
-      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
-
-    case(POISSON_CG_CORRECTED)
-      call zpoisson_solve_1(this, pot, rho, all_nodes)
-      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
-
-    case(POISSON_MULTIGRID)
-      call zpoisson_solve_1(this, pot, rho, all_nodes)
-      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
-
-    case(POISSON_FFT)
-      if(this%der%mesh%sb%dim == 1 .and. cmplxscl) then
-        call messages_not_implemented('Complex scaled 1D soft coulomb and FFT poisson solver')
-      end if
-      call zpoisson_solve_1(this, pot, rho, all_nodes)
-      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
-
-    case(POISSON_ISF)
-      call zpoisson_solve_1(this, pot, rho, all_nodes)
-      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
-
-    case(POISSON_SETE)
-      call zpoisson_solve_1(this, pot, rho, all_nodes)
-      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
-
-    end select
-
-
+    endif
 
     POP_SUB(zpoisson_solve)
   end subroutine zpoisson_solve
@@ -625,7 +589,7 @@ contains
   !> Calculates the Poisson equation.
   !! Given the density returns the corresponding potential.
   !!
-  !! Different solvers are available that could be choosen in the input file
+  !! Different solvers are available that can be chosen in the input file
   !! with the "PoissonSolver" parameter
   subroutine dpoisson_solve(this, pot, rho, all_nodes)
     type(poisson_t),      intent(inout) :: this
@@ -887,7 +851,7 @@ contains
     hartree_nrg_num = lcl_hartree_nrg
 #endif
 
-    ! Calculate the anallytical Hartree energy (serially, discrete - not exactly exact)
+    ! Calculate the analytical Hartree energy (serially, discrete - not exactly exact)
     lcl_hartree_nrg = M_ZERO
     do ip = 1, mesh%np
       lcl_hartree_nrg = lcl_hartree_nrg + rho(ip) * vh_exact(ip)
