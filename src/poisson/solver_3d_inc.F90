@@ -33,7 +33,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
 
   select case(this%method)
   case(POISSON_DIRECT_SUM_3D, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
-      valid_solver = .true.
+    valid_solver = .true.
   case(POISSON_MULTIGRID, POISSON_ISF, POISSON_SETE)
     valid_solver = .true.
   case default
@@ -168,9 +168,10 @@ subroutine poisson3D_solve_direct(this, pot, rho)
   FLOAT, allocatable :: pvec(:) 
 #endif
 
+  PUSH_SUB(poisson3D_solve_direct)
+
   ASSERT(this%method == POISSON_DIRECT_SUM_3D)
 
-  PUSH_SUB(poisson3D_solve_direct)
 #ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then
     SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
@@ -208,14 +209,26 @@ subroutine poisson3D_solve_direct(this, pot, rho)
     do ip = 1, this%der%mesh%np
       xx(:) = this%der%mesh%x(ip,1:3)
       do jp = 1, this%der%mesh%np
-        if(ip == jp) then
-          pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%spacing(1)*this%der%mesh%vol_pp(jp)
+        if(this%der%mesh%use_curvilinear) then
+          if(ip == jp) then
+            pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%spacing(1)*this%der%mesh%vol_pp(jp)
+          else
+            yy(:) = this%der%mesh%x(jp,1:3)
+            pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
+          endif
         else
-          yy(:) = this%der%mesh%x(jp,1:3)
-          pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
+          if(ip == jp) then
+            pot(ip) = pot(ip) + M_TWO*sqrt(M_PI)*rho(ip)/this%der%mesh%spacing(1)
+          else
+            yy(:) = this%der%mesh%x(jp,1:3)
+            pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))
+          endif
         end if
       end do
     end do
+    if(.not. this%der%mesh%use_curvilinear) then
+      pot(:) = pot(:) * this%der%mesh%volume_element
+    endif
 #ifdef HAVE_MPI
   end if
 #endif

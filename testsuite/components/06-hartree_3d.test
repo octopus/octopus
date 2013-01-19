@@ -21,3 +21,6 @@ match ; FFT Corrected ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.0
 
 Input: 06-hartree_3d.05-cg_corrected.inp
 match ; CG Corrected  ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00349973
+
+Input: 06-hartree_3d.06-direct3d.inp
+match ; Direct3D      ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.01698027
