@@ -8,5 +8,4 @@ BoxShape = sphere
 Radius  = 8.0
 Spacing = 0.3
 
-PoissonSolver = direct3D
-
+PoissonSolver = direct_sum
