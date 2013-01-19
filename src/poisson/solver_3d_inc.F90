@@ -32,7 +32,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   PUSH_SUB(poisson3D_init)
 
   select case(this%method)
-  case(POISSON_DIRECT_SUM_3D, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
+  case(POISSON_DIRECT_SUM, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
     valid_solver = .true.
   case(POISSON_MULTIGRID, POISSON_ISF, POISSON_SETE)
     valid_solver = .true.
@@ -171,7 +171,7 @@ subroutine poisson3D_solve_direct(this, pot, rho)
 
   PUSH_SUB(poisson3D_solve_direct)
 
-  ASSERT(this%method == POISSON_DIRECT_SUM_3D)
+  ASSERT(this%method == POISSON_DIRECT_SUM)
 
 #ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then

@@ -82,9 +82,7 @@ module poisson_m
     poisson_is_async
 
   integer, public, parameter ::         &
-    POISSON_DIRECT_SUM_1D = -1,         &
-    POISSON_DIRECT_SUM_2D = -2,         &
-    POISSON_DIRECT_SUM_3D = -3,         &  
+    POISSON_DIRECT_SUM    = -1,         &
     POISSON_FMM           = -4,         &
     POISSON_FFT           =  0,         &
     POISSON_CG            =  5,         &
@@ -171,12 +169,8 @@ contains
     !% Do not use a Poisson solver at all.
     !%Option FMM -4
     !% Fast multipole method.                                  
-    !%Option direct3D -3                                      
-    !% Direct evaluation of the Hartree potential (in 3D).   
-    !%Option direct2D -2
-    !% Direct evaluation of the Hartree potential (in 2D).
-    !%Option direct1D -1
-    !% Direct evaluation of the Hartree potential (in 1D), using <tt>Poisson1DSoftCoulombParam</tt>.
+    !%Option direct_sum -1                                      
+    !% Direct evaluation of the Hartree potential (only for finite systems).
     !%Option fft 0
     !% The Poisson equation is solved using FFTs. A cutoff technique
     !% for the Poisson kernel is selected so the proper boundary
@@ -213,9 +207,9 @@ contains
     if(der%mesh%use_curvilinear) then
       select case(der%mesh%sb%dim)
       case(1)
-        default_solver = POISSON_DIRECT_SUM_1D
+        default_solver = POISSON_DIRECT_SUM
       case(2)
-        default_solver = POISSON_DIRECT_SUM_2D
+        default_solver = POISSON_DIRECT_SUM
       case(3)
         default_solver = POISSON_CG_CORRECTED
       end select
@@ -281,13 +275,18 @@ contains
 
     end if
 
+    if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_DIRECT_SUM) then
+      message(1) = 'A periodic system may not use the direct_sum Poisson solver.'
+      call messages_fatal(1)
+    end if
+
     select case(der%mesh%sb%dim)
     case(1)
 
       select case(der%mesh%sb%periodic_dim)
       case(0)
-        if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM_1D)) then
-          message(1) = 'A finite 1D system may only use fft or direct1D Poisson solvers.'
+        if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM)) then
+          message(1) = 'A finite 1D system may only use fft or direct_sum Poisson solvers.'
           call messages_fatal(1)
         end if
       case(1)
@@ -297,32 +296,28 @@ contains
         endif
       end select
 
-      if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM_1D) then
+      if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM) then
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
-        message(2) = 'Poisson solver is direct1D.'
+        message(2) = 'Poisson solver is direct_sum.'
         call messages_fatal(2)
+        ! FIXME: even the direct solver does not have curvilinear implemented in serial!!!
       end if
 
     case(2)
 
-      if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM_2D) ) then
-        message(1) = 'A 2D system may only use fft or direct2D Poisson solvers.'
+      if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM) ) then
+        message(1) = 'A 2D system may only use fft or direct_sum Poisson solvers.'
         call messages_fatal(1)
       end if
 
-      if(der%mesh%use_curvilinear .and. (this%method /= POISSON_DIRECT_SUM_2D) ) then
+      if(der%mesh%use_curvilinear .and. (this%method /= POISSON_DIRECT_SUM) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
-        message(2) = 'Poisson solver is direct2D.'
+        message(2) = 'Poisson solver is direct_sum.'
         call messages_fatal(2)
       end if
 
     case(3)
       
-      if(this%method == POISSON_DIRECT_SUM_1D .or. this%method == POISSON_DIRECT_SUM_2D) then
-        message(1) = 'A 3D system may not use the direct1D or direct2D Poisson solvers.'
-        call messages_fatal(1)
-      end if
-
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
         write(message(1), '(a,i1,a)')'FMM is not ready to deal with periodic boundaries at present.'
         call messages_warning(1)
@@ -478,9 +473,6 @@ contains
     case(POISSON_SETE)
       call poisson_sete_end(this%sete_solver)
 
-    ! We should clean up and release
-    ! case(POISSON_DIRECT_SUM_3D)  
-    ! call poisson_direct_sum_end
     case(POISSON_FMM)
       call poisson_fmm_end(this%params_fmm)
 
@@ -574,7 +566,7 @@ contains
     end if
 
     ! why handle the first one separately?
-    if(this%method == POISSON_DIRECT_SUM_1D) then
+    if(this%method == POISSON_DIRECT_SUM .and. this%der%mesh%sb%dim == 1) then
       call zpoisson1D_solve(this, pot, rho, theta_)
     else
       call zpoisson_solve_1(this, pot, rho, all_nodes)
@@ -633,14 +625,18 @@ contains
     ASSERT(this%method /= -99)
       
     select case(this%method)
-    case(POISSON_DIRECT_SUM_1D)
-      call poisson1d_solve(this, pot, rho)
-
-    case(POISSON_DIRECT_SUM_2D)
-      call poisson2d_solve(this, pot, rho)
-
-    case(POISSON_DIRECT_SUM_3D)
-      call poisson3D_solve_direct(this, pot, rho)
+    case(POISSON_DIRECT_SUM)
+      select case(this%der%mesh%sb%dim)
+      case(1)
+        call poisson1d_solve(this, pot, rho)
+      case(2)
+        call poisson2d_solve(this, pot, rho)
+      case(3)
+        call poisson3D_solve_direct(this, pot, rho)
+      case default
+        message(1) = "Direct sum Poisson solver only available for 1, 2, or 3 dimensions."
+        call messages_fatal(1)
+      end select
 
     case(POISSON_FMM)
       call poisson_fmm_solve(this%params_fmm, this%der, pot, rho)
