@@ -88,10 +88,14 @@ subroutine poisson1D_solve(this, pot, rho)
       xx = this%der%mesh%x(ip, 1)
       do jp = 1, this%der%mesh%np
         yy = this%der%mesh%x(jp, 1)
-        pot(ip) = pot(ip) + rho(jp)/sqrt(this%poisson_soft_coulomb_param**2 + &
-	         (xx-yy)**2)*this%der%mesh%vol_pp(1)
+        if(this%der%mesh%use_curvilinear) then
+          pot(ip) = pot(ip) + rho(jp)/sqrt(this%poisson_soft_coulomb_param**2 + (xx-yy)**2)*this%der%mesh%vol_pp(jp)
+        else
+          pot(ip) = pot(ip) + rho(jp)/sqrt(this%poisson_soft_coulomb_param**2 + (xx-yy)**2)
+        endif
       end do
     end do
+    if(.not. this%der%mesh%use_curvilinear) pot(:) = pot(:) * this%der%mesh%volume_element
 #ifdef HAVE_MPI
   end if
 #endif

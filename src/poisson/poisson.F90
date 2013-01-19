@@ -300,7 +300,6 @@ contains
         message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
         message(2) = 'Poisson solver is direct_sum.'
         call messages_fatal(2)
-        ! FIXME: even the direct solver does not have curvilinear implemented in serial!!!
       end if
 
     case(2)
