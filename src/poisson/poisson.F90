@@ -565,13 +565,8 @@ contains
       call messages_not_implemented('Complex scaled 1D soft coulomb and FFT poisson solver')
     end if
 
-    ! why handle the first one separately?
-    if(this%method == POISSON_DIRECT_SUM .and. this%der%mesh%sb%dim == 1) then
-      call zpoisson1D_solve(this, pot, rho, theta_)
-    else
-      call zpoisson_solve_1(this, pot, rho, all_nodes)
-      if(cmplxscl) pot = pot * exp(- M_zI * theta_)
-    endif
+    call zpoisson_solve_1(this, pot, rho, all_nodes)
+    if(cmplxscl) pot = pot * exp(- M_zI * theta_)
 
     POP_SUB(zpoisson_solve)
   end subroutine zpoisson_solve
