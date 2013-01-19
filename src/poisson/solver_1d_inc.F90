@@ -24,8 +24,16 @@ subroutine poisson1d_init(this)
 
   PUSH_SUB(poisson1d_init)
 
+  !%Variable Poisson1DSoftCoulomParam
+  !%Type float
+  !%Default 1.0 bohr
+  !%Section Hamiltonian::Poisson
+  !%Description
+  !% When <tt>Dimensions = 1</tt>, to prevent divergence, the Coulomb interaction treated by the Poisson
+  !% solver is not 1/r but 1/sqrt(a^2 + r^2), where this variable sets the value of "a".
+  !%End
   call parse_float(datasets_check('Poisson1DSoftCoulombParam'), &
-    M_ONE, this%poisson_soft_coulomb_param)
+    M_ONE, this%poisson_soft_coulomb_param, units_inp%length)
 
   if(this%method == POISSON_FFT) then
     call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
@@ -93,7 +101,7 @@ end subroutine poisson1D_solve
 !-----------------------------------------------------------------
 
 !
-! Complex scaled soft Coulomb Hartree Solver
+!> Complex scaled soft Coulomb Hartree Solver
 !
 subroutine zpoisson1D_solve(this, pot, rho, theta)
   type(poisson_t), intent(in)  :: this

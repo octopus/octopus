@@ -176,7 +176,7 @@ contains
     !%Option direct2D -2
     !% Direct evaluation of the Hartree potential (in 2D).
     !%Option direct1D -1
-    !% Direct evaluation of the Hartree potential (in 1D).
+    !% Direct evaluation of the Hartree potential (in 1D), using <tt>Poisson1DSoftCoulombParam</tt>.
     !%Option fft 0
     !% The Poisson equation is solved using FFTs. A cutoff technique
     !% for the Poisson kernel is selected so the proper boundary
