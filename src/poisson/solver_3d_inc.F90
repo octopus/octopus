@@ -161,7 +161,7 @@ subroutine poisson3D_solve_direct(this, pot, rho)
   FLOAT,           intent(out) :: pot(:)
   FLOAT,           intent(in)  :: rho(:)
 
-  FLOAT, parameter :: prefactor = M_TWO*M_PI*(M_THREE/(M_PI*M_FOUR))**(M_TWOTHIRD) 
+  FLOAT :: prefactor
   integer  :: ip, jp
   FLOAT    :: xx(3), yy(3)
 #ifdef HAVE_MPI
@@ -173,6 +173,16 @@ subroutine poisson3D_solve_direct(this, pot, rho)
 
   ASSERT(this%method == POISSON_DIRECT_SUM)
 
+  select case(this%der%mesh%sb%dim)
+  case(3)
+    prefactor = M_TWO*M_PI*(M_THREE/(M_PI*M_FOUR))**(M_TWOTHIRD)
+  case(2)
+    prefactor = M_TWO*sqrt(M_PI)
+  case default
+    message(1) = "Internal error: poisson_solve_direct can only be called for 2D or 3D."
+    call messages_fatal(1)
+  end select
+
 #ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then
     SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
@@ -183,14 +193,11 @@ subroutine poisson3D_solve_direct(this, pot, rho)
       xx(1:3) = xg(1:3) 
       do jp = 1, this%der%mesh%np
         if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
-          if((this%der%mesh%use_curvilinear .eqv. .false.) .and. (this%der%mesh%spacing(1)==this%der%mesh%spacing(2)) .and. &
-               (this%der%mesh%spacing(2)==this%der%mesh%spacing(3)) .and.&
-               (this%der%mesh%spacing(1)==this%der%mesh%spacing(3))) then
-             pvec(jp) = rho(jp)*prefactor/(this%der%mesh%spacing(1)) 
+          if(this%der%mesh%use_curvilinear) then
+            pvec(jp) = rho(jp)*prefactor / (this%der%mesh%vol_pp(jp)**M_THIRD)
           else
-             pvec(jp) = (1.0/(this%der%mesh%spacing(1)*this%der%mesh%spacing(2)*&
-                  this%der%mesh%spacing(3))**(M_THIRD))*rho(jp)*prefactor
-          end if 
+            pvec(jp) = rho(jp)*prefactor / (this%der%mesh%volume_element**M_THIRD)
+          endif
        else
           yy(:) = this%der%mesh%x(jp,1:3)
           pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
@@ -212,14 +219,14 @@ subroutine poisson3D_solve_direct(this, pot, rho)
       do jp = 1, this%der%mesh%np
         if(this%der%mesh%use_curvilinear) then
           if(ip == jp) then
-            pot(ip) = pot(ip) + prefactor*rho(ip)/this%der%mesh%spacing(1)*this%der%mesh%vol_pp(jp)
+            pot(ip) = pot(ip) + prefactor*rho(ip)/(this%der%mesh%vol_pp(jp)**M_THIRD)*this%der%mesh%vol_pp(jp)
           else
             yy(:) = this%der%mesh%x(jp,1:3)
             pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
           endif
         else
           if(ip == jp) then
-            pot(ip) = pot(ip) + prefactor*rho(ip)/this%der%mesh%spacing(1)
+            pot(ip) = pot(ip) + prefactor*rho(ip)/(this%der%mesh%volume_element**M_THIRD)
           else
             yy(:) = this%der%mesh%x(jp,1:3)
             pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))
