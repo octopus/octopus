@@ -28,7 +28,6 @@ Dimensions = 2
 BoxShape = parallelepiped
 DerivativesOrder = 2
 Spacing = 0.25
-PoissonSolver = direct2d
 
 TDTimeStep = 0.075
 TDMaximumIter = 75
