@@ -837,6 +837,11 @@ contains
 
     PUSH_SUB(output_berkeleygw)
 
+    if(gr%mesh%sb%dim /= 3) then
+      message(1) = "BerkeleyGW output only available in 3D."
+      call messages_fatal(1)
+    endif
+
 #ifdef HAVE_BERKELEYGW
 
     SAFE_ALLOCATE(vxc(gr%mesh%np, st%d%nspin))
@@ -971,8 +976,8 @@ contains
     subroutine bgw_setup_header()
       PUSH_SUB(output_berkeleygw.bgw_setup_header)
 
-      adot(:,:) = matmul(gr%sb%rlattice, gr%sb%rlattice)
-      bdot(:,:) = matmul(gr%sb%klattice, gr%sb%klattice)
+      adot(1:3, 1:3) = matmul(gr%sb%rlattice(1:3, 1:3), gr%sb%rlattice(1:3, 1:3))
+      bdot(1:3, 1:3) = matmul(gr%sb%klattice(1:3, 1:3), gr%sb%klattice(1:3, 1:3))
       recvol = (M_TWO * M_PI)**3 / gr%sb%rcell_volume
       
       ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
