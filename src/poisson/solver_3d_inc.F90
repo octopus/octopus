@@ -208,12 +208,12 @@ subroutine poisson_solve_direct(this, pot, rho)
         do jp = 1, this%der%mesh%np
           if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
             pvec(jp) = rho(jp)*prefactor
+          else
+            yy(:) = this%der%mesh%x(jp,:)
+            pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
           endif
-        else
-          yy(:) = this%der%mesh%x(jp,:)
-          pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
-        end if
-      end do
+        enddo
+      endif
       tmp = dmf_integrate(this%der%mesh, pvec)
       if (this%der%mesh%vp%part(ip).eq.this%der%mesh%vp%partno) then
         pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
