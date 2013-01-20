@@ -162,7 +162,7 @@ subroutine poisson_solve_direct(this, pot, rho)
   FLOAT,           intent(in)  :: rho(:)
 
   FLOAT :: prefactor
-  integer  :: ip, jp
+  integer  :: ip, jp, dim
   FLOAT    :: xx(this%der%mesh%sb%dim), yy(this%der%mesh%sb%dim)
 #ifdef HAVE_MPI
   FLOAT    :: tmp
@@ -171,9 +171,10 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   PUSH_SUB(poisson_solve_direct)
 
+  dim = this%der%mesh%sb%dim
   ASSERT(this%method == POISSON_DIRECT_SUM)
 
-  select case(this%der%mesh%sb%dim)
+  select case(dim)
   case(3)
     prefactor = M_TWO*M_PI*(M_THREE/(M_PI*M_FOUR))**(M_TWOTHIRD)
   case(2)
@@ -194,13 +195,13 @@ subroutine poisson_solve_direct(this, pot, rho)
 
     pot = M_ZERO
     do ip = 1, this%der%mesh%np_global
-      xx(:) = mesh_x_global(this%der%mesh, ip)
+      xx(1:dim) = mesh_x_global(this%der%mesh, ip)(1:dim)
       if(this%der%mesh%use_curvilinear) then
         do jp = 1, this%der%mesh%np
           if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
             pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
-            yy(:) = this%der%mesh%x(jp,:)
+            yy(1:dim) = this%der%mesh%x(jp,1:dim)
             pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
           end if
         end do
@@ -209,7 +210,7 @@ subroutine poisson_solve_direct(this, pot, rho)
           if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
             pvec(jp) = rho(jp)*prefactor
           else
-            yy(:) = this%der%mesh%x(jp,:)
+            yy(1:dim) = this%der%mesh%x(jp,1:dim)
             pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
           endif
         enddo
@@ -226,13 +227,13 @@ subroutine poisson_solve_direct(this, pot, rho)
 #endif
     pot = M_ZERO
     do ip = 1, this%der%mesh%np
-      xx(:) = this%der%mesh%x(ip,:)
+      xx(1:dim) = this%der%mesh%x(ip,1:dim)
       if(this%der%mesh%use_curvilinear) then
         do jp = 1, this%der%mesh%np
           if(ip == jp) then
             pot(ip) = pot(ip) + prefactor*rho(ip)*this%der%mesh%vol_pp(jp)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
-            yy(:) = this%der%mesh%x(jp,:)
+            yy(1:dim) = this%der%mesh%x(jp,1:dim)
             pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
           endif
         enddo
@@ -241,7 +242,7 @@ subroutine poisson_solve_direct(this, pot, rho)
           if(ip == jp) then
             pot(ip) = pot(ip) + prefactor*rho(ip)
           else
-            yy(:) = this%der%mesh%x(jp,1:3)
+            yy(1:dim) = this%der%mesh%x(jp,1:dim)
             pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))
           endif
         end do
