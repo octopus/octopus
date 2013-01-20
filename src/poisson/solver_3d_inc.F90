@@ -195,17 +195,24 @@ subroutine poisson_solve_direct(this, pot, rho)
     pot = M_ZERO
     do ip = 1, this%der%mesh%np_global
       xx(:) = mesh_x_global(this%der%mesh, ip)
-      do jp = 1, this%der%mesh%np
-        if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
-          if(this%der%mesh%use_curvilinear) then
+      if(this%der%mesh%use_curvilinear) then
+        do jp = 1, this%der%mesh%np
+          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
             pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
+            yy(:) = this%der%mesh%x(jp,:)
+            pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
+          end if
+        end do
+      else
+        do jp = 1, this%der%mesh%np
+          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
             pvec(jp) = rho(jp)*prefactor
           endif
-       else
+        else
           yy(:) = this%der%mesh%x(jp,:)
           pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
-       end if
+        end if
       end do
       tmp = dmf_integrate(this%der%mesh, pvec)
       if (this%der%mesh%vp%part(ip).eq.this%der%mesh%vp%partno) then
@@ -220,23 +227,25 @@ subroutine poisson_solve_direct(this, pot, rho)
     pot = M_ZERO
     do ip = 1, this%der%mesh%np
       xx(:) = this%der%mesh%x(ip,:)
-      do jp = 1, this%der%mesh%np
-        if(this%der%mesh%use_curvilinear) then
+      if(this%der%mesh%use_curvilinear) then
+        do jp = 1, this%der%mesh%np
           if(ip == jp) then
             pot(ip) = pot(ip) + prefactor*rho(ip)*this%der%mesh%vol_pp(jp)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
             yy(:) = this%der%mesh%x(jp,:)
             pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
           endif
-        else
+        enddo
+      else
+        do jp = 1, this%der%mesh%np
           if(ip == jp) then
             pot(ip) = pot(ip) + prefactor*rho(ip)
           else
             yy(:) = this%der%mesh%x(jp,1:3)
             pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))
           endif
-        end if
-      end do
+        end do
+      end if
     end do
     if(.not. this%der%mesh%use_curvilinear) then
       pot(:) = pot(:) * this%der%mesh%volume_element
@@ -247,8 +256,6 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   POP_SUB(poisson_solve_direct) 
 end subroutine poisson_solve_direct
-
-
 
 !! Local Variables:
 !! mode: f90
