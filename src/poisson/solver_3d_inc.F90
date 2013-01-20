@@ -163,9 +163,9 @@ subroutine poisson3D_solve_direct(this, pot, rho)
 
   FLOAT :: prefactor
   integer  :: ip, jp
-  FLOAT    :: xx(3), yy(3)
+  FLOAT    :: xx(this%der%mesh%sb%dim), yy(this%der%mesh%sb%dim)
 #ifdef HAVE_MPI
-  FLOAT    :: tmp, xg(1:MAX_DIM)
+  FLOAT    :: tmp
   FLOAT, allocatable :: pvec(:) 
 #endif
 
@@ -189,8 +189,7 @@ subroutine poisson3D_solve_direct(this, pot, rho)
 
     pot = M_ZERO
     do ip = 1, this%der%mesh%np_global
-      xg = mesh_x_global(this%der%mesh, ip)
-      xx(1:3) = xg(1:3) 
+      xx(:) = mesh_x_global(this%der%mesh, ip)
       do jp = 1, this%der%mesh%np
         if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
           if(this%der%mesh%use_curvilinear) then
@@ -199,9 +198,9 @@ subroutine poisson3D_solve_direct(this, pot, rho)
             pvec(jp) = rho(jp)*prefactor / (this%der%mesh%volume_element**M_THIRD)
           endif
        else
-          yy(:) = this%der%mesh%x(jp,1:3)
+          yy(:) = this%der%mesh%x(jp,:)
           pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
-        end if
+       end if
       end do
       tmp = dmf_integrate(this%der%mesh, pvec)
       if (this%der%mesh%vp%part(ip).eq.this%der%mesh%vp%partno) then
@@ -215,13 +214,13 @@ subroutine poisson3D_solve_direct(this, pot, rho)
 #endif
     pot = M_ZERO
     do ip = 1, this%der%mesh%np
-      xx(:) = this%der%mesh%x(ip,1:3)
+      xx(:) = this%der%mesh%x(ip,:)
       do jp = 1, this%der%mesh%np
         if(this%der%mesh%use_curvilinear) then
           if(ip == jp) then
             pot(ip) = pot(ip) + prefactor*rho(ip)/(this%der%mesh%vol_pp(jp)**M_THIRD)*this%der%mesh%vol_pp(jp)
           else
-            yy(:) = this%der%mesh%x(jp,1:3)
+            yy(:) = this%der%mesh%x(jp,:)
             pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
           endif
         else
