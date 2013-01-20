@@ -184,6 +184,10 @@ subroutine poisson_solve_direct(this, pot, rho)
     call messages_fatal(1)
   end select
 
+  if(.not. this%der%mesh%use_curvilinear) then
+    prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/this%der%mesh%sb%dim))
+  endif
+
 #ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then
     SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
@@ -194,9 +198,9 @@ subroutine poisson_solve_direct(this, pot, rho)
       do jp = 1, this%der%mesh%np
         if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
           if(this%der%mesh%use_curvilinear) then
-            pvec(jp) = rho(jp)*prefactor / (this%der%mesh%vol_pp(jp)**M_THIRD)
+            pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
-            pvec(jp) = rho(jp)*prefactor / (this%der%mesh%volume_element**M_THIRD)
+            pvec(jp) = rho(jp)*prefactor
           endif
        else
           yy(:) = this%der%mesh%x(jp,:)
@@ -219,14 +223,14 @@ subroutine poisson_solve_direct(this, pot, rho)
       do jp = 1, this%der%mesh%np
         if(this%der%mesh%use_curvilinear) then
           if(ip == jp) then
-            pot(ip) = pot(ip) + prefactor*rho(ip)/(this%der%mesh%vol_pp(jp)**M_THIRD)*this%der%mesh%vol_pp(jp)
+            pot(ip) = pot(ip) + prefactor*rho(ip)*this%der%mesh%vol_pp(jp)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
             yy(:) = this%der%mesh%x(jp,:)
             pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
           endif
         else
           if(ip == jp) then
-            pot(ip) = pot(ip) + prefactor*rho(ip)/(this%der%mesh%volume_element**M_THIRD)
+            pot(ip) = pot(ip) + prefactor*rho(ip)
           else
             yy(:) = this%der%mesh%x(jp,1:3)
             pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))
