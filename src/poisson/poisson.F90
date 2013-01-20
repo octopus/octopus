@@ -624,9 +624,9 @@ contains
       case(1)
         call poisson1d_solve(this, pot, rho)
       case(2)
-        call poisson2d_solve(this, pot, rho)
+        call poisson_solve_direct(this, pot, rho)
       case(3)
-        call poisson3D_solve_direct(this, pot, rho)
+        call poisson_solve_direct(this, pot, rho)
       case default
         message(1) = "Direct sum Poisson solver only available for 1, 2, or 3 dimensions."
         call messages_fatal(1)

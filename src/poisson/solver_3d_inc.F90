@@ -156,7 +156,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
 end subroutine poisson3D_init
 
 
-subroutine poisson3D_solve_direct(this, pot, rho)
+subroutine poisson_solve_direct(this, pot, rho)
   type(poisson_t), intent(in)  :: this
   FLOAT,           intent(out) :: pot(:)
   FLOAT,           intent(in)  :: rho(:)
@@ -169,7 +169,7 @@ subroutine poisson3D_solve_direct(this, pot, rho)
   FLOAT, allocatable :: pvec(:) 
 #endif
 
-  PUSH_SUB(poisson3D_solve_direct)
+  PUSH_SUB(poisson_solve_direct)
 
   ASSERT(this%method == POISSON_DIRECT_SUM)
 
@@ -180,6 +180,7 @@ subroutine poisson3D_solve_direct(this, pot, rho)
     prefactor = M_TWO*sqrt(M_PI)
   case default
     message(1) = "Internal error: poisson_solve_direct can only be called for 2D or 3D."
+    ! why not? all that is needed is the appropriate prefactors to be defined above, actually. then 1D, 4D etc. can be done
     call messages_fatal(1)
   end select
 
@@ -240,8 +241,8 @@ subroutine poisson3D_solve_direct(this, pot, rho)
   end if
 #endif
 
-  POP_SUB(poisson3D_solve_direct) 
-end subroutine poisson3D_solve_direct
+  POP_SUB(poisson_solve_direct) 
+end subroutine poisson_solve_direct
 
 
 
