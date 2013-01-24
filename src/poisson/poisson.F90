@@ -236,6 +236,8 @@ contains
       !% <br>In 2D, <tt>spherical</tt> if finite, <tt>cylindrical</tt> if 1D-periodic, <tt>fft_nocut</tt> if 2D-periodic.
       !% <br>In 3D, <tt>spherical</tt> if finite, <tt>cylindrical</tt> if 1D-periodic, <tt>planar</tt> if 2D-periodic,
       !% <tt>fft_nocut</tt> if 3D-periodic.
+      !% See C. A. Rozzi et al., <i>Phys. Rev. B</i> <b>73</b>, 205119 (2006) for 3D implementation and
+      !% A. Castro et al., <i>Phys. Rev. B</i> <b>80</b>, 033102 (2009) for 2D implementation.
       !%Option spherical 0
       !% FFTs using spherical cutoff (in 2D or 3D).
       !%Option cylindrical 1
