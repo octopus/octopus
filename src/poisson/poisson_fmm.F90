@@ -128,7 +128,7 @@ contains
     !%Default 0.0001 
     !%Section Hamiltonian::Poisson 
     !%Description
-    !% Parameter for absolute or relative convergence of FMM.
+    !% Dimensionless parameter for relative convergence of FMM.
     !% Sets energy error bound.
     !% Strong inhomogeneous systems may violate the error bound.
     !% For inhomogeneous systems we have an error-controlled sequential version available
@@ -148,7 +148,7 @@ contains
     !%Default 0.291262136
     !%Section Hamiltonian::Poisson 
     !%Description
-    !% Parameter for the correction of the self-interaction of the
+    !% Dimensionless parameter for the correction of the self-interaction of the
     !% electrostatic Hartree potential. 
     !% 
     !% Octopus represents charge density in real space grids, each
@@ -160,24 +160,22 @@ contains
     !% $V_H(i) = (1/4\pi\epsilon_0) \Omega \sum_{i \neq j} \frac{\rho(\vec{r}(j))}{|\vec{r}(j) - \vec{r}(i)|} + V_{self.int.}(i)$
     !% where $\Omega$ is the volume of the cell, and $\vec{r}(j)$ is the
     !% position of the point $j$. The $V_{self.int.}(i)$ corresponds to
-    !% the integral on cell centered in the point $i$ that is necessary to
-    !% calculate the Hartree potential in point $i$:
+    !% the integral over the cell centered on the point $i$ that is necessary to
+    !% calculate the Hartree potential at point $i$:
     !%
     !% $V_{self.int.}(i):=\int_{\Omega(i)}d\vec{r} \frac{\rho(\vec{r}(i))}{|\vec{r}-\vec{r}(i)|}$
     !%
     !% In the FMM version implemented into Octopus, a correction method
-    !% for $V_H(i)$ is used (see “A survey of the parallel performance and
+    !% for $V_H(i)$ is used (see "A survey of the parallel performance and
     !% the accuracy of Poisson solvers for electronic structure
-    !% calculations”, by Pablo García-Risueño, Joseba Alberdi-Rodriguez
-    !% and others). This method defines cells neghbouring cell $i$, which
-    !% have volume is $\Omega(i)/8$ (in 3D) and charge density obtained by
+    !% calculations", by Pablo García-Risueño, Joseba Alberdi-Rodriguez, et al.)
+    !% This method defines cells neighbouring cell $i$, which
+    !% have volume $\Omega(i)/8$ (in 3D) and charge density obtained by
     !% interpolation. In the calculation of $V_H(i)$, in order to avoid
     !% double counting of charge, and to cancel part of the errors arising
     !% from considering the distances constant in the summation above, a
     !% term $-\alpha_{FMM}V_{self.int.}(i)$ is added to the summation (see
     !% the referred paper for the explicit formulae).
-    !%
-    !% The default value is 0.291262136.
     !%End
     call parse_float(datasets_check('AlphaFMM'), CNST(0.291262136), this%alpha_fmm)
 
