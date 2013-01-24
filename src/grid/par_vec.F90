@@ -1,4 +1,4 @@
-!! Copyright (C) 2005-2006 Florian Lorenzen, Heiko Appel, J. Alberdi
+!! Copyright (C) 2005-2006 Florian Lorenzen, Heiko Appel, J. Alberdi-Rodriguez
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by

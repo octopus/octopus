@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2011 M. Marques, A. Castro, X. Andrade, J. Alberdi, M. Oliveira
+!! Copyright (C) 2002-2011 M. Marques, A. Castro, X. Andrade, J. Alberdi-Rodriguez, M. Oliveira
 !! Copyright (C) Luigi Genovese, Thierry Deutsch, CEA Grenoble, 2006
 !!
 !! This program is free software; you can redistribute it and/or modify

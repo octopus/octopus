@@ -1,4 +1,4 @@
-!! Copyright (C) 2011 J. Alberdi, P. Garcia Risueño, M. Oliveira
+!! Copyright (C) 2011 J. Alberdi-Rodriguez, P. Garcia Risueño, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by

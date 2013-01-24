@@ -1,5 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch, 
-!! J. Alberdi, P. Garcia RisueÃ±o, M. Oliveira
+!! J. Alberdi-Rodriguez, P. Garcia Risueño, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
