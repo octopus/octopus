@@ -128,7 +128,7 @@ contains
     !% Dynamic structure factor (also known as energy-loss function or spectrum).
     !%End
 
-    call parse_integer  (datasets_check('PropagationSpectrumType'), SPECTRUM_ABSORPTION, spectrum%spectype)
+    call parse_integer(datasets_check('PropagationSpectrumType'), SPECTRUM_ABSORPTION, spectrum%spectype)
     if(.not.varinfo_valid_option('PropagationSpectrumType', spectrum%spectype)) call input_error('PropagationSpectrumType')
 
     !%Variable SpectrumMethod
@@ -143,7 +143,7 @@ contains
     !%Option compressed_sensing 2
     !% (Experimental) Uses the compressed sensing technique.
     !%End
-    call parse_integer  (datasets_check('SpectrumMethod'), SPECTRUM_FOURIER, spectrum%method)
+    call parse_integer(datasets_check('SpectrumMethod'), SPECTRUM_FOURIER, spectrum%method)
     if(.not.varinfo_valid_option('SpectrumMethod', spectrum%method)) then
       call input_error('SpectrumMethod')
     endif
@@ -184,7 +184,7 @@ contains
     default = SPECTRUM_DAMP_POLYNOMIAL
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) default = SPECTRUM_DAMP_NONE
 
-    call parse_integer  (datasets_check('PropagationSpectrumDampMode'), default, spectrum%damp)
+    call parse_integer(datasets_check('PropagationSpectrumDampMode'), default, spectrum%damp)
     if(.not.varinfo_valid_option('PropagationSpectrumDampMode', spectrum%damp)) call input_error('PropagationSpectrumDampMode')
 
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING .and. spectrum%damp /= SPECTRUM_DAMP_NONE) then

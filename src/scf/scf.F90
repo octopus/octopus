@@ -131,7 +131,7 @@ contains
     !% Maximum number of SCF iterations. The code will stop even if convergence
     !% has not been achieved. -1 means unlimited.
     !%End
-    call parse_integer  (datasets_check('MaximumIter'), 200, scf%max_iter)
+    call parse_integer(datasets_check('MaximumIter'), 200, scf%max_iter)
 
     !%Variable MaximumIterBerry
     !%Type integer
@@ -144,7 +144,7 @@ contains
     !% has not been achieved. -1 means unlimited.
     !%End
     if(associated(hm%vberry)) then
-      call parse_integer  (datasets_check('MaximumIterBerry'), 10, scf%max_iter_berry)
+      call parse_integer(datasets_check('MaximumIterBerry'), 10, scf%max_iter_berry)
       if(scf%max_iter_berry < 0) scf%max_iter_berry = huge(scf%max_iter_berry)
     end if
 

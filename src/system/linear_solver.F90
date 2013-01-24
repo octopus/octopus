@@ -140,9 +140,9 @@ contains
     if(present(def_solver)) defsolver_ = def_solver
 
     if (parse_isdef(datasets_check(trim(prefix)//"LinearSolver")) /= 0 ) then 
-      call parse_integer  (datasets_check(trim(prefix)//"LinearSolver"), defsolver_, fsolver)
+      call parse_integer(datasets_check(trim(prefix)//"LinearSolver"), defsolver_, fsolver)
     else
-      call parse_integer  (datasets_check("LinearSolver"), defsolver_, fsolver)
+      call parse_integer(datasets_check("LinearSolver"), defsolver_, fsolver)
     end if
 
     !the last 2 digits select the linear solver
@@ -159,9 +159,9 @@ contains
     !% convergence is not achieved.
     !%End
     if (parse_isdef(datasets_check(trim(prefix)//"LinearSolverMaxIter")) /= 0) then 
-      call parse_integer  (datasets_check(trim(prefix)//"LinearSolverMaxIter"), 1000, this%max_iter)
+      call parse_integer(datasets_check(trim(prefix)//"LinearSolverMaxIter"), 1000, this%max_iter)
     else
-      call parse_integer  (datasets_check("LinearSolverMaxIter"), 1000, this%max_iter)
+      call parse_integer(datasets_check("LinearSolverMaxIter"), 1000, this%max_iter)
     end if
 
     write(message(1),'(a)') 'Linear Solver'

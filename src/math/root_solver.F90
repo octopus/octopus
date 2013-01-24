@@ -54,19 +54,19 @@ module root_solver_m
 
   type root_solver_t
     private
-    integer :: solver_type    ! what solver to use (see ROOT_* variables above)_m
-    integer :: dim            ! dimensionality of the problem
-    integer :: maxiter        ! maximal number of iterations
-    integer :: usediter       ! number of iterations actually performed
+    integer :: solver_type    !< what solver to use (see ROOT_* variables above)_m
+    integer :: dim            !< dimensionality of the problem
+    integer :: maxiter        !< maximal number of iterations
+    integer :: usediter       !< number of iterations actually performed
     FLOAT   :: abs_tolerance
     FLOAT   :: rel_tolerance
-    FLOAT   :: ws_radius      ! radius of circle in complex plane; used for initial values
+    FLOAT   :: ws_radius      !< radius of circle in complex plane; used for initial values
     logical :: have_polynomial
     integer :: poly_order
   end type root_solver_t
 
-  ! a few variables which we have to define globally
-  ! for this module
+  !> a few variables which we have to define globally
+  !! for this module
   CMPLX, allocatable :: gbase_coeff(:), gcoeff(:)
   integer            :: gorder
 
@@ -125,7 +125,7 @@ contains
     !%Option root_watterstrom 5
     !% Watterstrom method.
     !%End
-    call parse_integer(datasets_check('RootSolver'),        ROOT_NEWTON, rs%solver_type)
+    call parse_integer(datasets_check('RootSolver'), ROOT_NEWTON, rs%solver_type)
     if( rs%solver_type.lt.ROOT_MINVAL.or.rs%solver_type.gt.ROOT_MAXVAL ) then
       call input_error(datasets_check('RootSolver'))
     end if
@@ -138,7 +138,7 @@ contains
     !% In case of an iterative root solver, this variable determines the maximum number
     !% of iteration steps.
     !%End
-    call parse_integer    (datasets_check('RootSolverMaxIter'),               100, rs%maxiter)
+    call parse_integer(datasets_check('RootSolverMaxIter'), 100, rs%maxiter)
 
     !%Variable RootSolverRelTolerance
     !%Type float
@@ -147,7 +147,7 @@ contains
     !%Description
     !% Relative tolerance for the root-finding process.
     !%End
-    call parse_float  (datasets_check('RootSolverRelTolerance'),   CNST(1e-8), rs%rel_tolerance)
+    call parse_float(datasets_check('RootSolverRelTolerance'), CNST(1e-8), rs%rel_tolerance)
 
     !%Variable RootSolverAbsTolerance
     !%Type float
@@ -156,7 +156,7 @@ contains
     !%Description
     !% Relative tolerance for the root-finding process.
     !%End
-    call parse_float  (datasets_check('RootSolverAbsTolerance'),   CNST(1e-8), rs%abs_tolerance)
+    call parse_float(datasets_check('RootSolverAbsTolerance'), CNST(1e-8), rs%abs_tolerance)
 
     !%Variable RootSolverHavePolynomial
     !%Type logical
@@ -166,7 +166,7 @@ contains
     !%  If set to yes, the coefficients of the polynomial have to be passed to
     !%  the root solver.
     !%End
-    call parse_logical(datasets_check('RootSolverHavePolynomial'),    .false., rs%have_polynomial)
+    call parse_logical(datasets_check('RootSolverHavePolynomial'), .false., rs%have_polynomial)
 
     !%Variable RootSolverWSRadius
     !%Type float
@@ -176,7 +176,7 @@ contains
     !% Radius of circle in the complex plane. If <tt>RootSolverWSRadius = 1.0</tt>,
     !% the unit roots of an <i>n</i>th-order polynomial are taken as initial values.
     !%End
-    call parse_float  (datasets_check('RootSolverWSRadius'),       CNST( 1.0), rs%ws_radius)
+    call parse_float(datasets_check('RootSolverWSRadius'), CNST( 1.0), rs%ws_radius)
 
     POP_SUB(root_solver_read)
   end subroutine root_solver_read
@@ -192,11 +192,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Implementation of J. Comp. Phys., 8, (1971), p. 304-308
+  !> Implementation of J. Comp. Phys., 8, (1971), p. 304-308
   subroutine zroot_watterstrom(rs, roots, coeff)
     type(root_solver_t), intent(in)  :: rs
-    CMPLX,                  intent(out) :: roots(:)    ! roots we are searching
-    CMPLX,                  intent(in)  :: coeff(:)    ! polynomial coefficients
+    CMPLX,                  intent(out) :: roots(:)    !< roots we are searching
+    CMPLX,                  intent(in)  :: coeff(:)    !< polynomial coefficients
 
     type(ode_solver_t) :: os
     CMPLX, allocatable    :: base_roots(:)
@@ -244,7 +244,7 @@ contains
     !%Option ode_pd89 4
     !% Prince-Dormand solver.
     !%End
-    call parse_integer(datasets_check('WatterstromODESolver'),       ODE_PD89, os%solver_type)
+    call parse_integer(datasets_check('WatterstromODESolver'), ODE_PD89, os%solver_type)
 
     !%Variable WatterstromODESolverNSteps
     !%Type integer
@@ -254,7 +254,7 @@ contains
     !% Number of steps which the chosen ODE solver should perform
     !% in the integration interval [<i>a</i>, <i>b</i>] of the Watterstrom ODE.
     !%End
-    call parse_integer(datasets_check('WatterstromODESolverNSteps'),      400, os%nsteps)
+    call parse_integer(datasets_check('WatterstromODESolverNSteps'), 400, os%nsteps)
 
     ! set up ODE solver
     os%nsize       = order
@@ -308,11 +308,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Newton-Raphson scheme can only be used in the real case.
+  !> Newton-Raphson scheme can only be used in the real case.
   subroutine droot_newton(rs, func, root, startval, success)
     type(root_solver_t), intent(in)  :: rs
-    FLOAT,               intent(out) :: root(:)        ! root we are searching
-    FLOAT,               intent(in)  :: startval(:)    ! start value for the search
+    FLOAT,               intent(out) :: root(:)        !< root we are searching
+    FLOAT,               intent(in)  :: startval(:)    !< start value for the search
     logical,             intent(out) :: success
     interface
       subroutine func(z, f, jf)
