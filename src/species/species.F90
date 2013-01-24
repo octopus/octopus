@@ -1075,20 +1075,20 @@ contains
 
     read_data = 0
 
-    call parse_block_float (blk, row, 1, spec%weight)
-    call parse_block_integer (blk, row, 2, spec%type)
+    call parse_block_float(blk, row, 1, spec%weight)
+    call parse_block_integer(blk, row, 2, spec%type)
 
     select case(spec%type)
     case(SPEC_USDEF) ! user-defined
       spec%Z=M_ZERO
-      call parse_block_float (blk, row, 3, spec%Z_val)
+      call parse_block_float(blk, row, 3, spec%Z_val)
       call parse_block_string(blk, row, 4, spec%user_def)
       call conv_to_C_string(spec%user_def)
       read_data = 5
 
     case(SPEC_FROM_FILE)
       spec%Z=M_ZERO
-      call parse_block_float (blk, row, 3, spec%Z_val)
+      call parse_block_float(blk, row, 3, spec%Z_val)
       call parse_block_string(blk, row, 4, spec%filename)
       read_data = 5
 
@@ -1133,30 +1133,30 @@ contains
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF) ! a pseudopotential file
       nn = parse_block_cols(blk, row)
 
-      call parse_block_float (blk, row, 3, spec%Z)
+      call parse_block_float(blk, row, 3, spec%Z)
 
       if(spec%type == SPEC_PS_UPF) then 
         read_data = 4
       end if
 
       if(nn > 4) then
-        call parse_block_integer (blk, row, 4, spec%lmax)
+        call parse_block_integer(blk, row, 4, spec%lmax)
         read_data = 5
       end if
 
       if(nn > 5) then
-        call parse_block_integer (blk, row, 5, spec%lloc)
+        call parse_block_integer(blk, row, 5, spec%lloc)
         read_data = 6
       end if
 
       if(nn > 6) then
-        call parse_block_float (blk, row, 6, spec%def_h)
+        call parse_block_float(blk, row, 6, spec%def_h)
         spec%def_h = units_to_atomic(units_inp%length, spec%def_h)
         read_data = 7
       end if
 
       if(nn > 7) then
-        call parse_block_float (blk, row, 7, spec%def_rsize)
+        call parse_block_float(blk, row, 7, spec%def_rsize)
         spec%def_rsize = units_to_atomic(units_inp%length, spec%def_rsize)
         read_data = 8
       end if
@@ -1165,7 +1165,7 @@ contains
 
       !for the moment we will read lmax and lloc, even if they are not necessary,
       !and we will not get any data from the default values
-      call parse_block_float (blk, row, 3, spec%z)
+      call parse_block_float(blk, row, 3, spec%z)
       call parse_block_string(blk, row, 4, spec%filename)
       call parse_block_integer(blk, row, 5, spec%lmax)
       call parse_block_integer(blk, row, 6, spec%lloc)
