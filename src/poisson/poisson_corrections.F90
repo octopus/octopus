@@ -41,10 +41,8 @@ module poisson_corrections_m
     poisson_corrections_init, &
     poisson_corrections_end,  &
     correct_rho,              &
-    boundary_conditions,      &
-    poisson_corr_t
-
-  public ::                   &
+    poisson_boundary_conditions, &
+    poisson_corr_t,           &
     internal_laplacian_op,    &
     internal_dotp,            &
     der_pointer,              &
@@ -313,7 +311,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine boundary_conditions(this, mesh, rho, pot)
+  subroutine poisson_boundary_conditions(this, mesh, rho, pot)
     type(poisson_corr_t), intent(in)    :: this    
     type(mesh_t),         intent(in)    :: mesh
     FLOAT,                intent(in)    :: rho(:)  !< rho(mesh%np)
@@ -323,7 +321,7 @@ contains
     FLOAT   :: xx(MAX_DIM), rr, s1, sa, gylm(1:MAX_DIM)
     FLOAT, allocatable :: mult(:)
 
-    PUSH_SUB(boundary_conditions)
+    PUSH_SUB(poisson_boundary_conditions)
 
     SAFE_ALLOCATE(mult(1:(this%maxl+1)**2))
 
@@ -349,8 +347,8 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(mult)
-    POP_SUB(boundary_conditions)
-  end subroutine boundary_conditions
+    POP_SUB(poisson_boundary_conditions)
+  end subroutine poisson_boundary_conditions
 
 end module poisson_corrections_m
 

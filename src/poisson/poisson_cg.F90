@@ -83,7 +83,7 @@ contains
 
     ! build initial guess for the potential
     wk(1:der%mesh%np) = pot(1:der%mesh%np)
-    call boundary_conditions(corrector, der%mesh, rho, wk)
+    call poisson_boundary_conditions(corrector, der%mesh, rho, wk)
     call dderivatives_lapl(der, wk, lwk, .true.)
 
     zk(1:der%mesh%np) = -M_FOUR*M_PI*rho(1:der%mesh%np) - lwk(1:der%mesh%np)
