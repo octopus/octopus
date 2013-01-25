@@ -180,8 +180,7 @@ contains
     !%Option cg 5
     !% Conjugate gradients.
     !%Option cg_corrected 6
-    !% Conjugate gradients, corrected for boundary conditions.
-    !% Further specification occurs with variables <tt>PoissonSolverBoundaries</tt> and <tt>PoissonSolverMaxMultipole</tt>.
+    !% Conjugate gradients, corrected for boundary conditions (only for finite systems).
     !%Option multigrid 7
     !% Multigrid method.
     !%Option isf 8
@@ -279,6 +278,11 @@ contains
 
     if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_DIRECT_SUM) then
       message(1) = 'A periodic system may not use the direct_sum Poisson solver.'
+      call messages_fatal(1)
+    end if
+
+    if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_CG_CORRECTED) then
+      message(1) = 'A periodic system may not use the cg_corrected Poisson solver.'
       call messages_fatal(1)
     end if
 

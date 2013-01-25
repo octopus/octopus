@@ -78,6 +78,9 @@ contains
 
     PUSH_SUB(poisson_corrections_init)
 
+    if(simul_box_is_periodic(mesh%sb)) &
+      call messages_not_implemented("Poisson boundary corrections for periodic systems")
+
     !%Variable PoissonSolverBoundaries
     !%Type integer
     !%Section Hamiltonian::Poisson
@@ -266,7 +269,7 @@ contains
   subroutine get_multipoles(this, mesh, rho, ml, mult)
     type(poisson_corr_t), intent(in)  :: this
     type(mesh_t),         intent(in)  :: mesh
-    FLOAT,                intent(in)  :: rho(:)  ! rho(mesh%np)
+    FLOAT,                intent(in)  :: rho(:)  !< rho(mesh%np)
     integer,              intent(in)  :: ml
     FLOAT,                intent(out) :: mult((ml+1)**2)
 
