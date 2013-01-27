@@ -201,9 +201,6 @@ contains
 #ifdef HAVE_OPENCL
     message(1) = trim(message(1))//' opencl'
 #endif
-#ifdef HAVE_CLAMDFFT
-    message(1) = trim(message(1))//' clamdfft'
-#endif
 #ifdef HAVE_M128D
     message(1) = trim(message(1))//' sse2'
 #endif
@@ -257,6 +254,12 @@ contains
 #endif
 #ifdef HAVE_PSPIO
     message(2) = trim(message(2))//' pspio'
+#endif
+#ifdef HAVE_CLAMDFFT
+    message(2) = trim(message(2))//' clamdfft'
+#endif
+#ifdef HAVE_CLAMDBLAS
+    message(2) = trim(message(2))//' clamdblas'
 #endif
 
     message(3) = &
