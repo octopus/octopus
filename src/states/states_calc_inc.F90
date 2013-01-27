@@ -1290,6 +1290,8 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
 
 #endif
 
+      call opencl_finish()
+
       do ib = st%block_start, st%block_end
         call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psinew_buffer, st%nst)
       end do
