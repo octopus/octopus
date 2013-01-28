@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
 
-Test       : Hartree
+Test       : Hartree OpenCL
 Options    : clamdfft
 Programs   : oct-test
 TestGroups : short-run, components
