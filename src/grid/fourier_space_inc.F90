@@ -70,6 +70,7 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
   type(cube_t),             intent(in)  :: cube
   R_TYPE,                   intent(in)  :: op(:, :, :)
   logical, optional,        intent(in)  :: in_device
+
   integer :: ii, jj, kk
 
   PUSH_SUB(X(fourier_space_op_init))

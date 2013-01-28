@@ -186,6 +186,7 @@ contains
 
 
   !-----------------------------------------------------------------
+  !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
   subroutine poisson_fft_build_3d_2d(this, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
     type(mesh_t),        intent(inout) :: mesh
@@ -250,6 +251,7 @@ contains
           if(abs(modg2) > M_EPSILON) then
             gz = abs(gg(3))
             gpar = hypot(gg(1), gg(2))
+            ! note: if gpar = 0, then modg2 = gz**2
             fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_2D(gpar,gz,r_c)/modg2
           else
             fft_Coulb_FS(ix, iy, iz) = -M_HALF*r_c**2
@@ -272,6 +274,7 @@ contains
 
 
   !-----------------------------------------------------------------
+  !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
   subroutine poisson_fft_build_3d_1d(this, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
     type(mesh_t),        intent(inout) :: mesh
@@ -394,6 +397,7 @@ contains
 
 
   !-----------------------------------------------------------------
+  !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
   subroutine poisson_fft_build_3d_0d(this, mesh, cube, kernel)
     type(poisson_fft_t), intent(inout) :: this
     type(mesh_t),        intent(inout) :: mesh
@@ -484,6 +488,7 @@ contains
 
 
   !-----------------------------------------------------------------
+  !> A. Castro et al., Phys. Rev. B 80, 033102 (2009)
   subroutine poisson_fft_build_2d_0d(this, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
@@ -557,13 +562,14 @@ contains
     
 
   !-----------------------------------------------------------------
+  !> A. Castro et al., Phys. Rev. B 80, 033102 (2009)
   subroutine poisson_fft_build_2d_1d(this, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
 
     integer :: ix, iy, ixx(2), db(2)
-    FLOAT :: temp(2), vec, r_c, gx, gy, default_r_c
+    FLOAT :: temp(2), r_c, gx, gy, default_r_c
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_2d_1d)
@@ -603,7 +609,6 @@ contains
       do iy = 1, db(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
         gy = temp(2)*ixx(2)
-        vec = sqrt( (temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
         fft_coulb_fs(ix, iy, 1) = poisson_cutoff_2d_1d(gy, gx, r_c)
       end do
     end do
@@ -618,6 +623,7 @@ contains
 
 
   !-----------------------------------------------------------------
+  !> A. Castro et al., Phys. Rev. B 80, 033102 (2009)
   subroutine poisson_fft_build_2d_2d(this, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh

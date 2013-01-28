@@ -67,8 +67,8 @@ module poisson_cutoff_m
   end interface poisson_cutoff_1D_0D
 
   interface poisson_cutoff_intcoslog
-    real(8) function intcoslog(mu, gx, gy)
-      real(8), intent(in) :: mu, gx, gy
+    real(8) function intcoslog(mu, gy, gx)
+      real(8), intent(in) :: mu, gy, gx
     end function intcoslog
     module procedure poisson_cutoff_intcoslog4
   end interface poisson_cutoff_intcoslog
@@ -78,12 +78,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  real(4) function poisson_cutoff_intcoslog4(mu, gx, gy)
+  real(4) function poisson_cutoff_intcoslog4(mu, gy, gx)
     real(4), intent(in) :: mu, gx, gy
 
     !no PUSH_SUB, called too often
 
-    poisson_cutoff_intcoslog4 = intcoslog(real(mu, 8), real(gx, 8), real(gy, 8))
+    poisson_cutoff_intcoslog4 = intcoslog(real(mu, 8), real(gy, 8), real(gx, 8))
 
   end function poisson_cutoff_intcoslog4
   ! ---------------------------------------------------------
@@ -174,7 +174,7 @@ contains
 
     if ( abs(x) < M_EPSILON ) then
       ! Simpson rule for the G_x = 0 contribution -log(r)
-      dr = rmax/real(nr)
+      dr = rmax/real(nr, REAL_PRECISION)
       sum = M_ZERO
       do j = 1, nr - 1, 2
         r = j*dr
@@ -190,7 +190,6 @@ contains
     end if
 
   end function poisson_cutoff_3D_1D
-
 
   ! ---------------------------------------------------------
   FLOAT function poisson_cutoff_3D_2D(p, z, r) result(cutoff)
