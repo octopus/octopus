@@ -63,8 +63,8 @@ module poisson_fft_m
        POISSON_FFT_KERNEL_CORRECTED =  4
 
   type poisson_fft_t
-    type(fourier_space_op_t) :: coulb
-    integer                  :: kernel
+    type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
+    integer                  :: kernel !< choice of kernel, one of options above
   end type poisson_fft_t
 contains
 
@@ -87,6 +87,9 @@ contains
         call poisson_fft_build_1d_0d(this, mesh, cube, soft_coulb_param)
       case(POISSON_FFT_KERNEL_NOCUT)
         call poisson_fft_build_1d_1d(this, mesh, cube, soft_coulb_param)
+      case default
+        message(1) = "Invalid Poisson FFT kernel for 1D."
+        call messages_fatal(1)
       end select
 
     case(2)
@@ -97,6 +100,9 @@ contains
         call poisson_fft_build_2d_1d(this, mesh, cube)
       case(POISSON_FFT_KERNEL_NOCUT)
         call poisson_fft_build_2d_2d(this, mesh, cube)
+      case default
+        message(1) = "Invalid Poisson FFT kernel for 2D."
+        call messages_fatal(1)
       end select
       
     case(3)
@@ -112,7 +118,10 @@ contains
         
       case(POISSON_FFT_KERNEL_NOCUT)
         call poisson_fft_build_3d_3d(this, mesh, cube)
-        
+
+      case default
+        message(1) = "Invalid Poisson FFT kernel for 3D."
+        call messages_fatal(1)        
       end select
     end select
 
@@ -744,7 +753,7 @@ contains
     FLOAT,                          intent(out)   :: pot(:)
     FLOAT,                          intent(in)    :: rho(:)
     type(mesh_cube_parallel_map_t), intent(in)    :: mesh_cube_map
-    logical, optional, intent(in)                 :: average_to_zero
+    logical,              optional, intent(in)    :: average_to_zero !< default is false
 
     logical :: average_to_zero_
     FLOAT :: average
