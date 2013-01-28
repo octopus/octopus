@@ -89,8 +89,9 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
   else
     this%in_device_memory = .true.
 #ifdef HAVE_OPENCL
-    call opencl_create_buffer(this%op_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, product(cube%rs_n(1:3)))
-    call opencl_write_buffer(this%op_buffer, product(cube%rs_n(1:3)), op)
+    ASSERT(all(cube%fs_n(1:3) == ubound(op)))
+    call opencl_create_buffer(this%op_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, product(cube%fs_n(1:3)))
+    call opencl_write_buffer(this%op_buffer, product(cube%fs_n(1:3)), op)
 #endif
   end if
 
