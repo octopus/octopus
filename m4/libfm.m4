@@ -48,7 +48,6 @@ dnl Backup LIBS
 acx_libfm_save_LIBS="$LIBS"
 LIBS="$FLIBS $LIBS_LIBFM $LIBS"
 
-echo $LIBS_LIBFM
 dnl First, check LIBS_LIBFM environment variable
 if test $acx_libfm_ok = no; then
   AC_MSG_CHECKING([for $fmm_func in $LIBS_LIBFM])
