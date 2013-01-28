@@ -193,7 +193,7 @@ contains
 
     integer :: ix, iy, iz, ixx(3), db(3), idim
     FLOAT :: temp(3), modg2
-    FLOAT :: gpar, gx, gz, r_c, gg(3), default_r_c
+    FLOAT :: gpar, gz, r_c, gg(3), default_r_c
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_3d_2d)
@@ -233,7 +233,6 @@ contains
 
     do ix = 1, cube%fs_n_global(1)
       ixx(1) = pad_feq(ix, db(1), .true.)
-      gx = temp(1)*ixx(1)
       do iy = 1, cube%fs_n_global(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
         do iz = 1, cube%fs_n_global(3)
@@ -403,7 +402,7 @@ contains
 
     integer :: ix, iy, iz, ixx(3), db(3), idim, lx, ly, lz, n1, n2, n3
     FLOAT :: temp(3), modg2
-    FLOAT :: gx, r_c, gg(3), default_r_c
+    FLOAT :: r_c, gg(3), default_r_c
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_3d_0d)
@@ -439,7 +438,6 @@ contains
     do lx = 1, n1
       ix = cube%fs_istart(1) + lx - 1
       ixx(1) = pad_feq(ix, db(1), .true.)
-      gx = temp(1)*ixx(1)
       do ly = 1, n2
         iy = cube%fs_istart(2) + ly - 1
         ixx(2) = pad_feq(iy, db(2), .true.)
