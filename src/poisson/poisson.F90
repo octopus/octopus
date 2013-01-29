@@ -416,9 +416,13 @@ contains
         case(POISSON_FFT_KERNEL_SPH) 
           call mesh_double_box(der%mesh%sb, der%mesh, box)
           box(:) = maxval(box)
+        case(POISSON_FFT_KERNEL_CYL) 
+          call mesh_double_box(der%mesh%sb, der%mesh, box)
+          box(2) = maxval(box(2:3)) ! max of finite directions
+          box(3) = maxval(box(2:3)) ! max of finite directions
         case(POISSON_FFT_KERNEL_CORRECTED)
           box(:) = der%mesh%idx%ll(:)
-        case(POISSON_FFT_KERNEL_CYL, POISSON_FFT_KERNEL_PLA, POISSON_FFT_KERNEL_NOCUT)
+        case(POISSON_FFT_KERNEL_PLA, POISSON_FFT_KERNEL_NOCUT)
           call mesh_double_box(der%mesh%sb, der%mesh, box)
         end select
 
