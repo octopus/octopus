@@ -241,6 +241,8 @@ void FC_FUNC_(oct_1dminimize, OCT_1DMINIMIZE)(double *a, double *b, double *m, f
 
   ierr = gsl_min_fminimizer_set (s, &F, *m, *a, *b);
 
+  gsl_set_error_handler_off();
+
   do
     {
       iter++;

@@ -1016,6 +1016,8 @@ contains
     !xx = omega
     !call hsfunction(xx, minhsval)
 
+    ierr = 0
+
     ie = int(aa/energy_step_)
     ww = ie * energy_step_
     if(ww < aa) then
@@ -1056,7 +1058,7 @@ contains
 
     if(ierr .ne. 0) then
       write(message(1),'(a,f14.6,a)') 'spectrum_hsfunction_min: The maximum at', xx,' was not properly converged.'
-      write(message(2),'(a,i5)')      'Error code: ierr'
+      write(message(2),'(a,i12)')      'Error code: ', ierr
       call messages_warning(2)
     end if
     call hsfunction(xx, hsval)
