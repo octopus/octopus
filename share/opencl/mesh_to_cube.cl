@@ -48,7 +48,7 @@ __kernel void dmesh_to_cube(const int nmap,
   for(int ii = 0; ii < count; ii++){
     double2 aa;
     aa.s0 = mesh_function[ip + ii];
-    aa.s1 = aa.s0;
+    aa.s1 = 0.0;
     cube_function[ix*stridex + iy*stridey + (iz + ii)*stridez] = aa;
   }
 
