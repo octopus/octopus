@@ -475,8 +475,9 @@ contains
     !%Section Output
     !%Description
     !% The output is saved when the iteration number is a multiple of the
-    !% <tt>OutputEvery</tt> variable. This works for the ground-state and
-    !% time-dependent runs.
+    !% <tt>OutputEvery</tt> variable. For <tt>CalculationMode = gs</tt> or <tt>unocc</tt>,
+    !% this variable controls writing of restart files. For <tt>td</tt> and <tt>opt_control</tt>,
+    !% this variable also controls the writing of the output requested by the variable <tt>Output</tt>.
     !%End
     call parse_integer(datasets_check('OutputEvery'), 50, outp%iter)
 

@@ -69,7 +69,7 @@ contains
 
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, occupied_states, total_states, iter
-    logical :: converged
+    logical :: converged, forced_finish
     integer :: max_iter, nst_calculated
     integer, allocatable :: states_read(:, :)
     character(len=50) :: str
@@ -138,15 +138,19 @@ contains
       call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = occupied_states + 1)
       call messages_print_stress(stdout)
 
-      if(converged .or. clean_stop()) exit
-    end do
+      forced_finish = clean_stop()
+      
+      ! write restart information.
+      if(converged .or. (modulo(iter, sys%outp%iter) == 0) .or. iter == max_iter .or. forced_finish) then
+        call restart_write(trim(tmpdir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, iter=iter)
+        if(ierr .ne. 0) then
+          message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
+          call messages_fatal(1)
+        end if
+      end if
 
-    ! write restart information.
-    call restart_write (trim(tmpdir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr)
-    if(ierr .ne. 0) then
-      message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
-      call messages_fatal(1)
-    end if
+      if(converged .or. forced_finish) exit
+    end do
 
     if(.not. converged) then
       write(message(1),'(a)') 'Some of the unoccupied states are not fully converged!'
