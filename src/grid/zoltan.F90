@@ -49,6 +49,8 @@ module zoltan_m
   !%Description
   !% Decides which algorithm is used to partition the mesh. By default,
   !% <tt>graph</tt> partitioning is used for 8 or more partitions, and <tt>rcb</tt> for fewer.
+  !% Applies only if <tt>MeshPartitionPackage = metis</tt> or <tt>zoltan</tt>.
+  !% All methods are available with Zoltan, but only <tt>rcb</tt> and <tt>graph</tt> with METIS.
   !%Option rcb 2
   !% Recursive coordinate bisection partitioning.
   !%Option rib 3
@@ -58,7 +60,7 @@ module zoltan_m
   !%Option reftree 5
   !% Refinement-tree-based partitioning.
   !%Option graph 6
-  !% Graph partitioning.
+  !% Graph partitioning (called 'k-way' by METIS).
   !%Option hypergraph 7
   !% Hypergraph partitioning.
   !%End

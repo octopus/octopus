@@ -122,7 +122,7 @@ contains
     !%Section Execution::Parallelization
     !%Description
     !% Decides which library to use to perform the mesh partition. By
-    !% default, METIS is used (if available).
+    !% default, METIS is used (if available); otherwise, Zoltan is used.
     !%Option metis 2
     !% METIS library.
     !%Option zoltan 3
