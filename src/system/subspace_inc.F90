@@ -97,6 +97,8 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
 
       end do
 
+      SAFE_DEALLOCATE_A(rdiff)
+
     end if
 
     SAFE_DEALLOCATE_A(hmss)
@@ -114,7 +116,6 @@ end subroutine X(subspace_diag)
 !> This routine diagonalises the Hamiltonian in the subspace defined by
 !! the states; this version is aware of parallelization in states but
 !! consumes more memory.
-!
 subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
