@@ -87,6 +87,7 @@ contains
 #ifdef HAVE_METIS
     default = METIS
 #endif
+    ! this variable is documented in src/grid/mesh_partition.F90
     call parse_integer(datasets_check('MeshPartitionPackage'), default, this%library)
 
     call parse_integer(datasets_check('BoxShape'), MINIMUM, this%box_shape)

@@ -123,6 +123,7 @@ contains
     !%Description
     !% Decides which library to use to perform the mesh partition. By
     !% default, METIS is used (if available); otherwise, Zoltan is used.
+    !% METIS is faster than Zoltan but uses more memory since it is serial.
     !%Option metis 2
     !% METIS library.
     !%Option zoltan 3
