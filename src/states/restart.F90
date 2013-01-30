@@ -97,14 +97,24 @@ contains
     PUSH_SUB(clean_stop)
 
     clean_stop = .false.
-    inquire(file='stop', exist=file_exists)
-    if(file_exists) then
+
+    if(mpi_grp_is_root(mpi_world)) then
+      inquire(file='stop', exist=file_exists)
+      if(file_exists) then
+        call loct_rm('stop')
+        clean_stop = .true.
+      endif
+    end if
+
+#ifdef HAVE_MPI
+    ! make sure all nodes agree on whether this condition occurred
+    call MPI_Bcast(clean_stop, 1, MPI_LOGICAL, 0, mpi_world%comm, mpi_err)
+#endif
+
+    if(clean_stop) then
       message(1) = 'Clean STOP'
       call messages_warning(1)
-      clean_stop = .true.
-
-      if(mpi_grp_is_root(mpi_world)) call loct_rm('stop')
-    end if
+    endif
 
     POP_SUB(clean_stop)
   end function clean_stop
