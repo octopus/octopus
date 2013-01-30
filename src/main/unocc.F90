@@ -69,8 +69,8 @@ contains
 
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, occupied_states, total_states, iter
-    logical :: converged, forced_finish
-    integer :: max_iter, nst_calculated
+    logical :: converged, forced_finish, showoccstates
+    integer :: max_iter, nst_calculated, showstart
     integer, allocatable :: states_read(:, :)
     character(len=50) :: str
 
@@ -87,9 +87,25 @@ contains
     call parse_integer(datasets_check('UnoccMaximumIter'), 50, max_iter)
     if(max_iter < 0) max_iter = huge(max_iter)
 
+    !%Variable UnoccShowOccStates
+    !%Type logical
+    !%Default false
+    !%Section Calculation Modes::Unoccupied States
+    !%Description
+    !% If true, the convergence for the occupied states will be shown too in the output.
+    !% This is useful only for testing.
+    !%End
+    call parse_logical(datasets_check('UnoccShowOccStates'), .false., showoccstates)
+
     occupied_states = sys%st%nst
     call init_(sys%gr%mesh, sys%st)
     total_states = sys%st%nst
+
+    if(showoccstates) then
+      showstart = 1
+    else
+      showstart = occupied_states + 1
+    endif
 
     ASSERT(total_states >= occupied_states)
 
@@ -135,7 +151,7 @@ contains
 
       write(str, '(a,i5)') 'Unoccupied states iteration #', iter
       call messages_print_stress(stdout, trim(str))
-      call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = occupied_states + 1)
+      call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart)
       call messages_print_stress(stdout)
 
       forced_finish = clean_stop()
