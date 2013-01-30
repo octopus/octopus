@@ -337,7 +337,7 @@ contains
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(in)    :: hm
     integer,              intent(in)    :: iter
-    logical,    optional, intent(inout) :: conv
+    logical,    optional, intent(out)   :: conv
 
     integer :: maxiter, ik, ns, ist
 #ifdef HAVE_MPI

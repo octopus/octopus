@@ -198,7 +198,7 @@ contains
     
     end if
   
-end subroutine messages_end
+  end subroutine messages_end
 
   ! ---------------------------------------------------------
   subroutine messages_fatal(no_lines, only_root_writes)
