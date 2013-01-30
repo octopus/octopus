@@ -127,7 +127,7 @@ subroutine X(fft_forward)(fft, in, out)
     ASSERT(fft_array(slot)%library == FFTLIB_CLAMD)
 
 #ifdef HAVE_CLAMDFFT
-    if(.not. fft%cl_use_real) then
+    if(.not. fft%cl_use_real .or. fft_array(slot)%type == FFT_COMPLEX) then
       call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan, CLFFT_FORWARD, opencl%command_queue, &
         in%mem, out%mem, cl_status)
       if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
