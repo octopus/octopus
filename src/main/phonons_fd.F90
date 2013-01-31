@@ -89,7 +89,7 @@ contains
     vib%disp = units_to_atomic(units_inp%length, vib%disp)
 
     ! calculate dynamical matrix
-    call get_dyn_matrix(sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, vib)
+    call get_dyn_matrix(sys%gr, sys%mc, sys%geo, sys%st, sys%ks, hm, sys%outp, vib)
 
     call vibrations_output(vib)
     
@@ -122,8 +122,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_dyn_matrix(gr, geo, st, ks, hm, outp, vib)
+  subroutine get_dyn_matrix(gr, mc, geo, st, ks, hm, outp, vib)
     type(grid_t), target, intent(inout) :: gr
+    type(multicomm_t),    intent(in)    :: mc
     type(geometry_t),     intent(inout) :: geo
     type(states_t),       intent(inout) :: st
     type(v_ks_t),         intent(inout) :: ks
@@ -161,7 +162,7 @@ contains
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, hm, st, calc_eigenval=.true.)
         call energy_calc_total (hm, gr, st)
-        call scf_run(scf, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces0(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
         end do
@@ -176,7 +177,7 @@ contains
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, hm, st, calc_eigenval=.true.)
         call energy_calc_total(hm, gr, st)
-        call scf_run(scf, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
         end do

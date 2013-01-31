@@ -154,7 +154,7 @@ contains
       call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart)
       call messages_print_stress(stdout)
 
-      forced_finish = clean_stop()
+      forced_finish = clean_stop(sys%mc%master_comm)
       
       ! write restart information.
       if(converged .or. (modulo(iter, sys%outp%iter) == 0) .or. iter == max_iter .or. forced_finish) then

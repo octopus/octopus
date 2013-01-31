@@ -91,8 +91,10 @@ module restart_m
 contains
 
   !> returns true if a file named stop exists
-  function clean_stop()
-    logical clean_stop, file_exists
+  function clean_stop(comm)
+    integer, intent(in) :: comm !< communicator spanning all nodes that will call this function, i.e. not any slaves
+
+    logical :: clean_stop, file_exists
 
     PUSH_SUB(clean_stop)
 
@@ -108,7 +110,7 @@ contains
 
 #ifdef HAVE_MPI
     ! make sure all nodes agree on whether this condition occurred
-    call MPI_Bcast(clean_stop, 1, MPI_LOGICAL, 0, mpi_world%comm, mpi_err)
+    call MPI_Bcast(clean_stop, 1, MPI_LOGICAL, 0, comm, mpi_err)
 #endif
 
     if(clean_stop) then

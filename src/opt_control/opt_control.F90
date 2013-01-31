@@ -229,7 +229,7 @@ contains
         call controlfunction_copy(par_prev, par)
         call f_striter(sys, hm, td, par, j1)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
-        if(clean_stop() .or. stop_loop) exit ctr_loop
+        if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
           call controlfunction_mixing(oct_iterator_current(iterator), par_prev, par, par_new)
           call controlfunction_copy(par, par_new)
@@ -258,7 +258,7 @@ contains
         call controlfunction_copy(par_prev, par)
         call f_iter(sys, hm, td, psi, par, prop_psi, prop_chi, j1)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
-        if(clean_stop() .or. stop_loop) exit ctr_loop
+        if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
         if( oct%use_mixing .and. (oct_iterator_current(iterator) > 1) ) then
           ! We do not mix if it is the first iteration, since in that case f_iter only propagates
           ! with the input field, and does not generate any output field.
@@ -295,7 +295,7 @@ contains
         call controlfunction_copy(par_prev, par)
         call f_wg05(sys, hm, td, psi, par, prop_psi, prop_chi, j1)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
-        if(clean_stop() .or. stop_loop) exit ctr_loop
+        if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
           call controlfunction_mixing(oct_iterator_current(iterator), par_prev, par, par_new)
           call controlfunction_copy(par, par_new)
@@ -326,7 +326,7 @@ contains
       j1 = target_j1(target, sys%gr, psi)
       stop_loop = iteration_manager(j1, par, par_prev, iterator)
       call controlfunction_end(par_prev)
-      if(clean_stop() .or. stop_loop) then
+      if(clean_stop(sys%mc%master_comm) .or. stop_loop) then
         call states_end(psi)
         call oct_prop_end(prop_chi)
         call oct_prop_end(prop_psi)
@@ -340,7 +340,7 @@ contains
         call f_zbr98(sys, hm, td, psi, prop_psi, prop_chi, par)
         j1 = target_j1(target, sys%gr, psi)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
-        if(clean_stop() .or. stop_loop) exit ctr_loop
+        if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
           call controlfunction_mixing(oct_iterator_current(iterator) - 1, par_prev, par, par_new)
           call controlfunction_copy(par, par_new)

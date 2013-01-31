@@ -190,7 +190,7 @@ contains
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
     call messages_info(2)
-    call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
+    call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
 
     gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
     trrho = M_ZERO
@@ -256,7 +256,7 @@ contains
         endif
 
         call scf_mix_clear(scfv)
-        call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
+        call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
 
         trrho = M_ZERO
         do is = 1, sys%st%d%spin_channels
@@ -333,7 +333,7 @@ contains
       endif
 
       call scf_mix_clear(scfv)
-      call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
+      call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
   
       trrho = M_ZERO
       do is = 1, sys%st%d%spin_channels

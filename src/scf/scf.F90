@@ -45,6 +45,7 @@ module scf_m
   use mpi_m
   use mpi_lib_m
   use multigrid_m
+  use multicomm_m
   use ob_lippmann_schwinger_m
   use parser_m
   use preconditioners_m
@@ -397,8 +398,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done)
+  subroutine scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done)
     type(scf_t),          intent(inout) :: scf !< self consistent cycle
+    type(multicomm_t),    intent(in)    :: mc
     type(grid_t),         intent(inout) :: gr !< grid
     type(geometry_t),     intent(inout) :: geo !< geometry
     type(states_t),       intent(inout) :: st !< States
@@ -683,7 +685,7 @@ contains
       end select
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
-      forced_finish = clean_stop()
+      forced_finish = clean_stop(mc%master_comm)
 
       if(gs_run_) then 
         ! save restart information

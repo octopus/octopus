@@ -147,7 +147,7 @@ contains
 
     if(sys%st%d%pack_states) call states_pack(sys%st)
 
-    call scf_run(scfv, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
+    call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
     call scf_end(scfv)
 
     if(sys%st%d%pack_states) call states_unpack(sys%st)

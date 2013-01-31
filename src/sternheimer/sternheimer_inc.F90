@@ -305,7 +305,7 @@ subroutine X(sternheimer_solve)(                           &
     else
       ! not quitting if converged allows results to be calculated if possible
       ! before dying on the next direction or frequency
-      if(clean_stop()) then
+      if(clean_stop(sys%mc%master_comm)) then
         message(1) = "Exiting cleanly."
         call messages_fatal(1, only_root_writes = .true.)
       endif

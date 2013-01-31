@@ -211,14 +211,13 @@ contains
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
 
     ii = 1
-    stopping = .false.
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
     ! step "iter" means propagation from (iter-1)*dt to iter*dt.
     propagation: do iter = td%iter, td%max_iter
 
-      if(clean_stop()) stopping = .true.
+      stopping = clean_stop(sys%mc%master_comm)
       call profiling_in(prof, "TIME_STEP")
 
       if(iter > 1) then
@@ -246,7 +245,7 @@ contains
         call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, iter*td%dt, td%dt)
         call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
         ! now calculate the eigenfunctions
-        call scf_run(td%scf, sys%gr, geo, st, sys%ks, hm, sys%outp, &
+        call scf_run(td%scf, sys%mc, sys%gr, geo, st, sys%ks, hm, sys%outp, &
           gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
       case(CP)
         if(states_are_real(st)) then

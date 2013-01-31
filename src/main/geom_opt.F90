@@ -60,7 +60,7 @@ module geom_opt_m
     integer  :: max_iter
     integer  :: what2minimize
 
-    ! shortcuts
+    !> shortcuts
     type(scf_t)                  :: scfv
     type(geometry_t),    pointer :: geo
     type(hamiltonian_t), pointer :: hm
@@ -328,8 +328,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Note: you might think it would be better to change the arguments with '(size)' below to '(:)'.
-  ! However, if you do that, then you will (portably) get a segmentation fault.
+  !> Note: you might think it would be better to change the arguments with '(size)' below to '(:)'.
+  !! However, if you do that, then you will (portably) get a segmentation fault.
   subroutine calc_point(size, coords, objective, getgrad, df)
     integer,     intent(in)    :: size
     REAL_DOUBLE, intent(in)    :: coords(size)
@@ -357,7 +357,7 @@ contains
     call energy_calc_total(g_opt%hm, g_opt%syst%gr, g_opt%st)
 
     ! do SCF calculation
-    call scf_run(g_opt%scfv, g_opt%syst%gr, g_opt%geo, g_opt%st, &
+    call scf_run(g_opt%scfv, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, &
       g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT)
 
     ! store results
@@ -378,7 +378,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Same as calc_point, but without the gradients.
+  !> Same as calc_point, but without the gradients.
   subroutine calc_point_ng(size, coords, objective)
     integer      :: size
     REAL_DOUBLE  :: coords(size)
@@ -405,7 +405,7 @@ contains
   ! ---------------------------------------------------------
   subroutine write_iter_info(geom_iter, size, energy, maxdx, maxdf, coords)
     integer,     intent(in) :: geom_iter
-    integer,     intent(in) :: size ! must equal dim * natoms
+    integer,     intent(in) :: size !< must equal dim * natoms
     REAL_DOUBLE, intent(in) :: energy, maxdx, maxdf
     REAL_DOUBLE, intent(in) :: coords(size)
 
@@ -509,10 +509,10 @@ contains
   end subroutine from_coords
     
   ! ---------------------------------------------------------
-  ! Same as write_iter_info, but without the gradients.
+  !> Same as write_iter_info, but without the gradients.
   subroutine write_iter_info_ng(geom_iter, size, energy, maxdx, coords)
     integer,     intent(in) :: geom_iter
-    integer,     intent(in) :: size ! must equal dim * natoms
+    integer,     intent(in) :: size !< must equal dim * natoms
     REAL_DOUBLE, intent(in) :: energy, maxdx
     REAL_DOUBLE, intent(in) :: coords(size)
 
