@@ -23,87 +23,86 @@
 ! Index set of unconverged eigenvectors.
 #define UC uc(1:nuc)
 
-
-  ! ---------------------------------------------------------
-  !> Driver for the LOBPCG eigensolver that performs a per-block,
-  !! per-k-point iteration.
-  subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size)
-    type(grid_t),           intent(in)    :: gr
-    type(states_t),         intent(inout) :: st
-    type(hamiltonian_t),    intent(in)    :: hm
-    type(preconditioner_t), intent(in)    :: pre
-    FLOAT,                  intent(in)    :: tol
-    integer,                intent(inout) :: niter
-    integer,                intent(in)    :: ik
-    integer,                intent(inout) :: converged
-    FLOAT,                  intent(out)   :: diff(:) !< (1:st%nst)
-    integer,                intent(in)    :: block_size
-
-    integer            :: ib, psi_start, psi_end, constr_start, constr_end, bs
-    integer            :: n_matvec, conv, maxiter, iblock
+! ---------------------------------------------------------
+!> Driver for the LOBPCG eigensolver that performs a per-block,
+!! per-k-point iteration.
+subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size)
+  type(grid_t),           intent(in)    :: gr
+  type(states_t),         intent(inout) :: st
+  type(hamiltonian_t),    intent(in)    :: hm
+  type(preconditioner_t), intent(in)    :: pre
+  FLOAT,                  intent(in)    :: tol
+  integer,                intent(inout) :: niter
+  integer,                intent(in)    :: ik
+  integer,                intent(inout) :: converged
+  FLOAT,                  intent(out)   :: diff(:) !< (1:st%nst)
+  integer,                intent(in)    :: block_size
+  
+  integer            :: ib, psi_start, psi_end, constr_start, constr_end, bs
+  integer            :: n_matvec, conv, maxiter, iblock
 #ifdef HAVE_MPI
-    integer            :: outcount
-    FLOAT, allocatable :: ldiff(:)
+  integer            :: outcount
+  FLOAT, allocatable :: ldiff(:)
 #endif
-
-    PUSH_SUB(X(eigensolver_lobpcg))
-
-    bs = block_size
-
-    maxiter = niter
-    niter   = 0
-
-    diff(1:st%nst) = M_ZERO
-
-    iblock = 0
-
+  
+  PUSH_SUB(X(eigensolver_lobpcg))
+  
+  bs = block_size
+  
+  maxiter = niter
+  niter   = 0
+  
+  diff(1:st%nst) = M_ZERO
+  
+  iblock = 0
+  
+  if(mpi_grp_is_root(mpi_world)) then
+    call loct_progress_bar(st%nst*(ik - 1), st%nst*st%d%nik)
+  end if
+  
+  ! Iterate over all blocks.
+  do ib = st%st_start, st%st_end, bs
+    iblock    = iblock+1
+    psi_start = ib
+    psi_end   = ib+bs-1
+    
+    if(psi_end > st%st_end) then
+      psi_end = st%st_end
+    end if
+    constr_start = st%st_start
+    constr_end   = ib-1
+    
+    n_matvec = maxiter
+    
+    if(constr_end >= constr_start) then
+      call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
+        constr_start, constr_end, &
+        ik, pre, tol, n_matvec, conv, diff, &
+        constr = st%X(psi)(:, :, constr_start:constr_end, ik))
+    else
+      call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
+        constr_start, constr_end, ik, pre, tol, n_matvec, conv, diff)
+    end if
+    
+    niter     = niter + n_matvec
+    converged = converged + conv  
+    
     if(mpi_grp_is_root(mpi_world)) then
-      call loct_progress_bar(st%nst*(ik - 1), st%nst*st%d%nik)
+      call loct_progress_bar(st%nst*(ik - 1) + psi_end, st%nst*st%d%nik)
     end if
-
-    ! Iterate over all blocks.
-    do ib = st%st_start, st%st_end, bs
-      iblock    = iblock+1
-      psi_start = ib
-      psi_end   = ib+bs-1
-
-      if(psi_end > st%st_end) then
-        psi_end = st%st_end
-      end if
-      constr_start = st%st_start
-      constr_end   = ib-1
-
-      n_matvec = maxiter
-
-      if(constr_end >= constr_start) then
-        call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
-           constr_start, constr_end, &
-           ik, pre, tol, n_matvec, conv, diff, &
-           constr = st%X(psi)(:, :, constr_start:constr_end, ik))
-      else
-        call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
-           constr_start, constr_end, ik, pre, tol, n_matvec, conv, diff)
-      end if
-
-      niter         = niter + n_matvec
-      converged = converged + conv  
-
-      if(mpi_grp_is_root(mpi_world)) then
-        call loct_progress_bar(st%nst*(ik - 1) + psi_end, st%nst*st%d%nik)
-      end if
-    end do
-
+  end do
+  
 #if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      SAFE_ALLOCATE(ldiff(1:st%lnst))
-      ldiff(1:st%lnst) = diff(st%st_start:st%st_end)
-      call lmpi_gen_allgatherv(st%lnst, ldiff, outcount, diff, st%mpi_grp)
-      SAFE_DEALLOCATE_A(ldiff)
-    end if
+  if(st%parallel_in_states) then
+    SAFE_ALLOCATE(ldiff(1:st%lnst))
+    ldiff(1:st%lnst) = diff(st%st_start:st%st_end)
+    call lmpi_gen_allgatherv(st%lnst, ldiff, outcount, diff, st%mpi_grp)
+    SAFE_DEALLOCATE_A(ldiff)
+  end if
 #endif
-
-    POP_SUB(X(eigensolver_lobpcg))
-  end subroutine X(eigensolver_lobpcg)
+  
+  POP_SUB(X(eigensolver_lobpcg))
+end subroutine X(eigensolver_lobpcg)
 
 
 ! ---------------------------------------------------------

@@ -82,6 +82,12 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
       call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
       st%eigenval(ist, ik) = real(X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi), REAL_PRECISION)
       diff(ist) = X(states_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
+
+      if(in_debug_mode) then
+        write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: Evolution Eigensolver - ik', ik, &
+          ' ist ', ist, ' iter ', iter, ' res ', diff(ist)
+        call messages_info(1)
+      end if
     end do
 
     ! Reordering.... (maybe this is unnecessary since the orthonormalization already orders them...)

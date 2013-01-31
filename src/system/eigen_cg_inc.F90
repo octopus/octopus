@@ -188,7 +188,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
       res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(p, ik), psi)
 
       if(in_debug_mode) then
-        write(message(1), '(a,i4,a,i4,a,i4,a,f12.6)') 'Debug: CG Eigensolver - ik', ik, ' ist ', p, ' iter ', iter, ' res ', res
+        write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: CG Eigensolver - ik', ik, ' ist ', p, ' iter ', iter, ' res ', res
         call messages_info(1)
       end if
 
@@ -306,6 +306,13 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
 
       ! Check convergence
       res = X(states_residue)(gr%mesh, dim, phi, lambda, psi)
+
+      if(in_debug_mode) then
+        write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: CG New Eigensolver - ik', ik, &
+          ' ist ', ist, ' iter ', i + 1, ' res ', res
+        call messages_info(1)
+      end if
+
       if(present(diff)) diff(ist) = res
       if(res < tol) then
         if(conv == ist - 1) conv = ist
