@@ -792,8 +792,9 @@ end subroutine X(states_normalize_orbital)
 FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
   type(mesh_t),      intent(in)  :: mesh
   integer,           intent(in)  :: dim
-  R_TYPE,            intent(in)  :: hf(:,:), ff(:,:)
+  R_TYPE,            intent(in)  :: hf(:,:)
   FLOAT,             intent(in)  :: ee
+  R_TYPE,            intent(in)  :: ff(:,:)
 
   R_TYPE, allocatable :: res(:,:)
   type(profile_t), save :: prof

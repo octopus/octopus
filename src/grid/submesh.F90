@@ -38,24 +38,24 @@ module submesh_m
   implicit none
   private 
 
-  public ::                         &
-       submesh_t,                   &
-       submesh_null,                &
-       submesh_init_sphere,         &
-       submesh_copy,                &
-       submesh_get_inv,             &
-       dsm_integrate,               &
-       zsm_integrate,               &
-       submesh_add_to_mesh,         &
-       dsubmesh_batch_add,          &
-       zsubmesh_batch_add,          &
-       submesh_to_mesh_dotp,        &
-       dsubmesh_batch_add_matrix,   &
-       zsubmesh_batch_add_matrix,   &
-       dsubmesh_batch_dotp_matrix,  &
-       zsubmesh_batch_dotp_matrix,  &
-       submesh_overlap,             &
-       submesh_end
+  public ::                      &
+    submesh_t,                   &
+    submesh_null,                &
+    submesh_init_sphere,         &
+    submesh_copy,                &
+    submesh_get_inv,             &
+    dsm_integrate,               &
+    zsm_integrate,               &
+    submesh_add_to_mesh,         &
+    dsubmesh_batch_add,          &
+    zsubmesh_batch_add,          &
+    submesh_to_mesh_dotp,        &
+    dsubmesh_batch_add_matrix,   &
+    zsubmesh_batch_add_matrix,   &
+    dsubmesh_batch_dotp_matrix,  &
+    zsubmesh_batch_dotp_matrix,  &
+    submesh_overlap,             &
+    submesh_end
 
   type submesh_t
     FLOAT                 :: center(1:MAX_DIM)
@@ -83,10 +83,14 @@ contains
   subroutine submesh_null(sm)
     type(submesh_t), intent(out) :: sm
 
+    PUSH_SUB(submesh_null)
+
     sm%np = -1
     nullify(sm%map)
     nullify(sm%x)
     nullify(sm%mesh)
+
+    POP_SUB(submesh_null)
 
   end subroutine submesh_null
 

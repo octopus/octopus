@@ -240,7 +240,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
   integer :: nst, dim, ist, maxter, i, conv, ip, idim
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
-       gamma, sol(2), alpha, beta, theta, theta2, res ! Could be complex?
+    gamma, sol(2), alpha, beta, theta, theta2, res ! Could be complex?
   R_TYPE :: dot
   logical, allocatable :: orthogonal(:)
 
