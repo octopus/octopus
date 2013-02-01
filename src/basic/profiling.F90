@@ -86,7 +86,7 @@ module profiling_m
     profiling_output
 
   integer, parameter ::                 & 
-       LABEL_LENGTH = 17,               &  !< Max. number of characters of tag label.
+       LABEL_LENGTH = 20,               &  !< Max. number of characters of tag label.
        MAX_PROFILES = 200                  !< Max. number of tags.
   
   type profile_t
