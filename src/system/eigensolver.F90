@@ -293,6 +293,7 @@ contains
 
     nullify(eigens%diff)
     SAFE_ALLOCATE(eigens%diff(1:st%nst, 1:st%d%nik))
+    eigens%diff(1:st%nst, 1:st%d%nik) = 0
 
     SAFE_ALLOCATE(eigens%converged(1:st%d%nik))
     eigens%converged(1:st%d%nik) = 0
