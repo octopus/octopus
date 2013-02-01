@@ -83,7 +83,7 @@ module multicomm_m
     multicomm_is_slave,              &
     multicomm_have_slaves
 
-  ! possible parallelization strategies
+  !> possible parallelization strategies
   integer, public, parameter ::      &
     P_STRATEGY_SERIAL  = 0,          & !< single domain, all states, k-points on a single processor
     P_STRATEGY_DOMAINS = 1,          & !< parallelization in domains
@@ -198,12 +198,15 @@ contains
       !%Section Execution::Parallelization
       !%Description
       !% Specifies the size of the groups used for the
-      !% parallelization. For example (n_d, n_s, n_k) means we have
-      !% <i>n_d*n_s*n_k</i> processors and that the <i>k</i>-points should be
-      !% divided in <i>n_k</i> groups, the states in <i>n_s</i> groups, and each
-      !% state in <i>n_d</i> domains. You can pass the value <tt>fill</tt> to one
+      !% parallelization, as one number each for domain, states, <i>k</i>-points, and other.
+      !% For example (n_d, n_s, n_k, n_o) means we have
+      !% <i>n_d*n_s*n_k*n_o</i> processors and that electron-hole pairs (only for <tt>CalculationMode = casida</tt>)
+      !% will be divided into <i>n_o</i> groups, the <i>k</i>-points should be
+      !% divided into <i>n_k</i> groups, the states into <i>n_s</i> groups, and the grid
+      !% points into <i>n_d</i> domains. You can pass the value <tt>fill</tt> to one
       !% field: it will be replaced by the value required to complete
-      !% the number of processors in the run.
+      !% the number of processors in the run. Any value for the column corresponding to
+      !% a parallelization strategy unavailable for the current <tt>CalculationMode</tt> will be ignored.
       !%Option fill -1
       !% Replaced by the value required to complete the number of processors.
       !%End
