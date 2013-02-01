@@ -97,6 +97,7 @@ module scf_m
     ! several convergence criteria
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force
     FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev, abs_force
+    logical :: conv_eigen_error
 
     integer :: mix_field
     logical :: lcao_restricted
@@ -230,6 +231,16 @@ contains
       message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv | ConvForce "
       call messages_fatal(3)
     end if
+
+    !%Variable ConvEigenError
+    !%Type logical
+    !%Default false
+    !%Section SCF::Convergence
+    !%Description
+    !% If true, the calculation will not be considered converged unless all states have
+    !% individual errors less than <tt>EigensolverTolerance</tt>.
+    !%End
+    call parse_logical(datasets_check('ConvEigenError'), .false., scf%conv_eigen_error)
 
     if(scf%max_iter < 0) scf%max_iter = huge(scf%max_iter)
 
@@ -646,7 +657,8 @@ contains
         (scf%conv_rel_dens  <= M_ZERO .or. scf%rel_dens  <= scf%conv_rel_dens)  .and. &
         (scf%conv_abs_force <= M_ZERO .or. scf%abs_force <= scf%conv_abs_force) .and. &
         (scf%conv_abs_ev    <= M_ZERO .or. scf%abs_ev    <= scf%conv_abs_ev)    .and. &
-        (scf%conv_rel_ev    <= M_ZERO .or. scf%rel_ev    <= scf%conv_rel_ev)
+        (scf%conv_rel_ev    <= M_ZERO .or. scf%rel_ev    <= scf%conv_rel_ev)    .and. &
+        (.not. scf%conv_eigen_error .or. all(scf%eigens%converged == st%nst))
 
       etime = loct_clock() - itime
       itime = etime + itime
