@@ -587,7 +587,7 @@ contains
         if(cas%w(ia) < -M_EPSILON) then
           message(1) = "There are negative unocc-occ KS eigenvalue differences."
           message(2) = "Probably this indicates an inconsistency in occupations between gs and unocc calculations."
-          call messages_fatal(2)
+          call messages_fatal(2, only_root_writes = .true.)
         endif
 
         if(cas%type == CASIDA_PETERSILKA) then
