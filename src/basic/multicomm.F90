@@ -199,7 +199,7 @@ contains
       !%Description
       !% Specifies the size of the groups used for the
       !% parallelization. For example (n_d, n_s, n_k) means we have
-      !% <i>n_p*n_s*n_k</i> processors and that the <i>k</i>-points should be
+      !% <i>n_d*n_s*n_k</i> processors and that the <i>k</i>-points should be
       !% divided in <i>n_k</i> groups, the states in <i>n_s</i> groups, and each
       !% state in <i>n_d</i> domains. You can pass the value <tt>fill</tt> to one
       !% field: it will be replaced by the value required to complete
