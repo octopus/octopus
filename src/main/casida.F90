@@ -206,7 +206,7 @@ contains
       (iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0 .or. iand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
        .or. iand(theorylevel, CASIDA_CASIDA) /= 0)) then
       message(1) = "Tamm-Dancoff, variational, and full Casida theory levels do not apply to complex wavefunctions."
-      call messages_fatal(1)
+      call messages_fatal(1, only_root_writes = .true.)
     end if
 
     !%Variable CasidaKohnShamStates
@@ -393,7 +393,7 @@ contains
 
     if(cas%n_pairs < 1) then
       message(1) = "No Casida pairs -- maybe there are no unoccupied states?"
-      call messages_fatal(1)
+      call messages_fatal(1, only_root_writes = .true.)
     end if
 
     if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
