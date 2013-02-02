@@ -311,6 +311,10 @@ foreach my $octopus_exe (@executables){
 	      $command_line = "cd $workdir; $aexec $command_suffix > out ";
 	    }
 
+	    if($np > 4) {
+		print "Note: this run calls for more than the standard maximum of 4 MPI tasks.\n";
+	    }
+
 	    print "Executing: " . $command_line . "\n";
 
 	    $test_start = [gettimeofday];
