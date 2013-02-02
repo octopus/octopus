@@ -311,6 +311,7 @@ foreach my $octopus_exe (@executables){
 	      $command_line = "cd $workdir; $aexec $command_suffix > out ";
 	    }
 
+# MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
 	    if($np > 4) {
 		print "Note: this run calls for more than the standard maximum of 4 MPI tasks.\n";
 	    }
