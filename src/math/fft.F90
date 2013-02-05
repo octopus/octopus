@@ -306,8 +306,10 @@ contains
     
       nn_temp(1:fft_dim) = nn(1:fft_dim)
       do ii = 1, fft_dim
-        ! the AMD OpenCL FFT only supports sizes 2, 3 and 5
-        nn_temp(ii) = fft_size(nn(ii), (/2, 3, 5/))
+        ! the AMD OpenCL FFT only supports sizes 2, 3 and 5, but size
+        ! 5 gives an fpe error on the Radeon 7970 (APPML 1.8), so we
+        ! only use factors 2 and 3
+        nn_temp(ii) = fft_size(nn(ii), (/2, 3/))
         if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
       end do 
       
