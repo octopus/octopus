@@ -545,6 +545,10 @@ contains
     do iter = 1, scf%max_iter
       call profiling_in(prof, "SCF_CYCLE")
 
+      ! this initialization seems redundant but avoids improper optimization at -O3 by PGI 7 on chum,
+      ! which would cause a failure of testsuite/linear_response/04-vib_modes.03-vib_modes_fd.inp
+      scf%eigens%converged = 0
+
       if(scf%lcao_restricted) then
         call lcao_wf(lcao, st, gr, geo, hm)
       else
