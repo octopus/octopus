@@ -1024,6 +1024,7 @@ contains
       ie = ie + 1
       ww = ie * energy_step_
     end if
+    xx = ie * energy_step_
     minhsval = real(funcw_(ie))
     do while(ww <= bb)
       hsval = real(funcw_(ie))
