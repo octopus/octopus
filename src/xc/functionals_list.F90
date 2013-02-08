@@ -452,6 +452,8 @@
 !% M06-2X functional of Minnesota
 !%Option oep_x                    901
 !% OEP: Exact exchange
+!%Option ks_inversion             801 
+!% Inversion of KS potential
 !%Option lda_xc_cmplx             701
 !% LDA complex scaled exchange-correlation.
 !%Option rdmft_xc_m               601
