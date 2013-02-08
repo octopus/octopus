@@ -173,7 +173,7 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   FLOAT :: prefactor
   integer  :: ip, jp, dim
-  FLOAT    :: xx(this%der%mesh%sb%dim), yy(this%der%mesh%sb%dim)
+  FLOAT    :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim)
 #ifdef HAVE_MPI
   FLOAT    :: tmp, xg(MAX_DIM)
   FLOAT, allocatable :: pvec(:) 
@@ -212,8 +212,8 @@ subroutine poisson_solve_direct(this, pot, rho)
           if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
             pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
-            yy(1:dim) = this%der%mesh%x(jp,1:dim)
-            pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
+            yy(1:dim) = this%der%mesh%x(jp, 1:dim)
+            pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
           end if
         end do
       else
@@ -221,13 +221,13 @@ subroutine poisson_solve_direct(this, pot, rho)
           if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
             pvec(jp) = rho(jp)*prefactor
           else
-            yy(1:dim) = this%der%mesh%x(jp,1:dim)
-            pvec(jp) = rho(jp)/sqrt(sum((xx-yy)**2))
+            yy(1:dim) = this%der%mesh%x(jp, 1:dim)
+            pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
           endif
         enddo
       endif
       tmp = dmf_integrate(this%der%mesh, pvec)
-      if (this%der%mesh%vp%part(ip).eq.this%der%mesh%vp%partno) then
+      if (this%der%mesh%vp%part(ip) /= this%der%mesh%vp%partno) then
         pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
       end if
     end do
@@ -244,23 +244,23 @@ subroutine poisson_solve_direct(this, pot, rho)
           if(ip == jp) then
             pot(ip) = pot(ip) + prefactor*rho(ip)*this%der%mesh%vol_pp(jp)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
-            yy(1:dim) = this%der%mesh%x(jp,1:dim)
-            pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))*this%der%mesh%vol_pp(jp)
+            yy(1:dim) = this%der%mesh%x(jp, 1:dim)
+            pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))*this%der%mesh%vol_pp(jp)
           endif
-        enddo
+        end do
       else
         do jp = 1, this%der%mesh%np
           if(ip == jp) then
             pot(ip) = pot(ip) + prefactor*rho(ip)
           else
-            yy(1:dim) = this%der%mesh%x(jp,1:dim)
-            pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx-yy)**2))
+            yy(1:dim) = this%der%mesh%x(jp, 1:dim)
+            pot(ip) = pot(ip) + rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
           endif
         end do
       end if
     end do
     if(.not. this%der%mesh%use_curvilinear) then
-      pot(:) = pot(:) * this%der%mesh%volume_element
+      pot(1:this%der%mesh%np) = pot(1:this%der%mesh%np)*this%der%mesh%volume_element
     endif
 #ifdef HAVE_MPI
   end if
