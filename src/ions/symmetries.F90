@@ -164,7 +164,7 @@ contains
 
     !%Variable SymmetriesCompute
     !%Type logical
-    !%Default true
+    !%Default (natoms < 100) ? true : false
     !%Section Execution::Symmetries
     !%Description
     !% If disabled, <tt>Octopus</tt> will not compute
