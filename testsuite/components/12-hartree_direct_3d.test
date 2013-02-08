@@ -1,0 +1,11 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test       : Hartree direct 3D
+Programs   : oct-test; oct-test_mpi
+TestGroups : long-run, components
+Enabled    : Yes
+
+Precision : 0.005
+Input: 12-hartree_direct_3d.01.inp
+match ; Direct3D      ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00974749
