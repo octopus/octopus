@@ -44,3 +44,5 @@ LCAODimension = 9
 unocc_LCAOStart = lcao_none
 
 NumberUnoccStates = 1
+
+ExperimentalFeatures = yes
