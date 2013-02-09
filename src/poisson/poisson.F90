@@ -745,9 +745,11 @@ contains
     FLOAT :: alpha, beta, rr, delta, norm, ralpha, hartree_nrg_num, &
          hartree_nrg_analyt, lcl_hartree_nrg 
     FLOAT :: total_charge
-    integer :: ip, idir, ierr, iunit, nn, n_gaussians
+    integer :: ip, idir, ierr, iunit, nn, n_gaussians, times, itime
 
     PUSH_SUB(poisson_test)
+
+    call parse_integer(datasets_check('TestRepetitions'), 1, times)
 
     if(mesh%sb%dim == 1) then
       call messages_not_implemented('Poisson test for 1D case')
@@ -825,7 +827,9 @@ contains
     end do
 
     ! This calculates the numerical potential
-    call dpoisson_solve(psolver, vh, rho)
+    do itime = 1, times
+      call dpoisson_solve(psolver, vh, rho)
+    end do
 
     ! Output results
     iunit = io_open("hartree_results", action='write')

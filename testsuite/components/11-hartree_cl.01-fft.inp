@@ -10,3 +10,5 @@ Spacing = 0.3
 
 PoissonSolver = fft
 FFTLibrary = clfft
+
+TestRepetitions = 2

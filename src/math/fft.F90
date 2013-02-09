@@ -453,7 +453,6 @@ contains
 
     case(FFTLIB_CLAMD)
       fft_array(jj)%cl_use_real = .false.
-      fft_array(jj)%cl_use_real = .true.
       call fftw_get_dims(fft_array(jj)%rs_n_global, (fft_array(jj)%cl_use_real .and. type == FFT_REAL), fft_array(jj)%fs_n_global)
       fft_array(jj)%rs_n = fft_array(jj)%rs_n_global
       fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
@@ -613,11 +612,23 @@ contains
       call clAmdFftSetPlanScale(fft_array(jj)%cl_plan_fw, CLFFT_BACKWARD, scale, status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')
 
-      call clAmdFftSetPlanScale(fft_array(jj)%cl_plan_bw, CLFFT_FORWARD, 1.0_8, status)
-      if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')
+      if(fft_array(jj)%cl_use_real .and. type == FFT_REAL) then
+        
+        call clAmdFftSetPlanScale(fft_array(jj)%cl_plan_bw, CLFFT_FORWARD, 1.0_8, status)
+        if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')
+        
+        call clAmdFftSetPlanScale(fft_array(jj)%cl_plan_bw, CLFFT_BACKWARD, scale, status)
+        if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')
 
-      call clAmdFftSetPlanScale(fft_array(jj)%cl_plan_bw, CLFFT_BACKWARD, scale, status)
-      if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')
+      else
+        
+        call clAmdFftSetPlanScale(fft_array(jj)%cl_plan_bw, CLFFT_FORWARD, scale, status)
+        if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')
+        
+        call clAmdFftSetPlanScale(fft_array(jj)%cl_plan_bw, CLFFT_BACKWARD, 1.0_8, status)
+        if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')
+
+      end if
 
       ! now 'bake' the plans, this signals that the plans are ready to use
 
