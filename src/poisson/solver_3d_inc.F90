@@ -227,7 +227,7 @@ subroutine poisson_solve_direct(this, pot, rho)
         enddo
       endif
       tmp = dmf_integrate(this%der%mesh, pvec)
-      if (this%der%mesh%vp%part(ip) /= this%der%mesh%vp%partno) then
+      if (this%der%mesh%vp%part(ip) == this%der%mesh%vp%partno) then
         pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
       end if
     end do
