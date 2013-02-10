@@ -71,7 +71,8 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
   R_TYPE,                   intent(in)  :: op(:, :, :)
   logical, optional,        intent(in)  :: in_device
 
-  integer :: ii, jj, kk
+  integer :: ii, jj, kk, ii_linear, size
+  R_TYPE, allocatable :: op_linear(:)
 
   PUSH_SUB(X(fourier_space_op_init))
 
@@ -89,11 +90,28 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
     end forall
   else
     this%in_device_memory = .true.
-#ifdef HAVE_OPENCL
+
     ASSERT(all(cube%fs_n(1:3) == ubound(op)))
-    call opencl_create_buffer(this%op_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, product(cube%fs_n(1:3)))
-    call opencl_write_buffer(this%op_buffer, product(cube%fs_n(1:3)), op)
+    
+    size = product(cube%fs_n(1:3))
+
+    SAFE_ALLOCATE(op_linear(1:size))
+
+    do kk = 1, cube%fs_n(3)
+      do jj = 1, cube%fs_n(2)
+        do ii = 1, cube%fs_n(1)
+          ii_linear = 1 + (ii - 1)*cube%fft%stride_fs(1) + (jj - 1)*cube%fft%stride_fs(2) + (kk - 1)*cube%fft%stride_fs(3)
+          op_linear(ii_linear) = op(ii, jj, kk)
+        end do
+      end do
+    end do
+
+#ifdef HAVE_OPENCL
+    call opencl_create_buffer(this%op_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, size)
+    call opencl_write_buffer(this%op_buffer, size, op_linear)
 #endif
+    
+    SAFE_DEALLOCATE_A(op_linear)
   end if
 
   POP_SUB(X(fourier_space_op_init))
