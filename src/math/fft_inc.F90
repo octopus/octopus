@@ -113,9 +113,7 @@ subroutine X(fft_forward)(fft, in, out)
     integer :: slot
     type(profile_t), save :: prof_fw
 #ifdef HAVE_CLAMDFFT
-    type(opencl_mem_t)         :: tmp, tmp_buf
-    type(octcl_kernel_t), save :: kernel
-    type(cl_kernel)            :: kernel_ref
+    type(opencl_mem_t)         :: tmp_buf
     integer                    :: bsize
     integer(8)                 :: tmp_buf_size
 #endif
@@ -275,9 +273,6 @@ subroutine X(fft_forward)(fft, in, out)
     integer :: slot
     type(profile_t), save :: prof_bw
 #ifdef HAVE_CLAMDFFT
-    type(opencl_mem_t) :: tmp
-    type(octcl_kernel_t), save :: kernel
-    type(cl_kernel)            :: kernel_ref
     integer                    :: bsize
     integer(8)                 :: tmp_buf_size
     type(opencl_mem_t)         :: tmp_buf
