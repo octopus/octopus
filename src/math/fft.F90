@@ -113,6 +113,9 @@ module fft_m
     integer     :: rs_istart(1:3) !< where does the local portion of the function start in real space
     integer     :: fs_istart(1:3) !< where does the local portion of the function start in fourier space
 
+    integer     :: stride_rs(1:3)
+    integer     :: stride_fs(1:3)
+
     type(c_ptr) :: planf                  !< plan for forward transform
     type(c_ptr) :: planb                  !< plan for backward transform
     integer(ptrdiff_t_kind) :: pfft_planf !< PFFT plan for forward transform
@@ -274,7 +277,6 @@ contains
     type(mpi_grp_t) :: mpi_grp_
 
 #ifdef HAVE_CLAMDFFT
-    integer(8), allocatable :: stride_rs(:), stride_fs(:)
     real(8) :: scale
 #endif
 
@@ -558,10 +560,7 @@ contains
       call clAmdFftSetResultLocation(fft_array(jj)%cl_plan_bw, CLFFT_OUTOFPLACE, status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetResultLocation')
 
-      
       ! invert the stride for Fortran arrays
-      SAFE_ALLOCATE(stride_rs(1:fft_dim))
-      SAFE_ALLOCATE(stride_fs(1:fft_dim))
 
 !      call clAmdFftGetPlanInStride(fft_array(jj)%cl_plan_bw, fft_dim, stride_rs, status)
 !      if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftGetPlanInStride')
@@ -573,11 +572,11 @@ contains
 !      print*, "STRIDE IN     ", stride_rs
 !      print*, "STRIDE OUT    ", stride_fs
 
-      stride_rs(1) = 1
-      stride_fs(1) = 1
+      fft_array(jj)%stride_rs(1) = 1
+      fft_array(jj)%stride_fs(1) = 1
       do ii = 2, fft_dim
-        stride_rs(ii) = stride_rs(ii - 1)*fft_array(jj)%rs_n(ii - 1)
-        stride_fs(ii) = stride_fs(ii - 1)*fft_array(jj)%fs_n(ii - 1)
+        fft_array(jj)%stride_rs(ii) = fft_array(jj)%stride_rs(ii - 1)*fft_array(jj)%rs_n(ii - 1)
+        fft_array(jj)%stride_fs(ii) = fft_array(jj)%stride_fs(ii - 1)*fft_array(jj)%fs_n(ii - 1)
       end do
 
 !      print*, "STRIDE NEW IN ", stride_rs
@@ -585,21 +584,18 @@ contains
 
       ! the strides
       
-      call clAmdFftSetPlanInStride(fft_array(jj)%cl_plan_fw, fft_dim, stride_rs, status)
+      call clAmdFftSetPlanInStride(fft_array(jj)%cl_plan_fw, fft_dim, int(fft_array(jj)%stride_rs, 8), status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanInStride')
 
-      call clAmdFftSetPlanOutStride(fft_array(jj)%cl_plan_fw, fft_dim, stride_fs, status)
+      call clAmdFftSetPlanOutStride(fft_array(jj)%cl_plan_fw, fft_dim, int(fft_array(jj)%stride_fs, 8), status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanOutStride')
 
-      call clAmdFftSetPlanInStride(fft_array(jj)%cl_plan_bw, fft_dim, stride_fs, status)
+      call clAmdFftSetPlanInStride(fft_array(jj)%cl_plan_bw, fft_dim, int(fft_array(jj)%stride_fs, 8), status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanInStride')
 
-      call clAmdFftSetPlanOutStride(fft_array(jj)%cl_plan_bw, fft_dim, stride_rs, status)
+      call clAmdFftSetPlanOutStride(fft_array(jj)%cl_plan_bw, fft_dim, int(fft_array(jj)%stride_rs, 8), status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanOutStride')
        
-      SAFE_DEALLOCATE_A(stride_rs)
-      SAFE_DEALLOCATE_A(stride_fs)
-
       ! set the scaling factors
 
       scale = 1.0_8/(product(real(fft_array(jj)%rs_n_global(1:fft_dim), 8)))
