@@ -127,6 +127,8 @@ subroutine X(fft_forward)(fft, in, out)
     slot = fft%slot
     ASSERT(fft_array(slot)%library == FFTLIB_CLAMD)
 
+#ifdef HAVE_CLAMDFFT
+
     call clAmdFftGetTmpBufSize(fft_array(slot)%cl_plan_bw, tmp_buf_size, cl_status)
     if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftGetTmpBufSize')
 
@@ -134,50 +136,17 @@ subroutine X(fft_forward)(fft, in, out)
       call opencl_create_buffer(tmp_buf, CL_MEM_READ_WRITE, TYPE_BYTE, int(tmp_buf_size, 4))
     end if
 
-#ifdef HAVE_CLAMDFFT
-    if(.not. fft%cl_use_real .or. fft_array(slot)%type == FFT_COMPLEX) then
-
-      if(tmp_buf_size > 0) then
-        call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
-          in%mem, out%mem, tmp_buf%mem, cl_status)
-      else
-        call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
-          in%mem, out%mem, cl_status)
-      end if
-
-      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
-      
-      call opencl_finish()
+    if(tmp_buf_size > 0) then
+      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
+        in%mem, out%mem, tmp_buf%mem, cl_status)
     else
-      
-      call opencl_create_buffer(tmp, CL_MEM_READ_WRITE, TYPE_FLOAT, product(fft%rs_n(1:3)))
-      
-      call octcl_kernel_start_call(kernel, 'convert.cl', 'complex_to_double')
-      kernel_ref = octcl_kernel_get_ref(kernel)
-
-      call opencl_set_kernel_arg(kernel_ref, 0, product(fft%rs_n(1:3)))
-      call opencl_set_kernel_arg(kernel_ref, 1, in)
-      call opencl_set_kernel_arg(kernel_ref, 2, tmp)
-
-      bsize = opencl_kernel_workgroup_size(kernel_ref)
-      
-      call opencl_kernel_run(kernel_ref, (/pad(product(fft%rs_n(1:3)), bsize)/), (/bsize/))
-      call opencl_finish()
-
-      if(tmp_buf_size > 0) then
-        call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
-          tmp%mem, out%mem, tmp_buf%mem, cl_status)
-      else
-        call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
-          tmp%mem, out%mem, cl_status)
-      end if
-      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
-
-      call opencl_release_buffer(tmp)
-      
-      call opencl_finish()
-
+      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
+        in%mem, out%mem, cl_status)
     end if
+    
+    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
+    
+    call opencl_finish()
 
     if(tmp_buf_size > 0) call opencl_release_buffer(tmp_buf)
 
@@ -330,52 +299,21 @@ subroutine X(fft_forward)(fft, in, out)
       call opencl_create_buffer(tmp_buf, CL_MEM_READ_WRITE, TYPE_BYTE, int(tmp_buf_size, 4))
     end if
 
-    if(.not. fft%cl_use_real .or. fft%type == FFT_COMPLEX) then 
-
-      if(tmp_buf_size > 0) then
-        call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
-          in%mem, out%mem, tmp_buf%mem, cl_status)
-      else
-        call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
-          in%mem, out%mem, cl_status)
-      end if
-
-      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
-
-      call opencl_finish()
+    if(tmp_buf_size > 0) then
+      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
+        in%mem, out%mem, tmp_buf%mem, cl_status)
     else
-
-      call opencl_create_buffer(tmp, CL_MEM_READ_WRITE, TYPE_FLOAT, product(fft%rs_n(1:3)))
-
-      if(tmp_buf_size > 0) then
-        call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_BACKWARD, opencl%command_queue, &
-          in%mem, tmp%mem, tmp_buf%mem, cl_status)
-      else
-        call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_BACKWARD, opencl%command_queue, &
-          in%mem, tmp%mem, cl_status)
-      end if
-      
-      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
-
-      call opencl_finish()
-
-      call octcl_kernel_start_call(kernel, 'convert.cl', 'double_to_complex')
-      kernel_ref = octcl_kernel_get_ref(kernel)
-
-      call opencl_set_kernel_arg(kernel_ref, 0, product(fft%rs_n(1:3)))
-      call opencl_set_kernel_arg(kernel_ref, 1, tmp)
-      call opencl_set_kernel_arg(kernel_ref, 2, out)
-
-      bsize = opencl_kernel_workgroup_size(kernel_ref)
-      
-      call opencl_kernel_run(kernel_ref, (/pad(product(fft%rs_n(1:3)), bsize)/), (/bsize/))
-      call opencl_finish()
-      call opencl_release_buffer(tmp)
-
+      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
+        in%mem, out%mem, cl_status)
     end if
-#endif
+    
+    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
+    
+    call opencl_finish()
 
     if(tmp_buf_size > 0) call opencl_release_buffer(tmp_buf)
+
+#endif
 
     call profiling_out(prof_bw)
 

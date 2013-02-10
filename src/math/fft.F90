@@ -121,7 +121,6 @@ module fft_m
     FLOAT, pointer :: drs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
     CMPLX, pointer :: zrs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
     CMPLX, pointer ::  fs_data(:,:,:) !< array used to store the function in fourier space that is passed to PFFT
-    logical        :: cl_use_real
 #ifdef HAVE_CLAMDFFT
     !> data for clAmdFft
     type(clAmdFftPlanHandle) :: cl_plan_fw 
@@ -452,8 +451,7 @@ contains
       SAFE_ALLOCATE(fft_array(jj)%fs_data(1:n_3, 1:n_1, 1:n3))
 
     case(FFTLIB_CLAMD)
-      fft_array(jj)%cl_use_real = .true.
-      call fftw_get_dims(fft_array(jj)%rs_n_global, (fft_array(jj)%cl_use_real .and. type == FFT_REAL), fft_array(jj)%fs_n_global)
+      call fftw_get_dims(fft_array(jj)%rs_n_global, (type == FFT_REAL), fft_array(jj)%fs_n_global)
       fft_array(jj)%rs_n = fft_array(jj)%rs_n_global
       fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
       fft_array(jj)%rs_istart = 1
@@ -534,7 +532,7 @@ contains
 
       ! set the layout
 
-      if(fft_array(jj)%cl_use_real .and. type == FFT_REAL) then
+      if(type == FFT_REAL) then
 
         call clAmdFftSetLayout(fft_array(jj)%cl_plan_fw, CLFFT_REAL, CLFFT_HERMITIAN_INTERLEAVED, status)
         if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetLayout')
@@ -612,7 +610,7 @@ contains
       call clAmdFftSetPlanScale(fft_array(jj)%cl_plan_fw, CLFFT_BACKWARD, scale, status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')
 
-      if(fft_array(jj)%cl_use_real .and. type == FFT_REAL) then
+      if(type == FFT_REAL) then
         
         call clAmdFftSetPlanScale(fft_array(jj)%cl_plan_bw, CLFFT_FORWARD, 1.0_8, status)
         if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clAmdFftSetPlanScale')

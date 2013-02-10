@@ -55,7 +55,7 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
         allocated = .true.
         cf%in_device_memory = .true.
 #ifdef HAVE_OPENCL
-        call opencl_create_buffer(cf%real_space_buffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%rs_n(1:3)))
+        call opencl_create_buffer(cf%real_space_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, product(cube%rs_n(1:3)))
 #endif
       end if
     end select
@@ -223,7 +223,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   else
 #ifdef HAVE_OPENCL
 
-    call opencl_set_buffer_to_zero(cf%real_space_buffer, TYPE_CMPLX, product(cube%rs_n(1:3)))
+    call opencl_set_buffer_to_zero(cf%real_space_buffer, R_TYPE_VAL, product(cube%rs_n(1:3)))
 
     call opencl_create_buffer(mf_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, mesh%np_global)
     call opencl_write_buffer(mf_buffer, mesh%np_global, gmf)
@@ -323,7 +323,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
     call octcl_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(cube_to_mesh)))
     kernel_ref = octcl_kernel_get_ref(kernel)
-    
+   
     call opencl_set_kernel_arg(kernel_ref, 0, mesh%cube_map%nmap)
     call opencl_set_kernel_arg(kernel_ref, 1, cube%rs_n(3)*cube%rs_n(2))
     call opencl_set_kernel_arg(kernel_ref, 2, cube%rs_n(3))

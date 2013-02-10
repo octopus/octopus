@@ -33,7 +33,7 @@ __kernel void dmesh_to_cube(const int nmap,
 			    const int centerz,
 			    __global int const * restrict map,
 			    __global double const * restrict mesh_function,
-			    __global double2 * restrict cube_function){
+			    __global double * restrict cube_function){
   
   const int imap = get_global_id(0);
   
@@ -46,10 +46,7 @@ __kernel void dmesh_to_cube(const int nmap,
   const int count = map[5*imap + MCM_COUNT];
 
   for(int ii = 0; ii < count; ii++){
-    double2 aa;
-    aa.s0 = mesh_function[ip + ii];
-    aa.s1 = 0.0;
-    cube_function[ix*stridex + iy*stridey + (iz + ii)*stridez] = aa;
+    cube_function[ix*stridex + iy*stridey + (iz + ii)*stridez] = mesh_function[ip + ii];
   }
 
 }
@@ -62,7 +59,7 @@ __kernel void dcube_to_mesh(const int nmap,
 			    const int centery,
 			    const int centerz,
 			    __global int const * restrict map,
-			    __global double2 const * restrict cube_function,
+			    __global double const * restrict cube_function,
 			    __global double * restrict mesh_function){
   
   const int imap = get_global_id(0);
@@ -76,8 +73,7 @@ __kernel void dcube_to_mesh(const int nmap,
   const int count = map[5*imap + MCM_COUNT];
 
   for(int ii = 0; ii < count; ii++){
-    double2 aa = cube_function[ix*stridex + iy*stridey + (iz + ii)*stridez];
-    mesh_function[ip + ii] = aa.s0;
+    mesh_function[ip + ii] = cube_function[ix*stridex + iy*stridey + (iz + ii)*stridez];
   }
 
 }
