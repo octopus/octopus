@@ -32,7 +32,8 @@ module clAmdFft
     clAmdFftGetPlanOutStride,    &
     clAmdFftSetPlanScale,        &
     clAmdFftGetPlanScale,        &
-    clAmdFftBakePlan
+    clAmdFftBakePlan,            &
+    clAmdFftGetTmpBufSize
 
   integer, public, parameter ::                                                   &
     CLFFT_INVALID_GLOBAL_WORK_SIZE         = CL_INVALID_GLOBAL_WORK_SIZE,         &
@@ -190,6 +191,7 @@ module clAmdFft
   ! ---------------------------------------------------------
 
   interface clAmdFftEnqueueTransform
+
     subroutine clamdfftenqueuetransform_low(plHandle, dir, commQueues, inputBuffers, outputBuffers, status)
       use cl
       use clAmdFft_types
@@ -203,6 +205,22 @@ module clAmdFft
       type(cl_mem),             intent(inout) :: outputBuffers
       integer,                  intent(out)   :: status      
     end subroutine clamdfftenqueuetransform_low
+
+    subroutine clamdfftenqueuetransform_tmpbuf_low(plHandle, dir, commQueues, inputBuffers, outputBuffers, tmpBuffer, status)
+      use cl
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(out)   :: plHandle
+      integer,                  intent(in)    :: dir
+      type(cl_command_queue),   intent(inout) :: commQueues
+      type(cl_mem),             intent(in)    :: inputBuffers
+      type(cl_mem),             intent(inout) :: outputBuffers
+      type(cl_mem),             intent(inout) :: tmpBuffer
+      integer,                  intent(out)   :: status      
+    end subroutine clamdfftenqueuetransform_tmpbuf_low
+
   end interface clAmdFftEnqueueTransform
 
   ! ---------------------------------------------------------
@@ -360,11 +378,26 @@ module clAmdFft
 
       implicit none
       
-      type(clAmdFftPlanHandle), intent(out)   :: plHandle
+      type(clAmdFftPlanHandle), intent(inout) :: plHandle
       type(cl_command_queue),   intent(inout) :: commQueues
       integer,                  intent(out)   :: status      
     end subroutine clAmdFftBakePlan_low
   end interface clAmdFftBakePlan
 
+  ! ---------------------------------------------------------
+
+  interface clAmdFftGetTmpBufSize
+    subroutine clAmdFftGetTmpBufSize_low(plHandle, buffersize, status)
+      use cl
+      use clAmdFft_types
+
+      implicit none
+      
+      type(clAmdFftPlanHandle), intent(in)    :: plHandle
+      integer(8),               intent(out)   :: buffersize
+      integer,                  intent(out)   :: status      
+    end subroutine clAmdFftGetTmpBufSize_low
+  end interface clAmdFftGetTmpBufSize
+  
 
 end module clAmdFft

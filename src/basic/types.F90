@@ -38,6 +38,7 @@ module types_m
   type(type_t), public :: TYPE_FLOAT   = type_t(1)
   type(type_t), public :: TYPE_CMPLX   = type_t(2)
   type(type_t), public :: TYPE_INTEGER = type_t(3)
+  type(type_t), public :: TYPE_BYTE    = type_t(4)
 
   interface operator(==)
     module procedure types_equal
@@ -48,9 +49,9 @@ module types_m
   end interface operator(/=)
 
 #ifdef SINGLE_PRECISION
-  integer :: sizes(3) = (/4, 8, 4/)
+  integer :: sizes(4) = (/4, 8, 4, 1/)
 #else
-  integer :: sizes(3) = (/8, 16, 4/)
+  integer :: sizes(4) = (/8, 16, 4, 1/)
 #endif
   
 contains

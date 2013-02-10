@@ -452,7 +452,7 @@ contains
       SAFE_ALLOCATE(fft_array(jj)%fs_data(1:n_3, 1:n_1, 1:n3))
 
     case(FFTLIB_CLAMD)
-      fft_array(jj)%cl_use_real = .false.
+      fft_array(jj)%cl_use_real = .true.
       call fftw_get_dims(fft_array(jj)%rs_n_global, (fft_array(jj)%cl_use_real .and. type == FFT_REAL), fft_array(jj)%fs_n_global)
       fft_array(jj)%rs_n = fft_array(jj)%rs_n_global
       fft_array(jj)%fs_n = fft_array(jj)%fs_n_global

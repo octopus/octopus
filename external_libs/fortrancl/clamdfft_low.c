@@ -73,6 +73,20 @@ void FC_FUNC_(clamdfftenqueuetransform_low, CLAMDFFTENQUEUETRANSFORM_LOW)(clAmdF
 
 /**************************************************/
 
+void FC_FUNC_(clamdfftenqueuetransform_tmpbuf_low, CLAMDFFTENQUEUETRANSFORM_TMPBUF_LOW)(clAmdFftPlanHandle ** plHandle, 
+											const int * dir, 
+											cl_command_queue * commQueues,
+											cl_mem * inputBuffers, 
+											cl_mem * outputBuffers, 
+											cl_mem * tmpBuffer, 
+											int * status){
+  
+  *status = clAmdFftEnqueueTransform(**plHandle, *dir, 1, commQueues, 0, NULL, NULL, inputBuffers, outputBuffers, *tmpBuffer);
+
+}
+
+/**************************************************/
+
 void FC_FUNC_(clamdfftsetplanprecision_low, CLAMDFFTSETPLANPRECISION_LOW)(clAmdFftPlanHandle ** plHandle, 
 									  const int * precision, 
 									  int * status){
@@ -237,6 +251,20 @@ void FC_FUNC_(clamdfftbakeplan_low, CLAMDFFTBAKEPLAN_LOW)(clAmdFftPlanHandle ** 
 
   *status = clAmdFftBakePlan(**plHandle, 1, commQueue, NULL, NULL);
 
+}
+
+
+/**************************************************/
+
+void FC_FUNC_(clamdfftgettmpbufsize_low, CLAMDFFTGETTMPBUFSIZE_LOW)(const clAmdFftPlanHandle ** plHandle, 
+								    cl_long * buffersize,
+								    int * status){
+
+  size_t buffersize_size_t;
+  
+  *status = clAmdFftGetTmpBufSize(**plHandle, &buffersize_size_t);
+  *buffersize = (cl_long) buffersize_size_t;
+  
 }
 
 #endif
