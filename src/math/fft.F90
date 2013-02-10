@@ -55,6 +55,7 @@ module fft_m
   use pfft_params_m
   use profiling_m
   use types_m
+  use unit_system_m
   use varinfo_m
 
   implicit none
@@ -270,7 +271,6 @@ contains
     integer :: ii, jj, fft_dim, idir, column_size, row_size, alloc_size, ierror, n3
     integer :: n_1, n_2, n_3, nn_temp(3), status
     integer :: library_
-    character(len=100) :: str_tmp
     type(mpi_grp_t) :: mpi_grp_
 
 #ifdef HAVE_CLAMDFFT
@@ -638,7 +638,6 @@ contains
 
 #endif
 
-
     case default
       call messages_write('Invalid FFT library.')
       call messages_fatal()
@@ -647,32 +646,30 @@ contains
     this = fft_array(jj)
     
     ! Write information
-    write(message(1), '(a)') "Info: FFT allocated with size ("
+    call messages_write('Info: FFT grid dimensions       =')
     do idir = 1, dim
-      write(str_tmp, '(i7,a)') fft_array(jj)%rs_n_global(idir)
-      if(idir == dim) then
-        message(1) = trim(message(1)) // trim(str_tmp) // ") in slot "
-      else
-        message(1) = trim(message(1)) // trim(str_tmp) // ","
-      endif
-    enddo
-    write(str_tmp, '(i2)') jj
-    message(1) = trim(message(1)) // trim(str_tmp)
+      call messages_write(fft_array(jj)%rs_n_global(idir))
+      if(idir < dim) call messages_write(" x ")
+    end do
+    call messages_new_line()
+
+    call messages_write('      Total grid size           =')
+    call messages_write(product(fft_array(jj)%rs_n_global(1:dim)))
+    call messages_write(' (')
+    call messages_write(product(fft_array(jj)%rs_n_global(1:dim))*CNST(8.0), units = unit_megabytes, fmt = '(f6.1)')
+    call messages_write(' )')
+    call messages_info()
+
     select case (library_)
-    case (FFTLIB_FFTW)
-      message(2) = "Info: FFT library = FFTW3"
-      call messages_info(2)
     case (FFTLIB_PFFT)
-      write(message(2),'(a)') "Info: FFT library = PFFT"
-      write(message(3),'(a)') "Info: PFFT processor grid"
-      write(message(4),'(a, i9)') " No. of processors                = ", mpi_grp_%size
-      write(message(5),'(a, i9)') " No. of columns in the proc. grid = ", column_size
-      write(message(6),'(a, i9)') " No. of rows    in the proc. grid = ", row_size
-      write(message(7),'(a, i9)') " The size of integer is = ", ptrdiff_t_kind
-      call messages_info(7)
+      write(message(1),'(a)') "Info: FFT library = PFFT"
+      write(message(2),'(a)') "Info: PFFT processor grid"
+      write(message(3),'(a, i9)') " No. of processors                = ", mpi_grp_%size
+      write(message(4),'(a, i9)') " No. of columns in the proc. grid = ", column_size
+      write(message(5),'(a, i9)') " No. of rows    in the proc. grid = ", row_size
+      write(message(6),'(a, i9)') " The size of integer is = ", ptrdiff_t_kind
+      call messages_info(6)
     case (FFTLIB_NFFT)
-      message(2) = "Info: FFT library = NFFT"
-      call messages_info(2)
 #ifdef HAVE_NFFT
       call nfft_write_info(fft_array(jj)%nfft)
 #endif
@@ -758,8 +755,6 @@ contains
 #endif
         end select
         fft_refs(ii) = FFT_NULL
-        write(message(1), '(a,i4)') "Info: FFT deallocated from slot ", ii
-        call messages_info(1)
       end if
     end if
 

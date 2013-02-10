@@ -129,6 +129,27 @@ contains
   end subroutine poisson_fft_init
 
   !-----------------------------------------------------------------
+
+  subroutine get_cutoff(default_r_c, r_c)
+    FLOAT, intent(in)  :: default_r_c
+    FLOAT, intent(out) :: r_c
+
+    call parse_float(datasets_check('PoissonCutoffRadius'), default_r_c, r_c, units_inp%length)
+    
+    call messages_write('Info: Poisson Cutoff Radius     =')
+    call messages_write(r_c, units = units_out%length, fmt = '(f6.1)')
+    call messages_info()
+    
+    if ( r_c > default_r_c + M_EPSILON) then
+      call messages_write('Poisson cutoff radius is larger than cell size.', new_line = .true.)
+      call messages_write('You can see electrons in neighboring cell(s).')
+      call messages_warning()
+    end if
+    
+  end subroutine get_cutoff
+
+  !-----------------------------------------------------------------
+
   subroutine poisson_fft_build_3d_3d(this, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
     type(mesh_t),        intent(inout) :: mesh
@@ -213,18 +234,7 @@ contains
     !%End
 
     default_r_c = db(1)*mesh%spacing(1)/M_TWO
-    call parse_float(datasets_check('PoissonCutoffRadius'),&
-      default_r_c, r_c, units_inp%length)
-
-    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-      trim(units_abbrev(units_out%length)), '] = ',       &
-      units_from_atomic(units_out%length, r_c)
-    call messages_info(1)
-    if ( r_c > default_r_c + M_EPSILON) then
-      message(1) = 'Poisson cutoff radius is larger than cell size.'
-      message(2) = 'You can see electrons in neighboring cell(s).'
-      call messages_warning(2)
-    end if
+    call get_cutoff(default_r_c, r_c)
 
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
@@ -292,18 +302,7 @@ contains
     db(1:3) = cube%rs_n_global(1:3)
 
     default_r_c = maxval(db(2:3)*mesh%spacing(2:3)/M_TWO)
-    call parse_float(datasets_check('PoissonCutoffRadius'),&
-      default_r_c, r_c, units_inp%length)
-
-    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-      trim(units_abbrev(units_out%length)), '] = ',       &
-      units_from_atomic(units_out%length, r_c)
-    call messages_info(1)
-    if ( r_c > default_r_c + M_EPSILON) then
-      message(1) = 'Poisson cutoff radius is larger than cell size.'
-      message(2) = 'You can see electrons in neighboring cell(s).'
-      call messages_warning(2)
-    end if
+    call get_cutoff(default_r_c, r_c)
 
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
@@ -415,18 +414,7 @@ contains
 
     if (kernel .ne. POISSON_FFT_KERNEL_CORRECTED) then
       default_r_c = maxval(db(1:3)*mesh%spacing(1:3)/M_TWO)
-      call parse_float(datasets_check('PoissonCutoffRadius'),&
-        default_r_c, r_c, units_inp%length)
-
-      write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-        trim(units_abbrev(units_out%length)), '] = ',       &
-        units_from_atomic(units_out%length, r_c)
-      call messages_info(1)
-      if ( r_c > default_r_c + M_EPSILON) then
-        message(1) = 'Poisson cutoff radius is larger than cell size.'
-        message(2) = 'You can see electrons in neighboring cell(s).'
-        call messages_warning(2)
-      end if
+      call get_cutoff(default_r_c, r_c)
     end if
 
     n1 = max(1, cube%fs_n(1))
@@ -505,18 +493,8 @@ contains
     db(1:2) = cube%rs_n_global(1:2)
 
     default_r_c = maxval(db(1:2)*mesh%spacing(1:2)/M_TWO)
-    call parse_float(datasets_check('PoissonCutoffRadius'),&
-      default_r_c, r_c, units_inp%length)
+    call get_cutoff(default_r_c, r_c)
 
-    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-      trim(units_abbrev(units_out%length)), '] = ',       &
-      units_from_atomic(units_out%length, r_c)
-    call messages_info(1)
-    if ( r_c > default_r_c + M_EPSILON) then
-      message(1) = 'Poisson cutoff radius is larger than cell size.'
-      message(2) = 'You can see electrons in neighboring cell(s).'
-      call messages_warning(2)
-    end if
     call spline_init(besselintf)
 
     ! store the fourier transform of the Coulomb interaction
@@ -577,18 +555,7 @@ contains
     db(1:2) = cube%rs_n_global(1:2)
 
     default_r_c = db(2)*mesh%spacing(2)/M_TWO
-    call parse_float(datasets_check('PoissonCutoffRadius'),&
-      default_r_c, r_c, units_inp%length)
-
-    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-      trim(units_abbrev(units_out%length)), '] = ',       &
-      units_from_atomic(units_out%length, r_c)
-    call messages_info(1)
-    if ( r_c > default_r_c + M_EPSILON) then
-      message(1) = 'Poisson cutoff radius is larger than cell size.'
-      message(2) = 'You can see electrons in neighboring cell(s).'
-      call messages_warning(2)
-    end if
+    call get_cutoff(default_r_c, r_c)
 
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
@@ -705,18 +672,7 @@ contains
     box(1:1) = cube%rs_n_global(1:1)
 
     default_r_c = box(1)*mesh%spacing(1)/M_TWO
-    call parse_float(datasets_check('PoissonCutoffRadius'),&
-      default_r_c, r_c, units_inp%length)
-
-    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-      trim(units_abbrev(units_out%length)), '] = ',       &
-      units_from_atomic(units_out%length, r_c)
-    call messages_info(1)
-    if ( r_c > default_r_c + M_EPSILON) then
-      message(1) = 'Poisson cutoff radius is larger than cell size.'
-      message(2) = 'You can see electrons in neighboring cell(s).'
-      call messages_warning(2)
-    end if
+    call get_cutoff(default_r_c, r_c)
 
     SAFE_ALLOCATE(fft_coulb_fs(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
     fft_coulb_fs = M_ZERO
