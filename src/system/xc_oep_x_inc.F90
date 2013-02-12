@@ -35,15 +35,16 @@
 !!  where the numbers indicate the processor that will do the work
 !------------------------------------------------------------
 
-subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
-  type(grid_t),           intent(inout) :: gr
+subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
+  type(grid_t),   intent(inout) :: gr
   type(states_t), target, intent(in)    :: st
-  integer,                intent(in)    :: is
-  type(xc_oep_t),         intent(inout) :: oep
-  FLOAT,                  intent(inout) :: ex
-  FLOAT,                  intent(in)    :: exx_coef !< amount of EXX (for hybrids)
+  integer,        intent(in)    :: is
+  integer,        intent(in)    :: jdm
+  type(xc_oep_t), intent(inout) :: oep
+  FLOAT,          intent(inout) :: ex
+  FLOAT,          intent(in)    :: exx_coef !< amount of EXX (for hybrids)
 
-  integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r
+  integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r, isp, idm
   integer, allocatable :: recv_stack(:), send_stack(:)
   FLOAT :: rr
   R_TYPE, pointer     :: wf_ist(:), send_buffer(:)
@@ -53,7 +54,16 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
   R_TYPE,  pointer :: recv_buffer(:)
   integer :: send_req, status(MPI_STATUS_SIZE)
 #endif
-
+  !
+  ! distinguish between 'is' being the spin_channel index (collinear)
+  ! and being the spinor (noncollinear)
+  if (st%d%ispin==SPINORS) then
+    isp = 1
+    idm = is
+  else
+    isp = is
+    idm = 1
+  end if 
   ! Note: we assume that st%occ is known in all nodes
   call profiling_in(C_PROFILING_XC_EXX)
   PUSH_SUB(X(oep_x))
@@ -119,7 +129,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
         ! send wavefunction
         send_req = 0
         if((send_stack(ist_s) > 0).and.(node_to.ne.st%mpi_grp%rank)) then
-          call MPI_Isend(st%X(psi)(1, 1, send_stack(ist_s), is), gr%mesh%np, R_MPITYPE, &
+          call MPI_Isend(st%X(psi)(1, jdm, send_stack(ist_s), isp), gr%mesh%np, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, send_req, mpi_err)
         end if
       end if
@@ -131,7 +141,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
       ! receive wavefunction
       if(recv_stack(ist_r) > 0) then
         if(node_fr == st%mpi_grp%rank) then
-          wf_ist => st%X(psi)(1:gr%mesh%np, 1, recv_stack(ist_r), is)
+          wf_ist => st%X(psi)(1:gr%mesh%np, jdm, recv_stack(ist_r), isp)
 #if defined(HAVE_MPI)
         else
           if(st%parallel_in_states) then
@@ -156,36 +166,35 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
         send_buffer(1:gr%mesh%np) = R_TOTYPE(M_ZERO)
         do jst = st%st_start, st%st_end
 
-          if((st%node(ist) == st%mpi_grp%rank).and.(jst < ist)) cycle
-          if((st%occ(ist, is).le.small).or.(st%occ(jst, is).le.small)) cycle
+          if((st%node(ist) == st%mpi_grp%rank).and.(jst < ist).and..not.(st%d%ispin==SPINORS)) cycle
+          if((st%occ(ist, isp).le.small).or.(st%occ(jst, isp).le.small)) cycle
 
-          rho_ij(1:gr%mesh%np) = R_CONJ(wf_ist(1:gr%mesh%np))*st%X(psi)(1:gr%mesh%np, 1, jst, is)
+          rho_ij(1:gr%mesh%np) = R_CONJ(wf_ist(1:gr%mesh%np))*st%X(psi)(1:gr%mesh%np, jdm, jst, isp)
           F_ij(1:gr%mesh%np) = R_TOTYPE(M_ZERO)
           call X(poisson_solve)(psolver, F_ij, rho_ij, all_nodes=.false.)
 
           ! this quantity has to be added to oep%X(lxc)(1:gr%mesh%np, ist)
           send_buffer(1:gr%mesh%np) = send_buffer(1:gr%mesh%np) + &
-            oep%socc*st%occ(jst, is)*F_ij(1:gr%mesh%np)*R_CONJ(st%X(psi)(1:gr%mesh%np, 1, jst, is))
+            oep%socc*st%occ(jst, isp)*F_ij(1:gr%mesh%np)*R_CONJ(st%X(psi)(1:gr%mesh%np, idm, jst, isp))
 
           ! if off-diagonal, then there is another contribution
           ! note that the wf jst is always in this node
-          if(ist .ne. jst) then
-            oep%X(lxc)(1:gr%mesh%np, jst) = oep%X(lxc)(1:gr%mesh%np, jst) - &
-              exx_coef * oep%socc * st%occ(ist, is) * R_CONJ(F_ij(1:gr%mesh%np)*wf_ist(1:gr%mesh%np))
+          if((ist .ne. jst).and..not.(st%d%ispin==SPINORS)) then
+            oep%X(lxc)(1:gr%mesh%np, jst, is) = oep%X(lxc)(1:gr%mesh%np, jst, is) - &
+              exx_coef * oep%socc * st%occ(ist, isp) * R_CONJ(F_ij(1:gr%mesh%np)*wf_ist(1:gr%mesh%np))
           end if
-
           ! get the contribution (ist, jst) to the exchange energy
           rr = M_ONE
           if(ist .ne. jst) rr = M_TWO
 
           ex = ex - exx_coef* M_HALF * rr * &
-              oep%sfact * oep%socc*st%occ(ist, is) * oep%socc*st%occ(jst, is) * &
-              R_REAL(X(mf_dotp)(gr%mesh, st%X(psi)(1:gr%mesh%np, 1, jst, is), wf_ist(:)*F_ij(:)))
+              oep%sfact * oep%socc*st%occ(ist, isp) * oep%socc*st%occ(jst, isp) * &
+              R_REAL(X(mf_dotp)(gr%mesh, st%X(psi)(1:gr%mesh%np, idm, jst, isp), wf_ist(:)*F_ij(:)))
         end do
 
         if(st%node(ist) == st%mpi_grp%rank) then
           ! either add the contribution ist
-          oep%X(lxc)(1:gr%mesh%np, ist) = oep%X(lxc)(1:gr%mesh%np, ist) - exx_coef * send_buffer(1:gr%mesh%np)
+          oep%X(lxc)(1:gr%mesh%np, ist, is) = oep%X(lxc)(1:gr%mesh%np, ist, is) - exx_coef * send_buffer(1:gr%mesh%np)
 
 #if defined(HAVE_MPI)
         else
@@ -207,7 +216,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex, exx_coef)
           call MPI_Recv(recv_buffer(:), gr%mesh%np, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, status, mpi_err)
 
-          oep%X(lxc)(1:gr%mesh%np, send_stack(ist_s)) = oep%X(lxc)(1:gr%mesh%np, send_stack(ist_s)) - &
+          oep%X(lxc)(1:gr%mesh%np, send_stack(ist_s), is) = oep%X(lxc)(1:gr%mesh%np, send_stack(ist_s), is) - &
             exx_coef * recv_buffer(1:gr%mesh%np)
         end if
 

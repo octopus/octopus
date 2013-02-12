@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2012-2013 M. Gruning, P. Melo, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -36,24 +37,34 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   FLOAT, optional,     intent(inout) :: vxc(:,:) !< vxc(gr%mesh%np, st%d%nspin)
 
   FLOAT :: eig
-  integer :: is, ist, ixc
+  integer :: is, ist, ixc, nspin_, isp, idm, jdm
   logical, save :: first = .true.
-
+  
   if(oep%level == XC_OEP_NONE) return
 
   call profiling_in(C_PROFILING_XC_OEP)
   PUSH_SUB(X(xc_oep_calc))
 
   ! initialize oep structure
+  nspin_ = min(st%d%nspin, 2)
   SAFE_ALLOCATE(oep%eigen_type (1:st%nst))
   SAFE_ALLOCATE(oep%eigen_index(1:st%nst))
-  SAFE_ALLOCATE(oep%X(lxc)(1:gr%mesh%np, st%st_start:st%st_end))
-  SAFE_ALLOCATE(oep%uxc_bar    (1:st%nst))
+  SAFE_ALLOCATE(oep%X(lxc)(1:gr%mesh%np, st%st_start:st%st_end,nspin_))
+  SAFE_ALLOCATE(oep%uxc_bar(1:st%nst,nspin_))
 
   ! this part handles the (pure) orbital functionals
-  spin: do is = 1, min(st%d%nspin, 2)
-    oep%X(lxc) = M_ZERO
-
+  oep%X(lxc) = M_ZERO
+  spin: do is = 1, nspin_
+    !
+    ! distinguish between 'is' being the spin_channel index (collinear)
+    ! and being the spinor (noncollinear)
+    if (st%d%ispin==SPINORS) then
+      isp = 1
+      idm = is
+    else
+      isp = is
+      idm = 1
+    end if
     ! get lxc
     functl_loop: do ixc = 1, 2
       if(xcs%functl(ixc, 1)%family .ne. XC_FAMILY_OEP) cycle
@@ -61,7 +72,9 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
       eig = M_ZERO
       select case(xcs%functl(ixc,1)%id)
       case(XC_OEP_X)
-        call X(oep_x) (gr, st, is, oep, eig, xcs%exx_coef)
+        sum_comp: do jdm = 1, st%d%dim
+          call X(oep_x) (gr, st, is, jdm, oep, eig, xcs%exx_coef)
+        end do sum_comp
         ex = ex + eig
       end select
     end do functl_loop
@@ -70,42 +83,44 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
     if(apply_sic_pz) then
       call X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
     end if
-
-    ! get the HOMO state
-    call xc_oep_AnalyzeEigen(oep, st, is)
-
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
-      oep%uxc_bar(ist) = X(mf_dotp)(gr%mesh, R_CONJ(st%X(psi)(1:gr%mesh%np, 1, ist, is)), oep%X(lxc)(1:gr%mesh%np, ist))
+      oep%uxc_bar(ist,is) = X(mf_dotp)(gr%mesh, R_CONJ(st%X(psi)(1:gr%mesh%np, idm, ist, isp)), oep%X(lxc)(1:gr%mesh%np, ist, is))
     end do
-
-#if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      call MPI_Barrier(st%mpi_grp%comm, mpi_err)
-      do ist = 1, st%nst
-        call MPI_Bcast(oep%uxc_bar(ist), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, mpi_err)
-      end do
-    end if
-#endif
-
-    if(present(vxc)) then
-      ! solve the KLI equation
-      if(oep%level .ne. XC_OEP_FULL .or. first) then
-        first = .false.
-
-        oep%vxc = M_ZERO
-        call X(xc_KLI_solve) (gr%mesh, st, is, oep)
-      end if
-
-      ! if asked, solve the full OEP equation
-      if(oep%level == XC_OEP_FULL) then
-        call X(xc_oep_solve)(gr, hm, st, is, vxc(:,is), oep)
-      end if
-
-      vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np)
-    end if
   end do spin
-
+#if defined(HAVE_MPI) 
+   if(st%parallel_in_states) then
+     call MPI_Barrier(st%mpi_grp%comm, mpi_err)
+     do ist = st%st_start, st%st_end
+       call MPI_Bcast(oep%uxc_bar(ist,isp), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, mpi_err)
+     end do
+   end if
+#endif
+  if (st%d%ispin==SPINORS) then
+    call xc_KLI_Pauli_solve(gr%mesh, st, oep)
+    vxc(1:gr%mesh%np,:) = oep%vxc(1:gr%mesh%np,:)
+  else
+    spin2: do is = 1, nspin_
+      ! get the HOMO state
+      call xc_oep_AnalyzeEigen(oep, st, is)
+      !
+      if(present(vxc)) then
+        ! solve the KLI equation
+        if(oep%level .ne. XC_OEP_FULL .or. first) then
+          first = .false.
+          oep%vxc = M_ZERO
+          call X(xc_KLI_solve) (gr%mesh, st, is, oep)
+        end if
+        
+        ! if asked, solve the full OEP equation
+        if(oep%level == XC_OEP_FULL) then
+          call X(xc_oep_solve)(gr, hm, st, is, vxc(:,is), oep)
+        end if
+        
+        vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np,1)
+      end if
+    end do spin2
+  end if
   SAFE_DEALLOCATE_P(oep%eigen_type)
   SAFE_DEALLOCATE_P(oep%eigen_index)
   SAFE_DEALLOCATE_P(oep%X(lxc))
@@ -146,16 +161,16 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   end if
 
   ! fix xc potential (needed for Hpsi)
-  vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np)
+  vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np,1)
 
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     ss = M_ZERO
     do ist = 1, st%nst
       ! evaluate right-hand side
-      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np))
-      bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np) - (vxc_bar - oep%uxc_bar(ist))) * &
-        R_CONJ(st%X(psi)(1:gr%mesh%np, 1, ist, is)) + oep%X(lxc)(1:gr%mesh%np, ist) 
+      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np,1))
+      bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np,1) - (vxc_bar - oep%uxc_bar(ist,is))) * &
+        R_CONJ(st%X(psi)(1:gr%mesh%np, 1, ist, is)) + oep%X(lxc)(1:gr%mesh%np, ist, is) 
 
       call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
 
@@ -169,12 +184,12 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
         M_TWO*R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*st%X(psi)(1:gr%mesh%np, 1, ist, is))
     end do
 
-    oep%vxc(1:gr%mesh%np) = oep%vxc(1:gr%mesh%np) + oep%mixing*ss(1:gr%mesh%np)
+    oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) + oep%mixing*ss(1:gr%mesh%np)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
-        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np))
-        oep%vxc(1:gr%mesh%np) = oep%vxc(1:gr%mesh%np) - (vxc_bar - oep%uxc_bar(ist))
+        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np,1))
+        oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do
 

@@ -65,7 +65,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2
 
-      oep%X(lxc)(1:gr%mesh%np, ist) = oep%X(lxc)(1:gr%mesh%np, ist) - vxc(1:gr%mesh%np, 1)*R_CONJ(psi(1:gr%mesh%np, 1))
+      oep%X(lxc)(1:gr%mesh%np, ist, is) = oep%X(lxc)(1:gr%mesh%np, ist, is) - vxc(1:gr%mesh%np, 1)*R_CONJ(psi(1:gr%mesh%np, 1))
 
       ! calculate the Hartree contribution using Poisson equation
       vxc(1:gr%mesh%np, 1) = M_ZERO
@@ -75,7 +75,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(ist, is)* &
         dmf_dotp(gr%mesh, vxc(1:gr%mesh%np, 1), R_ABS(psi(1:gr%mesh%np, 1))**2)
 
-      oep%X(lxc)(1:gr%mesh%np, ist) = oep%X(lxc)(1:gr%mesh%np, ist) - &
+      oep%X(lxc)(1:gr%mesh%np, ist, is) = oep%X(lxc)(1:gr%mesh%np, ist, is) - &
         vxc(1:gr%mesh%np, 1)*R_CONJ(psi(1:gr%mesh%np, 1))
     end if
   end do

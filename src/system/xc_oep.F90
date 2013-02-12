@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2012-2013 M. Gruning, P. Melo, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -69,9 +70,9 @@ module xc_oep_m
     integer          :: eigen_n
     integer, pointer :: eigen_type(:), eigen_index(:)
     FLOAT            :: socc, sfact
-    FLOAT,   pointer :: vxc(:), uxc_bar(:)
-    FLOAT,   pointer :: dlxc(:, :)
-    CMPLX,   pointer :: zlxc(:, :)
+    FLOAT,   pointer :: vxc(:,:), uxc_bar(:,:)
+    FLOAT,   pointer :: dlxc(:, :, :)
+    CMPLX,   pointer :: zlxc(:, :, :)
   end type xc_oep_t
 
   FLOAT, parameter :: small     = CNST(1.0e-5)
@@ -136,9 +137,9 @@ contains
         call parse_float(datasets_check('OEPMixing'), M_ONE, oep%mixing)
       end if
 
-      ! this routine is only prepared for finite systems, and ispin = 1, 2
-      if(d%ispin > SPIN_POLARIZED .or. d%nik>d%ispin) then
-        message(1) = "OEP only works for finite systems and collinear spin."
+     ! this routine is only prepared for finite systems
+      if(d%nik > d%ispin) then
+        message(1) = "OEP only works for finite systems."
         call messages_fatal(1)
       end if
     
@@ -146,8 +147,11 @@ contains
       call xc_oep_SpinFactor(oep, d%nspin)
 
       ! This variable will keep vxc across iterations
-      SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np))
-
+      if (d%ispin==3) then !MG150512: temporary solution, not so elegant (just not to touch previous source)
+        SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,d%nspin))
+      else
+        SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,1:1))
+      end if
       ! when performing full OEP, we need to solve a linear equation
       if(oep%level == XC_OEP_FULL) then 
         call scf_tol_init(oep%scftol, "OEP",def_maximumiter=10)
@@ -283,6 +287,8 @@ contains
     POP_SUB(xc_oep_AnalyzeEigen)
   end subroutine xc_oep_AnalyzeEigen
 
+
+#include "xc_kli_pauli_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"

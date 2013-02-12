@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2012-2013 M. Gruning, P. Melo, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -31,7 +32,6 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
 
   call profiling_in(C_PROFILING_XC_KLI)
   PUSH_SUB(X(xc_KLI_solve))
-
   ! some intermediate quantities
   ! vxc contains the Slater part!
   SAFE_ALLOCATE(rho_sigma(1:mesh%np))
@@ -56,20 +56,19 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
 #endif
 
   do ip = 1, mesh%np
-    oep%vxc(ip) = M_ZERO
+    oep%vxc(ip,1) = M_ZERO
     do ist = st%st_start, st%st_end
-      oep%vxc(ip) = oep%vxc(ip) + oep%socc * st%occ(ist, is) * oep%X(lxc)(ip, ist) * st%X(psi)(ip, 1, ist, is)
+      oep%vxc(ip,1) = oep%vxc(ip,1) + oep%socc * st%occ(ist, is) * oep%X(lxc)(ip, ist, is) * st%X(psi)(ip, 1, ist, is)
     end do
-    oep%vxc(ip) = oep%vxc(ip) / rho_sigma(ip)
+    oep%vxc(ip,1) = oep%vxc(ip,1) / rho_sigma(ip)
   end do
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    call MPI_Allreduce(oep%vxc(1), dd(1), mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    oep%vxc(1:mesh%np) = dd(1:mesh%np)
+    call MPI_Allreduce(oep%vxc(1,1), dd(1), mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    oep%vxc(1:mesh%np,1) = dd(1:mesh%np)
     SAFE_DEALLOCATE_A(dd)
   end if
 #endif
-
   if(oep%level == XC_OEP_SLATER) then
     SAFE_DEALLOCATE_A(rho_sigma)
     SAFE_DEALLOCATE_A(sqphi)
@@ -77,13 +76,12 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
     POP_SUB(X(xc_KLI_solve))
     return
   end if
-
   eigen_n = oep%eigen_n
 
   SAFE_ALLOCATE(v_bar_S(1:st%nst))
   do ist = st%st_start, st%st_end
     if(st%occ(ist, is) .gt. small) then
-      v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc)
+      v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,1))
     end if
   end do
 
@@ -99,7 +97,6 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
     end do
   end if
 #endif
-
   ! If there is more than one state, then solve linear equation.
   linear_equation: if(eigen_n > 0) then
     SAFE_ALLOCATE(dd(1:mesh%np))
@@ -121,7 +118,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
           Ma(ist, jst) = - dmf_dotp(mesh, dd, sqphi(:, 1, kssj) )
         end do j_loop
         Ma(ist, ist) = M_ONE + Ma(ist, ist)
-        yy(ist, 1) = v_bar_S(kssi) - oep%uxc_bar(kssi)
+        yy(ist, 1) = v_bar_S(kssi) - oep%uxc_bar(kssi,is)
       end if
     end do i_loop
 
@@ -148,7 +145,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
     do ist = 1, eigen_n
       kssi = oep%eigen_index(ist)
       occ = st%occ(kssi, is)
-      oep%vxc(1:mesh%np) = oep%vxc(1:mesh%np) + &
+      oep%vxc(1:mesh%np,1) = oep%vxc(1:mesh%np,1) + &
         oep%socc * occ * xx(ist, 1) * sqphi(1:mesh%np, 1, kssi) / rho_sigma(1:mesh%np)
     end do
 
@@ -172,3 +169,4 @@ end subroutine X(xc_KLI_solve)
 !! mode: f90
 !! coding: utf-8
 !! End:
+
