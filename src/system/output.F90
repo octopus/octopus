@@ -188,8 +188,10 @@ contains
     !% Example: <tt>density + potential</tt>
     !%Option potential 1
     !% Outputs Kohn-Sham potential, separated by parts. File names are <tt>v0</tt> for 
-    !% the local part, <tt>vc</tt> for the classical potential (if it exists), <tt>vh</tt> for the
-    !% Hartree potential, and <tt>vxc-</tt> for the exchange-correlation potentials.
+    !% the local part of the ionic potential, <tt>vc</tt> for the classical potential (if it exists),
+    !% <tt>vh</tt> for the Hartree potential, <tt>vks</tt> for the local part of the Kohn-Sham potential, and
+    !% <tt>vxc-</tt> for the exchange-correlation potentials. For <tt>vks</tt> and <tt>vxc</tt>,
+    !% a suffix for spin is added in the spin-polarized case.
     !%Option density 2
     !% Outputs density. The output file is called <tt>density-</tt>, or <tt>lr_density-</tt> in linear response.
     !%Option wfs 4
