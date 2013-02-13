@@ -91,7 +91,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
 #if defined(HAVE_MPI) 
    if(st%parallel_in_states) then
      call MPI_Barrier(st%mpi_grp%comm, mpi_err)
-     do ist = st%st_start, st%st_end
+     do ist = 1, st%nst
        call MPI_Bcast(oep%uxc_bar(ist,isp), 1, MPI_FLOAT, st%node(ist), st%mpi_grp%comm, mpi_err)
      end do
    end if
