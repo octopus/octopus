@@ -6,6 +6,7 @@ Programs   : octopus; octopus_mpi
 TestGroups : long-run, periodic_systems
 Enabled    : Yes
 
+# this test is based on CA Rozzi et al., Phys Rev B 73, 205119 (2006) Section V.A
 
 Input: 03-sodium_chain.01-ground_state.inp
 
