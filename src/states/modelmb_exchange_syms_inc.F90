@@ -107,7 +107,7 @@ subroutine X(modelmb_sym_state)(eigenval, iunit, gr, mm, &
     ! skip diagram combinations already used in present degenerate subspace
     if (young_used (idiagram_combo) > 0) cycle
 
-    call X(modelmb_sym_state_1diag)(eigenval, gr, mm, &
+    call X(modelmb_sym_state_1diag)(gr, &
        modelmbparticles, dg_combo_ndown(:, idiagram_combo), &
        dg_combo_iy(:, idiagram_combo), &
        antisymwf, sym_ok_alltypes, norm, youngstring)
@@ -153,16 +153,13 @@ end subroutine X(modelmb_sym_state)
 
 ! ---------------------------------------------------------
 !> project out states for a single combination of Young diagrams (1 diagram for each particle type)
-subroutine X(modelmb_sym_state_1diag)(eigenval, gr, mm, &
+subroutine X(modelmb_sym_state_1diag)(gr, &
            modelmbparticles, nspindown_in, iyoung_in, &
            antisymwf, sym_ok_alltypes, norm, youngstring)
-  FLOAT,                    intent(in)    :: eigenval
   type(modelmb_particle_t), intent(in)    :: modelmbparticles
   type(grid_t),             intent(in)    :: gr
-  integer,                  intent(in)    :: mm
   integer,                  intent(in)    :: nspindown_in(1:modelmbparticles%ntype_of_particle)
   integer,                  intent(in)    :: iyoung_in(1:modelmbparticles%ntype_of_particle)
-
   R_TYPE,                   intent(inout) :: antisymwf(:,:,:) !< will be antisymmetrized on output
   integer,                  intent(out)   :: sym_ok_alltypes(1:modelmbparticles%ntype_of_particle)
   FLOAT,                    intent(out)   :: norm
