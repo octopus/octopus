@@ -26,7 +26,7 @@ subroutine X(modelmb_sym_state)(eigenval, iunit, gr, mm, &
   integer,                  intent(in)    :: mm
   type(modelmb_particle_t), intent(in)    :: modelmbparticles
   integer,                  intent(in)    :: ncombo
-  integer,                  intent(inout) :: young_used(1:ncombo)
+  integer,                  intent(inout) :: young_used(:) !< (1:ncombo)
   R_TYPE,                   intent(inout) :: wf(:) !< will be antisymmetrized on output
   logical,                  intent(out)   :: symmetries_satisfied
   logical,                  intent(in)    :: tproj_1yd
@@ -158,10 +158,10 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
            antisymwf, sym_ok_alltypes, norm, youngstring)
   type(modelmb_particle_t), intent(in)    :: modelmbparticles
   type(grid_t),             intent(in)    :: gr
-  integer,                  intent(in)    :: nspindown_in(1:modelmbparticles%ntype_of_particle)
-  integer,                  intent(in)    :: iyoung_in(1:modelmbparticles%ntype_of_particle)
+  integer,                  intent(in)    :: nspindown_in(:) !< (1:modelmbparticles%ntype_of_particle)
+  integer,                  intent(in)    :: iyoung_in(:) !< (1:modelmbparticles%ntype_of_particle)
   R_TYPE,                   intent(inout) :: antisymwf(:,:,:) !< will be antisymmetrized on output
-  integer,                  intent(out)   :: sym_ok_alltypes(1:modelmbparticles%ntype_of_particle)
+  integer,                  intent(out)   :: sym_ok_alltypes(:) !< (1:modelmbparticles%ntype_of_particle)
   FLOAT,                    intent(out)   :: norm
   character(len=500),       intent(out)   :: youngstring
 
