@@ -155,8 +155,8 @@ end subroutine X(restart_write_lr_rho)
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_subdir, rho_tag, ierr)
-  type(lr_t),        intent(inout) :: lr
+subroutine X(restart_read_lr_rho)(dl_rho, gr, nspin, restart_subdir, rho_tag, ierr)
+  R_TYPE,            intent(inout) :: dl_rho(:,:) !< (gr%mesh%np, nspin)
   type(grid_t),      intent(in)    :: gr
   integer,           intent(in)    :: nspin
   character(len=*),  intent(in)    :: restart_subdir
@@ -172,18 +172,18 @@ subroutine X(restart_read_lr_rho)(lr, gr, nspin, restart_subdir, rho_tag, ierr)
   do is = 1, nspin
     write(fname, '(a, i1,a)') trim(rho_tag)//'_', is
     call X(restart_read_function)(trim(restart_dir)//trim(restart_subdir), fname, gr%mesh,&
-         lr%X(dl_rho)(:, is), s_ierr)
+      dl_rho(:, is), s_ierr)
     if( s_ierr /=0 ) ierr = s_ierr
   end do
 
 
   if( ierr == 0 ) then 
-    write(message(1),'(a)') 'Loaded restart density '//rho_tag
+    write(message(1),'(a)') 'Loaded restart density '//trim(rho_tag)
     call messages_info(1)
 
   else
 
-    write(message(1),'(a)') 'Could not load restart '//rho_tag
+    write(message(1),'(a)') 'Could not load restart '//trim(rho_tag)
     call messages_info(1)
 
   end if

@@ -449,10 +449,10 @@ contains
               !attempt to read 
               if(ierr == 0) then 
                 if(states_are_complex(sys%st)) then 
-                  call zrestart_read_lr_rho(em_vars%lr(idir, sigma_alt, ifactor), sys%gr, sys%st%d%nspin, &
+                  call zrestart_read_lr_rho(em_vars%lr(idir, sigma_alt, ifactor)%zdl_rho, sys%gr, sys%st%d%nspin, &
                     EM_RESP_DIR, em_rho_tag(closest_omega, idir), ierr)
                 else 
-                  call drestart_read_lr_rho(em_vars%lr(idir, sigma_alt, ifactor), sys%gr, sys%st%d%nspin, &
+                  call drestart_read_lr_rho(em_vars%lr(idir, sigma_alt, ifactor)%ddl_rho, sys%gr, sys%st%d%nspin, &
                     EM_RESP_DIR, em_rho_tag(closest_omega, idir), ierr)
                 end if
 
