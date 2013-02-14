@@ -49,6 +49,7 @@ module casida_m
   use system_m
   use unit_m
   use unit_system_m
+  use phonons_lr_m
   use xc_m
   
   implicit none
@@ -76,6 +77,7 @@ module casida_m
     character(len=80) :: wfn_list
     character(len=80) :: trandens
     logical           :: triplet        !< use triplet kernel?
+    logical           :: forces         !< calculate excited-state forces
     character(len=80) :: restart_file
 
     integer           :: n_pairs        !< number of pairs to take into account
@@ -303,6 +305,15 @@ contains
       cas%triplet = .false.
     endif
 
+    !%Variable CasidaCalcForces
+    !%Type logical
+    !%Section Linear Response::Casida
+    !%Default false
+    !%Description
+    !% Enable calculation of excited-state forces. Requires previous <tt>vib_modes</tt> calculation.
+    !%End
+    call parse_logical(datasets_check('CasidaCalcForces'), .false., cas%forces)
+
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, sys%mc)
 
@@ -483,8 +494,9 @@ contains
     type(states_t), pointer :: st
     type(mesh_t),   pointer :: mesh
 
-    FLOAT, allocatable :: rho(:, :), rho_spin(:, :), fxc(:,:,:), pot(:)
-    integer :: qi_old, qa_old, mu_old
+    FLOAT, allocatable :: rho(:, :), rho_spin(:, :), fxc(:,:,:), pot(:), &
+      dl_rho(:, :), kxc(:, :, :, :, :, :)
+    integer :: qi_old, qa_old, mu_old, ierr, iatom, idir
 
     PUSH_SUB(casida_work)
 
@@ -537,6 +549,29 @@ contains
         call xc_get_fxc(sys%ks%xc, mesh, rho_spin, SPIN_POLARIZED, fxc)
       else
         call xc_get_fxc(sys%ks%xc, mesh, rho, st%d%ispin, fxc)
+      endif
+
+      if(cas%forces) then
+        message(1) = "Reading vib_modes density for calculating excited-state forces."
+        call messages_info(1)
+
+        SAFE_ALLOCATE(dl_rho(1:mesh%np, 1:st%d%nspin))
+        SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
+        kxc = M_ZERO
+        do iatom = 1, sys%geo%natoms
+          do idir = 1, mesh%sb%dim
+            call drestart_read_lr_rho(dl_rho, sys%gr, st%d%nspin, &
+              VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
+
+            if(ierr .ne. 0) then
+              message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
+              call messages_fatal(1)
+            end if
+            
+            call xc_get_kxc(sys%ks%xc, mesh, dl_rho, st%d%ispin, kxc(:, :, :, :, iatom, idir))
+          enddo
+        enddo
+        SAFE_DEALLOCATE_A(dl_rho)
       endif
     end if
 
