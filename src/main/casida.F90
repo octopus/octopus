@@ -641,7 +641,7 @@ contains
           if(saved_K(ia, ia)) then
             ff = cas%mat(ia, ia)
           else
-            call K_term(cas%pair(ia), cas%pair(ia), lr = .false., mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
+            call K_term(cas%pair(ia), cas%pair(ia), fxc, mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
             cas%mat(ia, ia) = mtxel_vh + mtxel_xc
             ff = cas%mat(ia, ia)
             call write_K_term(cas, iunit, ia, ia)
@@ -733,7 +733,7 @@ contains
           counter = counter + 1
           ! if not loaded, then calculate matrix element
           if(.not.saved_K(ia, jb)) then
-            call K_term(cas%pair(ia), cas%pair(jb), lr = .false., mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
+            call K_term(cas%pair(ia), cas%pair(jb), fxc, mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
             cas%mat(ia, jb) = mtxel_vh + mtxel_xc
           end if
           if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
@@ -936,15 +936,14 @@ contains
 
     ! ---------------------------------------------------------
     !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-    subroutine K_term(pp, qq, lr, mtxel_vh, mtxel_xc)
+    subroutine K_term(pp, qq, xc, mtxel_vh, mtxel_xc)
       type(states_pair_t), intent(in) :: pp, qq
-      logical,             intent(in) :: lr !< if true, use lr_fxc instead of fxc
+      FLOAT,               intent(in) :: xc(:,:,:) !< pass fxc or lr_fxc (1:mesh%np, 1:spin, 1:spin)
       FLOAT,    optional, intent(out) :: mtxel_vh
       FLOAT,    optional, intent(out) :: mtxel_xc
 
       integer :: pi, qi, sigma, pa, qa, mu
       FLOAT, allocatable :: rho_i(:), rho_j(:)
-      FLOAT, pointer :: xc(:,:,:)
 
       PUSH_SUB(casida_work.K_term)
 
@@ -986,12 +985,6 @@ contains
       end if
 
       if(present(mtxel_xc)) then
-        if(lr) then
-          xc => lr_fxc(:, :, :, iatom, idir)
-        else
-          xc => fxc
-        endif
-
         if(cas%triplet) then
           rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * M_HALF * (xc(1:mesh%np, 1, 1) - xc(1:mesh%np, 1, 2))
         else
