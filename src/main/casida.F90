@@ -600,7 +600,7 @@ contains
     !> Despite the name, this routine does eps_diff also. 
     subroutine solve_petersilka
       integer :: ia, iunit, idir, actual
-      FLOAT   :: ff
+      FLOAT   :: ff, mtxel_vh, mtxel_fxc
       FLOAT, allocatable :: deltav(:), xx(:)
 
       PUSH_SUB(casida_work.solve_petersilka)
@@ -629,7 +629,8 @@ contains
           if(saved_K(ia, ia)) then
             ff = cas%mat(ia, ia)
           else
-            cas%mat(ia, ia) = K_term(cas%pair(ia), cas%pair(ia))
+            call K_term(cas%pair(ia), cas%pair(ia), mtxel_vh = mtxel_vh, mtxel_fxc = mtxel_fxc)
+            cas%mat(ia, ia) = mtxel_vh + mtxel_fxc
             ff = cas%mat(ia, ia)
             call write_K_term(cas, iunit, ia, ia)
           end if
@@ -699,7 +700,7 @@ contains
 
       FLOAT, allocatable :: gaus_leg_points(:), gaus_leg_weights(:)
       integer :: ii, jj
-      FLOAT :: theta, phi, qlen
+      FLOAT :: theta, phi, qlen, mtxel_vh, mtxel_fxc
       FLOAT :: qvect(MAX_DIM)
 
       PUSH_SUB(casida_work.solve_casida)
@@ -720,7 +721,8 @@ contains
           counter = counter + 1
           ! if not loaded, then calculate matrix element
           if(.not.saved_K(ia, jb)) then
-            cas%mat(ia, jb) = K_term(cas%pair(ia), cas%pair(jb))
+            call K_term(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_fxc = mtxel_fxc)
+            cas%mat(ia, jb) = mtxel_vh + mtxel_fxc
           end if
           if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
         end do
@@ -921,9 +923,11 @@ contains
 
 
     ! ---------------------------------------------------------
-    ! return the matrix element of <i(p),a(p)|v + fxc|j(q),b(q)>
-    FLOAT function K_term(pp, qq)
+    ! calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|fxc|j(q),b(q)>
+    subroutine K_term(pp, qq, mtxel_vh, mtxel_fxc)
       type(states_pair_t), intent(in) :: pp, qq
+      FLOAT,    optional, intent(out) :: mtxel_vh
+      FLOAT,    optional, intent(out) :: mtxel_fxc
 
       integer :: pi, qi, sigma, pa, qa, mu
       FLOAT, allocatable :: rho_i(:), rho_j(:)
@@ -950,30 +954,37 @@ contains
       end if
 
       !  first the Hartree part (only works for real wfs...)
-      if(.not. cas%triplet .and. (qi .ne. qi_old  .or.   qa .ne. qa_old   .or.  mu .ne. mu_old)) then
-        pot(1:mesh%np) = M_ZERO
-        if(hm%theory_level .ne. INDEPENDENT_PARTICLES) &
-          call dpoisson_solve(psolver, pot, rho_j, all_nodes=.false.)
+      if(present(mtxel_vh)) then
+        if(.not. cas%triplet) then
+          if(qi .ne. qi_old  .or.   qa .ne. qa_old   .or.  mu .ne. mu_old) then
+            pot(1:mesh%np) = M_ZERO
+            if(hm%theory_level .ne. INDEPENDENT_PARTICLES) call dpoisson_solve(psolver, pot, rho_j, all_nodes=.false.)
+          endif
+          ! value of pot is retained between calls
+          mtxel_vh = dmf_dotp(mesh, rho_i(:), pot(:))
+
+          qi_old = qi
+          qa_old = qa
+          mu_old = mu
+        else
+          mtxel_vh = M_ZERO
+        endif
       end if
 
-      if(cas%triplet) then
-        K_term = M_ZERO
-        rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * M_HALF * (fxc(1:mesh%np, 1, 1) - fxc(1:mesh%np, 1, 2))
-      else
-        K_term = dmf_dotp(mesh, rho_i(:), pot(:))
-        rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * fxc(1:mesh%np, sigma, mu)
+      if(present(mtxel_fxc)) then
+        if(cas%triplet) then
+          rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * M_HALF * (fxc(1:mesh%np, 1, 1) - fxc(1:mesh%np, 1, 2))
+        else
+          rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * fxc(1:mesh%np, sigma, mu)
+        endif
+        mtxel_fxc = dmf_integrate(mesh, rho(:, 1))
       endif
-      K_term = K_term + dmf_integrate(mesh, rho(:, 1))
-
-      qi_old = qi
-      qa_old = qa
-      mu_old = mu
 
       SAFE_DEALLOCATE_A(rho_i)
       SAFE_DEALLOCATE_A(rho_j)
 
       POP_SUB(casida_work.K_term)
-    end function K_term
+    end subroutine K_term
 
     ! ---------------------------------------------------------
     subroutine load_saved
