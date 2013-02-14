@@ -497,6 +497,7 @@ contains
     FLOAT, allocatable :: rho(:, :), rho_spin(:, :), pot(:), &
       dl_rho(:,:,:,:), kxc(:,:,:,:)
     FLOAT, target, allocatable :: fxc(:,:,:), lr_fxc(:,:,:,:,:)
+    FLOAT, pointer :: xc(:,:,:)
     integer :: qi_old, qa_old, mu_old, ierr, iatom, idir, is1, is2, ip
 
     PUSH_SUB(casida_work)
@@ -553,35 +554,44 @@ contains
       endif
 
       if(cas%forces) then
-        message(1) = "Reading vib_modes density for calculating excited-state forces."
-        call messages_info(1)
-
-        SAFE_ALLOCATE(dl_rho(1:mesh%np, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
         SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
         kxc = M_ZERO
         ! not spin polarized so far
         call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc(:, :, :, :))
-        SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
-        lr_fxc = M_ZERO
-
-        do iatom = 1, sys%geo%natoms
-          do idir = 1, mesh%sb%dim
-            call drestart_read_lr_rho(dl_rho(:, :, iatom, idir), sys%gr, st%d%nspin, &
-              VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
-
-            if(ierr .ne. 0) then
-              message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
-              call messages_fatal(1)
-            end if
-
-            forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
-              lr_fxc(ip, is1, is2, iatom, idir) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :, iatom, idir))
-            end forall
-          enddo
-        enddo
       endif
     end if
 
+    if(cas%forces) then
+      message(1) = "Reading vib_modes density for calculating excited-state forces."
+      call messages_info(1)
+
+      SAFE_ALLOCATE(dl_rho(1:mesh%np, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
+      if (cas%type /= CASIDA_EPS_DIFF) then
+        SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
+      endif
+
+      do iatom = 1, sys%geo%natoms
+        do idir = 1, mesh%sb%dim
+          call drestart_read_lr_rho(dl_rho(:, :, iatom, idir), sys%gr, st%d%nspin, &
+            VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
+
+          if(ierr .ne. 0) then
+            message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
+            call messages_fatal(1)
+          end if
+            
+          ! calc derivatives of eigenvalues here
+
+          if (cas%type /= CASIDA_EPS_DIFF) then
+            forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
+              lr_fxc(ip, is1, is2, iatom, idir) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :, iatom, idir))
+            end forall
+          endif
+        enddo
+      enddo
+    endif
+
+    xc => fxc
     select case(cas%type)
     case(CASIDA_EPS_DIFF,CASIDA_PETERSILKA)
       call solve_petersilka()
@@ -597,11 +607,13 @@ contains
         SAFE_DEALLOCATE_A(pot)
       endif
       if(cas%forces) then
-        SAFE_DEALLOCATE_A(dl_rho)
         SAFE_DEALLOCATE_A(kxc)
         SAFE_DEALLOCATE_A(lr_fxc)
       endif
     end if
+    if(cas%forces) then
+      SAFE_DEALLOCATE_A(dl_rho)
+    endif
     SAFE_DEALLOCATE_A(saved_K)
 
     POP_SUB(casida_work)
@@ -641,7 +653,7 @@ contains
           if(saved_K(ia, ia)) then
             ff = cas%mat(ia, ia)
           else
-            call K_term(cas%pair(ia), cas%pair(ia), fxc, mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
+            call K_term(cas%pair(ia), cas%pair(ia), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
             cas%mat(ia, ia) = mtxel_vh + mtxel_xc
             ff = cas%mat(ia, ia)
             call write_K_term(cas, iunit, ia, ia)
@@ -733,7 +745,7 @@ contains
           counter = counter + 1
           ! if not loaded, then calculate matrix element
           if(.not.saved_K(ia, jb)) then
-            call K_term(cas%pair(ia), cas%pair(jb), fxc, mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
+            call K_term(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
             cas%mat(ia, jb) = mtxel_vh + mtxel_xc
           end if
           if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
@@ -936,9 +948,8 @@ contains
 
     ! ---------------------------------------------------------
     !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-    subroutine K_term(pp, qq, xc, mtxel_vh, mtxel_xc)
+    subroutine K_term(pp, qq, mtxel_vh, mtxel_xc)
       type(states_pair_t), intent(in) :: pp, qq
-      FLOAT,               intent(in) :: xc(:,:,:) !< pass fxc or lr_fxc (1:mesh%np, 1:spin, 1:spin)
       FLOAT,    optional, intent(out) :: mtxel_vh
       FLOAT,    optional, intent(out) :: mtxel_xc
 
