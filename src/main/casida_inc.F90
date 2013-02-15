@@ -17,6 +17,117 @@
 !!
 !! $Id$
 
+subroutine X(oscillator_strengths)(cas, mesh, st)
+  type(casida_t), intent(inout) :: cas
+  type(mesh_t), intent(in) :: mesh
+  type(states_t), intent(in) :: st
+
+  FLOAT, allocatable :: deltav(:)
+  R_TYPE, allocatable :: xx(:)
+  CMPLX, allocatable :: zf(:), zx(:)
+  FLOAT, allocatable :: gaus_leg_points(:), gaus_leg_weights(:)
+  integer :: ii, jj, ia, ip, idir
+  FLOAT :: theta, phi, qlen
+  FLOAT :: qvect(MAX_DIM)
+
+  PUSH_SUB(X(oscillator_strengths))
+
+  SAFE_ALLOCATE(deltav(1:mesh%np))
+
+  if(cas%qcalc) then
+    SAFE_ALLOCATE(zf(1:mesh%np))
+    SAFE_ALLOCATE(zx(1:cas%n_pairs))
+
+    ! matrix element
+    do ia = 1, cas%n_pairs
+      do ip = 1, mesh%np
+        zf(ip) = exp(M_zI * dot_product(cas%qvector(:), mesh%x(ip, :))) * &
+          st%dpsi(ip, 1, cas%pair(ia)%i, cas%pair(ia)%sigma) * &
+          st%dpsi(ip, 1, cas%pair(ia)%a, cas%pair(ia)%sigma)
+      end do
+      zx(ia) = zmf_integrate(mesh, zf)
+    end do
+
+    ! intensity
+    do ia = 1, cas%n_pairs
+      cas%qf(ia) = abs(ztransition_matrix_element(cas, ia, zx))**2
+    end do
+
+    ! do we calculate the average
+    if(cas%avg_order .gt. 0) then
+
+      ! use Gauss-Legendre quadrature scheme
+      SAFE_ALLOCATE(gaus_leg_points (1:cas%avg_order))
+      SAFE_ALLOCATE(gaus_leg_weights(1:cas%avg_order))
+      call gauss_legendre_points(cas%avg_order, gaus_leg_points, gaus_leg_weights)
+
+      qlen = sqrt(dot_product(cas%qvector, cas%qvector))
+      do ii = 1, cas%avg_order
+        do jj = 1, 2 * cas%avg_order
+          
+          ! construct the q-vector
+          phi   = acos(gaus_leg_points(ii))
+          theta = M_PI * jj / cas%avg_order
+          qvect(1) = qlen * cos(theta) * sin(phi)
+          qvect(2) = qlen * sin(theta) * sin(phi)
+          qvect(3) = qlen * cos(phi)
+          
+          ! matrix elements
+          zx(:) = M_ZERO
+          zf(:) = M_ZERO
+          do ia = 1, cas%n_pairs
+            forall(ip = 1:mesh%np)
+              ! NB should use states_get_state here
+              zf(ip) = exp(M_zI * dot_product(qvect(1:3), mesh%x(ip, 1:3))) * &
+                st%dpsi(ip, 1, cas%pair(ia)%i, cas%pair(ia)%sigma) * &
+                st%dpsi(ip, 1, cas%pair(ia)%a, cas%pair(ia)%sigma)
+            end forall
+            zx(ia) = zmf_integrate(mesh, zf)
+          end do
+
+          ! intensities
+          do ia = 1, cas%n_pairs
+            cas%qf_avg(ia) = cas%qf_avg(ia) + &
+              gaus_leg_weights(ii)*abs(ztransition_matrix_element(cas, ia, zx))**2
+          end do
+          
+        end do ! jj (thetas)
+      end do ! ii (phis)
+      
+      ! normalize: for integral over sphere one would multiply by pi/N, but since
+      !            we want the average, the integral must be divided by 4*pi
+      forall(ia = 1:cas%n_pairs) cas%qf_avg(ia) = cas%qf_avg(ia) / (4*cas%avg_order)
+      
+      ! and finalize
+      SAFE_DEALLOCATE_A(gaus_leg_points)
+      SAFE_DEALLOCATE_A(gaus_leg_weights)
+      
+    end if ! averaging
+
+    SAFE_DEALLOCATE_A(zf)
+    SAFE_DEALLOCATE_A(zx)
+
+  end if
+
+  SAFE_ALLOCATE(xx(1:cas%n_pairs))
+  do idir = 1, mesh%sb%dim
+    deltav(1:mesh%np) = mesh%x(1:mesh%np, idir)
+    ! let us get now the x vector.
+    xx = X(ks_matrix_elements)(cas, st, mesh, deltav)
+    ! And now we are able to get the transition matrix elements between many-electron states.
+    do ia = 1, cas%n_pairs
+      cas%tm(ia, idir) = X(transition_matrix_element)(cas, ia, xx)
+    end do
+  end do
+  SAFE_DEALLOCATE_A(xx)
+
+  ! And the oscillator strengths.
+  do ia = 1, cas%n_pairs
+    cas%f(ia) = (M_TWO / mesh%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
+  end do
+
+  POP_SUB(X(oscillator_strengths))
+end subroutine X(oscillator_strengths)
 
 ! ---------------------------------------------------------
 function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
@@ -40,6 +151,7 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
     call states_get_state(st, mesh, cas%pair(ia)%i, cas%pair(ia)%sigma, psii)
     call states_get_state(st, mesh, cas%pair(ia)%a, cas%pair(ia)%sigma, psia)
 
+    ! use forall here
     do ip = 1, mesh%np
       ff(ip) = M_ZERO
       do idim = 1, st%d%dim
