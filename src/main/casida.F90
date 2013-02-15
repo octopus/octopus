@@ -102,6 +102,8 @@ module casida_m
     logical           :: fromScratch
   end type casida_t
 
+  type(profile_t), save :: prof
+
 contains
 
   subroutine casida_run_init()
@@ -344,7 +346,7 @@ contains
       endif
 
       if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
-        message(1) = "Info: Calculating resonance energies in the Tamm-Dancoff approximation"
+        message(1) = "Info: Calculating matrix elements in the Tamm-Dancoff approximation"
         call messages_info(1)
         cas%type = CASIDA_TAMM_DANCOFF
         call casida_work(sys, hm, cas)
@@ -352,7 +354,7 @@ contains
       endif
 
       if(iand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
-        message(1) = "Info: Calculating resonance energies with the CV(2)-DFT theory"
+        message(1) = "Info: Calculating matrix elements with the CV(2)-DFT theory"
         call messages_info(1)
         cas%type = CASIDA_VARIATIONAL
         call casida_work(sys, hm, cas)
@@ -360,7 +362,7 @@ contains
       endif
 
       if(iand(theorylevel, CASIDA_CASIDA) /= 0) then
-        message(1) = "Info: Calculating resonance energies with the full Casida method"
+        message(1) = "Info: Calculating matrix elements with the full Casida method"
         call messages_info(1)
         cas%type = CASIDA_CASIDA
         call casida_work(sys, hm, cas)
@@ -770,9 +772,13 @@ contains
         end do
         call io_close(iunit)
 
+        message(1) = "Info: Diagonalizing matrix for resonance energies."
+        call messages_info(1)
         ! now we diagonalize the matrix
         ! for huge matrices, perhaps we should consider ScaLAPACK here...
+        call profiling_in(prof, "CASIDA_DIAGONALIZATION")
         call lalg_eigensolve(cas%n_pairs, cas%mat, cas%w)
+        call profiling_out(prof)
 
         do ia = 1, cas%n_pairs
           if(cas%w(ia) < -M_EPSILON) then

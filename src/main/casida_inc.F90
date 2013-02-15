@@ -32,6 +32,8 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
 
   PUSH_SUB(X(oscillator_strengths))
 
+  call profiling_in(prof, "CASIDA_OSCILLATOR_STRENGTHS")
+
   if(cas%qcalc) then
     SAFE_ALLOCATE(zf(1:mesh%np))
     SAFE_ALLOCATE(zx(1:cas%n_pairs))
@@ -125,6 +127,8 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
   do ia = 1, cas%n_pairs
     cas%f(ia) = (M_TWO / mesh%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
   end do
+
+  call profiling_out(prof)
 
   POP_SUB(X(oscillator_strengths))
 end subroutine X(oscillator_strengths)
