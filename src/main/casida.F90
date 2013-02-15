@@ -671,31 +671,11 @@ contains
         call comm_allreduce(cas%mpi_grp%comm, cas%w)
       end if
 
-      SAFE_ALLOCATE(xx(1:cas%n_pairs))
-      SAFE_ALLOCATE(deltav(1:mesh%np))
-
-      do idir = 1, mesh%sb%dim
-
-        deltav(1:mesh%np) = mesh%x(1:mesh%np, idir)
-        
-        !WARNING: should xx always be real?
-        if (states_are_real(st)) then
-          xx = dks_matrix_elements(cas, st, mesh, deltav)
-        else
-          xx = zks_matrix_elements(cas, st, mesh, deltav)
-        end if
-        
-        do ia = 1, cas%n_pairs
-          cas%tm(ia, idir) = dtransition_matrix_element(cas, ia, xx)
-        enddo
-
-      end do
-      SAFE_DEALLOCATE_A(xx)
-      SAFE_DEALLOCATE_A(deltav)
-
-      do ia = 1, cas%n_pairs
-        cas%f(ia) = (M_TWO / mesh%sb%dim) * cas%w(ia) * sum((abs(cas%tm(ia, :)))**2)
-      end do
+      if(states_are_real(st)) then
+        call doscillator_strengths(cas, mesh, st)
+      else
+        call zoscillator_strengths(cas, mesh, st)
+      endif
 
       if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
