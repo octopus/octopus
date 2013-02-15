@@ -59,17 +59,17 @@ match ; LUMO+6         ; LINE(static/eigenvalues, -4, 12) ;  0.045205
 match ; LUMO+8         ; LINE(static/eigenvalues, -1, 12) ;  0.153188
 
 Input: 01-casida.03-casida.inp
-match ; 1st eps-diff   ; LINE(casida/eps_diff, 2, 9) ; 2.99416473E-01
-match ; 2nd eps-diff   ; LINE(casida/eps_diff, 4, 9) ; 3.55375584E-01
-match ; 3rd eps-diff   ; LINE(casida/eps_diff, 5, 9) ; 3.55375584E-01
+match ; 1st eps-diff   ; GREP(casida/eps_diff, '  5   6', 9) ; 2.99416473E-01
+match ; 2nd eps-diff   ; GREP(casida/eps_diff, '  4   6', 9) ; 3.55375584E-01
+match ; 3rd eps-diff   ; GREP(casida/eps_diff, '  4   7', 9) ; 3.55375584E-01
 
 match ; 1st Petersilka ; GREP(casida/petersilka, '  5   7', 9); 3.43091004E-01
 # owing to degeneracy and the gauge-dependence of Petersilka, the 2nd is not well defined
 match ; 3rd Petersilka ; GREP(casida/petersilka, '  5   8', 9); 4.11090328E-01
 
-match ; 1st excitation ; LINE(casida/casida, 2, 7) ; 3.37393747E-01
-match ; 2nd excitation ; LINE(casida/casida, 4, 7) ; 3.55373946E-01
-match ; 3rd excitation ; LINE(casida/casida, 5, 7) ; 3.75379848E-01
+match ; 1st Casida ; LINE(casida/casida, 2, 7) ; 3.37393747E-01
+match ; 2nd Casida ; LINE(casida/casida, 4, 7) ; 3.55373946E-01
+match ; 3rd Casida ; LINE(casida/casida, 5, 7) ; 3.75379848E-01
 
 Util : oct-casida_spectrum
 Input: 01-casida.04-spectrum.inp
