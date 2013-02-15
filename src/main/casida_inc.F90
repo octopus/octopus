@@ -32,8 +32,6 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
 
   PUSH_SUB(X(oscillator_strengths))
 
-  SAFE_ALLOCATE(deltav(1:mesh%np))
-
   if(cas%qcalc) then
     SAFE_ALLOCATE(zf(1:mesh%np))
     SAFE_ALLOCATE(zx(1:cas%n_pairs))
@@ -110,6 +108,8 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
   end if
 
   SAFE_ALLOCATE(xx(1:cas%n_pairs))
+  SAFE_ALLOCATE(deltav(1:mesh%np))
+
   do idir = 1, mesh%sb%dim
     deltav(1:mesh%np) = mesh%x(1:mesh%np, idir)
     ! let us get now the x vector.
@@ -178,7 +178,9 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
 
   zz = R_TOTYPE(M_ZERO)
   if(cas%w(ia) > M_ZERO) then
-    if(cas%type == CASIDA_CASIDA) then
+    if(cas%type == CASIDA_PETERSILKA .or. cas%type == CASIDA_EPS_DIFF) then
+      zz = sqrt(TOFLOAT(cas%el_per_state)) * xx(ia)
+    else if(cas%type == CASIDA_CASIDA) then
       do jb = 1, cas%n_pairs
         zz = zz + xx(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
       end do

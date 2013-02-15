@@ -685,8 +685,9 @@ contains
           xx = zks_matrix_elements(cas, st, mesh, deltav)
         end if
         
-        cas%tm(:, idir) = xx(:)
-        cas%tm(:, idir) = sqrt(TOFLOAT(cas%el_per_state)) * cas%tm(:, idir) 
+        do ia = 1, cas%n_pairs
+          cas%tm(ia, idir) = dtransition_matrix_element(cas, ia, xx)
+        enddo
 
       end do
       SAFE_DEALLOCATE_A(xx)
