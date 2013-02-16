@@ -22,6 +22,7 @@ Radius = 12.0
 Spacing = 0.36
 
 XCFunctional = lda_x + lda_c_vwn
+CasidaTheoryLevel = eps_diff + petersilka + lrtddft_casida + tamm_dancoff + variational
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
