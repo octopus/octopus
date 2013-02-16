@@ -155,20 +155,31 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
 
       ! calculate the matrix elements between iterations
-      do jter = 1, iter
-        do kter = 1, jter
-          if(jter < iter - 1 .and. kter < iter - 1) then
-            ! it was calculated on the previous iteration
-            ! in parallel this was already reduced, so we set it to zero in non-root ranks
-            if(gr%mesh%parallel_in_domains .and. gr%mesh%mpi_grp%rank /= 0) mm(jter, kter, 1:2, 1:bsize) = CNST(0.0)
-            cycle
-          endif
 
-          call X(mesh_batch_dotp_vector)(gr%mesh, resb(jter)%batch, resb(kter)%batch, mm(jter, kter, 1, :), reduce = .false.)
-          call X(mesh_batch_dotp_vector)(gr%mesh, psib(jter)%batch, psib(kter)%batch, mm(jter, kter, 2, :), reduce = .false.)
+      select case(iter)
+      case(2)
+        call X(rmmdiis_matrix_iter_2)(gr%mesh, bsize, resb, psib, mm)
+
+      case(3)
+        call X(rmmdiis_matrix_iter_3)(gr%mesh, bsize, resb, psib, mm)
+        
+      case default
+        do jter = 1, iter
+          do kter = 1, jter
+            
+            if(jter < iter - 1 .and. kter < iter - 1) then
+              ! it was calculated on the previous iteration
+              ! in parallel this was already reduced, so we set it to zero in non-root ranks
+              if(gr%mesh%parallel_in_domains .and. gr%mesh%mpi_grp%rank /= 0) mm(jter, kter, 1:2, 1:bsize) = CNST(0.0)
+              cycle
+            endif
+            
+            call X(mesh_batch_dotp_vector)(gr%mesh, resb(jter)%batch, resb(kter)%batch, mm(jter, kter, 1, :), reduce = .false.)
+            call X(mesh_batch_dotp_vector)(gr%mesh, psib(jter)%batch, psib(kter)%batch, mm(jter, kter, 2, :), reduce = .false.)
+          end do
         end do
-      end do
-
+      end select
+            
       ! symmetrize
       do jter = 1, iter
         do kter = jter + 1, iter
@@ -304,6 +315,74 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   POP_SUB(X(eigensolver_rmmdiis))
 
 end subroutine X(eigensolver_rmmdiis)
+
+! ---------------------------------------------------------
+
+subroutine X(rmmdiis_matrix_iter_2)(mesh, bsize, resb, psib, mm)
+  type(mesh_t),           intent(in)    :: mesh
+  integer,                intent(in)    :: bsize
+  type(batch_pointer_t),  intent(in)    :: psib(:)
+  type(batch_pointer_t),  intent(in)    :: resb(:)
+  R_TYPE,                 intent(inout) :: mm(:, :, :, :)
+  
+  type(profile_t), save :: prof
+
+  PUSH_SUB(X(rmmdiis_matrix_iter_2))
+
+  call profiling_in(prof, 'RMMDIIS_ITER_2')
+
+  ! jter = 1, kter = 1
+  call X(mesh_batch_dotp_vector)(mesh, resb(1)%batch, resb(1)%batch, mm(1, 1, 1, :), reduce = .false.)
+  call X(mesh_batch_dotp_vector)(mesh, psib(1)%batch, psib(1)%batch, mm(1, 1, 2, :), reduce = .false.)   
+  ! jter = 2, kter = 1
+  call X(mesh_batch_dotp_vector)(mesh, resb(2)%batch, resb(1)%batch, mm(2, 1, 1, :), reduce = .false.)
+  call X(mesh_batch_dotp_vector)(mesh, psib(2)%batch, psib(1)%batch, mm(2, 1, 2, :), reduce = .false.)
+  ! jter = 2, kter = 2
+  call X(mesh_batch_dotp_vector)(mesh, resb(2)%batch, resb(2)%batch, mm(2, 2, 1, :), reduce = .false.)
+  call X(mesh_batch_dotp_vector)(mesh, psib(2)%batch, psib(2)%batch, mm(2, 2, 2, :), reduce = .false.)
+
+  call profiling_out(prof)
+
+  POP_SUB(X(rmmdiis_matrix_iter_2))
+end subroutine X(rmmdiis_matrix_iter_2)
+
+! ---------------------------------------------------------
+
+subroutine X(rmmdiis_matrix_iter_3)(mesh, bsize, resb, psib, mm)
+  type(mesh_t),           intent(in)    :: mesh
+  integer,                intent(in)    :: bsize
+  type(batch_pointer_t),  intent(in)    :: psib(:)
+  type(batch_pointer_t),  intent(in)    :: resb(:)
+  R_TYPE,                 intent(inout) :: mm(:, :, :, :)
+  
+  type(profile_t), save :: prof
+
+  PUSH_SUB(X(rmmdiis_matrix_iter_3))
+
+  call profiling_in(prof, 'RMMDIIS_ITER_3')
+
+  ! jter = 1, kter = 1 
+  if(mesh%parallel_in_domains .and. mesh%mpi_grp%rank /= 0) mm(1, 1, 1:2, 1:bsize) = CNST(0.0)
+  ! jter = 2, kter = 1 
+  call X(mesh_batch_dotp_vector)(mesh, resb(2)%batch, resb(1)%batch, mm(2, 1, 1, :), reduce = .false.)
+  call X(mesh_batch_dotp_vector)(mesh, psib(2)%batch, psib(1)%batch, mm(2, 1, 2, :), reduce = .false.)
+  ! jter = 2, kter = 2
+  call X(mesh_batch_dotp_vector)(mesh, resb(2)%batch, resb(2)%batch, mm(2, 2, 1, :), reduce = .false.)
+  call X(mesh_batch_dotp_vector)(mesh, psib(2)%batch, psib(2)%batch, mm(2, 2, 2, :), reduce = .false.)
+  ! jter = 3, kter = 1
+  call X(mesh_batch_dotp_vector)(mesh, resb(3)%batch, resb(1)%batch, mm(3, 1, 1, :), reduce = .false.)
+  call X(mesh_batch_dotp_vector)(mesh, psib(3)%batch, psib(1)%batch, mm(3, 1, 2, :), reduce = .false.)
+  ! jter = 3, kter = 2
+  call X(mesh_batch_dotp_vector)(mesh, resb(3)%batch, resb(2)%batch, mm(3, 2, 1, :), reduce = .false.)
+  call X(mesh_batch_dotp_vector)(mesh, psib(3)%batch, psib(2)%batch, mm(3, 2, 2, :), reduce = .false.)
+  ! jter = 3, kter = 3
+  call X(mesh_batch_dotp_vector)(mesh, resb(3)%batch, resb(3)%batch, mm(3, 3, 1, :), reduce = .false.)
+  call X(mesh_batch_dotp_vector)(mesh, psib(3)%batch, psib(3)%batch, mm(3, 3, 2, :), reduce = .false.)
+        
+  call profiling_out(prof)
+
+  POP_SUB(X(rmmdiis_matrix_iter_3))
+end subroutine X(rmmdiis_matrix_iter_3)
 
 ! ---------------------------------------------------------
 subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
