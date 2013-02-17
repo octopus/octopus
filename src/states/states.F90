@@ -355,6 +355,8 @@ contains
 
     ASSERT(st%d%block_size > 0)
 
+    conf%target_states_block_size = st%d%block_size
+
     !%Variable SpinComponents
     !%Type integer
     !%Default unpolarized

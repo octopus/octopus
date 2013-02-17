@@ -567,12 +567,33 @@ contains
     !% To improve memory-access locality when calculating derivatives,
     !% <tt>Octopus</tt> arranges mesh points in blocks. This variable
     !% controls the size of this blocks in the different
-    !% directions. The default is | 20 | 20 | 100 |. (This variable only
-    !% affects the performance of <tt>Octopus</tt> and not the
-    !% results.) 
+    !% directions. The default is selected according to the value of
+    !% the StatesBlockSize variable. (This variable only affects the
+    !% performance of <tt>Octopus</tt> and not the results.)
     !%End
-    bsize(1:2) = 20
-    bsize(3) = 100
+
+    select case(conf%target_states_block_size)
+    case(1)
+      bsize(1:3) = (/  2,   1, 200/)
+    case(2)
+      bsize(1:3) = (/ 10,   4, 200/)
+    case(4)
+      bsize(1:3) = (/ 10,   4,  80/)
+    case(8)
+      bsize(1:3) = (/ 10,   2,  30/)
+    case(16)
+      bsize(1:3) = (/ 15,  15,   4/)
+    case(32)
+      bsize(1:3) = (/ 15,  15,   2/)
+    case(64)
+      bsize(1:3) = (/  8,  10,   4/)
+    case(128)
+      bsize(1:3) = (/  8,   6,   2/)
+    case(256)
+      bsize(1:3) = (/  4,   6,   2/)
+    case default
+      bsize(1:3) = (/ 15,  15,   4/)
+    end select
 
     if(parse_block('MeshBlockSize', blk) == 0) then
       nn = parse_block_cols(blk, 0)
@@ -580,7 +601,7 @@ contains
         call parse_block_integer(blk, 0, idir - 1, bsize(idir))
       end do
     end if
-
+    
     ! When using open boundaries we need to have a mesh block-size of 1
     if (parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
       if (any(bsize > 1)) then

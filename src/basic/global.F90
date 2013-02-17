@@ -51,6 +51,7 @@ module global_m
     character(len=256) :: cflags
     character(len=256) :: fc
     character(len=256) :: fcflags
+    integer            :: target_states_block_size
   end type conf_t
 
   type(conf_t),      public :: conf
@@ -163,6 +164,8 @@ FCFLAGS
 
     ! initialize info for the input variables
     call varinfo_init(trim(conf%share)//'/varinfo');
+
+    conf%target_states_block_size = -1
 
   end subroutine global_init
 
