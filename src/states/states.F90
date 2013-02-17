@@ -321,41 +321,6 @@ contains
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_null(st)
 
-    !%Variable StatesBlockSize
-    !%Type integer
-    !%Section Execution::Optimization
-    !%Description
-    !% Some routines work over blocks of eigenfunctions, which
-    !% generally improves performance at the expense of increased
-    !% memory consumption. This variable selects the size of the
-    !% blocks to be used. If OpenCl is enabled, the default is 32;
-    !% otherwise it is max(4, 2*nthreads).
-    !%End
-
-    nthreads = 1
-#ifdef HAVE_OPENMP
-    !$omp parallel
-    !$omp master
-    nthreads = omp_get_num_threads()
-    !$omp end master
-    !$omp end parallel
-#endif    
-
-    if(opencl_is_enabled()) then
-      default = 32
-    else
-      default = max(4, 2*nthreads)
-    end if
-
-    call parse_integer(datasets_check('StatesBlockSize'), default, st%d%block_size)
-    if(st%d%block_size < 1) then
-      message(1) = "The variable 'StatesBlockSize' must be greater than 0."
-      call messages_fatal(1)
-    end if
-
-    ASSERT(st%d%block_size > 0)
-
-    conf%target_states_block_size = st%d%block_size
 
     !%Variable SpinComponents
     !%Type integer
@@ -546,7 +511,7 @@ contains
       st%d%nspin = 4
       st%d%spin_channels = 2
     end select
-     
+    
     if(ntot > 0) then
       if(ntot < st%nst) then
         message(1) = 'TotalStates is smaller than the number of states required by the system.'
@@ -558,6 +523,45 @@ contains
 
     st%nst = st%nst + nempty
 
+    !%Variable StatesBlockSize
+    !%Type integer
+    !%Section Execution::Optimization
+    !%Description
+    !% Some routines work over blocks of eigenfunctions, which
+    !% generally improves performance at the expense of increased
+    !% memory consumption. This variable selects the size of the
+    !% blocks to be used. If OpenCl is enabled, the default is 32;
+    !% otherwise it is max(4, 2*nthreads).
+    !%End
+
+    nthreads = 1
+#ifdef HAVE_OPENMP
+    !$omp parallel
+    !$omp master
+    nthreads = omp_get_num_threads()
+    !$omp end master
+    !$omp end parallel
+#endif    
+
+    if(opencl_is_enabled()) then
+      default = 32
+    else
+      default = max(4, 2*nthreads)
+    end if
+
+    if(default > pad_pow2(st%nst)) default = pad_pow2(st%nst)
+
+    ASSERT(default > 0)
+
+    call parse_integer(datasets_check('StatesBlockSize'), default, st%d%block_size)
+    if(st%d%block_size < 1) then
+      call messages_write("The variable 'StatesBlockSize' must be greater than 0.")
+      call messages_fatal()
+    end if
+
+    ASSERT(st%d%block_size > 0)
+
+    conf%target_states_block_size = st%d%block_size
 
     ! FIXME: For now, open-boundary calculations are only possible for
     ! continuum states, i.e. for those states treated by the Lippmann-
