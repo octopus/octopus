@@ -154,31 +154,23 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
 
+      call profiling_in(prof_iter, 'RMMDIIS_MATRIX')
       ! calculate the matrix elements between iterations
-
-      select case(iter)
-      case(2)
-        call X(rmmdiis_matrix_iter_2)(gr%mesh, bsize, resb, psib, mm)
-
-      case(3)
-        call X(rmmdiis_matrix_iter_3)(gr%mesh, bsize, resb, psib, mm)
-        
-      case default
-        do jter = 1, iter
-          do kter = 1, jter
-            
-            if(jter < iter - 1 .and. kter < iter - 1) then
-              ! it was calculated on the previous iteration
-              ! in parallel this was already reduced, so we set it to zero in non-root ranks
-              if(gr%mesh%parallel_in_domains .and. gr%mesh%mpi_grp%rank /= 0) mm(jter, kter, 1:2, 1:bsize) = CNST(0.0)
-              cycle
-            endif
-            
-            call X(mesh_batch_dotp_vector)(gr%mesh, resb(jter)%batch, resb(kter)%batch, mm(jter, kter, 1, :), reduce = .false.)
-            call X(mesh_batch_dotp_vector)(gr%mesh, psib(jter)%batch, psib(kter)%batch, mm(jter, kter, 2, :), reduce = .false.)
-          end do
+      do jter = 1, iter
+        do kter = 1, jter
+          
+          if(jter < iter - 1 .and. kter < iter - 1) then
+            ! it was calculated on the previous iteration
+            ! in parallel this was already reduced, so we set it to zero in non-root ranks
+            if(gr%mesh%parallel_in_domains .and. gr%mesh%mpi_grp%rank /= 0) mm(jter, kter, 1:2, 1:bsize) = CNST(0.0)
+            cycle
+          endif
+          
+          call X(mesh_batch_dotp_vector)(gr%mesh, resb(jter)%batch, resb(kter)%batch, mm(jter, kter, 1, :), reduce = .false.)
+          call X(mesh_batch_dotp_vector)(gr%mesh, psib(jter)%batch, psib(kter)%batch, mm(jter, kter, 2, :), reduce = .false.)
         end do
-      end select
+      end do
+      call profiling_out(prof_iter)
             
       ! symmetrize
       do jter = 1, iter
@@ -318,205 +310,6 @@ end subroutine X(eigensolver_rmmdiis)
 
 ! ---------------------------------------------------------
 
-subroutine X(rmmdiis_matrix_iter_2)(mesh, bsize, resb, psib, mm)
-  type(mesh_t),           intent(in)    :: mesh
-  integer,                intent(in)    :: bsize
-  type(batch_pointer_t),  intent(in)    :: psib(:)
-  type(batch_pointer_t),  intent(in)    :: resb(:)
-  R_TYPE,                 intent(inout) :: mm(:, :, :, :)
-
-  type(profile_t), save :: prof
-  integer :: bstatus, ii, ip
-  R_TYPE  :: resb1, resb2, psib1, psib2
-
-  PUSH_SUB(X(rmmdiis_matrix_iter_2))
-
-  call profiling_in(prof, 'RMMDIIS_ITER_2')
-
-  bstatus = batch_status(psib(1)%batch)
-
-  do ii = 1, 3
-    ASSERT(batch_status(psib(ii)%batch) == bstatus)
-    ASSERT(batch_status(resb(ii)%batch) == bstatus)
-  end do
-
-  if(bstatus == BATCH_PACKED .and. .not. mesh%use_curvilinear .and. psib(1)%batch%dim == 1) then
-
-    mm(1, 1, 1:2, 1:bsize) = CNST(0.0)
-    mm(2, 1, 1:2, 1:bsize) = CNST(0.0)
-    mm(2, 2, 1:2, 1:bsize) = CNST(0.0)
-
-    do ip = 1, mesh%np
-      do ii = 1, bsize
-        resb1 = resb(1)%batch%pack%X(psi)(ii, ip)
-        resb2 = resb(2)%batch%pack%X(psi)(ii, ip)
-        psib1 = psib(1)%batch%pack%X(psi)(ii, ip)
-        psib2 = psib(2)%batch%pack%X(psi)(ii, ip)
-
-        mm(1, 1, 1, ii) = mm(1, 1, 1, ii) + R_CONJ(resb1)*resb1
-        mm(1, 1, 2, ii) = mm(1, 1, 2, ii) + R_CONJ(psib1)*psib1
-        mm(2, 1, 1, ii) = mm(2, 1, 1, ii) + R_CONJ(resb2)*resb1
-        mm(2, 1, 2, ii) = mm(2, 1, 2, ii) + R_CONJ(psib2)*psib1
-        mm(2, 2, 1, ii) = mm(2, 2, 1, ii) + R_CONJ(resb2)*resb2
-        mm(2, 2, 2, ii) = mm(2, 2, 2, ii) + R_CONJ(psib2)*psib2
-      end do
-    end do
-    
-    mm(1, 1, 1:2, 1:bsize) = mm(1, 1, 1:2, 1:bsize)*mesh%volume_element
-    mm(2, 1, 1:2, 1:bsize) = mm(2, 1, 1:2, 1:bsize)*mesh%volume_element
-    mm(2, 2, 1:2, 1:bsize) = mm(2, 2, 1:2, 1:bsize)*mesh%volume_element
-    
-  else
-    
-    ! jter = 1, kter = 1
-    call X(mesh_batch_dotp_vector)(mesh, resb(1)%batch, resb(1)%batch, mm(1, 1, 1, :), reduce = .false.)
-    call X(mesh_batch_dotp_vector)(mesh, psib(1)%batch, psib(1)%batch, mm(1, 1, 2, :), reduce = .false.)   
-    ! jter = 2, kter = 1
-    call X(mesh_batch_dotp_vector)(mesh, resb(2)%batch, resb(1)%batch, mm(2, 1, 1, :), reduce = .false.)
-    call X(mesh_batch_dotp_vector)(mesh, psib(2)%batch, psib(1)%batch, mm(2, 1, 2, :), reduce = .false.)
-    ! jter = 2, kter = 2
-    call X(mesh_batch_dotp_vector)(mesh, resb(2)%batch, resb(2)%batch, mm(2, 2, 1, :), reduce = .false.)
-    call X(mesh_batch_dotp_vector)(mesh, psib(2)%batch, psib(2)%batch, mm(2, 2, 2, :), reduce = .false.)
-    
-  end if
-
-  call profiling_out(prof)
-
-  POP_SUB(X(rmmdiis_matrix_iter_2))
-end subroutine X(rmmdiis_matrix_iter_2)
-
-! ---------------------------------------------------------
-
-subroutine X(rmmdiis_matrix_iter_3)(mesh, bsize, resb, psib, mm)
-  type(mesh_t),           intent(in)    :: mesh
-  integer,                intent(in)    :: bsize
-  type(batch_pointer_t),  intent(in)    :: psib(:)
-  type(batch_pointer_t),  intent(in)    :: resb(:)
-  R_TYPE,                 intent(inout) :: mm(:, :, :, :)
-  
-  type(profile_t), save :: prof
-  integer :: bstatus, ii, ip
-  R_TYPE  :: resb1, resb2, resb3, psib1, psib2, psib3
-#ifdef HAVE_OPENCL
-  type(opencl_mem_t)         :: sum_buffer
-  type(octcl_kernel_t), save :: kernel
-  type(cl_kernel)            :: kernel_ref
-  R_TYPE, allocatable        :: sum_tmp(:, :)
-#endif
-
-  PUSH_SUB(X(rmmdiis_matrix_iter_3))
-
-  call profiling_in(prof, 'RMMDIIS_ITER_3')
-
-  bstatus = batch_status(psib(1)%batch)
-  
-  do ii = 1, 3
-    ASSERT(batch_status(psib(ii)%batch) == bstatus)
-    ASSERT(batch_status(resb(ii)%batch) == bstatus)
-  end do
-
-  ! jter = 1, kter = 1
-  if(mesh%parallel_in_domains .and. mesh%mpi_grp%rank /= 0) mm(1, 1, 1:2, 1:bsize) = CNST(0.0)
-
-  if(bstatus == BATCH_PACKED .and. .not. mesh%use_curvilinear .and. psib(1)%batch%dim == 1) then
-
-    mm(2, 1:2, 1:2, 1:bsize) = CNST(0.0)
-    mm(3, 1:3, 1:2, 1:bsize) = CNST(0.0)
-
-    do ip = 1, mesh%np
-      do ii = 1, bsize
-        resb1 = resb(1)%batch%pack%X(psi)(ii, ip)
-        resb2 = resb(2)%batch%pack%X(psi)(ii, ip)
-        resb3 = resb(3)%batch%pack%X(psi)(ii, ip)
-        psib1 = psib(1)%batch%pack%X(psi)(ii, ip)
-        psib2 = psib(2)%batch%pack%X(psi)(ii, ip)
-        psib3 = psib(3)%batch%pack%X(psi)(ii, ip)
-
-        mm(2, 1, 1, ii) = mm(2, 1, 1, ii) + R_CONJ(resb2)*resb1
-        mm(2, 1, 2, ii) = mm(2, 1, 2, ii) + R_CONJ(psib2)*psib1
-        mm(2, 2, 1, ii) = mm(2, 2, 1, ii) + R_CONJ(resb2)*resb2
-        mm(2, 2, 2, ii) = mm(2, 2, 2, ii) + R_CONJ(psib2)*psib2
-        mm(3, 1, 1, ii) = mm(3, 1, 1, ii) + R_CONJ(resb3)*resb1
-        mm(3, 1, 2, ii) = mm(3, 1, 2, ii) + R_CONJ(psib3)*psib1
-        mm(3, 2, 1, ii) = mm(3, 2, 1, ii) + R_CONJ(resb3)*resb2
-        mm(3, 2, 2, ii) = mm(3, 2, 2, ii) + R_CONJ(psib3)*psib2
-        mm(3, 3, 1, ii) = mm(3, 3, 1, ii) + R_CONJ(resb3)*resb3
-        mm(3, 3, 2, ii) = mm(3, 3, 2, ii) + R_CONJ(psib3)*psib3
-      end do
-    end do
-
-    mm(2, 1:2, 1:2, 1:bsize) = mm(2, 1:2, 1:2, 1:bsize)*mesh%volume_element
-    mm(3, 1:3, 1:2, 1:bsize) = mm(3, 1:3, 1:2, 1:bsize)*mesh%volume_element
-
-
-  else if(bstatus == BATCH_CL_PACKED .and. .not. mesh%use_curvilinear .and. psib(1)%batch%dim == 1) then
-
-#ifdef HAVE_OPENCL
-
-    call opencl_create_buffer(sum_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, 10*psib(1)%batch%pack%size(1))
-
-    call octcl_kernel_start_call(kernel, 'rmmdiis.cl', TOSTRING(X(rmmdiis_iter_3)), flags = '-D'//R_TYPE_CL)
-    kernel_ref = octcl_kernel_get_ref(kernel)
-
-    call opencl_set_kernel_arg(kernel_ref, 0, mesh%np)
-    call opencl_set_kernel_arg(kernel_ref, 1, resb(1)%batch%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 2, resb(2)%batch%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 3, resb(3)%batch%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 4, psib(1)%batch%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 5, psib(2)%batch%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 6, psib(3)%batch%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 7, log2(psib(1)%batch%pack%size(1)))
-    call opencl_set_kernel_arg(kernel_ref, 8, sum_buffer)
-    
-    call opencl_kernel_run(kernel_ref, (/psib(1)%batch%pack%size(1)/), (/psib(1)%batch%pack%size(1)/))
-
-    SAFE_ALLOCATE(sum_tmp(1:psib(1)%batch%pack%size(1), 1:10))
-
-    call opencl_read_buffer(sum_buffer, 10*psib(1)%batch%pack%size(1), sum_tmp)
-
-    call opencl_release_buffer(sum_buffer)
-    
-    mm(2, 1, 1, 1:bsize) = sum_tmp(1:bsize, 1)*mesh%volume_element
-    mm(2, 1, 2, 1:bsize) = sum_tmp(1:bsize, 2)*mesh%volume_element
-    mm(2, 2, 1, 1:bsize) = sum_tmp(1:bsize, 3)*mesh%volume_element
-    mm(2, 2, 2, 1:bsize) = sum_tmp(1:bsize, 4)*mesh%volume_element
-    mm(3, 1, 1, 1:bsize) = sum_tmp(1:bsize, 5)*mesh%volume_element
-    mm(3, 1, 2, 1:bsize) = sum_tmp(1:bsize, 6)*mesh%volume_element
-    mm(3, 2, 1, 1:bsize) = sum_tmp(1:bsize, 7)*mesh%volume_element
-    mm(3, 2, 2, 1:bsize) = sum_tmp(1:bsize, 8)*mesh%volume_element
-    mm(3, 3, 1, 1:bsize) = sum_tmp(1:bsize, 9)*mesh%volume_element
-    mm(3, 3, 2, 1:bsize) = sum_tmp(1:bsize, 10)*mesh%volume_element
-
-    SAFE_DEALLOCATE_A(sum_tmp)
-    
-#endif
-
-  else
-
-    ! jter = 2, kter = 1 
-    call X(mesh_batch_dotp_vector)(mesh, resb(2)%batch, resb(1)%batch, mm(2, 1, 1, :), reduce = .false.)
-    call X(mesh_batch_dotp_vector)(mesh, psib(2)%batch, psib(1)%batch, mm(2, 1, 2, :), reduce = .false.)
-    ! jter = 2, kter = 2
-    call X(mesh_batch_dotp_vector)(mesh, resb(2)%batch, resb(2)%batch, mm(2, 2, 1, :), reduce = .false.)
-    call X(mesh_batch_dotp_vector)(mesh, psib(2)%batch, psib(2)%batch, mm(2, 2, 2, :), reduce = .false.)
-    ! jter = 3, kter = 1
-    call X(mesh_batch_dotp_vector)(mesh, resb(3)%batch, resb(1)%batch, mm(3, 1, 1, :), reduce = .false.)
-    call X(mesh_batch_dotp_vector)(mesh, psib(3)%batch, psib(1)%batch, mm(3, 1, 2, :), reduce = .false.)
-    ! jter = 3, kter = 2
-    call X(mesh_batch_dotp_vector)(mesh, resb(3)%batch, resb(2)%batch, mm(3, 2, 1, :), reduce = .false.)
-    call X(mesh_batch_dotp_vector)(mesh, psib(3)%batch, psib(2)%batch, mm(3, 2, 2, :), reduce = .false.)
-    ! jter = 3, kter = 3
-    call X(mesh_batch_dotp_vector)(mesh, resb(3)%batch, resb(3)%batch, mm(3, 3, 1, :), reduce = .false.)
-    call X(mesh_batch_dotp_vector)(mesh, psib(3)%batch, psib(3)%batch, mm(3, 3, 2, :), reduce = .false.)
-
-  end if
-
-  call profiling_out(prof)
-
-  POP_SUB(X(rmmdiis_matrix_iter_3))
-end subroutine X(rmmdiis_matrix_iter_3)
-
-! ---------------------------------------------------------
 subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st

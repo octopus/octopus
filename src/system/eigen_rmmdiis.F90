@@ -23,9 +23,6 @@ module eigen_rmmdiis_m
   use batch_m
   use batch_ops_m
   use comm_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use global_m
   use grid_m
   use hamiltonian_m
@@ -40,8 +37,6 @@ module eigen_rmmdiis_m
   use messages_m
   use mpi_m
   use mpi_lib_m
-  use opencl_m
-  use octcl_kernel_m
   use preconditioners_m
   use profiling_m
   use states_m
@@ -61,6 +56,8 @@ module eigen_rmmdiis_m
   type batch_pointer_t
     type(batch_t), pointer :: batch
   end type batch_pointer_t
+
+  type(profile_t), save :: prof_iter
 
   contains
 
