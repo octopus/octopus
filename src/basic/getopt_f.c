@@ -58,7 +58,7 @@ void FC_FUNC_(clean_clarg, CLEAR_CLARG)()
 
 void print_config(){
 #ifdef HAVE_OPENMP
-  printf("openmp");
+  printf("openmp ");
 #endif
 #ifdef HAVE_MPI
   printf("mpi ");
