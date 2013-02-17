@@ -29,12 +29,14 @@
 typedef double rtype;
 #define X(x)        d ## x
 #define MUL(x, y)   ((x)*(y))
+#define CONJ(x)     (x)
 
 #elif defined(RTYPE_COMPLEX)
 
 typedef double2 rtype;
 #define X(x)        z ## x
 #define MUL(x, y)   complex_mul(x, y)
+#define CONJ(x)     complex_conj(x)
 
 #else
 #error Type not defined

@@ -397,6 +397,12 @@ subroutine X(rmmdiis_matrix_iter_3)(mesh, bsize, resb, psib, mm)
   type(profile_t), save :: prof
   integer :: bstatus, ii, ip
   R_TYPE  :: resb1, resb2, resb3, psib1, psib2, psib3
+#ifdef HAVE_OPENCL
+  type(opencl_mem_t)         :: sum_buffer
+  type(octcl_kernel_t), save :: kernel
+  type(cl_kernel)            :: kernel_ref
+  R_TYPE, allocatable        :: sum_tmp(:, :)
+#endif
 
   PUSH_SUB(X(rmmdiis_matrix_iter_3))
 
@@ -441,6 +447,49 @@ subroutine X(rmmdiis_matrix_iter_3)(mesh, bsize, resb, psib, mm)
 
     mm(2, 1:2, 1:2, 1:bsize) = mm(2, 1:2, 1:2, 1:bsize)*mesh%volume_element
     mm(3, 1:3, 1:2, 1:bsize) = mm(3, 1:3, 1:2, 1:bsize)*mesh%volume_element
+
+
+  else if(bstatus == BATCH_CL_PACKED .and. .not. mesh%use_curvilinear .and. psib(1)%batch%dim == 1) then
+
+#ifdef HAVE_OPENCL
+
+    call opencl_create_buffer(sum_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, 10*psib(1)%batch%pack%size(1))
+
+    call octcl_kernel_start_call(kernel, 'rmmdiis.cl', TOSTRING(X(rmmdiis_iter_3)), flags = '-D'//R_TYPE_CL)
+    kernel_ref = octcl_kernel_get_ref(kernel)
+
+    call opencl_set_kernel_arg(kernel_ref, 0, mesh%np)
+    call opencl_set_kernel_arg(kernel_ref, 1, resb(1)%batch%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 2, resb(2)%batch%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 3, resb(3)%batch%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 4, psib(1)%batch%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 5, psib(2)%batch%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 6, psib(3)%batch%pack%buffer)
+    call opencl_set_kernel_arg(kernel_ref, 7, log2(psib(1)%batch%pack%size(1)))
+    call opencl_set_kernel_arg(kernel_ref, 8, sum_buffer)
+    
+    call opencl_kernel_run(kernel_ref, (/psib(1)%batch%pack%size(1)/), (/psib(1)%batch%pack%size(1)/))
+
+    SAFE_ALLOCATE(sum_tmp(1:psib(1)%batch%pack%size(1), 1:10))
+
+    call opencl_read_buffer(sum_buffer, 10*psib(1)%batch%pack%size(1), sum_tmp)
+
+    call opencl_release_buffer(sum_buffer)
+    
+    mm(2, 1, 1, 1:bsize) = sum_tmp(1:bsize, 1)*mesh%volume_element
+    mm(2, 1, 2, 1:bsize) = sum_tmp(1:bsize, 2)*mesh%volume_element
+    mm(2, 2, 1, 1:bsize) = sum_tmp(1:bsize, 3)*mesh%volume_element
+    mm(2, 2, 2, 1:bsize) = sum_tmp(1:bsize, 4)*mesh%volume_element
+    mm(3, 1, 1, 1:bsize) = sum_tmp(1:bsize, 5)*mesh%volume_element
+    mm(3, 1, 2, 1:bsize) = sum_tmp(1:bsize, 6)*mesh%volume_element
+    mm(3, 2, 1, 1:bsize) = sum_tmp(1:bsize, 7)*mesh%volume_element
+    mm(3, 2, 2, 1:bsize) = sum_tmp(1:bsize, 8)*mesh%volume_element
+    mm(3, 3, 1, 1:bsize) = sum_tmp(1:bsize, 9)*mesh%volume_element
+    mm(3, 3, 2, 1:bsize) = sum_tmp(1:bsize, 10)*mesh%volume_element
+
+    SAFE_DEALLOCATE_A(sum_tmp)
+    
+#endif
 
   else
 

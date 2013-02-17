@@ -23,6 +23,9 @@ module eigen_rmmdiis_m
   use batch_m
   use batch_ops_m
   use comm_m
+#ifdef HAVE_OPENCL
+  use cl
+#endif
   use global_m
   use grid_m
   use hamiltonian_m
@@ -37,11 +40,14 @@ module eigen_rmmdiis_m
   use messages_m
   use mpi_m
   use mpi_lib_m
+  use opencl_m
+  use octcl_kernel_m
   use preconditioners_m
   use profiling_m
   use states_m
   use states_calc_m
   use subspace_m
+  use types_m
 
   implicit none
 
