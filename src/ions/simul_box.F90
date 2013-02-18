@@ -675,16 +675,17 @@ contains
       !%Default simple cubic
       !%Section Mesh::Simulation Box
       !%Description
-      !% Primitive lattice vectors. Vectors are stored in rows.
-      !% Note that these vectors will be normalized to 1 after being read.
+      !% (Experimental) Primitive lattice vectors. Vectors are stored in rows.
+      !% Note that these vectors will be normalized.
       !% Default:
       !% <tt>%LatticeVectors
       !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
       !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
       !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
       !% <br>%</tt>
+      !%
+      !% Note: This version of Octopus does not support non-orthogonal cells.
       !%End
-
       sb%rlattice_primitive = M_ZERO
       forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
 
@@ -694,6 +695,9 @@ contains
             call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
           end do
         end do
+        
+        call messages_experimental('Non-orthogonal cells support')
+
       end if
     end if
 
