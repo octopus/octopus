@@ -34,7 +34,7 @@ Input      : 12-absorption.04-spectrum.inp
 match ; Electronic sum rule ; GREP(cross_section_vector.1, 'Electronic sum rule', 30) ; 0.964690
 match ; Polarizability sum rule ; GREP(cross_section_vector.1, 'Polarizability (sum rule)', 30) ; 16.466776
 
-Precision : 1e-7
+Precision : 2.0e-7
 
 match ; Energy      1 ; LINE(cross_section_tensor,  -91, 1) ; 1.0
 match ; Sigma       1 ; LINE(cross_section_tensor,  -91, 21) ; 0.61376368E-01
