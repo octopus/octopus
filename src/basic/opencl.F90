@@ -32,6 +32,7 @@ module opencl_m
   use datasets_m
   use global_m
   use io_m
+  use loct_m
   use messages_m
   use mpi_m
   use types_m
@@ -189,7 +190,7 @@ module opencl_m
     subroutine opencl_init(base_grp)
       type(mpi_grp_t),  intent(inout) :: base_grp
 
-      logical  :: disable, default
+      logical  :: disable, default, run_benchmark
       integer  :: device_type
       integer  :: idevice, iplatform, ndevices, idev, cl_status, ret_devices, nplatforms, iplat
       character(len=256) :: device_name
@@ -498,6 +499,20 @@ module opencl_m
 
       call profiling_out(prof_init)
 #endif
+      !%Variable OpenCLBenchmark
+      !%Type logical
+      !%Default no
+      !%Section Execution::OpenCL
+      !%Description
+      !% If this variable is set to yes, Octopus will run some
+      !% routines to benchmark the performance of the OpenCL device.
+      !%End
+
+      call parse_logical(datasets_check('OpenCLBenchmark'), .false., run_benchmark)
+
+      if(run_benchmark) then
+        call opencl_check_bandwidth()
+      end if
 
       call messages_print_stress(stdout)
 
@@ -1281,6 +1296,67 @@ module opencl_m
 
     ! ----------------------------------------------------
     
+    subroutine opencl_check_bandwidth()
+#ifdef HAVE_OPENCL
+      integer :: itime
+      integer, parameter :: times = 10
+      integer :: size
+      real(8) :: time, stime
+      real(8) :: read_bw, write_bw
+      type(opencl_mem_t) :: buff
+      FLOAT, allocatable :: data(:)
+
+      call messages_new_line()
+      call messages_write('Info: Benchmarking the bandwidth between main memory and device memory')
+      call messages_new_line()
+      call messages_info()
+
+      call messages_write(' Buffer size   Read bw  Write bw')
+      call messages_new_line()
+      call messages_write('       [MiB]   [MiB/s]   [MiB/s]')
+      call messages_info()
+
+      size = 15000
+      do 
+        SAFE_ALLOCATE(data(1:size))
+        call opencl_create_buffer(buff, CL_MEM_READ_WRITE, TYPE_FLOAT, size)
+        
+        stime = loct_clock()
+        do itime = 1, times
+          call opencl_write_buffer(buff, size, data)
+          call opencl_finish()
+        end do
+        time = (loct_clock() - stime)/dble(times)
+
+        write_bw = dble(size)*8.0_8/time
+        
+        stime = loct_clock()
+        do itime = 1, times
+          call opencl_read_buffer(buff, size, data)
+        end do
+        call opencl_finish()
+
+        time = (loct_clock() - stime)/dble(times)
+        read_bw = dble(size)*8.0_8/time
+
+        call messages_write(size*8.0_8/1024.0**2)
+        call messages_write(write_bw/1024.0**2, fmt = '(f10.1)')
+        call messages_write(read_bw/1024.0**2, fmt = '(f10.1)')
+        call messages_info()
+
+        call opencl_release_buffer(buff)
+
+        SAFE_DEALLOCATE_A(data)
+
+        size = int(size*2.0)
+        
+        if(size > 50000000) exit
+      end do
+#endif
+    end subroutine opencl_check_bandwidth
+
+
+
 #include "undef.F90"
 #include "real.F90"
 #include "opencl_inc.F90"
