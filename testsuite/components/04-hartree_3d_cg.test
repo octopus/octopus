@@ -1,0 +1,12 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test       : Hartree CG
+Programs   : oct-test; oct-test_mpi
+TestGroups : short-run, components
+Enabled    : Yes
+
+Precision : 0.005
+
+Input: 04-hartree_3d_cg.01-cg_corrected.inp
+match ; CG Corrected  ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00349973

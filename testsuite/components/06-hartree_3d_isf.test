@@ -1,0 +1,11 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: oct-run_regression_test.pl 2423 2006-09-24 21:25:52Z acastro $
+
+Test       : Hartree ISF
+Programs   : oct-test; oct-test_mpi
+TestGroups : short-run, components
+Enabled    : Yes
+
+Precision : 0.005
+Input: 06-hartree_3d_isf.01-isf.inp
+match ; ISF           ; GREP(hartree_results, 'Hartree test (abs.) =', 22) ; 0.00035845

@@ -29,12 +29,13 @@ dist_share_DATA =                                  \
 	02-derivatives_2d.01.inp                   \
 	03-derivatives_3d.test                     \
 	03-derivatives_3d.01.inp                   \
-	06-hartree_3d.test                         \
-	06-hartree_3d.01-isf.inp                   \
-	06-hartree_3d.02-multigrid.inp             \
-	06-hartree_3d.03-fft.inp                   \
-	06-hartree_3d.04-fft_corrected.inp         \
-	06-hartree_3d.05-cg_corrected.inp          \
+	04-hartree_3d_cg.test                      \
+	04-hartree_3d_cg.01-cg_corrected.inp       \
+	05-hartree_3d_fft.test                     \
+	05-hartree_3d_fft.01-fft.inp               \
+	05-hartree_3d_fft.02-fft_corrected.inp     \
+	06-hartree_3d_isf.test                     \
+	06-hartree_3d_isf.01-isf.inp               \
 	07-gram_schmidt.test                       \
 	07-gram_schmidt.01-real.inp                \
         07-gram_schmidt.02-complex.inp             \
@@ -49,6 +50,8 @@ dist_share_DATA =                                  \
         11-hartree_cl.test                         \
         11-hartree_cl.01-fft.inp                   \
 	12-hartree_direct_3d.test                  \
-	12-hartree_direct_3d.01.inp
+	12-hartree_direct_3d.01.inp                \
+	13-hartree_3d_mg.test                      \
+	13-hartree_3d_mg.01-multigrid.inp
 
 CLEANFILES = *~ *.bak
