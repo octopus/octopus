@@ -1,3 +1,9 @@
+octopus (4.1.0) UNRELEASED; urgency=low
+
+  * Updated to version 4.1.0.
+
+ -- Xavier Andrade <xavier@tddft.org>  Sun, 17 Feb 2013 23:34:14 -0500
+
 octopus (4.0.0) unstable; urgency=low
 
   * Updated to version 4.0.0
