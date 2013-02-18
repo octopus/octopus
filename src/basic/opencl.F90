@@ -511,7 +511,9 @@ module opencl_m
       call parse_logical(datasets_check('OpenCLBenchmark'), .false., run_benchmark)
 
       if(run_benchmark) then
+#ifdef HAVE_OPENCL
         call opencl_check_bandwidth()
+#endif
       end if
 
       call messages_print_stress(stdout)
@@ -1297,7 +1299,6 @@ module opencl_m
     ! ----------------------------------------------------
     
     subroutine opencl_check_bandwidth()
-#ifdef HAVE_OPENCL
       integer :: itime
       integer, parameter :: times = 10
       integer :: size
@@ -1352,7 +1353,6 @@ module opencl_m
         
         if(size > 50000000) exit
       end do
-#endif
     end subroutine opencl_check_bandwidth
 
 
