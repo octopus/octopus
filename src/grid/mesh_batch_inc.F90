@@ -780,9 +780,6 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
     
     if(.not. mesh%use_curvilinear) then
 
-      scal = M_ZERO
-      ssq  = M_ONE
-
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
           a0 = aa%pack%X(psi)(ist, ip)
@@ -797,9 +794,6 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
       end do
 
     else
-
-      scal = M_ZERO
-      ssq  = M_ONE
 
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
