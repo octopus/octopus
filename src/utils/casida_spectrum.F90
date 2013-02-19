@@ -27,6 +27,7 @@ program casida_spectrum
   use messages_m
   use parser_m
   use profiling_m
+  use space_m
   use unit_m
   use unit_system_m
 
@@ -34,6 +35,7 @@ program casida_spectrum
 
   type casida_spectrum_t
     FLOAT :: br, energy_step, min_energy, max_energy
+    type(space_t) :: space
   end type casida_spectrum_t
 
   integer :: ierr
@@ -51,6 +53,7 @@ program casida_spectrum
   call datasets_init(1)
   call io_init()
   call unit_system_init()
+  call space_init(cs%space)
 
   !%Variable CasidaSpectrumBroadening
   !%Type float
@@ -102,6 +105,7 @@ program casida_spectrum
   call calc_broad(cs, CASIDA_DIR, 'variational', .false.)
   call calc_broad(cs, CASIDA_DIR, 'casida', .false.)
 
+  call space_end(cs%space)
   call io_end()
   call datasets_end()
   call messages_end()
@@ -118,7 +122,7 @@ contains
     logical,                 intent(in) :: extracols
 
     FLOAT, allocatable :: spectrum(:,:)
-    FLOAT :: omega, energy, ff(4)
+    FLOAT :: omega, energy, tm(3), ff(4)
     integer :: nsteps, iunit, j1, j2, ii
 
     nsteps = (cs%max_energy - cs%min_energy) / cs%energy_step
@@ -138,16 +142,20 @@ contains
     do
       if(extracols) then
         ! first two columns are occ and unocc states
-        read(iunit, *, end=100) j1, j2, energy, ff(1:4)
+        read(iunit, *, end=100) j1, j2, energy, tm(1:3), ff(4)
       else
         ! first column is the index of the excitation
-        read(iunit, *, end=100) j1, energy, ff(1:4)
+        read(iunit, *, end=100) j1, energy, tm(1:3), ff(4)
       end if
 
       energy = units_to_atomic(units_out%energy, energy)
 
       do j1 = 1, nsteps
         omega = cs%min_energy + real(j1-1, REAL_PRECISION)*cs%energy_step
+
+        ! transition matrix elements by themselves are dependent on gauge in degenerate subspaces
+        ! make into oscillator strengths, as in casida_inc.F90 X(oscillator_strengths), and like the last column
+        ff(1:3) = (M_TWO / cs%space%dim) * energy * (tm(1:3))**2
         spectrum(1:4, j1) = spectrum(1:4, j1) + ff(1:4)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
     end do
