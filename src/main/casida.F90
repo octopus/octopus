@@ -27,7 +27,6 @@ module casida_m
   use excited_states_m
   use gauss_legendre_m
   use global_m
-  use output_m
   use hamiltonian_m
   use io_m
   use io_function_m
@@ -40,6 +39,7 @@ module casida_m
   use messages_m
   use mpi_m
   use multicomm_m
+  use output_m
   use parser_m
   use poisson_m
   use profiling_m
@@ -50,6 +50,7 @@ module casida_m
   use system_m
   use unit_m
   use unit_system_m
+  use utils_m
   use phonons_lr_m
   use xc_m
   
@@ -972,7 +973,7 @@ contains
     call io_mkdir(CASIDA_DIR)
     iunit = io_open(CASIDA_DIR//'q'//trim(theory_name(cas)), action='write')
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,a10,3es15.8,a2)') '#','E' , '|<f|exp(iq.r)|i>|^2', &
-                                                             '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:MAX_DIM),')'
+                                                             '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:dim),')'
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,10x,a15)')        '#', trim(units_abbrev(units_out%energy)), &
                                                                   trim('-'), &
                                                                   trim('-'), &
@@ -1036,11 +1037,12 @@ contains
       write(iunit, '(6x)', advance='no')
     endif
 
-    select case(dim)
-    case(1); write(iunit, '(3(1x,a15))') 'E' , '<x>', '<f>'
-    case(2); write(iunit, '(4(1x,a15))') 'E' , '<x>', '<y>', '<f>'
-    case(3); write(iunit, '(5(1x,a15))') 'E' , '<x>', '<y>', '<z>', '<f>'
-    end select
+    write(iunit, '(1x,a15)', advance='no') 'E'
+    do idim = 1, dim
+      write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '>'
+    enddo
+    write(iunit, '(1x,a15)') '<f>'
+
     do ia = 1, cas%n_pairs
       if((cas%type == CASIDA_EPS_DIFF) .or. (cas%type == CASIDA_PETERSILKA)) then
         write(iunit, '(2i4)', advance='no') cas%pair(ind(ia))%i, cas%pair(ind(ia))%a
@@ -1050,7 +1052,7 @@ contains
       else
         write(iunit, '(i6)', advance='no') ind(ia)
       end if
-      write(iunit, '(5(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
+      write(iunit, '(99(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
         (units_from_atomic(units_out%length, cas%tm(ind(ia), idim)), idim=1,dim), cas%f(ind(ia))
     end do
     call io_close(iunit)
@@ -1071,14 +1073,10 @@ contains
       ! First, a little header
       write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
                                 units_from_atomic(units_out%energy, cas%w(ind(ia)))
-        write(iunit,'(a,es14.5)') '# <X> ['//trim(units_abbrev(units_out%length))// '] = ', &
-                                  units_from_atomic(units_out%length, cas%tm(ind(ia),1))
-      if(dim > 1) &
-        write(iunit,'(a,es14.5)') '# <Y> ['//trim(units_abbrev(units_out%length))// '] = ', &
-                                  units_from_atomic(units_out%length, cas%tm(ind(ia),2))
-      if(dim > 2) &
-        write(iunit,'(a,es14.5)') '# <Z> ['//trim(units_abbrev(units_out%length))// '] = ', &
-                                  units_from_atomic(units_out%length, cas%tm(ind(ia),3))
+      do idim = 1, dim
+        write(iunit,'(a,es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
+                                  units_from_atomic(units_out%length, cas%tm(ind(ia), idim))
+      enddo
 
       temp = M_ONE
       ! make the largest component positive, to specify the phase
