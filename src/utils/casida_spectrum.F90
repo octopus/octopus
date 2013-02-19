@@ -129,11 +129,11 @@ contains
     logical,                 intent(in) :: extracols
 
     FLOAT, allocatable :: spectrum(:,:)
-    FLOAT :: omega, energy, tm(3), ff(4)
+    FLOAT :: omega, energy, tm(MAX_DIM), ff(MAX_DIM+1)
     integer :: istep, nsteps, iunit, trash(3), ii, ncols
 
     nsteps = (cs%max_energy - cs%min_energy) / cs%energy_step
-    SAFE_ALLOCATE(spectrum(1:4, 1:nsteps))
+    SAFE_ALLOCATE(spectrum(1:cs%space%dim+1, 1:nsteps))
     spectrum = M_ZERO
 
     iunit = io_open(trim(dir)// fname, action='read', status='old', die = .false.)
@@ -154,7 +154,7 @@ contains
 
     read(iunit, *) ! skip header
     do
-      read(iunit, *, end=100) trash(1:ncols), energy, tm(1:3), ff(4)
+      read(iunit, *, end=100) trash(1:ncols), energy, tm(1:cs%space%dim), ff(cs%space%dim+1)
 
       energy = units_to_atomic(units_out%energy, energy)
 
@@ -163,8 +163,9 @@ contains
 
         ! transition matrix elements by themselves are dependent on gauge in degenerate subspaces
         ! make into oscillator strengths, as in casida_inc.F90 X(oscillator_strengths), and like the last column
-        ff(1:3) = (M_TWO / cs%space%dim) * energy * (tm(1:3))**2
-        spectrum(1:4, istep) = spectrum(1:4, istep) + ff(1:4)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
+        ff(1:cs%space%dim) = (M_TWO / cs%space%dim) * energy * (tm(1:cs%space%dim))**2
+        spectrum(1:cs%space%dim+1, istep) = spectrum(1:cs%space%dim+1, istep) + &
+          ff(1:cs%space%dim+1)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
     end do
 100 continue
@@ -173,8 +174,8 @@ contains
     ! print spectra
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
     do istep = 1, nsteps
-      write(iunit, '(5es14.6)') units_from_atomic(units_out%energy, cs%min_energy + real(istep - 1, REAL_PRECISION) &
-        *cs%energy_step), (units_from_atomic(unit_one/units_out%energy, spectrum(ii, istep)), ii = 1, 4)
+      write(iunit, '(99es14.6)') units_from_atomic(units_out%energy, cs%min_energy + real(istep - 1, REAL_PRECISION) &
+        *cs%energy_step), (units_from_atomic(unit_one/units_out%energy, spectrum(ii, istep)), ii = 1, cs%space%dim+1)
     end do
 
     call io_close(iunit)
