@@ -32,6 +32,19 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
 
   PUSH_SUB(X(oscillator_strengths))
 
+  if(cas%triplet) then
+    cas%tm(:,:) = M_ZERO
+    cas%f(:) = M_ZERO
+
+    if(cas%qcalc) then
+      cas%qf(:) = M_ZERO
+      if(cas%avg_order .gt. 0) cas%qf_avg(:) = M_ZERO
+    endif
+
+    POP_SUB(X(oscillator_strengths))
+    return
+  endif
+
   call profiling_in(prof, "CASIDA_OSCILLATOR_STRENGTHS")
 
   if(cas%qcalc) then
