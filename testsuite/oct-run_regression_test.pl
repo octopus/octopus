@@ -285,10 +285,14 @@ foreach my $octopus_exe (@executables){
 	  print "$command_suffix" . "\n";
 
 	  # serial or MPI run?
-	  if ( $command_suffix =~ /mpi$/) {
+	  if ( $octopus_exe =~ /mpi$/) {
             if("$global_np" ne "") {
 		$np = $global_np;
             }
+	    # utility runs should be on only one processor
+	    if ( $command_suffix !~ /mpi$/) {
+		$np = 1;
+	    }
 	    if( -x "$mpiexec_raw") {
 	      if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
 		  $specify_np = "";
