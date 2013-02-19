@@ -30,12 +30,14 @@ program casida_spectrum
   use space_m
   use unit_m
   use unit_system_m
+  use varinfo_m
 
   implicit none
 
   type casida_spectrum_t
     FLOAT :: br, energy_step, min_energy, max_energy
     type(space_t) :: space
+    integer :: ispin
   end type casida_spectrum_t
 
   integer :: ierr
@@ -54,6 +56,11 @@ program casida_spectrum
   call io_init()
   call unit_system_init()
   call space_init(cs%space)
+
+  ! Reads the spin components. This is read here, as well as in states_init.
+  call parse_integer(datasets_check('SpinComponents'), 1, cs%ispin)
+  if(.not.varinfo_valid_option('SpinComponents', cs%ispin)) call input_error('SpinComponents')
+  cs%ispin = min(2, cs%ispin)
 
   !%Variable CasidaSpectrumBroadening
   !%Type float
@@ -123,7 +130,7 @@ contains
 
     FLOAT, allocatable :: spectrum(:,:)
     FLOAT :: omega, energy, tm(3), ff(4)
-    integer :: nsteps, iunit, j1, j2, ii
+    integer :: istep, nsteps, iunit, trash(3), ii, ncols
 
     nsteps = (cs%max_energy - cs%min_energy) / cs%energy_step
     SAFE_ALLOCATE(spectrum(1:4, 1:nsteps))
@@ -138,25 +145,26 @@ contains
       return
     end if
 
+    ! For Casida, CV(2), Tamm-Dancoff: first column is the index of the excitation
+    ! For eps_diff, Petersilka: first two columns are occ and unocc states, then spin if spin-polarized
+    ncols = 1
+    if(extracols) then
+      ncols = ncols + cs%ispin
+    endif
+
     read(iunit, *) ! skip header
     do
-      if(extracols) then
-        ! first two columns are occ and unocc states
-        read(iunit, *, end=100) j1, j2, energy, tm(1:3), ff(4)
-      else
-        ! first column is the index of the excitation
-        read(iunit, *, end=100) j1, energy, tm(1:3), ff(4)
-      end if
+      read(iunit, *, end=100) trash(1:ncols), energy, tm(1:3), ff(4)
 
       energy = units_to_atomic(units_out%energy, energy)
 
-      do j1 = 1, nsteps
-        omega = cs%min_energy + real(j1-1, REAL_PRECISION)*cs%energy_step
+      do istep = 1, nsteps
+        omega = cs%min_energy + real(istep-1, REAL_PRECISION)*cs%energy_step
 
         ! transition matrix elements by themselves are dependent on gauge in degenerate subspaces
         ! make into oscillator strengths, as in casida_inc.F90 X(oscillator_strengths), and like the last column
         ff(1:3) = (M_TWO / cs%space%dim) * energy * (tm(1:3))**2
-        spectrum(1:4, j1) = spectrum(1:4, j1) + ff(1:4)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
+        spectrum(1:4, istep) = spectrum(1:4, istep) + ff(1:4)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
     end do
 100 continue
@@ -164,9 +172,9 @@ contains
 
     ! print spectra
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
-    do j1 = 1, nsteps
-      write(iunit, '(5es14.6)') units_from_atomic(units_out%energy, cs%min_energy + real(j1 - 1, REAL_PRECISION) &
-        *cs%energy_step), (units_from_atomic(unit_one/units_out%energy, spectrum(ii, j1)), ii = 1, 4)
+    do istep = 1, nsteps
+      write(iunit, '(5es14.6)') units_from_atomic(units_out%energy, cs%min_energy + real(istep - 1, REAL_PRECISION) &
+        *cs%energy_step), (units_from_atomic(unit_one/units_out%energy, spectrum(ii, istep)), ii = 1, 4)
     end do
 
     call io_close(iunit)
