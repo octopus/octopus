@@ -29,15 +29,15 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc)
   integer :: ip, ixc, spin_channels
   type(xc_functl_t), pointer :: functl(:)
 
+  if(xcs%kernel_family == XC_FAMILY_NONE) return ! nothing to do
+
+  PUSH_SUB(xc_get_fxc)
+
   ! is there anything to do? (only LDA by now)
   if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)).ne.XC_FAMILY_NONE) then
     message(1) = "Only LDA functionals are authorized for now in xc_get_fxc."
     call messages_fatal(1)
   end if
-
-  if(xcs%kernel_family == XC_FAMILY_NONE) return ! nothing to do
-
-  PUSH_SUB(xc_get_fxc)
 
   if(ispin == UNPOLARIZED) then
     functl => xcs%kernel(:, 1)
