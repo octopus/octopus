@@ -129,7 +129,7 @@ contains
           n_partially_filled = n_partially_filled + 1
           if(present(partially_filled)) partially_filled(n_partially_filled) = ist
         elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
-          message(1) = 'Internal error: Illegal values in the occupation numbers.'
+          write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
           call messages_fatal(1)
          end if
       end do
@@ -142,7 +142,7 @@ contains
           n_partially_filled = n_partially_filled + 1
           if(present(partially_filled)) partially_filled(n_partially_filled) = ist
         elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
-          message(1) = 'Internal error: Illegal values in the occupation numbers.'
+          write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
           call messages_fatal(1)
          end if
       end do
