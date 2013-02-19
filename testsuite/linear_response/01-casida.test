@@ -96,10 +96,10 @@ match ; eps_diff spectrum y    ; LINE(casida/spectrum.eps_diff, 531, 29);  2.103
 match ; eps_diff spectrum z    ; LINE(casida/spectrum.eps_diff, 531, 43);  2.103199E+00
 match ; eps_diff spectrum tot  ; LINE(casida/spectrum.eps_diff, 531, 57);  4.277532E+00
 
-match ; Petersilka spectrum x   ; LINE(casida/spectrum.petersilka, 531, 15);  5.760632E-01
-match ; Petersilka spectrum y   ; LINE(casida/spectrum.petersilka, 531, 29);  6.486833E+00
-match ; Petersilka spectrum z   ; LINE(casida/spectrum.petersilka, 531, 43);  6.486833E+00
-match ; Petersilka spectrum tot ; LINE(casida/spectrum.petersilka, 531, 57);  1.354973E+01
+#match ; Petersilka spectrum x   ; LINE(casida/spectrum.petersilka, 531, 15);  5.760632E-01
+#match ; Petersilka spectrum y   ; LINE(casida/spectrum.petersilka, 531, 29);  6.486833E+00
+#match ; Petersilka spectrum z   ; LINE(casida/spectrum.petersilka, 531, 43);  6.486833E+00
+#match ; Petersilka spectrum tot ; LINE(casida/spectrum.petersilka, 531, 57);  1.354973E+01
 
 match ; Casida spectrum x    ; LINE(casida/spectrum.casida, 531, 15);  2.166247E-01
 match ; Casida spectrum y    ; LINE(casida/spectrum.casida, 531, 29);  5.754486E+00
