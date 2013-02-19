@@ -74,7 +74,7 @@ module casida_m
 
     integer, pointer  :: n_occ(:)       !< number of occupied states
     integer, pointer  :: n_unocc(:)     !< number of unoccupied states
-    integer           :: nspin
+    integer           :: nik
     integer           :: el_per_state
     character(len=80) :: wfn_list
     character(len=80) :: trandens
@@ -147,20 +147,21 @@ contains
     call restart_look_and_read(sys%st, sys%gr)
 
     cas%el_per_state = sys%st%smear%el_per_state
-    cas%nspin = sys%st%d%nspin
+    cas%nik = sys%st%d%nik
 
-    SAFE_ALLOCATE(  cas%n_occ(1:cas%nspin))
-    SAFE_ALLOCATE(cas%n_unocc(1:cas%nspin))
+    SAFE_ALLOCATE(  cas%n_occ(1:cas%nik))
+    SAFE_ALLOCATE(cas%n_unocc(1:cas%nik))
 
     cas%n_occ(:) = 0
-    do ik = 1, cas%nspin
+    do ik = 1, cas%nik
       call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
       if(n_partially_filled > 0 .or. n_half_filled > 0) then
         call messages_not_implemented("Casida with partial occupations")
         ! Formulas are in Casida 1995 reference. The occupations are not used at all here currently.
       endif
       cas%n_occ(ik) = n_filled + n_partially_filled + n_half_filled
-      cas%n_unocc(ik) = sys%st%nst - cas%n_occ(ik)
+      cas%n_unocc(ik) = sys%st%nst - n_filled
+      ! when we implement occupations, partially occupied levels need to be counted as both occ and unocc.
     end do
 
     select case(sys%st%d%ispin)
@@ -409,7 +410,7 @@ contains
 
     ! count pairs
     cas%n_pairs = 0
-    do ik = 1, cas%nspin
+    do ik = 1, cas%nik
       do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
         if(loct_isinstringlist(ast, cas%wfn_list)) then
           do ist = 1, cas%n_occ(ik)
@@ -438,7 +439,7 @@ contains
     SAFE_ALLOCATE(   cas%f(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
-    SAFE_ALLOCATE(cas%index(1:maxval(cas%n_occ), minval(cas%n_occ):maxval(cas%n_occ + cas%n_unocc), cas%nspin))
+    SAFE_ALLOCATE(cas%index(1:maxval(cas%n_occ), minval(cas%n_occ):maxval(cas%n_occ + cas%n_unocc), cas%nik))
 
     if(cas%qcalc) then
       SAFE_ALLOCATE( cas%qf    (1:cas%n_pairs))
@@ -449,7 +450,7 @@ contains
 
     ! create pairs
     jpair = 1
-    do ik = 1, cas%nspin
+    do ik = 1, cas%nik
       do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
         if(loct_isinstringlist(ast, cas%wfn_list)) then
           do ist = 1, cas%n_occ(ik)
@@ -1030,7 +1031,7 @@ contains
 
     if(cas%type == CASIDA_EPS_DIFF .or. (cas%type == CASIDA_PETERSILKA)) then
       write(iunit, '(2a4)', advance='no') 'From', '  To'
-      if(cas%nspin == 2) then
+      if(sys%st%d%ispin == SPIN_POLARIZED) then
         write(iunit, '(a5)', advance='no') 'Spin'
       endif
     else
@@ -1046,7 +1047,7 @@ contains
     do ia = 1, cas%n_pairs
       if((cas%type == CASIDA_EPS_DIFF) .or. (cas%type == CASIDA_PETERSILKA)) then
         write(iunit, '(2i4)', advance='no') cas%pair(ind(ia))%i, cas%pair(ind(ia))%a
-        if(cas%nspin == 2) then
+        if(sys%st%d%ispin == SPIN_POLARIZED) then
           write(iunit, '(i5)', advance='no') cas%pair(ind(ia))%sigma
         endif
       else
@@ -1156,7 +1157,7 @@ contains
     write(iunit, '(a)')
     write(iunit, '(a)') '%Occupations'
 
-    do ik = 1, cas%nspin
+    do ik = 1, cas%nik
       do ist = 1, cas%n_occ(ik)
         occ = M_ONE * cas%el_per_state
         do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)

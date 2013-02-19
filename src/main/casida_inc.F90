@@ -206,7 +206,7 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
       do jb = 1, cas%n_pairs
         zz = zz + xx(jb) * cas%mat(jb, ia)
       end do
-      if(cas%nspin == 1) zz = sqrt(M_TWO) * zz
+      if(cas%nik == 1) zz = sqrt(M_TWO) * zz
     endif
   end if
 
