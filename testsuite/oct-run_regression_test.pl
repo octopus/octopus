@@ -282,8 +282,6 @@ foreach my $octopus_exe (@executables){
 
 	  $command_suffix = $command;
 
-	  print "$command_suffix" . "\n";
-
 	  # serial or MPI run?
 	  if ( $octopus_exe =~ /mpi$/) {
             if("$global_np" ne "") {
