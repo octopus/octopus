@@ -405,7 +405,6 @@ contains
     character(len=*),  intent(in) :: string
     integer, optional, intent(in) :: unit
 
-    PUSH_SUB(json_write_string)
 
     if(present(unit)) then
       write(unit=unit, fmt="(a)", advance="no") string
@@ -413,13 +412,11 @@ contains
       write(unit=*, fmt="(a)", advance="no") string
     end if
 
-    POP_SUB(json_write_string)
   end subroutine json_write_string
 
   subroutine json_write_line(unit)
     integer, optional, intent(in) :: unit
 
-    PUSH_SUB(json_write_line)
 
     if(present(unit)) then
       write(unit=unit, fmt=*)
@@ -427,7 +424,6 @@ contains
       write(unit=*, fmt=*)
     end if
 
-    POP_SUB(json_write_line)
   end subroutine json_write_line
 
   elemental function json_null_isdef(this) result(is)
@@ -470,22 +466,18 @@ contains
     type(json_null_t),   intent(in)    :: this
     type(json_string_t), intent(inout) :: string
 
-    PUSH_SUB(json_null_string)
 
     if(json_null_isdef(this))call json_string_extend_char(string, "null")
 
-    POP_SUB(json_null_string)
   end subroutine json_null_string
 
   subroutine json_null_write(this, unit)
     type(json_null_t), intent(in) :: this
     integer, optional, intent(in) :: unit
 
-    PUSH_SUB(json_null_write)
 
     if(json_null_isdef(this)) call json_write_string("null", unit)
 
-    POP_SUB(json_null_write)
   end subroutine json_null_write
 
   elemental function json_logical_isdef(this) result(is)
@@ -536,7 +528,6 @@ contains
     type(json_logical_t), intent(in)    :: this
     type(json_string_t),  intent(inout) :: string
 
-    PUSH_SUB(json_logical_string)
 
     if(this%val) then
       call json_string_extend_char(string, "true")
@@ -544,14 +535,12 @@ contains
       call json_string_extend_char(string, "false")
     end if
 
-    POP_SUB(json_logical_string)
   end subroutine json_logical_string
 
   subroutine json_logical_write(this, unit)
     type(json_logical_t), intent(in) :: this
     integer,    optional, intent(in) :: unit
 
-    PUSH_SUB(json_logical_write)
 
     if(json_logical_isdef(this)) then
       if(this%val) then
@@ -561,7 +550,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_logical_write)
   end subroutine json_logical_write
 
   elemental function json_integer_isdef(this) result(is)
@@ -650,7 +638,6 @@ contains
     character(len=json_integer_len(this)) :: buff
     character(len=6)                      :: frmt
 
-    PUSH_SUB(json_integer_string)
 
     if(json_integer_isdef(this)) then
       buff=""
@@ -659,7 +646,6 @@ contains
       call json_string_extend_char(string, trim(adjustl(buff)))
     end if
 
-    POP_SUB(json_integer_string)
   end subroutine json_integer_string
 
   subroutine json_integer_write(this, unit)
@@ -669,7 +655,6 @@ contains
     character(len=json_integer_len(this)) :: buff
     character(len=6)                      :: frmt
 
-    PUSH_SUB(json_integer_write)
 
     if(json_integer_isdef(this)) then
       buff=""
@@ -678,7 +663,6 @@ contains
       call json_write_string(trim(adjustl(buff)), unit)
     end if
 
-    POP_SUB(json_integer_write)
   end subroutine json_integer_write
 
   elemental function json_real_isdef(this) result(is)
@@ -771,7 +755,6 @@ contains
     character(len=13)                  :: frmt
     integer                            :: p, r
 
-    PUSH_SUB(json_real_string)
 
     if(json_real_isdef(this)) then
       buff=""
@@ -782,7 +765,6 @@ contains
       call json_string_extend_char(string, trim(adjustl(buff)))
     end if
 
-    POP_SUB(json_real_string)
   end subroutine json_real_string
 
   subroutine json_real_write(this, unit)
@@ -793,7 +775,6 @@ contains
     character(len=13)                  :: frmt
     integer                            :: p, r
 
-    PUSH_SUB(json_real_write)
     
     if(json_real_isdef(this)) then
       buff=""
@@ -804,7 +785,6 @@ contains
       call json_write_string(trim(adjustl(buff)), unit)
     end if
 
-    POP_SUB(json_real_write)
   end subroutine json_real_write
 
   elemental subroutine json_string_iterator_nullify(this)
@@ -828,7 +808,6 @@ contains
     type(json_string_iterator_t), intent(out) :: this
     type(json_string_t), target,  intent(in)  :: string
 
-    PUSH_SUB(json_string_iterator_init)
 
     call json_string_iterator_nullify(this)
     this%val=>null()
@@ -838,7 +817,6 @@ contains
       this%val=>string%val
     end if
 
-    POP_SUB(json_string_iterator_init)
   end subroutine json_string_iterator_init
 
   elemental subroutine json_string_iterator_end(this)
@@ -883,7 +861,6 @@ contains
     type(json_string_t),        intent(out) :: this
     character(len=*), optional, intent(in)  :: val
 
-    PUSH_SUB(json_string_init)
 
     call json_string_nullify(this)
     this%len=0
@@ -893,13 +870,11 @@ contains
     if(present(val))&
       call json_string_extend_char(this, val)
 
-    POP_SUB(json_string_init)
   end subroutine json_string_init
 
   subroutine json_string_end(this)
     type(json_string_t), intent(inout) :: this
 
-    PUSH_SUB(json_string_end)
     
     this%type=JSON_UNDEF_TYPE
     SAFE_DEALLOCATE_P(this%val)
@@ -907,7 +882,6 @@ contains
     this%size=0
     this%len=0
 
-    POP_SUB(json_string_end)
   end subroutine json_string_end
 
   subroutine json_string_reallocate(this, extra)
@@ -918,7 +892,6 @@ contains
     real(kind=wp)                    :: need
     integer                          :: i, n
 
-    PUSH_SUB(json_string_reallocate)
     
     if(json_string_isdef(this)) then
       need=real(this%len+extra, kind=wp)
@@ -932,7 +905,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_string_reallocate)
   end subroutine json_string_reallocate
 
   elemental function json_string_len(this) result(len)
@@ -1059,7 +1031,6 @@ contains
     integer   :: i
     logical   :: escape
 
-    PUSH_SUB(json_string_string)
 
     if(json_string_isdef(this)) then
       call json_string_append(string, '"')
@@ -1072,7 +1043,6 @@ contains
       call json_string_append(string, '"')
     end if
 
-    POP_SUB(json_string_string)
   end subroutine json_string_string
 
   subroutine json_string_write(this, unit)
@@ -1083,7 +1053,6 @@ contains
     integer   :: i
     logical   :: escape
     
-    PUSH_SUB(json_string_write)
 
     if(json_string_isdef(this)) then
       call json_write_string('"', unit)
@@ -1095,7 +1064,6 @@ contains
       call json_write_string('"', unit)
     end if
 
-    POP_SUB(json_string_write)
   end subroutine json_string_write
 
   elemental subroutine json_string_set(this, i, char, ierr)
@@ -1167,13 +1135,11 @@ contains
     type(json_string_t), intent(inout) :: this
     character,           intent(in)    :: char
 
-    PUSH_SUB(json_string_append)
 
     call json_string_reallocate(this, 1)
     this%len=this%len+1
     this%val(this%len)=char
 
-    POP_SUB(json_string_append)
 
   end subroutine json_string_append
 
@@ -1183,7 +1149,6 @@ contains
 
     integer :: i
 
-    PUSH_SUB(json_string_extend_char)
 
     call json_string_reallocate(this, len(char))
     do i = 1, len(char)
@@ -1191,20 +1156,17 @@ contains
     end do
     this%len=this%len+len(char)
 
-    POP_SUB(json_string_extend_char)
   end subroutine json_string_extend_char
 
   subroutine json_string_extend_string(this, string)
     type(json_string_t), intent(inout) :: this
     type(json_string_t), intent(in)    :: string
 
-    PUSH_SUB(json_string_extend_string)
 
     call json_string_reallocate(this, string%len)
     this%val(this%len+1:this%len+string%len)=string%val(1:string%len)
     this%len=this%len+string%len
 
-    POP_SUB(json_string_extend_string)
   end subroutine json_string_extend_string
 
   elemental subroutine json_array_iterator_nullify(this)
@@ -1226,13 +1188,11 @@ contains
     type(json_array_iterator_t), intent(out) :: this
     type(json_array_t), target,  intent(in)  :: array
 
-    PUSH_SUB(json_array_iterator_init)
 
     call json_array_iterator_nullify(this)
     this%node=>null()
     if(json_array_isdef(array).and.(array%size>0)) this%node=>array%head
 
-    POP_SUB(json_array_iterator_init)
   end subroutine json_array_iterator_init
 
   elemental subroutine json_array_iterator_end(this)
@@ -1246,7 +1206,6 @@ contains
     type(json_array_iterator_t), target, intent(inout) :: this
     type(json_value_t), pointer,         intent(out)   :: val
 
-    PUSH_SUB(json_array_iterator_next)
 
     val=>null()
     if(associated(this%node)) then
@@ -1254,7 +1213,6 @@ contains
       this%node=>this%node%next
     end if
 
-    POP_SUB(json_array_iterator_next)
   end subroutine json_array_iterator_next
 
   elemental subroutine json_array_nullify(this)
@@ -1291,14 +1249,12 @@ contains
 
     integer :: i
 
-    PUSH_SUB(json_array_init_logical)
 
     call json_array_init(this)
     do i = 1, size(vals)
       call json_array_append_logical(this, vals(i))
     end do
 
-    POP_SUB(json_array_init_logical)
   end subroutine json_array_init_logical
 
   subroutine json_array_init_integer(this, vals)
@@ -1307,14 +1263,12 @@ contains
 
     integer :: i
 
-    PUSH_SUB(json_array_init_integer)
 
     call json_array_init(this)
     do i = 1, size(vals)
       call json_array_append_integer(this, vals(i))
     end do
 
-    POP_SUB(json_array_init_integer)
   end subroutine json_array_init_integer
 
   subroutine json_array_init_real(this, vals)
@@ -1323,14 +1277,12 @@ contains
 
     integer :: i
 
-    PUSH_SUB(json_array_init_real)
 
     call json_array_init(this)
     do i = 1, size(vals)
       call json_array_append_real(this, vals(i))
     end do
 
-    POP_SUB(json_array_init_real)
   end subroutine json_array_init_real
 
   subroutine json_array_init_string(this, vals)
@@ -1339,14 +1291,12 @@ contains
 
     integer :: i
 
-    PUSH_SUB(json_array_init_string)
     
     call json_array_init(this)
     do i = 1, size(vals)
       call json_array_append_string(this, vals(i))
     end do
 
-    POP_SUB(json_array_init_string)
   end subroutine json_array_init_string
 
   recursive subroutine json_array_end(this)
@@ -1354,7 +1304,6 @@ contains
 
     type(json_value_node_t), pointer :: node
 
-    PUSH_SUB(json_array_end)
 
     this%type=JSON_UNDEF_TYPE
     do
@@ -1370,7 +1319,6 @@ contains
     this%size=0
     this%head=>null()
 
-    POP_SUB(json_array_end)
   end subroutine json_array_end
 
   elemental function json_array_len(this) result(size)
@@ -1389,7 +1337,6 @@ contains
     type(json_array_iterator_t) :: iter_1, iter_2
     type(json_value_t), pointer :: val_1, val_2
 
-    PUSH_SUB(json_array_equal)
 
     eqv=.false.
     if(json_array_isdef(this_1).and.json_array_isdef(this_2)) then
@@ -1410,7 +1357,6 @@ contains
       call json_array_iterator_end(iter_2)
     end if
 
-    POP_SUB(json_array_equal)
   end function json_array_equal
 
   recursive subroutine json_array_string(this, string)
@@ -1420,7 +1366,6 @@ contains
     type(json_array_iterator_t) :: iter
     type(json_value_t), pointer :: val
 
-    PUSH_SUB(json_array_string)
 
     if(json_array_isdef(this)) then
       call json_string_append(string, "[")
@@ -1438,7 +1383,6 @@ contains
       call json_string_append(string, "]")
     end if
 
-    POP_SUB(json_array_string)
   end subroutine json_array_string
 
   recursive subroutine json_array_write(this, unit, level, separator, count)
@@ -1453,7 +1397,6 @@ contains
     character                   :: sep
     integer                     :: lvl, cnt
 
-    PUSH_SUB(json_array_write)
 
     if(json_array_isdef(this)) then
       lvl=0
@@ -1481,7 +1424,6 @@ contains
       call json_array_iterator_end(iter)
     end if
 
-    POP_SUB(json_array_write)
   end subroutine json_array_write
 
   subroutine json_array_append_value(this, val)
@@ -1490,7 +1432,6 @@ contains
 
     type(json_value_node_t), pointer :: node
 
-    PUSH_SUB(json_array_append_value)
 
     if(json_value_isdef(val).and.json_array_isdef(this)) then
       SAFE_ALLOCATE(node)
@@ -1505,7 +1446,6 @@ contains
       this%size=this%size+1
     end if
 
-    POP_SUB(json_array_append_value)
   end subroutine json_array_append_value
 
   subroutine json_array_append_null(this)
@@ -1514,7 +1454,6 @@ contains
     type(json_value_t), pointer :: json_value
     type(json_null_t),  pointer :: type_value
 
-    PUSH_SUB(json_array_append_null)
 
     if(json_array_isdef(this)) then
       SAFE_ALLOCATE(type_value)
@@ -1524,7 +1463,6 @@ contains
       call json_array_append_value(this, json_value)
     end if
 
-    POP_SUB(json_array_append_null)
   end subroutine json_array_append_null
 
   subroutine json_array_append_logical(this, val)
@@ -1534,7 +1472,6 @@ contains
     type(json_value_t),   pointer :: json_value
     type(json_logical_t), pointer :: type_value
     
-    PUSH_SUB(json_array_append_logical)
 
     if(json_array_isdef(this)) then
       SAFE_ALLOCATE(type_value)
@@ -1544,7 +1481,6 @@ contains
       call json_array_append_value(this, json_value)
     end if
 
-    POP_SUB(json_array_append_logical)
   end subroutine json_array_append_logical
 
   subroutine json_array_append_integer(this, val)
@@ -1554,7 +1490,6 @@ contains
     type(json_value_t),   pointer :: json_value
     type(json_integer_t), pointer :: type_value
 
-    PUSH_SUB(json_array_append_integer)
 
     if(json_array_isdef(this)) then
       SAFE_ALLOCATE(type_value)
@@ -1564,7 +1499,6 @@ contains
       call json_array_append_value(this, json_value)
     end if
 
-    POP_SUB(json_array_append_integer)
   end subroutine json_array_append_integer
 
   subroutine json_array_append_real(this, val)
@@ -1574,7 +1508,6 @@ contains
     type(json_value_t), pointer :: json_value
     type(json_real_t),  pointer :: type_value
 
-    PUSH_SUB(json_array_append_real)
 
     if(json_array_isdef(this)) then
       SAFE_ALLOCATE(type_value)
@@ -1584,7 +1517,6 @@ contains
       call json_array_append_value(this, json_value)
     end if
 
-    POP_SUB(json_array_append_real)
   end subroutine json_array_append_real
 
   subroutine json_array_append_string(this, val)
@@ -1594,7 +1526,6 @@ contains
     type(json_value_t),  pointer :: json_value
     type(json_string_t), pointer :: type_value
 
-    PUSH_SUB(json_array_append_string)
 
     if(json_array_isdef(this)) then
       SAFE_ALLOCATE(type_value)
@@ -1604,7 +1535,6 @@ contains
       call json_array_append_value(this, json_value)
     end if
 
-    POP_SUB(json_array_append_string)
   end subroutine json_array_append_string
 
   subroutine json_array_append_array(this, val)
@@ -1613,7 +1543,6 @@ contains
 
     type(json_value_t), pointer :: json_value
 
-    PUSH_SUB(json_array_append_array)
 
     if(json_array_isdef(val).and.json_array_isdef(this)) then
       SAFE_ALLOCATE(json_value)
@@ -1621,7 +1550,6 @@ contains
       call json_array_append_value(this, json_value)
     end if
 
-    POP_SUB(json_array_append_array)
   end subroutine json_array_append_array
 
   subroutine json_array_append_array_logical(this, vals)
@@ -1630,7 +1558,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_append_array_logical)
 
     if(json_array_isdef(this)) then
       SAFE_ALLOCATE(json_array)
@@ -1638,7 +1565,6 @@ contains
       call json_array_append_array(this, json_array)
     end if
 
-    POP_SUB(json_array_append_array_logical)
   end subroutine json_array_append_array_logical
 
   subroutine json_array_append_array_integer(this, vals)
@@ -1647,7 +1573,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_append_array_integer)
 
     if(json_array_isdef(this)) then
       SAFE_ALLOCATE(json_array)
@@ -1655,7 +1580,6 @@ contains
       call json_array_append_array(this, json_array)
     end if
 
-    POP_SUB(json_array_append_array_integer)
   end subroutine json_array_append_array_integer
 
   subroutine json_array_append_array_real(this, vals)
@@ -1664,7 +1588,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_append_array_real)
 
     if(json_array_isdef(this)) then
       SAFE_ALLOCATE(json_array)
@@ -1672,7 +1595,6 @@ contains
       call json_array_append_array(this, json_array)
     end if
 
-    POP_SUB(json_array_append_array_real)
   end subroutine json_array_append_array_real
 
   subroutine json_array_append_array_string(this, vals)
@@ -1681,7 +1603,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_append_array_string)
 
     if(json_array_isdef(this)) then
       SAFE_ALLOCATE(json_array)
@@ -1689,7 +1610,6 @@ contains
       call json_array_append_array(this, json_array)
     end if
 
-    POP_SUB(json_array_append_array_string)
   end subroutine json_array_append_array_string
 
   subroutine json_array_append_object(this, val)
@@ -1698,7 +1618,6 @@ contains
 
     type(json_value_t), pointer :: json_value
 
-    PUSH_SUB(json_array_append_object)
 
     if(json_object_isdef(val).and.json_array_isdef(this)) then
       SAFE_ALLOCATE(json_value)
@@ -1706,7 +1625,6 @@ contains
       call json_array_append_value(this, json_value)
     end if
 
-    POP_SUB(json_array_append_object)
   end subroutine json_array_append_object
 
   subroutine json_array_set_value(this, i, val, ierr)
@@ -1718,7 +1636,6 @@ contains
     type(json_value_node_t), pointer :: node
     integer                          :: idx
 
-    PUSH_SUB(json_array_set_value)
 
     ierr=JSON_UNDEF_ERROR
     if(json_value_isdef(val).and.json_array_isdef(this)) then
@@ -1740,7 +1657,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_set_value)
   end subroutine json_array_set_value
 
   subroutine json_array_set_null(this, i, ierr)
@@ -1751,7 +1667,6 @@ contains
     type(json_value_t), pointer :: json_value
     type(json_null_t),  pointer :: type_value
 
-    PUSH_SUB(json_array_set_null)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -1762,7 +1677,6 @@ contains
       call json_array_set_value(this, i, json_value, ierr)
     end if
 
-    POP_SUB(json_array_set_null)
   end subroutine json_array_set_null
 
   subroutine json_array_set_logical(this, i, val, ierr)
@@ -1774,7 +1688,6 @@ contains
     type(json_value_t),   pointer :: json_value
     type(json_logical_t), pointer :: type_value
 
-    PUSH_SUB(json_array_set_logical)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -1785,7 +1698,6 @@ contains
       call json_array_set_value(this, i, json_value, ierr)
     end if
 
-    POP_SUB(json_array_set_logical)
     return
   end subroutine json_array_set_logical
 
@@ -1798,7 +1710,6 @@ contains
     type(json_value_t),   pointer :: json_value
     type(json_integer_t), pointer :: type_value
 
-    PUSH_SUB(json_array_set_integer)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -1809,7 +1720,6 @@ contains
       call json_array_set_value(this, i, json_value, ierr)
     end if
 
-    POP_SUB(json_array_set_integer)
   end subroutine json_array_set_integer
 
   subroutine json_array_set_real(this, i, val, ierr)
@@ -1821,7 +1731,6 @@ contains
     type(json_value_t), pointer :: json_value
     type(json_real_t),  pointer :: type_value
 
-    PUSH_SUB(json_array_set_real)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -1832,7 +1741,6 @@ contains
       call json_array_set_value(this, i, json_value, ierr)
     end if
 
-    POP_SUB(json_array_set_real)
   end subroutine json_array_set_real
 
   subroutine json_array_set_string(this, i, val, ierr)
@@ -1844,7 +1752,6 @@ contains
     type(json_value_t),  pointer :: json_value
     type(json_string_t), pointer :: type_value
 
-    PUSH_SUB(json_array_set_string)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -1855,7 +1762,6 @@ contains
       call json_array_set_value(this, i, json_value, ierr)
     end if
 
-    POP_SUB(json_array_set_string)
   end subroutine json_array_set_string
 
   subroutine json_array_set_array(this, i, val, ierr)
@@ -1866,7 +1772,6 @@ contains
 
     type(json_value_t), pointer :: json_value
 
-    PUSH_SUB(json_array_set_array)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(val).and.json_array_isdef(this)) then
@@ -1875,7 +1780,6 @@ contains
       call json_array_set_value(this, i, json_value, ierr)
     end if
 
-    POP_SUB(json_array_set_array)
   end subroutine json_array_set_array
 
   subroutine json_array_set_array_logical(this, i, vals, ierr)
@@ -1886,7 +1790,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_set_array_logical)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -1895,7 +1798,6 @@ contains
       call json_array_set_array(this, i, json_array, ierr)
     end if
 
-    POP_SUB(json_array_set_array_logical)
   end subroutine json_array_set_array_logical
 
   subroutine json_array_set_array_integer(this, i, vals, ierr)
@@ -1906,7 +1808,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_set_array_integer)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -1915,7 +1816,6 @@ contains
       call json_array_set_array(this, i, json_array, ierr)
     end if
 
-    POP_SUB(json_array_set_array_integer)
   end subroutine json_array_set_array_integer
 
   subroutine json_array_set_array_real(this, i, vals, ierr)
@@ -1926,7 +1826,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_set_array_real)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -1935,7 +1834,6 @@ contains
       call json_array_set_array(this, i, json_array, ierr)
     end if
 
-    POP_SUB(json_array_set_array_real)
   end subroutine json_array_set_array_real
 
   subroutine json_array_set_array_string(this, i, vals, ierr)
@@ -1946,7 +1844,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_set_array_string)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -1955,7 +1852,6 @@ contains
       call json_array_set_array(this, i, json_array, ierr)
     end if
 
-    POP_SUB(json_array_set_array_string)
   end subroutine json_array_set_array_string
 
   subroutine json_array_set_object(this, i, val, ierr)
@@ -1966,7 +1862,6 @@ contains
 
     type(json_value_t), pointer :: json_value
 
-    PUSH_SUB(json_array_set_object)
 
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(val).and.json_array_isdef(this)) then
@@ -1975,7 +1870,6 @@ contains
       call json_array_set_value(this, i, json_value, ierr)
     end if
 
-    POP_SUB(json_array_set_object)
   end subroutine json_array_set_object
 
   subroutine json_array_get_self_logical(this, vals, ierr)
@@ -1988,7 +1882,6 @@ contains
     type(json_array_iterator_t)   :: iter
     integer                       :: i
 
-    PUSH_SUB(json_array_get_self_logical)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2014,7 +1907,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_get_self_logical)
   end subroutine json_array_get_self_logical
 
   subroutine json_array_get_self_integer(this, vals, ierr)
@@ -2027,7 +1919,6 @@ contains
     type(json_array_iterator_t)   :: iter
     integer                       :: i
 
-    PUSH_SUB(json_array_get_self_integer)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2053,7 +1944,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_get_self_integer)
   end subroutine json_array_get_self_integer
 
   subroutine json_array_get_self_real(this, vals, ierr)
@@ -2066,7 +1956,6 @@ contains
     type(json_array_iterator_t) :: iter
     integer                     :: i
 
-    PUSH_SUB(json_array_get_self_real)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2092,7 +1981,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_get_self_real)
   end subroutine json_array_get_self_real
 
   subroutine json_array_get_self_string(this, vals, ierr)
@@ -2105,7 +1993,6 @@ contains
     type(json_array_iterator_t)  :: iter
     integer                      :: i
 
-    PUSH_SUB(json_array_get_self_string)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2131,7 +2018,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_get_self_string)
   end subroutine json_array_get_self_string
 
   subroutine json_array_get_value(this, i, val, ierr)
@@ -2143,7 +2029,6 @@ contains
     type(json_value_node_t), pointer :: node
     integer                          :: idx
 
-    PUSH_SUB(json_array_get_value)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2161,7 +2046,6 @@ contains
       if(associated(val))ierr=JSON_OK
     end if
 
-    POP_SUB(json_array_get_value)
   end subroutine json_array_get_value
 
   subroutine json_array_get_null(this, i, ierr)
@@ -2172,7 +2056,6 @@ contains
     type(json_value_t), pointer :: json_value
     type(json_null_t),  pointer :: type_value
 
-    PUSH_SUB(json_array_get_null)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2185,7 +2068,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_get_null)
   end subroutine json_array_get_null
 
   subroutine json_array_get_logical(this, i, val, ierr)
@@ -2197,7 +2079,6 @@ contains
     type(json_value_t),   pointer :: json_value
     type(json_logical_t), pointer :: json_tpval
 
-    PUSH_SUB(json_array_get_logical)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2210,7 +2091,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_get_logical)
   end subroutine json_array_get_logical
 
   subroutine json_array_get_integer(this, i, val, ierr)
@@ -2222,7 +2102,6 @@ contains
     type(json_value_t),   pointer :: json_value
     type(json_integer_t), pointer :: json_tpval
 
-    PUSH_SUB(json_array_get_integer)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2235,7 +2114,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_get_integer)
   end subroutine json_array_get_integer
 
   subroutine json_array_get_real(this, i, val, ierr)
@@ -2247,7 +2125,6 @@ contains
     type(json_value_t), pointer :: json_value
     type(json_real_t),  pointer :: json_tpval
 
-    PUSH_SUB(json_array_get_real)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2260,7 +2137,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_get_real)
   end subroutine json_array_get_real
 
   subroutine json_array_get_string(this, i, val, ierr)
@@ -2272,7 +2148,6 @@ contains
     type(json_value_t),  pointer :: json_value
     type(json_string_t), pointer :: json_tpval
 
-    PUSH_SUB(json_array_get_string)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2285,7 +2160,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_get_string)
   end subroutine json_array_get_string
 
   subroutine json_array_get_array(this, i, val, ierr)
@@ -2296,7 +2170,6 @@ contains
 
     type(json_value_t),  pointer :: json_value
 
-    PUSH_SUB(json_array_get_array)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2308,7 +2181,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_get_array)
   end subroutine json_array_get_array
 
   subroutine json_array_get_array_logical(this, i, vals, ierr)
@@ -2319,7 +2191,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_get_array_logical)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2329,7 +2200,6 @@ contains
         call json_array_get_self_logical(json_array, vals, ierr)
     end if
 
-    POP_SUB(json_array_get_array_logical)
   end subroutine json_array_get_array_logical
 
   subroutine json_array_get_array_integer(this, i, vals, ierr)
@@ -2340,7 +2210,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_get_array_integer)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2350,7 +2219,6 @@ contains
         call json_array_get_self_integer(json_array, vals, ierr)
     end if
 
-    POP_SUB(json_array_get_array_integer)
   end subroutine json_array_get_array_integer
 
   subroutine json_array_get_array_real(this, i, vals, ierr)
@@ -2361,7 +2229,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_get_array_real)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2371,7 +2238,6 @@ contains
         call json_array_get_self_real(json_array, vals, ierr)
     end if
 
-    POP_SUB(json_array_get_array_real)
   end subroutine json_array_get_array_real
 
   subroutine json_array_get_array_string(this, i, vals, ierr)
@@ -2382,7 +2248,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_array_get_array_string)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2392,7 +2257,6 @@ contains
         call json_array_get_self_string(json_array, vals, ierr)
     end if
 
-    POP_SUB(json_array_get_array_string)
   end subroutine json_array_get_array_string
 
   subroutine json_array_get_object(this, i, val, ierr)
@@ -2403,7 +2267,6 @@ contains
 
     type(json_value_t), pointer :: json_value
 
-    PUSH_SUB(json_array_get_object)
 
     ierr=JSON_UNDEF_ERROR
     if(json_array_isdef(this)) then
@@ -2415,7 +2278,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_array_get_object)
   end subroutine json_array_get_object
 
   subroutine json_array_pop(this, val)
@@ -2424,7 +2286,6 @@ contains
 
     type(json_value_node_t), pointer :: node
 
-    PUSH_SUB(json_array_pop)
 
     if(associated(this%head)) then
       node=>this%head
@@ -2437,7 +2298,6 @@ contains
       val=>null()
     end if
 
-    POP_SUB(json_array_pop)
   end subroutine json_array_pop
 
   elemental subroutine json_member_nullify(this)
@@ -2461,20 +2321,17 @@ contains
     type(json_string_t), target, intent(in)  :: ident
     type(json_value_t),  target, intent(in)  :: val
 
-    PUSH_SUB(json_member_init)
 
     call json_member_nullify(this)
     this%ident=>ident
     this%val=>val
     this%type=json_value_type(this%val)
 
-    POP_SUB(json_member_init)
   end subroutine json_member_init
 
   recursive subroutine json_member_end(this)
     type(json_member_t), intent(inout) :: this
 
-    PUSH_SUB(json_member_end)
 
     if(associated(this%ident)) then
       call json_string_end(this%ident)
@@ -2488,7 +2345,6 @@ contains
     this%val=>null()
     this%type=JSON_UNDEF_TYPE
 
-    POP_SUB(json_member_end)
   end subroutine json_member_end
 
   recursive function json_member_equal(this_1, this_2) result(eqv)
@@ -2496,7 +2352,6 @@ contains
     type(json_member_t), intent(in) :: this_2
     logical :: eqv
 
-    PUSH_SUB(json_member_equal)
 
     eqv=.false.
     if(json_member_isdef(this_1).and.json_member_isdef(this_2)) then
@@ -2504,14 +2359,12 @@ contains
       eqv=eqv.and.json_value_equal(this_1%val, this_2%val)
     end if
 
-    POP_SUB(json_member_equal)
   end function json_member_equal
 
   recursive subroutine json_member_string(this, string)
     type(json_member_t), intent(in)    :: this
     type(json_string_t), intent(inout) :: string
 
-    PUSH_SUB(json_member_string)
 
     if(json_member_isdef(this)) then
       call json_string_string(this%ident, string)
@@ -2519,7 +2372,6 @@ contains
       call json_value_string(this%val, string)
     end if
 
-    POP_SUB(json_member_string)
   end subroutine json_member_string
 
   recursive subroutine json_member_write(this, unit, level, separator, count)
@@ -2529,7 +2381,6 @@ contains
     character, optional, intent(in) :: separator
     integer,   optional, intent(in) :: count
 
-    PUSH_SUB(json_member_write)
 
     if(json_member_isdef(this)) then
       call json_string_write(this%ident, unit)
@@ -2537,7 +2388,6 @@ contains
       call json_value_write(this%val, unit, level, separator, count)
     end if
 
-    POP_SUB(json_member_write)
   end subroutine json_member_write
 
   elemental subroutine json_object_iterator_nullify(this)
@@ -2564,7 +2414,6 @@ contains
 
     integer :: i
 
-    PUSH_SUB(json_object_iterator_init)
 
     call json_object_iterator_nullify(this)
     if(object%used>0) then
@@ -2579,7 +2428,6 @@ contains
       end do
     end if
 
-    POP_SUB(json_object_iterator_init)
   end subroutine json_object_iterator_init
 
   elemental subroutine json_object_iterator_end(this)
@@ -2597,7 +2445,6 @@ contains
 
     integer :: i
 
-    PUSH_SUB(json_object_iterator_next)
 
     member=>null()
     if(associated(this%node)) then
@@ -2616,7 +2463,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_object_iterator_next)
   end subroutine json_object_iterator_next
 
   elemental subroutine json_object_nullify(this)
@@ -2642,7 +2488,6 @@ contains
 
     integer :: i
 
-    PUSH_SUB(json_object_init)
 
     call json_object_nullify(this)
     this%used=0
@@ -2651,7 +2496,6 @@ contains
     forall(i=1:this%size)this%table(i)%head=>null()
     this%type=JSON_OBJECT_TYPE
 
-    POP_SUB(json_object_init)
   end subroutine json_object_init
 
   recursive subroutine json_object_end(this)
@@ -2660,7 +2504,6 @@ contains
     type(json_member_node_t), pointer :: node
     integer                           :: i
 
-    PUSH_SUB(json_object_end)
 
     this%type=JSON_UNDEF_TYPE
     do i = 1, this%size
@@ -2681,7 +2524,6 @@ contains
     SAFE_DEALLOCATE_P(this%table)
     this%table=>null()
 
-    POP_SUB(json_object_end)
   end subroutine json_object_end
 
   subroutine json_object_reallocate(this)
@@ -2692,7 +2534,6 @@ contains
     real(kind=wp)                     :: need
     integer                           :: i, n
 
-    PUSH_SUB(json_object_reallocate)
 
     need=real(this%used+1, kind=wp)
     if(this%size<int(JSON_TABLE_GROWTH_FACTOR*need)) then
@@ -2717,7 +2558,6 @@ contains
       this%table=>buff%table
     end if
 
-    POP_SUB(json_object_reallocate)
   end subroutine json_object_reallocate
 
   elemental function json_object_len(this) result(len)
@@ -2737,7 +2577,6 @@ contains
     type(json_value_t),  pointer :: val
     integer                      :: ierr
 
-    PUSH_SUB(json_object_equal)
 
     eqv=.false.
     if(json_object_isdef(this_1).and.json_object_isdef(this_2)) then
@@ -2762,7 +2601,6 @@ contains
       call json_object_iterator_end(iter)
     end if
 
-    POP_SUB(json_object_equal)
   end function json_object_equal
 
   !Daniel J. Bernstein Hash Function
@@ -2788,7 +2626,6 @@ contains
     type(json_member_node_t), pointer :: node
     integer                           :: i
 
-    PUSH_SUB(json_object_string)
 
     if(json_object_isdef(this)) then
       call json_string_append(string, "{")
@@ -2804,7 +2641,6 @@ contains
       call json_string_append(string, "}")
     end if
 
-    POP_SUB(json_object_string)
   end subroutine json_object_string
 
   recursive subroutine json_object_write(this, unit, level, separator, count)
@@ -2819,7 +2655,6 @@ contains
     character                    :: sep
     integer                      :: lvl, cnt
 
-    PUSH_SUB(json_object_write)
 
     if(json_object_isdef(this)) then
       lvl=0
@@ -2847,7 +2682,6 @@ contains
       call json_write_string("}", unit)
     end if
 
-    POP_SUB(json_object_write)
   end subroutine json_object_write
 
   subroutine json_object_pop(this, member)
@@ -2857,7 +2691,6 @@ contains
     type(json_member_node_t), pointer :: node
     integer                           :: i
 
-    PUSH_SUB(json_object_pop)
 
     member=>null()
     do i = 1, this%size
@@ -2872,7 +2705,6 @@ contains
       end if
     end do
 
-    POP_SUB(json_object_pop)
   end subroutine json_object_pop
 
   subroutine json_object_set_member(this, member)
@@ -2882,7 +2714,6 @@ contains
     type(json_member_node_t), pointer :: node
     integer                           :: n
 
-    PUSH_SUB(json_object_set_member)
 
     if(json_member_isdef(member)) then
       call json_object_reallocate(this)
@@ -2916,7 +2747,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_object_set_member)
   end subroutine json_object_set_member
 
   subroutine json_object_set_value(this, ident, val)
@@ -2926,7 +2756,6 @@ contains
 
     type(json_member_t), pointer :: member
 
-    PUSH_SUB(json_object_set_value)
 
     if(json_value_isdef(val)) then
       SAFE_ALLOCATE(member)
@@ -2934,7 +2763,6 @@ contains
       call json_object_set_member(this, member)
     end if
 
-    POP_SUB(json_object_set_value)
   end subroutine json_object_set_value
 
   subroutine json_object_set_null(this, ident)
@@ -2945,7 +2773,6 @@ contains
     type(json_value_t),  pointer :: json_value
     type(json_null_t),   pointer :: type_value
 
-    PUSH_SUB(json_object_set_null)
 
     SAFE_ALLOCATE(string)
     call json_string_init(string, ident)
@@ -2955,7 +2782,6 @@ contains
     call json_value_init_null(json_value, type_value)
     call json_object_set_value(this, string, json_value)
 
-    POP_SUB(json_object_set_null)
   end subroutine json_object_set_null
 
   subroutine json_object_set_logical(this, ident, val)
@@ -2967,7 +2793,6 @@ contains
     type(json_value_t),   pointer :: json_value
     type(json_logical_t), pointer :: type_value
 
-    PUSH_SUB(json_object_set_logical)
 
     SAFE_ALLOCATE(string)
     call json_string_init(string, ident)
@@ -2977,7 +2802,6 @@ contains
     call json_value_init_logical(json_value, type_value)
     call json_object_set_value(this, string, json_value)
 
-    POP_SUB(json_object_set_logical)
   end subroutine json_object_set_logical
 
   subroutine json_object_set_integer(this, ident, val)
@@ -2989,7 +2813,6 @@ contains
     type(json_value_t),   pointer :: json_value
     type(json_integer_t), pointer :: type_value
 
-    PUSH_SUB(json_object_set_integer)
 
     SAFE_ALLOCATE(string)
     call json_string_init(string, ident)
@@ -2999,7 +2822,6 @@ contains
     call json_value_init_integer(json_value, type_value)
     call json_object_set_value(this, string, json_value)
 
-    POP_SUB(json_object_set_integer)
   end subroutine json_object_set_integer
 
   subroutine json_object_set_real(this, ident, val)
@@ -3011,7 +2833,6 @@ contains
     type(json_value_t),  pointer :: json_value
     type(json_real_t),   pointer :: type_value
 
-    PUSH_SUB(json_object_set_real)
 
     SAFE_ALLOCATE(string)
     call json_string_init(string, ident)
@@ -3021,7 +2842,6 @@ contains
     call json_value_init_real(json_value, type_value)
     call json_object_set_value(this, string, json_value)
 
-    POP_SUB(json_object_set_real)
   end subroutine json_object_set_real
 
   subroutine json_object_set_string(this, ident, val)
@@ -3033,7 +2853,6 @@ contains
     type(json_value_t),  pointer :: json_value
     type(json_string_t), pointer :: type_value
 
-    PUSH_SUB(json_object_set_string)
 
     SAFE_ALLOCATE(string)
     call json_string_init(string, ident)
@@ -3043,7 +2862,6 @@ contains
     call json_value_init_string(json_value, type_value)
     call json_object_set_value(this, string, json_value)
 
-    POP_SUB(json_object_set_string)
   end subroutine json_object_set_string
 
   subroutine json_object_set_array(this, ident, val)
@@ -3054,7 +2872,6 @@ contains
     type(json_string_t), pointer :: string
     type(json_value_t),  pointer :: json_value
 
-    PUSH_SUB(json_object_set_array)
 
     if(json_array_isdef(val)) then
       SAFE_ALLOCATE(string)
@@ -3064,7 +2881,6 @@ contains
       call json_object_set_value(this, string, json_value)
     end if
 
-    POP_SUB(json_object_set_array)
   end subroutine json_object_set_array
 
   subroutine json_object_set_array_logical(this, ident, vals)
@@ -3074,13 +2890,11 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_object_set_array_logical)
 
     SAFE_ALLOCATE(json_array)
     call json_array_init_logical(json_array, vals)
     call json_object_set_array(this, ident, json_array)
 
-    POP_SUB(json_object_set_array_logical)
   end subroutine json_object_set_array_logical
 
   subroutine json_object_set_array_integer(this, ident, vals)
@@ -3090,13 +2904,11 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_object_set_array_integer)
 
     SAFE_ALLOCATE(json_array)
     call json_array_init_integer(json_array, vals)
     call json_object_set_array(this, ident, json_array)
 
-    POP_SUB(json_object_set_array_integer)
   end subroutine json_object_set_array_integer
 
   subroutine json_object_set_array_real(this, ident, vals)
@@ -3106,13 +2918,11 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_object_set_array_real)
 
     SAFE_ALLOCATE(json_array)
     call json_array_init_real(json_array, vals)
     call json_object_set_array(this, ident, json_array)
 
-    POP_SUB(json_object_set_array_real)
   end subroutine json_object_set_array_real
 
   subroutine json_object_set_array_string(this, ident, vals)
@@ -3122,13 +2932,11 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_object_set_array_string)
 
     SAFE_ALLOCATE(json_array)
     call json_array_init_string(json_array, vals)
     call json_object_set_array(this, ident, json_array)
 
-    POP_SUB(json_object_set_array_string)
   end subroutine json_object_set_array_string
 
   subroutine json_object_set_object(this, ident, val)
@@ -3139,7 +2947,6 @@ contains
     type(json_string_t), pointer :: string
     type(json_value_t),  pointer :: json_value
 
-    PUSH_SUB(json_object_set_object)
 
     if(json_object_isdef(val)) then
       SAFE_ALLOCATE(string)
@@ -3149,7 +2956,6 @@ contains
       call json_object_set_value(this, string, json_value)
     end if
 
-    POP_SUB(json_object_set_object)
   end subroutine json_object_set_object
 
   subroutine json_object_get_value(this, ident, val, ierr)
@@ -3160,7 +2966,6 @@ contains
 
     type(json_member_node_t), pointer :: node
 
-    PUSH_SUB(json_object_get_value)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3177,7 +2982,6 @@ contains
       if(associated(val))ierr=JSON_OK
     end if
 
-    POP_SUB(json_object_get_value)
   end subroutine json_object_get_value
 
   subroutine json_object_get_null(this, ident, ierr)
@@ -3189,7 +2993,6 @@ contains
     type(json_value_t), pointer :: json_value
     type(json_null_t),  pointer :: json_tpval
 
-    PUSH_SUB(json_object_get_null)
 
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this)) then
@@ -3204,7 +3007,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_object_get_null)
   end subroutine json_object_get_null
 
   subroutine json_object_get_logical(this, ident, val, ierr)
@@ -3217,7 +3019,6 @@ contains
     type(json_value_t),   pointer :: json_value
     type(json_logical_t), pointer :: json_tpval
 
-    PUSH_SUB(json_object_get_logical)
 
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this)) then
@@ -3232,7 +3033,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_object_get_logical)
   end subroutine json_object_get_logical
 
   subroutine json_object_get_integer(this, ident, val, ierr)
@@ -3245,7 +3045,6 @@ contains
     type(json_value_t),   pointer :: json_value
     type(json_integer_t), pointer :: json_tpval
 
-    PUSH_SUB(json_object_get_integer)
 
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this)) then
@@ -3260,7 +3059,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_object_get_integer)
   end subroutine json_object_get_integer
 
   subroutine json_object_get_real(this, ident, val, ierr)
@@ -3273,7 +3071,6 @@ contains
     type(json_value_t), pointer :: json_value
     type(json_real_t),  pointer :: json_tpval
 
-    PUSH_SUB(json_object_get_real)
 
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this)) then
@@ -3288,7 +3085,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_object_get_real)
   end subroutine json_object_get_real
 
   subroutine json_object_get_string(this, ident, val, ierr)
@@ -3301,7 +3097,6 @@ contains
     type(json_value_t),  pointer :: json_value
     type(json_string_t), pointer :: json_tpval
 
-    PUSH_SUB(json_object_get_string)
 
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this)) then
@@ -3316,7 +3111,6 @@ contains
       end if
     end if
 
-    POP_SUB(json_object_get_string)
   end subroutine json_object_get_string
 
   subroutine json_object_get_array(this, ident, val, ierr)
@@ -3328,7 +3122,6 @@ contains
     type(json_string_t)         :: json_ident
     type(json_value_t), pointer :: json_value
 
-    PUSH_SUB(json_object_get_array)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3340,7 +3133,6 @@ contains
       if(ierr==JSON_OK) call json_value_get_array(json_value, val, ierr)
     end if
 
-    POP_SUB(json_object_get_array)
   end subroutine json_object_get_array
 
   subroutine json_object_get_array_logical(this, ident, vals, ierr)
@@ -3351,7 +3143,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_object_get_array_logical)
 
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this)) then
@@ -3361,7 +3152,6 @@ contains
         call json_array_get_self_logical(json_array, vals, ierr)
     end if
 
-    POP_SUB(json_object_get_array_logical)
   end subroutine json_object_get_array_logical
 
   subroutine json_object_get_array_integer(this, ident, vals, ierr)
@@ -3372,7 +3162,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_object_get_array_integer)
 
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this)) then
@@ -3382,7 +3171,6 @@ contains
         call json_array_get_self_integer(json_array, vals, ierr)
     end if
 
-    POP_SUB(json_object_get_array_integer)
   end subroutine json_object_get_array_integer
 
   subroutine json_object_get_array_real(this, ident, vals, ierr)
@@ -3393,7 +3181,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_object_get_array_real)
 
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this)) then
@@ -3403,7 +3190,6 @@ contains
         call json_array_get_self_real(json_array, vals, ierr)
     end if
 
-    POP_SUB(json_object_get_array_real)
   end subroutine json_object_get_array_real
 
   subroutine json_object_get_array_string(this, ident, vals, ierr)
@@ -3414,7 +3200,6 @@ contains
 
     type(json_array_t), pointer :: json_array
 
-    PUSH_SUB(json_object_get_array_string)
 
     ierr=JSON_UNDEF_ERROR
     if(json_object_isdef(this)) then
@@ -3424,7 +3209,6 @@ contains
         call json_array_get_self_string(json_array, vals, ierr)
     end if
 
-    POP_SUB(json_object_get_array_string)
   end subroutine json_object_get_array_string
 
   subroutine json_object_get_object(this, ident, val, ierr)
@@ -3436,7 +3220,6 @@ contains
     type(json_string_t)         :: json_ident
     type(json_value_t), pointer :: json_value
 
-    PUSH_SUB(json_object_get_object)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3448,7 +3231,6 @@ contains
       if(ierr==JSON_OK) call json_value_get_object(json_value, val, ierr)
     end if
 
-    POP_SUB(json_object_get_object)
   end subroutine json_object_get_object
 
   elemental subroutine json_value_nullify(this)
@@ -3485,13 +3267,11 @@ contains
     type(json_value_t),        intent(out) :: this
     type(json_null_t), target, intent(in)  :: val
 
-    PUSH_SUB(json_value_init_null)
 
     call json_value_nullify(this)
     this%jnull=>val
     this%type=JSON_NULL_TYPE
 
-    POP_SUB(json_value_init_null)
 
   end subroutine json_value_init_null
 
@@ -3499,13 +3279,11 @@ contains
     type(json_value_t),           intent(out) :: this
     type(json_logical_t), target, intent(in)  :: val
 
-    PUSH_SUB(json_value_init_logical)
 
     call json_value_nullify(this)
     this%logical=>val
     this%type=JSON_LOGICAL_TYPE
 
-    POP_SUB(json_value_init_logical)
 
   end subroutine json_value_init_logical
 
@@ -3513,13 +3291,11 @@ contains
     type(json_value_t),           intent(out) :: this
     type(json_integer_t), target, intent(in)  :: val
 
-    PUSH_SUB(json_value_init_integer)
 
     call json_value_nullify(this)
     this%integer=>val
     this%type=JSON_INTEGER_TYPE
 
-    POP_SUB(json_value_init_integer)
 
   end subroutine json_value_init_integer
 
@@ -3527,58 +3303,49 @@ contains
     type(json_value_t),        intent(out) :: this
     type(json_real_t), target, intent(in)  :: val
 
-    PUSH_SUB(json_value_init_real)
 
     call json_value_nullify(this)
     this%real=>val
     this%type=JSON_REAL_TYPE
 
-    POP_SUB(json_value_init_real)
   end subroutine json_value_init_real
 
   subroutine json_value_init_string(this, val)
     type(json_value_t),          intent(out) :: this
     type(json_string_t), target, intent(in)  :: val
 
-    PUSH_SUB(json_value_init_string)
 
     call json_value_nullify(this)
     this%string=>val
     this%type=JSON_STRING_TYPE
 
-    POP_SUB(json_value_init_string)
   end subroutine json_value_init_string
 
   subroutine json_value_init_array(this, val)
     type(json_value_t),         intent(out) :: this
     type(json_array_t), target, intent(in)  :: val
 
-    PUSH_SUB(json_value_init_array)
 
     call json_value_nullify(this)
     this%array=>val
     this%type=JSON_ARRAY_TYPE
 
-    POP_SUB(json_value_init_array)
   end subroutine json_value_init_array
 
   subroutine json_value_init_object(this, val)
     type(json_value_t),          intent(out) :: this
     type(json_object_t), target, intent(in)  :: val
 
-    PUSH_SUB(json_value_init_object)
 
     call json_value_nullify(this)
     this%object=>val
     this%type=JSON_OBJECT_TYPE
 
-    POP_SUB(json_value_init_object)
   end subroutine json_value_init_object
 
   recursive subroutine json_value_end(this)
     type(json_value_t), intent(inout) :: this
 
-    PUSH_SUB(json_value_end)
 
     select case(this%type)
     case(JSON_NULL_TYPE)
@@ -3612,7 +3379,6 @@ contains
     end select
     this%type=JSON_UNDEF_TYPE
 
-    POP_SUB(json_value_end)
   end subroutine json_value_end
 
   recursive function json_value_equal(this_1, this_2) result(eqv)
@@ -3620,7 +3386,6 @@ contains
     type(json_value_t), intent(in) :: this_2
     logical :: eqv
 
-    PUSH_SUB(json_value_equal)
 
     eqv=.false.
     if(json_value_isdef(this_1).and.json_value_isdef(this_2)) then
@@ -3644,14 +3409,12 @@ contains
       end if
     end if
 
-    POP_SUB(json_value_equal)
   end function json_value_equal
 
   recursive subroutine json_value_string(this, string)
     type(json_value_t),  intent(in)    :: this
     type(json_string_t), intent(inout) :: string
 
-    PUSH_SUB(json_value_string)
 
     select case(this%type)
     case(JSON_NULL_TYPE)
@@ -3670,7 +3433,6 @@ contains
       call json_object_string(this%object, string)
     end select
 
-    POP_SUB(json_value_string)
   end subroutine json_value_string
 
   subroutine json_value_get_null(this, val, ierr)
@@ -3678,7 +3440,6 @@ contains
     type(json_null_t),  pointer, intent(out) :: val
     integer,                     intent(out) :: ierr
 
-    PUSH_SUB(json_value_get_null)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3687,7 +3448,6 @@ contains
       ierr=JSON_OK
     end if
 
-    POP_SUB(json_value_get_null)
   end subroutine json_value_get_null
 
   subroutine json_value_get_logical(this, val, ierr)
@@ -3695,7 +3455,6 @@ contains
     type(json_logical_t), pointer, intent(out) :: val
     integer,                       intent(out) :: ierr
 
-    PUSH_SUB(json_value_get_logical)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3704,7 +3463,6 @@ contains
       ierr=JSON_OK
     end if
 
-    POP_SUB(json_value_get_logical)
   end subroutine json_value_get_logical
 
   subroutine json_value_get_integer(this, val, ierr)
@@ -3712,7 +3470,6 @@ contains
     type(json_integer_t), pointer, intent(out) :: val
     integer,                       intent(out) :: ierr
 
-    PUSH_SUB(json_value_get_integer)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3721,7 +3478,6 @@ contains
       ierr=JSON_OK
     end if
 
-    POP_SUB(json_value_get_integer)
   end subroutine json_value_get_integer
 
   subroutine json_value_get_real(this, val, ierr)
@@ -3729,7 +3485,6 @@ contains
     type(json_real_t),  pointer, intent(out) :: val
     integer,                     intent(out) :: ierr
 
-    PUSH_SUB(json_value_get_real)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3738,7 +3493,6 @@ contains
       ierr=JSON_OK
     end if
 
-    POP_SUB(json_value_get_real)
   end subroutine json_value_get_real
 
   subroutine json_value_get_string(this, val, ierr)
@@ -3746,7 +3500,6 @@ contains
     type(json_string_t), pointer, intent(out) :: val
     integer,                      intent(out) :: ierr
 
-    PUSH_SUB(json_value_get_string)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3755,7 +3508,6 @@ contains
       ierr=JSON_OK
     end if
 
-    POP_SUB(json_value_get_string)
   end subroutine json_value_get_string
 
   subroutine json_value_get_array(this, val, ierr)
@@ -3763,7 +3515,6 @@ contains
     type(json_array_t), pointer, intent(out) :: val
     integer,                     intent(out) :: ierr
 
-    PUSH_SUB(json_value_get_array)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3772,7 +3523,6 @@ contains
       ierr=JSON_OK
     end if
 
-    POP_SUB(json_value_get_array)
   end subroutine json_value_get_array
 
   subroutine json_value_get_object(this, val, ierr)
@@ -3780,7 +3530,6 @@ contains
     type(json_object_t), pointer, intent(out) :: val
     integer,                      intent(out) :: ierr
 
-    PUSH_SUB(json_value_get_object)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3789,7 +3538,6 @@ contains
       ierr=JSON_OK
     end if
 
-    POP_SUB(json_value_get_object)
   end subroutine json_value_get_object
 
   recursive subroutine json_value_write(this, unit, level, separator, count)
@@ -3799,7 +3547,6 @@ contains
     character, optional, intent(in) :: separator
     integer,   optional, intent(in) :: count
 
-    PUSH_SUB(json_value_write)
 
     select case(this%type)
     case(JSON_NULL_TYPE)
@@ -3818,7 +3565,6 @@ contains
       call json_object_write(this%object, unit, level, separator, count)
     end select
 
-    POP_SUB(json_value_write)
   end subroutine json_value_write
 
   elemental subroutine json_json_nullify(this)
@@ -3842,32 +3588,27 @@ contains
     type(json_t),               intent(out) :: this
     type(json_array_t), target, intent(in)  :: val
 
-    PUSH_SUB(json_json_array_init)
 
     call json_json_nullify(this)
     this%array=>val
     this%type=JSON_ARRAY_TYPE
 
-    POP_SUB(json_json_array_init)
   end subroutine json_json_array_init
 
   subroutine json_json_object_init(this, val)
     type(json_t),                intent(out) :: this
     type(json_object_t), target, intent(in)  :: val
 
-    PUSH_SUB(json_json_object_init)
 
     call json_json_nullify(this)
     this%object=>val
     this%type=JSON_OBJECT_TYPE
 
-    POP_SUB(json_json_object_init)
   end subroutine json_json_object_init
 
   subroutine json_json_end(this)
     type(json_t), intent(inout) :: this
 
-    PUSH_SUB(json_json_end)
 
     select case(this%type)
     case(JSON_ARRAY_TYPE)
@@ -3881,7 +3622,6 @@ contains
     end select
     this%type=JSON_UNDEF_TYPE
 
-    POP_SUB(json_json_end)
   end subroutine json_json_end
 
   function json_json_equal(this_1, this_2) result(eqv)
@@ -3889,7 +3629,6 @@ contains
     type(json_t), intent(in) :: this_2
     logical :: eqv
 
-    PUSH_SUB(json_json_equal)
 
     eqv=.false.
     if(json_json_isdef(this_1).and.json_json_isdef(this_2)) then
@@ -3903,14 +3642,12 @@ contains
       end if
     end if
 
-    POP_SUB(json_json_equal)
   end function json_json_equal
 
   subroutine json_json_string(this, string)
     type(json_t),        intent(in)    :: this
     type(json_string_t), intent(inout) :: string
 
-    PUSH_SUB(json_json_string)
 
     select case(this%type)
     case(JSON_ARRAY_TYPE)
@@ -3919,7 +3656,6 @@ contains
       call json_object_string(this%object, string)
     end select
 
-    POP_SUB(json_json_string)
   end subroutine json_json_string
 
   subroutine json_json_write(this, unit, separator, count)
@@ -3928,7 +3664,6 @@ contains
     character, optional, intent(in) :: separator
     integer,   optional, intent(in) :: count
 
-    PUSH_SUB(json_json_write)
 
     select case(this%type)
     case(JSON_ARRAY_TYPE)
@@ -3938,7 +3673,6 @@ contains
     end select
     call json_write_line(unit)
 
-    POP_SUB(json_json_write)
   end subroutine json_json_write
 
   subroutine json_json_get_array(this, val, ierr)
@@ -3946,7 +3680,6 @@ contains
     type(json_array_t), pointer, intent(out) :: val
     integer,                     intent(out) :: ierr
 
-    PUSH_SUB(json_json_get_array)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3955,7 +3688,6 @@ contains
       ierr=JSON_OK
     end if
 
-    POP_SUB(json_json_get_array)
   end subroutine json_json_get_array
 
   subroutine json_json_get_object(this, val, ierr)
@@ -3963,7 +3695,6 @@ contains
     type(json_object_t), pointer, intent(out) :: val
     integer,                      intent(out) :: ierr
 
-    PUSH_SUB(json_json_get_object)
 
     val=>null()
     ierr=JSON_UNDEF_ERROR
@@ -3972,7 +3703,6 @@ contains
       ierr=JSON_OK
     end if
 
-    POP_SUB(json_json_get_object)
   end subroutine json_json_get_object
 
 end module json_m
