@@ -31,6 +31,7 @@ module casida_m
   use hamiltonian_m
   use io_m
   use io_function_m
+  use kpoints_m
   use lalg_adv_m
   use loct_m
   use math_m
@@ -133,6 +134,12 @@ contains
       call messages_warning(1)
     end if
 
+    if(kpoints_number(sys%gr%sb%kpoints) > 1) then
+      ! Hartree matrix elements may not be correct, not tested anyway.
+      ! Changing all references from st%d%nspin to st%d%nik would get pretty close. --DAS
+      call messages_not_implemented("Casida with k-points")
+    endif
+
     message(1) = 'Info: Starting Casida linear-response calculation.'
     call messages_info(1)
 
@@ -147,6 +154,10 @@ contains
     cas%n_occ(:) = 0
     do ik = 1, cas%nspin
       call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
+      if(n_partially_filled > 0 .or. n_half_filled > 0) then
+        call messages_not_implemented("Casida with partial occupations")
+        ! Formulas are in Casida 1995 reference. The occupations are not used at all here currently.
+      endif
       cas%n_occ(ik) = n_filled + n_partially_filled + n_half_filled
       cas%n_unocc(ik) = sys%st%nst - cas%n_occ(ik)
     end do
@@ -271,26 +282,28 @@ contains
         cas%qvector(idir) = units_to_atomic(unit_one / units_inp%length, cas%qvector(idir))
       end do
       call parse_block_end(blk)
+      call messages_experimental("IXS/EELS transition rates")
       message(1) = "Info: Calculating IXS/EELS transition rates."
       call messages_info(1)
       cas%qcalc = .true.
+
+      !%Variable CasidaQuadratureOrder
+      !%Type integer
+      !%Section Linear Response::Casida
+      !%Default 5
+      !%Description
+      !% Only applies if <tt>CasidaMomentumTransfer</tt> is nonzero.
+      !% Directionally averaged dynamic structure factor is calculated by
+      !% averaging over the results from a set of <i>q</i>-vectors. The vectors
+      !% are generated using Gauss-Legendre quadrature scheme [see <i>e.g.</i>
+      !% K. Atkinson, <i>J. Austral. Math. Soc.</i> <b>23</b>, 332 (1982)], and this
+      !% variable determines the order of the scheme.
+      !%End
+      call parse_integer(datasets_check('CasidaQuadratureOrder'), 5, cas%avg_order)
     else
       cas%qvector(:) = M_ZERO
       cas%qcalc = .false.
     end if
-
-    !%Variable CasidaQuadratureOrder
-    !%Type integer
-    !%Section Linear Response::Casida
-    !%Default 5
-    !%Description
-    !% Directionally averaged dynamic structure factor is calculated by
-    !% averaging over the results from a set of <i>q</i>-vectors. The vectors
-    !% are generated using Gauss-Legendre quadrature scheme [see <i>e.g.</i>
-    !% K. Atkinson, <i>J. Austral. Math. Soc.</i> <b>23</b>, 332 (1982)], and this
-    !% variable determines the order of the scheme.
-    !%End
-    call parse_integer(datasets_check('CasidaQuadratureOrder'), 5, cas%avg_order)
 
     !%Variable CasidaCalcTriplet
     !%Type logical
@@ -305,6 +318,10 @@ contains
       call parse_logical(datasets_check('CasidaCalcTriplet'), .false., cas%triplet)
     else
       cas%triplet = .false.
+    endif
+
+    if(cas%triplet) then
+      call messages_experimental("Casida triplet calculations")
     endif
 
     !%Variable CasidaCalcForces
@@ -346,6 +363,7 @@ contains
       endif
 
       if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
+        call messages_experimental("Tamm-Dancoff calculations")
         message(1) = "Info: Calculating matrix elements in the Tamm-Dancoff approximation"
         call messages_info(1)
         cas%type = CASIDA_TAMM_DANCOFF
@@ -354,6 +372,7 @@ contains
       endif
 
       if(iand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
+        call messages_experimental("CV(2)-DFT calculations")
         message(1) = "Info: Calculating matrix elements with the CV(2)-DFT theory"
         call messages_info(1)
         cas%type = CASIDA_VARIATIONAL

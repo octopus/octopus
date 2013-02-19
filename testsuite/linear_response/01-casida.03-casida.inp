@@ -2,6 +2,7 @@
 # $Id$
 
 CalculationMode = casida
+ExperimentalFeatures = yes
 
 FromScratch = yes
 
