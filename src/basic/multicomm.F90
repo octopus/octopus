@@ -89,7 +89,7 @@ module multicomm_m
     P_STRATEGY_DOMAINS = 1,          & !< parallelization in domains
     P_STRATEGY_STATES  = 2,          & !< parallelization in states
     P_STRATEGY_KPOINTS = 3,          & !< parallelization in k-points
-    P_STRATEGY_OTHER   = 4             !< something else like e-h matrix elements
+    P_STRATEGY_OTHER   = 4             !< something else like e-h pairs
 
   integer, public, parameter ::      &
     P_MASTER           = 1,          &
@@ -280,7 +280,7 @@ contains
       !%Option par_kpoints 4
       !% <tt>Octopus</tt> will run parallel in <i>k</i>-points/spin.
       !%Option par_other   8
-      !% For <tt>CalculationMode = casida</tt>, it means parallelization in electron-hole matrix elements.
+      !% For <tt>CalculationMode = casida</tt>, it means parallelization in electron-hole pairs.
       !%End
 
       ! defaults are set ultimately by calc_mode_init, modified with calc_mode_set_parallelization by some calculation modes

@@ -745,6 +745,7 @@ contains
       do jb = 1, cas%n_pairs
         actual = actual + 1
         if(mod(actual, cas%mpi_grp%size) .ne. cas%mpi_grp%rank) cycle
+        ! note: the ordering of jb, ia loops are crucial to minimize number of Poisson solves required.
         do ia = jb, cas%n_pairs
           counter = counter + 1
           ! if not loaded, then calculate matrix element
