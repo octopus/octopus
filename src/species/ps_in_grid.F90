@@ -41,29 +41,29 @@ module ps_in_grid_m
     linear_extrapolate
 
   type ps_in_grid_t
-    type(logrid_t) :: g                ! log grid where the pseudos are defined
+    type(logrid_t) :: g                !< log grid where the pseudos are defined
 
-    FLOAT          :: zval             ! valence charge
+    FLOAT          :: zval             !< valence charge
 
-    integer        :: no_l_channels    ! number of l channels to consider
-    FLOAT, pointer :: vps(:, :)        ! the pseudopotential (l=0 .. no_l_channels-1)
-    FLOAT, pointer :: KB(:,:)          ! Kleinman-Bylander projectors
-    FLOAT, pointer :: dkbcos(:)        ! Kleinman-Bylander cosine
-    FLOAT, pointer :: dknorm(:)        ! Kleinman-Bylander norm
-    FLOAT, pointer :: kb_radius(:)     ! radius of KB projectors
+    integer        :: no_l_channels    !< number of l channels to consider
+    FLOAT, pointer :: vps(:, :)        !< the pseudopotential (l=0 .. no_l_channels-1)
+    FLOAT, pointer :: KB(:,:)          !< Kleinman-Bylander projectors
+    FLOAT, pointer :: dkbcos(:)        !< Kleinman-Bylander cosine
+    FLOAT, pointer :: dknorm(:)        !< Kleinman-Bylander norm
+    FLOAT, pointer :: kb_radius(:)     !< radius of KB projectors
 
     integer        :: so_no_l_channels
-    FLOAT, pointer :: so_vps(:,:)      ! spin-orbit components (l=1 .. so_no_l_channels)
-    FLOAT, pointer :: so_KB(:,:)       ! Kleinman-Bylander projectors
-    FLOAT, pointer :: so_dkbcos(:)     ! Kleinman-Bylander cosine
-    FLOAT, pointer :: so_dknorm(:)     ! Kleinman-Bylander norm
-    FLOAT, pointer :: so_kb_radius(:)  ! radius of KB projectors
+    FLOAT, pointer :: so_vps(:,:)      !< spin-orbit components (l=1 .. so_no_l_channels)
+    FLOAT, pointer :: so_KB(:,:)       !< Kleinman-Bylander projectors
+    FLOAT, pointer :: so_dkbcos(:)     !< Kleinman-Bylander cosine
+    FLOAT, pointer :: so_dknorm(:)     !< Kleinman-Bylander norm
+    FLOAT, pointer :: so_kb_radius(:)  !< radius of KB projectors
     
-    FLOAT, pointer :: vlocal(:)        ! local part of the pseudopotential
-    FLOAT, pointer :: rphi(:, :,:)     ! pseudo wavefunctions
+    FLOAT, pointer :: vlocal(:)        !< local part of the pseudopotential
+    FLOAT, pointer :: rphi(:, :,:)     !< pseudo wavefunctions
 
     logical        :: core_corrections
-    FLOAT, pointer :: chcore(:)        ! core charge density
+    FLOAT, pointer :: chcore(:)        !< core charge density
 
   end type ps_in_grid_t
 
@@ -77,7 +77,7 @@ contains
 
     PUSH_SUB(ps_in_grid_init)
 
-    ! initialize logaritmic grid
+    ! initialize logarithmic grid
     call logrid_init(ps%g, flavor, a, b, nrval)
 
     ! copy data
@@ -187,8 +187,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! KB-projectors
-  !   kb = (vps - vlocal) |phi> * dknorm
+  !> KB-projectors
+  !!   kb = (vps - vlocal) |phi> * dknorm
   subroutine ps_in_grid_kb_projectors(ps)
     type(ps_in_grid_t), intent(inout) :: ps
 
@@ -217,11 +217,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! KB-cosines and KB-norms:
-  !       dkbcos stores the KB "cosines:"
-  !               || (v_l - v_local) phi_l ||^2 / < (v_l - v_local)phi_l | phi_l >  [Rydberg]
-  !       dknorm stores the KB "norms:"
-  !               1 / || (v_l - v_local) phi_l || [1/Rydberg]
+  !> KB-cosines and KB-norms:
+  !!       dkbcos stores the KB "cosines:"
+  !!               || (v_l - v_local) phi_l ||^2 / < (v_l - v_local)phi_l | phi_l >  [Rydberg]
+  !!       dknorm stores the KB "norms:"
+  !!               1 / || (v_l - v_local) phi_l || [1/Rydberg]
   subroutine ps_in_grid_kb_cosines(ps, lloc)
     type(ps_in_grid_t), intent(inout) :: ps
     integer,            intent(in)    :: lloc
@@ -319,7 +319,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! checks normalization of the pseudo wavefunctions
+  !> checks normalization of the pseudo wavefunctions
   subroutine ps_in_grid_check_rphi(ps)
     type(ps_in_grid_t), intent(in) :: ps
     

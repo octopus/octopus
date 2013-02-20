@@ -163,7 +163,7 @@ contains
       ps%kbc    = 1     ! only one projector per angular momentum
       ps%l_loc  = lloc  ! the local part of the pseudo
 
-      ps%l_max  = min(ps_psf%ps_grid%no_l_channels - 1, lmax) ! Maybe the file has not enough components.
+      ps%l_max  = min(ps_psf%ps_grid%no_l_channels - 1, lmax) ! Maybe the file does not have enough components.
       ps%conf%p = ps_psf%ps_grid%no_l_channels
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
 
@@ -183,7 +183,7 @@ contains
       ps%kbc    = 1     ! only one projector per angular momentum
       ps%l_loc  = lloc  ! the local part of the pseudo
 
-      ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file has not enough components.
+      ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file does not have enough components.
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
 
       call ps_cpi_process(ps_cpi, ps%l_loc)
@@ -202,7 +202,7 @@ contains
       ps%kbc    = 1     ! only one projector per angular momentum
       ps%l_loc  = lloc  ! the local part of the pseudo
 
-      ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file has not enough components.
+      ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file does not have enough components.
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
 
       call ps_fhi_process(ps_fhi, lmax, ps%l_loc)

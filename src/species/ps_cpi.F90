@@ -43,7 +43,7 @@ module ps_cpi_m
     type(ps_cpi_file_t), pointer :: cpi_file
     type(ps_in_grid_t),  pointer :: ps_grid
 
-    type(valconf_t),     pointer :: conf    ! what to do with this?
+    type(valconf_t),     pointer :: conf    !< what to do with this?
   end type ps_cpi_t
 
 contains
@@ -112,7 +112,7 @@ contains
     type(ps_cpi_file_t), intent(in)  :: cpi_file
     type(ps_in_grid_t),  intent(out) :: ps_grid
 
-    ! Initializes the pseudo in the logaritmic grid.
+    ! Initializes the pseudo in the logarithmic grid.
     call ps_in_grid_init(ps_grid,                      &
       LOGRID_CPI, cpi_file%a, cpi_file%rofi(2), cpi_file%nr,  &
       cpi_file%no_l_channels, 0)
