@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2012-2013 D. Strubbe
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -112,7 +113,15 @@ contains
     
     PUSH_SUB(casida_run_init)
     
-    call calc_mode_set_parallelization(P_STRATEGY_OTHER, default = .true.)
+    ! Pure 'other' parallelization is a bad idea. Trying to solve the Poisson equation separately on each node
+    ! consumes excessive memory and time (easily more than is available). In principle, the line below would setup
+    ! joint domain/other parallelization, but 'other' parallelization takes precedence, especially since
+    ! multicomm_init does not know the actual problem size and uses a fictitious value of 10000, making it
+    ! impossible to choose joint parallelization wisely, and generally resulting in a choice of only one domain
+    ! group. FIXME! --DAS
+
+    ! call calc_mode_set_parallelization(P_STRATEGY_OTHER, default = .true).
+    call calc_mode_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled, but not default
 
     POP_SUB(casida_run_init)
   end subroutine casida_run_init

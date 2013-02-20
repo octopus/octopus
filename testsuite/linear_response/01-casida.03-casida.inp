@@ -27,3 +27,8 @@ CasidaTheoryLevel = eps_diff + petersilka + lrtddft_casida + tamm_dancoff + vari
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
+
+ParallelizationStrategy = par_domains + par_other
+%ParallelizationGroupRanks
+ 2 | 1 | 1 | 2
+%
