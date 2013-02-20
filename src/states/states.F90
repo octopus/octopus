@@ -339,7 +339,7 @@ contains
     !% wavefunctions necessary for a spin-unpolarized calculation.
     !%Option non_collinear 3
     !%Option spinors 3
-    !% The spin-orbitals are two-component spinors. This effectively allows the spin-density to
+    !% (Synonym: <tt>non_collinear</tt>.) The spin-orbitals are two-component spinors. This effectively allows the spin-density to
     !% be oriented non-collinearly: <i>i.e.</i> the magnetization vector is allowed to take different
     !% directions at different points. This vector is always in 3D regardless of <tt>Dimensions</tt>.
     !%End

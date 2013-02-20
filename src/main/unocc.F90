@@ -125,6 +125,12 @@ contains
       call messages_info(1)
     end if
 
+    if(sys%st%d%ispin == SPINORS) then
+      message(1) = "Try gs with ExtraStates instead of unocc mode for spinors."
+      call messages_warning(1)
+      call messages_experimental("unocc for spinors")
+    endif
+
     call density_calc(sys%st, sys%gr, sys%st%rho)
 
     if(fromScratch .or. ierr /= 0) then
