@@ -167,6 +167,11 @@ contains
       ps%conf%p = ps_psf%ps_grid%no_l_channels
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
 
+      if(lmax /= ps%l_max) then
+        message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+        call messages_fatal(1)
+      endif
+
       call ps_psf_process(ps_psf, lmax, ps%l_loc)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
@@ -186,6 +191,11 @@ contains
       ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file does not have enough components.
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
 
+      if(lmax /= ps%l_max) then
+        message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+        call messages_fatal(1)
+      endif
+
       call ps_cpi_process(ps_cpi, ps%l_loc)
       call logrid_copy(ps_cpi%ps_grid%g, ps%g)
 
@@ -204,6 +214,11 @@ contains
 
       ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file does not have enough components.
       if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
+
+      if(lmax /= ps%l_max) then
+        message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+        call messages_fatal(1)
+      endif
 
       call ps_fhi_process(ps_fhi, lmax, ps%l_loc)
       call logrid_copy(ps_fhi%ps_grid%g, ps%g)
@@ -239,13 +254,6 @@ contains
       ps%g%r2ofi = ps%g%rofi**2
 
     end select
-
-    if(flavour == PS_TYPE_PSF .or. flavour == PS_TYPE_CPI .or. flavour == PS_TYPE_FHI) then
-      if(lmax > ps%conf%p) then
-        message(1) = "lmax in Species block for " // trim(label) // " is larger than number available."
-        call messages_warning(1)
-      endif
-    endif
 
     write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
     call messages_info(1)

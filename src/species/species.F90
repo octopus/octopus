@@ -1150,8 +1150,8 @@ contains
       end if
 
       if(nn > 5 .and. spec%lloc > spec%lmax) then
-        message(1) = "lloc > lmax in Species block for " // trim(spec%label) // ". No channel will be considered local."
-        call messages_warning(1)
+        message(1) = "lloc > lmax in Species block for " // trim(spec%label) // "."
+        call messages_fatal(1)
       endif
 
       if(nn > 6) then
