@@ -296,7 +296,7 @@ contains
     !%
     !% The three (possibly complex) numbers (<i>nx</i>, <i>ny</i>, <i>nz</i>) mark the polarization 
     !% direction of the field. The float <tt>omega</tt> will be the carrier frequency of the
-    !% pulse. The envelope of the field is a time-dependent function whose definition
+    !% pulse (in energy units). The envelope of the field is a time-dependent function whose definition
     !% must be given in a <tt>TDFunctions</tt> block. <tt>envelope_function_name</tt> is a string (and therefore
     !% it must be surrounded by quotation marks) that must match one of the function names
     !% given in the first column of the <tt>TDFunctions</tt> block.
