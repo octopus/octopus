@@ -89,7 +89,7 @@ module multicomm_m
     P_STRATEGY_DOMAINS = 1,          & !< parallelization in domains
     P_STRATEGY_STATES  = 2,          & !< parallelization in states
     P_STRATEGY_KPOINTS = 3,          & !< parallelization in k-points
-    P_STRATEGY_OTHER   = 4             !< something else like e-h pairs
+    P_STRATEGY_OTHER   = 4             !< something else like e-h matrix elements
 
   integer, public, parameter ::      &
     P_MASTER           = 1,          &
@@ -270,7 +270,6 @@ contains
       !% The values can be combined: for example, <tt>par_domains + par_states</tt>
       !% means a combined parallelization in domains and states.
       !% Default: <tt>par_domains + par_states</tt> for <tt>CalculationMode = td</tt>,
-      !% <tt>par_domains + par_other</tt> for <tt>CalculationMode = casida</tt>,
       !% otherwise <tt>par_domains</tt>.
       !%Option serial 0
       !% <tt>Octopus</tt> will run in serial.
@@ -281,10 +280,10 @@ contains
       !%Option par_kpoints 4
       !% <tt>Octopus</tt> will run parallel in <i>k</i>-points/spin.
       !%Option par_other   8
-      !% Run-mode-dependent. For example, in <tt>casida</tt>, it means parallelization in <i>e-h</i> pairs.
+      !% For <tt>CalculationMode = casida</tt>, it means parallelization in electron-hole matrix elements.
       !%End
 
-      ! default is set in calc_mode_default_parallel_mask()
+      ! defaults are set ultimately by calc_mode_init, modified with calc_mode_set_parallelization by some calculation modes
 
      if(base_grp%size > 1) then
 

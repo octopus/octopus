@@ -26,3 +26,8 @@ XCFunctional = lda_x + lda_c_vwn
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
+
+ParallelizationStrategy = par_domains + par_other
+%ParallelizationGroupRanks
+ 2 | 1 | 1 | 2
+%
