@@ -343,7 +343,7 @@ contains
     subroutine read_block(blk)
       type(block_t), intent(inout) :: blk
 
-      integer :: ii, nn
+      integer :: ii, nn, temp
       logical :: fill_used
 
       PUSH_SUB(multicomm_init.read_block)
@@ -352,9 +352,10 @@ contains
 
       mc%group_sizes = 1
       do ii = 1, min(nn, mc%n_index)
+        call parse_block_integer(blk, 0, ii - 1, temp)
         if(multicomm_strategy_is_parallel(mc, ii)) then
-          call parse_block_integer(blk, 0, ii - 1, mc%group_sizes(ii))
-        else
+          mc%group_sizes(ii) = temp
+        else if(temp /= 1) then
           message(1) = 'In ParallelizationGroupRanks, ignoring specification for ' // par_types(ii)
           message(2) = 'This parallelization strategy is not available.'
           call messages_warning(2)
