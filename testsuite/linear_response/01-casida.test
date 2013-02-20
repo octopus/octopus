@@ -92,27 +92,27 @@ Input: 01-casida.04-spectrum.inp
 # all theory levels have appreciable amplitude at E = 0.53 Ha
 # due to symmetry, the values in y and z must be equal
 
-match ; eps_diff spectrum x    ; LINE(casida/spectrum.eps_diff, 531, 15);  7.113362E-02
-match ; eps_diff spectrum y    ; LINE(casida/spectrum.eps_diff, 531, 29);  2.103199E+00
-match ; eps_diff spectrum z    ; LINE(casida/spectrum.eps_diff, 531, 43);  2.103199E+00
-match ; eps_diff spectrum tot  ; LINE(casida/spectrum.eps_diff, 531, 57);  4.277532E+00
+match ; eps_diff spectrum x    ; LINE(casida/spectrum.eps_diff, 532, 15);  7.113362E-02
+match ; eps_diff spectrum y    ; LINE(casida/spectrum.eps_diff, 532, 29);  2.103199E+00
+match ; eps_diff spectrum z    ; LINE(casida/spectrum.eps_diff, 532, 43);  2.103199E+00
+match ; eps_diff spectrum tot  ; LINE(casida/spectrum.eps_diff, 532, 57);  4.277532E+00
 
-#match ; Petersilka spectrum x   ; LINE(casida/spectrum.petersilka, 531, 15);  5.760632E-01
-#match ; Petersilka spectrum y   ; LINE(casida/spectrum.petersilka, 531, 29);  6.486833E+00
-#match ; Petersilka spectrum z   ; LINE(casida/spectrum.petersilka, 531, 43);  6.486833E+00
-#match ; Petersilka spectrum tot ; LINE(casida/spectrum.petersilka, 531, 57);  1.354973E+01
+#match ; Petersilka spectrum x   ; LINE(casida/spectrum.petersilka, 532, 15);  5.760632E-01
+#match ; Petersilka spectrum y   ; LINE(casida/spectrum.petersilka, 532, 29);  6.486833E+00
+#match ; Petersilka spectrum z   ; LINE(casida/spectrum.petersilka, 532, 43);  6.486833E+00
+#match ; Petersilka spectrum tot ; LINE(casida/spectrum.petersilka, 532, 57);  1.354973E+01
 
-match ; Casida spectrum x    ; LINE(casida/spectrum.casida, 531, 15);  2.166247E-01
-match ; Casida spectrum y    ; LINE(casida/spectrum.casida, 531, 29);  5.754486E+00
-match ; Casida spectrum z    ; LINE(casida/spectrum.casida, 531, 43);  5.754486E+00
-match ; Casida spectrum tot  ; LINE(casida/spectrum.casida, 531, 57);  1.172560E+01
+match ; Casida spectrum x    ; LINE(casida/spectrum.casida, 532, 15);  2.166247E-01
+match ; Casida spectrum y    ; LINE(casida/spectrum.casida, 532, 29);  5.754486E+00
+match ; Casida spectrum z    ; LINE(casida/spectrum.casida, 532, 43);  5.754486E+00
+match ; Casida spectrum tot  ; LINE(casida/spectrum.casida, 532, 57);  1.172560E+01
 
-match ; CV(2) spectrum x   ; LINE(casida/spectrum.variational, 531, 15);  1.488925E-01
-match ; CV(2) spectrum y   ; LINE(casida/spectrum.variational, 531, 29);  2.633573E-01
-match ; CV(2) spectrum z   ; LINE(casida/spectrum.variational, 531, 43);  2.633573E-01
-match ; CV(2) spectrum tot ; LINE(casida/spectrum.variational, 531, 57);  6.756071E-01
+match ; CV(2) spectrum x   ; LINE(casida/spectrum.variational, 532, 15);  1.488925E-01
+match ; CV(2) spectrum y   ; LINE(casida/spectrum.variational, 532, 29);  2.633573E-01
+match ; CV(2) spectrum z   ; LINE(casida/spectrum.variational, 532, 43);  2.633573E-01
+match ; CV(2) spectrum tot ; LINE(casida/spectrum.variational, 532, 57);  6.756071E-01
 
-match ; Tamm-Dancoff spectrum x   ; LINE(casida/spectrum.tamm_dancoff, 531, 15);  1.926204E-01
-match ; Tamm-Dancoff spectrum y   ; LINE(casida/spectrum.tamm_dancoff, 531, 29);  6.968953E+00
-match ; Tamm-Dancoff spectrum z   ; LINE(casida/spectrum.tamm_dancoff, 531, 43);  6.968953E+00
-match ; Tamm-Dancoff spectrum tot ; LINE(casida/spectrum.tamm_dancoff, 531, 57);  1.413053E+01
+match ; Tamm-Dancoff spectrum x   ; LINE(casida/spectrum.tamm_dancoff, 532, 15);  1.926204E-01
+match ; Tamm-Dancoff spectrum y   ; LINE(casida/spectrum.tamm_dancoff, 532, 29);  6.968953E+00
+match ; Tamm-Dancoff spectrum z   ; LINE(casida/spectrum.tamm_dancoff, 532, 43);  6.968953E+00
+match ; Tamm-Dancoff spectrum tot ; LINE(casida/spectrum.tamm_dancoff, 532, 57);  1.413053E+01

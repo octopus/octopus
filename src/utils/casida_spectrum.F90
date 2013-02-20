@@ -31,6 +31,7 @@ program casida_spectrum
   use space_m
   use unit_m
   use unit_system_m
+  use utils_m
   use varinfo_m
 
   implicit none
@@ -174,6 +175,13 @@ contains
 
     ! print spectra
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
+
+    write(iunit, '(a2,a12)', advance = 'no') '# ', 'E [' // trim(units_abbrev(units_out%energy)) // ']'
+    do ii = 1, cs%space%dim
+      write(iunit, '(a14)', advance = 'no') '<' // index2axis(ii) // '>^2'
+    enddo
+    write(iunit, '(a14)') '<f>'
+
     do istep = 1, nsteps
       write(iunit, '(99es14.6)') units_from_atomic(units_out%energy, cs%min_energy + real(istep - 1, REAL_PRECISION) &
         *cs%energy_step), (units_from_atomic(unit_one/units_out%energy, spectrum(ii, istep)), ii = 1, cs%space%dim+1)

@@ -1047,9 +1047,9 @@ contains
       write(iunit, '(6x)', advance='no')
     endif
 
-    write(iunit, '(1x,a15)', advance='no') 'E'
+    write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']' 
     do idim = 1, dim
-      write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '>'
+      write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '> [' // trim(units_abbrev(units_out%length)) // ']' 
     enddo
     write(iunit, '(1x,a15)') '<f>'
 
