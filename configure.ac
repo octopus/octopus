@@ -404,7 +404,7 @@ AC_CONFIG_FILES([Makefile
   src/sternheimer/Makefile
   src/main/Makefile
   src/utils/Makefile
-  perl/Makefile
+  scripts/Makefile
   doc/Makefile
   doc/pdf/Makefile
   doc/html/Makefile

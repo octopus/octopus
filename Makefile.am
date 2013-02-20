@@ -22,7 +22,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
 if ENABLE_PERL
-  PERL_DIR = perl
+  PERL_DIR = scripts
 endif
 
 SUBDIRS =        \
