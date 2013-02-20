@@ -104,6 +104,7 @@ contains
     type(states_t),      intent(in)    :: st
 
     integer :: default_iter, default_es
+    real(8) :: mem
 
     PUSH_SUB(eigensolver_init)
 
@@ -166,6 +167,7 @@ contains
     end if
 
     call messages_obsolete_variable('EigensolverVerbose')
+    
 
     !%Variable EigensolverSubspaceDiag
     !%Type logical
@@ -246,6 +248,9 @@ contains
     case default
       call input_error('Eigensolver')
     end select
+
+    call messages_print_stress(stdout, 'Eigensolver')
+
     call messages_print_var_option(stdout, "Eigensolver", eigens%es_type)
 
     call messages_obsolete_variable('EigensolverInitTolerance', 'EigensolverTolerance')
@@ -305,9 +310,31 @@ contains
       message(1) = "No subspace diagonalization will be done."
       call messages_info(1)
     endif
-        
-    POP_SUB(eigensolver_init)
 
+    ! print memory requirements
+    select case(eigens%es_type)
+    case(RS_RMMDIIS)
+      call messages_write('Info: The rmmdiis eigensolver requires ')
+      mem = (2.0_8*eigens%es_maxiter - 1.0_8)*st%d%block_size*dble(gr%mesh%np_part)
+      if(states_are_real(st)) then
+        mem = mem*CNST(8.0)
+      else
+        mem = mem*CNST(16.0)
+      end if
+      call messages_write(mem, units = unit_megabytes, fmt = '(f9.1)')
+      call messages_write(' of additional')
+      call messages_new_line()
+      call messages_write('      memory.  This amount can be reduced by decreasing the value')
+      call messages_new_line()
+      call messages_write('      of the variable StatesBlockSize (currently set to ')
+      call messages_write(st%d%block_size)
+      call messages_write(').')
+      call messages_info()
+    end select
+
+    call messages_print_stress(stdout)
+      
+    POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
 
