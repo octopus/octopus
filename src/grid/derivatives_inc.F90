@@ -225,7 +225,7 @@ end subroutine X(derivatives_batch_set_bc)
 ! ---------------------------------------------------------
 subroutine X(derivatives_set_bc)(der, ff)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: ff(:)
+  R_TYPE, target,      intent(inout) :: ff(:) ! target for batch_add_state
 
   type(batch_t) :: batch_ff
 

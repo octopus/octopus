@@ -111,14 +111,14 @@ module command_line_m
     end subroutine getopt_dielectric_function
 
     subroutine getopt_propagation_spectrum(fname)
-      character(len=*) :: fname
+      character(len=*), intent(in) :: fname
     end subroutine getopt_propagation_spectrum
 
     subroutine getopt_rotatory_strength
     end subroutine getopt_rotatory_strength
 
     subroutine getopt_vibrational(mode)
-      integer :: mode
+      integer, intent(in) :: mode
     end subroutine getopt_vibrational
 
     subroutine getopt_xyz_anim
@@ -127,44 +127,43 @@ module command_line_m
     subroutine getopt_oscillator_strength(mode, omega, searchinterval, &
                                           order, nresonances, nfrequencies, time, &
                                           l, m, damping, file)
-      integer :: mode
-      real(8) :: omega
-      real(8) :: searchinterval
-      integer :: order, nresonances, nfrequencies
-      real(8) :: time
-      integer :: print_omega_file
-      integer :: l, m
-      real(8) :: damping
-      character(len=*) :: file
+      integer, intent(in) :: mode
+      real(8), intent(in) :: omega
+      real(8), intent(in) :: searchinterval
+      integer, intent(in) :: order, nresonances, nfrequencies
+      real(8), intent(in) :: time
+      integer, intent(in) :: l, m
+      real(8), intent(in) :: damping
+      character(len=*), intent(in) :: file
     end subroutine getopt_oscillator_strength
 
     subroutine getopt_harmonic_spectrum(w0, m, ar, x, y, z, pol)
-      real(8)          :: w0
-      integer          :: m
-      integer          :: ar
-      character(len=*) :: pol
-      real(8)          :: x
-      real(8)          :: y
-      real(8)          :: z
+      real(8)         , intent(in) :: w0
+      integer         , intent(in) :: m
+      integer         , intent(in) :: ar
+      character(len=*), intent(in) :: pol
+      real(8)         , intent(in) :: x
+      real(8)         , intent(in) :: y
+      real(8)         , intent(in) :: z
     end subroutine getopt_harmonic_spectrum
 
     subroutine getopt_help(mode, name)
-      character(len=*) :: mode
-      character(len=*) :: name
+      character(len=*), intent(in) :: mode
+      character(len=*), intent(in) :: name
     end subroutine getopt_help
     
     subroutine getopt_photoelectron_spectrum(mode, interp, estep, espan, &
       thstep, thspan, phstep, phspan, pol, center)
-      integer          :: mode
-      integer          :: interp
-      real(8)          :: estep
-      real(8)          :: espan(2)
-      real(8)          :: thstep
-      real(8)          :: thspan(2)
-      real(8)          :: phstep
-      real(8)          :: phspan(2)
-      real(8)          :: pol(3)
-      real(8)          :: center(3)
+      integer, intent(in) :: mode
+      integer, intent(in) :: interp
+      real(8), intent(in) :: estep
+      real(8), intent(in) :: espan(2)
+      real(8), intent(in) :: thstep
+      real(8), intent(in) :: thspan(2)
+      real(8), intent(in) :: phstep
+      real(8), intent(in) :: phspan(2)
+      real(8), intent(in) :: pol(3)
+      real(8), intent(in) :: center(3)
     end subroutine getopt_photoelectron_spectrum
 
   end interface
@@ -227,8 +226,10 @@ module command_line_m
   !! and -1 if the command line arguments cannot be accessed.
   subroutine getopt_init(ierr)
     integer, intent(out) :: ierr
+
     integer :: argc, i
     character(len=100), allocatable :: argstring(:)
+
 #ifdef FC_COMMAND_LINE_ARGUMENTS
     argc = command_argument_count()
     allocate(argstring(0:argc))
@@ -267,9 +268,11 @@ module command_line_m
   subroutine get_command_argument(c, a)
     integer,          intent(in)     :: c
     character(len=*), intent(out)    :: a
+
 #if defined(FC_COMMAND_LINE_INTRINSIC)
     call getarg(c, a)
 #endif
+
   end subroutine get_command_argument
 
 #endif

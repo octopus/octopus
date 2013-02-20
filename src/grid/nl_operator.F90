@@ -145,7 +145,6 @@ module nl_operator_m
   integer :: function_opencl
 #endif
 
-  type(profile_t), save :: nl_operate_profile
   type(profile_t), save :: operate_batch_prof
 
 
