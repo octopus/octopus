@@ -240,6 +240,13 @@ contains
 
     end select
 
+    if(flavour == PS_TYPE_PSF .or. flavour == PS_TYPE_CPI .or. flavour == PS_TYPE_FHI) then
+      if(lmax > ps%conf%p) then
+        message(1) = "lmax in Species block for " // trim(label) // " is larger than number available."
+        call messages_warning(1)
+      endif
+    endif
+
     write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
     call messages_info(1)
 

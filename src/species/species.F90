@@ -1149,6 +1149,11 @@ contains
         read_data = 6
       end if
 
+      if(nn > 5 .and. spec%lloc > spec%lmax) then
+        message(1) = "lloc > lmax in Species block for " // trim(spec%label) // ". No channel will be considered local."
+        call messages_warning(1)
+      endif
+
       if(nn > 6) then
         call parse_block_float(blk, row, 6, spec%def_h)
         spec%def_h = units_to_atomic(units_inp%length, spec%def_h)
