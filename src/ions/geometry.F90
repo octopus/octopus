@@ -308,7 +308,10 @@ contains
       call species_set_label(geo%species(k), atom_get_label(geo%atom(j)))
       call species_set_index(geo%species(k), k)
       call species_read(geo%species(k))
-      geo%only_user_def = (geo%only_user_def .and. (species_type(geo%species(k)) == SPEC_USDEF))
+      ! these are the species which do not represent atoms
+      geo%only_user_def = (geo%only_user_def .and. &
+        (species_type(geo%species(k)) == SPEC_USDEF .or. species_type(geo%species(k)) == SPEC_CHARGE_DENSITY .or. &
+        species_type(geo%species(k)) == SPEC_FROM_FILE .or. species_type(geo%species(k)) == SPEC_JELLI_SLAB))
     end do atoms2
 
     ! Reads the spin components. This is read here, as well as in states_init,

@@ -112,7 +112,7 @@ module species_m
 
 
     character(len=1024) :: user_def !< for the user-defined potential
-    FLOAT :: omega
+    FLOAT :: omega                  !< harmonic frequency for Hermite polynomials
 
 
     character(len=200) :: filename !< for the potential read from a file.
@@ -213,10 +213,10 @@ contains
     !% octopus homepage</a>.
     !%
     !% The format of this block is the following: The first field is
-    !% the name of the species, followed by the atomic mass (in atomic mass
-    !% units). The third field defines the type of species (the valid options
-    !% are detailed below). Each type also needs some parameters given in
-    !% the remaining fields of the row.
+    !% the name of the species. The second is the atomic mass (in atomic mass
+    !% units). The third defines the type of species (the valid options
+    !% are detailed below). The fourth is the atomic number (or valence charge for non-atomic species).
+    !% Some types may need some parameters given in the remaining fields of the row.
     !%
     !% In 3D, <i>e.g.</i>
     !%
@@ -235,44 +235,39 @@ contains
     !% fields: default spacing, and default radius (used for minimum simulation box if the
     !% radius is not specified).
     !%Option spec_user_defined 123
-    !% Species with user-defined potential. In this case, the fourth
-    !% field is the valence charge and the fifth
+    !% Species with user-defined potential. In this case, the fifth
     !% field is a string with a mathematical expression that defines the
     !% potential (you can use any of the <i>x</i>, <i>y</i>, <i>z</i>
     !% or <i>r</i> variables).
     !%Option spec_point  2
-    !% Point charge: the fourth field is the value of the charge.
+    !% Point charge. No extra columns.
     !%Option spec_jelli  3
-    !% Jellium sphere: the extra parameters are the charge of the jellium
-    !% sphere (an equal value of valence charge is assumed) and the radius of
-    !% the sphere.
+    !% Jellium sphere: the fifth field is the radius of the sphere.
     !%Option spec_jelli_slab  4
-    !% Jellium slab: the extra parameters are the charge of the jellium
-    !% slab (an equal value of valence charge is assumed) and the thickness of
-    !% the slab. The slab extends across the simulation box in the <i>xy</i>-plane.
+    !% Jellium slab: the fifth field is the thickness of the slab.
+    !% The slab extends across the simulation box in the <i>xy</i>-plane.
     !%Option spec_ps_psf  100
     !% Troullier Martins pseudopotential in <tt>SIESTA</tt> format: the pseudopotential will be
     !% read from a <tt>.psf</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/octopus/PP/PSF</tt> directory.
-    !% Columns 4, 5, 6 are the atomic number, the maximum
+    !% Columns 5 and 6 are the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !%Option spec_ps_hgh  101
-    !% Hartwigsen-Goedecker-Hutter pseudopotentials: column 4 is
-    !% the atomic number and columns 5 and 6 are irrelevant, since they
-    !% are not necessary to define the HGH pseudopotential.
+    !% Hartwigsen-Goedecker-Hutter pseudopotentials. No extra columns,
+    !% as they are not necessary to define the HGH pseudopotential.
     !%Option spec_ps_cpi  102
     !% Fritz-Haber pseudopotential: the pseudopotential will be
     !% read from a <tt>.cpi</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/PP/CPI</tt> directory.
-    !% Columns 4, 5, 6 are the atomic number, the maximum
+    !% Columns 5 and 6 are the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !%Option spec_ps_fhi  103
     !% Fritz-Haber pseudopotential (<tt>ABINIT</tt> format): the pseudopotential will be
     !% read from a <tt>.fhi</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/PP/FHI</tt> directory.
-    !% Columns 4, 5, 6 are the atomic number, the maximum
+    !% Columns 5 and 6 are the maximum
     !% <i>l</i>-component of the pseudopotential to consider in the
     !% calculation, and the <i>l</i>-component to consider as local.
     !% Note that you can use the pseudopotentials from <tt>ABINIT</tt> homepage.
@@ -280,22 +275,20 @@ contains
     !% UPF format: the pseudopotential will be
     !% read from a <tt>.UPF</tt> file, either in the working
     !% directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> directory.
-    !% Column 4 is the atomic number. Columns 5 and 6 are 
-    !% ignored, as the maximum <i>l</i>-component of the pseudopotential to
+    !% No extra columns, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
     !% local are indicated in the pseudopotential file are cannot be changed.
     !%Option spec_pspio  110
     !% (experimental) PSPIO library: the pseudopotential will be read from a file,
     !% either in the working directory or in the <tt>OCTOPUS-HOME/share/PP/UPF</tt> 
     !% directory, using the PSPIO library.
-    !% Column 4 is the atomic number. Columns 5 and 6 are 
-    !% ignored, as the maximum <i>l</i>-component of the pseudopotential to
+    !% No extra columns, as the maximum <i>l</i>-component of the pseudopotential to
     !% consider in the calculation and the <i>l</i>-component to consider as
     !% local are indicated in the pseudopotential file are cannot be changed.
     !%Option spec_full_delta   127
     !% Full atomic potential represented by a delta charge
     !% distribution. The atom will be displaced to the nearest grid
-    !% point. Column 4 is the atomic number.
+    !% point. No extra columns.
     !%Option spec_full_gaussian   124
     !% A full-potential atom is defined by a Gaussian accumulation of
     !% positive charge (distorted if curvilinear coordinates are
@@ -314,13 +307,12 @@ contains
     !% position. For a precise description, see N. A. Modine,
     !% <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997).
     !%
-    !% Column 4 is the atomic number and column 5 is
-    !% <math>sigma</math>, the width of the gaussian that should be
+    !% Column 5 is <math>sigma</math>, the width of the Gaussian that should be
     !% small, but you may run into numerical difficulties if it is too
     !% small (0.25 by default).
     !%Option spec_charge_density 125
-    !% The potential is created by a distribution of charge. The extra parameters are the
-    !% valence charge of the species, and an expression for the charge distribution.
+    !% The potential is created by a distribution of charge.
+    !% Column 5 is an expression for the charge distribution.
     !%Option species_from_file  126
     !% The potential is read from a file, whose name is given in column 5.
     !%End
@@ -436,7 +428,7 @@ contains
       xx(1) = CNST(0.01)
       rr    = sqrt(sum(xx**2))
       call parse_expression(pot_re, pot_im, MAX_DIM, xx, rr, M_ZERO, spec%user_def)
-      spec%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re ))
+      spec%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re )) ! why...?
       ! To avoid problems with constant potentials.
       if(spec%omega <= M_ZERO) spec%omega = CNST(0.1) 
 
@@ -500,7 +492,13 @@ contains
     SAFE_ALLOCATE(spec%iwf_l(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_m(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_i(1:spec%niwfs, 1:ispin))
+
     call species_iwf_fix_qn(spec, ispin, space)
+
+    if(species_is_ps(spec)) then
+      write(message(1),'(a,i6,a,i6)') 'Number of orbitals: total = ', ps_niwfs(spec%ps), ', bound = ', spec%niwfs
+      call messages_info(1)
+    endif
 
     POP_SUB(species_init)
   end subroutine species_init
@@ -1186,6 +1184,7 @@ contains
 
 
   ! ---------------------------------------------------------
+  !> set up quantum numbers of orbitals, and reject those that are unbound (for pseudopotentials)
   subroutine species_iwf_fix_qn(spec, ispin, space)
     type(species_t), intent(inout) :: spec
     integer,         intent(in)    :: ispin
@@ -1315,9 +1314,6 @@ contains
     POP_SUB(species_iwf_fix_qn)
   end subroutine species_iwf_fix_qn
   ! ---------------------------------------------------------
-
-
-
 
 end module species_m
 
