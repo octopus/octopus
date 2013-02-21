@@ -247,7 +247,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine solve_schroedinger(psf_file, g, conf, ispin, rphi, eigen)
-    type(ps_psf_file_t), intent(in)    :: psf_file
+    type(ps_psf_file_t), intent(inout) :: psf_file
     type(logrid_t),      intent(in)    :: g
     type(valconf_t),     intent(in)    :: conf
     integer,             intent(in)    :: ispin
