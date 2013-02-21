@@ -41,11 +41,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   type(batch_pointer_t), allocatable :: psib(:), resb(:)
   integer, allocatable :: done(:), last(:)
   logical, allocatable :: failed(:)
-  logical :: pack
+  logical :: pack, save_pack_mem
 
   PUSH_SUB(X(eigensolver_rmmdiis))
 
   pack = hamiltonian_apply_packed(hm, gr%mesh)
+  save_pack_mem = .true.
 
   SAFE_ALLOCATE(lambda(1:st%nst))
   SAFE_ALLOCATE(psib(1:niter))
@@ -82,8 +83,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       if(iter /= 1) call batch_copy(st%psib(ib, ik), psib(iter)%batch, reference = .false.)
       call batch_copy(st%psib(ib, ik), resb(iter)%batch, reference = .false.)
     end do
-
-    call batch_copy(st%psib(ib, ik), resb(1)%batch, reference = .false.)
 
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(1)%batch, resb(1)%batch, ik)
     nops = nops + bsize
