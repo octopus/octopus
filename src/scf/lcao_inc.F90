@@ -79,7 +79,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   R_TYPE, allocatable :: hpsi(:, :, :), overlap(:, :, :)
   FLOAT, allocatable :: ev(:)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :)
-  integer :: kstart, kend, ispin, iunit_h, iunit_s, iunit_e, iunit_o
+  integer :: kstart, kend, ispin, iunit_h, iunit_s, iunit_e, iunit_o, ii, ll, mm
 
 #ifdef HAVE_MPI
   FLOAT, allocatable :: tmp(:, :)
@@ -126,7 +126,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
     if(mpi_grp_is_root(mpi_world)) then
       write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
       write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
-      write(iunit_o,'(4a6)') 'iorb', 'atom', 'level', 'spin'
+      write(iunit_o,'(7a6)') 'iorb', 'atom', 'level', 'i', 'l', 'm', 'spin'
       write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
     endif
   endif
@@ -140,8 +140,10 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
     end do
 
 #ifdef LCAO_DEBUG
-    if(this%debug .and. mpi_grp_is_root(mpi_world)) &
-      write(iunit_o,'(4i6)') n1, this%atom(n1), this%level(n1), this%ddim(n1)
+    if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+      call species_iwf_ilm(geo%atom(this%atom(n1))%spec, this%level(n1), this%ddim(n1), ii, ll, mm)
+      write(iunit_o,'(7i6)') n1, this%atom(n1), this%level(n1), ii, ll, mm, this%ddim(n1)
+    endif
 #endif
 
     do ik = kstart, kend
