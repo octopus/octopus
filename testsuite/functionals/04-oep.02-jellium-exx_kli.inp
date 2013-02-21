@@ -24,10 +24,7 @@ Spacing = 0.35
 XCFunctional = oep_x
 OEPLevel = oep_kli
 
-
 ConvRelDens = 8e-6
-
-LCAOStart = lcao_none
 
 EigenSolverTolerance = 1e-5
 
