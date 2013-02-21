@@ -76,8 +76,13 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     bsize = maxst - minst + 1
 
     if(pack) call batch_pack(st%psib(ib, ik))
-
     psib(1)%batch => st%psib(ib, ik)
+
+    do iter = 1, niter
+      if(iter /= 1) call batch_copy(st%psib(ib, ik), psib(iter)%batch, reference = .false.)
+      call batch_copy(st%psib(ib, ik), resb(iter)%batch, reference = .false.)
+    end do
+
     call batch_copy(st%psib(ib, ik), resb(1)%batch, reference = .false.)
 
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(1)%batch, resb(1)%batch, ik)
@@ -199,12 +204,15 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       end do
 
       call batch_scal(gr%mesh%np, evec(iter, 1, :), psib(iter)%batch, a_start = minst)
-      call batch_scal(gr%mesh%np, evec(iter, 1, :), resb(iter)%batch, a_start = minst)
 
       do jj = 1, iter - 1
         call batch_axpy(gr%mesh%np, evec(jj, 1, :), psib(jj)%batch, psib(iter)%batch, a_start = minst)
-        call batch_axpy(gr%mesh%np, evec(jj, 1, :), resb(jj)%batch, resb(iter)%batch, a_start = minst)
       end do
+
+      ! re-calculate the residual
+      call X(hamiltonian_apply_batch)(hm, gr%der, psib(iter)%batch, resb(iter)%batch, ik)
+      nops = nops + bsize
+      call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
 
       SAFE_DEALLOCATE_A(eval)      
       SAFE_DEALLOCATE_A(evec)
