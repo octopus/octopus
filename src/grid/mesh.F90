@@ -428,11 +428,13 @@ contains
     type(mesh_t), intent(in) :: mesh
     integer,      intent(in) :: iunit
     
+    integer :: idir
+
     PUSH_SUB(mesh_dump)
     
     write(iunit, '(a)')         dump_tag
-    write(iunit, '(a20,7i8)')   'nr(1, :)=           ', mesh%idx%nr(1, 1:mesh%sb%dim)
-    write(iunit, '(a20,7i8)')   'nr(2, :)=           ', mesh%idx%nr(2, 1:mesh%sb%dim)
+    write(iunit, '(a20,7i8)')   'nr(1, :)=           ', (mesh%idx%nr(1, idir), idir = 1, mesh%sb%dim)
+    write(iunit, '(a20,7i8)')   'nr(2, :)=           ', (mesh%idx%nr(2, idir), idir = 1, mesh%sb%dim)
     write(iunit, '(a20,7i8)')   'l(:)=               ', mesh%idx%ll(1:mesh%sb%dim)
     write(iunit, '(a20,7i8)')   'enlarge(:)=         ', mesh%idx%enlarge(1:mesh%sb%dim)
     write(iunit, '(a20,1i10)')  'np=                 ', mesh%np

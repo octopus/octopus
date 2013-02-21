@@ -312,7 +312,7 @@ contains
 
     type(symmetrizer_t) :: symmetrizer
     FLOAT,  allocatable :: tmpdensity(:)
-    integer :: ispin, np
+    integer :: ispin, np, dims(2)
     type(profile_t), save :: reduce_prof
 #ifdef HAVE_OPENCL
     integer :: ip
@@ -321,6 +321,7 @@ contains
     PUSH_SUB(density_calc_end)
 
     np = this%gr%fine%mesh%np
+    dims = (/np, this%st%d%nspin/)
 
     if(this%packed) then
 #ifdef HAVE_OPENCL
@@ -339,7 +340,7 @@ contains
     ! reduce over states and k-points
     if(this%st%parallel_in_states .or. this%st%d%kpt%parallel) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
-      call comm_allreduce(this%st%st_kpt_mpi_grp%comm, this%density, dim = (/np, this%st%d%nspin/))
+      call comm_allreduce(this%st%st_kpt_mpi_grp%comm, this%density, dim = dims)
       call profiling_out(reduce_prof)
     end if
 
