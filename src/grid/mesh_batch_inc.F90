@@ -436,10 +436,10 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
   if(batch_status(bb) /= status) then 
     if(batch_status(aa) /= BATCH_NOT_PACKED) then
-      ASSERT(.not. batch_is_sync(aa))
+      ASSERT(batch_is_sync(aa))
     end if
     if(batch_status(aa) /= BATCH_NOT_PACKED) then
-      ASSERT(.not. batch_is_sync(bb))
+      ASSERT(batch_is_sync(bb))
     end if
     status = BATCH_NOT_PACKED
   end if
