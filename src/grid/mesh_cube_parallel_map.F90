@@ -73,23 +73,26 @@ contains
     type(mesh_t),                   intent(in)  :: mesh
     type(cube_t),                   intent(in)  :: cube
 
-    integer :: im, ip, nn, ixyz(3), lxyz(3), ii
-    integer, allocatable :: cube_part(:)
+    integer :: im, ip, nn, ii, ixyz(3), lxyz(3), ipos, cube_np
+    integer, allocatable :: cube_part(:), part_local(:), global_index(:)
     integer, pointer :: mf_order(:), cf_order(:)
-    type(dimensions_t), allocatable :: part(:)
+    integer, allocatable :: part(:,:,:)
+
     type(profile_t), save :: prof
 
     integer :: last_found_proc
     PUSH_SUB(mesh_cube_parallel_map_init)
     call profiling_in(prof,"MC_PAR_INIT")
-    !Get the cube partition on the mesh
-    SAFE_ALLOCATE(part(1:cube%mpi_grp%size))
+
+    !Get the cube partition on the mesh and the number of local cube points that are also on the mesh
+    SAFE_ALLOCATE(part(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
     call cube_partition(cube, part)
 
     SAFE_ALLOCATE(cube_part(1:mesh%np_global))
     
     ixyz = 0
     last_found_proc = 1
+    cube_np = 0
     do im = 1, mesh%cube_map%nmap
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
@@ -97,36 +100,48 @@ contains
       call index_to_coords(mesh%idx, mesh%sb%dim, ip, ixyz)
       ixyz = ixyz + cube%center
 
-      forall(ii = 0:nn - 1) cube_part(ip + ii) = cube_point_to_process(ixyz(1), ixyz(2), ixyz(3) + ii, part, last_found_proc)
+      do ii = 0, nn - 1
+        !! another option using less memory, but slower
+        !! cube_part(ip + ii) = cube_point_to_process(ixyz(1), ixyz(2), ixyz(3) + ii, part, last_found_proc)
+        cube_part(ip + ii) = part(ixyz(1), ixyz(2), ixyz(3) + ii)
+        if (cube_part(ip + ii) == cube%mpi_grp%rank + 1) cube_np = cube_np + 1
+      end do
     end do
-
     SAFE_DEALLOCATE_A(part)
 
-    !Init mesh to cube partition transfer
-    call partition_transfer_init(this%m2c, mesh%np_global, &
-                                 mesh%mpi_grp, mesh%vp%part, cube%mpi_grp, cube_part, &
-                                 this%m2c_nsend, this%m2c_nrec, mf_order, cf_order)
+    ! Mesh to cube
+    ! We will work only with the local mesh points and we need to know the global index of those points.
+    SAFE_ALLOCATE(part_local(1:mesh%np))
+    SAFE_ALLOCATE(global_index(1:mesh%np))
+    do ip = 1, mesh%np
+      global_index(ip) = mesh%vp%local(mesh%vp%xlocal(mesh%mpi_grp%rank + 1) + ip - 1)
+      part_local(ip) = cube_part(global_index(ip))
+    end do
 
+    ! Init partition transfer
+    call partition_transfer_init(this%m2c, mesh%np, global_index, mesh%mpi_grp, &
+                                 cube%mpi_grp, part_local, &
+                                 this%m2c_nsend, this%m2c_nrec, mf_order, cf_order)
+   ! Convert ordering of mesh and cube points from global mesh index to local mesh and cube indexes
     SAFE_ALLOCATE(this%m2c_mf_order(1:this%m2c_nsend))
-    SAFE_ALLOCATE(this%m2c_cf_order(1:this%m2c_nrec, 1:3))    
+    SAFE_ALLOCATE(this%m2c_cf_order(1:this%m2c_nrec, 1:3))
     do ip = 1, this%m2c_nsend
 #ifdef HAVE_MPI
       this%m2c_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
 #endif
-
       if (this%m2c_mf_order(ip) == 0) then
-        write(message(1),'(a,i3,a,i3)') "Error in mesh_cube_parallel_map_init: m2c point ", &
+        write(message(1),'(a,i4,a,i4)') "Error in mesh_cube_parallel_map_init (m2c): mesh point ", &
              mf_order(ip), " is not stored in partition ", mesh%vp%partno
-        call messages_fatal(1)
       end if
-
     end do
+
     do ip = 1, this%m2c_nrec
       call index_to_coords(mesh%idx, mesh%sb%dim, cf_order(ip), ixyz)
       ixyz = ixyz + cube%center
 
       if (.not. cube_global2local(cube, ixyz, lxyz)) then
-        message(1) = "Error in mesh_cube_parallel_map_init"
+        write(message(1),'(a,3i4,a,i4)') "Error in mesh_cube_parallel_map_init (m2c): cube point ", &
+             lxyz(1:3), " is not stored in partition ", cube%mpi_grp%rank + 1
         call messages_fatal(1)
       end if
 
@@ -134,40 +149,60 @@ contains
     end do
     SAFE_DEALLOCATE_P(mf_order)
     SAFE_DEALLOCATE_P(cf_order)
+    SAFE_DEALLOCATE_A(part_local)
+    SAFE_DEALLOCATE_A(global_index)
 
-    !Init cube to mesh partition transfer
-    call partition_transfer_init(this%c2m, mesh%np_global, &
-                                 cube%mpi_grp, cube_part, mesh%mpi_grp, mesh%vp%part, &
+
+    ! Cube to mesh
+    
+    ! We will work only with the local cube points and we need to know the global index of those points.
+    SAFE_ALLOCATE(part_local(1:cube_np))
+    SAFE_ALLOCATE(global_index(1:cube_np))
+    ipos = 0
+    do ip = 1, mesh%np_global
+      if (cube_part(ip) == cube%mpi_grp%rank + 1) then
+        ipos = ipos + 1
+        global_index(ipos) = ip
+        part_local(ipos) = mesh%vp%part(ip)
+      end if
+    end do
+
+    ! Init partition transfer
+    call partition_transfer_init(this%c2m, cube_np, global_index, cube%mpi_grp, &
+                                 mesh%mpi_grp, part_local, &
                                  this%c2m_nsend, this%c2m_nrec, cf_order, mf_order)
 
+   ! Convert ordering of mesh and cube points from global mesh index to local mesh and cube indexes
     SAFE_ALLOCATE(this%c2m_cf_order(1:this%c2m_nsend, 1:3))
     SAFE_ALLOCATE(this%c2m_mf_order(1:this%c2m_nrec))
-    do ip = 1, this%c2m_nrec
-#ifdef HAVE_MPI
-      this%c2m_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
-#endif
-      if (this%c2m_mf_order(ip) == 0) then
-        write(message(1),'(a,i3,a,i3)') "Error in mesh_cube_parallel_map_init: c2m point ", &
-             mf_order(ip), " is not stored in partition ", mesh%vp%partno
-      end if
-
-    end do
-    do ip = 1, this%c2m_nsend
+     do ip = 1, this%c2m_nsend
       call index_to_coords(mesh%idx, mesh%sb%dim, cf_order(ip), ixyz)
       ixyz = ixyz + cube%center
 
       if (.not. cube_global2local(cube, ixyz, lxyz)) then
-        message(1) = "Error in mesh_cube_parallel_map_init"
+        write(message(1),'(a,3i4,a,i4)') "Error in mesh_cube_parallel_map_init (c2m): cube point ", &
+             lxyz(1:3), " is not stored in partition ", cube%mpi_grp%rank + 1
         call messages_fatal(1)
       end if
 
       this%c2m_cf_order(ip, 1:3) = lxyz(1:3)
     end do
+    do ip = 1, this%c2m_nrec
+#ifdef HAVE_MPI
+      this%c2m_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
+#endif
+      if (this%c2m_mf_order(ip) == 0) then
+        write(message(1),'(a,i3,a,i3)') "Error in mesh_cube_parallel_map_init (c2m): mesh point ", &
+             mf_order(ip), " is not stored in partition ", mesh%vp%partno
+      end if
+    end do
     SAFE_DEALLOCATE_P(mf_order)
     SAFE_DEALLOCATE_P(cf_order)
+    SAFE_DEALLOCATE_A(part_local)
+    SAFE_DEALLOCATE_A(global_index)
 
     SAFE_DEALLOCATE_A(cube_part)
-    
+
     call profiling_out(prof)
     POP_SUB(mesh_cube_parallel_map_init)
   end subroutine mesh_cube_parallel_map_init

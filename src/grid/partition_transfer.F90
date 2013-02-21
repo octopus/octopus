@@ -1,4 +1,4 @@
-!! Copyright (C) 2011 M. Oliveira
+!! Copyright (C) 2011-2012 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -61,27 +61,27 @@ contains
   !! of a Cartesian topology created from the other group. This is the
   !! case when one of the groups is mpi_world, the other is the
   !! parallelization in domains group, and there are no slaves.
-  subroutine partition_transfer_init(this, np, mpi_grp_in, part_in, mpi_grp_out, part_out, nsend, nrec, order_in, order_out)
+  subroutine partition_transfer_init(this, np, global_index, mpi_grp_in, mpi_grp_out, part_out, nsend, nrec, order_in, order_out)
     type(partition_transfer_t), intent(out) :: this
-    integer,                    intent(in)  :: np 
+    integer,                    intent(in)  :: np !< the number of local points in the input partition
+    integer,                    intent(in)  :: global_index(:) !< the global indexes of the points of the input partition
     type(mpi_grp_t), target,    intent(in)  :: mpi_grp_in
-    integer,                    intent(in)  :: part_in(:)  !< point -> partition
     type(mpi_grp_t), target,    intent(in)  :: mpi_grp_out
     integer,                    intent(in)  :: part_out(:) !< point -> partition
     integer,                    intent(out) :: nsend
     integer,                    intent(out) :: nrec
-    integer, pointer,           intent(out) :: order_in(:)
+    integer, pointer,           intent(out) :: order_in(:) 
     integer, pointer,           intent(out) :: order_out(:)
 
     logical :: found
     integer :: n12, tmp_partno(2), ipart, opart, ip, pcount, mycolumn, irec, isend, ipos
-    type(iihash_t) :: map_out, map_in
+    type(iihash_t) :: map_out
     type(mpi_grp_t), pointer :: grp1, grp2
     integer, allocatable :: partno_list(:,:), part_map(:,:)
     type(profile_t), save :: prof
 
     PUSH_SUB(partition_transfer_init)
-   call profiling_in(prof,"P_TRANS_INIT")
+    call profiling_in(prof,"P_TRANS_INIT")
    
     ! In order to avoid unnecessary communications, all the data
     ! transfer is going to be made from the point of view of the group
@@ -110,7 +110,7 @@ contains
     tmp_partno(2) = grp2%rank + 1
 #ifdef HAVE_MPI
     call MPI_Allgather(tmp_partno(1), 2, MPI_INTEGER, partno_list(1, 1), 2, MPI_INTEGER, &
-         grp1%comm, mpi_err)
+         this%comm, mpi_err)
 #endif
 
     ! Build partition map. This is a matrix with n12 columns and
@@ -164,31 +164,18 @@ contains
       end if
     end do
 
-    ! Build mapping between all the possible senders and the input
-    ! group. This map is a hash table similar to the map_out one.
-    call iihash_init(map_in, mpi_grp_in%size)
-    do ipart = 1, grp2%size
-      if (mpi_grp_in%size >= mpi_grp_out%size) then
-        do ip = 1, n12
-          call iihash_insert(map_in, part_map(ipart, ip), part_map(ipart, ip))
-        end do
-      else
-        call iihash_insert(map_in, part_map(ipart, mycolumn), ipart)
-      end if
-    end do
-
     ! Total number of points to be sent
     nsend = 0
     do irec = 1, grp1%size
       opart = iihash_lookup(map_out, irec, found)
       if (.not. found) cycle
-      nsend = nsend + count(part_in(1:np) == mpi_grp_in%rank + 1 .and. part_out(1:np) == opart)
+      nsend = nsend + count(part_out(1:np) == opart)
     end do
 
     ! List of points to be send
     SAFE_ALLOCATE(this%sdispls(1:grp1%size))
     SAFE_ALLOCATE(this%scounts(1:grp1%size))
-    SAFE_ALLOCATE(order_in(1:nsend))
+    SAFE_ALLOCATE(order_in(1:max(1,nsend)))
 
     ipos = 0
     ! Loop over all possible receivers
@@ -200,44 +187,11 @@ contains
       if (.not. found) cycle
 
       do ip = 1, np
-        ! Does point ip belong to partition ipart and should it be sent to partition opart?
-        if (part_in(ip) == mpi_grp_in%rank + 1 .and. part_out(ip) == opart) then
+        ! Should point ip be sent to partition opart?
+        if (part_out(ip) == opart) then
           ipos = ipos + 1
-          order_in(ipos) = ip
+          order_in(ipos) = global_index(ip)
           this%scounts(irec) = this%scounts(irec) + 1
-        end if
-      end do
-
-    end do
-
-    ! Total number of points to be received
-    nrec = 0
-    do isend = 1, grp1%size
-      ipart = iihash_lookup(map_in, isend, found)
-      if (.not. found) cycle
-      nrec = nrec + count(part_in(1:np) == ipart .and. part_out(1:np) ==  mpi_grp_out%rank + 1)
-    end do
-
-    ! Displacements and number of points to be received 
-    SAFE_ALLOCATE(this%rdispls(1:grp1%size))
-    SAFE_ALLOCATE(this%rcounts(1:grp1%size))
-    SAFE_ALLOCATE(order_out(1:nrec))
-
-    ipos = 0
-    ! Loop over all possible senders
-    do isend = 1, grp1%size
-      this%rcounts(isend) = 0
-      this%rdispls(isend) = ipos
-
-      ipart = iihash_lookup(map_in, isend, found)
-      if (.not. found) cycle
-
-      do ip = 1, np
-        ! Is point ip to be received by this output partition and is it stored in partition ipart?
-        if (part_in(ip) == ipart .and. part_out(ip) == mpi_grp_out%rank + 1) then
-          ipos = ipos + 1
-          order_out(ipos) = ip
-          this%rcounts(isend) = this%rcounts(isend) + 1
         end if
       end do
 
@@ -246,7 +200,36 @@ contains
     SAFE_DEALLOCATE_A(part_map)
     SAFE_DEALLOCATE_A(partno_list)
     call iihash_end(map_out)
-    call iihash_end(map_in)
+
+
+    ! Displacements and number of points to be received 
+    ! These are obtained from the corresponding "send" information
+    SAFE_ALLOCATE(this%rdispls(1:grp1%size))
+    SAFE_ALLOCATE(this%rcounts(1:grp1%size))
+
+#ifdef HAVE_MPI
+    call mpi_debug_in(this%comm, C_MPI_ALLTOALLV)
+    call MPI_Alltoall(this%scounts(1), 1, MPI_INTEGER, &
+                      this%rcounts(1), 1, MPI_INTEGER, &
+                      this%comm, mpi_err)
+    call mpi_debug_out(this%comm, C_MPI_ALLTOALLV)
+#endif
+
+    nrec = 0
+    do isend = 1, grp1%size
+      this%rdispls(isend) = nrec
+      nrec = nrec + this%rcounts(isend)
+    end do
+
+    ! Ordering of the points at output
+    SAFE_ALLOCATE(order_out(1:max(1,nrec)))
+#ifdef HAVE_MPI
+    call mpi_debug_in(this%comm, C_MPI_ALLTOALLV)
+    call MPI_Alltoallv(order_in(1), this%scounts(1), this%sdispls(1), MPI_INTEGER, &
+         order_out(1), this%rcounts(1), this%rdispls(1), MPI_INTEGER,    &
+         this%comm, mpi_err)
+    call mpi_debug_out(this%comm, C_MPI_ALLTOALLV)
+#endif
 
     call profiling_out(prof)
     POP_SUB(partition_transfer_init)
@@ -266,6 +249,9 @@ contains
     POP_SUB(partition_transfer_end)
   end subroutine partition_transfer_end
 
+#include "undef.F90"
+#include "integer.F90"
+#include "partition_transfer_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
