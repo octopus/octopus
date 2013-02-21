@@ -360,6 +360,8 @@ subroutine X(mesh_batch_rotate)(mesh, aa, transf)
   call profiling_in(prof, "BATCH_ROTATE")
   ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
 
+  call batch_pack_was_modified(aa)
+
 #ifdef R_TREAL  
   block_size = max(40, hardware%l2%size/(2*8*aa%nst))
 #else
@@ -409,7 +411,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   logical, optional, intent(in)    :: reduce
   logical, optional, intent(in)    :: cproduct
 
-  integer :: ist, indb, idim, ip, bsize
+  integer :: ist, indb, idim, ip, bsize, status
   logical :: reduce_, cproduct_
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:), cltmp(:, :)
@@ -430,7 +432,19 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   ASSERT(aa%nst == bb%nst)
   ASSERT(aa%dim == bb%dim)
 
-  select case(batch_status(aa))
+  status = batch_status(aa)
+
+  if(batch_status(bb) /= status) then 
+    if(batch_status(aa) /= BATCH_NOT_PACKED) then
+      ASSERT(.not. batch_is_sync(aa))
+    end if
+    if(batch_status(aa) /= BATCH_NOT_PACKED) then
+      ASSERT(.not. batch_is_sync(bb))
+    end if
+    status = BATCH_NOT_PACKED
+  end if
+
+  select case(status)
   case(BATCH_NOT_PACKED)
     do ist = 1, aa%nst
       dot(ist) = M_ZERO
@@ -567,6 +581,8 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 #endif
 
   PUSH_SUB(X(mesh_batch_exchange_points))
+
+  call batch_pack_was_modified(aa)
 
   ASSERT(present(backward_map) .neqv. present(forward_map))
   ASSERT(batch_type(aa) == R_TYPE_VAL)

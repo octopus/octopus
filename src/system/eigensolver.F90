@@ -81,6 +81,8 @@ module eigensolver_m
     type(subspace_t) :: sdiag
 
     integer :: rmmdiis_minimization_iter
+
+    logical :: save_mem
   end type eigensolver_t
 
 
@@ -218,6 +220,19 @@ contains
       !%End
 
       call parse_integer(datasets_check('EigensolverMinimizationIter'), 5, eigens%rmmdiis_minimization_iter)
+
+      !%Variable EigensolverSaveMemory
+      !%Type logical
+      !%Default no
+      !%Section SCF::Eigensolver
+      !%Description
+      !% The RMMDIIS eigensolver may require a considerable amount of
+      !% extra memory. When this variable is set to yes, the
+      !% eigensolver will use less memory at the expense of some
+      !% performance. This is specially useful for GPUs. The default is no.
+      !%End
+
+      call parse_logical(datasets_check('EigensolverSaveMemory'), .false., eigens%save_mem)
 
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
 
@@ -427,7 +442,7 @@ contains
             call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik, eigens%diff(:, ik))
+              eigens%converged(ik), ik, eigens%diff(:, ik), eigens%save_mem)
           end if
 #if defined(HAVE_ARPACK) 
         case(RS_ARPACK) 
@@ -465,7 +480,7 @@ contains
             call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
             call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik,  eigens%diff(:, ik))
+              eigens%converged(ik), ik,  eigens%diff(:, ik), eigens%save_mem)
           end if         
 #if defined(HAVE_ARPACK) 
        	case(RS_ARPACK) 

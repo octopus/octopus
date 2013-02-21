@@ -64,7 +64,8 @@ module batch_m
     batch_type,                     &
     batch_inv_index,                &
     batch_linear_index,             &
-    batch_pack_size
+    batch_pack_size,                &
+    batch_is_sync
 
   !--------------------------------------------------------------
   type batch_state_t
@@ -291,13 +292,17 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_copy(bin, bout, reference)
+  subroutine batch_copy(bin, bout, reference, pack)
     type(batch_t), target,   intent(in)    :: bin
     type(batch_t),           intent(out)   :: bout
     logical,       optional, intent(in)    :: reference !< If .true. (the default) the copy points to the same memory.
                                                         !! If .false. new memory is allocated.
+    logical,       optional, intent(in)    :: pack      !< If .false. the new batch will not be packed
+                                                        !! If .true. the new batch will be packed
+                                                        !! The default is to do the same as bin.
 
     integer :: ii, np
+    logical :: pack_
 
     PUSH_SUB(batch_copy)
 
@@ -344,7 +349,9 @@ contains
         call zbatch_new(bout, 1, bin%nst, np)
       end if
 
-      if(batch_is_packed(bin)) call batch_pack(bout, copy = .false.)
+      pack_ = batch_is_packed(bin)
+      if(present(pack)) pack_ = pack
+      if(pack_) call batch_pack(bout, copy = .false.)
 
     end if
 
@@ -803,6 +810,15 @@ integer pure function batch_linear_index(this, cind) result(index)
   end if
 
 end function batch_linear_index
+
+! ------------------------------------------------------
+
+logical pure function batch_is_sync(this) result(sync)
+  type(batch_t),     intent(in)    :: this
+
+  sync = .not. this%dirty
+
+end function batch_is_sync
 
 #include "real.F90"
 #include "batch_inc.F90"
