@@ -533,7 +533,7 @@ contains
       dl_rho(:,:,:,:), kxc(:,:,:,:)
     FLOAT, target, allocatable :: fxc(:,:,:), lr_fxc(:,:,:,:,:)
     FLOAT, pointer :: xc(:,:,:)
-    integer :: qi_old, qa_old, mu_old, ierr, iatom, idir, is1, is2, ip
+    integer :: qi_old, qa_old, mu_old
 
     PUSH_SUB(casida_work)
 
@@ -587,44 +587,9 @@ contains
       else
         call xc_get_fxc(sys%ks%xc, mesh, rho, st%d%ispin, fxc)
       endif
-
-      if(cas%forces) then
-        SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
-        kxc = M_ZERO
-        ! not spin polarized so far
-        call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc(:, :, :, :))
-      endif
     end if
 
-    if(cas%forces) then
-      message(1) = "Reading vib_modes density for calculating excited-state forces."
-      call messages_info(1)
-
-      SAFE_ALLOCATE(dl_rho(1:mesh%np, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
-      if (cas%type /= CASIDA_EPS_DIFF) then
-        SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
-      endif
-
-      do iatom = 1, sys%geo%natoms
-        do idir = 1, mesh%sb%dim
-          call drestart_read_lr_rho(dl_rho(:, :, iatom, idir), sys%gr, st%d%nspin, &
-            VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
-
-          if(ierr .ne. 0) then
-            message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
-            call messages_fatal(1)
-          end if
-            
-          ! calc derivatives of eigenvalues here
-
-          if (cas%type /= CASIDA_EPS_DIFF) then
-            forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
-              lr_fxc(ip, is1, is2, iatom, idir) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :, iatom, idir))
-            end forall
-          endif
-        enddo
-      enddo
-    endif
+    if(cas%forces) call casida_forces_init()
 
     xc => fxc
     select case(cas%type)
@@ -962,6 +927,52 @@ contains
 
       POP_SUB(casida_work.load_saved)
     end subroutine load_saved
+
+
+    ! ---------------------------------------------------------
+    subroutine casida_forces_init()
+      
+      integer :: ip, iatom, idir, is1, is2, ierr
+      
+      PUSH_SUB(casida_work.casida_forces_init)
+      
+      if(cas%type /= CASIDA_EPS_DIFF) then
+        SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
+        kxc = M_ZERO
+        ! not spin polarized so far
+        call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc(:, :, :, :))
+      endif
+
+      message(1) = "Reading vib_modes density for calculating excited-state forces."
+      call messages_info(1)
+      
+      SAFE_ALLOCATE(dl_rho(1:mesh%np, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
+      if (cas%type /= CASIDA_EPS_DIFF) then
+        SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
+      endif
+      
+      do iatom = 1, sys%geo%natoms
+        do idir = 1, mesh%sb%dim
+          call drestart_read_lr_rho(dl_rho(:, :, iatom, idir), sys%gr, st%d%nspin, &
+            VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
+          
+          if(ierr .ne. 0) then
+            message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
+            call messages_fatal(1)
+          end if
+          
+          ! calc derivatives of eigenvalues here
+          
+          if (cas%type /= CASIDA_EPS_DIFF) then
+            forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
+              lr_fxc(ip, is1, is2, iatom, idir) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :, iatom, idir))
+            end forall
+          endif
+        enddo
+      enddo
+      
+      POP_SUB(casida_work.casida_forces_init)
+    end subroutine casida_forces_init
 
   end subroutine casida_work
 
