@@ -554,7 +554,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "DOTPV_BATCH_REDUCE")
-    call comm_allreduce(mesh%mpi_grp%comm, dot, aa%nst)
+    call comm_allreduce(mesh%mpi_grp%comm, dot, dim = aa%nst)
     call profiling_out(profcomm)
   end if
 
