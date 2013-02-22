@@ -213,11 +213,11 @@ contains
     !% unoccupied-occupied transitions.
     !% Ref: S Hirata and M Head-Gordon, <i>Chem. Phys. Lett.</i> <b>314</b>, 291 (1999).
     !%Option variational 8
-    !% Second-order constrained variational theory CV(2)-DFT.
+    !% Second-order constrained variational theory CV(2)-DFT. Only for real wavefunctions.
     !% Ref: T Ziegler, M Seth, M Krykunov, J Autschbach, and F Wang,
     !% <i>J. Chem. Phys.</i> <b>130</b>, 154102 (2009).
     !%Option lrtddft_casida 16
-    !% The full Casida method.
+    !% The full Casida method. Only for real wavefunctions.
     !% Ref: C Jamorski, ME Casida, and DR Salahub, <i>J. Chem. Phys.</i> <b>104</b>, 5134 (1996)
     !% and ME Casida, "Time-dependent density functional response theory for molecules,"
     !% in <i>Recent Advances in Density Functional Methods</i>, edited by DE Chong, vol. 1
@@ -229,10 +229,11 @@ contains
       CASIDA_EPS_DIFF + CASIDA_PETERSILKA + CASIDA_CASIDA, theorylevel)
 
     if (states_are_complex(sys%st) .and. &
-      (iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0 .or. iand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
+      (iand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
        .or. iand(theorylevel, CASIDA_CASIDA) /= 0)) then
-      message(1) = "Tamm-Dancoff, variational, and full Casida theory levels do not apply to complex wavefunctions."
+      message(1) = "Variational and full Casida theory levels do not apply to complex wavefunctions."
       call messages_fatal(1, only_root_writes = .true.)
+      ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
     end if
 
     !%Variable CasidaKohnShamStates
