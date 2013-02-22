@@ -220,7 +220,7 @@ contains
 
      
     double precision, allocatable ::  pot_ion(:,:,:) !< pot_ion additional  external potential
-    !that is added to the output
+    !!                that is added to the output
     !!                when the XC parameter ixc/=0 and sumpion=.true.
     !!                When sumpion=.true., it is always provided in the distributed form,
     !!                clearly without the overlapping terms which are needed only for the XC part
@@ -295,15 +295,10 @@ contains
     !!                The array pot_ion to the planes from i3s+i3xcsh to i3s+i3xcsh+n3pi-1
     !!                For global disposition i3s is equal to distributed case with i3xcsh=0.
     integer :: i3s
-    integer, allocatable :: nscatterarr(:,:)
 
     PUSH_SUB(libisf_get_dims)
-    !! Ez da do-a behar, nahikoa da prozesu bakoitzak bere zatiarekin
-    !! deitzen badu. Asko jota gero MPI_Allgather bat egin beharko
-    !! litzateke nscatterarr osartzeko. Cool, Basque comments!
 
     !! Get the dimensions of the cube
-    SAFE_ALLOCATE(nscatterarr(5, 0:mpi_world%size-1))
     call PS_dim4allocation(this%geocode, this%datacode, mpi_world%rank, mpi_world%size, &
          cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), &
          ixc, n3d, n3p, n3pi, i3xcsh, i3s)
