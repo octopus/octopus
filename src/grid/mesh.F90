@@ -189,7 +189,7 @@ contains
       if(ii > 1) write(message(1), '(2a)') trim(message(1)), ','
       write(message(1), '(a,f6.3)') trim(message(1)), units_from_atomic(units_out%length, mesh%spacing(ii))
     end do
-    write(message(1), '(5a,f8.5)') trim(message(1)), ') ', &
+    write(message(1), '(5a,f12.5)') trim(message(1)), ') ', &
          '   volume/point [', trim(units_abbrev(units_out%length**mesh%sb%dim)), '] = ',      &
          units_from_atomic(units_out%length**mesh%sb%dim, mesh%vol_pp(1))
     
