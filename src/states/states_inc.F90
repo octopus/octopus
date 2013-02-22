@@ -17,19 +17,20 @@
 !!
 !! $Id: states_inc.F90 7770 2011-04-26 00:51:17Z dstrubbe $
 
-subroutine X(states_get_state2)(st, mesh, ist, iqn, psi)
-  type(states_t), intent(in)    :: st
-  type(mesh_t),   intent(in)    :: mesh
-  integer,        intent(in)    :: ist       !< current state
-  integer,        intent(in)    :: iqn       !< current k-point
-  R_TYPE,         intent(out)   :: psi(:, :)
+subroutine X(states_get_state2)(st, mesh, ist, iqn, psi, left)
+  type(states_t),    intent(in)    :: st
+  type(mesh_t),      intent(in)    :: mesh
+  integer,           intent(in)    :: ist       !< current state
+  integer,           intent(in)    :: iqn       !< current k-point
+  R_TYPE,            intent(out)   :: psi(:, :)
+  logical, optional, intent (in)   :: left
   
   integer :: idim
 
   PUSH_SUB(X(states_get_state2))
 
   do idim =  1, st%d%dim
-    call X(states_get_state1)(st, mesh, idim, ist, iqn, psi(:, idim))
+    call X(states_get_state1)(st, mesh, idim, ist, iqn, psi(:, idim), left)
   end do
 
   POP_SUB(X(states_get_state2))
@@ -37,36 +38,44 @@ end subroutine X(states_get_state2)
 
 ! ------------------------------------------------------------
 
-subroutine X(states_get_state1)(st, mesh, idim, ist, iqn, psi)
-  type(states_t), intent(in)    :: st
-  type(mesh_t),   intent(in)    :: mesh
-  integer,        intent(in)    :: idim   !< current dimension
-  integer,        intent(in)    :: ist    !< current state
-  integer,        intent(in)    :: iqn    !< current k-point
-  R_TYPE,         intent(out)   :: psi(:)
+subroutine X(states_get_state1)(st, mesh, idim, ist, iqn, psi, left)
+  type(states_t),    intent(in)    :: st
+  type(mesh_t),      intent(in)    :: mesh
+  integer,           intent(in)    :: idim   !< current dimension
+  integer,           intent(in)    :: ist    !< current k-point
+  integer,           intent(in)    :: iqn
+  R_TYPE,            intent(out)   :: psi(:)
+  logical, optional, intent(in)    :: left 
 
   PUSH_SUB(X(states_get_state1))
 
-  call batch_get_state(st%psib(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
+  if (optional_default(left, .false.)) then
+    ASSERT(st%have_left_states)
+    call batch_get_state(st%psibL(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
+  else
+    call batch_get_state(st%psib(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
+  end if
+
 
   POP_SUB(X(states_get_state1))
 end subroutine X(states_get_state1)
 
 ! ------------------------------------------------------------
 
-subroutine X(states_set_state2)(st, mesh, ist, iqn, psi)
-  type(states_t), intent(inout) :: st
-  type(mesh_t),   intent(in)    :: mesh
-  integer,        intent(in)    :: ist        !< current dimension
-  integer,        intent(in)    :: iqn        !< current k-point
-  R_TYPE,         intent(in)    :: psi(:, :)
+subroutine X(states_set_state2)(st, mesh, ist, iqn, psi, left)
+  type(states_t),    intent(inout) :: st
+  type(mesh_t),      intent(in)    :: mesh
+  integer,           intent(in)    :: ist       !< current dimension
+  integer,           intent(in)    :: iqn       !< current k-point
+  R_TYPE,            intent(in)    :: psi(:, :)
+  logical, optional, intent(in)    :: left
   
   integer :: idim
 
   PUSH_SUB(X(states_set_state2))
 
   do idim =  1, st%d%dim
-    call X(states_set_state1)(st, mesh, idim, ist, iqn, psi(:, idim))
+    call X(states_set_state1)(st, mesh, idim, ist, iqn, psi(:, idim), left)
   end do
 
   POP_SUB(X(states_set_state2))
@@ -74,17 +83,23 @@ end subroutine X(states_set_state2)
 
 ! ------------------------------------------------------------
 
-subroutine X(states_set_state1)(st, mesh, idim, ist, iqn, psi)
-  type(states_t), intent(inout) :: st
-  type(mesh_t),   intent(in)    :: mesh
-  integer,        intent(in)    :: idim   !< current dimension
-  integer,        intent(in)    :: ist    !< current state
-  integer,        intent(in)    :: iqn    !< current k-point
-  R_TYPE,         intent(in)    :: psi(:)
+subroutine X(states_set_state1)(st, mesh, idim, ist, iqn, psi, left)
+  type(states_t),    intent(inout) :: st
+  type(mesh_t),      intent(in)    :: mesh
+  integer,           intent(in)    :: idim   !< current dimension
+  integer,           intent(in)    :: ist    !< current state
+  integer,           intent(in)    :: iqn    !< current k-point
+  R_TYPE,            intent(in)    :: psi(:)
+  logical, optional, intent(in)    :: left
 
   PUSH_SUB(X(states_set_state1))
-
-  call batch_set_state(st%psib(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
+  
+  if (optional_default(left, .false.)) then
+    ASSERT(st%have_left_states)
+    call batch_set_state(st%psibL(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
+  else
+    call batch_set_state(st%psib(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
+  end if
   
   POP_SUB(X(states_set_state1))
 end subroutine X(states_set_state1)

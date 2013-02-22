@@ -247,14 +247,18 @@ contains
 
     integer :: iunit, iunit2, iunit_mesh, iunit_states, iunit_geo, iunit_rho
     integer :: err, ik, idir, ist, idim, isp, itot
-    character(len=80) :: filename
-    logical :: lr_wfns_are_associated, should_write
+    character(len=80) :: filename, filename1 
+    logical :: lr_wfns_are_associated, should_write, cmplxscl
     FLOAT   :: kpoint(1:MAX_DIM)
     FLOAT,  allocatable :: dpsi(:)
     CMPLX,  allocatable :: zpsi(:)
     FLOAT, pointer :: rho(:)
+    CMPLX, pointer :: zrho(:), zrho_fine(:)
 
     PUSH_SUB(restart_write)
+
+    cmplxscl = .false.
+    if(associated(st%zeigenval%Im)) cmplxscl = .true.
 
     if(.not. restart_write_files) then
       ierr = 0
@@ -330,10 +334,13 @@ contains
       do ist = 1, st%nst
         do idim = 1, st%d%dim
           write(filename,'(i10.10)') itot
+          if(st%have_left_states) filename1 = 'L'//trim(filename) !cmplxscl
 
           if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
             write(iunit, '(i8,a,i8,a,i8,3a)') ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
-            write(iunit2, '(e21.14,a,e21.14,a)', advance='no') st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | '
+            write(iunit2, '(e21.14,a,e21.14,a)', advance='no') st%occ(ist,ik), ' | ', st%eigenval(ist, ik)
+            if (cmplxscl) write(iunit2, '(1x,e21.14)', advance='no') st%zeigenval%Im(ist, ik)
+            write(iunit2, '(a)', advance='no')  ' | '
             do idir = 1, gr%sb%dim
               write(iunit2, '(e21.14,a)', advance='no') kpoint(idir), ' | '
             enddo
@@ -357,6 +364,10 @@ contains
                 else
                   call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
                   call zrestart_write_function(dir, filename, gr%mesh, zpsi, err)
+                  if(st%have_left_states) then!cmplxscl
+                    call states_get_state(st, gr%mesh, idim, ist, ik, zpsi, left = .true.)
+                    call zrestart_write_function(dir, filename1, gr%mesh, zpsi, err)
+                  end if
                 end if
                 if(err == 0) ierr = ierr + 1
               end if
@@ -388,7 +399,11 @@ contains
       write(iunit_rho,'(a)') '%densities'
     end if
     if(gr%have_fine_mesh) then
-      SAFE_ALLOCATE(rho(1:gr%mesh%np))
+      if(st%cmplxscl%space) then
+        SAFE_ALLOCATE(zrho(1:gr%mesh%np))
+      else
+        SAFE_ALLOCATE(rho(1:gr%mesh%np))
+      end if
     end if
     do isp = 1, st%d%nspin
       if(st%d%nspin==1) then
@@ -400,15 +415,28 @@ contains
         write(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
       end if
       if(gr%have_fine_mesh)then
-        call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, st%rho(:,isp), rho, INJECTION)
-        call drestart_write_function(dir, filename, gr%mesh, rho, err)
+        if(st%cmplxscl%space) then
+          SAFE_ALLOCATE(zrho_fine(1:gr%fine%mesh%np))
+          zrho_fine(:)= st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp)
+          call zmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, zrho_fine, zrho, INJECTION)
+          call zrestart_write_function(dir, filename, gr%mesh, zrho, err)
+          SAFE_DEALLOCATE_P(zrho_fine)
+        else
+          call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, st%rho(:,isp), rho, INJECTION)
+          call drestart_write_function(dir, filename, gr%mesh, rho, err)
+        end if
       else
-        call drestart_write_function(dir, filename, gr%mesh, st%rho(:,isp), err)
+        if(st%cmplxscl%space) then
+          call zrestart_write_function(dir, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), err)
+        else
+          call drestart_write_function(dir, filename, gr%mesh, st%rho(:,isp), err)
+        end if  
       end if
       if(err==0) ierr = ierr + 1
     end do
     if(gr%have_fine_mesh)then
       SAFE_DEALLOCATE_P(rho)
+      SAFE_DEALLOCATE_P(zrho)      
     end if
     if(ierr==st%d%nspin) ierr=0 ! All OK
 
@@ -480,7 +508,7 @@ contains
   !! <0 => Fatal error
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, rdmft, number_read)
+  subroutine restart_read(dir, st, gr, ierr, iter, lr, exact, rdmft, number_read, read_left)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
@@ -490,6 +518,7 @@ contains
     logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions and on the same grid
     logical,    optional, intent(in)    :: rdmft
     integer,    optional, intent(out)   :: number_read(:, :)
+    logical,    optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
 
     integer              :: wfns_file, occ_file, err, ik, ist, idir, idim, int
     integer              :: read_np, read_np_part, read_ierr, ip, xx(1:MAX_DIM), iread, nread
@@ -502,9 +531,9 @@ contains
 
     FLOAT                :: my_occ, flt
     logical              :: read_occ, lr_allocated, grid_changed, grid_reordered
-    logical              :: exact_, integral_occs, rdmft_
+    logical              :: exact_, integral_occs, rdmft_, cmplxscl, read_left_
     FLOAT, allocatable   :: dpsi(:)
-    CMPLX, allocatable   :: zpsi(:)
+    CMPLX, allocatable   :: zpsi(:), zpsiL(:)
     character(len=256), allocatable :: restart_file(:, :, :)
     logical,            allocatable :: restart_file_present(:, :, :)
 
@@ -512,6 +541,13 @@ contains
 
     call profiling_in(prof_read, "RESTART_READ")
 
+    cmplxscl = .false.
+    if(associated(st%zeigenval%Im)) cmplxscl = .true.
+    
+    read_left_ = optional_default(read_left, .false.)
+    if(read_left_) then
+       ASSERT(st%have_left_states)
+    end if
     exact_ = optional_default(exact, .false.)
     rdmft_ = optional_default(rdmft, .false.)
 
@@ -622,6 +658,9 @@ contains
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np))
     else
       SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
+      if(read_left_) then
+        SAFE_ALLOCATE(zpsiL(1:gr%mesh%np))
+      end if
     end if
 
     SAFE_ALLOCATE(restart_file(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
@@ -652,7 +691,12 @@ contains
       call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, line, err)
       if(.not. present(lr)) then ! do not read eigenvalues or occupations when reading linear response
         ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-        read(line, *) my_occ, char, st%eigenval(ist, ik), char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
+        if(.not. cmplxscl) then
+          read(line, *) my_occ, char, st%eigenval(ist, ik), char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
+        else
+          read(line, *) my_occ, char, st%eigenval(ist, ik), st%zeigenval%Im(ist, ik), &
+                        char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
+        end if
         if(read_occ) then
           st%occ(ist, ik) = my_occ
           integral_occs = integral_occs .and. &
@@ -701,8 +745,10 @@ contains
           else
             if (.not. grid_changed) then
               call zrestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
+              if(read_left_) call zrestart_read_function(dir, 'L'//restart_file(idim, ist, ik), gr%mesh, zpsiL, err)  
             else
               call zrestart_read_function(dir, restart_file(idim, ist, ik), gr%mesh, zpsi, err, map)
+              if(read_left_) call zrestart_read_function(dir, 'L'//restart_file(idim, ist, ik), gr%mesh, zpsiL, err, map) 
             end if
           end if
 
@@ -715,6 +761,13 @@ contains
           else
             if(.not. present(lr)) then
               call states_set_state(st, gr%mesh, idim, ist, ik, zpsi)
+              if(st%have_left_states) then
+                if(read_left_) then
+                  call states_set_state(st, gr%mesh, idim, ist, ik, zpsiL, left = .true.)
+                else
+                  call states_set_state(st, gr%mesh, idim, ist, ik, zpsi, left = .true.)
+                end if
+              end if  
             else
               call lalg_copy(gr%mesh%np, zpsi, lr%zdl_psi(:, idim, ist, ik))
             end if
@@ -738,6 +791,7 @@ contains
 
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(zpsiL)
 
     if(mpi_grp_is_root(mpi_world)) then
       write(stdout, '(1x)')

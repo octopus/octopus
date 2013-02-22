@@ -209,7 +209,7 @@ contains
   !! \phi(x) = (e^x - 1)/x
   !! \f]
   ! ---------------------------------------------------------
-  subroutine exponential_apply(te, der, hm, zpsi, ist, ik, deltat, time, order, vmagnus, imag_time)
+  subroutine exponential_apply(te, der, hm, zpsi, ist, ik, deltat, time, order, vmagnus, imag_time, Imtime, Imdeltat)
     type(exponential_t), intent(inout) :: te
     type(derivatives_t), intent(in)    :: der
     type(hamiltonian_t), intent(in)    :: hm
@@ -221,6 +221,8 @@ contains
     integer, optional,   intent(inout) :: order
     FLOAT,   optional,   intent(in)    :: vmagnus(der%mesh%np, hm%d%nspin, 2)
     logical, optional,   intent(in)    :: imag_time
+    FLOAT, optional,     intent(in)    :: Imtime   ! Imaginary part of the time - needed for cmplxscl%time
+    FLOAT, optional,     intent(in)    :: Imdeltat ! also needed for cmplxscl%time
 
     CMPLX   :: timestep
     logical :: apply_magnus
@@ -228,6 +230,18 @@ contains
 
     PUSH_SUB(exponential_apply)
     call profiling_in(exp_prof, "EXPONENTIAL")
+
+    
+    if(present(Imtime)) then
+      ASSERT(present(Imdeltat)) 
+    end if
+    
+    ! In order to make things clear is better not to mix the two
+    ! even if imag_time = .true. is a particular case of the
+    ! general complex time with time = 0 and Imtime = t 
+    if (present(imag_time)) then
+      ASSERT(.not. present(Imtime)) 
+    end if
 
     ! The only method that is currently taking care of the presence of an inhomogeneous
     ! term is the Lanczos expansion.
@@ -242,6 +256,7 @@ contains
     ! If we want to use imaginary time, timestep = i*deltat
     ! Otherwise, timestep is simply equal to deltat.
     timestep = TOCMPLX(deltat, M_ZERO)
+
     if(present(imag_time)) then
       if(imag_time) then
         select case(te%exp_method)
@@ -249,7 +264,7 @@ contains
             timestep = M_zI*deltat
           case default
             write(message(1), '(a)') &
-              'Imaginary time evolution can only be performed with the Lanczos'
+              'Imaginary  time evolution can only be performed with the Lanczos'
             write(message(2), '(a)') &
               'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
             write(message(3), '(a)') &
@@ -257,6 +272,21 @@ contains
             call messages_fatal(3)
         end select
       end if
+    end if
+
+    if(present(Imtime)) then
+      select case(te%exp_method)
+        case(EXP_TAYLOR, EXP_LANCZOS)
+          timestep = timestep + M_zI*Imdeltat
+        case default
+          write(message(1), '(a)') &
+            'Complex time evolution can only be performed with the Lanczos'
+          write(message(2), '(a)') &
+            'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
+          write(message(3), '(a)') &
+            'Taylor expansion ("TDExponentialMethod = taylor") method.'
+          call messages_fatal(3)
+      end select
     end if
 
     select case(te%exp_method)
@@ -282,8 +312,12 @@ contains
 
       if(apply_magnus) then
         call zmagnus(hm, der, psi, oppsi, ik, vmagnus)
-      else
-        call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik, time)
+        else
+          if(present(Imtime)) then
+            call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik, time, Imtime = Imtime)
+          else 
+            call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik, time)
+          end if
       end if
 
       POP_SUB(exponential_apply.operate)
@@ -544,7 +578,7 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, der, hm, psib, ik, deltat, time)
+  subroutine exponential_apply_batch(te, der, hm, psib, ik, deltat, time, Imdeltat, Imtime)
     type(exponential_t),   intent(inout) :: te
     type(derivatives_t),   intent(inout) :: der
     type(hamiltonian_t),   intent(inout) :: hm
@@ -552,13 +586,20 @@ contains
     type(batch_t), target, intent(inout) :: psib
     FLOAT,                 intent(in)    :: deltat
     FLOAT,                 intent(in)    :: time
+    FLOAT, optional,     intent(in)    :: Imdeltat
+    FLOAT, optional,     intent(in)    :: Imtime
     
     integer :: ii, ist
     CMPLX, pointer :: psi(:, :)
+    logical :: cmplxscl
 
     PUSH_SUB(exponential_apply_batch)
 
     ASSERT(batch_type(psib) == TYPE_CMPLX)
+
+    cmplxscl = .false.
+    if(present(Imdeltat) .and. present(Imtime)) cmplxscl = .true. 
+  
 
     if (te%exp_method == EXP_TAYLOR) then 
       call taylor_series_batch
@@ -567,8 +608,12 @@ contains
       do ii = 1, psib%nst
         psi  => psib%states(ii)%zpsi
         ist  =  psib%states(ii)%ist
-        
-        call exponential_apply(te, der, hm, psi, ist, ik, deltat, time)
+
+        if (cmplxscl) then
+          call exponential_apply(te, der, hm, psi, ist, ik, deltat, time, Imdeltat = Imdeltat, Imtime =Imtime )
+        else 
+          call exponential_apply(te, der, hm, psi, ist, ik, deltat, time)
+        end if
       end do
 
     end if
@@ -610,16 +655,24 @@ contains
       call batch_copy_data(der%mesh%np, psib, psi1b)
 
       do iter = 1, te%exp_order
-        zfact = zfact*(-M_zI*deltat)/iter
-        zfact_is_real = .not. zfact_is_real
-
+        if(cmplxscl) then
+          zfact = zfact*(-M_zI*(deltat + M_zI * Imdeltat))/iter
+          zfact_is_real = .false.
+        else
+          zfact = zfact*(-M_zI*deltat)/iter
+          zfact_is_real = .not. zfact_is_real
+        end if
         ! FIXME: need a test here for runaway exponential, e.g. for too large dt.
         !  in runaway case the problem is really hard to trace back: the positions
         !  go haywire on the first step of dynamics (often NaN) and with debugging options
         !  the code stops in ZAXPY below without saying why.
 
-        call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, time)
-
+        if(cmplxscl) then
+          call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, time, Imtime)
+        else
+          call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, time)
+        end if
+        
         if(zfact_is_real) then
           call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
         else

@@ -42,6 +42,7 @@ module smear_m
     smear_copy,                       &
     smear_find_fermi_energy,          &
     smear_fill_occupations,           &
+    smear_occupy_states_by_ordering,  &
     smear_calc_entropy,               &
     smear_delta_function,             &
     smear_step_function,              &
@@ -166,6 +167,28 @@ contains
     POP_SUB(smear_copy)
   end subroutine smear_copy
 
+  subroutine smear_occupy_states_by_ordering(this, eigenvalues, occupations, &
+    qtot, nik, nst, kweights, Imeigenvalues)
+    type(smear_t),   intent(inout) :: this
+    FLOAT,           intent(in)    :: eigenvalues(:,:)
+    FLOAT,           intent(inout) :: occupations(:,:)
+    FLOAT,           intent(in)    :: qtot, kweights(:)
+    integer,         intent(in)    :: nik, nst
+    FLOAT, optional, intent(in)    :: Imeigenvalues(:,:)    
+    
+    integer :: ii, ist, nelectrons
+
+    nelectrons = qtot
+    occupations(:, 1) = 0
+
+    do ii=1, nelectrons
+      ist = 1 + (ii - 1) / 2
+      occupations(ist, 1) = occupations(ist, 1) + 1
+      this%e_fermi = eigenvalues(ist, 1)
+    end do
+    
+  end subroutine smear_occupy_states_by_ordering
+
 
   !--------------------------------------------------
   subroutine smear_find_fermi_energy(this, eigenvalues, occupations, &
@@ -242,11 +265,13 @@ contains
         end do
       end do
       
-      if (cmplxscl) then
-        call sort(eigenval_list, Imeigenval_list, reorder)
-      else
+      !if (cmplxscl) then ! already sorted!
+         ! We shall only bother to implement gamma-point stuff
+         ! with complex scaling
+        !call sort(eigenval_list, Imeigenval_list, reorder)
+      !else
         call sort(eigenval_list, reorder)
-      end if
+      !end if
       
       do iter = 1, nst * nik
         xx = kweights(k_list(reorder(iter)))
@@ -337,22 +362,22 @@ contains
     if(this%method == SMEAR_FIXED_OCC) then
       ! do nothing
     else if(this%method == SMEAR_SEMICONDUCTOR) then
-      if(cmplxscl) then ! fill states with Im(E_F) <= Im(e) <= 0 and Re(e) <= Re(E_F)
-        do ik = 1, nik
-          do ist = 1, nst
-            xx = eigenvalues(ist, ik) - this%e_fermi
-            ixx = Imeigenvalues(ist,ik) - this%Ime_fermi
-            if(xx < M_ZERO .and. (ixx > M_ZERO .and. Imeigenvalues(ist,ik) <= M_ZERO .or. &
-                abs(Imeigenvalues(ist,ik)) < CNST(1E-6)) ) then
-              occupations(ist, ik) = this%el_per_state
-            else if(xx == M_ZERO .and. ixx == M_ZERO ) then 
-              occupations(ist, ik) = this%ef_occ * this%el_per_state
-            else
-              occupations(ist, ik) = M_ZERO
-            end if
-          end do
-        end do
-      else
+      !if(cmplxscl) then ! fill states with Im(E_F) <= Im(e) <= 0 and Re(e) <= Re(E_F)
+      !  do ik = 1, nik
+      !    do ist = 1, nst
+      !      xx = eigenvalues(ist, ik) - this%e_fermi
+      !      ixx = Imeigenvalues(ist,ik) - this%Ime_fermi
+      !      if(xx < M_ZERO .and. (ixx > M_ZERO .and. Imeigenvalues(ist,ik) <= M_ZERO .or. &
+      !          abs(Imeigenvalues(ist,ik)) < CNST(1E-6)) ) then
+      !        occupations(ist, ik) = this%el_per_state
+      !      else if(xx == M_ZERO .and. ixx == M_ZERO ) then 
+      !        occupations(ist, ik) = this%ef_occ * this%el_per_state
+      !      else
+      !        occupations(ist, ik) = M_ZERO
+      !      end if
+      !    end do
+      !  end do
+      !else
 
         ASSERT(this%fermi_count > 0 .and. this%fermi_count <= nik*nst)
 
@@ -371,7 +396,7 @@ contains
                         
           end do
         end do
-      end if
+      !end if
 
     else 
       dsmear = max(CNST(1e-14), this%dsmear)

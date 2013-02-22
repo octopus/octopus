@@ -133,6 +133,12 @@
                 call states_get_state(st, gr%mesh, idim, ist, ik, ztmp)
                 call zio_function_output(outp%how, dir, fname, gr%mesh, ztmp, &
                   fn_unit, ierr, is_tmp = .false., geo = geo)
+                  if(st%have_left_states) then
+                    fname = 'L'// trim(fname)
+                    call states_get_state(st, gr%mesh, idim, ist, ik, ztmp, left = .true.)
+                    call zio_function_output(outp%how, dir, fname, gr%mesh, ztmp, &
+                      fn_unit, ierr, is_tmp = .false., geo = geo)                    
+                  end if
               end if
             end do
           end do

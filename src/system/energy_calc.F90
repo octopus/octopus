@@ -73,7 +73,7 @@ contains
 
     PUSH_SUB(energy_calc_total)
 
-    cmplxscl = hm%cmplxscl
+    cmplxscl = hm%cmplxscl%space
     
     full_ = .false.
     if(present(full)) full_ = full
@@ -91,16 +91,16 @@ contains
         hm%energy%extern   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
         evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       else
-        etmp  = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC, cproduct = hm%cmplxscl)
+        etmp  = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC, cproduct = hm%cmplxscl%space)
         hm%energy%kinetic   = real(etmp)
         hm%energy%Imkinetic = aimag(etmp)
          
         etmp  = zenergy_calc_electronic(hm, gr%der, st, &
-          terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL, cproduct = hm%cmplxscl)
+          terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL, cproduct = hm%cmplxscl%space)
         hm%energy%extern   =  real(etmp)
         hm%energy%Imextern =  aimag(etmp)
         
-        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA, cproduct = hm%cmplxscl)
+        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA, cproduct = hm%cmplxscl%space)
         
         evxctau   = real(etmp)
         Imevxctau = aimag(etmp)

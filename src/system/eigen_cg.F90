@@ -83,9 +83,9 @@ contains
     h_rr=M_z0
     psi=M_z0
 
-    kinetic_phase = exp(-M_TWO * M_zI * hm%cmplxscl_th)
+    kinetic_phase = exp(-M_TWO * M_zI * hm%cmplxscl%theta)
     
-    print *,"theta",hm%cmplxscl_th
+    print *,"theta",hm%cmplxscl%theta
     
     spacingsquared = (gr%mesh%spacing(1) * gr%mesh%spacing(1))
 

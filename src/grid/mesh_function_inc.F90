@@ -715,17 +715,22 @@ end subroutine X(mf_put_radial_spline)
 !!   multipole(6, is) = Integral [ f * Y_{2, -1} ].
 !! And so on.
 !! -----------------------------------------------------------------------------
-subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
-  type(mesh_t),   intent(in)  :: mesh
-  R_TYPE,         intent(in)  :: ff(:)
-  integer,        intent(in)  :: lmax
-  R_TYPE,         intent(out) :: multipole(:) !< ((lmax + 1)**2)
+subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
+  type(mesh_t),      intent(in)  :: mesh
+  R_TYPE,            intent(in)  :: ff(:)
+  integer,           intent(in)  :: lmax
+  R_TYPE,            intent(out) :: multipole(:) !< ((lmax + 1)**2)
+  FLOAT, optional,   intent(in)  :: cmplxscl_th !< the space complex scaling angle cmplxscl%theta 
 
   integer :: idim, ip, ll, lm, add_lm
   FLOAT   :: xx(MAX_DIM), rr, ylm
   R_TYPE, allocatable :: ff2(:)
+  logical :: cmplxscl
 
   PUSH_SUB(X(mf_multipoles))
+  cmplxscl = .false.
+  if(present(cmplxscl_th)) cmplxscl = .true.
+
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
@@ -741,19 +746,38 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole)
     end do
   end if
 
-  if(lmax>1) then
-    add_lm = 5
-    do ll = 2, lmax
-      do lm = -ll, ll
-        do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, coords=xx)
-          call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
-          ff2(ip) = ff(ip) * ylm * rr**ll
+  if(.not. cmplxscl) then
+    if(lmax>1) then
+      add_lm = 5
+      do ll = 2, lmax
+        do lm = -ll, ll
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, rr, coords=xx)
+            call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
+            ff2(ip) = ff(ip) * ylm * rr**ll
+          end do
+          multipole(add_lm) = X(mf_integrate)(mesh, ff2)
+          add_lm = add_lm + 1
         end do
-        multipole(add_lm) = X(mf_integrate)(mesh, ff2)
-        add_lm = add_lm + 1
       end do
-    end do
+    end if
+  else
+#ifdef R_TCOMPLEX    
+    if(lmax>1) then
+      add_lm = 5
+      do ll = 2, lmax
+        do lm = -ll, ll
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, rr, coords=xx)
+            call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
+            ff2(ip) = ff(ip) * ylm * rr**ll * exp(M_zI * cmplxscl_th * ll) 
+          end do
+          multipole(add_lm) = X(mf_integrate)(mesh, ff2)
+          add_lm = add_lm + 1
+        end do
+      end do
+    end if
+#endif    
   end if
 
   SAFE_DEALLOCATE_A(ff2)

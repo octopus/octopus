@@ -1,0 +1,36 @@
+CalculationMode = gs
+
+ExperimentalFeatures = yes
+ComplexScaling = space
+
+ComplexScalingTheta = 0.4
+
+Dimensions = 1
+ForceComplex = true # arpack solver works only if ForceComplex
+BoxShape = sphere
+fromScratch = yes
+Spacing = 0.1
+Radius = 6.5
+ExtraStates = 8
+XCFunctional=lda_xc_cmplx
+PoissonSolver=direct_sum
+
+# recommended 2 * nstates + 1 or more
+EigenSolverArnoldiVectors = 50
+
+TheoryLevel = DFT
+
+Eigensolver = arpack
+
+eith = exp(i * ComplexScalingTheta)
+
+%Species
+ 'HARMONIC' | 1 | spec_user_defined | 2 | "2*(r*eith)^2"
+%
+
+%Coordinates
+ 'HARMONIC' | 0
+%
+
+#Output = wfs + density + potential
+#OutputHow = axis_x + axis_y + axis_z

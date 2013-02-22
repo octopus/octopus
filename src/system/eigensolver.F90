@@ -23,6 +23,7 @@ module eigensolver_m
   use batch_m
   use datasets_m
   use derivatives_m
+  use eigen_arpack_m
   use eigen_cg_m
   use eigen_lobpcg_m
   use eigen_rmmdiis_m
@@ -67,6 +68,7 @@ module eigensolver_m
     FLOAT   :: tolerance
     integer :: es_maxiter
 
+    type(eigen_arpack_t) :: arpack !< arpack solver !!!
     integer :: arnoldi_vectors
     FLOAT   :: imag_time
 
@@ -106,6 +108,7 @@ contains
     type(states_t),      intent(in)    :: st
 
     integer :: default_iter, default_es
+    FLOAT   :: default_tol
     real(8) :: mem
 
     PUSH_SUB(eigensolver_init)
@@ -183,6 +186,7 @@ contains
     call parse_logical(datasets_check('EigensolverSubspaceDiag'), .true., eigens%subspace_diag)
 
     default_iter = 25
+    default_tol = CNST(1e-6)
 
     select case(eigens%es_type)
     case(RS_CG_NEW)
@@ -258,6 +262,15 @@ contains
         write(message(2), '(a)') 'Please provide a different Eigensolver.' 
         call messages_fatal(2) 
       end if 
+
+      call arpack_init(eigens%arpack, gr, st%nst)
+
+      !Some default values 
+      eigens%subspace_diag = .false. ! no need of subspace diagonalization in this case
+      default_iter = 500  ! empirical value based upon experience
+      default_tol = M_ZERO ! default is machine precision   
+
+
 #endif 
 
     case default
@@ -277,9 +290,10 @@ contains
     !%Default 1.0e-6
     !%Section SCF::Eigensolver
     !%Description
-    !% This is the tolerance for the eigenvectors. The default is 1e-6.
+    !% This is the tolerance for the eigenvectors. The default is 1e-6
+    !% except for the ARPACK solver for which it is 0.
     !%End
-    call parse_float(datasets_check('EigensolverTolerance'), CNST(1.0e-6), eigens%tolerance)
+    call parse_float(datasets_check('EigensolverTolerance'), default_tol, eigens%tolerance)
 
     !%Variable EigensolverMaxIter
     !%Type integer
@@ -444,9 +458,9 @@ contains
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik, eigens%diff(:, ik), eigens%save_mem)
           end if
-#if defined(HAVE_ARPACK) 
-        case(RS_ARPACK) 
-          call deigen_solver_arpack(gr, st, hm, eigens%tolerance, maxiter, eigens%arnoldi_vectors, & 
+#if defined(HAVE_ARPACK)
+        case(RS_ARPACK)
+          call deigen_solver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, maxiter, & 
             eigens%converged(ik), ik, eigens%diff(:,ik)) 
 #endif 
         end select
@@ -484,7 +498,7 @@ contains
           end if         
 #if defined(HAVE_ARPACK) 
        	case(RS_ARPACK) 
-          call zeigen_solver_arpack(gr, st, hm, eigens%tolerance, maxiter, eigens%arnoldi_vectors, & 
+          call zeigen_solver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, maxiter, & 
             eigens%converged(ik), ik, eigens%diff(:,ik)) 
 #endif 
         end select
@@ -512,8 +526,8 @@ contains
     ! If we complex scale H the eigenstates need to be orthonormalized with respect to the c-product.
     ! Moreover the eigenvalues ordering need to be imposed as there is no eigensolver 
     ! supporting this ordering (yet).
-    if(hm%cmplxscl) then !cmplxscl
-      call states_sort_complex(gr%mesh, st, eigens%diff )
+    if(st%cmplxscl%space) then
+      call states_sort_complex(gr%mesh, st, eigens%diff)
       call states_orthogonalize_cproduct(st, gr%mesh)
     end if
     
@@ -598,14 +612,14 @@ contains
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
 
-#if defined(HAVE_ARPACK) 
-#include "undef.F90" 
-#include "real.F90" 
-#include "eigen_arpack_inc.F90" 
-#include "undef.F90" 
-#include "complex.F90" 
-#include "eigen_arpack_inc.F90" 
-#endif 
+!#if defined(HAVE_ARPACK) 
+!#include "undef.F90" 
+!#include "real.F90" 
+!#include "eigen_arpack_inc.F90" 
+!#include "undef.F90" 
+!#include "complex.F90" 
+!#include "eigen_arpack_inc.F90" 
+!#endif 
 
 end module eigensolver_m
 

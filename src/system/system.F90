@@ -214,7 +214,7 @@ contains
     calc_eigenval_ = optional_default(calc_eigenval, .true.)
 
     call states_fermi(sys%st, sys%gr%mesh)
-    if(hm%cmplxscl) then
+    if(hm%cmplxscl%space) then
       call density_calc(sys%st, sys%gr, sys%st%zrho%Re, sys%st%zrho%Im)
     else
       call density_calc(sys%st, sys%gr, sys%st%rho)

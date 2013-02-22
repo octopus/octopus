@@ -31,8 +31,11 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
   integer :: ik, minst, maxst, ib
   type(batch_t) :: hpsib
   type(profile_t), save :: prof
+  logical :: cmplxscl
 
   PUSH_SUB(X(calculate_eigenvalues))
+  
+  cmplxscl = hm%cmplxscl%space
 
   if(hm%theory_level == CLASSICAL) then
     st%eigenval = M_ZERO
@@ -67,19 +70,30 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_pack(st%psib(ib, ik))
+        if(st%have_left_states) call batch_pack(st%psibL(ib, ik))
         call batch_pack(hpsib, copy = .false.)
       end if
 
-      call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik, time)
-      call X(mesh_batch_dotp_vector)(der%mesh, st%psib(ib, ik), hpsib, eigen(minst:maxst))
-
-      if(hamiltonian_apply_packed(hm, der%mesh)) call batch_unpack(st%psib(ib, ik), copy = .false.)
       
+      call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik, time)
+      if(st%have_left_states) then
+        call X(mesh_batch_dotp_vector)(der%mesh, st%psibL(ib, ik), hpsib, eigen(minst:maxst), cproduct = cmplxscl)
+      else
+        call X(mesh_batch_dotp_vector)(der%mesh, st%psib(ib, ik), hpsib, eigen(minst:maxst), cproduct = cmplxscl)        
+      end if
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
+        call batch_unpack(st%psib(ib, ik), copy = .false.)
+        if(st%have_left_states) call batch_unpack(st%psibL(ib, ik), copy = .false.)
+      end if
+
       call batch_end(hpsib, copy = .false.)
 
     end do
     
     st%eigenval(st%st_start:st%st_end, ik) = real(eigen(st%st_start:st%st_end), REAL_PRECISION)
+#ifdef R_TCOMPLEX    
+    if(cmplxscl) st%zeigenval%Im(st%st_start:st%st_end, ik) = aimag(eigen(st%st_start:st%st_end)) ! not REAL_PRECISION?
+#endif
 
   end do
 
@@ -119,14 +133,17 @@ R_TYPE function X(energy_calc_electronic)(hm, der, st, terms, cproduct) result(e
       call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
 
       call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik, terms = terms)
-      call X(mesh_batch_dotp_vector)(der%mesh, st%psib(ib, ik), hpsib, tt(minst:maxst, ik), cproduct = cproduct_)
-
+      if(st%have_left_states) then
+        call X(mesh_batch_dotp_vector)(der%mesh, st%psibL(ib, ik), hpsib, tt(minst:maxst, ik), cproduct = cproduct_)
+      else
+        call X(mesh_batch_dotp_vector)(der%mesh, st%psib(ib, ik), hpsib, tt(minst:maxst, ik), cproduct = cproduct_)
+      end if
       call batch_end(hpsib, copy = .false.)
 
     end do
   end do
 
-  if(hm%cmplxscl) then
+  if(hm%cmplxscl%space) then
 #ifdef R_TCOMPLEX
     energy = zstates_eigenvalues_sum(st, tt)
 #else

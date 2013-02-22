@@ -458,6 +458,8 @@
 !% LDA complex scaled exchange-correlation.
 !%Option rdmft_xc_m               601
 !% RDMFT Mueller functional
+!%Option xc_half_hartree          917
+!% Half-Hartree exchange for two electrons (supports complex scaling)
 !%Option none                       0
 !% Exchange and correlation set to zero.
 !%End

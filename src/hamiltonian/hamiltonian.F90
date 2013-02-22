@@ -26,6 +26,7 @@ module hamiltonian_m
 #ifdef HAVE_OPENCL
   use cl
 #endif  
+  use cmplxscl_m
   use datasets_m
   use derivatives_m
   use energy_m
@@ -168,12 +169,12 @@ module hamiltonian_m
     CMPLX, pointer :: phase(:, :)
 
     FLOAT :: current_time
+    FLOAT :: Imcurrent_time  !< needed when cmplxscl%time = .true.
     logical :: apply_packed  !< This is initialized by the StatesPack variable.
     
     !> If we use a complex-scaled Hamiltonian by complexifying the spatial coordinate with 
-    !> the transformation r -> r*exp(i*theta)  
-    FLOAT                    :: cmplxscl_th !< the complex scaling angle
-    logical                  :: cmplxscl
+    !> the transformation r -> r*exp(i*theta)      
+    type(cmplxscl_t) :: cmplxscl  !< complex scaling parameters
     
   end type hamiltonian_t
 
@@ -232,24 +233,8 @@ contains
     ! initialize variables
     nullify(hm%oct_fxc)
 
-    !%Variable ComplexScalingAngle
-    !%Type float 
-    !%Default 0.3
-    !%Section Hamiltonian
-    !%Description
-    !% The complex scaling parameter theta in DFRT.
-    !% It should be bound to 0 <= theta < pi/4. 
-    !%End
-    call parse_float(datasets_check('ComplexScalingAngle'), CNST(0.3), hm%cmplxscl_th)
-    if(hm%cmplxscl_th < M_ZERO .or. hm%cmplxscl_th > M_PI/CNST(4.0)) call input_error('ComplexScalingAngle')
-    hm%cmplxscl=states_dim%cmplxscl
-    if (states_dim%cmplxscl) then
-      call messages_print_stress(stdout, "Complex Scaling")
-      write(message(1), '(a,f12.3)') 'Complex scaling angle theta = ', hm%cmplxscl_th
-      call messages_info(1)
-      call messages_print_stress(stdout)
-    end if
-
+    !cmplxscl: copy cmplxscl initialized in states.F90
+    call cmplxscl_copy(st%cmplxscl, hm%cmplxscl)
 
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
@@ -280,7 +265,7 @@ contains
 
     nullify(hm%Imvhxc, hm%Imvhartree, hm%Imvxc, hm%Imvtau)
 
-    if(hm%cmplxscl) then
+    if(hm%cmplxscl%space) then
       
       SAFE_ALLOCATE(hm%Imvhxc(1:gr%mesh%np, 1:hm%d%nspin))
       hm%Imvhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
@@ -302,7 +287,7 @@ contains
     end if
 
     !Initialize external potential
-    call epot_init(hm%ep, gr, geo, hm%d%ispin, hm%d%nik, hm%cmplxscl)
+    call epot_init(hm%ep, gr, geo, hm%d%ispin, hm%d%nik, hm%cmplxscl%space)
 
     nullify(hm%vberry)
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb)) then
@@ -753,6 +738,8 @@ contains
       SAFE_DEALLOCATE_P(hm%hf_st)
     endif
 
+
+
     SAFE_DEALLOCATE_P(hm%energy)
 
     POP_SUB(hamiltonian_end)
@@ -767,7 +754,7 @@ contains
     PUSH_SUB(hamiltonian_hermitian)
     hamiltonian_hermitian = .not.((hm%ab .eq. IMAGINARY_ABSORBING) .or. &
                                   hamiltonian_oct_exchange(hm)     .or. &
-                                  hm%d%cmplxscl)
+                                  hm%cmplxscl%space)
 
     POP_SUB(hamiltonian_hermitian)
   end function hamiltonian_hermitian
@@ -912,10 +899,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_update(this, mesh, time)
+  subroutine hamiltonian_update(this, mesh, time, Imtime)
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     FLOAT, optional,     intent(in)    :: time
+    FLOAT, optional,     intent(in)    :: Imtime
 
     integer :: ispin, ip, idir, iatom, ilaser
     type(profile_t), save :: prof
@@ -926,17 +914,19 @@ contains
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
 
     this%current_time = M_ZERO
+    this%Imcurrent_time = M_ZERO !cmplxscl
     if(present(time)) this%current_time = time
+    if(present(Imtime)) this%Imcurrent_time = Imtime !cmplxscl
 
     ! set everything to zero
     call hamiltonian_base_clear(this%hm_base)
 
     ! the xc, hartree and external potentials
-    call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, this%cmplxscl)
+    call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, this%cmplxscl%space)
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
-        if(this%cmplxscl) then
+        if(this%cmplxscl%space) then
           forall (ip = 1:mesh%np) this%hm_base%Impotential(ip, ispin) = this%Imvhxc(ip, ispin) +  this%ep%Imvpsl(ip)
         end if
       else
@@ -954,7 +944,8 @@ contains
             call laser_potential(this%ep%lasers(ilaser), mesh,  this%hm_base%potential(:, ispin), time)
           end do
         case(E_FIELD_MAGNETIC)
-          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL + FIELD_UNIFORM_MAGNETIC_FIELD, this%cmplxscl)
+          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL + FIELD_UNIFORM_MAGNETIC_FIELD, &
+            this%cmplxscl%space)
           ! get the vector potential
           SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
           vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
@@ -966,7 +957,7 @@ contains
           call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time)
           SAFE_DEALLOCATE_A(vp)
         case(E_FIELD_VECTOR_POTENTIAL)
-          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl)
+          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
           ! get the uniform vector potential associated to a magnetic field
           aa = M_ZERO
           call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time)
@@ -978,14 +969,14 @@ contains
 
     ! the gauge field
     if(gauge_field_is_applied(this%ep%gfield)) then
-      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl)
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
       this%hm_base%uniform_vector_potential = &
         this%hm_base%uniform_vector_potential + gauge_field_get_vec_pot(this%ep%gfield)/P_c
     end if
 
     ! the vector potential of a static magnetic field
     if(associated(this%ep%a_static)) then
-      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, this%cmplxscl)
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, this%cmplxscl%space)
       forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
         this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
       end forall
@@ -993,7 +984,7 @@ contains
 
     ! and the static magnetic field
     if(associated(this%ep%b_field)) then
-      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, this%cmplxscl)
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, this%cmplxscl%space)
       forall (idir = 1:3)
         this%hm_base%uniform_magnetic_field(idir) = this%hm_base%uniform_magnetic_field(idir) + this%ep%b_field(idir)
       end forall
@@ -1081,7 +1072,7 @@ contains
       this%ep%vpsl_lead(1:np, RIGHT) = this%lead(RIGHT)%v0(1:np)
     end if
 
-    call epot_generate(this%ep, gr, geo, st, this%cmplxscl)
+    call epot_generate(this%ep, gr, geo, st, this%cmplxscl%space)
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep, geo)
     call hamiltonian_update(this, gr%mesh, time)
 

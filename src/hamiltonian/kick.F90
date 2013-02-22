@@ -564,17 +564,22 @@ contains
 
   ! ---------------------------------------------------------
   ! 
-  subroutine kick_function_get(gr, kick, kick_function)
+  subroutine kick_function_get(gr, kick, kick_function, theta)
     type(grid_t),         intent(in)    :: gr
     type(kick_t),         intent(in)    :: kick
     CMPLX,                intent(out)   :: kick_function(:)
+    FLOAT, optional,      intent(in)    :: theta
 
     integer :: ip, im
     FLOAT   :: xx(MAX_DIM)
     FLOAT   :: rkick, ikick, gylm(1:MAX_DIM), rr, ylm
+    logical :: cmplxscl
 
     PUSH_SUB(kick_function_get)
 
+    cmplxscl = .false.
+    if(present(theta)) cmplxscl = .true.
+    
     if(abs(kick%qlength) > M_EPSILON) then ! q-vector is set
 
       select case (kick%qkick_mode)
@@ -638,6 +643,9 @@ contains
           kick_function(ip) = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim) * &
             kick%pol(1:gr%mesh%sb%dim, kick%pol_dir))
         end forall
+        if(cmplxscl) then
+          kick_function(:) = kick_function(:) * exp(M_zI * theta)
+        end if
       end if
     end if
 
@@ -648,25 +656,35 @@ contains
   ! ---------------------------------------------------------
   !> Applies the delta-function electric field \f$ E(t) = E_0 \Delta(t) \f$
   !! where \f$ E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
-  subroutine kick_apply(gr, st, ions, geo, kick)
+  subroutine kick_apply(gr, st, ions, geo, kick, theta)
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(ion_dynamics_t), intent(in)    :: ions
     type(geometry_t),     intent(inout) :: geo
     type(kick_t),         intent(in)    :: kick
+    FLOAT, optional,      intent(in)    :: theta
 
     integer :: iqn, ist, idim, ip, ispin, iatom
     CMPLX   :: cc(2), kick_value
     CMPLX, allocatable :: kick_function(:), psi(:, :)
+    logical :: cmplxscl
 
     PUSH_SUB(kick_apply)
 
+    cmplxscl = .false.
+    if(present(theta)) cmplxscl = .true.
+    
     ! The wavefunctions at time delta t read
     ! psi(delta t) = psi(t) exp(i k x)
     delta_strength: if(kick%delta_strength .ne. M_ZERO) then
 
         SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
-        call kick_function_get(gr, kick, kick_function)
+        
+        if(.not. cmplxscl) then
+          call kick_function_get(gr, kick, kick_function)
+        else
+          call kick_function_get(gr, kick, kick_function, theta)          
+        end if
 
         write(message(1),'(a,f11.6)') 'Info: Applying delta kick: k = ', kick%delta_strength
         select case (kick%function_mode)

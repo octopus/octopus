@@ -124,6 +124,7 @@
 #  define REAL_PRECISION 4
 #  define FLOAT     	 real(4)
 #  define MPI_FLOAT 	 MPI_REAL
+#  define MPI_2FLOAT     MPI_2REAL
 #  define CMPLX     	 complex(4)
 #  define MPI_CMPLX 	 MPI_COMPLEX
 #  define PREC(x)   	 s ## x
@@ -134,6 +135,7 @@
 #  define REAL_PRECISION 8
 #  define FLOAT          real(8)
 #  define MPI_FLOAT 	 MPI_DOUBLE_PRECISION
+#  define MPI_2FLOAT     MPI_2DOUBLE_PRECISION
 #  define CMPLX     	 complex(8)
 #  define MPI_CMPLX 	 MPI_DOUBLE_COMPLEX
 #  define PREC(x)   	 d ## x

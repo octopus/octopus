@@ -18,13 +18,14 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
+subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, terms)
   type(hamiltonian_t),   intent(in)    :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
   type(batch_t), target, intent(inout) :: hpsib
   integer,               intent(in)    :: ik
   FLOAT, optional,       intent(in)    :: time
+  FLOAT, optional,       intent(in)    :: Imtime
   integer, optional,     intent(in)    :: terms
 
   integer :: nst, bs, sp
@@ -47,6 +48,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
 
   if(present(time)) then
     ASSERT(abs(time - hm%current_time) < CNST(1e-10))
+  end if
+
+  if(present(Imtime)) then
+    ASSERT(abs(Imtime - hm%Imcurrent_time) < CNST(1e-10))
   end if
 
   ! all terms are enabled by default
@@ -127,22 +132,21 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, terms)
     call X(derivatives_batch_finish)(handle)
     call profiling_out(prof_kinetic_finish)
 
-    if(hm%cmplxscl) then !cmplxscl
+    if(hm%cmplxscl%space) then !cmplxscl
     !complex scale the laplacian 
       do sp = 1, der%mesh%np, bs   
         if(batch_is_packed(hpsib)) then
           forall (ist = 1:hpsib%nst_linear, ip = sp:min(sp + bs - 1, der%mesh%np))
-            hpsib%pack%X(psi)(ist, ip) = exp(-M_TWO*M_zI*hm%cmplxscl_th)*hpsib%pack%X(psi)(ist, ip)
+            hpsib%pack%X(psi)(ist, ip) = exp(-M_TWO*M_zI*hm%cmplxscl%theta)*hpsib%pack%X(psi)(ist, ip)
           end forall
         else
           do ii = 1, nst
             call set_pointers()
-            forall(ip = sp:min(sp + bs - 1, der%mesh%np)) hpsi(ip) = exp(-M_TWO*M_zI*hm%cmplxscl_th)*hpsi(ip)
+            forall(ip = sp:min(sp + bs - 1, der%mesh%np)) hpsi(ip) = exp(-M_TWO*M_zI*hm%cmplxscl%theta)*hpsi(ip)
           end do
         end if
       end do    
     end if
-    
   else
     call batch_set_zero(hpsib)
   end if
@@ -258,7 +262,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
 
   PUSH_SUB(X(hamiltonian_external))
 
-  cmplxscl = this%cmplxscl
+  cmplxscl = this%cmplxscl%space
   
   select case(batch_status(psib))
   case(BATCH_NOT_PACKED)
@@ -318,7 +322,7 @@ end subroutine X(hamiltonian_external)
 
 ! ---------------------------------------------------------
 
-subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms)
+subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms, Imtime)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
@@ -327,6 +331,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms)
   R_TYPE,   target,    intent(out)   :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
   FLOAT,    optional,  intent(in)    :: time
   integer,  optional,  intent(in)    :: terms
+  FLOAT,    optional,  intent(in)    :: Imtime
 
   type(batch_t) :: psib, hpsib
 
@@ -339,9 +344,17 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms)
 
   if(present(time)) then
     if(present(terms)) then
-      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms)
+      if(present(Imtime)) then
+        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime)
+      else       
+        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms)
+      end if
     else
-      call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time)
+      if(present(Imtime)) then
+        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, Imtime = Imtime)
+      else 
+        call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time)
+      end if
     endif
   else
     if(present(terms)) then
@@ -359,22 +372,31 @@ end subroutine X(hamiltonian_apply)
 
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_all) (hm, der, st, hst, time)
+subroutine X(hamiltonian_apply_all) (hm, der, st, hst, time, Imtime)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
   type(states_t),      intent(inout) :: hst
   FLOAT, optional,     intent(in)    :: time
+  FLOAT, optional,     intent(in)    :: Imtime
 
   integer :: ik, ib
 
   PUSH_SUB(X(hamiltonian_apply_all))
 
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ib = st%block_start, st%block_end
-      call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hst%psib(ib, ik), ik, time)
+  if(present(Imtime)) then
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ib = st%block_start, st%block_end
+        call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hst%psib(ib, ik), ik, time, Imtime)
+      end do
     end do
-  end do
+  else 
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ib = st%block_start, st%block_end
+        call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hst%psib(ib, ik), ik, time)
+      end do
+    end do
+  end if
   
   if(hamiltonian_oct_exchange(hm)) call X(oct_exchange_operator_all)(hm, der, st, hst)
 
@@ -416,7 +438,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 
     call states_get_state(hm%hf_st, der%mesh, jst, ik, psi2)
     
-    if(.not. hm%cmplxscl) then
+    if(.not. hm%cmplxscl%space) then
       do idim = 1, hm%hf_st%d%dim
         forall(ip = 1:der%mesh%np)
           rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
@@ -432,7 +454,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
           rho(ip) = rho(ip) + psi2(ip, idim)*psi(ip, idim)
         end forall
       end do
-      call zpoisson_solve(psolver, pot, rho, theta = hm%cmplxscl_th)
+      call zpoisson_solve(psolver, pot, rho, theta = hm%cmplxscl%theta)
 #endif      
     end if
 

@@ -172,7 +172,7 @@ contains
     PUSH_SUB(states_orthogonalize_cproduct)
     SAFE_ALLOCATE(  psi(1:mesh%np_part, 1:st%d%dim))
    
-    ASSERT(st%d%cmplxscl .eqv. .true.)
+    ASSERT(st%cmplxscl%space .eqv. .true.)
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = 1, st%nst
@@ -190,7 +190,7 @@ contains
         psi = psi /cnorm
         call states_set_state(st, mesh, ist, ik, psi)
         
-        print *,"cnorm", ist, cnorm, abs(cnorm), atan2 (aimag(cnorm), real(cnorm) )
+!         print *,"cnorm", ist, cnorm, abs(cnorm), atan2 (aimag(cnorm), real(cnorm) )
         
       end do
     end do
@@ -253,7 +253,6 @@ contains
     POP_SUB(reorder_states_by_args)
   end subroutine reorder_states_by_args
 
-! ---------------------------------------------------------
   subroutine states_sort_complex( mesh, st, diff)
     type(mesh_t),      intent(in)    :: mesh
     type(states_t),    intent(inout) :: st
@@ -262,29 +261,52 @@ contains
     integer              :: ik, ist, idim
     integer, allocatable :: index(:)
     FLOAT, allocatable   :: diff_copy(:,:)
+    FLOAT, allocatable   :: buf(:)
+    FLOAT                :: imthreshold
+    CMPLX, allocatable   :: cbuf(:)
     
     PUSH_SUB(states_sort_complex)
     
     SAFE_ALLOCATE(index(st%nst))
+    SAFE_ALLOCATE(cbuf(st%nst))
+    SAFE_ALLOCATE(buf(st%nst))
     SAFE_ALLOCATE(diff_copy(1:size(diff,1),1:size(diff,2)))
     
     diff_copy = diff
-    
-    do ik = st%d%kpt%start, st%d%kpt%end
 
-      call sort(st%zeigenval%Re(:, ik), st%zeigenval%Im(:, ik), index)
-      do ist = 1 , st%nst !reorder the eigenstates error accordingly
+    do ik = st%d%kpt%start, st%d%kpt%end
+      cbuf(:) = (st%zeigenval%Re(:, ik) + M_zI * st%zeigenval%Im(:, ik))
+      buf(:) = real(cbuf) + st%cmplxscl%penalizationfactor * aimag(cbuf)**2
+      do ist=1, st%nst
+         if(aimag(cbuf(ist)).gt.0) then
+            buf(ist) = buf(ist) + 8.0 * aimag(cbuf(ist))
+         end if
+      end do
+      
+      call sort(buf, index)
+      if(mpi_grp_is_root(mpi_world)) then
+        write(message(1), *) 'Permutation of states'
+        write(message(2), *) index
+        call messages_info(1)
+        call messages_info(2)
+      end if
+      
+      cbuf(:) = cbuf(:)
+      do ist=1, st%nst !reorder the eigenstates error accordingly
         diff(ist, ik) = diff_copy(index(ist),ik)
+        st%zeigenval%Re(ist, ik) = real(cbuf(index(ist)))
+        st%zeigenval%Im(ist, ik) = aimag(cbuf(index(ist)))
       end do
     
-      do idim =1, st%d%dim
+      do idim=1, st%d%dim
         call reorder_states_by_args(st, mesh, index, ik)
       end do
     end do
     
-    
     SAFE_DEALLOCATE_A(index)
     SAFE_DEALLOCATE_A(diff_copy)
+    SAFE_DEALLOCATE_A(buf)
+    SAFE_DEALLOCATE_A(cbuf)
     
     POP_SUB(states_sort_complex)
   end subroutine states_sort_complex

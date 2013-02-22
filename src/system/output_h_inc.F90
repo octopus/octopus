@@ -32,7 +32,7 @@
     PUSH_SUB(output_hamiltonian)
 
     if(iand(outp%what, C_OUTPUT_POTENTIAL).ne.0) then
-      if(hm%cmplxscl) then
+      if(hm%cmplxscl%space) then
         call zio_function_output(outp%how, dir, "v0", der%mesh,&
            hm%ep%vpsl + M_zI*hm%ep%Imvpsl, units_out%energy, err, geo = geo)
       else  
@@ -47,7 +47,7 @@
       end if
 
       if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        if (.not. hm%cmplxscl) then 
+        if (.not. hm%cmplxscl%space) then 
           call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo)
         else
           call zio_function_output(outp%how, dir, 'vh', der%mesh, & 
@@ -59,7 +59,7 @@
           else
             write(fname, '(a,i1)') 'vxc-sp', is
           endif
-          if(.not. hm%cmplxscl) then
+          if(.not. hm%cmplxscl%space) then
             call dio_function_output(outp%how, dir, fname, der%mesh, hm%vxc(:, is), units_out%energy, err, geo = geo)
           else
             call zio_function_output(outp%how, dir, fname, der%mesh, &
@@ -76,12 +76,12 @@
             call dio_function_output(outp%how, dir, fname, der%mesh, &
               hm%ep%vpsl + hm%ep%Vclassical + hm%vhxc(:, is), units_out%energy, err, geo = geo)
           else
-            if(.not. hm%cmplxscl) then
+            if(.not. hm%cmplxscl%space) then
               call dio_function_output(outp%how, dir, fname, der%mesh, &
                 hm%ep%vpsl + hm%vhxc(:, is), units_out%energy, err, geo = geo)
             else
               call zio_function_output(outp%how, dir, fname, der%mesh, &
-                hm%ep%vpsl +M_zI * hm%ep%Imvpsl+ hm%vhxc(:, is) + M_zI * hm%vhxc(:, is), units_out%energy, err, geo = geo)
+                hm%ep%vpsl +M_zI * hm%ep%Imvpsl+ hm%vhxc(:, is) + M_zI * hm%Imvhxc(:, is), units_out%energy, err, geo = geo)
             end if
           end if
         end do

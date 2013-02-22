@@ -1,0 +1,44 @@
+CalculationMode = gs
+
+ExperimentalFeatures = yes
+ComplexScaling = space
+
+ComplexScalingTheta = 0.4
+
+Dimensions = 1
+ForceComplex = true # arpack solver works only if ForceComplex
+BoxShape = sphere
+fromScratch = yes
+Spacing = 0.08
+Radius = 4
+ExtraStates = 8
+XCFunctional=lda_xc_cmplx
+#XCFunctional=None
+PoissonSolver=direct_sum
+
+# recommended 2 * nstates + 1 or more
+EigenSolverArnoldiVectors = 50
+
+#TheoryLevel = independent_particles
+TheoryLevel = DFT
+
+Eigensolver = arpack
+
+eith = exp(i * ComplexScalingTheta)
+
+a0 = 4.0
+b0 = 0.5
+c0 = 4.0
+d0 = 2.0
+e0 = 6.0
+
+%Species
+ 'BARRIERS' | 1 | spec_user_defined | 5 | "a0 * (-1.0/(1.0 + exp(-2.0*c0*(r*eith-d0))) + 1.0/(1.0 + exp(-2.0*c0*(r*eith+d0))) - e0*exp(-(r*eith)^2/b0))"
+%
+
+%Coordinates
+ 'BARRIERS' | 0
+%
+
+Output = wfs + density + potential
+OutputHow = axis_x + axis_y + axis_z

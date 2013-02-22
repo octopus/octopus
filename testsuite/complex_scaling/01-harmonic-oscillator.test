@@ -1,0 +1,20 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Complex-scaling - harmonic oscillator
+Programs   : octopus
+TestGroups : short-run; daily
+Enabled    : Yes
+
+# direct_sum doesn't complex-scale correctly these days so this test temporarily uses 2D for the non-independent particle test
+
+Input: 01-harmonic-oscillator.independent.inp
+match ; Total energy ; GREP(static/info, 'Total       =', 20)    ; 2.00000000      7.438546E-13
+#match ; 3rd state   ; GREP(static/info, '   3   --     ', 12) ; 3.000000       0.000000       0.000000
+
+#Input: 01-harmonic-oscillator.complex-lda.inp
+#match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 6.00112385E+00
+
+#      Total       =         2.08113393      1.876471E-07
+
+
+#2.08113548E+00

@@ -86,11 +86,12 @@ module messages_m
   !> Prints out to iunit a message in the form:
   !! ["InputVariable" = value]
   !! where "InputVariable" is given by var.
-  !! Since the variable can be integer, real, or logical, we
+  !! Since the variable can be integer, real, logical, or string we
   !! need a generic interface.
   ! ---------------------------------------------------------
   interface messages_print_var_value
     module procedure messages_print_var_valuei
+    module procedure messages_print_var_values
     module procedure messages_print_var_valuer
     module procedure messages_print_var_valuel
   end interface messages_print_var_value
@@ -575,6 +576,19 @@ contains
     write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(intstring))//']'
 
   end subroutine messages_print_var_valuei
+  ! ---------------------------------------------------------
+
+  ! ---------------------------------------------------------
+  subroutine messages_print_var_values(iunit, var, value)
+    integer,          intent(in) :: iunit
+    character(len=*), intent(in) :: var
+    character(len=*), intent(in) :: value
+
+    if(.not. mpi_grp_is_root(mpi_world)) return
+
+    write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(value)//']'
+
+  end subroutine messages_print_var_values
   ! ---------------------------------------------------------
 
 

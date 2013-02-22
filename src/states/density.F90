@@ -126,10 +126,11 @@ contains
 
   ! ---------------------------------------------------
 
-  subroutine density_calc_accumulate(this, ik, psib)
+  subroutine density_calc_accumulate(this, ik, psib, psibL)
     type(density_calc_t), target, intent(inout) :: this
     integer,                      intent(in)    :: ik
     type(batch_t),                intent(inout) :: psib
+    type(batch_t), optional,      intent(inout) :: psibL !< Left states
 
     integer :: ist, ip, ispin
     CMPLX   :: term, psi1, psi2
@@ -137,7 +138,7 @@ contains
     FLOAT, pointer :: Imcrho(:)  
     FLOAT, allocatable :: frho(:), weight(:)
     type(profile_t), save :: prof
-    logical :: correct_size, calc_cmplx
+    logical :: correct_size, cmplxscl
 #ifdef HAVE_OPENCL
     integer            :: wgsize
     type(opencl_mem_t) :: buff_weight
@@ -150,8 +151,8 @@ contains
     correct_size = ubound(this%density, dim = 1) == this%gr%fine%mesh%np &
       .or. ubound(this%density, dim = 1) == this%gr%fine%mesh%np_part
     
-    calc_cmplx = .false. ! calculate the imaginary part of the density
-    if(associated(this%Imdensity)) calc_cmplx = .true.
+    cmplxscl = .false. ! calculate the imaginary part of the density
+    if(associated(this%Imdensity)) cmplxscl = .true.
 
     ispin = states_dim_get_spin_index(this%st%d, ik)
 
@@ -163,13 +164,13 @@ contains
       if(this%gr%have_fine_mesh) then
         SAFE_ALLOCATE(crho(1:this%gr%mesh%np_part))
         crho = M_ZERO
-        if(calc_cmplx) then
+        if(cmplxscl) then
           SAFE_ALLOCATE(Imcrho(1:this%gr%mesh%np_part))
           Imcrho = M_ZERO
         end if
       else
         crho => this%density(:, ispin)
-        if (calc_cmplx) Imcrho => this%Imdensity(:, ispin)
+        if (cmplxscl) Imcrho => this%Imdensity(:, ispin)
       end if
 
       select case(batch_status(psib))
@@ -181,11 +182,11 @@ contains
             end forall
           end do
         else
-          if(calc_cmplx) then
+          if(cmplxscl) then
             do ist = 1, psib%nst
               forall(ip = 1:this%gr%mesh%np)
-                crho(ip)   = crho(ip)   + weight(ist) * real( psib%states(ist)%zpsi(ip, 1)**2)
-                Imcrho(ip) = Imcrho(ip) + weight(ist) * aimag(psib%states(ist)%zpsi(ip, 1)**2)
+                crho(ip)   = crho(ip)   + weight(ist) * real( psibL%states(ist)%zpsi(ip, 1) * psib%states(ist)%zpsi(ip, 1))
+                Imcrho(ip) = Imcrho(ip) + weight(ist) * aimag(psibL%states(ist)%zpsi(ip, 1) * psib%states(ist)%zpsi(ip, 1))
               end forall
             end do
           else
@@ -205,11 +206,11 @@ contains
             end do
           end do
         else
-          if(calc_cmplx) then
+          if(cmplxscl) then
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
-                crho(ip)   = crho(ip)   + weight(ist) * real( psib%pack%zpsi(ist, ip)**2 )
-                Imcrho(ip) = Imcrho(ip) + weight(ist) * aimag(psib%pack%zpsi(ist, ip)**2 )
+                crho(ip)   = crho(ip)   + weight(ist) * real( psibL%pack%zpsi(ist, ip) * psib%pack%zpsi(ist, ip))
+                Imcrho(ip) = Imcrho(ip) + weight(ist) * aimag(psibL%pack%zpsi(ist, ip) * psib%pack%zpsi(ist, ip))
               end do
             end do
           else  
@@ -253,7 +254,7 @@ contains
       end select
 
       if(this%gr%have_fine_mesh) then
-        if(calc_cmplx) then
+        if(cmplxscl) then
           SAFE_ALLOCATE(frho(1:this%gr%fine%mesh%np))
           call dmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, crho, frho, order = 2)
           forall(ip = 1:this%gr%fine%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + frho(ip)    
@@ -371,12 +372,15 @@ contains
 
     integer :: ik, ib
     type(density_calc_t) :: dens_calc
+    logical :: cmplxscl
 
     PUSH_SUB(density_calc)
 
     ASSERT(ubound(density, dim = 1) == gr%fine%mesh%np .or. ubound(density, dim = 1) == gr%fine%mesh%np_part)
 
-    if (present(Imdensity)) then
+    cmplxscl = present(Imdensity)
+    
+    if (cmplxscl) then
       call density_calc_init(dens_calc, st, gr, density, Imdensity) 
     else
       call density_calc_init(dens_calc, st, gr, density)
@@ -384,7 +388,11 @@ contains
     
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%block_start, st%block_end
-        call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
+        if(cmplxscl) then
+          call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik), st%psibL(ib, ik))
+        else
+          call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
+        end if
       end do
     end do
 

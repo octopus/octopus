@@ -108,6 +108,9 @@ void print_config(){
 #ifdef HAVE_ARPACK
   printf("arpack ");
 #endif  
+#ifdef HAVE_PARPACK
+  printf("parpack ");
+#endif    
 #ifdef HAVE_CLAMDFFT
   printf("clamdfft ");
 #endif  

@@ -544,7 +544,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     end if
           
     call states_get_state(st, mesh, ist, iqn, psi)
-    ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false., dotu = st%d%cmplxscl)
+    ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false., dotu = st%cmplxscl%space)
   end do
     
   if(mesh%parallel_in_domains) then
@@ -584,7 +584,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   end if
 
   if(normalize_) then
-    if (st%d%cmplxscl) then 
+    if (st%cmplxscl%space) then 
       nrm2 = sqrt(X(mf_dotp)(mesh, st%d%dim, phi, phi, dotu = .true.))
       do idim = 1, st%d%dim
          phi(:, idim) = phi(:, idim) / nrm2

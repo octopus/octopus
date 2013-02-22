@@ -41,13 +41,22 @@ if test $acx_arpack_ok = no; then
 fi
 
 if test $acx_arpack_ok = no; then
-  LIBS="$LIBS_ARPACK -larpack $LIBS_LAPACK $LIBS_BLAS $acx_arpack_save_LIBS $FLIBS"
   AC_MSG_CHECKING([for arpack library with -larpack])
-  AC_LINK_IFELSE([
-    program main
-    call dsaupd
-    end program main
-], [acx_arpack_ok=yes; LIBS_ARPACK="$LIBS_ARPACK -larpack"], [])
+  if test "$LIBS_ARPACK" = ""; then
+    LIBS=" -larpack $LIBS_LAPACK $LIBS_BLAS $acx_arpack_save_LIBS $FLIBS"
+    AC_LINK_IFELSE([
+      program main
+      call dsaupd
+      end program main
+      ], [acx_arpack_ok=yes; LIBS_ARPACK=" -larpack"], [])
+  else
+    LIBS="-L$LIBS_ARPACK -larpack $LIBS_LAPACK $LIBS_BLAS $acx_arpack_save_LIBS $FLIBS"
+    AC_LINK_IFELSE([
+      program main
+      call dsaupd
+      end program main
+      ], [acx_arpack_ok=yes; LIBS_ARPACK="-L$LIBS_ARPACK -larpack"], [])  
+  fi
   if test $acx_arpack_ok = no; then
     AC_MSG_RESULT([$acx_arpack_ok])
   else

@@ -101,7 +101,7 @@ contains
         write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4,5x,a5)')   &
           '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>', 'Error'
       else
-        if(st%d%cmplxscl) then
+        if(st%cmplxscl%space) then
           write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12,1x,a10)')   &
             '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation ', 'Error'
         else
@@ -114,7 +114,7 @@ contains
         write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
           '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
       else
-        if(st%d%cmplxscl) then
+        if(st%cmplxscl%space) then
           write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12,1x)')   &
             '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation '
         else
@@ -168,7 +168,7 @@ contains
                 units_from_atomic(units_out%energy, st%eigenval(ist, ik)), occ, st%spin(1:3, ist, ik)
               if(present(error)) write(tmp_str(3), '(a3,es8.1,a1)')'  (', error(ist, ik+is), ')'
             else
-              if(st%d%cmplxscl) then !cmplxscl
+              if(st%cmplxscl%space) then !cmplxscl
                 write(tmp_str(2), '(1x,f12.6,3x,f12.6,3x,f12.6)') &
                   units_from_atomic(units_out%energy, st%zeigenval%Re(ist, ik+is)), &
                   units_from_atomic(units_out%energy, st%zeigenval%Im(ist, ik+is)), occ

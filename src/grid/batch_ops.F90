@@ -125,13 +125,13 @@ contains
     else if(batch_is_packed(this) .and. batch_type(this) == TYPE_FLOAT) then
       this%pack%dpsi = M_ZERO
     else if(batch_is_packed(this) .and. batch_type(this) == TYPE_CMPLX) then
-      this%pack%zpsi = M_ZERO
+      this%pack%zpsi = M_z0
     else
       do ist_linear = 1, this%nst_linear
         if(associated(this%states_linear(ist_linear)%dpsi)) then
           this%states_linear(ist_linear)%dpsi = M_ZERO
         else
-          this%states_linear(ist_linear)%zpsi = M_ZERO
+          this%states_linear(ist_linear)%zpsi = M_z0
         end if
       end do
 

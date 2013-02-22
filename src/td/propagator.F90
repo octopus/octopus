@@ -26,6 +26,7 @@ module propagator_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
+  use cmplxscl_m
   use cube_function_m
   use datasets_m
   use density_m
@@ -94,6 +95,7 @@ module propagator_m
     type(exponential_t) :: te               !< How to apply the propagator \f$ e^{-i H \Delta t} \f$.
     !> Storage of the KS potential of previous iterations.
     FLOAT, pointer      :: v_old(:, :, :) => null()
+    FLOAT, pointer      :: Imv_old(:, :, :) => null()
     !> Auxiliary function to store the Magnus potentials.
     FLOAT, pointer      :: vmagnus(:, :, :) => null() 
     type(ob_terms_t)    :: ob               !< For open boundaries: leads, memory
@@ -122,6 +124,7 @@ contains
     !this%method
     !call exponential_nullify(this%te)
     this%v_old=>null()
+    this%Imv_old=>null()
     this%vmagnus=>null() 
     !call ob_terms_nullify(this%ob)
     !this%scf_propagation_steps 
@@ -149,6 +152,7 @@ contains
     end select
 
     call loct_pointer_copy(tro%v_old, tri%v_old)
+    call loct_pointer_copy(tro%Imv_old, tri%Imv_old)
     call exponential_copy(tro%te, tri%te)
     tro%scf_propagation_steps = tri%scf_propagation_steps
 
@@ -171,8 +175,11 @@ contains
     logical,             intent(in)    :: have_fields 
 
     integer :: default_propagator
-
+    logical :: cmplxscl
+    
     PUSH_SUB(propagator_init)
+    
+    cmplxscl = st%cmplxscl%space
     
     call propagator_nullify(tr)
 
@@ -331,6 +338,11 @@ contains
     ! Allocate memory to store the old KS potentials
     SAFE_ALLOCATE(tr%v_old(1:gr%mesh%np, 1:st%d%nspin, 0:3))
     tr%v_old(:, :, :) = M_ZERO
+    if(cmplxscl) then
+      SAFE_ALLOCATE(tr%Imv_old(1:gr%mesh%np, 1:st%d%nspin, 0:3))
+      tr%Imv_old(:, :, :) = M_ZERO
+    end if
+
     call exponential_init(tr%te) ! initialize propagator
 
     call messages_obsolete_variable('TDSelfConsistentSteps', 'TDStepsWithSelfConsistency')
@@ -393,6 +405,7 @@ contains
     ! sanity check
     ASSERT(associated(tr%v_old)) 
     SAFE_DEALLOCATE_P(tr%v_old)         ! clean old KS potentials
+    SAFE_DEALLOCATE_P(tr%Imv_old) 
 
     select case(tr%method)
     case(PROP_MAGNUS)
@@ -427,6 +440,11 @@ contains
     forall(idim = 1:3, ispin = 1:hm%d%nspin, ip = 1:gr%mesh%np)
       tr%v_old(ip, ispin, idim) = hm%vhxc(ip, ispin)
     end forall
+    if(hm%cmplxscl%space) then
+      forall(idim = 1:3, ispin = 1:hm%d%nspin, ip = 1:gr%mesh%np)
+        tr%Imv_old(ip, ispin, idim) = hm%Imvhxc(ip, ispin)
+      end forall
+    end if
 
     POP_SUB(propagator_run_zero_iter)
   end subroutine propagator_run_zero_iter
@@ -454,13 +472,16 @@ contains
 
     integer :: is, iter, ik, ist
     FLOAT   :: d, d_max
-    logical :: self_consistent
+    logical :: self_consistent, cmplxscl
     CMPLX, allocatable :: zpsi1(:, :, :, :)
     FLOAT, allocatable :: dtmp(:), vaux(:, :), vold(:, :)
+    FLOAT, allocatable :: Imvaux(:, :), Imvold(:, :)
     type(profile_t), save :: prof
 
     call profiling_in(prof, "TD_PROPAGATOR")
     PUSH_SUB(propagator_dt)
+
+    cmplxscl = hm%cmplxscl%space
 
     if(present(ions)) then
       ASSERT(present(geo))
@@ -487,15 +508,29 @@ contains
 
     SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin))
     vaux(1:gr%mesh%np, 1:st%d%nspin) = hm%vhxc(1:gr%mesh%np, 1:st%d%nspin)
+    if (cmplxscl) then
+      SAFE_ALLOCATE(Imvaux(1:gr%mesh%np, 1:st%d%nspin))
+      Imvaux(1:gr%mesh%np, 1:st%d%nspin) = hm%Imvhxc(1:gr%mesh%np, 1:st%d%nspin)
+    end if 
 
     if(.not. propagator_requires_vks(tr)) then
       SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
       call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), vold)
+      if(cmplxscl) then
+        SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
+        call lalg_copy(gr%mesh%np, st%d%nspin, tr%Imv_old(:, :, 1), Imvold)
+      end if
     else
       call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
       call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc(:, :),     tr%v_old(:, :, 1))
       call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%v_old(:, :, 1:3), time, tr%v_old(:, :, 0))
+      if(cmplxscl) then
+        call lalg_copy(gr%mesh%np, st%d%nspin, tr%Imv_old(:, :, 2), tr%Imv_old(:, :, 3))
+        call lalg_copy(gr%mesh%np, st%d%nspin, tr%Imv_old(:, :, 1), tr%Imv_old(:, :, 2))
+        call lalg_copy(gr%mesh%np, st%d%nspin, hm%Imvhxc(:, :),     tr%Imv_old(:, :, 1))
+        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), tr%Imv_old(:, :, 1:3), time, tr%Imv_old(:, :, 0))
+      end if
     end if
 
     select case(tr%method)
@@ -515,7 +550,11 @@ contains
     if(self_consistent) then
 
       ! First, compare the new potential to the extrapolated one.
-      call density_calc(st, gr, st%rho)
+      if(.not. cmplxscl) then
+        call density_calc(st, gr, st%rho)
+      else
+        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+      end if
       call v_ks_calc(ks, hm, st, geo, time = time - dt)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
       d_max = M_ZERO
@@ -541,6 +580,10 @@ contains
           
           tr%v_old(:, :, 0) = hm%vhxc(:, :)
           vaux(:, :) = hm%vhxc(:, :)
+          if(cmplxscl) then
+            tr%v_old(:, :, 0) = hm%vhxc(:, :)
+            vaux(:, :) = hm%vhxc(:, :)
+          end if
           select case(tr%method)
           case(PROP_ETRS);                     call td_etrs
           case(PROP_AETRS, PROP_CAETRS);       call td_aetrs
@@ -553,7 +596,11 @@ contains
             call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
           end select
 
-          call density_calc(st, gr, st%rho)
+          if(.not. cmplxscl) then
+            call density_calc(st, gr, st%rho)
+          else
+            call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+          end if
           call v_ks_calc(ks, hm, st, geo, time = time - dt)
           SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
           d_max = M_ZERO
@@ -574,6 +621,9 @@ contains
     
     SAFE_DEALLOCATE_A(vold)
     SAFE_DEALLOCATE_A(vaux)
+    
+    SAFE_DEALLOCATE_A(Imvold)
+    SAFE_DEALLOCATE_A(Imvaux)
     
     POP_SUB(propagator_dt)
     call profiling_out(prof)
@@ -681,6 +731,7 @@ contains
 
       if(tr%method == PROP_CAETRS) then
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
+        if(cmplxscl) call lalg_copy(gr%mesh%np, st%d%nspin, Imvold, hm%Imvhxc)
         call hamiltonian_update(hm, gr%mesh, time = time - dt)
         call v_ks_calc_start(ks, hm, st, geo, time = time - dt, calc_energy = .false.)
       end if
@@ -797,36 +848,133 @@ contains
     ! ---------------------------------------------------------
     !> Exponential midpoint
     subroutine exponential_midpoint
-      integer :: ib, ik
+      integer :: ib, ik, ii
       type(ion_state_t) :: ions_state
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
+      CMPLX :: zt, zdt
 
       PUSH_SUB(propagator_dt.exponential_midpoint)
 
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
-        call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
-      end if
-
-      !move the ions to time 'time - dt/2'
-      if(present(ions)) then
-        call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
-      end if
       
-      if(gauge_field_is_applied(hm%ep%gfield)) then
-        vecpot = gauge_field_get_vec_pot(hm%ep%gfield)
-        vecpot_vel = gauge_field_get_vec_pot_vel(hm%ep%gfield)
-        call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
+      if(hm%cmplxscl%time) then
+        zt =  TOCMPLX(time, M_ZERO) *exp(M_zI * TOCMPLX(hm%cmplxscl%alphaR, M_ZERO))
+        zdt = TOCMPLX(dt,   M_ZERO) *exp(M_zI * TOCMPLX(hm%cmplxscl%alphaR, M_ZERO))
+        
+        !FIXME: not adapted yet
+        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
+          if(hm%cmplxscl%space) &
+            call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time - dt/M_TWO, hm%Imvhxc(:, :))
+        end if
+
+        !FIXME: not implemented yet
+        !move the ions to time 'time - dt/2'
+        if(present(ions)) then
+          call ion_dynamics_save_state(ions, geo, ions_state)
+          call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
+          call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
+        end if
+        
+        !FIXME: not implemented yet      
+        if(gauge_field_is_applied(hm%ep%gfield)) then
+          vecpot = gauge_field_get_vec_pot(hm%ep%gfield)
+          vecpot_vel = gauge_field_get_vec_pot_vel(hm%ep%gfield)
+          call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
+        end if
+
+        call hamiltonian_update(hm, gr%mesh, time = real(zt - zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt - zdt/M_z2  ))
+
+        do ik = st%d%kpt%start, st%d%kpt%end
+          do ib = st%block_start, st%block_end
+
+            call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, &
+              real(zdt/mu,REAL_PRECISION), real(zt - zdt/M_z2,REAL_PRECISION), &
+              Imdeltat = aimag(zdt/mu), Imtime = aimag(zt -  zdt / M_z2 ) )
+
+          end do
+        end do
+        
+      else
+
+        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
+          if(hm%cmplxscl%space) &
+            call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time - dt/M_TWO, hm%Imvhxc(:, :))
+        end if
+
+        !move the ions to time 'time - dt/2'
+        if(present(ions)) then
+          call ion_dynamics_save_state(ions, geo, ions_state)
+          call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
+          call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
+        end if
+      
+        if(gauge_field_is_applied(hm%ep%gfield)) then
+          vecpot = gauge_field_get_vec_pot(hm%ep%gfield)
+          vecpot_vel = gauge_field_get_vec_pot_vel(hm%ep%gfield)
+          call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
+        end if
+
+        call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
+
+        do ik = st%d%kpt%start, st%d%kpt%end
+          do ib = st%block_start, st%block_end
+
+            call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/mu, time - dt/M_TWO)
+
+          end do
+        end do
       end if
 
-      call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
+      if(hm%cmplxscl%space) then ! Propagate the left state
+        ! (L(t+dt)| = (L|U(t-dt) = (L|e^{i H_\theta(t-dt/2) (dt)}
+        
+        if(hm%cmplxscl%time) then
+          zt =  TOCMPLX(time,M_ZERO) *exp(M_zI * TOCMPLX(hm%cmplxscl%alphaL, M_ZERO))
+          zdt = TOCMPLX(dt,  M_ZERO) *exp(M_zI * TOCMPLX(hm%cmplxscl%alphaL, M_ZERO))
 
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%block_start, st%block_end
-          call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/mu, time - dt/M_TWO)
-        end do
-      end do
+          ! FIXME: check this interpolation!! 
+          ! probably need some rethinking 
+          if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+            call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time + dt/M_TWO, hm%vhxc(:, :))
+            if(hm%cmplxscl%space) &
+              call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
+          end if
+        
+          call hamiltonian_update(hm, gr%mesh, time = real(zt + zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt + zdt/M_z2  ))
+          
+          do ik = st%d%kpt%start, st%d%kpt%end
+            do ib = st%block_start, st%block_end
+              call exponential_apply_batch(tr%te, gr%der, hm, st%psibL(ib, ik), ik,&
+                real(-zdt/mu, REAL_PRECISION), real(zt + zdt/M_z2, REAL_PRECISION), &
+                Imdeltat = aimag(-zdt/mu), Imtime = aimag(zt +  zdt / M_z2 ) )
+
+            end do
+          end do
+        
+        else
+          
+          ! FIXME: check this interpolation!! 
+          ! probably need some rethinking 
+          if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+            call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time + dt/M_TWO, hm%vhxc(:, :))
+            if(hm%cmplxscl%space) &
+              call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
+          end if
+
+          call hamiltonian_update(hm, gr%mesh, time = time + M_HALF*dt)
+
+          do ik = st%d%kpt%start, st%d%kpt%end
+            do ib = st%block_start, st%block_end
+              call exponential_apply_batch(tr%te, gr%der, hm, st%psibL(ib, ik), ik, -dt/mu, time + dt/M_TWO)            
+
+            end do
+          end do
+        
+        end if
+                
+      end if
+
 
       !restore to time 'time - dt'
       if(present(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
@@ -982,8 +1130,12 @@ contains
       SAFE_ALLOCATE(rhs(1:np*st%d%dim))
         
       call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
+      if(hm%cmplxscl%space) & 
+        call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time - dt/M_TWO, hm%Imvhxc(:, :))
+    
       call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
-
+      
+      
       ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
@@ -1014,7 +1166,7 @@ contains
 
           do idim = 1, st%d%dim
             call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np))
-          end do
+          end do          
 
           if(.not.converged) then
             write(message(1),'(a)')        'The linear solver used for the Crank-Nicholson'
@@ -1024,6 +1176,64 @@ contains
 
         end do
       end do
+
+      if(hm%cmplxscl%space) then !Left states
+        
+        dt_op = - dt !propagate backwards
+        t_op  = time + dt/M_TWO
+        
+        
+        call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time + dt/M_TWO, hm%vhxc(:, :))
+        if(hm%cmplxscl%space) & 
+          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
+    
+        call hamiltonian_update(hm, gr%mesh, time = time + dt/M_TWO)
+      
+      
+        ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
+        do ik = st%d%kpt%start, st%d%kpt%end
+          do ist = st%st_start, st%st_end
+
+            call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs,left = .true. )
+            call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, -dt/M_TWO, time + dt/M_TWO)
+
+            if(hamiltonian_inh_term(hm)) then
+              SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
+              do idim = 1, st%d%dim
+                call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi, left = .true.)
+                forall(ip = 1:gr%mesh%np) zpsi_rhs(ip, idim) = zpsi_rhs(ip, idim) - dt*inhpsi(ip)
+              end do
+              SAFE_DEALLOCATE_A(inhpsi)
+            end if
+
+            ! put the values is a continuous array
+            do idim = 1, st%d%dim
+              call states_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np), left = .true.)
+              rhs((idim - 1)*np + 1:idim*np) = zpsi_rhs(1:np, idim)
+            end do
+
+            ist_op = ist
+            ik_op = ik
+            iter = 2000
+            call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, propagator_qmr_prec, iter, dres, cgtol, &
+              showprogress = .false., converged = converged)
+
+            do idim = 1, st%d%dim
+              call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np), left = .true.)
+            end do          
+
+            if(.not.converged) then
+              write(message(1),'(a)')        'The linear solver used for the Crank-Nicholson'
+              write(message(2),'(a,es14.4)') 'propagator did not converge for left states: Residual = ', dres
+              call messages_warning(2)
+            end if
+
+          end do
+        end do
+        
+        
+      end if
+
 
       SAFE_DEALLOCATE_A(zpsi_rhs)
       SAFE_DEALLOCATE_A(zpsi)

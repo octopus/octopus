@@ -20,10 +20,13 @@
 #include "global.h"
 
 module xc_m
+  use cube_m
+  use cube_function_m
   use datasets_m
   use derivatives_m
   use global_m
   use grid_m
+  use index_m
   use io_m
   use io_function_m
   use lalg_basic_m
@@ -31,6 +34,7 @@ module xc_m
   use mesh_function_m
   use messages_m
   use mpi_m
+  use par_vec_m
   use parser_m
   use poisson_m
   use profiling_m

@@ -301,7 +301,7 @@ contains
     scf%mixdim2 = 1
     if(hm%d%cdft) scf%mixdim2 = 1 + gr%mesh%sb%dim
     if(scf%mix_field /= MIXNONE) then
-      if(.not. hm%cmplxscl) then
+      if(.not. st%cmplxscl%space) then
         call mix_init(scf%smix, scf%mixdim1, scf%mixdim2, st%d%nspin)
       else
         call mix_init(scf%smix, scf%mixdim1, scf%mixdim2, st%d%nspin, func_type = TYPE_CMPLX)
@@ -439,7 +439,7 @@ contains
 
     PUSH_SUB(scf_run)
     
-    cmplxscl = hm%cmplxscl
+    cmplxscl = st%cmplxscl%space
   
     gs_run_ = .true.
     if(present(gs_run)) gs_run_ = gs_run
@@ -484,7 +484,8 @@ contains
       SAFE_ALLOCATE(zrhoout(1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
       SAFE_ALLOCATE(zrhoin (1:gr%fine%mesh%np, 1:scf%mixdim2, 1:nspin))
 
-      zrhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
+      zrhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) &
+           + M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
       zrhoout = M_z0
     end if
 
@@ -594,8 +595,6 @@ contains
       ! compute output density, potential (if needed) and eigenvalues sum
       if(cmplxscl) then
         call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-!         print *,"Density integral", sum(st%zrho%Re(:,1) + M_zI * st%zrho%Im(:,1))*gr%mesh%volume_element
-        print *,"Density integral", zmf_integrate(gr%mesh, st%zrho%Re(:,1) + M_zI * st%zrho%Im(:,1))
       else
         call density_calc(st, gr, st%rho)
       end if

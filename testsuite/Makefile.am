@@ -28,7 +28,8 @@ SUBDIRS = \
 	optimal_control  \
 	periodic_systems \
 	open_systems     \
-        photo_electron
+        photo_electron   \
+        complex_scaling
 
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite
 

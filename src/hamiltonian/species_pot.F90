@@ -252,17 +252,18 @@ contains
   end subroutine species_atom_density
   ! ---------------------------------------------------------
 
-  subroutine species_get_density(spec, pos, mesh, rho)
+  subroutine species_get_density(spec, pos, mesh, rho, Imrho)
     type(species_t),    target, intent(in)  :: spec
     FLOAT,                      intent(in)  :: pos(:)
     type(mesh_t),       target, intent(in)  :: mesh
     FLOAT,                      intent(out) :: rho(:)
+    FLOAT, optional,            intent(out) :: Imrho(:)
 
     type(root_solver_t) :: rs
     logical :: conv
     integer :: dim
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
-    FLOAT   :: delta, alpha, beta, xx(MAX_DIM), yy(MAX_DIM), rr, imrho, rerho
+    FLOAT   :: delta, alpha, beta, xx(MAX_DIM), yy(MAX_DIM), rr, imrho1, rerho
     FLOAT   :: dist2, dist2_min
     integer :: icell, ipos, ip
     type(periodic_copy_t) :: pp
@@ -276,11 +277,15 @@ contains
     FLOAT,    allocatable :: rho_sphere(:)
     FLOAT, parameter      :: threshold = CNST(1e-6)
     FLOAT                 :: norm_factor
+    logical               :: cmplxscl
     
     PUSH_SUB(species_get_density)
 
     call profiling_in(prof, "SPECIES_DENSITY")
 
+    cmplxscl = .false.
+    if (present(Imrho)) cmplxscl = .true.
+    
     select case(species_type(spec))
 
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF, SPEC_PSPIO)
@@ -411,18 +416,32 @@ contains
         range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
 
       rho = M_ZERO
+      if (cmplxscl) Imrho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
         yy(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos, coords = xx)
           xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) + yy(1:mesh%sb%dim)
           rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
-          call parse_expression(rerho, imrho, mesh%sb%dim, xx, rr, M_ZERO, trim(species_rho_string(spec)))
+          call parse_expression(rerho, imrho1, mesh%sb%dim, xx, rr, M_ZERO, trim(species_rho_string(spec)))
           rho(ip) = rho(ip) - rerho
+          if (cmplxscl) Imrho(ip) = Imrho(ip) - imrho1
         end do
       end do
-      rr = species_zval(spec) / abs(dmf_integrate(mesh, rho(:)))
-      rho(1:mesh%np) = rr * rho(1:mesh%np)
+      if (cmplxscl) then 
+         rr = M_ONE
+         !print*, 'CMPLXK BLAHLBHASOMETHING'
+         !rr1 = species_zval(spec) / abs(dmf_integrate(mesh, rho(:)**2 + Imrho(:)**2))
+         rho(1:mesh%np) = rr * rho(1:mesh%np)
+         Imrho(1:mesh%np) = rr * Imrho(1:mesh%np)
+         !print*, Imrho(1:10)
+      else
+         ! XXX perhaps we should normalize to
+         ! some complex number when complex-scaling, but we don't know
+         ! exactly for now.
+         rr = species_zval(spec) / abs(dmf_integrate(mesh, rho(:)))
+         rho(1:mesh%np) = rr * rho(1:mesh%np)
+      end if
 
       call periodic_copy_end(pp)
 

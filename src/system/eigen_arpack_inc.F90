@@ -17,143 +17,220 @@
 !!
 	
 	
-subroutine X(eigen_solver_arpack)(gr, st, hm, tol_, niter, ncv, converged, ik, diff)
+subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tol_, niter, converged, ik, diff)
+  type(eigen_arpack_t),intent(in)    :: arpack
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in)    :: hm
   FLOAT,               intent(in)    :: tol_
   integer,             intent(inout) :: niter
-  integer,             intent(in)    :: ncv
   integer,             intent(inout) :: converged
   integer,             intent(in)    :: ik
   FLOAT,     optional, intent(out)   :: diff(:) !< (1:st%nst)
 	
   logical, allocatable :: select(:)
-  R_TYPE, allocatable  :: ax(:),  resid(:), v(:, :),   &
+  R_TYPE, allocatable  :: resid(:), v(:, :), &
                           workd(:), workev(:), workl(:), zd(:), &
-                          psi(:,:)
+                          psi(:,:), hpsi(:,:)
                      
   integer :: ldv, nev, iparam(11), ipntr(14), ido, n, lworkl, info, ierr, &
-             i, j, ishfts, maxitr, mode1, ist
-  FLOAT :: tol, sigmar, sigmai
-  FLOAT, allocatable :: rwork(:), d(:, :) 
-  CMPLX :: sigma 	
-	!!!!WARNING: No support for spinors, yet. No support for complex wavefunctions.
+             i, j, ishfts, maxitr, mode1, ist, idim, ncv
+  FLOAT :: tol, sigmar, sigmai, resid_sum, tmp
+  FLOAT, allocatable :: rwork(:), d(:, :)
+  CMPLX :: sigma, eps_temp
+  integer :: mpi_comm
+  character(len=2) :: which
+  	
+	!!!!WARNING: No support for spinors, yet. 
+  PUSH_SUB(eigen_arpack.eigen_solver_arpack)
 
-  PUSH_SUB(X(eigen_solver_arpack))
-	
-#if defined(HAVE_MPI)
-  if(gr%mesh%parallel_in_domains) then
-    message(1) = 'Arpack-Solver not parallelized for domain decomposition.'
-    call messages_fatal(1)
-    !  FIXME: Need to adjust mesh%x and mesh%vol_pp occurences in the code below
-    !         appropriately for domain decomposition. Also parallelization
-    !         of the vectors has to be taken care of.
-  end if
-#endif
-	
-  ldv = gr%mesh%np
+  !Enable debug info
+  if(in_debug_mode) call arpack_debug(conf%debug_level)
+  
+  mpi_comm = mpi_world%comm
+  if (gr%mesh%parallel_in_domains) mpi_comm = gr%mesh%mpi_grp%comm
+  
+  ncv = arpack%arnoldi_vectors
   n = gr%mesh%np
+  ldv = gr%mesh%np
   nev = st%nst
   lworkl  = 3*ncv**2+6*ncv
-  SAFE_ALLOCATE(ax(ldv))
+
   SAFE_ALLOCATE(d(ncv+1, 3))
-  SAFE_ALLOCATE(resid(ldv))
-  SAFE_ALLOCATE(v(ldv, ncv))
+  SAFE_ALLOCATE(resid(ldv))       !residual vector 
+  SAFE_ALLOCATE(v(ldv, ncv))      !Arnoldi basis vectors / Eigenstates
   SAFE_ALLOCATE(workd(3*ldv))
   SAFE_ALLOCATE(workev(3*ncv))
   SAFE_ALLOCATE(workl(lworkl))
   SAFE_ALLOCATE(select(ncv))
-  
   SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
   
 #if defined(R_TCOMPLEX)
   SAFE_ALLOCATE(rwork(ncv))
   SAFE_ALLOCATE(zd(ncv+1))
 #endif
-	
-  select = .true.
-  tol    = tol_
-  ido    = 0
-  info = 1
+  which = arpack%sort	
+  select(:) = .true.
+  tol  = tol_
+  ido  = 0
+  info = arpack%init_resid ! 0. random resid vector 
+                           ! 1. calculate resid vector 
+                           ! 2. resid vector constant = 1 
   
-  do i = 1, gr%mesh%np
-!      resid(i) = sum(st%X(psi)(i, 1, 1:st%nst, ik))*sqrt(gr%mesh%vol_pp(1))
-      resid(i) = R_TOTYPE(M_ONE)
-  end do
+  if(info == 1) then !Calculate the residual vector
+    print*, 'eigen_solver_arpack info1, allocate for calculating residual.'
+    SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
+  
+    resid(:) = R_TOTYPE(M_ZERO)
+    do ist = 1, st%nst
+      call states_get_state(st, gr%mesh, ist, ik, psi)      
+      do idim = 1, st%d%dim
+       call X(hamiltonian_apply) (hm, gr%der, psi, hpsi, idim, ik)
+       ! XXX this will hardly work because tmp is not necessarily written to...
+       ! In fact as of lately, it is never written to as the mentioned sorting trick is not in use
+       !if (st%eigenval(ist, ik) > CNST(1e3)) tmp = st%eigenval(ist, ik) -  CNST(1e3) ! compensate the ugly sorting trick
+       resid(1:ldv) = resid(1:ldv) + hpsi(1:ldv, idim) - tmp * psi(1:ldv, idim)
+       if(associated(st%zeigenval%Im)) resid(1:ldv) = resid(1:ldv) - M_zI * st%zeigenval%Im(ist, ik) * psi(1:ldv, idim)
+      end do
+    end do
+    !resid(:) = resid(:) * sqrt(gr%mesh%volume_element)
+    SAFE_DEALLOCATE_A(hpsi)
 
-	
-  ishfts = 1
-  maxitr = niter
-  mode1 = 1
-  iparam(1) = ishfts
-  iparam(3) = maxitr
-  iparam(7) = mode1
-	
+    resid_sum = abs(sum(resid(:)**2))
+    print *,"residual", resid_sum
+    if(resid_sum < M_EPSILON .or. resid_sum > M_HUGE) then
+      resid(:) = R_TOTYPE(M_ONE)
+    end if
+    
+  else
+    resid(:) = R_TOTYPE(M_ONE)
+  end if
+  
+!   do i = 1, ldv
+! !      resid(i) = sum(st%X(psi)(i, 1, 1:st%nst, ik))*sqrt(gr%mesh%vol_pp(1))
+!       resid(i) = R_TOTYPE(M_ONE)
+!   end do
+!   ishfts = 1
+!   maxitr = niter
+!   mode1 = 1
+  iparam(1) = 1
+  iparam(3) = niter
+  iparam(7) = 1
+
   do
-#if defined(R_TCOMPLEX)      
-    call znaupd  ( ido, 'I', n, 'SR', nev, tol, resid, ncv, &
-               v, ldv, iparam, ipntr, workd, workl, lworkl, &
-               rwork,info )
+#if defined(R_TCOMPLEX)
+    if(arpack%use_parpack) then
+#if defined(HAVE_PARPACK)
+      call pznaupd  ( mpi_comm, &
+            ido, 'I', n, which, nev, tol, resid, ncv, &
+            v, ldv, iparam, ipntr, workd, workl, lworkl, &
+            rwork, info)
+
+#endif
+    else
+      call znaupd  ( & 
+            ido, 'I', n, which, nev, tol, resid, ncv, &
+            v, ldv, iparam, ipntr, workd, workl, lworkl, &
+            rwork, info)
+    end if
+
 #else 
-    call dnaupd  ( ido, 'I', n, 'SR', nev, tol, resid, ncv, &
-               v, ldv, iparam, ipntr, workd, workl, lworkl, & 
-               info )
+    if(arpack%use_parpack) then
+#if defined(HAVE_PARPACK)
+      call pdnaupd  ( mpi_comm, &
+            ido, 'I', n, which, nev, tol, resid, ncv, &
+            v, ldv, iparam, ipntr, workd, workl, lworkl, &
+            info )  
+#endif
+    else 
+      call dnaupd  ( & 
+            ido, 'I', n, which, nev, tol, resid, ncv, &
+            v, ldv, iparam, ipntr, workd, workl, lworkl, &
+            info)
+    end if
 #endif      
       
     if( abs(ido).ne.1) exit
-    call av (n, workd(ipntr(1)), workd(ipntr(2)))
+    
+    !!!call av (arpack, ldv, workd(ipntr(1)), workd(ipntr(2))) ! calculate H * psi
+    call av (arpack, n, workd(ipntr(1)), workd(ipntr(2))) ! calculate H * psi
+    
   end do
-  ! If info is larger than zero, it may not be an error (i.e., not all eigenvectors
-  ! were converged)
-  if(info .lt. 0) then
-    write(message(1),'(a,i5)') 'Error with ARPACK _naupd, info = ', info
-    write(message(2),'(a)')    'Check the documentation of _naupd.'
-    call messages_fatal(2)
-  end if
+  
+  !Error Check
+  call arpack_check_error('naupd', info)
+  
+ 
 
 #if defined(R_TCOMPLEX) 
-  call zneupd  (.true., 'A', select, zd, v, ldv, sigma, &
-        workev, 'I', n, 'SR', nev, tol, resid, ncv, & 
-        v, ldv, iparam, ipntr, workd, workl, lworkl, &
-        rwork, ierr)
-        d(:,1)=real(zd(:))
-        d(:,2)=aimag(zd(:))
-        d(:,3)=M_ZERO
+  if(arpack%use_parpack) then
+#if defined(HAVE_PARPACK) 
+    call pzneupd  (mpi_comm,&
+          .true., 'A', select, zd, v, ldv, sigma, &
+          workev, 'I', n, which, nev, tol, resid, ncv, & 
+          v, ldv, iparam, ipntr, workd, workl, lworkl, &
+          rwork, info)
+          d(:,1)=real(zd(:))
+          d(:,2)=aimag(zd(:))
+          d(:,3)=M_ZERO
+#endif
+  else
+    call zneupd  (&
+          .true., 'A', select, zd, v, ldv, sigma, &
+          workev, 'I', n,  which, nev, tol, resid, ncv, & 
+          v, ldv, iparam, ipntr, workd, workl, lworkl, &
+          rwork, info)
+          d(:,1)=real(zd(:))
+          d(:,2)=aimag(zd(:))
+          d(:,3)=M_ZERO
+  end if    
         
 #else	
-  call dneupd ( .true., 'A', select, d, d(1,2), v, ldv, &
-       sigmar, sigmai, workev, 'I', n, 'SR', nev, tol, &
-       resid, ncv, v, ldv, iparam, ipntr, workd, workl, &
-       lworkl, ierr )
+  if(arpack%use_parpack) then
+#if defined(HAVE_PARPACK)
+    call pdneupd (mpi_comm,&
+         .true., 'A', select, d, d(1,2), v, ldv, &
+         sigmar, sigmai, workev, 'I', n, which, nev, tol, &
+         resid, ncv, v, ldv, iparam, ipntr, workd, workl, &
+         lworkl, info )
+ 
 #endif
-       
-  if(ierr .ne. 0) then
-    write(message(1),'(a,i5)') 'Error with ARPACK _neupd, info = ', info
-    write(message(2),'(a)')    'Check the documentation of _neupd.'
-    call messages_fatal(2)
+  else
+    call dneupd (&
+         .true., 'A', select, d, d(1,2), v, ldv, &
+         sigmar, sigmai, workev, 'I', n, which, nev, tol, &
+         resid, ncv, v, ldv, iparam, ipntr, workd, workl, &
+         lworkl, info )
   end if
 
-  ! This sets the number of converged eigenvectors.
-  converged =  iparam(5)
+#endif
 
-  call dmout(6, converged, 3, d, ncv+1, -6, 'Ritz values (Real, Imag) and residual residuals')
+  !Error Check    
+  call arpack_check_error('neupd', info) 
 
   ! This sets niter to the number of matrix-vector operations.
   niter = iparam(9)
-  do j = 1, converged
-    do i = 1, gr%mesh%np
-!       st%X(psi)(i, 1, j, ik) = v(i, j)/sqrt(gr%mesh%vol_pp(1))
-      psi(i,1) = v(i, j)/sqrt(gr%mesh%volume_element) 
-    end do
-    call states_set_state(st, gr%mesh, j, ik, psi)
+  
+  ! The number of converged eigenvectors.
+  converged =  iparam(5)
     
-    print *,"st", j, "norm", sqrt(X(mf_dotp)(gr%mesh, st%d%dim, psi, psi, dotu = .true.))!,&
-!      sqrt(sum(psi(:, 1)*psi(:, 1))*gr%mesh%volume_element), sqrt(X(mf_integrate)(gr%mesh,psi(:,1)**2))
-        
-    st%eigenval(j, ik) = d(j, 1)
-    if(associated(st%zeigenval%Im))then 
-      st%zeigenval%Im(j, ik) = d(j, 2)
+  do j = 1, converged
+!     do i = 1, n
+!       psi(i,1) = v(i, j)!/sqrt(gr%mesh%volume_element) 
+!     end do
+!     do i = n + 1, gr%mesh%np_part
+!       psi(i,1) = R_TOTYPE(M_ZERO) 
+!     end do
+    psi(1:n, 1) = v(1:n, j)
+    psi(n+1:gr%mesh%np_part,1) = R_TOTYPE(M_ZERO) 
+    
+    call states_set_state(st, gr%mesh, j, ik, psi)
+
+    eps_temp = (d(j, 1) + M_zI * d(j, 2)) / arpack%rotation
+
+    st%eigenval(j, ik) = real(eps_temp)
+    if(associated(st%zeigenval%Im)) then
+      st%zeigenval%Im(j, ik) = aimag(eps_temp)
     end if
 
     if(abs(workl(ipntr(11)+j-1))< M_EPSILON) then
@@ -163,23 +240,23 @@ subroutine X(eigen_solver_arpack)(gr, st, hm, tol_, niter, ncv, converged, ik, d
     end if
   end do
 
-  !Fill unconverged states
-  do j = converged + 1, st%nst
-    do i = 1, gr%mesh%np
-!       st%X(psi)(i, 1, j, ik) = R_TOTYPE(M_ONE)
-      psi(i,1) = R_TOTYPE(M_ONE) 
-    end do
-    call states_set_state(st, gr%mesh, j, ik, psi)
+  !Fill unconverged states with (nice) garbage  
+  ! or maybe we should go with whatever we have
+  !do j = converged + 1, st%nst
+  !  do i = 1, gr%mesh%np
+  !    psi(i,1) = R_TOTYPE(M_ONE) 
+  !  end do
+  !  call states_set_state(st, gr%mesh, j, ik, psi)
 
-    st%eigenval(j, ik) = M_HUGE
-    if(associated(st%zeigenval%Im))then 
-      st%zeigenval%Im(j, ik) = M_HUGE
-    end if
-    diff(j) = M_HUGE
-  end do
+  !  st%eigenval(j, ik) = M_HUGE
+  !  if(associated(st%zeigenval%Im))then 
+  !    st%zeigenval%Im(j, ik) = M_HUGE
+  !  end if
+  !  diff(j) = M_HUGE
+  !end do
 
 
-  SAFE_DEALLOCATE_A(ax)
+
   SAFE_DEALLOCATE_A(d)
   SAFE_DEALLOCATE_A(resid)
   SAFE_DEALLOCATE_A(v)
@@ -195,16 +272,16 @@ subroutine X(eigen_solver_arpack)(gr, st, hm, tol_, niter, ncv, converged, ik, d
   SAFE_DEALLOCATE_A(zd)  
 #endif
 
-   POP_SUB(X(eigen_solver_arpack))
-
+   POP_SUB(eigen_arpack.eigen_solver_arpack)
 contains
 
   ! ---------------------------------------------------------
-  subroutine av (n, v, w)
-    integer, intent(in) :: n
-    R_TYPE, intent(in) :: v(n)
-    R_TYPE, intent(out) :: w(n)
-
+  subroutine av (arpack, n, v, w)
+    type(eigen_arpack_t), intent(in) :: arpack
+    integer,              intent(in) :: n
+    R_TYPE,               intent(in) :: v(n)
+    R_TYPE,               intent(out):: w(n)
+    
     integer :: i, NP, NP_PART
     R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
     
@@ -213,27 +290,28 @@ contains
     NP = gr%mesh%np
     NP_PART = gr%mesh%np_part
 
+    ASSERT(n == NP .or. n == NP_PART)
+
     SAFE_ALLOCATE(psi(NP_PART, hm%d%dim))
     SAFE_ALLOCATE(hpsi(NP_PART, hm%d%dim))
 
-    do i = 1, NP
-!       print *,i, NP, NP_PART, ist
-      psi(i, 1) = v(i)/sqrt(gr%mesh%vol_pp(1))
-    end do
-    do i = NP+1, NP_PART
-      psi(i, 1) = M_ZERO
-    end do
-! psi(1:NP,1) = v(:)
-! psi(NP+1:NP_PART,1) = M_ZERO
+!     do i = 1, NP
+!       psi(i, 1) = v(i)!/sqrt(gr%mesh%volume_element)
+!     end do
+!     do i = NP+1, NP_PART
+!       psi(i, 1) = M_ZERO
+!     end do
     
+    psi(1:n,1) = v(1:n)
+    psi(n+1:NP_PART, 1) = M_ZERO
     
     call X(hamiltonian_apply) (hm, gr%der, psi, hpsi, 1, ik)
     
-! w(:) = hpsi(1:NP,1)
-        
-    do i = 1, NP
-      w(i) = hpsi(i, 1)*sqrt(gr%mesh%vol_pp(1))
-    end do
+    w(1:n) = arpack%rotation * hpsi(1:n,1) ! XXX only works if complex
+    
+ !    do i = 1, NP
+ !       w(i) = hpsi(i, 1)!*sqrt(gr%mesh%volume_element)
+ !     end do
 
 
     SAFE_DEALLOCATE_A(psi)

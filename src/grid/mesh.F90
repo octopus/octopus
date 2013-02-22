@@ -364,7 +364,7 @@ contains
     if(mesh%parallel_in_domains) then
       min_loc_in(1) = dmin
       min_loc_in(2) = mesh%np_global * mesh%mpi_grp%rank  + real(imin, REAL_PRECISION) 
-      call MPI_Allreduce(min_loc_in, min_loc_out, 1, MPI_FLOAT, &
+      call MPI_Allreduce(min_loc_in, min_loc_out, 1, MPI_2FLOAT, &
         MPI_MINLOC, mesh%mpi_grp%comm, mpi_err)
       dmin = min_loc_out(1)
       imin = mod(nint(min_loc_out(2)), mesh%np_global)

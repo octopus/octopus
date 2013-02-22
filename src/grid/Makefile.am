@@ -70,7 +70,8 @@ libgrid_a_SOURCES =       \
 	symmetrizer.F90         \
 	transfer_table.F90      \
 	zoltan.F90              \
-	zoltan_low.c
+	zoltan_low.c            \
+  cmplxscl.F90
 
 
 noinst_HEADERS =                   \
@@ -145,4 +146,6 @@ symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o par_vec.o
 transfer_table.o : transfer_table.F90
 zoltan_low.o : zoltan_low.c
 zoltan.o : zoltan.F90
+cmplxscl.o :cmplxscl.F90
+
 

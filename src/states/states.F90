@@ -25,6 +25,7 @@ module states_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
+  use cmplxscl_m
   use comm_m
   use batch_m
   use batch_ops_m
@@ -149,6 +150,9 @@ module states_m
     FLOAT, pointer           :: dpsi(:,:,:,:)         !< dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
     CMPLX, pointer           :: zpsi(:,:,:,:)         !< zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
    
+   
+     
+    type(cmplxscl_t)         :: cmplxscl              !< contain the cmplxscl parameters                 
     !> Pointers to complexified quantities. 
     !! When we use complex scaling the Hamiltonian is no longer hermitian.
     !! In this case we have to distinguish between left and right eigenstates of H and
@@ -165,6 +169,8 @@ module states_m
     type(cmplx_array2_t)     :: zeigenval    !< cmplxscl: the complexified eigenvalues 
     FLOAT,           pointer :: Imrho_core(:)  
     FLOAT,           pointer :: Imfrozen_rho(:, :)   
+    type(batch_t),   pointer :: psibL(:, :)  !< Left wave-functions blocks
+    logical                  :: have_left_states
 
 
     type(batch_t), pointer   :: psib(:, :)            !< A set of wave-functions blocks
@@ -265,14 +271,14 @@ contains
     call modelmb_particles_nullify(st%modelmbparticles)
     st%priv%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
 
-    st%d%cmplxscl = .false.
+    st%cmplxscl%space = .false.
     !cmplxscl
     nullify(st%psi%dL, st%psi%dR)
     nullify(st%psi%zL, st%psi%zR)     
     nullify(st%zeigenval%Re, st%zeigenval%Im) 
     nullify(st%zrho%Re, st%zrho%Im)
     nullify(st%Imrho_core, st%Imfrozen_rho)
-
+    nullify(st%psibL)
 
     nullify(st%dpsi, st%zpsi)
     nullify(st%psib, st%iblock, st%block_is_local)
@@ -606,23 +612,12 @@ contains
       call messages_info(1)
     end if
 
-    !%Variable ComplexScaling
-    !%Type logical
-    !%Default false
-    !%Section Hamiltonian
-    !%Description
-    !% (experimental) If set to yes, a complex scaled Hamiltonian will be used. 
-    !% When <tt>TheoryLevel=DFT</tt> Density functional resonance theory DFRT is employed.  
-    !% In order to reveal resonances <tt>ComplexScalingAngle</tt> bigger than zero should be set.
-    !% D. L. Whitenack and A. Wasserman, Phys. Rev. Lett. 107, 163002 (2011).
-    !%End
-    call parse_logical(datasets_check('ComplexScaling'), .false., st%d%cmplxscl)
+    !cmplxscl
+    call cmplxscl_init(st%cmplxscl)
 
-
-    if (st%d%cmplxscl) then
-      call messages_experimental('Complex Scaling')
-      call messages_print_var_value(stdout, "ComplexScaling", st%d%cmplxscl)
-
+    st%have_left_states = .false.
+    
+    if (st%cmplxscl%space) then
       !Even for gs calculations it requires complex wavefunctions
       st%priv%wfs_type = TYPE_CMPLX
       !Allocate imaginary parts of the eigenvalues
@@ -1189,11 +1184,12 @@ contains
 
   ! ---------------------------------------------------------
   !> Allocates the KS wavefunctions defined within a states_t structure.
-  subroutine states_allocate_wfns(st, mesh, wfs_type, alloc_zphi)
+  subroutine states_allocate_wfns(st, mesh, wfs_type, alloc_zphi, alloc_Left)
     type(states_t),         intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
     logical,      optional, intent(in)      :: alloc_zphi ! only needed for gs transport
+    logical,      optional, intent(in)      :: alloc_Left ! allocate an addtional set of wfs to store left eigenstates
 
     integer :: ip, ik, ist, idim, st1, st2, k1, k2, np_part
     logical :: force
@@ -1209,6 +1205,12 @@ contains
       ASSERT(wfs_type == TYPE_FLOAT .or. wfs_type == TYPE_CMPLX)
       st%priv%wfs_type = wfs_type
     end if
+
+    st%have_left_states = optional_default(alloc_Left, .false.) .and. st%cmplxscl%space
+    if(st%have_left_states) then
+      ASSERT(st%priv%wfs_type == TYPE_CMPLX) 
+    end if
+    print *,"HAVE LEFT STATES?? = ",st%have_left_states
 
     !%Variable ForceComplex
     !%Type logical
@@ -1240,11 +1242,15 @@ contains
       else        
         SAFE_ALLOCATE(st%psi%zR(1:np_part, 1:st%d%dim, st1:st2, k1:k2))  
         st%zpsi => st%psi%zR
-        if(st%d%cmplxscl) then
-          SAFE_ALLOCATE(st%psi%zL(1:np_part, 1:st%d%dim, st1:st2, k1:k2))  
-        else
-          st%psi%zL => st%psi%zR  
-        end if          
+        if(st%cmplxscl%space) then 
+          if (st%have_left_states) then
+            print *, "ALLOCATE LEFT"
+            SAFE_ALLOCATE(st%psi%zL(1:np_part, 1:st%d%dim, st1:st2, k1:k2))  
+          else
+            print *, "POINT LEFT"          
+            st%psi%zL => st%psi%zR  
+          end if          
+        end if
       end if
       
       if(optional_default(alloc_zphi, .false.)) then
@@ -1352,6 +1358,9 @@ contains
     end do
 
     SAFE_ALLOCATE(st%psib(1:st%nblocks, 1:st%d%nik))
+    if(st%have_left_states) then
+      SAFE_ALLOCATE(st%psibL(1:st%nblocks, 1:st%d%nik))
+    end if
     SAFE_ALLOCATE(st%block_is_local(1:st%nblocks, 1:st%d%nik))
     st%block_is_local = .false.
     st%block_start  = -1
@@ -1380,7 +1389,19 @@ contains
               call batch_init(st%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
               call zbatch_new(st%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
             end if
+            if(st%have_left_states) then !cmplxscl
+              if(associated(st%psi%zL)) then
+                call batch_init(st%psibL(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%psi%zL(:, :, bstart(ib):bend(ib), iqn))
+              else
+                ASSERT(present(mesh))
+                call batch_init(st%psibL(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
+                call zbatch_new(st%psibL(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+              end if 
+            else
+              st%psibL => st%psib                           
+            end if            
           end if
+          
         end do
       end if
     end do
@@ -1393,6 +1414,18 @@ contains
     st%block_size(1:st%nblocks) = bend(1:st%nblocks) - bstart(1:st%nblocks) + 1
 
     st%block_initialized = .true.
+    
+    
+!     !cmplxscl
+!     if(st%have_left_states) then
+!       do ib = 1, st%nblocks
+!         do iqn = st%d%kpt%start, st%d%kpt%end
+!           call batch_copy(st%psib(ib,iqn), st%psibL(ib,iqn), reference = .false.)
+!         end do
+!       end do
+!     else
+!       st%psibL => st%psib
+!     end if
 
 !!$!!!!DEBUG
 !!$    ! some debug output that I will keep here for the moment
@@ -1432,11 +1465,20 @@ contains
     if (st%block_initialized) then
        do ib = 1, st%nblocks
           do iq = st%d%kpt%start, st%d%kpt%end
-            if(st%block_is_local(ib, iq)) call batch_end(st%psib(ib, iq))
+            if(st%block_is_local(ib, iq)) then
+              call batch_end(st%psib(ib, iq))
+              if(st%have_left_states) call batch_end(st%psibL(ib, iq)) !cmplxscl
+            end if
           end do
        end do
 
        SAFE_DEALLOCATE_P(st%psib)
+
+       if(st%have_left_states) then !cmplxscl
+         SAFE_DEALLOCATE_P(st%psibL)
+       else  
+         nullify(st%psibL)
+       end if      
        SAFE_DEALLOCATE_P(st%iblock)
        SAFE_DEALLOCATE_P(st%block_range)
        SAFE_DEALLOCATE_P(st%block_size)
@@ -1480,7 +1522,7 @@ contains
     SAFE_ALLOCATE(st%zrho%Re(1:gr%fine%mesh%np_part, 1:st%d%nspin))
     st%zrho%Re = M_ZERO    
     st%rho => st%zrho%Re 
-    if( st%d%cmplxscl) then
+    if( st%cmplxscl%space) then
       SAFE_ALLOCATE(st%zrho%Im(1:gr%fine%mesh%np_part, 1:st%d%nspin))
       st%zrho%Im = M_ZERO
     end if
@@ -1492,7 +1534,7 @@ contains
     if(geo%nlcc) then
       SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
       st%rho_core(:) = M_ZERO
-      if(st%d%cmplxscl) then
+      if(st%cmplxscl%space) then
         SAFE_ALLOCATE(st%Imrho_core(1:gr%fine%mesh%np))
         st%Imrho_core(:) = M_ZERO
       end if
@@ -1622,7 +1664,7 @@ contains
     SAFE_DEALLOCATE_P(st%zeigenval%Re)
     SAFE_DEALLOCATE_P(st%zeigenval%Im)
     nullify(st%eigenval)
-    if (st%d%cmplxscl) then      
+    if (st%cmplxscl%space) then      
       SAFE_ALLOCATE(st%zeigenval%Im(1:st%nst, 1:st%d%nik))
       st%zeigenval%Im = huge(st%zeigenval%Im)      
     end if
@@ -1665,13 +1707,14 @@ contains
     stout%rho => stout%zrho%Re
     call loct_pointer_copy(stout%zeigenval%Re, stin%zeigenval%Re) 
     stout%eigenval => stout%zeigenval%Re
-    if(stin%d%cmplxscl) then
+    if(stin%cmplxscl%space) then
       call loct_pointer_copy(stout%psi%zL, stin%psi%zL)         
       call loct_pointer_copy(stout%zrho%Im, stin%zrho%Im)           
       call loct_pointer_copy(stout%zeigenval%Im, stin%zeigenval%Im) 
       call loct_pointer_copy(stout%Imrho_core, stin%Imrho_core)
       call loct_pointer_copy(stout%Imfrozen_rho, stin%Imfrozen_rho)
     end if
+    stout%have_left_states = stin%have_left_states
 
     
     ! the call to init_block is done at the end of this subroutine
@@ -1774,7 +1817,7 @@ contains
     else
       SAFE_DEALLOCATE_P(st%eigenval)
     end if
-    if(st%d%cmplxscl) then
+    if(st%cmplxscl%space) then
       SAFE_DEALLOCATE_P(st%zrho%Im)
       SAFE_DEALLOCATE_P(st%zeigenval%Im)
       SAFE_DEALLOCATE_P(st%Imrho_core)
@@ -1814,8 +1857,11 @@ contains
     CMPLX   :: alpha, beta
     FLOAT, allocatable :: dpsi(:,  :)
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
+    logical            :: cmplxscl
 
     PUSH_SUB(states_generate_random)
+
+    cmplxscl = st%cmplxscl%space
 
     ist_start = st%st_start
     if(present(ist_start_)) ist_start = max(ist_start, ist_start_)
@@ -1850,8 +1896,13 @@ contains
           else
             call zmf_random(mesh, zpsi(:, 1), seed)
             call states_set_state(st, mesh, ist,  ik, zpsi)
+            if(st%have_left_states) then
+              call zmf_random(mesh, zpsi(:, 1), seed)
+              call states_set_state(st, mesh, ist,  ik, zpsi, left = .true.)
+            end if
           end if
           st%eigenval(ist, ik) = M_ZERO
+          if(cmplxscl) st%zeigenval%Im(ist, ik) = M_ZERO
         end do
       end do
 
@@ -1931,12 +1982,9 @@ contains
 
     PUSH_SUB(states_fermi)
 
-    if(st%d%cmplxscl) then
-      call smear_find_fermi_energy(st%smear, st%zeigenval%Re, st%occ, st%qtot, &
-        st%d%nik, st%nst, st%d%kweights, st%zeigenval%Im)
-
-      call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
-        st%d%nik, st%nst, st%zeigenval%Im)
+    if(st%cmplxscl%space) then
+      call smear_occupy_states_by_ordering(st%smear, st%eigenval, st%occ, st%qtot, &
+        st%d%nik, st%nst, st%d%kweights)
     else
       
       call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
@@ -2543,6 +2591,7 @@ contains
         end if
         
         call batch_pack(st%psib(ib, iqn), copy)
+        if(st%have_left_states)  call batch_pack(st%psibL(ib, iqn), copy)
       end do
     end do qnloop
 
@@ -2566,6 +2615,7 @@ contains
     do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%block_start, st%block_end
         if(batch_is_packed(st%psib(ib, iqn))) call batch_unpack(st%psib(ib, iqn), copy)
+        if(batch_is_packed(st%psib(ib, iqn)) .and. st%have_left_states) call batch_unpack(st%psibL(ib, iqn), copy)        
       end do
     end do
 
@@ -2586,6 +2636,7 @@ contains
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%block_start, st%block_end
           call batch_sync(st%psib(ib, iqn))
+          if(st%have_left_states) call batch_sync(st%psibL(ib, iqn))
         end do
       end do
 
@@ -2607,6 +2658,10 @@ contains
     write(message(2), '(a,i8)')    'Number of states         = ', st%nst
     write(message(3), '(a,i8)')    'States block-size        = ', st%d%block_size
     call messages_info(3)
+    if(st%have_left_states) then
+      write(message(1), '(a)')    'States have left states'
+      call messages_info(1)
+    end if
 
     call messages_print_stress(stdout)
 
@@ -2633,6 +2688,7 @@ contains
     do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%block_start, st%block_end
         call batch_set_zero(st%psib(ib, iqn))
+        if(st%have_left_states) call batch_set_zero(st%psibL(ib, iqn)) 
       end do
     end do
     

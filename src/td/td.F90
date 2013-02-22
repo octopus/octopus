@@ -125,15 +125,17 @@ contains
     type(grid_t),     pointer :: gr   ! some shortcuts
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
-    logical                   :: stopping, update_energy
+    logical                   :: stopping, update_energy, cmplxscl
     integer                   :: iter, ii, ierr, scsteps, ispin
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force
     type(profile_t),     save :: prof
-    FLOAT, allocatable :: vold(:, :)
+    FLOAT, allocatable :: vold(:, :), Imvold(:, :)
 
     PUSH_SUB(td_run)
+
+    cmplxscl = hm%cmplxscl%space
 
     ! some shortcuts
     gr  => sys%gr
@@ -147,13 +149,13 @@ contains
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
       !complex wfs are required for Ehrenfest
-      call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+      call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
       if(st%open_boundaries) then
         ASSERT(associated(gr%ob_grid%lead))
         call states_allocate_intf_wfns(st, gr%ob_grid%lead(:)%mesh)
       end if
     else
-      call states_allocate_wfns(st, gr%mesh)
+      call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
     end if
 
     ! CP has to be initialized after wavefunction type is set
@@ -222,7 +224,11 @@ contains
 
       if(iter > 1) then
         if( ((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time) ) then
-          call kick_apply(gr, st, td%ions, geo, hm%ep%kick)
+          if(.not. cmplxscl) then
+            call kick_apply(gr, st, td%ions, geo, hm%ep%kick)
+          else
+            call kick_apply(gr, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+          end if
           call td_write_kick(gr, hm, sys%outp, geo, iter)
         end if
       end if
@@ -257,8 +263,14 @@ contains
       end select
 
       ! update density
-      if(.not. propagator_dens_is_propagated(td%tr)) call density_calc(st, gr, st%rho)
-
+      if(.not. propagator_dens_is_propagated(td%tr)) then 
+        if(.not. cmplxscl) then
+          call density_calc(st, gr, st%rho)
+        else
+          call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+        end if  
+      end if
+      
       generate = .false.
 
       if(ion_dynamics_ions_move(td%ions)) then
@@ -286,6 +298,12 @@ contains
           do ispin = 1, st%d%nspin
             call lalg_copy(gr%mesh%np, hm%vhxc(:, ispin), vold(:, ispin))
           end do
+          if(cmplxscl) then
+            SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
+            do ispin = 1, st%d%nspin
+              call lalg_copy(gr%mesh%np, hm%Imvhxc(:, ispin), Imvold(:, ispin))
+            end do
+          end if
         end if
    
 
@@ -310,6 +328,12 @@ contains
             call lalg_copy(gr%mesh%np, vold(:, ispin), hm%vhxc(:, ispin))
           end do
           SAFE_DEALLOCATE_A(vold)
+          if(cmplxscl) then
+            do ispin = 1, st%d%nspin
+              call lalg_copy(gr%mesh%np, Imvold(:, ispin), hm%Imvhxc(:, ispin))
+            end do
+            SAFE_DEALLOCATE_A(Imvold)
+          end if
         end if
       end if
 
@@ -365,7 +389,12 @@ contains
     subroutine print_header
 
       if(td%dynamics /= CP) then
-        write(message(1), '(a7,1x,a14,a14,a10,a17)') 'Iter ', 'Time ', 'Energy ', 'SC Steps', 'Elapsed Time '
+        if(.not.cmplxscl) then
+          write(message(1), '(a7,1x,a14,a14,a10,a17)') 'Iter ', 'Time ', 'Energy ', 'SC Steps', 'Elapsed Time '
+        else
+          write(message(1), '(a7,1x,a14,a14,a14,a10,a17)') &
+                                      'Iter ', 'Time ', 'Re(Energy) ','Im(Energy) ', 'SC Steps', 'Elapsed Time '
+        end if
       else
         write(message(1), '(a7,1x,a14,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'CP Energy ', 'Elapsed Time '
       end if
@@ -380,10 +409,18 @@ contains
 
       ! write info
       if(td%dynamics /= CP) then
-        write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, &
-             units_from_atomic(units_out%time, iter*td%dt), &
-             units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
-             scsteps, loct_clock() - etime
+        if(.not. cmplxscl) then
+          write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, &
+               units_from_atomic(units_out%time, iter*td%dt), &
+               units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
+               scsteps, loct_clock() - etime
+        else
+          write(message(1), '(i7,1x,3f14.6,i10,f14.3)') iter, &
+               units_from_atomic(units_out%time, iter*td%dt), &
+               units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
+               units_from_atomic(units_out%energy, hm%energy%Imtotal), &
+               scsteps, loct_clock() - etime
+        end if     
       else
         write(message(1), '(i7,1x,3f14.6,f14.3, i10)') iter, &
              units_from_atomic(units_out%time, iter*td%dt), &
@@ -432,17 +469,17 @@ contains
     ! ---------------------------------------------------------
     subroutine init_wfs()
 
-      integer :: i, is, ierr, ist, jst, freeze_orbitals
+      integer :: i, is, ierr, ist, ik, jst, freeze_orbitals
       character(len=50) :: filename
       FLOAT :: x
       type(block_t) :: blk
       type(states_t) :: stin
-      CMPLX, allocatable :: rotation_matrix(:, :)
+      CMPLX, allocatable :: rotation_matrix(:, :), zv_old(:), zpsi(:,:)
 
       PUSH_SUB(td_run.init_wfs)
 
       if(.not.fromscratch) then
-        call restart_read(trim(tmpdir)//'td', st, gr, ierr, iter=td%iter)
+        call restart_read(trim(tmpdir)//'td', st, gr, ierr, iter=td%iter, read_left = st%have_left_states)
         if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"
           call messages_warning(1)
@@ -473,10 +510,21 @@ contains
 
       if(.not. fromscratch) then
         ! read potential from previous interactions
+        
+        if(cmplxscl) then
+          SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
+        end if
+        
         do i = 1, 2
           do is = 1, st%d%nspin
             write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'td/vprev_', i, is
-            call dio_function_input(trim(filename)//'.obf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
+            if(cmplxscl) then
+              call zio_function_input(trim(filename)//'.obf', gr%mesh, zv_old(1:gr%mesh%np), ierr)
+              td%tr%v_old(1:gr%mesh%np, is, i)   =  real(zv_old(1:gr%mesh%np))
+              td%tr%Imv_old(1:gr%mesh%np, is, i) = aimag(zv_old(1:gr%mesh%np))
+            else
+              call dio_function_input(trim(filename)//'.obf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
+            end if
             ! If we do not succeed, try netcdf
             if(ierr > 0) call dio_function_input(trim(filename)//'.ncdf', gr%mesh, td%tr%v_old(1:gr%mesh%np, is, i), ierr)
             if(ierr > 0) then
@@ -485,6 +533,9 @@ contains
             end if
           end do
         end do
+        if(cmplxscl) then
+          SAFE_DEALLOCATE_A(zv_old)
+        end if
 
       end if
 
@@ -505,6 +556,24 @@ contains
         if(parse_isdef(datasets_check('UserDefinedStates')).ne.0) then
           call restart_read_user_def_orbitals(gr%mesh, st)
         end if
+        
+!         if(st%have_left_states) then
+!           ! At the beginning of the time evolution left and right states are the same 
+!           ! Rational: At the moment cmplxscl left and right states are symmetric 
+!           ! since the original (unscaled) Hamiltonian is real.
+!           ! In the future we may consider to extend the ground state scf
+!           ! to deal with the general case (this would be needed, for instance, to include
+!           ! magnetic fields) 
+!           cSAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:st%d%dim))
+!           do ik = st%d%kpt%start, st%d%kpt%end
+!             do ist = st%st_start, st%st_end
+!               call states_get_state(st, gr%mesh, ist,  ik, zpsi)
+!               call states_set_state(st, gr%mesh, ist,  ik, zpsi, left = .true.)
+!             end do
+!           end do    
+!           cSAFE_DEALLOCATE_A(zpsi)       
+!         end if
+        
 
         !%Variable TransformStates
         !%Type block
@@ -553,6 +622,8 @@ contains
 
       end if
 
+
+
       !%Variable TDFreezeOrbitals
       !%Type integer
       !%Default 0
@@ -580,27 +651,30 @@ contains
 
       if(freeze_orbitals /= 0) call messages_experimental('TDFreezeOrbitals')
 
+      if(.not. cmplxscl) then
+        call density_calc(st, gr, st%rho)
+      else
+        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+      end if
+
       if(freeze_orbitals > 0) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
         call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)
         write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call messages_info(1)
-        call density_calc(st, gr, st%rho)
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       elseif(freeze_orbitals < 0) then
         ! This means SAE approximation. We calculate the Hxc first, then freeze all
         ! orbitals minus one.
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call messages_info(1)
-        call density_calc(st, gr, st%rho)
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
         call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
         call v_ks_freeze_hxc(sys%ks)
         call density_calc(st, gr, st%rho)
       else
         ! Normal run.
-        call density_calc(st, gr, st%rho)
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       end if
 
@@ -626,7 +700,11 @@ contains
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
       if(hm%ep%kick%time .eq. M_ZERO) then
-        call kick_apply(gr, st, td%ions, geo, hm%ep%kick)
+        if(.not. cmplxscl) then
+          call kick_apply(gr, st, td%ions, geo, hm%ep%kick)
+        else
+          call kick_apply(gr, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+        end if
         call td_write_kick(gr, hm, sys%outp, geo, 0)
       end if
       call propagator_run_zero_iter(hm, gr, td%tr)
@@ -725,6 +803,7 @@ contains
 
       integer :: ii, is, ierr
       character(len=256) :: filename
+      CMPLX, allocatable :: zv_old(:)
 
       if(.not. write_restart()) return
 
@@ -736,14 +815,25 @@ contains
         message(1) = 'Unsuccessful write of "'//trim(tmpdir)//'td"'
         call messages_fatal(1)
       end if
+      
+      if(cmplxscl) then
+        SAFE_ALLOCATE(zv_old(1:gr%mesh%np))
+      end if
 
       ! write potential from previous interactions
       do ii = 1, 2
         do is = 1, st%d%nspin
           write(filename,'(a6,i2.2,i3.3)') 'vprev_', ii, is
-          call dio_function_output(restart_format, trim(tmpdir)//"td", &
-            filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), unit_one, ierr, &
-            is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
+          if(cmplxscl) then
+            zv_old = td%tr%v_old(1:gr%mesh%np, is, ii) + M_zI * td%tr%Imv_old(1:gr%mesh%np, is, ii)
+            call zio_function_output(restart_format, trim(tmpdir)//"td", &
+              filename, gr%mesh, zv_old, unit_one, ierr, &
+              is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
+          else
+            call dio_function_output(restart_format, trim(tmpdir)//"td", &
+              filename, gr%mesh, td%tr%v_old(1:gr%mesh%np, is, ii), unit_one, ierr, &
+              is_tmp = .true., grp = st%dom_st_kpt_mpi_grp)
+          end if
           ! the unit is energy actually, but this only for restart, and can be kept in atomic units
           ! for simplicity
           if(ierr.ne.0) then
@@ -754,6 +844,11 @@ contains
       end do
 
       if(td%dynamics == CP) call cpmd_restart_write(td%cp_propagator, gr, st)
+
+      if(cmplxscl) then
+        SAFE_DEALLOCATE_A(zv_old)
+      end if
+      
 
       POP_SUB(td_run.td_save_restart)
     end subroutine td_save_restart
