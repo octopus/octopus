@@ -176,7 +176,7 @@ contains
     !% The default is <tt>lcao_full</tt> if at least one species representing an atom is present.
     !% The default is <tt>lcao_none</tt> if all species are <tt>spec_user_defined</tt>,
     !% <tt>spec_charge_density</tt>, <tt>species_from_file</tt>, or <tt>spec_jelli_slab</tt>.
-    !% The initial guess densitie for LCAO are from the pseudopotential for PSF, HGH, UPF, PSPIO species;
+    !% The initial guess densities for LCAO are from the pseudopotential for PSF, HGH, UPF, PSPIO species;
     !% from the natural charge density for <tt>spec_charge_density</tt>, <tt>spec_point</tt>,
     !% <tt>spec_jelli</tt>, and <tt>spec_jelli_slab</tt>;
     !% or uniform for CPI and FHI pseudopotentials, <tt>spec_full_delta</tt>, <tt>spec_full_gaussian</tt>,
