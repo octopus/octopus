@@ -1,8 +1,9 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Complex-scaling - harmonic oscillator
+Options    : arpack
 Programs   : octopus
-TestGroups : short-run; daily
+TestGroups : short-run; complex_scaling
 Enabled    : Yes
 
 # direct_sum doesn't complex-scale correctly these days so this test temporarily uses 2D for the non-independent particle test

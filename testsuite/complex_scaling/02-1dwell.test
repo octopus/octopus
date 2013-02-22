@@ -1,8 +1,9 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Complex-scaling - harmonic oscillator
+Options    : arpack
 Programs   : octopus
-TestGroups : short-run; daily
+TestGroups : short-run; complex_scaling
 Enabled    : Yes
 
 Input: 02-1dwell.lda.inp
