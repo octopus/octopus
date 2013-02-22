@@ -365,14 +365,6 @@ contains
 
     if (sys%st%d%ispin /= SPINORS) then
 
-      if(iand(theorylevel, CASIDA_PETERSILKA) /= 0) then
-        message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
-        call messages_info(1)
-        cas%type = CASIDA_PETERSILKA
-        call casida_work(sys, hm, cas)
-        call casida_write(cas, sys)
-      endif
-
       if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
         call messages_experimental("Tamm-Dancoff calculations")
         message(1) = "Info: Calculating matrix elements in the Tamm-Dancoff approximation"
@@ -395,6 +387,16 @@ contains
         message(1) = "Info: Calculating matrix elements with the full Casida method"
         call messages_info(1)
         cas%type = CASIDA_CASIDA
+        call casida_work(sys, hm, cas)
+        call casida_write(cas, sys)
+      endif
+
+      ! Doing this first, if doing the others later, takes longer, because we would use
+      ! each Poisson solution for only one matrix element instead of a whole column.
+      if(iand(theorylevel, CASIDA_PETERSILKA) /= 0) then
+        message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
+        call messages_info(1)
+        cas%type = CASIDA_PETERSILKA
         call casida_work(sys, hm, cas)
         call casida_write(cas, sys)
       endif
