@@ -159,7 +159,7 @@ contains
 
     this%initialized = .true.
 
-    ! The initial LCAO calculation is done by default if we have pseudopotentials.
+    ! The initial LCAO calculation is done by default if we have species representing atoms.
     ! Otherwise, it is not the default value and has to be enforced in the input file.
     mode_default = LCAO_START_FULL
     if(geo%only_user_def) mode_default = LCAO_START_NONE
@@ -169,11 +169,14 @@ contains
     !%Section SCF::LCAO
     !%Description
     !% Before starting a SCF calculation, <tt>Octopus</tt> can perform
-    !% a LCAO calculation. These can provide <tt>Octopus</tt> with a good set
+    !% a linear combination of atomic orbitals (LCAO) calculation.
+    !% These can provide <tt>Octopus</tt> with a good set
     !% of initial wavefunctions and with a new guess for the density.
     !% (Up to the current version, only a minimal basis set is used.)
-    !% The default is <tt>lcao_full</tt> unless all species are user-defined, in which case
-    !% the default is <tt>lcao_none</tt>.
+    !% The default is <tt>lcao_full</tt> if at least one species representing an atom is present.
+    !% The default is <tt>lcao_none</tt> if all species are <tt>spec_user_def</tt>,
+    !% <tt>spec_charge_density</tt>, <tt>species_from_file</tt>, or <tt>spec_jelli_slab</tt>.
+    !% (Non-pseudopotential species use Hermite polynomials as orbitals.)
     !%Option lcao_none 0
     !% Do not perform a LCAO calculation before the SCF cycle. Instead use random wavefunctions.
     !%Option lcao_states 2
@@ -308,8 +311,12 @@ contains
       !% (Only applies if <tt>LCAOAlternative = no</tt>.)
       !% Before starting the SCF cycle, an initial LCAO calculation can be performed
       !% in order to obtain reasonable initial guesses for spin-orbitals and densities.
-      !% For this purpose, the code calculates a number of atomic orbitals -- this
-      !% number depends on the given species. The default dimension for the LCAO basis
+      !% For this purpose, the code calculates a number of atomic orbitals.
+      !% The number available for a species described by a pseudopotential is all the
+      !% orbitals up the maximum angular momentum being used, minus any orbitals that
+      !% are found to be unbound. For non-pseudopotential species, the number is equal to
+      !% twice the valence charge.
+      !% The default dimension for the LCAO basis
       !% set will be the sum of all these numbers, or twice the number of required orbitals
       !% for the full calculation, whichever is less.
       !%
@@ -384,7 +391,7 @@ contains
       !%Default false
       !%Section SCF::LCAO
       !%Description
-      !% Only applies if <tt>LCAOAlternative = true</tt>.
+      !% Only applies if <tt>LCAOAlternative = true</tt>, and all species are pseudopotentials.
       !% (experimental) If this variable is set to yes, the LCAO
       !% procedure will add an extra set of numerical orbitals (by
       !% using the derivative of the radial part of the original
