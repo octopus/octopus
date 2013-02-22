@@ -696,7 +696,7 @@ contains
           end do
         end do
         
-        call messages_experimental('Non-orthogonal cells support')
+        call messages_not_implemented('Non-orthogonal cells support')
 
       end if
     end if
