@@ -34,7 +34,7 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   select case(this%method)
   case(POISSON_DIRECT_SUM, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
     valid_solver = .true.
-  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_SETE)
+  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_SETE, POISSON_LIBISF)
     valid_solver = .true.
   case default
     valid_solver = .false.
@@ -138,7 +138,17 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
      
   case(POISSON_ISF)
     call poisson_isf_init(this%isf_solver, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
-
+    
+  case(POISSON_LIBISF)
+    call poisson_libisf_init(this%libisf_solver, this%der%mesh, this%cube)
+    call poisson_libisf_get_dims(this%libisf_solver, this%cube)
+    this%cube%parallel_in_domains = this%libisf_solver%datacode == "D"
+    !! At the beginnig we'll use the MPI_WORLD_COMM
+    this%cube%mpi_grp = mpi_world
+    if (this%der%mesh%parallel_in_domains .and. this%cube%parallel_in_domains) then
+      call mesh_cube_parallel_map_init(this%mesh_cube_map, this%der%mesh, this%cube)
+    end if
+    
   case(POISSON_FFT)
 
     call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel)

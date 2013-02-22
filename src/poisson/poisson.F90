@@ -47,6 +47,7 @@ module poisson_m
   use poisson_isf_m
   use poisson_fft_m
   use poisson_fmm_m
+  use poisson_libisf_m
   use poisson_multigrid_m
   use poisson_sete_m
   use profiling_m
@@ -89,7 +90,8 @@ module poisson_m
     POISSON_CG_CORRECTED  =  6,         &
     POISSON_MULTIGRID     =  7,         &
     POISSON_ISF           =  8,         &
-    POISSON_SETE          =  9
+    POISSON_SETE          =  9,         &
+    POISSON_LIBISF        = 10
   
   type poisson_t
     type(derivatives_t), pointer :: der
@@ -104,6 +106,7 @@ module poisson_m
     type(poisson_corr_t) :: corrector
     type(poisson_sete_t) :: sete_solver
     type(poisson_isf_t)  :: isf_solver
+    type(poisson_libisf_t) :: libisf_solver
     type(poisson_fmm_t)  :: params_fmm
     integer :: nslaves
 #ifdef HAVE_MPI2
@@ -187,6 +190,10 @@ contains
     !% Interpolating Scaling Functions Poisson solver.
     !%Option sete 9
     !% (Experimental) SETE solver. Complex boundaries are required.
+    !%Option libisf 10
+    !% (Experimental) Meant to be exactly the same as Interpolating
+    !% Scaling Functions Poisson solver, but using an external
+    !% library, taken from BigDFT 1.6.0
     !%End
 
     default_solver = POISSON_FFT
@@ -374,13 +381,16 @@ contains
         call messages_experimental('FMM Poisson solver')
       end if
 
+      if (this%method == POISSON_LIBISF) then
+        call messages_experimental('LIBISF Poisson solver')
+      end if
     end select
 
     ! Now that we know the method, we check if we need a cube and its dimentions
     need_cube = .false.
     fft_type = FFT_REAL
 
-    if (this%method == POISSON_ISF) then
+    if (this%method == POISSON_ISF .or. this%method == POISSON_LIBISF) then
       fft_type = FFT_NONE
       box(:) = der%mesh%idx%ll(:)
       need_cube = .true.
@@ -477,6 +487,10 @@ contains
 
     case(POISSON_ISF)
       call poisson_isf_end(this%isf_solver)
+      has_cube = .true.
+
+    case(POISSON_LIBISF)
+      call poisson_libisf_end(this%libisf_solver)
       has_cube = .true.
 
     case(POISSON_SETE)
@@ -683,6 +697,15 @@ contains
     case(POISSON_ISF)
       call poisson_isf_solve(this%isf_solver, der%mesh, this%cube, pot, rho, all_nodes_value)
      
+
+    case(POISSON_LIBISF)
+      if (this%libisf_solver%datacode == "G") then
+        ! Global version
+        call poisson_libisf_global_solve(this%libisf_solver, der%mesh, this%cube, pot, rho, all_nodes_value)
+      else ! "D" Distributed version
+        call poisson_libisf_parallel_solve(this%libisf_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
+      end if
+
     case(POISSON_SETE)
 
       nx = der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) + 1 - 2*der%mesh%idx%enlarge(1)
