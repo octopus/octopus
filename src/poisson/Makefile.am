@@ -49,13 +49,13 @@ depend:
 poisson_sete.o : poisson_sete.F90
 poisson_cutoffs.o : poisson_cutoffs.c
 poisson_cutoff.o : poisson_cutoff.F90 
-poisson_isf.o : poisson_isf.F90 
 poisson_libisf.o : poisson_libisf.F90
 poisson_fft.o : poisson_fft.F90 poisson_cutoff.o 
 poisson_corrections.o : poisson_corrections.F90 
 poisson_cg.o : poisson_cg.F90 poisson_corrections.o 
 poisson_multigrid.o : poisson_multigrid.F90 poisson_corrections.o 
-poisson.o : poisson.F90 solver_3d_inc.F90 solver_2d_inc.F90 solver_1d_inc.F90 poisson_multigrid.o poisson_fft.o poisson_isf.o poisson_libisf.o poisson_cg.o poisson_corrections.o poisson_sete.o poisson_fmm.o
+poisson.o : poisson.F90 solver_3d_inc.F90 solver_2d_inc.F90 solver_1d_inc.F90 poisson_multigrid.o \
+  poisson_fft.o poisson_isf.o poisson_libisf.o poisson_cg.o poisson_corrections.o poisson_sete.o poisson_fmm.o
 scaling_function.o : scaling_function.F90 lazy_8_inc.F90
 poisson_isf.o : poisson_isf.F90 scaling_function.o
 poisson_fmm.o : poisson_fmm.F90

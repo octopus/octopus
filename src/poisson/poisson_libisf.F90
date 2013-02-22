@@ -38,7 +38,6 @@ module poisson_libisf_m
   use mpi_m
   use par_vec_m
   use parser_m
-  use poisson_cutoff_m
   use profiling_m
   use simul_box_m
   use splines_m
@@ -301,7 +300,7 @@ contains
     PUSH_SUB(libisf_get_dims)
     !! Ez da do-a behar, nahikoa da prozesu bakoitzak bere zatiarekin
     !! deitzen badu. Asko jota gero MPI_Allgather bat egin beharko
-    !! litzateke nscatterarr osartzeko
+    !! litzateke nscatterarr osartzeko. Cool, Basque comments!
 
     !! Get the dimensions of the cube
     SAFE_ALLOCATE(nscatterarr(5, 0:mpi_world%size-1))
@@ -315,8 +314,8 @@ contains
     cube%rs_istart(1:2) = 1
     cube%rs_istart(3)   = this%localnscatterarr(5)
     
-    !! With ISF we don't care about the Fourier space and its dimensions
-    !! We'll put as in RS
+    !! With ISF we don`t care about the Fourier space and its dimensions
+    !! We`ll put as in RS
     cube%fs_n_global(1) = cube%rs_n_global(1)
     cube%fs_n_global(2) = cube%rs_n_global(2)
     cube%fs_n_global(3) = cube%rs_n_global(3)
