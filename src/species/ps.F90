@@ -900,20 +900,10 @@ contains
     integer :: i, l
 
     ps_niwfs = 0
-    select case(ps%flavour)
-    case(PS_TYPE_PSF, PS_TYPE_CPI, PS_TYPE_FHI)
-      ! In this case we do not count the orbitals whose "l" number is larger than the "l_max" of the pseudo-potential.
-      do i = 1, ps%conf%p
-        l = ps%conf%l(i)
-        if(l <= ps%l_max) ps_niwfs = ps_niwfs + (2*l+1)
-      end do
-
-    case default
-      do i = 1, ps%conf%p
-        l = ps%conf%l(i)
-        ps_niwfs = ps_niwfs + (2*l+1)
-      end do
-    end select
+    do i = 1, ps%conf%p
+      l = ps%conf%l(i)
+      ps_niwfs = ps_niwfs + (2*l+1)
+    end do
 
   end function ps_niwfs
   ! ---------------------------------------------------------
