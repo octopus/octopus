@@ -103,16 +103,9 @@ if COMPILE_NEWUOA
 endif
 
 # Since ETSF_IO depends on netCDF, it must be first in the list
-#<<<<<<< .mine
-#!all_LIBS = $(core_LIBS) @LIBS_NFFT@ @LIBS_PFFT@ @LIBS_FFT@ @LIBS_SPARSKIT@ \
-#!  @LIBS_ETSF_IO@ @LIBS_NETCDF@ $(external_LIBS) \
-#!  @LIBS_LIBFM@ @LIBS_MPI@ @LIBS_ZOLTAN@ @LIBS_BERKELEYGW@ @LIBS_ARPACK@ \
-#!  @LIBS_PARPACK@
-#=======
 outside_LIBS = @LIBS_PSPIO@ @LIBS_NFFT@ @LIBS_PFFT@ @LIBS_FFT@ @LIBS_SPARSKIT@ \
   @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ @LIBS_MPI@ \
   @LIBS_ZOLTAN@ @LIBS_BERKELEYGW@ @LIBS_ARPACK@ @LIBS_PARPACK@ @GD_LIBS@
-#>>>>>>> .r9624
 
 other_LIBS = $(core_LIBS) $(external_LIBS) $(outside_LIBS)
 all_LIBS = $(octopus_LIBS) $(other_LIBS)
