@@ -42,12 +42,14 @@ module casida_m
   use multicomm_m
   use output_m
   use parser_m
+  use pert_m
   use poisson_m
   use profiling_m
   use restart_m
   use simul_box_m
   use states_m
   use states_dim_m
+  use sternheimer_m
   use system_m
   use unit_m
   use unit_system_m
@@ -568,7 +570,9 @@ contains
       qi_old = -1
       qa_old = -1
       mu_old = -1
+    endif
       
+    if (cas%type /= CASIDA_EPS_DIFF .or. cas%forces) then
       ! We calculate here the kernel, since it will be needed later.
       SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
       if(cas%triplet) then
@@ -933,6 +937,9 @@ contains
     subroutine casida_forces_init()
       
       integer :: ip, iatom, idir, is1, is2, ierr
+      FLOAT, allocatable :: dhvar(:,:,:)
+      CMPLX, allocatable :: zhvar(:,:,:)
+      type(pert_t) :: ionic_pert
       
       PUSH_SUB(casida_work.casida_forces_init)
       
@@ -950,9 +957,21 @@ contains
       if (cas%type /= CASIDA_EPS_DIFF) then
         SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
       endif
-      
+
+      if(states_are_real(st)) then
+        SAFE_ALLOCATE(dhvar(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
+      else
+        SAFE_ALLOCATE(zhvar(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
+      endif
+      call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
+
       do iatom = 1, sys%geo%natoms
+        call pert_setup_atom(ionic_pert, iatom)
+
         do idir = 1, mesh%sb%dim
+
+          call pert_setup_dir(ionic_pert, idir)
+
           call drestart_read_lr_rho(dl_rho(:, :, iatom, idir), sys%gr, st%d%nspin, &
             VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
           
@@ -960,9 +979,14 @@ contains
             message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
             call messages_fatal(1)
           end if
-          
+
+          if(states_are_real(st)) then
+            call dcalc_hvar(.true., .true., fxc, sys, dl_rho(:, :, iatom, idir), st%d%nspin, dhvar)
+          else
+            call zcalc_hvar(.true., .true., fxc, sys, TOCMPLX(dl_rho(:, :, iatom, idir), M_ZERO), st%d%nspin, zhvar)
+          endif
           ! calc derivatives of eigenvalues here
-          
+
           if (cas%type /= CASIDA_EPS_DIFF) then
             forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
               lr_fxc(ip, is1, is2, iatom, idir) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :, iatom, idir))
@@ -970,6 +994,8 @@ contains
           endif
         enddo
       enddo
+
+      call pert_end(ionic_pert)
       
       POP_SUB(casida_work.casida_forces_init)
     end subroutine casida_forces_init
