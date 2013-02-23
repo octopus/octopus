@@ -24,6 +24,11 @@ module subspace_m
   use batch_ops_m
   use blas_m
   use blacs_proc_grid_m
+#ifdef HAVE_CLAMDBLAS
+  use cl
+  use clamdblas
+#endif
+  use comm_m
   use datasets_m
   use derivatives_m
   use global_m
@@ -47,6 +52,7 @@ module subspace_m
   use states_block_m
   use states_calc_m
   use types_m
+  use opencl_m
   use varinfo_m
 
   implicit none
