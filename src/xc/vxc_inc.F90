@@ -916,6 +916,9 @@ end function get_qxc
 !
 !------------------------------------------------------------
 
+! Subroutine to stitch discontinuous values of a multiple-valued function
+! together to a single continuous, single-valued function by smoothly
+! joining at the branch cuts.
 subroutine stitch(get_branch, functionvalues, startpoint)
   ! Function for getting values of multiple-valued functions.
   ! Each value of the parameter 'branch' corresponds to one such value.
@@ -943,10 +946,7 @@ subroutine stitch(get_branch, functionvalues, startpoint)
 end subroutine stitch
 
 
-! Subroutine to stitch discontinuous values of a multiple-valued function
-! together to a single continuous, single-valued function by smoothly
-! joining at the branch cuts.
-!recursive 
+! Like stitch, but stitches along one line only.
 subroutine stitchline(get_branch, functionvalues, startpoint, direction, startbranch)
   
   ! Function for getting values of multiple-valued functions.
@@ -1044,99 +1044,24 @@ contains
   
 end subroutine stitchline
 
-
-
-
-
-
-! Subroutine to stitch discontinuous values of a multiple-valued function
-! together to a single continuous, single-valued function by smoothly
-! joining at the branch cuts.
-subroutine oldstitch(get_branch, functionvalues, istart, idx)
-  
-  ! Function for getting values of multiple-valued functions.
-  ! Each value of the parameter 'branch' corresponds to one such value.
-  interface 
-     CMPLX function get_branch(x, branch)
-       CMPLX, intent(in)   :: x
-       integer, intent(in) :: branch
-     end function get_branch
-  end interface
-  
-  CMPLX, intent(inout) :: functionvalues(:)
-  integer, intent(in) :: istart
-  integer, intent(in) :: idx(:)
-  
-  integer :: currentbranch, npts, i
-  CMPLX :: prev_value, err
-
-  PUSH_SUB(stitch)
-  npts = size(idx, 1)
-
-  ! First loop forwards from zero and stitch along the way
-  currentbranch = 0
-  prev_value = functionvalues(idx(istart))
-  do i=istart + 1, npts
-     call stitch_single_point()
-  end do
-  
-  ! Now loop backwards
-  currentbranch = 0
-  prev_value = functionvalues(idx(istart))
-  do i=istart - 1, 1, -1
-     call stitch_single_point()
-  end do
-  
-  POP_SUB(stitch)
-contains
-
-  subroutine stitch_single_point()
-    CMPLX :: v1, v2, v3, v
-    integer :: j, adj
-    
-    PUSH_SUB(stitch.stitch_single_point)
-    
-    v1 = get_branch(functionvalues(idx(i)), currentbranch)
-    v2 = get_branch(functionvalues(idx(i)), currentbranch - 1)
-    v3 = get_branch(functionvalues(idx(i)), currentbranch + 1)
-    
-    adj = 0
-    v = v1
-    if (abs(v2 - prev_value).lt.abs(v - prev_value)) then
-       v = v2
-       adj = -1
-    end if
-    if (abs(v3 - prev_value).lt.abs(v - prev_value)) then
-       v = v3
-       adj = +1
-    end if
-    currentbranch = currentbranch + adj
-    functionvalues(idx(i)) = v
-    prev_value = v
-    
-    POP_SUB(stitch.stitch_single_point)
-  end subroutine stitch_single_point
-  
-end subroutine oldstitch
-
 ! For evaluating values of multiple-valued functions when one value,
 ! e.g. the principal value, is known.  Used to stitch
 CMPLX function get_root3_branch(x, branch) result(y)
-  CMPLX, intent(in) :: x
+  CMPLX,   intent(in) :: x
   integer, intent(in) :: branch
   
   y = x * exp(branch * M_TWO * M_zI * M_PI / M_THREE)
 end function get_root3_branch
 
 CMPLX function get_root6_branch(x, branch) result(y)
-  CMPLX, intent(in) :: x
+  CMPLX,   intent(in) :: x
   integer, intent(in) :: branch
   
   y = x * exp(branch * M_zI * M_PI / M_THREE)
 end function get_root6_branch
 
 CMPLX function get_logarithm_branch(x, branch) result(y)
-  CMPLX, intent(in) :: x
+  CMPLX,   intent(in) :: x
   integer, intent(in) :: branch
   
   y = x + branch * M_TWO * M_zI * M_PI
@@ -1161,7 +1086,7 @@ subroutine zxc_complex_lda(mesh, rho, Imrho, theta, vxc, Imvxc, ex, Imex, ec, Im
   ! LDA correlation parameters
   FLOAT, parameter :: gamma = 0.031091, alpha1 = 0.21370, beta1 = 7.5957, beta2 = 3.5876, beta3 = 1.6382, beta4 = 0.49294
   CMPLX, allocatable   :: zvc_arr(:, :, :), Q0(:, :, :), Q1(:, :, :), dQ1drs(:, :, :), epsc(:, :, :), depsdrs(:, :, :), &
-       zrho_local(:), zvxc_local(:)
+    zrho_local(:), zvxc_local(:)
   CMPLX                :: dimphase, tmp, zex, zec, zex2
   FLOAT                :: dmin_unused
   integer              :: N, izero, i, j
@@ -1193,9 +1118,7 @@ subroutine zxc_complex_lda(mesh, rho, Imrho, theta, vxc, Imvxc, ex, Imex, ec, Im
   SAFE_ALLOCATE(dQ1drs(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
   SAFE_ALLOCATE(epsc(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
   SAFE_ALLOCATE(depsdrs(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
-  
   SAFE_ALLOCATE(vxbuf(cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3)))
-
 
   dimphase = exp(-mesh%sb%dim * M_zI * theta)
   
@@ -1216,10 +1139,10 @@ subroutine zxc_complex_lda(mesh, rho, Imrho, theta, vxc, Imvxc, ex, Imex, ec, Im
 
   Q0(:, :, :) = -M_TWO * gamma * (M_ONE + alpha1 * rootrs(:, :, :)**2)
   Q1(:, :, :) = M_TWO * gamma * rootrs(:, :, :) * (beta1 + rootrs(:, :, :) * (beta2 + rootrs(:, :, :) &
-       * (beta3 + rootrs(:, :, :) * beta4)))
+    * (beta3 + rootrs(:, :, :) * beta4)))
   
   dQ1drs(:, :, :) = gamma * (beta1 / rootrs(:, :, :) + M_TWO * beta2 + rootrs(:, :, :) &
-       * (M_THREE * beta3 + M_FOUR * beta4 * rootrs(:, :, :)))
+    * (M_THREE * beta3 + M_FOUR * beta4 * rootrs(:, :, :)))
 
   epsc(:, :, :) = log(M_ONE + M_ONE / Q1(:, :, :))
 
@@ -1228,7 +1151,7 @@ subroutine zxc_complex_lda(mesh, rho, Imrho, theta, vxc, Imvxc, ex, Imex, ec, Im
   epsc(:, :, :) = Q0(:, :, :) * epsc(:, :, :)
 
   depsdrs(:, :, :) = -M_TWO * gamma * alpha1 * epsc(:, :, :) / Q0(:, :, :) &
-       - Q0(:, :, :) * dQ1drs(:, :, :) / (Q1(:, :, :) * (Q1(:, :, :) + M_ONE))
+    - Q0(:, :, :) * dQ1drs(:, :, :) / (Q1(:, :, :) * (Q1(:, :, :) + M_ONE))
 
   zvc_arr(:, :, :) = epsc(:, :, :) - rootrs(:, :, :)**2 * depsdrs(:, :, :) / M_THREE
 
@@ -1298,10 +1221,6 @@ subroutine xc_get_vxc_cmplx(der, xcs, ispin, rho, Imrho, vxc, Imvxc, theta, ex, 
   ASSERT(present(ec) .eqv. present(Imec))
   calc_energy = present(ex)
   
-  !ASSERT(present(vxc) .eqv. present(Imvxc))
-  ASSERT(present(ex) .eqv. present(Imex))
-  ASSERT(present(ec) .eqv. present(Imec))
-
   !Pointer-shortcut for xcs%functl
   !It helps to remember that for xcs%functl(:,:)
   ! (1,:) => exchange,    (2,:) => correlation
@@ -1311,8 +1230,6 @@ subroutine xc_get_vxc_cmplx(der, xcs, ispin, rho, Imrho, vxc, Imvxc, theta, ex, 
   else
     functl => xcs%functl(:, 2)
   end if
-
-
   
   if(functl(1)%id == XC_LDA_XC_CMPLX) then
     
