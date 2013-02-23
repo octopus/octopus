@@ -44,6 +44,7 @@ match ; Eigenvalue  4 ; GREP(static/info, ' 4   --', 13) ;  -8.616854
 
 Processors : 3
 Input: 20-eigensolver.06-rmmdiis.inp
+Precision : 0.00015
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -14.539769
 match ; Eigenvalue  2 ; GREP(static/info, ' 2   --', 13) ;  -8.142283
 match ; Eigenvalue  3 ; GREP(static/info, ' 3   --', 13) ;  -8.142283
