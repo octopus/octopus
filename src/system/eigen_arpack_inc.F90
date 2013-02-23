@@ -41,8 +41,10 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tol_, niter, converged, ik
   integer :: mpi_comm
   character(len=2) :: which
   	
-	!!!!WARNING: No support for spinors, yet. 
-  PUSH_SUB(eigen_arpack.eigen_solver_arpack)
+  !!!!WARNING: No support for spinors, yet. 
+  PUSH_SUB(X(eigen_solver_arpack))
+
+#ifdef HAVE_ARPACK
 
   !Enable debug info
   if(in_debug_mode) call arpack_debug(conf%debug_level)
@@ -272,7 +274,11 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tol_, niter, converged, ik
   SAFE_DEALLOCATE_A(zd)  
 #endif
 
-   POP_SUB(eigen_arpack.eigen_solver_arpack)
+#endif
+! HAVE_ARPACK
+
+   POP_SUB(X(eigen_solver_arpack))
+
 contains
 
   ! ---------------------------------------------------------

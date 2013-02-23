@@ -22,8 +22,7 @@
 
 module eigen_arpack_m
 
-
-use batch_m
+  use batch_m
   use comm_m
   use datasets_m
   use global_m
@@ -55,15 +54,15 @@ use batch_m
     zeigen_solver_arpack,       &
     arpack_init
 
-    type eigen_arpack_t
-      integer          :: arnoldi_vectors !< number of Arnoldi vectors
-      character(len=2) :: sort            !< which eigenvalue sorting
-      integer          :: init_resid      !< inital residual strategy
-      CMPLX            :: rotation        !< rotate spectrum by complex number before determining order
-      logical          :: use_parpack
-    end type eigen_arpack_t
+  type eigen_arpack_t
+    integer          :: arnoldi_vectors !< number of Arnoldi vectors
+    character(len=2) :: sort            !< which eigenvalue sorting
+    integer          :: init_resid      !< inital residual strategy
+    CMPLX            :: rotation        !< rotate spectrum by complex number before determining order
+    logical          :: use_parpack
+  end type eigen_arpack_t
 
-  contains
+contains
 
   subroutine arpack_init(this, gr, nst)
     type(eigen_arpack_t),  intent(inout) :: this
@@ -77,7 +76,7 @@ use batch_m
 #if defined(HAVE_ARPACK)
 
     ! XXX yuck, this parameter is also given in Hamiltonian.  How should it be transferred from there to here
-    ! without parsing the parameter again?  For now we'll just parse it again
+    ! without parsing the parameter again?  For now we`ll just parse it again
     rotate_spectrum_angle = M_ZERO
 
     call parse_float(datasets_check('ComplexScalingRotateSpectrum'), M_ZERO, rotate_spectrum_angle)
@@ -142,9 +141,9 @@ use batch_m
     
 
  
-    !%Variable EigensolverArpackIntialResid
+    !%Variable EigensolverArpackInitialResid
     !%Type integer
-    !%Default constant 
+    !%Default constant
     !%Section SCF::Eigensolver
     !%Description
     !% Initial residual vector.
@@ -155,10 +154,10 @@ use batch_m
     !%Option calc 1
     !% resid = H*psi - epsilon*psi.
     !%End
-    call parse_integer(datasets_check('EigensolverArpackIntialResid'), 2, this%init_resid)
-    if(.not.varinfo_valid_option('EigensolverArpackIntialResid', this%init_resid))&
-       call input_error('EigensolverArpackIntialResid')
-    call messages_print_var_option(stdout, "EigensolverArpackIntialResid", this%init_resid)
+    call parse_integer(datasets_check('EigensolverArpackInitialResid'), 2, this%init_resid)
+    if(.not.varinfo_valid_option('EigensolverArpackInitialResid', this%init_resid))&
+       call input_error('EigensolverArpackInitialResid')
+    call messages_print_var_option(stdout, "EigensolverArpackInitialResid", this%init_resid)
 
 #else 
 
@@ -172,7 +171,6 @@ use batch_m
     POP_SUB(arpack_init)    
   end subroutine arpack_init
   
-#if defined(HAVE_ARPACK)  
   !--------------------------------------------    
   subroutine arpack_debug(debug_level)
     integer, intent(in) :: debug_level
@@ -309,7 +307,7 @@ use batch_m
           write(message(4),'(a)'), 'probably made an error in passing data from ZNAUPD to'
           write(message(5),'(a)'), 'ZNEUPD or that the data was modified before entering'
           write(message(6),'(a)'), 'ZNEUPD.'
-          msg_lines = 6          
+          msg_lines = 6
           
       end select
       
@@ -417,9 +415,6 @@ use batch_m
     POP_SUB(arpack_check_error)
   end subroutine arpack_check_error
 
-#endif
-!HAVE_ARPACK  
-
 #include "real.F90" 
 #include "eigen_arpack_inc.F90" 
 #include "undef.F90" 
@@ -428,8 +423,7 @@ use batch_m
 #include "eigen_arpack_inc.F90" 
 #include "undef.F90" 
 
-
-  end module eigen_arpack_m
+end module eigen_arpack_m
 
 
 !! Local Variables:
