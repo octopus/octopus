@@ -1316,7 +1316,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
   integer,           intent(in)    :: ik
   R_TYPE,            intent(out)   :: overlap(:, :)
   R_TYPE, optional,  intent(in)    :: psi2(:, :, :) !< if present it calculates <psi2|psi>
-  
+
   integer       :: ip, ib, jb, block_size, sp, size, idim
   type(batch_t) :: psib, psi2b
   type(profile_t), save :: prof
@@ -1364,7 +1364,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
-      
+
       do ib = st%block_start, st%block_end
         call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psi)
       end do
@@ -1382,7 +1382,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
         a = psi(1, 1, 1), lda = ubound(psi, dim = 1),      &
         beta = CNST(1.0),                                  & 
         c = overlap(1, 1), ldc = ubound(overlap, dim = 1))
-      
+
     end do
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
@@ -1392,59 +1392,56 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 #ifdef HAVE_CLAMDBLAS
 
   else if(opencl_is_enabled()) then
-    
+
     ASSERT(ubound(overlap, dim = 1) == st%nst)
+
+    call opencl_create_buffer(overlap_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
+    call opencl_set_buffer_to_zero(overlap_buffer, R_TYPE_VAL, st%nst*st%nst)
+
+    ! we need to use a temporary array
 
     block_size = 4000
 
     call opencl_create_buffer(psi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-    call opencl_create_buffer(overlap_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
-
-    call opencl_set_buffer_to_zero(overlap_buffer, R_TYPE_VAL, st%nst*st%nst)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
-      
+
       do ib = st%block_start, st%block_end
         ASSERT(R_TYPE_VAL == batch_type(st%psib(ib, ik)))
         call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
       end do
 
 #ifdef R_TREAL
-      call clAmdblasDsyrkEx(order = clAmdBlasColumnMajor, uplo = clAmdBlasUpper, transA = clAmdBlasNoTrans, &
-        N = int(st%nst, 8), K = int(size, 8), &
-        alpha = real(mesh%volume_element, 8), &
-        A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
-        beta = 1.0_8, &
-        C = overlap_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
-        CommandQueue = opencl%command_queue, status = ierr)
-      if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasDsyrkEx')
+      call clAmdblasDsyrkEx &
 #else
-      call clAmdblasZherkEx(order = clAmdBlasColumnMajor, uplo = clAmdBlasUpper, transA = clAmdBlasNoTrans, &
+      call clAmdblasZherkEx &
+#endif
+        (order = clAmdBlasColumnMajor, uplo = clAmdBlasUpper, transA = clAmdBlasNoTrans, &
         N = int(st%nst, 8), K = int(size, 8), &
         alpha = real(mesh%volume_element, 8), &
         A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
         beta = 1.0_8, &
         C = overlap_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
         CommandQueue = opencl%command_queue, status = ierr)
-      if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasZherkEx')
-#endif
+      if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasDsyrkEx/clAmdBlasZherkEx')
 
     end do
 
+    call opencl_release_buffer(psi_buffer)
+
     call opencl_read_buffer(overlap_buffer, st%nst*st%nst, overlap)
 
-    call opencl_release_buffer(psi_buffer)
-    call opencl_release_buffer(overlap_buffer)
-
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
+
+    call opencl_release_buffer(overlap_buffer)
 
 #endif
 
   else
 
     ASSERT(.not. present(psi2))
-    
+
     do ib = st%block_start, st%block_end
       do jb = ib, st%block_end
         if(ib == jb) then
@@ -1454,7 +1451,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
         end if
       end do
     end do
-    
+
   end if
 
   call profiling_out(prof)

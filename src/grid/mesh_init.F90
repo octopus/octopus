@@ -573,6 +573,9 @@ contains
     !%End
 
     select case(conf%target_states_block_size)
+
+#if 0
+    ! Core i7
     case(1)
       bsize(1:3) = (/  2,   1, 200/)
     case(2)
@@ -591,6 +594,74 @@ contains
       bsize(1:3) = (/  8,   6,   2/)
     case(256)
       bsize(1:3) = (/  4,   6,   2/)
+#endif
+
+#if 1
+    ! 7970
+    case(1)
+      bsize(1:3) = (/   50, 2, 200/)
+    case(2)
+      bsize(1:3) = (/  	10, 1, 200/)
+    case(4)
+      bsize(1:3) = (/  	4, 4, 100/)
+    case(8)
+      bsize(1:3) = (/  	10, 10, 30/)
+    case(16)
+      bsize(1:3) = (/   20, 6, 6/)
+    case(32)
+      bsize(1:3) = (/  	15, 15, 1/)
+    case(64)
+      bsize(1:3) = (/  	10, 10, 1/)
+    case(128)
+      bsize(1:3) = (/  	10, 5, 1/)
+    case(256)
+      bsize(1:3) = (/  	4, 6, 1/)
+#endif
+
+#if 0
+    ! K20
+    case(1)
+      bsize(1:3) = (/ 50, 4, 200/)
+    case(2)
+      bsize(1:3) = (/ 50, 4, 200/)
+    case(4)
+      bsize(1:3) = (/ 30, 2, 100/)
+    case(8)
+      bsize(1:3) = (/100, 4, 20/)
+    case(16)
+      bsize(1:3) = (/ 30, 6, 4/)
+    case(32)
+      bsize(1:3) = (/ 50, 4, 4/)
+    case(64)
+      bsize(1:3) = (/ 30, 4, 2/)
+    case(128)
+      bsize(1:3) = (/ 30, 2, 2/)
+    case(256)
+      bsize(1:3) = (/ 20, 2, 1/)
+#endif
+
+#if 0
+    ! M2090
+    case(1)
+      bsize(1:3) = (/ 20, 15, 200 /)
+    case(2)
+      bsize(1:3) = (/ 200, 30, 200 /)
+    case(4)
+      bsize(1:3) = (/ 80, 6, 20 /)
+    case(8)
+      bsize(1:3) = (/ 15, 20, 1 /)
+    case(16)
+      bsize(1:3) = (/ 50, 6, 2 /)
+    case(32)
+      bsize(1:3) = (/ 20, 6, 2 /)
+    case(64)
+      bsize(1:3) = (/ 100, 2, 4 /)
+    case(128)
+      bsize(1:3) = (/ 6, 4, 1 /)
+    case(256)
+      bsize(1:3) = (/ 6, 2, 1 /)
+#endif
+
     case default
       bsize(1:3) = (/ 15,  15,   4/)
     end select
