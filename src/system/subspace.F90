@@ -68,7 +68,8 @@ module subspace_m
     integer :: method
   end type subspace_t
 
-
+  type(profile_t),     save    :: diagon_prof, hamiltonian_prof
+  
 contains
 
   subroutine subspace_init(this, st)

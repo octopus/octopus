@@ -30,7 +30,6 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
 
   R_TYPE, allocatable :: hmss(:, :), rdiff(:)
   integer             :: ib, jb, minst, maxst
-  type(profile_t),     save    :: diagon_prof
   type(batch_t) :: hpsib
   R_TYPE, pointer :: psi(:, :, :)
 
@@ -46,23 +45,11 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
 
     SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
 
-    do ib = st%block_start, st%block_end
-      call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
-
-      call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik)
-
-      do jb = ib, st%block_end
-        call X(mesh_batch_dotp_matrix)(der%mesh, hpsib, st%psib(jb, ik), hmss)
-      end do
-
-      call batch_end(hpsib, copy = .false.)
-     
-    end do
-
-    ! only half of hmss has the matrix, but this is what Lapack needs
+    call X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
 
     ! Diagonalize the Hamiltonian in the subspace.
-    call lalg_eigensolve(st%nst, hmss, eigenval(:))
+    ! only half of hmss has the matrix, but this is what Lapack needs
+    call lalg_eigensolve(st%nst, hmss, eigenval)
 
 #ifdef HAVE_MPI
     ! the eigenvectors are not unique due to phases and degenerate subspaces, but
@@ -277,6 +264,41 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 end subroutine X(subspace_diag_scalapack)
 
 ! ------------------------------------------------------
+
+!> This routine diagonalises the Hamiltonian in the subspace defined by the states.
+subroutine X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
+  type(subspace_t),       intent(in)    :: this
+  type(derivatives_t),    intent(in)    :: der
+  type(states_t), target, intent(inout) :: st
+  type(hamiltonian_t),    intent(in)    :: hm
+  integer,                intent(in)    :: ik
+  R_TYPE,                 intent(out)   :: hmss(:, :)
+
+  integer       :: ib, jb, minst, maxst
+  type(batch_t) :: hpsib
+
+  PUSH_SUB(X(subspace_diag_hamiltonian))
+  call profiling_in(hamiltonian_prof, "SUBSPACE_HAMILTONIAN")
+
+  ASSERT(.not. st%parallel_in_states)
+  
+  do ib = st%block_start, st%block_end
+    call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
+    
+    call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik)
+    
+    do jb = ib, st%block_end
+      call X(mesh_batch_dotp_matrix)(der%mesh, hpsib, st%psib(jb, ik), hmss)
+    end do
+    
+    call batch_end(hpsib, copy = .false.)
+    
+  end do
+
+  call profiling_out(hamiltonian_prof)
+  POP_SUB(X(subspace_diag_hamiltonian))
+
+end subroutine X(subspace_diag_hamiltonian)
 
 !! Local Variables:
 !! mode: f90
