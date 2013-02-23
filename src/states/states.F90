@@ -1210,7 +1210,6 @@ contains
     if(st%have_left_states) then
       ASSERT(st%priv%wfs_type == TYPE_CMPLX) 
     end if
-    print *,"HAVE LEFT STATES?? = ",st%have_left_states
 
     !%Variable ForceComplex
     !%Type logical
