@@ -291,43 +291,65 @@ subroutine X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
 
   if(states_are_packed(st) .and. opencl_is_enabled()) then
 
-    SAFE_ALLOCATE(hpsib_all(st%block_start:st%block_end))
-
-     do ib = st%block_start, st%block_end
-      call batch_copy(st%psib(ib, ik), hpsib_all(ib), reference = .false.)
-
-      call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib_all(ib), ik)
-    end do
-        
     ASSERT(ubound(hmss, dim = 1) == st%nst)
 
-    block_size = 4000
+    SAFE_ALLOCATE(hpsib_all(st%block_start:st%block_end))
 
-    call opencl_create_buffer(psi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-    call opencl_create_buffer(hpsi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    do ib = st%block_start, st%block_end
+      call batch_copy(st%psib(ib, ik), hpsib_all(ib), reference = .false.)
+      call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib_all(ib), ik)
+    end do
+
     call opencl_create_buffer(hmss_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
-
     call opencl_set_buffer_to_zero(hmss_buffer, R_TYPE_VAL, st%nst*st%nst)
 
-    do sp = 1, der%mesh%np, block_size
-      size = min(block_size, der%mesh%np - sp + 1)
-      
-      do ib = st%block_start, st%block_end
-        ASSERT(R_TYPE_VAL == batch_type(st%psib(ib, ik)))
-        call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
-        call batch_get_points(hpsib_all(ib), sp, sp + size - 1, hpsi_buffer, st%nst)
-      end do
+    if(st%block_start == st%block_end) then
+      ! all the states are stored in one block
+      ! we can use blas directly
 
       call aX(clAmdblas,gemmEx)(order = clAmdBlasColumnMajor, transA = clAmdBlasNoTrans, transB = clAmdBlasConjTrans, &
-        M = int(st%nst, 8), N = int(st%nst, 8), K = int(size, 8), &
+        M = int(st%nst, 8), N = int(st%nst, 8), K = int(der%mesh%np, 8), &
         alpha = R_TOTYPE(der%mesh%volume_element), &
-        A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
-        B = hpsi_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), &
+        A = st%psib(st%block_start, ik)%pack%buffer%mem, offA = 0_8, lda = int(st%psib(st%block_start, ik)%pack%size(1), 8), &
+        B = hpsib_all(st%block_start)%pack%buffer%mem, offB = 0_8, ldb = int(hpsib_all(st%block_start)%pack%size(1), 8), &
+        beta = R_TOTYPE(CNST(0.0)), &
         C = hmss_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
         CommandQueue = opencl%command_queue, status = ierr)
       if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXgemmEx')
 
-    end do
+    else
+      ! we have to copy the blocks to a temporary array
+
+      block_size = 4000
+
+      call opencl_create_buffer(psi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+      call opencl_create_buffer(hpsi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+
+      do sp = 1, der%mesh%np, block_size
+        size = min(block_size, der%mesh%np - sp + 1)
+
+        do ib = st%block_start, st%block_end
+          ASSERT(R_TYPE_VAL == batch_type(st%psib(ib, ik)))
+          call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
+          call batch_get_points(hpsib_all(ib), sp, sp + size - 1, hpsi_buffer, st%nst)
+        end do
+
+        call aX(clAmdblas,gemmEx)(order = clAmdBlasColumnMajor, transA = clAmdBlasNoTrans, transB = clAmdBlasConjTrans, &
+          M = int(st%nst, 8), N = int(st%nst, 8), K = int(size, 8), &
+          alpha = R_TOTYPE(der%mesh%volume_element), &
+          A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
+          B = hpsi_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), &
+          C = hmss_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
+          CommandQueue = opencl%command_queue, status = ierr)
+        if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXgemmEx')
+
+      end do
+
+
+      call opencl_release_buffer(psi_buffer)
+      call opencl_release_buffer(hpsi_buffer)
+      
+    end if
 
     do ib = st%block_start, st%block_end
       call batch_end(hpsib_all(ib), copy = .false.)
@@ -337,11 +359,9 @@ subroutine X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
 
     if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm, hmss, dim = (/st%nst, st%nst/))
 
-    call opencl_release_buffer(psi_buffer)
-    call opencl_release_buffer(hpsi_buffer)
     call opencl_release_buffer(hmss_buffer)
 
-    
+
     SAFE_DEALLOCATE_A(hpsib_all)
 
   else
