@@ -41,7 +41,7 @@ libsystem_a_SOURCES =         \
 	forces.F90            \
 	elf.F90               \
 	magnetic.F90          \
-  eigen_arpack.F90
+	eigen_arpack.F90
 
 noinst_HEADERS =                        \
 	energy_calc_inc.F90             \

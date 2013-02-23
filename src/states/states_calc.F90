@@ -190,8 +190,6 @@ contains
         psi = psi /cnorm
         call states_set_state(st, mesh, ist, ik, psi)
         
-!         print *,"cnorm", ist, cnorm, abs(cnorm), atan2 (aimag(cnorm), real(cnorm) )
-        
       end do
     end do
     SAFE_DEALLOCATE_A(psi)
@@ -222,27 +220,27 @@ contains
     SAFE_ALLOCATE(buf1(mesh%np_part,1:st%d%dim))
 
     do ist = 1, st%nst
-       ok(ist) = .false.
-       rank(args(ist)) = ist
+      ok(ist) = .false.
+      rank(args(ist)) = ist
     end do
 
     do ist = 1, st%nst
-       if ((args(ist) /= ist).and.(.not.(ok(ist)))) then
-          call states_get_state(st, mesh, ist, ik, buf)
-          kst = ist
-          do
-             jst = args(kst)
-             if (jst.eq.ist) then
-               call states_set_state(st, mesh, rank(jst), ik, buf)
-               ok(rank(jst)) = .true.
-               exit
-             end if
-             call states_get_state(st, mesh, jst, ik, buf1)
-             call states_set_state(st, mesh, kst, ik, buf1)             
-             ok(kst) = .true.
-             kst = jst
-          end do
-       end if
+      if ((args(ist) /= ist).and.(.not.(ok(ist)))) then
+        call states_get_state(st, mesh, ist, ik, buf)
+        kst = ist
+        do
+          jst = args(kst)
+          if (jst.eq.ist) then
+            call states_set_state(st, mesh, rank(jst), ik, buf)
+            ok(rank(jst)) = .true.
+            exit
+          end if
+          call states_get_state(st, mesh, jst, ik, buf1)
+          call states_set_state(st, mesh, kst, ik, buf1)             
+          ok(kst) = .true.
+          kst = jst
+        end do
+      end if
     end do
 
     SAFE_DEALLOCATE_A(ok)
@@ -253,7 +251,7 @@ contains
     POP_SUB(reorder_states_by_args)
   end subroutine reorder_states_by_args
 
-  subroutine states_sort_complex( mesh, st, diff)
+  subroutine states_sort_complex(mesh, st, diff)
     type(mesh_t),      intent(in)    :: mesh
     type(states_t),    intent(inout) :: st
     FLOAT,             intent(inout) :: diff(:,:) !eigenstates convergence error
@@ -278,20 +276,19 @@ contains
       cbuf(:) = (st%zeigenval%Re(:, ik) + M_zI * st%zeigenval%Im(:, ik))
       buf(:) = real(cbuf) + st%cmplxscl%penalizationfactor * aimag(cbuf)**2
       do ist=1, st%nst
-         if(aimag(cbuf(ist)).gt.0) then
-            buf(ist) = buf(ist) + 8.0 * aimag(cbuf(ist))
-         end if
+        if (aimag(cbuf(ist)).gt.0) then
+          buf(ist) = buf(ist) + 8.0 * aimag(cbuf(ist))
+        end if
       end do
       
       call sort(buf, index)
-      if(mpi_grp_is_root(mpi_world)) then
+      if (mpi_grp_is_root(mpi_world)) then
         write(message(1), *) 'Permutation of states'
         write(message(2), *) index
         call messages_info(1)
         call messages_info(2)
       end if
       
-      cbuf(:) = cbuf(:)
       do ist=1, st%nst !reorder the eigenstates error accordingly
         diff(ist, ik) = diff_copy(index(ist),ik)
         st%zeigenval%Re(ist, ik) = real(cbuf(index(ist)))

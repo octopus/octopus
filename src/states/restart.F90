@@ -465,7 +465,7 @@ contains
   !> Reads the interface regions of the wavefunctions
   subroutine restart_get_ob_intf(st, gr)
     type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(in) :: gr
+    type(grid_t),     intent(in)    :: gr
 
     integer            :: ik, ist, idim, il
     CMPLX, allocatable :: zpsi(:)
