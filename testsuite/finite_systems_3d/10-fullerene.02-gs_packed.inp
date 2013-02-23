@@ -83,8 +83,5 @@ StatesPack = yes
 'C'| -6.291688| -0.839777 | 2.141966
 %
 
-ParallelizationStrategy = par_states + par_domains
+ParallelizationStrategy = par_domains
 
-%ParallelizationGroupRanks
- fill | 2
-%
