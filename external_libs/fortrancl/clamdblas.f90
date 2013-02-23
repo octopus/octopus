@@ -12,7 +12,9 @@ module clAmdBlas
     clAmdBlasDtrsmEx,        &
     clAmdBlasZtrsmEx,        &
     clAmdBlasDgemmEx,        &
-    clAmdBlasZgemmEx
+    clAmdBlasZgemmEx,        &
+    clAmdBlasDsyrkEx,        &
+    clAmdBlasZherkEx
 
   integer, public, parameter ::     &
     clAmdBlasRowMajor        = 0,   &
@@ -210,5 +212,58 @@ module clAmdBlas
       integer,                intent(out)   :: status
     end subroutine clAmdBlasZgemmEx_low
   end interface clAmdBlasZgemmEx
+
+  ! -------------------------------------------------
+
+  interface clAmdBlasDsyrkEx
+    subroutine clAmdBlasDsyrkEx_low(order, uplo, transA, N, K, &
+      alpha, A, offA, lda, beta, C, offC, ldc, commandQueue, status)
+      use cl
+
+      implicit none
+
+      integer,                intent(in)    :: order
+      integer,                intent(in)    :: uplo
+      integer,                intent(in)    :: transA
+      integer(8),             intent(in)    :: N
+      integer(8),             intent(in)    :: K
+      real(8),                intent(in)    :: alpha
+      type(cl_mem),           intent(in)    :: A
+      integer(8),             intent(in)    :: offA
+      integer(8),             intent(in)    :: lda
+      real(8),                intent(in)    :: beta
+      type(cl_mem),           intent(inout) :: C
+      integer(8),             intent(in)    :: offC
+      integer(8),             intent(in)    :: ldc
+      type(cl_command_queue), intent(inout) :: CommandQueue 
+      integer,                intent(out)   :: status
+    end subroutine clAmdBlasDsyrkEx_low
+  end interface clAmdBlasDsyrkEx
+  ! -------------------------------------------------
+
+  interface clAmdBlasZherkEx
+    subroutine clAmdBlasZherkEx_low(order, uplo, transA, N, K, &
+      alpha, A, offA, lda, beta, C, offC, ldc, commandQueue, status)
+      use cl
+
+      implicit none
+
+      integer,                intent(in)    :: order
+      integer,                intent(in)    :: uplo
+      integer,                intent(in)    :: transA
+      integer(8),             intent(in)    :: N
+      integer(8),             intent(in)    :: K
+      real(8),                intent(in)    :: alpha
+      type(cl_mem),           intent(in)    :: A
+      integer(8),             intent(in)    :: offA
+      integer(8),             intent(in)    :: lda
+      real(8),                intent(in)    :: beta
+      type(cl_mem),           intent(inout) :: C
+      integer(8),             intent(in)    :: offC
+      integer(8),             intent(in)    :: ldc
+      type(cl_command_queue), intent(inout) :: CommandQueue 
+      integer,                intent(out)   :: status
+    end subroutine clAmdBlasZherkEx_low
+  end interface clAmdBlasZherkEx
 
 end module clAmdBlas
