@@ -318,7 +318,7 @@ contains
       !% in order to obtain reasonable initial guesses for spin-orbitals and densities.
       !% For this purpose, the code calculates a number of atomic orbitals.
       !% The number available for a species described by a pseudopotential is all the
-      !% orbitals up the maximum angular momentum being used, minus any orbitals that
+      !% orbitals up the maximum angular momentum in the pseudopotential, minus any orbitals that
       !% are found to be unbound. For non-pseudopotential species, the number is equal to
       !% twice the valence charge.
       !% The default dimension for the LCAO basis
