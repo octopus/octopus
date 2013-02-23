@@ -96,8 +96,7 @@ module eigensolver_m
        RS_EVO     =  9,         &
        RS_LOBPCG  =  8,         &
        RS_RMMDIIS = 10,         &
-       RS_ARPACK  = 12,         &  
-       RS_DIRECT  = 14
+       RS_ARPACK  = 12
 
 contains
 
@@ -152,9 +151,6 @@ contains
     !% (Experimental) Multigrid eigensolver.
     !%Option arpack 12
     !% Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
-    !%Option direct 14
-    !% Direct eigensolver. Experimental, and only implemented for complex
-    !% wavefunctions.
     !%End
 
     if(st%parallel_in_states) then
@@ -193,9 +189,6 @@ contains
     case(RS_MG)
     case(RS_CG)
     case(RS_PLAN)
-    case(RS_DIRECT)
-      if(states_are_real(st)) call messages_not_implemented("direct eigensolver for real wavefunctions")
-      call messages_experimental("direct eigensolver")
     case(RS_EVO)
       !%Variable EigensolverImaginaryTime
       !%Type float
@@ -319,7 +312,7 @@ contains
     end if
     
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_DIRECT, RS_LOBPCG, RS_RMMDIIS)
+    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
       call preconditioner_init(eigens%pre, gr)
     case default
       call preconditioner_null(eigens%pre)
@@ -422,8 +415,7 @@ contains
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
       maxiter = eigens%es_maxiter
       
-      if(eigens%subspace_diag .and. eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES &
-       .and. eigens%es_type /= RS_DIRECT) then
+      if(eigens%subspace_diag .and. eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
         if (states_are_real(st)) then
           call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         else
@@ -438,14 +430,12 @@ contains
           call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
           call deigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik))
-        case(RS_DIRECT)
-          call messages_not_implemented("direct eigensolver for real wavefunctions")
+            eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PLAN)
           call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
           call deigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
-               eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
+            eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call deigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
@@ -476,8 +466,6 @@ contains
           call zeigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
           call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
-        case(RS_DIRECT)
-           call eigensolver_direct(gr, st, hm, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
                eigens%converged(ik), ik, eigens%diff(:, ik))
@@ -503,8 +491,7 @@ contains
 #endif 
         end select
 
-        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS .and.eigens%es_type /= RS_ARPACK &
-          .and.eigens%es_type /= RS_DIRECT ) then
+        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS .and.eigens%es_type /= RS_ARPACK) then
           call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
 
