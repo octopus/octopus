@@ -38,7 +38,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   integer :: ist, minst, idim, ii, iter, nops, maxst, jj, bsize, ib, jter, kter, prog
   R_TYPE :: ca, cb, cc
   R_TYPE, allocatable :: fr(:, :)
-  type(profile_t), save :: prof
   type(batch_pointer_t), allocatable :: psib(:), resb(:)
   integer, allocatable :: done(:), last(:)
   logical, allocatable :: failed(:)
@@ -171,8 +170,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
 
-      call batch_sync(psib(iter)%batch)
-      call batch_sync(resb(iter)%batch)
+      call profiling_in(prof_sync, "RMMDIIS_SYNC")
+      if(save_pack_mem) then
+        call batch_sync(psib(iter)%batch)
+        call batch_sync(resb(iter)%batch)
+      end if
+      call profiling_out(prof_sync)
 
       call profiling_in(prof_iter, 'RMMDIIS_MATRIX')
       ! calculate the matrix elements between iterations
@@ -221,6 +224,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       call batch_end(resb(iter)%batch, copy = .false.)
 
+      call profiling_in(prof_lc, "RMMDIIS_LC")
+
       call batch_scal(gr%mesh%np, evec(iter, 1, :), psib(iter)%batch, a_start = minst)
 
       do jj = 1, iter - 1
@@ -228,6 +233,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         call batch_axpy(gr%mesh%np, evec(jj, 1, :), psib(jj)%batch, psib(iter)%batch, a_start = minst)
         call batch_unpack(psib(jj)%batch, copy = .false.)
       end do
+
+      call profiling_out(prof_lc)
 
       call batch_copy(psib(iter)%batch, resb(iter)%batch, reference = .false.)
 
@@ -274,7 +281,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     ! we can remove most of the batches
     do iter = 1, niter
       if(iter /= 1) call batch_end(psib(iter)%batch, copy = .false.)
-      if(iter /= niter -1) call batch_end(resb(iter)%batch, copy = .false.)
+      if(iter /= niter - 1) call batch_end(resb(iter)%batch, copy = .false.)
     end do
 
     if(save_pack_mem) call batch_pack(psib(1)%batch, copy = .false.)

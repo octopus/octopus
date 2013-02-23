@@ -57,7 +57,8 @@ module eigen_rmmdiis_m
     type(batch_t), pointer :: batch
   end type batch_pointer_t
 
-  type(profile_t), save :: prof_iter
+  type(profile_t), save :: prof, prof_iter
+  type(profile_t), save :: prof_lc, prof_sync
 
   contains
 
