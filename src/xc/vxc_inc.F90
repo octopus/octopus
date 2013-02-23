@@ -929,8 +929,9 @@ subroutine stitch(get_branch, functionvalues, startpoint)
     end function get_branch
   end interface
 
-  CMPLX, intent(inout) :: functionvalues(:, :, :)
-  integer, intent(in)  :: startpoint(3)
+  CMPLX,   intent(inout) :: functionvalues(:, :, :)
+  integer, intent(in)    :: startpoint(3)
+  
   integer :: i, j, imax, jmax
 
   imax = size(functionvalues, 1)
@@ -958,13 +959,12 @@ subroutine stitchline(get_branch, functionvalues, startpoint, direction, startbr
     end function get_branch
   end interface
 
-  CMPLX, intent(inout) :: functionvalues(:, :, :)
-  integer, intent(in)  :: startpoint(3)
-  integer, intent(in), optional  :: direction
-  integer, intent(in), optional :: startbranch
+  CMPLX,             intent(inout) :: functionvalues(:, :, :)
+  integer,           intent(in)    :: startpoint(3)
+  integer, optional, intent(in)    :: direction
+  integer, optional, intent(in)    :: startbranch
 
-  integer :: stitchedpoints
-  integer :: direction1, startbranch1
+  integer :: stitchedpoints, direction_, startbranch_
   
   integer :: currentbranch, npts, i
   integer :: currentlocation(3)
@@ -977,30 +977,30 @@ subroutine stitchline(get_branch, functionvalues, startpoint, direction, startbr
   currentlocation = startpoint
 
   if (present(direction)) then
-    direction1 = direction
+    direction_ = direction
   else
-    direction1 = 1
+    direction_ = 1
   end if
 
   if (present(startbranch)) then
-    startbranch1 = startbranch
+    startbranch_ = startbranch
   else
-    startbranch1 = 0
+    startbranch_ = 0
   end if
 
-  npts = size(functionvalues, direction1)
+  npts = size(functionvalues, direction_)
 
   ! First loop forwards from zero and stitch along the way
-  currentbranch = startbranch1
+  currentbranch = startbranch_
   prev_value = functionvalues(startpoint(1), startpoint(2), startpoint(3))
-  do i=startpoint(direction1) + 1, npts
+  do i=startpoint(direction_) + 1, npts
     call stitch_single_point()
   end do
   
   ! Now loop backwards
-  currentbranch = startbranch1
+  currentbranch = startbranch_
   prev_value = functionvalues(startpoint(1), startpoint(2), startpoint(3))
-  do i=startpoint(direction1) - 1, 1, -1
+  do i=startpoint(direction_) - 1, 1, -1
     call stitch_single_point()
   end do
   
@@ -1009,17 +1009,14 @@ contains
 
   !recursive 
   subroutine stitch_single_point()
-    !integer :: i1, j1, k1
-    CMPLX :: v1, v2, v3, v
+    CMPLX   :: v1, v2, v3, v
     integer :: j, adj
     
     stitchedpoints = stitchedpoints + 1
 
     PUSH_SUB(newstitch.stitch_single_point)
     
-    currentlocation(direction1) = i
-
-    !print*, 'ssp', direction1, 'loc', currentlocation
+    currentlocation(direction_) = i
 
     v1 = get_branch(functionvalues(currentlocation(1), currentlocation(2), currentlocation(3)), currentbranch)
     v2 = get_branch(functionvalues(currentlocation(1), currentlocation(2), currentlocation(3)), currentbranch - 1)
@@ -1073,24 +1070,24 @@ subroutine zxc_complex_lda(mesh, rho, Imrho, theta, vxc, Imvxc, ex, Imex, ec, Im
   FLOAT,           intent(in)    :: rho(:, :)
   FLOAT,           intent(in)    :: Imrho(:, :)
   FLOAT,           intent(in)    :: theta
-  FLOAT, optional, intent(inout) :: ex
-  FLOAT, optional, intent(inout) :: Imex            
-  FLOAT, optional, intent(inout) :: ec
-  FLOAT, optional, intent(inout) :: Imec            
   FLOAT, optional, intent(inout) :: vxc(:, :)
   FLOAT, optional, intent(inout) :: Imvxc(:, :)
+  FLOAT, optional, intent(inout) :: ex
+  FLOAT, optional, intent(inout) :: Imex
+  FLOAT, optional, intent(inout) :: ec
+  FLOAT, optional, intent(inout) :: Imec
 
   ! Exchange potential prefactor
   FLOAT, parameter :: Wx = -0.98474502184269641
 
   ! LDA correlation parameters
-  FLOAT, parameter :: gamma = 0.031091, alpha1 = 0.21370, beta1 = 7.5957, beta2 = 3.5876, beta3 = 1.6382, beta4 = 0.49294
-  CMPLX, allocatable   :: zvc_arr(:, :, :), Q0(:, :, :), Q1(:, :, :), dQ1drs(:, :, :), epsc(:, :, :), depsdrs(:, :, :), &
+  FLOAT, parameter      :: gamma = 0.031091, alpha1 = 0.21370, beta1 = 7.5957, beta2 = 3.5876, beta3 = 1.6382, beta4 = 0.49294
+  CMPLX, allocatable    :: zvc_arr(:, :, :), Q0(:, :, :), Q1(:, :, :), dQ1drs(:, :, :), epsc(:, :, :), depsdrs(:, :, :), &
     zrho_local(:), zvxc_local(:)
-  CMPLX                :: dimphase, tmp, zex, zec, zex2
-  FLOAT                :: dmin_unused
-  integer              :: N, izero, i, j
-  CMPLX, allocatable   :: vxbuf(:, :, :), rootrs(:, :, :)
+  CMPLX                 :: dimphase, tmp, zex, zec, zex2
+  FLOAT                 :: dmin_unused
+  integer               :: N, izero, i, j
+  CMPLX, allocatable    :: vxbuf(:, :, :), rootrs(:, :, :)
   type(cube_t)          :: cube
   type(cube_function_t) :: cf
   logical               :: calc_energy
@@ -1208,11 +1205,11 @@ subroutine xc_get_vxc_cmplx(der, xcs, ispin, rho, Imrho, vxc, Imvxc, theta, ex, 
   FLOAT, optional,      intent(inout) :: Imec            !< cmplxscl: Correlation energy
 
   
-  CMPLX, pointer :: zpot(:), zrho_tot(:)
-  CMPLX          :: ztmp
-  Integer        :: isp
+  CMPLX, pointer             :: zpot(:), zrho_tot(:)
+  CMPLX                      :: ztmp
+  Integer                    :: isp
   type(xc_functl_t), pointer :: functl(:)
-  logical         :: calc_energy
+  logical                    :: calc_energy
 
   PUSH_SUB(xc_get_vxc_cmplx)
 
