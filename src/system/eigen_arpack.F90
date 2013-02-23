@@ -175,43 +175,8 @@ contains
   subroutine arpack_debug(debug_level)
     integer, intent(in) :: debug_level
 
-! Modified from ARPACK debug.h 
-! I don't think this is going to change too much.. well at least it didn't since 1997 :)
-!
-!\SCCS Information: @(#) 
-! FILE: debug.h   SID: 2.3   DATE OF SID: 11/16/95   RELEASE: 2 
-!
-!     %---------------------------------%
-!     | See debug.doc for documentation |
-!     %---------------------------------%
-    integer  logfil, ndigit, mgetv0, &
-             msaupd, msaup2, msaitr, mseigt, msapps, msgets, mseupd, &
-             mnaupd, mnaup2, mnaitr, mneigh, mnapps, mngets, mneupd, &
-             mcaupd, mcaup2, mcaitr, mceigh, mcapps, mcgets, mceupd
-    common /debug/ &
-             logfil, ndigit, mgetv0, &
-             msaupd, msaup2, msaitr, mseigt, msapps, msgets, mseupd, &
-             mnaupd, mnaup2, mnaitr, mneigh, mnapps, mngets, mneupd, &
-             mcaupd, mcaup2, mcaitr, mceigh, mcapps, mcgets, mceupd
-
     PUSH_SUB(arpack_debug)
-      
-    ndigit = -3
-    logfil = 6
-    mnaitr = 0
-    mnapps = 0
-    mnaupd = debug_level + 1
-    mnaup2 = debug_level + 1
-    mneigh = 0
-    mneupd = debug_level + 1
-    mngets = debug_level + 1
-    
-    mcaupd = debug_level + 1
-    mcaup2 = debug_level + 1
-    mceigh = 0
-    mceupd = debug_level + 1
-    mcgets = debug_level + 1
-    
+    ! Debugging variables temporarily removed.  -Ask
     POP_SUB(arpack_debug)
   end subroutine arpack_debug
   
