@@ -22,27 +22,15 @@
 module poisson_libisf_m
   use cube_function_m
   use cube_m
-  use datasets_m
-  use fft_m
   use fourier_space_m
-  use geometry_m
   use global_m
-  use lalg_basic_m
-  use loct_m
-  use loct_math_m
-  use math_m
   use mesh_cube_parallel_map_m
-  use mesh_function_m
   use mesh_m
   use messages_m
   use mpi_m
   use par_vec_m
   use parser_m
   use profiling_m
-  use simul_box_m
-  use splines_m
-  use unit_m
-  use unit_system_m
 
 #ifdef HAVE_LIBISF
   !! From BigDFT
