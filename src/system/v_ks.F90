@@ -639,8 +639,8 @@ contains
               ex = energy%exchange, ec = energy%correlation, deltaxc = energy%delta_xc)
           else
             call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, st%d%ispin, ks%calc%density, ks%calc%Imdensity, &
-                 ks%calc%vxc, ks%calc%Imvxc, hm%cmplxscl%theta, ex = energy%exchange, ec = energy%correlation, &
-                 Imex = energy%Imexchange, Imec = energy%Imcorrelation)
+              ks%calc%vxc, ks%calc%Imvxc, hm%cmplxscl%theta, ex = energy%exchange, ec = energy%correlation, &
+              Imex = energy%Imexchange, Imec = energy%Imcorrelation)
           end if
         end if
       else
@@ -656,7 +656,7 @@ contains
               ks%calc%vxc)
           else
             call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, st%d%ispin, ks%calc%density, ks%calc%Imdensity, &
-                 ks%calc%vxc, ks%calc%Imvxc, hm%cmplxscl%theta)
+              ks%calc%vxc, ks%calc%Imvxc, hm%cmplxscl%theta)
           end if
         end if
       end if
@@ -1011,7 +1011,7 @@ contains
       else
         ! Solve the Poisson equation for the scaled density and coulomb potential
         call zpoisson_solve(ks%hartree_solver, zpot,&
-               ks%calc%total_density + M_zI * ks%calc%Imtotal_density, theta = hm%cmplxscl%theta)
+          ks%calc%total_density + M_zI * ks%calc%Imtotal_density, theta = hm%cmplxscl%theta)
         pot   =   real(zpot)
         Impot =  aimag(zpot)
       end if

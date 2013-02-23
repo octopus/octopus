@@ -34,7 +34,7 @@
     if(iand(outp%what, C_OUTPUT_POTENTIAL).ne.0) then
       if(hm%cmplxscl%space) then
         call zio_function_output(outp%how, dir, "v0", der%mesh,&
-           hm%ep%vpsl + M_zI*hm%ep%Imvpsl, units_out%energy, err, geo = geo)
+          hm%ep%vpsl + M_zI*hm%ep%Imvpsl, units_out%energy, err, geo = geo)
       else  
         SAFE_ALLOCATE(v0(1:der%mesh%np, 1:hm%d%dim))
         v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
@@ -63,7 +63,7 @@
             call dio_function_output(outp%how, dir, fname, der%mesh, hm%vxc(:, is), units_out%energy, err, geo = geo)
           else
             call zio_function_output(outp%how, dir, fname, der%mesh, &
-               hm%vxc(:, is) + M_zI *  hm%Imvxc(:, is), units_out%energy, err, geo = geo)
+              hm%vxc(:, is) + M_zI *  hm%Imvxc(:, is), units_out%energy, err, geo = geo)
           end if
           
           ! finally the full KS potential (without non-local PP contributions)
@@ -81,7 +81,7 @@
                 hm%ep%vpsl + hm%vhxc(:, is), units_out%energy, err, geo = geo)
             else
               call zio_function_output(outp%how, dir, fname, der%mesh, &
-                hm%ep%vpsl +M_zI * hm%ep%Imvpsl+ hm%vhxc(:, is) + M_zI * hm%Imvhxc(:, is), units_out%energy, err, geo = geo)
+                hm%ep%vpsl + M_zI * hm%ep%Imvpsl + hm%vhxc(:, is) + M_zI * hm%Imvhxc(:, is), units_out%energy, err, geo = geo)
             end if
           end if
         end do
