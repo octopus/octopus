@@ -83,7 +83,9 @@ module sternheimer_m
        sternheimer_has_converged, &
        swap_sigma,                &
        wfs_tag_sigma,             &
-       sternheimer_obsolete_variables
+       sternheimer_obsolete_variables, &
+       dcalc_hvar,                &
+       zcalc_hvar
 
   type sternheimer_t
      private

@@ -349,19 +349,38 @@ subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(out)   :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
 
+  PUSH_SUB(X(sternheimer_calc_hvar))
+
+  call X(calc_hvar)(this%add_hartree, this%add_fxc, this%fxc, sys, lr(1)%X(dl_rho), nsigma, hvar)
+
+  POP_SUB(X(sternheimer_calc_hvar))
+
+end subroutine X(sternheimer_calc_hvar)
+
+
+!--------------------------------------------------------------
+subroutine X(calc_hvar)(add_hartree, add_fxc, fxc, sys, lr_rho, nsigma, hvar)
+  logical,                intent(in)    :: add_hartree
+  logical,                intent(in)    :: add_fxc
+  FLOAT,                  intent(in)    :: fxc(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:st%d%nspin)
+  type(system_t),         intent(inout) :: sys
+  R_TYPE,                 intent(in)    :: lr_rho(:,:) !< (1:mesh%np, 1:sys%st%d%nspin)
+  integer,                intent(in)    :: nsigma 
+  R_TYPE,                 intent(out)   :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
+
   R_TYPE, allocatable :: tmp(:), hartree(:)
   integer :: np, ip, ispin, ispin2
 
-  PUSH_SUB(X(sternheimer_calc_hvar))
-  call profiling_in(prof_hvar, "STERNHEIMER_HVAR")
+  PUSH_SUB(X(calc_hvar))
+  call profiling_in(prof_hvar, "CALC_HVAR")
 
   np = sys%gr%mesh%np
 
-  if (this%add_hartree) then 
+  if (add_hartree) then 
     SAFE_ALLOCATE(    tmp(1:np))
     SAFE_ALLOCATE(hartree(1:np))
     do ip = 1, np
-      tmp(ip) = sum(lr(1)%X(dl_rho)(ip, 1:sys%st%d%nspin))
+      tmp(ip) = sum(lr_rho(ip, 1:sys%st%d%nspin))
     end do
     hartree(1:np) = R_TOTYPE(M_ZERO)
     call X(poisson_solve)(psolver, hartree, tmp, all_nodes = .false.)
@@ -374,25 +393,25 @@ subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
     hvar(1:np, ispin, 1) = M_ZERO
 
     !* hartree
-    if (this%add_hartree) hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + hartree(1:np)
+    if (add_hartree) hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + hartree(1:np)
     
     !* fxc
-    if(this%add_fxc) then
+    if(add_fxc) then
       do ispin2 = 1, sys%st%d%nspin
-        hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + this%fxc(1:np, ispin, ispin2)*lr(1)%X(dl_rho)(1:np, ispin2)
+        hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + fxc(1:np, ispin, ispin2)*lr_rho(1:np, ispin2)
       end do
     end if
   end do
   
   if (nsigma == 2) hvar(1:np, 1:sys%st%d%nspin, 2) = R_CONJ(hvar(1:np, 1:sys%st%d%nspin, 1))
 
-  if (this%add_hartree) then
+  if (add_hartree) then
     SAFE_DEALLOCATE_A(hartree)
   end if
 
   call profiling_out(prof_hvar)
-  POP_SUB(X(sternheimer_calc_hvar))
-end subroutine X(sternheimer_calc_hvar)
+  POP_SUB(X(calc_hvar))
+end subroutine X(calc_hvar)
 
 
 !-----------------------------------------------------------
