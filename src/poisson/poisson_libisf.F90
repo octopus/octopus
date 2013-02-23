@@ -44,7 +44,7 @@ module poisson_libisf_m
   use unit_m
   use unit_system_m
 
-#ifdef HAVE_ISF
+#ifdef HAVE_LIBISF
   !! From BigDFT
   use poisson_solver
 #endif
@@ -94,6 +94,7 @@ module poisson_libisf_m
     integer     :: rs_istart(1:3) !< where does the local portion of the function start in real space
 
   end type poisson_libisf_t
+
 contains
 
   subroutine poisson_libisf_init(this, mesh, cube, soft_coulb_param)
@@ -296,7 +297,7 @@ contains
     !!                For global disposition i3s is equal to distributed case with i3xcsh=0.
     integer :: i3s
 
-    PUSH_SUB(libisf_get_dims)
+    PUSH_SUB(poisson_libisf_get_dims)
 
     !! Get the dimensions of the cube
     call PS_dim4allocation(this%geocode, this%datacode, mpi_world%rank, mpi_world%size, &
@@ -319,7 +320,7 @@ contains
     cube%fs_istart(1:2) = 1
     cube%fs_istart(3)   = this%localnscatterarr(5)
 
-    POP_SUB(libisf_get_dims)
+    POP_SUB(poisson_libisf_get_dims)
 #endif
   end subroutine poisson_libisf_get_dims
   
