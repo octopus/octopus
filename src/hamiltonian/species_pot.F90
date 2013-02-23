@@ -429,18 +429,12 @@ contains
         end do
       end do
       if (cmplxscl) then 
-         rr = M_ONE
-         !print*, 'CMPLXK BLAHLBHASOMETHING'
-         !rr1 = species_zval(spec) / abs(dmf_integrate(mesh, rho(:)**2 + Imrho(:)**2))
-         rho(1:mesh%np) = rr * rho(1:mesh%np)
-         Imrho(1:mesh%np) = rr * Imrho(1:mesh%np)
-         !print*, Imrho(1:10)
+        rr = M_ONE
+        rho(1:mesh%np) = rr * rho(1:mesh%np)
+        Imrho(1:mesh%np) = rr * Imrho(1:mesh%np)
       else
-         ! XXX perhaps we should normalize to
-         ! some complex number when complex-scaling, but we don't know
-         ! exactly for now.
-         rr = species_zval(spec) / abs(dmf_integrate(mesh, rho(:)))
-         rho(1:mesh%np) = rr * rho(1:mesh%np)
+        rr = species_zval(spec) / abs(dmf_integrate(mesh, rho(:)))
+        rho(1:mesh%np) = rr * rho(1:mesh%np)
       end if
 
       call periodic_copy_end(pp)

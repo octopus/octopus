@@ -716,7 +716,7 @@ contains
 
           call dpoisson_solve(ep%poisson_solver, vl, rho, all_nodes = .false.)
           if (cmplxscl) then
-             call dpoisson_solve(ep%poisson_solver, Imvl, Imrho, all_nodes = .false.)
+            call dpoisson_solve(ep%poisson_solver, Imvl, Imrho, all_nodes = .false.)
           end if
         end if
 
@@ -728,19 +728,19 @@ contains
           write(68,*) "Calling rhonuc iatom", iatom
           rho_nuc(1:der%mesh%np) = rho_nuc(1:der%mesh%np) + rho(1:der%mesh%np)
           if (iatom==geo%natoms.and.calc_gate_energy==0) then
-             write(68,*) "Entering the zone"
-             nx = der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) + 1 - 2*der%mesh%idx%enlarge(1)
-             ny = der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) + 1 - 2*der%mesh%idx%enlarge(2)
-             nz = der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) + 1 - 2*der%mesh%idx%enlarge(3)
-             nx_half = (der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) - 2*der%mesh%idx%enlarge(1))/2 + 1
-             ny_half = (der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) - 2*der%mesh%idx%enlarge(2))/2 + 1
-             nz_half = (der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) - 2*der%mesh%idx%enlarge(3))/2 + 1
-             do counter = 1, der%mesh%np
-               call  index_to_coords(der%mesh%idx,der%mesh%sb%dim,counter,conversion)
-               conversion(1) = conversion(1) + nx_half
-               conversion(2) = conversion(2) + ny_half
-               conversion(3) = conversion(3) + nz_half
-               v_es(counter)=v_es3(conversion(1),conversion(2),conversion(3))
+            write(68,*) "Entering the zone"
+            nx = der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) + 1 - 2*der%mesh%idx%enlarge(1)
+            ny = der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) + 1 - 2*der%mesh%idx%enlarge(2)
+            nz = der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) + 1 - 2*der%mesh%idx%enlarge(3)
+            nx_half = (der%mesh%idx%nr(2,1) - der%mesh%idx%nr(1,1) - 2*der%mesh%idx%enlarge(1))/2 + 1
+            ny_half = (der%mesh%idx%nr(2,2) - der%mesh%idx%nr(1,2) - 2*der%mesh%idx%enlarge(2))/2 + 1
+            nz_half = (der%mesh%idx%nr(2,3) - der%mesh%idx%nr(1,3) - 2*der%mesh%idx%enlarge(3))/2 + 1
+            do counter = 1, der%mesh%np
+              call index_to_coords(der%mesh%idx, der%mesh%sb%dim, counter, conversion)
+              conversion(1) = conversion(1) + nx_half
+              conversion(2) = conversion(2) + ny_half
+              conversion(3) = conversion(3) + nz_half
+              v_es(counter)=v_es3(conversion(1),conversion(2),conversion(3))
             enddo
             es_energy = dmf_dotp(der%mesh, rho_nuc, v_es)
             write(68,*) "Calculating ion energy due to bias:", es_energy*CNST(2.0*13.60569193)
