@@ -29,13 +29,12 @@ module cmplxscl_m
   implicit none
   
   private
-  
 
   public :: &
-       cmplxscl_t, &
-       cmplxscl_init, & 
-       cmplxscl_copy, & 
-       cmplxscl_end 
+    cmplxscl_t, &
+    cmplxscl_init, & 
+    cmplxscl_copy, & 
+    cmplxscl_end 
        
   !> Complex scaling module    
   type cmplxscl_t
@@ -47,7 +46,6 @@ module cmplxscl_m
      FLOAT             :: alphaL     !< time coordinate scaling angle for left states
      FLOAT             :: rotatespectrumangle !< angle with which to rotate eigenvalues to obtain desired order from ARPACK
      FLOAT             :: penalizationfactor !< factor which penalizes imaginary parts of eigenvalues when ordering states
-
   end type cmplxscl_t
 
   integer, parameter ::     &
@@ -123,7 +121,7 @@ contains
     !%Variable ComplexScalingPenalizationFactor
     !%Type float
     !%Default 2
-    !%Section ComplexScaling
+    !%Section Hamiltonian
     !%Description
     !% Eigenstates eps will be ordered by
     !%  \Re(\epsilon) + penalizationfactor (\Im(\epsilon))^2

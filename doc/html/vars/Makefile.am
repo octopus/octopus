@@ -37,8 +37,7 @@ dist_doc_DATA = \
 	System.html \
 	Time-Dependent.html \
 	Open_Boundaries.html \
-	Utilities.html \
-        ComplexScaling.html
+	Utilities.html
 
 CLEANFILES = $(dist_doc_DATA)
 
