@@ -615,9 +615,10 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
   integer,        intent(in)    :: ep
   R_TYPE,         intent(inout) :: psi(:, :, sp:)
 
-  integer :: idim, ist, ii
+  integer :: idim, ist, ii, ip
   
   PUSH_SUB(X(batch_get_points))
+  call profiling_in(get_points_prof, 'GET_POINTS')
 
 #ifdef R_TREAL
   ! cannot get a real value from a complex batch
@@ -648,26 +649,36 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
   case(BATCH_PACKED)
 
     if(batch_type(this) == TYPE_FLOAT) then
-      
-      do ii = 1, this%nst_linear
-        ist = this%index(ii, 1)
-        idim = this%index(ii, 2)
-        psi(ist, idim, sp:ep) = this%pack%dpsi(ii, sp:ep)
+
+      !$omp parallel do private(ip, ii, ist, idim)
+      do ip = sp, ep
+        do ii = 1, this%nst_linear
+          ist = this%index(ii, 1)
+          idim = this%index(ii, 2)
+          psi(ist, idim, ip) = this%pack%dpsi(ii, ip)
+        end do
       end do
+      !$omp end parallel do
 
     else
 
-      do ii = 1, this%nst_linear
-        ist = this%index(ii, 1)
-        idim = this%index(ii, 2)
-        psi(ist, idim, sp:ep) = this%pack%zpsi(ii, sp:ep)
+      !$omp parallel do private(ip, ii, ist, idim)
+      do ip = sp, ep
+        do ii = 1, this%nst_linear
+          ist = this%index(ii, 1)
+          idim = this%index(ii, 2)
+          psi(ist, idim, ip) = this%pack%zpsi(ii, ip)
+        end do
       end do
+      !$omp end parallel do
 
     end if
 
   case(BATCH_CL_PACKED)
     call messages_not_implemented('batch_get_points for CL packed batches')
   end select
+
+  call profiling_out(get_points_prof)
 
   POP_SUB(X(batch_get_points))
 end subroutine X(batch_get_points)
@@ -680,9 +691,11 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
   integer,        intent(in)    :: ep
   R_TYPE,         intent(in)    :: psi(:, :, sp:)
 
-  integer :: idim, ist, ii
+  integer :: idim, ist, ii, ip
 
   PUSH_SUB(X(batch_set_points))
+
+  call profiling_in(set_points_prof, 'SET_POINTS')
 
 #ifdef R_TCOMPLEX
   ! cannot set a real batch with complex values
@@ -716,25 +729,35 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
 
     if(batch_type(this) == TYPE_FLOAT) then
 
-      do ii = 1, this%nst_linear
-        ist = this%index(ii, 1)
-        idim = this%index(ii, 2)
-        this%pack%dpsi(ii, sp:ep) = psi(ist, idim, sp:ep)
+      !$omp parallel do private(ip, ii, ist, idim)
+      do ip = sp, ep
+        do ii = 1, this%nst_linear
+          ist = this%index(ii, 1)
+          idim = this%index(ii, 2)
+          this%pack%dpsi(ii, ip) = psi(ist, idim, ip)
+        end do
       end do
+      !$omp end parallel do
 
     else
 
-      do ii = 1, this%nst_linear
-        ist = this%index(ii, 1)
-        idim = this%index(ii, 2)
-        this%pack%zpsi(ii, sp:ep) = psi(ist, idim, sp:ep)
+      !$omp parallel do private(ip, ii, ist, idim)
+      do ip = sp, ep
+        do ii = 1, this%nst_linear
+          ist = this%index(ii, 1)
+          idim = this%index(ii, 2)
+          this%pack%zpsi(ii, ip) = psi(ist, idim, ip)
+        end do
       end do
+      !$omp end parallel do
 
     end if
 
   case(BATCH_CL_PACKED)
     call messages_not_implemented('batch_set_points for CL packed batches')
   end select
+
+  call profiling_out(set_points_prof)
 
   POP_SUB(X(batch_set_points))
 end subroutine X(batch_set_points)
