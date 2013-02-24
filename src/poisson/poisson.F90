@@ -21,6 +21,7 @@
 #include "global.h"
 
 module poisson_m
+  use batch_m
   use boundaries_m
   use cube_m
   use datasets_m
@@ -52,6 +53,7 @@ module poisson_m
   use poisson_sete_m
   use profiling_m
   use simul_box_m
+  use types_m
   use unit_m
   use unit_system_m
   use varinfo_m
@@ -67,6 +69,7 @@ module poisson_m
     poisson_init,                &
     dpoisson_solve,              &
     zpoisson_solve,              &
+    poisson_solve_batch,         &
     poisson_solver_is_iterative, &
     poisson_solver_has_free_bc,  &
     poisson_end,                 &
@@ -593,6 +596,35 @@ contains
 
     POP_SUB(zpoisson_solve)
   end subroutine zpoisson_solve
+
+
+  !-----------------------------------------------------------------
+
+  subroutine poisson_solve_batch(this, potb, rhob, all_nodes)
+    type(poisson_t),      intent(inout) :: this
+    type(batch_t),        intent(inout) :: potb 
+    type(batch_t),        intent(inout) :: rhob 
+    logical, optional,    intent(in)    :: all_nodes
+
+    integer :: ii
+
+    PUSH_SUB(poisson_solve_batch)
+
+    ASSERT(potb%nst_linear == rhob%nst_linear)
+    ASSERT(batch_type(potb) == batch_type(rhob))
+
+    if(batch_type(potb) == TYPE_FLOAT) then
+      do ii = 1, potb%nst_linear
+        call dpoisson_solve(this, potb%states_linear(ii)%dpsi, rhob%states_linear(ii)%dpsi, all_nodes)
+      end do
+    else
+      do ii = 1, potb%nst_linear
+        call zpoisson_solve(this, potb%states_linear(ii)%zpsi, rhob%states_linear(ii)%zpsi, all_nodes)
+      end do
+    end if
+
+    POP_SUB(poisson_solve_batch)
+  end subroutine poisson_solve_batch
 
   !-----------------------------------------------------------------
 
