@@ -351,7 +351,11 @@ subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
 
   PUSH_SUB(X(sternheimer_calc_hvar))
 
-  call X(calc_hvar)(this%add_hartree, this%add_fxc, this%fxc, sys, lr(1)%X(dl_rho), nsigma, hvar)
+  if(this%add_fxc) then
+    call X(calc_hvar)(this%add_hartree, sys, lr(1)%X(dl_rho), nsigma, hvar, fxc = this%fxc)
+  else
+    call X(calc_hvar)(this%add_hartree, sys, lr(1)%X(dl_rho), nsigma, hvar)
+  endif
 
   POP_SUB(X(sternheimer_calc_hvar))
 
@@ -359,14 +363,13 @@ end subroutine X(sternheimer_calc_hvar)
 
 
 !--------------------------------------------------------------
-subroutine X(calc_hvar)(add_hartree, add_fxc, fxc, sys, lr_rho, nsigma, hvar)
+subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
   logical,                intent(in)    :: add_hartree
-  logical,                intent(in)    :: add_fxc
-  FLOAT,                  intent(in)    :: fxc(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:st%d%nspin)
   type(system_t),         intent(inout) :: sys
   R_TYPE,                 intent(in)    :: lr_rho(:,:) !< (1:mesh%np, 1:sys%st%d%nspin)
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(out)   :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
+  FLOAT, optional,        intent(in)    :: fxc(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:st%d%nspin)
 
   R_TYPE, allocatable :: tmp(:), hartree(:)
   integer :: np, ip, ispin, ispin2
@@ -396,7 +399,7 @@ subroutine X(calc_hvar)(add_hartree, add_fxc, fxc, sys, lr_rho, nsigma, hvar)
     if (add_hartree) hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + hartree(1:np)
     
     !* fxc
-    if(add_fxc) then
+    if(present(fxc)) then
       do ispin2 = 1, sys%st%d%nspin
         hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + fxc(1:np, ispin, ispin2)*lr_rho(1:np, ispin2)
       end do

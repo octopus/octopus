@@ -981,9 +981,9 @@ contains
           end if
 
           if(states_are_real(st)) then
-            call dcalc_hvar(.true., .true., fxc, sys, dl_rho(:, :, iatom, idir), st%d%nspin, dhvar)
+            call dcalc_hvar(.true., sys, dl_rho(:, :, iatom, idir), st%d%nspin, dhvar, fxc = fxc)
           else
-            call zcalc_hvar(.true., .true., fxc, sys, TOCMPLX(dl_rho(:, :, iatom, idir), M_ZERO), st%d%nspin, zhvar)
+            call zcalc_hvar(.true., sys, TOCMPLX(dl_rho(:, :, iatom, idir), M_ZERO), st%d%nspin, zhvar, fxc = fxc)
           endif
           ! calc derivatives of eigenvalues here
 
