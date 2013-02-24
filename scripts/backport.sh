@@ -57,7 +57,7 @@ if [ $# -ne 1 ]; then
 fi
 
 # e.g. https://civet.berkeley.edu/svn/BerkeleyGW
-Root=`svn info | grep Root | awk '{print $3}'`
+Root=`svn info | grep "Repository Root" | awk '{print $3}'`
 # e.g. https://civet.berkeley.edu/svn/BerkeleyGW/branches/1.0.x
 URL=`svn info | grep URL | awk '{print $2}'`
 # e.g. branches/1.0.x
