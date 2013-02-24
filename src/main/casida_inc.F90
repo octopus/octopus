@@ -22,7 +22,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
   type(mesh_t), intent(in) :: mesh
   type(states_t), intent(in) :: st
 
-  FLOAT, allocatable :: deltav(:)
+  FLOAT, allocatable :: deltav(:), psi_a(:)
   R_TYPE, allocatable :: xx(:)
   CMPLX, allocatable :: zf(:), zx(:)
   FLOAT, allocatable :: gaus_leg_points(:), gaus_leg_weights(:)
@@ -49,15 +49,19 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
 
   if(cas%qcalc) then
     SAFE_ALLOCATE(zf(1:mesh%np))
+    SAFE_ALLOCATE(psi_a(1:mesh%np))
     SAFE_ALLOCATE(zx(1:cas%n_pairs))
 
     ! matrix element
     do ia = 1, cas%n_pairs
+
+      call states_get_state(st, mesh, 1, cas%pair(ia)%i, cas%pair(ia)%sigma, zf)
+      call states_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%sigma, psi_a)
+
       do ip = 1, mesh%np
-        zf(ip) = exp(M_zI * dot_product(cas%qvector(:), mesh%x(ip, :))) * &
-          st%dpsi(ip, 1, cas%pair(ia)%i, cas%pair(ia)%sigma) * &
-          st%dpsi(ip, 1, cas%pair(ia)%a, cas%pair(ia)%sigma)
+        zf(ip) = exp(M_zI*dot_product(cas%qvector(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*zf(ip)*psi_a(ip)
       end do
+
       zx(ia) = zmf_integrate(mesh, zf)
     end do
 
@@ -88,12 +92,14 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
           ! matrix elements
           zx(:) = M_ZERO
           zf(:) = M_ZERO
+
+          call states_get_state(st, mesh, 1, cas%pair(ia)%i, cas%pair(ia)%sigma, zf)
+          call states_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%sigma, psi_a)
+
           do ia = 1, cas%n_pairs
             forall(ip = 1:mesh%np)
               ! NB should use states_get_state here
-              zf(ip) = exp(M_zI * dot_product(qvect(1:3), mesh%x(ip, 1:3))) * &
-                st%dpsi(ip, 1, cas%pair(ia)%i, cas%pair(ia)%sigma) * &
-                st%dpsi(ip, 1, cas%pair(ia)%a, cas%pair(ia)%sigma)
+              zf(ip) = exp(M_zI*dot_product(qvect(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*zf(ip)*psi_a(ip)
             end forall
             zx(ia) = zmf_integrate(mesh, zf)
           end do
@@ -118,6 +124,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
     end if ! averaging
 
     SAFE_DEALLOCATE_A(zf)
+    SAFE_DEALLOCATE_A(psi_a)
     SAFE_DEALLOCATE_A(zx)
 
   end if
