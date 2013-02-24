@@ -950,7 +950,7 @@ contains
       do ilaser = 1, this%ep%no_lasers
         select case(laser_kind(this%ep%lasers(ilaser)))
         case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
-          do ispin = 1, this%d%nspin
+          do ispin = 1, this%d%spin_channels
             call laser_potential(this%ep%lasers(ilaser), mesh,  this%hm_base%potential(:, ispin), time)
           end do
         case(E_FIELD_MAGNETIC)
