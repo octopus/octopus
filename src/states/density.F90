@@ -409,8 +409,9 @@ contains
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
 
-    integer :: ist, ik
+    integer :: ist, ik, ib, nblock
     type(states_t) :: staux
+    CMPLX, allocatable :: psi(:, :, :)
     type(batch_t)  :: psib
     type(density_calc_t) :: dens_calc
 
@@ -433,15 +434,30 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       if(n < st%st_start .or. n > st%st_end) cycle
 
-      if(states_are_real(st)) then
-        call batch_init(psib, st%d%dim, st%st_start, n, st%dpsi(:, :, ist:ist, ik))
-      else
-        call batch_init(psib, st%d%dim, st%st_start, n, st%zpsi(:, :, ist:ist, ik))
-      end if
-      
-      call density_calc_accumulate(dens_calc, ik, psib)
-      
-      call batch_end(psib)
+      do ib =  st%block_start, st%block_end
+        if(states_block_max(st, ib) <= n) then
+
+          call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
+          if(states_block_max(st, ib) == n) exit
+
+        else 
+
+          nblock = n - states_block_min(st, ib) + 1
+
+          SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1:nblock))
+
+          do ist = 1, nblock
+            call states_get_state(st, gr%mesh, states_block_min(st, ib) + ist - 1, ik, psi(:, :, ist)) 
+          end do
+
+          call batch_init(psib, st%d%dim, states_block_min(st, ib), n, psi)
+          call density_calc_accumulate(dens_calc, ik, psib)
+          call batch_end(psib)
+          exit
+
+        end if
+
+      end do
     end do
 
     call density_calc_end(dens_calc)
