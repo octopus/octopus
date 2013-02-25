@@ -209,7 +209,6 @@ contains
     !% The Petersilka approximation uses only the diagonal part of the Tamm-Dancoff matrix.
     !% This is acceptable if there is little mixing between single-particle transitions.
     !% Ref: M Petersilka, UJ Gossmann, and EKU Gross, <i>Phys. Rev. Lett.</i> <b>76</b>, 1212 (1996).
-    !% (Diagonalization in degenerate subspaces is not implemented here.)
     !%Option tamm_dancoff 4
     !% The Tamm-Dancoff approximation uses only occupied-unoccupied transitions and not
     !% unoccupied-occupied transitions.
@@ -597,9 +596,9 @@ contains
 
     xc => fxc
     select case(cas%type)
-    case(CASIDA_EPS_DIFF,CASIDA_PETERSILKA)
+    case(CASIDA_EPS_DIFF)
       call solve_petersilka()
-    case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA)
+    case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
       call solve_casida()
     end select
 
@@ -705,7 +704,11 @@ contains
 
       PUSH_SUB(casida_work.solve_casida)
 
-      max = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
+      if(cas%type == CASIDA_PETERSILKA) then
+        max = cas%n_pairs ! might be more, actually...
+      else
+        max = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
+      endif
       counter = 0
       actual = 0
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
@@ -717,9 +720,20 @@ contains
       do jb = 1, cas%n_pairs
         actual = actual + 1
         if(mod(actual, cas%mpi_grp%size) .ne. cas%mpi_grp%rank) cycle
+        q => cas%pair(jb)
         ! note: the ordering of jb, ia loops are crucial to minimize number of Poisson solves required.
         do ia = jb, cas%n_pairs
           counter = counter + 1
+
+          if(cas%type == CASIDA_PETERSILKA) then
+            p => cas%pair(ia)
+            if(abs((st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)) &
+              - (st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))) > CNST(1e-8)) then
+              ! only calculate off-diagonals in degenerate subspace
+              cycle
+            endif
+          endif
+
           ! if not loaded, then calculate matrix element
           if(.not.saved_K(ia, jb)) then
             call K_term(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
@@ -761,6 +775,7 @@ contains
             else if(cas%type == CASIDA_VARIATIONAL) then
               cas%mat(ia, jb) = M_TWO * cas%mat(ia, jb)
             endif
+
             if(sys%st%d%ispin == UNPOLARIZED) then
               cas%mat(ia, jb) = M_TWO * cas%mat(ia, jb)
             endif
@@ -1095,7 +1110,7 @@ contains
     write(iunit, '(1x,a15)') '<f>'
 
     do ia = 1, cas%n_pairs
-      if((cas%type == CASIDA_EPS_DIFF) .or. (cas%type == CASIDA_PETERSILKA)) then
+      if((cas%type == CASIDA_EPS_DIFF)) then
         write(iunit, '(2i4)', advance='no') cas%pair(ind(ia))%i, cas%pair(ind(ia))%a
         if(sys%st%d%ispin == SPIN_POLARIZED) then
           write(iunit, '(i5)', advance='no') cas%pair(ind(ia))%sigma
@@ -1110,7 +1125,7 @@ contains
 
     if(cas%qcalc) call qcasida_write(cas)
 
-    if(cas%type == CASIDA_EPS_DIFF .or. cas%type == CASIDA_PETERSILKA) then
+    if(cas%type == CASIDA_EPS_DIFF) then
       POP_SUB(casida_write)
       return
     end if
@@ -1137,7 +1152,7 @@ contains
         write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, temp * cas%mat(jb, ind(ia))
       end do
 
-      if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL) then
+      if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
         call write_implied_occupations(cas, iunit, ind(ia))
       endif
       call io_close(iunit)

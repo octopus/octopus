@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2011-2013 D. Strubbe
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -201,14 +202,14 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
 
   zz = R_TOTYPE(M_ZERO)
   if(cas%w(ia) > M_ZERO) then
-    if(cas%type == CASIDA_PETERSILKA .or. cas%type == CASIDA_EPS_DIFF) then
+    if(cas%type == CASIDA_EPS_DIFF) then
       zz = sqrt(TOFLOAT(cas%el_per_state)) * xx(ia)
     else if(cas%type == CASIDA_CASIDA) then
       do jb = 1, cas%n_pairs
         zz = zz + xx(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
       end do
       zz = (M_ONE/sqrt(cas%w(ia))) * zz
-    else ! TAMM_DANCOFF, VARIATIONAL
+    else ! TAMM_DANCOFF, VARIATIONAL, PETERSILKA
       do jb = 1, cas%n_pairs
         zz = zz + xx(jb) * cas%mat(jb, ia)
       end do

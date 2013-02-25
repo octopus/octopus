@@ -109,7 +109,7 @@ program casida_spectrum
   call messages_print_var_value(stdout, datasets_check('CasidaSpectrumMaxEnergy'), cs%max_energy, unit = units_out%energy)
 
   call calc_broad(cs, CASIDA_DIR, 'eps_diff', .true.)
-  call calc_broad(cs, CASIDA_DIR, 'petersilka', .true.)
+  call calc_broad(cs, CASIDA_DIR, 'petersilka', .false.)
   call calc_broad(cs, CASIDA_DIR, 'tamm_dancoff', .false.)
   call calc_broad(cs, CASIDA_DIR, 'variational', .false.)
   call calc_broad(cs, CASIDA_DIR, 'casida', .false.)
@@ -147,8 +147,8 @@ contains
       return
     end if
 
-    ! For Casida, CV(2), Tamm-Dancoff: first column is the index of the excitation
-    ! For eps_diff, Petersilka: first two columns are occ and unocc states, then spin if spin-polarized
+    ! For Casida, CV(2), Tamm-Dancoff, Petersilka: first column is the index of the excitation
+    ! For eps_diff: first two columns are occ and unocc states, then spin if spin-polarized
     ncols = 1
     if(extracols) then
       ncols = ncols + cs%ispin
