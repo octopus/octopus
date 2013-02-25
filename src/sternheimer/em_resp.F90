@@ -1247,6 +1247,8 @@ contains
     ! ---------------------------------------------------------
     subroutine out_projections()
       CMPLX   :: proj
+      FLOAT, allocatable :: dpsi(:, :)
+      CMPLX, allocatable :: zpsi(:, :)
       integer :: ist, ivar, ik, idir, sigma
       character(len=80) :: fname
 
@@ -1280,11 +1282,15 @@ contains
               do sigma = 1, em_vars%nsigma
 
                 if(states_are_complex(st)) then
-                  proj = &
-                       zmf_dotp(gr%mesh, st%d%dim, st%zpsi(:, :, ist, ik), em_vars%lr(idir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
+                  SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:st%d%dim))
+                  call states_get_state(st, gr%mesh, ist, ik, zpsi)
+                  proj = zmf_dotp(gr%mesh, st%d%dim, zpsi, em_vars%lr(idir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
+                  SAFE_DEALLOCATE_A(zpsi)
                 else
-                  proj = &
-                       dmf_dotp(gr%mesh, st%d%dim, st%dpsi(:, :, ist, ik), em_vars%lr(idir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
+                  SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
+                  call states_get_state(st, gr%mesh, ist, ik, dpsi)
+                  proj = dmf_dotp(gr%mesh, st%d%dim, dpsi, em_vars%lr(idir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
+                  SAFE_DEALLOCATE_A(dpsi)
                 end if
                   
                 if( sigma == em_vars%nsigma .and. ivar == st%nst) then 
