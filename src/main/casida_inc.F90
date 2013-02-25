@@ -98,7 +98,6 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
 
           do ia = 1, cas%n_pairs
             forall(ip = 1:mesh%np)
-              ! NB should use states_get_state here
               zf(ip) = exp(M_zI*dot_product(qvect(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*zf(ip)*psi_a(ip)
             end forall
             zx(ia) = zmf_integrate(mesh, zf)
@@ -228,25 +227,37 @@ subroutine X(transition_density) (cas, st, mesh, ia, n0I)
   integer,        intent(in)  :: ia
   R_TYPE,         intent(out) :: n0I(:)
 
-  integer :: ip, jb, idim
-  R_TYPE, allocatable :: xx(:)
+  integer :: ip, jb, idim, block_size, sp, ep
+  R_TYPE, allocatable :: xx(:), psi(:, :, :, :)
 
   PUSH_SUB(X(transition_density))
 
   SAFE_ALLOCATE(xx(1:cas%n_pairs))
 
-  ASSERT(associated(st%X(psi)))
+  block_size = 1000
 
-  do ip = 1, mesh%np
-    do jb = 1, cas%n_pairs
-      do idim = 1, st%d%dim
-        xx(jb) = R_CONJ(st%X(psi)(ip, idim, cas%pair(jb)%i, cas%pair(jb)%sigma)) * &
-             st%X(psi)(ip, idim, cas%pair(jb)%a, cas%pair(jb)%sigma)
+  SAFE_ALLOCATE(psi(st%st_start:st%st_end, 1:st%d%dim, 1:block_size, st%d%kpt%start:st%d%kpt%end))
+
+  ! We do this by blocks of points to avoid allocating an array of the
+  ! size of the full states.
+  do sp = 1, mesh%np, block_size
+    ep = min(sp + block_size - 1, mesh%np)
+
+    call states_get_points(st, mesh, sp, ep, psi)
+    
+    do ip = sp, ep
+      do jb = 1, cas%n_pairs
+        do idim = 1, st%d%dim
+          xx(jb) = R_CONJ(psi(cas%pair(jb)%i, idim, ip - sp + 1, cas%pair(jb)%sigma))* &
+            psi(cas%pair(jb)%a, idim, ip - sp + 1, cas%pair(jb)%sigma)
+        end do
       end do
+      n0I(ip) = X(transition_matrix_element)(cas, ia, xx)
     end do
-    n0I(ip) = X(transition_matrix_element) (cas, ia, xx)
+
   end do
 
+  SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(xx)
   POP_SUB(X(transition_density))
 end subroutine X(transition_density)

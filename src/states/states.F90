@@ -100,6 +100,7 @@ module states_m
     states_blacs_blocksize,           &
     states_get_state,                 &
     states_set_state,                 &
+    states_get_points,                &
     states_pack,                      &
     states_unpack,                    &
     states_sync,                      &
@@ -255,6 +256,10 @@ module states_m
   interface states_set_state
     module procedure dstates_set_state1, zstates_set_state1, dstates_set_state2, zstates_set_state2
   end interface states_set_state
+
+  interface states_get_points
+    module procedure dstates_get_points1, zstates_get_points1, dstates_get_points2, zstates_get_points2 
+  end interface states_get_points
 
 contains
 
