@@ -660,12 +660,13 @@ contains
         s2 = sys%st%st_end
         k1 = sys%st%d%kpt%start
         k2 = sys%st%d%kpt%end
-        ! the following copying does NOT ALWAYS work, especially for large numbers of k2
-        !sys%st%zpsi(1:sys%gr%mesh%np, :, s1:s2, k1:k2) = sys%st%zphi(1:sys%gr%mesh%np, :, s1:s2, k1:k2)
-        ! so do it the stupid and slow way
-        forall (ik = k1:k2, is = s1:s2, idim = 1:sys%st%d%dim, ip = 1:sys%gr%mesh%np)
-          sys%st%zpsi(ip, idim, is, ik) = sys%st%zphi(ip, idim, is, ik)
-        end forall
+
+        do ik = k1, k2
+          do is = s1, s2
+            call states_set_state(sys%st, sys%gr%mesh, is, ik, sys%st%zphi(:, :, is, ik))
+          end do
+        end do
+
       end if
 
     end if
