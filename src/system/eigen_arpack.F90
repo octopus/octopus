@@ -201,77 +201,77 @@ contains
           OK = .true.
           
         case (1)
-          write(message(2),'(a)'), 'The Schur form computed by LAPACK routine csheqr'
-          write(message(3),'(a)'), 'could not be reordered by LAPACK routine ztrsen.'
-          write(message(4),'(a)'), 'Re-enter subroutine pzneupd with IPARAM(5)=NCV and'
-          write(message(5),'(a)'), 'increase the size of the array D to have'
-          write(message(6),'(a)'), 'dimension at least dimension NCV and allocate at least NCV'
-          write(message(7),'(a)'), 'columns for Z. NOTE: Not necessary if Z and V share'
-          write(message(8),'(a)'), 'the same space. Please notify the authors if this error'
-          write(message(9),'(a)'), 'occurs.'
+          write(message(2),'(a)') 'The Schur form computed by LAPACK routine csheqr'
+          write(message(3),'(a)') 'could not be reordered by LAPACK routine ztrsen.'
+          write(message(4),'(a)') 'Re-enter subroutine pzneupd with IPARAM(5)=NCV and'
+          write(message(5),'(a)') 'increase the size of the array D to have'
+          write(message(6),'(a)') 'dimension at least dimension NCV and allocate at least NCV'
+          write(message(7),'(a)') 'columns for Z. NOTE: Not necessary if Z and V share'
+          write(message(8),'(a)') 'the same space. Please notify the authors if this error'
+          write(message(9),'(a)') 'occurs.'
           msg_lines = 9
          
         case(-1) 
-          write(message(2),'(a)'), 'N must be positive.'
+          write(message(2),'(a)') 'N must be positive.'
           msg_lines = 2
                          
         case(-2)
-          write(message(2),'(a)'), 'NEV must be positive.'
+          write(message(2),'(a)') 'NEV must be positive.'
           msg_lines = 2
           
         case(-3)
-          write(message(2),'(a)'), 'NCV-NEV >= 2 and less than or equal to N.'
+          write(message(2),'(a)') 'NCV-NEV >= 2 and less than or equal to N.'
           msg_lines = 2
           
         case(-5)
-          write(message(2),'(a)'), 'WHICH must be one of "LM", "SM", "LR", "SR", "LI", "SI"'
+          write(message(2),'(a)') 'WHICH must be one of "LM", "SM", "LR", "SR", "LI", "SI"'
           msg_lines = 2
           
         case(-6)
-          write(message(2),'(a)'), 'BMAT must be one of "I" or "G".'
+          write(message(2),'(a)') 'BMAT must be one of "I" or "G".'
           msg_lines = 2
           
         case(-7)
-          write(message(2),'(a)'), 'Length of private work WORKL array is not sufficient.'
+          write(message(2),'(a)') 'Length of private work WORKL array is not sufficient.'
           msg_lines = 2
           
         case(-8)
-          write(message(2),'(a)'), 'Error return from LAPACK eigenvalue calculation.'
-          write(message(3),'(a)'), 'This should never happened.'
+          write(message(2),'(a)') 'Error return from LAPACK eigenvalue calculation.'
+          write(message(3),'(a)') 'This should never happened.'
           msg_lines = 3
           
         case(-9)
-          write(message(2),'(a)'), 'Error return from calculation of eigenvectors.'
-          write(message(3),'(a)'), 'Informational error from LAPACK routine ztrevc.'
+          write(message(2),'(a)') 'Error return from calculation of eigenvectors.'
+          write(message(3),'(a)') 'Informational error from LAPACK routine ztrevc.'
           msg_lines = 3
                                
         case(-10)
-          write(message(2),'(a)'), 'IPARAM(7) must be 1,2,3'
+          write(message(2),'(a)') 'IPARAM(7) must be 1,2,3'
           msg_lines = 2
                         
         case(-11)
-          write(message(2),'(a)'), 'PARAM(7) = 1 and BMAT = "G" are incompatible.'
+          write(message(2),'(a)') 'PARAM(7) = 1 and BMAT = "G" are incompatible.'
           msg_lines = 2       
                             
         case(-12)
-          write(message(2),'(a)'), 'HOWMNY = "S" not yet implemented'
+          write(message(2),'(a)') 'HOWMNY = "S" not yet implemented'
           msg_lines = 2
           
         case(-13)
-          write(message(2),'(a)'), 'OWMNY must be one of "A" or "P" if RVEC = .true.'
+          write(message(2),'(a)') 'OWMNY must be one of "A" or "P" if RVEC = .true.'
           msg_lines = 2
           
         case(-14)
-          write(message(2),'(a)'), 'PZNAUPD did not find any eigenvalues to sufficient'
-          write(message(3),'(a)'), 'accuracy.'
+          write(message(2),'(a)') 'PZNAUPD did not find any eigenvalues to sufficient'
+          write(message(3),'(a)') 'accuracy.'
           msg_lines = 3
           
         case(-15)
-          write(message(2),'(a)'), 'ZNEUPD got a different count of the number of converged'
-          write(message(3),'(a)'), 'Ritz values than ZNAUPD got.  This indicates the user'
-          write(message(4),'(a)'), 'probably made an error in passing data from ZNAUPD to'
-          write(message(5),'(a)'), 'ZNEUPD or that the data was modified before entering'
-          write(message(6),'(a)'), 'ZNEUPD.'
+          write(message(2),'(a)') 'ZNEUPD got a different count of the number of converged'
+          write(message(3),'(a)') 'Ritz values than ZNAUPD got.  This indicates the user'
+          write(message(4),'(a)') 'probably made an error in passing data from ZNAUPD to'
+          write(message(5),'(a)') 'ZNEUPD or that the data was modified before entering'
+          write(message(6),'(a)') 'ZNEUPD.'
           msg_lines = 6
           
       end select
@@ -283,81 +283,81 @@ contains
           OK = .true.
           
         case (1)
-          write(message(2),'(a)'), 'Maximum number of iterations taken.'
-          write(message(3),'(a)'), 'All possible eigenvalues of OP has been found. IPARAM(5)'
-          write(message(4),'(a)'), 'returns the number of wanted converged Ritz values.'
+          write(message(2),'(a)') 'Maximum number of iterations taken.'
+          write(message(3),'(a)') 'All possible eigenvalues of OP has been found. IPARAM(5)'
+          write(message(4),'(a)') 'returns the number of wanted converged Ritz values.'
           msg_lines = 4
           OK = .true.
           
         case (2)        
-          write(message(2),'(a)'), 'No longer an informational error. Deprecated starting'
-          write(message(3),'(a)'), 'with release 2 of ARPACK.'
+          write(message(2),'(a)') 'No longer an informational error. Deprecated starting'
+          write(message(3),'(a)') 'with release 2 of ARPACK.'
           msg_lines = 3
           OK = .true.
           
         case (3)
-          write(message(2),'(a)'), 'No shifts could be applied during a cycle of the'
-          write(message(3),'(a)'), 'Implicitly restarted Arnoldi iteration. One possibility'
-          write(message(4),'(a)'), 'is to increase the size of NCV relative to NEV.'
-          write(message(5),'(a)'), 'See remark 4 below.'
+          write(message(2),'(a)') 'No shifts could be applied during a cycle of the'
+          write(message(3),'(a)') 'Implicitly restarted Arnoldi iteration. One possibility'
+          write(message(4),'(a)') 'is to increase the size of NCV relative to NEV.'
+          write(message(5),'(a)') 'See remark 4 below.'
           msg_lines = 5
           OK = .true.
                 
         case (-1)
-           write(message(2),'(a)'), 'N must be positive.'
+           write(message(2),'(a)') 'N must be positive.'
            msg_lines = 2
            
         case (-2)       
-           write(message(2),'(a)'), 'NEV must be positive.'
+           write(message(2),'(a)') 'NEV must be positive.'
            msg_lines = 2
            
         case (-3)
-           write(message(2),'(a)'), 'NCV-NEV >= 2 and less than or equal to N.'
+           write(message(2),'(a)') 'NCV-NEV >= 2 and less than or equal to N.'
            msg_lines = 2
            
         case (-4)
-           write(message(2),'(a)'), 'The maximum number of Arnoldi update iteration'          
-           write(message(3),'(a)'), 'must be greater than zero.'
+           write(message(2),'(a)') 'The maximum number of Arnoldi update iteration'          
+           write(message(3),'(a)') 'must be greater than zero.'
            msg_lines = 3
                 
         case (-5)
-           write(message(2),'(a)'), 'WHICH must be one of "LM", "SM", "LR", "SR", "LI", "SI"'
+           write(message(2),'(a)') 'WHICH must be one of "LM", "SM", "LR", "SR", "LI", "SI"'
            msg_lines = 2
            
         case (-6)
-           write(message(2),'(a)'), 'BMAT must be one of "I" or "G".'
+           write(message(2),'(a)') 'BMAT must be one of "I" or "G".'
            msg_lines = 2
            
         case (-7)
-           write(message(2),'(a)'), 'Length of private work array is not sufficient.'
+           write(message(2),'(a)') 'Length of private work array is not sufficient.'
            msg_lines = 2
            
         case (-8)
-           write(message(2),'(a)'), 'Error return from LAPACK eigenvalue calculation;'
+           write(message(2),'(a)') 'Error return from LAPACK eigenvalue calculation;'
            msg_lines = 2
            
         case (-9)
-           write(message(2),'(a)'), 'Starting vector is zero.'
+           write(message(2),'(a)') 'Starting vector is zero.'
            msg_lines = 2
            
         case (-10)
-           write(message(2),'(a)'), 'IPARAM(7) must be 1,2,3.'
+           write(message(2),'(a)') 'IPARAM(7) must be 1,2,3.'
            msg_lines = 2
            
         case (-11)
-           write(message(2),'(a)'), 'IPARAM(7) = 1 and BMAT = "G" are incompatable.'
+           write(message(2),'(a)') 'IPARAM(7) = 1 and BMAT = "G" are incompatable.'
            msg_lines = 2
            
         case (-12)
-           write(message(2),'(a)'), 'IPARAM(1) must be equal to 0 or 1.'
+           write(message(2),'(a)') 'IPARAM(1) must be equal to 0 or 1.'
            msg_lines = 2
            
         case (-9999)
-           write(message(2),'(a)'), 'Could not build an Arnoldi factorization.'
-           write(message(3),'(a)'), 'User input error highly likely.  Please'
-           write(message(4),'(a)'), 'check actual array dimensions and layout.'
-           write(message(5),'(a)'), 'IPARAM(5) returns the size of the current Arnoldi'
-           write(message(6),'(a)'), 'factorization.'
+           write(message(2),'(a)') 'Could not build an Arnoldi factorization.'
+           write(message(3),'(a)') 'User input error highly likely.  Please'
+           write(message(4),'(a)') 'check actual array dimensions and layout.'
+           write(message(5),'(a)') 'IPARAM(5) returns the size of the current Arnoldi'
+           write(message(6),'(a)') 'factorization.'
            msg_lines = 6
           
       end select
