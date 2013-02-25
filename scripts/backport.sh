@@ -49,12 +49,28 @@
 
 # David Strubbe, March 2012, UC Berkeley
 # Script to automagically backport a commit from trunk to a branch.
-# Usage: sh backport.sh revision#
+# Usage (from checked-out version of branch): sh backport.sh revision#
+# Has been tested for svn versions 1.6 and 1.7
 
 if [ $# -ne 1 ]; then
     echo "Usage: $0 revision"
     exit
 fi
+
+#Sample output from svn info with subversion 1.6
+#Path: .
+#URL: http://www.tddft.org/svn/octopus/trunk
+#Repository Root: http://www.tddft.org/svn/octopus
+#Repository UUID: 53d8e6fd-f412-0410-a60b-8e56063eb7bf
+#Revision: 10120
+#Node Kind: directory
+#Schedule: normal
+#Last Changed Author: xavier
+#Last Changed Rev: 10120
+#Last Changed Date: 2013-02-25 09:36:09 -0500 (Mon, 25 Feb 2013)
+
+#Sample output from svn info with subversion 1.7 -- as above, except after Path comes also:
+#Working Copy Root Path: /Users/dstrubbe/Software/octopus
 
 # e.g. https://civet.berkeley.edu/svn/BerkeleyGW
 Root=`svn info | grep "Repository Root" | awk '{print $3}'`
