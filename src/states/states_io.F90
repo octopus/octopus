@@ -354,7 +354,7 @@ contains
 
     FLOAT, parameter    :: M_THRESHOLD = CNST(1.0e-6)
     logical             :: use_qvector = .false.
-    FLOAT, allocatable  :: qvector(:)
+    FLOAT, allocatable  :: qvector(:), psi_initial(:, :), psi_ist(:, :)
 
     PUSH_SUB(states_write_tpa)
 
@@ -370,15 +370,14 @@ contains
     end do
 
     ! make sure that half-occupancy was found
-    if(tpa_initialst.eq.-1) then
+    if(tpa_initialst == -1) then
       if(mpi_grp_is_root(mpi_world)) then
 
-        message(1) = 'No orbital with half-occupancy found. TPA output is not written.'
-        call messages_warning(1)
+        call messages_write('No orbital with half-occupancy found. TPA output is not written.')
+        call messages_warning()
 
-    POP_SUB(states_write_tpa)
-return
-
+        POP_SUB(states_write_tpa)
+        return
       end if
     end if
 
@@ -397,7 +396,7 @@ return
     !% <br>&nbsp;&nbsp; 0.1 | 0.2 | 0.3
     !% <br>%</tt>
     !%End
-    if(parse_block(datasets_check('MomentumTransfer'),blk)==0) then
+    if(parse_block(datasets_check('MomentumTransfer'), blk) == 0) then
 
       ! check if input makes sense
       ncols = parse_block_cols(blk, 0)
@@ -405,8 +404,8 @@ return
       if(ncols .ne. gr%mesh%sb%dim ) then ! wrong size
 
         if(mpi_grp_is_root(mpi_world)) then
-          message(1) = 'Inconsistent size of momentum-transfer vector. It will not be used in the TPA calculation.'
-          call messages_warning(1)
+          call messages_write('Inconsistent size of momentum-transfer vector. It will not be used in the TPA calculation.')
+          call messages_warning()
         end if
 
       else ! correct size
@@ -458,21 +457,27 @@ return
 
     end if
 
+    SAFE_ALLOCATE(psi_initial(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(psi_ist(1:gr%mesh%np, 1:st%d%dim))
+
+    call states_get_state(st, gr%mesh, tpa_initialst, tpa_initialk, psi_initial)
+
     ! loop through every state
-    do ist = 1,st%nst
+    do ist = 1, st%nst
+
+      call states_get_state(st, gr%mesh, ist, tpa_initialk, psi_ist)
 
       ! final states are the unoccupied ones
       if (abs(st%occ(ist,tpa_initialk)) .lt. M_THRESHOLD) then
 
-        osc_strength=M_ZERO
-        transition_energy=st%eigenval(ist,tpa_initialk)-st%eigenval(tpa_initialst,tpa_initialk)
+        osc_strength = M_ZERO
+        transition_energy = st%eigenval(ist, tpa_initialk) - st%eigenval(tpa_initialst, tpa_initialk)
 
         ! dipole matrix elements <f|x|i> etc. -> oscillator strengths
-        do icoord=1,gr%mesh%sb%dim    ! for x,y,z
+        do icoord = 1, gr%mesh%sb%dim    ! for x,y,z
 
-          ff(1:gr%mesh%np) = st%dpsi(1:gr%mesh%np,1,tpa_initialst,tpa_initialk) * &
-                       &  gr%mesh%x(1:gr%mesh%np,icoord)                        * &
-                       &  st%dpsi(1:gr%mesh%np,1,ist,tpa_initialk)
+          ff(1:gr%mesh%np) = psi_initial(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, icoord)* &
+            psi_ist(1:gr%mesh%np, 1)
           osc(icoord)  = dmf_integrate(gr%mesh, ff)
           osc_strength = osc_strength + 2.0/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2.0
 
@@ -481,13 +486,13 @@ return
         ! matrix elements <f|exp(iq.r)|i> -> dynamic structure factor
         if (use_qvector) then
 
-          cff(1:gr%mesh%np) = TOCMPLX(st%dpsi(1:gr%mesh%np,1,tpa_initialst,tpa_initialk), M_ZERO) * &
-                       &   TOCMPLX(st%dpsi(1:gr%mesh%np,1,ist,tpa_initialk), M_ZERO)
-          do icoord=1,gr%mesh%sb%dim    ! for x,y,z
-            cff(1:gr%mesh%np) = cff(1:gr%mesh%np) * exp(M_zI*gr%mesh%x(1:gr%mesh%np,icoord)*qvector(icoord))
+          cff(1:gr%mesh%np) = psi_initial(1:gr%mesh%np, 1)*psi_ist(1:gr%mesh%np, 1)
+
+          do icoord = 1, gr%mesh%sb%dim    ! for x,y,z
+            cff(1:gr%mesh%np) = cff(1:gr%mesh%np)*exp(M_zI*gr%mesh%x(1:gr%mesh%np, icoord)*qvector(icoord))
           end do
 
-          dsf = abs(zmf_integrate(gr%mesh, cff))**2.0
+          dsf = abs(zmf_integrate(gr%mesh, cff))**2
         end if
 
         ! write oscillator strengths (+ dynamic structure factor if qvector if given) into file
@@ -512,6 +517,9 @@ return
     if(mpi_grp_is_root(mpi_world)) then
       call io_close(iunit)
     end if
+
+    SAFE_DEALLOCATE_A(psi_initial)
+    SAFE_DEALLOCATE_A(psi_ist)
 
     SAFE_DEALLOCATE_A(ff)
     if(use_qvector) then
