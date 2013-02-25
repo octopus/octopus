@@ -597,8 +597,9 @@ contains
     xc => fxc
     select case(cas%type)
     case(CASIDA_EPS_DIFF)
-      call solve_petersilka()
+      call solve_eps_diff()
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
+      call casida_get_matrix()
       call solve_casida()
     end select
 
@@ -624,26 +625,15 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    !> Despite the name, this routine does eps_diff also. 
-    subroutine solve_petersilka
-      integer :: ia, iunit, idir, actual
-      FLOAT   :: ff, mtxel_vh, mtxel_xc
-      FLOAT, allocatable :: deltav(:), xx(:)
+    subroutine solve_eps_diff
+      integer :: ia, actual
 
-      PUSH_SUB(casida_work.solve_petersilka)
+      PUSH_SUB(casida_work.solve_eps_diff)
 
       ! initialize progress bar
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, cas%n_pairs)
 
-      ! file to save matrix elements
-      iunit = io_open(trim(cas%restart_file), action='write', &
-        position='append', is_tmp=.true.)
-
-      actual = 0
       do ia = 1, cas%n_pairs
-        actual = actual + 1
-        if(mod(actual, cas%mpi_grp%size) .ne. cas%mpi_grp%rank) cycle
-
         cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
                     st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma)
         if(cas%w(ia) < -M_EPSILON) then
@@ -651,28 +641,8 @@ contains
           message(2) = "Probably this indicates an inconsistency in occupations between gs and unocc calculations."
           call messages_fatal(2, only_root_writes = .true.)
         endif
-
-        if(cas%type == CASIDA_PETERSILKA) then
-          if(saved_K(ia, ia)) then
-            ff = cas%mat(ia, ia)
-          else
-            call K_term(cas%pair(ia), cas%pair(ia), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
-            cas%mat(ia, ia) = mtxel_vh + mtxel_xc
-            ff = cas%mat(ia, ia)
-            call write_K_term(cas, iunit, ia, ia)
-          end if
-
-          cas%w(ia) = cas%w(ia) + cas%el_per_state * ff
-          ! note that the correct "single-pole approximation" requires diagonalization in degenerate subspaces
-        end if
-
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
       end do
-
-      ! sum all matrix elements
-      if(cas%parallel_in_eh_pairs) then
-        call comm_allreduce(cas%mpi_grp%comm, cas%w)
-      end if
 
       if(states_are_real(st)) then
         call doscillator_strengths(cas, mesh, st)
@@ -682,27 +652,20 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
-#if defined(HAVE_MPI)
-      if(cas%parallel_in_eh_pairs) then
-        call MPI_Barrier(cas%mpi_grp%comm, mpi_err)
-      end if
-#endif
-
-      ! close restart file
-      call io_close(iunit)
-      POP_SUB(casida_work.solve_petersilka)
-    end subroutine solve_petersilka
+      POP_SUB(casida_work.solve_eps_diff)
+    end subroutine solve_eps_diff
 
 
     ! ---------------------------------------------------------
-    subroutine solve_casida()
+    subroutine casida_get_matrix()
+
       FLOAT :: temp
       integer :: ia, jb
-      integer :: max, actual, iunit, counter
+      integer :: max, actual, counter
       type(states_pair_t), pointer :: p, q
       FLOAT :: mtxel_vh, mtxel_xc
 
-      PUSH_SUB(casida_work.solve_casida)
+      PUSH_SUB(casida_work.casida_get_matrix)
 
       if(cas%type == CASIDA_PETERSILKA) then
         max = cas%n_pairs ! might be more, actually...
@@ -749,7 +712,20 @@ contains
       if(cas%parallel_in_eh_pairs) then
         call comm_allreduce(cas%mpi_grp%comm, cas%mat)
       end if
-      !if(mpi_grp_is_root(cas%mpi_grp)) print *, "mat =", cas%mat
+
+      POP_SUB(casida_work.casida_get_matrix)
+
+    end subroutine casida_get_matrix
+
+    ! ---------------------------------------------------------
+    subroutine solve_casida()
+
+      FLOAT :: temp
+      integer :: ia, jb
+      integer :: iunit
+      type(states_pair_t), pointer :: p, q
+
+      PUSH_SUB(casida_work.solve_casida)
 
       ! all processors with the exception of the first are done
       if (mpi_grp_is_root(cas%mpi_grp)) then
