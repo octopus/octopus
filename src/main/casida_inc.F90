@@ -296,6 +296,38 @@ subroutine X(get_transition_densities) (cas, sys)
   POP_SUB(X(get_transition_densities))
 end subroutine X(get_transition_densities)
 
+! -----------------------------------------------------------------------------
+
+subroutine X(casida_get_rho)(st, mesh, ii, ia, sigma, rho) 
+  type(states_t), intent(in)  :: st
+  type(mesh_t),   intent(in)  :: mesh
+  integer,        intent(in)  :: ii
+  integer,        intent(in)  :: ia
+  integer,        intent(in)  :: sigma
+  FLOAT,          intent(out) :: rho(:)
+
+  R_TYPE, allocatable :: psi_i(:), psi_a(:)
+  integer :: ip
+
+  PUSH_SUB(X(casida_get_rho))
+
+  SAFE_ALLOCATE(psi_i(1:mesh%np))
+  SAFE_ALLOCATE(psi_a(1:mesh%np))
+
+  call states_get_state(st, mesh, 1, ii, sigma, psi_i)
+  call states_get_state(st, mesh, 1, ia, sigma, psi_a)
+  
+  do ip = 1, mesh%np
+    rho(ip) = R_CONJ(psi_i(ip))*psi_a(ip)
+  end do
+  
+  SAFE_DEALLOCATE_A(psi_i)
+  SAFE_DEALLOCATE_A(psi_a)
+
+  POP_SUB(X(casida_get_rho))
+end subroutine X(casida_get_rho)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

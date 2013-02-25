@@ -847,11 +847,11 @@ contains
       SAFE_ALLOCATE(rho_j(1:mesh%np))
 
       if (states_are_real(st)) then
-        rho_i(1:mesh%np) =        st%dpsi(1:mesh%np, 1, pi, sigma) *       st%dpsi(1:mesh%np, 1, pa, sigma)
-        rho_j(1:mesh%np) =        st%dpsi(1:mesh%np, 1, qi, mu)    *       st%dpsi(1:mesh%np, 1, qa, mu)
+        call dcasida_get_rho(st, mesh, pa, pi, sigma, rho_i)
+        call dcasida_get_rho(st, mesh, qi, qa, mu, rho_j)
       else
-        rho_i(1:mesh%np) =        st%zpsi(1:mesh%np, 1, pi, sigma) * conjg(st%zpsi(1:mesh%np, 1, pa, sigma))
-        rho_j(1:mesh%np) =  conjg(st%zpsi(1:mesh%np, 1, qi, mu))   *       st%zpsi(1:mesh%np, 1, qa, mu)
+        call zcasida_get_rho(st, mesh, pa, pi, sigma, rho_i)
+        call zcasida_get_rho(st, mesh, qi, qa, mu, rho_j)
       end if
 
       !  first the Hartree part (only works for real wfs...)
