@@ -668,7 +668,7 @@ contains
       PUSH_SUB(casida_work.casida_get_matrix)
 
       if(cas%type == CASIDA_PETERSILKA) then
-        max = cas%n_pairs ! might be more, actually...
+        max = cas%n_pairs
       else
         max = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
       endif
@@ -684,10 +684,12 @@ contains
         actual = actual + 1
         if(mod(actual, cas%mpi_grp%size) .ne. cas%mpi_grp%rank) cycle
         q => cas%pair(jb)
+
+        ! we only count diagonals for Petersilka
+        if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
+
         ! note: the ordering of jb, ia loops are crucial to minimize number of Poisson solves required.
         do ia = jb, cas%n_pairs
-          counter = counter + 1
-
           if(cas%type == CASIDA_PETERSILKA) then
             p => cas%pair(ia)
             if(abs((st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)) &
@@ -695,6 +697,8 @@ contains
               ! only calculate off-diagonals in degenerate subspace
               cycle
             endif
+          else
+            counter = counter + 1
           endif
 
           ! if not loaded, then calculate matrix element
