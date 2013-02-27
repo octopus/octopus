@@ -89,6 +89,7 @@ module casida_m
     type(states_pair_t), pointer :: pair(:)
     integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%sigma) = j
 
+    !> FIXME: mat, tm should be R_TYPE
     FLOAT,   pointer  :: mat(:,:)       !< general-purpose matrix
     FLOAT,   pointer  :: w(:)           !< The excitation energies.
     FLOAT,   pointer  :: tm(:, :)       !< The transition matrix elements (between the many-particle states)
@@ -594,6 +595,10 @@ contains
 
     if(cas%forces) call casida_forces_init()
 
+    if(cas%type == CASIDA_EPS_DIFF .or. cas%forces) then
+      SAFE_DEALLOCATE_A(rho)
+    endif
+
     xc => fxc
     select case(cas%type)
     case(CASIDA_EPS_DIFF)
@@ -606,18 +611,13 @@ contains
     ! clean up
     if (cas%type /= CASIDA_EPS_DIFF) then
       SAFE_DEALLOCATE_A(fxc)
-      SAFE_DEALLOCATE_A(rho)
       if(.not. cas%triplet) then
         SAFE_DEALLOCATE_A(pot)
       endif
       if(cas%forces) then
-        SAFE_DEALLOCATE_A(kxc)
         SAFE_DEALLOCATE_A(lr_fxc)
       endif
     end if
-    if(cas%forces) then
-      SAFE_DEALLOCATE_A(dl_rho)
-    endif
     SAFE_DEALLOCATE_A(saved_K)
 
     POP_SUB(casida_work)
@@ -792,12 +792,8 @@ contains
         ! And let us now get the S matrix...
         if(cas%type == CASIDA_CASIDA) then
           do ia = 1, cas%n_pairs
-            if(sys%st%d%ispin == UNPOLARIZED) then
-              cas%s(ia) = M_HALF / ( st%eigenval(cas%pair(ia)%a, 1) - st%eigenval(cas%pair(ia)%i, 1) )
-            elseif(sys%st%d%ispin == SPIN_POLARIZED) then
-              cas%s(ia) = M_ONE / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
-                                    st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma) )
-            end if
+            cas%s(ia) = (M_ONE/st%smear%el_per_state) / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
+                                                          st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma) )
           end do
         endif
 
@@ -820,13 +816,14 @@ contains
 
     ! ---------------------------------------------------------
     !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
+    !> FIXME: all FLOATs here should be R_TYPE
     subroutine K_term(pp, qq, mtxel_vh, mtxel_xc)
       type(states_pair_t), intent(in) :: pp, qq
       FLOAT,    optional, intent(out) :: mtxel_vh
       FLOAT,    optional, intent(out) :: mtxel_xc
 
       integer :: pi, qi, sigma, pa, qa, mu
-      FLOAT, allocatable :: rho_i(:), rho_j(:)
+      FLOAT, allocatable :: rho_i(:), rho_j(:), integrand(:)
 
       PUSH_SUB(casida_work.K_term)
 
@@ -840,6 +837,7 @@ contains
 
       SAFE_ALLOCATE(rho_i(1:mesh%np))
       SAFE_ALLOCATE(rho_j(1:mesh%np))
+      SAFE_ALLOCATE(integrand(1:mesh%np))
 
       if (states_are_real(st)) then
         call dcasida_get_rho(st, mesh, pa, pi, sigma, rho_i)
@@ -869,15 +867,16 @@ contains
 
       if(present(mtxel_xc)) then
         if(cas%triplet) then
-          rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * M_HALF * (xc(1:mesh%np, 1, 1) - xc(1:mesh%np, 1, 2))
+          integrand(1:mesh%np) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * M_HALF * (xc(1:mesh%np, 1, 1) - xc(1:mesh%np, 1, 2))
         else
-          rho(1:mesh%np, 1) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * xc(1:mesh%np, sigma, mu)
+          integrand(1:mesh%np) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * xc(1:mesh%np, sigma, mu)
         endif
-        mtxel_xc = dmf_integrate(mesh, rho(:, 1))
+        mtxel_xc = dmf_integrate(mesh, integrand)
       endif
 
       SAFE_DEALLOCATE_A(rho_i)
       SAFE_DEALLOCATE_A(rho_j)
+      SAFE_DEALLOCATE_A(integrand)
 
       POP_SUB(casida_work.K_term)
     end subroutine K_term
@@ -991,6 +990,8 @@ contains
       enddo
 
       call pert_end(ionic_pert)
+      SAFE_DEALLOCATE_A(kxc)
+      SAFE_DEALLOCATE_A(dl_rho)
       
       POP_SUB(casida_work.casida_forces_init)
     end subroutine casida_forces_init

@@ -305,7 +305,7 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, sigma, rho)
   integer,        intent(in)  :: ii
   integer,        intent(in)  :: ia
   integer,        intent(in)  :: sigma
-  FLOAT,          intent(out) :: rho(:)
+  FLOAT,          intent(out) :: rho(:) !< FIXME: should be R_TYPE
 
   R_TYPE, allocatable :: psi_i(:), psi_a(:)
   integer :: ip
