@@ -292,7 +292,7 @@ contains
         cas%qvector(idir) = units_to_atomic(unit_one / units_inp%length, cas%qvector(idir))
       end do
       call parse_block_end(blk)
-      call messages_experimental("IXS/EELS transition rates")
+      call messages_experimental("IXS/EELS transition rates calculation")
       message(1) = "Info: Calculating IXS/EELS transition rates."
       call messages_info(1)
       cas%qcalc = .true.
@@ -331,7 +331,7 @@ contains
     endif
 
     if(cas%triplet) then
-      call messages_experimental("Casida triplet calculations")
+      call messages_experimental("Casida triplet calculation")
     endif
 
     ! Initialize structure
@@ -364,7 +364,7 @@ contains
       endif
 
       if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
-        call messages_experimental("Tamm-Dancoff calculations")
+        call messages_experimental("Tamm-Dancoff calculation")
         message(1) = "Info: Calculating resonance energies in the Tamm-Dancoff approximation"
         call messages_info(1)
         cas%type = CASIDA_TAMM_DANCOFF
@@ -373,7 +373,7 @@ contains
       endif
 
       if(iand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
-        call messages_experimental("CV(2)-DFT calculations")
+        call messages_experimental("CV(2)-DFT calculation")
         message(1) = "Info: Calculating resonance energies with the CV(2)-DFT theory"
         call messages_info(1)
         cas%type = CASIDA_VARIATIONAL
