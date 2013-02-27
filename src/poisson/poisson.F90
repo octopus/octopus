@@ -795,7 +795,8 @@ contains
   !! potential originated by a Gaussian distribution of charge.
   !! This only makes sense for finite systems.
   subroutine poisson_test(mesh)
-    type(mesh_t), intent(inout) :: mesh
+    type(mesh_t), intent(in) :: mesh
+
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), xx(:, :)
     FLOAT :: alpha, beta, rr, delta, norm, ralpha, hartree_nrg_num, &
          hartree_nrg_analyt, lcl_hartree_nrg 
@@ -948,6 +949,7 @@ contains
     SAFE_DEALLOCATE_A(vh)
     SAFE_DEALLOCATE_A(vh_exact)
     SAFE_DEALLOCATE_A(xx)
+
     POP_SUB(poisson_test)
   end subroutine poisson_test
 

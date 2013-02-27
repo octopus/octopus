@@ -69,9 +69,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_corrections_init(this, ml, mesh)
-    type(poisson_corr_t), intent(inout) :: this
-    integer, intent(in)      :: ml
-    type(mesh_t), intent(in) :: mesh
+    type(poisson_corr_t), intent(out) :: this
+    integer,              intent(in)  :: ml
+    type(mesh_t),         intent(in)  :: mesh
 
     FLOAT :: alpha, gamma, ylm, gylm(1:MAX_DIM), rr, xx(MAX_DIM)
     integer :: ip, ll, add_lm, lldfac, jj, mm

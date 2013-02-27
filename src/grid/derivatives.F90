@@ -352,7 +352,7 @@ contains
   !> Returns the diagonal elements of the Laplacian, needed for preconditioning
   subroutine derivatives_lapl_diag(der, lapl)
     type(derivatives_t), intent(in)  :: der
-    FLOAT,               intent(out) :: lapl(:)  ! lapl(mesh%np)
+    FLOAT,               intent(out) :: lapl(:)  !< lapl(mesh%np)
 
     PUSH_SUB(derivatives_lapl_diag)
 

@@ -53,16 +53,16 @@ module poisson_multigrid_m
 
   type mg_solver_t
 
-     FLOAT ::                    &
-          threshold,                &
-          relax_factor
+    FLOAT ::                    &
+      threshold,                &
+      relax_factor
      
-     integer ::                     &
-          maxcycles,                &
-          presteps,                 &
-          poststeps,                &
-          restriction_method,       &
-          relaxation_method
+    integer ::                  &
+      maxcycles,                &
+      presteps,                 &
+      poststeps,                &
+      restriction_method,       &
+      relaxation_method
      
      type(poisson_corr_t) :: corrector
      
@@ -72,7 +72,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_multigrid_init(this, mesh, ml, thr)
-    type(mg_solver_t), intent(inout) :: this
+    type(mg_solver_t), intent(out)   :: this
     type(mesh_t),      intent(inout) :: mesh
     integer,           intent(in)    :: ml
     FLOAT,             intent(in)    :: thr
@@ -187,7 +187,7 @@ contains
   ! ---------------------------------------------------------
   subroutine poisson_multigrid_solver(this, der, pot, rho)
     type(mg_solver_t),           intent(in)    :: this
-    type(derivatives_t), target, intent(inout) :: der
+    type(derivatives_t),         intent(in)    :: der
     FLOAT,                       intent(inout) :: pot(:)
     FLOAT,                       intent(in)    :: rho(:)
 
@@ -244,7 +244,7 @@ contains
 
   recursive subroutine poisson_multigrid_cycle(this, der, pot, rho)
     type(mg_solver_t),           intent(in)    :: this
-    type(derivatives_t),         intent(inout) :: der
+    type(derivatives_t),         intent(in)    :: der
     FLOAT,                       intent(inout) :: pot(:)
     FLOAT,                       intent(in)    :: rho(:)
     
@@ -305,7 +305,7 @@ contains
   subroutine multigrid_relax(this, mesh, der, pot, rho, steps)
     type(mg_solver_t),   intent(in)    :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(derivatives_t), intent(inout) :: der
+    type(derivatives_t), intent(in)    :: der
     FLOAT,               intent(inout) :: pot(:)
     FLOAT,               intent(in)    :: rho(:)
     integer,             intent(in)    :: steps

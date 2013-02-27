@@ -70,7 +70,7 @@ contains
 
   subroutine poisson_fft_init(this, mesh, cube, kernel, soft_coulb_param)
     type(poisson_fft_t), intent(out)   :: this
-    type(mesh_t),        intent(inout) :: mesh
+    type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: kernel
     FLOAT, optional,     intent(in)    :: soft_coulb_param
@@ -152,7 +152,7 @@ contains
 
   subroutine poisson_fft_build_3d_3d(this, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
-    type(mesh_t),        intent(inout) :: mesh
+    type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
 
     integer :: ix, iy, iz, ixx(3), db(3), idim
@@ -210,7 +210,7 @@ contains
   !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
   subroutine poisson_fft_build_3d_2d(this, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
-    type(mesh_t),        intent(inout) :: mesh
+    type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
 
     integer :: ix, iy, iz, ixx(3), db(3), idim
@@ -287,7 +287,7 @@ contains
   !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
   subroutine poisson_fft_build_3d_1d(this, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
-    type(mesh_t),        intent(inout) :: mesh
+    type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
 
     type(spline_t)     :: cylinder_cutoff_f
@@ -399,7 +399,7 @@ contains
   !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
   subroutine poisson_fft_build_3d_0d(this, mesh, cube, kernel)
     type(poisson_fft_t), intent(inout) :: this
-    type(mesh_t),        intent(inout) :: mesh
+    type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: kernel
 

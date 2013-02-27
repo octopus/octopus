@@ -21,8 +21,8 @@
 !------------------------------------------------------------------
 
 subroutine X(poisson_solve_start)(this, rho)
-  type(poisson_t),      intent(inout) :: this
-  R_TYPE,               intent(in)    :: rho(:)
+  type(poisson_t),      intent(in) :: this
+  R_TYPE,               intent(in) :: rho(:)
 
 #ifdef HAVE_MPI2    
   integer :: islave
@@ -45,7 +45,7 @@ end subroutine X(poisson_solve_start)
 !----------------------------------------------------------------
 
 subroutine X(poisson_solve_finish)(this, pot)
-  type(poisson_t),  intent(inout) :: this
+  type(poisson_t),  intent(in)    :: this
   R_TYPE,           intent(inout) :: pot(:)
 
 #ifdef HAVE_MPI2
