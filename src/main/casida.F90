@@ -77,6 +77,7 @@ module casida_m
 
     integer, pointer  :: n_occ(:)       !< number of occupied states
     integer, pointer  :: n_unocc(:)     !< number of unoccupied states
+    integer           :: nst            !< total number of states
     integer           :: nik
     integer           :: el_per_state
     character(len=80) :: wfn_list
@@ -161,6 +162,7 @@ contains
     call restart_look_and_read(sys%st, sys%gr)
 
     cas%el_per_state = sys%st%smear%el_per_state
+    cas%nst = sys%st%nst
     cas%nik = sys%st%d%nik
 
     SAFE_ALLOCATE(  cas%n_occ(1:cas%nik))
@@ -174,7 +176,7 @@ contains
         ! Formulas are in Casida 1995 reference. The occupations are not used at all here currently.
       endif
       cas%n_occ(ik) = n_filled + n_partially_filled + n_half_filled
-      cas%n_unocc(ik) = sys%st%nst - n_filled
+      cas%n_unocc(ik) = cas%nst - n_filled
       ! when we implement occupations, partially occupied levels need to be counted as both occ and unocc.
     end do
 
@@ -264,7 +266,7 @@ contains
     !% of occupied states.
     !%End
 
-    write(nst_string,'(i6)') sys%st%nst
+    write(nst_string,'(i6)') cas%nst
     write(default,'(a,a)') "1-", trim(adjustl(nst_string))
     call parse_string(datasets_check('CasidaKohnShamStates'), default, cas%wfn_list)
     write(message(1),'(a,a)') "Info: States that form the basis: ", trim(cas%wfn_list)
@@ -431,7 +433,7 @@ contains
     ! count pairs
     cas%n_pairs = 0
     do ik = 1, cas%nik
-      do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
+      do ast = cas%n_occ(ik) + 1, cas%nst
         if(loct_isinstringlist(ast, cas%wfn_list)) then
           do ist = 1, cas%n_occ(ik)
             if(loct_isinstringlist(ist, cas%wfn_list)) then
@@ -459,7 +461,7 @@ contains
     SAFE_ALLOCATE(   cas%f(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
-    SAFE_ALLOCATE(cas%index(1:maxval(cas%n_occ), minval(cas%n_occ):maxval(cas%n_occ + cas%n_unocc), cas%nik))
+    SAFE_ALLOCATE(cas%index(1:maxval(cas%n_occ), cas%nst - maxval(cas%n_unocc) + 1:cas%nst, cas%nik))
 
     if(cas%qcalc) then
       SAFE_ALLOCATE( cas%qf    (1:cas%n_pairs))
@@ -471,7 +473,7 @@ contains
     ! create pairs
     jpair = 1
     do ik = 1, cas%nik
-      do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
+      do ast = cas%n_occ(ik) + 1, cas%nst
         if(loct_isinstringlist(ast, cas%wfn_list)) then
           do ist = 1, cas%n_occ(ik)
             if(loct_isinstringlist(ist, cas%wfn_list)) then
@@ -1203,13 +1205,13 @@ contains
     do ik = 1, cas%nik
       do ist = 1, cas%n_occ(ik)
         occ = M_ONE * cas%el_per_state
-        do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
+        do ast = cas%n_occ(ik) + 1, cas%nst
           if(cas%index(ist, ast, ik) == 0) cycle  ! we were not using this state
           occ = occ - abs(cas%mat(cas%index(ist, ast, ik), ind))**2
         enddo
         write(iunit, '(f8.6,a)', advance='no') occ, ' | '
       enddo
-      do ast = cas%n_occ(ik) + 1, cas%n_occ(ik) + cas%n_unocc(ik)
+      do ast = cas%n_occ(ik) + 1, cas%nst
         occ = M_ZERO
         do ist = 1, cas%n_occ(ik)
           if(cas%index(ist, ast, ik) == 0) cycle  ! we were not using this state
