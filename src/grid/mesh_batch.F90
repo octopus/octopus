@@ -66,29 +66,28 @@ contains
 
 ! -----------------------------------------------------
 
-subroutine mesh_batch_nrm2(mesh, aa, nrm2, reduce)
-  type(mesh_t),            intent(in)    :: mesh
-  type(batch_t),           intent(in)    :: aa
-  FLOAT,                   intent(out)   :: nrm2(:)
-  logical,       optional, intent(in)    :: reduce
+  subroutine mesh_batch_nrm2(mesh, aa, nrm2, reduce)
+    type(mesh_t),            intent(in)    :: mesh
+    type(batch_t),           intent(in)    :: aa
+    FLOAT,                   intent(out)   :: nrm2(:)
+    logical,       optional, intent(in)    :: reduce
+    
+    PUSH_SUB(mesh_batch_nrm2)
+    
+    if(batch_type(aa) == TYPE_FLOAT) then
+      call dmesh_batch_nrm2(mesh, aa, nrm2)
+    else
+      call zmesh_batch_nrm2(mesh, aa, nrm2)
+    end if
+    
+    if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
+      nrm2(1:aa%nst) = nrm2(1:aa%nst)**2
+      call comm_allreduce(mesh%mpi_grp%comm, nrm2, dim = aa%nst)
+      nrm2(1:aa%nst) = sqrt(nrm2(1:aa%nst))
+    end if
 
-  PUSH_SUB(mesh_batch_nrm2)
-
-  if(batch_type(aa) == TYPE_FLOAT) then
-    call dmesh_batch_nrm2(mesh, aa, nrm2)
-  else
-    call zmesh_batch_nrm2(mesh, aa, nrm2)
-  end if
-  
-  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    nrm2(1:aa%nst) = nrm2(1:aa%nst)**2
-    call comm_allreduce(mesh%mpi_grp%comm, nrm2, dim = aa%nst)
-    nrm2(1:aa%nst) = sqrt(nrm2(1:aa%nst))
-  end if
-
-  POP_SUB(mesh_batch_nrm2)
-end subroutine mesh_batch_nrm2
-
+    POP_SUB(mesh_batch_nrm2)
+  end subroutine mesh_batch_nrm2
 
 #include "undef.F90"
 #include "real.F90"

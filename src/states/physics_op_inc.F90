@@ -18,14 +18,14 @@
 !! $Id: derivatives.F90 5812 2009-08-13 10:18:31Z marques $
 
 ! ---------------------------------------------------------
-! The action of the angular momentum operator (three spatial components).
-! In case of real functions, it does not include the -i prefactor
-! (L = -i r ^ nabla).
-! ---------------------------------------------------------
+!> The action of the angular momentum operator (three spatial components).
+!! In case of real functions, it does not include the -i prefactor
+!! (L = -i r ^ nabla).
+!! ---------------------------------------------------------
 subroutine X(physics_op_L)(der, ff, lf, ghost_update, set_bc)
-  type(derivatives_t), intent(inout) :: der
-  R_TYPE,              intent(inout) :: ff(:)    ! ff(der%mesh%np_part)
-  R_TYPE,              intent(out)   :: lf(:, :) ! lf(der%mesh%np, 3) in 3D, lf(der%mesh%np, 1) in 2D
+  type(derivatives_t), intent(in)    :: der
+  R_TYPE,              intent(inout) :: ff(:)    !< ff(der%mesh%np_part)
+  R_TYPE,              intent(out)   :: lf(:, :) !< lf(der%mesh%np, 3) in 3D, lf(der%mesh%np, 1) in 2D
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
@@ -74,12 +74,12 @@ end subroutine X(physics_op_L)
 
 
 ! ---------------------------------------------------------
-! Square of the angular momentum L. This has to be very much improved if
-! accuracy is needed.
-! ---------------------------------------------------------
+!> Square of the angular momentum L. This has to be very much improved if
+!! accuracy is needed.
+!! ---------------------------------------------------------
 subroutine X(physics_op_L2)(der, ff, l2f, ghost_update, set_bc)
-  type(derivatives_t), intent(inout) :: der
-  R_TYPE,              intent(inout) :: ff(:)   ! ff(1:der%mesh%np_part)
+  type(derivatives_t), intent(in   ) :: der
+  R_TYPE,              intent(inout) :: ff(:)   !< ff(1:der%mesh%np_part)
   R_TYPE,              intent(out)   :: l2f(:)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc

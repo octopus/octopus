@@ -722,7 +722,7 @@ contains
 
         count_atoms=iatom
 
-        ! cmplxscl: we won't be caring about whatever POISSON_SETE is
+        ! cmplxscl: we won`t be caring about whatever POISSON_SETE is
         
         if (poisson_get_solver(ep%poisson_solver) == POISSON_SETE) then  !SEC
           write(68,*) "Calling rhonuc iatom", iatom

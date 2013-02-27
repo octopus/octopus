@@ -46,7 +46,7 @@ end subroutine X(pert_apply_batch)
 !! Note that e^ikr phase is applied to f_in, then is removed afterward
 subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out)
   type(pert_t),         intent(in)    :: this
-  type(grid_t),         intent(inout) :: gr
+  type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
   integer,              intent(in)    :: ik
@@ -262,7 +262,7 @@ end subroutine X(pert_apply)
 
   ! --------------------------------------------------------------------------
 subroutine X(ionic_perturbation)(gr, geo, hm, ik, f_in, f_out, iatom, idir)
-  type(grid_t),         intent(inout) :: gr
+  type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
   integer,              intent(in)    :: ik

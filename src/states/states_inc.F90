@@ -42,8 +42,8 @@ subroutine X(states_get_state1)(st, mesh, idim, ist, iqn, psi, left)
   type(states_t),    intent(in)    :: st
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: idim   !< current dimension
-  integer,           intent(in)    :: ist    !< current k-point
-  integer,           intent(in)    :: iqn
+  integer,           intent(in)    :: ist
+  integer,           intent(in)    :: iqn    !< current k-point
   R_TYPE,            intent(out)   :: psi(:)
   logical, optional, intent(in)    :: left 
 
