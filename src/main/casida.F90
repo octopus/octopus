@@ -232,12 +232,16 @@ contains
     call parse_integer(datasets_check('CasidaTheoryLevel'), &
       CASIDA_EPS_DIFF + CASIDA_PETERSILKA + CASIDA_CASIDA, theorylevel)
 
-    if (states_are_complex(sys%st) .and. &
-      (iand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
-       .or. iand(theorylevel, CASIDA_CASIDA) /= 0)) then
-      message(1) = "Variational and full Casida theory levels do not apply to complex wavefunctions."
-      call messages_fatal(1, only_root_writes = .true.)
-      ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
+    if (states_are_complex(sys%st)) then
+      if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
+        call messages_not_implemented("Tamm-Dancoff calculation with complex wavefunctions")
+      endif
+      if((iand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
+        .or. iand(theorylevel, CASIDA_CASIDA) /= 0)) then
+        message(1) = "Variational and full Casida theory levels do not apply to complex wavefunctions."
+        call messages_fatal(1, only_root_writes = .true.)
+        ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
+      endif
     end if
 
     !%Variable CasidaKohnShamStates
