@@ -1106,96 +1106,7 @@ contains
 #endif
   end subroutine poisson_slave_work
 
-  !------------------------------------------------------------------
-
-  subroutine dpoisson_solve_start(this, rho)
-    type(poisson_t),      intent(inout) :: this
-    FLOAT,                intent(in)    :: rho(:)
-
-#ifdef HAVE_MPI2    
-    integer :: islave
-    type(profile_t), save :: prof
-
-    PUSH_SUB(dpoisson_solve_start)
-    call profiling_in(prof, "POISSON_START")
-
-    ! we assume all nodes have a copy of the density
-    do islave = this%local_grp%rank, this%nslaves - 1, this%local_grp%size !all nodes are used for communication
-      call MPI_Send(rho(1), this%der%mesh%np, MPI_FLOAT, islave, CMD_POISSON_SOLVE, this%intercomm, mpi_err)
-    end do
-    
-    call profiling_out(prof)
-    POP_SUB(dpoisson_solve_start)
-#endif
-    
-  end subroutine dpoisson_solve_start
-  
   !----------------------------------------------------------------
-
-  subroutine dpoisson_solve_finish(this, pot)
-    type(poisson_t),  intent(inout) :: this
-    FLOAT,            intent(inout) :: pot(:)
-
-#ifdef HAVE_MPI2
-    type(profile_t), save :: prof
-
-    PUSH_SUB(dpoisson_solve_finish)
-    call profiling_in(prof, "POISSON_FINISH")
-
-    call MPI_Bcast(pot(1), this%der%mesh%np, MPI_FLOAT, 0, this%intercomm, mpi_err)
-
-    call profiling_out(prof)
-    POP_SUB(dpoisson_solve_finish)
-#endif
-  end subroutine dpoisson_solve_finish
-
-  !----------------------------------------------------------------
-
-  !------------------------------------------------------------------
-
-  subroutine zpoisson_solve_start(this, rho)
-    type(poisson_t),      intent(inout) :: this
-    CMPLX,                intent(in)    :: rho(:)
-
-#ifdef HAVE_MPI2    
-    integer :: islave
-    type(profile_t), save :: prof
-
-    PUSH_SUB(zpoisson_solve_start)
-    call profiling_in(prof, "ZPOISSON_START")
-
-    ! we assume all nodes have a copy of the density
-    do islave = this%local_grp%rank, this%nslaves - 1, this%local_grp%size !all nodes are used for communication
-      call MPI_Send(rho(1), this%der%mesh%np, MPI_CMPLX, islave, CMD_POISSON_SOLVE, this%intercomm, mpi_err)
-    end do
-    
-    call profiling_out(prof)
-    POP_SUB(zpoisson_solve_start)
-#endif
-    
-  end subroutine zpoisson_solve_start
-  
-  !----------------------------------------------------------------
-
-  subroutine zpoisson_solve_finish(this, pot)
-    type(poisson_t),  intent(inout) :: this
-    CMPLX,            intent(inout) :: pot(:)
-
-#ifdef HAVE_MPI2
-    type(profile_t), save :: prof
-
-    PUSH_SUB(zpoisson_solve_finish)
-    call profiling_in(prof, "ZPOISSON_FINISH")
-
-    call MPI_Bcast(pot(1), this%der%mesh%np, MPI_CMPLX, 0, this%intercomm, mpi_err)
-
-    call profiling_out(prof)
-    POP_SUB(zpoisson_solve_finish)
-#endif
-  end subroutine zpoisson_solve_finish
-
-  !----------------------------------------------------------------
-
 
   logical pure function poisson_is_async(this) result(async)
     type(poisson_t),  intent(in) :: this
@@ -1207,6 +1118,13 @@ contains
 #include "solver_1d_inc.F90"
 #include "solver_2d_inc.F90"
 #include "solver_3d_inc.F90"
+
+#include "undef.F90"
+#include "real.F90"
+#include "poisson_inc.F90"
+#include "undef.F90"
+#include "complex.F90"
+#include "poisson_inc.F90"
 
 end module poisson_m
 
