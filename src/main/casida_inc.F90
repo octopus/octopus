@@ -315,6 +315,7 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, sigma, rho)
   SAFE_ALLOCATE(psi_i(1:mesh%np))
   SAFE_ALLOCATE(psi_a(1:mesh%np))
 
+  ! FIXME: need to take into account spinor dimension here, not just 1
   call states_get_state(st, mesh, 1, ii, sigma, psi_i)
   call states_get_state(st, mesh, 1, ia, sigma, psi_a)
   
@@ -328,6 +329,80 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, sigma, rho)
   POP_SUB(X(casida_get_rho))
 end subroutine X(casida_get_rho)
 
+! -----------------------------------------------------------------------------
+
+!> one-particle matrix elements of perturbation
+subroutine X(casida_lr_hmat1)(cas, sys, hm, pert, hvar, lr_hmat1, st_start, st_end, ik)
+  type(casida_t), intent(inout) :: cas
+  type(system_t), intent(in) :: sys
+  type(hamiltonian_t), intent(inout) :: hm
+  type(pert_t), intent(in) :: pert
+  FLOAT, intent(in) :: hvar(:,:,:)
+  R_TYPE, intent(out) :: lr_hmat1(:,:,:)
+  integer, intent(in) :: st_start
+  integer, intent(in) :: st_end
+  integer, intent(in) :: ik
+
+  integer :: ist, jst, ispin, idim
+  R_TYPE, allocatable :: psi(:,:,:), pert_psi(:,:)
+  R_TYPE :: temp
+
+  PUSH_SUB(X(casida_lr_hmat1))
+
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, st_start:st_end))
+  SAFE_ALLOCATE(pert_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+
+  ! could use batches?
+
+  ispin = states_dim_get_spin_index(sys%st%d, ik)
+  
+  do ist = st_start, st_end
+    call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:, :, ist))
+  enddo
+    
+  do ist = st_start, st_end
+    call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, psi(:, :, ist), pert_psi(:, :))
+    do idim = 1, sys%st%d%dim
+      pert_psi(:, idim) = pert_psi(:, idim) + hvar(:, ispin, 1) * psi(:, idim, ist)
+    enddo
+    
+    do jst = ist, st_end
+      lr_hmat1(ist, jst, ik) = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi(:, :, jst), pert_psi(:, :))
+      if(jst /= ist) lr_hmat1(jst, ist, ik) = R_CONJ(lr_hmat1(ist, jst, ik)) ! Hermiticity
+    enddo
+  enddo
+
+  POP_SUB(X(casida_lr_hmat1))
+end subroutine X(casida_lr_hmat1)
+
+! -----------------------------------------------------------------------------
+
+!> two-particle matrix elements of perturbation
+subroutine X(casida_lr_hmat2)(cas, lr_hmat1, ik)
+  type(casida_t), intent(inout) :: cas
+  R_TYPE, intent(in) :: lr_hmat1(:,:,:)
+  integer, intent(in) :: ik
+
+  integer :: ia, jb
+
+  PUSH_SUB(X(casida_lr_hmat2))
+
+  do ia = 1, cas%n_pairs
+    do jb = ia, cas%n_pairs
+      ! if occ states the same, apply unocc matrix elements
+      if(cas%pair(ia)%i == cas%pair(jb)%i) then
+        cas%X(lr_hmat2)(ia, jb) = cas%X(lr_hmat2)(ia, jb) + lr_hmat1(cas%pair(ia)%a, cas%pair(jb)%a, ik)
+      endif
+      ! if unocc states the same, apply occ matrix elements
+      if(cas%pair(ia)%a == cas%pair(jb)%a) then
+        cas%X(lr_hmat2)(ia, jb) = cas%X(lr_hmat2)(ia, jb) - lr_hmat1(cas%pair(ia)%i, cas%pair(jb)%i, ik)
+      endif
+    enddo
+  enddo
+
+  POP_SUB(X(casida_lr_hmat2))
+
+end subroutine X(casida_lr_hmat2)
 
 !! Local Variables:
 !! mode: f90

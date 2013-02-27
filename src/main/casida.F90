@@ -97,7 +97,8 @@ module casida_m
     FLOAT,   pointer  :: tm(:, :)       !< The transition matrix elements (between the many-particle states)
     FLOAT,   pointer  :: f(:)           !< The (dipole) strengths
     FLOAT,   pointer  :: s(:)           !< The diagonal part of the S-matrix
-    FLOAT,   pointer  :: lr_hmat(:,:)   !< derivative of single-particle contribution
+    FLOAT,   pointer  :: dlr_hmat2(:,:) !< derivative of single-particle contribution to mat
+    CMPLX,   pointer  :: zlr_hmat2(:,:) !< derivative of single-particle contribution to mat
 
     ! variables for momentum-transfer-dependent calculation
     logical           :: qcalc
@@ -532,7 +533,7 @@ contains
   !! the matrix formulation of M. Petersilka, or of M. Casida
   subroutine casida_work(sys, hm, cas)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(in)    :: hm
+    type(hamiltonian_t),    intent(inout) :: hm
     type(casida_t),         intent(inout) :: cas
 
     logical, allocatable :: saved_K(:, :) ! which matrix elements have been loaded
@@ -938,8 +939,9 @@ contains
     ! ---------------------------------------------------------
     subroutine casida_forces_init()
       
-      integer :: ip, iatom, idir, is1, is2, ierr
-      FLOAT, allocatable :: hvar(:,:,:)
+      integer :: ip, iatom, idir, is1, is2, ierr, ik
+      FLOAT, allocatable :: hvar(:,:,:), dlr_hmat1(:,:,:)
+      CMPLX, allocatable :: zlr_hmat1(:,:,:)
       type(pert_t) :: ionic_pert
       
       PUSH_SUB(casida_work.casida_forces_init)
@@ -959,7 +961,18 @@ contains
         SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
       endif
 
-      SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
+      SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:1))
+      if(states_are_real(st)) then
+        SAFE_ALLOCATE(dlr_hmat1(cas%nst, cas%nst, cas%nik))
+        dlr_hmat1 = M_ZERO
+        SAFE_ALLOCATE(cas%dlr_hmat2(cas%n_pairs, cas%n_pairs))
+        cas%dlr_hmat2 = M_ZERO
+      else
+        SAFE_ALLOCATE(zlr_hmat1(cas%nst, cas%nst, cas%nik))
+        zlr_hmat1 = M_ZERO
+        SAFE_ALLOCATE(cas%zlr_hmat2(cas%n_pairs, cas%n_pairs))
+        cas%zlr_hmat2 = M_ZERO
+      endif
       call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
 
       do iatom = 1, sys%geo%natoms
@@ -977,7 +990,32 @@ contains
             call messages_fatal(1)
           end if
 
-          call dcalc_hvar(.true., sys, dl_rho(:, :, iatom, idir), st%d%nspin, hvar, fxc = fxc)
+          call dcalc_hvar(.true., sys, dl_rho(:, :, iatom, idir), 1, hvar, fxc = fxc)
+
+          do ik = 1, cas%nik
+            if(states_are_real(st)) then
+              ! occ-occ matrix elements
+              call dcasida_lr_hmat1(cas, sys, hm, ionic_pert, hvar, dlr_hmat1, 1, cas%n_occ(ik), ik)
+              ! unocc-unocc matrix elements
+              call dcasida_lr_hmat1(cas, sys, hm, ionic_pert, hvar, dlr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
+            else
+              ! occ-occ matrix elements
+              call zcasida_lr_hmat1(cas, sys, hm, ionic_pert, hvar, zlr_hmat1, 1, cas%n_occ(ik), ik)
+              ! unocc-unocc matrix elements
+              call zcasida_lr_hmat1(cas, sys, hm, ionic_pert, hvar, zlr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
+            endif
+          enddo
+
+          ! use them to make two-particle matrix elements (as for eigenvalues)
+          do ik = 1, cas%nik
+            if(states_are_real(st)) then
+              call dcasida_lr_hmat2(cas, dlr_hmat1, ik)
+              write(100,*) dlr_hmat1
+              exit
+            else
+              call zcasida_lr_hmat2(cas, zlr_hmat1, ik)
+            endif
+          enddo
 
           if (cas%type /= CASIDA_EPS_DIFF) then
             forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
@@ -991,6 +1029,11 @@ contains
       SAFE_DEALLOCATE_A(kxc)
       SAFE_DEALLOCATE_A(dl_rho)
       SAFE_DEALLOCATE_A(hvar)
+      if(states_are_real(st)) then
+        SAFE_DEALLOCATE_A(dlr_hmat1)
+      else
+        SAFE_DEALLOCATE_A(zlr_hmat1)
+      endif
       
       POP_SUB(casida_work.casida_forces_init)
     end subroutine casida_forces_init
