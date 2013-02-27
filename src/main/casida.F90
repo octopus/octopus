@@ -302,7 +302,7 @@ contains
         cas%qvector(idir) = units_to_atomic(unit_one / units_inp%length, cas%qvector(idir))
       end do
       call parse_block_end(blk)
-      call messages_experimental("IXS/EELS transition rates")
+      call messages_experimental("IXS/EELS transition rate calculation")
       message(1) = "Info: Calculating IXS/EELS transition rates."
       call messages_info(1)
       cas%qcalc = .true.
