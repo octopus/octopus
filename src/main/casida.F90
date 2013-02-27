@@ -91,10 +91,12 @@ module casida_m
 
     !> FIXME: mat, tm should be R_TYPE
     FLOAT,   pointer  :: mat(:,:)       !< general-purpose matrix
+    FLOAT,   pointer  :: mat_save(:,:)  !< to save mat when it gets turned into the eigenvectors
     FLOAT,   pointer  :: w(:)           !< The excitation energies.
     FLOAT,   pointer  :: tm(:, :)       !< The transition matrix elements (between the many-particle states)
     FLOAT,   pointer  :: f(:)           !< The (dipole) strengths
     FLOAT,   pointer  :: s(:)           !< The diagonal part of the S-matrix
+    FLOAT,   pointer  :: lr_hmat(:,:)   !< derivative of single-particle contribution
 
     ! variables for momentum-transfer-dependent calculation
     logical           :: qcalc
@@ -335,7 +337,7 @@ contains
     endif
 
     if(cas%triplet) then
-      call messages_experimental("Casida triplet calculations")
+      call messages_experimental("Casida triplet calculation")
     endif
 
     !%Variable CasidaCalcForces
@@ -369,7 +371,7 @@ contains
     if (sys%st%d%ispin /= SPINORS) then
 
       if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
-        call messages_experimental("Tamm-Dancoff calculations")
+        call messages_experimental("Tamm-Dancoff calculation")
         message(1) = "Info: Calculating matrix elements in the Tamm-Dancoff approximation"
         call messages_info(1)
         cas%type = CASIDA_TAMM_DANCOFF
@@ -378,7 +380,7 @@ contains
       endif
 
       if(iand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
-        call messages_experimental("CV(2)-DFT calculations")
+        call messages_experimental("CV(2)-DFT calculation")
         message(1) = "Info: Calculating matrix elements with the CV(2)-DFT theory"
         call messages_info(1)
         cas%type = CASIDA_VARIATIONAL
@@ -931,8 +933,7 @@ contains
     subroutine casida_forces_init()
       
       integer :: ip, iatom, idir, is1, is2, ierr
-      FLOAT, allocatable :: dhvar(:,:,:)
-      CMPLX, allocatable :: zhvar(:,:,:)
+      FLOAT, allocatable :: hvar(:,:,:)
       type(pert_t) :: ionic_pert
       
       PUSH_SUB(casida_work.casida_forces_init)
@@ -952,11 +953,7 @@ contains
         SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
       endif
 
-      if(states_are_real(st)) then
-        SAFE_ALLOCATE(dhvar(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
-      else
-        SAFE_ALLOCATE(zhvar(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
-      endif
+      SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
       call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
 
       do iatom = 1, sys%geo%natoms
@@ -974,12 +971,7 @@ contains
             call messages_fatal(1)
           end if
 
-          if(states_are_real(st)) then
-            call dcalc_hvar(.true., sys, dl_rho(:, :, iatom, idir), st%d%nspin, dhvar, fxc = fxc)
-          else
-            call zcalc_hvar(.true., sys, TOCMPLX(dl_rho(:, :, iatom, idir), M_ZERO), st%d%nspin, zhvar, fxc = fxc)
-          endif
-          ! calc derivatives of eigenvalues here
+          call dcalc_hvar(.true., sys, dl_rho(:, :, iatom, idir), st%d%nspin, hvar, fxc = fxc)
 
           if (cas%type /= CASIDA_EPS_DIFF) then
             forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
@@ -992,6 +984,7 @@ contains
       call pert_end(ionic_pert)
       SAFE_DEALLOCATE_A(kxc)
       SAFE_DEALLOCATE_A(dl_rho)
+      SAFE_DEALLOCATE_A(hvar)
       
       POP_SUB(casida_work.casida_forces_init)
     end subroutine casida_forces_init
