@@ -83,7 +83,7 @@ module casida_m
     character(len=80) :: wfn_list
     character(len=80) :: trandens
     logical           :: triplet        !< use triplet kernel?
-    logical           :: forces         !< calculate excited-state forces
+    logical           :: calc_forces    !< calculate excited-state forces
     character(len=80) :: restart_file
 
     integer           :: n_pairs        !< number of pairs to take into account
@@ -99,6 +99,7 @@ module casida_m
     FLOAT,   pointer  :: s(:)           !< The diagonal part of the S-matrix
     FLOAT,   pointer  :: dlr_hmat2(:,:) !< derivative of single-particle contribution to mat
     CMPLX,   pointer  :: zlr_hmat2(:,:) !< derivative of single-particle contribution to mat
+    FLOAT,   pointer  :: forces(:,:,:)  !< excited-state forces
 
     ! variables for momentum-transfer-dependent calculation
     logical           :: qcalc
@@ -354,7 +355,7 @@ contains
     !%Description
     !% Enable calculation of excited-state forces. Requires previous <tt>vib_modes</tt> calculation.
     !%End
-    call parse_logical(datasets_check('CasidaCalcForces'), .false., cas%forces)
+    call parse_logical(datasets_check('CasidaCalcForces'), .false., cas%calc_forces)
 
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, sys%mc)
@@ -524,6 +525,10 @@ contains
     SAFE_DEALLOCATE_P(cas%n_occ)
     SAFE_DEALLOCATE_P(cas%n_unocc)
 
+    if(cas%calc_forces) then
+      SAFE_DEALLOCATE_P(cas%forces)
+    endif
+
     POP_SUB(casida_type_end)
   end subroutine casida_type_end
 
@@ -581,7 +586,7 @@ contains
       mu_old = -1
     endif
       
-    if (cas%type /= CASIDA_EPS_DIFF .or. cas%forces) then
+    if (cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
       ! We calculate here the kernel, since it will be needed later.
       SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
       if(cas%triplet) then
@@ -602,12 +607,6 @@ contains
       endif
     end if
 
-    if(cas%forces) call casida_forces_init()
-
-    if(cas%type == CASIDA_EPS_DIFF .or. cas%forces) then
-      SAFE_DEALLOCATE_A(rho)
-    endif
-
     xc => fxc
     select case(cas%type)
     case(CASIDA_EPS_DIFF)
@@ -617,16 +616,22 @@ contains
       call solve_casida()
     end select
 
+    if(cas%calc_forces) call casida_forces_init()
+
     ! clean up
     if (cas%type /= CASIDA_EPS_DIFF) then
       SAFE_DEALLOCATE_A(fxc)
       if(.not. cas%triplet) then
         SAFE_DEALLOCATE_A(pot)
       endif
-      if(cas%forces) then
+      if(cas%calc_forces) then
         SAFE_DEALLOCATE_A(lr_fxc)
       endif
     end if
+    if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
+      SAFE_DEALLOCATE_A(rho)
+    endif
+
     SAFE_DEALLOCATE_A(saved_K)
 
     POP_SUB(casida_work)
@@ -939,7 +944,7 @@ contains
     ! ---------------------------------------------------------
     subroutine casida_forces_init()
       
-      integer :: ip, iatom, idir, is1, is2, ierr, ik
+      integer :: ip, iatom, idir, is1, is2, ierr, ik, ia
       FLOAT, allocatable :: hvar(:,:,:), dlr_hmat1(:,:,:)
       CMPLX, allocatable :: zlr_hmat1(:,:,:)
       type(pert_t) :: ionic_pert
@@ -962,16 +967,13 @@ contains
       endif
 
       SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:1))
+      SAFE_ALLOCATE(cas%forces(1:sys%geo%natoms, 1:mesh%sb%dim, 1:cas%n_pairs))
       if(states_are_real(st)) then
         SAFE_ALLOCATE(dlr_hmat1(cas%nst, cas%nst, cas%nik))
-        dlr_hmat1 = M_ZERO
         SAFE_ALLOCATE(cas%dlr_hmat2(cas%n_pairs, cas%n_pairs))
-        cas%dlr_hmat2 = M_ZERO
       else
         SAFE_ALLOCATE(zlr_hmat1(cas%nst, cas%nst, cas%nik))
-        zlr_hmat1 = M_ZERO
         SAFE_ALLOCATE(cas%zlr_hmat2(cas%n_pairs, cas%n_pairs))
-        cas%zlr_hmat2 = M_ZERO
       endif
       call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
 
@@ -992,6 +994,14 @@ contains
 
           call dcalc_hvar(.true., sys, dl_rho(:, :, iatom, idir), 1, hvar, fxc = fxc)
 
+          if(states_are_real(st)) then
+            dlr_hmat1 = M_ZERO
+            cas%dlr_hmat2 = M_ZERO
+          else
+            zlr_hmat1 = M_ZERO
+            cas%zlr_hmat2 = M_ZERO
+          endif
+
           do ik = 1, cas%nik
             if(states_are_real(st)) then
               ! occ-occ matrix elements
@@ -1010,8 +1020,6 @@ contains
           do ik = 1, cas%nik
             if(states_are_real(st)) then
               call dcasida_lr_hmat2(cas, dlr_hmat1, ik)
-              write(100,*) dlr_hmat1
-              exit
             else
               call zcasida_lr_hmat2(cas, zlr_hmat1, ik)
             endif
@@ -1022,11 +1030,23 @@ contains
               lr_fxc(ip, is1, is2, iatom, idir) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :, iatom, idir))
             end forall
           endif
+
+          if(cas%type == CASIDA_EPS_DIFF) then
+            do ia = 1, cas%n_pairs
+              if(states_are_real(st)) then
+                cas%forces(iatom, idir, ia) = cas%dlr_hmat2(ia, ia)
+              else
+                cas%forces(iatom, idir, ia) = real(cas%zlr_hmat2(ia, ia), REAL_PRECISION)
+              endif
+            enddo
+          endif
         enddo
       enddo
 
       call pert_end(ionic_pert)
-      SAFE_DEALLOCATE_A(kxc)
+      if(cas%type /= CASIDA_EPS_DIFF) then
+        SAFE_DEALLOCATE_A(kxc)
+      endif
       SAFE_DEALLOCATE_A(dl_rho)
       SAFE_DEALLOCATE_A(hvar)
       if(states_are_real(st)) then
@@ -1148,37 +1168,45 @@ contains
 
     if(cas%qcalc) call qcasida_write(cas)
 
-    if(cas%type == CASIDA_EPS_DIFF) then
-      POP_SUB(casida_write)
-      return
-    end if
+    if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
+      dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
+      call io_mkdir(trim(dir_name))
+    endif
 
-    ! output eigenvectors
-    dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
-    call io_mkdir(trim(dir_name))
     do ia = 1, cas%n_pairs
+      
       write(str,'(i5.5)') ia
-      iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
-      ! First, a little header
-      write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
-                                units_from_atomic(units_out%energy, cas%w(ind(ia)))
-      do idim = 1, dim
-        write(iunit,'(a,es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
-                                  units_from_atomic(units_out%length, cas%tm(ind(ia), idim))
-      enddo
 
-      temp = M_ONE
-      ! make the largest component positive, to specify the phase
-      if( maxval(cas%mat(:, ind(ia))) - abs(minval(cas%mat(:, ind(ia)))) < -M_EPSILON) temp = -temp
+      ! output eigenvectors
+      if(cas%type /= CASIDA_EPS_DIFF) then
+        iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
+        ! First, a little header
+        write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
+          units_from_atomic(units_out%energy, cas%w(ind(ia)))
+        do idim = 1, dim
+          write(iunit,'(a,es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
+            units_from_atomic(units_out%length, cas%tm(ind(ia), idim))
+        enddo
 
-      do jb = 1, cas%n_pairs
-        write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, temp * cas%mat(jb, ind(ia))
-      end do
+        temp = M_ONE
+        ! make the largest component positive, to specify the phase
+        if( maxval(cas%mat(:, ind(ia))) - abs(minval(cas%mat(:, ind(ia)))) < -M_EPSILON) temp = -temp
 
-      if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
-        call write_implied_occupations(cas, iunit, ind(ia))
+        do jb = 1, cas%n_pairs
+          write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, temp * cas%mat(jb, ind(ia))
+        end do
+
+        if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
+          call write_implied_occupations(cas, iunit, ind(ia))
+        endif
+        call io_close(iunit)
       endif
-      call io_close(iunit)
+
+      if(cas%calc_forces) then
+        iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
+        call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, ia))
+        call io_close(iunit)
+      endif
     end do
 
     SAFE_DEALLOCATE_A(w)

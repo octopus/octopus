@@ -345,7 +345,6 @@ subroutine X(casida_lr_hmat1)(cas, sys, hm, pert, hvar, lr_hmat1, st_start, st_e
 
   integer :: ist, jst, ispin, idim
   R_TYPE, allocatable :: psi(:,:,:), pert_psi(:,:)
-  R_TYPE :: temp
 
   PUSH_SUB(X(casida_lr_hmat1))
 
@@ -367,8 +366,8 @@ subroutine X(casida_lr_hmat1)(cas, sys, hm, pert, hvar, lr_hmat1, st_start, st_e
     enddo
     
     do jst = ist, st_end
-      lr_hmat1(ist, jst, ik) = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi(:, :, jst), pert_psi(:, :))
-      if(jst /= ist) lr_hmat1(jst, ist, ik) = R_CONJ(lr_hmat1(ist, jst, ik)) ! Hermiticity
+      lr_hmat1(jst, ist, ik) = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi(:, :, jst), pert_psi(:, :))
+      if(jst /= ist) lr_hmat1(ist, jst, ik) = R_CONJ(lr_hmat1(jst, ist, ik)) ! Hermiticity
     enddo
   enddo
 
