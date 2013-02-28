@@ -793,14 +793,23 @@ contains
         call profiling_out(prof)
 
         do ia = 1, cas%n_pairs
-          if(cas%w(ia) < -M_EPSILON) then
-            write(message(1),'(a,i4,a)') 'For whatever reason, excitation energy', ia, ' is negative.'
-            write(message(2),'(a)')      'This should not happen.'
-            call messages_warning(2)
-            cas%w(ia) = M_ZERO
+
+          if(cas%type == CASIDA_CASIDA) then
+            if(cas%w(ia) < -M_EPSILON) then       
+              write(message(1),'(a,i4,a)') 'Casida excitation energy', ia, ' is imaginary.'
+              call messages_warning(1)
+              cas%w(ia) = -sqrt(-cas%w(ia))
+            else
+              cas%w(ia) = sqrt(cas%w(ia))
+            endif
           else
-            if(cas%type == CASIDA_CASIDA) cas%w(ia) = sqrt(cas%w(ia))
-          end if
+            if(cas%w(ia) < -M_EPSILON) then
+              write(message(1),'(a,i4,a)') 'For whatever reason, excitation energy', ia, ' is negative.'
+              write(message(2),'(a)')      'This should not happen.'
+              call messages_warning(2)
+           endif
+          endif
+
         end do
 
         ! And let us now get the S matrix...
