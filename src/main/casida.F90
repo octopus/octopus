@@ -89,6 +89,7 @@ module casida_m
     integer           :: n_pairs        !< number of pairs to take into account
     type(states_pair_t), pointer :: pair(:)
     integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%sigma) = j
+    integer, pointer  :: ind(:)         !< ordering in energy of solutions
 
     !> FIXME: mat, tm should be R_TYPE
     FLOAT,   pointer  :: mat(:,:)       !< general-purpose matrix
@@ -464,6 +465,7 @@ contains
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
     SAFE_ALLOCATE(cas%index(1:maxval(cas%n_occ), cas%nst - maxval(cas%n_unocc) + 1:cas%nst, cas%nik))
+    SAFE_ALLOCATE( cas%ind(1:cas%n_pairs))
 
     if(cas%qcalc) then
       SAFE_ALLOCATE( cas%qf    (1:cas%n_pairs))
@@ -516,6 +518,7 @@ contains
     SAFE_DEALLOCATE_P(cas%s)
     SAFE_DEALLOCATE_P(cas%f)
     SAFE_DEALLOCATE_P(cas%w)
+    SAFE_DEALLOCATE_P(cas%ind)
 
     if(cas%qcalc) then
       SAFE_DEALLOCATE_P(cas%qf)
@@ -640,7 +643,9 @@ contains
 
     ! ---------------------------------------------------------
     subroutine solve_eps_diff
+
       integer :: ia, actual
+      FLOAT, allocatable :: w(:)
 
       PUSH_SUB(casida_work.solve_eps_diff)
 
@@ -657,6 +662,11 @@ contains
         endif
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
       end do
+
+      SAFE_ALLOCATE(w(1:cas%n_pairs))
+      w = cas%w
+      call sort(w, cas%ind)
+      SAFE_DEALLOCATE_A(w)
 
       if(states_are_real(st)) then
         call doscillator_strengths(cas, mesh, st)
@@ -810,6 +820,7 @@ contains
            endif
           endif
 
+          cas%ind(ia) = ia ! diagonalization returns eigenvalues in order.
         end do
 
         ! And let us now get the S matrix...
@@ -1074,19 +1085,12 @@ contains
     type(casida_t), intent(in) :: cas
 
     integer :: iunit, ia, dim
-    integer, allocatable :: ind(:)
-    FLOAT, allocatable :: w(:)
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(qcasida_write)
 
     dim = size(cas%tm, 2)
-
-    SAFE_ALLOCATE(  w(1:cas%n_pairs))
-    SAFE_ALLOCATE(ind(1:cas%n_pairs))
-    w = cas%w
-    call sort(w, ind)
 
     call io_mkdir(CASIDA_DIR)
     iunit = io_open(CASIDA_DIR//'q'//trim(theory_name(cas)), action='write')
@@ -1099,20 +1103,17 @@ contains
 
     if(cas%avg_order.eq.0) then
       do ia = 1, cas%n_pairs
-        write(iunit, '(es15.8,es15.8)') units_from_atomic(units_out%energy, cas%w(ind(ia))), cas%qf(ind(ia))
+        write(iunit, '(es15.8,es15.8)') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), cas%qf(cas%ind(ia))
       end do
     else
       do ia = 1, cas%n_pairs
-        write(iunit, '(3es15.8)') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
-                                  cas%qf    (ind(ia)), &
-                                  cas%qf_avg(ind(ia))
+        write(iunit, '(3es15.8)') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), &
+                                  cas%qf    (cas%ind(ia)), &
+                                  cas%qf_avg(cas%ind(ia))
       end do
     end if
 
     call io_close(iunit)
-
-    SAFE_DEALLOCATE_A(w)
-    SAFE_DEALLOCATE_A(ind)
 
     POP_SUB(qcasida_write)
 
@@ -1128,19 +1129,12 @@ contains
     character(len=50) :: dir_name
     integer :: iunit, ia, jb, dim, idim
     FLOAT   :: temp
-    integer, allocatable :: ind(:)
-    FLOAT, allocatable :: w(:)
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(casida_write)
 
     dim = size(cas%tm, 2)
-
-    SAFE_ALLOCATE(  w(1:cas%n_pairs))
-    SAFE_ALLOCATE(ind(1:cas%n_pairs))
-    w = cas%w
-    call sort(w, ind)
 
     ! output excitation energies and oscillator strengths
     call io_mkdir(CASIDA_DIR)
@@ -1163,15 +1157,15 @@ contains
 
     do ia = 1, cas%n_pairs
       if((cas%type == CASIDA_EPS_DIFF)) then
-        write(iunit, '(2i4)', advance='no') cas%pair(ind(ia))%i, cas%pair(ind(ia))%a
+        write(iunit, '(2i4)', advance='no') cas%pair(cas%ind(ia))%i, cas%pair(cas%ind(ia))%a
         if(sys%st%d%ispin == SPIN_POLARIZED) then
-          write(iunit, '(i5)', advance='no') cas%pair(ind(ia))%sigma
+          write(iunit, '(i5)', advance='no') cas%pair(cas%ind(ia))%sigma
         endif
       else
-        write(iunit, '(i6)', advance='no') ind(ia)
+        write(iunit, '(i6)', advance='no') cas%ind(ia)
       end if
-      write(iunit, '(99(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(ind(ia))), &
-        (units_from_atomic(units_out%length, cas%tm(ind(ia), idim)), idim=1,dim), cas%f(ind(ia))
+      write(iunit, '(99(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), &
+        (units_from_atomic(units_out%length, cas%tm(cas%ind(ia), idim)), idim=1,dim), cas%f(cas%ind(ia))
     end do
     call io_close(iunit)
 
@@ -1191,22 +1185,22 @@ contains
         iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
         ! First, a little header
         write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
-          units_from_atomic(units_out%energy, cas%w(ind(ia)))
+          units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
         do idim = 1, dim
           write(iunit,'(a,es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
-            units_from_atomic(units_out%length, cas%tm(ind(ia), idim))
+            units_from_atomic(units_out%length, cas%tm(cas%ind(ia), idim))
         enddo
 
         temp = M_ONE
         ! make the largest component positive, to specify the phase
-        if( maxval(cas%mat(:, ind(ia))) - abs(minval(cas%mat(:, ind(ia)))) < -M_EPSILON) temp = -temp
+        if( maxval(cas%mat(:, cas%ind(ia))) - abs(minval(cas%mat(:, cas%ind(ia)))) < -M_EPSILON) temp = -temp
 
         do jb = 1, cas%n_pairs
-          write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, temp * cas%mat(jb, ind(ia))
+          write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, temp * cas%mat(jb, cas%ind(ia))
         end do
 
         if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
-          call write_implied_occupations(cas, iunit, ind(ia))
+          call write_implied_occupations(cas, iunit, cas%ind(ia))
         endif
         call io_close(iunit)
       endif
@@ -1217,9 +1211,6 @@ contains
         call io_close(iunit)
       endif
     end do
-
-    SAFE_DEALLOCATE_A(w)
-    SAFE_DEALLOCATE_A(ind)
 
     ! Calculate and write the transition densities
     if (states_are_real(sys%st)) then
