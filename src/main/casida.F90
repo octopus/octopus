@@ -98,9 +98,14 @@ module casida_m
     FLOAT,   pointer  :: tm(:, :)       !< The transition matrix elements (between the many-particle states)
     FLOAT,   pointer  :: f(:)           !< The (dipole) strengths
     FLOAT,   pointer  :: s(:)           !< The diagonal part of the S-matrix
+
+    FLOAT,   pointer  :: dmat2(:,:)     !< matrix to diagonalize for forces
+    CMPLX,   pointer  :: zmat2(:,:)     !< matrix to diagonalize for forces
     FLOAT,   pointer  :: dlr_hmat2(:,:) !< derivative of single-particle contribution to mat
     CMPLX,   pointer  :: zlr_hmat2(:,:) !< derivative of single-particle contribution to mat
     FLOAT,   pointer  :: forces(:,:,:)  !< excited-state forces
+    FLOAT,   pointer  :: dw2(:)          !< perturbed excitation energies.
+    FLOAT,   pointer  :: zw2(:)          !< perturbed excitation energies.
 
     ! variables for momentum-transfer-dependent calculation
     logical           :: qcalc
@@ -799,6 +804,10 @@ contains
         ! now we diagonalize the matrix
         ! for huge matrices, perhaps we should consider ScaLAPACK here...
         call profiling_in(prof, "CASIDA_DIAGONALIZATION")
+        if(cas%calc_forces) then
+          SAFE_ALLOCATE(cas%mat_save(cas%n_pairs, cas%n_pairs))
+          cas%mat_save = cas%mat ! save before gets turned into eigenvectors
+        endif
         call lalg_eigensolve(cas%n_pairs, cas%mat, cas%w)
         call profiling_out(prof)
 
@@ -826,8 +835,8 @@ contains
         ! And let us now get the S matrix...
         if(cas%type == CASIDA_CASIDA) then
           do ia = 1, cas%n_pairs
-            cas%s(ia) = (M_ONE/st%smear%el_per_state) / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
-                                                          st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma) )
+            cas%s(ia) = (M_ONE/cas%el_per_state) / ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%sigma) - &
+                                                     st%eigenval(cas%pair(ia)%i, cas%pair(ia)%sigma) )
           end do
         endif
 
@@ -968,6 +977,7 @@ contains
       FLOAT, allocatable :: hvar(:,:,:), dlr_hmat1(:,:,:)
       CMPLX, allocatable :: zlr_hmat1(:,:,:)
       type(pert_t) :: ionic_pert
+      FLOAT :: factor = CNST(1e12)
       
       PUSH_SUB(casida_work.casida_forces_init)
       
@@ -986,14 +996,26 @@ contains
         SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
       endif
 
+      if(cas%type == CASIDA_EPS_DIFF) then
+        SAFE_ALLOCATE(cas%mat_save(cas%n_pairs, cas%n_pairs))
+        cas%mat_save = M_ZERO
+        do ia = 1, cas%n_pairs
+          cas%mat_save(ia, ia) = cas%w(ia)
+        enddo
+      endif
+
       SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:1))
       SAFE_ALLOCATE(cas%forces(1:sys%geo%natoms, 1:mesh%sb%dim, 1:cas%n_pairs))
       if(states_are_real(st)) then
         SAFE_ALLOCATE(dlr_hmat1(cas%nst, cas%nst, cas%nik))
         SAFE_ALLOCATE(cas%dlr_hmat2(cas%n_pairs, cas%n_pairs))
+        SAFE_ALLOCATE(cas%dmat2(cas%n_pairs, cas%n_pairs))
+        SAFE_ALLOCATE(cas%dw2(cas%n_pairs))
       else
         SAFE_ALLOCATE(zlr_hmat1(cas%nst, cas%nst, cas%nik))
         SAFE_ALLOCATE(cas%zlr_hmat2(cas%n_pairs, cas%n_pairs))
+        SAFE_ALLOCATE(cas%zmat2(cas%n_pairs, cas%n_pairs))
+        SAFE_ALLOCATE(cas%zw2(cas%n_pairs))
       endif
       call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
 
@@ -1051,13 +1073,17 @@ contains
             end forall
           endif
 
-          if(cas%type == CASIDA_EPS_DIFF) then
+          if(states_are_real(st)) then
+            cas%dmat2 = cas%mat_save * factor + cas%dlr_hmat2
+            call lalg_eigensolve(cas%n_pairs, cas%dmat2, cas%dw2)
             do ia = 1, cas%n_pairs
-              if(states_are_real(st)) then
-                cas%forces(iatom, idir, ia) = cas%dlr_hmat2(ia, ia)
-              else
-                cas%forces(iatom, idir, ia) = real(cas%zlr_hmat2(ia, ia), REAL_PRECISION)
-              endif
+              cas%forces(iatom, idir, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - cas%dw2(ia)
+            enddo
+          else
+            cas%zmat2 = cas%mat_save * factor + cas%zlr_hmat2
+            call lalg_eigensolve(cas%n_pairs, cas%zmat2, cas%zw2)
+            do ia = 1, cas%n_pairs
+              cas%forces(iatom, idir, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - real(cas%zw2(ia), REAL_PRECISION)
             enddo
           endif
         enddo
@@ -1069,10 +1095,15 @@ contains
       endif
       SAFE_DEALLOCATE_A(dl_rho)
       SAFE_DEALLOCATE_A(hvar)
+      SAFE_DEALLOCATE_P(cas%mat_save)
       if(states_are_real(st)) then
         SAFE_DEALLOCATE_A(dlr_hmat1)
+        SAFE_DEALLOCATE_P(cas%dmat2)
+        SAFE_DEALLOCATE_P(cas%dw2)
       else
         SAFE_DEALLOCATE_A(zlr_hmat1)
+        SAFE_DEALLOCATE_P(cas%zmat2)
+        SAFE_DEALLOCATE_P(cas%zw2)
       endif
       
       POP_SUB(casida_work.casida_forces_init)
@@ -1207,7 +1238,7 @@ contains
 
       if(cas%calc_forces) then
         iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
-        call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, ia))
+        call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
         call io_close(iunit)
       endif
     end do
