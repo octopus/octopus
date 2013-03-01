@@ -554,7 +554,7 @@ contains
 
     FLOAT, allocatable :: rho(:, :), rho_spin(:, :), pot(:), &
       dl_rho(:,:,:,:), kxc(:,:,:,:)
-    FLOAT, target, allocatable :: fxc(:,:,:), lr_fxc(:,:,:,:,:)
+    FLOAT, target, allocatable :: fxc(:,:,:), fxc_spin(:,:,:), lr_fxc(:,:,:,:,:)
     FLOAT, pointer :: xc(:,:,:)
     integer :: qi_old, qa_old, mu_old
 
@@ -591,19 +591,23 @@ contains
     if (cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
       ! We calculate here the kernel, since it will be needed later.
       SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
-      if(cas%triplet) then
-        SAFE_ALLOCATE(rho_spin(1:mesh%np, 1:2))
-        SAFE_ALLOCATE(fxc(1:mesh%np, 1:2, 1:2))
-      else
-        SAFE_ALLOCATE(fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
-      endif
+      SAFE_ALLOCATE(fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
       fxc = M_ZERO
 
       call states_total_density(st, mesh, rho)
       if(cas%triplet) then
+        SAFE_ALLOCATE(rho_spin(1:mesh%np, 1:2))
+        SAFE_ALLOCATE(fxc_spin(1:mesh%np, 1:2, 1:2))
+
+        fxc_spin = M_ZERO
         rho_spin(:, 1) = M_HALF * rho(:, 1)
         rho_spin(:, 2) = M_HALF * rho(:, 1)
-        call xc_get_fxc(sys%ks%xc, mesh, rho_spin, SPIN_POLARIZED, fxc)
+
+        call xc_get_fxc(sys%ks%xc, mesh, rho_spin, SPIN_POLARIZED, fxc_spin)
+        fxc(:, 1, 1) = M_HALF * (fxc_spin(:, 1, 1) - fxc_spin(:, 1, 2))
+
+        SAFE_DEALLOCATE_A(rho_spin)
+        SAFE_DEALLOCATE_A(fxc_spin)
       else
         call xc_get_fxc(sys%ks%xc, mesh, rho, st%d%ispin, fxc)
       endif
@@ -916,11 +920,7 @@ contains
       end if
 
       if(present(mtxel_xc)) then
-        if(cas%triplet) then
-          integrand(1:mesh%np) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * M_HALF * (xc(1:mesh%np, 1, 1) - xc(1:mesh%np, 1, 2))
-        else
-          integrand(1:mesh%np) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * xc(1:mesh%np, sigma, mu)
-        endif
+        integrand(1:mesh%np) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * xc(1:mesh%np, sigma, mu)
         mtxel_xc = dmf_integrate(mesh, integrand)
       endif
 
