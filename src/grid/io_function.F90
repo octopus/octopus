@@ -86,12 +86,12 @@ module io_function_m
     C_OUTPUT_HOW_XYZ             =  65536,    &
     C_OUTPUT_HOW_CUBE            = 131072
 
-  ! doutput_kind => real variables; zoutput_kind => complex variables.
+  !> doutput_kind => real variables; zoutput_kind => complex variables.
   integer, parameter, private ::  &
     DOUTPUT_KIND      =    1,     &
     ZOUTPUT_KIND      =   -1
 
-  ! index to label mapping
+  !> index to label mapping
   character(len=3), parameter ::  &
     index2label(3) = (/ 're ', 'im ', 'abs' /)
 
@@ -292,7 +292,7 @@ contains
     type(geometry_t),  intent(in) :: geo
     type(mesh_t),      intent(in) :: mesh
     FLOAT,   optional, intent(in) :: forces(:, :)
-    integer, optional, intent(in) :: index ! for use in writing animated files
+    integer, optional, intent(in) :: index !< for use in writing animated files
 
     integer :: idir, idir2, iatom, index_
     character(len=7) :: index_str
