@@ -351,6 +351,8 @@ subroutine X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
       
     end if
 
+    call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*der%mesh%np)
+
     do ib = st%block_start, st%block_end
       call batch_end(hpsib_all(ib), copy = .false.)
     end do

@@ -1239,6 +1239,8 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
 
     end do
 
+    call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*mesh%np)
+
   else
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_rotate for spinors')
@@ -1297,7 +1299,9 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
         call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psinew_buffer, st%nst)
       end do
     end do
-    
+
+    call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*mesh%np)
+   
     call opencl_release_buffer(uu_buffer)
     call opencl_release_buffer(psicopy_buffer)
     call opencl_release_buffer(psinew_buffer)
@@ -1385,6 +1389,8 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
     end do
 
+    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*(st%nst - CNST(1.0))*mesh%np)
+
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
 
     SAFE_DEALLOCATE_A(psi)
@@ -1427,6 +1433,8 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
       if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasDsyrkEx/clAmdBlasZherkEx')
 
     end do
+
+    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*(st%nst - CNST(1.0))*mesh%np)
 
     call opencl_release_buffer(psi_buffer)
 
