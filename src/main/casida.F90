@@ -549,7 +549,6 @@ contains
     type(hamiltonian_t),    intent(inout) :: hm
     type(casida_t),         intent(inout) :: cas
 
-    logical, allocatable :: saved_K(:, :) ! which matrix elements have been loaded
     type(states_t), pointer :: st
     type(mesh_t),   pointer :: mesh
 
@@ -569,9 +568,7 @@ contains
     mesh => sys%gr%mesh
 
     ! initialize stuff
-    SAFE_ALLOCATE(saved_K(1:cas%n_pairs, 1:cas%n_pairs))
     cas%mat = M_ZERO
-    saved_K = .false.
     cas%tm  = M_ZERO
     cas%f   = M_ZERO
     cas%w   = M_ZERO
@@ -580,9 +577,6 @@ contains
       cas%qf     = M_ZERO
       cas%qf_avg = M_ZERO
     end if
-
-    ! load saved matrix elements
-    call load_saved()
 
     if (cas%type /= CASIDA_EPS_DIFF) then
       ! This is to be allocated here, and is used inside K_term.
@@ -620,7 +614,7 @@ contains
     case(CASIDA_EPS_DIFF)
       call solve_eps_diff()
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
-      call casida_get_matrix()
+      call casida_get_matrix(cas%restart_file)
       call solve_casida()
     end select
 
@@ -639,8 +633,6 @@ contains
     if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
       SAFE_DEALLOCATE_A(rho)
     endif
-
-    SAFE_DEALLOCATE_A(saved_K)
 
     POP_SUB(casida_work)
 
@@ -686,15 +678,21 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine casida_get_matrix()
+    subroutine casida_get_matrix(restart_file)
+      character(len=*), intent(in) :: restart_file
 
       FLOAT :: temp
       integer :: ia, jb, iunit
       integer :: max, actual, counter
       type(states_pair_t), pointer :: p, q
       FLOAT :: mtxel_vh, mtxel_xc
+      logical, allocatable :: is_saved(:, :) ! which matrix elements have been loaded
 
       PUSH_SUB(casida_work.casida_get_matrix)
+
+      ! load saved matrix elements
+      SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
+      call load_saved(is_saved, restart_file)
 
       if(cas%type == CASIDA_PETERSILKA) then
         max = cas%n_pairs
@@ -731,7 +729,7 @@ contains
           endif
 
           ! if not loaded, then calculate matrix element
-          if(.not.saved_K(ia, jb)) then
+          if(.not. is_saved(ia, jb)) then
             call K_term(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
             cas%mat(ia, jb) = mtxel_vh + mtxel_xc
           end if
@@ -748,17 +746,18 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) then      
         ! output the restart file
-        iunit = io_open(trim(cas%restart_file), action='write', &
+        iunit = io_open(trim(restart_file), action='write', &
           position='append', is_tmp=.true.)
 
         do ia = 1, cas%n_pairs
           do jb = ia, cas%n_pairs
-            if(.not.saved_K(ia, jb)) call write_K_term(cas, iunit, ia, jb)
+            if(.not. is_saved(ia, jb)) call write_K_term(cas, iunit, ia, jb)
           enddo
         enddo
 
         call io_close(iunit)
       endif
+      SAFE_DEALLOCATE_A(is_saved)
 
       POP_SUB(casida_work.casida_get_matrix)
 
@@ -933,15 +932,19 @@ contains
     end subroutine K_term
 
     ! ---------------------------------------------------------
-    subroutine load_saved
+    subroutine load_saved(is_saved, restart_file)
+      logical,          intent(out) :: is_saved(:,:)
+      character(len=*), intent(in)  :: restart_file
+
       integer :: iunit, err
       integer :: ia, jb, ii, aa, is, jj, bb, js
       FLOAT   :: val
 
       PUSH_SUB(casida_work.load_saved)
 
+      is_saved = .false.
       if(mpi_grp_is_root(mpi_world)) then
-        iunit = io_open(trim(cas%restart_file), action='read', &
+        iunit = io_open(trim(restart_file), action='read', &
           status='old', die=.false., is_tmp=.true.)
 
         if( iunit > 0) then
@@ -954,9 +957,9 @@ contains
             
             if(ia > 0 .and. jb > 0) then
               cas%mat(ia, jb) = val
-              saved_K(ia, jb) = .true.
+              is_saved(ia, jb) = .true.
               cas%mat(jb, ia) = val
-              saved_K(jb, ia) = .true.
+              is_saved(jb, ia) = .true.
             endif
           end do
         
@@ -969,7 +972,7 @@ contains
 
       ! if no file found, root has no new information to offer the others
 #ifdef HAVE_MPI
-      call MPI_Bcast(saved_K(1, 1), cas%n_pairs**2, MPI_LOGICAL, 0, mpi_world, mpi_err)
+      call MPI_Bcast(is_saved(1, 1), cas%n_pairs**2, MPI_LOGICAL, 0, mpi_world, mpi_err)
 ! No need to bcast these, since they will be obtained from a reduction
 !      call MPI_Bcast(cas%mat(1, 1), cas%npairs**2, MPI_FLOAT,   0, mpi_world, mpi_err)
 #endif
