@@ -618,7 +618,7 @@ contains
     case(CASIDA_EPS_DIFF)
       call solve_eps_diff()
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
-      call casida_get_matrix(cas%restart_file)
+      call casida_get_matrix(cas%mat, cas%restart_file)
       call solve_casida()
     end select
 
@@ -682,8 +682,9 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine casida_get_matrix(restart_file)
-      character(len=*), intent(in) :: restart_file
+    subroutine casida_get_matrix(matrix, restart_file)
+      FLOAT,            intent(out) :: matrix(:,:)
+      character(len=*), intent(in)  :: restart_file
 
       FLOAT :: temp
       integer :: ia, jb, iunit
@@ -696,7 +697,7 @@ contains
 
       ! load saved matrix elements
       SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
-      call load_saved(is_saved, restart_file)
+      call load_saved(matrix, is_saved, restart_file)
 
       if(cas%type == CASIDA_PETERSILKA) then
         max = cas%n_pairs
@@ -708,7 +709,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
 
       ! only root retains the saved values
-      if(.not.mpi_grp_is_root(mpi_world)) cas%mat = M_ZERO
+      if(.not.mpi_grp_is_root(mpi_world)) matrix = M_ZERO
 
       ! calculate the matrix elements of (v + fxc)
       do jb = 1, cas%n_pairs
@@ -735,9 +736,9 @@ contains
           ! if not loaded, then calculate matrix element
           if(.not. is_saved(ia, jb)) then
             call K_term(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
-            cas%mat(ia, jb) = mtxel_vh + mtxel_xc
+            matrix(ia, jb) = mtxel_vh + mtxel_xc
           end if
-          if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
+          if(jb /= ia) matrix(jb, ia) = matrix(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
         end do
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, max)
       end do
@@ -745,7 +746,7 @@ contains
 
       ! sum all matrix elements
       if(cas%parallel_in_eh_pairs) then
-        call comm_allreduce(cas%mpi_grp%comm, cas%mat)
+        call comm_allreduce(cas%mpi_grp%comm, matrix)
       end if
 
       if(mpi_grp_is_root(mpi_world)) then      
@@ -755,7 +756,7 @@ contains
 
         do ia = 1, cas%n_pairs
           do jb = ia, cas%n_pairs
-            if(.not. is_saved(ia, jb)) call write_K_term(cas, iunit, ia, jb)
+            if(.not. is_saved(ia, jb)) call write_K_term(cas, matrix(ia, jb), iunit, ia, jb)
           enddo
         enddo
 
@@ -932,9 +933,10 @@ contains
     end subroutine K_term
 
     ! ---------------------------------------------------------
-    subroutine load_saved(is_saved, restart_file)
-      logical,          intent(out) :: is_saved(:,:)
-      character(len=*), intent(in)  :: restart_file
+    subroutine load_saved(matrix, is_saved, restart_file)
+      FLOAT,            intent(inout) :: matrix(:,:)
+      logical,          intent(out)   :: is_saved(:,:)
+      character(len=*), intent(in)    :: restart_file
 
       integer :: iunit, err
       integer :: ia, jb, ii, aa, is, jj, bb, js
@@ -956,9 +958,9 @@ contains
             jb = cas%index(jj, bb, js)
             
             if(ia > 0 .and. jb > 0) then
-              cas%mat(ia, jb) = val
+              matrix(ia, jb) = val
               is_saved(ia, jb) = .true.
-              cas%mat(jb, ia) = val
+              matrix(jb, ia) = val
               is_saved(jb, ia) = .true.
             endif
           end do
@@ -1266,8 +1268,9 @@ contains
 
   ! ---------------------------------------------------------
   ! write matrix element to casida_restart file
-  subroutine write_K_term(cas, iunit, ia, jb)
+  subroutine write_K_term(cas, mat_val, iunit, ia, jb)
     type(casida_t), intent(in) :: cas
+    FLOAT,          intent(in) :: mat_val
     integer,        intent(in) :: iunit
     integer,        intent(in) :: ia
     integer,        intent(in) :: jb
@@ -1275,7 +1278,7 @@ contains
     PUSH_SUB(write_K_term)
 
     write(iunit,*) cas%pair(ia)%i, cas%pair(ia)%a, cas%pair(ia)%sigma, &
-                   cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, cas%mat(ia, jb)
+                   cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, mat_val
 
     POP_SUB(write_K_term)
   end subroutine write_K_term
