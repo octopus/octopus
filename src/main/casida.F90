@@ -689,7 +689,7 @@ contains
     subroutine casida_get_matrix()
 
       FLOAT :: temp
-      integer :: ia, jb
+      integer :: ia, jb, iunit
       integer :: max, actual, counter
       type(states_pair_t), pointer :: p, q
       FLOAT :: mtxel_vh, mtxel_xc
@@ -735,7 +735,7 @@ contains
             call K_term(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
             cas%mat(ia, jb) = mtxel_vh + mtxel_xc
           end if
-          if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
+          if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
         end do
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, max)
       end do
@@ -746,6 +746,20 @@ contains
         call comm_allreduce(cas%mpi_grp%comm, cas%mat)
       end if
 
+      if(mpi_grp_is_root(mpi_world)) then      
+        ! output the restart file
+        iunit = io_open(trim(cas%restart_file), action='write', &
+          position='append', is_tmp=.true.)
+
+        do ia = 1, cas%n_pairs
+          do jb = ia, cas%n_pairs
+            if(.not.saved_K(ia, jb)) call write_K_term(cas, iunit, ia, jb)
+          enddo
+        enddo
+
+        call io_close(iunit)
+      endif
+
       POP_SUB(casida_work.casida_get_matrix)
 
     end subroutine casida_get_matrix
@@ -755,7 +769,6 @@ contains
 
       FLOAT :: temp
       integer :: ia, jb
-      integer :: iunit
       type(states_pair_t), pointer :: p, q
 
       PUSH_SUB(casida_work.solve_casida)
@@ -766,17 +779,13 @@ contains
         ! complete progress bar
         if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
-        ! complete the matrix and output the restart file
-        iunit = io_open(trim(cas%restart_file), action='write', &
-          position='append', is_tmp=.true.)
-
+        ! complete the matrix
         do ia = 1, cas%n_pairs
           p => cas%pair(ia)
           temp = st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)
             
           do jb = ia, cas%n_pairs
             q => cas%pair(jb)
-            if(.not.saved_K(ia, jb)) call write_K_term(cas, iunit, ia, jb)
               
             if(cas%type == CASIDA_CASIDA) then
               cas%mat(ia, jb) = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
@@ -797,7 +806,6 @@ contains
             cas%mat(ia, ia) = cas%mat(ia, ia) + temp
           endif
         end do
-        call io_close(iunit)
 
         message(1) = "Info: Diagonalizing matrix for resonance energies."
         call messages_info(1)
