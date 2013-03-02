@@ -368,11 +368,19 @@ contains
 
     cas%restart_dir = trim(tmpdir)//'casida'
     cas%fromScratch = fromScratch
-    if(cas%fromScratch) call loct_rm(trim(cas%restart_dir))
     call io_mkdir(trim(cas%restart_dir))
 
-    ! First, print the differences between KS eigenvalues (first approximation to the
-    ! excitation energies, or rather, to the JDOS).
+    if(cas%fromScratch) then ! remove old restart files
+      if(cas%triplet) then
+        call loct_rm(trim(cas%restart_dir)//'/kernel_triplet')
+        if(cas%calc_forces) call loct_rm(trim(cas%restart_dir)//'/forces_triplet')
+      else
+        call loct_rm(trim(cas%restart_dir)//'/kernel')
+        if(cas%calc_forces) call loct_rm(trim(cas%restart_dir)//'/forces')
+      endif
+    endif
+
+    ! First, print the differences between KS eigenvalues (first approximation to the excitation energies).
     if(iand(theorylevel, CASIDA_EPS_DIFF) /= 0) then
       message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
       call messages_info(1)
