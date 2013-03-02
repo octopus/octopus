@@ -359,9 +359,10 @@ contains
     !%Section Linear Response::Casida
     !%Default false
     !%Description
-    !% Enable calculation of excited-state forces. Requires previous <tt>vib_modes</tt> calculation.
+    !% (Experimental) Enable calculation of excited-state forces. Requires previous <tt>vib_modes</tt> calculation.
     !%End
     call parse_logical(datasets_check('CasidaCalcForces'), .false., cas%calc_forces)
+    if(cas%calc_forces) call messages_experimental("Excited-state forces calculation")
 
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, sys%mc)
@@ -702,7 +703,7 @@ contains
       integer :: max, actual, counter
       type(states_pair_t), pointer :: p, q
       FLOAT :: mtxel_vh, mtxel_xc
-      logical, allocatable :: is_saved(:, :) ! which matrix elements have been loaded
+      logical, allocatable :: is_saved(:, :)
 
       PUSH_SUB(casida_work.casida_get_matrix)
 
@@ -720,7 +721,13 @@ contains
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
 
       ! only root retains the saved values
-      if(.not.mpi_grp_is_root(mpi_world)) matrix = M_ZERO
+      if(.not. mpi_grp_is_root(mpi_world)) matrix = M_ZERO
+
+      ! FIXME: this temporary measure destroys restart data after Petersilka
+      if(cas%type == CASIDA_PETERSILKA) then
+        matrix = M_ZERO
+        is_saved = .false.
+      endif
 
       ! calculate the matrix elements of (v + fxc)
       do jb = 1, cas%n_pairs
@@ -760,7 +767,7 @@ contains
         call comm_allreduce(cas%mpi_grp%comm, matrix)
       end if
 
-      if(mpi_grp_is_root(mpi_world)) then      
+      if(mpi_grp_is_root(mpi_world) .or. cas%type /= CASIDA_PETERSILKA) then
         ! output the restart file
         iunit = io_open(trim(restart_file), action='write', &
           position='append', is_tmp=.true.)

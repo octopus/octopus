@@ -69,15 +69,15 @@ match ; 1st eps-diff f ; GREP(casida/eps_diff, '  5   6', 73) ; 0.0
 match ; 7th eps-diff f ; GREP(casida/eps_diff, '  5   8', 73) ; 0.0
 match ;12th eps-diff f ; GREP(casida/eps_diff, '  5  11', 73) ; 8.75319608E-02
 
-match ; 1st Petersilka E ; LINE(casida/petersilka,  2,  9); 3.40770458E-01
-match ; 2nd Petersilka E ; LINE(casida/petersilka,  3,  9); 3.40770458E-01
+match ; 1st Petersilka E ; LINE(casida/petersilka,  2,  9); 3.43092969E-01
+match ; 2nd Petersilka E ; LINE(casida/petersilka,  3,  9); 3.43092969E-01
 match ; 3rd Petersilka E ; LINE(casida/petersilka,  4,  9); 3.55296641E-01
-match ; 9th Petersilka E ; LINE(casida/petersilka, 10,  9); 4.27868251E-01
+match ; 9th Petersilka E ; LINE(casida/petersilka, 10,  9); 4.29311884E-01
 
 match ; 1st Petersilka f ; LINE(casida/petersilka,  2, 73); 0.0
 match ; 2nd Petersilka f ; LINE(casida/petersilka,  3, 73); 0.0
-match ; 7th Petersilka f ; LINE(casida/petersilka,  8, 73); 4.69514074E-02
-match ; 9th Petersilka f ; LINE(casida/petersilka, 10, 73); 1.32776963E-01
+match ; 7th Petersilka f ; LINE(casida/petersilka,  8, 73); 5.03623198E-02
+match ; 9th Petersilka f ; LINE(casida/petersilka, 10, 73); 8.74469297E-02
 
 match ; 1st Casida E ; LINE(casida/casida, 2, 7) ; 3.37393747E-01
 match ; 2nd Casida E ; LINE(casida/casida, 4, 7) ; 3.55373946E-01
@@ -98,10 +98,10 @@ match ; eps_diff spectrum y    ; LINE(casida/spectrum.eps_diff, 532, 29);  2.103
 match ; eps_diff spectrum z    ; LINE(casida/spectrum.eps_diff, 532, 43);  2.103199E+00
 match ; eps_diff spectrum tot  ; LINE(casida/spectrum.eps_diff, 532, 57);  4.277532E+00
 
-match ; Petersilka spectrum x   ; LINE(casida/spectrum.petersilka, 532, 15);  1.926204E-01
-match ; Petersilka spectrum y   ; LINE(casida/spectrum.petersilka, 532, 29);  6.968953E+00
-match ; Petersilka spectrum z   ; LINE(casida/spectrum.petersilka, 532, 43);  6.968953E+00
-match ; Petersilka spectrum tot ; LINE(casida/spectrum.petersilka, 532, 57);  1.413053E+01
+match ; Petersilka spectrum x   ; LINE(casida/spectrum.petersilka, 532, 15);  5.948958E-02
+match ; Petersilka spectrum y   ; LINE(casida/spectrum.petersilka, 532, 29);  6.486833E+00
+match ; Petersilka spectrum z   ; LINE(casida/spectrum.petersilka, 532, 43);  6.486833E+00
+match ; Petersilka spectrum tot ; LINE(casida/spectrum.petersilka, 532, 57);  1.303316E+01
 
 match ; Casida spectrum x    ; LINE(casida/spectrum.casida, 532, 15);  2.166247E-01
 match ; Casida spectrum y    ; LINE(casida/spectrum.casida, 532, 29);  5.754486E+00
