@@ -10,12 +10,8 @@ Enabled    : Yes
 
 Input: 01-harmonic-oscillator.independent.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20)    ; 2.00000000      7.438546E-13
-#match ; 3rd state   ; GREP(static/info, '   3   --     ', 12) ; 3.000000       0.000000       0.000000
+match ; 3rd state   ; GREP(static/info, '   3   --     ', 12) ; 5.000000
 
-#Input: 01-harmonic-oscillator.complex-lda.inp
-#match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 6.00112385E+00
-
-#      Total       =         2.08113393      1.876471E-07
-
-
-#2.08113548E+00
+Input: 01-harmonic-oscillator.complex-lda.inp
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 2.0811
+match ; 3rd state    ; GREP(static/info, '   3   --     ', 12) ; 5.7692
