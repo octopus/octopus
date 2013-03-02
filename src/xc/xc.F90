@@ -30,6 +30,7 @@ module xc_m
   use io_m
   use io_function_m
   use lalg_basic_m
+  use lalg_adv_m
   use mesh_m
   use mesh_function_m
   use messages_m

@@ -1,3 +1,4 @@
+
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -279,17 +280,19 @@ end subroutine zgeneigensolve
 ! ---------------------------------------------------------
 !> Computes all the eigenvalues and the right (left) eigenvectors of a complex
 !! (non hermitian) eigenproblem, of the form  A*x=(lambda)*x
-subroutine zeigensolve_nonh(n, a, e, err_code, side)
+subroutine zeigensolve_nonh(n, a, e, err_code, side, sort_eigenvectors)
   integer,           intent(in)      :: n
   CMPLX,             intent(inout)   :: a(:, :)   !< (n,n)
   CMPLX,             intent(out)     :: e(:)     !< (n)
   integer, optional, intent(out)     :: err_code
   character(1), optional, intent(in) :: side     !< which eigenvectors ('L' or 'R')
+  logical, optional, intent(in)      :: sort_eigenvectors
 
-  integer            :: info, lwork
-  FLOAT, allocatable :: rwork(:)
-  CMPLX, allocatable :: work(:), vl(:, :), vr(:, :)
+  integer            :: info, lwork, i
+  FLOAT, allocatable :: rwork(:), re(:)
+  CMPLX, allocatable :: work(:), vl(:, :), vr(:, :), e_copy(:), a_copy(:, :)
   character(1)       :: side_
+  integer, allocatable :: ind(:)
 
   PUSH_SUB(zeigensolve_nonh)
 
@@ -345,6 +348,27 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side)
   end if
   if(present(err_code)) then
     err_code = info
+  end if
+
+  if(present(sort_eigenvectors)) then
+    if(sort_eigenvectors) then
+      SAFE_ALLOCATE(re(n))
+      SAFE_ALLOCATE(ind(n))
+      SAFE_ALLOCATE(e_copy(n))
+      SAFE_ALLOCATE(a_copy(n, n))
+      re = real(e, REAL_PRECISION)
+      e_copy = e
+      a_copy = a
+      call sort(re, ind)
+      forall(i = 1:n)
+        e(i) = e_copy(ind(i))
+        a(1:n, i) = a_copy(1:n, ind(i))
+      end forall
+      SAFE_DEALLOCATE_A(e_copy)
+      SAFE_DEALLOCATE_A(a_copy)
+      SAFE_DEALLOCATE_A(re)
+      SAFE_DEALLOCATE_A(ind)
+    end if
   end if
 
   POP_SUB(zeigensolve_nonh)

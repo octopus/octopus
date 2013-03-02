@@ -30,11 +30,11 @@ libmath_a_SOURCES =                      \
 	fftw.F90                         \
 	spline_filter.F90                \
 	gauss_legendre.F90               \
+	loct_math.F90                    \
 	lalg_basic.F90                   \
+	math.F90                         \
 	lalg_adv.F90                     \
 	lapack.F90                       \
-	loct_math.F90                    \
-	math.F90                         \
 	mix.F90                          \
 	oct_gsl_f.c                      \
 	oct_gsl_min_f.c                  \
@@ -90,10 +90,10 @@ nfft.o : nfft.F90 nfft_inc.F90 nfft_f.o lalg_basic.o fftw.o loct_math.o
 spline_filter.o: spline_filter.F90 splines.o
 gauss_legendre.o : gauss_legendre.F90 
 lalg_basic.o : lalg_basic.F90 lalg_basic_blas_inc.F90 blas.o 
-lalg_adv.o : lalg_adv.F90 lalg_adv_lapack_inc.F90 lalg_adv_scalapack_inc.F90 lapack.o scalapack.o
+lalg_adv.o : lalg_adv.F90 lalg_adv_lapack_inc.F90 lalg_adv_scalapack_inc.F90 lapack.o scalapack.o math.o
 lapack.o : lapack.F90
 loct_math.o : loct_math.F90
-math.o : math.F90 math_inc.F90 lalg_basic.o lalg_adv.o loct_math.o blas.o
+math.o : math.F90 math_inc.F90 lalg_basic.o loct_math.o blas.o
 mix.o : mix.F90 mix_inc.F90 lalg_basic.o lalg_adv.o
 oct_gsl_f.o : oct_gsl_f.c
 ode_solver.o : ode_solver.F90 ode_solver_inc.F90 
