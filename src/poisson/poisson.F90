@@ -517,7 +517,7 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine zpoisson_solve_1(this, pot, rho, all_nodes)
+  subroutine zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes)
     type(poisson_t),      intent(inout) :: this
     CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
     CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
@@ -529,7 +529,7 @@ contains
 
     der => this%der
 
-    PUSH_SUB(zpoisson_solve_1)
+    PUSH_SUB(zpoisson_solve_real_and_imag_separately)
 
     if(present(all_nodes)) then
       all_nodes_value = all_nodes
@@ -537,26 +537,28 @@ contains
       all_nodes_value = this%all_nodes_default
     end if
 
-    SAFE_ALLOCATE(aux1(1:der%mesh%np))
-    SAFE_ALLOCATE(aux2(1:der%mesh%np))
 
-    ! first the real part
-    aux1(1:der%mesh%np) = real(rho(1:der%mesh%np))
-    aux2(1:der%mesh%np) = real(pot(1:der%mesh%np))
-    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
-    pot(1:der%mesh%np)  = aux2(1:der%mesh%np)
+  !if((this%method.eq.POISSON_DIRECT_SUM).and.(this%der%mesh%sb%dim.eq.1).and.present(theta)) then
+  !  call poisson1d_solve(this, pot, rho, theta)
+  !else
+  SAFE_ALLOCATE(aux1(1:der%mesh%np))
+  SAFE_ALLOCATE(aux2(1:der%mesh%np))
+  ! first the real part
+  aux1(1:der%mesh%np) = real(rho(1:der%mesh%np))
+  aux2(1:der%mesh%np) = real(pot(1:der%mesh%np))
+  call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
+  pot(1:der%mesh%np)  = aux2(1:der%mesh%np)
+  
+  ! now the imaginary part
+  aux1(1:der%mesh%np) = aimag(rho(1:der%mesh%np))
+  aux2(1:der%mesh%np) = aimag(pot(1:der%mesh%np))
+  call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
+  pot(1:der%mesh%np) = pot(1:der%mesh%np) + M_zI*aux2(1:der%mesh%np)
 
-    ! now the imaginary part
-    aux1(1:der%mesh%np) = aimag(rho(1:der%mesh%np))
-    aux2(1:der%mesh%np) = aimag(pot(1:der%mesh%np))
-    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
-    pot(1:der%mesh%np) = pot(1:der%mesh%np) + M_zI*aux2(1:der%mesh%np)
-
-    SAFE_DEALLOCATE_A(aux1)
-    SAFE_DEALLOCATE_A(aux2)
-
-    POP_SUB(zpoisson_solve_1)
-  end subroutine zpoisson_solve_1
+  SAFE_DEALLOCATE_A(aux1)
+  SAFE_DEALLOCATE_A(aux2)
+  POP_SUB(zpoisson_solve_real_and_imag_separately)
+  end subroutine zpoisson_solve_real_and_imag_separately
 
   !-----------------------------------------------------------------
 
@@ -586,13 +588,18 @@ contains
     end if
 
     ASSERT(this%method.ne.-99)
-      
-    if(this%der%mesh%sb%dim == 1 .and. cmplxscl .and. this%method == POISSON_FFT) then
-      call messages_not_implemented('Complex scaled 1D soft coulomb and FFT poisson solver')
-    end if
 
-    call zpoisson_solve_1(this, pot, rho, all_nodes)
-    if(cmplxscl) pot = pot * exp(- M_zI * theta_)
+
+    if(this%der%mesh%sb%dim == 1 .and. cmplxscl) then
+      if(this%method == POISSON_DIRECT_SUM) then
+        call zpoisson1d_solve(this, pot, rho, theta = theta)
+      else
+        call messages_not_implemented('Complex scaled 1D soft Coulomb with Poisson solver other than direct_sum')
+      end if
+    else
+      call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes)
+    end if
+    if(cmplxscl) pot = pot * exp(-M_zI * theta_)
 
     POP_SUB(zpoisson_solve)
   end subroutine zpoisson_solve
@@ -678,7 +685,7 @@ contains
     case(POISSON_DIRECT_SUM)
       select case(this%der%mesh%sb%dim)
       case(1)
-        call poisson1d_solve(this, pot, rho)
+        call dpoisson1d_solve(this, pot, rho)
       case(2)
         call poisson_solve_direct(this, pot, rho)
       case(3)
@@ -1117,16 +1124,19 @@ contains
 
   end function poisson_is_async
 
-#include "solver_1d_inc.F90"
+! 1d solver´s init function is datatype independent, but the solve function must be included separately as real/complex
+#include "solver_1d_init_inc.F90"
 #include "solver_2d_inc.F90"
 #include "solver_3d_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
 #include "poisson_inc.F90"
+#include "solver_1d_solve_inc.F90"
 #include "undef.F90"
 #include "complex.F90"
 #include "poisson_inc.F90"
+#include "solver_1d_solve_inc.F90"
 
 end module poisson_m
 

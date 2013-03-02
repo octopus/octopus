@@ -15,51 +15,39 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id$
+!! $Id: solver_1d_inc.F90 9854 2013-01-19 23:28:12Z dstrubbe $
 
-
-!-----------------------------------------------------------------
-subroutine poisson1d_init(this)
-  type(poisson_t), intent(inout) :: this
-
-  PUSH_SUB(poisson1d_init)
-
-  !%Variable Poisson1DSoftCoulomParam
-  !%Type float
-  !%Default 1.0 bohr
-  !%Section Hamiltonian::Poisson
-  !%Description
-  !% When <tt>Dimensions = 1</tt>, to prevent divergence, the Coulomb interaction treated by the Poisson
-  !% solver is not 1/r but 1/sqrt(a^2 + r^2), where this variable sets the value of "a".
-  !%End
-  call parse_float(datasets_check('Poisson1DSoftCoulombParam'), &
-    M_ONE, this%poisson_soft_coulomb_param, units_inp%length)
-
-  if(this%method == POISSON_FFT) then
-    call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
-      soft_coulb_param = this%poisson_soft_coulomb_param)
-  end if
-
-  POP_SUB(poisson1d_init)
-end subroutine poisson1d_init
-
-!-----------------------------------------------------------------
-
-subroutine poisson1D_solve(this, pot, rho)
+subroutine X(poisson1D_solve)(this, pot, rho, theta)
   type(poisson_t), intent(in)  :: this
-  FLOAT,           intent(out) :: pot(:)
-  FLOAT,           intent(in)  :: rho(:)
+  R_TYPE,          intent(out) :: pot(:)
+  R_TYPE,          intent(in)  :: rho(:)
+  FLOAT, optional, intent(in)  :: theta !< Complex scaling angle
+  ! Passing theta is not needed for a normal Poisson solver due to linearity,
+  ! which makes it possible to solve separately for real/imaginary parts.
+  ! But the soft-Coulomb kernel makes it necessary.
+  !
+  ! Note that we don't divide by e^(i theta) here, we do it "outside" as with the other Poisson solvers.
 
-  integer  :: ip, jp
-  FLOAT    :: xx, yy
+  integer             :: ip, jp
+  FLOAT               :: xx, yy
+  logical             :: cmplxscl
+  R_TYPE              :: soft_coulomb_param_squared
 #ifdef HAVE_MPI
-  FLOAT    :: tmp, xg(1:MAX_DIM)
-  FLOAT, allocatable :: pvec(:)
+  R_TYPE              :: tmp
+  FLOAT               :: xg(1:MAX_DIM)
+  R_TYPE, allocatable :: pvec(:)
 #endif
 
   ASSERT(this%method == -1)
 
-  PUSH_SUB(poisson1D_solve)
+  PUSH_SUB(X(poisson1D_solve))
+
+  soft_coulomb_param_squared = this%poisson_soft_coulomb_param**2
+  if(present(theta)) then
+    ! This will discard imaginary part for R_TYPE real.
+    ! But theta won't be there unless we already use complex scaling, so only cmplx is relevant.
+    soft_coulomb_param_squared = soft_coulomb_param_squared * exp(-M_TWO * M_zI * theta)
+  end if
 
 #ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then
@@ -71,9 +59,9 @@ subroutine poisson1D_solve(this, pot, rho)
       xx = xg(1)
       do jp = 1, this%der%mesh%np
         yy = this%der%mesh%x(jp, 1)
-        pvec(jp) = rho(jp)/sqrt(this%poisson_soft_coulomb_param**2 + (xx-yy)**2)
+        pvec(jp) = rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)
       end do
-      tmp = dmf_integrate(this%der%mesh, pvec)
+      tmp = X(mf_integrate)(this%der%mesh, pvec)
       if (this%der%mesh%vp%part(ip).eq.this%der%mesh%vp%partno) then
         pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
       end if
@@ -89,9 +77,9 @@ subroutine poisson1D_solve(this, pot, rho)
       do jp = 1, this%der%mesh%np
         yy = this%der%mesh%x(jp, 1)
         if(this%der%mesh%use_curvilinear) then
-          pot(ip) = pot(ip) + rho(jp)/sqrt(this%poisson_soft_coulomb_param**2 + (xx-yy)**2)*this%der%mesh%vol_pp(jp)
+          pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)*this%der%mesh%vol_pp(jp)
         else
-          pot(ip) = pot(ip) + rho(jp)/sqrt(this%poisson_soft_coulomb_param**2 + (xx-yy)**2)
+          pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)
         endif
       end do
     end do
@@ -100,9 +88,8 @@ subroutine poisson1D_solve(this, pot, rho)
   end if
 #endif
 
-  POP_SUB(poisson1D_solve)
-end subroutine poisson1D_solve
-
+  POP_SUB(X(poisson1D_solve))
+end subroutine X(poisson1D_solve)
 
 !! Local Variables:
 !! mode: f90
