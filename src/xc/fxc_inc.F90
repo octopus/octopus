@@ -210,12 +210,12 @@ contains
               do delta = 1, 2
                 do i = 1, 2
                   zfxc(alpha, beta, gamma, delta, ip) = zfxc(alpha, beta, gamma, delta, ip) + &
-                    zd2nidnalphabetadngammadelta(zeigref_(1:2, i, ip), mmatrix(:, :, i, ip), beta, alpha, delta, gamma) * &
+                    lalg_zd2ni(zeigref_(1:2, i, ip), mmatrix(:, :, i, ip), beta, alpha, delta, gamma) * &
                     vdedd(ip, i)
                   do j = 1, 2
                     zfxc(alpha, beta, gamma, delta, ip) = zfxc(alpha, beta, gamma, delta, ip) + &
-                       zdnidnalphabeta(zeigref_(1:2, i, ip), beta, alpha) * &
-                       zdnidnalphabeta(zeigref_(1:2, j, ip), delta, gamma) * localfxc(j, i)                       
+                       lalg_zdni(zeigref_(1:2, i, ip), beta, alpha) * &
+                       lalg_zdni(zeigref_(1:2, j, ip), delta, gamma) * localfxc(j, i)
                   end do
                 end do
               end do
@@ -227,25 +227,6 @@ contains
 
     POP_SUB(xc_get_fxc.lda_process)
   end subroutine lda_process
-
-  CMPLX function zdnidnalphabeta(eigenvec, alpha, beta)
-    integer, intent(in) :: alpha, beta
-    CMPLX :: eigenvec(2)
-    zdnidnalphabeta = conjg(eigenvec(alpha)) * eigenvec(beta)
-  end function zdnidnalphabeta
-
-  CMPLX function zduialphadngammadelta(eigenvec, mmatrix, alpha, gamma, delta)
-    integer, intent(in) :: alpha, gamma, delta
-    CMPLX :: eigenvec(2), mmatrix(2, 2)
-    zduialphadngammadelta = mmatrix(alpha, gamma) * eigenvec(delta)
-  end function zduialphadngammadelta
-
-  CMPLX function zd2nidnalphabetadngammadelta(eigenvec, mmatrix, alpha, beta, gamma, delta)
-    integer, intent(in) :: alpha, beta, gamma, delta
-    CMPLX :: eigenvec(2), mmatrix(2, 2)
-    zd2nidnalphabetadngammadelta  = conjg(mmatrix(alpha, delta) * eigenvec(gamma)) * eigenvec(beta) + &
-                                    conjg(eigenvec(alpha)) * mmatrix(beta, gamma) * eigenvec(delta)
-  end function zd2nidnalphabetadngammadelta
 
 end subroutine xc_get_fxc
 

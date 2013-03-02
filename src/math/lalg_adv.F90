@@ -52,7 +52,10 @@ module lalg_adv_m
     zlalg_phi,                    &
     lalg_zpseudoinverse,          &
     lalg_zeigenderivatives,       &
-    lalg_check_zeigenderivatives
+    lalg_check_zeigenderivatives, &
+    lalg_zdni,                    &
+    lalg_zduialpha,               &
+    lalg_zd2ni
 
   type(profile_t), save :: cholesky_prof, eigensolver_prof
 
@@ -275,11 +278,15 @@ contains
 
 
   !>-------------------------------------------------
-  !!
-  !! Computes the necessary ingredients to compute,
+  !! Computes the necessary ingredients to obtain,
   !! later, the first and second derivatives of the
   !! eigenvalues of a Hermitean complex matrix zmat,
   !! and the first derivatives of the eigenvectors.
+  !!
+  !! This follows the scheme of J. R. Magnus,
+  !! Econometric Theory 1, 179 (1985), restricted to
+  !! Hermitean matrices, although probably this can be
+  !! found in other sources. 
   !!---------------------------------------------
   subroutine lalg_zeigenderivatives(n, mat, zeigenvec, zeigenval, zmat)
     integer, intent(in) :: n
@@ -293,6 +300,8 @@ contains
     CMPLX, allocatable :: lambdaminusdm(:, :)
     CMPLX, allocatable :: ilambdaminusdm(:, :)
     CMPLX, allocatable :: unit(:, :)
+
+    PUSH_SUB(lalg_zeigenderivatives)
 
     SAFE_ALLOCATE(unit(n, n))
     SAFE_ALLOCATE(knaught(n, n))
@@ -321,11 +330,11 @@ contains
     SAFE_DEALLOCATE_A(knaught)
     SAFE_DEALLOCATE_A(lambdaminusdm)
     SAFE_DEALLOCATE_A(ilambdaminusdm)
+    POP_SUB(lalg_zeigenderivatives)
   end subroutine lalg_zeigenderivatives
 
 
   !>-------------------------------------------------
-  !!
   !! Computes the Moore-Penrose pseudoinverse of a
   !! complex matrix.
   !!---------------------------------------------
@@ -338,6 +347,8 @@ contains
     CMPLX, allocatable :: u(:, :), vt(:, :), sigma(:, :)
     FLOAT, allocatable :: sg_values(:)
 
+    PUSH_SUB(lalg_zpseudoinverse)
+
     SAFE_ALLOCATE(u(n, n)) 
     SAFE_ALLOCATE(vt(n, n)) 
     SAFE_ALLOCATE(sigma(n, n)) 
@@ -348,7 +359,7 @@ contains
 
     sigma = M_z0
     do i = 1, n
-      if(abs(sg_values(i)) < 1.0e-12) then
+      if(abs(sg_values(i)) < 1.0e-12 * maxval(abs(sg_values))) then
         sigma(i, i) = M_z0
       else
         sigma(i, i) = M_z1 / sg_values(i)
@@ -361,7 +372,13 @@ contains
 
     ! Check if we truly have a pseudoinverse
     vt = matmul(mat, matmul(imat, mat)) - mat
-    if( maxval(abs(vt)) > 1.0e-15) then
+    if( maxval(abs(vt)) > 1.0e-10 * maxval(abs(mat))) then
+      write(*, *) maxval(abs(vt))
+      write(*, *) vt
+      write(*, *)
+      write(*, *) 1.0e-10 * maxval(abs(mat))
+      write(*, *) maxval(abs(vt)) > 1.0e-10 * maxval(abs(mat))
+      write(*, *) mat
       write(message(1), '(a)') 'Pseudoinverse failed.'
       call messages_fatal(1)
     end if
@@ -370,9 +387,16 @@ contains
     SAFE_DEALLOCATE_A(vt) 
     SAFE_DEALLOCATE_A(sigma)
     SAFE_DEALLOCATE_A(sg_values)
+    POP_SUB(lalg_zpseudoinverse)
   end subroutine lalg_zpseudoinverse
 
 
+  !>-------------------------------------------------
+  !! The purpose of this routine is to check that "lalg_zeigenderivatives"
+  !! is working properly, and therefore, it is not really called anywhere
+  !! in the code. It is here only for debugging purposes (perhaps it will
+  !! disappear in the future...)
+  !!-------------------------------------------------
   subroutine lalg_check_zeigenderivatives(n, mat)
     integer, intent(in) :: n
     CMPLX, intent(in) :: mat(:, :)
@@ -381,6 +405,8 @@ contains
     CMPLX :: deltah, zuder_direct, zder_direct, zuder_directplus, zuder_directminus
     CMPLX, allocatable :: zeigenvec(:, :), dm(:, :), zeigref_(:, :), zeigenval(:), mmatrix(:, :, :)
     CMPLX, allocatable :: zeigplus(:), zeigminus(:), zeig0(:), zeigplusminus(:), zeigminusplus(:)
+
+    PUSH_SUB(lalg_check_zeigenderivatives)
 
     SAFE_ALLOCATE(zeigenvec(n, n))
     SAFE_ALLOCATE(dm(n, n))
@@ -403,8 +429,8 @@ contains
     !deltah = M_z1 * maxval(abs(dm)) * CNST(0.001)
     do alpha = 1, n
       do beta = 1, n
-        zder_direct = zdnidnalphabeta(zeigref_(:, 1), alpha, beta)
-        zuder_direct = zduialphadngammadelta(zeigref_(:, 2), mmatrix(:, :, 2), 2, alpha, beta)
+        zder_direct = lalg_zdni(zeigref_(:, 2), alpha, beta)
+        zuder_direct = lalg_zduialpha(zeigref_(:, 2), mmatrix(:, :, 2), 2, alpha, beta)
 
         zeigenvec = dm
         zeigenvec(alpha, beta) = zeigenvec(alpha, beta) + deltah
@@ -427,7 +453,7 @@ contains
         do gamma = 1, n
           do delta = 1, n
             if(alpha.eq.gamma .and. beta.eq.delta) then
-               zder_direct = zd2nidnalphabetadngammadelta(zeigref_(:, 1), mmatrix(:, :, 1), alpha, beta, gamma, delta)
+               zder_direct = lalg_zd2ni(zeigref_(:, 1), mmatrix(:, :, 1), alpha, beta, gamma, delta)
 
                zeigenvec = dm
                call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeig0)
@@ -443,7 +469,7 @@ contains
                write(*, '(4i1,4f24.12)') alpha, beta, gamma, delta, &
                  zder_direct, (zeigplus(1) + zeigminus(1) - M_TWO*zeig0(1))/(deltah**2)
             else
-               zder_direct = zd2nidnalphabetadngammadelta(zeigref_(:, 1), mmatrix(:, :, 1), alpha, beta, gamma, delta)
+               zder_direct = lalg_zd2ni(zeigref_(:, 1), mmatrix(:, :, 1), alpha, beta, gamma, delta)
 
                zeigenvec = dm
                zeigenvec(alpha, beta) = zeigenvec(alpha, beta) + deltah
@@ -476,7 +502,6 @@ contains
       end do
     end do
 
-
     SAFE_DEALLOCATE_A(zeigenval)
     SAFE_DEALLOCATE_A(mmatrix)
     SAFE_DEALLOCATE_A(zeigenvec)
@@ -487,27 +512,27 @@ contains
     SAFE_DEALLOCATE_A(zeig0)
     SAFE_DEALLOCATE_A(zeigplusminus)
     SAFE_DEALLOCATE_A(zeigminusplus)
-
+    POP_SUB(lalg_check_zeigenderivatives)
   end subroutine lalg_check_zeigenderivatives
 
-  CMPLX function zdnidnalphabeta(eigenvec, alpha, beta)
+  CMPLX function lalg_zdni(eigenvec, alpha, beta)
     integer, intent(in) :: alpha, beta
     CMPLX :: eigenvec(2)
-    zdnidnalphabeta = conjg(eigenvec(alpha)) * eigenvec(beta)
-  end function zdnidnalphabeta
+    lalg_zdni = conjg(eigenvec(alpha)) * eigenvec(beta)
+  end function lalg_zdni
 
-  CMPLX function zduialphadngammadelta(eigenvec, mmatrix, alpha, gamma, delta)
+  CMPLX function lalg_zduialpha(eigenvec, mmatrix, alpha, gamma, delta)
     integer, intent(in) :: alpha, gamma, delta
     CMPLX :: eigenvec(2), mmatrix(2, 2)
-    zduialphadngammadelta = mmatrix(alpha, gamma) * eigenvec(delta)
-  end function zduialphadngammadelta
+    lalg_zduialpha = mmatrix(alpha, gamma) * eigenvec(delta)
+  end function lalg_zduialpha
 
-  CMPLX function zd2nidnalphabetadngammadelta(eigenvec, mmatrix, alpha, beta, gamma, delta)
+  CMPLX function lalg_zd2ni(eigenvec, mmatrix, alpha, beta, gamma, delta)
     integer, intent(in) :: alpha, beta, gamma, delta
     CMPLX :: eigenvec(2), mmatrix(2, 2)
-    zd2nidnalphabetadngammadelta  = conjg(mmatrix(alpha, delta) * eigenvec(gamma)) * eigenvec(beta) + &
-                                    conjg(eigenvec(alpha)) * mmatrix(beta, gamma) * eigenvec(delta)
-  end function zd2nidnalphabetadngammadelta
+    lalg_zd2ni  = conjg(mmatrix(alpha, delta) * eigenvec(gamma)) * eigenvec(beta) + &
+                  conjg(eigenvec(alpha)) * mmatrix(beta, gamma) * eigenvec(delta)
+  end function lalg_zd2ni
 
 #ifdef HAVE_LAPACK
 #include "lalg_adv_lapack_inc.F90"
