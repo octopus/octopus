@@ -71,8 +71,6 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 
     call X(states_trsm)(st, mesh, ik, ss)
 
-    call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
-
     SAFE_DEALLOCATE_A(ss)
   case(ORTH_PAR_GS)
     call par_gs()
@@ -438,7 +436,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_trsm for spinors')
 
 #ifdef HAVE_OPENCL
-    block_size = 4000
+    block_size = batch_points_block_size(st%psib(st%block_start, ik))
 
     call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
@@ -1245,13 +1243,13 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_rotate for spinors')
 #ifdef HAVE_OPENCL
-    block_size = 4000
-
-    call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-    call opencl_create_buffer(psinew_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    block_size = batch_points_block_size(st%psib(st%block_start, ik))
 
     call opencl_create_buffer(uu_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
     call opencl_write_buffer(uu_buffer, product(ubound(uu)), uu)
+
+    call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call opencl_create_buffer(psinew_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1406,7 +1404,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
     ! we need to use a temporary array
 
-    block_size = 4000
+    block_size = batch_points_block_size(st%psib(st%block_start, ik))
 
     call opencl_create_buffer(psi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
@@ -1423,7 +1421,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 #else
       call clAmdblasZherkEx &
 #endif
-        (order = clAmdBlasColumnMajor, uplo = clAmdBlasUpper, transA = clAmdBlasNoTrans, &
+      (order = clAmdBlasColumnMajor, uplo = clAmdBlasUpper, transA = clAmdBlasNoTrans, &
         N = int(st%nst, 8), K = int(size, 8), &
         alpha = real(mesh%volume_element, 8), &
         A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
@@ -1434,9 +1432,9 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
     end do
 
-    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*(st%nst - CNST(1.0))*mesh%np)
-
     call opencl_release_buffer(psi_buffer)
+
+    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*(st%nst - CNST(1.0))*mesh%np)
 
     call opencl_read_buffer(overlap_buffer, st%nst*st%nst, overlap)
 

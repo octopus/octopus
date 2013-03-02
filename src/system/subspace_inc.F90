@@ -320,7 +320,7 @@ subroutine X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
     else
       ! we have to copy the blocks to a temporary array
 
-      block_size = 4000
+      block_size = batch_points_block_size(st%psib(st%block_start, ik))
 
       call opencl_create_buffer(psi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
       call opencl_create_buffer(hpsi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
@@ -338,7 +338,7 @@ subroutine X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
           M = int(st%nst, 8), N = int(st%nst, 8), K = int(size, 8), &
           alpha = R_TOTYPE(der%mesh%volume_element), &
           A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
-          B = hpsi_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), &
+          B = hpsi_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), & 
           C = hmss_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
           CommandQueue = opencl%command_queue, status = ierr)
         if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXgemmEx')

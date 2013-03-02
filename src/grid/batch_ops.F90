@@ -53,7 +53,8 @@ module batch_ops_m
     batch_set_state,                &
     batch_get_state,                &
     batch_get_points,               &
-    batch_set_points
+    batch_set_points,               &
+    batch_points_block_size
 
   interface batch_set
     module procedure dbatch_set
@@ -301,6 +302,16 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
 
   POP_SUB(batch_set_points_cl)
 end subroutine batch_set_points_cl
+
+! -------------------------
+
+integer pure function batch_points_block_size(this) result(block_size)
+  type(batch_t),       intent(in)    :: this
+  
+  block_size = 100000
+
+end function batch_points_block_size
+
 
 #include "real.F90"
 #include "batch_ops_inc.F90"
