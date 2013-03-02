@@ -84,8 +84,8 @@ module casida_m
     character(len=80) :: trandens
     logical           :: triplet        !< use triplet kernel?
     logical           :: calc_forces    !< calculate excited-state forces
-    character(len=80) :: restart_file
-
+    character(len=80) :: restart_dir
+    
     integer           :: n_pairs        !< number of pairs to take into account
     type(states_pair_t), pointer :: pair(:)
     integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%sigma) = j
@@ -366,11 +366,10 @@ contains
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, sys%mc)
 
-    cas%restart_file = trim(tmpdir)//'casida-restart'
-    if(cas%triplet) cas%restart_file = trim(cas%restart_file)//'-triplet'
-
+    cas%restart_dir = trim(tmpdir)//'/casida'
     cas%fromScratch = fromScratch
-    if(cas%fromScratch) call loct_rm(trim(cas%restart_file)) ! restart
+    if(cas%fromScratch) call loct_rm(trim(cas%restart_dir))
+    call io_mkdir(trim(cas%restart_dir))
 
     ! First, print the differences between KS eigenvalues (first approximation to the
     ! excitation energies, or rather, to the JDOS).
@@ -557,6 +556,7 @@ contains
     FLOAT, target, allocatable :: fxc(:,:,:), fxc_spin(:,:,:), lr_fxc(:,:,:,:,:)
     FLOAT, pointer :: xc(:,:,:)
     integer :: qi_old, qa_old, mu_old
+    character(len=100) :: restart_filename
 
     PUSH_SUB(casida_work)
 
@@ -613,12 +613,15 @@ contains
       endif
     end if
 
+    restart_filename = trim(cas%restart_dir)//'/kernel'
+    if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
+
     xc => fxc
     select case(cas%type)
     case(CASIDA_EPS_DIFF)
       call solve_eps_diff()
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
-      call casida_get_matrix(cas%mat, cas%restart_file)
+      call casida_get_matrix(cas%mat, restart_filename)
       call solve_casida()
     end select
 
@@ -945,6 +948,7 @@ contains
       PUSH_SUB(casida_work.load_saved)
 
       is_saved = .false.
+
       if(mpi_grp_is_root(mpi_world)) then
         iunit = io_open(trim(restart_file), action='read', &
           status='old', die=.false., is_tmp=.true.)
@@ -967,7 +971,7 @@ contains
         
           call io_close(iunit)
         else if(.not. cas%fromScratch) then
-          message(1) = "Could not find Casida restart file. Starting from scratch."
+          message(1) = "Could not find restart file '" // trim(restart_file) // "'. Starting from scratch."
           call messages_warning(1)
         endif
       endif
