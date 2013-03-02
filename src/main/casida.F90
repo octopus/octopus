@@ -366,7 +366,7 @@ contains
     ! Initialize structure
     call casida_type_init(cas, sys%gr%sb%dim, sys%mc)
 
-    cas%restart_dir = trim(tmpdir)//'/casida'
+    cas%restart_dir = trim(tmpdir)//'casida'
     cas%fromScratch = fromScratch
     if(cas%fromScratch) call loct_rm(trim(cas%restart_dir))
     call io_mkdir(trim(cas%restart_dir))
@@ -994,7 +994,8 @@ contains
       FLOAT, allocatable :: hvar(:,:,:), dlr_hmat1(:,:,:)
       CMPLX, allocatable :: zlr_hmat1(:,:,:)
       type(pert_t) :: ionic_pert
-      FLOAT :: factor = CNST(1e12)
+      FLOAT :: factor = CNST(1e12) ! FIXME: allow user to set
+      character(len=100) :: restart_filename
       
       PUSH_SUB(casida_work.casida_forces_init)
       
@@ -1088,8 +1089,19 @@ contains
             forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
               lr_fxc(ip, is1, is2, iatom, idir) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :, iatom, idir))
             end forall
+
+            restart_filename = trim(cas%restart_dir)//'/lr_kernel'
+            if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
+
+            if(states_are_real(st)) then
+              call casida_get_matrix(cas%dmat2, restart_filename)
+            else
+              ! good luck
+              call messages_not_implemented("lr_kernel for complex wfns") ! FIXME
+            endif
           endif
 
+          if(cas%type == CASIDA_CASIDA) call messages_not_implemented("Forces for Casida theory level")
           if(states_are_real(st)) then
             cas%dmat2 = cas%mat_save * factor + cas%dlr_hmat2
             call lalg_eigensolve(cas%n_pairs, cas%dmat2, cas%dw2)
