@@ -701,15 +701,30 @@ contains
       FLOAT :: temp
       integer :: ia, jb, iunit
       integer :: max, actual, counter
-      type(states_pair_t), pointer :: p, q
       FLOAT :: mtxel_vh, mtxel_xc
-      logical, allocatable :: is_saved(:, :)
+      logical, allocatable :: is_saved(:, :), is_calcd(:, :)
 
       PUSH_SUB(casida_work.casida_get_matrix)
 
       ! load saved matrix elements
       SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
       call load_saved(matrix, is_saved, restart_file)
+
+      SAFE_ALLOCATE(is_calcd(1:cas%n_pairs, 1:cas%n_pairs))
+      is_calcd = .true.
+      ! purge saved non-degenerate offdiagonals, mark which are being calculated
+      if(cas%type == CASIDA_PETERSILKA .and. mpi_grp_is_root(mpi_world)) then
+        do ia = 1, cas%n_pairs
+          do jb = ia, cas%n_pairs
+            if(isnt_degenerate(cas, st, ia, jb)) then
+              matrix(ia, jb) = M_ZERO
+              matrix(jb, ia) = M_ZERO
+              is_calcd(ia, jb) = .false.
+              is_calcd(jb, ia) = .false.
+            endif
+          enddo
+        enddo
+      endif
 
       if(cas%type == CASIDA_PETERSILKA) then
         max = cas%n_pairs
@@ -723,17 +738,10 @@ contains
       ! only root retains the saved values
       if(.not. mpi_grp_is_root(mpi_world)) matrix = M_ZERO
 
-      ! FIXME: this temporary measure destroys restart data after Petersilka
-      if(cas%type == CASIDA_PETERSILKA) then
-        matrix = M_ZERO
-        is_saved = .false.
-      endif
-
       ! calculate the matrix elements of (v + fxc)
       do jb = 1, cas%n_pairs
         actual = actual + 1
         if(mod(actual, cas%mpi_grp%size) .ne. cas%mpi_grp%rank) cycle
-        q => cas%pair(jb)
 
         ! we only count diagonals for Petersilka
         if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
@@ -741,12 +749,8 @@ contains
         ! note: the ordering of jb, ia loops are crucial to minimize number of Poisson solves required.
         do ia = jb, cas%n_pairs
           if(cas%type == CASIDA_PETERSILKA) then
-            p => cas%pair(ia)
-            if(abs((st%eigenval(p%a, p%sigma) - st%eigenval(p%i, p%sigma)) &
-              - (st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))) > CNST(1e-8)) then
-              ! only calculate off-diagonals in degenerate subspace
-              cycle
-            endif
+            ! only calculate off-diagonals in degenerate subspace
+            if(isnt_degenerate(cas, st, ia, jb)) cycle
           else
             counter = counter + 1
           endif
@@ -767,14 +771,15 @@ contains
         call comm_allreduce(cas%mpi_grp%comm, matrix)
       end if
 
-      if(mpi_grp_is_root(mpi_world) .or. cas%type /= CASIDA_PETERSILKA) then
+      if(mpi_grp_is_root(mpi_world)) then
         ! output the restart file
         iunit = io_open(trim(restart_file), action='write', &
           position='append', is_tmp=.true.)
 
         do ia = 1, cas%n_pairs
           do jb = ia, cas%n_pairs
-            if(.not. is_saved(ia, jb)) call write_K_term(cas, matrix(ia, jb), iunit, ia, jb)
+            if(.not. is_saved(ia, jb) .and. is_calcd(ia, jb)) &
+              call write_K_term(cas, matrix(ia, jb), iunit, ia, jb)
           enddo
         enddo
 
@@ -1374,6 +1379,25 @@ contains
 
     POP_SUB(write_implied_occupations)
   end subroutine write_implied_occupations
+
+  logical function isnt_degenerate(cas, st, ia, jb)
+    type(casida_t), intent(in) :: cas
+    type(states_t), intent(in) :: st
+    integer,        intent(in) :: ia
+    integer,        intent(in) :: jb
+
+    type(states_pair_t), pointer :: pp, qq
+
+    PUSH_SUB(isnt_degenerate)
+
+    pp => cas%pair(ia)
+    qq => cas%pair(jb)
+
+    isnt_degenerate = (abs((st%eigenval(pp%a, pp%sigma) - st%eigenval(pp%i, pp%sigma)) &
+      - (st%eigenval(qq%a, qq%sigma) - st%eigenval(qq%i, qq%sigma))) > CNST(1e-8))
+
+    POP_SUB(isnt_degenerate)
+  end function isnt_degenerate
 
 #include "undef.F90"
 #include "real.F90"
