@@ -311,6 +311,8 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     padnprojs = pad_pow2(this%max_nprojs)
     lnprojs = min(opencl_kernel_workgroup_size(kernel_projector_bra)/psib%pack%size_real(1), padnprojs)
 
+    call opencl_set_kernel_arg(kernel_projector_bra, 9, TYPE_FLOAT, 128*lnprojs) !128 must match the value in projector.cl
+
     call opencl_kernel_run(kernel_projector_bra, &
       (/psib%pack%size_real(1), padnprojs, this%nprojector_matrices/), (/psib%pack%size_real(1), lnprojs, 1/))
 
