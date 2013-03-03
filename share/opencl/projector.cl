@@ -33,16 +33,21 @@ __kernel void projector_bra(const int nmat,
   const int ist = get_global_id(0);
   const int ipj = get_global_id(1);
   const int imat = get_global_id(2);
+  __local int loff[5];
 
-  const int npoints       = offsets[5*imat + 0];
-  const int nprojs        = offsets[5*imat + 1];
-  const int matrix_offset = offsets[5*imat + 2];
-  const int map_offset    = offsets[5*imat + 3];
-  const int scal_offset   = offsets[5*imat + 4];
+  for(int ii = get_local_id(0); ii < 5; ii += get_local_size(0)) loff[ii] = offsets[5*imat + ii];
+
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  const int npoints       = loff[0];
+  const int nprojs        = loff[1];
+  const int matrix_offset = loff[2];
+  const int map_offset    = loff[3];
+  const int scal_offset   = loff[4];
+
+  if(ipj >= nprojs) return;
 
   const int nppj = npoints*ipj;
-
-  if(ipj >= nprojs || imat >= nmat) return;
 
   double aa = 0.0;
   for(int ip = 0; ip < npoints; ip++){

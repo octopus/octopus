@@ -310,10 +310,9 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
     padnprojs = pad_pow2(this%max_nprojs)
     lnprojs = min(opencl_kernel_workgroup_size(kernel_projector_bra)/psib%pack%size_real(1), padnprojs)
-    wgsize = min(32, opencl_kernel_workgroup_size(kernel_projector_bra)/(psib%pack%size_real(1)*lnprojs))
 
     call opencl_kernel_run(kernel_projector_bra, &
-      (/psib%pack%size_real(1), padnprojs, pad(this%nprojector_matrices, wgsize)/), (/psib%pack%size_real(1), lnprojs, wgsize/))
+      (/psib%pack%size_real(1), padnprojs, this%nprojector_matrices/), (/psib%pack%size_real(1), lnprojs, 1/))
 
     do imat = 1, this%nprojector_matrices
       pmat => this%projector_matrices(imat)
