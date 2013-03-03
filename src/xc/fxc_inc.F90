@@ -147,12 +147,13 @@ contains
 
         !CHECK OF DERIVATIVES OF EIGENVALUES
         !densitymatrix(1, 1) = ( CNST(0.1), M_ZERO)
-        !densitymatrix(2, 2) = (-CNST(0.3), M_ZERO)
+        !densitymatrix(2, 2) = (-CNST(0.1), M_ZERO)
         !densitymatrix(1, 2) = ( CNST(0.2), CNST(0.25))
         !densitymatrix(2, 1) = ( CNST(0.2),-CNST(0.25))
         !call lalg_check_zeigenderivatives(2, densitymatrix)
         !stop
         !ENDOFCHECK
+        if(maxval(abs(densitymatrix)) < tiny) densitymatrix = M_z0
 
         call lalg_zeigenderivatives(2, densitymatrix, zeigref_(:, :, ip), zeigenval, mmatrix(:, :, :, ip))
         dens(ip, 1) = max(real(zeigenval(1)), M_ZERO)

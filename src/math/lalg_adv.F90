@@ -359,7 +359,7 @@ contains
 
     sigma = M_z0
     do i = 1, n
-      if(abs(sg_values(i)) < 1.0e-12 * maxval(abs(sg_values))) then
+      if(abs(sg_values(i)) <= 1.0e-12 * maxval(abs(sg_values))) then
         sigma(i, i) = M_z0
       else
         sigma(i, i) = M_z1 / sg_values(i)
