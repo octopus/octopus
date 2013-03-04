@@ -27,50 +27,33 @@ __kernel void projector_bra(const int nmat,
 			    __global int const * restrict map,
 			    __global double const * restrict scal,
 			    __global double const * restrict psi, const int ldpsi,
-			    __global double * restrict projection, const int ldprojection,
-			    __local  double * restrict lmatrix
+			    __global double * restrict projection, const int ldprojection
 			    ){
   
   const int ist = get_global_id(0);
   const int ipj = get_global_id(1);
   const int imat = get_global_id(2);
-  const int itot = get_local_id(0) + get_local_size(0)*get_local_id(1);
-  const int ntot = get_local_size(0)*get_local_size(1);
+  __local int loff[5];
 
-#define BSIZE 128
+  for(int ii = get_local_id(0); ii < 5; ii += get_local_size(0)) loff[ii] = offsets[5*imat + ii];
 
-  __local int lmap[BSIZE];
-
-  for(int ii = itot; ii < 5; ii += ntot) lmap[ii] = offsets[5*imat + ii];
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  const int npoints       = lmap[0];
-  const int nprojs        = lmap[1];
-  const int matrix_offset = lmap[2];
-  const int map_offset    = lmap[3];
-  const int scal_offset   = lmap[4];
+  const int npoints       = loff[0];
+  const int nprojs        = loff[1];
+  const int matrix_offset = loff[2];
+  const int map_offset    = loff[3];
+  const int scal_offset   = loff[4];
+
+  if(ipj >= nprojs) return;
 
   const int nppj = npoints*ipj;
 
   double aa = 0.0;
-  
-  for(int sp = 0; sp < npoints; sp += BSIZE){
-    int size = min(BSIZE, npoints - sp);
-
-    for(int ip = itot; ip < size; ip += ntot) lmap[ip] = (map[map_offset + sp + ip] - 1)<<ldpsi;
-    for(int ip = get_local_id(0); ip < size; ip += get_local_size(0)) {
-      if(ipj < nprojs) lmatrix[ip + ipj*BSIZE] = matrix[matrix_offset + nppj + sp + ip];
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    for(int ip = 0; ip < size; ip++){
-      if(ipj < nprojs) aa += lmatrix[ip + ipj*BSIZE]*psi[lmap[ip] + ist];
-    }
+  for(int ip = 0; ip < npoints; ip++){
+    aa += matrix[matrix_offset + ip + nppj]*psi[((map[map_offset + ip] - 1)<<ldpsi) + ist];
   }
-  
-  if(ipj < nprojs) projection[ist + ((scal_offset + ipj)<<ldprojection)] = scal[scal_offset + ipj]*aa;
-
-#undef BSIZE
+  projection[ist + ((scal_offset + ipj)<<ldprojection)] = scal[scal_offset + ipj]*aa;
 
 }
 
