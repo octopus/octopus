@@ -495,9 +495,13 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
   else
     !collect the data in all processes
     SAFE_ALLOCATE(gcf(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
+    if (mpi_world%size > 1) then
 #ifdef HAVE_MPI
     call X(cube_function_allgather)(cube, gcf, cf%X(rs))
 #endif
+    else
+      gcf = cf%X(rs)
+    end if
 
     ! cube to mesh
     do im = 1, mesh%cube_map%nmap
