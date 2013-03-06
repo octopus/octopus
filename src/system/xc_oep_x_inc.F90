@@ -185,7 +185,7 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
           end if
           ! get the contribution (ist, jst) to the exchange energy
           rr = M_ONE
-          if(ist .ne. jst) rr = M_TWO
+          if(ist .ne. jst .and. .not.(st%d%ispin==SPINORS)) rr = M_TWO
 
           ex = ex - exx_coef* M_HALF * rr * &
               oep%sfact * oep%socc*st%occ(ist, isp) * oep%socc*st%occ(jst, isp) * &
