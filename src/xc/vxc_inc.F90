@@ -1129,7 +1129,7 @@ subroutine zxc_complex_lda(mesh, rho, Imrho, theta, vxc, Imvxc, ex, Imex, ec, Im
   ! use the PW91 parametrization.  We have to stitch the square root
   ! of the Wigner-Seitz radius and also the logarithm.
   
-  ! add a tiny arbitrary number so we don't get NaN when the density is zero
+  ! add a tiny arbitrary number so we don`t get NaN when the density is zero
   rootrs(:, :, :) = (M_THREE / (1e-20 + M_FOUR * M_PI * (cf%zRS(:, :, :)) * dimphase))**(M_ONE / M_SIX)
 
   call stitch(get_root6_branch, rootrs, cube%center)
