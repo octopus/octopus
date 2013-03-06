@@ -11,7 +11,7 @@ case $with_libxc_prefix in
       if test x"$FCFLAGS_LIBXC" = x; then
         FCFLAGS_LIBXC="-I/usr/include";
       fi ;;
-  *) LIBS_LIBXC="-L$with_libxc_prefix/lib -lxc"; FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_prefix/include" ;;
+  *) LIBS_LIBXC="$with_libxc_prefix/lib/libxc.a"; FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_prefix/include" ;;
 esac
 
 AC_ARG_WITH(libxc-include, [AS_HELP_STRING([--with-libxc-include=DIR], [Directory where libxc Fortran headers were installed.])])
