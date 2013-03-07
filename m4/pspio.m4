@@ -38,6 +38,13 @@ case $with_pspio_prefix in
   *) LIBS_PSPIO="-L$with_pspio_prefix/lib -lpspio_fortran -lpspio"; FCFLAGS_PSPIO="$ax_cv_f90_modflag$with_pspio_prefix/include" ;;
 esac
 
+testprog="AC_LANG_PROGRAM([],[
+    use pspio_f90_types_m
+    use pspio_f90_lib_m
+
+    type(pspio_f90_pspdata_t) :: pspdata
+    call pspio_f90_pspdata_free(pspdata)])"
+
 dnl The tests
 if test "$acx_pspio_ok" = no; then
   AC_MSG_CHECKING([for pspio])
@@ -46,24 +53,12 @@ if test "$acx_pspio_ok" = no; then
     pspio_fcflags="$FCFLAGS_PSPIO"; pspio_libs="$LIBS_PSPIO"
     FCFLAGS="$pspio_fcflags $acx_pspio_save_FCFLAGS $GSL_CFLAGS"
     LIBS="$pspio_libs $acx_pspio_save_LIBS $GSL_LIBS"
-    AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
-    use pspio_f90_types_m
-    use pspio_f90_lib_m
-
-    type(pspio_f90_pspdata_t) :: pspdata
-    call pspio_f90_pspdata_free(pspdata)
-]), [acx_pspio_ok=yes; FCFLAGS_PSPIO="$pspio_fcflags"; LIBS_PSPIO="$pspio_libs"], [])
+    AC_LINK_IFELSE($testprog, [acx_pspio_ok=yes; FCFLAGS_PSPIO="$pspio_fcflags"; LIBS_PSPIO="$pspio_libs"], [])
   else
     pspio_libs="-lpspio_fortran -lpspio"
     FCFLAGS="$pspio_fcflags $acx_pspio_save_FCFLAGS $GSL_CFLAGS"
     LIBS=" $acx_pspio_save_LIBS $pspio_libs $GSL_LIBS"
-    AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
-    use pspio_f90_types_m
-    use pspio_f90_lib_m
-
-    type(pspio_f90_pspdata_t) :: pspdata
-    call pspio_f90_pspdata_free(pspdata)
-]), [acx_pspio_ok=yes; FCFLAGS_PSPIO="$pspio_fcflags"; LIBS_PSPIO="$pspio_libs"], [])
+    AC_LINK_IFELSE($testprog, [acx_pspio_ok=yes; FCFLAGS_PSPIO="$pspio_fcflags"; LIBS_PSPIO="$pspio_libs"], [])
   fi
   AC_MSG_RESULT([$acx_pspio_ok ($LIBS_PSPIO)])
 fi

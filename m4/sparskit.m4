@@ -14,21 +14,22 @@ esac
 dnl Backup LIBS 
 acx_sparskit_save_LIBS="$LIBS"
 
-dnl First, check if it links
-if test $acx_sparskit_ok = no; then
-  LIBS="$LIBS_SPARSKIT $LIBS_LAPACK $LIBS_BLAS $acx_sparskit_save_LIBS $FLIBS"
-  AC_MSG_CHECKING([for SPARSKIT library])
-  AC_LINK_IFELSE([
+testprog="
     subroutine distdot
     end subroutine distdot
     program main
     call bcgstab
-    end program main
-], acx_sparskit_ok=yes, [])
+    end program main"
+
+dnl First, check if it links
+if test $acx_sparskit_ok = no; then
+  LIBS="$LIBS_SPARSKIT $LIBS_LAPACK $LIBS_BLAS $acx_sparskit_save_LIBS $FLIBS"
+  AC_MSG_CHECKING([for SPARSKIT library])
+  AC_LINK_IFELSE($testprog, acx_sparskit_ok=yes, [])
   if test $acx_sparskit_ok = no; then
     AC_MSG_RESULT([$acx_sparskit_ok])
   else
-    AC_MSG_RESULT([$acx_sparskit_ok($LIBS_SPARSKIT)])
+    AC_MSG_RESULT([$acx_sparskit_ok ($LIBS_SPARSKIT)])
   fi
 fi
 
@@ -36,13 +37,7 @@ dnl ... check if it links ...
 if test $acx_sparskit_ok = no; then
   LIBS="$LIBS_SPARSKIT /usr/lib/libskit.a $LIBS_LAPACK $LIBS_BLAS $acx_sparskit_save_LIBS $FLIBS"
   AC_MSG_CHECKING([for SPARSKIT library with libskit.a])
-  AC_LINK_IFELSE([
-    subroutine distdot
-    end subroutine distdot
-    program main
-    call bcgstab
-    end program main
-], [acx_sparskit_ok=yes; LIBS_SPARSKIT="$LIBS_SPARSKIT /usr/lib/libskit.a"], [])
+  AC_LINK_IFELSE($testprog, [acx_sparskit_ok=yes; LIBS_SPARSKIT="$LIBS_SPARSKIT /usr/lib/libskit.a"], [])
   if test $acx_sparskit_ok = no; then
     AC_MSG_RESULT([$acx_sparskit_ok])
   else

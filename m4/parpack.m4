@@ -31,14 +31,13 @@ fi
 dnl PARPACK always wants ARPACK 
 LIBS_PARPACK="$LIBS_PARPACK $LIBS_ARPACK"
 
+testprog="AC_LANG_PROGRAM([],[call pdsaupd])"
+
 dnl First, check LIBS_PARPACK environment variable
 if test $acx_parpack_ok = no; then
   LIBS="$LIBS_PARPACK $LIBS_LAPACK $LIBS_BLAS $acx_parpack_save_LIBS $FLIBS"
   AC_MSG_CHECKING([for parpack library])
-  AC_LINK_IFELSE([
-	    program main
-	    call pdsaupd
-	    end program main], [acx_parpack_ok=yes], [])
+  AC_LINK_IFELSE($testprog, [acx_parpack_ok=yes], [])
   if test $acx_parpack_ok = no; then
     AC_MSG_RESULT([$acx_parpack_ok])
   else
@@ -50,18 +49,10 @@ if test $acx_parpack_ok = no; then
   AC_MSG_CHECKING([for parpack library with -lparpack])
   if test "$LIBS_PARPACK" = ""; then
     LIBS="-lparpack  $LIBS_LAPACK $LIBS_BLAS $acx_parpack_save_LIBS $FLIBS" 
-    AC_LINK_IFELSE([
-      program main
-      call pdsaupd
-      end program main
-    ], [acx_parpack_ok=yes; LIBS_PARPACK=" -lparpack"], [])
+    AC_LINK_IFELSE($testprog, [acx_parpack_ok=yes; LIBS_PARPACK=" -lparpack"], [])
   else
     LIBS="-L$LIBS_PARPACK -lparpack  $LIBS_LAPACK $LIBS_BLAS $acx_parpack_save_LIBS $FLIBS" 
-    AC_LINK_IFELSE([
-      program main
-      call pdsaupd
-      end program main
-    ], [acx_parpack_ok=yes; LIBS_PARPACK="-L$LIBS_PARPACK -lparpack"], [])  
+    AC_LINK_IFELSE($testprog, [acx_parpack_ok=yes; LIBS_PARPACK="-L$LIBS_PARPACK -lparpack"], [])  
   fi
   if test $acx_parpack_ok = no; then
     AC_MSG_RESULT([$acx_parpack_ok])

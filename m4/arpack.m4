@@ -23,16 +23,13 @@ if test $acx_arpack_ok = no; then
   esac
 fi
 
-
+testprog="AC_LANG_PROGRAM([],[call dsaupd])"
 
 dnl First, check LIBS_ARPACK environment variable
 if test $acx_arpack_ok = no; then
   LIBS="$LIBS_ARPACK $LIBS_LAPACK $LIBS_BLAS $acx_arpack_save_LIBS $FLIBS"
   AC_MSG_CHECKING([for arpack library])
-  AC_LINK_IFELSE([
-	    program main
-	    call dsaupd
-	    end program main], [acx_arpack_ok=yes], [])
+  AC_LINK_IFELSE($testprog, [acx_arpack_ok=yes], [])
   if test $acx_arpack_ok = no; then
     AC_MSG_RESULT([$acx_arpack_ok])
   else
@@ -44,11 +41,7 @@ if test $acx_arpack_ok = no; then
   AC_MSG_CHECKING([for arpack library with -larpack])
   if test "$LIBS_ARPACK" = ""; then
     LIBS=" -larpack $LIBS_LAPACK $LIBS_BLAS $acx_arpack_save_LIBS $FLIBS"
-    AC_LINK_IFELSE([
-      program main
-      call dsaupd
-      end program main
-      ], [acx_arpack_ok=yes; LIBS_ARPACK=" -larpack"], [])
+    AC_LINK_IFELSE($testprog, [acx_arpack_ok=yes; LIBS_ARPACK=" -larpack"], [])
   else
     LIBS="-L$LIBS_ARPACK -larpack $LIBS_LAPACK $LIBS_BLAS $acx_arpack_save_LIBS $FLIBS"
     AC_LINK_IFELSE([
