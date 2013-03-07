@@ -284,7 +284,6 @@ contains
           end if
           message(1) = "Info: Done writing mesh_graph.txt."
           call messages_info(1)
-          call MPI_Barrier(MPI_COMM_WORLD, mpi_err)
         end if
 
       else
