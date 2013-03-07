@@ -214,24 +214,26 @@ contains
     !%Description
     !% Choose which electron-hole matrix-based theory levels to use in calculating excitation energies.
     !% More than one may be used to take advantage of the significant commonality between the calculations.
-    !% Only <tt>eps_diff</tt> is available for spinors. Note the restart data saved by each theory level
+    !% Only <tt>eps_diff</tt> is implemented for complex wavefunctions. Note the restart data saved by each theory level
     !% is compatible with all the others.
     !%Option eps_diff 1
     !% Difference of eigenvalues, <i>i.e.</i> independent-particle approximation.
     !%Option petersilka 2
-    !% The Petersilka approximation uses only the diagonal part of the Tamm-Dancoff matrix.
+    !% The Petersilka approximation uses only elements of the Tamm-Dancoff matrix between degenerate
+    !% transitions (if no degeneracy, this is just the diagonal elements). Also called the "single-pole" approximation.
     !% This is acceptable if there is little mixing between single-particle transitions.
-    !% Ref: M Petersilka, UJ Gossmann, and EKU Gross, <i>Phys. Rev. Lett.</i> <b>76</b>, 1212 (1996).
+    !% Ref: M Petersilka, UJ Gossmann, and EKU Gross, <i>Phys. Rev. Lett.</i> <b>76</b>, 1212 (1996);
+    !% T Grabo, M Petersilka,and EKU Gross, <i>Theochem</i> <b>501-502</b> 353 (2000).
     !%Option tamm_dancoff 4
     !% The Tamm-Dancoff approximation uses only occupied-unoccupied transitions and not
     !% unoccupied-occupied transitions.
     !% Ref: S Hirata and M Head-Gordon, <i>Chem. Phys. Lett.</i> <b>314</b>, 291 (1999).
     !%Option variational 8
-    !% Second-order constrained variational theory CV(2)-DFT. Only for real wavefunctions.
+    !% Second-order constrained variational theory CV(2)-DFT. Only applies to real wavefunctions.
     !% Ref: T Ziegler, M Seth, M Krykunov, J Autschbach, and F Wang,
     !% <i>J. Chem. Phys.</i> <b>130</b>, 154102 (2009).
     !%Option lrtddft_casida 16
-    !% The full Casida method. Only for real wavefunctions.
+    !% The full Casida method. Only applies to real wavefunctions.
     !% Ref: C Jamorski, ME Casida, and DR Salahub, <i>J. Chem. Phys.</i> <b>104</b>, 5134 (1996)
     !% and ME Casida, "Time-dependent density functional response theory for molecules,"
     !% in <i>Recent Advances in Density Functional Methods</i>, edited by DE Chong, vol. 1
@@ -243,8 +245,8 @@ contains
       CASIDA_EPS_DIFF + CASIDA_PETERSILKA + CASIDA_CASIDA, theorylevel)
 
     if (states_are_complex(sys%st)) then
-      if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
-        call messages_not_implemented("Tamm-Dancoff calculation with complex wavefunctions")
+      if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0 .or. iand(theorylevel, CASIDA_PETERSILKA) /= 0) then
+        call messages_not_implemented("Tamm-Dancoff and Petersilka theory levels with complex wavefunctions")
       endif
       if((iand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
         .or. iand(theorylevel, CASIDA_CASIDA) /= 0)) then
