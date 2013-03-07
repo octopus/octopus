@@ -1222,7 +1222,7 @@ contains
     call io_mkdir(CASIDA_DIR)
     iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), action='write')
 
-    if(cas%type == CASIDA_EPS_DIFF .or. (cas%type == CASIDA_PETERSILKA)) then
+    if(cas%type == CASIDA_EPS_DIFF) then
       write(iunit, '(2a4)', advance='no') 'From', '  To'
       if(sys%st%d%ispin == SPIN_POLARIZED) then
         write(iunit, '(a5)', advance='no') 'Spin'
