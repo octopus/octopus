@@ -156,8 +156,8 @@ contains
         if(maxval(abs(densitymatrix)) < tiny) densitymatrix = M_z0
 
         call lalg_zeigenderivatives(2, densitymatrix, zeigref_(:, :, ip), zeigenval, mmatrix(:, :, :, ip))
-        dens(ip, 1) = max(real(zeigenval(1)), M_ZERO)
-        dens(ip, 2) = max(real(zeigenval(2)), M_ZERO)
+        dens(ip, 1) = max(real(zeigenval(1), REAL_PRECISION), M_ZERO)
+        dens(ip, 2) = max(real(zeigenval(2), REAL_PRECISION), M_ZERO)
 
       end select
     end do

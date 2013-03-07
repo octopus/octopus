@@ -968,7 +968,7 @@ subroutine stitchline(get_branch, functionvalues, startpoint, direction, startbr
   
   integer :: currentbranch, npts, i
   integer :: currentlocation(3)
-  CMPLX :: prev_value, err
+  CMPLX :: prev_value
 
   PUSH_SUB(stitchline)
 
@@ -1010,7 +1010,7 @@ contains
   !recursive 
   subroutine stitch_single_point()
     CMPLX   :: v1, v2, v3, v
-    integer :: j, adj
+    integer :: adj
     
     stitchedpoints = stitchedpoints + 1
 
@@ -1084,9 +1084,8 @@ subroutine zxc_complex_lda(mesh, rho, Imrho, theta, vxc, Imvxc, ex, Imex, ec, Im
   FLOAT, parameter      :: gamma = 0.031091, alpha1 = 0.21370, beta1 = 7.5957, beta2 = 3.5876, beta3 = 1.6382, beta4 = 0.49294
   CMPLX, allocatable    :: zvc_arr(:, :, :), Q0(:, :, :), Q1(:, :, :), dQ1drs(:, :, :), epsc(:, :, :), depsdrs(:, :, :), &
     zrho_local(:), zvxc_local(:)
-  CMPLX                 :: dimphase, tmp, zex, zec, zex2
-  FLOAT                 :: dmin_unused
-  integer               :: N, izero, i, j
+  CMPLX                 :: dimphase, zex, zec
+  integer               :: N
   CMPLX, allocatable    :: vxbuf(:, :, :), rootrs(:, :, :)
   type(cube_t)          :: cube
   type(cube_function_t) :: cf

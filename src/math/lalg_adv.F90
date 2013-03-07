@@ -359,7 +359,7 @@ contains
 
     sigma = M_z0
     do i = 1, n
-      if(abs(sg_values(i)) <= 1.0e-12 * maxval(abs(sg_values))) then
+      if(abs(sg_values(i)) <= CNST(1.0e-12) * maxval(abs(sg_values))) then
         sigma(i, i) = M_z0
       else
         sigma(i, i) = M_z1 / sg_values(i)
@@ -372,12 +372,12 @@ contains
 
     ! Check if we truly have a pseudoinverse
     vt = matmul(mat, matmul(imat, mat)) - mat
-    if( maxval(abs(vt)) > 1.0e-10 * maxval(abs(mat))) then
+    if( maxval(abs(vt)) > CNST(1.0e-10) * maxval(abs(mat))) then
       write(*, *) maxval(abs(vt))
       write(*, *) vt
       write(*, *)
       write(*, *) 1.0e-10 * maxval(abs(mat))
-      write(*, *) maxval(abs(vt)) > 1.0e-10 * maxval(abs(mat))
+      write(*, *) maxval(abs(vt)) > CNST(1.0e-10) * maxval(abs(mat))
       write(*, *) mat
       write(message(1), '(a)') 'Pseudoinverse failed.'
       call messages_fatal(1)
