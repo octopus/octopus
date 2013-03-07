@@ -148,8 +148,9 @@ contains
 
     type(casida_t) :: cas
     type(block_t) :: blk
-    integer :: idir, ik, n_filled, n_partially_filled, n_half_filled, theorylevel
+    integer :: idir, ik, n_filled, n_partially_filled, n_half_filled, theorylevel, iatom
     character(len=80) :: nst_string, default
+    character(len=100) :: restart_filename
 
     PUSH_SUB(casida_run)
 
@@ -376,10 +377,18 @@ contains
     if(cas%fromScratch) then ! remove old restart files
       if(cas%triplet) then
         call loct_rm(trim(cas%restart_dir)//'/kernel_triplet')
-        if(cas%calc_forces) call loct_rm(trim(cas%restart_dir)//'/forces_triplet')
       else
         call loct_rm(trim(cas%restart_dir)//'/kernel')
-        if(cas%calc_forces) call loct_rm(trim(cas%restart_dir)//'/forces')
+      endif
+
+      if(cas%calc_forces) then
+        do iatom = 1, sys%geo%natoms
+          do idir = 1, sys%gr%sb%dim
+            write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_kernel_', iatom, '_', idir
+            if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
+            call loct_rm(trim(restart_filename))
+          enddo
+        enddo
       endif
     endif
 
@@ -1125,9 +1134,9 @@ contains
             if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
 
             if(states_are_real(st)) then
+              xc => lr_fxc(:, :, :, iatom, idir)
               call casida_get_matrix(cas%dmat2, restart_filename)
             else
-              ! good luck
               call messages_not_implemented("lr_kernel for complex wfns") ! FIXME
             endif
           endif
