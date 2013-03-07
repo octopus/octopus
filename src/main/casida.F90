@@ -764,7 +764,12 @@ contains
         end do
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, max)
       end do
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(max, max)
+
+      if(mpi_grp_is_root(mpi_world)) then
+        call loct_progress_bar(max, max)
+        ! complete progress bar
+        write(stdout, '(1x)')
+      endif
 
       ! sum all matrix elements
       if(cas%parallel_in_eh_pairs) then
@@ -802,9 +807,6 @@ contains
 
       ! all processors with the exception of the first are done
       if (mpi_grp_is_root(cas%mpi_grp)) then
-
-        ! complete progress bar
-        if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
         ! complete the matrix
         do ia = 1, cas%n_pairs
@@ -1110,7 +1112,7 @@ contains
               lr_fxc(ip, is1, is2, iatom, idir) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :, iatom, idir))
             end forall
 
-            restart_filename = trim(cas%restart_dir)//'/lr_kernel'
+            write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_kernel_', iatom, '_', idir
             if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
 
             if(states_are_real(st)) then
