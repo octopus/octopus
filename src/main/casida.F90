@@ -705,17 +705,23 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine casida_get_matrix(matrix, restart_file)
+    subroutine casida_get_matrix(matrix, restart_file, is_forces)
       FLOAT,            intent(out) :: matrix(:,:)
       character(len=*), intent(in)  :: restart_file
+      logical, optional, intent(in) :: is_forces
 
       FLOAT :: temp
       integer :: ia, jb, iunit
       integer :: max, actual, counter
       FLOAT :: mtxel_vh, mtxel_xc
       logical, allocatable :: is_saved(:, :), is_calcd(:, :)
+      logical :: is_forces_
 
       PUSH_SUB(casida_work.casida_get_matrix)
+
+      mtxel_vh = M_ZERO
+      mtxel_xc = M_ZERO
+      is_forces_ = optional_default(is_forces, .false.)
 
       ! load saved matrix elements
       SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
@@ -768,7 +774,11 @@ contains
 
           ! if not loaded, then calculate matrix element
           if(.not. is_saved(ia, jb)) then
-            call K_term(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
+            if(is_forces_) then
+              call K_term(cas%pair(ia), cas%pair(jb), mtxel_xc = mtxel_xc)
+            else
+              call K_term(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
+            endif
             matrix(ia, jb) = mtxel_vh + mtxel_xc
           end if
           if(jb /= ia) matrix(jb, ia) = matrix(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
@@ -1135,7 +1145,7 @@ contains
 
             if(states_are_real(st)) then
               xc => lr_fxc(:, :, :, iatom, idir)
-              call casida_get_matrix(cas%dmat2, restart_filename)
+              call casida_get_matrix(cas%dmat2, restart_filename, is_forces = .true.)
             else
               call messages_not_implemented("lr_kernel for complex wfns") ! FIXME
             endif
