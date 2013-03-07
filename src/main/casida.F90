@@ -1023,6 +1023,13 @@ contains
       
       PUSH_SUB(casida_work.casida_forces_init)
       
+      if(cas%type == CASIDA_CASIDA) then
+        message(1) = "Forces for Casida theory level not implemented"
+        call messages_warning(1)
+        POP_SUB(casida_work.casida_forces_init)
+        return
+      endif
+
       if(cas%type /= CASIDA_EPS_DIFF) then
         SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
         kxc = M_ZERO
@@ -1125,7 +1132,6 @@ contains
             endif
           endif
 
-          if(cas%type == CASIDA_CASIDA) call messages_not_implemented("Forces for Casida theory level")
           if(states_are_real(st)) then
             cas%dmat2 = cas%mat_save * factor + cas%dlr_hmat2
             call lalg_eigensolve(cas%n_pairs, cas%dmat2, cas%dw2)
@@ -1289,7 +1295,7 @@ contains
         call io_close(iunit)
       endif
 
-      if(cas%calc_forces) then
+      if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
         iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
         call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
         call io_close(iunit)
