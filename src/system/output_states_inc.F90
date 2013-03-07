@@ -76,7 +76,7 @@
 
     if(iand(outp%what, C_OUTPUT_CURRENT) .ne. 0) then
       if(states_are_complex(st)) then
-        fn_unit = units_out%time * units_out%length**(-gr%mesh%sb%dim)
+        fn_unit = (unit_one / units_out%time) * units_out%length**(-gr%mesh%sb%dim)
         ! calculate current first
         SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
         call states_calc_quantities(gr%der, st, paramagnetic_current = current)
