@@ -1129,9 +1129,9 @@ contains
           ! use them to make two-particle matrix elements (as for eigenvalues)
           do ik = 1, cas%nik
             if(states_are_real(st)) then
-              call dcasida_lr_hmat2(cas, dlr_hmat1, ik)
+              call dcasida_lr_hmat2(cas, st, dlr_hmat1, ik)
             else
-              call zcasida_lr_hmat2(cas, zlr_hmat1, ik)
+              call zcasida_lr_hmat2(cas, st, zlr_hmat1, ik)
             endif
           enddo
 

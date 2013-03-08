@@ -333,15 +333,15 @@ end subroutine X(casida_get_rho)
 
 !> one-particle matrix elements of perturbation
 subroutine X(casida_lr_hmat1)(cas, sys, hm, pert, hvar, lr_hmat1, st_start, st_end, ik)
-  type(casida_t), intent(inout) :: cas
-  type(system_t), intent(in) :: sys
+  type(casida_t),      intent(inout) :: cas
+  type(system_t),      intent(in)    :: sys
   type(hamiltonian_t), intent(inout) :: hm
-  type(pert_t), intent(in) :: pert
-  FLOAT, intent(in) :: hvar(:,:,:)
-  R_TYPE, intent(out) :: lr_hmat1(:,:,:)
-  integer, intent(in) :: st_start
-  integer, intent(in) :: st_end
-  integer, intent(in) :: ik
+  type(pert_t),        intent(in)    :: pert
+  FLOAT,               intent(in)    :: hvar(:,:,:)
+  R_TYPE,              intent(out)   :: lr_hmat1(:,:,:)
+  integer,             intent(in)    :: st_start
+  integer,             intent(in)    :: st_end
+  integer,             intent(in)    :: ik
 
   integer :: ist, jst, ispin, idim
   R_TYPE, allocatable :: psi(:,:,:), pert_psi(:,:)
@@ -377,10 +377,11 @@ end subroutine X(casida_lr_hmat1)
 ! -----------------------------------------------------------------------------
 
 !> two-particle matrix elements of perturbation
-subroutine X(casida_lr_hmat2)(cas, lr_hmat1, ik)
+subroutine X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
   type(casida_t), intent(inout) :: cas
-  R_TYPE, intent(in) :: lr_hmat1(:,:,:)
-  integer, intent(in) :: ik
+  type(states_t), intent(in)    :: st
+  R_TYPE,         intent(in)    :: lr_hmat1(:,:,:)
+  integer,        intent(in)    :: ik
 
   integer :: ia, jb
 
@@ -391,10 +392,12 @@ subroutine X(casida_lr_hmat2)(cas, lr_hmat1, ik)
       ! if occ states the same, apply unocc matrix elements
       if(cas%pair(ia)%i == cas%pair(jb)%i) then
         cas%X(lr_hmat2)(ia, jb) = cas%X(lr_hmat2)(ia, jb) + lr_hmat1(cas%pair(ia)%a, cas%pair(jb)%a, ik)
+        cas%X(lr_hmat2)(jb, ia) = cas%X(lr_hmat2)(jb, ia) + lr_hmat1(cas%pair(jb)%a, cas%pair(ia)%a, ik)
       endif
       ! if unocc states the same, apply occ matrix elements
       if(cas%pair(ia)%a == cas%pair(jb)%a) then
         cas%X(lr_hmat2)(ia, jb) = cas%X(lr_hmat2)(ia, jb) - lr_hmat1(cas%pair(ia)%i, cas%pair(jb)%i, ik)
+        cas%X(lr_hmat2)(jb, ia) = cas%X(lr_hmat2)(jb, ia) - lr_hmat1(cas%pair(jb)%i, cas%pair(ia)%i, ik)
       endif
     enddo
   enddo
