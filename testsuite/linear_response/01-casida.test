@@ -40,6 +40,10 @@ match ; Total energy   ; GREP(static/info, 'Total       =', 20) ;  -19.96949077
 match ; HOMO-1         ; GREP(static/info, '4   --', 12) ;  -0.441038
 match ; HOMO           ; GREP(static/info, '5   --', 12) ;  -0.388160
 
+Input: 01-casida.012-vib_modes.inp
+match ; Bond stretch   ; LINE(vib_modes/normal_frequencies_lr, 1, 7); 2254.15140
+match ; Libration 1    ; LINE(vib_modes/normal_frequencies_lr, 2, 7);  324.14270
+
 Input: 01-casida.02-unocc.inp
 match ; HOMO-1         ; LINE(static/eigenvalues, -11, 12); -0.441038
 match ; HOMO           ; LINE(static/eigenvalues, -10, 12); -0.388160

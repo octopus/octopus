@@ -1,0 +1,36 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+CalculationMode = vib_modes
+
+FromScratch = yes
+
+bond_length = 2.0744
+
+%Coordinates
+"N" |  -bond_length/2 |  0.0 |  0.0 
+"N" |   bond_length/2 |  0.0 |  0.0 
+%
+
+FilterPotentials = filter_TS
+%Species
+"N" | 14.0067000 | spec_ps_psf | 7 | 2 | 0 
+%
+
+BoxShape = sphere
+
+Radius = 12.0
+Spacing = 0.36
+
+XCFunctional = lda_x + lda_c_vwn
+
+ConvRelDens = 1e-9
+
+LCAODimension = 18
+
+EigenSolver = cg_new
+EigenSolverTolerance = 1e-6
+EigenSolverMaxIter = 20
+
+PoissonSolver = fft
+PoissonFFTKernel = multipole_correction
