@@ -12,6 +12,7 @@ bond_length = 2.0744
 "N" |   bond_length/2 |  0.0 |  0.0 
 %
 
+FilterPotentials = filter_TS
 %Species
 "N" | 14.0067000 | spec_ps_psf | 7 | 2 | 0 
 %
