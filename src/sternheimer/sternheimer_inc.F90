@@ -41,7 +41,7 @@ subroutine X(sternheimer_solve)(                           &
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: rhs(:, :, :), hvar(:, :, :), psi(:, :)
   R_TYPE, allocatable :: tmp(:)
-  real(8):: abs_dens
+  real(8):: abs_dens, rel_dens
   R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
 
@@ -278,13 +278,15 @@ subroutine X(sternheimer_solve)(                           &
       forall(ip = 1:mesh%np) tmp(ip) = dl_rhoin(ip, ispin, 1) - dl_rhotmp(ip, ispin, 1)
       abs_dens = hypot(abs_dens, real(X(mf_nrm2)(mesh, tmp), 8))
     end do
+    rel_dens = abs_dens / st%qtot
 
-    write(message(1), '(a, e20.6)') "SCF Residual ", abs_dens
+    write(message(1), '(a,e20.6,a,e20.6,a)') "SCF Residual: ", abs_dens, " (abs), ", rel_dens, " (rel)"
 
     message(2)="--------------------------------------------"
     call messages_info(2)
       
-    if( abs_dens <= this%scf_tol%conv_abs_dens ) then 
+    if( (abs_dens <= this%scf_tol%conv_abs_dens .or. this%scf_tol%conv_abs_dens <= M_ZERO) .and. &
+        (rel_dens <= this%scf_tol%conv_rel_dens .or. this%scf_tol%conv_rel_dens <= M_ZERO)) then 
       if(conv_last .and. states_conv) then 
         ! if not all states are converged, keep working
         conv = .true.

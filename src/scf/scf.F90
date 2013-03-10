@@ -228,7 +228,7 @@ contains
       scf%conv_abs_force <= M_ZERO) then
       message(1) = "Input: Not all convergence criteria can be <= 0"
       message(2) = "Please set one of the following:"
-      message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv | ConvForce "
+      message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv | ConvForce"
       call messages_fatal(3)
     end if
 

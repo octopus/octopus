@@ -48,6 +48,7 @@ module scf_tol_m
   type scf_tol_t
      integer           :: max_iter
      integer           :: scheme
+     FLOAT             :: conv_rel_dens
      FLOAT             :: conv_abs_dens
      FLOAT             :: dynamic_tol_factor
      FLOAT             :: current_tol
@@ -92,11 +93,33 @@ contains
     !%Description
     !% The tolerance in the variation of the density, to determine if
     !% the SCF for linear response is converged.
+    !% A zero value means do not use this criterion.
     !%End
     str = 'LRConvAbsDens'
     if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
          str = trim(prefix)//trim(str)
     call parse_float(datasets_check(str), CNST(1e-5), this%conv_abs_dens)
+
+    !%Variable LRConvRelDens
+    !%Type float
+    !%Default 0.0
+    !%Section Linear Response::SCF in LR calculations
+    !%Description
+    !% The tolerance in the variation of the density, to determine if
+    !% the SCF for linear response is converged.
+    !% A zero value means do not use this criterion.
+    !%End
+    str = 'LRConvRelDens'
+    if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
+         str = trim(prefix)//trim(str)
+    call parse_float(datasets_check(str), CNST(1e-5), this%conv_rel_dens)
+
+    if(this%conv_abs_dens <= M_ZERO .and. this%conv_rel_dens <= M_ZERO) then
+      message(1) = "Input: Not all convergence criteria can be <= 0"
+      message(2) = "Please set one of the following to a nonzero value:"
+      message(3) = "LRConvAbsDens | LRConvRelDens"
+      call messages_fatal(3)
+    endif
 
     !%Variable LRTolScheme
     !%Type integer
