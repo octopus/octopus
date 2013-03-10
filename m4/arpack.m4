@@ -44,11 +44,7 @@ if test $acx_arpack_ok = no; then
     AC_LINK_IFELSE($testprog, [acx_arpack_ok=yes; LIBS_ARPACK=" -larpack"], [])
   else
     LIBS="-L$LIBS_ARPACK -larpack $LIBS_LAPACK $LIBS_BLAS $acx_arpack_save_LIBS $FLIBS"
-    AC_LINK_IFELSE([
-      program main
-      call dsaupd
-      end program main
-      ], [acx_arpack_ok=yes; LIBS_ARPACK="-L$LIBS_ARPACK -larpack"], [])  
+    AC_LINK_IFELSE($testprog, [acx_arpack_ok=yes; LIBS_ARPACK="-L$LIBS_ARPACK -larpack"], [])  
   fi
   if test $acx_arpack_ok = no; then
     AC_MSG_RESULT([$acx_arpack_ok])
@@ -57,12 +53,11 @@ if test $acx_arpack_ok = no; then
   fi
 fi
 
-
-AC_SUBST(LIBS_ARPACK)
 LIBS="$acx_arpack_save_LIBS"
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_arpack_ok" = xyes; then
+  AC_SUBST(LIBS_ARPACK)
   AC_DEFINE(HAVE_ARPACK,1,[Defined if you have ARPACK library.])
   $1
 else

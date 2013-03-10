@@ -28,14 +28,12 @@ if test $acx_parpack_ok = no; then
   esac
 fi
 
-dnl PARPACK always wants ARPACK 
-LIBS_PARPACK="$LIBS_PARPACK $LIBS_ARPACK"
-
+deplibs_parpack="$LIBS_ARPACK $LIBS_LAPACK $LIBS_BLAS $acx_parpack_save_LIBS $FLIBS"
 testprog="AC_LANG_PROGRAM([],[call pdsaupd])"
 
 dnl First, check LIBS_PARPACK environment variable
 if test $acx_parpack_ok = no; then
-  LIBS="$LIBS_PARPACK $LIBS_LAPACK $LIBS_BLAS $acx_parpack_save_LIBS $FLIBS"
+  LIBS="$LIBS_PARPACK $deplibs_parpack"
   AC_MSG_CHECKING([for parpack library])
   AC_LINK_IFELSE($testprog, [acx_parpack_ok=yes], [])
   if test $acx_parpack_ok = no; then
@@ -48,10 +46,10 @@ fi
 if test $acx_parpack_ok = no; then
   AC_MSG_CHECKING([for parpack library with -lparpack])
   if test "$LIBS_PARPACK" = ""; then
-    LIBS="-lparpack  $LIBS_LAPACK $LIBS_BLAS $acx_parpack_save_LIBS $FLIBS" 
+    LIBS="-lparpack $deplibs_parpack"
     AC_LINK_IFELSE($testprog, [acx_parpack_ok=yes; LIBS_PARPACK=" -lparpack"], [])
   else
-    LIBS="-L$LIBS_PARPACK -lparpack  $LIBS_LAPACK $LIBS_BLAS $acx_parpack_save_LIBS $FLIBS" 
+    LIBS="-L$LIBS_PARPACK -lparpack $LIBS_ARPACK $LIBS_LAPACK $LIBS_BLAS $acx_parpack_save_LIBS $FLIBS"
     AC_LINK_IFELSE($testprog, [acx_parpack_ok=yes; LIBS_PARPACK="-L$LIBS_PARPACK -lparpack"], [])  
   fi
   if test $acx_parpack_ok = no; then
@@ -61,14 +59,13 @@ if test $acx_parpack_ok = no; then
   fi
 fi
 
-
-AC_SUBST(LIBS_PARPACK)
 LIBS="$acx_parpack_save_LIBS"
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_parpack_ok" = xyes; then
   AC_DEFINE(HAVE_PARPACK,1,[Defined if you have PARPACK library.])
   $1
+  AC_SUBST(LIBS_PARPACK)
 else
   if test $acx_parpack_ok = nompi; then
     AC_MSG_WARN([PARPACK requires MPI support.]) 
@@ -80,6 +77,5 @@ else
               *** Will compile without PARPACK support])
   $2
 fi
-
 
 ])dnl ACX_PARPACK
