@@ -119,7 +119,7 @@ contains
     ! value to use for adaptive tol scheme
     if(this%conv_abs_dens <= M_ZERO) then
       this%conv_threshold_use = this%conv_rel_dens * qtot
-    else if(this%conv_abs_dens <= M_ZERO) then
+    else if(this%conv_rel_dens <= M_ZERO) then
       this%conv_threshold_use = this%conv_abs_dens
     else
       this%conv_threshold_use = min(this%conv_abs_dens, this%conv_rel_dens * qtot)

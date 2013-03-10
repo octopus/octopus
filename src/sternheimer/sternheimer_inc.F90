@@ -280,7 +280,7 @@ subroutine X(sternheimer_solve)(                           &
     end do
     rel_dens = abs_dens / st%qtot
 
-    write(message(1), '(a,e20.6,a,e20.6,a)') "SCF Residual: ", abs_dens, " (abs), ", rel_dens, " (rel)"
+    write(message(1), '(a,e16.6,a,e16.6,a)') "SCF Residual: ", abs_dens, " (abs), ", rel_dens, " (rel)"
 
     message(2)="--------------------------------------------"
     call messages_info(2)
