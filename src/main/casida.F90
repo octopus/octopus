@@ -104,8 +104,8 @@ module casida_m
     FLOAT,   pointer  :: dlr_hmat2(:,:) !< derivative of single-particle contribution to mat
     CMPLX,   pointer  :: zlr_hmat2(:,:) !< derivative of single-particle contribution to mat
     FLOAT,   pointer  :: forces(:,:,:)  !< excited-state forces
-    FLOAT,   pointer  :: dw2(:)          !< perturbed excitation energies.
-    FLOAT,   pointer  :: zw2(:)          !< perturbed excitation energies.
+    FLOAT,   pointer  :: dw2(:)         !< perturbed excitation energies.
+    FLOAT,   pointer  :: zw2(:)         !< perturbed excitation energies.
 
     ! variables for momentum-transfer-dependent calculation
     logical           :: qcalc
@@ -160,8 +160,7 @@ contains
     end if
 
     if(kpoints_number(sys%gr%sb%kpoints) > 1) then
-      ! Hartree matrix elements may not be correct, not tested anyway.
-      ! Changing all references from st%d%nspin to st%d%nik would get pretty close. --DAS
+      ! Hartree matrix elements may not be correct, not tested anyway. --DAS
       call messages_not_implemented("Casida with k-points")
     endif
 
@@ -980,9 +979,9 @@ contains
 
     ! ---------------------------------------------------------
     subroutine load_saved(matrix, is_saved, restart_file)
-      FLOAT,            intent(inout) :: matrix(:,:)
-      logical,          intent(out)   :: is_saved(:,:)
-      character(len=*), intent(in)    :: restart_file
+      FLOAT,            intent(out) :: matrix(:,:)
+      logical,          intent(out) :: is_saved(:,:)
+      character(len=*), intent(in)  :: restart_file
 
       integer :: iunit, err
       integer :: ia, jb, ii, aa, is, jj, bb, js
@@ -991,6 +990,7 @@ contains
       PUSH_SUB(casida_work.load_saved)
 
       is_saved = .false.
+      matrix = M_ZERO
 
       if(mpi_grp_is_root(mpi_world)) then
         iunit = io_open(trim(restart_file), action='read', &
