@@ -24,7 +24,7 @@ Spacing = 0.36
 
 XCFunctional = lda_x + lda_c_vwn
 
-ConvRelDens = 1e-9
+LRConvAbsDens = 1e-6
 
 LCAODimension = 18
 
