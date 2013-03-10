@@ -41,8 +41,12 @@ match ; HOMO-1         ; GREP(static/info, '4   --', 12) ;  -0.441038
 match ; HOMO           ; GREP(static/info, '5   --', 12) ;  -0.388160
 
 Input: 01-casida.012-vib_modes.inp
+Precision : 0.0002
 match ; Bond stretch   ; LINE(vib_modes/normal_frequencies_lr, 1, 7); 2254.15821
+Precision : 0.01
 match ; Libration 1    ; LINE(vib_modes/normal_frequencies_lr, 2, 7);  324.13371
+
+Precision : 0.0001
 
 Input: 01-casida.02-unocc.inp
 match ; HOMO-1         ; LINE(static/eigenvalues, -11, 12); -0.441038
