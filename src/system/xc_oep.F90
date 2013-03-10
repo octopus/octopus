@@ -54,7 +54,7 @@ module xc_oep_m
     dxc_oep_calc,               &
     zxc_oep_calc
 
-  ! the OEP levels
+  !> the OEP levels
   integer, public, parameter :: &
     XC_OEP_NONE   = 1,          &
     XC_OEP_SLATER = 2,          &
@@ -62,17 +62,17 @@ module xc_oep_m
     XC_OEP_FULL   = 5
 
   type xc_oep_t
-    integer       :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
-    FLOAT         :: mixing     !< how much of the function S(r) to add to vxc in every iteration
-    type(lr_t)    :: lr         !< to solve the equation H psi = b
+    integer               :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
+    FLOAT                 :: mixing     !< how much of the function S(r) to add to vxc in every iteration
+    type(lr_t)            :: lr         !< to solve the equation H psi = b
     type(linear_solver_t) :: solver
-    type(scf_tol_t) :: scftol
-    integer          :: eigen_n
-    integer, pointer :: eigen_type(:), eigen_index(:)
-    FLOAT            :: socc, sfact
-    FLOAT,   pointer :: vxc(:,:), uxc_bar(:,:)
-    FLOAT,   pointer :: dlxc(:, :, :)
-    CMPLX,   pointer :: zlxc(:, :, :)
+    type(scf_tol_t)       :: scftol
+    integer               :: eigen_n
+    integer, pointer      :: eigen_type(:), eigen_index(:)
+    FLOAT                 :: socc, sfact
+    FLOAT,   pointer      :: vxc(:,:), uxc_bar(:,:)
+    FLOAT,   pointer      :: dlxc(:, :, :)
+    CMPLX,   pointer      :: zlxc(:, :, :)
   end type xc_oep_t
 
   FLOAT, parameter :: small     = CNST(1.0e-5)
@@ -81,11 +81,12 @@ module xc_oep_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_init(oep, family, gr, d)
+  subroutine xc_oep_init(oep, family, gr, d, nel)
     type(xc_oep_t),     intent(out)   :: oep
     integer,            intent(in)    :: family
     type(grid_t),       intent(inout) :: gr
     type(states_dim_t), intent(in)    :: d
+    FLOAT,              intent(in)    :: nel
 
     PUSH_SUB(xc_oep_init)
 
@@ -154,7 +155,7 @@ contains
       end if
       ! when performing full OEP, we need to solve a linear equation
       if(oep%level == XC_OEP_FULL) then 
-        call scf_tol_init(oep%scftol, "OEP",def_maximumiter=10)
+        call scf_tol_init(oep%scftol, "OEP", nel, def_maximumiter=10)
         call linear_solver_init(oep%solver, gr, "OEP")
         call lr_init(oep%lr)
       end if

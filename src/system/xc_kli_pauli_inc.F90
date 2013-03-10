@@ -98,7 +98,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
     vs = vloc ! Slater part
 
     ! iteration criteria
-    call scf_tol_init(oep%scftol,"KLI",def_maximumiter=50)
+    call scf_tol_init(oep%scftol, "KLI", st%qtot, def_maximumiter=50)
 
     ! get the HOMO state
     call xc_oep_AnalyzeEigen(oep, st, 1)

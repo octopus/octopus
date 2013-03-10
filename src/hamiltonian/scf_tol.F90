@@ -50,6 +50,7 @@ module scf_tol_m
      integer           :: scheme
      FLOAT             :: conv_rel_dens
      FLOAT             :: conv_abs_dens
+     FLOAT             :: conv_threshold_use
      FLOAT             :: dynamic_tol_factor
      FLOAT             :: current_tol
      FLOAT             :: initial_tol
@@ -60,9 +61,10 @@ module scf_tol_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine scf_tol_init(this, prefix, def_maximumiter, tol_scheme)
+  subroutine scf_tol_init(this, prefix, qtot, def_maximumiter, tol_scheme)
     type(scf_tol_t),    intent(out) :: this
     character(len=*),   intent(in)  :: prefix
+    FLOAT,              intent(in)  :: qtot
     integer, optional,  intent(in)  :: def_maximumiter
     integer, optional,  intent(in)  :: tol_scheme
 
@@ -112,7 +114,16 @@ contains
     str = 'LRConvRelDens'
     if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
          str = trim(prefix)//trim(str)
-    call parse_float(datasets_check(str), CNST(1e-5), this%conv_rel_dens)
+    call parse_float(datasets_check(str), M_ZERO, this%conv_rel_dens)
+
+    ! value to use for adaptive tol scheme
+    if(this%conv_abs_dens <= M_ZERO) then
+      this%conv_threshold_use = this%conv_rel_dens * qtot
+    else if(this%conv_abs_dens <= M_ZERO) then
+      this%conv_threshold_use = this%conv_abs_dens
+    else
+      this%conv_threshold_use = min(this%conv_abs_dens, this%conv_rel_dens * qtot)
+    endif
 
     if(this%conv_abs_dens <= M_ZERO .and. this%conv_rel_dens <= M_ZERO) then
       message(1) = "Input: Not all convergence criteria can be <= 0"
@@ -146,11 +157,11 @@ contains
     else
       str = 'LRTolScheme'
       if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
-           str = trim(prefix)//trim(str)
+        str = trim(prefix)//trim(str)
       call parse_integer(datasets_check(str), SCF_TOL_ADAPTIVE, this%scheme)
     end if
     if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) &
-         call input_error('LRTolScheme')
+      call input_error('LRTolScheme')
 
     !%Variable LRTolInitTol
     !%Type float
@@ -162,7 +173,7 @@ contains
     !%End
     str = 'LRTolInitTol'
     if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
-         str = trim(prefix)//trim(str)
+      str = trim(prefix)//trim(str)
     call parse_float(datasets_check(str), CNST(1e-2), this%initial_tol)
     this%current_tol = this%initial_tol
 
@@ -204,7 +215,7 @@ contains
       !%End
       str = 'LRTolIterWindow'
       if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
-           str = trim(prefix)//trim(str)
+        str = trim(prefix)//trim(str)
       call parse_integer(datasets_check(str), 10, this%iter_window)
     end if
 
@@ -233,18 +244,18 @@ contains
       if(iter == 0) then
         r = this%initial_tol
       else
-        r = this%dynamic_tol_factor * (this%final_tol/this%conv_abs_dens)*scf_res
+        r = this%dynamic_tol_factor * (this%final_tol/this%conv_threshold_use)*scf_res
       end if
 
     case(SCF_TOL_LINEAR)
       r = this%initial_tol + (this%final_tol - this%initial_tol) * &
-           real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
+        real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
 
     case(SCF_TOL_EXP)
       logi = log(this%initial_tol)
       logf = log(this%final_tol)
       r = logi + (logf - logi) * &
-           real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
+        real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
       r = exp(r)
     end select
       

@@ -255,9 +255,9 @@ contains
 
     ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed
     if (ham_var == 0) then
-      call scf_tol_init(this%scf_tol, prefix, tol_scheme = 0) ! fixed
+      call scf_tol_init(this%scf_tol, prefix, sys%st%qtot, tol_scheme = 0) ! fixed
     else
-      call scf_tol_init(this%scf_tol, prefix)
+      call scf_tol_init(this%scf_tol, prefix, sys%st%qtot)
     end if
 
     if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%mesh, sys%st, sys%ks)

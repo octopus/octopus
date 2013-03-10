@@ -290,7 +290,7 @@ contains
       end if
 
       if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
-        call xc_oep_init(ks%oep, ks%xc_family, gr, dd)
+        call xc_oep_init(ks%oep, ks%xc_family, gr, dd, nel)
       endif
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
         call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, mc)
