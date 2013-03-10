@@ -389,15 +389,19 @@ subroutine X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
 
   do ia = 1, cas%n_pairs
     do jb = ia, cas%n_pairs
+!      not sure if this line is appropriate or not. --DAS
+!      if(cas%type == CASIDA_PETERSILKA .and. isnt_degenerate(cas, st, ia, jb)) cycle
+
       ! if occ states the same, apply unocc matrix elements
       if(cas%pair(ia)%i == cas%pair(jb)%i) then
         cas%X(lr_hmat2)(ia, jb) = cas%X(lr_hmat2)(ia, jb) + lr_hmat1(cas%pair(ia)%a, cas%pair(jb)%a, ik)
-        cas%X(lr_hmat2)(jb, ia) = cas%X(lr_hmat2)(jb, ia) + lr_hmat1(cas%pair(jb)%a, cas%pair(ia)%a, ik)
+        if(ia /= jb) cas%X(lr_hmat2)(jb, ia) = cas%X(lr_hmat2)(jb, ia) + lr_hmat1(cas%pair(jb)%a, cas%pair(ia)%a, ik)
       endif
+
       ! if unocc states the same, apply occ matrix elements
       if(cas%pair(ia)%a == cas%pair(jb)%a) then
         cas%X(lr_hmat2)(ia, jb) = cas%X(lr_hmat2)(ia, jb) - lr_hmat1(cas%pair(ia)%i, cas%pair(jb)%i, ik)
-        cas%X(lr_hmat2)(jb, ia) = cas%X(lr_hmat2)(jb, ia) - lr_hmat1(cas%pair(jb)%i, cas%pair(ia)%i, ik)
+        if(ia /= jb) cas%X(lr_hmat2)(jb, ia) = cas%X(lr_hmat2)(jb, ia) - lr_hmat1(cas%pair(jb)%i, cas%pair(ia)%i, ik)
       endif
     enddo
   enddo
