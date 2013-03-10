@@ -22,8 +22,8 @@
 module scf_tol_m
   use datasets_m
   use global_m
-  use parser_m
   use messages_m
+  use parser_m
   use varinfo_m
 
   implicit none
@@ -31,17 +31,17 @@ module scf_tol_m
   private
 
   integer, public, parameter :: &
-       SCF_TOL_FIXED    = 0, &
-       SCF_TOL_ADAPTIVE = 1, &
-       SCF_TOL_LINEAR   = 2, &
+       SCF_TOL_FIXED    = 0,    &
+       SCF_TOL_ADAPTIVE = 1,    &
+       SCF_TOL_LINEAR   = 2,    &
        SCF_TOL_EXP      = 3
 
-  public :: &
-       scf_tol_t, &
-       scf_tol_init, & 
-       scf_tol_end, & 
-       scf_tol_stop, & 
-       scf_tol_step, &
+  public ::                       &
+       scf_tol_t,                 &
+       scf_tol_init,              & 
+       scf_tol_end,               & 
+       scf_tol_stop,              & 
+       scf_tol_step,              &
        scf_tol_final,             &
        scf_tol_obsolete_variables
 
@@ -106,7 +106,7 @@ contains
     !% The scheme used to adjust the tolerance of the solver during
     !% the SCF iteration. For <tt>kdotp</tt> and magnetic <tt>em_resp</tt> modes, or
     !% whenever <tt>HamiltonianVariation = V_ext_only</tt>, the
-    !% scheme is set to fixed, and this variable is ignored.
+    !% scheme is set to <tt>tol_fixed</tt>, and this variable is ignored.
     !%Option tol_fixed 0
     !% The solver tolerance is fixed for all the iterations; this
     !% improves convergence but increases the computational cost
@@ -152,7 +152,7 @@ contains
     !%End
     str = 'LRTolFinalTol'
     if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
-         str = trim(prefix)//trim(str)
+      str = trim(prefix)//trim(str)
     call parse_float(datasets_check(str), CNST(1e-6), this%final_tol)
 
     if(this%scheme == SCF_TOL_ADAPTIVE) then 
@@ -167,7 +167,7 @@ contains
       !%End
       str = 'LRTolAdaptiveFactor'
       if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
-           str = trim(prefix)//trim(str)
+        str = trim(prefix)//trim(str)
       call parse_float(datasets_check(str), CNST(0.1), this%dynamic_tol_factor)
     end if
 
@@ -177,7 +177,7 @@ contains
       !%Default 10
       !%Section Linear Response::SCF in LR calculations
       !%Description
-      !% Number of iterations necessary to reach the final tolerance
+      !% Number of iterations necessary to reach the final tolerance.
       !%End
       str = 'LRTolIterWindow'
       if(parse_isdef(datasets_check(trim(prefix)//trim(str))) /= 0) &
@@ -271,6 +271,9 @@ contains
   subroutine scf_tol_obsolete_variables(old_prefix, new_prefix)
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
+
+    PUSH_SUB(scf_tol_obsolete_variables)
+
     call messages_obsolete_variable(trim(old_prefix)//'LRMaximumIter', trim(new_prefix)//'LRMaximumIter')
     call messages_obsolete_variable(trim(old_prefix)//'LRConvAbsDens', trim(new_prefix)//'LRConvAbsDens')
     call messages_obsolete_variable(trim(old_prefix)//'LRTolScheme', trim(new_prefix)//'LRTolScheme')
@@ -278,6 +281,8 @@ contains
     call messages_obsolete_variable(trim(old_prefix)//'LRTolFinalTol', trim(new_prefix)//'LRTolFinalTol')
     call messages_obsolete_variable(trim(old_prefix)//'LRTolAdaptiveFactor', trim(new_prefix)//'LRTolAdaptiveFactor')
     call messages_obsolete_variable(trim(old_prefix)//'LRTolIterWindow', trim(new_prefix)//'LRTolIterWindow')
+
+    POP_SUB(scf_tol_obsolete_variables)
   end subroutine scf_tol_obsolete_variables
 
 end module scf_tol_m
