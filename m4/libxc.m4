@@ -26,17 +26,29 @@ acx_libxc_save_FCFLAGS="$FCFLAGS"
 
 dnl The tests
 AC_MSG_CHECKING([for libxc])
-libxc_fcflags="$FCFLAGS_LIBXC"; libxc_libs="$LIBS_LIBXC"
-FCFLAGS="$libxc_fcflags $acx_libxc_save_FCFLAGS"
-LIBS="$libxc_libs $acx_libxc_save_LIBS"
-AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
+
+testprog="AC_LANG_PROGRAM([],[
   use xc_f90_lib_m
   implicit none
   integer :: major
   integer :: minor
-  call xc_f90_version(major, minor)
-]), [acx_libxc_ok=yes; FCFLAGS_LIBXC="$libxc_fcflags"; LIBS_LIBXC="$libxc_libs"], [])
+  call xc_f90_version(major, minor)])"
+
+# first try linking statically
+libxc_fcflags="$FCFLAGS_LIBXC"; libxc_libs="$LIBS_LIBXC"
+FCFLAGS="$libxc_fcflags $acx_libxc_save_FCFLAGS"
+LIBS="$libxc_libs $acx_libxc_save_LIBS"
+AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes; FCFLAGS_LIBXC="$libxc_fcflags"; LIBS_LIBXC="$libxc_libs"], [])
 AC_MSG_RESULT([$acx_libxc_ok ($FCFLAGS_LIBXC $LIBS_LIBXC)])
+
+# otherwise try linking dynamically (for when libxc was installed as a package)
+if test x"$acx_libxc_ok" = xno; then
+  LIBS_LIBXC="-L$with_libxc_prefix/lib -lxc"
+  libxc_libs="$LIBS_LIBXC"
+  LIBS="$libxc_libs $acx_libxc_save_LIBS"
+  AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes; FCFLAGS_LIBXC="$libxc_fcflags"; LIBS_LIBXC="$libxc_libs"], [])
+  AC_MSG_RESULT([$acx_libxc_ok ($FCFLAGS_LIBXC $LIBS_LIBXC)])
+fi
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_libxc_ok" = xyes; then
