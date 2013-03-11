@@ -371,11 +371,11 @@ contains
       !%Variable CasidaCalcForcesKernel
       !%Type logical
       !%Section Linear Response::Casida
-      !%Default false
+      !%Default true
       !%Description
       !% If false, the derivative of the kernel will not be included in the excited-state force calculation.
       !%End
-      call parse_logical(datasets_check('CasidaCalcForcesKernel'), .false., cas%calc_forces_kernel)
+      call parse_logical(datasets_check('CasidaCalcForcesKernel'), .true., cas%calc_forces_kernel)
     endif
 
     ! Initialize structure
