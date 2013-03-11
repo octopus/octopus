@@ -1,0 +1,17 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 01-casida.test 10206 2013-03-11 22:10:21Z dstrubbe $
+
+Test       : oct-center-geom
+Programs   : oct-center-geom
+TestGroups : short-run; components
+Enabled    : Yes
+
+# quadricyclane molecule
+
+Input : 14-center-geom.01-run.inp
+match ; Coordinate  1 x ; LINE(adjusted.xyz,  3, 20);  1.106580
+match ; Coordinate  1 y ; LINE(adjusted.xyz,  3, 36);  0.752138
+match ; Coordinate  1 z ; LINE(adjusted.xyz,  3, 48);  0.748524
+match ; Coordinate 15 x ; LINE(adjusted.xyz, 17, 20); -0.529171
+match ; Coordinate 15 y ; LINE(adjusted.xyz, 17, 36);  2.154103
+match ; Coordinate 15 z ; LINE(adjusted.xyz, 17, 48);  0.014197
