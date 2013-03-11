@@ -658,6 +658,7 @@ contains
       call solve_eps_diff()
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
       call casida_get_matrix(cas%mat, restart_filename)
+      call casida_matrix_factors(cas%mat)
       call solve_casida()
     end select
 
@@ -834,6 +835,24 @@ contains
     end subroutine casida_get_matrix
 
     ! ---------------------------------------------------------
+    subroutine casida_matrix_factors(matrix)
+      FLOAT, intent(inout) :: matrix(:,:)
+
+      PUSH_SUB(casida_matrix_factors)
+
+      if(cas%type == CASIDA_VARIATIONAL) then
+        matrix = M_TWO * matrix
+      endif
+    
+      if(sys%st%d%ispin == UNPOLARIZED) then
+        matrix = M_TWO * matrix
+      endif
+
+      POP_SUB(casida_matrix_factors)
+
+    end subroutine casida_matrix_factors
+
+    ! ---------------------------------------------------------
     subroutine solve_casida()
 
       FLOAT :: temp
@@ -857,14 +876,7 @@ contains
             if(cas%type == CASIDA_CASIDA) then
               cas%mat(ia, jb) = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
                 sqrt(st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))
-            else if(cas%type == CASIDA_VARIATIONAL) then
-              cas%mat(ia, jb) = M_TWO * cas%mat(ia, jb)
             endif
-
-            if(sys%st%d%ispin == UNPOLARIZED) then
-              cas%mat(ia, jb) = M_TWO * cas%mat(ia, jb)
-            endif
-
             if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
           end do
           if(cas%type == CASIDA_CASIDA) then
@@ -1172,6 +1184,7 @@ contains
             if(states_are_real(st)) then
               xc => lr_fxc(:, :, :, iatom, idir)
               call casida_get_matrix(cas%dmat2, restart_filename, is_forces = .true.)
+              call casida_matrix_factors(cas%dmat2)
             else
               call messages_not_implemented("lr_kernel for complex wfns") ! FIXME
             endif
