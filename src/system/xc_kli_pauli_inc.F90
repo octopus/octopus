@@ -21,7 +21,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
   type(states_t), intent(in)    :: st
   type(xc_oep_t), intent(inout) :: oep
   !
-  integer :: is, ip, ii, jj, ist, eigen_n, it, kssi 
+  integer :: is, ip, ii, jj, ist, eigen_n, it, kssi
   FLOAT, allocatable :: rho(:,:), lambda(:), n(:), t_rho(:,:)
   FLOAT, allocatable :: t_v(:,:), vloc(:,:), rhov(:), v_m1(:,:), p_i(:,:,:), t_vi(:,:,:), delta_v(:), vs(:,:)
   CMPLX, allocatable :: weighted_hf(:,:,:), rho_i(:,:,:,:)
@@ -57,6 +57,11 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
       end do
     end do
   end do
+
+  ! reduce over states
+  if(st%parallel_in_states) then
+    call comm_allreduce(st%mpi_grp%comm, weighted_hf)
+  end if
 
   SAFE_ALLOCATE(t_v(mesh%np,4))
   t_v = M_ZERO
@@ -210,4 +215,4 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
   call profiling_out(C_PROFILING_XC_KLI)
 
   POP_SUB(xc_kli_pauli_solve)
-end subroutine xc_KLI_Pauli_solve
+end subroutine xc_kli_pauli_solve
