@@ -84,6 +84,7 @@ module casida_m
     character(len=80) :: trandens
     logical           :: triplet        !< use triplet kernel?
     logical           :: calc_forces    !< calculate excited-state forces
+    logical           :: calc_forces_kernel    !< calculate excited-state forces with kernel
     character(len=80) :: restart_dir
     
     integer           :: n_pairs        !< number of pairs to take into account
@@ -364,7 +365,18 @@ contains
     !% (Experimental) Enable calculation of excited-state forces. Requires previous <tt>vib_modes</tt> calculation.
     !%End
     call parse_logical(datasets_check('CasidaCalcForces'), .false., cas%calc_forces)
-    if(cas%calc_forces) call messages_experimental("Excited-state forces calculation")
+    if(cas%calc_forces) then
+      call messages_experimental("Excited-state forces calculation")
+
+      !%Variable CasidaCalcForcesKernel
+      !%Type logical
+      !%Section Linear Response::Casida
+      !%Default false
+      !%Description
+      !% If false, the derivative of the kernel will not be included in the excited-state force calculation.
+      !%End
+      call parse_logical(datasets_check('CasidaCalcForcesKernel'), .false., cas%calc_forces_kernel)
+    endif
 
     ! Initialize structure
     call casida_type_init(cas, sys)
@@ -1135,7 +1147,7 @@ contains
             endif
           enddo
 
-          if (cas%type /= CASIDA_EPS_DIFF) then
+          if (cas%type /= CASIDA_EPS_DIFF .and. cas%calc_forces_kernel) then
             forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
               lr_fxc(ip, is1, is2, iatom, idir) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :, iatom, idir))
             end forall
@@ -1149,16 +1161,22 @@ contains
             else
               call messages_not_implemented("lr_kernel for complex wfns") ! FIXME
             endif
+          else
+            if(states_are_real(st)) then
+              cas%dmat2 = M_ZERO
+            else
+              cas%dmat2 = M_ZERO
+            endif
           endif
 
           if(states_are_real(st)) then
-            cas%dmat2 = cas%mat_save * factor + cas%dlr_hmat2
+            cas%dmat2 = cas%mat_save * factor + cas%dlr_hmat2 + cas%dmat2
             call lalg_eigensolve(cas%n_pairs, cas%dmat2, cas%dw2)
             do ia = 1, cas%n_pairs
               cas%forces(iatom, idir, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - cas%dw2(ia)
             enddo
           else
-            cas%zmat2 = cas%mat_save * factor + cas%zlr_hmat2
+            cas%zmat2 = cas%mat_save * factor + cas%zlr_hmat2 + cas%zmat2
             call lalg_eigensolve(cas%n_pairs, cas%zmat2, cas%zw2)
             do ia = 1, cas%n_pairs
               cas%forces(iatom, idir, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - real(cas%zw2(ia), REAL_PRECISION)
