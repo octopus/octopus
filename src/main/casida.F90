@@ -781,7 +781,7 @@ contains
 
         ! note: the ordering of jb, ia loops are crucial to minimize number of Poisson solves required.
         do ia = jb, cas%n_pairs
-          if(cas%type == CASIDA_PETERSILKA) then
+          if(cas%type == CASIDA_PETERSILKA .and. .not. is_forces_) then
             ! only calculate off-diagonals in degenerate subspace
             if(isnt_degenerate(cas, st, ia, jb)) cycle
           else
@@ -853,6 +853,7 @@ contains
           do jb = ia, cas%n_pairs
             q => cas%pair(jb)
               
+            ! FIXME: need the equivalent of this stuff for forces too.
             if(cas%type == CASIDA_CASIDA) then
               cas%mat(ia, jb) = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
                 sqrt(st%eigenval(q%a, q%sigma) - st%eigenval(q%i, q%sigma))
@@ -864,7 +865,7 @@ contains
               cas%mat(ia, jb) = M_TWO * cas%mat(ia, jb)
             endif
 
-            if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
+            if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
           end do
           if(cas%type == CASIDA_CASIDA) then
             cas%mat(ia, ia) = temp**2 + cas%mat(ia, ia)
@@ -1047,7 +1048,7 @@ contains
     ! ---------------------------------------------------------
     subroutine casida_forces_init()
       
-      integer :: ip, iatom, idir, is1, is2, ierr, ik, ia
+      integer :: ip, iatom, idir, is1, is2, ierr, ik, ia, ist, jst, iunit
       FLOAT, allocatable :: hvar(:,:,:), dlr_hmat1(:,:,:)
       CMPLX, allocatable :: zlr_hmat1(:,:,:)
       type(pert_t) :: ionic_pert
@@ -1138,6 +1139,19 @@ contains
             endif
           enddo
 
+          if(mpi_grp_is_root(mpi_world)) then
+            write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_hmat1_', iatom, '_', idir
+            iunit = io_open(restart_filename, action = 'write')
+            do ik = 1, cas%nik
+              do ist = 1, cas%nst
+                do jst = ist, cas%nst
+                  write(iunit, *) ist, jst, ik, dlr_hmat1(ist, jst, ik)
+                enddo
+              enddo
+            enddo
+            call io_close(iunit)
+          endif
+
           ! use them to make two-particle matrix elements (as for eigenvalues)
           do ik = 1, cas%nik
             if(states_are_real(st)) then
@@ -1165,7 +1179,7 @@ contains
             if(states_are_real(st)) then
               cas%dmat2 = M_ZERO
             else
-              cas%dmat2 = M_ZERO
+              cas%zmat2 = M_ZERO
             endif
           endif
 
