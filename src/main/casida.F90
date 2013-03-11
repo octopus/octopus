@@ -367,7 +367,7 @@ contains
     if(cas%calc_forces) call messages_experimental("Excited-state forces calculation")
 
     ! Initialize structure
-    call casida_type_init(cas, sys%gr%sb%dim, sys%mc)
+    call casida_type_init(cas, sys)
 
     cas%restart_dir = trim(tmpdir)//'casida'
     cas%fromScratch = fromScratch
@@ -447,10 +447,9 @@ contains
 
   ! ---------------------------------------------------------
   !> allocates stuff, and constructs the arrays pair_i and pair_j
-  subroutine casida_type_init(cas, dim, mc)
+  subroutine casida_type_init(cas, sys)
     type(casida_t),    intent(inout) :: cas
-    integer,           intent(in)    :: dim
-    type(multicomm_t), intent(in)    :: mc
+    type(system_t),    intent(in)    :: sys
 
     integer :: ist, ast, jpair, ik
 
@@ -483,12 +482,17 @@ contains
     ! allocate stuff
     SAFE_ALLOCATE(cas%pair(1:cas%n_pairs))
     SAFE_ALLOCATE( cas%mat(1:cas%n_pairs, 1:cas%n_pairs))
-    SAFE_ALLOCATE(  cas%tm(1:cas%n_pairs, 1:dim))
+    SAFE_ALLOCATE(  cas%tm(1:cas%n_pairs, 1:sys%gr%sb%dim))
     SAFE_ALLOCATE(   cas%f(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
     SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
     SAFE_ALLOCATE(cas%index(1:maxval(cas%n_occ), cas%nst - maxval(cas%n_unocc) + 1:cas%nst, cas%nik))
     SAFE_ALLOCATE( cas%ind(1:cas%n_pairs))
+
+    if(cas%calc_forces) then
+      SAFE_ALLOCATE(cas%mat_save(cas%n_pairs, cas%n_pairs))
+      SAFE_ALLOCATE(cas%forces(1:sys%geo%natoms, 1:sys%gr%sb%dim, 1:cas%n_pairs))
+    endif
 
     if(cas%qcalc) then
       SAFE_ALLOCATE( cas%qf    (1:cas%n_pairs))
@@ -516,9 +520,9 @@ contains
     end do
 
     ! now let us take care of initializing the parallel stuff
-    cas%parallel_in_eh_pairs = multicomm_strategy_is_parallel(mc, P_STRATEGY_OTHER)
+    cas%parallel_in_eh_pairs = multicomm_strategy_is_parallel(sys%mc, P_STRATEGY_OTHER)
     if(cas%parallel_in_eh_pairs) then
-      call mpi_grp_init(cas%mpi_grp, mc%group_comm(P_STRATEGY_OTHER))
+      call mpi_grp_init(cas%mpi_grp, sys%mc%group_comm(P_STRATEGY_OTHER))
     else
       call mpi_grp_init(cas%mpi_grp, -1)
     end if
@@ -552,6 +556,7 @@ contains
     SAFE_DEALLOCATE_P(cas%n_unocc)
 
     if(cas%calc_forces) then
+      SAFE_DEALLOCATE_P(cas%mat_save)
       SAFE_DEALLOCATE_P(cas%forces)
     endif
 
@@ -861,10 +866,7 @@ contains
         ! now we diagonalize the matrix
         ! for huge matrices, perhaps we should consider ScaLAPACK here...
         call profiling_in(prof, "CASIDA_DIAGONALIZATION")
-        if(cas%calc_forces) then
-          SAFE_ALLOCATE(cas%mat_save(cas%n_pairs, cas%n_pairs))
-          cas%mat_save = cas%mat ! save before gets turned into eigenvectors
-        endif
+        if(cas%calc_forces) cas%mat_save = cas%mat ! save before gets turned into eigenvectors
         call lalg_eigensolve(cas%n_pairs, cas%mat, cas%w)
         call profiling_out(prof)
 
@@ -1065,7 +1067,6 @@ contains
       endif
 
       if(cas%type == CASIDA_EPS_DIFF) then
-        SAFE_ALLOCATE(cas%mat_save(cas%n_pairs, cas%n_pairs))
         cas%mat_save = M_ZERO
         do ia = 1, cas%n_pairs
           cas%mat_save(ia, ia) = cas%w(ia)
@@ -1073,7 +1074,6 @@ contains
       endif
 
       SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:1))
-      SAFE_ALLOCATE(cas%forces(1:sys%geo%natoms, 1:mesh%sb%dim, 1:cas%n_pairs))
       if(states_are_real(st)) then
         SAFE_ALLOCATE(dlr_hmat1(cas%nst, cas%nst, cas%nik))
         SAFE_ALLOCATE(cas%dlr_hmat2(cas%n_pairs, cas%n_pairs))
@@ -1173,7 +1173,6 @@ contains
       endif
       SAFE_DEALLOCATE_A(dl_rho)
       SAFE_DEALLOCATE_A(hvar)
-      SAFE_DEALLOCATE_P(cas%mat_save)
       if(states_are_real(st)) then
         SAFE_DEALLOCATE_A(dlr_hmat1)
         SAFE_DEALLOCATE_P(cas%dmat2)
