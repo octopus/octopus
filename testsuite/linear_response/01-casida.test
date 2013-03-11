@@ -95,10 +95,25 @@ match ; 1st Casida f ; LINE(casida/casida, 2, 73) ; 0.0
 match ; 3rd Casida f ; LINE(casida/casida, 5, 73) ; 0.0
 match ; 9th Casida f ; LINE(casida/casida,10, 73) ; 1.33551722E-01
 
+match ; 1st TDA E ; LINE(casida/tamm_dancoff, 2, 7) ; 3.42506434E-01
+match ; 2nd TDA E ; LINE(casida/tamm_dancoff, 4, 7) ; 3.53561930E-01
+match ; 3rd TDA E ; LINE(casida/tamm_dancoff, 5, 7) ; 3.74266381E-01
+
+match ; 1st TDA f ; LINE(casida/tamm_dancoff, 2, 73) ; 0.0
+match ; 3rd TDA f ; LINE(casida/tamm_dancoff, 5, 73) ; 0.0
+match ; 9th TDA f ; LINE(casida/tamm_dancoff,10, 73) ; 1.31608720E-01
+
 match ; 1st eps-diff force 1 1 ; LINE(casida/eps_diff_excitations/forces_00001.xsf, 2, 50); -0.248596
 match ; 1st eps-diff force 1 2 ; LINE(casida/eps_diff_excitations/forces_00001.xsf, 2, 65);  0.0
+match ; 9th eps-diff force 1 1 ; LINE(casida/eps_diff_excitations/forces_00009.xsf, 2, 50); -0.027225
+
+match ; 1st Pet force 1 1 ;  LINE(casida/petersilka_excitations/forces_00001.xsf, 2, 50); -0.248696
+match ; 1st Pet force 1 2 ;  LINE(casida/petersilka_excitations/forces_00001.xsf, 2, 65);  0.0
+match ; 9th Pet force 1 1 ;  LINE(casida/petersilka_excitations/forces_00009.xsf, 2, 50); -0.027143
+
 match ; 1st TDA force 1 1 ;  LINE(casida/tamm_dancoff_excitations/forces_00001.xsf, 2, 50); -0.277736
 match ; 1st TDA force 1 2 ;  LINE(casida/tamm_dancoff_excitations/forces_00001.xsf, 2, 65);  0.0
+match ; 9th TDA force 1 1 ;  LINE(casida/tamm_dancoff_excitations/forces_00009.xsf, 2, 50); -0.028346
 
 Util : oct-casida_spectrum
 Input: 01-casida.04-spectrum.inp
