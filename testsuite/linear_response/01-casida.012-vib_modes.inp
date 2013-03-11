@@ -24,8 +24,6 @@ Spacing = 0.36
 
 XCFunctional = lda_x + lda_c_vwn
 
-LRConvAbsDens = 1e-6
-
 LCAODimension = 18
 
 EigenSolver = cg_new
