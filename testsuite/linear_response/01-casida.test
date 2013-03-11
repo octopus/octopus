@@ -95,6 +95,11 @@ match ; 1st Casida f ; LINE(casida/casida, 2, 73) ; 0.0
 match ; 3rd Casida f ; LINE(casida/casida, 5, 73) ; 0.0
 match ; 9th Casida f ; LINE(casida/casida,10, 73) ; 1.33551722E-01
 
+match ; 1st eps-diff force 1 1 ; LINE(casida/eps_diff_excitations/forces_00001.xsf, 2, 50); -0.248596
+match ; 1st eps-diff force 1 2 ; LINE(casida/eps_diff_excitations/forces_00001.xsf, 2, 65);  0.0
+match ; 1st TDA force 1 1 ;  LINE(casida/tamm_dancoff_excitations/forces_00001.xsf, 2, 50); -0.277736
+match ; 1st TDA force 1 2 ;  LINE(casida/tamm_dancoff_excitations/forces_00001.xsf, 2, 65);  0.0
+
 Util : oct-casida_spectrum
 Input: 01-casida.04-spectrum.inp
 

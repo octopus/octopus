@@ -1037,7 +1037,7 @@ contains
       FLOAT, allocatable :: hvar(:,:,:), dlr_hmat1(:,:,:)
       CMPLX, allocatable :: zlr_hmat1(:,:,:)
       type(pert_t) :: ionic_pert
-      FLOAT :: factor = CNST(1e12) ! FIXME: allow user to set
+      FLOAT :: factor = CNST(1e6) ! FIXME: allow user to set
       character(len=100) :: restart_filename
       
       PUSH_SUB(casida_work.casida_forces_init)
