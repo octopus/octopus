@@ -26,7 +26,7 @@ subroutine X(poisson1D_solve)(this, pot, rho, theta)
   ! which makes it possible to solve separately for real/imaginary parts.
   ! But the soft-Coulomb kernel makes it necessary.
   !
-  ! Note that we don't divide by e^(i theta) here, we do it "outside" as with the other Poisson solvers.
+  ! Note that we don`t divide by e^(i theta) here, we do it "outside" as with the other Poisson solvers.
 
   integer             :: ip, jp
   FLOAT               :: xx, yy
@@ -45,7 +45,7 @@ subroutine X(poisson1D_solve)(this, pot, rho, theta)
   soft_coulomb_param_squared = this%poisson_soft_coulomb_param**2
   if(present(theta)) then
     ! This will discard imaginary part for R_TYPE real.
-    ! But theta won't be there unless we already use complex scaling, so only cmplx is relevant.
+    ! But theta won`t be there unless we already use complex scaling, so only cmplx is relevant.
     soft_coulomb_param_squared = soft_coulomb_param_squared * exp(-M_TWO * M_zI * theta)
   end if
 
