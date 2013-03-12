@@ -140,6 +140,8 @@ contains
 
     ! print out geometry
     call from_coords(g_opt, coords)
+    message(1) = "Writing final coordinates to min.xyz"
+    call messages_info(1)
     call geometry_write_xyz(".", "min", g_opt%geo, g_opt%dim)
 
     SAFE_DEALLOCATE_A(coords)
@@ -421,11 +423,14 @@ contains
     message(2) = ""
     message(3) = "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
     write(message(4),'("+++++++++++++++++++++ MINIMIZATION ITER #: ",I4," ++++++++++++++++++++++")') geom_iter
-    write(message(5), '(2x,2(a,f16.10))') "Energy    = ", units_from_atomic(units_out%energy, energy)
+    write(message(5), '(2x,a,f16.10,1x,a)') "Energy    = ", &
+      units_from_atomic(units_out%energy, energy), trim(units_abbrev(units_out%energy))
     if(maxdf > M_ZERO) then
-      write(message(6),'(2X,2(a,f16.10))')  "Max force = ", units_from_atomic(units_out%force, maxdf)
+      write(message(6),'(2x,a,f16.10,1x,a)')  "Max force = ", &
+        units_from_atomic(units_out%force, maxdf), trim(units_abbrev(units_out%force))
     end if
-    write(message(7),'(2X,2(a,f16.10))')  "Max dr    = ", units_from_atomic(units_out%length, maxdx)
+    write(message(7),'(2x,a,f16.10,1x,a)')  "Max dr    = ", &
+      units_from_atomic(units_out%length, maxdx), trim(units_abbrev(units_out%length))
     message(8) = message(3)
     message(9) = message(3)
     message(10) = ""
