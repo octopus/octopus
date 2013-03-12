@@ -932,12 +932,6 @@ contains
 
       end if
 
-#if defined(HAVE_MPI)
-      if(cas%parallel_in_eh_pairs) then
-        call MPI_Barrier(cas%mpi_grp%comm, mpi_err)
-      end if
-#endif
-
       POP_SUB(casida_work.solve_casida)
     end subroutine solve_casida
 
