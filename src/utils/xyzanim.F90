@@ -76,7 +76,7 @@ program xyzanim
   call geometry_init(geo, space)
   call simul_box_init(sb, geo, space)
 
-  record_length = 100 + 3*geo%natoms*3*20
+  record_length = 100 + geo%space%dim*geo%natoms*3*20
 
   ! Opens the coordinates file
   coords_unit = io_open(coords_file, action='read', recl = record_length)
@@ -85,7 +85,7 @@ program xyzanim
   ierr = 0
   do while(ierr == 0)
     read(unit = coords_unit, iostat = ierr, fmt = *) iter, time, &
-      ((geo%atom(i)%x(j), j = 1, 3), i = 1, geo%natoms)
+      ((geo%atom(i)%x(j), j = 1, geo%space%dim), i = 1, geo%natoms)
     if(mod(iter, sampling) == 0) then
       write(comment, '(i10,f20.6)') iter, time
       call geometry_write_xyz('td.general', 'movie', geo, geo%space%dim, append = .true., comment = trim(comment))
