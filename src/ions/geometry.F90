@@ -170,6 +170,7 @@ contains
     !% indicating the number of atoms. The second can contain comments that are simply ignored by
     !% <tt>Octopus</tt>. Then there follows one line per atom, containing the chemical species and
     !% the Cartesian coordinates of the atom.
+    !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
     !%End
 
     !%Variable Coordinates
@@ -208,7 +209,7 @@ contains
     !% of the cell, so the coordinates inside the cell are in the
     !% range [-0.5, 0.5).
     !%
-    !% This block cannot be used with the <tt>minimum</tt> box shapes.
+    !% This block cannot be used with the <tt>minimum</tt> box shape.
     !% 
     !%End
 
