@@ -26,6 +26,7 @@ module casida_m
   use datasets_m
   use density_m
   use excited_states_m
+  use forces_m
   use gauss_legendre_m
   use global_m
   use hamiltonian_m
@@ -85,6 +86,7 @@ module casida_m
     logical           :: triplet        !< use triplet kernel?
     logical           :: calc_forces    !< calculate excited-state forces
     logical           :: calc_forces_kernel    !< calculate excited-state forces with kernel
+    logical           :: calc_forces_scf       !< calculate excited-state forces with SCF forces
     character(len=80) :: restart_dir
     
     integer           :: n_pairs        !< number of pairs to take into account
@@ -376,6 +378,16 @@ contains
       !% If false, the derivative of the kernel will not be included in the excited-state force calculation.
       !%End
       call parse_logical(datasets_check('CasidaCalcForcesKernel'), .true., cas%calc_forces_kernel)
+
+      !%Variable CasidaCalcForcesSCF
+      !%Type logical
+      !%Section Linear Response::Casida
+      !%Default false
+      !%Description
+      !% If true, the ground-state forces will be included in the excited-state forces, so they are total forces.
+      !% If false, the excited-state forces that are produced are only the gradients of the excitation energy.
+      !%End
+      call parse_logical(datasets_check('CasidaCalcForcesSCF'), .false., cas%calc_forces_scf)
     endif
 
     ! Initialize structure
@@ -1222,6 +1234,17 @@ contains
         SAFE_DEALLOCATE_P(cas%zw2)
       endif
       
+      if(cas%calc_forces_scf) then
+        call forces_calculate(sys%gr, sys%geo, hm%ep, st)
+        do ia = 1, cas%n_pairs
+          do iatom = 1, sys%geo%natoms
+            do idir = 1, sys%gr%sb%dim
+              cas%forces(iatom, idir, ia) = cas%forces(iatom, idir, ia) + sys%geo%atom(iatom)%f(idir)
+            enddo
+          enddo
+        enddo
+      endif
+
       POP_SUB(casida_work.casida_forces_init)
     end subroutine casida_forces_init
 
