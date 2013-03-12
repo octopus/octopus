@@ -35,8 +35,8 @@ program xyzanim
 
   implicit none
 
-  character(len=256) :: coords_file, xyzfile
-  integer :: ierr, sampling, i, coords_unit, xyz_unit, iter, j, record_length
+  character(len=256) :: coords_file, comment
+  integer :: ierr, sampling, i, coords_unit, iter, j, record_length
   FLOAT :: time
   type(simul_box_t) :: sb
   type(geometry_t)  :: geo
@@ -57,7 +57,6 @@ program xyzanim
 
   ! Sets the filenames
   coords_file = 'td.general/coordinates'
-  xyzfile = 'td.general/movie.xyz'
 
   !%Variable AnimationSampling
   !%Type integer
@@ -82,16 +81,14 @@ program xyzanim
   ! Opens the coordinates file
   coords_unit = io_open(coords_file, action='read', recl = record_length)
 
-  ! Opens the xyz file
-  xyz_unit = io_open(xyzfile, action='write')
-
   call io_skip_header(coords_unit)
   ierr = 0
   do while(ierr == 0)
     read(unit = coords_unit, iostat = ierr, fmt = *) iter, time, &
       ((geo%atom(i)%x(j), j = 1, 3), i = 1, geo%natoms)
     if(mod(iter, sampling) == 0) then
-      call write_xyz()
+      write(comment, '(i10,f20.6)') iter, time
+      call geometry_write_xyz('td.general', 'movie', geo, geo%space%dim, append = .true., comment = trim(comment))
     end if
   end do
 
@@ -99,26 +96,13 @@ program xyzanim
   call geometry_end(geo)
   call space_end(space)
 
-  call io_close(coords_unit); call io_close(xyz_unit)
+  call io_close(coords_unit)
 
   call io_end()
   call datasets_end()
   call messages_end()
   call parser_end()
   call global_end()
-
-contains
-
-  ! ---------------------------------------------------------
-  subroutine write_xyz
-    integer :: i
-    ! xyz format
-    write(xyz_unit, '(i4)') geo%natoms
-    write(xyz_unit, '(i10,f20.6)') iter, time
-    do i = 1, geo%natoms
-      write(xyz_unit, '(6x,a,2x,3f12.6)') geo%atom(i)%label, geo%atom(i)%x(:)
-    end do
-  end subroutine write_xyz
 
 end program xyzanim
 
