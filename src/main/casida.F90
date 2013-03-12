@@ -782,7 +782,7 @@ contains
 
         ! note: the ordering of jb, ia loops are crucial to minimize number of Poisson solves required.
         do ia = jb, cas%n_pairs
-          if(cas%type == CASIDA_PETERSILKA .and. .not. is_forces_) then
+          if(cas%type == CASIDA_PETERSILKA) then
             ! only calculate off-diagonals in degenerate subspace
             if(isnt_degenerate(cas, st, ia, jb)) cycle
           else
