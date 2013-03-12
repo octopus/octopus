@@ -107,6 +107,7 @@ module scf_m
     type(eigensolver_t) :: eigens
     integer :: mixdim1
     integer :: mixdim2
+    logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
   end type scf_t
 
 contains
@@ -379,6 +380,8 @@ contains
     ! this variable is also used in td/td_write.F90
     scf%lmm_r = units_to_atomic(units_inp%length, scf%lmm_r)
 
+    scf%forced_finish = .false.
+
     POP_SUB(scf_init)
   end subroutine scf_init
 
@@ -434,11 +437,16 @@ contains
     CMPLX, allocatable :: zrhoout(:,:,:), zrhoin(:,:,:), zrhonew(:,:,:)
     FLOAT, allocatable :: Imvout(:,:,:), Imvin(:,:,:), Imvnew(:,:,:)
     character(len=8) :: dirname
-    logical :: finish, forced_finish, gs_run_, berry_conv, cmplxscl
+    logical :: finish, gs_run_, berry_conv, cmplxscl
     integer :: verbosity_
 
     PUSH_SUB(scf_run)
-    
+
+    if(scf%forced_finish) then
+      message(1) = "Previous clean stop, not doing SCF and quitting."
+      call messages_fatal(1)
+    endif
+
     cmplxscl = st%cmplxscl%space
   
     gs_run_ = .true.
@@ -700,11 +708,11 @@ contains
       end select
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
-      forced_finish = clean_stop(mc%master_comm)
+      scf%forced_finish = clean_stop(mc%master_comm)
 
       if(gs_run_) then 
         ! save restart information
-        if(finish .or. (modulo(iter, outp%iter) == 0) .or. iter == scf%max_iter .or. forced_finish) then
+        if(finish .or. (modulo(iter, outp%iter) == 0) .or. iter == scf%max_iter .or. scf%forced_finish) then
           call restart_write(trim(tmpdir) // GS_DIR, st, gr, geo, err, iter=iter)
           if(err .ne. 0) then
             message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
@@ -748,7 +756,7 @@ contains
         forcein(1:geo%natoms, 1:gr%sb%dim) = forceout(1:geo%natoms, 1:gr%sb%dim)
       end if
 
-      if(forced_finish) then
+      if(scf%forced_finish) then
         call profiling_out(prof)
         exit
       end if
