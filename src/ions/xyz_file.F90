@@ -125,7 +125,11 @@ contains
       gf%flags = ior(gf%flags, XYZ_FLAGS_RESIDUE)
       gf%flags = ior(gf%flags, XYZ_FLAGS_CHARGE)
 
-      call parse_string(datasets_check('PDB'//trim(what)), 'coords.pdb', str)
+      ! no default, since we do not do this unless the input tag is present
+      call parse_string(datasets_check('PDB'//trim(what)), '', str)
+
+      message(1) = "Reading " // trim(what) // " from " // trim(str)
+      call messages_info(1)
 
       iunit = io_open(str, action='read')
       call xyz_file_read_PDB(what, iunit, gf)
@@ -136,7 +140,11 @@ contains
       call check_duplicated(done)
 
       gf%file_type = XYZ_FILE_XYZ
-      call parse_string(datasets_check('XYZ'//trim(what)), 'coords.xyz', str)
+      ! no default, since we do not do this unless the input tag is present
+      call parse_string(datasets_check('XYZ'//trim(what)), '', str)
+
+      message(1) = "Reading " // trim(what) // " from " // trim(str)
+      call messages_info(1)
 
       iunit = io_open(str, status='old', action='read', is_tmp=.true.)
       read(iunit, *) gf%n
@@ -145,7 +153,6 @@ contains
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 
       do ia = 1, gf%n
-        ! NOTE: might force space%dim below to be 3 - do people use xyz files in 2D?
         read(iunit,*) gf%atom(ia)%label, gf%atom(ia)%x(1:space%dim)
       end do
 
@@ -159,6 +166,9 @@ contains
 
       gf%file_type = XYZ_FILE_INP
       gf%flags = ior(gf%flags, XYZ_FLAGS_MOVE)
+
+      message(1) = "Reading " // trim(what) // " from " // trim(what) // " block"
+      call messages_info(1)
 
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 
@@ -190,6 +200,9 @@ contains
 
       gf%file_type = XYZ_FILE_REDUCED
       gf%flags = ior(gf%flags, XYZ_FLAGS_MOVE)
+
+      message(1) = "Reading " // trim(what) // " from Reduced" // trim(what) // " block"
+      call messages_info(1)
 
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 

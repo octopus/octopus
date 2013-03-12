@@ -126,14 +126,16 @@ contains
   !> initializes the xyz positions of the atoms in the structure geo
   subroutine geometry_init_xyz(geo)
     type(geometry_t), intent(inout) :: geo
-    !
+
     type(xyz_file_info) :: xyz
     integer             :: ia
     logical             :: move
-    !
+
     PUSH_SUB(geometry_init_xyz)
-    ! load positions of the atoms
+
     call xyz_file_init(xyz)
+
+    ! NOTE: these input tags are read in the routine xyz_file_read, src/ions/xyz_file.F90
 
     !%Variable PDBCoordinates
     !%Type string
@@ -213,6 +215,7 @@ contains
     !% 
     !%End
 
+    ! load positions of the atoms
     call xyz_file_read('Coordinates', xyz, geo%space)
 
     if(xyz%n < 1) then
