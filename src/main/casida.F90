@@ -1134,14 +1134,14 @@ contains
           do ik = 1, cas%nik
             if(states_are_real(st)) then
               ! occ-occ matrix elements
-              call dcasida_lr_hmat1(cas, sys, hm, ionic_pert, hvar, dlr_hmat1, 1, cas%n_occ(ik), ik)
+              call dcasida_lr_hmat1(sys, hm, ionic_pert, hvar, dlr_hmat1, 1, cas%n_occ(ik), ik)
               ! unocc-unocc matrix elements
-              call dcasida_lr_hmat1(cas, sys, hm, ionic_pert, hvar, dlr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
+              call dcasida_lr_hmat1(sys, hm, ionic_pert, hvar, dlr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
             else
               ! occ-occ matrix elements
-              call zcasida_lr_hmat1(cas, sys, hm, ionic_pert, hvar, zlr_hmat1, 1, cas%n_occ(ik), ik)
+              call zcasida_lr_hmat1(sys, hm, ionic_pert, hvar, zlr_hmat1, 1, cas%n_occ(ik), ik)
               ! unocc-unocc matrix elements
-              call zcasida_lr_hmat1(cas, sys, hm, ionic_pert, hvar, zlr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
+              call zcasida_lr_hmat1(sys, hm, ionic_pert, hvar, zlr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
             endif
           enddo
 

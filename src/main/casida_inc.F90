@@ -332,8 +332,7 @@ end subroutine X(casida_get_rho)
 ! -----------------------------------------------------------------------------
 
 !> one-particle matrix elements of perturbation
-subroutine X(casida_lr_hmat1)(cas, sys, hm, pert, hvar, lr_hmat1, st_start, st_end, ik)
-  type(casida_t),      intent(inout) :: cas
+subroutine X(casida_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, st_start, st_end, ik)
   type(system_t),      intent(in)    :: sys
   type(hamiltonian_t), intent(inout) :: hm
   type(pert_t),        intent(in)    :: pert
