@@ -345,7 +345,7 @@ contains
 
     if(g_opt%fixed_atom /= 0) call xyz_adjust_it(g_opt%geo, rotate = .false.)
 
-    call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .true.)
+    call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .false., die_if_not = .true.)
 
     call geometry_write_xyz(".", "work-geom", g_opt%geo, g_opt%dim, append = .true.)
 

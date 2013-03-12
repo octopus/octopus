@@ -747,16 +747,19 @@ contains
   !! happens or a warning is written, depending on the argument
   !! warn_if_not.
   ! ---------------------------------------------------------
-  subroutine simul_box_atoms_in_box(sb, geo, warn_if_not)
+  subroutine simul_box_atoms_in_box(sb, geo, warn_if_not, die_if_not)
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(inout) :: geo
     logical,           intent(in)    :: warn_if_not
+    logical, optional, intent(in)    :: die_if_not
 
     integer :: iatom, pd, idir
     FLOAT :: xx(1:MAX_DIM)
+    logical :: die_if_not_
 
     PUSH_SUB(simul_box_atoms_in_box)
 
+    die_if_not_ = optional_default(die_if_not, .false.)
     pd = sb%periodic_dim
 
     do iatom = 1, geo%natoms
@@ -796,7 +799,8 @@ contains
           message(2) = "This is a bug." 
           call messages_fatal(2) 
         else 
-          if(warn_if_not) call messages_warning(1) 
+          if(warn_if_not) call messages_warning(1)
+          if(die_if_not_) call messages_fatal(1)
         end if
       end if
 
