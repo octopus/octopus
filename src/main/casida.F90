@@ -588,8 +588,8 @@ contains
     type(mesh_t),   pointer :: mesh
 
     FLOAT, allocatable :: rho(:, :), rho_spin(:, :), pot(:), &
-      dl_rho(:,:,:,:), kxc(:,:,:,:)
-    FLOAT, target, allocatable :: fxc(:,:,:), fxc_spin(:,:,:), lr_fxc(:,:,:,:,:)
+      dl_rho(:,:), kxc(:,:,:,:)
+    FLOAT, target, allocatable :: fxc(:,:,:), fxc_spin(:,:,:), lr_fxc(:,:,:)
     FLOAT, pointer :: xc(:,:,:)
     integer :: qi_old, qa_old, mu_old
     character(len=100) :: restart_filename
@@ -1086,9 +1086,9 @@ contains
       message(1) = "Reading vib_modes density for calculating excited-state forces."
       call messages_info(1)
       
-      SAFE_ALLOCATE(dl_rho(1:mesh%np, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
+      SAFE_ALLOCATE(dl_rho(1:mesh%np, 1:st%d%nspin))
       if (cas%type /= CASIDA_EPS_DIFF) then
-        SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:sys%geo%natoms, 1:mesh%sb%dim))
+        SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
       endif
 
       if(cas%type == CASIDA_EPS_DIFF) then
@@ -1119,7 +1119,7 @@ contains
 
           call pert_setup_dir(ionic_pert, idir)
 
-          call drestart_read_lr_rho(dl_rho(:, :, iatom, idir), sys%gr, st%d%nspin, &
+          call drestart_read_lr_rho(dl_rho, sys%gr, st%d%nspin, &
             VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
           
           if(ierr .ne. 0) then
@@ -1127,7 +1127,7 @@ contains
             call messages_fatal(1)
           end if
 
-          call dcalc_hvar(.true., sys, dl_rho(:, :, iatom, idir), 1, hvar, fxc = fxc)
+          call dcalc_hvar(.true., sys, dl_rho, 1, hvar, fxc = fxc)
 
           if(states_are_real(st)) then
             dlr_hmat1 = M_ZERO
@@ -1175,14 +1175,14 @@ contains
 
           if (cas%type /= CASIDA_EPS_DIFF .and. cas%calc_forces_kernel) then
             forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
-              lr_fxc(ip, is1, is2, iatom, idir) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :, iatom, idir))
+              lr_fxc(ip, is1, is2) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :))
             end forall
 
             write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_kernel_', iatom, '_', idir
             if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
 
             if(states_are_real(st)) then
-              xc => lr_fxc(:, :, :, iatom, idir)
+              xc => lr_fxc(:, :, :)
               call casida_get_matrix(cas%dmat2, restart_filename, is_forces = .true.)
               call casida_matrix_factors(cas%dmat2)
             else
