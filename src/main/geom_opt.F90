@@ -134,7 +134,8 @@ contains
     end select
 
     if (ierr /= 0) then
-      message(1) = "Error occurred during the GSL minimization procedure:"
+      ! it is (remarkably) possible to get an error from GSL which gsl_strerror reports as 'unknown error', so write the number
+      write(message(1),'(a,i6,a)') "Error code ", ierr, " occurred during the GSL minimization procedure:"
       call loct_strerror(ierr, message(2))
       call messages_fatal(2)
     end if
@@ -430,7 +431,7 @@ contains
     PUSH_SUB(write_iter_info)
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
-    write(title, '(f16.10)') units_from_atomic(units_out%energy, energy)
+    write(title, '(f16.10,2x,a)') units_from_atomic(units_out%energy, energy), trim(units_abbrev(units_out%energy))
     call geometry_write_xyz("geom", trim(c_geom_iter), g_opt%geo, g_opt%dim, comment=trim(title))
     call geometry_write_xyz(".", "last", g_opt%geo, g_opt%dim)
 
