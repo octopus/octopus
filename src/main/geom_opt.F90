@@ -133,9 +133,12 @@ contains
            calc_point, write_iter_info, energy)
     end select
 
-    if (ierr /= 0) then
-      ! it is (remarkably) possible to get an error from GSL which gsl_strerror reports as 'unknown error', so write the number
-      write(message(1),'(a,i6,a)') "Error code ", ierr, " occurred during the GSL minimization procedure:"
+    if(ierr == 1025) then
+      ! not a GSL error, set by our minimize routines, so we must handle it separately
+      message(1) = "Reached maximum number of iterations allowed by GOMaxIter."
+      call messages_info(1)
+    else if (ierr /= 0) then
+      message(1) = "Error occurred during the GSL minimization procedure:"
       call loct_strerror(ierr, message(2))
       call messages_fatal(2)
     end if
