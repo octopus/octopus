@@ -154,7 +154,9 @@ contains
     ! ---------------------------------------------------------
     subroutine init_()
 
-      logical :: center
+      logical :: center, does_exist
+      integer :: iter
+      character*100 :: filename
 
       PUSH_SUB(geom_opt_run.init_)
 
@@ -305,6 +307,19 @@ contains
 
       call loct_rm("./work-geom.xyz")
 
+      ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
+      iter = 1
+      do
+        write(filename, '(a,i4.4,a)') "geom/go.", iter, ".xyz"
+        inquire(file = trim(filename), exist = does_exist)
+        if(does_exist) then
+          call loct_rm(trim(filename))
+          iter = iter + 1
+        else
+          exit
+        endif
+      enddo
+
       POP_SUB(geom_opt_run.init_)
     end subroutine init_
 
@@ -416,6 +431,7 @@ contains
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10)') units_from_atomic(units_out%energy, energy)
     call geometry_write_xyz("geom", trim(c_geom_iter), g_opt%geo, g_opt%dim, comment=trim(title))
+    call geometry_write_xyz(".", "last", g_opt%geo, g_opt%dim)
 
     call from_coords(g_opt, coords)
 
