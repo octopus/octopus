@@ -737,7 +737,7 @@ contains
   end subroutine simul_box_build_lattice
 
 
-  !> This function adjusts the coordinates defined in the geomentry
+  !> This function adjusts the coordinates defined in the geometry
   !! object. If coordinates were given in reduced coordinates it
   !! converts them to real coordinates and it checks that the atoms
   !! are inside the box.
