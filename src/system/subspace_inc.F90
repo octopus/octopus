@@ -28,9 +28,6 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   FLOAT,                  intent(out)   :: eigenval(:)
   FLOAT, optional,        intent(out)   :: diff(:)
 
-  R_TYPE, allocatable :: hmss(:, :), rdiff(:)
-  integer             :: ib, jb, minst, maxst
-  type(batch_t) :: hpsib
   R_TYPE, pointer :: psi(:, :, :)
 
   PUSH_SUB(X(subspace_diag))
@@ -41,6 +38,32 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
     psi => st%X(psi)(:, :, :, ik)
     call X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   case(SD_STANDARD)
+    call X(subspace_diag_standard)(this, der, st, hm, ik, eigenval, diff)
+  case default
+    ASSERT(.false.)
+  end select
+
+  call profiling_out(diagon_prof)
+  POP_SUB(X(subspace_diag))
+end subroutine X(subspace_diag)
+
+! ---------------------------------------------------------
+!> This routine diagonalises the Hamiltonian in the subspace defined by the states.
+subroutine X(subspace_diag_standard)(this, der, st, hm, ik, eigenval, diff)
+  type(subspace_t),       intent(in)    :: this
+  type(derivatives_t),    intent(in)    :: der
+  type(states_t), target, intent(inout) :: st
+  type(hamiltonian_t),    intent(in)    :: hm
+  integer,                intent(in)    :: ik
+  FLOAT,                  intent(out)   :: eigenval(:)
+  FLOAT, optional,        intent(out)   :: diff(:)
+
+  R_TYPE, allocatable :: hmss(:, :), rdiff(:)
+  integer             :: ib, jb, minst, maxst
+  type(batch_t)       :: hpsib
+
+  PUSH_SUB(X(subspace_diag_standard))
+
     ASSERT(.not. st%parallel_in_states)
 
     SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
@@ -90,14 +113,9 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
 
     SAFE_DEALLOCATE_A(hmss)
 
-  case default
-    ASSERT(.false.)
-  end select
+  POP_SUB(X(subspace_diag_standard))
 
-  call profiling_out(diagon_prof)
-  POP_SUB(X(subspace_diag))
-
-end subroutine X(subspace_diag)
+end subroutine X(subspace_diag_standard)
 
 ! --------------------------------------------------------- 
 !> This routine diagonalises the Hamiltonian in the subspace defined by
