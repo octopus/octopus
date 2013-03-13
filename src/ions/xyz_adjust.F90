@@ -51,6 +51,8 @@ contains
     integer :: axis_type
     type(block_t) :: blk
 
+    PUSH_SUB(xyz_adjust_it)
+
     ! is there something to do
     if(geo%natoms <= 1) return
 
@@ -129,6 +131,8 @@ contains
     ! recenter
     call find_center(geo, center)
     call translate(geo, -center)
+
+    POP_SUB(xyz_adjust_it)
   end subroutine xyz_adjust_it
 
 
@@ -140,6 +144,8 @@ contains
     FLOAT :: xmin(MAX_DIM), xmax(MAX_DIM)
     integer  :: i, j
 
+    PUSH_SUB(find_center)
+
     xmin =  CNST(1e10)
     xmax = -CNST(1e10)
     do i = 1, geo%natoms
@@ -150,6 +156,8 @@ contains
     end do
 
     x = (xmax + xmin)/M_TWO
+
+    POP_SUB(find_center)
   end subroutine find_center
 
 
@@ -162,6 +170,8 @@ contains
     FLOAT :: sm, m
     integer  :: i
 
+    PUSH_SUB(find_center_of_mass)
+
     x = M_ZERO
     m = M_ONE
     sm = M_ZERO
@@ -172,6 +182,8 @@ contains
     end do
 
     x = x / sm
+
+    POP_SUB(find_center_of_mass)
   end subroutine find_center_of_mass
 
 
@@ -182,6 +194,8 @@ contains
 
     integer  :: i, j
     FLOAT :: rmax, r, r2
+
+    PUSH_SUB(axis_large)
 
     ! first get the further apart atoms
     rmax = -CNST(1e10)
@@ -206,6 +220,8 @@ contains
         x2 = geo%atom(i)%x - r2*x
       end if
     end do
+
+    POP_SUB(axis_large)
   end subroutine axis_large
 
 
@@ -219,6 +235,8 @@ contains
 
     FLOAT :: m, tinertia(MAX_DIM, MAX_DIM), vec(MAX_DIM, MAX_DIM), eigenvalues(MAX_DIM)
     integer :: ii, jj, iatom
+
+    PUSH_SUB(axis_inertia)
 
     ! first calculate the inertia tensor
     tinertia = M_ZERO
@@ -238,6 +256,8 @@ contains
 
     x  = vec(:,1) / sqrt(sum(vec(:,1)**2))
     x2 = vec(:,2) / sqrt(sum(vec(:,2)**2))
+
+    POP_SUB(axis_inertia)
   end subroutine axis_inertia
 
 
@@ -248,12 +268,16 @@ contains
 
     integer  :: iatom
 
+    PUSH_SUB(translate)
+
     do iatom = 1, geo%natoms
       geo%atom(iatom)%x = geo%atom(iatom)%x + x
     end do
     do iatom = 1, geo%ncatoms
       geo%catom(iatom)%x = geo%catom(iatom)%x + x
     end do
+
+    POP_SUB(translate)
   end subroutine translate
 
 
@@ -268,6 +292,8 @@ contains
     FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
     FLOAT :: m3(MAX_DIM, MAX_DIM), f2(MAX_DIM), per(MAX_DIM)
     FLOAT :: alpha, r
+
+    PUSH_SUB(geometry_rotate)
 
     ! initialize matrices
     m1 = M_ZERO
@@ -328,6 +354,7 @@ contains
       geo%catom(iatom)%x = matmul(m1, f2)
     end do
 
+    POP_SUB(geometry_rotate)
   end subroutine geometry_rotate
 
 
@@ -337,6 +364,8 @@ contains
     FLOAT, intent(in)    :: angle
 
     FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
+
+    PUSH_SUB(rotate_x)
 
     ca = cos(angle)
     sa = sin(angle)
@@ -349,6 +378,8 @@ contains
     aux(3, 2) = -sa
 
     m = matmul(aux, m)
+
+    POP_SUB(rotate_x)
   end subroutine rotate_x
 
 
@@ -358,6 +389,8 @@ contains
     FLOAT, intent(in)    :: angle
 
     FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
+
+    PUSH_SUB(rotate_y)
 
     ca = cos(angle)
     sa = sin(angle)
@@ -370,6 +403,8 @@ contains
     aux(3, 1) = -sa
 
     m = matmul(aux, m)
+
+    POP_SUB(rotate_x)
   end subroutine rotate_y
 
 
@@ -379,6 +414,8 @@ contains
     FLOAT,    intent(in) :: angle
 
     FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
+
+    PUSH_SUB(rotate_z)
 
     ca = cos(angle)
     sa = sin(angle)
@@ -391,6 +428,8 @@ contains
     aux(2, 1) = -sa
 
     m = matmul(aux, m)
+
+    POP_SUB(rotate_z)
   end subroutine rotate_z
 
 end module xyz_adjust_m
