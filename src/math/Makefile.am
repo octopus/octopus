@@ -37,7 +37,7 @@ libmath_a_SOURCES =                      \
 	lapack.F90                       \
 	mix.F90                          \
 	oct_gsl_f.c                      \
-	oct_gsl_min_f.c                  \
+	minimizer_low.c                  \
 	ode_solver.F90                   \
 	permutations.F90                 \
 	pfft.F90			 \
@@ -56,7 +56,8 @@ libmath_a_SOURCES =                      \
 	sgfft.F90                        \
 	matrix.F90                       \
 	compressed_sensing.F90           \
-	fftw_low.c
+	fftw_low.c                       \
+	minimizer.F90
 
 noinst_HEADERS =                         \
 	fft_inc.F90                      \

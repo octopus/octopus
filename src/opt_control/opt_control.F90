@@ -37,6 +37,7 @@ module opt_control_m
   use loct_m
   use loct_math_m
   use mesh_m
+  use minimizer_m
 #if defined(HAVE_NEWUOA)
   use newuoa_m
 #endif

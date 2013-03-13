@@ -30,6 +30,7 @@ module rdmft_m
   use hamiltonian_base_m
   use messages_m
   use mesh_function_m
+  use minimizer_m
   use loct_m
   use parser_m
   use poisson_m

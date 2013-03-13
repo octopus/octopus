@@ -46,19 +46,7 @@ module loct_math_m
     loct_ran_gaussian,       &
     loct_ran_flat,           &
     loct_fft_optimize,       &
-    loct_1dminimize,         &
-    loct_minimize,           &
-    loct_minimize_direct,    &
     loct_numerical_derivative
-
-
-  integer, public, parameter ::     &
-    MINMETHOD_STEEPEST_DESCENT = 1, &
-    MINMETHOD_FR_CG            = 2, &
-    MINMETHOD_PR_CG            = 3, &
-    MINMETHOD_BFGS             = 4, &
-    MINMETHOD_BFGS2            = 5, &
-    MINMETHOD_NMSIMPLEX        = 6
 
   ! ---------------------------------------------------------
   !> Numerical derivative.
@@ -248,79 +236,6 @@ module loct_math_m
     end function oct_ran_flat
     module procedure oct_ran_flat4
   end interface loct_ran_flat
-
-  interface loct_1dminimize
-    subroutine oct_1dminimize(a, b, m, f, status)
-      real(8), intent(inout) :: a, b, m
-      interface
-        subroutine f(x, fx)
-          real(8), intent(in)  :: x
-          real(8), intent(out) :: fx
-        end subroutine f
-      end interface
-      integer, intent(out) :: status
-    end subroutine oct_1dminimize
-  end interface loct_1dminimize
-
-  interface loct_minimize
-    function oct_minimize(method, dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
-      integer :: oct_minimize
-      integer, intent(in)    :: method
-      integer, intent(in)    :: dim
-      real(8), intent(inout) :: x
-      real(8), intent(in)    :: step
-      real(8), intent(in)    :: tolgrad
-      real(8), intent(in)    :: toldr
-      integer, intent(in)    :: maxiter
-      interface
-        subroutine f(n, x, val, getgrad, grad)
-          integer, intent(in)    :: n
-          real(8), intent(in)    :: x(n)
-          real(8), intent(inout) :: val
-          integer, intent(in)    :: getgrad
-          real(8), intent(inout) :: grad(n)
-        end subroutine f
-        subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
-          integer, intent(in) :: iter
-          integer, intent(in) :: n
-          real(8), intent(in) :: val
-          real(8), intent(in) :: maxdr
-          real(8), intent(in) :: maxgrad
-          real(8), intent(in) :: x(n)
-        end subroutine write_iter_info
-      end interface
-      real(8), intent(out)   :: minimum
-    end function oct_minimize
-  end interface loct_minimize
-
-  interface loct_minimize_direct
-    function oct_minimize_direct(method, dim, x, step, toldr, maxiter, f, write_iter_info, minimum)
-      integer :: oct_minimize_direct
-      integer, intent(in)    :: method
-      integer, intent(in)    :: dim
-      real(8), intent(inout) :: x
-      real(8), intent(in)    :: step
-      real(8), intent(in)    :: toldr
-      integer, intent(in)    :: maxiter
-      !> No intents here is unfortunately required because the same dummy function will be passed
-      !! also to newuoa routines in opt_control, and there the interface has no intents.
-      interface
-        subroutine f(n, x, val)
-          integer :: n
-          real(8) :: x(n)
-          real(8) :: val
-        end subroutine f
-        subroutine write_iter_info(iter, n, val, maxdr, x)
-          integer, intent(in) :: iter
-          integer, intent(in) :: n
-          real(8), intent(in) :: val
-          real(8), intent(in) :: maxdr
-          real(8), intent(in) :: x(n)
-        end subroutine write_iter_info
-      end interface
-      real(8), intent(out)   :: minimum
-    end function oct_minimize_direct
-  end interface loct_minimize_direct
 
   interface loct_fft_optimize
     subroutine oct_fft_optimize(n, par)

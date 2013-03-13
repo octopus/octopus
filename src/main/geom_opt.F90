@@ -33,6 +33,7 @@ module geom_opt_m
   use parser_m
   use mesh_m
   use messages_m
+  use minimizer_m
   use profiling_m
   use restart_m
   use scf_m

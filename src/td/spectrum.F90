@@ -33,6 +33,7 @@ module spectrum_m
   use loct_math_m
   use math_m
   use messages_m
+  use minimizer_m
   use parser_m
   use profiling_m
   use string_m
