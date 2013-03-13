@@ -11,4 +11,12 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.41784564
 match ; Force    [1] ; GREP(static/info, 'Forces on the ions', 50, 2) ; -0.000732
 match ; Force    [2] ; GREP(static/info, 'Forces on the ions', 50, 3) ;  0.000732
 match ; Geometry [1] ; LINE(min.xyz, 3, 50) ; -2.738370
-match ; Geometry [1] ; LINE(min.xyz, 4, 50) ;  2.738370
+match ; Geometry [2] ; LINE(min.xyz, 4, 50) ;  2.738370
+
+# the results differ because we stop simplex before it converges
+Input      : 23-go-na2.02-simplex.inp
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.41754016
+match ; Force    [1] ; GREP(static/info, 'Forces on the ions', 50, 2) ;  0.002584
+match ; Force    [2] ; GREP(static/info, 'Forces on the ions', 50, 3) ; -0.002584
+match ; Geometry [1] ; LINE(min.xyz, 3, 50) ; -2.884259
+match ; Geometry [2] ; LINE(min.xyz, 4, 50) ;  2.615741

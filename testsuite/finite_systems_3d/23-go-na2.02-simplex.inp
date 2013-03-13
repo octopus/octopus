@@ -1,0 +1,14 @@
+CalculationMode = go
+GOMethod = simplex
+ExperimentalFeatures = yes
+
+dist = 3.0
+
+%Coordinates
+'Na'  | 0 | 0 | -dist 
+'Na'  | 0 | 0 |  dist 
+%
+
+FromScratch = yes
+GOCenter = yes
+GOMaxIter = 4
