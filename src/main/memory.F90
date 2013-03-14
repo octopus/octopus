@@ -41,6 +41,8 @@ contains
 
     real(8) :: mesh_global, mesh_local, wfns
 
+    PUSH_SUB(memory_run)
+
     mesh_global = mesh_global_memory(sys%gr%mesh)
     mesh_local  = mesh_local_memory(sys%gr%mesh)
 
@@ -77,6 +79,8 @@ contains
     call messages_new_line()
 
     call messages_info()
+
+    POP_SUB(memory_run)
 
   end subroutine memory_run
 
