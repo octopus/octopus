@@ -67,6 +67,7 @@ module subspace_m
     zsubspace_diag
 
   integer, parameter ::        &
+    SD_NONE      = 0,          &
     SD_STANDARD  = 1,          &
     SD_SCALAPACK = 3
   
@@ -78,42 +79,54 @@ module subspace_m
   
 contains
 
-  subroutine subspace_init(this, st)
-    type(subspace_t), intent(out) :: this
-    type(states_t),   intent(in)  :: st
+  subroutine subspace_init(this, st, no_sd)
+    type(subspace_t),  intent(out) :: this
+    type(states_t),    intent(in)  :: st
+    logical,           intent(in)  :: no_sd
 
     integer :: default
 
-    !%Variable SubspaceDiagonalization
-    !%Type integer
-    !%Default standard
-    !%Section SCF::Eigensolver
-    !%Description
-    !% Selects the method to perform subspace diagonalization. The
-    !% default is <tt>standard</tt>, unless states parallelization is used,
-    !% when the default is <tt>scalapack</tt>.
-    !%Option standard 1
-    !% The standard routine. Can be used with domain parallelization but not
-    !% state parallelization.
-    !%Option scalapack 3
-    !% State-parallelized version using ScaLAPACK. (Requires that
-    !% Octopus was compiled with ScaLAPACK support.)
-    !%End
+    PUSH_SUB(subspace_init)
 
-    default = SD_STANDARD
+    if(no_sd) then
 
-    if(st%parallel_in_states) then
+      this%method = SD_NONE
+
+    else
+
+      !%Variable SubspaceDiagonalization
+      !%Type integer
+      !%Default standard
+      !%Section SCF::Eigensolver
+      !%Description
+      !% Selects the method to perform subspace diagonalization. The
+      !% default is <tt>standard</tt>, unless states parallelization is used,
+      !% when the default is <tt>scalapack</tt>.
+      !%Option none 0
+      !% No subspace diagonalization. WARNING: this will generally give incorrect results.
+      !%Option standard 1
+      !% The standard routine. Can be used with domain parallelization but not
+      !% state parallelization.
+      !%Option scalapack 3
+      !% State-parallelized version using ScaLAPACK. (Requires that
+      !% Octopus was compiled with ScaLAPACK support.)
+      !%End
+
+      default = SD_STANDARD
+
+      if(st%parallel_in_states) then
 #ifdef HAVE_SCALAPACK
-      default = SD_SCALAPACK
+        default = SD_SCALAPACK
 #else
-      message(1) = 'Parallelization in states of the ground state requires scalapack.'
-      call messages_fatal(1)
+        message(1) = 'Parallelization in states of the ground state requires scalapack.'
+        call messages_fatal(1)
 #endif
-    end if
+      end if
 
-    call parse_integer(datasets_check('SubspaceDiagonalization'), default, this%method)
+      call parse_integer(datasets_check('SubspaceDiagonalization'), default, this%method)
 
-    if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call input_error('SubspaceDiagonalization')
+      if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call input_error('SubspaceDiagonalization')
+    endif
 
     call messages_print_var_option(stdout, 'SubspaceDiagonalization', this%method)
 
@@ -145,7 +158,8 @@ contains
       call messages_fatal(1)
     end if
 #endif
-    
+
+    POP_SUB(subspace_init)
   end subroutine subspace_init
 
   ! ---------------------------------------------------------

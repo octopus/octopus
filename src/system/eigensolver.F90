@@ -63,8 +63,6 @@ module eigensolver_m
   type eigensolver_t
     integer :: es_type    !< which eigensolver to use
 
-    logical :: subspace_diag
-    
     FLOAT   :: tolerance
     integer :: es_maxiter
 
@@ -168,19 +166,8 @@ contains
     end if
 
     call messages_obsolete_variable('EigensolverVerbose')
+    call messages_obsolete_variable('EigensolverSubspaceDiag', 'SubspaceDiagonalization')
     
-
-    !%Variable EigensolverSubspaceDiag
-    !%Type logical
-    !%Default yes
-    !%Section SCF::Eigensolver
-    !%Description
-    !% Allows you to turn off subspace diagonalization during the diagonalization of
-    !% the Hamiltonian. Subspace diagonalization sometimes creates problems when restarting
-    !% unoccupied-states calculations with a larger number of unoccupied states.
-    !%End
-    call parse_logical(datasets_check('EigensolverSubspaceDiag'), .true., eigens%subspace_diag)
-
     default_iter = 25
     default_tol = CNST(1e-6)
 
@@ -259,7 +246,6 @@ contains
       call arpack_init(eigens%arpack, gr, st%nst)
 
       !Some default values 
-      eigens%subspace_diag = .false. ! no need of subspace diagonalization in this case
       default_iter = 500  ! empirical value based upon experience
       default_tol = M_ZERO ! default is machine precision   
 
@@ -326,12 +312,7 @@ contains
     eigens%converged(1:st%d%nik) = 0
     eigens%matvec = 0
     
-    if(eigens%subspace_diag) then
-      call subspace_init(eigens%sdiag, st)
-    else
-      message(1) = "No subspace diagonalization will be done."
-      call messages_info(1)
-    endif
+    call subspace_init(eigens%sdiag, st, no_sd = eigens%es_type == RS_ARPACK)
 
     ! print memory requirements
     select case(eigens%es_type)
@@ -415,7 +396,7 @@ contains
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
       maxiter = eigens%es_maxiter
       
-      if(eigens%subspace_diag .and. eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
+      if(eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
         if (states_are_real(st)) then
           call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         else
@@ -455,7 +436,7 @@ contains
 #endif 
         end select
 
-        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK) then
+        if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK) then
           call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
 
@@ -491,7 +472,7 @@ contains
 #endif 
         end select
 
-        if(eigens%subspace_diag.and.eigens%es_type /= RS_RMMDIIS .and.eigens%es_type /= RS_ARPACK) then
+        if(eigens%es_type /= RS_RMMDIIS .and.eigens%es_type /= RS_ARPACK) then
           call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
 

@@ -39,6 +39,8 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
     call X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   case(SD_STANDARD)
     call X(subspace_diag_standard)(this, der, st, hm, ik, eigenval, diff)
+  case(SD_NONE)
+    ! do nothing
   case default
     ASSERT(.false.)
   end select
