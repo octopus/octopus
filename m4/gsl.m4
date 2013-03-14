@@ -77,9 +77,6 @@ AC_DEFUN([AX_PATH_GSL],
       echo "*** exact error that occured. This usually means GSL was incorrectly installed"
       echo "*** or that you have moved GSL since it was installed. In the latter case, you"
       echo "*** may want to edit the gsl-config script: $GSL_CONFIG" ])
-
-    CFLAGS="$ac_save_CFLAGS"
-    LIBS="$ac_save_LIBS"
   fi
 
   if test "x$no_gsl" = x ; then
@@ -87,6 +84,9 @@ AC_DEFUN([AX_PATH_GSL],
   else
      ifelse([$4], , :, [$4])
   fi
+
+  CFLAGS="$ac_save_CFLAGS"
+  LIBS="$ac_save_LIBS"
 
   AC_SUBST(GSL_CFLAGS)
   AC_SUBST(GSL_LIBS)

@@ -19,8 +19,6 @@
 
 AC_DEFUN([ACX_PSPIO], [
 acx_pspio_ok=no
-FCFLAGS_PSPIO=""
-LIBS_PSPIO=""
 
 dnl Backup LIBS and FCFLAGS
 acx_pspio_save_LIBS="$LIBS"

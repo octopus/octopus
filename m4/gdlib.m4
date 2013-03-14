@@ -40,11 +40,9 @@ AC_DEFUN([ACX_GDLIB],
 )],[], [acx_gdlib_ok=no])
     AC_MSG_RESULT([$acx_gdlib_ok])
 
-    LIBS="$acx_save_LIBS"
     if test x"$acx_gdlib_ok" = xno; then
       AC_MSG_WARN([GD library support has been disabled.
                    *** Some esoteric parts of octopus will not work.])
-      CFLAGS="$acx_save_CFLAGS"
       GD_CFLAGS=""
       GD_LIBS=""
     else
@@ -79,5 +77,8 @@ AC_DEFUN([ACX_GDLIB],
         esac
       done
     fi
+
+    LIBS="$acx_save_LIBS"
+    CFLAGS="$acx_save_CFLAGS"
   fi
 ])
