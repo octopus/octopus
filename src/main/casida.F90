@@ -87,6 +87,7 @@ module casida_m
     logical           :: calc_forces    !< calculate excited-state forces
     logical           :: calc_forces_kernel    !< calculate excited-state forces with kernel
     logical           :: calc_forces_scf       !< calculate excited-state forces with SCF forces
+    logical           :: herm_conj      !< use Hermitian conjugate of matrix
     character(len=80) :: restart_dir
     
     integer           :: n_pairs        !< number of pairs to take into account
@@ -358,6 +359,17 @@ contains
     if(cas%triplet) then
       call messages_experimental("Casida triplet calculation")
     endif
+
+    !%Variable CasidaHermitianConjugate
+    !%Type logical
+    !%Section Linear Response::Casida
+    !%Default false
+    !%Description
+    !% The Casida matrix is Hermitian, so it should not matter whether we calculate the upper or
+    !% lower diagonal. Numerical issues may cause small differences however. Use this variable to
+    !% calculate the Hermitian conjugate of the usual matrix, for testing.
+    !%End
+    call parse_logical(datasets_check('CasidaHermitianConjugate'), .false., cas%herm_conj)
 
     !%Variable CasidaCalcForces
     !%Type logical
@@ -960,13 +972,23 @@ contains
 
       PUSH_SUB(casida_work.K_term)
 
-      pi = pp%i
-      pa = pp%a
-      sigma = pp%sigma
+      if(cas%herm_conj) then
+        pi = qq%i
+        pa = qq%a
+        sigma = qq%sigma
 
-      qi = qq%i
-      qa = qq%a
-      mu = qq%sigma
+        qi = pp%i
+        qa = pp%a
+        mu = pp%sigma
+      else
+        pi = pp%i
+        pa = pp%a
+        sigma = pp%sigma
+
+        qi = qq%i
+        qa = qq%a
+        mu = qq%sigma
+      endif
 
       SAFE_ALLOCATE(rho_i(1:mesh%np))
       SAFE_ALLOCATE(rho_j(1:mesh%np))
@@ -1002,6 +1024,12 @@ contains
         integrand(1:mesh%np) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * xc(1:mesh%np, sigma, mu)
         mtxel_xc = dmf_integrate(mesh, integrand)
       endif
+
+! FIXME: needed when there is a complex version
+!      if(cas%herm_conj) then
+!        if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
+!        if(present(mtxel_xc)) mtxel_vh = R_CONJ(mtxel_xc)
+!      endif
 
       SAFE_DEALLOCATE_A(rho_i)
       SAFE_DEALLOCATE_A(rho_j)
