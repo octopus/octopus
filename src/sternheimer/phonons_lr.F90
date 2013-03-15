@@ -199,7 +199,7 @@ contains
 
     if(do_infrared) then
       SAFE_ALLOCATE(infrared(1:natoms*ndim, 1:ndim))
-      call Born_charges_init(born, geo, st, gr%sb%dim)
+      call Born_charges_init(born, geo, st, ndim)
     endif
     SAFE_ALLOCATE(force_deriv(1:ndim, 1:natoms))
 
@@ -282,7 +282,7 @@ contains
         end do
         infrared(imat, idir) = infrared(imat, idir) - species_zval(geo%atom(iatom)%spec)
 
-        born%charge(1:gr%sb%dim, idir, iatom) = -infrared(imat, 1:gr%sb%dim)
+        born%charge(1:ndim, idir, iatom) = -infrared(imat, 1:ndim)
       endif
 
       message(1) = ""
@@ -301,7 +301,7 @@ contains
         message(1) = "Cannot calculate infrared intensities for periodic system with smearing (i.e. without a gap)."
         call messages_info(1)
       else
-        call out_Born_charges(born, geo, gr%sb%dim, VIB_MODES_DIR, write_real = .true.)
+        call out_Born_charges(born, geo, ndim, VIB_MODES_DIR, write_real = .true.)
         call calc_infrared()
       endif
 
@@ -343,12 +343,12 @@ contains
       PUSH_SUB(phonons_lr_run.build_ionic_dyn_matrix)
 
       do iatom = 1, natoms
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, ndim
 
           do jatom = 1, natoms
-            do jdir = 1, gr%mesh%sb%dim         
+            do jdir = 1, ndim         
 
-              xi(1:MAX_DIM) = geo%atom(iatom)%x(1:MAX_DIM)
+              xi(1:ndim) = geo%atom(iatom)%x(1:ndim)
 
               !ion - ion
               if( iatom == jatom) then 
@@ -357,8 +357,8 @@ contains
                 do katom = 1, natoms
                   if ( katom == iatom ) cycle
 
-                  xk(1:MAX_DIM) = geo%atom(katom)%x(1:MAX_DIM)
-                  r2 = sum((xi(1:gr%mesh%sb%dim) - xk(1:gr%mesh%sb%dim))**2)
+                  xk(1:ndim) = geo%atom(katom)%x(1:ndim)
+                  r2 = sum((xi(1:ndim) - xk(1:ndim))**2)
 
                   ac = ac + species_zval(geo%atom(iatom)%spec) * &
                             species_zval(geo%atom(katom)%spec) &
@@ -371,9 +371,9 @@ contains
 
               else ! iatom /= jatom
 
-                xj(1:MAX_DIM) = geo%atom(jatom)%x(1:MAX_DIM)
+                xj(1:ndim) = geo%atom(jatom)%x(1:ndim)
 
-                r2 = sum((xi(1:gr%mesh%sb%dim) - xj(1:gr%mesh%sb%dim))**2)
+                r2 = sum((xi(1:ndim) - xj(1:ndim))**2)
                 ac = species_zval(geo%atom(iatom)%spec) * species_zval(geo%atom(jatom)%spec) &
                      /(r2**CNST(1.5))*(&
                      ddelta(idir, jdir) - (M_THREE*(xi(idir)-xj(idir))*(xi(jdir)-xj(jdir)))/r2)
