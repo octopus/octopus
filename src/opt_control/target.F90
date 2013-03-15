@@ -584,10 +584,10 @@ module opt_control_target_m
       !% As an example, the following target can be used to maximize the
       !% velocity difference between atom 1 and 2 (in a 3D system):
       !%
-      !% <tt>%OCTVelocityTarget</tt>
-      !% <tt> "(v[1,1]-v[2,1])^2 + (v[1,2]-v[2,2])^2 + "</tt>
-      !% <tt> "(v[1,3]-v[2,3])^2"</tt>
-      !% <tt>%</tt>
+      !% <tt>%OCTVelocityTarget
+      !% <br> "(v[1,1]-v[2,1])^2 + (v[1,2]-v[2,2])^2 + "
+      !% <br> "(v[1,3]-v[2,3])^2"
+      !% <br>%</tt>
       !%
       !%End
 
@@ -613,10 +613,10 @@ module opt_control_target_m
       !% corresponding to the target shown in the <tt>OCTVelocityTarget</tt> 
       !% help section:
       !%
-      !% <tt>%OCTVelocityDerivatives</tt>
-      !% <tt> " 2*(v[1,1]-v[2,1])" | " 2*(v[1,2]-v[2,2])" | " 2*(v[1,3]-v[2,3])" </tt>
-      !% <tt> "-2*(v[1,1]-v[2,1])" | "-2*(v[1,2]-v[2,2])" | "-2*(v[1,3]-v[2,3])" </tt>
-      !% <tt>%</tt>
+      !% <tt>%OCTVelocityDerivatives
+      !% <br> " 2*(v[1,1]-v[2,1])" | " 2*(v[1,2]-v[2,2])" | " 2*(v[1,3]-v[2,3])"
+      !% <br> "-2*(v[1,1]-v[2,1])" | "-2*(v[1,2]-v[2,2])" | "-2*(v[1,3]-v[2,3])"
+      !% <br>%</tt>
       !%
       !%End
        
