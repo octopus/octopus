@@ -71,7 +71,7 @@ contains
 
       !%Variable MainAxis
       !%Type block
-      !%Section Utilities::oct-center-geometry
+      !%Section Utilities::oct-center-geom
       !%Description 
       !% A vector of three reals defining the axis to which the molecule
       !% should be aligned. If not present, the default value will
@@ -84,7 +84,7 @@ contains
       !%Variable AxisType
       !%Type integer
       !%Default inertia
-      !%Section Utilities::oct-center-geometry
+      !%Section Utilities::oct-center-geom
       !%Description
       !% After the structure is centered, it is also aligned to a set of orthogonal axes.
       !% This variable decides which set of axes to use.
