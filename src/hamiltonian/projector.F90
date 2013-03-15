@@ -51,31 +51,31 @@ module projector_m
   implicit none
 
   private
-  public ::                       &
-       projector_t,               &
-       projector_null,            &
-       projector_is_null,         &
-       projector_is,              &
-       projector_init,            &
-       projector_init_phases,     &
-       projector_build,           &
-       projector_end,             &
-       dproject_psi,              &
-       zproject_psi,              &
-       dproject_psi_batch,        &
-       zproject_psi_batch,        &
-       dproject_sphere,           &
-       zproject_sphere,           &
-       dprojector_matrix_element, &
-       zprojector_matrix_element, &
-       dprojector_commute_r,      &
-       zprojector_commute_r
+  public ::                    &
+    projector_t,               &
+    projector_null,            &
+    projector_is_null,         &
+    projector_is,              &
+    projector_init,            &
+    projector_init_phases,     &
+    projector_build,           &
+    projector_end,             &
+    dproject_psi,              &
+    zproject_psi,              &
+    dproject_psi_batch,        &
+    zproject_psi_batch,        &
+    dproject_sphere,           &
+    zproject_sphere,           &
+    dprojector_matrix_element, &
+    zprojector_matrix_element, &
+    dprojector_commute_r,      &
+    zprojector_commute_r
 
   integer, public, parameter ::  &
-       M_NONE = 0,  &
-       M_HGH  = 1,  &
-       M_KB   = 2,  &
-       M_RKB  = 3
+    M_NONE = 0,  &
+    M_HGH  = 1,  &
+    M_KB   = 2,  &
+    M_RKB  = 3
 
   integer, parameter :: MAX_NPROJECTIONS = 24
   integer, parameter :: MAX_L = 5
@@ -111,6 +111,7 @@ module projector_m
   end type projector_t
 
 contains
+
   ! ---------------------------------------------------------
   subroutine projector_null(p)
     type(projector_t), intent(out) :: p
