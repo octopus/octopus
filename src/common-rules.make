@@ -44,7 +44,7 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src/include \
         -I$(top_srcdir)/external_libs/spglib/src \
 	-I$(top_srcdir)/liboct_parser \
-        $(CPPFLAGS_ZOLTAN) \
+        $(CPPFLAGS_ZOLTAN) $(GSL_CFLAGS) $(GD_CFLAGS) \
 	-DSHARE_OCTOPUS='"$(pkgdatadir)"'
 
 AM_CCASFLAGS = \

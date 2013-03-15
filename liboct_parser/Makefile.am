@@ -28,4 +28,6 @@ liboct_parser_a_SOURCES = symbols.c parse.c parse_exp.c parser_f.c gsl_userdef.c
 noinst_HEADERS = grammar.c symbols.h gsl_userdef.h string_f.h
 include_HEADERS = liboct_parser.h string_f.h
 
+AM_CPPFLAGS = $(GSL_CFLAGS)
+
 CLEANFILES = *~ *.bak
