@@ -97,11 +97,11 @@ contains
   ! -------------------------------------------------------------
 
   subroutine submesh_init_sphere(this, sb, mesh, center, rc)
-    type(submesh_t),      intent(out)  :: this
-    type(simul_box_t),    intent(in)   :: sb
-    type(mesh_t), target, intent(in)   :: mesh
-    FLOAT,                intent(in)   :: center(:)
-    FLOAT,                intent(in)   :: rc
+    type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
+    type(simul_box_t),    intent(in)     :: sb
+    type(mesh_t), target, intent(in)     :: mesh
+    FLOAT,                intent(in)     :: center(:)
+    FLOAT,                intent(in)     :: rc
     
     FLOAT :: r2, xx(1:MAX_DIM)
     FLOAT, allocatable :: center_copies(:, :)
