@@ -200,7 +200,9 @@ contains
       !%Default steep
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Method by which the minimization is performed.
+      !% Method by which the minimization is performed. For more information see the
+      !% <a href=http://www.gnu.org/software/gsl/manual/html_node/Multidimensional-Minimization.html>
+      !% GSL documentation</a>.
       !%Option steep 1
       !% Simple steepest descent.
       !%Option cg_fr 2
@@ -386,7 +388,7 @@ contains
     if(g_opt%what2minimize == MINWHAT_FORCES) then
       objective = M_ZERO
       do iatom = 1, g_opt%geo%natoms
-        objective = objective + sum(g_opt%geo%atom(iatom)%f(:)**2)
+        objective = objective + sum(g_opt%geo%atom(iatom)%f(1:g_opt%syst%gr%sb%dim)**2)
       end do
       objective = sqrt(objective)
     else
@@ -440,23 +442,31 @@ contains
 
     call from_coords(g_opt, coords)
 
-    message(1) = ""
-    message(2) = ""
-    message(3) = "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    write(message(4),'("+++++++++++++++++++++ MINIMIZATION ITER #: ",I4," ++++++++++++++++++++++")') geom_iter
-    write(message(5), '(2x,a,f16.10,1x,a)') "Energy    = ", &
-      units_from_atomic(units_out%energy, energy), trim(units_abbrev(units_out%energy))
+    call messages_new_line()
+    call messages_new_line()
+
+    call messages_write("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", new_line = .true.)
+
+    call messages_write("+++++++++++++++++++++ MINIMIZATION ITER #:")
+    call messages_write(geom_iter, fmt = "I5")
+    call messages_write(" ++++++++++++++++++++++", new_line = .true.)
+
+    call messages_write("  Energy    = ")
+    call messages_write(energy, units = units_out%energy, fmt = "f16.10,1x", print_units = .true., new_line = .true.)
+
     if(maxdf > M_ZERO) then
-      write(message(6),'(2x,a,f16.10,1x,a)')  "Max force = ", &
-        units_from_atomic(units_out%force, maxdf), trim(units_abbrev(units_out%force))
+      call messages_write("  Max force = ")
+      call messages_write(maxdf, units = units_out%force, fmt = "f16.10,1x", print_units = .true., new_line = .true.)
     end if
-    write(message(7),'(2x,a,f16.10,1x,a)')  "Max dr    = ", &
-      units_from_atomic(units_out%length, maxdx), trim(units_abbrev(units_out%length))
-    message(8) = message(3)
-    message(9) = message(3)
-    message(10) = ""
-    message(11) = ""
-    call messages_info(11)
+
+    call messages_write("  Max dr    = ")
+    call messages_write(maxdx, units = units_out%length, fmt = "f16.10,1x", print_units = .true., new_line = .true.)
+
+    call messages_write("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", new_line = .true.)
+    call messages_write("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", new_line = .true.)
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
 
     POP_SUB(write_iter_info)
   end subroutine write_iter_info
