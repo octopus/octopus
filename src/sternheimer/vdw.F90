@@ -145,10 +145,11 @@ contains
 
       !%Variable vdWNPoints
       !%Type integer
+      !%Default 6
       !%Section Linear Response::Polarizabilities
       !%Description
       !% How many points to use in the Gauss-Legendre integration to obtain the
-      !% van der Waals coefficients. The default is 6.
+      !% van der Waals coefficients.
       !%End
       call messages_obsolete_variable('vdW_npoints', 'vdWNPoints')
       call parse_integer(datasets_check('vdWNPoints'), 6, gaus_leg_n)
