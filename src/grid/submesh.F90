@@ -81,7 +81,7 @@ module submesh_m
 contains
   
   subroutine submesh_null(sm)
-    type(submesh_t), intent(out) :: sm
+    type(submesh_t), intent(inout) :: sm !< valgrind objects to intent(out) due to the initializations above
 
     PUSH_SUB(submesh_null)
 

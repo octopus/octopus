@@ -113,7 +113,7 @@ module projector_m
 contains
   ! ---------------------------------------------------------
   subroutine projector_null(p)
-    type(projector_t), intent(out) :: p
+    type(projector_t), intent(inout) :: p !< valgrind objects to intent(out) due to the initializations above
 
     PUSH_SUB(projector_null)
 
