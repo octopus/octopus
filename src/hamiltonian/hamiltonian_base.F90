@@ -386,6 +386,7 @@ contains
       region_count(nregion) = 0
 
       do iatom = 1, epot%natoms
+        ASSERT(associated(epot%proj(iatom)%sphere%mesh))
         if(atom_counted(iatom)) cycle
 
         overlap = .false.
