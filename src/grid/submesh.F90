@@ -330,7 +330,7 @@ contains
     
     FLOAT :: distance
 
-    distance = sum((sm1%center(1:MAX_DIM) - sm2%center(1:MAX_DIM))**2)
+    distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
     overlap = distance + CNST(100.0)*M_EPSILON <= (sm1%radius + sm2%radius)**2
 
   end function submesh_overlap
