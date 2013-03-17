@@ -390,10 +390,11 @@ contains
 
         overlap = .false.
 
-        if(projector_is(epot%proj(iatom), M_KB)) then
+        if(.not. projector_is(epot%proj(iatom), M_NONE)) then
           ASSERT(associated(epot%proj(iatom)%sphere%mesh))
           do jatom = 1, region_count(nregion)
             katom = order(head(nregion) + jatom - 1)
+            if(projector_is(epot%proj(katom), M_NONE)) exit
             overlap = submesh_overlap(epot%proj(iatom)%sphere, epot%proj(katom)%sphere)
             if(overlap) exit
           end do
