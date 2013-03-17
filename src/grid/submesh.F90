@@ -96,13 +96,12 @@ contains
 
   ! -------------------------------------------------------------
 
-  subroutine submesh_init_sphere(this, sb, mesh, center, rc, nomesh)
+  subroutine submesh_init_sphere(this, sb, mesh, center, rc)
     type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
     type(simul_box_t),    intent(in)     :: sb
     type(mesh_t), target, intent(in)     :: mesh
     FLOAT,                intent(in)     :: center(:)
     FLOAT,                intent(in)     :: rc
-    logical, optional,    intent(in)     :: nomesh !< do not actually make a mesh
     
     FLOAT :: r2, xx(1:MAX_DIM)
     FLOAT, allocatable :: center_copies(:, :)
@@ -111,7 +110,6 @@ contains
     type(periodic_copy_t) :: pp
     integer, allocatable :: map_inv(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
-    logical :: nomesh_
 
     PUSH_SUB(submesh_init_sphere)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
@@ -121,13 +119,6 @@ contains
     this%center(1:sb%dim) = center(1:sb%dim)
 
     this%radius = rc
-
-    nomesh_ = optional_default(nomesh, .false.)
-    if(nomesh_) then
-       call profiling_out(submesh_init_prof)
-       POP_SUB(submesh_init_sphere)
-       return
-    endif
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
