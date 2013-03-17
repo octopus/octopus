@@ -386,12 +386,12 @@ contains
       region_count(nregion) = 0
 
       do iatom = 1, epot%natoms
-        ASSERT(associated(epot%proj(iatom)%sphere%mesh))
         if(atom_counted(iatom)) cycle
 
         overlap = .false.
 
         if(projector_is(epot%proj(iatom), M_KB)) then
+          ASSERT(associated(epot%proj(iatom)%sphere%mesh))
           do jatom = 1, region_count(nregion)
             katom = order(head(nregion) + jatom - 1)
             overlap = submesh_overlap(epot%proj(iatom)%sphere, epot%proj(katom)%sphere)
