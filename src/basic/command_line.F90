@@ -127,29 +127,29 @@ module command_line_m
     subroutine getopt_oscillator_strength(mode, omega, searchinterval, &
                                           order, nresonances, nfrequencies, time, &
                                           l, m, damping, file)
-      integer, intent(in) :: mode
-      real(8), intent(in) :: omega
-      real(8), intent(in) :: searchinterval
-      integer, intent(in) :: order, nresonances, nfrequencies
-      real(8), intent(in) :: time
-      integer, intent(in) :: l, m
-      real(8), intent(in) :: damping
-      character(len=*), intent(in) :: file
+      integer, intent(inout) :: mode
+      real(8), intent(inout) :: omega
+      real(8), intent(inout) :: searchinterval
+      integer, intent(inout) :: order, nresonances, nfrequencies
+      real(8), intent(inout) :: time
+      integer, intent(inout) :: l, m
+      real(8), intent(inout) :: damping
+      character(len=*), intent(inout) :: file
     end subroutine getopt_oscillator_strength
 
     subroutine getopt_harmonic_spectrum(w0, m, ar, x, y, z, pol)
-      real(8)         , intent(in) :: w0
-      integer         , intent(in) :: m
-      integer         , intent(in) :: ar
-      character(len=*), intent(in) :: pol
-      real(8)         , intent(in) :: x
-      real(8)         , intent(in) :: y
-      real(8)         , intent(in) :: z
+      real(8)         , intent(inout) :: w0
+      integer         , intent(inout) :: m
+      integer         , intent(inout) :: ar
+      character(len=*), intent(inout) :: pol
+      real(8)         , intent(inout) :: x
+      real(8)         , intent(inout) :: y
+      real(8)         , intent(inout) :: z
     end subroutine getopt_harmonic_spectrum
 
     subroutine getopt_help(mode, name)
-      character(len=*), intent(in) :: mode
-      character(len=*), intent(in) :: name
+      character(len=*), intent(inout) :: mode
+      character(len=*), intent(inout) :: name
     end subroutine getopt_help
     
     subroutine getopt_photoelectron_spectrum(mode, interp, estep, espan, &
