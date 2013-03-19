@@ -347,11 +347,6 @@ contains
         if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
       end do
       
-      if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
-        write(message(1),'(a,9i6)') "Inefficient FFT grid. A better grid would be", nn_temp(1:fft_dim)
-        call messages_warning(1)
-      endif
-    
     end select
 
     ! find out if fft has already been allocated
@@ -654,6 +649,13 @@ contains
     call messages_write(' (')
     call messages_write(product(fft_array(jj)%rs_n_global(1:dim))*CNST(8.0), units = unit_megabytes, fmt = '(f6.1)')
     call messages_write(' )')
+    if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
+      call messages_new_line()
+      call messages_write('      Inefficient FFT grid. A better grid would be: ')
+      do idir = 1, fft_dim
+        call messages_write(nn_temp(idir))
+      end do
+    end if
     call messages_info()
 
     select case (library_)

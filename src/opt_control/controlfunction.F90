@@ -312,6 +312,7 @@ contains
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
         units_from_atomic(units_out%energy, cf_common%omegamax), ' ['//trim(units_abbrev(units_out%energy)) // ']'
+      call messages_info(2)
     end if
 
     !%Variable OCTFixFluenceTo
