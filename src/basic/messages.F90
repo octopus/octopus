@@ -1145,7 +1145,7 @@ contains
   ! ------------------------------------------------------------
 
   subroutine messages_write_integer(val, fmt, new_line, units, print_units)
-    integer,                    intent(in) :: val
+    integer(4),                 intent(in) :: val
     character(len=*), optional, intent(in) :: fmt
     logical,          optional, intent(in) :: new_line
     type(unit_t),     optional, intent(in) :: units
