@@ -74,6 +74,7 @@ contains
     logical,             intent(inout) :: fromScratch
 
     type(scf_t)  :: scfv
+    type(rdm_t)  :: rdm
     integer      :: ierr
 
     PUSH_SUB(ground_state_run)
@@ -140,14 +141,17 @@ contains
     end if
     call messages_info()
 
+    if(sys%st%d%pack_states) call states_pack(sys%st)
+    
     ! self-consistency for occupation numbers in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call scf_occ(sys%gr, hm, sys%st, sys)
-    endif
+      call rdmft_init(rdm, sys) 
+      call scf_rdmft(rdm, sys%geo, sys%gr, hm, sys%st, sys, sys%ks, sys%outp)
+      call rdmft_end(rdm)
+    else
+      call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
+    endif    
 
-    if(sys%st%d%pack_states) call states_pack(sys%st)
-
-    call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp)
     call scf_end(scfv)
 
     if(sys%st%d%pack_states) call states_unpack(sys%st)

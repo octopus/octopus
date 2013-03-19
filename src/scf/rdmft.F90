@@ -1,37 +1,21 @@
-!! Copyright (C) 2012 I. Theophilou, N. Helbig 
-!! 
-!! This program is free software; you can redistribute it and/or modify 
-!! it under the terms of the GNU General Public License as published by 
-!! the Free Software Foundation; either version 2, or (at your option) 
-!! any later version. 
-!! 
-!! This program is distributed in the hope that it will be useful, 
-!! but WITHOUT ANY WARRANTY; without even the implied warranty of 
-!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
-!! GNU General Public License for more details. 
-!! 
-!! You should have received a copy of the GNU General Public License 
-!! along with this program; if not, write to the Free Software 
-!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 
-!! 02111-1307, USA. 
-!! 
-!! $Id: scf.F90 9160 2012-06-23 20:38:20Z xavier $ 
-
-#include "global.h"
+ #include "global.h"
 
 module rdmft_m
   use datasets_m
   use density_m
   use eigensolver_m
   use energy_m
+  use geometry_m
   use global_m
   use grid_m
   use hamiltonian_m
   use hamiltonian_base_m
+  use lalg_adv_m
+  use loct_m
+  use loct_math_m 
   use messages_m
   use mesh_function_m
-  use minimizer_m
-  use loct_m
+  use output_m
   use parser_m
   use poisson_m
   use profiling_m
@@ -39,347 +23,407 @@ module rdmft_m
   use system_m
   use unit_m
   use unit_system_m
+  use v_ks_m
  
   implicit none
 
   private
-  public ::                &
-    rdmft_init,            &
-    rdmft_end,             &
-    scf_occ
+  public ::                      & 
+       rdm_t,                    &
+       rdmft_init,               &
+       rdmft_end,                &
+       scf_occ,                  &
+       scf_rdmft
 
 
   type rdm_t
     integer  :: max_iter
-    FLOAT    :: mu
-    FLOAT, ALLOCATABLE :: eone(:)
-    FLOAT, ALLOCATABLE :: hartree(:,:)
-    FLOAT, ALLOCATABLE :: exchange(:,:)
-    FLOAT, ALLOCATABLE :: V_h(:)
-    FLOAT, ALLOCATABLE :: V_x(:)
-    
-    type(eigensolver_t) :: eigens
-    ! shortcuts
-    type(hamiltonian_t), pointer :: hm
-    type(grid_t),        pointer :: gr
-    type(states_t),      pointer :: st
-    integer                      :: dim
-    integer                      :: size
+    FLOAT    :: mu, occsum, qtot
+    FLOAT, ALLOCATABLE   :: eone(:), hartree(:,:), exchange(:,:)   
+    REAL(8) :: step, toler
   end type rdm_t
-
-  type(rdm_t), save :: rdm  
+  
+  type(rdm_t), save :: rdm
   
 
-contains
+  contains
    
-  subroutine rdmft_init(sys, hm)
-    type(system_t), target,      intent(inout) :: sys
-    type(hamiltonian_t), target, intent(inout) :: hm
+  subroutine rdmft_init(rdm,sys)
+    type(rdm_t),           intent(inout)    :: rdm
+    type(system_t), target,intent(inout)    :: sys
 
     PUSH_SUB(rdmft_init)  
 
-    rdm%gr     => sys%gr
-    rdm%st     => sys%st
-    rdm%hm     => hm
-    rdm%dim    =  sys%gr%mesh%sb%dim
-    rdm%size = rdm%st%nst
-    
-    SAFE_ALLOCATE(rdm%eone(1:rdm%st%nst))
-    SAFE_ALLOCATE(rdm%hartree(1:rdm%st%nst, 1:rdm%st%nst))
-    SAFE_ALLOCATE(rdm%exchange(1:rdm%st%nst, 1:rdm%st%nst))
-    SAFE_ALLOCATE(rdm%V_h(1:rdm%st%nst))
-    SAFE_ALLOCATE(rdm%V_x(1:rdm%st%nst))
+    SAFE_ALLOCATE(rdm%eone(1:sys%st%nst))
+    SAFE_ALLOCATE(rdm%hartree(1:sys%st%nst, 1:sys%st%nst))
+    SAFE_ALLOCATE(rdm%exchange(1:sys%st%nst, 1:sys%st%nst))
 
     rdm%eone = M_ZERO
     rdm%hartree = M_ZERO
     rdm%exchange = M_ZERO
+    rdm%mu = M_TWO*sys%st%eigenval(int(sys%st%qtot*M_HALF), 1)
+    rdm%qtot = sys%st%qtot
+    rdm%occsum = M_ZERO
+
+    !%Variable RDMMaxIter
+    !%Type integer
+    !%Default 3000
+    !%Section SCF::RDMFT
+    !%Description
+    !% Even if the convergence criterion is not satisfied, the minimization will stop
+    !% after this number of iterations.
+    !%End 
+    call parse_integer(datasets_check('RDMMaxIter'), 3000, rdm%max_iter)
+    
+    !%Variable RDMStep
+    !%Type float
+    !%Default 1d-2 
+    !%Section SCF::RDMFT
+    !%Description 
+    !% Initial step for the occupation number optimizer.
+    !%End
+
+    call parse_float(datasets_check('RDMStep'), 1d-2, rdm%step)
+
+    !%Variable RDMTolerance
+    !%Type float
+    !%Default 1e-6 Ha
+    !%Section SCF::RDMFT
+    !%Description
+    !% Convergence criterion, for stopping the minimization. Minimization is
+    !% stopped when all derivatives of the energy wrt. the occupation number 
+    !% are smaller than this criterion.
+    !%End
+
+    call parse_float(datasets_check('RDMTolerance'), CNST(1e-6), rdm%toler)
     
     POP_SUB(rdmft_init)
 
   end subroutine rdmft_init
 
-  subroutine rdmft_end()
+  subroutine rdmft_end(rdm)
+    type(rdm_t), intent(inout) :: rdm
 
     PUSH_SUB(rdmft_end)
 
     SAFE_DEALLOCATE_A(rdm%eone)
     SAFE_DEALLOCATE_A(rdm%hartree)
     SAFE_DEALLOCATE_A(rdm%exchange)
-    SAFE_DEALLOCATE_A(rdm%V_h)
-    SAFE_DEALLOCATE_A(rdm%V_x)
 
     POP_SUB(rdmft_end)
 
-
   end subroutine rdmft_end
 
-  !> optimization of occupation numbers according to arXiv:1208.4699
-  ! ----------------------------------------------------------------
-  subroutine scf_occ(gr, hm, st, sys) 
+  ! scf for the occupation numbers and the natural orbitals
+  subroutine scf_rdmft(rdm, geo, gr, hm, st, sys, ks, outp)
+
+    type(rdm_t),          intent(inout) :: rdm
+    type(geometry_t),     intent(in)    :: geo
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
     type(states_t),       intent(inout) :: st
     type(system_t),       intent(inout) :: sys
-    
-    integer :: ist, jst
-    integer :: icycle, iter, n_unpinned
-    FLOAT :: abs_occ, occsum,  sumgi1, sumgi2, sumgim, mu1, mu2, mum, muinitial, muhat, dinterv 
-    FLOAT :: el_per_state ! maximum number of electrons in each state
-    FLOAT, allocatable :: occin(:,:), occout(:,:)
-    FLOAT, allocatable :: hpsi(:,:), hpsi2(:,:), pot(:)
-    FLOAT, allocatable :: rho(:), dpsi2(:,:)
-    FLOAT, allocatable :: dE_dn(:), dE_dn2(:), ksmear(:), sigma(:)
+    type(v_ks_t),         intent(inout) :: ks
+    type(output_t),       intent(in)    :: outp
 
-    FLOAT, parameter :: conv = CNST(0.00001)
-    FLOAT, parameter :: smallocc = CNST(0.001)
+    PUSH_SUB(scf_rdmft)
+
+    call scf_occ(rdm, geo, gr, hm,st) 
+    
+    POP_SUB(scf_rdmft)
+
+  end subroutine scf_rdmft
+    ! ---------------------------------------------------------
+  subroutine scf_occ(rdm, geo, gr, hm, st )
+    type(rdm_t),          intent(inout) :: rdm
+    type(geometry_t),     intent(in)    :: geo
+    type(grid_t),         intent(inout) :: gr
+    type(hamiltonian_t),  intent(inout) :: hm
+    type(states_t),       intent(inout) :: st
+
+    
+    REAL(8),allocatable :: theta(:),df(:)
+    REAL(8)::energy
+    integer :: ist, jst, icycle
+    FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv
+    FLOAT, allocatable :: occout(:,:), occin(:,:),hpsi(:,:),pot(:),rho(:),dpsi2(:,:)
+    FLOAT :: el_per_state !maixmum number of electrons per state
+    FLOAT, parameter :: smallocc=CNST(0.0000001) 
 
     PUSH_SUB(scf_occ)
-
-    call rdmft_init(sys,hm)
     
-    SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
     SAFE_ALLOCATE(occout(1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(theta(1:st%nst))
     SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
-    SAFE_ALLOCATE(hpsi2(1:gr%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(pot (1:gr%mesh%np))
     SAFE_ALLOCATE(rho (1:gr%mesh%np))
     SAFE_ALLOCATE(dpsi2(1:gr%mesh%np ,1:st%d%dim))
-    SAFE_ALLOCATE(dE_dn(1:st%nst))
-    SAFE_ALLOCATE(dE_dn2(1:st%nst))
-    SAFE_ALLOCATE(ksmear(1:st%nst))
-    SAFE_ALLOCATE(sigma(1:st%nst))
-
+    SAFE_ALLOCATE(df(1:st%nst))
     occout = M_ZERO
+    occin = M_ZERO
+    theta  = M_ZERO
     hpsi = M_ZERO
-    sigma = M_ZERO
-    dE_dn = M_ZERO 
-    dE_dn2 = M_ZERO
-    ksmear = 0.5
- 
+    energy = M_ZERO
+
     if(hm%d%ispin == 1) & ! unpolarized
       el_per_state = M_TWO
     if (hm%d%ispin ==2) & 
      el_per_state = M_ONE
- 
-    occout(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
-    where(occout(:,:) < smallocc) occout(:,:)=smallocc 
-    where(occout(:,:) > el_per_state-smallocc) occout(:,:)=el_per_state-smallocc
 
-    if (rdm%hm%d%ispin.ne.1) then
-      call messages_not_implemented("RDMFT not yet implemented for spin_polarized or spinors")
+    !Initialize the occin. Smallocc is used for numerical stability
+    
+    occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
+    where(occin(:,:) < smallocc) occin(:,:) = smallocc 
+    where(occin(:,:) > el_per_state-smallocc) occin(:,:) = el_per_state - smallocc
+
+    st%occ = occin
+    theta(:) = asin(sqrt(occin(:,1)/M_TWO))*(M_HALF/M_PI)
+    
+    if (hm%d%ispin.ne.1) then
+      call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
     end if
-
-
+  
     !derivative of one electron energy with respect to the natural orbitals occupation number
     do ist = 1, st%nst
       call dhamiltonian_apply(hm,gr%der,st%dpsi(:,:,ist, 1), hpsi, ist, 1, &
                             & terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
       rdm%eone(ist) = dmf_dotp(gr%mesh,st%dpsi(:,1,ist,1), hpsi(:,1))
     enddo
-
+    
     !calculates the integrals used for the hartree part of the total energy and its derivative
     do ist = 1, st%nst
       pot = M_ZERO
       rho = M_ZERO
-      rho(:) = st%dpsi(:, 1, ist, 1)*st%dpsi(:, 1, ist, 1)
-      call dpoisson_solve (psolver, pot, rho)
+      rho(:) = st%dpsi(:,1,ist,1)**2
+      call dpoisson_solve(psolver, pot , rho)
+      
       do jst = ist, st%nst
-        rdm%hartree(jst, ist) = dmf_dotp(gr%mesh,st%dpsi(:,1,jst,1)**2 , pot)
-        rdm%hartree(ist, jst) = rdm%hartree(jst, ist)  
+        rdm%hartree(jst,ist) = dmf_dotp(gr%mesh,st%dpsi(:,1,jst,1)**2, pot(:))
+        rdm%hartree(ist,jst) = rdm%hartree(jst,ist)  
       enddo
     enddo
+   
     !calculates the integrals used for the exchange part of the total energy and its derivative
-    do ist= 1, st%nst 
-      pot=M_ZERO
-      rho=M_ZERO
+    do ist = 1, st%nst 
+      pot = M_ZERO
+      rho = M_ZERO
+      dpsi2 = M_ZERO      
       call states_get_state(st, gr%mesh, ist, 1, dpsi2)
+      
       do jst = ist, st%nst
         rho(:) = dpsi2(:, 1)*st%dpsi(:, 1, jst, 1)
         call dpoisson_solve(psolver, pot, rho)
-        rdm%exchange(ist, jst) = dmf_dotp(gr%mesh, rho , pot)
+        rdm%exchange(ist, jst) = dmf_dotp(gr%mesh,rho, pot)
         rdm%exchange(jst, ist) = rdm%exchange(ist, jst)
       end do
     end do
 
+    !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
+    !bisection to find the root of rdm%occsum-st%qtot=M_ZERO
+    mu1 = rdm%mu   !initial guess for mu 
+    mu2 = -1.d-6
     dinterv = M_HALF
-    muinitial = rdm%st%eigenval(int(st%qtot*M_HALF), 1) !initial guess for mu
-    rdm%max_iter = 1000
-    do icycle = 1, rdm%max_iter  !finding the eigenvalues of the effective diagonal hamiltonian
-      rdm%st%occ = occout
-      rdm%mu = mum
-      call energy_derivatives(dE_dn, dE_dn2)
-      sigma(:) = (log(max(el_per_state - rdm%st%occ(:, 1), 1d-16)/max(rdm%st%occ(:, 1), 1d-16)))
-      do ist = 1, st%nst
-        rdm%st%eigenval(ist, 1) = dE_dn(ist) + sigma(ist)*ksmear(ist)
-      end do
-      mu1 = muinitial
-      mu2 = -smallocc
-      !check if initial interval contains the root, and broaden interval if necessary
-      call fill_occupations(rdm%st%eigenval, mu1, ksmear, el_per_state, occout, occsum, sumgi1)
-      call fill_occupations(rdm%st%eigenval, mu2, ksmear, el_per_state, occout, occsum, sumgi2)
-      do while (sumgi1*sumgi2.gt.M_ZERO)
-        if(sumgi2.gt.M_ZERO) then
-          mu2 = mu1
-          sumgi2 = sumgi1
-          mu1 = mu1 - dinterv
-          call fill_occupations(rdm%st%eigenval, mu1, ksmear, el_per_state, occout, occsum, sumgi1)
-        else
-          mu1 = mu2
-          sumgi1 = sumgi2
-          mu2 = mu2 + dinterv
-          call fill_occupations(rdm%st%eigenval, mu2, ksmear, el_per_state, occout, occsum, sumgi2)
-        endif
-      enddo
+    call  multid_minimize(st%nst, rdm%max_iter, theta, energy)
+    sumgi1 = rdm%occsum - st%qtot 
+    rdm%mu = mu2
+    call  multid_minimize(st%nst, rdm%max_iter, theta, energy) 
+    sumgi2 = rdm%occsum - st%qtot
 
-      do iter = 1, rdm%max_iter !bisection to find the root of sumocc-st%qtot=M_ZERO, for fixed set of occupation numbers find mu
-        mum = (mu1 + mu2)*M_HALF
-        call fill_occupations(rdm%st%eigenval, mum, ksmear, el_per_state, occout, occsum, sumgim)        
-        if (sumgi1*sumgim.lt.M_ZERO) then
-          mu2 = mum
+    do while (sumgi1*sumgi2.gt.M_ZERO)
+      if (sumgi2.gt.M_ZERO) then
+        mu2 = mu1
+        sumgi2 = sumgi1
+        mu1 = mu1 - dinterv
+        rdm%mu = mu1
+        call  multid_minimize(st%nst, rdm%max_iter, theta, energy) 
+        sumgi1 = rdm%occsum - st%qtot 
+      else
+        mu1 = mu2
+        sumgi1 = sumgi2
+        mu2 = mu2 + dinterv
+        rdm%mu = mu2
+        call  multid_minimize(st%nst, rdm%max_iter, theta, energy) 
+        sumgi2 = rdm%occsum - st%qtot 
+      end if
+    end do
+
+    do icycle = 1, rdm%max_iter
+      mum = (mu1 + mu2)*M_HALF
+      rdm%mu = mum
+      call  multid_minimize(st%nst, rdm%max_iter, theta, energy) 
+      sumgim = rdm%occsum - st%qtot
+      if (sumgi1*sumgim.lt.M_ZERO) then
+        mu2 = mum
+      else
+        mu1 = mum
+        sumgi1 = sumgim
+      end if
+      if (abs(sumgim).lt.rdm%toler*rdm%step.or.abs((mu1-mu2)*M_HALF).lt.rdm%toler*rdm%step)  exit
+      cycle
+    end do
+    if (icycle.ge.rdm%max_iter) then
+      write(message(1),'(a,1x,f11.6)'), 'bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
+      call messages_fatal(1)
+    endif
+
+    occout = M_ZERO
+    do ist = 1, st%nst
+      occout(ist, 1) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
+    end do
+
+    write(message(1),'(a,1x,f11.6)'), 'Occupations sum', rdm%occsum
+    call messages_info(1)
+    write(message(1),'(a,es15.8)') ' etot RDMFT= ', units_from_atomic(units_out%energy,energy+hm%ep%eii) 
+    write(message(2),'(a4,1x,a12)')'#st','Occupation'
+    call messages_info(2)   
+
+    do ist = 1, st%nst
+      write(message(1),'(i4,3x,f11.6)'), ist, occout(ist, 1)
+      call messages_info(1)  
+    end do
+   
+    st%occ = occout
+
+    SAFE_DEALLOCATE_A(occout)
+    SAFE_DEALLOCATE_A(occin)
+    SAFE_DEALLOCATE_A(theta)
+    SAFE_DEALLOCATE_A(hpsi)
+    SAFE_DEALLOCATE_A(pot)
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(dpsi2)
+    
+    POP_SUB(scf_occ)
+
+    contains
+  
+    subroutine multid_minimize(nst, max_iter, theta, objective) 
+      integer, intent(in)        :: nst
+      integer, intent(in)        :: max_iter
+      FLOAT, intent(inout)       :: theta(1:nst)
+      FLOAT, intent(out)         :: objective
+
+      integer :: icycle, ist, jst, iexit
+      FLOAT :: objective_new
+      FLOAT, allocatable :: theta_new(:), df(:)
+ 
+      PUSH_SUB(scf_occ.multid_minimize)
+
+      SAFE_ALLOCATE(theta_new(1:nst))
+      SAFE_ALLOCATE(df(1:nst))
+
+      objective = M_ZERO
+      df = M_ZERO
+      objective_new = -1d-8
+      theta_new = theta
+
+      do icycle = 1, max_iter
+        if(objective_new.lt.objective) then
+          rdm%step = 1.3*rdm%step
+          objective = objective_new
+          theta = theta_new
         else
-          mu1 = mum
-          sumgi1=sumgim
+          rdm%step = 0.9*rdm%step
         end if
-        if (abs(sumgim).lt.conv.or.abs((mu1-mu2)*M_HALF).lt.conv)  exit
+
+        do ist = 1, nst
+          theta_new(ist) = theta(ist) - rdm%step*df(ist)
+        end do
+           
+        call calcul_objective(nst, theta_new, df, objective_new)
+        iexit = M_ZERO
+        do ist = 1, nst 
+          if  (abs(df(ist)).lt.rdm%toler)  iexit=iexit+1 
+        end do
+        if (iexit==nst)  exit
         cycle
       end do
-      abs_occ = M_ZERO
-      n_unpinned = 0
-      muhat = M_ZERO
-      do ist = 1, rdm%st%nst
-        if (occout(ist, 1).lt.el_per_state-conv .and. occout(ist, 1).gt.conv) then
-          muhat = muhat + dE_dn(ist)
-          n_unpinned = n_unpinned + 1
-        end if
-      end do
-      muhat = muhat/n_unpinned
-
-      do ist = 1, rdm%st%nst
-        if (occout(ist,1).lt.el_per_state-conv .and. occout(ist,1).gt.conv) then
-          abs_occ = abs_occ + (dE_dn(ist)-muhat)**2
-        end if
-      end do
-      abs_occ=abs_occ/n_unpinned
-      if (abs_occ.lt.conv) exit
-      cycle
-    end do !iteration to find optimal occupation numbers
-
-    !total energy without nuclei interaction  
-    rdm%hm%energy%total = M_ZERO
-    do ist = 1, rdm%st%nst
-      rdm%hm%energy%total = rdm%hm%energy%total + rdm%st%occ(ist,1)*rdm%eone(ist) &
-                                 & + M_HALF*rdm%st%occ(ist, 1)*rdm%V_h(ist) &
-                                 & + rdm%st%occ(ist,1)*rdm%V_x(ist)
-    end do
-
-    
-    write(message(1),'(a,1x,f11.5)') 'Occupations sum', occsum
-    call messages_info(1)
-    write(message(1),'(a,es15.8)') ' etot RDMFT= ', units_from_atomic(units_out%energy,rdm%hm%energy%total+rdm%hm%ep%eii) 
-    write(message(2),'(a4,1x,a12)') '#st','Occupation'
-    call messages_info(2)   
-    do ist = 1,st%nst
-      write(message(1),'(i4,3x,f11.5)') ist, occout(ist,1)
-      call messages_info(1)
-    end do
-
-   call rdmft_end()
-
-   SAFE_DEALLOCATE_A(occout)
-   SAFE_DEALLOCATE_A(occin)
-   SAFE_DEALLOCATE_A(hpsi)
-   SAFE_DEALLOCATE_A(hpsi2)
-   SAFE_DEALLOCATE_A(pot)
-   SAFE_DEALLOCATE_A(rho)
-   SAFE_DEALLOCATE_A(dpsi2)
-   SAFE_DEALLOCATE_A(dE_dn)
-   SAFE_DEALLOCATE_A(dE_dn2)
-   SAFE_DEALLOCATE_A(ksmear)
-   SAFE_DEALLOCATE_A(sigma)
-STOP
-   POP_SUB(scf_occ)
-  end subroutine scf_occ
-  
-  subroutine fill_occupations(eigenval, mu, ksmear, el_per_state, occ, occsum, sumgi)  
-    FLOAT,                intent(in)    :: eigenval(rdm%st%nst,rdm%st%d%nik)
-    FLOAT,                intent(in)    :: mu
-    FLOAT,                intent(inout) :: ksmear(1:rdm%st%nst)
-    FLOAT,                intent(in)    :: el_per_state    
-    FLOAT,                intent(out)   :: occ(1:rdm%st%nst,1)
-    FLOAT,                intent(out)   :: occsum
-    FLOAT,                intent(out)   :: sumgi
    
-    INTEGER :: ik, ist 
-    FLOAT :: xx, stepf
+      if (iexit.ne.nst) then
+        write(message(1),'(a)'), 'did not manage to minimize '
+        call messages_info(1)
+      end if
 
-    PUSH_SUB(fill_occupations)
-
-    do ik = 1, rdm%st%d%nik 
-      do ist = 1, rdm%st%nst
-        xx = (eigenval(ist, ik)-mu)/ksmear(ist)
-        stepf = M_ONE/(M_ONE + exp(xx))
-        occ(ist, ik) = stepf * el_per_state
-      end do
-    end do
-
-    occsum = M_ZERO
-    do ist = 1, rdm%st%nst
-      occsum = occsum + occ(ist, 1)
-    end do
-    sumgi = occsum - rdm%st%qtot
-
-    POP_SUB(fill_occupations)
-  end subroutine fill_occupations
-
-  subroutine energy_derivatives(dE_dn, dE_dn2) 
-    FLOAT, intent(inout)         :: dE_dn(1:rdm%st%nst)             
-    FLOAT, intent(inout)         :: dE_dn2(1:rdm%st%nst)
-  
-    INTEGER :: ist, jst
-    FLOAT :: dVx2
-       
-    PUSH_SUB(energy_derivatives)
-             
-    !Calculate hartree contribution 
-    rdm%V_h = M_ZERO
-    do ist = 1, rdm%st%nst
-      do jst = 1, rdm%st%nst
-        rdm%V_h(ist) = rdm%V_h(ist) + rdm%st%occ(jst,1)*rdm%hartree(jst,ist)
-      enddo
-    end do
-  
-    !Calcualate exchange contribution
-    rdm%V_x = M_ZERO
-    do ist = 1, rdm%st%nst 
-      do jst=1, rdm%st%nst
-        rdm%V_x(ist) = rdm%V_x(ist) - sqrt(rdm%st%occ(jst,1))*rdm%exchange(ist,jst)
-      end do
-      rdm%V_x(ist) = rdm%V_x(ist)*M_HALF/max(sqrt(rdm%st%occ(ist,1)),1d-16)
-    end do
+      objective = objective_new
+      theta = theta_new
  
-    dE_dn(:) = rdm%eone(:) + rdm%V_h(:) + rdm%V_x(:)
+      SAFE_DEALLOCATE_A(theta_new)
+      SAFE_DEALLOCATE_A(df)
 
-    do ist = 1, rdm%st%nst
-      dE_dn2(ist) = rdm%hartree(ist, ist)
-    end do
+      POP_SUB(scf_occ.multid_minimize)
+  
+    end subroutine multid_minimize
+   
+    subroutine calcul_objective(nst, theta_new, df, objective_new) 
+      INTEGER, intent(in)                 :: nst
+      FLOAT, intent(in)                   :: theta_new(1:nst)
+      FLOAT, intent(out)                  :: df(1:nst)
+      FLOAT, intent(out)                  :: objective_new
 
-    do ist = 1, rdm%st%nst
-      dVx2 = M_ZERO
-      do jst = 1, ist-1
-        dVx2 = dVx2 + sqrt(rdm%st%occ(jst, 1))*rdm%exchange(ist, jst)
+      integer :: ist, jst
+      FLOAT ::  energy_tot
+      FLOAT, allocatable :: V_h(:), V_x(:), dE_dn(:),occ(:) 
+ 
+      PUSH_SUB(scf_occ.calcul_objective)
+
+      SAFE_ALLOCATE(V_h(1:nst))
+      SAFE_ALLOCATE(V_x(1:nst))
+      SAFE_ALLOCATE(dE_dn(1:nst))
+      SAFE_ALLOCATE(occ(1:nst))
+      V_h = M_ZERO
+      V_x = M_ZERO
+      dE_dn = M_ZERO
+      occ = M_ZERO
+
+      do ist = 1, nst
+        occ(ist) = M_TWO*sin(theta_new(ist)*M_PI*M_TWO)**2
       end do
-      do jst = ist+1, rdm%st%nst
-        dVx2 = dVx2 + sqrt(rdm%st%occ(jst, 1))*rdm%exchange(ist, jst)
+
+      !Calculate hartree contribution 
+      do ist = 1,nst
+        do jst = 1, nst
+          V_h(ist) = V_h(ist) + occ(jst)*rdm%hartree(jst, ist)
+        enddo
       end do
-      dE_dn2(ist) = dE_dn2(ist) + (M_ONE/max((M_FOUR*rdm%st%occ(ist, 1)**1.5), 1d-16))*dVx2
-    end do
 
-    POP_SUB(energy_derivatives)
-  end subroutine energy_derivatives
+      !Calcualate exchange contribution
+      do ist = 1, nst 
+        do jst = 1, nst
+          V_x(ist) = V_x(ist) - sqrt(occ(jst))*rdm%exchange(ist,jst)
+        end do
+        V_x(ist) = V_x(ist)*M_HALF/max(sqrt(occ(ist)), 1d-16)
+      end do
 
+      rdm%occsum = M_ZERO
+      do ist = 1, nst
+        rdm%occsum = rdm%occsum + occ(ist)
+      end do
+
+      !Calculate the energy derivative with respect to the occupation numbers
+      dE_dn(:) = rdm%eone(:) + V_h(:) + V_x(:)
+      do ist = 1, nst
+        df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta_new(ist)*M_PI)*(dE_dn(ist)-rdm%mu)
+      end do
+
+      !Total energy calculation without nuclei interaction  
+    
+      energy_tot = M_ZERO
+      do ist = 1, nst
+        energy_tot = energy_tot + occ(ist)*rdm%eone(ist) + &
+                                 & M_HALF*occ(ist)*V_h(ist) + &
+                                 & occ(ist)*V_x(ist)
+      end do
+      objective_new = energy_tot - rdm%mu*(rdm%occsum - rdm%qtot)
+
+      POP_SUB(scf_occ.calcul_objective)
+    end subroutine calcul_objective
+
+  end subroutine scf_occ
 end module rdmft_m
+
 
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
 !! End:
+
