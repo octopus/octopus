@@ -683,7 +683,8 @@ contains
     type(partition_t)    :: partition
     integer              :: ierr
 
-    logical :: from_scratch
+    logical :: from_scratch, has_virtual_partition
+    integer :: vsize !< 'virtual' partition size
 
     PUSH_SUB(mesh_init_stage_3.do_partition)
 
@@ -705,6 +706,27 @@ contains
     if(.not. from_scratch) call mesh_partition_read(mesh, mesh%vp%part, ierr)
     
     if(ierr /= 0) then
+
+      !%Variable MeshPartitionVirtualSize
+      !%Type integer
+      !%Default mesh mpi_grp size
+      !%Section Execution::Parallelization
+      !%Description
+      !% Gives the possibility to change the partition nodes
+      !% Afterward, it crashes
+      !%End
+      call parse_integer(datasets_check('MeshPartitionVirtualSize'), mesh%mpi_grp%size, vsize)
+      
+      if (vsize /= mesh%mpi_grp%size) then
+        write(message(1),'(a,I7)') "Changing the partition size to", vsize
+        write(message(2),'(a)') "The execution will crash"
+        call messages_warning(2)
+        mesh%mpi_grp%size = vsize
+        partition%npart = vsize
+        has_virtual_partition = .true.
+      else 
+        has_virtual_partition = .false.
+      end if
       
       if(.not. present(parent)) then
         call mesh_partition(mesh, stencil, mesh%vp%part)
@@ -746,6 +768,12 @@ contains
       call partition_write_info(partition)      
       call partition_end(partition)
       call mesh_partition_messages_debug(mesh)
+    end if   
+    if (has_virtual_partition) then  
+      write(message(1),'(a)') "Execution has ended"
+      write(message(2),'(a)') "If you want to run your system, you don`t have to MeshPartitionVirtualSize"
+      call messages_warning(2)
+      stop
     end if
 
     !%Variable MeshUseTopology
