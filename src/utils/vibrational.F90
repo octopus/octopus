@@ -81,7 +81,7 @@
     !%End
 
     call parse_integer(datasets_check('PropagationSpectrumTimeStepFactor'), 10, skip)
-    if(skip <= 0) call input_error('PropagationSpectruTimeStepFactor')
+    if(skip <= 0) call input_error('PropagationSpectrumTimeStepFactor')
 
     max_freq = 1 + nint(spectrum%max_energy/spectrum%energy_step)
 
