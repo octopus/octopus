@@ -683,7 +683,7 @@ contains
     type(partition_t)    :: partition
     integer              :: ierr
 
-    logical :: from_scratch, has_virtual_partition
+    logical :: from_scratch, has_virtual_partition = .false.
     integer :: vsize !< 'virtual' partition size
 
     PUSH_SUB(mesh_init_stage_3.do_partition)
@@ -771,7 +771,7 @@ contains
     end if   
     if (has_virtual_partition) then  
       write(message(1),'(a)') "Execution has ended"
-      write(message(2),'(a)') "If you want to run your system, you don`t have to MeshPartitionVirtualSize"
+      write(message(2),'(a)') "If you want to run your system, you don`t have to use MeshPartitionVirtualSize"
       call messages_warning(2)
       stop
     end if
