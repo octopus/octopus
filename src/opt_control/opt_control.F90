@@ -399,7 +399,7 @@ contains
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator) - 1
 
-      call minimize_multidim(MINMETHOD_BFGS2, dof, x(1), step, &
+      call minimize_multidim(MINMETHOD_BFGS2, dof, x, step, &
         real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
         maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue, ierr)
 
@@ -467,7 +467,7 @@ contains
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator)
 
-      call minimize_multidim_nograd(MINMETHOD_NMSIMPLEX, dim, x(1), step, &
+      call minimize_multidim_nograd(MINMETHOD_NMSIMPLEX, dim, x, step, &
         real(oct_iterator_tolerance(iterator), 8), maxiter, &
         opt_control_direct_calc, opt_control_direct_message_info, minvalue, ierr)
 

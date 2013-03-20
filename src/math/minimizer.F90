@@ -20,6 +20,10 @@
 #include "global.h"
 
 module minimizer_m
+  use global_m
+  use profiling_m
+  use messages_m
+
   implicit none
 
   private
@@ -28,13 +32,14 @@ module minimizer_m
     minimize_multidim,         &
     minimize_multidim_nograd
 
-  integer, public, parameter ::     &
-    MINMETHOD_STEEPEST_DESCENT = 1, &
-    MINMETHOD_FR_CG            = 2, &
-    MINMETHOD_PR_CG            = 3, &
-    MINMETHOD_BFGS             = 4, &
-    MINMETHOD_BFGS2            = 5, &
-    MINMETHOD_NMSIMPLEX        = 6
+  integer, public, parameter ::      &
+    MINMETHOD_STEEPEST_DESCENT =  1, &
+    MINMETHOD_FR_CG            =  2, &
+    MINMETHOD_PR_CG            =  3, &
+    MINMETHOD_BFGS             =  4, &
+    MINMETHOD_BFGS2            =  5, &
+    MINMETHOD_NMSIMPLEX        =  6, &
+    MINMETHOD_SD_NATIVE        = -1
 
   interface loct_1dminimize
     subroutine oct_1dminimize(a, b, m, f, status)
@@ -113,7 +118,7 @@ module minimizer_m
     subroutine minimize_multidim_nograd(method, dim, x, step, toldr, maxiter, f, write_iter_info, minimum, ierr)
       integer, intent(in)    :: method
       integer, intent(in)    :: dim
-      real(8), intent(inout) :: x
+      real(8), intent(inout) :: x(:)
       real(8), intent(in)    :: step
       real(8), intent(in)    :: toldr
       integer, intent(in)    :: maxiter
@@ -136,7 +141,9 @@ module minimizer_m
       real(8), intent(out)   :: minimum
       integer, intent(out)   :: ierr
 
-      ierr = loct_minimize_direct(method, dim, x, step, toldr, maxiter, f, write_iter_info, minimum)
+      ASSERT(ubound(x, dim = 1) >= dim)
+
+      ierr = loct_minimize_direct(method, dim, x(1), step, toldr, maxiter, f, write_iter_info, minimum)
 
     end subroutine minimize_multidim_nograd
 
@@ -145,7 +152,7 @@ module minimizer_m
     subroutine minimize_multidim(method, dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
       integer, intent(in)    :: method
       integer, intent(in)    :: dim
-      real(8), intent(inout) :: x
+      real(8), intent(inout) :: x(:)
       real(8), intent(in)    :: step
       real(8), intent(in)    :: tolgrad
       real(8), intent(in)    :: toldr
@@ -170,9 +177,68 @@ module minimizer_m
       real(8), intent(out)   :: minimum
       integer, intent(out)   :: ierr
 
-      ierr = loct_minimize(method, dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
+      ASSERT(ubound(x, dim = 1) >= dim)
+
+      select case(method)
+      case(MINMETHOD_SD_NATIVE)
+        call minimize_sd(dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
+
+      case default
+        ierr = loct_minimize(method, dim, x(1), step, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
+
+      end select
 
     end subroutine minimize_multidim
+
+    !----------------------------------------------
+
+    subroutine minimize_sd(dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
+      integer, intent(in)    :: dim
+      real(8), intent(inout) :: x(:)
+      real(8), intent(in)    :: step
+      real(8), intent(in)    :: tolgrad
+      real(8), intent(in)    :: toldr
+      integer, intent(in)    :: maxiter
+      interface
+        subroutine f(n, x, val, getgrad, grad)
+          integer, intent(in)    :: n
+          real(8), intent(in)    :: x(n)
+          real(8), intent(inout) :: val
+          integer, intent(in)    :: getgrad
+          real(8), intent(inout) :: grad(n)
+        end subroutine f
+        subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
+          integer, intent(in) :: iter
+          integer, intent(in) :: n
+          real(8), intent(in) :: val
+          real(8), intent(in) :: maxdr
+          real(8), intent(in) :: maxgrad
+          real(8), intent(in) :: x(n)
+        end subroutine write_iter_info
+      end interface
+      real(8), intent(out)   :: minimum
+      integer, intent(out)   :: ierr
+
+      integer :: iter
+      real(8), allocatable :: grad(:)
+      real(8) :: val, step2, maxgrad
+
+      SAFE_ALLOCATE(grad(1:dim))
+
+      step2 = step*CNST(10.0)
+      do iter = 1, maxiter
+        call f(dim, x, val, 1, grad)
+
+        maxgrad = maxval(abs(grad))
+
+        call write_iter_info(iter, dim, val, maxgrad*step2, maxgrad, x)
+
+        x(1:dim) = x(1:dim) - step2*grad(1:dim)
+
+        step2 = step2*CNST(0.99)
+      end do
+
+    end subroutine minimize_sd
 
 end module minimizer_m
 

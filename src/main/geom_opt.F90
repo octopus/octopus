@@ -124,11 +124,11 @@ contains
     !Minimize
     select case(g_opt%method)
     case(MINMETHOD_NMSIMPLEX)
-      call minimize_multidim_nograd(g_opt%method, g_opt%size, coords(1), real(g_opt%step, 8),&
+      call minimize_multidim_nograd(g_opt%method, g_opt%size, coords, real(g_opt%step, 8),&
         real(g_opt%toldr, 8), g_opt%max_iter, &
         calc_point_ng, write_iter_info_ng, energy, ierr)
     case default
-      call minimize_multidim(g_opt%method, g_opt%size, coords(1), real(g_opt%step, 8),&
+      call minimize_multidim(g_opt%method, g_opt%size, coords, real(g_opt%step, 8),&
         real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
         calc_point, write_iter_info, energy, ierr)
     end select
@@ -205,6 +205,8 @@ contains
       !% GSL documentation</a>.
       !%Option steep 1
       !% Simple steepest descent.
+      !%Option steep_native -1
+      !% (Experimental) Non-gsl implementation of steepest descent.
       !%Option cg_fr 2
       !% Fletcher-Reeves conjugate-gradient algorithm. The
       !% conjugate-gradient algorithm proceeds as a succession of line
