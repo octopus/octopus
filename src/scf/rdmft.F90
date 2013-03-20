@@ -1,11 +1,10 @@
- #include "global.h"
+#include "global.h"
 
 module rdmft_m
   use datasets_m
   use density_m
   use eigensolver_m
   use energy_m
-  use geometry_m
   use global_m
   use grid_m
   use hamiltonian_m
@@ -20,7 +19,6 @@ module rdmft_m
   use poisson_m
   use profiling_m
   use states_m
-  use system_m
   use unit_m
   use unit_system_m
   use v_ks_m
@@ -39,30 +37,29 @@ module rdmft_m
   type rdm_t
     integer  :: max_iter
     FLOAT    :: mu, occsum, qtot
-    FLOAT, ALLOCATABLE   :: eone(:), hartree(:,:), exchange(:,:)   
+    FLOAT, allocatable   :: eone(:), hartree(:,:), exchange(:,:)   
     REAL(8) :: step, toler
   end type rdm_t
   
   type(rdm_t), save :: rdm
   
-
-  contains
+contains
    
-  subroutine rdmft_init(rdm,sys)
+  subroutine rdmft_init(rdm, st)
     type(rdm_t),           intent(inout)    :: rdm
-    type(system_t), target,intent(inout)    :: sys
+    type(states_t),        intent(inout)    :: st
 
     PUSH_SUB(rdmft_init)  
 
-    SAFE_ALLOCATE(rdm%eone(1:sys%st%nst))
-    SAFE_ALLOCATE(rdm%hartree(1:sys%st%nst, 1:sys%st%nst))
-    SAFE_ALLOCATE(rdm%exchange(1:sys%st%nst, 1:sys%st%nst))
+    SAFE_ALLOCATE(rdm%eone(1:st%nst))
+    SAFE_ALLOCATE(rdm%hartree(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(rdm%exchange(1:st%nst, 1:st%nst))
 
     rdm%eone = M_ZERO
     rdm%hartree = M_ZERO
     rdm%exchange = M_ZERO
-    rdm%mu = M_TWO*sys%st%eigenval(int(sys%st%qtot*M_HALF), 1)
-    rdm%qtot = sys%st%qtot
+    rdm%mu = M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)
+    rdm%qtot = st%qtot
     rdm%occsum = M_ZERO
 
     !%Variable RDMMaxIter
@@ -71,19 +68,19 @@ module rdmft_m
     !%Section SCF::RDMFT
     !%Description
     !% Even if the convergence criterion is not satisfied, the minimization will stop
-    !% after this number of iterations.
+    !% after this number of iterations. The default is 3000.
     !%End 
     call parse_integer(datasets_check('RDMMaxIter'), 3000, rdm%max_iter)
     
     !%Variable RDMStep
     !%Type float
-    !%Default 1d-2 
+    !%Default 1e-2 
     !%Section SCF::RDMFT
     !%Description 
-    !% Initial step for the occupation number optimizer.
+    !% Initial step for the occupation number optimizer. The default is 1.0e-2.
     !%End
 
-    call parse_float(datasets_check('RDMStep'), 1d-2, rdm%step)
+    call parse_float(datasets_check('RDMStep'), CNST(1.0e-2), rdm%step)
 
     !%Variable RDMTolerance
     !%Type float
@@ -92,14 +89,16 @@ module rdmft_m
     !%Description
     !% Convergence criterion, for stopping the minimization. Minimization is
     !% stopped when all derivatives of the energy wrt. the occupation number 
-    !% are smaller than this criterion.
+    !% are smaller than this criterion. The default is 1.0e-6.
     !%End
 
-    call parse_float(datasets_check('RDMTolerance'), CNST(1e-6), rdm%toler)
+    call parse_float(datasets_check('RDMTolerance'), CNST(1.0e-6), rdm%toler)
     
     POP_SUB(rdmft_init)
 
   end subroutine rdmft_init
+
+  ! ----------------------------------------
 
   subroutine rdmft_end(rdm)
     type(rdm_t), intent(inout) :: rdm
@@ -114,29 +113,27 @@ module rdmft_m
 
   end subroutine rdmft_end
 
-  ! scf for the occupation numbers and the natural orbitals
-  subroutine scf_rdmft(rdm, geo, gr, hm, st, sys, ks, outp)
+  ! ----------------------------------------
 
+  ! scf for the occupation numbers and the natural orbitals
+  subroutine scf_rdmft(rdm, gr, hm, st)
     type(rdm_t),          intent(inout) :: rdm
-    type(geometry_t),     intent(in)    :: geo
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
     type(states_t),       intent(inout) :: st
-    type(system_t),       intent(inout) :: sys
-    type(v_ks_t),         intent(inout) :: ks
-    type(output_t),       intent(in)    :: outp
 
     PUSH_SUB(scf_rdmft)
 
-    call scf_occ(rdm, geo, gr, hm,st) 
+    call scf_occ(rdm, gr, hm, st) 
     
     POP_SUB(scf_rdmft)
 
   end subroutine scf_rdmft
-    ! ---------------------------------------------------------
-  subroutine scf_occ(rdm, geo, gr, hm, st )
+  
+  ! ---------------------------------------------------------
+  
+  subroutine scf_occ(rdm, gr, hm, st)
     type(rdm_t),          intent(inout) :: rdm
-    type(geometry_t),     intent(in)    :: geo
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
     type(states_t),       intent(inout) :: st
@@ -146,9 +143,9 @@ module rdmft_m
     REAL(8)::energy
     integer :: ist, jst, icycle
     FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv
-    FLOAT, allocatable :: occout(:,:), occin(:,:),hpsi(:,:),pot(:),rho(:),dpsi2(:,:)
-    FLOAT :: el_per_state !maixmum number of electrons per state
-    FLOAT, parameter :: smallocc=CNST(0.0000001) 
+    FLOAT, allocatable :: occout(:,:), occin(:,:), hpsi(:,:), pot(:), rho(:), dpsi2(:,:)
+    FLOAT :: el_per_state !maximum number of electrons per state
+    FLOAT, parameter :: smallocc = CNST(0.0000001) 
 
     PUSH_SUB(scf_occ)
     
@@ -166,10 +163,8 @@ module rdmft_m
     hpsi = M_ZERO
     energy = M_ZERO
 
-    if(hm%d%ispin == 1) & ! unpolarized
-      el_per_state = M_TWO
-    if (hm%d%ispin ==2) & 
-     el_per_state = M_ONE
+    if(hm%d%ispin == 1) el_per_state = M_TWO ! unpolarized
+    if(hm%d%ispin == 2) el_per_state = M_ONE
 
     !Initialize the occin. Smallocc is used for numerical stability
     
@@ -195,11 +190,11 @@ module rdmft_m
     do ist = 1, st%nst
       pot = M_ZERO
       rho = M_ZERO
-      rho(:) = st%dpsi(:,1,ist,1)**2
+      rho(:) = st%dpsi(:, 1, ist, 1)**2
       call dpoisson_solve(psolver, pot , rho)
       
       do jst = ist, st%nst
-        rdm%hartree(jst,ist) = dmf_dotp(gr%mesh,st%dpsi(:,1,jst,1)**2, pot(:))
+        rdm%hartree(jst,ist) = dmf_dotp(gr%mesh,st%dpsi(:, 1, jst, 1)**2, pot(:))
         rdm%hartree(ist,jst) = rdm%hartree(jst,ist)  
       enddo
     enddo
@@ -222,7 +217,7 @@ module rdmft_m
     !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
     !bisection to find the root of rdm%occsum-st%qtot=M_ZERO
     mu1 = rdm%mu   !initial guess for mu 
-    mu2 = -1.d-6
+    mu2 = -CNST(1.0e-6)
     dinterv = M_HALF
     call  multid_minimize(st%nst, rdm%max_iter, theta, energy)
     sumgi1 = rdm%occsum - st%qtot 
@@ -253,17 +248,17 @@ module rdmft_m
       rdm%mu = mum
       call  multid_minimize(st%nst, rdm%max_iter, theta, energy) 
       sumgim = rdm%occsum - st%qtot
-      if (sumgi1*sumgim.lt.M_ZERO) then
+      if (sumgi1*sumgim < M_ZERO) then
         mu2 = mum
       else
         mu1 = mum
         sumgi1 = sumgim
       end if
-      if (abs(sumgim).lt.rdm%toler*rdm%step.or.abs((mu1-mu2)*M_HALF).lt.rdm%toler*rdm%step)  exit
+      if(abs(sumgim) < rdm%toler*rdm%step .or. abs((mu1-mu2)*M_HALF) < rdm%toler*rdm%step)  exit
       cycle
     end do
     if (icycle.ge.rdm%max_iter) then
-      write(message(1),'(a,1x,f11.6)'), 'bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
+      write(message(1),'(a,1x,f11.6)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
       call messages_fatal(1)
     endif
 
@@ -272,14 +267,14 @@ module rdmft_m
       occout(ist, 1) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
     end do
 
-    write(message(1),'(a,1x,f11.6)'), 'Occupations sum', rdm%occsum
+    write(message(1),'(a,1x,f11.6)') 'Occupations sum', rdm%occsum
     call messages_info(1)
     write(message(1),'(a,es15.8)') ' etot RDMFT= ', units_from_atomic(units_out%energy,energy+hm%ep%eii) 
     write(message(2),'(a4,1x,a12)')'#st','Occupation'
     call messages_info(2)   
 
     do ist = 1, st%nst
-      write(message(1),'(i4,3x,f11.6)'), ist, occout(ist, 1)
+      write(message(1),'(i4,3x,f11.6)') ist, occout(ist, 1)
       call messages_info(1)  
     end do
    
@@ -303,7 +298,7 @@ module rdmft_m
       FLOAT, intent(inout)       :: theta(1:nst)
       FLOAT, intent(out)         :: objective
 
-      integer :: icycle, ist, jst, iexit
+      integer :: icycle, ist, iexit
       FLOAT :: objective_new
       FLOAT, allocatable :: theta_new(:), df(:)
  
@@ -314,16 +309,16 @@ module rdmft_m
 
       objective = M_ZERO
       df = M_ZERO
-      objective_new = -1d-8
+      objective_new = CNST(-1.0e-8)
       theta_new = theta
 
       do icycle = 1, max_iter
         if(objective_new.lt.objective) then
-          rdm%step = 1.3*rdm%step
+          rdm%step = CNST(1.3)*rdm%step
           objective = objective_new
           theta = theta_new
         else
-          rdm%step = 0.9*rdm%step
+          rdm%step = CNST(0.9)*rdm%step
         end if
 
         do ist = 1, nst
@@ -331,16 +326,17 @@ module rdmft_m
         end do
            
         call calcul_objective(nst, theta_new, df, objective_new)
-        iexit = M_ZERO
+
+        iexit = 0
         do ist = 1, nst 
-          if  (abs(df(ist)).lt.rdm%toler)  iexit=iexit+1 
+          if(abs(df(ist)) < rdm%toler)  iexit = iexit + 1 
         end do
-        if (iexit==nst)  exit
+        if (iexit == nst) exit
         cycle
       end do
    
-      if (iexit.ne.nst) then
-        write(message(1),'(a)'), 'did not manage to minimize '
+      if (iexit /= nst) then
+        write(message(1),'(a)') 'Did not manage to minimize '
         call messages_info(1)
       end if
 
@@ -354,6 +350,8 @@ module rdmft_m
   
     end subroutine multid_minimize
    
+    ! --------------------------------------------
+    
     subroutine calcul_objective(nst, theta_new, df, objective_new) 
       INTEGER, intent(in)                 :: nst
       FLOAT, intent(in)                   :: theta_new(1:nst)
