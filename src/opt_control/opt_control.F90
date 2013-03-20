@@ -399,9 +399,9 @@ contains
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator) - 1
 
-      ierr = loct_minimize(MINMETHOD_BFGS2, dof, x(1), step, &
-           real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
-           maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue)
+      call minimize_multidim(MINMETHOD_BFGS2, dof, x(1), step, &
+        real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
+        maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue, ierr)
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then
@@ -467,9 +467,9 @@ contains
       step = oct%direct_step * M_PI
       maxiter = oct_iterator_maxiter(iterator)
 
-      ierr = loct_minimize_direct(MINMETHOD_NMSIMPLEX, dim, x(1), step, &
-               real(oct_iterator_tolerance(iterator), 8), maxiter, &
-               opt_control_direct_calc, opt_control_direct_message_info, minvalue)
+      call minimize_multidim_nograd(MINMETHOD_NMSIMPLEX, dim, x(1), step, &
+        real(oct_iterator_tolerance(iterator), 8), maxiter, &
+        opt_control_direct_calc, opt_control_direct_message_info, minvalue, ierr)
 
       if(ierr.ne.0) then
         if(ierr <= 1024) then

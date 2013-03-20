@@ -124,13 +124,13 @@ contains
     !Minimize
     select case(g_opt%method)
     case(MINMETHOD_NMSIMPLEX)
-      ierr = loct_minimize_direct(g_opt%method, g_opt%size, coords(1), real(g_opt%step, 8),&
-           real(g_opt%toldr, 8), g_opt%max_iter, &
-           calc_point_ng, write_iter_info_ng, energy)
+      call minimize_multidim_nograd(g_opt%method, g_opt%size, coords(1), real(g_opt%step, 8),&
+        real(g_opt%toldr, 8), g_opt%max_iter, &
+        calc_point_ng, write_iter_info_ng, energy, ierr)
     case default
-      ierr = loct_minimize(g_opt%method, g_opt%size, coords(1), real(g_opt%step, 8),&
-           real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
-           calc_point, write_iter_info, energy)
+      call minimize_multidim(g_opt%method, g_opt%size, coords(1), real(g_opt%step, 8),&
+        real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
+        calc_point, write_iter_info, energy, ierr)
     end select
 
     if(ierr == 1025) then
