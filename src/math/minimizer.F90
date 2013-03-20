@@ -23,6 +23,9 @@ module minimizer_m
   use global_m
   use profiling_m
   use messages_m
+#if defined(HAVE_NEWUOA)
+  use newuoa_m
+#endif
 
   implicit none
 
@@ -39,7 +42,8 @@ module minimizer_m
     MINMETHOD_BFGS             =  4, &
     MINMETHOD_BFGS2            =  5, &
     MINMETHOD_NMSIMPLEX        =  6, &
-    MINMETHOD_SD_NATIVE        = -1
+    MINMETHOD_SD_NATIVE        = -1, &
+    MINMETHOD_NEWUOA           =  7
 
   interface loct_1dminimize
     subroutine oct_1dminimize(a, b, m, f, status)
@@ -141,9 +145,26 @@ module minimizer_m
       real(8), intent(out)   :: minimum
       integer, intent(out)   :: ierr
 
+      integer :: npt, iprint, sizeofw
+      REAL_DOUBLE, allocatable :: w(:)
+
       ASSERT(ubound(x, dim = 1) >= dim)
 
-      ierr = loct_minimize_direct(method, dim, x(1), step, toldr, maxiter, f, write_iter_info, minimum)
+      select case(method)
+      case(MINMETHOD_NMSIMPLEX) 
+        ierr = loct_minimize_direct(method, dim, x(1), step, toldr, maxiter, f, write_iter_info, minimum)
+#if defined(HAVE_NEWUOA)
+      case(MINMETHOD_NEWUOA)
+        npt = 2*dim + 1
+        iprint = 2
+        sizeofw = (npt + 13)*(npt + dim) + 3 * dim*(dim + 3)/2 
+        SAFE_ALLOCATE(w(1:sizeofw))
+        w = M_ZERO
+        call newuoa(dim, npt, x, step, toldr, iprint, maxiter, w, f)
+        SAFE_DEALLOCATE_A(w)
+        ierr = 0
+#endif
+      end select
 
     end subroutine minimize_multidim_nograd
 

@@ -38,9 +38,6 @@ module opt_control_m
   use loct_math_m
   use mesh_m
   use minimizer_m
-#if defined(HAVE_NEWUOA)
-  use newuoa_m
-#endif
   use opt_control_global_m
   use opt_control_state_m
   use opt_control_propagation_m
@@ -492,8 +489,8 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_newuoa
 #if defined(HAVE_NEWUOA)
-      integer :: iprint, npt, maxfun, sizeofw, dim
-      REAL_DOUBLE :: rhobeg, rhoend
+      integer :: dim, ierr, maxfun
+      REAL_DOUBLE :: minvalue, step
       FLOAT, allocatable :: xl(:), xu(:)
       REAL_DOUBLE, allocatable :: x(:), w(:)
       FLOAT, allocatable :: theta(:)
@@ -534,15 +531,11 @@ contains
       call controlfunction_get_theta(par, theta)
       x = theta
 
-      iprint = 2
-      npt = 2*dim + 1
-      rhoend = oct_iterator_tolerance(iterator)
-      rhobeg = oct%direct_step * M_PI
       maxfun = oct_iterator_maxiter(iterator)
-      sizeofw = (npt + 13)*(npt + dim) + 3 * dim*(dim + 3)/2 
-      SAFE_ALLOCATE(w(1:sizeofw))
-      w = M_ZERO
-      call newuoa(dim, npt, x, rhobeg, rhoend, iprint, maxfun, w, opt_control_direct_calc)
+      step = oct%direct_step * M_PI
+      call minimize_multidim_nograd(MINMETHOD_NEWUOA, dim, x, step, &
+        real(oct_iterator_tolerance(iterator), 8), maxfun, &
+        opt_control_direct_calc, opt_control_direct_message_info, minvalue, ierr)
 
       SAFE_DEALLOCATE_A(x)
       SAFE_DEALLOCATE_A(theta)
