@@ -97,6 +97,8 @@ module command_line_m
   !> Each program/utility that needs to use the getopt features should have
   !! an interface here -- the definition of the procedure should be given in the
   !! getopt_f.c file. And they MUST be listed under public above, or they have no effect!
+  !! Arguments should be intent(inout) since default values are setting by the calling routine,
+  !! and are left unchanged if the corresponding option is not given.
   interface
     subroutine getopt_octopus
     end subroutine getopt_octopus
@@ -111,14 +113,14 @@ module command_line_m
     end subroutine getopt_dielectric_function
 
     subroutine getopt_propagation_spectrum(fname)
-      character(len=*), intent(in) :: fname
+      character(len=*), intent(inout) :: fname
     end subroutine getopt_propagation_spectrum
 
     subroutine getopt_rotatory_strength
     end subroutine getopt_rotatory_strength
 
     subroutine getopt_vibrational(mode)
-      integer, intent(in) :: mode
+      integer, intent(inout) :: mode
     end subroutine getopt_vibrational
 
     subroutine getopt_xyz_anim
@@ -154,16 +156,16 @@ module command_line_m
     
     subroutine getopt_photoelectron_spectrum(mode, interp, estep, espan, &
       thstep, thspan, phstep, phspan, pol, center)
-      integer, intent(in) :: mode
-      integer, intent(in) :: interp
-      real(8), intent(in) :: estep
-      real(8), intent(in) :: espan(2)
-      real(8), intent(in) :: thstep
-      real(8), intent(in) :: thspan(2)
-      real(8), intent(in) :: phstep
-      real(8), intent(in) :: phspan(2)
-      real(8), intent(in) :: pol(3)
-      real(8), intent(in) :: center(3)
+      integer, intent(inout) :: mode
+      integer, intent(inout) :: interp
+      real(8), intent(inout) :: estep
+      real(8), intent(inout) :: espan(2)
+      real(8), intent(inout) :: thstep
+      real(8), intent(inout) :: thspan(2)
+      real(8), intent(inout) :: phstep
+      real(8), intent(inout) :: phspan(2)
+      real(8), intent(inout) :: pol(3)
+      real(8), intent(inout) :: center(3)
     end subroutine getopt_photoelectron_spectrum
 
   end interface
@@ -187,8 +189,8 @@ module command_line_m
   interface get_command_argument
 #ifdef FC_COMMAND_LINE_IMPLICIT
      subroutine getarg(c, a)
-       integer :: c
-       character(len=*) :: a
+       integer,          intent(in)  :: c
+       character(len=*), intent(out) :: a
      end subroutine getarg
 #else
      module procedure getarg
@@ -204,12 +206,12 @@ module command_line_m
 
   interface 
     subroutine set_number_clarg(argc)
-      integer :: argc
+      integer, intent(in) :: argc
     end subroutine set_number_clarg
 
     subroutine set_clarg(i, argstring)
-      integer :: i
-      character(len=*) :: argstring
+      integer, intent(in) :: i
+      character(len=*), intent(in) :: argstring
     end subroutine set_clarg
 
     subroutine clean_clarg()
@@ -217,7 +219,7 @@ module command_line_m
   end interface
 
 
-  contains
+contains
 
 
   ! ---------------------------------------------------------
