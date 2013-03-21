@@ -117,150 +117,150 @@ module minimizer_m
     end function oct_minimize_direct
   end interface loct_minimize_direct
 
-  contains 
+contains 
 
-    subroutine minimize_multidim_nograd(method, dim, x, step, toldr, maxiter, f, write_iter_info, minimum, ierr)
-      integer, intent(in)    :: method
-      integer, intent(in)    :: dim
-      real(8), intent(inout) :: x(:)
-      real(8), intent(in)    :: step
-      real(8), intent(in)    :: toldr
-      integer, intent(in)    :: maxiter
-      !> No intents here is unfortunately required because the same dummy function will be passed
-      !! also to newuoa routines in opt_control, and there the interface has no intents.
-      interface
-        subroutine f(n, x, val)
-          integer :: n
-          real(8) :: x(n)
-          real(8) :: val
-        end subroutine f
-        subroutine write_iter_info(iter, n, val, maxdr, x)
-          integer, intent(in) :: iter
-          integer, intent(in) :: n
-          real(8), intent(in) :: val
-          real(8), intent(in) :: maxdr
-          real(8), intent(in) :: x(n)
-        end subroutine write_iter_info
-      end interface
-      real(8), intent(out)   :: minimum
-      integer, intent(out)   :: ierr
-
-      integer :: npt, iprint, sizeofw
-      REAL_DOUBLE, allocatable :: w(:)
-
-      ASSERT(ubound(x, dim = 1) >= dim)
-
-      select case(method)
-      case(MINMETHOD_NMSIMPLEX) 
-        ierr = loct_minimize_direct(method, dim, x(1), step, toldr, maxiter, f, write_iter_info, minimum)
+  subroutine minimize_multidim_nograd(method, dim, x, step, toldr, maxiter, f, write_iter_info, minimum, ierr)
+    integer, intent(in)    :: method
+    integer, intent(in)    :: dim
+    real(8), intent(inout) :: x(:)
+    real(8), intent(in)    :: step
+    real(8), intent(in)    :: toldr
+    integer, intent(in)    :: maxiter
+    !> No intents here is unfortunately required because the same dummy function will be passed
+    !! also to newuoa routines in opt_control, and there the interface has no intents.
+    interface
+      subroutine f(n, x, val)
+        integer :: n
+        real(8) :: x(n)
+        real(8) :: val
+      end subroutine f
+      subroutine write_iter_info(iter, n, val, maxdr, x)
+        integer, intent(in) :: iter
+        integer, intent(in) :: n
+        real(8), intent(in) :: val
+        real(8), intent(in) :: maxdr
+        real(8), intent(in) :: x(n)
+      end subroutine write_iter_info
+    end interface
+    real(8), intent(out)   :: minimum
+    integer, intent(out)   :: ierr
+    
+    integer :: npt, iprint, sizeofw
+    REAL_DOUBLE, allocatable :: w(:)
+    
+    ASSERT(ubound(x, dim = 1) >= dim)
+    
+    select case(method)
+    case(MINMETHOD_NMSIMPLEX) 
+      ierr = loct_minimize_direct(method, dim, x(1), step, toldr, maxiter, f, write_iter_info, minimum)
 #if defined(HAVE_NEWUOA)
-      case(MINMETHOD_NEWUOA)
-        npt = 2*dim + 1
-        iprint = 2
-        sizeofw = (npt + 13)*(npt + dim) + 3 * dim*(dim + 3)/2 
-        SAFE_ALLOCATE(w(1:sizeofw))
-        w = M_ZERO
-        call newuoa(dim, npt, x, step, toldr, iprint, maxiter, w, f)
-        SAFE_DEALLOCATE_A(w)
-        ierr = 0
+    case(MINMETHOD_NEWUOA)
+      npt = 2*dim + 1
+      iprint = 2
+      sizeofw = (npt + 13)*(npt + dim) + 3 * dim*(dim + 3)/2 
+      SAFE_ALLOCATE(w(1:sizeofw))
+      w = M_ZERO
+      call newuoa(dim, npt, x, step, toldr, iprint, maxiter, w, f)
+      SAFE_DEALLOCATE_A(w)
+      ierr = 0
 #endif
-      end select
+    end select
 
-    end subroutine minimize_multidim_nograd
+  end subroutine minimize_multidim_nograd
 
-    !----------------------------------------------
+  !----------------------------------------------
 
-    subroutine minimize_multidim(method, dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
-      integer, intent(in)    :: method
-      integer, intent(in)    :: dim
-      real(8), intent(inout) :: x(:)
-      real(8), intent(in)    :: step
-      real(8), intent(in)    :: tolgrad
-      real(8), intent(in)    :: toldr
-      integer, intent(in)    :: maxiter
-      interface
-        subroutine f(n, x, val, getgrad, grad)
-          integer, intent(in)    :: n
-          real(8), intent(in)    :: x(n)
-          real(8), intent(inout) :: val
-          integer, intent(in)    :: getgrad
-          real(8), intent(inout) :: grad(n)
-        end subroutine f
-        subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
-          integer, intent(in) :: iter
-          integer, intent(in) :: n
-          real(8), intent(in) :: val
-          real(8), intent(in) :: maxdr
-          real(8), intent(in) :: maxgrad
-          real(8), intent(in) :: x(n)
-        end subroutine write_iter_info
-      end interface
-      real(8), intent(out)   :: minimum
-      integer, intent(out)   :: ierr
+  subroutine minimize_multidim(method, dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
+    integer, intent(in)    :: method
+    integer, intent(in)    :: dim
+    real(8), intent(inout) :: x(:)
+    real(8), intent(in)    :: step
+    real(8), intent(in)    :: tolgrad
+    real(8), intent(in)    :: toldr
+    integer, intent(in)    :: maxiter
+    interface
+      subroutine f(n, x, val, getgrad, grad)
+        integer, intent(in)    :: n
+        real(8), intent(in)    :: x(n)
+        real(8), intent(inout) :: val
+        integer, intent(in)    :: getgrad
+        real(8), intent(inout) :: grad(n)
+      end subroutine f
+      subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
+        integer, intent(in) :: iter
+        integer, intent(in) :: n
+        real(8), intent(in) :: val
+        real(8), intent(in) :: maxdr
+        real(8), intent(in) :: maxgrad
+        real(8), intent(in) :: x(n)
+      end subroutine write_iter_info
+    end interface
+    real(8), intent(out)   :: minimum
+    integer, intent(out)   :: ierr
+    
+    ASSERT(ubound(x, dim = 1) >= dim)
+    
+    select case(method)
+    case(MINMETHOD_SD_NATIVE)
+      call minimize_sd(dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
+      
+    case default
+      ierr = loct_minimize(method, dim, x(1), step, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
+      
+    end select
+    
+  end subroutine minimize_multidim
 
-      ASSERT(ubound(x, dim = 1) >= dim)
+  !----------------------------------------------
 
-      select case(method)
-      case(MINMETHOD_SD_NATIVE)
-        call minimize_sd(dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
-
-      case default
-        ierr = loct_minimize(method, dim, x(1), step, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
-
-      end select
-
-    end subroutine minimize_multidim
-
-    !----------------------------------------------
-
-    subroutine minimize_sd(dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
-      integer, intent(in)    :: dim
-      real(8), intent(inout) :: x(:)
-      real(8), intent(in)    :: step
-      real(8), intent(in)    :: tolgrad
-      real(8), intent(in)    :: toldr
-      integer, intent(in)    :: maxiter
-      interface
-        subroutine f(n, x, val, getgrad, grad)
-          integer, intent(in)    :: n
-          real(8), intent(in)    :: x(n)
-          real(8), intent(inout) :: val
-          integer, intent(in)    :: getgrad
-          real(8), intent(inout) :: grad(n)
-        end subroutine f
-        subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
-          integer, intent(in) :: iter
-          integer, intent(in) :: n
-          real(8), intent(in) :: val
-          real(8), intent(in) :: maxdr
-          real(8), intent(in) :: maxgrad
-          real(8), intent(in) :: x(n)
-        end subroutine write_iter_info
-      end interface
-      real(8), intent(out)   :: minimum
-      integer, intent(out)   :: ierr
-
-      integer :: iter
-      real(8), allocatable :: grad(:)
-      real(8) :: val, step2, maxgrad
-
-      SAFE_ALLOCATE(grad(1:dim))
-
-      step2 = step*CNST(10.0)
-      do iter = 1, maxiter
-        call f(dim, x, val, 1, grad)
-
-        maxgrad = maxval(abs(grad))
-
-        call write_iter_info(iter, dim, val, maxgrad*step2, maxgrad, x)
-
-        x(1:dim) = x(1:dim) - step2*grad(1:dim)
-
-        step2 = step2*CNST(0.99)
-      end do
-
-    end subroutine minimize_sd
-
+  subroutine minimize_sd(dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
+    integer, intent(in)    :: dim
+    real(8), intent(inout) :: x(:)
+    real(8), intent(in)    :: step
+    real(8), intent(in)    :: tolgrad
+    real(8), intent(in)    :: toldr
+    integer, intent(in)    :: maxiter
+    interface
+      subroutine f(n, x, val, getgrad, grad)
+        integer, intent(in)    :: n
+        real(8), intent(in)    :: x(n)
+        real(8), intent(inout) :: val
+        integer, intent(in)    :: getgrad
+        real(8), intent(inout) :: grad(n)
+      end subroutine f
+      subroutine write_iter_info(iter, n, val, maxdr, maxgrad, x)
+        integer, intent(in) :: iter
+        integer, intent(in) :: n
+        real(8), intent(in) :: val
+        real(8), intent(in) :: maxdr
+        real(8), intent(in) :: maxgrad
+        real(8), intent(in) :: x(n)
+      end subroutine write_iter_info
+    end interface
+    real(8), intent(out)   :: minimum
+    integer, intent(out)   :: ierr
+    
+    integer :: iter
+    real(8), allocatable :: grad(:)
+    real(8) :: val, step2, maxgrad
+    
+    SAFE_ALLOCATE(grad(1:dim))
+    
+    step2 = step*CNST(10.0)
+    do iter = 1, maxiter
+      call f(dim, x, val, 1, grad)
+      
+      maxgrad = maxval(abs(grad))
+      
+      call write_iter_info(iter, dim, val, maxgrad*step2, maxgrad, x)
+      
+      x(1:dim) = x(1:dim) - step2*grad(1:dim)
+      
+      step2 = step2*CNST(0.99)
+    end do
+    
+  end subroutine minimize_sd
+  
 end module minimizer_m
 
 !! Local Variables:
