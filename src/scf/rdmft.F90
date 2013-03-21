@@ -143,7 +143,7 @@ contains
     REAL(8)::energy
     integer :: ist, jst, icycle
     FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv
-    FLOAT, allocatable :: occout(:,:), occin(:,:), hpsi(:,:), pot(:), rho(:), dpsi2(:,:)
+    FLOAT, allocatable :: occout(:,:), occin(:,:), hpsi(:,:), pot(:), rho(:), dpsi(:,:), dpsi2(:,:)
     FLOAT :: el_per_state !maximum number of electrons per state
     FLOAT, parameter :: smallocc = CNST(0.0000001) 
 
@@ -155,7 +155,8 @@ contains
     SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(pot (1:gr%mesh%np))
     SAFE_ALLOCATE(rho (1:gr%mesh%np))
-    SAFE_ALLOCATE(dpsi2(1:gr%mesh%np ,1:st%d%dim))
+    SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(dpsi2(1:gr%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(df(1:st%nst))
     occout = M_ZERO
     occin = M_ZERO
@@ -173,7 +174,7 @@ contains
     where(occin(:,:) > el_per_state-smallocc) occin(:,:) = el_per_state - smallocc
 
     st%occ = occin
-    theta(:) = asin(sqrt(occin(:,1)/M_TWO))*(M_HALF/M_PI)
+    theta(:) = asin(sqrt(occin(:, 1)/M_TWO))*(M_HALF/M_PI)
     
     if (hm%d%ispin.ne.1) then
       call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
@@ -181,23 +182,26 @@ contains
   
     !derivative of one electron energy with respect to the natural orbitals occupation number
     do ist = 1, st%nst
-      call dhamiltonian_apply(hm,gr%der,st%dpsi(:,:,ist, 1), hpsi, ist, 1, &
+      call states_get_state(st, gr%mesh, ist, 1, dpsi)
+      call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &
                             & terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
-      rdm%eone(ist) = dmf_dotp(gr%mesh,st%dpsi(:,1,ist,1), hpsi(:,1))
-    enddo
+      rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
+    end do
     
     !calculates the integrals used for the hartree part of the total energy and its derivative
     do ist = 1, st%nst
       pot = M_ZERO
       rho = M_ZERO
-      rho(:) = st%dpsi(:, 1, ist, 1)**2
+      call states_get_state(st, gr%mesh, ist, 1, dpsi)
+      rho(1:gr%mesh%np) = dpsi(1:gr%mesh%np, 1)**2
       call dpoisson_solve(psolver, pot , rho)
       
       do jst = ist, st%nst
-        rdm%hartree(jst,ist) = dmf_dotp(gr%mesh,st%dpsi(:, 1, jst, 1)**2, pot(:))
-        rdm%hartree(ist,jst) = rdm%hartree(jst,ist)  
-      enddo
-    enddo
+        call states_get_state(st, gr%mesh, jst, 1, dpsi)
+        rdm%hartree(jst, ist) = dmf_dotp(gr%mesh, dpsi(:, 1)**2, pot(:))
+        rdm%hartree(ist, jst) = rdm%hartree(jst, ist)
+      end do
+    end do
    
     !calculates the integrals used for the exchange part of the total energy and its derivative
     do ist = 1, st%nst 
@@ -207,7 +211,8 @@ contains
       call states_get_state(st, gr%mesh, ist, 1, dpsi2)
       
       do jst = ist, st%nst
-        rho(:) = dpsi2(:, 1)*st%dpsi(:, 1, jst, 1)
+        call states_get_state(st, gr%mesh, jst, 1, dpsi)
+        rho(1:gr%mesh%np) = dpsi2(1:gr%mesh%np, 1)*dpsi(1:gr%mesh%np, 1)
         call dpoisson_solve(psolver, pot, rho)
         rdm%exchange(ist, jst) = dmf_dotp(gr%mesh,rho, pot)
         rdm%exchange(jst, ist) = rdm%exchange(ist, jst)
@@ -225,8 +230,8 @@ contains
     call  multid_minimize(st%nst, rdm%max_iter, theta, energy) 
     sumgi2 = rdm%occsum - st%qtot
 
-    do while (sumgi1*sumgi2.gt.M_ZERO)
-      if (sumgi2.gt.M_ZERO) then
+    do while (sumgi1*sumgi2 > M_ZERO)
+      if (sumgi2 > M_ZERO) then
         mu2 = mu1
         sumgi2 = sumgi1
         mu1 = mu1 - dinterv
@@ -384,12 +389,12 @@ contains
         enddo
       end do
 
-      !Calcualate exchange contribution
+      !Calculate exchange contribution
       do ist = 1, nst 
         do jst = 1, nst
-          V_x(ist) = V_x(ist) - sqrt(occ(jst))*rdm%exchange(ist,jst)
+          V_x(ist) = V_x(ist) - sqrt(occ(jst))*rdm%exchange(ist, jst)
         end do
-        V_x(ist) = V_x(ist)*M_HALF/max(sqrt(occ(ist)), 1d-16)
+        V_x(ist) = V_x(ist)*M_HALF/max(sqrt(occ(ist)), CNST(1.0e-16))
       end do
 
       rdm%occsum = M_ZERO
