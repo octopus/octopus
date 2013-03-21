@@ -1,18 +1,18 @@
 =head1 NAME
 
-oct-vibrational - Calculates the vibrational spectrum from a molecular-dynamics run. 
+oct-vibrational_spectrum - Calculates the vibrational spectrum from a molecular-dynamics run. 
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<oct-vibrational>
+=item B<oct-vibrational_spectrum>
 
 =back
 
-[oct-vibrational does not read the standard input: all standard
+[oct-vibrational_spectrum does not read the standard input: all standard
 input will be simply ignored. An input file named F<inp> must be
-present in the running directory.  Also, oct-vibrational accepts
+present in the running directory.  Also, oct-vibrational_spectrum accepts
 no command-line arguments, since there is not a standard way to do
 this with Fortran 90.]
 
