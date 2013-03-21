@@ -148,6 +148,8 @@ contains
     integer :: npt, iprint, sizeofw
     REAL_DOUBLE, allocatable :: w(:)
     
+    PUSH_SUB(minimize_multidim_nograd)
+
     ASSERT(ubound(x, dim = 1) >= dim)
     
     select case(method)
@@ -165,6 +167,8 @@ contains
       ierr = 0
 #endif
     end select
+
+    POP_SUB(minimize_multidim_nograd)
 
   end subroutine minimize_multidim_nograd
 
@@ -198,6 +202,8 @@ contains
     real(8), intent(out)   :: minimum
     integer, intent(out)   :: ierr
     
+    PUSH_SUB(minimize_multidim)
+
     ASSERT(ubound(x, dim = 1) >= dim)
     
     select case(method)
@@ -208,6 +214,8 @@ contains
       ierr = loct_minimize(method, dim, x(1), step, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
       
     end select
+
+    POP_SUB(minimize_multidim)
     
   end subroutine minimize_multidim
 
@@ -244,6 +252,8 @@ contains
     real(8), allocatable :: grad(:)
     real(8) :: val, step2, maxgrad
     
+    PUSH_SUB(minimize_sd)
+
     SAFE_ALLOCATE(grad(1:dim))
     
     step2 = step*CNST(10.0)
@@ -259,6 +269,7 @@ contains
       step2 = step2*CNST(0.99)
     end do
     
+    POP_SUB(minimize_sd)
   end subroutine minimize_sd
   
 end module minimizer_m
