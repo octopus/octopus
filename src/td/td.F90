@@ -557,23 +557,6 @@ contains
           call restart_read_user_def_orbitals(gr%mesh, st)
         end if
         
-!         if(st%have_left_states) then
-!           ! At the beginning of the time evolution left and right states are the same 
-!           ! Rational: At the moment cmplxscl left and right states are symmetric 
-!           ! since the original (unscaled) Hamiltonian is real.
-!           ! In the future we may consider to extend the ground state scf
-!           ! to deal with the general case (this would be needed, for instance, to include
-!           ! magnetic fields) 
-!           cSAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:st%d%dim))
-!           do ik = st%d%kpt%start, st%d%kpt%end
-!             do ist = st%st_start, st%st_end
-!               call states_get_state(st, gr%mesh, ist,  ik, zpsi)
-!               call states_set_state(st, gr%mesh, ist,  ik, zpsi, left = .true.)
-!             end do
-!           end do    
-!           cSAFE_DEALLOCATE_A(zpsi)       
-!         end if
-        
 
         !%Variable TransformStates
         !%Type block
