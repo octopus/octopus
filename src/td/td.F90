@@ -170,7 +170,7 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st, time = td%iter*td%dt)
       end if
 
-      call forces_calculate(gr, geo, hm%ep, st, td%iter*td%dt)
+      call forces_calculate(gr, geo, hm%ep, st, td%iter*td%dt, td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     end if
@@ -339,7 +339,7 @@ contains
 
       ! Recalculate forces, update velocities...
       if(ion_dynamics_ions_move(td%ions)) then
-        if(td%dynamics /= BO) call forces_calculate(gr, sys%geo, hm%ep, st, iter*td%dt)
+        if(td%dynamics /= BO) call forces_calculate(gr, sys%geo, hm%ep, st, iter*td%dt, td%dt)
 
         call ion_dynamics_propagate_vel(td%ions, sys%geo, atoms_moved = generate)
 

@@ -109,12 +109,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine forces_calculate(gr, geo, ep, st, t)
+  subroutine forces_calculate(gr, geo, ep, st, t, dt)
     type(grid_t),     intent(inout) :: gr
     type(geometry_t), intent(inout) :: geo
     type(epot_t),     intent(inout) :: ep
     type(states_t),   intent(inout) :: st
     FLOAT,     optional, intent(in) :: t
+    FLOAT,     optional, intent(in) :: dt
 
     integer :: i, j
     FLOAT :: x(MAX_DIM), time
@@ -151,8 +152,22 @@ contains
             geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
              + species_zval(geo%atom(i)%spec)*x(1:gr%mesh%sb%dim)
           end do
+    
+        case(E_FIELD_VECTOR_POTENTIAL)
+          ! Forces are correctly calculated only if the time-dependent
+          ! vector potential has no spatial dependence.
+          ! The full force taking account of the spatial dependence of A should be:
+          ! F = q [- dA/dt + v x \nabla x A]
 
-        case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL, E_FIELD_SCALAR_POTENTIAL)
+          x(1:gr%sb%dim) = M_ZERO
+          call laser_electric_field(ep%lasers(j), x(1:gr%sb%dim), t, dt) !convert in E field (E = -dA/ c dt)
+          do i = 1, geo%natoms
+            ! Also here the proton charge is +1
+            geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
+             + species_zval(geo%atom(i)%spec)*x(1:gr%mesh%sb%dim)
+          end do
+
+        case(E_FIELD_MAGNETIC, E_FIELD_SCALAR_POTENTIAL)
           write(message(1),'(a)') 'The forces are currently not properly calculated if time-dependent'
           write(message(2),'(a)') 'magnetic fields are present.'
           call messages_fatal(2)
