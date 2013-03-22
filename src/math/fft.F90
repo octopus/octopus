@@ -96,7 +96,8 @@ module fft_m
        FFTLIB_FFTW  = 1, &
        FFTLIB_PFFT  = 2, &
        FFTLIB_CLAMD = 3, &
-       FFTLIB_NFFT  = 4
+       FFTLIB_NFFT  = 4, &
+       FFTLIB_PNFFT = 5
        
 
   type fft_t
@@ -302,11 +303,11 @@ contains
     if(fft_dim > 3) call messages_not_implemented('FFT for dimension > 3')
 
     library_ = library
+    nn_temp(1:fft_dim) = nn(1:fft_dim)
 
     select case (library_)
     case (FFTLIB_CLAMD)
     
-      nn_temp(1:fft_dim) = nn(1:fft_dim)
       do ii = 1, fft_dim
         ! the AMD OpenCL FFT only supports sizes 2, 3 and 5, but size
         ! 5 gives an fpe error on the Radeon 7970 (APPML 1.8), so we
@@ -341,7 +342,6 @@ contains
         call messages_fatal(1)
       endif
       
-      nn_temp(1:fft_dim) = nn(1:fft_dim)
       do ii = 1, fft_dim
         call loct_fft_optimize(nn_temp(ii), optimize_parity(ii))
         if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
