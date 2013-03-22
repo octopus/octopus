@@ -1142,7 +1142,8 @@ contains
     !% the orbital. The default (no sixth column given) is to renormalize.
     !%
     !%Option file 0
-    !% Read initial orbital from file.
+    !% Read initial orbital from file. 
+    !% Accepted file formats: obf, ncdf and csv.
     !%Option formula 1
     !% Calculate initial orbital by given analytic expression.
     !%Option normalize_yes 1

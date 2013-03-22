@@ -281,7 +281,10 @@ contains
     !% (<tt>magnetic_field</tt>); (iii) a vector potential (<tt>vector_potential</tt>) -- this option, 
     !% in the current version, is a field constant in space, which permits us to describe 
     !% an electric perturbation in the velocity gauge; (iv) an arbitrary scalar potential
-    !% (<tt>scalar_potential</tt>).
+    !% (<tt>scalar_potential</tt>). 
+    !% The last element is optional and indicates the carrier phase function <tt>phi(t)</tt>. 
+    !% It is a time dependent function and as such should be expressed as a formula within 
+    !% quotation marks.
     !%
     !% The "other descriptors" depend on which kind of external field has been indicated in 
     !% the first column.
@@ -291,7 +294,7 @@ contains
     !% For these cases, the syntax is:
     !%
     !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; type | nx | ny | nz | omega | envelope_function_name
+    !% <br>&nbsp;&nbsp; type | nx | ny | nz | omega | envelope_function_name | phase
     !% <br>%</tt>
     !%
     !% The three (possibly complex) numbers (<i>nx</i>, <i>ny</i>, <i>nz</i>) mark the polarization 
@@ -299,12 +302,12 @@ contains
     !% pulse (in energy units). The envelope of the field is a time-dependent function whose definition
     !% must be given in a <tt>TDFunctions</tt> block. <tt>envelope_function_name</tt> is a string (and therefore
     !% it must be surrounded by quotation marks) that must match one of the function names
-    !% given in the first column of the <tt>TDFunctions</tt> block.
+    !% given in the first column of the <tt>TDFunctions</tt> block. 
     !%
     !% (B) type = <tt>scalar_potential</tt>
     !%
     !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; scalar_potential | "scalar_expression" | freq | envelope_function_name
+    !% <br>&nbsp;&nbsp; scalar_potential | "scalar_expression" | freq | envelope_function_name | phase
     !% <br>%</tt>
     !%
     !% The scalar potential is not just a dipole, but any expression given by the string
