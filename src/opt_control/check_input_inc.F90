@@ -106,7 +106,6 @@
       end if
     end if
     
-!!!!NEW
     ! the inh term in the bwd evolution of chi is taken into
     ! consideration only for certain propagators
     if(.not.oct_algorithm_is_direct(oct)) then
@@ -130,7 +129,6 @@
         end select
       end if
     end if
-!!!!ENDOFNEW
 
 
     if(target_type(target) .eq. oct_tg_excited) then
@@ -192,6 +190,24 @@
        end if
        if((oct%algorithm .eq. oct_algorithm_cg) .and. target_move_ions(target)) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_velocity", and'
+          write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", then you have to'
+          write(message(3), '(a)') 'set "OCTMoveIons = false"'
+          call messages_fatal(3)
+       end if
+    end if
+
+    if(target_type(target) .eq. oct_tg_hhgnew) then
+       if( (oct%algorithm .ne. oct_algorithm_direct) .and. &
+            (oct%algorithm .ne. oct_algorithm_newuoa) .and. & 
+            (oct%algorithm .ne. oct_algorithm_cg) ) then
+          write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_hhgnew", you can only use'
+          write(message(2), '(a)') '"OCTScheme = oct_algorithm_direct" or'
+          write(message(3), '(a)') '"OCTScheme = oct_algorithm_newuoa" or'
+          write(message(4), '(a)') '"OCTScheme = oct_algorithm_cg" for the optimization.'
+          call messages_fatal(4)
+       end if
+       if((oct%algorithm .eq. oct_algorithm_cg) .and. target_move_ions(target)) then
+          write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_hhgnew", and'
           write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", then you have to'
           write(message(3), '(a)') 'set "OCTMoveIons = false"'
           call messages_fatal(3)

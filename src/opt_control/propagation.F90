@@ -175,6 +175,17 @@ module opt_control_propagation_m
        end do
     end if
 
+    if(target_type(target) .eq. oct_tg_hhgnew) then
+       call target_init_propagation(target)
+       SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
+       vel_target_ = .true.
+       do iatom=1, sys%geo%natoms
+          sys%geo%atom(iatom)%f(1:MAX_DIM) = M_ZERO
+          sys%geo%atom(iatom)%v(1:MAX_DIM) = M_ZERO
+          x_initial(iatom,1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM)
+       end do
+    end if
+
     if(target_move_ions(target)) then
       move_ions_ = .true.
     else

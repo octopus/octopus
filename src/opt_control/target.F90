@@ -25,6 +25,7 @@ module opt_control_target_m
   use derivatives_m
   use epot_m
   use excited_states_m
+  use fft_m
   use forces_m
   use geometry_m
   use global_m
@@ -72,7 +73,8 @@ module opt_control_target_m
             target_j1,               &
             target_chi,              &
             target_move_ions,        &
-            target_curr_functional
+            target_curr_functional,  &
+            target_init_propagation
 
 
   integer, public, parameter ::       &
@@ -86,7 +88,8 @@ module opt_control_target_m
     oct_tg_exclude_state    = 8,      &
     oct_tg_hhg              = 9,      &
     oct_tg_velocity         = 10,     &
-    oct_tg_current          = 11
+    oct_tg_current          = 11,     &
+    oct_tg_hhgnew           = 12
 
   integer, public, parameter ::       &
     oct_targetmode_static = 0,        &
@@ -121,10 +124,33 @@ module opt_control_target_m
     FLOAT   :: curr_weight
     integer :: strt_iter_curr_tg
     FLOAT, pointer :: spatial_curr_wgt(:) => null()
+    character(len=1000) :: plateau_string
+    CMPLX, pointer :: acc(:, :)
+    CMPLX, pointer :: vel(:, :)
+    FLOAT, pointer :: alpha(:)
+    type(fft_t) :: fft_handler
   end type target_t
 
 
   contains
+
+  ! ---------------------------------------------------------
+  !> This routine performs all the things that must be initialized
+  !! prior to a forward evolution, regarding the target. Right now
+  !! some of those initizalizations are not done here, and should
+  !! be moved.
+  subroutine target_init_propagation(target)
+    type(target_t), intent(inout)    :: target
+    PUSH_SUB(target_init_propagation)
+
+    select case(target%type)
+    case(oct_tg_hhgnew)
+      target%vel = M_z0
+      target%acc = M_z0
+    end select
+
+    POP_SUB(target_init_propagation)
+  end subroutine target_init_propagation
 
 
   ! ----------------------------------------------------------------------
@@ -154,11 +180,13 @@ module opt_control_target_m
     type(epot_t),     intent(inout) :: ep
 
     integer             :: ierr, ip, ist, jst, jj, iatom, ib, idim, inst, inik, &
-                           id, ik, no_states, no_constraint, no_ptpair, cstr_dim(MAX_DIM)
+                           id, ik, no_states, no_constraint, no_ptpair, cstr_dim(MAX_DIM), iunit, &
+                           nn(3), optimize_parity(3)
+    logical             :: optimize(3)
     type(block_t)       :: blk
-    FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im, xstart, xend
+    FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im, xstart, xend, dw, ww
     FLOAT, allocatable  :: vl(:), vl_grad(:,:), xp(:), tmp_box(:,:)
-    FLOAT               :: stencil_size, point_dist, fact
+    FLOAT               :: fact
     CMPLX, allocatable  :: rotation_matrix(:, :)
     type(states_t)      :: tmp_st
     character(len=1024) :: expression
@@ -204,7 +232,9 @@ module opt_control_target_m
     !% block <tt>OCTTargetTransformStates</tt>. This means that the target operator is the unity
     !% operator minus the projector onto that state.
     !%Option oct_tg_hhg 9
-    !% The target is the optimization of the HHG yield.
+    !% The target is the optimization of the HHG yield. You must supply the OCTOptimizeHarmonicSpectrum
+    !% block, and it attempts to optimize te maximum of the spectrum around each harmonic peak. You may
+    !% use only one of the gradient-less optimization schemes.
     !%Option oct_tg_velocity 10
     !% The target is a function of the velocities of the nuclei at the end of the influence of
     !% the external field, defined by <tt>OCTVelocityTarget</tt>
@@ -213,6 +243,10 @@ module opt_control_target_m
     !% If combined with target that involves the density, set variable <tt>OCTTargetOperator</tt>= <tt>OCTTargetDensity</tt> 
     !% and set explicitly <tt>OCTCurrentFunctional</tt>. Only this combination is enabled. All other targets force
     !% <tt>OCTCurrentFunctional</tt>=0.
+    !%Option oct_tg_hhgnew 12
+    !% EXPERIMENTAL: The  target is the optimization of the HHG yield. You must supply the
+    !% OCTHarmonicWeigth string. It attempts to optimized the integral of the harmonic spectrum multiplied
+    !% by some user defined weight function.
     !%End
     call parse_integer(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, target%type)
     if(.not.varinfo_valid_option('OCTTargetOperator', target%type)) &
@@ -567,6 +601,81 @@ module opt_control_target_m
       target%dt     = td%dt
       SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
       target%td_fitness = M_ZERO
+
+    case(oct_tg_hhgnew)
+       
+       if(parse_isdef('OCTMoveIons') .eq. 0) then
+          message(1) = 'If OCTTargetOperator = oct_tg_hhgnew, then you must supply'
+          message(2) = 'the variable "OCTMoveIons".'
+          call messages_fatal(2)
+       else
+          call parse_logical(datasets_check('OCTMoveIons'), .false., target%move_ions)
+       end if
+       
+       if(oct%algorithm .eq. oct_algorithm_cg) then
+
+
+          SAFE_ALLOCATE(target%vel(td%max_iter+1, MAX_DIM))
+          SAFE_ALLOCATE(target%acc(td%max_iter+1, MAX_DIM))
+          SAFE_ALLOCATE(target%alpha(td%max_iter))
+          
+          ! The following is a temporary hack, that assumes only one atom at the origin of coordinates.
+          if(geo%natoms > 1) then
+            message(1) = 'If "OCTTargetOperator = oct_tg_hhgnew", then you can only have one atom.'
+            call messages_fatal(1)
+          end if
+
+          SAFE_ALLOCATE(target%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
+          SAFE_ALLOCATE(vl(1:gr%mesh%np_part))
+          SAFE_ALLOCATE(vl_grad(1:gr%mesh%np, 1:gr%sb%dim))
+          SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
+
+          vl(:) = M_ZERO
+          vl_grad(:,:) = M_ZERO
+          call epot_local_potential(ep, gr%der, gr%dgrid, geo, 1, vl)
+          call dderivatives_grad(gr%der, vl, vl_grad)
+          forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
+            target%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
+          end forall
+
+          ! Note that the calculation of the gradient of the potential
+          ! is wrong at the borders of the box, since it assumes zero boundary
+          ! conditions. The best way to solve this problems is to define the 
+          ! target making use of the definition of the forces based on the gradient
+          ! of the density, rather than on the gradient of the potential.
+          
+       end if
+
+      !%Variable OCTHarmonicWeight
+      !%Type string
+      !%Section Calculation Modes::Optimal Control
+      !%Description
+      !% EXPERIMENTAL: If "OCTTargetOperator = oct_tg_plateau", then the function to optimize is the integral of the
+      !% harmonic spectrum H(w), weighted with a function f(w) that is defined as a string here. For example, if 
+      !% you set OCTHarmonicWeight  = "step(w-1)", the function to optimize is the integral of step(w-1)*H(w) or, i.e.
+      !% the integral of H(w) from one to infinity. In practice, it is better if you also set an upper limit, i.e.
+      !% for example f(w) = step(w-1)*step(2-w).
+      !%End
+      call parse_string(datasets_check('OCTHarmonicWeight'), "1", target%plateau_string)
+      target%dt = td%dt
+      SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
+      target%td_fitness = M_ZERO
+
+      iunit = io_open('.alpha', action = 'write')
+      dw = (M_TWO * M_PI) / (td%max_iter * target%dt)
+      do jj = 0, td%max_iter - 1
+        ww = jj * dw
+        call parse_expression(psi_re, psi_im, "w", ww, target%plateau_string)
+        target%alpha(jj+1) = psi_re
+        write(iunit, *) ww, psi_re
+      end do
+      call io_close(iunit)
+
+      nn(1:3) = (/ td%max_iter, 1, 1 /)
+      optimize(1:3) = .false.
+      optimize_parity(1:3) = -1
+      call fft_init(target%fft_handler, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
+
 
     case(oct_tg_velocity)
       !%Variable OCTVelocityTarget
@@ -929,6 +1038,16 @@ module opt_control_target_m
           SAFE_DEALLOCATE_P(target%rho)
        end if
     end if
+    if(target_type(target).eq.oct_tg_hhgnew) then
+       if(oct%algorithm .eq. oct_algorithm_cg) then
+          SAFE_DEALLOCATE_P(target%grad_local_pot)
+          SAFE_DEALLOCATE_P(target%rho)
+          SAFE_DEALLOCATE_P(target%vel)
+          SAFE_DEALLOCATE_P(target%acc)
+          SAFE_DEALLOCATE_P(target%alpha)
+          call fft_end(target%fft_handler)
+       end if
+    end if
     if(target%type .eq. oct_tg_current .or. &
        target%type .eq. oct_tg_density) then
       SAFE_DEALLOCATE_P(target%spatial_curr_wgt)
@@ -994,8 +1113,8 @@ module opt_control_target_m
     integer,             intent(in)    :: max_time
 
     CMPLX, allocatable :: opsi(:, :)
-    integer :: ist, ip
-    FLOAT :: acc(MAX_DIM), dt
+    integer :: ist, ip, ia
+    FLOAT :: acc(MAX_DIM), dt, dw
     integer :: iatom, idim, ik
 
     if(target_mode(target)  .ne. oct_targetmode_td) return
@@ -1005,6 +1124,43 @@ module opt_control_target_m
     target%td_fitness(time) = M_ZERO
 
     select case(target%type)
+
+    case(oct_tg_hhgnew)
+
+      ! If the ions move, the target is computed in the propagation routine.
+      if(.not.target_move_ions(target)) then
+
+        SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
+
+        opsi = M_z0
+        ! WARNING This does not work for spinors.
+        ! The following is a temporary hack. It assumes only one atom at the origin.
+        acc = M_ZERO
+        do ik = 1, psi%d%nik
+          do ist = 1, psi%nst
+            do idim = 1, gr%sb%dim
+              opsi(1:gr%mesh%np, 1) = target%grad_local_pot(1, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
+              acc(idim) = acc(idim) + real( psi%occ(ist, ik) * &
+                  zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik)), REAL_PRECISION )
+              target%acc(time+1, idim) = target%acc(time+1, idim) + psi%occ(ist, ik) * &
+                  zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik))
+            end do
+          end do
+        end do
+
+        SAFE_DEALLOCATE_A(opsi)
+      end if
+
+      dt = target%dt
+      dw = (M_TWO * M_PI/(max_time * target%dt))
+      if(time .eq. max_time) then
+        target%acc(1, 1:gr%sb%dim) = M_HALF * (target%acc(1, 1:gr%sb%dim) + target%acc(max_time+1, 1:gr%sb%dim))
+        do ia = 1, gr%sb%dim
+          call zfft_forward1(target%fft_handler, target%acc(1:max_time, ia), target%vel(1:max_time, ia))
+        end do
+        target%vel = target%vel * target%dt
+      end if
+
     case(oct_tg_velocity)
 
       ! If the ions move, the target is computed in the propagation routine.
@@ -1019,8 +1175,8 @@ module opt_control_target_m
           do ist = 1, psi%nst
             do idim = 1, gr%sb%dim
               opsi(1:gr%mesh%np, 1) = target%grad_local_pot(iatom, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
-              geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) + psi%occ(ist, ik) * &
-                zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik))
+              geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) + real(psi%occ(ist, ik) * &
+                zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik)), REAL_PRECISION)
             end do
           end do
         end do
@@ -1049,7 +1205,8 @@ module opt_control_target_m
             opsi(ip, 1) = target%rho(ip) * psi%zpsi(ip, 1, ist, 1)
           end do
           target%td_fitness(time) = &
-            target%td_fitness(time) + psi%occ(ist, 1) * zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :))
+            target%td_fitness(time) + psi%occ(ist, 1) * &
+              real(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :)), REAL_PRECISION)
         end do
         SAFE_DEALLOCATE_A(opsi)
       case(SPIN_POLARIZED)
@@ -1092,7 +1249,9 @@ module opt_control_target_m
     FLOAT,             intent(in)        :: time
     type(states_t),    intent(inout)     :: inh
  
-    integer :: ik, ist, idim, ip
+    integer :: ik, ist, ip, maxiter, i, idim
+    FLOAT :: dw, ww
+    CMPLX :: gvec(MAX_DIM)
     
     PUSH_SUB(target_inh)
 
@@ -1101,6 +1260,23 @@ module opt_control_target_m
       call target_build_tdlocal(target, gr, time)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
         inh%zpsi(ip, idim, ist, ik) = - psi%occ(ist, ik) * target%rho(ip) * psi%zpsi(ip, idim, ist, ik)
+      end forall
+
+    case(oct_tg_hhgnew)
+
+      maxiter = size(target%td_fitness) - 1
+      dw = (M_TWO * M_PI) / (maxiter * target%dt)
+      gvec = M_z0
+      do i = 0, maxiter - 1
+        ww = i * dw
+        gvec(1:gr%sb%dim) = gvec(1:gr%sb%dim) + dw * target%alpha(i+1) * &
+          real(target%vel(i+1, 1:gr%sb%dim) * exp( -M_zI * ww * (time-target%dt/M_TWO) ), REAL_PRECISION )
+      end do
+
+      forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
+        inh%zpsi(ip, idim, ist, ik) = &
+           - psi%occ(ist, ik) * M_TWO * sum(target%grad_local_pot(1, ip, 1:gr%sb%dim) * gvec(1:gr%sb%dim)) * &
+           psi%zpsi(ip, idim, ist, ik)
       end forall
       
     case(oct_tg_velocity)
@@ -1115,6 +1291,10 @@ module opt_control_target_m
       else
         inh%zpsi = M_ZERO
       end if     
+
+    case default
+      write(message(1),'(a)') 'Internal error in target_inh'
+      call messages_fatal(1)
   
     end select
 
@@ -1156,8 +1336,8 @@ module opt_control_target_m
     type(states_t), intent(inout)   :: psi
     type(geometry_t), intent(in), optional :: geo
 
-    integer :: is, ip, ist, jj, maxiter, ik
-    FLOAT :: omega, aa, maxhh, ww, currfunc_tmp
+    integer :: is, ip, ist, jj, maxiter, ik, i
+    FLOAT :: omega, aa, maxhh, ww, currfunc_tmp, dw
     FLOAT, allocatable :: local_function(:)
     CMPLX, allocatable :: ddipole(:)
     FLOAT :: f_re, dummy(3)
@@ -1218,6 +1398,15 @@ module opt_control_target_m
       call spectrum_hsfunction_end()
 
       SAFE_DEALLOCATE_A(ddipole)
+
+    case(oct_tg_hhgnew)
+      maxiter = size(target%td_fitness) - 1
+      dw = (M_TWO * M_PI) / (maxiter * target%dt)
+      j1 = M_ZERO
+      do i = 0, maxiter - 1
+        ww = i * dw
+        j1 = j1 + dw * target%alpha(i+1) * sum(abs(target%vel(i+1, 1:gr%sb%dim))**2)
+      end do
 
     case(oct_tg_velocity)
       f_re = M_ZERO
@@ -1285,6 +1474,7 @@ module opt_control_target_m
     integer :: ik, ip, ist, jst, idim, no_electrons, ia, ib, n_pairs, nst, kpoints, jj
     character(len=1024) :: temp_string
     FLOAT :: df_dv, dummy(3)
+
 
     PUSH_SUB(target_chi)
 
@@ -1446,6 +1636,12 @@ module opt_control_target_m
         end if
       end do
 
+    case(oct_tg_hhgnew)
+      !we have a time-dependent target --> Chi(T)=0
+      forall(ip=1:gr%mesh%np, idim=1:chi_out%d%dim, ist=chi_out%st_start:chi_out%st_end, ik=1:chi_out%d%nik)
+         chi_out%zpsi(ip, idim, ist, ik) = M_z0
+      end forall
+
     case(oct_tg_velocity)
       !we have a time-dependent target --> Chi(T)=0
       forall(ip=1:gr%mesh%np, idim=1:chi_out%d%dim, ist=chi_out%st_start:chi_out%st_end, ik=1:chi_out%d%nik)
@@ -1504,7 +1700,7 @@ module opt_control_target_m
     type(target_t), intent(in) :: target
 
     select case(target%type)
-    case(oct_tg_td_local, oct_tg_hhg, oct_tg_velocity)
+    case(oct_tg_td_local, oct_tg_hhg, oct_tg_velocity, oct_tg_hhgnew)
       target_mode = oct_targetmode_td
     case default
       target_mode = oct_targetmode_static
