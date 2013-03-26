@@ -22,7 +22,7 @@
 SUBDIRS = pdf html
 
 man_MANS = octopus.1 oct-atomic_occupations.1 oct-casida_spectrum.1 oct-center-geom.1 oct-propagation_spectrum.1 \
-        oct-display_partitions.1 oct-harmonic-spectrum.1 oct-vibrational.1 oct-rotatory_strength.1 \
+        oct-display_partitions.1 oct-harmonic-spectrum.1 oct-vibrational_spectrum.1 oct-rotatory_strength.1 \
 	oct-run_periodic_table.1 oct-run_regression_test.pl.1 oct-run_testsuite.1 oct-xyz-anim.1
 
 EXTRA_DIST = \
