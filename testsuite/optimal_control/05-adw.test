@@ -16,7 +16,7 @@ Enabled    : Yes
 #
 Input: 05-adw.01-ground_state.inp
 match ; Total energy ; GREP(ground_state_static/info, 'Total       =', 20) ; -0.62061585
-match ; 2th state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -0.463839
+match ; 2nd state    ; GREP(excited_states_static/eigenvalues, '2   --', 12) ; -0.463839
 
 # Now we run an OCT run identical (or almost, the numerical parameters
 # are slightly different) to the one described in section 5.1.1, and
