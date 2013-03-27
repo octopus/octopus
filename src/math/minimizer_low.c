@@ -93,13 +93,13 @@ my_df (const gsl_vector *v, void *params, gsl_vector *df)
 typedef void (*print_f_ptr)(const int*, const int*, const double*, const double*, const double*, const double*);
 
 int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
-     (const int *method, const int *dim, double *point, const double *step, 
+     (const int *method, const int *dim, double *point, const double *step, const double *line_tol, 
       const double *tolgrad, const double *toldr, const int *maxiter, func_d f, 
       const print_f_ptr write_info, double *minimum)
 {
   int iter = 0;
   int status;
-  double maxgrad, maxdr, tol;
+  double maxgrad, maxdr;
   int i;
   double * oldpoint;
   double * grad;
@@ -131,7 +131,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
   absgrad = gsl_vector_alloc (*dim);
   absdr = gsl_vector_alloc (*dim);
 
-  tol = 0.1;
+  //GSL recommends line_tol = 0.1;
   switch(*method){
   case 1: 
     T = gsl_multimin_fdfminimizer_steepest_descent;
@@ -152,7 +152,7 @@ int FC_FUNC_(oct_minimize, OCT_MINIMIZE)
 
   s = gsl_multimin_fdfminimizer_alloc (T, *dim);
 
-  gsl_multimin_fdfminimizer_set (s, &my_func, x, *step, tol);
+  gsl_multimin_fdfminimizer_set (s, &my_func, x, *step, *line_tol);
   do
     {
       iter++;

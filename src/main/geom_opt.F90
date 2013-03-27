@@ -56,6 +56,7 @@ module geom_opt_m
   type geom_opt_t
     integer  :: method
     FLOAT    :: step
+    FLOAT    :: line_tol
     FLOAT    :: tolgrad
     FLOAT    :: toldr
     integer  :: max_iter
@@ -129,7 +130,7 @@ contains
         calc_point_ng, write_iter_info_ng, energy, ierr)
     case default
       call minimize_multidim(g_opt%method, g_opt%size, coords, real(g_opt%step, 8),&
-        real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
+        real(g_opt%line_tol, 8), real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
         calc_point, write_iter_info, energy, ierr)
     end select
 
@@ -278,6 +279,16 @@ contains
       !% WARNING: in some weird units.
       !%End
       call parse_float(datasets_check('GOStep'), M_HALF, g_opt%step)
+
+      !%Variable GOLineTol
+      !%Type float
+      !%Default 0.1
+      !%Section Calculation Modes::Geometry Optimization
+      !%Description
+      !% Tolerance for line-minimization. Applies only to GSL methods that use the forces.
+      !% WARNING: in some weird units.
+      !%End
+      call parse_float(datasets_check('GOLineTol'), CNST(0.1), g_opt%line_tol)
 
       !%Variable GOMaxIter
       !%Type integer

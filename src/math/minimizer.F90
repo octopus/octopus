@@ -59,11 +59,13 @@ module minimizer_m
   end interface loct_1dminimize
 
   interface loct_minimize
-    integer function oct_minimize(method, dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
+    integer function oct_minimize(method, dim, x, step, line_tol, &
+      tolgrad, toldr, maxiter, f, write_iter_info, minimum)
       integer, intent(in)    :: method
       integer, intent(in)    :: dim
       real(8), intent(inout) :: x
       real(8), intent(in)    :: step
+      real(8), intent(in)    :: line_tol
       real(8), intent(in)    :: tolgrad
       real(8), intent(in)    :: toldr
       integer, intent(in)    :: maxiter
@@ -174,11 +176,12 @@ contains
 
   !----------------------------------------------
 
-  subroutine minimize_multidim(method, dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
+  subroutine minimize_multidim(method, dim, x, step, line_tol, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
     integer, intent(in)    :: method
     integer, intent(in)    :: dim
     real(8), intent(inout) :: x(:)
     real(8), intent(in)    :: step
+    real(8), intent(in)    :: line_tol
     real(8), intent(in)    :: tolgrad
     real(8), intent(in)    :: toldr
     integer, intent(in)    :: maxiter
@@ -211,7 +214,7 @@ contains
       call minimize_sd(dim, x, step, tolgrad, toldr, maxiter, f, write_iter_info, minimum, ierr)
       
     case default
-      ierr = loct_minimize(method, dim, x(1), step, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
+      ierr = loct_minimize(method, dim, x(1), step, line_tol, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
       
     end select
 
