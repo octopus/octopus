@@ -1164,7 +1164,7 @@ module opt_control_target_m
         end do
         target%vel = target%vel * target%dt
         do iw = 1, max_time
-          ! We add the one-half dt term because when doing the propagation we want the value at interpoated times.
+          ! We add the one-half dt term because when doing the propagation we want the value at interpolated times.
           target%acc(iw, 1:gr%sb%dim) = target%vel(iw, 1:gr%sb%dim) * target%alpha(iw) * exp(M_zI * (iw-1) * dw * M_HALF * dt)
         end do
         do ia = 1, gr%sb%dim
