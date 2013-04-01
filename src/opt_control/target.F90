@@ -127,6 +127,7 @@ module opt_control_target_m
     character(len=1000) :: plateau_string
     CMPLX, pointer :: acc(:, :)
     CMPLX, pointer :: vel(:, :)
+    CMPLX, pointer :: gvec(:, :)
     FLOAT, pointer :: alpha(:)
     type(fft_t) :: fft_handler
   end type target_t
@@ -146,6 +147,7 @@ module opt_control_target_m
     select case(target%type)
     case(oct_tg_hhgnew)
       target%vel = M_z0
+      target%gvec = M_z0
       target%acc = M_z0
     end select
 
@@ -617,6 +619,7 @@ module opt_control_target_m
 
           SAFE_ALLOCATE(target%vel(td%max_iter+1, MAX_DIM))
           SAFE_ALLOCATE(target%acc(td%max_iter+1, MAX_DIM))
+          SAFE_ALLOCATE(target%gvec(td%max_iter+1, MAX_DIM))
           SAFE_ALLOCATE(target%alpha(td%max_iter))
           
           ! The following is a temporary hack, that assumes only one atom at the origin of coordinates.
@@ -1044,6 +1047,7 @@ module opt_control_target_m
           SAFE_DEALLOCATE_P(target%rho)
           SAFE_DEALLOCATE_P(target%vel)
           SAFE_DEALLOCATE_P(target%acc)
+          SAFE_DEALLOCATE_P(target%gvec)
           SAFE_DEALLOCATE_P(target%alpha)
           call fft_end(target%fft_handler)
        end if
@@ -1113,7 +1117,7 @@ module opt_control_target_m
     integer,             intent(in)    :: max_time
 
     CMPLX, allocatable :: opsi(:, :)
-    integer :: ist, ip, ia
+    integer :: ist, ip, ia, iw
     FLOAT :: acc(MAX_DIM), dt, dw
     integer :: iatom, idim, ik
 
@@ -1159,7 +1163,17 @@ module opt_control_target_m
           call zfft_forward1(target%fft_handler, target%acc(1:max_time, ia), target%vel(1:max_time, ia))
         end do
         target%vel = target%vel * target%dt
+        do iw = 1, max_time
+          ! We add the one-half dt term because when doing the propagation we want the value at interpoated times.
+          target%acc(iw, 1:gr%sb%dim) = target%vel(iw, 1:gr%sb%dim) * target%alpha(iw) * exp(M_zI * (iw-1) * dw * M_HALF * dt)
+        end do
+        do ia = 1, gr%sb%dim
+          call zfft_backward1(target%fft_handler, target%acc(1:max_time, ia), target%gvec(1:max_time, ia))
+        end do
+        target%gvec(max_time + 1, 1:gr%sb%dim) = target%gvec(1, 1:gr%sb%dim)
+        target%gvec = target%gvec * (M_TWO * M_PI/ target%dt)
       end if
+
 
     case(oct_tg_velocity)
 
@@ -1242,17 +1256,17 @@ module opt_control_target_m
   ! ---------------------------------------------------------------
   !> Calculates the inhomogeneous term that appears in the equation
   !! for chi, and places it into inh.
-  subroutine target_inh(psi, gr, target, time, inh)
+  subroutine target_inh(psi, gr, target, time, inh, iter)
     type(states_t),    intent(inout)     :: psi
     type(grid_t),      intent(in)        :: gr
     type(target_t),    intent(inout)     :: target
     FLOAT,             intent(in)        :: time
     type(states_t),    intent(inout)     :: inh
+    integer,           intent(in)        :: iter
  
     integer :: ik, ist, ip, maxiter, i, idim
-    FLOAT :: dw, ww
     CMPLX :: gvec(MAX_DIM)
-    
+
     PUSH_SUB(target_inh)
 
     select case(target%type)
@@ -1263,24 +1277,14 @@ module opt_control_target_m
       end forall
 
     case(oct_tg_hhgnew)
-
-      maxiter = size(target%td_fitness) - 1
-      dw = (M_TWO * M_PI) / (maxiter * target%dt)
-      gvec = M_z0
-      do i = 0, maxiter - 1
-        ww = i * dw
-        gvec(1:gr%sb%dim) = gvec(1:gr%sb%dim) + dw * target%alpha(i+1) * &
-          real(target%vel(i+1, 1:gr%sb%dim) * exp( -M_zI * ww * (time-target%dt/M_TWO) ), REAL_PRECISION )
-      end do
-
+      gvec(1:gr%sb%dim) = real(target%gvec(iter+1, 1:gr%sb%dim), REAL_PRECISION)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
         inh%zpsi(ip, idim, ist, ik) = &
            - psi%occ(ist, ik) * M_TWO * sum(target%grad_local_pot(1, ip, 1:gr%sb%dim) * gvec(1:gr%sb%dim)) * &
            psi%zpsi(ip, idim, ist, ik)
       end forall
-      
+
     case(oct_tg_velocity)
-      ! set -(dF/dn)*psi_j as inhomogenous term --> !!! D_KS(r,t) is not implemented yet !!!
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
          inh%zpsi(ip, idim, ist, ik) = - psi%occ(ist, ik) * target%rho(ip) * psi%zpsi(ip, idim, ist, ik)
       end forall

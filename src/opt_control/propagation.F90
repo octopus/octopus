@@ -590,7 +590,7 @@ module opt_control_propagation_m
 
     if(target_mode(target) == oct_targetmode_td) then
       call states_copy(inh, st)
-      call target_inh(st, gr, target, td%dt*iter, inh)
+      call target_inh(st, gr, target, abs(td%dt)*iter, inh, iter)
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)
     end if
