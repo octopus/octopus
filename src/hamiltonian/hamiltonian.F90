@@ -1094,6 +1094,7 @@ contains
     type(mesh_t),          intent(in) :: mesh
 
     apply = this%apply_packed
+    if(simul_box_is_periodic(mesh%sb)) apply = .false.
     if(mesh%use_curvilinear) apply = .false.
     if(associated(this%phase)) apply = .false.
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
