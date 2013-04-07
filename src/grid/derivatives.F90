@@ -47,6 +47,7 @@ module derivatives_m
   use stencil_starplus_m
   use stencil_variational_m
   use transfer_table_m
+  use types_m
   use utils_m
   use varinfo_m
 

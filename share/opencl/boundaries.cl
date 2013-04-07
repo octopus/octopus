@@ -37,6 +37,48 @@ __kernel void boundaries_periodic(const int nper,
 
 }
 
+__kernel void boundaries_periodic_send(const int maxsend,
+				       __global const int * __restrict nsend,
+				       __global const int * __restrict per_send,
+				       __global const double * __restrict ff,
+				       const int ldff, 
+				       __global double * __restrict sendbuffer){
+
+  const int ist   = get_global_id(0);
+  const int ip    = get_global_id(1);
+  const int ipart = get_global_id(2);
+  
+  const int np = nsend[ipart];
+
+  if(ip >= np) return;
+  
+  const int ip_send = per_send[maxsend*ipart + ip] - 1;
+
+  sendbuffer[((maxsend*ipart + ip)<<ldff) + ist] = ff[(ip_send<<ldff) + ist];
+  
+}
+
+__kernel void boundaries_periodic_recv(const int maxrecv,
+				       __global const int * __restrict nrecv,
+				       __global const int * __restrict per_recv,
+				       const int ldper_recv,
+				       __global const double * __restrict recvbuffer,
+				       __global double * __restrict ff,
+				       const int ldff){
+
+  const int ist   = get_global_id(0);
+  const int ip    = get_global_id(1);
+  const int ipart = get_global_id(2);
+  
+  const int np = nrecv[ipart];
+
+  if(ip >= np) return;
+  
+  const int ip_recv = per_recv[ldper_recv*ipart + ip] - 1;
+
+  ff[(ip_recv<<ldff) + ist] = recvbuffer[((maxrecv*ipart + ip)<<ldff) + ist];
+  
+}
 /*
  Local Variables:
  mode: c

@@ -37,6 +37,8 @@ subroutine X(derivatives_batch_set_bc)(der, ffb)
   PUSH_SUB(X(derivatives_batch_set_bc))
   call profiling_in(set_bc_prof, 'SET_BC')
   
+  ASSERT(batch_type(ffb) == R_TYPE_VAL)
+
   pp = der%mesh%vp%partno
 
   ! The boundary points are at different locations depending on the presence
@@ -154,12 +156,14 @@ contains
     R_TYPE, allocatable :: recvbuffer(:, :, :)
     integer, allocatable :: send_disp(:), send_count(:)
     integer, allocatable :: recv_disp(:), recv_count(:)
-    integer :: ipart, npart, maxsend, maxrecv
+    integer :: ipart, npart, maxsend, maxrecv, ldbuffer
 #endif
 #ifdef HAVE_OPENCL
-  type(octcl_kernel_t), save :: kernel
-  type(cl_kernel) :: kernel_ref
-  integer :: npersize
+    type(octcl_kernel_t), save :: kernel_send, kernel_recv, kernel
+    type(cl_kernel) :: kernel_ref
+    integer :: wgsize
+    type(opencl_mem_t) :: buff_send
+    type(opencl_mem_t) :: buff_recv
 #endif
 
     PUSH_SUB(X(derivatives_batch_set_bc).periodic)
@@ -172,8 +176,10 @@ contains
       npart = der%mesh%vp%npart
       maxsend = maxval(der%boundaries%nsend(1:npart))
       maxrecv = maxval(der%boundaries%nrecv(1:npart))
-      
-      SAFE_ALLOCATE(sendbuffer(1:ffb%nst_linear, 1:maxsend, 1:npart))
+
+      ldbuffer = ffb%nst_linear
+      if(batch_status(ffb) == BATCH_CL_PACKED) ldbuffer = ffb%pack%size(1)
+      SAFE_ALLOCATE(sendbuffer(1:ldbuffer, 1:maxsend, 1:npart))
 
       select case(batch_status(ffb))
 
@@ -188,7 +194,7 @@ contains
         end do
 
       case(BATCH_PACKED)
-        
+
         do ipart = 1, npart
           do ip = 1, der%boundaries%nsend(ipart)
             forall(ist = 1:ffb%nst_linear) 
@@ -198,7 +204,28 @@ contains
         end do
 
       case(BATCH_CL_PACKED)
-        call messages_not_implemented('periodic boundary conditions with domain parallelization and OpenCL')
+
+        call opencl_create_buffer(buff_send, CL_MEM_WRITE_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxsend*npart)
+
+        call octcl_kernel_start_call(kernel_send, 'boundaries.cl', 'boundaries_periodic_send')
+        kernel_ref = octcl_kernel_get_ref(kernel_send)
+
+        call opencl_set_kernel_arg(kernel_ref, 0, maxsend)
+        call opencl_set_kernel_arg(kernel_ref, 1, der%boundaries%buff_nsend)
+        call opencl_set_kernel_arg(kernel_ref, 2, der%boundaries%buff_per_send)
+        call opencl_set_kernel_arg(kernel_ref, 3, ffb%pack%buffer)
+        call opencl_set_kernel_arg(kernel_ref, 4, log2(ffb%pack%size_real(1)))
+        call opencl_set_kernel_arg(kernel_ref, 5, buff_send)
+
+        wgsize = opencl_kernel_workgroup_size(kernel_ref)/ffb%pack%size_real(1)
+
+        call opencl_kernel_run(kernel_ref, (/ffb%pack%size_real(1), pad(maxsend, wgsize), npart/), &
+          (/ffb%pack%size_real(1), wgsize, 1/))
+
+        call opencl_finish()
+
+        call opencl_read_buffer(buff_send, ffb%pack%size(1)*maxsend*npart, sendbuffer)
+        call opencl_release_buffer(buff_send)
 
       end select
 
@@ -206,30 +233,28 @@ contains
       SAFE_ALLOCATE(send_disp(1:npart))
       SAFE_ALLOCATE(recv_count(1:npart))
       SAFE_ALLOCATE(recv_disp(1:npart))
-      
+
       do ipart = 1, npart
-        send_count(ipart) = ffb%nst_linear*der%boundaries%nsend(ipart)
-        send_disp(ipart)  = ffb%nst_linear*maxsend*(ipart - 1)
-        recv_count(ipart) = ffb%nst_linear*der%boundaries%nrecv(ipart)
-        recv_disp(ipart)  = ffb%nst_linear*maxrecv*(ipart - 1)
+        send_count(ipart) = ldbuffer*der%boundaries%nsend(ipart)
+        send_disp(ipart)  = ldbuffer*maxsend*(ipart - 1)
+        recv_count(ipart) = ldbuffer*der%boundaries%nrecv(ipart)
+        recv_disp(ipart)  = ldbuffer*maxrecv*(ipart - 1)
       end do
-      
+
       ASSERT(send_count(der%mesh%vp%partno) == 0)
       ASSERT(recv_count(der%mesh%vp%partno) == 0)
-      ASSERT(all(recv_count <= ffb%nst_linear*maxrecv))
-      ASSERT(all(send_count <= ffb%nst_linear*maxsend))
-      
-      SAFE_ALLOCATE(recvbuffer(1:ffb%nst_linear, 1:maxrecv, 1:npart))
-      
+
+      SAFE_ALLOCATE(recvbuffer(1:ldbuffer, 1:maxrecv, 1:npart))
+
       call MPI_Alltoallv(sendbuffer(1, 1, 1), send_count(1), send_disp(1), R_MPITYPE, &
         recvbuffer(1, 1, 1), recv_count(1), recv_disp(1), R_MPITYPE, der%mesh%vp%comm, mpi_err)
-      
+
       SAFE_DEALLOCATE_A(send_count)
       SAFE_DEALLOCATE_A(send_disp)
       SAFE_DEALLOCATE_A(recv_count)
       SAFE_DEALLOCATE_A(recv_disp)
       SAFE_DEALLOCATE_A(sendbuffer)
-      
+
       select case(batch_status(ffb))
 
       case(BATCH_NOT_PACKED)
@@ -243,7 +268,7 @@ contains
         end do
 
       case(BATCH_PACKED)
-        
+
         do ipart = 1, npart
           do ip = 1, der%boundaries%nsend(ipart)
             forall(ist = 1:ffb%nst_linear) 
@@ -252,22 +277,49 @@ contains
           end do
         end do
 
+      case(BATCH_CL_PACKED)
+
+        call opencl_create_buffer(buff_recv, CL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxrecv*npart)
+        call opencl_write_buffer(buff_recv, ffb%pack%size(1)*maxrecv*npart, recvbuffer)
+
+        call octcl_kernel_start_call(kernel_recv, 'boundaries.cl', 'boundaries_periodic_recv')
+        kernel_ref = octcl_kernel_get_ref(kernel_recv)
+
+        call opencl_set_kernel_arg(kernel_ref, 0, maxrecv)
+        call opencl_set_kernel_arg(kernel_ref, 1, der%boundaries%buff_nrecv)
+        call opencl_set_kernel_arg(kernel_ref, 2, der%boundaries%buff_per_recv)
+        call opencl_set_kernel_arg(kernel_ref, 3, ubound(der%boundaries%per_recv, dim = 1))
+        call opencl_set_kernel_arg(kernel_ref, 4, buff_recv)
+        call opencl_set_kernel_arg(kernel_ref, 5, ffb%pack%buffer)
+        call opencl_set_kernel_arg(kernel_ref, 6, log2(ffb%pack%size_real(1)))
+
+        wgsize = opencl_kernel_workgroup_size(kernel_ref)/ffb%pack%size_real(1)
+
+        !        print*, maxrecv, ubound(der%boundaries%per_recv, dim = 1), maxsend,
+
+        call opencl_kernel_run(kernel_ref, (/ffb%pack%size_real(1), pad(maxrecv, wgsize), npart/), &
+          (/ffb%pack%size_real(1), wgsize, 1/))
+
+        call opencl_finish()
+
+        call opencl_release_buffer(buff_recv)
+
       end select
 
       call profiling_count_transfers(sum(der%boundaries%nsend(1:npart) + der%boundaries%nrecv(1:npart))*ffb%nst_linear, &
         R_TOTYPE(M_ONE))
-      
+
       call profiling_out(set_bc_comm_prof)
-      
+
       SAFE_DEALLOCATE_A(recvbuffer)        
 
     end if
 #endif
 
     select case(batch_status(ffb))
-      
+
     case(BATCH_NOT_PACKED)
-      
+
       do ist = 1, ffb%nst_linear
         ff => ffb%states_linear(ist)%X(psi)
         forall (ip = 1:der%boundaries%nper)
@@ -294,12 +346,12 @@ contains
       call opencl_set_kernel_arg(kernel_ref, 1, der%boundaries%buff_per_points)
       call opencl_set_kernel_arg(kernel_ref, 2, ffb%pack%buffer)
       call opencl_set_kernel_arg(kernel_ref, 3, log2(ffb%pack%size_real(1)))
-      
-      npersize = opencl_kernel_workgroup_size(kernel_ref)/ffb%pack%size_real(1)
 
-      call opencl_kernel_run(kernel_ref, (/ffb%pack%size_real(1), pad(der%boundaries%nper, npersize)/), &
-        (/ffb%pack%size_real(1), npersize/))
-      
+      wgsize = opencl_kernel_workgroup_size(kernel_ref)/ffb%pack%size_real(1)
+
+      call opencl_kernel_run(kernel_ref, (/ffb%pack%size_real(1), pad(der%boundaries%nper, wgsize)/), &
+        (/ffb%pack%size_real(1), wgsize/))
+
       call opencl_finish()
 
 #endif
