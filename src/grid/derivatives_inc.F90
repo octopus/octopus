@@ -260,7 +260,7 @@ contains
       case(BATCH_NOT_PACKED)
 
         do ipart = 1, npart
-          do ip = 1, der%boundaries%nsend(ipart)
+          do ip = 1, der%boundaries%nrecv(ipart)
             forall(ist = 1:ffb%nst_linear) 
               ffb%states_linear(ist)%X(psi)(der%boundaries%per_recv(ip, ipart)) = recvbuffer(ist, ip, ipart)
             end forall
@@ -270,7 +270,7 @@ contains
       case(BATCH_PACKED)
 
         do ipart = 1, npart
-          do ip = 1, der%boundaries%nsend(ipart)
+          do ip = 1, der%boundaries%nrecv(ipart)
             forall(ist = 1:ffb%nst_linear) 
               ffb%pack%X(psi)(ist, der%boundaries%per_recv(ip, ipart)) = recvbuffer(ist, ip, ipart)
             end forall
@@ -294,8 +294,6 @@ contains
         call opencl_set_kernel_arg(kernel_ref, 6, log2(ffb%pack%size_real(1)))
 
         wgsize = opencl_kernel_workgroup_size(kernel_ref)/ffb%pack%size_real(1)
-
-        !        print*, maxrecv, ubound(der%boundaries%per_recv, dim = 1), maxsend,
 
         call opencl_kernel_run(kernel_ref, (/ffb%pack%size_real(1), pad(maxrecv, wgsize), npart/), &
           (/ffb%pack%size_real(1), wgsize, 1/))
