@@ -229,9 +229,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       call batch_scal(gr%mesh%np, evec(iter, 1, :), psib(iter)%batch, a_start = minst)
 
       do jj = 1, iter - 1
-        call batch_pack(psib(jj)%batch)
+        if(pack) call batch_pack(psib(jj)%batch)
         call batch_axpy(gr%mesh%np, evec(jj, 1, :), psib(jj)%batch, psib(iter)%batch, a_start = minst)
-        call batch_unpack(psib(jj)%batch, copy = .false.)
+        if(pack) call batch_unpack(psib(jj)%batch, copy = .false.)
       end do
 
       call profiling_out(prof_lc)
