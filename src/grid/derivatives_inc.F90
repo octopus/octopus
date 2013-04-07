@@ -154,85 +154,36 @@ contains
     R_TYPE, allocatable :: recvbuffer(:, :, :)
     integer, allocatable :: send_disp(:), send_count(:)
     integer, allocatable :: recv_disp(:), recv_count(:)
-    integer :: ipart, nreq, npart, maxsend, maxrecv
-    integer, allocatable :: req(:), statuses(:, :)
+    integer :: ipart, npart, maxsend, maxrecv
 #endif
 
     PUSH_SUB(X(derivatives_batch_set_bc).periodic)
 
-    select case(batch_status(ffb))
-    case(BATCH_NOT_PACKED)
 #ifdef HAVE_MPI
-      if(der%mesh%parallel_in_domains) then
-        call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
+    if(der%mesh%parallel_in_domains) then
 
-        ! get the points that are copies from other nodes
-        SAFE_ALLOCATE(req(1:2 * der%mesh%vp%npart * ffb%nst_linear))
+      call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
 
-        nreq = 0
+      npart = der%mesh%vp%npart
+      maxsend = maxval(der%boundaries%nsend(1:npart))
+      maxrecv = maxval(der%boundaries%nrecv(1:npart))
+      
+      SAFE_ALLOCATE(sendbuffer(1:ffb%nst_linear, 1:maxsend, 1:npart))
 
-        do ist = 1, ffb%nst_linear
-          do ipart = 1, der%mesh%vp%npart
-            if(ipart == der%mesh%vp%partno .or. der%boundaries%nrecv(ipart) == 0) cycle
+      select case(batch_status(ffb))
 
-            ff => ffb%states_linear(ist)%X(psi)
-            nreq = nreq + 1
-            call MPI_Irecv(ff(1), 1, der%boundaries%X(recv_type)(ipart), ipart - 1, 3, &
-              der%mesh%vp%comm, req(nreq), mpi_err)
+      case(BATCH_NOT_PACKED)
+
+        do ipart = 1, npart
+          do ip = 1, der%boundaries%nsend(ipart)
+            forall(ist = 1:ffb%nst_linear) 
+              sendbuffer(ist, ip, ipart) = ffb%states_linear(ist)%X(psi)(1 + der%boundaries%per_send(ip, ipart))
+            end forall
           end do
         end do
 
-        do ist = 1, ffb%nst_linear
-          do ipart = 1, der%mesh%vp%npart
-            if(ipart == der%mesh%vp%partno .or. der%boundaries%nsend(ipart) == 0) cycle
-
-            ff => ffb%states_linear(ist)%X(psi)
-            nreq = nreq + 1
-            call MPI_Isend(ff(1), 1, der%boundaries%X(send_type)(ipart), ipart - 1, 3, &
-              der%mesh%vp%comm, req(nreq), mpi_err)
-          end do
-        end do
-
-        call profiling_count_transfers(  &
-          sum(der%boundaries%nsend(1:der%mesh%vp%npart) + der%boundaries%nrecv(1:der%mesh%vp%npart)) * ffb%nst_linear, &
-          R_TOTYPE(M_ONE))
-
-        call profiling_out(set_bc_comm_prof)
-      end if
-#endif
-
-      do ist = 1, ffb%nst_linear
-        ff => ffb%states_linear(ist)%X(psi)
-        forall (ip = 1:der%boundaries%nper)
-          ff(der%boundaries%per_points(ip)) = ff(der%boundaries%per_map(ip))
-        end forall
-      end do
-
-#ifdef HAVE_MPI
-      if(der%mesh%parallel_in_domains .and. nreq > 0) then
-        call profiling_in(set_bc_comm_prof)
-
-        ! if nreq = 0, 1:nreq generates an illegal array reference
-        SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:nreq))
-        call MPI_Waitall(nreq, req(1), statuses(1, 1), mpi_err)
-        SAFE_DEALLOCATE_A(statuses)
-        SAFE_DEALLOCATE_A(req)
-
-        call profiling_out(set_bc_comm_prof)
-      end if
-#endif
-    case(BATCH_PACKED)
-
-#ifdef HAVE_MPI
-
-      if(der%mesh%parallel_in_domains) then
-
-        npart = der%mesh%vp%npart
-        maxsend = maxval(der%boundaries%nsend(1:npart))
-        maxrecv = maxval(der%boundaries%nrecv(1:npart))
-
-        SAFE_ALLOCATE(sendbuffer(1:ffb%nst_linear, 1:maxsend, 1:npart))
-
+      case(BATCH_PACKED)
+        
         do ipart = 1, npart
           do ip = 1, der%boundaries%nsend(ipart)
             forall(ist = 1:ffb%nst_linear) 
@@ -241,34 +192,50 @@ contains
           end do
         end do
 
-        SAFE_ALLOCATE(send_count(1:npart))
-        SAFE_ALLOCATE(send_disp(1:npart))
-        SAFE_ALLOCATE(recv_count(1:npart))
-        SAFE_ALLOCATE(recv_disp(1:npart))
+      end select
+
+      SAFE_ALLOCATE(send_count(1:npart))
+      SAFE_ALLOCATE(send_disp(1:npart))
+      SAFE_ALLOCATE(recv_count(1:npart))
+      SAFE_ALLOCATE(recv_disp(1:npart))
+      
+      do ipart = 1, npart
+        send_count(ipart) = ffb%nst_linear*der%boundaries%nsend(ipart)
+        send_disp(ipart)  = ffb%nst_linear*maxsend*(ipart - 1)
+        recv_count(ipart) = ffb%nst_linear*der%boundaries%nrecv(ipart)
+        recv_disp(ipart)  = ffb%nst_linear*maxrecv*(ipart - 1)
+      end do
+      
+      ASSERT(send_count(der%mesh%vp%partno) == 0)
+      ASSERT(recv_count(der%mesh%vp%partno) == 0)
+      ASSERT(all(recv_count <= ffb%nst_linear*maxrecv))
+      ASSERT(all(send_count <= ffb%nst_linear*maxsend))
+      
+      SAFE_ALLOCATE(recvbuffer(1:ffb%nst_linear, 1:maxrecv, 1:npart))
+      
+      call MPI_Alltoallv(sendbuffer(1, 1, 1), send_count(1), send_disp(1), R_MPITYPE, &
+        recvbuffer(1, 1, 1), recv_count(1), recv_disp(1), R_MPITYPE, der%mesh%vp%comm, mpi_err)
+      
+      SAFE_DEALLOCATE_A(send_count)
+      SAFE_DEALLOCATE_A(send_disp)
+      SAFE_DEALLOCATE_A(recv_count)
+      SAFE_DEALLOCATE_A(recv_disp)
+      SAFE_DEALLOCATE_A(sendbuffer)
+      
+      select case(batch_status(ffb))
+
+      case(BATCH_NOT_PACKED)
 
         do ipart = 1, npart
-          send_count(ipart) = ffb%nst_linear*der%boundaries%nsend(ipart)
-          send_disp(ipart)  = ffb%nst_linear*maxsend*(ipart - 1)
-          recv_count(ipart) = ffb%nst_linear*der%boundaries%nrecv(ipart)
-          recv_disp(ipart)  = ffb%nst_linear*maxrecv*(ipart - 1)
+          do ip = 1, der%boundaries%nsend(ipart)
+            forall(ist = 1:ffb%nst_linear) 
+              ffb%states_linear(ist)%X(psi)(1 + der%boundaries%per_recv(ip, ipart)) = recvbuffer(ist, ip, ipart)
+            end forall
+          end do
         end do
 
-        ASSERT(send_count(der%mesh%vp%partno) == 0)
-        ASSERT(recv_count(der%mesh%vp%partno) == 0)
-        ASSERT(all(recv_count <= ffb%nst_linear*maxrecv))
-        ASSERT(all(send_count <= ffb%nst_linear*maxsend))
-
-        SAFE_ALLOCATE(recvbuffer(1:ffb%nst_linear, 1:maxrecv, 1:npart))
-
-        call MPI_Alltoallv(sendbuffer(1, 1, 1), send_count(1), send_disp(1), R_MPITYPE, &
-          recvbuffer(1, 1, 1), recv_count(1), recv_disp(1), R_MPITYPE, der%mesh%vp%comm, mpi_err)
-
-        SAFE_DEALLOCATE_A(send_count)
-        SAFE_DEALLOCATE_A(send_disp)
-        SAFE_DEALLOCATE_A(recv_count)
-        SAFE_DEALLOCATE_A(recv_disp)
-        SAFE_DEALLOCATE_A(sendbuffer)
-
+      case(BATCH_PACKED)
+        
         do ipart = 1, npart
           do ip = 1, der%boundaries%nsend(ipart)
             forall(ist = 1:ffb%nst_linear) 
@@ -277,11 +244,30 @@ contains
           end do
         end do
 
-        SAFE_DEALLOCATE_A(recvbuffer)        
+      end select
 
-      end if
+      call profiling_count_transfers(sum(der%boundaries%nsend(1:npart) + der%boundaries%nrecv(1:npart))*ffb%nst_linear, &
+        R_TOTYPE(M_ONE))
+      
+      call profiling_out(set_bc_comm_prof)
+      
+      SAFE_DEALLOCATE_A(recvbuffer)        
 
+    end if
 #endif
+
+    select case(batch_status(ffb))
+      
+    case(BATCH_NOT_PACKED)
+      
+      do ist = 1, ffb%nst_linear
+        ff => ffb%states_linear(ist)%X(psi)
+        forall (ip = 1:der%boundaries%nper)
+          ff(der%boundaries%per_points(ip)) = ff(der%boundaries%per_map(ip))
+        end forall
+      end do
+
+    case(BATCH_PACKED)
 
       do ist = 1, ffb%nst_linear
         forall (ip = 1:der%boundaries%nper)
@@ -293,6 +279,7 @@ contains
       call messages_not_implemented('periodic boundary conditions with OpenCL')
 
     end select
+
     POP_SUB(X(derivatives_batch_set_bc).periodic)
   end subroutine periodic
 
