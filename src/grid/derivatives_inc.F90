@@ -156,66 +156,81 @@ contains
 
     PUSH_SUB(X(derivatives_batch_set_bc).periodic)
 
+    select case(batch_status(ffb))
+    case(BATCH_NOT_PACKED)
 #ifdef HAVE_MPI
-    if(der%mesh%parallel_in_domains) then
-      call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
-      
-      ! get the points that are copies from other nodes
-      SAFE_ALLOCATE(req(1:2 * der%mesh%vp%npart * ffb%nst_linear))
+      if(der%mesh%parallel_in_domains) then
+        call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
 
-      nreq = 0
+        ! get the points that are copies from other nodes
+        SAFE_ALLOCATE(req(1:2 * der%mesh%vp%npart * ffb%nst_linear))
 
-      do ist = 1, ffb%nst_linear
-        do ipart = 1, der%mesh%vp%npart
-          if(ipart == der%mesh%vp%partno .or. der%boundaries%nrecv(ipart) == 0) cycle
+        nreq = 0
 
-          ff => ffb%states_linear(ist)%X(psi)
-          nreq = nreq + 1
-          call MPI_Irecv(ff(1), 1, der%boundaries%X(recv_type)(ipart), ipart - 1, 3, &
-            der%mesh%vp%comm, req(nreq), mpi_err)
+        do ist = 1, ffb%nst_linear
+          do ipart = 1, der%mesh%vp%npart
+            if(ipart == der%mesh%vp%partno .or. der%boundaries%nrecv(ipart) == 0) cycle
+
+            ff => ffb%states_linear(ist)%X(psi)
+            nreq = nreq + 1
+            call MPI_Irecv(ff(1), 1, der%boundaries%X(recv_type)(ipart), ipart - 1, 3, &
+              der%mesh%vp%comm, req(nreq), mpi_err)
+          end do
         end do
-      end do
-      
-      do ist = 1, ffb%nst_linear
-        do ipart = 1, der%mesh%vp%npart
-          if(ipart == der%mesh%vp%partno .or. der%boundaries%nsend(ipart) == 0) cycle
 
-          ff => ffb%states_linear(ist)%X(psi)
-          nreq = nreq + 1
-          call MPI_Isend(ff(1), 1, der%boundaries%X(send_type)(ipart), ipart - 1, 3, &
-            der%mesh%vp%comm, req(nreq), mpi_err)
+        do ist = 1, ffb%nst_linear
+          do ipart = 1, der%mesh%vp%npart
+            if(ipart == der%mesh%vp%partno .or. der%boundaries%nsend(ipart) == 0) cycle
+
+            ff => ffb%states_linear(ist)%X(psi)
+            nreq = nreq + 1
+            call MPI_Isend(ff(1), 1, der%boundaries%X(send_type)(ipart), ipart - 1, 3, &
+              der%mesh%vp%comm, req(nreq), mpi_err)
+          end do
         end do
-      end do
-      
-      call profiling_count_transfers(  &
-        sum(der%boundaries%nsend(1:der%mesh%vp%npart) + der%boundaries%nrecv(1:der%mesh%vp%npart)) * ffb%nst_linear, &
-        R_TOTYPE(M_ONE))
-      
-      call profiling_out(set_bc_comm_prof)
-    end if
-#endif
-    
-    do ist = 1, ffb%nst_linear
-      ff => ffb%states_linear(ist)%X(psi)
-      forall (ip = 1:der%boundaries%nper)
-        ff(der%boundaries%per_points(ip)) = ff(der%boundaries%per_map(ip))
-      end forall
-    end do
-    
-#ifdef HAVE_MPI
-    if(der%mesh%parallel_in_domains .and. nreq > 0) then
-      call profiling_in(set_bc_comm_prof)
-      
-      ! if nreq = 0, 1:nreq generates an illegal array reference
-      SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:nreq))
-      call MPI_Waitall(nreq, req(1), statuses(1, 1), mpi_err)
-      SAFE_DEALLOCATE_A(statuses)
-      SAFE_DEALLOCATE_A(req)
-      
-      call profiling_out(set_bc_comm_prof)
-    end if
+
+        call profiling_count_transfers(  &
+          sum(der%boundaries%nsend(1:der%mesh%vp%npart) + der%boundaries%nrecv(1:der%mesh%vp%npart)) * ffb%nst_linear, &
+          R_TOTYPE(M_ONE))
+
+        call profiling_out(set_bc_comm_prof)
+      end if
 #endif
 
+      do ist = 1, ffb%nst_linear
+        ff => ffb%states_linear(ist)%X(psi)
+        forall (ip = 1:der%boundaries%nper)
+          ff(der%boundaries%per_points(ip)) = ff(der%boundaries%per_map(ip))
+        end forall
+      end do
+
+#ifdef HAVE_MPI
+      if(der%mesh%parallel_in_domains .and. nreq > 0) then
+        call profiling_in(set_bc_comm_prof)
+
+        ! if nreq = 0, 1:nreq generates an illegal array reference
+        SAFE_ALLOCATE(statuses(1:MPI_STATUS_SIZE, 1:nreq))
+        call MPI_Waitall(nreq, req(1), statuses(1, 1), mpi_err)
+        SAFE_DEALLOCATE_A(statuses)
+        SAFE_DEALLOCATE_A(req)
+
+        call profiling_out(set_bc_comm_prof)
+      end if
+#endif
+    case(BATCH_PACKED)
+
+      ASSERT(.not. der%mesh%parallel_in_domains)
+
+      do ist = 1, ffb%nst_linear
+        forall (ip = 1:der%boundaries%nper)
+          ffb%pack%X(psi)(ist, der%boundaries%per_points(ip)) = ffb%pack%X(psi)(ist, der%boundaries%per_map(ip))
+        end forall
+      end do      
+
+    case(BATCH_CL_PACKED)
+      call messages_not_implemented('periodic boundary conditions with OpenCL')
+
+    end select
     POP_SUB(X(derivatives_batch_set_bc).periodic)
   end subroutine periodic
 
