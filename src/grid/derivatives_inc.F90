@@ -204,7 +204,7 @@ contains
         end do
 
       case(BATCH_CL_PACKED)
-
+#ifdef HAVE_OPENCL
         call opencl_create_buffer(buff_send, CL_MEM_WRITE_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxsend*npart)
 
         call octcl_kernel_start_call(kernel_send, 'boundaries.cl', 'boundaries_periodic_send')
@@ -226,7 +226,7 @@ contains
 
         call opencl_read_buffer(buff_send, ffb%pack%size(1)*maxsend*npart, sendbuffer)
         call opencl_release_buffer(buff_send)
-
+#endif
       end select
 
       SAFE_ALLOCATE(send_count(1:npart))
@@ -278,7 +278,7 @@ contains
         end do
 
       case(BATCH_CL_PACKED)
-
+#ifdef HAVE_OPENCL
         call opencl_create_buffer(buff_recv, CL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxrecv*npart)
         call opencl_write_buffer(buff_recv, ffb%pack%size(1)*maxrecv*npart, recvbuffer)
 
@@ -301,7 +301,7 @@ contains
         call opencl_finish()
 
         call opencl_release_buffer(buff_recv)
-
+#endif
       end select
 
       call profiling_count_transfers(sum(der%boundaries%nsend(1:npart) + der%boundaries%nrecv(1:npart))*ffb%nst_linear, &
