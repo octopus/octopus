@@ -156,6 +156,11 @@ contains
     integer, allocatable :: recv_disp(:), recv_count(:)
     integer :: ipart, npart, maxsend, maxrecv
 #endif
+#ifdef HAVE_OPENCL
+  type(octcl_kernel_t), save :: kernel
+  type(cl_kernel) :: kernel_ref
+  integer :: npersize
+#endif
 
     PUSH_SUB(X(derivatives_batch_set_bc).periodic)
 
@@ -191,6 +196,9 @@ contains
             end forall
           end do
         end do
+
+      case(BATCH_CL_PACKED)
+        call messages_not_implemented('periodic boundary conditions with domain parallelization and OpenCL')
 
       end select
 
@@ -277,7 +285,24 @@ contains
       end do
 
     case(BATCH_CL_PACKED)
-      call messages_not_implemented('periodic boundary conditions with OpenCL')
+#ifdef HAVE_OPENCL
+
+      call octcl_kernel_start_call(kernel, 'boundaries.cl', 'boundaries_periodic')
+      kernel_ref = octcl_kernel_get_ref(kernel)
+
+      call opencl_set_kernel_arg(kernel_ref, 0, der%boundaries%nper)
+      call opencl_set_kernel_arg(kernel_ref, 1, der%boundaries%buff_per_points)
+      call opencl_set_kernel_arg(kernel_ref, 2, ffb%pack%buffer)
+      call opencl_set_kernel_arg(kernel_ref, 3, log2(ffb%pack%size_real(1)))
+      
+      npersize = opencl_kernel_workgroup_size(kernel_ref)/ffb%pack%size_real(1)
+
+      call opencl_kernel_run(kernel_ref, (/ffb%pack%size_real(1), pad(der%boundaries%nper, npersize)/), &
+        (/ffb%pack%size_real(1), npersize/))
+      
+      call opencl_finish()
+
+#endif
 
     end select
 

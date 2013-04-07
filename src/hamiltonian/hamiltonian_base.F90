@@ -454,7 +454,6 @@ contains
     end do
 
     if(mesh%use_curvilinear) this%apply_projector_matrices = .false.
-    if(simul_box_is_periodic(mesh%sb) .and. opencl_is_enabled()) this%apply_projector_matrices = .false.
 
     if(.not. this%apply_projector_matrices) then
       POP_SUB(hamiltonian_base_build_proj)

@@ -22,6 +22,9 @@
 module derivatives_m
   use batch_m
   use boundaries_m
+#ifdef HAVE_OPENCL
+  use cl
+#endif
   use datasets_m
   use global_m
   use lalg_adv_m
@@ -34,6 +37,7 @@ module derivatives_m
   use mpi_m
   use nl_operator_m
   use opencl_m
+  use octcl_kernel_m
   use par_vec_m
   use parser_m
   use profiling_m

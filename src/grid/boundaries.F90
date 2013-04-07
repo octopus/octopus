@@ -21,6 +21,9 @@
 
 module boundaries_m
   use batch_m
+#ifdef HAVE_OPENCL
+  use cl
+#endif
   use global_m
   use messages_m
   use mesh_m
@@ -31,6 +34,7 @@ module boundaries_m
   use profiling_m
   use simul_box_m
   use subarray_m
+  use types_m
 
   implicit none
   
@@ -46,6 +50,7 @@ module boundaries_m
     integer, pointer :: nsend(:)
     integer, pointer :: nrecv(:)
 #endif
+    type(opencl_mem_t) :: buff_per_points
   end type boundaries_t
 
   public ::                        &
@@ -266,6 +271,13 @@ contains
       end if
 #endif
 
+#ifdef HAVE_OPENCL
+      if(opencl_is_enabled()) then
+        call opencl_create_buffer(this%buff_per_points, CL_MEM_READ_ONLY, TYPE_INTEGER, 2*this%nper)
+        call opencl_write_buffer(this%buff_per_points, 2*this%nper, this%per_points)
+      end if
+#endif
+
     end if
 
     POP_SUB(boundaries_init)
@@ -292,6 +304,10 @@ contains
       end if
 #endif
       
+#ifdef HAVE_OPENCL
+      if(opencl_is_enabled()) call opencl_release_buffer(this%buff_per_points)
+#endif
+
       SAFE_DEALLOCATE_P(this%per_points)
     end if
 
