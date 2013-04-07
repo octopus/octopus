@@ -177,7 +177,7 @@ contains
         do ipart = 1, npart
           do ip = 1, der%boundaries%nsend(ipart)
             forall(ist = 1:ffb%nst_linear) 
-              sendbuffer(ist, ip, ipart) = ffb%states_linear(ist)%X(psi)(1 + der%boundaries%per_send(ip, ipart))
+              sendbuffer(ist, ip, ipart) = ffb%states_linear(ist)%X(psi)(der%boundaries%per_send(ip, ipart))
             end forall
           end do
         end do
@@ -187,7 +187,7 @@ contains
         do ipart = 1, npart
           do ip = 1, der%boundaries%nsend(ipart)
             forall(ist = 1:ffb%nst_linear) 
-              sendbuffer(ist, ip, ipart) = ffb%pack%X(psi)(ist, 1 + der%boundaries%per_send(ip, ipart))
+              sendbuffer(ist, ip, ipart) = ffb%pack%X(psi)(ist, der%boundaries%per_send(ip, ipart))
             end forall
           end do
         end do
@@ -229,7 +229,7 @@ contains
         do ipart = 1, npart
           do ip = 1, der%boundaries%nsend(ipart)
             forall(ist = 1:ffb%nst_linear) 
-              ffb%states_linear(ist)%X(psi)(1 + der%boundaries%per_recv(ip, ipart)) = recvbuffer(ist, ip, ipart)
+              ffb%states_linear(ist)%X(psi)(der%boundaries%per_recv(ip, ipart)) = recvbuffer(ist, ip, ipart)
             end forall
           end do
         end do
@@ -239,7 +239,7 @@ contains
         do ipart = 1, npart
           do ip = 1, der%boundaries%nsend(ipart)
             forall(ist = 1:ffb%nst_linear) 
-              ffb%pack%X(psi)(ist, 1 + der%boundaries%per_recv(ip, ipart)) = recvbuffer(ist, ip, ipart)
+              ffb%pack%X(psi)(ist, der%boundaries%per_recv(ip, ipart)) = recvbuffer(ist, ip, ipart)
             end forall
           end do
         end do

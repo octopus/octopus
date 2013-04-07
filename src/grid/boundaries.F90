@@ -46,10 +46,6 @@ module boundaries_m
     integer, pointer :: per_recv(:, :)
     integer, pointer :: nsend(:)
     integer, pointer :: nrecv(:)
-    integer, pointer :: dsend_type(:)
-    integer, pointer :: zsend_type(:)
-    integer, pointer :: drecv_type(:)
-    integer, pointer :: zrecv_type(:)
 #endif
   end type boundaries_t
 
@@ -98,11 +94,9 @@ contains
 
     integer :: sp, ip, ip_inner, iper, ip_global
 #ifdef HAVE_MPI
-    integer :: ip_inner_global, ipart, nblocks
+    integer :: ip_inner_global, ipart
     integer, allocatable :: recv_rem_points(:, :)
     integer :: nper_recv
-    integer :: maxmax
-    integer, allocatable :: blocklengths(:), offsets(:)
     integer, allocatable :: send_buffer(:)
     integer :: bsize, status(MPI_STATUS_SIZE)
 #endif
@@ -117,9 +111,7 @@ contains
     if (simul_box_is_periodic(mesh%sb)) then
 
       sp = mesh%np
-#ifdef HAVE_MPI
-        if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost(mesh%vp%partno)
-#endif
+      if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost(mesh%vp%partno)
 
       !count the number of points that are periodic
       this%nper = 0
@@ -269,60 +261,10 @@ contains
         ! we no longer need this
         SAFE_DEALLOCATE_A(recv_rem_points)
 
-        ! Now we have all the indices required locally, so we can
-        ! build the mpi datatypes
-
-        SAFE_ALLOCATE(this%dsend_type(1:mesh%vp%npart))
-        SAFE_ALLOCATE(this%zsend_type(1:mesh%vp%npart))
-        SAFE_ALLOCATE(this%drecv_type(1:mesh%vp%npart))
-        SAFE_ALLOCATE(this%zrecv_type(1:mesh%vp%npart))
-
-        maxmax = max(maxval(this%nsend), maxval(this%nrecv))
-
-        SAFE_ALLOCATE(blocklengths(1:maxmax))
-        SAFE_ALLOCATE(offsets(1:maxmax))
-
-        do ipart = 1, mesh%vp%npart
-          if(ipart == mesh%vp%partno) cycle
-
-          if(this%nsend(ipart) > 0) then
-
-            ASSERT(all(this%per_send(1:this%nsend(ipart), ipart) <= mesh%np))
-
-            ! MPI indices start from zero
-            this%per_send(1:this%nsend(ipart), ipart) = this%per_send(1:this%nsend(ipart), ipart) - 1
-
-            call get_blocks(this%nsend(ipart), this%per_send(:, ipart), nblocks, blocklengths, offsets)
-
-            call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_FLOAT, this%dsend_type(ipart), mpi_err)
-            call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_CMPLX, this%zsend_type(ipart), mpi_err)
-            call MPI_Type_commit(this%dsend_type(ipart), mpi_err)
-            call MPI_Type_commit(this%zsend_type(ipart), mpi_err)
-
-          end if
-          
-          if(this%nrecv(ipart) > 0) then
-            ASSERT(all(this%per_recv(1:this%nrecv(ipart), ipart) <= mesh%np_part))
-            ASSERT(all(this%per_recv(1:this%nrecv(ipart), ipart) > mesh%np))
-
-            this%per_recv(1:this%nrecv(ipart), ipart) = this%per_recv(1:this%nrecv(ipart), ipart) - 1
-
-            call get_blocks(this%nrecv(ipart), this%per_recv(:, ipart), nblocks, blocklengths, offsets)
-
-            call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_FLOAT, this%drecv_type(ipart), mpi_err)
-            call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_CMPLX, this%zrecv_type(ipart), mpi_err)
-            call MPI_Type_commit(this%drecv_type(ipart), mpi_err)
-            call MPI_Type_commit(this%zrecv_type(ipart), mpi_err)
-
-          end if
-
-        end do
-
         call MPI_Buffer_detach(send_buffer(1), bsize, mpi_err)
 
       end if
 #endif
-      ASSERT(iper == this%nper)
 
     end if
 
@@ -334,10 +276,6 @@ contains
   subroutine boundaries_end(this)
     type(boundaries_t),  intent(out)   :: this
 
-#ifdef HAVE_MPI
-    integer :: ipart
-#endif
-
     PUSH_SUB(boundaries_end)
 
     if(simul_box_is_periodic(this%mesh%sb)) then
@@ -347,21 +285,6 @@ contains
         ASSERT(associated(this%nsend))
         ASSERT(associated(this%nrecv))
         
-        do ipart = 1, this%mesh%vp%npart
-          if(this%nsend(ipart) /= 0) then 
-            call MPI_Type_free(this%dsend_type(ipart), mpi_err)
-            call MPI_Type_free(this%zsend_type(ipart), mpi_err)
-          end if
-          if(this%nrecv(ipart) /= 0) then 
-            call MPI_Type_free(this%drecv_type(ipart), mpi_err)
-            call MPI_Type_free(this%zrecv_type(ipart), mpi_err)
-          end if
-        end do
-        
-        SAFE_DEALLOCATE_P(this%dsend_type)
-        SAFE_DEALLOCATE_P(this%zsend_type)
-        SAFE_DEALLOCATE_P(this%drecv_type)
-        SAFE_DEALLOCATE_P(this%zrecv_type)
         SAFE_DEALLOCATE_P(this%per_send)
         SAFE_DEALLOCATE_P(this%per_recv)
         SAFE_DEALLOCATE_P(this%nsend)
