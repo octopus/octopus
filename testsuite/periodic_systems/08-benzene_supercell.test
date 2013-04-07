@@ -1,0 +1,36 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test       : Benzene supercell
+Programs   : octopus; octopus_mpi
+TestGroups : short-run, periodic_systems
+Enabled    : Yes
+
+Processors: 4
+Input: 08-benzene_supercell.01-gs.inp
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -39.31167186
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ; -10.90692500
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  31.49117774
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ; -11.17459749
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  -1.62651273
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  30.19471301
+match ; External energy    ; GREP(static/info, 'External    =', 20) ; -87.34709738
+
+match ; Eigenvalue  1      ; GREP(static/info, ' 1   --', 13) ; -0.749736
+match ; Eigenvalue  2      ; GREP(static/info, ' 2   --', 13) ; -0.641172
+match ; Eigenvalue  3      ; GREP(static/info, ' 3   --', 13) ; -0.564650
+match ; Eigenvalue  4      ; GREP(static/info, ' 4   --', 13) ; -0.557280
+match ; Eigenvalue  5      ; GREP(static/info, ' 5   --', 13) ; -0.487222
+match ; Eigenvalue  6      ; GREP(static/info, ' 6   --', 13) ; -0.423668
+match ; Eigenvalue  7      ; GREP(static/info, ' 7   --', 13) ; -0.404147
+match ; Eigenvalue  8      ; GREP(static/info, ' 8   --', 13) ; -0.317089
+match ; Eigenvalue  9      ; GREP(static/info, ' 9   --', 13) ; -0.312911
+match ; Eigenvalue 10      ; GREP(static/info, '10   --', 13) ; -0.255469
+match ; Eigenvalue 11      ; GREP(static/info, '11   --', 13) ; -0.215723
+match ; Eigenvalue 12      ; GREP(static/info, '12   --', 13) ; -0.137084
+match ; Eigenvalue 13      ; GREP(static/info, '13   --', 13) ; -0.135263
+match ; Eigenvalue 14      ; GREP(static/info, '14   --', 13) ; -0.135002
+match ; Eigenvalue 15      ; GREP(static/info, '15   --', 13) ; -0.117047
+match ; Eigenvalue 16      ; GREP(static/info, '16   --', 13) ;  0.002866
+match ; Eigenvalue 17      ; GREP(static/info, '17   --', 13) ;  0.058004
+match ; Eigenvalue 18      ; GREP(static/info, '18   --', 13) ;  0.063085
