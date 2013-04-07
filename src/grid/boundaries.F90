@@ -38,9 +38,8 @@ module boundaries_m
 
   type boundaries_t
     type(mesh_t), pointer :: mesh
-    integer          :: nper            !< the number of points that correpond to pbc
-    integer, pointer :: per_points(:)   !< (1:nper) the list of points that correspond to pbc 
-    integer, pointer :: per_map(:)      !< (1:nper) the inner point that corresponds to each pbc point
+    integer          :: nper             !< the number of points that correpond to pbc
+    integer, pointer :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
 #ifdef HAVE_MPI
     integer, pointer :: per_send(:, :)
     integer, pointer :: per_recv(:, :)
@@ -54,6 +53,11 @@ module boundaries_m
     boundaries_init,               &
     boundaries_end
 
+
+  integer, parameter, public ::    &
+    POINT_BOUNDARY = 1,            &
+    POINT_INNER    = 2
+
 #if defined(HAVE_MPI)
   public ::                        &
     pv_handle_batch_t,             &
@@ -63,8 +67,6 @@ module boundaries_m
     zghost_update_batch_start,     &
     dghost_update_batch_finish,    &
     zghost_update_batch_finish
-
-  integer, parameter, public :: BOUND_SEND = 1, BOUND_RECV = 2
 
   type pv_handle_batch_t
     private
@@ -106,7 +108,6 @@ contains
     this%mesh => mesh
 
     nullify(this%per_points)
-    nullify(this%per_map)
 
     if (simul_box_is_periodic(mesh%sb)) then
 
@@ -152,8 +153,7 @@ contains
         end if
       end do
 
-      SAFE_ALLOCATE(this%per_points(1:this%nper))
-      SAFE_ALLOCATE(this%per_map(1:this%nper))
+      SAFE_ALLOCATE(this%per_points(1:2, 1:this%nper))
 
 #ifdef HAVE_MPI
       if(mesh%parallel_in_domains) then
@@ -186,8 +186,8 @@ contains
 
         if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then
           iper = iper + 1
-          this%per_points(iper) = ip
-          this%per_map(iper) = ip_inner
+          this%per_points(POINT_BOUNDARY, iper) = ip
+          this%per_points(POINT_INNER, iper) = ip_inner
 
 #ifdef HAVE_MPI
         else if(mesh%parallel_in_domains .and. ip /= ip_inner) then ! the point is in another node
@@ -293,7 +293,6 @@ contains
 #endif
       
       SAFE_DEALLOCATE_P(this%per_points)
-      SAFE_DEALLOCATE_P(this%per_map)
     end if
 
     POP_SUB(boundaries_end)

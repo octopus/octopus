@@ -146,7 +146,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine periodic()
-    integer :: ip, ist
+    integer :: ip, ist, ip_bnd, ip_inn
     R_TYPE, pointer :: ff(:)
 
 #ifdef HAVE_MPI
@@ -263,16 +263,17 @@ contains
       do ist = 1, ffb%nst_linear
         ff => ffb%states_linear(ist)%X(psi)
         forall (ip = 1:der%boundaries%nper)
-          ff(der%boundaries%per_points(ip)) = ff(der%boundaries%per_map(ip))
+          ff(der%boundaries%per_points(POINT_BOUNDARY, ip)) = ff(der%boundaries%per_points(POINT_INNER, ip))
         end forall
       end do
 
     case(BATCH_PACKED)
 
-      do ist = 1, ffb%nst_linear
-        forall (ip = 1:der%boundaries%nper)
-          ffb%pack%X(psi)(ist, der%boundaries%per_points(ip)) = ffb%pack%X(psi)(ist, der%boundaries%per_map(ip))
-        end forall
+      !$omp parallel do private(ip, ip_bnd, ip_inn, ist)
+      do ip = 1, der%boundaries%nper
+        ip_bnd = der%boundaries%per_points(POINT_BOUNDARY, ip)
+        ip_inn = der%boundaries%per_points(POINT_INNER, ip)
+        forall(ist = 1:ffb%nst_linear) ffb%pack%X(psi)(ist, ip_bnd) = ffb%pack%X(psi)(ist, ip_inn)
       end do
 
     case(BATCH_CL_PACKED)
