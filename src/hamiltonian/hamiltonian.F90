@@ -1095,7 +1095,6 @@ contains
 
     apply = this%apply_packed
     if(simul_box_is_periodic(mesh%sb) .and. opencl_is_enabled()) apply = .false.
-    if(simul_box_is_periodic(mesh%sb) .and. mesh%parallel_in_domains) apply = .false.
     if(mesh%use_curvilinear) apply = .false.
     if(associated(this%phase)) apply = .false.
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.

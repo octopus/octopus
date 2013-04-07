@@ -42,6 +42,8 @@ module boundaries_m
     integer, pointer :: per_points(:)   !< (1:nper) the list of points that correspond to pbc 
     integer, pointer :: per_map(:)      !< (1:nper) the inner point that corresponds to each pbc point
 #ifdef HAVE_MPI
+    integer, pointer :: per_send(:, :)
+    integer, pointer :: per_recv(:, :)
     integer, pointer :: nsend(:)
     integer, pointer :: nrecv(:)
     integer, pointer :: dsend_type(:)
@@ -66,7 +68,7 @@ module boundaries_m
     dghost_update_batch_finish,    &
     zghost_update_batch_finish
 
-  integer :: SEND = 1, RECV = 2
+  integer, parameter, public :: BOUND_SEND = 1, BOUND_RECV = 2
 
   type pv_handle_batch_t
     private
@@ -100,8 +102,7 @@ contains
     integer, allocatable :: recv_rem_points(:, :)
     integer :: nper_recv
     integer :: maxmax
-    integer, allocatable :: recv_points(:, :), blocklengths(:), offsets(:)
-    integer, allocatable :: send_points(:, :)
+    integer, allocatable :: blocklengths(:), offsets(:)
     integer, allocatable :: send_buffer(:)
     integer :: bsize, status(MPI_STATUS_SIZE)
 #endif
@@ -164,7 +165,7 @@ contains
 
 #ifdef HAVE_MPI
       if(mesh%parallel_in_domains) then
-        SAFE_ALLOCATE(recv_points(1:nper_recv, 1:mesh%vp%npart))
+        SAFE_ALLOCATE(this%per_recv(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(recv_rem_points(1:nper_recv, 1:mesh%vp%npart))
         SAFE_ALLOCATE(this%nrecv(1:mesh%vp%npart))
         this%nrecv = 0
@@ -209,7 +210,7 @@ contains
                 ! count the points to receive from each node
                 this%nrecv(ipart) = this%nrecv(ipart) + 1
                 ! and store the number of the point
-                recv_points(this%nrecv(ipart), ipart) = ip
+                this%per_recv(this%nrecv(ipart), ipart) = ip
                 ! and where it is in the other partition
                 recv_rem_points(this%nrecv(ipart), ipart) = ip_inner
 
@@ -256,12 +257,12 @@ contains
           call MPI_Bsend(recv_rem_points(1, ipart), this%nrecv(ipart), MPI_INTEGER, ipart - 1, 1, mesh%vp%comm, mpi_err)
         end do
 
-        SAFE_ALLOCATE(send_points(1:maxval(this%nsend), 1:mesh%vp%npart))
+        SAFE_ALLOCATE(this%per_send(1:maxval(this%nsend), 1:mesh%vp%npart))
 
         ! And we receive them
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno .or. this%nsend(ipart) == 0) cycle
-          call MPI_Recv(send_points(1, ipart), this%nsend(ipart), MPI_INTEGER, &
+          call MPI_Recv(this%per_send(1, ipart), this%nsend(ipart), MPI_INTEGER, &
                ipart - 1, 1, mesh%vp%comm, status, mpi_err)
         end do
 
@@ -286,12 +287,12 @@ contains
 
           if(this%nsend(ipart) > 0) then
 
-            ASSERT(all(send_points(1:this%nsend(ipart), ipart) <= mesh%np))
+            ASSERT(all(this%per_send(1:this%nsend(ipart), ipart) <= mesh%np))
 
             ! MPI indices start from zero
-            send_points(1:this%nsend(ipart), ipart) = send_points(1:this%nsend(ipart), ipart) - 1
+            this%per_send(1:this%nsend(ipart), ipart) = this%per_send(1:this%nsend(ipart), ipart) - 1
 
-            call get_blocks(this%nsend(ipart), send_points(:, ipart), nblocks, blocklengths, offsets)
+            call get_blocks(this%nsend(ipart), this%per_send(:, ipart), nblocks, blocklengths, offsets)
 
             call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_FLOAT, this%dsend_type(ipart), mpi_err)
             call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_CMPLX, this%zsend_type(ipart), mpi_err)
@@ -301,12 +302,12 @@ contains
           end if
           
           if(this%nrecv(ipart) > 0) then
-            ASSERT(all(recv_points(1:this%nrecv(ipart), ipart) <= mesh%np_part))
-            ASSERT(all(recv_points(1:this%nrecv(ipart), ipart) > mesh%np))
+            ASSERT(all(this%per_recv(1:this%nrecv(ipart), ipart) <= mesh%np_part))
+            ASSERT(all(this%per_recv(1:this%nrecv(ipart), ipart) > mesh%np))
 
-            recv_points(1:this%nrecv(ipart), ipart) = recv_points(1:this%nrecv(ipart), ipart) - 1
+            this%per_recv(1:this%nrecv(ipart), ipart) = this%per_recv(1:this%nrecv(ipart), ipart) - 1
 
-            call get_blocks(this%nrecv(ipart), recv_points(:, ipart), nblocks, blocklengths, offsets)
+            call get_blocks(this%nrecv(ipart), this%per_recv(:, ipart), nblocks, blocklengths, offsets)
 
             call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_FLOAT, this%drecv_type(ipart), mpi_err)
             call MPI_Type_indexed(nblocks, blocklengths(1), offsets(1), MPI_CMPLX, this%zrecv_type(ipart), mpi_err)
@@ -361,6 +362,8 @@ contains
         SAFE_DEALLOCATE_P(this%zsend_type)
         SAFE_DEALLOCATE_P(this%drecv_type)
         SAFE_DEALLOCATE_P(this%zrecv_type)
+        SAFE_DEALLOCATE_P(this%per_send)
+        SAFE_DEALLOCATE_P(this%per_recv)
         SAFE_DEALLOCATE_P(this%nsend)
         SAFE_DEALLOCATE_P(this%nrecv)
       end if
