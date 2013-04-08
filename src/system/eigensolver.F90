@@ -68,11 +68,12 @@ module eigensolver_m
 
     type(eigen_arpack_t) :: arpack !< arpack solver !!!
     integer :: arnoldi_vectors
+    FLOAT   :: current_rel_dens_error !< for the arpack solver it is important to base precision on how well density is converged
     FLOAT   :: imag_time
 
     !> Stores information about how well it performed.
-    FLOAT, pointer :: diff(:, :)
-    integer        :: matvec
+    FLOAT, pointer   :: diff(:, :)
+    integer          :: matvec
     integer, pointer :: converged(:)
 
     !> Stores information about the preconditioning.
@@ -235,7 +236,9 @@ contains
       !%End 
       call parse_integer(datasets_check('EigensolverArnoldiVectors'), 2*st%nst, eigens%arnoldi_vectors) 
       if(eigens%arnoldi_vectors-st%nst < (M_TWO - st%nst)) call input_error('EigensolverArnoldiVectors') 
-      	 	 
+      
+      eigens%current_rel_dens_error = -M_ONE ! Negative initial value to signify that no value has been assigned yet
+      
       ! Arpack is not working in some cases, so let us check. 
       if(st%d%ispin .eq. SPINORS) then 
         write(message(1), '(a)') 'The ARPACK diagonalizer does not handle spinors (yet).' 
@@ -248,8 +251,6 @@ contains
       !Some default values 
       default_iter = 500  ! empirical value based upon experience
       default_tol = M_ZERO ! default is machine precision   
-
-
 #endif 
 
     case default
@@ -431,8 +432,11 @@ contains
           end if
 #if defined(HAVE_ARPACK)
         case(RS_ARPACK)
-          call deigen_solver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, maxiter, & 
-            eigens%converged(ik), ik, eigens%diff(:,ik)) 
+          ! We don't have any tests of this presently and would not like
+          ! to guarantee that it works right now
+          call messages_not_implemented('ARPACK solver for Hermitian problems')
+          !call deigen_solver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, maxiter, &
+          !  eigens%converged(ik), ik, eigens%diff(:,ik)) 
 #endif 
         end select
 
@@ -467,8 +471,8 @@ contains
           end if         
 #if defined(HAVE_ARPACK) 
        	case(RS_ARPACK) 
-          call zeigen_solver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, maxiter, & 
-            eigens%converged(ik), ik, eigens%diff(:,ik)) 
+          call zeigen_solver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, eigens%current_rel_dens_error, maxiter, & 
+            eigens%converged(ik), ik, eigens%diff(:,ik))
 #endif 
         end select
 

@@ -17,14 +17,15 @@
 !!
 	
 	
-subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tol_, niter, converged, ik, diff)
+subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_dens_error, niter, converged, ik, diff)
   type(eigen_arpack_t),intent(in)    :: arpack
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(inout) :: st
   type(hamiltonian_t), intent(in)    :: hm
-  FLOAT,               intent(in)    :: tol_
+  FLOAT,               intent(in)    :: tolerance
+  FLOAT,               intent(in)    :: current_rel_dens_error
   integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged
+  integer,             intent(out)   :: converged
   integer,             intent(in)    :: ik
   FLOAT,     optional, intent(out)   :: diff(:) !< (1:st%nst)
 	
@@ -33,13 +34,13 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tol_, niter, converged, ik
                           workd(:), workev(:), workl(:), zd(:), &
                           psi(:,:), hpsi(:,:)
                      
-  integer :: ldv, nev, iparam(11), ipntr(14), ido, n, lworkl, info, ierr, &
-             i, j, ishfts, maxitr, mode1, ist, idim, ncv
-  FLOAT :: tol, sigmar, sigmai, resid_sum, tmp
-  FLOAT, allocatable :: rwork(:), d(:, :)
-  CMPLX :: sigma, eps_temp
-  integer :: mpi_comm
-  character(len=2) :: which
+  integer              :: ldv, nev, iparam(11), ipntr(14), ido, n, lworkl, info, ierr, &
+    i, j, ishfts, maxitr, mode1, ist, idim, ncv
+  FLOAT                :: tol, sigmar, sigmai, resid_sum, tmp, tolpower
+  FLOAT, allocatable   :: rwork(:), d(:, :)
+  CMPLX                :: sigma, eps_temp
+  integer              :: mpi_comm
+  character(len=2)     :: which
   	
   !!!!WARNING: No support for spinors, yet. 
   PUSH_SUB(X(eigen_solver_arpack))
@@ -59,7 +60,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tol_, niter, converged, ik
   lworkl  = 3*ncv**2+6*ncv
 
   SAFE_ALLOCATE(d(ncv+1, 3))
-  SAFE_ALLOCATE(resid(ldv))       !residual vector 
+  SAFE_ALLOCATE(resid(ldv))       !residual vector
   SAFE_ALLOCATE(v(ldv, ncv))      !Arnoldi basis vectors / Eigenstates
   SAFE_ALLOCATE(workd(3*ldv))
   SAFE_ALLOCATE(workev(3*ncv))
@@ -71,42 +72,65 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tol_, niter, converged, ik
   SAFE_ALLOCATE(rwork(ncv))
   SAFE_ALLOCATE(zd(ncv+1))
 #endif
-  which = arpack%sort	
+  which = arpack%sort
   select(:) = .true.
-  tol  = tol_
+
+  ! The idea with initial_tolerance is to optionally base the arpack tolerance on the current degree of convergence
+  ! of the electronic density, which can improve performance in some (badly converged) SCF steps by at least an order
+  ! of magnitude.  To do this we, for the time being, interpolate exponentially such that a rel_dens=1
+  ! corresponds to tol=ArpackInitialTolerance whereas rel_dens=1e-5 corresponds to tol=EigenSolverTolerance.
+  ! We can fix this later so it allows other values and types of convergence criteria.
+  if(arpack%initial_tolerance.gt.0) then
+    if(current_rel_dens_error.lt.0) then
+      tol = arpack%initial_tolerance
+    else
+      tolpower = M_ONE ! more aggresive (larger) values seem to frequently get trouble mid-SCF-loop
+      tol = arpack%initial_tolerance * exp(log(tolerance / arpack%initial_tolerance) / &
+        (-M_FIVE * log(M_TEN))**tolpower * log(current_rel_dens_error)**tolpower)
+     
+      !tol = arpack%initial_tolerance * exp(-log(arpack%initial_tolerance / tolerance) / (M_FIVE * log(M_TEN)**tolpower) &
+      !  * log(current_rel_dens_error)**tolpower)
+      !tol = arpack%initial_tolerance * current_rel_dens_error**(log(arpack%initial_tolerance / tolerance) / (M_FIVE * log(M_TEN)))
+      tol = min(tol, arpack%initial_tolerance)
+      write(message(1), '(a,es10.3)') 'Arpack: Current tolerance', tol
+    end if
+    call messages_info(1)
+  else
+    tol  = tolerance
+  end if
+
   ido  = 0
-  info = arpack%init_resid ! 0. random resid vector 
-                           ! 1. calculate resid vector 
-                           ! 2. resid vector constant = 1 
+  info = arpack%init_resid ! 0. random resid vector
+                           ! 1. calculate resid vector
+                           ! 2. resid vector constant = 1
   
-  if(info == 1) then !Calculate the residual vector
-    print*, 'eigen_solver_arpack info1, allocate for calculating residual.'
-    SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
+  !if(info == 1) then !Calculate the residual vector
+    
+  !  SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
   
-    resid(:) = R_TOTYPE(M_ZERO)
-    do ist = 1, st%nst
-      call states_get_state(st, gr%mesh, ist, ik, psi)      
-      do idim = 1, st%d%dim
-       call X(hamiltonian_apply) (hm, gr%der, psi, hpsi, idim, ik)
+ !   resid(:) = R_TOTYPE(M_ZERO)
+ !   do ist = 1, st%nst
+ !     call states_get_state(st, gr%mesh, ist, ik, psi)      
+ !     do idim = 1, st%d%dim
+ !      call X(hamiltonian_apply) (hm, gr%der, psi, hpsi, idim, ik)
        ! XXX this will hardly work because tmp is not necessarily written to...
        ! In fact as of lately, it is never written to as the mentioned sorting trick is not in use
        !if (st%eigenval(ist, ik) > CNST(1e3)) tmp = st%eigenval(ist, ik) -  CNST(1e3) ! compensate the ugly sorting trick
-       resid(1:ldv) = resid(1:ldv) + hpsi(1:ldv, idim) - tmp * psi(1:ldv, idim)
-       if(associated(st%zeigenval%Im)) resid(1:ldv) = resid(1:ldv) - M_zI * st%zeigenval%Im(ist, ik) * psi(1:ldv, idim)
-      end do
-    end do
+       !!!!!!resid(1:ldv) = arpresid(1:ldv) + hpsi(1:ldv, idim) - tmp * psi(1:ldv, idim)
+       !!!!!!if(associated(st%zeigenval%Im)) resid(1:ldv) = resid(1:ldv) - M_zI * st%zeigenval%Im(ist, ik) * psi(1:ldv, idim)
+ !     end do
+ !   end do
     !resid(:) = resid(:) * sqrt(gr%mesh%volume_element)
-    SAFE_DEALLOCATE_A(hpsi)
+    !SAFE_DEALLOCATE_A(hpsi)
 
-    resid_sum = abs(sum(resid(:)**2))
-    print *,"residual", resid_sum
-    if(resid_sum < M_EPSILON .or. resid_sum > M_HUGE) then
-      resid(:) = R_TOTYPE(M_ONE)
-    end if
+    !resid_sum = abs(sum(resid(:)**2))
+    !if(resid_sum < M_EPSILON .or. resid_sum > M_HUGE) then
+    !  resid(:) = R_TOTYPE(M_ONE)
+    !end if
     
-  else
-    resid(:) = R_TOTYPE(M_ONE)
-  end if
+ ! else
+ !   resid(:) = R_TOTYPE(M_ONE)
+ ! end if
   
 !   do i = 1, ldv
 ! !      resid(i) = sum(st%X(psi)(i, 1, 1:st%nst, ik))*sqrt(gr%mesh%vol_pp(1))
@@ -162,7 +186,17 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tol_, niter, converged, ik
   !Error Check
   call arpack_check_error('naupd', info)
   
- 
+  write(message(1), '(a)') 'Arpack: Relative errors in Ritz values'
+  call messages_info(1)
+  do i=1, ncv
+    tmp = abs(workl(ipntr(8) + i - 1) / workl(ipntr(6) + i - 1))
+    if(tmp.le.tol) then
+      write(message(1), '(a,i6,a,es10.3,a)') 'Arpack:', i, '   ', tmp, ' OK'
+    else
+      write(message(1), '(a,i6,a,es10.3)') 'Arpack:', i, '   ', tmp
+    end if
+    call messages_info(1)
+  end do
 
 #if defined(R_TCOMPLEX) 
   if(arpack%use_parpack) then
@@ -210,11 +244,19 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tol_, niter, converged, ik
   !Error Check    
   call arpack_check_error('neupd', info) 
 
+
+  if(arpack%init_resid.eq.2) then
+    resid(:) = R_TOTYPE(M_ONE)
+  else ! XXX revisit meaning of init_resid values
+    resid(:) = sum(v(:, :), 2)
+  end if
+    
+
   ! This sets niter to the number of matrix-vector operations.
   niter = iparam(9)
   
   ! The number of converged eigenvectors.
-  converged =  iparam(5)
+  converged = iparam(5)
     
   do j = 1, converged
 !     do i = 1, n
@@ -241,6 +283,15 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tol_, niter, converged, ik
       diff(j) = workl(ipntr(11)+j-1)
     end if
   end do
+
+  write(message(1), '(a,i6)') 'Arpack: Number of major iterations         ', iparam(3)
+  write(message(2), '(a,i6)') 'Arpack: Number of matrix-vector operations ', iparam(9)
+  write(message(3), '(a,i6)') 'Arpack: Number of reorthogonalizations     ', iparam(11)
+  write(message(4), '(a,i6)') 'Arpack: Number of converged ritz values    ', iparam(5)
+  call messages_info(4)
+
+  ! ipntr(8) is a pointer to the BOUNDS array, presumably of length ncv
+  ! perhaps we can use that to intelligently choose a stop criterion involving e.g. only our occupied states
 
   !Fill unconverged states with (nice) garbage  
   ! or maybe we should go with whatever we have
@@ -288,7 +339,7 @@ contains
     R_TYPE,               intent(in) :: v(n)
     R_TYPE,               intent(out):: w(n)
     
-    integer :: i, NP, NP_PART
+    integer             :: i, NP, NP_PART
     R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
     
     PUSH_SUB(X(eigen_solver_arpack).av)

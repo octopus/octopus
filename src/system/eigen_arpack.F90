@@ -60,6 +60,7 @@ module eigen_arpack_m
     integer          :: init_resid      !< inital residual strategy
     CMPLX            :: rotation        !< rotate spectrum by complex number before determining order
     logical          :: use_parpack
+    FLOAT            :: initial_tolerance
   end type eigen_arpack_t
 
 contains
@@ -75,13 +76,31 @@ contains
     PUSH_SUB(arpack_init)
 #if defined(HAVE_ARPACK)
 
-    ! XXX yuck, this parameter is also given in Hamiltonian.  How should it be transferred from there to here
+    ! XXX yuck, this parameter is also given in grid/cmplxscl.  How should it be transferred from there to here
     ! without parsing the parameter again?  For now we`ll just parse it again
+    ! Documentation for this variable is written in grid/cmplxscl.
     rotate_spectrum_angle = M_ZERO
 
     call parse_float(datasets_check('ComplexScalingRotateSpectrum'), M_ZERO, rotate_spectrum_angle)
     call messages_print_var_value(stdout, "ComplexScalingRotateSpectrum", rotate_spectrum_angle)
 
+    !%Variable ArpackInitialTolerance
+    !%Type float
+    !%Section SCF::Eigensolver 
+    !%Description 
+    !% Use this tolerance in Arpack when the relative density error is
+    !% approximately 1. As the relative density error becomes lower,
+    !% use a tolerance in between this value and EigenSolverTolerance
+    !% approaching the latter as the SCF cycle converges. This
+    !% parameter is ignored if given a non-positive value (default).
+    !% In that case EigenSolverTolerance is used always.
+    !%End 
+    call parse_float(datasets_check('ArpackInitialTolerance'), M_ZERO, this%initial_tolerance)
+    
+    if(this%initial_tolerance.gt.0) then
+      call messages_print_var_value(stdout, "ArpackInitialTolerance", this%initial_tolerance)
+    end if
+    
     this%rotation = exp(M_zI * rotate_spectrum_angle)
      
     use_parpack = .false.
@@ -95,13 +114,10 @@ contains
     !%Description 
     !% Use PARPACK.
     !%End 
-    call parse_logical(datasets_check('EigensolverParpack'), use_parpack, this%use_parpack) 
+    call parse_logical(datasets_check('EigensolverParpack'), use_parpack, this%use_parpack)
     call messages_print_var_value(stdout, "EigensolverParpack", this%use_parpack)
     
 #endif
-
-
-    
     
     !%Variable EigensolverArnoldiVectors 
     !%Type integer 
@@ -170,7 +186,8 @@ contains
   
     POP_SUB(arpack_init)    
   end subroutine arpack_init
-  
+
+
   !--------------------------------------------    
   subroutine arpack_debug(debug_level)
     integer, intent(in) :: debug_level

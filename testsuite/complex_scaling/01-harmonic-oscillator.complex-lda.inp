@@ -17,6 +17,8 @@ PoissonSolver=direct_sum
 
 # recommended 2 * nstates + 1 or more
 EigenSolverArnoldiVectors = 50
+EigensolverTolerance = 1e-15
+ArpackInitialTolerance = 1
 
 TheoryLevel = DFT
 
