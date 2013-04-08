@@ -285,7 +285,6 @@ contains
       if (mpi_grp_is_root(mpi_world)) then
         write(message(1), *) 'Permutation of states'
         write(message(2), *) index
-        call messages_info(1)
         call messages_info(2)
       end if
       
