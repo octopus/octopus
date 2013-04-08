@@ -188,13 +188,13 @@ contains
   !! from how it is in the rest of the code (for historical reasons
   !! and also because the vec_init has more a global than local point
   !! of view on the mesh): See the comments in the parameter list.
-  subroutine vec_init(comm, root, np, np_part, idx, stencil, dim, periodic_dim, vp)
+  subroutine vec_init(comm, root, np_global, np_part_global, idx, stencil, dim, periodic_dim, vp)
     integer,         intent(in)  :: comm         !< Communicator to use.
     integer,         intent(in)  :: root         !< The master node.
 
     !> The next seven entries come from the mesh.
-    integer,         intent(in)  :: np           !< mesh%np_global
-    integer,         intent(in)  :: np_part      !< mesh%np_part_global
+    integer,         intent(in)  :: np_global           !< mesh%np_global
+    integer,         intent(in)  :: np_part_global      !< mesh%np_part_global
     type(index_t),   intent(in)  :: idx
     type(stencil_t), intent(in)  :: stencil      !< The stencil for which to calculate ghost points.
     integer,         intent(in)  :: dim          !< Number of dimensions.
@@ -223,7 +223,7 @@ contains
 
     ! Shortcuts.
     call MPI_Comm_Size(comm, npart, mpi_err)
-    np_enl = np_part - np
+    np_enl = np_part_global - np_global
 
     ! Store partition number and rank for later reference.
     ! Having both variables is a bit redundant but makes the code readable.
@@ -236,7 +236,7 @@ contains
     SAFE_ALLOCATE(irr(1:npart, 1:npart))
     SAFE_ALLOCATE(vp%np_local(1:npart))
     SAFE_ALLOCATE(vp%xlocal(1:npart))
-    SAFE_ALLOCATE(vp%local(1:np))
+    SAFE_ALLOCATE(vp%local(1:np_global))
     SAFE_ALLOCATE(vp%np_bndry(1:npart))
     SAFE_ALLOCATE(vp%xbndry(1:npart))
     SAFE_ALLOCATE(vp%bndry(1:np_enl))
@@ -250,13 +250,13 @@ contains
     ! Count number of points for each node.
     ! Local points.
     vp%np_local = 0
-    do ip = 1, np
+    do ip = 1, np_global
       vp%np_local(vp%part(ip)) = vp%np_local(vp%part(ip)) + 1
     end do
     ! Boundary points.
     vp%np_bndry = 0
     do ip = 1, np_enl
-      vp%np_bndry(vp%part(ip + np)) = vp%np_bndry(vp%part(ip + np)) + 1
+      vp%np_bndry(vp%part(ip + np_global)) = vp%np_bndry(vp%part(ip + np_global)) + 1
     end do
 
     ! Set up local-to-global index table for local points
@@ -270,12 +270,12 @@ contains
     end do
     ! Set the local and boundary points
     ir = 0
-    do ip = 1, np
+    do ip = 1, np_global
       vp%local(vp%xlocal(vp%part(ip)) + ir(vp%part(ip))) = ip
       ir(vp%part(ip))                                 = ir(vp%part(ip)) + 1 ! increment the counter
     end do
     ir = 0
-    do ip = np+1, np+np_enl
+    do ip = np_global+1, np_global+np_enl
       vp%bndry(vp%xbndry(vp%part(ip)) + ir(vp%part(ip))) = ip
       ir(vp%part(ip))                                 = ir(vp%part(ip)) + 1 ! increment the counter
     end do
@@ -388,7 +388,7 @@ contains
 
     ! Fill ghost as described above.
     irr = 0
-    do ip = 1, np+np_enl
+    do ip = 1, np_global+np_enl
       inode = vp%partno
       jnode = iihash_lookup(ghost_flag(inode), ip, found)
       ! If point ip is a ghost point for inode from jnode, save this
@@ -459,7 +459,7 @@ contains
     ! Complete entries in vp.
     vp%comm   = comm
     vp%root   = root
-    vp%np     = np
+    vp%np     = np_global
     vp%np_enl = np_enl
     vp%npart  = npart
 

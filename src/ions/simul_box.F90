@@ -1010,6 +1010,7 @@ contains
 
 
   !--------------------------------------------------------------
+  !> Checks if a mesh point belongs to the actual mesh.
   logical function simul_box_in_box(sb, geo, yy) result(in_box)
     type(simul_box_t),  intent(in) :: sb
     type(geometry_t),   intent(in) :: geo
@@ -1030,6 +1031,7 @@ contains
 
 
   !--------------------------------------------------------------
+  !> Checks if a group of mesh points belong to the actual mesh.
   subroutine simul_box_in_box_vec(sb, geo, npoints, point, in_box)
     type(simul_box_t),  intent(in)  :: sb
     type(geometry_t),   intent(in)  :: geo
@@ -1108,18 +1110,13 @@ contains
       else
         do ip = 1, npoints
           in_box(ip) = .false.
-
           do ilist = 1, nlist(ip)
-
             iatom = list(ilist, ip)
-
             dist2 = sum((xx(1:sb%dim, ip) - geo%atom(iatom)%x(1:sb%dim))**2)
-
             if(dist2 < species_def_rsize(geo%atom(iatom)%spec)**2) then
               in_box(ip) = .true.
               exit
             end if
-
           end do
         end do
       end if

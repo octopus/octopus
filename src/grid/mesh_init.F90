@@ -81,7 +81,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge, ob_grid)
   mesh%sb => sb     ! keep an internal pointer
   mesh%idx%sb => sb
   mesh%spacing = spacing ! this number can change in the following
-  mesh%use_curvilinear = cv%method.ne.CURV_METHOD_UNIFORM
+  mesh%use_curvilinear = cv%method /= CURV_METHOD_UNIFORM
   mesh%cv => cv
 
   ! multiresolution requires the curvilinear coordinates machinery
@@ -173,7 +173,9 @@ subroutine mesh_read_lead(ob_grid, mesh)
 end subroutine mesh_read_lead
 
 ! ---------------------------------------------------------
-
+!> This subroutine checks if every grid point belongs to the internal
+!! mesh, based on the global lxyz_inv matrix. Afterwards, it counts
+!! how many points has the mesh and the enlargement.
 subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   type(mesh_t),        intent(inout) :: mesh
   type(simul_box_t),   intent(in)    :: sb
@@ -181,7 +183,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   type(curvilinear_t), intent(in)    :: cv
   type(stencil_t),     intent(in)    :: stencil
 
-  integer :: i, j, k, il, ik, ix, iy, iz, is
+  integer :: il, ik, ix, iy, iz, is
   integer :: newi, newj, newk, ii, jj, kk, dx, dy, dz, i_lev
   integer :: jx, jy, jz, res_counter, j_counter
   FLOAT   :: chi(MAX_DIM)
@@ -189,7 +191,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   logical, allocatable :: in_box(:)
   FLOAT,   allocatable :: xx(:, :)
   real(8), parameter :: DELTA = CNST(1e-12)
-  integer :: sz, ez
+  integer :: start_z, end_z
   type(profile_t), save :: prof
 #if defined(HAVE_MPI) && defined(HAVE_MPI2)
   type(profile_t), save :: prof_reduce
@@ -203,16 +205,13 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   ! enlarge mesh for boundary points
   mesh%idx%nr(1,:) = mesh%idx%nr(1,:) - mesh%idx%enlarge(:)
   mesh%idx%nr(2,:) = mesh%idx%nr(2,:) + mesh%idx%enlarge(:)
-
   if(mesh%idx%sb%box_shape == HYPERCUBE) then
     call hypercube_init(mesh%idx%hypercube, sb%dim, mesh%idx%nr, mesh%idx%enlarge(1))
     mesh%np_part_global = hypercube_number_total_points(mesh%idx%hypercube)
     mesh%np_global      = hypercube_number_inner_points(mesh%idx%hypercube)
-
     nullify(mesh%resolution)
     nullify(mesh%idx%lxyz_inv)
     nullify(mesh%idx%lxyz)
-
     call profiling_out(mesh_init_prof)
     POP_SUB(mesh_init_stage_2)
     return
@@ -232,10 +231,8 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 
   mesh%idx%lxyz_inv(:,:,:) = 0
   res = 1
-
   SAFE_ALLOCATE(xx(1:MAX_DIM, mesh%idx%nr(1,1):mesh%idx%nr(2,1)))
   SAFE_ALLOCATE(in_box(mesh%idx%nr(1,1):mesh%idx%nr(2,1)))
-
   chi = M_ZERO
 
 #if defined(HAVE_MPI) && defined(HAVE_MPI2)
@@ -243,22 +240,23 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   SAFE_ALLOCATE(end(1:mpi_world%size))
   call multicomm_divide_range(mesh%idx%nr(2,3) - mesh%idx%nr(1,3) + 1, mpi_world%size, start, end)
 
-  sz = start(mpi_world%rank + 1) - 1 + mesh%idx%nr(1, 3)
-  ez = end(mpi_world%rank + 1) - 1 + mesh%idx%nr(1, 3)
+  start_z = start(mpi_world%rank + 1) - 1 + mesh%idx%nr(1, 3)
+  end_z = end(mpi_world%rank + 1) - 1 + mesh%idx%nr(1, 3)
+
+  SAFE_DEALLOCATE_A(start)
+  SAFE_DEALLOCATE_A(end)
 #else
-  sz = mesh%idx%nr(1, 3)
-  ez = mesh%idx%nr(2, 3)
+  start_z = mesh%idx%nr(1, 3)
+  end_z = mesh%idx%nr(2, 3)
 #endif
 
   call profiling_in(prof, "MESH_LABEL")
 
   ! We label the points inside the mesh
-  do iz = sz, ez
+  do iz = start_z, end_z
     chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + sb%box_offset(3)
-    
     do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
       chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2) + sb%box_offset(2)
-      
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + sb%box_offset(1)
         call curvilinear_chi2x(sb, cv, chi(:), xx(:, ix))
@@ -267,72 +265,51 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
       call simul_box_in_box_vec(sb, geo, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box)
 
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-
         ! With multiresolution, only inner (not enlargement) points are marked now
         if(sb%mr_flag) then
-
           if (in_box(ix) ) then
-
             ! First check: is the point beyond the multiresolution areas
             n_mod = 2**sb%hr_area%num_radii
-            if (sum((xx(:,ix)-sb%hr_area%center(:))**2).gt. sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
-                 mod(ix, n_mod).eq.0 .and. mod(iy, n_mod).eq.0 .and. mod(iz,n_mod) .eq. 0) then
+            if (sum((xx(:,ix)-sb%hr_area%center(:))**2) > sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
+                 mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz,n_mod) == 0) then
               mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
             end if
-
             ! Other option: must be inside the multiresolution area and satisfy coordinate index conditions
             if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
               do i_lev = 1,sb%hr_area%num_radii
                 n_mod = 2**(i_lev-1)
-                if( sum((xx(:,ix)-sb%hr_area%center(:))**2) .lt. sb%hr_area%radius(i_lev)**2 + DELTA .and. &
-                    mod(ix, n_mod).eq.0 .and. mod(iy, n_mod).eq.0 .and. mod(iz,n_mod) .eq. 0) then
+                if( sum((xx(:,ix)-sb%hr_area%center(:))**2) < sb%hr_area%radius(i_lev)**2 + DELTA .and. &
+                    mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz,n_mod) == 0) then
                   mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix,iy, iz), INNER_POINT)
                 end if
               end do
             end if
-
           end if
-
         else ! the usual way: mark both inner and enlargement points
-
           if (in_box(ix)) then
-
             mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
-
             do is = 1, stencil%size
               if(stencil%center == is) cycle
-    
-              i = ix + stencil%points(1, is)
-              j = iy + stencil%points(2, is)
-              k = iz + stencil%points(3, is)
-    
-              if(any((/i, j, k/) < mesh%idx%nr(1, 1:3)) .or. any((/i, j, k/) >  mesh%idx%nr(2, 1:3))) cycle
-    
-              mesh%idx%lxyz_inv(i, j, k) = ibset(mesh%idx%lxyz_inv(i, j, k), ENLARGEMENT_POINT)
-
+              ii = ix + stencil%points(1, is)
+              jj = iy + stencil%points(2, is)
+              kk = iz + stencil%points(3, is)
+              if(any((/ii, jj, kk/) < mesh%idx%nr(1, 1:3)) .or. any((/ii, jj, kk/) >  mesh%idx%nr(2, 1:3))) cycle
+              mesh%idx%lxyz_inv(ii, jj, kk) = ibset(mesh%idx%lxyz_inv(ii, jj, kk), ENLARGEMENT_POINT)
             end do
-
           end if
-  
         end if
-
       end do
     end do
   end do
-
 
 #if defined(HAVE_MPI) && defined(HAVE_MPI2)
   call profiling_in(prof_reduce, "MESH_LABEL_REDUCE")
 
   npoints = product(nr(2, 1:3) - nr(1, 1:3) + 1)
-
   call MPI_Allreduce(MPI_IN_PLACE, mesh%idx%lxyz_inv(nr(1, 1), nr(1, 2), nr(1, 3)), npoints, &
     MPI_INTEGER, MPI_BOR, mpi_world%comm, mpi_err)
 
   call profiling_out(prof_reduce)
-
-  SAFE_DEALLOCATE_A(start)
-  SAFE_DEALLOCATE_A(end)
 #endif
 
   call profiling_out(prof)
@@ -341,27 +318,19 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   SAFE_DEALLOCATE_A(in_box)
 
   if(sb%mr_flag) then
-
     ! Calculate the resolution for each point and label the enlargement points
     do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
       chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + sb%box_offset(3)
-      
       do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
         chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2) + sb%box_offset(2)
-        
         do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
           chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + sb%box_offset(1)
- 
-          ! skip if not inner point
+           ! skip if not inner point
           if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
-        
           res = -1
           res_counter = 0
- 
           do while(.true.)
- 
             res_counter = res_counter + 1
- 
             ! loop through Cartesian axes (both directions)
             do j_counter = 1,6
               select case(j_counter)
@@ -378,7 +347,6 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
                 case(6)
                   jx=ix; jy=iy; jz=iz+res_counter
               end select
- 
               if(any((/jx, jy, jz/) < mesh%idx%nr(1, 1:3)) .or. &
                  any((/jx, jy, jz/) > mesh%idx%nr(2, 1:3))) cycle
               ! exit after finding neighboring inner point
@@ -386,35 +354,24 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
                 res = res_counter
                 exit
               end if
- 
             end do
- 
-            if(res.ne.-1) exit
- 
+            if(res /= -1) exit
           end do
- 
           mesh%resolution(ix, iy, iz) = res
-
           ! mark the enlargement points
           do is = 1, stencil%size
             if(stencil%center == is) cycle
- 
-            i = ix + res*stencil%points(1, is)
-            j = iy + res*stencil%points(2, is)
-            k = iz + res*stencil%points(3, is)
- 
-            if(any((/i, j, k/) < mesh%idx%nr(1, 1:3)) .or. any((/i, j, k/) >  mesh%idx%nr(2, 1:3))) cycle
-
-            mesh%idx%lxyz_inv(i, j, k) = ibset(mesh%idx%lxyz_inv(i, j, k), ENLARGEMENT_POINT)
-
+            ii = ix + res*stencil%points(1, is)
+            jj = iy + res*stencil%points(2, is)
+            kk = iz + res*stencil%points(3, is)
+            if(any((/ii, jj, kk/) < mesh%idx%nr(1, 1:3)) .or. any((/ii, jj, kk/) >  mesh%idx%nr(2, 1:3))) cycle
+            mesh%idx%lxyz_inv(ii, jj, kk) = ibset(mesh%idx%lxyz_inv(ii, jj, kk), ENLARGEMENT_POINT)
             ! If the point is not an inner point, and if its resolution can be decreased, do it now
-            if(.not. btest(mesh%idx%lxyz_inv(i, j, k), INNER_POINT)) then
-              if(mesh%resolution(i, j, k) .eq. 0 .or. mesh%resolution(i, j, k) .gt. res) &
-                mesh%resolution(i,j,k) = res
+            if(.not. btest(mesh%idx%lxyz_inv(ii, jj, kk), INNER_POINT)) then
+              if(mesh%resolution(ii, jj, kk) == 0 .or. mesh%resolution(ii, jj, kk) > res) &
+                   mesh%resolution(ii, jj, kk) = res
             end if
- 
           end do
- 
         end do
       end do
     end do
@@ -434,11 +391,9 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   mesh%np_part_global = il
   mesh%np_global      = ik
 
-
   ! Errors occur during actual calculation if resolution interfaces are too close to each other. The
   ! following routine checks that everything will be ok.
   if(sb%mr_flag) then
-
     ! loop through all interpolation points and check that all points used for interpolation exist
     do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
       do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
@@ -603,7 +558,7 @@ contains
     end if
     
     ! When using open boundaries we need to have a mesh block-size of 1
-    if (parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
+    if (parse_block(datasets_check('OpenBoundaries'), blk) == 0) then
       if (any(bsize > 1)) then
         message(1) = 'When in transport mode, the block-ordering'
         message(2) = 'of the mesh points cannot be chosen freely.'
@@ -995,17 +950,17 @@ contains
               do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
  
                 ! Skip ordinary points
-                if(mesh%idx%lxyz_inv(ix,iy,iz).gt.0 .and. &
-                     mesh%idx%lxyz_inv(ix,iy,iz).le.mesh%np) cycle
+                if(mesh%idx%lxyz_inv(ix,iy,iz) > 0 .and. &
+                     mesh%idx%lxyz_inv(ix,iy,iz) <= mesh%np) cycle
 
                 ! Is it the kind of intermediate point we are looking for?
                 n_mod = 2**i_lev
                 dx = abs(mod(ix, n_mod))
                 dy = abs(mod(iy, n_mod))
                 dz = abs(mod(iz, n_mod))
-                if(dx+dy+dz.eq.M_ZERO) cycle
+                if(dx+dy+dz == M_ZERO) cycle
 
-                if(abs(vol_tmp(ix, iy, iz)).lt.DELTA) cycle
+                if(abs(vol_tmp(ix, iy, iz)) < DELTA) cycle
 
                 ! The present point (ix,iy,iz) is an intermediate one. When
                 ! calculating integrals, the value of the integrand is
