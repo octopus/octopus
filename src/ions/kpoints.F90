@@ -333,19 +333,28 @@ contains
       if(this%use_symmetries) then
 
         SAFE_ALLOCATE(num_symm_ops(1:this%full%npoints))
-        SAFE_ALLOCATE(symm_ops(1:this%full%npoints, 1:symmetries_number(symm)))
+
+        if(this%use_time_reversal) then
+          SAFE_ALLOCATE(symm_ops(1:this%full%npoints, 1:2*symmetries_number(symm)))
+        else
+          SAFE_ALLOCATE(symm_ops(1:this%full%npoints, 1:symmetries_number(symm)))
+        end if
         
         call kpoints_grid_reduce(symm, this%use_time_reversal, &
           this%reduced%npoints, dim, this%reduced%red_point, this%reduced%weight, symm_ops, num_symm_ops)
         
         ! sanity checks
         ASSERT(maxval(num_symm_ops) >= 1)
-        ASSERT(maxval(num_symm_ops) <= symmetries_number(symm))
+        if(this%use_time_reversal) then
+          ASSERT(maxval(num_symm_ops) <= 2*symmetries_number(symm))
+        else
+          ASSERT(maxval(num_symm_ops) <= symmetries_number(symm))
+        end if
         ! the total number of symmetry operations in the list has to be equal to the number of k-points
         ASSERT(sum(num_symm_ops(1:this%reduced%npoints)) == this%full%npoints)
 
         do ik = 1, this%reduced%npoints
-          ASSERT(all(symm_ops(ik, 1:num_symm_ops(ik)) < symm%nops))
+          ASSERT(all(symm_ops(ik, 1:num_symm_ops(ik)) <= symm%nops))
         end do
 
         SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
@@ -717,6 +726,8 @@ contains
       ! operate with the symmetry operations
       
       do iop = 1, symmetries_number(symm)
+        if(iop == symmetries_identity_index(symm)) cycle ! no need to check for the identity
+
         call symmetries_apply_kpoint(symm, iop, reduced(1:dim, nreduced), tran)
         tran_inv(1:dim) = -tran(1:dim)
            
