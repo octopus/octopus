@@ -42,7 +42,7 @@ module boundaries_m
 
   type boundaries_t
     type(mesh_t), pointer :: mesh
-    integer          :: nper             !< the number of points that correpond to pbc
+    integer          :: nper             !< the number of points that correspond to pbc
     integer, pointer :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
 #ifdef HAVE_MPI
     integer, pointer :: per_send(:, :)
