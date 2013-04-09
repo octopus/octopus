@@ -523,9 +523,9 @@ contains
 
       ! This is like in vec_scatter/gather.
       vp%rdispls(1:vp%npart) = vp%xghost_neigh(vp%partno, 1:vp%npart) - vp%xghost(vp%partno)
-      
       vp%rcounts(1:vp%npart) = vp%np_ghost_neigh(vp%partno, 1:vp%npart)
-
+      SAFE_DEALLOCATE_P(vp%xghost_neigh)
+      
       POP_SUB(vec_init.init_send_points)
     end subroutine init_send_points
 
@@ -557,7 +557,6 @@ contains
     SAFE_DEALLOCATE_P(vp%np_ghost)
     SAFE_DEALLOCATE_P(vp%np_ghost_neigh)
     SAFE_DEALLOCATE_P(vp%xghost)
-    SAFE_DEALLOCATE_P(vp%xghost_neigh)
     SAFE_DEALLOCATE_P(vp%ghost)
 
     if(associated(vp%global)) then 

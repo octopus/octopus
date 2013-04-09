@@ -630,10 +630,10 @@ contains
   subroutine do_partition()
 #ifdef HAVE_MPI
     integer :: i, j, ipart, jpart, ip, ix, iy, iz
-    integer, allocatable ::  nnb(:), gindex(:), gedges(:)
+    integer, allocatable :: gindex(:), gedges(:)
     logical, allocatable :: nb(:, :)
     integer              :: idx(1:MAX_DIM), jx(1:MAX_DIM)
-    integer              :: graph_comm, iedge
+    integer              :: graph_comm, iedge, nnb
     logical              :: use_topo, reorder, partition_print
     type(partition_t)    :: partition
     integer              :: ierr
@@ -800,15 +800,14 @@ contains
     call vec_init(graph_comm, 0, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
          mesh%sb%dim, mesh%sb%periodic_dim, mesh%vp)
 
-    SAFE_ALLOCATE(nnb(1:mesh%vp%npart))
+    ! check the number of ghost neighbours in parallel
     nnb = 0
-    do jpart = 1, mesh%vp%npart
-      do ipart = 1, mesh%vp%npart
-        if (ipart == jpart) cycle
-        if (mesh%vp%np_ghost_neigh(jpart, ipart) /= 0) nnb(jpart) = nnb(jpart) + 1
-      end do
-      ASSERT(nnb(jpart) >= 0 .and. nnb(jpart) < mesh%vp%npart)
+    jpart =  mesh%vp%partno
+    do ipart = 1, mesh%vp%npart
+      if (ipart == jpart) cycle
+      if (mesh%vp%np_ghost_neigh(jpart, ipart) /= 0) nnb = nnb + 1
     end do
+    ASSERT(nnb >= 0 .and. nnb < mesh%vp%npart)
 
     ! Set local point numbers.
     mesh%np      = mesh%vp%np_local(mesh%vp%partno)
