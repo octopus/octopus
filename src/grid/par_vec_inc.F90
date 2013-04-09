@@ -41,7 +41,7 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   call profiling_in(prof_scatter, "VEC_SCATTER")
 
   ! Skip the MPI call if domain parallelization is not used.
-  if(vp%npart.lt.2) then
+  if(vp%npart < 2) then
     v_local(1:vp%np) = v(1:vp%np)
     POP_SUB(X(vec_scatter))
     return
@@ -53,7 +53,7 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   displs = vp%xlocal - 1
 
   SAFE_ALLOCATE(v_tmp(1:1))
-  if(vp%rank.eq.root) then
+  if(vp%rank == root) then
   ! Fill send buffer.
     SAFE_DEALLOCATE_A(v_tmp)
     SAFE_ALLOCATE(v_tmp(1:vp%np))
@@ -104,7 +104,7 @@ subroutine X(vec_scatter_bndry)(vp, root, v, v_local)
 
   ! Fill send buffer.
   SAFE_ALLOCATE(v_tmp(1:1))
-  if(vp%rank.eq.root) then
+  if(vp%rank == root) then
     SAFE_DEALLOCATE_A(v_tmp)
     SAFE_ALLOCATE(v_tmp(1:vp%np_enl))
 
@@ -167,7 +167,7 @@ subroutine X(vec_gather)(vp, root, v, v_local)
   PUSH_SUB(X(vec_gather))
 
   ! Skip the MPI call if domain parallelization is not used.
-  if(vp%npart.lt.2) then
+  if(vp%npart < 2) then
     v(1:vp%np) = v_local(1:vp%np)
     POP_SUB(X(vec_gather))
     return
@@ -187,7 +187,7 @@ subroutine X(vec_gather)(vp, root, v, v_local)
   call mpi_debug_out(vp%comm, C_MPI_GATHERV)
 
   ! Copy values from v_tmp to their original position in v.
-  if(vp%rank.eq.root) then
+  if(vp%rank == root) then
     do i = 1, vp%np
       v(vp%local(i)) = v_tmp(i)
     end do

@@ -85,7 +85,7 @@ contains
     evxctau = M_ZERO
     Imevxctau = M_ZERO
     if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK) & 
-      & .and.(hm%theory_level.ne.CLASSICAL)) then
+      & .and.(hm%theory_level /= CLASSICAL)) then
       if(states_are_real(st)) then
         hm%energy%kinetic  = denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%extern   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)

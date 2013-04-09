@@ -97,7 +97,7 @@ contains
     !%End 
     call parse_float(datasets_check('ArpackInitialTolerance'), M_ZERO, this%initial_tolerance)
     
-    if(this%initial_tolerance.gt.0) then
+    if(this%initial_tolerance > 0) then
       call messages_print_var_value(stdout, "ArpackInitialTolerance", this%initial_tolerance)
     end if
     

@@ -538,7 +538,7 @@ contains
     end if
 
 
-  !if((this%method.eq.POISSON_DIRECT_SUM).and.(this%der%mesh%sb%dim.eq.1).and.present(theta)) then
+  !if((this%method == POISSON_DIRECT_SUM).and.(this%der%mesh%sb%dim == 1).and.present(theta)) then
   !  call poisson1d_solve(this, pot, rho, theta)
   !else
   SAFE_ALLOCATE(aux1(1:der%mesh%np))
@@ -587,7 +587,7 @@ contains
       theta_ = theta
     end if
 
-    ASSERT(this%method.ne.-99)
+    ASSERT(this%method /= -99)
 
 
     if(this%der%mesh%sb%dim == 1 .and. cmplxscl) then

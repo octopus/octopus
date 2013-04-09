@@ -187,7 +187,7 @@ contains
         write(dirname,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
         call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(idir, 1))
           
-        if(ierr .ne. 0) then
+        if(ierr /= 0) then
           message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
           call messages_warning(1)
         end if
@@ -198,7 +198,7 @@ contains
             write(dirname,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
             call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(idir, idir2, 1))
           
-            if(ierr .ne. 0) then
+            if(ierr /= 0) then
               message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//trim(dirname)//"'"
               call messages_warning(1)
             end if

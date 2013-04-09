@@ -46,7 +46,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
 
   if(isigma == 1) then ! the density, current, etc. are only defined for the + frequency
 
-    if(iand(outp%what, C_OUTPUT_DENSITY) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_DENSITY) /= 0) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       do is = 1, st%d%nspin
         if(st%d%nspin == 1) then
@@ -59,7 +59,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
       end do
     end if
 
-    if(iand(outp%what, C_OUTPUT_POL_DENSITY) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_POL_DENSITY) /= 0) then
       fn_unit = units_out%length**(1 - gr%mesh%sb%dim)
       SAFE_ALLOCATE(tmp(1:gr%mesh%np))
       do is = 1, st%d%nspin
@@ -76,7 +76,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
       SAFE_DEALLOCATE_A(tmp)
     end if
 
-    if(iand(outp%what, C_OUTPUT_CURRENT) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_CURRENT) /= 0) then
       if(states_are_complex(st)) then
         fn_unit = units_out%time**(-1) * units_out%length**(-gr%mesh%sb%dim)
         do is = 1, st%d%nspin
@@ -97,13 +97,13 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
     end if
 
     if(gr%mesh%sb%dim==3) then
-      if(iand(outp%what, C_OUTPUT_ELF).ne.0) call lr_elf('lr_elf_D','lr_elf')
+      if(iand(outp%what, C_OUTPUT_ELF) /= 0) call lr_elf('lr_elf_D','lr_elf')
     end if
 
   end if ! isigma == 1
 
 
-  if(iand(outp%what, C_OUTPUT_WFS) .ne. 0) then
+  if(iand(outp%what, C_OUTPUT_WFS) /= 0) then
     fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
     do ist = st%st_start, st%st_end
       if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -134,7 +134,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
     end do
   end if
 
-  if(iand(outp%what, C_OUTPUT_WFS_SQMOD) .ne. 0) then
+  if(iand(outp%what, C_OUTPUT_WFS_SQMOD) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(dtmp(gr%mesh%np_part))
     do ist = st%st_start, st%st_end

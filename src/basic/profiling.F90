@@ -250,12 +250,12 @@ contains
     call papi_init()
 #endif
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then
+    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
       prof_vars%mode = ior(prof_vars%mode, PROFILING_MEMORY)
     end if
 
     ! initialize memory profiling
-    if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) then
+    if(iand(prof_vars%mode, PROFILING_MEMORY) /= 0) then
       prof_vars%alloc_count   = 0
       prof_vars%dealloc_count = 0
 
@@ -280,7 +280,7 @@ contains
       prof_vars%memory_limit = int(ii, 8)*1024
     end if
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then
+    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
       prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, action='write')
     end if
 
@@ -364,7 +364,7 @@ contains
       call profile_end(prof_vars%profile_list(ii)%p)
     end do
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) then
+    if(iand(prof_vars%mode, PROFILING_MEMORY) /= 0) then
       call messages_print_stress(stdout, "Memory profiling information")
       write(message(1), '(a,i10)') 'Number of   allocations = ', prof_vars%alloc_count
       write(message(2), '(a,i10)') 'Number of deallocations = ', prof_vars%dealloc_count
@@ -382,13 +382,13 @@ contains
 
       call messages_print_stress(stdout)
 
-      if(prof_vars%alloc_count.ne.prof_vars%dealloc_count) then
+      if(prof_vars%alloc_count /= prof_vars%dealloc_count) then
         message(1) = "Not all memory was deallocated!";
         call messages_warning(1)
       end if
     end if
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then
+    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
       call io_close(prof_vars%mem_iunit)
     end if
 
@@ -422,7 +422,7 @@ contains
 
     prof_vars%last_profile = prof_vars%last_profile + 1
 
-    ASSERT(prof_vars%last_profile .le. MAX_PROFILES)
+    ASSERT(prof_vars%last_profile  <=  MAX_PROFILES)
 
     prof_vars%profile_list(prof_vars%last_profile)%p => this
     this%initialized = .true.
@@ -785,7 +785,7 @@ contains
     end if
 
     iunit = io_open(trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number, action='write')
-    if(iunit.lt.0) then
+    if(iunit < 0) then
       message(1) = 'Could not write profiling results.'
       call messages_warning(1)
       POP_SUB(profiling_output)
@@ -903,7 +903,7 @@ contains
 
     size = size_ ! make a copy that we can change
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then 
+    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then 
       call profiling_memory_log('A ', var, file, line, size)
     end if
 
@@ -926,7 +926,7 @@ contains
 
     ! check if variable is already in stack
     do ii = 1, MAX_MEMORY_VARS
-      if(str.eq.prof_vars%large_vars(ii)) then
+      if(str == prof_vars%large_vars(ii)) then
         if(size > prof_vars%large_vars_size(ii)) then
           ! delete variable by moving stack up
           do jj = ii,  MAX_MEMORY_VARS - 1
@@ -971,7 +971,7 @@ contains
     prof_vars%dealloc_count  = prof_vars%dealloc_count + 1
     prof_vars%total_memory   = prof_vars%total_memory - size
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL).ne.0) then 
+    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then 
       call profiling_memory_log('D ', var, file, line, -size)
     end if
 

@@ -104,7 +104,7 @@ contains
       intf%extent_uc = nint(2*lsize(tdir)/der%mesh%spacing(tdir))
     endif
 
-    intf%reducible = mod(intf%extent_uc, derivatives_stencil_extent(der, tdir)).eq.0
+    intf%reducible = mod(intf%extent_uc, derivatives_stencil_extent(der, tdir)) == 0
     if(.not.intf%reducible) then
       intf%nblocks = 1
     else
@@ -181,7 +181,7 @@ contains
     if (member_of_interface) then
       member_of_interface = .false.
       do ii=1, intf%np_uc
-        if (intf%index(ii).eq.idx) then
+        if (intf%index(ii) == idx) then
           member_of_interface = .true.
           index = ii
           exit

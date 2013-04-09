@@ -295,18 +295,18 @@ contains
     !%End
     call parse_integer(datasets_check('Output'), 0, outp%what)
 
-    if(iand(outp%what, C_OUTPUT_ELF_FS) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_ELF_FS) /= 0) then
       call messages_experimental("ELF in Fourier space")
     endif
 
-    if(iand(outp%what, C_OUTPUT_WFS_FOURIER) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_WFS_FOURIER) /= 0) then
       call messages_experimental("Wave-functions in Fourier space")
     endif
 
     ! cannot calculate the ELF in 1D
-    if(iand(outp%what, C_OUTPUT_ELF) .ne. 0 .or. iand(outp%what, C_OUTPUT_elf_basins) .ne. 0 &
-       .or. iand(outp%what, C_OUTPUT_ELF_FS) .ne. 0) then
-       if(sb%dim .ne. 2 .and. sb%dim .ne. 3) then
+    if(iand(outp%what, C_OUTPUT_ELF) /= 0 .or. iand(outp%what, C_OUTPUT_elf_basins) /= 0 &
+       .or. iand(outp%what, C_OUTPUT_ELF_FS) /= 0) then
+       if(sb%dim /= 2 .and. sb%dim /= 3) then
          outp%what = iand(outp%what, not(C_OUTPUT_ELF + C_OUTPUT_ELF_BASINS + C_OUTPUT_ELF_FS))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
          call messages_warning(1)
@@ -317,15 +317,15 @@ contains
       call input_error('Output')
     end if
 
-    if(iand(outp%what, C_OUTPUT_MMB) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_MMB) /= 0) then
       call messages_experimental("Model many-body state analysis")
     end if
 
-    if(iand(outp%what, C_OUTPUT_MMB_WFS) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_MMB_WFS) /= 0) then
       call messages_experimental("Model many-body wfs")
     end if
 
-    if(iand(outp%what, C_OUTPUT_MMB_DEN) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_MMB_DEN) /= 0) then
       call messages_experimental("Model many-body density and/or density matrix")
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
@@ -334,7 +334,7 @@ contains
       !   dimensions. The current 1D 1-particle case is simple.
     end if
 
-    if(iand(outp%what, C_OUTPUT_WFS) .ne. 0  .or.  iand(outp%what, C_OUTPUT_WFS_SQMOD) .ne. 0 ) then
+    if(iand(outp%what, C_OUTPUT_WFS) /= 0  .or.  iand(outp%what, C_OUTPUT_WFS_SQMOD) /= 0 ) then
 
       !%Variable OutputWfsNumber
       !%Type string
@@ -463,11 +463,11 @@ contains
       end select
     end if
 
-    if(iand(outp%what, C_OUTPUT_MATRIX_ELEMENTS) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_MATRIX_ELEMENTS) /= 0) then
       call output_me_init(outp%me, sb)
     end if
 
-    if(iand(outp%what, C_OUTPUT_BERKELEYGW) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_BERKELEYGW) /= 0) then
       call output_berkeleygw_init(nst, outp%bgw)
     end if
 
@@ -521,29 +521,29 @@ contains
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp)
 
-    if(iand(outp%what, C_OUTPUT_GEOMETRY) .ne. 0) then
-      if(iand(outp%how, C_OUTPUT_HOW_XCRYSDEN) .ne. 0) then        
+    if(iand(outp%what, C_OUTPUT_GEOMETRY) /= 0) then
+      if(iand(outp%how, C_OUTPUT_HOW_XCRYSDEN) /= 0) then        
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
       endif
-      if(iand(outp%how, C_OUTPUT_HOW_XYZ) .ne. 0) then
+      if(iand(outp%how, C_OUTPUT_HOW_XYZ) /= 0) then
         call geometry_write_xyz(dir, "geometry", geo, gr%sb%dim)
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
       endif
     end if
 
-    if(iand(outp%what, C_OUTPUT_FORCES) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_FORCES) /= 0) then
       call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
     endif
 
-    if(iand(outp%what, C_OUTPUT_MATRIX_ELEMENTS) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_MATRIX_ELEMENTS) /= 0) then
       call output_me(outp%me, dir, st, gr, geo, hm)
     end if
 
-    if (iand(outp%how, C_OUTPUT_HOW_ETSF) .ne. 0) then
+    if (iand(outp%how, C_OUTPUT_HOW_ETSF) /= 0) then
       call output_etsf(st, gr, geo, dir, outp)
     end if
 
-    if (iand(outp%what, C_OUTPUT_BERKELEYGW) .ne. 0) then
+    if (iand(outp%what, C_OUTPUT_BERKELEYGW) /= 0) then
       call output_berkeleygw(outp%bgw, dir, st, gr, xc, hm, geo)
     end if
     
@@ -576,19 +576,19 @@ contains
     SAFE_ALLOCATE(f_loc(1:gr%mesh%np, 1:imax))
 
     ! First the ELF in real space
-    if(iand(outp%what, C_OUTPUT_ELF) .ne. 0 .or. iand(outp%what, C_OUTPUT_ELF_BASINS) .ne. 0) then
-      ASSERT(gr%mesh%sb%dim .ne. 1)
+    if(iand(outp%what, C_OUTPUT_ELF) /= 0 .or. iand(outp%what, C_OUTPUT_ELF_BASINS) /= 0) then
+      ASSERT(gr%mesh%sb%dim /= 1)
 
       call elf_calc(st, gr, f_loc)
       
       ! output ELF in real space
-      if(iand(outp%what, C_OUTPUT_ELF) .ne. 0) then
+      if(iand(outp%what, C_OUTPUT_ELF) /= 0) then
         write(fname, '(a)') 'elf_rs'
         call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
           f_loc(:,imax), unit_one, ierr, is_tmp = .false., geo = geo)
         ! this quantity is dimensionless
 
-        if(st%d%ispin .ne. UNPOLARIZED) then
+        if(st%d%ispin /= UNPOLARIZED) then
           do is = 1, 2
             write(fname, '(a,i1)') 'elf_rs-sp', is
             call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
@@ -598,12 +598,12 @@ contains
         end if
       end if
 
-      if(iand(outp%what, C_OUTPUT_ELF_BASINS) .ne. 0) &
+      if(iand(outp%what, C_OUTPUT_ELF_BASINS) /= 0) &
         call out_basins(f_loc(:,1), "elf_rs_basins")
     end if
 
     ! Second, ELF in Fourier space.
-    if(iand(outp%what, C_OUTPUT_ELF_FS) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_ELF_FS) /= 0) then
       call elf_calc_fs(st, gr, f_loc)
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'elf_fs-sp', is
@@ -614,7 +614,7 @@ contains
     end if
 
     ! Now Bader analysis
-    if(iand(outp%what, C_OUTPUT_BADER) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_BADER) /= 0) then
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,i1)') 'bader-sp', is
@@ -628,7 +628,7 @@ contains
     end if
 
     ! Now the pressure
-    if(iand(outp%what, C_OUTPUT_EL_PRESSURE) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_EL_PRESSURE) /= 0) then
       call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call dio_function_output(outp%how, dir, "el_pressure", gr%mesh, &
         f_loc(:,1), unit_one, ierr, is_tmp = .false., geo = geo, grp = mpi_grp)

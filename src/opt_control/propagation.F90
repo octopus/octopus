@@ -165,7 +165,7 @@ module opt_control_propagation_m
     call v_ks_calc(sys%ks, hm, psi, time = M_ZERO)
     call propagator_run_zero_iter(hm, gr, td%tr)
 
-    if(target_type(target) .eq. oct_tg_velocity) then
+    if(target_type(target)  ==  oct_tg_velocity) then
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
        vel_target_ = .true.
        do iatom=1, sys%geo%natoms
@@ -175,7 +175,7 @@ module opt_control_propagation_m
        end do
     end if
 
-    if(target_type(target) .eq. oct_tg_hhgnew) then
+    if(target_type(target)  ==  oct_tg_hhgnew) then
        call target_init_propagation(target)
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
        vel_target_ = .true.
@@ -216,7 +216,7 @@ module opt_control_propagation_m
       if(move_ions_) then
          call forces_calculate(gr, sys%geo, hm%ep, psi, i*td%dt)
          do iatom=1, sys%geo%natoms
-           if(i.ne.td%max_iter) then
+           if(i /= td%max_iter) then
              sys%geo%atom(iatom)%v(1:MAX_DIM) = sys%geo%atom(iatom)%v(1:MAX_DIM) + &
                sys%geo%atom(iatom)%f(1:MAX_DIM)*td%dt/species_weight(sys%geo%atom(iatom)%spec)
            else
@@ -341,7 +341,7 @@ module opt_control_propagation_m
     call propagator_remove_scf_prop(tr_chi)
 
     aux_fwd_propagation = ( target_mode(target) == oct_targetmode_td .or. &
-                           (hm%theory_level.ne.INDEPENDENT_PARTICLES .and. &
+                           (hm%theory_level /= INDEPENDENT_PARTICLES .and. &
                             .not.sys%ks%frozen_hxc ) )
     if(aux_fwd_propagation) then
       call states_copy(psi2, psi)
@@ -385,7 +385,7 @@ module opt_control_propagation_m
     call v_ks_calc(sys%ks, hm, psi)
 
     if( target_mode(target) == oct_targetmode_td .or. &
-        (hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.sys%ks%frozen_hxc) ) ) then
+        (hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.sys%ks%frozen_hxc) ) ) then
       call states_end(psi2)
       call controlfunction_end(par_prev)
     end if
@@ -595,7 +595,7 @@ module opt_control_propagation_m
       call states_end(inh)
     end if
 
-    if( hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
+    if( hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call density_calc(st, gr, st%rho)
       call hamiltonian_set_oct_exchange(hm, st, gr, ks%xc)
     end if
@@ -634,7 +634,7 @@ module opt_control_propagation_m
       call hamiltonian_remove_inh(hm)
     end if
 
-    if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
+    if(hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call hamiltonian_remove_oct_exchange(hm)
     end if
 
@@ -645,7 +645,7 @@ module opt_control_propagation_m
         call controlfunction_to_h_val(par, hm%ep, j+1)
       end if
     end do
-    if(hm%theory_level.ne.INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
+    if(hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call density_calc(st, gr, st%rho)
       call v_ks_calc(ks, hm, st)
       call hamiltonian_update(hm, gr%mesh)
@@ -691,7 +691,7 @@ module opt_control_propagation_m
       call states_end(oppsi)
 
       ! The quadratic part should only be computed if necessary.
-      if(laser_kind(hm%ep%lasers(j)).eq.E_FIELD_MAGNETIC ) then
+      if(laser_kind(hm%ep%lasers(j)) == E_FIELD_MAGNETIC ) then
         call states_copy(oppsi, psi)
         dq(j) = M_z0
         do ik = 1, psi%d%nik
@@ -832,7 +832,7 @@ module opt_control_propagation_m
     PUSH_SUB(oct_prop_check)
 
     do j = 1, prop%number_checkpoints + 2
-     if(prop%iter(j) .eq. iter) then
+     if(prop%iter(j)  ==  iter) then
        call states_copy(stored_st, psi)
        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
        call restart_read(trim(filename), stored_st, gr, ierr)
@@ -870,7 +870,7 @@ module opt_control_propagation_m
     PUSH_SUB(oct_prop_read_state)
 
     do j = 1, prop%number_checkpoints + 2
-     if(prop%iter(j) .eq. iter) then
+     if(prop%iter(j)  ==  iter) then
        write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
        call restart_read(trim(filename), psi, gr, ierr)
      end if
@@ -895,7 +895,7 @@ module opt_control_propagation_m
     PUSH_SUB(oct_prop_output)
 
     do j = 1, prop%number_checkpoints + 2
-      if(prop%iter(j) .eq. iter) then
+      if(prop%iter(j)  ==  iter) then
         write(filename,'(a,i4.4)') trim(prop%dirname)//'/', j
         call restart_write(io_workpath(filename), psi, gr, geo, ierr, iter)
       end if

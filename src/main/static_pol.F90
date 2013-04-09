@@ -115,19 +115,19 @@ contains
         rewind(iunit)
 
         read(iunit, fmt=*, iostat = ios) e_field_saved
-        field_written = (ios .eq. 0)
+        field_written = (ios  ==  0)
 
         read(iunit, fmt=*, iostat = ios) (center_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
-        center_written = (ios .eq. 0)
+        center_written = (ios  ==  0)
 
         do ii = 1, 3
           read(iunit, fmt=*, iostat = ios) ((dipole(ii, jj, isign), jj = 1, sys%gr%mesh%sb%dim), isign = 1, 2)
-          if(ios .ne. 0) exit
+          if(ios /= 0) exit
           i_start = i_start + 1
         end do
 
         read(iunit, fmt=*, iostat = ios) (diag_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
-        diagonal_done = (ios .eq. 0)
+        diagonal_done = (ios  ==  0)
 
         call io_close(iunit)
       end if
@@ -148,16 +148,16 @@ contains
       call messages_info(1)
     end if
 
-    if(iand(sys%outp%what, C_OUTPUT_DENSITY) .ne. 0 .or. &
-       iand(sys%outp%what, C_OUTPUT_POL_DENSITY) .ne. 0) then
-       if(i_start .gt. 2 .and. calc_diagonal) then
+    if(iand(sys%outp%what, C_OUTPUT_DENSITY) /= 0 .or. &
+       iand(sys%outp%what, C_OUTPUT_POL_DENSITY) /= 0) then
+       if(i_start > 2 .and. calc_diagonal) then
           i_start = 2
           diagonal_done = .false.
           !FIXME: take derivatives between yz and z (not y) so can restart from only last (z) calc
        endif
     endif
 
-    if(i_start .eq. 1) then
+    if(i_start  ==  1) then
       if(mpi_grp_is_root(mpi_world)) then
         ! open new file, erase old data, write e_field
         iunit = io_open(trim(tmpdir)//EM_RESP_FD_DIR//RESTART_FILE, action='write', status='replace')
@@ -243,7 +243,7 @@ contains
         if(.not. fromScratch) then
           call restart_read(trim(dir_name), sys%st, sys%gr, ierr)
           call system_h_setup(sys, hm)
-          if(ierr .ne. 0) fromScratch_local = .true.
+          if(ierr /= 0) fromScratch_local = .true.
         endif
 
         if(fromScratch_local) then
@@ -277,7 +277,7 @@ contains
 
         if(write_restart_densities) then
           call restart_write(trim(dir_name), sys%st, sys%gr, sys%geo, ierr)
-          if(ierr .ne. 0) then
+          if(ierr /= 0) then
             message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
             call messages_fatal(1)
           end if
@@ -320,7 +320,7 @@ contains
       if(.not. fromScratch) then
         call restart_read(trim(dir_name), sys%st, sys%gr, ierr)
         call system_h_setup(sys, hm)
-        if(ierr .ne. 0) fromScratch_local = .true.
+        if(ierr /= 0) fromScratch_local = .true.
       endif
 
       if(fromScratch_local) then
@@ -359,7 +359,7 @@ contains
 
       if(write_restart_densities) then
         call restart_write(trim(dir_name), sys%st, sys%gr, sys%geo, ierr)
-        if(ierr .ne. 0) then
+        if(ierr /= 0) then
           message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
           call messages_fatal(1)
         end if
@@ -477,13 +477,13 @@ contains
       PUSH_SUB(output_init_)
 
       !allocate memory for what we want to output
-      if(iand(sys%outp%what, C_OUTPUT_DENSITY) .ne. 0 .or. &
-         iand(sys%outp%what, C_OUTPUT_POL_DENSITY) .ne. 0 ) then 
+      if(iand(sys%outp%what, C_OUTPUT_DENSITY) /= 0 .or. &
+         iand(sys%outp%what, C_OUTPUT_POL_DENSITY) /= 0 ) then 
         SAFE_ALLOCATE(lr_rho (1:sys%gr%mesh%np, 1:sys%st%d%nspin))
         SAFE_ALLOCATE(lr_rho2(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
       end if
       
-      if(iand(sys%outp%what, C_OUTPUT_ELF) .ne. 0) then 
+      if(iand(sys%outp%what, C_OUTPUT_ELF) /= 0) then 
         SAFE_ALLOCATE(    elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
         SAFE_ALLOCATE( lr_elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
         SAFE_ALLOCATE(   elfd(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
@@ -520,8 +520,8 @@ contains
       endif
 
       !DENSITY AND POLARIZABILITY DENSITY   
-      if(iand(sys%outp%what, C_OUTPUT_DENSITY) .ne. 0 .or. &
-         iand(sys%outp%what, C_OUTPUT_POL_DENSITY) .ne. 0) then 
+      if(iand(sys%outp%what, C_OUTPUT_DENSITY) /= 0 .or. &
+         iand(sys%outp%what, C_OUTPUT_POL_DENSITY) /= 0) then 
          
         if(isign == 1 .and. ii == 2) then
           tmp_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
@@ -541,7 +541,7 @@ contains
 
           !write
           do is = 1, sys%st%d%nspin
-            if(iand(sys%outp%what, C_OUTPUT_DENSITY) .ne. 0) then
+            if(iand(sys%outp%what, C_OUTPUT_DENSITY) /= 0) then
               fn_unit = units_out%length**(1-sys%gr%sb%dim) / units_out%energy
               write(fname, '(a,i1,2a)') 'fd_density-sp', is, '-', index2axis(ii)
               call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
@@ -556,7 +556,7 @@ contains
               enddo
             endif
 
-            if(iand(sys%outp%what, C_OUTPUT_POL_DENSITY) .ne. 0) then
+            if(iand(sys%outp%what, C_OUTPUT_POL_DENSITY) /= 0) then
               do jj = ii, sys%gr%mesh%sb%dim
                 fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy
                 write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
@@ -576,7 +576,7 @@ contains
       end if
 
       !ELF
-      if(iand(sys%outp%what, C_OUTPUT_ELF) .ne. 0) then 
+      if(iand(sys%outp%what, C_OUTPUT_ELF) /= 0) then 
          
         if(isign == 1) then 
           call elf_calc(sys%st, sys%gr, elf, elfd)
@@ -618,21 +618,21 @@ contains
 
       call io_mkdir(EM_RESP_FD_DIR)
 
-      if((iand(sys%outp%what, C_OUTPUT_density) .ne. 0 .or. &
-         iand(sys%outp%what, C_OUTPUT_pol_density) .ne. 0) .and. calc_diagonal) then 
+      if((iand(sys%outp%what, C_OUTPUT_density) /= 0 .or. &
+         iand(sys%outp%what, C_OUTPUT_pol_density) /= 0) .and. calc_diagonal) then 
         lr_rho2(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = &
           -(sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) - lr_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) &
           - tmp_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) + gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)) / e_field**2
   
         do is = 1, sys%st%d%nspin
-          if(iand(sys%outp%what, C_OUTPUT_density) .ne. 0) then
+          if(iand(sys%outp%what, C_OUTPUT_density) /= 0) then
             fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'fd2_density-sp', is, '-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               sys%gr%mesh, lr_rho2(:, is), unit_one, ierr, geo = sys%geo)
           endif
   
-          if(iand(sys%outp%what, C_OUTPUT_pol_density) .ne. 0) then
+          if(iand(sys%outp%what, C_OUTPUT_pol_density) /= 0) then
             fn_unit = units_out%length**(3-sys%gr%sb%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'beta_density-sp', is, '-x-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
@@ -682,13 +682,13 @@ contains
         endif
       end if
 
-      if(iand(sys%outp%what, C_OUTPUT_DENSITY) .ne. 0 .or. &
-         iand(sys%outp%what, C_OUTPUT_POL_DENSITY) .ne. 0) then 
+      if(iand(sys%outp%what, C_OUTPUT_DENSITY) /= 0 .or. &
+         iand(sys%outp%what, C_OUTPUT_POL_DENSITY) /= 0) then 
         SAFE_DEALLOCATE_A(lr_rho)
         SAFE_DEALLOCATE_A(lr_rho2)
       end if
       
-      if(iand(sys%outp%what, C_OUTPUT_ELF) .ne. 0) then 
+      if(iand(sys%outp%what, C_OUTPUT_ELF) /= 0) then 
         SAFE_DEALLOCATE_A(lr_elf)
         SAFE_DEALLOCATE_A(elf)
         SAFE_DEALLOCATE_A(lr_elfd)

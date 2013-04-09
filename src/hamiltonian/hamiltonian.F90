@@ -243,7 +243,7 @@ contains
     hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
 
     nullify(hm%vhartree, hm%vxc, hm%vtau, hm%axc)
-    if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
+    if(hm%theory_level /= INDEPENDENT_PARTICLES) then
 
       SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np))
       hm%vhartree=M_ZERO
@@ -251,7 +251,7 @@ contains
       SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
       hm%vxc=M_ZERO
 
-      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+      if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
         SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
         hm%vtau=M_ZERO
       end if
@@ -270,7 +270,7 @@ contains
       SAFE_ALLOCATE(hm%Imvhxc(1:gr%mesh%np, 1:hm%d%nspin))
       hm%Imvhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
 
-      if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
+      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
 
         SAFE_ALLOCATE(hm%Imvhartree(1:gr%mesh%np))
         hm%Imvhartree=M_ZERO
@@ -278,7 +278,7 @@ contains
         SAFE_ALLOCATE(hm%Imvxc(1:gr%mesh%np, 1:hm%d%nspin))
         hm%Imvxc=M_ZERO
 
-        if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+        if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
           SAFE_ALLOCATE(hm%Imvtau(1:gr%mesh%np, 1:hm%d%nspin))
           hm%Imvtau=M_ZERO
         end if
@@ -364,7 +364,7 @@ contains
 
     nullify(hm%ab_pot)
 
-    if(hm%ab .ne. NOT_ABSORBING) call init_abs_boundaries()
+    if(hm%ab /= NOT_ABSORBING) call init_abs_boundaries()
 
     !%Variable ParticleMass
     !%Type float
@@ -428,7 +428,7 @@ contains
     ! no e^ik phase needed for Gamma-point-only periodic calculations
 
     if(gr%ob_grid%open_boundaries) then
-      if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
+      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         message(1) = 'Open-boundary calculations for interacting electrons are'
         message(2) = 'not yet possible.'
         call messages_fatal(2)
@@ -542,7 +542,7 @@ contains
         name = 'v0'
         fname = trim(static_dir)//'/'//trim(name)
         call read_potential(fname, mesh, hm%lead(il)%v0(:), trim(name), il)
-        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+        if(hm%theory_level /= INDEPENDENT_PARTICLES) then
           name = 'vh'
           fname = trim(static_dir)//'/'//trim(name)
           call read_potential(fname, mesh, hm%lead(il)%vh(:), trim(name), il)
@@ -661,19 +661,19 @@ contains
 
       ! first try obf format
       call dio_function_input(trim(fname)//'.obf', mesh, pot, ierr)
-      if(ierr.eq.0) then
+      if(ierr == 0) then
         message(1) = 'Info: Successfully read '//trim(potname)//' potential of the '&
                      //trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.obf'//'.'
         call messages_info(1)
       else  ! try ncdf format
         call dio_function_input(trim(fname)//'.ncdf', mesh, pot, ierr)
-        if(ierr.eq.0) then
+        if(ierr == 0) then
           message(1) = 'Info: Successfully read '//trim(potname)//' potential of the '&
                      //trim(LEAD_NAME(il))//' lead from '//trim(fname)//'.ncdf'//'.'
           call messages_info(1)
         end if
       end if
-      if (ierr .ne. 0) then
+      if (ierr /= 0) then
         ! Reading potential failed.
         message(1) = 'Could not read '//trim(potname)//' potential from the file'
         message(2) = trim(fname)
@@ -718,7 +718,7 @@ contains
     SAFE_DEALLOCATE_P(hm%Imvxc)
     SAFE_DEALLOCATE_P(hm%Imvtau)
     
-    if(iand(hm%xc_family, XC_FAMILY_MGGA).ne.0) then
+    if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
 
@@ -752,7 +752,7 @@ contains
     type(hamiltonian_t), intent(in) :: hm
 
     PUSH_SUB(hamiltonian_hermitian)
-    hamiltonian_hermitian = .not.((hm%ab .eq. IMAGINARY_ABSORBING) .or. &
+    hamiltonian_hermitian = .not.((hm%ab  ==  IMAGINARY_ABSORBING) .or. &
                                   hamiltonian_oct_exchange(hm)     .or. &
                                   hm%cmplxscl%space)
 
@@ -872,7 +872,7 @@ contains
 
     if(.not.hm%adjoint) then
       hm%adjoint = .true.
-      if(hm%ab .eq. IMAGINARY_ABSORBING) then
+      if(hm%ab  ==  IMAGINARY_ABSORBING) then
         hm%ab_pot = -hm%ab_pot
       end if
     endif
@@ -889,7 +889,7 @@ contains
 
     if(hm%adjoint) then
       hm%adjoint = .false.
-      if(hm%ab .eq. IMAGINARY_ABSORBING) then
+      if(hm%ab  ==  IMAGINARY_ABSORBING) then
         hm%ab_pot = -hm%ab_pot
       end if
     endif
@@ -1097,9 +1097,9 @@ contains
     if(mesh%use_curvilinear) apply = .false.
     if(associated(this%phase)) apply = .false.
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
-    if(this%ab .eq. IMAGINARY_ABSORBING) apply = .false.
+    if(this%ab  ==  IMAGINARY_ABSORBING) apply = .false.
     if(this%theory_level == HARTREE .or. this%theory_level == HARTREE_FOCK) apply = .false.
-    if(iand(this%xc_family, XC_FAMILY_MGGA).ne.0)  apply = .false.
+    if(iand(this%xc_family, XC_FAMILY_MGGA) /= 0)  apply = .false.
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
 
   end function hamiltonian_apply_packed

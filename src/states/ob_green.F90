@@ -83,7 +83,7 @@ contains
         write(message(1), '(a,e10.3)') 'Umerski-Residual = ', residual
         call messages_info(1)
       end if
-      if(residual.gt.eps) then
+      if(residual > eps) then
         ! 3. if not converged try the other method while saving the old
         SAFE_ALLOCATE(green2(1:np, 1:np))
         call lead_green_sancho(c_energy, diag, offdiag, np, green2, threshold, h_is_real)
@@ -93,10 +93,10 @@ contains
           call messages_info(1)
         end if
         ! 4. if also not converged choose the best one and give warning
-        if(residual2.lt.eps) then ! finally converged
+        if(residual2 < eps) then ! finally converged
           self_energy = green2
         else ! write warning
-          if(residual2.lt.residual) then
+          if(residual2 < residual) then
             self_energy = green2
           end if
           message(1) = "The surface Green's function did not converge properly"
@@ -111,7 +111,7 @@ contains
       end if
     end if
     ! now calculate the self-energy
-    if(intf%il.eq.LEFT) then
+    if(intf%il == LEFT) then
       call lalg_trmm(np, np, 'U', 'N', 'L', M_z1, offdiag, self_energy)
       call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, self_energy)
     else
@@ -145,7 +145,7 @@ contains
       call messages_info(1)
     end if
 
-    if(dos.lt.M_ZERO) then
+    if(dos < M_ZERO) then
       green(:, :) = transpose(conjg(green(:, :)))
       if(in_debug_mode) then ! write info
         message(1) = "surface Green's function changed to its hermitian conjugate"
@@ -182,7 +182,7 @@ contains
     forall (j = 1:np) tmp1(j, j) = tmp1(j, j) + energy
 
     tmp2(1:np, 1:np) = green(1:np, 1:np)
-    if(mod(intf%il+1,2)+1.eq.1) then
+    if(mod(intf%il+1,2)+1 == 1) then
       call lalg_trmm(np, np, 'U', 'N', 'L', M_z1, offdiag, tmp2)
       call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, tmp2)
     else
@@ -259,7 +259,7 @@ contains
       norm = infinity_norm(es)
       res  = abs(old_norm/norm-M_ONE)
 
-      if(res.lt.threshold) exit
+      if(res < threshold) exit
 
       old_norm = norm
 
@@ -325,7 +325,7 @@ contains
     ! use o2 as tmp variable
     forall(ip = 1:np) x1(1:np, ip) = offdiag(1:np, ip)
 
-    if (mod(intf%il+1,2)+1.eq.1) then
+    if (mod(intf%il+1,2)+1 == 1) then
       call lalg_invert_upper_triangular(np, x1)
     else
       call lalg_invert_lower_triangular(np, x1)
@@ -338,7 +338,7 @@ contains
     forall(ip = 1:np) x2(1:np, ip) = -diag(1:np, ip)
     forall (ip = 1:np) x2(ip, ip) = x2(ip, ip) + energy
 
-    if (mod(intf%il+1,2)+1.eq.1) then
+    if (mod(intf%il+1,2)+1 == 1) then
       call lalg_trmm(np, np, 'U', 'N', 'R', M_z1, x1, x2)
     else
       call lalg_trmm(np, np, 'L', 'N', 'R', M_z1, x1, x2)
@@ -371,7 +371,7 @@ contains
     do iblock = 1, intf%nblocks-1
       ni = (iblock-1)*np
       h(1:np, 1:np, iblock) = diag(ni+1:ni+np, ni+1:ni+np)
-      if(mod(intf%il+1,2)+1.eq.1) then
+      if(mod(intf%il+1,2)+1 == 1) then
         ! lower blocks
         v(1:np, 1:np, iblock) = diag(ni+1:ni+np, ni+np+1:ni+2*np)
       else
@@ -382,7 +382,7 @@ contains
     ! now the last block
     ni = (intf%nblocks-1)*np
     h(1:np, 1:np, intf%nblocks) = diag(ni+1:ni+np, ni+1:ni+np)
-    if(mod(intf%il+1,2)+1.eq.1) then
+    if(mod(intf%il+1,2)+1 == 1) then
       ! upper block of offdiag
       v(1:np, 1:np, intf%nblocks) = offdiag(ni+1:ni+np, 1:np)
     else
@@ -411,7 +411,7 @@ contains
     PUSH_SUB(lead_green_umerski)
 
     ! check if intf%np_uc is a integer multiple of the intf%np_intf
-    ASSERT(mod(intf%np_uc, intf%np_intf).eq.0)
+    ASSERT(mod(intf%np_uc, intf%np_intf) == 0)
 
     np = intf%np_intf
     np2 = 2*np
@@ -431,7 +431,7 @@ contains
     ! x = x(m)*...*x(2)*x(1)
     do ib=1, intf%nblocks
       call create_moeb_trans_matrix(intf, energy, h(:, :, ib), v(:, :, ib), x2)
-      if (ib.eq.1) then
+      if (ib == 1) then
         x = x2
       else
         x = matmul(x2, x)

@@ -178,10 +178,10 @@ contains
           if(ii== -1) then
             read(iunit, '(a)', advance='no') char
             ii = 0
-            if (char .eq. '#') read(iunit, '(a)') char
+            if (char  ==  '#') read(iunit, '(a)') char
           end if
           read(iunit, fmt=*, iostat=ierr) l_xx(1:ndim), l_ff(1:nspin)
-          if(ierr.ne.0) exit
+          if(ierr /= 0) exit
           ii = ii + 1
           if(pass == 1) npoints = npoints + 1
           if(pass == 2) then

@@ -70,7 +70,7 @@
     PUSH_SUB(opt_control_cg_calc)
 
     SAFE_ALLOCATE(theta(1:n))
-    if(getgrad .eq. 1) then
+    if(getgrad  ==  1) then
       theta = x
       call controlfunction_set_theta(par_, theta)
       call controlfunction_theta_to_basis(par_)

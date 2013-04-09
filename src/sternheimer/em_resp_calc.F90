@@ -167,8 +167,8 @@ contains
     write(str, '(f11.4)') freq
     str = adjustl(str)
     if(abs(freq) < M_ONE) then
-      if(freq >= M_ZERO .and. str(1:1).ne.'0') str = "0"//trim(str)
-      if(freq <  M_ZERO .and. str(2:2).ne.'0') str = "-0"//trim(str(2:))
+      if(freq >= M_ZERO .and. str(1:1) /= '0') str = "0"//trim(str)
+      if(freq <  M_ZERO .and. str(2:2) /= '0') str = "-0"//trim(str(2:))
     end if
     str = trim(adjustl(str))
 

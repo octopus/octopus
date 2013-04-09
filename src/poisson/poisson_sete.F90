@@ -976,7 +976,7 @@ contains
           I1=I-(NXL+THIS%NXBOT)
           J1=J-(NYL+THIS%NYBOT)
           K1=K-(THIS%NZBOT)
-          if(i1.gt.0.and.j1.gt.0.and.k1.gt.0)then ! this is redundant
+          if(i1 > 0.and.j1 > 0.and.k1 > 0)then ! this is redundant
             q2(m)=q2(m)+dyg(j)*dxg(i)*rho(i1,j1,k1)
 !            rhotest(i,j,k)=rho(i1,j1,k1)
           end if

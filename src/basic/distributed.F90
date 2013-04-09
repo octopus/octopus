@@ -134,7 +134,7 @@ contains
           write(message(1),'(a,a,i6,a,i6)') trim(message(1)), ':', this%range(1, kk - 1), " - ", this%range(2, kk - 1)
         endif
         call messages_info(1)
-        if(this%mpi_grp%rank .eq. kk - 1) then
+        if(this%mpi_grp%rank  ==  kk - 1) then
           this%start  = this%range(1, kk - 1)
           this%end    = this%range(2, kk - 1)
           this%nlocal = this%num(kk - 1)

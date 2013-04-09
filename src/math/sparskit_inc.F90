@@ -54,7 +54,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !% Direct versions of the Quasi-Generalized Minimum Residual method
   !%End
   call parse_integer(datasets_check('SPARSKITSolver'),          SK_CG, sk%solver_type)
-  if ( sk%solver_type.lt.SK_MINVAL.or.sk%solver_type.gt.SK_MAXVAL ) then
+  if ( sk%solver_type < SK_MINVAL.or.sk%solver_type > SK_MAXVAL ) then
     call input_error('SPARSKITSolver')
   end if
 
@@ -133,7 +133,7 @@ subroutine X(sparskit_solver_init)(n, sk)
 
   ! Krylov subspace size
   m = sk%krylov_size
-  if (mod(m, 2).ne.0) m = m + 1
+  if (mod(m, 2) /= 0) m = m + 1
 
   select case(sk%solver_type)
   case(SK_CG)
@@ -356,7 +356,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 
 
 
-  if(iter .gt.sk%maxiter) then
+  if(iter  > sk%maxiter) then
 !    message(1) = 'Maxiter reached'
 !    call messages_warning(1)
   end if

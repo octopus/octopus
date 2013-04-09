@@ -180,7 +180,7 @@ contains
 
     PUSH_SUB(divides)
 
-    divides = mod(b, a).eq.0
+    divides = mod(b, a) == 0
 
     POP_SUB(divides)
   end function divides
@@ -337,7 +337,7 @@ contains
     ! no push_sub: called too frequently
 
     ! evaluate normalization constants once and for all
-    if (li.gt.lmax) then
+    if (li > lmax) then
       fourpi = M_FOUR*M_PI
       do l = 0, li
         ilm0 = l*l + l
@@ -348,7 +348,7 @@ contains
           end do
           c(ilm0 + m) = sqrt(fac)
           ! next line because ylm are real combinations of m and -m
-          if(m.ne.0) c(ilm0 + m) = c(ilm0 + m)*sqrt(M_TWO)
+          if(m /= 0) c(ilm0 + m) = c(ilm0 + m)*sqrt(M_TWO)
           c(ilm0 - m) = c(ilm0 + m)
         end do
       end do
@@ -356,7 +356,7 @@ contains
     end if
 
     ! if l=0, no calculations are required
-    if (li.eq.0) then
+    if (li == 0) then
       ylm = c(0)
       grylm(:) = M_ZERO
       return
@@ -364,7 +364,7 @@ contains
 
     ! if r=0, direction is undefined => make ylm=0 except for l=0
     r2 = x**2 + y**2 + z**2
-    if(r2.lt.tiny) then
+    if(r2 < tiny) then
       ylm = M_ZERO
       grylm(:) = M_ZERO
       return
@@ -376,7 +376,7 @@ contains
     Rz = z/rsize
 
     ! explicit formulas for l=1 and l=2
-    if(li.eq.1) then
+    if(li == 1) then
       select case(mi)
       case(-1)
         ylm = (-c(1))*Ry
@@ -397,7 +397,7 @@ contains
       return
     end if
 
-    if(li.eq.2) then
+    if(li == 2) then
       select case(mi)
       case(-2)
         ylm = c(4)*M_SIX*Rx*Ry
@@ -442,7 +442,7 @@ contains
       sinm = cosmm1*sinphi + sinmm1*cosphi
     end do
 
-    if(mi.lt.0) then
+    if(mi < 0) then
       phase = sinm
       dphase = mabs*cosm
     else
@@ -453,19 +453,19 @@ contains
     pmm = M_ONE
     fac = M_ONE
 
-    if(mabs.gt.M_ZERO) then
+    if(mabs > M_ZERO) then
       do i = 1, mabs
         pmm = (-pmm)*fac*xysize
         fac = fac + M_TWO
       end do
     end if
 
-    if(li.eq.mabs) then
+    if(li == mabs) then
       plgndr = pmm
       dplg = (-li)*Rz*pmm/(xysize**2)
     else
       pmmp1 = Rz*(2*mabs + 1)*pmm
-      if(li.eq.mabs + 1) then
+      if(li == mabs + 1) then
         plgndr = pmmp1
         dplg = -((li*Rz*pmmp1 - (mabs + li)*pmm)/(xysize**2))
       else
@@ -790,7 +790,7 @@ contains
     member = .false.
 
     do i = 1, ubound(a, 1)
-      if(a(i).eq.n) then
+      if(a(i) == n) then
         member = .true.
         exit
       end if
@@ -814,7 +814,7 @@ contains
     do ii = 1, nn
       cc(ii) = M_ONE
       do kk = 1, nn
-        if(kk .eq. ii) cycle
+        if(kk  ==  ii) cycle
         cc(ii) = cc(ii)*(xx - xa(kk))/(xa(ii) - xa(kk))
       end do
     end do
@@ -857,7 +857,7 @@ contains
 
     n = size(x)
     ASSERT(n>1)
-    ASSERT(size(u).eq.n-1)
+    ASSERT(size(u) == n-1)
 
     ! These lines make the code less machine-dependent.
     SAFE_ALLOCATE(xx(1:n))
@@ -896,12 +896,12 @@ contains
 
     n = size(x)
     ASSERT(n>1)
-    ASSERT(size(u).eq.n-1)
+    ASSERT(size(u) == n-1)
 
-    if(n.eq.2) then
+    if(n == 2) then
       x(1) = cos(u(1))
       x(2) = sin(u(2))
-    elseif(n.eq.3) then
+    elseif(n == 3) then
       x(1) = cos(u(1))
       x(2) = sin(u(1))*cos(u(2))
       x(3) = sin(u(1))*sin(u(2))
@@ -951,9 +951,9 @@ contains
     ! --- l=2..(n-1) ---
     do l=2, n-1
        do m=1, n-1
-          if(m.eq.l) then
+          if(m == l) then
              grad_matrix(m,l) = -r*grad_matrix(m,l)*product(sin(x(1:l)))
-          elseif(m.lt.l) then
+          elseif(m < l) then
              grad_matrix(m,l) = grad_matrix(m,l)*r*cos(x(m))*cos(x(l))*product(sin(x(1:m-1)))*product(sin(x(m+1:l-1)))
           else
              grad_matrix(m,l) = M_ZERO
@@ -1073,8 +1073,8 @@ contains
     dim = size(u,1)  
 
     ASSERT((dim < 3) .or. (dim > 2))
-    ASSERT(size(v,1) .eq. dim)
-    ASSERT((size(M,1) .eq. dim) .and. (size(M,2) .eq. dim))
+    ASSERT(size(v,1)  ==  dim)
+    ASSERT((size(M,1)  ==  dim) .and. (size(M,2)  ==  dim))
 
     SAFE_ALLOCATE(uu(1:dim))
     SAFE_ALLOCATE(vv(1:dim))

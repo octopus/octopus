@@ -110,7 +110,7 @@ contains
       cat = cat + M_THREE/M_PI * domega * pol**3
     end do
 
-    if((gauss_start .le. gaus_leg_n).and.mpi_grp_is_root(mpi_world)) then
+    if((gauss_start  <=  gaus_leg_n).and.mpi_grp_is_root(mpi_world)) then
       iunit = io_open(VDW_DIR//'vdw_c6', action='write', position='append')
       write(iunit, '(1x)')
       write(iunit, '(a,es20.12)') "C_3  [a.u. ] = ", c3
@@ -196,7 +196,7 @@ contains
       if(.not.fromScratch .and. file_exists) then
         iunit = io_open(VDW_DIR//'vdw_c6', action='read')
         read(iunit, '(a12,i3)', iostat=ierr) dirname, ii
-        if(ii .ne. gaus_leg_n) then
+        if(ii /= gaus_leg_n) then
           message(1) = "Invalid restart of van der Waals calculation."
           message(2) = "The number of points in the Gauss-Legendre integration changed."
           write(message(3), '(i3,a,i3,a)') gaus_leg_n, " (input) != ", ii, "(restart)"
@@ -205,7 +205,7 @@ contains
         read(iunit,*) ! skip comment line
         do
           read(iunit, *, iostat=ierr) iomega, domega, pol
-          if(ierr.ne.0) exit
+          if(ierr /= 0) exit
           gauss_start = gauss_start + 1
           c3  = c3  + M_THREE/M_PI * domega * pol 
           c6  = c6  + M_THREE/M_PI * domega * pol**2
@@ -231,7 +231,7 @@ contains
           write(dirname,'(a,i1,a)') VDW_DIR//"wfs_", dir, "_1_1"
           call restart_read(trim(tmpdir)//dirname, sys%st, sys%gr, ierr, lr=lr(dir,1))
           
-          if(ierr.ne.0) then
+          if(ierr /= 0) then
             message(1) = "Could not load response wavefunctions from '"//trim(tmpdir)//dirname
             call messages_warning(1)
           end if

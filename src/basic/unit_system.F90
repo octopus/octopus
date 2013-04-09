@@ -150,7 +150,7 @@ contains
     !% Same as <tt>Units</tt>, but only refers to output values.
     !%End
 
-    if(parse_isdef(datasets_check('Units')).ne.0) then
+    if(parse_isdef(datasets_check('Units')) /= 0) then
       call parse_integer(datasets_check('Units'), UNITS_ATOMIC, cc)
       if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call input_error('Units')
       cinp = cc
@@ -360,12 +360,12 @@ contains
     ierr = 0
     do
       read(iunit, '(a)', iostat = ios) line
-      if(ios.ne.0) exit
-      if(index(line,'[A]').ne.0  .or.  index(line,'eV').ne.0) then
+      if(ios /= 0) exit
+      if(index(line,'[A]') /= 0  .or.  index(line,'eV') /= 0) then
         call unit_system_get(uu, UNITS_EVA)
         POP_SUB(unit_system_from_file)
         return
-      elseif(index(line,'[b]').ne.0) then
+      elseif(index(line,'[b]') /= 0) then
         call unit_system_get(uu, UNITS_ATOMIC)
         POP_SUB(unit_system_from_file)
         return

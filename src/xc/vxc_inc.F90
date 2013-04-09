@@ -101,8 +101,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   endif
 
   ! initialize a couple of handy variables
-  gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA).ne.0
-  mgga = iand(xcs%family, XC_FAMILY_MGGA).ne.0
+  gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA) /= 0
+  mgga = iand(xcs%family, XC_FAMILY_MGGA) /= 0
 
   !Read the spin channels
   spin_channels = functl(FUNC_X)%spin_channels
@@ -124,7 +124,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       call dderivatives_grad(der, dens(:, isp), gdens(:, :, isp)) 
     end do
   else if(mgga) then
-    if (xc_get_vxc_counter .le. 2) then 
+    if (xc_get_vxc_counter  <=  2) then 
       ipot_to_pass = M_ONE
     else
       ipot_to_pass = ioniz_pot
@@ -170,7 +170,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = FUNC_X, FUNC_C
 
-      if(calc_energy .and. iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC).ne.0) then
+      if(calc_energy .and. iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
         ! we get the xc energy and potential
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA)
@@ -1024,11 +1024,11 @@ contains
     
     adj = 0
     v = v1
-    if (abs(v2 - prev_value).lt.abs(v - prev_value)) then
+    if (abs(v2 - prev_value) < abs(v - prev_value)) then
       v = v2
       adj = -1
     end if
-    if (abs(v3 - prev_value).lt.abs(v - prev_value)) then
+    if (abs(v3 - prev_value) < abs(v - prev_value)) then
       v = v3
       adj = +1
     end if

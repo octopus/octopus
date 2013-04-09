@@ -95,14 +95,14 @@ contains
     CMPLX   :: tmp, alpha
 
     PUSH_SUB(calc_source_wf)
-    if(m.eq.0) then
+    if(m == 0) then
       ! initial src is V*psi0(outer) (precalculated in gs mode)
       tmp = -M_zI*dt*f0*u(0)
       !call lalg_gemv(np, np, tmp*M_zI*M_HALF*dt, mem, psi0, tmp, src)
       call lalg_symv(np, tmp*M_zI*M_HALF*dt, mem, psi0, tmp, src)
     else
       tmp   = factor*u(m)*u(m-1)
-      if(m.gt.maxiter) then
+      if(m > maxiter) then
         src(1:np) = tmp*src(1:np)
       else
         alpha = M_HALF*dt**2*f0*lambda/u(m)

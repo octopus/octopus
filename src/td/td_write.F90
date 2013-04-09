@@ -237,7 +237,7 @@ contains
     if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call input_error('TDOutput')
 
     do iout = 1, OUT_MAX
-      writ%out(iout)%write = (iand(flags, 2**(iout - 1)) .ne. 0)
+      writ%out(iout)%write = (iand(flags, 2**(iout - 1)) /= 0)
     end do
 
     !special cases
@@ -330,7 +330,7 @@ contains
       call states_allocate_wfns(writ%gs_st, gr%mesh, TYPE_CMPLX)
       writ%gs_st%node(:)  = 0
       call restart_read(trim(restart_dir)//'gs', writ%gs_st, gr, ierr)
-      if(ierr.ne.0 .and.ierr.ne.(writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
+      if(ierr /= 0 .and.ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
         message(1) = "Could not load "//trim(restart_dir)//"gs"
         call messages_fatal(1)
       end if
@@ -467,7 +467,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       do iout = 1, OUT_MAX
-        if(iout.eq.OUT_LASER) cycle
+        if(iout == OUT_LASER) cycle
         if(writ%out(iout)%write)  call write_iter_end(writ%out(iout)%handle)
       end do
     end if
@@ -574,7 +574,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       do iout = 1, OUT_MAX
-        if(iout.eq.OUT_LASER) cycle
+        if(iout == OUT_LASER) cycle
         if(writ%out(iout)%write)  call write_iter_flush(writ%out(iout)%handle)
       end do
     end if
@@ -589,7 +589,7 @@ contains
     if(present(dt)) then
       call output_scalar_pot(outp, gr, geo, hm, filename, iter*dt)
     else
-      if(iter.eq.0) call output_scalar_pot(outp, gr, geo, hm, filename)
+      if(iter == 0) call output_scalar_pot(outp, gr, geo, hm, filename)
     end if
  
     call profiling_out(prof)
@@ -962,13 +962,13 @@ contains
       call write_iter_string(out_ftchd, aux)
       call write_iter_nl(out_ftchd)
 
-      if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
+      if(kick%qkick_mode == QKICKMODE_BESSEL) then
         write(aux,'(a15, i0.3, 1x, i0.3)') '# ll, mm       ', kick%qbessel_l, kick%qbessel_m
         call write_iter_string(out_ftchd, aux)
         call write_iter_nl(out_ftchd)
       end if
 
-      if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
+      if(kick%qkick_mode == QKICKMODE_BESSEL) then
         write(aux, '(a15, f9.6)') '# qlength      ', kick%qlength
       else ! sin or cos
         write(aux, '(a15)')       '# qvector      '
@@ -985,7 +985,7 @@ contains
       call write_iter_nl(out_ftchd)
 
       call write_iter_header_start(out_ftchd)
-      if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
+      if(kick%qkick_mode == QKICKMODE_BESSEL) then
         write(aux,'(a17)') 'int(j_l*Y_lm*rho)'
       else
         write(aux,'(a12)') 'Real, Imag'
@@ -1004,7 +1004,7 @@ contains
     ftchd = M_ZERO
 
     ! If kick mode is exp, sin, or cos, apply the normal Fourier transform
-    if(kick%qkick_mode.ne.QKICKMODE_BESSEL) then
+    if(kick%qkick_mode /= QKICKMODE_BESSEL) then
       SAFE_ALLOCATE(integrand(1:gr%mesh%np))
       integrand = M_ZERO
       do is = 1, st%d%nspin
@@ -1031,7 +1031,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_ftchd)
-      if(kick%qkick_mode.eq.QKICKMODE_BESSEL) then
+      if(kick%qkick_mode == QKICKMODE_BESSEL) then
         call write_iter_double(out_ftchd, ftchd_bessel, 1)
       else ! exp, sin, cos
         call write_iter_double(out_ftchd, real(ftchd), 1)

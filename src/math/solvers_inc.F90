@@ -386,7 +386,7 @@ end subroutine X(bi_conjugate_gradients)
     res      = rho
 
     ! If rho is basically zero we are already done.
-    if(abs(rho).gt.M_EPSILON) then
+    if(abs(rho) > M_EPSILON) then
       call prec(v, z)
 
       xsi = nrm2(z)
@@ -624,7 +624,7 @@ end subroutine X(bi_conjugate_gradients)
     res      = rho
 
 ! If rho is basically zero we are already done.
-    if(abs(rho).gt.M_EPSILON) then
+    if(abs(rho) > M_EPSILON) then
       call lalg_copy(np, r, v)
       call lalg_scal(np, M_ONE/rho, v)
       call lalg_copy(np, r, w)

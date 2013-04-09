@@ -161,7 +161,7 @@ contains
     !%End
     call parse_string(datasets_check('RestartDir'), tmpdir, restart_dir)
     ! Append "/" if necessary.
-    if(scan(restart_dir, '/', .true.).lt.1) then
+    if(scan(restart_dir, '/', .true.) < 1) then
       restart_dir = trim(restart_dir)//'/'
     end if
 
@@ -187,7 +187,7 @@ contains
 
     !check how many wfs we have
     call states_look(trim(dir)//GS_DIR, gr%mesh%mpi_grp, kpoints, dim, nst, ierr)
-    if(ierr .ne. 0) then
+    if(ierr /= 0) then
       message(1) = 'Could not properly read wavefunctions from "'//trim(dir)//GS_DIR//'".'
       call messages_fatal(1)
     end if
@@ -478,7 +478,7 @@ contains
     ! Sanity check.
     do il = 1, NLEADS
       ASSERT(associated(st%ob_lead(il)%intf_psi))
-      ASSERT(il.le.2) ! FIXME: wrong if non-transport calculation
+      ASSERT(il <= 2) ! FIXME: wrong if non-transport calculation
     end do
 
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
@@ -641,7 +641,7 @@ contains
       grid_reordered = .false.
     end if
 
-    if(ierr .ne. 0) then
+    if(ierr /= 0) then
       if(wfns_file > 0) call io_close(wfns_file, grp = st%dom_st_kpt_mpi_grp)
       if(occ_file > 0) call io_close(occ_file, grp = st%dom_st_kpt_mpi_grp)
       if(exact_) call restart_fail()
@@ -677,7 +677,7 @@ contains
     do
       call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, line, int)
       read(line, '(a)') char
-      if(int .ne. 0 .or. char == '%') exit
+      if(int /= 0 .or. char == '%') exit
 
       call iopar_backspace(st%dom_st_kpt_mpi_grp, wfns_file)
 
@@ -700,7 +700,7 @@ contains
         if(read_occ) then
           st%occ(ist, ik) = my_occ
           integral_occs = integral_occs .and. &
-            abs((st%occ(ist, ik) - st%smear%el_per_state) * st%occ(ist, ik)) .le. M_EPSILON
+            abs((st%occ(ist, ik) - st%smear%el_per_state) * st%occ(ist, ik))  <=  M_EPSILON
         endif
       end if
 
@@ -839,8 +839,8 @@ contains
       call messages_info(1)
       call messages_print_stress(stdout)
 
-      if(ierr .ne. 0 .and. exact_) call restart_fail()
-      if(ierr .ne. 0 .and. rdmft_) call restart_fail_rdmft()
+      if(ierr /= 0 .and. exact_) call restart_fail()
+      if(ierr /= 0 .and. rdmft_) call restart_fail_rdmft()
     end if
 
     SAFE_DEALLOCATE_A(filled)
@@ -948,12 +948,12 @@ contains
     restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)//'/'// GS_DIR
 
     wfns = io_open(trim(restart_dir)//'/wfns', action='read', is_tmp=.true., grp=mpi_grp)
-    if(wfns .lt. 0) then
+    if(wfns  <  0) then
       message(1) = 'Could not read '//trim(restart_dir)//'/wfns.'
       call messages_fatal(1)
     end if
     occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_grp)
-    if(occs .lt. 0) then
+    if(occs  <  0) then
       message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
       call messages_fatal(1)
     end if
@@ -975,7 +975,7 @@ contains
       ! they are written correctly, i.e. of same length.
       call iopar_read(mpi_grp, wfns, line, err)
       read(line, '(a)') char
-      if(char .eq. '%') then
+      if(char  ==  '%') then
         exit
       end if
 
@@ -1068,7 +1068,7 @@ contains
         case(SPINORS)
           message(1) = "restart.lead_dens_accum() does not work with spinors yet!"
           call messages_fatal(1)
-!          if(k_idim.eq.2) then
+!          if(k_idim == 2) then
 !            do ip = 1, np
 !              c = w_k*occ*tmp(ip, 1)*conjg(tmp(ip, 2))
 !              st%ob_lead(il)%rho(ip, 3) = st%ob_lead(il)%rho(ip, 3) + real(c, REAL_PRECISION)
@@ -1164,7 +1164,7 @@ contains
       do ib = 1, nstates
         ! Check that number of columns is five or six.
         ncols = parse_block_cols(blk, ib - 1)
-        if(ncols .lt. 5 .or. ncols .gt. 6) then
+        if(ncols  <  5 .or. ncols > 6) then
           message(1) = 'Each line in the UserDefinedStates block must have'
           message(2) = 'five or six columns.'
           call messages_fatal(2)
@@ -1183,9 +1183,9 @@ contains
             do ik = 1, st%d%nik
 
               ! does the block entry match and is this node responsible?
-              if(.not.(id .eq. idim .and. is .eq. inst .and. ik .eq. inik    &
-                .and. st%st_start .le. is .and. st%st_end .ge. is          &
-                .and. st%d%kpt%start .le. ik .and. st%d%kpt%end .ge. ik) ) cycle
+              if(.not.(id  ==  idim .and. is  ==  inst .and. ik  ==  inik    &
+                .and. st%st_start  <=  is .and. st%st_end >= is          &
+                .and. st%d%kpt%start  <=  ik .and. st%d%kpt%end >= ik) ) cycle
 
               select case(state_from)
 
@@ -1241,7 +1241,7 @@ contains
               call states_set_state(st, mesh, id, is, ik, zpsi(:, 1))
 
               ! normalize orbital
-              if(parse_block_cols(blk, ib - 1) .eq. 6) then
+              if(parse_block_cols(blk, ib - 1)  ==  6) then
                 call parse_block_integer(blk, ib - 1, 5, normalize)
               else
                 normalize = 1

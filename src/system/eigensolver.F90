@@ -240,7 +240,7 @@ contains
       eigens%current_rel_dens_error = -M_ONE ! Negative initial value to signify that no value has been assigned yet
       
       ! Arpack is not working in some cases, so let us check. 
-      if(st%d%ispin .eq. SPINORS) then 
+      if(st%d%ispin  ==  SPINORS) then 
         write(message(1), '(a)') 'The ARPACK diagonalizer does not handle spinors (yet).' 
         write(message(2), '(a)') 'Please provide a different Eigensolver.' 
         call messages_fatal(2) 
@@ -524,10 +524,10 @@ contains
         leigenval(1:st%d%kpt%nlocal) = st%eigenval(ist, st%d%kpt%start:st%d%kpt%end)
         call lmpi_gen_allgatherv(st%d%kpt%nlocal, ldiff, outcount, &
                                  eigens%diff(ist, :), st%d%kpt%mpi_grp)
-        ASSERT(outcount.eq.st%d%nik)
+        ASSERT(outcount == st%d%nik)
         call lmpi_gen_allgatherv(st%d%kpt%nlocal, leigenval, outcount, &
                                  st%eigenval(ist, :), st%d%kpt%mpi_grp)
-        ASSERT(outcount.eq.st%d%nik)
+        ASSERT(outcount == st%d%nik)
       end do
       SAFE_DEALLOCATE_A(ldiff)
       SAFE_DEALLOCATE_A(leigenval)

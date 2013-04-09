@@ -24,7 +24,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
 
   PUSH_SUB(X(sm_integrate))
 
-  ASSERT(present(ff) .or. sm%np .eq. 0)
+  ASSERT(present(ff) .or. sm%np  ==  0)
 
   if(sm%np > 0) then
     if (mesh%use_curvilinear) then

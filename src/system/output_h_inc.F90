@@ -31,7 +31,7 @@
     
     PUSH_SUB(output_hamiltonian)
 
-    if(iand(outp%what, C_OUTPUT_POTENTIAL).ne.0) then
+    if(iand(outp%what, C_OUTPUT_POTENTIAL) /= 0) then
       if(hm%cmplxscl%space) then
         call zio_function_output(outp%how, dir, "v0", der%mesh,&
           hm%ep%vpsl + M_zI*hm%ep%Imvpsl, units_out%energy, err, geo = geo)
@@ -46,7 +46,7 @@
         call dio_function_output(outp%how, dir, "vc", der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo)
       end if
 
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         if (.not. hm%cmplxscl%space) then 
           call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo)
         else
@@ -144,7 +144,7 @@
 
     PUSH_SUB(output_scalar_pot)
 
-    if(iand(outp%what, C_OUTPUT_TD_POTENTIAL).ne.0) then
+    if(iand(outp%what, C_OUTPUT_TD_POTENTIAL) /= 0) then
       SAFE_ALLOCATE(scalar_pot(1:gr%mesh%np))
       do is = 1, hm%ep%no_lasers
         write(fname, '(a,i1)') 'scalar_pot-', is
@@ -172,7 +172,7 @@
     
     PUSH_SUB(output_kick)
 
-    if(iand(outp%what, C_OUTPUT_KICK_FUNCTION).ne.0) then
+    if(iand(outp%what, C_OUTPUT_KICK_FUNCTION) /= 0) then
       SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
       call kick_function_get(gr, hm%ep%kick, kick_function)
       call zio_function_output(outp%how, dir, "kick_function", gr%mesh, kick_function(:), &

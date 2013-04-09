@@ -197,7 +197,7 @@ contains
     ispin = ground_state%d%ispin
     nspin = ground_state%d%nspin
 
-    if( nik > 2 .or. ( (nik .eq. 2) .and. (ispin .ne. SPIN_POLARIZED))  ) then
+    if( nik > 2 .or. ( (nik  ==  2) .and. (ispin /= SPIN_POLARIZED))  ) then
       message(1) = 'Cannot calculate projections onto excited states for periodic systems.'
       call messages_fatal(1)
     end if
@@ -221,13 +221,13 @@ contains
       ! We will not accept, for the time being, constructing excited states in spin-restricted mode if
       ! there are single-particle states that are half-filled, *unless* there is only one state and it is
       ! half-filled (single-particle calculation).
-      if(  (n_half_filled(1) .ne. 0  .and. n_filled(1) > 0)  .or. (n_half_filled(1) > 1)  ) then
+      if(  (n_half_filled(1) /= 0  .and. n_filled(1) > 0)  .or. (n_half_filled(1) > 1)  ) then
         message(1) = 'Cannot construct excited states from ground states that contain half-filled'
         message(2) = 'orbitals - unless they are just one-particle states with only one half-filled'
         message(3) = 'orbital and no doubly occupied ones. Try using the spin-unrestricted mode.'
         call messages_fatal(3)
       end if
-      if(n_half_filled(1).eq.0) then
+      if(n_half_filled(1) == 0) then
         n_empty(1) = nst - n_filled(1)
         n_possible_pairs = n_filled(1) * n_empty(1)
       else ! This is for the one-electron case.
@@ -268,14 +268,14 @@ contains
       read(iunit, *, end = 101) 
       backspace(iunit)
       read(iunit, *, iostat = ios) trash, trash, trash, dump
-      if(ios .ne. 0) then
+      if(ios /= 0) then
         message(1) = 'Error attempting to read the electron-hole pairs in file "'//trim(filename)//'"'
         call messages_fatal(1)
       end if
       ipair = ipair + 1
     end do
 101 continue
-    if(ipair .eq. 0) then
+    if(ipair  ==  0) then
       message(1) = 'File "'//trim(filename)//'" is empty?'
       call messages_fatal(1)
     elseif(ipair > n_possible_pairs) then
@@ -292,7 +292,7 @@ contains
     do ipair = 1, excited_state%n_pairs
       read(iunit, *) excited_state%pair(ipair)%i, excited_state%pair(ipair)%a, &
                      excited_state%pair(ipair)%sigma, excited_state%weight(ipair)
-      if(( (ispin .eq. UNPOLARIZED) .or. (ispin .eq. SPINORS) ) .and. (excited_state%pair(ipair)%sigma .ne. 1) ) then
+      if(( (ispin  ==  UNPOLARIZED) .or. (ispin  ==  SPINORS) ) .and. (excited_state%pair(ipair)%sigma /= 1) ) then
         message(1) = 'Error reading excited state in file "'//trim(filename)//'":'
         message(2) = 'Cannot treat a electron-hole pair for "down" spin when not working in spin-polarized mode.'
         call messages_fatal(2)
@@ -302,13 +302,13 @@ contains
       ! First, whether the occupied state belongs to the list of occupied states.
       ok = .false.
       do ist = 1, n_filled(excited_state%pair(ipair)%sigma)
-        ok = excited_state%pair(ipair)%i .eq. filled(ist, excited_state%pair(ipair)%sigma)
+        ok = excited_state%pair(ipair)%i  ==  filled(ist, excited_state%pair(ipair)%sigma)
         if(ok) exit
       end do
 
       ! Treat differently the one-electron case in unpolarized mode
-      if( ispin .eq. UNPOLARIZED .and. (n_half_filled(1).eq.1) ) then
-        ok = excited_state%pair(ipair)%i .eq. half_filled(1, excited_state%pair(ipair)%sigma)
+      if( ispin  ==  UNPOLARIZED .and. (n_half_filled(1) == 1) ) then
+        ok = excited_state%pair(ipair)%i  ==  half_filled(1, excited_state%pair(ipair)%sigma)
       end if
 
       if(.not.ok) then
@@ -320,11 +320,11 @@ contains
       ! Then, whether the unoccupied state is really unoccupied.
       ok = .true.
       do ist = 1, n_filled(excited_state%pair(ipair)%sigma)
-        ok = .not. (excited_state%pair(ipair)%a .eq. filled(ist, excited_state%pair(ipair)%sigma))
+        ok = .not. (excited_state%pair(ipair)%a  ==  filled(ist, excited_state%pair(ipair)%sigma))
       end do
       ! Treat differently the one-electron case in unpolarized mode
-      if( ispin .eq. UNPOLARIZED .and. (n_half_filled(1).eq.1) ) then
-        ok = .not. (excited_state%pair(ipair)%i .eq. half_filled(1, excited_state%pair(ipair)%sigma))
+      if( ispin  ==  UNPOLARIZED .and. (n_half_filled(1) == 1) ) then
+        ok = .not. (excited_state%pair(ipair)%i  ==  half_filled(1, excited_state%pair(ipair)%sigma))
       end if
       ok = .not. (excited_state%pair(ipair)%a > nst)
       if(.not.ok) then
@@ -408,7 +408,7 @@ contains
   logical function pair_is_eq(pair1, pair2) result(res)
     type(states_pair_t), intent(in) :: pair1, pair2
 
-    res = (pair1%i .eq. pair2%i) .and. (pair1%a .eq. pair2%a) .and. (pair1%sigma .eq. pair2%sigma)
+    res = (pair1%i  ==  pair2%i) .and. (pair1%a  ==  pair2%a) .and. (pair1%sigma  ==  pair2%sigma)
   end function pair_is_eq
 
 #include "undef.F90"

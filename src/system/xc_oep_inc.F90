@@ -67,7 +67,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
     end if
     ! get lxc
     functl_loop: do ixc = 1, 2
-      if(xcs%functl(ixc, 1)%family .ne. XC_FAMILY_OEP) cycle
+      if(xcs%functl(ixc, 1)%family /= XC_FAMILY_OEP) cycle
 
       eig = M_ZERO
       select case(xcs%functl(ixc,1)%id)
@@ -106,7 +106,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
       !
       if(present(vxc)) then
         ! solve the KLI equation
-        if(oep%level .ne. XC_OEP_FULL .or. first) then
+        if(oep%level /= XC_OEP_FULL .or. first) then
           first = .false.
           oep%vxc = M_ZERO
           call X(xc_KLI_solve) (gr%mesh, st, is, oep)

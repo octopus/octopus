@@ -61,7 +61,7 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out)
 
   call profiling_in(prof, "PERT_APPLY")
 
-  ASSERT(this%dir .ne. -1)
+  ASSERT(this%dir /= -1)
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
     SAFE_ALLOCATE(f_in_copy(1:gr%mesh%np_part, 1:hm%d%dim))

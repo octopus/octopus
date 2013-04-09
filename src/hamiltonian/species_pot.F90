@@ -595,7 +595,7 @@ contains
       case(SPEC_FROM_FILE)
 
         call dio_function_input(trim(species_filename(spec)), mesh, vl, err)
-        if(err .ne. 0) then
+        if(err /= 0) then
           write(message(1), '(a)')    'Error loading file '//trim(species_filename(spec))//'.'
           write(message(2), '(a,i4)') 'Error code returned = ', err
           call messages_fatal(2)

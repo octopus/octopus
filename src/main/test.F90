@@ -60,7 +60,7 @@ program oct_test
     TEST_ALL     = 3
 
   call getopt_init(ierr)
-  if(ierr .eq. 0) call getopt_octopus()
+  if(ierr  ==  0) call getopt_octopus()
   call getopt_end()
 
   call global_init()

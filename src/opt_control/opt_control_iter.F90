@@ -144,7 +144,7 @@ contains
                                                 '               Delta'
     write(iterator%convergence_iunit, '(91(''#''))') 
 
-    if(parse_isdef('OCTVelocityTarget').ne.0) then
+    if(parse_isdef('OCTVelocityTarget') /= 0) then
        iterator%velocities_iunit = io_open(OCT_DIR//'velocities', action='write')
     end if
 
@@ -166,7 +166,7 @@ contains
     write(iterator%convergence_iunit, '(91("#"))') 
     call io_close(iterator%convergence_iunit)
 
-    if(parse_isdef('OCTVelocityTarget').ne.0) then
+    if(parse_isdef('OCTVelocityTarget') /= 0) then
        call io_close(iterator%velocities_iunit)
     end if
 
@@ -196,7 +196,7 @@ contains
     jfunctional = j1 + j2
     delta = controlfunction_diff(par, par_prev)
     
-    if(iterator%ctr_iter .eq. iterator%ctr_iter_max) then
+    if(iterator%ctr_iter  ==  iterator%ctr_iter_max) then
       message(1) = "Info: Maximum number of iterations reached."
       call messages_info(1)
       stoploop = .true.
@@ -219,7 +219,7 @@ contains
     write(message(4), '(6x,a,f12.5)')  " => Fluence  = ", fluence
     write(message(5), '(6x,a,f12.5)')  " => Penalty  = ", controlfunction_alpha(par, 1)
     write(message(6), '(6x,a,es12.2)') " => D[e,e']  = ", delta
-    if(iterator%ctr_iter .ne. 0) then
+    if(iterator%ctr_iter /= 0) then
       call messages_info(6)
     else
       call messages_info(5)
@@ -271,7 +271,7 @@ contains
       delta = M_ZERO
     end if
 
-    if(iterator%ctr_iter .eq. 0) then
+    if(iterator%ctr_iter  ==  0) then
       write(message(1), '(a)') 'Initial-guess field'
       call messages_print_stress(stdout, trim(message(1)))
     else
@@ -304,7 +304,7 @@ contains
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
       iterator%ctr_iter, j, j1, j2, delta
 
-    if(parse_isdef('OCTVelocityTarget').ne.0) then
+    if(parse_isdef('OCTVelocityTarget') /= 0) then
        call velocities_write(iterator, sys)
     end if
 

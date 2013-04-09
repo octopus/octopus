@@ -544,8 +544,8 @@ contains
         do j = 1, der%lapl%stencil%size
           this_one = .true.
           do k = 1, der%dim
-            if(k == i .and. polynomials(k, j).ne.2) this_one = .false.
-            if(k.ne.i .and. polynomials(k, j).ne.0) this_one = .false.
+            if(k == i .and. polynomials(k, j) /= 2) this_one = .false.
+            if(k /= i .and. polynomials(k, j) /= 0) this_one = .false.
           end do
           if(this_one) rhs(j) = M_TWO
         end do
@@ -569,8 +569,8 @@ contains
       do j = 1, der%grad(dir)%stencil%size
         this_one = .true.
         do k = 1, der%dim
-          if(k == dir .and. polynomials(k, j).ne.1) this_one = .false.
-          if(k.ne.dir .and. polynomials(k, j).ne.0) this_one = .false.
+          if(k == dir .and. polynomials(k, j) /= 1) this_one = .false.
+          if(k /= dir .and. polynomials(k, j) /= 0) this_one = .false.
         end do
         if(this_one) rhs(j) = M_ONE
       end do

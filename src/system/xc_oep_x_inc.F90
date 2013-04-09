@@ -109,7 +109,7 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
         recv_stack(ist_r) = jst
         ist_r = ist_r + 1
       end if
-      if(node_to .ne. -1 .and. st%node(jst) == st%mpi_grp%rank) then
+      if(node_to /= -1 .and. st%node(jst) == st%mpi_grp%rank) then
         send_stack(ist_s) = jst
         ist_s = ist_s + 1
       end if
@@ -128,7 +128,7 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
       if(st%parallel_in_states) then
         ! send wavefunction
         send_req = 0
-        if((send_stack(ist_s) > 0).and.(node_to.ne.st%mpi_grp%rank)) then
+        if((send_stack(ist_s) > 0).and.(node_to /= st%mpi_grp%rank)) then
           call MPI_Isend(st%X(psi)(1, jdm, send_stack(ist_s), isp), gr%mesh%np, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, send_req, mpi_err)
         end if
@@ -155,7 +155,7 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
 
 #if defined(HAVE_MPI)
       if(st%parallel_in_states) then
-        if(send_req.ne.0) call MPI_Wait(send_req, status, mpi_err)
+        if(send_req /= 0) call MPI_Wait(send_req, status, mpi_err)
         send_req = 0
       end if
 #endif
@@ -167,7 +167,7 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
         do jst = st%st_start, st%st_end
 
           if((st%node(ist) == st%mpi_grp%rank).and.(jst < ist).and..not.(st%d%ispin==SPINORS)) cycle
-          if((st%occ(ist, isp).le.small).or.(st%occ(jst, isp).le.small)) cycle
+          if((st%occ(ist, isp) <= small).or.(st%occ(jst, isp) <= small)) cycle
 
           rho_ij(1:gr%mesh%np) = R_CONJ(wf_ist(1:gr%mesh%np))*st%X(psi)(1:gr%mesh%np, jdm, jst, isp)
           F_ij(1:gr%mesh%np) = R_TOTYPE(M_ZERO)
@@ -179,13 +179,13 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
 
           ! if off-diagonal, then there is another contribution
           ! note that the wf jst is always in this node
-          if((ist .ne. jst).and..not.(st%d%ispin==SPINORS)) then
+          if((ist /= jst).and..not.(st%d%ispin==SPINORS)) then
             oep%X(lxc)(1:gr%mesh%np, jst, is) = oep%X(lxc)(1:gr%mesh%np, jst, is) - &
               exx_coef * oep%socc * st%occ(ist, isp) * R_CONJ(F_ij(1:gr%mesh%np)*wf_ist(1:gr%mesh%np))
           end if
           ! get the contribution (ist, jst) to the exchange energy
           rr = M_ONE
-          if(ist .ne. jst .and. .not.(st%d%ispin==SPINORS)) rr = M_TWO
+          if(ist /= jst .and. .not.(st%d%ispin==SPINORS)) rr = M_TWO
 
           ex = ex - exx_coef* M_HALF * rr * &
               oep%sfact * oep%socc*st%occ(ist, isp) * oep%socc*st%occ(jst, isp) * &
@@ -212,7 +212,7 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
       ! now we have to receive the contribution to lxc from the node to
       ! which we sent the wavefunction ist
       if(st%parallel_in_states) then
-        if((node_to >= 0) .and. (send_stack(ist_s) > 0) .and. (node_to .ne. st%mpi_grp%rank)) then
+        if((node_to >= 0) .and. (send_stack(ist_s) > 0) .and. (node_to /= st%mpi_grp%rank)) then
           call MPI_Recv(recv_buffer(:), gr%mesh%np, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, status, mpi_err)
 
@@ -220,7 +220,7 @@ subroutine X(oep_x) (gr, st, is, jdm, oep, ex, exx_coef)
             exx_coef * recv_buffer(1:gr%mesh%np)
         end if
 
-        if(send_req.ne.0) call MPI_Wait(send_req, status, mpi_err)
+        if(send_req /= 0) call MPI_Wait(send_req, status, mpi_err)
       end if
 #endif
 

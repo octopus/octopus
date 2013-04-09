@@ -328,7 +328,7 @@ module opt_control_target_m
       !% 
       !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
-      if(parse_isdef(datasets_check('OCTTargetTransformStates')) .ne. 0) then
+      if(parse_isdef(datasets_check('OCTTargetTransformStates')) /= 0) then
         if(parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
           call states_copy(tmp_st, target%st)
           call states_deallocate_wfns(tmp_st)
@@ -388,8 +388,8 @@ module opt_control_target_m
               do ik = 1, target%st%d%nik   
                 
                 ! does the block entry match and is this node responsible?
-                if(.not. (id .eq. idim .and. ist .eq. inst .and. ik .eq. inik    &
-                  .and. target%st%st_start .le. ist .and. target%st%st_end .ge. ist) ) cycle
+                if(.not. (id  ==  idim .and. ist  ==  inst .and. ik  ==  inik    &
+                  .and. target%st%st_start  <=  ist .and. target%st%st_end >= ist) ) cycle
                 
                 ! parse formula string
                 call parse_block_string(                            &
@@ -448,13 +448,13 @@ module opt_control_target_m
       !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
 
-      if(parse_isdef('OCTTargetDensity').ne.0) then
+      if(parse_isdef('OCTTargetDensity') /= 0) then
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
         target%rho = M_ZERO
         call parse_string(datasets_check('OCTTargetDensity'), "0", expression)
 
 
-        if(trim(expression) .eq. 'OCTTargetDensityFromState') then
+        if(trim(expression)  ==  'OCTTargetDensityFromState') then
 
           if(parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
             call states_copy(tmp_st, target%st)
@@ -511,7 +511,7 @@ module opt_control_target_m
       !% the variable <tt>OCTLocalTarget</tt>.
       !%End
 
-      if(parse_isdef('OCTLocalTarget') .ne. 0) then
+      if(parse_isdef('OCTLocalTarget') /= 0) then
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
         target%rho = M_ZERO
         call parse_string(datasets_check('OCTLocalTarget'), "0", expression)
@@ -577,7 +577,7 @@ module opt_control_target_m
       !% <br>%</tt>
       !%
       !%End
-      if(parse_isdef(datasets_check('OCTOptimizeHarmonicSpectrum')) .ne. 0) then
+      if(parse_isdef(datasets_check('OCTOptimizeHarmonicSpectrum')) /= 0) then
         if(parse_block(datasets_check('OCTOptimizeHarmonicSpectrum'), blk) == 0) then
           target%hhg_nks = parse_block_cols(blk, 0)
           SAFE_ALLOCATE(    target%hhg_k(1:target%hhg_nks))
@@ -606,7 +606,7 @@ module opt_control_target_m
 
     case(oct_tg_hhgnew)
        
-       if(parse_isdef('OCTMoveIons') .eq. 0) then
+       if(parse_isdef('OCTMoveIons')  ==  0) then
           message(1) = 'If OCTTargetOperator = oct_tg_hhgnew, then you must supply'
           message(2) = 'the variable "OCTMoveIons".'
           call messages_fatal(2)
@@ -614,7 +614,7 @@ module opt_control_target_m
           call parse_logical(datasets_check('OCTMoveIons'), .false., target%move_ions)
        end if
        
-       if(oct%algorithm .eq. oct_algorithm_cg) then
+       if(oct%algorithm  ==  oct_algorithm_cg) then
 
 
           SAFE_ALLOCATE(target%vel(td%max_iter+1, MAX_DIM))
@@ -753,7 +753,7 @@ module opt_control_target_m
           call messages_fatal(2)
        end if
        
-       if(parse_isdef('OCTMoveIons') .eq. 0) then
+       if(parse_isdef('OCTMoveIons')  ==  0) then
           message(1) = 'If OCTTargetOperator = oct_tg_velocity, then you must supply'
           message(2) = 'the variable "OCTMoveIons".'
           call messages_fatal(2)
@@ -761,7 +761,7 @@ module opt_control_target_m
           call parse_logical(datasets_check('OCTMoveIons'), .false., target%move_ions)
        end if
        
-       if(oct%algorithm .eq. oct_algorithm_cg) then
+       if(oct%algorithm  ==  oct_algorithm_cg) then
           if(parse_block(datasets_check('OCTVelocityDerivatives'),blk)==0) then
              SAFE_ALLOCATE(target%vel_der_array(1:geo%natoms,1:gr%sb%dim))
              do ist=0, geo%natoms-1
@@ -869,8 +869,8 @@ module opt_control_target_m
       !%Description
       !% Allows for a time dependent target for the current without defining it for the total 
       !% time-interval of the simulation.
-      !% Thus it can be switched on at the iteration desired, <tt>OCTStartIterCurrTg</tt> .ge. 0
-      !% and  <tt>OCTStartIterCurrTg</tt> .lt. <tt>TDMaximumIter</tt>. 
+      !% Thus it can be switched on at the iteration desired, <tt>OCTStartIterCurrTg</tt> >= 0
+      !% and  <tt>OCTStartIterCurrTg</tt>  <  <tt>TDMaximumIter</tt>. 
       !% Tip: If you would like to specify a real time for switching
       !% the functional on rather than the number of steps, just use something
       !% like:
@@ -898,7 +898,7 @@ module opt_control_target_m
       !%
       !% There are no restrictions on the number of lines, nor on the number of pairs of start- and endpoints. 
       !% Attention: <tt>startpoint</tt> and <tt>endpoint</tt> have to be supplied pairwise 
-      !% with <tt>startpoint .lt. endpoint</tt>. <tt>dimension .gt. 0</tt> is integer, <tt>fact</tt> is float.
+      !% with <tt>startpoint  <  endpoint</tt>. <tt>dimension > 0</tt> is integer, <tt>fact</tt> is float.
       !%End
       
       call parse_integer(datasets_check('OCTCurrentFunctional'), oct_no_curr, target%curr_functional)
@@ -907,7 +907,7 @@ module opt_control_target_m
       case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
         SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:stin%d%nspin ) )
         stin%current= M_ZERO
-        if(target%type .eq. oct_tg_density) then
+        if(target%type  ==  oct_tg_density) then
           message(1) =  'Info: Target is also a current.'
           call messages_info(1)
         end if
@@ -919,13 +919,13 @@ module opt_control_target_m
       write(message(2), '(a,f8.3)') 'Info: OCTCurrentWeight = ',  target%curr_weight
       call messages_info(2)
 
-      if (target_mode(target) .eq. oct_targetmode_td) then
+      if (target_mode(target)  ==  oct_targetmode_td) then
         call parse_integer(datasets_check('OCTStartIterCurrTg'), 0, target%strt_iter_curr_tg)
-        if (target%strt_iter_curr_tg .lt. 0) then
+        if (target%strt_iter_curr_tg  <  0) then
           message(1) = 'OCTStartIterCurrTg must be positive.'
           call messages_fatal(1)
-        elseif (target%strt_iter_curr_tg .ge. td%max_iter) then
-          message(1) = 'OCTStartIterCurrTg has to be .lt. TDMaximumIter.'
+        elseif (target%strt_iter_curr_tg >= td%max_iter) then
+          message(1) = 'OCTStartIterCurrTg has to be  <  TDMaximumIter.'
           call messages_fatal(1)
         end if
         write(message(1), '(a,i3)')   'Info: TargetMode = ', target_mode(target)
@@ -939,7 +939,7 @@ module opt_control_target_m
       end if
 
 
-      if(parse_isdef(datasets_check('OCTSpatialCurrWeight')) .ne. 0) then
+      if(parse_isdef(datasets_check('OCTSpatialCurrWeight')) /= 0) then
         if(parse_block(datasets_check('OCTSpatialCurrWeight'), blk) == 0) then
           SAFE_ALLOCATE(target%spatial_curr_wgt(1:gr%mesh%np_part))
           SAFE_ALLOCATE(xp(1:gr%mesh%np_part))
@@ -950,7 +950,7 @@ module opt_control_target_m
           cstr_dim = 0
           do ib = 1, no_constraint
             call parse_block_integer(blk, ib - 1, 0, idim)
-            if( idim .le. 0 .or. idim .gt. gr%mesh%sb%dim) then
+            if( idim  <=  0 .or. idim > gr%mesh%sb%dim) then
               write(message(1), '(a,i3)') 'Error in "OCTSpatialCurrWeight" block, line:', ib
               write(message(2), '(a)'   ) '"dimension" has to be positive'
               write(message(3), '(a)'   ) 'and must not exceed dimensions of the system.'
@@ -962,7 +962,7 @@ module opt_control_target_m
             call parse_block_float(blk, ib - 1, 1, fact)
 
             no_ptpair = parse_block_cols(blk, ib-1) - 2
-            if (mod(no_ptpair,2) .ne. 0) then
+            if (mod(no_ptpair,2) /= 0) then
               write(message(1), '(a,i3)') 'Error in "OCTSpatialCurrWeight" block, line:', ib
               write(message(2), '(a)'   ) 'Each interval needs start and end point!'
               call messages_fatal(2)
@@ -972,9 +972,9 @@ module opt_control_target_m
               call parse_block_float(blk, ib - 1, jj, xstart)
               call parse_block_float(blk, ib - 1, jj+1, xend)
                            
-              if (xstart .ge. xend) then
+              if (xstart >= xend) then
                 write(message(1), '(a,i3)') 'Error in "OCTSpatialCurrWeight" block, line:', ib
-                write(message(2), '(a)'   ) 'Set "startpoint" .lt. "endpoint" ' 
+                write(message(2), '(a)'   ) 'Set "startpoint"  <  "endpoint" ' 
                 call messages_fatal(2)
               end if
 
@@ -1021,28 +1021,28 @@ module opt_control_target_m
     PUSH_SUB(target_end)
 
     call states_end(target%st)
-    if(target%type .eq. oct_tg_local .or. &
-       target%type .eq. oct_tg_density .or. &
-       target%type .eq. oct_tg_td_local) then
+    if(target%type  ==  oct_tg_local .or. &
+       target%type  ==  oct_tg_density .or. &
+       target%type  ==  oct_tg_td_local) then
       SAFE_DEALLOCATE_P(target%rho)
     end if
-    if(target%type .eq. oct_tg_hhg) then
+    if(target%type  ==  oct_tg_hhg) then
       SAFE_DEALLOCATE_P(target%hhg_k)
       SAFE_DEALLOCATE_P(target%hhg_alpha)
       SAFE_DEALLOCATE_P(target%hhg_a)
     end if
-    if(target_mode(target).eq.oct_targetmode_td) then
+    if(target_mode(target) == oct_targetmode_td) then
       SAFE_DEALLOCATE_P(target%td_fitness)
     end if
-    if(target_type(target).eq.oct_tg_velocity) then
-       if(oct%algorithm .eq. oct_algorithm_cg) then
+    if(target_type(target) == oct_tg_velocity) then
+       if(oct%algorithm  ==  oct_algorithm_cg) then
           SAFE_DEALLOCATE_P(target%vel_der_array)
           SAFE_DEALLOCATE_P(target%grad_local_pot)
           SAFE_DEALLOCATE_P(target%rho)
        end if
     end if
-    if(target_type(target).eq.oct_tg_hhgnew) then
-       if(oct%algorithm .eq. oct_algorithm_cg) then
+    if(target_type(target) == oct_tg_hhgnew) then
+       if(oct%algorithm  ==  oct_algorithm_cg) then
           SAFE_DEALLOCATE_P(target%grad_local_pot)
           SAFE_DEALLOCATE_P(target%rho)
           SAFE_DEALLOCATE_P(target%vel)
@@ -1052,8 +1052,8 @@ module opt_control_target_m
           call fft_end(target%fft_handler)
        end if
     end if
-    if(target%type .eq. oct_tg_current .or. &
-       target%type .eq. oct_tg_density) then
+    if(target%type  ==  oct_tg_current .or. &
+       target%type  ==  oct_tg_density) then
       SAFE_DEALLOCATE_P(target%spatial_curr_wgt)
     end if
     POP_SUB(target_end)
@@ -1121,7 +1121,7 @@ module opt_control_target_m
     FLOAT :: acc(MAX_DIM), dt, dw
     integer :: iatom, idim, ik
 
-    if(target_mode(target)  .ne. oct_targetmode_td) return
+    if(target_mode(target)  /= oct_targetmode_td) return
 
     PUSH_SUB(target_tdcalc)
 
@@ -1157,7 +1157,7 @@ module opt_control_target_m
 
       dt = target%dt
       dw = (M_TWO * M_PI/(max_time * target%dt))
-      if(time .eq. max_time) then
+      if(time  ==  max_time) then
         target%acc(1, 1:gr%sb%dim) = M_HALF * (target%acc(1, 1:gr%sb%dim) + target%acc(max_time+1, 1:gr%sb%dim))
         do ia = 1, gr%sb%dim
           call zfft_forward1(target%fft_handler, target%acc(1:max_time, ia), target%vel(1:max_time, ia))
@@ -1200,7 +1200,7 @@ module opt_control_target_m
       end if
 
       dt = target%dt
-      if( (time .eq. 0) .or. (time .eq. max_time) ) dt = target%dt * M_HALF
+      if( (time  ==  0) .or. (time  ==  max_time) ) dt = target%dt * M_HALF
       do iatom = 1, geo%natoms
          geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) + &
            geo%atom(iatom)%f(1:MAX_DIM) * dt / species_weight(geo%atom(iatom)%spec)
@@ -1211,7 +1211,7 @@ module opt_control_target_m
       !!!! WARNING Here one should build the time-dependent target.
       select case(psi%d%ispin)
       case(UNPOLARIZED)
-        ASSERT(psi%d%nik .eq. 1)
+        ASSERT(psi%d%nik  ==  1)
         SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
         opsi = M_z0
         do ist  = psi%st_start, psi%st_end
@@ -1239,7 +1239,7 @@ module opt_control_target_m
     ! case oct_tg_density only active if combined with td current functional
     case(oct_tg_current, oct_tg_density)
 
-      if (time .ge. target%strt_iter_curr_tg) then
+      if (time >= target%strt_iter_curr_tg) then
         target%td_fitness(time) = jcurr_functional(target, gr, psi)
       end if 
 
@@ -1290,7 +1290,7 @@ module opt_control_target_m
       end forall
    
     case(oct_tg_current, oct_tg_density)
-      if (abs(nint(time/target%dt)) .ge. target%strt_iter_curr_tg) then
+      if (abs(nint(time/target%dt)) >= target%strt_iter_curr_tg) then
         inh%zpsi =  -chi_current(target, gr, psi)
       else
         inh%zpsi = M_ZERO
@@ -1439,8 +1439,8 @@ module opt_control_target_m
     end select
 
     ! current functionals are conveniently combined with others
-    if (target%type .eq. oct_tg_current .or. &
-        target%curr_functional .ne. oct_no_curr) then
+    if (target%type  ==  oct_tg_current .or. &
+        target%curr_functional /= oct_no_curr) then
       select case(target_mode(target))
       case(oct_targetmode_static)
         currfunc_tmp = jcurr_functional(target, gr, psi )
@@ -1491,9 +1491,9 @@ module opt_control_target_m
       select case(psi_in%d%ispin)
       case(UNPOLARIZED)
 
-        ASSERT(psi_in%d%nik .eq. 1)
+        ASSERT(psi_in%d%nik  ==  1)
 
-        if(no_electrons .eq. 1) then
+        if(no_electrons  ==  1) then
           do ip = 1, gr%mesh%np
             chi_out%zpsi(ip, 1, 1, 1) = sqrt(target%rho(ip)) * &
               exp(M_zI * atan2(aimag(psi_in%zpsi(ip, 1, 1, 1)), &
@@ -1577,19 +1577,19 @@ module opt_control_target_m
         call messages_fatal(1)
 
       case(SPIN_POLARIZED)
-        ASSERT(chi_out%d%nik .eq. 2)
+        ASSERT(chi_out%d%nik  ==  2)
 
         do ik = 1, kpoints
           do ist = chi_out%st_start, chi_out%st_end
             chi_out%zpsi(:, :, ist, ik) = M_z0
             do ia = 1, n_pairs
-              if(ik .ne. target%est%pair(ia)%sigma) cycle
+              if(ik /= target%est%pair(ia)%sigma) cycle
               if(abs(dI(ia)) < CNST(1.0e-12)) cycle
               do ib = 1, n_pairs
                 if(abs(dI(ib)) < CNST(1.0e-12)) cycle
                 mk = M_z0
                 do jst = 1, nst
-                  if(jst .eq. target%est%pair(ib)%i) jj = target%est%pair(ia)%a
+                  if(jst  ==  target%est%pair(ib)%i) jj = target%est%pair(ia)%a
                   mk(:, :) = mk(:, :) + conjg(mm(ist, jst, ik, ib)) * target%est%st%zpsi(:, :, jj, ik)
                 end do
                 call lalg_axpy(gr%mesh%np_part, psi_in%d%dim, M_z1, lambda(ib, ia) * mk(:, :), chi_out%zpsi(:, :, ist, ik))
@@ -1599,7 +1599,7 @@ module opt_control_target_m
         end do
         
       case(SPINORS)
-        ASSERT(chi_out%d%nik .eq. 1)
+        ASSERT(chi_out%d%nik  ==  1)
 
         do ist = chi_out%st_start, chi_out%st_end
           chi_out%zpsi(:, :, ist, 1) = M_z0
@@ -1612,7 +1612,7 @@ module opt_control_target_m
 
               mk = M_z0
               do jst = 1, nst
-                if(jst .eq. target%est%pair(ib)%i) jj = target%est%pair(ia)%a
+                if(jst  ==  target%est%pair(ib)%i) jj = target%est%pair(ia)%a
                 mk(:, :) = mk(:, :) + conjg(mm(ist, jst, 1, ib)) * target%est%st%zpsi(:, :, jj, 1)
               end do
 
@@ -1687,9 +1687,9 @@ module opt_control_target_m
 
     ! boundary conditions of static current functionals are combined with others.
     ! chi_out%zpsi is accumulated.
-    if(target%type .eq. oct_tg_current .or. &
-      target%curr_functional .ne. oct_no_curr) then
-      if (target_mode(target) .eq. oct_targetmode_static ) then
+    if(target%type  ==  oct_tg_current .or. &
+      target%curr_functional /= oct_no_curr) then
+      if (target_mode(target)  ==  oct_targetmode_static ) then
         chi_out%zpsi = chi_out%zpsi + chi_current(target, gr, psi_in)
       end if
     end if 
@@ -1814,7 +1814,7 @@ module opt_control_target_m
     PUSH_SUB(jcurr_functional)
     
     jcurr = M_ZERO    
-    ASSERT(psi%d%nik .eq. 1)
+    ASSERT(psi%d%nik  ==  1)
     SAFE_ALLOCATE(semilocal_function(1:gr%mesh%np))
     semilocal_function = M_ZERO
 
@@ -1831,7 +1831,7 @@ module opt_control_target_m
     case(oct_max_curr_ring)
       call states_calc_quantities(gr%der, psi, paramagnetic_current=psi%current) 
 
-      if(gr%sb%dim .ne. M_TWO) then
+      if(gr%sb%dim /= M_TWO) then
         call messages_not_implemented('Target for dimension != 2')
       end if
 
@@ -1879,7 +1879,7 @@ module opt_control_target_m
 
     SAFE_ALLOCATE(grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim, 1))
 
-    if(target_mode(target) .eq. oct_targetmode_td ) then 
+    if(target_mode(target)  ==  oct_targetmode_td ) then 
       call states_calc_quantities(gr%der, psi_in, paramagnetic_current=psi_in%current) 
     end if
 

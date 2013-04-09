@@ -187,13 +187,13 @@ subroutine X(root_laguerre)(rs, root, startval, coeff)
 
     zold = z
 
-    if ( abs(denom1).gt.abs(denom2) ) then
+    if ( abs(denom1) > abs(denom2) ) then
       z = z - order / denom1
     else
       z = z - order / denom2
     end if
 
-    if (abs(zold-z).lt.rs%abs_tolerance) exit
+    if (abs(zold-z) < rs%abs_tolerance) exit
 
   end do
 

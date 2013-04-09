@@ -295,7 +295,7 @@ contains
       fft_dim = fft_dim + 1
     end do
 
-    if(fft_dim .eq. 0) then
+    if(fft_dim  ==  0) then
       message(1) = "Internal error in fft_init: apparently, a 1x1x1 FFT is required."
       call messages_fatal(1)
     end if
@@ -328,7 +328,7 @@ contains
       do ii = 1, fft_dim
         !NFFT likes even grids
         !The underlying FFT grids are optimized inside the nfft_init routine
-        if(int(nn(ii)/2)*2 .ne. nn(ii)) nn(ii)=nn(ii)+1 
+        if(int(nn(ii)/2)*2 /= nn(ii)) nn(ii)=nn(ii)+1 
       end do 
           
     case default
@@ -394,7 +394,7 @@ contains
  
       call pfft_create_procmesh_2d(ierror, mpi_grp_%comm, column_size, row_size, fft_array(jj)%comm)        
    
-      if (ierror .ne. 0) then
+      if (ierror /= 0) then
         message(1) = "The number of rows and columns in PFFT processor grid is not equal to "
         message(2) = "the number of processor in the MPI communicator."
         message(3) = "Please check it."

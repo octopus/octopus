@@ -328,7 +328,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! Check for convergence. If converged, quit the eigenpair iteration loop.
     call X(lobpcg_unconv_ev)
 
-    if(nuc.eq.0) then
+    if(nuc == 0) then
       exit iteration
     end if
 

@@ -363,17 +363,17 @@ contains
       ! Find weights of numerical derivative from Lagrange
       ! interpolation formula
       do IN = IN1,IN2
-        if (IN .eq. 0) then
+        if (IN  ==  0) then
           DGDM(IN) = 0
           do JN = IN1,IN2
-            if (JN.ne.0) DGDM(IN) = DGDM(IN) + M_ONE / (0 - JN)
+            if (JN /= 0) DGDM(IN) = DGDM(IN) + M_ONE / (0 - JN)
           end do
         else
           F1 = 1
           F2 = 1
           do JN = IN1,IN2
-            if (JN.ne.IN .and. JN.ne.0) F1 = F1 * (0  - JN)
-            if (JN.ne.IN)               F2 = F2 * (IN - JN)
+            if (JN /= IN .and. JN /= 0) F1 = F1 * (0  - JN)
+            if (JN /= IN)               F2 = F2 * (IN - JN)
           end do
           DGDM(IN) = F1 / F2
         end if
@@ -390,7 +390,7 @@ contains
       
       ! DVMIN is a small number added to avoid a division by zero
       DVOL = DVOL + DVMIN
-      if (IR.eq.1 .or. IR.eq.NR) DVOL = DVOL / 2
+      if (IR == 1 .or. IR == NR) DVOL = DVOL / 2
       if (GGA) AUX(IR) = DVOL
       
       ! Find the weights for the derivative d(gradF(i))/d(F(j)), of
@@ -440,7 +440,7 @@ contains
       if(gga) then
         dexdgd(:, 1) = M_TWO * vxsigma(1)*gd(:, 1)
         decdgd(:, 1) = M_TWO * vcsigma(1)*gd(:, 1)
-        if(NSPIN .eq. 2) then
+        if(NSPIN  ==  2) then
           dexdgd(:, 1) = dexdgd(:, 1) + vxsigma(2)*gd(:, 2)
           dexdgd(:, 2) = M_TWO * vxsigma(3)*gd(:, 2) + vxsigma(2)*gd(:, 1)
           decdgd(:, 1) = decdgd(:, 1) + vcsigma(2)*gd(:, 2)
@@ -722,9 +722,9 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-      if(.not. (et.le.e1 .or. et.ge.e2 .or. nt.lt.nnode-1 .or. nt.gt.nnode)) then
+      if(.not. (et <= e1 .or. et >= e2 .or. nt < nnode-1 .or. nt > nnode)) then
         e=et
-        if(abs(de).lt.tol) then
+        if(abs(de) < tol) then
           ierr = 0
           exit
         endif
@@ -738,7 +738,7 @@ contains
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      if(nt .lt. nnode) then
+      if(nt  <  nnode) then
         !  too few nodes; set e1 and n1
         e1=e
         n1=nt
@@ -752,7 +752,7 @@ contains
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        if(n2.ge.nnode) cycle
+        if(n2 >= nnode) cycle
         del=del*M_TWO
         e2=e1+del
         cycle
@@ -772,7 +772,7 @@ contains
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      if(n1 .lt. nnode) cycle
+      if(n1  <  nnode) cycle
       del=del*M_TWO
       e1=e2-del
 
@@ -787,7 +787,7 @@ contains
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    if(ierr .ne. 1) then
+    if(ierr /= 1) then
       g(1) = M_ZERO
       do i = 2, n
         t=h(i)-e*s(i)
@@ -840,7 +840,7 @@ contains
     zdr = z*a*b
     
     do n = nmax, 1, -1
-      if( h(n)-e*s(n) .lt. M_ONE ) then
+      if( h(n)-e*s(n)  <  M_ONE ) then
         knk = n
         exit
       endif
@@ -870,7 +870,7 @@ contains
 
 
     yn = M_ZERO
-    if(.not. (n.lt.nmax .or. abs(dr).gt.CNST(1.e3))) then
+    if(.not. (n < nmax .or. abs(dr) > CNST(1.e3))) then
       call bcrmax(e,dr,rmax,h,s,n,yn,a,b)
     endif
 
@@ -901,7 +901,7 @@ contains
     t=h(knk)-e*s(knk)
     de=g*(x+xin+t*g)/gsg
     nnode=nnode+nndin
-    if(de.lt.M_ZERO) nnode=nnode+1
+    if(de < M_ZERO) nnode=nnode+1
     
     do i=knk,n
       y(i) = y(i)*ratio
@@ -947,7 +947,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-    if (mod(n,2).ne.1) then
+    if (mod(n,2) /= 1) then
       write(message(1),'(a,i6)') ' nrmlzg: n should be odd. n =', n
       call messages_warning(1)
     endif
@@ -1007,8 +1007,8 @@ contains
 !  g and its first two derivatives vanish, making y zero.                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    if(l .lt. 2) then
-      if(l .le. 0) then
+    if(l  <  2) then
+      if(l  <=  0) then
         c0=zdr/M_SIX
         c0=c0/(M_ONE-CNST(0.75)*zdr)
       else
@@ -1023,8 +1023,8 @@ contains
     endif
     y2=(-M_ONE)/d2
     
-    if(l .lt. 2) then
-      if(l .le. 0) then
+    if(l  <  2) then
+      if(l  <=  0) then
         c0=zdr/M_SIX
         c0=c0/(M_ONE-CNST(0.75)*zdr)
       else
@@ -1109,7 +1109,7 @@ contains
     do i = n - 2, knk, -1
       x=x+t*g
       y(i)=y(i+1)+x
-      if( y(i)*y(i+1) .lt. M_ZERO) nnode=nnode+1
+      if( y(i)*y(i+1)  <  M_ZERO) nnode=nnode+1
       t=h(i)-e*s(i)
       g=y(i)/(M_ONE-t/CNST(12.))
       gsg=gsg+g*s(i)*g
@@ -1167,11 +1167,11 @@ contains
       xl=x
       x=x+t*g
       y(i)=y(i-1)+x
-      if( y(i)*y(i-1) .lt. M_ZERO) nnode=nnode+1
+      if( y(i)*y(i-1)  <  M_ZERO) nnode=nnode+1
       t=h(i)-e*s(i)
       g=y(i)/(M_ONE-t/CNST(12.))
       gsg=gsg+g*s(i)*g
-      if(.not. (nnode.lt.ncor .or. xl*x.gt.M_ZERO)) then
+      if(.not. (nnode < ncor .or. xl*x > M_ZERO)) then
         knk = i
         exit
       endif

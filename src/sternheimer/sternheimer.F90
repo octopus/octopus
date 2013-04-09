@@ -128,7 +128,7 @@ contains
     PUSH_SUB(sternheimer_init)
 
     if(simul_box_is_periodic(sys%gr%mesh%sb)) call messages_experimental("Sternheimer equation for periodic systems")
-    if(sys%st%smear%method .eq. SMEAR_FIXED_OCC) then
+    if(sys%st%smear%method  ==  SMEAR_FIXED_OCC) then
       call messages_experimental("Sternheimer equation for arbitrary occupations")
     endif
 
@@ -187,7 +187,7 @@ contains
 
     if(present(set_ham_var)) then
       ham_var = set_ham_var
-    else if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
+    else if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       if (parse_isdef(datasets_check(trim(prefix)//'HamiltonianVariation')) /= 0) then
         call parse_integer(datasets_check(trim(prefix)//'HamiltonianVariation'), 3, ham_var)
       else
@@ -197,7 +197,7 @@ contains
       ham_var = 0
     end if
 
-    if(hm%theory_level .ne. INDEPENDENT_PARTICLES) then
+    if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       this%add_fxc = ((ham_var / 2) == 1)
       this%add_hartree = (mod(ham_var, 2) == 1)
     else

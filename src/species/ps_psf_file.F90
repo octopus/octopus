@@ -141,7 +141,7 @@ contains
         read(unit) l, (psf%vso(i, nup), i=2, psf%nr)
       end if
 
-      if( (l /= nup) .and. (psf%irel.eq.'rel') ) then
+      if( (l /= nup) .and. (psf%irel == 'rel') ) then
         message(1) = 'Unexpected angular momentum'
         message(2) = 'Pseudopotential should be ordered by increasing l'
         call messages_warning(2)
@@ -152,7 +152,7 @@ contains
         psf%vso(2, nup), psf%vso(3, nup))
 
     end do
-    if(psf%irel.ne.'rel') then
+    if(psf%irel /= 'rel') then
       psf%vso(:,:) = M_ZERO
     end if
 

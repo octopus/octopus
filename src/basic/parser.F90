@@ -251,7 +251,7 @@ contains
     ! initialize the parser
     if(mpi_grp_is_root(mpi_world)) call loct_mkdir('exec')
     ierr = parse_init('exec/parser.log', mpi_world%rank)
-    if(ierr .ne. 0) then
+    if(ierr /= 0) then
       write(0,'(a)') '*** Fatal Error (description follows)'
       write(0,'(a)') 'Error initializing liboct'
       write(0,'(a)') 'Do you have write permissions in this directory?'
@@ -263,7 +263,7 @@ contains
 
     ! read in default variables
     ierr = parse_input_file(trim(conf%share)//'/variables')
-    if(ierr .ne. 0) then
+    if(ierr /= 0) then
       write(0,'(a)') '*** Fatal Error (description follows)'
       write(0,'(a)') 'Cannot open variables file: '//trim(conf%share)//'/variables'
 #ifdef HAVE_MPI
@@ -274,7 +274,7 @@ contains
 
     ! setup standard input
     ierr = parse_input_file('inp')
-    if(ierr .ne. 0) then 
+    if(ierr /= 0) then 
       write(0,'(a)') '*** Fatal Error (description follows)' 
       write(0,'(a)') 'Error initializing liboct' 
       write(0,'(a)') 'Cannot open input file!' 
@@ -310,7 +310,7 @@ contains
     if(def) idef = 1
 
     call oct_parse_int(name, idef, ires)
-    res = (ires .ne. 0)
+    res = (ires /= 0)
 
   end subroutine parse_logical
 
@@ -324,7 +324,7 @@ contains
     integer :: ires
 
     call oct_parse_block_int(blk, l, c, ires)
-    res = (ires .ne. 0)
+    res = (ires /= 0)
 
   end subroutine parse_block_logical
 

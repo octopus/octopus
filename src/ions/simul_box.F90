@@ -497,7 +497,7 @@ contains
           call parse_block_end(blk)
         else
           call parse_float(datasets_check('Lsize'), -M_ONE, sb%lsize(1), units_inp%length)
-          if(sb%lsize(1) .eq. -M_ONE) then
+          if(sb%lsize(1)  ==  -M_ONE) then
             call input_error('Lsize')
           end if
           if(def_rsize > M_ZERO .and. sb%periodic_dim < sb%dim) &
@@ -942,7 +942,7 @@ contains
     PUSH_SUB(simul_box_write_info)
 
     write(message(1),'(a)') 'Simulation Box:'
-    if(sb%box_shape .eq. BOX_USDEF) then
+    if(sb%box_shape  ==  BOX_USDEF) then
       write(message(2), '(a)') '  Type = user-defined'
     else
       write(message(2), '(a,a,1x)') '  Type = ', bs(sb%box_shape)
@@ -1156,7 +1156,7 @@ contains
         enddo
         rr = sqrt(sum(xx(1:sb%dim, ip)**2))
         call parse_expression(re, im, sb%dim, xx(:, ip), rr, M_ZERO, sb%user_def)
-        in_box(ip) = in_box(ip) .and. (re .ne. M_ZERO)
+        in_box(ip) = in_box(ip) .and. (re /= M_ZERO)
       end do
     end select
 
@@ -1248,7 +1248,7 @@ contains
     ! Find (and throw away) the dump tag.
     do
       call iopar_read(mpi_world, iunit, line, ierr)
-      if(trim(line) .eq. dump_tag) exit
+      if(trim(line)  ==  dump_tag) exit
     end do
 
     call iopar_read(mpi_world, iunit, line, ierr)
@@ -1374,13 +1374,13 @@ contains
     PUSH_SUB(ob_simul_box_init)
 
     ! Open boundaries are only possible for rectangular simulation boxes.
-    if(sb%box_shape.ne.PARALLELEPIPED) then
+    if(sb%box_shape /= PARALLELEPIPED) then
       message(1) = 'Open boundaries are only possible with a parallelepiped'
       message(2) = 'simulation box.'
       call messages_fatal(2)
     end if
     ! Simulation box must not be periodic in transport direction.
-    if(sb%periodic_dim.eq.1) then
+    if(sb%periodic_dim == 1) then
       message(1) = 'When using open boundaries, you cannot use periodic boundary'
       message(2) = 'conditions in the x-direction.'
       call messages_fatal(2)
@@ -1388,7 +1388,7 @@ contains
 
     if(transport_mode) then
       ! lowest index must be transport direction
-      ASSERT(TRANS_DIR.eq.1)
+      ASSERT(TRANS_DIR == 1)
       sb%transport_dim = TRANS_DIR
       lead_sb(:)%transport_dim = TRANS_DIR
     else ! just open boundaries
@@ -1434,12 +1434,12 @@ contains
       ! * periodic in one dimension, and
       ! * of the same dimensionality as the central system.
 
-      if(lead_sb(il)%box_shape .ne. PARALLELEPIPED) then
+      if(lead_sb(il)%box_shape /= PARALLELEPIPED) then
         message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not a parallelepiped.'
         call messages_fatal(1)
       end if
 
-      if(any(sb%lsize(2:sb%dim) .ne. lead_sb(il)%lsize(2:sb%dim))) then
+      if(any(sb%lsize(2:sb%dim) /= lead_sb(il)%lsize(2:sb%dim))) then
         message(1) = 'The size in non-transport-directions of the ' // LEAD_NAME(il) // ' lead'
         message(2) = 'does not fit the size of the non-transport-directions of the central system.'
         call messages_fatal(2)
@@ -1452,12 +1452,12 @@ contains
         call messages_fatal(3)
       end if
 
-      if(lead_sb(il)%periodic_dim .ne. 1) then
+      if(lead_sb(il)%periodic_dim /= 1) then
         message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' lead is not periodic in x-direction.'
         message(2) = 'For now we assume the first unit cell to be the periodic representative.'
         call messages_warning(2)
       end if
-      if(lead_sb(il)%dim .ne. sb%dim) then
+      if(lead_sb(il)%dim /= sb%dim) then
         message(1) = 'Simulation box of ' // LEAD_NAME(il) // ' has a different dimension than'
         message(2) = 'the central system.'
         call messages_fatal(2)
@@ -1502,12 +1502,12 @@ contains
 
     ! Set the number of atoms and classical atoms to the number
     ! of atoms coming from left and right lead and central part.
-    if(geo%natoms .gt. 0) then
+    if(geo%natoms > 0) then
       SAFE_DEALLOCATE_P(geo%atom)
     end if
     geo%natoms = central_geo%natoms + ucells(LEFT)*lead_geo(LEFT)%natoms + ucells(RIGHT)*lead_geo(RIGHT)%natoms
     SAFE_ALLOCATE(geo%atom(1:geo%natoms))
-    if(geo%ncatoms .gt. 0) then
+    if(geo%ncatoms > 0) then
       SAFE_DEALLOCATE_P(geo%catom)
     end if
     geo%ncatoms = central_geo%ncatoms + ucells(LEFT)*lead_geo(LEFT)%ncatoms + ucells(RIGHT)*lead_geo(RIGHT)%ncatoms
@@ -1553,7 +1553,7 @@ contains
     end do
 
     ! Initialize the species of the "extended" central system.
-    if(geo%nspecies .gt. 0) then
+    if(geo%nspecies > 0) then
       SAFE_DEALLOCATE_P(geo%species)
       SAFE_DEALLOCATE_P(geo%ionic_interaction_type)
     end if

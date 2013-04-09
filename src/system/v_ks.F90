@@ -196,7 +196,7 @@ contains
       ks%xc_family = ks%xc%family
 
       ! check for SIC
-      if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA) .ne. 0) then
+      if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA) /= 0) then
 
         !%Variable SICCorrection
         !%Type integer
@@ -289,10 +289,10 @@ contains
         call parse_float(datasets_check('XCTailCorrectionCMDistance'), M_ZERO, ks%tc_distance)
       end if
 
-      if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
+      if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_init(ks%oep, ks%xc_family, gr, dd, nel)
       endif
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
+      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_init(ks%ks_inversion, ks%xc_family, gr, geo, mc)
       endif
     case(RDMFT)
@@ -334,10 +334,10 @@ contains
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
+      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_end(ks%ks_inversion, gr, geo)
       endif
-      if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
+      if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_end(ks%oep)
       endif
       call xc_end(ks%xc)
@@ -377,10 +377,10 @@ contains
       write(iunit, '(1x)')
       call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
 
-      if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
+      if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_write_info(ks%oep, iunit)
       end if
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
+      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_write_info(ks%ks_inversion, iunit)
       end if
         
@@ -509,7 +509,7 @@ contains
         end if
       end if
 
-      if(ks%theory_level .ne. HARTREE) call v_a_xc(geo, hm)
+      if(ks%theory_level /= HARTREE) call v_a_xc(geo, hm)
     end if
 
     nullify(ks%calc%hf_st)
@@ -614,7 +614,7 @@ contains
       end if
 
       nullify(ks%calc%vtau)
-      if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+      if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
         SAFE_ALLOCATE(ks%calc%vtau(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
         ks%calc%vtau = M_ZERO
         if(cmplxscl) then
@@ -627,7 +627,7 @@ contains
       if(hm%d%cdft) then
         call messages_not_implemented('Current-DFT')
       else if(ks%calc%calc_energy) then
-        if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+        if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_MGGA')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
@@ -644,7 +644,7 @@ contains
           end if
         end if
       else
-        if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+        if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_MGGA')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, &
             st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
@@ -663,7 +663,7 @@ contains
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
         ! The OEP family has to be handled specially
-        if(iand(ks%xc_family, XC_FAMILY_OEP) .ne. 0) then
+        if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_OEP')
           if (states_are_real(st)) then
             call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
@@ -674,7 +674,7 @@ contains
           end if
         endif
 
-        if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) .ne. 0) then
+        if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_KS_INVERSION')
         ! Also treat KS inversion separately (not part of libxc)
         if(present(time)) then
@@ -748,7 +748,7 @@ contains
           state_cycle: do ist = st%st_start, st%st_end
             
             to_calc = .false.
-            if ((st%occ(ist,ik) .ne. M_ZERO) .and. (counter .gt. ks%tc_delay) ) to_calc = .true.
+            if ((st%occ(ist,ik) /= M_ZERO) .and. (counter > ks%tc_delay) ) to_calc = .true.
             
             ! If the state is not occupied and the call counter is greater than the desired value
             ! don`t apply the correction and cycle
@@ -770,7 +770,7 @@ contains
               distance_cm = M_ZERO
               call cm_pos(geo,pos)
               pos = M_ZERO
-              if (ks%gr%mesh%sb%dim .ne. MAX_DIM) then
+              if (ks%gr%mesh%sb%dim /= MAX_DIM) then
                 message(1) = "Simulation box dimension different from the dimension used in subroutine cm_pos."
                 call messages_fatal(1)
               end if
@@ -785,10 +785,10 @@ contains
               !- at least we have reached the linking region (and)...
               !- the cm distance is greater than the desired value ...
               ! then apply the correction
-              if( (s_dens .ne. M_ZERO) .and. (ks%calc%total_density(ip) .lt. ks%tc_link_factor*ks%tail_correction_tol) & 
-                .and. (distance_cm .gt. ks%tc_distance) ) then
+              if( (s_dens /= M_ZERO) .and. (ks%calc%total_density(ip)  <  ks%tc_link_factor*ks%tail_correction_tol) & 
+                .and. (distance_cm > ks%tc_distance) ) then
                 
-                if (ks%calc%total_density(ip) .gt. ks%tail_correction_tol ) then 
+                if (ks%calc%total_density(ip) > ks%tail_correction_tol ) then 
                   smooth_ratio =  ks%calc%total_density(ip)/ks%tail_correction_tol
                   vnew = - M_ONE/distance_cm
                   vxcc(ip) = ( smooth_ratio*vxcc(ip) + (ks%tc_link_factor-smooth_ratio)*vnew ) / ks%tc_link_factor
@@ -897,7 +897,7 @@ contains
           end if
         end if
 
-        if(iand(hm%xc_family, XC_FAMILY_MGGA) .ne. 0) then
+        if(iand(hm%xc_family, XC_FAMILY_MGGA) /= 0) then
           do ispin = 1, hm%d%nspin
             call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
             if(hm%cmplxscl%space) call lalg_copy(ks%gr%fine%mesh%np, ks%calc%Imvtau(:, ispin), hm%Imvtau(:, ispin))

@@ -45,7 +45,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
   if(smear_is_semiconducting(st%smear) .or. st%smear%integral_occs) then
     theta = st%occ(ist, ik) / st%smear%el_per_state
     do jst = 1, st%nst
-      if(abs(st%occ(ist, ik) * st%occ(jst, ik)) .gt. M_EPSILON) then
+      if(abs(st%occ(ist, ik) * st%occ(jst, ik)) > M_EPSILON) then
         beta_ij(jst) = st%occ(jst, ik) / st%smear%el_per_state
       else
         beta_ij(jst) = M_ZERO
@@ -56,7 +56,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
     theta_Fi(1:st%nst) = st%occ(1:st%nst, ik) / st%smear%el_per_state
 
     do jst = 1, st%nst
-      if(st%smear%method .eq. SMEAR_FIXED_OCC .or. st%smear%method .eq. SMEAR_COLD) then
+      if(st%smear%method  ==  SMEAR_FIXED_OCC .or. st%smear%method  ==  SMEAR_COLD) then
         if(theta_Fi(ist) + theta_Fi(jst) > M_EPSILON) then
           theta_ij = theta_Fi(jst) / (theta_Fi(ist) + theta_Fi(jst))
           theta_ji = theta_Fi(ist) / (theta_Fi(ist) + theta_Fi(jst))
@@ -82,7 +82,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega)
         ! cannot calculate for fixed occ, ignore
         ! the kernel is supposed to kill off these KS resonances anyway
         ! in dynamic case, need to add 'self term' without omega, for variation of occupations
-        if(st%smear%method .ne. SMEAR_FIXED_OCC) then 
+        if(st%smear%method /= SMEAR_FIXED_OCC) then 
           xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
           yy = (st%smear%e_fermi - st%eigenval(jst, ik) + CNST(1e-14))/dsmear
           ! average for better numerics, as in ABINIT
@@ -132,7 +132,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   ! generalized to TDDFT. Note that their \Delta n_ext = 0 unless the perturbation explicitly
   ! changes the charge of the system, as in "computational alchemy" (PRL 66 2116 (1991)).
   ! n(r,E_F) * dV_SCF = dl_rho, before correction.
-  is_ef_shift = .not. smear_is_semiconducting(st%smear) .and. st%smear%method .ne. SMEAR_FIXED_OCC
+  is_ef_shift = .not. smear_is_semiconducting(st%smear) .and. st%smear%method /= SMEAR_FIXED_OCC
   
   ! initialize density
   do isigma = 1, nsigma

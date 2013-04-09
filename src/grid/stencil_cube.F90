@@ -65,7 +65,7 @@ contains
     PUSH_SUB(stencil_cube_extent)
 
     extent = 0
-    if(dir.ge.1.or.dir.le.3) then
+    if(dir >= 1.or.dir <= 3) then
       extent = order
     end if
     stencil_cube_extent = extent

@@ -146,7 +146,7 @@ contains
     ! Get the environment variable OCTOPUS_SHARE that overrides SHARE_OCTOPUS/share/octopus.
     call loct_getenv("OCTOPUS_SHARE", share)
 
-    if(share.ne."") then
+    if(share /= "") then
       conf%share = trim(share)
     else
       conf%share = SHARE_OCTOPUS

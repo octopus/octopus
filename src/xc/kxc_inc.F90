@@ -40,7 +40,7 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
   end if
 
   ! is there anything to do? (only LDA by now)
-  if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)).ne.XC_FAMILY_NONE) then
+  if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)) /= XC_FAMILY_NONE) then
     message(1) = "Only LDA functionals are authorized for now in xc_get_kxc."
     call messages_fatal(1)
   end if

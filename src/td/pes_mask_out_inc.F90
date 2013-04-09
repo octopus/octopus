@@ -64,7 +64,7 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
 
         call PES_mask_cube_to_mesh(mask, cf, PsiAB(:, idim, ist, ik))        
 
-        if (mask%mode .ne. PES_MASK_MODE_PASSIVE) then 
+        if (mask%mode /= PES_MASK_MODE_PASSIVE) then 
           PsiAB(:, idim, ist, ik) = PsiAB(:, idim, ist, ik) + st%zpsi(:, idim, ist, ik) 
         end if
         
@@ -80,7 +80,7 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
   call density_calc_end(dens_calc)
 
   ! THE OUTPUT 
-  if(iand(outp%what, C_OUTPUT_PES_DENSITY) .ne. 0) then
+  if(iand(outp%what, C_OUTPUT_PES_DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
@@ -94,7 +94,7 @@ subroutine PES_mask_output_states(st, gr, geo, dir, outp, mask)
   end if
 
 
-  if(iand(outp%what, C_OUTPUT_PES_WFS).ne.0) then
+  if(iand(outp%what, C_OUTPUT_PES_WFS) /= 0) then
     fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
     do ist = st%st_start, st%st_end
 !        if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -237,7 +237,7 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
   np = ll(1)*ll(2)*ll(3)  
 
   !check dim
-  if (dim .lt. 2 .or. dim .gt. 3) then
+  if (dim  <  2 .or. dim > 3) then
     message(1) = "This interpolator works only for 2 <= dim <= 3." 
     call messages_fatal(1)
   end if
@@ -543,7 +543,7 @@ subroutine PES_mask_dump_ar_polar_M(PESK, file, Lk, dim, dir, Emax, Estep)
 
 
   !in 1D we do not interpolate 
-  if (  (dim .eq. 1) ) then 
+  if (  (dim  ==  1) ) then 
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
     call messages_fatal(1)
 
@@ -669,7 +669,7 @@ subroutine PES_mask_dump_ar_plane_M(PESK, file, Lk, dim, dir, Emax, Estep)
 
 
   !in 1D we do not interpolate 
-  if (  (dim .eq. 1) ) then 
+  if (  (dim  ==  1) ) then 
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
     call messages_fatal(1)
 
@@ -806,7 +806,7 @@ subroutine PES_mask_dump_ar_spherical_cut_M(PESK, file, Lk, dim, dir, Emin, Emax
 
 
   !in 1D we do not interpolate 
-  if (  (dim .eq. 1) ) then 
+  if (  (dim  ==  1) ) then 
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
     call messages_fatal(1)
 
@@ -1073,7 +1073,7 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
   npoints = M_ZERO
 
   !in 1D we do not interpolate 
-  if ( (.not. interpolate) .or.  (dim .eq. 1) ) then 
+  if ( (.not. interpolate) .or.  (dim  ==  1) ) then 
 
     do ix = 1,ll(1)
       KK(1) = Lk(ix)
@@ -1082,7 +1082,7 @@ subroutine PES_mask_dump_power_totalM(PESK, file, Lk, dim, Emax, Estep, interpol
         do iz = 1, ll(3)
           KK(3) = Lk(iz)
 
-          if(KK(1).ne.0 .or. KK(2).ne.0 .or. KK(3).ne.0) then
+          if(KK(1) /= 0 .or. KK(2) /= 0 .or. KK(3) /= 0) then
             ! the power spectrum
             vec = sum(KK(1:dim)**2) / M_TWO
             ii = int(vec / step) + 1
@@ -1220,7 +1220,7 @@ subroutine PES_mask_dump_power_total(mask, st, file, wfAk)
   npoints = M_ZERO
 
   !in 1D we do not interpolate 
-  if ((.not. mask%interpolate_out) .or. (mask%mesh%sb%dim .eq. 1) ) then 
+  if ((.not. mask%interpolate_out) .or. (mask%mesh%sb%dim  ==  1) ) then 
 
     do ix = 1, mask%ll(1)
       KK(1) = mask%Lk(ix)
@@ -1229,7 +1229,7 @@ subroutine PES_mask_dump_power_total(mask, st, file, wfAk)
         do iz = 1, mask%ll(3)
           KK(3) = mask%Lk(iz)
           
-          if(KK(1).ne.0 .or. KK(2).ne.0 .or. KK(3).ne.0) then
+          if(KK(1) /= 0 .or. KK(2) /= 0 .or. KK(3) /= 0) then
             ! the power spectrum
             vec = sum(KK(1:mask%mesh%sb%dim)**2) / M_TWO
             ii = int(vec / step) + 1
@@ -1509,7 +1509,7 @@ subroutine PES_mask_dump_ARPES(mask, st, file, wfAk)
       do iz = 1, mask%ll(3)
         KK(3) = mask%Lk(iz)
         
-        if(KK(3)==0 .and. (KK(1).ne.0 .or. KK(2).ne.0)) then
+        if(KK(3)==0 .and. (KK(1) /= 0 .or. KK(2) /= 0)) then
           vec = atan2(KK(2), KK(1))
           ii  = int(abs(vec) * (nn - 1)/M_PI) + 1
           
@@ -1592,14 +1592,14 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
  
 
   !Photoelectron wavefunction and density in real space
-  if(iand(outp%what, C_OUTPUT_PES_WFS) .ne. 0  .or.  iand(outp%what, C_OUTPUT_PES_DENSITY) .ne. 0 ) then
+  if(iand(outp%what, C_OUTPUT_PES_WFS) /= 0  .or.  iand(outp%what, C_OUTPUT_PES_DENSITY) /= 0 ) then
     write(dir, '(a,i7.7)') "td.", iter  ! name of directory
     call  PES_mask_output_states(st, gr, geo, dir, outp, mask)
   end if
 
   !Dump the output in the td.00iter directories
   dir = file 
-  if(iand(outp%what, C_OUTPUT_PES) .ne. 0 ) then
+  if(iand(outp%what, C_OUTPUT_PES) /= 0 ) then
     write(dir, '(a,i7.7,a)') "td.", iter,"/PESM"  ! name of directory
   end if
 
@@ -1866,7 +1866,7 @@ subroutine PES_mask_restart_read(mask, st)
   end do
 
   call PES_mask_read_info(tmpdir, idummy,fdummy,fdummy,idummy,afdummy,RR)
-  if(RR(1) .ne. mask%mask_R(1) .or. RR(2) .ne. mask%mask_R(2)) then
+  if(RR(1) /= mask%mask_R(1) .or. RR(2) /= mask%mask_R(2)) then
     message(1)="PhotoElectronSpectrum = pes_mask : The mask parameters have changed."
     message(2)="I will restart mapping from the previous context."
     call messages_warning(2)

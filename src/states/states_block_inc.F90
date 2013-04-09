@@ -114,7 +114,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
       ll = mod(rank+round+1, size) ! The column of the block currently being communicated.
       ! In all but the first rounds we have to wait for the data to arrive and
       ! then swap buffers.
-      if(round.gt.0) then
+      if(round > 0) then
         call MPI_Waitall(2, reqs, stats, mpi_err)
         tmp_ptr => sendbuf
         sendbuf => recvbuf
@@ -123,7 +123,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
       end if
       ! In all but the last rounds the data has to be passed on to the left neighbour, and
       ! accordingly received from the right neighbour.
-      if(round.lt.size-1) then
+      if(round < size-1) then
         recvcnt = xpsi2_count(ll)
         call MPI_Irecv(recvbuf(1, 1, 1), mesh%np*st%d%dim*recvcnt, R_MPITYPE, right, 0, &
           st%mpi_grp%comm, reqs(1), mpi_err)
@@ -134,7 +134,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
       res_row_offset = sum(xpsi1_count(0:rank-1))
       res_col_offset = sum(xpsi2_count(0:kk-1))
       if(.not.mesh%use_curvilinear) then
-        if(xpsi1_count(rank).gt.0.and.sendcnt.gt.0) then
+        if(xpsi1_count(rank) > 0.and.sendcnt > 0) then
           SAFE_ALLOCATE(res_local(1:xpsi1_count(rank), 1:sendcnt))
 
           call profiling_in(C_PROFILING_BLOCKT_MM)
@@ -316,7 +316,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
     call states_block_local_idx(st, xres_, res_col, xres_count, xres_node)
 
     ! Take care of beta first, if necessary, and compact res to res_block.
-    if(beta.ne.R_TOTYPE(M_ZERO)) then
+    if(beta /= R_TOTYPE(M_ZERO)) then
       call profiling_in(C_PROFILING_BLOCK_MATR_CP)
       do ii = 1, xres_count(rank)
         do idim = 1, st%d%dim
@@ -356,7 +356,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
       ! In all but the first rounds we have to wait for the data to arrive and
       ! then swap buffers, i.e., what we received in the send buffer in the remainder
       ! of this loop, a bit confusing.
-      if(round.gt.0) then
+      if(round > 0) then
         call MPI_Waitall(2, reqs, stats, mpi_err)
         tmp_ptr => sendbuf
         sendbuf => recvbuf
@@ -365,7 +365,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
       end if
       ! In all but the last rounds the data has to be passed on to the left neighbour, and
       ! accordingly received from the right neighbour.
-      if(round.lt.size-1) then
+      if(round < size-1) then
         recvcnt = xpsi_count(ll)
         call MPI_Irecv(recvbuf, mesh%np*st%d%dim*recvcnt, R_MPITYPE, right, 0, st%mpi_grp%comm, reqs(1), mpi_err)
         call MPI_Isend(sendbuf, mesh%np*st%d%dim*sendcnt, R_MPITYPE, left, 0, st%mpi_grp%comm, reqs(2), mpi_err)
@@ -375,7 +375,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
       matr_row_offset = sum(xpsi_count(0:kk-1))
       matr_col_offset = sum(xres_count(0:rank-1))
       SAFE_ALLOCATE(matr_block(1:xpsi_count(kk), 1:xres_count(rank)))
-      if(sendcnt.gt.0.and.xres_count(rank).gt.0) then
+      if(sendcnt > 0.and.xres_count(rank) > 0) then
         call profiling_in(C_PROFILING_BLOCK_MATR_CP)
         matr_block = matr(matr_row_offset+1:matr_row_offset+xpsi_count(kk), &
           matr_col_offset+1:matr_col_offset+xres_count(rank))

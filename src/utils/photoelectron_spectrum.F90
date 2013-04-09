@@ -68,7 +68,7 @@ program photoelectron_spectrum
   call io_init_datasets()
 
   call getopt_init(ierr)
-  if(ierr.ne.0) then
+  if(ierr /= 0) then
     message(1) = "Your Fortran compiler doesn't support command-line arguments;"
     message(2) = "the oct-photoelectron-spectrum command is not available."
     call messages_fatal(2)
@@ -92,7 +92,7 @@ program photoelectron_spectrum
   
   call getopt_photoelectron_spectrum(mode,interp,uEstep, uEspan,&
                                      uThstep, uThspan, uPhstep, uPhspan, pol, center)
-  if(interp .eq. 0) interpol = .false.
+  if(interp  ==  0) interpol = .false.
 
   call PES_mask_read_info(tmpdir, dim, Emax, Estep, ll(1), Lk,RR)
 

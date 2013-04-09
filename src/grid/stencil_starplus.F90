@@ -64,8 +64,8 @@ contains
     PUSH_SUB(stencil_starplus_extent)
 
     extent = 0
-    if(dir.ge.1.or.dir.le.3) then
-      if(order.le.2) then
+    if(dir >= 1.or.dir <= 3) then
+      if(order <= 2) then
         extent = 2
       else
         extent = order

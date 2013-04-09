@@ -302,7 +302,7 @@ contains
     end do
 
     ! rotate the to-axis to the z-axis
-    if(to(2).ne.M_ZERO) then
+    if(to(2) /= M_ZERO) then
       alpha = atan2(to(2), to(1))
       call rotate_z(m1, alpha)
     end if

@@ -230,7 +230,7 @@ contains
         kst = ist
         do
           jst = args(kst)
-          if (jst.eq.ist) then
+          if (jst == ist) then
             call states_set_state(st, mesh, rank(jst), ik, buf)
             ok(rank(jst)) = .true.
             exit
@@ -276,7 +276,7 @@ contains
       cbuf(:) = (st%zeigenval%Re(:, ik) + M_zI * st%zeigenval%Im(:, ik))
       buf(:) = real(cbuf) + st%cmplxscl%penalizationfactor * aimag(cbuf)**2
       do ist=1, st%nst
-        if (aimag(cbuf(ist)).gt.0) then
+        if (aimag(cbuf(ist)) > 0) then
           buf(ist) = buf(ist) + 8.0 * aimag(cbuf(ist))
         end if
       end do
@@ -361,13 +361,13 @@ contains
       do js = 1, st%nst*st%d%nik
 
         ! a state is always degenerate to itself
-        if ( is.eq.js ) cycle
+        if ( is == js ) cycle
 
         evis = st%eigenval(eindex(1, sindex(is)), eindex(2, sindex(is)))
         evjs = st%eigenval(eindex(1, sindex(js)), eindex(2, sindex(js)))
 
         ! is evjs in the "evis plus minus threshold" bracket?
-        if( (evjs.gt.evis - degen_thres).and.(evjs.lt.evis + degen_thres) ) then
+        if( (evjs > evis - degen_thres).and.(evjs < evis + degen_thres) ) then
           ! mark forward scattering states with +1 and backward scattering
           ! states with -1
           !WARNING: IS THIS REALLY NECESSARY? - have to calculate momentum

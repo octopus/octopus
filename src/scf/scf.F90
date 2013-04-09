@@ -714,7 +714,7 @@ contains
         ! save restart information
         if(finish .or. (modulo(iter, outp%iter) == 0) .or. iter == scf%max_iter .or. scf%forced_finish) then
           call restart_write(trim(tmpdir) // GS_DIR, st, gr, geo, err, iter=iter)
-          if(err .ne. 0) then
+          if(err /= 0) then
             message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
             call messages_fatal(1)
           end if
@@ -859,7 +859,7 @@ contains
           call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
         end if
 
-        if(st%smear%method .ne. SMEAR_SEMICONDUCTOR .and. st%smear%method .ne. SMEAR_FIXED_OCC) then
+        if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
           write(message(1), '(a,f12.6,a)') "Fermi energy = ", units_from_atomic(units_out%energy, st%smear%e_fermi)
           call messages_info(1)
         endif
@@ -944,7 +944,7 @@ contains
         write(iunit, '(1x)')
 
         call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
-        if(st%smear%method .ne. SMEAR_SEMICONDUCTOR .and. st%smear%method .ne. SMEAR_FIXED_OCC) then
+        if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
           write(message(1), '(a,f12.6,a)') "Fermi energy = ", units_from_atomic(units_out%energy, st%smear%e_fermi)
           call messages_info(1, iunit)
         endif
@@ -1027,7 +1027,7 @@ contains
 
       do idir = 1, gr%sb%dim
         ! in periodic directions use single-point Berry`s phase calculation
-        if(idir .le. gr%sb%periodic_dim) then
+        if(idir  <=  gr%sb%periodic_dim) then
           dipole(idir) = -n_dip(idir) - berry_dipole(st, gr%mesh, idir)
 
           ! use quantum of polarization to reduce to smallest possible magnitude
@@ -1059,7 +1059,7 @@ contains
           write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
           write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
 
-          if (st%d%nik * st%smear%el_per_state .ne. 2) then
+          if (st%d%nik * st%smear%el_per_state /= 2) then
             write(iunit, '(a)') &
               "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
             write(iunit, '(a)') &

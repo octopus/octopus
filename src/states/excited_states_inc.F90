@@ -36,7 +36,7 @@ R_TYPE function X(states_mpdotp_x)(mesh, excited_state, st, mat) result(dotp)
 
   dotp = M_ZERO
 
-  ASSERT(excited_state%st%d%nik.eq.st%d%nik)
+  ASSERT(excited_state%st%d%nik == st%d%nik)
 
   SAFE_ALLOCATE(mat_local(1:excited_state%st%nst, 1:st%nst, 1:st%d%nik))
 
@@ -120,9 +120,9 @@ R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1ops
   st1opst2 = R_TOTYPE(M_ONE)
 
   ispin = st1%d%ispin
-  ASSERT(ispin .eq. st2%d%ispin)
+  ASSERT(ispin  ==  st2%d%ispin)
   nik   = st1%d%nik
-  ASSERT(nik .eq. st2%d%nik)
+  ASSERT(nik  ==  st2%d%nik)
   ! Can only consider the number of states of the state that comes with fewer states.
   nst = min(st1%nst, st2%nst)
 
@@ -150,7 +150,7 @@ R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1ops
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
         call messages_fatal(1)
       end if
-      if(  (i1 .ne. i2)  .or.  (k1 .ne. k2) ) then
+      if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
         message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
         call messages_fatal(1)
       end if
@@ -214,7 +214,7 @@ R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1ops
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
         call messages_fatal(1)
       end if
-      if(  (i1 .ne. i2)  .or.  (k1 .ne. k2) ) then
+      if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
         message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
         call messages_fatal(1)
       end if
@@ -281,9 +281,9 @@ R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
   PUSH_SUB(X(states_mpdotp_g))
 
   ispin = st1%d%ispin
-  ASSERT(ispin .eq. st2%d%ispin)
+  ASSERT(ispin  ==  st2%d%ispin)
   nik   = st1%d%nik
-  ASSERT(nik .eq. st2%d%nik)
+  ASSERT(nik  ==  st2%d%nik)
   ! Can only consider the number of states of the state that comes with fewer states.
   nst = min(st1%nst, st2%nst)
 
@@ -314,7 +314,7 @@ R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
         call messages_fatal(1)
       end if
-      if(  (i1 .ne. i2)  .or.  (k1 .ne. k2) ) then
+      if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
         message(1) = 'Internal Error: different number of occupied states in states_mpdotp_g'
         call messages_fatal(1)
       end if
@@ -353,7 +353,7 @@ R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
         call messages_fatal(1)
       end if
-      if(i1 .ne. i2) then
+      if(i1 /= i2) then
         message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
         call messages_fatal(1)
       end if

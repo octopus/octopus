@@ -151,7 +151,7 @@ contains
       end do
 
     case(SPIN_POLARIZED, SPINORS)
-      if(nelfs .eq. 3) then
+      if(nelfs  ==  3) then
         do ip = 1, gr%mesh%np
           dens = rho(ip, 1) + rho(ip, 2)
           if( dens >= dmin ) then

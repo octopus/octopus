@@ -199,7 +199,7 @@ contains
 
     kick%function_mode = KICK_FUNCTION_DIPOLE
 
-    if(parse_isdef(datasets_check('TDDeltaUserDefined')).ne.0) then
+    if(parse_isdef(datasets_check('TDDeltaUserDefined')) /= 0) then
 
       kick%function_mode = KICK_FUNCTION_USER_DEFINED
       kick%n_multipoles = 0
@@ -401,12 +401,12 @@ contains
       end do
 
       ! Read the calculation mode (exp, cos, sin, or bessel)
-      if(parse_block_cols(blk, 0).gt.MAX_DIM) then
+      if(parse_block_cols(blk, 0) > MAX_DIM) then
 
         call parse_block_integer(blk, 0, idir - 1, kick%qkick_mode)
 
         ! Read l and m if bessel mode (j_l*Y_lm) is used
-        if(kick%qkick_mode.eq.QKICKMODE_BESSEL .and. parse_block_cols(blk, 0).eq.MAX_DIM+3) then
+        if(kick%qkick_mode == QKICKMODE_BESSEL .and. parse_block_cols(blk, 0) == MAX_DIM+3) then
           call parse_block_integer(blk, 0, idir + 0, kick%qbessel_l)
           call parse_block_integer(blk, 0, idir + 1, kick%qbessel_m)
         else
@@ -443,10 +443,10 @@ contains
     read(iunit, '(15x,i2)')     kick%delta_strength_mode
     read(iunit, '(15x,f18.12)') kick%delta_strength
     read(iunit, '(a)') line
-    if(index(line,'defined').ne.0) then
+    if(index(line,'defined') /= 0) then
       kick%function_mode = KICK_FUNCTION_USER_DEFINED
       read(line,'("# User defined:",1x,a)') kick%user_defined_function
-    elseif(index(line,'multipole').ne.0) then
+    elseif(index(line,'multipole') /= 0) then
       kick%function_mode = KICK_FUNCTION_MULTIPOLE
       read(line, '("# N multipoles ",i3)') kick%n_multipoles
       SAFE_ALLOCATE(     kick%l(1:kick%n_multipoles))
@@ -470,7 +470,7 @@ contains
       read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
     end if
     read(iunit, '(15x,f18.12)', iostat = ierr) kick%time
-    if(ierr.ne.0) then
+    if(ierr /= 0) then
       kick%time = M_ZERO
       backspace(iunit)
     end if
@@ -495,7 +495,7 @@ contains
       write(iunit, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
       write(iunit, '(a15,f18.12)')  '# kick strength', kick%delta_strength
        ! if this were to be read by humans, we would want units_from_atomic(units_out%length**(-1))
-      if(kick%function_mode .eq. KICK_FUNCTION_USER_DEFINED) then
+      if(kick%function_mode  ==  KICK_FUNCTION_USER_DEFINED) then
         write(iunit,'(a15,1x,a)')     '# User defined:', trim(kick%user_defined_function)
       elseif(kick%n_multipoles > 0) then
         write(iunit, '(a15,i3)')    '# N multipoles ', kick%n_multipoles
@@ -519,7 +519,7 @@ contains
       write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
       call write_iter_string(out, aux)
       call write_iter_nl(out)
-      if(kick%function_mode .eq. KICK_FUNCTION_USER_DEFINED) then
+      if(kick%function_mode  ==  KICK_FUNCTION_USER_DEFINED) then
         write(aux,'(a15,1x,a)')     '# User defined:', trim(kick%user_defined_function)
         call write_iter_string(out, aux)
         call write_iter_nl(out)
@@ -618,7 +618,7 @@ contains
       end do
 
     else
-      if(kick%function_mode .eq. KICK_FUNCTION_USER_DEFINED) then
+      if(kick%function_mode  ==  KICK_FUNCTION_USER_DEFINED) then
 
         kick_function = M_z0
         do ip = 1, gr%mesh%np
@@ -676,7 +676,7 @@ contains
     
     ! The wavefunctions at time delta t read
     ! psi(delta t) = psi(t) exp(i k x)
-    delta_strength: if(kick%delta_strength .ne. M_ZERO) then
+    delta_strength: if(kick%delta_strength /= M_ZERO) then
 
         SAFE_ALLOCATE(kick_function(1:gr%mesh%np))
         
@@ -759,7 +759,7 @@ contains
         ! The nuclear velocities will be changed by
         ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
         ! where M and Z are the ionic mass and charge, respectively.
-        if(ion_dynamics_ions_move(ions)  .and. kick%delta_strength .ne. M_ZERO) then
+        if(ion_dynamics_ions_move(ions)  .and. kick%delta_strength /= M_ZERO) then
           do iatom = 1, geo%natoms
             geo%atom(iatom)%v(1:gr%mesh%sb%dim) = geo%atom(iatom)%v(1:gr%mesh%sb%dim) + &
               kick%delta_strength * kick%pol(1:gr%mesh%sb%dim, kick%pol_dir) * &

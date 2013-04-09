@@ -135,7 +135,7 @@ contains
     else if(functl%id == XC_HALF_HARTREE) then
       functl%type = XC_EXCHANGE_CORRELATION
 
-    else if(functl%family .eq. XC_FAMILY_NONE) then
+    else if(functl%family  ==  XC_FAMILY_NONE) then
       functl%type = -1
 
     else ! handled by libxc
@@ -144,8 +144,8 @@ contains
       functl%type     = XC_F90(info_kind)(functl%info)
       functl%flags    = XC_F90(info_flags)(functl%info)
 
-      ok = iand(functl%flags, XC_FLAGS_1D).ne.0
-      if((ndim.ne.1).and.ok) then
+      ok = iand(functl%flags, XC_FLAGS_1D) /= 0
+      if((ndim /= 1).and.ok) then
         message(1) = 'Specified functional is only allowed in 1D.'
         call messages_fatal(1)
       end if
@@ -154,8 +154,8 @@ contains
         call messages_fatal(1)
       end if
 
-      ok = iand(functl%flags, XC_FLAGS_2D).ne.0
-      if((ndim.ne.2).and.ok) then
+      ok = iand(functl%flags, XC_FLAGS_2D) /= 0
+      if((ndim /= 2).and.ok) then
         message(1) = 'Specified functional is only allowed in 2D.'
         call messages_fatal(1)
       end if
@@ -164,8 +164,8 @@ contains
         call messages_fatal(1)
       end if
 
-      ok = iand(functl%flags, XC_FLAGS_3D).ne.0
-      if((ndim.ne.3).and.ok) then
+      ok = iand(functl%flags, XC_FLAGS_3D) /= 0
+      if((ndim /= 3).and.ok) then
         message(1) = 'Specified functional is only allowed in 3D.'
         call messages_fatal(1)
       end if
@@ -234,9 +234,9 @@ contains
 
     PUSH_SUB(xc_functl_end)
 
-    if(functl%family.ne.XC_FAMILY_NONE .and. functl%family.ne.XC_FAMILY_OEP .and. &
-      functl%family.ne.XC_FAMILY_KS_INVERSION .and. &
-      functl%id .ne. XC_LDA_XC_CMPLX .and. functl%id .ne. XC_HALF_HARTREE) then
+    if(functl%family /= XC_FAMILY_NONE .and. functl%family /= XC_FAMILY_OEP .and. &
+      functl%family /= XC_FAMILY_KS_INVERSION .and. &
+      functl%id /= XC_LDA_XC_CMPLX .and. functl%id /= XC_HALF_HARTREE) then
       call XC_F90(func_end)(functl%conf)
     end if
 
@@ -288,7 +288,7 @@ contains
       write(message(3), '(4x,a)') 'WARNING: under development'
       call messages_info(3, iunit)
       
-    else if(functl%family .ne. XC_FAMILY_NONE) then ! all the other families
+    else if(functl%family /= XC_FAMILY_NONE) then ! all the other families
       select case(functl%type)
       case(XC_EXCHANGE)
         write(message(1), '(2x,a)') 'Exchange'

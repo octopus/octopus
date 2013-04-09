@@ -36,7 +36,7 @@ subroutine X(physics_op_L)(der, ff, lf, ghost_update, set_bc)
 
   PUSH_SUB(X(physics_op_L))
 
-  ASSERT(der%mesh%sb%dim .ne. 1)
+  ASSERT(der%mesh%sb%dim /= 1)
 
   SAFE_ALLOCATE(gf(1:der%mesh%np, 1:der%mesh%sb%dim))
 

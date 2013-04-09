@@ -163,7 +163,7 @@ contains
         ! 1 is the sigma index which is used in em_resp
         call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
 
-        if(ierr .ne. 0) then
+        if(ierr /= 0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
           message(2) = "Previous kdotp calculation required."
           call messages_fatal(2)
@@ -218,7 +218,7 @@ contains
           ! 1 is the sigma index which is used in em_resp
           call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr2(idir, idir2, 1))
           
-          if(ierr .ne. 0) then
+          if(ierr /= 0) then
             message(1) = "Could not load 2nd-order kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
             message(2) = "Previous kdotp calculation required."
             call messages_fatal(2)
@@ -404,7 +404,7 @@ contains
                     write(dirname_restart,'(2a)') EM_RESP_DIR, trim(wfs_tag_sigma(str_tmp, sigma))
                     call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
                     
-                    if(ierr .ne. 0) then
+                    if(ierr /= 0) then
                       message(1) = "Initializing to zero, could not load response wavefunctions from '" &
                         //trim(tmpdir)//trim(dirname_restart)//"'"
                       call messages_warning(1)
@@ -417,7 +417,7 @@ contains
                         call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, &
                           lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
                         
-                        if(ierr .ne. 0) then
+                        if(ierr /= 0) then
                           message(1) = "Initializing to zero, could not load second-order response wavefunctions from '" &
                             //trim(tmpdir)//trim(dirname_restart)//"'"
                           call messages_warning(1)
@@ -1052,7 +1052,7 @@ contains
 
     call out_wfn_and_densities()
 
-    if(gr%sb%periodic_dim .eq. gr%sb%dim) then
+    if(gr%sb%periodic_dim  ==  gr%sb%dim) then
       call out_dielectric_constant()
     endif
 
@@ -1322,7 +1322,7 @@ contains
         if(states_are_complex(st)) then 
 
           if(gr%sb%dim == 3) then
-            if(iand(outp%what, C_OUTPUT_ELF).ne.0) &
+            if(iand(outp%what, C_OUTPUT_ELF) /= 0) &
               call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
           end if
           do isigma = 1, em_vars%nsigma
@@ -1331,7 +1331,7 @@ contains
         else
 
           if(gr%sb%dim == 3) then
-            if(iand(outp%what, C_OUTPUT_ELF) .ne. 0) &
+            if(iand(outp%what, C_OUTPUT_ELF) /= 0) &
               call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
           end if
 
@@ -1386,7 +1386,7 @@ contains
              str_center('['//trim(units_abbrev(units_out%length**4)) //']', 20)
 
         ff = M_ZERO
-        if(em_vars%omega(iomega) .ne. 0) ff = real(dic)/(M_THREE*em_vars%omega(iomega))
+        if(em_vars%omega(iomega) /= 0) ff = real(dic)/(M_THREE*em_vars%omega(iomega))
 
         write(iunit, '(3e20.8)') units_from_atomic(units_out%energy, em_vars%omega(iomega)), &
              units_from_atomic(units_out%length**3, aimag(dic)/(P_C*M_PI)), units_from_atomic(units_out%length**4, ff)
@@ -1521,7 +1521,7 @@ contains
         HRS_C = M_ZERO
         do ii = 1, sb%dim
           do jj = 1, sb%dim
-            if (ii .ne. jj) then
+            if (ii /= jj) then
               HRS_B = HRS_B + beta(ii,ii,ii) * (beta(ii,jj,jj) + beta(jj,ii,jj) + beta(jj,jj,ii))
               HRS_C = HRS_C + (beta(ii,ii,jj) + beta(ii,jj,ii) + beta(jj,ii,ii))**2
             endif
@@ -1548,7 +1548,7 @@ contains
         HRS_C3 = M_ZERO
         do ii = 1, sb%dim
           do jj = 1, sb%dim
-            if (ii .ne. jj) then
+            if (ii /= jj) then
               HRS_B1 = HRS_B1 + beta(ii,ii,ii) * beta(ii,jj,jj)
               HRS_B2 = HRS_B2 + beta(ii,ii,ii) * (beta(jj,ii,jj) + beta(jj,jj,ii))
               HRS_C1 = HRS_C1 + (beta(ii,ii,jj) + beta(ii,jj,ii))**2

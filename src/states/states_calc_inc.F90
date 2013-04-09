@@ -718,7 +718,7 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
       size = min(block_size, mesh%np - sp + 1)
 
       if(present(Theta_Fi)) then
-        if(Theta_Fi .ne. M_ONE) &
+        if(Theta_Fi /= M_ONE) &
           call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp, idim), 1)
       end if
 
@@ -938,7 +938,7 @@ subroutine X(states_angular_momentum)(gr, phi, ll, l2)
 
   PUSH_SUB(X(states_angular_momemtum))
 
-  ASSERT(gr%mesh%sb%dim.ne.1)
+  ASSERT(gr%mesh%sb%dim /= 1)
 
   select case(gr%mesh%sb%dim)
   case(3)
@@ -1007,7 +1007,7 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
     ! Each process sends the states in st2 to the rest of the processes.
     do ist = st1%st_start, st1%st_end
       do jj = 0, st1%mpi_grp%size - 1
-        if(st1%mpi_grp%rank.ne.jj) then
+        if(st1%mpi_grp%rank /= jj) then
           call MPI_Isend(st2%X(psi)(1, 1, ist, ik), st1%d%dim*mesh%np, R_MPITYPE, &
             jj, ist, st1%mpi_grp%comm, request, mpi_err)
         end if
@@ -1018,7 +1018,7 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
     SAFE_ALLOCATE(phi2(1:mesh%np, 1:st1%d%dim))
     do jj = 1, n2
       ll = st1%node(jj)
-      if(ll.ne.st1%mpi_grp%rank) then
+      if(ll /= st1%mpi_grp%rank) then
         call MPI_Irecv(phi2(1, 1), st1%d%dim*mesh%np, R_MPITYPE, ll, jj, st1%mpi_grp%comm, request, mpi_err)
         call MPI_Wait(request, status, mpi_err)
       else

@@ -34,11 +34,11 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc, zfxc)
   type(xc_functl_t), pointer :: functl(:)
 
   if(present(zfxc)) then
-    ASSERT(ispin .eq. SPINORS)
+    ASSERT(ispin  ==  SPINORS)
     spinors_fxc = .true.
     zfxc = M_z0
   else
-    ASSERT(ispin .ne. SPINORS)
+    ASSERT(ispin /= SPINORS)
     spinors_fxc = .false.
   end if
 
@@ -47,7 +47,7 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc, zfxc)
   PUSH_SUB(xc_get_fxc)
 
   ! is there anything to do? (only LDA by now)
-  if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)).ne.XC_FAMILY_NONE) then
+  if(iand(xcs%kernel_family, NOT(XC_FAMILY_LDA)) /= XC_FAMILY_NONE) then
     message(1) = "Only LDA functionals are authorized for now in xc_get_fxc."
     call messages_fatal(1)
   end if

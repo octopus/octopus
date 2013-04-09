@@ -56,7 +56,7 @@ program dielectric_function
   call global_init()
 
   call getopt_init(ierr)
-  if(ierr.eq.0) call getopt_dielectric_function
+  if(ierr == 0) call getopt_dielectric_function
   call getopt_end()
 
   call parser_init()

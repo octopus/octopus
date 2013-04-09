@@ -173,7 +173,7 @@ contains
         if(abs(E_field(idir)) > M_EPSILON) then
           ! calculate the ip-independent part first
           det = berry_phase_det(st, mesh, idir, ispin)
-          if(abs(det) .gt. M_EPSILON) then
+          if(abs(det) > M_EPSILON) then
             factor = E_field(idir) * (mesh%sb%lsize(idir) / M_PI) / det
           else
             ! If det = 0, mu = -infinity, so this condition should never be reached

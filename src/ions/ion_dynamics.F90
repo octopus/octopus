@@ -208,7 +208,7 @@ contains
     !%End
 
     ! we now load the velocities, either from the temperature, from the input, or from a file
-    if(parse_isdef(datasets_check('RandomVelocityTemp')) .ne. 0) then
+    if(parse_isdef(datasets_check('RandomVelocityTemp')) /= 0) then
 
       if( mpi_grp_is_root(mpi_world)) then
         call loct_ran_init(random_gen_pointer)
@@ -291,8 +291,8 @@ contains
 
       call xyz_file_init(xyz)
       call xyz_file_read('Velocities', xyz, geo%space)
-      if(xyz%file_type.ne.XYZ_FILE_ERR) then
-        if(geo%natoms.ne.xyz%n) then
+      if(xyz%file_type /= XYZ_FILE_ERR) then
+        if(geo%natoms /= xyz%n) then
           write(message(1), '(a,i4,a,i4)') 'I need exactly ', geo%natoms, ' velocities, but I found ', xyz%n
           call messages_fatal(1)
         end if

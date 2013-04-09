@@ -404,7 +404,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
           ! include enlargement points that are neither inner points nor outer boundary points.
           if( .not. btest(mesh%idx%lxyz_inv(ix, iy, iz),ENLARGEMENT_POINT)) cycle
           if(  btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
-          if(  i_lev.eq.2**mesh%sb%hr_area%num_radii ) cycle
+          if(  i_lev == 2**mesh%sb%hr_area%num_radii ) cycle
 
           ! the value of point (ix,iy,iz) is going to be interpolated
           dx = abs(mod(ix, 2**(i_lev)))
@@ -418,7 +418,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
                 newk = iz + mesh%sb%hr_area%interp%posi(kk)*dz
                 if(any((/newi, newj, newk/) <  mesh%idx%nr(1, 1:3)) .or. &
                    any((/newi, newj, newk/) >  mesh%idx%nr(2, 1:3)) .or. &
-                   mesh%idx%lxyz_inv(newi,newj,newk).eq.0) then
+                   mesh%idx%lxyz_inv(newi,newj,newk) == 0) then
 
                      message(1) = 'Multiresolution radii are too close to each other (or outer boundary)'
                      write(message(2),'(7I4)') ix,iy,iz,newi,newj,newk,mesh%resolution(ix,iy,iz)
@@ -629,7 +629,7 @@ contains
   ! ---------------------------------------------------------
   subroutine do_partition()
 #ifdef HAVE_MPI
-    integer :: i, j, ipart, jpart, ip, ix, iy, iz
+    integer :: ii, jj, ipart, jpart, ip, ix, iy, iz
     integer, allocatable :: gindex(:), gedges(:)
     logical, allocatable :: nb(:, :)
     integer              :: idx(1:MAX_DIM), jx(1:MAX_DIM)
@@ -691,8 +691,8 @@ contains
           ix = 2*mesh%idx%lxyz(ip, 1)
           iy = 2*mesh%idx%lxyz(ip, 2)
           iz = 2*mesh%idx%lxyz(ip, 3)
-          i = parent%idx%lxyz_inv(ix, iy, iz)
-          mesh%vp%part(ip) = parent%vp%part(i)
+          ii = parent%idx%lxyz_inv(ix, iy, iz)
+          mesh%vp%part(ip) = parent%vp%part(ii)
         end do
       end if
       
@@ -753,8 +753,8 @@ contains
       do ip = 1, mesh%np_global
         ipart = mesh%vp%part(ip)
         call index_to_coords(mesh%idx, mesh%sb%dim, ip, idx)
-        do j = 1, stencil%size
-          jx(1:MAX_DIM) = idx(1:MAX_DIM) + stencil%points(1:MAX_DIM, j)
+        do jj = 1, stencil%size
+          jx(1:MAX_DIM) = idx(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
           if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
             jpart = mesh%vp%part(index_from_coords(mesh%idx, mesh%sb%dim, jx))
             if(ipart /= jpart ) nb(ipart, jpart) = .true.
@@ -820,19 +820,19 @@ contains
     SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:MAX_DIM))
     mesh%x(:, :) = M_ZERO
     ! Do the inner points
-    do i = 1, mesh%np
-      j = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + i - 1)
-      mesh%x(i, 1:MAX_DIM) = mesh_x_global(mesh, j)
+    do ii = 1, mesh%np
+      jj = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ii - 1)
+      mesh%x(ii, 1:MAX_DIM) = mesh_x_global(mesh, jj)
     end do
     ! Do the ghost points
-    do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
-      j = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + i - 1)
-      mesh%x(i+mesh%np, 1:MAX_DIM) = mesh_x_global(mesh, j)
+    do ii = 1, mesh%vp%np_ghost(mesh%vp%partno)
+      jj = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + ii - 1)
+      mesh%x(ii+mesh%np, 1:MAX_DIM) = mesh_x_global(mesh, jj)
     end do
     ! Do the boundary points
-    do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
-      j = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + i - 1)
-      mesh%x(i + mesh%np + mesh%vp%np_ghost(mesh%vp%partno), 1:MAX_DIM) = mesh_x_global(mesh, j)
+    do ii = 1, mesh%vp%np_bndry(mesh%vp%partno)
+      jj = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + ii - 1)
+      mesh%x(ii + mesh%np + mesh%vp%np_ghost(mesh%vp%partno), 1:MAX_DIM) = mesh_x_global(mesh, jj)
     end do
 #endif
 
@@ -855,7 +855,7 @@ contains
     real(8), parameter :: DELTA = CNST(1e-12)
  
 #if defined(HAVE_MPI)
-    integer :: k
+    integer :: kk
 #endif
 
     PUSH_SUB(mesh_init_stage_3.mesh_get_vol_pp)
@@ -872,8 +872,8 @@ contains
 #if defined(HAVE_MPI)
       ! Do the inner points.
       do ip = 1, min(np, mesh%np)
-        k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
-        call index_to_coords(mesh%idx, sb%dim, k, jj)
+        kk = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
+        call index_to_coords(mesh%idx, sb%dim, kk, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
         mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, :), chi(1:sb%dim))
       end do
@@ -881,16 +881,16 @@ contains
       if(mesh%use_curvilinear) then
         ! Do the ghost points.
         do ip = 1, mesh%vp%np_ghost(mesh%vp%partno)
-          k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + ip - 1)
-          call index_to_coords(mesh%idx, sb%dim, k, jj)
+          kk = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + ip - 1)
+          call index_to_coords(mesh%idx, sb%dim, kk, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip + mesh%np) = &
             mesh%vol_pp(ip + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip + mesh%np, :), chi(1:sb%dim))
         end do
         ! Do the boundary points.
         do ip = 1, mesh%vp%np_bndry(mesh%vp%partno)
-          k = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + ip - 1)
-          call index_to_coords(mesh%idx, sb%dim, k, jj)
+          kk = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + ip - 1)
+          call index_to_coords(mesh%idx, sb%dim, kk, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
             mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &

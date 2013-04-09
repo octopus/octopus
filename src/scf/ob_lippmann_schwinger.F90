@@ -182,10 +182,10 @@ contains
         leigenval(1:st%d%kpt%nlocal) = st%eigenval(ist, st%d%kpt%start:st%d%kpt%end)
         call lmpi_gen_allgatherv(st%d%kpt%nlocal, ldiff, outcount, &
                                  eigens%diff(ist, :), st%d%kpt%mpi_grp)
-        ASSERT(outcount.eq.st%d%nik)
+        ASSERT(outcount == st%d%nik)
         call lmpi_gen_allgatherv(st%d%kpt%nlocal, leigenval, outcount, &
                                  st%eigenval(ist, :), st%d%kpt%mpi_grp)
-        ASSERT(outcount.eq.st%d%nik)
+        ASSERT(outcount == st%d%nik)
       end do
       SAFE_DEALLOCATE_A(ldiff)
       SAFE_DEALLOCATE_A(leigenval)

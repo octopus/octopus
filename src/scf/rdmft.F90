@@ -176,7 +176,7 @@ contains
     st%occ = occin
     theta(:) = asin(sqrt(occin(:, 1)/M_TWO))*(M_HALF/M_PI)
     
-    if (hm%d%ispin.ne.1) then
+    if (hm%d%ispin /= 1) then
       call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
     end if
   
@@ -262,7 +262,7 @@ contains
       if(abs(sumgim) < rdm%toler*rdm%step .or. abs((mu1-mu2)*M_HALF) < rdm%toler*rdm%step)  exit
       cycle
     end do
-    if (icycle.ge.rdm%max_iter) then
+    if (icycle >= rdm%max_iter) then
       write(message(1),'(a,1x,f11.6)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
       call messages_fatal(1)
     endif
@@ -318,7 +318,7 @@ contains
       theta_new = theta
 
       do icycle = 1, max_iter
-        if(objective_new.lt.objective) then
+        if(objective_new < objective) then
           rdm%step = CNST(1.3)*rdm%step
           objective = objective_new
           theta = theta_new

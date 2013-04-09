@@ -80,8 +80,8 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   ! of magnitude.  To do this we, for the time being, interpolate exponentially such that a rel_dens=1
   ! corresponds to tol=ArpackInitialTolerance whereas rel_dens=1e-5 corresponds to tol=EigenSolverTolerance.
   ! We can fix this later so it allows other values and types of convergence criteria.
-  if(arpack%initial_tolerance.gt.0) then
-    if(current_rel_dens_error.lt.0) then
+  if(arpack%initial_tolerance > 0) then
+    if(current_rel_dens_error < 0) then
       tol = arpack%initial_tolerance
     else
       tolpower = M_ONE ! more aggresive (larger) values seem to frequently get trouble mid-SCF-loop
@@ -176,7 +176,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
     end if
 #endif      
       
-    if( abs(ido).ne.1) exit
+    if( abs(ido) /= 1) exit
     
     !!!call av (arpack, ldv, workd(ipntr(1)), workd(ipntr(2))) ! calculate H * psi
     call av (arpack, n, workd(ipntr(1)), workd(ipntr(2))) ! calculate H * psi
@@ -190,7 +190,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   call messages_info(1)
   do i=1, ncv
     tmp = abs(workl(ipntr(8) + i - 1) / workl(ipntr(6) + i - 1))
-    if(tmp.le.tol) then
+    if(tmp <= tol) then
       write(message(1), '(a,i6,a,es10.3,a)') 'Arpack:', i, '   ', tmp, ' OK'
     else
       write(message(1), '(a,i6,a,es10.3)') 'Arpack:', i, '   ', tmp
@@ -245,7 +245,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   call arpack_check_error('neupd', info) 
 
 
-  if(arpack%init_resid.eq.2) then
+  if(arpack%init_resid == 2) then
     resid(:) = R_TOTYPE(M_ONE)
   else ! XXX revisit meaning of init_resid values
     resid(:) = sum(v(:, :), 2)

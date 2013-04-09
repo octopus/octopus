@@ -83,7 +83,7 @@ contains
     PUSH_SUB(ob_mem_init)
 
       do il=1, NLEADS
-        ASSERT(intf(il)%np_intf .eq. intf(il)%np_uc)
+        ASSERT(intf(il)%np_intf  ==  intf(il)%np_uc)
       end do
 
     ! Allocate arrays depending on the type of coefficients requested.
@@ -96,7 +96,7 @@ contains
         ob%lead(il)%q = M_z0
       end do
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-      ASSERT(op%mesh%sb%dim .eq. 2)
+      ASSERT(op%mesh%sb%dim  ==  2)
       ! sp_coeff has the size ny*nz*do**2, (np=ny*nz*do).
       do il = 1, NLEADS
         np = intf(il)%np_intf
@@ -126,7 +126,7 @@ contains
     !% Decides when to consider the memory coefficients converged.
     !%End
     call parse_float(datasets_check('MemoryTol'), CNST(1e-12), mem_tolerance)
-    if(mem_tolerance .le. M_ZERO) then
+    if(mem_tolerance  <=  M_ZERO) then
       write(message(1), '(a,f14.6,a)') "Input : '", mem_tolerance, "' is not a valid MemoryTol."
       message(2) = '(0 < TDTransMemTol)'
       call messages_fatal(2)
@@ -140,7 +140,7 @@ contains
     !% Sets the maximum iteration number to converge the memory coefficients.
     !%End
     call parse_integer(datasets_check('MemoryMaxIter'), 500, mem_iter)
-    if(mem_iter .le. 0) then
+    if(mem_iter  <=  0) then
       write(message(1), '(a,i6,a)') "Input : '", mem_iter, "' is not a valid MemoryMaxIter."
       message(2) = '(0 <= TDTransMemMaxIter)'
       call messages_fatal(2)
@@ -152,8 +152,8 @@ contains
       call read_coeffs(trim(restart_dir)//'open_boundaries/', saved_iter, ob, hm, intf(il), &
                        op%mesh%sb%dim, max_iter, spacing, delta, op%stencil%size, order)
 
-      if (saved_iter .lt. max_iter) then ! Calculate missing coefficients.
-        if (saved_iter .gt. 0) then
+      if (saved_iter  <  max_iter) then ! Calculate missing coefficients.
+        if (saved_iter > 0) then
           write(message(1),'(a,i5,a)') 'Info: Successfully loaded the first', saved_iter, &
             ' memory coefficients of '//trim(lead_name(il))//' lead.'
           call messages_info(1)
@@ -166,15 +166,15 @@ contains
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max_iter+1)
 
         ! FIXME: the spinor index of hm%lead(il)%h_diag is ignored here.
-        ASSERT(hm%d%ispin .ne. SPINORS)
-        if(saved_iter .eq. 0) then 
+        ASSERT(hm%d%ispin /= SPINORS)
+        if(saved_iter  ==  0) then 
           ! Get anchor for recursion.
           select case(ob%mem_type)
           case(SAVE_CPU_TIME)
             call approx_coeff0(intf(il), delta, hm%lead(il)%h_diag(:, :, 1),   &
               hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q(:, :, 0))
           case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-            ASSERT(op%mesh%sb%dim .eq. 2)
+            ASSERT(op%mesh%sb%dim  ==  2)
             call approx_sp_coeff0(intf(il), delta, hm%lead(il)%h_diag(:, :, 1), &
                  hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q_sp(:, 0), &
                  ob%lead(il)%q_s(:,:,:), order, ob%lead(il)%sp2full_map)
@@ -187,7 +187,7 @@ contains
           call calculate_coeffs_ni(saved_iter+1, max_iter, delta, intf(il), hm%lead(il)%h_diag(:, :, 1), &
             hm%lead(il)%h_offdiag(:, :), ob%lead(il)%q(:, :, :))
         case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-          ASSERT(op%mesh%sb%dim .eq. 2)
+          ASSERT(op%mesh%sb%dim  ==  2)
           call apply_coupling(ob%lead(il)%q(:, :, 0), hm%lead(il)%h_offdiag(:, :),&
               ob%lead(il)%q(:, :, 0), np, il)
           call calculate_sp_coeffs(saved_iter+1, max_iter, delta, intf(il), hm%lead(il)%h_diag(:, :, 1), &
@@ -195,7 +195,7 @@ contains
             order, op%mesh%sb%dim, ob%lead(il)%sp2full_map, spacing)
         end select
 
-        if(saved_iter .lt. max_iter) then
+        if(saved_iter  <  max_iter) then
           message(1) = ''
           message(2) = 'Info: Writing memory coefficients of '// &
             trim(lead_name(il))//' lead.'
@@ -211,7 +211,7 @@ contains
         call messages_info(1)
       end if
 
-      if(ob%mem_type .eq. SAVE_CPU_TIME) then
+      if(ob%mem_type  ==  SAVE_CPU_TIME) then
         do ii=0, max_iter
           call apply_coupling(ob%lead(il)%q(:, :, ii), hm%lead(il)%h_offdiag(:, :),&
               ob%lead(il)%q(:, :, ii), np, il)
@@ -247,7 +247,7 @@ contains
 
     ! If we are in 1D and have only a number we can solve the equation explicitly.
     ! So check this first for faster calculation.
-    if(np .eq. 1) then
+    if(np  ==  1) then
       hh = M_z1 + M_zI*delta*diag(1,1)
       if(infinity_norm(offdiag) > M_ZERO) then
         coeff0(1, 1) = (-hh + sqrt(hh**2 + d2*(M_TWO*offdiag(1,1))**2)) / (M_TWO*d2*offdiag(1,1)**2)
@@ -279,7 +279,7 @@ contains
         call lalg_sym_inverter('U', np, coeff0)
         call matrix_symmetrize(coeff0, np)
         norm = infinity_norm(coeff0)
-        if((abs(old_norm/norm-M_ONE)) .lt. mem_tolerance) then
+        if((abs(old_norm/norm-M_ONE))  <  mem_tolerance) then
           exit
         end if
         ! Apply coupling matrices.
@@ -287,7 +287,7 @@ contains
         call matrix_symmetric_average(q0, np)
         old_norm = norm
       end do
-      if(iter .gt. mem_iter) then
+      if(iter > mem_iter) then
         write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
           //trim(lead_name(intf%il))//' lead, not converged'
         call messages_warning(1)
@@ -345,7 +345,7 @@ contains
       call lalg_sym_inverter('U', np, q0)
       call matrix_symmetrize(q0, np)
       norm = infinity_norm(q0)
-      if((abs(old_norm/norm-M_ONE)) .lt. mem_tolerance) then
+      if((abs(old_norm/norm-M_ONE))  <  mem_tolerance) then
         exit
       end if
       ! Apply coupling matrices.
@@ -353,7 +353,7 @@ contains
       call matrix_symmetric_average(q0, np)
       old_norm = norm
     end do
-    if(iter .gt. mem_iter) then
+    if(iter > mem_iter) then
       write(message(1), '(a,i6,a)') 'Memory coefficent for time step 0, ' &
         //trim(lead_name(intf%il))//' lead, not converged'
       call messages_warning(1)
@@ -417,7 +417,7 @@ contains
 
     m_l(:, :) = delta*coeffs(:, :, 0)
     m_r(:, :) = m_l(:, :)
-    if(mod(intf%il+1,2)+1 .eq. 1) then
+    if(mod(intf%il+1,2)+1  ==  1) then
       call lalg_trmm(np, np, 'U', 'N', 'R', M_z1, offdiag, m_l)
       call lalg_trmm(np, np, 'U', 'T', 'L', M_z1, offdiag, m_r)
     else
@@ -429,7 +429,7 @@ contains
       ! The part of the sum independent of coeff_p(:, :, ii),
       ! accumulated in tmp2.
       tmp2 = M_z0
-      if(ii .gt. 1) then
+      if(ii > 1) then
         tmp(:, :) = M_TWO*coeffs(:, :, ii-1) + coeffs(:, :, ii-2)
       else
         tmp(:, :) = M_TWO*coeffs(:, :, ii-1)
@@ -437,12 +437,12 @@ contains
       call lalg_symm(np, np, 'L', M_z1, tmp, m_r, M_z0, tmp2)
       
       do ki = 1, ii-1       
-        if(ki .gt. 1) then
+        if(ki > 1) then
           tmp(:, :) = coeffs(:, :, ki) + M_TWO*coeffs(:, :, ki-1) + coeffs(:, :, ki-2)
         else
           tmp(:, :) = coeffs(:, :, ki) + M_TWO*coeffs(:, :, ki-1)
         end if
-        if(mod(intf%il+1,2)+1.eq.1) then
+        if(mod(intf%il+1,2)+1 == 1) then
           call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, tmp)
         else
           call lalg_trmm(np, np, 'L', 'T', 'R', M_z1, offdiag, tmp)
@@ -467,14 +467,14 @@ contains
         call matrix_symmetric_average(coeffs(:, :, ii), np)
 
         norm = infinity_norm(coeffs(:, :, ii))
-        if(abs(old_norm/norm-M_ONE) .lt. mem_tolerance) then
+        if(abs(old_norm/norm-M_ONE)  <  mem_tolerance) then
           exit
         end if
         old_norm = norm
       end do
 
       ! Write a warning if a coefficient is not converged.
-      if(ji .gt. mem_iter) then
+      if(ji > mem_iter) then
         write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', ii, &
           ', '//trim(lead_name(intf%il))//' lead, not converged.'
         call messages_warning(1)
@@ -524,7 +524,7 @@ contains
     FLOAT              :: old_norm, norm, sp2
 
     PUSH_SUB(calculate_sp_coeffs)
-    ASSERT(intf%np_intf.eq.intf%np_uc)
+    ASSERT(intf%np_intf == intf%np_uc)
 
     np  = intf%np_intf
     sp2 = spacing**2
@@ -545,7 +545,7 @@ contains
       prefactor_minus(ip, ip) = M_ONE + prefactor_minus(ip, ip)
     end do
     inv_offdiag(:, :) = offdiag(:, :)
-    if (mod(intf%il+1,2)+1 .eq. 1) then
+    if (mod(intf%il+1,2)+1  ==  1) then
       call lalg_invert_upper_triangular(np, inv_offdiag)
     else
       call lalg_invert_lower_triangular(np, inv_offdiag)
@@ -553,7 +553,7 @@ contains
 
     call lalg_sym_inverter('U', np, prefactor_plus)
     call matrix_symmetrize(prefactor_plus, np)
-    if (mod(intf%il+1,2)+1.eq.1) then
+    if (mod(intf%il+1,2)+1 == 1) then
       call lalg_trmm(np, np, 'U', 'N', 'L', M_z1, offdiag, prefactor_plus)
       call lalg_trmm(np, np, 'U', 'N', 'R', M_z1, inv_offdiag, prefactor_minus)
     else
@@ -571,14 +571,14 @@ contains
         do ki = 0, ii
           tmp1(:, :) = M_z0
           sp_tmp = sp_coeffs(:, ki)
-          if(ki.gt.0) then
+          if(ki > 0) then
             sp_tmp = sp_tmp + M_TWO*sp_coeffs(:, ki-1)
           end if
-          if(ki.gt.1) then
+          if(ki > 1) then
             sp_tmp = sp_tmp + sp_coeffs(:, ki-2)
           end if
           call make_full_matrix(np, order, dim, sp_tmp, mem_s, tmp1, mapping)
-          if (intf%il.eq.LEFT) then
+          if (intf%il == LEFT) then
             call lalg_trmm(np, np, 'U', 'N', 'R', M_z1, inv_offdiag, tmp1)
           else
             call lalg_trmm(np, np, 'L', 'N', 'R', M_z1, inv_offdiag, tmp1)
@@ -593,13 +593,13 @@ contains
         call matrix_symmetrize(tmp1, np)
         call make_sparse_matrix(np, order, dim, tmp1, mem_s, sp_coeffs(:, ii), mapping)
         norm = infinity_norm(tmp1)
-        if((abs(norm-old_norm)*sp2) .lt. mem_tolerance) then
+        if((abs(norm-old_norm)*sp2)  <  mem_tolerance) then
           exit
         end if
         old_norm = norm
       end do
       ! Write a warning if a coefficient is not converged.
-      if(ji .gt. mem_iter) then
+      if(ji > mem_iter) then
         write(message(1), '(a,i6,a)') 'Memory coefficent for time step ', ii, &
           ', '//trim(lead_name(intf%il))//' lead, not converged.'
         call messages_warning(1)
@@ -646,7 +646,7 @@ contains
     call io_mkdir(dir, is_tmp=.true.)
     iunit = io_open(trim(dir)//trim(lead_name(intf%il)), &
                     action='write', form='unformatted', is_tmp=.true.)
-    if(iunit.lt.0) then
+    if(iunit < 0) then
       message(1) = 'Cannot write memory coefficients to file.'
       call messages_warning(1)
       call io_close(iunit)
@@ -676,7 +676,7 @@ contains
         end do
       end do
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
-      ASSERT(dim.eq.2)
+      ASSERT(dim == 2)
       write(iunit) ob%lead(intf%il)%q_s(:, :, 1)
       do ntime = 0, iter
         write(iunit) ob%lead(intf%il)%q_sp(1:np*order, ntime)
@@ -720,7 +720,7 @@ contains
     ! Try to open file.
     iunit = io_open(trim(dir)//trim(lead_name(il)), action='read', &
       status='old', die=.false., is_tmp=.true., form='unformatted')
-    if(iunit .lt. 0) then ! no file found
+    if(iunit  <  0) then ! no file found
       POP_SUB(read_coeffs)
       return
     end if
@@ -739,14 +739,14 @@ contains
 
     ! Check if numerical parameters of saved coefficients match
     ! current parameter set.
-    if((s_dim.eq.dim) .and. (s_np.eq.np) .and. (s_op_n.eq.op_n) &
-      .and. (s_spacing.eq.spacing) .and. (s_delta.eq.delta) .and. (s_mem_type.eq.ob%mem_type) &
+    if((s_dim == dim) .and. (s_np == np) .and. (s_op_n == op_n) &
+      .and. (s_spacing == spacing) .and. (s_delta == delta) .and. (s_mem_type == ob%mem_type) &
       .and. (s_reducible.eqv.intf%reducible) ) then
       ! read the potential
       read(iunit) s_vks(1:np)
       if(hm%lead(il)%vks(1:np, 1).app.s_vks(1:np)) then
         ! Read the coefficients.
-        if (ob%mem_type.eq.SAVE_CPU_TIME) then ! Full (upper half) matrices.
+        if (ob%mem_type == SAVE_CPU_TIME) then ! Full (upper half) matrices.
           do ntime = 0, min(iter, s_iter)
             do ip = 1, np
               read(iunit) ob%lead(il)%q(ip, ip:np, ntime)
@@ -754,7 +754,7 @@ contains
             end do
           end do
         else ! Packed matrices (FIXME: yet only 2D).
-          ASSERT(dim.eq.2)
+          ASSERT(dim == 2)
           read(iunit) ob%lead(il)%q_s(:, :, 1)
           ob%lead(il)%q_s(:, :, 2) = ob%lead(il)%q_s(1:np, 1:np, 1)
           det = lalg_inverter(np, ob%lead(il)%q_s(:, :, 2), invert=.true.)
@@ -826,7 +826,7 @@ contains
 
     PUSH_SUB(make_sparse_matrix)
 
-    ASSERT(dim .eq. 2)
+    ASSERT(dim  ==  2)
 
     SAFE_ALLOCATE( tmp(1:np, 1:np))
     SAFE_ALLOCATE(tmp2(1:np, 1:np))

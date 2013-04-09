@@ -41,7 +41,7 @@ program octopus
   type(block_t) :: blk
 
   call getopt_init(ierr)
-  if(ierr .eq. 0) call getopt_octopus()
+  if(ierr  ==  0) call getopt_octopus()
   call getopt_end()
 
   call global_init()
@@ -195,9 +195,9 @@ contains
 
     message(2) = ''
     if(days  > 0) write(message(2), '(i3,a)') days, ' days,'
-    if(hours > 0.or.message(2).ne.'') &
+    if(hours > 0.or.message(2) /= '') &
       write(message(2), '(a,1x,i2.2,a)') trim(message(2)), hours, 'h'
-    if(min   > 0.or.message(1).ne.'') &
+    if(min   > 0.or.message(1) /= '') &
       write(message(2), '(a,1x,i2.2,a)') trim(message(2)), min, 'm'
     write(message(2), '(a,1x,i2.2,a,i3,a)') trim(message(2)), sec, '.', usec/1000, 's'
     message(1) = str_center('Walltime: ' // trim(message(2)), 70)

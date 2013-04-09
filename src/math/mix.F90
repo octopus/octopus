@@ -251,7 +251,7 @@ contains
     PUSH_SUB(mix_end)
 
     ! Arrays got allocated for all mixing schemes, except linear mixing
-    if (smix%type_of_mixing .ne. MIX_LINEAR) then
+    if (smix%type_of_mixing /= MIX_LINEAR) then
       SAFE_DEALLOCATE_P(smix%ddf)
       SAFE_DEALLOCATE_P(smix%ddv)
       SAFE_DEALLOCATE_P(smix%dvin_old)

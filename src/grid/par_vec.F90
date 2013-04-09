@@ -325,11 +325,11 @@ contains
       do jj = 1, stencil%size
         ! Get point number of possible ghost point.
         index = index_from_coords(idx, dim, p1(:) + stencil%points(:, jj))
-        ASSERT(index.ne.0)
+        ASSERT(index /= 0)
         ! If this index does not belong to partition of node "inode",
         ! then index is a ghost point for "inode" with part(index) now being
         ! a neighbour of "inode".
-        if(vp%part(index).ne.inode) then
+        if(vp%part(index) /= inode) then
           ! Only mark and count this ghost point, if it is not
           ! done yet. Otherwise, points would possibly be registered
           ! more than once.
@@ -389,13 +389,12 @@ contains
     ! Fill ghost as described above.
     irr = 0
     do ip = 1, np_global+np_enl
-      inode = vp%partno
-      jnode = iihash_lookup(ghost_flag(inode), ip, found)
-      ! If point ip is a ghost point for inode from jnode, save this
+      jnode = iihash_lookup(ghost_flag(vp%partno), ip, found)
+      ! If point ip is a ghost point for vp%partno from jnode, save this
       ! information.
       if(found) then
-        vp%ghost(vp%xghost_neigh(inode, jnode) + irr(inode, jnode)) = ip
-        irr(inode, jnode)                                           = irr(inode, jnode) + 1
+        vp%ghost(vp%xghost_neigh(vp%partno, jnode) + irr(vp%partno, jnode)) = ip
+        irr(vp%partno, jnode)                                           = irr(vp%partno, jnode) + 1
       end if
     end do
 

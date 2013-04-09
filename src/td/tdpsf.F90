@@ -90,9 +90,9 @@ contains
     dlmax= M_ZERO
     kmax = M_ZERO
     do i = 1, MAX_DIM
-      if (ll(i) .gt. lmax) lmax=ll(i)
-      if(mesh%spacing(i) .gt. dlmax) dlmax=mesh%spacing(i)
-      if(M_ONE/(mesh%spacing(i)) .gt. kmax) kmax= M_PI/(mesh%spacing(i))
+      if (ll(i) > lmax) lmax=ll(i)
+      if(mesh%spacing(i) > dlmax) dlmax=mesh%spacing(i)
+      if(M_ONE/(mesh%spacing(i)) > kmax) kmax= M_PI/(mesh%spacing(i))
     end do   
  
     SAFE_ALLOCATE(psf%XFltr(1:2,1:MAX_DIM,1:lmax))
@@ -328,14 +328,14 @@ contains
     ! Minus
     call tdpsf_project(psf,wftmp,wfout,1,MINUS)
 
-    if(psf%mesh%sb%dim .gt. 1) then 
+    if(psf%mesh%sb%dim > 1) then 
       !-----  Y axis ------
       ! Plus
       call tdpsf_project(psf,wfout,wftmp,2,PLUS)
       ! Minus
       call tdpsf_project(psf,wftmp,wfout,2,MINUS)
 
-      if(psf%mesh%sb%dim .gt. 2) then 
+      if(psf%mesh%sb%dim > 2) then 
         !-----  Z axis ------
         ! Plus
         call tdpsf_project(psf,wfout,wftmp,3,PLUS)
@@ -435,7 +435,7 @@ contains
     call tdpsf_project_X_to_K(psf,wffltrd,wf1,1,MINUS)
     wfout = wfout + wf1
 
-    if(psf%mesh%sb%dim .gt. 1) then 
+    if(psf%mesh%sb%dim > 1) then 
       !-----  Y axis ------
       call tdpsf_project_K_to_X(psf,wf1,wf2,1,MINUS)
       wffltrd = wffltrd - wf2           
@@ -448,7 +448,7 @@ contains
       call tdpsf_project_X_to_K(psf,wffltrd,wf1,2,MINUS)
       wfout = wfout + wf1
 
-      if(psf%mesh%sb%dim .gt. 2) then 
+      if(psf%mesh%sb%dim > 2) then 
         !-----  Z axis ------
         call tdpsf_project_K_to_X(psf,wf1 ,wf2,2,MINUS)
         wffltrd = wffltrd - wf2
@@ -533,7 +533,7 @@ contains
     call tdpsf_project_K_to_X(psf,wffltrd,wf1,1,MINUS)
     wfout = wfout + wf1
 
-    if(psf%mesh%sb%dim .gt. 1) then 
+    if(psf%mesh%sb%dim > 1) then 
       !-----  Y axis ------
       call tdpsf_project_X_to_K(psf,wf1,wf2,1,MINUS)
       wffltrd = wffltrd - wf2           
@@ -546,7 +546,7 @@ contains
       call tdpsf_project_K_to_X(psf,wffltrd,wf1,2,MINUS)
       wfout = wfout + wf1
 
-      if(psf%mesh%sb%dim .gt. 2) then 
+      if(psf%mesh%sb%dim > 2) then 
         !-----  Z axis ------
         call tdpsf_project_X_to_K(psf,wf1 ,wf2,2,MINUS)
         wffltrd = wffltrd - wf2
@@ -663,14 +663,14 @@ contains
     ! Minus
     call tdpsf_project_K(psf,wftmp,wfout,1,MINUS)
 
-    if(psf%mesh%sb%dim .gt. 1) then 
+    if(psf%mesh%sb%dim > 1) then 
       !-----  Y axis ------
       ! Plus
       call tdpsf_project_K(psf,wfout,wftmp,2,PLUS)
       ! Minus
       call tdpsf_project_K(psf,wftmp,wfout,2,MINUS)
 
-      if(psf%mesh%sb%dim .gt. 2) then 
+      if(psf%mesh%sb%dim > 2) then 
         !-----  Z axis ------
         ! Plus
         call tdpsf_project_K(psf,wfout,wftmp,3,PLUS)

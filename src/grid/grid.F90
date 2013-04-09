@@ -271,7 +271,7 @@ contains
       
       call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
       
-      call derivatives_init(gr%fine%der, gr%mesh%sb, gr%cv%method .ne. CURV_METHOD_UNIFORM)
+      call derivatives_init(gr%fine%der, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
       
       if(gr%mesh%parallel_in_domains) then
         call mesh_init_stage_3(gr%fine%mesh, gr%stencil, gr%mesh%mpi_grp)

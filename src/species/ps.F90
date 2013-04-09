@@ -452,7 +452,7 @@ contains
         end do
       end do
       
-      if(trim(ps%icore).ne.'nc') then
+      if(trim(ps%icore) /= 'nc') then
         rmax = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold)
         call spline_filter_mask(ps%core, 0, rmax, gmax, alpha, gamma)
       end if
@@ -471,7 +471,7 @@ contains
         end do
       end do
       
-      if(trim(ps%icore).ne.'nc') then
+      if(trim(ps%icore) /= 'nc') then
         call spline_filter_bessel(ps%core, 0, gmax, alpha, beta_fs, rcut, beta_rs)
       end if
 
@@ -561,7 +561,7 @@ contains
     call spline_print(ps%ur, iunit)
     call io_close(iunit)
 
-    if(trim(ps%icore).ne.'nc') then
+    if(trim(ps%icore) /= 'nc') then
       iunit = io_open(trim(dir)//'/nlcc', action='write')
       call spline_print(ps%core, iunit)
       call io_close(iunit)

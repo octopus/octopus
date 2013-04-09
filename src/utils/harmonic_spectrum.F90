@@ -45,7 +45,7 @@ program harmonic_spectrum
     HS_FROM_ACC  = 2
 
   call getopt_init(ierr)
-  if(ierr.ne.0) then
+  if(ierr /= 0) then
     call messages_write("Your Fortran compiler doesn't support command-line arguments;")
     call messages_new_line()
     call messages_write("the oct-harmonic-spectrum command is not available.")
@@ -78,17 +78,17 @@ program harmonic_spectrum
   call messages_obsolete_variable('HarmonicSpectrumPolarization')
   call messages_obsolete_variable('HarmonicSpectrumMode')
 
-  if( (pol.ne.'x') .and. &
-      (pol.ne.'y') .and. &
-      (pol.ne.'z') .and. &
-      (pol.ne.'+') .and. &
-      (pol.ne.'-') .and. &
-      (pol.ne.'v') ) then
+  if( (pol /= 'x') .and. &
+      (pol /= 'y') .and. &
+      (pol /= 'z') .and. &
+      (pol /= '+') .and. &
+      (pol /= '-') .and. &
+      (pol /= 'v') ) then
     message(1) = 'The polarization direction given in the command line is not valid.'
     call messages_fatal(1)
   end if
-  if( (mode.ne.HS_FROM_MULT) .and. &
-      (mode .ne.HS_FROM_ACC) ) then
+  if( (mode /= HS_FROM_MULT) .and. &
+      (mode  /= HS_FROM_ACC) ) then
     message(1) = 'The harmonic-spectrum mode given in the command line is not valid.'
     call messages_fatal(1)
   end if
@@ -98,7 +98,7 @@ program harmonic_spectrum
     if(get_maxima) then
       call spectrum_hs_from_mult('hs-mult-maxima', spectrum, pol, vec, w0)
     else
-      if(ar .eq. 1) then
+      if(ar  ==  1) then
          message(1)= "Calculating angle-resolved hs from multipoles."
         call messages_info(1)
         call spectrum_hs_ar_from_mult('hs-mult', spectrum, vec)
@@ -110,7 +110,7 @@ program harmonic_spectrum
     if(get_maxima) then
       call spectrum_hs_from_acc('hs-acc-maxima', spectrum, pol, vec, w0)
     else
-      if(ar .eq. 1) then
+      if(ar  ==  1) then
          message(1)= "Calculating angle-resolved hs from acceleration."
         call messages_info(1)
         call spectrum_hs_ar_from_acc('hs-acc', spectrum, vec)

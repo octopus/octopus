@@ -120,7 +120,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
     if(nec >= ned)           exit outer_loop ! :)   Already converged!
     if(matvec >= maxmatvecs) exit outer_loop ! :(   Maximum number of mat-vec operation surpassed...
 
-    if (d1.le.winsiz) then !start from beginning
+    if (d1 <= winsiz) then !start from beginning
       blk = winsiz
     else                   !restart to work on another set of eigen-pairs
       blk = min(krylov/2, d1)
@@ -157,7 +157,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
           end do
         end do
         xx = X(mf_nrm2)(gr%mesh, dim, vv(:, :, ist))
-        if(xx .le. M_EPSILON) then
+        if(xx  <=  M_EPSILON) then
           call X(mf_random)(gr%mesh, vv(:, 1, ist))
         else
           do idim = 1, dim
@@ -199,7 +199,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
       ! Store the Ritz values as approximate eigenvalues.
       call lalg_copy(winsiz, tmp, eigenval(nec + 1:nec + winsiz))
 
-      if ( d2+1.le.krylov .and. matvec.lt.maxmatvecs) then
+      if ( d2+1 <= krylov .and. matvec < maxmatvecs) then
         ! In this case, compute only the lowest Ritz eigenpair.
         call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), vv(:, :, 1:d2), hevec(1:d2, 1), &
              R_TOTYPE(M_ZERO), eigenvec(:, :, nec + 1))

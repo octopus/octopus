@@ -187,7 +187,7 @@ contains
     npart = mesh%mpi_grp%size
     ipart = mesh%mpi_grp%rank + 1
 
-    if(npart .lt. 8) then
+    if(npart  <  8) then
       default_method = RCB
     else
       default_method = GRAPH
@@ -541,14 +541,14 @@ contains
     iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
       action='write')
     do jj = 1, mesh%np_global
-      if(mesh%vp%part(jj) .eq. mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
+      if(mesh%vp%part(jj)  ==  mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
     end do
     call io_close(iunit)
 
     iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
       action='write')
     do jj = 1, mesh%np_part_global
-      if(mesh%vp%part(jj) .eq. mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
+      if(mesh%vp%part(jj)  ==  mesh%mpi_grp%rank+1) write(iunit, '(i8,3f18.8)') jj, mesh_x_global(mesh, jj)
     end do
     call io_close(iunit)
 

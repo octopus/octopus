@@ -93,7 +93,7 @@ contains
     !%End
     call parse_string('stdout', '-', filename)
     stdout = 6
-    if(trim(filename).ne.'-') then
+    if(trim(filename) /= '-') then
       close(stdout)
       open(stdout, file=filename, status='unknown')
     end if
@@ -109,7 +109,7 @@ contains
     !%End
     call parse_string('stderr', '-', filename)
     stderr = 0
-    if(trim(filename) .ne. '-') then
+    if(trim(filename) /= '-') then
       close(stderr)
       open(stderr, file=filename, status='unknown')
     end if
@@ -126,7 +126,7 @@ contains
     !%End
     call parse_string('WorkDir', '.', work_dir)
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
-    if (work_dir .ne. '.') call loct_mkdir(trim(work_dir))
+    if (work_dir /= '.') call loct_mkdir(trim(work_dir))
 
     !%Variable FlushMessages
     !%Type logical
@@ -161,7 +161,7 @@ contains
     logical :: file_exists, mpi_debug_hook
     integer :: sec, usec
 
-    if(conf%debug_level .ge. 99) then
+    if(conf%debug_level >= 99) then
       !wipe out debug trace files from previous runs to start fresh rather than appending
       call delete_debug_trace()
     endif
@@ -233,9 +233,9 @@ contains
   subroutine io_end()
     PUSH_SUB(io_end)
 
-    if(stderr.ne.0) call io_close(stderr)
-    if(stdin .ne.5) call io_close(stdin)
-    if(stdout.ne.6) call io_close(stdout)
+    if(stderr /= 0) call io_close(stderr)
+    if(stdin  /= 5) call io_close(stdin)
+    if(stdout /= 6) call io_close(stdout)
 
     POP_SUB(io_end)
   end subroutine io_end
@@ -257,7 +257,7 @@ contains
       if (lun_is_free(lun)) then
         inquire(unit=lun, opened=used, iostat=iostat)
 
-        if (iostat .ne. 0) used = .true.
+        if (iostat /= 0) used = .true.
         lun_is_free(lun) = .false.
         if (.not. used) then
           got_lun = lun
@@ -277,7 +277,7 @@ contains
 
     PUSH_SUB(io_free)
 
-    if (lun .ge. min_lun .and. lun .le. max_lun) &
+    if (lun >= min_lun .and. lun  <=  max_lun) &
       lun_is_free(lun) = .true.
 
     POP_SUB(io_free)
@@ -297,7 +297,7 @@ contains
     is_tmp_ = .false.
     if(present(is_tmp)) is_tmp_ = is_tmp
 
-    if(path(1:1) .eq. '/') then
+    if(path(1:1)  ==  '/') then
       ! we do not change absolute path names
       wpath = trim(path)
     else
@@ -392,7 +392,7 @@ contains
           action=trim(action), position=trim(position_), iostat=iostat)
       endif
       
-      if(iostat.ne.0) then
+      if(iostat /= 0) then
         call io_free(iunit)
         iunit = -1
         if(die_) then
@@ -467,7 +467,7 @@ contains
     write(iunit, '(a)') '******** io_status ********'
     do ii = 0, max_lun
       inquire(ii, opened=opened, named=named, name=filename, form=form, iostat=iostat)
-      if (iostat .eq. 0) then
+      if (iostat  ==  0) then
         if (opened) then
           if(.not. named) filename = 'No name available'
           write(iunit, '(i4,5x,a,5x,a)') ii, form, filename
@@ -533,7 +533,7 @@ contains
 
     i = index(path, ".", back = .true.)
     j = index(path(i+1:), "/")
-    if(i.eq.0 .or. j.ne.0) then
+    if(i == 0 .or. j /= 0) then
       ext = ""
     else
       ext = path(i+1:)

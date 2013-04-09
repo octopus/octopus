@@ -168,7 +168,7 @@ contains
   
     PUSH_SUB(read_resonances_file)
 
-    if(order.ne.2) then
+    if(order /= 2) then
       write(message(1),'(a)') 'The run mode #3 is only compatible with the analysis of the'
       write(message(2),'(a)') 'second-order response.'
       call messages_fatal(2)
@@ -183,7 +183,7 @@ contains
   
     ! Now, we should find out which units the file "ot" has.
     call unit_system_from_file(units, "ot", ierr)
-    if(ierr.ne.0) then
+    if(ierr /= 0) then
       write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
       call messages_fatal(1)
     end if
@@ -191,7 +191,7 @@ contains
     mode = COSINE_TRANSFORM
   
     iunit = io_open(trim(ffile), action='read', status='old', die=.false.)
-    if(iunit.eq.0) then
+    if(iunit == 0) then
       write(message(1),'(a)') 'Could not open '//trim(ffile)//' file.'
       call messages_fatal(1)
     end if
@@ -201,7 +201,7 @@ contains
     nresonances = 0
     do
       read(iunit, *, iostat = ios) dummy, dummy
-      if(ios.ne.0) exit
+      if(ios /= 0) exit
       nresonances = nresonances + 1
     end do
   
@@ -232,7 +232,7 @@ contains
   
     call read_ot(nspin, order_in_file, nw_subtracted)
   
-    if(order_in_file.ne.order) then
+    if(order_in_file /= order) then
       write(message(1), '(a)') 'The ot file should contain the second-order response in this run mode.'
       call messages_fatal(1)
     end if
@@ -310,7 +310,7 @@ contains
   
     ! Now, we should find out which units the file "ot" has.
     call unit_system_from_file(units, "ot", ierr)
-    if(ierr.ne.0) then
+    if(ierr /= 0) then
       write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
       call messages_fatal(1)
     end if
@@ -332,12 +332,12 @@ contains
   
     call read_ot(nspin, order_in_file, nw_subtracted)
   
-    if(order_in_file.ne.order) then
+    if(order_in_file /= order) then
       write(message(1), '(a)') 'Internal error in analyze_signal'
       call messages_fatal(1)
     end if
   
-    if(mod(order, 2).eq.1) then
+    if(mod(order, 2) == 1) then
       mode = SINE_TRANSFORM
     else
       mode = COSINE_TRANSFORM
@@ -494,7 +494,7 @@ contains
     message(1) = "FIXME: cannot work in single-precision."
     call messages_fatal(1)
   #endif
-    if(ierr.ne.0) then
+    if(ierr /= 0) then
       write(message(1),'(a)') 'Could not find a maximum.'
       write(message(2),'(a)')
       write(message(3), '(a,f12.8,a,f12.8,a)') '   Search interval = [', &
@@ -570,7 +570,7 @@ contains
       power = power / (M_ONE - sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
     case(COSINE_TRANSFORM)
       ! WARNING: there is some difference between the omega=0 case and the rest.
-      if(omega.ne.M_ZERO) then
+      if(omega /= M_ZERO) then
         power = power / (M_ONE + sin(M_TWO*omega*total_time)/(M_TWO*omega*total_time))
       else
         power = power / M_TWO
@@ -585,7 +585,7 @@ contains
                                              ' '//trim(units_abbrev(units_out%length**3))//' = ', power, ' b^3'
     call messages_info(4)
 
-    if(c01*c02 .ne. M_ZERO) then
+    if(c01*c02 /= M_ZERO) then
       write(message(1), '(a,f12.8)')         '    C(omega)/(C0i*C0j) = ', power / (c01 * c02)
       call messages_info(1)
    end if
@@ -844,7 +844,7 @@ contains
         ot(i) = ot(i) - M_TWO * power * sin(omega*i*dt)
       end do
     case(0)
-      if(omega .eq. M_ZERO) then
+      if(omega == M_ZERO) then
         do i = 0, time_steps
           ot(i) = ot(i) - power * cos(omega*i*dt)
         end do
@@ -935,7 +935,7 @@ contains
     PUSH_SUB(read_ot)
 
     iunit = io_open('ot', action='read', status='old')
-    if(iunit .eq. 0) then
+    if(iunit == 0) then
       write(message(1),'(a)') 'A file called ot should be present and was not found.'
       call messages_fatal(1)
     end if
@@ -946,18 +946,18 @@ contains
     read(iunit, '(a)')      line
   
     i = index(line, 'Observable')
-    if(index(line, 'Observable').ne.0) then
+    if(index(line, 'Observable') /= 0) then
       observable(1) = -1
-    elseif(index(line, '# O =').ne.0) then
+    elseif(index(line, '# O =') /= 0) then
       observable(1) = 0
-      if(index(line,'x').ne.0) then
+      if(index(line,'x') /= 0) then
         observable(2) = 1
-      elseif(index(line,'y').ne.0) then
+      elseif(index(line,'y') /= 0) then
         observable(2) = 2
-      elseif(index(line,'z').ne.0) then
+      elseif(index(line,'z') /= 0) then
         observable(2) = 3
       end if
-    elseif(index(line, '# (l, m) = ').ne.0) then
+    elseif(index(line, '# (l, m) = ') /= 0) then
       read(line,'(a12,i1,a1,i2,a1)') dummychar(1:12), observable(1), dummychar(1:1), observable(2), dummychar(1:1)
     else
       write(message(1),'(a)') 'Problem reading "ot" file: could not figure out the shape'
@@ -972,7 +972,7 @@ contains
   
     ! Figure out about the units of the file
     call unit_system_from_file(units, "ot", ierr)
-    if(ierr.ne.0) then
+    if(ierr /= 0) then
       write(message(1), '(a)') 'Could not figure out the units in file "ot".'
       call messages_fatal(1)
     end if
@@ -1038,7 +1038,7 @@ contains
   
     ! Now, we should find out which units the file "ot" has.
     call unit_system_from_file(units, "ot", ierr)
-    if(ierr.ne.0) then
+    if(ierr /= 0) then
       write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
       call messages_fatal(1)
     end if
@@ -1063,7 +1063,7 @@ contains
   
     call read_ot(nspin, order, nw_subtracted)
   
-    if(mod(order, 2).eq.1) then
+    if(mod(order, 2) == 1) then
       mode = SINE_TRANSFORM
     else
       mode = COSINE_TRANSFORM
@@ -1141,7 +1141,7 @@ program oscillator_strength
 
   ! Reads the information passed through the command line options (if available).
   call getopt_init(ierr)
-  if(ierr.ne.0) then
+  if(ierr /= 0) then
     message(1) = "Your Fortran compiler doesn't support command-line arguments;"
     message(2) = "the oct-oscillator-strength command is not available."
     call messages_fatal(2)

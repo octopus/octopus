@@ -168,7 +168,7 @@
       do ip = 1, pesrc%npoints
 
 #if defined(HAVE_MPI)
-        if(mesh%mpi_grp%rank .eq. pesrc%rankmin(ip)) then !needed if mesh%parallel_in_domains is true
+        if(mesh%mpi_grp%rank  ==  pesrc%rankmin(ip)) then !needed if mesh%parallel_in_domains is true
           contains_ip = .true.
         else
           contains_ip = .false.
@@ -183,7 +183,7 @@
                   st%zpsi(pesrc%points(ip), idim, ist, ik)
 
 #if defined(HAVE_MPI)
-                if(mesh%mpi_grp%rank .ne. 0) then
+                if(mesh%mpi_grp%rank /= 0) then
                   wf=pesrc%wf(ip, idim, ist, ik, ii)
                   call mpi_send(wf,1, MPI_DOUBLE_COMPLEX,0, 1, mesh%mpi_grp%comm, mpi_err)
                 end if
@@ -192,7 +192,7 @@
               end if
 
 #if defined(HAVE_MPI)
-              if(mesh%mpi_grp%rank .eq. 0 .and. pesrc%rankmin(ip) .ne. 0) then
+              if(mesh%mpi_grp%rank  ==  0 .and. pesrc%rankmin(ip) /= 0) then
                 call mpi_recv(wf,1, MPI_DOUBLE_COMPLEX,pesrc%rankmin(ip), 1, mesh%mpi_grp%comm,status, mpi_err)
                 pesrc%wf(ip, idim, ist, ik, ii) = wf
 

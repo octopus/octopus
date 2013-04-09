@@ -97,7 +97,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
       ! Orthogonalize to lowest eigenvalues (already calculated)
       if(p > 1) call X(states_orthogonalize_single)(st, gr%mesh, p - 1, ik, g, normalize = .false.)
 
-      if(iter .ne. 1) then
+      if(iter /= 1) then
         gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g, g0, reduce = .false.)
       else
         gg1 = M_ZERO
@@ -124,7 +124,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
       end if
 
       ! Starting or following iterations...
-      if(iter .eq. 1) then
+      if(iter  ==  1) then
         gg0 = gg
 
         do idim = 1, st%d%dim
@@ -292,7 +292,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
 
     band: do i = 1, maxter - 1 ! One operation has already been made.
 
-      if(mod(i, 5).eq.0) orthogonal = .false.
+      if(mod(i, 5) == 0) orthogonal = .false.
 
       ! Get H|psi> (through the linear formula)
       do idim = 1, st%d%dim

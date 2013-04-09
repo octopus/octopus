@@ -519,10 +519,10 @@ contains
     if(present(ref_file)) then
       call spectrum_mult_info(ref_file, ref_nspin, ref_kick, &
         ref_time_steps, ref_dt, ref_file_units, lmax = ref_lmax)
-      if( (nspin .ne. ref_nspin)           .or. &
-          (time_steps .ne. ref_time_steps) .or. &
+      if( (nspin /= ref_nspin)           .or. &
+          (time_steps /= ref_time_steps) .or. &
           (.not.(dt .app. ref_dt))         .or. &
-          (lmax .ne. ref_lmax) ) then
+          (lmax /= ref_lmax) ) then
         write(message(1),'(a)') 'The multipoles and reference multipoles files do not match.'
         call messages_fatal(1)
       end if
@@ -796,7 +796,7 @@ contains
 
     ! Figure out the units of the file
     ii = index(line, 'eV')
-    if(ii.ne.0) then
+    if(ii /= 0) then
       call unit_system_get(file_units, UNITS_EVA)
     else
       call unit_system_get(file_units, UNITS_ATOMIC)
@@ -806,7 +806,7 @@ contains
     call count_time_steps(in_file_sin, time_steps_sin, dt_sin)
     call count_time_steps(in_file_cos, time_steps_cos, dt_cos)
 
-    if(dt_sin.ne.dt_cos) then
+    if(dt_sin /= dt_cos) then
       message(1) = "dt is different in ftchds.cos and ftchds.sin!"
       call messages_fatal(1)
     end if
@@ -1136,7 +1136,7 @@ contains
     stop "FIXME: cannot work in single-precision."
 #endif
 
-    if(ierr .ne. 0) then
+    if(ierr /= 0) then
       write(message(1),'(a,f14.6,a)') 'spectrum_hsfunction_min: The maximum at', xx,' was not properly converged.'
       write(message(2),'(a,i12)')      'Error code: ', ierr
       call messages_warning(2)
@@ -1270,7 +1270,7 @@ contains
       read(iunit, '(28x,e20.12)', advance = 'no', iostat = ierr) aa(1)
       ! FIXME: parsing of file depends on how code was compiled (MAX_DIM)!!!
       jj = 2
-      do while( (ierr.eq.0) .and. (jj <= MAX_DIM) )
+      do while( (ierr == 0) .and. (jj <= MAX_DIM) )
        read(iunit, '(e20.12)', advance = 'no', iostat = ierr) aa(jj)
        jj = jj+1
       end do
@@ -1586,7 +1586,7 @@ contains
       read(iunit, '(28x,e20.12)', advance = 'no', iostat = ierr) aa(1)
       ! FIXME: parsing of file depends on how code was compiled (MAX_DIM)!!!
       jj = 2
-      do while( (ierr.eq.0) .and. (jj <= MAX_DIM) )
+      do while( (ierr == 0) .and. (jj <= MAX_DIM) )
         read(iunit, '(e20.12)', advance = 'no', iostat = ierr) aa(jj)
         jj = jj + 1 
       end do
@@ -1725,7 +1725,7 @@ contains
     PUSH_SUB(spectrum_hs_output)
 
       ! output
-    if(trim(out_file) .ne. '-') then
+    if(trim(out_file) /= '-') then
       iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
       write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
        
@@ -1775,7 +1775,7 @@ contains
 
     ! Figure out the units of the file
     ii = index(line,'eV')
-    if(ii.ne.0) then
+    if(ii /= 0) then
       call unit_system_get(file_units, UNITS_EVA)
     else
       call unit_system_get(file_units, UNITS_ATOMIC)

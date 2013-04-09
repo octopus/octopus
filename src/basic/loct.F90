@@ -202,7 +202,7 @@ contains
 
     call oct_wfs_list(s, list)
     inlist = .false.
-    if (list(a).eq.1) inlist = .true.
+    if (list(a) == 1) inlist = .true.
 
     deallocate(list)
 

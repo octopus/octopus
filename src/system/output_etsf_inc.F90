@@ -61,7 +61,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 #ifdef HAVE_ETSF_IO
 
   ! geometry
-  if (iand(outp%what, C_OUTPUT_GEOMETRY).ne.0) then
+  if (iand(outp%what, C_OUTPUT_GEOMETRY) /= 0) then
 
     call output_etsf_geometry_dims(geo, gr%sb, geometry_dims, geometry_flags)
 
@@ -74,7 +74,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! density
-  if (iand(outp%what, C_OUTPUT_DENSITY).ne.0) then
+  if (iand(outp%what, C_OUTPUT_DENSITY) /= 0) then
     call dcube_function_alloc_rs(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
@@ -92,7 +92,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! wave-functions
-  if (iand(outp%what, C_OUTPUT_WFS).ne.0) then
+  if (iand(outp%what, C_OUTPUT_WFS) /= 0) then
     call dcube_function_alloc_rs(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, wfs_dims, wfs_flags)
@@ -114,7 +114,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! wave-functions in fourier space
-  if (iand(outp%what, C_OUTPUT_WFS_FOURIER).ne.0) then
+  if (iand(outp%what, C_OUTPUT_WFS_FOURIER) /= 0) then
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)
     call fourier_shell_init(shell, zcube, gr%mesh, convention = .true.)

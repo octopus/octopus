@@ -118,7 +118,7 @@ contains
 
     done = .false.
 
-    if(parse_isdef(datasets_check('PDB'//trim(what))) .ne. 0) then
+    if(parse_isdef(datasets_check('PDB'//trim(what))) /= 0) then
       call check_duplicated(done)
 
       gf%file_type = XYZ_FILE_PDB
@@ -136,7 +136,7 @@ contains
       call io_close(iunit)
     end if
 
-    if(parse_isdef(datasets_check('XYZ'//trim(what))) .ne. 0) then ! read a xyz file
+    if(parse_isdef(datasets_check('XYZ'//trim(what))) /= 0) then ! read a xyz file
       call check_duplicated(done)
 
       gf%file_type = XYZ_FILE_XYZ
@@ -174,7 +174,7 @@ contains
 
       do ia = 1, gf%n
         ncol = parse_block_cols(blk, ia - 1)
-        if((ncol .lt. space%dim + 1) .or. (ncol .gt. space%dim + 2)) then
+        if((ncol  <  space%dim + 1) .or. (ncol > space%dim + 2)) then
           write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
           call messages_fatal(1)
         end if
@@ -208,7 +208,7 @@ contains
 
       do ia = 1, gf%n
         ncol = parse_block_cols(blk, ia - 1)
-        if((ncol .lt. space%dim + 1) .or. (ncol .gt. space%dim + 2)) then
+        if((ncol  <  space%dim + 1) .or. (ncol > space%dim + 2)) then
           write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
           call messages_fatal(1)
         end if

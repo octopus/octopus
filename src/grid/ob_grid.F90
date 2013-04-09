@@ -157,7 +157,7 @@ contains
     !% Just use open boundaries.
     !%End
     NLEADS = 0
-    if(parse_block(datasets_check('OpenBoundaries'), blk).eq.0) then
+    if(parse_block(datasets_check('OpenBoundaries'), blk) == 0) then
 
       call messages_experimental("Open boundaries")
       ob_grid%open_boundaries = .true.
@@ -167,7 +167,7 @@ contains
       do nr = 0, nrows - 1
         call parse_block_integer(blk, nr, 0, tag)
 
-        if(tag.eq.NUMBER_LEADS) then
+        if(tag == NUMBER_LEADS) then
           call parse_block_integer(blk, nr, 2, NLEADS)
           if ((NLEADS < 0) .or. (NLEADS > 2 * MAX_DIM)) &
             call input_error('OpenBoundaries:number_leads')
@@ -193,9 +193,9 @@ contains
         select case(tag)
         case(LEAD_DATASET)
           call parse_block_string(blk, nr, 1, ob_grid%lead(LEFT)%info%dataset)
-          if(ncols .eq. 3) then
+          if(ncols  ==  3) then
             call parse_block_string(blk, nr, 2, ob_grid%lead(RIGHT)%info%dataset)
-            if(trim(ob_grid%lead(LEFT)%info%dataset) .ne. trim(ob_grid%lead(RIGHT)%info%dataset)) then
+            if(trim(ob_grid%lead(LEFT)%info%dataset) /= trim(ob_grid%lead(RIGHT)%info%dataset)) then
               message(1) = 'For now datasets for left and right lead unit cells must'
               message(2) = 'be equal, i.e. only symmetric leads are possible.'
               call messages_fatal(2)
@@ -207,9 +207,9 @@ contains
           end if
         case(LEAD_RESTART_DIR)
           call parse_block_string(blk, nr, 1, ob_grid%lead(LEFT)%info%restart_dir)
-          if(ncols .eq. 3) then
+          if(ncols  ==  3) then
             call parse_block_string(blk, nr, 2, ob_grid%lead(RIGHT)%info%restart_dir)
-            if(trim(ob_grid%lead(LEFT)%info%restart_dir) .ne. trim(ob_grid%lead(RIGHT)%info%restart_dir)) then
+            if(trim(ob_grid%lead(LEFT)%info%restart_dir) /= trim(ob_grid%lead(RIGHT)%info%restart_dir)) then
               message(1) = 'Restart directories for left and right lead'
               message(2) = 'unit cells must be equal, i.e. only symmetric'
               message(3) = 'leads are possible.'
@@ -222,9 +222,9 @@ contains
           end if
         case(LEAD_STATIC_DIR)
           call parse_block_string(blk, nr, 1, ob_grid%lead(LEFT)%info%static_dir)
-          if(ncols .eq. 3) then
+          if(ncols  ==  3) then
             call parse_block_string(blk, nr, 2, ob_grid%lead(RIGHT)%info%static_dir)
-            if(trim(ob_grid%lead(LEFT)%info%static_dir) .ne. trim(ob_grid%lead(RIGHT)%info%static_dir)) then
+            if(trim(ob_grid%lead(LEFT)%info%static_dir) /= trim(ob_grid%lead(RIGHT)%info%static_dir)) then
               message(1) = 'Static directories for left and right lead'
               message(2) = 'unit cells must be equal, i.e. only symmetric'
               message(3) = 'leads are possible.'
@@ -237,20 +237,20 @@ contains
           end if
         case(ADD_UNIT_CELLS)
           call parse_block_integer(blk, nr, 1, ob_grid%lead(LEFT)%info%ucells)
-          if(ncols .eq. 3) then
+          if(ncols  ==  3) then
             call parse_block_integer(blk, nr, 2, ob_grid%lead(RIGHT)%info%ucells)
           else
             do ol = 2, NLEADS
               ob_grid%lead(ol)%info%ucells = ob_grid%lead(LEFT)%info%ucells
             end do
           end if
-          if(any(ob_grid%lead(1:NLEADS)%info%ucells .lt. 0)) then
+          if(any(ob_grid%lead(1:NLEADS)%info%ucells  <  0)) then
             message(1) = 'add_unit_cells in the OpenBoundaries block must not be negative.'
             call messages_fatal(1)
           end if
         case(TD_POT_FORMULA)
           call parse_block_string(blk, nr, 1, ob_grid%lead(LEFT)%td_bias)
-          if(ncols .eq. 3) then
+          if(ncols  ==  3) then
             call parse_block_string(blk, nr, 2, ob_grid%lead(RIGHT)%td_bias)
           else
             do ol = 2, NLEADS
@@ -270,17 +270,17 @@ contains
         end select
       end do
       ! Check if necessary lead_dataset line has been provided.
-      if(all(ob_grid%lead(1:NLEADS)%info%dataset .eq. '')) then
+      if(all(ob_grid%lead(1:NLEADS)%info%dataset  ==  '')) then
         call input_error('OpenBoundaries')
       end if
       ! Set default restart directory.
-      if(all(ob_grid%lead(1:NLEADS)%info%restart_dir .eq. '')) then
+      if(all(ob_grid%lead(1:NLEADS)%info%restart_dir  ==  '')) then
         do il = 1, NLEADS
           ob_grid%lead(il)%info%restart_dir = trim(ob_grid%lead(il)%info%dataset) // 'restart'
         end do
       end if
       ! Set default static directory.
-      if(all(ob_grid%lead(1:NLEADS)%info%static_dir .eq. '')) then
+      if(all(ob_grid%lead(1:NLEADS)%info%static_dir  ==  '')) then
         do il = 1, NLEADS
           ob_grid%lead(il)%info%static_dir = trim(ob_grid%lead(il)%info%dataset) // 'static'
         end do

@@ -64,7 +64,7 @@ subroutine dcholesky(n, a, bof, err_code)
   end if
 
   call lapack_potrf('U', n, a(1, 1), lead_dim(a), info)
-  if(info.ne.0) then
+  if(info /= 0) then
     if(bof_) then
       write(message(1), '(3a,i5)') 'In dcholesky, LAPACK ', TOSTRING(DLAPACK(potrf)), ' returned error message ', info
       call messages_fatal(1)
@@ -111,7 +111,7 @@ subroutine zcholesky(n, a, bof, err_code)
 
   call lapack_potrf('U', n, a(1, 1), lead_dim(a), info)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     if(bof_) then
       write(message(1), '(3a,i5)') 'In zcholesky, LAPACK ', TOSTRING(ZLAPACK(potrf)), ' returned error message ', info
       call messages_fatal(1)
@@ -181,7 +181,7 @@ subroutine dgeneigensolve(n, a, b, e, bof, err_code)
 
   SAFE_DEALLOCATE_A(diag)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     if(bof_) then
       write(message(1),'(3a,i5)') 'In dgeneigensolve, LAPACK ', TOSTRING(DLAPACK(sygv)), ' returned error message ', info
       call messages_fatal(1)
@@ -254,7 +254,7 @@ subroutine zgeneigensolve(n, a, b, e, bof, err_code)
 
   SAFE_DEALLOCATE_A(diag)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     if(bof_) then
       write(message(1),'(3a,i5)') 'In zgeneigensolve, LAPACK ', TOSTRING(ZLAPACK(hegv)), ' returned error message ', info
       call messages_fatal(1)
@@ -324,7 +324,7 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side, sort_eigenvectors)
 
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 2*n)))
-  if (side_.eq.'L'.or.side_.eq.'l') then
+  if (side_ == 'L'.or.side_ == 'l') then
       SAFE_ALLOCATE(vl(1:n, 1:n))
       SAFE_ALLOCATE(vr(1, 1))
       call lapack_geev('V', 'N', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
@@ -342,7 +342,7 @@ subroutine zeigensolve_nonh(n, a, e, err_code, side, sort_eigenvectors)
   SAFE_DEALLOCATE_A(vr)
   SAFE_DEALLOCATE_A(vl)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     write(message(1),'(3a,i5)') 'In zeigensolve_nonh, LAPACK ', TOSTRING(ZLAPACK(geev)), ' returned error message ', info
     call messages_fatal(1)
   end if
@@ -419,7 +419,7 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
 
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:max(1, 2*n)))
-  if (side_.eq.'L'.or.side_.eq.'l') then
+  if (side_ == 'L'.or.side_ == 'l') then
       SAFE_ALLOCATE(vl(1:n, 1:n))
       SAFE_ALLOCATE(vr(1, 1))
       call lapack_geev('V', 'N', n, a(1, 1), lead_dim(a), e(1), vl(1, 1), lead_dim(vl), vr(1,1), lead_dim(vr), &
@@ -437,7 +437,7 @@ subroutine deigensolve_nonh(n, a, e, err_code, side)
   SAFE_DEALLOCATE_A(vr)
   SAFE_DEALLOCATE_A(vl)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     write(message(1),'(3a,i5)') 'In deigensolve_nonh, LAPACK ', TOSTRING(DLAPACK(geev)), ' returned error message ', info
     call messages_fatal(1)
   end if
@@ -503,7 +503,7 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
 
   SAFE_DEALLOCATE_A(work)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     if(bof_) then
       write(message(1),'(3a,i5)') 'In dlowest_geneigensolve, LAPACK ', TOSTRING(DLAPACK(sygvx)), ' returned error message ', info
       call messages_fatal(1)
@@ -580,7 +580,7 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
     1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), lwork, rwork(1), iwork(1), ifail(1), info)
   SAFE_DEALLOCATE_A(work)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     if(bof_) then
       write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', TOSTRING(ZLAPACK(hegvx)), ' returned error message ', info
       call messages_fatal(1)
@@ -630,7 +630,7 @@ subroutine deigensolve(n, a, e, bof, err_code)
   call lapack_syev('V', 'U', n, a(1, 1), lead_dim(a), e(1), work(1), lwork, info)
   SAFE_DEALLOCATE_A(work)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     if(bof_) then
       write(message(1),'(3a,i5)') 'In deigensolve, LAPACK ', TOSTRING(DLAPACK(syev)), ' returned error message ', info
       call messages_fatal(1)
@@ -683,7 +683,7 @@ subroutine zeigensolve(n, a, e, bof, err_code)
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(rwork)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     if(bof_) then
       write(message(1),'(3a,i5)') 'In zeigensolve, LAPACK ', TOSTRING(ZLAPACK(heev)), ' returned error message ', info
       call messages_fatal(1)
@@ -750,7 +750,7 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
     1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
   SAFE_DEALLOCATE_A(work)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     write(message(1),'(3a,i5)') &
       'In dlowest_eigensolve, LAPACK ', TOSTRING(DLAPACK(syevx)), ' returned error message ', info
     call messages_fatal(1)
@@ -805,7 +805,7 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
     1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
   SAFE_DEALLOCATE_A(work)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     write(message(1),'(3a,i5)') &
       'In zlowest_eigensolve, LAPACK ', TOSTRING(ZLAPACK(heevx)), ' returned error message ', info
     call messages_fatal(1)
@@ -859,7 +859,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
 
   d = M_ONE
   do i = 1, n
-    if(ipiv(i).ne.i) then
+    if(ipiv(i) /= i) then
       d = - d*a(i, i)
     else
       d = d*a(i, i)
@@ -925,7 +925,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
 
   d = M_ONE
   do i = 1, n
-    if(ipiv(i).ne.i) then
+    if(ipiv(i) /= i) then
       d = - d*a(i, i)
     else
       d = d*a(i, i)
@@ -1274,7 +1274,7 @@ subroutine zsvd_inverse(n, a, threshold)
     do k = 1, n
       tmp = M_ZERO
       do l = 1, n
-        if (sg_values(l).lt.threshold_) then
+        if (sg_values(l) < threshold_) then
           write(message(1), '(a)') 'In zsvd_inverse: singular value below threshold.'
           call messages_warning(1)
           sg_inverse = M_ZERO
@@ -1320,7 +1320,7 @@ subroutine dinvert_upper_triangular(n, a)
 
   call DLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     write(message(1), '(3a,i5)') &
       'In dinvert_upper_triangular, LAPACK ', TOSTRING(DLAPACK(trtri)), ' returned error message ', info
     call messages_fatal(1)
@@ -1356,7 +1356,7 @@ subroutine zinvert_upper_triangular(n, a)
 
   call ZLAPACK(trtri)('U', 'N', n, a(1, 1), n, info)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     write(message(1), '(3a,i5)') &
       'In zinvert_upper_triangular, LAPACK ', TOSTRING(ZLAPACK(trtri)), ' returned error message ', info
     call messages_fatal(1)
@@ -1391,7 +1391,7 @@ subroutine dinvert_lower_triangular(n, a)
 
   call DLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     write(message(1), '(3a,i5)') &
       'In dinvert_lower_triangular, LAPACK ', TOSTRING(DLAPACK(trtri)), ' returned error message ', info
     call messages_fatal(1)
@@ -1426,7 +1426,7 @@ subroutine zinvert_lower_triangular(n, a)
 
   call ZLAPACK(trtri)('L', 'N', n, a(1, 1), n, info)
 
-  if(info.ne.0) then
+  if(info /= 0) then
     write(message(1), '(3a,i5)') &
       'In zinvert_lower_triangular, LAPACK ', TOSTRING(ZLAPACK(trtri)), ' returned error message ', info
     call messages_fatal(1)

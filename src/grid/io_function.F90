@@ -186,7 +186,7 @@ contains
       call input_error('OutputHow')
     end if
 
-    if(how .eq. 0) then
+    if(how  ==  0) then
       write(message(1), '(a)') 'Must specify output method with variable OutputHow.'
       call messages_fatal(1, only_root_writes = .true.)
      endif
@@ -197,14 +197,14 @@ contains
       C_OUTPUT_HOW_PLANE_X + C_OUTPUT_HOW_PLANE_Y + C_OUTPUT_HOW_DX + C_OUTPUT_HOW_CUBE))
 
 #if !defined(HAVE_NETCDF)
-    if (iand(how, C_OUTPUT_HOW_NETCDF) .ne. 0) then
+    if (iand(how, C_OUTPUT_HOW_NETCDF) /= 0) then
       message(1) = 'Octopus was compiled without NetCDF support.'
       message(2) = 'It is not possible to write output in NetCDF format.'
       call messages_fatal(2)
     end if
 #endif
 #if !defined(HAVE_ETSF_IO)
-    if (iand(how, C_OUTPUT_HOW_ETSF) .ne. 0) then
+    if (iand(how, C_OUTPUT_HOW_ETSF) /= 0) then
       message(1) = 'Octopus was compiled without ETSF_IO support.'
       message(2) = 'It is not possible to write output in ETSF format.'
       call messages_fatal(2)
@@ -225,21 +225,21 @@ contains
     PUSH_SUB(io_function_fill_how)
 
     how = 0
-    if(index(where, "AxisX")     .ne. 0) how = ior(how, C_OUTPUT_HOW_AXIS_X)
-    if(index(where, "AxisY")     .ne. 0) how = ior(how, C_OUTPUT_HOW_AXIS_Y)
-    if(index(where, "AxisZ")     .ne. 0) how = ior(how, C_OUTPUT_HOW_AXIS_Z)
-    IF(INDEX(WHERE, "PlaneX")    .ne. 0) how = ior(how, C_OUTPUT_HOW_PLANE_X)
-    if(index(where, "PlaneY")    .ne. 0) how = ior(how, C_OUTPUT_HOW_PLANE_Y)
-    if(index(where, "PlaneZ")    .ne. 0) how = ior(how, C_OUTPUT_HOW_PLANE_Z)
-    if(index(where, "DX")        .ne. 0) how = ior(how, C_OUTPUT_HOW_DX)
-    if(index(where, "XCrySDen")  .ne. 0) how = ior(how, C_OUTPUT_HOW_XCRYSDEN)
-    if(index(where, "Binary")    .ne. 0) how = ior(how, C_OUTPUT_HOW_BINARY)
-    if(index(where, "MeshIndex") .ne. 0) how = ior(how, C_OUTPUT_HOW_MESH_INDEX)
-    if(index(where, "XYZ")       .ne. 0) how = ior(how, C_OUTPUT_HOW_XYZ)
+    if(index(where, "AxisX")     /= 0) how = ior(how, C_OUTPUT_HOW_AXIS_X)
+    if(index(where, "AxisY")     /= 0) how = ior(how, C_OUTPUT_HOW_AXIS_Y)
+    if(index(where, "AxisZ")     /= 0) how = ior(how, C_OUTPUT_HOW_AXIS_Z)
+    IF(INDEX(WHERE, "PlaneX")    /= 0) how = ior(how, C_OUTPUT_HOW_PLANE_X)
+    if(index(where, "PlaneY")    /= 0) how = ior(how, C_OUTPUT_HOW_PLANE_Y)
+    if(index(where, "PlaneZ")    /= 0) how = ior(how, C_OUTPUT_HOW_PLANE_Z)
+    if(index(where, "DX")        /= 0) how = ior(how, C_OUTPUT_HOW_DX)
+    if(index(where, "XCrySDen")  /= 0) how = ior(how, C_OUTPUT_HOW_XCRYSDEN)
+    if(index(where, "Binary")    /= 0) how = ior(how, C_OUTPUT_HOW_BINARY)
+    if(index(where, "MeshIndex") /= 0) how = ior(how, C_OUTPUT_HOW_MESH_INDEX)
+    if(index(where, "XYZ")       /= 0) how = ior(how, C_OUTPUT_HOW_XYZ)
 #if defined(HAVE_NETCDF)
-    if(index(where, "NETCDF")    .ne. 0) how = ior(how, C_OUTPUT_HOW_NETCDF)
+    if(index(where, "NETCDF")    /= 0) how = ior(how, C_OUTPUT_HOW_NETCDF)
 #endif
-    if(index(where, "Cube")      .ne. 0) how = ior(how, C_OUTPUT_HOW_CUBE)
+    if(index(where, "Cube")      /= 0) how = ior(how, C_OUTPUT_HOW_CUBE)
 
     POP_SUB(io_function_fill_how)
   end function io_function_fill_how
@@ -367,7 +367,7 @@ contains
 
     PUSH_SUB(ncdf_error)
 
-    if(status .eq. NF90_NOERR) then
+    if(status  ==  NF90_NOERR) then
     POP_SUB(ncdf_error)
       return
     endif

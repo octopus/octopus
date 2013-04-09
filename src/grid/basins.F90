@@ -109,7 +109,7 @@ contains
     if(mesh%sb%dim < 2) ymax = 0
 
     do jj = 1, mesh%np
-      if(this%map(jj) .eq. -1) then
+      if(this%map(jj)  ==  -1) then
         dum = steep_fill(jj)
       end if
     end do
@@ -140,7 +140,7 @@ contains
         ii_max = get_max(ii, threshold)
       end if
 
-      if(ii_max.ne.-1) then
+      if(ii_max /= -1) then
         color = steep_fill(ii_max)
       else
         color = cur_color
@@ -228,7 +228,7 @@ contains
         f_max  = -huge(f_max)
 
         do jj = 1, mesh%np
-          if(this%map(jj) .ne. ii-1) cycle
+          if(this%map(jj) /= ii-1) cycle
           if(f_max <= f(jj)) then
             ii_max = jj
             f_max  = f(jj)

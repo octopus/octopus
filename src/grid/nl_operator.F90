@@ -835,7 +835,7 @@ contains
     ! are independent from the partitions, i.e. everything
     ! except op%i and -- in the non-constant case -- op%w_re
     ! op%w_im.
-    if(op%mesh%vp%rank.eq.op%mesh%vp%root) then
+    if(op%mesh%vp%rank == op%mesh%vp%root) then
       call nl_operator_common_copy(op, opg)
     end if
     if(in_debug_mode) call messages_debug_newlines(4)
@@ -846,7 +846,7 @@ contains
     do ip = 1, op%stencil%size
       call ivec_gather(op%mesh%vp, op%mesh%vp%root, opg%i(ip, :), op%i(ip, :))
     end do
-    if(op%mesh%vp%rank.eq.op%mesh%vp%root) then
+    if(op%mesh%vp%rank == op%mesh%vp%root) then
       call nl_operator_translate_indices(opg)
     end if
     if(in_debug_mode) call messages_debug_newlines(2)
@@ -999,17 +999,17 @@ contains
         ! a real local point (i.e. the local point number
         ! is less or equal than the number of local points of
         ! the node which owns the point with global number jp):
-        if(opg%i(ip, jp).le.il) then
+        if(opg%i(ip, jp) <= il) then
           ! Write the global point number from the lookup
           ! table in op_(ip, jp).
           opg%i(ip, jp) = opg%mesh%vp%local(opg%mesh%vp%xlocal(opg%mesh%vp%part(jp)) &
             +opg%i(ip, jp)-1)
           ! Or a ghost point:
-        else if(opg%i(ip, jp).gt.il.and.opg%i(ip, jp).le.ig) then
+        else if(opg%i(ip, jp) > il.and.opg%i(ip, jp) <= ig) then
           opg%i(ip, jp) = opg%mesh%vp%ghost(opg%mesh%vp%xghost(opg%mesh%vp%part(jp)) &
             +opg%i(ip, jp)-1-il)
           ! Or a boundary point:
-        else if(opg%i(ip, jp).gt.ig) then
+        else if(opg%i(ip, jp) > ig) then
           opg%i(ip, jp) = opg%mesh%vp%bndry(opg%mesh%vp%xbndry(opg%mesh%vp%part(jp)) &
             +opg%i(ip, jp)-1-ig)
         end if

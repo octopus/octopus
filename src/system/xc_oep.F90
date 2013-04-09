@@ -91,7 +91,7 @@ contains
 
     PUSH_SUB(xc_oep_init)
 
-    if(iand(family, XC_FAMILY_OEP).eq.0) then
+    if(iand(family, XC_FAMILY_OEP) == 0) then
       oep%level = XC_OEP_NONE
     POP_SUB(xc_oep_init)
       return
@@ -124,7 +124,7 @@ contains
     call parse_integer(datasets_check('OEPLevel'), XC_OEP_KLI, oep%level)
     if(.not. varinfo_valid_option('OEPLevel', oep%level)) call input_error('OEP_level')
 
-    if(oep%level .ne. XC_OEP_NONE) then
+    if(oep%level /= XC_OEP_NONE) then
       if(oep%level == XC_OEP_FULL) then
         call messages_experimental("Full OEP")    
         !%Variable OEPMixing
@@ -175,7 +175,7 @@ contains
 
     PUSH_SUB(xc_oep_end)
 
-    if(oep%level.ne.XC_OEP_NONE) then
+    if(oep%level /= XC_OEP_NONE) then
       SAFE_DEALLOCATE_P(oep%vxc)
 
       if(oep%level == XC_OEP_FULL) then 
@@ -193,7 +193,7 @@ contains
     type(xc_oep_t), intent(in) :: oep
     integer,        intent(in) :: iunit
 
-    if(oep%level.eq.XC_OEP_NONE) return
+    if(oep%level == XC_OEP_NONE) return
 
     PUSH_SUB(xc_oep_write_info)
     call messages_print_var_option(iunit, 'OEPLevel', oep%level)
@@ -262,16 +262,16 @@ contains
     ! of the potential
     max_eigen = CNST(-1e30)
     do ist = 1, st%nst
-      if((occ(ist) .gt. small).and.(eigenval(ist).gt.max_eigen)) then
+      if((occ(ist) > small).and.(eigenval(ist) > max_eigen)) then
         max_eigen = eigenval(ist)
       end if
     end do
 
     oep%eigen_n = 1
     do ist = 1, st%nst
-      if(occ(ist) .gt. small) then
+      if(occ(ist) > small) then
         ! criterion for degeneracy
-        if(abs(eigenval(ist)-max_eigen).le.CNST(1e-3)) then
+        if(abs(eigenval(ist)-max_eigen) <= CNST(1e-3)) then
           oep%eigen_type(ist) = 2
         else
           oep%eigen_type(ist) = 1

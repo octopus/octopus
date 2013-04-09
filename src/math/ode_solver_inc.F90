@@ -40,7 +40,7 @@ subroutine X(ode_solver_init)(os)
   !% Prince-Dormand solver.
   !%End
   call parse_integer(datasets_check('ODESolver'),       ODE_RK4, os%solver_type)
-  if( os%solver_type .lt. ODE_MINVAL .or. os%solver_type .gt. ODE_MAXVAL ) then
+  if( os%solver_type  <  ODE_MINVAL .or. os%solver_type > ODE_MAXVAL ) then
     call input_error(datasets_check('ODESolver'))
   end if
 

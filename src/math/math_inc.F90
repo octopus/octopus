@@ -229,7 +229,7 @@ logical function X(approximately_equal_1)(a, b) result(app)
   PUSH_SUB(X(approximately_equal_1))
 
   app = .false.
-  if(size(a).ne.size(b)) then
+  if(size(a) /= size(b)) then
     POP_SUB(X(approximately_equal_1))
     return
   endif
@@ -254,7 +254,7 @@ logical function X(approximately_equal_2)(a, b) result(app)
   PUSH_SUB(X(approximately_equal_2))
 
   app = .false.
-  if(any(shape(a).ne.shape(b))) then
+  if(any(shape(a) /= shape(b))) then
     POP_SUB(X(approximately_equal_2))
     return
   endif
@@ -279,7 +279,7 @@ logical function X(approximately_equal_3)(a, b) result(app)
   PUSH_SUB(X(approximately_equal_3))
 
   app = .false.
-  if(any(shape(a).ne.shape(b))) then
+  if(any(shape(a) /= shape(b))) then
     POP_SUB(X(approximately_equal_3))
     return
   endif
@@ -349,7 +349,7 @@ subroutine X(parker_traub)(nsize, vdm_base, vdm_inverse)
   pp = R_TOTYPE(M_ONE)
   do j = 1, nsize
     do k = 1, nsize
-      if(k.ne.j) then
+      if(k /= j) then
         pp(j) = pp(j) * ( vdm_base(j) - vdm_base(k) )
       end if
     end do
@@ -426,7 +426,7 @@ FLOAT function X(matrix_inv_residual)(nsize, a, b) result(residual)
   residual = M_ZERO
   do i = 1, nsize   
     do j = 1, nsize
-      if(i.ne.j) then 
+      if(i /= j) then 
         residual = residual + abs(ab(i, j)) 
       end if
     end do
@@ -493,7 +493,7 @@ subroutine X(matrix_symmetric_average)(matrix, np)
 
   SAFE_ALLOCATE(tmp(1:np, 1:np))
 
-  if(np.gt.1) then
+  if(np > 1) then
     do j = 1, np
       tmp(:, j) = M_HALF*(matrix(j, :) + matrix(:, j))
     end do

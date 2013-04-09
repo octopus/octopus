@@ -97,7 +97,7 @@ contains
     end if
 
     if(present(error)) then
-      if(st%d%ispin .eq. SPINORS) then
+      if(st%d%ispin  ==  SPINORS) then
         write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4,5x,a5)')   &
           '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>', 'Error'
       else
@@ -110,7 +110,7 @@ contains
         end if
       end if
     else
-      if(st%d%ispin .eq. SPINORS) then
+      if(st%d%ispin  ==  SPINORS) then
         write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
           '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
       else
@@ -147,9 +147,9 @@ contains
             occ = st%occ(ist, ik+is)
           end if
 
-          if(is .eq. 0) cspin = 'up'
-          if(is .eq. 1) cspin = 'dn'
-          if(st%d%ispin .eq. UNPOLARIZED .or. st%d%ispin .eq. SPINORS) cspin = '--'
+          if(is  ==  0) cspin = 'up'
+          if(is  ==  1) cspin = 'dn'
+          if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
 
           write(tmp_str(1), '(i4,3x,a2)') ist, trim(cspin)
           if(simul_box_is_periodic(sb)) then
@@ -244,7 +244,7 @@ contains
 
     if (gnuplot_mode) then
       do is = 0, ns-1
-        if (ns .gt. 1) then
+        if (ns > 1) then
           write(filename, '(a,i1.1,a)') 'bands-gp-', is+1,'.dat'
         else
           write(filename, '(a)') 'bands-gp.dat'
@@ -289,7 +289,7 @@ contains
 
     if (grace_mode) then
       do is = 0, ns-1
-        if (ns .gt. 1) then
+        if (ns > 1) then
           write(filename, '(a,i1.1,a)') 'bands-grace-', is+1,'.dat'
         else
           write(filename, '(a)') 'bands-grace.dat'
@@ -362,7 +362,7 @@ contains
     tpa_initialst = -1
     do ist = 1, st%nst
       do ik = 1, st%d%nik
-        if (abs(st%occ(ist,ik)-0.5) .lt. M_THRESHOLD) then
+        if (abs(st%occ(ist,ik)-0.5)  <  M_THRESHOLD) then
           tpa_initialst = ist
           tpa_initialk  = ik
         end if
@@ -401,7 +401,7 @@ contains
       ! check if input makes sense
       ncols = parse_block_cols(blk, 0)
 
-      if(ncols .ne. gr%mesh%sb%dim ) then ! wrong size
+      if(ncols /= gr%mesh%sb%dim ) then ! wrong size
 
         if(mpi_grp_is_root(mpi_world)) then
           call messages_write('Inconsistent size of momentum-transfer vector. It will not be used in the TPA calculation.')
@@ -468,7 +468,7 @@ contains
       call states_get_state(st, gr%mesh, ist, tpa_initialk, psi_ist)
 
       ! final states are the unoccupied ones
-      if (abs(st%occ(ist,tpa_initialk)) .lt. M_THRESHOLD) then
+      if (abs(st%occ(ist,tpa_initialk))  <  M_THRESHOLD) then
 
         osc_strength = M_ZERO
         transition_energy = st%eigenval(ist, tpa_initialk) - st%eigenval(tpa_initialst, tpa_initialk)
@@ -609,7 +609,7 @@ contains
     do ist = 1, st%nst
 
       do is = 0, ns-1
-        if (ns.gt.1) then
+        if (ns > 1) then
           write(filename, '(a,i4.4,a,i1.1,a)') 'dos-', ist, '-', is+1,'.dat'
         else
           write(filename, '(a,i4.4,a)') 'dos-', ist, '.dat'
@@ -642,7 +642,7 @@ contains
     end do
 
     ! for spin-polarized calculations also output spin-resolved tDOS
-    if(st%d%nspin .gt. 1) then    
+    if(st%d%nspin > 1) then    
       do is = 0, ns-1
         write(filename, '(a,i1.1,a)') 'total-dos-', is+1,'.dat'
         iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
@@ -835,7 +835,7 @@ contains
               end if
               ! This is nonsense, but at least all indices are present.
             case(SPINORS)
-              if(ispin .eq. 1) then
+              if(ispin  ==  1) then
                 spin = 'up'
               else
                 spin = 'dn'
@@ -919,14 +919,14 @@ contains
           do idim = 1, st%d%dim
             self_energy(1:np, 1:np) = st%ob_lead(il)%self_energy(1:np, 1:np, idim, ist, ik)
             call lalg_gemv(np, np, M_z1, self_energy(1:np, 1:np), psi(1:np, idim), M_z0, hpsi(1:np, idim))
-            if((il.eq.LEFT).and.(-kpoint(1).gt.M_ZERO) .or. (il.eq.RIGHT).and.(-kpoint(1).lt.M_ZERO)) then
+            if((il == LEFT).and.(-kpoint(1) > M_ZERO) .or. (il == RIGHT).and.(-kpoint(1) < M_ZERO)) then
               ! add the reflecting part
               self_energy(1:np, 1:np) = transpose(conjg(self_energy(1:np, 1:np))) - self_energy(1:np, 1:np)
               call lalg_gemv(np, np, M_z1, self_energy(1:np, 1:np), phi(1:np, idim), M_z1, hpsi(1:np, idim))
             end if
             write(fname, '(3a,i4.4,a,i3.3,a,i1.1)') 'src0-', trim(LEAD_NAME(il)), '-', ist, '-', ik, '-', idim
             iunit = io_open(trim(dir)//trim(fname), action='write', form='unformatted', is_tmp=.true.)
-            if(iunit.lt.0) then
+            if(iunit < 0) then
               message(1) = 'Cannot write term for source term to file.'
               call messages_warning(1)
               call io_close(iunit)
@@ -969,7 +969,7 @@ contains
           ! Try to open file.
           write(fname, '(3a,i4.4,a,i3.3,a,i1.1)') 'src0-', trim(LEAD_NAME(intf%il)), '-', ist, '-', ik, '-', idim
           iunit = io_open(trim(dir)//trim(fname), action='read', status='old', die=.false., is_tmp=.true., form='unformatted')
-          if(iunit.lt.0) then ! no file found
+          if(iunit < 0) then ! no file found
             message(1) = 'Cannot read src(0) from file.'
             call messages_fatal(1)
           end if
@@ -977,7 +977,7 @@ contains
           ! Now read the data.
           read(iunit) np
 
-          if(np.ne.size(src0, 1)) then
+          if(np /= size(src0, 1)) then
             message(1) = 'Size mismatch! Cannot read src(0) from file.'
             call messages_fatal(1)
           end if

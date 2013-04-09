@@ -26,7 +26,7 @@
 
     PUSH_SUB(controlfunction_basis_to_theta)
 
-    ASSERT(par%current_representation .ne. ctr_real_time)
+    ASSERT(par%current_representation /= ctr_real_time)
 
     select case(par%current_representation)
     case(ctr_fourier_series_h)
@@ -101,7 +101,7 @@
 
     PUSH_SUB(controlfunction_theta_to_basis)
 
-    ASSERT(par%current_representation .ne. ctr_real_time)
+    ASSERT(par%current_representation /= ctr_real_time)
 
 
     select case(par%current_representation)
@@ -227,7 +227,7 @@
       par%u = M_ZERO
       forall(mm = 1:par%dim) par%u(mm, mm) = M_ONE
 
-      if( cf_common%mode .eq. controlfunction_mode_f ) then
+      if( cf_common%mode  ==  controlfunction_mode_f ) then
 
         SAFE_ALLOCATE(fnn(par%dim))
         do mm = 1, par%dim
@@ -356,7 +356,7 @@
       forall(mm = 1:n-1) par%utransf(mm, mm) = M_ONE
       forall(mm = 1:n-1) par%utransfi(mm, mm) = M_ONE
 
-      if( cf_common%mode .eq. controlfunction_mode_f ) then
+      if( cf_common%mode  ==  controlfunction_mode_f ) then
 
         eigenvec = par%u
         call lalg_eigensolve(n-1, eigenvec, eigenval)

@@ -47,7 +47,7 @@ program propagation_spectrum
 
   call getopt_init(ierr)
   refmultipoles = ""
-  if(ierr.eq.0) call getopt_propagation_spectrum(refmultipoles)
+  if(ierr == 0) call getopt_propagation_spectrum(refmultipoles)
   call getopt_end()
 
   call parser_init()
@@ -207,7 +207,7 @@ program propagation_spectrum
         
       end if
 
-      if(reffname .eq. "") then
+      if(reffname  ==  "") then
         reference_multipoles = .false.
       else
         reference_multipoles = .true.

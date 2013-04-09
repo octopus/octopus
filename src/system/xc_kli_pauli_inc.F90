@@ -37,7 +37,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
   rho(1:mesh%np, 1:4) = st%rho(1:mesh%np, 1:4)
   do ip = 1,mesh%np
     do is = 1, 2
-      if (rho(ip,is) .lt. CNST(1e-20)) rho(ip,is) = CNST(1e-20)
+      if (rho(ip,is)  <  CNST(1e-20)) rho(ip,is) = CNST(1e-20)
     end do
   end do
   n(1:mesh%np) = rho(1:mesh%np,1) + rho(1:mesh%np,2)
@@ -185,7 +185,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
         do is = 1, 4 
           reached_threshold(is) = dmf_nrm2(mesh,(vs(1:mesh%np,is) + vloc(1:mesh%np,is) - v_m1(1:mesh%np,is))) 
         end do
-        if (all(reached_threshold(:) .le. oep%scftol%conv_abs_dens)) exit
+        if (all(reached_threshold(:)  <=  oep%scftol%conv_abs_dens)) exit
 
       end do KLI_iteration
 

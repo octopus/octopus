@@ -100,7 +100,7 @@ contains
     ! load wavefunctions
     if(.not. fromscratch) then
       call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr)
-      if(ierr .ne. 0) then
+      if(ierr /= 0) then
         message(1) = "Could not load wavefunctions: Starting from scratch."
         call messages_warning(1)
         fromscratch = .true.
@@ -396,7 +396,7 @@ contains
       g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT)
 
     ! store results
-    if(getgrad .eq. 1) call to_grad(g_opt, df)
+    if(getgrad  ==  1) call to_grad(g_opt, df)
 
     if(g_opt%what2minimize == MINWHAT_FORCES) then
       objective = M_ZERO

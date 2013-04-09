@@ -213,7 +213,7 @@ contains
       !%  Smearing widths are hard-coded by species (experimental).
       !%End
       call parse_integer(datasets_check('ClassicalPotential'), 0, ep%classical_pot)
-      if(ep%classical_pot .eq. CLASSICAL_GAUSSIAN) then
+      if(ep%classical_pot  ==  CLASSICAL_GAUSSIAN) then
         call messages_experimental("Gaussian smeared classical charges")
         ! This method probably works but definitely needs to be made user-friendly:
         ! i.e. telling the user what widths are used and letting them be set somehow.
@@ -922,7 +922,7 @@ contains
       ASSERT(geo%ncatoms==0)
       ! This depends on the area, but we should check if it is fully consistent.        
       spci => geo%atom(1)%spec
-      if( species_type(spci).eq.SPEC_JELLI_SLAB ) then
+      if( species_type(spci) == SPEC_JELLI_SLAB ) then
         energy = energy +M_PI *species_zval(spci)**2 /( M_FOUR *sb%lsize(1) *sb%lsize(2) ) &
           & *( sb%lsize(3) - species_jthick(spci) /M_THREE ) 
       else

@@ -799,7 +799,7 @@ contains
       ! calculate the matrix elements of (v + fxc)
       do jb = 1, cas%n_pairs
         actual = actual + 1
-        if(mod(actual, cas%mpi_grp%size) .ne. cas%mpi_grp%rank) cycle
+        if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
 
         ! we only count diagonals for Petersilka
         if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
@@ -1005,9 +1005,9 @@ contains
       !  first the Hartree part (only works for real wfs...)
       if(present(mtxel_vh)) then
         if(.not. cas%triplet) then
-          if(qi .ne. qi_old  .or.   qa .ne. qa_old   .or.  mu .ne. mu_old) then
+          if(qi /= qi_old  .or.   qa /= qa_old   .or.  mu /= mu_old) then
             pot(1:mesh%np) = M_ZERO
-            if(hm%theory_level .ne. INDEPENDENT_PARTICLES) call dpoisson_solve(psolver, pot, rho_j, all_nodes=.false.)
+            if(hm%theory_level /= INDEPENDENT_PARTICLES) call dpoisson_solve(psolver, pot, rho_j, all_nodes=.false.)
           endif
           ! value of pot is retained between calls
           mtxel_vh = dmf_dotp(mesh, rho_i(:), pot(:))
@@ -1060,7 +1060,7 @@ contains
         if( iunit > 0) then
           do
             read(iunit, fmt=*, iostat=err) ii, aa, is, jj, bb, js, val
-            if(err.ne.0) exit
+            if(err /= 0) exit
             
             ia = cas%index(ii, aa, is)
             jb = cas%index(jj, bb, js)
@@ -1156,7 +1156,7 @@ contains
           call drestart_read_lr_rho(dl_rho, sys%gr, st%d%nspin, &
             VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
           
-          if(ierr .ne. 0) then
+          if(ierr /= 0) then
             message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
             call messages_fatal(1)
           end if
@@ -1299,7 +1299,7 @@ contains
                                                                   trim('-'), &
                                                                   trim('a.u.')
 
-    if(cas%avg_order.eq.0) then
+    if(cas%avg_order == 0) then
       do ia = 1, cas%n_pairs
         write(iunit, '(es15.8,es15.8)') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), cas%qf(cas%ind(ia))
       end do

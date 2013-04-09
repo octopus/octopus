@@ -151,7 +151,7 @@ contains
 
       PUSH_SUB(system_init.print_r)
 
-      if(iand(sys%outp%what, C_OUTPUT_R).ne.0) then
+      if(iand(sys%outp%what, C_OUTPUT_R) /= 0) then
 
         do i=1, sys%gr%mesh%sb%dim
           write(fname, '(a,i1)') 'r-', i

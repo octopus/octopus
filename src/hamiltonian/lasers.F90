@@ -508,7 +508,7 @@ contains
       case(E_FIELD_VECTOR_POTENTIAL); write(iunit, '(a)') '   Vector Potential.'
       case(E_FIELD_SCALAR_POTENTIAL); write(iunit, '(a)') '   Scalar Potential.'
       end select
-      if(lasers(il)%field .ne. E_FIELD_SCALAR_POTENTIAL) then
+      if(lasers(il)%field /= E_FIELD_SCALAR_POTENTIAL) then
         write(iunit,'(3x,a,3(a1,f7.4,a1,f7.4,a1))') 'Polarization: ', &
           '(', real(lasers(il)%pol(1)), ',', aimag(lasers(il)%pol(1)), '), ', &
           '(', real(lasers(il)%pol(2)), ',', aimag(lasers(il)%pol(2)), '), ', &
@@ -529,7 +529,7 @@ contains
       ! In a Gaussian system of units,
       ! I(t) = (1/(8\pi)) * c * E(t)^2
       ! (1/(8\pi)) * c = 5.4525289841210 a.u.
-      if(lasers(il)%field .eq. E_FIELD_ELECTRIC .or. lasers(il)%field .eq. E_FIELD_VECTOR_POTENTIAL) then
+      if(lasers(il)%field  ==  E_FIELD_ELECTRIC .or. lasers(il)%field  ==  E_FIELD_VECTOR_POTENTIAL) then
         fluence = M_ZERO
         max_intensity = M_ZERO
         maxfield= M_ZERO   
@@ -660,7 +660,7 @@ contains
     else
       amp = M_z1
     end if
-    if(laser%field .eq. E_FIELD_SCALAR_POTENTIAL) then
+    if(laser%field  ==  E_FIELD_SCALAR_POTENTIAL) then
       ! In this case we will just return the value of the time function. The "field", in fact, 
       ! should be a function of the position in space (thus, a true "field"), given by the 
       ! gradient of the scalar potential.

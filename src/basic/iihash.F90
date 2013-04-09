@@ -67,7 +67,7 @@ contains
 
     PUSH_SUB(iihash_init)
 
-    if(size.lt.2) then
+    if(size < 2) then
       min_size = 3
     else
       min_size = size
@@ -111,7 +111,7 @@ contains
 
     integer :: k
 
-    ASSERT(key.ge.0)
+    ASSERT(key >= 0)
 
     k = hash(h, key)
     call ialist_insert(key, val, h%keyval(k))
@@ -198,12 +198,12 @@ contains
 
     ! This routine implements the Sieve of Eratosthenes.
     subroutine sieve()
-      do while(j.lt.size)
-        do while(.not.primes(j).and.j.lt.size)
+      do while(j < size)
+        do while(.not.primes(j).and.j < size)
           j = j + 1
         end do
         i = 2*j
-        do while(i.le.size)
+        do while(i <= size)
           primes(i) = .false.
           i = i + j
         end do

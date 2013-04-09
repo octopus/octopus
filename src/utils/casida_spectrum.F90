@@ -49,7 +49,7 @@ program casida_spectrum
   call global_init()
 
   call getopt_init(ierr)
-  if(ierr.eq.0) call getopt_casida_spectrum
+  if(ierr == 0) call getopt_casida_spectrum
   call getopt_end()
 
   call parser_init()

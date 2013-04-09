@@ -115,7 +115,7 @@ contains
     message(3) = ''
     write(message(4), '(23x,a,4x,a,8x,a)') 'total time', 'calls', 'usec/call'
     do j = 1, C_NUM_MPI_ROUTINES
-      if (sec_accum(j).eq.0) then
+      if (sec_accum(j) == 0) then
         usec_call(j) = 0
       else
         usec_call(j) = (sec_accum(j)*1000000)/call_counter(j)

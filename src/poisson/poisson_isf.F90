@@ -1504,7 +1504,7 @@ contains
     md1=n1/2
     md2=n2/2
     md3=n3/2
-151 if (nproc*(md2/nproc).lt.n2/2) then
+151 if (nproc*(md2/nproc) < n2/2) then
       md2=md2+1
       goto 151
     endif
@@ -1515,7 +1515,7 @@ contains
 
     nd1=n1/2+1;  nd2=n2/2+1
     nd3=n3/2+1
-250 if (modulo(nd3,nproc) .ne. 0) then
+250 if (modulo(nd3,nproc) /= 0) then
       nd3=nd3+1
       goto 250
     endif
@@ -1702,7 +1702,7 @@ contains
     !Body
     do jp2=0,md2/nproc-1
       j2=iproc*(md2/nproc)+jp2
-      if (j2.le.m2-1) then
+      if (j2 <= m2-1) then
         do j3=0,m3-1
           do j1=0,m1-1
             zf(j1,j3,jp2)=rhopot(j1,j3,j2)
@@ -1826,23 +1826,23 @@ contains
     iend=min((iproc+1)*nker2/nproc,n2h+n03)
 
     istart1=istart
-    if(iproc .eq. 0) istart1=n2h-n03+2
+    if(iproc  ==  0) istart1=n2h-n03+2
 
     iend2=iend
 
     iend1=n2h
     istart2=n2h+1
-    if(istart .gt. n2h) then
+    if(istart > n2h) then
       iend1=istart1-1
       istart2=istart
     end if
-    if(iend .le. n2h) then
+    if(iend  <=  n2h) then
       istart2=iend2+1
       iend1=iend
     end if
 
 !!!!!START KERNEL CONSTRUCTION
-    !  if(iproc .eq. 0) then
+    !  if(iproc  ==  0) then
     !     write(unit=*,fmt="(1x,a,i0,a)") &
     !          "Build the kernel in parallel using a sum of ",N_GAUSS," gaussians"
     !     write(unit=*,fmt="(1x,a,i0,a)") &
@@ -1981,7 +1981,7 @@ contains
 
     SAFE_ALLOCATE(karrayfour(1:2, 1:nker1, 1:nker2, 1:nker3/nproc))
 
-    ! if(iproc .eq. 0) print *,"Do a 3D PHalFFT for the kernel"
+    ! if(iproc  ==  0) print *,"Do a 3D PHalFFT for the kernel"
 
     call kernelfft(nfft1,nfft2,nfft3,nker1,nker2,nker3,nproc,iproc,karray,karrayfour,comm)
 

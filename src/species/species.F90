@@ -417,7 +417,7 @@ contains
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a user-defined potential.'
         i = min(237, len_trim(spec%user_def)-1) ! I subtract 1 to avoid the non-printable C "end-of-string" character.
         write(message(2),'(a,a)')      '   Potential = ', trim(spec%user_def(1:i))
-        if(len(trim(spec%user_def)).gt.237) then
+        if(len(trim(spec%user_def)) > 237) then
           message(2) = trim(message(2))//'...'
         end if
         call messages_info(2)
@@ -526,7 +526,7 @@ contains
       
       call ps_getradius(this%ps)
 
-      if(filter .ne. PS_FILTER_NONE) then 
+      if(filter /= PS_FILTER_NONE) then 
         call ps_filter(this%ps, filter, grid_cutoff)
         call ps_getradius(this%ps) ! radius may have changed
       end if

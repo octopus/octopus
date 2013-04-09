@@ -221,7 +221,7 @@ module tdfunction_m
     !% Explained above.
     !%End
     ierr = -3
-    if(parse_block(datasets_check('TDFunctions'), blk) .ne. 0) then
+    if(parse_block(datasets_check('TDFunctions'), blk) /= 0) then
       ierr = -1
       POP_SUB(tdf_read)
       return
@@ -230,7 +230,7 @@ module tdfunction_m
     nrows = parse_block_n(blk)
     row_loop: do i = 1, nrows
       call parse_block_string(blk, i-1, 0, row_name)
-      if(trim(row_name).eq.trim(function_name)) then
+      if(trim(row_name) == trim(function_name)) then
 
         call parse_block_integer(blk, i-1, 1, function_type)
 
@@ -665,7 +665,7 @@ module tdfunction_m
     type(tdf_t), intent(inout) :: f
     PUSH_SUB(tdf_zerofourier_to_numerical)
 
-    ASSERT(f%valww(1).eq.M_ZERO)
+    ASSERT(f%valww(1) == M_ZERO)
     call tdf_fourier_to_numerical(f)
 
     POP_SUB(tdf_zerofourier_to_numerical)
@@ -752,7 +752,7 @@ module tdfunction_m
       nrm = sqrt(dot_product(e, e))
       e = sqrt(fdotf_) * e/ nrm
 
-      if(f%mode .eq. TDF_ZERO_FOURIER) then
+      if(f%mode  ==  TDF_ZERO_FOURIER) then
         e(1:f%nfreqs-1) = e(1:f%nfreqs-1) - sum(e(1:f%nfreqs-1))/(f%nfreqs-1)
         nrm = sqrt(dot_product(e, e))
         e = sqrt(fdotf_) * e/ nrm
@@ -783,7 +783,7 @@ module tdfunction_m
     integer :: j
     FLOAT, allocatable :: val(:)
 
-    if(f%mode .eq. TDF_NUMERICAL) return
+    if(f%mode  ==  TDF_NUMERICAL) return
     PUSH_SUB(tdf_to_numerical)
 
     SAFE_ALLOCATE(val(1:niter+1))
@@ -942,20 +942,20 @@ module tdfunction_m
     fout%init_time  = fin%init_time
     fout%expression = fin%expression
     fout%nfreqs = fin%nfreqs
-    if(fin%mode .eq. TDF_FROM_FILE) then
+    if(fin%mode  ==  TDF_FROM_FILE) then
       fout%amplitude = fin%amplitude
     end if
-    if(fin%mode .eq. TDF_NUMERICAL) then
+    if(fin%mode  ==  TDF_NUMERICAL) then
       SAFE_ALLOCATE(fout%val(1:fout%niter+1))
       fout%val  = fin%val
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
-    if(fin%mode .eq. TDF_FOURIER_SERIES) then
+    if(fin%mode  ==  TDF_FOURIER_SERIES) then
       SAFE_ALLOCATE(fout%valww(2*fout%nfreqs-1))
       fout%valww  = fin%valww
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
-    if(fin%mode .eq. TDF_ZERO_FOURIER) then
+    if(fin%mode  ==  TDF_ZERO_FOURIER) then
       SAFE_ALLOCATE(fout%valww(2*fout%nfreqs-1))
       fout%valww  = fin%valww
       call fft_copy(fin%fft_handler, fout%fft_handler)
@@ -1001,7 +1001,7 @@ module tdfunction_m
     PUSH_SUB(tdf_cosine_multiply)
 
     ! For the moment, we will just assume that f and g are of the same type.
-    ASSERT(f%mode .eq. TDF_NUMERICAL)
+    ASSERT(f%mode  ==  TDF_NUMERICAL)
 
     do j = 1, f%niter + 1
       t = f%init_time + (j-1)*f%dt
@@ -1055,7 +1055,7 @@ module tdfunction_m
       write(iunit,'(6x,a)') 'Mode: time-dependent function parsed from the expression:'
       write(iunit,'(6x,a)') '      f(t) = '//trim(f%expression)
     end select
-    if(f%omega0 .ne. M_ZERO) then
+    if(f%omega0 /= M_ZERO) then
       write(iunit,'(6x,a,f10.4,3a)') 'Frequency: ', units_from_atomic(units_out%energy, f%omega0), &
         ' [', trim(units_abbrev(units_out%energy)), ']'
     end if
@@ -1081,7 +1081,7 @@ module tdfunction_m
     fg = M_ZERO
 
     ! For the moment, we will just assume that f and g are of the same type.
-    ASSERT(f%mode .eq. g%mode)
+    ASSERT(f%mode  ==  g%mode)
 
     select case(f%mode)
     case(TDF_NUMERICAL)
@@ -1095,7 +1095,7 @@ module tdfunction_m
     case(TDF_FOURIER_SERIES)
       fg = dot_product(f%valww, g%valww)
     case(TDF_ZERO_FOURIER)
-      ASSERT(f%valww(1).eq.M_ZERO)
+      ASSERT(f%valww(1) == M_ZERO)
       fg = dot_product(f%valww, g%valww)
     case default
       do i = 1, f%niter + 1
@@ -1124,7 +1124,7 @@ module tdfunction_m
     PUSH_SUB(tdf_diff)
 
     ! For the moment, we will just assume that f and g are of the same type.
-    ASSERT(f%mode .eq. g%mode)
+    ASSERT(f%mode  ==  g%mode)
 
     call tdf_copy(fminusg, f)
 

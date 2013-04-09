@@ -180,7 +180,7 @@ contains
         write(dirname_restart,'(2a)') KDOTP_DIR, trim(wfs_tag_sigma(str_tmp, 1))
         call restart_read(trim(tmpdir)//dirname_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
 
-        if(ierr .ne. 0) then
+        if(ierr /= 0) then
           message(1) = "Could not load kdotp wavefunctions from '"//trim(tmpdir)//trim(dirname_restart)//"'"
           message(2) = "Previous kdotp calculation required."
           call messages_fatal(2)
@@ -446,7 +446,7 @@ contains
             dirname = trim(restart_dir)//VIB_MODES_DIR//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))
             call restart_read(trim(dirname), st, gr, ierr, lr = lrtmp)
 
-            if(ierr .ne. 0) then
+            if(ierr /= 0) then
               message(1) = "Failed to load response wavefunctions from '"//dirname//"'"
               call messages_fatal(1)
             end if

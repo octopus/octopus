@@ -106,7 +106,7 @@ contains
 
     iunit = io_open(filename2, action='read', form='formatted', status='old', is_tmp=.true.)
     i = load_params(iunit, psp)
-    if(i .ne. 0) then
+    if(i /= 0) then
       message(1) = 'Error reading hgh file!'
       call messages_fatal(1)
     end if
@@ -187,7 +187,7 @@ contains
     ! get the pseudoatomic eigenfunctions (WARNING: This is not correctly done yet: "some" wavefunctions
     ! are obtained, but not the real ones!!!
     call solve_schroedinger(psp, ierr)
-    if(ierr.ne.0) then ! If the wavefunctions could not be found, we set its number to zero.
+    if(ierr /= 0) then ! If the wavefunctions could not be found, we set its number to zero.
       write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
       write(message(2),'(a)') 'do its job. The program will continue, but expect poor'
       write(message(3),'(a)') 'convergence properties.'
@@ -229,26 +229,26 @@ contains
     iostat = 1
     j = 5
     read(unit,'(a)') line
-    do while((iostat .ne. 0) .and. (j > 0))
+    do while((iostat /= 0) .and. (j > 0))
       j = j - 1
       read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal, params%c(1:j)
     end do
     if(j<1) read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal
-    if( iostat.ne.0 ) then
+    if( iostat /= 0 ) then
       load_params = 1
       POP_SUB(load_params)
       return
     end if
 
     read(unit,'(a)', iostat = iostat) line
-    if(iostat .ne. 0) then
+    if(iostat /= 0) then
       load_params = 0
       POP_SUB(load_params)
       return
     end if
     iostat = 1
     j = 4
-    do while((iostat .ne. 0) .and. (j > 0))
+    do while((iostat /= 0) .and. (j > 0))
       j = j - 1
       read(line, *, iostat=iostat) params%rc(0), (params%h(0, i, i), i = 1, j)
     end do
@@ -260,10 +260,10 @@ contains
 
     kloop: do k = 1, 3
       read(unit, '(a)', iostat = iostat) line
-      if(iostat .ne. 0) exit kloop
+      if(iostat /= 0) exit kloop
       iostat = 1
       j = 4
-      do while((iostat .ne. 0) .and. (j > 0))
+      do while((iostat /= 0) .and. (j > 0))
         j = j - 1
         read(line, *, iostat = iostat) params%rc(k), (params%h(k, i, i), i = 1, j)
       end do
@@ -271,7 +271,7 @@ contains
       read(unit, '(a)') line
       iostat = 1
       j = 4
-      do while((iostat .ne. 0) .and. (j>0))
+      do while((iostat /= 0) .and. (j>0))
         j = j - 1
         read(line, *, iostat = iostat) (params%k(k, i, i), i = 1, 3)
       end do
@@ -607,7 +607,7 @@ contains
         rmax = psp%g%rofi(psp%g%nrval)
         call egofv(hato, s, psp%g%nrval, e, g, y, l, z, &
           real(psp%g%a, 8), real(psp%g%b, 8), rmax, nprin, nnode, dr, ierr)
-        if(ierr .ne. 0) exit self_consistent
+        if(ierr /= 0) exit self_consistent
         psp%eigen(n) = e
 
         psp%rphi(2:psp%g%nrval, n) = g(2:psp%g%nrval) * sqrt(psp%g%drdi(2:psp%g%nrval))
@@ -623,7 +623,7 @@ contains
 
     end do self_consistent
 
-    if(ierr .eq. 0) then
+    if(ierr  ==  0) then
       !  checking normalization of the calculated wavefunctions
       !do l = 0, psp%l_max_occ
       do n = 1, psp%conf%p

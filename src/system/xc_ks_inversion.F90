@@ -93,7 +93,7 @@ contains
 
     PUSH_SUB(xc_ks_inversion_init)
 
-    if(iand(family, XC_FAMILY_KS_INVERSION) .eq. 0) then
+    if(iand(family, XC_FAMILY_KS_INVERSION)  ==  0) then
       ks_inv%level = XC_KS_INVERSION_NONE
       POP_SUB(xc_ks_inversion_init)
       return
@@ -144,7 +144,7 @@ contains
     call parse_integer(datasets_check('KSInversionLevel'), XC_KS_INVERSION_ADIABATIC, ks_inv%level)
     if(.not.varinfo_valid_option('KSInversionLevel', ks_inv%level)) call input_error('KSInversionLevel')
 
-    if(ks_inv%level.ne.XC_KS_INVERSION_NONE) then
+    if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       ! initialize auxilary random wavefunctions
       call states_null(ks_inv%aux_st)
       call states_init(ks_inv%aux_st, gr, geo)      
@@ -169,7 +169,7 @@ contains
 
     PUSH_SUB(xc_ks_inversion_end)
 
-    if(ks_inv%level .ne. XC_KS_INVERSION_NONE) then
+    if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       ! cleanup
       call eigensolver_end(ks_inv%eigensolver)
       call hamiltonian_end(ks_inv%aux_hm, gr, geo)
@@ -185,7 +185,7 @@ contains
     type(xc_ks_inversion_t), intent(in) :: ks_inversion
     integer,                 intent(in) :: iunit
 
-    if(ks_inversion%level.eq.XC_KS_INVERSION_NONE) return
+    if(ks_inversion%level == XC_KS_INVERSION_NONE) return
 
     PUSH_SUB(xc_ks_inversion_write_info)
     call messages_print_var_option(iunit, 'KSInversionLevel', ks_inversion%level)
@@ -367,7 +367,7 @@ contains
       ! Inversion according to Phys. Rev. Lett. 100, 153004 (2008), Eq. (6)
       do jj = 1, np
         call mesh_r(gr%mesh, jj, rr)
-        if (abs(rr).lt.CNST(1e-1)) rr = CNST(1e-1) 
+        if (abs(rr) < CNST(1e-1)) rr = CNST(1e-1) 
         vhxc(jj, 1:nspin) = vhxc(jj, 1:nspin) + (st%rho(jj,1:nspin) - target_rho(jj,1:nspin))*alpha*rr**beta
       end do
 
@@ -387,7 +387,7 @@ contains
         enddo
       enddo
 
-      if (diffdensity .lt. convergence) then
+      if (diffdensity  <  convergence) then
         if(verbosity == 2) then
           write(iunit2,*) counter, diffdensity
         end if

@@ -80,7 +80,7 @@ subroutine X(io_function_input)(filename, mesh, ff, ierr, is_tmp, map)
     call mpi_debug_out(mesh%vp%comm, C_MPI_BCAST)
 
     ! Only scatter, when successfully read the file(s).
-    if(ierr.le.0) then
+    if(ierr <= 0) then
       call X(vec_scatter)(mesh%vp, mesh%vp%root, ff_global, ff)
     end if
 
@@ -140,7 +140,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
     ASSERT(.not. present(map))
     file = io_workpath(filename, is_tmp=is_tmp)
     status = nf90_open(trim(file), NF90_WRITE, ncid)
-    if(status.ne.NF90_NOERR) then
+    if(status /= NF90_NOERR) then
       ierr = 2
     else
       call cube_init(cube, mesh%idx%ll, mesh%sb)
@@ -188,7 +188,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
     end if
 
   case("csv")
-    if (mesh%sb%box_shape .ne. PARALLELEPIPED) then
+    if (mesh%sb%box_shape /= PARALLELEPIPED) then
       message(1) = "Box shape must be parallelepiped when a .csv file is used."
       call messages_fatal(1)
     end if 
@@ -199,7 +199,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
     
     call io_csv_get_info(filename, dims, ierr)
     
-    if (ierr .ne. 0) then
+    if (ierr /= 0) then
       message(1) = "Could not read file "//trim(filename)//""
       call messages_fatal(1)
     end if
@@ -207,7 +207,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
     SAFE_ALLOCATE(read_ff(1:dims(1)*dims(2)*dims(3)))
     call io_csv_read(filename, dims(1)*dims(2)*dims(3), read_ff, ierr)
 
-    if (ierr .ne. 0) then
+    if (ierr /= 0) then
       message(1) = "Could not read file "//trim(filename)//""
       call messages_fatal(1)
     end if
@@ -336,9 +336,9 @@ contains
       status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(1))
       call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     end if
-    if((ndim(1) .ne. cube%rs_n_global(1)) .or. &
-      (ndim(2) .ne. cube%rs_n_global(2)) .or. &
-      (ndim(3) .ne. cube%rs_n_global(3))) then
+    if((ndim(1) /= cube%rs_n_global(1)) .or. &
+      (ndim(2) /= cube%rs_n_global(2)) .or. &
+      (ndim(3) /= cube%rs_n_global(3))) then
       ierr = 12
       POP_SUB(X(io_function_input_global).read_netcdf)
       return
@@ -366,7 +366,7 @@ contains
     else
       file_kind = file_kind*8
     end if
-    if(file_kind .ne. function_kind) then
+    if(file_kind /= function_kind) then
       select case(file_kind)
       case(4)
         ierr = -1
@@ -554,46 +554,46 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
 
   np_max = mesh%np_global
   ! should we output boundary points?
-  if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS)  .ne.0) np_max = mesh%np_part_global
+  if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS)   /= 0) np_max = mesh%np_part_global
 
-  if(iand(how, C_OUTPUT_HOW_BINARY)    .ne.0) call out_binary()
-  if(iand(how, C_OUTPUT_HOW_AXIS_X)    .ne.0) call out_axis (1, 2, 3) ! x ; y=0,z=0
-  if(iand(how, C_OUTPUT_HOW_AXIS_Y)    .ne.0) call out_axis (2, 1, 3) ! y ; x=0,z=0
-  if(iand(how, C_OUTPUT_HOW_AXIS_Z)    .ne.0) call out_axis (3, 1, 2) ! z ; x=0,y=0
-  if(iand(how, C_OUTPUT_HOW_PLANE_X)   .ne.0) call out_plane(1, 2, 3) ! x=0; y; z;
-  if(iand(how, C_OUTPUT_HOW_PLANE_Y)   .ne.0) call out_plane(2, 1, 3) ! y=0; x; z;
-  if(iand(how, C_OUTPUT_HOW_PLANE_Z)   .ne.0) call out_plane(3, 1, 2) ! z=0; x; y;
-  if(iand(how, C_OUTPUT_HOW_MESH_INDEX).ne.0) call out_mesh_index()
-  if(iand(how, C_OUTPUT_HOW_DX)        .ne.0) call out_dx()
-  if(iand(how, C_OUTPUT_HOW_XCRYSDEN)  .ne.0) then
+  if(iand(how, C_OUTPUT_HOW_BINARY)     /= 0) call out_binary()
+  if(iand(how, C_OUTPUT_HOW_AXIS_X)     /= 0) call out_axis (1, 2, 3) ! x ; y=0,z=0
+  if(iand(how, C_OUTPUT_HOW_AXIS_Y)     /= 0) call out_axis (2, 1, 3) ! y ; x=0,z=0
+  if(iand(how, C_OUTPUT_HOW_AXIS_Z)     /= 0) call out_axis (3, 1, 2) ! z ; x=0,y=0
+  if(iand(how, C_OUTPUT_HOW_PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
+  if(iand(how, C_OUTPUT_HOW_PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
+  if(iand(how, C_OUTPUT_HOW_PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
+  if(iand(how, C_OUTPUT_HOW_MESH_INDEX) /= 0) call out_mesh_index()
+  if(iand(how, C_OUTPUT_HOW_DX)         /= 0) call out_dx()
+  if(iand(how, C_OUTPUT_HOW_XCRYSDEN)   /= 0) then
     call out_xcrysden(.true.)
 #ifdef R_TCOMPLEX
     call out_xcrysden(.false.)
 #endif
   endif
-  if(iand(how, C_OUTPUT_HOW_CUBE)      .ne.0) call out_cube()
+  if(iand(how, C_OUTPUT_HOW_CUBE)       /= 0) call out_cube()
 
-  if(iand(how, C_OUTPUT_HOW_MATLAB).ne.0) then
+  if(iand(how, C_OUTPUT_HOW_MATLAB) /= 0) then
 #if defined(R_TCOMPLEX)
     do jj = 1, 3 ! re, im, abs
 #else
     do jj = 1, 1 ! only real part
 #endif
-      if(iand(how, C_OUTPUT_HOW_PLANE_X).ne.0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
-      if(iand(how, C_OUTPUT_HOW_PLANE_Y).ne.0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
-      if(iand(how, C_OUTPUT_HOW_PLANE_Z).ne.0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
+      if(iand(how, C_OUTPUT_HOW_PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
+      if(iand(how, C_OUTPUT_HOW_PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
+      if(iand(how, C_OUTPUT_HOW_PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
     end do
-    if(iand(how, C_OUTPUT_HOW_MESHGRID).ne.0) then
+    if(iand(how, C_OUTPUT_HOW_MESHGRID) /= 0) then
       do jj = 4, 5 ! meshgrid
-        if(iand(how, C_OUTPUT_HOW_PLANE_X).ne.0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
-        if(iand(how, C_OUTPUT_HOW_PLANE_Y).ne.0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
-        if(iand(how, C_OUTPUT_HOW_PLANE_Z).ne.0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
+        if(iand(how, C_OUTPUT_HOW_PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
+        if(iand(how, C_OUTPUT_HOW_PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
+        if(iand(how, C_OUTPUT_HOW_PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
       end do
     end if
   end if
 
 #if defined(HAVE_NETCDF)
-  if(iand(how, C_OUTPUT_HOW_NETCDF)    .ne.0) call out_netcdf()
+  if(iand(how, C_OUTPUT_HOW_NETCDF)     /= 0) call out_netcdf()
 #endif
 
   POP_SUB(X(io_function_output_global))
@@ -726,7 +726,7 @@ contains
     min_d3 = mesh%idx%nr(1, d3) + mesh%idx%enlarge(d3)
     max_d3 = mesh%idx%nr(2, d3) - mesh%idx%enlarge(d3)    
     
-    if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS).ne.0) then
+    if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS) /= 0) then
       min_d2 = mesh%idx%nr(1, d2)
       max_d2 = mesh%idx%nr(2, d2)
       min_d3 = mesh%idx%nr(1, d3)
@@ -987,7 +987,7 @@ contains
     fname_ext = trim(fname)
 #endif
 
-    if(mesh%sb%dim .ne. 3) then
+    if(mesh%sb%dim /= 3) then
       write(message(1), '(a)') 'Cannot output function '//trim(fname_ext)//' in XCrySDen format except in 3D.'
       call messages_warning(1)
       return
@@ -1142,7 +1142,7 @@ end subroutine X(io_function_output_global)
 
 
     status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
-    if(status.ne.NF90_NOERR) then
+    if(status /= NF90_NOERR) then
       ierr = 2
       POP_SUB(X(out_cf_netcdf))
       return

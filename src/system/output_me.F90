@@ -105,9 +105,9 @@ contains
       call input_error('OutputMatrixElements')
     end if
 
-    if(sb%dim .ne. 2 .and. sb%dim .ne. 3) this%what = iand(this%what, not(output_me_ang_momentum))
+    if(sb%dim /= 2 .and. sb%dim /= 3) this%what = iand(this%what, not(output_me_ang_momentum))
 
-    if(iand(this%what, output_me_ks_multipoles) .ne. 0) then
+    if(iand(this%what, output_me_ks_multipoles) /= 0) then
       !%Variable OutputMEMultipoles
       !%Type integer
       !%Default 1
@@ -140,17 +140,17 @@ contains
     
     PUSH_SUB(output_me)
 
-    if(iand(this%what, output_me_momentum).ne.0) then
+    if(iand(this%what, output_me_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
       call output_me_out_momentum(fname, st, gr)
     end if
 
-    if(iand(this%what, output_me_ang_momentum).ne.0) then
+    if(iand(this%what, output_me_ang_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_angular_momentum'
       call output_me_out_ang_momentum(fname, st, gr)
     end if
 
-    if(iand(this%what, output_me_ks_multipoles).ne.0) then
+    if(iand(this%what, output_me_ks_multipoles) /= 0) then
       ! The files will be called matrix_elements.x. The content of each file
       ! should be clear from the header of each file.
       id = 1
@@ -171,7 +171,7 @@ contains
       end do
     end if
 
-    if(iand(this%what, output_me_one_body).ne.0) then
+    if(iand(this%what, output_me_one_body) /= 0) then
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
       if (states_are_real(st)) then
@@ -181,7 +181,7 @@ contains
       end if
     end if
 
-    if(iand(this%what, output_me_two_body).ne.0) then
+    if(iand(this%what, output_me_two_body) /= 0) then
       message(1) = "Computing two-body matrix elements"
       call messages_info(1)
       if (states_are_real(st)) then
@@ -260,9 +260,9 @@ contains
             occ = st%occ(ist, ik+is)
           end if
           
-          if(is .eq. 0) cspin = 'up'
-          if(is .eq. 1) cspin = 'dn'
-          if(st%d%ispin .eq. UNPOLARIZED .or. st%d%ispin .eq. SPINORS) cspin = '--'
+          if(is  ==  0) cspin = 'up'
+          if(is  ==  1) cspin = 'dn'
+          if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
           
           write(message(1), '(i4,3x,a2,1x)') ist, trim(cspin)
           do idir = 1, gr%sb%dim
@@ -420,9 +420,9 @@ contains
               occ = st%occ(ist, ik+is)
             end if
             
-            if(is .eq. 0) cspin = 'up'
-            if(is .eq. 1) cspin = 'dn'
-            if(st%d%ispin .eq. UNPOLARIZED .or. st%d%ispin .eq. SPINORS) cspin = '--'
+            if(is  ==  0) cspin = 'up'
+            if(is  ==  1) cspin = 'dn'
+            if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
 
             write(tmp_str(1), '(i4,3x,a2)') ist, trim(cspin)
             write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &

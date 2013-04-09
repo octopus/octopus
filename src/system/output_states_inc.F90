@@ -35,7 +35,7 @@
 
     PUSH_SUB(output_states)
 
-    if(iand(outp%what, C_OUTPUT_DENSITY) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_DENSITY) /= 0) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       do is = 1, st%d%nspin
         if(st%d%nspin == 1) then
@@ -56,7 +56,7 @@
       end do
     end if
 
-    if(iand(outp%what, C_OUTPUT_POL_DENSITY) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_POL_DENSITY) /= 0) then
       fn_unit = units_out%length**(1-gr%mesh%sb%dim)
       SAFE_ALLOCATE(dtmp(1:gr%fine%mesh%np))
       do idir = 1, gr%sb%dim
@@ -74,7 +74,7 @@
       SAFE_DEALLOCATE_A(dtmp)
     end if
 
-    if(iand(outp%what, C_OUTPUT_CURRENT) .ne. 0) then
+    if(iand(outp%what, C_OUTPUT_CURRENT) /= 0) then
       if(states_are_complex(st)) then
         fn_unit = (unit_one / units_out%time) * units_out%length**(-gr%mesh%sb%dim)
         ! calculate current first
@@ -98,7 +98,7 @@
       endif
     end if
 
-    if(iand(outp%what, C_OUTPUT_WFS).ne.0) then
+    if(iand(outp%what, C_OUTPUT_WFS) /= 0) then
       fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
 
       if (states_are_real(st)) then
@@ -149,7 +149,7 @@
       SAFE_DEALLOCATE_A(ztmp)
     end if
 
-    if(iand(outp%what, C_OUTPUT_WFS_SQMOD).ne.0) then
+    if(iand(outp%what, C_OUTPUT_WFS_SQMOD) /= 0) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
       if (states_are_complex(st)) then
@@ -190,7 +190,7 @@
       SAFE_DEALLOCATE_A(ztmp)
     end if
 
-    if(iand(outp%what, C_OUTPUT_KED).ne.0) then
+    if(iand(outp%what, C_OUTPUT_KED) /= 0) then
       fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
       SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
       call states_calc_quantities(gr%der, st, kinetic_energy_density = elf)
@@ -209,15 +209,15 @@
       SAFE_DEALLOCATE_A(elf)
     end if
 
-    if(iand(outp%what, C_OUTPUT_DOS).ne.0) then
+    if(iand(outp%what, C_OUTPUT_DOS) /= 0) then
       call states_write_dos (trim(dir), st)
     end if
 
-    if(iand(outp%what, C_OUTPUT_TPA).ne.0) then
+    if(iand(outp%what, C_OUTPUT_TPA) /= 0) then
       call states_write_tpa (trim(dir), gr, st)
     end if
 
-    if(iand(outp%what, C_OUTPUT_MMB).ne.0) then
+    if(iand(outp%what, C_OUTPUT_MMB) /= 0) then
       if (states_are_real(st)) then
         call doutput_modelmb (trim(dir), gr, st, geo, outp)
       else

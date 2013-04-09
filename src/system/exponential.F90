@@ -248,7 +248,7 @@ contains
     ! However, I disconnect this check, because this routine is sometimes called in an
     ! auxiliary way, in order to compute (1-hm(t)*deltat)|zpsi>.
     ! This should be cleaned up.
-    !_ASSERT(.not.(hamiltonian_inh_term(hm) .and. (te%exp_method .ne. EXP_LANCZOS)))
+    !_ASSERT(.not.(hamiltonian_inh_term(hm) .and. (te%exp_method /= EXP_LANCZOS)))
 
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
@@ -359,7 +359,7 @@ contains
           end do
         end if
 
-        if(i .ne. te%exp_order) then
+        if(i /= te%exp_order) then
           do idim = 1, hm%d%dim
             call lalg_copy(der%mesh%np, hzpsi1(:, idim), zpsi1(:, idim))
           end do
@@ -723,7 +723,7 @@ contains
 
     PUSH_SUB(exponential_apply_all)
 
-    ASSERT(te%exp_method .eq. EXP_TAYLOR)
+    ASSERT(te%exp_method  ==  EXP_TAYLOR)
 
     call states_copy(st1, st)
     call states_copy(hst1, st)

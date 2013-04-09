@@ -106,7 +106,7 @@ contains
         call restart_read(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr)
       endif      
 
-      if(ierr .ne. 0) then
+      if(ierr /= 0) then
         call messages_write("Could not load wavefunctions from '"//trim(restart_dir)//GS_DIR//"'")
         call messages_new_line()
         call messages_write("Starting from scratch!")

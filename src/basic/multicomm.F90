@@ -189,7 +189,7 @@ contains
 
     nullify(mc%group_sizes)
     mc%have_slaves = .false.
-    if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
+    if(mc%par_strategy /= P_STRATEGY_SERIAL) then
       SAFE_ALLOCATE(mc%group_sizes(1:mc%n_index))
       mc%group_sizes(:) = 1
 
@@ -302,7 +302,7 @@ contains
           message(2) = "Please select a ParallelizationStrategy compatible with"
           jj = 2
           do ii = 1, n_par_types
-            if(iand(par_mask, 2**(ii - 1)) .ne. 0) then
+            if(iand(par_mask, 2**(ii - 1)) /= 0) then
               jj = jj + 1
               write(message(jj), '(2a)') "  -> ", par_types(ii)
             end if
@@ -465,7 +465,7 @@ contains
       call messages_info(ii)
 
       ! do we have the correct number of processors
-      if(product(mc%group_sizes(1:mc%n_index)) .ne. base_grp%size) then
+      if(product(mc%group_sizes(1:mc%n_index)) /= base_grp%size) then
         write(message(1),'(a)') 'Inconsistent number of processors:'
         write(message(2),'(a,i6)') '  MPI processes      = ', base_grp%size
         write(message(3),'(a,i6)') '  Required processes = ', product(real_group_sizes(1:mc%n_index))
@@ -668,7 +668,7 @@ contains
 
       PUSH_SUB(multicomm_end)
 
-    if(mc%par_strategy .ne. P_STRATEGY_SERIAL) then
+    if(mc%par_strategy /= P_STRATEGY_SERIAL) then
 #if defined(HAVE_MPI)
       ! Delete communicators.
       do ii = 1, mc%n_index
@@ -702,7 +702,7 @@ contains
     type(multicomm_t), intent(in) :: mc
     integer,           intent(in) :: level
 
-    rr = iand(mc%par_strategy, 2**(level - 1)) .ne. 0
+    rr = iand(mc%par_strategy, 2**(level - 1)) /= 0
 
   end function multicomm_strategy_is_parallel
 
@@ -728,7 +728,7 @@ contains
     grp_size = mpi_grp%size
 
     ! Number of rounds.
-    if(mod(grp_size, 2) .eq. 0) then
+    if(mod(grp_size, 2)  ==  0) then
       rounds = grp_size - 1
     else
       rounds = grp_size
@@ -754,7 +754,7 @@ contains
 
       ! No PUSH SUB, called too often.
 
-      if(mod(grp_size, 2).eq.0) then
+      if(mod(grp_size, 2) == 0) then
         get_partner = get_partner_even(grp_size, in - 1, ir - 1) + 1
       else
         get_partner = get_partner_odd(grp_size, in - 1, ir - 1) + 1
@@ -772,9 +772,9 @@ contains
 
       mm = grp_size / 2
 
-      if(ii .eq. 0) then
+      if(ii  ==  0) then
         pp = rr + 1
-      elseif(ii .eq. rr + 1) then
+      elseif(ii  ==  rr + 1) then
         pp = 0
       else
         ! I never know when to use which remainder function, but here
@@ -796,7 +796,7 @@ contains
 
       pp = get_partner_even(grp_size + 1, ii, rr)
 
-      if(pp .eq. 2 * mm - 1) then
+      if(pp  ==  2 * mm - 1) then
         pp = ii
       end if
 

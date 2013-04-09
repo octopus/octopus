@@ -172,7 +172,7 @@ contains
 
     call profiling_in(prof, "SGFFT")
 
-    if (max(n1,n2,n3).gt.8192) stop 'fft:8192 limit reached'
+    if (max(n1,n2,n3) > 8192) stop 'fft:8192 limit reached'
 
     ! some reasonable values of ncache: 
     !   IBM/RS6000/590: 16*1024 ; IBM/RS6000/390: 3*1024 ; 
@@ -184,15 +184,15 @@ contains
     if (ncache /= 0 .and. ncache <= max(n1,n2,n3)*4) ncache=max(n1,n2,n3/2)*4
 
     ! check whether input values are reasonable
-    if (inzee.le.0 .or. inzee.ge.3) stop 'fft:wrong inzee'
-    if (isign.ne.1 .and. isign.ne.-1) stop 'fft:wrong isign'
-    if (n1.gt.nd1) stop 'fft:n1>nd1'
-    if (n2.gt.nd2) stop 'fft:n2>nd2'
-    if (n3.gt.nd3) stop 'fft:n3>nd3'
+    if (inzee <= 0 .or. inzee >= 3) stop 'fft:wrong inzee'
+    if (isign /= 1 .and. isign /= -1) stop 'fft:wrong isign'
+    if (n1 > nd1) stop 'fft:n1>nd1'
+    if (n2 > nd2) stop 'fft:n2>nd2'
+    if (n3 > nd3) stop 'fft:n3>nd3'
 
 
     ! vector computer with memory banks:
-    if (ncache.eq.0) then
+    if (ncache == 0) then
       allocate(trig(2,8192),after(20),now(20),before(20))
 
       call ctrig(n3,trig,after,before,now,isign,ic)
@@ -212,7 +212,7 @@ contains
 
       inzee=3-inzee
 
-      if (n2.ne.n3) call ctrig(n2,trig,after,before,now,isign,ic)
+      if (n2 /= n3) call ctrig(n2,trig,after,before,now,isign,ic)
       nfft=nd3*n1
       mm=nd3*nd1
 
@@ -227,7 +227,7 @@ contains
         trig,after(i),now(i),before(i),isign)
       inzee=3-inzee
 
-      if (n1.ne.n2) call ctrig(n1,trig,after,before,now,isign,ic)
+      if (n1 /= n2) call ctrig(n1,trig,after,before,now,isign,ic)
       nfft=nd2*n3
       mm=nd2*nd3
 
@@ -266,11 +266,11 @@ contains
       lot = max(1,ncache/(4*n3))
       nn = lot
       n=n3
-      if (2*n*lot*2.gt.ncache) stop 'fft:ncache1'
+      if (2*n*lot*2 > ncache) stop 'fft:ncache1'
 
       call ctrig(n3,trig,after,before,now,isign,ic)
 
-      if (ic.eq.1) then
+      if (ic == 1) then
         i=ic
         lotomp=(nd1*n2)/npr+1
         ma=iam*lotomp+1
@@ -319,11 +319,11 @@ contains
       lot=max(1,ncache/(4*n2))
       nn=lot
       n=n2
-      if (2*n*lot*2.gt.ncache) stop 'fft:ncache2'
+      if (2*n*lot*2 > ncache) stop 'fft:ncache2'
 
-      if (n2.ne.n3) call ctrig(n2,trig,after,before,now,isign,ic)
+      if (n2 /= n3) call ctrig(n2,trig,after,before,now,isign,ic)
 
-      if (ic.eq.1) then
+      if (ic == 1) then
         i=ic
         lotomp=(nd3*n1)/npr+1
         ma=iam*lotomp+1
@@ -372,11 +372,11 @@ contains
       lot=max(1,ncache/(4*n1))
       nn=lot
       n=n1
-      if (2*n*lot*2.gt.ncache) stop 'fft:ncache3'
+      if (2*n*lot*2 > ncache) stop 'fft:ncache3'
 
-      if (n1.ne.n2) call ctrig(n1,trig,after,before,now,isign,ic)
+      if (n1 /= n2) call ctrig(n1,trig,after,before,now,isign,ic)
 
-      if (ic.eq.1) then
+      if (ic == 1) then
         i=ic
         lotomp=(nd2*n3)/npr+1
         ma=iam*lotomp+1
@@ -417,7 +417,7 @@ contains
       inzet=3-inzet
 
       deallocate(zw,trig,after,now,before)
-      if (iam.eq.0) inzee=inzet
+      if (iam == 0) inzee=inzet
       !$omp end parallel  
 
     endif
@@ -526,11 +526,11 @@ contains
       8192,   8, 8, 8, 4, 4, 1 /
 
     do i = 1, 149
-      if (n.eq.idata(1,i)) then
+      if (n == idata(1,i)) then
         ic=0
         do j=1,6
           itt=idata(1+j,i)
-          if (itt.gt.1) then
+          if (itt > 1) then
             ic=ic+1
             now(j)=idata(1+j,i)
           else
@@ -557,7 +557,7 @@ contains
     twopi=6.283185307179586d0
     angle=isign*twopi/n
 
-    if (mod(n,2).eq.0) then
+    if (mod(n,2) == 0) then
       nh=n/2
       trig(1,1)=1.0_8
       trig(2,1)=0.0_8
@@ -616,7 +616,7 @@ contains
 
     !         sqrt(.5d0)
     rt2i=0.7071067811865475d0
-    if (now.eq.2) then
+    if (now == 2) then
       ia=1
       nin1=ia-after
       nout1=ia-atn
@@ -638,8 +638,8 @@ contains
       end do
       do ia = 2, after
         ias=ia-1
-        if (2*ias.eq.after) then
-          if (isign.eq.1) then
+        if (2*ias == after) then
+          if (isign == 1) then
             nin1=ia-after
             nout1=ia-atn
             do ib=1,before
@@ -678,8 +678,8 @@ contains
               end do
             end do
           endif
-        else if (4*ias.eq.after) then
-          if (isign.eq.1) then
+        else if (4*ias == after) then
+          if (isign == 1) then
             nin1=ia-after
             nout1=ia-atn
             do ib = 1, before
@@ -722,8 +722,8 @@ contains
               end do
             end do
           endif
-        else if (4*ias.eq.3*after) then
-          if (isign.eq.1) then
+        else if (4*ias == 3*after) then
+          if (isign == 1) then
             nin1=ia-after
             nout1=ia-atn
             do ib = 1, before
@@ -792,8 +792,8 @@ contains
           end do
         endif
       end do
-    else if (now.eq.4) then
-      if (isign.eq.1) then 
+    else if (now == 4) then
+      if (isign == 1) then 
         ia=1
         nin1=ia-after
         nout1=ia-atn
@@ -835,7 +835,7 @@ contains
         end do
         do ia = 2, after
           ias=ia-1
-          if (2*ias.eq.after) then
+          if (2*ias == after) then
             nin1=ia-after
             nout1=ia-atn
             do ib = 1, before
@@ -977,7 +977,7 @@ contains
         end do
         do ia = 2, after
           ias=ia-1
-          if (2*ias.eq.after) then
+          if (2*ias == after) then
             nin1=ia-after
             nout1=ia-atn
             do ib = 1, before
@@ -1078,8 +1078,8 @@ contains
           endif
         end do
       endif
-    else if (now.eq.8) then
-      if (isign.eq.-1) then 
+    else if (now == 8) then
+      if (isign == -1) then 
         ia=1
         nin1=ia-after
         nout1=ia-atn
@@ -1524,7 +1524,7 @@ contains
         end do
 
       end if
-    else if (now.eq.3) then 
+    else if (now == 3) then 
       !         .5d0*sqrt(3.d0)
       bb=isign*0.8660254037844387d0
       ia=1
@@ -1560,8 +1560,8 @@ contains
       end do
       do ia = 2, after
         ias=ia-1
-        if (4*ias.eq.3*after) then
-          if (isign.eq.1) then
+        if (4*ias == 3*after) then
+          if (isign == 1) then
             nin1=ia-after
             nout1=ia-atn
             do ib = 1, before
@@ -1624,8 +1624,8 @@ contains
               end do
             end do
           endif
-        else if (8*ias.eq.3*after) then
-          if (isign.eq.1) then
+        else if (8*ias == 3*after) then
+          if (isign == 1) then
             nin1=ia-after
             nout1=ia-atn
             do ib = 1, before
@@ -1736,7 +1736,7 @@ contains
           end do
         end if
       end do
-    else if (now.eq.5) then
+    else if (now == 5) then
       !         cos(2.d0*pi/5.d0)
       cos2=0.3090169943749474d0
       !         cos(4.d0*pi/5.d0)
@@ -1800,8 +1800,8 @@ contains
       end do
       do ia = 2, after
         ias=ia-1
-        if (8*ias.eq.5*after) then
-          if (isign.eq.1) then
+        if (8*ias == 5*after) then
+          if (isign == 1) then
             nin1=ia-after
             nout1=ia-atn
             do ib = 1, before
@@ -1993,7 +1993,7 @@ contains
           end do
         endif
       end do
-    else if (now.eq.6) then
+    else if (now == 6) then
       !         .5d0*sqrt(3.d0)
       bb=isign*0.8660254037844387d0
 
@@ -2100,7 +2100,7 @@ contains
     
     !         sqrt(.5d0)
     rt2i=0.7071067811865475d0
-    if (now.eq.2) then
+    if (now == 2) then
       ia=1
       nin1=ia-after
       nout1=ia-atn
@@ -2121,8 +2121,8 @@ contains
 2001      continue
         do 2000,ia=2,after
         ias=ia-1
-        if (2*ias.eq.after) then
-                if (isign.eq.1) then
+        if (2*ias == after) then
+                if (isign == 1) then
                         nin1=ia-after
                         nout1=ia-atn
                         do 2010,ib=1,before
@@ -2159,8 +2159,8 @@ contains
                         zout(2,nout2,j)= s2 + s1
 2020                        continue
                 endif
-        else if (4*ias.eq.after) then
-                if (isign.eq.1) then
+        else if (4*ias == after) then
+                if (isign == 1) then
                         nin1=ia-after
                         nout1=ia-atn
                         do 2030,ib=1,before
@@ -2201,8 +2201,8 @@ contains
                         zout(2,nout2,j)= s1 - s2
 2040                        continue
                 endif
-        else if (4*ias.eq.3*after) then
-                if (isign.eq.1) then
+        else if (4*ias == 3*after) then
+                if (isign == 1) then
                         nin1=ia-after
                         nout1=ia-atn
                         do 2050,ib=1,before
@@ -2268,8 +2268,8 @@ contains
 2090                continue
         endif
 2000        continue
-        else if (now.eq.4) then
-        if (isign.eq.1) then 
+        else if (now == 4) then
+        if (isign == 1) then 
                 ia=1
                 nin1=ia-after
                 nout1=ia-atn
@@ -2310,7 +2310,7 @@ contains
 4001                continue
                 do 4000,ia=2,after
                 ias=ia-1
-                if (2*ias.eq.after) then
+                if (2*ias == after) then
                         nin1=ia-after
                         nout1=ia-atn
                         do 4010,ib=1,before
@@ -2449,7 +2449,7 @@ contains
 4101                continue
                 do 4100,ia=2,after
                 ias=ia-1
-                if (2*ias.eq.after) then
+                if (2*ias == after) then
                         nin1=ia-after
                         nout1=ia-atn
                         do 4110,ib=1,before
@@ -2548,8 +2548,8 @@ contains
                 endif
 4100                continue
         endif
-        else if (now.eq.8) then
-        if (isign.eq.-1) then 
+        else if (now == 8) then
+        if (isign == -1) then 
                 ia=1
                         nin1=ia-after
                         nout1=ia-atn
@@ -2992,7 +2992,7 @@ contains
 8001                continue
 
         endif
-        else if (now.eq.3) then 
+        else if (now == 3) then 
 !         .5d0*sqrt(3.d0)
         bb=isign*0.8660254037844387d0
         ia=1
@@ -3027,8 +3027,8 @@ contains
 3001        continue
         do 3000,ia=2,after
         ias=ia-1
-        if (4*ias.eq.3*after) then
-        if (isign.eq.1) then
+        if (4*ias == 3*after) then
+        if (isign == 1) then
                 nin1=ia-after
                 nout1=ia-atn
                 do 3010,ib=1,before
@@ -3089,8 +3089,8 @@ contains
                 zout(2,nout3,j) = s1 - r2
 3020                continue
         endif
-        else if (8*ias.eq.3*after) then
-        if (isign.eq.1) then
+        else if (8*ias == 3*after) then
+        if (isign == 1) then
                 nin1=ia-after
                 nout1=ia-atn
                 do 3030,ib=1,before
@@ -3198,7 +3198,7 @@ contains
 3090        continue
         endif
 3000        continue
-        else if (now.eq.5) then
+        else if (now == 5) then
 !         cos(2.d0*pi/5.d0)
         cos2=0.3090169943749474d0
 !         cos(4.d0*pi/5.d0)
@@ -3261,8 +3261,8 @@ contains
 5001        continue
         do 5000,ia=2,after
         ias=ia-1
-        if (8*ias.eq.5*after) then
-                if (isign.eq.1) then
+        if (8*ias == 5*after) then
+                if (isign == 1) then
                         nin1=ia-after
                         nout1=ia-atn
                         do 5010,ib=1,before
@@ -3451,7 +3451,7 @@ contains
 5100                continue
         endif
 5000        continue
-       else if (now.eq.6) then
+       else if (now == 6) then
 !         .5d0*sqrt(3.d0)
         bb=isign*0.8660254037844387d0
 
@@ -3624,17 +3624,17 @@ contains
     call profiling_in(prof, "SG_PCONV")
 
     ! check input
-    if (mod(n1,2).ne.0) stop 'Parallel convolution:ERROR:n1'
-    if (mod(n2,2).ne.0) stop 'Parallel convolution:ERROR:n2'
-    if (mod(n3,2).ne.0) stop 'Parallel convolution:ERROR:n3'
-    if (nd1.lt.n1/2+1) stop 'Parallel convolution:ERROR:nd1'
-    if (nd2.lt.n2/2+1) stop 'Parallel convolution:ERROR:nd2'
-    if (nd3.lt.n3/2+1) stop 'Parallel convolution:ERROR:nd3'
-    if (md1.lt.n1/2) stop 'Parallel convolution:ERROR:md1'
-    if (md2.lt.n2/2) stop 'Parallel convolution:ERROR:md2'
-    if (md3.lt.n3/2) stop 'Parallel convolution:ERROR:md3'
-    if (mod(nd3,nproc).ne.0) stop 'Parallel convolution:ERROR:nd3'
-    if (mod(md2,nproc).ne.0) stop 'Parallel convolution:ERROR:md2'
+    if (mod(n1,2) /= 0) stop 'Parallel convolution:ERROR:n1'
+    if (mod(n2,2) /= 0) stop 'Parallel convolution:ERROR:n2'
+    if (mod(n3,2) /= 0) stop 'Parallel convolution:ERROR:n3'
+    if (nd1 < n1/2+1) stop 'Parallel convolution:ERROR:nd1'
+    if (nd2 < n2/2+1) stop 'Parallel convolution:ERROR:nd2'
+    if (nd3 < n3/2+1) stop 'Parallel convolution:ERROR:nd3'
+    if (md1 < n1/2) stop 'Parallel convolution:ERROR:md1'
+    if (md2 < n2/2) stop 'Parallel convolution:ERROR:md2'
+    if (md3 < n3/2) stop 'Parallel convolution:ERROR:md3'
+    if (mod(nd3,nproc) /= 0) stop 'Parallel convolution:ERROR:nd3'
+    if (mod(md2,nproc) /= 0) stop 'Parallel convolution:ERROR:md2'
 
     !defining work arrays dimensions
     ncache = ncache_optimal()
@@ -3643,15 +3643,15 @@ contains
     ! if (timing_flag == 1 .and. iproc ==0) print *,'parallel ncache=',ncache
 
     lzt = n2/2
-    if (mod(n2/2,2).eq.0) lzt=lzt+1
-    if (mod(n2/2,4).eq.0) lzt=lzt+1
+    if (mod(n2/2,2) == 0) lzt=lzt+1
+    if (mod(n2/2,4) == 0) lzt=lzt+1
 
     SAFE_ALLOCATE(zw(1:2, 1:ncache/4, 1:2))
     SAFE_ALLOCATE(zt(1:2, 1:lzt, 1:n1))
     SAFE_ALLOCATE(zmpi2(1:2, 1:n1, 1:md2/nproc, 1:nd3))
     SAFE_ALLOCATE(cosinarr(1:2, 1:n3/2))
 
-    if (nproc.gt.1) then
+    if (nproc > 1) then
       SAFE_ALLOCATE(zmpi1(1:2, 1:n1, 1:md2/nproc, 1:nd3/nproc, 1:nproc))
     end if
 
@@ -3684,7 +3684,7 @@ contains
 
     ! transform along z axis
     lot=ncache/(2*n3)
-    if (lot.lt.1) then  
+    if (lot < 1) then  
       write(6,*) & 
         'convolxc_off:ncache has to be enlarged to be able to hold at' // &  
         'least one 1-d FFT of this size even though this will' // & 
@@ -3694,7 +3694,7 @@ contains
 
     do j2=1,md2/nproc
       !this condition ensures that we manage only the interesting part for the FFT
-      if (iproc*(md2/nproc)+j2.le.n2/2) then
+      if (iproc*(md2/nproc)+j2 <= n2/2) then
         do i1=1,(n1/2),lot
           ma=i1
           mb=min(i1+(lot-1),(n1/2))
@@ -3724,7 +3724,7 @@ contains
 
     !Interprocessor data transposition
     !input: I1,J2,j3,jp3,(Jp2)
-    if (nproc.gt.1) then
+    if (nproc > 1) then
       call profiling_in(prof_comm, "SG_ALLTOALL")
       !communication scheduling
       call MPI_Alltoall(zmpi2(1, 1, 1, 1), n1*(md2/nproc)*(nd3/nproc), &
@@ -3738,7 +3738,7 @@ contains
     !now each process perform complete convolution of its planes
     do j3=1,nd3/nproc
       !this condition ensures that we manage only the interesting part for the FFT
-      if (iproc*(nd3/nproc)+j3.le.n3/2+1) then
+      if (iproc*(nd3/nproc)+j3 <= n3/2+1) then
 	Jp2stb=1
 	J2stb=1
 	Jp2stf=1
@@ -3746,7 +3746,7 @@ contains
 
  ! transform along x axis
         lot=ncache/(4*n1)
-        if (lot.lt.1) then  
+        if (lot < 1) then  
           write(6,*) & 
             'convolxc_off:ncache has to be enlarged to be able to hold at' // &  
             'least one 1-d FFT of this size even though this will' // & 
@@ -3761,7 +3761,7 @@ contains
 
           !reverse index ordering, leaving the planes to be transformed at the end
           !input: I1,J2,j3,Jp2,(jp3)
-          if (nproc.eq.1) then
+          if (nproc == 1) then
             call mpiswitch_upcorn(j3,nfft,Jp2stb,J2stb,lot,n1,md2,nd3,nproc,zmpi2,zw(1,1,1))
           else
             call mpiswitch_upcorn(j3,nfft,Jp2stb,J2stb,lot,n1,md2,nd3,nproc,zmpi1,zw(1,1,1))
@@ -3786,7 +3786,7 @@ contains
 
         !transform along y axis
         lot=ncache/(4*n2)
-        if (lot.lt.1) then  
+        if (lot < 1) then  
           write(6,*) & 
             'convolxc_off:ncache has to be enlarged to be able to hold at' // &  
             'least one 1-d FFT of this size even though this will' // & 
@@ -3856,7 +3856,7 @@ contains
 
           !reverse ordering
           !input: J2,Jp2,I1,j3,(jp3)
-          if (nproc.eq.1) then
+          if (nproc == 1) then
             call unmpiswitch_downcorn(j3,nfft,Jp2stf,J2stf,lot,n1,md2,nd3,nproc,zw(1,1,inzee),zmpi2)
           else
             call unmpiswitch_downcorn(j3,nfft,Jp2stf,J2stf,lot,n1,md2,nd3,nproc,zw(1,1,inzee),zmpi1)
@@ -3869,7 +3869,7 @@ contains
 
     !Interprocessor data transposition
     !input: I1,J2,j3,Jp2,(jp3)
-    if (nproc.gt.1) then
+    if (nproc > 1) then
       call profiling_in(prof_comm, "SG_ALLTOALL")
       !communication scheduling
       call MPI_ALLTOALL(zmpi1(1, 1, 1, 1, 1), n1*(md2/nproc)*(nd3/nproc), &
@@ -3885,7 +3885,7 @@ contains
     lot=ncache/(2*n3)
     do j2=1,md2/nproc
       !this condition ensures that we manage only the interesting part for the FFT
-      if (iproc*(md2/nproc)+j2.le.n2/2) then
+      if (iproc*(md2/nproc)+j2 <= n2/2) then
         do i1=1,(n1/2),lot
           ma=i1
           mb=min(i1+(lot-1),(n1/2))
@@ -4033,7 +4033,7 @@ contains
     do Jp2 = Jp2stb, nproc
       do J2 = J2stb, md2/nproc
 	mfft = mfft + 1
-        if (mfft.gt.nfft) then
+        if (mfft > nfft) then
           Jp2stb=Jp2
           J2stb=J2
           return
@@ -4253,7 +4253,7 @@ contains
     do Jp2=Jp2stf,nproc
       do J2 = J2stf, md2/nproc
 	mfft=mfft+1
-        if (mfft.gt.nfft) then
+        if (mfft > nfft) then
           Jp2stf=Jp2
           J2stf=J2
           return
@@ -4389,18 +4389,18 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
        after2,now2,before2,after3,now3,before3
 
   !check input
-  if (nd1.lt.n1) stop 'ERROR:nd1'
-  if (nd2.lt.n2) stop 'ERROR:nd2'
-  if (nd3.lt.n3/2+1) stop 'ERROR:nd3'
-  if (mod(nd3,nproc).ne.0) stop 'ERROR:nd3'
-  if (mod(nd2,nproc).ne.0) stop 'ERROR:nd2'
+  if (nd1 < n1) stop 'ERROR:nd1'
+  if (nd2 < n2) stop 'ERROR:nd2'
+  if (nd3 < n3/2+1) stop 'ERROR:nd3'
+  if (mod(nd3,nproc) /= 0) stop 'ERROR:nd3'
+  if (mod(nd2,nproc) /= 0) stop 'ERROR:nd2'
   
   !defining work arrays dimensions
   ncache = ncache_optimal()
   if (ncache <= max(n1,n2,n3/2)*4) ncache=max(n1,n2,n3/2)*4
   lzt=n2
-  if (mod(n2,2).eq.0) lzt=lzt+1
-  if (mod(n2,4).eq.0) lzt=lzt+1
+  if (mod(n2,2) == 0) lzt=lzt+1
+  if (mod(n2,4) == 0) lzt=lzt+1
   
   !Allocations
   allocate(trig1(2,8192),after1(7),now1(7),before1(7), &
@@ -4408,7 +4408,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
        trig3(2,8192),after3(7),now3(7),before3(7), &
        zw(2,ncache/4,2),zt(2,lzt,n1), &
        zmpi2(2,n1,nd2/nproc,nd3),cosinarr(2,n3/2))
-  if (nproc.gt.1) allocate(zmpi1(2,n1,nd2/nproc,nd3/nproc,nproc))
+  if (nproc > 1) allocate(zmpi1(2,n1,nd2/nproc,nd3/nproc,nproc))
   
   !calculating the FFT work arrays (beware on the HalFFT in n3 dimension)
   call ctrig(n3/2,trig3,after3,before3,now3,1,ic3)
@@ -4425,11 +4425,11 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   !transform along z axis
 
   lot=ncache/(2*n3)
-  if (lot.lt.1) stop 'kernelfft:enlarge ncache for z'
+  if (lot < 1) stop 'kernelfft:enlarge ncache for z'
   
   do j2=1,nd2/nproc
      !this condition ensures that we manage only the interesting part for the FFT
-     !        if (iproc*(nd2/nproc)+j2.le.n2) then
+     !        if (iproc*(nd2/nproc)+j2 <= n2) then
      do i1=1,n1,lot
         ma=i1
         mb=min(i1+(lot-1),n1)
@@ -4459,7 +4459,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
 
   !Interprocessor data transposition
   !input: I1,J2,j3,jp3,(Jp2)
-  if (nproc.gt.1) then
+  if (nproc > 1) then
      !communication scheduling
      call MPI_ALLTOALL(zmpi2(:, 1, 1, 1),2*n1*(nd2/nproc)*(nd3/nproc), &
           MPI_DOUBLE_PRECISION, &
@@ -4471,13 +4471,13 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
 
   do j3=1,nd3/nproc
      !this condition ensures that we manage only the interesting part for the FFT
-     if (iproc*(nd3/nproc)+j3.le.n3/2+1) then
+     if (iproc*(nd3/nproc)+j3 <= n3/2+1) then
         Jp2st=1
         J2st=1
         
         !transform along x axis
         lot=ncache/(4*n1)
-        if (lot.lt.1) stop 'kernelfft:enlarge ncache for x'
+        if (lot < 1) stop 'kernelfft:enlarge ncache for x'
         
         do j=1,n2,lot
            ma=j
@@ -4486,7 +4486,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
 
            !reverse ordering
            !input: I1,J2,j3,Jp2,(jp3)
-           if (nproc.eq.1) then
+           if (nproc == 1) then
               call mpiswitch(j3,nfft,Jp2st,J2st,lot,n1,nd2,nd3,nproc,zmpi2,zw(1,1,1))
            else
               call mpiswitch(j3,nfft,Jp2st,J2st,lot,n1,nd2,nd3,nproc,zmpi1,zw(1,1,1))
@@ -4510,7 +4510,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
 
         !transform along y axis
         lot=ncache/(4*n2)
-        if (lot.lt.1) stop 'kernelfft:enlarge ncache for y'
+        if (lot < 1) stop 'kernelfft:enlarge ncache for y'
 
         do j=1,n1,lot
            ma=j
@@ -4545,7 +4545,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
        trig2,after2,now2,before2, &
        trig3,after3,now3,before3, &
        zmpi2,zw,zt,cosinarr)
-  if (nproc.gt.1) deallocate(zmpi1)
+  if (nproc > 1) deallocate(zmpi1)
 #endif
 end subroutine kernelfft
 
@@ -4574,7 +4574,7 @@ end subroutine kernelfft
     do Jp2 = Jp2st, nproc
       do J2 = J2st, nd2/nproc
         mfft = mfft + 1
-        if (mfft .gt. nfft) then
+        if (mfft > nfft) then
           Jp2st = Jp2
           J2st = J2
           return

@@ -39,7 +39,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
 
     if(cas%qcalc) then
       cas%qf(:) = M_ZERO
-      if(cas%avg_order .gt. 0) cas%qf_avg(:) = M_ZERO
+      if(cas%avg_order > 0) cas%qf_avg(:) = M_ZERO
     endif
 
     POP_SUB(X(oscillator_strengths))
@@ -72,7 +72,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
     end do
 
     ! do we calculate the average
-    if(cas%avg_order .gt. 0) then
+    if(cas%avg_order > 0) then
 
       ! use Gauss-Legendre quadrature scheme
       SAFE_ALLOCATE(gaus_leg_points (1:cas%avg_order))

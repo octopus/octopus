@@ -287,7 +287,7 @@ contains
 
       gamma_only_ = gamma_only
       if(.not. gamma_only_) &
-        gamma_only_ = (parse_block(datasets_check('KPointsGrid'), blk) .ne. 0)
+        gamma_only_ = (parse_block(datasets_check('KPointsGrid'), blk) /= 0)
 
       this%nik_axis(1:MAX_DIM) = 1
       this%shifts(1:MAX_DIM) = M_ZERO

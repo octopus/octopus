@@ -480,7 +480,7 @@ contains
 
       if(.not.fromscratch) then
         call restart_read(trim(tmpdir)//'td', st, gr, ierr, iter=td%iter, read_left = st%have_left_states)
-        if(ierr.ne.0) then
+        if(ierr /= 0) then
           message(1) = "Could not load "//trim(tmpdir)//"td: Starting from scratch"
           call messages_warning(1)
 
@@ -499,7 +499,7 @@ contains
       if(.not. fromscratch .and. td%dynamics == CP) then
         call cpmd_restart_read(td%cp_propagator, gr, st, ierr)
 
-        if(ierr.ne.0) then
+        if(ierr /= 0) then
           message(1) = "Could not load "//trim(restart_dir)//"td/cpmd: Starting from scratch"
           call messages_warning(1)
 
@@ -542,7 +542,7 @@ contains
       if(fromScratch) then
         if(.not. st%only_userdef_istates) then
           call restart_read(trim(restart_dir)//GS_DIR, st, gr, ierr, exact = .true.)
-          if(ierr.ne.0) then
+          if(ierr /= 0) then
             write(message(1), '(3a)') 'Unsuccessful read of states.'
             call messages_fatal(1)
           end if
@@ -553,7 +553,7 @@ contains
         ! check if we should deploy user-defined wavefunctions.
         ! according to the settings in the input file the routine
         ! overwrites orbitals that were read from restart/gs
-        if(parse_isdef(datasets_check('UserDefinedStates')).ne.0) then
+        if(parse_isdef(datasets_check('UserDefinedStates')) /= 0) then
           call restart_read_user_def_orbitals(gr%mesh, st)
         end if
         
@@ -581,7 +581,7 @@ contains
         !% Each line provides the coefficients of the new states, in terms of
         !% the old ones.
         !%End
-        if(parse_isdef(datasets_check('TransformStates')).ne.0) then
+        if(parse_isdef(datasets_check('TransformStates')) /= 0) then
           if(parse_block(datasets_check('TransformStates'), blk) == 0) then
             call states_copy(stin, st)
             SAFE_DEALLOCATE_P(stin%zpsi)
@@ -682,7 +682,7 @@ contains
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
-      if(hm%ep%kick%time .eq. M_ZERO) then
+      if(hm%ep%kick%time  ==  M_ZERO) then
         if(.not. cmplxscl) then
           call kick_apply(gr, st, td%ions, geo, hm%ep%kick)
         else
@@ -794,7 +794,7 @@ contains
 
       ! first write resume file
       call restart_write(trim(tmpdir)//'td', st, gr, geo, ierr, iter)
-      if(ierr.ne.0) then
+      if(ierr /= 0) then
         message(1) = 'Unsuccessful write of "'//trim(tmpdir)//'td"'
         call messages_fatal(1)
       end if
@@ -819,7 +819,7 @@ contains
           end if
           ! the unit is energy actually, but this only for restart, and can be kept in atomic units
           ! for simplicity
-          if(ierr.ne.0) then
+          if(ierr /= 0) then
             write(message(1), '(3a)') 'Unsuccessful write of "', trim(filename), '"'
             call messages_fatal(1)
           end if

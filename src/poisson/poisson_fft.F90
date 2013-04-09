@@ -412,7 +412,7 @@ contains
 
     db(1:3) = cube%rs_n_global(1:3)
 
-    if (kernel .ne. POISSON_FFT_KERNEL_CORRECTED) then
+    if (kernel /= POISSON_FFT_KERNEL_CORRECTED) then
       default_r_c = maxval(db(1:3)*mesh%spacing(1:3)/M_TWO)
       call get_cutoff(default_r_c, r_c)
     end if

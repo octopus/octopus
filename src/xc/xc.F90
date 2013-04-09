@@ -108,7 +108,7 @@ contains
       call xc_functl_write_info(xcs%functl(ifunc, 1), iunit)
     end do
     
-    if(xcs%exx_coef.ne.M_ZERO) then
+    if(xcs%exx_coef /= M_ZERO) then
       write(message(1), '(1x)')
       write(message(2), '(a,f8.5)') "Exact exchange mixing = ", xcs%exx_coef
       call messages_info(2, iunit)
@@ -156,17 +156,17 @@ contains
     ! Take care of hybrid functionals (they appear in the correlation functional)
     xcs%exx_coef = M_ZERO
     ll =  (hartree_fock) &
-      .or.(xcs%functl(FUNC_X,1)%id.eq.XC_OEP_X) &
-      .or.(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA).ne.0)
+      .or.(xcs%functl(FUNC_X,1)%id == XC_OEP_X) &
+      .or.(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0)
     if(ll) then
-      if((xcs%functl(FUNC_X,1)%id.ne.0).and.(xcs%functl(FUNC_X,1)%id.ne.XC_OEP_X)) then
+      if((xcs%functl(FUNC_X,1)%id /= 0).and.(xcs%functl(FUNC_X,1)%id /= XC_OEP_X)) then
         message(1) = "You cannot use an exchange functional when performing"
         message(2) = "a Hartree-Fock calculation or using a hybrid functional."
         call messages_fatal(2)
       end if
 
       ! get the mixing coefficient for hybrids
-      if(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA).ne.0) then
+      if(iand(xcs%functl(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) then
         call XC_F90(hyb_exx_coef)(xcs%functl(FUNC_C,1)%conf, xcs%exx_coef)
       else
         ! we are doing Hartree-Fock plus possibly a correlation functional
@@ -180,13 +180,13 @@ contains
     end if
 
     ! Now it is time for these current functionals
-    if (iand(xcs%family, XC_FAMILY_LCA).ne.0 .and. &
-      iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP).ne.0) then
+    if (iand(xcs%family, XC_FAMILY_LCA) /= 0 .and. &
+      iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_OEP) /= 0) then
       message(1) = "LCA functional can only be used along with LDA or GGA functionals."
       call messages_fatal(1)
     end if
 
-    if(iand(xcs%family, XC_FAMILY_MGGA).ne.0) then
+    if(iand(xcs%family, XC_FAMILY_MGGA) /= 0) then
       !%Variable MGGAimplementation
       !%Type integer
       !%Default mgga_gea

@@ -289,7 +289,7 @@ contains
     call parse_integer(datasets_check('TDPropagator'), default_propagator, tr%method)
     if(.not.varinfo_valid_option('TDPropagator', tr%method)) call input_error('TDPropagator')
 
-    if(gr%ob_grid%open_boundaries.and.tr%method.ne.PROP_CRANK_NICHOLSON_SRC_MEM) then
+    if(gr%ob_grid%open_boundaries.and.tr%method /= PROP_CRANK_NICHOLSON_SRC_MEM) then
       message(1) = 'The time-evolution method for time-dependent run cannot'
       message(2) = 'be chosen freely. The Crank-Nicholson propagator'
       message(3) = 'with source and memory term has to be used. Either set'
@@ -492,7 +492,7 @@ contains
     end if
 
     self_consistent = .false.
-    if(hm%theory_level .ne. INDEPENDENT_PARTICLES .and. tr%method /= PROP_CAETRS) then
+    if(hm%theory_level /= INDEPENDENT_PARTICLES .and. tr%method /= PROP_CAETRS) then
       if(time <= tr%scf_propagation_steps*abs(dt) + M_EPSILON) then
         self_consistent = .true.
         SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
@@ -640,7 +640,7 @@ contains
 
       PUSH_SUB(propagator_dt.td_etrs)
 
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
 
         SAFE_ALLOCATE(vhxc_t1(1:gr%mesh%np, 1:st%d%nspin))
         SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
@@ -696,7 +696,7 @@ contains
         call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
       end if
 
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
       end if
       call hamiltonian_update(hm, gr%mesh, time = time)
@@ -707,7 +707,7 @@ contains
         end do
       end do
 
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         SAFE_DEALLOCATE_A(vhxc_t1)
         SAFE_DEALLOCATE_A(vhxc_t2)
       end if
@@ -861,7 +861,7 @@ contains
         zdt = TOCMPLX(dt,   M_ZERO) *exp(M_zI * TOCMPLX(hm%cmplxscl%alphaR, M_ZERO))
         
         !FIXME: not adapted yet
-        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+        if(hm%theory_level /= INDEPENDENT_PARTICLES) then
           call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
           if(hm%cmplxscl%space) &
             call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time - dt/M_TWO, hm%Imvhxc(:, :))
@@ -896,7 +896,7 @@ contains
         
       else
 
-        if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+        if(hm%theory_level /= INDEPENDENT_PARTICLES) then
           call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
           if(hm%cmplxscl%space) &
             call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time - dt/M_TWO, hm%Imvhxc(:, :))
@@ -935,7 +935,7 @@ contains
 
           ! FIXME: check this interpolation!! 
           ! probably need some rethinking 
-          if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+          if(hm%theory_level /= INDEPENDENT_PARTICLES) then
             call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time + dt/M_TWO, hm%vhxc(:, :))
             if(hm%cmplxscl%space) &
               call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
@@ -956,7 +956,7 @@ contains
           
           ! FIXME: check this interpolation!! 
           ! probably need some rethinking 
-          if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+          if(hm%theory_level /= INDEPENDENT_PARTICLES) then
             call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time + dt/M_TWO, hm%vhxc(:, :))
             if(hm%cmplxscl%space) &
               call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
@@ -1016,7 +1016,7 @@ contains
       tr%te%exp_method = EXP_TAYLOR
       tr%te%exp_order  = 1
 
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         np_part = gr%mesh%np_part
         SAFE_ALLOCATE(zpsi_rhs_pred(1:np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
         zpsi_rhs_pred = st%zpsi ! store zpsi for predictor step
@@ -1082,7 +1082,7 @@ contains
         end do
       end do
       
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         SAFE_DEALLOCATE_A(vhxc_t1)
         SAFE_DEALLOCATE_A(vhxc_t2)
         SAFE_DEALLOCATE_A(zpsi_rhs_pred)
@@ -1259,7 +1259,7 @@ contains
       atime(1) = (M_HALF-sqrt(M_THREE)/M_SIX)*dt
       atime(2) = (M_HALF+sqrt(M_THREE)/M_SIX)*dt
 
-      if(hm%theory_level.ne.INDEPENDENT_PARTICLES) then
+      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         do j = 1, 2
           call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), atime(j) - dt, hm%vhxc(:, :))
           call hamiltonian_update(hm, gr%mesh)

@@ -262,7 +262,7 @@ contains
     case(SPHERE)
       call mesh_r(mesh, ip, rr, coords=xx)
       dd = rr - (mesh%sb%rsize - width)
-      if(dd.gt.M_ZERO) then
+      if(dd > M_ZERO) then
         is_on_border = .true.
         dist = dd
       end if
@@ -270,13 +270,13 @@ contains
     case(CYLINDER)
       call mesh_r(mesh, ip, rr, coords=xx)
       dd = sqrt(xx(2)**2 + xx(3)**2) - (mesh%sb%rsize - width)
-      if(dd.gt.M_ZERO) then
+      if(dd > M_ZERO) then
         is_on_border = .true.
         dist = dd
       end if
       if(mesh%sb%periodic_dim == 0) then
         dd = abs(xx(1)) - (mesh%sb%xsize - width)
-        if(dd.gt.M_ZERO) then
+        if(dd > M_ZERO) then
           is_on_border = .true.
           dist = sqrt(dist*dist + dd*dd)
         end if
@@ -310,7 +310,7 @@ contains
       call mesh_r(mesh, ip, rr, coords=xx)
       do idir = mesh%sb%periodic_dim+1, mesh%sb%dim
         dd = abs(xx(idir)) - (mesh%sb%lsize(idir) - width)
-        if(dd.gt.M_ZERO) then
+        if(dd > M_ZERO) then
           is_on_border = .true.
           dist = dist + dd*dd
         end if
@@ -460,7 +460,7 @@ contains
     ! Find (and throw away) the dump tag.
     do
       read(iunit, '(a)') line
-      if(trim(line).eq.dump_tag) exit
+      if(trim(line) == dump_tag) exit
     end do
 
     ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
@@ -649,7 +649,7 @@ contains
 
     valid = .true.
     do idir = 1, mesh%sb%dim
-      if(point(idir) .lt. mesh%idx%nr(1, idir) .or. point(idir) .gt. mesh%idx%nr(2, idir)) then
+      if(point(idir)  <  mesh%idx%nr(1, idir) .or. point(idir) > mesh%idx%nr(2, idir)) then
         valid = .false.
       end if
     end do

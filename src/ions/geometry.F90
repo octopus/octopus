@@ -230,7 +230,7 @@ contains
       SAFE_ALLOCATE(geo%atom(1:geo%natoms))
       do ia = 1, geo%natoms
         move=.true.
-        if(iand(xyz%flags, XYZ_FLAGS_MOVE).ne.0)move=xyz%atom(ia)%move
+        if(iand(xyz%flags, XYZ_FLAGS_MOVE) /= 0)move=xyz%atom(ia)%move
         call atom_init(geo%atom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, move=move)
       end do
     end if
@@ -244,8 +244,8 @@ contains
     nullify(geo%catom)
     geo%ncatoms = 0
     call xyz_file_read('Classical', xyz, geo%space)
-    if(xyz%file_type .ne. XYZ_FILE_ERR) then ! found classical atoms
-      if(.not. iand(xyz%flags, XYZ_FLAGS_CHARGE) .ne. 0) then
+    if(xyz%file_type /= XYZ_FILE_ERR) then ! found classical atoms
+      if(.not. iand(xyz%flags, XYZ_FLAGS_CHARGE) /= 0) then
         message(1) = "Need to know charge for the classical atoms."
         message(2) = "Please use a .pdb"
         call messages_fatal(2)
@@ -946,7 +946,7 @@ contains
 
     geo_out%ncatoms = geo_in%ncatoms
     SAFE_ALLOCATE(geo_out%catom(1:geo_out%ncatoms))
-    if(geo_in%ncatoms.gt.0) then
+    if(geo_in%ncatoms > 0) then
       geo_out%catom(1:geo_out%ncatoms) = geo_in%catom(1:geo_in%ncatoms)
     end if
 

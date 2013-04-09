@@ -80,7 +80,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
 
   SAFE_ALLOCATE(v_bar_S(1:st%nst))
   do ist = st%st_start, st%st_end
-    if(st%occ(ist, is) .gt. small) then
+    if(st%occ(ist, is) > small) then
       v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,1))
     end if
   end do
@@ -111,7 +111,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
 
     i_loop: do ist = 1, eigen_n
       kssi = oep%eigen_index(ist)
-      if(proc .eq. st%node(kssi)) then
+      if(proc  ==  st%node(kssi)) then
         dd(1:mesh%np) = sqphi(1:mesh%np, 1, kssi) / rho_sigma(1:mesh%np)
         j_loop: do jst = ist, eigen_n
           kssj = oep%eigen_index(jst)

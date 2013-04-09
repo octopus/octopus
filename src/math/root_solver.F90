@@ -126,7 +126,7 @@ contains
     !% Watterstrom method.
     !%End
     call parse_integer(datasets_check('RootSolver'), ROOT_NEWTON, rs%solver_type)
-    if( rs%solver_type.lt.ROOT_MINVAL.or.rs%solver_type.gt.ROOT_MAXVAL ) then
+    if( rs%solver_type < ROOT_MINVAL.or.rs%solver_type > ROOT_MAXVAL ) then
       call input_error(datasets_check('RootSolver'))
     end if
 

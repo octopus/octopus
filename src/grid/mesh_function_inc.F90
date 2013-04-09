@@ -569,7 +569,7 @@ R_TYPE function X(mf_surface_integral_scalar) (mesh, ff, plane) result(dd)
 
   PUSH_SUB(X(mf_surface_integral_scalar))
 
-  if(mesh%sb%dim .ne. 3) then
+  if(mesh%sb%dim /= 3) then
     message(1) = 'INTERNAL ERROR at Xmf_surface_integral: wrong dimensionality.'
     call messages_fatal(1)
   end if
@@ -622,7 +622,7 @@ R_TYPE function X(mf_line_integral_scalar) (mesh, ff, line) result(dd)
 
   PUSH_SUB(X(mf_line_integral_scalar))
 
-  if(mesh%sb%dim .ne. 2) then
+  if(mesh%sb%dim /= 2) then
     message(1) = 'INTERNAL ERROR at Xmf_surface_integral: wrong dimensionality.'
     call messages_fatal(1)
   end if

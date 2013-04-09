@@ -108,7 +108,7 @@ contains
     !% the Crank-Nicholson procedure for open boundaries.
     !%End
     call parse_integer(datasets_check('OpenBoundariesQMRMaxIter'), 100, qmr_max_iter)
-    if(qmr_max_iter.le.0) then
+    if(qmr_max_iter <= 0) then
       call input_error('OpenBoundariesQMRMaxIter')
     end if
 
@@ -121,7 +121,7 @@ contains
     !% in the Crank-Nicholson procedure.
     !%End
     call parse_float(datasets_check('OpenBoundariesQMRTol'), CNST(1e-12), qmr_tol)
-    if(qmr_tol.le.M_ZERO) then
+    if(qmr_tol <= M_ZERO) then
       call input_error('OpenBoundariesQMRTol')
     end if
 
@@ -171,12 +171,12 @@ contains
     !% Can be used to pre-calculate memory coefficients.
     !%End
     call parse_integer(datasets_check('OpenBoundariesMaxMemCoeffs'), max_iter, ob%max_mem_coeffs)
-    if(ob%max_mem_coeffs.le.0) then
+    if(ob%max_mem_coeffs <= 0) then
       write(message(1), '(a,i6,a)') "Input : '", ob%max_mem_coeffs, "' is not a valid OpenBoundariesMaxMemCoeffs."
       message(2) = '(0 < OpenBoundariesMaxMemCoeffs)'
       call messages_fatal(2)
     end if
-    if((iand(ob%additional_terms, SRC_TERM_FLAG).ne.0).and.(ob%max_mem_coeffs.lt.max_iter)) then
+    if((iand(ob%additional_terms, SRC_TERM_FLAG) /= 0).and.(ob%max_mem_coeffs < max_iter)) then
       write(message(1), '(a,i6,a)') "Input OpenBoundariesMaxMemCoeffs: '", ob%max_mem_coeffs,&
                         "' is smaller than TDMaximumIter."
       message(2) = 'This is an experimental parameter, so handle with care.'
@@ -230,8 +230,8 @@ contains
     heff_sym = .true.
     if(associated(hm%ep%A_static)) heff_sym = .false.
     do il=1, hm%ep%no_lasers
-      if(laser_kind(hm%ep%lasers(il)).eq.E_FIELD_MAGNETIC) heff_sym = .false.
-      if(laser_kind(hm%ep%lasers(il)).eq.E_FIELD_VECTOR_POTENTIAL) heff_sym = .false.
+      if(laser_kind(hm%ep%lasers(il)) == E_FIELD_MAGNETIC) heff_sym = .false.
+      if(laser_kind(hm%ep%lasers(il)) == E_FIELD_VECTOR_POTENTIAL) heff_sym = .false.
     end do
 
     nullify(lead_p, intf_p, dt_p, t_p, ist_p, ik_p, mem_type_p)
@@ -301,7 +301,7 @@ contains
     m = timestep-1
 
     ! save the initial state
-    if (m.eq.0) then
+    if (m == 0) then
       do il = 1, NLEADS
         np = gr%intf(il)%np_intf
         call save_intf_wf(gr%intf(il), st, gr%mesh, ob%lead(il)%st_intface(1:np, :, :, 0))
@@ -320,14 +320,14 @@ contains
         do il = 1, NLEADS
           np = gr%intf(il)%np_intf
           ! 2. Add source term
-          if(iand(ob%additional_terms, SRC_TERM_FLAG).ne.0) then
+          if(iand(ob%additional_terms, SRC_TERM_FLAG) /= 0) then
             f0  = M_z1/(M_z1+M_zI*M_HALF*dt*(st%ob_eigenval(ist, ik)-ob%td_pot0(il)))
             fac = f0/conjg(f0)
-            if(m.gt.ob%max_mem_coeffs) then
+            if(m > ob%max_mem_coeffs) then
               tmp_mem(1:np, 1:np) = M_ZERO
             else
               tmp_mem(1:np, 1:np) = ob%lead(il)%q(1:np, 1:np, m)
-              if(m.gt.0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-1)
+              if(m > 0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-1)
             end if
             call calc_source_wf(ob%max_mem_coeffs, m, np, tmp_mem(1:np, 1:np), dt, &
               st%ob_lead(il)%intf_psi(:, 1, ist, ik), ob%src_mem_u(:, il), f0, fac,              &
@@ -335,14 +335,14 @@ contains
             call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), psi)
           end if
           ! 3. Add memory term.
-          if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
+          if(iand(ob%additional_terms, MEM_TERM_FLAG) /= 0) then
             do it = max(m-ob%max_mem_coeffs,0), m-1
               factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
                 (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
               tmp_wf(1:np) = ob%lead(il)%st_intface(1:np, ist, ik, mod(it+1, ob%max_mem_coeffs+1)) &
                           + ob%lead(il)%st_intface(1:np, ist, ik, mod(it, ob%max_mem_coeffs+1))
               tmp_mem(1:np, 1:np) = ob%lead(il)%q(1:np, 1:np, m-it)
-              if((m-it).gt.0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-it-1)
+              if((m-it) > 0) tmp_mem(1:np, 1:np) = tmp_mem(1:np, 1:np) + ob%lead(il)%q(1:np, 1:np, m-it-1)
               call apply_mem(tmp_mem(1:np, 1:np), gr%intf(il), tmp_wf(1:np), psi, factor)
             end do
           end if
@@ -443,7 +443,7 @@ contains
 
 
     ! save the initial state
-    if (m.eq.0) then
+    if (m == 0) then
       do il = 1, NLEADS
         np = gr%intf(il)%np_intf
         call save_intf_wf(gr%intf(il), st, gr%mesh, ob%lead(il)%st_intface(1:np, :, :, 0))
@@ -463,11 +463,11 @@ contains
           np  = gr%intf(il)%np_intf
           npo = np*order
           ! 2. Add source term
-          if(iand(ob%additional_terms, SRC_TERM_FLAG).ne.0) then
+          if(iand(ob%additional_terms, SRC_TERM_FLAG) /= 0) then
             f0  = M_z1/(M_z1+M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))
             fac = (M_z1-M_zI*M_HALF*dt*st%ob_eigenval(ist, ik))*f0
             tmp_mem(1:npo) = ob%lead(il)%q_sp(1:npo, m)
-            if(m.gt.0) tmp_mem(1:npo) = tmp_mem(1:npo) + ob%lead(il)%q_sp(1:npo, m-1)
+            if(m > 0) tmp_mem(1:npo) = tmp_mem(1:npo) + ob%lead(il)%q_sp(1:npo, m-1)
             call calc_source_wf_sp(max_iter, m, np, &
               tmp_mem(1:npo), dt, order, gr%sb%dim, st%ob_lead(il)%intf_psi(:, 1, ist, ik), &
               ob%lead(il)%q_s(:, :, :), ob%lead(il)%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
@@ -475,14 +475,14 @@ contains
             call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), psi)
           end if
           ! 3. Add memory term.
-          if(iand(ob%additional_terms, MEM_TERM_FLAG).ne.0) then
+          if(iand(ob%additional_terms, MEM_TERM_FLAG) /= 0) then
             do it = max(m-ob%max_mem_coeffs,0), m-1
               factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
                 (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
               tmp_wf(1:np) = ob%lead(il)%st_intface(1:np, ist, ik, mod(it+1, ob%max_mem_coeffs+1)) &
                           + ob%lead(il)%st_intface(1:np, ist, ik, mod(it, ob%max_mem_coeffs+1))
               tmp_mem(1:npo) = ob%lead(il)%q_sp(1:npo, m-it)
-              if((m-it).gt.0) tmp_mem(1:npo) = tmp_mem(1:npo) + ob%lead(il)%q_sp(1:npo, m-it-1)
+              if((m-it) > 0) tmp_mem(1:npo) = tmp_mem(1:npo) + ob%lead(il)%q_sp(1:npo, m-it-1)
               call apply_sp_mem(tmp_mem(1:npo), gr%intf(il), tmp_wf(1:np), psi, &
                 factor, ob%lead(il)%q_s(:, :, :), order, gr%sb%dim, ob%lead(il)%sp2full_map)
             end do
@@ -619,7 +619,7 @@ contains
 
     SAFE_ALLOCATE(intf_wf(1:maxval(gr%intf(1:NLEADS)%np_intf), 1:NLEADS))
 
-    ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
+    ASSERT(sign == M_ONE.or.sign == -M_ONE)
 
     transposed_ = optional_default(transposed, .false.)
 
@@ -671,7 +671,7 @@ contains
 
     SAFE_ALLOCATE(intf_wf(1:intf(LEFT)%np_intf, 1:NLEADS))
 
-    ASSERT(sign.eq.M_ONE.or.sign.eq.-M_ONE)
+    ASSERT(sign == M_ONE.or.sign == -M_ONE)
 
     transposed_ = optional_default(transposed, .false.)
 
@@ -827,18 +827,18 @@ contains
 
     call messages_print_stress(stdout, 'Open Boundaries')
 
-    if(ob%mem_type.eq.save_cpu_time) then
+    if(ob%mem_type == save_cpu_time) then
       mem_type_name = 'full'
     end if
-    if(ob%mem_type.eq.save_ram_usage) then
+    if(ob%mem_type == save_ram_usage) then
       mem_type_name = 'sparse'
     end if
 
     terms = ''
-    if(iand(ob%additional_terms, mem_term_flag).ne.0) then
+    if(iand(ob%additional_terms, mem_term_flag) /= 0) then
       terms = trim(terms)//'memory'
     end if
-    if(iand(ob%additional_terms, src_term_flag).ne.0) then
+    if(iand(ob%additional_terms, src_term_flag) /= 0) then
       terms = trim(terms)//' source'
     end if
     

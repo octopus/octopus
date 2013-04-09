@@ -755,8 +755,8 @@ contains
 
     write(iunit, '(a)', advance=trim(adv_)) trim(str)
     if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
-      if(iunit .eq. stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
-      if(iunit .eq. stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
+      if(iunit  ==  stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
+      if(iunit  ==  stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
     end if
 
   end subroutine flush_msg
@@ -802,15 +802,15 @@ contains
     ! this is called by push/pop so there cannot be a push/pop in this routine
 
     ! Correct overflow.
-    if(usec2 - usec1 .lt. 0) then
+    if(usec2 - usec1  <  0) then
       usec2 = 1000000 + usec2
-      if(sec2 .ge. sec1) then
+      if(sec2 >= sec1) then
         sec2 = sec2 - 1
       end if
     end if
 
     ! Replace values.
-    if(sec2 .ge. sec1) then
+    if(sec2 >= sec1) then
       sec2 = sec2 - sec1
     end if
     usec2 = usec2 - usec1
@@ -832,7 +832,7 @@ contains
     usec2 = usec1 + usec2
 
     ! Carry?
-    if(usec2 .ge. 1000000) then
+    if(usec2 >= 1000000) then
       sec2  = sec2 + 1
       usec2 = usec2 - 1000000
     end if
@@ -863,7 +863,7 @@ contains
     sub_stack(no_sub_stack)  = trim(messages_clean_path(sub_name))
     time_stack(no_sub_stack) = loct_clock()
 
-    if(conf%debug_level .ge. 99) then
+    if(conf%debug_level >= 99) then
       call open_debug_trace(iunit)
       call push_sub_write(iunit)
       ! close file to ensure flushing
@@ -920,19 +920,19 @@ contains
     ! of the same size
     sub_name_short = messages_clean_path(sub_name)
 
-    if(sub_name_short .ne. sub_stack(no_sub_stack)) then
+    if(sub_name_short /= sub_stack(no_sub_stack)) then
       write (message(1),'(a)') 'Wrong sub name on pop_sub :'
       write (message(2),'(2a)') ' got      : ', sub_name_short
       write (message(3),'(2a)') ' expected : ', sub_stack(no_sub_stack)
       call messages_fatal(3)
     end if
 
-    if(conf%debug_level .ge. 99) then
+    if(conf%debug_level >= 99) then
       call open_debug_trace(iunit)
       call pop_sub_write(iunit)
       ! close file to ensure flushing
       close(iunit)
-    else if (conf%debug_level .gt. 1 .and. mpi_grp_is_root(mpi_world)) then
+    else if (conf%debug_level > 1 .and. mpi_grp_is_root(mpi_world)) then
       ! write to stderr if we are node 0
       call pop_sub_write(stderr)
     end if

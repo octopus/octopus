@@ -120,7 +120,7 @@ module opt_control_initst_m
       !% 
       !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
-      if(parse_isdef(datasets_check('OCTInitialTransformStates')) .ne. 0) then
+      if(parse_isdef(datasets_check('OCTInitialTransformStates')) /= 0) then
         if(parse_block(datasets_check('OCTInitialTransformStates'), blk) == 0) then
           call states_copy(tmp_st, initial_state)
           call states_deallocate_wfns(tmp_st)
@@ -178,8 +178,8 @@ module opt_control_initst_m
               do ik = 1, initial_state%d%nik   
                 
                 ! does the block entry match and is this node responsible?
-                if(.not. (id .eq. idim .and. is .eq. inst .and. ik .eq. inik    &
-                  .and. initial_state%st_start .le. is .and. initial_state%st_end .ge. is) ) cycle
+                if(.not. (id  ==  idim .and. is  ==  inst .and. ik  ==  inik    &
+                  .and. initial_state%st_start  <=  is .and. initial_state%st_end >= is) ) cycle
                 
                 ! parse formula string
                 call parse_block_string(                            &

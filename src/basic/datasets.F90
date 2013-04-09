@@ -151,7 +151,7 @@ contains
 
     composite_name = trim(current_label)//trim(variable)
 
-    if(parse_isdef(composite_name) .ne. 0) then
+    if(parse_isdef(composite_name) /= 0) then
       ! composite name has been defined in the input file
       var_name = composite_name
     else

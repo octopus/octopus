@@ -37,7 +37,7 @@ program oct_help
   call global_init()
 
   call getopt_init(ierr)
-  if(ierr.ne.0) then
+  if(ierr /= 0) then
     write(stderr, '(a)') "Your Fortran compiler doesn't support command-line arguments;"
     write(stderr, '(a)') "the oct-help command is not available."
     stop

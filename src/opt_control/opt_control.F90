@@ -104,7 +104,7 @@ contains
     ! Initializes the time propagator. Then, it forces the propagation to be self consistent, in case
     ! the theory level is not "independent particles".
     call td_init(td, sys, hm)
-    if(hm%theory_level .ne. INDEPENDENT_PARTICLES ) call propagator_set_scf_prop(td%tr, threshold = CNST(1.0e-14))
+    if(hm%theory_level /= INDEPENDENT_PARTICLES ) call propagator_set_scf_prop(td%tr, threshold = CNST(1.0e-14))
 
     ! Read general information about how the OCT run will be made, from inp file. "oct_read_inp" is
     ! in the opt_control_global_m module (like the definition of the oct_t data type)
@@ -372,7 +372,7 @@ contains
       f = - target_j1(target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
       call iteration_manager_direct(-f, par, iterator, sys)
       call states_end(psi)
-      if(oct_iterator_maxiter(iterator).eq.0) then
+      if(oct_iterator_maxiter(iterator) == 0) then
         ! Nothing to do.
         POP_SUB(opt_control_run.scheme_cg)
         return
@@ -400,7 +400,7 @@ contains
         real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
         maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue, ierr)
 
-      if(ierr.ne.0) then
+      if(ierr /= 0) then
         if(ierr <= 1024) then
           message(1) = "Error occurred during the GSL minimization procedure:"
           call loct_strerror(ierr, message(2))
@@ -438,7 +438,7 @@ contains
       f = - target_j1(target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
       call iteration_manager_direct(-f, par, iterator, sys)
       call states_end(psi)
-      if(oct_iterator_maxiter(iterator).eq.0) then
+      if(oct_iterator_maxiter(iterator) == 0) then
         ! Nothing to do.
         POP_SUB(opt_control_run.scheme_cg)
         return
@@ -468,7 +468,7 @@ contains
         real(oct_iterator_tolerance(iterator), 8), maxiter, &
         opt_control_direct_calc, opt_control_direct_message_info, minvalue, ierr)
 
-      if(ierr.ne.0) then
+      if(ierr /= 0) then
         if(ierr <= 1024) then
           message(1) = "Error occurred during the GSL minimization procedure:"
           call loct_strerror(ierr, message(2))
@@ -505,7 +505,7 @@ contains
       f = - target_j1(target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
       call iteration_manager_direct(-f, par, iterator, sys)      
       call states_end(psi)
-      if(oct_iterator_maxiter(iterator).eq.0) then
+      if(oct_iterator_maxiter(iterator) == 0) then
         ! Nothing to do.
         POP_SUB(opt_control_run.scheme_cg)
         return
@@ -602,7 +602,7 @@ contains
 
     PUSH_SUB(f_wg05)
 
-    if( oct_iterator_current(iterator) .eq. 0) then
+    if( oct_iterator_current(iterator)  ==  0) then
       call states_end(psi)
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
@@ -680,7 +680,7 @@ contains
     ! which is placed at par_chi
     call bwd_step_2(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
 
-    if(controlfunction_mode().eq.controlfunction_mode_f) call controlfunction_cosine_multiply(par_chi)
+    if(controlfunction_mode() == controlfunction_mode_f) call controlfunction_cosine_multiply(par_chi)
 
     call controlfunction_set_rep(par_chi)
 
@@ -717,7 +717,7 @@ contains
 
     PUSH_SUB(f_iter)
 
-    if( oct_iterator_current(iterator) .eq. 0) then
+    if( oct_iterator_current(iterator)  ==  0) then
       call states_end(psi)
       call states_copy(psi, initial_st)
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)

@@ -80,7 +80,7 @@ contains
     SAFE_ALLOCATE(psf%rphi   (1:psf%nr, 1:psf%no_l_channels))
 
     do l = 1, psf%no_l_channels
-      if(l.ne.1) read(unit, *)
+      if(l /= 1) read(unit, *)
 
       do i = 2, psf%nr
         read(unit, *) idummy, psf%rofi(i), psf%rphi(i, l), psf%vps(i, l)

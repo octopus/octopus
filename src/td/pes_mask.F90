@@ -415,7 +415,7 @@ contains
       !NFFT initialization
       
       ! we just add 2 points for the enlarged region
-      if (mask%enlarge_nfft .ne. 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
+      if (mask%enlarge_nfft /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
       
 #ifdef HAVE_NFFT    
       !Set NFFT defaults to values that are optimal for PES (at least for the cases I have tested)
@@ -438,7 +438,7 @@ contains
       SAFE_ALLOCATE(XX(1:mask%ll(1),3))
       
       !Generate the NFFT-enlarged node grid
-      if (mask%enlarge_nfft .gt. 0) then
+      if (mask%enlarge_nfft > 0) then
         do ii=2, mask%ll(1)-1 
           XX(ii,1)= (ii - int(mask%ll(1)/2) -1)*mask%spacing(1)
         end do
@@ -546,7 +546,7 @@ contains
       call parse_block_float(blk, 0, 1, mask%mask_R(2), units_inp%length)
     end if
     
-    if(mask%mask_R(2) .gt. mesh%sb%rsize)  mask%mask_R(2) = mesh%sb%rsize 
+    if(mask%mask_R(2) > mesh%sb%rsize)  mask%mask_R(2) = mesh%sb%rsize 
     
     
     
@@ -559,7 +559,7 @@ contains
     call messages_info(2)
     
     
-    if (mask%mode .eq. PES_MASK_MODE_PSF ) then 
+    if (mask%mode  ==  PES_MASK_MODE_PSF ) then 
       width = mask%mask_R(2)-mask%mask_R(1)
       call tdpsf_init(mask%psf,mask%fft, mesh, dt,width)
     else
@@ -666,7 +666,7 @@ contains
     SAFE_ALLOCATE(mask%ext_pot(0:max_iter,1:3))
     mask%ext_pot=M_ZERO
 
-    if(mask%sw_evolve .eq. VOLKOV) then
+    if(mask%sw_evolve  ==  VOLKOV) then
       ! Precalculate the potential vector for all the simulation time
       do il = 1, hm%ep%no_lasers
         select case(laser_kind(hm%ep%lasers(il)))
@@ -735,7 +735,7 @@ contains
 
     do ii = 1, mask%fs_n_global(1)
 
-      if (mask%pw_map_how .eq.  PW_MAP_NFFT) then
+      if (mask%pw_map_how  ==   PW_MAP_NFFT) then
         !The Fourier space is shrunk by the factor M_TWO**mask%enlarge_nfft
         mask%Lk(ii) = (ii - nn/2 - 1)*temp/(M_TWO**mask%enlarge_nfft)
       else
@@ -848,8 +848,8 @@ contains
           rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
         end if
         dd = rr -  R(1) 
-        if(dd .gt. M_ZERO ) then 
-          if (dd .lt. width) then
+        if(dd > M_ZERO ) then 
+          if (dd  <  width) then
             mask_fn(ip) = M_ONE * sin(dd * M_PI / (M_TWO * (width) ))**2
           else 
             mask_fn(ip) = M_ONE 
@@ -866,8 +866,8 @@ contains
           rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
         end if
         dd = rr - R(1) 
-        if(dd .gt. M_ZERO ) then 
-          if (dd .lt. width) then
+        if(dd > M_ZERO ) then 
+          if (dd  <  width) then
             mask_fn(ip) = M_ONE 
           else 
             mask_fn(ip) = M_ZERO
@@ -1210,7 +1210,7 @@ contains
                 k_dot_r=sum(ikk(1:mesh%sb%dim)*temp(1:mesh%sb%dim)*ixx(1:mesh%sb%dim)*mask%spacing(1:mesh%sb%dim))  
                 
 
-                !               if(k_dot_r .gt. 0) then 
+                !               if(k_dot_r > 0) then 
                 wfout(kx,ky,kz)=wfout(kx,ky,kz)+wfin(ix,iy,iz)*exp(-M_zI*k_dot_r)
                 !               end if 
                 
@@ -1263,7 +1263,7 @@ contains
                 
                 k_dot_r=sum(ikk(1:mesh%sb%dim)*temp(1:mesh%sb%dim)*ixx(1:mesh%sb%dim)*mask%spacing(1:mesh%sb%dim))  
                 
-                !               if(k_dot_r .gt. 0) then 
+                !               if(k_dot_r > 0) then 
                 wfout(ix,iy,iz)=wfout(ix,iy,iz)+wfin(kx,ky,kz)*exp(M_zI*k_dot_r)
                 !               end if 
                 
@@ -1614,7 +1614,7 @@ contains
     end if ! time > mask%start_time
     
 
-    if(mask%mode .eq. PES_MASK_MODE_MASK ) call PES_mask_apply_mask(mask, st)  !apply the mask to all the KS orbitals
+    if(mask%mode  ==  PES_MASK_MODE_MASK ) call PES_mask_apply_mask(mask, st)  !apply the mask to all the KS orbitals
 
 
 

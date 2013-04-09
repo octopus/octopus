@@ -219,7 +219,7 @@ contains
 
     ! No PUSH_SUB, called too often
 
-    if(cv%method.ne.CURV_METHOD_UNIFORM) then
+    if(cv%method /= CURV_METHOD_UNIFORM) then
       SAFE_ALLOCATE(Jac(1:sb%dim, 1:sb%dim))
     end if
 
@@ -240,7 +240,7 @@ contains
       jdet = M_ONE*lalg_determinant(sb%dim, Jac, invert = .false.)
     end select
 
-    if(cv%method.ne.CURV_METHOD_UNIFORM) then
+    if(cv%method /= CURV_METHOD_UNIFORM) then
       SAFE_DEALLOCATE_A(Jac)
     end if
 

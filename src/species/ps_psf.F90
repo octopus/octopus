@@ -171,7 +171,7 @@ contains
 
     do i = 1, conf%p
       l = conf%l(i)
-      if(ispin==2 .and. psf_file%irel.ne.'isp') then
+      if(ispin==2 .and. psf_file%irel /= 'isp') then
         x = conf%occ(i, 1)
         conf%occ(i, 1) = min(x, real(2*l+1, REAL_PRECISION))
         conf%occ(i, 2) = x - conf%occ(i,1)
@@ -327,7 +327,7 @@ contains
       call egofv(hato, s, g%nrval, e, gg, y, l-1, z, &
         real(g%a, 8), real(g%b, 8), rmax, nprin, nnode, dr, ierr)
 
-      if(ierr.ne.0) then
+      if(ierr /= 0) then
         write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
         write(message(2),'(a)') 'do its job. The program will terminate, since the wavefunctions'
         write(message(3),'(a)') 'are needed. Change the pseudopotential or improve the code.'
@@ -371,7 +371,7 @@ contains
             call egofv(hato, s, g%nrval, e, gg, y, l-1, z, &
               real(g%a, 8), real(g%b, 8), rmax, nprin, nnode, dr, ierr)
 
-            if(ierr.ne.0) then
+            if(ierr /= 0) then
               write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
               write(message(2),'(a)') 'do its job. The program will terminate, since the wavefunctions'
               write(message(3),'(a)') 'are needed. Change the pseudopotential or improve the code.'

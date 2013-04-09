@@ -82,7 +82,7 @@ contains
 
     j = 1
     do i = 1, len(str)
-      if(str(i:i).ne.' ') then
+      if(str(i:i) /= ' ') then
         str(j:j) = str(i:i)
         j = j + 1
       end if
@@ -101,7 +101,7 @@ contains
 
     l = len(str)
     do i = 1, l
-      if(str(i:i) .ne. ' ') exit
+      if(str(i:i) /= ' ') exit
     end do
 
     do j = 1, l - i + 1

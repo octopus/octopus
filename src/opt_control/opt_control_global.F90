@@ -132,9 +132,9 @@ module opt_control_global_m
     !% algorithms. Not all of them can be used with any choice of target or control function
     !% representation. For example, some algorithms cannot be used if 
     !% <tt>OCTControlRepresentation = control_function_real_time</tt>    
-    !% (<tt>OCTScheme</tt> .gt. <tt>oct_algorithm_straight_iteration</tt>), and others cannot be used 
+    !% (<tt>OCTScheme</tt> > <tt>oct_algorithm_straight_iteration</tt>), and others cannot be used 
     !% if <tt>OCTControlRepresentation = control_function_parametrized</tt>
-    !% (<tt>OCTScheme</tt> .lt. <tt>oct_algorithm_straight_iteration</tt>).
+    !% (<tt>OCTScheme</tt>  <  <tt>oct_algorithm_straight_iteration</tt>).
     !%Option oct_algorithm_zbr98 1 
     !% Backward-Forward-Backward scheme described in <i>JCP</i> <b>108</b>, 1953 (1998).
     !% Only possible if target operator is a projection operator.
@@ -183,7 +183,7 @@ module opt_control_global_m
     ! We must check that the algorithm is consistent with OCTControlRepresentation, i.e.
     ! some algorithms only make sense if the control functions are handled directly in real
     ! time, some others make only sense if the control functions are parameterized.
-    if(oct%ctr_function_rep .eq. oct_ctr_function_real_time) then
+    if(oct%ctr_function_rep  ==  oct_ctr_function_real_time) then
       if(oct%algorithm > oct_algorithm_str_iter) call input_error('OCTScheme')
     else
       if(oct%algorithm < oct_algorithm_str_iter) call input_error('OCTScheme')

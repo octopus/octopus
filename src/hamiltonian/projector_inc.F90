@@ -352,7 +352,7 @@ subroutine X(projector_commute_r)(pj, gr, dim, idir, ik, psi, cpsi)
   PUSH_SUB(X(projector_commute_r))
   call profiling_in(prof, "PROJ_COMMUTE")
 
-  if(pj%type .ne. M_NONE) then
+  if(pj%type /= M_NONE) then
 
     ns = pj%sphere%np
     map => pj%sphere%map

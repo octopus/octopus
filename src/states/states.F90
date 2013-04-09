@@ -455,16 +455,16 @@ contains
         restart_dir = trim(trim(gr%ob_grid%lead(il)%info%restart_dir)//'/'// GS_DIR)
         ! first get nst and kpoints of all states
         call states_look(restart_dir, mpi_world, ob_k(il), ob_d(il), ob_st(il), ierr)
-        if(ierr.ne.0) then
+        if(ierr /= 0) then
           message(1) = 'Could not read the number of states of the periodic calculation'
           message(2) = 'from '//restart_dir//'.'
           call messages_fatal(2)
         end if
       end do
-      if(NLEADS.gt.1) then
-        if(ob_k(LEFT).ne.ob_k(RIGHT).or. &
-          ob_st(LEFT).ne.ob_st(LEFT).or. &
-          ob_d(LEFT).ne.ob_d(RIGHT)) then
+      if(NLEADS > 1) then
+        if(ob_k(LEFT) /= ob_k(RIGHT).or. &
+          ob_st(LEFT) /= ob_st(LEFT).or. &
+          ob_d(LEFT) /= ob_d(RIGHT)) then
           message(1) = 'The number of states for the left and right leads are not equal.'
           call messages_fatal(1)
         end if
@@ -477,9 +477,9 @@ contains
       SAFE_DEALLOCATE_A(ob_st)
       SAFE_DEALLOCATE_A(ob_k)
       call distributed_nullify(st%ob_d%kpt, 0)
-      if((st%d%ispin.eq.UNPOLARIZED.and.st%ob_d%dim.ne.1) .or.   &
-        (st%d%ispin.eq.SPIN_POLARIZED.and.st%ob_d%dim.ne.1) .or. &
-        (st%d%ispin.eq.SPINORS.and.st%ob_d%dim.ne.2)) then
+      if((st%d%ispin == UNPOLARIZED.and.st%ob_d%dim /= 1) .or.   &
+        (st%d%ispin == SPIN_POLARIZED.and.st%ob_d%dim /= 1) .or. &
+        (st%d%ispin == SPINORS.and.st%ob_d%dim /= 2)) then
         message(1) = 'The spin type of the leads calculation from '&
                      //gr%ob_grid%lead(LEFT)%info%restart_dir
         message(2) = 'and SpinComponents of the current run do not match.'
@@ -579,7 +579,7 @@ contains
     ! Schwinger approach during SCF.
     ! Bound states should be done with extra states, without k-points.
     if(gr%ob_grid%open_boundaries) then
-      if(st%nst.ne.st%ob_nst .or. st%d%nik.ne.st%ob_d%nik) then
+      if(st%nst /= st%ob_nst .or. st%d%nik /= st%ob_d%nik) then
         message(1) = 'Open-boundary calculations for possibly bound states'
         message(2) = 'are not possible yet. You have to match your number'
         message(3) = 'of states to the number of free states of your previous'
@@ -736,7 +736,7 @@ contains
       restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)//'/'//GS_DIR
 
       occs = io_open(trim(restart_dir)//'/occs', action='read', is_tmp=.true., grp=mpi_world)
-      if(occs .lt. 0) then
+      if(occs  <  0) then
         message(1) = 'Could not read '//trim(restart_dir)//'/occs.'
         call messages_fatal(1)
       end if
@@ -750,7 +750,7 @@ contains
         call iopar_read(mpi_world, occs, line, err)
 
         read(line, '(a)') char
-        if(char .eq. '%') exit
+        if(char  ==  '%') exit
         call iopar_backspace(mpi_world, occs)
 
         ! Extract eigenvalue.
@@ -759,7 +759,7 @@ contains
         read(line, *) occ, char, eigenval, char, (flt, char, idir = 1, gr%sb%dim), kweights, &
            char, chars, char, ik, char, ist, char, idim
 
-        if(st%d%ispin .eq. SPIN_POLARIZED) then
+        if(st%d%ispin  ==  SPIN_POLARIZED) then
           call messages_not_implemented('Spin-Transport')
 
           if(is_spin_up(ik)) then
@@ -832,7 +832,7 @@ contains
     do
       call iopar_read(mpi_grp, iunit, line, i)
       read(line, '(a)') char
-      if(i.ne.0.or.char=='%') exit
+      if(i /= 0.or.char=='%') exit
       read(line, *) ik, char, ist, char, idim, char, filename
       if(idim == 2)    dim     = 2
       call iopar_read(mpi_grp, iunit2, line, err)
@@ -1022,7 +1022,7 @@ contains
           do ist = start_pos + 1, start_pos + ncols
             st%occ(ist, ik) = read_occs(ist - start_pos, ik)
             integral_occs = integral_occs .and. &
-              abs((st%occ(ist, ik) - el_per_state) * st%occ(ist, ik)) .le. M_EPSILON
+              abs((st%occ(ist, ik) - el_per_state) * st%occ(ist, ik))  <=  M_EPSILON
           end do
         end do
 
@@ -1084,8 +1084,8 @@ contains
     call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs)
 
     if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC) then
-      if((st%d%ispin /= SPINORS .and. st%nst * 2 .le. st%qtot) .or. &
-         (st%d%ispin == SPINORS .and. st%nst .le. st%qtot)) then
+      if((st%d%ispin /= SPINORS .and. st%nst * 2  <=  st%qtot) .or. &
+         (st%d%ispin == SPINORS .and. st%nst  <=  st%qtot)) then
         call messages_write('Smearing needs unoccupied states (via ExtraStates) to be useful.')
         call messages_warning()
       endif
@@ -1121,7 +1121,7 @@ contains
     PUSH_SUB(states_read_initial_spins)
 
     st%fixed_spins = .false.
-    if(st%d%ispin .ne. SPINORS) then
+    if(st%d%ispin /= SPINORS) then
       POP_SUB(states_read_initial_spins)
       return
     end if
@@ -2479,7 +2479,7 @@ contains
 
     PUSH_SUB(state_is_local)
 
-    state_is_local = ist.ge.st%st_start.and.ist.le.st%st_end
+    state_is_local = ist >= st%st_start.and.ist <= st%st_end
 
     POP_SUB(state_is_local)
   end function state_is_local

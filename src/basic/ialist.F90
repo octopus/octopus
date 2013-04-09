@@ -75,7 +75,7 @@ contains
 
     ! no push_sub, called too frequently
 
-    if(l%length.gt.0) then
+    if(l%length > 0) then
       old_head => l%head
       l%head => l%head%next
       SAFE_DEALLOCATE_P(old_head)
@@ -97,16 +97,16 @@ contains
     PUSH_SUB(ialist_delete)
 
     ! Deletions are only possible from nonempty lists.
-    if (l%length.ge.1) then
+    if (l%length >= 1) then
       ! We take the head as special case.
-      if(l%head%key.eq.key) then
+      if(l%head%key == key) then
         call ialist_drop(l)
       else
         ! Process tail of list, if head had a different key.
-        if(l%length.gt.1) then
+        if(l%length > 1) then
           ptr => l%head
           do i = 1, l%length - 2
-            if(ptr%next%key.eq.key) then
+            if(ptr%next%key == key) then
               SAFE_DEALLOCATE_P(ptr%next)
               ptr%next => ptr%next%next
               l%length = l%length - 1
@@ -136,7 +136,7 @@ contains
     type(iacons_t), pointer :: ptr
 
     ! List is empty.
-    if(l%length.eq.0) then
+    if(l%length == 0) then
       SAFE_ALLOCATE(ptr)
       ptr%key  =  key
       ptr%val  =  val
@@ -149,7 +149,7 @@ contains
       found = .false.
       do i = 1, l%length
         ! If found, replace key`s value.
-        if(ptr%key.eq.key) then
+        if(ptr%key == key) then
           ptr%val = val
           found = .true.
           exit
@@ -188,7 +188,7 @@ contains
 
     ptr => l%head
     do i = 1, l%length
-      if(ptr%key.eq.key) then
+      if(ptr%key == key) then
         ialist_lookup = ptr%val
         if(present(found)) then
           found = .true.

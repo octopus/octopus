@@ -102,7 +102,7 @@ contains
 #if defined(HAVE_MPI)
     integer :: mpi_err
 
-    if(comm .ne. -1 .and. comm .ne. MPI_COMM_NULL) then
+    if(comm /= -1 .and. comm /= MPI_COMM_NULL) then
       grp%comm = comm
       call MPI_Comm_rank(grp%comm, grp%rank, mpi_err)
       call MPI_Comm_size(grp%comm, grp%size, mpi_err)

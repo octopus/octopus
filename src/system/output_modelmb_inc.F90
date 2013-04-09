@@ -59,7 +59,7 @@
     SAFE_ALLOCATE(wf(1:gr%mesh%np))
 
     call modelmb_density_matrix_nullify(denmat)
-    if(iand(outp%what, C_OUTPUT_MMB_DEN).ne.0) then
+    if(iand(outp%what, C_OUTPUT_MMB_DEN) /= 0) then
       call modelmb_density_matrix_init(dirname, st, denmat)
     end if
  
@@ -109,14 +109,14 @@
         write (iunit,'(a,l1)') "symmetries_satisfied2 ", symmetries_satisfied
       end if
 
-      if(iand(outp%what, C_OUTPUT_MMB_DEN).ne.0 .and. symmetries_satisfied) then
+      if(iand(outp%what, C_OUTPUT_MMB_DEN) /= 0 .and. symmetries_satisfied) then
         call X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
       end if
 
       if(gr%mesh%parallel_in_domains) then
       end if
 
-      if(iand(outp%what, C_OUTPUT_MMB_WFS).ne.0 .and. symmetries_satisfied) then
+      if(iand(outp%what, C_OUTPUT_MMB_WFS) /= 0 .and. symmetries_satisfied) then
         fn_unit = units_out%length**(-gr%mesh%sb%dim)
         write(filename, '(a,i4.4)') 'wf-st', mm
           call X(io_function_output)(outp%how, trim(dirname), trim(filename), gr%mesh, wf, &
@@ -132,7 +132,7 @@
 
     SAFE_DEALLOCATE_A(wf)
 
-    if(iand(outp%what, C_OUTPUT_MMB_DEN).ne.0) then
+    if(iand(outp%what, C_OUTPUT_MMB_DEN) /= 0) then
       call modelmb_density_matrix_end (denmat)
     end if
  

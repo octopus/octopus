@@ -121,7 +121,7 @@ contains
       call messages_fatal(2)
     end if
 
-    if(ierr .ne. 0) then
+    if(ierr /= 0) then
       message(1) = "Info:  Could not load all wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
       call messages_info(1)
     end if
@@ -174,7 +174,7 @@ contains
       ! write restart information.
       if(converged .or. (modulo(iter, sys%outp%iter) == 0) .or. iter == max_iter .or. forced_finish) then
         call restart_write(trim(tmpdir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, iter=iter)
-        if(ierr .ne. 0) then
+        if(ierr /= 0) then
           message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
           call messages_fatal(1)
         end if

@@ -308,7 +308,7 @@ contains
     !% the truncation is given by a cut-off frequency which is determined by this variable.
     !%End
     call parse_float(datasets_check('OCTControlFunctionOmegaMax'), -M_ONE, cf_common%omegamax)
-    if(cf_common%representation .ne. ctr_real_time) then
+    if(cf_common%representation /= ctr_real_time) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
         units_from_atomic(units_out%energy, cf_common%omegamax), ' ['//trim(units_abbrev(units_out%energy)) // ']'
@@ -376,7 +376,7 @@ contains
     call parse_integer(datasets_check('OCTControlFunctionType'), controlfunction_mode_epsilon, cf_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', cf_common%mode)) &
       call input_error('OCTControlFunctionType')
-    if ( (.not.parametrized_controls)  .and.  (cf_common%mode .ne. controlfunction_mode_epsilon) ) &
+    if ( (.not.parametrized_controls)  .and.  (cf_common%mode /= controlfunction_mode_epsilon) ) &
       call input_error('OCTControlFunctionType')
     call messages_print_var_option(stdout, 'OCTControlFunctionType', cf_common%mode)
 
@@ -415,7 +415,7 @@ contains
 
     ! For phase-only optimization, we need to store the envelope, in order to be able
     ! to calculate the fluence.
-    if(cf_common%mode .eq. controlfunction_mode_phi) then
+    if(cf_common%mode  ==  controlfunction_mode_phi) then
       call laser_get_f(ep%lasers(1), cf_common%f)
     end if 
 
@@ -442,7 +442,7 @@ contains
     mode_fixed_fluence = .false.
     select case(cf_common%representation)
     case(ctr_fourier_series_h, ctr_zero_fourier_series_h)
-      if(cf_common%targetfluence .eq. M_ZERO) then
+      if(cf_common%targetfluence  ==  M_ZERO) then
         write(message(1), '(a)') 'If you set "OCTControlFunctionRepresentation" to either'
         write(message(2), '(a)') '"control_fourier_series_h", or "control_zero_fourier_series_h", then the run'
         write(message(3), '(a)') 'must be done in fixed fluence mode.'
@@ -450,14 +450,14 @@ contains
       end if
       mode_fixed_fluence = .true.
     case(ctr_fourier_series, ctr_zero_fourier_series)
-      if(cf_common%targetfluence .ne. M_ZERO) then
+      if(cf_common%targetfluence /= M_ZERO) then
         write(message(1), '(a)') 'If you set "OCTControlFunctionRepresentation" to "control_fourier_series",'
         write(message(2), '(a)') 'then you cannot run in fixed fluence mode.'
         call messages_fatal(2)
       end if
       mode_fixed_fluence = .false.
     case default
-      if (cf_common%targetfluence .ne. M_ZERO) mode_fixed_fluence = .true.
+      if (cf_common%targetfluence /= M_ZERO) mode_fixed_fluence = .true.
     end select
 
 
@@ -486,7 +486,7 @@ contains
     if(parse_block('OCTPenalty', blk) == 0) then
       ! We have a block
       ncols = parse_block_cols(blk, 0)
-      if(ncols .ne. cf_common%no_controlfunctions) then
+      if(ncols /= cf_common%no_controlfunctions) then
         call input_error('OCTPenalty')
       else
         do ipar = 1, ncols
@@ -531,14 +531,14 @@ contains
     if (parse_block(datasets_check('OCTLaserEnvelope'), blk)==0) then
 
       ! Cannot have this unless we have the "usual" controlfunction_mode_epsilon.
-      if(cf_common%mode .ne. controlfunction_mode_epsilon) then
+      if(cf_common%mode /= controlfunction_mode_epsilon) then
         write(message(1),'(a)') 'The block "OCTLaserEnvelope" is only compatible with the option'
         write(message(2),'(a)') '"OCTControlFunctionType = controlfunction_mode_epsilon".'
         call messages_fatal(2)
       end if
 
       no_lines = parse_block_n(blk)
-      if(no_lines .ne. cf_common%no_controlfunctions) call input_error('OCTLaserEnvelope')
+      if(no_lines /= cf_common%no_controlfunctions) call input_error('OCTLaserEnvelope')
 
       do irow = 1, no_lines
         call parse_block_string(blk, irow - 1, 0, expression)
@@ -686,7 +686,7 @@ contains
       write(message(2),'(a)') 'is less than or equal to zero. This should not happen. Please review your input file.'
       call messages_fatal(2)
     else
-      if(cf_common%representation .ne. ctr_real_time) then
+      if(cf_common%representation /= ctr_real_time) then
         write(message(1), '(a)')      'Info: The expansion of the control functions in a Fourier series'
         write(message(2), '(a,i6,a)') '      expansion implies the use of ', cp%dim, ' basis-set functions.'
         write(message(3), '(a,i6,a)') '      The number of degrees of freedom is ', cp%dof,'.'
@@ -760,7 +760,7 @@ contains
 
     call controlfunction_apply_envelope(par)
 
-    if(cf_common%targetfluence .ne. M_ZERO) then
+    if(cf_common%targetfluence /= M_ZERO) then
       if(cf_common%targetfluence < M_ZERO) then
         cf_common%targetfluence = controlfunction_fluence(par) 
         write(message(1), '(a)')         'Info: The QOCT run will attempt to find a solution with the same'
@@ -807,8 +807,8 @@ contains
 
     PUSH_SUB(controlfunction_set_rep)
 
-    if(par%current_representation .ne. cf_common%representation) then
-      if(cf_common%representation .eq. ctr_real_time) then
+    if(par%current_representation /= cf_common%representation) then
+      if(cf_common%representation  ==  ctr_real_time) then
         call controlfunction_to_realtime(par)
       else
         call controlfunction_to_basis(par)
@@ -828,7 +828,7 @@ contains
 
     PUSH_SUB(controlfunction_to_basis)
 
-    if(par%current_representation.eq.ctr_real_time) then
+    if(par%current_representation == ctr_real_time) then
       select case(cf_common%representation)
       case(ctr_fourier_series_h)
         do ipar = 1, par%no_controlfunctions
@@ -910,7 +910,7 @@ contains
 
     PUSH_SUB(controlfunction_diff)
 
-    ASSERT(pp%current_representation .eq. qq%current_representation)
+    ASSERT(pp%current_representation  ==  qq%current_representation)
 
     res = M_ZERO
     do ipar = 1, pp%no_controlfunctions
@@ -998,7 +998,7 @@ contains
     PUSH_SUB(controlfunction_apply_envelope)
 
     ! Do not apply the envelope if the control functions are represented as a sine-Fourier series.
-    if(cf_common%representation .eq. ctr_real_time) then
+    if(cf_common%representation  ==  ctr_real_time) then
       do ipar = 1, cp%no_controlfunctions
         do iter = 1, tdf_niter(cp%f(ipar)) + 1
           call tdf_set_numerical(cp%f(ipar), iter, tdf(cp%f(ipar), iter) / tdf(cf_common%td_penalty(ipar), iter) )
@@ -1229,7 +1229,7 @@ contains
     end select
 
     ! Now, in case of a parametrized control function, the parameters.
-    if(cf_common%representation .ne. ctr_real_time) then
+    if(cf_common%representation /= ctr_real_time) then
       iunit = io_open(trim(filename)//'/theta', action='write')
       do idof = 1, par%dof
         write(iunit,'(i5,es20.8e3)') idof, par%theta(idof)
@@ -1305,7 +1305,7 @@ contains
 
     PUSH_SUB(controlfunction_j2)
 
-    ASSERT(par%current_representation .eq. cf_common%representation)
+    ASSERT(par%current_representation  ==  cf_common%representation)
 
     call controlfunction_copy(par_, par)
     call controlfunction_to_realtime(par_)
@@ -1437,7 +1437,7 @@ contains
 
      PUSH_SUB(controlfunction_randomize)
 
-     ASSERT(cf_common%representation .ne. ctr_real_time)
+     ASSERT(cf_common%representation /= ctr_real_time)
 
      call controlfunction_set_rep(par)
 

@@ -67,14 +67,14 @@ contains
     read(unit, *) psf%znucl, psf%zion, psf%pspdat
     read(unit, *) psf%pspcod, psf%pspxc, psf%lmax, psf%lloc, psf%mmax, psf%r2well
 
-    if(psf%pspcod.ne.6) then
+    if(psf%pspcod /= 6) then
       message(1) = "Inconsistency in pseudopotential file:"
       write(message(2),'(a,i2)') "  expecting pspcod = 6, but found ", psf%pspcod
       call messages_fatal(2)
     end if
     
     read(unit, '(a3)') line
-    if(line.ne.'4--') then  ! have non-local core corrections
+    if(line /= '4--') then  ! have non-local core corrections
       backspace(unit)
       read(unit, *) psf%rchrg, psf%fchrg, psf%qchrg
     else

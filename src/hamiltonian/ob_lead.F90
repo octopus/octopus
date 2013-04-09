@@ -77,7 +77,7 @@ contains
           lapl%mesh%idx%lxyz(nn,2)+lapl%stencil%points(2,kk), &
           lapl%mesh%idx%lxyz(nn,3)+lapl%stencil%points(3,kk))
         ! If the coupling point is in the interface...
-        if(k_stencil.le.lapl%np.and. &
+        if(k_stencil <= lapl%np.and. &
           member_of_interface(k_stencil, intf, intf_index)) then
           ! ... get the operator coefficients.
           if(lapl%cmplx_op) then
@@ -216,7 +216,7 @@ contains
     PUSH_SUB(apply_coupling)
 
     res(1:np, 1:np) = matrix(1:np, 1:np)
-    if(mod(il+1,2)+1.eq.1) then
+    if(mod(il+1,2)+1 == 1) then
       call lalg_trmm(np, np, 'U', 'N', 'L', M_z1, offdiag, res)
       call lalg_trmm(np, np, 'U', 'T', 'R', M_z1, offdiag, res)
     else
@@ -332,7 +332,7 @@ contains
 
     PUSH_SUB(lead_copy)
 
-    ASSERT(dst%np.le.src%np)
+    ASSERT(dst%np <= src%np)
     np = dst%np
 
     forall(ip = 1:np) dst%h_diag(1:np, ip, 1:dim) = src%h_diag(1:np, ip, 1:dim)
@@ -364,9 +364,9 @@ contains
     np = intf%np_uc
     np_part = np + lead%np_part - lead%np
 
-    if(np.ne.lead%np) then
+    if(np /= lead%np) then
       ! the new unit cell must be smaller
-      ASSERT(np.le.lead%np)
+      ASSERT(np <= lead%np)
       ! create temp lead
       call lead_init_pot(old_lead, np, np_part, nspin)
       call lead_init_kin(old_lead, np, np_part, dim)

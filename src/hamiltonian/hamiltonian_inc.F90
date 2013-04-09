@@ -431,7 +431,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
     if(hm%hf_st%occ(jst, ik) < M_EPSILON) cycle
 
     ! in Hartree we just remove the self-interaction
-    if(hm%theory_level == HARTREE .and. jst .ne. ist) cycle
+    if(hm%theory_level == HARTREE .and. jst /= ist) cycle
 
     pot = R_TOTYPE(M_ZERO)
     rho = R_TOTYPE(M_ZERO)
@@ -501,7 +501,7 @@ subroutine X(oct_exchange_operator_all) (hm, der, st, hst)
 
   select case(hm%d%ispin)
   case(UNPOLARIZED)
-    ASSERT(st%d%nik .eq. 1)
+    ASSERT(st%d%nik  ==  1)
 
     pot = M_ZERO
     rho = M_ZERO
@@ -523,7 +523,7 @@ subroutine X(oct_exchange_operator_all) (hm, der, st, hst)
     end do
 
   case(SPIN_POLARIZED)
-    ASSERT(st%d%nik .eq. 2)
+    ASSERT(st%d%nik  ==  2)
 
     pot = M_ZERO
     rho = M_ZERO

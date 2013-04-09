@@ -84,7 +84,7 @@ contains
         call back_trans_8(nd,nt,x,y)
       end select
       call blas_copy(nt, y(0), 1, x(0) ,1)
-      if (nt.eq.nd) then
+      if (nt == nd) then
         exit loop1
       end if
     end do loop1
@@ -164,11 +164,11 @@ contains
         ! periodically wrap index if necessary
         ind=j+2*i
         loop99: do
-          if (ind.lt.0) then 
+          if (ind < 0) then 
             ind=ind+nt
             cycle loop99
           end if
-          if (ind.ge.nt) then 
+          if (ind >= nt) then 
             ind=ind-nt
             cycle loop99
           end if
@@ -216,11 +216,11 @@ contains
         ! periodically wrap index if necessary
         ind=i-j
         loop99: do
-          if (ind.lt.0) then 
+          if (ind < 0) then 
             ind=ind+nt/2
             cycle loop99
           end if
-          if (ind.ge.nt/2) then 
+          if (ind >= nt/2) then 
             ind=ind-nt/2
             cycle loop99
           end if

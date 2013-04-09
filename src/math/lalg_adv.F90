@@ -419,7 +419,7 @@ contains
     SAFE_ALLOCATE(zeigplusminus(n))
     SAFE_ALLOCATE(zeigminusplus(n))
 
-    ASSERT(n .eq. 2)
+    ASSERT(n  ==  2)
 
     dm = mat
     call lalg_zeigenderivatives(2, dm, zeigref_, zeigenval, mmatrix)
@@ -452,7 +452,7 @@ contains
 
         do gamma = 1, n
           do delta = 1, n
-            if(alpha.eq.gamma .and. beta.eq.delta) then
+            if(alpha == gamma .and. beta == delta) then
                zder_direct = lalg_zd2ni(zeigref_(:, 1), mmatrix(:, :, 1), alpha, beta, gamma, delta)
 
                zeigenvec = dm

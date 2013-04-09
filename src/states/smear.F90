@@ -122,7 +122,7 @@ contains
     !% among the existing states.
     !%End
     this%dsmear = CNST(1e-14)
-    if(this%method .ne. SMEAR_SEMICONDUCTOR .and. this%method .ne. SMEAR_FIXED_OCC) then
+    if(this%method /= SMEAR_SEMICONDUCTOR .and. this%method /= SMEAR_FIXED_OCC) then
       call parse_float(datasets_check('Smearing'), CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
     end if
 
@@ -387,7 +387,7 @@ contains
 
     entropy = M_ZERO
 
-    if(this%method .eq. SMEAR_FIXED_OCC) then
+    if(this%method  ==  SMEAR_FIXED_OCC) then
     ! Fermi-Dirac entropy, not quite the same as will be obtained with true smearing
     ! RM Wentzcovitch, JL Martins, and PB Allen, Phys. Rev. B 45, 11372 (1992) eqn (5)
     ! also N Marzari PhD thesis p 117, http://quasiamore.mit.edu/phd/Marzari_PhD.pdf
@@ -395,7 +395,7 @@ contains
       do ik = 1, nik
         do ist = 1, nst
           ff = occ(ist, ik) / this%el_per_state
-          if(ff .gt. M_ZERO .and. ff .lt. M_ONE) then
+          if(ff > M_ZERO .and. ff  <  M_ONE) then
             term = ff * log(ff) + (1 - ff) * log (1 - ff)
           else ! we have semiconducting smearing, or perverse occupations as in Methfessel-Paxton
             term = M_ZERO      
@@ -617,7 +617,7 @@ contains
 
     PUSH_SUB(smear_is_semiconducting)
 
-    answer = this%method .eq. SMEAR_SEMICONDUCTOR
+    answer = this%method  ==  SMEAR_SEMICONDUCTOR
 
     POP_SUB(smear_is_semiconducting)
   end function smear_is_semiconducting

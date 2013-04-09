@@ -572,7 +572,7 @@ contains
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
 
       ASSERT(st_start <= sys%st%nst)
-      if(st_start .gt. sys%st%nst) then ! nothing to be done in LCAO
+      if(st_start > sys%st%nst) then ! nothing to be done in LCAO
         POP_SUB(lcao_run)
         return
       endif
@@ -654,8 +654,8 @@ contains
         ! equation.
         ! Use free states as initial wavefunctions.
 
-        ASSERT(sys%st%ob_nst .eq. sys%st%nst)
-        ASSERT(sys%st%ob_d%nik .eq. sys%st%d%nik)
+        ASSERT(sys%st%ob_nst  ==  sys%st%nst)
+        ASSERT(sys%st%ob_d%nik  ==  sys%st%d%nik)
         s1 = sys%st%st_start
         s2 = sys%st%st_end
         k1 = sys%st%d%kpt%start
