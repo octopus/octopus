@@ -103,19 +103,9 @@ module par_vec_m
     dvec_scatter,                  &
     zvec_scatter,                  &
     ivec_scatter,                  &
-    dvec_scatter_bndry,            &
-    zvec_scatter_bndry,            &
-    ivec_scatter_bndry,            &
-    dvec_scatter_all,              &
-    zvec_scatter_all,              &
-    ivec_scatter_all,              &
     dvec_gather,                   &
     zvec_gather,                   &
     ivec_gather,                   &
-    dvec_selective_gather,         &
-    zvec_selective_gather,         &
-    dvec_selective_scatter,        &
-    zvec_selective_scatter,        &
     dvec_allgather,                &
     zvec_allgather,                &
     ivec_allgather
