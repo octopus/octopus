@@ -432,7 +432,7 @@ contains
           end if
 #if defined(HAVE_ARPACK)
         case(RS_ARPACK)
-          ! We don't have any tests of this presently and would not like
+          ! We don`t have any tests of this presently and would not like
           ! to guarantee that it works right now
           call messages_not_implemented('ARPACK solver for Hermitian problems')
           !call deigen_solver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, maxiter, &

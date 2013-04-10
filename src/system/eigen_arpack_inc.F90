@@ -1,4 +1,4 @@
-!!!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -106,7 +106,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   
   !if(info == 1) then !Calculate the residual vector
     
-  !  SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
+  !  SAFE_A!LLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
   
  !   resid(:) = R_TOTYPE(M_ZERO)
  !   do ist = 1, st%nst
@@ -121,7 +121,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
  !     end do
  !   end do
     !resid(:) = resid(:) * sqrt(gr%mesh%volume_element)
-    !SAFE_DEALLOCATE_A(hpsi)
+    !SAFE_D!EALLOCATE_A(hpsi)
 
     !resid_sum = abs(sum(resid(:)**2))
     !if(resid_sum < M_EPSILON .or. resid_sum > M_HUGE) then
