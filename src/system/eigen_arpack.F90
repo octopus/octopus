@@ -86,6 +86,7 @@ contains
 
     !%Variable ArpackInitialTolerance
     !%Type float
+    !%Default 0.0
     !%Section SCF::Eigensolver 
     !%Description 
     !% Use this tolerance in Arpack when the relative density error is
@@ -97,7 +98,7 @@ contains
     !%End 
     call parse_float(datasets_check('ArpackInitialTolerance'), M_ZERO, this%initial_tolerance)
     
-    if(this%initial_tolerance > 0) then
+    if(this%initial_tolerance > M_ZERO) then
       call messages_print_var_value(stdout, "ArpackInitialTolerance", this%initial_tolerance)
     end if
     

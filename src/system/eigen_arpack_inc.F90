@@ -80,8 +80,8 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   ! of magnitude.  To do this we, for the time being, interpolate exponentially such that a rel_dens=1
   ! corresponds to tol=ArpackInitialTolerance whereas rel_dens=1e-5 corresponds to tol=EigenSolverTolerance.
   ! We can fix this later so it allows other values and types of convergence criteria.
-  if(arpack%initial_tolerance > 0) then
-    if(current_rel_dens_error < 0) then
+  if(arpack%initial_tolerance > M_ZERO) then
+    if(current_rel_dens_error < M_ZERO) then
       tol = arpack%initial_tolerance
     else
       tolpower = M_ONE ! more aggresive (larger) values seem to frequently get trouble mid-SCF-loop

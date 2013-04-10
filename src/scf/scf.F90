@@ -661,6 +661,8 @@ contains
       scf%rel_dens = scf%abs_dens / st%qtot
       scf%abs_ev = abs(evsum_out - evsum_in)
       scf%rel_ev = scf%abs_ev / abs(evsum_out)
+      
+      scf%eigens%current_rel_dens_error = scf%rel_dens
 
       ! are we finished?
       finish = &
