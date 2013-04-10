@@ -69,9 +69,7 @@ module nl_operator_m
     nl_operator_skewadjoint,    &
     nl_operator_selfadjoint,    &
     nl_operator_get_index,      &
-    nl_operator_write,          &
     nl_operator_update_weights, &
-    nl_operator_op_to_matrix_cmplx, &
     nl_operator_np_zero_bc,         &
     nl_operator_compact_boundaries
 
@@ -1027,108 +1025,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> When running in parallel only the root node
-  !! creates the matrix. But all nodes have to
-  !! call this routine because the distributed operator has
-  !! to be collected.
-  subroutine nl_operator_op_to_matrix_cmplx(op, aa)
-    type(nl_operator_t), target, intent(in) :: op
-    CMPLX, intent(out)                      :: aa(:, :)
-
-    integer          :: ip, jp, kp, index
-
-    type(nl_operator_t), pointer :: opg
-
-    PUSH_SUB(nl_operator_op_to_matrix_cmplx)
-
-#if defined(HAVE_MPI)
-    if(op%mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(opg)
-      call nl_operator_gather(op, opg)
-    else
-#endif
-      opg => op
-#if defined(HAVE_MPI)
-    end if
-#endif
-
-    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
-      kp = 1
-      do ip = 1, op%mesh%np_global
-        if(.not.op%const_w) kp = ip
-        do jp = 1, op%stencil%size
-          index = nl_operator_get_index(opg, jp, ip)
-          if(index <= op%mesh%np_global) then
-            aa(ip, index) = opg%w_re(jp, kp)
-            if (op%cmplx_op) aa(ip, index) = aa(ip, index) + opg%w_im(jp, kp)
-          end if
-        end do
-      end do
-      
-      if(op%mesh%parallel_in_domains) then 
-        call nl_operator_end(opg)
-        SAFE_DEALLOCATE_P(opg)
-      end if
-    end if
-    if(in_debug_mode) call messages_debug_newlines(2)
-
-    POP_SUB(nl_operator_op_to_matrix_cmplx)
-
-  end subroutine nl_operator_op_to_matrix_cmplx
-
-  ! ---------------------------------------------------------
-  !> When running in parallel only the root node
-  !! creates the matrix. But all nodes have to
-  !! call this routine because the distributed operator has
-  !! to be collected.
-  subroutine nl_operator_op_to_matrix(op, aa, bb)
-    type(nl_operator_t), target, intent(in) :: op
-    FLOAT, intent(out)                      :: aa(:, :)
-    FLOAT, optional, intent(out)            :: bb(:, :)
-
-    integer          :: ip, jp, kp, index
-
-    type(nl_operator_t), pointer :: opg
-
-    PUSH_SUB(nl_operator_op_to_matrix)
-
-    if(op%mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
-      SAFE_ALLOCATE(opg)
-      call nl_operator_gather(op, opg)
-#else
-      ASSERT(.false.)
-#endif
-    else
-      opg => op
-    end if
-
-    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
-      kp = 1
-      do ip = 1, op%mesh%np_global
-        if(.not.op%const_w) kp = ip
-        do jp = 1, op%stencil%size
-          index = nl_operator_get_index(opg, jp, ip)
-          if(index <= op%mesh%np_global) then
-            aa(ip, index) = opg%w_re(jp, kp)
-            if (op%cmplx_op) bb(ip, index) = opg%w_im(jp, kp)
-          end if
-        end do
-      end do
-      
-      if(op%mesh%parallel_in_domains) then 
-        call nl_operator_end(opg)
-        SAFE_DEALLOCATE_P(opg)
-      end if
-    end if
-    if(in_debug_mode) call messages_debug_newlines(2)
-
-    POP_SUB(nl_operator_op_to_matrix)
-
-  end subroutine nl_operator_op_to_matrix
-
-
-  ! ---------------------------------------------------------
   subroutine nl_operator_matrix_to_op(op_ref, op, aa, bb)
     FLOAT, intent(in)                :: aa(:, :)
     FLOAT, optional, intent(in)      :: bb(:, :)
@@ -1153,89 +1049,6 @@ contains
 
     POP_SUB(nl_operator_matrix_to_op)
   end subroutine nl_operator_matrix_to_op
-
-
-  ! ---------------------------------------------------------
-  !> Prints the matrix of the non-local operator op to
-  !! a file (unit).
-  !!
-  !! When running in parallel, only the root node writes
-  !! to the file but all nodes have to call this routine
-  !! simultaneously because the distributed operator has
-  !! to be collected.
-  subroutine nl_operator_write(op, filename)
-    character(len=*),    intent(in) :: filename
-    type(nl_operator_t), intent(in) :: op
-
-    integer            :: ip, jp
-    integer            :: unit
-    FLOAT, allocatable :: aa(:, :)
-
-    PUSH_SUB(nl_operator_write)
-
-
-    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
-      SAFE_ALLOCATE(aa(1:op%mesh%np_global, 1:op%mesh%np_global))
-      aa = M_ZERO
-    end if
-
-    call nl_operator_op_to_matrix(op, aa)
-
-    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
-      unit = io_open(filename, action='write')
-      if(unit < 0) then
-        message(1) = 'Could not open file '//filename//' to write operator.'
-        call messages_fatal(1)
-      end if
-      do ip = 1, op%mesh%np_global
-        do jp = 1, op%mesh%np_global - 1
-          write(unit, fmt = '(f9.4)', advance ='no') aa(ip, jp)
-        end do
-        write(unit, fmt = '(f9.4)') aa(ip, op%mesh%np_global)
-      end do
-      call io_close(unit)
-
-      SAFE_DEALLOCATE_A(aa)
-    end if
-
-    POP_SUB(nl_operator_write)
-
-  end subroutine nl_operator_write
-
-
-  ! ---------------------------------------------------------
-  !> Same as nl_operator_write but transposed matrix.
-  subroutine nl_operatorT_write(op, unit)
-    type(nl_operator_t), intent(in) :: op
-    integer, intent(in)             :: unit
-
-    integer :: ip, jp
-    FLOAT, allocatable :: aa(:, :)
-
-    PUSH_SUB(nl_operatorT_write)
-
-
-    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
-      SAFE_ALLOCATE(aa(1:op%mesh%np_global, 1:op%mesh%np_global))
-      aa = M_ZERO
-    end if
-
-    call nl_operator_op_to_matrix(op, aa)
-
-    if(mpi_grp_is_root(op%mesh%mpi_grp)) then
-      do ip = 1, op%mesh%np_global
-        do jp = 1, op%mesh%np_global - 1
-          write(unit, fmt = '(f9.4)', advance ='no') aa(jp, ip)
-        end do
-        write(unit, fmt = '(f9.4)') aa(op%mesh%np_global, ip)
-      end do
-
-      SAFE_DEALLOCATE_A(aa)
-    end if
-
-    POP_SUB(nl_operatorT_write)
-
-  end subroutine nl_operatorT_write
 
 
   ! ---------------------------------------------------------
