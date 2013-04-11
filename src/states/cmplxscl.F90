@@ -30,27 +30,26 @@ module cmplxscl_m
   
   private
 
-  public :: &
-    cmplxscl_t, &
-    cmplxscl_init, & 
-    cmplxscl_copy, & 
+  public ::                &
+    cmplxscl_t,            &
+    cmplxscl_init,         & 
+    cmplxscl_copy,         & 
     cmplxscl_end 
        
   !> Complex scaling module    
   type cmplxscl_t
     logical            :: space       !< scale spatial coordinates
     logical            :: time        !< scale time coordinate
-  
-     FLOAT             :: theta       !< spatial coordinates scaling angle
-     FLOAT             :: alphaR     !< time coordinate scaling angle for right states
-     FLOAT             :: alphaL     !< time coordinate scaling angle for left states
-     FLOAT             :: rotatespectrumangle !< angle with which to rotate eigenvalues to obtain desired order from ARPACK
-     FLOAT             :: penalizationfactor !< factor which penalizes imaginary parts of eigenvalues when ordering states
+    FLOAT              :: theta       !< spatial coordinates scaling angle
+    FLOAT              :: alphaR      !< time coordinate scaling angle for right states
+    FLOAT              :: alphaL      !< time coordinate scaling angle for left states
+    FLOAT              :: rotatespectrumangle !< angle with which to rotate eigenvalues to obtain desired order from ARPACK
+    FLOAT              :: penalizationfactor  !< factor which penalizes imaginary parts of eigenvalues when ordering states
   end type cmplxscl_t
 
   integer, parameter ::     &
-    CMPLXSCL_NONE    = 0, &
-    CMPLXSCL_SPACE   = 2, &
+    CMPLXSCL_NONE    = 0,   &
+    CMPLXSCL_SPACE   = 2,   &
     CMPLXSCL_TIME    = 4
 
 contains

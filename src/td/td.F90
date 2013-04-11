@@ -22,6 +22,7 @@
 module td_m
   use batch_m
   use calc_mode_m
+  use cmplxscl_m
   use cpmd_m
   use datasets_m
   use density_m

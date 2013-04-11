@@ -30,7 +30,8 @@ libstates_a_SOURCES = \
 	ob_green.F90                 \
 	modelmb_exchange_syms.F90    \
 	density.F90                  \
-	states_io.F90
+	states_io.F90                \
+	cmplxscl.F90
 
 noinst_HEADERS = \
 	physics_op_inc.F90 \
@@ -50,7 +51,7 @@ ksinversion.o : ksinversion.F90 modelmb_particles.o states.o
 modelmb_density_matrix.o : modelmb_density_matrix.F90 modelmb_density_matrix_inc.F90 modelmb_particles.o states.o
 modelmb_exchange_syms.o : modelmb_exchange_syms.F90 modelmb_exchange_syms_inc.F90 modelmb_density_matrix.o modelmb_particles.o states.o
 physics_op.o : physics_op_inc.F90
-states.o : states.F90 states_inc.F90 states_dim.o ob_green.o modelmb_particles.o smear.o
+states.o : states.F90 states_inc.F90 states_dim.o ob_green.o modelmb_particles.o smear.o cmplxscl.o
 states_dim.o : states_dim.F90
 states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o smear.o
 states_block.o : states_block.F90 states_block_inc.F90 states.o
@@ -59,3 +60,4 @@ linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_
 restart.o : restart.F90 restart_inc.F90 states.o linear_response.o states_calc.o states_io.o smear.o
 density.o : states.o
 states_io.o : states.o
+cmplxscl.o : cmplxscl.F90
