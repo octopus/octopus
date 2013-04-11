@@ -33,7 +33,7 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   R_TYPE,     intent(in)  :: v(:)
   R_TYPE,     intent(out) :: v_local(:)
 
-  integer              :: i         !< Counter.
+  integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Send buffer.
 
@@ -42,7 +42,7 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
 
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart < 2) then
-    v_local(1:vp%np) = v(1:vp%np)
+    v_local(1:vp%np_global) = v(1:vp%np_global)
     POP_SUB(X(vec_scatter))
     return
   end if
@@ -56,12 +56,12 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   if(vp%rank == root) then
   ! Fill send buffer.
     SAFE_DEALLOCATE_A(v_tmp)
-    SAFE_ALLOCATE(v_tmp(1:vp%np))
+    SAFE_ALLOCATE(v_tmp(1:vp%np_global))
 
     ! Rearrange copy of v. All points of node r are in
     ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
-    do i = 1, vp%np
-      v_tmp(i) = v(vp%local(i))
+    do ii = 1, vp%np_global
+      v_tmp(ii) = v(vp%local(ii))
     end do
   end if
 
@@ -93,7 +93,7 @@ subroutine X(vec_gather)(vp, root, v, v_local)
   R_TYPE,     intent(out) :: v(:)
   R_TYPE,     intent(in)  :: v_local(:)
 
-  integer              :: i         !< Counter.
+  integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
 
@@ -101,7 +101,7 @@ subroutine X(vec_gather)(vp, root, v, v_local)
 
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart < 2) then
-    v(1:vp%np) = v_local(1:vp%np)
+    v(1:vp%np_global) = v_local(1:vp%np_global)
     POP_SUB(X(vec_gather))
     return
   end if
@@ -111,7 +111,7 @@ subroutine X(vec_gather)(vp, root, v, v_local)
   SAFE_ALLOCATE(displs(1:vp%npart))
   displs = vp%xlocal-1
 
-  SAFE_ALLOCATE(v_tmp(1:vp%np))
+  SAFE_ALLOCATE(v_tmp(1:vp%np_global))
 
   call mpi_debug_in(vp%comm, C_MPI_GATHERV)
   call MPI_Gatherv(v_local(1), vp%np_local(vp%partno), R_MPITYPE, v_tmp(1), &
@@ -121,8 +121,8 @@ subroutine X(vec_gather)(vp, root, v, v_local)
 
   ! Copy values from v_tmp to their original position in v.
   if(vp%rank == root) then
-    do i = 1, vp%np
-      v(vp%local(i)) = v_tmp(i)
+    do ii = 1, vp%np_global
+      v(vp%local(ii)) = v_tmp(ii)
     end do
 
   end if
@@ -143,7 +143,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
   R_TYPE,     intent(out) :: v(:)
   R_TYPE,     intent(in)  :: v_local(:)
 
-  integer              :: i         !< Counter.
+  integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
 
@@ -155,7 +155,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
   SAFE_ALLOCATE(displs(1:vp%npart))
   displs = vp%xlocal-1
 
-  SAFE_ALLOCATE(v_tmp(1:vp%np))
+  SAFE_ALLOCATE(v_tmp(1:vp%np_global))
 
   call mpi_debug_in(vp%comm, C_MPI_ALLGATHERV)
   call MPI_Allgatherv(v_local(1), vp%np_local(vp%partno), R_MPITYPE, v_tmp(1), &
@@ -164,8 +164,8 @@ subroutine X(vec_allgather)(vp, v, v_local)
   call mpi_debug_out(vp%comm, C_MPI_ALLGATHERV)
 
   ! Copy values from v_tmp to their original position in v.
-  do i = 1, vp%np
-    v(vp%local(i)) = v_tmp(i)
+  do ii = 1, vp%np_global
+    v(vp%local(ii)) = v_tmp(ii)
   end do
 
   SAFE_DEALLOCATE_A(v_tmp)

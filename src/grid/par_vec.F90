@@ -128,7 +128,7 @@ module par_vec_m
     integer                 :: npart                !< Number of partitions.
     integer                 :: root                 !< The master node.
     integer                 :: comm                 !< MPI communicator to use.
-    integer                 :: np                   !< Number of points in mesh.
+    integer                 :: np_global            !< Number of points in mesh.
     integer                 :: np_enl               !< Number of points in enlargement.
     integer, pointer        :: part(:)              !< Point -> partition.
     integer, pointer        :: np_local(:)          !< How many points has partition r? 
@@ -446,11 +446,11 @@ contains
     end do
 
     ! Complete entries in vp.
-    vp%comm   = comm
-    vp%root   = root
-    vp%np     = np_global
-    vp%np_enl = np_enl
-    vp%npart  = npart
+    vp%comm      = comm
+    vp%root      = root
+    vp%np_global = np_global
+    vp%np_enl    = np_enl
+    vp%npart     = npart
 
     call init_send_points
 

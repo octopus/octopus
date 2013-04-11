@@ -487,8 +487,8 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
 
     ! These must be initialized for vec_gather, vec_scatter to work
     ! as copy operations when running without domain parallelization.
-    mesh%vp%np = mesh%np_global
-    mesh%vp%npart  = 1
+    mesh%vp%np_global = mesh%np_global
+    mesh%vp%npart = 1
   end if
 
   call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
