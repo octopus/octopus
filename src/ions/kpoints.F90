@@ -776,18 +776,37 @@ contains
     
     PUSH_SUB(kpoints_write_info)
     
+    call messages_print_stress(iunit, 'Brillouin zone sampling')
+
     if(this%method == KPOINTS_MONKH_PACK) then
-      write(message(1),'(a)') 'Number of k-points in each direction = '
+
+      call messages_write('Dimensions of the k-point grid      =')
       do idir = 1, this%full%dim
-        write(str_tmp,'(i3,1x)') this%nik_axis(idir)
-        message(1) = trim(message(1)) // trim(str_tmp)
-      enddo
-      call messages_info(1, iunit)
+        call messages_write(this%nik_axis(idir), fmt = '(i3,1x)')
+      end do
+      call messages_new_line()
+      
+      call messages_write('Total number of k-points            =')
+      call messages_write(this%full%npoints)
+      call messages_new_line()
+
+      call messages_write('Number of symmetry-reduced k-points =')
+      call messages_write(this%reduced%npoints)
+
+      call messages_info(iunit = iunit)
+      
     else
-      ! a Monkhorst-Pack grid was not used
-      write(message(1),'(a,i3)') 'Number of k-points = ', kpoints_number(this)
-      call messages_info(1, iunit)
+
+      call messages_write('Total number of k-points            =')
+      call messages_write(this%full%npoints)
+      call messages_new_line()
+      call messages_info(iunit = iunit)
+
     endif
+
+    call messages_new_line()
+    call messages_write('List of k-points:')
+    call messages_info(iunit = iunit)
 
     write(message(1), '(6x,a)') 'ik'
     do idir = 1, this%full%dim
@@ -798,7 +817,7 @@ contains
     write(str_tmp, '(6x,a)') 'Weight'
     message(1) = trim(message(1)) // trim(str_tmp)
     message(2) = '---------------------------------------------------------'
-    call messages_info(2, iunit, verbose_limit = .true.)
+    call messages_info(2, iunit)
     
     do ik = 1, kpoints_number(this)
       write(message(1),'(i8,1x)') ik
@@ -808,9 +827,13 @@ contains
       enddo
       write(str_tmp,'(f12.4)') kpoints_get_weight(this, ik)
       message(1) = trim(message(1)) // trim(str_tmp)
-      call messages_info(1, iunit, verbose_limit = .true.)
+      call messages_info(1, iunit)
     end do
-    
+
+    call messages_info(iunit = iunit)
+
+    call messages_print_stress(iunit)
+
     POP_SUB(kpoints_write_info)
   end subroutine kpoints_write_info
   
