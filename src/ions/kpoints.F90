@@ -37,16 +37,16 @@ module kpoints_m
   
   private
   
-  public ::                  &
-    kpoints_grid_t,          &
-    kpoints_t,               &
-    kpoints_init,            &
-    kpoints_end,             &
-    kpoints_copy,            &
-    kpoints_number,          &
-    kpoints_get_weight,      &
-    kpoints_get_point,       &
-    kpoints_set_point,       &
+  public ::                       &
+    kpoints_grid_t,               &
+    kpoints_t,                    &
+    kpoints_init,                 &
+    kpoints_end,                  &
+    kpoints_copy,                 &
+    kpoints_number,               &
+    kpoints_get_weight,           &
+    kpoints_get_point,            &
+    kpoints_set_point,            &
     kpoints_set_transport_mode,   &
     kpoints_write_info,           &
     kpoints_point_is_gamma,       &
@@ -75,6 +75,8 @@ module kpoints_m
     FLOAT          :: shifts(MAX_DIM)      ! 
     integer, pointer :: symmetry_ops(:, :)
     integer, pointer :: num_symmetry_ops(:)
+
+    FLOAT, pointer :: klattice(:, :)
   end type kpoints_t
 
   integer, parameter ::                &
@@ -239,6 +241,10 @@ contains
       call messages_info(1)
 
     end if
+
+    SAFE_ALLOCATE(this%klattice(1:dim, 1:dim))
+
+    this%klattice(1:dim, 1:dim) = klattice(1:dim, 1:dim)
 
     POP_SUB(kpoints_init)
 
@@ -477,6 +483,7 @@ contains
     call kpoints_grid_end(this%full)
     call kpoints_grid_end(this%reduced)
 
+    SAFE_DEALLOCATE_P(this%klattice)
     SAFE_DEALLOCATE_P(this%symmetry_ops)
     SAFE_DEALLOCATE_P(this%num_symmetry_ops)
 
@@ -559,6 +566,9 @@ contains
     kout%nik_axis(1:kin%full%dim) = kin%nik_axis(1:kin%full%dim)
     kout%shifts  (1:kin%full%dim) = kin%shifts  (1:kin%full%dim)
 
+    SAFE_ALLOCATE(kout%klattice(1:kin%full%dim, kin%full%dim))
+    kout%klattice(1:kin%full%dim, kin%full%dim) = kin%klattice(1:kin%full%dim, kin%full%dim)
+
     POP_SUB(kpoints_copy)
   end subroutine kpoints_copy
 
@@ -573,17 +583,23 @@ contains
 
 
   ! ----------------------------------------------------------
-  pure function kpoints_get_point(this, ik) result(point)
-    type(kpoints_t), intent(in) :: this
-    integer,         intent(in) :: ik
-    FLOAT                       :: point(1:this%full%dim)
+  pure function kpoints_get_point(this, ik, absolute_coordinates) result(point)
+    type(kpoints_t),   intent(in) :: this
+    integer,           intent(in) :: ik
+    logical, optional, intent(in) :: absolute_coordinates    !< .true. by default
+    FLOAT                         :: point(1:this%full%dim)
 
-    point(1:this%full%dim) = this%reduced%point(1:this%full%dim, ik)
+    if(optional_default(absolute_coordinates, .true.)) then
+      point(1:this%full%dim) = this%reduced%point(1:this%full%dim, ik)
+    else
+      point(1:this%full%dim) = this%reduced%red_point(1:this%full%dim, ik)
+    end if
 
   end function kpoints_get_point
 
   ! ----------------------------------------------------------
   !> sets the ik-th kpoint to a given value (only to be used in transport mode)
+  !> the point must be in relative coordinates
   subroutine kpoints_set_point(this, ik, point)
     type(kpoints_t), intent(inout) :: this
     integer,         intent(in)    :: ik
@@ -591,8 +607,11 @@ contains
 
     PUSH_SUB(kpoints_set_point)
 
-    this%reduced%point(1:this%full%dim, ik) = point(1:this%full%dim)
-    this%full%point(1:this%full%dim, ik)    = point(1:this%full%dim)
+    this%reduced%red_point(1:this%full%dim, ik) = point(1:this%full%dim)
+    this%full%red_point(1:this%full%dim, ik)    = point(1:this%full%dim)
+
+    call kpoints_to_absolute(this%klattice, this%full%red_point(:, ik), this%full%point(:, ik), this%full%dim)
+    call kpoints_to_absolute(this%klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik), this%reduced%dim)
 
     POP_SUB(kpoints_set_point)
   end subroutine kpoints_set_point
@@ -851,7 +870,7 @@ contains
     do ik = 1, kpoints_number(this)
       write(message(1),'(i8,1x)') ik
       do idir = 1, this%full%dim
-        write(str_tmp,'(f12.4)') units_from_atomic(unit_one/units_out%length, this%reduced%red_point(idir, ik))
+        write(str_tmp,'(f12.4)') this%reduced%red_point(idir, ik)
         message(1) = trim(message(1)) // trim(str_tmp)
       enddo
       write(str_tmp,'(f12.4)') kpoints_get_weight(this, ik)

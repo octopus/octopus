@@ -329,7 +329,7 @@ contains
     itot = 1
     do ik = 1, st%d%nik
       kpoint = M_ZERO
-      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
 
       do ist = 1, st%nst
         do idim = 1, st%d%dim
