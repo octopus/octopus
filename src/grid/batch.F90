@@ -359,7 +359,7 @@ contains
       bout%states(ii)%ist = bin%states(ii)%ist
     end do
 
-    bout%index(1:bin%nst, 1:bin%ndims) = bin%index(1:bin%nst, 1:bin%ndims)
+    bout%index(1:bin%nst_linear, 1:bin%ndims) = bin%index(1:bin%nst_linear, 1:bin%ndims)
 
     POP_SUB(batch_copy)
   end subroutine batch_copy
