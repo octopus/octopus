@@ -622,14 +622,17 @@ contains
     FLOAT,             intent(out) :: kpoints(:, :)
   
     FLOAT :: dx(1:MAX_DIM), maxcoord
-    integer :: ii, jj, divisor, ik, idir, ix(1:MAX_DIM), npoints
-    FLOAT, allocatable :: nrm(:), shell(:), coords(:, :), mink(:)
+    integer :: ii, jj, divisor, ik, idir, npoints
+    integer, allocatable :: ix(:)
+    FLOAT, allocatable :: nrm(:), shell(:), coords(:, :)
 
     PUSH_SUB(kpoints_grid_generate)
-    
+   
     dx(1:dim) = M_ONE/(M_TWO*naxis(1:dim))
 
     npoints = product(naxis(1:dim))
+
+    SAFE_ALLOCATE(ix(1:dim))
 
     do ii = 0, npoints - 1
 
@@ -655,13 +658,9 @@ contains
 
     end do
 
+    SAFE_DEALLOCATE_A(ix)
+
     ! sort the k-points
-
-    SAFE_ALLOCATE(mink(1:dim))
-
-    do idir = 1, dim
-      mink(idir) = minval(kpoints(idir, 1:npoints))
-    end do
 
     SAFE_ALLOCATE(nrm(1:npoints))
     SAFE_ALLOCATE(shell(1:npoints))
@@ -669,7 +668,11 @@ contains
     
     do ik = 1, npoints
       shell(ik) = sum((kpoints(1:dim, ik)/dx(1:dim))**2)
-      coords(1:dim, ik) = (kpoints(1:dim, ik) - mink(1:dim))/dx(1:dim)
+      do idir = 1, dim
+        coords(idir, ik) = kpoints(idir, ik)
+        if(coords(idir, ik) < CNST(0.0)) coords(idir, ik) = coords(idir, ik) + CNST(1.0)
+        coords(idir, ik) = coords(idir, ik)/(dx(idir)*CNST(2.0))
+      end do
     end do
 
     nrm(1:npoints) = M_ZERO
@@ -683,12 +686,11 @@ contains
     end do
 
     do ik = 1, npoints
-      nrm(ik) = maxcoord - nrm(ik) + shell(ik)*maxcoord
+      nrm(ik) = nrm(ik) + shell(ik)*maxcoord
     end do
 
     call sort(nrm, kpoints)
 
-    SAFE_DEALLOCATE_A(mink)
     SAFE_DEALLOCATE_A(nrm)
     SAFE_DEALLOCATE_A(shell)
     SAFE_DEALLOCATE_A(coords)

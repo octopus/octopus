@@ -36,9 +36,9 @@ match ; Eigenvalue  8 ; GREP(static/info, '#k =   2', 12,  8) ; -0.001430
 match ; Eigenvalue 16 ; GREP(static/info, '#k =   2', 12, 16) ;  0.104514
 match ; Eigenvalue 17 ; GREP(static/info, '#k =   2', 12, 17) ;  0.192430
 
-match ; k-point 3 (x) ; GREP(static/info, '#k =   3', 18) ; 0.230999
+match ; k-point 3 (x) ; GREP(static/info, '#k =   3', 18) ; 0.077000
 match ; k-point 3 (y) ; GREP(static/info, '#k =   3', 30) ; 0.230999
-match ; k-point 3 (z) ; GREP(static/info, '#k =   3', 42) ; 0.077000
+match ; k-point 3 (z) ; GREP(static/info, '#k =   3', 42) ; 0.230999
 match ; Eigenvalue  1 ; GREP(static/info, '#k =   3', 12,  1) ; -0.241547
 match ; Eigenvalue  8 ; GREP(static/info, '#k =   3', 12,  8) ; -0.017855
 match ; Eigenvalue 16 ; GREP(static/info, '#k =   3', 12, 16) ;  0.120700
@@ -55,6 +55,6 @@ match ; Eigenvalue 17 ; GREP(static/info, '#k =   4', 12, 17) ;  0.223391
 Input      : 04-silicon.02-kdotp.inp
 match ; vg(x) k1 st1  ; LINE(kdotp/velocity,     5, 20) ;  0.06525
 match ; vg(y) k2 st10 ; LINE(kdotp/velocity,    34, 32) ; -0.32130
-match ; vg(z) k3 st17 ; LINE(kdotp/velocity,    61, 45) ; 0.06380
+match ; vg(z) k3 st17 ; LINE(kdotp/velocity,    61, 45) ;  0.14636
 Precision : 0.0005
 match ; 1/m*  k1 st1  ; GREP(kdotp/kpoint_1_1, 'Isotropic average', 25, 0) ;  0.859345
