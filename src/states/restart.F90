@@ -293,7 +293,8 @@ contains
       write(iunit,'(a)') '%Wavefunctions'
 
       iunit2 = io_open(trim(dir)//'/occs', action='write', is_tmp=.true.)
-      write(iunit2,'(a)') '# occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim'
+      write(iunit2,'(2a)') '# occupations | eigenvalue[a.u.] | Im(eigenvalue) [a.u.] ', &
+        '| k-points | k-weights | filename | ik | ist | idim'
       write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
 
       iunit_mesh = io_open(trim(dir)//'/mesh', action='write', is_tmp=.true.)
@@ -339,7 +340,11 @@ contains
           if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
             write(iunit, '(i8,a,i8,a,i8,3a)') ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
             write(iunit2, '(e21.14,a,e21.14,a)', advance='no') st%occ(ist,ik), ' | ', st%eigenval(ist, ik)
-            if (cmplxscl) write(iunit2, '(1x,e21.14)', advance='no') st%zeigenval%Im(ist, ik)
+            if (cmplxscl) then
+              write(iunit2, '(a,e21.14)', advance='no') ' | ', st%zeigenval%Im(ist, ik)
+            else
+              write(iunit2, '(a,e21.14)', advance='no') ' | ', CNST(0.0)
+            end if
             write(iunit2, '(a)', advance='no')  ' | '
             do idir = 1, gr%sb%dim
               write(iunit2, '(e21.14,a)', advance='no') kpoint(idir), ' | '
@@ -529,7 +534,7 @@ contains
     character(len=50)    :: str
     integer, allocatable :: read_lxyz(:, :), map(:)
 
-    FLOAT                :: my_occ, flt
+    FLOAT                :: my_occ, flt, imev
     logical              :: read_occ, lr_allocated, grid_changed, grid_reordered
     logical              :: exact_, integral_occs, rdmft_, cmplxscl, read_left_
     FLOAT, allocatable   :: dpsi(:)
@@ -690,13 +695,11 @@ contains
 
       call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, line, err)
       if(.not. present(lr)) then ! do not read eigenvalues or occupations when reading linear response
-        ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-        if(.not. cmplxscl) then
-          read(line, *) my_occ, char, st%eigenval(ist, ik), char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
-        else
-          read(line, *) my_occ, char, st%eigenval(ist, ik), st%zeigenval%Im(ist, ik), &
-                        char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
-        end if
+        ! # occupations | eigenvalue[a.u.] | Im(eigenvalue) [a.u.] | k-points | k-weights | filename | ik | ist | idim
+
+        read(line, *) my_occ, char, st%eigenval(ist, ik), char, imev, char, (flt, char, idir = 1, gr%sb%dim), st%d%kweights(ik)
+        if(cmplxscl) st%zeigenval%Im(ist, ik) = imev
+
         if(read_occ) then
           st%occ(ist, ik) = my_occ
           integral_occs = integral_occs .and. &
@@ -927,7 +930,7 @@ contains
     integer                    :: np, ip, idir
     character(len=256)         :: line, fname, filename, restart_dir, chars
     character                  :: char
-    FLOAT                      :: occ, eval, kpoint(1:MAX_DIM), w_k
+    FLOAT                      :: occ, eval, imeval, kpoint(1:MAX_DIM), w_k
     type(simul_box_t), pointer :: sb
     type(mesh_t), pointer      :: m_lead, m_center
     CMPLX                      :: phase
@@ -986,7 +989,7 @@ contains
 
       call iopar_read(mpi_grp, occs, line, err)
       !# occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-      read(line, *) occ, char, eval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), &
+      read(line, *) occ, char, eval, char, imeval, char, (kpoint(idir), char, idir = 1, gr%sb%dim), &
         w_k, char, chars, char, ik, char, ist, char, idim
 
       ! we need the kpoints from the periodic run for the scattering states

@@ -727,7 +727,7 @@ contains
 
     subroutine read_ob_eigenval_and_occ()
       integer            :: occs, ist, ik, idim, idir, err
-      FLOAT              :: flt, eigenval, occ, kweights
+      FLOAT              :: flt, eigenval, imeigenval, occ, kweights
       character          :: char
       character(len=256) :: restart_dir, line, chars
 
@@ -756,7 +756,7 @@ contains
         ! Extract eigenvalue.
         call iopar_read(mpi_world, occs, line, err)
         ! # occupations | eigenvalue[a.u.] | k-points | k-weights | filename | ik | ist | idim
-        read(line, *) occ, char, eigenval, char, (flt, char, idir = 1, gr%sb%dim), kweights, &
+        read(line, *) occ, char, eigenval, char, imeigenval, char, (flt, char, idir = 1, gr%sb%dim), kweights, &
            char, chars, char, ik, char, ist, char, idim
 
         if(st%d%ispin  ==  SPIN_POLARIZED) then
