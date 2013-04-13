@@ -150,7 +150,9 @@ subroutine batch_copy_data(np, xx, yy)
 
   integer :: ist
   type(profile_t), save :: prof
+#ifdef HAVE_OPENCL
   integer :: localsize
+#endif
 
   PUSH_SUB(batch_copy_data)
   call profiling_in(prof, "BATCH_COPY_DATA")
@@ -224,7 +226,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
   case(BATCH_CL_PACKED)
 
     tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
-    offset = this%index(1, 1) - 1
+    offset = batch_linear_to_ist(this, 1) - 1
 
 #ifdef HAVE_OPENCL
     call octcl_kernel_start_call(kernel, 'points.cl', 'get_points')
@@ -278,7 +280,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
 
     tsize = types_get_size(batch_type(this))&
       &/types_get_size(TYPE_FLOAT)
-    offset = this%index(1, 1) - 1
+    offset = batch_linear_to_ist(this, 1) - 1
 #ifdef HAVE_OPENCL
     call octcl_kernel_start_call(kernel, 'points.cl', 'set_points')
     

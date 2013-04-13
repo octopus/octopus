@@ -63,7 +63,9 @@ module batch_m
     batch_status,                   &
     batch_type,                     &
     batch_inv_index,                &
-    batch_linear_index,             &
+    batch_ist_idim_to_linear,       &
+    batch_linear_to_ist,            &
+    batch_linear_to_idim,           &
     batch_pack_size,                &
     batch_is_sync
 
@@ -94,7 +96,7 @@ module batch_m
     integer                        :: dim
 
     integer                        :: ndims
-    integer,             pointer   :: index(:, :)
+    integer,             pointer   :: ist_idim_index(:, :)
 
     logical                        :: is_allocated
 
@@ -157,7 +159,7 @@ contains
     SAFE_DEALLOCATE_P(this%states)
     SAFE_DEALLOCATE_P(this%states_linear)
     
-    SAFE_DEALLOCATE_P(this%index)
+    SAFE_DEALLOCATE_P(this%ist_idim_index)
 
     POP_SUB(batch_end)
   end subroutine batch_end
@@ -227,7 +229,7 @@ contains
     nullify(this%pack%zpsi)
 
     this%ndims = 2
-    SAFE_ALLOCATE(this%index(1:this%nst_linear, 1:this%ndims))
+    SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
 
     POP_SUB(batch_init_empty)
   end subroutine batch_init_empty
@@ -264,7 +266,7 @@ contains
     nullify(this%pack%zpsi)
 
     this%ndims = 1
-    SAFE_ALLOCATE(this%index(1:this%nst_linear, 1:this%ndims))
+    SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
 
     POP_SUB(batch_init_empty_linear)
   end subroutine batch_init_empty_linear
@@ -359,7 +361,7 @@ contains
       bout%states(ii)%ist = bin%states(ii)%ist
     end do
 
-    bout%index(1:bin%nst_linear, 1:bin%ndims) = bin%index(1:bin%nst_linear, 1:bin%ndims)
+    bout%ist_idim_index(1:bin%nst_linear, 1:bin%ndims) = bin%ist_idim_index(1:bin%nst_linear, 1:bin%ndims)
 
     POP_SUB(batch_copy)
   end subroutine batch_copy
@@ -790,7 +792,7 @@ integer function batch_inv_index(this, cind) result(index)
   integer,           intent(in)    :: cind(:)
 
   do index = 1, this%nst_linear
-    if(all(cind(1:this%ndims) == this%index(index, 1:this%ndims))) exit
+    if(all(cind(1:this%ndims) == this%ist_idim_index(index, 1:this%ndims))) exit
   end do
 
   ASSERT(index <= this%nst_linear)
@@ -799,7 +801,7 @@ end function batch_inv_index
 
 ! ------------------------------------------------------
 
-integer pure function batch_linear_index(this, cind) result(index)
+integer pure function batch_ist_idim_to_linear(this, cind) result(index)
   type(batch_t),     intent(in)    :: this
   integer,           intent(in)    :: cind(:)
   
@@ -809,7 +811,27 @@ integer pure function batch_linear_index(this, cind) result(index)
     index = (cind(1) - 1)*this%dim + cind(2)
   end if
 
-end function batch_linear_index
+end function batch_ist_idim_to_linear
+
+! ------------------------------------------------------
+
+integer pure function batch_linear_to_ist(this, linear_index) result(ist)
+  type(batch_t),     intent(in)    :: this
+  integer,           intent(in)    :: linear_index
+  
+  ist = this%ist_idim_index(linear_index, 1)
+
+end function batch_linear_to_ist
+
+! ------------------------------------------------------
+
+integer pure function batch_linear_to_idim(this, linear_index) result(idim)
+  type(batch_t),     intent(in)    :: this
+  integer,           intent(in)    :: linear_index
+  
+  idim = this%ist_idim_index(linear_index, 2)
+  
+end function batch_linear_to_idim
 
 ! ------------------------------------------------------
 

@@ -239,8 +239,8 @@ contains
     psi  => psib%states_linear(ii)%X(psi)
     epsi => epsib%states_linear(ii)%X(psi)
     hpsi => hpsib%states_linear(ii)%X(psi)
-    ist  =  psib%index(ii, 1)
-    idim =  psib%index(ii, 2)
+    ist  =  batch_linear_to_ist(psib, ii)
+    idim =  batch_linear_to_idim(psib, ii)
   end subroutine set_pointers
 
 end subroutine X(hamiltonian_apply_batch)

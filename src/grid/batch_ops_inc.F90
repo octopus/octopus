@@ -46,7 +46,9 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   type(batch_t),     intent(inout) :: yy
 
   integer :: ist
+#ifdef HAVE_OPENCL
   integer :: localsize
+#endif
   CMPLX :: zaa
 
   PUSH_SUB(X(batch_axpy_const))
@@ -125,9 +127,10 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
   type(batch_t),     intent(inout) :: yy
   integer, optional, intent(in)    :: a_start
 
-  integer :: ist, ip, localsize, effsize
+  integer :: ist, ip, effsize
   R_TYPE, allocatable     :: aa_linear(:)
 #ifdef HAVE_OPENCL
+  integer :: localsize
   integer :: size_factor
   type(opencl_mem_t)      :: aa_buffer
   FLOAT,  allocatable     :: aa_linear_double(:)
@@ -152,7 +155,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
 
   aa_linear = M_ZERO
   do ist = 1, yy%nst_linear
-    aa_linear(ist) = aa(yy%index(ist, 1) - (optional_default(a_start, 1) - 1))
+    aa_linear(ist) = aa(batch_linear_to_ist(yy, ist) - (optional_default(a_start, 1) - 1))
   end do
 
   select case(batch_status(xx))
@@ -237,9 +240,10 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start)
   type(batch_t),     intent(inout) :: xx
   integer, optional, intent(in)    :: a_start
 
-  integer :: ist, ip, localsize, effsize
+  integer :: ist, ip, effsize
   R_TYPE, allocatable     :: aa_linear(:)
 #ifdef HAVE_OPENCL
+  integer :: localsize
   integer :: size_factor
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(opencl_mem_t)      :: aa_buffer
@@ -261,7 +265,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start)
 
   aa_linear = M_ZERO
   do ist = 1, xx%nst_linear
-    aa_linear(ist) = aa(xx%index(ist, 1) - (optional_default(a_start, 1) - 1))
+    aa_linear(ist) = aa(batch_linear_to_ist(xx, ist) - (optional_default(a_start, 1) - 1))
   end do
   
   select case(batch_status(xx))
@@ -346,10 +350,10 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start)
   type(batch_t),     intent(inout) :: yy
   integer, optional, intent(in)    :: a_start
 
-  integer :: ist, ip, localsize, effsize
+  integer :: ist, ip, effsize
   R_TYPE, allocatable     :: aa_linear(:)
 #ifdef HAVE_OPENCL
-  integer :: size_factor
+  integer :: size_factor, localsize
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(opencl_mem_t)      :: aa_buffer
   type(octcl_kernel_t), save :: kernel
@@ -373,7 +377,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start)
 
   aa_linear = M_ZERO
   do ist = 1, yy%nst_linear
-    aa_linear(ist) = aa(yy%index(ist, 1) - (optional_default(a_start, 1) - 1))
+    aa_linear(ist) = aa(batch_linear_to_ist(yy, ist) - (optional_default(a_start, 1) - 1))
   end do
 
   select case(batch_status(xx))
@@ -631,16 +635,16 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
     if(batch_type(this) == TYPE_FLOAT) then
       
       do ii = 1, this%nst_linear
-        ist = this%index(ii, 1)
-        idim = this%index(ii, 2)
+        ist = batch_linear_to_ist(this, ii)
+        idim = batch_linear_to_idim(this, ii)
         psi(ist, idim, sp:ep) = this%states_linear(ii)%dpsi(sp:ep)
       end do
 
     else
 
       do ii = 1, this%nst_linear
-        ist = this%index(ii, 1)
-        idim = this%index(ii, 2)
+        ist = batch_linear_to_ist(this, ii)
+        idim = batch_linear_to_idim(this, ii)
         psi(ist, idim, sp:ep) = this%states_linear(ii)%zpsi(sp:ep)
       end do
 
@@ -653,8 +657,8 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = this%index(ii, 1)
-          idim = this%index(ii, 2)
+          ist = batch_linear_to_ist(this, ii)
+          idim = batch_linear_to_idim(this, ii)
           psi(ist, idim, ip) = this%pack%dpsi(ii, ip)
         end do
       end do
@@ -665,8 +669,8 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = this%index(ii, 1)
-          idim = this%index(ii, 2)
+          ist = batch_linear_to_ist(this, ii)
+          idim = batch_linear_to_idim(this, ii)
           psi(ist, idim, ip) = this%pack%zpsi(ii, ip)
         end do
       end do
@@ -710,16 +714,16 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
     if(batch_type(this) == TYPE_FLOAT) then
 
       do ii = 1, this%nst_linear
-        ist = this%index(ii, 1)
-        idim = this%index(ii, 2)
+        ist = batch_linear_to_ist(this, ii)
+        idim = batch_linear_to_idim(this, ii)
         this%states_linear(ii)%dpsi(sp:ep) = psi(ist, idim, sp:ep)
       end do
 
     else
 
       do ii = 1, this%nst_linear
-        ist = this%index(ii, 1)
-        idim = this%index(ii, 2)
+        ist = batch_linear_to_ist(this, ii)
+        idim = batch_linear_to_idim(this, ii)
         this%states_linear(ii)%zpsi(sp:ep) = psi(ist, idim, sp:ep)
       end do
 
@@ -732,8 +736,8 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = this%index(ii, 1)
-          idim = this%index(ii, 2)
+          ist = batch_linear_to_ist(this, ii)
+          idim = batch_linear_to_idim(this, ii)
           this%pack%dpsi(ii, ip) = psi(ist, idim, ip)
         end do
       end do
@@ -744,8 +748,8 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = this%index(ii, 1)
-          idim = this%index(ii, 2)
+          ist = batch_linear_to_ist(this, ii)
+          idim = batch_linear_to_idim(this, ii)
           this%pack%zpsi(ii, ip) = psi(ist, idim, ip)
         end do
       end do

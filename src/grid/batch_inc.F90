@@ -63,8 +63,8 @@ subroutine X(batch_add_state)(this, ist, psi)
   do idim = 1, this%dim
     ii = this%dim*(this%current - 1) + idim
     this%states_linear(ii)%X(psi) => psi(:, idim)
-    this%index(ii, 1) = ist
-    this%index(ii, 2) = idim
+    this%ist_idim_index(ii, 1) = ist
+    this%ist_idim_index(ii, 2) = idim
   end do
 
   this%current = this%current + 1
@@ -82,7 +82,7 @@ subroutine X(batch_add_state_linear)(this, psi)
 
   ASSERT(this%current <= this%nst_linear)
   this%states_linear(this%current)%X(psi) => psi
-  this%index(this%current, 1) = this%current
+  this%ist_idim_index(this%current, 1) = this%current
 
   this%current = this%current + 1
 
