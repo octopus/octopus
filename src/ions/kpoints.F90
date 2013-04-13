@@ -621,9 +621,9 @@ contains
     FLOAT,             intent(in)  :: shift(:)
     FLOAT,             intent(out) :: kpoints(:, :)
   
-    FLOAT :: dx(1:MAX_DIM)
+    FLOAT :: dx(1:MAX_DIM), maxcoord
     integer :: ii, jj, divisor, ik, idir, ix(1:MAX_DIM), npoints
-    FLOAT, allocatable :: nrm(:)
+    FLOAT, allocatable :: nrm(:), shell(:), coords(:, :), mink(:)
 
     PUSH_SUB(kpoints_grid_generate)
     
@@ -631,15 +631,12 @@ contains
 
     npoints = product(naxis(1:dim))
 
-    SAFE_ALLOCATE(nrm(1:npoints))
-    
     do ii = 0, npoints - 1
 
       ik = npoints - ii
       jj = ii
       divisor = npoints
 
-      nrm(ik) = M_ZERO
       do idir = 1, dim
         divisor = divisor / naxis(idir)
         ix(idir) = jj / divisor + 1
@@ -651,20 +648,50 @@ contains
           kpoints(idir, ik) = kpoints(idir, ik) - dx(idir)
         end if
   
-        ! get the norm for sorting
-        nrm(ik) = nrm(ik) + (kpoints(idir, ik)/dx(idir))**2
-
-        ! tweak the norm a bit so the points have a specific order
-        if(kpoints(idir, ik) >  M_EPSILON) nrm(ik) = nrm(ik) - CNST(0.01)*(dim - idir + 1)
-        if(kpoints(idir, ik) < -M_EPSILON) nrm(ik) = nrm(ik) + CNST(0.01)*(dim - idir + 1)
-
-        !bring back point to first Brillouin zone
+        !bring back point to first Brillouin zone, except for points at 1/2 that would be sent to -1/2
         if ( kpoints(idir,ik) /= M_HALF )  kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
+
       end do
 
     end do
 
+    ! sort the k-points
+
+    SAFE_ALLOCATE(mink(1:dim))
+
+    do idir = 1, dim
+      mink(idir) = minval(kpoints(idir, 1:npoints))
+    end do
+
+    SAFE_ALLOCATE(nrm(1:npoints))
+    SAFE_ALLOCATE(shell(1:npoints))
+    SAFE_ALLOCATE(coords(1:dim, 1:npoints))
+    
+    do ik = 1, npoints
+      shell(ik) = sum((kpoints(1:dim, ik)/dx(1:dim))**2)
+      coords(1:dim, ik) = (kpoints(1:dim, ik) - mink(1:dim))/dx(1:dim)
+    end do
+
+    nrm(1:npoints) = M_ZERO
+
+    maxcoord = CNST(1.0)
+    do idir = dim, 1, -1
+      do ik = 1, npoints
+        nrm(ik) = nrm(ik) + coords(idir, ik)*maxcoord
+      end do
+      maxcoord = maxcoord*max(CNST(1.0), maxval(coords(idir, 1:npoints)))
+    end do
+
+    do ik = 1, npoints
+      nrm(ik) = maxcoord - nrm(ik) + shell(ik)*maxcoord
+    end do
+
     call sort(nrm, kpoints)
+
+    SAFE_DEALLOCATE_A(mink)
+    SAFE_DEALLOCATE_A(nrm)
+    SAFE_DEALLOCATE_A(shell)
+    SAFE_DEALLOCATE_A(coords)
 
     POP_SUB(kpoints_grid_generate)
   end subroutine kpoints_grid_generate
