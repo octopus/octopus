@@ -28,3 +28,14 @@ match ; my           ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ; 0.39
 match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.829468
 # This differs significantly from the initial magnetization.
 # It is due to the small radius and large spacing.
+
+Input: 09-spinors.03-rmmdiis_extra_states.inp
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669588
+match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
+match ; <Sx>         ; GREP(static/info, '1   --', 36) ;  0.0736
+match ; <Sy>         ; GREP(static/info, '1   --', 44) ;  0.0736
+match ; <Sz>         ; GREP(static/info, '1   --', 52) ;  0.4890
+Precision : 0.00021
+match ; mx           ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ; 0.147186
+match ; my           ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ; 0.147186
+match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.978097

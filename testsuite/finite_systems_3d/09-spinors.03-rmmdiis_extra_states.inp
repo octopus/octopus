@@ -1,0 +1,21 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 09-spinors.01-ground_state.inp 6532 2010-04-23 20:30:46Z xavier $
+
+CalculationMode = gs
+fromScratch = yes
+
+Radius = 7.0
+Spacing = 0.5
+%Coordinates
+  "Na" | 0 | 0 | 0.0
+%
+SpinComponents = non_collinear
+GuessMagnetDensity = user_defined
+%AtomsMagnetDirection
+ 1 | 1 | 0
+%
+
+Eigensolver = rmmdiis
+
+ExtraStates = 5
+
