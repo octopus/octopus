@@ -103,6 +103,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
         forall (ist = 1:psib%nst_linear, ip = sp:min(sp + bs - 1, der%mesh%np_part))
           epsib%pack%X(psi)(ist, ip) = hm%phase(ip, ik)*psib%pack%X(psi)(ist, ip)
         end forall
+
+        call batch_pack_was_modified(epsib)
       else
         do ii = 1, nst
           call set_pointers()
@@ -208,6 +210,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
         forall (ist = 1:hpsib%nst_linear, ip = sp:min(sp + bs - 1, der%mesh%np))
           hpsib%pack%X(psi)(ist, ip) = conjg(hm%phase(ip, ik))*hpsib%pack%X(psi)(ist, ip)
         end forall
+        call batch_pack_was_modified(hpsib)
       else
         do ii = 1, nst
           call set_pointers()

@@ -356,7 +356,6 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
       call profiling_in(prof_gather, "PROJ_MAT_GATHER")
 
       ! collect all the points we need in a continous array
-      ! MISSING: phases
       if(batch_is_packed(psib)) then
         forall(ip = 1:npoints)
           forall(ist = 1:nst)
@@ -497,7 +496,6 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
       end if
       
       ! and copy the points from the local buffer to its position
-      ! MISSING: phases
       if(batch_is_packed(vpsib)) then
         forall(ip = 1:npoints)
           forall(ist = 1:nst)

@@ -230,15 +230,45 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
   type(batch_t),          intent(out)   :: bb
   R_TYPE,       optional, intent(in)    :: omega
 
-  integer :: ii
+  integer :: ip, ii
   type(profile_t), save :: prof
 
   PUSH_SUB(X(preconditioner_apply_batch))
   call profiling_in(prof, 'PRECONDITIONER_BATCH')
 
-  if(pre%which == PRE_FILTER .and. .not. associated(hm%phase)) then
-    call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
+  if(pre%which == PRE_FILTER) then
+    call X(derivatives_batch_set_bc)(gr%der, aa)
+
+    ! apply the phase
+    if(associated(hm%phase)) then
+      select case(batch_status(aa))
+      case(BATCH_PACKED)
+       
+        do ip = 1, gr%der%mesh%np_part
+          forall (ii = 1:aa%nst_linear)
+            aa%pack%X(psi)(ii, ip) = hm%phase(ip, ik)*aa%pack%X(psi)(ii, ip)
+          end forall
+        end do
+
+        call batch_pack_was_modified(aa)
+
+      case(BATCH_NOT_PACKED)
+        
+        do ii = 1, aa%nst_linear
+          do ip = 1, gr%der%mesh%np_part
+            aa%states(ii)%X(psi) = hm%phase(ip, ik)*aa%states(ii)%X(psi)
+          end do
+        end do
+
+      end select
+    end if
+
+    call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb, set_bc = .false.)
+  else if(pre%which == PRE_NONE) then
+    call batch_copy_data(gr%der%mesh%np, aa, bb)
   else
+    ASSERT(.not. batch_is_packed(aa))
+    ASSERT(.not. batch_is_packed(bb))
     do ii = 1, aa%nst
       call X(preconditioner_apply)(pre, gr, hm, ik, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega)
     end do
