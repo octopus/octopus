@@ -101,7 +101,9 @@ module hamiltonian_m
     hamiltonian_get_time,            &
     hamiltonian_apply_packed,        &
     dexchange_operator,              &
-    zexchange_operator
+    zexchange_operator,              &
+    dhamiltonian_phase,              &
+    zhamiltonian_phase
 
   type hamiltonian_t
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -167,6 +169,7 @@ module hamiltonian_m
     FLOAT, pointer :: oct_fxc(:, :, :)
 
     CMPLX, pointer :: phase(:, :)
+    type(opencl_mem_t) :: buff_phase
 
     FLOAT :: current_time
     FLOAT :: Imcurrent_time  !< needed when cmplxscl%time = .true.
@@ -468,6 +471,13 @@ contains
         end forall
       end do
 
+#ifdef HAVE_OPENCL
+      if(opencl_is_enabled()) then
+        call opencl_create_buffer(hm%buff_phase, CL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
+        call opencl_write_buffer(hm%buff_phase, gr%mesh%np_part*hm%d%kpt%nlocal, hm%phase)
+      end if
+#endif 
+
       POP_SUB(hamiltonian_init.init_phase)
     end subroutine init_phase
 
@@ -703,6 +713,12 @@ contains
     PUSH_SUB(hamiltonian_end)
 
     call hamiltonian_base_end(hm%hm_base)
+
+#ifdef HAVE_OPENCL
+    if(associated(hm%phase) .and. opencl_is_enabled()) then
+      call opencl_release_buffer(hm%buff_phase)
+    end if
+#endif
 
     SAFE_DEALLOCATE_P(hm%phase)
     SAFE_DEALLOCATE_P(hm%vhartree)
@@ -1014,6 +1030,11 @@ contains
       if(associated(this%hm_base%uniform_vector_potential)) then
         if(.not. associated(this%phase)) then
           SAFE_ALLOCATE(this%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
+#ifdef HAVE_OPENCL
+          if(opencl_is_enabled()) then
+            call opencl_create_buffer(this%buff_phase, CL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
+          end if
+#endif
         end if
 
         kpoint(1:mesh%sb%dim) = M_ZERO
@@ -1025,6 +1046,11 @@ contains
               + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
           end forall
         end do
+#ifdef HAVE_OPENCL
+        if(opencl_is_enabled()) then
+          call opencl_write_buffer(this%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%phase)
+        end if
+#endif
       end if
 
       max_npoints = this%hm_base%max_npoints

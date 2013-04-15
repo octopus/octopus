@@ -32,7 +32,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   R_TYPE, pointer     :: epsi(:)
   R_TYPE, allocatable :: psi_copy(:, :, :)
 
-  type(profile_t), save :: phase_prof
   logical :: kinetic_only_, apply_phase, pack
   integer :: ii, ist, idim, ip
   R_TYPE, pointer :: psi(:), hpsi(:)
@@ -96,23 +95,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   bs = hardware%X(block_size)
  
   if(apply_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
-
-    call profiling_in(phase_prof, "PBC_PHASE_APPLY")
-    do sp = 1, der%mesh%np_part, bs
-      if(batch_is_packed(psib)) then
-        forall (ist = 1:psib%nst_linear, ip = sp:min(sp + bs - 1, der%mesh%np_part))
-          epsib%pack%X(psi)(ist, ip) = hm%phase(ip, ik)*psib%pack%X(psi)(ist, ip)
-        end forall
-
-        call batch_pack_was_modified(epsib)
-      else
-        do ii = 1, nst
-          call set_pointers()
-          forall(ip = sp:min(sp + bs - 1, der%mesh%np_part)) epsi(ip) = hm%phase(ip, ik)*psi(ip)
-        end do
-      end if
-    end do
-    call profiling_out(phase_prof)
+    call X(hamiltonian_phase)(hm, der%mesh%np_part, ik, .false., epsib, src = psib)
   end if
 
 
@@ -202,25 +185,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   end if
 
   if(apply_phase) then
-    call profiling_in(phase_prof)
-    ! now we need to remove the exp(-i k.r) factor
-    do sp = 1, der%mesh%np, bs
-      
-      if(batch_is_packed(hpsib)) then
-        forall (ist = 1:hpsib%nst_linear, ip = sp:min(sp + bs - 1, der%mesh%np))
-          hpsib%pack%X(psi)(ist, ip) = conjg(hm%phase(ip, ik))*hpsib%pack%X(psi)(ist, ip)
-        end forall
-        call batch_pack_was_modified(hpsib)
-      else
-        do ii = 1, nst
-          call set_pointers()
-          forall(ip = sp:min(sp + bs - 1, der%mesh%np)) hpsi(ip) = conjg(hm%phase(ip, ik))*hpsi(ip)
-        end do
-      end if
-    end do
-
-    call profiling_out(phase_prof)
-
+    call X(hamiltonian_phase)(hm, der%mesh%np, ik, .true., hpsib)
     if(batch_is_packed(epsib)) call batch_unpack(epsib, copy = .false.)
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
@@ -757,6 +722,75 @@ subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
     
   POP_SUB(X(hamiltonian_diagonal))
 end subroutine X(hamiltonian_diagonal)
+
+
+! ---------------------------------------------------------
+subroutine X(hamiltonian_phase)(hm, np, iqn, conjugate, psib, src)
+  type(hamiltonian_t),                   intent(in)    :: hm
+  integer,                               intent(in)    :: np
+  integer,                               intent(in)    :: iqn
+  logical,                               intent(in)    :: conjugate
+  type(batch_t),                 target, intent(inout) :: psib
+  type(batch_t),       optional, target, intent(in)    :: src
+
+  integer :: ip, ii
+  type(batch_t), pointer :: src_
+  type(profile_t), save :: phase_prof
+
+  PUSH_SUB(X(hamiltonian_phase))
+  call profiling_in(phase_prof, "PBC_PHASE_APPLY")
+
+  src_ => psib
+  if(present(src)) src_ => src
+
+  select case(batch_status(psib))
+  case(BATCH_PACKED)
+    
+    if(conjugate) then
+
+      do ip = 1, np
+        forall (ii = 1:psib%nst_linear)
+          psib%pack%X(psi)(ii, ip) = conjg(hm%phase(ip, iqn))*src_%pack%X(psi)(ii, ip)
+        end forall
+      end do
+      
+    else
+
+      do ip = 1, np
+        forall (ii = 1:psib%nst_linear)
+          psib%pack%X(psi)(ii, ip) = hm%phase(ip, iqn)*src_%pack%X(psi)(ii, ip)
+        end forall
+      end do
+
+    end if
+    
+    call batch_pack_was_modified(psib)
+    
+  case(BATCH_NOT_PACKED)
+
+    if(conjugate) then
+
+      do ii = 1, psib%nst_linear
+        forall(ip = 1:np)
+          psib%states_linear(ii)%X(psi)(ip) = conjg(hm%phase(ip, iqn))*src_%states_linear(ii)%X(psi)(ip)
+        end forall
+      end do
+      
+    else
+
+      do ii = 1, psib%nst_linear
+        forall(ip = 1:np)
+          psib%states_linear(ii)%X(psi)(ip) = hm%phase(ip, iqn)*src_%states_linear(ii)%X(psi)(ip)
+        end forall
+      end do
+
+    end if
+
+  end select
+
+  call profiling_out(phase_prof)
+  POP_SUB(X(hamiltonian_phase))
+end subroutine X(hamiltonian_phase)
 
 !! Local Variables:
 !! mode: f90
