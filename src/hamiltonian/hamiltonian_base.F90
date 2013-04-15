@@ -43,6 +43,7 @@ module hamiltonian_base_m
   use mpi_m
   use nl_operator_m
   use opencl_m
+  use octcl_kernel_m
   use parser_m
   use profiling_m
   use projector_m
@@ -109,6 +110,7 @@ module hamiltonian_base_m
     type(opencl_mem_t)                :: buff_scals
     type(opencl_mem_t)                :: buff_pos
     type(opencl_mem_t)                :: buff_invmap
+    type(opencl_mem_t)                :: buff_projector_phases
 #endif
   end type hamiltonian_base_t
 
@@ -328,6 +330,7 @@ contains
         call opencl_release_buffer(this%buff_scals)
         call opencl_release_buffer(this%buff_pos)
         call opencl_release_buffer(this%buff_invmap)
+        if(associated(this%projector_phases)) call opencl_release_buffer(this%buff_projector_phases)
       end if
 #endif
 

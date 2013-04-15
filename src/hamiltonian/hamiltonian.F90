@@ -1035,6 +1035,12 @@ contains
 
         if(.not. associated(this%hm_base%projector_phases)) then
           SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
+#ifdef HAVE_OPENCL
+          if(opencl_is_enabled()) then
+            call opencl_create_buffer(this%hm_base%buff_projector_phases, CL_MEM_READ_ONLY, &
+              TYPE_CMPLX, max_npoints*nmat*this%d%kpt%nlocal)
+          end if
+#endif
         end if
 
         do ik = this%d%kpt%start, this%d%kpt%end
@@ -1045,6 +1051,14 @@ contains
             end do
           end do
         end do
+
+#ifdef HAVE_OPENCL
+        if(opencl_is_enabled()) then
+          call opencl_write_buffer(this%hm_base%buff_projector_phases, &
+            max_npoints*nmat*this%d%kpt%nlocal, this%hm_base%projector_phases)
+        end if
+#endif
+      
       end if
 
       POP_SUB(hamiltonian_update.build_phase)

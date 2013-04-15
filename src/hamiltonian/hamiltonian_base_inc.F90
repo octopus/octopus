@@ -275,8 +275,10 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_OPENCL
-  integer :: padnprojs, wgsize, lnprojs
+  integer :: padnprojs, wgsize, lnprojs, size
   type(profile_t), save :: cl_prof
+  type(octcl_kernel_t), save :: ker_proj_bra, ker_proj_bra_phase
+  type(cl_kernel) :: kernel
 #endif
   if(.not. this%apply_projector_matrices) return
 
@@ -298,21 +300,36 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     
     call profiling_in(cl_prof, "CL_PROJ_BRA")
 
-    call opencl_set_kernel_arg(kernel_projector_bra, 0, this%nprojector_matrices)
-    call opencl_set_kernel_arg(kernel_projector_bra, 1, this%buff_offsets)
-    call opencl_set_kernel_arg(kernel_projector_bra, 2, this%buff_matrices)
-    call opencl_set_kernel_arg(kernel_projector_bra, 3, this%buff_maps)
-    call opencl_set_kernel_arg(kernel_projector_bra, 4, this%buff_scals)
-    call opencl_set_kernel_arg(kernel_projector_bra, 5, psib%pack%buffer)
-    call opencl_set_kernel_arg(kernel_projector_bra, 6, log2(psib%pack%size_real(1)))
-    call opencl_set_kernel_arg(kernel_projector_bra, 7, projection%buff_projection)
-    call opencl_set_kernel_arg(kernel_projector_bra, 8, log2(psib%pack%size_real(1)))
+    if(associated(this%projector_phases)) then
+      call octcl_kernel_start_call(ker_proj_bra_phase, 'projector.cl', 'projector_bra_phase')
+      kernel = octcl_kernel_get_ref(ker_proj_bra_phase)
+      size = psib%pack%size(1)
+      ASSERT(R_TYPE_VAL == TYPE_CMPLX)
+    else
+      call octcl_kernel_start_call(ker_proj_bra, 'projector.cl', 'projector_bra')
+      kernel = octcl_kernel_get_ref(ker_proj_bra)
+      size = psib%pack%size_real(1)
+    end if
+
+    call opencl_set_kernel_arg(kernel, 0, this%nprojector_matrices)
+    call opencl_set_kernel_arg(kernel, 1, this%buff_offsets)
+    call opencl_set_kernel_arg(kernel, 2, this%buff_matrices)
+    call opencl_set_kernel_arg(kernel, 3, this%buff_maps)
+    call opencl_set_kernel_arg(kernel, 4, this%buff_scals)
+    call opencl_set_kernel_arg(kernel, 5, psib%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 6, log2(size))
+    call opencl_set_kernel_arg(kernel, 7, projection%buff_projection)
+    call opencl_set_kernel_arg(kernel, 8, log2(size))
+
+    if(associated(this%projector_phases)) then
+      call opencl_set_kernel_arg(kernel, 9, this%buff_projector_phases)
+    end if
 
     padnprojs = pad_pow2(this%max_nprojs)
-    lnprojs = min(opencl_kernel_workgroup_size(kernel_projector_bra)/psib%pack%size_real(1), padnprojs)
+    lnprojs = min(opencl_kernel_workgroup_size(kernel)/size, padnprojs)
 
-    call opencl_kernel_run(kernel_projector_bra, &
-      (/psib%pack%size_real(1), padnprojs, this%nprojector_matrices/), (/psib%pack%size_real(1), lnprojs, 1/))
+    call opencl_kernel_run(kernel, &
+      (/size, padnprojs, this%nprojector_matrices/), (/size, lnprojs, 1/))
 
     do imat = 1, this%nprojector_matrices
       pmat => this%projector_matrices(imat)
@@ -529,8 +546,10 @@ contains
 
   subroutine finish_opencl()
 #ifdef HAVE_OPENCL
-    integer :: wgsize, imat, iregion
+    integer :: wgsize, imat, iregion, size
     type(profile_t), save :: cl_prof
+    type(octcl_kernel_t), save :: ker_proj_ket, ker_proj_ket_phase
+    type(cl_kernel) :: kernel
 
     PUSH_SUB(X(hamiltonian_base_nlocal_finish).finish_opencl)
 
@@ -540,23 +559,38 @@ contains
 
     call profiling_in(cl_prof, "CL_PROJ_KET")
 
+    if(associated(this%projector_phases)) then
+      call octcl_kernel_start_call(ker_proj_ket_phase, 'projector.cl', 'projector_ket_phase')
+      kernel = octcl_kernel_get_ref(ker_proj_ket_phase)
+      size = vpsib%pack%size(1)
+      ASSERT(R_TYPE_VAL == TYPE_CMPLX)
+    else
+      call octcl_kernel_start_call(ker_proj_ket, 'projector.cl', 'projector_ket')
+      kernel = octcl_kernel_get_ref(ker_proj_ket)
+      size = vpsib%pack%size_real(1)
+    end if
+
     do iregion = 1, this%nregions
       
-      call opencl_set_kernel_arg(kernel_projector_ket, 0, this%nprojector_matrices)
-      call opencl_set_kernel_arg(kernel_projector_ket, 1, this%regions(iregion) - 1)
-      call opencl_set_kernel_arg(kernel_projector_ket, 2, this%buff_offsets)
-      call opencl_set_kernel_arg(kernel_projector_ket, 3, this%buff_matrices)
-      call opencl_set_kernel_arg(kernel_projector_ket, 4, this%buff_maps)
-      call opencl_set_kernel_arg(kernel_projector_ket, 5, projection%buff_projection)
-      call opencl_set_kernel_arg(kernel_projector_ket, 6, log2(vpsib%pack%size_real(1)))
-      call opencl_set_kernel_arg(kernel_projector_ket, 7, vpsib%pack%buffer)
-      call opencl_set_kernel_arg(kernel_projector_ket, 8, log2(vpsib%pack%size_real(1)))
-      
-      wgsize = opencl_kernel_workgroup_size(kernel_projector_ket)/vpsib%pack%size_real(1)    
+      call opencl_set_kernel_arg(kernel, 0, this%nprojector_matrices)
+      call opencl_set_kernel_arg(kernel, 1, this%regions(iregion) - 1)
+      call opencl_set_kernel_arg(kernel, 2, this%buff_offsets)
+      call opencl_set_kernel_arg(kernel, 3, this%buff_matrices)
+      call opencl_set_kernel_arg(kernel, 4, this%buff_maps)
+      call opencl_set_kernel_arg(kernel, 5, projection%buff_projection)
+      call opencl_set_kernel_arg(kernel, 6, log2(size))
+      call opencl_set_kernel_arg(kernel, 7, vpsib%pack%buffer)
+      call opencl_set_kernel_arg(kernel, 8, log2(size))
 
-      call opencl_kernel_run(kernel_projector_ket, &
-        (/vpsib%pack%size_real(1), pad(this%max_npoints, wgsize), this%regions(iregion + 1) - this%regions(iregion)/), &
-        (/vpsib%pack%size_real(1), wgsize, 1/))
+      if(associated(this%projector_phases)) then
+        call opencl_set_kernel_arg(kernel, 9, this%buff_projector_phases)
+      end if
+
+      wgsize = opencl_kernel_workgroup_size(kernel)/size    
+
+      call opencl_kernel_run(kernel, &
+        (/size, pad(this%max_npoints, wgsize), this%regions(iregion + 1) - this%regions(iregion)/), &
+        (/size, wgsize, 1/))
       
       call opencl_finish()
       
