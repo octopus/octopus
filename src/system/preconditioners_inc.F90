@@ -31,7 +31,6 @@ subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
   FLOAT   :: omega_
   type(profile_t), save :: preconditioner_prof
 #ifndef R_TREAL
-  R_TYPE, allocatable :: a_copy(:)
   integer :: ip
 #endif
 
@@ -48,24 +47,9 @@ subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
     end do
 
   case(PRE_FILTER)
-    if(associated(hm%phase)) then
-#ifndef R_TREAL
-      SAFE_ALLOCATE(a_copy(1:gr%mesh%np_part))
-      
-      do idim = 1, hm%d%dim
-        call X(derivatives_set_bc)(gr%der, a(:, idim))
-        forall (ip = 1:gr%mesh%np_part) a_copy(ip) = hm%phase(ip, ik)*a(ip, idim)
-        call X(derivatives_perform)(pre%op, gr%der, a_copy(:), b(:, idim), set_bc = .false.)
-        forall (ip = 1:gr%mesh%np) b(ip, idim) = conjg(hm%phase(ip, ik))*b(ip, idim)
-      end do
-
-      SAFE_DEALLOCATE_A(a_copy)
-#endif
-    else
-      do idim = 1, hm%d%dim
-        call X(derivatives_perform)(pre%op, gr%der, a(:, idim), b(:, idim))
-      end do
-    end if
+    do idim = 1, hm%d%dim
+      call X(derivatives_perform)(pre%op, gr%der, a(:, idim), b(:, idim))
+    end do
 
   case(PRE_JACOBI)
     call apply_D_inverse(a, b)
@@ -237,15 +221,13 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
   call profiling_in(prof, 'PRECONDITIONER_BATCH')
 
   if(pre%which == PRE_FILTER) then
-    call X(derivatives_batch_set_bc)(gr%der, aa)
 
-    ! apply the phase
-    if(associated(hm%phase)) call X(hamiltonian_phase)(hm, gr%der, gr%der%mesh%np_part, ik, .false., aa)
-
-    call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb, set_bc = .false.)
+    call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
 
   else if(pre%which == PRE_NONE) then
+
     call batch_copy_data(gr%der%mesh%np, aa, bb)
+
   else
     ASSERT(.not. batch_is_packed(aa))
     ASSERT(.not. batch_is_packed(bb))

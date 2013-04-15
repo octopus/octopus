@@ -35,8 +35,6 @@ XCFunctional = mgga_x_tb09 + lda_c_pz
 
 ConvRelEv = 1e-8
 
-Preconditioner = no
-
 ParallelizationStrategy = par_kpoints
 
 CurrentInTau = no
