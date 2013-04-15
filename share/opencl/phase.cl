@@ -20,6 +20,7 @@
 */
 
 #include <cl_global.h>
+#include <cl_complex.h>
 
 #ifdef EXT_KHR_FP64
 #define HAVE_SINCOS
@@ -48,6 +49,27 @@ __kernel void phase(const int offset,
 
 }
 
+__kernel void phase_hamiltonian(const int conjugate,
+				const int offset,
+				const int np,
+				const __global double2 * restrict phase, 
+				__global const double2 * src, const int ldsrc, 
+				__global double2 * psi, const int ldpsi){
+  
+  const int ist = get_global_id(0);
+  const int ip  = get_global_id(1);
+
+  double2 ff = psi[(ip<<ldpsi) + ist];
+
+  if(ip >= np) return;
+
+  if(conjugate){
+    psi[(ip<<ldpsi) + ist] = complex_mul(complex_conj(phase[offset + ip]), src[(ip<<ldpsi) + ist]);
+  } else {
+    psi[(ip<<ldpsi) + ist] = complex_mul(phase[offset + ip], src[(ip<<ldpsi) + ist]);
+  }
+  
+}
 /*
  Local Variables:
  mode: c

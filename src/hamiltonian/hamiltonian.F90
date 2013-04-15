@@ -51,6 +51,7 @@ module hamiltonian_m
   use opencl_m
   use ob_interface_m
   use ob_lead_m
+  use octcl_kernel_m
   use opencl_m
   use parser_m
   use poisson_m
@@ -1137,7 +1138,6 @@ contains
 
     apply = this%apply_packed
     if(mesh%use_curvilinear) apply = .false.
-    if(associated(this%phase) .and. opencl_is_enabled()) apply = .false.
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     if(this%ab  ==  IMAGINARY_ABSORBING) apply = .false.
     if(this%theory_level == HARTREE .or. this%theory_level == HARTREE_FOCK) apply = .false.

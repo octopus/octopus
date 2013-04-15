@@ -95,7 +95,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   bs = hardware%X(block_size)
  
   if(apply_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
-    call X(hamiltonian_phase)(hm, der%mesh%np_part, ik, .false., epsib, src = psib)
+    call X(hamiltonian_phase)(hm, der, der%mesh%np_part, ik, .false., epsib, src = psib)
   end if
 
 
@@ -185,7 +185,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   end if
 
   if(apply_phase) then
-    call X(hamiltonian_phase)(hm, der%mesh%np, ik, .true., hpsib)
+    call X(hamiltonian_phase)(hm, der, der%mesh%np, ik, .true., hpsib)
     if(batch_is_packed(epsib)) call batch_unpack(epsib, copy = .false.)
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
@@ -725,8 +725,9 @@ end subroutine X(hamiltonian_diagonal)
 
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_phase)(hm, np, iqn, conjugate, psib, src)
-  type(hamiltonian_t),                   intent(in)    :: hm
+subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
+  type(hamiltonian_t),                   intent(in)    :: this
+  type(derivatives_t),                   intent(in)    :: der
   integer,                               intent(in)    :: np
   integer,                               intent(in)    :: iqn
   logical,                               intent(in)    :: conjugate
@@ -736,9 +737,16 @@ subroutine X(hamiltonian_phase)(hm, np, iqn, conjugate, psib, src)
   integer :: ip, ii
   type(batch_t), pointer :: src_
   type(profile_t), save :: phase_prof
+#ifdef HAVE_OPENCL
+  integer :: wgsize
+  type(octcl_kernel_t), save :: ker_phase
+  type(cl_kernel) :: kernel
+#endif
 
   PUSH_SUB(X(hamiltonian_phase))
   call profiling_in(phase_prof, "PBC_PHASE_APPLY")
+
+  ASSERT(np <= der%mesh%np_part)
 
   src_ => psib
   if(present(src)) src_ => src
@@ -750,7 +758,7 @@ subroutine X(hamiltonian_phase)(hm, np, iqn, conjugate, psib, src)
 
       do ip = 1, np
         forall (ii = 1:psib%nst_linear)
-          psib%pack%X(psi)(ii, ip) = conjg(hm%phase(ip, iqn))*src_%pack%X(psi)(ii, ip)
+          psib%pack%X(psi)(ii, ip) = conjg(this%phase(ip, iqn))*src_%pack%X(psi)(ii, ip)
         end forall
       end do
       
@@ -758,13 +766,11 @@ subroutine X(hamiltonian_phase)(hm, np, iqn, conjugate, psib, src)
 
       do ip = 1, np
         forall (ii = 1:psib%nst_linear)
-          psib%pack%X(psi)(ii, ip) = hm%phase(ip, iqn)*src_%pack%X(psi)(ii, ip)
+          psib%pack%X(psi)(ii, ip) = this%phase(ip, iqn)*src_%pack%X(psi)(ii, ip)
         end forall
       end do
 
     end if
-    
-    call batch_pack_was_modified(psib)
     
   case(BATCH_NOT_PACKED)
 
@@ -772,7 +778,7 @@ subroutine X(hamiltonian_phase)(hm, np, iqn, conjugate, psib, src)
 
       do ii = 1, psib%nst_linear
         forall(ip = 1:np)
-          psib%states_linear(ii)%X(psi)(ip) = conjg(hm%phase(ip, iqn))*src_%states_linear(ii)%X(psi)(ip)
+          psib%states_linear(ii)%X(psi)(ip) = conjg(this%phase(ip, iqn))*src_%states_linear(ii)%X(psi)(ip)
         end forall
       end do
       
@@ -780,13 +786,41 @@ subroutine X(hamiltonian_phase)(hm, np, iqn, conjugate, psib, src)
 
       do ii = 1, psib%nst_linear
         forall(ip = 1:np)
-          psib%states_linear(ii)%X(psi)(ip) = hm%phase(ip, iqn)*src_%states_linear(ii)%X(psi)(ip)
+          psib%states_linear(ii)%X(psi)(ip) = this%phase(ip, iqn)*src_%states_linear(ii)%X(psi)(ip)
         end forall
       end do
 
     end if
 
+  case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
+    call octcl_kernel_start_call(ker_phase, 'phase.cl', 'phase_hamiltonian')
+    kernel = octcl_kernel_get_ref(ker_phase)
+
+    if(conjugate) then
+      call opencl_set_kernel_arg(kernel, 0, 1_4)
+    else
+      call opencl_set_kernel_arg(kernel, 0, 0_4)
+    end if
+      
+    call opencl_set_kernel_arg(kernel, 1, (iqn - this%d%kpt%start)*der%mesh%np_part)
+    call opencl_set_kernel_arg(kernel, 2, np)
+    call opencl_set_kernel_arg(kernel, 3, this%buff_phase)
+    call opencl_set_kernel_arg(kernel, 4, src_%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 5, log2(src_%pack%size(1)))
+    call opencl_set_kernel_arg(kernel, 6, psib%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 7, log2(psib%pack%size(1)))
+    
+    wgsize = opencl_kernel_workgroup_size(kernel)/psib%pack%size(1)
+
+    call opencl_kernel_run(kernel, (/psib%pack%size(1), pad(np, wgsize)/), (/psib%pack%size(1), wgsize/))
+
+    call opencl_finish()
+#endif
   end select
+
+  call batch_pack_was_modified(psib)
+
 
   call profiling_out(phase_prof)
   POP_SUB(X(hamiltonian_phase))

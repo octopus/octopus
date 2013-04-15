@@ -240,7 +240,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
     call X(derivatives_batch_set_bc)(gr%der, aa)
 
     ! apply the phase
-    if(associated(hm%phase)) call X(hamiltonian_phase)(hm, gr%der%mesh%np_part, ik, .false., aa)
+    if(associated(hm%phase)) call X(hamiltonian_phase)(hm, gr%der, gr%der%mesh%np_part, ik, .false., aa)
 
     call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb, set_bc = .false.)
 
