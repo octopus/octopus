@@ -1000,7 +1000,7 @@ contains
   contains
 
     subroutine build_phase()
-      integer :: ik, imat, nmat, max_npoints
+      integer :: ik, imat, nmat, max_npoints, offset
       FLOAT   :: kpoint(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_update.build_phase)
@@ -1038,27 +1038,29 @@ contains
 #ifdef HAVE_OPENCL
           if(opencl_is_enabled()) then
             call opencl_create_buffer(this%hm_base%buff_projector_phases, CL_MEM_READ_ONLY, &
-              TYPE_CMPLX, max_npoints*nmat*this%d%kpt%nlocal)
+              TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
           end if
 #endif
         end if
 
+        offset = 0
         do ik = this%d%kpt%start, this%d%kpt%end
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
             do ip = 1, this%hm_base%projector_matrices(imat)%npoints
               this%hm_base%projector_phases(ip, imat, ik) = this%ep%proj(iatom)%phase(ip, ik)
             end do
+
+#ifdef HAVE_OPENCL
+            if(opencl_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
+              call opencl_write_buffer(this%hm_base%buff_projector_phases, &
+                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, ik), offset = offset)
+            end if
+#endif
+            offset = offset + this%hm_base%projector_matrices(imat)%npoints
           end do
         end do
 
-#ifdef HAVE_OPENCL
-        if(opencl_is_enabled()) then
-          call opencl_write_buffer(this%hm_base%buff_projector_phases, &
-            max_npoints*nmat*this%d%kpt%nlocal, this%hm_base%projector_phases)
-        end if
-#endif
-      
       end if
 
       POP_SUB(hamiltonian_update.build_phase)

@@ -323,6 +323,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
     if(associated(this%projector_phases)) then
       call opencl_set_kernel_arg(kernel, 9, this%buff_projector_phases)
+      call opencl_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
     end if
 
     padnprojs = pad_pow2(this%max_nprojs)
@@ -584,6 +585,7 @@ contains
 
       if(associated(this%projector_phases)) then
         call opencl_set_kernel_arg(kernel, 9, this%buff_projector_phases)
+        call opencl_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
       end if
 
       wgsize = opencl_kernel_workgroup_size(kernel)/size    

@@ -95,7 +95,7 @@ __kernel void projector_bra_phase(const int nmat,
 				  __global double const * restrict scal,
 				  __global double2 const * restrict psi, const int ldpsi,
 				  __global double2 * restrict projection, const int ldprojection,
-				  __global double2 const * restrict phases
+				  __global double2 const * restrict phases, const int phases_offset
 				  ){
   
   const int ist = get_global_id(0);
@@ -119,8 +119,7 @@ __kernel void projector_bra_phase(const int nmat,
 
   double2 aa = 0.0;
   for(int ip = 0; ip < npoints; ip++){
-    double2 phasepsi = complex_mul(phases[map_offset + ip], psi[((map[map_offset + ip] - 1)<<ldpsi) + ist]);
-    //double2 phasepsi = psi[((map[map_offset + ip] - 1)<<ldpsi) + ist];
+    double2 phasepsi = complex_mul(phases[phases_offset + map_offset + ip], psi[((map[map_offset + ip] - 1)<<ldpsi) + ist]);
     aa += matrix[matrix_offset + ip + nppj]*phasepsi;
   }
   projection[ist + ((scal_offset + ipj)<<ldprojection)] = scal[scal_offset + ipj]*aa;
@@ -134,7 +133,7 @@ __kernel void projector_ket_phase(const int nmat,
 				  __global int const * restrict map,
 				  __global double2 const * restrict projection, const int ldprojection,
 				  __global double2 * restrict psi, const int ldpsi,
-				  __global double2 const * restrict phases
+				  __global double2 const * restrict phases, const int phases_offset
 				  ){
   
   const int ist = get_global_id(0);
@@ -154,8 +153,7 @@ __kernel void projector_ket_phase(const int nmat,
     aa += matrix[matrix_offset + ip + npoints*ipj]*projection[ist + ((scal_offset + ipj)<<ldprojection)];
   }
 
-  //psi[((map[map_offset + ip] - 1)<<ldpsi) + ist] += aa;
-  psi[((map[map_offset + ip] - 1)<<ldpsi) + ist] += complex_mul(complex_conj(phases[map_offset + ip]), aa);
+  psi[((map[map_offset + ip] - 1)<<ldpsi) + ist] += complex_mul(complex_conj(phases[phases_offset + map_offset + ip]), aa);
 
 }
 
