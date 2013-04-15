@@ -244,7 +244,7 @@ subroutine X(transition_density) (cas, st, mesh, ia, n0I)
   do sp = 1, mesh%np, block_size
     ep = min(sp + block_size - 1, mesh%np)
 
-    call states_get_points(st, mesh, sp, ep, psi)
+    call states_get_points(st, sp, ep, psi)
     
     do ip = sp, ep
       do jb = 1, cas%n_pairs

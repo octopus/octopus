@@ -109,9 +109,8 @@ end subroutine X(states_set_state1)
 !> Returns the value of all the states in the range of points
 !> [start_point:end_point].
 
-subroutine X(states_get_points1)(st, mesh, start_point, end_point, iqn, psi)
+subroutine X(states_get_points1)(st, start_point, end_point, iqn, psi)
   type(states_t),    intent(in)    :: st
-  type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: start_point
   integer,           intent(in)    :: end_point   
   integer,           intent(in)    :: iqn   
@@ -134,9 +133,8 @@ end subroutine X(states_get_points1)
 !> Returns the value of all the states in the range of points
 !> [start_point:end_point].
 
-subroutine X(states_get_points2)(st, mesh, start_point, end_point, psi)
+subroutine X(states_get_points2)(st, start_point, end_point, psi)
   type(states_t),    intent(in)    :: st
-  type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: start_point
   integer,           intent(in)    :: end_point   
   R_TYPE,            intent(out)   :: psi(:, :, :, :)
@@ -146,7 +144,7 @@ subroutine X(states_get_points2)(st, mesh, start_point, end_point, psi)
   PUSH_SUB(X(states_get_points2))
     
   do iqn = st%d%kpt%start, st%d%kpt%end
-    call X(states_get_points1)(st, mesh, start_point, end_point, iqn, psi(:, :, :, iqn))
+    call X(states_get_points1)(st, start_point, end_point, iqn, psi(:, :, :, iqn))
   end do
   
   POP_SUB(X(states_get_points2))
