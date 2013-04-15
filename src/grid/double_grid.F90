@@ -224,13 +224,13 @@ contains
         !inner points
         ip = ip - 1 + mesh%vp%xlocal(mesh%vp%partno)
         ip = mesh%vp%local(ip)
-      else if (ip <= mesh%np + mesh%vp%np_ghost(mesh%vp%partno)) then
+      else if (ip <= mesh%np + mesh%vp%np_ghost) then
         !ghost points
         ip = ip - 1 - mesh%np + mesh%vp%xghost(mesh%vp%partno) 
         ip = mesh%vp%ghost(ip)
       else
         !boundary points
-        ip = ip - 1 - (mesh%np + mesh%vp%np_ghost(mesh%vp%partno)) + mesh%vp%xbndry(mesh%vp%partno)
+        ip = ip - 1 - (mesh%np + mesh%vp%np_ghost) + mesh%vp%xbndry(mesh%vp%partno)
         ip = mesh%vp%bndry(ip)
       end if
     end if

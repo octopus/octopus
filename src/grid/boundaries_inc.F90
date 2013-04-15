@@ -22,7 +22,7 @@
 !! for non-local operations contains local values and
 !! ghost point values.
 !! Length of v_local must be
-!! vp%np_local(vp%partno)+vp%np_ghost(vp%partno)
+!! vp%np_local(vp%partno)+vp%np_ghost
 subroutine X(vec_ghost_update)(vp, v_local)
   type(pv_t), intent(in)    :: vp
   R_TYPE,     intent(inout) :: v_local(:)
@@ -75,7 +75,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   select case(batch_status(v_local))
 #ifdef HAVE_OPENCL
   case(BATCH_CL_PACKED)
-    SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack%size(1)*vp%np_ghost(vp%partno)))
+    SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack%size(1)*vp%np_ghost))
 
     do ipart = 1, vp%npart
       if(vp%np_ghost_neigh(vp%partno, ipart) == 0) cycle
@@ -191,7 +191,7 @@ subroutine X(ghost_update_batch_finish)(handle)
 
 #ifdef HAVE_OPENCL
   if(batch_status(handle%v_local) == BATCH_CL_PACKED) then
-    call opencl_write_buffer(handle%v_local%pack%buffer, handle%v_local%pack%size(1)*handle%vp%np_ghost(handle%vp%partno), &
+    call opencl_write_buffer(handle%v_local%pack%buffer, handle%v_local%pack%size(1)*handle%vp%np_ghost, &
       handle%X(recv_buffer), offset = handle%v_local%pack%size(1)*handle%vp%np_local(handle%vp%partno))
 
     SAFE_DEALLOCATE_P(handle%X(send_buffer))

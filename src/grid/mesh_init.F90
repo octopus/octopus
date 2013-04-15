@@ -811,7 +811,7 @@ contains
 
     ! Set local point numbers.
     mesh%np      = mesh%vp%np_local(mesh%vp%partno)
-    mesh%np_part = mesh%np + mesh%vp%np_ghost(mesh%vp%partno) + mesh%vp%np_bndry(mesh%vp%partno)
+    mesh%np_part = mesh%np + mesh%vp%np_ghost + mesh%vp%np_bndry
 
     ! Compute mesh%x as it is done in the serial case but only for local points.
     ! x consists of three parts: the local points, the
@@ -825,14 +825,14 @@ contains
       mesh%x(ii, 1:MAX_DIM) = mesh_x_global(mesh, jj)
     end do
     ! Do the ghost points
-    do ii = 1, mesh%vp%np_ghost(mesh%vp%partno)
+    do ii = 1, mesh%vp%np_ghost
       jj = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + ii - 1)
       mesh%x(ii+mesh%np, 1:MAX_DIM) = mesh_x_global(mesh, jj)
     end do
     ! Do the boundary points
-    do ii = 1, mesh%vp%np_bndry(mesh%vp%partno)
+    do ii = 1, mesh%vp%np_bndry
       jj = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + ii - 1)
-      mesh%x(ii + mesh%np + mesh%vp%np_ghost(mesh%vp%partno), 1:MAX_DIM) = mesh_x_global(mesh, jj)
+      mesh%x(ii + mesh%np + mesh%vp%np_ghost, 1:MAX_DIM) = mesh_x_global(mesh, jj)
     end do
 #endif
 
@@ -880,7 +880,7 @@ contains
 
       if(mesh%use_curvilinear) then
         ! Do the ghost points.
-        do ip = 1, mesh%vp%np_ghost(mesh%vp%partno)
+        do ip = 1, mesh%vp%np_ghost
           kk = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno) + ip - 1)
           call index_to_coords(mesh%idx, sb%dim, kk, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
@@ -888,13 +888,13 @@ contains
             mesh%vol_pp(ip + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip + mesh%np, :), chi(1:sb%dim))
         end do
         ! Do the boundary points.
-        do ip = 1, mesh%vp%np_bndry(mesh%vp%partno)
+        do ip = 1, mesh%vp%np_bndry
           kk = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + ip - 1)
           call index_to_coords(mesh%idx, sb%dim, kk, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
-          mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
-            mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &
-            *curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi(1:sb%dim))
+          mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost) = &
+            mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost) &
+            *curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip+mesh%np+mesh%vp%np_ghost, :), chi(1:sb%dim))
         end do
       end if
 #endif

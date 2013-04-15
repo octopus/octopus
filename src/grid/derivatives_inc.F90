@@ -44,8 +44,8 @@ subroutine X(derivatives_batch_set_bc)(der, ffb)
   ! The boundary points are at different locations depending on the presence
   ! of ghost points due to domain parallelization.
   if(der%mesh%parallel_in_domains) then
-    bndry_start = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost(pp) + 1
-    bndry_end   = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost(pp) + der%mesh%vp%np_bndry(pp)
+    bndry_start = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost + 1
+    bndry_end   = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost + der%mesh%vp%np_bndry
   else
     bndry_start = der%mesh%np + 1
     bndry_end   = der%np_zero_bc

@@ -912,15 +912,21 @@ contains
 
     integer :: ip, jp
     integer :: il, ig
-
+    integer, allocatable :: np_ghost_tmp(:)
+    
     PUSH_SUB(nl_operator_translate_indices)
 
     ASSERT(associated(opg%i))
 
+    SAFE_ALLOCATE(np_ghost_tmp(1:opg%mesh%vp%npart))
+    call MPI_Allgather(opg%mesh%vp%np_ghost, 1, MPI_INTEGER, &
+         np_ghost_tmp(1), 1, MPI_INTEGER, &
+         opg%mesh%vp%comm, mpi_err)
+    
     do ip = 1, opg%stencil%size
       do jp = 1, opg%mesh%np_global
         il = opg%mesh%vp%np_local(opg%mesh%vp%part(jp))
-        ig = il+opg%mesh%vp%np_ghost(opg%mesh%vp%part(jp))
+        ig = il+np_ghost_tmp(opg%mesh%vp%part(jp))
         ! opg%i(ip, jp) is a local point number, i.e. it can be
         ! a real local point (i.e. the local point number
         ! is less or equal than the number of local points of
@@ -941,6 +947,7 @@ contains
         end if
       end do
     end do
+    SAFE_DEALLOCATE_A(np_ghost_tmp)
 
     POP_SUB(nl_operator_translate_indices)
 

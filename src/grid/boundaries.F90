@@ -121,7 +121,7 @@ contains
     if (simul_box_is_periodic(mesh%sb)) then
 
       sp = mesh%np
-      if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost(mesh%vp%partno)
+      if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost
 
       !count the number of points that are periodic
       this%nper = 0

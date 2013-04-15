@@ -140,7 +140,7 @@ module par_vec_m
     !! local(xlocal(r):
     !! xlocal(r)+np_local(r)-1).           
     integer, pointer        :: local(:)            
-    integer, pointer        :: np_bndry(:)          !< Number of boundary points.
+    integer                 :: np_bndry             !< Number of boundary points.
     integer, pointer        :: xbndry(:)            !< Index of bndry(:). 
     !> Global numbers of boundary
     !! points.
@@ -151,7 +151,7 @@ module par_vec_m
     integer                 :: total                !< Total number of ghost points. 
     !> How many ghost points has
     !! partition r?
-    integer, pointer        :: np_ghost(:)    
+    integer                 :: np_ghost
     !> Number of ghost points per
     !! neighbour per partition.      
     integer, pointer        :: np_ghost_neigh(:, :)
@@ -208,6 +208,7 @@ contains
     integer                     :: np_ghost_partno  !< Number of ghost point of the actual process
     integer, allocatable        :: np_ghost_neigh_partno(:) !< Number of the neighbours ghost points of the actual process
     integer                     :: idir
+    integer, pointer            :: np_ghost_tmp(:), np_bndry_tmp(:)
 
     PUSH_SUB(vec_init)
 
@@ -227,11 +228,10 @@ contains
     SAFE_ALLOCATE(vp%np_local(1:npart))
     SAFE_ALLOCATE(vp%xlocal(1:npart))
     SAFE_ALLOCATE(vp%local(1:np_global))
-    SAFE_ALLOCATE(vp%np_bndry(1:npart))
+    SAFE_ALLOCATE(np_bndry_tmp(1:npart))
     SAFE_ALLOCATE(vp%xbndry(1:npart))
     SAFE_ALLOCATE(vp%bndry(1:np_enl))
     SAFE_ALLOCATE(vp%global(1:npart))
-    SAFE_ALLOCATE(vp%np_ghost(1:npart))
     SAFE_ALLOCATE(vp%np_ghost_neigh(1:npart, 1:npart))
     SAFE_ALLOCATE(np_ghost_neigh_partno(1:npart))
     SAFE_ALLOCATE(vp%xghost(1:npart))
@@ -244,10 +244,11 @@ contains
       vp%np_local(vp%part(ip)) = vp%np_local(vp%part(ip)) + 1
     end do
     ! Boundary points.
-    vp%np_bndry = 0
+    np_bndry_tmp = 0
     do ip = 1, np_enl
-      vp%np_bndry(vp%part(ip + np_global)) = vp%np_bndry(vp%part(ip + np_global)) + 1
+      np_bndry_tmp(vp%part(ip + np_global)) = np_bndry_tmp(vp%part(ip + np_global)) + 1
     end do
+    vp%np_bndry = np_bndry_tmp(vp%partno)
 
     ! Set up local-to-global index table for local points
     ! (xlocal, local) and for boundary points (xbndry, bndry).
@@ -256,7 +257,7 @@ contains
     ! Set the starting point of local and boundary points
     do inode = 2, npart
       vp%xlocal(inode) = vp%xlocal(inode - 1) + vp%np_local(inode - 1)
-      vp%xbndry(inode) = vp%xbndry(inode - 1) + vp%np_bndry(inode - 1)
+      vp%xbndry(inode) = vp%xbndry(inode - 1) + np_bndry_tmp(inode - 1)
     end do
     ! Set the local and boundary points
     ir = 0
@@ -346,9 +347,7 @@ contains
     call MPI_Allgather(np_ghost_neigh_partno(1),npart,MPI_INTEGER, &
          vp%np_ghost_neigh(1,1),npart,MPI_INTEGER, &
          comm, mpi_err)
-    call MPI_Allgather(np_ghost_partno,1,MPI_INTEGER, &
-         vp%np_ghost(1),1, MPI_INTEGER, &
-         comm, mpi_err)
+    vp%np_ghost = np_ghost_partno
 
     SAFE_DEALLOCATE_A(np_ghost_neigh_partno)
     ! Transpose data
@@ -361,10 +360,15 @@ contains
       end do
     end do
     
-    ! Set index tables xghost and xghost_neigh.
+    ! Set index tables xghost and xghost_neigh. 
+    SAFE_ALLOCATE(np_ghost_tmp(1:npart))
+    call MPI_Allgather(vp%np_ghost, 1, MPI_INTEGER, &
+         np_ghost_tmp(1), 1, MPI_INTEGER, &
+         comm, mpi_err)
+
     vp%xghost(1) = 1
     do inode = 2, npart
-      vp%xghost(inode) = vp%xghost(inode - 1) + vp%np_ghost(inode - 1)
+      vp%xghost(inode) = vp%xghost(inode - 1) + np_ghost_tmp(inode - 1)
     end do
     do inode = 1, npart
       vp%xghost_neigh(inode, 1) = vp%xghost(inode)
@@ -405,7 +409,7 @@ contains
       
       write(filenum, '(i3.3)') rank+1
       iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, action='write')
-      do ip = 1, vp%np_ghost(rank+1)
+      do ip = 1, vp%np_ghost
         jp = vp%ghost(vp%xghost(rank+1) + ip - 1)
         write(iunit, '(4i8)') jp, (idx%lxyz(jp, idir), idir = 1, MAX_DIM)
       end do
@@ -427,24 +431,27 @@ contains
         end if
       end do
     end if
-
+    
     do inode = ip, jp
       ! Create hash table.
-      call iihash_init(vp%global(inode), vp%np_local(inode) + vp%np_ghost(inode) + vp%np_bndry(inode))
+      call iihash_init(vp%global(inode), vp%np_local(inode) + np_ghost_tmp(inode) + np_bndry_tmp(inode))
       ! Insert local points.
       do kp = 1, vp%np_local(inode)
         call iihash_insert(vp%global(inode), vp%local(vp%xlocal(inode) + kp - 1), kp)
       end do
       ! Insert ghost points.
-      do kp = 1, vp%np_ghost(inode)
+      do kp = 1, np_ghost_tmp(inode)
         call iihash_insert(vp%global(inode), vp%ghost(vp%xghost(inode) + kp - 1), kp + vp%np_local(inode))
       end do
       ! Insert boundary points.
-      do kp = 1, vp%np_bndry(inode)
-        call iihash_insert(vp%global(inode), vp%bndry(vp%xbndry(inode) + kp - 1), kp + vp%np_local(inode) + vp%np_ghost(inode))
+      do kp = 1, np_bndry_tmp(inode)
+        call iihash_insert(vp%global(inode), vp%bndry(vp%xbndry(inode) + kp - 1), kp + vp%np_local(inode) + np_ghost_tmp(inode))
       end do
     end do
-
+    SAFE_DEALLOCATE_P(np_ghost_tmp)
+    SAFE_DEALLOCATE_P(np_bndry_tmp)
+    
+    
     ! Complete entries in vp.
     vp%comm      = comm
     vp%root      = root
@@ -540,10 +547,8 @@ contains
     SAFE_DEALLOCATE_P(vp%np_local)
     SAFE_DEALLOCATE_P(vp%xlocal)
     SAFE_DEALLOCATE_P(vp%local)
-    SAFE_DEALLOCATE_P(vp%np_bndry)
     SAFE_DEALLOCATE_P(vp%xbndry)
     SAFE_DEALLOCATE_P(vp%bndry)
-    SAFE_DEALLOCATE_P(vp%np_ghost)
     SAFE_DEALLOCATE_P(vp%np_ghost_neigh)
     SAFE_DEALLOCATE_P(vp%xghost)
     SAFE_DEALLOCATE_P(vp%ghost)
