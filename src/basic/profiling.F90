@@ -86,7 +86,7 @@ module profiling_m
     profiling_output
 
   integer, parameter ::                 & 
-       LABEL_LENGTH = 20,               &  !< Max. number of characters of tag label.
+       LABEL_LENGTH = 25,               &  !< Max. number of characters of tag label.
        MAX_PROFILES = 200                  !< Max. number of tags.
   
   type profile_t
@@ -793,16 +793,16 @@ contains
     end if
 
     write(iunit, '(2a)')                                                                                    &
-      '                                                               CUMULATIVE TIME                      |', &
+      '                                                                       CUMULATIVE TIME                      |', &
       '                  SELF TIME'
     write(iunit, '(2a)')                                                                                    &
-      '                                            --------------------------------------------------------|', &
+      '                                                    --------------------------------------------------------|', &
       '-------------------------------------------'
     write(iunit, '(2a)')                                                                                    &
-      'TAG                   NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL    MFLOPS  MBYTES/S   %TIME |', &
+      'TAG                           NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL    MFLOPS  MBYTES/S   %TIME |', &
       '        TOTAL_TIME    TIME_PER_CALL  %TIME'
     write(iunit, '(2a)')                                                                    &
-      '====================================================================================================|', &
+      '============================================================================================================|', &
       '==========================================='
 
     total_time = profile_total_time(C_PROFILING_COMPLETE_DATASET)
