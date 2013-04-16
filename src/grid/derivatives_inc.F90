@@ -156,7 +156,7 @@ contains
     R_TYPE, allocatable :: recvbuffer(:, :, :)
     integer, allocatable :: send_disp(:), send_count(:)
     integer, allocatable :: recv_disp(:), recv_count(:)
-    integer :: ipart, npart, maxsend, maxrecv, ldbuffer
+    integer :: ipart, npart, maxsend, maxrecv, ldbuffer, ip2
 #endif
 #ifdef HAVE_OPENCL
     type(octcl_kernel_t), save :: kernel_send, kernel_recv, kernel
@@ -187,9 +187,10 @@ contains
 
         do ipart = 1, npart
           do ip = 1, der%boundaries%nsend(ipart)
-            forall(ist = 1:ffb%nst_linear) 
-              sendbuffer(ist, ip, ipart) = ffb%states_linear(ist)%X(psi)(der%boundaries%per_send(ip, ipart))
-            end forall
+            ip2 = der%boundaries%per_send(ip, ipart)
+            do ist = 1, ffb%nst_linear
+              sendbuffer(ist, ip, ipart) = ffb%states_linear(ist)%X(psi)(ip2)
+            end do
           end do
         end do
 
@@ -197,9 +198,10 @@ contains
 
         do ipart = 1, npart
           do ip = 1, der%boundaries%nsend(ipart)
-            forall(ist = 1:ffb%nst_linear) 
-              sendbuffer(ist, ip, ipart) = ffb%pack%X(psi)(ist, der%boundaries%per_send(ip, ipart))
-            end forall
+            ip2 = der%boundaries%per_send(ip, ipart)
+            do ist = 1, ffb%nst_linear
+              sendbuffer(ist, ip, ipart) = ffb%pack%X(psi)(ist, ip2)
+            end do
           end do
         end do
 
@@ -273,9 +275,10 @@ contains
 
         do ipart = 1, npart
           do ip = 1, der%boundaries%nrecv(ipart)
-            forall(ist = 1:ffb%nst_linear) 
-              ffb%states_linear(ist)%X(psi)(der%boundaries%per_recv(ip, ipart)) = recvbuffer(ist, ip, ipart)
-            end forall
+            ip2 = der%boundaries%per_recv(ip, ipart)
+            do ist = 1, ffb%nst_linear
+              ffb%states_linear(ist)%X(psi)(ip2) = recvbuffer(ist, ip, ipart)
+            end do
           end do
         end do
 
@@ -283,9 +286,10 @@ contains
 
         do ipart = 1, npart
           do ip = 1, der%boundaries%nrecv(ipart)
-            forall(ist = 1:ffb%nst_linear) 
-              ffb%pack%X(psi)(ist, der%boundaries%per_recv(ip, ipart)) = recvbuffer(ist, ip, ipart)
-            end forall
+            ip2 = der%boundaries%per_recv(ip, ipart)
+            do ist = 1, ffb%nst_linear
+              ffb%pack%X(psi)(ist, ip2) = recvbuffer(ist, ip, ipart)
+            end do
           end do
         end do
 
