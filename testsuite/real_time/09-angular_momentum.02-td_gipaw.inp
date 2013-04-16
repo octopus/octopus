@@ -27,7 +27,7 @@ TDMaximumIter = 100
 TDPolarizationDirection = 1
 TDDeltaStrength = 0.1
 
-TDOutput = energy + angular
+TDOutput = energy + angular + multipoles
 MagneticGaugeCorrection = gipaw
 
 TDEnergyUpdateIter = 25

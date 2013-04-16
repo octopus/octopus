@@ -34,6 +34,37 @@ match ; Lz [step  50]     ; LINE(td.general/angular,  -51, 70) ; -8.285220259541
 match ; Lz [step  75]     ; LINE(td.general/angular,  -26, 70) ; -5.132227395732e-02
 match ; Lz [step 100]     ; LINE(td.general/angular,   -1, 70) ; -2.601120844702e-02
 
+# quadrupole moments
+match ; Q(-2)[step   1]   ; LINE(td.general/multipoles, -101, 109) ;  -4.030792352094e+00
+match ; Q(-2)[step  25]   ; LINE(td.general/multipoles,  -76, 109) ;  -4.071235001663e+00
+match ; Q(-2)[step  50]   ; LINE(td.general/multipoles,  -51, 109) ;  -4.100012508521e+00
+match ; Q(-2)[step  75]   ; LINE(td.general/multipoles,  -26, 109) ;  -4.060541777004e+00
+match ; Q(-2)[step 100]   ; LINE(td.general/multipoles,   -1, 109) ;  -3.971636130119e+00
+
+match ; Q(-1)[step   1]   ; LINE(td.general/multipoles, -101, 129) ;   2.940720965739e+00
+match ; Q(-1)[step  25]   ; LINE(td.general/multipoles,  -76, 129) ;   2.934117461257e+00
+match ; Q(-1)[step  50]   ; LINE(td.general/multipoles,  -51, 129) ;   2.898385034954e+00
+match ; Q(-1)[step  75]   ; LINE(td.general/multipoles,  -26, 129) ;   2.845128245252e+00
+match ; Q(-1)[step 100]   ; LINE(td.general/multipoles,   -1, 129) ;   2.830167213317e+00
+
+match ; Q( 0)[step   1]   ; LINE(td.general/multipoles, -101, 149) ;  -8.407896678680e+00
+match ; Q( 0)[step  25]   ; LINE(td.general/multipoles,  -76, 149) ;  -8.666209191291e+00
+match ; Q( 0)[step  50]   ; LINE(td.general/multipoles,  -51, 149) ;  -8.816432106815e+00
+match ; Q( 0)[step  75]   ; LINE(td.general/multipoles,  -26, 149) ;  -8.726453002773e+00
+match ; Q( 0)[step 100]   ; LINE(td.general/multipoles,   -1, 149) ;  -8.664291087730e+00
+
+match ; Q( 1)[step   1]   ; LINE(td.general/multipoles, -101, 169) ;  -5.635079634709e+00
+match ; Q( 1)[step  25]   ; LINE(td.general/multipoles,  -76, 169) ;  -5.851189053361e+00
+match ; Q( 1)[step  50]   ; LINE(td.general/multipoles,  -51, 169) ;  -5.652039581874e+00
+match ; Q( 1)[step  75]   ; LINE(td.general/multipoles,  -26, 169) ;  -5.549696793753e+00
+match ; Q( 1)[step 100]   ; LINE(td.general/multipoles,   -1, 169) ;  -5.423640477593e+00
+
+match ; Q( 2)[step   1]   ; LINE(td.general/multipoles, -101, 189) ;   1.198605402397e+01
+match ; Q( 2)[step  25]   ; LINE(td.general/multipoles,  -76, 189) ;   1.244282951492e+01
+match ; Q( 2)[step  50]   ; LINE(td.general/multipoles,  -51, 189) ;   1.270272861177e+01
+match ; Q( 2)[step  75]   ; LINE(td.general/multipoles,  -26, 189) ;   1.252213103527e+01
+match ; Q( 2)[step 100]   ; LINE(td.general/multipoles,   -1, 189) ;   1.238188675055e+01
+
 # This is commented since L2 is not calculated since revision [6492]
 #match ; L2 [step   1]     ; LINE(td.general/angular, -101, 90) ; 1.637081717513e+02
 #match ; L2 [step  25]     ; LINE(td.general/angular,  -76, 90) ; 1.644232675259e+02
