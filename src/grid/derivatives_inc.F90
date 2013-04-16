@@ -171,7 +171,7 @@ contains
 #ifdef HAVE_MPI
     if(der%mesh%parallel_in_domains) then
 
-      call profiling_in(set_bc_comm_prof, 'SET_BC_COMMUNICATION')
+      call profiling_in(set_bc_precomm_prof, 'SET_BC_PRECOMM')
 
       npart = der%mesh%vp%npart
       maxsend = maxval(der%boundaries%nsend(1:npart))
@@ -229,6 +229,7 @@ contains
 #endif
       end select
 
+
       SAFE_ALLOCATE(send_count(1:npart))
       SAFE_ALLOCATE(send_disp(1:npart))
       SAFE_ALLOCATE(recv_count(1:npart))
@@ -246,8 +247,19 @@ contains
 
       SAFE_ALLOCATE(recvbuffer(1:ldbuffer, 1:maxrecv, 1:npart))
 
+      call profiling_out(set_bc_precomm_prof)
+
+      call profiling_in(set_bc_comm_prof, 'SET_BC_COMM')
+
       call MPI_Alltoallv(sendbuffer(1, 1, 1), send_count(1), send_disp(1), R_MPITYPE, &
         recvbuffer(1, 1, 1), recv_count(1), recv_disp(1), R_MPITYPE, der%mesh%vp%comm, mpi_err)
+
+      call profiling_count_transfers(sum(der%boundaries%nsend(1:npart) + der%boundaries%nrecv(1:npart))*ffb%nst_linear, &
+        R_TOTYPE(M_ONE))
+
+      call profiling_out(set_bc_comm_prof)
+
+      call profiling_in(set_bc_postcomm_prof, 'SET_BC_POSTCOMM')
 
       SAFE_DEALLOCATE_A(send_count)
       SAFE_DEALLOCATE_A(send_disp)
@@ -304,12 +316,9 @@ contains
 #endif
       end select
 
-      call profiling_count_transfers(sum(der%boundaries%nsend(1:npart) + der%boundaries%nrecv(1:npart))*ffb%nst_linear, &
-        R_TOTYPE(M_ONE))
-
-      call profiling_out(set_bc_comm_prof)
-
       SAFE_DEALLOCATE_A(recvbuffer)        
+
+      call profiling_out(set_bc_postcomm_prof)
 
     end if
 #endif

@@ -34,3 +34,9 @@ match ; Eigenvalue 15      ; GREP(static/info, '15   --', 13) ; -0.117047
 match ; Eigenvalue 16      ; GREP(static/info, '16   --', 13) ;  0.002866
 match ; Eigenvalue 17      ; GREP(static/info, '17   --', 13) ;  0.058004
 match ; Eigenvalue 18      ; GREP(static/info, '18   --', 13) ;  0.063085
+
+#these are dummy matches, they just report the result
+Precision: 2000
+match ; Prof BC pre comm   ; GREP(profiling.000004/time.000000, SET_BC_PRECOMM, 69) ; 0.0
+match ; Prof BC comm       ; GREP(profiling.000004/time.000000, SET_BC_COMM, 69) ; 0.0
+match ; Prof BC post comm  ; GREP(profiling.000004/time.000000, SET_BC_POSTCOMM, 69) ; 0.0

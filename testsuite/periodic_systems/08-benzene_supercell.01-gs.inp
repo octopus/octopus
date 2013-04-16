@@ -26,3 +26,5 @@ BoxShape = parallelepiped
 LSize = 5
 
 FromScratch = yes
+
+ProfilingMode = yes

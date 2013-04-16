@@ -150,7 +150,7 @@ module derivatives_m
   type(profile_t), save :: gradient_prof, divergence_prof, curl_prof
   type(profile_t), save :: set_bc_prof
 #ifdef HAVE_MPI
-  type(profile_t), save :: set_bc_comm_prof
+  type(profile_t), save :: set_bc_comm_prof, set_bc_precomm_prof, set_bc_postcomm_prof
 #endif
 
 contains
