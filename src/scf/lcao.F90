@@ -136,6 +136,7 @@ contains
 
     integer :: ia, n, ii, jj, maxj, idim
     integer :: mode_default
+    FLOAT   :: max_orb_radius
 
     PUSH_SUB(lcao_init)
 
@@ -241,6 +242,15 @@ contains
 
     if(.not. this%alternative) then
 
+      !%Variable LCAOMaximumRadius
+      !%Type float
+      !%Section SCF::LCAO
+      !%Description
+      !% The LCAO procedure will ignore orbitals that have an
+      !% extension longer that this value. The default value is 20.0.
+      !%End
+      call parse_float(datasets_check('LCAOMaximumOrbitalRadius'), CNST(20.0), max_orb_radius, unit = units_inp%length)
+
       ! count the number of orbitals available
       maxj = 0
       this%maxorbs = 0
@@ -250,15 +260,6 @@ contains
       end do
 
       this%maxorbs = this%maxorbs*st%d%dim
-
-      if(this%maxorbs < st%nst) then
-        this%initialized = .false.
-        write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
-        write(message(2),'(a,i6,a,i6,a)') 'Required: ', st%nst, '. Available: ', this%maxorbs, '.'
-        call messages_warning(2)
-        POP_SUB(lcao_init)
-        return
-      end if
 
       ! generate tables to know which indices each atomic orbital has
 
@@ -297,6 +298,7 @@ contains
         do ia = 1, geo%natoms
           do idim = 1,st%d%dim
             if(jj > species_niwfs(geo%atom(ia)%spec) ) cycle
+            if(species_get_iwf_radius(geo%atom(ia)%spec, jj, is = 1) >= max_orb_radius) cycle
 
             this%atom(ii) = ia
             this%level(ii) = jj
@@ -307,7 +309,37 @@ contains
         end do
       end do
 
-      ASSERT(ii - 1 == this%maxorbs)
+      ! some orbitals might have been removed because of their radii
+      if(this%maxorbs /= ii - 1) then
+        call messages_write('Info: ')
+        call messages_write(this%maxorbs - ii + 1)
+        call messages_write(' of ')
+        call messages_write(this%maxorbs)
+        call messages_write(' orbitals cannot be used for the LCAO calculation,')
+        call messages_new_line()
+        call messages_write('      their radii exceeds LCAOMaximumOrbitalRadius (')
+        call messages_write(max_orb_radius, units = units_out%length, fmt = '(f6.1)')
+        call messages_write(').')
+        call messages_warning()
+
+        this%maxorbs = ii - 1
+      end if
+
+      if(this%maxorbs < st%nst) then
+        this%initialized = .false.
+        call messages_write('Cannot do LCAO initial calculation because there are not enough atomic orbitals.')
+        call messages_new_line()
+
+        call messages_write('Required: ')
+        call messages_write(st%nst)
+        call messages_write('. Available: ')
+        call messages_write(this%maxorbs)
+        call messages_write('.')
+        call messages_warning()
+
+        POP_SUB(lcao_init)
+        return
+      end if
 
       !%Variable LCAODimension
       !%Type integer
