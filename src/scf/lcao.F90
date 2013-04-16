@@ -94,6 +94,7 @@ module lcao_m
     integer, pointer  :: ck(:, :)
     real(4), pointer  :: dbuff(:, :, :, :)
     real(8), pointer  :: zbuff(:, :, :, :)
+    FLOAT             :: orbital_scale_factor
 
     !> For the alternative LCAO
     logical             :: keep_orb     !< Whether we keep orbitals in memory.
@@ -242,7 +243,18 @@ contains
 
     if(.not. this%alternative) then
 
-      !%Variable LCAOMaximumRadius
+      !%Variable LCAOScaleFactor
+      !%Type float
+      !%Section SCF::LCAO
+      !%Description
+      !% The coordinates of the atomic orbitals used by the LCAO
+      !% procedure will be rescaled by the value of this variable. The
+      !% default value is 1.0 (no rescaling).
+      !%End
+      call parse_float(datasets_check('LCAOScaleFactor'), CNST(1.0), this%orbital_scale_factor)
+      call messages_print_var_value(stdout, 'LCAOScaleFactor', this%orbital_scale_factor)
+
+      !%Variable LCAOMaximumOrbitalRadius
       !%Type float
       !%Section SCF::LCAO
       !%Description
@@ -250,6 +262,7 @@ contains
       !% extension longer that this value. The default value is 20.0.
       !%End
       call parse_float(datasets_check('LCAOMaximumOrbitalRadius'), CNST(20.0), max_orb_radius, unit = units_inp%length)
+      call messages_print_var_value(stdout, 'LCAOMaximumOrbitalRadius', this%orbital_scale_factor)
 
       ! count the number of orbitals available
       maxj = 0
@@ -298,7 +311,7 @@ contains
         do ia = 1, geo%natoms
           do idim = 1,st%d%dim
             if(jj > species_niwfs(geo%atom(ia)%spec) ) cycle
-            if(species_get_iwf_radius(geo%atom(ia)%spec, jj, is = 1) >= max_orb_radius) cycle
+            if(this%orbital_scale_factor*species_get_iwf_radius(geo%atom(ia)%spec, jj, is = 1) >= max_orb_radius) cycle
 
             this%atom(ii) = ia
             this%level(ii) = jj

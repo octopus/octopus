@@ -52,7 +52,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
 
   SAFE_ALLOCATE(ao(1:mesh%np))
 
-  call species_get_orbital(spec, mesh, jj, max(spin_channel, idim), geo%atom(iatom)%x, ao)
+  call species_get_orbital(spec, mesh, jj, max(spin_channel, idim), geo%atom(iatom)%x, ao, scale = this%orbital_scale_factor)
   
   do ip = 1, mesh%np
     psi(ip, idim) = ao(ip)

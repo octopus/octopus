@@ -671,25 +671,28 @@ contains
   !! \todo Most of this work should be done inside the species
   !! module, and we should get rid of species_iwf_i, species_ifw_l, etc.
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine species_get_orbital(spec, mesh, iorb, ispin, pos, orb)
+  subroutine species_get_orbital(spec, mesh, iorb, ispin, pos, orb, scale)
     type(species_t), target, intent(in)     :: spec
     type(mesh_t),            intent(in)     :: mesh
     integer,                 intent(in)     :: iorb
     integer,                 intent(in)     :: ispin   !< The spin index.
     FLOAT,                   intent(in)     :: pos(:)  !< The position of the atom.
     FLOAT,                   intent(out)    :: orb(:)  !< The function defined in the mesh where the orbitals is returned.
+    FLOAT, optional,         intent(in)     :: scale
 
     integer :: i, l, m, ip, icell
-    FLOAT :: r2, x(1:MAX_DIM), radius
+    FLOAT :: r2, x(1:MAX_DIM), radius, xfactor
     FLOAT, allocatable :: xf(:, :), ylm(:), lorb(:)
     type(ps_t), pointer :: ps
     type(periodic_copy_t) :: pc
 
     PUSH_SUB(species_get_orbital)
 
+    xfactor = CNST(1.0)/optional_default(scale, CNST(1.0))
+
     call species_iwf_ilm(spec, iorb, ispin, i, l, m)
 
-    radius = min(species_get_iwf_radius(spec, iorb, ispin), maxval(mesh%sb%lsize))
+    radius = min(species_get_iwf_radius(spec, iorb, ispin)/xfactor, maxval(mesh%sb%lsize))
 
     call periodic_copy_init(pc, mesh%sb, pos, range = radius)
 
@@ -706,7 +709,7 @@ contains
         SAFE_ALLOCATE(ylm(1:mesh%np))
 
         do ip = 1, mesh%np
-          x(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell)
+          x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - periodic_copy_position(pc, mesh%sb, icell))*xfactor
           r2 = sum(x(1:mesh%sb%dim)**2)
           xf(ip, 1:mesh%sb%dim) = x(1:mesh%sb%dim)
           
@@ -732,7 +735,7 @@ contains
       else
 
         do ip = 1, mesh%np
-          x(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim)
+          x(1:mesh%sb%dim) = (mesh%x(ip, 1:mesh%sb%dim) - pos(1:mesh%sb%dim))*xfactor
           r2 = sum(x(1:mesh%sb%dim)**2)
           select case(mesh%sb%dim)
           case(1)
