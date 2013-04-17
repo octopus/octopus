@@ -126,7 +126,11 @@ contains
     !%Description
     !% If true, allows the use of certain parts of the code that are
     !% still under development and are not suitable for production
-    !% runs. This should not be used unless you know what you are doing.
+    !% runs. This should not be used unless you know what you are doing, check
+    !% 
+    !%  http://www.tddft.org/programs/octopus/wiki/index.php/Experimental_Features
+    !%
+    !% for details.
     !%End
     call parse_logical('ExperimentalFeatures', .false., conf%devel_version)
 
@@ -1015,9 +1019,15 @@ contains
     INCR(experimentals, 1)
 
     if(.not. conf%devel_version) then
-      write(message(1), '(a)') trim(name)//' is under development.'
-      write(message(2), '(a)') 'To use it (at your own risk) set the variable ExperimentalFeatures to yes.'
-      call messages_fatal(2, only_root_writes = .true.)
+      call messages_write(trim(name)//' is an experimental feature.')
+      call messages_new_line()
+      call messages_new_line()
+      call messages_write('If you still want to use this feature (at your own risk), check:')
+      call messages_new_line()
+      call messages_new_line()
+      call messages_write('http://www.tddft.org/programs/octopus/wiki/index.php/Experimental_Features')
+      call messages_new_line()
+      call messages_fatal(only_root_writes = .true.)
     else
       write(message(1), '(a)') trim(name)//' is under development.'
       write(message(2), '(a)') 'It might not work or produce wrong results.'
