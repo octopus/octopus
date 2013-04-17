@@ -29,5 +29,6 @@ TDDeltaStrength = 0.1
 
 TDOutput = energy + angular + multipoles
 MagneticGaugeCorrection = gipaw
+TDMultipoleLmax = 2
 
 TDEnergyUpdateIter = 25
