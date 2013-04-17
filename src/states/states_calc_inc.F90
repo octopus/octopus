@@ -59,7 +59,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
     ss = M_ZERO
 
     call X(states_calc_overlap)(st, mesh, ik, ss)
-
+ 
     bof = .false.
     ! calculate the Cholesky decomposition
     call lalg_cholesky(nst, ss, bof = bof)
@@ -1319,7 +1319,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
   R_TYPE,            intent(out)   :: overlap(:, :)
   R_TYPE, optional,  intent(in)    :: psi2(:, :, :) !< if present it calculates <psi2|psi>
 
-  integer       :: ip, ib, jb, block_size, sp, size, idim
+  integer       :: ip, ib, jb, block_size, sp, size, idim, ist, jst
   type(batch_t) :: psib, psi2b
   type(profile_t), save :: prof
   FLOAT :: vol
@@ -1359,7 +1359,6 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
     block_size = max(40, hardware%l2%size/(16*st%nst))
 #endif
 
-
     SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
 
     overlap(1:st%nst, 1:st%nst) = CNST(0.0)
@@ -1386,6 +1385,14 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
         c = overlap(1, 1), ldc = ubound(overlap, dim = 1))
 
     end do
+
+#ifndef R_TREAL
+    do jst = 1, st%nst
+      do ist = 1, jst
+        overlap(ist, jst) = conjg(overlap(ist, jst))
+      end do
+    end do
+#endif
 
     call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*(st%nst - CNST(1.0))*mesh%np)
 
@@ -1438,6 +1445,16 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
     call opencl_read_buffer(overlap_buffer, st%nst*st%nst, overlap)
 
+    call cl_finish()
+
+#ifndef R_TREAL
+    do jst = 1, st%nst
+      do ist = 1, jst
+        overlap(ist, jst) = conjg(overlap(ist, jst))
+      end do
+    end do
+#endif
+
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
 
     call opencl_release_buffer(overlap_buffer)
@@ -1459,6 +1476,16 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
     end do
 
   end if
+
+! Debug output
+!#ifndef R_TREAL
+!  do ist = 1, st%nst
+!    do jst = 1, st%nst
+!      write(12, '(e12.6,a,e12.6,a)', advance = 'no') real(overlap(ist, jst)), ' ',  aimag(overlap(ist, jst)), ' '
+!    end do
+!      write(12, *) ' ' 
+!  end do
+!#endif
 
   call profiling_out(prof)
 
