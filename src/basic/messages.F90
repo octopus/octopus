@@ -177,26 +177,49 @@ contains
         message(1) = ''
         call messages_info(1)      
       end if
-      
-      if(experimentals > 0) then
-        call messages_write('Octopus used ')
-        call messages_write(experimentals)
-        call messages_write(' experimental feature(s).')
-        call messages_info()
-      end if
+
       
       if(warnings > 0) then
         call messages_write('Octopus emitted ')
         call messages_write(warnings)
-        call messages_write(' warning(s).')
+        if(warnings > 1) then
+          call messages_write(' warnings.')
+        else
+          call messages_write(' warning.')
+        end if
         call messages_info()
+      end if
+      
+      if(experimentals > 0) then
+        call messages_new_line()
+        call messages_write('Octopus used ')
+        call messages_write(experimentals)
+        if(experimentals > 1) then
+          call messages_write(' experimental features:')
+        else
+          call messages_write(' experimental feature:')
+        end if
+        call messages_new_line()
+        call messages_new_line()
+        call messages_write('  Since you used one or more experimental features, results are likely')
+        call messages_new_line()
+        call messages_write('  wrong and should not  be considered as valid scientific data.  Check')
+        call messages_new_line()
+        call messages_new_line()
+        call messages_write('  http://www.tddft.org/programs/octopus/wiki/index.php/Experimental_Features')
+        call messages_new_line()
+        call messages_new_line()
+        call messages_write('  or contact the octopus developers for details.')
+        call messages_new_line()
+        call messages_info()
+
       end if
       
       open(unit = iunit_out, file = 'exec/messages', action = 'write')
       write(iunit_out, '(a, i9)') "warnings          = ", warnings
       write(iunit_out, '(a, i9)') "experimental      = ", experimentals
       close(iunit_out)
-    
+ 
     end if
   
   end subroutine messages_end
