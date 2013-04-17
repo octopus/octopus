@@ -1433,7 +1433,6 @@ contains
 
     integer :: ii
     logical :: cmplxscl
-    character(len=80) :: aux  
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 

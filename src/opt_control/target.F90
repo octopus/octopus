@@ -1264,7 +1264,7 @@ module opt_control_target_m
     type(states_t),    intent(inout)     :: inh
     integer,           intent(in)        :: iter
  
-    integer :: ik, ist, ip, maxiter, i, idim
+    integer :: ik, ist, ip, idim
     CMPLX :: gvec(MAX_DIM)
 
     PUSH_SUB(target_inh)
