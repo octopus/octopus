@@ -153,10 +153,9 @@ module par_vec_m
     !! partition r?
     integer                 :: np_ghost
     integer, pointer        :: np_ghost_neigh_partno(:) !< Number of the neighbours ghost points of the actual process
-    integer, pointer        :: np_ghost_neigh_back(:)   !< Same as previous, but outward
+    integer, pointer        :: np_ghost_neigh_back(:)   !< Like xghost for neighbours.
     integer, pointer        :: xghost(:)                !< Like xlocal.
-    integer, pointer        :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
-    integer, pointer        :: xghost_neigh_back(:)     !<  Same as previous, but outward
+    integer, pointer        :: xghost_neigh_back(:)     !< Same as previous, but outward
     integer, pointer        :: ghost(:)                 !< Global indices of all local
   end type pv_t
 
@@ -382,9 +381,7 @@ contains
     ! Get space for ghost point vector.
     SAFE_ALLOCATE(vp%ghost(1:vp%total))
 
-    SAFE_ALLOCATE(vp%xghost_neigh_partno(1:npart))
     SAFE_ALLOCATE(vp%xghost_neigh_back(1:npart))
-    vp%xghost_neigh_partno(1:npart) = xghost_neigh(1:npart,vp%partno)
     vp%xghost_neigh_back(1:npart)   = xghost_neigh(vp%partno,1:npart)
 
     ! Fill ghost as described above.
@@ -499,7 +496,7 @@ contains
         ! Iterate over all ghost points that ipart wants.
         do ii = 0, vp%np_ghost_neigh_partno(ipart) - 1
           ! Get global number kk of i-th ghost point.
-          kk = vp%ghost(vp%xghost_neigh_partno(ipart) + ii)
+          kk = vp%ghost(vp%xghost(ipart) + ii)
           ! Lookup up local number of point kk
           jj = jj + 1
           displacements(jj) = vec_global2local(vp, kk, vp%partno)
@@ -532,7 +529,6 @@ contains
       vp%rdispls(1:vp%npart) = vp%xghost_neigh_back(1:vp%npart) - vp%xghost(vp%partno)
       vp%rcounts(1:vp%npart) = vp%np_ghost_neigh_back(1:vp%npart)
       SAFE_DEALLOCATE_P(vp%np_ghost_neigh_back)
-      SAFE_DEALLOCATE_P(vp%xghost_neigh_partno)
       SAFE_DEALLOCATE_P(vp%xghost_neigh_back)
       
       POP_SUB(vec_init.init_send_points)
