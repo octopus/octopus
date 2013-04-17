@@ -154,23 +154,22 @@ contains
 
     !%Variable TDOutput
     !%Type flag
-    !%Default multipoles + geometry + temperature + energy
+    !%Default multipoles + energy (+ others depending on other options)
     !%Section Time-Dependent::TD Output
     !%Description
     !% Defines what should be output during the time-dependent
     !% simulation. Many of the options can increase the computational
     !% cost of the simulation, so only use the ones that you need. In
     !% most cases the default value is enough, as it is adapted to the
-    !% details of the TD run. The energy and multipoles are always
-    !% calculated. If the ions are allowed to be moved, additionally
+    !% details of the TD run. If the ions are allowed to be moved, additionally
     !% the geometry and the temperature are output. If a laser is
     !% included it will output by default.
     !%Option multipoles 1
-    !% Outputs the multipole moments of the density to the file <tt>td.general/multipoles</tt>.
+    !% Outputs the (electric) multipole moments of the density to the file <tt>td.general/multipoles</tt>.
     !% This is required to, <i>e.g.</i>, calculate optical absorption spectra of finite systems. The
     !% maximum value of <math>l</math> can be set with the variable <tt>TDMultipoleLmax</tt>.
     !%Option angular 2
-    !% Outputs the angular momentum of the system, which can be used to calculate circular
+    !% Outputs the orbital angular momentum of the system to <tt>td.general/angular</tt>, which can be used to calculate circular
     !% dichroism.
     !%Option spin 4
     !% (Experimental) Outputs the expectation value of the spin, which can be used to calculate magnetic
@@ -184,17 +183,17 @@ contains
     !% should only be used if it is really needed.
     !%Option geometry 16
     !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
-    !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>.
+    !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>. On by default if <tt>MoveIons = yes</tt>.
     !%Option dipole_acceleration 32
     !% When set, outputs the acceleration of the electronic dipole, calculated from the Ehrenfest theorem,
     !% in the file <tt>td.general/acceleration</tt>. This file can then be
     !% processed by the utility <tt>oct-harmonic-spectrum</tt> in order to obtain the harmonic spectrum.
     !%Option laser 64
-    !% If set, and if there are lasers defined in <tt>TDExternalFields</tt>,
-    !% <tt>octopus</tt> outputs the laser field to the file <tt>td.general/laser</tt>.
+    !% If set, outputs the laser field to the file <tt>td.general/laser</tt>.
+    !% On by default if <tt>TDExternalFields</tt> is set.
     !%Option energy 128
-    !% If <tt>set</tt>, <tt>octopus</tt> outputs the different components of the energy
-    !% to the file <tt>td.general/el_energy</tt>.
+    !% If set, <tt>octopus</tt> outputs the different components of the energy
+    !% to the file <tt>td.general/energy</tt>. Will be zero except for every <tt>TDEnergyUpdateIter</tt> iterations.
     !%Option td_occup 256
     !% (Experimental) If set, outputs the projections of the
     !% time-dependent Kohn-Sham wavefunctions onto the static
@@ -207,14 +206,16 @@ contains
     !%Option gauge_field 1024
     !% If set, outputs the vector gauge field corresponding to a spatially uniform (but time-dependent) 
     !% external electrical potential. This is only useful in a time-dependent periodic run.
+    !% On by default if <tt>GaugeVectorField</tt> is set.
     !%Option temperature 2048
-    !% If set, the ionic temperature at each step is printed.
+    !% If set, the ionic temperature at each step is printed. On by default if <tt>MoveIons = yes</tt>.
     !%Option ftchd       4096
     !% Write Fourier transform of the electron density to the file <tt>ftchd.X</tt>,
     !% where X depends on the kick (e.g. with sin-shaped perturbation X=sin).
     !% This is needed for calculating the dynamic structure factor.
     !% In the case that the kick mode is qbessel, the written quantity is integral over
     !% density, multiplied by spherical Bessel function times real spherical harmonic.
+    !% On by default if <tt>TDMomentumTransfer</tt> is set.
     !%Option dipole_velocity    8192
     !% When set, outputs the dipole velocity, calculated from the Ehrenfest theorem,
     !% in the file <tt>td.general/velocity</tt>. This file can then be
@@ -223,14 +224,11 @@ contains
     !% Write the KS eigenvalues. 
     !%End
 
-    default = &
-         2**(OUT_MULTIPOLES - 1) +  &
-         2**(OUT_FTCHD - 1) +       &
-         2**(OUT_COORDS - 1) +      &
-         2**(OUT_TEMPERATURE - 1) + &
-         2**(OUT_ENERGY - 1) +      &
-         2**(OUT_GAUGE_FIELD - 1) + &
-         2**(OUT_LASER - 1)
+    default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
+    if(ions_move) default = default + 2**(OUT_COORDS - 1) + 2**(OUT_TEMPERATURE - 1)
+    if(with_gauge_field) default = default + 2**(OUT_GAUGE_FIELD - 1)
+    if(hm%ep%no_lasers > 0) default = default + 2**(OUT_LASER - 1)
+    if(kick%qkick_mode /= QKICKMODE_NONE) default = default + 2**(OUT_FTCHD - 1)
 
     call parse_integer(datasets_check('TDOutput'), default, flags)
 
@@ -239,13 +237,6 @@ contains
     do iout = 1, OUT_MAX
       writ%out(iout)%write = (iand(flags, 2**(iout - 1)) /= 0)
     end do
-
-    !special cases
-    writ%out(OUT_COORDS)%write = writ%out(OUT_COORDS)%write .and. ions_move
-    writ%out(OUT_TEMPERATURE)%write = writ%out(OUT_TEMPERATURE)%write .and. ions_move
-    writ%out(OUT_GAUGE_FIELD)%write = writ%out(OUT_GAUGE_FIELD)%write .and. with_gauge_field
-    writ%out(OUT_LASER)%write = writ%out(OUT_LASER)%write .and. (hm%ep%no_lasers > 0)
-    writ%out(OUT_FTCHD)%write = writ%out(OUT_FTCHD)%write .and. (kick%qkick_mode /= QKICKMODE_NONE)
 
     ! experimental stuff
     if(writ%out(OUT_SPIN)%write) call messages_experimental('TDOutput = spin')
@@ -257,7 +248,7 @@ contains
     !%Default 1
     !%Section Time-Dependent::TD Output
     !%Description
-    !% Maximum multipole of the density output to the file <tt>td.general/multipoles</tt>
+    !% Maximum electric multipole of the density output to the file <tt>td.general/multipoles</tt>
     !% during a time-dependent simulation. Must be non-negative.
     !%End
     call parse_integer(datasets_check('TDMultipoleLmax'), 1, writ%lmax)
