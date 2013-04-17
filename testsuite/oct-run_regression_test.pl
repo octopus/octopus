@@ -502,8 +502,6 @@ sub run_match_new(){
     return 0;
   }
 
-  $value = `cd $workdir; $pre_command`;
-
   # append the command and the regexp also to the shell script matches.sh in the
   # current archive directory
   open(SCRIPT, ">>$mscript");
@@ -518,6 +516,8 @@ perl -e 'print \"Match: \".(abs(\$ENV{LINE}-($ref_value)) <= $precnum ? \"OK\" :
 echo
 echo";
   close(SCRIPT);
+
+  $value = `cd $workdir; $pre_command`;
 
   $success = ("$value" ne "") && (abs(($value)-($ref_value)) <= $precnum);
 
