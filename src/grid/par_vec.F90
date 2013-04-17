@@ -154,9 +154,10 @@ module par_vec_m
     integer                 :: np_ghost
     integer, pointer        :: np_ghost_neigh_partno(:) !< Number of the neighbours ghost points of the actual process
     integer, pointer        :: np_ghost_neigh_back(:)   !< Same as previous, but outward
-    integer, pointer        :: xghost(:)            !< Like xlocal.
-    integer, pointer        :: xghost_neigh(:, :)   !< Like xghost for neighbours.
-    integer, pointer        :: ghost(:)             !< Global indices of all local
+    integer, pointer        :: xghost(:)                !< Like xlocal.
+    integer, pointer        :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
+    integer, pointer        :: xghost_neigh_back(:)     !<  Same as previous, but outward
+    integer, pointer        :: ghost(:)                 !< Global indices of all local
   end type pv_t
 
 #if defined(HAVE_MPI)
@@ -196,8 +197,7 @@ contains
     integer                     :: npart            !< Number of partitions.
     integer                     :: np_enl           !< Number of points in enlargement.
     integer                     :: ip, jp, kp, jj, index, inode, jnode !< Counters.
-    integer, allocatable        :: ir(:), irr(:, :) !< Counters.
-    integer                     :: rank             !< Rank of current node.
+    integer, allocatable        :: irr(:)           !< Counter.
     integer                     :: p1(MAX_DIM)      !< Points.
     type(iihash_t), allocatable :: ghost_flag(:)    !< To remember ghost pnts.
     integer                     :: iunit            !< For debug output to files.
@@ -210,7 +210,8 @@ contains
     integer, pointer            :: np_ghost_tmp(:), np_bndry_tmp(:)
     !> Number of ghost points per
     !! neighbour per partition.      
-    integer, pointer        :: np_ghost_neigh(:, :) 
+    integer, pointer            :: np_ghost_neigh(:, :) 
+    integer, pointer            :: xghost_neigh(:, :)   !< Like xghost for neighbours.
 
     PUSH_SUB(vec_init)
 
@@ -220,13 +221,11 @@ contains
 
     ! Store partition number and rank for later reference.
     ! Having both variables is a bit redundant but makes the code readable.
-    call MPI_Comm_Rank(comm, rank, mpi_err)
-    vp%rank   = rank
-    vp%partno = rank + 1
+    call MPI_Comm_Rank(comm, vp%rank, mpi_err)
+    vp%partno = vp%rank + 1
 
     SAFE_ALLOCATE(ghost_flag(1:npart))
-    SAFE_ALLOCATE(ir(1:npart))
-    SAFE_ALLOCATE(irr(1:npart, 1:npart))
+    SAFE_ALLOCATE(irr(1:npart))
     SAFE_ALLOCATE(vp%np_local(1:npart))
     SAFE_ALLOCATE(vp%xlocal(1:npart))
     SAFE_ALLOCATE(vp%local(1:np_global))
@@ -237,7 +236,7 @@ contains
     SAFE_ALLOCATE(np_ghost_neigh(1:npart, 1:npart))
     SAFE_ALLOCATE(vp%np_ghost_neigh_partno(1:npart))
     SAFE_ALLOCATE(vp%xghost(1:npart))
-    SAFE_ALLOCATE(vp%xghost_neigh(1:npart, 1:npart))
+    SAFE_ALLOCATE(xghost_neigh(1:npart, 1:npart))
 
     ! Count number of points for each node.
     ! Local points.
@@ -262,15 +261,15 @@ contains
       vp%xbndry(inode) = vp%xbndry(inode - 1) + np_bndry_tmp(inode - 1)
     end do
     ! Set the local and boundary points
-    ir = 0
+    irr = 0
     do ip = 1, np_global
-      vp%local(vp%xlocal(vp%part(ip)) + ir(vp%part(ip))) = ip
-      ir(vp%part(ip))                                 = ir(vp%part(ip)) + 1 ! increment the counter
+      vp%local(vp%xlocal(vp%part(ip)) + irr(vp%part(ip))) = ip
+      irr(vp%part(ip)) = irr(vp%part(ip)) + 1 ! increment the counter
     end do
-    ir = 0
+    irr = 0
     do ip = np_global+1, np_global+np_enl
-      vp%bndry(vp%xbndry(vp%part(ip)) + ir(vp%part(ip))) = ip
-      ir(vp%part(ip))                                 = ir(vp%part(ip)) + 1 ! increment the counter
+      vp%bndry(vp%xbndry(vp%part(ip)) + irr(vp%part(ip))) = ip
+      irr(vp%part(ip)) = irr(vp%part(ip)) + 1 ! increment the counter
     end do
 
     ! Format of ghost:
@@ -333,9 +332,9 @@ contains
             ! Increase number of ghost points of inode from part(index).
             vp%np_ghost_neigh_partno(vp%part(index)) = vp%np_ghost_neigh_partno(vp%part(index))+1
             ! Increase total number of ghostpoints of inode.
-            np_ghost_partno                       = np_ghost_partno + 1
+            np_ghost_partno = np_ghost_partno + 1
             ! One more ghost point.
-            vp%total                              = vp%total + 1
+            vp%total = vp%total + 1
           end if
         end if
       end do
@@ -374,14 +373,19 @@ contains
       vp%xghost(inode) = vp%xghost(inode - 1) + np_ghost_tmp(inode - 1)
     end do
     do inode = 1, npart
-      vp%xghost_neigh(inode, 1) = vp%xghost(inode)
+      xghost_neigh(inode, 1) = vp%xghost(inode)
       do jnode = 2, npart
-        vp%xghost_neigh(inode, jnode) = vp%xghost_neigh(inode, jnode - 1) + np_ghost_neigh(inode, jnode - 1)
+        xghost_neigh(inode, jnode) = xghost_neigh(inode, jnode - 1) + np_ghost_neigh(inode, jnode - 1)
       end do
     end do
 
     ! Get space for ghost point vector.
     SAFE_ALLOCATE(vp%ghost(1:vp%total))
+
+    SAFE_ALLOCATE(vp%xghost_neigh_partno(1:npart))
+    SAFE_ALLOCATE(vp%xghost_neigh_back(1:npart))
+    vp%xghost_neigh_partno(1:npart) = xghost_neigh(1:npart,vp%partno)
+    vp%xghost_neigh_back(1:npart)   = xghost_neigh(vp%partno,1:npart)
 
     ! Fill ghost as described above.
     irr = 0
@@ -390,20 +394,22 @@ contains
       ! If point ip is a ghost point for vp%partno from jnode, save this
       ! information.
       if(found) then
-        vp%ghost(vp%xghost_neigh(vp%partno, jnode) + irr(vp%partno, jnode)) = ip
-        irr(vp%partno, jnode)                                           = irr(vp%partno, jnode) + 1
+        vp%ghost(vp%xghost_neigh_back(jnode) + irr(jnode)) = ip
+        irr(jnode) = irr(jnode) + 1
       end if
     end do
+    SAFE_DEALLOCATE_A(irr)
 
     do inode =  1, npart
       do jnode = 1, npart
         if(inode /= jnode) then
-          call MPI_Bcast(vp%ghost(vp%xghost_neigh(inode, jnode)), np_ghost_neigh(inode,jnode), MPI_INTEGER, &
+          call MPI_Bcast(vp%ghost(xghost_neigh(inode, jnode)), np_ghost_neigh(inode,jnode), MPI_INTEGER, &
                inode-1, comm, mpi_err)
         end if
       end do
     end do
     SAFE_DEALLOCATE_P(np_ghost_neigh)
+    SAFE_DEALLOCATE_P(xghost_neigh)
 
     if(in_debug_mode) then
       ! Write numbers and coordinates of each node`s ghost points
@@ -468,6 +474,7 @@ contains
     do inode = 1, npart
       call iihash_end(ghost_flag(inode))
     end do
+    SAFE_DEALLOCATE_A(ghost_flag)
 
     POP_SUB(vec_init)
 
@@ -492,7 +499,7 @@ contains
         ! Iterate over all ghost points that ipart wants.
         do ii = 0, vp%np_ghost_neigh_partno(ipart) - 1
           ! Get global number kk of i-th ghost point.
-          kk = vp%ghost(vp%xghost_neigh(ipart, vp%partno) + ii)
+          kk = vp%ghost(vp%xghost_neigh_partno(ipart) + ii)
           ! Lookup up local number of point kk
           jj = jj + 1
           displacements(jj) = vec_global2local(vp, kk, vp%partno)
@@ -522,10 +529,11 @@ contains
       end do
 
       ! This is like in vec_scatter/gather.
-      vp%rdispls(1:vp%npart) = vp%xghost_neigh(vp%partno, 1:vp%npart) - vp%xghost(vp%partno)
+      vp%rdispls(1:vp%npart) = vp%xghost_neigh_back(1:vp%npart) - vp%xghost(vp%partno)
       vp%rcounts(1:vp%npart) = vp%np_ghost_neigh_back(1:vp%npart)
       SAFE_DEALLOCATE_P(vp%np_ghost_neigh_back)
-      SAFE_DEALLOCATE_P(vp%xghost_neigh)
+      SAFE_DEALLOCATE_P(vp%xghost_neigh_partno)
+      SAFE_DEALLOCATE_P(vp%xghost_neigh_back)
       
       POP_SUB(vec_init.init_send_points)
     end subroutine init_send_points
