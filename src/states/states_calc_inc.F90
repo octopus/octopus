@@ -1445,7 +1445,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
     call opencl_read_buffer(overlap_buffer, st%nst*st%nst, overlap)
 
-    call cl_finish()
+    call opencl_finish()
 
 #ifndef R_TREAL
     do jst = 1, st%nst
