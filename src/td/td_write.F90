@@ -168,7 +168,7 @@ contains
     !%Option multipoles 1
     !% Outputs the multipole moments of the density to the file <tt>td.general/multipoles</tt>.
     !% This is required to, <i>e.g.</i>, calculate optical absorption spectra of finite systems. The
-    !% maximum value of <math>l</math> can be set with the variable <tt>TDDipoleLmax</tt>.
+    !% maximum value of <math>l</math> can be set with the variable <tt>TDMultipoleLmax</tt>.
     !%Option angular 2
     !% Outputs the angular momentum of the system, which can be used to calculate circular
     !% dichroism.
@@ -252,20 +252,21 @@ contains
     if(writ%out(OUT_POPULATIONS)%write) call messages_experimental('TDOutput = populations')
     if(writ%out(OUT_PROJ)%write) call messages_experimental('TDOutput = td_occup')
 
-    !%Variable TDDipoleLmax
+    !%Variable TDMultipoleLmax
     !%Type integer
     !%Default 1
     !%Section Time-Dependent::TD Output
     !%Description
     !% Maximum multipole of the density output to the file <tt>td.general/multipoles</tt>
-    !% during a time-dependent simulation. Must be 0 &lt; <tt>TDDipoleLmax &lt; 5</tt>.
+    !% during a time-dependent simulation. Must be non-negative.
     !%End
-    call parse_integer(datasets_check('TDDipoleLmax'), 1, writ%lmax)
-    if (writ%lmax < 0 .or. writ%lmax > 4) then
-      write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid TDDipoleLmax."
-      message(2) = '(0 <= TDDipoleLmax <= 4 )'
+    call parse_integer(datasets_check('TDMultipoleLmax'), 1, writ%lmax)
+    if (writ%lmax < 0) then
+      write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid TDMultipoleLmax."
+      message(2) = '(Must be TDMultipoleLmax >= 0 )'
       call messages_fatal(2)
     end if
+    call messages_obsolete_variable('TDDipoleLmax', 'TDMultipoleLmax')
 
     ! Compatibility test
     if( (writ%out(OUT_ACC)%write) .and. ions_move ) then
