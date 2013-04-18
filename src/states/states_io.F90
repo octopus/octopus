@@ -87,7 +87,7 @@ contains
     message(1) = 'Eigenvalues [' // trim(units_abbrev(units_out%energy)) // ']'
     call messages_info(1, iunit)
     if (st%d%nik > ns) then
-      message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) //']'
+      message(1) = 'k-points'
       call messages_info(1, iunit)
     end if
 
