@@ -403,9 +403,7 @@ contains
       !% of each <i>k</i>-point and the following are the components of the <i>k</i>-point
       !% vector. You only need to specify the components for the
       !% periodic directions. Note that the <i>k</i>-points should be given in
-      !% Cartesian coordinates (not in reduced coordinates), <i>i.e.</i>
-      !% what <tt>Octopus</tt> writes in a line in the ground-state standard output as
-      !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>.
+      !% Cartesian coordinates (not in reduced coordinates), in the units of inverse length.
       !%
       !% For example, if you want to include only the Gamma point, you can
       !% use:
@@ -421,7 +419,9 @@ contains
       !%Section Mesh::KPoints
       !%Description
       !% Same as the block <tt>KPoints</tt> but this time the input is given in reduced 
-      !% coordinates.
+      !% coordinates, , <i>i.e.</i>
+      !% what <tt>Octopus</tt> writes in a line in the ground-state standard output as
+      !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>.
       !%End
 
       reduced = .false.
