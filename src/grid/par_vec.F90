@@ -211,7 +211,6 @@ contains
     !> Number of ghost points per
     !! neighbour per partition.      
     integer, pointer            :: np_ghost_neigh(:, :) 
-    integer, pointer            :: xghost_neigh(:, :)   !< Like xghost for neighbours.
 
     PUSH_SUB(vec_init)
 
@@ -236,7 +235,6 @@ contains
     SAFE_ALLOCATE(np_ghost_neigh(1:npart, 1:npart))
     SAFE_ALLOCATE(vp%np_ghost_neigh_partno(1:npart))
     SAFE_ALLOCATE(vp%xghost(1:npart))
-    SAFE_ALLOCATE(xghost_neigh(1:npart, 1:npart))
 
     ! Count number of points for each node.
     ! Local points.
@@ -372,20 +370,30 @@ contains
     do inode = 2, npart
       vp%xghost(inode) = vp%xghost(inode - 1) + np_ghost_tmp(inode - 1)
     end do
+
+    SAFE_ALLOCATE(vp%xghost_neigh_partno(1:npart))
+    SAFE_ALLOCATE(vp%xghost_neigh_back(1:npart))
+    tmp = 0
     do inode = 1, npart
-      xghost_neigh(inode, 1) = vp%xghost(inode)
+      tmp = vp%xghost(inode)
+      vp%xghost_neigh_partno(inode) = vp%xghost(inode) 
+      if (inode == vp%partno) then
+        vp%xghost_neigh_back(1)   = vp%xghost(inode)
+      end if
       do jnode = 2, npart
-        xghost_neigh(inode, jnode) = xghost_neigh(inode, jnode - 1) + np_ghost_neigh(inode, jnode - 1)
+        tmp = tmp + np_ghost_neigh(inode, jnode - 1)
+        if (jnode == vp%partno) then
+          vp%xghost_neigh_partno(inode) = tmp
+        end if
+        if (inode == vp%partno) then
+          vp%xghost_neigh_back(jnode) = tmp
+        end if
       end do
     end do
 
     ! Get space for ghost point vector.
     SAFE_ALLOCATE(vp%ghost(1:vp%total))
 
-    SAFE_ALLOCATE(vp%xghost_neigh_partno(1:npart))
-    SAFE_ALLOCATE(vp%xghost_neigh_back(1:npart))
-    vp%xghost_neigh_partno(1:npart) = xghost_neigh(1:npart,vp%partno)
-    vp%xghost_neigh_back(1:npart)   = xghost_neigh(vp%partno,1:npart)
 
     ! Fill ghost as described above.
     irr = 0
@@ -403,13 +411,14 @@ contains
     do inode =  1, npart
       do jnode = 1, npart
         if(inode /= jnode) then
-          call MPI_Bcast(vp%ghost(xghost_neigh(inode, jnode)), np_ghost_neigh(inode,jnode), MPI_INTEGER, &
+          tmp = vp%xghost_neigh_partno(inode)
+          call MPI_Bcast(tmp, 1, MPI_INTEGER, jnode-1, comm, mpi_err)
+          call MPI_Bcast(vp%ghost(tmp), np_ghost_neigh(inode,jnode), MPI_INTEGER, &
                inode-1, comm, mpi_err)
         end if
       end do
     end do
     SAFE_DEALLOCATE_P(np_ghost_neigh)
-    SAFE_DEALLOCATE_P(xghost_neigh)
 
     if(in_debug_mode) then
       ! Write numbers and coordinates of each node`s ghost points
