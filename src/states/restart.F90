@@ -441,7 +441,9 @@ contains
     end do
     if(gr%have_fine_mesh)then
       SAFE_DEALLOCATE_P(rho)
-      SAFE_DEALLOCATE_P(zrho)      
+      if(st%cmplxscl%space) then
+         SAFE_DEALLOCATE_P(zrho)
+      endif
     end if
     if(ierr==st%d%nspin) ierr=0 ! All OK
 
