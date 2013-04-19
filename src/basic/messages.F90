@@ -128,7 +128,7 @@ contains
     !% still under development and are not suitable for production
     !% runs. This should not be used unless you know what you are doing, check
     !% 
-    !%  http://www.tddft.org/programs/octopus/wiki/index.php/Experimental_Features
+    !%  http://www.tddft.org/programs/octopus/experimental_features
     !%
     !% for details.
     !%End
@@ -210,12 +210,16 @@ contains
         call messages_write('  wrong and should not  be considered as valid scientific data.  Check')
         call messages_new_line()
         call messages_new_line()
-        call messages_write('  http://www.tddft.org/programs/octopus/wiki/index.php/Experimental_Features')
+        call messages_write('  http://www.tddft.org/programs/octopus/experimental_features')
         call messages_new_line()
         call messages_new_line()
         call messages_write('  or contact the octopus developers for details.')
         call messages_new_line()
         call messages_info()
+
+      else
+
+        
 
       end if
       
@@ -1025,7 +1029,7 @@ contains
       call messages_write('If you still want to use this feature (at your own risk), check:')
       call messages_new_line()
       call messages_new_line()
-      call messages_write('http://www.tddft.org/programs/octopus/wiki/index.php/Experimental_Features')
+      call messages_write('http://www.tddft.org/programs/octopus/experimental_features')
       call messages_new_line()
       call messages_fatal(only_root_writes = .true.)
     else
