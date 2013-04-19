@@ -22,7 +22,7 @@
 !> X(kb_project) calculates the action of the projector kb_p on the psi 
 !! wavefunction. The action of the projector kb_p is defined as:
 !! \f[
-!! \hat{kb_p} |psi> = \sum_{i}^kb_p%n_c p%e(i) |kb_p%p(:, i)><kb_p%p(:, i)|psi>
+!! \hat{kb_p} |psi> = \sum_{i}^kb_p\%n_c p\%e(i) |kb_p\%p(:, i)><kb_p\%p(:, i)|psi>
 !! \f]
 !! The result is summed up to ppsi.
 !------------------------------------------------------------------------------
