@@ -48,8 +48,6 @@ module mesh_function_m
     zmf_integrate,         &
     dmf_add,               &
     zmf_add,               &
-    dmf_copy,              &
-    zmf_copy,              &
     dmf_dotp,              &
     zmf_dotp,              &
     dmf_nrm2,              &
@@ -58,10 +56,6 @@ module mesh_function_m
     zmf_moment,            &
     dmf_random,            &
     zmf_random,            &
-    dmf_partial_integrate, &
-    zmf_partial_integrate, &
-    dmf_interpolate,       &
-    zmf_interpolate,       &
     dmf_interpolate_points,&
     zmf_interpolate_points,&
     mf_surface_integral,   &

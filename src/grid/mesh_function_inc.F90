@@ -73,6 +73,7 @@ R_TYPE function X(mf_dotp_aux)(f1, f2) result(dotp)
   POP_SUB(X(mf_dotp_aux))
 end function X(mf_dotp_aux)
 
+
 ! ---------------------------------------------------------
 !> this function returns the dot product between two vectors
 R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
@@ -173,6 +174,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
 
 end function X(mf_dotp_2)
 
+
 ! ---------------------------------------------------------
 !> this function returns the the norm of a vector
 FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
@@ -229,6 +231,7 @@ FLOAT function X(mf_nrm2_2)(mesh, dim, ff, reduce) result(nrm2)
   POP_SUB(X(mf_nrm2_2))
 
 end function X(mf_nrm2_2)
+
 
 ! ---------------------------------------------------------
 !> This function calculates the "order" moment of the function ff
@@ -294,100 +297,6 @@ subroutine X(mf_random)(mesh, ff, seed)
   POP_SUB(X(mf_random))
 
 end subroutine X(mf_random)
-
-! ---------------------------------------------------------
-!> Does a partial integration of a function: i.e. in N
-!! dimensions, it integrates over N-1 dimensions. The
-!! argument jj is the dimension which is not integrated.
-!! The input function f_in is a normal function defined on
-!! the mesh, whereas the output function f_out is a 1D array
-!! of mesh%idx%ll(jj) + 2*mesh%enlarge(jj) elements.
-!!
-!! In order to retrieve the coordinate v of u(n), one needs
-!! to do:
-!!  k = gr%mesh%idx%nr(1, j) + n - 1
-!!  i = gr%mesh%idx%lxyz_inv(k, 0, 0) ! Assuming j = 1
-!!  if(i>0) v = gr%mesh%x(i, j)   ! I do not understand why
-!!                                ! we need i>0 ...
-!!
-!! \warning: It will stop if one is using curvilinear
-!! coordinates, or real-space domain parallelization.
-subroutine X(mf_partial_integrate)(mesh, jj, f_in, f_out)
-  type(mesh_t), intent(in)  :: mesh
-  integer,      intent(in)  :: jj
-  R_TYPE,       intent(in)  :: f_in(:)
-  R_TYPE,       intent(out) :: f_out(:)
-
-  integer :: ip, np_out, mm
-  PUSH_SUB(X(mf_partial_integrate))
-
-  ASSERT(.not.(mesh%parallel_in_domains))
-  ASSERT(.not.(mesh%use_curvilinear))
-
-  np_out = mesh%idx%ll(jj) + 2*mesh%idx%enlarge(jj)
-
-  f_out(1:np_out) = M_ZERO
-  do ip = 1, mesh%np
-     mm = mesh%idx%lxyz(ip, jj) - mesh%idx%nr(1, jj) + 1
-     f_out(mm) = f_out(mm) + f_in(ip)
-  end do
-
-  f_out(1:np_out) = f_out(1:np_out)*mesh%volume_element/mesh%spacing(jj)
-
-  POP_SUB(X(mf_partial_integrate))
-end subroutine X(mf_partial_integrate)
-
-
-! ---------------------------------------------------------
-subroutine X(mf_interpolate) (mesh_in, mesh_out, full_interpolation, f_in, f_out)
-  type(mesh_t),         intent(in)  :: mesh_in, mesh_out
-  logical,              intent(in)  :: full_interpolation
-  R_TYPE,               intent(in)  :: f_in(:)    !< (mesh_in%np_global)
-  R_TYPE,               intent(out) :: f_out(:)   !< (mesh%np)
-
-  integer :: ix, iy, iz
-  R_TYPE, allocatable :: f_global(:)
-  integer :: ip, jj, kk
-
-  PUSH_SUB(X(mf_interpolate))
-
-  if(full_interpolation) then
-    call X(mf_interpolate_points) (mesh_in%sb%dim, mesh_in%np_global, mesh_in%x, f_in, &
-         mesh_out%np, mesh_out%x, f_out)
-  else
-    
-    if(mesh_in%parallel_in_domains) then
-      SAFE_ALLOCATE(f_global(1:mesh_in%np_global))
-#if defined(HAVE_MPI)
-      call X(vec_allgather)(mesh_in%vp, f_global, f_in)
-#endif
-    end if
-
-    f_out = M_ZERO
-    do ip = 1, mesh_out%np
-      kk = ip
-      if(mesh_out%parallel_in_domains) &
-        kk = mesh_out%vp%local(mesh_out%vp%xlocal(mesh_out%vp%partno) + ip -1)
-      ix = mesh_out%idx%lxyz(kk, 1); if ( ix < mesh_in%idx%nr(1, 1) .or. ix > mesh_in%idx%nr(2, 1) ) cycle
-      iy = mesh_out%idx%lxyz(kk, 2); if ( iy < mesh_in%idx%nr(1, 2) .or. iy > mesh_in%idx%nr(2, 2) ) cycle
-      iz = mesh_out%idx%lxyz(kk, 3); if ( iz < mesh_in%idx%nr(1, 3) .or. iz > mesh_in%idx%nr(2, 3) ) cycle
-      jj = mesh_in%idx%lxyz_inv(ix, iy, iz)
-
-      if(mesh_in%parallel_in_domains) then
-        if(jj > 0 .and. jj <= mesh_in%np_global) f_out(ip) = f_global(jj)
-      else
-        if(jj > 0 .and. jj <= mesh_in%np_global) f_out(ip) = f_in(jj)
-      end if
-    end do
-
-    if(mesh_in%parallel_in_domains) then
-      SAFE_DEALLOCATE_A(f_global)
-    end if
-
-  end if
-
-  POP_SUB(X(mf_interpolate))
-end subroutine X(mf_interpolate)
 
 
 ! --------------------------------------------------------- 
@@ -844,65 +753,6 @@ subroutine X(mf_add)(mesh1, start1, end1, func1, mesh2, start2, end2, func2, per
   POP_SUB(X(mf_add))
 end subroutine X(mf_add)
 
-
-!--------------------------------------------------------------
-!> copies some part of the function in mesh1 to another mesh (index based, so same spacing is assumed)
-subroutine X(mf_copy)(mesh1, start1, end1, func1, mesh2, start2, end2, func2, per_dim, include_bounds)
-  type(mesh_t),      intent(in)  :: mesh1
-  integer,           intent(in)  :: start1(1:3)    !< starting point in mesh1
-  integer,           intent(in)  :: end1(1:3)      !< end point in mesh1
-  R_TYPE,            intent(in)  :: func1(:)       !< copy from this
-  type(mesh_t),      intent(in)  :: mesh2
-  integer,           intent(in)  :: start2(1:3)    !< starting point in mesh2
-  integer,           intent(in)  :: end2(1:3)      !< end point in mesh2
-  R_TYPE,            intent(out) :: func2(:)       !< copy into this
-  integer,           intent(in)  :: per_dim        !< the periodic dimension
-  logical, optional, intent(in)  :: include_bounds !< also use the points outside the box?
-
-  integer :: np1, np2, ip1, ip2, ix2, iy2, iz2
-  integer :: ix1(1:3)
-
-  PUSH_SUB(X(mf_copy))
-
-  if (optional_default(include_bounds, .false.)) then
-    ASSERT(per_dim == 0)
-    np1 = mesh1%np_part
-    np2 = mesh2%np_part
-  else
-    np1 = mesh1%np
-    np2 = mesh2%np
-  end if
-
-  ix1(1) = start1(1)
-  do ix2 = start2(1), end2(1)
-
-    ix1(2) = start1(2)
-    do iy2 = start2(2), end2(2)
-
-      ix1(3) = start1(3)
-      do iz2 = start2(3), end2(3)
-
-        ip1 = mesh1%idx%lxyz_inv(ix1(1), ix1(2), ix1(3))
-        ip2 = mesh2%idx%lxyz_inv(ix2, iy2, iz2)
-
-        if(ip2 > 0 .and. ip2 <= np2 .and. ip1 > 0 .and. ip1 <= np1) then
-          func2(ip2) = func1(ip1)
-        end if
-
-        INCR(ix1(3), 1)
-        if(per_dim == 3 .and. ix1(3) > end1(3)) ix1(3) = start1(3)
-      end do
-
-      INCR(ix1(2), 1)
-      if(per_dim >= 2 .and. ix1(2) > end1(2)) ix1(2) = start1(2)
-    end do
-
-    INCR(ix1(1), 1)
-    if(per_dim >= 1 .and. ix1(1) > end1(1)) ix1(1) = start1(1)
-  end do
-
-  POP_SUB(X(mf_copy))
-end subroutine X(mf_copy)
 
 !! Local Variables:
 !! mode: f90
