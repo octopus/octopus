@@ -529,6 +529,9 @@ contains
         call geometry_write_xyz(dir, "geometry", geo, gr%sb%dim)
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
       endif
+      if(iand(outp%how, C_OUTPUT_HOW_OPENSCAD) /= 0) then
+        call geometry_write_openscad(dir, "geometry", geo, gr%sb%dim)
+      endif
     end if
 
     if(iand(outp%what, C_OUTPUT_FORCES) /= 0) then

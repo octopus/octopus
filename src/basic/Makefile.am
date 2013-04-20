@@ -69,7 +69,8 @@ libbasic_a_SOURCES =     \
 	blacs.F90        \
 	blacs_proc_grid.F90  \
 	comm.F90             \
-	octcl_kernel.F90
+	octcl_kernel.F90     \
+	openscad.F90
 
 if COMPILE_PAPI
 libbasic_a_SOURCES += papi.c papi_f.F90
@@ -141,3 +142,5 @@ lookup.o : lookup.F90 global.o messages.o profiling.o loct_pointer.o
 utils.o : utils.F90 messages.o global.o unit.o unit_system.o string.o mpi.o loct.o
 
 space.o : space.F90 datasets.o parser.o messages.o
+
+openscad.o : openscad.F90 io.o messages.o

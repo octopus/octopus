@@ -32,6 +32,7 @@ module geometry_m
   use messages_m
   use multicomm_m
   use mpi_m
+  use openscad_m
   use parser_m
   use profiling_m
   use space_m
@@ -61,6 +62,7 @@ module geometry_m
     cm_pos,                          &
     cm_vel,                          &
     geometry_write_xyz,              &
+    geometry_write_openscad,         &
     loadPDB,                         &
     geometry_val_charge,             &
     geometry_grid_defaults,          &
@@ -880,6 +882,41 @@ contains
 
     POP_SUB(atom_write_xyz)
   end subroutine geometry_write_xyz
+
+
+  ! ---------------------------------------------------------
+  subroutine geometry_write_openscad(dir, fname, geo, sbdim, append, comment)
+    character(len=*),    intent(in) :: dir, fname
+    type(geometry_t),    intent(in) :: geo
+    integer,             intent(in) :: sbdim
+    logical,             intent(in), optional :: append
+    character(len=*),    intent(in), optional :: comment
+
+    type(openscad_file_t) :: cad_file
+    integer :: iatom, jatom
+
+    FLOAT, parameter :: atom_radius = CNST(0.6)
+    FLOAT, parameter :: bond_radius = CNST(0.3)
+    FLOAT, parameter :: max_bond_length = CNST(3.0)
+
+    call io_mkdir(dir)
+    call openscad_file_init(cad_file, trim(dir)//'/'//trim(fname)//'.scad', scale = CNST(10.0))
+
+    do iatom = 1, geo%natoms
+
+      call openscad_file_sphere(cad_file, geo%atom(iatom)%x(1:3), atom_radius)
+
+      do jatom = iatom + 1, geo%natoms
+        if(sum((geo%atom(iatom)%x(1:3) - geo%atom(jatom)%x(1:3))**2) > max_bond_length**2) cycle
+
+        call openscad_file_bond(cad_file, geo%atom(iatom)%x(1:3), geo%atom(jatom)%x(1:3), bond_radius)
+      end do
+
+    end do
+
+    call openscad_file_end(cad_file)
+
+  end subroutine geometry_write_openscad
 
 
   ! ---------------------------------------------------------

@@ -84,7 +84,9 @@ module io_function_m
     C_OUTPUT_HOW_BINARY          =  16384,    &
     C_OUTPUT_HOW_ETSF            =  32768,    &
     C_OUTPUT_HOW_XYZ             =  65536,    &
-    C_OUTPUT_HOW_CUBE            = 131072
+    C_OUTPUT_HOW_CUBE            = 131072,    &
+    C_OUTPUT_HOW_OPENSCAD        = 262144
+    
 
   !> doutput_kind => real variables; zoutput_kind => complex variables.
   integer, parameter, private ::  &
@@ -180,6 +182,8 @@ contains
     !% Geometry will be output in XYZ format. Does not affect other outputs.
     !%Option cube 131072
     !% Generates output in the cube file format (<tt>http://local.wasp.uwa.edu.au/~pbourke/dataformats/cube/</tt>)
+    !%Option openscad 262144
+    !% Generates output in OpenSCAD format (http://www.openscad.org/). For the moment only the geometry is supported.
     !%End
     call parse_integer(datasets_check('OutputHow'), 0, how)
     if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
