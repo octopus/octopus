@@ -28,66 +28,88 @@ module openscad_m
 
   private
 
-  public ::                & 
-    openscad_file_t,       &
-    openscad_file_init,    &
-    openscad_file_end,     &
-    openscad_file_sphere,  &
-    openscad_file_bond
+  public ::                         &
+    openscad_file_t,                &
+    openscad_file_init,             &
+    openscad_file_end,              &
+    openscad_file_sphere,           &
+    openscad_file_bond,             &
+    openscad_file_define_variable
 
   type openscad_file_t
     private
     
     integer :: iunit
-    FLOAT   :: scale
     integer :: curve_res
   end type openscad_file_t
 
 contains
 
-  subroutine openscad_file_init(this, filename, scale)
+  subroutine openscad_file_init(this, filename)
     type(openscad_file_t), intent(out) :: this
     character(len=*),      intent(in)  :: filename
-    FLOAT,                 intent(in)  :: scale    
     
     PUSH_SUB(openscad_file_init)
 
     this%iunit = io_open(filename, action = 'write')
-    this%scale = scale
     this%curve_res = 50
 
     write(this%iunit, '(a,i10,a)') '$fn = ', this%curve_res, ';'
-    write(this%iunit, '(a,f12.6,a)') 'scale(', this%scale, '){'
 
     POP_SUB(openscad_file_init)
   end subroutine openscad_file_init
 
   !-------------------------------------------------------
 
-  subroutine openscad_file_sphere(this, position, radius)
+  subroutine openscad_file_define_variable(this, variable_name, variable_value)
     type(openscad_file_t), intent(inout) :: this
-    FLOAT,                 intent(in)    :: position(:)
-    FLOAT,                 intent(in)    :: radius
+    character(len=*),      intent(in)    :: variable_name
+    FLOAT,                 intent(in)    :: variable_value
+
+    PUSH_SUB(openscad_file_define_variable)
+
+    write(this%iunit, '(a,f12.6,a)') variable_name//' = ', variable_value, ';'
+
+    POP_SUB(openscad_file_define_variable)
+  end subroutine openscad_file_define_variable
+  
+  !-------------------------------------------------------
+
+  subroutine openscad_file_sphere(this, position, radius, radius_variable)
+    type(openscad_file_t),      intent(inout) :: this
+    FLOAT,                      intent(in)    :: position(:)
+    FLOAT,            optional, intent(in)    :: radius
+    character(len=*), optional, intent(in)    :: radius_variable
 
     PUSH_SUB(openscad_file_sphere)
 
+    ASSERT(.not. present(radius) .eqv. present(radius_variable))
+
     call write_translate(this, position)
-    write(this%iunit, '(a,f12.6,a)') '  sphere(', radius, ');'
+
+    if(present(radius)) then
+      write(this%iunit, '(a,f12.6,a)') '  sphere(', radius, ');'
+    else
+      write(this%iunit, '(a,a,a)') '  sphere(', trim(radius_variable), ');'
+    end if
 
     POP_SUB(openscad_file_sphere)
   end subroutine openscad_file_sphere
   
   !-------------------------------------------------------
 
-  subroutine openscad_file_bond(this, pos1, pos2, radius)
-    type(openscad_file_t), intent(inout) :: this
-    FLOAT,                 intent(in)    :: pos1(:)
-    FLOAT,                 intent(in)    :: pos2(:)
-    FLOAT,                 intent(in)    :: radius
+  subroutine openscad_file_bond(this, pos1, pos2, radius, radius_variable)
+    type(openscad_file_t),      intent(inout) :: this
+    FLOAT,                      intent(in)    :: pos1(:)
+    FLOAT,                      intent(in)    :: pos2(:)
+    FLOAT,            optional, intent(in)    :: radius
+    character(len=*), optional, intent(in)    :: radius_variable
 
     FLOAT :: length, vec(1:3), angles(1:3)
 
     PUSH_SUB(openscad_file_bond)
+
+    ASSERT(.not. present(radius) .eqv. present(radius_variable))
 
     vec(1:3) = pos2(1:3) - pos1(1:3)
     length = sqrt(sum(vec(1:3)**2))
@@ -100,7 +122,12 @@ contains
     
     call write_translate(this, CNST(0.5)*(pos1(1:3) + pos2(1:3)))
     call write_rotate(this, angles)
-    write(this%iunit, '(a,f12.6,a,f12.6,a)') '  cylinder(h=', length, ', r =', radius, ', center = true);'
+
+    if(present(radius)) then
+      write(this%iunit, '(a,f12.6,a,f12.6,a)') '  cylinder(h=', length, ', r =', radius, ', center = true);'
+    else
+      write(this%iunit, '(a,f12.6,a,a,a)') '  cylinder(h=', length, ', r =', trim(radius_variable), ', center = true);'
+    end if
 
     POP_SUB(openscad_file_bond)
   end subroutine openscad_file_bond
@@ -111,8 +138,6 @@ contains
     type(openscad_file_t), intent(inout) :: this
     
     PUSH_SUB(openscad_file_end)
-
-    write(this%iunit, '(a)') '}'
 
     call io_close(this%iunit)
 

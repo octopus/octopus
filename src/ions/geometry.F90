@@ -900,16 +900,19 @@ contains
     FLOAT, parameter :: max_bond_length = CNST(3.0)
 
     call io_mkdir(dir)
-    call openscad_file_init(cad_file, trim(dir)//'/'//trim(fname)//'.scad', scale = CNST(10.0))
+    call openscad_file_init(cad_file, trim(dir)//'/'//trim(fname)//'.scad')
+
+    call openscad_file_define_variable(cad_file, "atom_radius", atom_radius)
+    call openscad_file_define_variable(cad_file, "bond_radius", bond_radius)
 
     do iatom = 1, geo%natoms
 
-      call openscad_file_sphere(cad_file, geo%atom(iatom)%x(1:3), atom_radius)
+      call openscad_file_sphere(cad_file, geo%atom(iatom)%x(1:3), radius_variable = "atom_radius")
 
       do jatom = iatom + 1, geo%natoms
         if(sum((geo%atom(iatom)%x(1:3) - geo%atom(jatom)%x(1:3))**2) > max_bond_length**2) cycle
 
-        call openscad_file_bond(cad_file, geo%atom(iatom)%x(1:3), geo%atom(jatom)%x(1:3), bond_radius)
+        call openscad_file_bond(cad_file, geo%atom(iatom)%x(1:3), geo%atom(jatom)%x(1:3), radius_variable = "bond_radius")
       end do
 
     end do
