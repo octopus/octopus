@@ -30,7 +30,7 @@ module datasets_m
     datasets_end,  &
     datasets_check
 
-  ! variables to treat multi datasets
+  !> variables to treat multi datasets
   character(len=32), public, allocatable :: dataset_label(:)
   integer,           public, allocatable :: dataset_runmode(:), dataset_run_order(:)
   integer,           public              :: current_dataset
@@ -53,7 +53,7 @@ contains
     integer :: mpi_err
 #endif
 
-    ! variable CalculationMode is defined in src/main.F90
+    ! variable CalculationMode is defined in src/main/main.F90
 
     ! The block should be of the form
     ! %CalculationMode

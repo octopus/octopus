@@ -48,7 +48,7 @@ module born_charges_m
     logical :: correct                   !< correct according to sum rule?
   end type Born_charges_t
 
-  contains
+contains
 
   ! ---------------------------------------------------------
   subroutine Born_charges_init(this, geo, st, dim)
@@ -57,7 +57,7 @@ module born_charges_m
     type(states_t),       intent(in)  :: st
     integer,              intent(in)  :: dim
 
-    integer idir
+    integer :: idir
 
     PUSH_SUB(Born_charges_init)
 
@@ -135,7 +135,7 @@ module born_charges_m
     integer,              intent(in)    :: dim
     character(len=*),     intent(in)    :: dirname
     logical,              intent(in)    :: write_real
-       ! set write_real to true if they are all real, to suppress writing imaginary part and phase
+    !< set write_real to true if they are all real, to suppress writing imaginary part and phase
 
     integer iatom, iunit
     FLOAT :: phase(1:MAX_DIM, 1:MAX_DIM)
@@ -167,10 +167,10 @@ module born_charges_m
       do iatom = 1, geo%natoms
         write(iunit,'(a,i5,a,a5,a,f10.4)') 'Index: ', iatom, '   Label: ', trim(species_label(geo%atom(iatom)%spec)), &
           '   Ionic charge: ', species_zval(geo%atom(iatom)%spec)
-        
+
         write(iunit,'(a)') 'Magnitude:'
         call output_tensor(iunit, TOFLOAT(abs(this%charge(:, :, iatom))), dim, unit_one)
-        
+
         write(iunit,'(a)') 'Phase:'
         phase(1:dim, 1:dim) = atan2(aimag(this%charge(1:dim, 1:dim, iatom)), real(this%charge(1:dim, 1:dim, iatom)))
         call output_tensor(iunit, phase(:, :), dim, unit_one, write_average = .false.)

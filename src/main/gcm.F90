@@ -51,12 +51,12 @@ module gcm_m
     gcm_run
 
 
-  contains
+contains
 
-  ! ---------------------------------------------------------
-  ! Very preliminary implementation of the generator coodinates DFT scheme
-  ! proposed by K. Capelle [K. Capelle, J. Chem. Phys. 119, 1285 (2003).
-  ! ---------------------------------------------------------
+  !> ---------------------------------------------------------
+  !! Very preliminary implementation of the generator coordinates DFT scheme
+  !! proposed by K. Capelle [K. Capelle, J. Chem. Phys. 119, 1285 (2003).
+  !! ---------------------------------------------------------
   subroutine gcm_run(sys, hm)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
