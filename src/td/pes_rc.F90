@@ -19,275 +19,275 @@
 
 #include "global.h"
 
-  module pes_rc_m
-    use comm_m
-    use datasets_m
-    use geometry_m
-    use global_m
-    use grid_m
-    use hamiltonian_m
-    use io_binary_m
-    use io_function_m
-    use io_m
-    use math_m
-    use mesh_m
-    use messages_m
-    use mpi_m
-    use output_m
-    use parser_m
-    use profiling_m
-    use simul_box_m
-    use states_m
-    use string_m
-    use unit_m
-    use unit_system_m
-    use varinfo_m
-    use varinfo_m
+module pes_rc_m
+  use comm_m
+  use datasets_m
+  use geometry_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
+  use io_binary_m
+  use io_function_m
+  use io_m
+  use math_m
+  use mesh_m
+  use messages_m
+  use mpi_m
+  use output_m
+  use parser_m
+  use profiling_m
+  use simul_box_m
+  use states_m
+  use string_m
+  use unit_m
+  use unit_system_m
+  use varinfo_m
+  use varinfo_m
 
-    private
+  private
 
-    public ::                             &
-      pes_rc_t,                           &
-      pes_rc_init,                        &
-      pes_rc_init_write,                  &
-      pes_rc_output,                      &
-      pes_rc_calc,                        &
-      pes_rc_end
+  public ::                             &
+    pes_rc_t,                           &
+    pes_rc_init,                        &
+    pes_rc_init_write,                  &
+    pes_rc_output,                      &
+    pes_rc_calc,                        &
+    pes_rc_end
 
-    type PES_rc_t
-      integer          :: npoints                 !< how many points we store the wf
-      integer, pointer :: points(:)               !< which points to use
-      character(len=30), pointer :: filenames(:)  !< filenames
-      CMPLX, pointer :: wf(:,:,:,:,:)
-      integer, pointer :: rankmin(:)              !< partition of the mesh containing the points
-    end type PES_rc_t
+  type PES_rc_t
+    integer          :: npoints                 !< how many points we store the wf
+    integer, pointer :: points(:)               !< which points to use
+    character(len=30), pointer :: filenames(:)  !< filenames
+    CMPLX, pointer :: wf(:,:,:,:,:)
+    integer, pointer :: rankmin(:)              !< partition of the mesh containing the points
+  end type PES_rc_t
 
 
-  contains
+contains
 
-    ! ---------------------------------------------------------
-    subroutine PES_rc_init(pesrc, mesh, st, save_iter)
-      type(PES_rc_t), intent(out) :: pesrc
-      type(mesh_t),   intent(in)  :: mesh
-      type(states_t), intent(in)  :: st
-      integer,        intent(in)  :: save_iter
+  ! ---------------------------------------------------------
+  subroutine PES_rc_init(pesrc, mesh, st, save_iter)
+    type(PES_rc_t), intent(out) :: pesrc
+    type(mesh_t),   intent(in)  :: mesh
+    type(states_t), intent(in)  :: st
+    integer,        intent(in)  :: save_iter
 
-      type(block_t) :: blk
-      integer  :: ip
-      FLOAT :: xx(MAX_DIM)
-      FLOAT :: dmin
-      integer :: rankmin
+    type(block_t) :: blk
+    integer  :: ip
+    FLOAT :: xx(MAX_DIM)
+    FLOAT :: dmin
+    integer :: rankmin
 
-      PUSH_SUB(PES_rc_init)
+    PUSH_SUB(PES_rc_init)
 
-      message(1) = 'Info: Calculating PES using rc technique.'
-      call messages_info(1)
+    message(1) = 'Info: Calculating PES using rc technique.'
+    call messages_info(1)
 
-      !%Variable PhotoElectronSpectrumPoints
-      !%Type block
-      !%Section Time-Dependent::PhotoElectronSpectrum
-      !%Description
-      !% List of points at which to calculate the photoelectron spectrum by Suraud method.
-      !% Required when <tt>PhotoElectronSpectrum = pes_rc</tt>.
-      !% The exact syntax is:
-      !%
-      !% <tt>%PhotoElectronSpectrumPoints
-      !% <br>&nbsp;&nbsp;x1 | y1 | z1
-      !% <br>%
-      !% </tt>
-      !%End
-      call messages_obsolete_variable('PES_rc_points', 'PhotoElectronSpectrumPoints')
-      if (parse_block(datasets_check('PhotoElectronSpectrumPoints'), blk) < 0) then
-        message(1) = 'The PhotoElectronSpectrumPoints block is required when PhotoElectronSpectrum = pes_rc'
-        call messages_fatal(1)
+    !%Variable PhotoElectronSpectrumPoints
+    !%Type block
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% List of points at which to calculate the photoelectron spectrum by Suraud method.
+    !% Required when <tt>PhotoElectronSpectrum = pes_rc</tt>.
+    !% The exact syntax is:
+    !%
+    !% <tt>%PhotoElectronSpectrumPoints
+    !% <br>&nbsp;&nbsp;x1 | y1 | z1
+    !% <br>%
+    !% </tt>
+    !%End
+    call messages_obsolete_variable('PES_rc_points', 'PhotoElectronSpectrumPoints')
+    if (parse_block(datasets_check('PhotoElectronSpectrumPoints'), blk) < 0) then
+      message(1) = 'The PhotoElectronSpectrumPoints block is required when PhotoElectronSpectrum = pes_rc'
+      call messages_fatal(1)
+    end if
+
+    pesrc%npoints = parse_block_n(blk)
+
+    ! setup filenames and read points
+    SAFE_ALLOCATE(pesrc%filenames(1:pesrc%npoints))
+    SAFE_ALLOCATE(pesrc%points   (1:pesrc%npoints))
+    SAFE_ALLOCATE(pesrc%rankmin   (1:pesrc%npoints))
+
+    do ip = 1, pesrc%npoints
+      write(pesrc%filenames(ip), '(a,i2.2,a)') 'PES_rc.', ip, '.out'
+
+      call parse_block_float(blk, ip - 1, 0, xx(1), units_inp%length)
+      call parse_block_float(blk, ip - 1, 1, xx(2), units_inp%length)
+      call parse_block_float(blk, ip - 1, 2, xx(3), units_inp%length)
+
+
+      pesrc%points(ip) = mesh_nearest_point(mesh, xx, dmin, rankmin)
+      pesrc%rankmin(ip)= rankmin
+
+    end do
+
+    call parse_block_end(blk)
+
+    SAFE_ALLOCATE(pesrc%wf(1:pesrc%npoints, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:save_iter))
+
+    POP_SUB(PES_rc_init)
+  end subroutine PES_rc_init
+
+
+  ! ---------------------------------------------------------
+  subroutine PES_rc_end(pesrc)
+    type(PES_rc_t), intent(inout) :: pesrc
+
+    PUSH_SUB(PES_rc_end)
+
+    if(associated(pesrc%filenames)) then
+      SAFE_DEALLOCATE_P(pesrc%filenames)
+      SAFE_DEALLOCATE_P(pesrc%points)
+      SAFE_DEALLOCATE_P(pesrc%wf)
+      SAFE_DEALLOCATE_P(pesrc%rankmin)
+    end if
+
+    POP_SUB(PES_rc_end)
+  end subroutine PES_rc_end
+
+
+  ! ---------------------------------------------------------
+  subroutine PES_rc_calc(pesrc, st, mesh, ii)
+    type(PES_rc_t), intent(inout) :: pesrc
+    type(states_t), intent(in)    :: st
+    integer,        intent(in)    :: ii
+    type(mesh_t),   intent(in)    :: mesh
+
+    integer :: ip, ik, ist, idim
+    logical :: contains_ip
+#if defined(HAVE_MPI)
+    CMPLX :: wf
+    integer :: status(MPI_STATUS_SIZE)
+#endif
+
+    PUSH_SUB(PES_rc_calc)
+
+    contains_ip = .true.
+
+    do ip = 1, pesrc%npoints
+
+#if defined(HAVE_MPI)
+      if(mesh%mpi_grp%rank  ==  pesrc%rankmin(ip)) then !needed if mesh%parallel_in_domains is true
+        contains_ip = .true.
+      else
+        contains_ip = .false.
       end if
+#endif
 
-      pesrc%npoints = parse_block_n(blk)
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
+          do idim = 1, st%d%dim
+            if(contains_ip) then
+              pesrc%wf(ip, idim, ist, ik, ii) = st%occ(ist, ik) * &
+                st%zpsi(pesrc%points(ip), idim, ist, ik)
 
-      ! setup filenames and read points
-      SAFE_ALLOCATE(pesrc%filenames(1:pesrc%npoints))
-      SAFE_ALLOCATE(pesrc%points   (1:pesrc%npoints))
-      SAFE_ALLOCATE(pesrc%rankmin   (1:pesrc%npoints))
+#if defined(HAVE_MPI)
+              if(mesh%mpi_grp%rank /= 0) then
+                wf=pesrc%wf(ip, idim, ist, ik, ii)
+                call mpi_send(wf,1, MPI_DOUBLE_COMPLEX,0, 1, mesh%mpi_grp%comm, mpi_err)
+              end if
+#endif
 
-      do ip = 1, pesrc%npoints
-        write(pesrc%filenames(ip), '(a,i2.2,a)') 'PES_rc.', ip, '.out'
+            end if
 
-        call parse_block_float(blk, ip - 1, 0, xx(1), units_inp%length)
-        call parse_block_float(blk, ip - 1, 1, xx(2), units_inp%length)
-        call parse_block_float(blk, ip - 1, 2, xx(3), units_inp%length)
+#if defined(HAVE_MPI)
+            if(mesh%mpi_grp%rank  ==  0 .and. pesrc%rankmin(ip) /= 0) then
+              call mpi_recv(wf,1, MPI_DOUBLE_COMPLEX,pesrc%rankmin(ip), 1, mesh%mpi_grp%comm,status, mpi_err)
+              pesrc%wf(ip, idim, ist, ik, ii) = wf
 
+            end if
+#endif
 
-        pesrc%points(ip) = mesh_nearest_point(mesh, xx, dmin, rankmin)
-        pesrc%rankmin(ip)= rankmin
-
+          end do
+        end do
       end do
+    end do
 
-      call parse_block_end(blk)
-
-      SAFE_ALLOCATE(pesrc%wf(1:pesrc%npoints, 1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik, 1:save_iter))
-
-      POP_SUB(PES_rc_init)
-    end subroutine PES_rc_init
+    POP_SUB(PES_rc_calc)
+  end subroutine PES_rc_calc
 
 
-    ! ---------------------------------------------------------
-    subroutine PES_rc_end(pesrc)
-      type(PES_rc_t), intent(inout) :: pesrc
+  ! ---------------------------------------------------------
+  subroutine PES_rc_output(pesrc, st, iter, save_iter, dt)
+    type(PES_rc_t), intent(in) :: pesrc
+    type(states_t), intent(in) :: st
+    integer,        intent(in) :: iter, save_iter
+    FLOAT,          intent(in) :: dt
 
-      PUSH_SUB(PES_rc_end)
+    type(unit_t) :: units
 
-      if(associated(pesrc%filenames)) then
-        SAFE_DEALLOCATE_P(pesrc%filenames)
-        SAFE_DEALLOCATE_P(pesrc%points)
-        SAFE_DEALLOCATE_P(pesrc%wf)
-        SAFE_DEALLOCATE_P(pesrc%rankmin)
-      end if
+    integer :: ip, iunit, ii, jj, ik, ist, idim
+    CMPLX :: vfu
 
-      POP_SUB(PES_rc_end)
-    end subroutine PES_rc_end
+    PUSH_SUB(PES_rc_output)
 
+    do ip = 1, pesrc%npoints
+      iunit = io_open('td.general/'//pesrc%filenames(ip), action='write', position='append')
+      do ii = 1, save_iter
+        jj = iter - save_iter + ii
+        write(iunit, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
+        do ik = 1, st%d%nik
+          do ist = st%st_start, st%st_end
+            do idim = 1, st%d%dim
+              vfu = pesrc%wf(ip, idim, ist, ik, ii)
+              vfu = units_from_atomic(sqrt(units_out%length**(-3)), vfu)
+              units=sqrt(units_out%length**(-3))
+              write(iunit, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
+                real(vfu),  aimag(vfu) 
+            end do
+          end do
+        end do
+        write(iunit, '(1x)', advance='yes')
+      end do
+      call io_close(iunit)
+    end do
 
-    ! ---------------------------------------------------------
-    subroutine PES_rc_calc(pesrc, st, mesh, ii)
-      type(PES_rc_t), intent(inout) :: pesrc
-      type(states_t), intent(in)    :: st
-      integer,        intent(in)    :: ii
-      type(mesh_t),   intent(in)    :: mesh
+    POP_SUB(PES_rc_output)
+  end subroutine PES_rc_output
 
-      integer :: ip, ik, ist, idim
-      logical :: contains_ip
-#if defined(HAVE_MPI)
-      CMPLX :: wf
-      integer :: status(MPI_STATUS_SIZE)
-#endif
+  ! ---------------------------------------------------------
+  subroutine PES_rc_init_write(pesrc, mesh, st)
+    type(PES_rc_t), intent(in) :: pesrc
+    type(mesh_t),   intent(in)  :: mesh
+    type(states_t), intent(in)  :: st
 
-      PUSH_SUB(PES_rc_calc)
+    integer  :: ip,ik,ist,idim,iunit
+    FLOAT :: xx(MAX_DIM)
 
-      contains_ip = .true.
+    PUSH_SUB(PES_rc_init_write)
 
+    if(mpi_grp_is_root(mpi_world)) then
       do ip = 1, pesrc%npoints
+        iunit = io_open('td.general/'//pesrc%filenames(ip), action='write')
+        xx(:)=mesh%idx%lxyz(pesrc%points(ip),:)
+        write(iunit,'(a1)') '#'
+        write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
+          '# R = (',units_from_atomic(units_inp%length, xx(1)*mesh%spacing(1)), &
+          ' ,',units_from_atomic(units_inp%length, xx(2)*mesh%spacing(1)), &
+          ' ,',units_from_atomic(units_inp%length, xx(3)*mesh%spacing(1)), &
+          ' )  [', trim(units_abbrev(units_inp%length)), ']'
 
-#if defined(HAVE_MPI)
-        if(mesh%mpi_grp%rank  ==  pesrc%rankmin(ip)) then !needed if mesh%parallel_in_domains is true
-          contains_ip = .true.
-        else
-          contains_ip = .false.
-        end if
-#endif
-
+        write(iunit,'(a1)') '#'  
+        write(iunit, '(a3,14x)', advance='no') '# t' 
         do ik = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
             do idim = 1, st%d%dim
-              if(contains_ip) then
-                pesrc%wf(ip, idim, ist, ik, ii) = st%occ(ist, ik) * &
-                  st%zpsi(pesrc%points(ip), idim, ist, ik)
-
-#if defined(HAVE_MPI)
-                if(mesh%mpi_grp%rank /= 0) then
-                  wf=pesrc%wf(ip, idim, ist, ik, ii)
-                  call mpi_send(wf,1, MPI_DOUBLE_COMPLEX,0, 1, mesh%mpi_grp%comm, mpi_err)
-                end if
-#endif
-
-              end if
-
-#if defined(HAVE_MPI)
-              if(mesh%mpi_grp%rank  ==  0 .and. pesrc%rankmin(ip) /= 0) then
-                call mpi_recv(wf,1, MPI_DOUBLE_COMPLEX,pesrc%rankmin(ip), 1, mesh%mpi_grp%comm,status, mpi_err)
-                pesrc%wf(ip, idim, ist, ik, ii) = wf
-
-              end if
-#endif
-
+              write(iunit, '(3x,a8,i3,a7,i3,a8,i3,3x)', advance='no') &
+                "ik = ", ik, " ist = ", ist, " idim = ", idim
             end do
           end do
         end do
-      end do
+        write(iunit, '(1x)', advance='yes')
 
-      POP_SUB(PES_rc_calc)
-    end subroutine PES_rc_calc
-
-
-    ! ---------------------------------------------------------
-    subroutine PES_rc_output(pesrc, st, iter, save_iter, dt)
-      type(PES_rc_t), intent(in) :: pesrc
-      type(states_t), intent(in) :: st
-      integer,        intent(in) :: iter, save_iter
-      FLOAT,          intent(in) :: dt
-
-      type(unit_t) :: units
-
-      integer :: ip, iunit, ii, jj, ik, ist, idim
-      CMPLX :: vfu
-
-      PUSH_SUB(PES_rc_output)
-
-      do ip = 1, pesrc%npoints
-        iunit = io_open('td.general/'//pesrc%filenames(ip), action='write', position='append')
-        do ii = 1, save_iter
-          jj = iter - save_iter + ii
-          write(iunit, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
-          do ik = 1, st%d%nik
-            do ist = st%st_start, st%st_end
-              do idim = 1, st%d%dim
-                vfu = pesrc%wf(ip, idim, ist, ik, ii)
-                vfu = units_from_atomic(sqrt(units_out%length**(-3)), vfu)
-                units=sqrt(units_out%length**(-3))
-                write(iunit, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
-                  real(vfu),  aimag(vfu) 
-              end do
-            end do
-          end do
-          write(iunit, '(1x)', advance='yes')
-        end do
         call io_close(iunit)
       end do
+    endif
 
-      POP_SUB(PES_rc_output)
-    end subroutine PES_rc_output
+    POP_SUB(PES_rc_init_write)
+  end subroutine PES_rc_init_write
 
-    ! ---------------------------------------------------------
-    subroutine PES_rc_init_write(pesrc, mesh, st)
-      type(PES_rc_t), intent(in) :: pesrc
-      type(mesh_t),   intent(in)  :: mesh
-      type(states_t), intent(in)  :: st
-
-      integer  :: ip,ik,ist,idim,iunit
-      FLOAT :: xx(MAX_DIM)
-
-      PUSH_SUB(PES_rc_init_write)
-
-      if(mpi_grp_is_root(mpi_world)) then
-        do ip = 1, pesrc%npoints
-          iunit = io_open('td.general/'//pesrc%filenames(ip), action='write')
-          xx(:)=mesh%idx%lxyz(pesrc%points(ip),:)
-          write(iunit,'(a1)') '#'
-          write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
-            '# R = (',units_from_atomic(units_inp%length, xx(1)*mesh%spacing(1)), &
-            ' ,',units_from_atomic(units_inp%length, xx(2)*mesh%spacing(1)), &
-            ' ,',units_from_atomic(units_inp%length, xx(3)*mesh%spacing(1)), &
-            ' )  [', trim(units_abbrev(units_inp%length)), ']'
-
-          write(iunit,'(a1)') '#'  
-          write(iunit, '(a3,14x)', advance='no') '# t' 
-          do ik = st%d%kpt%start, st%d%kpt%end
-            do ist = st%st_start, st%st_end
-              do idim = 1, st%d%dim
-                write(iunit, '(3x,a8,i3,a7,i3,a8,i3,3x)', advance='no') &
-                  "ik = ", ik, " ist = ", ist, " idim = ", idim
-              end do
-            end do
-          end do
-          write(iunit, '(1x)', advance='yes')
-
-          call io_close(iunit)
-        end do
-      endif
-
-      POP_SUB(PES_rc_init_write)
-    end subroutine PES_rc_init_write
-
-  end module pes_rc_m
+end module pes_rc_m
 
 !! Local Variables:
 !! mode: f90
