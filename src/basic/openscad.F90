@@ -34,6 +34,7 @@ module openscad_m
     openscad_file_end,              &
     openscad_file_sphere,           &
     openscad_file_bond,             &
+    openscad_file_cube,             &
     openscad_file_define_variable
 
   type openscad_file_t
@@ -95,7 +96,22 @@ contains
 
     POP_SUB(openscad_file_sphere)
   end subroutine openscad_file_sphere
-  
+
+  !-------------------------------------------------------
+
+  subroutine openscad_file_cube(this, position, sizes)
+    type(openscad_file_t),      intent(inout) :: this
+    FLOAT,                      intent(in)    :: position(:)
+    FLOAT,            optional, intent(in)    :: sizes(:)
+
+    PUSH_SUB(openscad_file_cube)
+    
+    call write_translate(this, position)
+    write(this%iunit, '(a,f12.6,a,f12.6,a,f12.6,a)') '  cube([', sizes(1), ',', sizes(2), ',', sizes(3), '], center = true);'
+
+    POP_SUB(openscad_file_cube)
+  end subroutine openscad_file_cube
+
   !-------------------------------------------------------
 
   subroutine openscad_file_bond(this, pos1, pos2, radius, radius_variable)

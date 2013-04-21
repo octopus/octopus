@@ -595,6 +595,7 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
 #if defined(HAVE_NETCDF)
   if(iand(how, C_OUTPUT_HOW_NETCDF)     /= 0) call out_netcdf()
 #endif
+  if(iand(how, C_OUTPUT_HOW_OPENSCAD) /= 0) call out_openscad()
 
   POP_SUB(X(io_function_output_global))
   call profiling_out(write_prof)
@@ -1083,10 +1084,7 @@ contains
     type(cube_t) :: cube
     type(cube_function_t) :: cf
 
-
-
     PUSH_SUB(X(io_function_output_global).out_netcdf)
-
 
     ! put values in a nice cube
     call cube_init(cube, mesh%idx%ll, mesh%sb)
@@ -1109,6 +1107,89 @@ contains
 
 
 #endif /*defined(HAVE_NETCDF)*/
+ 
+  subroutine out_openscad()
+    integer :: ip, ii, jp
+    logical, allocatable :: print_point(:)
+    FLOAT,   allocatable :: position(:, :)
+    FLOAT,   allocatable :: sizes(:, :)
+    type(openscad_file_t) :: cad_file
+    FLOAT, parameter :: isosurface_value = CNST(0.21)
+    logical :: inside, can_join
+    integer :: ix(1:3), jx(1:3), reddir, itimes
+
+    PUSH_SUB(X(io_function_output_global).out_openscad)
+
+#ifdef R_TREAL
+    print*, minval(ff(1:mesh%np)), maxval(ff(1:mesh%np))
+#endif
+
+    SAFE_ALLOCATE(print_point(1:mesh%np))
+    SAFE_ALLOCATE(position(1:3, 1:mesh%np))
+    SAFE_ALLOCATE(sizes(1:3, 1:mesh%np))
+
+    print_point(1:mesh%np) = .false.
+
+    do ip = 1, mesh%np
+#ifdef R_TREAL
+      inside = ff(ip) > isosurface_value
+#else
+      inside = abs(ff(ip)) > isosurface_value
+#endif
+      if(inside) then
+        print_point(ip) = .true.
+        position(1:3, ip) = mesh%x(ip, 1:3)
+        sizes(1:3, ip) = mesh%spacing(1:3)
+      end if
+    end do
+
+    ! since openscad can have problems with too many objects, we try
+    ! to merge the cubes before creating the file
+    do reddir = 3, 1, -1
+      do ip = 1, mesh%np
+        if(print_point(ip)) then
+          ix(1:3) = mesh%idx%lxyz(ip, 1:3)
+          jx(1:3) = ix(1:3)
+          do 
+            jx(reddir) = jx(reddir) + 1
+            jp = mesh%idx%lxyz_inv(jx(1), jx(2), jx(3))
+            if(jp > mesh%np .or. jp < 1) exit
+            if(.not. print_point(jp)) exit
+            
+            ! check that the blocks are in the same position and have
+            ! the same size, so that they can be merged
+            can_join = .true.
+            do idir = 1, 3
+              if(idir == reddir) cycle
+              can_join = can_join .and. (abs(sizes(idir, ip) - sizes(idir, jp)) < M_EPSILON)
+              can_join = can_join .and. (abs(position(idir, ip) - position(idir, jp)) < M_EPSILON)
+            end do
+            
+            if(.not. can_join) exit
+            
+            print_point(jp) = .false.
+            position(reddir, ip) = (sizes(reddir, ip)*position(reddir, ip) + sizes(reddir, jp)*position(reddir, jp))
+            sizes(reddir, ip) = sizes(reddir, ip) + sizes(reddir, jp)
+            position(reddir, ip) = position(reddir, ip)/sizes(reddir, ip)
+          end do
+        end if
+      end do
+    end do
+    
+    call openscad_file_init(cad_file, trim(dir)//'/'//trim(fname)//".scad")
+
+    do ip = 1, mesh%np
+      if(print_point(ip)) call openscad_file_cube(cad_file, position(1:3, ip), sizes(1:3, ip))
+    end do
+
+    print*, "NUMBER OBJECTS", count(print_point(1:mesh%np))
+
+    call openscad_file_end(cad_file)
+
+    SAFE_DEALLOCATE_A(print_point)
+
+    POP_SUB(X(io_function_output_global).out_openscad)
+  end subroutine out_openscad
 
 end subroutine X(io_function_output_global)
 

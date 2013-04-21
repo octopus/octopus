@@ -37,6 +37,7 @@ module io_function_m
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif
+  use openscad_m
   use par_vec_m
   use parser_m
   use profiling_m
@@ -244,6 +245,7 @@ contains
     if(index(where, "NETCDF")    /= 0) how = ior(how, C_OUTPUT_HOW_NETCDF)
 #endif
     if(index(where, "Cube")      /= 0) how = ior(how, C_OUTPUT_HOW_CUBE)
+    if(index(where, "OpenSCAD")  /= 0) how = ior(how, C_OUTPUT_HOW_OPENSCAD)
 
     POP_SUB(io_function_fill_how)
   end function io_function_fill_how
