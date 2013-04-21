@@ -173,7 +173,8 @@ contains
     !% When calculating the density response via real-time propagation,
     !% one needs to perform an initial kick on the KS system, at
     !% time zero. Depending on what kind of response property one wants to obtain,
-    !% this kick may be done in several modes.
+    !% this kick may be done in several modes. For use to calculate triplet excitations,
+    !% see MJT Oliveira, A Castro, MAL Marques, and A Rubio, J. Nanoscience and Nanotechnology 8, 3392 (2008).
     !%Option kick_density 0
     !% The total density of the system is perturbed.
     !%Option kick_spin 1
