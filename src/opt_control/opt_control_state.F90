@@ -26,6 +26,8 @@
 !! and velocities, also, so that one can propagate (and optimize) simultaneously the quantum
 !! and classical subsystems.
 module opt_control_state_m
+
+  use global_m
   use states_m
 
   implicit none
@@ -37,28 +39,34 @@ module opt_control_state_m
 
   !> This is the datatype that contains the objects that are propagated: in principle this
   !! could be both the quantum and the classical subsystems, but for the moment it is only
-  !! the quantum susbsytesm. So this data type is merely a wrapper around the states_t data type.
+  !! the quantum subsystem. So this data type is merely a wrapper around the states_t data type.
   type opt_control_state_t
     private
     type(states_t) :: psi
   end type opt_control_state_t
 
-  contains
+contains
 
   subroutine opt_control_state_init(ocs, initial_state)
     type(opt_control_state_t), intent(inout) :: ocs
     type(states_t), intent(in)               :: initial_state
 
+    PUSH_SUB(opt_control_state_init)
+
     call states_copy(ocs%psi, initial_state)
 
+    POP_SUB(opt_control_state_init)
   end subroutine opt_control_state_init
 
 
   subroutine opt_control_state_end(ocs)
     type(opt_control_state_t), intent(inout) :: ocs
 
+    PUSH_SUB(opt_control_state_end)
+
     call states_end(ocs%psi)
 
+    POP_SUB(opt_control_state_end)
   end subroutine opt_control_state_end
 
 end module opt_control_state_m

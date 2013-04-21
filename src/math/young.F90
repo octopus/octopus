@@ -45,14 +45,13 @@ module young_m
    integer, pointer :: young_down(:,:)
   end type young_t 
 
-  contains
+contains
 
   !------------------------------------------------------------
   subroutine young_init (this, nup, ndown)
     integer, intent(in) :: nup, ndown
     type(young_t), intent(inout) :: this
 
-    ! local vars
     integer :: ipart
 
     PUSH_SUB(young_init)
@@ -95,12 +94,11 @@ module young_m
     integer, intent(in) :: nn
     type(young_t), intent(inout) :: this
 
-    ! local vars
     integer :: idown, iup
     PUSH_SUB(young_fill)
 
     if (this%iyoung > this%nyoung) then
-    POP_SUB(young_fill)
+      POP_SUB(young_fill)
       return
     end if
 
@@ -124,7 +122,7 @@ module young_m
     end do
 
     if (this%iyoung > this%nyoung) then
-    POP_SUB(young_fill)
+      POP_SUB(young_fill)
       return
     end if
 
@@ -165,7 +163,7 @@ module young_m
     end do
 
     if (this%iyoung > this%nyoung) then
-    POP_SUB(young_fill)
+      POP_SUB(young_fill)
       return
     end if
     
@@ -238,7 +236,7 @@ module young_m
 
 
   !------------------------------------------------------------
-  ! routine gets all Young diagrams for all distributions of spins
+  !> routine gets all Young diagrams for all distributions of spins
   subroutine young_write_allspins (iunit, nparticles)
     integer, intent(in) :: iunit, nparticles
     integer :: nup, ndown

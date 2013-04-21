@@ -85,7 +85,7 @@ module opt_control_global_m
                                     !! file as initial guess, the code may generate a random field.
   end type oct_t
 
-  contains
+contains
 
   !> Reads, from the inp file, some global information about how the QOCT run
   !! should be. It uses this information to fill the "oct" variable. All the components

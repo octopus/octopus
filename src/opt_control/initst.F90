@@ -50,7 +50,7 @@ module opt_control_initst_m
     oct_is_userdefined      = 4         
 
 
-  contains
+contains
 
 
   ! ---------------------------------------------------------

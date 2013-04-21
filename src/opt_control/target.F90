@@ -133,7 +133,7 @@ module opt_control_target_m
   end type target_t
 
 
-  contains
+contains
 
   ! ---------------------------------------------------------
   !> This routine performs all the things that must be initialized

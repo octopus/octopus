@@ -117,9 +117,7 @@ module tdfunction_m
     module procedure tdfi, tdft
   end interface tdf
 
-  contains
-
-
+contains
 
   !------------------------------------------------------------
   subroutine tdf_read(f, function_name, ierr)
