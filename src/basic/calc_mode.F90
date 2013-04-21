@@ -44,95 +44,95 @@ module calc_mode_m
 
   type(calc_mode_t) :: this
 
-  contains
-
-    ! ----------------------------------------------------------
-
-    subroutine calc_mode_init()
-      ! no push_sub because this routine is called before everything
-      ! is fully initialized for the debugging stack
-
-      this%par_mask = 0
-      this%par_mask = ibset(this%par_mask, P_STRATEGY_DOMAINS - 1)
-      this%par_mask = ibset(this%par_mask, P_STRATEGY_KPOINTS - 1)
-
-      this%def_par_mask = 0
-      this%def_par_mask = ibset(this%def_par_mask, P_STRATEGY_DOMAINS - 1)
-
-      this%scalapack_compat = .false.
-
-      this%extra_states = .true.
-    end subroutine calc_mode_init
-
-    ! -----------------------------------------------------
-
-    subroutine calc_mode_end()
-
-    end subroutine calc_mode_end
-
-    ! -----------------------------------------------------
-
-    subroutine calc_mode_set_parallelization(par, default)
-      integer, intent(in) :: par
-      logical, intent(in) :: default
-
-      this%par_mask = ibset(this%par_mask, par - 1)
-      if(default) this%def_par_mask = ibset(this%def_par_mask, par - 1)
-
-    end subroutine calc_mode_set_parallelization
-
-    ! -----------------------------------------------------
+contains
     
-    !> Defines that the current run mode requires division of states
-    !! and domains to be compatible with scalapack.
-    subroutine calc_mode_set_scalapack_compat()
-      this%scalapack_compat = .true.
-    end subroutine calc_mode_set_scalapack_compat
+  ! ----------------------------------------------------------
 
-    ! ----------------------------------------------------- 
+  subroutine calc_mode_init()
+    ! no push_sub because this routine is called before everything
+    ! is fully initialized for the debugging stack
+
+    this%par_mask = 0
+    this%par_mask = ibset(this%par_mask, P_STRATEGY_DOMAINS - 1)
+    this%par_mask = ibset(this%par_mask, P_STRATEGY_KPOINTS - 1)
     
-    !> Whether the current run mode requires divisions compatible with
-    !! scalapack.
-    logical pure function calc_mode_scalapack_compat() result(compat)
-      compat = this%scalapack_compat
-    end function calc_mode_scalapack_compat
+    this%def_par_mask = 0
+    this%def_par_mask = ibset(this%def_par_mask, P_STRATEGY_DOMAINS - 1)
     
-    ! -----------------------------------------------------
+    this%scalapack_compat = .false.
+    
+    this%extra_states = .true.
+  end subroutine calc_mode_init
 
-    integer function calc_mode_parallel_mask() result(par_mask)
-      PUSH_SUB(calc_mode_parallel_mask)
-
-      par_mask = this%par_mask
-
-      POP_SUB(calc_mode_parallel_mask)
-    end function calc_mode_parallel_mask
-
-    ! -----------------------------------------------------
-    !> This function returns the default modes used for a calculation,
-    !! that might be different from the modes available.
-    integer function calc_mode_default_parallel_mask() result(par_mask)
-      PUSH_SUB(calc_mode_default_parallel_mask)
-
-      par_mask = this%def_par_mask
-
-      POP_SUB(calc_mode_default_parallel_mask)
-    end function calc_mode_default_parallel_mask
-
-    ! -----------------------------------------------------
-
-    subroutine calc_mode_set_extra_states(set)
-      logical, intent(in) :: set
-
-      this%extra_states = set
-    end subroutine calc_mode_set_extra_states
-
-    ! -----------------------------------------------------
-
-    logical pure function calc_mode_extra_states() result(extra_states)
-      
-      extra_states = this%extra_states
-    end function calc_mode_extra_states
-
+  ! -----------------------------------------------------
+  
+  subroutine calc_mode_end()
+    
+  end subroutine calc_mode_end
+  
+  ! -----------------------------------------------------
+  
+  subroutine calc_mode_set_parallelization(par, default)
+    integer, intent(in) :: par
+    logical, intent(in) :: default
+    
+    this%par_mask = ibset(this%par_mask, par - 1)
+    if(default) this%def_par_mask = ibset(this%def_par_mask, par - 1)
+    
+  end subroutine calc_mode_set_parallelization
+  
+  ! -----------------------------------------------------
+  
+  !> Defines that the current run mode requires division of states
+  !! and domains to be compatible with scalapack.
+  subroutine calc_mode_set_scalapack_compat()
+    this%scalapack_compat = .true.
+  end subroutine calc_mode_set_scalapack_compat
+  
+  ! ----------------------------------------------------- 
+  
+  !> Whether the current run mode requires divisions compatible with
+  !! scalapack.
+  logical pure function calc_mode_scalapack_compat() result(compat)
+    compat = this%scalapack_compat
+  end function calc_mode_scalapack_compat
+  
+  ! -----------------------------------------------------
+  
+  integer function calc_mode_parallel_mask() result(par_mask)
+    PUSH_SUB(calc_mode_parallel_mask)
+    
+    par_mask = this%par_mask
+    
+    POP_SUB(calc_mode_parallel_mask)
+  end function calc_mode_parallel_mask
+  
+  ! -----------------------------------------------------
+  !> This function returns the default modes used for a calculation,
+  !! that might be different from the modes available.
+  integer function calc_mode_default_parallel_mask() result(par_mask)
+    PUSH_SUB(calc_mode_default_parallel_mask)
+    
+    par_mask = this%def_par_mask
+    
+    POP_SUB(calc_mode_default_parallel_mask)
+  end function calc_mode_default_parallel_mask
+  
+  ! -----------------------------------------------------
+  
+  subroutine calc_mode_set_extra_states(set)
+    logical, intent(in) :: set
+    
+    this%extra_states = set
+  end subroutine calc_mode_set_extra_states
+  
+  ! -----------------------------------------------------
+  
+  logical pure function calc_mode_extra_states() result(extra_states)
+    
+    extra_states = this%extra_states
+  end function calc_mode_extra_states
+  
 end module calc_mode_m
 
 !! Local Variables:

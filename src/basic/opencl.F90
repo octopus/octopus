@@ -173,1178 +173,1178 @@ module opencl_m
   integer :: buffer_alloc_count
   integer(8) :: allocated_mem
 
-  contains
+contains
 
-    pure logical function opencl_is_enabled() result(enabled)
+  pure logical function opencl_is_enabled() result(enabled)
 #ifdef HAVE_OPENCL
-      enabled = opencl%enabled
+    enabled = opencl%enabled
 #else
-      enabled = .false.
+    enabled = .false.
 #endif
-    end function opencl_is_enabled
+  end function opencl_is_enabled
 
-    ! ------------------------------------------
-    
-    subroutine opencl_init(base_grp)
-      type(mpi_grp_t),  intent(inout) :: base_grp
+  ! ------------------------------------------
 
-      logical  :: disable, default, run_benchmark
-      integer  :: device_type
-      integer  :: idevice, iplatform, ndevices, idev, cl_status, ret_devices, nplatforms, iplat
-      character(len=256) :: device_name
+  subroutine opencl_init(base_grp)
+    type(mpi_grp_t),  intent(inout) :: base_grp
+
+    logical  :: disable, default, run_benchmark
+    integer  :: device_type
+    integer  :: idevice, iplatform, ndevices, idev, cl_status, ret_devices, nplatforms, iplat
+    character(len=256) :: device_name
 #ifdef HAVE_OPENCL
-      type(cl_program) :: prog
-      type(cl_platform_id), allocatable :: allplatforms(:)
-      type(cl_device_id), allocatable :: alldevices(:)
-      type(profile_t), save :: prof_init
+    type(cl_program) :: prog
+    type(cl_platform_id), allocatable :: allplatforms(:)
+    type(cl_device_id), allocatable :: alldevices(:)
+    type(profile_t), save :: prof_init
 #endif
 
-      PUSH_SUB(opencl_init)
+    PUSH_SUB(opencl_init)
 
-      buffer_alloc_count = 0
+    buffer_alloc_count = 0
 
-      !%Variable DisableOpenCL
-      !%Type logical
-      !%Default yes
-      !%Section Execution::OpenCL
-      !%Description
-      !% If Octopus was compiled with OpenCL support, it will try to
-      !% initialize and use an OpenCL device. By setting this variable
-      !% to <tt>yes</tt> you tell Octopus not to use OpenCL.
-      !%End
+    !%Variable DisableOpenCL
+    !%Type logical
+    !%Default yes
+    !%Section Execution::OpenCL
+    !%Description
+    !% If Octopus was compiled with OpenCL support, it will try to
+    !% initialize and use an OpenCL device. By setting this variable
+    !% to <tt>yes</tt> you tell Octopus not to use OpenCL.
+    !%End
 
 #ifndef HAVE_OPENCL
-      default = .true.
+    default = .true.
 #else
-      default = .false.
+    default = .false.
 #endif
-      call parse_logical(datasets_check('DisableOpenCL'), default, disable)
-      opencl%enabled = .not. disable
+    call parse_logical(datasets_check('DisableOpenCL'), default, disable)
+    opencl%enabled = .not. disable
 
 #ifndef HAVE_OPENCL
-      if(opencl%enabled) then
-        message(1) = 'Octopus was compiled without OpenCL support.'
-        call messages_fatal(1)
-      end if
+    if(opencl%enabled) then
+      message(1) = 'Octopus was compiled without OpenCL support.'
+      call messages_fatal(1)
+    end if
 #endif
 
-      if(.not. opencl_is_enabled()) then
-        POP_SUB(opencl_init)
-        return
-      end if
+    if(.not. opencl_is_enabled()) then
+      POP_SUB(opencl_init)
+      return
+    end if
 
-      !%Variable OpenCLPlatform
-      !%Type integer
-      !%Default 0
-      !%Section Execution::OpenCL
-      !%Description
-      !% This variable selects the OpenCL platform that Octopus will
-      !% use. You can give an explicit platform number or use one of
-      !% the options that select a particular vendor
-      !% implementation. Platform 0 is used by default.
-      !%Option amd -2
-      !% Use the AMD OpenCL platform.
-      !%Option nvidia -3
-      !% Use the Nvidia OpenCL platform.
-      !%Option ati -4
-      !% Use the ATI (old AMD) OpenCL platform.
-      !%Option intel -5
-      !% Use the Intel OpenCL platform.
-      !%End
-      call parse_integer(datasets_check('OpenCLPlatform'), 0, iplatform)
+    !%Variable OpenCLPlatform
+    !%Type integer
+    !%Default 0
+    !%Section Execution::OpenCL
+    !%Description
+    !% This variable selects the OpenCL platform that Octopus will
+    !% use. You can give an explicit platform number or use one of
+    !% the options that select a particular vendor
+    !% implementation. Platform 0 is used by default.
+    !%Option amd -2
+    !% Use the AMD OpenCL platform.
+    !%Option nvidia -3
+    !% Use the Nvidia OpenCL platform.
+    !%Option ati -4
+    !% Use the ATI (old AMD) OpenCL platform.
+    !%Option intel -5
+    !% Use the Intel OpenCL platform.
+    !%End
+    call parse_integer(datasets_check('OpenCLPlatform'), 0, iplatform)
 
-      !%Variable OpenCLDevice
-      !%Type integer
-      !%Default 0
-      !%Section Execution::OpenCL
-      !%Description
-      !% This variable selects the OpenCL device that Octopus will
-      !% use. You can specify one of the options below or a numerical
-      !% id to select a specific device.
-      !%Option gpu -1
-      !% If available, Octopus will use a GPU for OpenCL. This is the default.
-      !%Option cpu -2
-      !% If available, Octopus will use a GPU for OpenCL.
-      !%Option accelerator -3
-      !% If available, Octopus will use an accelerator for OpenCL.
-      !%Option cl_default -4
-      !% Octopus will use the default device specified by the OpenCL
-      !% implementation.
-      !%End
-      call parse_integer(datasets_check('OpenCLDevice'), OPENCL_GPU, idevice)
+    !%Variable OpenCLDevice
+    !%Type integer
+    !%Default 0
+    !%Section Execution::OpenCL
+    !%Description
+    !% This variable selects the OpenCL device that Octopus will
+    !% use. You can specify one of the options below or a numerical
+    !% id to select a specific device.
+    !%Option gpu -1
+    !% If available, Octopus will use a GPU for OpenCL. This is the default.
+    !%Option cpu -2
+    !% If available, Octopus will use a GPU for OpenCL.
+    !%Option accelerator -3
+    !% If available, Octopus will use an accelerator for OpenCL.
+    !%Option cl_default -4
+    !% Octopus will use the default device specified by the OpenCL
+    !% implementation.
+    !%End
+    call parse_integer(datasets_check('OpenCLDevice'), OPENCL_GPU, idevice)
 
-      if(idevice < OPENCL_DEFAULT) then
-        message(1) = 'Invalid OpenCLDevice.'
-        call messages_fatal(1)
-      end if
+    if(idevice < OPENCL_DEFAULT) then
+      message(1) = 'Invalid OpenCLDevice.'
+      call messages_fatal(1)
+    end if
 
-      call messages_print_stress(stdout, "OpenCL")
+    call messages_print_stress(stdout, "OpenCL")
 
 #ifdef HAVE_OPENCL
-      call profiling_in(prof_init, 'CL_INIT')
-      
-      call clGetPlatformIDs(nplatforms, cl_status)
-      if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
- 
-      SAFE_ALLOCATE(allplatforms(1:nplatforms))
+    call profiling_in(prof_init, 'CL_INIT')
 
-      call clGetPlatformIDs(allplatforms, iplat, cl_status)
-      if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
+    call clGetPlatformIDs(nplatforms, cl_status)
+    if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
 
-      call messages_write('Info: Available CL platforms: ')
-      call messages_write(nplatforms)
-      call messages_info()
+    SAFE_ALLOCATE(allplatforms(1:nplatforms))
 
-      do iplat = 1, nplatforms
+    call clGetPlatformIDs(allplatforms, iplat, cl_status)
+    if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
 
-        call clGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_NAME, device_name, cl_status)
+    call messages_write('Info: Available CL platforms: ')
+    call messages_write(nplatforms)
+    call messages_info()
 
-        if(iplatform < 0) then
-          if(iplatform == get_platform_id(device_name)) iplatform = iplat - 1
-        end if
+    do iplat = 1, nplatforms
 
-        if(iplatform == iplat - 1) then
-          call messages_write('    * Platform ')
-        else
-          call messages_write('      Platform ')
-        end if
+      call clGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_NAME, device_name, cl_status)
 
-        call messages_write(iplat - 1)
-        call messages_write(' : '//device_name)
-        call clGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_VERSION, device_name, cl_status)
-        call messages_write(' ('//trim(device_name)//')')
-        call messages_info()
-      end do
-
-      call messages_info()
-
-      if(iplatform >= nplatforms .or. iplatform < 0) then
-        call messages_write('Requested CL platform does not exist')
-        if(iplatform > 0) then 
-          call messages_write('(platform = ')
-          call messages_write(iplatform)
-          call messages_write(').')
-        end if
-        call messages_fatal()
+      if(iplatform < 0) then
+        if(iplatform == get_platform_id(device_name)) iplatform = iplat - 1
       end if
 
-      opencl%platform_id = allplatforms(iplatform + 1)
+      if(iplatform == iplat - 1) then
+        call messages_write('    * Platform ')
+      else
+        call messages_write('      Platform ')
+      end if
 
-      SAFE_DEALLOCATE_A(allplatforms)
-
-      call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, cl_status)
-
-      call messages_write('Info: Available CL devices: ')
-      call messages_write(ndevices)
+      call messages_write(iplat - 1)
+      call messages_write(' : '//device_name)
+      call clGetPlatformInfo(allplatforms(iplat), CL_PLATFORM_VERSION, device_name, cl_status)
+      call messages_write(' ('//trim(device_name)//')')
       call messages_info()
+    end do
 
-      SAFE_ALLOCATE(alldevices(1:ndevices))
+    call messages_info()
 
-      ! list all devices
-
-      call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, alldevices, ret_devices, cl_status)
-
-      do idev = 1, ndevices
-        call messages_write('      Device ')
-        call messages_write(idev - 1)
-        call clGetDeviceInfo(alldevices(idev), CL_DEVICE_NAME, device_name, cl_status)
-        call messages_write(' : '//device_name)
-        call messages_info()
-      end do
-
-      select case(idevice)
-        case(OPENCL_GPU)
-          device_type = CL_DEVICE_TYPE_GPU
-        case(OPENCL_CPU)
-          device_type = CL_DEVICE_TYPE_CPU
-        case(OPENCL_ACCELERATOR)
-          device_type = CL_DEVICE_TYPE_ACCELERATOR
-        case(OPENCL_DEFAULT)
-          device_type = CL_DEVICE_TYPE_DEFAULT
-        case default
-          device_type = CL_DEVICE_TYPE_ALL
-      end select
-
-      ! now get a list of the selected type
-      call clGetDeviceIDs(opencl%platform_id, device_type, alldevices, ret_devices, cl_status)
-      
-      if(ret_devices < 1) then
-        ! we didnt find a device of the selected type, we ask for the default device
-        call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_DEFAULT, alldevices, ret_devices, cl_status)
-
-        if(ret_devices < 1) then
-          ! if this does not work, we ask for all devices
-          call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, alldevices, ret_devices, cl_status)
-        end if
-        
-        if(ret_devices < 1) then
-          call messages_write('Cannot find an OpenCL device')
-          call messages_fatal()
-        end if
-      end if
-
-      ! the number of devices can be smaller
-      ndevices = ret_devices
-
-      if(idevice < 0) then
-        if(base_grp%size > 1) then
-          ! with MPI we have to select the device so multiple GPUs in one
-          ! node are correctly distributed
-          call select_device(idevice)
-        else
-          idevice = 0
-        end if
-      end if
-
-      if(idevice >= ndevices) then
-        call messages_write('Requested CL device does not exist (device = ')
-        call messages_write(idevice)
-        call messages_write(', platform = ')
+    if(iplatform >= nplatforms .or. iplatform < 0) then
+      call messages_write('Requested CL platform does not exist')
+      if(iplatform > 0) then 
+        call messages_write('(platform = ')
         call messages_write(iplatform)
         call messages_write(').')
-        call messages_fatal()
+      end if
+      call messages_fatal()
+    end if
+
+    opencl%platform_id = allplatforms(iplatform + 1)
+
+    SAFE_DEALLOCATE_A(allplatforms)
+
+    call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, cl_status)
+
+    call messages_write('Info: Available CL devices: ')
+    call messages_write(ndevices)
+    call messages_info()
+
+    SAFE_ALLOCATE(alldevices(1:ndevices))
+
+    ! list all devices
+
+    call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, alldevices, ret_devices, cl_status)
+
+    do idev = 1, ndevices
+      call messages_write('      Device ')
+      call messages_write(idev - 1)
+      call clGetDeviceInfo(alldevices(idev), CL_DEVICE_NAME, device_name, cl_status)
+      call messages_write(' : '//device_name)
+      call messages_info()
+    end do
+
+    select case(idevice)
+    case(OPENCL_GPU)
+      device_type = CL_DEVICE_TYPE_GPU
+    case(OPENCL_CPU)
+      device_type = CL_DEVICE_TYPE_CPU
+    case(OPENCL_ACCELERATOR)
+      device_type = CL_DEVICE_TYPE_ACCELERATOR
+    case(OPENCL_DEFAULT)
+      device_type = CL_DEVICE_TYPE_DEFAULT
+    case default
+      device_type = CL_DEVICE_TYPE_ALL
+    end select
+
+    ! now get a list of the selected type
+    call clGetDeviceIDs(opencl%platform_id, device_type, alldevices, ret_devices, cl_status)
+
+    if(ret_devices < 1) then
+      ! we didnt find a device of the selected type, we ask for the default device
+      call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_DEFAULT, alldevices, ret_devices, cl_status)
+
+      if(ret_devices < 1) then
+        ! if this does not work, we ask for all devices
+        call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, alldevices, ret_devices, cl_status)
       end if
 
-      opencl%device = alldevices(idevice + 1)
+      if(ret_devices < 1) then
+        call messages_write('Cannot find an OpenCL device')
+        call messages_fatal()
+      end if
+    end if
 
-      if(mpi_grp_is_root(base_grp)) call device_info()
+    ! the number of devices can be smaller
+    ndevices = ret_devices
 
-      ! create the context
-      opencl%context = clCreateContext(opencl%platform_id, opencl%device, cl_status)
-      if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateContext")
+    if(idevice < 0) then
+      if(base_grp%size > 1) then
+        ! with MPI we have to select the device so multiple GPUs in one
+        ! node are correctly distributed
+        call select_device(idevice)
+      else
+        idevice = 0
+      end if
+    end if
 
-      SAFE_DEALLOCATE_A(alldevices)
+    if(idevice >= ndevices) then
+      call messages_write('Requested CL device does not exist (device = ')
+      call messages_write(idevice)
+      call messages_write(', platform = ')
+      call messages_write(iplatform)
+      call messages_write(').')
+      call messages_fatal()
+    end if
 
-      opencl%command_queue = clCreateCommandQueue(opencl%context, opencl%device, CL_QUEUE_PROFILING_ENABLE, cl_status)
-      if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateCommandQueue")
-      
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, opencl%max_workgroup_size, cl_status)
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, opencl%local_memory_size, cl_status)
+    opencl%device = alldevices(idevice + 1)
 
-      ! now initialize the kernels
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/set_zero.cl')
-      call opencl_create_kernel(set_zero, prog, "set_zero")
-      call opencl_release_program(prog)
-      
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/vpsi.cl')
-      call opencl_create_kernel(kernel_vpsi, prog, "vpsi")
-      call opencl_create_kernel(kernel_vpsi_spinors, prog, "vpsi_spinors")
-      call opencl_release_program(prog)
-      
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/axpy.cl', flags = '-DRTYPE_DOUBLE')
-      call opencl_create_kernel(kernel_daxpy, prog, "daxpy")
-      call opencl_release_program(prog)
+    if(mpi_grp_is_root(base_grp)) call device_info()
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/axpy.cl', flags = '-DRTYPE_COMPLEX')
-      call opencl_create_kernel(kernel_zaxpy, prog, "zaxpy")
-      call opencl_release_program(prog)
+    ! create the context
+    opencl%context = clCreateContext(opencl%platform_id, opencl%device, cl_status)
+    if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateContext")
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/pack.cl')
-      call opencl_create_kernel(dpack, prog, "dpack")
-      call opencl_create_kernel(zpack, prog, "zpack")
-      call opencl_create_kernel(dunpack, prog, "dunpack")
-      call opencl_create_kernel(zunpack, prog, "zunpack")
-      call opencl_release_program(prog)
+    SAFE_DEALLOCATE_A(alldevices)
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/copy.cl')
-      call opencl_create_kernel(kernel_copy, prog, "copy")
-      call opencl_release_program(prog)
+    opencl%command_queue = clCreateCommandQueue(opencl%context, opencl%device, CL_QUEUE_PROFILING_ENABLE, cl_status)
+    if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateCommandQueue")
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/subarray.cl')
-      call opencl_create_kernel(kernel_subarray_gather, prog, "subarray_gather")
-      call opencl_release_program(prog)
+    call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, opencl%max_workgroup_size, cl_status)
+    call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, opencl%local_memory_size, cl_status)
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/density.cl')
-      call opencl_create_kernel(kernel_density_real, prog, "density_real")
-      call opencl_create_kernel(kernel_density_complex, prog, "density_complex")
-      call opencl_release_program(prog)
+    ! now initialize the kernels
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/set_zero.cl')
+    call opencl_create_kernel(set_zero, prog, "set_zero")
+    call opencl_release_program(prog)
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/phase.cl')
-      call opencl_create_kernel(kernel_phase, prog, "phase")
-      call opencl_release_program(prog)
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/vpsi.cl')
+    call opencl_create_kernel(kernel_vpsi, prog, "vpsi")
+    call opencl_create_kernel(kernel_vpsi_spinors, prog, "vpsi_spinors")
+    call opencl_release_program(prog)
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/mesh_batch.cl')
-      call opencl_create_kernel(dkernel_dot_vector, prog, "ddot_vector")
-      call opencl_create_kernel(zkernel_dot_vector, prog, "zdot_vector")
-      call opencl_create_kernel(dkernel_dot_matrix, prog, "ddot_matrix")
-      call opencl_create_kernel(zkernel_dot_matrix, prog, "zdot_matrix")
-      call opencl_create_kernel(zkernel_dot_matrix_spinors, prog, "zdot_matrix_spinors")
-      call opencl_create_kernel(kernel_nrm2_vector, prog, "nrm2_vector")
-      call opencl_release_program(prog)
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/axpy.cl', flags = '-DRTYPE_DOUBLE')
+    call opencl_create_kernel(kernel_daxpy, prog, "daxpy")
+    call opencl_release_program(prog)
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/mul.cl', flags = '-DRTYPE_DOUBLE')
-      call opencl_create_kernel(dzmul, prog, "dzmul")
-      call opencl_release_program(prog)
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/axpy.cl', flags = '-DRTYPE_COMPLEX')
+    call opencl_create_kernel(kernel_zaxpy, prog, "zaxpy")
+    call opencl_release_program(prog)
 
-      call opencl_build_program(prog, trim(conf%share)//'/opencl/mul.cl', flags = '-DRTYPE_COMPLEX')
-      call opencl_create_kernel(zzmul, prog, "zzmul")
-      call opencl_release_program(prog)
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/pack.cl')
+    call opencl_create_kernel(dpack, prog, "dpack")
+    call opencl_create_kernel(zpack, prog, "zpack")
+    call opencl_create_kernel(dunpack, prog, "dunpack")
+    call opencl_create_kernel(zunpack, prog, "zunpack")
+    call opencl_release_program(prog)
+
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/copy.cl')
+    call opencl_create_kernel(kernel_copy, prog, "copy")
+    call opencl_release_program(prog)
+
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/subarray.cl')
+    call opencl_create_kernel(kernel_subarray_gather, prog, "subarray_gather")
+    call opencl_release_program(prog)
+
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/density.cl')
+    call opencl_create_kernel(kernel_density_real, prog, "density_real")
+    call opencl_create_kernel(kernel_density_complex, prog, "density_complex")
+    call opencl_release_program(prog)
+
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/phase.cl')
+    call opencl_create_kernel(kernel_phase, prog, "phase")
+    call opencl_release_program(prog)
+
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/mesh_batch.cl')
+    call opencl_create_kernel(dkernel_dot_vector, prog, "ddot_vector")
+    call opencl_create_kernel(zkernel_dot_vector, prog, "zdot_vector")
+    call opencl_create_kernel(dkernel_dot_matrix, prog, "ddot_matrix")
+    call opencl_create_kernel(zkernel_dot_matrix, prog, "zdot_matrix")
+    call opencl_create_kernel(zkernel_dot_matrix_spinors, prog, "zdot_matrix_spinors")
+    call opencl_create_kernel(kernel_nrm2_vector, prog, "nrm2_vector")
+    call opencl_release_program(prog)
+
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/mul.cl', flags = '-DRTYPE_DOUBLE')
+    call opencl_create_kernel(dzmul, prog, "dzmul")
+    call opencl_release_program(prog)
+
+    call opencl_build_program(prog, trim(conf%share)//'/opencl/mul.cl', flags = '-DRTYPE_COMPLEX')
+    call opencl_create_kernel(zzmul, prog, "zzmul")
+    call opencl_release_program(prog)
 
 #ifdef HAVE_CLAMDBLAS
-      call clAmdBlasSetup(cl_status)
-      if(cl_status /= clAmdBlasSuccess) call clblas_print_error(cl_status, 'clAmdBlasSetup')
+    call clAmdBlasSetup(cl_status)
+    if(cl_status /= clAmdBlasSuccess) call clblas_print_error(cl_status, 'clAmdBlasSetup')
 #endif
 
 #ifdef HAVE_CLAMDFFT
-      call clAmdFftSetup(cl_status)
-      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftSetup')
+    call clAmdFftSetup(cl_status)
+    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftSetup')
 #endif
 
-      call profiling_out(prof_init)
+    call profiling_out(prof_init)
 #endif
-      !%Variable OpenCLBenchmark
-      !%Type logical
-      !%Default no
-      !%Section Execution::OpenCL
-      !%Description
-      !% If this variable is set to yes, Octopus will run some
-      !% routines to benchmark the performance of the OpenCL device.
-      !%End
+    !%Variable OpenCLBenchmark
+    !%Type logical
+    !%Default no
+    !%Section Execution::OpenCL
+    !%Description
+    !% If this variable is set to yes, Octopus will run some
+    !% routines to benchmark the performance of the OpenCL device.
+    !%End
 
-      call parse_logical(datasets_check('OpenCLBenchmark'), .false., run_benchmark)
+    call parse_logical(datasets_check('OpenCLBenchmark'), .false., run_benchmark)
 
-      if(run_benchmark) then
+    if(run_benchmark) then
 #ifdef HAVE_OPENCL
-        call opencl_check_bandwidth()
+      call opencl_check_bandwidth()
 #endif
-      end if
+    end if
 
-      call messages_print_stress(stdout)
+    call messages_print_stress(stdout)
 
-      POP_SUB(opencl_init)
+    POP_SUB(opencl_init)
 
-    contains
-      
-      subroutine select_device(idevice)
-        integer, intent(inout) :: idevice
+  contains
+
+    subroutine select_device(idevice)
+      integer, intent(inout) :: idevice
 #if defined(HAVE_MPI) && defined(HAVE_OPENCL)
-        integer :: irank
-        character(len=256) :: device_name
+      integer :: irank
+      character(len=256) :: device_name
 
-        PUSH_SUB(opencl_init.select_device)
+      PUSH_SUB(opencl_init.select_device)
 
-        idevice = mod(base_grp%rank, ndevices)
+      idevice = mod(base_grp%rank, ndevices)
 
+      call MPI_Barrier(base_grp%comm, mpi_err)
+      call messages_write('Info: CL device distribution:')
+      call messages_info()
+      do irank = 0, base_grp%size - 1
+        if(irank == base_grp%rank) then
+          call clGetDeviceInfo(alldevices(idevice + 1), CL_DEVICE_NAME, device_name, cl_status)
+          call messages_write('      MPI node ')
+          call messages_write(base_grp%rank)
+          call messages_write(' -> CL device ')
+          call messages_write(idevice)
+          call messages_write(' : '//device_name)
+          call messages_info(all_nodes = .true.)
+        end if
         call MPI_Barrier(base_grp%comm, mpi_err)
-        call messages_write('Info: CL device distribution:')
-        call messages_info()
-        do irank = 0, base_grp%size - 1
-          if(irank == base_grp%rank) then
-            call clGetDeviceInfo(alldevices(idevice + 1), CL_DEVICE_NAME, device_name, cl_status)
-            call messages_write('      MPI node ')
-            call messages_write(base_grp%rank)
-            call messages_write(' -> CL device ')
-            call messages_write(idevice)
-            call messages_write(' : '//device_name)
-            call messages_info(all_nodes = .true.)
-          end if
-          call MPI_Barrier(base_grp%comm, mpi_err)
-        end do
+      end do
 #endif
 
-        POP_SUB(opencl_init.select_device)
-      end subroutine select_device
+      POP_SUB(opencl_init.select_device)
+    end subroutine select_device
 
-      subroutine device_info()
+    subroutine device_info()
 
 #ifdef HAVE_OPENCL
-        integer(8) :: val 
-        character(len=256) :: val_str
+      integer(8) :: val 
+      character(len=256) :: val_str
 
-        PUSH_SUB(opencl_init.device_info)
+      PUSH_SUB(opencl_init.device_info)
 
-        call messages_new_line()
-        call messages_write('Selected CL device:')
-        call messages_new_line()
+      call messages_new_line()
+      call messages_write('Selected CL device:')
+      call messages_new_line()
 
-        call clGetDeviceInfo(opencl%device, CL_DEVICE_VENDOR, val_str, cl_status)
-        call messages_write('      Device vendor          : '//trim(val_str))
-        call messages_new_line()
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_VENDOR, val_str, cl_status)
+      call messages_write('      Device vendor          : '//trim(val_str))
+      call messages_new_line()
 
-        call clGetDeviceInfo(opencl%device, CL_DEVICE_NAME, val_str, cl_status)
-        call messages_write('      Device name            : '//trim(val_str))
-        call messages_new_line()
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_NAME, val_str, cl_status)
+      call messages_write('      Device name            : '//trim(val_str))
+      call messages_new_line()
 
-        call clGetDeviceInfo(opencl%device, CL_DRIVER_VERSION, val_str, cl_status)
-        call messages_write('      Driver version         : '//trim(val_str))
-        call messages_new_line()
+      call clGetDeviceInfo(opencl%device, CL_DRIVER_VERSION, val_str, cl_status)
+      call messages_write('      Driver version         : '//trim(val_str))
+      call messages_new_line()
 
-        call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_COMPUTE_UNITS, val, cl_status)
-        call messages_write('      Compute units          :')
-        call messages_write(val)
-        call messages_new_line()
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_COMPUTE_UNITS, val, cl_status)
+      call messages_write('      Compute units          :')
+      call messages_write(val)
+      call messages_new_line()
 
-        call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CLOCK_FREQUENCY, val, cl_status)
-        call messages_write('      Clock frequency        :')
-        call messages_write(val)
-        call messages_write(' GHz')
-        call messages_new_line()
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CLOCK_FREQUENCY, val, cl_status)
+      call messages_write('      Clock frequency        :')
+      call messages_write(val)
+      call messages_write(' GHz')
+      call messages_new_line()
 
-        call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_SIZE, val, cl_status)
-        call messages_write('      Device memory          :')
-        call messages_write(val, units = unit_megabytes)
-        call messages_new_line()
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_SIZE, val, cl_status)
+      call messages_write('      Device memory          :')
+      call messages_write(val, units = unit_megabytes)
+      call messages_new_line()
 
-        call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, val, cl_status)
-        call messages_write('      Max alloc size         :')
-        call messages_write(val, units = unit_megabytes)
-        call messages_new_line()
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, val, cl_status)
+      call messages_write('      Max alloc size         :')
+      call messages_write(val, units = unit_megabytes)
+      call messages_new_line()
 
-        call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val, cl_status)
-        call messages_write('      Device cache           :')
-        call messages_write(val, units = unit_kilobytes)
-        call messages_new_line()
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val, cl_status)
+      call messages_write('      Device cache           :')
+      call messages_write(val, units = unit_kilobytes)
+      call messages_new_line()
 
-        call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, val, cl_status)
-        call messages_write('      Local memory           :')
-        call messages_write(val, units = unit_kilobytes)
-        call messages_new_line()
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, val, cl_status)
+      call messages_write('      Local memory           :')
+      call messages_write(val, units = unit_kilobytes)
+      call messages_new_line()
 
-        call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val, cl_status)
-        call messages_write('      Constant memory        :')
-        call messages_write(val, units = unit_kilobytes)
-        call messages_new_line()
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val, cl_status)
+      call messages_write('      Constant memory        :')
+      call messages_write(val, units = unit_kilobytes)
+      call messages_new_line()
 
-        call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val, cl_status)
-        call messages_write('      Max. workgroup size    :')
-        call messages_write(val)
-        call messages_new_line()
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val, cl_status)
+      call messages_write('      Max. workgroup size    :')
+      call messages_write(val)
+      call messages_new_line()
 
-        call messages_write('      Extension cl_khr_fp64  :')
-        call messages_write(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64"))
-        call messages_new_line()
+      call messages_write('      Extension cl_khr_fp64  :')
+      call messages_write(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64"))
+      call messages_new_line()
 
-        call messages_write('      Extension cl_amd_fp64  :')
-        call messages_write(f90_cl_device_has_extension(opencl%device, "cl_amd_fp64"))
-        call messages_new_line()
+      call messages_write('      Extension cl_amd_fp64  :')
+      call messages_write(f90_cl_device_has_extension(opencl%device, "cl_amd_fp64"))
+      call messages_new_line()
 
-        call messages_info()
+      call messages_info()
 
-        POP_SUB(opencl_init.device_info)
+      POP_SUB(opencl_init.device_info)
 #endif
-      end subroutine device_info
+    end subroutine device_info
 
-    end subroutine opencl_init
+  end subroutine opencl_init
 
-    ! ------------------------------------------
+  ! ------------------------------------------
 
-    integer function get_platform_id(platform_name) result(platform_id)
-      character(len=*), intent(in) :: platform_name
+  integer function get_platform_id(platform_name) result(platform_id)
+    character(len=*), intent(in) :: platform_name
 
-      platform_id = CL_PLAT_INVALID
-      if(index(platform_name, 'AMD') > 0)    platform_id = CL_PLAT_AMD
-      if(index(platform_name, 'ATI') > 0)    platform_id = CL_PLAT_ATI
-      if(index(platform_name, 'NVIDIA') > 0) platform_id = CL_PLAT_NVIDIA
-      if(index(platform_name, 'Intel') > 0)  platform_id = CL_PLAT_INTEL
-    end function get_platform_id
+    platform_id = CL_PLAT_INVALID
+    if(index(platform_name, 'AMD') > 0)    platform_id = CL_PLAT_AMD
+    if(index(platform_name, 'ATI') > 0)    platform_id = CL_PLAT_ATI
+    if(index(platform_name, 'NVIDIA') > 0) platform_id = CL_PLAT_NVIDIA
+    if(index(platform_name, 'Intel') > 0)  platform_id = CL_PLAT_INTEL
+  end function get_platform_id
 
-    ! ------------------------------------------
+  ! ------------------------------------------
 
-    subroutine opencl_end()
+  subroutine opencl_end()
 #ifdef HAVE_OPENCL
-      integer :: ierr
+    integer :: ierr
 #endif
 
-      PUSH_SUB(opencl_end)
+    PUSH_SUB(opencl_end)
 
 #ifdef HAVE_CLAMDBLAS
-      call clAmdBlasTearDown()
+    call clAmdBlasTearDown()
 #endif
 
 #ifdef HAVE_CLAMDFFT
-      call clAmdFftTearDown()
+    call clAmdFftTearDown()
 #endif
 
-      if(opencl_is_enabled()) then
+    if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
-        call opencl_release_kernel(kernel_vpsi)
-        call opencl_release_kernel(kernel_vpsi_spinors)
-        call opencl_release_kernel(set_zero)
-        call opencl_release_kernel(kernel_daxpy)
-        call opencl_release_kernel(kernel_zaxpy)
-        call opencl_release_kernel(kernel_copy)
-        call opencl_release_kernel(dpack)
-        call opencl_release_kernel(zpack)
-        call opencl_release_kernel(dunpack)
-        call opencl_release_kernel(zunpack)
-        call opencl_release_kernel(kernel_subarray_gather)
-        call opencl_release_kernel(kernel_density_real)
-        call opencl_release_kernel(kernel_density_complex)
-        call opencl_release_kernel(kernel_phase)
-        call opencl_release_kernel(dkernel_dot_matrix)
-        call opencl_release_kernel(zkernel_dot_matrix)
-        call opencl_release_kernel(dkernel_dot_vector)
-        call opencl_release_kernel(zkernel_dot_vector)
-        call opencl_release_kernel(zkernel_dot_matrix_spinors)
+      call opencl_release_kernel(kernel_vpsi)
+      call opencl_release_kernel(kernel_vpsi_spinors)
+      call opencl_release_kernel(set_zero)
+      call opencl_release_kernel(kernel_daxpy)
+      call opencl_release_kernel(kernel_zaxpy)
+      call opencl_release_kernel(kernel_copy)
+      call opencl_release_kernel(dpack)
+      call opencl_release_kernel(zpack)
+      call opencl_release_kernel(dunpack)
+      call opencl_release_kernel(zunpack)
+      call opencl_release_kernel(kernel_subarray_gather)
+      call opencl_release_kernel(kernel_density_real)
+      call opencl_release_kernel(kernel_density_complex)
+      call opencl_release_kernel(kernel_phase)
+      call opencl_release_kernel(dkernel_dot_matrix)
+      call opencl_release_kernel(zkernel_dot_matrix)
+      call opencl_release_kernel(dkernel_dot_vector)
+      call opencl_release_kernel(zkernel_dot_vector)
+      call opencl_release_kernel(zkernel_dot_matrix_spinors)
 
-        
-        call clReleaseCommandQueue(opencl%command_queue, ierr)
 
-        if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
-        call clReleaseContext(opencl%context, cl_status)
+      call clReleaseCommandQueue(opencl%command_queue, ierr)
 
-        if(buffer_alloc_count /= 0) then
-          call messages_write('OpenCL:')
-          call messages_write(real(allocated_mem, REAL_PRECISION), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
-          call messages_write(' in ')
-          call messages_write(buffer_alloc_count)
-          call messages_write(' buffers were not deallocated.')
-          call messages_warning()
-        end if
-#endif
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
+      call clReleaseContext(opencl%context, cl_status)
+
+      if(buffer_alloc_count /= 0) then
+        call messages_write('OpenCL:')
+        call messages_write(real(allocated_mem, REAL_PRECISION), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
+        call messages_write(' in ')
+        call messages_write(buffer_alloc_count)
+        call messages_write(' buffers were not deallocated.')
+        call messages_warning()
       end if
+#endif
+    end if
 
-      POP_SUB(opencl_end)
-    end subroutine opencl_end
+    POP_SUB(opencl_end)
+  end subroutine opencl_end
 
-    ! ------------------------------------------
+  ! ------------------------------------------
 
-    integer function opencl_padded_size(nn) result(psize)
-      integer,        intent(in) :: nn
+  integer function opencl_padded_size(nn) result(psize)
+    integer,        intent(in) :: nn
 
 #ifdef HAVE_OPENCL
-      integer :: modnn, bsize
+    integer :: modnn, bsize
 
-      bsize = opencl_max_workgroup_size()
+    bsize = opencl_max_workgroup_size()
 
-      psize = nn
-      modnn = mod(nn, bsize)
-      if(modnn /= 0) psize = psize + bsize - modnn
+    psize = nn
+    modnn = mod(nn, bsize)
+    if(modnn /= 0) psize = psize + bsize - modnn
 #else
-      psize = nn
+    psize = nn
 #endif
-    end function opencl_padded_size
+  end function opencl_padded_size
 
 #ifdef HAVE_OPENCL
-    ! ------------------------------------------
+  ! ------------------------------------------
 
-    subroutine opencl_create_buffer_4(this, flags, type, size)
-      type(opencl_mem_t), intent(inout) :: this
-      integer,            intent(in)    :: flags
-      type(type_t),       intent(in)    :: type
-      integer,            intent(in)    :: size
-      
-      integer(8) :: fsize
-      integer :: ierr
+  subroutine opencl_create_buffer_4(this, flags, type, size)
+    type(opencl_mem_t), intent(inout) :: this
+    integer,            intent(in)    :: flags
+    type(type_t),       intent(in)    :: type
+    integer,            intent(in)    :: size
 
-      PUSH_SUB(opencl_create_buffer_4)
+    integer(8) :: fsize
+    integer :: ierr
 
-      this%type = type
-      this%size = size
-      fsize = int(size, 8)*types_get_size(type)
+    PUSH_SUB(opencl_create_buffer_4)
 
-      ASSERT(fsize >= 0)
+    this%type = type
+    this%size = size
+    fsize = int(size, 8)*types_get_size(type)
 
-      this%mem = clCreateBuffer(opencl%context, flags, fsize, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
+    ASSERT(fsize >= 0)
 
-      INCR(buffer_alloc_count, 1)
-      INCR(allocated_mem, fsize)
+    this%mem = clCreateBuffer(opencl%context, flags, fsize, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 
-      POP_SUB(opencl_create_buffer_4)
-    end subroutine opencl_create_buffer_4
+    INCR(buffer_alloc_count, 1)
+    INCR(allocated_mem, fsize)
 
-    ! ------------------------------------------
+    POP_SUB(opencl_create_buffer_4)
+  end subroutine opencl_create_buffer_4
 
-    subroutine opencl_release_buffer(this)
-      type(opencl_mem_t), intent(inout) :: this
+  ! ------------------------------------------
 
-      integer :: ierr
+  subroutine opencl_release_buffer(this)
+    type(opencl_mem_t), intent(inout) :: this
 
-      PUSH_SUB(opencl_release_buffer)
+    integer :: ierr
 
-      call clReleaseMemObject(this%mem, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
+    PUSH_SUB(opencl_release_buffer)
 
-      INCR(buffer_alloc_count, -1)
-      INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
+    call clReleaseMemObject(this%mem, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
 
-      this%size = 0
+    INCR(buffer_alloc_count, -1)
+    INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
 
-      POP_SUB(opencl_release_buffer)
-    end subroutine opencl_release_buffer
+    this%size = 0
 
-    ! ------------------------------------------
+    POP_SUB(opencl_release_buffer)
+  end subroutine opencl_release_buffer
 
-    integer(SIZEOF_SIZE_T) pure function opencl_get_buffer_size(this) result(size)
-      type(opencl_mem_t), intent(in) :: this
+  ! ------------------------------------------
 
-      size = this%size
-    end function opencl_get_buffer_size
+  integer(SIZEOF_SIZE_T) pure function opencl_get_buffer_size(this) result(size)
+    type(opencl_mem_t), intent(in) :: this
 
-    ! -----------------------------------------
+    size = this%size
+  end function opencl_get_buffer_size
 
-    type(type_t) pure function opencl_get_buffer_type(this) result(type)
-      type(opencl_mem_t), intent(in) :: this
+  ! -----------------------------------------
 
-      type = this%type
-    end function opencl_get_buffer_type
+  type(type_t) pure function opencl_get_buffer_type(this) result(type)
+    type(opencl_mem_t), intent(in) :: this
 
-    ! -----------------------------------------
+    type = this%type
+  end function opencl_get_buffer_type
 
-    subroutine opencl_finish()
-      integer :: ierr
+  ! -----------------------------------------
 
-      PUSH_SUB(opencl_finish)
+  subroutine opencl_finish()
+    integer :: ierr
 
-      call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
+    PUSH_SUB(opencl_finish)
 
-      call clFinish(opencl%command_queue, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
+    call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
 
-      call profiling_out(prof_kernel_run)
-      POP_SUB(opencl_finish)
-    end subroutine opencl_finish
+    call clFinish(opencl%command_queue, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
 
-    ! ------------------------------------------
+    call profiling_out(prof_kernel_run)
+    POP_SUB(opencl_finish)
+  end subroutine opencl_finish
 
-    subroutine opencl_set_kernel_arg_buffer(kernel, narg, buffer)
-      type(cl_kernel),    intent(inout) :: kernel
-      integer,            intent(in)    :: narg
-      type(opencl_mem_t), intent(in)    :: buffer
-      
-      integer :: ierr
+  ! ------------------------------------------
 
-      PUSH_SUB(opencl_set_kernel_arg_buffer)
+  subroutine opencl_set_kernel_arg_buffer(kernel, narg, buffer)
+    type(cl_kernel),    intent(inout) :: kernel
+    integer,            intent(in)    :: narg
+    type(opencl_mem_t), intent(in)    :: buffer
 
-      call clSetKernelArg(kernel, narg, buffer%mem, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clSetKernelArg_buf")
+    integer :: ierr
 
-      POP_SUB(opencl_set_kernel_arg_buffer)
+    PUSH_SUB(opencl_set_kernel_arg_buffer)
 
-    end subroutine opencl_set_kernel_arg_buffer
+    call clSetKernelArg(kernel, narg, buffer%mem, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clSetKernelArg_buf")
 
-    ! ------------------------------------------
+    POP_SUB(opencl_set_kernel_arg_buffer)
 
-    subroutine opencl_set_kernel_arg_local(kernel, narg, type, size)
-      type(cl_kernel),    intent(inout) :: kernel
-      integer,            intent(in)    :: narg
-      type(type_t),       intent(in)    :: type
-      integer,            intent(in)    :: size
-
-      integer :: ierr
-      integer(8) :: size_in_bytes
-
-      PUSH_SUB(opencl_set_kernel_arg_local)
-
-      size_in_bytes = int(size, 8)*types_get_size(type)
-      
-      if(size_in_bytes > opencl%local_memory_size) then
-        write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", dble(size_in_bytes)/1024.0, " Kb"
-        write(message(2), '(a,f12.6,a)') "          available local memory: ", dble(opencl%local_memory_size)/1024.0, " Kb"
-        call messages_fatal(2)
-      else if(size_in_bytes <= 0) then
-        write(message(1), '(a,i10)') "CL Error: invalid local memory size: ", size_in_bytes
-        call messages_fatal(1)
-      end if
-
-      call clSetKernelArgLocal(kernel, narg, size_in_bytes, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_local")
-
-      POP_SUB(opencl_set_kernel_arg_local)
-
-    end subroutine opencl_set_kernel_arg_local
-
-    ! ------------------------------------------
-
-    subroutine opencl_kernel_run(kernel, globalsizes, localsizes)
-      type(cl_kernel),    intent(inout) :: kernel
-      integer,            intent(in)    :: globalsizes(:)
-      integer,            intent(in)    :: localsizes(:)
-      
-      integer :: dim, ierr
-      integer(8) :: gsizes(1:3)
-      integer(8) :: lsizes(1:3)
-
-      PUSH_SUB(opencl_kernel_run)
-      call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
-
-      dim = ubound(globalsizes, dim = 1)
-
-      ASSERT(dim == ubound(localsizes, dim = 1))
-      ASSERT(all(localsizes <= opencl_max_workgroup_size()))
-      ASSERT(all(mod(globalsizes, localsizes) == 0))
-     
-      gsizes(1:dim) = int(globalsizes(1:dim), 8)
-      lsizes(1:dim) = int(localsizes(1:dim), 8)
-
-      call clEnqueueNDRangeKernel(opencl%command_queue, kernel, gsizes(1:dim), lsizes(1:dim), ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
-
-      call profiling_out(prof_kernel_run)
-      POP_SUB(opencl_kernel_run)
-    end subroutine opencl_kernel_run
-
-
-    ! -----------------------------------------------
-
-    integer pure function opencl_max_workgroup_size() result(max_workgroup_size)
-      max_workgroup_size = opencl%max_workgroup_size
-    end function opencl_max_workgroup_size
-
-    ! -----------------------------------------------
-        
-    integer function opencl_kernel_workgroup_size(kernel) result(workgroup_size)
-      type(cl_kernel), intent(inout) :: kernel
-
-      integer(8) :: workgroup_size8
-      integer    :: ierr
-
-      call clGetKernelWorkGroupInfo(kernel, opencl%device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
-      workgroup_size = workgroup_size8
-
-    end function opencl_kernel_workgroup_size
-
-    ! -----------------------------------------------
-
-    subroutine opencl_build_program(prog, filename, flags)
-      type(cl_program),           intent(inout) :: prog
-      character(len=*),           intent(in)    :: filename
-      character(len=*), optional, intent(in)    :: flags
-      
-      character(len = OPENCL_MAX_FILE_LENGTH) :: string
-      integer :: ierr, ierrlog, iunit, irec
-      type(profile_t), save :: prof
-
-      PUSH_SUB(opencl_build_program)
-      call profiling_in(prof, "CL_COMPILE", exclude = .true.)
-
-      string = ''
-
-      call io_assign(iunit)
-      open(unit = iunit, file = trim(filename), access='direct', status = 'old', action = 'read', iostat = ierr, recl = 1)
-      irec = 1
-      do
-        read(unit = iunit, rec = irec, iostat = ierr) string(irec:irec) 
-        if (ierr /= 0) exit
-        if(irec == OPENCL_MAX_FILE_LENGTH) then
-          call messages_write('CL source file is too big: '//trim(filename)//'.')
-          call messages_new_line()
-          call messages_write("       Increase 'OPENCL_MAX_FILE_LENGTH'.")
-          call messages_fatal()
-        end if
-        irec = irec + 1
-      end do
-
-      close(unit = iunit)
-      call io_free(iunit)
-
-      call messages_write("Building CL program '"//trim(filename)//"'.")
-      call messages_info()
-
-      prog = clCreateProgramWithSource(opencl%context, string, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateProgramWithSource")
-
-      ! build the compilation flags
-      string='-w'
-      ! full optimization
-      string=trim(string)//' -cl-denorms-are-zero'
-      string=trim(string)//' -cl-strict-aliasing'
-      string=trim(string)//' -cl-mad-enable'
-      string=trim(string)//' -cl-unsafe-math-optimizations'
-      string=trim(string)//' -cl-finite-math-only'
-      string=trim(string)//' -cl-fast-relaxed-math'
-
-      string=trim(string)//' -I'//trim(conf%share)//'/opencl/'
-      
-      if (f90_cl_device_has_extension(opencl%device, "cl_amd_fp64")) then
-        string = trim(string)//' -DEXT_AMD_FP64'
-      else if(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64")) then
-        string = trim(string)//' -DEXT_KHR_FP64'
-      else
-        call messages_write('Octopus requires an OpenCL device with double-precision support.')
+  end subroutine opencl_set_kernel_arg_buffer
+
+  ! ------------------------------------------
+
+  subroutine opencl_set_kernel_arg_local(kernel, narg, type, size)
+    type(cl_kernel),    intent(inout) :: kernel
+    integer,            intent(in)    :: narg
+    type(type_t),       intent(in)    :: type
+    integer,            intent(in)    :: size
+
+    integer :: ierr
+    integer(8) :: size_in_bytes
+
+    PUSH_SUB(opencl_set_kernel_arg_local)
+
+    size_in_bytes = int(size, 8)*types_get_size(type)
+
+    if(size_in_bytes > opencl%local_memory_size) then
+      write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", dble(size_in_bytes)/1024.0, " Kb"
+      write(message(2), '(a,f12.6,a)') "          available local memory: ", dble(opencl%local_memory_size)/1024.0, " Kb"
+      call messages_fatal(2)
+    else if(size_in_bytes <= 0) then
+      write(message(1), '(a,i10)') "CL Error: invalid local memory size: ", size_in_bytes
+      call messages_fatal(1)
+    end if
+
+    call clSetKernelArgLocal(kernel, narg, size_in_bytes, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_local")
+
+    POP_SUB(opencl_set_kernel_arg_local)
+
+  end subroutine opencl_set_kernel_arg_local
+
+  ! ------------------------------------------
+
+  subroutine opencl_kernel_run(kernel, globalsizes, localsizes)
+    type(cl_kernel),    intent(inout) :: kernel
+    integer,            intent(in)    :: globalsizes(:)
+    integer,            intent(in)    :: localsizes(:)
+
+    integer :: dim, ierr
+    integer(8) :: gsizes(1:3)
+    integer(8) :: lsizes(1:3)
+
+    PUSH_SUB(opencl_kernel_run)
+    call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
+
+    dim = ubound(globalsizes, dim = 1)
+
+    ASSERT(dim == ubound(localsizes, dim = 1))
+    ASSERT(all(localsizes <= opencl_max_workgroup_size()))
+    ASSERT(all(mod(globalsizes, localsizes) == 0))
+
+    gsizes(1:dim) = int(globalsizes(1:dim), 8)
+    lsizes(1:dim) = int(localsizes(1:dim), 8)
+
+    call clEnqueueNDRangeKernel(opencl%command_queue, kernel, gsizes(1:dim), lsizes(1:dim), ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
+
+    call profiling_out(prof_kernel_run)
+    POP_SUB(opencl_kernel_run)
+  end subroutine opencl_kernel_run
+
+
+  ! -----------------------------------------------
+
+  integer pure function opencl_max_workgroup_size() result(max_workgroup_size)
+    max_workgroup_size = opencl%max_workgroup_size
+  end function opencl_max_workgroup_size
+
+  ! -----------------------------------------------
+
+  integer function opencl_kernel_workgroup_size(kernel) result(workgroup_size)
+    type(cl_kernel), intent(inout) :: kernel
+
+    integer(8) :: workgroup_size8
+    integer    :: ierr
+
+    call clGetKernelWorkGroupInfo(kernel, opencl%device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
+    workgroup_size = workgroup_size8
+
+  end function opencl_kernel_workgroup_size
+
+  ! -----------------------------------------------
+
+  subroutine opencl_build_program(prog, filename, flags)
+    type(cl_program),           intent(inout) :: prog
+    character(len=*),           intent(in)    :: filename
+    character(len=*), optional, intent(in)    :: flags
+
+    character(len = OPENCL_MAX_FILE_LENGTH) :: string
+    integer :: ierr, ierrlog, iunit, irec
+    type(profile_t), save :: prof
+
+    PUSH_SUB(opencl_build_program)
+    call profiling_in(prof, "CL_COMPILE", exclude = .true.)
+
+    string = ''
+
+    call io_assign(iunit)
+    open(unit = iunit, file = trim(filename), access='direct', status = 'old', action = 'read', iostat = ierr, recl = 1)
+    irec = 1
+    do
+      read(unit = iunit, rec = irec, iostat = ierr) string(irec:irec) 
+      if (ierr /= 0) exit
+      if(irec == OPENCL_MAX_FILE_LENGTH) then
+        call messages_write('CL source file is too big: '//trim(filename)//'.')
+        call messages_new_line()
+        call messages_write("       Increase 'OPENCL_MAX_FILE_LENGTH'.")
         call messages_fatal()
       end if
+      irec = irec + 1
+    end do
 
-      if(present(flags)) then
-        string = trim(string)//' '//trim(flags)
-      end if
+    close(unit = iunit)
+    call io_free(iunit)
 
-      if(in_debug_mode) then
-        message(1) = "Debug info: compilation flags '"//trim(string)//"'. "
-        call messages_info(1)
-      end if
+    call messages_write("Building CL program '"//trim(filename)//"'.")
+    call messages_info()
 
-      call clBuildProgram(prog, trim(string), ierr)
+    prog = clCreateProgramWithSource(opencl%context, string, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateProgramWithSource")
 
-      call clGetProgramBuildInfo(prog, opencl%device, CL_PROGRAM_BUILD_LOG, string, ierrlog)
-      if(ierrlog /= CL_SUCCESS) call opencl_print_error(ierrlog, "clGetProgramBuildInfo")
-      
-      if(len(trim(string)) > 0) write(stderr, '(a)') trim(string)
+    ! build the compilation flags
+    string='-w'
+    ! full optimization
+    string=trim(string)//' -cl-denorms-are-zero'
+    string=trim(string)//' -cl-strict-aliasing'
+    string=trim(string)//' -cl-mad-enable'
+    string=trim(string)//' -cl-unsafe-math-optimizations'
+    string=trim(string)//' -cl-finite-math-only'
+    string=trim(string)//' -cl-fast-relaxed-math'
 
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clBuildProgram")
+    string=trim(string)//' -I'//trim(conf%share)//'/opencl/'
 
-      call profiling_out(prof)
-      POP_SUB(opencl_build_program)
-    end subroutine opencl_build_program
+    if (f90_cl_device_has_extension(opencl%device, "cl_amd_fp64")) then
+      string = trim(string)//' -DEXT_AMD_FP64'
+    else if(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64")) then
+      string = trim(string)//' -DEXT_KHR_FP64'
+    else
+      call messages_write('Octopus requires an OpenCL device with double-precision support.')
+      call messages_fatal()
+    end if
 
-    ! -----------------------------------------------
+    if(present(flags)) then
+      string = trim(string)//' '//trim(flags)
+    end if
 
-    subroutine opencl_release_program(prog)
-      type(cl_program),    intent(inout) :: prog
+    if(in_debug_mode) then
+      message(1) = "Debug info: compilation flags '"//trim(string)//"'. "
+      call messages_info(1)
+    end if
 
-      integer :: ierr
+    call clBuildProgram(prog, trim(string), ierr)
 
-      PUSH_SUB(opencl_release_program)
+    call clGetProgramBuildInfo(prog, opencl%device, CL_PROGRAM_BUILD_LOG, string, ierrlog)
+    if(ierrlog /= CL_SUCCESS) call opencl_print_error(ierrlog, "clGetProgramBuildInfo")
 
-      call clReleaseProgram(prog, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseProgram")
+    if(len(trim(string)) > 0) write(stderr, '(a)') trim(string)
 
-      POP_SUB(opencl_release_program)
-    end subroutine opencl_release_program
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clBuildProgram")
 
-    ! -----------------------------------------------
+    call profiling_out(prof)
+    POP_SUB(opencl_build_program)
+  end subroutine opencl_build_program
 
-    subroutine opencl_release_kernel(prog)
-      type(cl_kernel),      intent(inout) :: prog
+  ! -----------------------------------------------
 
-      integer :: ierr
+  subroutine opencl_release_program(prog)
+    type(cl_program),    intent(inout) :: prog
 
-      PUSH_SUB(opencl_release_kernel)
+    integer :: ierr
 
-      call clReleaseKernel(prog, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseKernel")
+    PUSH_SUB(opencl_release_program)
 
-      POP_SUB(opencl_release_kernel)
-    end subroutine opencl_release_kernel
+    call clReleaseProgram(prog, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseProgram")
 
-    ! -----------------------------------------------
-    subroutine opencl_create_kernel(kernel, prog, name)
-      type(cl_kernel),  intent(inout) :: kernel
-      type(cl_program), intent(inout) :: prog
-      character(len=*), intent(in)    :: name
+    POP_SUB(opencl_release_program)
+  end subroutine opencl_release_program
 
-      integer :: ierr
-      type(profile_t), save :: prof
+  ! -----------------------------------------------
 
-      PUSH_SUB(opencl_create_kernel)
-      call profiling_in(prof, "CL_BUILD_KERNEL", exclude = .true.)
+  subroutine opencl_release_kernel(prog)
+    type(cl_kernel),      intent(inout) :: prog
 
-      kernel = clCreateKernel(prog, name, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateKernel")
+    integer :: ierr
 
-      call profiling_out(prof)
-      POP_SUB(opencl_create_kernel)
-    end subroutine opencl_create_kernel
+    PUSH_SUB(opencl_release_kernel)
 
-    ! ------------------------------------------------
-    
-    subroutine opencl_print_error(ierr, name)
-      integer,          intent(in) :: ierr
-      character(len=*), intent(in) :: name
+    call clReleaseKernel(prog, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseKernel")
 
-      character(len=40) :: errcode
-    
-      PUSH_SUB(opencl_print_error)
+    POP_SUB(opencl_release_kernel)
+  end subroutine opencl_release_kernel
 
-      select case(ierr)
-      case(CL_SUCCESS); errcode = 'CL_SUCCESS '
-      case(CL_DEVICE_NOT_FOUND); errcode = 'CL_DEVICE_NOT_FOUND '
-      case(CL_DEVICE_NOT_AVAILABLE); errcode = 'CL_DEVICE_NOT_AVAILABLE '
-      case(CL_COMPILER_NOT_AVAILABLE); errcode = 'CL_COMPILER_NOT_AVAILABLE '
-      case(CL_MEM_OBJECT_ALLOCATION_FAILURE); errcode = 'CL_MEM_OBJECT_ALLOCATION_FAILURE '
-      case(CL_OUT_OF_RESOURCES); errcode = 'CL_OUT_OF_RESOURCES '
-      case(CL_OUT_OF_HOST_MEMORY); errcode = 'CL_OUT_OF_HOST_MEMORY '
-      case(CL_PROFILING_INFO_NOT_AVAILABLE); errcode = 'CL_PROFILING_INFO_NOT_AVAILABLE '
-      case(CL_MEM_COPY_OVERLAP); errcode = 'CL_MEM_COPY_OVERLAP '
-      case(CL_IMAGE_FORMAT_MISMATCH); errcode = 'CL_IMAGE_FORMAT_MISMATCH '
-      case(CL_IMAGE_FORMAT_NOT_SUPPORTED); errcode = 'CL_IMAGE_FORMAT_NOT_SUPPORTED '
-      case(CL_BUILD_PROGRAM_FAILURE); errcode = 'CL_BUILD_PROGRAM_FAILURE '
-      case(CL_MAP_FAILURE); errcode = 'CL_MAP_FAILURE '
-      case(CL_INVALID_VALUE); errcode = 'CL_INVALID_VALUE '
-      case(CL_INVALID_DEVICE_TYPE); errcode = 'CL_INVALID_DEVICE_TYPE '
-      case(CL_INVALID_PLATFORM); errcode = 'CL_INVALID_PLATFORM '
-      case(CL_INVALID_DEVICE); errcode = 'CL_INVALID_DEVICE '
-      case(CL_INVALID_CONTEXT); errcode = 'CL_INVALID_CONTEXT '
-      case(CL_INVALID_QUEUE_PROPERTIES); errcode = 'CL_INVALID_QUEUE_PROPERTIES '
-      case(CL_INVALID_COMMAND_QUEUE); errcode = 'CL_INVALID_COMMAND_QUEUE '
-      case(CL_INVALID_HOST_PTR); errcode = 'CL_INVALID_HOST_PTR '
-      case(CL_INVALID_MEM_OBJECT); errcode = 'CL_INVALID_MEM_OBJECT '
-      case(CL_INVALID_IMAGE_FORMAT_DESCRIPTOR); errcode = 'CL_INVALID_IMAGE_FORMAT_DESCRIPTOR '
-      case(CL_INVALID_IMAGE_SIZE); errcode = 'CL_INVALID_IMAGE_SIZE '
-      case(CL_INVALID_SAMPLER); errcode = 'CL_INVALID_SAMPLER '
-      case(CL_INVALID_BINARY); errcode = 'CL_INVALID_BINARY '
-      case(CL_INVALID_BUILD_OPTIONS); errcode = 'CL_INVALID_BUILD_OPTIONS '
-      case(CL_INVALID_PROGRAM); errcode = 'CL_INVALID_PROGRAM '
-      case(CL_INVALID_PROGRAM_EXECUTABLE); errcode = 'CL_INVALID_PROGRAM_EXECUTABLE '
-      case(CL_INVALID_KERNEL_NAME); errcode = 'CL_INVALID_KERNEL_NAME '
-      case(CL_INVALID_KERNEL_DEFINITION); errcode = 'CL_INVALID_KERNEL_DEFINITION '
-      case(CL_INVALID_KERNEL); errcode = 'CL_INVALID_KERNEL '
-      case(CL_INVALID_ARG_INDEX); errcode = 'CL_INVALID_ARG_INDEX '
-      case(CL_INVALID_ARG_VALUE); errcode = 'CL_INVALID_ARG_VALUE '
-      case(CL_INVALID_ARG_SIZE); errcode = 'CL_INVALID_ARG_SIZE '
-      case(CL_INVALID_KERNEL_ARGS); errcode = 'CL_INVALID_KERNEL_ARGS '
-      case(CL_INVALID_WORK_DIMENSION); errcode = 'CL_INVALID_WORK_DIMENSION '
-      case(CL_INVALID_WORK_GROUP_SIZE); errcode = 'CL_INVALID_WORK_GROUP_SIZE '
-      case(CL_INVALID_WORK_ITEM_SIZE); errcode = 'CL_INVALID_WORK_ITEM_SIZE '
-      case(CL_INVALID_GLOBAL_OFFSET); errcode = 'CL_INVALID_GLOBAL_OFFSET '
-      case(CL_INVALID_EVENT_WAIT_LIST); errcode = 'CL_INVALID_EVENT_WAIT_LIST '
-      case(CL_INVALID_EVENT); errcode = 'CL_INVALID_EVENT '
-      case(CL_INVALID_OPERATION); errcode = 'CL_INVALID_OPERATION '
-      case(CL_INVALID_GL_OBJECT); errcode = 'CL_INVALID_GL_OBJECT '
-      case(CL_INVALID_BUFFER_SIZE); errcode = 'CL_INVALID_BUFFER_SIZE '
-      case(CL_INVALID_MIP_LEVEL); errcode = 'CL_INVALID_MIP_LEVEL '
-      case(CL_INVALID_GLOBAL_WORK_SIZE); errcode = 'CL_INVALID_GLOBAL_WORK_SIZE '
-      case(CL_PLATFORM_NOT_FOUND_KHR); errcode = 'CL_PLATFORM_NOT_FOUND_KHR'
-      case default
-        write(errcode, '(i10)') ierr
-        errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
-      end select
+  ! -----------------------------------------------
+  subroutine opencl_create_kernel(kernel, prog, name)
+    type(cl_kernel),  intent(inout) :: kernel
+    type(cl_program), intent(inout) :: prog
+    character(len=*), intent(in)    :: name
 
-      message(1) = 'OpenCL '//trim(name)//' '//trim(errcode)
-      call messages_fatal(1)
-  
-      POP_SUB(opencl_print_error)
-    end subroutine opencl_print_error
+    integer :: ierr
+    type(profile_t), save :: prof
 
-    ! ----------------------------------------------------
+    PUSH_SUB(opencl_create_kernel)
+    call profiling_in(prof, "CL_BUILD_KERNEL", exclude = .true.)
 
-    subroutine clblas_print_error(ierr, name)
-      integer,          intent(in) :: ierr
-      character(len=*), intent(in) :: name
+    kernel = clCreateKernel(prog, name, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateKernel")
 
-      character(len=40) :: errcode
-    
-      PUSH_SUB(clblas_print_error)
+    call profiling_out(prof)
+    POP_SUB(opencl_create_kernel)
+  end subroutine opencl_create_kernel
+
+  ! ------------------------------------------------
+
+  subroutine opencl_print_error(ierr, name)
+    integer,          intent(in) :: ierr
+    character(len=*), intent(in) :: name
+
+    character(len=40) :: errcode
+
+    PUSH_SUB(opencl_print_error)
+
+    select case(ierr)
+    case(CL_SUCCESS); errcode = 'CL_SUCCESS '
+    case(CL_DEVICE_NOT_FOUND); errcode = 'CL_DEVICE_NOT_FOUND '
+    case(CL_DEVICE_NOT_AVAILABLE); errcode = 'CL_DEVICE_NOT_AVAILABLE '
+    case(CL_COMPILER_NOT_AVAILABLE); errcode = 'CL_COMPILER_NOT_AVAILABLE '
+    case(CL_MEM_OBJECT_ALLOCATION_FAILURE); errcode = 'CL_MEM_OBJECT_ALLOCATION_FAILURE '
+    case(CL_OUT_OF_RESOURCES); errcode = 'CL_OUT_OF_RESOURCES '
+    case(CL_OUT_OF_HOST_MEMORY); errcode = 'CL_OUT_OF_HOST_MEMORY '
+    case(CL_PROFILING_INFO_NOT_AVAILABLE); errcode = 'CL_PROFILING_INFO_NOT_AVAILABLE '
+    case(CL_MEM_COPY_OVERLAP); errcode = 'CL_MEM_COPY_OVERLAP '
+    case(CL_IMAGE_FORMAT_MISMATCH); errcode = 'CL_IMAGE_FORMAT_MISMATCH '
+    case(CL_IMAGE_FORMAT_NOT_SUPPORTED); errcode = 'CL_IMAGE_FORMAT_NOT_SUPPORTED '
+    case(CL_BUILD_PROGRAM_FAILURE); errcode = 'CL_BUILD_PROGRAM_FAILURE '
+    case(CL_MAP_FAILURE); errcode = 'CL_MAP_FAILURE '
+    case(CL_INVALID_VALUE); errcode = 'CL_INVALID_VALUE '
+    case(CL_INVALID_DEVICE_TYPE); errcode = 'CL_INVALID_DEVICE_TYPE '
+    case(CL_INVALID_PLATFORM); errcode = 'CL_INVALID_PLATFORM '
+    case(CL_INVALID_DEVICE); errcode = 'CL_INVALID_DEVICE '
+    case(CL_INVALID_CONTEXT); errcode = 'CL_INVALID_CONTEXT '
+    case(CL_INVALID_QUEUE_PROPERTIES); errcode = 'CL_INVALID_QUEUE_PROPERTIES '
+    case(CL_INVALID_COMMAND_QUEUE); errcode = 'CL_INVALID_COMMAND_QUEUE '
+    case(CL_INVALID_HOST_PTR); errcode = 'CL_INVALID_HOST_PTR '
+    case(CL_INVALID_MEM_OBJECT); errcode = 'CL_INVALID_MEM_OBJECT '
+    case(CL_INVALID_IMAGE_FORMAT_DESCRIPTOR); errcode = 'CL_INVALID_IMAGE_FORMAT_DESCRIPTOR '
+    case(CL_INVALID_IMAGE_SIZE); errcode = 'CL_INVALID_IMAGE_SIZE '
+    case(CL_INVALID_SAMPLER); errcode = 'CL_INVALID_SAMPLER '
+    case(CL_INVALID_BINARY); errcode = 'CL_INVALID_BINARY '
+    case(CL_INVALID_BUILD_OPTIONS); errcode = 'CL_INVALID_BUILD_OPTIONS '
+    case(CL_INVALID_PROGRAM); errcode = 'CL_INVALID_PROGRAM '
+    case(CL_INVALID_PROGRAM_EXECUTABLE); errcode = 'CL_INVALID_PROGRAM_EXECUTABLE '
+    case(CL_INVALID_KERNEL_NAME); errcode = 'CL_INVALID_KERNEL_NAME '
+    case(CL_INVALID_KERNEL_DEFINITION); errcode = 'CL_INVALID_KERNEL_DEFINITION '
+    case(CL_INVALID_KERNEL); errcode = 'CL_INVALID_KERNEL '
+    case(CL_INVALID_ARG_INDEX); errcode = 'CL_INVALID_ARG_INDEX '
+    case(CL_INVALID_ARG_VALUE); errcode = 'CL_INVALID_ARG_VALUE '
+    case(CL_INVALID_ARG_SIZE); errcode = 'CL_INVALID_ARG_SIZE '
+    case(CL_INVALID_KERNEL_ARGS); errcode = 'CL_INVALID_KERNEL_ARGS '
+    case(CL_INVALID_WORK_DIMENSION); errcode = 'CL_INVALID_WORK_DIMENSION '
+    case(CL_INVALID_WORK_GROUP_SIZE); errcode = 'CL_INVALID_WORK_GROUP_SIZE '
+    case(CL_INVALID_WORK_ITEM_SIZE); errcode = 'CL_INVALID_WORK_ITEM_SIZE '
+    case(CL_INVALID_GLOBAL_OFFSET); errcode = 'CL_INVALID_GLOBAL_OFFSET '
+    case(CL_INVALID_EVENT_WAIT_LIST); errcode = 'CL_INVALID_EVENT_WAIT_LIST '
+    case(CL_INVALID_EVENT); errcode = 'CL_INVALID_EVENT '
+    case(CL_INVALID_OPERATION); errcode = 'CL_INVALID_OPERATION '
+    case(CL_INVALID_GL_OBJECT); errcode = 'CL_INVALID_GL_OBJECT '
+    case(CL_INVALID_BUFFER_SIZE); errcode = 'CL_INVALID_BUFFER_SIZE '
+    case(CL_INVALID_MIP_LEVEL); errcode = 'CL_INVALID_MIP_LEVEL '
+    case(CL_INVALID_GLOBAL_WORK_SIZE); errcode = 'CL_INVALID_GLOBAL_WORK_SIZE '
+    case(CL_PLATFORM_NOT_FOUND_KHR); errcode = 'CL_PLATFORM_NOT_FOUND_KHR'
+    case default
+      write(errcode, '(i10)') ierr
+      errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
+    end select
+
+    message(1) = 'OpenCL '//trim(name)//' '//trim(errcode)
+    call messages_fatal(1)
+
+    POP_SUB(opencl_print_error)
+  end subroutine opencl_print_error
+
+  ! ----------------------------------------------------
+
+  subroutine clblas_print_error(ierr, name)
+    integer,          intent(in) :: ierr
+    character(len=*), intent(in) :: name
+
+    character(len=40) :: errcode
+
+    PUSH_SUB(clblas_print_error)
 #ifdef HAVE_CLAMDBLAS
-      select case(ierr)
-      case(clAmdBlasSuccess);                    errcode = 'clAmdBlasSuccess'
-      case(clAmdBlasInvalidValue);               errcode = 'clAmdBlasInvalidValue'
-      case(clAmdBlasInvalidCommandQueue);        errcode = 'clAmdBlasInvalidCommandQueue'
-      case(clAmdBlasInvalidContext);             errcode = 'clAmdBlasInvalidContext'
-      case(clAmdBlasInvalidMemObject);           errcode = 'clAmdBlasInvalidMemObject'
-      case(clAmdBlasInvalidDevice);              errcode = 'clAmdBlasInvalidDevice'
-      case(clAmdBlasInvalidEventWaitList);       errcode = 'clAmdBlasInvalidEventWaitList'
-      case(clAmdBlasOutOfResources);             errcode = 'clAmdBlasOutOfResources'
-      case(clAmdBlasOutOfHostMemory);            errcode = 'clAmdBlasOutOfHostMemory'
-      case(clAmdBlasInvalidOperation);           errcode = 'clAmdBlasInvalidOperation'
-      case(clAmdBlasCompilerNotAvailable);       errcode = 'clAmdBlasCompilerNotAvailable'
-      case(clAmdBlasBuildProgramFailure );       errcode = 'clAmdBlasBuildProgramFailure'
-      case(clAmdBlasNotImplemented);             errcode = 'clAmdBlasNotImplemented'
-      case(clAmdBlasNotInitialized);             errcode = 'clAmdBlasNotInitialized'
-      case(clAmdBlasInvalidMatA);                errcode = 'clAmdBlasInvalidMatA'
-      case(clAmdBlasInvalidMatB);                errcode = 'clAmdBlasInvalidMatB'
-      case(clAmdBlasInvalidMatC);                errcode = 'clAmdBlasInvalidMatC'
-      case(clAmdBlasInvalidVecX);                errcode = 'clAmdBlasInvalidVecX'
-      case(clAmdBlasInvalidVecY);                errcode = 'clAmdBlasInvalidVecY'
-      case(clAmdBlasInvalidDim);                 errcode = 'clAmdBlasInvalidDim'
-      case(clAmdBlasInvalidLeadDimA);            errcode = 'clAmdBlasInvalidLeadDimA'
-      case(clAmdBlasInvalidLeadDimB);            errcode = 'clAmdBlasInvalidLeadDimB'
-      case(clAmdBlasInvalidLeadDimC);            errcode = 'clAmdBlasInvalidLeadDimC'
-      case(clAmdBlasInvalidIncX);                errcode = 'clAmdBlasInvalidIncX'
-      case(clAmdBlasInvalidIncY);                errcode = 'clAmdBlasInvalidIncY'
-      case(clAmdBlasInsufficientMemMatA);        errcode = 'clAmdBlasInsufficientMemMatA'
-      case(clAmdBlasInsufficientMemMatB);        errcode = 'clAmdBlasInsufficientMemMatB'
-      case(clAmdBlasInsufficientMemMatC);        errcode = 'clAmdBlasInsufficientMemMatC'
-      case(clAmdBlasInsufficientMemVecX);        errcode = 'clAmdBlasInsufficientMemVecX'
-      case(clAmdBlasInsufficientMemVecY);        errcode = 'clAmdBlasInsufficientMemVecY'
-      case default
-        write(errcode, '(i10)') ierr
-        errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
-      end select
+    select case(ierr)
+    case(clAmdBlasSuccess);                    errcode = 'clAmdBlasSuccess'
+    case(clAmdBlasInvalidValue);               errcode = 'clAmdBlasInvalidValue'
+    case(clAmdBlasInvalidCommandQueue);        errcode = 'clAmdBlasInvalidCommandQueue'
+    case(clAmdBlasInvalidContext);             errcode = 'clAmdBlasInvalidContext'
+    case(clAmdBlasInvalidMemObject);           errcode = 'clAmdBlasInvalidMemObject'
+    case(clAmdBlasInvalidDevice);              errcode = 'clAmdBlasInvalidDevice'
+    case(clAmdBlasInvalidEventWaitList);       errcode = 'clAmdBlasInvalidEventWaitList'
+    case(clAmdBlasOutOfResources);             errcode = 'clAmdBlasOutOfResources'
+    case(clAmdBlasOutOfHostMemory);            errcode = 'clAmdBlasOutOfHostMemory'
+    case(clAmdBlasInvalidOperation);           errcode = 'clAmdBlasInvalidOperation'
+    case(clAmdBlasCompilerNotAvailable);       errcode = 'clAmdBlasCompilerNotAvailable'
+    case(clAmdBlasBuildProgramFailure );       errcode = 'clAmdBlasBuildProgramFailure'
+    case(clAmdBlasNotImplemented);             errcode = 'clAmdBlasNotImplemented'
+    case(clAmdBlasNotInitialized);             errcode = 'clAmdBlasNotInitialized'
+    case(clAmdBlasInvalidMatA);                errcode = 'clAmdBlasInvalidMatA'
+    case(clAmdBlasInvalidMatB);                errcode = 'clAmdBlasInvalidMatB'
+    case(clAmdBlasInvalidMatC);                errcode = 'clAmdBlasInvalidMatC'
+    case(clAmdBlasInvalidVecX);                errcode = 'clAmdBlasInvalidVecX'
+    case(clAmdBlasInvalidVecY);                errcode = 'clAmdBlasInvalidVecY'
+    case(clAmdBlasInvalidDim);                 errcode = 'clAmdBlasInvalidDim'
+    case(clAmdBlasInvalidLeadDimA);            errcode = 'clAmdBlasInvalidLeadDimA'
+    case(clAmdBlasInvalidLeadDimB);            errcode = 'clAmdBlasInvalidLeadDimB'
+    case(clAmdBlasInvalidLeadDimC);            errcode = 'clAmdBlasInvalidLeadDimC'
+    case(clAmdBlasInvalidIncX);                errcode = 'clAmdBlasInvalidIncX'
+    case(clAmdBlasInvalidIncY);                errcode = 'clAmdBlasInvalidIncY'
+    case(clAmdBlasInsufficientMemMatA);        errcode = 'clAmdBlasInsufficientMemMatA'
+    case(clAmdBlasInsufficientMemMatB);        errcode = 'clAmdBlasInsufficientMemMatB'
+    case(clAmdBlasInsufficientMemMatC);        errcode = 'clAmdBlasInsufficientMemMatC'
+    case(clAmdBlasInsufficientMemVecX);        errcode = 'clAmdBlasInsufficientMemVecX'
+    case(clAmdBlasInsufficientMemVecY);        errcode = 'clAmdBlasInsufficientMemVecY'
+    case default
+      write(errcode, '(i10)') ierr
+      errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
+    end select
 #endif
 
-      message(1) = 'clAmdBlas '//trim(name)//' '//trim(errcode)
-      call messages_fatal(1)
-  
-      POP_SUB(clblas_print_error)
-    end subroutine clblas_print_error
+    message(1) = 'clAmdBlas '//trim(name)//' '//trim(errcode)
+    call messages_fatal(1)
 
-    ! ----------------------------------------------------
-    subroutine clfft_print_error(ierr, name)
-      integer,          intent(in) :: ierr
-      character(len=*), intent(in) :: name
+    POP_SUB(clblas_print_error)
+  end subroutine clblas_print_error
 
-      character(len=40) :: errcode
+  ! ----------------------------------------------------
+  subroutine clfft_print_error(ierr, name)
+    integer,          intent(in) :: ierr
+    character(len=*), intent(in) :: name
 
-      PUSH_SUB(clfft_print_error)
+    character(len=40) :: errcode
+
+    PUSH_SUB(clfft_print_error)
 #ifdef HAVE_CLAMDFFT
-      select case(ierr)
-      case(CLFFT_INVALID_GLOBAL_WORK_SIZE);          errcode = 'CLFFT_INVALID_GLOBAL_WORK_SIZE' 
-      case(CLFFT_INVALID_MIP_LEVEL);                 errcode = 'CLFFT_INVALID_MIP_LEVEL' 
-      case(CLFFT_INVALID_BUFFER_SIZE);               errcode = 'CLFFT_INVALID_BUFFER_SIZE' 
-      case(CLFFT_INVALID_GL_OBJECT);                 errcode = 'CLFFT_INVALID_GL_OBJECT' 
-      case(CLFFT_INVALID_OPERATION);                 errcode = 'CLFFT_INVALID_OPERATION' 
-      case(CLFFT_INVALID_EVENT);                     errcode = 'CLFFT_INVALID_EVENT' 
-      case(CLFFT_INVALID_EVENT_WAIT_LIST);           errcode = 'CLFFT_INVALID_EVENT_WAIT_LIST' 
-      case(CLFFT_INVALID_GLOBAL_OFFSET);             errcode = 'CLFFT_INVALID_GLOBAL_OFFSET' 
-      case(CLFFT_INVALID_WORK_ITEM_SIZE);            errcode = 'CLFFT_INVALID_WORK_ITEM_SIZE' 
-      case(CLFFT_INVALID_WORK_GROUP_SIZE);           errcode = 'CLFFT_INVALID_WORK_GROUP_SIZE' 
-      case(CLFFT_INVALID_WORK_DIMENSION);            errcode = 'CLFFT_INVALID_WORK_DIMENSION' 
-      case(CLFFT_INVALID_KERNEL_ARGS);               errcode = 'CLFFT_INVALID_KERNEL_ARGS' 
-      case(CLFFT_INVALID_ARG_SIZE);                  errcode = 'CLFFT_INVALID_ARG_SIZE' 
-      case(CLFFT_INVALID_ARG_VALUE);                 errcode = 'CLFFT_INVALID_ARG_VALUE' 
-      case(CLFFT_INVALID_ARG_INDEX);                 errcode = 'CLFFT_INVALID_ARG_INDEX' 
-      case(CLFFT_INVALID_KERNEL);                    errcode = 'CLFFT_INVALID_KERNEL' 
-      case(CLFFT_INVALID_KERNEL_DEFINITION);         errcode = 'CLFFT_INVALID_KERNEL_DEFINITION' 
-      case(CLFFT_INVALID_KERNEL_NAME);               errcode = 'CLFFT_INVALID_KERNEL_NAME' 
-      case(CLFFT_INVALID_PROGRAM_EXECUTABLE);        errcode = 'CLFFT_INVALID_PROGRAM_EXECUTABLE' 
-      case(CLFFT_INVALID_PROGRAM);                   errcode = 'CLFFT_INVALID_PROGRAM' 
-      case(CLFFT_INVALID_BUILD_OPTIONS);             errcode = 'CLFFT_INVALID_BUILD_OPTIONS' 
-      case(CLFFT_INVALID_BINARY);                    errcode = 'CLFFT_INVALID_BINARY' 
-      case(CLFFT_INVALID_SAMPLER);                   errcode = 'CLFFT_INVALID_SAMPLER' 
-      case(CLFFT_INVALID_IMAGE_SIZE);                errcode = 'CLFFT_INVALID_IMAGE_SIZE' 
-      case(CLFFT_INVALID_IMAGE_FORMAT_DESCRIPTOR);   errcode = 'CLFFT_INVALID_IMAGE_FORMAT_DESCRIPTOR' 
-      case(CLFFT_INVALID_MEM_OBJECT);                errcode = 'CLFFT_INVALID_MEM_OBJECT' 
-      case(CLFFT_INVALID_HOST_PTR);                  errcode = 'CLFFT_INVALID_HOST_PTR' 
-      case(CLFFT_INVALID_COMMAND_QUEUE);             errcode = 'CLFFT_INVALID_COMMAND_QUEUE' 
-      case(CLFFT_INVALID_QUEUE_PROPERTIES);          errcode = 'CLFFT_INVALID_QUEUE_PROPERTIES' 
-      case(CLFFT_INVALID_CONTEXT);                   errcode = 'CLFFT_INVALID_CONTEXT' 
-      case(CLFFT_INVALID_DEVICE);                    errcode = 'CLFFT_INVALID_DEVICE' 
-      case(CLFFT_INVALID_PLATFORM);                  errcode = 'CLFFT_INVALID_PLATFORM' 
-      case(CLFFT_INVALID_DEVICE_TYPE);               errcode = 'CLFFT_INVALID_DEVICE_TYPE' 
-      case(CLFFT_INVALID_VALUE);                     errcode = 'CLFFT_INVALID_VALUE' 
-      case(CLFFT_MAP_FAILURE);                       errcode = 'CLFFT_MAP_FAILURE' 
-      case(CLFFT_BUILD_PROGRAM_FAILURE);             errcode = 'CLFFT_BUILD_PROGRAM_FAILURE' 
-      case(CLFFT_IMAGE_FORMAT_NOT_SUPPORTED);        errcode = 'CLFFT_IMAGE_FORMAT_NOT_SUPPORTED' 
-      case(CLFFT_IMAGE_FORMAT_MISMATCH);             errcode = 'CLFFT_IMAGE_FORMAT_MISMATCH' 
-      case(CLFFT_MEM_COPY_OVERLAP);                  errcode = 'CLFFT_MEM_COPY_OVERLAP' 
-      case(CLFFT_PROFILING_INFO_NOT_AVAILABLE);      errcode = 'CLFFT_PROFILING_INFO_NOT_AVAILABLE' 
-      case(CLFFT_OUT_OF_HOST_MEMORY);                errcode = 'CLFFT_OUT_OF_HOST_MEMORY' 
-      case(CLFFT_OUT_OF_RESOURCES);                  errcode = 'CLFFT_OUT_OF_RESOURCES' 
-      case(CLFFT_MEM_OBJECT_ALLOCATION_FAILURE);     errcode = 'CLFFT_MEM_OBJECT_ALLOCATION_FAILURE' 
-      case(CLFFT_COMPILER_NOT_AVAILABLE);            errcode = 'CLFFT_COMPILER_NOT_AVAILABLE' 
-      case(CLFFT_DEVICE_NOT_AVAILABLE);              errcode = 'CLFFT_DEVICE_NOT_AVAILABLE' 
-      case(CLFFT_DEVICE_NOT_FOUND);                  errcode = 'CLFFT_DEVICE_NOT_FOUND' 
-      case(CLFFT_SUCCESS);                           errcode = 'CLFFT_SUCCESS' 
-      case(CLFFT_BUGCHECK);                          errcode = 'CLFFT_BUGCHECK' 
-      case(CLFFT_NOTIMPLEMENTED);                    errcode = 'CLFFT_NOTIMPLEMENTED' 
-      case(CLFFT_FILE_NOT_FOUND);                    errcode = 'CLFFT_FILE_NOT_FOUND' 
-      case(CLFFT_FILE_CREATE_FAILURE);               errcode = 'CLFFT_FILE_CREATE_FAILURE' 
-      case(CLFFT_VERSION_MISMATCH);                  errcode = 'CLFFT_VERSION_MISMATCH' 
-      case(CLFFT_INVALID_PLAN);                      errcode = 'CLFFT_INVALID_PLAN'
-      case(CLFFT_DEVICE_NO_DOUBLE);                  errcode = 'CLFFT_DEVICE_NO_DOUBLE' 
-      case(CLFFT_ENDSTATUS);                         errcode = 'CLFFT_ENDSTATUS' 
-      case default
-        write(errcode, '(i10)') ierr
-        errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
-      end select
+    select case(ierr)
+    case(CLFFT_INVALID_GLOBAL_WORK_SIZE);          errcode = 'CLFFT_INVALID_GLOBAL_WORK_SIZE' 
+    case(CLFFT_INVALID_MIP_LEVEL);                 errcode = 'CLFFT_INVALID_MIP_LEVEL' 
+    case(CLFFT_INVALID_BUFFER_SIZE);               errcode = 'CLFFT_INVALID_BUFFER_SIZE' 
+    case(CLFFT_INVALID_GL_OBJECT);                 errcode = 'CLFFT_INVALID_GL_OBJECT' 
+    case(CLFFT_INVALID_OPERATION);                 errcode = 'CLFFT_INVALID_OPERATION' 
+    case(CLFFT_INVALID_EVENT);                     errcode = 'CLFFT_INVALID_EVENT' 
+    case(CLFFT_INVALID_EVENT_WAIT_LIST);           errcode = 'CLFFT_INVALID_EVENT_WAIT_LIST' 
+    case(CLFFT_INVALID_GLOBAL_OFFSET);             errcode = 'CLFFT_INVALID_GLOBAL_OFFSET' 
+    case(CLFFT_INVALID_WORK_ITEM_SIZE);            errcode = 'CLFFT_INVALID_WORK_ITEM_SIZE' 
+    case(CLFFT_INVALID_WORK_GROUP_SIZE);           errcode = 'CLFFT_INVALID_WORK_GROUP_SIZE' 
+    case(CLFFT_INVALID_WORK_DIMENSION);            errcode = 'CLFFT_INVALID_WORK_DIMENSION' 
+    case(CLFFT_INVALID_KERNEL_ARGS);               errcode = 'CLFFT_INVALID_KERNEL_ARGS' 
+    case(CLFFT_INVALID_ARG_SIZE);                  errcode = 'CLFFT_INVALID_ARG_SIZE' 
+    case(CLFFT_INVALID_ARG_VALUE);                 errcode = 'CLFFT_INVALID_ARG_VALUE' 
+    case(CLFFT_INVALID_ARG_INDEX);                 errcode = 'CLFFT_INVALID_ARG_INDEX' 
+    case(CLFFT_INVALID_KERNEL);                    errcode = 'CLFFT_INVALID_KERNEL' 
+    case(CLFFT_INVALID_KERNEL_DEFINITION);         errcode = 'CLFFT_INVALID_KERNEL_DEFINITION' 
+    case(CLFFT_INVALID_KERNEL_NAME);               errcode = 'CLFFT_INVALID_KERNEL_NAME' 
+    case(CLFFT_INVALID_PROGRAM_EXECUTABLE);        errcode = 'CLFFT_INVALID_PROGRAM_EXECUTABLE' 
+    case(CLFFT_INVALID_PROGRAM);                   errcode = 'CLFFT_INVALID_PROGRAM' 
+    case(CLFFT_INVALID_BUILD_OPTIONS);             errcode = 'CLFFT_INVALID_BUILD_OPTIONS' 
+    case(CLFFT_INVALID_BINARY);                    errcode = 'CLFFT_INVALID_BINARY' 
+    case(CLFFT_INVALID_SAMPLER);                   errcode = 'CLFFT_INVALID_SAMPLER' 
+    case(CLFFT_INVALID_IMAGE_SIZE);                errcode = 'CLFFT_INVALID_IMAGE_SIZE' 
+    case(CLFFT_INVALID_IMAGE_FORMAT_DESCRIPTOR);   errcode = 'CLFFT_INVALID_IMAGE_FORMAT_DESCRIPTOR' 
+    case(CLFFT_INVALID_MEM_OBJECT);                errcode = 'CLFFT_INVALID_MEM_OBJECT' 
+    case(CLFFT_INVALID_HOST_PTR);                  errcode = 'CLFFT_INVALID_HOST_PTR' 
+    case(CLFFT_INVALID_COMMAND_QUEUE);             errcode = 'CLFFT_INVALID_COMMAND_QUEUE' 
+    case(CLFFT_INVALID_QUEUE_PROPERTIES);          errcode = 'CLFFT_INVALID_QUEUE_PROPERTIES' 
+    case(CLFFT_INVALID_CONTEXT);                   errcode = 'CLFFT_INVALID_CONTEXT' 
+    case(CLFFT_INVALID_DEVICE);                    errcode = 'CLFFT_INVALID_DEVICE' 
+    case(CLFFT_INVALID_PLATFORM);                  errcode = 'CLFFT_INVALID_PLATFORM' 
+    case(CLFFT_INVALID_DEVICE_TYPE);               errcode = 'CLFFT_INVALID_DEVICE_TYPE' 
+    case(CLFFT_INVALID_VALUE);                     errcode = 'CLFFT_INVALID_VALUE' 
+    case(CLFFT_MAP_FAILURE);                       errcode = 'CLFFT_MAP_FAILURE' 
+    case(CLFFT_BUILD_PROGRAM_FAILURE);             errcode = 'CLFFT_BUILD_PROGRAM_FAILURE' 
+    case(CLFFT_IMAGE_FORMAT_NOT_SUPPORTED);        errcode = 'CLFFT_IMAGE_FORMAT_NOT_SUPPORTED' 
+    case(CLFFT_IMAGE_FORMAT_MISMATCH);             errcode = 'CLFFT_IMAGE_FORMAT_MISMATCH' 
+    case(CLFFT_MEM_COPY_OVERLAP);                  errcode = 'CLFFT_MEM_COPY_OVERLAP' 
+    case(CLFFT_PROFILING_INFO_NOT_AVAILABLE);      errcode = 'CLFFT_PROFILING_INFO_NOT_AVAILABLE' 
+    case(CLFFT_OUT_OF_HOST_MEMORY);                errcode = 'CLFFT_OUT_OF_HOST_MEMORY' 
+    case(CLFFT_OUT_OF_RESOURCES);                  errcode = 'CLFFT_OUT_OF_RESOURCES' 
+    case(CLFFT_MEM_OBJECT_ALLOCATION_FAILURE);     errcode = 'CLFFT_MEM_OBJECT_ALLOCATION_FAILURE' 
+    case(CLFFT_COMPILER_NOT_AVAILABLE);            errcode = 'CLFFT_COMPILER_NOT_AVAILABLE' 
+    case(CLFFT_DEVICE_NOT_AVAILABLE);              errcode = 'CLFFT_DEVICE_NOT_AVAILABLE' 
+    case(CLFFT_DEVICE_NOT_FOUND);                  errcode = 'CLFFT_DEVICE_NOT_FOUND' 
+    case(CLFFT_SUCCESS);                           errcode = 'CLFFT_SUCCESS' 
+    case(CLFFT_BUGCHECK);                          errcode = 'CLFFT_BUGCHECK' 
+    case(CLFFT_NOTIMPLEMENTED);                    errcode = 'CLFFT_NOTIMPLEMENTED' 
+    case(CLFFT_FILE_NOT_FOUND);                    errcode = 'CLFFT_FILE_NOT_FOUND' 
+    case(CLFFT_FILE_CREATE_FAILURE);               errcode = 'CLFFT_FILE_CREATE_FAILURE' 
+    case(CLFFT_VERSION_MISMATCH);                  errcode = 'CLFFT_VERSION_MISMATCH' 
+    case(CLFFT_INVALID_PLAN);                      errcode = 'CLFFT_INVALID_PLAN'
+    case(CLFFT_DEVICE_NO_DOUBLE);                  errcode = 'CLFFT_DEVICE_NO_DOUBLE' 
+    case(CLFFT_ENDSTATUS);                         errcode = 'CLFFT_ENDSTATUS' 
+    case default
+      write(errcode, '(i10)') ierr
+      errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
+    end select
 #endif
 
-      message(1) = 'clAmdFft '//trim(name)//' '//trim(errcode)
-      call messages_fatal(1)
+    message(1) = 'clAmdFft '//trim(name)//' '//trim(errcode)
+    call messages_fatal(1)
 
-      POP_SUB(clfft_print_error)
-    end subroutine clfft_print_error
+    POP_SUB(clfft_print_error)
+  end subroutine clfft_print_error
 
-    ! ----------------------------------------------------
+  ! ----------------------------------------------------
 
-    logical function f90_cl_device_has_extension(device, extension) result(has)
-      type(cl_device_id), intent(inout) :: device
-      character(len=*),   intent(in)    :: extension
+  logical function f90_cl_device_has_extension(device, extension) result(has)
+    type(cl_device_id), intent(inout) :: device
+    character(len=*),   intent(in)    :: extension
 
-      integer :: cl_status
-      character(len=2048) :: all_extensions
+    integer :: cl_status
+    character(len=2048) :: all_extensions
 
-      call clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, all_extensions, cl_status)
+    call clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, all_extensions, cl_status)
 
-      has = index(all_extensions, extension) /= 0
+    has = index(all_extensions, extension) /= 0
 
-    end function f90_cl_device_has_extension
+  end function f90_cl_device_has_extension
 
-    ! ---------------------------------------------------------
-    
-    integer pure function opencl_pad(size, blk) result(pad)
-      integer, intent(in) :: size
-      integer, intent(in) :: blk
-      
-      integer :: mm
-      
-      mm = mod(size, blk)
-      if(mm == 0) then
-        pad = size
-      else
-        pad = size + blk - mm
-      end if
-    end function opencl_pad
-    
-    ! ----------------------------------------------------
-    
-    subroutine opencl_set_buffer_to_zero(buffer, type, nval, offset)
-      type(opencl_mem_t), intent(inout) :: buffer
-      type(type_t),       intent(in)    :: type
-      integer,            intent(in)    :: nval
-      integer, optional,  intent(in)    :: offset
+  ! ---------------------------------------------------------
 
-      integer :: nval_real, bsize
-      
-      PUSH_SUB(opencl_set_buffer_to_zero)
+  integer pure function opencl_pad(size, blk) result(pad)
+    integer, intent(in) :: size
+    integer, intent(in) :: blk
 
-      ASSERT(type == TYPE_CMPLX .or. type == TYPE_FLOAT)
-      
-      nval_real = nval*types_get_size(type)/8
+    integer :: mm
 
-      call opencl_set_kernel_arg(set_zero, 0, nval_real)
-      call opencl_set_kernel_arg(set_zero, 1, optional_default(offset, 0)*types_get_size(type)/8)
-      call opencl_set_kernel_arg(set_zero, 2, buffer)
+    mm = mod(size, blk)
+    if(mm == 0) then
+      pad = size
+    else
+      pad = size + blk - mm
+    end if
+  end function opencl_pad
 
-      bsize = opencl_kernel_workgroup_size(set_zero)
+  ! ----------------------------------------------------
 
-      call opencl_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
-      call opencl_finish()
-      
-      POP_SUB(opencl_set_buffer_to_zero)
-    end subroutine opencl_set_buffer_to_zero
+  subroutine opencl_set_buffer_to_zero(buffer, type, nval, offset)
+    type(opencl_mem_t), intent(inout) :: buffer
+    type(type_t),       intent(in)    :: type
+    integer,            intent(in)    :: nval
+    integer, optional,  intent(in)    :: offset
 
-    ! ----------------------------------------------------
-    
-    subroutine opencl_check_bandwidth()
-      integer :: itime
-      integer, parameter :: times = 10
-      integer :: size
-      real(8) :: time, stime
-      real(8) :: read_bw, write_bw
-      type(opencl_mem_t) :: buff
-      FLOAT, allocatable :: data(:)
+    integer :: nval_real, bsize
 
-      call messages_new_line()
-      call messages_write('Info: Benchmarking the bandwidth between main memory and device memory')
-      call messages_new_line()
-      call messages_info()
+    PUSH_SUB(opencl_set_buffer_to_zero)
 
-      call messages_write(' Buffer size   Read bw  Write bw')
-      call messages_new_line()
-      call messages_write('       [MiB]   [MiB/s]   [MiB/s]')
-      call messages_info()
+    ASSERT(type == TYPE_CMPLX .or. type == TYPE_FLOAT)
 
-      size = 15000
-      do 
-        SAFE_ALLOCATE(data(1:size))
-        call opencl_create_buffer(buff, CL_MEM_READ_WRITE, TYPE_FLOAT, size)
-        
-        stime = loct_clock()
-        do itime = 1, times
-          call opencl_write_buffer(buff, size, data)
-          call opencl_finish()
-        end do
-        time = (loct_clock() - stime)/dble(times)
+    nval_real = nval*types_get_size(type)/8
 
-        write_bw = dble(size)*8.0_8/time
-        
-        stime = loct_clock()
-        do itime = 1, times
-          call opencl_read_buffer(buff, size, data)
-        end do
+    call opencl_set_kernel_arg(set_zero, 0, nval_real)
+    call opencl_set_kernel_arg(set_zero, 1, optional_default(offset, 0)*types_get_size(type)/8)
+    call opencl_set_kernel_arg(set_zero, 2, buffer)
+
+    bsize = opencl_kernel_workgroup_size(set_zero)
+
+    call opencl_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
+    call opencl_finish()
+
+    POP_SUB(opencl_set_buffer_to_zero)
+  end subroutine opencl_set_buffer_to_zero
+
+  ! ----------------------------------------------------
+
+  subroutine opencl_check_bandwidth()
+    integer :: itime
+    integer, parameter :: times = 10
+    integer :: size
+    real(8) :: time, stime
+    real(8) :: read_bw, write_bw
+    type(opencl_mem_t) :: buff
+    FLOAT, allocatable :: data(:)
+
+    call messages_new_line()
+    call messages_write('Info: Benchmarking the bandwidth between main memory and device memory')
+    call messages_new_line()
+    call messages_info()
+
+    call messages_write(' Buffer size   Read bw  Write bw')
+    call messages_new_line()
+    call messages_write('       [MiB]   [MiB/s]   [MiB/s]')
+    call messages_info()
+
+    size = 15000
+    do 
+      SAFE_ALLOCATE(data(1:size))
+      call opencl_create_buffer(buff, CL_MEM_READ_WRITE, TYPE_FLOAT, size)
+
+      stime = loct_clock()
+      do itime = 1, times
+        call opencl_write_buffer(buff, size, data)
         call opencl_finish()
-
-        time = (loct_clock() - stime)/dble(times)
-        read_bw = dble(size)*8.0_8/time
-
-        call messages_write(size*8.0_8/1024.0**2)
-        call messages_write(write_bw/1024.0**2, fmt = '(f10.1)')
-        call messages_write(read_bw/1024.0**2, fmt = '(f10.1)')
-        call messages_info()
-
-        call opencl_release_buffer(buff)
-
-        SAFE_DEALLOCATE_A(data)
-
-        size = int(size*2.0)
-        
-        if(size > 50000000) exit
       end do
-    end subroutine opencl_check_bandwidth
+      time = (loct_clock() - stime)/dble(times)
+
+      write_bw = dble(size)*8.0_8/time
+
+      stime = loct_clock()
+      do itime = 1, times
+        call opencl_read_buffer(buff, size, data)
+      end do
+      call opencl_finish()
+
+      time = (loct_clock() - stime)/dble(times)
+      read_bw = dble(size)*8.0_8/time
+
+      call messages_write(size*8.0_8/1024.0**2)
+      call messages_write(write_bw/1024.0**2, fmt = '(f10.1)')
+      call messages_write(read_bw/1024.0**2, fmt = '(f10.1)')
+      call messages_info()
+
+      call opencl_release_buffer(buff)
+
+      SAFE_DEALLOCATE_A(data)
+
+      size = int(size*2.0)
+
+      if(size > 50000000) exit
+    end do
+  end subroutine opencl_check_bandwidth
 
 
 
