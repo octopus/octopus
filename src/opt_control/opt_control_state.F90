@@ -28,6 +28,7 @@
 module opt_control_state_m
 
   use global_m
+  use messages_m
   use states_m
 
   implicit none
