@@ -21,11 +21,11 @@
 
 module symmetries_m
   use datasets_m
-  use global_m
   use geometry_m
-  use parser_m
+  use global_m
   use messages_m
   use mpi_m
+  use parser_m
   use profiling_m
   use species_m
   use symm_op_m
@@ -34,16 +34,16 @@ module symmetries_m
 
   private
   
-  public ::                           &
-       symmetries_t,                  &
-       symmetries_init,               &
-       symmetries_copy,               &
-       symmetries_end,                &
-       symmetries_number,             &
-       symmetries_apply_kpoint,       &
-       symmetries_space_group_number, &
-       symmetries_have_break_dir,     &
-       symmetries_identity_index
+  public ::                        &
+    symmetries_t,                  &
+    symmetries_init,               &
+    symmetries_copy,               &
+    symmetries_end,                &
+    symmetries_number,             &
+    symmetries_apply_kpoint,       &
+    symmetries_space_group_number, &
+    symmetries_have_break_dir,     &
+    symmetries_identity_index
 
   type symmetries_t
     type(symm_op_t), pointer :: ops(:)
@@ -54,9 +54,8 @@ module symmetries_m
 
   real(8), parameter :: symprec = CNST(1e-5)
 
+  !> these functions are defined in spglib_f.c
   interface
-    ! these functions are defined in spglib_f.c
-
     integer function spglib_get_max_multiplicity(lattice, position, types, num_atom, symprec)
       real(8), intent(in) :: lattice
       real(8), intent(in) :: position
@@ -115,8 +114,8 @@ contains
     type(symm_op_t) :: tmpop
     character(len=6) :: group_name
     character(len=30) :: group_elements
-    integer :: natoms
-    logical :: any_non_spherical, symmetries_compute
+    integer :: natoms, identity(3,3)
+    logical :: any_non_spherical, symmetries_compute, found_identity, is_supercell
 
     interface
       subroutine symmetries_finite_init(atoms_count, typs, position, verbosity, point_group)
@@ -265,6 +264,32 @@ contains
       fullnops = spglib_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
         max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
+      ! we need to check that it is not a supercell, as in the QE routine (sgam_at)
+      ! they disable fractional translations if the identity has one, because the sym ops might not form a group.
+      ! spglib may return duplicate operations in this case!
+      is_supercell = (fullnops > 48)
+      found_identity = .false.
+      identity = reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), shape(identity))
+      do iop = 1, fullnops
+        if(all(rotation(1:3, 1:3, iop) == identity(1:3, 1:3))) then
+          found_identity = .true.
+          if(any(abs(translation(1:3, iop)) > M_EPSILON)) then
+            is_supercell = .true.
+            write(message(1),'(a,3f12.6)') 'Identity has a fractional translation ', translation(1:3, iop)
+            call messages_info(1)
+          endif
+        endif
+      enddo
+      if(.not. found_identity) then
+        message(1) = "Symmetries internal error: Identity is missing from symmetry operations."
+        call messages_fatal(1)
+      endif
+    
+      if(is_supercell) then
+        message(1) = "Disabling fractional translations. System appears to be a supercell."
+        call messages_warning(1)
+      endif
+
       ! this is a hack to get things working, this variable should be
       ! eliminated and the direction calculated automatically from the
       ! perturbations.
@@ -299,7 +324,8 @@ contains
         call symm_op_init(tmpop, rotation(:, :, iop), real(translation(:, iop), REAL_PRECISION))
 
         if(symm_op_invariant(tmpop, this%breakdir, real(symprec, REAL_PRECISION)) &
-          .and. .not. symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION))) then
+          .and. .not. symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION)) &
+          .and. (.not. is_supercell .or. all(abs(translation(1:3, iop)) < M_EPSILON))) then
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
         end if
