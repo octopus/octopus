@@ -262,7 +262,7 @@ contains
       !% extension longer that this value. The default value is 20.0.
       !%End
       call parse_float(datasets_check('LCAOMaximumOrbitalRadius'), CNST(20.0), max_orb_radius, unit = units_inp%length)
-      call messages_print_var_value(stdout, 'LCAOMaximumOrbitalRadius', this%orbital_scale_factor)
+      call messages_print_var_value(stdout, 'LCAOMaximumOrbitalRadius', max_orb_radius, units_out%length)
 
       ! count the number of orbitals available
       maxj = 0
