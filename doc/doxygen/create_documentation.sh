@@ -28,23 +28,14 @@ oct_base_dir=$PWD
 # go to the source directory
 cd $oct_base_dir/src
 
-# iterate all folders
-for folder in $(ls)
-do
-    if [ -d $folder ]; then
-	echo "Creating documentation for $folder"
-	cd $oct_base_dir/src/$folder
-	cp $dox_dir/Doxyfile .
-	#change project name
-	sed -i "s/Octopus/Octopus_$folder/" Doxyfile
-	#copy to the new location
-	sed -i "s|doxygen_doc|$dox_dir/$folder|" Doxyfile
-	#call doxygen
-	doxygen >/dev/null 2>/dev/null
-	
-        # go back to the source directory, to iterate next folder
-	cd $oct_base_dir/src
-    fi
-done
+echo "Creating documentation"
+
+cp $dox_dir/Doxyfile .
+cp $dox_dir/octopus.png .
+#copy to the new location
+sed -i "s|doxygen_doc|$dox_dir/$folder|" Doxyfile
+#call doxygen
+doxygen >/dev/null 2>/dev/null
+
 cd ..
-echo "Doxygen documentation created in doc/doxygen/index.html"
+echo "Doxygen documentation created in $dox_dir/html/index.html"
