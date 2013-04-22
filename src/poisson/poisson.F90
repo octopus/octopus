@@ -137,6 +137,7 @@ contains
 
     logical :: need_cube
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type
+    FLOAT :: fft_alpha
 
     if(this%method /= -99) return ! already initialized
 
@@ -403,12 +404,32 @@ contains
 
       need_cube = .true.
 
+      !%Variable DoubleFFTParameter
+      !%Type float
+      !%Default 2.0
+      !%Section Mesh::FFTs
+      !%Description
+      !% For solving the Poisson equation in Fourier space, and for applying the local potential
+      !% in Fourier space, an auxiliary cubic mesh is built. This mesh will be larger than
+      !% the circumscribed cube of the usual mesh by a factor <tt>DoubleFFTParameter</tt>. See
+      !% the section that refers to Poisson equation, and to the local potential for details
+      !% [the default value of two is typically good].
+      !%End
+      call parse_float(datasets_check('DoubleFFTParameter'), M_TWO, fft_alpha)
+      if (fft_alpha < M_ONE .or. fft_alpha > M_THREE ) then
+        write(message(1), '(a,f12.5,a)') "Input: '", fft_alpha, &
+          "' is not a valid DoubleFFTParameter"
+        message(2) = '1.0 <= DoubleFFTParameter <= 3.0'
+        call messages_fatal(2)
+      end if
+
+
       select case (der%mesh%sb%dim)
 
       case (1)
         select case(this%kernel)
         case(POISSON_FFT_KERNEL_SPH)
-          call mesh_double_box(der%mesh%sb, der%mesh, box)
+          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
         case(POISSON_FFT_KERNEL_NOCUT)
           box = der%mesh%idx%ll
         end select
@@ -416,10 +437,10 @@ contains
       case (2)
         select case(this%kernel)
         case(POISSON_FFT_KERNEL_SPH)
-          call mesh_double_box(der%mesh%sb, der%mesh, box)
+          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
           box(1:2) = maxval(box)
         case(POISSON_FFT_KERNEL_CYL)
-          call mesh_double_box(der%mesh%sb, der%mesh, box)
+          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
         case(POISSON_FFT_KERNEL_NOCUT)
           box(:) = der%mesh%idx%ll(:)
         end select
@@ -427,16 +448,16 @@ contains
       case (3)
         select case(this%kernel)
         case(POISSON_FFT_KERNEL_SPH) 
-          call mesh_double_box(der%mesh%sb, der%mesh, box)
+          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
           box(:) = maxval(box)
         case(POISSON_FFT_KERNEL_CYL) 
-          call mesh_double_box(der%mesh%sb, der%mesh, box)
+          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
           box(2) = maxval(box(2:3)) ! max of finite directions
           box(3) = maxval(box(2:3)) ! max of finite directions
         case(POISSON_FFT_KERNEL_CORRECTED)
           box(:) = der%mesh%idx%ll(:)
         case(POISSON_FFT_KERNEL_PLA, POISSON_FFT_KERNEL_NOCUT)
-          call mesh_double_box(der%mesh%sb, der%mesh, box)
+          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
         end select
 
       end select

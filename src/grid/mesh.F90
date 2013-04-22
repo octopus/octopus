@@ -149,9 +149,10 @@ contains
 
   ! ---------------------------------------------------------
   !> finds the dimension of a box doubled in the non-periodic dimensions
-  subroutine mesh_double_box(sb, mesh, db)
+  subroutine mesh_double_box(sb, mesh, alpha, db)
     type(simul_box_t), intent(in)  :: sb
     type(mesh_t),      intent(in)  :: mesh
+    FLOAT,             intent(in)  :: alpha !< enlargement factor for double box
     integer,           intent(out) :: db(MAX_DIM)
 
     integer :: idir
@@ -165,7 +166,7 @@ contains
       db(idir) = mesh%idx%ll(idir)
     end do
     do idir = sb%periodic_dim + 1, sb%dim
-      db(idir) = nint(sb%fft_alpha * (mesh%idx%ll(idir) - 1)) + 1
+      db(idir) = nint(alpha * (mesh%idx%ll(idir) - 1)) + 1
     end do
     
     POP_SUB(mesh_double_box)

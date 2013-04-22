@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2013 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -143,8 +144,6 @@ module simul_box_m
 
     type(kpoints_t) :: kpoints                   !< the k-points
 
-    FLOAT :: fft_alpha      !< enlargement factor for double box
-
     integer :: dim
     integer :: periodic_dim
     integer :: transport_dim
@@ -214,25 +213,6 @@ contains
       type(block_t)        :: blk
 
       PUSH_SUB(simul_box_init.read_misc)
-
-      !%Variable DoubleFFTParameter
-      !%Type float
-      !%Default 2.0
-      !%Section Mesh::FFTs
-      !%Description
-      !% For solving the Poisson equation in Fourier space, and for applying the local potential
-      !% in Fourier space, an auxiliary cubic mesh is built. This mesh will be larger than
-      !% the circumscribed cube of the usual mesh by a factor <tt>DoubleFFTParameter</tt>. See
-      !% the section that refers to Poisson equation, and to the local potential for details
-      !% [the default value of two is typically good].
-      !%End
-      call parse_float(datasets_check('DoubleFFTParameter'), M_TWO, sb%fft_alpha)
-      if (sb%fft_alpha < M_ONE .or. sb%fft_alpha > M_THREE ) then
-        write(message(1), '(a,f12.5,a)') "Input: '", sb%fft_alpha, &
-          "' is not a valid DoubleFFTParameter"
-        message(2) = '1.0 <= DoubleFFTParameter <= 3.0'
-        call messages_fatal(2)
-      end if
 
       sb%dim = space%dim
 
@@ -1211,7 +1191,6 @@ contains
       write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
       write(iunit, '(a20,a1024)')   'user_def=           ', sb%user_def
     end select
-    write(iunit, '(a20,e22.14)')    'fft_alpha=          ', sb%fft_alpha
     write(iunit, '(a20,99e22.14)')   'box_offset=         ', sb%box_offset(1:sb%dim)
     write(iunit, '(a20,l7)')        'mr_flag=            ', sb%mr_flag
     if(sb%mr_flag) then
@@ -1283,8 +1262,6 @@ contains
       read(line, *) str, sb%user_def
     end select
     call iopar_read(mpi_world, iunit, line, ierr)
-    read(line, *) str, sb%fft_alpha
-    call iopar_read(mpi_world, iunit, line, ierr)
     read(line, *) str, sb%box_offset(1:sb%dim)
     call iopar_read(mpi_world, iunit, line, ierr)
     read(line,*) str, sb%mr_flag
@@ -1335,7 +1312,6 @@ contains
     sbout%klattice                = sbin%klattice
     sbout%klattice_primitive      = sbin%klattice_primitive
     sbout%volume_element          = sbin%volume_element
-    sbout%fft_alpha               = sbin%fft_alpha
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
     sbout%transport_dim           = sbin%transport_dim
