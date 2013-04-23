@@ -132,6 +132,13 @@ contains
       call messages_experimental("unocc for spinors")
     endif
 
+    if (states_are_real(sys%st)) then
+      message(1) = 'Info: Using real wavefunctions.'
+    else
+      message(1) = 'Info: Using complex wavefunctions.'
+    end if
+    call messages_info(1)
+
     call density_calc(sys%st, sys%gr, sys%st%rho)
 
     if(fromScratch .or. ierr /= 0) then
