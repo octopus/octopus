@@ -70,7 +70,7 @@ module kpoints_m
     logical        :: use_symmetries
     logical        :: use_time_reversal
 
-    ! For the modified Monkhorst-Pack scheme
+    !> For the modified Monkhorst-Pack scheme
     integer        :: nik_axis(MAX_DIM)    !< number of MP divisions
     FLOAT          :: shifts(MAX_DIM)      ! 
     integer, pointer :: symmetry_ops(:, :)
@@ -143,6 +143,7 @@ contains
 
     integer :: ik, idir
     character(len=100) :: str_tmp
+    FLOAT :: weight_sum
 
     PUSH_SUB(kpoints_init)
 
@@ -404,6 +405,7 @@ contains
       !% vector. You only need to specify the components for the
       !% periodic directions. Note that the <i>k</i>-points should be given in
       !% Cartesian coordinates (not in reduced coordinates), in the units of inverse length.
+      !% The weights will be renormalized so they sum to 1.
       !%
       !% For example, if you want to include only the Gamma point, you can
       !% use:
@@ -462,6 +464,18 @@ contains
         end do
       end if
       call parse_block_end(blk)
+
+      if(any(this%full%weight(:) < -M_ZERO)) then
+        message(1) = "k-point weights must be non-negative."
+        call messages_fatal(1)
+      endif
+      ! renormalize weights
+      weight_sum = sum(this%full%weight(1:this%full%npoints))
+      if(weight_sum < M_EPSILON) then
+        message(1) = "k-point weights must sum to a positive number."
+        call messages_fatal(1)
+      endif
+      this%full%weight = this%full%weight / weight_sum
 
       ! for the moment we do not apply symmetries to user kpoints
       call kpoints_grid_copy(this%full, this%reduced)
