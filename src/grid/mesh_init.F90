@@ -831,7 +831,7 @@ contains
     end do
     ! Do the boundary points
     do ii = 1, mesh%vp%np_bndry
-      jj = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + ii - 1)
+      jj = mesh%vp%bndry(mesh%vp%xbndry + ii - 1)
       mesh%x(ii + mesh%np + mesh%vp%np_ghost, 1:MAX_DIM) = mesh_x_global(mesh, jj)
     end do
 #endif
@@ -889,7 +889,7 @@ contains
         end do
         ! Do the boundary points.
         do ip = 1, mesh%vp%np_bndry
-          kk = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno) + ip - 1)
+          kk = mesh%vp%bndry(mesh%vp%xbndry + ip - 1)
           call index_to_coords(mesh%idx, sb%dim, kk, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost) = &

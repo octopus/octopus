@@ -114,7 +114,7 @@ contains
     SAFE_ALLOCATE(part_local(1:mesh%np))
     SAFE_ALLOCATE(global_index(1:mesh%np))
     do ip = 1, mesh%np
-      global_index(ip) = mesh%vp%local(mesh%vp%xlocal(mesh%mpi_grp%rank + 1) + ip - 1)
+      global_index(ip) = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
       part_local(ip) = cube_part(global_index(ip))
     end do
 

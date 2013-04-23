@@ -141,7 +141,7 @@ module par_vec_m
     !! xlocal(r)+np_local(r)-1).           
     integer, pointer        :: local(:)            
     integer                 :: np_bndry             !< Number of boundary points.
-    integer, pointer        :: xbndry(:)            !< Index of bndry(:). 
+    integer                 :: xbndry               !< Starting index of running process in bndry(:) 
     !> Global numbers of boundary
     !! points.
     integer, pointer        :: bndry(:)    
@@ -156,7 +156,7 @@ module par_vec_m
     integer, pointer        :: np_ghost_neigh_back(:)   !< Same as previous, but outward
     integer, pointer        :: xghost(:)                !< Like xlocal.
     integer, pointer        :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
-    integer, pointer        :: xghost_neigh_back(:)     !<  Same as previous, but outward
+    integer, pointer        :: xghost_neigh_back(:)     !< Same as previous, but outward
     integer, pointer        :: ghost(:)                 !< Global indices of all local
   end type pv_t
 
@@ -202,7 +202,7 @@ contains
     type(iihash_t), allocatable :: ghost_flag(:)    !< To remember ghost pnts.
     integer                     :: iunit            !< For debug output to files.
     character(len=3)            :: filenum
-    integer                     :: tmp
+    integer                     :: tmp, init, size, ii
     logical                     :: found
     integer                     :: np_ghost_partno  !< Number of ghost point of the actual process
    
@@ -211,6 +211,7 @@ contains
     !> Number of ghost points per
     !! neighbour per partition.      
     integer, pointer            :: np_ghost_neigh(:, :) 
+    integer, pointer            :: xbndry_tmp(:)    !< Starting index of process i in bndry(:). 
 
     PUSH_SUB(vec_init)
 
@@ -229,10 +230,8 @@ contains
     SAFE_ALLOCATE(vp%xlocal(1:npart))
     SAFE_ALLOCATE(vp%local(1:np_global))
     SAFE_ALLOCATE(np_bndry_tmp(1:npart))
-    SAFE_ALLOCATE(vp%xbndry(1:npart))
-    SAFE_ALLOCATE(vp%bndry(1:np_enl))
+    SAFE_ALLOCATE(xbndry_tmp(1:npart))
     SAFE_ALLOCATE(vp%global(1:npart))
-    SAFE_ALLOCATE(np_ghost_neigh(1:npart, 1:npart))
     SAFE_ALLOCATE(vp%np_ghost_neigh_partno(1:npart))
     SAFE_ALLOCATE(vp%xghost(1:npart))
 
@@ -252,11 +251,11 @@ contains
     ! Set up local-to-global index table for local points
     ! (xlocal, local) and for boundary points (xbndry, bndry).
     vp%xlocal(1) = 1
-    vp%xbndry(1) = 1
+    xbndry_tmp(1) = 1
     ! Set the starting point of local and boundary points
     do inode = 2, npart
       vp%xlocal(inode) = vp%xlocal(inode - 1) + vp%np_local(inode - 1)
-      vp%xbndry(inode) = vp%xbndry(inode - 1) + np_bndry_tmp(inode - 1)
+      xbndry_tmp(inode) = xbndry_tmp(inode - 1) + np_bndry_tmp(inode - 1)
     end do
     ! Set the local and boundary points
     irr = 0
@@ -265,10 +264,6 @@ contains
       irr(vp%part(ip)) = irr(vp%part(ip)) + 1 ! increment the counter
     end do
     irr = 0
-    do ip = np_global+1, np_global+np_enl
-      vp%bndry(vp%xbndry(vp%part(ip)) + irr(vp%part(ip))) = ip
-      irr(vp%part(ip)) = irr(vp%part(ip)) + 1 ! increment the counter
-    end do
 
     ! Format of ghost:
     !
@@ -340,9 +335,9 @@ contains
    
     tmp=0
     call MPI_Allreduce(vp%total, tmp, 1, MPI_INTEGER, MPI_SUM, comm, mpi_err)
-    vp%total = tmp
+    vp%total = tmp    
+    SAFE_ALLOCATE(np_ghost_neigh(1:npart, 1:npart))
     ! Distribute local data to all processes
-    inode = vp%partno
     call MPI_Allgather(vp%np_ghost_neigh_partno(1),npart,MPI_INTEGER, &
          np_ghost_neigh(1,1),npart,MPI_INTEGER, &
          comm, mpi_err)
@@ -390,10 +385,10 @@ contains
         end if
       end do
     end do
-
+    SAFE_DEALLOCATE_P(np_ghost_neigh)
+    
     ! Get space for ghost point vector.
     SAFE_ALLOCATE(vp%ghost(1:vp%total))
-
 
     ! Fill ghost as described above.
     irr = 0
@@ -406,19 +401,19 @@ contains
         irr(jnode) = irr(jnode) + 1
       end if
     end do
-    SAFE_DEALLOCATE_A(irr)
 
     do inode =  1, npart
       do jnode = 1, npart
         if(inode /= jnode) then
-          tmp = vp%xghost_neigh_partno(inode)
-          call MPI_Bcast(tmp, 1, MPI_INTEGER, jnode-1, comm, mpi_err)
-          call MPI_Bcast(vp%ghost(tmp), np_ghost_neigh(inode,jnode), MPI_INTEGER, &
+          init = vp%xghost_neigh_partno(inode)
+          size = vp%np_ghost_neigh_partno(inode)
+          call MPI_Bcast(init, 1, MPI_INTEGER, jnode-1, comm, mpi_err)
+          call MPI_Bcast(size, 1, MPI_INTEGER, jnode-1, comm, mpi_err)
+          call MPI_Bcast(vp%ghost(init), size, MPI_INTEGER, &
                inode-1, comm, mpi_err)
         end if
       end do
     end do
-    SAFE_DEALLOCATE_P(np_ghost_neigh)
 
     if(in_debug_mode) then
       ! Write numbers and coordinates of each node`s ghost points
@@ -440,6 +435,12 @@ contains
     if (periodic_dim /= 0) then
       ip = 1
       jp = npart
+      SAFE_ALLOCATE(vp%bndry(1:np_enl))
+      irr = 0
+      do ii = np_global+1, np_global+np_enl
+        vp%bndry(xbndry_tmp(vp%part(ii)) + irr(vp%part(ii))) = ii
+        irr(vp%part(ii)) = irr(vp%part(ii)) + 1 ! increment the counter
+      end do
     else
       ip = vp%partno
       jp = vp%partno
@@ -449,7 +450,17 @@ contains
           call iihash_init(vp%global(inode),1)
         end if
       end do
+      ii=xbndry_tmp(vp%partno)+np_bndry_tmp(vp%partno)
+      SAFE_ALLOCATE(vp%bndry(xbndry_tmp(vp%partno):ii))
+      irr = 0
+      do ii = np_global+1, np_global+np_enl
+        if(vp%part(ii) == vp%partno) then
+          vp%bndry(xbndry_tmp(vp%part(ii)) + irr(vp%part(ii))) = ii
+          irr(vp%part(ii)) = irr(vp%part(ii)) + 1 ! increment the counter
+        end if
+      end do
     end if
+    SAFE_DEALLOCATE_A(irr)
     
     do inode = ip, jp
       ! Create hash table.
@@ -464,11 +475,13 @@ contains
       end do
       ! Insert boundary points.
       do kp = 1, np_bndry_tmp(inode)
-        call iihash_insert(vp%global(inode), vp%bndry(vp%xbndry(inode) + kp - 1), kp + vp%np_local(inode) + np_ghost_tmp(inode))
+        call iihash_insert(vp%global(inode), vp%bndry(xbndry_tmp(inode) + kp - 1), kp + vp%np_local(inode) + np_ghost_tmp(inode))
       end do
     end do
+    vp%xbndry = xbndry_tmp(vp%partno)
     SAFE_DEALLOCATE_P(np_ghost_tmp)
     SAFE_DEALLOCATE_P(np_bndry_tmp)
+    SAFE_DEALLOCATE_P(xbndry_tmp)
     
     
     ! Complete entries in vp.
@@ -569,7 +582,6 @@ contains
     SAFE_DEALLOCATE_P(vp%np_local)
     SAFE_DEALLOCATE_P(vp%xlocal)
     SAFE_DEALLOCATE_P(vp%local)
-    SAFE_DEALLOCATE_P(vp%xbndry)
     SAFE_DEALLOCATE_P(vp%bndry)
     SAFE_DEALLOCATE_P(vp%np_ghost_neigh_partno)
     SAFE_DEALLOCATE_P(vp%xghost)

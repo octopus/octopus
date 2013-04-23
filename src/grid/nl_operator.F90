@@ -912,7 +912,7 @@ contains
 
     integer :: ip, jp
     integer :: il, ig
-    integer, allocatable :: np_ghost_tmp(:)
+    integer, allocatable :: np_ghost_tmp(:), xbndry_tmp(:)
     
     PUSH_SUB(nl_operator_translate_indices)
 
@@ -921,6 +921,11 @@ contains
     SAFE_ALLOCATE(np_ghost_tmp(1:opg%mesh%vp%npart))
     call MPI_Allgather(opg%mesh%vp%np_ghost, 1, MPI_INTEGER, &
          np_ghost_tmp(1), 1, MPI_INTEGER, &
+         opg%mesh%vp%comm, mpi_err)
+
+    SAFE_ALLOCATE(xbndry_tmp(1:opg%mesh%vp%npart))
+    call MPI_Allgather(opg%mesh%vp%xbndry, 1, MPI_INTEGER, &
+         xbndry_tmp(1), 1, MPI_INTEGER, &
          opg%mesh%vp%comm, mpi_err)
     
     do ip = 1, opg%stencil%size
@@ -942,12 +947,13 @@ contains
             +opg%i(ip, jp)-1-il)
           ! Or a boundary point:
         else if(opg%i(ip, jp) > ig) then
-          opg%i(ip, jp) = opg%mesh%vp%bndry(opg%mesh%vp%xbndry(opg%mesh%vp%part(jp)) &
+          opg%i(ip, jp) = opg%mesh%vp%bndry(xbndry_tmp(opg%mesh%vp%part(jp)) &
             +opg%i(ip, jp)-1-ig)
         end if
       end do
     end do
     SAFE_DEALLOCATE_A(np_ghost_tmp)
+    SAFE_DEALLOCATE_A(xbndry_tmp)
 
     POP_SUB(nl_operator_translate_indices)
 

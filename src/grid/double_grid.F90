@@ -230,7 +230,7 @@ contains
         ip = mesh%vp%ghost(ip)
       else
         !boundary points
-        ip = ip - 1 - (mesh%np + mesh%vp%np_ghost) + mesh%vp%xbndry(mesh%vp%partno)
+        ip = ip - 1 - (mesh%np + mesh%vp%np_ghost) + mesh%vp%xbndry
         ip = mesh%vp%bndry(ip)
       end if
     end if
