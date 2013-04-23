@@ -287,7 +287,7 @@ contains
     
       if(is_supercell) then
         message(1) = "Disabling fractional translations. System appears to be a supercell."
-        call messages_warning(1)
+        call messages_info(1)
       endif
 
       ! this is a hack to get things working, this variable should be
