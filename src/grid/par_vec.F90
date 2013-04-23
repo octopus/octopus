@@ -155,10 +155,7 @@ module par_vec_m
     !! partition r?
     integer                 :: np_ghost
     integer, pointer        :: np_ghost_neigh_partno(:) !< Number of the neighbours ghost points of the actual process
-    integer, pointer        :: np_ghost_neigh_back(:)   !< Same as previous, but outward
-    integer, pointer        :: xghost(:)                !< Like xlocal.
-    integer, pointer        :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
-    integer, pointer        :: xghost_neigh_back(:)     !< Same as previous, but outward
+    integer                 :: xghost                   !< Like xlocal.
     integer, pointer        :: ghost(:)                 !< Global indices of all local
   end type pv_t
 
@@ -214,6 +211,10 @@ contains
     !! neighbour per partition.      
     integer, pointer            :: np_ghost_neigh(:, :) 
     integer, pointer            :: xbndry_tmp(:)    !< Starting index of process i in bndry(:). 
+    integer, pointer            :: np_ghost_neigh_partno_prev(:) !< Sum of the all previous elements
+    integer, pointer            :: xghost_tmp(:)  
+    integer, pointer            :: xghost_neigh_partno(:)   !< Like xghost for neighbours.
+    integer, pointer            :: xghost_neigh_back(:)     !< Same as previous, but outward
 
     PUSH_SUB(vec_init)
 
@@ -235,7 +236,6 @@ contains
     SAFE_ALLOCATE(xbndry_tmp(1:npart))
     SAFE_ALLOCATE(vp%global(1:npart))
     SAFE_ALLOCATE(vp%np_ghost_neigh_partno(1:npart))
-    SAFE_ALLOCATE(vp%xghost(1:npart))
 
     ! Count number of points for each node.
     ! Local points.
@@ -334,7 +334,7 @@ contains
         end if
       end do
     end do
-   
+
     tmp=0
     call MPI_Allreduce(vp%total, tmp, 1, MPI_INTEGER, MPI_SUM, comm, mpi_err)
     vp%total = tmp    
@@ -355,35 +355,37 @@ contains
       end do
     end do
     vp%np_ghost_neigh_partno(1:npart) = np_ghost_neigh(1:npart, vp%partno)
-    SAFE_ALLOCATE(vp%np_ghost_neigh_back(1:npart))
-    vp%np_ghost_neigh_back(1:npart) = np_ghost_neigh(vp%partno, 1:npart)
+    SAFE_ALLOCATE(vp%rcounts(1:npart))
+    vp%rcounts(1:npart) = np_ghost_neigh(vp%partno, 1:npart)
     ! Set index tables xghost and xghost_neigh. 
     SAFE_ALLOCATE(np_ghost_tmp(1:npart))
     call MPI_Allgather(vp%np_ghost, 1, MPI_INTEGER, &
          np_ghost_tmp(1), 1, MPI_INTEGER, &
          comm, mpi_err)
-
-    vp%xghost(1) = 1
+   
+    SAFE_ALLOCATE(xghost_tmp(1:npart))
+    xghost_tmp(1) = 1
     do inode = 2, npart
-      vp%xghost(inode) = vp%xghost(inode - 1) + np_ghost_tmp(inode - 1)
+      xghost_tmp(inode) = xghost_tmp(inode - 1) + np_ghost_tmp(inode - 1)
     end do
+    vp%xghost = xghost_tmp(vp%partno)
 
-    SAFE_ALLOCATE(vp%xghost_neigh_partno(1:npart))
-    SAFE_ALLOCATE(vp%xghost_neigh_back(1:npart))
+    SAFE_ALLOCATE(xghost_neigh_partno(1:npart))
+    SAFE_ALLOCATE(xghost_neigh_back(1:npart))
     tmp = 0
     do inode = 1, npart
-      tmp = vp%xghost(inode)
-      vp%xghost_neigh_partno(inode) = vp%xghost(inode) 
+      tmp = xghost_tmp(inode)
+      xghost_neigh_partno(inode) = xghost_tmp(inode) 
       if (inode == vp%partno) then
-        vp%xghost_neigh_back(1)   = vp%xghost(inode)
+        xghost_neigh_back(1)   = xghost_tmp(inode)
       end if
       do jnode = 2, npart
         tmp = tmp + np_ghost_neigh(inode, jnode - 1)
         if (jnode == vp%partno) then
-          vp%xghost_neigh_partno(inode) = tmp
+          xghost_neigh_partno(inode) = tmp
         end if
         if (inode == vp%partno) then
-          vp%xghost_neigh_back(jnode) = tmp
+          xghost_neigh_back(jnode) = tmp
         end if
       end do
     end do
@@ -399,7 +401,7 @@ contains
       ! If point ip is a ghost point for vp%partno from jnode, save this
       ! information.
       if(found) then
-        vp%ghost(vp%xghost_neigh_back(jnode) + irr(jnode)) = ip
+        vp%ghost(xghost_neigh_back(jnode) + irr(jnode)) = ip
         irr(jnode) = irr(jnode) + 1
       end if
     end do
@@ -407,7 +409,7 @@ contains
     do inode =  1, npart
       do jnode = 1, npart
         if(inode /= jnode) then
-          init = vp%xghost_neigh_partno(inode)
+          init = xghost_neigh_partno(inode)
           size = vp%np_ghost_neigh_partno(inode)
           call MPI_Bcast(init, 1, MPI_INTEGER, jnode-1, comm, mpi_err)
           call MPI_Bcast(size, 1, MPI_INTEGER, jnode-1, comm, mpi_err)
@@ -426,7 +428,7 @@ contains
       write(filenum, '(i3.3)') vp%partno
       iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, action='write')
       do ip = 1, vp%np_ghost
-        jp = vp%ghost(vp%xghost(vp%partno) + ip - 1)
+        jp = vp%ghost(xghost_tmp(vp%partno) + ip - 1)
         write(iunit, '(4i8)') jp, (idx%lxyz(jp, idir), idir = 1, MAX_DIM)
       end do
 
@@ -473,7 +475,7 @@ contains
       end do
       ! Insert ghost points.
       do kp = 1, np_ghost_tmp(inode)
-        call iihash_insert(vp%global(inode), vp%ghost(vp%xghost(inode) + kp - 1), kp + vp%np_local(inode))
+        call iihash_insert(vp%global(inode), vp%ghost(xghost_tmp(inode) + kp - 1), kp + vp%np_local(inode))
       end do
       ! Insert boundary points.
       do kp = 1, np_bndry_tmp(inode)
@@ -484,7 +486,7 @@ contains
     SAFE_DEALLOCATE_P(np_ghost_tmp)
     SAFE_DEALLOCATE_P(np_bndry_tmp)
     SAFE_DEALLOCATE_P(xbndry_tmp)
-    
+    SAFE_DEALLOCATE_P(xghost_tmp)    
     
     ! Complete entries in vp.
     vp%comm      = comm
@@ -523,7 +525,7 @@ contains
         ! Iterate over all ghost points that ipart wants.
         do ii = 0, vp%np_ghost_neigh_partno(ipart) - 1
           ! Get global number kk of i-th ghost point.
-          kk = vp%ghost(vp%xghost_neigh_partno(ipart) + ii)
+          kk = vp%ghost(xghost_neigh_partno(ipart) + ii)
           ! Lookup up local number of point kk
           jj = jj + 1
           displacements(jj) = vec_global2local(vp, kk, vp%partno)
@@ -533,6 +535,7 @@ contains
       call subarray_init(vp%sendpoints, total, displacements)
 
       SAFE_DEALLOCATE_A(displacements)
+      SAFE_DEALLOCATE_P(xghost_neigh_partno)
         
       ! Send and receive displacements.
       ! Send displacement cannot directly be calculated
@@ -545,7 +548,6 @@ contains
       
       SAFE_ALLOCATE(vp%sdispls(1:vp%npart))
       SAFE_ALLOCATE(vp%rdispls(1:vp%npart))
-      SAFE_ALLOCATE(vp%rcounts(1:vp%npart))
 
       vp%sdispls(1) = 0
       do ipart = 2, vp%npart
@@ -553,11 +555,8 @@ contains
       end do
 
       ! This is like in vec_scatter/gather.
-      vp%rdispls(1:vp%npart) = vp%xghost_neigh_back(1:vp%npart) - vp%xghost(vp%partno)
-      vp%rcounts(1:vp%npart) = vp%np_ghost_neigh_back(1:vp%npart)
-      SAFE_DEALLOCATE_P(vp%np_ghost_neigh_back)
-      SAFE_DEALLOCATE_P(vp%xghost_neigh_partno)
-      SAFE_DEALLOCATE_P(vp%xghost_neigh_back)
+      vp%rdispls(1:vp%npart) = xghost_neigh_back(1:vp%npart) - vp%xghost
+      SAFE_DEALLOCATE_P(xghost_neigh_back)
       
       POP_SUB(vec_init.init_send_points)
     end subroutine init_send_points
@@ -586,7 +585,6 @@ contains
     SAFE_DEALLOCATE_P(vp%local)
     SAFE_DEALLOCATE_P(vp%bndry)
     SAFE_DEALLOCATE_P(vp%np_ghost_neigh_partno)
-    SAFE_DEALLOCATE_P(vp%xghost)
     SAFE_DEALLOCATE_P(vp%ghost)
 
     if(associated(vp%global)) then 

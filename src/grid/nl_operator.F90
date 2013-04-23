@@ -912,7 +912,7 @@ contains
 
     integer :: ip, jp
     integer :: il, ig
-    integer, allocatable :: np_ghost_tmp(:), xbndry_tmp(:)
+    integer, allocatable :: np_ghost_tmp(:), xbndry_tmp(:), xghost_tmp(:)
     
     PUSH_SUB(nl_operator_translate_indices)
 
@@ -927,7 +927,12 @@ contains
     call MPI_Allgather(opg%mesh%vp%xbndry, 1, MPI_INTEGER, &
          xbndry_tmp(1), 1, MPI_INTEGER, &
          opg%mesh%vp%comm, mpi_err)
-    
+
+    SAFE_ALLOCATE(xghost_tmp(1:opg%mesh%vp%npart))
+    call MPI_Allgather(opg%mesh%vp%xghost, 1, MPI_INTEGER, &
+         xghost_tmp(1), 1, MPI_INTEGER, &
+         opg%mesh%vp%comm, mpi_err)
+        
     do ip = 1, opg%stencil%size
       do jp = 1, opg%mesh%np_global
         il = opg%mesh%vp%np_local(opg%mesh%vp%part(jp))
@@ -943,7 +948,7 @@ contains
             +opg%index(ip, jp)-1)
           ! Or a ghost point:
         else if(opg%index(ip, jp) > il.and.opg%index(ip, jp) <= ig) then
-          opg%index(ip, jp) = opg%mesh%vp%ghost(opg%mesh%vp%xghost(opg%mesh%vp%part(jp)) &
+          opg%index(ip, jp) = opg%mesh%vp%ghost(xghost_tmp(opg%mesh%vp%part(jp)) &
             +opg%index(ip, jp)-1-il)
           ! Or a boundary point:
         else if(opg%index(ip, jp) > ig) then
@@ -954,6 +959,7 @@ contains
     end do
     SAFE_DEALLOCATE_A(np_ghost_tmp)
     SAFE_DEALLOCATE_A(xbndry_tmp)
+    SAFE_DEALLOCATE_A(xghost_tmp)
 
     POP_SUB(nl_operator_translate_indices)
 
