@@ -38,6 +38,7 @@ module opt_control_propagation_m
   use loct_m
   use mesh_function_m
   use messages_m
+  use mpi_m
   use opt_control_target_m
   use profiling_m
   use restart_m
@@ -132,7 +133,7 @@ module opt_control_propagation_m
     type(oct_prop_t), optional, intent(in)     :: prop
     logical, optional,          intent(in)     :: write_iter
 
-    integer :: ii, i
+    integer :: ii, istep
     logical :: write_iter_ = .false.
     type(grid_t),  pointer :: gr
     type(td_write_t)           :: write_handler
@@ -195,28 +196,31 @@ module opt_control_propagation_m
     call target_tdcalc(target, hm, gr, sys%geo, psi, 0, td%max_iter)
 
     if(present(prop)) call oct_prop_output(prop, 0, psi, gr, sys%geo)
-    ii = 1
-    do i = 1, td%max_iter
-      ! time-iterate wavefunctions
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i)
 
-      if(present(prop)) call oct_prop_output(prop, i, psi, gr, sys%geo)
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
+
+    ii = 1
+    do istep = 1, td%max_iter
+      ! time-iterate wavefunctions
+      call propagator_dt(sys%ks, hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, td%max_iter, istep)
+
+      if(present(prop)) call oct_prop_output(prop, istep, psi, gr, sys%geo)
 
       ! update
       call density_calc(psi, gr, psi%rho)
-      call v_ks_calc(sys%ks, hm, psi, time = i*td%dt)
+      call v_ks_calc(sys%ks, hm, psi, time = istep*td%dt)
       call energy_calc_total(hm, sys%gr, psi)
 
       if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, psi)
 
       ! if td_target
-      call target_tdcalc(target, hm, gr, sys%geo, psi, i, td%max_iter)
+      call target_tdcalc(target, hm, gr, sys%geo, psi, istep, td%max_iter)
 
       ! calculate velocity and new position of each atom
       if(move_ions_) then
-         call forces_calculate(gr, sys%geo, hm%ep, psi, i*td%dt)
-         do iatom=1, sys%geo%natoms
-           if(i /= td%max_iter) then
+         call forces_calculate(gr, sys%geo, hm%ep, psi, istep*td%dt)
+         do iatom= 1, sys%geo%natoms
+           if(istep /= td%max_iter) then
              sys%geo%atom(iatom)%v(1:MAX_DIM) = sys%geo%atom(iatom)%v(1:MAX_DIM) + &
                sys%geo%atom(iatom)%f(1:MAX_DIM)*td%dt/species_weight(sys%geo%atom(iatom)%spec)
            else
@@ -226,24 +230,26 @@ module opt_control_propagation_m
            sys%geo%atom(iatom)%x(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM) + &
            sys%geo%atom(iatom)%v(1:MAX_DIM)*td%dt
          end do
-         call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = i*td%dt)
+         call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = istep*td%dt)
       end if
 
       ! only write in final run
       if(write_iter_) then
-        call td_write_iter(write_handler, gr, psi, hm, sys%geo, hm%ep%kick, td%dt, i)
+        call td_write_iter(write_handler, gr, psi, hm, sys%geo, hm%ep%kick, td%dt, istep)
         ii = ii + 1 
-        if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output
-          if(i == td%max_iter) sys%outp%iter = ii - 1
-          ii = i
-          call td_write_data(write_handler, gr, psi, hm, sys%ks%xc, sys%outp, sys%geo, i) 
+        if(ii == sys%outp%iter+1 .or. istep == td%max_iter) then ! output
+          if(istep == td%max_iter) sys%outp%iter = ii - 1
+          ii = istep
+          call td_write_data(write_handler, gr, psi, hm, sys%ks%xc, sys%outp, sys%geo, istep) 
         end if
       end if
+
+      if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(istep, td%max_iter)
     end do
 
     if(vel_target_) then
        do iatom=1, sys%geo%natoms
-          sys%geo%atom(iatom)%x(1:MAX_DIM) = x_initial(iatom,1:MAX_DIM)
+          sys%geo%atom(iatom)%x(1:MAX_DIM) = x_initial(iatom, 1:MAX_DIM)
        end do
        SAFE_DEALLOCATE_A(x_initial)
     end if
@@ -265,7 +271,7 @@ module opt_control_propagation_m
     type(states_t),          intent(inout) :: psi
     type(oct_prop_t),        intent(in)    :: prop
 
-    integer :: i
+    integer :: istep
     type(grid_t),  pointer :: gr
 
     PUSH_SUB(propagate_backward)
@@ -283,11 +289,15 @@ module opt_control_propagation_m
     call propagator_run_zero_iter(hm, gr, td%tr)
 
     call oct_prop_output(prop, td%max_iter, psi, gr, sys%geo)
-    do i = td%max_iter, 1, -1
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, (i-1)*td%dt, -td%dt, td%mu, td%max_iter, i)
-      call oct_prop_output(prop, i-1, psi, gr, sys%geo)
+    
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
+
+    do istep = td%max_iter, 1, -1
+      call propagator_dt(sys%ks, hm, gr, psi, td%tr, (istep - 1)*td%dt, -td%dt, td%mu, td%max_iter, istep)
+      call oct_prop_output(prop, istep - 1, psi, gr, sys%geo)
       call density_calc(psi, gr, psi%rho)
       call v_ks_calc(sys%ks, hm, psi)
+      if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter - istep + 1, td%max_iter)
     end do
 
     POP_SUB(propagate_backward)
