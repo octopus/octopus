@@ -45,6 +45,7 @@
   !!
   !!
   !! Usage example for par_vec routines.
+  !! \verbatim
   !!
   !! ! Initialize parallelization with mesh and operator op
   !! ! initialized and given.
@@ -75,6 +76,7 @@
   !!
   !! ! Clean up.
   !! deallocate(ul, vl, wl)
+  !! \endverbatim
 module par_vec_m
   use global_m
   use iihash_m

@@ -87,9 +87,9 @@ module nl_operator_m
     integer, pointer      :: nn(:)     !< the size of the stencil at each point (for curvilinear coordinates)
     integer               :: np        !< number of points in mesh
     !> When running in parallel mode, the next three arrays are unique on each node.
-    integer, pointer  :: i(:,:)    !< index of the points
-    FLOAT,   pointer  :: w_re(:,:) !< weightsp, real part
-    FLOAT,   pointer  :: w_im(:,:) !< weightsp, imaginary part
+    integer, pointer  :: index(:,:)    !< index of the points. Unique on each parallel process.
+    FLOAT,   pointer  :: w_re(:,:)     !< weightsp, real part. Unique on each parallel process.
+    FLOAT,   pointer  :: w_im(:,:)     !< weightsp, imaginary part. Unique on each parallel process.
 
     logical               :: const_w   !< are the weights independent of index i
     logical               :: cmplx_op  !< .true. if we have also imaginary weights
@@ -262,7 +262,7 @@ contains
 
     PUSH_SUB(nl_operator_init)
 
-    nullify(op%mesh, op%i, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
+    nullify(op%mesh, op%index, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
     nullify(op%inner%imin, op%inner%imax, op%inner%ri)
     nullify(op%outer%imin, op%outer%imax, op%outer%ri)
     nullify(op%nn)
@@ -288,7 +288,7 @@ contains
     opo%mesh         => opi%mesh
 
     call loct_pointer_copy(opo%nn, opi%nn)
-    call loct_pointer_copy(opo%i,    opi%i)
+    call loct_pointer_copy(opo%index, opi%index)
     call loct_pointer_copy(opo%w_re, opi%w_re)
     call loct_pointer_copy(opo%w_im, opi%w_im)
 
@@ -830,15 +830,15 @@ contains
 
     ! Copy elements of op to opg that
     ! are independent from the partitions, i.e. everything
-    ! except op%i and -- in the non-constant case -- op%w_re
+    ! except op%index and -- in the non-constant case -- op%w_re
     ! op%w_im.
     call nl_operator_common_copy(op, opg)
 
-    ! Gather op%i and -- if necessary -- op%w_re and op%w_im.
+    ! Gather op%index and -- if necessary -- op%w_re and op%w_im.
     ! Collect for every point in the stencil in a single step.
     ! This permits to use ivec_gather.
     do ip = 1, op%stencil%size
-      call ivec_allgather(op%mesh%vp, opg%i(ip, :), op%i(ip, :))
+      call ivec_allgather(op%mesh%vp, opg%index(ip, :), op%index(ip, :))
     end do
     call nl_operator_translate_indices(opg)
 
@@ -860,7 +860,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Copies all parts of op to opg that are independent of
-  !! the partitions, i.e. everything except op%i and -- in the
+  !! the partitions, i.e. everything except op%index and -- in the
   !! non-constant case -- op%w_re op%w_im.
   !! This can be considered as nl_operator_copy and
   !! reallocating w_re, w_im and i.
@@ -875,7 +875,7 @@ contains
 
     call stencil_copy(op%stencil, opg%stencil)
 
-    SAFE_ALLOCATE(opg%i(1:op%stencil%size, 1:op%mesh%np_global))
+    SAFE_ALLOCATE(opg%index(1:op%stencil%size, 1:op%mesh%np_global))
     if(op%const_w) then
       SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:1))
       if(op%cmplx_op) then
@@ -916,7 +916,7 @@ contains
     
     PUSH_SUB(nl_operator_translate_indices)
 
-    ASSERT(associated(opg%i))
+    ASSERT(associated(opg%index))
 
     SAFE_ALLOCATE(np_ghost_tmp(1:opg%mesh%vp%npart))
     call MPI_Allgather(opg%mesh%vp%np_ghost, 1, MPI_INTEGER, &
@@ -932,23 +932,23 @@ contains
       do jp = 1, opg%mesh%np_global
         il = opg%mesh%vp%np_local(opg%mesh%vp%part(jp))
         ig = il+np_ghost_tmp(opg%mesh%vp%part(jp))
-        ! opg%i(ip, jp) is a local point number, i.e. it can be
+        ! opg%index(ip, jp) is a local point number, i.e. it can be
         ! a real local point (i.e. the local point number
         ! is less or equal than the number of local points of
         ! the node which owns the point with global number jp):
-        if(opg%i(ip, jp) <= il) then
+        if(opg%index(ip, jp) <= il) then
           ! Write the global point number from the lookup
           ! table in op_(ip, jp).
-          opg%i(ip, jp) = opg%mesh%vp%local(opg%mesh%vp%xlocal(opg%mesh%vp%part(jp)) &
-            +opg%i(ip, jp)-1)
+          opg%index(ip, jp) = opg%mesh%vp%local(opg%mesh%vp%xlocal(opg%mesh%vp%part(jp)) &
+            +opg%index(ip, jp)-1)
           ! Or a ghost point:
-        else if(opg%i(ip, jp) > il.and.opg%i(ip, jp) <= ig) then
-          opg%i(ip, jp) = opg%mesh%vp%ghost(opg%mesh%vp%xghost(opg%mesh%vp%part(jp)) &
-            +opg%i(ip, jp)-1-il)
+        else if(opg%index(ip, jp) > il.and.opg%index(ip, jp) <= ig) then
+          opg%index(ip, jp) = opg%mesh%vp%ghost(opg%mesh%vp%xghost(opg%mesh%vp%part(jp)) &
+            +opg%index(ip, jp)-1-il)
           ! Or a boundary point:
-        else if(opg%i(ip, jp) > ig) then
-          opg%i(ip, jp) = opg%mesh%vp%bndry(xbndry_tmp(opg%mesh%vp%part(jp)) &
-            +opg%i(ip, jp)-1-ig)
+        else if(opg%index(ip, jp) > ig) then
+          opg%index(ip, jp) = opg%mesh%vp%bndry(xbndry_tmp(opg%mesh%vp%part(jp)) &
+            +opg%index(ip, jp)-1-ig)
         end if
       end do
     end do
@@ -976,7 +976,7 @@ contains
 
     PUSH_SUB(nl_operator_matrix_to_op)
 
-    ASSERT(associated(op_ref%i))
+    ASSERT(associated(op_ref%index))
 
     call nl_operator_copy(op, op_ref)
     do ip = 1, op%np
@@ -1022,7 +1022,7 @@ contains
       SAFE_DEALLOCATE_P(op%outer%ri)
     end if
 
-    SAFE_DEALLOCATE_P(op%i)
+    SAFE_DEALLOCATE_P(op%index)
     SAFE_DEALLOCATE_P(op%w_re)
     SAFE_DEALLOCATE_P(op%w_im)
 

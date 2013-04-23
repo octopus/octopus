@@ -341,7 +341,7 @@ contains
             factor, pot(1), rho(1))
         else
           do ip = 1, mesh%np
-            point_lap = sum(der%lapl%w_re(1:nn, ip)*pot(der%lapl%i(1:nn, ip)))
+            point_lap = sum(der%lapl%w_re(1:nn, ip)*pot(der%lapl%index(1:nn, ip)))
             pot(ip) = pot(ip) - CNST(0.7)/der%lapl%w_re(der%lapl%stencil%center, ip)*(point_lap-rho(ip))
           end do
         end if
