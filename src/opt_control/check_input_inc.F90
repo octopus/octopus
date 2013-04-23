@@ -75,7 +75,7 @@
     end if
 
     if(oct%algorithm  ==  oct_algorithm_zbr98) then
-      select case(target_type(target))
+      select case(target_type(oct_target))
       case(oct_tg_groundstate, oct_tg_gstransformation, &
            oct_tg_userdefined)
       case default
@@ -96,9 +96,9 @@
     end if
       
     ! local targets only in ZR98 and WG05
-    if(target_type(target)  ==  oct_tg_local .or. &
-       target_type(target)  ==  oct_tg_density .or. &
-       target_type(target)  ==  oct_tg_td_local) then
+    if(target_type(oct_target)  ==  oct_tg_local .or. &
+       target_type(oct_target)  ==  oct_tg_density .or. &
+       target_type(oct_target)  ==  oct_tg_td_local) then
       if(oct%algorithm  ==  oct_algorithm_zbr98) then
         write(message(1), '(a)') 'Cannot use ZBR98 OCT scheme if the target is oct_tg_density,'
         write(message(2), '(a)') 'oct_tg_local or oct_tg_td_local.'
@@ -109,7 +109,7 @@
     ! the inh term in the bwd evolution of chi is taken into
     ! consideration only for certain propagators
     if(.not.oct_algorithm_is_direct(oct)) then
-      if(target_mode(target)  ==  oct_targetmode_td) then
+      if(target_mode(oct_target)  ==  oct_targetmode_td) then
         select case(tr%method)
         case(PROP_CRANK_NICHOLSON)
         case(PROP_QOCT_TDDFT_PROPAGATOR)
@@ -131,7 +131,7 @@
     end if
 
 
-    if(target_type(target)  ==  oct_tg_excited) then
+    if(target_type(oct_target)  ==  oct_tg_excited) then
       if(sys%st%d%ispin  ==  UNPOLARIZED) then
         write(message(1), '(a)') 'If OCTTargetMode = oct_tg_excited, then you must run either with'
         write(message(1), '(a)') 'SpinComponents = spin_polarized or SpinComponents = spinors.'
@@ -164,7 +164,7 @@
       end if
     end if
 
-    if(target_type(target)  ==  oct_tg_exclude_state ) then
+    if(target_type(oct_target)  ==  oct_tg_exclude_state ) then
       if(no_electrons > 1) then
         write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_exclude_state", you can only do'
         write(message(2), '(a)') 'one-electron runs.'
@@ -178,7 +178,7 @@
       end if
     end if
     
-    if(target_type(target)  ==  oct_tg_velocity) then
+    if(target_type(oct_target)  ==  oct_tg_velocity) then
        if( (oct%algorithm /= oct_algorithm_direct) .and. &
             (oct%algorithm /= oct_algorithm_newuoa) .and. & 
             (oct%algorithm /= oct_algorithm_cg) ) then
@@ -188,7 +188,7 @@
           write(message(4), '(a)') '"OCTScheme = oct_algorithm_cg" for the optimization.'
           call messages_fatal(4)
        end if
-       if((oct%algorithm  ==  oct_algorithm_cg) .and. target_move_ions(target)) then
+       if((oct%algorithm  ==  oct_algorithm_cg) .and. target_move_ions(oct_target)) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_velocity", and'
           write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", then you have to'
           write(message(3), '(a)') 'set "OCTMoveIons = false"'
@@ -196,7 +196,7 @@
        end if
     end if
 
-    if(target_type(target)  ==  oct_tg_hhgnew) then
+    if(target_type(oct_target)  ==  oct_tg_hhgnew) then
        if( (oct%algorithm /= oct_algorithm_direct) .and. &
             (oct%algorithm /= oct_algorithm_newuoa) .and. & 
             (oct%algorithm /= oct_algorithm_cg) ) then
@@ -206,7 +206,7 @@
           write(message(4), '(a)') '"OCTScheme = oct_algorithm_cg" for the optimization.'
           call messages_fatal(4)
        end if
-       if((oct%algorithm  ==  oct_algorithm_cg) .and. target_move_ions(target)) then
+       if((oct%algorithm  ==  oct_algorithm_cg) .and. target_move_ions(oct_target)) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_hhgnew", and'
           write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", then you have to'
           write(message(3), '(a)') 'set "OCTMoveIons = false"'
@@ -214,7 +214,7 @@
        end if
     end if
     
-    if(target_curr_functional(target) /= oct_no_curr) then
+    if(target_curr_functional(oct_target) /= oct_no_curr) then
       select case(sys%st%d%ispin)
       case(UNPOLARIZED)
       case(SPIN_POLARIZED)

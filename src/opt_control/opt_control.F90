@@ -68,7 +68,7 @@ module opt_control_m
   type(filter_t), save       :: filter
   type(oct_t), save          :: oct
   type(oct_iterator_t), save :: iterator
-  type(target_t), save       :: target
+  type(target_t), save       :: oct_target
   type(states_t), save       :: initial_st
   
 
@@ -146,7 +146,7 @@ contains
 
     ! Figure out the starting wavefunction(s), and the target.
     call initial_state_init(sys, hm, initial_st)
-    call target_init(sys%gr, sys%geo, initial_st, td, controlfunction_w0(par), target, oct, hm%ep)
+    call target_init(sys%gr, sys%geo, initial_st, td, controlfunction_w0(par), oct_target, oct, hm%ep)
 
     ! Sanity checks.
     call check_faulty_runmodes(sys, hm, td%tr)
@@ -154,7 +154,7 @@ contains
 
     ! Informative output.
     call output_states(initial_st, sys%gr, sys%geo, OCT_DIR//'initial', sys%outp)
-    call target_output(target, sys%gr, OCT_DIR//'target', sys%geo, sys%outp)
+    call target_output(oct_target, sys%gr, OCT_DIR//'target', sys%geo, sys%outp)
 
 
     ! mode switcher; here is where the real run is made.
@@ -162,39 +162,39 @@ contains
       case(oct_algorithm_zbr98)
         message(1) = "Info: Starting OCT iteration using scheme: ZBR98"
         call messages_info(1)
-        call scheme_zbr98
+        call scheme_zbr98()
       case(oct_algorithm_wg05)
         message(1) = "Info: Starting OCT iteration using scheme: WG05"
         call messages_info(1)
-        call scheme_wg05
+        call scheme_wg05()
       case(oct_algorithm_zr98)
         message(1) = "Info: Starting OCT iteration using scheme: ZR98"
         call messages_info(1)
-        call scheme_mt03
+        call scheme_mt03()
       case(oct_algorithm_mt03)
         message(1) = "Info: Starting OCT iteration using scheme: MT03"
         call messages_info(1)
-        call scheme_mt03
+        call scheme_mt03()
       case(oct_algorithm_krotov)
         message(1) = "Info: Starting OCT iteration using scheme: KROTOV"
         call messages_info(1)
-        call scheme_mt03
+        call scheme_mt03()
       case(oct_algorithm_str_iter)
         message(1) = "Info: Starting OCT iterations using scheme: STRAIGHT ITERATION"
         call messages_info(1)
-        call scheme_straight_iteration
+        call scheme_straight_iteration()
       case(oct_algorithm_cg)
         message(1) = "Info: Starting OCT iterations using scheme: CONJUGATE GRADIENTS"
         call messages_info(1)
-        call scheme_cg
+        call scheme_cg()
       case(oct_algorithm_direct)
         message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NELDER-MEAD)"
         call messages_info(1)
-        call scheme_direct
+        call scheme_direct()
       case(oct_algorithm_newuoa)
         message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NEWUOA)"
         call messages_info(1)
-        call scheme_newuoa
+        call scheme_newuoa()
     case default
       call input_error('OCTScheme')
     end select
@@ -209,7 +209,7 @@ contains
     call filter_end(filter)
     call td_end(td)
     call states_end(initial_st)
-    call target_end(target, oct)
+    call target_end(oct_target, oct)
     call controlfunction_mod_close()
    
     POP_SUB(opt_control_run)
@@ -218,7 +218,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine scheme_straight_iteration
+    subroutine scheme_straight_iteration()
       PUSH_SUB(opt_control_run.scheme_straight_iteration)
 
       call controlfunction_set_rep(par)
@@ -243,7 +243,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine scheme_mt03
+    subroutine scheme_mt03()
       type(states_t) :: psi
       PUSH_SUB(opt_control_run.scheme_mt03)
 
@@ -276,7 +276,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine scheme_wg05
+    subroutine scheme_wg05()
       type(states_t) :: psi
       PUSH_SUB(opt_control_run.scheme_wg05)
 
@@ -311,7 +311,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine scheme_zbr98
+    subroutine scheme_zbr98()
       type(states_t) :: psi
       PUSH_SUB(opt_control_run.scheme_zbr98)
 
@@ -320,8 +320,8 @@ contains
       call oct_prop_init(prop_psi, "psi")
 
       call controlfunction_copy(par_prev, par)
-      call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
-      j1 = target_j1(target, sys%gr, psi)
+      call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
+      j1 = target_j1(oct_target, sys%gr, psi)
       stop_loop = iteration_manager(j1, par, par_prev, iterator)
       call controlfunction_end(par_prev)
       if(clean_stop(sys%mc%master_comm) .or. stop_loop) then
@@ -336,7 +336,7 @@ contains
       ctr_loop: do
         call controlfunction_copy(par_prev, par)
         call f_zbr98(sys, hm, td, psi, prop_psi, prop_chi, par)
-        j1 = target_j1(target, sys%gr, psi)
+        j1 = target_j1(oct_target, sys%gr, psi)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
         if(oct%use_mixing) then
@@ -356,7 +356,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine scheme_cg
+    subroutine scheme_cg()
       integer :: dof, ierr, maxiter
       REAL_DOUBLE   :: step, minvalue
       FLOAT, allocatable :: theta(:)
@@ -368,8 +368,8 @@ contains
       call controlfunction_set_rep(par)
 
       call states_copy(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, target, psi)
-      f = - target_j1(target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
+      call propagate_forward(sys, hm, td, par, oct_target, psi)
+      f = - target_j1(oct_target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
       call iteration_manager_direct(-f, par, iterator, sys)
       call states_end(psi)
       if(oct_iterator_maxiter(iterator) == 0) then
@@ -419,7 +419,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine scheme_direct
+    subroutine scheme_direct()
       integer :: ierr, maxiter
       REAL_DOUBLE :: minvalue, step
       FLOAT, allocatable :: theta(:)
@@ -434,8 +434,8 @@ contains
       dim = controlfunction_dof(par)
 
       call states_copy(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, target, psi)
-      f = - target_j1(target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
+      call propagate_forward(sys, hm, td, par, oct_target, psi)
+      f = - target_j1(oct_target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
       call iteration_manager_direct(-f, par, iterator, sys)
       call states_end(psi)
       if(oct_iterator_maxiter(iterator) == 0) then
@@ -487,7 +487,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine scheme_newuoa
+    subroutine scheme_newuoa()
 #if defined(HAVE_NEWUOA)
       integer :: dim, ierr, maxfun
       REAL_DOUBLE :: minvalue, step
@@ -501,8 +501,8 @@ contains
       call controlfunction_set_rep(par)
 
       call states_copy(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, target, psi)
-      f = - target_j1(target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
+      call propagate_forward(sys, hm, td, par, oct_target, psi)
+      f = - target_j1(oct_target, sys%gr, psi, sys%geo) - controlfunction_j2(par)
       call iteration_manager_direct(-f, par, iterator, sys)      
       call states_end(psi)
       if(oct_iterator_maxiter(iterator) == 0) then
@@ -570,15 +570,15 @@ contains
     if(oct%use_mixing) then
       call states_end(psi)
       call states_copy(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
+      call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
     end if
 
-    call target_get_state(target, chi)
-    call bwd_step(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
+    call target_get_state(oct_target, chi)
+    call bwd_step(sys, td, hm, oct_target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
     call states_copy(psi, initial_st)
-    call fwd_step(sys, td, hm, target, par, par_chi, psi, prop_chi, prop_psi)
+    call fwd_step(sys, td, hm, oct_target, par, par_chi, psi, prop_chi, prop_psi)
 
     call states_end(chi)
     call controlfunction_end(par_chi)
@@ -605,8 +605,8 @@ contains
     if( oct_iterator_current(iterator)  ==  0) then
       call states_end(psi)
       call states_copy(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
-      j1 = target_j1(target, sys%gr, psi)
+      call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
+      j1 = target_j1(oct_target, sys%gr, psi)
       POP_SUB(f_wg05)
       return
     end if
@@ -614,8 +614,8 @@ contains
     call controlfunction_copy(parp, par)
 
     call states_copy(chi, psi)
-    call target_chi(target, sys%gr, psi, chi, sys%geo)
-    call bwd_step(sys, td, hm, target, par, parp, chi, prop_chi, prop_psi)
+    call target_chi(oct_target, sys%gr, psi, chi, sys%geo)
+    call bwd_step(sys, td, hm, oct_target, par, parp, chi, prop_chi, prop_psi)
 
     call controlfunction_filter(parp, filter)
 
@@ -632,9 +632,9 @@ contains
 
     call states_end(psi)
     call states_copy(psi, initial_st)
-    call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
+    call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
 
-    j1 = target_j1(target, sys%gr, psi)
+    j1 = target_j1(oct_target, sys%gr, psi)
 
     call states_end(chi)
     call controlfunction_end(parp)
@@ -667,18 +667,18 @@ contains
 
     ! First, a forward propagation with the input field.
     call states_copy(psi, initial_st)
-    call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
+    call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
 
     ! Check the performance.
-    j1 = target_j1(target, sys%gr, psi, sys%geo)
+    j1 = target_j1(oct_target, sys%gr, psi, sys%geo)
 
     ! Set the boundary condition for the backward propagation.
     call states_copy(chi, psi)
-    call target_chi(target, sys%gr, psi, chi, sys%geo)
+    call target_chi(oct_target, sys%gr, psi, chi, sys%geo)
 
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
-    call bwd_step_2(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
+    call bwd_step_2(sys, td, hm, oct_target, par, par_chi, chi, prop_chi, prop_psi)
 
     if(controlfunction_mode() == controlfunction_mode_f) call controlfunction_cosine_multiply(par_chi)
 
@@ -720,8 +720,8 @@ contains
     if( oct_iterator_current(iterator)  ==  0) then
       call states_end(psi)
       call states_copy(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
-      j1 = target_j1(target, sys%gr, psi)
+      call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
+      j1 = target_j1(oct_target, sys%gr, psi)
       POP_SUB(f_iter)
       return
     end if
@@ -732,18 +732,18 @@ contains
       ! No need to do this auxiliary propagation if no mixing has been done previously.
       call states_end(psi)
       call states_copy(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
+      call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
     end if
     
     call states_copy(chi, psi)
-    call target_chi(target, sys%gr, psi, chi, sys%geo)
-    call bwd_step(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi)
+    call target_chi(oct_target, sys%gr, psi, chi, sys%geo)
+    call bwd_step(sys, td, hm, oct_target, par, par_chi, chi, prop_chi, prop_psi)
 
     call states_end(psi)
     call states_copy(psi, initial_st)
-    call fwd_step(sys, td, hm, target, par, par_chi, psi, prop_chi, prop_psi)
+    call fwd_step(sys, td, hm, oct_target, par, par_chi, psi, prop_chi, prop_psi)
 
-    j1 = target_j1(target, sys%gr, psi)
+    j1 = target_j1(oct_target, sys%gr, psi)
 
     call states_end(chi)
     call controlfunction_end(par_chi)

@@ -40,9 +40,9 @@
 
     call states_copy(psi, initial_st)
 
-    call propagate_forward(sys, hm, td, par, target, psi, write_iter = .true.)
+    call propagate_forward(sys, hm, td, par, oct_target, psi, write_iter = .true.)
 
-    j1 = target_j1(target, sys%gr, psi)
+    j1 = target_j1(oct_target, sys%gr, psi)
     fluence = controlfunction_fluence(par)
     j2 = controlfunction_j2(par)
     jfunctional = j1 + j2

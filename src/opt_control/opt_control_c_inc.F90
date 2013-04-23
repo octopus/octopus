@@ -42,8 +42,8 @@
     call controlfunction_set_theta(par_, theta)
     call controlfunction_theta_to_basis(par_)
     call states_copy(psi, initial_st)
-    call propagate_forward(sys_, hm_, td_, par_, target, psi)
-    f = - target_j1(target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
+    call propagate_forward(sys_, hm_, td_, par_, oct_target, psi)
+    f = - target_j1(oct_target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
     call states_end(psi)
 
     SAFE_DEALLOCATE_A(theta)
@@ -125,8 +125,8 @@
       call controlfunction_set_theta(par_, theta)
       call controlfunction_theta_to_basis(par_)
       call states_copy(psi, initial_st)
-      call propagate_forward(sys_, hm_, td_, par_, target, psi)
-      f = - target_j1(target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
+      call propagate_forward(sys_, hm_, td_, par_, oct_target, psi)
+      f = - target_j1(oct_target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
       call states_end(psi)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
     end if
@@ -193,8 +193,8 @@
     if(oct%delta == M_ZERO) then
       ! We only need the value of the target functional.
       call states_copy(psi, initial_st)
-      call propagate_forward(sys_, hm_, td_, par_, target, psi)
-      f = - target_j1(target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
+      call propagate_forward(sys_, hm_, td_, par_, oct_target, psi)
+      f = - target_j1(oct_target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
       call states_end(psi)
     else
