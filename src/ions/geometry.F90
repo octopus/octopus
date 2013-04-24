@@ -894,23 +894,41 @@ contains
 
     type(openscad_file_t) :: cad_file
     integer :: iatom, jatom
-
-    FLOAT, parameter :: atom_radius = CNST(0.6)
+    FLOAT :: max_bond_length
+    character(len=12) :: numi, numj
+    
+    
+    FLOAT, parameter :: hydrogen_radius = CNST(0.4)
+    FLOAT, parameter :: atom_radius = CNST(0.7)
     FLOAT, parameter :: bond_radius = CNST(0.3)
-    FLOAT, parameter :: max_bond_length = CNST(3.0)
+    FLOAT, parameter :: hydrogen_max_bond_length = CNST(3.0)
+    FLOAT, parameter :: other_max_bond_length = CNST(3.5)
 
     call io_mkdir(dir)
     call openscad_file_init(cad_file, trim(dir)//'/'//trim(fname)//'.scad')
 
+    call openscad_file_define_variable(cad_file, "hydrogen_radius", hydrogen_radius)
     call openscad_file_define_variable(cad_file, "atom_radius", atom_radius)
     call openscad_file_define_variable(cad_file, "bond_radius", bond_radius)
 
     do iatom = 1, geo%natoms
 
-      call openscad_file_sphere(cad_file, geo%atom(iatom)%x(1:3), radius_variable = "atom_radius")
+      write(numi, '(i12)') iatom
+      call openscad_file_comment(cad_file, 'Atom '//trim(adjustl(numi))//': '//trim(species_label(geo%atom(iatom)%spec)))
+
+      if(species_z(geo%atom(iatom)%spec) == 1) then
+        call openscad_file_sphere(cad_file, geo%atom(iatom)%x(1:3), radius_variable = "hydrogen_radius")
+        max_bond_length = hydrogen_max_bond_length
+      else
+        call openscad_file_sphere(cad_file, geo%atom(iatom)%x(1:3), radius_variable = "atom_radius")
+        max_bond_length = other_max_bond_length
+      end if
 
       do jatom = iatom + 1, geo%natoms
         if(sum((geo%atom(iatom)%x(1:3) - geo%atom(jatom)%x(1:3))**2) > max_bond_length**2) cycle
+
+        write(numj, '(i12)') jatom
+        call openscad_file_comment(cad_file, '  Bond '//trim(adjustl(numi))//' -> '//trim(adjustl(numj)))
 
         call openscad_file_bond(cad_file, geo%atom(iatom)%x(1:3), geo%atom(jatom)%x(1:3), radius_variable = "bond_radius")
       end do

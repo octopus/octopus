@@ -36,7 +36,8 @@ module openscad_m
     openscad_file_bond,             &
     openscad_file_cube,             &
     openscad_file_define_variable,  &
-    openscad_file_triangle
+    openscad_file_triangle,         &
+    openscad_file_comment
 
   type openscad_file_t
     private
@@ -197,6 +198,17 @@ contains
       '], triangles=[ [2,1,0] ]);'
     
   end subroutine openscad_file_triangle
+
+  ! ------------------------------------------------------
+
+  subroutine openscad_file_comment(this, comment)
+    type(openscad_file_t), intent(inout) :: this
+    character(len=*),      intent(in)    :: comment
+
+    write(this%iunit, '(a,a)') '//', trim(comment)
+
+  end subroutine openscad_file_comment
+
 
 end module openscad_m
 
