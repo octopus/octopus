@@ -35,7 +35,8 @@ module openscad_m
     openscad_file_sphere,           &
     openscad_file_bond,             &
     openscad_file_cube,             &
-    openscad_file_define_variable
+    openscad_file_define_variable,  &
+    openscad_file_triangle
 
   type openscad_file_t
     private
@@ -180,6 +181,23 @@ contains
     
   end subroutine write_rotate
   
+  !------------------------------------------------------
+
+  subroutine openscad_file_triangle(this, pos1, pos2, pos3)
+    type(openscad_file_t), intent(inout) :: this
+    FLOAT,                 intent(in)    :: pos1(:)
+    FLOAT,                 intent(in)    :: pos2(:)
+    FLOAT,                 intent(in)    :: pos3(:)
+
+    write(this%iunit, '(a,a,f12.6,a,f12.6,a,f12.6,a,a,f12.6,a,f12.6,a,f12.6,a,a,f12.6,a,f12.6,a,f12.6,a,a)') &
+      ' polyhedron( points = [ ', &
+      '[', pos1(1), ',', pos1(2), ',', pos1(3), '],',       &
+      '[', pos2(1), ',', pos2(2), ',', pos2(3), '],',       &
+      '[', pos3(1), ',', pos3(2), ',', pos3(3), '],',       &
+      '], triangles=[ [2,1,0] ]);'
+    
+  end subroutine openscad_file_triangle
+
 end module openscad_m
 
 !! Local Variables:

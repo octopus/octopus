@@ -1111,89 +1111,194 @@ contains
 #endif /*defined(HAVE_NETCDF)*/
  
   subroutine out_openscad()
-    integer :: ip, ii, jp
-    logical, allocatable :: print_point(:)
-    FLOAT,   allocatable :: position(:, :)
-    FLOAT,   allocatable :: sizes(:, :)
+    integer :: ip, ii, jp, jj, kk, iver, ntriangles, ll
     type(openscad_file_t) :: cad_file
-    FLOAT, parameter :: isosurface_value = CNST(0.21)
-    logical :: inside, can_join
-    integer :: ix(1:3), jx(1:3), reddir, itimes
+    FLOAT, parameter :: isosurface_value = CNST(0.05)
+    logical :: inside, can_join, out
+
+    integer, allocatable :: edges(:), triangles(:, :)
+    integer :: iunit, cubeindex, cube_point(0:7)
+    FLOAT :: vertlist(1:3, 0:11)
 
     PUSH_SUB(X(io_function_output_global).out_openscad)
+
+    SAFE_ALLOCATE(edges(0:255))
+    SAFE_ALLOCATE(triangles(1:16, 0:255))
+
+    iunit = io_open(trim(conf%share)//"/marching_cubes_edges.data", action='read', status='old', die=.true.)
+
+    do ii = 0, 255
+      read(iunit, *) edges(ii)
+    end do
+
+    call io_close(iunit)
+
+
+    iunit = io_open(trim(conf%share)//"/marching_cubes_triangles.data", action='read', status='old', die=.true.)
+
+    do ii = 0, 255
+      read(iunit, *) (triangles(jj, ii), jj = 1, 16)
+    end do
+
+    call io_close(iunit)
+
 
 #ifdef R_TREAL
     print*, minval(ff(1:mesh%np)), maxval(ff(1:mesh%np))
 #endif
 
-    SAFE_ALLOCATE(print_point(1:mesh%np))
-    SAFE_ALLOCATE(position(1:3, 1:mesh%np))
-    SAFE_ALLOCATE(sizes(1:3, 1:mesh%np))
 
-    print_point(1:mesh%np) = .false.
-
-    do ip = 1, mesh%np
-#ifdef R_TREAL
-      inside = ff(ip) > isosurface_value
-#else
-      inside = abs(ff(ip)) > isosurface_value
-#endif
-      if(inside) then
-        print_point(ip) = .true.
-        position(1:3, ip) = mesh%x(ip, 1:3)
-        sizes(1:3, ip) = mesh%spacing(1:3)
-      end if
-    end do
-
-    ! since openscad can have problems with too many objects, we try
-    ! to merge the cubes before creating the file
-    do reddir = 3, 1, -1
-      do ip = 1, mesh%np
-        if(print_point(ip)) then
-          ix(1:3) = mesh%idx%lxyz(ip, 1:3)
-          jx(1:3) = ix(1:3)
-          do 
-            jx(reddir) = jx(reddir) + 1
-            jp = mesh%idx%lxyz_inv(jx(1), jx(2), jx(3))
-            if(jp > mesh%np .or. jp < 1) exit
-            if(.not. print_point(jp)) exit
-            
-            ! check that the blocks are in the same position and have
-            ! the same size, so that they can be merged
-            can_join = .true.
-            do idir = 1, 3
-              if(idir == reddir) cycle
-              can_join = can_join .and. (abs(sizes(idir, ip) - sizes(idir, jp)) < M_EPSILON)
-              can_join = can_join .and. (abs(position(idir, ip) - position(idir, jp)) < M_EPSILON)
-            end do
-            
-            if(.not. can_join) exit
-            
-            print_point(jp) = .false.
-            position(reddir, ip) = (sizes(reddir, ip)*position(reddir, ip) + sizes(reddir, jp)*position(reddir, jp))
-            sizes(reddir, ip) = sizes(reddir, ip) + sizes(reddir, jp)
-            position(reddir, ip) = position(reddir, ip)/sizes(reddir, ip)
-          end do
-        end if
-      end do
-    end do
-    
     call openscad_file_init(cad_file, trim(dir)//'/'//trim(fname)//".scad")
 
-    do ip = 1, mesh%np
-      if(print_point(ip)) call openscad_file_cube(cad_file, position(1:3, ip), sizes(1:3, ip))
+    do ip = 1, mesh%np_global
+      ii = mesh%idx%lxyz(ip, 1)
+      jj = mesh%idx%lxyz(ip, 2)
+      kk = mesh%idx%lxyz(ip, 3)
+
+      cube_point(0) = mesh%idx%lxyz_inv(ii    , jj    , kk    )
+      cube_point(1) = mesh%idx%lxyz_inv(ii    , jj + 1, kk    )
+      cube_point(2) = mesh%idx%lxyz_inv(ii + 1, jj + 1, kk    )
+      cube_point(3) = mesh%idx%lxyz_inv(ii + 1, jj    , kk    )
+      cube_point(4) = mesh%idx%lxyz_inv(ii    , jj    , kk + 1)
+      cube_point(5) = mesh%idx%lxyz_inv(ii    , jj + 1, kk + 1)
+      cube_point(6) = mesh%idx%lxyz_inv(ii + 1, jj + 1, kk + 1)
+      cube_point(7) = mesh%idx%lxyz_inv(ii + 1, jj    , kk + 1)
+
+      if(any(cube_point < 1 .or. cube_point > mesh%np_global)) cycle
+      
+      cubeindex = 0
+      if(X(inside_isolevel)(mesh, ff, cube_point(0), isosurface_value)) cubeindex = cubeindex + 1
+      if(X(inside_isolevel)(mesh, ff, cube_point(1), isosurface_value)) cubeindex = cubeindex + 2
+      if(X(inside_isolevel)(mesh, ff, cube_point(2), isosurface_value)) cubeindex = cubeindex + 4
+      if(X(inside_isolevel)(mesh, ff, cube_point(3), isosurface_value)) cubeindex = cubeindex + 8
+      if(X(inside_isolevel)(mesh, ff, cube_point(4), isosurface_value)) cubeindex = cubeindex + 16
+      if(X(inside_isolevel)(mesh, ff, cube_point(5), isosurface_value)) cubeindex = cubeindex + 32
+      if(X(inside_isolevel)(mesh, ff, cube_point(6), isosurface_value)) cubeindex = cubeindex + 64
+      if(X(inside_isolevel)(mesh, ff, cube_point(7), isosurface_value)) cubeindex = cubeindex + 128
+
+      if(edges(cubeindex) == 0) cycle
+
+      vertlist = CNST(3.333333333333333333)
+
+      if(iand(edges(cubeindex), 1) /= 0) then
+        vertlist(1:3, 0) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(0), cube_point(1))
+      end if
+      if(iand(edges(cubeindex), 2) /= 0) then
+        vertlist(1:3, 1) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(1), cube_point(2))
+      end if
+      if(iand(edges(cubeindex), 4) /= 0) then
+        vertlist(1:3, 2) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(2), cube_point(3))
+      end if
+      if(iand(edges(cubeindex), 8) /= 0) then
+        vertlist(1:3, 3) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(3), cube_point(0))
+      end if
+      if(iand(edges(cubeindex), 16) /= 0) then
+        vertlist(1:3, 4) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(4), cube_point(5))
+      end if
+      if(iand(edges(cubeindex), 32) /= 0) then
+        vertlist(1:3, 5) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(5), cube_point(6))
+      end if
+      if(iand(edges(cubeindex), 64) /= 0) then
+        vertlist(1:3, 6) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(6), cube_point(7))
+      end if
+      if(iand(edges(cubeindex), 128) /= 0) then
+        vertlist(1:3, 7) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(7), cube_point(4))
+      end if
+      if(iand(edges(cubeindex), 256) /= 0) then
+        vertlist(1:3, 8) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(0), cube_point(4))
+      end if
+      if(iand(edges(cubeindex), 512) /= 0) then
+        vertlist(1:3, 9) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(1), cube_point(5))
+      end if
+      if(iand(edges(cubeindex), 1024) /= 0) then
+        vertlist(1:3, 10) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(2), cube_point(6))
+      end if
+      if(iand(edges(cubeindex), 2048) /= 0) then
+        vertlist(1:3, 11) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(3), cube_point(7))
+      end if
+      
+#if 0
+      print*, "CUBEINDEX ", cubeindex
+      print*, "TRIANGLES ", triangles(:, cubeindex)
+
+      print*, "--------------------"
+      do jp = 0, 7
+        print*, mesh%x(cube_point(0), 1:3)
+      end do
+      print*, "--------------------"
+
+      print*, "--------------------"
+      do jp = 0, 11
+        print*, jp, vertlist(1:3, jp)
+      end do
+      print*, "--------------------"
+#endif
+
+      ntriangles = 0
+      ll = 1
+      do
+        if(triangles(ll, cubeindex) == -1) exit
+        call openscad_file_triangle(cad_file, &
+          vertlist(1:3, triangles(ll    , cubeindex)), &
+          vertlist(1:3, triangles(ll + 1, cubeindex)), &
+          vertlist(1:3, triangles(ll + 2, cubeindex)))
+        ll = ll + 3
+      end do
+
     end do
 
-    print*, "NUMBER OBJECTS", count(print_point(1:mesh%np))
-
     call openscad_file_end(cad_file)
-
-    SAFE_DEALLOCATE_A(print_point)
 
     POP_SUB(X(io_function_output_global).out_openscad)
   end subroutine out_openscad
 
 end subroutine X(io_function_output_global)
+
+! -----------------------------------------------
+
+logical pure function X(inside_isolevel)(mesh, ff, ip, isosurface_value) result(inside)
+  type(mesh_t),    intent(in) :: mesh
+  R_TYPE,          intent(in) :: ff(:)
+  integer,         intent(in) :: ip
+  FLOAT,           intent(in) :: isosurface_value
+
+#ifdef R_TREAL
+  inside = ff(ip) > isosurface_value
+#else
+  inside = abs(ff(ip)) > isosurface_value
+#endif  
+
+end function X(inside_isolevel)
+
+! -----------------------------------------------
+
+pure function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) result(pos)
+  type(mesh_t),    intent(in) :: mesh
+  R_TYPE,          intent(in) :: ff(:)
+  FLOAT,           intent(in) :: isosurface_value
+  integer,         intent(in) :: ip1
+  integer,         intent(in) :: ip2
+  FLOAT                       :: pos(1:3)
+
+  FLOAT :: v1, v2
+  
+#ifdef R_TREAL
+  v1 = ff(ip1)
+  v2 = ff(ip2)
+#else
+  v1 = abs(ff(ip1))
+  v2 = abs(ff(ip2))
+#endif  
+
+  if(abs(v2 - v1) > M_EPSILON) then
+    pos(1:3) = mesh%x(ip1, 1:3) + (isosurface_value - v1)*(mesh%x(ip2, 1:3) - mesh%x(ip1, 1:3))/(v2 - v1)
+  else
+    ! this should never happen, but just to be sure
+    pos(1:3) = CNST(0.5)*(mesh%x(ip1, 1:3) + mesh%x(ip2, 1:3))
+  end if
+
+end function X(interpolate_isolevel)
+
 
 #if defined(HAVE_NETCDF)
   ! --------------------------------------------------------- 
