@@ -185,11 +185,11 @@ contains
     !% system. This can be overridden by the <tt>PoissonFFTKernel</tt>
     !% variable.
     !%Option cg 5
-    !% Conjugate gradients.
+    !% Conjugate gradients (only for finite systems).
     !%Option cg_corrected 6
     !% Conjugate gradients, corrected for boundary conditions (only for finite systems).
     !%Option multigrid 7
-    !% Multigrid method.
+    !% Multigrid method (only for finite systems).
     !%Option isf 8
     !% Interpolating Scaling Functions Poisson solver.
     !%Option sete 9
@@ -294,6 +294,16 @@ contains
 
     if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_CG_CORRECTED) then
       message(1) = 'A periodic system may not use the cg_corrected Poisson solver.'
+      call messages_fatal(1)
+    end if
+
+    if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_CG) then
+      message(1) = 'A periodic system may not use the cg Poisson solver.'
+      call messages_fatal(1)
+    end if
+
+    if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_MULTIGRID) then
+      message(1) = 'A periodic system may not use the multigrid Poisson solver.'
       call messages_fatal(1)
     end if
 
