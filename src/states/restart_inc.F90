@@ -47,7 +47,6 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
   integer, optional, intent(in)   :: map(:)
 
   integer :: ip, np, il, il2, ipart, offset
-  integer, allocatable :: list(:)
   R_TYPE, pointer :: read_ff(:)
   type(profile_t), save :: prof_io
   type(batch_t) :: ffb
@@ -96,25 +95,15 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
 
   if(mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "RESTART_READ_COMM")
-    SAFE_ALLOCATE(list(1:mesh%np_global))
     ! this is the global index of the points we read
-    il = 0
-    do ipart = 1, mesh%vp%npart
-      do ip = 1, mesh%vp%np_local_vec(ipart)
-        INCR(il, 1)
-        il2 = mesh%vp%local_vec(ip + mesh%vp%xlocal_vec(ipart) - 1)
-        list(il) = il2
-      end do
-    end do
 
     ff(1:mesh%np) = read_ff(1:mesh%np)
 
     call batch_init(ffb, 1)
     call batch_add_state(ffb, ff)
-    call X(mesh_batch_exchange_points)(mesh, ffb, backward_map = list)
+    call X(mesh_batch_exchange_points)(mesh, ffb, backward_map = mesh%vp%local_vec)
     call batch_end(ffb)
     
-    SAFE_DEALLOCATE_A(list)
     call profiling_out(prof_comm)
   end if
 

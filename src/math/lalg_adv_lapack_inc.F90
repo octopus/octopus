@@ -136,8 +136,8 @@ end subroutine zcholesky
 
 ! ---------------------------------------------------------
 !> Computes all the eigenvalues and the eigenvectors of a real
-!! generalized symmetric-definite eigenproblem, of the form  A*x=(lambda)*B*x
-!! A*Bx=(lambda)*x, or B*A*x=(lambda)*x.
+!! generalized symmetric-definite eigenproblem, of the form  
+!! \f$ Ax=\lambda Bx, ABx=\lambda x, or BAx=\lambda x.\f$
 !! Here A and B are assumed to be symmetric and B is also positive definite.
 subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
