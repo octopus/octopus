@@ -136,9 +136,9 @@ contains
     call restart_look_and_read(sys%st, sys%gr, is_complex = complex_response)
 
     if (states_are_real(sys%st)) then
-      message(1) = 'Info: SCF using real wavefunctions.'
+      message(1) = 'Info: Using real wavefunctions.'
     else
-      message(1) = 'Info: SCF using complex wavefunctions.'
+      message(1) = 'Info: Using complex wavefunctions.'
     end if
     call messages_info(1)
 
