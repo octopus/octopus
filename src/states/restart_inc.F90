@@ -46,7 +46,7 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
   integer,          intent(out)   :: ierr
   integer, optional, intent(in)   :: map(:)
 
-  integer :: ip, np, il, il2, ipart, offset
+  integer :: ip, np, offset
   R_TYPE, pointer :: read_ff(:)
   type(profile_t), save :: prof_io
   type(batch_t) :: ffb
