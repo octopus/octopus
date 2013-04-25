@@ -125,6 +125,10 @@ contains
     gr => sys%gr
     ndim = sys%gr%sb%dim
 
+    if(gr%sb%kpoints%reduced%npoints /= gr%sb%kpoints%full%npoints) then
+      call messages_not_implemented('em_resp with reduced k-grid')
+    endif
+
     call parse_input()
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC .and. &
