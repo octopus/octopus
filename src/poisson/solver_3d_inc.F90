@@ -46,11 +46,11 @@ subroutine poisson3D_init(this, geo, all_nodes_comm)
   !%Type integer
   !%Section Hamiltonian::Poisson
   !%Description
-  !% Order of the multipolar expansion for boundary
-  !% corrections. 
+  !% Order of the multipolar expansion for boundary corrections. 
   !%
-  !% The versions of <tt>multigrid</tt> and <tt>cg_corrected</tt>
-  !% implemented in Octopus do a multipolar expansion of the given
+  !% The Poisson solvers <tt>multigrid</tt>, <tt>cg</tt>, and <tt>cg_corrected</tt>
+  !% (and <tt>fft</tt> with <tt>PoissonFFTKernel = multipole_correction</tt>)
+  !% do a multipolar expansion of the given
   !% charge density, such that $\rho = \rho_{multip.expansion}+\Delta
   !% \rho$. The Hartree potential due to the \rho_{multip.expansion} is
   !% calculated analytically, while the Hartree potential due to $\Delta
