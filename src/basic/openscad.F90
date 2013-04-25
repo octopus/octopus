@@ -21,8 +21,10 @@
 
 module openscad_m
   use global_m
-  use messages_m
   use io_m
+  use messages_m
+  use polyhedron_m
+  use profiling_m
 
   implicit none
 
@@ -37,6 +39,7 @@ module openscad_m
     openscad_file_cube,             &
     openscad_file_define_variable,  &
     openscad_file_triangle,         &
+    openscad_file_polyhedron,       &
     openscad_file_comment
 
   type openscad_file_t
@@ -198,6 +201,44 @@ contains
       '], triangles=[ [2,1,0] ]);'
     
   end subroutine openscad_file_triangle
+
+  !------------------------------------------------------
+
+  subroutine openscad_file_polyhedron(this, poly)
+    type(openscad_file_t), intent(inout) :: this
+    type(polyhedron_t),    intent(in)    :: poly
+    
+    integer :: ii, minmap, maxmap
+    integer, allocatable :: map(:)
+
+    PUSH_SUB(openscad_file_polyhedron)
+
+    minmap = minval(poly%point_indices(1:poly%npoints))
+    maxmap = maxval(poly%point_indices(1:poly%npoints))
+
+    SAFE_ALLOCATE(map(minmap:maxmap))
+
+    write(this%iunit, '(a)') ' polyhedron( points = [ '
+
+    do ii = 1, poly%npoints
+      write(this%iunit, '(a,f12.6,a,f12.6,a,f12.6,a)') &
+        '[', poly%points(1, ii), ',', poly%points(2, ii), ',',  poly%points(3, ii), '],'
+      map(poly%point_indices(ii)) = ii - 1
+    end do
+
+    write(this%iunit, '(a)') '], triangles = [ '
+
+    do ii = 1, poly%ntriangles
+      write(this%iunit, '(a,i10,a,i10,a,i10,a)') &
+        '[', map(poly%triangles(3, ii)), ',', map(poly%triangles(2, ii)), ',',  map(poly%triangles(1, ii)), '],'
+    end do
+
+    write(this%iunit, '(a)') ']);'
+
+    SAFE_DEALLOCATE_A(map)
+
+    POP_SUB(openscad_file_polyhedron)
+  end subroutine openscad_file_polyhedron
 
   ! ------------------------------------------------------
 
