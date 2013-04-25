@@ -606,49 +606,47 @@ contains
 
     case(oct_tg_hhgnew)
        
-       if(parse_isdef('OCTMoveIons')  ==  0) then
-          message(1) = 'If OCTTargetOperator = oct_tg_hhgnew, then you must supply'
-          message(2) = 'the variable "OCTMoveIons".'
-          call messages_fatal(2)
-       else
-          call parse_logical(datasets_check('OCTMoveIons'), .false., target%move_ions)
-       end if
-       
-       if(oct%algorithm  ==  oct_algorithm_cg) then
+      if(parse_isdef('OCTMoveIons')  ==  0) then
+         message(1) = 'If OCTTargetOperator = oct_tg_hhgnew, then you must supply'
+         message(2) = 'the variable "OCTMoveIons".'
+         call messages_fatal(2)
+      else
+         call parse_logical(datasets_check('OCTMoveIons'), .false., target%move_ions)
+      end if
+      
+       ! We allocate many things that are perhaps not necessary if we use a direct optimization scheme.
 
 
-          SAFE_ALLOCATE(target%vel(td%max_iter+1, MAX_DIM))
-          SAFE_ALLOCATE(target%acc(td%max_iter+1, MAX_DIM))
-          SAFE_ALLOCATE(target%gvec(td%max_iter+1, MAX_DIM))
-          SAFE_ALLOCATE(target%alpha(td%max_iter))
+      SAFE_ALLOCATE(target%vel(td%max_iter+1, MAX_DIM))
+      SAFE_ALLOCATE(target%acc(td%max_iter+1, MAX_DIM))
+      SAFE_ALLOCATE(target%gvec(td%max_iter+1, MAX_DIM))
+      SAFE_ALLOCATE(target%alpha(td%max_iter))
           
-          ! The following is a temporary hack, that assumes only one atom at the origin of coordinates.
-          if(geo%natoms > 1) then
-            message(1) = 'If "OCTTargetOperator = oct_tg_hhgnew", then you can only have one atom.'
-            call messages_fatal(1)
-          end if
+      ! The following is a temporary hack, that assumes only one atom at the origin of coordinates.
+      if(geo%natoms > 1) then
+        message(1) = 'If "OCTTargetOperator = oct_tg_hhgnew", then you can only have one atom.'
+        call messages_fatal(1)
+      end if
 
-          SAFE_ALLOCATE(target%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
-          SAFE_ALLOCATE(vl(1:gr%mesh%np_part))
-          SAFE_ALLOCATE(vl_grad(1:gr%mesh%np, 1:gr%sb%dim))
-          SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
+      SAFE_ALLOCATE(target%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
+      SAFE_ALLOCATE(vl(1:gr%mesh%np_part))
+      SAFE_ALLOCATE(vl_grad(1:gr%mesh%np, 1:gr%sb%dim))
+      SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
 
-          vl(:) = M_ZERO
-          vl_grad(:,:) = M_ZERO
-          call epot_local_potential(ep, gr%der, gr%dgrid, geo, 1, vl)
-          call dderivatives_grad(gr%der, vl, vl_grad)
-          forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
-            target%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
-          end forall
+      vl(:) = M_ZERO
+      vl_grad(:,:) = M_ZERO
+      call epot_local_potential(ep, gr%der, gr%dgrid, geo, 1, vl)
+      call dderivatives_grad(gr%der, vl, vl_grad)
+      forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
+        target%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
+      end forall
 
-          ! Note that the calculation of the gradient of the potential
-          ! is wrong at the borders of the box, since it assumes zero boundary
-          ! conditions. The best way to solve this problems is to define the 
-          ! target making use of the definition of the forces based on the gradient
-          ! of the density, rather than on the gradient of the potential.
+      ! Note that the calculation of the gradient of the potential
+      ! is wrong at the borders of the box, since it assumes zero boundary
+      ! conditions. The best way to solve this problems is to define the 
+      ! target making use of the definition of the forces based on the gradient
+      ! of the density, rather than on the gradient of the potential.
           
-       end if
-
       !%Variable OCTHarmonicWeight
       !%Type string
       !%Section Calculation Modes::Optimal Control
