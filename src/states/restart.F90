@@ -526,7 +526,7 @@ contains
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
-    integer,    optional, intent(inout) :: iter
+    integer,    optional, intent(out)   :: iter
     type(lr_t), optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
     logical,    optional, intent(in)    :: exact    !< if .true. we need all the wavefunctions and on the same grid
     logical,    optional, intent(in)    :: rdmft
