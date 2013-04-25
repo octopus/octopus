@@ -192,7 +192,6 @@ contains
     case default
       call input_error('TDDeltaStrengthMode')
     end select
-    call messages_print_var_option(stdout, 'TDDeltaStrengthMode', kick%delta_strength_mode)
 
     nullify(kick%l)
     nullify(kick%m)
