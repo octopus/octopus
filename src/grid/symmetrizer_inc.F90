@@ -59,7 +59,7 @@ subroutine X(symmetrizer_apply)(this, field, symmfield)
 
     if(this%mesh%parallel_in_domains) then
       ! convert to global point
-      destpoint(1:3) = this%mesh%idx%lxyz(vp%local(vp%xlocal(vp%partno) + ip - 1), 1:3) - offset(1:3)
+      destpoint(1:3) = this%mesh%idx%lxyz(vp%local(vp%xlocal + ip - 1), 1:3) - offset(1:3)
     else
       destpoint(1:3) = this%mesh%idx%lxyz(ip, 1:3) - offset(1:3)
     end if
@@ -139,7 +139,7 @@ subroutine X(symmetrizer_apply_vector)(this, field, symmfield)
   do ip = 1, this%mesh%np
     if(this%mesh%parallel_in_domains) then
       ! convert to global point
-      destpoint(1:3) = this%mesh%idx%lxyz(vp%local(vp%xlocal(vp%partno) + ip - 1), 1:3) - offset(1:3)
+      destpoint(1:3) = this%mesh%idx%lxyz(vp%local(vp%xlocal + ip - 1), 1:3) - offset(1:3)
     else
       destpoint(1:3) = this%mesh%idx%lxyz(ip, 1:3) - offset(1:3)
     end if

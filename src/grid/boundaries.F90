@@ -207,7 +207,7 @@ contains
             ip_inner = vec_global2local(mesh%vp, ip_inner_global, ipart)
             
             if(ip_inner /= 0) then
-              if(ip_inner <= mesh%vp%np_local(ipart)) then
+              if(ip_inner <= mesh%vp%np_local_vec(ipart)) then
                 ! count the points to receive from each node
                 this%nrecv(ipart) = this%nrecv(ipart) + 1
                 ! and store the number of the point

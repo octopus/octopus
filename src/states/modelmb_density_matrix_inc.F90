@@ -68,7 +68,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   do ip = 1, mesh%np
     ! find global index
     ip_global = ip
-    if (mesh%parallel_in_domains) ip_global = mesh%vp%local(ip + mesh%vp%xlocal(mesh%vp%partno) - 1)
+    if (mesh%parallel_in_domains) ip_global = mesh%vp%local(ip + mesh%vp%xlocal - 1)
 
     ! find coordinates of present point in full MAX_DIM space
     call index_to_coords(mesh%idx, mesh%sb%dim, ip_global, ix)

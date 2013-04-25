@@ -222,7 +222,7 @@ contains
       !map the local point to a global point
       if (ip <= mesh%np) then
         !inner points
-        ip = ip - 1 + mesh%vp%xlocal(mesh%vp%partno)
+        ip = ip - 1 + mesh%vp%xlocal
         ip = mesh%vp%local(ip)
       else if (ip <= mesh%np + mesh%vp%np_ghost) then
         !ghost points

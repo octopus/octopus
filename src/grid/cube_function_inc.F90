@@ -348,8 +348,8 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
   if(local_) then
 #ifdef HAVE_MPI
-    first = mesh%vp%xlocal(mesh%vp%partno)
-    last = mesh%vp%np_local(mesh%vp%partno)   
+    first = mesh%vp%xlocal
+    last = mesh%vp%np_local   
     do ii = 1, last
       mf(ii) = gmf(mesh%vp%local(ii+first-1))
     end do

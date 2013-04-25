@@ -528,7 +528,7 @@ contains
 
       jp = ip
       if(mesh_p%parallel_in_domains) &
-        jp = mesh_p%vp%local(mesh_p%vp%xlocal(mesh_p%vp%partno)+ip-1)
+        jp = mesh_p%vp%local(mesh_p%vp%xlocal+ip-1)
 
       chi(1:dim) = mesh_p%idx%lxyz(jp, 1:dim) * mesh_p%spacing(1:dim) + mesh_p%sb%box_offset(1:dim) 
 

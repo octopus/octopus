@@ -26,7 +26,7 @@
 !! ---------------------------------------------------------
 !! Scatters a vector v to all nodes in vp with respect to
 !! to point -> node mapping in vp.
-!! v_local has at least to be of size vp%np_local(vp%partno).
+!! v_local has at least to be of size vp%np_local.
 subroutine X(vec_scatter)(vp, root, v, v_local)
   type(pv_t), intent(in)  :: vp
   integer,    intent(in)  :: root
@@ -47,10 +47,10 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
     return
   end if
 
-  ! Unfortunately, vp%xlocal ist not quite the required
+  ! Unfortunately, vp%xlocal_vec ist not quite the required
   ! displacement vector.
   SAFE_ALLOCATE(displs(1:vp%npart))
-  displs = vp%xlocal - 1
+  displs = vp%xlocal_vec - 1
 
   SAFE_ALLOCATE(v_tmp(1:1))
   if(vp%rank == root) then
@@ -59,9 +59,9 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
     SAFE_ALLOCATE(v_tmp(1:vp%np_global))
 
     ! Rearrange copy of v. All points of node r are in
-    ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
+    ! v_tmp(xlocal_vec(r):xlocal_vec(r)+np_local_vec(r)-1).
     do ii = 1, vp%np_global
-      v_tmp(ii) = v(vp%local(ii))
+      v_tmp(ii) = v(vp%local_vec(ii))
     end do
   end if
 
@@ -69,8 +69,8 @@ subroutine X(vec_scatter)(vp, root, v, v_local)
   ! But partition numbers from 1 to vp%npart with usually
   ! vp%npart = mpiv%numprocs.
   call mpi_debug_in(vp%comm, C_MPI_SCATTERV)
-  call MPI_Scatterv(v_tmp(1), vp%np_local, displs(1), R_MPITYPE, v_local(1), &
-                    vp%np_local(vp%partno), R_MPITYPE,              &
+  call MPI_Scatterv(v_tmp(1), vp%np_local_vec, displs(1), R_MPITYPE, v_local(1), &
+                    vp%np_local, R_MPITYPE,                                      &
                     root, vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_SCATTERV)
 
@@ -106,23 +106,24 @@ subroutine X(vec_gather)(vp, root, v, v_local)
     return
   end if
 
-  ! Unfortunately, vp%xlocal ist not quite the required
+  ! Unfortunately, vp%xlocal_vec ist not quite the required
   ! displacement vector.
   SAFE_ALLOCATE(displs(1:vp%npart))
-  displs = vp%xlocal-1
+  displs = vp%xlocal_vec - 1
 
   SAFE_ALLOCATE(v_tmp(1:vp%np_global))
 
   call mpi_debug_in(vp%comm, C_MPI_GATHERV)
-  call MPI_Gatherv(v_local(1), vp%np_local(vp%partno), R_MPITYPE, v_tmp(1), &
-                   vp%np_local, displs(1), R_MPITYPE,                        &
+  call MPI_Gatherv(v_local(1), vp%np_local, R_MPITYPE, v_tmp(1), &
+                   vp%np_local_vec, displs(1), R_MPITYPE,        &
                    root, vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_GATHERV)
 
   ! Copy values from v_tmp to their original position in v.
   if(vp%rank == root) then
     do ii = 1, vp%np_global
-      v(vp%local(ii)) = v_tmp(ii)
+!!$    do ii = vp%xlocal, vp%xlocal + vp%np_local - 1
+      v(vp%local_vec(ii)) = v_tmp(ii)
     end do
 
   end if
@@ -150,22 +151,22 @@ subroutine X(vec_allgather)(vp, v, v_local)
   PUSH_SUB(X(vec_allgather))
   call profiling_in(prof_allgather, "VEC_ALLGATHER")
   
-  ! Unfortunately, vp%xlocal ist not quite the required
+  ! Unfortunately, vp%xlocal_vec ist not quite the required
   ! displacement vector.
   SAFE_ALLOCATE(displs(1:vp%npart))
-  displs = vp%xlocal-1
+  displs = vp%xlocal_vec - 1
 
   SAFE_ALLOCATE(v_tmp(1:vp%np_global))
 
   call mpi_debug_in(vp%comm, C_MPI_ALLGATHERV)
-  call MPI_Allgatherv(v_local(1), vp%np_local(vp%partno), R_MPITYPE, v_tmp(1), &
-                      vp%np_local, displs(1), R_MPITYPE,                       &
+  call MPI_Allgatherv(v_local(1), vp%np_local, R_MPITYPE, v_tmp(1), &
+                      vp%np_local_vec, displs(1), R_MPITYPE,        &
                       vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLGATHERV)
 
   ! Copy values from v_tmp to their original position in v.
   do ii = 1, vp%np_global
-    v(vp%local(ii)) = v_tmp(ii)
+    v(vp%local_vec(ii)) = v_tmp(ii)
   end do
 
   SAFE_DEALLOCATE_A(v_tmp)

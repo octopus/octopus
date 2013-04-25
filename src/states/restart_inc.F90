@@ -83,7 +83,7 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
   offset = 0
   !in the parallel case, each node reads a part of the file
   if(mesh%parallel_in_domains) then
-    offset = mesh%vp%xlocal(mesh%vp%partno) - 1
+    offset = mesh%vp%xlocal - 1
   end if
 
   ASSERT(associated(read_ff))
@@ -92,7 +92,6 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
 
   call io_binary_read(trim(dir)//'/'//trim(filename)//'.obf', np, read_ff, ierr, offset = offset)
   call profiling_count_transfers(np, read_ff(1))
-
   call profiling_out(prof_io)
 
   if(mesh%parallel_in_domains) then
@@ -101,9 +100,9 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
     ! this is the global index of the points we read
     il = 0
     do ipart = 1, mesh%vp%npart
-      do ip = 1, mesh%vp%np_local(ipart)
+      do ip = 1, mesh%vp%np_local_vec(ipart)
         INCR(il, 1)
-        il2 = mesh%vp%local(ip + mesh%vp%xlocal(ipart) - 1)
+        il2 = mesh%vp%local_vec(ip + mesh%vp%xlocal_vec(ipart) - 1)
         list(il) = il2
       end do
     end do

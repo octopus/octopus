@@ -614,7 +614,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       send_count = 0
       do ip = 1, mesh%np
         !get the global point
-        ipg = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
+        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
         !the destination
         ipart = mesh%vp%part(forward_map(ipg))
         INCR(send_count(ipart), 1)
@@ -645,7 +645,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       send_count = 0
       do ip = 1, mesh%np
         !get the global point
-        ipg = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
+        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
         !the destination
         ipart = mesh%vp%part(forward_map(ipg))
         INCR(send_count(ipart), 1)
@@ -683,7 +683,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       recv_count = 0
       do ip = 1, mesh%np
         !get the global point
-        ipg = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
+        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
         !the source
         ipart = mesh%vp%part(backward_map(ipg))
         INCR(recv_count(ipart), 1)
@@ -736,7 +736,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       recv_count = 0
       do ip = 1, mesh%np
         !get the global point
-        ipg = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
+        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
         !the destination
         ipart = mesh%vp%part(backward_map(ipg))
         INCR(recv_count(ipart), 1)

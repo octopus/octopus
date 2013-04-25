@@ -21,13 +21,13 @@
  
   !> Some general things and nomenclature:
   !!
-  !! - Points that are stored only on one node are
+  !! - Points that are stored only on one process are
   !!   called local points.
   !! - Local points that are stored redundantly on
-  !!   another node because of the partitioning are
+  !!   another process because of the partitioning are
   !!   called ghost points.
   !! - Points from the enlargement are only stored
-  !!   once on the corresponding node and are called
+  !!   once on the corresponding process and are called
   !!   boundary points.
   !! - np is the total number of inner points.
   !!
@@ -37,11 +37,11 @@
   !! In the typical case of zero boundary conditions
   !! v(np+1:np_part) is 0.
   !! The two parts are split according to the partitions.
-  !! The result of this split are local vectors vl on each node
+  !! The result of this split are local vectors vl on each process
   !! which consist of three parts:
-  !! - vl(1:np_local)                                     local points.
-  !! - vl(np_local+1:np_local+np_ghost)                   ghost points.
-  !! - vl(np_local+np_ghost+1:np_local+np_ghost+np_bndry) boundary points.
+  !! - vl(1:np_local_vec)                                     local points.
+  !! - vl(np_local_vec+1:np_local_vec+np_ghost)                   ghost points.
+  !! - vl(np_local_vec+np_ghost+1:np_local_vec+np_ghost+np_bndry) boundary points.
   !!
   !!
   !! Usage example for par_vec routines.
@@ -114,10 +114,10 @@ module par_vec_m
 #endif
   !> Parallel information
   type pv_t
-    ! The content of these members is node-dependent.
+    ! The content of these members is process-dependent.
     integer          :: rank                 !< Our rank in the communicator. 
     !> Partition number of the
-    !! current node
+    !! current process
     integer          :: partno              
     type(subarray_t) :: sendpoints
     integer, pointer :: sendpos(:)
@@ -126,37 +126,48 @@ module par_vec_m
     integer, pointer :: sdispls(:)
     integer, pointer :: rcounts(:)
 
-    ! The following members are set independent of the nodes.
+    ! The following members are set independent of the processs.
     integer                 :: npart                !< Number of partitions.
-    integer                 :: root                 !< The master node.
+    integer                 :: root                 !< The master process.
     integer                 :: comm                 !< MPI communicator to use.
     integer                 :: np_global            !< Number of points in mesh.
-    integer                 :: np_enl               !< Number of points in enlargement.
     integer, pointer        :: part(:)              !< Point -> partition.
-    integer, pointer        :: np_local(:)          !< How many points has partition r? 
-    !> Points of partition r start at
-    !! xlocal(r) in local. Global start point
-    !! of the local index.  
-    integer, pointer        :: xlocal(:)   
-    !> Partition r has points
-    !! local(xlocal(r):
-    !! xlocal(r)+np_local(r)-1).           
-    integer, pointer        :: local(:)            
+
+    integer, pointer        :: np_local_vec(:)      !< How many points has partition r?
+                                                    !! Global vector; npart elements.
+    integer                 :: np_local             !< How many points has running partition? 
+                                                    !! Local value.
+    integer, pointer        :: xlocal_vec(:)        !< Points of partition r start at
+                                                    !! xlocal_vec(r) in local. Global start point
+                                                    !! of the local index.  
+                                                    !! Global vector; npart elements.
+    integer                 :: xlocal               !< Starting index of running process in local(:) vector.
+                                                    !! Local value.
+          
+    integer, pointer        :: local_vec(:)         !< Partition r has points
+                                                    !! local_vec(xlocal_vec(r):
+                                                    !! xlocal_vec(r)+np_local_vec(r)-1). 
+                                                    !! Global vector; np_global elements    
+    integer, pointer        :: local(:)             !< Local points of running process
+                                                    !! Local vector; np_local elements
     integer                 :: np_bndry             !< Number of boundary points.
+                                                    !! Local value
     integer                 :: xbndry               !< Starting index of running process in bndry(:) 
-    !> Global numbers of boundary
-    !! points.
-    integer, pointer        :: bndry(:)    
-    !> global(r) contains the global ->
-    !! local mapping for partition r.        
-    type(iihash_t), pointer :: global(:)           
+                                                    !! Local value
+ 
+    integer, pointer        :: bndry(:)             !< Global numbers of boundary points.
+                                                    !! Global vector; np_enl elements
+      
+    type(iihash_t), pointer :: global(:)            !< global(r) contains the global ->
+                                                    !! local mapping for partition r.   
     integer                 :: total                !< Total number of ghost points. 
-    !> How many ghost points has
-    !! partition r?
-    integer                 :: np_ghost
+
+    integer                 :: np_ghost                 !< How many ghost points has partition r?
+                                                        !! Local value
     integer, pointer        :: np_ghost_neigh_partno(:) !< Number of the neighbours ghost points of the actual process
-    integer                 :: xghost                   !< Like xlocal.
-    integer, pointer        :: ghost(:)                 !< Global indices of all local
+    integer                 :: xghost                   !< Starting index of running procces in ghost(:) vector.
+    integer, pointer        :: ghost(:)                 !< Global indices of all local points.
+                                                        !! Global vector; vp%total elements
   end type pv_t
 
 #if defined(HAVE_MPI)
@@ -171,7 +182,7 @@ contains
   !! and the ghost point exchange.
   !!
   !! Note: we cannot pass in the i(:, :) array from the stencil
-  !! because it is not yet computed (it is local to a node and
+  !! because it is not yet computed (it is local to a process and
   !! must be initialized some time after vec_init is run).
   !! \warning The naming scheme for the np_ variables is different
   !! from how it is in the rest of the code (for historical reasons
@@ -179,7 +190,7 @@ contains
   !! of view on the mesh): See the comments in the parameter list.
   subroutine vec_init(comm, root, np_global, np_part_global, idx, stencil, dim, periodic_dim, vp)
     integer,         intent(in)  :: comm         !< Communicator to use.
-    integer,         intent(in)  :: root         !< The master node.
+    integer,         intent(in)  :: root         !< The master process.
 
     !> The next seven entries come from the mesh.
     integer,         intent(in)  :: np_global           !< mesh%np_global
@@ -190,7 +201,7 @@ contains
     integer,         intent(in)  :: periodic_dim !< Number of periodic dimensions
     type(pv_t),      intent(inout) :: vp         !< Description of partition.
 
-    ! Careful: MPI counts node ranks from 0 to numproc-1.
+    ! Careful: MPI counts process ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
     ! For this reason, all ranks are incremented by one.
     integer                     :: npart            !< Number of partitions.
@@ -229,20 +240,21 @@ contains
 
     SAFE_ALLOCATE(ghost_flag(1:npart))
     SAFE_ALLOCATE(irr(1:npart))
-    SAFE_ALLOCATE(vp%np_local(1:npart))
-    SAFE_ALLOCATE(vp%xlocal(1:npart))
-    SAFE_ALLOCATE(vp%local(1:np_global))
+    SAFE_ALLOCATE(vp%np_local_vec(1:npart))
+    SAFE_ALLOCATE(vp%xlocal_vec(1:npart))
     SAFE_ALLOCATE(np_bndry_tmp(1:npart))
     SAFE_ALLOCATE(xbndry_tmp(1:npart))
     SAFE_ALLOCATE(vp%global(1:npart))
     SAFE_ALLOCATE(vp%np_ghost_neigh_partno(1:npart))
 
-    ! Count number of points for each node.
+    ! Count number of points for each process.
     ! Local points.
-    vp%np_local = 0
+    vp%np_local_vec = 0
     do ip = 1, np_global
-      vp%np_local(vp%part(ip)) = vp%np_local(vp%part(ip)) + 1
+      vp%np_local_vec(vp%part(ip)) = vp%np_local_vec(vp%part(ip)) + 1
     end do
+    vp%np_local = vp%np_local_vec(vp%partno)
+    
     ! Boundary points.
     np_bndry_tmp = 0
     do ip = 1, np_enl
@@ -251,20 +263,17 @@ contains
     vp%np_bndry = np_bndry_tmp(vp%partno)
 
     ! Set up local-to-global index table for local points
-    ! (xlocal, local) and for boundary points (xbndry, bndry).
-    vp%xlocal(1) = 1
+    ! (xlocal_vec, local) and for boundary points (xbndry, bndry).
+    vp%xlocal_vec(1) = 1
     xbndry_tmp(1) = 1
     ! Set the starting point of local and boundary points
     do inode = 2, npart
-      vp%xlocal(inode) = vp%xlocal(inode - 1) + vp%np_local(inode - 1)
+      vp%xlocal_vec(inode) = vp%xlocal_vec(inode - 1) + vp%np_local_vec(inode - 1)
       xbndry_tmp(inode) = xbndry_tmp(inode - 1) + np_bndry_tmp(inode - 1)
     end do
+    vp%xlocal = vp%xlocal_vec(vp%partno)
     ! Set the local and boundary points
-    irr = 0
-    do ip = 1, np_global
-      vp%local(vp%xlocal(vp%part(ip)) + irr(vp%part(ip))) = ip
-      irr(vp%part(ip)) = irr(vp%part(ip)) + 1 ! increment the counter
-    end do
+    call init_local
     irr = 0
 
     ! Format of ghost:
@@ -272,7 +281,7 @@ contains
     ! np_ghost_neigh, np_ghost, xghost_neigh, xghost are components of vp.
     ! The vp% is omitted due to space constraints.
     !
-    ! The following figure shows how ghost points of node "inode" are put into ghost:
+    ! The following figure shows how ghost points of process "inode" are put into ghost:
     !
     !  |<-------------------------------------------np_ghost(inode)--------------------------------------->|
     !  |                                                                                                   |
@@ -290,7 +299,7 @@ contains
     ! Mark and count ghost points and neighbours
     ! (set vp%np_ghost_neigh, vp%np_ghost, ghost_flag).
     do inode = 1, npart
-      call iihash_init(ghost_flag(inode), vp%np_local(inode))
+      call iihash_init(ghost_flag(inode), vp%np_local_vec(inode))
     end do
 
     do jj = 1, stencil%size
@@ -304,7 +313,7 @@ contains
     ! Check process node and communicate
     inode = vp%partno
     ! Check all points of this node.
-    do ip = vp%xlocal(inode), vp%xlocal(inode)+ vp%np_local(inode) - 1
+    do ip = vp%xlocal, vp%xlocal + vp%np_local - 1
       ! Get coordinates of current point.
       call index_to_coords(idx, dim, vp%local(ip), p1)
       
@@ -420,7 +429,7 @@ contains
     end do
 
     if(in_debug_mode) then
-      ! Write numbers and coordinates of each node`s ghost points
+      ! Write numbers and coordinates of each process` ghost points
       ! to a single file (like in mesh_partition_init) called
       ! debug/mesh_partition/ghost_points.###.
       call io_mkdir('debug/mesh_partition')
@@ -468,18 +477,20 @@ contains
     
     do inode = ip, jp
       ! Create hash table.
-      call iihash_init(vp%global(inode), vp%np_local(inode) + np_ghost_tmp(inode) + np_bndry_tmp(inode))
+      call iihash_init(vp%global(inode), vp%np_local_vec(inode) + &
+           np_ghost_tmp(inode) + np_bndry_tmp(inode))
       ! Insert local points.
-      do kp = 1, vp%np_local(inode)
-        call iihash_insert(vp%global(inode), vp%local(vp%xlocal(inode) + kp - 1), kp)
+      do kp = 1, vp%np_local_vec(inode)
+        call iihash_insert(vp%global(inode), vp%local_vec(vp%xlocal_vec(inode) + kp - 1), kp)
       end do
       ! Insert ghost points.
       do kp = 1, np_ghost_tmp(inode)
-        call iihash_insert(vp%global(inode), vp%ghost(xghost_tmp(inode) + kp - 1), kp + vp%np_local(inode))
+        call iihash_insert(vp%global(inode), vp%ghost(xghost_tmp(inode) + kp - 1), kp + vp%np_local_vec(inode))
       end do
       ! Insert boundary points.
       do kp = 1, np_bndry_tmp(inode)
-        call iihash_insert(vp%global(inode), vp%bndry(xbndry_tmp(inode) + kp - 1), kp + vp%np_local(inode) + np_ghost_tmp(inode))
+        call iihash_insert(vp%global(inode), vp%bndry(xbndry_tmp(inode) + kp - 1), &
+             kp + vp%np_local_vec(inode) + np_ghost_tmp(inode))
       end do
     end do
     vp%xbndry = xbndry_tmp(vp%partno)
@@ -492,7 +503,6 @@ contains
     vp%comm      = comm
     vp%root      = root
     vp%np_global = np_global
-    vp%np_enl    = np_enl
     vp%npart     = npart
 
     call init_send_points
@@ -505,6 +515,29 @@ contains
     POP_SUB(vec_init)
 
   contains
+    subroutine init_local
+      integer :: sp, ep
+      PUSH_SUB(vec_init.init_local)
+      
+      sp = vp%xlocal
+      ep = vp%xlocal + vp%np_local + 1
+      SAFE_ALLOCATE(vp%local(sp:ep))
+
+      sp = 1
+      ep = np_global
+      SAFE_ALLOCATE(vp%local_vec(sp:ep))
+
+      irr = 0      
+      do ip = 1, np_global
+        if (vp%part(ip) == vp%partno) then
+          vp%local(vp%xlocal + irr(vp%part(ip))) = ip
+        end if
+        vp%local_vec(vp%xlocal_vec(vp%part(ip)) + irr(vp%part(ip))) = ip
+        irr(vp%part(ip)) = irr(vp%part(ip)) + 1 ! increment the counter
+      end do
+
+      POP_SUB(vec_init.init_local)
+    end subroutine init_local
     
     subroutine init_send_points
       integer, allocatable :: displacements(:)
@@ -580,9 +613,10 @@ contains
     SAFE_DEALLOCATE_P(vp%rcounts)
     SAFE_DEALLOCATE_P(vp%sendpos)
     SAFE_DEALLOCATE_P(vp%part)
-    SAFE_DEALLOCATE_P(vp%np_local)
-    SAFE_DEALLOCATE_P(vp%xlocal)
+    SAFE_DEALLOCATE_P(vp%np_local_vec)
+    SAFE_DEALLOCATE_P(vp%xlocal_vec)
     SAFE_DEALLOCATE_P(vp%local)
+    SAFE_DEALLOCATE_P(vp%local_vec)
     SAFE_DEALLOCATE_P(vp%bndry)
     SAFE_DEALLOCATE_P(vp%np_ghost_neigh_partno)
     SAFE_DEALLOCATE_P(vp%ghost)

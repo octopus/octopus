@@ -810,7 +810,7 @@ contains
     ASSERT(nnb >= 0 .and. nnb < mesh%vp%npart)
 
     ! Set local point numbers.
-    mesh%np      = mesh%vp%np_local(mesh%vp%partno)
+    mesh%np      = mesh%vp%np_local
     mesh%np_part = mesh%np + mesh%vp%np_ghost + mesh%vp%np_bndry
 
     ! Compute mesh%x as it is done in the serial case but only for local points.
@@ -821,7 +821,7 @@ contains
     mesh%x(:, :) = M_ZERO
     ! Do the inner points
     do ii = 1, mesh%np
-      jj = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ii - 1)
+      jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
       mesh%x(ii, 1:MAX_DIM) = mesh_x_global(mesh, jj)
     end do
     ! Do the ghost points
@@ -872,7 +872,7 @@ contains
 #if defined(HAVE_MPI)
       ! Do the inner points.
       do ip = 1, min(np, mesh%np)
-        kk = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ip - 1)
+        kk = mesh%vp%local(mesh%vp%xlocal + ip - 1)
         call index_to_coords(mesh%idx, sb%dim, kk, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
         mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, :), chi(1:sb%dim))

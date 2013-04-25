@@ -2519,8 +2519,8 @@ contains
     ! points and we set to zero the remaining points.
 
     if (mesh%parallel_in_domains) then
-      blocksize(1) = maxval(mesh%vp%np_local) + &
-        (st%d%dim - 1)*maxval(mesh%vp%np_local + mesh%vp%np_bndry + mesh%vp%np_ghost)
+      blocksize(1) = maxval(mesh%vp%np_local_vec) + (st%d%dim - 1) * &
+       maxval(mesh%vp%np_local_vec + mesh%vp%np_bndry + mesh%vp%np_ghost)
     else
       blocksize(1) = mesh%np + (st%d%dim - 1)*mesh%np_part
     end if

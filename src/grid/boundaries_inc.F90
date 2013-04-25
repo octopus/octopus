@@ -22,7 +22,7 @@
 !! for non-local operations contains local values and
 !! ghost point values.
 !! Length of v_local must be
-!! vp%np_local(vp%partno)+vp%np_ghost
+!! vp%np_local+vp%np_ghost
 subroutine X(vec_ghost_update)(vp, v_local)
   type(pv_t), intent(in)    :: vp
   R_TYPE,     intent(inout) :: v_local(:)
@@ -40,7 +40,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
   call MPI_Alltoallv(ghost_send(1), vp%np_ghost_neigh_partno(1), vp%sdispls(1),           &
-    R_MPITYPE, v_local(vp%np_local(vp%partno)+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE,    &
+    R_MPITYPE, v_local(vp%np_local+1), vp%rcounts(1), vp%rdispls(1), R_MPITYPE,    &
     vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
 
@@ -95,7 +95,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       
       handle%nnb = handle%nnb + 1
       tag = 0
-      pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
+      pos = vp%np_local + 1 + vp%rdispls(ipart)
       call MPI_Irecv(v_local%pack%X(psi)(1, pos), vp%rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, ipart - 1, tag, &
         vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
@@ -107,7 +107,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
         
         handle%nnb = handle%nnb + 1
         tag = ii
-        pos = vp%np_local(vp%partno) + 1 + vp%rdispls(ipart)
+        pos = vp%np_local + 1 + vp%rdispls(ipart)
         call MPI_Irecv(v_local%states_linear(ii)%X(psi)(pos), vp%rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
         vp%comm, handle%requests(handle%nnb), mpi_err)
       end do
@@ -192,7 +192,7 @@ subroutine X(ghost_update_batch_finish)(handle)
 #ifdef HAVE_OPENCL
   if(batch_status(handle%v_local) == BATCH_CL_PACKED) then
     call opencl_write_buffer(handle%v_local%pack%buffer, handle%v_local%pack%size(1)*handle%vp%np_ghost, &
-      handle%X(recv_buffer), offset = handle%v_local%pack%size(1)*handle%vp%np_local(handle%vp%partno))
+      handle%X(recv_buffer), offset = handle%v_local%pack%size(1)*handle%vp%np_local)
 
     SAFE_DEALLOCATE_P(handle%X(send_buffer))
     SAFE_DEALLOCATE_P(handle%X(recv_buffer))

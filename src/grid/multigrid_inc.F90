@@ -60,7 +60,7 @@
       ipfg = ipf
 #ifdef HAVE_MPI
       ! translate to a global index
-      if(fine_mesh%parallel_in_domains) ipfg = fine_mesh%vp%local(ipf - 1 + fine_mesh%vp%xlocal(fine_mesh%vp%partno))
+      if(fine_mesh%parallel_in_domains) ipfg = fine_mesh%vp%local(ipf - 1 + fine_mesh%vp%xlocal)
 #endif 
       xf(1:3) = fine_mesh%idx%lxyz(ipfg, 1:3)
 
@@ -177,7 +177,7 @@
 #ifdef HAVE_MPI
       ! translate to a global index
       if(fine_der%mesh%parallel_in_domains) then
-        fn = fine_der%mesh%vp%local(fn - 1 + fine_der%mesh%vp%xlocal(fine_der%mesh%vp%partno))
+        fn = fine_der%mesh%vp%local(fn - 1 + fine_der%mesh%vp%xlocal)
       end if
 #endif
       fi(:) = fine_der%mesh%idx%lxyz(fn, :)

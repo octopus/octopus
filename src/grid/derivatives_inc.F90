@@ -32,20 +32,18 @@ subroutine X(derivatives_batch_set_bc)(der, ffb)
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: ffb
 
-  integer :: pp, bndry_start, bndry_end
+  integer :: bndry_start, bndry_end
 
   PUSH_SUB(X(derivatives_batch_set_bc))
   call profiling_in(set_bc_prof, 'SET_BC')
   
   ASSERT(batch_type(ffb) == R_TYPE_VAL)
 
-  pp = der%mesh%vp%partno
-
   ! The boundary points are at different locations depending on the presence
   ! of ghost points due to domain parallelization.
   if(der%mesh%parallel_in_domains) then
-    bndry_start = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost + 1
-    bndry_end   = der%mesh%vp%np_local(pp) + der%mesh%vp%np_ghost + der%mesh%vp%np_bndry
+    bndry_start = der%mesh%vp%np_local + der%mesh%vp%np_ghost + 1
+    bndry_end   = der%mesh%vp%np_local + der%mesh%vp%np_ghost + der%mesh%vp%np_bndry
   else
     bndry_start = der%mesh%np + 1
     bndry_end   = der%np_zero_bc

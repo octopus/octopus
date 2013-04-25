@@ -392,7 +392,7 @@ contains
           ! When running in parallel, get global number of
           ! point ii.
           call index_to_coords(mesh%idx, mesh%sb%dim, &
-            mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno) + ii - 1), p1)
+            mesh%vp%local(mesh%vp%xlocal + ii - 1), p1)
         else
           call index_to_coords(mesh%idx, mesh%sb%dim, ii, p1)
         end if
@@ -719,10 +719,10 @@ contains
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
-      do ip = 1, mesh%vp%np_local(mesh%vp%partno)
-        opt%w_re(:, ip) = opgt%w_re(:, mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+ip-1))
+      do ip = 1, mesh%vp%np_local
+        opt%w_re(:, ip) = opgt%w_re(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
         if(opt%cmplx_op) then
-          opt%w_im(:, ip) = opgt%w_im(:, mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+ip-1))
+          opt%w_im(:, ip) = opgt%w_im(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
         end if
       end do
       call nl_operator_end(opg)
@@ -797,10 +797,10 @@ contains
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
-      do ip = 1, mesh%vp%np_local(mesh%vp%partno)
-        opt%w_re(:, ip) = opgt%w_re(:, mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+ip-1))
+      do ip = 1, mesh%vp%np_local
+        opt%w_re(:, ip) = opgt%w_re(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
         if(opt%cmplx_op) then
-          opt%w_im(:, ip) = opgt%w_im(:, mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+ip-1))
+          opt%w_im(:, ip) = opgt%w_im(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
         end if
       end do
       call nl_operator_end(opg)
@@ -935,7 +935,7 @@ contains
         
     do ip = 1, opg%stencil%size
       do jp = 1, opg%mesh%np_global
-        il = opg%mesh%vp%np_local(opg%mesh%vp%part(jp))
+        il = opg%mesh%vp%np_local_vec(opg%mesh%vp%part(jp))
         ig = il+np_ghost_tmp(opg%mesh%vp%part(jp))
         ! opg%index(ip, jp) is a local point number, i.e. it can be
         ! a real local point (i.e. the local point number
@@ -944,7 +944,7 @@ contains
         if(opg%index(ip, jp) <= il) then
           ! Write the global point number from the lookup
           ! table in op_(ip, jp).
-          opg%index(ip, jp) = opg%mesh%vp%local(opg%mesh%vp%xlocal(opg%mesh%vp%part(jp)) &
+          opg%index(ip, jp) = opg%mesh%vp%local(opg%mesh%vp%xlocal_vec(opg%mesh%vp%part(jp)) &
             +opg%index(ip, jp)-1)
           ! Or a ghost point:
         else if(opg%index(ip, jp) > il.and.opg%index(ip, jp) <= ig) then

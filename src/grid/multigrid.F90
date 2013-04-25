@@ -192,7 +192,7 @@ contains
       ig = i
 #ifdef HAVE_MPI
       ! translate to a global index of the coarse grid
-      if(coarse%parallel_in_domains) ig = coarse%vp%local(ig - 1 + coarse%vp%xlocal(coarse%vp%partno))
+      if(coarse%parallel_in_domains) ig = coarse%vp%local(ig - 1 + coarse%vp%xlocal)
 #endif
       ! locate the equivalent global fine grid point
       ig = fine%idx%lxyz_inv(2*coarse%idx%lxyz(ig, 1), 2*coarse%idx%lxyz(ig, 2), 2*coarse%idx%lxyz(ig, 3))
@@ -215,7 +215,7 @@ contains
       ig = i
 #ifdef HAVE_MPI
       ! translate to a global index
-      if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal(fine%vp%partno))
+      if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
 #endif
       mod2 = mod(fine%idx%lxyz(ig, :), 2)
       
@@ -250,7 +250,7 @@ contains
       ig = i
 #ifdef HAVE_MPI
       ! translate to a global index
-      if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal(fine%vp%partno))
+      if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
 #endif
       x(1:3)    = fine%idx%lxyz(ig, 1:3)/2
       mod2(1:3) = mod(fine%idx%lxyz(ig, 1:3), 2)
