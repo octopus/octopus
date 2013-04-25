@@ -208,7 +208,7 @@ contains
     type(openscad_file_t), intent(inout) :: this
     type(polyhedron_t),    intent(in)    :: poly
     
-    integer :: ii, minmap, maxmap
+    integer :: ii, minmap, maxmap, jj
     integer, allocatable :: map(:)
 
     PUSH_SUB(openscad_file_polyhedron)
@@ -218,12 +218,18 @@ contains
 
     SAFE_ALLOCATE(map(minmap:maxmap))
 
+    map = -1
+
     write(this%iunit, '(a)') ' polyhedron( points = [ '
 
+    jj = 0
     do ii = 1, poly%npoints
-      write(this%iunit, '(a,f12.6,a,f12.6,a,f12.6,a)') &
-        '[', poly%points(1, ii), ',', poly%points(2, ii), ',',  poly%points(3, ii), '],'
-      map(poly%point_indices(ii)) = ii - 1
+      if(map(poly%point_indices(ii)) == -1) then !skip duplicated points
+        write(this%iunit, '(a,f12.6,a,f12.6,a,f12.6,a,i6)') &
+          '[', poly%points(1, ii), ',', poly%points(2, ii), ',',  poly%points(3, ii), '], //', jj
+        map(poly%point_indices(ii)) = jj
+        jj = jj + 1
+      end if
     end do
 
     write(this%iunit, '(a)') '], triangles = [ '

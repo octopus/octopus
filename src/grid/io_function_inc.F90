@@ -1114,7 +1114,7 @@ contains
     integer :: ip, ii, jp, jj, kk, iver, ntriangles, ll
     type(openscad_file_t) :: cad_file
     type(polyhedron_t) :: poly
-    FLOAT, parameter :: isosurface_value = CNST(0.05)
+    FLOAT, parameter :: isosurface_value = CNST(0.21)
     logical :: inside, can_join, out
 
     integer, allocatable :: edges(:), triangles(:, :)
@@ -1145,7 +1145,7 @@ contains
 
 
 #ifdef R_TREAL
-    print*, minval(ff(1:mesh%np)), maxval(ff(1:mesh%np))
+    print*, trim(fname), minval(ff(1:mesh%np)), maxval(ff(1:mesh%np))
 #endif
 
 
@@ -1235,21 +1235,23 @@ contains
       print*, "--------------------"
 #endif
 
+      call polyhedron_init(poly)
+
       ntriangles = 0
       ll = 1
       do
         if(triangles(ll, cubeindex) == -1) exit
 
-        call polyhedron_init(poly)
         call polyhedron_add_point(poly, triangles(ll    , cubeindex), vertlist(1:3, triangles(ll    , cubeindex)))
         call polyhedron_add_point(poly, triangles(ll + 1, cubeindex), vertlist(1:3, triangles(ll + 1, cubeindex)))
         call polyhedron_add_point(poly, triangles(ll + 2, cubeindex), vertlist(1:3, triangles(ll + 2, cubeindex)))
         call polyhedron_add_triangle(poly, triangles(ll:ll + 2, cubeindex))
-        call openscad_file_polyhedron(cad_file, poly)
-        call polyhedron_end(poly)
 
         ll = ll + 3
       end do
+
+      call openscad_file_polyhedron(cad_file, poly)
+      call polyhedron_end(poly)
 
     end do
 
