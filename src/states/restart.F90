@@ -234,7 +234,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine restart_write(dir, st, gr, geo, ierr, iter, lr, st_start_writing)
+  subroutine restart_write(dir, st, gr, geo, ierr, iter, lr, st_start_writing, write_density)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
@@ -244,11 +244,12 @@ contains
     !> if this next argument is present, the lr wfs are stored instead of the gs wfs
     type(lr_t), optional, intent(in)    :: lr
     integer,    optional, intent(in)    :: st_start_writing
+    logical,    optional, intent(in)    :: write_density !< default = .true.
 
     integer :: iunit, iunit2, iunit_mesh, iunit_states, iunit_geo, iunit_rho
     integer :: err, ik, idir, ist, idim, isp, itot
     character(len=80) :: filename, filename1 
-    logical :: lr_wfns_are_associated, should_write, cmplxscl
+    logical :: lr_wfns_are_associated, should_write, cmplxscl, write_density_
     FLOAT   :: kpoint(1:MAX_DIM)
     FLOAT,  allocatable :: dpsi(:)
     CMPLX,  allocatable :: zpsi(:)
@@ -259,6 +260,8 @@ contains
 
     cmplxscl = .false.
     if(associated(st%zeigenval%Im)) cmplxscl = .true.
+
+    write_density_ = optional_default(write_density, .true.)
 
     if(.not. restart_write_files) then
       ierr = 0
@@ -397,67 +400,70 @@ contains
     ! do NOT use st%lnst here as it is not (st%st_end - st%st_start + 1)
     if(ierr == st%d%kpt%nlocal * (st%st_end - st%st_start + 1) * st%d%dim) ierr = 0 ! All OK
 
-    !write the densities
-    if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
-      iunit_rho = io_open(trim(dir)//'/density', action='write', is_tmp=.true.)
-      write(iunit_rho,'(a)') '#     #spin    #nspin    filename'
-      write(iunit_rho,'(a)') '%densities'
-    end if
-    if(gr%have_fine_mesh) then
-      if(st%cmplxscl%space) then
-        SAFE_ALLOCATE(zrho(1:gr%mesh%np))
-      else
-        SAFE_ALLOCATE(rho(1:gr%mesh%np))
-      end if
-    end if
-    do isp = 1, st%d%nspin
-      if(st%d%nspin==1) then
-        write(unit=filename, fmt='(a)') 'density'
-      else
-        write(unit=filename, fmt='(a,i1)') 'density-sp', isp
-      endif
+    if(write_density_) then
+      !write the densities
       if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
-        write(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
+        iunit_rho = io_open(trim(dir)//'/density', action='write', is_tmp=.true.)
+        write(iunit_rho,'(a)') '#     #spin    #nspin    filename'
+        write(iunit_rho,'(a)') '%densities'
       end if
-      if(gr%have_fine_mesh)then
+      if(gr%have_fine_mesh) then
         if(st%cmplxscl%space) then
-          SAFE_ALLOCATE(zrho_fine(1:gr%fine%mesh%np))
-          zrho_fine(:)= st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp)
-          call zmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, zrho_fine, zrho, INJECTION)
-          call zrestart_write_function(dir, filename, gr%mesh, zrho, err)
-          SAFE_DEALLOCATE_P(zrho_fine)
+          SAFE_ALLOCATE(zrho(1:gr%mesh%np))
         else
-          call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, st%rho(:,isp), rho, INJECTION)
-          call drestart_write_function(dir, filename, gr%mesh, rho, err)
+          SAFE_ALLOCATE(rho(1:gr%mesh%np))
         end if
-      else
-        if(st%cmplxscl%space) then
-          call zrestart_write_function(dir, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), err)
-        else
-          call drestart_write_function(dir, filename, gr%mesh, st%rho(:,isp), err)
-        end if  
       end if
-      if(err==0) ierr = ierr + 1
-    end do
-    if(gr%have_fine_mesh)then
-      SAFE_DEALLOCATE_P(rho)
-      if(st%cmplxscl%space) then
-         SAFE_DEALLOCATE_P(zrho)
+      do isp = 1, st%d%nspin
+        if(st%d%nspin==1) then
+          write(unit=filename, fmt='(a)') 'density'
+        else
+          write(unit=filename, fmt='(a,i1)') 'density-sp', isp
+        endif
+        if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
+          write(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
+        end if
+        if(gr%have_fine_mesh)then
+          if(st%cmplxscl%space) then
+            SAFE_ALLOCATE(zrho_fine(1:gr%fine%mesh%np))
+            zrho_fine(:)= st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp)
+            call zmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, zrho_fine, zrho, INJECTION)
+            call zrestart_write_function(dir, filename, gr%mesh, zrho, err)
+            SAFE_DEALLOCATE_P(zrho_fine)
+          else
+            call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, st%rho(:,isp), rho, INJECTION)
+            call drestart_write_function(dir, filename, gr%mesh, rho, err)
+          end if
+        else
+          if(st%cmplxscl%space) then
+            call zrestart_write_function(dir, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), err)
+          else
+            call drestart_write_function(dir, filename, gr%mesh, st%rho(:,isp), err)
+          end if
+        end if
+        if(err==0) ierr = ierr + 1
+      end do
+      if(gr%have_fine_mesh)then
+        SAFE_DEALLOCATE_P(rho)
+        if(st%cmplxscl%space) then
+          SAFE_DEALLOCATE_P(zrho)
+        endif
+      end if
+      if(ierr==st%d%nspin) ierr=0 ! All OK
+
+      if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
+        write(iunit_rho,'(a)') '%'
+        if(present(iter)) write(iunit_rho,'(a,i7)') 'Iter = ', iter
+        call io_close(iunit_rho)
       endif
-    end if
-    if(ierr==st%d%nspin) ierr=0 ! All OK
+    endif
 
     if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
       write(iunit,'(a)') '%'
       write(iunit2, '(a)') '%'
-      write(iunit_rho,'(a)') '%'
-      if(present(iter)) then
-        write(iunit,'(a,i7)') 'Iter = ', iter
-        write(iunit_rho,'(a,i7)') 'Iter = ', iter
-      end if
+      if(present(iter)) write(iunit,'(a,i7)') 'Iter = ', iter
       call io_close(iunit)
       call io_close(iunit2)
-      call io_close(iunit_rho)
     end if
 
     call unblock_signals()
