@@ -105,6 +105,9 @@ void print_config(){
 #ifdef HAVE_NFFT
   printf("nfft ");
 #endif
+#ifdef HAVE_PNFFT
+  printf("pnfft ");
+#endif
 #ifdef HAVE_ARPACK
   printf("arpack ");
 #endif  

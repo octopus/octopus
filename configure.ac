@@ -109,7 +109,7 @@ AC_ARG_ENABLE(opencl, AS_HELP_STRING([--enable-opencl], [OpenCL support (experim
 AC_ARG_ENABLE(blacs, AS_HELP_STRING([--with-blacs], [Blacs support (experimental)]))
 AC_ARG_ENABLE(scalapack, AS_HELP_STRING([--with-scalapack], [ScaLAPACK support (experimental), add before --with-blacs]))
 AC_ARG_ENABLE(libfm, AS_HELP_STRING([--with-libfm], [Libfm support (experimental)]))
-AC_ARG_ENABLE(libfm, AS_HELP_STRING([--with-pfft], [PFFT support (experimental)]))
+dnl AC_ARG_ENABLE(pfft, AS_HELP_STRING([--with-pfft], [PFFT support (experimental)]))
 
 if test -n "${enable_single}" -a x"${enable_single}" != x"no"; then
   SINGLE_PRECISION=1
@@ -358,6 +358,9 @@ ACX_LIBFM
 
 dnl check for PFFT
 ACX_PFFT
+
+dnl check for PNFFT
+ACX_PNFFT
 
 dnl check for PSPIO
 ACX_PSPIO

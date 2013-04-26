@@ -243,6 +243,9 @@ contains
 #ifdef HAVE_NFFT
     message(2) = trim(message(2))//' nfft'
 #endif
+#ifdef HAVE_PNFFT
+    message(2) = trim(message(2))//' pnfft'
+#endif
 #ifdef HAVE_SCALAPACK
     message(2) = trim(message(2))//' scalapack'
 #endif
