@@ -24,7 +24,16 @@ dist_share_DATA =                        \
           01-h1d_lin.01-mask.inp         \
           01-h1d_lin.02-ba.inp           \
           02-restart.01-ba.inp           \
-          02-restart.02-restart_ba.inp
+          02-restart.02-restart_ba.inp   \
+          03-h1d_ati.01.inp              \
+          04-nfft.01-ba.inp              \
+          04-nfft.02-ati.inp             \
+          05-pfft-h3d.01-gs.inp          \
+          05-pfft-h3d.02-mask.inp        \
+          05-pfft-h3d.03-ba.inp
+          
+          
+          
 
 
 CLEANFILES = *~ *.bak

@@ -1,0 +1,34 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Photoelectron - PFFT
+Options    : pfft
+Programs   : octopus_mpi
+TestGroups : short-run, photo_electron
+Enabled    : Yes
+
+# Note: the discrepancy between the numbers test 02 and 03 
+# is due to the fact that we are not in convergence wrt the box 
+# parameters. The box size is optimize for quick-run (~60s) 
+# rather than numerical value accuracy.
+
+
+# Ground state
+Processors : 4
+Input      : 05-pfft-h3d.01-gs.inp
+match ; Total energy   ; GREP(static/info, 'Total       =', 20) ;  -0.49919533
+
+# Hydrogen PES spectrum mask-method
+# This test basically checks the forward transform
+Processors : 4
+Input      : 05-pfft-h3d.02-mask.inp
+match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 23, 21) ;  1.256662921796E-04 
+match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 25, 21) ;  3.449654452396E-05
+match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 60, 21) ;  1.174295927407E-07
+
+# Hydrogen PES spectrum full mask-method
+# This test checks both forward and backward transforms
+Processors : 4
+Input      : 05-pfft-h3d.03-ba.inp
+match ; PES [val  1] ; LINE(td.general/PESM_power.sum, 23, 21) ;  3.384099673837E-05
+match ; PES [val  2] ; LINE(td.general/PESM_power.sum, 25, 21) ;  6.990706948261E-06
+match ; PES [val  3] ; LINE(td.general/PESM_power.sum, 60, 21) ;  3.931730291888E-08

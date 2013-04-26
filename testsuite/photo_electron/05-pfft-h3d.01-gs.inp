@@ -1,0 +1,18 @@
+CalculationMode = gs
+
+FromScratch = YES
+ExperimentalFeatures = YES
+
+#############################
+# GS
+#############################
+
+%Coordinates
+"H" | 0.0 | 0.0 | 0.0
+%
+
+BoxShape = sphere
+Radius = 10 
+Spacing = 0.4
+
+TheoryLevel = independent_particles

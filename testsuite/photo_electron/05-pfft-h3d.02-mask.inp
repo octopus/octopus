@@ -1,0 +1,58 @@
+CalculationMode = td
+
+FromScratch = YES
+ExperimentalFeatures = YES
+
+#############################
+# GS
+#############################
+%Coordinates
+"H" | 0.0 | 0.0 | 0.0
+%
+
+BoxShape = sphere
+Radius = 10 
+Spacing = 0.4
+
+TheoryLevel = independent_particles
+
+
+#############################
+# PES
+#############################
+PhotoElectronSpectrum = pes_mask
+
+%PESMaskSize
+  8 | Radius
+%
+
+PESMaskMode = mask_mode
+PESMaskPlaneWaveProjection = pfft_map
+
+##########################
+#LASER
+##########################
+amplitude = 0.7763
+omega = 1.5
+tc = 2*pi/omega
+nc_c = 8
+nc_u = 1
+nc = nc_c + 2 * nc_u
+
+%TDExternalFields
+  vector_potential | 1 | 0 | 0 | omega | "ramp"
+%
+
+%TDFunctions
+ "ramp" | tdf_trapezoidal | amplitude | nc_c*tc | nc/2*tc | nc_u*tc
+%
+
+#############################
+# TD
+#############################
+dt = 0.08
+T = nc*tc
+
+TDTimeStep = dt
+TDMaximumIter = T/TDTimeStep
+
