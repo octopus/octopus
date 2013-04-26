@@ -173,7 +173,7 @@ contains
       ixx(1) = pad_feq(ix, db(1), .true.)
       do iy = 1, cube%fs_n_global(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
-        do iz = 1, cube%fs_n_global(2)
+        do iz = 1, cube%fs_n_global(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
           gg(1:3) = temp(1:3)*ixx(1:3)
