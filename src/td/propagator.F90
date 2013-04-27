@@ -81,10 +81,10 @@ module propagator_m
     PROP_ETRS                    = 2,  &
     PROP_AETRS                   = 3,  &
     PROP_EXPONENTIAL_MIDPOINT    = 4,  &
-    PROP_CRANK_NICHOLSON         = 5,  &
-    PROP_CRANK_NICHOLSON_SPARSKIT= 6,  &
+    PROP_CRANK_NICOLSON          = 5,  &
+    PROP_CRANK_NICOLSON_SPARSKIT = 6,  &
     PROP_MAGNUS                  = 7,  &
-    PROP_CRANK_NICHOLSON_SRC_MEM = 8,  &
+    PROP_CRANK_NICOLSON_SRC_MEM  = 8,  &
     PROP_QOCT_TDDFT_PROPAGATOR   = 10, &
     PROP_CAETRS                  = 12
 
@@ -146,7 +146,7 @@ contains
     select case(tro%method)
     case(PROP_MAGNUS)
       call loct_pointer_copy(tro%vmagnus, tri%vmagnus)
-    case(PROP_CRANK_NICHOLSON_SRC_MEM)
+    case(PROP_CRANK_NICOLSON_SRC_MEM)
       message(1) = 'Internal error at propagator_copy.'
       call messages_fatal(1)
     end select
@@ -256,13 +256,15 @@ contains
     !%   U_{\rm EM}(t+\delta t, t) = \exp \left( -i\delta t H_{t+\delta t/2}\right)\,.
     !% </MATH>
     !%Option crank_nicholson 5
-    !% Classical Crank-Nicholson propagator.
+    !%Option crank_nicolson 5
+    !% Classical Crank-Nicolson propagator.
     !%
     !% <MATH>
     !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
     !% </MATH>
     !%Option crank_nicholson_sparskit 6
-    !% Classical Crank-Nicholson propagator. Requires the SPARSKIT library.
+    !%Option crank_nicolson_sparskit 6
+    !% Classical Crank-Nicolson propagator. Requires the SPARSKIT library.
     !%
     !% <MATH>
     !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
@@ -276,7 +278,8 @@ contains
     !% It is still in a experimental state; we are not yet sure of when it is
     !% advantageous.
     !%Option crank_nicholson_src_mem 8
-    !% Crank-Nicholson propagator with source and memory term for transport
+    !%Option crank_nicolson_src_mem 8
+    !% Crank-Nicolson propagator with source and memory term for transport
     !% calculations.
     !%Option qoct_tddft_propagator 10
     !% WARNING: EXPERIMENTAL
@@ -284,17 +287,17 @@ contains
     call messages_obsolete_variable('TDEvolutionMethod', 'TDPropagator')
 
     default_propagator = PROP_ETRS
-    if(gr%ob_grid%open_boundaries) default_propagator = PROP_CRANK_NICHOLSON_SRC_MEM
+    if(gr%ob_grid%open_boundaries) default_propagator = PROP_CRANK_NICOLSON_SRC_MEM
 
     call parse_integer(datasets_check('TDPropagator'), default_propagator, tr%method)
     if(.not.varinfo_valid_option('TDPropagator', tr%method)) call input_error('TDPropagator')
 
-    if(gr%ob_grid%open_boundaries.and.tr%method /= PROP_CRANK_NICHOLSON_SRC_MEM) then
+    if(gr%ob_grid%open_boundaries.and.tr%method /= PROP_CRANK_NICOLSON_SRC_MEM) then
       message(1) = 'The time-evolution method for time-dependent run cannot'
-      message(2) = 'be chosen freely. The Crank-Nicholson propagator'
+      message(2) = 'be chosen freely. The Crank-Nicolson propagator'
       message(3) = 'with source and memory term has to be used. Either set'
       message(4) = ''
-      message(5) = '  TDPropagator = crank_nicholson_src_mem'
+      message(5) = '  TDPropagator = crank_nicolson_src_mem'
       message(6) = ''
       message(7) = 'in your input or remove the TDPropagator variable.'
       call messages_fatal(7)
@@ -304,21 +307,21 @@ contains
     case(PROP_ETRS)
     case(PROP_AETRS, PROP_CAETRS)
     case(PROP_EXPONENTIAL_MIDPOINT)
-    case(PROP_CRANK_NICHOLSON)
-    case(PROP_CRANK_NICHOLSON_SPARSKIT)
+    case(PROP_CRANK_NICOLSON)
+    case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       SAFE_ALLOCATE(tdsk)
       call zsparskit_solver_init(gr%mesh%np, tdsk)
       SAFE_ALLOCATE(zpsi_tmp(1:gr%mesh%np_part, 1:st%d%dim, 1:st%nst, st%d%kpt%start:st%d%kpt%end))
 #else
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
-      message(2) = 'library is required if the "crank_nicholson_sparskit" propagator is selected.'
+      message(2) = 'library is required if the "crank_nicolson_sparskit" propagator is selected.'
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
       call messages_fatal(3)
 #endif
     case(PROP_MAGNUS)
       SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
-    case(PROP_CRANK_NICHOLSON_SRC_MEM)
+    case(PROP_CRANK_NICOLSON_SRC_MEM)
       call ob_propagator_init(st, gr, hm, tr%ob, dt, max_iter)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
     case default
@@ -411,12 +414,12 @@ contains
     case(PROP_MAGNUS)
       ASSERT(associated(tr%vmagnus))
       SAFE_DEALLOCATE_P(tr%vmagnus)
-    case(PROP_CRANK_NICHOLSON_SPARSKIT)
+    case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       call zsparskit_solver_end()
       SAFE_DEALLOCATE_A(zpsi_tmp)
 #endif
-    case(PROP_CRANK_NICHOLSON_SRC_MEM)
+    case(PROP_CRANK_NICOLSON_SRC_MEM)
       call ob_propagator_end(tr%ob)
     end select
     
@@ -537,10 +540,10 @@ contains
     case(PROP_ETRS);                     call td_etrs
     case(PROP_AETRS, PROP_CAETRS);       call td_aetrs
     case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint
-    case(PROP_CRANK_NICHOLSON);          call td_crank_nicholson
-    case(PROP_CRANK_NICHOLSON_SPARSKIT); call td_crank_nicholson_sparskit
+    case(PROP_CRANK_NICOLSON);           call td_crank_nicolson
+    case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson_sparskit
     case(PROP_MAGNUS);                   call td_magnus
-    case(PROP_CRANK_NICHOLSON_SRC_MEM);  call td_crank_nicholson_src_mem
+    case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
     end select
@@ -588,10 +591,10 @@ contains
           case(PROP_ETRS);                     call td_etrs
           case(PROP_AETRS, PROP_CAETRS);       call td_aetrs
           case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint
-          case(PROP_CRANK_NICHOLSON);          call td_crank_nicholson
-          case(PROP_CRANK_NICHOLSON_SPARSKIT); call td_crank_nicholson_sparskit
+          case(PROP_CRANK_NICOLSON);           call td_crank_nicolson
+          case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson_sparskit
           case(PROP_MAGNUS);                   call td_magnus
-          case(PROP_CRANK_NICHOLSON_SRC_MEM);  call td_crank_nicholson_src_mem
+          case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem
           case(PROP_QOCT_TDDFT_PROPAGATOR)
             call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
           end select
@@ -990,15 +993,15 @@ contains
 
 
     ! ---------------------------------------------------------
-    !> Crank-Nicholson propagator, linear solver from SPARSKIT.
-    subroutine td_crank_nicholson_sparskit
+    !> Crank-Nicolson propagator, linear solver from SPARSKIT.
+    subroutine td_crank_nicolson_sparskit
 
 #ifdef HAVE_SPARSKIT
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       CMPLX, allocatable :: zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
       integer :: ik, ist, idim, np_part
 
-      PUSH_SUB(propagator_dt.td_crank_nicholson_sparskit)
+      PUSH_SUB(propagator_dt.td_crank_nicolson_sparskit)
 
       np_part = gr%mesh%np_part
       SAFE_ALLOCATE(zpsi_rhs_corr(1:np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
@@ -1089,16 +1092,16 @@ contains
       end if
       SAFE_DEALLOCATE_A(zpsi_rhs_corr)
 
-      POP_SUB(propagator_dt.td_crank_nicholson_sparskit)
+      POP_SUB(propagator_dt.td_crank_nicolson_sparskit)
 #endif
 
-    end subroutine td_crank_nicholson_sparskit
+    end subroutine td_crank_nicolson_sparskit
     ! ---------------------------------------------------------
 
 
     ! ---------------------------------------------------------
-    !> Crank-Nicholson propagator, QMR linear solver.
-    subroutine td_crank_nicholson
+    !> Crank-Nicolson propagator, QMR linear solver.
+    subroutine td_crank_nicolson
 
       CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:), inhpsi(:)
       integer :: ik, ist, idim, ip, isize, np_part, np, iter
@@ -1106,7 +1109,7 @@ contains
       FLOAT :: cgtol = CNST(1.0e-12)
       logical :: converged
 
-      PUSH_SUB(propagator_dt.td_crank_nicholson)
+      PUSH_SUB(propagator_dt.td_crank_nicolson)
 
       np_part = gr%mesh%np_part
       np = gr%mesh%np
@@ -1169,7 +1172,7 @@ contains
           end do          
 
           if(.not.converged) then
-            write(message(1),'(a)')        'The linear solver used for the Crank-Nicholson'
+            write(message(1),'(a)')        'The linear solver used for the Crank-Nicolson'
             write(message(2),'(a,es14.4)') 'propagator did not converge: Residual = ', dres
             call messages_warning(2)
           end if
@@ -1223,7 +1226,7 @@ contains
             end do          
 
             if(.not.converged) then
-              write(message(1),'(a)')        'The linear solver used for the Crank-Nicholson'
+              write(message(1),'(a)')        'The linear solver used for the Crank-Nicolson'
               write(message(2),'(a,es14.4)') 'propagator did not converge for left states: Residual = ', dres
               call messages_warning(2)
             end if
@@ -1238,9 +1241,9 @@ contains
       SAFE_DEALLOCATE_A(zpsi_rhs)
       SAFE_DEALLOCATE_A(zpsi)
       SAFE_DEALLOCATE_A(rhs)
-      POP_SUB(propagator_dt.td_crank_nicholson)
+      POP_SUB(propagator_dt.td_crank_nicolson)
 
-    end subroutine td_crank_nicholson
+    end subroutine td_crank_nicolson
     ! ---------------------------------------------------------
 
 
@@ -1304,9 +1307,9 @@ contains
 
 
     ! ---------------------------------------------------------
-    !> Crank-Nicholson scheme with source and memory term.
-    subroutine td_crank_nicholson_src_mem()
-      PUSH_SUB(propagator_dt.td_crank_nicholson_src_mem)
+    !> Crank-Nicolson scheme with source and memory term.
+    subroutine td_crank_nicolson_src_mem()
+      PUSH_SUB(propagator_dt.td_crank_nicolson_src_mem)
       
       select case(tr%ob%mem_type)
       case(SAVE_CPU_TIME)
@@ -1315,15 +1318,15 @@ contains
         call cn_src_mem_sp_dt(tr%ob, st, hm, gr, max_iter, dt, time, nt)
       end select
 
-      POP_SUB(propagator_dt.td_crank_nicholson_src_mem)
-    end subroutine td_crank_nicholson_src_mem
+      POP_SUB(propagator_dt.td_crank_nicolson_src_mem)
+    end subroutine td_crank_nicolson_src_mem
 
   end subroutine propagator_dt
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  !> operators for Crank-Nicholson scheme
+  !> operators for Crank-Nicolson scheme
   subroutine propagator_qmr_op(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
@@ -1364,7 +1367,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> operators for Crank-Nicholson scheme
+  !> operators for Crank-Nicolson scheme
   subroutine td_zop(xre, xim, yre, yim)
     FLOAT, intent(in)  :: xre(:)
     FLOAT, intent(in)  :: xim(:)

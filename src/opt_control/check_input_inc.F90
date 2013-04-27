@@ -111,7 +111,7 @@
     if(.not.oct_algorithm_is_direct(oct)) then
       if(target_mode(oct_target)  ==  oct_targetmode_td) then
         select case(tr%method)
-        case(PROP_CRANK_NICHOLSON)
+        case(PROP_CRANK_NICOLSON)
         case(PROP_QOCT_TDDFT_PROPAGATOR)
           select case(tr%te%exp_method)
             case(EXP_TAYLOR)
@@ -123,7 +123,7 @@
           end select
         case default
           write(message(1), '(a)') 'If you use time-dependent target, then you must set'
-          write(message(2), '(a)') '"TDPropagator = crank_nicholson", or'
+          write(message(2), '(a)') '"TDPropagator = crank_nicolson", or'
           write(message(3), '(a)') '"TDPropagator = qoct_tddft_propagator", '
           call messages_fatal(4)
         end select

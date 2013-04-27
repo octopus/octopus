@@ -18,7 +18,7 @@
 !! $Id: td_transport.F90 3030 2007-06-25 16:45:05Z marques $
 
 !> Implementation of the propagator for open boundaries, i.e. the
-!! modified Crank-Nicholson with source and memory terms.
+!! modified Crank-Nicolson with source and memory terms.
 
 #include "global.h"
 
@@ -60,7 +60,7 @@ module ob_propagator_m
   !! to calculate \f$(1 - i dt H)|\psi>\f$.
   type(exponential_t) :: taylor_1st
 
-  !> Parameters to the BiCG in Crank-Nicholson.
+  !> Parameters to the BiCG in Crank-Nicolson.
   integer :: qmr_max_iter
   FLOAT   :: qmr_tol
 
@@ -105,7 +105,7 @@ contains
     !%Section Open Boundaries
     !%Description
     !% Sets the maximum iteration number for the QMR linear solver in
-    !% the Crank-Nicholson procedure for open boundaries.
+    !% the Crank-Nicolson procedure for open boundaries.
     !%End
     call parse_integer(datasets_check('OpenBoundariesQMRMaxIter'), 100, qmr_max_iter)
     if(qmr_max_iter <= 0) then
@@ -118,7 +118,7 @@ contains
     !%Section Open Boundaries
     !%Description
     !% Sets the convergence tolerance for the residue in the QMR linear solver
-    !% in the Crank-Nicholson procedure.
+    !% in the Crank-Nicolson procedure.
     !%End
     call parse_float(datasets_check('OpenBoundariesQMRTol'), CNST(1e-12), qmr_tol)
     if(qmr_tol <= M_ZERO) then
@@ -149,7 +149,7 @@ contains
     !%Section Open Boundaries
     !%Description
     !% The open-boundaries propagator inserts two additional terms in
-    !% the Crank-Nicholson scheme: source and memory. With this variable,
+    !% the Crank-Nicolson scheme: source and memory. With this variable,
     !% one or both of them can be switched off.
     !%
     !%Option mem_term 1
@@ -253,7 +253,7 @@ contains
   end function lambda
 
   ! ---------------------------------------------------------
-  !> Crank-Nicholson timestep with source and memory.
+  !> Crank-Nicolson timestep with source and memory.
   !! Only non-interacting electrons for the moment, so no
   !! predictor-corrector scheme.
   subroutine cn_src_mem_dt(ob, st, hm, gr, max_iter, dt, t, timestep)
@@ -395,7 +395,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Crank-Nicholson timestep with source and memory - sparse version.
+  !> Crank-Nicolson timestep with source and memory - sparse version.
   !! Only non-interacting electrons for the moment, so no
   !! predictor-corrector scheme.
   subroutine cn_src_mem_sp_dt(ob, st, hm, gr, max_iter, dt, t, timestep)
