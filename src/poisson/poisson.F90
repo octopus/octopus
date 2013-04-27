@@ -123,24 +123,20 @@ module poisson_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, geo, all_nodes_comm, label)
+  subroutine poisson_init(this, der, geo, all_nodes_comm)
     type(poisson_t),             intent(out) :: this
     type(derivatives_t), target, intent(in)  :: der
     type(geometry_t),            intent(in)  :: geo
     integer,                     intent(in)  :: all_nodes_comm
-    character(len=*),  optional, intent(in)  :: label
 
     logical :: need_cube
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type
-    character*60 :: str
 
     if(this%method /= -99) return ! already initialized
 
     PUSH_SUB(poisson_init)
 
-    str = "Hartree"
-    if(present(label)) str = trim(str) // trim(label)
-    call messages_print_stress(stdout, trim(str))
+    call messages_print_stress(stdout, "Hartree")
 
     this%nslaves = 0
     this%der => der
