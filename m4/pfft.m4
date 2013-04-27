@@ -74,9 +74,8 @@ if test x"$acx_pfft_ok" = xno; then
     integer :: x = PFFT_REDFT00
     call dpfft_plan_dft_3d()
   ]), [acx_pfft_ok=yes], [])
+  AC_MSG_RESULT([$acx_pfft_ok ($FCFLAGS_PFFT $LIBS_PFFT)])
 fi
-
-AC_MSG_RESULT([$acx_pfft_ok ($FCFLAGS_PFFT $LIBS_PFFT)])
 
 dnl Generic PFFT library? is there such a thing?
 for pfft in pfft; do
