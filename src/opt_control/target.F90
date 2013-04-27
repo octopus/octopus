@@ -736,7 +736,7 @@ module opt_control_target_m
       !% The time dependent version of <tt>oct_curr_square</tt>. In fact, calculates the 
       !% square of current in time interval [<tt>OCTStartTimeCurrTg</tt>, 
       !% total time = <tt>TDMaximumIter</tt> * <tt>TDTimeStep</tt>]. 
-      !% Set <tt>TDPropagator</tt> = <tt>crank_nicholson</tt>  
+      !% Set <tt>TDPropagator</tt> = <tt>crank_nicolson</tt>.
       !%End 
 
       !%Variable OCTCurrentWeight

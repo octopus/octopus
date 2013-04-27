@@ -18,7 +18,7 @@
 !! $Id: td_transport.F90 3030 2007-06-25 16:45:05Z marques $
 
 !> Calculation of the memory coefficients for the modified
-!! Crank-Nicholson propagator.
+!! Crank-Nicolson propagator.
 
 #include "global.h"
 
