@@ -83,7 +83,7 @@ OpenBoundariesQMRMaxIter = 10000
 
 TDTimeStep = 0.02
 TDMaximumIter = 100
-TDPropagator = crank_nicholson_src_mem
+TDPropagator = crank_nicolson_src_mem
 
 %ring_lead_CurrentThroughPlane
    0.0 | 0.0 # origin
