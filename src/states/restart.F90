@@ -938,7 +938,7 @@ contains
 
     integer              :: err, isp
     character(len=12)    :: filename
-    FLOAT, allocatable   :: rho(:), rho_coarse(:)
+    FLOAT, allocatable   :: rho_coarse(:)
     CMPLX, allocatable   :: zrho(:), zrho_coarse(:)
 
     PUSH_SUB(restart_read_rho)
@@ -957,10 +957,10 @@ contains
 
     if(gr%have_fine_mesh) then
       if(st%cmplxscl%space) then
-        SAFE_ALLOCATE(zrho(1:gr%mesh%np))
-        SAFE_ALLOCATE(zrho_coarse(1:gr%fine%mesh%np))
+        SAFE_ALLOCATE(zrho(1:gr%fine%mesh%np))
+        SAFE_ALLOCATE(zrho_coarse(1:gr%mesh%np_part))
       else
-        SAFE_ALLOCATE(rho(1:gr%mesh%np))
+        SAFE_ALLOCATE(rho_coarse(1:gr%mesh%np_part))
       end if
     end if
     do isp = 1, st%d%nspin
