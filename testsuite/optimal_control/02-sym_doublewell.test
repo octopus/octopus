@@ -14,6 +14,9 @@ Enabled    : Yes
 
 # Ground state and unoccupied states
 Input: 02-sym_doublewell.01-ground_state.inp
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.54979665
+match ; Eigenvalue   ; GREP(static/info, '1   --',        12) ; -0.549797
+
 Input: 02-sym_doublewell.02-unocc.inp
 match ; 2nd state    ; GREP(static/eigenvalues, '2   --', 12) ; -0.525874
 

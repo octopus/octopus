@@ -7,6 +7,11 @@ Enabled    : Yes
 # asymmetric quantum well
 Input: 09-density+current.01-ground_state.inp
 
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.62061608
+match ; Eigenvalue   ; GREP(static/info, '1   --',        12) ; -0.620616
+match ; Eigenvalue   ; GREP(static/info, '2   --',        12) ; -0.463839
+
+
 # optimize overlap of density and minimize
 # the current of final state. Uses ZR98.
 Input: 09-density+current.02-oct.inp

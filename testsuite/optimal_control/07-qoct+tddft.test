@@ -9,6 +9,10 @@ Enabled    : Yes
 
 Input: 07-qoct+tddft.01-ground_state.inp
 
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 3.35089335
+match ; Eigenvalue   ; GREP(static/info, '1   --',        12) ; 1.372935
+match ; Eigenvalue   ; GREP(static/info, '2   --',        12) ; 1.481456
+
 Input: 07-qoct+tddft.02-oct.inp
 
 Precision : 0.005
