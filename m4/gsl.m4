@@ -4,9 +4,9 @@
 
 AC_DEFUN([AX_PATH_GSL],
 [
-  AC_ARG_WITH(gsl-prefix,[--with-gsl-prefix=PFX   Prefix where GSL is installed (optional)],
+  AC_ARG_WITH(gsl-prefix,[AS_HELP_STRING([--with-gsl-prefix=<PFX>], [Prefix where GSL is installed (optional)])],
     gsl_prefix="$withval", gsl_prefix="")
-  AC_ARG_WITH(gsl-exec-prefix,[--with-gsl-exec-prefix=PFX Exec prefix where GSL is installed (optional)],
+  AC_ARG_WITH(gsl-exec-prefix,[AS_HELP_STRING([--with-gsl-exec-prefix=<PFX>], [Exec prefix where GSL is installed (optional)])],
     gsl_exec_prefix="$withval", gsl_exec_prefix="")
 
   if test "x${GSL_CONFIG+set}" != xset ; then
@@ -24,7 +24,7 @@ AC_DEFUN([AX_PATH_GSL],
 
   if test "$GSL_CONFIG" = "no" ; then
     no_gsl=yes
-    echo "*** The gsl-config script installed by GSL could not be found"
+    echo "*** The gsl-config script installed by GSL could not be found."
     echo "*** If GSL was installed in PREFIX, make sure PREFIX/bin is in"
     echo "*** your path, or set the GSL_CONFIG environment variable to the"
     echo "*** full path to gsl-config."
