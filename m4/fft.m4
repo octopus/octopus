@@ -20,24 +20,16 @@
 
 AC_DEFUN([ACX_FFT],
 [
-acx_fft_ok=no
+  acx_fft_ok=no
 
-  AC_ARG_WITH(fft, [  --with-fft=ARG    FFT support
-      ARG=fftw3       FFTW3 support through libfftw3 (default))],
-    [fft=$withval], [fft=fftw3])
-
-  case $fft in
-    fftw3*)
-      fft=3
-      if test "x${SINGLE_PRECISION}" != x; then
-        fft_func="sfftw_plan_dft_1d"
-        fft_libs="fftw3f"
-      else
-        fft_func="dfftw_plan_dft_1d"
-        fft_libs="fftw3"
-      fi
-      ;;
-  esac
+  fft=3
+  if test "x${SINGLE_PRECISION}" != x; then
+    fft_func="sfftw_plan_dft_1d"
+    fft_libs="fftw3f"
+  else
+    fft_func="dfftw_plan_dft_1d"
+    fft_libs="fftw3"
+  fi
 
   dnl Check if the library was given in the command line
   if test $acx_fft_ok = no; then
