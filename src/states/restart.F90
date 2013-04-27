@@ -67,6 +67,7 @@ module restart_m
     read_free_states,        &
     restart_write,           &
     restart_read,            &
+    restart_read_rho,        &
     restart_get_ob_intf,     &
     restart_format,          &
     restart_dir,             &
@@ -923,6 +924,101 @@ contains
     end subroutine restart_fail_rdmft
 
   end subroutine restart_read
+
+  ! ---------------------------------------------------------
+  !> returns in ierr:
+  !! <0 => Fatal error
+  !! =0 => read all wavefunctions
+  !! >0 => could only read ierr wavefunctions
+  subroutine restart_read_rho(dir, st, gr, ierr)
+    character(len=*),     intent(in)    :: dir
+    type(states_t),       intent(inout) :: st
+    type(grid_t),         intent(in)    :: gr
+    integer,              intent(out)   :: ierr
+
+    integer              :: err, isp
+    character(len=12)    :: filename
+    FLOAT, allocatable   :: rho(:), rho_coarse(:)
+    CMPLX, allocatable   :: zrho(:), zrho_coarse(:)
+
+    PUSH_SUB(restart_read_rho)
+
+    write(message(1), '(a,i5)') 'Info: Loading restart density.'
+    call messages_info(1)
+
+    ierr = 0
+
+    ! skip for now, since we know what the files are going to be called
+    !read the densities
+!    iunit_rho = io_open(trim(dir)//'/density', action='write', is_tmp=.true.)
+!    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
+!    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
+!   we could read the iteration 'iter' too, not sure if that is useful.
+
+    if(gr%have_fine_mesh) then
+      if(st%cmplxscl%space) then
+        SAFE_ALLOCATE(zrho(1:gr%mesh%np))
+        SAFE_ALLOCATE(zrho_coarse(1:gr%fine%mesh%np))
+      else
+        SAFE_ALLOCATE(rho(1:gr%mesh%np))
+      end if
+    end if
+    do isp = 1, st%d%nspin
+      if(st%d%nspin==1) then
+        write(unit=filename, fmt='(a)') 'density'
+      else
+        write(unit=filename, fmt='(a,i1)') 'density-sp', isp
+      endif
+!      if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
+!        read(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
+!      end if
+      if(gr%have_fine_mesh)then
+        if(st%cmplxscl%space) then
+          call zrestart_read_function(dir, filename, gr%mesh, zrho_coarse, err)
+          call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, zrho_coarse, zrho, order = 2)
+          st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
+          st%zrho%Im(:,isp) = aimag(zrho)
+        else
+          call drestart_read_function(dir, filename, gr%mesh, rho_coarse, err)
+          call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, rho_coarse, st%rho(:,isp), order = 2)
+        end if
+      else
+        if(st%cmplxscl%space) then
+          call zrestart_read_function(dir, filename, gr%mesh, zrho, err)
+          st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
+          st%zrho%Im(:,isp) = aimag(zrho)
+        else
+          call drestart_read_function(dir, filename, gr%mesh, st%rho(:,isp), err)
+        end if  
+      end if
+      if(err == 0) then
+        ierr = ierr + 1
+      else
+        message(1) = "Could not read density from file " // trim(filename)
+        call messages_warning(1)
+      endif
+    end do
+
+    if(gr%have_fine_mesh)then
+      if(st%cmplxscl%space) then
+         SAFE_DEALLOCATE_A(zrho_coarse)
+      else
+        SAFE_DEALLOCATE_A(rho_coarse)
+      endif
+    end if
+    if(st%cmplxscl%space) then
+      SAFE_DEALLOCATE_A(zrho)
+    endif
+
+    if(mpi_grp_is_root(mpi_world)) then
+      write(stdout, '(1x)')
+    end if
+
+    if(ierr==st%d%nspin) ierr=0 ! All OK
+
+    POP_SUB(restart_read_rho)
+
+  end subroutine restart_read_rho
 
 
   ! ---------------------------------------------------------

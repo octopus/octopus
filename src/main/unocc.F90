@@ -68,7 +68,7 @@ contains
     logical,             intent(inout) :: fromscratch
 
     type(eigensolver_t) :: eigens
-    integer :: iunit, ierr, occupied_states, total_states, iter
+    integer :: iunit, ierr, occupied_states, total_states, iter, ierr_rho
     logical :: converged, forced_finish, showoccstates
     integer :: max_iter, nst_calculated, showstart
     integer, allocatable :: states_read(:, :)
@@ -122,7 +122,7 @@ contains
     end if
 
     if(ierr /= 0) then
-      message(1) = "Info:  Could not load all wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
+      message(1) = "Info: Could not load all wavefunctions from '"//trim(restart_dir)//GS_DIR//"'"
       call messages_info(1)
     end if
 
@@ -139,7 +139,12 @@ contains
     end if
     call messages_info(1)
 
-    call density_calc(sys%st, sys%gr, sys%st%rho)
+    call restart_read_rho(trim(restart_dir)//GS_DIR, sys%st, sys%gr, ierr_rho)
+    if(ierr_rho /= 0) then
+      message(1) = "Building density from wavefunctions."
+      call messages_info(1)
+      call density_calc(sys%st, sys%gr, sys%st%rho)
+    end if
 
     if(fromScratch .or. ierr /= 0) then
       if(ierr > 0 .and. .not. fromScratch) then
