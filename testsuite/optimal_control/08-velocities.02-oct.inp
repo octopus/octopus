@@ -62,7 +62,7 @@ TDEnergyUpdateIter = 1
 # For the OCT runs:
 stime  = 100.0
 TDMaximumIter = stime/dt
-TDPropagator = crank_nicholson
+TDPropagator = crank_nicolson
 
 # For the TD runs:
 totaltime = 500.0
