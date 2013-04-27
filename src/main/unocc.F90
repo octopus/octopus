@@ -143,7 +143,12 @@ contains
     if(ierr_rho /= 0) then
       message(1) = "Building density from wavefunctions."
       call messages_info(1)
-      call density_calc(sys%st, sys%gr, sys%st%rho)
+
+      if(.not. hm%cmplxscl%space) then
+        call density_calc(sys%st, sys%gr, sys%st%rho)
+      else
+        call density_calc(sys%st, sys%gr, sys%st%zrho%Re, sys%st%zrho%Im)
+      endif
     end if
 
     if(fromScratch .or. ierr /= 0) then

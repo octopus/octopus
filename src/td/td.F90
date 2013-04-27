@@ -80,7 +80,7 @@ module td_m
     td_init,              &
     td_end
 
-  ! Parameters.
+  !> Parameters.
   integer, parameter :: &
        EHRENFEST = 1,   &
        BO        = 2,   &
@@ -470,12 +470,12 @@ contains
     ! ---------------------------------------------------------
     subroutine init_wfs()
 
-      integer :: i, is, ierr, ist, ik, jst, freeze_orbitals
+      integer :: i, is, ierr, ist, jst, freeze_orbitals, ierr_rho
       character(len=50) :: filename
       FLOAT :: x
       type(block_t) :: blk
       type(states_t) :: stin
-      CMPLX, allocatable :: rotation_matrix(:, :), zv_old(:), zpsi(:,:)
+      CMPLX, allocatable :: rotation_matrix(:, :), zv_old(:)
 
       PUSH_SUB(td_run.init_wfs)
 
