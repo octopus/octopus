@@ -69,10 +69,9 @@ if test x"$acx_pnfft_ok" = xno; then
     
     call pnfft_init()
   ]), [acx_pnfft_ok=yes], [])
+
+  AC_MSG_RESULT([$acx_pnfft_ok ($FCFLAGS_PNFFT $LIBS_PNFFT)])
 fi
-
-
-AC_MSG_RESULT([$acx_pnfft_ok ($FCFLAGS_PNFFT $LIBS_PNFFT)])
 
 dnl Generic PNFFT library? is there such a thing?
 for pnfft in pnfft; do

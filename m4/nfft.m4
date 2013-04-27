@@ -24,32 +24,16 @@ acx_nfft_ok=no
 nfft_func="nfft_init_1d"
 nfft_libs="-lnfft3"
 
-dnl We cannot use nfft if fftw3 is not found
-if test "x$acx_fft_ok" != xyes; then
-  acx_nfft_ok=nofftw3
-  CFLAGS_NFFT=""
-  LIBS_NFFT_IO=""
-fi
-
-
-  dnl Check if the library was given in the command line
-    AC_ARG_WITH([nfft], [AS_HELP_STRING([--with-nfft=DIR], [use NFFT library (optional) 
+dnl Check if the library was given in the command line
+AC_ARG_WITH([nfft], [AS_HELP_STRING([--with-nfft=DIR], [use NFFT library (optional) 
                                                                http://www-user.tu-chemnitz.de/~potts/nfft/index.php])],
                                                                [],
                                                                [with_nfft=no] )
-    case $with_nfft in
-      no ) acx_nfft_ok=disable ;;
-      *) LIBS_NFFT="-L$with_nfft/lib $nfft_libs" 
-         CFLAGS_NFFT="-I$with_nfft/include" ;;
-    esac
-
-#      yes | "") ;;
-#      no ) acx_nfft_ok=disable ;;
-#      -* | */* | *.a | *.so | *.so.* | *.o) 
-#         LIBS_NFFT="-L$with_nfft/lib $nfft_libs" 
-#         CFLAGS_NFFT="-I$with_nfft/include" 
-#      ;;
-#      *) LIBS_NFFT="-l$with_nfft" ;;
+case $with_nfft in
+  no ) acx_nfft_ok=disable ;;
+  *) LIBS_NFFT="-L$with_nfft/lib $nfft_libs" 
+     CFLAGS_NFFT="-I$with_nfft/include" ;;
+esac
 
 dnl Backup LIBS and FCFLAGS
 acx_nfft_save_LIBS="$LIBS"
@@ -64,7 +48,7 @@ if test $acx_nfft_ok = no; then
     nfft_libs="$LIBS_NFFT"
     CFLAGS="$nfft_cflags "
     LIBS="$nfft_libs $LIBS_FFT"
-AC_LINK_IFELSE([AC_LANG_SOURCE([
+    AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include "nfft3util.h"
 #include "nfft3.h"
  int main(void)
@@ -74,9 +58,7 @@ AC_LINK_IFELSE([AC_LANG_SOURCE([
    nfft_finalize(&p);   
    return 1;
  }
-    ])],
-[acx_nfft_ok=yes; CFLAGS_NFFT="$nfft_cflags"; LIBS_NFFT="$nfft_libs"], [])
-
+    ])],[acx_nfft_ok=yes; CFLAGS_NFFT="$nfft_cflags"; LIBS_NFFT="$nfft_libs"], [])
   fi
 
   if test $acx_nfft_ok = no ; then
@@ -84,11 +66,7 @@ AC_LINK_IFELSE([AC_LANG_SOURCE([
   else
     AC_MSG_RESULT([$acx_nfft_ok ($LIBS_NFFT)])
   fi
-
-
 fi
-
-
 
 AC_SUBST(CFLAGS_NFFT)
 AC_SUBST(LIBS_NFFT)
@@ -103,7 +81,7 @@ if test x"$acx_nfft_ok" = xyes; then
 else
    if test $acx_nfft_ok != disable; then 
      AC_MSG_WARN([Could not find NFFT library.
-                *** Will compile without nfft support])
+                *** Will compile without NFFT support])
    fi
    $2
 fi
