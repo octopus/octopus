@@ -470,7 +470,7 @@ contains
     ! ---------------------------------------------------------
     subroutine init_wfs()
 
-      integer :: i, is, ierr, ist, jst, freeze_orbitals, ierr_rho
+      integer :: i, is, ierr, ist, jst, freeze_orbitals
       character(len=50) :: filename
       FLOAT :: x
       type(block_t) :: blk

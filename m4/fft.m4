@@ -22,7 +22,6 @@ AC_DEFUN([ACX_FFT],
 [
   acx_fft_ok=no
 
-  fft=3
   if test "x${SINGLE_PRECISION}" != x; then
     fft_func="sfftw_plan_dft_1d"
     fft_libs="fftw3f"

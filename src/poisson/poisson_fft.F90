@@ -134,6 +134,8 @@ contains
     FLOAT, intent(in)  :: default_r_c
     FLOAT, intent(out) :: r_c
 
+    PUSH_SUB(get_cutoff)
+
     call parse_float(datasets_check('PoissonCutoffRadius'), default_r_c, r_c, units_inp%length)
     
     call messages_write('Info: Poisson Cutoff Radius     =')
@@ -145,7 +147,8 @@ contains
       call messages_write('You can see electrons in neighboring cell(s).')
       call messages_warning()
     end if
-    
+
+    POP_SUB(get_cutoff)
   end subroutine get_cutoff
 
   !-----------------------------------------------------------------

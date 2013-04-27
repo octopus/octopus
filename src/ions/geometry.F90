@@ -896,14 +896,15 @@ contains
     integer :: iatom, jatom
     FLOAT :: max_bond_length
     character(len=12) :: numi, numj
-    
-    
+
     FLOAT, parameter :: hydrogen_radius = CNST(0.4)
     FLOAT, parameter :: atom_radius = CNST(0.7)
     FLOAT, parameter :: bond_radius = CNST(0.3)
     FLOAT, parameter :: hydrogen_max_bond_length = CNST(3.0)
     FLOAT, parameter :: other_max_bond_length = CNST(3.5)
 
+    PUSH_SUB(geometry_write_openscad)
+    
     call io_mkdir(dir)
     call openscad_file_init(cad_file, trim(dir)//'/'//trim(fname)//'.scad')
 
@@ -937,6 +938,7 @@ contains
 
     call openscad_file_end(cad_file)
 
+    POP_SUB(geometry_write_openscad)
   end subroutine geometry_write_openscad
 
 
@@ -1024,7 +1026,6 @@ contains
 
     POP_SUB(geometry_copy)
   end subroutine geometry_copy
-
 
 end module geometry_m
 
