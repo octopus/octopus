@@ -234,11 +234,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine restart_write(dir, st, gr, geo, ierr, iter, lr, st_start_writing, write_density)
+  subroutine restart_write(dir, st, gr, ierr, iter, lr, st_start_writing, write_density)
     character(len=*),     intent(in)    :: dir
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
-    type(geometry_t),     intent(in)    :: geo
     integer,              intent(out)   :: ierr
     integer,    optional, intent(in)    :: iter
     !> if this next argument is present, the lr wfs are stored instead of the gs wfs
@@ -246,7 +245,7 @@ contains
     integer,    optional, intent(in)    :: st_start_writing
     logical,    optional, intent(in)    :: write_density !< default = .true.
 
-    integer :: iunit, iunit2, iunit_mesh, iunit_states, iunit_geo, iunit_rho
+    integer :: iunit, iunit2, iunit_mesh, iunit_states, iunit_rho
     integer :: err, ik, idir, ist, idim, isp, itot
     character(len=80) :: filename, filename1 
     logical :: lr_wfns_are_associated, should_write, cmplxscl, write_density_
@@ -410,6 +409,7 @@ contains
       if(gr%have_fine_mesh) then
         if(st%cmplxscl%space) then
           SAFE_ALLOCATE(zrho(1:gr%mesh%np))
+          SAFE_ALLOCATE(zrho_fine(1:gr%fine%mesh%np))
         else
           SAFE_ALLOCATE(rho(1:gr%mesh%np))
         end if
@@ -425,11 +425,9 @@ contains
         end if
         if(gr%have_fine_mesh)then
           if(st%cmplxscl%space) then
-            SAFE_ALLOCATE(zrho_fine(1:gr%fine%mesh%np))
             zrho_fine(:)= st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp)
             call zmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, zrho_fine, zrho, INJECTION)
             call zrestart_write_function(dir, filename, gr%mesh, zrho, err)
-            SAFE_DEALLOCATE_P(zrho_fine)
           else
             call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, st%rho(:,isp), rho, INJECTION)
             call drestart_write_function(dir, filename, gr%mesh, rho, err)
@@ -447,6 +445,7 @@ contains
         SAFE_DEALLOCATE_P(rho)
         if(st%cmplxscl%space) then
           SAFE_DEALLOCATE_P(zrho)
+          SAFE_DEALLOCATE_P(zrho_fine)
         endif
       end if
       if(ierr==st%d%nspin) ierr=0 ! All OK

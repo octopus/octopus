@@ -180,7 +180,7 @@ contains
       
       ! write restart information.
       if(converged .or. (modulo(iter, sys%outp%iter) == 0) .or. iter == max_iter .or. forced_finish) then
-        call restart_write(trim(tmpdir)//GS_DIR, sys%st, sys%gr, sys%geo, ierr, iter=iter, write_density=.false.)
+        call restart_write(trim(tmpdir)//GS_DIR, sys%st, sys%gr, ierr, iter=iter, write_density=.false.)
         if(ierr /= 0) then
           message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
           call messages_fatal(1)

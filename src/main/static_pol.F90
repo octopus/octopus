@@ -276,7 +276,7 @@ contains
         call output_cycle_()
 
         if(write_restart_densities) then
-          call restart_write(trim(dir_name), sys%st, sys%gr, sys%geo, ierr)
+          call restart_write(trim(dir_name), sys%st, sys%gr, ierr)
           if(ierr /= 0) then
             message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
             call messages_fatal(1)
@@ -358,7 +358,7 @@ contains
       end if
 
       if(write_restart_densities) then
-        call restart_write(trim(dir_name), sys%st, sys%gr, sys%geo, ierr)
+        call restart_write(trim(dir_name), sys%st, sys%gr, ierr)
         if(ierr /= 0) then
           message(1) = 'Unsuccessful write of "'//trim(dir_name)//'"'
           call messages_fatal(1)
