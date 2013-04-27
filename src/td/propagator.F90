@@ -537,13 +537,13 @@ contains
     end if
 
     select case(tr%method)
-    case(PROP_ETRS);                     call td_etrs
-    case(PROP_AETRS, PROP_CAETRS);       call td_aetrs
-    case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint
-    case(PROP_CRANK_NICOLSON);           call td_crank_nicolson
-    case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson_sparskit
-    case(PROP_MAGNUS);                   call td_magnus
-    case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem
+    case(PROP_ETRS);                     call td_etrs()
+    case(PROP_AETRS, PROP_CAETRS);       call td_aetrs()
+    case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint()
+    case(PROP_CRANK_NICOLSON);           call td_crank_nicolson()
+    case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson_sparskit()
+    case(PROP_MAGNUS);                   call td_magnus()
+    case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
     end select
@@ -588,13 +588,13 @@ contains
             vaux(:, :) = hm%vhxc(:, :)
           end if
           select case(tr%method)
-          case(PROP_ETRS);                     call td_etrs
-          case(PROP_AETRS, PROP_CAETRS);       call td_aetrs
-          case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint
-          case(PROP_CRANK_NICOLSON);           call td_crank_nicolson
-          case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson_sparskit
-          case(PROP_MAGNUS);                   call td_magnus
-          case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem
+          case(PROP_ETRS);                     call td_etrs()
+          case(PROP_AETRS, PROP_CAETRS);       call td_aetrs()
+          case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint()
+          case(PROP_CRANK_NICOLSON);           call td_crank_nicolson()
+          case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson_sparskit()
+          case(PROP_MAGNUS);                   call td_magnus()
+          case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
           case(PROP_QOCT_TDDFT_PROPAGATOR)
             call td_qoct_tddft_propagator(hm, gr, st, tr, time, dt)
           end select
@@ -851,7 +851,7 @@ contains
     ! ---------------------------------------------------------
     !> Exponential midpoint
     subroutine exponential_midpoint
-      integer :: ib, ik, ii
+      integer :: ib, ik
       type(ion_state_t) :: ions_state
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
       CMPLX :: zt, zdt
