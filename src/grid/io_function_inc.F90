@@ -1148,8 +1148,9 @@ contains
     print*, trim(fname), minval(ff(1:mesh%np)), maxval(ff(1:mesh%np))
 #endif
 
-
     call openscad_file_init(cad_file, trim(dir)//'/'//trim(fname)//".scad")
+
+    call geometry_write_openscad(geo, cad_file = cad_file)
 
     do ip = 1, mesh%np_global
       ii = mesh%idx%lxyz(ip, 1)

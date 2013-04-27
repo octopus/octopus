@@ -27,6 +27,7 @@ module geom_opt_m
   use geometry_m
   use global_m
   use hamiltonian_m
+  use io_m
   use lcao_m
   use loct_m
   use loct_math_m
@@ -148,7 +149,7 @@ contains
     call from_coords(g_opt, coords)
     message(1) = "Writing final coordinates to min.xyz"
     call messages_info(1)
-    call geometry_write_xyz(".", "min", g_opt%geo, g_opt%dim)
+    call geometry_write_xyz(g_opt%geo, './min')
 
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
@@ -384,7 +385,7 @@ contains
 
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .false., die_if_not = .true.)
 
-    call geometry_write_xyz(".", "work-geom", g_opt%geo, g_opt%dim, append = .true.)
+    call geometry_write_xyz(g_opt%geo, './work-geom', append = .true.)
 
     call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
@@ -450,8 +451,9 @@ contains
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10,2x,a)') units_from_atomic(units_out%energy, energy), trim(units_abbrev(units_out%energy))
-    call geometry_write_xyz("geom", trim(c_geom_iter), g_opt%geo, g_opt%dim, comment=trim(title))
-    call geometry_write_xyz(".", "last", g_opt%geo, g_opt%dim)
+    call io_mkdir('geom')
+    call geometry_write_xyz(g_opt%geo, 'geom/'//trim(c_geom_iter), comment = trim(title))
+    call geometry_write_xyz(g_opt%geo, './last')
 
     call from_coords(g_opt, coords)
 

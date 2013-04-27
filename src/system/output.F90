@@ -526,11 +526,13 @@ contains
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
       endif
       if(iand(outp%how, C_OUTPUT_HOW_XYZ) /= 0) then
-        call geometry_write_xyz(dir, "geometry", geo, gr%sb%dim)
+        call io_mkdir(dir)
+        call geometry_write_xyz(geo, trim(dir)//'/geometry')
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
       endif
       if(iand(outp%how, C_OUTPUT_HOW_OPENSCAD) /= 0) then
-        call geometry_write_openscad(dir, "geometry", geo, gr%sb%dim)
+        call io_mkdir(dir)
+        call geometry_write_openscad(geo, trim(dir)//'/geometry')
       endif
     end if
 

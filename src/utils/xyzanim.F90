@@ -88,7 +88,8 @@ program xyzanim
       ((geo%atom(i)%x(j), j = 1, geo%space%dim), i = 1, geo%natoms)
     if(mod(iter, sampling) == 0) then
       write(comment, '(i10,f20.6)') iter, time
-      call geometry_write_xyz('td.general', 'movie', geo, geo%space%dim, append = .true., comment = trim(comment))
+      call io_mkdir('td.general')
+      call geometry_write_xyz(geo, 'td.general/movie', append = .true., comment = trim(comment))
     end if
   end do
 

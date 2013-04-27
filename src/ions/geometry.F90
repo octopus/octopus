@@ -269,7 +269,8 @@ contains
       write(message(1), '(a)') "Some of the atoms seem to sit too close to each other."
       write(message(2), '(a)') "Please review your input files and the output geometry."
       ! then write out the geometry, whether asked for or not in Output variable
-      call geometry_write_xyz(STATIC_DIR, "geometry", geo, geo%space%dim)
+      call io_mkdir(STATIC_DIR)
+      call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry')
       call messages_fatal(2)
     end if
 
@@ -838,10 +839,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine geometry_write_xyz(dir, fname, geo, sbdim, append, comment)
-    character(len=*),    intent(in) :: dir, fname
+  subroutine geometry_write_xyz(geo, fname, append, comment)
     type(geometry_t),    intent(in) :: geo
-    integer,             intent(in) :: sbdim
+    character(len=*),    intent(in) :: fname
     logical,             intent(in), optional :: append
     character(len=*),    intent(in), optional :: comment
 
@@ -852,12 +852,11 @@ contains
 
     PUSH_SUB(atom_write_xyz)
 
-    call io_mkdir(dir)
     position = 'asis'
     if(present(append)) then
       if(append) position = 'append'
     end if
-    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write', position=position)
+    iunit = io_open(trim(fname)//'.xyz', action='write', position=position)
 
     write(iunit, '(i4)') geo%natoms
     if (present(comment)) then
@@ -866,16 +865,16 @@ contains
       write(iunit, '(1x,a,a)') 'units: ', trim(units_abbrev(units_out%length))
     endif
     do iatom = 1, geo%natoms
-      call atom_write_xyz(geo%atom(iatom), sbdim, iunit)
+      call atom_write_xyz(geo%atom(iatom), geo%space%dim, iunit)
     end do
     call io_close(iunit)
 
     if(geo%ncatoms > 0) then
-      iunit = io_open(trim(dir)//'/'//trim(fname)//'_classical.xyz', action='write', position=position)
+      iunit = io_open(trim(fname)//'_classical.xyz', action='write', position=position)
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
       do iatom = 1, geo%ncatoms
-        call atom_classical_write_xyz(geo%catom(iatom), sbdim, iunit)
+        call atom_classical_write_xyz(geo%catom(iatom), geo%space%dim, iunit)
       end do
       call io_close(iunit)
     end if
@@ -885,14 +884,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine geometry_write_openscad(dir, fname, geo, sbdim, append, comment)
-    character(len=*),    intent(in) :: dir, fname
-    type(geometry_t),    intent(in) :: geo
-    integer,             intent(in) :: sbdim
-    logical,             intent(in), optional :: append
-    character(len=*),    intent(in), optional :: comment
+  subroutine geometry_write_openscad(geo, fname, cad_file)
+    type(geometry_t),                        intent(in)    :: geo
+    character(len=*),      optional,         intent(in)    :: fname
+    type(openscad_file_t), optional, target, intent(inout) :: cad_file
 
-    type(openscad_file_t) :: cad_file
+    type(openscad_file_t), pointer :: cad_file_
     integer :: iatom, jatom
     FLOAT :: max_bond_length
     character(len=12) :: numi, numj
@@ -903,25 +900,31 @@ contains
     FLOAT, parameter :: hydrogen_max_bond_length = CNST(3.0)
     FLOAT, parameter :: other_max_bond_length = CNST(3.5)
 
+    ASSERT(.not. present(cad_file) .eqv. present(fname))
+
     PUSH_SUB(geometry_write_openscad)
     
-    call io_mkdir(dir)
-    call openscad_file_init(cad_file, trim(dir)//'/'//trim(fname)//'.scad')
+    if(.not. present(cad_file)) then
+      SAFE_ALLOCATE(cad_file_)
+      call openscad_file_init(cad_file_, trim(fname)//'.scad')
+    else
+      cad_file_ => cad_file
+    end if
 
-    call openscad_file_define_variable(cad_file, "hydrogen_radius", hydrogen_radius)
-    call openscad_file_define_variable(cad_file, "atom_radius", atom_radius)
-    call openscad_file_define_variable(cad_file, "bond_radius", bond_radius)
+    call openscad_file_define_variable(cad_file_, "hydrogen_radius", hydrogen_radius)
+    call openscad_file_define_variable(cad_file_, "atom_radius", atom_radius)
+    call openscad_file_define_variable(cad_file_, "bond_radius", bond_radius)
 
     do iatom = 1, geo%natoms
 
       write(numi, '(i12)') iatom
-      call openscad_file_comment(cad_file, 'Atom '//trim(adjustl(numi))//': '//trim(species_label(geo%atom(iatom)%spec)))
+      call openscad_file_comment(cad_file_, 'Atom '//trim(adjustl(numi))//': '//trim(species_label(geo%atom(iatom)%spec)))
 
       if(species_z(geo%atom(iatom)%spec) == 1) then
-        call openscad_file_sphere(cad_file, geo%atom(iatom)%x(1:3), radius_variable = "hydrogen_radius")
+        call openscad_file_sphere(cad_file_, geo%atom(iatom)%x(1:3), radius_variable = "hydrogen_radius")
         max_bond_length = hydrogen_max_bond_length
       else
-        call openscad_file_sphere(cad_file, geo%atom(iatom)%x(1:3), radius_variable = "atom_radius")
+        call openscad_file_sphere(cad_file_, geo%atom(iatom)%x(1:3), radius_variable = "atom_radius")
         max_bond_length = other_max_bond_length
       end if
 
@@ -929,14 +932,17 @@ contains
         if(sum((geo%atom(iatom)%x(1:3) - geo%atom(jatom)%x(1:3))**2) > max_bond_length**2) cycle
 
         write(numj, '(i12)') jatom
-        call openscad_file_comment(cad_file, '  Bond '//trim(adjustl(numi))//' -> '//trim(adjustl(numj)))
+        call openscad_file_comment(cad_file_, '  Bond '//trim(adjustl(numi))//' -> '//trim(adjustl(numj)))
 
-        call openscad_file_bond(cad_file, geo%atom(iatom)%x(1:3), geo%atom(jatom)%x(1:3), radius_variable = "bond_radius")
+        call openscad_file_bond(cad_file_, geo%atom(iatom)%x(1:3), geo%atom(jatom)%x(1:3), radius_variable = "bond_radius")
       end do
 
     end do
 
-    call openscad_file_end(cad_file)
+    if(.not. present(cad_file)) then
+      call openscad_file_end(cad_file_)
+      SAFE_DEALLOCATE_P(cad_file_)
+    end if
 
     POP_SUB(geometry_write_openscad)
   end subroutine geometry_write_openscad
