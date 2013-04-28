@@ -46,7 +46,11 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   ASSERT(batch_status(psib) == batch_status(hpsib))
 
   if(present(time)) then
-    ASSERT(abs(time - hm%current_time) < CNST(1e-10))
+    if(abs(time - hm%current_time) > CNST(1e-10)) then
+      write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
+      write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
+      call messages_fatal(2)
+    endif
   end if
 
   if(present(Imtime)) then
