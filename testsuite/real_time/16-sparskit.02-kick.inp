@@ -1,7 +1,5 @@
 CalculationMode = td
 
-FromScratch = yes
-
 bond_length = 2.8
 
 %Coordinates
@@ -18,13 +16,11 @@ Spacing = 0.6
 
 Radius = 6
 
-MoveIons = vel_verlet
-
 TDTimeStep = 0.1
 
 TDMaximumIter = 20
 
-TDPropagator = exp_mid
+TDPropagator = crank_nicolson_sparskit
 
 ParallelizationStrategy = par_domains + par_states
 
@@ -32,6 +28,14 @@ ParallelizationStrategy = par_domains + par_states
  2 | 2
 %
 
+FromScratch = yes
+
 FilterPotentials = filter_ts
+
+TDDeltaStrength = 0.2
+
+TDPolarizationDirection = 1
+
+OutputEvery = 10
 
 TDEnergyUpdateIter = 5
