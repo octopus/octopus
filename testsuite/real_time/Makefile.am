@@ -73,6 +73,12 @@ dist_share_DATA =                      \
 	13-absorption-spin.02-td.inp           \
 	13-absorption-spin.03-td-restart.inp   \
 	13-absorption-spin.04-spectrum.inp     \
-        13-absorption-spin.05-spectrum_compressed_sensing.inp
+        13-absorption-spin.05-spectrum_compressed_sensing.inp \
+	14-absorption-spinors.test                \
+	14-absorption-spinors.01-gs.inp           \
+	14-absorption-spinors.02-td.inp           \
+	14-absorption-spinors.03-td-restart.inp   \
+	14-absorption-spinors.04-spectrum.inp     \
+        14-absorption-spinors.05-spectrum_compressed_sensing.inp
 
 CLEANFILES = *~ *.bak
