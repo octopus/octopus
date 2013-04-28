@@ -93,8 +93,7 @@ contains
     !%Section Calculation Modes::Unoccupied States
     !%Description
     !% If true, the convergence for the occupied states will be shown too in the output.
-    !% This is useful only for testing. It will be enabled during a run if the occupied
-    !% states are not converged.
+    !% This is useful for testing, or if the occupied states fail to converge.
     !%End
     call parse_logical(datasets_check('UnoccShowOccStates'), .false., showoccstates)
 
@@ -173,14 +172,6 @@ contains
     do iter = 1, max_iter
       call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged)
 
-      if(any(eigens%converged(sys%st%d%kpt%start:sys%st%d%kpt%end) < occupied_states)) then
-        write(message(1),'(a)') 'Some of the occupied states are not fully converged!'
-        write(message(2),'(a)') 'This may indicate corruption of the gs data.'
-        call messages_warning(2)
-
-        showstart = 1
-      endif
-
       write(str, '(a,i5)') 'Unoccupied states iteration #', iter
       call messages_print_stress(stdout, trim(str))
       call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart)
@@ -200,6 +191,11 @@ contains
       if(converged .or. forced_finish) exit
     end do
 
+    if(any(eigens%converged(sys%st%d%kpt%start:sys%st%d%kpt%end) < occupied_states)) then
+      write(message(1),'(a)') 'Some of the occupied states are not fully converged!'
+      call messages_warning(1)
+    endif
+
     if(.not. converged) then
       write(message(1),'(a)') 'Some of the unoccupied states are not fully converged!'
       call messages_warning(1)
@@ -211,9 +207,9 @@ contains
       iunit = io_open(STATIC_DIR//'/eigenvalues', action='write')
       
       if(converged) then
-        write(iunit,'(a)') 'All unoccupied states converged.'
+        write(iunit,'(a)') 'All states converged.'
       else
-        write(iunit,'(a)') 'Some of the unoccupied states are not fully converged!'
+        write(iunit,'(a)') 'Some of the states are not fully converged!'
       end if
       write(iunit,'(a, e17.6)') 'Criterion = ', eigens%tolerance
       write(iunit,'(1x)')
