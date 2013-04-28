@@ -22,11 +22,11 @@ TDMaximumIter = 20
 
 TDPropagator = crank_nicolson
 
-ParallelizationStrategy = par_domains + par_states
+ParallelizationStrategy = par_domains
 
-%ParallelizationGroupRanks
- 2 | 2
-%
+#%ParallelizationGroupRanks
+# 2 | 2
+#%
 
 FromScratch = yes
 
