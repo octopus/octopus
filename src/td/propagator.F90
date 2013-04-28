@@ -138,7 +138,8 @@ contains
   subroutine propagator_copy(tro, tri)
     type(propagator_t), intent(inout) :: tro
     type(propagator_t), intent(in)    :: tri
-    PUSH_SUB(tr_rti_copy)
+
+    PUSH_SUB(propagator_copy)
     
     call propagator_nullify(tro)
     tro%method = tri%method
@@ -156,7 +157,7 @@ contains
     call exponential_copy(tro%te, tri%te)
     tro%scf_propagation_steps = tri%scf_propagation_steps
 
-    POP_SUB(tr_rti_copy)
+    POP_SUB(propagator_copy)
   end subroutine propagator_copy
   ! ---------------------------------------------------------
 
@@ -383,10 +384,15 @@ contains
   subroutine propagator_set_scf_prop(tr, threshold)
     type(propagator_t), intent(inout) :: tr
     FLOAT, intent(in), optional :: threshold
+
+    PUSH_SUB(propagator_set_scf_prop)
+
     tr%scf_propagation_steps = huge(1)
     if(present(threshold)) then
       scf_threshold = threshold
     end if
+
+    POP_SUB(propagator_set_scf_prop)
   end subroutine propagator_set_scf_prop
   ! ---------------------------------------------------------
 
@@ -394,7 +400,12 @@ contains
   ! ---------------------------------------------------------
   subroutine propagator_remove_scf_prop(tr)
     type(propagator_t), intent(inout) :: tr
+
+    PUSH_SUB(propagator_remove_scf_prop)
+
     tr%scf_propagation_steps = -1
+
+    POP_SUB(propagator_remove_scf_prop)
   end subroutine propagator_remove_scf_prop
   ! ---------------------------------------------------------
 
@@ -635,7 +646,8 @@ contains
 
     ! ---------------------------------------------------------
     !> Propagator with enforced time-reversal symmetry
-    subroutine td_etrs
+    subroutine td_etrs()
+
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       integer :: ik, ib
       type(batch_t) :: zpsib_save
@@ -721,7 +733,8 @@ contains
 
     ! ---------------------------------------------------------
     !> Propagator with approximate enforced time-reversal symmetry
-    subroutine td_aetrs
+    subroutine td_aetrs()
+
       integer :: ik, ispin, ip, ist, ib
       FLOAT :: vv
       CMPLX :: phase
@@ -850,7 +863,7 @@ contains
 
     ! ---------------------------------------------------------
     !> Exponential midpoint
-    subroutine exponential_midpoint
+    subroutine exponential_midpoint()
       integer :: ib, ik
       type(ion_state_t) :: ions_state
       FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
@@ -969,7 +982,7 @@ contains
 
           do ik = st%d%kpt%start, st%d%kpt%end
             do ib = st%block_start, st%block_end
-              call exponential_apply_batch(tr%te, gr%der, hm, st%psibL(ib, ik), ik, -dt/mu, time + dt/M_TWO)            
+              call exponential_apply_batch(tr%te, gr%der, hm, st%psibL(ib, ik), ik, -dt/mu, time + dt/M_TWO)
 
             end do
           end do
@@ -994,7 +1007,7 @@ contains
 
     ! ---------------------------------------------------------
     !> Crank-Nicolson propagator, linear solver from SPARSKIT.
-    subroutine td_crank_nicolson_sparskit
+    subroutine td_crank_nicolson_sparskit()
 
 #ifdef HAVE_SPARSKIT
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
@@ -1101,7 +1114,7 @@ contains
 
     ! ---------------------------------------------------------
     !> Crank-Nicolson propagator, QMR linear solver.
-    subroutine td_crank_nicolson
+    subroutine td_crank_nicolson()
 
       CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:), inhpsi(:)
       integer :: ik, ist, idim, ip, isize, np_part, np, iter
@@ -1155,7 +1168,7 @@ contains
             SAFE_DEALLOCATE_A(inhpsi)
           end if
 
-          ! put the values is a continuous array
+          ! put the values in a continuous array
           do idim = 1, st%d%dim
             call states_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np))
             rhs((idim - 1)*np + 1:idim*np) = zpsi_rhs(1:np, idim)
@@ -1250,7 +1263,8 @@ contains
 
     ! ---------------------------------------------------------
     !> Magnus propagator
-    subroutine td_magnus
+    subroutine td_magnus()
+
       integer :: j, is, ist, ik, i
       FLOAT :: atime(2)
       FLOAT, allocatable :: vaux(:, :, :), pot(:)
