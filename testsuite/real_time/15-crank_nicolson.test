@@ -1,0 +1,28 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 24-cpmd.test 3344 2007-10-13 13:38:03Z acastro $
+
+Test       : Crank-Nicolson
+Programs   : octopus_mpi; octopus
+TestGroups : short-run, real_time
+Enabled    : Yes
+
+#This test checks the time propagation
+
+# ground state
+Processors : 1
+Input      : 15-crank_nicolson.01-gs.inp
+match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -10.60764719
+
+Processors : 4
+Input      : 15-crank_nicolson.02-kick.inp
+match ; Energy [step  1] ; LINE(td.general/energy, -21, 30) ; -1.058576638440e+01
+match ; Energy [step  5] ; LINE(td.general/energy, -16, 30) ; -1.043033051444e+01
+match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.043031059756e+01
+match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.043029718804e+01
+match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.043029007270e+01
+
+match ; Dipole [step  1] ; LINE(td.general/multipoles, -21, 50) ; -1.214172412514e-13
+match ; Dipole [step  5] ; LINE(td.general/multipoles, -16, 50) ; -7.295810178585e-01
+match ; Dipole [step 10] ; LINE(td.general/multipoles, -11, 50) ; -1.339402812014e+00
+match ; Dipole [step 15] ; LINE(td.general/multipoles,  -6, 50) ; -1.833991422975e+00
+match ; Dipole [step 20] ; LINE(td.general/multipoles,  -1, 50) ; -2.215415244400e+00

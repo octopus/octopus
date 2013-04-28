@@ -79,6 +79,9 @@ dist_share_DATA =                      \
 	14-absorption-spinors.02-td.inp           \
 	14-absorption-spinors.03-td-restart.inp   \
 	14-absorption-spinors.04-spectrum.inp     \
-        14-absorption-spinors.05-spectrum_compressed_sensing.inp
+        14-absorption-spinors.05-spectrum_compressed_sensing.inp \
+        15-crank_nicolson.test                 \
+        15-crank_nicolson.01-gs.inp            \
+        15-crank_nicolson.02-kick.inp
 
 CLEANFILES = *~ *.bak
