@@ -571,7 +571,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   type(mesh_t),      intent(in)    :: mesh            !< The mesh descriptor.
   type(batch_t),     intent(inout) :: aa              !< A batch which contains the mesh functions whose points will be exchanged.
   integer, optional, intent(in)    :: forward_map(:)  !< A map which gives the destination of the value each point.
-  integer, optional, intent(in)    :: backward_map(:) !< A map which gives the source of the value of each point.
+  logical, optional, intent(in)    :: backward_map    !< A map which gives the source of the value of each point.
 
 #ifdef HAVE_MPI
   integer :: ip, ipg, npart, ipart, ist, pos, nstl
@@ -599,8 +599,6 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
     SAFE_ALLOCATE(send_count(1:npart))
     SAFE_ALLOCATE(recv_count(1:npart))
-    SAFE_ALLOCATE(send_disp(1:npart))
-    SAFE_ALLOCATE(recv_disp(1:npart))
     SAFE_ALLOCATE(send_count_nstl(1:npart))
     SAFE_ALLOCATE(recv_count_nstl(1:npart))
     SAFE_ALLOCATE(send_disp_nstl(1:npart))
@@ -609,6 +607,9 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
     if(present(forward_map)) then
 
+      SAFE_ALLOCATE(send_disp(1:npart))
+      SAFE_ALLOCATE(recv_disp(1:npart))
+      
       ASSERT(ubound(forward_map, dim = 1) == mesh%np_global)
 
       send_count = 0
@@ -676,52 +677,33 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         end if
       end do
 
+      SAFE_DEALLOCATE_A(send_disp)
+      SAFE_DEALLOCATE_A(recv_disp)
+    
     else ! backward map
 
-      ASSERT(ubound(backward_map, dim = 1) == mesh%np_global)
-
-      recv_count = 0
-      do ip = 1, mesh%np
-        !get the global point
-        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
-        !the source
-        ipart = mesh%vp%part_vec(backward_map(ipg))
-        INCR(recv_count(ipart), 1)
-      end do
-
+      recv_count = mesh%vp%recv_count
       ASSERT(sum(recv_count) == mesh%np)
 
-      send_count = 0
-      do ipg = 1, mesh%np_global
-        if(mesh%vp%part_vec(backward_map(ipg)) == mesh%vp%partno) then
-          INCR(send_count(mesh%vp%part_vec(ipg)), 1)
-        end if
-      end do
-
+      send_count = mesh%vp%send_count
       ASSERT(sum(send_count) == mesh%np)
 
-      send_disp(1) = 0
-      recv_disp(1) = 0
-      do ipart = 2, npart
-        send_disp(ipart) = send_disp(ipart - 1) + send_count(ipart - 1)
-        recv_disp(ipart) = recv_disp(ipart - 1) + recv_count(ipart - 1)
-      end do
+      send_disp = mesh%vp%send_disp
+      recv_disp = mesh%vp%recv_disp
 
       ASSERT(send_disp(npart) + send_count(npart) == mesh%np)
       ASSERT(recv_disp(npart) + recv_count(npart) == mesh%np)
 
       !pack for sending
-      send_count = 0
-      do ipg = 1, mesh%np_global
-        if(mesh%vp%part_vec(backward_map(ipg)) == mesh%vp%partno) then
-          ip = vec_global2local(mesh%vp, backward_map(ipg), mesh%vp%partno)
-          ipart = mesh%vp%part_vec(ipg)
-          INCR(send_count(ipart), 1)
-          pos = send_disp(ipart) + send_count(ipart)
-          forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip) 
-        end if
+      send_count = 0  
+      do ip = 1, mesh%np
+        ipg = mesh%vp%xlocal + ip - 1
+        ipart = mesh%vp%part_vec(ipg)
+        INCR(send_count(ipart), 1)
+        pos = mesh%vp%send_disp(ipart) + send_count(ipart)
+        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip) 
       end do
-
+      
       SAFE_ALLOCATE(recv_buffer(1:nstl, mesh%np))
 
       send_count_nstl = send_count * nstl
@@ -735,10 +717,8 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       recv_count = 0
       do ip = 1, mesh%np
-        !get the global point
-        ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
-        !the destination
-        ipart = mesh%vp%part_vec(backward_map(ipg))
+        ! get the destination
+        ipart = mesh%vp%part_local(ip)
         INCR(recv_count(ipart), 1)
         pos = recv_disp(ipart) + recv_count(ipart)
         forall(ist = 1:nstl) aa%states_linear(ist)%X(psi)(ip) = recv_buffer(ist, pos)
@@ -748,8 +728,6 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
     SAFE_DEALLOCATE_A(send_count)
     SAFE_DEALLOCATE_A(recv_count)
-    SAFE_DEALLOCATE_A(send_disp)
-    SAFE_DEALLOCATE_A(recv_disp)
     SAFE_DEALLOCATE_A(send_count_nstl)
     SAFE_DEALLOCATE_A(recv_count_nstl)
     SAFE_DEALLOCATE_A(send_disp_nstl)

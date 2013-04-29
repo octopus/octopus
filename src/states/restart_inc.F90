@@ -101,7 +101,7 @@ subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
 
     call batch_init(ffb, 1)
     call batch_add_state(ffb, ff)
-    call X(mesh_batch_exchange_points)(mesh, ffb, backward_map = mesh%vp%local_vec)
+    call X(mesh_batch_exchange_points)(mesh, ffb, backward_map = .true.)
     call batch_end(ffb)
     
     call profiling_out(prof_comm)
