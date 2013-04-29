@@ -93,7 +93,7 @@ contains
       SAFE_ALLOCATE(lr%dl_j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
     end if
 
-    np = NP
+    np = gr%mesh%np
     ndim = gr%mesh%sb%dim
 
     SAFE_ALLOCATE(   gpsi(1:np, 1:ndim))
