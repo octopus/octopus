@@ -105,7 +105,7 @@ contains
         SAFE_ALLOCATE(ob%lead(il)%sp2full_map(1:np*order))
         ob%lead(il)%q_sp = M_z0
         ob%lead(il)%q_s  = M_z0
-        ob%lead(il)%sp2full_map = M_z0
+        ob%lead(il)%sp2full_map = 0
         nullify(ob%lead(il)%q)
         ! Fill sparse to full mapping matrix.
         do ii = 0, np-1

@@ -339,34 +339,34 @@ contains
     R_TYPE,               intent(in) :: v(n)
     R_TYPE,               intent(out):: w(n)
     
-    integer             :: i, NP, NP_PART
+    integer             :: i, np, np_part
     R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
     
     PUSH_SUB(X(eigen_solver_arpack).av)
 
-    NP = gr%mesh%np
-    NP_PART = gr%mesh%np_part
+    np = gr%mesh%np
+    np_part = gr%mesh%np_part
 
-    ASSERT(n == NP .or. n == NP_PART)
+    ASSERT(n == np .or. n == np_part)
 
-    SAFE_ALLOCATE(psi(NP_PART, hm%d%dim))
-    SAFE_ALLOCATE(hpsi(NP_PART, hm%d%dim))
+    SAFE_ALLOCATE(psi(np_part, hm%d%dim))
+    SAFE_ALLOCATE(hpsi(np_part, hm%d%dim))
 
-!     do i = 1, NP
+!     do i = 1, np
 !       psi(i, 1) = v(i)!/sqrt(gr%mesh%volume_element)
 !     end do
-!     do i = NP+1, NP_PART
+!     do i = np+1, np_part
 !       psi(i, 1) = M_ZERO
 !     end do
     
     psi(1:n,1) = v(1:n)
-    psi(n+1:NP_PART, 1) = M_ZERO
+    psi(n+1:np_part, 1) = M_ZERO
     
     call X(hamiltonian_apply) (hm, gr%der, psi, hpsi, 1, ik)
     
     w(1:n) = arpack%rotation * hpsi(1:n,1) ! XXX only works if complex
     
- !    do i = 1, NP
+ !    do i = 1, np
  !       w(i) = hpsi(i, 1)!*sqrt(gr%mesh%volume_element)
  !     end do
 

@@ -569,7 +569,7 @@ contains
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
     ! Get the number of energy steps.
-    no_e = spectrum%max_energy / spectrum%energy_step
+    no_e = int(spectrum%max_energy / spectrum%energy_step)
     SAFE_ALLOCATE(sigma(0:no_e, 1:3, 1:nspin))
 
 
@@ -836,7 +836,7 @@ contains
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
     ! Get the number of energy steps.
-    no_e = spectrum%max_energy / spectrum%energy_step
+    no_e = int(spectrum%max_energy / spectrum%energy_step)
 
     SAFE_ALLOCATE(chi(0:no_e))
     chi = M_ZERO
@@ -947,7 +947,7 @@ contains
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
-    no_e = spectrum%max_energy / spectrum%energy_step
+    no_e = int(spectrum%max_energy / spectrum%energy_step)
 
     do it = istart, iend
       angular(it, 1) = sum(angular(it, 1:3)*kick%pol(1:3, kick%pol_dir))
@@ -1511,9 +1511,9 @@ contains
     else
 
       SAFE_ALLOCATE(racc(0:time_steps))
-      racc = ddipole
+      racc = real(ddipole, REAL_PRECISION)
 
-      no_e = spectrum%max_energy / spectrum%energy_step
+      no_e = int(spectrum%max_energy / spectrum%energy_step)
       SAFE_ALLOCATE(sps(0:no_e))
       SAFE_ALLOCATE(spc(0:no_e))
       sps = M_ZERO
@@ -1617,9 +1617,9 @@ contains
     else
 
       SAFE_ALLOCATE(racc(0:time_steps))
-      racc = acc
+      racc = real(acc, REAL_PRECISION)
 
-      no_e = spectrum%max_energy / spectrum%energy_step
+      no_e = int(spectrum%max_energy / spectrum%energy_step)
       SAFE_ALLOCATE(sps(0:no_e))
       SAFE_ALLOCATE(spc(0:no_e))
       sps = M_ZERO
@@ -1693,7 +1693,7 @@ contains
       call io_close(iunit)
 
     else
-      no_e = spectrum%max_energy / spectrum%energy_step
+      no_e = int(spectrum%max_energy / spectrum%energy_step)
       SAFE_ALLOCATE(sp(0:no_e))
       sp = M_ZERO
 

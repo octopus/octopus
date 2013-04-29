@@ -113,7 +113,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
         call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, time, terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
-          x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim) )
+          x(j) = x(j) - 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)
         end do
       end do
 
@@ -129,7 +129,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
 
         do idim = 1, st%d%dim
           x(j) = x(j) + 2*st%occ(ist, ik)* &
-            zmf_dotp(gr%mesh, st%zpsi(1:gr%mesh%np, idim, ist, ik), vnl_xzpsi(:, idim) )
+            real(zmf_dotp(gr%mesh, st%zpsi(1:gr%mesh%np, idim, ist, ik), vnl_xzpsi(:, idim)), REAL_PRECISION)
         end do
       end do
       SAFE_DEALLOCATE_A(xzpsi)
