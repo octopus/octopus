@@ -94,7 +94,7 @@ contains
     
     if (this%library == GA .or. this%box_shape == HYPERCUBE) then
       SAFE_ALLOCATE(this%point_to_part(1:this%npoints))
-      this%point_to_part = mesh%vp%part
+      this%point_to_part = mesh%vp%part_vec
     end if
     
     SAFE_ALLOCATE(this%nghost(1:this%npart))

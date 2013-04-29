@@ -935,8 +935,8 @@ contains
         
     do ip = 1, opg%stencil%size
       do jp = 1, opg%mesh%np_global
-        il = opg%mesh%vp%np_local_vec(opg%mesh%vp%part(jp))
-        ig = il+np_ghost_tmp(opg%mesh%vp%part(jp))
+        il = opg%mesh%vp%np_local_vec(opg%mesh%vp%part_vec(jp))
+        ig = il+np_ghost_tmp(opg%mesh%vp%part_vec(jp))
         ! opg%index(ip, jp) is a local point number, i.e. it can be
         ! a real local point (i.e. the local point number
         ! is less or equal than the number of local points of
@@ -944,15 +944,15 @@ contains
         if(opg%index(ip, jp) <= il) then
           ! Write the global point number from the lookup
           ! table in op_(ip, jp).
-          opg%index(ip, jp) = opg%mesh%vp%local(opg%mesh%vp%xlocal_vec(opg%mesh%vp%part(jp)) &
+          opg%index(ip, jp) = opg%mesh%vp%local(opg%mesh%vp%xlocal_vec(opg%mesh%vp%part_vec(jp)) &
             +opg%index(ip, jp)-1)
           ! Or a ghost point:
         else if(opg%index(ip, jp) > il.and.opg%index(ip, jp) <= ig) then
-          opg%index(ip, jp) = opg%mesh%vp%ghost(xghost_tmp(opg%mesh%vp%part(jp)) &
+          opg%index(ip, jp) = opg%mesh%vp%ghost(xghost_tmp(opg%mesh%vp%part_vec(jp)) &
             +opg%index(ip, jp)-1-il)
           ! Or a boundary point:
         else if(opg%index(ip, jp) > ig) then
-          opg%index(ip, jp) = opg%mesh%vp%bndry(xbndry_tmp(opg%mesh%vp%part(jp)) &
+          opg%index(ip, jp) = opg%mesh%vp%bndry(xbndry_tmp(opg%mesh%vp%part_vec(jp)) &
             +opg%index(ip, jp)-1-ig)
         end if
       end do

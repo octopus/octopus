@@ -163,7 +163,7 @@ contains
       if (cube_part(ip) == cube%mpi_grp%rank + 1) then
         ipos = ipos + 1
         global_index(ipos) = ip
-        part_local(ipos) = mesh%vp%part(ip)
+        part_local(ipos) = mesh%vp%part_vec(ip)
       end if
     end do
 

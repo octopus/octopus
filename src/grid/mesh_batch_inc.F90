@@ -616,7 +616,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         !get the global point
         ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
         !the destination
-        ipart = mesh%vp%part(forward_map(ipg))
+        ipart = mesh%vp%part_vec(forward_map(ipg))
         INCR(send_count(ipart), 1)
       end do
 
@@ -624,8 +624,8 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       recv_count = 0
       do ipg = 1, mesh%np_global
-        if(mesh%vp%part(forward_map(ipg)) == mesh%vp%partno) then
-          INCR(recv_count(mesh%vp%part(ipg)), 1)
+        if(mesh%vp%part_vec(forward_map(ipg)) == mesh%vp%partno) then
+          INCR(recv_count(mesh%vp%part_vec(ipg)), 1)
         end if
       end do
 
@@ -647,7 +647,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         !get the global point
         ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
         !the destination
-        ipart = mesh%vp%part(forward_map(ipg))
+        ipart = mesh%vp%part_vec(forward_map(ipg))
         INCR(send_count(ipart), 1)
         pos = send_disp(ipart) + send_count(ipart)
         forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip)
@@ -666,10 +666,10 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       recv_count = 0
       do ipg = 1, mesh%np_global
-        if(mesh%vp%part(forward_map(ipg)) == mesh%vp%partno) then
+        if(mesh%vp%part_vec(forward_map(ipg)) == mesh%vp%partno) then
           ip = vec_global2local(mesh%vp, forward_map(ipg), mesh%vp%partno)
           ASSERT(ip /= 0)
-          ipart = mesh%vp%part(ipg)
+          ipart = mesh%vp%part_vec(ipg)
           INCR(recv_count(ipart), 1)
           pos = recv_disp(ipart) + recv_count(ipart)
           forall(ist = 1:nstl) aa%states_linear(ist)%X(psi)(ip) = recv_buffer(ist, pos)
@@ -685,7 +685,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         !get the global point
         ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
         !the source
-        ipart = mesh%vp%part(backward_map(ipg))
+        ipart = mesh%vp%part_vec(backward_map(ipg))
         INCR(recv_count(ipart), 1)
       end do
 
@@ -693,8 +693,8 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       send_count = 0
       do ipg = 1, mesh%np_global
-        if(mesh%vp%part(backward_map(ipg)) == mesh%vp%partno) then
-          INCR(send_count(mesh%vp%part(ipg)), 1)
+        if(mesh%vp%part_vec(backward_map(ipg)) == mesh%vp%partno) then
+          INCR(send_count(mesh%vp%part_vec(ipg)), 1)
         end if
       end do
 
@@ -713,9 +713,9 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       !pack for sending
       send_count = 0
       do ipg = 1, mesh%np_global
-        if(mesh%vp%part(backward_map(ipg)) == mesh%vp%partno) then
+        if(mesh%vp%part_vec(backward_map(ipg)) == mesh%vp%partno) then
           ip = vec_global2local(mesh%vp, backward_map(ipg), mesh%vp%partno)
-          ipart = mesh%vp%part(ipg)
+          ipart = mesh%vp%part_vec(ipg)
           INCR(send_count(ipart), 1)
           pos = send_disp(ipart) + send_count(ipart)
           forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip) 
@@ -738,7 +738,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         !get the global point
         ipg = mesh%vp%local(mesh%vp%xlocal + ip - 1)
         !the destination
-        ipart = mesh%vp%part(backward_map(ipg))
+        ipart = mesh%vp%part_vec(backward_map(ipg))
         INCR(recv_count(ipart), 1)
         pos = recv_disp(ipart) + recv_count(ipart)
         forall(ist = 1:nstl) aa%states_linear(ist)%X(psi)(ip) = recv_buffer(ist, pos)

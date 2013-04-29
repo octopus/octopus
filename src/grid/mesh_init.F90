@@ -645,7 +645,7 @@ contains
 
     mesh%mpi_grp = mpi_grp
 
-    SAFE_ALLOCATE(mesh%vp%part(1:mesh%np_part_global))
+    SAFE_ALLOCATE(mesh%vp%part_vec(1:mesh%np_part_global))
 
     !%Variable MeshPartitionFromScratch
     !%Type logical
@@ -658,7 +658,7 @@ contains
     call parse_logical(datasets_check('MeshPartitionFromScratch'), .false., from_scratch)
 
     ierr = -1
-    if(.not. from_scratch) call mesh_partition_read(mesh, mesh%vp%part, ierr)
+    if(.not. from_scratch) call mesh_partition_read(mesh, mesh%vp%part_vec, ierr)
     
     if(ierr /= 0) then
 
@@ -684,7 +684,7 @@ contains
       end if
       
       if(.not. present(parent)) then
-        call mesh_partition(mesh, stencil, mesh%vp%part)
+        call mesh_partition(mesh, stencil, mesh%vp%part_vec)
       else
         ! if there is a parent grid, use its partition
         do ip = 1, mesh%np_global
@@ -692,19 +692,19 @@ contains
           iy = 2*mesh%idx%lxyz(ip, 2)
           iz = 2*mesh%idx%lxyz(ip, 3)
           ii = parent%idx%lxyz_inv(ix, iy, iz)
-          mesh%vp%part(ip) = parent%vp%part(ii)
+          mesh%vp%part_vec(ip) = parent%vp%part_vec(ii)
         end do
       end if
       
-      call mesh_partition_boundaries(mesh, stencil, mesh%vp%part)
+      call mesh_partition_boundaries(mesh, stencil, mesh%vp%part_vec)
       
-      call mesh_partition_write(mesh, mesh%vp%part)
+      call mesh_partition_write(mesh, mesh%vp%part_vec)
 
     end if
 
     call partition_init(partition, mesh)
     if (partition%library == GA .or. partition%box_shape == HYPERCUBE)  then
-      partition%point_to_part = mesh%vp%part
+      partition%point_to_part = mesh%vp%part_vec
     end if
     
     !%Variable PartitionPrint
@@ -719,7 +719,7 @@ contains
     call parse_logical(datasets_check('PartitionPrint'), .true., partition_print)
     
     if (partition_print) then
-      call partition_build(partition, mesh, stencil, mesh%vp%part)
+      call partition_build(partition, mesh, stencil, mesh%vp%part_vec)
       call partition_write_info(partition)      
       call partition_end(partition)
       call mesh_partition_messages_debug(mesh)
@@ -751,12 +751,12 @@ contains
       nb = .false.
 
       do ip = 1, mesh%np_global
-        ipart = mesh%vp%part(ip)
+        ipart = mesh%vp%part_vec(ip)
         call index_to_coords(mesh%idx, mesh%sb%dim, ip, idx)
         do jj = 1, stencil%size
           jx(1:MAX_DIM) = idx(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
           if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
-            jpart = mesh%vp%part(index_from_coords(mesh%idx, mesh%sb%dim, jx))
+            jpart = mesh%vp%part_vec(index_from_coords(mesh%idx, mesh%sb%dim, jx))
             if(ipart /= jpart ) nb(ipart, jpart) = .true.
           end if
         end do
