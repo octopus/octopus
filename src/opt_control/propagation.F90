@@ -77,7 +77,7 @@ module opt_control_propagation_m
   end type oct_prop_t
 
 
-  ! Module variables 
+  !> Module variables 
   integer :: niter_
   integer :: number_checkpoints_
   FLOAT   :: eta_
@@ -85,9 +85,7 @@ module opt_control_propagation_m
   logical :: zbr98_
   logical :: gradients_
 
-  contains
-
-
+contains
 
   !> This subroutine must be called before any QOCT propagations are
   !! done. It simply stores in the module some data that is needed for
@@ -118,11 +116,11 @@ module opt_control_propagation_m
   ! ---------------------------------------------------------
 
 
-  ! ---------------------------------------------------------
-  ! Performs a full propagation of state psi, with the laser
-  ! field specified in par. If write_iter is present and is
-  ! set to .true., writes down through the td_write module.
-  ! ---------------------------------------------------------
+  !> ---------------------------------------------------------
+  !! Performs a full propagation of state psi, with the laser
+  !! field specified in par. If write_iter is present and is
+  !! set to .true., writes down through the td_write module.
+  !! ---------------------------------------------------------
   subroutine propagate_forward(sys, hm, td, par, target, psi, prop, write_iter)
     type(system_t),             intent(inout)  :: sys
     type(hamiltonian_t),        intent(inout)  :: hm
@@ -195,7 +193,7 @@ module opt_control_propagation_m
 
     call target_tdcalc(target, hm, gr, sys%geo, psi, 0, td%max_iter)
 
-    if(present(prop)) call oct_prop_output(prop, 0, psi, gr, sys%geo)
+    if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
 
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
@@ -204,7 +202,7 @@ module opt_control_propagation_m
       ! time-iterate wavefunctions
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, td%max_iter, istep)
 
-      if(present(prop)) call oct_prop_output(prop, istep, psi, gr, sys%geo)
+      if(present(prop)) call oct_prop_output(prop, istep, psi, gr)
 
       ! update
       call density_calc(psi, gr, psi%rho)
@@ -260,10 +258,10 @@ module opt_control_propagation_m
   ! ---------------------------------------------------------
 
 
-  ! ---------------------------------------------------------
-  ! Performs a full backward propagation of state psi, with the
-  ! external fields specified in Hamiltonian h.
-  ! ---------------------------------------------------------
+  !> ---------------------------------------------------------
+  !! Performs a full backward propagation of state psi, with the
+  !! external fields specified in Hamiltonian h.
+  !! ---------------------------------------------------------
   subroutine propagate_backward(sys, hm, td, psi, prop)
     type(system_t),          intent(inout) :: sys
     type(hamiltonian_t),     intent(inout) :: hm
@@ -288,13 +286,13 @@ module opt_control_propagation_m
     call v_ks_calc(sys%ks, hm, psi)
     call propagator_run_zero_iter(hm, gr, td%tr)
 
-    call oct_prop_output(prop, td%max_iter, psi, gr, sys%geo)
+    call oct_prop_output(prop, td%max_iter, psi, gr)
     
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     do istep = td%max_iter, 1, -1
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, (istep - 1)*td%dt, -td%dt, td%mu, td%max_iter, istep)
-      call oct_prop_output(prop, istep - 1, psi, gr, sys%geo)
+      call oct_prop_output(prop, istep - 1, psi, gr)
       call density_calc(psi, gr, psi%rho)
       call v_ks_calc(sys%ks, hm, psi)
       if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter - istep + 1, td%max_iter)
@@ -305,19 +303,19 @@ module opt_control_propagation_m
   ! ---------------------------------------------------------
 
 
-  ! ---------------------------------------------------------
-  ! Performs a forward propagation on the state psi and on the
-  ! Lagrange-multiplier state chi. It also updates the control
-  ! function par,  according to the following scheme:
-  ! 
-  ! |chi> --> U[par_chi](T, 0)|chi>
-  ! par = par[|psi>, |chi>]
-  ! |psi> --> U[par](T, 0)|psi>
-  !
-  ! Note that the control functions "par" are updated on the
-  ! fly, so that the propagation of psi is performed with the
-  ! "new" control functions.
-  ! --------------------------------------------------------
+  !> ---------------------------------------------------------
+  !! Performs a forward propagation on the state psi and on the
+  !! Lagrange-multiplier state chi. It also updates the control
+  !! function par,  according to the following scheme:
+  !! 
+  !! |chi> --> U[par_chi](T, 0)|chi>
+  !! par = par[|psi>, |chi>]
+  !! |psi> --> U[par](T, 0)|psi>
+  !!
+  !! Note that the control functions "par" are updated on the
+  !! fly, so that the propagation of psi is performed with the
+  !! "new" control functions.
+  !! --------------------------------------------------------
   subroutine fwd_step(sys, td, hm, target, par, par_chi, psi, prop_chi, prop_psi)
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
@@ -369,7 +367,7 @@ module opt_control_propagation_m
       call propagator_run_zero_iter(hm, gr, tr_psi2)
     end if
 
-    call oct_prop_output(prop_psi, 0, psi, gr, sys%geo)
+    call oct_prop_output(prop_psi, 0, psi, gr)
     call states_copy(chi, psi)
     call oct_prop_read_state(prop_chi, chi, gr, 0)
 
@@ -386,7 +384,7 @@ module opt_control_propagation_m
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i)
       call target_tdcalc(target, hm, gr, sys%geo, psi, i, td%max_iter) 
-      call oct_prop_output(prop_psi, i, psi, gr, sys%geo)
+      call oct_prop_output(prop_psi, i, psi, gr)
       call oct_prop_check(prop_chi, chi, gr, i)
     end do
     call update_field(td%max_iter+1, par, gr, hm, psi, chi, par_chi, dir = 'f')
@@ -408,15 +406,15 @@ module opt_control_propagation_m
   ! ---------------------------------------------------------
 
 
-  ! --------------------------------------------------------
-  ! Performs a backward propagation on the state psi and on the
-  ! Lagrange-multiplier state chi, according to the following
-  ! scheme:
-  !
-  ! |psi> --> U[par](0, T)|psi>
-  ! par_chi = par_chi[|psi>, |chi>]
-  ! |chi> --> U[par_chi](0, T)|chi>
-  ! --------------------------------------------------------
+  !> --------------------------------------------------------
+  !! Performs a backward propagation on the state psi and on the
+  !! Lagrange-multiplier state chi, according to the following
+  !! scheme:
+  !!
+  !! |psi> --> U[par](0, T)|psi>
+  !! par_chi = par_chi[|psi>, |chi>]
+  !! |chi> --> U[par_chi](0, T)|chi>
+  !! --------------------------------------------------------
   subroutine bwd_step(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi) 
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
@@ -456,14 +454,14 @@ module opt_control_propagation_m
     call propagator_run_zero_iter(hm, gr, tr_chi)
 
     td%dt = -td%dt
-    call oct_prop_output(prop_chi, td%max_iter, chi, gr, sys%geo)
+    call oct_prop_output(prop_chi, td%max_iter, chi, gr)
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par_chi, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
-      call oct_prop_output(prop_chi, i-1, chi, gr, sys%geo)
+      call oct_prop_output(prop_chi, i-1, chi, gr)
       call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
@@ -482,18 +480,18 @@ module opt_control_propagation_m
   ! ---------------------------------------------------------
 
 
-  ! --------------------------------------------------------
-  ! Performs a backward propagation on the state psi and on the
-  ! Lagrange-multiplier state chi, according to the following
-  ! scheme:
-  !
-  ! |psi> --> U[par](0, T)|psi>
-  ! |chi> --> U[par](0, T)|chi>
-  ! 
-  ! It also calculates during the propagation, a new "output" field:
-  !
-  ! par_chi = par_chi[|psi>, |chi>]
-  ! --------------------------------------------------------
+  !> --------------------------------------------------------
+  !! Performs a backward propagation on the state psi and on the
+  !! Lagrange-multiplier state chi, according to the following
+  !! scheme:
+  !!
+  !! |psi> --> U[par](0, T)|psi>
+  !! |chi> --> U[par](0, T)|chi>
+  !! 
+  !! It also calculates during the propagation, a new "output" field:
+  !!
+  !! par_chi = par_chi[|psi>, |chi>]
+  !! --------------------------------------------------------
   subroutine bwd_step_2(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi) 
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
@@ -536,7 +534,7 @@ module opt_control_propagation_m
     call propagator_run_zero_iter(hm, gr, td%tr)
     call propagator_run_zero_iter(hm, gr, tr_chi)
     td%dt = -td%dt
-    call oct_prop_output(prop_chi, td%max_iter, chi, gr, sys%geo)
+    call oct_prop_output(prop_chi, td%max_iter, chi, gr)
 
     call states_copy(st_ref, psi)
 
@@ -556,7 +554,7 @@ module opt_control_propagation_m
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, st_ref)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
       hm%vhxc(:, :) = vhxc(:, :)
-      call oct_prop_output(prop_chi, i-1, chi, gr, sys%geo)
+      call oct_prop_output(prop_chi, i-1, chi, gr)
     end do
 
     call states_end(st_ref)
@@ -892,12 +890,11 @@ module opt_control_propagation_m
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_output(prop, iter, psi, gr, geo)
+  subroutine oct_prop_output(prop, iter, psi, gr)
     type(oct_prop_t), intent(in)    :: prop
     integer,          intent(in)    :: iter
     type(states_t),   intent(inout) :: psi
     type(grid_t),     intent(inout) :: gr
-    type(geometry_t), intent(in)    :: geo
 
     integer :: j, ierr
     character(len=100) :: filename

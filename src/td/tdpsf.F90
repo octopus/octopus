@@ -86,7 +86,7 @@ contains
     dim = mesh%sb%dim 
 
 
-    lmax = M_ZERO
+    lmax = 0
     dlmax= M_ZERO
     kmax = M_ZERO
     do i = 1, MAX_DIM

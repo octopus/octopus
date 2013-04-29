@@ -156,7 +156,8 @@ subroutine X(cpmd_propagate)(this, gr, hm, st, iter, dt)
 contains
 
   subroutine calc_xx()
-    integer :: ist1, ist2, it
+
+    integer :: ist1, it
     FLOAT   :: res
     R_TYPE, allocatable :: aa(:, :), bb(:, :), xb(:, :), xxi(:, :)
 
