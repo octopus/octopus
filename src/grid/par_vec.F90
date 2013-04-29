@@ -551,10 +551,12 @@ contains
         irr(vp%part_vec(ip)) = irr(vp%part_vec(ip)) + 1 ! increment the counter
       end do
 
+      POP_SUB(vec_init.init_local)
     end subroutine init_local
 
     subroutine init_MPI_Alltoall
       integer :: ipg
+      PUSH_SUB(vec_init.init_MPI_Alltoall)
       
       SAFE_ALLOCATE(vp%recv_count(1:npart))
       vp%recv_count = 0
@@ -594,7 +596,7 @@ contains
         vp%part_local(ip) = ipart
       end do
 
-      POP_SUB(vec_init.init_local)
+      POP_SUB(vec_init.init_MPI_Alltoall)
     end subroutine init_MPI_Alltoall
     
     subroutine init_send_points
