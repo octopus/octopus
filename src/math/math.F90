@@ -1045,7 +1045,7 @@ contains
       POP_SUB(is_prime); return 
     endif
 
-    root = sqrt(real(n))
+    root = nint(sqrt(real(n)))
     do i = 2, root
       if (mod(n,i) == 0) then
         is_prime = .false.

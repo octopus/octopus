@@ -20,10 +20,10 @@
 ! ---------------------------------------------------------
 subroutine X(root_solver_run)(rs, func, root, success, startval, coeff)
   type(root_solver_t), intent(inout) :: rs
-  R_TYPE,                intent(out)  :: root(:)        ! roots we are searching
+  R_TYPE,                intent(out)  :: root(:)        !< roots we are searching
   logical,               intent(out)  :: success
-  R_TYPE, optional,      intent(in)   :: startval(:)    ! start value for the search
-  R_TYPE, optional,      intent(in)   :: coeff(:)       ! polynomial coefficients
+  R_TYPE, optional,      intent(in)   :: startval(:)    !< start value for the search
+  R_TYPE, optional,      intent(in)   :: coeff(:)       !< polynomial coefficients
   interface
     subroutine func(z, f, jf)
       R_TYPE, intent(in)  :: z(:)
@@ -140,9 +140,9 @@ end subroutine X(root_solver_end)
 ! ---------------------------------------------------------
 subroutine X(root_laguerre)(rs, root, startval, coeff)
   type(root_solver_t), intent(inout) :: rs
-  R_TYPE,                 intent(out)   :: root        ! root we are searching
-  R_TYPE,                 intent(in)    :: startval    ! start value for the search
-  R_TYPE,                 intent(in)    :: coeff(:)    ! polynomial coefficients
+  R_TYPE,                 intent(out)   :: root        !< root we are searching
+  R_TYPE,                 intent(in)    :: startval    !< start value for the search
+  R_TYPE,                 intent(in)    :: coeff(:)    !< polynomial coefficients
 
   R_TYPE,  allocatable  :: b(:), c(:), d(:)
   R_TYPE  :: z, zold, s1, s2, denom1, denom2, lroot
