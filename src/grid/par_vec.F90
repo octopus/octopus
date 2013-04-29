@@ -131,8 +131,9 @@ module par_vec_m
     integer                 :: root                 !< The master process.
     integer                 :: comm                 !< MPI communicator to use.
     integer                 :: np_global            !< Number of points in mesh.
-    integer, pointer        :: part_vec(:)          !< Global point -> partition.
-    integer, pointer        :: part_local(:)        !< Local point -> partition
+    integer, pointer        :: part_vec(:)          !< Global point        -> partition.
+    integer, pointer        :: part_local(:)        !< Local point         -> partition
+    integer, pointer        :: part_local_rev(:)    !< Local point's value -> partition
 
     integer, pointer        :: np_local_vec(:)      !< How many points has partition r?
                                                     !! Global vector; npart elements.
@@ -575,12 +576,21 @@ contains
         vp%recv_disp(ipart) = vp%recv_disp(ipart - 1) + vp%recv_count(ipart - 1)
       end do
 
-      SAFE_ALLOCATE(vp%part_local(1:vp%np_local))
+      SAFE_ALLOCATE(vp%part_local_rev(1:vp%np_local))
       do ip = 1, vp%np_local
         !get the global point
         ipg = vp%local(vp%xlocal + ip - 1)
         !the destination
         ipart = vp%part_vec(vp%local_vec(ipg))
+        vp%part_local_rev(ip) = ipart
+      end do
+
+      SAFE_ALLOCATE(vp%part_local(1:vp%np_local))
+      do ip = 1, vp%np_local
+        !get the global point
+        ipg = vp%xlocal + ip - 1
+        !the destination
+        ipart = vp%part_vec(ipg)
         vp%part_local(ip) = ipart
       end do
 
@@ -664,6 +674,7 @@ contains
     SAFE_DEALLOCATE_P(vp%recv_disp)
     SAFE_DEALLOCATE_P(vp%part_vec)
     SAFE_DEALLOCATE_P(vp%part_local)
+    SAFE_DEALLOCATE_P(vp%part_local_rev)
     SAFE_DEALLOCATE_P(vp%np_local_vec)
     SAFE_DEALLOCATE_P(vp%xlocal_vec)
     SAFE_DEALLOCATE_P(vp%local)

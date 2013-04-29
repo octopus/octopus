@@ -697,8 +697,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       !pack for sending
       send_count = 0  
       do ip = 1, mesh%np
-        ipg = mesh%vp%xlocal + ip - 1
-        ipart = mesh%vp%part_vec(ipg)
+        ipart = mesh%vp%part_local(ip)
         INCR(send_count(ipart), 1)
         pos = mesh%vp%send_disp(ipart) + send_count(ipart)
         forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip) 
@@ -718,7 +717,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       recv_count = 0
       do ip = 1, mesh%np
         ! get the destination
-        ipart = mesh%vp%part_local(ip)
+        ipart = mesh%vp%part_local_rev(ip)
         INCR(recv_count(ipart), 1)
         pos = recv_disp(ipart) + recv_count(ipart)
         forall(ist = 1:nstl) aa%states_linear(ist)%X(psi)(ip) = recv_buffer(ist, pos)
