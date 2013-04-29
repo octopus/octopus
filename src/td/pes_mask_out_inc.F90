@@ -1762,6 +1762,7 @@ subroutine PES_mask_write_orbital(mask, filename, wf)
 
   ll(1:3) = mask%fs_n_global(1:3)
   np = ll(1)*ll(2)*ll(3) 
+  ierr = 0 
   
   if (mask%cube%parallel_in_domains) then
     SAFE_ALLOCATE(gwf(1:ll(1),1:ll(2),1:ll(3))) 
