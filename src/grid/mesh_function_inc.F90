@@ -647,15 +647,16 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
 
   ff2(1:mesh%np) = ff(1:mesh%np)
   multipole(1) = X(mf_integrate)(mesh, ff2)
-
-  if(lmax > 0) then
-    do idim = 1, 3
-      ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
-      multipole(idim+1) = X(mf_integrate)(mesh, ff2)
-    end do
-  end if
-
+  
   if(.not. cmplxscl) then
+    
+    if(lmax > 0) then
+      do idim = 1, 3
+        ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
+        multipole(idim+1) = X(mf_integrate)(mesh, ff2)
+      end do
+    end if
+
     if(lmax>1) then
       add_lm = 5
       do ll = 2, lmax
@@ -670,8 +671,17 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
         end do
       end do
     end if
+
   else
-#ifdef R_TCOMPLEX    
+
+    if(lmax > 0) then
+      do idim = 1, 3
+        ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
+        ff2(1:mesh%np) = ff2(1:mesh%np)* exp(M_zI * cmplxscl_th)
+        multipole(idim+1) = X(mf_integrate)(mesh, ff2)
+      end do
+    end if
+
     if(lmax>1) then
       add_lm = 5
       do ll = 2, lmax
@@ -686,7 +696,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th)
         end do
       end do
     end if
-#endif    
+
   end if
 
   SAFE_DEALLOCATE_A(ff2)
