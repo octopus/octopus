@@ -109,7 +109,6 @@ module propagator_m
   type(grid_t),            pointer, private :: grid_p
   type(hamiltonian_t),     pointer, private :: hm_p
   type(propagator_t),      pointer, private :: tr_p
-  CMPLX, allocatable,      private :: zpsi_tmp(:,:,:,:)
   integer,                 private :: ik_op, ist_op, idim_op, dim_op, nst_op
   type(states_t),          private :: st_op
   FLOAT,                   private :: t_op, dt_op
@@ -312,8 +311,7 @@ contains
     case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       SAFE_ALLOCATE(tdsk)
-      call zsparskit_solver_init(gr%mesh%np, tdsk)
-      SAFE_ALLOCATE(zpsi_tmp(1:gr%mesh%np_part, 1:st%d%dim, 1:st%nst, st%d%kpt%start:st%d%kpt%end))
+      call zsparskit_solver_init(st%d%dim*gr%mesh%np, tdsk)
 #else
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "crank_nicolson_sparskit" propagator is selected.'
@@ -428,7 +426,6 @@ contains
     case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       call zsparskit_solver_end()
-      SAFE_DEALLOCATE_A(zpsi_tmp)
 #endif
     case(PROP_CRANK_NICOLSON_SRC_MEM)
       call ob_propagator_end(tr%ob)
@@ -1006,105 +1003,129 @@ contains
 
 
     ! ---------------------------------------------------------
-    !> Crank-Nicolson propagator, linear solver from SPARSKIT.
+    !> Crank-Nicolson propagator, SPARSKIT.
     subroutine td_crank_nicolson_sparskit()
 
 #ifdef HAVE_SPARSKIT
-      FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
-      CMPLX, allocatable :: zpsi_rhs_pred(:,:,:,:), zpsi_rhs_corr(:,:,:,:)
-      integer :: ik, ist, idim, np_part
+      CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:), inhpsi(:)
+      integer :: ik, ist, idim, ip, isize, np_part, np
 
       PUSH_SUB(propagator_dt.td_crank_nicolson_sparskit)
 
       np_part = gr%mesh%np_part
-      SAFE_ALLOCATE(zpsi_rhs_corr(1:np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-      zpsi_rhs_corr = st%zpsi ! store zpsi for corrector step
+      np = gr%mesh%np
+      isize = np_part*st%lnst*st%d%kpt%nlocal*st%d%dim
 
       ! define pointer and variables for usage in td_zop, td_zopt routines
       grid_p    => gr
       hm_p      => hm
       tr_p      => tr
       dt_op = dt
-      t_op  = time
+      t_op  = time - dt/M_TWO
+      dim_op = st%d%dim
 
       ! we (ab)use exponential_apply to compute (1-i\delta t/2 H_n)\psi^n
       ! exponential order needs to be only 1
       tr%te%exp_method = EXP_TAYLOR
       tr%te%exp_order  = 1
 
-      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-        np_part = gr%mesh%np_part
-        SAFE_ALLOCATE(zpsi_rhs_pred(1:np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-        zpsi_rhs_pred = st%zpsi ! store zpsi for predictor step
+      SAFE_ALLOCATE(zpsi_rhs(1:np_part, 1:st%d%dim))
+      SAFE_ALLOCATE(zpsi(1:np*st%d%dim))
+      SAFE_ALLOCATE(rhs(1:np*st%d%dim))
         
-        SAFE_ALLOCATE(vhxc_t1(1:gr%mesh%np, 1:st%d%nspin))
-        SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
-        vhxc_t1 = hm%vhxc
-
-        ! get rhs of CN linear system (rhs1 = (1-i\delta t/2 H_n)\psi^n)
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do ist = st%st_start, st%st_end
-            call exponential_apply(tr%te, gr%der, hm, zpsi_rhs_pred(:, :, ist, ik), ist, ik, dt/M_TWO, time - dt)
-            if(hamiltonian_inh_term(hm)) then
-              zpsi_rhs_pred(:, :, ist, ik) = zpsi_rhs_pred(:, :, ist, ik) + dt * hm%inh_st%zpsi(:, :, ist, ik)
-            end if
-          end do
-        end do
-
-        ! predictor step: 
-        ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
-        do idim = 1, st%d%dim
-          do ik = st%d%kpt%start, st%d%kpt%end
-            do ist = st%st_start, st%st_end
-              idim_op = idim
-              ist_op = ist
-              ik_op = ik
-              call zsparskit_solver_run(tdsk, td_zop, td_zopt, &
-                st%zpsi(1:gr%mesh%np, idim, ist, ik), zpsi_rhs_pred(1:gr%mesh%np, idim, ist, ik))
-            end do
-          end do
-        end do
-
-        call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo)
-
-        vhxc_t2 = hm%vhxc
-        ! compute potential at n+1/2 as average
-        hm%vhxc = (vhxc_t1 + vhxc_t2)/M_TWO
-        call hamiltonian_update(hm, gr%mesh)
-      end if
-
-      ! get rhs of CN linear system (rhs2 = (1-i\delta t H_{n+1/2})\psi^n)
+      call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
+      if(hm%cmplxscl%space) & 
+        call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time - dt/M_TWO, hm%Imvhxc(:, :))
+    
+      call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
+      
+      
+      ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
-          call exponential_apply(tr%te, gr%der, hm, zpsi_rhs_corr(:, :, ist, ik), ist, ik, dt/M_TWO, time - dt)
+
+          call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs)
+          call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, dt/M_TWO, time - dt/M_TWO)
+
           if(hamiltonian_inh_term(hm)) then
-            zpsi_rhs_corr(:, :, ist, ik) = zpsi_rhs_corr(:, :, ist, ik) + dt * hm%inh_st%zpsi(:, :, ist, ik)
+            SAFE_ALLOCATE(inhpsi(1:np))
+            do idim = 1, st%d%dim
+              call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
+              forall(ip = 1:np) zpsi_rhs(ip, idim) = zpsi_rhs(ip, idim) + dt*inhpsi(ip)
+            end do
+            SAFE_DEALLOCATE_A(inhpsi)
           end if
+
+          ! put the values in a continuous array
+          do idim = 1, st%d%dim
+            call states_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np))
+            rhs((idim - 1)*np + 1:idim*np) = zpsi_rhs(1:np, idim)
+          end do
+
+          ist_op = ist
+          ik_op = ik
+          call zsparskit_solver_run(tdsk, td_zop, td_zopt, zpsi, rhs)
+
+          do idim = 1, st%d%dim
+            call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np))
+          end do
+         
         end do
       end do
 
-      ! corrector step: 
-      ! solve (1+i\delta t/2 H_{n+1/2})\psi_{n+1} = (1-i\delta t/2 H_{n+1/2})\psi^n
-      do idim = 1, st%d%dim
+      if(hm%cmplxscl%space) then !Left states
+        
+        dt_op = - dt !propagate backwards
+        t_op  = time + dt/M_TWO
+        
+        
+        call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time + dt/M_TWO, hm%vhxc(:, :))
+        if(hm%cmplxscl%space) & 
+          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
+    
+        call hamiltonian_update(hm, gr%mesh, time = time + dt/M_TWO)
+      
+      
+        ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
         do ik = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
-            idim_op = idim
+
+            call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs,left = .true. )
+            call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, -dt/M_TWO, time + dt/M_TWO)
+
+            if(hamiltonian_inh_term(hm)) then
+              SAFE_ALLOCATE(inhpsi(1:np))
+              do idim = 1, st%d%dim
+                call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi, left = .true.)
+                forall(ip = 1:np) zpsi_rhs(ip, idim) = zpsi_rhs(ip, idim) - dt*inhpsi(ip)
+              end do
+              SAFE_DEALLOCATE_A(inhpsi)
+            end if
+
+            ! put the values is a continuous array
+            do idim = 1, st%d%dim
+              call states_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np), left = .true.)
+              rhs((idim - 1)*np + 1:idim*np) = zpsi_rhs(1:np, idim)
+            end do
+
             ist_op = ist
             ik_op = ik
-            call zsparskit_solver_run(tdsk, td_zop, td_zopt, &
-              st%zpsi(1:gr%mesh%np, idim, ist, ik), zpsi_rhs_corr(1:gr%mesh%np, idim, ist, ik))
+            call zsparskit_solver_run(tdsk, td_zop, td_zopt, zpsi, rhs)
+
+            do idim = 1, st%d%dim
+              call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np), left = .true.)
+            end do          
+
           end do
         end do
-      end do
-      
-      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-        SAFE_DEALLOCATE_A(vhxc_t1)
-        SAFE_DEALLOCATE_A(vhxc_t2)
-        SAFE_DEALLOCATE_A(zpsi_rhs_pred)
+        
+        
       end if
-      SAFE_DEALLOCATE_A(zpsi_rhs_corr)
 
+
+      SAFE_DEALLOCATE_A(zpsi_rhs)
+      SAFE_DEALLOCATE_A(zpsi)
+      SAFE_DEALLOCATE_A(rhs)
       POP_SUB(propagator_dt.td_crank_nicolson_sparskit)
 #endif
 
@@ -1387,17 +1408,27 @@ contains
     FLOAT, intent(in)  :: xim(:)
     FLOAT, intent(out) :: yre(:)
     FLOAT, intent(out) :: yim(:)
+    integer :: idim
+    CMPLX, allocatable :: zpsi(:, :)
 
     PUSH_SUB(td_zop)
 #ifdef HAVE_SPARSKIT    
-    zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op) = &
-      xre(1:grid_p%mesh%np) + M_zI * xim(1:grid_p%mesh%np)
+    SAFE_ALLOCATE(zpsi(1:grid_p%mesh%np_part, 1:dim_op))
+    zpsi = M_z0
+    forall(idim = 1:dim_op)
+      zpsi(1:grid_p%mesh%np, idim) = xre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) + &
+                                     M_zI * xim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
+    end forall
 
-    ! propagate backwards
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op / M_TWO, t_op)
+    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO, t_op)
 
-    yre(1:grid_p%mesh%np) =  real(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
-    yim(1:grid_p%mesh%np) = aimag(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
+    forall(idim = 1:dim_op)
+      yre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = real(zpsi(1:grid_p%mesh%np, idim))
+      yim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = aimag(zpsi(1:grid_p%mesh%np, idim))
+    end forall
+
+    SAFE_DEALLOCATE_A(zpsi)
+
 #endif    
     POP_SUB(td_zop)
   end subroutine td_zop
@@ -1411,20 +1442,30 @@ contains
     FLOAT, intent(in)  :: xim(:)
     FLOAT, intent(out) :: yre(:)
     FLOAT, intent(out) :: yim(:)
-    
+    integer :: idim
+    CMPLX, allocatable :: zpsi(:, :)
+
     PUSH_SUB(td_zopt)
 #ifdef HAVE_SPARSKIT        
     ! To act with the transpose of H on the wfn we apply H to the conjugate of psi
     ! and conjugate the resulting hpsi (note that H is not a purely real operator
     ! for scattering wavefunctions anymore).
-    zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op) = &
-      xre(1:grid_p%mesh%np) - M_zI * xim(1:grid_p%mesh%np)
-    
-    ! propagate backwards
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi_tmp(:, :, ist_op, ik_op), ist_op, ik_op, -dt_op/M_TWO, t_op)
+    SAFE_ALLOCATE(zpsi(1:grid_p%mesh%np_part, 1:dim_op))
+    zpsi = M_z0
+    forall(idim = 1:dim_op)
+      zpsi(1:grid_p%mesh%np, idim) = xre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) - &
+                                     M_zI * xim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
+    end forall
 
-    yre(1:grid_p%mesh%np) =    real(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
-    yim(1:grid_p%mesh%np) = - aimag(zpsi_tmp(1:grid_p%mesh%np, idim_op, ist_op, ik_op))
+    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO, t_op)
+
+    forall(idim = 1:dim_op)
+      yre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) =    real(zpsi(1:grid_p%mesh%np, idim))
+      yim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = - aimag(zpsi(1:grid_p%mesh%np, idim))
+    end forall
+
+    SAFE_DEALLOCATE_A(zpsi)
+
 #endif        
     POP_SUB(td_zopt)
   end subroutine td_zopt
