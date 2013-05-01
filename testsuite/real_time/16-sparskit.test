@@ -5,11 +5,8 @@ Test       : Crank-Nicolson (SPARSKIT)
 Options    : sparskit
 Programs   : octopus_mpi; octopus
 TestGroups : short-run, real_time
-Enabled    : No
+Enabled    : Yes
 
-#This test checks the time propagation
-
-# ground state
 Processors : 1
 Input      : 16-sparskit.01-gs.inp
 match ; Initial energy ; GREP(static/info, 'Total       =', 20) ; -10.60764719
@@ -22,8 +19,8 @@ match ; Energy [step 10] ; LINE(td.general/energy, -11, 30) ; -1.043031059756e+0
 match ; Energy [step 15] ; LINE(td.general/energy,  -6, 30) ; -1.043029718804e+01
 match ; Energy [step 20] ; LINE(td.general/energy,  -1, 30) ; -1.043029007270e+01
 
-match ; Dipole [step  1] ; LINE(td.general/multipoles, -21, 50) ; -1.214172412514e-13
-match ; Dipole [step  5] ; LINE(td.general/multipoles, -16, 50) ; -7.297463057551e-01 
-match ; Dipole [step 10] ; LINE(td.general/multipoles, -11, 50) ; -1.339788328704e+00
-match ; Dipole [step 15] ; LINE(td.general/multipoles,  -6, 50) ; -1.834500157145e+00
-match ; Dipole [step 20] ; LINE(td.general/multipoles,  -1, 50) ; -2.215869668213e+00
+match ; Dipole [step  1] ; LINE(td.general/multipoles, -21, 50) ; -5.990095086210e-13
+match ; Dipole [step  5] ; LINE(td.general/multipoles, -16, 50) ; -7.295803713146e-01
+match ; Dipole [step 10] ; LINE(td.general/multipoles, -11, 50) ; -1.339401396602e+00
+match ; Dipole [step 15] ; LINE(td.general/multipoles,  -6, 50) ; -1.833988730412e+00
+match ; Dipole [step 20] ; LINE(td.general/multipoles,  -1, 50) ; -2.215411690464e+00
