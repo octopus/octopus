@@ -198,11 +198,12 @@ subroutine X(sparskit_solver_init)(n, sk)
   sk%fpar(2) = sk%abs_tolerance
 
   ! allocate and initialize work arrays
-  SAFE_ALLOCATE(sk_b(1:sk%size))
-  SAFE_ALLOCATE(sk_y(1:sk%size))
-  SAFE_ALLOCATE(sk_work(1:workspace_size))
-  sk_work = M_ZERO
-  sk_y    = M_ZERO
+  SAFE_ALLOCATE(sk%sk_b(1:sk%size))
+  SAFE_ALLOCATE(sk%sk_y(1:sk%size))
+  SAFE_ALLOCATE(sk%sk_work(1:workspace_size))
+  sk%sk_work = M_ZERO
+  sk%sk_y    = M_ZERO
+  sk%sk_b    = M_ZERO
 
   POP_SUB(X(sparskit_solver_init))
 end subroutine X(sparskit_solver_init)
@@ -247,17 +248,17 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   sk%used_iter = 0
 
 #ifdef R_TREAL
-  sk_b = rhs
+  sk%sk_b = rhs
   ! initial guess
-  sk_y = sol
+  sk%sk_y = sol
 #endif
 #ifdef R_TCOMPLEX
   do iter = 1, sk%size/2
-    sk_b(iter)           = real (rhs(iter))
-    sk_b(iter + sk%size/2) = aimag(rhs(iter))
+    sk%sk_b(iter)           = real (rhs(iter))
+    sk%sk_b(iter + sk%size/2) = aimag(rhs(iter))
     ! initial guess
-    sk_y(iter)           = real (sol(iter))
-    sk_y(iter + sk%size/2) = aimag(sol(iter))
+    sk%sk_y(iter)           = real (sol(iter))
+    sk%sk_y(iter + sk%size/2) = aimag(sol(iter))
   end do
 #endif
 
@@ -266,25 +267,25 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
     
     select case(sk%solver_type)
     case(SK_CG)
-      call cg(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+      call cg(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
     case(SK_CGNR)                          
-      call cgnr(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+      call cgnr(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
     case(SK_BCG)                           
-      call bcg(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+      call bcg(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
     case(SK_DBCG)                          
-      call dbcg(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+      call dbcg(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
     case(SK_BCGSTAB)                       
-      call bcgstab(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+      call bcgstab(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
     case(SK_TFQMR)                         
-      call tfqmr(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+      call tfqmr(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
     case(SK_FOM)                           
-      call fom(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+      call fom(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
     case(SK_GMRES)                         
-      call gmres(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+      call gmres(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
     case(SK_FGMRES)                        
-      call fgmres(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+      call fgmres(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
     case(SK_DQGMRES)                       
-      call dqgmres(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
+      call dqgmres(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
     case default
       write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
            "' is not a valid SPARSKIT solver."
@@ -296,20 +297,20 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
     select case(sk%ipar(1))
     case(1)
 #ifdef R_TREAL
-      call op(sk_work(sk%ipar(8):sk%ipar(8)+sk%size),sk_work(sk%ipar(9):sk%ipar(9)+sk%size))
+      call op(sk%sk_work(sk%ipar(8):sk%ipar(8)+sk%size),sk%sk_work(sk%ipar(9):sk%ipar(9)+sk%size))
 #endif
 #ifdef R_TCOMPLEX
-      call op(sk_work(sk%ipar(8):sk%ipar(8)+sk%size/2),sk_work(sk%ipar(8)+sk%size/2:sk%ipar(8)+sk%size), &
-           sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
+      call op(sk%sk_work(sk%ipar(8):sk%ipar(8)+sk%size/2),sk%sk_work(sk%ipar(8)+sk%size/2:sk%ipar(8)+sk%size), &
+           sk%sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk%sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
 #endif
     case(2)
       ! call atmux(n,w(sk%ipar(8)),w(sk%ipar(9)),a,ja,ia)
 #ifdef R_TREAL
-      call opt(sk_work(sk%ipar(8):sk%ipar(8)+sk%size),sk_work(sk%ipar(9):sk%ipar(9)+sk%size))
+      call opt(sk%sk_work(sk%ipar(8):sk%ipar(8)+sk%size),sk%sk_work(sk%ipar(9):sk%ipar(9)+sk%size))
 #endif
 #ifdef R_TCOMPLEX
-      call opt(sk_work(sk%ipar(8):sk%ipar(8)+sk%size/2),sk_work(sk%ipar(8)+sk%size/2:sk%ipar(8)+sk%size), &
-           sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
+      call opt(sk%sk_work(sk%ipar(8):sk%ipar(8)+sk%size/2),sk%sk_work(sk%ipar(8)+sk%size/2:sk%ipar(8)+sk%size), &
+           sk%sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk%sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
 #endif
     case(3, 4, 5, 6)
       ! left preconditioner solver
@@ -379,11 +380,11 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   end if
 
 #ifdef R_TREAL
-  sol = sk_y
+  sol = sk%sk_y
 #endif
 #ifdef R_TCOMPLEX
   do iter = 1, sk%size/2
-    sol(iter) = sk_y(iter) + M_zI*sk_y(iter+sk%size/2)
+    sol(iter) = sk%sk_y(iter) + M_zI*sk%sk_y(iter+sk%size/2)
   end do
 #endif
 
@@ -393,12 +394,14 @@ end subroutine X(sparskit_solver_run)
 
 
 ! ---------------------------------------------------------
-subroutine X(sparskit_solver_end)()
+subroutine X(sparskit_solver_end)(sk)
+  type(sparskit_solver_t), intent(inout) :: sk
+
   PUSH_SUB(X(sparskit_solver_end))
 
-  SAFE_DEALLOCATE_A(sk_b)
-  SAFE_DEALLOCATE_A(sk_y)
-  SAFE_DEALLOCATE_A(sk_work)
+  SAFE_DEALLOCATE_A(sk%sk_b)
+  SAFE_DEALLOCATE_A(sk%sk_y)
+  SAFE_DEALLOCATE_A(sk%sk_work)
 
   POP_SUB(X(sparskit_solver_end))
 end subroutine X(sparskit_solver_end)

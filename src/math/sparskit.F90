@@ -46,8 +46,6 @@ module sparskit_m
 
 #ifdef HAVE_SPARSKIT
 
-  FLOAT, allocatable :: sk_work(:), sk_b(:), sk_y(:)
-
   public ::                      &
     sparskit_solver_t,           &
     dsparskit_solver_init,       &
@@ -68,6 +66,8 @@ module sparskit_m
     FLOAT   :: residual_norm        !< used store current error norm
     FLOAT   :: rel_tolerance        !< relative tolerance
     FLOAT   :: abs_tolerance        !< absolute tolerance
+
+    FLOAT, allocatable :: sk_work(:), sk_b(:), sk_y(:)
 
     integer :: ipar(16)             !< integer parameter array for the reverse communication protocol
     FLOAT   :: fpar(16)             !< floating-point parameter array for the reverse communication protocol
