@@ -27,6 +27,7 @@ module cube_m
   use io_m
   use messages_m
   use mpi_m
+  use multicomm_m
   use fft_m
   use opencl_m
   use pfft_m
@@ -63,7 +64,8 @@ module cube_m
     integer, pointer :: local(:,:)  !< local to global map used when gathering a function
 
     type(fft_t), pointer :: fft !< the fft object
-    logical :: pes !< Saves if it is going to use Photo Electron Spectrum
+    logical :: has_cube_mapping !< Saves if a mapping with the cube is needed. 
+                                !! Until now, is needed with par_states (without par_domains) and PES.
   end type cube_t
 
   !> It is intended to be used within a vector.
@@ -98,7 +100,7 @@ contains
     integer :: mpi_comm, tmp_n(3), fft_type_, optimize_parity(3), default_lib, fft_library_
     integer :: effdim_fft
     logical :: optimize(3)
-    integer :: photoelectron_flags
+    integer :: photoelectron_flags, par_strategy
     type(mpi_grp_t) :: mpi_grp_
 
     PUSH_SUB(cube_init)
@@ -196,18 +198,23 @@ contains
 
     call mpi_grp_init(cube%mpi_grp, mpi_comm)
 
-    !Initialize mapping only if PES is going to be used    
+    ! Initialize mapping only if PES is going to be used or if only states parallelization 
+    ! (without domains) mode is selected.
     
     ! variable definition appears in src/td/pes.F90
     call parse_integer(datasets_check('PhotoElectronSpectrum'), 0, photoelectron_flags)
     if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
       call input_error('PhotoElectronSpectrum')
     end if
-    if (photoelectron_flags /= 0) then
-      cube%pes = .true.
+    ! variable definition appears in src/basic/multicomm.F90
+    call parse_integer(datasets_check('ParallelizationStrategy'), 0, par_strategy)
+    
+    if ((par_strategy == P_STRATEGY_STATES .and. cube%parallel_in_domains) .or. &
+         (photoelectron_flags /= 0)) then
+      cube%has_cube_mapping = .true.
       call cube_do_mapping(cube)
     else
-      cube%pes = .false.
+      cube%has_cube_mapping = .false.
     end if
     if (cube%parallel_in_domains) call cube_partition_messages_debug(cube)
 
@@ -225,7 +232,7 @@ contains
       SAFE_DEALLOCATE_P(cube%fft)
     end if
 
-    if (cube%pes) then
+    if (cube%has_cube_mapping) then
       SAFE_DEALLOCATE_P(cube%np_local)
       SAFE_DEALLOCATE_P(cube%xlocal)
       SAFE_DEALLOCATE_P(cube%local)
