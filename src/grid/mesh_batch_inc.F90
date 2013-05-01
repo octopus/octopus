@@ -672,7 +672,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
           ASSERT(ip /= 0)
           ipart = mesh%vp%part_vec(ipg)
           INCR(recv_count(ipart), 1)
-          pos = recv_disp(ipart) + recv_count(ipart)
+          pos = mesh%vp%recv_disp(ipart) + recv_count(ipart)
           forall(ist = 1:nstl) aa%states_linear(ist)%X(psi)(ip) = recv_buffer(ist, pos)
         end if
       end do
