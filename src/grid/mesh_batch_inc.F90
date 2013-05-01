@@ -688,11 +688,8 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       send_count = mesh%vp%send_count
       ASSERT(sum(send_count) == mesh%np)
 
-      send_disp = mesh%vp%send_disp
-      recv_disp = mesh%vp%recv_disp
-
-      ASSERT(send_disp(npart) + send_count(npart) == mesh%np)
-      ASSERT(recv_disp(npart) + recv_count(npart) == mesh%np)
+      ASSERT(mesh%vp%send_disp(npart) + send_count(npart) == mesh%np)
+      ASSERT(mesh%vp%recv_disp(npart) + recv_count(npart) == mesh%np)
 
       !pack for sending
       send_count = 0  
@@ -706,9 +703,9 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       SAFE_ALLOCATE(recv_buffer(1:nstl, mesh%np))
 
       send_count_nstl = send_count * nstl
-      send_disp_nstl = send_disp * nstl
+      send_disp_nstl = mesh%vp%send_disp * nstl
       recv_count_nstl = recv_count * nstl
-      recv_disp_nstl = recv_disp * nstl
+      recv_disp_nstl = mesh%vp%recv_disp * nstl
       call MPI_Alltoallv(send_buffer(1, 1), send_count_nstl, send_disp_nstl, R_MPITYPE, &
         recv_buffer(1, 1), recv_count_nstl, recv_disp_nstl, R_MPITYPE, mesh%mpi_grp%comm, mpi_err)
 
