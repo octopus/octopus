@@ -1198,8 +1198,8 @@ contains
           ist_op = ist
           ik_op = ik
           iter = 2000
-          call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, propagator_qmr_prec, iter, dres, cgtol, &
-            showprogress = .false., converged = converged)
+          call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, propagator_qmr_dotu, propagator_qmr_nrm2, &
+            propagator_qmr_prec, iter, dres, cgtol, showprogress = .false., converged = converged)
 
           do idim = 1, st%d%dim
             call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np))
@@ -1252,8 +1252,8 @@ contains
             ist_op = ist
             ik_op = ik
             iter = 2000
-            call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, propagator_qmr_prec, iter, dres, cgtol, &
-              showprogress = .false., converged = converged)
+            call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, propagator_qmr_dotu, propagator_qmr_nrm2, &
+              propagator_qmr_prec, iter, dres, cgtol, showprogress = .false., converged = converged)
 
             do idim = 1, st%d%dim
               call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np), left = .true.)
@@ -1399,6 +1399,23 @@ contains
     POP_SUB(propagator_qmr_prec)
   end subroutine propagator_qmr_prec
   ! ---------------------------------------------------------
+
+  FLOAT function propagator_qmr_nrm2(x)
+    CMPLX, intent(in) :: x(:)
+    
+    propagator_qmr_nrm2 = zmf_nrm2(grid_p%mesh, x)
+    
+  end function propagator_qmr_nrm2
+  
+  
+  ! ---------------------------------------------------------
+  CMPLX function propagator_qmr_dotu(x,y)
+    CMPLX, intent(in) :: x(:)
+    CMPLX, intent(in) :: y(:)
+    
+    propagator_qmr_dotu = zmf_dotp(grid_p%mesh, x, y, dotu = .true.)
+    
+  end function propagator_qmr_dotu
 
 
   ! ---------------------------------------------------------
