@@ -1412,7 +1412,7 @@ contains
     CMPLX, allocatable :: zpsi(:, :)
 
     PUSH_SUB(td_zop)
-#ifdef HAVE_SPARSKIT    
+
     SAFE_ALLOCATE(zpsi(1:grid_p%mesh%np_part, 1:dim_op))
     zpsi = M_z0
     forall(idim = 1:dim_op)
@@ -1429,7 +1429,6 @@ contains
 
     SAFE_DEALLOCATE_A(zpsi)
 
-#endif    
     POP_SUB(td_zop)
   end subroutine td_zop
   ! ---------------------------------------------------------
@@ -1446,7 +1445,7 @@ contains
     CMPLX, allocatable :: zpsi(:, :)
 
     PUSH_SUB(td_zopt)
-#ifdef HAVE_SPARSKIT        
+
     ! To act with the transpose of H on the wfn we apply H to the conjugate of psi
     ! and conjugate the resulting hpsi (note that H is not a purely real operator
     ! for scattering wavefunctions anymore).
@@ -1466,7 +1465,6 @@ contains
 
     SAFE_DEALLOCATE_A(zpsi)
 
-#endif        
     POP_SUB(td_zopt)
   end subroutine td_zopt
   ! ---------------------------------------------------------
