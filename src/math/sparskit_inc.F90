@@ -28,7 +28,7 @@ subroutine X(sparskit_solver_init)(n, sk)
 
   !%Variable SPARSKITSolver
   !%Type integer
-  !%Default sk_cg
+  !%Default sk_bcg
   !%Section Math::General
   !%Description
   !% Specifies what kind of linear solver will be used.
@@ -53,7 +53,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Option sk_dqgmres 10
   !% Direct versions of the Quasi-Generalized Minimum Residual method
   !%End
-  call parse_integer(datasets_check('SPARSKITSolver'),          SK_CG, sk%solver_type)
+  call parse_integer(datasets_check('SPARSKITSolver'), SK_BCG, sk%solver_type)
   if ( sk%solver_type < SK_MINVAL.or.sk%solver_type > SK_MAXVAL ) then
     call input_error('SPARSKITSolver')
   end if
@@ -74,7 +74,7 @@ subroutine X(sparskit_solver_init)(n, sk)
 
   !%Variable SPARSKITMaxIter
   !%Type integer
-  !%Default 0
+  !%Default 50000
   !%Section Math::General
   !%Description
   !% This variable controls the maximum number of iteration steps that
@@ -84,16 +84,17 @@ subroutine X(sparskit_solver_init)(n, sk)
 
   !%Variable SPARSKITIterOut
   !%Type integer
-  !%Default 0
+  !%Default -1
   !%Section Math::General
   !%Description
   !% Determines how often status info of the solver is printed.
+  !% If <= 0, will never be printed.
   !%End
   call parse_integer(datasets_check('SPARSKITIterOut'),            -1, sk%iter_out)
 
   !%Variable SPARSKITRelTolerance
   !%Type float
-  !%Default 1e-8
+  !%Default 1e-5
   !%Section Math::General
   !%Description
   !% Some SPARSKIT solvers use a relative tolerance as a stopping criterion 
@@ -104,7 +105,7 @@ subroutine X(sparskit_solver_init)(n, sk)
 
   !%Variable SPARSKITAbsTolerance
   !%Type float
-  !%Default 1e-8
+  !%Default 1e-10
   !%Section Math::General
   !%Description
   !% Some SPARSKIT solvers use an absolute tolerance as a stopping criterion 
