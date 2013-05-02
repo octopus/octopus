@@ -23,23 +23,26 @@ AC_REQUIRE([ACX_PFFT])
 acx_pnfft_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(pnfft-prefix, [AS_HELP_STRING([--with-pnfft-prefix=DIR], [http://www-user.tu-chemnitz.de/~mpip/software.php. It requires PFFT.])])
+AC_ARG_WITH(pnfft-prefix, [AS_HELP_STRING([--with-pnfft-prefix=<lib>], [http://www-user.tu-chemnitz.de/~mpip/software.php. It requires PFFT.])])
 case $with_pnfft_prefix in
+  yes | "") ;;
   no) acx_pnfft_ok=disable ;;
-  *) LIBS_PNFFT="-L$with_pnfft_prefix/lib -lpnfft"; 
-     FCFLAGS_PNFFT="$ax_cv_f90_modflag$with_pnfft_prefix/include" ;;
+  *.a | *.so | *.so.* | *.o) LIBS_PFFT="-L$with_pfft_prefix" ;;
+  *) LIBS_PNFFT="-L$with_pnfft_prefix/lib"; 
+     FCFLAGS_PNFFT="$ax_cv_f90_modflag$with_pnfft_prefix/include" ;;  
 esac
 
+dnl The include dir must be specified when the library is given with a 
+dnl specified file to be compiled static (i.e. *.a etc.)
+AC_ARG_WITH(pnfft-include, [AS_HELP_STRING([--with-pnfft-include=DIR], [Directory where PNFFT Fortran include files were installed.])])
+case $with_pnfft_include in
+  "") if test "x$FCFLAGS_PNFFT" == x; then
+  FCFLAGS_PNFFT="$ax_cv_f90_modflag /usr/include"
+  fi;;
+  *)  FCFLAGS_PNFFT="$ax_cv_f90_modflag$with_pnfft_include" ;;
+esac
+FCFLAGS_PNFFT="$FCFLAGS_PNFFT"
 
-dnl We cannot use PNFFT if MPI is not found
-if test "x$acx_mpi_ok" != xyes; then
-  acx_pnfft_ok=nompi
-fi
-
-dnl We cannot use PNFFT if FFTW3 is not found
-if test "x$acx_fft_ok" != xyes; then
-  acx_pnfft_ok=nofftw3
-fi
 
 dnl We cannot use PNFFT if PFFT is not found
 if test "x$acx_pfft_ok" != xyes; then
@@ -51,35 +54,51 @@ acx_pnfft_save_LIBS="$LIBS"
 acx_pnfft_save_FCFLAGS="$FCFLAGS"
 
 
-LIBS="$LIBS_PNFFT $LIBS_PFFT $LIBS"
-FCFLAGS="$FCFLAGS_PNFFT $FCFLAGS_PFFT $FCFLAGS_FFT $FCFLAGS"
-
-
-pnfft_func="pnfft_init"
+testprogram="AC_LANG_PROGRAM([],[ 
+    use iso_c_binding
+    include \"fftw3-mpi.f03\"
+    include \"pfft.f03\"
+    include \"pnfft.f03\"
+    
+    call pnfft_init()
+  ])"
 
 
 dnl First, check LIBS_PNFFT environment variable
 if test x"$acx_pnfft_ok" = xno; then
-  AC_MSG_CHECKING([for $pnfft_func in $FCFLAGS_PNFFT $LIBS_PNFFT])
-  AC_LINK_IFELSE(AC_LANG_PROGRAM([],[  
-    use iso_c_binding
-    include "fftw3-mpi.f03"
-    include "pfft.f03"
-    include "pnfft.f03"
-    
-    call pnfft_init()
-  ]), [acx_pnfft_ok=yes], [])
+  LIBS="$LIBS_PNFFT $LIBS_PFFT $LIBS"
+  FCFLAGS="$FCFLAGS_PNFFT $FCFLAGS_PFFT $FCFLAGS"
 
-  AC_MSG_RESULT([$acx_pnfft_ok ($FCFLAGS_PNFFT $LIBS_PNFFT)])
+  AC_MSG_CHECKING([for pnfft library])
+  AC_LINK_IFELSE($testprogram, [acx_pnfft_ok=yes; LIBS_PNFFT="$LIBS_PNFFT $LIBS_PFFT"], [])
+
+  if test $acx_pnfft_ok = no; then
+    AC_MSG_RESULT([$acx_pnfft_ok])
+  else
+    AC_MSG_RESULT([$acx_pnfft_ok ($LIBS_PNFFT)])
+  fi
 fi
 
-dnl Generic PNFFT library? is there such a thing?
-for pnfft in pnfft; do
-  if test x"$acx_pnfft_ok" = xno; then
-    AC_CHECK_LIB($pnfft -lpfft -lfftw3_mpi -lfftw3 -lfftw3_mpi -lm, $pnfft_func,
-      [acx_pnfft_ok=yes; LIBS_PNFFT="$LIBS_PNFFT -lpfft -lfftw3 -lfftw3_mpi -lm"], [], [$FLIBS])
+
+dnl Generic PNFFT library 
+if test $acx_pnfft_ok = no; then
+  AC_MSG_CHECKING([for pnfft library with -lpnfft])
+  if test "$LIBS_PNFFT" = ""; then
+    LIBS="-lpnfft $LIBS_PFFT $LIBS"
+    FCFLAGS="$FCFLAGS_PFFT  $acx_pnfft_save_FCFLAGS"
+    AC_LINK_IFELSE($testprogram, [acx_pnfft_ok=yes; LIBS_PNFFT=" -lpnfft $LIBS_PFFT"], [])
+  else
+    LIBS="$LIBS_PNFFT -lpnfft $LIBS_PFFT $LIBS"
+    FCFLAGS="$FCFLAGS_PNFFT $FCFLAGS_PFFT  $acx_pnfft_save_FCFLAGS"    
+    AC_LINK_IFELSE($testprogram, [acx_pnfft_ok=yes; LIBS_PNFFT="$LIBS_PNFFT -lpnfft $LIBS_PFFT"], [])  
   fi
-done
+  if test $acx_pnfft_ok = no; then
+    AC_MSG_RESULT([$acx_pnfft_ok])
+  else
+    AC_MSG_RESULT([$acx_pnfft_ok ($LIBS_PNFFT)])
+  fi
+fi
+
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_pnfft_ok" = xyes; then
