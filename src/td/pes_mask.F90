@@ -201,7 +201,7 @@ contains
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!  Calculation mode
+!!  Calculation mode
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     !%Variable PESMaskMode
@@ -269,9 +269,6 @@ contains
 
 
 
-    ! ========================================
-    ! = Optimization and numerical stability =
-    ! ========================================
     !%Variable PESMaskPlaneWaveProjection
     !%Type integer
     !%Default fft_map
@@ -372,7 +369,7 @@ contains
     end if
     
     !Enlarge the bounding box region
-    mask%ll(1:sb%dim)= mask%ll(1:sb%dim)*2**mask%enlarge 
+    mask%ll(1:sb%dim)= mask%ll(1:sb%dim)*M_TWO**mask%enlarge 
     
     
     select case(mask%pw_map_how)
@@ -388,7 +385,13 @@ contains
         mpi_grp = mask%mesh%mpi_grp)
       !        print *,mpi_world%rank, "mask%mesh%mpi_grp%comm", mask%mesh%mpi_grp%comm, mask%mesh%mpi_grp%size
       !         print *,mpi_world%rank, "mask%cube%mpi_grp%comm", mask%cube%mpi_grp%comm, mask%cube%mpi_grp%size
-      mask%ll(1:3) = mask%cube%fs_n(1:3)
+      mask%ll(1) = mask%cube%fs_n(1)
+      mask%ll(2) = mask%cube%fs_n(2)
+      mask%ll(3) = mask%cube%fs_n(3)
+!     Note:      
+!     For some obscure reasons using 
+!     mask%ll(1:3) = mask%cube%fs_n(1:3) 
+!     results in wrong dimensions (and therefore crashes) at runtime
       mask%fft = mask%cube%fft
       mask%np = mesh%np_part ! the mask is local
       if ( mask%mesh%parallel_in_domains .and. mask%cube%parallel_in_domains) then
@@ -478,7 +481,7 @@ contains
     mask%fs_n = mask%cube%fs_n 
     mask%fs_n_global = mask%cube%fs_n_global 
     
-    !   print *, mpi_world%rank, " mask%ll", mask%ll(1:3), "states -",st%st_start,st%st_end
+    print *, mpi_world%rank, " mask%ll", mask%ll(1:3), "states -",st%st_start,st%st_end
     !Allocations
     call cube_function_null(mask%cM)    
     call zcube_function_alloc_RS(mask%cube, mask%cM, force_alloc = .true.)
@@ -499,7 +502,7 @@ contains
     
     
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!  Mask Function options
+!!  Mask Function options
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     SAFE_ALLOCATE(mask%mask_R(2))
@@ -593,7 +596,7 @@ contains
     endif
     
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!  Output
+!!  Output
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     !%Variable PESMaskIncludePsiA
@@ -658,7 +661,7 @@ contains
     end if
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!  Set external fields 
+!!  Set external fields 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     SAFE_ALLOCATE(mask%ext_pot(0:max_iter,1:3))
