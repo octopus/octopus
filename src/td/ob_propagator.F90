@@ -365,7 +365,8 @@ contains
         
         ! Use the stable symmetric QMR solver
         ! h_eff_backward must be a complex symmetric operator !
-        call zqmr_sym(np, psi2(:), rhs(:), h_eff_backward, precond_prop, qmr_iter, &
+        call zqmr_sym(np*st%d%dim, psi2, rhs, h_eff_backward, ob_propagator_qmr_dotu, &
+                      ob_propagator_qmr_nrm2, ob_propagator_qmr_prec, qmr_iter, &
                       residue=dres, threshold=qmr_tol, showprogress=in_debug_mode, converged=conv)
 
         do idim = 1, st%d%dim
@@ -498,8 +499,9 @@ contains
         ! Solve linear system (1 + i \delta H_{eff}) psi = tmp.
         qmr_iter      = qmr_max_iter
         tmp(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)
-        call zqmr_sym(gr%mesh%np, psi(:, 1), tmp(:, 1), h_eff_backward_sp, precond_prop, &
-                      qmr_iter, residue=dres, threshold=qmr_tol, showprogress=.false.)
+        call zqmr_sym(np, psi(:, 1), tmp(:, 1), h_eff_backward_sp, ob_propagator_qmr_dotu, &
+                      ob_propagator_qmr_nrm2, ob_propagator_qmr_prec, qmr_iter, &
+                      residue=dres, threshold=qmr_tol, showprogress=in_debug_mode)
 
         call states_set_state(st, gr%mesh, ist, ik, psi)
 
@@ -786,31 +788,34 @@ contains
     POP_SUB(apply_sp_mem)
   end subroutine apply_sp_mem
 
-
   ! ---------------------------------------------------------
-  subroutine precond_prop(x, y)
+  subroutine ob_propagator_qmr_prec(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-!    integer            :: np
-!    CMPLX, allocatable :: diag(:, :)
+    PUSH_SUB(ob_propagator_qmr_prec)
+    y = x
 
-!    no push_sub, called too frequently
-!    np = gr_p%mesh%np
+    POP_SUB(ob_propagator_qmr_prec)
+  end subroutine ob_propagator_qmr_prec
+  ! ---------------------------------------------------------
 
-    y(:) = x(:) ! no preconditioner
-!    SA FE_ALLOCATE(diag(1:np, 1:1))
+  FLOAT function ob_propagator_qmr_nrm2(x)
+    CMPLX, intent(in) :: x(:)
 
-!    call zhamiltonian_diagonal(hm_p, gr_p, diag, 1)
+    ob_propagator_qmr_nrm2 = zmf_nrm2(gr_p%mesh, x)
 
-!    diag(:, 1) = M_z1 + M_HALF*dt_p*M_zI*diag(:,1) 
-!    if (.not.heff_sym) diag(:, 1) = diag(:, 1)**2
-!    y(1:np)    = x(1:np)/diag(1:np, 1)
+  end function ob_propagator_qmr_nrm2
 
-!    SA FE_DEALLOCATE_A(diag)
 
-  end subroutine precond_prop
+  ! ---------------------------------------------------------
+  CMPLX function ob_propagator_qmr_dotu(x,y)
+    CMPLX, intent(in) :: x(:)
+    CMPLX, intent(in) :: y(:)
 
+    ob_propagator_qmr_dotu = zmf_dotp(gr_p%mesh, x, y, dotu = .true.)
+
+  end function ob_propagator_qmr_dotu
 
   ! ---------------------------------------------------------
   !> Write some status information to stdout.
