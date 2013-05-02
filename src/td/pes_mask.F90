@@ -369,7 +369,7 @@ contains
     end if
     
     !Enlarge the bounding box region
-    mask%ll(1:sb%dim)= mask%ll(1:sb%dim)*M_TWO**mask%enlarge 
+    mask%ll(1:sb%dim)= mask%ll(1:sb%dim)*2**mask%enlarge 
     
     
     select case(mask%pw_map_how)
@@ -385,13 +385,13 @@ contains
         mpi_grp = mask%mesh%mpi_grp)
       !        print *,mpi_world%rank, "mask%mesh%mpi_grp%comm", mask%mesh%mpi_grp%comm, mask%mesh%mpi_grp%size
       !         print *,mpi_world%rank, "mask%cube%mpi_grp%comm", mask%cube%mpi_grp%comm, mask%cube%mpi_grp%size
-      mask%ll(1) = mask%cube%fs_n(1)
-      mask%ll(2) = mask%cube%fs_n(2)
-      mask%ll(3) = mask%cube%fs_n(3)
-!     Note:      
-!     For some obscure reasons using 
+      mask%ll(1) = mask%cube%fs_n(3)
+      mask%ll(2) = mask%cube%fs_n(1)
+      mask%ll(3) = mask%cube%fs_n(2)
+!     Note: even if tempting, setting       
 !     mask%ll(1:3) = mask%cube%fs_n(1:3) 
-!     results in wrong dimensions (and therefore crashes) at runtime
+!     results in the wrong index mapping! (1->3, 2->1, 3->2) 
+
       mask%fft = mask%cube%fft
       mask%np = mesh%np_part ! the mask is local
       if ( mask%mesh%parallel_in_domains .and. mask%cube%parallel_in_domains) then
