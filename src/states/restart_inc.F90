@@ -37,7 +37,7 @@ end subroutine X(restart_write_function)
 
 ! ---------------------------------------------------------
 !> In domain parallel case each process reads a part of the file.
-!! At the end all the processes have entire mesh
+!! At the end all the processes have the corresponding mesh part
 subroutine X(restart_read_function)(dir, filename, mesh, ff, ierr, map)
   character(len=*), intent(in)    :: dir
   character(len=*), intent(in)    :: filename
