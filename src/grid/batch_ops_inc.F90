@@ -196,7 +196,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
 #endif
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
-      !omp paralled do private(ip, ist)
+      !$omp parallel do private(ip, ist)
       do ip = 1, np
         do ist = 1, yy%pack%size(1)
           yy%pack%zpsi(ist, ip) = aa_linear(ist)*xx%pack%zpsi(ist, ip) + yy%pack%zpsi(ist, ip)
@@ -204,7 +204,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
       end do
     else
 #ifdef R_TREAL
-      !omp paralled do private(ip, ist)
+      !$omp parallel do private(ip, ist)
       do ip = 1, np
         do ist = 1, yy%pack%size(1)
           yy%pack%dpsi(ist, ip) = aa_linear(ist)*xx%pack%dpsi(ist, ip) + yy%pack%dpsi(ist, ip)
