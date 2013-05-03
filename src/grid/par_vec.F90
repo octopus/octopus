@@ -133,7 +133,7 @@ module par_vec_m
     integer                 :: np_global            !< Number of points in mesh.
     integer, pointer        :: part_vec(:)          !< Global point        -> partition.
     integer, pointer        :: part_local(:)        !< Local point         -> partition
-    integer, pointer        :: part_local_rev(:)    !< Local point's value -> partition
+    integer, pointer        :: part_local_rev(:)    !< Local point`s value -> partition
 
     integer, pointer        :: np_local_vec(:)      !< How many points has partition r?
                                                     !! Global vector; npart elements.
