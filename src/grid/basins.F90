@@ -21,11 +21,13 @@
 
 module basins_m
   use global_m
-  use mesh_m
   use index_m
+  use mesh_m
   use messages_m
   use par_vec_m
   use profiling_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 
@@ -260,20 +262,23 @@ contains
     integer,        intent(in) :: iunit
 
     integer :: ii
+    type(unit_t) :: unit_vol
+    FLOAT :: xx(1:MAX_DIM)
 
     PUSH_SUB(basins_write)
+
+    unit_vol = units_out%length**mesh%sb%dim
 
     write(iunit, '(a,i5)') 'Number of basins = ', this%number
     write(iunit, '(1x)')
 
     do ii = 1, this%number
       write(iunit, '(a,i5)') '# ', ii
-      write(iunit, '(a,3(f12.6,a))') '  position = (', &
-         mesh%x(this%position(ii), 1), ',', &
-         mesh%x(this%position(ii), 2), ',', &
-         mesh%x(this%position(ii), 3), ')'
+      xx = units_from_atomic(units_out%length, mesh_x_global(mesh, this%position(ii)))
+      write(iunit, '(a,3(f12.6,a), a)') '  position = (', &
+         xx(1), ',', xx(2), ',', xx(3), ') ', units_abbrev(units_out%length)
       write(iunit, '(a,f12.6)') '  value = ', this%val(ii)
-      write(iunit, '(a,f12.6)') '  volume = ', this%volume(ii)
+      write(iunit, '(a,f12.6,a,a)') '  volume = ', units_from_atomic(unit_vol, this%volume(ii)), ' ', units_abbrev(unit_vol)
       write(iunit, '(a,f12.6)') '  population = ', this%population(ii)
     end do
 
