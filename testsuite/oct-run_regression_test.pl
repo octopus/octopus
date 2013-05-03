@@ -497,6 +497,9 @@ sub run_match_new(){
     $pre_command = "grep -a -A$off $par[1] $par[0] | awk '(NR==$off+1)'";
     $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";
 
+  }elsif($func eq "SIZE") { # function SIZE(filename)
+    $pre_command = "ls -lt $par[0] | awk '{printf \$5}'";
+
   }else{ # error
     printf stderr "Unknown command '$func'\n";
     return 0;
