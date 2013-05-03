@@ -179,7 +179,8 @@ contains
     !% Plain binary, new format.
     !%Option etsf 32768
     !% ETSF file format (<tt>http://www.etsf.eu/resources/software/standardization_project</tt>).
-    !% Requires the ETSF_IO library.
+    !% Requires the ETSF_IO library. Applies only to <tt>Output = density</tt>, <tt>geometry</tt>,
+    !% <tt>wfs</tt>, and/or <tt>wfs_fourier</tt>.
     !%Option xyz 65536
     !% Geometry will be output in XYZ format. Does not affect other outputs.
     !%Option cube 131072

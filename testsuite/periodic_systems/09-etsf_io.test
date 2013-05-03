@@ -1,0 +1,40 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 04-silicon.test 3344 2007-10-13 13:38:03Z acastro $
+
+Test       : ETSF_IO
+Options    : etsf_io
+Programs   : octopus; octopus_mpi
+TestGroups : short-run, periodic_systems
+Enabled    : Yes
+
+Input      : 09-etsf_io.01-gs.inp
+
+match ; Total k-points   ; GREP(static/info, 'Total number of k-points', 38) ; 2
+
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ; -33.79531187
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ; -33.79951714
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;  -0.47845966
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   2.48288919
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;  -8.24466526
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;  -1.50771570
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;  13.22649026
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -5.95279501
+
+match ; k-point 1 (x) ; GREP(static/info, '#k =   1', 18) ; 0.000000
+match ; k-point 1 (y) ; GREP(static/info, '#k =   1', 30) ; 0.000000
+match ; k-point 1 (z) ; GREP(static/info, '#k =   1', 42) ; 0.000000
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   1', 12,  1) ; -0.280475
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   1', 12,  8) ;  0.052868
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   1', 12, 16) ;  0.160610
+match ; Eigenvalue 18 ; GREP(static/info, '#k =   1', 12, 18) ;  0.165239
+
+match ; k-point 2 (x) ; GREP(static/info, '#k =   2', 18) ; 0.500000
+match ; k-point 2 (y) ; GREP(static/info, '#k =   2', 30) ; 0.500000
+match ; k-point 2 (z) ; GREP(static/info, '#k =   2', 42) ; 0.500000
+match ; Eigenvalue  1 ; GREP(static/info, '#k =   2', 12,  1) ; -0.191935
+match ; Eigenvalue  8 ; GREP(static/info, '#k =   2', 12,  8) ; -0.098940
+match ; Eigenvalue 16 ; GREP(static/info, '#k =   2', 12, 16) ;  0.115142
+match ; Eigenvalue 18 ; GREP(static/info, '#k =   2', 12, 18) ;  0.217481
+
+# ETSF_IO files are binary, so we cannot test anything about them.
+# At least we can check that this run finished without crashing.
