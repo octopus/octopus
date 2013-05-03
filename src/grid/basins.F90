@@ -233,8 +233,14 @@ contains
             ii_max = jj
             f_max  = f(jj)
           end if
-          this%volume(ii) = this%volume(ii) + mesh%vol_pp(jj)
-          this%population(ii) = this%population(ii) + mesh%vol_pp(jj)*sum(rho(jj, :))
+
+          if(mesh%use_curvilinear) then
+            this%volume(ii) = this%volume(ii) + mesh%vol_pp(jj)
+            this%population(ii) = this%population(ii) + mesh%vol_pp(jj)*sum(rho(jj, :))
+          else
+            this%volume(ii) = this%volume(ii) + mesh%volume_element
+            this%population(ii) = this%population(ii) + mesh%volume_element*sum(rho(jj, :))
+          endif
         end do
         
         this%position(ii) = ii_max
