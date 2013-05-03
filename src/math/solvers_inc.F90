@@ -18,61 +18,61 @@
 !! $Id$
 
 
-! The two following subroutines, sym_conjugate_gradients, and bi_conjugate_gradients,
-! must be called under a common interface: conjugate_gradients. It provides an
-! approximate solution to the linear system problem  Ax = b.
-! Solving a symmetric linear system, which is either real or complex symmetric or
-! Hermitian the best choice is sym_conjugate_gradients (does not need A^\dagger)
-! Solving a real unsymmetric or a complex non-Hermitian system bi_conjugate_gradients
-! has to be chosen (where one does need A^\dagger).
-!
-! Note: the complex-valued versions (both CG and BiCG) work only with
-!       symmetric operators but they may be non-Hermitian. This is a
-!       property of the CG algorithm. A comment on this can be found
-!       in chapter 4.1 of ftp://ftp.netlib.org/templates/templates.ps
-!
-! subroutine conjugate_gradients(np, x, b, op, [opt,] dotp, iter [, residue] [, threshold] )
-!    integer, intent(in)  :: np      => The dimension of the problem.
-!    FLOAT, intent(inout) :: x       => On input, an estimate to the solution.
-!                                    => On output, the approximate solution.
-!    FLOAT, intent(in)    :: b       => The inhomogeneous term of the equation.
-!    interface
-!      subroutine op(x, y)
-!         FLOAT, intent(in)  :: x(:)
-!         FLOAT, intent(out) :: y(:)
-!      end subroutine op
-!    end interface                   => This should be a procedure that
-!                                       computes Ax = y.
-!    interface
-!      subroutine opt(x, y)
-!         FLOAT, intent(in)  :: x(:)
-!         FLOAT, intent(out) :: y(:)
-!      end subroutine opt
-!    end interface                   => If present, this should be a procedure that
-!                                       computes A^\dagger x = y.
-!                                       Only useful for non-Hermitian operators.
-!    interface
-!      R_TYPE function dotp(x, y)
-!      R_TYPE, intent(inout) :: x(:)
-!      R_TYPE, intent(in)    :: y(:)
-!    end function dotp               => Calculates the <x | y>.
-!                                       Depending on the matrix A one should choose:
-!                                       complex symmetric: <x | y> = x^T * y
-!                                       hermitian:         <x | y> = x^\dagger * y
-!                                       general:           <x | y> = x^\dagger * y
-!    integer, intent(inout) :: iter  => On input, the maximum number of iterations that
-!                                       the procedure is allowed to take.
-!                                       On output, the iterations it actually did.
-!    FLOAT, intent(out) :: residue   => If present, it measures the final error:
-!                                       residue = <Ax - b | Ax - b>.
-!    FLOAT, intent(in)  :: threshold => If present, it sets the required accuracy
-!                                       threshold for the algorithm to stop. If not
-!                                       present, this is set to 1.0e-6. [The algorithm
-!                                       stops when <Ax - b | Ax - b> <= threshold, or
-!                                       iter iterations are reached.]
-! end subroutine conjugate_gradients
-!
-! (*) NOTE: The algorithm assumes that the vectors are given in an orthonormal basis.
+!> The two following subroutines, sym_conjugate_gradients, and bi_conjugate_gradients,
+!! must be called under a common interface: conjugate_gradients. It provides an
+!! approximate solution to the linear system problem  Ax = b.
+!! Solving a symmetric linear system, which is either real or complex symmetric or
+!! Hermitian the best choice is sym_conjugate_gradients (does not need A^\dagger)
+!! Solving a real unsymmetric or a complex non-Hermitian system bi_conjugate_gradients
+!! has to be chosen (where one does need A^\dagger).
+!!
+!! Note: the complex-valued versions (both CG and BiCG) work only with
+!!       symmetric operators but they may be non-Hermitian. This is a
+!!       property of the CG algorithm. A comment on this can be found
+!!       in chapter 4.1 of ftp://ftp.netlib.org/templates/templates.ps
+!!
+!! subroutine conjugate_gradients(np, x, b, op, [opt,] dotp, iter [, residue] [, threshold] )
+!!    integer, intent(in)  :: np      => The dimension of the problem.
+!!    FLOAT, intent(inout) :: x       => On input, an estimate to the solution.
+!!                                    => On output, the approximate solution.
+!!    FLOAT, intent(in)    :: b       => The inhomogeneous term of the equation.
+!!    interface
+!!      subroutine op(x, y)
+!!         FLOAT, intent(in)  :: x(:)
+!!         FLOAT, intent(out) :: y(:)
+!!      end subroutine op
+!!    end interface                   => This should be a procedure that
+!!                                       computes Ax = y.
+!!    interface
+!!      subroutine opt(x, y)
+!!         FLOAT, intent(in)  :: x(:)
+!!         FLOAT, intent(out) :: y(:)
+!!      end subroutine opt
+!!    end interface                   => If present, this should be a procedure that
+!!                                       computes A^\dagger x = y.
+!!                                       Only useful for non-Hermitian operators.
+!!    interface
+!!      R_TYPE function dotp(x, y)
+!!      R_TYPE, intent(inout) :: x(:)
+!!      R_TYPE, intent(in)    :: y(:)
+!!    end function dotp               => Calculates the <x | y>.
+!!                                       Depending on the matrix A one should choose:
+!!                                       complex symmetric: <x | y> = x^T * y
+!!                                       hermitian:         <x | y> = x^\dagger * y
+!!                                       general:           <x | y> = x^\dagger * y
+!!    integer, intent(inout) :: iter  => On input, the maximum number of iterations that
+!!                                       the procedure is allowed to take.
+!!                                       On output, the iterations it actually did.
+!!    FLOAT, intent(out) :: residue   => If present, it measures the final error:
+!!                                       residue = <Ax - b | Ax - b>.
+!!    FLOAT, intent(in)  :: threshold => If present, it sets the required accuracy
+!!                                       threshold for the algorithm to stop. If not
+!!                                       present, this is set to 1.0e-6. [The algorithm
+!!                                       stops when <Ax - b | Ax - b> <= threshold, or
+!!                                       iter iterations are reached.]
+!! end subroutine conjugate_gradients
+!!
+!! (*) NOTE: The algorithm assumes that the vectors are given in an orthonormal basis.
 
 
 ! ---------------------------------------------------------

@@ -19,8 +19,8 @@
 
 #include "global.h"
 
-! This module is intended to contain "only mathematical" functions
-! and procedures.
+!> This module is intended to contain "only mathematical" functions
+!! and procedures.
 
 module solvers_m
   use blas_m
