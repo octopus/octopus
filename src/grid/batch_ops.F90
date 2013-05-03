@@ -104,7 +104,7 @@ module batch_ops_m
     module procedure batch_set_points_cl
   end interface batch_set_points
 
-  type(profile_t), save :: scal_prof, xpay_prof, axpy_prof, get_points_prof, set_points_prof
+  type(profile_t), save :: scal_prof, xpay_prof, axpy_const_prof, axpy_vec_prof, get_points_prof, set_points_prof
 
 contains
 

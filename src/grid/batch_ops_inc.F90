@@ -52,7 +52,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   CMPLX :: zaa
 
   PUSH_SUB(X(batch_axpy_const))
-  call profiling_in(axpy_prof, "BATCH_AXPY")
+  call profiling_in(axpy_const_prof, "BATCH_AXPY_CONST")
 
   ASSERT(batch_type(yy) == batch_type(xx))
 #ifdef R_TCMPLX
@@ -114,7 +114,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
 
   call batch_pack_was_modified(yy)
 
-  call profiling_out(axpy_prof)
+  call profiling_out(axpy_const_prof)
   POP_SUB(X(batch_axpy_const))
 end subroutine X(batch_axpy_const)
 
@@ -139,7 +139,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
 #endif
   
   PUSH_SUB(X(batch_axpy_vec))
-  call profiling_in(axpy_prof, "BATCH_AXPY")
+  call profiling_in(axpy_vec_prof, "BATCH_AXPY_VEC")
 
   ASSERT(batch_type(yy) == batch_type(xx))
 #ifdef R_TCMPLX
@@ -196,15 +196,17 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
 #endif
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
-      do ist = 1, yy%pack%size(1)
-        do ip = 1, np
+      !omp paralled do private(ip, ist)
+      do ip = 1, np
+        do ist = 1, yy%pack%size(1)
           yy%pack%zpsi(ist, ip) = aa_linear(ist)*xx%pack%zpsi(ist, ip) + yy%pack%zpsi(ist, ip)
         end do
       end do
     else
 #ifdef R_TREAL
-      do ist = 1, yy%pack%size(1)
-        do ip = 1, np
+      !omp paralled do private(ip, ist)
+      do ip = 1, np
+        do ist = 1, yy%pack%size(1)
           yy%pack%dpsi(ist, ip) = aa_linear(ist)*xx%pack%dpsi(ist, ip) + yy%pack%dpsi(ist, ip)
         end do
       end do
@@ -227,7 +229,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
 
   SAFE_DEALLOCATE_A(aa_linear)
 
-  call profiling_out(axpy_prof)
+  call profiling_out(axpy_vec_prof)
   POP_SUB(X(batch_axpy_vec))
 end subroutine X(batch_axpy_vec)
 
