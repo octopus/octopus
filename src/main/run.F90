@@ -42,6 +42,7 @@ module run_m
   use poisson_m
   use kdotp_m
   use gcm_m
+  use profiling_m
   use pulpo_m
   use restart_m
   use static_pol_m
@@ -63,6 +64,7 @@ module run_m
 
   type(system_t),      save :: sys
   type(hamiltonian_t), save :: hm
+  type(profile_t),     save :: calc_mode_prof
 
   integer :: calc_mode_id
 
@@ -101,14 +103,15 @@ contains
       if(multicomm_is_slave(sys%mc))then
         !for the moment we only have one type of slave
         call poisson_slave_work(sys%ks%hartree_solver)
+        POP_SUB(run)
         return
       end if
     end if
 #endif
 
-    message(1) = "Info: Octopus initialization completed."
-    message(2) = "Info: Starting calculation mode."
-    call messages_info(2)
+    call messages_write('Info: Octopus initialization completed.', new_line = .true.)
+    call messages_write('Info: Starting calculation mode.')
+    call messages_info()
 
     !%Variable FromScratch
     !%Type logical
@@ -121,6 +124,8 @@ contains
     !%End
 
     call parse_logical(datasets_check('fromScratch'), .false., fromScratch)
+
+    call profiling_in(calc_mode_prof, "CALC_MODE")
 
     select case(calc_mode_id)
     case(CM_GS)
@@ -163,6 +168,8 @@ contains
     case(CM_PULPO_A_FEIRA)
       call pulpo_print()
     end select
+
+    call profiling_out(calc_mode_prof)
 
 #ifdef HAVE_MPI2
     if(sys%ks%theory_level/=INDEPENDENT_PARTICLES) &
