@@ -148,11 +148,13 @@ contains
 
         conv = .false.
         if (associated(hm%ep%A_static)) then ! magnetic gs
-          call zqmr_sym(dim*np, psi, rhs, lhs_symmetrized, dotu, &
-            nrm2, precond, iter, residue = res, threshold = eigens%tolerance, converged = conv, showprogress = in_debug_mode)
+          call zqmr_sym(dim*np, psi, rhs, lhs_symmetrized, ls_qmr_dotu, ls_qmr_nrm2, &
+                        ls_qmr_prec, iter, residue = res, threshold = eigens%tolerance, &
+                        converged = conv, showprogress = in_debug_mode)
         else
-          call zqmr_sym(dim*np, psi, rhs, lhs, dotu, nrm2, precond, &
-            iter, residue=res, threshold = eigens%tolerance, converged = conv, showprogress = in_debug_mode)
+          call zqmr_sym(dim*np, psi, rhs, lhs, ls_qmr_dotu, ls_qmr_nrm2, ls_qmr_prec, &
+                        iter, residue=res, threshold = eigens%tolerance, &
+                        converged = conv, showprogress = in_debug_mode)
         end if
         do idim = 1, dim
           call states_set_state(st, gr%mesh, idim, ist, ik, psi((idim-1)*np+1:idim*np))
@@ -281,28 +283,24 @@ contains
   ! ---------------------------------------------------------
   ! Dot product for QMR solver. This routine works for x being a spinor
   ! considered as one continuous vector.
-  CMPLX function dotu(x, y)
+  CMPLX function ls_qmr_dotu(x,y)
     CMPLX, intent(in) :: x(:)
     CMPLX, intent(in) :: y(:)
 
-! no push_sub, called too frequently
+    ls_qmr_dotu = zmf_dotp(gr_p%mesh, x, y, dotu = .true.)
 
-    dotu = blas_dotu(st_p%d%dim*gr_p%mesh%np, x(1), 1, y(1), 1)
-
-  end function dotu
+  end function ls_qmr_dotu
 
 
   ! ---------------------------------------------------------
   ! Norm for QMR solver. This routine works for x being a spinor
   ! considered as one continuous vector.
-  FLOAT function nrm2(x)
+  FLOAT function ls_qmr_nrm2(x)
     CMPLX, intent(in) :: x(:)
 
-! no push_sub, called too frequently
+    ls_qmr_nrm2 = zmf_nrm2(gr_p%mesh, x)
 
-    nrm2 = lalg_nrm2(st_p%d%dim*gr_p%mesh%np, x)
-
-  end function nrm2
+  end function ls_qmr_nrm2
 
 
   ! ---------------------------------------------------------
@@ -422,17 +420,16 @@ contains
   ! Identity preconditioner. Since preconditioning with the inverse of
   ! the diagonal did not improve the convergence we put identity here
   ! until we have something better.
-  subroutine precond(x, y)
+  subroutine ls_qmr_prec(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-    integer :: np
 ! no push_sub, called too frequently
 
-    np = st_p%d%dim*gr_p%mesh%np
-    y(1:np) = x(1:np)
+    y(:) = x(:)
 
-  end subroutine precond
+  end subroutine ls_qmr_prec
+
 end module ob_lippmann_schwinger_m
 
 
