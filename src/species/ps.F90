@@ -429,11 +429,14 @@ contains
     type(ps_t), intent(inout) :: ps
     integer,    intent(in)    :: filter
     FLOAT,      intent(in)    :: gmax
+
     integer :: l, k
+    type(profile_t), save:: prof
 
     FLOAT :: alpha, beta_fs, rmax, rcut, gamma, beta_rs
 
     PUSH_SUB(ps_filter)
+    call profiling_in(prof, "PS_FILTER")
 
     select case(filter)
     case(PS_FILTER_NONE)
@@ -477,6 +480,7 @@ contains
 
     end select
 
+    call profiling_out(prof)
     POP_SUB(ps_filter)
   end subroutine ps_filter
 

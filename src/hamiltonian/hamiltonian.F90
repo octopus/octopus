@@ -217,9 +217,11 @@ contains
     type(states_dim_t), pointer :: states_dim
     integer :: ncols
     type(block_t) :: blk
+    type(profile_t), save :: prof
 
     PUSH_SUB(hamiltonian_init)
-
+    call profiling_in(prof, 'HAMILTONIAN_INIT')
+    
     states_dim => st%d
 
     ! make a couple of local copies
@@ -451,6 +453,7 @@ contains
     !%End
     call parse_logical(datasets_check('StatesPack'), .true., hm%apply_packed)
 
+    call profiling_out(prof)
     POP_SUB(hamiltonian_init)
 
   contains
