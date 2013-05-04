@@ -502,8 +502,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         call messages_info(3)
       end if
 
-      message(1) = 'Calculating matrix elements.'
-      call messages_info(1)
+      call messages_write('Calculating matrix elements.')
+      call messages_info()
 
       call profiling_in(prof_matrix, "LCAO_MATRIX")
 
@@ -584,8 +584,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
-      message(1) = 'Diagonalizing Hamiltonian.'
-      call messages_info(1)
+      call messages_write('Diagonalizing Hamiltonian.')
+      call messages_info()
 
       call profiling_out(prof_matrix)
 
@@ -605,8 +605,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
       call profiling_in(prof_wavefunction, "LCAO_WAVEFUNCTIONS")
 
-      message(1) = 'Generating wavefunctions.'
-      call messages_info(1)
+      call messages_write('Generating wavefunctions.')
+      call messages_info()
 
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, this%nbasis)
 

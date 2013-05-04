@@ -428,7 +428,7 @@ contains
       !% If set to yes (the default) Octopus keeps atomic orbitals in
       !% memory during the LCAO procedure. If set to no, the orbitals
       !% are generated each time that they are needed, increasing
-      !% computational time but saving memory.
+      !% computational time but saving memory. The default is yes.
       !%
       !% When set to yes, Octopus prints the amount of memory per node
       !% that is required to store the orbitals.
