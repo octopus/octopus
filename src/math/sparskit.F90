@@ -92,19 +92,15 @@ end module sparskit_m
 
 #ifdef HAVE_SPARSKIT
 
+!> This function will be linked by SPARSKIT to perform dot products.
 ! ---------------------------------------------------------
 FLOAT function distdot(n, x, ix, y, iy)
   use blas_m
-  !  use lalg_basic_m
 
   integer, intent(in) :: n, ix, iy
   FLOAT,   intent(in) :: x, y
 
-#ifdef SINGLE_PRECISION
-  distdot = sdot(n, x, ix, y, iy)
-#else
-  distdot = ddot(n, x, ix, y, iy)
-#endif
+  distdot = blas_dot(n, x, ix, y, iy)
 
 end function distdot
 
