@@ -406,19 +406,25 @@ contains
 
       iunit = io_open(VIB_MODES_DIR//'infrared', action='write')
 
-      write(iunit, '(a)') '#   freq ['//trim(units_abbrev(unit_invcm))//']     <x>           <y>           <z>           average'
+      write(iunit, '(a)', advance = 'no') '#   freq ['//trim(units_abbrev(unit_invcm))//']'
+      do idir = 1, ndim
+        write(iunit, '(a14)', advance = 'no') '<' // index2axis(idir) // '> [' // trim(units_abbrev(units_out%length)) // ']'
+      enddo
+      write(iunit, '(a14)') 'average [' // trim(units_abbrev(units_out%length)) // ']'
 
       do iatom = 1, natoms
         do idir = 1, ndim
 
           imat = vibrations_get_index(vib, iatom, idir)
 
+          write(iunit, '(f14.5)', advance = 'no') units_from_atomic(unit_invcm, vib%freq(imat))
           do jdir = 1, ndim
             lir(jdir) = dot_product(infrared(:, jdir), vib%normal_mode(:, imat))
+            write(iunit, '(f14.5)', advance = 'no') units_from_atomic(units_out%length, lir(jdir))
           end do
-          lir(ndim+1) = sqrt(sum(lir(1:ndim)**2)/M_THREE)
 
-          write(iunit, '(5f14.5)') units_from_atomic(unit_invcm, vib%freq(imat)), lir(1:ndim+1)
+          lir(ndim+1) = sqrt(sum(lir(1:ndim)**2)/M_THREE)
+          write(iunit, '(f14.5)') units_from_atomic(units_out%length, lir(ndim + 1))
         end do
       end do
 
