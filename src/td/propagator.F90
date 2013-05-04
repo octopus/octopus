@@ -304,11 +304,11 @@ contains
     case(PROP_AETRS, PROP_CAETRS)
     case(PROP_EXPONENTIAL_MIDPOINT)
     case(PROP_CRANK_NICOLSON)
-      ! set up pointer for zmf_dotp_aux, zmf_nrm2_aux
+      ! set up pointer for zmf_dotu_aux, zmf_nrm2_aux
       call mesh_init_mesh_aux(gr%mesh)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
-      ! set up pointer for zmf_dotp_aux
+      ! set up pointer for zmf_dotu_aux
       SAFE_ALLOCATE(tdsk)
       call zsparskit_solver_init(st%d%dim*gr%mesh%np, tdsk)
 #else

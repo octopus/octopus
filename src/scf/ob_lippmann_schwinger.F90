@@ -54,7 +54,7 @@ module ob_lippmann_schwinger_m
     CMPLX, pointer           :: self_energy(:, :, :)
   end type p_se_t
 
-  ! Pointers to communicate with iterative linear solver.
+  !> Pointers to communicate with iterative linear solver.
   integer, pointer             :: ist_p, ik_p
   FLOAT, pointer               :: energy_p
   type(p_se_t), pointer        :: lead_p(:)
@@ -65,8 +65,8 @@ module ob_lippmann_schwinger_m
 contains
 
   ! ---------------------------------------------------------
-  ! Solve the Lippmann-Schwinger equation for the open boundary
-  ! system. Use convergence criteria in eigens.
+  !> Solve the Lippmann-Schwinger equation for the open boundary
+  !! system. Use convergence criteria in eigens.
   subroutine lippmann_schwinger(eigens, hm, gr, st)
     type(eigensolver_t),         intent(inout) :: eigens
     type(hamiltonian_t), target, intent(inout) :: hm
@@ -86,6 +86,9 @@ contains
 #endif
 
     PUSH_SUB(lippmann_schwinger)
+
+    ! set up pointer for QMR solver
+    call mesh_init_mesh_aux(gr%mesh)
 
     np = gr%mesh%np
     np_part = gr%mesh%np_part
@@ -148,11 +151,11 @@ contains
 
         conv = .false.
         if (associated(hm%ep%A_static)) then ! magnetic gs
-          call zqmr_sym(dim*np, psi, rhs, lhs_symmetrized, ls_qmr_dotu, ls_qmr_nrm2, &
+          call zqmr_sym(dim*np, psi, rhs, lhs_symmetrized, zmf_dotu_aux, zmf_nrm2_aux, &
                         ls_qmr_prec, iter, residue = res, threshold = eigens%tolerance, &
                         converged = conv, showprogress = in_debug_mode)
         else
-          call zqmr_sym(dim*np, psi, rhs, lhs, ls_qmr_dotu, ls_qmr_nrm2, ls_qmr_prec, &
+          call zqmr_sym(dim*np, psi, rhs, lhs, zmf_dotu_aux, zmf_nrm2_aux, ls_qmr_prec, &
                         iter, residue=res, threshold = eigens%tolerance, &
                         converged = conv, showprogress = in_debug_mode)
         end if
@@ -276,31 +279,6 @@ contains
     SAFE_DEALLOCATE_A(tmp_pot)
     POP_SUB(calc_rhs)
   end subroutine calc_rhs
-
-
-
-
-  ! ---------------------------------------------------------
-  ! Dot product for QMR solver. This routine works for x being a spinor
-  ! considered as one continuous vector.
-  CMPLX function ls_qmr_dotu(x,y)
-    CMPLX, intent(in) :: x(:)
-    CMPLX, intent(in) :: y(:)
-
-    ls_qmr_dotu = zmf_dotp(gr_p%mesh, x, y, dotu = .true.)
-
-  end function ls_qmr_dotu
-
-
-  ! ---------------------------------------------------------
-  ! Norm for QMR solver. This routine works for x being a spinor
-  ! considered as one continuous vector.
-  FLOAT function ls_qmr_nrm2(x)
-    CMPLX, intent(in) :: x(:)
-
-    ls_qmr_nrm2 = zmf_nrm2(gr_p%mesh, x)
-
-  end function ls_qmr_nrm2
 
 
   ! ---------------------------------------------------------
