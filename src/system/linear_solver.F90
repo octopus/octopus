@@ -43,7 +43,7 @@ module linear_solver_m
 
   private
 
-  integer, public, parameter ::&
+  integer, public, parameter :: &
        LS_CG              = 5,  &
        LS_BICGSTAB        = 4,  &
        LS_MULTIGRID       = 7,  &
@@ -96,6 +96,7 @@ contains
 
     integer :: fsolver
     integer :: defsolver_ 
+
     PUSH_SUB(linear_solver_init)
 
     !%Variable LinearSolver
@@ -144,6 +145,9 @@ contains
     else
       call parse_integer(datasets_check("LinearSolver"), defsolver_, fsolver)
     end if
+
+    ! set up pointer for dot product and norm in QMR solvers
+    call mesh_init_mesh_aux(gr%mesh)
 
     !the last 2 digits select the linear solver
     this%solver = mod(fsolver, 100)

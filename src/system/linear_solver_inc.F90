@@ -67,7 +67,7 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_respo
   case(LS_QMR_SYMMETRIC)   
     ! complex symmetric: for Sternheimer, only if wfns are real
     call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
-      X(ls_solver_operator_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
+      X(ls_solver_operator_na), X(mf_dotu_aux), X(mf_nrm2_aux), X(ls_preconditioner), &
       this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
 
   case(LS_QMR_SYMMETRIZED)
@@ -75,19 +75,19 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_respo
     SAFE_ALLOCATE(z(1:gr%mesh%np, 1:1))
     call X(ls_solver_operator_t_na)(y(:, 1), z(:, 1))
     call X(qmr_sym)(gr%mesh%np, x(:, 1), z(:, 1), &
-      X(ls_solver_operator_sym_na), X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
+      X(ls_solver_operator_sym_na), X(mf_dotu_aux), X(mf_nrm2_aux), X(ls_preconditioner), &
       this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
 
   case(LS_QMR_DOTP)
     ! using conjugated dot product
     call X(qmr_sym)(gr%mesh%np, x(:, 1), y(:, 1), &
-      X(ls_solver_operator_na), X(ls_dotp_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), &
+      X(ls_solver_operator_na), X(mf_dotp_aux), X(mf_nrm2_aux), X(ls_preconditioner), &
       this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
 
   case(LS_QMR_GENERAL)
     ! general algorithm
     call X(qmr)(gr%mesh%np, x(:, 1), y(:, 1), X(ls_solver_operator_na), X(ls_solver_operator_t_na), &
-      X(ls_dotu_qmr), X(ls_nrm2_qmr), X(ls_preconditioner), X(ls_preconditioner), &
+      X(mf_dotu_aux), X(mf_nrm2_aux), X(ls_preconditioner), X(ls_preconditioner), &
       this%iter, residue = this%abs_psi, threshold = tol, showprogress = .false.)
 
   case(LS_SOS)
@@ -103,34 +103,6 @@ subroutine X(solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, occ_respo
   POP_SUB(X(solve_HXeY))
 
 end subroutine X(solve_HXeY)
-
-
-! ---------------------------------------------------------
-FLOAT function X(ls_nrm2_qmr)(x)
-  R_TYPE, intent(in) :: x(:)
-  
-  X(ls_nrm2_qmr) = X(mf_nrm2)(args%gr%mesh, x)
-  
-end function X(ls_nrm2_qmr)
-
-
-! ---------------------------------------------------------
-R_TYPE function X(ls_dotu_qmr)(x,y)
-  R_TYPE, intent(in) :: x(:)
-  R_TYPE, intent(in) :: y(:)
-  
-  X(ls_dotu_qmr) = X(mf_dotp)(args%gr%mesh, x, y, dotu = .true.)
-  
-end function X(ls_dotu_qmr)
-
-! ---------------------------------------------------------
-R_TYPE function X(ls_dotp_qmr)(x,y)
-  R_TYPE, intent(in) :: x(:)
-  R_TYPE, intent(in) :: y(:)
-  
-  X(ls_dotp_qmr) = X(mf_dotp)(args%gr%mesh, x, y)
-  
-end function X(ls_dotp_qmr)
 
 ! ---------------------------------------------------------
 !> Conjugate gradients

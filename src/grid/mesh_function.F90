@@ -66,7 +66,11 @@ module mesh_function_m
     zmf_dotp_aux,          &
     dmf_multipoles,        &
     zmf_multipoles,        &
-    mesh_init_mesh_aux
+    mesh_init_mesh_aux,    &
+    dmf_dotu_aux,          &
+    zmf_dotu_aux,          &
+    dmf_nrm2_aux,          &
+    zmf_nrm2_aux
 
   interface mf_surface_integral
     module procedure dmf_surface_integral_scalar, dmf_surface_integral_vector, &

@@ -75,6 +75,32 @@ R_TYPE function X(mf_dotp_aux)(f1, f2) result(dotp)
   POP_SUB(X(mf_dotp_aux))
 end function X(mf_dotp_aux)
 
+!> Same as above, but no conjugation.
+!! ---------------------------------------------------------
+R_TYPE function X(mf_dotu_aux)(f1, f2) result(dotu)
+  R_TYPE,            intent(in) :: f1(:), f2(:)
+
+  PUSH_SUB(X(mf_dotu_aux))
+
+  ASSERT(associated(mesh_aux))
+  dotu = X(mf_dotp)(mesh_aux, f1, f2, dotu = .true.)
+
+  POP_SUB(X(mf_dotu_aux))
+end function X(mf_dotu_aux)
+
+!> Same as above, but for norm.
+!! ---------------------------------------------------------
+FLOAT function X(mf_nrm2_aux)(ff) result(norm)
+  R_TYPE,            intent(in) :: ff(:)
+
+  PUSH_SUB(X(mf_nrm2_aux))
+
+  ASSERT(associated(mesh_aux))
+  norm = X(mf_nrm2)(mesh_aux, ff)
+
+  POP_SUB(X(mf_nrm2_aux))
+end function X(mf_nrm2_aux)
+
 
 ! ---------------------------------------------------------
 !> this function returns the dot product between two vectors
