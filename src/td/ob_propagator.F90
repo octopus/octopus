@@ -245,7 +245,7 @@ contains
 
   CMPLX function lambda(m, k, max_iter, sm_u) result(res)
     integer, intent(in) :: m, k, max_iter
-    CMPLX,   intent(in) :: sm_u(0:max_iter)
+    CMPLX,   intent(in) :: sm_u(0:) !< (0:max_iter)
 
     integer :: j
     res = M_z1
@@ -581,7 +581,8 @@ contains
     type(interface_t), intent(in)    :: intf
     type(states_t),    intent(in)    :: st
     type(mesh_t),      intent(in)    :: mesh
-    CMPLX,             intent(inout) :: st_intf(1:intf%np_intf, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
+    CMPLX,             intent(inout) :: st_intf(:, st%st_start:, st%d%kpt%start:)
+                                        !< (1:intf%np_intf, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
 
     integer :: ik, ist
     CMPLX, allocatable :: psi(:, :)
@@ -775,7 +776,7 @@ contains
     CMPLX,             intent(in)    :: mem_s(:, :, :)
     integer,           intent(in)    :: order
     integer,           intent(in)    :: dim
-    integer,           intent(in)    :: mapping(:)   ! the mapping
+    integer,           intent(in)    :: mapping(:)
     logical, optional, intent(in)    :: transposed
 
     CMPLX, allocatable :: tmem(:, :)
