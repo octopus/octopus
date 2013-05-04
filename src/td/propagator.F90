@@ -309,6 +309,7 @@ contains
     case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
       ! set up pointer for zmf_dotu_aux
+      call mesh_init_mesh_aux(gr%mesh)
       SAFE_ALLOCATE(tdsk)
       call zsparskit_solver_init(st%d%dim*gr%mesh%np, tdsk)
 #else
