@@ -59,7 +59,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
     ss = M_ZERO
 
     call X(states_calc_overlap)(st, mesh, ik, ss)
- 
+
     bof = .false.
     ! calculate the Cholesky decomposition
     call lalg_cholesky(nst, ss, bof = bof)
@@ -1438,6 +1438,8 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
       if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasDsyrkEx/clAmdBlasZherkEx')
 
     end do
+
+    call opencl_finish()
 
     call opencl_release_buffer(psi_buffer)
 

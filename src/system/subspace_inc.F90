@@ -363,6 +363,8 @@ subroutine X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
           CommandQueue = opencl%command_queue, status = ierr)
         if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXgemmEx')
 
+        call opencl_finish()
+
       end do
 
 
