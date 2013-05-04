@@ -94,7 +94,7 @@ module mesh_function_m
     module procedure zmf_nrm2_1, zmf_nrm2_2
   end interface zmf_nrm2
 
-  type(mesh_t), pointer :: mesh_aux
+  type(mesh_t), pointer :: mesh_aux => null()
 
   type(profile_t), save ::            &
        C_PROFILING_MF_INTEGRATE,      &
@@ -126,16 +126,18 @@ end module mesh_function_m
 #ifdef HAVE_SPARSKIT
 
 !> This function will be linked by SPARSKIT to perform dot products.
+!! It expects complex numbers as an array with first real parts, then imaginary parts.
 ! ---------------------------------------------------------
-FLOAT function distdot(n, x, ix, y, iy)
+REAL_DOUBLE function distdot(n, x, ix, y, iy)
   use mesh_function_m
 
-  integer, intent(in) :: n
-  FLOAT,   intent(in) :: x(n)
-  integer, intent(in) :: ix
-  FLOAT,   intent(in) :: y(n)
-  integer, intent(in) :: iy
+  integer,     intent(in) :: n
+  REAL_DOUBLE, intent(in) :: x(n)
+  integer,     intent(in) :: ix
+  REAL_DOUBLE, intent(in) :: y(n)
+  integer,     intent(in) :: iy
 
+  ! SPARSKIT only calls this function with ix, iy = 1 i.e. no stride.
   ASSERT(ix == 1)
   ASSERT(iy == 1)
   distdot = dmf_dotp_aux(x(1:n/2), y(1:n/2)) + dmf_dotp_aux(x(n/2+1:n), y(n/2+1:n))

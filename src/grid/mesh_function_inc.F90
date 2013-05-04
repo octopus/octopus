@@ -68,6 +68,8 @@ R_TYPE function X(mf_dotp_aux)(f1, f2) result(dotp)
   R_TYPE,            intent(in) :: f1(:), f2(:)
 
   PUSH_SUB(X(mf_dotp_aux))
+
+  ASSERT(associated(mesh_aux))
   dotp = X(mf_dotp)(mesh_aux, f1, f2)
 
   POP_SUB(X(mf_dotp_aux))
