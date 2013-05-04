@@ -672,7 +672,7 @@ contains
     case(SAVE_CPU_TIME)
       do ntime = 0, iter
         do ip = 1, np
-          write(iunit) ob%lead(intf%il)%q(ip, ip:np, ntime)
+          write(iunit) ob%lead(intf%il)%q(ip:np, ip, ntime)
         end do
       end do
     case(SAVE_RAM_USAGE) ! FIXME: only 2D.
@@ -749,8 +749,8 @@ contains
         if (ob%mem_type == SAVE_CPU_TIME) then ! Full (upper half) matrices.
           do ntime = 0, min(iter, s_iter)
             do ip = 1, np
-              read(iunit) ob%lead(il)%q(ip, ip:np, ntime)
-              ob%lead(il)%q(ip:np, ip, ntime) = ob%lead(il)%q(ip, ip:np, ntime)
+              read(iunit) ob%lead(il)%q(ip:np, ip, ntime)
+              ob%lead(il)%q(ip, ip:np, ntime) = ob%lead(il)%q(ip:np, ip, ntime)
             end do
           end do
         else ! Packed matrices (FIXME: yet only 2D).
