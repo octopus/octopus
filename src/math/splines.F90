@@ -818,22 +818,15 @@ contains
       end do
     end if
 
-    !$omp parallel private(i, j)
     do i = 1, np
-      !$omp do 
       do j = 1, npoints
         y2(j) = y(j) * x(j)**2 * loct_sph_bessel(l, x(j)*xw(i))
       end do
-      !$omp end do
-      
-      !$omp master
       call spline_init(aux)
       call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
       yw(i) = sqrt(CNST(2.0)/M_PI)*oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
       call spline_end(aux)
-      !$omp end master
     end do
-    !$omp end parallel
 
     call spline_init(splw)
     call oct_spline_fit(np, xw(1), yw(1), splw%spl, splw%acc)
