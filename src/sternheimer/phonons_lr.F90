@@ -166,6 +166,10 @@ contains
 
     call restart_look_and_read(st, gr)
 
+    if(states_are_complex(sys%st)) then
+      call messages_not_implemented('linear-response vib_modes with complex wavefunctions')
+    endif
+
     ! read kdotp wavefunctions if necessary (for IR intensities)
     if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
       message(1) = "Reading kdotp wavefunctions for periodic directions."
@@ -262,6 +266,7 @@ contains
         call vibrations_out_dyn_matrix(vib, imat, jmat)
       end do
       
+      ! FIXME: generalize to complex case
       if(do_infrared) then
         if(smear_is_semiconducting(st%smear)) then
           do jdir = 1, gr%sb%periodic_dim
@@ -411,7 +416,7 @@ contains
           do jdir = 1, ndim
             lir(jdir) = dot_product(infrared(:, jdir), vib%normal_mode(:, imat))
           end do
-          lir(ndim+1) = sqrt(sum(lir(1:ndim)**2))
+          lir(ndim+1) = sqrt(sum(lir(1:ndim)**2)/M_THREE)
 
           write(iunit, '(5f14.5)') units_from_atomic(unit_invcm, vib%freq(imat)), lir(1:ndim+1)
         end do
@@ -434,6 +439,7 @@ contains
       call lr_init(lrtmp)
       call lr_allocate(lrtmp, st, gr%mesh)
 
+      ! FIXME: generalize to complex case
       lr(1)%ddl_psi = M_ZERO
 
       do inm = 1, vib%num_modes
