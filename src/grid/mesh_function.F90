@@ -123,6 +123,27 @@ contains
 
 end module mesh_function_m
 
+#ifdef HAVE_SPARSKIT
+
+!> This function will be linked by SPARSKIT to perform dot products.
+! ---------------------------------------------------------
+FLOAT function distdot(n, x, ix, y, iy)
+  use mesh_function_m
+
+  integer, intent(in) :: n
+  FLOAT,   intent(in) :: x(n)
+  integer, intent(in) :: ix
+  FLOAT,   intent(in) :: y(n)
+  integer, intent(in) :: iy
+
+  ASSERT(ix == 1)
+  ASSERT(iy == 1)
+  distdot = dmf_dotp_aux(x(1:n/2), y(1:n/2)) + dmf_dotp_aux(x(n/2+1:n), y(n/2+1:n))
+
+end function distdot
+
+#endif /* HAVE_SPARSKIT */
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

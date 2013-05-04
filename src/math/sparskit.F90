@@ -88,23 +88,9 @@ contains
 
 #endif /* HAVE_SPARSKIT */
 
+! distdot function for dot products is defined in mesh_function_m
+
 end module sparskit_m
-
-#ifdef HAVE_SPARSKIT
-
-!> This function will be linked by SPARSKIT to perform dot products.
-! ---------------------------------------------------------
-FLOAT function distdot(n, x, ix, y, iy)
-  use blas_m
-
-  integer, intent(in) :: n, ix, iy
-  FLOAT,   intent(in) :: x, y
-
-  distdot = blas_dot(n, x, ix, y, iy)
-
-end function distdot
-
-#endif /* HAVE_SPARSKIT */
 
 !! Local Variables:
 !! mode: f90

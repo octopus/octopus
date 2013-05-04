@@ -265,7 +265,6 @@ contains
     !%Option crank_nicholson_sparskit 6
     !%Option crank_nicolson_sparskit 6
     !% Classical Crank-Nicolson propagator. Requires the SPARSKIT library.
-    !% (Domain parallelization not implemented.)
     !%
     !% <MATH>
     !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
@@ -311,8 +310,8 @@ contains
     case(PROP_CRANK_NICOLSON)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
-      if(gr%mesh%parallel_in_domains) &
-        call messages_not_implemented("crank_nicolson_sparskit propagator parallel in domains")
+      ! set up pointer for distdot
+      call mesh_init_mesh_aux(gr%mesh)
       SAFE_ALLOCATE(tdsk)
       call zsparskit_solver_init(st%d%dim*gr%mesh%np, tdsk)
 #else
