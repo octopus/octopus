@@ -32,9 +32,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   logical,                intent(in)    :: save_mem
 
   R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :, :), finalpsi(:)
-  R_TYPE, allocatable :: eigen(:)
+  R_TYPE, allocatable :: eigen(:), nrmsq(:)
   FLOAT,  allocatable :: eval(:, :)
-  FLOAT,  allocatable :: lambda(:), nrm(:)
+  FLOAT,  allocatable :: lambda(:)
   integer :: ist, minst, idim, ii, iter, nops, maxst, jj, bsize, ib, jter, kter, prog
   R_TYPE :: ca, cb, cc
   R_TYPE, allocatable :: fr(:, :)
@@ -55,7 +55,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_ALLOCATE(last(1:st%d%block_size))
   SAFE_ALLOCATE(failed(1:st%d%block_size))
   SAFE_ALLOCATE(fr(1:4, 1:st%d%block_size))
-  SAFE_ALLOCATE(nrm(1:st%d%block_size))
+  SAFE_ALLOCATE(nrmsq(1:st%d%block_size))
 
   do iter = 1, niter
     if(iter /= 1) then
@@ -97,10 +97,10 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     done = 0
 
-    call mesh_batch_nrm2(gr%mesh, resb(1)%batch, nrm)
+    call X(mesh_batch_dotp_vector)(gr%mesh, resb(1)%batch, resb(1)%batch, nrmsq)
 
     do ii = 1, bsize
-      if(nrm(ii) < tol) done(ii) = 1
+      if(sqrt(abs(nrmsq(ii))) < tol) done(ii) = 1
     end do
 
     if(all(done(1:bsize) /= 0)) then
@@ -349,7 +349,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(last)
   SAFE_DEALLOCATE_A(failed)
   SAFE_DEALLOCATE_A(fr)
-  SAFE_DEALLOCATE_A(nrm)
+  SAFE_DEALLOCATE_A(nrmsq)
 
   POP_SUB(X(eigensolver_rmmdiis))
 
