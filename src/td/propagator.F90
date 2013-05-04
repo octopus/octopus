@@ -60,17 +60,13 @@ module propagator_m
   implicit none
 
   private
-  public ::                   &
+  public ::                       &
     propagator_t,                 &
     propagator_init,              &
     propagator_end,               &
     propagator_copy,              &
     propagator_run_zero_iter,     &
     propagator_dt,                &
-    td_zop,                   &
-    td_zopt,                  &
-    propagator_qmr_op,            &
-    propagator_qmr_prec,          &
     propagator_set_scf_prop,      &
     propagator_remove_scf_prop,   &
     propagator_ions_are_propagated, &
@@ -308,10 +304,11 @@ contains
     case(PROP_AETRS, PROP_CAETRS)
     case(PROP_EXPONENTIAL_MIDPOINT)
     case(PROP_CRANK_NICOLSON)
+      ! set up pointer for zmf_dotp_aux, zmf_nrm2_aux
+      call mesh_init_mesh_aux(gr%mesh)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
 #ifdef HAVE_SPARSKIT
-      ! set up pointer for distdot
-      call mesh_init_mesh_aux(gr%mesh)
+      ! set up pointer for zmf_dotp_aux
       SAFE_ALLOCATE(tdsk)
       call zsparskit_solver_init(st%d%dim*gr%mesh%np, tdsk)
 #else
@@ -1200,7 +1197,7 @@ contains
           ist_op = ist
           ik_op = ik
           iter = 2000
-          call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, propagator_qmr_dotu, propagator_qmr_nrm2, &
+          call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
             propagator_qmr_prec, iter, dres, cgtol, showprogress = .false., converged = converged)
 
           do idim = 1, st%d%dim
@@ -1254,7 +1251,7 @@ contains
             ist_op = ist
             ik_op = ik
             iter = 2000
-            call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, propagator_qmr_dotu, propagator_qmr_nrm2, &
+            call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
               propagator_qmr_prec, iter, dres, cgtol, showprogress = .false., converged = converged)
 
             do idim = 1, st%d%dim
@@ -1401,23 +1398,6 @@ contains
     POP_SUB(propagator_qmr_prec)
   end subroutine propagator_qmr_prec
   ! ---------------------------------------------------------
-
-  FLOAT function propagator_qmr_nrm2(x)
-    CMPLX, intent(in) :: x(:)
-    
-    propagator_qmr_nrm2 = zmf_nrm2(grid_p%mesh, x)
-    
-  end function propagator_qmr_nrm2
-  
-  
-  ! ---------------------------------------------------------
-  CMPLX function propagator_qmr_dotu(x,y)
-    CMPLX, intent(in) :: x(:)
-    CMPLX, intent(in) :: y(:)
-    
-    propagator_qmr_dotu = zmf_dotp(grid_p%mesh, x, y, dotu = .true.)
-    
-  end function propagator_qmr_dotu
 
 
   ! ---------------------------------------------------------
