@@ -30,7 +30,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
     if (mesh%use_curvilinear) then
       res = sum(ff(1:sm%np)*mesh%vol_pp(sm%map(1:sm%np)) )
     else
-      res = sum(ff(1:sm%np))*mesh%vol_pp(1)
+      res = sum(ff(1:sm%np))*mesh%volume_element
     end if
   else
     res = M_ZERO
@@ -257,7 +257,7 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
 
         end do
 
-        dot(jst, ist) = dotp*this%mesh%vol_pp(1)
+        dot(jst, ist) = dotp*this%mesh%volume_element
       end do
     end do
     
