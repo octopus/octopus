@@ -747,8 +747,10 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
 #ifdef HAVE_OPENCL
   type(opencl_mem_t)  :: nrm2_buffer
 #endif
+  type(profile_t), save :: prof
 
   PUSH_SUB(X(mesh_batch_nrm2))
+  call profiling_in(prof, 'MESH_BATCH_NRM2')
 
   select case(batch_status(aa))
   case(BATCH_NOT_PACKED)
@@ -847,6 +849,7 @@ subroutine X(mesh_batch_nrm2)(mesh, aa, nrm2)
 
   end select
   
+  call profiling_out(prof)
   POP_SUB(X(mesh_batch_nrm2))
 end subroutine X(mesh_batch_nrm2)
 

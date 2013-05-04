@@ -149,7 +149,7 @@ module opencl_m
 
 #endif
 
-  type(profile_t), save :: prof_read, prof_write, prof_kernel_run
+  type(profile_t), save :: prof_read, prof_write
 
   integer, parameter  ::      &
     OPENCL_GPU         = -1,  &
@@ -787,12 +787,9 @@ contains
 
     PUSH_SUB(opencl_finish)
 
-    call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
-
     call clFinish(opencl%command_queue, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
 
-    call profiling_out(prof_kernel_run)
     POP_SUB(opencl_finish)
   end subroutine opencl_finish
 
@@ -857,7 +854,6 @@ contains
     integer(8) :: lsizes(1:3)
 
     PUSH_SUB(opencl_kernel_run)
-    call profiling_in(prof_kernel_run, "CL_KERNEL_RUN")
 
     dim = ubound(globalsizes, dim = 1)
 
@@ -871,7 +867,6 @@ contains
     call clEnqueueNDRangeKernel(opencl%command_queue, kernel, gsizes(1:dim), lsizes(1:dim), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
 
-    call profiling_out(prof_kernel_run)
     POP_SUB(opencl_kernel_run)
   end subroutine opencl_kernel_run
 
