@@ -69,7 +69,7 @@ contains
     integer,           intent(in) :: iunit, nst
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
-    FLOAT, optional,   intent(in) :: error(nst, st%d%nik)
+    FLOAT, optional,   intent(in) :: error(:,:) !< (nst, st%d%nik)
     integer, optional, intent(in) :: st_start
 
     integer :: ik, ist, ns, is, idir, st_start_
@@ -953,7 +953,7 @@ contains
     type(states_t),    intent(in)    :: st
     CMPLX,             intent(inout) :: src0(:, : ,:, :)
 
-    integer :: ik, ist, idim, np, iunit
+    integer :: ik, ist, idim, np, iunit, ip
     character(len=256) :: fname
 
     PUSH_SUB(states_read_proj_lead_wf)
@@ -978,7 +978,7 @@ contains
           end if
 
           ! because we use a sliced array we have to remap the index
-          read(iunit) src0(1:np, idim, ist-st%st_start+1, ik-st%d%kpt%start+1)
+          read(iunit) (src0(ip, idim, ist-st%st_start+1, ik-st%d%kpt%start+1), ip = 1, np)
 
           call io_close(iunit)
         end do

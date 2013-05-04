@@ -455,6 +455,7 @@ contains
 
     character(len=20)  :: str
     character(len=100) :: line
+    integer :: idir
 
     PUSH_SUB(mesh_init_from_file)
 
@@ -469,8 +470,8 @@ contains
     mesh%idx%nr = 0
     mesh%idx%ll = 0
     mesh%idx%enlarge = 0
-    read(iunit, '(a20,7i8)')  str, mesh%idx%nr(1, 1:mesh%sb%dim)
-    read(iunit, '(a20,7i8)')  str, mesh%idx%nr(2, 1:mesh%sb%dim)
+    read(iunit, '(a20,7i8)')  str, (mesh%idx%nr(1, idir), idir = 1,mesh%sb%dim)
+    read(iunit, '(a20,7i8)')  str, (mesh%idx%nr(2, idir), idir = 1,mesh%sb%dim)
     read(iunit, '(a20,7i8)')  str, mesh%idx%ll(1:mesh%sb%dim)
     ! ll should not be read but computed:
     mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
