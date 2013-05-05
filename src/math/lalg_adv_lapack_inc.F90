@@ -28,7 +28,7 @@
 
 
 ! ---------------------------------------------------------
-! Auxiliary functions.
+!> Auxiliary functions.
 FLOAT function sfmin()
   interface
     FLOAT function DLAPACK(lamch)(cmach)
@@ -137,7 +137,7 @@ end subroutine zcholesky
 ! ---------------------------------------------------------
 !> Computes all the eigenvalues and the eigenvectors of a real
 !! generalized symmetric-definite eigenproblem, of the form  
-!! \f$ Ax=\lambda Bx, ABx=\lambda x, or BAx=\lambda x.\f$
+!! \f$ Ax=\lambda Bx \f$.
 !! Here A and B are assumed to be symmetric and B is also positive definite.
 subroutine dgeneigensolve(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
@@ -206,8 +206,7 @@ end subroutine dgeneigensolve
 
 ! ---------------------------------------------------------
 !> Computes all the eigenvalues and the eigenvectors of a complex
-!! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x,
-!! A*Bx=(lambda)*x, or B*A*x=(lambda)*x.
+!! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x.
 !! Here A and B are assumed to be Hermitian and B is also positive definite.
 subroutine zgeneigensolve(n, a, b, e, bof, err_code)
   integer,           intent(in)    :: n
@@ -656,7 +655,7 @@ end subroutine deigensolve
 !> Computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
 subroutine zeigensolve(n, a, e, bof, err_code)
   integer,           intent(in)    :: n
-  CMPLX,             intent(inout) :: a(:, :)   !< (n,n)
+  CMPLX,             intent(inout) :: a(:,:)   !< (n,n)
   FLOAT,             intent(out)   :: e(:)     !< (n)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
