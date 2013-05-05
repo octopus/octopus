@@ -127,7 +127,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   type(hamiltonian_t),    intent(in)    :: hm
   integer,                intent(in)    :: st_start
   integer,                intent(in)    :: st_end
-  R_TYPE, target,         intent(inout) :: psi(gr%mesh%np_part, st%d%dim, st_start:st_end)
+  R_TYPE, target,         intent(inout) :: psi(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
   integer,                intent(in)    :: constr_start
   integer,                intent(in)    :: constr_end
   integer,                intent(in)    :: ik
@@ -136,7 +136,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   integer,                intent(inout) :: niter
   integer,                intent(out)   :: converged
   FLOAT,                  intent(inout) :: diff(:) !< (1:st%nst)
-  R_TYPE, optional,       intent(in)    :: constr(gr%mesh%np_part, st%d%dim, constr_start:constr_end)
+  R_TYPE, optional,       intent(in)    :: constr(:, :, constr_start:) !< (gr%mesh%np_part, st%d%dim, constr_start:constr_end)
 
   integer :: nps   !< Number of points per state.
   integer :: nst   !< Number of eigenstates (i.e. the blocksize).
