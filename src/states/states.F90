@@ -784,14 +784,16 @@ contains
   end subroutine states_init
 
   ! ---------------------------------------------------------
-  !> Reads the state stored in directory "dir", and finds out
+  !> Reads the files 'wfns' and 'occs' stored in directory "dir", and finds out
   !! the kpoints, dim, and nst contained in it.
   ! ---------------------------------------------------------
   subroutine states_look(dir, mpi_grp, kpoints, dim, nst, ierr)
-    character(len=*),  intent(in)    :: dir
-    type(mpi_grp_t),   intent(in)    :: mpi_grp
-    integer,           intent(out)   :: dim, ierr
-    integer,           intent(inout) :: nst, kpoints
+    character(len=*),  intent(in)  :: dir
+    type(mpi_grp_t),   intent(in)  :: mpi_grp
+    integer,           intent(out) :: kpoints
+    integer,           intent(out) :: dim
+    integer,           intent(out) :: nst
+    integer,           intent(out) :: ierr
 
     character(len=256) :: line
     character(len=12)  :: filename
@@ -1193,8 +1195,8 @@ contains
     type(states_t),         intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
-    logical,      optional, intent(in)      :: alloc_zphi ! only needed for gs transport
-    logical,      optional, intent(in)      :: alloc_Left ! allocate an addtional set of wfs to store left eigenstates
+    logical,      optional, intent(in)      :: alloc_zphi !< only needed for gs transport
+    logical,      optional, intent(in)      :: alloc_Left !< allocate an addtional set of wfs to store left eigenstates
 
     integer :: ip, ik, ist, idim, st1, st2, k1, k2, np_part
     logical :: force

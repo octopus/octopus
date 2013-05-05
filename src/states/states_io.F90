@@ -760,6 +760,7 @@ contains
 
   ! ---------------------------------------------------------
 
+  !> Note: this file is currently unused.
   subroutine states_dump(st, iunit)
     type(states_t), intent(in) :: st
      integer,       intent(in) :: iunit
@@ -780,7 +781,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     integer,             intent(in)    :: nspin
     integer,             intent(in)    :: d_ispin
-    type(lead_t),        intent(in)    :: lead(:) ! Diagonal and off-diagonal block of the lead Hamiltonian.
+    type(lead_t),        intent(in)    :: lead(:) !< Diagonal and off-diagonal block of the lead Hamiltonian.
 
     character(len=2)      :: spin
     character(len=256)    :: fmt, fname_real, fname_imag
