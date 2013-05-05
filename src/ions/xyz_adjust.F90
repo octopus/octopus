@@ -100,11 +100,11 @@ contains
       select case(axis_type)
       case(INERTIA, PSEUDO)
         call find_center_of_mass(geo, center, pseudo = (axis_type==PSEUDO))
-        call translate(geo, -center)
+        call translate(geo, center)
         call axis_inertia(geo, x1, x2, pseudo = (axis_type==PSEUDO))
       case(LARGE)
         call find_center(geo, center)
-        call translate(geo, -center)
+        call translate(geo, center)
         call axis_large(geo, x1, x2)
       case default
         write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
@@ -130,7 +130,7 @@ contains
 
     ! recenter
     call find_center(geo, center)
-    call translate(geo, -center)
+    call translate(geo, center)
 
     POP_SUB(xyz_adjust_it)
   end subroutine xyz_adjust_it
@@ -264,17 +264,17 @@ contains
   ! ---------------------------------------------------------
   subroutine translate(geo, x)
     type(geometry_t), intent(inout) :: geo
-    FLOAT, intent(in) :: x(MAX_DIM)
+    FLOAT,            intent(in)    :: x(MAX_DIM)
 
     integer  :: iatom
 
     PUSH_SUB(translate)
 
     do iatom = 1, geo%natoms
-      geo%atom(iatom)%x = geo%atom(iatom)%x + x
+      geo%atom(iatom)%x = geo%atom(iatom)%x - x
     end do
     do iatom = 1, geo%ncatoms
-      geo%catom(iatom)%x = geo%catom(iatom)%x + x
+      geo%catom(iatom)%x = geo%catom(iatom)%x - x
     end do
 
     POP_SUB(translate)

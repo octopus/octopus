@@ -310,7 +310,7 @@ contains
     case(3)
 
       do ie = 0, energy_steps
-        read(in_file(1), *) dump, sigmau(1:3, ie, 1:nspin)
+        read(in_file(1), *) dump, (sigmau(1:3, ie, is), is = 1, nspin)
       end do
 
       ! The first row of sigma is the vector that we have just read, but properly projected...
@@ -344,8 +344,8 @@ contains
       call io_skip_header(in_file(2))
 
       do ie = 0, energy_steps
-        read(in_file(1), *) dump, sigmau(1:3, ie, 1:nspin)
-        read(in_file(2), *) dump, sigmaw(1:3, ie, 1:nspin)
+        read(in_file(1), *) dump, (sigmau(1:3, ie, is), is = 1, nspin)
+        read(in_file(2), *) dump, (sigmaw(1:3, ie, is), is = 1, nspin)
       end do
 
       ! The first row of sigma is the vector that we have just read, but properly projected...
@@ -381,9 +381,9 @@ contains
       call io_skip_header(in_file(3))
 
       do ie = 0, energy_steps
-        read(in_file(1), *) dump, sigmau(1:3, ie, 1:nspin)
-        read(in_file(2), *) dump, sigmav(1:3, ie, 1:nspin)
-        read(in_file(3), *) dump, sigmaw(1:3, ie, 1:nspin)
+        read(in_file(1), *) dump, (sigmau(1:3, ie, is), is = 1, nspin)
+        read(in_file(2), *) dump, (sigmav(1:3, ie, is), is = 1, nspin)
+        read(in_file(3), *) dump, (sigmaw(1:3, ie, is), is = 1, nspin)
       end do
 
       do is = 1, nspin
@@ -604,7 +604,7 @@ contains
     if (abs(kick%delta_strength) < 1.d-12) kick%delta_strength = M_ONE
     do ie = 0, no_e
       energy = ie * spectrum%energy_step
-      print * , ie, energy, sigma(ie, 1:3, 1), kick%delta_strength
+      print * , ie, energy, (sigma(ie, idir, 1), idir = 1, 3), kick%delta_strength
       forall(isp = 1:nspin) sf(ie, isp) = sum(sigma(ie, 1:3, isp)*kick%pol(1:3, kick%pol_dir))
       sf(ie, 1:nspin) = -sf(ie, 1:nspin) * (energy * M_TWO) / (M_PI * kick%delta_strength)
       sigma(ie, 1:3, 1:nspin) = -sigma(ie, 1:3, 1:nspin)*(M_FOUR*M_PI*energy/P_c)/kick%delta_strength
@@ -682,7 +682,7 @@ contains
     FLOAT,             intent(out)   :: dipole(0:, 1:, 1:)
     FLOAT, optional,   intent(out)   :: Imdipole(0:, 1:, 1:)
 
-    integer :: nspin, lmax, time_steps, trash, it
+    integer :: nspin, lmax, time_steps, trash, it, idir
     FLOAT   :: dt,  dump
     type(kick_t) :: kick
     type(unit_system_t) :: file_units
@@ -709,7 +709,7 @@ contains
             dipole(it, 2, 1), Imdipole(it, 2, 1), &
             dipole(it, 3, 1), Imdipole(it, 3, 1)
         else 
-          read(in_file, *) trash, dump, dump, dipole(it, 1:3, 1)
+          read(in_file, *) trash, dump, dump, (dipole(it, idir, 1), idir = 1, 3)
         end if
       case(2)
         if(cmplxscl) then
@@ -722,7 +722,7 @@ contains
             dipole(it, 2, 2), Imdipole(it, 2, 2), &
             dipole(it, 3, 2), Imdipole(it, 3, 2)
         else
-          read(in_file, *) trash, dump, dump, dipole(it, 1:3, 1), dump, dipole(it, 1:3, 2)
+          read(in_file, *) trash, dump, dump, (dipole(it, idir, 1), idir = 1, 3), dump, (dipole(it, idir, 2), idir = 1, 3)
         end if
       case(4)
         if(cmplxscl) then
@@ -744,8 +744,8 @@ contains
             dipole(it, 3, 4), Imdipole(it, 3, 4) 
         else
           read(in_file, *) &
-            trash, dump, dump, dipole(it, 1:3, 1), dump, dipole(it, 1:3, 2), dump, dipole(it, 1:3, 3), &
-              dump, dipole(it, 1:3, 4)
+            trash, dump, dump, (dipole(it, idir, 1), idir = 1, 3), dump, (dipole(it, idir, 2), idir = 1, 3), &
+            dump, (dipole(it, idir, 3), idir = 1, 3), dump, (dipole(it, idir, 4), idir = 1, 3)
         end if
       end select
 
