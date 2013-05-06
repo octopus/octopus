@@ -58,7 +58,7 @@ dnl else
 dnl   AC_MSG_RESULT([$acx_libfm_ok ($LIBS_LIBFM)])
 dnl fi
   AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
-  #include <fcs_fconfig.h>
+    include "fcs_fconfig.h"
     use fcs_module
     use iso_fortran_env
     use iso_c_binding
