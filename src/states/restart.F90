@@ -179,7 +179,7 @@ contains
     logical,          optional, intent(in)    :: exact !< if .true. we need all the wavefunctions and on the exact grid
 
     integer :: kpoints, dim, nst, ierr
-    character(len=80) dir
+    character(len=80) :: dir
     FLOAT, pointer :: new_occ(:,:)
 
     PUSH_SUB(restart_look_and_read)
@@ -293,7 +293,11 @@ contains
     if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
       iunit = io_open(trim(dir)//'/wfns', action='write', is_tmp=.true.)
       write(iunit,'(a)') '#     #k-point            #st            #dim    filename'
-      write(iunit,'(a)') '%Wavefunctions'
+      if(states_are_real(st)) then
+        write(iunit,'(a)') '%Real_Wavefunctions'
+      else
+        write(iunit,'(a)') '%Complex_Wavefunctions'
+      endif
 
       iunit2 = io_open(trim(dir)//'/occs', action='write', is_tmp=.true.)
       write(iunit2,'(2a)') '# occupations | eigenvalue[a.u.] | Im(eigenvalue) [a.u.] ', &
@@ -681,8 +685,20 @@ contains
     restart_file_present = .false.
 
     ! Skip two lines.
-    call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file,  line, err)
-    call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file,  line, err)
+    call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, line, err)
+    call iopar_read(st%dom_st_kpt_mpi_grp, wfns_file, line, err)
+
+    if(states_are_real(st)) then
+      read(line, '(a)') str
+      if(str(2:8) == 'Complex') then
+        message(1) = "Cannot restart real calculation from complex wavefunctions."
+        call messages_fatal(1)
+      elseif(str(2:5) /= 'Real') then 
+        message(1) = "Restart file 'wfns' does not specify real/complex; cannot check compatibility."
+        call messages_warning(1)
+      endif
+    endif
+    ! complex can be restarted from real, so there is no problem.
 
     call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, line, err)
     call iopar_read(st%dom_st_kpt_mpi_grp, occ_file, line, err)
