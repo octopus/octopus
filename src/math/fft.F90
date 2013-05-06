@@ -836,6 +836,8 @@ contains
     integer :: nondiv
     integer, allocatable :: exponents(:)
 
+    PUSH_SUB(fft_size)
+
     nfactors = ubound(factors, dim = 1)
 
     SAFE_ALLOCATE(exponents(1:nfactors))
@@ -849,6 +851,7 @@ contains
 
     SAFE_DEALLOCATE_A(exponents)
 
+    POP_SUB(fft_size)
   end function fft_size
 
   ! -------------------------------------------------------
@@ -862,6 +865,8 @@ contains
 
     integer :: ifactor
 
+    PUSH_SUB(get_exponents)
+
     nondiv = num
     do ifactor = 1, nfactors
       exponents(ifactor) = 0
@@ -872,6 +877,7 @@ contains
       end do
     end do
     
+    POP_SUB(get_exponents)
   end subroutine get_exponents
 
 #include "undef.F90"
