@@ -54,7 +54,6 @@ AC_DEFUN([ACX_FFT],
   acx_fft_save_FCFLAGS="$FCFLAGS"
 
   testprogram="AC_LANG_PROGRAM([],[ 
-      include 'fftw3.f'
       call $fft_func
     ])"
 
@@ -115,6 +114,7 @@ AC_DEFUN([ACX_FFT],
     testprogram="AC_LANG_PROGRAM([],[ 
         use iso_c_binding
         include 'fftw3-mpi.f03'
+
         call fftw_mpi_init()
       ])"
       
