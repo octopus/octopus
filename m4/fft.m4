@@ -31,12 +31,12 @@ AC_DEFUN([ACX_FFT],
   fi
 
   dnl Check if the library was given in the command line
-  AC_ARG_WITH(fft-prefix, [AS_HELP_STRING([--with-fft-prefix=DIR], [use FFT library prefix directory.])])
-  case $with_fft_prefix in
+  AC_ARG_WITH(fft-lib, [AS_HELP_STRING([--with-fft-lib=DIR], [use FFT library prefix directory.])])
+  case $with_fft_lib in
     yes | "") ;;
-    *.a | *.so | *.so.* | *.o) LIBS_FFT="$with_fft_prefix" ;;
-    *) LIBS_FFT="-L$with_fft_prefix/lib";
-       FCFLAGS_FFT="$ax_cv_f90_modflag$with_fft_prefix/include" ;;
+    *.a | *.so | *.so.* | *.o) LIBS_FFT="$with_fft_lib" ;;
+    *) LIBS_FFT="-L$with_fft_lib/lib";
+       FCFLAGS_FFT="$ax_cv_f90_modflag$with_fft_lib/include" ;;
   esac
 
   
