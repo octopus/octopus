@@ -17,3 +17,11 @@ match ; Overlap 1 9 ; GREP(out, '      1      9', 15) ;  0.238004E-16
 match ; Overlap 6 6 ; GREP(out, '      6      6', 15) ;  0.100000E+01
 match ; Overlap 7 8 ; GREP(out, '      7      8', 15) ;  0.654511E-16
 match ; Overlap 9 9 ; GREP(out, '      9      9', 15) ;  0.100000E+01
+
+Input: 09-qr.02-complex.inp
+match ; Overlap 1 1 ; GREP(out, '      1      1', 15) ;  0.100000E+01
+match ; Overlap 1 2 ; GREP(out, '      1      2', 15) ;  0.120490E-15
+match ; Overlap 1 9 ; GREP(out, '      1      9', 15) ;  0.238004E-16
+match ; Overlap 6 6 ; GREP(out, '      6      6', 15) ;  0.100000E+01
+match ; Overlap 7 8 ; GREP(out, '      7      8', 15) ;  0.654511E-16
+match ; Overlap 9 9 ; GREP(out, '      9      9', 15) ;  0.100000E+01
