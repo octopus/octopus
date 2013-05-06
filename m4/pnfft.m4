@@ -23,7 +23,7 @@ AC_REQUIRE([ACX_PFFT])
 acx_pnfft_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(pnfft-prefix, [AS_HELP_STRING([--with-pnfft-prefix=<lib>], [http://www-user.tu-chemnitz.de/~mpip/software.php. It requires PFFT.])])
+AC_ARG_WITH(pnfft-prefix, [AS_HELP_STRING([--with-pnfft-prefix=DIR], [http://www-user.tu-chemnitz.de/~mpip/software.php. It requires PFFT.])])
 case $with_pnfft_prefix in
   yes | "") ;;
   no) acx_pnfft_ok=disable ;;
@@ -41,7 +41,6 @@ case $with_pnfft_include in
   fi;;
   *)  FCFLAGS_PNFFT="$ax_cv_f90_modflag$with_pnfft_include" ;;
 esac
-FCFLAGS_PNFFT="$FCFLAGS_PNFFT"
 
 
 dnl We cannot use PNFFT if PFFT is not found
@@ -52,6 +51,9 @@ fi
 dnl Backup LIBS and FCFLAGS
 acx_pnfft_save_LIBS="$LIBS"
 acx_pnfft_save_FCFLAGS="$FCFLAGS"
+
+FCFLAGS_PNFFT="$FCFLAGS_PNFFT $FCFLAGS_PFFT"
+FCFLAGS="$FCFLAGS_PNFFT  $acx_pnfft_save_FCFLAGS"    
 
 
 testprogram="AC_LANG_PROGRAM([],[ 
@@ -67,7 +69,6 @@ testprogram="AC_LANG_PROGRAM([],[
 dnl First, check LIBS_PNFFT environment variable
 if test x"$acx_pnfft_ok" = xno; then
   LIBS="$LIBS_PNFFT $LIBS_PFFT $LIBS"
-  FCFLAGS="$FCFLAGS_PNFFT $FCFLAGS_PFFT $FCFLAGS"
 
   AC_MSG_CHECKING([for pnfft library])
   AC_LINK_IFELSE($testprogram, [acx_pnfft_ok=yes; LIBS_PNFFT="$LIBS_PNFFT $LIBS_PFFT"], [])
@@ -85,11 +86,9 @@ if test $acx_pnfft_ok = no; then
   AC_MSG_CHECKING([for pnfft library with -lpnfft])
   if test "$LIBS_PNFFT" = ""; then
     LIBS="-lpnfft $LIBS_PFFT $LIBS"
-    FCFLAGS="$FCFLAGS_PFFT  $acx_pnfft_save_FCFLAGS"
     AC_LINK_IFELSE($testprogram, [acx_pnfft_ok=yes; LIBS_PNFFT=" -lpnfft $LIBS_PFFT"], [])
   else
     LIBS="$LIBS_PNFFT -lpnfft $LIBS_PFFT $LIBS"
-    FCFLAGS="$FCFLAGS_PNFFT $FCFLAGS_PFFT  $acx_pnfft_save_FCFLAGS"    
     AC_LINK_IFELSE($testprogram, [acx_pnfft_ok=yes; LIBS_PNFFT="$LIBS_PNFFT -lpnfft $LIBS_PFFT"], [])  
   fi
   if test $acx_pnfft_ok = no; then

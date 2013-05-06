@@ -71,7 +71,7 @@ octopus_LIBS = \
 	$(top_builddir)/src/basic/libbasic.a
 
 core_LIBS = \
-	@LIBS_SCALAPACK@ @LIBS_BLACS@                 \
+	@LIBS_FFT@ @LIBS_SCALAPACK@ @LIBS_BLACS@     \
 	@LIBS_LAPACK@ @LIBS_BLAS@                     \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
 	@GSL_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@
@@ -103,7 +103,7 @@ if COMPILE_NEWUOA
 endif
 
 # Since ETSF_IO depends on netCDF, it must be first in the list
-outside_LIBS = @LIBS_PSPIO@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ @LIBS_FFT@ \
+outside_LIBS = @LIBS_PSPIO@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ \
   @LIBS_SPARSKIT@ @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ @LIBS_MPI@ \
   @LIBS_ZOLTAN@ @LIBS_BERKELEYGW@ @LIBS_ARPACK@ @LIBS_PARPACK@ @GD_LIBS@
  
@@ -129,7 +129,7 @@ SUFFIXES = _oct.f90 .F90 .o .S .s
 	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
 	$(top_srcdir)/build/preprocess.pl $*_oct.f90 \
 	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@"
-	@FC@ @FCFLAGS@ @FCFLAGS_PSPIO@ @FCFLAGS_PFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_BERKELEYGW@ @FCFLAGS_LIBXC@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@FC@ @FCFLAGS@ @FCFLAGS_PSPIO@ @FCFLAGS_FFT@ @FCFLAGS_PFFT@ @FCFLAGS_PNFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_BERKELEYGW@ @FCFLAGS_LIBXC@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
 # This rule is basically to create a _oct.f90 file by hand for

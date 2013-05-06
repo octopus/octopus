@@ -23,7 +23,7 @@ AC_REQUIRE([ACX_FFT])
 acx_pfft_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--with-pfft-prefix=<lib>], [http://www-user.tu-chemnitz.de/~mpip/software.php])])
+AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--with-pfft-prefix=DIR], [http://www-user.tu-chemnitz.de/~mpip/software.php])])
 case $with_pfft_prefix in
   yes | "") ;;
   no) acx_pfft_ok=disable ;;
@@ -43,19 +43,6 @@ case $with_pfft_include in
 esac
 
 
-dnl We need to link against the MPI FFTW3 used to compile PFFT 
-dnl This test could in principle live on it's own m4 file but since it's just functional
-dnl to PFFT for the moment I will leave it here.
-AC_ARG_WITH(mpifftw-prefix, [AS_HELP_STRING([--with-mpifftw-prefix=DIR], [MPI FFTW3 libraries directory (the one used to build PFFT).])])
-case $with_mpifftw_prefix in
- "") LIBS_MPIFFT="-L/usr/lib -lfftw3_mpi -lfftw3";
-     FCFLAGS_MPIFFT="$ax_cv_f90_modflag /usr/include";;
- *)  LIBS_MPIFFT="-L$with_mpifftw_prefix/lib -lfftw3_mpi -lfftw3";
-     FCFLAGS_MPIFFT="$ax_cv_f90_modflag$with_mpifftw_prefix/include" ;;
-esac
-FCFLAGS_PFFT="$FCFLAGS_PFFT $FCFLAGS_MPIFFT"
-
-
 dnl We cannot use PFFT if MPI is not found
 if test "x$acx_mpi_ok" != xyes; then
   acx_pfft_ok=nompi
@@ -66,9 +53,18 @@ if test "x$acx_fft_ok" != xyes; then
   acx_pfft_ok=nofftw3
 fi
 
+dnl We cannot use PFFT if FFTW3_MPI is not found
+if test "x$acx_fftmpi_ok" != xyes; then
+  acx_pfft_ok=nofftw3mpi
+fi
+
+
 dnl Backup LIBS and FCFLAGS
 acx_pfft_save_LIBS="$LIBS"
 acx_pfft_save_FCFLAGS="$FCFLAGS"
+
+FCFLAGS_PFFT="$FCFLAGS_PFFT $FCFLAGS_FFT"
+FCFLAGS="$FCFLAGS_PFFT $acx_pfft_save_FCFLAGS"
 
 
 testprogram="AC_LANG_PROGRAM([],[ 
@@ -79,12 +75,11 @@ testprogram="AC_LANG_PROGRAM([],[
   ])"
 
 
-dnl First, check LIBS_PFFT environment variable
+dnl First, check for direct link with LIBS_PFFT lib
 if test x"$acx_pfft_ok" = xno; then
-  LIBS="$LIBS_PFFT $LIBS_MPIFFT $acx_pfft_save_LIB"
-  FCFLAGS="$FCFLAGS_PFFT $acx_pfft_save_FCFLAGS"
+  LIBS="$LIBS_PFFT $LIBS_FFTMPI $LIBS_FFT $acx_pfft_save_LIB"
   AC_MSG_CHECKING([for pfft library])
-  AC_LINK_IFELSE($testprogram, [acx_pfft_ok=yes; LIBS_PFFT="$LIBS_PFFT $LIBS_MPIFFT"], [])
+  AC_LINK_IFELSE($testprogram, [acx_pfft_ok=yes; LIBS_PFFT="$LIBS_PFFT $LIBS_FFTMPI $LIBS_FFT"], [])
   if test $acx_pfft_ok = no; then
     AC_MSG_RESULT([$acx_pfft_ok])
   else
@@ -97,14 +92,13 @@ dnl Generic PFFT library
 if test $acx_pfft_ok = no; then
   AC_MSG_CHECKING([for pfft library with -lpfft])
   if test "$LIBS_PFFT" = ""; then
-    LIBS="-lpfft $LIBS_MPIFFT $LIBS $acx_pfft_save_LIB"
-    FCFLAGS="$FCFLAGS_FFT $acx_pfft_save_FCFLAGS"
-    AC_LINK_IFELSE($testprogram, [acx_pfft_ok=yes; LIBS_PFFT="-lpfft $LIBS_MPIFFT"], [])
+    LIBS="-lpfft $LIBS_FFTMPI $LIBS_FFT $acx_pfft_save_LIB"
+    AC_LINK_IFELSE($testprogram, [acx_pfft_ok=yes; LIBS_PFFT="-lpfft $LIBS_FFTMPI $LIBS_FFT"], [])
   else
-    LIBS="$LIBS_PFFT -lpfft $LIBS_MPIFFT $acx_pfft_save_LIB"
-    FCFLAGS="$FCFLAGS_PFFT $FCFLAGS_FFT $acx_pfft_save_FCFLAGS"    
+    LIBS="$LIBS_PFFT -lpfft $LIBS_FFTMPI $LIBS_FFT $acx_pfft_save_LIB"
     AC_LINK_IFELSE($testprogram, [acx_pfft_ok=yes; 
-                                  LIBS_PFFT="$LIBS_PFFT -lpfft $LIBS_MPIFFT"], [])  
+                                  LIBS_PFFT="$LIBS_PFFT -lpfft  $LIBS_FFTMPI $LIBS_FFT"], [])  
+
   fi
   if test $acx_pfft_ok = no; then
     AC_MSG_RESULT([$acx_pfft_ok])
@@ -113,11 +107,6 @@ if test $acx_pfft_ok = no; then
   fi
 fi
 
-dnl Usually fft library are present in the system.
-dnl In order to have the correct symbols for PFFT we need to override the default.
-if test $acx_pfft_ok = yes; then
-  LDFLAGS="$LDFLAGS $LIBS_MPIFFT"
-fi
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_pfft_ok" = xyes; then
