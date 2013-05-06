@@ -1593,15 +1593,17 @@ contains
     !%Section Execution::Optimization
     !%Description
     !% The full orthogonalization method used by some
-    !% eigensolvers. The default is gram_schmidt. With state
-    !% parallelization the default is par_gram_schmidt.
+    !% eigensolvers. The default is <tt>cholesky_serial</tt>. With state
+    !% parallelization, the default is <tt>cholesky_parallel</tt>.
     !%Option gram_schmidt 1
-    !% Cholesky decomposition (despite the name) implemented using
+    !%Option cholesky_serial 1
+    !% Cholesky decomposition implemented using
     !% BLAS/LAPACK. Can be used with domain parallelization but not
-    !% state parallelization.
-    !%Option par_gram_schmidt 2
-    !% Cholesky decomposition (despite the name) implemented using
-    !% ScaLAPACK. Compatible with states parallelization.
+    !% state parallelization. (Obsolete synonym: <tt>gram_schmidt</tt>)
+    !%Option par_gram_schmidt 1
+    !%Option cholesky_parallel 2
+    !% Cholesky decomposition implemented using
+    !% ScaLAPACK. Compatible with states parallelization. (Obsolete synonym: <tt>par_gram_schmidt</tt>)
     !%Option mgs 3
     !% Modified Gram-Schmidt orthogonalization.
     !% Can be used with domain parallelization but not state parallelization.
@@ -1612,9 +1614,9 @@ contains
     !%End
 
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-      default = ORTH_PAR_GS
+      default = ORTH_CHOLESKY_PARALLEL
     else
-      default = ORTH_GS
+      default = ORTH_CHOLESKY_SERIAL
     end if
 
     call parse_integer(datasets_check('StatesOrthogonalization'), default, st%d%orth_method)

@@ -62,23 +62,23 @@ module states_dim_m
     states_dim_get_kpoint_index,      &
     kpoints_distribute
 
-  ! Parameters...
+  !> Parameters...
   integer, public, parameter :: &
     UNPOLARIZED    = 1,         &
     SPIN_POLARIZED = 2,         &
     SPINORS        = 3
 
-  ! Spin-polarized k-indices for non-periodic systems.
+  !> Spin-polarized k-indices for non-periodic systems.
   integer, public, parameter :: &
     SPIN_DOWN = 1,              &
     SPIN_UP   = 2
 
-  ! Orthogonalization methods
-  integer, public, parameter ::   &
-    ORTH_GS     = 1,               &
-    ORTH_PAR_GS = 2,               &
-    ORTH_MGS    = 3,               &
-    ORTH_QR     = 4
+  !> Orthogonalization methods
+  integer, public, parameter ::    &
+    ORTH_CHOLESKY_SERIAL   = 1,    &
+    ORTH_CHOLESKY_PARALLEL = 2,    &
+    ORTH_MGS               = 3,    &
+    ORTH_QR                = 4
 
   type states_dim_t
     integer :: dim                  !< Dimension of the state (one or two for spinors)

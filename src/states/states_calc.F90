@@ -106,13 +106,13 @@ module states_calc_m
 
 contains
 
-  ! ---------------------------------------------------------
-  ! This routine transforms the orbitals of state "st", according
-  ! to the transformation matrix "uu".
-  !
-  ! Each row of u contains the coefficients of the new orbitals
-  ! in terms of the old ones.
-  ! ---------------------------------------------------------
+  !> ---------------------------------------------------------
+  !! This routine transforms the orbitals of state "st", according
+  !! to the transformation matrix "uu".
+  !!
+  !! Each row of u contains the coefficients of the new orbitals
+  !! in terms of the old ones.
+  !! ---------------------------------------------------------
   subroutine states_rotate(mesh, st, stin, uu)
     type(mesh_t),      intent(in)    :: mesh
     type(states_t),    intent(inout) :: st
@@ -198,9 +198,9 @@ contains
   end subroutine states_orthogonalize_cproduct
 
   ! ---------------------------------------------------------
+  !> Reorder the states in st so that the order corresponds to
+  !! the indices given in args (args could come from an argsort)
   subroutine reorder_states_by_args(st, mesh, args, ik)
-    ! Reorder the states in st so that the order corresponds to
-    ! the indices given in args (args could come from an argsort)
 
     type(states_t),       intent(inout) :: st
     type(mesh_t),         intent(in)    :: mesh
@@ -254,7 +254,7 @@ contains
   subroutine states_sort_complex(mesh, st, diff)
     type(mesh_t),      intent(in)    :: mesh
     type(states_t),    intent(inout) :: st
-    FLOAT,             intent(inout) :: diff(:,:) !eigenstates convergence error
+    FLOAT,             intent(inout) :: diff(:,:) !< eigenstates convergence error
 
     integer              :: ik, ist, idim
     integer, allocatable :: index(:)

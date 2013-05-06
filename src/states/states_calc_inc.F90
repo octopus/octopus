@@ -46,10 +46,10 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
   nst = st%nst
 
   select case(st%d%orth_method)
-  case(ORTH_GS)
+  case(ORTH_CHOLESKY_SERIAL)
     
     if(st%parallel_in_states) then
-      message(1) = 'The gram_schmidt orthogonalization method cannot work with state-parallelization.'
+      message(1) = 'The cholesky_serial orthogonalization method cannot work with state-parallelization.'
       call messages_fatal(1)
     end if
 
@@ -64,15 +64,15 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
     call lalg_cholesky(nst, ss, bof = bof)
 
     if(bof) then
-      message(1) = "gram_schmidt orthogonalization failed in Cholesky decomposition; probably eigenvectors are not independent."
+      message(1) = "The cholesky_serial orthogonalization; probably eigenvectors are not independent."
       call messages_warning(1)
     end if
 
     call X(states_trsm)(st, mesh, ik, ss)
 
     SAFE_DEALLOCATE_A(ss)
-  case(ORTH_PAR_GS)
-    call par_gs()
+  case(ORTH_CHOLESKY_PARALLEL)
+    call cholesky_parallel()
 
   case(ORTH_QR)
     call qr()
@@ -86,25 +86,25 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 
 contains
   
-  subroutine par_gs()
+  subroutine cholesky_parallel()
 #ifdef HAVE_SCALAPACK
     integer             :: info, nbl, nrow, ncol
     integer             :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
 #endif
 
-    PUSH_SUB(X(states_orthogonalization_full).par_gs)
+    PUSH_SUB(X(states_orthogonalization_full).cholesky_parallel)
 
 ! some checks
 #ifndef HAVE_MPI
-    message(1) = 'The parallel_gram_schmidt orthogonalizer can only be used in parallel.'
+    message(1) = 'The cholesky_parallel orthogonalizer can only be used in parallel.'
     call messages_fatal(1)
 #else
 #ifndef HAVE_SCALAPACK
-    message(1) = 'The parallel_gram_schmidt orthogonalizer requires ScaLAPACK.'
+    message(1) = 'The cholesky_parallel orthogonalizer requires ScaLAPACK.'
     call messages_fatal(1)
 #endif
     if(st%dom_st_mpi_grp%size == 1) then
-      message(1) = 'The parallel_gram_schmidt orthogonalizer is designed to be used with domain or state parallelization.'
+      message(1) = 'The cholesky_parallel orthogonalizer is designed to be used with domain or state parallelization.'
       call messages_warning(1)
     end if
 #endif
@@ -124,7 +124,8 @@ contains
       st%d%dim*ubound(st%X(psi), dim = 1), info)
 
     if(info /= 0) then
-      write(message(1),'(a,i6)') "descinit for psi failed in states_orthogonalization_full.par_gs with error ", info
+      write(message(1),'(a,i6)') "descinit for psi failed in " // TOSTRING(X(states_orthogonalization_full)) &
+        // ".cholesky_parallel with error ", info
       call messages_fatal(1)
     end if
 
@@ -137,7 +138,8 @@ contains
     call descinit(ss_desc(1), st%nst, st%nst, nbl, nbl, 0, 0, st%dom_st_proc_grid%context, ubound(ss, dim = 1), info)
 
     if(info /= 0) then
-      write(message(1),'(a,i6)') "descinit for ss failed in states_orthogonalization_full.par_gs with error ", info
+      write(message(1),'(a,i6)') "descinit for ss failed in " // TOSTRING(X(states_orthogonalization_full)) &
+        // ".cholesky_parallel with error ", info
       call messages_fatal(1)
     end if
 
@@ -152,7 +154,7 @@ contains
 
     if(info /= 0) then
       write(message(1),'(a,i6)') &
-        "parallel_gram_schdmit orthogonalization with " // TOSTRING(pX(potrf)) // " failed with error ", info
+        "cholesky_parallel orthogonalization with " // TOSTRING(pX(potrf)) // " failed with error ", info
       call messages_fatal(1)
     end if
 
@@ -165,8 +167,8 @@ contains
     SAFE_DEALLOCATE_A(ss)
 #endif
 
-    POP_SUB(X(states_orthogonalization_full).par_gs)
-  end subroutine par_gs
+    POP_SUB(X(states_orthogonalization_full).cholesky_parallel)
+  end subroutine cholesky_parallel
 
   ! -----------------------------------------------------------------------------------------------
 

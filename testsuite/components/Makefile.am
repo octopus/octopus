@@ -36,9 +36,9 @@ dist_share_DATA =                                  \
 	05-hartree_3d_fft.02-fft_corrected.inp     \
 	06-hartree_3d_isf.test                     \
 	06-hartree_3d_isf.01-isf.inp               \
-	07-gram_schmidt.test                       \
-	07-gram_schmidt.01-real.inp                \
-        07-gram_schmidt.02-complex.inp             \
+	07-cholesky_serial.test                    \
+	07-cholesky_serial.01-real.inp             \
+        07-cholesky_serial.02-complex.inp          \
         08-mgs.test                                \
         08-mgs.01-real.inp                         \
         08-mgs.02-complex.inp                      \
