@@ -61,7 +61,6 @@ AC_DEFUN([ACX_FFT],
   dnl First, check LIBS_FFT lib
   if test $acx_fft_ok = no; then
     LIBS="$LIBS_FFT $LIBS $FLIBS"
-    FCFLAGS="$FCFLAGS_FFT $FCFLAGS"
     AC_MSG_CHECKING([for $fft_func in $LIBS_FFT])
     AC_LINK_IFELSE($testprogram, [acx_fft_ok=yes], [])    
 
@@ -83,12 +82,10 @@ AC_DEFUN([ACX_FFT],
     AC_MSG_CHECKING([for fft library with -l$fft_lib])
     if test "$LIBS_FFT" = ""; then
       LIBS="-l$fft_lib $LIBS $acx_fft_save_LIB"
-      FCFLAGS="$FCFLAGS_FFT $acx_fft_save_FCFLAGS"
       AC_LINK_IFELSE($testprogram, [acx_fft_ok=yes; 
                                     LIBS_FFT="-l$fft_lib"], [])
     else
       LIBS="$LIBS_FFT -l$fft_lib $acx_fft_save_LIB"
-      FCFLAGS="$FCFLAGS_FFT $acx_fft_save_FCFLAGS"    
       AC_LINK_IFELSE($testprogram, [acx_fft_ok=yes; 
                                     LIBS_FFT="$LIBS_FFT -l$fft_lib"], [])  
 
