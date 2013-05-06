@@ -38,21 +38,26 @@ dist_share_DATA =                                  \
 	06-hartree_3d_isf.01-isf.inp               \
 	07-cholesky_serial.test                    \
 	07-cholesky_serial.01-real.inp             \
-        07-cholesky_serial.02-complex.inp          \
-        08-mgs.test                                \
-        08-mgs.01-real.inp                         \
-        08-mgs.02-complex.inp                      \
-        09-qr.test                                 \
-        09-qr.01-real.inp                          \
-        09-qr.02-complex.inp                       \
-        10-hartree_pfft.test                       \
-        10-hartree_pfft.01-fft.inp                 \
-        10-hartree_pfft.02-fft_corrected.inp       \
-        11-hartree_cl.test                         \
-        11-hartree_cl.01-fft.inp                   \
+	07-cholesky_serial.02-complex.inp          \
+	08-mgs.test                                \
+	08-mgs.01-real.inp                         \
+	08-mgs.02-complex.inp                      \
+	09-qr.test                                 \
+	09-qr.01-real.inp                          \
+	09-qr.02-complex.inp                       \
+	10-hartree_pfft.test                       \
+	10-hartree_pfft.01-fft.inp                 \
+	10-hartree_pfft.02-fft_corrected.inp       \
+	11-hartree_cl.test                         \
+	11-hartree_cl.01-fft.inp                   \
 	12-hartree_direct_3d.test                  \
 	12-hartree_direct_3d.01.inp                \
 	13-hartree_3d_mg.test                      \
-	13-hartree_3d_mg.01-multigrid.inp
+	13-hartree_3d_mg.01-multigrid.inp          \
+	14-center-geom.test                        \
+	14-center-geom.01-run.inp                  \
+	15-cholesky_parallel.test                  \
+	15-cholesky_parallel.01-real.inp           \
+	15-cholesky_parallel.02-complex.inp
 
 CLEANFILES = *~ *.bak
