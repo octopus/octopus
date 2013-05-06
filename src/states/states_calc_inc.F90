@@ -19,8 +19,7 @@
 
 
 ! ---------------------------------------------------------
-!> Orthonormalizes nst orbitals in mesh (honours state
-!! parallelization).
+!> Orthonormalizes nst orbitals in mesh (honours state parallelization).
 subroutine X(states_orthogonalization_full)(st, mesh, ik)
   type(states_t),         intent(inout) :: st
   type(mesh_t),           intent(in)    :: mesh
@@ -41,7 +40,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
 
   ASSERT(st%d%orth_method /= 0)
 
-  call profiling_in(prof, "GRAM_SCHMIDT_FULL")
+  call profiling_in(prof, "ORTHOGONALIZATION_FULL")
   PUSH_SUB(X(states_orthogonalization_full))
 
   nst = st%nst
@@ -50,7 +49,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
   case(ORTH_GS)
     
     if(st%parallel_in_states) then
-      message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
+      message(1) = 'The gram_schmidt orthogonalization method cannot work with state-parallelization.'
       call messages_fatal(1)
     end if
 
@@ -65,7 +64,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
     call lalg_cholesky(nst, ss, bof = bof)
 
     if(bof) then
-      message(1) = "Gram-Schmidt orthogonalization failed in Cholesky decomposition; probably eigenvectors are not independent."
+      message(1) = "gram_schmidt orthogonalization failed in Cholesky decomposition; probably eigenvectors are not independent."
       call messages_warning(1)
     end if
 
@@ -97,15 +96,15 @@ contains
 
 ! some checks
 #ifndef HAVE_MPI
-    message(1) = 'The parallel Gram-Schmidt orthogonalizer can only be used in parallel.'
+    message(1) = 'The parallel_gram_schmidt orthogonalizer can only be used in parallel.'
     call messages_fatal(1)
 #else
 #ifndef HAVE_SCALAPACK
-    message(1) = 'The parallel Gram-Schmidt orthogonalizer requires ScaLAPACK.'
+    message(1) = 'The parallel_gram_schmidt orthogonalizer requires ScaLAPACK.'
     call messages_fatal(1)
 #endif
     if(st%dom_st_mpi_grp%size == 1) then
-      message(1) = 'The parallel Gram-Schmidt orthogonalizer is designed to be used with domain or state parallelization.'
+      message(1) = 'The parallel_gram_schmidt orthogonalizer is designed to be used with domain or state parallelization.'
       call messages_warning(1)
     end if
 #endif
@@ -153,7 +152,7 @@ contains
 
     if(info /= 0) then
       write(message(1),'(a,i6)') &
-        "Parallel Gram-Schmidt orthogonalization with " // TOSTRING(pX(potrf)) // " failed with error ", info
+        "parallel_gram_schdmit orthogonalization with " // TOSTRING(pX(potrf)) // " failed with error ", info
       call messages_fatal(1)
     end if
 
@@ -316,7 +315,7 @@ contains
     PUSH_SUB(X(states_orthogonalization_full).mgs)
 
     if(st%parallel_in_states) then
-      message(1) = 'The selected orthogonalization method cannot work with state-parallelization.'
+      message(1) = 'The mgs orthogonalization method cannot work with state-parallelization.'
       call messages_fatal(1)
     end if
 

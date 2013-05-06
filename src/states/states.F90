@@ -1590,24 +1590,24 @@ contains
 
     !%Variable StatesOrthogonalization
     !%Type integer
-    !%Default gram_schmidt
     !%Section Execution::Optimization
     !%Description
     !% The full orthogonalization method used by some
     !% eigensolvers. The default is gram_schmidt. With state
     !% parallelization the default is par_gram_schmidt.
     !%Option gram_schmidt 1
-    !% The standard Gram-Schmidt orthogonalization implemented using
+    !% Cholesky decomposition (despite the name) implemented using
     !% BLAS/LAPACK. Can be used with domain parallelization but not
     !% state parallelization.
     !%Option par_gram_schmidt 2
-    !% The standard Gram-Schmidt orthogonalization implemented using
+    !% Cholesky decomposition (despite the name) implemented using
     !% ScaLAPACK. Compatible with states parallelization.
     !%Option mgs 3
     !% Modified Gram-Schmidt orthogonalization.
+    !% Can be used with domain parallelization but not state parallelization.
     !%Option qr 4
     !% (Experimental) Orthogonalization is performed based on a QR
-    !% decomposition based on Lapack routines _getrf and _orgqr.
+    !% decomposition with LAPACK or ScaLAPACK.
     !% Compatible with states parallelization.
     !%End
 
