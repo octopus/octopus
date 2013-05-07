@@ -109,7 +109,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
   R_TYPE,            intent(in) :: f1(:), f2(:)
   logical, optional, intent(in) :: reduce
   logical, optional, intent(in) :: dotu
-     !< if true, use lalg_dotu instead of lalg_dot;
+     !< if true, use blas_dotu instead of blas_dot;
      !! no complex conjugation.  Default is false.
      !! has no effect if working with real version
 
@@ -130,7 +130,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 
   if(mesh%use_curvilinear) then
     dotp = M_ZERO
-    ! preprocessor conditionals necessary since lalg_dotu only exists for complex input
+    ! preprocessor conditionals necessary since blas_dotu only exists for complex input
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
 #endif
