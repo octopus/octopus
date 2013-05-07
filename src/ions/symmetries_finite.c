@@ -1046,7 +1046,7 @@ axis->direction[1] = (b[2]-a[2])*(c[0]-b[0]) - (b[0]-a[0])*(c[2]-b[2]) ;
 axis->direction[2] = (b[0]-a[0])*(c[1]-b[1]) - (b[1]-a[1])*(c[0]-b[0]) ;
 /*
  *  Arbitrarily select axis direction so that first non-zero component
- *  or the direction is positive.
+ *  of the direction is positive.
  */
 sign = 0 ;
 if( axis->direction[0] <= 0 )
@@ -1089,7 +1089,7 @@ for( i = 0 ; i < DIMENSION ; i++ ){
     c[i] = Atoms[ic].x[i] - CenterOfSomething[i] ;
     }
 if( ( axis = init_axis_parameters( a, b, c ) ) == NULL ){
-    if( verbose > 0 ) printf( "    no coherrent axis is defined by the points\n" ) ;
+    if( verbose > 0 ) printf( "    no coherent axis is defined by the points\n" ) ;
     return NULL ;
     }
 axis->transform_atom = rotate_atom ;
@@ -1173,7 +1173,7 @@ for( i = 0 ; i < DIMENSION ; i++ )
     b[i] = 2*r*centerpoint[i] - b[i] ;
 /* Do a quick check of geometry validity */
 if( ( axis = init_axis_parameters( a, b, c ) ) == NULL ){
-    if( verbose > 0 ) printf( "    no coherrent improper axis is defined by the points\n" ) ;
+    if( verbose > 0 ) printf( "    no coherent improper axis is defined by the points\n" ) ;
     return NULL ;
     }
 axis->transform_atom = rotate_reflect_atom ;
@@ -1388,12 +1388,20 @@ for( i = 1 ; i < AtomsCount ; i++ ){
 free( distances ) ;
 }
 
-void destroy_axes(){
+void destroy_normal_axes(){
   int i = 0;
   for(i = 0; i < NormalAxesCount; i++) destroy_symmetry_element(NormalAxes[i]);
   NormalAxesCount = 0;
   free(NormalAxes);
   NormalAxes = NULL;
+}
+
+void destroy_improper_axes(){
+  int i = 0;
+  for(i = 0; i < ImproperAxesCount; i++) destroy_symmetry_element(ImproperAxes[i]);
+  ImproperAxesCount = 0;
+  free(ImproperAxes);
+  ImproperAxes = NULL;
 }
 
 void
@@ -1769,7 +1777,8 @@ void FC_FUNC_(symmetries_finite_get_group_elements,SYMMETRIES_FINITE_GET_GROUP_E
 void FC_FUNC_(symmetries_finite_end,SYMMETRIES_FINITE_END)(){  
   destroy_inversion_centers();
   destroy_planes();
-  destroy_axes();
+  destroy_normal_axes();
+  destroy_improper_axes();
 
   free(SymmetryCode);
   SymmetryCode = NULL;
