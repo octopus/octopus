@@ -850,6 +850,10 @@ contains
 
     call parse_integer(datasets_check('TestRepetitions'), 1, times)
 
+    if(mesh%sb%dim == 1) then
+      call messages_not_implemented('Poisson test for 1D case')
+    endif
+
     n_gaussians = 1 
 
     SAFE_ALLOCATE(     rho(1:mesh%np))
@@ -902,13 +906,12 @@ contains
       do ip = 1, mesh%np
         call mesh_r(mesh, ip, rr, origin = xx(:, nn))
         select case(mesh%sb%dim)
-        case(1)
+        case(3)
           if(rr > r_small) then
-            vh_exact(ip) = vh_exact(ip) + (-1)**nn * M_HALF*( rr*loct_erf(rr/alpha) + alpha/sqrt(M_PI)*exp(-rr**2/alpha**2) - rr)
+            vh_exact(ip) = vh_exact(ip) + (-1)**nn * loct_erf(rr/alpha)/rr
           else
-            vh_exact(ip) = vh_exact(ip) + (-1)**nn * M_HALF*alpha/sqrt(M_PI)
+            vh_exact(ip) = vh_exact(ip) + (-1)**nn * (M_TWO/sqrt(M_PI))/alpha
           end if
-
         case(2)
           ralpha = rr**2/(M_TWO*alpha**2)
           if(ralpha < CNST(100.0)) then
@@ -918,14 +921,6 @@ contains
             vh_exact(ip) = vh_exact(ip) + (-1)**nn * beta * (M_PI)**(M_THREE*M_HALF) * alpha * &
                           (M_ONE/sqrt(M_TWO*M_PI*ralpha)) 
           end if
-
-        case(3)
-          if(rr > r_small) then
-            vh_exact(ip) = vh_exact(ip) + (-1)**nn * loct_erf(rr/alpha)/rr
-          else
-            vh_exact(ip) = vh_exact(ip) + (-1)**nn * (M_TWO/sqrt(M_PI))/alpha
-          end if
-
         end select
       end do
     end do
@@ -947,10 +942,7 @@ contains
     do ip = 1, mesh%np
       lcl_hartree_nrg = lcl_hartree_nrg + rho(ip) * vh(ip)
     end do
-    lcl_hartree_nrg = lcl_hartree_nrg/M_TWO
-    do idir = 1, mesh%sb%dim
-      lcl_hartree_nrg = lcl_hartree_nrg * mesh%spacing(idir)
-    end do
+    lcl_hartree_nrg = lcl_hartree_nrg * mesh%spacing(1) * mesh%spacing(2) * mesh%spacing(3)/M_TWO
 #ifdef HAVE_MPI
     call MPI_Reduce(lcl_hartree_nrg, hartree_nrg_num, 1, &
          MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD, mpi_err)
@@ -967,10 +959,7 @@ contains
     do ip = 1, mesh%np
       lcl_hartree_nrg = lcl_hartree_nrg + rho(ip) * vh_exact(ip)
     end do
-    lcl_hartree_nrg = lcl_hartree_nrg/M_TWO
-    do idir = 1, mesh%sb%dim
-      lcl_hartree_nrg = lcl_hartree_nrg * mesh%spacing(idir)
-    end do
+    lcl_hartree_nrg = lcl_hartree_nrg * mesh%spacing(1) * mesh%spacing(2) * mesh%spacing(3)/M_TWO
 #ifdef HAVE_MPI 
     call MPI_Reduce(lcl_hartree_nrg, hartree_nrg_analyt, 1, &
          MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD, mpi_err)
@@ -989,17 +978,14 @@ contains
     end if
     
     call io_close(iunit)
-
-    ! Output the density and the potentials
-    ! not dimensionless, but no need for unit conversion for a test routine
+    
     call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_rho", mesh, rho, unit_one, ierr)
     call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_exact", mesh, vh_exact, unit_one, ierr)
     call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", mesh, vh, unit_one, ierr)
-    if (mesh%sb%dim > 1) then
-      call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_rho", mesh, rho, unit_one, ierr)
-      call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_exact", mesh, vh_exact, unit_one, ierr)
-      call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", mesh, vh, unit_one, ierr)
-    end if
+    call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_rho", mesh, rho, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_exact", mesh, vh_exact, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", mesh, vh, unit_one, ierr)
+    ! not dimensionless, but no need for unit conversion for a test routine
 
     SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(rhop)
