@@ -361,6 +361,11 @@ ACX_PNFFT
 dnl check for PSPIO
 ACX_PSPIO
 
+dnl check for ParMETIS (also checks METIS in the same path)
+AC_LANG_PUSH(C)
+ACX_PATH_PARMETIS
+AC_LANG_POP(C)
+
 dnl now I run configure for the internal libraries
 AC_CONFIG_SUBDIRS([external_libs/spglibs])
 
