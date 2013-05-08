@@ -191,7 +191,7 @@ contains
       if(converged .or. forced_finish) exit
     end do
 
-    if(any(eigens%converged(sys%st%d%kpt%start:sys%st%d%kpt%end) < occupied_states)) then
+    if(any(eigens%converged < occupied_states)) then
       write(message(1),'(a)') 'Some of the occupied states are not fully converged!'
       call messages_warning(1)
     endif

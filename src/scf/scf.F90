@@ -790,6 +790,10 @@ contains
     SAFE_DEALLOCATE_A(zrhoout)
     SAFE_DEALLOCATE_A(zrhoin)
 
+    if(any(scf%eigens%converged < st%nst)) then
+      write(message(1),'(a)') 'Some of the states are not fully converged!'
+      call messages_warning(1)
+    endif
 
     if(.not.finish) then
       write(message(1), '(a,i4,a)') 'SCF *not* converged after ', iter - 1, ' iterations.'
@@ -944,6 +948,10 @@ contains
           write(iunit, '(a)') 'SCF *not* converged!'
         end if
         write(iunit, '(1x)')
+
+        if(any(scf%eigens%converged < st%nst)) then
+          write(iunit,'(a)') 'Some of the states are not fully converged!'
+        endif
 
         call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
         if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
