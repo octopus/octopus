@@ -85,7 +85,7 @@ module cube_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, nn, sb, fft_type, fft_library, dont_optimize, nn_out, verbose, mpi_grp)
+  subroutine cube_init(cube, nn, sb, fft_type, fft_library, dont_optimize, nn_out, verbose, mpi_grp, need_partition)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: nn(3)
     type(simul_box_t), intent(in)  :: sb
@@ -96,6 +96,7 @@ contains
                                                 !! If optimized, may be different from input nn.
     logical, optional, intent(in)  :: verbose   !< Print info to the screen.
     type(mpi_grp_t), optional, intent(in) :: mpi_grp !< The mpi group to be use for cube parallelization
+    logical, optional, intent(in)  :: need_partition !< Should we calculate and store the cube partition?
 
     integer :: mpi_comm, tmp_n(3), fft_type_, optimize_parity(3), default_lib, fft_library_
     integer :: effdim_fft
@@ -198,24 +199,16 @@ contains
 
     call mpi_grp_init(cube%mpi_grp, mpi_comm)
 
-    ! Initialize mapping only if PES is going to be used or if only states parallelization 
-    ! (without domains) mode is selected.
-    
-    ! variable definition appears in src/td/pes.F90
-    call parse_integer(datasets_check('PhotoElectronSpectrum'), 0, photoelectron_flags)
-    if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
-      call input_error('PhotoElectronSpectrum')
-    end if
-    ! variable definition appears in src/basic/multicomm.F90
-    call parse_integer(datasets_check('ParallelizationStrategy'), 0, par_strategy)
-    
-    if ((par_strategy == P_STRATEGY_STATES .and. cube%parallel_in_domains) .or. &
-         (photoelectron_flags /= 0)) then
-      cube%has_cube_mapping = .true.
-      call cube_do_mapping(cube)
+    ! Initialize mapping only if needed
+    if (present(need_partition) .and. cube%parallel_in_domains) then
+      cube%has_cube_mapping = need_partition
     else
       cube%has_cube_mapping = .false.
     end if
+    if (cube%has_cube_mapping) then
+      call cube_do_mapping(cube)
+    end if
+
     if (cube%parallel_in_domains) call cube_partition_messages_debug(cube)
 
     POP_SUB(cube_init)

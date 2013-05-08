@@ -382,7 +382,7 @@ contains
     case(PW_MAP_PFFT)
       ASSERT(mask%mesh%parallel_in_domains)
       call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_PFFT, nn_out = ll, &
-        mpi_grp = mask%mesh%mpi_grp)
+        mpi_grp = mask%mesh%mpi_grp, need_partition=.true.)
       !        print *,mpi_world%rank, "mask%mesh%mpi_grp%comm", mask%mesh%mpi_grp%comm, mask%mesh%mpi_grp%size
       !         print *,mpi_world%rank, "mask%cube%mpi_grp%comm", mask%cube%mpi_grp%comm, mask%cube%mpi_grp%size
       mask%ll(1) = mask%cube%fs_n(3)
