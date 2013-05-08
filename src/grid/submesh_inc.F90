@@ -136,6 +136,8 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
     end do
   end do
   !$omp end parallel do
+
+  call profiling_count_operations(mm%nst*mm%dim*ss%nst*this%np*(R_ADD + R_MUL))
   
   call profiling_out(prof)
   POP_SUB(X(submesh_batch_add_matrix))

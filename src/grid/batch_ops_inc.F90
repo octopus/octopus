@@ -229,6 +229,8 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start)
 
   SAFE_DEALLOCATE_A(aa_linear)
 
+  call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(batch_type(xx))/types_get_size(TYPE_FLOAT))
+
   call profiling_out(axpy_vec_prof)
   POP_SUB(X(batch_axpy_vec))
 end subroutine X(batch_axpy_vec)
