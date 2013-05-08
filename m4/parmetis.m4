@@ -1,13 +1,30 @@
+## Copyright (C) DUNE project. http://users.dune-project.org/
+## Copyright (C) 2013 J. Alberdi-Rodriguez
+##
+## This program is free software; you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation; either version 2, or (at your option)
+## any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program; if not, write to the Free Software
+## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+## 02111-1307, USA.
+##
+## $Id$
+##
+
 dnl -*- mode: autoconf; tab-width: 8; indent-tabs-mode: nil; -*-
 dnl vi: set et ts=8 sw=2 sts=2:
-# $Id$
 # searches for ParMetis headers and libs
 
 AC_DEFUN([ACX_PATH_PARMETIS],[
   AC_MSG_CHECKING(for ParMETIS library)
-  AC_REQUIRE([AC_PROG_CC])
-  AC_REQUIRE([AC_PATH_XTRA])
-dnl joseba  AC_REQUIRE([DUNE_MPI])
 
   #
   # USer hints ...
@@ -36,7 +53,6 @@ dnl joseba  AC_REQUIRE([DUNE_MPI])
 	fi
 	],
     [
-    #echo with_parmetis1=$withparmetis PARMETIS=$PARMETIS
 	if test -n "$PARMETIS" ; then
           if test -d "$PARMETIS" ; then
 	    # get absolute path
@@ -72,17 +88,11 @@ dnl joseba  AC_REQUIRE([DUNE_MPI])
     [AC_HELP_STRING([--with-metis-lib],  [name of the metis libraries (default is metis)])],
     ,[with_metis_lib=metis])
 
-  #echo with_parmetis=$with_parmetis
   # store old values
   ac_save_LDFLAGS="$LDFLAGS"
   ac_save_CPPFLAGS="$CPPFLAGS"
   ac_save_LIBS="$LIBS"
-     
-  # call IMDX_LIB_METIS directly and not via AC_REQUIRE
-  # because AC_REQUIRE support not allow parameters
-  # without any parameters a missing METIS would halt configure
-dnl joseba  IMMDX_LIB_METIS(,[true])
-  
+       
   ## do nothing if --without-parmetis is used
   if test x"$with_mpi" != x"no" && test x"$with_parmetis" != x"no" ; then
 
@@ -90,11 +100,10 @@ dnl joseba  IMMDX_LIB_METIS(,[true])
       PARMETIS_LIB_PATH="$with_parmetis/$lib_path"
       PARMETIS_INCLUDE_PATH="$with_parmetis/$include_path"
                   
-      PARMETIS_LIBS="-L$PARMETIS_LIB_PATH -l$with_metis_lib $DUNEMPILIBS -lm"
-      PARMETIS_LDFLAGS="$DUNEMPILDFLAGS"
+      PARMETIS_LIBS="-L$PARMETIS_LIB_PATH -l$with_metis_lib -lm"
 
       # set variables so that tests can use them
-      CPPFLAGS="$CPPFLAGS -I$PARMETIS_INCLUDE_PATH $METIS_INCLUDE $DUNEMPICPPFLAGS"
+      CPPFLAGS="$CPPFLAGS -I$PARMETIS_INCLUDE_PATH $METIS_INCLUDE "
 
       # check for central header
       AC_CHECK_HEADER([parmetis.h],[
@@ -104,10 +113,8 @@ dnl joseba  IMMDX_LIB_METIS(,[true])
 	      AC_MSG_WARN([parmetis.h not found in $PARMETIS_INCLUDE_PATH with $CPPFLAGS])]
       )
 
-      PARMETIS_CPPFLAGS="${DUNEMPICPPFLAGS} ${PARMETIS_CPPFLAGS} -DENABLE_PARMETIS=1"
+      PARMETIS_CPPFLAGS="${PARMETIS_CPPFLAGS} -DENABLE_PARMETIS=1"
 
-#      AC_LANG_PUSH([C++])
-       #Joseba change
       acx_parmetis_save_FCFLAGS="$FCFLAGS"
       FCFLAGS="$PARMETIS_CPPFLAGS $acx_parmetis_save_FCFLAGS"
       acx_parmetis_save_CFLAGS="$CFLAGS"
@@ -115,12 +122,12 @@ dnl joseba  IMMDX_LIB_METIS(,[true])
       
       # if header is found check for the libs
 
-      LIBS="$DUNEMPILIBS -lm $LIBS"
+      LIBS="-lm $LIBS"
       
       if test x$HAVE_PARMETIS = x1 ; then
 	  DUNE_CHECK_LIB_EXT([$PARMETIS_LIB_PATH], [$with_metis_lib], [metis_partgraphkway],
               [
-		  PARMETIS_LIBS="-L$PARMETIS_LIB_PATH -l$with_metis_lib $METIS_LDFLAGS $DUNEMPILIBS -lm"
+		  PARMETIS_LIBS="-L$PARMETIS_LIB_PATH -l$with_metis_lib $METIS_LDFLAGS -lm"
 		  LIBS="$PARMETIS_LIBS $ac_save_LIBS"
               ],[
 		  HAVE_PARMETIS="0"
@@ -137,12 +144,7 @@ dnl joseba  IMMDX_LIB_METIS(,[true])
 		  AC_MSG_WARN(libparmetis not found!)
               ])
       fi
-
-#      AC_LANG_POP([C++])
-      
-      # pre-set variable for summary
-      #with_parmetis="no"
-      
+            
       # did it work?
       AC_MSG_CHECKING(ParMETIS in $with_parmetis)
       if test x$HAVE_PARMETIS = x1 ; then
@@ -153,17 +155,11 @@ dnl joseba  IMMDX_LIB_METIS(,[true])
 		  This is only true if MPI was found by configure 
 		  _and_ if the application uses the PARMETIS_CPPFLAGS])
 	  AC_MSG_RESULT(ok)
-	  
-    # add to global list
-	  DUNE_PKG_LIBS="$PARMETIS_LIBS $DUNE_PKG_LIBS"
-	  DUNE_PKG_LDFLAGS="$DUNE_PKG_LDFLAGS $PARMETIS_LDFLAGS"
-	  DUNE_PKG_CPPFLAGS="$DUNE_PKG_CPPFLAGS $PARMETIS_CPPFLAGS"
-	  
-          # Joseba change
+	  	  
           LIBS="$ac_save_LIBS $PARMETIS_LIBS"
           LDFLAGS="$ac_save_LDFLAGS $PARMETIS_LIBS"
           CPPFLAGS="$ac_save_CPPFLAGS $PARMETIS_CPPFLAGS"
-          # AC_DEFINE(HAVE_METIS, 1, [This is defined when we should compile with METIS support (default).])
+          
     # re-set variable correctly
 	  with_parmetis="yes"
       else
@@ -178,16 +174,5 @@ dnl joseba  IMMDX_LIB_METIS(,[true])
  
   # tell automake	
   AM_CONDITIONAL(PARMETIS, test x$HAVE_PARMETIS = x1)
-  
-  # restore variables. Joseba commented
-  dnl LDFLAGS="$ac_save_LDFLAGS"
-  dnl CPPFLAGS="$ac_save_CPPFLAGS"
-  dnl LIBS="$ac_save_LIBS" # Joseba change
-  dnl echo "PARMETIS found"
-  dnl LIBS="$PARMETIS_LIBS $ac_save_LIBS"
-  dnl LDFLAGS="$PARMETIS_LIBS $ac_save_LDFLAGS"
-  dnl CPPFLAGS="$PARMETIS_CPPFLAGS $ac_save_CPPFLAGS"
-  
-  DUNE_ADD_SUMMARY_ENTRY([ParMETIS],[$with_parmetis])
-
+    
 ])
