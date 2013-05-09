@@ -232,53 +232,54 @@ contains
   subroutine nfft_write_info(nfft)
     type(nfft_t), intent(inout) :: nfft
 
-    integer :: idir
+    integer :: idir, mm
     character(len=100) :: str_tmp
 
     PUSH_SUB(nfft_write_info)
 
-    write(message(1), '(a)') "Info: NFFT dimensions ("
-    do idir = 1, nfft%dim
-      write(str_tmp, '(i7,a)') nfft%N(idir)
-      if(idir == nfft%dim) then
-        message(1) = trim(message(1)) // trim(str_tmp) // ";; "
-      else
-        message(1) = trim(message(1)) // trim(str_tmp) // ","
-      end if
+    call messages_write("Info: NFFT parameters")
+    call messages_new_line()
+    call messages_write("      Fourier coefficients      N = ")
+    do idir = 1,  nfft%dim
+      call messages_write(nfft%N(idir))
+      if(idir < nfft%dim) call messages_write(" x ")      
     end do
-    write(str_tmp, '(i7,a)') nfft%M 
-    message(1) = trim(message(1)) // trim(str_tmp) // ") "
-    call messages_info(1)
+    call messages_new_line()
 
-    write(message(1), '(a)') "Info: NFFT uses FFTW3 with size ("
-    do idir = 1, nfft%dim
-      write(str_tmp, '(i7,a)') nfft%fftN(idir)
-      if(idir == nfft%dim) then
-        message(1) = trim(message(1)) // trim(str_tmp) // ") "
-      else
-        message(1) = trim(message(1)) // trim(str_tmp) // ","
-      end if
+    call messages_write("      Spatial nodes             M = ")
+    mm = 1  
+    do idir = 1,  nfft%dim
+      mm = mm * nfft%M
     end do
-    call messages_info(1)
+    call messages_write(mm)
+    call messages_new_line()
 
-    write(message(1), '(a,f8.4)') "Info: NFFT oversampling factor sigma = ",nfft%sigma
-    call messages_info(1)
-    
+    call messages_write("      Oversampling factor   sigma = ")
+    call messages_write(nfft%sigma)
+    call messages_new_line()
 
-    write(message(1), '(a,i3)') "Info: NFFT window function cut-off parameter m = ",nfft%mm
-    call messages_info(1)
+    call messages_write("      FFT grid size             n = ")
+    do idir = 1,  nfft%dim
+      call messages_write(nfft%fftN(idir))
+      if(idir < nfft%dim) call messages_write(" x ")      
+    end do
+    call messages_new_line()
 
-    write(message(1), '(a)') "Info: NFFT precomputation strategy "
+    call messages_write("      Real space cutoff         m = ")
+    call messages_write(nfft%mm)
+    call messages_new_line()
+
+    call messages_write("      Pre-computation strategy    = ")
     select case(nfft%precompute)
     case(nfft_PRE_LIN_PSI)
-      write(str_tmp, '(a)') " NFFT_PRE_LIN_PSI" 
+      call messages_write(" NFFT_PRE_LIN_PSI") 
     case(nfft_PRE_PSI)
-      write(str_tmp, '(a)') " NFFT_PRE_PSI" 
+      call messages_write(" NFFT_PRE_PSI") 
     case(nfft_PRE_FULL_PSI)
-      write(str_tmp, '(a)') " NFFT_PRE_FULL_PSI" 
+      call messages_write(" NFFT_PRE_FULL_PSI") 
     end select
-    message(1) = trim(message(1)) // trim(str_tmp)     
-    call messages_info(1)
+
+    call messages_info()
 
    
     POP_SUB(nfft_write_info)
