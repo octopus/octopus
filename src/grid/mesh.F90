@@ -67,8 +67,7 @@ module mesh_m
     mesh_x_global,             &
     mesh_write_fingerprint,    &
     mesh_read_fingerprint,     &
-    mesh_compact_boundaries,   &
-    translate_point
+    mesh_compact_boundaries
 
   !> Describes mesh distribution to nodes.
   !!
@@ -377,38 +376,7 @@ contains
     POP_SUB(mesh_nearest_point)
   end function mesh_nearest_point
   
-  
-  !--------------------------------------------------------------
-  integer function translate_point(mesh, index, tdist) result (tindex)
-    type(mesh_t), intent(in) :: mesh
-    integer,      intent(in) :: index
-    integer,      intent(in) :: tdist(:)
-    
-    integer :: ixyz(MAX_DIM), id
-    
-    PUSH_SUB(translate_point)
-    
-    ASSERT(index >= 1 .and. index <= mesh%np)
-    
-    ixyz(:) = mesh%idx%lxyz(index, :)
-    
-    do id = 1, mesh%sb%dim
-      ixyz(id) = ixyz(id) + tdist(id)
-    end do
-    
-    tindex = index_from_coords(mesh%idx, mesh%sb%dim, ixyz) 
-    
-    ! check if the translated point is still inside the domain and return
-    ! a negative index otherwise to indicate that the requested translation
-    ! is not valid
-    if (tindex < 1 .or. tindex > mesh%np) then
-      tindex = -1
-    end if
-    
-    POP_SUB(translate_point)
-  end function translate_point
-  
-  
+ 
   ! --------------------------------------------------------------
   !> mesh_gcutoff returns the "natural" band limitation of the
   !! grid mesh, in terms of the maximum G vector. For a cubic regular
