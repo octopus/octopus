@@ -384,7 +384,7 @@ contains
       do ii = 1, npart
         xadj_size_all(ii) = vtxdist(ii+1) - vtxdist(ii) 
       end do
-      ! Adapt to MPI requirements of desplacements
+      ! Adapt to MPI requirements of displacements
       vtxdist = vtxdist - 1  
       ! Gather local outputs to a global old-fashion one
       call MPI_Allgatherv(part_local(1), xadj_size-1, MPI_INTEGER, &
