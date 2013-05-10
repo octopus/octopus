@@ -183,9 +183,9 @@ subroutine output_etsf_error(error_data)
 
   PUSH_SUB(output_etsf_error)
   
-  call etsf_io_low_error_handle(error_data)
+  call output_etsf_io_low_error_handle(error_data)
   message(1) = "ETSF_IO returned a fatal error. See message above."
-  call messages_fatal(1)
+  call messages_fatal(1, only_root_writes = .true.)
 
   POP_SUB(output_etsf_error)
 end subroutine output_etsf_error
@@ -733,6 +733,67 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
   POP_SUB(output_etsf_wfs_pw_write)
 
 end subroutine output_etsf_wfs_pw_write
+
+!! DAS: copied from ETSF_IO 1.0.3 etsf_io_low_level.f90, changed to send output to standard error
+!!****m* etsf_io_low_error_group/etsf_io_low_error_handle
+!! NAME
+!!  etsf_io_low_error_handle
+!!
+!! FUNCTION
+!!  This method can be used to output the informations contained in an error
+!!  structure. The output is done on standard output. Write your own method
+!!  if custom error handling is required.
+!!
+!! COPYRIGHT
+!!  Copyright (C) 2006, 2007 (Damien Caliste)
+!!  This file is distributed under the terms of the
+!!  GNU Lesser General Public License, see the COPYING file
+!!  or http://www.gnu.org/copyleft/lesser.txt .
+!!
+!! INPUTS
+!!  * error_data <type(etsf_io_low_error)>=informations about an error.
+!!
+!! SOURCE
+subroutine output_etsf_io_low_error_handle(error_data)
+  type(etsf_io_low_error), intent(in) :: error_data
+  
+  integer :: i
+  
+  if(.not. mpi_grp_is_root(mpi_world)) return
+
+  PUSH_SUB(output_etsf_io_low_error_handle)
+
+  ! Error handling
+  write(0,*) 
+  write(0,*) "    ***"
+  write(0,*) "    *** ETSF I/O ERROR"
+  write(0,*) "    ***"
+  write(0,*) "    *** Backtrace          : ", &
+    & trim(error_data%backtrace(error_data%backtraceId)), "()"
+  do i = error_data%backtraceId - 1, 1, -1
+    write(0,*) "    ***                      ", trim(error_data%backtrace(i)), "()"
+  end do
+  write(0,*) "    *** Action performed   : ", trim(error_data%access_mode_str), &
+    & " ", trim(error_data%target_type_str)
+  if (trim(error_data%target_name) /= "") then
+    write(0,*) "    *** Target (name)      : ", trim(error_data%target_name)
+  end if
+  if (error_data%target_id /= 0) then
+    write(0,*) "    *** Target (id)        : ", error_data%target_id
+  end if
+  if (trim(error_data%error_message) /= "") then
+    write(0,*) "    *** Error message      : ", trim(error_data%error_message)
+  end if
+  if (error_data%error_id /= nf90_noerr) then
+    write(0,*) "    *** Error id           : ", error_data%error_id
+  end if
+  write(0,*) "    ***"
+  write(0,*) 
+
+  POP_SUB(output_etsf_io_low_error_handle)
+
+end subroutine output_etsf_io_low_error_handle
+!!***
 
 #endif
 
