@@ -415,10 +415,12 @@ contains
 
   ! ---------------------------------------------------------
   !> Same as calc_point, but without the gradients.
+  !! No intents here is unfortunately required because the same dummy function will be passed
+  !! also to newuoa routines in opt_control, and there the interface has no intents.
   subroutine calc_point_ng(size, coords, objective)
-    integer      :: size
-    REAL_DOUBLE  :: coords(size)
-    REAL_DOUBLE  :: objective
+    integer     :: size         !< intent(in)
+    REAL_DOUBLE :: coords(size) !< intent(in)
+    REAL_DOUBLE :: objective    !< intent(inout)
 
     integer :: getgrad
     REAL_DOUBLE , allocatable :: df(:)

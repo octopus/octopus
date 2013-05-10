@@ -157,6 +157,13 @@ module loct_m
     end subroutine loct_exit_failure
   end interface
 
+  interface loct_wfs_list
+    subroutine oct_wfs_list(str, l)
+      character(len=*), intent(in)  :: str
+      integer,          intent(out) :: l !< array
+    end subroutine oct_wfs_list
+  end interface loct_wfs_list
+
   ! ---------------------------------------------------------
   !> GD library
 #if defined(HAVE_GDLIB)
@@ -209,7 +216,7 @@ contains
 
     allocate(list(2**14))
 
-    call oct_wfs_list(s, list)
+    call loct_wfs_list(s, list(1))
     inlist = .false.
     if (list(a) == 1) inlist = .true.
 
