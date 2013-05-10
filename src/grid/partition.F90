@@ -60,7 +60,8 @@ module partition_m
   integer, parameter, public :: &
        METIS     = 2,           &
        ZOLTAN    = 3,           &
-       PFFT_PART = 5
+       PFFT_PART = 5,           &
+       PARMETIS  = 6
 
 contains
 

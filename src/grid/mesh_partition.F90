@@ -85,13 +85,26 @@ contains
     integer              :: npart          !< Number of partitions.
     integer              :: ipart          !< number of the current partition
     integer, allocatable :: xadj(:)        !< Indices of adjacency list in adjncy.
+                                           !! Differents for each process if ParMETIS is used.
     integer, allocatable :: adjncy(:)      !< Adjacency lists.
+                                           !! Only local part if ParMETIS is used.
     integer              :: iunit          !< For debug output to files.
-#ifdef HAVE_METIS
-    integer              :: options(5)     !< Options to METIS.
+#if defined(HAVE_METIS) || defined(HAVE_PARMETIS)
+    integer              :: options(5)     !< Options to (Par)METIS.
     integer              :: edgecut        !< Number of edges cut by partitioning.
 #endif
-
+#ifdef HAVE_PARMETIS
+    integer              :: adjwgt         !< Adjacency weights, NULL in our case
+    integer, allocatable :: adjncy_local(:)!< Local part of adjacency list
+    integer, allocatable :: xadj_local(:)  !< Local part of xadj
+    real, allocatable    :: tpwgts(:)      !< The fraction of vertex weight that shouldb e distributed 
+                                           !! to each sub-domain for each balance constraint
+    integer, allocatable :: vtxdist(:)     !< Initial distribution of the points
+    integer              :: local_part     !< Partition computed by ParMETIS of size n_i
+    integer              :: xadj_size      !< Number of points per process. The size of xadj_local array
+    integer, allocatable :: xadj_size_all(:)!< All the sizes of local matrices
+    integer, allocatable :: part_local(:)  !< Output of the ParMETIS call
+#endif
     type(stencil_t) :: stencil
     integer :: ip, ii
     integer :: stencil_to_use, default_method, method
@@ -127,10 +140,16 @@ contains
     !% Zoltan library.
     !%Option pfft_part 5
     !% (Experimental) Use PFFT to perform the mesh partition.
+    !%Option parmetis 6
+    !% (Experimental) Use ParMETIS libary to perform the mesh partition. Has to 
+    !% be compiled separately
     !%End
     default = ZOLTAN
 #ifdef HAVE_METIS
     default = METIS
+#endif
+#ifdef HAVE_PARMETIS
+    default = PARMETIS
 #endif
     call parse_integer(datasets_check('MeshPartitionPackage'), default, library)
 
@@ -200,6 +219,12 @@ contains
       ifinal(1:npart) = mesh%np_global
       lsize(1:npart) = mesh%np_global
 
+    case(PARMETIS)
+
+      istart(1:npart) = 1
+      ifinal(1:npart) = mesh%np_global
+      lsize(1:npart) = mesh%np_global
+
     case(ZOLTAN)
 
       ! If we use Zoltan, we divide the space in a basic way, to balance
@@ -217,7 +242,7 @@ contains
       nv = lsize(ipart)
       SAFE_ALLOCATE(xadj(1:nv + 1))
 
-      if(library == METIS .or. .not. zoltan_method_is_geometric(method)) then !calculate the graphs
+      if(library == METIS .or. library == PARMETIS .or. .not. zoltan_method_is_geometric(method)) then !calculate the graphs
         SAFE_ALLOCATE(adjncy(1:(stencil%size - 1)*nv))
 
         ! Create graph with each point being
@@ -312,6 +337,68 @@ contains
         message(1) = 'Selected partition method is not available in METIS.'
         call messages_fatal(1)
       end select
+#endif
+    case(PARMETIS)
+#ifdef HAVE_PARMETIS
+      options = 0 ! For the moment we use default options
+      
+      write(message(1),'(a)') 'Info: Using ParMETIS multilevel k-way algorithm to partition the mesh.'
+      call messages_info(1)
+
+      ! Compute vtxdist with multicomm_divide_range
+      ! vtxdist has to be equal in all processes
+      call multicomm_divide_range(mesh%np_global, npart, istart, ifinal, lsize)
+      SAFE_ALLOCATE(vtxdist(1:npart+1))
+      vtxdist(1) = 1
+      do ii = 2, npart + 1
+        vtxdist(ii) = vtxdist(ii-1) + lsize(ii-1)
+      end do
+
+      ! The sum of all tpwgts elements has to be 1 and 
+      ! we don`t care about the weights. So; 1/npart
+      SAFE_ALLOCATE(tpwgts(1:npart))
+      tpwgts = M_ONE/real(npart)
+      
+      ! Recalculate local adjncy and xadj from the global ones
+      xadj_size = vtxdist(ipart+1) - vtxdist(ipart) + 1
+      SAFE_ALLOCATE(xadj_local(1:xadj_size))
+      do ii = 1, xadj_size
+        xadj_local(ii) =  xadj(ii+vtxdist(ipart)-1) - xadj(vtxdist(ipart)) + 1
+      end do
+      SAFE_ALLOCATE(adjncy_local(1:xadj_local(xadj_size)))
+      do ii = 1, xadj_local(xadj_size)
+        adjncy_local(ii) = adjncy(xadj(vtxdist(ipart))+ii-1)
+      end do
+      
+      ! Allocate output matrix
+      SAFE_ALLOCATE(part_local(1:xadj_size)) ! Work with a local output
+      ! Call to ParMETIS with:
+      ! No weights. Fortran-style numbering. No imbalance tolerance
+      call ParMETIS_V3_PartKway(vtxdist, xadj_local, adjncy_local, 0, 0, 0, 1, & 
+           1, mesh%mpi_grp%size, tpwgts, 1.05, & 
+           options, edgecut, part_local, mesh%mpi_grp%comm) 
+
+      ASSERT(all(part_local(1:xadj_size-1)>0))
+      ! Calculate sending sizes of all the processes
+      SAFE_ALLOCATE(xadj_size_all(1:npart))
+      do ii = 1, npart
+        xadj_size_all(ii) = vtxdist(ii+1) - vtxdist(ii) 
+      end do
+      ! Adapt to MPI requirements of desplacements
+      vtxdist = vtxdist - 1  
+      ! Gather local outputs to a global old-fashion one
+      call MPI_Allgatherv(part_local(1), xadj_size-1, MPI_INTEGER, &
+           part(1), xadj_size_all(1), vtxdist(1), MPI_INTEGER, &
+           mesh%mpi_grp%comm, mpi_err)
+        
+      ! Deallocate matrices
+      SAFE_DEALLOCATE_A(xadj_size_all)
+      SAFE_DEALLOCATE_A(part_local)
+      SAFE_DEALLOCATE_A(vtxdist)
+      SAFE_DEALLOCATE_A(tpwgts)
+      SAFE_DEALLOCATE_A(xadj_local)
+      SAFE_DEALLOCATE_A(adjncy_local)
+      
 #endif
     case(ZOLTAN)
 
