@@ -541,6 +541,8 @@ contains
     FLOAT, allocatable :: dos(:,:,:)
     character(len=64)  :: filename
 
+    if(.not. mpi_grp_is_root(mpi_world)) return ! only first node outputs
+
     PUSH_SUB(states_write_dos)
 
     evalmin = minval(st%eigenval)
