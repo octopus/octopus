@@ -35,6 +35,7 @@ module em_resp_m
   use lalg_basic_m
   use linear_response_m
   use linear_solver_m
+  use loct_m
   use math_m
   use mesh_m
   use mesh_function_m
@@ -445,7 +446,7 @@ contains
                 
               !search for the density of the closest frequency, including negative
               closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
-              call oct_search_file_lr(closest_omega, idir, ierr, trim(tmpdir)//EM_RESP_DIR)
+              call loct_search_file_lr(closest_omega, idir, ierr, trim(tmpdir)//EM_RESP_DIR)
               sigma_alt = 1
               if(closest_omega * em_vars%freq_factor(ifactor) * em_vars%omega(iomega) < M_ZERO) opp_freq = .true.
               if(opp_freq .and. em_vars%nsigma == 2) sigma_alt = 2

@@ -31,6 +31,7 @@ module loct_m
     loct_nanosleep,          &
     loct_getcwd,             &
     loct_sysname,            &
+    loct_search_file_lr,     &
     loct_mkdir,              &
     loct_stat,               &
     loct_rm,                 &
@@ -120,6 +121,14 @@ module loct_m
     end function number_of_lines
   end interface loct_number_of_lines
 
+  interface loct_search_file_lr
+    subroutine oct_search_file_lr(freq, tag, ierr, dirname)
+      REAL_DOUBLE,      intent(inout) :: freq
+      integer,          intent(in)    :: tag
+      integer,          intent(out)   :: ierr
+      character(len=*), intent(in)    :: dirname
+    end subroutine oct_search_file_lr
+  end interface loct_search_file_lr
 
   ! ---------------------------------------------------------
   !> Varia

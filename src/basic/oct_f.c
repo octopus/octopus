@@ -307,7 +307,7 @@ ierr results:
 */
 
 void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
-     (double * freq, int * tag, int * ierr, STR_F_TYPE dirname STR_ARG1)
+     (double * freq, const int * tag, int * ierr, STR_F_TYPE dirname STR_ARG1)
 {
 #if HAVE_DIRENT_H && HAVE_CLOSEDIR && HAVE_READDIR && HAVE_STRCHR && HAVE_STRTOD
 
