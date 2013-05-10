@@ -88,7 +88,7 @@ contains
     ! sometimes a deadlock can occur here (if some nodes can allocate and other cannot)
     if(sys%st%dom_st_kpt_mpi_grp%comm > 0) call MPI_Barrier(sys%st%dom_st_kpt_mpi_grp%comm, mpi_err)
 #endif
-    call messages_write('      done.')
+    call messages_write('Info: Ground-state allocation done.')
     call messages_info()
 
     ! Read free states for ground-state open-boundary calculation.

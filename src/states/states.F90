@@ -1420,7 +1420,24 @@ contains
     st%block_size(1:st%nblocks) = bend(1:st%nblocks) - bstart(1:st%nblocks) + 1
 
     st%block_initialized = .true.
-    
+
+    call messages_write('Info: Blocks of states')
+    call messages_info()
+
+     do ib = 1, st%nblocks
+       call messages_write('      Block ')
+       call messages_write(ib)
+       call messages_write(' contains ')
+       call messages_write(st%block_size(ib))
+       call messages_write(' states')
+       if(st%block_size(ib) > 0) then
+         call messages_write(':')
+         call messages_write(st%block_range(ib, 1))
+         call messages_write(' - ')
+         call messages_write(st%block_range(ib, 2))
+       endif
+       call messages_info()
+     end do
     
 !     !cmplxscl
 !     if(st%have_left_states) then
