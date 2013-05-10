@@ -702,9 +702,6 @@ contains
     end if
 
     call partition_init(partition, mesh)
-    if (partition%box_shape == HYPERCUBE)  then
-      partition%point_to_part = mesh%vp%part_vec
-    end if
     
     !%Variable PartitionPrint
     !%Type logical

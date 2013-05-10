@@ -33,7 +33,6 @@ module partition_m
   use parser_m
   use mpi_m
   use profiling_m
-  use simul_box_m
   use stencil_m
 
   implicit none
@@ -46,11 +45,9 @@ module partition_m
     partition_end,         &
     partition_build,       &
     partition_quality,     &
-    partition_write_info,  &
-    partition_copy
+    partition_write_info
 
   type partition_t
-    integer, pointer :: point_to_part(:)
     integer, pointer :: nghost(:)
     integer, pointer :: nbound(:)
     integer, pointer :: nlocal(:)
@@ -58,7 +55,6 @@ module partition_m
     integer          :: npart
     integer          :: npoints
     integer          :: library
-    integer          :: box_shape
   end type partition_t
 
   integer, parameter, public :: &
@@ -86,13 +82,6 @@ contains
     ! this variable is documented in src/grid/mesh_partition.F90
     call parse_integer(datasets_check('MeshPartitionPackage'), default, this%library)
 
-    call parse_integer(datasets_check('BoxShape'), MINIMUM, this%box_shape)
-    
-    if (this%box_shape == HYPERCUBE) then
-      SAFE_ALLOCATE(this%point_to_part(1:this%npoints))
-      this%point_to_part = mesh%vp%part_vec
-    end if
-    
     SAFE_ALLOCATE(this%nghost(1:this%npart))
     SAFE_ALLOCATE(this%nbound(1:this%npart))
     SAFE_ALLOCATE(this%nlocal(1:this%npart))
@@ -234,9 +223,7 @@ contains
     type(partition_t), intent(inout) :: this
 
     PUSH_SUB(partition_end)
-    if (this%box_shape == HYPERCUBE) then
-      SAFE_DEALLOCATE_P(this%point_to_part)
-    end if
+
     SAFE_DEALLOCATE_P(this%nghost)
     SAFE_DEALLOCATE_P(this%nbound)
     SAFE_DEALLOCATE_P(this%nlocal)
@@ -262,22 +249,6 @@ contains
     quality = M_ONE/(M_ONE + quality)
 
   end function partition_quality
-
-  ! -----------------------------------------------------------------------
-
-  subroutine partition_copy(parta, partb)
-    type(partition_t), intent(in)    :: parta
-    type(partition_t), intent(inout) :: partb
-
-    PUSH_SUB(partition_copy)
-
-    ASSERT(parta%npart == partb%npart)
-    ASSERT(parta%npoints == partb%npoints)
-
-    partb%point_to_part = parta%point_to_part
-
-    POP_SUB(partition_copy)
-  end subroutine partition_copy
 
 end module partition_m
 
