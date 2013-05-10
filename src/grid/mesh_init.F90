@@ -40,7 +40,6 @@ module mesh_init_m
   use par_vec_m
   use parser_m
   use partition_m
-  use partitioner_m
   use profiling_m
   use simul_box_m
   use stencil_m
@@ -703,7 +702,7 @@ contains
     end if
 
     call partition_init(partition, mesh)
-    if (partition%library == GA .or. partition%box_shape == HYPERCUBE)  then
+    if (partition%box_shape == HYPERCUBE)  then
       partition%point_to_part = mesh%vp%part_vec
     end if
     

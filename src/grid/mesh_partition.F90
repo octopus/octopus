@@ -38,7 +38,6 @@ module mesh_partition_m
   use multicomm_m
   use parser_m
   use partition_m
-  use partitioner_m
   use pfft_m
   use profiling_m
   use simul_box_m
@@ -100,8 +99,6 @@ contains
     integer, parameter   :: STAR = 1, LAPLACIAN = 2
     integer, allocatable :: istart(:), ifinal(:), lsize(:)
     FLOAT, allocatable   :: xglobal(:, :)
-    type(partition_t)    :: partition
-    type(partitioner_t)  :: partitioner
     type(cube_t) :: cube
     integer, allocatable :: cube_part(:,:,:)
 
@@ -128,8 +125,6 @@ contains
     !% METIS library.
     !%Option zoltan 3
     !% Zoltan library.
-    !%Option ga 4
-    !% (Experimental) Genetic-algorithm optimization of the grid partition.
     !%Option pfft_part 5
     !% (Experimental) Use PFFT to perform the mesh partition.
     !%End
@@ -139,7 +134,6 @@ contains
 #endif
     call parse_integer(datasets_check('MeshPartitionPackage'), default, library)
 
-    if(library == GA) call messages_experimental('Genetic algorithm mesh partition')
     if(library == PFFT_PART) call messages_experimental('PFFT mesh partition')
 
 #ifndef HAVE_METIS
@@ -218,7 +212,7 @@ contains
 
     end select
 
-    if(library /= GA .and. library /= PFFT_PART) then
+    if(library /= PFFT_PART) then
       ! Shortcut (number of vertices).
       nv = lsize(ipart)
       SAFE_ALLOCATE(xadj(1:nv + 1))
@@ -351,24 +345,6 @@ contains
       ! we collect part from all processors
       call MPI_Allgatherv(xadj(1), lsize(ipart), MPI_INTEGER, part(1), &
         lsize(1), istart(1), MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
-#endif
-
-    case(GA)
-
-      if(mpi_grp_is_root(mesh%mpi_grp)) then
-
-        call partition_init(partition, mesh)
-
-        call partitioner_init(partitioner)
-        call partitioner_perform(partitioner, mesh, stencil, partition)
-        call partitioner_end(partitioner)
-
-        part = partition%point_to_part
-        call partition_end(partition)
-      end if
-
-#ifdef HAVE_MPI
-      call MPI_Bcast(part(1), mesh%np_part_global, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
 
     case(PFFT_PART)

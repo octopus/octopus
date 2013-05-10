@@ -46,10 +46,7 @@ module partition_m
     partition_end,         &
     partition_build,       &
     partition_quality,     &
-    partition_randomize,   &
     partition_write_info,  &
-    partition_mutate,      &
-    partition_crossover,   &
     partition_copy
 
   type partition_t
@@ -67,7 +64,6 @@ module partition_m
   integer, parameter, public :: &
        METIS     = 2,           &
        ZOLTAN    = 3,           &
-       GA        = 4,           &
        PFFT_PART = 5
 
 contains
@@ -92,7 +88,7 @@ contains
 
     call parse_integer(datasets_check('BoxShape'), MINIMUM, this%box_shape)
     
-    if (this%library == GA .or. this%box_shape == HYPERCUBE) then
+    if (this%box_shape == HYPERCUBE) then
       SAFE_ALLOCATE(this%point_to_part(1:this%npoints))
       this%point_to_part = mesh%vp%part_vec
     end if
@@ -238,7 +234,7 @@ contains
     type(partition_t), intent(inout) :: this
 
     PUSH_SUB(partition_end)
-    if (this%library == GA .or. this%box_shape == HYPERCUBE) then
+    if (this%box_shape == HYPERCUBE) then
       SAFE_DEALLOCATE_P(this%point_to_part)
     end if
     SAFE_DEALLOCATE_P(this%nghost)
@@ -268,133 +264,7 @@ contains
   end function partition_quality
 
   ! -----------------------------------------------------------------------
-  
-  subroutine partition_randomize(this, rng)
-    type(partition_t), intent(inout) :: this
-    type(c_ptr),       intent(in)    :: rng
 
-    integer :: ip
-    FLOAT :: rand
-
-    PUSH_SUB(partition_randomize)
-
-    do ip = 1,this%npoints
-      rand = loct_ran_flat(rng, M_ZERO, M_ONE)
-      this%point_to_part(ip) = nint(rand*this%npart + M_HALF)
-      ASSERT(this%point_to_part(ip) > 0 .and. this%point_to_part(ip) <= this%npart)
-    end do
-
-    POP_SUB(partition_randomize)
-  end subroutine partition_randomize
-
-  ! ----------------------------------------------------------------------
-
-  subroutine partition_mutate(this, rng, mesh, stencil)
-    type(partition_t), intent(inout) :: this
-    type(c_ptr),       intent(in)    :: rng
-    type(mesh_t),      intent(in)    :: mesh
-    type(stencil_t),   intent(in)    :: stencil
-
-    FLOAT :: random
-
-    PUSH_SUB(partition_mutate)
-
-    random = loct_ran_flat(rng, M_ZERO, M_ONE)
-
-    if(random >= CNST(0.5)) then
-      call mutate_contamination()
-    else
-      call mutate_all()
-    end if
-
-    POP_SUB(partition_mutate)
-
-  contains
-    
-    subroutine mutate_all()
-      integer :: ip
-
-      PUSH_SUB(partition_mutate.mutate_all)
-
-      do ip = 1, this%npoints
-        if(loct_ran_flat(rng, M_ZERO, M_ONE) < CNST(0.01)) then
-          this%point_to_part(ip) = nint(loct_ran_flat(rng, M_ZERO, M_ONE)*this%npart + M_HALF)
-        end if
-      end do
-
-      POP_SUB(partition_mutate.mutate_all)
-    end subroutine mutate_all
-    
-    subroutine mutate_contamination()
-      integer :: istencil, ip, ipart, ipcoords(1:MAX_DIM)
-      integer, allocatable :: jpcoords(:, :), jp(:)
-
-      PUSH_SUB(partition_mutate.mutate_contamination)
-
-      SAFE_ALLOCATE(jpcoords(1:MAX_DIM, 1:stencil%size))
-      SAFE_ALLOCATE(jp(1:stencil%size))
-      
-      ip = nint(loct_ran_flat(rng, M_ZERO, M_ONE)*mesh%np_global + M_HALF)
-      ipart = this%point_to_part(ip)
-      
-      call index_to_coords(mesh%idx, mesh%sb%dim, ip, ipcoords)
-
-      do istencil = 1, stencil%size
-        jpcoords(:, istencil) = ipcoords + stencil%points(:, istencil)
-      end do
-
-      call index_from_coords_vec(mesh%idx, mesh%sb%dim, stencil%size, jpcoords, jp)
-
-      forall(istencil = 1:stencil%size) this%point_to_part(jp(istencil)) = ipart
-
-      POP_SUB(partition_mutate.mutate_contamination)
-    end subroutine mutate_contamination
-    
-
-  end subroutine partition_mutate
-
-  ! ----------------------------------------------------------------------
-
-  subroutine partition_crossover(parent1, parent2, rng, child1, child2)
-    type(partition_t), intent(in)    :: parent1
-    type(partition_t), intent(in)    :: parent2
-    type(c_ptr),       intent(in)    :: rng
-    type(partition_t), intent(inout) :: child1
-    type(partition_t), intent(inout) :: child2
-
-    integer :: p1, p2, p3, p4, ip
-
-    PUSH_SUB(partition_crossover)
-
-    ASSERT(parent1%npoints == parent2%npoints)
-    ASSERT(parent1%npoints == child1%npoints)
-    ASSERT(parent1%npoints == child2%npoints)
-
-    p3 = nint(loct_ran_flat(rng, M_ZERO, M_ONE)*parent1%npoints + M_HALF)
-    p4 = nint(loct_ran_flat(rng, M_ZERO, M_ONE)*parent1%npoints + M_HALF)
-
-    p1 = min(p3, p4)
-    p2 = max(p3, p4)
-
-    forall(ip = 1:p1) 
-      child1%point_to_part(ip) = parent1%point_to_part(ip)
-      child2%point_to_part(ip) = parent2%point_to_part(ip)
-    end forall
-
-    forall(ip = p1 + 1:p2) 
-      child1%point_to_part(ip) = parent2%point_to_part(ip)
-      child2%point_to_part(ip) = parent1%point_to_part(ip)
-    end forall
-
-    forall(ip = p2 + 1:parent1%npoints) 
-      child1%point_to_part(ip) = parent1%point_to_part(ip)
-      child2%point_to_part(ip) = parent2%point_to_part(ip)
-    end forall
-
-    POP_SUB(partition_crossover)
-  end subroutine partition_crossover
-  
-  ! -----------------------------------------------------------
   subroutine partition_copy(parta, partb)
     type(partition_t), intent(in)    :: parta
     type(partition_t), intent(inout) :: partb

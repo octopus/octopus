@@ -56,7 +56,6 @@ libgrid_a_SOURCES =       \
 	ob_interface.F90        \
 	operate.c               \
 	operate_f.F90           \
-	partitioner.F90         \
 	partition.F90           \
 	partition_transfer.F90  \
 	par_vec.F90             \
@@ -121,16 +120,15 @@ mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o mesh_function.o
 mesh_cube_map.o : mesh_cube_map.F90 index.o partition_transfer.o cube.o
 mesh_cube_parallel_map.o : mesh_cube_parallel_map.F90 partition_transfer.o mesh.o cube.o
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o modelmb_1part.o
-mesh_init.o : mesh_init.F90 mesh.o par_vec.o stencil.o ob_grid.o partition.o partitioner.o mesh_partition.o mesh_cube_map.o
+mesh_init.o : mesh_init.F90 mesh.o par_vec.o stencil.o ob_grid.o partition.o mesh_partition.o mesh_cube_map.o
 mesh.o : mesh.F90 par_vec.o index.o curvilinear.o mesh_cube_map.o
-mesh_partition.o : mesh_partition.F90 mesh.o zoltan.o stencil_star.o stencil.o partition.o partitioner.o 
+mesh_partition.o : mesh_partition.F90 mesh.o zoltan.o stencil_star.o stencil.o partition.o
 modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o
 multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o transfer_table.o boundaries.o
 nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o boundaries.o operate_f.o
 ob_grid.o : ob_grid.F90 mesh.o ob_interface.o
 ob_interface.o : ob_interface.F90 derivatives.o mesh.o
 operate.o : operate.c operate_inc.c
-partitioner.o : partitioner.F90 partition.o
 partition.o : partition.F90 mesh.o
 partition_transfer.o : partition_transfer.F90 partition_transfer_inc.F90 par_vec.o
 par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o subarray.o
