@@ -278,7 +278,7 @@ contains
 
     integer :: ist
     
-    PUSH_SUB(batch_is_ok)
+    ! no push_sub, called too frequently
     
     ok = (this%nst_linear >= 1) .and. associated(this%states_linear)
     ok = ubound(this%states_linear, dim = 1) == this%nst_linear
@@ -289,7 +289,6 @@ contains
       end do
     end if
 
-    POP_SUB(batch_is_ok)
   end function batch_is_ok
 
   !--------------------------------------------------------------
@@ -437,7 +436,7 @@ contains
     logical :: copy_
     type(profile_t), save :: prof, prof_copy
 
-    PUSH_SUB(batch_pack)
+    ! no push_sub, called too freqently
 
     call profiling_in(prof, "BATCH_PACK")
     ASSERT(batch_is_ok(this))
@@ -491,8 +490,6 @@ contains
 
     call profiling_out(prof)
 
-    POP_SUB(batch_pack)
-
   contains
 
     subroutine pack_copy()
@@ -545,7 +542,7 @@ contains
     logical :: copy_
     type(profile_t), save :: prof
 
-    PUSH_SUB(batch_unpack)
+    ! no push_sub, called too freqently
 
     call profiling_in(prof, "BATCH_UNPACK")
 
@@ -576,8 +573,6 @@ contains
 
     call profiling_out(prof)
 
-    POP_SUB(batch_unpack)
-    
   end subroutine batch_unpack
 
   ! ----------------------------------------------------

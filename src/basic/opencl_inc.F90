@@ -211,14 +211,13 @@ subroutine X(opencl_set_kernel_arg_data)(kernel, narg, data)
   
   integer :: ierr
 
-  PUSH_SUB(X(opencl_set_kernel_arg_data))
+  ! no push_sub, called too frequently
 
 #ifdef HAVE_OPENCL
   call clSetKernelArg(kernel, narg, data, ierr)
 #endif
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_data")
 
-  POP_SUB(X(opencl_set_kernel_arg_data))
 end subroutine X(opencl_set_kernel_arg_data)
 
 

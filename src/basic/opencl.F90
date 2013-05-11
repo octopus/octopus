@@ -785,12 +785,11 @@ contains
   subroutine opencl_finish()
     integer :: ierr
 
-    PUSH_SUB(opencl_finish)
+    ! no push_sub, called too frequently
 
     call clFinish(opencl%command_queue, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
 
-    POP_SUB(opencl_finish)
   end subroutine opencl_finish
 
   ! ------------------------------------------
@@ -802,12 +801,10 @@ contains
 
     integer :: ierr
 
-    PUSH_SUB(opencl_set_kernel_arg_buffer)
+    ! no push_sub, called too frequently
 
     call clSetKernelArg(kernel, narg, buffer%mem, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clSetKernelArg_buf")
-
-    POP_SUB(opencl_set_kernel_arg_buffer)
 
   end subroutine opencl_set_kernel_arg_buffer
 
