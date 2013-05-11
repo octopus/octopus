@@ -850,7 +850,7 @@ contains
     integer(8) :: gsizes(1:3)
     integer(8) :: lsizes(1:3)
 
-    PUSH_SUB(opencl_kernel_run)
+    ! no push_sub, called too frequently
 
     dim = ubound(globalsizes, dim = 1)
 
@@ -864,7 +864,6 @@ contains
     call clEnqueueNDRangeKernel(opencl%command_queue, kernel, gsizes(1:dim), lsizes(1:dim), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
 
-    POP_SUB(opencl_kernel_run)
   end subroutine opencl_kernel_run
 
 
