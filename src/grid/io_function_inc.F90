@@ -556,9 +556,6 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
   ! should we output boundary points?
   if(iand(how, C_OUTPUT_HOW_BOUNDARY_POINTS)   /= 0) np_max = mesh%np_part_global
 
-  write(0,*) 'ubound(ff, dim = 1) = ', ubound(ff, dim = 1)
-  write(0,*) 'mesh%np_global = ', mesh%np_global
-  write(0,*) 'mesh%np_part_global = ', mesh%np_part_global
   ASSERT(ubound(ff, dim = 1) >= np_max)
 
   if(iand(how, C_OUTPUT_HOW_BINARY)     /= 0) call out_binary()
