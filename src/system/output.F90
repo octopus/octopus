@@ -108,7 +108,7 @@ module output_m
   type output_t
     !> General output variables:
     integer :: what                !< what to output
-    integer :: how                 !< how to output
+    integer :: how = -1            !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
