@@ -489,13 +489,13 @@ sub run_match_new(){
     } else {
       $pre_command = "awk '(NR==$par[1])' $par[0]";
     }
-    $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";
+    $pre_command .= " | cut -b $par[2]-";
 
   }elsif($func eq "GREP") { # function GREP(filename, 're', column <, offset>)
     my $off = 1*$par[3];
     # -a means even if the file is considered binary due to a stray funny character, it will work
     $pre_command = "grep -a -A$off $par[1] $par[0] | awk '(NR==$off+1)'";
-    $pre_command .= " | cut -b $par[2]- | perl -ne '/\\s*([0-9\\-+.eEdD]*)/; print \$1'";
+    $pre_command .= " | cut -b $par[2]-";
 
   }elsif($func eq "SIZE") { # function SIZE(filename)
     $pre_command = "ls -lt $par[0] | awk '{printf \$5}'";
@@ -504,6 +504,8 @@ sub run_match_new(){
     printf stderr "Unknown command '$func'\n";
     return 0;
   }
+
+  $pre_command .= " | perl -ne '/\\s*([0-9\\-+.eEdDnNaA]*)/; print \$1'";
 
   # append the command and the regexp also to the shell script matches.sh in the
   # current archive directory
