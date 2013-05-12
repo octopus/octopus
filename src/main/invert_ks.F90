@@ -137,7 +137,8 @@ contains
 
     ! output for all cases    
     call output_all(sys%outp, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, sys%ks%xc, STATIC_DIR)
-        
+
+    sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp%comm = sys%st%dom_st_kpt_mpi_grp%comm
     ! save files in restart format
     call restart_write(trim(tmpdir) // GS_DIR, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
 
