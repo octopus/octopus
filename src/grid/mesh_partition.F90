@@ -101,7 +101,6 @@ contains
                                            !! to each sub-domain for each balance constraint
     integer, allocatable :: vtxdist(:)     !< Initial distribution of the points
     integer              :: local_part     !< Partition computed by ParMETIS of size n_i
-    integer              :: xadj_size      !< Number of points per process. The size of xadj_local array
     integer, allocatable :: xadj_size_all(:)!< All the sizes of local matrices
     integer, allocatable :: part_local(:)  !< Output of the ParMETIS call
 #endif
@@ -360,25 +359,24 @@ contains
       tpwgts = M_ONE/real(npart)
       
       ! Recalculate local adjncy and xadj from the global ones
-      xadj_size = vtxdist(ipart+1) - vtxdist(ipart) + 1
-      SAFE_ALLOCATE(xadj_local(1:xadj_size))
-      do ii = 1, xadj_size
+      SAFE_ALLOCATE(xadj_local(1:lsize(ipart) + 1))
+      do ii = 1, lsize(ipart) + 1
         xadj_local(ii) =  xadj(ii+vtxdist(ipart)-1) - xadj(vtxdist(ipart)) + 1
       end do
-      SAFE_ALLOCATE(adjncy_local(1:xadj_local(xadj_size)))
-      do ii = 1, xadj_local(xadj_size)
+      SAFE_ALLOCATE(adjncy_local(1:xadj_local(lsize(ipart) + 1)))
+      do ii = 1, xadj_local(lsize(ipart) + 1)
         adjncy_local(ii) = adjncy(xadj(vtxdist(ipart))+ii-1)
       end do
       
       ! Allocate output matrix
-      SAFE_ALLOCATE(part_local(1:xadj_size)) ! Work with a local output
+      SAFE_ALLOCATE(part_local(1:lsize(ipart) + 1)) ! Work with a local output
       ! Call to ParMETIS with:
       ! No weights. Fortran-style numbering. No imbalance tolerance
       call ParMETIS_V3_PartKway(vtxdist, xadj_local, adjncy_local, 0, 0, 0, 1, & 
            1, mesh%mpi_grp%size, tpwgts, 1.05, & 
            options, edgecut, part_local, mesh%mpi_grp%comm) 
 
-      ASSERT(all(part_local(1:xadj_size-1)>0))
+      ASSERT(all(part_local(1:lsize(ipart))>0))
       ! Calculate sending sizes of all the processes
       SAFE_ALLOCATE(xadj_size_all(1:npart))
       do ii = 1, npart
@@ -387,7 +385,7 @@ contains
       ! Adapt to MPI requirements of displacements
       vtxdist = vtxdist - 1  
       ! Gather local outputs to a global old-fashion one
-      call MPI_Allgatherv(part_local(1), xadj_size-1, MPI_INTEGER, &
+      call MPI_Allgatherv(part_local(1), lsize(ipart), MPI_INTEGER, &
            part(1), xadj_size_all(1), vtxdist(1), MPI_INTEGER, &
            mesh%mpi_grp%comm, mpi_err)
         
