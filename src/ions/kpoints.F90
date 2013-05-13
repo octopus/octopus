@@ -426,8 +426,6 @@ contains
       !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>.
       !%End
 
-      this%use_symmetries = .false.
-
       reduced = .false.
       if(parse_block(datasets_check('KPoints'), blk) /= 0) then
         if(parse_block(datasets_check('KPointsReduced'), blk) == 0) then
@@ -439,6 +437,7 @@ contains
         end if
       end if
       read_user_kpoints = .true.
+      this%use_symmetries = .false.
 
       call kpoints_grid_init(dim, this%full, parse_block_n(blk))
 
