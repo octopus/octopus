@@ -547,8 +547,8 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
   mfmtheader = '(a,a10,5a23)'
 #endif
 
-  if(how == 0) then
-    message(1) = "Internal error: cannot call io_function with outp%how = 0."
+  if(how <= 0) then
+    message(1) = "Internal error: cannot call io_function with outp%how <= 0."
     call messages_fatal(1)
   endif
 
