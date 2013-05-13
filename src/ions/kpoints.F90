@@ -431,6 +431,7 @@ contains
         end if
       end if
       read_user_kpoints = .true.
+      this%use_symmetries = .false.
 
       call kpoints_grid_init(dim, this%full, parse_block_n(blk))
 
