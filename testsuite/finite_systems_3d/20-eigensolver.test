@@ -6,8 +6,7 @@ Programs   : octopus; octopus_mpi
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
-# This test checks the eigensolvers lobpcg, cg, cg_new, plan, evolution and rmmdiis with a simple
-# SiH4.
+# This test checks the eigensolvers lobpcg, cg, cg_new, plan, evolution and rmmdiis with CH4.
 
 Input: 20-eigensolver.01-lobpcg.inp
 match ; Eigenvalue  1 ; GREP(static/info, ' 1   --', 13) ; -14.539741

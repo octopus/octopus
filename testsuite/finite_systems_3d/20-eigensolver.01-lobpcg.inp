@@ -19,6 +19,5 @@ Spacing = 0.25
 %
 
 EigenSolver = lobpcg
-EigenSolverTolerance = 1e-5
 
 ParallelizationStrategy = par_domains
