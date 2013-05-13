@@ -436,7 +436,7 @@ contains
     logical :: copy_
     type(profile_t), save :: prof, prof_copy
 
-    ! no push_sub, called too freqently
+    ! no push_sub, called too frequently
 
     call profiling_in(prof, "BATCH_PACK")
     ASSERT(batch_is_ok(this))
@@ -542,7 +542,7 @@ contains
     logical :: copy_
     type(profile_t), save :: prof
 
-    ! no push_sub, called too freqently
+    PUSH_SUB(batch_unpack)
 
     call profiling_in(prof, "BATCH_UNPACK")
 
@@ -572,6 +572,8 @@ contains
     end if
 
     call profiling_out(prof)
+
+    POP_SUB(batch_unpack)
 
   end subroutine batch_unpack
 
