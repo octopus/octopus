@@ -108,7 +108,7 @@ module output_m
   type output_t
     !> General output variables:
     integer :: what                !< what to output
-    integer :: how = 0             !< how to output
+    integer :: how                 !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
@@ -497,8 +497,11 @@ contains
     call parse_logical(datasets_check('OutputDuringSCF'), .false., outp%duringscf)
 
     ! these two kinds of Output do not have a how
-    if(iand(outp%what, iand(not(C_OUTPUT_MATRIX_ELEMENTS), not(C_OUTPUT_BERKELEYGW))) /= 0) &
+    if(iand(outp%what, iand(not(C_OUTPUT_MATRIX_ELEMENTS), not(C_OUTPUT_BERKELEYGW))) /= 0) then
       call io_function_read_how(sb, outp%how)
+    else
+       outp%how = 0
+    endif
 
     POP_SUB(output_init)
   end subroutine output_init
