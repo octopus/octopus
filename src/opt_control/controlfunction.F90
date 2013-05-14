@@ -171,8 +171,8 @@ module controlfunction_m
     FLOAT, pointer :: theta(:) => NULL()
   end type controlfunction_t
   
-  ! the next variable has to be a pointer to avoid a bug in the IBM compiler
-  ! and it can not be properly initialized thanks to a bug in the PGI compiler
+  !> the next variable has to be a pointer to avoid a bug in the IBM compiler
+  !! and it can not be properly initialized thanks to a bug in the PGI compiler
   logical                                 :: cf_common_initialized=.false.
   type(controlfunction_common_t), pointer :: cf_common => NULL()
   type(mix_t) :: controlfunction_mix
@@ -1064,9 +1064,11 @@ contains
 
     PUSH_SUB(controlfunction_end)
 
-    do ipar = 1, cp%no_controlfunctions
-      call tdf_end(cp%f(ipar))
-    end do
+    if(associated(cp%f)) then
+      do ipar = 1, cp%no_controlfunctions
+        call tdf_end(cp%f(ipar))
+      end do
+    endif
     SAFE_DEALLOCATE_P(cp%f)
     SAFE_DEALLOCATE_P(cp%alpha)
     SAFE_DEALLOCATE_P(cp%u)
@@ -1402,7 +1404,7 @@ contains
 
     PUSH_SUB(controlfunction_copy)
 
-    call controlfunction_nullify(cp_out)
+    call controlfunction_end(cp_out)
 
     cp_out%no_controlfunctions = cp_in%no_controlfunctions
     cp_out%dim = cp_in%dim
