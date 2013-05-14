@@ -533,6 +533,7 @@ contains
         call parse_block_string(blk, 0, 0, target%td_local_target)
         call conv_to_C_string(target%td_local_target)
         SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
+        call parse_block_end(blk)
       else
         message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block.'
         call messages_fatal(1)
@@ -588,6 +589,7 @@ contains
             call parse_block_float(blk, 1, jj - 1, target%hhg_alpha(jj))
             call parse_block_float(blk, 2, jj - 1, target%hhg_a(jj))
           end do
+          call parse_block_end(blk)
         else
           message(1) = '"OCTOptimizeHarmonicSpectrum" has to be specified as a block.'
           call messages_info(1)
@@ -745,6 +747,7 @@ contains
              call parse_block_string(blk, jj, 0, expression)
              target%vel_input_string = trim(target%vel_input_string) // trim(expression)
           end do
+          call parse_block_end(blk)
        else
           message(1) = 'If OCTTargetOperator = oct_tg_velocity, then you must give the shape'
           message(2) = 'of this target in the block "OCTVelocityTarget".'
@@ -767,6 +770,7 @@ contains
                    call parse_block_string(blk, ist, jst, target%vel_der_array(ist+1, jst+1))
                 end do
              end do
+             call parse_block_end(blk)
           else
              message(1) = 'If OCTTargetOperator = oct_tg_velocity, and'
              message(2) = 'OCTScheme = oct_algorithm_cg, then you must define the'
@@ -991,13 +995,13 @@ contains
           SAFE_DEALLOCATE_A(xp)
           SAFE_DEALLOCATE_A(tmp_box)
                              
+          call parse_block_end(blk)     
         else
           message(1) = '"OCTSpatialCurrWeight" has to be specified as a block.'
           call messages_info(1)
           call input_error('OCTEvalBoxCurrTg')
         end if
-     
-     end if
+      end if
     
     case default
 
