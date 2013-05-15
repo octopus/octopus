@@ -361,8 +361,9 @@ ACX_PNFFT
 dnl check for PSPIO
 ACX_PSPIO
 
-dnl check for ParMETIS (also checks METIS in the same path)
+dnl check for METIS5 and ParMETIS (also checks METIS in the same path)
 AC_LANG_PUSH(C)
+ACX_PATH_METIS
 ACX_PATH_PARMETIS
 AC_LANG_POP(C)
 

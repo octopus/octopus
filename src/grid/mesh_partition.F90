@@ -89,12 +89,12 @@ contains
     integer, allocatable :: adjncy(:)      !< Adjacency lists.
                                            !! Only local part if ParMETIS is used.
     integer              :: iunit          !< For debug output to files.
-#if defined(HAVE_METIS) || defined(HAVE_PARMETIS)
-    integer              :: options(5)     !< Options to (Par)METIS.
+#if defined(HAVE_METIS) || defined(HAVE_METIS_5) || defined(HAVE_PARMETIS)
+    integer, allocatable :: options(:)     !< Options to (Par)METIS.
     integer              :: edgecut        !< Number of edges cut by partitioning.
 #endif
-#ifdef HAVE_PARMETIS
-    integer              :: adjwgt         !< Adjacency weights, NULL in our case
+#if defined(HAVE_PARMETIS) || defined(HAVE_METIS_5)
+    integer, pointer     :: adjwgt=>null() !< Adjacency weights, NULL in our case
     integer, allocatable :: adjncy_local(:)!< Local part of adjacency list
     integer, allocatable :: xadj_local(:)  !< Local part of xadj
     real, allocatable    :: tpwgts(:)      !< The fraction of vertex weight that shouldb e distributed 
@@ -103,6 +103,8 @@ contains
     integer              :: local_part     !< Partition computed by ParMETIS of size n_i
     integer, allocatable :: xadj_size_all(:)!< All the sizes of local matrices
     integer, allocatable :: part_local(:)  !< Output of the ParMETIS call
+    integer, pointer :: vwgt=>null(), vsize=>null(), opts=>null() !< Weights for the graph. NULL as we are
+                                                                  !! going to use them
 #endif
     type(stencil_t) :: stencil
     integer :: ip, ii
@@ -154,7 +156,7 @@ contains
 
     if(library == PFFT_PART) call messages_experimental('PFFT mesh partition')
 
-#ifndef HAVE_METIS
+#if !defined(HAVE_METIS) && !defined(HAVE_METIS_5)
     if(library == METIS) then
       message(1) = 'METIS was requested, but Octopus was compiled without it.'
       call messages_fatal(1)
@@ -312,6 +314,7 @@ contains
     select case(library)
     case(METIS)
 #ifdef HAVE_METIS
+      SAFE_ALLOCATE(options(1:5))
       options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
 
       ! Partition graph.
@@ -337,8 +340,21 @@ contains
         call messages_fatal(1)
       end select
 #endif
+#ifdef HAVE_METIS_5
+      SAFE_ALLOCATE(options(0:40))
+      SAFE_ALLOCATE(tpwgts(1:npart))
+      tpwgts = M_ONE/real(npart)
+      call METIS_SetDefaultOptions(options) ! is equal to: options = -1
+      options(17) = 1 ! METIS_OPTION_NUMBERING. Fortran style; start from 1
+      message(1) = 'Info: Using METIS 5 multilevel k-way algorithm to partition the mesh.'
+      call messages_info(1)
+      call METIS_PartGraphKway(nv, 1, xadj, adjncy, &
+           vwgt, vsize, adjwgt, npart, tpwgts, &
+           1.01, options, edgecut, part)  
+#endif
     case(PARMETIS)
 #ifdef HAVE_PARMETIS
+      SAFE_ALLOCATE(options(0:2))
       options = 0 ! For the moment we use default options
       
       write(message(1),'(a)') 'Info: Using ParMETIS multilevel k-way algorithm to partition the mesh.'
@@ -446,6 +462,9 @@ contains
 
     end select
 
+#if defined(HAVE_METIS) || defined(HAVE_METIS_5) || defined(HAVE_PARMETIS)
+    SAFE_DEALLOCATE_A(options)
+#endif
     SAFE_DEALLOCATE_A(istart)
     SAFE_DEALLOCATE_A(ifinal)
     SAFE_DEALLOCATE_A(lsize)
