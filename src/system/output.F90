@@ -1036,14 +1036,14 @@ contains
       
       PUSH_SUB(output_berkeleygw.bgw_write_header)
 
-      call write_binary_header(iunit, sheader, iflavor = 2, ns = st%d%nspin, ng = shell%ngvectors, &
-        ntran = symmetries_number(gr%sb%symm), cell_symmetry = 0, nat = geo%natoms, &
-        nk = gr%sb%kpoints%reduced%npoints, nbands = st%nst, ngkmax = shell%ngvectors, ecutrho = shell%ekin_cutoff * M_TWO,  &
-        ecutwfc = shell%ekin_cutoff * M_TWO, FFTgrid = FFTgrid, kgrid = gr%sb%kpoints%nik_axis, kshift = gr%sb%kpoints%shifts, &
-        celvol = gr%sb%rcell_volume, alat = M_ONE, avec = gr%sb%rlattice, adot = adot, recvol = recvol, &
-        blat = M_ONE, bvec = gr%sb%klattice, bdot = bdot, mtrx = mtrx, tnp = tnp, atyp = atyp, &
-        apos = apos, ngk = ngk, kw = gr%sb%kpoints%reduced%weight, kpt = gr%sb%kpoints%reduced%red_point, &
-        ifmin = ifmin, ifmax = ifmax, energies = energies, occupations = occupations, warn = .false.)
+      call write_binary_header(iunit, sheader, 2, st%d%nspin, shell%ngvectors, &
+        symmetries_number(gr%sb%symm), 0, geo%natoms, &
+        gr%sb%kpoints%reduced%npoints, st%nst, shell%ngvectors, shell%ekin_cutoff * M_TWO,  &
+        shell%ekin_cutoff * M_TWO, FFTgrid, gr%sb%kpoints%nik_axis, gr%sb%kpoints%shifts, &
+        gr%sb%rcell_volume, M_ONE, gr%sb%rlattice, adot, recvol, &
+        M_ONE, gr%sb%klattice, bdot, mtrx, tnp, atyp, &
+        apos, ngk, gr%sb%kpoints%reduced%weight, gr%sb%kpoints%reduced%red_point, &
+        ifmin, ifmax, energies, occupations, warn = .false.)
 
       call write_binary_gvectors(iunit, shell%ngvectors, shell%ngvectors, shell%red_gvec)
 
