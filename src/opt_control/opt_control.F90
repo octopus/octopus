@@ -325,7 +325,6 @@ contains
       call propagate_forward(sys, hm, td, par, target, psi, prop_psi)
       j1 = target_j1(target, sys%gr, psi)
       stop_loop = iteration_manager(j1, par, par_prev, iterator)
-      call controlfunction_end(par_prev)
       if(clean_stop(sys%mc%master_comm) .or. stop_loop) then
         call states_end(psi)
         call oct_prop_end(prop_chi)
@@ -413,6 +412,7 @@ contains
         end if
       end if
 
+      call controlfunction_end(par_)
       SAFE_DEALLOCATE_A(x)
       SAFE_DEALLOCATE_A(theta)
       POP_SUB(opt_control_run.scheme_cg)
@@ -481,6 +481,7 @@ contains
         end if
       end if
 
+      call controlfunction_end(par_)
       SAFE_DEALLOCATE_A(x)
       SAFE_DEALLOCATE_A(theta)
       POP_SUB(opt_control_run.scheme_direct)
@@ -526,7 +527,7 @@ contains
       ! can use them.
       call controlfunction_copy(par_, par)
       sys_      => sys
-      hm_        => hm
+      hm_       => hm
       td_       => td
 
       call controlfunction_basis_to_theta(par)
@@ -543,6 +544,7 @@ contains
       w = M_ZERO
       call newuoa(dim, npt, x, rhobeg, rhoend, iprint, maxfun, w, opt_control_direct_calc)
 
+      call controlfunction_end(par_)
       SAFE_DEALLOCATE_A(x)
       SAFE_DEALLOCATE_A(theta)
       SAFE_DEALLOCATE_A(xl)
@@ -632,7 +634,6 @@ contains
       call controlfunction_set_fluence(parp)
     end if
 
-    call controlfunction_end(par)
     call controlfunction_copy(par, parp)
     call controlfunction_apply_envelope(par)
 
@@ -694,7 +695,6 @@ contains
     if(oct%mode_fixed_fluence) call controlfunction_set_fluence(par_chi)
 
     ! Copy par_chi to par
-    call controlfunction_end(par)
     call controlfunction_copy(par, par_chi)
 
     call controlfunction_end(par_chi)
