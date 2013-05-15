@@ -476,6 +476,7 @@ contains
       type(block_t) :: blk
       type(states_t) :: stin
       CMPLX, allocatable :: rotation_matrix(:, :), zv_old(:)
+      logical :: freeze_hxc
 
       PUSH_SUB(td_run.init_wfs)
 
@@ -660,6 +661,21 @@ contains
       else
         ! Normal run.
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
+      end if
+
+      !%Variable TDFreezeHXC
+      !%Type logical
+      !%Default no
+      !%Section Time-Dependent
+      !%Description
+      !% The electrons are evolved as independent particles feeling the Hartree and 
+      !% exchange-correlation potentials from the ground-state electronic configuration.
+      !%End
+      call parse_logical(datasets_check('TDFreezeHXC'), .false., freeze_hxc)
+      if(freeze_hxc) then 
+        write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
+        call messages_info(1)
+        call v_ks_freeze_hxc(sys%ks)
       end if
 
       x = minval(st%eigenval(st%st_start, :))
