@@ -27,6 +27,8 @@ module xyz_adjust_m
   use parser_m
   use messages_m
   use species_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 
@@ -48,7 +50,7 @@ contains
       LARGE   = 3
 
     FLOAT :: center(MAX_DIM), x1(MAX_DIM), x2(MAX_DIM), to(MAX_DIM)
-    integer :: axis_type
+    integer :: axis_type, idir
     type(block_t) :: blk
 
     PUSH_SUB(xyz_adjust_it)
@@ -68,6 +70,9 @@ contains
         to(1) = M_ONE; to(2) = M_ZERO; to(3) = M_ZERO
       end if
       to = to / sqrt(sum(to**2))
+
+      write(message(1),'(a,6f15.6)') 'Using main axis ', to
+      call messages_info(1)
 
       !%Variable MainAxis
       !%Type block
@@ -96,6 +101,7 @@ contains
       !% The larger axis of the molecule.
       !%End
       call parse_integer(datasets_check('AxisType'), INERTIA, axis_type)
+      call messages_print_var_option(stdout, "AxisType", axis_type)
 
       select case(axis_type)
       case(INERTIA, PSEUDO)
@@ -130,6 +136,11 @@ contains
 
     ! recenter
     call find_center(geo, center)
+
+    write(message(1),'(3a,6f15.6)') 'Center [', trim(units_abbrev(units_out%length)), '] = ', &
+      (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
+    call messages_info(1)
+
     call translate(geo, center)
 
     POP_SUB(xyz_adjust_it)
