@@ -15,7 +15,7 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 ## 02111-1307, USA.
 ##
-## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
+## $Id$
 
 # ---------------------------------------------------------------
 # Include paths.
@@ -91,6 +91,14 @@ if COMPILE_METIS
   external_LIBS += $(top_builddir)/external_libs/metis-4.0/libmetis.a
   AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-4.0/
 endif
+
+if COMPILE_METIS_5
+  external_LIBS += $(top_builddir)/external_libs/metis-5.1/GKlib/libgk.a
+  external_LIBS += $(top_builddir)/external_libs/metis-5.1/libmetis/libmetis_tmp.a
+  external_LIBS += $(top_builddir)/external_libs/metis-5.1/libmetis5.a
+  AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-5.1/
+endif
+
 
 if COMPILE_ZOLTAN
   external_LIBS += $(top_builddir)/external_libs/zoltan/libzoltan.a
