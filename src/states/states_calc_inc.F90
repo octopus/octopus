@@ -64,7 +64,7 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
     call lalg_cholesky(nst, ss, bof = bof)
 
     if(bof) then
-      message(1) = "The cholesky_serial orthogonalization; probably eigenvectors are not independent."
+      message(1) = "The cholesky_serial orthogonalization failed; probably eigenvectors are not independent."
       call messages_warning(1)
     end if
 
