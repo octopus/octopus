@@ -103,8 +103,8 @@ contains
     integer              :: local_part     !< Partition computed by ParMETIS of size n_i
     integer, allocatable :: xadj_size_all(:)!< All the sizes of local matrices
     integer, allocatable :: part_local(:)  !< Output of the ParMETIS call
-    integer, pointer :: vwgt=>null(), vsize=>null(), opts=>null() !< Weights for the graph. NULL as we are
-                                                                  !! going to use them
+    integer, pointer :: vwgt=>null(), vsize=>null() !< Weights for the graph. NULL as we are
+                                                    !! going to use them
 #endif
     type(stencil_t) :: stencil
     integer :: ip, ii
@@ -146,7 +146,7 @@ contains
     !% be compiled separately
     !%End
     default = ZOLTAN
-#ifdef HAVE_METIS
+#if defined(HAVE_METIS) || defined(HAVE_METIS_5)
     default = METIS
 #endif
 #ifdef HAVE_PARMETIS
@@ -343,14 +343,30 @@ contains
 #ifdef HAVE_METIS_5
       SAFE_ALLOCATE(options(0:40))
       SAFE_ALLOCATE(tpwgts(1:npart))
+      
+      ! The sum of all tpwgts elements has to be 1 and 
+      ! we don`t care about the weights. So; 1/npart
       tpwgts = M_ONE/real(npart)
       call METIS_SetDefaultOptions(options) ! is equal to: options = -1
       options(17) = 1 ! METIS_OPTION_NUMBERING. Fortran style; start from 1
-      message(1) = 'Info: Using METIS 5 multilevel k-way algorithm to partition the mesh.'
-      call messages_info(1)
-      call METIS_PartGraphKway(nv, 1, xadj, adjncy, &
-           vwgt, vsize, adjwgt, npart, tpwgts, &
-           1.01, options, edgecut, part)  
+
+      select case(method)
+      case(RCB)
+        message(1) = 'Info: Using METIS 5 multilevel recursive bisection to partition the mesh.'
+        call messages_info(1)
+        call METIS_PartGraphRecursive(nv, 1, xadj, adjncy, &
+             vwgt, vsize, adjwgt, npart, tpwgts, &
+             1.01, options, edgecut, part)
+      case(GRAPH)
+        message(1) = 'Info: Using METIS 5 multilevel k-way algorithm to partition the mesh.'
+        call messages_info(1)
+        call METIS_PartGraphKway(nv, 1, xadj, adjncy, &
+             vwgt, vsize, adjwgt, npart, tpwgts, &
+             1.01, options, edgecut, part)  
+      case default
+        message(1) = 'Selected partition method is not available in METIS 5.'
+        call messages_fatal(1)
+      end select
 #endif
     case(PARMETIS)
 #ifdef HAVE_PARMETIS
