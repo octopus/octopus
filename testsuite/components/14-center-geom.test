@@ -2,12 +2,13 @@
 # $Id: 01-casida.test 10206 2013-03-11 22:10:21Z dstrubbe $
 
 Test       : oct-center-geom
-Programs   : oct-center-geom
+Programs   : octopus; octopus_mpi
 TestGroups : short-run; components
 Enabled    : Yes
 
 # quadricyclane molecule
 
+Util  : oct-center-geom
 Input : 14-center-geom.01-run.inp
 match ; Coordinate  1 x ; LINE(adjusted.xyz,  3, 20);  1.106580
 match ; Coordinate  1 y ; LINE(adjusted.xyz,  3, 36);  0.752138
