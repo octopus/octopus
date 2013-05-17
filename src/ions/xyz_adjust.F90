@@ -29,6 +29,7 @@ module xyz_adjust_m
   use species_m
   use unit_m
   use unit_system_m
+  use utils_m
 
   implicit none
 
@@ -71,7 +72,7 @@ contains
       end if
       to = to / sqrt(sum(to**2))
 
-      write(message(1),'(a,6f15.6)') 'Using main axis ', to
+      write(message(1),'(a,6f15.6)') 'Using main axis ', to(1:geo%space%dim)
       call messages_info(1)
 
       !%Variable MainAxis
@@ -106,10 +107,20 @@ contains
       select case(axis_type)
       case(INERTIA, PSEUDO)
         call find_center_of_mass(geo, center, pseudo = (axis_type==PSEUDO))
+
+        write(message(1),'(3a,6f15.6)') 'Center of mass [', trim(units_abbrev(units_out%length)), '] = ', &
+          (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
+        call messages_info(1)
+
         call translate(geo, center)
         call axis_inertia(geo, x1, x2, pseudo = (axis_type==PSEUDO))
       case(LARGE)
         call find_center(geo, center)
+
+        write(message(1),'(3a,6f15.6)') 'Center [', trim(units_abbrev(units_out%length)), '] = ', &
+          (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
+        call messages_info(1)
+
         call translate(geo, center)
         call axis_large(geo, x1, x2)
       case default
@@ -129,6 +140,10 @@ contains
       end if
       x2 = x2/sqrt(sum(x2**2))
 
+      write(message(1),'(a,6f15.6)') 'Found primary   axis ', x1(1:geo%space%dim)
+      write(message(2),'(a,6f15.6)') 'Found secondary axis ', x2(1:geo%space%dim)
+      call messages_info(2)
+
       ! rotate to main axis
       call geometry_rotate(geo, x1, x2, to)
 
@@ -136,11 +151,6 @@ contains
 
     ! recenter
     call find_center(geo, center)
-
-    write(message(1),'(3a,6f15.6)') 'Center [', trim(units_abbrev(units_out%length)), '] = ', &
-      (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
-    call messages_info(1)
-
     call translate(geo, center)
 
     POP_SUB(xyz_adjust_it)
@@ -246,6 +256,7 @@ contains
 
     FLOAT :: m, tinertia(MAX_DIM, MAX_DIM), vec(MAX_DIM, MAX_DIM), eigenvalues(MAX_DIM)
     integer :: ii, jj, iatom
+    type(unit_t) :: unit
 
     PUSH_SUB(axis_inertia)
 
@@ -262,11 +273,30 @@ contains
       end do
     end do
 
+    unit = units_out%length**2
+    ! note: we always use amu for atomic masses, so no unit conversion to/from atomic is needed.
+    if(pseudo) then
+      write(message(1),'(a)') 'Moment of inertia tensor [' // trim(units_abbrev(unit)) // ']'
+    else
+      write(message(1),'(a)') 'Moment of inertia tensor [amu*' // trim(units_abbrev(unit)) // ']'
+    endif
+    call messages_info(1)
+    call output_tensor(stdout, tinertia, geo%space%dim, unit, write_average = .true.)
+
     vec = tinertia
     call lalg_eigensolve(3, vec, eigenvalues)
 
-    x  = vec(:,1) / sqrt(sum(vec(:,1)**2))
-    x2 = vec(:,2) / sqrt(sum(vec(:,2)**2))
+    write(message(1),'(a,6f25.6)') 'Eigenvalues: ', &
+      (units_from_atomic(unit, eigenvalues(jj)), jj = 1, geo%space%dim)
+    call messages_info(1)
+
+    ! make a choice to fix the sign of the axis.
+    do ii = 1, 2
+      jj = maxloc(abs(vec(:,ii)), dim = 1)
+      if(vec(jj,ii) < M_ZERO) vec(:,ii) = -vec(:,ii)
+    enddo
+    x  = vec(:,1)
+    x2 = vec(:,2)
 
     POP_SUB(axis_inertia)
   end subroutine axis_inertia
