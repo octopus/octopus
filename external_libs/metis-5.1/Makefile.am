@@ -26,10 +26,11 @@
 libmetis5_a_SOURCES = \
 	libgk.a libmetis_tmp.a
 
-noinst_HEADERS = \
-	include/metis.h GKlib/GKlib.h
+libmetis5_a_LIBADD = \
+	GKlib/libgk.a \
+	libmetis/libmetis_tmp.a
 
 SUBDIRS =        \
-	 	GKlib	libmetis
+	 	include	GKlib	libmetis
 
 CLEANFILES = *~ *.bak

@@ -386,6 +386,7 @@ AC_CONFIG_FILES([Makefile
   external_libs/Makefile
   external_libs/metis-4.0/Makefile
   external_libs/metis-5.1/Makefile
+  external_libs/metis-5.1/include/Makefile
   external_libs/metis-5.1/GKlib/Makefile
   external_libs/metis-5.1/libmetis/Makefile
   external_libs/qshep/Makefile

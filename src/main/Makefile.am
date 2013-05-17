@@ -17,7 +17,7 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 ## 02111-1307, USA.
 ##
-## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
+## $Id$
 
 include $(srcdir)/../common-rules.make
 

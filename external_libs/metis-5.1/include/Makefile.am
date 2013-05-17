@@ -19,20 +19,5 @@
 ##
 ## $Id$
 
-noinst_LIBRARIES = libmetis_tmp.a
-
-libmetis_tmp_a_SOURCES = \
-	auxapi.c      contig.c   graph.c       mesh.c      options.c    srefine.c \
-	balance.c     debug.c    initpart.c    meshpart.c  parmetis.c   stat.c    \
-	bucketsort.c  fm.c       kmetis.c      minconn.c   pmetis.c     timing.c  \
-	checkgraph.c  fortran.c  kwayfm.c      mincover.c  refine.c     util.c    \
-	coarsen.c     frename.c  kwayrefine.c  mmd.c       separator.c  wspace.c  \
-	compress.c    gklib.c    mcutil.c      ometis.c    sfm.c
-
 noinst_HEADERS = \
-	defs.h        gklib_rename.h  metislib.h  rename.h      struct.h \
-	gklib_defs.h  macros.h        proto.h     stdheaders.h
-
-AM_CPPFLAGS = -I../GKlib/ -I../include
-
-CLEANFILES = *~ *.bak
+	metis.h
