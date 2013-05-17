@@ -21,7 +21,7 @@
 
 noinst_LIBRARIES = libgk.a
 
-libmetis_gk_a_SOURCES = \
+libgk_a_SOURCES = \
 	b64.c       fkvkselect.c  htable.c    omp.c     seq.c       \
 	blas.c      fs.c          io.c        pdb.c     sort.c      \
 	csr.c       getopt.c      itemsets.c  pqueue.c  string.c    \

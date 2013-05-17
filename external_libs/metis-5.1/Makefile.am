@@ -27,7 +27,7 @@ libmetis5_a_SOURCES = \
 	libgk.a libmetis_tmp.a
 
 noinst_HEADERS = \
-	include/metis.h
+	include/metis.h GKlib/GKlib.h
 
 SUBDIRS =        \
 	 	GKlib	libmetis

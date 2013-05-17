@@ -32,6 +32,8 @@ libmetis_tmp_a_SOURCES = \
 noinst_HEADERS = \
 	defs.h        gklib_rename.h  metislib.h  rename.h      struct.h \
 	gklib_defs.h  macros.h        proto.h     stdheaders.h
+#	../GKlib/GKlib.h
 
+AM_CPPFLAGS = -I../GKlib/ -I../include
 
 CLEANFILES = *~ *.bak
