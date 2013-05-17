@@ -132,18 +132,6 @@ contains
         call messages_fatal(1)
       end select
 
-      ! check if the axes are OK
-      if(sum(x2**2) == M_ZERO) then ! linear molecule
-        if(x1(1) == M_ZERO) then
-          x2(1) = x1(1); x2(2) = -x1(3); x2(3) = x1(2)
-        else if(x1(2) == M_ZERO) then
-          x2(2) = x1(2); x2(1) = -x1(3); x2(3) = x1(1)
-        else
-          x2(3) = x1(3); x2(1) = -x1(2); x2(2) = x1(1)
-        end if
-      end if
-      x2 = x2/sqrt(sum(x2**2))
-
       write(message(1),'(a,6f15.6)') 'Found primary   axis ', x1(1:geo%space%dim)
       write(message(2),'(a,6f15.6)') 'Found secondary axis ', x2(1:geo%space%dim)
       call messages_info(2)
@@ -258,7 +246,7 @@ contains
     FLOAT,  intent(out) :: x(MAX_DIM), x2(MAX_DIM)
     logical, intent(in) :: pseudo
 
-    FLOAT :: m, tinertia(MAX_DIM, MAX_DIM), vec(MAX_DIM, MAX_DIM), eigenvalues(MAX_DIM)
+    FLOAT :: m, tinertia(MAX_DIM, MAX_DIM), eigenvalues(MAX_DIM)
     integer :: ii, jj, iatom
     type(unit_t) :: unit
 
@@ -287,8 +275,7 @@ contains
     call messages_info(1)
     call output_tensor(stdout, tinertia, geo%space%dim, unit, write_average = .true.)
 
-    vec = tinertia
-    call lalg_eigensolve(3, vec, eigenvalues)
+    call lalg_eigensolve(3, tinertia, eigenvalues)
 
     write(message(1),'(a,6f25.6)') 'Eigenvalues: ', &
       (units_from_atomic(unit, eigenvalues(jj)), jj = 1, geo%space%dim)
@@ -296,11 +283,11 @@ contains
 
     ! make a choice to fix the sign of the axis.
     do ii = 1, 2
-      jj = maxloc(abs(vec(:,ii)), dim = 1)
-      if(vec(jj,ii) < M_ZERO) vec(:,ii) = -vec(:,ii)
+      jj = maxloc(abs(tinertia(:,ii)), dim = 1)
+      if(tinertia(jj,ii) < M_ZERO) tinertia(:,ii) = -tinertia(:,ii)
     enddo
-    x  = vec(:,1)
-    x2 = vec(:,2)
+    x  = tinertia(:,1)
+    x2 = tinertia(:,2)
 
     POP_SUB(axis_inertia)
   end subroutine axis_inertia
