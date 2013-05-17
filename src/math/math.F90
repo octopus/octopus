@@ -265,7 +265,7 @@ contains
     integer :: i
     FLOAT :: dx, dy, dz, r, plm, cosm, sinm, cosmm1, sinmm1, cosphi, sinphi
 
-!   no push_sub: this routine is called too many times
+    !   no push_sub: this routine is called too many times
 
     ! if l=0, no calculations are required
     if (li == 0) then
@@ -785,7 +785,7 @@ contains
 
     integer :: i
 
-    PUSH_SUB(member)
+    ! no push_sub, called too frequently
 
     member = .false.
 
@@ -796,16 +796,15 @@ contains
       end if
     end do
 
-    POP_SUB(member)
   end function member
 
 
   ! ---------------------------------------------------------
   subroutine interpolation_coefficients(nn, xa, xx, cc)
-    integer, intent(in)  :: nn    ! the number of points and coefficients
-    FLOAT,   intent(in)  :: xa(:) ! the nn points where we know the function
-    FLOAT,   intent(in)  :: xx    ! the point where we want the function
-    FLOAT,   intent(out) :: cc(:) ! the coefficients
+    integer, intent(in)  :: nn    !< the number of points and coefficients
+    FLOAT,   intent(in)  :: xa(:) !< the nn points where we know the function
+    FLOAT,   intent(in)  :: xx    !< the point where we want the function
+    FLOAT,   intent(out) :: cc(:) !< the coefficients
 
     integer :: ii, kk
 
