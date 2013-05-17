@@ -59,6 +59,10 @@ contains
     ! is there something to do
     if(geo%natoms <= 1) return
 
+    if(geo%space%dim /= 3) then
+      call messages_not_implemented("oct-center-geom in other than 3 dimensions")
+    endif
+
     if(optional_default(rotate, .true.)) then
 
       ! get to axis
