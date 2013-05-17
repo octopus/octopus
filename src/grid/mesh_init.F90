@@ -822,7 +822,7 @@ contains
     end do
     ! Do the ghost points
     do ii = 1, mesh%vp%np_ghost
-      jj = mesh%vp%xghost + ii - 1
+      jj = mesh%vp%ghost(mesh%vp%xghost + ii - 1) 
       mesh%x(ii+mesh%np, 1:MAX_DIM) = mesh_x_global(mesh, jj)
     end do
     ! Do the boundary points
@@ -877,7 +877,7 @@ contains
       if(mesh%use_curvilinear) then
         ! Do the ghost points.
         do ip = 1, mesh%vp%np_ghost
-          kk = mesh%vp%xghost + ip - 1
+          kk = mesh%vp%xghost + ip - 1 
           call index_to_coords(mesh%idx, sb%dim, kk, jj)
           chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
           mesh%vol_pp(ip + mesh%np) = &
