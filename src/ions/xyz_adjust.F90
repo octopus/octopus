@@ -87,7 +87,7 @@ contains
       !% should be aligned. If not present, the default value will
       !% be:
       !% <tt>%MainAxis
-      !% <br> 1 | 0 | 1 
+      !% <br> 1 | 0 | 0 
       !% <br>%</tt>
       !%End
 
@@ -273,7 +273,7 @@ contains
         do jj = 1, 3
           tinertia(ii, jj) = tinertia(ii, jj) - m*geo%atom(iatom)%x(ii)*geo%atom(iatom)%x(jj)
         end do
-        tinertia(ii, ii) = tinertia(ii, ii) + M_THREE*m*sqrt(sum(geo%atom(iatom)%x(:)**2))
+        tinertia(ii, ii) = tinertia(ii, ii) + m*sum(geo%atom(iatom)%x(:)**2)
       end do
     end do
 
