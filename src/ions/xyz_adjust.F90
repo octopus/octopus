@@ -449,7 +449,7 @@ contains
 
     m = matmul(aux, m)
 
-    POP_SUB(rotate_x)
+    POP_SUB(rotate_y)
   end subroutine rotate_y
 
 
