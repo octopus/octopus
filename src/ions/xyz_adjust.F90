@@ -46,12 +46,13 @@ contains
     logical,          optional, intent(in)    :: rotate
 
     integer, parameter :: &
-      INERTIA = 1,     &
-      PSEUDO  = 2,     &
+      NONE    = 0,        &
+      INERTIA = 1,        &
+      PSEUDO  = 2,        &
       LARGE   = 3
 
     FLOAT :: center(MAX_DIM), x1(MAX_DIM), x2(MAX_DIM), to(MAX_DIM)
-    integer :: axis_type, idir
+    integer :: axis_type, idir, default
     type(block_t) :: blk
 
     PUSH_SUB(xyz_adjust_it)
@@ -59,22 +60,19 @@ contains
     ! is there something to do
     if(geo%natoms <= 1) return
 
-    if(geo%space%dim /= 3) then
-      call messages_not_implemented("oct-center-geom in other than 3 dimensions")
-    endif
-
     if(optional_default(rotate, .true.)) then
 
       ! get to axis
       if(parse_block(datasets_check('MainAxis'), blk)==0) then
-        call parse_block_float(blk, 0, 0, to(1))
-        call parse_block_float(blk, 0, 1, to(2))
-        call parse_block_float(blk, 0, 2, to(3))
+        do idir = 1, geo%space%dim
+          call parse_block_float(blk, 0, idir - 1, to(idir))
+        enddo
         call parse_block_end(blk)
       else
-        to(1) = M_ONE; to(2) = M_ZERO; to(3) = M_ZERO
+        to(:) = M_ZERO
+        to(1) = M_ONE
       end if
-      to = to / sqrt(sum(to**2))
+      to = to / sqrt(sum(to(1:geo%space%dim)**2))
 
       write(message(1),'(a,6f15.6)') 'Using main axis ', to(1:geo%space%dim)
       call messages_info(1)
@@ -83,9 +81,9 @@ contains
       !%Type block
       !%Section Utilities::oct-center-geom
       !%Description 
-      !% A vector of three reals defining the axis to which the molecule
+      !% A vector of reals defining the axis to which the molecule
       !% should be aligned. If not present, the default value will
-      !% be:
+      !% be the x-axis. For example in 3D:
       !% <tt>%MainAxis
       !% <br> 1 | 0 | 0 
       !% <br>%</tt>
@@ -97,7 +95,10 @@ contains
       !%Section Utilities::oct-center-geom
       !%Description
       !% After the structure is centered, it is also aligned to a set of orthogonal axes.
-      !% This variable decides which set of axes to use.
+      !% This variable decides which set of axes to use. Only implemented for 3D; otherwise
+      !% 'none' is default and the only legal value.
+      !%Option none 0
+      !% Do not rotate. Will still give output regarding center of mass and moment of inertia.
       !%Option inertia 1
       !% The axis of inertia.
       !%Option pseudo_inertia 2
@@ -105,14 +106,23 @@ contains
       !%Option large_axis 3
       !% The larger axis of the molecule.
       !%End
-      call parse_integer(datasets_check('AxisType'), INERTIA, axis_type)
+      if(geo%space%dim == 3) then
+        default = INERTIA
+      else
+        default = NONE
+      endif
+      call parse_integer(datasets_check('AxisType'), default, axis_type)
       call messages_print_var_option(stdout, "AxisType", axis_type)
 
+      if(geo%space%dim /= 3 .and. axis_type /= NONE) then
+        call messages_not_implemented("alignment to axes (AxisType /= none) in other than 3 dimensions")
+      endif
+
       select case(axis_type)
-      case(INERTIA, PSEUDO)
+      case(NONE, INERTIA, PSEUDO)
         call find_center_of_mass(geo, center, pseudo = (axis_type==PSEUDO))
 
-        write(message(1),'(3a,6f15.6)') 'Center of mass [', trim(units_abbrev(units_out%length)), '] = ', &
+        write(message(1),'(3a,99f15.6)') 'Center of mass [', trim(units_abbrev(units_out%length)), '] = ', &
           (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
         call messages_info(1)
 
@@ -121,7 +131,7 @@ contains
       case(LARGE)
         call find_center(geo, center)
 
-        write(message(1),'(3a,6f15.6)') 'Center [', trim(units_abbrev(units_out%length)), '] = ', &
+        write(message(1),'(3a,99f15.6)') 'Center [', trim(units_abbrev(units_out%length)), '] = ', &
           (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
         call messages_info(1)
 
@@ -132,12 +142,11 @@ contains
         call messages_fatal(1)
       end select
 
-      write(message(1),'(a,6f15.6)') 'Found primary   axis ', x1(1:geo%space%dim)
-      write(message(2),'(a,6f15.6)') 'Found secondary axis ', x2(1:geo%space%dim)
+      write(message(1),'(a,99f15.6)') 'Found primary   axis ', x1(1:geo%space%dim)
+      write(message(2),'(a,99f15.6)') 'Found secondary axis ', x2(1:geo%space%dim)
       call messages_info(2)
 
-      ! rotate to main axis
-      call geometry_rotate(geo, x1, x2, to)
+      if(axis_type /= NONE) call geometry_rotate(geo, x1, x2, to)
 
     end if
 
@@ -162,13 +171,14 @@ contains
     xmin =  CNST(1e10)
     xmax = -CNST(1e10)
     do i = 1, geo%natoms
-      do j = 1, 3
+      do j = 1, geo%space%dim
         if(geo%atom(i)%x(j) > xmax(j)) xmax(j) = geo%atom(i)%x(j)
         if(geo%atom(i)%x(j) < xmin(j)) xmin(j) = geo%atom(i)%x(j)
       end do
     end do
 
-    x = (xmax + xmin)/M_TWO
+    x = M_ZERO
+    x(1:geo%space%dim) = (xmax(1:geo%space%dim) + xmin(1:geo%space%dim))/M_TWO
 
     POP_SUB(find_center)
   end subroutine find_center
@@ -214,20 +224,20 @@ contains
     rmax = -CNST(1e10)
     do i = 1, geo%natoms
       do j = 1, geo%natoms/2 + 1
-        r = sqrt(sum((geo%atom(i)%x-geo%atom(j)%x)**2))
+        r = sqrt(sum((geo%atom(i)%x(1:geo%space%dim)-geo%atom(j)%x(1:geo%space%dim))**2))
         if(r > rmax) then
           rmax = r
           x = geo%atom(i)%x - geo%atom(j)%x
         end if
       end do
     end do
-    x  = x /sqrt(sum(x**2))
+    x  = x /sqrt(sum(x(1:geo%space%dim)**2))
 
     ! now let us find out what is the second most important axis
     rmax = -CNST(1e10)
     do i = 1, geo%natoms
-      r2 = sum(x * geo%atom(i)%x)
-      r = sqrt(sum((geo%atom(i)%x - r2*x)**2))
+      r2 = sum(x(1:geo%space%dim) * geo%atom(i)%x(1:geo%space%dim))
+      r = sqrt(sum((geo%atom(i)%x(1:geo%space%dim) - r2*x(1:geo%space%dim))**2))
       if(r > rmax) then
         rmax = r
         x2 = geo%atom(i)%x - r2*x
@@ -257,8 +267,8 @@ contains
     m = M_ONE
     do iatom = 1, geo%natoms
       if(.not.pseudo) m = species_weight(geo%atom(iatom)%spec)
-      do ii = 1, 3
-        do jj = 1, 3
+      do ii = 1, geo%space%dim
+        do jj = 1, geo%space%dim
           tinertia(ii, jj) = tinertia(ii, jj) - m*geo%atom(iatom)%x(ii)*geo%atom(iatom)%x(jj)
         end do
         tinertia(ii, ii) = tinertia(ii, ii) + m*sum(geo%atom(iatom)%x(:)**2)
@@ -268,14 +278,14 @@ contains
     unit = units_out%length**2
     ! note: we always use amu for atomic masses, so no unit conversion to/from atomic is needed.
     if(pseudo) then
-      write(message(1),'(a)') 'Moment of inertia tensor [' // trim(units_abbrev(unit)) // ']'
+      write(message(1),'(a)') 'Moment of pseudo-inertia tensor [' // trim(units_abbrev(unit)) // ']'
     else
       write(message(1),'(a)') 'Moment of inertia tensor [amu*' // trim(units_abbrev(unit)) // ']'
     endif
     call messages_info(1)
     call output_tensor(stdout, tinertia, geo%space%dim, unit, write_average = .true.)
 
-    call lalg_eigensolve(3, tinertia, eigenvalues)
+    call lalg_eigensolve(geo%space%dim, tinertia, eigenvalues)
 
     write(message(1),'(a,6f25.6)') 'Eigenvalues: ', &
       (units_from_atomic(unit, eigenvalues(jj)), jj = 1, geo%space%dim)
@@ -326,6 +336,9 @@ contains
     FLOAT :: alpha, r
 
     PUSH_SUB(geometry_rotate)
+
+    if(geo%space%dim /= 3) &
+      call messages_not_implemented("geometry_rotate in other than 3 dimensions")
 
     ! initialize matrices
     m1 = M_ZERO
