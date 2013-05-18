@@ -7,18 +7,20 @@
 \version\verbatim $Id: gk_externs.h 10711 2011-08-31 22:23:04Z karypis $ \endverbatim
 */
 
+#include <config.h>
+
 #ifndef _GK_EXTERNS_H_
 #define _GK_EXTERNS_H_
 
 
 /*************************************************************************
-* Extern variable definition. Hopefully, the __thread makes them thread-safe.
+* Extern variable definition. Hopefully, the TLS_SPECIFIER makes them thread-safe.
 **************************************************************************/
 #ifndef _GK_ERROR_C_
 /* declared in error.c */
-extern __thread int gk_cur_jbufs;
-extern __thread jmp_buf gk_jbufs[];
-extern __thread jmp_buf gk_jbuf;
+extern TLS_SPECIFIER int gk_cur_jbufs;
+extern TLS_SPECIFIER jmp_buf gk_jbufs[];
+extern TLS_SPECIFIER jmp_buf gk_jbuf;
 
 #endif
 

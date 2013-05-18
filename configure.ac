@@ -84,6 +84,7 @@ AC_CHECK_TYPES([uint32_t, uint64_t])
 AC_CHECK_SIZEOF(unsigned int)
 AC_CHECK_SIZEOF(unsigned long)
 AC_CHECK_SIZEOF(unsigned long long)
+AX_TLS
 
 # Checks for library functions.
 AC_PROG_GCC_TRADITIONAL

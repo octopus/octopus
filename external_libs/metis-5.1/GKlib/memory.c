@@ -12,11 +12,11 @@ can be used to define other memory allocation routines.
 \version\verbatim $Id: memory.c 10783 2011-09-21 23:19:56Z karypis $ \endverbatim
 */
 
-
+#include <config.h>
 #include <GKlib.h>
 
 /* This is for the global mcore that tracks all heap allocations */
-static __thread gk_mcore_t *gkmcore = NULL;
+static TLS_SPECIFIER gk_mcore_t *gkmcore = NULL;
 
 
 /*************************************************************************/

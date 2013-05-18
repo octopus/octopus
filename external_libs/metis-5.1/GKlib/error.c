@@ -12,24 +12,24 @@ This file contains functions dealing with error reporting and termination
 
 #define _GK_ERROR_C_  /* this is needed to properly declare the gk_jub* variables
                          as an extern function in GKlib.h */
-
+#include <config.h>
 #include <GKlib.h>
 
 
 /* These are the jmp_buf for the graceful exit in case of severe errors.
    Multiple buffers are defined to allow for recursive invokation. */
 #define MAX_JBUFS 128
-__thread int gk_cur_jbufs=-1;
-__thread jmp_buf gk_jbufs[MAX_JBUFS];
-__thread jmp_buf gk_jbuf;
+TLS_SPECIFIER int gk_cur_jbufs=-1;
+TLS_SPECIFIER jmp_buf gk_jbufs[MAX_JBUFS];
+TLS_SPECIFIER jmp_buf gk_jbuf;
 
 typedef void (*gksighandler_t)(int);
 
 /* These are the holders of the old singal handlers for the trapped signals */
-static __thread gksighandler_t old_SIGMEM_handler;  /* Custom signal */
-static __thread gksighandler_t old_SIGERR_handler;  /* Custom signal */
-static __thread gksighandler_t old_SIGMEM_handlers[MAX_JBUFS];  /* Custom signal */
-static __thread gksighandler_t old_SIGERR_handlers[MAX_JBUFS];  /* Custom signal */
+static TLS_SPECIFIER gksighandler_t old_SIGMEM_handler;  /* Custom signal */
+static TLS_SPECIFIER gksighandler_t old_SIGERR_handler;  /* Custom signal */
+static TLS_SPECIFIER gksighandler_t old_SIGMEM_handlers[MAX_JBUFS];  /* Custom signal */
+static TLS_SPECIFIER gksighandler_t old_SIGERR_handlers[MAX_JBUFS];  /* Custom signal */
 
 /* The following is used to control if the gk_errexit() will actually abort or not.
    There is always a single copy of this variable */
@@ -178,7 +178,7 @@ char *gk_strerror(int errnum)
   return strerror(errnum);
 #else 
 #ifndef SUNOS
-  static __thread char buf[1024];
+  static TLS_SPECIFIER char buf[1024];
 
   strerror_r(errnum, buf, 1024);
 
