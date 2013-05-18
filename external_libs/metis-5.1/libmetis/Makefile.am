@@ -33,6 +33,7 @@ noinst_HEADERS = \
 	defs.h        gklib_rename.h  metislib.h  rename.h      struct.h \
 	gklib_defs.h  macros.h        proto.h     stdheaders.h
 
-AM_CPPFLAGS = -I../GKlib/ -I../include
+AM_CPPFLAGS = -I$(top_srcdir)/external_libs/metis-5.1/GKlib/ -I$(top_srcdir)/external_libs/metis-5.1/include
 
 CLEANFILES = *~ *.bak
+
