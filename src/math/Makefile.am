@@ -40,7 +40,7 @@ libmath_a_SOURCES =                      \
 	minimizer_low.c                  \
 	ode_solver.F90                   \
 	permutations.F90                 \
-	pfft.F90			 \
+	pfft.F90			                   \
 	root_solver.F90                  \
 	solvers.F90                      \
 	splines.F90                      \
@@ -50,16 +50,17 @@ libmath_a_SOURCES =                      \
 	ylm.c                            \
 	young.F90                        \
 	scalapack.F90                    \
-        nfft.F90			 \
+  nfft.F90    			               \
 	nfft_f.c                         \
 	pblas.F90                        \
 	sgfft.F90                        \
 	matrix.F90                       \
 	compressed_sensing.F90           \
 	fftw_low.c                       \
-	minimizer.F90
+	minimizer.F90                    \
+  pnfft.F90
 
-noinst_HEADERS =                         \
+noinst_HEADERS =                   \
 	fft_inc.F90                      \
 	lalg_basic_blas_inc.F90          \
 	lalg_adv_lapack_inc.F90          \
@@ -72,7 +73,8 @@ noinst_HEADERS =                         \
 	sparskit_inc.F90                 \
 	symm_op_inc.F90                  \
 	matrix_inc.F90                   \
-        nfft_inc.F90
+  nfft_inc.F90                     \
+  pnfft_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -83,9 +85,10 @@ blas.o : blas.F90
 checksum.o : checksum.c
 checksum_interface.o : checksum_interface.F90
 dablas.o : dablas.c 
-fft.o : fft.F90 fft_inc.F90 fftw.o pfft.o nfft.o lalg_basic.o loct_math.o math.o
+fft.o : fft.F90 fft_inc.F90 fftw.o pfft.o pnfft.o nfft.o lalg_basic.o loct_math.o math.o
 fftw.o : fftw.F90
 pfft.o : pfft.F90 fftw.o math.o
+pnfft.o : pnfft.F90 pfft.o fftw.o math.o
 nfft_f.o : nfft_f.c
 nfft.o : nfft.F90 nfft_inc.F90 nfft_f.o lalg_basic.o fftw.o loct_math.o
 spline_filter.o: spline_filter.F90 splines.o

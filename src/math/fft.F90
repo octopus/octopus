@@ -53,6 +53,8 @@ module fft_m
   use parser_m
   use pfft_m
   use pfft_params_m
+  use pnfft_m
+  use pnfft_params_m
   use profiling_m
   use types_m
   use unit_system_m
@@ -104,7 +106,7 @@ module fft_m
     integer     :: slot    !< in which slot do we have this fft
 
     integer     :: type    !< is the fft real or complex
-    integer     :: library !< what library are we using (FFTLIB_FFTW or FFTLIB_PFFT)
+    integer     :: library !< what library are we using
 
     integer     :: comm           !< MPI communicator
     integer     :: rs_n_global(3) !< total size of the fft in each direction in real space
@@ -134,6 +136,10 @@ module fft_m
 #ifdef HAVE_NFFT
     type(nfft_t) :: nfft 
 #endif
+#ifdef HAVE_PNFFT
+    type(pnfft_t) :: pnfft 
+#endif
+
   end type fft_t
 
   integer, save     :: fft_refs(FFT_MAX)
@@ -330,11 +336,21 @@ contains
         !The underlying FFT grids are optimized inside the nfft_init routine
         if(int(nn(ii)/2)*2 /= nn(ii)) nn(ii)=nn(ii)+1 
       end do 
+    case (FFTLIB_PNFFT)
           
+      do ii = 1, fft_dim
+        !also PNFFT likes even grids
+        if(int(nn(ii)/2)*2 /= nn(ii)) nn(ii)=nn(ii)+1 
+      end do 
+          
+      if(fft_dim < 3) &
+          call messages_not_implemented('PNFFT support for dimension < 3')
+                    
     case default
 
       if(fft_dim < 3 .and. library_ == FFTLIB_PFFT) &
            call messages_not_implemented('PFFT support for dimension < 3')
+
 
       ! FFT optimization
       if(any(optimize_parity(1:fft_dim) > 1)) then
@@ -354,8 +370,9 @@ contains
     do ii = FFT_MAX, 1, -1
       if(fft_refs(ii) /= FFT_NULL) then
         if(all(nn(1:dim) == fft_array(ii)%rs_n_global(1:dim)) .and. type == fft_array(ii)%type &
-             .and. library_ == fft_array(ii)%library .and. library_ /= FFTLIB_NFFT) then
-             !FIXME: For the moment NFFT plans are always allocated from scratch since they 
+             .and. library_ == fft_array(ii)%library .and. library_ /= FFTLIB_NFFT &
+             .and. library_ /= FFTLIB_PNFFT ) then
+             ! NFFT and PNFFT plans are always allocated from scratch since they 
              ! are very likely to be different
           this = fft_array(ii)              ! return a copy
           fft_refs(ii) = fft_refs(ii) + 1  ! increment the ref count
@@ -386,7 +403,8 @@ contains
     nullify(fft_array(jj)%fs_data)
 
     ! Initialize parallel communicator
-    if (library_ == FFTLIB_PFFT) then
+    select case (library_)
+    case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT
       call pfft_init()
  
@@ -401,9 +419,19 @@ contains
         call messages_fatal(3)
       end if
 #endif
-    else
+
+    case (FFTLIB_PNFFT)
+#ifdef HAVE_PNFFT
+
+      call pnfft_init_procmesh(fft_array(jj)%pnfft, mpi_grp_, fft_array(jj)%comm) 
+
+#endif
+
+    case default
       fft_array(jj)%comm = -1
-    end if
+
+    end select
+    
     if (present(mpi_comm)) mpi_comm = fft_array(jj)%comm
 
     ! Get dimentions of arrays
@@ -460,7 +488,16 @@ contains
       fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
       fft_array(jj)%rs_istart = 1
       fft_array(jj)%fs_istart = 1
-      
+    
+    case(FFTLIB_PNFFT)       
+      fft_array(jj)%fs_n_global = fft_array(jj)%rs_n_global
+      fft_array(jj)%rs_n = fft_array(jj)%rs_n_global
+      fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
+      fft_array(jj)%rs_istart = 1
+      fft_array(jj)%fs_istart = 1
+      ! indices partition is performed together with the plan preparation
+
+
     end select
 
     ! Prepare plans
@@ -492,6 +529,14 @@ contains
              fft_array(jj)%zrs_data, FFTW_BACKWARD, fft_prepare_plan, mpi_comm)
       end if
 #endif
+    case (FFTLIB_PNFFT)
+#ifdef HAVE_PNFFT     
+      call pnfft_copy_params(this%pnfft,fft_array(jj)%pnfft)     
+      call pnfft_init_plan(fft_array(jj)%pnfft, mpi_comm, fft_array(jj)%fs_n_global, &
+           fft_array(jj)%fs_n, fft_array(jj)%fs_istart, fft_array(jj)%rs_n, fft_array(jj)%rs_istart)
+      
+#endif
+
     case(FFTLIB_CLAMD)
 #ifdef HAVE_CLAMDFFT
 
@@ -637,27 +682,29 @@ contains
     this = fft_array(jj)
     
     ! Write information
-    call messages_write('Info: FFT grid dimensions       =')
-    do idir = 1, dim
-      call messages_write(fft_array(jj)%rs_n_global(idir))
-      if(idir < dim) call messages_write(" x ")
-    end do
-    call messages_new_line()
-
-    call messages_write('      Total grid size           =')
-    call messages_write(product(fft_array(jj)%rs_n_global(1:dim)))
-    call messages_write(' (')
-    call messages_write(product(fft_array(jj)%rs_n_global(1:dim))*CNST(8.0), units = unit_megabytes, fmt = '(f6.1)')
-    call messages_write(' )')
-    if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
-      call messages_new_line()
-      call messages_write('      Inefficient FFT grid. A better grid would be: ')
-      do idir = 1, fft_dim
-        call messages_write(nn_temp(idir))
+    if (.not. (library_ == FFTLIB_NFFT .or. library_ == FFTLIB_PNFFT)) then
+      call messages_write('Info: FFT grid dimensions       =')
+      do idir = 1, dim
+        call messages_write(fft_array(jj)%rs_n_global(idir))
+        if(idir < dim) call messages_write(" x ")
       end do
-    end if
-    call messages_info()
+      call messages_new_line()
 
+      call messages_write('      Total grid size           =')
+      call messages_write(product(fft_array(jj)%rs_n_global(1:dim)))
+      call messages_write(' (')
+      call messages_write(product(fft_array(jj)%rs_n_global(1:dim))*CNST(8.0), units = unit_megabytes, fmt = '(f6.1)')
+      call messages_write(' )')
+      if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
+        call messages_new_line()
+        call messages_write('      Inefficient FFT grid. A better grid would be: ')
+        do idir = 1, fft_dim
+          call messages_write(nn_temp(idir))
+        end do
+      end if
+      call messages_info()
+    end if
+    
     select case (library_)
     case (FFTLIB_PFFT)
       write(message(1),'(a)') "Info: FFT library = PFFT"
@@ -667,10 +714,21 @@ contains
       write(message(5),'(a, i9)') " No. of rows    in the proc. grid = ", row_size
       write(message(6),'(a, i9)') " The size of integer is = ", ptrdiff_t_kind
       call messages_info(6)
+
+    case (FFTLIB_PNFFT)
+      call messages_write("Info: FFT library = PNFFT")
+      call messages_info()
+#ifdef HAVE_PNFFT
+      call pnfft_write_info(fft_array(jj)%pnfft)
+#endif
+
     case (FFTLIB_NFFT)
+    call messages_write("Info: FFT library = NFFT")
+    call messages_info()
 #ifdef HAVE_NFFT
       call nfft_write_info(fft_array(jj)%nfft)
 #endif
+
     end select
 
     POP_SUB(fft_init)
@@ -704,6 +762,10 @@ contains
     !Do nothing 
     case(FFTLIB_CLAMD)
     !Do nothing 
+    case(FFTLIB_PNFFT)
+#ifdef HAVE_PNFFT
+      call pnfft_set_sp_nodes(fft_array(slot)%pnfft, XX, fft_array(slot)%rs_istart)
+#endif
     case default
       call messages_write('Invalid FFT library.')
       call messages_fatal()
@@ -750,6 +812,11 @@ contains
 #ifdef HAVE_NFFT
         case(FFTLIB_NFFT)
         call nfft_end(fft_array(ii)%nfft)
+#endif
+
+#ifdef HAVE_PNFFT
+        case(FFTLIB_PNFFT)
+        call pnfft_end(fft_array(ii)%pnfft)
 #endif
         end select
         fft_refs(ii) = FFT_NULL
