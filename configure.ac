@@ -152,10 +152,6 @@ dnl check for NEWUOA
 ACX_NEWUOA
 AM_CONDITIONAL(COMPILE_NEWUOA, test x${HAVE_NEWUOA} = x1)
 
-dnl check for external Zoltan
-ACX_ZOLTAN
-AM_CONDITIONAL(COMPILE_ZOLTAN, test x"$compile_zoltan" == x"yes")
-
 dnl check for C MPI
 if test x"$enable_mpi" == x"yes"; then
   AC_CHECK_HEADER(mpi.h,,AC_MSG_ERROR([cannot find mpi.h]))
@@ -388,7 +384,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/spglib/Makefile
   external_libs/spglib/src/Makefile
   external_libs/newuoa/Makefile
-  external_libs/zoltan/Makefile
   external_libs/slatec/Makefile
   external_libs/fortrancl/Makefile
   external_libs/bpdn/Makefile

@@ -44,7 +44,7 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src/include \
         -I$(top_srcdir)/external_libs/spglib/src \
 	-I$(top_srcdir)/liboct_parser \
-        $(CPPFLAGS_ZOLTAN) $(GSL_CFLAGS) $(GD_CFLAGS) \
+        $(GSL_CFLAGS) $(GD_CFLAGS) \
 	-DSHARE_OCTOPUS='"$(pkgdatadir)"'
 
 AM_CCASFLAGS = \
@@ -93,11 +93,6 @@ if COMPILE_METIS
   AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-5.1/include/
 endif
 
-if COMPILE_ZOLTAN
-  external_LIBS += $(top_builddir)/external_libs/zoltan/libzoltan.a
-  AM_CPPFLAGS += -I$(top_srcdir)/external_libs/zoltan/include
-endif
-
 if COMPILE_NEWUOA
   external_LIBS += $(top_builddir)/external_libs/newuoa/libnewuoa.a
   AM_FCFLAGS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/newuoa
@@ -106,7 +101,7 @@ endif
 # Since ETSF_IO depends on netCDF, it must be first in the list
 outside_LIBS = @LIBS_PSPIO@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ \
   @LIBS_SPARSKIT@ @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ @LIBS_MPI@ \
-  @LIBS_ZOLTAN@ @LIBS_BERKELEYGW@ @LIBS_ARPACK@ @LIBS_PARPACK@ @GD_LIBS@ \
+  @LIBS_BERKELEYGW@ @LIBS_ARPACK@ @LIBS_PARPACK@ @GD_LIBS@ \
   @LIBS_METIS_5@
 
 other_LIBS = $(core_LIBS) $(external_LIBS) $(outside_LIBS)
@@ -116,12 +111,7 @@ all_LIBS = $(octopus_LIBS) $(other_LIBS)
 # How to compile F90 files.
 # ---------------------------------------------------------------
 
-SUFFIXES = _oct.f90 .F90 .o .S .s
-
-.S.o:
-	@CPP@ @CPPFLAGS@ $(INCLUDES) $(DEFAULT_INCLUDES) $(AM_CPPFLAGS) $< > $*_oct.s
-	@CC@ -c -o $@ $*_oct.s
-	@rm -f $*_oct.s
+SUFFIXES = _oct.f90 .F90 .o
 
 # Compilation is a two-step process: first we preprocess F90 files
 # to generate _oct.f90 files. Then, we compile this _oct.f90 into

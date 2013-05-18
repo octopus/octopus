@@ -43,7 +43,6 @@ module mesh_partition_m
   use simul_box_m
   use stencil_m
   use stencil_star_m
-  use zoltan_m
 
   implicit none
   
@@ -54,6 +53,10 @@ module mesh_partition_m
     mesh_partition_write,        &
     mesh_partition_read,         &
     mesh_partition_messages_debug
+
+  integer, public, parameter ::    &
+       RCB        = 2,             &
+       GRAPH      = 6
 
 contains
   
@@ -132,22 +135,17 @@ contains
     !%Section Execution::Parallelization
     !%Description
     !% Decides which library to use to perform the mesh partition. By
-    !% default, METIS is used (if available); otherwise, Zoltan is used.
-    !% METIS is faster than Zoltan but uses more memory since it is serial.
+    !% default, METIS is used.
     !%Option metis 2
     !% METIS library.
-    !%Option zoltan 3
-    !% Zoltan library.
     !%Option pfft_part 5
     !% (Experimental) Use PFFT to perform the mesh partition.
     !%Option parmetis 6
     !% (Experimental) Use ParMETIS libary to perform the mesh partition. Has to 
     !% be compiled separately
     !%End
-    default = ZOLTAN
-#if defined(HAVE_METIS)
+
     default = METIS
-#endif
 #ifdef HAVE_PARMETIS
     default = PARMETIS
 #endif
@@ -205,7 +203,19 @@ contains
     else
       default_method = GRAPH
     end if
-    ! Documentation is in zoltan.F90
+
+    !%Variable MeshPartition
+    !%Type integer
+    !%Section Execution::Parallelization
+    !%Description
+    !% Decides which algorithm is used to partition the mesh. By
+    !% default, <tt>graph</tt> partitioning is used for 8 or more
+    !% partitions, and <tt>rcb</tt> for fewer.
+    !%Option rcb 2
+    !% Recursive coordinate bisection partitioning.
+    !%Option graph 6
+    !% Graph partitioning (called 'k-way' by METIS).
+    !%End
     call parse_integer(datasets_check('MeshPartition'), default_method, method)
 
     SAFE_ALLOCATE(istart(1:npart))
@@ -225,16 +235,6 @@ contains
       ifinal(1:npart) = mesh%np_global
       lsize(1:npart) = mesh%np_global
 
-    case(ZOLTAN)
-
-      ! If we use Zoltan, we divide the space in a basic way, to balance
-      ! the memory for the graph. 
-      call multicomm_divide_range(mesh%np_global, npart, istart, ifinal, lsize)
-
-      do ii = 1, npart
-        part(istart(ii):ifinal(ii)) = ii
-      end do
-
     end select
 
     if(library /= PFFT_PART) then
@@ -242,7 +242,7 @@ contains
       nv = lsize(ipart)
       SAFE_ALLOCATE(xadj(1:nv + 1))
 
-      if(library == METIS .or. library == PARMETIS .or. .not. zoltan_method_is_geometric(method)) then !calculate the graphs
+      if(library == METIS .or. library == PARMETIS) then !calculate the graphs
         SAFE_ALLOCATE(adjncy(1:(stencil%size - 1)*nv))
 
         ! Create graph with each point being
@@ -401,39 +401,6 @@ contains
       SAFE_DEALLOCATE_A(xadj_local)
       SAFE_DEALLOCATE_A(adjncy_local)
       
-#endif
-    case(ZOLTAN)
-
-      call zoltan_method_info(method)
-
-      SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
-
-      do ip = 1, mesh%np_part_global
-        xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
-      end do
-
-#ifdef HAVE_MPI
-      !assign all points to one node
-      call zoltan_partition(method, mesh%sb%dim, mesh%np_global, mesh%np_part_global, &
-        xglobal(1, 1), istart(ipart), xadj(1), adjncy(1), ipart, part(1), mesh%mpi_grp%comm)
-#endif
-
-      SAFE_DEALLOCATE_A(xglobal)
-
-      ! we use xadj as a buffer
-      xadj(1:lsize(ipart)) = part(istart(ipart):ifinal(ipart))
-
-      ASSERT(all(xadj(1:lsize(ipart)) > 0))
-
-      part(1:mesh%np_global) = 0 ! so we catch non-initialized values
-
-      ! convert start to C notation
-      istart = istart - 1
-
-#ifdef HAVE_MPI
-      ! we collect part from all processors
-      call MPI_Allgatherv(xadj(1), lsize(ipart), MPI_INTEGER, part(1), &
-        lsize(1), istart(1), MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
 #endif
 
     case(PFFT_PART)
