@@ -22,7 +22,7 @@
 !!
 !! Y. Saad, A. Stathopoulos, J. Chelikowsky, K. Wu and S. Ogut,
 !! "Solution of Large Eigenvalue Problems in Electronic Structure Calculations",
-!! BIT 36, 1 (1996).
+!! BIT 36 563-578 (1996) doi:10.1007/BF01731934 .
 !!
 !! We also implement the "smoothing" preconditioning described in that paper.
 
