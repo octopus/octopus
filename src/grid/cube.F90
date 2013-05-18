@@ -22,16 +22,18 @@
 
 module cube_m
   use datasets_m
+  use fft_m
   use global_m
   use index_m
   use io_m
   use messages_m
   use mpi_m
   use multicomm_m
-  use fft_m
+  use nfft_m
   use opencl_m
-  use pfft_m
   use parser_m
+  use pfft_m
+  use pnfft_m
   use profiling_m
   use simul_box_m
   use varinfo_m
@@ -59,6 +61,9 @@ module cube_m
     integer :: fs_istart(1:3)   !< where does the local portion of the cube start in fourier space
     integer :: center(1:3)      !< the coordinates of the center of the cube
 
+    FLOAT, pointer :: Lrs(:,:)  !< The real space coordinates vector: Lrs(i,{1,2,3})={x,y,z}(i)
+    FLOAT, pointer :: Lfs(:,:)  !< The fourier space coordinates vector: Lfs(i,{1,2,3})={kx,ky,kz}(i)
+
     integer, pointer :: np_local(:) !< Number of points in each partition
     integer, pointer :: xlocal(:)   !< where does each process start when gathering a function
     integer, pointer :: local(:,:)  !< local to global map used when gathering a function
@@ -85,7 +90,8 @@ module cube_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, nn, sb, fft_type, fft_library, dont_optimize, nn_out, verbose, mpi_grp, need_partition)
+  subroutine cube_init(cube, nn, sb, fft_type, fft_library, dont_optimize, nn_out, verbose, &
+                       mpi_grp, need_partition, spacing, tp_enlarge)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: nn(3)
     type(simul_box_t), intent(in)  :: sb
@@ -97,12 +103,17 @@ contains
     logical, optional, intent(in)  :: verbose   !< Print info to the screen.
     type(mpi_grp_t), optional, intent(in) :: mpi_grp !< The mpi group to be use for cube parallelization
     logical, optional, intent(in)  :: need_partition !< Should we calculate and store the cube partition?
+    FLOAT, optional, intent(in)    :: spacing(3)        
+    FLOAT, optional, intent(in)    :: tp_enlarge     !< Two point enlargement factor. Can be used with (p)nfft 
+                                                     !! enlarge the box by moving outward the cube first and last points  
+                                                     !! in each direction. The resulting boundaries are rescaled by tp_enlarge.
 
     integer :: mpi_comm, tmp_n(3), fft_type_, optimize_parity(3), default_lib, fft_library_
     integer :: effdim_fft
     logical :: optimize(3)
     integer :: photoelectron_flags, par_strategy
     type(mpi_grp_t) :: mpi_grp_
+    FLOAT  :: tp_enlarge_
 
     PUSH_SUB(cube_init)
 
@@ -110,9 +121,18 @@ contains
 
     fft_type_ = optional_default(fft_type, FFT_NONE)
 
+    ASSERT(present(tp_enlarge) .eqv. present(spacing))
+
+    tp_enlarge_ = optional_default(tp_enlarge, M_ONE)
+    ASSERT(tp_enlarge_ >= M_ONE)
+
     effdim_fft = min (3, sb%dim)
 
     nullify(cube%fft)
+    
+    nullify(cube%Lrs)
+    nullify(cube%Lfs)
+    
     
     mpi_grp_ = mpi_world
     if (present(mpi_grp)) mpi_grp_ = mpi_grp
@@ -166,7 +186,7 @@ contains
       fft_library_ = FFTLIB_NONE
     end if
 
-    cube%parallel_in_domains = fft_library_ == FFTLIB_PFFT
+    cube%parallel_in_domains = (fft_library_ == FFTLIB_PFFT .or. fft_library_ == FFTLIB_PNFFT)
     if (fft_library_ == FFTLIB_NONE) then
       cube%rs_n_global = nn
       cube%fs_n_global = nn
@@ -188,14 +208,28 @@ contains
       if(present(dont_optimize)) then
         if(dont_optimize) optimize = .false.
       endif
+      
+      if(present(tp_enlarge)) call cube_tp_fft_defaults(cube, fft_library_)
+      
       call fft_init(cube%fft, tmp_n, sb%dim, fft_type_, fft_library_, optimize, optimize_parity, &
            mpi_comm=mpi_comm, mpi_grp = mpi_grp_)
       if(present(nn_out)) nn_out(1:3) = tmp_n(1:3)
 
       call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
            cube%rs_istart, cube%fs_istart)
+
+      if(present(tp_enlarge)) call cube_init_coords(cube, tp_enlarge_, spacing, fft_library_)
+
+      if(fft_library_ == FFTLIB_NFFT .or. fft_library_ == FFTLIB_PNFFT) then 
+        call fft_init_stage1(cube%fft,cube%Lrs)
+        !set local dimensions after stage1 - needed for PNFFT 
+        call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
+             cube%rs_istart, cube%fs_istart)
+      end if
+
     end if
     cube%center(1:3) = cube%rs_n_global(1:3)/2 + 1
+    
 
     call mpi_grp_init(cube%mpi_grp, mpi_comm)
 
@@ -230,8 +264,98 @@ contains
       SAFE_DEALLOCATE_P(cube%xlocal)
       SAFE_DEALLOCATE_P(cube%local)
     end if
+    
+    SAFE_DEALLOCATE_P(cube%Lrs)
+    SAFE_DEALLOCATE_P(cube%Lfs)
+    
     POP_SUB(cube_end)
   end subroutine cube_end
+
+
+  ! ---------------------------------------------------------
+  subroutine cube_tp_fft_defaults(cube, fft_library)
+    type(cube_t), intent(inout) :: cube
+    integer,      intent(in)    :: fft_library
+    
+    PUSH_SUB(cube_tp_fft_defaults)
+    select case (fft_library)
+      case (FFTLIB_NFFT)
+#ifdef HAVE_NFFT    
+        !Set NFFT defaults to values that gives good performance for two-point enlargement
+        !These values are overridden by the NFFT options in the input file 
+        cube%fft%nfft%set_defaults = .true.
+        cube%fft%nfft%guru = .true.
+        cube%fft%nfft%mm = 2 
+        cube%fft%nfft%sigma = CNST(1.1)
+        cube%fft%nfft%precompute = NFFT_PRE_PSI
+#endif
+
+      case (FFTLIB_PNFFT)
+#ifdef HAVE_PNFFT    
+        cube%fft%pnfft%set_defaults = .true.
+        cube%fft%pnfft%m = 2 
+        cube%fft%pnfft%sigma = CNST(1.1)
+#endif
+      case default 
+      !do nothing  
+    end select
+    
+    POP_SUB(cube_tp_fft_defaults)
+  end subroutine cube_tp_fft_defaults
+
+
+  ! ---------------------------------------------------------
+  subroutine cube_init_coords(cube, enlarge, spacing, fft_library)
+    type(cube_t), intent(inout) :: cube
+    FLOAT,        intent(in) :: enlarge
+    FLOAT,        intent(in) :: spacing(3)
+    integer,      intent(in) :: fft_library
+    
+    FLOAT   :: temp
+    integer :: ii, nn
+
+    PUSH_SUB(cube_init_coords)
+
+
+    nn = cube%fs_n_global(1) ! assume we have a cube nn(1:3) = nn 
+
+    SAFE_ALLOCATE(cube%Lrs(1:nn, 1:3))
+    
+    !! Real space coordinates 
+    if (enlarge > M_ONE) then
+      do ii = 2, nn - 1 
+        cube%Lrs(ii, 1:3) = (ii - int(nn/2) -1) * spacing(1)
+      end do
+      cube%Lrs(1,  1:3) = (-int(nn/2)) * spacing(1) * enlarge 
+      cube%Lrs(nn, 1:3) = (int(nn/2))  * spacing(1) * enlarge
+      
+    else
+      do ii = 1, nn 
+        cube%Lrs(ii, 1:3) = (ii - int(nn/2) -1) * spacing(1)
+      end do
+    end if
+
+
+    !! Fourier space coordinates 
+    if(fft_library /= FFTLIB_NONE) then
+
+      SAFE_ALLOCATE(cube%Lfs(1:nn, 1:3))
+
+      temp = M_TWO * M_PI / (nn * spacing(1))
+
+      do ii = 1, nn
+        if (fft_library == FFTLIB_NFFT .or. fft_library == FFTLIB_PNFFT ) then
+          !The Fourier space is shrunk by the enlarge factor
+          cube%Lfs(ii, 1:3) = (ii - nn/2 - 1)*temp/enlarge
+        else
+          cube%Lfs(ii, 1:3) = pad_feq(ii,nn, .true.) * temp
+        end if
+      end do
+    end if
+    
+    POP_SUB(cube_init_coords)
+  end subroutine cube_init_coords
+
 
   ! ---------------------------------------------------------
   !> True if global coordinates belong to this process. On output
