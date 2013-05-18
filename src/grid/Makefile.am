@@ -48,7 +48,6 @@ libgrid_a_SOURCES =       \
 	mesh_function.F90       \
 	mesh_init.F90           \
 	mesh_partition.F90      \
-	metis.c                 \
 	modelmb_1part.F90       \
 	multigrid.F90           \
 	nl_operator.F90         \

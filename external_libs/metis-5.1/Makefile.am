@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-## Copyright (C) 2013 J. Alberdi-Rodriguez
+## Copyright (C) 2013 J. Alberdi-Rodriguez, X. Andrade
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -19,18 +19,7 @@
 ##
 ## $Id$
 
-#if COMPILE_METIS_5
-  noinst_LIBRARIES = libmetis5.a
-#endif
 
-libmetis5_a_SOURCES = \
-	libgk.a libmetis_tmp.a
-
-libmetis5_a_LIBADD = \
-	GKlib/libgk.a \
-	libmetis/libmetis_tmp.a
-
-SUBDIRS =        \
-	 	include	GKlib	libmetis
+SUBDIRS = include GKlib libmetis
 
 CLEANFILES = *~ *.bak

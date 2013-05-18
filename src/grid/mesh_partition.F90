@@ -89,11 +89,10 @@ contains
     integer, allocatable :: adjncy(:)      !< Adjacency lists.
                                            !! Only local part if ParMETIS is used.
     integer              :: iunit          !< For debug output to files.
-#if defined(HAVE_METIS) || defined(HAVE_METIS_5) || defined(HAVE_PARMETIS)
+    
+#if defined(HAVE_PARMETIS) || defined(HAVE_METIS)
     integer, allocatable :: options(:)     !< Options to (Par)METIS.
     integer              :: edgecut        !< Number of edges cut by partitioning.
-#endif
-#if defined(HAVE_PARMETIS) || defined(HAVE_METIS_5)
     integer, pointer     :: adjwgt=>null() !< Adjacency weights, NULL in our case
     integer, allocatable :: adjncy_local(:)!< Local part of adjacency list
     integer, allocatable :: xadj_local(:)  !< Local part of xadj
@@ -146,7 +145,7 @@ contains
     !% be compiled separately
     !%End
     default = ZOLTAN
-#if defined(HAVE_METIS) || defined(HAVE_METIS_5)
+#if defined(HAVE_METIS)
     default = METIS
 #endif
 #ifdef HAVE_PARMETIS
@@ -156,7 +155,7 @@ contains
 
     if(library == PFFT_PART) call messages_experimental('PFFT mesh partition')
 
-#if !defined(HAVE_METIS) && !defined(HAVE_METIS_5)
+#if !defined(HAVE_METIS)
     if(library == METIS) then
       message(1) = 'METIS was requested, but Octopus was compiled without it.'
       call messages_fatal(1)
@@ -314,33 +313,6 @@ contains
     select case(library)
     case(METIS)
 #ifdef HAVE_METIS
-      SAFE_ALLOCATE(options(1:5))
-      options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
-
-      ! Partition graph.
-      ! Recursive bisection is better for small number of partitions (<8),
-      ! multilevel k-way otherwise (cf. METIS manual).
-      ! If the graph contains no vertices, METIS cannot be called. This seems
-      ! to happen, e.g., when using minimum BoxShape without any atoms in the
-      ! input file.
-
-      select case(method)
-      case(RCB)
-        message(1) = 'Info: Using METIS multilevel recursive bisection to partition the mesh.'
-        call messages_info(1)
-        call oct_metis_part_graph_recursive(nv, xadj, adjncy, &
-          0, 0, 0, 1, npart, options, edgecut, part)
-      case(GRAPH)
-        message(1) = 'Info: Using METIS multilevel k-way algorithm to partition the mesh.'
-        call messages_info(1)
-        call oct_metis_part_graph_kway(nv, xadj, adjncy, &
-          0, 0, 0, 1, npart, options, edgecut, part)
-      case default
-        message(1) = 'Selected partition method is not available in METIS.'
-        call messages_fatal(1)
-      end select
-#endif
-#ifdef HAVE_METIS_5
       SAFE_ALLOCATE(options(0:40))
       SAFE_ALLOCATE(tpwgts(1:npart))
       
@@ -478,7 +450,7 @@ contains
 
     end select
 
-#if defined(HAVE_METIS) || defined(HAVE_METIS_5) || defined(HAVE_PARMETIS)
+#if defined(HAVE_METIS) || defined(HAVE_PARMETIS)
     SAFE_DEALLOCATE_A(options)
 #endif
     SAFE_DEALLOCATE_A(istart)

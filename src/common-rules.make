@@ -88,17 +88,10 @@ if COMPILE_OPENCL
 endif
 
 if COMPILE_METIS
-  external_LIBS += $(top_builddir)/external_libs/metis-4.0/libmetis.a
-  AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-4.0/
-endif
-
-if COMPILE_METIS_5
+  external_LIBS += $(top_builddir)/external_libs/metis-5.1/libmetis/libmetis.a
   external_LIBS += $(top_builddir)/external_libs/metis-5.1/GKlib/libgk.a
-  external_LIBS += $(top_builddir)/external_libs/metis-5.1/libmetis/libmetis_tmp.a
-  external_LIBS += $(top_builddir)/external_libs/metis-5.1/libmetis5.a
-  AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-5.1/
+  AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-5.1/include/
 endif
-
 
 if COMPILE_ZOLTAN
   external_LIBS += $(top_builddir)/external_libs/zoltan/libzoltan.a
@@ -115,7 +108,6 @@ outside_LIBS = @LIBS_PSPIO@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ \
   @LIBS_SPARSKIT@ @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ @LIBS_MPI@ \
   @LIBS_ZOLTAN@ @LIBS_BERKELEYGW@ @LIBS_ARPACK@ @LIBS_PARPACK@ @GD_LIBS@ \
   @LIBS_METIS_5@
- 
 
 other_LIBS = $(core_LIBS) $(external_LIBS) $(outside_LIBS)
 all_LIBS = $(octopus_LIBS) $(other_LIBS)

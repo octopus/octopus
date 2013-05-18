@@ -147,10 +147,6 @@ if test x"$enable_mpi" != x"no"; then
   ACX_METIS
 fi
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_METIS} = x1)
-if test x"$enable_mpi" != x"no"; then
-  ACX_METIS
-fi
-AM_CONDITIONAL(COMPILE_METIS_5, test x${HAVE_METIS5} = x1)
   
 dnl check for NEWUOA
 ACX_NEWUOA
@@ -384,7 +380,6 @@ ACX_OCTOPUS_COMPILATION_INFO
 
 AC_CONFIG_FILES([Makefile
   external_libs/Makefile
-  external_libs/metis-4.0/Makefile
   external_libs/metis-5.1/Makefile
   external_libs/metis-5.1/include/Makefile
   external_libs/metis-5.1/GKlib/Makefile
