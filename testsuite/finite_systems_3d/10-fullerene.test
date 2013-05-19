@@ -54,3 +54,27 @@ match ; Eigenvalue 110     ; GREP(static/info, '110   --', 13) ;  -0.054077
 match ; Eigenvalue 120     ; GREP(static/info, '120   --', 13) ;  -0.009967
 match ; Eigenvalue 130     ; GREP(static/info, '130   --', 13) ;   0.118919
 match ; Eigenvalue 140     ; GREP(static/info, '140   --', 13) ;   0.181107
+
+Input: 10-fullerene.03-gs_stdlcao.inp
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -340.67480783
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -71.57879406
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  4008.93596422
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -94.55595344
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;   -13.38926436
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   280.72712553
+match ; External energy    ; GREP(static/info, 'External    =', 20) ; -8229.01045005
+
+match ; Eigenvalue  10     ; GREP(static/info, ' 10   --', 13) ;  -0.600974 
+match ; Eigenvalue  20     ; GREP(static/info, ' 20   --', 13) ;  -0.522288
+match ; Eigenvalue  30     ; GREP(static/info, ' 30   --', 13) ;  -0.449431
+match ; Eigenvalue  40     ; GREP(static/info, ' 40   --', 13) ;  -0.375817
+match ; Eigenvalue  50     ; GREP(static/info, ' 50   --', 13) ;  -0.295173
+match ; Eigenvalue  60     ; GREP(static/info, ' 60   --', 13) ;  -0.261441
+match ; Eigenvalue  70     ; GREP(static/info, ' 70   --', 13) ;  -0.218915
+match ; Eigenvalue  80     ; GREP(static/info, ' 80   --', 13) ;  -0.196823
+match ; Eigenvalue  90     ; GREP(static/info, ' 90   --', 13) ;  -0.147694
+match ; Eigenvalue 100     ; GREP(static/info, '100   --', 13) ;  -0.124490
+match ; Eigenvalue 110     ; GREP(static/info, '110   --', 13) ;  -0.054077
+match ; Eigenvalue 120     ; GREP(static/info, '120   --', 13) ;  -0.009967
+match ; Eigenvalue 130     ; GREP(static/info, '130   --', 13) ;   0.118919
+match ; Eigenvalue 140     ; GREP(static/info, '140   --', 13) ;   0.181107
