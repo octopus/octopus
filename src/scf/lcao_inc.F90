@@ -75,10 +75,10 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   type(hamiltonian_t), intent(in)    :: hm
   integer, optional,   intent(in)    :: start
 
-  integer :: nst, ik, n1, n2, idim, lcao_start, ie, max
+  integer :: nst, ik, n1, n2, idim, lcao_start, ie, maxmtxel
   R_TYPE, allocatable :: hpsi(:, :, :), overlap(:, :, :)
   FLOAT, allocatable :: ev(:)
-  R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :)
+  R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :), zeropsi(:)
   integer :: kstart, kend, ispin, iunit_h, iunit_s, iunit_e, iunit_o, ii, ll, mm
 
 #ifdef HAVE_MPI
@@ -97,7 +97,6 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   kend = st%d%kpt%end
 
   lcao_start = optional_default(start, 1)
-  if(st%parallel_in_states .and. st%st_start > lcao_start) lcao_start = st%st_start
 
   ! Allocation of variables
 
@@ -108,12 +107,12 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   SAFE_ALLOCATE(overlap(this%norbs, this%norbs, st%d%spin_channels))
 
   ie = 0
-  max = this%norbs * (this%norbs + 1)/2
+  maxmtxel = this%norbs * (this%norbs + 1)/2
 
   message(1) = "Info: Getting Hamiltonian matrix elements."
   call messages_info(1)
 
-  if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
+  if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, maxmtxel)
 
 #ifdef LCAO_DEBUG
 ! This code (and related below) is commented out because it causes mysterious optimization
@@ -178,7 +177,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
       ie = ie + 1
     end do
 
-    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ie, max)
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ie, maxmtxel)
   end do
 
   if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
@@ -186,6 +185,8 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   SAFE_DEALLOCATE_A(hpsi)
 
   SAFE_ALLOCATE(ev(1:this%norbs))
+  SAFE_ALLOCATE(zeropsi(1:gr%mesh%np))
+  zeropsi = R_TOTYPE(M_ZERO)
 
   do ik = kstart, kend
     ispin = states_dim_get_spin_index(st%d, ik)
@@ -198,13 +199,17 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
       call MPI_Bcast(hamilt(1, 1, ik), this%norbs**2, R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
 #endif
 
+    ! each node should receive all the eigenvalues
     st%eigenval(lcao_start:nst, ik) = ev(lcao_start:nst)
 
-    if(lcao_start /= 1) then 
-      ASSERT(associated(st%X(psi)))
-      st%X(psi)(1:gr%mesh%np, 1:st%d%dim, lcao_start:st%st_end, ik) = R_TOTYPE(M_ZERO)
-    end if
+    do n1 = max(lcao_start, st%st_start), st%st_end
+      do idim = 1, st%d%dim
+        call states_set_state(st, gr%mesh, idim, n1, ik, zeropsi)
+      end do
+    end do
   end do
+
+  SAFE_DEALLOCATE_A(zeropsi)
 
 #ifdef LCAO_DEBUG
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
@@ -235,18 +240,16 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   end if
 #endif
 
-  if(lcao_start == 1) call states_set_zero(st)
-
   ! Change of basis
   do n2 = 1, this%norbs
     do ispin = 1, st%d%spin_channels
       
       call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
 
-      do ik =  kstart, kend
+      do ik = kstart, kend
         if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
         do idim = 1, st%d%dim
-          do n1 = lcao_start, st%st_end
+          do n1 = max(lcao_start, st%st_start), st%st_end
             call states_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
             call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
             call states_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
