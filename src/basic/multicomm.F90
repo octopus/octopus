@@ -849,6 +849,7 @@ contains
       
       if(nprocs <= nobjs) then
 
+        ! procs are assigned to groups by round robin
         do rank = 0, nprocs - 1
           jj = nobjs / nprocs
           ii = nobjs - jj*nprocs

@@ -74,7 +74,7 @@ contains
 
     integer :: ik, ist, ns, is, idir, st_start_
     FLOAT :: occ, kpoint(1:MAX_DIM)
-    character(len=80) tmp_str(MAX_DIM), cspin
+    character(len=80) :: tmp_str(MAX_DIM), cspin
 
     PUSH_SUB(states_write_eigenvalues)
 
