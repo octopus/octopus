@@ -613,7 +613,7 @@ contains
 
   subroutine calc_tb09_c()
     FLOAT, allocatable :: gnon(:)
-    FLOAT gn(MAX_DIM), n, tb09_c
+    FLOAT :: gn(MAX_DIM), n, tb09_c
     integer :: ii
 
     PUSH_SUB(xc_get_vxc.calc_tb09_c)
@@ -630,8 +630,7 @@ contains
       end if
 
       if (n <= CNST(1e-7)) then 
-        gnon(ii) = CNST(0.0)
-        ! here you will have to print the true gnon(ii) with the corresponding mesh point ii
+        gnon(ii) = M_ZERO
       else
         gnon(ii) = sqrt(sum((gn(1:der%mesh%sb%dim)/n)**2))
       end if
@@ -639,10 +638,7 @@ contains
 
     tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
 
-    write(message(1), '(a,f13.6)') "Info: In the functional TB09 c = ", tb09_c
-    call messages_info(1)
-
-    call  XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)
+    call XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)
 
     SAFE_DEALLOCATE_A(gnon)
 
