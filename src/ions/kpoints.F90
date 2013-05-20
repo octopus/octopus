@@ -104,7 +104,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine kpoints_grid_end(this)
-    type(kpoints_grid_t), intent(out) :: this
+    type(kpoints_grid_t), intent(inout) :: this
 
     PUSH_SUB(kpoints_grid_end)
 

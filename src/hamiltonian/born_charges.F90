@@ -88,7 +88,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine Born_charges_end(this)
-    type(Born_charges_t), intent(out) :: this
+    type(Born_charges_t), intent(inout) :: this
 
     PUSH_SUB(Born_charges_end)
 

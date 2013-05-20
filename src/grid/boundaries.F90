@@ -306,7 +306,7 @@ contains
   ! ---------------------------------------------------------
   
   subroutine boundaries_end(this)
-    type(boundaries_t),  intent(out)   :: this
+    type(boundaries_t),  intent(inout) :: this
 
     PUSH_SUB(boundaries_end)
 

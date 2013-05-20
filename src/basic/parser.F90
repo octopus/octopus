@@ -149,7 +149,7 @@ module parser_m
   interface parse_block_end
     subroutine oct_parse_block_end(blk)
       use block_t_m
-      type(block_t), intent(in) :: blk
+      type(block_t), intent(inout) :: blk
     end subroutine oct_parse_block_end
   end interface parse_block_end
 
