@@ -662,15 +662,15 @@ contains
 !  of bisections after a given eigenvalue has been isolated                   !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr,ierr)
-    REAL_DOUBLE, dimension(n), intent(in)    :: h, s
-    integer,                   intent(in)    :: n
-    REAL_DOUBLE,               intent(inout) :: e
-    REAL_DOUBLE, dimension(n), intent(out)   :: g, y
-    integer,                   intent(in)    :: l
-    REAL_DOUBLE,               intent(in)    :: z, a, b, rmax
-    integer,                   intent(in)    :: nprin, nnode
-    REAL_DOUBLE,               intent(in)    :: dr
-    integer,                   intent(out)   :: ierr
+    REAL_DOUBLE, intent(in)    :: h(:), s(:) !< (n)
+    integer,     intent(in)    :: n
+    REAL_DOUBLE, intent(inout) :: e
+    REAL_DOUBLE, intent(out)   :: g(:), y(:) !< (n)
+    integer,     intent(in)    :: l
+    REAL_DOUBLE, intent(in)    :: z, a, b, rmax
+    integer,     intent(in)    :: nprin, nnode
+    REAL_DOUBLE, intent(in)    :: dr
+    integer,     intent(out)   :: ierr
     
     integer :: i,ncor,n1,n2,niter,nt
     REAL_DOUBLE               :: e1, e2, del, de, et, t
@@ -824,8 +824,8 @@ contains
     REAL_DOUBLE, intent(inout) :: e
     REAL_DOUBLE, intent(out)   :: de
     REAL_DOUBLE, intent(in)    :: dr, rmax
-    REAL_DOUBLE, intent(in)    :: h(nmax), s(nmax)
-    REAL_DOUBLE, intent(out)   :: y(nmax)
+    REAL_DOUBLE, intent(in)    :: h(:), s(:) !< (nmax)
+    REAL_DOUBLE, intent(out)   :: y(:) !< (nmax)
     integer,     intent(in)    :: nmax, l
     integer,     intent(in)    :: ncor
     integer,     intent(out)   :: nnode
@@ -1073,8 +1073,8 @@ contains
 
 
   subroutine numin(e,h,s,y,n,nnode,yn,g,gsg,x,knk)
-    REAL_DOUBLE, intent(in)  :: e, h(n), s(n)
-    REAL_DOUBLE, intent(out) :: y(n)
+    REAL_DOUBLE, intent(in)  :: e, h(:), s(:) !< (n)
+    REAL_DOUBLE, intent(out) :: y(:) !< (n)
     integer,     intent(in)  :: n
     integer,     intent(out) :: nnode
     REAL_DOUBLE, intent(in)  :: yn

@@ -120,6 +120,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
         if(converged == p - 1) converged = p ! only consider the first converged eigenvectors
         st%eigenval(p, ik) = es(1)
         res = sqrt(abs(gg))
+
+        if(in_debug_mode) then
+          write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: CG Eigensolver - ik', ik, ' ist ', p, ' iter ', iter, ' res ', res
+          call messages_info(1)
+        end if
+
         exit
       end if
 
