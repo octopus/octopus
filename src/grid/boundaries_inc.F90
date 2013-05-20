@@ -136,11 +136,11 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 #ifdef HAVE_OPENCL
   case(BATCH_CL_PACKED)
     do ipart = 1, vp%npart
-      if(vp%np_ghost_neigh(ipart, vp%partno) == 0) cycle
+      if(vp%np_ghost_neigh_partno(ipart) == 0) cycle
       handle%nnb = handle%nnb + 1
       tag = 0
       call MPI_Isend(handle%X(send_buffer)(1 + (vp%sendpos(ipart) - 1)*v_local%pack%size(1)), &
-        vp%np_ghost_neigh(ipart, vp%partno)*v_local%pack%size(1), &
+        vp%np_ghost_neigh_partno(ipart)*v_local%pack%size(1), &
         R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
     end do
 #endif
