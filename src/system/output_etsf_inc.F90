@@ -19,16 +19,16 @@
 
 ! ---------------------------------------------------------
 
-  !> To create an etsf file one has to do the following:
-  !!
-  !! - Calculate the dimensions and the flags with the _dims functions
-  !!   for all sets of values.
-  !! - Init the data file with the flags and the dims.
-  !! - Call the _write functions for all sets.
-  !! - Close the file.
-  !!
-  !! \note to keep things clean, new data MUST be added following this
-  !! scheme and using functions.
+!> To create an etsf file one has to do the following:
+!!
+!! - Calculate the dimensions and the flags with the _dims functions
+!!   for all sets of values.
+!! - Init the data file with the flags and the dims.
+!! - Call the _write functions for all sets.
+!! - Close the file.
+!!
+!! \note to keep things clean, new data MUST be added following this
+!! scheme and using functions.
 subroutine output_etsf(st, gr, geo, dir, outp)
   type(states_t),         intent(in) :: st
   type(grid_t),           intent(in) :: gr
