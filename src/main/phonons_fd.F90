@@ -160,7 +160,7 @@ contains
         ! first force
         call hamiltonian_epot_generate(hm, gr, geo, st)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, calc_eigenval=.true.)
+        call v_ks_calc(ks, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total (hm, gr, st)
         call scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
@@ -175,7 +175,7 @@ contains
         ! second force
         call hamiltonian_epot_generate(hm, gr, geo, st)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, calc_eigenval=.true.)
+        call v_ks_calc(ks, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total(hm, gr, st)
         call scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms

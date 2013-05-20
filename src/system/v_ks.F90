@@ -399,7 +399,7 @@ contains
     type(v_ks_t),               intent(inout) :: ks
     type(hamiltonian_t),        intent(inout) :: hm
     type(states_t),             intent(inout) :: st
-    type(geometry_t), optional, intent(in)    :: geo
+    type(geometry_t),           intent(in)    :: geo
     logical,          optional, intent(in)    :: calc_eigenval
     FLOAT,            optional, intent(in)    :: time
     logical,          optional, intent(in)    :: calc_berry !< use this before wfns initialized
@@ -432,7 +432,7 @@ contains
     type(v_ks_t),            target,   intent(inout) :: ks 
     type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
-    type(geometry_t) ,       optional, intent(in)    :: geo
+    type(geometry_t) ,                 intent(in)    :: geo
     FLOAT,                   optional, intent(in)    :: time 
     logical,                 optional, intent(in)    :: calc_berry !< Use this before wfns initialized.
     logical,                 optional, intent(in)    :: calc_energy

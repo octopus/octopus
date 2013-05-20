@@ -71,7 +71,7 @@ contains
     call density_calc(sys%st, sys%gr, sys%st%rho)
 
     ! calculate the KS potential
-    call v_ks_calc(sys%ks, hm, sys%st, calc_eigenval = .true.)
+    call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .true.)
 
     e_t = M_ZERO
     e_ext = M_ZERO
