@@ -706,7 +706,7 @@ contains
     integer,             intent(in)    :: op_n         !< Number of operator points.
     integer,             intent(in)    :: order        !< Discretization order.
 
-    integer :: ntime, ip, iunit, s_dim, s_np, s_op_n, s_mem_type, np, il
+    integer :: ntime, ip, iunit, s_dim, s_np, s_op_n, s_mem_type, np, il, ierr
     FLOAT   :: s_spacing, s_delta, det
     FLOAT, allocatable :: s_vks(:)
     logical :: s_reducible
@@ -728,39 +728,43 @@ contains
     SAFE_ALLOCATE(s_vks(1:np))
 
     ! Now read the data.
-    read(iunit) s_dim
-    read(iunit) s_iter
-    read(iunit) s_np
-    read(iunit) s_spacing
-    read(iunit) s_delta
-    read(iunit) s_op_n
-    read(iunit) s_mem_type
-    read(iunit) s_reducible
+    read(iunit, iostat=ierr) s_dim
+    if (ierr == 0) read(iunit, iostat=ierr) s_iter
+    if (ierr == 0) read(iunit, iostat=ierr) s_np
+    if (ierr == 0) read(iunit, iostat=ierr) s_spacing
+    if (ierr == 0) read(iunit, iostat=ierr) s_delta
+    if (ierr == 0) read(iunit, iostat=ierr) s_op_n
+    if (ierr == 0) read(iunit, iostat=ierr) s_mem_type
+    if (ierr == 0) read(iunit, iostat=ierr) s_reducible
 
     ! Check if numerical parameters of saved coefficients match
     ! current parameter set.
-    if((s_dim == dim) .and. (s_np == np) .and. (s_op_n == op_n) &
+    if((ierr == 0) .and. (s_dim == dim) .and. (s_np == np) .and. (s_op_n == op_n) &
       .and. (s_spacing == spacing) .and. (s_delta == delta) .and. (s_mem_type == ob%mem_type) &
       .and. (s_reducible.eqv.intf%reducible) ) then
       ! read the potential
-      read(iunit) s_vks(1:np)
-      if(hm%lead(il)%vks(1:np, 1).app.s_vks(1:np)) then
+      read(iunit, iostat=ierr) s_vks(1:np)
+      if((ierr == 0) .and. (hm%lead(il)%vks(1:np, 1).app.s_vks(1:np))) then
         ! Read the coefficients.
         if (ob%mem_type == SAVE_CPU_TIME) then ! Full (upper half) matrices.
           do ntime = 0, min(iter, s_iter)
             do ip = 1, np
-              read(iunit) ob%lead(il)%q(ip:np, ip, ntime)
-              ob%lead(il)%q(ip, ip:np, ntime) = ob%lead(il)%q(ip:np, ip, ntime)
+              if (ierr == 0) then
+                read(iunit, iostat=ierr) ob%lead(il)%q(ip:np, ip, ntime)
+                ob%lead(il)%q(ip, ip:np, ntime) = ob%lead(il)%q(ip:np, ip, ntime)
+              end if
             end do
           end do
         else ! Packed matrices (FIXME: yet only 2D).
           ASSERT(dim == 2)
-          read(iunit) ob%lead(il)%q_s(:, :, 1)
-          ob%lead(il)%q_s(:, :, 2) = ob%lead(il)%q_s(1:np, 1:np, 1)
-          det = lalg_inverter(np, ob%lead(il)%q_s(:, :, 2), invert=.true.)
-          do ntime = 0, min(iter, s_iter)
-            read(iunit) ob%lead(il)%q_sp(1:np*order, ntime)
-          end do
+          read(iunit, iostat=ierr) ob%lead(il)%q_s(:, :, 1)
+          if (ierr == 0) then
+            ob%lead(il)%q_s(:, :, 2) = ob%lead(il)%q_s(1:np, 1:np, 1)
+            det = lalg_inverter(np, ob%lead(il)%q_s(:, :, 2), invert=.true.)
+            do ntime = 0, min(iter, s_iter)
+              if (ierr == 0) read(iunit, iostat=ierr) ob%lead(il)%q_sp(1:np*order, ntime)
+            end do
+          end if
         end if
       else
         s_iter = 0
@@ -768,6 +772,7 @@ contains
     else
       s_iter = 0
     end if
+    if (ierr /= 0) s_iter = 0
 
     call io_close(iunit)
 
