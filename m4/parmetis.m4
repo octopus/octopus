@@ -72,7 +72,7 @@ AC_DEFUN([ACX_PATH_PARMETIS],[
 		with_parmetis=/usr/local/
 		if test ! -f "$with_metis/$include_path/parmetis.h" ; then
 		    with_parmetis="no"
-		    AC_MSG_RESULT(failed)
+		    AC_MSG_RESULT(no)
 		else
 		    AC_MSG_RESULT(yes)
 		fi
@@ -164,7 +164,7 @@ AC_DEFUN([ACX_PATH_PARMETIS],[
 	  with_parmetis="yes"
       else
 	  with_parmetis="no"
-	  AC_MSG_RESULT(failed)
+	  AC_MSG_RESULT(no)
       fi 
       
   # end of "no --without-parmetis"

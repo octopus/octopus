@@ -73,12 +73,13 @@ AC_DEFUN([ACX_PATH_METIS], [
             with_metis=/usr/local
             if test ! -f "$with_metis/include/metis.h" ; then
               with_metis=""
-              AC_MSG_RESULT(failed)
+              AC_MSG_RESULT(no)
             else
               AC_MSG_RESULT(yes)
             fi
-          fi  
-	  AC_MSG_RESULT(yes)
+	  else
+	    AC_MSG_RESULT(yes)
+	  fi
 	else
 	  AC_MSG_RESULT(yes)
 	fi
@@ -132,7 +133,7 @@ AC_DEFUN([ACX_PATH_METIS], [
 	AC_MSG_RESULT(ok)
 	LIBS_METIS_5="$METIS_LDFLAGS $METIS_LIB"
       else
-	AC_MSG_RESULT(failed)
+	AC_MSG_RESULT(no)
 	LIBS_METIS_5=""
       fi
     fi
@@ -141,13 +142,10 @@ AC_DEFUN([ACX_PATH_METIS], [
     AM_CONDITIONAL(METIS, test x$METIS_LIB = x1)
     if test x = x"$METIS_LIB" ; then
       with_metis=no
-    ifelse([$2],,[AC_MSG_WARN(Failed to find valid METIS library)],[$2])
-      :
+      AC_MSG_WARN(Failed to find valid METIS library)
     else
       with_metis=yes
-      ifelse([$1],,[AC_DEFINE(HAVE_METIS_5,1,[Define if you have METIS library])
-      		],[$1])
-	:
+      AC_DEFINE(HAVE_METIS_5,1,[Define if you have METIS library])
     fi
 
     AC_SUBST(LIBS_METIS_5)
