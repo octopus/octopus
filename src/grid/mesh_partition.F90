@@ -20,11 +20,8 @@
 #include "global.h"
 
 module mesh_partition_m
-  use cube_m
   use curvilinear_m
   use datasets_m
-  use fft_m
-  use geometry_m
   use global_m
   use hypercube_m
   use index_m
@@ -39,7 +36,6 @@ module mesh_partition_m
   use multicomm_m
   use parser_m
   use partition_m
-  use pfft_m
   use profiling_m
   use simul_box_m
   use stencil_m
@@ -97,24 +93,22 @@ contains
 #if defined(HAVE_PARMETIS) || defined(HAVE_METIS)
     integer, allocatable :: options(:)     !< Options to (Par)METIS.
     integer              :: edgecut        !< Number of edges cut by partitioning.
-    integer, allocatable :: adjncy_local(:)!< Local part of adjacency list
-    integer, allocatable :: xadj_local(:)  !< Local part of xadj
     REAL_SINGLE, allocatable :: tpwgts(:)  !< The fraction of vertex weight that should be distributed 
                                            !! to each sub-domain for each balance constraint
-    integer, allocatable :: vtxdist(:)     !< Initial distribution of the points
-    integer              :: local_part     !< Partition computed by ParMETIS of size n_i
+#endif
+#if defined(HAVE_PARMETIS)
+    integer :: ii
+    integer, allocatable :: adjncy_local(:)!< Local part of adjacency list
+    integer, allocatable :: xadj_local(:)  !< Local part of xadj
     integer, allocatable :: xadj_size_all(:)!< All the sizes of local matrices
     integer, allocatable :: part_local(:)  !< Output of the ParMETIS call
+    integer, allocatable :: vtxdist(:)     !< Initial distribution of the points
 #endif
     type(stencil_t) :: stencil
-    integer :: ip, ii
     integer :: stencil_to_use, default_method, method
     integer :: library
     integer, parameter   :: STAR = 1, LAPLACIAN = 2
     integer, allocatable :: istart(:), ifinal(:), lsize(:)
-    FLOAT, allocatable   :: xglobal(:, :)
-    type(cube_t) :: cube
-    integer, allocatable :: cube_part(:,:,:)
 
     type(profile_t), save :: prof
     integer :: default
@@ -136,8 +130,6 @@ contains
     !% default, METIS is used.
     !%Option metis 2
     !% METIS library.
-    !%Option pfft_part 5
-    !% (Experimental) Use PFFT to perform the mesh partition.
     !%Option parmetis 6
     !% (Experimental) Use ParMETIS libary to perform the mesh partition. Has to 
     !% be compiled separately
@@ -149,18 +141,9 @@ contains
 #endif
     call parse_integer(datasets_check('MeshPartitionPackage'), default, library)
 
-    if(library == PFFT_PART) call messages_experimental('PFFT mesh partition')
-
 #if !defined(HAVE_METIS)
     if(library == METIS) then
       message(1) = 'METIS was requested, but Octopus was compiled without it.'
-      call messages_fatal(1)
-    end if
-#endif
-
-#ifndef HAVE_PFFT
-    if(library == PFFT_PART) then
-      message(1) = 'PFFT was requested, but Octopus was compiled without it.'
       call messages_fatal(1)
     end if
 #endif
@@ -235,77 +218,73 @@ contains
 
     end select
 
-    if(library /= PFFT_PART) then
-      ! Shortcut (number of vertices).
-      nv = lsize(ipart)
-      SAFE_ALLOCATE(xadj(1:nv + 1))
+    ! Shortcut (number of vertices).
+    nv = lsize(ipart)
+    SAFE_ALLOCATE(xadj(1:nv + 1))
 
-      if(library == METIS .or. library == PARMETIS) then !calculate the graphs
-        SAFE_ALLOCATE(adjncy(1:(stencil%size - 1)*nv))
+    if(library == METIS .or. library == PARMETIS) then !calculate the graphs
+      SAFE_ALLOCATE(adjncy(1:(stencil%size - 1)*nv))
 
-        ! Create graph with each point being
-        ! represented by a vertex and edges between
-        ! neighbouring points.
-        ne = 1
-        ! Iterate over number of vertices.
-        do iv = 1, nv
-          ! Get coordinates of point iv (vertex iv).
-          call index_to_coords(mesh%idx, mesh%sb%dim, iv, ix)
-          ! Set entry in index table.
-          xadj(iv) = ne
-          ! Check all possible neighbours.
-          do jp = 1, stencil%size 
-            if(jp == stencil%center) cycle
+      ! Create graph with each point being
+      ! represented by a vertex and edges between
+      ! neighbouring points.
+      ne = 1
+      ! Iterate over number of vertices.
+      do iv = 1, nv
+        ! Get coordinates of point iv (vertex iv).
+        call index_to_coords(mesh%idx, mesh%sb%dim, iv, ix)
+        ! Set entry in index table.
+        xadj(iv) = ne
+        ! Check all possible neighbours.
+        do jp = 1, stencil%size 
+          if(jp == stencil%center) cycle
 
-            ! Store coordinates of possible neighbors, they
-            ! are needed several times in the check below.
-            jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jp)
+          ! Store coordinates of possible neighbors, they
+          ! are needed several times in the check below.
+          jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jp)
 
-            if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
-              ! Only points inside the mesh or its enlargement
-              ! are included in the graph.
-              inb = index_from_coords(mesh%idx, mesh%sb%dim, jx)
-              if(inb /= 0 .and. inb <= nv) then
-                ! Store a new edge and increment edge counter.
-                adjncy(ne) = inb
-                ne         = ne + 1
-              end if
+          if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
+            ! Only points inside the mesh or its enlargement
+            ! are included in the graph.
+            inb = index_from_coords(mesh%idx, mesh%sb%dim, jx)
+            if(inb /= 0 .and. inb <= nv) then
+              ! Store a new edge and increment edge counter.
+              adjncy(ne) = inb
+              ne         = ne + 1
             end if
-          end do
-        end do
-        ne         = ne - 1 ! We start with ne=1 for simplicity. This is off by one
-        ! in the end --> -1.
-        xadj(nv + 1) = ne + 1 ! Set number of edges plus 1 as last index.
-        ! The reason is: neighbours of node i are stored
-        ! in adjncy(xadj(i):xadj(i+1)-1). Setting the last
-        ! index as mentioned makes special handling of
-        ! last element unnecessary (this indexing is a
-        ! METIS requirement).
-
-        if(in_debug_mode) then
-          ! DEBUG output. Write graph to file mesh_graph.txt.
-          message(1) = 'Info: Adjacency lists of the graph representing the grid'
-          message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
-          message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
-          message(4) = 'Info: First line contains number of vertices and edges.'
-          message(5) = 'Info: Edges are not directed and appear twice in the lists.'
-          call messages_info(5)
-          if(mpi_grp_is_root(mpi_world)) then
-            call io_mkdir('debug/mesh_partition')
-            iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
-            write(iunit, *) nv, ne/2
-            do iv = 1, nv
-              write(iunit, *) adjncy(xadj(iv):xadj(iv+1) - 1)
-            end do
-            call io_close(iunit)
           end if
-          message(1) = "Info: Done writing mesh_graph.txt."
-          call messages_info(1)
-        end if
+        end do
+      end do
+      ne         = ne - 1 ! We start with ne=1 for simplicity. This is off by one
+      ! in the end --> -1.
+      xadj(nv + 1) = ne + 1 ! Set number of edges plus 1 as last index.
+      ! The reason is: neighbours of node i are stored
+      ! in adjncy(xadj(i):xadj(i+1)-1). Setting the last
+      ! index as mentioned makes special handling of
+      ! last element unnecessary (this indexing is a
+      ! METIS requirement).
 
-      else
-        SAFE_ALLOCATE(adjncy(1:1))
+      if(in_debug_mode) then
+        ! DEBUG output. Write graph to file mesh_graph.txt.
+        message(1) = 'Info: Adjacency lists of the graph representing the grid'
+        message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
+        message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
+        message(4) = 'Info: First line contains number of vertices and edges.'
+        message(5) = 'Info: Edges are not directed and appear twice in the lists.'
+        call messages_info(5)
+        if(mpi_grp_is_root(mpi_world)) then
+          call io_mkdir('debug/mesh_partition')
+          iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
+          write(iunit, *) nv, ne/2
+          do iv = 1, nv
+            write(iunit, *) adjncy(xadj(iv):xadj(iv+1) - 1)
+          end do
+          call io_close(iunit)
+        end if
+        message(1) = "Info: Done writing mesh_graph.txt."
+        call messages_info(1)
       end if
+
     end if
 
     select case(library)
@@ -400,19 +379,6 @@ contains
       SAFE_DEALLOCATE_A(adjncy_local)
       SAFE_DEALLOCATE_A(options)      
 #endif
-
-    case(PFFT_PART)
-      call cube_init(cube, mesh%idx%ll, mesh%sb, fft_type=FFT_REAL, fft_library=FFTLIB_PFFT)
-      SAFE_ALLOCATE(cube_part(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
-      part = 0
-      do ip = 1, mesh%np_global
-        call index_to_coords(mesh%idx, mesh%sb%dim, ip, ix(1:3))
-        ix(1:3) = ix(1:3) + cube%center(1:3)
-        part(ip) = cube_part(ix(1), ix(2), ix(3))
-      end do
-      SAFE_DEALLOCATE_A(cube_part)
-      call cube_end(cube)
-
     end select
 
     SAFE_DEALLOCATE_A(istart)
