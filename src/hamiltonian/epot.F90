@@ -777,7 +777,12 @@ contains
         SAFE_ALLOCATE(vl(1:sphere%np))
 
         call double_grid_apply_local(dgrid, geo%atom(iatom)%spec, der%mesh, sphere, geo%atom(iatom)%x, vl)
-        vpsl(sphere%map(1:sphere%np)) = vpsl(sphere%map(1:sphere%np)) + vl(1:sphere%np)
+
+        ! Cannot be written (correctly) as a vector expression since for periodic systems,
+        ! there can be values ip, jp such that sphere%map(ip) == sphere%map(jp).
+        do ip = 1, sphere%np
+          vpsl(sphere%map(ip)) = vpsl(sphere%map(ip)) + vl(ip)
+        enddo
 
         SAFE_DEALLOCATE_A(vl)
         call submesh_end(sphere)
