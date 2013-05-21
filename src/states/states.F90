@@ -1093,9 +1093,6 @@ contains
       call messages_fatal(2, only_root_writes = .true.)
     end if
 
-    ! initialize Fermi energy
-    call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, st%d%nik, st%nst, st%d%kweights)
-
     POP_SUB(states_read_initial_occs)
   end subroutine states_read_initial_occs
 

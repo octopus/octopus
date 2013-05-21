@@ -685,6 +685,8 @@ contains
       end if
 #endif
       call hamiltonian_span(hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
+      ! initialize Fermi energy
+      call states_fermi(st, gr%mesh)
       call energy_calc_total(hm, gr, st)
 
       POP_SUB(td_run.init_wfs)
