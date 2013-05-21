@@ -1073,13 +1073,13 @@ contains
 
 
   subroutine numin(e,h,s,y,n,nnode,yn,g,gsg,x,knk)
-    REAL_DOUBLE, intent(in)  :: e, h(:), s(:) !< (n)
-    REAL_DOUBLE, intent(out) :: y(:) !< (n)
-    integer,     intent(in)  :: n
-    integer,     intent(out) :: nnode
-    REAL_DOUBLE, intent(in)  :: yn
-    REAL_DOUBLE, intent(out) :: g, gsg, x
-    integer,     intent(in)  :: knk
+    REAL_DOUBLE, intent(in)    :: e, h(:), s(:) !< (n)
+    REAL_DOUBLE, intent(inout) :: y(:) !< (n)
+    integer,     intent(in)    :: n
+    integer,     intent(out)   :: nnode
+    REAL_DOUBLE, intent(in)    :: yn
+    REAL_DOUBLE, intent(out)   :: g, gsg, x
+    integer,     intent(in)    :: knk
 
     integer :: i
     REAL_DOUBLE :: t
