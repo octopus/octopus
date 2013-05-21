@@ -753,7 +753,7 @@ contains
 
       FLOAT :: temp
       integer :: ia, jb, iunit
-      integer :: max, actual, counter
+      integer :: maxcount, actual, counter
       FLOAT :: mtxel_vh, mtxel_xc
       logical, allocatable :: is_saved(:, :), is_calcd(:, :)
       logical :: is_forces_
@@ -785,13 +785,13 @@ contains
       endif
 
       if(cas%type == CASIDA_PETERSILKA) then
-        max = cas%n_pairs
+        maxcount = cas%n_pairs
       else
-        max = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
+        maxcount = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
       endif
       counter = 0
       actual = 0
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, max)
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, maxcount)
 
       ! only root retains the saved values
       if(.not. mpi_grp_is_root(mpi_world)) matrix = M_ZERO
@@ -824,11 +824,11 @@ contains
           end if
           if(jb /= ia) matrix(jb, ia) = matrix(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
         end do
-        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, max)
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
       end do
 
       if(mpi_grp_is_root(mpi_world)) then
-        call loct_progress_bar(max, max)
+        call loct_progress_bar(maxcount, maxcount)
         ! complete progress bar
         write(stdout, '(1x)')
       endif

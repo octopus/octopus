@@ -140,8 +140,8 @@ module loct_m
   end interface loct_getenv
 
   interface loct_progress_bar
-    subroutine oct_progress_bar(a, max)
-      integer, intent(in) :: a, max
+    subroutine oct_progress_bar(a, maxcount)
+      integer, intent(in) :: a, maxcount
     end subroutine oct_progress_bar
   end interface loct_progress_bar
 
