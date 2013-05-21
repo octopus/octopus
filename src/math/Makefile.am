@@ -33,6 +33,8 @@ libmath_a_SOURCES =                      \
 	loct_math.F90                    \
 	lalg_basic.F90                   \
 	math.F90                         \
+	metis.F90                        \
+	metis_f.c                        \
 	lalg_adv.F90                     \
 	lapack.F90                       \
 	mix.F90                          \
@@ -40,7 +42,7 @@ libmath_a_SOURCES =                      \
 	minimizer_low.c                  \
 	ode_solver.F90                   \
 	permutations.F90                 \
-	pfft.F90			                   \
+	pfft.F90			 \
 	root_solver.F90                  \
 	solvers.F90                      \
 	splines.F90                      \
@@ -50,7 +52,7 @@ libmath_a_SOURCES =                      \
 	ylm.c                            \
 	young.F90                        \
 	scalapack.F90                    \
-  nfft.F90    			               \
+	nfft.F90    			 \
 	nfft_f.c                         \
 	pblas.F90                        \
 	sgfft.F90                        \
@@ -73,8 +75,8 @@ noinst_HEADERS =                   \
 	sparskit_inc.F90                 \
 	symm_op_inc.F90                  \
 	matrix_inc.F90                   \
-  nfft_inc.F90                     \
-  pnfft_inc.F90
+	nfft_inc.F90                     \
+	pnfft_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -98,6 +100,8 @@ lalg_adv.o : lalg_adv.F90 lalg_adv_lapack_inc.F90 lalg_adv_scalapack_inc.F90 lap
 lapack.o : lapack.F90
 loct_math.o : loct_math.F90
 math.o : math.F90 math_inc.F90 lalg_basic.o loct_math.o blas.o
+metis.o : metis.F90
+metis_f.o : metis_f.c
 mix.o : mix.F90 mix_inc.F90 lalg_basic.o lalg_adv.o
 oct_gsl_f.o : oct_gsl_f.c
 ode_solver.o : ode_solver.F90 ode_solver_inc.F90 

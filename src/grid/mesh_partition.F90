@@ -33,6 +33,7 @@ module mesh_partition_m
   use loct_m
   use math_m
   use mesh_m
+  use metis_m
   use messages_m
   use mpi_m
   use multicomm_m
@@ -96,17 +97,14 @@ contains
 #if defined(HAVE_PARMETIS) || defined(HAVE_METIS)
     integer, allocatable :: options(:)     !< Options to (Par)METIS.
     integer              :: edgecut        !< Number of edges cut by partitioning.
-    integer, pointer     :: adjwgt=>null() !< Adjacency weights, NULL in our case
     integer, allocatable :: adjncy_local(:)!< Local part of adjacency list
     integer, allocatable :: xadj_local(:)  !< Local part of xadj
-    real, allocatable    :: tpwgts(:)      !< The fraction of vertex weight that shouldb e distributed 
+    REAL_SINGLE, allocatable :: tpwgts(:)  !< The fraction of vertex weight that should be distributed 
                                            !! to each sub-domain for each balance constraint
     integer, allocatable :: vtxdist(:)     !< Initial distribution of the points
     integer              :: local_part     !< Partition computed by ParMETIS of size n_i
     integer, allocatable :: xadj_size_all(:)!< All the sizes of local matrices
     integer, allocatable :: part_local(:)  !< Output of the ParMETIS call
-    integer, pointer :: vwgt=>null(), vsize=>null() !< Weights for the graph. NULL as we are
-                                                    !! going to use them
 #endif
     type(stencil_t) :: stencil
     integer :: ip, ii
@@ -313,36 +311,36 @@ contains
     select case(library)
     case(METIS)
 #ifdef HAVE_METIS
-      SAFE_ALLOCATE(options(0:40))
+      SAFE_ALLOCATE(options(1:40))
       SAFE_ALLOCATE(tpwgts(1:npart))
       
       ! The sum of all tpwgts elements has to be 1 and 
       ! we don`t care about the weights. So; 1/npart
-      tpwgts = M_ONE/real(npart)
-      call METIS_SetDefaultOptions(options) ! is equal to: options = -1
-      options(17) = 1 ! METIS_OPTION_NUMBERING. Fortran style; start from 1
+      tpwgts(1:npart) = real(1.0, 4)/real(npart, 4)
+
+      options = 0
+      call oct_metis_setdefaultoptions(options(1)) ! is equal to: options = -1
+      options(METIS_OPTION_NUMBERING) = 1 ! Fortran style: start counting from 1
 
       select case(method)
       case(RCB)
         message(1) = 'Info: Using METIS 5 multilevel recursive bisection to partition the mesh.'
         call messages_info(1)
-        call METIS_PartGraphRecursive(nv, 1, xadj, adjncy, &
-             vwgt, vsize, adjwgt, npart, tpwgts, &
-             1.01, options, edgecut, part)
+        call oct_metis_partgraphrecursive(nv, 1, xadj(1), adjncy(1), npart, tpwgts(1), 1.01_4, options(1), edgecut, part(1))
       case(GRAPH)
         message(1) = 'Info: Using METIS 5 multilevel k-way algorithm to partition the mesh.'
         call messages_info(1)
-        call METIS_PartGraphKway(nv, 1, xadj, adjncy, &
-             vwgt, vsize, adjwgt, npart, tpwgts, &
-             1.01, options, edgecut, part)  
+        call oct_metis_partgraphkway(nv, 1, xadj(1), adjncy(1), npart, tpwgts(1), 1.01_4, options(1), edgecut, part(1))
       case default
         message(1) = 'Selected partition method is not available in METIS 5.'
         call messages_fatal(1)
       end select
+      
+      SAFE_DEALLOCATE_A(options)
 #endif
     case(PARMETIS)
 #ifdef HAVE_PARMETIS
-      SAFE_ALLOCATE(options(0:2))
+      SAFE_ALLOCATE(options(1:3))
       options = 0 ! For the moment we use default options
       
       write(message(1),'(a)') 'Info: Using ParMETIS multilevel k-way algorithm to partition the mesh.'
@@ -360,7 +358,7 @@ contains
       ! The sum of all tpwgts elements has to be 1 and 
       ! we don`t care about the weights. So; 1/npart
       SAFE_ALLOCATE(tpwgts(1:npart))
-      tpwgts = M_ONE/real(npart)
+      tpwgts = real(1.0, 4)/real(npart, 4)
       
       ! Recalculate local adjncy and xadj from the global ones
       SAFE_ALLOCATE(xadj_local(1:lsize(ipart) + 1))
@@ -375,10 +373,10 @@ contains
       ! Allocate output matrix
       SAFE_ALLOCATE(part_local(1:lsize(ipart) + 1)) ! Work with a local output
       ! Call to ParMETIS with:
-      ! No weights. Fortran-style numbering. No imbalance tolerance
-      call ParMETIS_V3_PartKway(vtxdist, xadj_local, adjncy_local, 0, 0, 0, 1, & 
-           1, mesh%mpi_grp%size, tpwgts, 1.05, & 
-           options, edgecut, part_local, mesh%mpi_grp%comm) 
+      ! Fortran-style numbering. No imbalance tolerance
+      call oct_parmetis_v3_partkway(vtxdist(1), xadj_local(1), adjncy_local(1), & 
+           1, mesh%mpi_grp%size, tpwgts(1), 1.05, & 
+           options(1), edgecut, part_local(1), mesh%mpi_grp%comm) 
 
       ASSERT(all(part_local(1:lsize(ipart))>0))
       ! Calculate sending sizes of all the processes
@@ -400,7 +398,7 @@ contains
       SAFE_DEALLOCATE_A(tpwgts)
       SAFE_DEALLOCATE_A(xadj_local)
       SAFE_DEALLOCATE_A(adjncy_local)
-      
+      SAFE_DEALLOCATE_A(options)      
 #endif
 
     case(PFFT_PART)
@@ -417,9 +415,6 @@ contains
 
     end select
 
-#if defined(HAVE_METIS) || defined(HAVE_PARMETIS)
-    SAFE_DEALLOCATE_A(options)
-#endif
     SAFE_DEALLOCATE_A(istart)
     SAFE_DEALLOCATE_A(ifinal)
     SAFE_DEALLOCATE_A(lsize)
