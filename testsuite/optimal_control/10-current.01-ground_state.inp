@@ -2,7 +2,6 @@
 #  V(x) = 1/64*(x)^4-1/4*(x)^2+1/256*(x)^3
 # are calculated. 
 ExperimentalFeatures = yes
-DebugLevel = 0
 
 CalculationMode = gs
 

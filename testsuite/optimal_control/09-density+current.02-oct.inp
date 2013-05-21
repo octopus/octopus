@@ -3,7 +3,6 @@
 # Final state has maximal density overlap and
 # minimal current. 
 
-DebugLevel = 0
 Dimensions = 1
 fromScratch = yes
 

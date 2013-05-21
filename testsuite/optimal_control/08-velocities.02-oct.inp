@@ -5,7 +5,6 @@
 #CalculationMode = gs
 CalculationMode = opt_control
 #CalculationMode = td
-DebugLevel = 0
 Dimensions = 1
 fromScratch = yes
 

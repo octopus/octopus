@@ -2,7 +2,6 @@
 # Tests OCTTargetOperator = oct_tg_current
 #       OCTCurrentFunctional =  oct_min_curr 
 
-DebugLevel = 0
 Dimensions = 1
 fromScratch = yes
 

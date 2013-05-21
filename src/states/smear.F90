@@ -176,6 +176,8 @@ contains
     
     integer :: ii, ist, nelectrons
 
+    PUSH_SUB(smear_occupy_states_by_ordering)
+
     nelectrons = qtot
     occupations(:, 1) = 0
 
@@ -185,6 +187,7 @@ contains
       this%e_fermi = eigenvalues(ist, 1)
     end do
     
+    POP_SUB(smear_occupy_states_by_ordering)
   end subroutine smear_occupy_states_by_ordering
 
 
@@ -378,7 +381,7 @@ contains
     FLOAT,          intent(in)    :: eigenvalues(:,:)
     FLOAT,          intent(in)    :: kweights(:)
     integer,        intent(in)    :: nik, nst
-    FLOAT,          intent(in)    :: occ(:, :) ! used if fixed_occ
+    FLOAT,          intent(in)    :: occ(:, :) !< used if fixed_occ
 
     integer :: ist, ik
     FLOAT :: dsmear, xx, term, ff
