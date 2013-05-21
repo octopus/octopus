@@ -37,4 +37,4 @@ ConvRelEv = 1e-8
 
 ParallelizationStrategy = par_kpoints
 
-CurrentInTau = no
+XCUseGaugeIndependentKED = no

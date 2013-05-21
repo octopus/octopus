@@ -32,7 +32,7 @@ ExtraStates = 2
 FromScratch = yes
 
 XCFunctional = mgga_x_tb09 + lda_c_pz
-CurrentInTau = no
+XCUseGaugeIndependentKED = no
 ExperimentalFeatures = yes
 
 ConvRelEv = 1e-8
