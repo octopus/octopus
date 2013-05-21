@@ -1,4 +1,4 @@
-## Copyright (C) 2011 J. Alberdi
+## Copyright (C) 2011 J. Alberdi-Rodriguez
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ AC_REQUIRE([ACX_FFT])
 acx_pfft_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--with-pfft-prefix=<lib>], [http://www-user.tu-chemnitz.de/~mpip/software.php])])
+AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--with-pfft-prefix=<lib>], [PFFT version 1.0.7 is requiered, linked with a patched version of FFTW3.3.3. Source and more information at http://www-user.tu-chemnitz.de/~mpip/software.php])])
 case $with_pfft_prefix in
   yes | "") ;;
   no) acx_pfft_ok=disable ;;
@@ -36,7 +36,7 @@ esac
 
 dnl The include dir must be specified when the library is given with a 
 dnl specified file to be compiled static (i.e. *.a etc.)
-AC_ARG_WITH(pfft-include, [AS_HELP_STRING([--with-pfft-include=DIR], [PFFT Fortran include files directory.])])
+AC_ARG_WITH(pfft-include, [AS_HELP_STRING([--with-pfft-include=DIR], [PFFT Fortran include files directory])])
 case $with_pfft_include in
   "") if test "x$FCFLAGS_PFFT" == x; then
         FCFLAGS_PFFT="$ax_cv_f90_modflag/usr/include"
@@ -85,8 +85,19 @@ FCFLAGS="$FCFLAGS_PFFT $acx_pfft_save_FCFLAGS"
 testprogram="AC_LANG_PROGRAM([],[ 
     include 'fftw3.f'
     include 'pfft.f'
-    integer :: x = PFFT_REDFT00
-    call dpfft_plan_dft_3d()
+
+    integer                 :: comm_cart_2d
+    integer(ptrdiff_t_kind) :: n(3)
+    integer(ptrdiff_t_kind) :: alloc_local
+    integer(ptrdiff_t_kind) :: local_ni(3), local_i_start(3)
+    integer(ptrdiff_t_kind) :: local_no(3), local_o_start(3)
+    integer(8)              :: fftplan
+    complex(8), allocatable :: data_in(:)
+    complex(8), allocatable :: data_out(:)
+
+    call dpfft_plan_dft_3d(fftplan, n, data_in, data_out, comm_cart_2d, &
+     &     PFFT_FORWARD, PFFT_TRANSPOSED_OUT + PFFT_MEASURE + PFFT_DESTROY_INPUT)
+
   ])"
 
 
