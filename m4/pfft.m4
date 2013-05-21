@@ -81,8 +81,11 @@ acx_pfft_save_FCFLAGS="$FCFLAGS"
 FCFLAGS_PFFT="$FCFLAGS_PFFT $FCFLAGS_MPIFFT"
 FCFLAGS="$FCFLAGS_PFFT $acx_pfft_save_FCFLAGS"
 
-
+# some symbols below will not be defined for version 1.0.4, making sure
+# we have a version that is able to work in our code
 testprogram="AC_LANG_PROGRAM([],[ 
+    implicit none
+
     include 'fftw3.f'
     include 'pfft.f'
 
