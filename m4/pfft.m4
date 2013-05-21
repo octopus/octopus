@@ -50,9 +50,9 @@ AC_ARG_WITH(mpifftw-prefix, [AS_HELP_STRING([--with-mpifftw-prefix=DIR], [MPI FF
 case $with_mpifftw_prefix in
  "")  case $LIBS_FFT in 
       *.a | *.so | *.so.* | *.o) xpath=${LIBS_FFT%/lib/*};
-         LIBS_MPIFFT="-L$xpath/lib -lfftw3_mpi -lfftw3"; 
+         LIBS_MPIFFT="-L$xpath/lib -lfftw3_mpi"; 
          FCFLAGS_MPIFFT="$ax_cv_f90_modflag$xpath/include";;
-      *) LIBS_MPIFFT="-L/usr/lib -lfftw3_mpi -lfftw3"; 
+      *) LIBS_MPIFFT="-L/usr/lib -lfftw3_mpi"; 
          FCFLAGS_MPIFFT="$ax_cv_f90_modflag/usr/include";;
       esac
       ;;
@@ -88,9 +88,6 @@ testprogram="AC_LANG_PROGRAM([],[
 
     integer                 :: comm_cart_2d
     integer(ptrdiff_t_kind) :: n(3)
-    integer(ptrdiff_t_kind) :: alloc_local
-    integer(ptrdiff_t_kind) :: local_ni(3), local_i_start(3)
-    integer(ptrdiff_t_kind) :: local_no(3), local_o_start(3)
     integer(8)              :: fftplan
     complex(8), allocatable :: data_in(:)
     complex(8), allocatable :: data_out(:)
