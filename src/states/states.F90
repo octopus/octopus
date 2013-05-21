@@ -202,7 +202,6 @@ module states_m
 
 
     FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
-    logical        :: current_in_tau   !< are we using in tau the term which depends on the paramagnetic current?
 
     !> It may be required to "freeze" the deepest orbitals during the evolution; the density
     !! of these orbitals is kept in frozen_rho. It is different from rho_core.
@@ -655,16 +654,6 @@ contains
     !% to load ground-state orbitals from a previous ground-state run.
     !%End
     call parse_logical(datasets_check('OnlyUserDefinedInitialStates'), .false., st%only_userdef_istates)
-
-    !%Variable CurrentInTau
-    !%Type logical
-    !%Default yes
-    !%Section States
-    !%Description
-    !% If true, a term including the (paramagnetic or total) current is included in the calculation of the kinetic-energy density.
-    !%End
-    call parse_logical(datasets_check('CurrentInTau'), .true., st%current_in_tau)
-
 
     ! we now allocate some arrays
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
@@ -1757,7 +1746,6 @@ contains
     call loct_pointer_copy(stout%current, stin%current)
 
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
-    stout%current_in_tau = stin%current_in_tau
 
     call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
 
@@ -2363,7 +2351,7 @@ contains
 
           if(present(gi_kinetic_energy_density)) then
             ASSERT(associated(tau))
-            if(states_are_complex(st) .and. st%current_in_tau) then
+            if(states_are_complex(st)) then
               ASSERT(associated(jp))
               gi_kinetic_energy_density(1:der%mesh%np, is) = tau(1:der%mesh%np, is) - &
                    jp(1:der%mesh%np, i_dim, 1)**2/st%rho(1:der%mesh%np, 1)

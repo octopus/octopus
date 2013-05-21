@@ -71,6 +71,7 @@ module xc_m
 
     FLOAT   :: exx_coef                 !< amount of EXX to add for the hybrids
     integer :: mGGA_implementation      !< how to implement the MGGAs
+    logical :: use_gi_ked               !< should we use the gauge-independent kinetic energy density?
 
     integer :: xc_density_correction
     logical :: xcd_optimize_cutoff
@@ -206,6 +207,20 @@ contains
       call parse_integer(datasets_check('MGGAimplementation'), 1, xcs%mGGA_implementation)
       if(.not.varinfo_valid_option('MGGAimplementation', xcs%mGGA_implementation)) &
         call input_error('xcs%mGGA_implementation')
+
+
+      call messages_obsolete_variable('CurrentInTau', 'XCUseGaugeIndependentKED')
+
+      !%Variable XCUseGaugeIndependentKED
+      !%Type logical
+      !%Default yes
+      !%Section Hamiltonian::XC
+      !%Description
+      !% If true, when evaluating the XC functional, a term including the (paramagnetic or total) current
+      !% is added to the kinetic-energy density such as to make it gauge-independent.
+      !%End
+      call parse_logical(datasets_check('XCUseGaugeIndependentKED'), .true., xcs%use_gi_ked)
+
     end if
 
 
