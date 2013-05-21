@@ -159,30 +159,30 @@ module pfft_m
 
     ! ---------------------------------------------------------
     !> PFFT simple interface to create plan from real to complex
-    subroutine PDFFT(plan_dft_r2c_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags, fftw_flags)
+    subroutine PDFFT(plan_dft_r2c_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags)
       use pfft_params_m
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
       FLOAT,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
       CMPLX,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
-      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
+      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags
     end subroutine PDFFT(plan_dft_r2c_3d)
 
     ! ---------------------------------------------------------
     !> PFFT simple interface to create plan from complex to real
-    subroutine PDFFT(plan_dft_c2r_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags, fftw_flags)
+    subroutine PDFFT(plan_dft_c2r_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags)
       use pfft_params_m
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
       CMPLX,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
       FLOAT,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
-      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
+      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags
     end subroutine PDFFT(plan_dft_c2r_3d)
 
     ! ---------------------------------------------------------
     !> Advanced interface for creating plan of FFT from real to complex
     subroutine PDFFT(plan_many_dft_r2c)(plan, rank_n, n, ni, no, howmany, &
-         iblock, oblock, in, out, mpi_comm, sign, pfft_flags, fftw_flags)
+         iblock, oblock, in, out, mpi_comm, sign, pfft_flags)
       use pfft_params_m
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(in)    :: rank_n  !< The dimensions of the matrices
@@ -199,13 +199,13 @@ module pfft_m
                                                         !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
       FLOAT,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
       CMPLX,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
-      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
+      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags
     end subroutine PDFFT(plan_many_dft_r2c) 
 
     ! ---------------------------------------------------------
     !> Advanced interface for creating plan of FFT from complex to real
     subroutine PDFFT(plan_many_dft_c2r)(plan, rank_n, n, ni, no, howmany, &
-         iblock, oblock, in, out, mpi_comm, sign, pfft_flags, fftw_flags)
+         iblock, oblock, in, out, mpi_comm, sign, pfft_flags)
       use pfft_params_m
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(in)    :: rank_n  !< The dimensions of the matrices
@@ -222,18 +222,18 @@ module pfft_m
                                                         !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
       CMPLX,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
       FLOAT,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
-      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
+      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags
     end subroutine PDFFT(plan_many_dft_c2r)
 
   ! ---------------------------------------------------------
     !> Advanced interface for creating plan of FFT
-    subroutine PDFFT(plan_dft_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags, fftw_flags)
+    subroutine PDFFT(plan_dft_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags)
       use pfft_params_m
       integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
       integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
       CMPLX,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
       CMPLX,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
-      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags, fftw_flags
+      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags
     end subroutine PDFFT(plan_dft_3d)
   end interface
 
@@ -320,7 +320,8 @@ contains
 
     tmp_n(1:3) = n(1:3)
 
-    call PDFFT(plan_dft_r2c_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, PFFT_TRANSPOSED_OUT, flags) 
+    call PDFFT(plan_dft_r2c_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, &
+         PFFT_TRANSPOSED_OUT + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
     
     call profiling_out(prof)
     POP_SUB(pfft_prepare_plan_r2c)
@@ -347,7 +348,8 @@ contains
 
     tmp_n(1:3) = n(1:3)
 
-    call PDFFT(plan_dft_c2r_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, PFFT_TRANSPOSED_IN, flags) 
+    call PDFFT(plan_dft_c2r_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, &
+         PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
 
     call profiling_out(prof)
     POP_SUB(pfft_prepare_plan_c2r)
@@ -379,7 +381,7 @@ contains
       pfft_flags = PFFT_TRANSPOSED_IN
     end if
 
-    call PDFFT(plan_dft_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, pfft_flags, flags)
+    call PDFFT(plan_dft_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, pfft_flags)
 
     POP_SUB(pfft_prepare_plan_c2c)
   end subroutine pfft_prepare_plan_c2c

@@ -50,16 +50,16 @@ AC_ARG_WITH(mpifftw-prefix, [AS_HELP_STRING([--with-mpifftw-prefix=DIR], [MPI FF
 case $with_mpifftw_prefix in
  "")  case $LIBS_FFT in 
       *.a | *.so | *.so.* | *.o) xpath=${LIBS_FFT%/lib/*};
-         LIBS_MPIFFT="-L$xpath/lib -lfftw3_mpi"; 
+         LIBS_MPIFFT="-L$xpath/lib -lfftw3_mpi -lfftw3"; 
          FCFLAGS_MPIFFT="$ax_cv_f90_modflag$xpath/include";;
-      *) LIBS_MPIFFT="-L/usr/lib -lfftw3_mpi"; 
+      *) LIBS_MPIFFT="-L/usr/lib -lfftw3_mpi -lfftw3"; 
          FCFLAGS_MPIFFT="$ax_cv_f90_modflag/usr/include";;
       esac
       ;;
  *.a | *.so | *.so.* | *.o) LIBS_MPIFFT=$with_mpifftw_prefix;
      xpath=${with_mpifftw_prefix%/lib/*} 
      FCFLAGS_MPIFFT="$ax_cv_f90_modflag$xpath/include";;
- *)  LIBS_MPIFFT="-L$with_mpifftw_prefix/lib -lfftw3_mpi";
+ *)  LIBS_MPIFFT="-L$with_mpifftw_prefix/lib -lfftw3_mpi -lfftw3";
      FCFLAGS_MPIFFT="$ax_cv_f90_modflag$with_mpifftw_prefix/include" ;;
 esac
 
