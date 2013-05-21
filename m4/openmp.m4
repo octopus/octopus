@@ -50,7 +50,7 @@ for ax_openmp_flag in $ax_openmp_flags; do
     none) []_AC_LANG_PREFIX[]FLAGS="$save[]_AC_LANG_PREFIX[] $_AC_LANG_PREFIX[]FLAGS" ;;
     *) []_AC_LANG_PREFIX[]FLAGS="$save[]_AC_LANG_PREFIX[]FLAGS $ax_openmp_flag";;
   esac
-  AC_LINK_IFELSE(omp_set_num_threads,
+  AC_LINK_IFELSE([AC_LANG_CALL([], [omp_set_num_threads])],
         [ax_cv_[]_AC_LANG_ABBREV[]_openmp=$ax_openmp_flag; break])
 done
 []_AC_LANG_PREFIX[]FLAGS=$save[]_AC_LANG_PREFIX[]FLAGS

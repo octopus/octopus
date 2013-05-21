@@ -57,7 +57,7 @@ AC_DEFUN([ACX_FORTRAN_CHECK_FUNC],
 [
 AC_MSG_CHECKING([for $1])
 AC_LANG_PUSH(Fortran)dnl
-AC_LINK_IFELSE($1, 
+AC_LINK_IFELSE([AC_LANG_CALL([], [$1])], 
 [
 acx_fortran_check_func=yes
 AC_DEFINE_UNQUOTED(AS_TR_CPP([HAVE_$1]),1, [Define if the $1 function can be called from Fortran])], 

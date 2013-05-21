@@ -47,7 +47,7 @@ AC_DEFUN([ACX_FFT],
   if test $acx_fft_ok = no; then
     if test "x$LIBS_FFT" != x; then
       AC_MSG_CHECKING([for $fft_func in $LIBS_FFT])
-      AC_LINK_IFELSE($fft_func, [acx_fft_ok=yes], [])
+      AC_LINK_IFELSE([AC_LANG_CALL([], [$fft_func])], [acx_fft_ok=yes], [])
       if test $acx_fft_ok = no; then
         AC_MSG_RESULT([$acx_fft_ok])
       else
