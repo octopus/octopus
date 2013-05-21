@@ -31,7 +31,7 @@ LIBS="$LIBS_BLACS $LIBS_LAPACK $LIBS_BLAS $LIBS $FLIBS"
 dnl First, check LIBS_BLACS environment variable
 if test $acx_blacs_ok = no; then
   AC_MSG_CHECKING([for $blacs_pinfo in $LIBS_BLACS])
-  AC_TRY_LINK_FUNC($blacs_pinfo, [acx_blacs_ok=yes], [])
+  AC_LINK_IFELSE($blacs_pinfo, [acx_blacs_ok=yes], [])
   if test $acx_blacs_ok = no; then
     AC_MSG_RESULT([$acx_blacs_ok ($LIBS_BLACS)])
   else

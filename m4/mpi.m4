@@ -8,7 +8,7 @@ LIBS="$LIBS_MPI $LIBS $FLIBS"
 dnl First, check LIBS_MPI environment variable
 if test $acx_mpi_ok = no; then
   AC_MSG_CHECKING([for MPI_init in $LIBS_MPI])
-  AC_TRY_LINK_FUNC(MPI_Init, [acx_mpi_ok=yes], [])
+  AC_LINK_IFELSE([AC_LANG_CALL([], [MPI_Init])], [acx_mpi_ok=yes], [])
   if test $acx_mpi_ok = no; then
     AC_MSG_RESULT([$acx_mpi_ok])
   else

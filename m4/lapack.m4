@@ -32,7 +32,7 @@ LIBS="$LIBS_LAPACK $LIBS_BLAS $LIBS $FLIBS"
 dnl First, check LIBS_LAPACK environment variable
 if test $acx_lapack_ok = no; then
   AC_MSG_CHECKING([for $cheev in $LIBS_LAPACK])
-  AC_TRY_LINK_FUNC($cheev, [acx_lapack_ok=yes], [])
+  AC_LINK_IFELSE($cheev, [acx_lapack_ok=yes], [])
   if test $acx_lapack_ok = no; then
     AC_MSG_RESULT([$acx_lapack_ok])
   else

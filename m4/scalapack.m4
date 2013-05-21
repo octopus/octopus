@@ -32,7 +32,7 @@ LIBS="$LIBS_SCALAPACK $LIBS_BLACS $LIBS_LAPACK $LIBS_BLAS $LIBS $FLIBS"
 dnl First, check LIBS_SCALAPACK environment variable
 if test $acx_scalapack_ok = no; then
   AC_MSG_CHECKING([for $pcheev in $LIBS_SCALAPACK])
-  AC_TRY_LINK_FUNC($pcheev, [acx_scalapack_ok=yes], [])
+  AC_LINK_IFELSE($pcheev, [acx_scalapack_ok=yes], [])
   if test $acx_scalapack_ok = no; then
     AC_MSG_RESULT([$acx_scalapack_ok ($LIBS_SCALAPACK)])
   else

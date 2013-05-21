@@ -51,7 +51,7 @@ LIBS="$FLIBS $LIBS_LIBFM $LIBS"
 dnl First, check LIBS_LIBFM environment variable
 if test $acx_libfm_ok = no; then
   AC_MSG_CHECKING([for $fmm_func in $LIBS_LIBFM])
-dnl AC_TRY_LINK_FUNC($fmm_func, [acx_libfm_ok=yes], [])
+dnl AC_LINK_IFELSE($fmm_func, [acx_libfm_ok=yes], [])
 dnl if test $acx_libfm_ok = no; then
 dnl   AC_MSG_RESULT([$acx_libfm_ok ($LIBS_LIBFM)])
 dnl else
