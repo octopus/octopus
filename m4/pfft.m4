@@ -23,7 +23,7 @@ AC_REQUIRE([ACX_FFT])
 acx_pfft_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--with-pfft-prefix=<lib>], [PFFT version 1.0.7 is requiered, linked with a patched version of FFTW3.3.3. Source and more information at http://www-user.tu-chemnitz.de/~mpip/software.php])])
+AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--with-pfft-prefix=<lib>], [PFFT version 1.0.7 is required, linked with a patched version of FFTW3.3.3. Source and more information at http://www-user.tu-chemnitz.de/~mpip/software.php])])
 case $with_pfft_prefix in
   yes | "") ;;
   no) acx_pfft_ok=disable ;;
