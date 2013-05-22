@@ -208,10 +208,10 @@ contains
   !> Calculate res <- offdiag^T matrix offdiag with all matrices np x np.
   !! If matrix is symmetric, so is the result.
   subroutine apply_coupling(matrix, offdiag, res, np, il)
-    CMPLX,   intent(in)    :: matrix(np, np)
-    CMPLX,   intent(in)    :: offdiag(np, np)
+    CMPLX,   intent(in)    :: matrix(:, :) !< (np, np)
+    CMPLX,   intent(in)    :: offdiag(:, :) !< (np, np)
     integer, intent(in)    :: np, il
-    CMPLX,   intent(out)   :: res(np, np)
+    CMPLX,   intent(out)   :: res(:, :) !< (np, np)
 
     PUSH_SUB(apply_coupling)
 
