@@ -53,12 +53,12 @@ module mesh_partition_m
     mesh_partition_messages_debug
 
   integer, parameter ::  &
-       METIS    = 2,     &
-       PARMETIS = 6
+       METIS    = 1,     &
+       PARMETIS = 2
 
-  integer, public, parameter ::    &
-       RCB        = 2,             &
-       GRAPH      = 6
+  integer, public, parameter :: &
+       RCB    = 1,              &
+       GRAPH  = 2
 
 contains
   
@@ -128,18 +128,16 @@ contains
 
     !%Variable MeshPartitionPackage
     !%Type integer
-    !%Default metis
     !%Section Execution::Parallelization
     !%Description
-    !% Decides which library to use to perform the mesh partition. By
-    !% default, METIS is used.
-    !%Option metis 2
+    !% Decides which library to use to perform the mesh partition.
+    !% By default ParMETIS is used when available, otherwise METIS is used.
+    !%Option metis 1
     !% METIS library.
-    !%Option parmetis 6
-    !% (Experimental) Use ParMETIS libary to perform the mesh partition. Has to 
-    !% be compiled separately
+    !%Option parmetis 2
+    !% (Experimental) Use ParMETIS libary to perform the mesh partition. 
+    !% Only available if the code was compiled with ParMETIS support.
     !%End
-
     default = METIS
 #ifdef HAVE_PARMETIS
     default = PARMETIS
@@ -149,6 +147,12 @@ contains
 #if !defined(HAVE_METIS)
     if(library == METIS) then
       message(1) = 'METIS was requested, but Octopus was compiled without it.'
+      call messages_fatal(1)
+    end if
+#endif
+#if !defined(HAVE_PARMETIS)
+    if(library == PARMETIS) then
+      message(1) = 'PARMETIS was requested, but Octopus was compiled without it.'
       call messages_fatal(1)
     end if
 #endif
@@ -194,12 +198,12 @@ contains
     !%Type integer
     !%Section Execution::Parallelization
     !%Description
-    !% Decides which algorithm is used to partition the mesh. By
-    !% default, <tt>graph</tt> partitioning is used for 8 or more
-    !% partitions, and <tt>rcb</tt> for fewer.
-    !%Option rcb 2
+    !% When using METIS to perform the mesh partitioning, decides which
+    !% algorithm is used. By default, <tt>graph</tt> partitioning 
+    !% is used for 8 or more partitions, and <tt>rcb</tt> for fewer.
+    !%Option rcb 1
     !% Recursive coordinate bisection partitioning.
-    !%Option graph 6
+    !%Option graph 2
     !% Graph partitioning (called 'k-way' by METIS).
     !%End
     call parse_integer(datasets_check('MeshPartition'), default_method, method)
@@ -215,71 +219,68 @@ contains
     ! Shortcut (number of vertices).
     nv = lsize(ipart)
     SAFE_ALLOCATE(xadj(1:nv + 1))
+    SAFE_ALLOCATE(adjncy(1:(stencil%size - 1)*nv))
 
-    if(library == METIS .or. library == PARMETIS) then !calculate the graphs
-      SAFE_ALLOCATE(adjncy(1:(stencil%size - 1)*nv))
+    ! Create graph with each point being
+    ! represented by a vertex and edges between
+    ! neighbouring points.
+    ne = 1
+    ! Iterate over number of vertices.
+    do iv = 1, nv
+      ! Get coordinates of point iv (vertex iv).
+      call index_to_coords(mesh%idx, mesh%sb%dim, iv, ix)
+      ! Set entry in index table.
+      xadj(iv) = ne
+      ! Check all possible neighbours.
+      do jp = 1, stencil%size 
+        if(jp == stencil%center) cycle
 
-      ! Create graph with each point being
-      ! represented by a vertex and edges between
-      ! neighbouring points.
-      ne = 1
-      ! Iterate over number of vertices.
-      do iv = 1, nv
-        ! Get coordinates of point iv (vertex iv).
-        call index_to_coords(mesh%idx, mesh%sb%dim, iv, ix)
-        ! Set entry in index table.
-        xadj(iv) = ne
-        ! Check all possible neighbours.
-        do jp = 1, stencil%size 
-          if(jp == stencil%center) cycle
+        ! Store coordinates of possible neighbors, they
+        ! are needed several times in the check below.
+        jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jp)
 
-          ! Store coordinates of possible neighbors, they
-          ! are needed several times in the check below.
-          jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jp)
-
-          if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
-            ! Only points inside the mesh or its enlargement
-            ! are included in the graph.
-            inb = index_from_coords(mesh%idx, mesh%sb%dim, jx)
-            if(inb /= 0 .and. inb <= nv) then
-              ! Store a new edge and increment edge counter.
-              adjncy(ne) = inb
-              ne         = ne + 1
-            end if
+        if(all(jx(1:MAX_DIM) >= mesh%idx%nr(1, 1:MAX_DIM)) .and. all(jx(1:MAX_DIM) <= mesh%idx%nr(2, 1:MAX_DIM))) then
+          ! Only points inside the mesh or its enlargement
+          ! are included in the graph.
+          inb = index_from_coords(mesh%idx, mesh%sb%dim, jx)
+          if(inb /= 0 .and. inb <= nv) then
+            ! Store a new edge and increment edge counter.
+            adjncy(ne) = inb
+            ne         = ne + 1
           end if
-        end do
-      end do
-      ne         = ne - 1 ! We start with ne=1 for simplicity. This is off by one
-      ! in the end --> -1.
-      xadj(nv + 1) = ne + 1 ! Set number of edges plus 1 as last index.
-      ! The reason is: neighbours of node i are stored
-      ! in adjncy(xadj(i):xadj(i+1)-1). Setting the last
-      ! index as mentioned makes special handling of
-      ! last element unnecessary (this indexing is a
-      ! METIS requirement).
-
-      if(in_debug_mode) then
-        ! DEBUG output. Write graph to file mesh_graph.txt.
-        message(1) = 'Info: Adjacency lists of the graph representing the grid'
-        message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
-        message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
-        message(4) = 'Info: First line contains number of vertices and edges.'
-        message(5) = 'Info: Edges are not directed and appear twice in the lists.'
-        call messages_info(5)
-        if(mpi_grp_is_root(mpi_world)) then
-          call io_mkdir('debug/mesh_partition')
-          iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
-          write(iunit, *) nv, ne/2
-          do iv = 1, nv
-            write(iunit, *) adjncy(xadj(iv):xadj(iv+1) - 1)
-          end do
-          call io_close(iunit)
         end if
-        message(1) = "Info: Done writing mesh_graph.txt."
-        call messages_info(1)
-      end if
+      end do
+    end do
+    ne         = ne - 1 ! We start with ne=1 for simplicity. This is off by one
+    ! in the end --> -1.
+    xadj(nv + 1) = ne + 1 ! Set number of edges plus 1 as last index.
+    ! The reason is: neighbours of node i are stored
+    ! in adjncy(xadj(i):xadj(i+1)-1). Setting the last
+    ! index as mentioned makes special handling of
+    ! last element unnecessary (this indexing is a
+    ! METIS requirement).
 
+    if(in_debug_mode) then
+      ! DEBUG output. Write graph to file mesh_graph.txt.
+      message(1) = 'Info: Adjacency lists of the graph representing the grid'
+      message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
+      message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
+      message(4) = 'Info: First line contains number of vertices and edges.'
+      message(5) = 'Info: Edges are not directed and appear twice in the lists.'
+      call messages_info(5)
+      if(mpi_grp_is_root(mpi_world)) then
+        call io_mkdir('debug/mesh_partition')
+        iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
+        write(iunit, *) nv, ne/2
+        do iv = 1, nv
+          write(iunit, *) adjncy(xadj(iv):xadj(iv+1) - 1)
+        end do
+        call io_close(iunit)
+      end if
+      message(1) = "Info: Done writing mesh_graph.txt."
+      call messages_info(1)
     end if
+
 
     select case(library)
     case(METIS)
@@ -390,7 +391,6 @@ contains
   end subroutine mesh_partition
 
   ! --------------------------------------------------------
-
   subroutine mesh_partition_boundaries(mesh, stencil, part)
     type(mesh_t),    intent(in)    :: mesh
     type(stencil_t), intent(in)    :: stencil
