@@ -56,8 +56,8 @@ module mesh_partition_m
        METIS    = 1,     &
        PARMETIS = 2
 
-  integer, public, parameter :: &
-       RCB    = 1,              &
+  integer, parameter :: &
+       RCB    = 1,      &
        GRAPH  = 2
 
 contains
