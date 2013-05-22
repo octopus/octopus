@@ -359,10 +359,6 @@ subroutine FNAME(copy_1)(n1, dx, dy)
   TYPE1,   intent(in)  :: dx(:)
   TYPE1,   intent(out) :: dy(:)
 
-#ifdef HAVE_OPENMP
-  integer :: ini, nn_loc
-#endif
-
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
 

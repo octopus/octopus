@@ -17,8 +17,8 @@
 !!
 !! $Id: scf.F90 4182 2008-05-14 14:02:30Z acastro $
 
-! This module solves the Schroedinger equation for a system with open
-! boundaries for a prescribed energy.
+!> This module solves the Schroedinger equation for a system with open
+!! boundaries for a prescribed energy.
 
 #include "global.h"
 
@@ -209,11 +209,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! The right hand side of the Lippmann-Schwinger equation
-  ! e-T-V0-sum(a)[H_ca*g_a*H_ac].
+  !> The right hand side of the Lippmann-Schwinger equation
+  !! e-T-V0-sum(a)[H_ca*g_a*H_ac].
   subroutine calc_rhs(rhs, transposed)
     CMPLX, intent(inout)          :: rhs(:, :)
-    logical, optional, intent(in) :: transposed ! needed only for the non hermitian part
+    logical, optional, intent(in) :: transposed !< needed only for the non-Hermitian part
 
     integer :: ip, idim, il, np
     integer :: start(1:3), finish(1:3), start_lead(1:3), finish_lead(1:3)
@@ -282,9 +282,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! The left hand side of the Lippmann-Schwinger equation
-  ! e-H-sum(a)[H_ca*g_a*H_ac].
-  ! Used by the iterative linear solver.
+  !> The left hand side of the Lippmann-Schwinger equation
+  !! e-H-sum(a)[H_ca*g_a*H_ac].
+  !! Used by the iterative linear solver.
   subroutine lhs(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
@@ -293,7 +293,7 @@ contains
     CMPLX, allocatable :: tmp_y(:, :)
     integer            :: np, np_part, idim, il, dim
 
-! no push_sub, called too frequently
+    ! no push_sub, called too frequently
 
     np_part = gr_p%mesh%np_part
     np      = gr_p%mesh%np
@@ -330,9 +330,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! The left hand side of the Lippmann-Schwinger equation
-  ! (e-H-sum(a)[H_ca*g_a*H_ac])^T.
-  ! Used by the iterative linear solver.
+  !> The left hand side of the Lippmann-Schwinger equation
+  !! (e-H-sum(a)[H_ca*g_a*H_ac])^T.
+  !! Used by the iterative linear solver.
   subroutine lhs_t(y)
     CMPLX, intent(inout) :: y(:)
 
@@ -340,7 +340,7 @@ contains
     CMPLX, allocatable :: tmp_y(:, :)
     integer            :: np, np_part, idim, il, dim
 
-! no push_sub, called too frequently
+    ! no push_sub, called too frequently
 
     np      = gr_p%mesh%np
     np_part = gr_p%mesh%np_part
@@ -379,14 +379,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! The left hand side of the Lippmann-Schwinger equation
-  ! (e-H-sum(a)[H_ca*g_a*H_ac])^T*(e-H-sum(a)[H_ca*g_a*H_ac]).
-  ! Used by the iterative linear solver.
+  !> The left hand side of the Lippmann-Schwinger equation
+  !! (e-H-sum(a)[H_ca*g_a*H_ac])^T*(e-H-sum(a)[H_ca*g_a*H_ac]).
+  !! Used by the iterative linear solver.
   subroutine lhs_symmetrized(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-! no push_sub, called too frequently
+    ! no push_sub, called too frequently
 
     call lhs(x, y)
     call lhs_t(y)
@@ -395,14 +395,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Identity preconditioner. Since preconditioning with the inverse of
-  ! the diagonal did not improve the convergence we put identity here
-  ! until we have something better.
+  !> Identity preconditioner. Since preconditioning with the inverse of
+  !! the diagonal did not improve the convergence we put identity here
+  !! until we have something better.
   subroutine ls_qmr_prec(x, y)
     CMPLX, intent(in)  :: x(:)
     CMPLX, intent(out) :: y(:)
 
-! no push_sub, called too frequently
+    ! no push_sub, called too frequently
 
     y(:) = x(:)
 
