@@ -27,13 +27,14 @@
 
 #if defined(HAVE_METIS)
 #include <metis.h>
-#elif defined(HAVE_PARMETIS)
+#endif
+#if defined(HAVE_PARMETIS)
 #include <parmetis.h>
+#include <mpi.h>
 #endif
 
 
 #ifdef HAVE_METIS
-#include <mpi.h>
  
 void FC_FUNC_(oct_metis_setdefaultoptions, OCT_METIS_SETDEFAULTOPTIONS)
      (idx_t *options)

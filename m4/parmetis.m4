@@ -92,9 +92,9 @@ AC_DEFUN([ACX_PATH_PARMETIS],[
   ac_save_LDFLAGS="$LDFLAGS"
   ac_save_CPPFLAGS="$CPPFLAGS"
   ac_save_LIBS="$LIBS"
-       
+
   ## do nothing if --without-parmetis is used
-  if test x"$with_mpi" != x"no" && test x"$with_parmetis" != x"no" ; then
+  if test "x$acx_mpi_ok" == xyes && test x"$with_parmetis" != x"no" ; then
 
       # defaultpath
       PARMETIS_LIB_PATH="$with_parmetis/$lib_path"
