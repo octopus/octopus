@@ -188,26 +188,6 @@ contains
     npart = mesh%mpi_grp%size
     ipart = mesh%mpi_grp%rank + 1
 
-    if(npart  <  8) then
-      default_method = RCB
-    else
-      default_method = GRAPH
-    end if
-
-    !%Variable MeshPartition
-    !%Type integer
-    !%Section Execution::Parallelization
-    !%Description
-    !% When using METIS to perform the mesh partitioning, decides which
-    !% algorithm is used. By default, <tt>graph</tt> partitioning 
-    !% is used for 8 or more partitions, and <tt>rcb</tt> for fewer.
-    !%Option rcb 1
-    !% Recursive coordinate bisection partitioning.
-    !%Option graph 2
-    !% Graph partitioning (called 'k-way' by METIS).
-    !%End
-    call parse_integer(datasets_check('MeshPartition'), default_method, method)
-
     SAFE_ALLOCATE(istart(1:npart))
     SAFE_ALLOCATE(ifinal(1:npart))
     SAFE_ALLOCATE(lsize(1:npart))
@@ -295,6 +275,27 @@ contains
       options = 0
       call oct_metis_setdefaultoptions(options(1)) ! is equal to: options = -1
       options(METIS_OPTION_NUMBERING) = 1 ! Fortran style: start counting from 1
+
+
+      if(npart  <  8) then
+        default_method = RCB
+      else
+        default_method = GRAPH
+      end if
+
+      !%Variable MeshPartition
+      !%Type integer
+      !%Section Execution::Parallelization
+      !%Description
+      !% When using METIS to perform the mesh partitioning, decides which
+      !% algorithm is used. By default, <tt>graph</tt> partitioning 
+      !% is used for 8 or more partitions, and <tt>rcb</tt> for fewer.
+      !%Option rcb 1
+      !% Recursive coordinate bisection partitioning.
+      !%Option graph 2
+      !% Graph partitioning (called 'k-way' by METIS).
+      !%End
+      call parse_integer(datasets_check('MeshPartition'), default_method, method)
 
       select case(method)
       case(RCB)
