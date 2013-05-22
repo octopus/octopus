@@ -52,7 +52,7 @@ module compressed_sensing_m
   end type compressed_sensing_t
 
 contains
-
+  
   subroutine compressed_sensing_init(this, transform_type, ntime, dtime, stime, nfreq, dfreq, sfreq, noise)
     type(compressed_sensing_t),  intent(out) :: this
     integer,                     intent(in)  :: transform_type
@@ -66,11 +66,11 @@ contains
 
     integer :: itime, ifreq, type
     FLOAT   :: time, freq
-
+    
     PUSH_SUB(compressed_sensing_init)
-
+    
     this%sigma = noise
-
+    
     this%ntime = ntime
     this%dtime = dtime
     this%stime = stime
@@ -115,11 +115,11 @@ contains
       case(SPECTRUM_TRANSFORM_COS)
         type = COS_MATRIX
       end select
-
-    call bpdn_matrix_init(this%fourier_matrix, this%ntime, this%nfreq, type)
-    call bpdn_matrix_set_delta(this%fourier_matrix, this%dtime, this%dfreq)
-
-  endif
+      
+      call bpdn_matrix_init(this%fourier_matrix, this%ntime, this%nfreq, type)
+      call bpdn_matrix_set_delta(this%fourier_matrix, this%dtime, this%dfreq)
+      
+    endif
     
     POP_SUB(compressed_sensing_init)
   end subroutine compressed_sensing_init
@@ -139,9 +139,9 @@ contains
   ! -------------------------------------------------------------------
 
   subroutine compressed_sensing_spectral_analysis(this, time_function, freq_function)
-    type(compressed_sensing_t),  intent(out) :: this
-    FLOAT,                       intent(in)  :: time_function(:)
-    FLOAT,                       intent(out) :: freq_function(:)
+    type(compressed_sensing_t),  intent(inout) :: this
+    FLOAT,                       intent(in)    :: time_function(:)
+    FLOAT,                       intent(out)   :: freq_function(:)
 
     integer :: ierr
     FLOAT, allocatable :: tf_normalized(:)

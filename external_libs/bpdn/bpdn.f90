@@ -131,6 +131,7 @@ contains
   end subroutine bpdn_matrix_set_delta
 
   subroutine bpdn(nn, mm, aa, bb, sigma, xx, ierr, activesetit)
+    integer,           intent(out)   :: nn, mm
     type(bpdn_matrix), intent(in)    :: aa
     real(8),           intent(in)    :: bb(:)    !(1:nn)
     real(8),           intent(in)    :: sigma
@@ -151,7 +152,6 @@ contains
     integer :: nnziter, iter, maxits, lserr, status, maxlineerrors, nnzdiff, nnzg, nnzx
     logical :: done, testrelchange1, testrelchange2, testupdatetau, singletau
     logical, allocatable :: nnzidx(:)
-    integer :: nn, mm
 
     nn = aa%nn
     mm = aa%mm
@@ -397,7 +397,7 @@ contains
   !----------------------------------------------------------
 
   subroutine spg_line_curvy(aa, bb, xx, gg, fmax, stepmax, tau, xxnew, resnew, fnew, ierr)
-    type(bpdn_matrix), intent(in) :: aa
+    type(bpdn_matrix), intent(in)    :: aa
     real(8),           intent(in)    :: bb(:)    !(1:nn)
     real(8),           intent(in)    :: xx(:)    !(1:mm)
     real(8),           intent(in)    :: gg(:)    !(1:mm)
@@ -439,7 +439,7 @@ contains
       gts = scale*dotp(mm, gg, ss)
 
       if(gts >= 0) then
-        ierr = EXIT_NODESCENT;
+        ierr = EXIT_NODESCENT
         exit
       end if
 
