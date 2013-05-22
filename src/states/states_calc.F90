@@ -260,7 +260,6 @@ contains
     integer, allocatable :: index(:)
     FLOAT, allocatable   :: diff_copy(:,:)
     FLOAT, allocatable   :: buf(:)
-    FLOAT                :: imthreshold
     CMPLX, allocatable   :: cbuf(:)
     
     PUSH_SUB(states_sort_complex)

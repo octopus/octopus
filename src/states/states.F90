@@ -2243,7 +2243,7 @@ contains
     FLOAT, pointer :: tau(:, :)
     CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:), lwf_psi(:,:)
     CMPLX   :: c_tmp
-    integer :: is, ik, ik_tmp, ist, i_dim, st_dim, ii
+    integer :: is, ik, ist, i_dim, st_dim, ii
     FLOAT   :: ww, kpoint(1:MAX_DIM)
     logical :: something_to_do
 

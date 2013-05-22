@@ -1320,7 +1320,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
   R_TYPE,            intent(out)   :: overlap(:, :)
   R_TYPE, optional,  intent(in)    :: psi2(:, :, :) !< if present it calculates <psi2|psi>
 
-  integer       :: ip, ib, jb, block_size, sp, size, idim, ist, jst
+  integer       :: ip, ib, jb, block_size, sp, size, ist, jst
   type(batch_t) :: psib, psi2b
   type(profile_t), save :: prof
   FLOAT :: vol
