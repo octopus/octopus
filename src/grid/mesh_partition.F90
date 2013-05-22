@@ -49,7 +49,12 @@ module mesh_partition_m
     mesh_partition_boundaries,   &
     mesh_partition_write,        &
     mesh_partition_read,         &
+    mesh_partition_write_info,   &
     mesh_partition_messages_debug
+
+  integer, parameter ::  &
+       METIS    = 2,     &
+       PARMETIS = 6
 
   integer, public, parameter ::    &
        RCB        = 2,             &
@@ -203,20 +208,9 @@ contains
     SAFE_ALLOCATE(ifinal(1:npart))
     SAFE_ALLOCATE(lsize(1:npart))
 
-    select case(library)
-    case(METIS)
-
-      istart(1:npart) = 1
-      ifinal(1:npart) = mesh%np_global
-      lsize(1:npart) = mesh%np_global
-
-    case(PARMETIS)
-
-      istart(1:npart) = 1
-      ifinal(1:npart) = mesh%np_global
-      lsize(1:npart) = mesh%np_global
-
-    end select
+    istart(1:npart) = 1
+    ifinal(1:npart) = mesh%np_global
+    lsize(1:npart) = mesh%np_global
 
     ! Shortcut (number of vertices).
     nv = lsize(ipart)
@@ -516,8 +510,150 @@ contains
 
   end subroutine mesh_partition_read
 
-  ! ----------------------------------------------------
 
+  ! ----------------------------------------------------------------------
+  subroutine mesh_partition_write_info(mesh, stencil, point_to_part)
+    type(mesh_t),      intent(in)  :: mesh
+    type(stencil_t),   intent(in)  :: stencil
+    integer,           intent(in)  :: point_to_part(:)
+
+    integer :: npart, npoints
+    integer, allocatable :: nghost(:), nbound(:), nlocal(:), nneigh(:)
+    FLOAT :: quality
+
+    integer :: ip, ipcoords(1:MAX_DIM)
+    integer, allocatable :: jpcoords(:, :), jp(:)
+    integer :: istencil, ipart, jpart
+    type(profile_t), save :: prof
+    logical, allocatable :: is_a_neigh(:, :), gotit(:)
+    FLOAT :: scal
+
+    PUSH_SUB(mesh_partition_write_info)
+
+    call profiling_in(prof, "MESH_PARTITION_WRITE_INFO")
+
+    ! Build information about the mesh partition
+    npart = mesh%mpi_grp%size
+    npoints = mesh%np_part_global
+
+    SAFE_ALLOCATE(nghost(1:npart))
+    SAFE_ALLOCATE(nbound(1:npart))
+    SAFE_ALLOCATE(nlocal(1:npart))
+    SAFE_ALLOCATE(nneigh(1:npart))
+    SAFE_ALLOCATE(is_a_neigh(1:npart, 1:npart))
+    SAFE_ALLOCATE(gotit(1:mesh%np_part_global))
+    SAFE_ALLOCATE(jpcoords(1:MAX_DIM, 1:stencil%size))
+    SAFE_ALLOCATE(jp(1:stencil%size))
+
+    is_a_neigh = .false.
+    nghost = 0
+    nbound = 0
+    nlocal = 0
+    nneigh = 0
+
+    do ipart = 1, npart
+      gotit = .false.
+      do ip = 1, mesh%np_global
+        if(ipart /= point_to_part(ip)) cycle
+
+        INCR(nlocal(ipart), 1)
+        call index_to_coords(mesh%idx, mesh%sb%dim, ip, ipcoords)
+        
+        do istencil = 1, stencil%size
+          jpcoords(:, istencil) = ipcoords + stencil%points(:, istencil)
+        end do
+        
+        call index_from_coords_vec(mesh%idx, mesh%sb%dim, stencil%size, jpcoords, jp)
+        
+        do istencil = 1, stencil%size
+          if(stencil%center == istencil) cycle
+
+          if(.not. gotit(jp(istencil))) then
+            jpart = point_to_part(jp(istencil))
+         
+            if(jpart /= ipart) then
+              INCR(nghost(ipart), 1)
+              is_a_neigh(ipart, jpart) = .true.
+            else if(jp(istencil) > mesh%np_global) then
+              INCR(nbound(ipart), 1)
+            end if
+            
+            gotit(jp(istencil)) = .true.
+          end if
+          
+        end do
+        
+      end do
+    end do
+
+    forall(ipart = 1:npart)
+      nneigh(ipart) = count(is_a_neigh(ipart, 1:npart))
+    end forall
+
+    SAFE_DEALLOCATE_A(is_a_neigh)
+    SAFE_DEALLOCATE_A(gotit)
+    SAFE_DEALLOCATE_A(jpcoords)
+    SAFE_DEALLOCATE_A(jp)
+
+    ! Calculate partition quality
+    scal = real(npart, REAL_PRECISION)/npoints
+
+    quality = M_ZERO
+
+    quality = quality + (maxval(nlocal) - minval(nlocal))**3
+    quality = quality + (sum(TOFLOAT(nghost)**2))
+
+    quality = M_ONE/(M_ONE + quality)
+
+
+    ! Write information about the partition
+    message(1) = &
+      'Info: Mesh partition:'
+    message(2) = ''
+    call messages_info(2)
+
+    write(message(1),'(a,e16.6)') &
+      '      Partition quality:', quality
+    message(2) = ''
+    call messages_info(2)
+
+    write(message(1),'(a)') &
+      '                 Neighbours         Ghost points'
+    write(message(2),'(a,i5,a,i10)') &
+      '      Average  :      ', sum(nneigh)/npart, '           ', sum(nghost)/npart
+    write(message(3),'(a,i5,a,i10)') &
+      '      Minimum  :      ', minval(nneigh),    '           ', minval(nghost)
+    write(message(4),'(a,i5,a,i10)') &
+      '      Maximum  :      ', maxval(nneigh),    '           ', maxval(nghost)
+    message(5) = ''
+    call messages_info(5)
+
+    do ipart = 1, npart
+      write(message(1),'(a,i5)')  &
+        '      Nodes in domain-group  ', ipart
+      write(message(2),'(a,i10,a,i10)') &
+        '        Neighbours     :', nneigh(ipart), &
+        '        Local points    :', nlocal(ipart)
+      write(message(3),'(a,i10,a,i10)') &
+        '        Ghost points   :', nghost(ipart), &
+        '        Boundary points :', nbound(ipart)
+      call messages_info(3)
+    end do
+
+    message(1) = ''
+    call messages_info(1)
+
+    SAFE_DEALLOCATE_A(nghost)
+    SAFE_DEALLOCATE_A(nbound)
+    SAFE_DEALLOCATE_A(nlocal)
+    SAFE_DEALLOCATE_A(nneigh)
+
+    call profiling_out(prof)
+
+    POP_SUB(mesh_partition_write_info)
+  end subroutine mesh_partition_write_info
+
+  ! ----------------------------------------------------
   subroutine mesh_partition_messages_debug(mesh)
     type(mesh_t),    intent(in)    :: mesh
     

@@ -634,7 +634,6 @@ contains
     integer              :: idx(1:MAX_DIM), jx(1:MAX_DIM)
     integer              :: graph_comm, iedge, nnb
     logical              :: use_topo, reorder, partition_print
-    type(partition_t)    :: partition
     integer              :: ierr
 
     logical :: from_scratch, has_virtual_partition = .false.
@@ -676,7 +675,6 @@ contains
         write(message(2),'(a)') "The execution will crash"
         call messages_warning(2)
         mesh%mpi_grp%size = vsize
-        partition%npart = vsize
         has_virtual_partition = .true.
       else 
         has_virtual_partition = .false.
@@ -701,8 +699,6 @@ contains
 
     end if
 
-    call partition_init(partition, mesh)
-    
     !%Variable PartitionPrint
     !%Type logical
     !%Default true
@@ -715,9 +711,7 @@ contains
     call parse_logical(datasets_check('PartitionPrint'), .true., partition_print)
     
     if (partition_print) then
-      call partition_build(partition, mesh, stencil, mesh%vp%part_vec)
-      call partition_write_info(partition)      
-      call partition_end(partition)
+      call mesh_partition_write_info(mesh, stencil, mesh%vp%part_vec)
       call mesh_partition_messages_debug(mesh)
     end if   
     if (has_virtual_partition) then  
