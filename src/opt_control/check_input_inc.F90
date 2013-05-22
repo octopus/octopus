@@ -121,10 +121,20 @@
               write(message(3), '(a)') 'then you must set "TDExponentialMethod = taylor".'
               call messages_fatal(3)
           end select
+        case(PROP_EXPONENTIAL_MIDPOINT)
+          select case(tr%te%exp_method)
+            case(EXP_LANCZOS)
+            case default
+              write(message(1), '(a)') 'If you use time-dependent target, and you set'
+              write(message(2), '(a)') '"TDPropagator = exp_mid", '
+              write(message(3), '(a)') 'then you must set "TDExponentialMethod = lanczos".'
+              call messages_fatal(3)
+          end select
         case default
           write(message(1), '(a)') 'If you use time-dependent target, then you must set'
-          write(message(2), '(a)') '"TDPropagator = crank_nicolson", or'
-          write(message(3), '(a)') '"TDPropagator = qoct_tddft_propagator", '
+          write(message(2), '(a)') '"TDPropagator = crank_nicolson", '
+          write(message(3), '(a)') '"TDPropagator = qoct_tddft_propagator", or'
+          write(message(4), '(a)') '"TDPropagator = exp_mid".'
           call messages_fatal(4)
         end select
       end if

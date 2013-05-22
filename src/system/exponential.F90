@@ -488,7 +488,7 @@ contains
           res = abs(hamilt(iter + 1, iter)*abs(expo(iter, 1)))
 
           if(abs(hamilt(iter + 1, iter)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
-          if(iter > 2 .and. res < tol) exit
+          if(iter > 3 .and. res < tol) exit
         end do
 
         if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
@@ -546,7 +546,7 @@ contains
             res = abs(hamilt(iter + 1, iter)*abs(expo(iter, 1)))
 
             if(abs(hamilt(iter + 1, iter)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
-            if(iter > 2 .and. res < tol) exit
+            if(iter > 3 .and. res < tol) exit
           end do
 
           if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
