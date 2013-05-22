@@ -69,7 +69,19 @@ AC_DEFUN([ACX_FFT],
     fi
   done
 
-  AC_CHECK_FUNC(dfftw_init_threads, AC_DEFINE(HAVE_FFTW3_THREADS, 1,[Define if the threaded version of FFTW3 is available.]))
+  AC_MSG_CHECKING([for dfftw_init_threads in $LIBS_FFT])
+  AC_LINK_IFELSE([AC_LANG_CALL([], [dfftw_init_threads])], [acx_fft_threads_ok=yes], [acx_fft_threads_ok=no])
+  AC_MSG_RESULT([$acx_fft_threads_ok])
+  if test x"$acx_fft_threads_ok" != xyes; then
+    LIBS="$LIBS -lfftw3_threads"
+    AC_MSG_CHECKING([for dfftw_init_threads in $LIBS_FFT -lfftw3_threads])
+    AC_LINK_IFELSE([AC_LANG_CALL([], [dfftw_init_threads])],
+      [acx_fft_threads_ok=yes; LIBS_FFT="$LIBS_FFT -lfftw3_threads"], [acx_fft_threads_ok=no])
+    AC_MSG_RESULT([$acx_fft_threads_ok])
+  fi
+  if test x"$acx_fft_threads_ok" = xyes; then  
+    AC_DEFINE(HAVE_FFTW3_THREADS, 1,[Define if the threaded version of FFTW3 is available.])
+  fi
 
   AC_SUBST(LIBS_FFT)
   LIBS="$acx_fft_save_LIBS"
