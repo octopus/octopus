@@ -211,7 +211,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
   type(hamiltonian_t),    intent(in)    :: hm
   integer,                intent(in)    :: ik
   type(batch_t),          intent(inout) :: aa
-  type(batch_t),          intent(out)   :: bb
+  type(batch_t),          intent(inout) :: bb
   R_TYPE,       optional, intent(in)    :: omega
 
   integer :: ii

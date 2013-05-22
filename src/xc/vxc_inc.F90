@@ -400,7 +400,7 @@ contains
     if(mgga) then
       call copy_global_to_local(tau, l_tau, nblock, spin_channels, ip)
       ! we adjust for the different definition of tau in libxc
-      l_tau = l_tau / M_TWO
+      l_tau(1:spin_channels, 1:nblock) = l_tau(1:spin_channels, 1:nblock) / M_TWO
       call copy_global_to_local(ldens, l_ldens, nblock, spin_channels, ip)
     end if
 
