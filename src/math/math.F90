@@ -868,14 +868,20 @@ contains
       end if
     end do
 
-    u(n-1) = atan2(x(n), xx(n-1))
-    do k = n-2, 1, -1
+    u = M_ZERO
+    do k = 1, n-1
       sumx2 = M_ZERO
-      do j = n, k+1, -1
+      do j = k+1, n
         sumx2 = sumx2 + xx(j)**2
       end do
-      u(k) = atan2(sqrt(sumx2), xx(k))
+      if(sumx2.eq.M_ZERO .and. xx(k).eq. M_ZERO) exit
+      if( k < n-1 ) then
+        u(k) = atan2(sqrt(sumx2), xx(k))
+      else
+        u(n-1) = atan2(xx(n), xx(n-1))
+      end if
     end do
+
 
     POP_SUB(cartesian2hyperspherical)
   end subroutine cartesian2hyperspherical
@@ -899,7 +905,7 @@ contains
 
     if(n == 2) then
       x(1) = cos(u(1))
-      x(2) = sin(u(2))
+      x(2) = sin(u(1))
     elseif(n == 3) then
       x(1) = cos(u(1))
       x(2) = sin(u(1))*cos(u(2))
