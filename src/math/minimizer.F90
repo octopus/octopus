@@ -165,6 +165,7 @@ contains
       SAFE_ALLOCATE(w(1:sizeofw))
       w = M_ZERO
       call newuoa(dim, npt, x, step, toldr, iprint, maxiter, w, f)
+      call f(dim, x, minimum)
       SAFE_DEALLOCATE_A(w)
       ierr = 0
 #endif
@@ -253,7 +254,7 @@ contains
     
     integer :: iter
     real(8), allocatable :: grad(:)
-    real(8) :: val, step2, maxgrad
+    real(8) :: step2, maxgrad
     
     PUSH_SUB(minimize_sd)
 
@@ -261,17 +262,18 @@ contains
     
     step2 = step*CNST(10.0)
     do iter = 1, maxiter
-      call f(dim, x, val, 1, grad)
+      call f(dim, x, minimum, 1, grad)
       
       maxgrad = maxval(abs(grad))
       
-      call write_iter_info(iter, dim, val, maxgrad*step2, maxgrad, x)
+      call write_iter_info(iter, dim, minimum, maxgrad*step2, maxgrad, x)
       
       x(1:dim) = x(1:dim) - step2*grad(1:dim)
       
       step2 = step2*CNST(0.99)
     end do
-    
+    ierr = 0
+
     POP_SUB(minimize_sd)
   end subroutine minimize_sd
   
