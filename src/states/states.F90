@@ -1313,12 +1313,13 @@ contains
   !! st\%block_initialized: it should be .false. on entry, and .true. after exiting this routine.
   !!
   !! The set of batches st\%psib(1:st\%nblocks) contains the blocks themselves.
-  subroutine states_init_block(st, mesh)
+  subroutine states_init_block(st, mesh, verbose)
     type(states_t),           intent(inout) :: st
     type(mesh_t),   optional, intent(in)    :: mesh
+    logical, optional,        intent(in)    :: verbose
 
     integer :: ib, iqn, ist
-    logical :: same_node
+    logical :: same_node, verbose_
     integer, allocatable :: bstart(:), bend(:)
 
     PUSH_SUB(states_init_block)
@@ -1327,6 +1328,8 @@ contains
     SAFE_ALLOCATE(bend(1:st%nst))
     SAFE_ALLOCATE(st%iblock(1:st%nst, 1:st%d%nik))
     st%iblock = 0
+
+    verbose_ = optional_default(verbose, .true.)
 
     ! count and assign blocks
     ib = 0
@@ -1410,23 +1413,24 @@ contains
 
     st%block_initialized = .true.
 
-    call messages_write('Info: Blocks of states')
-    call messages_info()
-
-     do ib = 1, st%nblocks
-       call messages_write('      Block ')
-       call messages_write(ib)
-       call messages_write(' contains ')
-       call messages_write(st%block_size(ib))
-       call messages_write(' states')
-       if(st%block_size(ib) > 0) then
-         call messages_write(':')
-         call messages_write(st%block_range(ib, 1))
-         call messages_write(' - ')
-         call messages_write(st%block_range(ib, 2))
-       endif
-       call messages_info()
-     end do
+    if(verbose_) then
+      call messages_write('Info: Blocks of states')
+      call messages_info()
+      do ib = 1, st%nblocks
+        call messages_write('      Block ')
+        call messages_write(ib)
+        call messages_write(' contains ')
+        call messages_write(st%block_size(ib))
+        call messages_write(' states')
+        if(st%block_size(ib) > 0) then
+          call messages_write(':')
+          call messages_write(st%block_range(ib, 1))
+          call messages_write(' - ')
+          call messages_write(st%block_range(ib, 2))
+        endif
+        call messages_info()
+      end do
+    end if
     
 !     !cmplxscl
 !     if(st%have_left_states) then
@@ -1781,7 +1785,7 @@ contains
 
     stout%block_initialized = .false.
     if(stin%block_initialized) then
-      call states_init_block(stout)
+      call states_init_block(stout, verbose = .false.)
     end if
 
     stout%packed = stin%packed
