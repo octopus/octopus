@@ -316,7 +316,7 @@ contains
 ! This might seem wrong because, while for ordinary FFTs rs and fs are symmetric,
 ! PNFFT (and NFFT) breaks this symmetry by introducing different grids for rs
 ! and fs. 
-! For some reason I don't understand however this procedure of exchanging the definitions
+! For some reason I don`t understand however this procedure of exchanging the definitions
 ! is working fine for NFFT. Hopefully it will also do for PNFFT 
     
     fs_n(1:3)      = local_N(1:3) 
@@ -469,7 +469,7 @@ contains
 
     integer          :: nn, i1, i2, i3 
     integer          :: npart, ierr
-    integer          :: iunit          ! For debug output to files.
+    integer          :: iunit          !< For debug output to files.
     character(len=3) :: filenum
 
     PUSH_SUB(pnfft_messages_debug)
