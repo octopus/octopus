@@ -68,7 +68,7 @@ deb: dist
 .PHONY: ChangeLog
 
 ChangeLog:
-	(svn2cl -i -r {20090101}:BASE -o .changelog.tmp \$(top_srcdir) && \
+	(svn2cl -i -r {20120101}:BASE -o .changelog.tmp \$(top_srcdir) && \
 	mv .changelog.tmp ChangeLog) || (rm -f .changelog.tmp; touch ChangeLog; \
 	echo 'svn2cl command not found: installing possibly empty changelog.' >&2)
 
