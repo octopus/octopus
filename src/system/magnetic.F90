@@ -213,10 +213,10 @@ contains
   subroutine magnetic_induced(der, st, a_ind, b_ind)
     type(derivatives_t),  intent(in)    :: der
     type(states_t),       intent(inout) :: st
-    FLOAT,                intent(out)   :: a_ind(:, :) ! a_ind(gr%mesh%np_part, gr%mesh%sb%dim)
+    FLOAT,                intent(out)   :: a_ind(:, :) !< a_ind(der%mesh%np_part, der%mesh%sb%dim)
     FLOAT,                intent(out)   :: b_ind(:, :)
-    ! if gr%mesh%sb%dim=3, b_ind(gr%mesh%np_part, gr%mesh%sb%dim)
-    ! if gr%mesh%sb%dim=2, b_ind(gr%mesh%np_part, 1)
+    !< if der%mesh%sb%dim=3, b_ind(der%mesh%np_part, der%mesh%sb%dim)
+    !< if der%mesh%sb%dim=2, b_ind(der%mesh%np_part, 1)
 
     integer :: idir
     FLOAT, allocatable :: jj(:, :, :)
@@ -242,7 +242,7 @@ contains
     ! This minus sign is introduced here because the current that has been used
     ! before is the "number-current density", and not the "charge-current density",
     ! and therefore there is a minus sign missing (electrons are negative charges...)
-    a_ind = - a_ind / P_C
+    a_ind(1:der%mesh%np, 1:der%mesh%sb%dim) = - a_ind(1:der%mesh%np, 1:der%mesh%sb%dim) / P_C
 
     call dderivatives_curl(der, a_ind, b_ind)
 
