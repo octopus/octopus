@@ -117,7 +117,7 @@ SUFFIXES = _oct.f90 .F90 .o
 # to generate _oct.f90 files. Then, we compile this _oct.f90 into
 # an object file and delete the intermediate file.
 .F90.o:
-	@CPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
+	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
 	$(top_srcdir)/build/preprocess.pl $*_oct.f90 \
 	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@"
 	@FC@ @FCFLAGS@ @FCFLAGS_PSPIO@ @FCFLAGS_PFFT@ @FCFLAGS_PNFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_BERKELEYGW@ @FCFLAGS_LIBXC@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
@@ -127,7 +127,7 @@ SUFFIXES = _oct.f90 .F90 .o
 # debugging purposes. It is identical to the first part of
 # the .F90.o rule.
 .F90_oct.f90:
-	@CPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
+	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
 	$(top_srcdir)/build/preprocess.pl $*_oct.f90 \
 	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@"
 
