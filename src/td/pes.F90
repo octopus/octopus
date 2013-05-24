@@ -20,46 +20,21 @@
 #include "global.h"
 
 module PES_m
-  use comm_m
-  use cube_function_m
-  use cube_m
   use datasets_m
-  use density_m
-  use derivatives_m
-  use fft_m
-  use fourier_space_m
   use geometry_m
   use global_m
   use grid_m
   use hamiltonian_m
-  use index_m
-  use io_binary_m
-  use io_function_m
-  use io_m
-  use math_m
   use mesh_m
-  use mesh_cube_parallel_map_m
   use messages_m
   use mpi_m
-#if defined(HAVE_NFFT) 
-  use nfft_m
-#endif
-#if defined(HAVE_NETCDF)
-  use netcdf
-#endif
   use output_m
   use parser_m
   use pes_mask_m
   use pes_rc_m
   use profiling_m
-  use restart_m
   use simul_box_m
-  use states_io_m
   use states_m
-  use string_m
-  use system_m
-  use unit_m
-  use unit_system_m
   use varinfo_m
     
   implicit none
