@@ -64,12 +64,12 @@ module cube_m
     FLOAT, pointer :: Lrs(:,:)  !< The real space coordinates vector: Lrs(i,{1,2,3})={x,y,z}(i)
     FLOAT, pointer :: Lfs(:,:)  !< The fourier space coordinates vector: Lfs(i,{1,2,3})={kx,ky,kz}(i)
 
-    integer, pointer :: np_local(:) => NULL() !< Number of points in each partition
-    integer, pointer :: xlocal(:) => NULL()   !< where does each process start when gathering a function
-    integer, pointer :: local(:,:) => NULL()  !< local to global map used when gathering a function
-    integer, pointer :: np_local_fs(:) => NULL() !< Number of points in each partition
-    integer, pointer :: xlocal_fs(:) => NULL()   !< where does each process start when gathering a function
-    integer, pointer :: local_fs(:,:) => NULL()  !< local to global map used when gathering a function
+    integer, pointer :: np_local(:)    !< Number of points in each partition
+    integer, pointer :: xlocal(:)      !< where does each process start when gathering a function
+    integer, pointer :: local(:,:)     !< local to global map used when gathering a function
+    integer, pointer :: np_local_fs(:) !< Number of points in each fs partition
+    integer, pointer :: xlocal_fs(:)   !< where does each process start when gathering a fs function
+    integer, pointer :: local_fs(:,:)  !< local to global map used when gathering a fs function
 
 
     type(fft_t), pointer :: fft !< the fft object
@@ -136,6 +136,13 @@ contains
     
     nullify(cube%Lrs)
     nullify(cube%Lfs)
+    
+    nullify(cube%np_local)
+    nullify(cube%xlocal)
+    nullify(cube%local)
+    nullify(cube%np_local_fs)
+    nullify(cube%xlocal_fs)
+    nullify(cube%local_fs) 
     
     
     mpi_grp_ = mpi_world
