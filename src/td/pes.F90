@@ -20,7 +20,6 @@
 #include "global.h"
 
 module PES_m
-  use batch_m
   use comm_m
   use cube_function_m
   use cube_m
@@ -53,7 +52,6 @@ module PES_m
   use pes_mask_m
   use pes_rc_m
   use profiling_m
-  use qshepmod_m
   use restart_m
   use simul_box_m
   use states_io_m
@@ -74,16 +72,9 @@ module PES_m
     pes_init,                           &
     pes_init_write,                     &
     pes_calc,                           &
-    pes_restart_read,                   &
-    pes_restart_write,                  &
     pes_output,                         &
-    pes_mask_read_info,                 &
-    pes_mask_dump_full_mapm,            &
-    pes_mask_dump_ar_spherical_cut_m,   &
-    pes_mask_dump_ar_plane_m,           &
-    pes_mask_dump_ar_polar_m,           &
-    pes_mask_dump_full_mapm_cut,        &
-    pes_mask_dump_power_totalm
+    pes_restart_read,                   &
+    pes_restart_write
 
   type PES_t
     logical :: calc_rc
@@ -134,7 +125,6 @@ contains
     this%mask_R=>null()
     !this%shape=0
     this%Lk=>null()
-    !this%resample_lev
     !this%enlarge
     !thisenlarge_nfft
     !this%llr
@@ -339,7 +329,7 @@ contains
     POP_SUB(PES_init_write)
   end subroutine PES_init_write
 
-#include "pes_mask_out_inc.F90"
+
 
 end module PES_m
 

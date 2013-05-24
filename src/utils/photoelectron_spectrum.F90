@@ -28,6 +28,7 @@ program photoelectron_spectrum
   use messages_m
   use parser_m
   use pes_m  
+  use pes_mask_m  
   use profiling_m
   use string_m
   use unit_m

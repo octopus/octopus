@@ -38,9 +38,9 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libtd_a_SOURCES)
 
-pes.o: pes.F90 pes_mask.o pes_mask_out_inc.F90 pes_rc.o
+pes.o: pes.F90 pes_mask.o pes_rc.o
 pes_rc.o : pes_rc.F90
-pes_mask.o : pes_mask.F90 tdpsf.o
+pes_mask.o : pes_mask.F90 pes_mask_out_inc.F90 tdpsf.o
 tdpsf.o: tdpsf.F90
 spectrum.o: spectrum.F90
 propagator.o: propagator.F90 ob_propagator.o propagator_qoct_inc.F90

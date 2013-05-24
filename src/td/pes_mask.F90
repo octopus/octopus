@@ -20,6 +20,7 @@
 #include "global.h"
 
 module pes_mask_m
+  use batch_m
   use comm_m
   use cube_function_m
   use cube_m
@@ -32,6 +33,7 @@ module pes_mask_m
   use grid_m
   use hamiltonian_m
   use index_m
+  use io_binary_m
   use io_function_m
   use io_m
   use lasers_m
@@ -40,9 +42,9 @@ module pes_mask_m
   use mesh_cube_parallel_map_m
   use messages_m
   use mpi_m
-#if defined(HAVE_NFFT) 
-  use nfft_m
-#endif
+! #if defined(HAVE_NFFT) 
+!   use nfft_m
+! #endif
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif
@@ -50,6 +52,8 @@ module pes_mask_m
   use parser_m
   use poisson_m
   use profiling_m
+  use restart_m
+  use qshepmod_m
   use simul_box_m
   use states_io_m
   use states_m
@@ -73,7 +77,18 @@ module pes_mask_m
     pes_mask_cube_to_mesh,              &
     pes_mask_generate_mask_function,    &
     pes_mask_x_to_k,                    &
-    pes_mask_k_to_x
+    pes_mask_k_to_x,                    &
+    pes_mask_read_info,                 &
+    pes_mask_dump_full_mapm,            &
+    pes_mask_dump_ar_spherical_cut_m,   &
+    pes_mask_dump_ar_plane_m,           &
+    pes_mask_dump_ar_polar_m,           &
+    pes_mask_dump_full_mapm_cut,        &
+    pes_mask_dump_power_totalm,         &
+    pes_mask_restart_read,              &
+    pes_mask_restart_write,             &
+    pes_mask_output
+    
   
   type PES_mask_t
     CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
@@ -101,7 +116,6 @@ module pes_mask_m
     FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to an cube index
     !< we implicitly assume k to be the same for all directions
     
-    integer          :: resample_lev           !< resampling level
     integer          :: enlarge                !< Fourier space enlargement
     integer          :: enlarge_nfft           !< NFFT space enlargement
     !     integer          :: llr(MAX_DIM)           !< the size of the rescaled cubic mesh
@@ -147,7 +161,8 @@ module pes_mask_m
     PW_MAP_BARE_FFT    =  3,  &    !< FFT - normally from fftw3
     PW_MAP_TDPSF       =  4,  &    !< time-dependent phase-space filter
     PW_MAP_NFFT        =  5,  &    !< non-equispaced fft (NFFT)
-    PW_MAP_PFFT        =  6        !< use PFFT
+    PW_MAP_PFFT        =  6,  &    !< use PFFT
+    PW_MAP_PNFFT       =  7        !< use PNFFT
   
   integer, parameter ::       &
     M_SIN2            =  1,   &  
@@ -180,6 +195,8 @@ contains
     integer :: defaultMask,k1,k2,st1,st2, optimize_parity(3)
     logical :: optimize(3)
     FLOAT, allocatable  ::  XX(:,:)  
+    
+    integer :: mpi_comm
     
     PUSH_SUB(PES_mask_init)
     
@@ -296,11 +313,27 @@ contains
     !% Non-equispaced FFT map. 
     !%Option pfft_map 6
     !% Use PFFT libraries. 
+    !%Option pnfft_map 7
+    !% Use PNFFT libraries. 
     !%End
     call parse_integer(datasets_check('PESMaskPlaneWaveProjection'),PW_MAP_BARE_FFT,mask%pw_map_how)
     
     if(.not.varinfo_valid_option('PESMaskPlaneWaveProjection', mask%pw_map_how)) call input_error('PESMaskPlaneWaveProjection')
     call messages_print_var_option(stdout, "PESMaskPlaneWaveProjection", mask%pw_map_how)
+
+    if (mask%pw_map_how ==  PW_MAP_PFFT .and. (.not. mask%mesh%parallel_in_domains)) then
+      message(1)= "Trying to use PESMaskPlaneWaveProjection = pfft_map with no domain parallelization."
+      message(2)= "Projection method changed to more efficient fft_map."
+      call messages_warning(2)
+      mask%pw_map_how = PW_MAP_BARE_FFT
+    end if
+
+    if (mask%pw_map_how ==  PW_MAP_PNFFT .and. (.not. mask%mesh%parallel_in_domains)) then
+      message(1)= "Trying to use PESMaskPlaneWaveProjection = pnfft_map with no domain parallelization."
+      message(2)= "Projection method changed to more efficient nfft_map."
+      call messages_warning(2)
+      mask%pw_map_how = PW_MAP_NFFT
+    end if
     
 #if !defined(HAVE_NFFT) 
     if (mask%pw_map_how ==  PW_MAP_NFFT) then
@@ -311,17 +344,18 @@ contains
     
 #if !defined(HAVE_PFFT) 
     if (mask%pw_map_how ==  PW_MAP_PFFT) then
-      message(1) = "PESMaskPlaneWaveProjection = pfft_map requires PFFT. Recompile and try again." 
+      message(1) = "PESMaskPlaneWaveProjection = pfft_map requires linpfft. Recompile and try again." 
+      call messages_fatal(1) 
+    endif
+#endif
+
+#if !defined(HAVE_PNFFT) 
+    if (mask%pw_map_how ==  PW_MAP_PNFFT) then
+      message(1) = "PESMaskPlaneWaveProjection = pnfft_map requires libpnfft. Recompile and try again." 
       call messages_fatal(1) 
     endif
 #endif
     
-    if (mask%pw_map_how ==  PW_MAP_PFFT .and. (.not. mask%mesh%parallel_in_domains)) then
-      message(1)= "Trying to use PESMaskPlaneWaveProjection = pfft_map with no domain parallelization."
-      message(2)= "Projection method changed to more efficient fft_map."
-      call messages_warning(2)
-      mask%pw_map_how = PW_MAP_BARE_FFT
-    end if
     
     !%Variable PESMaskEnlargeLev
     !%Type integer
@@ -385,12 +419,16 @@ contains
         mpi_grp = mask%mesh%mpi_grp, need_partition=.true.)
       !        print *,mpi_world%rank, "mask%mesh%mpi_grp%comm", mask%mesh%mpi_grp%comm, mask%mesh%mpi_grp%size
       !         print *,mpi_world%rank, "mask%cube%mpi_grp%comm", mask%cube%mpi_grp%comm, mask%cube%mpi_grp%size
-      mask%ll(1) = mask%cube%fs_n(3)
-      mask%ll(2) = mask%cube%fs_n(1)
-      mask%ll(3) = mask%cube%fs_n(2)
+      
+
+!       mask%ll(1) = mask%cube%fs_n(3)
+!       mask%ll(2) = mask%cube%fs_n(1)
+!       mask%ll(3) = mask%cube%fs_n(2)
 !     Note: even if tempting, setting       
 !     mask%ll(1:3) = mask%cube%fs_n(1:3) 
 !     results in the wrong index mapping! (1->3, 2->1, 3->2) 
+!     Well.. very much agains intuit it turns out to be 
+      mask%ll(1:3) = mask%cube%rs_n(1:3) 
 
       mask%fft = mask%cube%fft
       mask%np = mesh%np_part ! the mask is local
@@ -418,56 +456,31 @@ contains
       ! we just add 2 points for the enlarged region
       if (mask%enlarge_nfft /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
       
-#ifdef HAVE_NFFT    
-      !Set NFFT defaults to values that are optimal for PES (at least for the cases I have tested)
-      !These values are overridden by the NFFT options in the input file 
-      mask%fft%nfft%set_defaults = .true.
-      mask%fft%nfft%guru = .true.
-      mask%fft%nfft%mm = 2 
-      mask%fft%nfft%sigma = CNST(1.1)
-      mask%fft%nfft%precompute = NFFT_PRE_PSI
-#endif
+      call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_NFFT, nn_out = ll, &
+                     spacing = mesh%spacing, tp_enlarge = M_TWO**mask%enlarge_nfft )
+                     
+      mask%ll = ll 
+      mask%fft = mask%cube%fft
+      mask%np = mesh%np_part_global       
+ 
       
-      ! These options should not affect NFFT scheme  
-      optimize(1:3) = .false.
-      optimize(sb%periodic_dim+1:sb%dim) = .true.
-      optimize_parity(1:sb%periodic_dim) = 0
-      optimize_parity(sb%periodic_dim+1:sb%dim) = 1
-      
-      call fft_init(mask%fft, mask%ll, sb%dim, FFT_COMPLEX, FFTLIB_NFFT, optimize, optimize_parity )
-      
-      SAFE_ALLOCATE(XX(1:mask%ll(1),3))
-      
-      !Generate the NFFT-enlarged node grid
-      if (mask%enlarge_nfft > 0) then
-        do ii=2, mask%ll(1)-1 
-          XX(ii,1)= (ii - int(mask%ll(1)/2) -1)*mask%spacing(1)
-        end do
-        XX(1,1)= (-int(mask%ll(1)/2))*mask%spacing(1)*M_TWO**mask%enlarge_nfft 
-        XX(mask%ll(1),1)= (int(mask%ll(1)/2))*mask%spacing(1)*M_TWO**mask%enlarge_nfft 
-        
-      else
-        do ii=1, mask%ll(1) 
-          XX(ii,1)= (ii - int(mask%ll(1)/2) -1)*mask%spacing(1)
-        end do
+    case(PW_MAP_PNFFT)  
+    
+      if (mask%enlarge_nfft /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
+
+      call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_PNFFT, nn_out = ll, &
+                     spacing = mesh%spacing, tp_enlarge = M_TWO**mask%enlarge_nfft, &
+                     mpi_grp = mask%mesh%mpi_grp, need_partition=.true.)
+                     
+                     
+      mask%ll(1:3) = mask%cube%fs_n(1:3) 
+
+      mask%fft = mask%cube%fft
+      mask%np = mesh%np_part ! the mask is local
+      if ( mask%mesh%parallel_in_domains .and. mask%cube%parallel_in_domains) then
+        call mesh_cube_parallel_map_init(mask%mesh_cube_map, mask%mesh, mask%cube)
       end if
-      
-      XX(:,2) = XX(:,1)
-      XX(:,3) = XX(:,1)
-      
-      !Set the node points and precompute the NFFT plan
-      call fft_init_stage1(mask%fft, XX)
-      
-      SAFE_DEALLOCATE_A(XX)
-      
-      call cube_init(mask%cube, mask%ll, mesh%sb)  
-      SAFE_ALLOCATE(mask%cube%fft)
-      mask%cube%fft = mask%fft
-      call fft_get_dims(mask%cube%fft, mask%cube%rs_n_global, mask%cube%fs_n_global, mask%cube%rs_n, mask%cube%fs_n, &
-        mask%cube%rs_istart, mask%cube%fs_istart)
-      
-      mask%np = mesh%np_part_global 
-      
+
     case default 
       !Program should die before coming here
       write(message(1),'(a)') "PESMaskPlaneWaveProjection unrecognized option." 
@@ -477,11 +490,27 @@ contains
     
     !Indices  
     
-    mask%fs_istart = mask%cube%fs_istart 
-    mask%fs_n = mask%cube%fs_n 
-    mask%fs_n_global = mask%cube%fs_n_global 
-    
-    print *, mpi_world%rank, " mask%ll", mask%ll(1:3), "states -",st%st_start,st%st_end
+    if (mask%pw_map_how == PW_MAP_PFFT) then
+      mask%fs_istart = mask%cube%rs_istart 
+      mask%fs_n = mask%cube%rs_n 
+      mask%fs_n_global = mask%cube%rs_n_global 
+    else
+      mask%fs_istart = mask%cube%fs_istart 
+      mask%fs_n = mask%cube%fs_n 
+      mask%fs_n_global = mask%cube%fs_n_global 
+    end if 
+
+    if(in_debug_mode) then
+      print *,mpi_world%rank, "mask%ll                  ", mask%ll(:)
+      print *,mpi_world%rank, "mask%cube%fs_n_global(:) ", mask%cube%fs_n_global(:)      
+      print *,mpi_world%rank, "mask%cube%fs_n(:)        ", mask%cube%fs_n(:)
+      print *,mpi_world%rank, "mask%cube%fs_istart(:)   ", mask%cube%fs_istart(:)
+      print *,mpi_world%rank, "mask%cube%rs_n_global(:) ", mask%cube%rs_n_global(:)      
+      print *,mpi_world%rank, "mask%cube%rs_n(:)        ", mask%cube%rs_n(:)
+      print *,mpi_world%rank, "mask%cube%rs_istart(:)   ", mask%cube%rs_istart(:)
+    end if 
+
+!     print *, mpi_world%rank, " mask%ll", mask%ll(1:3), "states -",st%st_start,st%st_end
     !Allocations
     call cube_function_null(mask%cM)    
     call zcube_function_alloc_RS(mask%cube, mask%cM, force_alloc = .true.)
@@ -678,13 +707,29 @@ contains
           do it = 1, max_iter
             field=M_ZERO
             call laser_field(hm%ep%lasers(il), field, it*dt)
-            mask%ext_pot(it,:)= mask%ext_pot(it,:)-field(:) !Sum up all the fields (for some reason needs negative sign)
+!             mask%ext_pot(it,:)= mask%ext_pot(it,:)-field(:) !Sum up all the fields (for some reason needs negative sign)
+            mask%ext_pot(it,:)= mask%ext_pot(it,:)+field(:) 
           end do
         end select
       end do
     else 
     end if
 
+    
+! NOTE ON FOURIER TRANSFORM CONVENTIONS:
+! In octopus we use FFT forward to map real space (rs) wavefunctions to fourier space (fs).
+! The forward discrete FT (DFT) transform is defined as:
+! 
+!  X_k = \sum_{n=0}^{N-1} x_n * exp(-i 2\pi k n / N)  
+! 
+! Here, we want to use the DFT to expand on planewaves exp(i k r) which are are the eigenstates of the 
+! momentum operator p = -i Nabla. 
+! Due to the inconsistency between the forward DFT and the eigenstates of p in the sign at the exponent
+! we decide to stick with the convention and flip the sign of the momentum.
+
+    
+    if(mask%pw_map_how /= PW_MAP_PNFFT .and. &
+       mask%pw_map_how /= PW_MAP_NFFT) mask%Lk = - mask%Lk ! to make up with octopus rs -> fs convention 
 
 
     POP_SUB(PES_mask_init)
@@ -956,41 +1001,19 @@ contains
 
     PUSH_SUB(PES_mask_Volkov_time_evolution_wf)
 
-
-    ! propagate wavefunction in momentum space in presence of a td field (in the velocity gauge)
-    if(mask%cube%fft%library == FFTLIB_PFFT) then !PFFT FS indices are transposed
-
-      do ix = 1, mask%fs_n(1)
-        KK(3) = mask%Lk(ix + mask%fs_istart(1) - 1)
-        do iy = 1, mask%fs_n(2)
-          KK(1) = mask%Lk(iy + mask%fs_istart(2) - 1)
-          do iz = 1, mask%fs_n(3)
-            KK(2) = mask%Lk(iz + mask%fs_istart(3) - 1)
-            
-            vec = sum(( KK(1:mesh%sb%dim) - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
-            wf(iz, ix, iy) = wf(iz, ix, iy) * exp(-M_zI * dt * vec)
-            
-            
-          end do
+    ! propagate wavefunction in momentum space in presence of a td field (in the velocity gauge)      
+    do ix = 1, mask%ll(1)
+      KK(1) = mask%Lk(ix + mask%fs_istart(1) - 1)
+      do iy = 1, mask%ll(2)
+        KK(2) = mask%Lk(iy + mask%fs_istart(2) - 1)
+        do iz = 1, mask%ll(3)
+          KK(3) = mask%Lk(iz + mask%fs_istart(3) - 1)
+          vec = sum(( KK(1:mesh%sb%dim) - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
+          wf(ix, iy, iz) = wf(ix, iy, iz) * exp(-M_zI * dt * vec)
         end do
       end do
-    else
+    end do
       
-      do ix = 1, mask%ll(1)
-        KK(1) = mask%Lk(ix + mask%fs_istart(1) - 1)
-        do iy = 1, mask%ll(2)
-          KK(2) = mask%Lk(iy + mask%fs_istart(2) - 1)
-          do iz = 1, mask%ll(3)
-            KK(3) = mask%Lk(iz + mask%fs_istart(3) - 1)
-            vec = sum(( KK(1:mesh%sb%dim) - mask%ext_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO
-            wf(ix, iy, iz) = wf(ix, iy, iz) * exp(-M_zI * dt * vec)
-          end do
-        end do
-      end do
-      
-    end if
-    
-
     POP_SUB(PES_mask_Volkov_time_evolution_wf)
   end subroutine PES_mask_Volkov_time_evolution_wf
 
@@ -1294,6 +1317,7 @@ contains
     
     type(profile_t), save :: prof
     type(cube_function_t) :: cf_tmp
+    FLOAT                 :: norm 
     
     call profiling_in(prof, "PESMASK_X_to_K")
     
@@ -1315,7 +1339,9 @@ contains
       call tdpsf_X_to_K(mask%psf, wfin, wfout)
       
     case(PW_MAP_NFFT)
-      call zfft_forward(mask%cube%fft, wfin, wfout)
+    call zfft_backward(mask%cube%fft, wfin, wfout, norm)
+    wfout = wfout * norm
+!       call zfft_forward(mask%cube%fft, wfin, wfout)
       
     case(PW_MAP_PFFT)
       call cube_function_null(cf_tmp)    
@@ -1326,6 +1352,15 @@ contains
       wfout = cf_tmp%fs
       call zcube_function_free_RS(mask%cube, cf_tmp)
       call cube_function_free_fs(mask%cube, cf_tmp)
+
+    case(PW_MAP_PNFFT)
+      call zfft_backward(mask%cube%fft, wfin, wfout, norm)
+      wfout = wfout * norm
+
+!       call zfft_forward(mask%cube%fft, wfin, wfout)
+
+!       call zfft_backward(mask%cube%fft, M_zI*conjg(wfin), wfout)
+!       wfout =  M_zI*conjg(wfout)
       
     case default
       
@@ -1346,6 +1381,7 @@ contains
     
     type(profile_t), save :: prof
     type(cube_function_t) :: cf_tmp
+    FLOAT :: norm
     
     call profiling_in(prof, "PESMASK_K_toX")
     
@@ -1367,7 +1403,9 @@ contains
       call tdpsf_K_to_X(mask%psf, wfin,wfout)
       
     case(PW_MAP_NFFT)
-      call zfft_backward(mask%cube%fft, wfin,wfout)
+      call zfft_forward(mask%cube%fft, wfin, wfout, norm)
+      wfout = wfout / norm
+!       call zfft_backward(mask%cube%fft, wfin,wfout)
       
     case(PW_MAP_PFFT)
       
@@ -1379,6 +1417,15 @@ contains
       wfout = cf_tmp%zRs
       call zcube_function_free_RS(mask%cube, cf_tmp)
       call cube_function_free_fs(mask%cube, cf_tmp)
+
+    case(PW_MAP_PNFFT)
+      call zfft_forward(mask%cube%fft, wfin, wfout, norm)
+      wfout = wfout / norm
+      
+!       call zfft_backward(mask%cube%fft, wfin,wfout)
+
+!       call zfft_forward(mask%cube%fft, M_zI*conjg(wfin),wfout)
+!       wfout =  M_zI*conjg(wfout)
       
 
     case default
@@ -1624,6 +1671,9 @@ contains
     
     call profiling_out(prof)
   end subroutine PES_mask_calc
+  
+  #include "pes_mask_out_inc.F90"
+  
 end module pes_mask_m
 
 !! Local Variables:

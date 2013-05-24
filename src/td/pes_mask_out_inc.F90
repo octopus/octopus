@@ -148,6 +148,9 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
   integer :: ist, ik, kx, ky, kz, idim
   FLOAT   :: scale
   FLOAT, pointer :: PESKloc(:,:,:)
+  character(len=128) :: file
+
+
 ! #ifdef HAVE_MPI
 !   type(profile_t), save :: reduce_prof
 ! #endif
@@ -193,7 +196,37 @@ subroutine PES_mask_create_full_map(mask, st, PESK, wfAk)
 
   
   if (mask%cube%parallel_in_domains) then
-    call dcube_function_allgather(mask%cube, PESK, PESKloc, transpose = .true.)
+
+    call dcube_function_allgather(mask%cube, PESK, PESKloc, gatherfs = .true.)
+    
+!     if(mask%pw_map_how .eq. PW_MAP_PFFT) then
+!       call dcube_function_allgather(mask%cube, PESK, PESKloc, & 
+!                                     order = (/2,3,1/))
+! 
+!     else if(mask%pw_map_how .eq. PW_MAP_PNFFT) then
+!       
+!       
+! !       PESK(mask%fs_istart(1):mask%fs_istart(1)+mask%ll(1)-1, &
+! !            mask%fs_istart(2):mask%fs_istart(2)+mask%ll(2)-1, &
+! !            mask%fs_istart(3):mask%fs_istart(3)+mask%ll(3)-1) = &
+! !         PESKloc(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3))
+! !       
+! !       write(file, '(i3.3)') mpi_world%rank
+! !       file = "fullmap_"//trim(file)
+! !       print *,"write file: ",file
+! !       call PES_mask_dump_full_mapM(PESK, file, mask%Lk)
+! 
+! 
+!       
+!       call dcube_function_allgather(mask%cube, PESK, PESKloc, gatherfs = .true.)
+! !                                     order = (/1,3,2/))
+! !     else
+! !       call dcube_function_allgather(mask%cube, PESK, PESKloc)
+!       
+!     end if
+    
+!     call dcube_function_allgather(mask%cube, PESK, PESKloc, gatherfs = .true.)
+
     SAFE_DEALLOCATE_P(PESKloc) 
   end if
 
@@ -1766,7 +1799,17 @@ subroutine PES_mask_write_orbital(mask, filename, wf)
   
   if (mask%cube%parallel_in_domains) then
     SAFE_ALLOCATE(gwf(1:ll(1),1:ll(2),1:ll(3))) 
-    call zcube_function_allgather(mask%cube, gwf, wf, transpose = .true.)
+!     call zcube_function_allgather(mask%cube, gwf, wf, transpose = .true.)
+    call zcube_function_allgather(mask%cube, gwf, wf, gatherfs = .true.)
+
+!     if(mask%pw_map_how .eq. PW_MAP_PFFT) then
+!       call zcube_function_allgather(mask%cube, gwf, wf, & 
+!                                     order = (/2,3,1/))
+! 
+!     else if(mask%pw_map_how .eq. PW_MAP_PNFFT) then
+! !       call zcube_function_allgather(mask%cube, gwf, wf, & 
+! !                                     order = (/2,3,1/))
+!     end if
     if(mpi_grp_is_root(mask%cube%mpi_grp)) then !only root writes the output   
       call io_binary_write(filename, np, gwf(:,:,:), ierr)
     end if
@@ -1785,6 +1828,45 @@ subroutine PES_mask_write_orbital(mask, filename, wf)
 
   POP_SUB(PES_mask_write_orbital)  
 end subroutine PES_mask_write_orbital
+
+
+! ---------------------------------------------------------
+subroutine PES_mask_read_orbital(mask, filename, wf)
+  type(PES_mask_t),  intent(in)  :: mask
+  character(len=80), intent(in)  :: filename
+  CMPLX,             intent(out) :: wf(:,:,:)
+
+  integer :: ll(3), np, ierr
+  CMPLX, allocatable :: gwf(:,:,:)
+
+
+  PUSH_SUB(PES_mask_read_orbital)
+
+
+  ll(1:3) = mask%fs_n_global(1:3)
+  np = ll(1)*ll(2)*ll(3) 
+  ierr = 0 
+  
+  if (mask%cube%parallel_in_domains) then
+    SAFE_ALLOCATE(gwf(1:ll(1),1:ll(2),1:ll(3))) 
+    !misses cube_function_allscatter
+
+    SAFE_DEALLOCATE_A(gwf)
+  else
+    call io_binary_read(filename, np, wf(:,:,:), ierr)    
+  end if
+
+  
+  if(ierr > 0) then
+    message(1) = "Failed to read file "//trim(filename)
+    call messages_fatal(1)
+  end if
+
+
+
+  POP_SUB(PES_mask_read_orbital)  
+end subroutine PES_mask_read_orbital
+
 
 
 ! ---------------------------------------------------------
