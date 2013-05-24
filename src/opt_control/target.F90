@@ -140,15 +140,15 @@ contains
   !! prior to a forward evolution, regarding the target. Right now
   !! some of those initizalizations are not done here, and should
   !! be moved.
-  subroutine target_init_propagation(target)
-    type(target_t), intent(inout)    :: target
+  subroutine target_init_propagation(tg)
+    type(target_t), intent(inout)    :: tg
     PUSH_SUB(target_init_propagation)
 
-    select case(target%type)
+    select case(tg%type)
     case(oct_tg_hhgnew)
-      target%vel = M_z0
-      target%gvec = M_z0
-      target%acc = M_z0
+      tg%vel = M_z0
+      tg%gvec = M_z0
+      tg%acc = M_z0
     end select
 
     POP_SUB(target_init_propagation)
@@ -157,12 +157,12 @@ contains
 
   ! ----------------------------------------------------------------------
   !> This just copies the states_t variable present in target, into st.
-  subroutine target_get_state(target, st)
-    type(target_t), intent(in)    :: target
+  subroutine target_get_state(tg, st)
+    type(target_t), intent(in)    :: tg
     type(states_t), intent(inout) :: st
 
     PUSH_SUB(target_get_state)
-    call states_copy(st, target%st)
+    call states_copy(st, tg%st)
 
     POP_SUB(target_get_state)
   end subroutine target_get_state
@@ -171,13 +171,13 @@ contains
 
   ! ----------------------------------------------------------------------
   !> The target is initialized, mainly by reading from the inp file.
-  subroutine target_init(gr, geo, stin, td, w0, target, oct, ep)
+  subroutine target_init(gr, geo, stin, td, w0, tg, oct, ep)
     type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(in)    :: geo
     type(states_t),   intent(inout) :: stin 
     type(td_t),       intent(in)    :: td
     FLOAT,            intent(in)    :: w0
-    type(target_t),   intent(inout) :: target
+    type(target_t),   intent(inout) :: tg
     type(oct_t),      intent(in)    :: oct
     type(epot_t),     intent(inout) :: ep
 
@@ -250,47 +250,47 @@ contains
     !% OCTHarmonicWeigth string. It attempts to optimized the integral of the harmonic spectrum multiplied
     !% by some user defined weight function.
     !%End
-    call parse_integer(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, target%type)
-    if(.not.varinfo_valid_option('OCTTargetOperator', target%type)) &
+    call parse_integer(datasets_check('OCTTargetOperator'), oct_tg_gstransformation, tg%type)
+    if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &
       call input_error('OCTTargetOperator')
 
-    call states_copy(target%st, stin)
-    call states_deallocate_wfns(target%st)
-    call states_allocate_wfns(target%st, gr%mesh, TYPE_CMPLX)
+    call states_copy(tg%st, stin)
+    call states_deallocate_wfns(tg%st)
+    call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
 
-    nullify(target%td_fitness)
+    nullify(tg%td_fitness)
 
-    select case(target%type)
+    select case(tg%type)
     case(oct_tg_groundstate)
       message(1) =  'Info: Using Ground State for TargetOperator'
       call messages_info(1)
-      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, ierr, exact = .true.)
+      call restart_read(trim(restart_dir)//GS_DIR, tg%st, gr, ierr, exact = .true.)
       
     case(oct_tg_excited) 
 
       message(1) =  'Info: TargetOperator is a linear combination of Slater determinants.'
       call messages_info(1)
 
-      call states_look (trim(restart_dir)//GS_DIR, gr%mesh%mpi_grp, ip, ip, target%st%nst, ierr)
-      target%st%st_start = 1
-      target%st%st_end   = target%st%nst
+      call states_look (trim(restart_dir)//GS_DIR, gr%mesh%mpi_grp, ip, ip, tg%st%nst, ierr)
+      tg%st%st_start = 1
+      tg%st%st_end   = tg%st%nst
 
-      SAFE_DEALLOCATE_P(target%st%occ)
-      SAFE_DEALLOCATE_P(target%st%eigenval)
-      SAFE_DEALLOCATE_P(target%st%node)
+      SAFE_DEALLOCATE_P(tg%st%occ)
+      SAFE_DEALLOCATE_P(tg%st%eigenval)
+      SAFE_DEALLOCATE_P(tg%st%node)
 
-      SAFE_ALLOCATE(     target%st%occ(1:target%st%nst, 1:target%st%d%nik))
-      SAFE_ALLOCATE(target%st%eigenval(1:target%st%nst, 1:target%st%d%nik))
-      SAFE_ALLOCATE(    target%st%node(1:target%st%nst))
-      if(target%st%d%ispin == SPINORS) then
-        SAFE_DEALLOCATE_P(target%st%spin)
-        SAFE_ALLOCATE(target%st%spin(1:3, 1:target%st%nst, 1:target%st%d%nik))
+      SAFE_ALLOCATE(     tg%st%occ(1:tg%st%nst, 1:tg%st%d%nik))
+      SAFE_ALLOCATE(tg%st%eigenval(1:tg%st%nst, 1:tg%st%d%nik))
+      SAFE_ALLOCATE(    tg%st%node(1:tg%st%nst))
+      if(tg%st%d%ispin == SPINORS) then
+        SAFE_DEALLOCATE_P(tg%st%spin)
+        SAFE_ALLOCATE(tg%st%spin(1:3, 1:tg%st%nst, 1:tg%st%d%nik))
       end if
-      call states_allocate_wfns(target%st, gr%mesh, TYPE_CMPLX)
-      target%st%node(:)  = 0
+      call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
+      tg%st%node(:)  = 0
 
-      call restart_read(trim(restart_dir)//GS_DIR, target%st, gr, ierr, exact = .true.)
-      call excited_states_init(target%est, target%st, "oct-excited-state-target") 
+      call restart_read(trim(restart_dir)//GS_DIR, tg%st, gr, ierr, exact = .true.)
+      call excited_states_init(tg%est, tg%st, "oct-excited-state-target") 
 
     case(oct_tg_exclude_state)
 
@@ -307,9 +307,9 @@ contains
       !% in this list only states that have been calculated in a previous "gs" or "unocc" calculation,
       !% or otherwise the error will be silently ignored.
       !%End
-      call parse_string(datasets_check('OCTExcludedStates'), "1", target%excluded_states_list)
-      call states_deallocate_wfns(target%st)
-      call restart_look_and_read(target%st, gr)
+      call parse_string(datasets_check('OCTExcludedStates'), "1", tg%excluded_states_list)
+      call states_deallocate_wfns(tg%st)
+      call restart_look_and_read(tg%st, gr)
 
     case(oct_tg_gstransformation)  
 
@@ -330,22 +330,22 @@ contains
       !%End
       if(parse_isdef(datasets_check('OCTTargetTransformStates')) /= 0) then
         if(parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
-          call states_copy(tmp_st, target%st)
+          call states_copy(tmp_st, tg%st)
           call states_deallocate_wfns(tmp_st)
           call restart_look_and_read(tmp_st, gr)
-          SAFE_ALLOCATE(rotation_matrix(1:target%st%nst, 1:tmp_st%nst))
+          SAFE_ALLOCATE(rotation_matrix(1:tg%st%nst, 1:tmp_st%nst))
           rotation_matrix = M_z0
-          do ist = 1, target%st%nst
+          do ist = 1, tg%st%nst
             do jst = 1, parse_block_cols(blk, ist - 1)
               call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
             end do
           end do
 
-          call states_rotate(gr%mesh, target%st, tmp_st, rotation_matrix)
+          call states_rotate(gr%mesh, tg%st, tmp_st, rotation_matrix)
           SAFE_DEALLOCATE_A(rotation_matrix)
           call states_end(tmp_st)
           call parse_block_end(blk)
-          call density_calc(target%st, gr, target%st%rho)
+          call density_calc(tg%st, gr, tg%st%rho)
         else
           message(1) = '"OCTTargetTransformStates" has to be specified as block.'
           call messages_info(1)
@@ -383,19 +383,19 @@ contains
           call parse_block_integer(blk, ib - 1, 2, inik)
 
           ! read formula strings and convert to C strings
-          do id = 1, target%st%d%dim
-            do ist = 1, target%st%nst
-              do ik = 1, target%st%d%nik   
+          do id = 1, tg%st%d%dim
+            do ist = 1, tg%st%nst
+              do ik = 1, tg%st%d%nik   
                 
                 ! does the block entry match and is this node responsible?
                 if(.not. (id  ==  idim .and. ist  ==  inst .and. ik  ==  inik    &
-                  .and. target%st%st_start  <=  ist .and. target%st%st_end >= ist) ) cycle
+                  .and. tg%st%st_start  <=  ist .and. tg%st%st_end >= ist) ) cycle
                 
                 ! parse formula string
                 call parse_block_string(                            &
-                  blk, ib - 1, 3, target%st%user_def_states(id, ist, ik))
+                  blk, ib - 1, 3, tg%st%user_def_states(id, ist, ik))
                 ! convert to C string
-                call conv_to_C_string(target%st%user_def_states(id, ist, ik))
+                call conv_to_C_string(tg%st%user_def_states(id, ist, ik))
                 
                 do ip = 1, gr%mesh%np
                   xx = gr%mesh%x(ip, :)
@@ -403,19 +403,19 @@ contains
                   
                   ! parse user-defined expressions
                   call parse_expression(psi_re, psi_im, &
-                    gr%sb%dim, xx, rr, M_ZERO, target%st%user_def_states(id, ist, ik))
+                    gr%sb%dim, xx, rr, M_ZERO, tg%st%user_def_states(id, ist, ik))
                   ! fill state
-                  target%st%zpsi(ip, id, ist, ik) = psi_re + M_zI * psi_im
+                  tg%st%zpsi(ip, id, ist, ik) = psi_re + M_zI * psi_im
                 end do
                 ! normalize orbital
-                call zstates_normalize_orbital(gr%mesh, target%st%d%dim, &
-                  target%st%zpsi(:,:, ist, ik))
+                call zstates_normalize_orbital(gr%mesh, tg%st%d%dim, &
+                  tg%st%zpsi(:,:, ist, ik))
               end do
             end do
           enddo
         end do
         call parse_block_end(blk)
-        call density_calc(target%st, gr, target%st%rho)
+        call density_calc(tg%st, gr, tg%st%rho)
       else
         message(1) = '"OCTTargetUserdefined" has to be specified as block.'
         call messages_fatal(1)
@@ -449,29 +449,29 @@ contains
       !%End
 
       if(parse_isdef('OCTTargetDensity') /= 0) then
-        SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
-        target%rho = M_ZERO
+        SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
+        tg%rho = M_ZERO
         call parse_string(datasets_check('OCTTargetDensity'), "0", expression)
 
 
         if(trim(expression)  ==  'OCTTargetDensityFromState') then
 
           if(parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
-            call states_copy(tmp_st, target%st)
+            call states_copy(tmp_st, tg%st)
             SAFE_DEALLOCATE_P(tmp_st%zpsi)
             call restart_look_and_read(tmp_st, gr)
-            SAFE_ALLOCATE(rotation_matrix(1:target%st%nst, 1:tmp_st%nst))
+            SAFE_ALLOCATE(rotation_matrix(1:tg%st%nst, 1:tmp_st%nst))
             rotation_matrix = M_z0
-            do ist = 1, target%st%nst
+            do ist = 1, tg%st%nst
               do jst = 1, parse_block_cols(blk, ist - 1)
                 call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
               end do
             end do
-            call states_rotate(gr%mesh, target%st, tmp_st, rotation_matrix)
+            call states_rotate(gr%mesh, tg%st, tmp_st, rotation_matrix)
             SAFE_DEALLOCATE_A(rotation_matrix)
-            call density_calc(target%st, gr, target%st%rho)
+            call density_calc(tg%st, gr, tg%st%rho)
             do ip = 1, gr%mesh%np
-              target%rho(ip) = sum(target%st%rho(ip, 1:target%st%d%spin_channels))
+              tg%rho(ip) = sum(tg%st%rho(ip, 1:tg%st%d%spin_channels))
             end do
             call states_end(tmp_st)
             call parse_block_end(blk)
@@ -488,11 +488,11 @@ contains
             call mesh_r(gr%mesh, ip, rr, coords = xx)
             ! parse user-defined expression
             call parse_expression(psi_re, psi_im, gr%sb%dim, xx, rr, M_ZERO, expression)
-            target%rho(ip) = psi_re
+            tg%rho(ip) = psi_re
           end do
           ! Normalize
-          rr = dmf_integrate(gr%mesh, target%rho)
-          target%rho = (-target%st%val_charge) * target%rho/rr
+          rr = dmf_integrate(gr%mesh, tg%rho)
+          tg%rho = (-tg%st%val_charge) * tg%rho/rr
         end if
 
       else
@@ -512,15 +512,15 @@ contains
       !%End
 
       if(parse_isdef('OCTLocalTarget') /= 0) then
-        SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
-        target%rho = M_ZERO
+        SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
+        tg%rho = M_ZERO
         call parse_string(datasets_check('OCTLocalTarget'), "0", expression)
         call conv_to_C_string(expression)
         do ip = 1, gr%mesh%np
           call mesh_r(gr%mesh, ip, rr, coords = xx)
           ! parse user-defined expression
           call parse_expression(psi_re, psi_im, gr%sb%dim, xx, rr, M_ZERO, expression)
-          target%rho(ip) = psi_re
+          tg%rho(ip) = psi_re
         end do
       else
         message(1) = 'If OCTTargetOperator = oct_tg_local, then you must give the shape'
@@ -530,18 +530,18 @@ contains
 
     case(oct_tg_td_local)
       if(parse_block(datasets_check('OCTTdTarget'),blk)==0) then
-        call parse_block_string(blk, 0, 0, target%td_local_target)
-        call conv_to_C_string(target%td_local_target)
-        SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
+        call parse_block_string(blk, 0, 0, tg%td_local_target)
+        call conv_to_C_string(tg%td_local_target)
+        SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
         call parse_block_end(blk)
       else
         message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block.'
         call messages_fatal(1)
       end if
-      target%dt = td%dt
-      SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
-      target%td_fitness = M_ZERO
-      call target_build_tdlocal(target, gr, M_ZERO)
+      tg%dt = td%dt
+      SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
+      tg%td_fitness = M_ZERO
+      call target_build_tdlocal(tg, gr, M_ZERO)
 
     case(oct_tg_hhg)
       !%Variable OCTOptimizeHarmonicSpectrum
@@ -580,14 +580,14 @@ contains
       !%End
       if(parse_isdef(datasets_check('OCTOptimizeHarmonicSpectrum')) /= 0) then
         if(parse_block(datasets_check('OCTOptimizeHarmonicSpectrum'), blk) == 0) then
-          target%hhg_nks = parse_block_cols(blk, 0)
-          SAFE_ALLOCATE(    target%hhg_k(1:target%hhg_nks))
-          SAFE_ALLOCATE(target%hhg_alpha(1:target%hhg_nks))
-          SAFE_ALLOCATE(    target%hhg_a(1:target%hhg_nks))
-          do jj = 1, target%hhg_nks
-            call parse_block_integer(blk, 0, jj - 1, target%hhg_k(jj))
-            call parse_block_float(blk, 1, jj - 1, target%hhg_alpha(jj))
-            call parse_block_float(blk, 2, jj - 1, target%hhg_a(jj))
+          tg%hhg_nks = parse_block_cols(blk, 0)
+          SAFE_ALLOCATE(    tg%hhg_k(1:tg%hhg_nks))
+          SAFE_ALLOCATE(tg%hhg_alpha(1:tg%hhg_nks))
+          SAFE_ALLOCATE(    tg%hhg_a(1:tg%hhg_nks))
+          do jj = 1, tg%hhg_nks
+            call parse_block_integer(blk, 0, jj - 1, tg%hhg_k(jj))
+            call parse_block_float(blk, 1, jj - 1, tg%hhg_alpha(jj))
+            call parse_block_float(blk, 2, jj - 1, tg%hhg_a(jj))
           end do
           call parse_block_end(blk)
         else
@@ -601,10 +601,10 @@ contains
         call messages_fatal(2)
       end if
 
-      target%hhg_w0 = w0
-      target%dt     = td%dt
-      SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
-      target%td_fitness = M_ZERO
+      tg%hhg_w0 = w0
+      tg%dt     = td%dt
+      SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
+      tg%td_fitness = M_ZERO
 
     case(oct_tg_hhgnew)
        
@@ -613,16 +613,16 @@ contains
          message(2) = 'the variable "OCTMoveIons".'
          call messages_fatal(2)
       else
-         call parse_logical(datasets_check('OCTMoveIons'), .false., target%move_ions)
+         call parse_logical(datasets_check('OCTMoveIons'), .false., tg%move_ions)
       end if
       
        ! We allocate many things that are perhaps not necessary if we use a direct optimization scheme.
 
 
-      SAFE_ALLOCATE(target%vel(td%max_iter+1, MAX_DIM))
-      SAFE_ALLOCATE(target%acc(td%max_iter+1, MAX_DIM))
-      SAFE_ALLOCATE(target%gvec(td%max_iter+1, MAX_DIM))
-      SAFE_ALLOCATE(target%alpha(td%max_iter))
+      SAFE_ALLOCATE(tg%vel(td%max_iter+1, MAX_DIM))
+      SAFE_ALLOCATE(tg%acc(td%max_iter+1, MAX_DIM))
+      SAFE_ALLOCATE(tg%gvec(td%max_iter+1, MAX_DIM))
+      SAFE_ALLOCATE(tg%alpha(td%max_iter))
           
       ! The following is a temporary hack, that assumes only one atom at the origin of coordinates.
       if(geo%natoms > 1) then
@@ -630,17 +630,17 @@ contains
         call messages_fatal(1)
       end if
 
-      SAFE_ALLOCATE(target%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
+      SAFE_ALLOCATE(tg%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
       SAFE_ALLOCATE(vl(1:gr%mesh%np_part))
       SAFE_ALLOCATE(vl_grad(1:gr%mesh%np, 1:gr%sb%dim))
-      SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
+      SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
 
       vl(:) = M_ZERO
       vl_grad(:,:) = M_ZERO
       call epot_local_potential(ep, gr%der, gr%dgrid, geo, 1, vl)
       call dderivatives_grad(gr%der, vl, vl_grad)
       forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
-        target%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
+        tg%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
       end forall
 
       ! Note that the calculation of the gradient of the potential
@@ -659,17 +659,17 @@ contains
       !% the integral of H(w) from one to infinity. In practice, it is better if you also set an upper limit, i.e.
       !% for example f(w) = step(w-1)*step(2-w).
       !%End
-      call parse_string(datasets_check('OCTHarmonicWeight'), "1", target%plateau_string)
-      target%dt = td%dt
-      SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
-      target%td_fitness = M_ZERO
+      call parse_string(datasets_check('OCTHarmonicWeight'), "1", tg%plateau_string)
+      tg%dt = td%dt
+      SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
+      tg%td_fitness = M_ZERO
 
       iunit = io_open('.alpha', action = 'write')
-      dw = (M_TWO * M_PI) / (td%max_iter * target%dt)
+      dw = (M_TWO * M_PI) / (td%max_iter * tg%dt)
       do jj = 0, td%max_iter - 1
         ww = jj * dw
-        call parse_expression(psi_re, psi_im, "w", ww, target%plateau_string)
-        target%alpha(jj+1) = psi_re
+        call parse_expression(psi_re, psi_im, "w", ww, tg%plateau_string)
+        tg%alpha(jj+1) = psi_re
         write(iunit, *) ww, psi_re
       end do
       call io_close(iunit)
@@ -677,7 +677,7 @@ contains
       nn(1:3) = (/ td%max_iter, 1, 1 /)
       optimize(1:3) = .false.
       optimize_parity(1:3) = -1
-      call fft_init(target%fft_handler, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
+      call fft_init(tg%fft_handler, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
 
 
     case(oct_tg_velocity)
@@ -742,10 +742,10 @@ contains
       !%End
        
        if(parse_block(datasets_check('OCTVelocityTarget'),blk)==0) then
-          target%vel_input_string = " "
+          tg%vel_input_string = " "
           do jj=0, parse_block_n(blk)-1
              call parse_block_string(blk, jj, 0, expression)
-             target%vel_input_string = trim(target%vel_input_string) // trim(expression)
+             tg%vel_input_string = trim(tg%vel_input_string) // trim(expression)
           end do
           call parse_block_end(blk)
        else
@@ -759,15 +759,15 @@ contains
           message(2) = 'the variable "OCTMoveIons".'
           call messages_fatal(2)
        else
-          call parse_logical(datasets_check('OCTMoveIons'), .false., target%move_ions)
+          call parse_logical(datasets_check('OCTMoveIons'), .false., tg%move_ions)
        end if
        
        if(oct%algorithm  ==  oct_algorithm_cg) then
           if(parse_block(datasets_check('OCTVelocityDerivatives'),blk)==0) then
-             SAFE_ALLOCATE(target%vel_der_array(1:geo%natoms,1:gr%sb%dim))
+             SAFE_ALLOCATE(tg%vel_der_array(1:geo%natoms,1:gr%sb%dim))
              do ist=0, geo%natoms-1
                 do jst=0, gr%sb%dim-1
-                   call parse_block_string(blk, ist, jst, target%vel_der_array(ist+1, jst+1))
+                   call parse_block_string(blk, ist, jst, tg%vel_der_array(ist+1, jst+1))
                 end do
              end do
              call parse_block_end(blk)
@@ -778,10 +778,10 @@ contains
              call messages_fatal(3)
           end if
           
-          SAFE_ALLOCATE(target%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
+          SAFE_ALLOCATE(tg%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
           SAFE_ALLOCATE(vl(1:gr%mesh%np_part))
           SAFE_ALLOCATE(vl_grad(1:gr%mesh%np, 1:gr%sb%dim))
-          SAFE_ALLOCATE(target%rho(1:gr%mesh%np))
+          SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
 
           ! calculate gradient of each species potential
           do iatom=1, geo%natoms
@@ -790,7 +790,7 @@ contains
              call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vl)
              call dderivatives_grad(gr%der, vl, vl_grad)
              forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
-                target%grad_local_pot(iatom, ist, jst) = vl_grad(ist, jst)
+                tg%grad_local_pot(iatom, ist, jst) = vl_grad(ist, jst)
              end forall
           end do
           SAFE_DEALLOCATE_A(vl)
@@ -804,9 +804,9 @@ contains
           
        end if
 
-       target%dt = td%dt
-       SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
-       target%td_fitness = M_ZERO
+       tg%dt = td%dt
+       SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
+       tg%td_fitness = M_ZERO
        
     case(oct_tg_current)
       message(1) =  'Info: Target is a current.'
@@ -822,7 +822,7 @@ contains
 
     ! set up quantities specified for current functionals (that might be
     ! combined with other functionals)
-    select case(target%type)
+    select case(tg%type)
     case(oct_tg_current, oct_tg_density)
      
       !%Variable OCTCurrentFunctional
@@ -903,47 +903,47 @@ contains
       !% with <tt>startpoint  <  endpoint</tt>. <tt>dimension > 0</tt> is integer, <tt>fact</tt> is float.
       !%End
       
-      call parse_integer(datasets_check('OCTCurrentFunctional'), oct_no_curr, target%curr_functional)
-      select case(target%curr_functional)
+      call parse_integer(datasets_check('OCTCurrentFunctional'), oct_no_curr, tg%curr_functional)
+      select case(tg%curr_functional)
       case(oct_no_curr)
       case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
         SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:stin%d%nspin ) )
         stin%current= M_ZERO
-        if(target%type  ==  oct_tg_density) then
+        if(tg%type  ==  oct_tg_density) then
           message(1) =  'Info: Target is also a current.'
           call messages_info(1)
         end if
       end select
  
 
-      call parse_float(datasets_check('OCTCurrentWeight'), M_ZERO, target%curr_weight)
-      write(message(1), '(a,i3)')   'Info: OCTCurrentFunctional = ', target%curr_functional
-      write(message(2), '(a,f8.3)') 'Info: OCTCurrentWeight = ',  target%curr_weight
+      call parse_float(datasets_check('OCTCurrentWeight'), M_ZERO, tg%curr_weight)
+      write(message(1), '(a,i3)')   'Info: OCTCurrentFunctional = ', tg%curr_functional
+      write(message(2), '(a,f8.3)') 'Info: OCTCurrentWeight = ',  tg%curr_weight
       call messages_info(2)
 
-      if (target_mode(target)  ==  oct_targetmode_td) then
-        call parse_integer(datasets_check('OCTStartIterCurrTg'), 0, target%strt_iter_curr_tg)
-        if (target%strt_iter_curr_tg  <  0) then
+      if (target_mode(tg)  ==  oct_targetmode_td) then
+        call parse_integer(datasets_check('OCTStartIterCurrTg'), 0, tg%strt_iter_curr_tg)
+        if (tg%strt_iter_curr_tg  <  0) then
           message(1) = 'OCTStartIterCurrTg must be positive.'
           call messages_fatal(1)
-        elseif (target%strt_iter_curr_tg >= td%max_iter) then
+        elseif (tg%strt_iter_curr_tg >= td%max_iter) then
           message(1) = 'OCTStartIterCurrTg has to be  <  TDMaximumIter.'
           call messages_fatal(1)
         end if
-        write(message(1), '(a,i3)')   'Info: TargetMode = ', target_mode(target)
-        write(message(2), '(a,i8)') 'Info: OCTStartIterCurrTg = ',  target%strt_iter_curr_tg
+        write(message(1), '(a,i3)')   'Info: TargetMode = ', target_mode(tg)
+        write(message(2), '(a,i8)') 'Info: OCTStartIterCurrTg = ',  tg%strt_iter_curr_tg
         call messages_info(2)
-        target%dt = td%dt
-        SAFE_ALLOCATE(target%td_fitness(0:td%max_iter))
-        target%td_fitness = M_ZERO
+        tg%dt = td%dt
+        SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
+        tg%td_fitness = M_ZERO
       else
-        target%strt_iter_curr_tg = 0
+        tg%strt_iter_curr_tg = 0
       end if
 
 
       if(parse_isdef(datasets_check('OCTSpatialCurrWeight')) /= 0) then
         if(parse_block(datasets_check('OCTSpatialCurrWeight'), blk) == 0) then
-          SAFE_ALLOCATE(target%spatial_curr_wgt(1:gr%mesh%np_part))
+          SAFE_ALLOCATE(tg%spatial_curr_wgt(1:gr%mesh%np_part))
           SAFE_ALLOCATE(xp(1:gr%mesh%np_part))
           SAFE_ALLOCATE(tmp_box(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
           
@@ -991,7 +991,7 @@ contains
           do idim = 1, gr%mesh%sb%dim
             if(cstr_dim(idim) == 0) tmp_box(:,idim) = M_ONE
           end do
-          target%spatial_curr_wgt(1:gr%mesh%np_part) = product(tmp_box(1:gr%mesh%np_part, 1:gr%mesh%sb%dim),2) 
+          tg%spatial_curr_wgt(1:gr%mesh%np_part) = product(tmp_box(1:gr%mesh%np_part, 1:gr%mesh%sb%dim),2) 
           SAFE_DEALLOCATE_A(xp)
           SAFE_DEALLOCATE_A(tmp_box)
                              
@@ -1005,9 +1005,9 @@ contains
     
     case default
 
-      target%curr_functional = oct_no_curr
-      target%curr_weight = M_ZERO
-      target%strt_iter_curr_tg = 0
+      tg%curr_functional = oct_no_curr
+      tg%curr_weight = M_ZERO
+      tg%strt_iter_curr_tg = 0
     end select
 
     POP_SUB(target_init)
@@ -1016,47 +1016,47 @@ contains
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_end(target, oct)
-    type(target_t), intent(inout) :: target
+  subroutine target_end(tg, oct)
+    type(target_t), intent(inout) :: tg
     type(oct_t), intent(in)       :: oct
 
     PUSH_SUB(target_end)
 
-    call states_end(target%st)
-    if(target%type  ==  oct_tg_local .or. &
-       target%type  ==  oct_tg_density .or. &
-       target%type  ==  oct_tg_td_local) then
-      SAFE_DEALLOCATE_P(target%rho)
+    call states_end(tg%st)
+    if(tg%type  ==  oct_tg_local .or. &
+       tg%type  ==  oct_tg_density .or. &
+       tg%type  ==  oct_tg_td_local) then
+      SAFE_DEALLOCATE_P(tg%rho)
     end if
-    if(target%type  ==  oct_tg_hhg) then
-      SAFE_DEALLOCATE_P(target%hhg_k)
-      SAFE_DEALLOCATE_P(target%hhg_alpha)
-      SAFE_DEALLOCATE_P(target%hhg_a)
+    if(tg%type  ==  oct_tg_hhg) then
+      SAFE_DEALLOCATE_P(tg%hhg_k)
+      SAFE_DEALLOCATE_P(tg%hhg_alpha)
+      SAFE_DEALLOCATE_P(tg%hhg_a)
     end if
-    if(target_mode(target) == oct_targetmode_td) then
-      SAFE_DEALLOCATE_P(target%td_fitness)
+    if(target_mode(tg) == oct_targetmode_td) then
+      SAFE_DEALLOCATE_P(tg%td_fitness)
     end if
-    if(target_type(target) == oct_tg_velocity) then
+    if(target_type(tg) == oct_tg_velocity) then
        if(oct%algorithm  ==  oct_algorithm_cg) then
-          SAFE_DEALLOCATE_P(target%vel_der_array)
-          SAFE_DEALLOCATE_P(target%grad_local_pot)
-          SAFE_DEALLOCATE_P(target%rho)
+          SAFE_DEALLOCATE_P(tg%vel_der_array)
+          SAFE_DEALLOCATE_P(tg%grad_local_pot)
+          SAFE_DEALLOCATE_P(tg%rho)
        end if
     end if
-    if(target_type(target) == oct_tg_hhgnew) then
+    if(target_type(tg) == oct_tg_hhgnew) then
        if(oct%algorithm  ==  oct_algorithm_cg) then
-          SAFE_DEALLOCATE_P(target%grad_local_pot)
-          SAFE_DEALLOCATE_P(target%rho)
-          SAFE_DEALLOCATE_P(target%vel)
-          SAFE_DEALLOCATE_P(target%acc)
-          SAFE_DEALLOCATE_P(target%gvec)
-          SAFE_DEALLOCATE_P(target%alpha)
-          call fft_end(target%fft_handler)
+          SAFE_DEALLOCATE_P(tg%grad_local_pot)
+          SAFE_DEALLOCATE_P(tg%rho)
+          SAFE_DEALLOCATE_P(tg%vel)
+          SAFE_DEALLOCATE_P(tg%acc)
+          SAFE_DEALLOCATE_P(tg%gvec)
+          SAFE_DEALLOCATE_P(tg%alpha)
+          call fft_end(tg%fft_handler)
        end if
     end if
-    if(target%type  ==  oct_tg_current .or. &
-       target%type  ==  oct_tg_density) then
-      SAFE_DEALLOCATE_P(target%spatial_curr_wgt)
+    if(tg%type  ==  oct_tg_current .or. &
+       tg%type  ==  oct_tg_density) then
+      SAFE_DEALLOCATE_P(tg%spatial_curr_wgt)
     end if
     POP_SUB(target_end)
   end subroutine target_end
@@ -1064,8 +1064,8 @@ contains
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output(target, gr, dir, geo, outp)
-    type(target_t), intent(inout) :: target
+  subroutine target_output(tg, gr, dir, geo, outp)
+    type(target_t), intent(inout) :: tg
     type(grid_t), intent(inout)   :: gr
     character(len=*), intent(in)  :: dir
     type(geometry_t),       intent(in)  :: geo
@@ -1076,28 +1076,28 @@ contains
     
     call loct_mkdir(trim(dir))
 
-    select case(target%type)
+    select case(tg%type)
     case(oct_tg_local)
       if(outp%how /= 0) then
         call dio_function_output(outp%how, trim(dir), 'local_target', gr%mesh, &
-          target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+          tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
       end if
     case(oct_tg_td_local)
-      call target_build_tdlocal(target, gr, M_ZERO)
+      call target_build_tdlocal(tg, gr, M_ZERO)
       if(outp%how /= 0) then
         call dio_function_output(outp%how, trim(dir), 'td_local_target', gr%mesh, &
-          target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+          tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
       end if
     case(oct_tg_density)
       if(outp%how /= 0) then
         call dio_function_output(outp%how, trim(dir), 'density_target', gr%mesh, &
-          target%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+          tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
       end if
     case(oct_tg_excited)
-      call output_states(target%est%st, gr, geo, trim(dir)//'/st', outp)
-      call excited_states_output(target%est, trim(dir))
+      call output_states(tg%est%st, gr, geo, trim(dir)//'/st', outp)
+      call excited_states_output(tg%est, trim(dir))
     case default
-      call output_states(target%st, gr, geo, trim(dir), outp)
+      call output_states(tg%st, gr, geo, trim(dir), outp)
     end select
 
     POP_SUB(target_output)
@@ -1109,8 +1109,8 @@ contains
   !> Calculates, at a given point in time marked by the integer
   !! index, the integrand of the target functional:
   !! <Psi(t)|\hat{O}(t)|Psi(t)>.
-  subroutine target_tdcalc(target, hm, gr, geo, psi, time, max_time)
-    type(target_t),      intent(inout) :: target
+  subroutine target_tdcalc(tg, hm, gr, geo, psi, time, max_time)
+    type(target_t),      intent(inout) :: tg
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
@@ -1123,18 +1123,18 @@ contains
     FLOAT :: acc(MAX_DIM), dt, dw
     integer :: iatom, idim, ik
 
-    if(target_mode(target)  /= oct_targetmode_td) return
+    if(target_mode(tg)  /= oct_targetmode_td) return
 
     PUSH_SUB(target_tdcalc)
 
-    target%td_fitness(time) = M_ZERO
+    tg%td_fitness(time) = M_ZERO
 
-    select case(target%type)
+    select case(tg%type)
 
     case(oct_tg_hhgnew)
 
-      ! If the ions move, the target is computed in the propagation routine.
-      if(.not.target_move_ions(target)) then
+      ! If the ions move, the tg is computed in the propagation routine.
+      if(.not.target_move_ions(tg)) then
 
         SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
 
@@ -1145,10 +1145,10 @@ contains
         do ik = 1, psi%d%nik
           do ist = 1, psi%nst
             do idim = 1, gr%sb%dim
-              opsi(1:gr%mesh%np, 1) = target%grad_local_pot(1, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
+              opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(1, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
               acc(idim) = acc(idim) + real( psi%occ(ist, ik) * &
                   zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik)), REAL_PRECISION )
-              target%acc(time+1, idim) = target%acc(time+1, idim) + psi%occ(ist, ik) * &
+              tg%acc(time+1, idim) = tg%acc(time+1, idim) + psi%occ(ist, ik) * &
                   zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik))
             end do
           end do
@@ -1157,30 +1157,30 @@ contains
         SAFE_DEALLOCATE_A(opsi)
       end if
 
-      dt = target%dt
-      dw = (M_TWO * M_PI/(max_time * target%dt))
+      dt = tg%dt
+      dw = (M_TWO * M_PI/(max_time * tg%dt))
       if(time  ==  max_time) then
-        target%acc(1, 1:gr%sb%dim) = M_HALF * (target%acc(1, 1:gr%sb%dim) + target%acc(max_time+1, 1:gr%sb%dim))
+        tg%acc(1, 1:gr%sb%dim) = M_HALF * (tg%acc(1, 1:gr%sb%dim) + tg%acc(max_time+1, 1:gr%sb%dim))
         do ia = 1, gr%sb%dim
-          call zfft_forward1(target%fft_handler, target%acc(1:max_time, ia), target%vel(1:max_time, ia))
+          call zfft_forward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%vel(1:max_time, ia))
         end do
-        target%vel = target%vel * target%dt
+        tg%vel = tg%vel * tg%dt
         do iw = 1, max_time
           ! We add the one-half dt term because when doing the propagation we want the value at interpolated times.
-          target%acc(iw, 1:gr%sb%dim) = target%vel(iw, 1:gr%sb%dim) * target%alpha(iw) * exp(M_zI * (iw-1) * dw * M_HALF * dt)
+          tg%acc(iw, 1:gr%sb%dim) = tg%vel(iw, 1:gr%sb%dim) * tg%alpha(iw) * exp(M_zI * (iw-1) * dw * M_HALF * dt)
         end do
         do ia = 1, gr%sb%dim
-          call zfft_backward1(target%fft_handler, target%acc(1:max_time, ia), target%gvec(1:max_time, ia))
+          call zfft_backward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%gvec(1:max_time, ia))
         end do
-        target%gvec(max_time + 1, 1:gr%sb%dim) = target%gvec(1, 1:gr%sb%dim)
-        target%gvec = target%gvec * (M_TWO * M_PI/ target%dt)
+        tg%gvec(max_time + 1, 1:gr%sb%dim) = tg%gvec(1, 1:gr%sb%dim)
+        tg%gvec = tg%gvec * (M_TWO * M_PI/ tg%dt)
       end if
 
 
     case(oct_tg_velocity)
 
       ! If the ions move, the target is computed in the propagation routine.
-      if(.not.target_move_ions(target)) then
+      if(.not.target_move_ions(tg)) then
 
       SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
       opsi = M_z0
@@ -1190,7 +1190,7 @@ contains
         do ik = 1, psi%d%nik
           do ist = 1, psi%nst
             do idim = 1, gr%sb%dim
-              opsi(1:gr%mesh%np, 1) = target%grad_local_pot(iatom, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
+              opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
               geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) + real(psi%occ(ist, ik) * &
                 zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik)), REAL_PRECISION)
             end do
@@ -1201,8 +1201,8 @@ contains
 
       end if
 
-      dt = target%dt
-      if( (time  ==  0) .or. (time  ==  max_time) ) dt = target%dt * M_HALF
+      dt = tg%dt
+      if( (time  ==  0) .or. (time  ==  max_time) ) dt = tg%dt * M_HALF
       do iatom = 1, geo%natoms
          geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) + &
            geo%atom(iatom)%f(1:MAX_DIM) * dt / species_weight(geo%atom(iatom)%spec)
@@ -1218,10 +1218,10 @@ contains
         opsi = M_z0
         do ist  = psi%st_start, psi%st_end
           do ip = 1, gr%mesh%np
-            opsi(ip, 1) = target%rho(ip) * psi%zpsi(ip, 1, ist, 1)
+            opsi(ip, 1) = tg%rho(ip) * psi%zpsi(ip, 1, ist, 1)
           end do
-          target%td_fitness(time) = &
-            target%td_fitness(time) + psi%occ(ist, 1) * &
+          tg%td_fitness(time) = &
+            tg%td_fitness(time) + psi%occ(ist, 1) * &
               real(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :)), REAL_PRECISION)
         end do
         SAFE_DEALLOCATE_A(opsi)
@@ -1235,14 +1235,14 @@ contains
 
     case(oct_tg_hhg)
 
-     call td_calc_tacc(gr, geo, psi, hm, acc, time*target%dt)
-     target%td_fitness(time) = acc(1)
+     call td_calc_tacc(gr, geo, psi, hm, acc, time*tg%dt)
+     tg%td_fitness(time) = acc(1)
 
     ! case oct_tg_density only active if combined with td current functional
     case(oct_tg_current, oct_tg_density)
 
-      if (time >= target%strt_iter_curr_tg) then
-        target%td_fitness(time) = jcurr_functional(target, gr, psi)
+      if (time >= tg%strt_iter_curr_tg) then
+        tg%td_fitness(time) = jcurr_functional(tg, gr, psi)
       end if 
 
     case default
@@ -1258,10 +1258,10 @@ contains
   ! ---------------------------------------------------------------
   !> Calculates the inhomogeneous term that appears in the equation
   !! for chi, and places it into inh.
-  subroutine target_inh(psi, gr, target, time, inh, iter)
+  subroutine target_inh(psi, gr, tg, time, inh, iter)
     type(states_t),    intent(inout)     :: psi
     type(grid_t),      intent(in)        :: gr
-    type(target_t),    intent(inout)     :: target
+    type(target_t),    intent(inout)     :: tg
     FLOAT,             intent(in)        :: time
     type(states_t),    intent(inout)     :: inh
     integer,           intent(in)        :: iter
@@ -1271,29 +1271,29 @@ contains
 
     PUSH_SUB(target_inh)
 
-    select case(target%type)
+    select case(tg%type)
     case(oct_tg_td_local)
-      call target_build_tdlocal(target, gr, time)
+      call target_build_tdlocal(tg, gr, time)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
-        inh%zpsi(ip, idim, ist, ik) = - psi%occ(ist, ik) * target%rho(ip) * psi%zpsi(ip, idim, ist, ik)
+        inh%zpsi(ip, idim, ist, ik) = - psi%occ(ist, ik) * tg%rho(ip) * psi%zpsi(ip, idim, ist, ik)
       end forall
 
     case(oct_tg_hhgnew)
-      gvec(1:gr%sb%dim) = real(target%gvec(iter+1, 1:gr%sb%dim), REAL_PRECISION)
+      gvec(1:gr%sb%dim) = real(tg%gvec(iter+1, 1:gr%sb%dim), REAL_PRECISION)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
         inh%zpsi(ip, idim, ist, ik) = &
-           - psi%occ(ist, ik) * M_TWO * sum(target%grad_local_pot(1, ip, 1:gr%sb%dim) * gvec(1:gr%sb%dim)) * &
+           - psi%occ(ist, ik) * M_TWO * sum(tg%grad_local_pot(1, ip, 1:gr%sb%dim) * gvec(1:gr%sb%dim)) * &
            psi%zpsi(ip, idim, ist, ik)
       end forall
 
     case(oct_tg_velocity)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
-         inh%zpsi(ip, idim, ist, ik) = - psi%occ(ist, ik) * target%rho(ip) * psi%zpsi(ip, idim, ist, ik)
+         inh%zpsi(ip, idim, ist, ik) = - psi%occ(ist, ik) * tg%rho(ip) * psi%zpsi(ip, idim, ist, ik)
       end forall
    
     case(oct_tg_current, oct_tg_density)
-      if (abs(nint(time/target%dt)) >= target%strt_iter_curr_tg) then
-        inh%zpsi =  -chi_current(target, gr, psi)
+      if (abs(nint(time/tg%dt)) >= tg%strt_iter_curr_tg) then
+        inh%zpsi =  -chi_current(tg, gr, psi)
       else
         inh%zpsi = M_ZERO
       end if     
@@ -1310,8 +1310,8 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine target_build_tdlocal(target, gr, time)
-    type(target_t), intent(inout) :: target
+  subroutine target_build_tdlocal(tg, gr, time)
+    type(target_t), intent(inout) :: tg
     type(grid_t),   intent(in)    :: gr
     FLOAT,          intent(in)    :: time
 
@@ -1322,8 +1322,8 @@ contains
 
     do ip = 1, gr%mesh%np
       call mesh_r(gr%mesh, ip, rr, coords = xx)
-      call parse_expression(re, im, gr%sb%dim, xx, rr, time, target%td_local_target)
-      target%rho(ip) = re
+      call parse_expression(re, im, gr%sb%dim, xx, rr, time, tg%td_local_target)
+      tg%rho(ip) = re
     end do
 
     POP_SUB(target_build_tdlocal)
@@ -1336,8 +1336,8 @@ contains
   !! <Psi(T)|\hat{O}|Psi(T) in the time-independent
   !! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   !! the time-dependent case.
-  FLOAT function target_j1(target, gr, psi, geo) result(j1)
-    type(target_t), intent(inout)   :: target
+  FLOAT function target_j1(tg, gr, psi, geo) result(j1)
+    type(target_t), intent(inout)   :: tg
     type(grid_t),   intent(inout)   :: gr
     type(states_t), intent(inout)   :: psi
     type(geometry_t), intent(in), optional :: geo
@@ -1352,12 +1352,12 @@ contains
     PUSH_SUB(target_j1)
 
     j1 = M_ZERO
-    select case(target%type)
+    select case(tg%type)
     case(oct_tg_density)
 
       SAFE_ALLOCATE(local_function(1:gr%mesh%np))
       do ip = 1, gr%mesh%np
-        local_function(ip) = - ( sqrt(psi%rho(ip, 1)) - sqrt(target%rho(ip)) )**2
+        local_function(ip) = - ( sqrt(psi%rho(ip, 1)) - sqrt(tg%rho(ip)) )**2
       end do
       j1 = dmf_integrate(gr%mesh, local_function)
       SAFE_DEALLOCATE_A(local_function)
@@ -1365,67 +1365,67 @@ contains
     case(oct_tg_local)
       j1 = M_ZERO
       do is = 1, psi%d%spin_channels
-        j1 = j1 + dmf_dotp(gr%mesh, target%rho, psi%rho(:, is))
+        j1 = j1 + dmf_dotp(gr%mesh, tg%rho, psi%rho(:, is))
       end do
 
     case(oct_tg_td_local)
-      maxiter = size(target%td_fitness) - 1
-      j1 = M_HALF * target%dt * target%td_fitness(0) + & 
-           M_HALF * target%dt * target%td_fitness(maxiter) + & 
-           target%dt * sum(target%td_fitness(1:maxiter-1))
+      maxiter = size(tg%td_fitness) - 1
+      j1 = M_HALF * tg%dt * tg%td_fitness(0) + & 
+           M_HALF * tg%dt * tg%td_fitness(maxiter) + & 
+           tg%dt * sum(tg%td_fitness(1:maxiter-1))
 
     case(oct_tg_excited)
-      j1 = abs(zstates_mpdotp(gr%mesh, target%est, psi))**2
+      j1 = abs(zstates_mpdotp(gr%mesh, tg%est, psi))**2
 
     case(oct_tg_exclude_state)
 
       j1 = M_ONE
-      do ist = 1, target%st%nst
-        if(loct_isinstringlist(ist, target%excluded_states_list)) then
+      do ist = 1, tg%st%nst
+        if(loct_isinstringlist(ist, tg%excluded_states_list)) then
           j1 = j1 - abs(zmf_dotp(gr%mesh, psi%d%dim, &
-            target%st%zpsi(:, :, ist, 1), psi%zpsi(:, :, 1, 1)))**2
+            tg%st%zpsi(:, :, ist, 1), psi%zpsi(:, :, 1, 1)))**2
         end if
       end do
 
     case(oct_tg_hhg)
 
-      maxiter = size(target%td_fitness) - 1
+      maxiter = size(tg%td_fitness) - 1
       SAFE_ALLOCATE(ddipole(0:maxiter))
       ddipole = M_z0
-      ddipole = target%td_fitness
+      ddipole = tg%td_fitness
 
-      call spectrum_hsfunction_init(target%dt, 0, maxiter, maxiter, ddipole)
-      do jj = 1, target%hhg_nks
-        aa = target%hhg_a(jj) * target%hhg_w0
-        ww = target%hhg_k(jj) * target%hhg_w0
+      call spectrum_hsfunction_init(tg%dt, 0, maxiter, maxiter, ddipole)
+      do jj = 1, tg%hhg_nks
+        aa = tg%hhg_a(jj) * tg%hhg_w0
+        ww = tg%hhg_k(jj) * tg%hhg_w0
         call spectrum_hsfunction_min(ww - aa, ww + aa, omega, maxhh)
-        j1 = j1 + target%hhg_alpha(jj) * log(-maxhh)
+        j1 = j1 + tg%hhg_alpha(jj) * log(-maxhh)
       end do
       call spectrum_hsfunction_end()
 
       SAFE_DEALLOCATE_A(ddipole)
 
     case(oct_tg_hhgnew)
-      maxiter = size(target%td_fitness) - 1
-      dw = (M_TWO * M_PI) / (maxiter * target%dt)
+      maxiter = size(tg%td_fitness) - 1
+      dw = (M_TWO * M_PI) / (maxiter * tg%dt)
       j1 = M_ZERO
       do i = 0, maxiter - 1
         ww = i * dw
-        j1 = j1 + dw * target%alpha(i+1) * sum(abs(target%vel(i+1, 1:gr%sb%dim))**2)
+        j1 = j1 + dw * tg%alpha(i+1) * sum(abs(tg%vel(i+1, 1:gr%sb%dim))**2)
       end do
 
     case(oct_tg_velocity)
       f_re = M_ZERO
       dummy(:) = M_ZERO
-      inp_string = target%vel_input_string
+      inp_string = tg%vel_input_string
       call target_parse_velocity(inp_string, geo)
       call conv_to_C_string(inp_string)
       call parse_expression(f_re, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), inp_string)
       j1 = f_re
 
     case(oct_tg_current)
-      ! calculate functional out of this select case(target%type) block,
-      ! so it can be combined with other target%type.
+      ! calculate functional out of this select case(tg%type) block,
+      ! so it can be combined with other tg%type.
       j1 = M_ZERO
 
     case default
@@ -1433,7 +1433,7 @@ contains
         do ist = psi%st_start, psi%st_end
           j1 = j1 + psi%occ(ist, ik) * &
             abs(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, ik), &
-                target%st%zpsi(:, :, ist, ik)))**2
+                tg%st%zpsi(:, :, ist, ik)))**2
         end do
       end do
 
@@ -1441,16 +1441,16 @@ contains
     end select
 
     ! current functionals are conveniently combined with others
-    if (target%type  ==  oct_tg_current .or. &
-        target%curr_functional /= oct_no_curr) then
-      select case(target_mode(target))
+    if (tg%type  ==  oct_tg_current .or. &
+        tg%curr_functional /= oct_no_curr) then
+      select case(target_mode(tg))
       case(oct_targetmode_static)
-        currfunc_tmp = jcurr_functional(target, gr, psi )
+        currfunc_tmp = jcurr_functional(tg, gr, psi )
       case(oct_targetmode_td)
-        maxiter = size(target%td_fitness) - 1
-        currfunc_tmp = M_HALF * target%dt * target%td_fitness(target%strt_iter_curr_tg) + & 
-                       M_HALF * target%dt * target%td_fitness(maxiter) + & 
-                       target%dt * sum(target%td_fitness(target%strt_iter_curr_tg+1:maxiter-1))  
+        maxiter = size(tg%td_fitness) - 1
+        currfunc_tmp = M_HALF * tg%dt * tg%td_fitness(tg%strt_iter_curr_tg) + & 
+                       M_HALF * tg%dt * tg%td_fitness(maxiter) + & 
+                       tg%dt * sum(tg%td_fitness(tg%strt_iter_curr_tg+1:maxiter-1))  
       end select
       if(conf%devel_version) then
         write(message(1), '(6x,a,f12.5)')    " => Other functional   = ", j1
@@ -1468,8 +1468,8 @@ contains
 
   ! ---------------------------------------------------------
   !> Calculate |chi(T)> = \hat{O}(T) |psi(T)>
-  subroutine target_chi(target, gr, psi_in, chi_out, geo)
-    type(target_t),    intent(inout) :: target
+  subroutine target_chi(tg, gr, psi_in, chi_out, geo)
+    type(target_t),    intent(inout) :: tg
     type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(inout) :: psi_in
     type(states_t),    intent(inout) :: chi_out
@@ -1486,7 +1486,7 @@ contains
 
     no_electrons = -nint(psi_in%val_charge)
 
-    select case(target%type)
+    select case(tg%type)
 
     case(oct_tg_density)
 
@@ -1497,7 +1497,7 @@ contains
 
         if(no_electrons  ==  1) then
           do ip = 1, gr%mesh%np
-            chi_out%zpsi(ip, 1, 1, 1) = sqrt(target%rho(ip)) * &
+            chi_out%zpsi(ip, 1, 1, 1) = sqrt(tg%rho(ip)) * &
               exp(M_zI * atan2(aimag(psi_in%zpsi(ip, 1, 1, 1)), &
                                 real(psi_in%zpsi(ip, 1, 1, 1) )) )
           end do
@@ -1505,10 +1505,10 @@ contains
           do ist = psi_in%st_start, psi_in%st_end
             do ip = 1, gr%mesh%np
               if(psi_in%rho(ip, 1) > CNST(1.0e-8)) then
-                chi_out%zpsi(ip, 1, ist, 1) = psi_in%occ(ist, 1) * sqrt(target%rho(ip) / psi_in%rho(ip, 1)) * &
+                chi_out%zpsi(ip, 1, ist, 1) = psi_in%occ(ist, 1) * sqrt(tg%rho(ip) / psi_in%rho(ip, 1)) * &
                   psi_in%zpsi(ip, 1, ist, 1)
               else
-                chi_out%zpsi(ip, 1, ist, 1) = M_ZERO !sqrt(target%rho(ip))
+                chi_out%zpsi(ip, 1, ist, 1) = M_ZERO !sqrt(tg%rho(ip))
               end if
             end do
           end do
@@ -1527,7 +1527,7 @@ contains
         do idim = 1, psi_in%d%dim
           do ist = psi_in%st_start, psi_in%st_end
             do ip = 1, gr%mesh%np
-              chi_out%zpsi(ip, idim, ist, ik) = psi_in%occ(ist, ik) * target%rho(ip) * psi_in%zpsi(ip, idim, ist, ik)
+              chi_out%zpsi(ip, idim, ist, ik) = psi_in%occ(ist, ik) * tg%rho(ip) * psi_in%zpsi(ip, idim, ist, ik)
             end do
           end do
         end do
@@ -1541,30 +1541,30 @@ contains
 
     case(oct_tg_excited) 
 
-      n_pairs = target%est%n_pairs
+      n_pairs = tg%est%n_pairs
       kpoints = psi_in%d%nik
       nst = psi_in%nst
 
       SAFE_ALLOCATE(cI(1:n_pairs))
       SAFE_ALLOCATE(dI(1:n_pairs))
-      SAFE_ALLOCATE(mat(1:target%est%st%nst, 1:nst, 1:psi_in%d%nik))
+      SAFE_ALLOCATE(mat(1:tg%est%st%nst, 1:nst, 1:psi_in%d%nik))
       SAFE_ALLOCATE(mm(1:nst, 1:nst, 1:kpoints, 1:n_pairs))
       SAFE_ALLOCATE(mk(1:gr%mesh%np_part, 1:psi_in%d%dim))
       SAFE_ALLOCATE(lambda(1:n_pairs, 1:n_pairs))
 
-      call zstates_matrix(gr%mesh, target%est%st, psi_in, mat)
+      call zstates_matrix(gr%mesh, tg%est%st, psi_in, mat)
 
       do ia = 1, n_pairs
-        cI(ia) = target%est%weight(ia)
-        call zstates_matrix_swap(mat, target%est%pair(ia))
+        cI(ia) = tg%est%weight(ia)
+        call zstates_matrix_swap(mat, tg%est%pair(ia))
         mm(1:nst, 1:nst, 1:kpoints, ia) = mat(1:nst, 1:kpoints, 1:kpoints)
-        dI(ia) = zstates_mpdotp(gr%mesh, target%est%st, psi_in, mat)
+        dI(ia) = zstates_mpdotp(gr%mesh, tg%est%st, psi_in, mat)
         if(abs(dI(ia)) > CNST(1.0e-12)) then
           do ik = 1, kpoints
             zdet = lalg_inverter(nst, mm(1:nst, 1:nst, ik, ia))
           end do
         end if
-        call zstates_matrix_swap(mat, target%est%pair(ia))
+        call zstates_matrix_swap(mat, tg%est%pair(ia))
       end do
 
       do ia = 1, n_pairs
@@ -1585,14 +1585,14 @@ contains
           do ist = chi_out%st_start, chi_out%st_end
             chi_out%zpsi(:, :, ist, ik) = M_z0
             do ia = 1, n_pairs
-              if(ik /= target%est%pair(ia)%sigma) cycle
+              if(ik /= tg%est%pair(ia)%sigma) cycle
               if(abs(dI(ia)) < CNST(1.0e-12)) cycle
               do ib = 1, n_pairs
                 if(abs(dI(ib)) < CNST(1.0e-12)) cycle
                 mk = M_z0
                 do jst = 1, nst
-                  if(jst  ==  target%est%pair(ib)%i) jj = target%est%pair(ia)%a
-                  mk(:, :) = mk(:, :) + conjg(mm(ist, jst, ik, ib)) * target%est%st%zpsi(:, :, jj, ik)
+                  if(jst  ==  tg%est%pair(ib)%i) jj = tg%est%pair(ia)%a
+                  mk(:, :) = mk(:, :) + conjg(mm(ist, jst, ik, ib)) * tg%est%st%zpsi(:, :, jj, ik)
                 end do
                 call lalg_axpy(gr%mesh%np_part, psi_in%d%dim, M_z1, lambda(ib, ia) * mk(:, :), chi_out%zpsi(:, :, ist, ik))
               end do
@@ -1614,8 +1614,8 @@ contains
 
               mk = M_z0
               do jst = 1, nst
-                if(jst  ==  target%est%pair(ib)%i) jj = target%est%pair(ia)%a
-                mk(:, :) = mk(:, :) + conjg(mm(ist, jst, 1, ib)) * target%est%st%zpsi(:, :, jj, 1)
+                if(jst  ==  tg%est%pair(ib)%i) jj = tg%est%pair(ia)%a
+                mk(:, :) = mk(:, :) + conjg(mm(ist, jst, 1, ib)) * tg%est%st%zpsi(:, :, jj, 1)
               end do
 
               call lalg_axpy(gr%mesh%np_part, 2, M_z1, lambda(ib, ia) * mk(:, :), chi_out%zpsi(:, :, ist, 1))
@@ -1635,10 +1635,10 @@ contains
     case(oct_tg_exclude_state)
 
       chi_out%zpsi(:, :, 1, 1) = psi_in%zpsi(:, :, 1, 1)
-      do ist = 1, target%st%nst
-        if(loct_isinstringlist(ist, target%excluded_states_list)) then
-          olap = zmf_dotp(gr%mesh, psi_in%d%dim, target%st%zpsi(:, :, ist, 1), psi_in%zpsi(:, :, 1, 1))
-          chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap * target%st%zpsi(:, :, ist, 1)
+      do ist = 1, tg%st%nst
+        if(loct_isinstringlist(ist, tg%excluded_states_list)) then
+          olap = zmf_dotp(gr%mesh, psi_in%d%dim, tg%st%zpsi(:, :, ist, 1), psi_in%zpsi(:, :, 1, 1))
+          chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap * tg%st%zpsi(:, :, ist, 1)
         end if
       end do
 
@@ -1658,14 +1658,14 @@ contains
       !NOTE: D_KS(r,t) is not calculated here
       df_dv = M_ZERO
       dummy(:) = M_ZERO
-      target%rho(:) = M_ZERO
+      tg%rho(:) = M_ZERO
       do ist=1, geo%natoms
          do jst=1, gr%sb%dim
-            temp_string = target%vel_der_array(ist, jst)
+            temp_string = tg%vel_der_array(ist, jst)
             call target_parse_velocity(temp_string, geo)
             call conv_to_C_string(temp_string)
             call parse_expression(df_dv, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), temp_string)
-            target%rho(:) = target%rho(:) + df_dv*target%grad_local_pot(ist,:,jst)/species_weight(geo%atom(ist)%spec)
+            tg%rho(:) = tg%rho(:) + df_dv*tg%grad_local_pot(ist,:,jst)/species_weight(geo%atom(ist)%spec)
          end do
       end do
     
@@ -1676,11 +1676,11 @@ contains
   
     case default
 
-      !olap = zstates_mpdotp(gr%mesh, target%st, psi_in)
+      !olap = zstates_mpdotp(gr%mesh, tg%st, psi_in)
       do ik = 1, psi_in%d%nik
         do ist = psi_in%st_start, psi_in%st_end
-          olap = zmf_dotp(gr%mesh, target%st%zpsi(:, 1, ist, ik), psi_in%zpsi(:, 1, ist, ik))
-          chi_out%zpsi(:, :, ist, ik) = olap * target%st%zpsi(:, :, ist, ik)
+          olap = zmf_dotp(gr%mesh, tg%st%zpsi(:, 1, ist, ik), psi_in%zpsi(:, 1, ist, ik))
+          chi_out%zpsi(:, :, ist, ik) = olap * tg%st%zpsi(:, :, ist, ik)
         end do
       end do
 
@@ -1689,10 +1689,10 @@ contains
 
     ! boundary conditions of static current functionals are combined with others.
     ! chi_out%zpsi is accumulated.
-    if(target%type  ==  oct_tg_current .or. &
-      target%curr_functional /= oct_no_curr) then
-      if (target_mode(target)  ==  oct_targetmode_static ) then
-        chi_out%zpsi = chi_out%zpsi + chi_current(target, gr, psi_in)
+    if(tg%type  ==  oct_tg_current .or. &
+      tg%curr_functional /= oct_no_curr) then
+      if (target_mode(tg)  ==  oct_targetmode_static ) then
+        chi_out%zpsi = chi_out%zpsi + chi_current(tg, gr, psi_in)
       end if
     end if 
 
@@ -1702,10 +1702,10 @@ contains
 
 
   ! ----------------------------------------------------------------------
-  integer pure function target_mode(target)
-    type(target_t), intent(in) :: target
+  integer pure function target_mode(tg)
+    type(target_t), intent(in) :: tg
 
-    select case(target%type)
+    select case(tg%type)
     case(oct_tg_td_local, oct_tg_hhg, oct_tg_velocity, oct_tg_hhgnew)
       target_mode = oct_targetmode_td
     case default
@@ -1715,7 +1715,7 @@ contains
     ! allow specific current functionals to be td
     ! Attention: yet combined with static density target,
     ! the total target is considered td.
-    select case(target%curr_functional)
+    select case(tg%curr_functional)
     case(oct_curr_square_td) 
       target_mode = oct_targetmode_td
     end select
@@ -1724,39 +1724,39 @@ contains
 
 
   ! ----------------------------------------------------------------------
-  integer pure function target_type(target)
-    type(target_t), intent(in) :: target
+  integer pure function target_type(tg)
+    type(target_t), intent(in) :: tg
 
-    target_type = target%type
+    target_type = tg%type
 
   end function target_type
   ! ----------------------------------------------------------------------
 
 
   !-----------------------------------------------------------------------
-  integer pure function target_curr_functional(target)
-    type(target_t), intent(in) :: target
+  integer pure function target_curr_functional(tg)
+    type(target_t), intent(in) :: tg
    
-    target_curr_functional = target%curr_functional
+    target_curr_functional = tg%curr_functional
  
   end function target_curr_functional
   !-----------------------------------------------------------------------
 
 
   ! ----------------------------------------------------------------------
-  logical pure function target_move_ions(target)
-    type(target_t), intent(in) :: target
+  logical pure function target_move_ions(tg)
+    type(target_t), intent(in) :: tg
     
-    target_move_ions = target%move_ions
+    target_move_ions = tg%move_ions
 
   end function target_move_ions
   ! ----------------------------------------------------------------------
 
   ! ----------------------------------------------------------------------
-  logical pure function is_spatial_curr_wgt(target)
-    type(target_t), intent(in) :: target
+  logical pure function is_spatial_curr_wgt(tg)
+    type(target_t), intent(in) :: tg
 
-    is_spatial_curr_wgt = associated(target%spatial_curr_wgt)
+    is_spatial_curr_wgt = associated(tg%spatial_curr_wgt)
    
   end function is_spatial_curr_wgt
   ! ----------------------------------------------------------------------
@@ -1805,8 +1805,8 @@ contains
   ! ----------------------------------------------------------------------
   !> Calculates a current functional that may be combined with
   !! other functionals found in function target_j1.
-  FLOAT function jcurr_functional(target, gr, psi) result(jcurr)
-    type(target_t), intent(in)    :: target
+  FLOAT function jcurr_functional(tg, gr, psi) result(jcurr)
+    type(target_t), intent(in)    :: tg
     type(grid_t),   intent(in)    :: gr
     type(states_t), intent(inout) :: psi
 
@@ -1820,7 +1820,7 @@ contains
     SAFE_ALLOCATE(semilocal_function(1:gr%mesh%np))
     semilocal_function = M_ZERO
 
-    select case(target%curr_functional)
+    select case(tg%curr_functional)
     case(oct_no_curr)
       semilocal_function = M_ZERO
 
@@ -1848,13 +1848,13 @@ contains
     end select
 
  
-    if( is_spatial_curr_wgt(target) ) then
+    if( is_spatial_curr_wgt(tg) ) then
       do ip = 1, gr%mesh%np
-        semilocal_function(ip) = semilocal_function(ip) * target%spatial_curr_wgt(ip) 
+        semilocal_function(ip) = semilocal_function(ip) * tg%spatial_curr_wgt(ip) 
       end do
     end if
 
-    jcurr = target%curr_weight * dmf_integrate(gr%mesh, semilocal_function)
+    jcurr = tg%curr_weight * dmf_integrate(gr%mesh, semilocal_function)
         
     SAFE_DEALLOCATE_A(semilocal_function)
 
@@ -1865,8 +1865,8 @@ contains
   ! ----------------------------------------------------------------------
   ! Calculates current-specific boundary condition
   !-----------------------------------------------------------------------
-  function chi_current(target, gr, psi_in) result(chi)
-    type(target_t),    intent(in)    :: target
+  function chi_current(tg, gr, psi_in) result(chi)
+    type(target_t),    intent(in)    :: tg
     type(grid_t),      intent(in)    :: gr
     type(states_t),    intent(inout) :: psi_in
     CMPLX                            :: chi( size(psi_in%zpsi,1), 1, size(psi_in%zpsi,3), 1)
@@ -1881,23 +1881,23 @@ contains
 
     SAFE_ALLOCATE(grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim, 1))
 
-    if(target_mode(target)  ==  oct_targetmode_td ) then 
+    if(target_mode(tg)  ==  oct_targetmode_td ) then 
       call states_calc_quantities(gr%der, psi_in, paramagnetic_current=psi_in%current) 
     end if
 
 
 
-    select case(target%curr_functional)
+    select case(tg%curr_functional)
     case(oct_no_curr)
       chi(ip, 1, ist, 1) = M_ZERO
 
     case(oct_curr_square,oct_curr_square_td)
        ! components current weighted by its position in the mesh, np_part included,
        ! since needed for the divergence of current.
-       if( is_spatial_curr_wgt(target) ) then
+       if( is_spatial_curr_wgt(tg) ) then
         do idim = 1, gr%sb%dim
           do ip = 1, gr%mesh%np_part 
-            psi_in%current(ip, idim, 1) = psi_in%current(ip, idim, 1) * target%spatial_curr_wgt(ip) 
+            psi_in%current(ip, idim, 1) = psi_in%current(ip, idim, 1) * tg%spatial_curr_wgt(ip) 
           end do
         end do
       end if
@@ -1912,7 +1912,7 @@ contains
                                grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim,1))
             
         do ip = 1, gr%mesh%np 
-          chi(ip, 1, ist, 1) =  -M_zI * target%curr_weight  * &
+          chi(ip, 1, ist, 1) =  -M_zI * tg%curr_weight  * &
                ( M_TWO * sum(psi_in%current(ip, 1:gr%sb%dim, 1) * grad_psi_in(ip, 1:gr%sb%dim, 1))+ &
                div_curr_psi_in(ip,1) * psi_in%zpsi(ip, 1, ist, 1) )
         end do
@@ -1921,12 +1921,12 @@ contains
 
     case(oct_max_curr_ring)
 
-      if( is_spatial_curr_wgt(target) ) then
+      if( is_spatial_curr_wgt(tg) ) then
 
         do ist = psi_in%st_start, psi_in%st_end
           call zderivatives_grad(gr%der, psi_in%zpsi(:,1, ist, 1), grad_psi_in(:,:,1))
           do ip = 1, gr%mesh%np 
-            chi(ip, 1, ist, 1) =  M_zI * target%curr_weight * target%spatial_curr_wgt(ip) * &
+            chi(ip, 1, ist, 1) =  M_zI * tg%curr_weight * tg%spatial_curr_wgt(ip) * &
                  ( grad_psi_in(ip, 1, 1)  * gr%mesh%x(ip,2) - &
                  grad_psi_in(ip, 2, 1)  * gr%mesh%x(ip,1)   ) 
           end do
@@ -1937,7 +1937,7 @@ contains
         do ist = psi_in%st_start, psi_in%st_end
           call zderivatives_grad(gr%der, psi_in%zpsi(:,1, ist, 1), grad_psi_in(:,:,1))
           do ip = 1, gr%mesh%np 
-            chi(ip, 1, ist, 1) =  M_zI * target%curr_weight * &
+            chi(ip, 1, ist, 1) =  M_zI * tg%curr_weight * &
                  ( grad_psi_in(ip, 1, 1)  * gr%mesh%x(ip,2) - &
                  grad_psi_in(ip, 2, 1)  * gr%mesh%x(ip,1)   ) 
           end do

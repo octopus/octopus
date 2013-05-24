@@ -121,12 +121,12 @@ contains
   !! field specified in par. If write_iter is present and is
   !! set to .true., writes down through the td_write module.
   !! ---------------------------------------------------------
-  subroutine propagate_forward(sys, hm, td, par, target, psi, prop, write_iter)
+  subroutine propagate_forward(sys, hm, td, par, tg, psi, prop, write_iter)
     type(system_t),             intent(inout)  :: sys
     type(hamiltonian_t),        intent(inout)  :: hm
     type(td_t),                 intent(inout)  :: td
     type(controlfunction_t),    intent(in)     :: par
-    type(target_t),             intent(inout)  :: target
+    type(target_t),             intent(inout)  :: tg
     type(states_t),             intent(inout)  :: psi
     type(oct_prop_t), optional, intent(in)     :: prop
     logical, optional,          intent(in)     :: write_iter
@@ -164,7 +164,7 @@ contains
     call v_ks_calc(sys%ks, hm, psi, sys%geo, time = M_ZERO)
     call propagator_run_zero_iter(hm, gr, td%tr)
 
-    if(target_type(target)  ==  oct_tg_velocity) then
+    if(target_type(tg)  ==  oct_tg_velocity) then
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
        vel_target_ = .true.
        do iatom=1, sys%geo%natoms
@@ -174,8 +174,8 @@ contains
        end do
     end if
 
-    if(target_type(target)  ==  oct_tg_hhgnew) then
-       call target_init_propagation(target)
+    if(target_type(tg)  ==  oct_tg_hhgnew) then
+       call target_init_propagation(tg)
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms,1:MAX_DIM))
        vel_target_ = .true.
        do iatom=1, sys%geo%natoms
@@ -185,13 +185,13 @@ contains
        end do
     end if
 
-    if(target_move_ions(target)) then
+    if(target_move_ions(tg)) then
       move_ions_ = .true.
     else
       call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)
     end if
 
-    call target_tdcalc(target, hm, gr, sys%geo, psi, 0, td%max_iter)
+    call target_tdcalc(tg, hm, gr, sys%geo, psi, 0, td%max_iter)
 
     if(present(prop)) call oct_prop_output(prop, 0, psi, gr)
 
@@ -212,7 +212,7 @@ contains
       if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, psi)
 
       ! if td_target
-      call target_tdcalc(target, hm, gr, sys%geo, psi, istep, td%max_iter)
+      call target_tdcalc(tg, hm, gr, sys%geo, psi, istep, td%max_iter)
 
       ! calculate velocity and new position of each atom
       if(move_ions_) then
@@ -316,11 +316,11 @@ contains
   !! fly, so that the propagation of psi is performed with the
   !! "new" control functions.
   !! --------------------------------------------------------
-  subroutine fwd_step(sys, td, hm, target, par, par_chi, psi, prop_chi, prop_psi)
+  subroutine fwd_step(sys, td, hm, tg, par, par_chi, psi, prop_chi, prop_psi)
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: hm
-    type(target_t), intent(inout)                 :: target
+    type(target_t), intent(inout)                 :: tg
     type(controlfunction_t), intent(inout)        :: par
     type(controlfunction_t), intent(in)           :: par_chi
     type(states_t), intent(inout)                 :: psi
@@ -348,7 +348,7 @@ contains
     ! the first two iterations are done self-consistently nonetheless.
     call propagator_remove_scf_prop(tr_chi)
 
-    aux_fwd_propagation = ( target_mode(target) == oct_targetmode_td .or. &
+    aux_fwd_propagation = ( target_mode(tg) == oct_targetmode_td .or. &
                            (hm%theory_level /= INDEPENDENT_PARTICLES .and. &
                             .not.sys%ks%frozen_hxc ) )
     if(aux_fwd_propagation) then
@@ -373,17 +373,17 @@ contains
 
     do i = 1, td%max_iter
       call update_field(i, par, gr, hm, psi, chi, par_chi, dir = 'f')
-      call update_hamiltonian_chi(i, gr, sys%ks, hm, td, target, par_chi, psi2)
+      call update_hamiltonian_chi(i, gr, sys%ks, hm, td, tg, par_chi, psi2)
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, td%max_iter, i)
       if(aux_fwd_propagation) then
-        call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par_prev, psi2, sys%geo)
+        call update_hamiltonian_psi(i, gr, sys%ks, hm, td, tg, par_prev, psi2, sys%geo)
         call propagator_dt(sys%ks, hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%mu, td%max_iter, i)
       end if
-      call update_hamiltonian_psi(i, gr, sys%ks, hm, td, target, par, psi, sys%geo)
+      call update_hamiltonian_psi(i, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i)
-      call target_tdcalc(target, hm, gr, sys%geo, psi, i, td%max_iter) 
+      call target_tdcalc(tg, hm, gr, sys%geo, psi, i, td%max_iter) 
       call oct_prop_output(prop_psi, i, psi, gr)
       call oct_prop_check(prop_chi, chi, gr, i)
     end do
@@ -392,7 +392,7 @@ contains
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
 
-    if( target_mode(target) == oct_targetmode_td .or. &
+    if( target_mode(tg) == oct_targetmode_td .or. &
         (hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.sys%ks%frozen_hxc) ) ) then
       call states_end(psi2)
       call controlfunction_end(par_prev)
@@ -415,11 +415,11 @@ contains
   !! par_chi = par_chi[|psi>, |chi>]
   !! |chi> --> U[par_chi](0, T)|chi>
   !! --------------------------------------------------------
-  subroutine bwd_step(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi) 
+  subroutine bwd_step(sys, td, hm, tg, par, par_chi, chi, prop_chi, prop_psi) 
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: hm
-    type(target_t), intent(inout)                 :: target
+    type(target_t), intent(inout)                 :: tg
     type(controlfunction_t), intent(in)           :: par
     type(controlfunction_t), intent(inout)        :: par_chi
     type(states_t), intent(inout)                 :: chi
@@ -458,11 +458,11 @@ contains
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
-      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par_chi, psi)
+      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
       call oct_prop_output(prop_chi, i-1, chi, gr)
-      call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi, sys%geo)
+      call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
     end do
@@ -492,11 +492,11 @@ contains
   !!
   !! par_chi = par_chi[|psi>, |chi>]
   !! --------------------------------------------------------
-  subroutine bwd_step_2(sys, td, hm, target, par, par_chi, chi, prop_chi, prop_psi) 
+  subroutine bwd_step_2(sys, td, hm, tg, par, par_chi, chi, prop_chi, prop_psi) 
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
     type(hamiltonian_t), intent(inout)            :: hm
-    type(target_t), intent(inout)                 :: target
+    type(target_t), intent(inout)                 :: tg
     type(controlfunction_t), intent(in)           :: par
     type(controlfunction_t), intent(inout)        :: par_chi
     type(states_t), intent(inout)                 :: chi
@@ -545,13 +545,13 @@ contains
       ! Here propagate psi one full step, and then simply interpolate to get the state
       ! at half the time interval. Perhaps one could gain some accuracy by performing two
       ! successive propagations of half time step.
-      call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, target, par, psi, sys%geo)
+      call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
       st_ref%zpsi = psi%zpsi
       vhxc(:, :) = hm%vhxc(:, :)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
       st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
       hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
-      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, target, par, st_ref)
+      call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, st_ref)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
       hm%vhxc(:, :) = vhxc(:, :)
       call oct_prop_output(prop_chi, i-1, chi, gr)
@@ -561,7 +561,7 @@ contains
 
 
     td%dt = -td%dt
-    call update_hamiltonian_psi(0, gr, sys%ks, hm, td, target, par, psi, sys%geo)
+    call update_hamiltonian_psi(0, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
     call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
 
     call density_calc(psi, gr, psi%rho)
@@ -581,13 +581,13 @@ contains
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, target, par_chi, st)
+  subroutine update_hamiltonian_chi(iter, gr, ks, hm, td, tg, par_chi, st)
     integer, intent(in)                        :: iter
     type(grid_t), intent(inout)                :: gr
     type(v_ks_t), intent(inout)                :: ks
     type(hamiltonian_t), intent(inout)         :: hm
     type(td_t), intent(inout)                  :: td
-    type(target_t), intent(inout)              :: target
+    type(target_t), intent(inout)              :: tg
     type(controlfunction_t), intent(in)        :: par_chi
     type(states_t), intent(inout)              :: st
 
@@ -596,9 +596,9 @@ contains
 
     PUSH_SUB(update_hamiltonian_chi)
 
-    if(target_mode(target) == oct_targetmode_td) then
+    if(target_mode(tg) == oct_targetmode_td) then
       call states_copy(inh, st)
-      call target_inh(st, gr, target, abs(td%dt)*iter, inh, iter)
+      call target_inh(st, gr, tg, abs(td%dt)*iter, inh, iter)
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)
     end if
@@ -624,13 +624,13 @@ contains
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_psi(iter, gr, ks, hm, td, target, par, st, geo)
+  subroutine update_hamiltonian_psi(iter, gr, ks, hm, td, tg, par, st, geo)
     integer,                 intent(in)    :: iter
     type(grid_t),            intent(inout) :: gr
     type(v_ks_t),            intent(inout) :: ks
     type(hamiltonian_t),     intent(inout) :: hm
     type(td_t),              intent(inout) :: td
-    type(target_t),          intent(inout) :: target
+    type(target_t),          intent(inout) :: tg
     type(controlfunction_t), intent(in)    :: par
     type(states_t),          intent(inout) :: st
     type(geometry_t),        intent(in)    :: geo
@@ -639,7 +639,7 @@ contains
 
     PUSH_SUB(update_hamiltonian_psi)
 
-    if(target_mode(target) == oct_targetmode_td) then
+    if(target_mode(tg) == oct_targetmode_td) then
       call hamiltonian_remove_inh(hm)
     end if
 
