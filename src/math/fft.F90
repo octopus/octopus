@@ -531,7 +531,23 @@ contains
 #endif
     case (FFTLIB_PNFFT)
 #ifdef HAVE_PNFFT     
-      call pnfft_copy_params(this%pnfft,fft_array(jj)%pnfft)     
+      call pnfft_copy_params(this%pnfft,fft_array(jj)%pnfft) ! pass default parameters like in NFFT
+
+      ! NOTE:
+      ! PNFFT (likewise NFFT) breaks the symmetry between real space and Fourier space
+      ! by allowing the possibility to have an unstructured grid in rs and by 
+      ! using different parallelizations (the rs is transposed w.r.t. fs).
+      ! Octopus, in fourier_space_m, uses the convention for which the mapping 
+      ! between rs and fs is done with a forward transform (and fs->rs with backward).
+      ! This is exactly the opposite of the definitions used by all the libraries 
+      ! performing FFTs (PNFFT and NFFT included) [see e.g. M. Frigo, and S. G. Johnson, Proc. 
+      ! IEEE 93, 216–231 (2005)].
+      ! While this leads to no problem on ordinary ffts where fs and rs can be exchanged 
+      ! it does makes a fundamental difference for PNFFT (for some reason I don't know NFFT 
+      ! is still symmetric).
+      ! Therefore, in order to perform rs->fs tranforms with PNFFT one should use the 
+      ! backward transform.     
+
       call pnfft_init_plan(fft_array(jj)%pnfft, mpi_comm, fft_array(jj)%fs_n_global, &
            fft_array(jj)%fs_n, fft_array(jj)%fs_istart, fft_array(jj)%rs_n, fft_array(jj)%rs_istart)
       
@@ -764,7 +780,7 @@ contains
     !Do nothing 
     case(FFTLIB_PNFFT)
 #ifdef HAVE_PNFFT
-      call pnfft_set_sp_nodes(fft_array(slot)%pnfft, XX, fft_array(slot)%rs_istart)
+      call pnfft_set_sp_nodes(fft_array(slot)%pnfft, XX)
 #endif
     case default
       call messages_write('Invalid FFT library.')

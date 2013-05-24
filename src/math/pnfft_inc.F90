@@ -26,12 +26,12 @@ subroutine X(pnfft_forward)(pnfft, in, out)
 
   PUSH_SUB(X(pnfft_forward))
 
-  print *, mpi_world%rank, "--- pnfft%N_local       ", pnfft%N_local 
-  print *, mpi_world%rank, "--- pnfft%M             ", pnfft%M 
-  print *, mpi_world%rank, "--- size(in)            ", size(in,1), size(in,2), size(in,3) 
-  print *, mpi_world%rank, "--- size(pnfft%f_hat)   ", size(pnfft%f_hat,1), size(pnfft%f_hat,2), size(pnfft%f_hat, 3) 
-  print *, mpi_world%rank, "--- size(out)           ", size(out,1), size(out,2), size(out,3)  
-  print *, mpi_world%rank, "--- size(pnfft%f)       ", size(pnfft%f,1), size(pnfft%f,2), size(pnfft%f,3) 
+!   print *, mpi_world%rank, "---> pnfft%N_local       ", pnfft%N_local 
+!   print *, mpi_world%rank, "---> pnfft%M             ", pnfft%M 
+!   print *, mpi_world%rank, "---> size(in)            ", size(in,1), size(in,2), size(in,3) 
+!   print *, mpi_world%rank, "---> size(pnfft%f_hat)   ", size(pnfft%f_hat,1), size(pnfft%f_hat,2), size(pnfft%f_hat, 3) 
+!   print *, mpi_world%rank, "---> size(out)           ", size(out,1), size(out,2), size(out,3)  
+!   print *, mpi_world%rank, "---> size(pnfft%f)       ", size(pnfft%f,1), size(pnfft%f,2), size(pnfft%f,3) 
   
 !   do i1 = 1, pnfft%N_local(1)
 !     do i2 = 1, pnfft%N_local(2)
@@ -40,6 +40,12 @@ subroutine X(pnfft_forward)(pnfft, in, out)
 !       end do
 !     end do
 !   end do
+
+! #ifdef R_TCOMPLEX 
+!   pnfft%f_hat(:,:,:) = cmplx(real(in(:,:,:)),aimag(in(:,:,:)), C_DOUBLE_COMPLEX)
+! #else
+!   pnfft%f_hat(:,:,:) = cmplx(in(:,:,:), C_DOUBLE_COMPLEX)
+! #endif
 
   pnfft%f_hat(:,:,:) = in(:,:,:)
 
@@ -51,7 +57,8 @@ subroutine X(pnfft_forward)(pnfft, in, out)
 !   do i1 = 1, pnfft%M(1)
 !     do i2 = 1, pnfft%M(2)
 !       do i3 = 1, pnfft%M(3)
-!         out(i1,i2,i3) = pnfft%f(i1,i2,i3)
+! !         out(i1,i2,i3) = pnfft%f_lin(pnfft_idx_3to1(pnfft,i1,i2,i3))
+!         out(i3,i2,i1) = pnfft%f(i1,i2,i3)
 !       end do
 !     end do
 !   end do
@@ -71,24 +78,36 @@ subroutine X(pnfft_backward)(pnfft, in, out)
 
   PUSH_SUB(X(pnfft_backward))
 
+!   print *, mpi_world%rank, "<--- pnfft%N_local       ", pnfft%N_local 
+!   print *, mpi_world%rank, "<--- pnfft%M             ", pnfft%M 
+!   print *, mpi_world%rank, "<--- size(in)            ", size(in,1), size(in,2), size(in,3) 
+!   print *, mpi_world%rank, "<--- size(pnfft%f_hat)   ", size(pnfft%f_hat,1), size(pnfft%f_hat,2), size(pnfft%f_hat, 3) 
+!   print *, mpi_world%rank, "<--- size(out)           ", size(out,1), size(out,2), size(out,3)  
+!   print *, mpi_world%rank, "<--- size(pnfft%f)       ", size(pnfft%f,1), size(pnfft%f,2), size(pnfft%f,3) 
 
-  do i1 = 1, pnfft%M(1)
-    do i2 = 1, pnfft%M(2)
-      do i3 = 1, pnfft%M(3)
-        pnfft%f(i3,i2,i1) = in(i1,i2,i3)
-      end do
-    end do
-  end do
+
+!   do i1 = 1, pnfft%M(1)
+!     do i2 = 1, pnfft%M(2)
+!       do i3 = 1, pnfft%M(3)
+!         pnfft%f_lin(pnfft_idx_3to1(pnfft,i3,i2,i1)) = cmplx(real(in(i1,i2,i3)), aimag(in(i1,i2,i3)),C_DOUBLE_COMPLEX)
+!       end do
+!     end do
+!   end do
+
+  pnfft%f(:,:,:) = in(:,:,:)
+
 
   call pnfft_adj(pnfft%plan)
 
-  do i1 = 1,pnfft%N_local(1)
-    do i2 = 1, pnfft%N_local(2)
-      do i3 = 1, pnfft%N_local(3)
-        out(i2,i3,i1) = pnfft%f_hat(i1,i3,i2)
-      end do
-    end do
-  end do
+  out(:,:,:) = pnfft%f_hat(:,:,:)
+
+!   do i1 = 1,pnfft%N_local(1)
+!     do i2 = 1, pnfft%N_local(2)
+!       do i3 = 1, pnfft%N_local(3)
+!         out(i2,i3,i1) = pnfft%f_hat(i1,i3,i2)
+!       end do
+!     end do
+!   end do
 
   out = out/pnfft%norm
 

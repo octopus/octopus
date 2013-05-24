@@ -56,8 +56,17 @@ module pnfft_m
 
   private
 
-#ifdef HAVE_PNFFT
+#ifndef HAVE_PNFFT
 
+  public ::               &
+    pnfft_t,              &      
+
+  type pnfft_t
+    FLOAT                 :: norm  
+
+end module pnfft_m
+
+#else
   public ::               &
     pnfft_t,              &      
     pnfft_write_info,     &
@@ -80,6 +89,7 @@ module pnfft_m
     integer(C_INTPTR_T)   :: N(3)            !> Number of Fourier coefficients local
     integer(C_INTPTR_T)   :: Nos(3)          !> FFT grid size
     integer(C_INTPTR_T)   :: M(3)
+    integer               :: M_istart(3)
     integer(C_INTPTR_T)   :: local_M         !> Local number of nodes per process
     integer               :: mm              !> Real space cut-off
     FLOAT                 :: sigma           !> oversampling factor
@@ -294,51 +304,36 @@ contains
     
     call pnfft_init_params(pnfft, fs_n_global(1:3), optimize = .true.)
     
-    x_max(:) = CNST(0.5)
+    x_max(:) = CNST(0.4)
          
     call pnfft_local_size_guru(3, pnfft%N, pnfft%Nos, x_max, pnfft%mm, mpi_comm, &
          PNFFT_TRANSPOSED_F_HAT, local_N, local_N_start, lower_border, upper_border)
-!          PNFFT_TRANSPOSED_NONE, local_N, local_N_start, lower_border, upper_border)
 
     pnfft%lower_border = lower_border
     pnfft%upper_border = upper_border
     pnfft%N_local(1:3)   = local_N(1:3) 
-    pnfft%M(1:3)   = pnfft%N_local(1:3) 
-! 
-!     pnfft%M(1)   = pnfft%N_local(1) 
-!     pnfft%M(2)   = pnfft%N_local(3) 
-!     pnfft%M(3)   = pnfft%N_local(2) 
+
+    pnfft%M(1)   = pnfft%N_local(2) 
+    pnfft%M(2)   = pnfft%N_local(3) 
+    pnfft%M(3)   = pnfft%N_local(1) 
+
     local_M = pnfft%M(1) * pnfft%M(2) * pnfft%M(3)
 
+    fs_n(1)      = local_N(1) 
+    fs_n(2)      = local_N(3) 
+    fs_n(3)      = local_N(2) 
+    fs_istart(1) = pnfft%N(1)/2 + local_N_start(1) + 1 
+    fs_istart(2) = pnfft%N(3)/2 + local_N_start(3) + 1 
+    fs_istart(3) = pnfft%N(2)/2 + local_N_start(2) + 1 
 
-! In order to stick with octopus convention that the forward FFT maps rs to fs 
-! we have to use the PNFFT library with swapped rs and fs definitions.
-! This might seem wrong because, while for ordinary FFTs rs and fs are symmetric,
-! PNFFT (and NFFT) breaks this symmetry by introducing different grids for rs
-! and fs. 
-! For some reason I don`t understand however this procedure of exchanging the definitions
-! is working fine for NFFT. Hopefully it will also do for PNFFT 
-    
-    fs_n(1:3)      = local_N(1:3) 
-    fs_istart(1:3) = pnfft%N(1:3)/2 + local_N_start(1:3) + 1 
 
-!     if(iand(pnfft%flags, PNFFT_TRANSPOSED_F_HAT) /= 0 ) then
-      ! we use the same decomposition 
-      ! but since we use PNFFT_TRANSPOSED_F_HAT the indices are transposed
-!     rs_n(1)      = fs_n(2) 
-!     rs_n(2)      = fs_n(1) 
-!     rs_n(3)      = fs_n(3) 
     rs_n(1:3) = pnfft%M(1:3) 
-    rs_istart(1:3) = fs_istart(1:3) 
 
-!     rs_istart(1) = fs_istart(1) 
-!     rs_istart(2) = fs_istart(3) 
-!     rs_istart(3) = fs_istart(2) 
-
-!     else
-!       fs_n(:)      = rs_n(:)
-!       fs_istart(:) = rs_istart(:)
-!     end if
+    rs_istart(1) = fs_istart(3) 
+    rs_istart(2) = fs_istart(2) 
+    rs_istart(3) = fs_istart(1) 
+    
+    pnfft%M_istart(:) = rs_istart(:)
     
 
     pnfft%plan = pnfft_init_guru(3, pnfft%N, pnfft%Nos, x_max, local_M, pnfft%mm, &
@@ -352,7 +347,6 @@ contains
     cx     = pnfft_get_x(pnfft%plan)
 
     ! Convert data pointers to Fortran format
-!     call c_f_pointer(cf_hat, pnfft%f_hat, [local_N(3),local_N(2),local_N(1)])
     call c_f_pointer(cf_hat, pnfft%f_hat, [local_N(1),local_N(3),local_N(2)])
     call c_f_pointer(cf,     pnfft%f_lin, [pnfft%local_M])
     call c_f_pointer(cf,     pnfft%f,     [pnfft%M(1),pnfft%M(2),pnfft%M(3)])
@@ -361,20 +355,21 @@ contains
 
 
 
-
-    print *, mpi_world%rank, "local_N(3)      ", local_N
-    print *, mpi_world%rank, "local_N_start(3)", local_N_start
-    print *, mpi_world%rank, "fs_istart(1:3)  ", fs_istart
-    print *, mpi_world%rank, "fs_n(1:3)       ", fs_n
-    print *, mpi_world%rank, "rs_istart(1:3)  ", rs_istart
-    print *, mpi_world%rank, "rs_n(1:3)       ", rs_n
-    print *, mpi_world%rank, "lower_border    ", lower_border
-    print *, mpi_world%rank, "upper_border    ", upper_border
-    print *, mpi_world%rank, "rs_range        ", upper_border(:) - lower_border(:)
-    print *, mpi_world%rank, "local_M         ", local_M
-    print *, mpi_world%rank, "pnfft%N_local   ", pnfft%N_local 
-    print *, mpi_world%rank, "pnfft%M         ", pnfft%M 
-
+    print *, mpi_world%rank, "local_N(3)       ", local_N
+    print *, mpi_world%rank, "local_N_start(3) ", local_N_start
+    print *, mpi_world%rank, "fs_istart(1:3)   ", fs_istart
+    print *, mpi_world%rank, "fs_n(1:3)        ", fs_n
+    print *, mpi_world%rank, "rs_istart(1:3)   ", rs_istart
+    print *, mpi_world%rank, "rs_n(1:3)        ", rs_n
+    print *, mpi_world%rank, "lower_border     ", lower_border
+    print *, mpi_world%rank, "upper_border     ", upper_border
+    print *, mpi_world%rank, "rs_range         ", upper_border(:) - lower_border(:)
+    print *, mpi_world%rank, "local_M          ", local_M
+    print *, mpi_world%rank, "pnfft%N_local    ", pnfft%N_local 
+    print *, mpi_world%rank, "pnfft%M          ", pnfft%M 
+    print *, mpi_world%rank, "pnfft%M_istart   ", pnfft%M_istart 
+    print *, mpi_world%rank, "size(pnfft%f_hat)", size(pnfft%f_hat,1), size(pnfft%f_hat,2), size(pnfft%f_hat, 3) 
+    print *, mpi_world%rank, "size(pnfft%f)    ", size(pnfft%f,1), size(pnfft%f,2), size(pnfft%f,3)
 
     POP_SUB(pnfft_init_plan)
   end subroutine pnfft_init_plan
@@ -402,63 +397,103 @@ contains
   ! Set the coordinates for the spatial nodes rescaled to 
   ! the 3D torus [-0.5,0.5)
   ! ---------------------------------------------------------  
-  subroutine pnfft_set_sp_nodes(pnfft, X, rs_istart)
+  subroutine pnfft_set_sp_nodes(pnfft, X)
     type(pnfft_t),    intent(inout) :: pnfft
     FLOAT,            intent(in)    :: X(:,:) !X(i, dim)
-    integer,          intent(in)    :: rs_istart(1:3)
 
-    FLOAT   :: len(3), cc(3), eps
-    integer :: ii, idir, i1, i2, i3, size(3)
-    FLOAT, allocatable ::  dX(:,:)
+    FLOAT   :: len(3), cc(3), eps,temp, lo(3), up(3), lo_g(3), up_g(3)
+    integer :: ii, idir, i1, i2, i3
+    FLOAT, allocatable ::  dX(:,:) 
+    integer :: j,t
 
     PUSH_SUB(pnfft_set_sp_nodes)
  
-    eps = 1.000001 ! the sample nodes must be in [0.5,0.5)
+    eps = 1.25 ! the sample nodes must be in [0.5,0.5)
+  
+    lo = pnfft%lower_border
+    up = pnfft%upper_border
+    
+    
     
     do idir=1,3  
       len(:) = (maxval(X(:,idir))-minval(X(:,idir)))*eps
       cc(:) = (minval(X(:,idir))+maxval(X(:,idir)))/M_TWO
     end do
+  
     
     
     
     do i1 = 1, pnfft%M(1)
       do i2 = 1, pnfft%M(2)
         do i3 = 1, pnfft%M(3)
-          pnfft%x(1, i1,i2,i3) = (X(rs_istart(1)+i1-1, 1)  - cc(1))/len(1)
-          pnfft%x(2, i1,i2,i3) = (X(rs_istart(2)+i2-1, 2)  - cc(2))/len(2)
-          pnfft%x(3, i1,i2,i3) = (X(rs_istart(3)+i3-1, 3)  - cc(3))/len(3)
-!           pnfft%x_lin(1, pnfft_idx_3to1(pnfft,ix,iy,iz)) = (X(rs_istart(1)+ix-1, 1)  - cc(1))/len(1)
-!           pnfft%x_lin(2, pnfft_idx_3to1(pnfft,ix,iy,iz)) = (X(rs_istart(2)+iy-1, 2)  - cc(2))/len(2)
-!           pnfft%x_lin(3, pnfft_idx_3to1(pnfft,ix,iy,iz)) = (X(rs_istart(3)+iz-1, 3)  - cc(3))/len(3)
+          pnfft%x(1, i1,i2,i3) = (X(pnfft%M_istart(1)+i1-1, 1)  - cc(1))/len(1)
+          pnfft%x(2, i1,i2,i3) = (X(pnfft%M_istart(2)+i2-1, 2)  - cc(2))/len(2)
+          pnfft%x(3, i1,i2,i3) = (X(pnfft%M_istart(3)+i3-1, 3)  - cc(3))/len(3)
+
+!           pnfft%x_lin(1, pnfft_idx_3to1(pnfft,i1,i2,i3)) = real((X(rs_istart(1)+i1-1, 1)  - cc(1))/len(1), C_DOUBLE)
+!           pnfft%x_lin(2, pnfft_idx_3to1(pnfft,i1,i2,i3)) = real((X(rs_istart(2)+i2-1, 2)  - cc(2))/len(2), C_DOUBLE)
+!           pnfft%x_lin(3, pnfft_idx_3to1(pnfft,i1,i2,i3)) = real((X(rs_istart(3)+i3-1, 3)  - cc(3))/len(3), C_DOUBLE)
+
+!           pnfft%x_lin(1, pnfft_idx_3to1(pnfft,i1,i2,i3)) = &
+!               (pnfft%upper_border(1) - pnfft%lower_border(1)) * rand(0) + pnfft%lower_border(1)
+!           pnfft%x_lin(2, pnfft_idx_3to1(pnfft,i1,i2,i3)) = &
+!               (pnfft%upper_border(2) - pnfft%lower_border(2)) * rand(0) + pnfft%lower_border(2)
+!           pnfft%x_lin(3, pnfft_idx_3to1(pnfft,i1,i2,i3)) = &
+!               (pnfft%upper_border(3) - pnfft%lower_border(3)) * rand(0) + pnfft%lower_border(3)
+
+!           pnfft%x(1, i1,i2,i3) = (pnfft%upper_border(1) - pnfft%lower_border(1)) * rand(0) + pnfft%lower_border(1)
+!           pnfft%x(2, i1,i2,i3) = (pnfft%upper_border(2) - pnfft%lower_border(2)) * rand(0) + pnfft%lower_border(2)
+!           pnfft%x(3, i1,i2,i3) = (pnfft%upper_border(3) - pnfft%lower_border(3)) * rand(0) + pnfft%lower_border(3)
+          
+          temp = (X(pnfft%M_istart(3)+i3-1, 3)  - cc(3))/len(3)
+          if(temp > pnfft%upper_border(3) .or. temp < pnfft%lower_border(3) ) then
+            print *, mpi_world%rank, "out of bounds x3 = ", temp,"-- ", pnfft%lower_border(3), pnfft%upper_border(3)
+          end if
+
 
         end do
+
+        temp = (X(pnfft%M_istart(2)+i2-1, 2)  - cc(2))/len(2)
+        if(temp > pnfft%upper_border(2) .or. temp < pnfft%lower_border(2) ) then
+          print *, mpi_world%rank, "out of bounds x2 = ", temp,"-- ", pnfft%lower_border(2), pnfft%upper_border(2)
+        end if
+
       end do
+
+      temp = (X(pnfft%M_istart(1)+i1-1, 1)  - cc(1))/len(1)
+      if(temp > pnfft%upper_border(1) .or. temp < pnfft%lower_border(1) ) then
+        print *, mpi_world%rank, "out of bounds x1 = ", temp,"-- ", pnfft%lower_border(1), pnfft%upper_border(1)
+      end if
+
     end do
+
+
+!     do j=1,pnfft%local_M
+!       do t=1,3
+!         pnfft%x_lin(t,j) = (pnfft%upper_border(t) - pnfft%lower_border(t)) * rand(0) + pnfft%lower_border(t)
+!       enddo
+!     enddo
 
 
     call pnfft_messages_debug(pnfft)
 
 
+    SAFE_ALLOCATE( dX(1:maxval(pnfft%M(:))-1, 1:3))
 
-!     x1_ =(X(:,1)-cc)/length
-!     length = (maxval(X(:,2))-minval(X(:,2)))*eps
-!     cc = (minval(X(:,2))+maxval(X(:,2)))/M_TWO
-!     x2_ =(X(:,2)-cc)/length
-!     length = (maxval(X(:,3))-minval(X(:,3)))*eps
-!     cc = (minval(X(:,3))+maxval(X(:,3)))/M_TWO
-!     x3_ =(X(:,3)-cc)/length
-    
      
-!     ! Set the normalization factor  
-!     do ii = 1, pnfft%M-1
-!       dX(ii,1)= abs(x1_(ii+1)-x1_(ii))
-!       dX(ii,2)= abs(x2_(ii+1)-x2_(ii))
-!       dX(ii,3)= abs(x3_(ii+1)-x3_(ii))
-!     end do
-! 
-!     pnfft%norm = M_ONE/(minval(dX(:,1)) * minval(dX(:,2)) * minval(dX(:,3)))
+    ! Set the normalization factor  
+    do idir=1,3 
+      do ii = 1, size(X(:,idir))-1
+        dX(ii,idir)= abs(X(ii+1, idir)-X(ii, idir))
+!         dX(ii,2)= abs(x2_(ii+1)-x2_(ii))
+!         dX(ii,3)= abs(x3_(ii+1)-x3_(ii))
+      end do
+    end do
 
+!     pnfft%norm = M_ONE/(minval(dX(:,1)) * minval(dX(:,2)) * minval(dX(:,3)))
+    pnfft%norm = M_ONE/(pnfft%N(1)*pnfft%N(2)*pnfft%N(3))
+
+    print *, mpi_world%rank, "pnfft%norm", pnfft%norm 
 
     POP_SUB(pnfft_set_sp_nodes)
   end subroutine pnfft_set_sp_nodes

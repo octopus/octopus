@@ -20,10 +20,11 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(fft_forward)(fft, in, out)
+subroutine X(fft_forward)(fft, in, out, norm)
     type(fft_t),     intent(in)  :: fft
     R_TYPE,          intent(in)  :: in(:,:,:)
     CMPLX,           intent(out) :: out(:,:,:)
+    FLOAT, optional, intent(out) :: norm 
 
     integer :: ii, jj, kk, slot, n1, n2, n3
     type(profile_t), save :: prof_fw
@@ -36,6 +37,7 @@ subroutine X(fft_forward)(fft, in, out)
 
     call profiling_in(prof_fw, "FFT_FORWARD")
 
+    
     slot = fft%slot
     select case (fft_array(slot)%library)
     case (FFTLIB_FFTW)
@@ -46,10 +48,12 @@ subroutine X(fft_forward)(fft, in, out)
     case (FFTLIB_NFFT)
 #ifdef HAVE_NFFT
       call X(nfft_forward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
+      if(present(norm)) norm = fft_array(slot)%nfft%norm
 #endif
     case (FFTLIB_PNFFT)
 #ifdef HAVE_PNFFT
       call X(pnfft_forward)(fft_array(slot)%pnfft, in(:,:,:), out(:,:,:))
+      if(present(norm)) norm = fft_array(slot)%pnfft%norm
 #endif
     case (FFTLIB_PFFT)
       if (all(fft_array(slot)%rs_n /= 0)) then
@@ -174,11 +178,12 @@ subroutine X(fft_forward)(fft, in, out)
   end subroutine X(fft_forward1)
 
   ! ---------------------------------------------------------
-  subroutine X(fft_backward)(fft, in, out)
+  subroutine X(fft_backward)(fft, in, out, norm)
     type(fft_t), intent(in)  :: fft
     CMPLX,       intent(in)  :: in(:,:,:)
     R_TYPE,      intent(out) :: out(:,:,:)
-
+    FLOAT, optional, intent(out) :: norm 
+    
     integer :: ii, jj, kk, slot
     FLOAT :: scaling_factor
     type(profile_t), save :: prof_bw
@@ -202,11 +207,13 @@ subroutine X(fft_forward)(fft, in, out)
       scale = .false. ! the result is already scaled
 #ifdef HAVE_NFFT    
       call X(nfft_backward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
+      if(present(norm)) norm = fft_array(slot)%nfft%norm
 #endif
     case (FFTLIB_PNFFT)
       scale = .false. ! the result is already scaled
 #ifdef HAVE_PNFFT    
       call X(pnfft_backward)(fft_array(slot)%pnfft, in(:,:,:), out(:,:,:))
+      if(present(norm)) norm = fft_array(slot)%pnfft%norm
 #endif
     case (FFTLIB_PFFT)
       if (all(fft_array(slot)%fs_n /= 0)) then

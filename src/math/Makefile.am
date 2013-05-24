@@ -90,7 +90,7 @@ dablas.o : dablas.c
 fft.o : fft.F90 fft_inc.F90 fftw.o pfft.o pnfft.o nfft.o lalg_basic.o loct_math.o math.o
 fftw.o : fftw.F90
 pfft.o : pfft.F90 fftw.o math.o
-pnfft.o : pnfft.F90 pfft.o fftw.o math.o
+pnfft.o : pnfft.F90 pnfft_inc.F90 pfft.o fftw.o math.o
 nfft_f.o : nfft_f.c
 nfft.o : nfft.F90 nfft_inc.F90 nfft_f.o lalg_basic.o fftw.o loct_math.o
 spline_filter.o: spline_filter.F90 splines.o
