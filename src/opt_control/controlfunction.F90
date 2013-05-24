@@ -102,8 +102,7 @@ module controlfunction_m
 
   integer, parameter, public :: controlfunction_mode_none      = 0, &
                                 controlfunction_mode_epsilon   = 1, &
-                                controlfunction_mode_f         = 2, &
-                                controlfunction_mode_phi       = 3
+                                controlfunction_mode_f         = 2
 
   !> This data type contains information that is filled when the module
   !! is initialized ("controlfunction_mod_init"), and stored while the module
@@ -137,12 +136,6 @@ module controlfunction_m
     FLOAT,       pointer :: alpha(:) => NULL()                     !< A factor that determines the "penalty", for each of the
                                                                    !! control functions.
     type(tdf_t), pointer :: td_penalty(:) => NULL()                !< The penalties, if these are time-dependent.
-
-
-    type(tdf_t)    :: f                                            !< This is the envelope of the laser field, only used in the 
-                                                                   !! phase-only optimization (necessary to store it in order to
-                                                                   !! calculate fluences)
-
   end type controlfunction_common_t
 
   !> This is the data type used to hold a control function.
@@ -157,7 +150,6 @@ module controlfunction_m
                                                  !! that the parameters are the coefficients of the basis set.
     integer :: dof           = 0                 !< This is the number of degrees of freedom, or number of parameters, used to 
                                                  !! represent a control function (this may be different -- smaller -- than "dim").
-    FLOAT   :: intphi        = M_ZERO
     type(tdf_t), pointer :: f(:) => NULL()
     FLOAT, pointer :: alpha(:) => NULL()
 
@@ -347,6 +339,7 @@ contains
     call parse_logical(datasets_check('OCTFixInitialFluence'), .true., &
       cf_common%fix_initial_fluence)
 
+
     !%Variable OCTControlFunctionType
     !%Type integer
     !%Section Calculation Modes::Optimal Control
@@ -367,11 +360,6 @@ contains
     !% control field is this envelope times a cosine function with a "carrier" frequency. 
     !% This carrier frequency is given by the carrier frequency of the <tt>TDExternalFields</tt> 
     !% in the <tt>inp</tt> file.
-    !%Option controlfunction_mode_phi       3
-    !% The optimization process attempts to find the best possible time-dependent phase. That is,
-    !% the external field would be given by a function in the form e(t) = f(t)*cos(w0*t+phi(t)), 
-    !% where f(t) is an "envelope", w0 a carrier frequency, and phi(t) the td phase that we 
-    !% wish to optimize.
     !%End
     call parse_integer(datasets_check('OCTControlFunctionType'), controlfunction_mode_epsilon, cf_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', cf_common%mode)) &
@@ -412,12 +400,6 @@ contains
         call laser_to_numerical(ep%lasers(il), dt, max_iter, cf_common%omegamax)
       end select
     end do
-
-    ! For phase-only optimization, we need to store the envelope, in order to be able
-    ! to calculate the fluence.
-    if(cf_common%mode  ==  controlfunction_mode_phi) then
-      call laser_get_f(ep%lasers(1), cf_common%f)
-    end if 
 
     ! Fix the carrier frequency
     call messages_obsolete_variable('OCTCarrierFrequency')
@@ -590,7 +572,6 @@ contains
     this%no_controlfunctions    = 0
     this%dim                    = 0
     this%dof                    = 0
-    this%intphi                 = M_ZERO
     this%f                      =>NULL()
     this%alpha                  =>NULL()
     this%current_representation = 0
@@ -723,9 +704,6 @@ contains
         call tdf_end(cp%f(ipar))
         call laser_get_f(ep%lasers(ipar), cp%f(ipar))
       end do
-    case(controlfunction_mode_phi)
-      call tdf_end(cp%f(1))
-      call laser_get_phi(ep%lasers(1), cp%f(1))
     end select
 
     POP_SUB(controlfunction_set)
@@ -773,20 +751,6 @@ contains
       call messages_info(2)
       if(cf_common%fix_initial_fluence) call controlfunction_set_fluence(par)
     end if
-
-    ! Now we have to find the "fluence" of the phase, in order to keep it constant.
-    select case(cf_common%mode)
-    case(controlfunction_mode_phi)
-      par%intphi = tdf_dot_product(par%f(1), par%f(1))
-      if(par%intphi <= M_ZERO) then
-        dt = tdf_dt(par%f(1))
-        ntiter = tdf_niter(par%f(1))
-
-        par%intphi = CNST(0.1) * (M_PI / M_TWO)**2 * dt * ntiter
-      else
-        par%intphi = tdf_dot_product(par%f(1), par%f(1))
-      end if
-    end select
 
     ! Move to the "native" representation, if necessary.
     call controlfunction_set_rep(par)
@@ -1028,8 +992,6 @@ contains
       do ipar = 1, cp%no_controlfunctions
         call laser_set_f(ep%lasers(ipar), par%f(ipar))
       end do
-    case(controlfunction_mode_phi)
-      call laser_set_phi(ep%lasers(1), par%f(1))
     end select
 
     call controlfunction_end(par)
@@ -1146,20 +1108,6 @@ contains
         call io_close(iunit)
       end do
 
-    case(controlfunction_mode_phi)
-
-      ! In this case, there is only one control function (for the moment)
-      iunit = io_open(trim(filename)//'/cp', action='write')
-      write(iunit,'(4a20)') '#       t [a.u]      ', '        e(t)         ', &
-                            '         f(t)        ', '       phi(t)        ' 
-      do iter = 1, tdf_niter(par%f(ipar)) + 1
-        time = (iter - 1) * tdf_dt(par%f(ipar))
-        write(iunit, '(4es20.8e3)') time, tdf(cf_common%f, time) * &
-          cos(par%w0 * time + tdf(par%f(1), time) ), tdf(cf_common%f, time), tdf(par%f(1), time)
-        func(iter, 1) = tdf(cf_common%f, time) * cos(par%w0 * time + tdf(par%f(1), time) )
-      end do
-      call io_close(iunit)
-
     end select
 
 
@@ -1201,7 +1149,7 @@ contains
       end do
       
 
-    case(controlfunction_mode_f, controlfunction_mode_phi)
+    case(controlfunction_mode_f)
       iunit = io_open(trim(filename)//'/cpw', action='write')
       write(iunit,'(3a20)') '#       w [a.u]      ', '      Re[e(w)]       ', &
                             '      Im[e(w)]       '
@@ -1252,8 +1200,7 @@ contains
   FLOAT function controlfunction_fluence(par)
     type(controlfunction_t), intent(in) :: par
     type(controlfunction_t)             :: par_
-    integer :: iter, ipar
-    FLOAT :: time, fi, phi
+    integer :: ipar
     type(tdf_t) :: ff
     PUSH_SUB(controlfunction_fluence)
 
@@ -1275,17 +1222,6 @@ contains
         controlfunction_fluence = controlfunction_fluence + tdf_dot_product(ff, ff)
         call tdf_end(ff)
       end do
-    case(controlfunction_mode_phi)
-      call tdf_init(ff)
-      call tdf_copy(ff, par_%f(1))
-      do iter = 1, tdf_niter(ff) + 1
-        time = (iter - 1) * tdf_dt(ff)
-        fi = tdf(cf_common%f, iter)
-        phi = real(tdf(ff, iter)) 
-        call tdf_set_numerical(ff, iter, fi * cos(par%w0 * time + phi))
-      end do
-      controlfunction_fluence = tdf_dot_product(ff, ff)
-      call tdf_end(ff)
     end select
 
     call controlfunction_end(par_)
@@ -1302,7 +1238,7 @@ contains
     type(controlfunction_t), intent(in) :: par
     type(controlfunction_t)             :: par_
     integer :: iter, ipar
-    FLOAT   :: time, integral, fi, phi, tdp
+    FLOAT   :: time, integral, fi, tdp
     type(tdf_t) :: ff
 
     PUSH_SUB(controlfunction_j2)
@@ -1340,18 +1276,6 @@ contains
         integral = integral + tdf_dot_product(ff, ff)
         call tdf_end(ff)
       end do
-    case(controlfunction_mode_phi)
-      call tdf_init(ff)
-      call tdf_copy(ff, par_%f(1))
-      do iter = 1, tdf_niter(ff) + 1
-        time = (iter - 1) * tdf_dt(ff)
-        fi = tdf(cf_common%f, iter)
-        phi = real(tdf(par_%f(1), iter), kind=REAL_PRECISION)
-        tdp = sqrt(real(tdf(cf_common%td_penalty(1), iter), kind=REAL_PRECISION))
-        call tdf_set_numerical(ff, iter, fi * cos(par_%w0 * time + phi))
-      end do
-      integral = tdf_dot_product(ff, ff)
-      call tdf_end(ff)
     end select
 
     j2 = - par_%alpha(1) * (integral - cf_common%targetfluence)
@@ -1409,7 +1333,6 @@ contains
     cp_out%no_controlfunctions = cp_in%no_controlfunctions
     cp_out%dim = cp_in%dim
     cp_out%dof = cp_in%dof
-    cp_out%intphi = cp_in%intphi
     cp_out%current_representation = cp_in%current_representation
     cp_out%w0 = cp_in%w0
 
@@ -1443,16 +1366,10 @@ contains
 
      call controlfunction_set_rep(par)
 
-     select case(cf_common%mode)
-     case(controlfunction_mode_epsilon, controlfunction_mode_f)
-       do ipar = 1, par%no_controlfunctions
-         call tdf_set_random(par%f(ipar))
-       end do
-       call controlfunction_basis_to_theta(par)
-     case(controlfunction_mode_phi)
-       call tdf_set_random(par%f(1))
-       call controlfunction_basis_to_theta(par)
-     end select
+     do ipar = 1, par%no_controlfunctions
+       call tdf_set_random(par%f(ipar))
+     end do
+     call controlfunction_basis_to_theta(par)
 
      POP_SUB(controlfunction_randomize)
   end subroutine controlfunction_randomize
@@ -1538,7 +1455,7 @@ contains
     dog = controlfunction_dof(par)
 
     select case(cf_common%mode)
-    case(controlfunction_mode_epsilon, controlfunction_mode_f, controlfunction_mode_phi)
+    case(controlfunction_mode_epsilon, controlfunction_mode_f)
       lower_bounds(1:dog - 1) = M_ZERO
       lower_bounds(dog)       = -M_PI
     end select

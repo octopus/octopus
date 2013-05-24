@@ -237,7 +237,7 @@
     end if
 
     select case(controlfunction_mode())
-    case(controlfunction_mode_f, controlfunction_mode_phi)
+    case(controlfunction_mode_f)
       if(.not. oct_algorithm_is_direct(oct)) then
         if(oct%algorithm /= oct_algorithm_cg) then
           message(1) = 'If you attempt an envelope-only or phase-only optimization, then'
