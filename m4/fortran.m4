@@ -80,17 +80,15 @@ m4_define([AC_LANG_FUNC_LINK_TRY(Fortran)],
 # --------------------------- 
 
 # Defining this suppresses warnings from AC_EGREP_CPP, concerned that Fortran preprocessing isn't defined
-AC_DEFUN([AC_LANG_PREPROC(Fortran)],[])
+m4_define([AC_LANG_PREPROC(Fortran)],[])
 
-AC_DEFUN([ACX_FCCPP],
-[
+AC_DEFUN([ACX_FCCPP],[
      AC_LANG_ASSERT(Fortran)
-     AC_LANG_PREPROC(Fortran)
      CPP_save="$CPP"
 
      # "gcc -E -x c" means treat the file as if it were C. For some reason, when gcc identifies the source
      # as Fortran, it will not concatenate tokens in preprocessing, so we must trick it.
-     for CPP_base in "$FCCPP" "$CPP_save" "$CPP_save -x c" "`which cpp`" "/lib/cpp"; do
+     for CPP_base in "$FCCPP" "/lib/cpp" "$CPP_save" "$CPP_save -x c" "`which cpp`"; do
          # cycle if blank
          if test -z "$CPP_base"; then
            continue
