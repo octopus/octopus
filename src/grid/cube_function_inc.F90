@@ -108,48 +108,81 @@ subroutine X(cube_function_free_rs)(cube, cf)
 end subroutine X(cube_function_free_rs)
 
 ! ---------------------------------------------------------
-subroutine X(cube_function_allgather)(cube, cf, cf_local, transpose)
+subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
   type(cube_t),      intent(in) :: cube
   R_TYPE,            intent(out):: cf(:,:,:)
   R_TYPE,            intent(in) :: cf_local(:,:,:)
-  logical, optional, intent(in) :: transpose
+  integer, optional, intent(in) :: order(3)
+  logical, optional, intent(in) :: gatherfs
 
-  integer :: ix, iy, iz, index, order(1:3)
+  integer :: ix, iy, iz, index, order_(1:3)
   R_TYPE, allocatable :: cf_tmp(:)
   type(profile_t), save :: prof_allgather
 
-  #ifdef HAVE_MPI
+#ifdef HAVE_MPI
 
   PUSH_SUB(X(cube_function_allgather))
   call profiling_in(prof_allgather, "CF_ALLGATHER")
 
 
-  SAFE_ALLOCATE(cf_tmp(1:cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)))
+  if(cube%fft%library == FFTLIB_PFFT .or. &
+    (cube%fft%library == FFTLIB_PNFFT .and. .not. optional_default(gatherfs, .false.))) then
+    
+    SAFE_ALLOCATE(cf_tmp(1:cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)))
+    call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
+    ! Warning: in the next line we have to pass the full cf_local array, not just the first element.
+    ! This is because cf_local might be a pointer to a subarray when using PFFT, such that
+    ! memory will not be contiguous (see cube_function_alloc_rs). In that case the 
+    ! Fortran compiler should do a temporary copy.
+    call MPI_Allgatherv ( cf_local, cube%np_local(cube%mpi_grp%rank+1), R_MPITYPE, &
+         cf_tmp(1), cube%np_local, cube%xlocal - 1, R_MPITYPE, &
+         cube%mpi_grp%comm, mpi_err)
+    call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
 
-  call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
-  ! Warning: in the next line we have to pass the full cf_local array, not just the first element.
-  ! This is because cf_local might be a pointer to a subarray when using PFFT, such that
-  ! memory will not be contiguous (see cube_function_alloc_rs). In that case the 
-  ! Fortran compiler should do a temporary copy.
-  call MPI_Allgatherv ( cf_local, cube%np_local(cube%mpi_grp%rank+1), R_MPITYPE, &
-       cf_tmp(1), cube%np_local, cube%xlocal - 1, R_MPITYPE, &
-       cube%mpi_grp%comm, mpi_err)
-  call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
+    if(optional_default(gatherfs,.false.)) then
+      order_ = (/2,3,1/)
+    else
+      order_ = (/1,2,3/)
+    end if
+    if(present(order)) order_ = order
 
-  order = (/1,2,3/)
-  if(optional_default(transpose, .false.)) order = (/2,3,1/) ! transpose the matrix (mainly for output reason)
 
-  do index = 1, cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
-    ix = cube%local(index, order(1))
-    iy = cube%local(index, order(2))
-    iz = cube%local(index, order(3))
-    cf(ix, iy, iz) = cf_tmp(index)
 
-  end do
+    do index = 1, cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
+      ix = cube%local(index, order_(1))
+      iy = cube%local(index, order_(2))
+      iz = cube%local(index, order_(3))
+      cf(ix, iy, iz) = cf_tmp(index)
+    end do
+
+  else
+    order_ = (/1,2,3/)
+    if(present(order)) order_ = order
+  
+    SAFE_ALLOCATE(cf_tmp(1:cube%fs_n_global(1)*cube%fs_n_global(2)*cube%fs_n_global(3)))
+    call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
+    ! Warning: in the next line we have to pass the full cf_local array, not just the first element.
+    ! This is because cf_local might be a pointer to a subarray when using PFFT, such that
+    ! memory will not be contiguous (see cube_function_alloc_rs). In that case the 
+    ! Fortran compiler should do a temporary copy.
+    call MPI_Allgatherv ( cf_local, cube%np_local_fs(cube%mpi_grp%rank+1), R_MPITYPE, &
+         cf_tmp(1), cube%np_local_fs, cube%xlocal_fs - 1, R_MPITYPE, &
+         cube%mpi_grp%comm, mpi_err)
+    call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
+
+    do index = 1, cube%fs_n_global(1)*cube%fs_n_global(2)*cube%fs_n_global(3)
+      ix = cube%local_fs(index, order_(1))
+      iy = cube%local_fs(index, order_(2))
+      iz = cube%local_fs(index, order_(3))
+      cf(ix, iy, iz) = cf_tmp(index)
+    end do    
+
+  end if
 
   SAFE_DEALLOCATE_A(cf_tmp)
 
   call profiling_out(prof_allgather)
+
 #endif
   POP_SUB(X(cube_function_allgather))
 end subroutine X(cube_function_allgather)

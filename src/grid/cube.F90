@@ -64,9 +64,13 @@ module cube_m
     FLOAT, pointer :: Lrs(:,:)  !< The real space coordinates vector: Lrs(i,{1,2,3})={x,y,z}(i)
     FLOAT, pointer :: Lfs(:,:)  !< The fourier space coordinates vector: Lfs(i,{1,2,3})={kx,ky,kz}(i)
 
-    integer, pointer :: np_local(:) !< Number of points in each partition
-    integer, pointer :: xlocal(:)   !< where does each process start when gathering a function
-    integer, pointer :: local(:,:)  !< local to global map used when gathering a function
+    integer, pointer :: np_local(:) => NULL() !< Number of points in each partition
+    integer, pointer :: xlocal(:) => NULL()   !< where does each process start when gathering a function
+    integer, pointer :: local(:,:) => NULL()  !< local to global map used when gathering a function
+    integer, pointer :: np_local_fs(:) => NULL() !< Number of points in each partition
+    integer, pointer :: xlocal_fs(:) => NULL()   !< where does each process start when gathering a function
+    integer, pointer :: local_fs(:,:) => NULL()  !< local to global map used when gathering a function
+
 
     type(fft_t), pointer :: fft !< the fft object
     logical :: has_cube_mapping !< Saves if a mapping with the cube is needed. 
@@ -240,7 +244,7 @@ contains
       cube%has_cube_mapping = .false.
     end if
     if (cube%has_cube_mapping) then
-      call cube_do_mapping(cube)
+      call cube_do_mapping(cube, fs = fft_library_ == FFTLIB_PNFFT)
     end if
 
     if (cube%parallel_in_domains) call cube_partition_messages_debug(cube)
@@ -263,6 +267,10 @@ contains
       SAFE_DEALLOCATE_P(cube%np_local)
       SAFE_DEALLOCATE_P(cube%xlocal)
       SAFE_DEALLOCATE_P(cube%local)
+
+      SAFE_DEALLOCATE_P(cube%np_local_fs)
+      SAFE_DEALLOCATE_P(cube%xlocal_fs)
+      SAFE_DEALLOCATE_P(cube%local_fs)
     end if
     
     SAFE_DEALLOCATE_P(cube%Lrs)
@@ -376,8 +384,9 @@ contains
 
   ! ---------------------------------------------------------
   !> do the mapping between global and local points of the cube
-  subroutine cube_do_mapping(cube)
+  subroutine cube_do_mapping(cube, fs)
     type(cube_t), intent(inout) :: cube
+    logical,      intent(in)    :: fs !< fill the fs mapping too
     
     integer :: tmp_local(6), position, process, ix, iy, iz, index
     integer, allocatable :: local_sizes(:)
@@ -438,8 +447,67 @@ contains
         end do
       end do
     end do
-
+    
     call profiling_out(prof_map)
+    
+    if(optional_default(fs,.false.)) then
+
+      tmp_local(1) = cube%fs_istart(1)
+      tmp_local(2) = cube%fs_istart(2)
+      tmp_local(3) = cube%fs_istart(3)
+      tmp_local(4) = cube%fs_n(1)
+      tmp_local(5) = cube%fs_n(2)
+      tmp_local(6) = cube%fs_n(3)
+
+      local_sizes = 0
+      if (cube%parallel_in_domains) then
+        call profiling_in(prof_gt,"CUBE_GAT_FS")
+  #ifdef HAVE_MPI
+        call MPI_Allgather(tmp_local, 6, MPI_INTEGER, local_sizes, 6, MPI_INTEGER,&
+                           cube%mpi_grp%comm, mpi_err)
+  #endif
+        call profiling_out(prof_gt)
+      else
+        local_sizes = tmp_local
+      end if
+
+      call profiling_in(prof_map,"CUBE_MAP_FS")
+
+      SAFE_ALLOCATE(cube%xlocal_fs(1:cube%mpi_grp%size))
+      SAFE_ALLOCATE(cube%np_local_fs(1:cube%mpi_grp%size))
+      SAFE_ALLOCATE(cube%local_fs(1:cube%fs_n_global(1)*cube%fs_n_global(2)*cube%fs_n_global(3), 3))
+
+      index = 1
+      do process = 1, cube%mpi_grp%size
+        position = ((process-1)*6)+1
+        if (position == 1) then
+          cube%xlocal_fs(1) = 1
+          cube%np_local_fs(1) = local_sizes(4)*local_sizes(5)*local_sizes(6)
+        else
+          ! calculate the begin index and size of each process
+          cube%xlocal_fs(process) = cube%xlocal_fs(process-1) + cube%np_local_fs(process-1)
+          cube%np_local_fs(process) = local_sizes(position+3)*local_sizes(position+4)*local_sizes(position+5)
+        end if
+
+        ! save the mapping between the global x,y,z and the global index
+        ! and determine which partition the point belongs to
+        do iz = local_sizes(position+2), local_sizes(position+2)+local_sizes(position+5)-1
+          do iy = local_sizes(position+1), local_sizes(position+1)+local_sizes(position+4)-1
+            do ix = local_sizes(position), local_sizes(position)+local_sizes(position+3)-1
+              cube%local_fs(index, 1) = ix
+              cube%local_fs(index, 2) = iy
+              cube%local_fs(index, 3) = iz
+              index = index + 1
+            end do
+          end do
+        end do
+      end do
+      
+      call profiling_out(prof_map)
+
+    end if
+
+    
 
     SAFE_DEALLOCATE_A(local_sizes)
 
