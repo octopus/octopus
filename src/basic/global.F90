@@ -163,7 +163,7 @@ CFLAGS
 FCFLAGS
 
     ! initialize info for the input variables
-    call varinfo_init(trim(conf%share)//'/varinfo');
+    call varinfo_init(trim(conf%share)//'/varinfo')
 
     conf%target_states_block_size = -1
 
