@@ -59,12 +59,12 @@ module pnfft_m
 #ifndef HAVE_PNFFT
 
   public ::               &
-    pnfft_t,              &      
+    pnfft_t     
 
   type pnfft_t
     FLOAT                 :: norm  
+  end type pnfft_t
 
-end module pnfft_m
 
 #else
   public ::               &
