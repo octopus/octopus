@@ -21,7 +21,7 @@ ExtraStates = 1
   0 | 0 
 %
 SpinComponents = polarized
-EigenSolver = cg_new
+EigenSolver = plan
 EigenSolverTolerance = 1.0e-5
 EigenSolverMaxIter = 1000
 
