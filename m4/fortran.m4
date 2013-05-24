@@ -75,13 +75,62 @@ AC_MSG_RESULT($acx_fortran_check_func)
 m4_define([AC_LANG_FUNC_LINK_TRY(Fortran)],
 [AC_LANG_PROGRAM([], [call [$1]])])
 
-################################################
-# AC_LANG_PREPROC(Fortran)
-# ---------------------------
-m4_define([AC_LANG_PREPROC(Fortran)],[
-  # this should not be hardwired
-  if test -z "$FCCPP"; then FCCPP="/lib/cpp -C -ansi"; fi
-  AC_SUBST(FCCPP)
+################################################ 
+# Fortran preprocessing
+# --------------------------- 
+
+# Defining this suppresses warnings from AC_EGREP_CPP, concerned that Fortran preprocessing isn't defined
+AC_DEFUN([AC_LANG_PREPROC(Fortran)],[])
+
+AC_DEFUN([ACX_FCCPP],
+[
+     AC_LANG_ASSERT(Fortran)
+     AC_LANG_PREPROC(Fortran)
+     CPP_save="$CPP"
+
+     # "gcc -E -x c" means treat the file as if it were C. For some reason, when gcc identifies the source
+     # as Fortran, it will not concatenate tokens in preprocessing, so we must trick it.
+     for CPP_base in "$FCCPP" "$CPP_save" "$CPP_save -x c" "`which cpp`" "/lib/cpp"; do
+         # cycle if blank
+         if test -z "$CPP_base"; then
+           continue
+         fi
+
+         for CPP in "$CPP_base" "$CPP_base -ansi"; do
+           AC_MSG_CHECKING([whether $CPP is usable for Fortran preprocessing])
+	   acx_fpp_ok=yes
+
+      	   AC_EGREP_CPP([anything], AC_LANG_PROGRAM([],[anything]),
+	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor cannot be run]); break])
+	     # very unlikely that adding -ansi will allow it to be run at all
+
+      	   AC_EGREP_CPP([hi], AC_LANG_PROGRAM([],[
+#define ADD_I(x) x ## i
+ADD_I(h)]),
+	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor does not concatenate tokens])])
+
+           # in Fortran this is string concatenation, must not be stripped
+	   # some cpp's might actually insert a space between // too which is not acceptable
+           AC_EGREP_CPP([// string2], [string1 // string2],
+	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor strips C++ style comment])])
+
+	  if test x"$acx_fpp_ok" = xyes; then
+            AC_MSG_RESULT([yes])
+	    break
+	  fi
+       done
+       if test x"$acx_fpp_ok" = xyes; then
+	  break
+       fi
+     done
+
+     if test x"$acx_fpp_ok" = xno; then
+     	AC_MSG_ERROR([Could not find preprocessor usable for Fortran.])
+     fi
+
+     FCCPP="$CPP"
+     CPP="$CPP_save"
+     AC_SUBST(FCCPP)
 ])
 
 ###############################################
