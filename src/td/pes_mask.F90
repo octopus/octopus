@@ -42,9 +42,6 @@ module pes_mask_m
   use mesh_cube_parallel_map_m
   use messages_m
   use mpi_m
-! #if defined(HAVE_NFFT) 
-!   use nfft_m
-! #endif
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif
@@ -116,9 +113,8 @@ module pes_mask_m
     FLOAT, pointer :: Lk(:) => NULL()          !< associate a k value to an cube index
     !< we implicitly assume k to be the same for all directions
     
-    integer          :: enlarge                !< Fourier space enlargement
-    integer          :: enlarge_nfft           !< NFFT space enlargement
-    !     integer          :: llr(MAX_DIM)           !< the size of the rescaled cubic mesh
+    FLOAT            :: enlarge                !< Fourier space enlargement
+    FLOAT            :: enlarge_2p                !< Two-point space enlargement
     
     FLOAT :: start_time              !< the time we switch on the photoelectron detector   
     FLOAT :: energyMax 
@@ -296,8 +292,8 @@ contains
     !% region. We perform discrete Fourier transforms (DFT) in order to approximate  
     !% a continuous Fourier transform. The major drawback of this approach is the built-in
     !% periodic boundary condition of DFT. Choosing an appropriate plane-wave projection 
-    !% for a given simulation in addition to <tt>PESMaskEnlargeLev</tt> and 
-    !% <tt>PESMaskNFFTEnlargeLev</tt>will help to converge the results.   
+    !% for a given simulation in addition to <tt>PESMaskEnlargeFactor</tt> and 
+    !% <tt>PESMask2PEnlargeFactor</tt>will help to converge the results.   
     !%
     !% NOTE: depending on the value of <tt>PESMaskMode</tt> <tt>PESMaskPlaneWaveProjection</tt>,
     !% may affect not only performance but also the time evolution of the density. 
@@ -357,38 +353,60 @@ contains
 #endif
     
     
-    !%Variable PESMaskEnlargeLev
-    !%Type integer
-    !%Default 0
+    !%Variable PESMaskEnlargeFactor
+    !%Type float
+    !%Default 1
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% Mask box enlargement level. Enlarges the mask bounding box by a factor 2**<tt>PESMaskEnlargeLev</tt>.
-    !% This will avoid wavefunction wrapping at the boundaries.
+    !% Mask box enlargement level. Enlarges the mask bounding box by a <tt>PESMaskEnlargeFactor</tt>.
+    !% This helps to avoid wavefunction wrapping at the boundaries.
     !%End
 
-    call parse_integer(datasets_check('PESMaskEnlargeLev'),0,mask%enlarge)
+    call parse_float(datasets_check('PESMaskEnlargeFactor'),M_ONE,mask%enlarge)
     
-    if ( mask%enlarge /= 0 ) then
-      call messages_print_var_value(stdout, "PESMaskEnlargeLev", mask%enlarge)
+    if ( mask%enlarge /= M_ONE ) then
+      call messages_print_var_value(stdout, "PESMaskEnlargeFactor", mask%enlarge)
     end if
+    if( mask%enlarge < M_ONE ) then
+      message(1) = "PESMaskEnlargeFactor must be bigger than one."
+      call messages_fatal(1) 
+    end if
+ 
     
-    !%Variable PESMaskNFFTEnlargeLev
-    !%Type integer
-    !%Default 0
+     call messages_obsolete_variable('PESMaskEnlargeLev', 'PESMaskEnlargeFactor')
+    
+    !%Variable PESMask2PEnlargeFactor
+    !%Type float
+    !%Default 1.0
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% Mask box enlargement level. Enlarges the mask box by a factor 2**<tt>PESMaskEnlargeLev</tt>
-    !% using NFFT. This way we add two points in each direction at a distance
-    !% L=Lb*2**<tt>PESMaskEnlargeLev</tt> where <i>Lb</i> is the box size.
+    !% Mask two points enlargement factor. Enlarges the mask box by adding two
+    !% points at the edges of the box in each direction (x,y,z) at a distance  
+    !% L=Lb*<tt>PESMask2PEnlargeFactor</tt> where <i>Lb</i> is the box size.
+    !% This allows to run simulations with an additional void space at a price of
+    !% adding few points. The Fourier space associated with the new box is restricted 
+    !% by the same factor.
     !% 
-    !% Note: the corresponding Fourier space is restricted by the same factor.
+    !% Note: needs <tt> PESMaskPlaneWaveProjection = nfft_map or pnfft_map </tt>.
     !%End
     
-    call parse_integer(datasets_check('PESMaskNFFTEnlargeLev'),0,mask%enlarge_nfft)
+    call parse_float(datasets_check('PESMask2PEnlargeFactor'), M_ONE, mask%enlarge_2p)
     
-    if ( mask%enlarge_nfft /= 0 ) then
-      call messages_print_var_value(stdout, "PESMaskNFFTEnlargeLev", mask%enlarge_nfft)
+    if ( mask%enlarge_2p /= M_ONE ) then
+      call messages_print_var_value(stdout, "PESMask2PEnlargeFactor", mask%enlarge_2p)
+      if (mask%pw_map_how /=  PW_MAP_NFFT .and. mask%pw_map_how /=  PW_MAP_PNFFT) then
+        message(1) = "PESMask2PEnlargeFactor requires PESMaskPlaneWaveProjection = nfft_map"
+        message(2) = "or pnfft_map in order to run properly." 
+        call messages_warning(2) 
+      endif        
     end if
+    
+    if( mask%enlarge_2p < M_ONE ) then
+      message(1) = "PESMask2PEnlargeFactor must be bigger than one."
+      call messages_fatal(1) 
+    end if
+    
+    call messages_obsolete_variable('PESMaskNFFTEnlargeLev', 'PESMask2PEnlargeFactor')
     
     
     mask%ll = 1
@@ -403,7 +421,7 @@ contains
     end if
     
     !Enlarge the bounding box region
-    mask%ll(1:sb%dim)= mask%ll(1:sb%dim)*2**mask%enlarge 
+    mask%ll(1:sb%dim)= mask%ll(1:sb%dim)*mask%enlarge 
     
     
     select case(mask%pw_map_how)
@@ -454,10 +472,10 @@ contains
       !NFFT initialization
       
       ! we just add 2 points for the enlarged region
-      if (mask%enlarge_nfft /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
+      if (mask%enlarge_2p /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
       
       call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_NFFT, nn_out = ll, &
-                     spacing = mesh%spacing, tp_enlarge = M_TWO**mask%enlarge_nfft )
+                     spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p )
                      
       mask%ll = ll 
       mask%fft = mask%cube%fft
@@ -466,10 +484,10 @@ contains
       
     case(PW_MAP_PNFFT)  
     
-      if (mask%enlarge_nfft /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
+      if (mask%enlarge_2p /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
 
       call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_PNFFT, nn_out = ll, &
-                     spacing = mesh%spacing, tp_enlarge = M_TWO**mask%enlarge_nfft, &
+                     spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p, &
                      mpi_grp = mask%mesh%mpi_grp, need_partition=.true.)
                      
                      
@@ -782,8 +800,8 @@ contains
     do ii = 1, mask%fs_n_global(1)
 
       if (mask%pw_map_how  ==   PW_MAP_NFFT) then
-        !The Fourier space is shrunk by the factor M_TWO**mask%enlarge_nfft
-        mask%Lk(ii) = (ii - nn/2 - 1)*temp/(M_TWO**mask%enlarge_nfft)
+        !The Fourier space is shrunk by the factor mask%enlarge_2p
+        mask%Lk(ii) = (ii - nn/2 - 1)*temp/(mask%enlarge_2p)
       else
         mask%Lk(ii) = pad_feq(ii,nn, .true.) * temp
       end if

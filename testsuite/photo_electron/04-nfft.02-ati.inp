@@ -73,7 +73,7 @@ PhotoElectronSpectrum = pes_mask
 PESMaskMode = fullmask_mode
 PESMaskPlaneWaveProjection = nfft_map
 
-PESMaskNFFTEnlargeLev = 2
+PESMask2PEnlargeFactor = 4.0
 
 NFFTGuruInterface = YES
 NFFTCutoff = 2

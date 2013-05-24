@@ -28,7 +28,6 @@ PhotoElectronSpectrum = pes_mask
 
 PESMaskMode = fullmask_mode
 PESMaskPlaneWaveProjection = pfft_map
-PESMaskEnlargeLev = 0
 
 ##########################
 #LASER
