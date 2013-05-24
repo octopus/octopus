@@ -1,4 +1,4 @@
-!! Copyright (C) 2010 X. Andrade
+!! Copyright (C) 2013 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -15,31 +15,261 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 !!
-!! $Id: partitioner.F90 6396 2010-03-26 08:51:58Z mjv500 $
+!! $Id: par_vec.F90 10505 2013-05-03 18:56:16Z dstrubbe $
 
 #include "global.h"
-
+ 
 module partition_m
   use global_m
   use messages_m
+  use mpi_m
+  use mpi_debug_m
   use profiling_m
+
 
   implicit none
 
   private
 
-  public ::                &
-       partition_init
+  public ::                        &
+    partition_t,                   &
+    partition_init,                &
+    partition_end,                 &
+    partition_get_partition_number
+
+
+  !> The partition is an array that contains the mapping between some global index 
+  !! and a process, such that point ip will be stored in process partition(ip).
+  !!
+  !! In this module this array is distributed among the processes, such that each process 
+  !! only stores a portion of the full array. Because each process needs to know in a 
+  !! straighforward way (i.e. without having to perform any kind of communication or 
+  !! lenghly operations) which process stores the partition corresponing to any giving
+  !! point, all the processes except one (the one with the highest rank) store exactly the 
+  !! same number of points.
+  !!
+  !! Note: the mpi group used by the processes for the partition distribution does not need
+  !! to be the same as the mpi group of the processes the partition refers to.
+  type partition_t
+
+    ! The following components are the same for all processes:
+    type(mpi_grp_t) :: mpi_grp   !< The mpi group use for distributing the partition data.
+    integer ::         np_global !< The total number of points in the partition.
+    integer ::         nppp      !< Number of points per process. It is different from
+                                 !! np_local only for the process with the highest rank.
+
+    ! The following components are process dependent:
+    integer :: np_local          !< The number of points of the partition stored in this process.
+    integer :: istart            !< The position of the first point stored in this process.
+    integer, pointer :: part(:)  !< The local portion of the partition.
+
+  end type partition_t
 
 
 contains
 
-  ! ----------------------------------------------------------------------
-  subroutine partition_init()
+  ! ---------------------------------------------------------
+  subroutine partition_init(partition, np_global, part_global, mpi_grp)
+    type(partition_t), intent(out) :: partition
+    integer,           intent(in)  :: np_global
+    integer,           intent(in)  :: part_global(:)
+    type(mpi_grp_t),   intent(in)  :: mpi_grp
+
     PUSH_SUB(partition_init)
+
+    !Global variables
+    partition%mpi_grp = mpi_grp
+    partition%np_global = np_global
+    partition%nppp = ceiling(real(np_global)/real(mpi_grp%size))
+
+    !Processor dependent
+    if (mpi_grp%rank + 1 == mpi_grp%size) then      
+      partition%np_local = mod(np_global, partition%nppp)
+      if (partition%np_local == 0) partition%np_local = partition%nppp
+    else
+      partition%np_local = partition%nppp
+    end if
+    partition%istart = partition%nppp*mpi_grp%rank + 1
+
+    !Allocate memory and store partition
+    nullify(partition%part)
+    SAFE_ALLOCATE(partition%part(partition%np_local))
+    partition%part(1:partition%np_local) = part_global(partition%istart:partition%istart+partition%np_local-1)
+
 
     POP_SUB(partition_init)
   end subroutine partition_init
+
+  ! ---------------------------------------------------------
+  !> Deallocate memory used by the partition.
+  subroutine partition_end(partition)
+    type(partition_t), intent(inout) :: partition
+
+    PUSH_SUB(partition_end)
+
+    SAFE_DEALLOCATE_P(partition%part)
+
+    POP_SUB(partition_end)
+  end subroutine partition_end
+
+  ! ---------------------------------------------------------
+  subroutine partition_get_partition_number(partition, np, points, partno)
+    type(partition_t), intent(out)  :: partition
+    integer,           intent(in)   :: np
+    integer,           intent(in)   :: points(:)
+    integer,           intent(out)  :: partno(:)
+
+    integer :: ip, nproc, rnp
+    integer, allocatable :: sbuffer(:), rbuffer(:)
+    integer, allocatable :: scounts(:), rcounts(:)
+    integer, allocatable :: sdispls(:), rdispls(:)
+    integer, allocatable :: ipos(:), order(:)
+
+    PUSH_SUB(partition_get_partition_number)
+
+    SAFE_ALLOCATE(scounts(1:partition%mpi_grp%size))
+    SAFE_ALLOCATE(rcounts(1:partition%mpi_grp%size))
+    SAFE_ALLOCATE(sdispls(1:partition%mpi_grp%size))
+    SAFE_ALLOCATE(rdispls(1:partition%mpi_grp%size))
+
+
+    ! How many points we will have to send/receive from each process?
+    scounts = 0
+    do ip = 1, np
+      !Who knows where points(ip) is stored?
+      nproc = ceiling(real(points(ip))/real(partition%nppp))
+
+      !We increase the respective counter
+      scounts(nproc) = scounts(nproc) + 1
+    end do
+
+
+    !Tell each process how many points we will need from it
+#ifdef HAVE_MPI
+    call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALL)
+    call MPI_Alltoall(scounts(1), 1, MPI_INTEGER, &
+                      rcounts(1), 1, MPI_INTEGER, &
+                      partition%mpi_grp%comm, mpi_err)
+    call mpi_debug_out(partition%mpi_grp%comm, C_MPI_ALLTOALL)
+#endif
+
+    !Build displacement arrays
+    sdispls(1) = 0
+    rdispls(1) = 0
+    do ip = 2, partition%mpi_grp%size
+      sdispls(ip) = sdispls(ip-1) + scounts(ip-1)
+      rdispls(ip) = rdispls(ip-1) + rcounts(ip-1)
+    end do
+
+
+    rnp = sum(rcounts)
+    SAFE_ALLOCATE(sbuffer(np))
+    SAFE_ALLOCATE(rbuffer(rnp))
+
+    !Put points in correct order for sending
+    SAFE_ALLOCATE(ipos(1:partition%mpi_grp%size))
+    SAFE_ALLOCATE(order(np))
+    ipos = 0
+    do ip = 1, np
+      !Who knows where points(ip) is stored?
+      nproc = ceiling(real(points(ip))/real(partition%nppp))
+
+      !We increase the respective counter
+      ipos(nproc) = ipos(nproc) + 1
+
+      !Put the point in the correct place
+      order(ip) = sdispls(nproc) + ipos(nproc)
+      sbuffer(sdispls(nproc) + ipos(nproc)) = points(ip) ! global index of the point
+    end do
+    SAFE_DEALLOCATE_A(ipos)
+
+    !Send the global indexes of the points to the process that knows what is the corresponding partition
+#ifdef HAVE_MPI
+    call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
+    call MPI_Alltoallv(sbuffer, scounts(1), sdispls(1), MPI_INTEGER, &
+                       rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &
+                       partition%mpi_grp%comm, mpi_err)
+    call mpi_debug_out(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
+#endif
+
+    !We get the partition number from the global index. This will be send back.
+    do ip = 1, rnp
+      rbuffer(ip) = partition%part(rbuffer(ip) - partition%istart + 1)
+    end do
+
+    !Now we send the information backwards
+#ifdef HAVE_MPI
+    call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
+    call MPI_Alltoallv(rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &
+                       sbuffer, scounts(1), sdispls(1), MPI_INTEGER,    &
+                       partition%mpi_grp%comm, mpi_err)
+    call mpi_debug_out(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
+#endif
+
+    !Reorder the points
+    do ip = 1, np
+      partno(ip) = sbuffer(order(ip))
+    end do
+
+    !Deallocate memory
+    SAFE_DEALLOCATE_A(order)
+    SAFE_DEALLOCATE_A(sbuffer)
+    SAFE_DEALLOCATE_A(scounts)
+    SAFE_DEALLOCATE_A(sdispls)
+    SAFE_DEALLOCATE_A(rbuffer)
+    SAFE_DEALLOCATE_A(rcounts)
+    SAFE_DEALLOCATE_A(rdispls)
+
+    POP_SUB(partition_get_partition_number)
+  end subroutine partition_get_partition_number
+
+
+  ! ---------------------------------------------------------
+  subroutine partition_test()
+
+    type(partition_t) :: partition
+    integer :: ip, np
+    integer, allocatable :: global_part(:), point_index(:), point_partno(:)
+
+    PUSH_SUB(partition_test)
+
+    np = 21
+    SAFE_ALLOCATE(global_part(np))
+
+    do ip = 1, np
+      global_part(ip) = 2*ip
+    end do
+
+    call partition_init(partition, np, global_part, mpi_world)
+
+
+    SAFE_ALLOCATE(point_index(np))
+    SAFE_ALLOCATE(point_partno(np))
+    do ip = 1, np
+      point_index(np - ip + 1) = ip
+    end do
+
+    call partition_get_partition_number(partition, np, point_index, point_partno)
+
+
+    if (mpi_world%rank == 0) then
+      do ip = 1, np
+        write(*,*) ip, global_part(ip)
+      end do
+      write(*,*)
+      do ip = 1, np
+        write(*,*) point_index(ip), point_partno(ip)
+      end do
+    end if
+
+    SAFE_DEALLOCATE_A(global_part)
+    SAFE_DEALLOCATE_A(point_index)
+    SAFE_DEALLOCATE_A(point_partno)
+
+    call partition_end(partition)
+
+    POP_SUB(partition_test)
+  end subroutine partition_test
 
 end module partition_m
 
