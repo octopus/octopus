@@ -205,8 +205,8 @@ contains
     logical, intent(in)                           :: parametrized_controls
 
     character(len=1024) :: expression
-    integer :: no_lines, steps, iunit, il, idir, ncols, ipar, irow, istep
-    FLOAT   :: octpenalty, f_re, f_im, total_time, time
+    integer :: no_lines, steps, il, idir, ncols, ipar, irow, ierr
+    FLOAT   :: octpenalty
     CMPLX   :: pol(MAX_DIM)
     type(block_t) :: blk
 
@@ -524,39 +524,15 @@ contains
 
       do irow = 1, no_lines
         call parse_block_string(blk, irow - 1, 0, expression)
-        total_time = steps * dt
-        if(trim(expression) == 'default') then
-          do istep = 1, steps + 1
-            time = (istep - 1) * dt
-            f_re = M_HALF * (loct_erf((CNST(100.0) / total_time) * (time - CNST(0.05) * total_time)) + &
-              loct_erf(-(CNST(100.0) / total_time) * (time - total_time + CNST(0.05) * total_time)) )
-            call tdf_set_numerical(cf_common%td_penalty(irow), istep, &
-              TOFLOAT(M_ONE / (f_re + CNST(1.0e-7)))  )
-          end do
-        else
-          call conv_to_C_string(expression)
-          do istep = 1, steps + 1
-            time = (istep - 1) * dt
-            call parse_expression(f_re, f_im, "t", time, expression)
-            call tdf_set_numerical(cf_common%td_penalty(irow), istep, &
-              TOFLOAT(M_ONE / (f_re + CNST(1.0e-7)))  )
-          end do
+        call parse_block_end(blk)
+        call tdf_read(cf_common%td_penalty(irow), trim(expression), ierr)
+        call tdf_to_numerical(cf_common%td_penalty(irow), steps, dt, cf_common%omegamax)
+        if(ierr.ne.0) then
+          message(1) = 'Time-dependent function "'//trim(expression)//'" could not be read from inp file.'
+          call messages_fatal(1)
         end if
+        ierr = parse_block(datasets_check('OCTLaserEnvelope'), blk)
       end do
-
-      if(mpi_grp_is_root(mpi_world)) then
-        iunit = io_open(OCT_DIR//'td_penalty', action='write' )
-        do istep = 1, steps + 1
-          time = (istep - 1) * dt
-          write(iunit, '(f14.8)', advance='no') time
-          do ipar = 1, cf_common%no_controlfunctions - 1
-            write(iunit, '(es20.8e3)') M_ONE / tdf(cf_common%td_penalty(ipar), istep)
-          end do
-          write(iunit, '(es20.8e3)') M_ONE / tdf(cf_common%td_penalty(cf_common%no_controlfunctions), istep)
-        end do
-        write(iunit,'()')
-        call io_close(iunit)
-      end if
 
       call parse_block_end(blk)
     end if
@@ -730,9 +706,6 @@ contains
   !! a certain fluence, maybe it should be randomized, etc.
   subroutine controlfunction_prepare_initial(par)
     type(controlfunction_t), intent(inout) :: par
-
-    FLOAT   :: dt
-    integer :: ntiter
 
     PUSH_SUB(controlfunction_prepare_initial)
 

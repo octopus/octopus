@@ -79,10 +79,11 @@ freq = 0.157
 
 %TDFunctions
 "envelope_function" | tdf_cw | ampl
+"octlaserenvelope" | tdf_from_expr | "1.0 / ((sin(t*pi/stime))+0.000001)"
 %
 
 %OCTLaserEnvelope
-"(sin(t*pi/stime))"
+"octlaserenvelope"
 %
 
 #----------------------------

@@ -68,9 +68,8 @@ OCTMaxIter = 1
 OCTPenalty = 1.0
 # predefine envelope of control field
 %OCTLaserEnvelope
-"0.5*( erf((t-stime/20))+ erf(-(t-stime+stime/20)))"
+"octlaserenvelope"
 %
-
 
 #----------------------------
 # Laser field = Initial guess
@@ -84,6 +83,7 @@ electric_field | 1 | 0 | 0 | freq | "envelope_function"
 
 %TDFunctions
 "envelope_function" | tdf_cw | ampl
+"octlaserenvelope" | tdf_from_expr | "1.0 / (0.5*( erf((t-stime/20))+ erf(-(t-stime+stime/20)))+1.0e-7)"
 %
 
 #-----------------------------
