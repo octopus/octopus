@@ -69,6 +69,7 @@ ACX_C_BUILTIN_PREFETCH
 
 # Checks for header files.
 AC_HEADER_DIRENT
+ACX_CHECK_CPP
 AC_HEADER_STDC
 AC_CHECK_HEADERS([signal.h errno.h])
 AC_FUNC_ALLOCA
@@ -190,10 +191,6 @@ AC_FC_SRCEXT(f90)
 FCFLAGS="${acx_save_fcflags}"
 
 ACX_FCFLAGS
-
-dnl octopus needs the preprocessor. The result goes to FCCPP
-dnl this is a hack, and should be changed in the future
-AC_LANG_PREPROC
 
 dnl how Fortran mangles function names
 AC_FC_WRAPPERS
