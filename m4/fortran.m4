@@ -75,39 +75,14 @@ AC_MSG_RESULT($acx_fortran_check_func)
 m4_define([AC_LANG_FUNC_LINK_TRY(Fortran)],
 [AC_LANG_PROGRAM([], [call [$1]])])
 
-AC_DEFUN([ACX_CHECK_CPP],
-[
-     for CPP in "$CPP" "$CPP -ansi"; do
-         AC_MSG_CHECKING([whether $CPP is usable for Fortran preprocessing])
-	 acx_fpp_ok=yes
-
-#      	 AC_EGREP_CPP([hi], AC_LANG_PROGRAM([],[
-#@%:@define ADD_I(x) x @%:@@%:@ i
-#ADD_I(h)]),
-#	   [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor does not concatenate tokens])])
-
-      	 AC_EGREP_CPP([hi], AC_LANG_PROGRAM([],[
-#define ADD_I(x) x ## i
-ADD_I(h)]),
-	   [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor does not concatenate tokens])])
-
-         # in Fortran this is string concatenation, must not be stripped
-         AC_EGREP_CPP([string2], [string1 // string2],
-	   [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor strips C++ style comment])])
-
-	if test x"$acx_fpp_ok" = xyes; then
-          AC_MSG_RESULT([yes])
-	  break
-	fi
-     done
-
-     if test x"$acx_fpp_ok" = xno; then
-     	AC_MSG_ERROR([Preprocessor is not usable for Fortran.])
-     fi
+################################################
+# AC_LANG_PREPROC(Fortran)
+# ---------------------------
+m4_define([AC_LANG_PREPROC(Fortran)],[
+  # this should not be hardwired
+  if test -z "$FCCPP"; then FCCPP="/lib/cpp -C -ansi"; fi
+  AC_SUBST(FCCPP)
 ])
-
-#  for my_cpp in "$FCCPP" "$CPP" "`which cpp` -ansi" "/lib/cpp -ansi"; do
-
 
 ###############################################
 # ACX_FORTRAN_LOC checks for the presence of the loc intrinsics
