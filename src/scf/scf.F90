@@ -37,6 +37,7 @@ module scf_m
   use lcao_m
   use loct_m
   use magnetic_m
+  use math_m
   use mesh_m
   use mesh_batch_m
   use mesh_function_m
@@ -925,6 +926,7 @@ contains
       character(len=*), intent(in) :: dir, fname
 
       integer :: iunit, idir, iatom, ii
+      FLOAT:: rr(1:3), ff(1:3), torque(1:3)
 
       PUSH_SUB(scf_run.scf_write_static)
 
@@ -1009,6 +1011,23 @@ contains
             (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:geo%natoms)%f(idir)))), idir=1, gr%sb%dim)
           write(iunit,'(a14, 10f15.6)') " Total force", &
             (units_from_atomic(units_out%force, sum(geo%atom(1:geo%natoms)%f(idir))), idir=1, gr%sb%dim)
+
+          if(geo%space%dim == 2 .or. geo%space%dim == 3) then
+
+            rr = CNST(0.0)
+            ff = CNST(0.0)
+            torque = CNST(0.0)
+            do iatom = 1, geo%natoms
+              rr(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim)
+              ff(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim)
+              torque(1:3) = torque(1:3) + dcross_product(rr, ff)
+            end do
+            
+          write(iunit,'(a14, 10f15.6)') ' Total torque', &
+            (units_from_atomic(units_out%force*units_out%length, torque(idir)), idir = 1, 3)
+
+          end if
+
         end if
 
         call io_close(iunit)
