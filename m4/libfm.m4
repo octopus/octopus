@@ -72,7 +72,7 @@ dnl fi
 fi
 
 dnl Generic LIBFM library?
-for libfm in fm_r64; do
+for libfm in fcs_fmm; do
   if test $acx_libfm_ok = no; then
     AC_CHECK_LIB($libfm , $fmm_func,
       [acx_libfm_ok=yes; LIBS_LIBFM="$LIBS_LIBFM -l$libfm"], [], [$FLIBS])
@@ -80,7 +80,7 @@ for libfm in fm_r64; do
 done
 
 dnl Generic LIBFM library?
-for libfm in fm_r64; do
+for libfm in fcs_fmm; do
   dnl if test x"$libfm" = xlibfm-openmpi; then       
   dnl   libfmCinit="libfmCinit-openmpi"
   dnl else

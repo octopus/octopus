@@ -198,6 +198,8 @@ contains
       this%disps = 0
       this%nlocalcharges = this%dsize(1)
 
+      subcomm = this%all_nodes_grp%comm
+
     else 
 #ifdef HAVE_MPI
       call MPI_Cartdim_get(this%all_nodes_grp%comm, cdim, mpi_err)
@@ -367,9 +369,11 @@ contains
     call profiling_in(prof_fmm_gat, "FMM_GATHER")
     if (mpi_world%size > 1) then
       !now we need to allgather the results between "states"
+#ifdef HAVE_MPI
       call MPI_Allgatherv(pot_lib_fmm(this%sp), this%nlocalcharges, MPI_FLOAT, &
         pot(1), this%dsize(1), this%disps(1), MPI_FLOAT, &
         this%perp_grp%comm, mpi_err)
+#endif
     else
       pot = pot_lib_fmm
     end if
