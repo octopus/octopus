@@ -142,12 +142,6 @@ else
   F90_FORALL=yes
 fi
 AC_SUBST(F90_FORALL)
-
-dnl check for METIS
-if test x"$enable_mpi" != x"no"; then
-  ACX_METIS
-fi
-AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_METIS} = x1)
   
 dnl check for NEWUOA
 ACX_NEWUOA
@@ -358,11 +352,16 @@ ACX_PNFFT
 dnl check for PSPIO
 ACX_PSPIO
 
-dnl check for METIS5 and ParMETIS (also checks METIS in the same path)
+dnl check for compiled METIS5 and ParMETIS (also checks METIS in the same path)
 AC_LANG_PUSH(C)
 ACX_PATH_METIS
 ACX_PATH_PARMETIS
 AC_LANG_POP(C)
+dnl if is not found a compiled METIS we will compile it METIS (if is not disabled)
+if test x"${with_metis}" == xno -a x"$enable_mpi" != x"no"; then
+  ACX_METIS
+fi
+AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
 
 dnl now I run configure for the internal libraries
 AC_CONFIG_SUBDIRS([external_libs/spglibs])

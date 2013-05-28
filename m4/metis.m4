@@ -12,7 +12,9 @@ AC_MSG_RESULT([$acx_metis_ok])
 
 if test x"$acx_metis_ok" = xyes; then
   HAVE_METIS=1
+  HAVE_COMP_METIS=1
   AC_DEFINE(HAVE_METIS, 1, [This is defined when we should compile with METIS support (default).])
+  AC_DEFINE(HAVE_COMP_METIS, 1, [This is defined when we should compile with METIS support (default).])
 fi
 
 ])dnl ACX_METIS

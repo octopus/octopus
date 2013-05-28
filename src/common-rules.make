@@ -45,6 +45,7 @@ AM_CPPFLAGS = \
         -I$(top_srcdir)/external_libs/spglib/src \
 	-I$(top_srcdir)/liboct_parser \
         $(GSL_CFLAGS) $(GD_CFLAGS) \
+	@METIS_INCLUDE@ \
 	-DSHARE_OCTOPUS='"$(pkgdatadir)"'
 
 AM_CCASFLAGS = \

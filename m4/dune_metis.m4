@@ -145,7 +145,7 @@ AC_DEFUN([ACX_PATH_METIS], [
       AC_MSG_WARN(Failed to find valid METIS library)
     else
       with_metis=yes
-      AC_DEFINE(HAVE_METIS_5,1,[Define if you have METIS library])
+      AC_DEFINE(HAVE_METIS,1,[Define if you have METIS library])
     fi
 
     AC_SUBST(LIBS_METIS_5)
