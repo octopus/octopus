@@ -357,10 +357,6 @@ AC_LANG_PUSH(C)
 ACX_PATH_METIS
 ACX_PATH_PARMETIS
 AC_LANG_POP(C)
-dnl if is not found a compiled METIS we will compile it METIS (if is not disabled)
-dnl if test x"${with_metis}" == xno -a x"$enable_mpi" != x"no"; then
-dnl  ACX_METIS
-dnl fi
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
 
 dnl now I run configure for the internal libraries
