@@ -19,7 +19,9 @@
 ##
 ## $Id$
 
-noinst_LIBRARIES = libgk.a
+if COMPILE_METIS
+  noinst_LIBRARIES = libgk.a
+endif
 
 libgk_a_SOURCES = \
 	b64.c       fkvkselect.c  htable.c    omp.c     seq.c       \

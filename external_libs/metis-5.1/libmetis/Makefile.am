@@ -19,7 +19,9 @@
 ##
 ## $Id$
 
-noinst_LIBRARIES = libmetis.a
+if COMPILE_METIS
+  noinst_LIBRARIES = libmetis.a
+endif
 
 libmetis_a_SOURCES = \
 	auxapi.c      contig.c   graph.c       mesh.c      options.c    srefine.c \
