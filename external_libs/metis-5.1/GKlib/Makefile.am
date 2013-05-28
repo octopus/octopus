@@ -23,6 +23,8 @@ if COMPILE_METIS
   noinst_LIBRARIES = libgk.a
 endif
 
+AM_CPPFLAGS = -DNDEBUG -DNDEBUG2 
+
 libgk_a_SOURCES = \
 	b64.c       fkvkselect.c  htable.c    omp.c     seq.c       \
 	blas.c      fs.c          io.c        pdb.c     sort.c      \

@@ -23,6 +23,8 @@ if COMPILE_METIS
   noinst_LIBRARIES = libmetis.a
 endif
 
+
+
 libmetis_a_SOURCES = \
 	auxapi.c      contig.c   graph.c       mesh.c      options.c    srefine.c \
 	balance.c     debug.c    initpart.c    meshpart.c  parmetis.c   stat.c    \
@@ -35,7 +37,7 @@ noinst_HEADERS = \
 	defs.h        gklib_rename.h  metislib.h  rename.h      struct.h \
 	gklib_defs.h  macros.h        proto.h     stdheaders.h
 
-AM_CPPFLAGS = -I$(top_srcdir)/external_libs/metis-5.1/GKlib/ -I$(top_srcdir)/external_libs/metis-5.1/include
+AM_CPPFLAGS = -I$(top_srcdir)/external_libs/metis-5.1/GKlib/ -I$(top_srcdir)/external_libs/metis-5.1/include -DNDEBUG -DNDEBUG2 
 
 CLEANFILES = *~ *.bak
 
