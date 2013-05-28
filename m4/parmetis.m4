@@ -27,9 +27,8 @@ AC_DEFUN([ACX_PATH_PARMETIS],[
   AC_MSG_CHECKING(for ParMETIS library)
 
   #
-  # USer hints ...
+  # User hints ...
   #
-  AC_ARG_VAR([PARMETIS], [ParMETIS library location])
   AC_ARG_WITH([parmetis],
     [AC_HELP_STRING([--with-parmetis],[user defined path to ParMETIS library])],
     [

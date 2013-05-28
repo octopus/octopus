@@ -47,7 +47,6 @@ AC_DEFUN([ACX_PATH_METIS], [
   #
   # User hints...
   #
-  AC_ARG_VAR([METIS], [METIS library location])
   AC_ARG_WITH([metis],
     [AC_HELP_STRING([--with-metis],
     [user defined path to METIS library])],
@@ -143,7 +142,7 @@ AC_DEFUN([ACX_PATH_METIS], [
     if test x = x"$METIS_LIB" ; then
       with_metis=no
             
-      dnl METIS was not found to link with it, but is included in the distribution
+      dnl METIS was not found to link with, but is included in the distribution
 
       dnl We disable METIS support only if the user is requesting this explicitly
       AC_ARG_ENABLE(metis, AS_HELP_STRING([--disable-metis], [Do not compile with internal METIS domain-partitioning library.]),[acx_metis_ok=$enableval],[acx_metis_ok=yes])
@@ -157,7 +156,7 @@ AC_DEFUN([ACX_PATH_METIS], [
         HAVE_METIS=1
         HAVE_COMP_METIS=1
         AC_DEFINE(HAVE_METIS, 1, [This is defined when we should compile with METIS support (default).])
-        AC_DEFINE(HAVE_COMP_METIS, 1, [This is defined when we should compile with METIS support (default).])
+        AC_DEFINE(HAVE_COMP_METIS, 1, [This is defined when we link with an external METIS library (default).])
       else
         AC_MSG_WARN(Octopus will be compiled without METIS support)
       fi
