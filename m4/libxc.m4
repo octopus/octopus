@@ -6,12 +6,12 @@ dnl if not, use environment variables or defaults
 AC_ARG_WITH(libxc-prefix, [AS_HELP_STRING([--with-libxc-prefix=DIR], [Directory where libxc was installed.])])
 case $with_libxc_prefix in
   "") if test x"$LIBS_LIBXC" = x; then
-        LIBS_LIBXC="-lxc"
+        LIBS_LIBXC="-lxcf -lxc"
       fi
       if test x"$FCFLAGS_LIBXC" = x; then
         FCFLAGS_LIBXC="-I/usr/include";
       fi ;;
-  *) LIBS_LIBXC="$with_libxc_prefix/lib/libxc.a"; FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_prefix/include" ;;
+  *) LIBS_LIBXC="$with_libxc_prefix/lib/libxcf.a $with_libxc_prefix/lib/libxc.a"; FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_prefix/include" ;;
 esac
 
 AC_ARG_WITH(libxc-include, [AS_HELP_STRING([--with-libxc-include=DIR], [Directory where libxc Fortran headers were installed.])])
@@ -43,7 +43,7 @@ AC_MSG_RESULT([$acx_libxc_ok ($FCFLAGS_LIBXC $LIBS_LIBXC)])
 
 # otherwise try linking dynamically (for when libxc was installed as a package)
 if test x"$acx_libxc_ok" = xno; then
-  LIBS_LIBXC="-L$with_libxc_prefix/lib -lxc"
+  LIBS_LIBXC="-L$with_libxc_prefix/lib -lxcf -lxc"
   libxc_libs="$LIBS_LIBXC"
   LIBS="$libxc_libs $acx_libxc_save_LIBS"
   AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes; FCFLAGS_LIBXC="$libxc_fcflags"; LIBS_LIBXC="$libxc_libs"], [])
