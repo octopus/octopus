@@ -4,15 +4,14 @@ acx_libxc_ok=no
 dnl Check if the library was given in the command line
 dnl if not, use environment variables or defaults
 AC_ARG_WITH(libxc-prefix, [AS_HELP_STRING([--with-libxc-prefix=DIR], [Directory where libxc was installed.])])
-case $with_libxc_prefix in
-  "") if test x"$LIBS_LIBXC" = x; then
-        LIBS_LIBXC="-lxcf90 -lxc"
-      fi
-      if test x"$FCFLAGS_LIBXC" = x; then
-        FCFLAGS_LIBXC="-I/usr/include";
-      fi ;;
-  *) LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"; FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_prefix/include" ;;
-esac
+
+# Set FCFLAGS_LIBXC only if not set from environment
+if test x"$FCFLAGS_LIBXC" = x; then
+  case $with_libxc_prefix in
+    "") FCFLAGS_LIBXC="-I/usr/include" ;;
+    *)  FCFLAGS_LIBXC="$ax_cv_f90_modflag$with_libxc_prefix/include" ;;
+  esac
+fi
 
 AC_ARG_WITH(libxc-include, [AS_HELP_STRING([--with-libxc-include=DIR], [Directory where libxc Fortran headers were installed.])])
 case $with_libxc_include in
@@ -34,31 +33,41 @@ testprog="AC_LANG_PROGRAM([],[
   integer :: minor
   call xc_f90_version(major, minor)])"
 
-# first try linking statically
-libxc_fcflags="$FCFLAGS_LIBXC"; libxc_libs="$LIBS_LIBXC"
-FCFLAGS="$libxc_fcflags $acx_libxc_save_FCFLAGS"
-LIBS="$libxc_libs $acx_libxc_save_LIBS"
-AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes; FCFLAGS_LIBXC="$libxc_fcflags"; LIBS_LIBXC="$libxc_libs"], [])
-AC_MSG_RESULT([$acx_libxc_ok ($FCFLAGS_LIBXC $LIBS_LIBXC)])
+FCFLAGS="$FCFLAGS_LIBXC $acx_libxc_save_FCFLAGS"
 
-# otherwise try linking dynamically (for when libxc was installed as a package)
+# static linkage, separate Fortran interface
+LIBS_LIBXC="$with_libxc_prefix/lib/libxc.a $with_libxc_prefix/lib/libxcf90.a"
+LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
+
+# dynamic linkage, separate Fortran interface
 if test x"$acx_libxc_ok" = xno; then
   LIBS_LIBXC="-L$with_libxc_prefix/lib -lxcf90 -lxc"
-  libxc_libs="$LIBS_LIBXC"
-  LIBS="$libxc_libs $acx_libxc_save_LIBS"
-  AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes; FCFLAGS_LIBXC="$libxc_fcflags"; LIBS_LIBXC="$libxc_libs"], [])
-  AC_MSG_RESULT([$acx_libxc_ok ($FCFLAGS_LIBXC $LIBS_LIBXC)])
+  LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+  AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
 fi
+
+# static linkage, combined Fortran interface (libxc pre-r10730)
+if test x"$acx_libxc_ok" = xno; then
+  LIBS_LIBXC="$with_libxc_prefix/lib/libxc.a"
+  LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+  AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
+fi
+
+# dynamic linkage, combined Fortran interface (libxc pre-r10730)
+if test x"$acx_libxc_ok" = xno; then
+  LIBS_LIBXC="-L$with_libxc_prefix/lib -lxc"
+  LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+  AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
+fi
+
+AC_MSG_RESULT([$acx_libxc_ok ($FCFLAGS_LIBXC $LIBS_LIBXC)])
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_libxc_ok" = xyes; then
-  AC_DEFINE(HAVE_LIBXC,1,[Defined if you have the LIBXC library.])
-  $1
+  AC_DEFINE(HAVE_LIBXC, 1, [Defined if you have the LIBXC library.])
 else
   AC_MSG_ERROR([Could not find required libxc library ( >= v 2.0.0).])
-  FCFLAGS_LIBXC=""
-  LIBS_LIBXC=""
-  $2
 fi
 
 AC_SUBST(FCFLAGS_LIBXC)
