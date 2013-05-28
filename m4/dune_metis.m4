@@ -142,7 +142,25 @@ AC_DEFUN([ACX_PATH_METIS], [
     AM_CONDITIONAL(METIS, test x$METIS_LIB = x1)
     if test x = x"$METIS_LIB" ; then
       with_metis=no
-      AC_MSG_WARN(Failed to find valid METIS library)
+            
+      dnl METIS was not found to link with it, but is included in the distribution
+
+      dnl We disable METIS support only if the user is requesting this explicitly
+      AC_ARG_ENABLE(metis, AS_HELP_STRING([--disable-metis], [Do not compile with internal METIS domain-partitioning library.]),[acx_metis_ok=$enableval],[acx_metis_ok=yes])
+      dnl Since v2.0, METIS ships with octopus, so we enable it by default
+
+      AC_MSG_CHECKING([whether METIS included in Octopus is enabled])
+
+      AC_MSG_RESULT([$acx_metis_ok])
+
+      if test x"$acx_metis_ok" = xyes; then
+        HAVE_METIS=1
+        HAVE_COMP_METIS=1
+        AC_DEFINE(HAVE_METIS, 1, [This is defined when we should compile with METIS support (default).])
+        AC_DEFINE(HAVE_COMP_METIS, 1, [This is defined when we should compile with METIS support (default).])
+      else
+        AC_MSG_WARN(Octopus will be compiled without METIS support)
+      fi
     else
       with_metis=yes
       AC_DEFINE(HAVE_METIS,1,[Define if you have METIS library])
