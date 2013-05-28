@@ -108,9 +108,11 @@ ADD_I(h)]),
 	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor does not concatenate tokens])])
 
            # in Fortran this is string concatenation, must not be stripped
-	   # some cpp's might actually insert a space between // too which is not acceptable
-           AC_EGREP_CPP([// string2], [string1 // string2],
-	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor strips C++ style comment])])
+	   # some cpp's (e.g. icc -E -ansi) might actually insert a space between // too which is not acceptable
+           AC_EGREP_CPP([rout // ine], AC_LANG_PROGRAM([],[
+#define PUSH_SUB(x) x // ine
+PUSH_SUB(rout)]),
+	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor mangles C++ style comment])])
 
 	  if test x"$acx_fpp_ok" = xyes; then
             AC_MSG_RESULT([yes])
