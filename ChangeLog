@@ -2202,3 +2202,32 @@
 	  
 	  ------------------------------------------------------------------------
 
+2013-05-23 08:22  micael
+
+	* [r10694] ChangeLog: Updating ChangeLog in 4.1.x.
+
+2013-05-23 09:44  micael
+
+	* [r10696] testsuite/linear_response/Makefile.am: Backport of 10695
+	  to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10695 | micael | 2013-05-23 10:41:30 +0100 (Thu, 23 May 2013) |
+	  2 lines
+	  
+	  A file was missing from the tarball.
+	  
+	  ------------------------------------------------------------------------
+
+2013-05-24 17:04  micael
+
+	* [r10718] testsuite/finite_systems_2d/04-biot_savart.01-gs.inp:
+	  Backport of 10707 to branches/4.1.x:
+	  ------------------------------------------------------------------------
+	  r10707 | micael | 2013-05-24 09:04:17 +0100 (Fri, 24 May 2013) |
+	  2 lines
+	  
+	  Changed the eigensolver of the Biot-Savart test to to make its
+	  SCF convergence more stable.
+	  
+	  ------------------------------------------------------------------------
+
