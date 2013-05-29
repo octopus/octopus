@@ -39,7 +39,7 @@ if test $acx_libfm_ok = no; then
   case $with_libfm in
     yes | "") ;;
     no) acx_libfm_ok=disable ;;
-    -* | */* | *.a | *.so | *.so.* | *.o) LIBS_LIBFM="$with_libfm" ;;
+    -* | */* | *.a | *.so | *.so.* | *.o) LIBS_LIBFM="-I $with_libfm/include -L $with_libfm/lib -lfcs -lfcs_fmm -lfcs_common -lfcs_direct -lfcs_near -lfcs_gridsort -lfcs4fortran" ;;
     *) LIBS_LIBFM="-l$with_libfm" ;;
   esac
 fi
