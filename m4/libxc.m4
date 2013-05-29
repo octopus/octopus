@@ -35,10 +35,18 @@ testprog="AC_LANG_PROGRAM([],[
 
 FCFLAGS="$FCFLAGS_LIBXC $acx_libxc_save_FCFLAGS"
 
+# set from environment variable, if not blank
+if test ! -z "$LIBS_LIBXC"; then
+  LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+  AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
+fi
+
 # static linkage, separate Fortran interface
-LIBS_LIBXC="$with_libxc_prefix/lib/libxc.a $with_libxc_prefix/lib/libxcf90.a"
-LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
-AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
+if test x"$acx_libxc_ok" = xno; then
+  LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"
+  LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+  AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
+fi
 
 # dynamic linkage, separate Fortran interface
 if test x"$acx_libxc_ok" = xno; then
