@@ -24,6 +24,7 @@
 
 #include <stdlib.h>
 
+#include <string.h>
 
 #if defined(HAVE_METIS)
 #include <metis.h>
@@ -49,7 +50,7 @@ void FC_FUNC_(oct_metis_partgraphrecursive, OCT_METIS_PARTGRAPHRECURSIVE)
 {
 
   METIS_PartGraphRecursive(nvtxs, ncon, xadj, adjncy, NULL, NULL, NULL, nparts, 
-			   tpwgts, ubvec, options, objval, part);
+			   NULL, NULL, options, objval, part);
 }
 
 
@@ -59,7 +60,7 @@ void FC_FUNC_(oct_metis_partgraphkway, OCT_METIS_PARTGRAPHKWAY)
 {
 
   METIS_PartGraphKway(nvtxs, ncon, xadj, adjncy, NULL, NULL, NULL, nparts, 
-		      tpwgts, ubvec, options, objval, part);
+		      NULL, NULL, options, objval, part);
 }
 
 #endif
@@ -71,12 +72,20 @@ void FC_FUNC_(oct_metis_partgraphkway, OCT_METIS_PARTGRAPHKWAY)
 void FC_FUNC_(oct_parmetis_v3_partkway, OCT_PARMETIS_PARTKWAY)
      (idx_t *vtxdist, idx_t *xadj, idx_t *adjncy, idx_t *ncon, 
       idx_t *nparts, real_t *tpwgts, real_t *ubvec, idx_t *options, 
-      idx_t *edgecut, idx_t *part, MPI_Comm *comm)
+      idx_t *edgecut, idx_t *part, MPI_Fint *fcomm)
 {
   idx_t wgtflag = 0, numflag = 1;
 
+  MPI_Comm comm;
+
+#ifdef HAVE_MPI2
+  comm = MPI_Comm_f2c(*fcomm);
+#else
+  comm = *fcomm;
+#endif
+
   ParMETIS_V3_PartKway(vtxdist, xadj, adjncy, NULL, NULL, &wgtflag, &numflag, 
-		       ncon, nparts, tpwgts, ubvec, options, edgecut, part, comm);
+		       ncon, nparts, tpwgts, ubvec, options, edgecut, part, &comm);
 }
 
 #endif
