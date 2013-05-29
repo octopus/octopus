@@ -50,7 +50,7 @@ module poisson_libisf_m
 
   type poisson_libisf_t
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
-    FLOAT, pointer           :: kernel(:) !< choice of kernel, one of options above
+    type(coulomb_operator)   :: kernel !< choice of kernel, one of options above
     !> Indicates the boundary conditions (BC) of the problem:
     !!            'F' free BC, isolated systems.
     !!                The program calculates the solution as if the given density is
@@ -120,10 +120,10 @@ contains
       this%datacode = "G"
     end if
 
-    call createKernel(mpi_world%rank, mpi_world%size, this%geocode, &
-         cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), &
-         mesh%spacing(1), mesh%spacing(2), mesh%spacing(3), &
-         this%isf_order, this%kernel, .true.)
+    this%kernel = pkernel_init(.false., mpi_world%rank, mpi_world%size, 0,&
+        this%geocode,cube%rs_n_global,mesh%spacing, this%isf_order)
+    call pkernel_set(this%kernel,.false.)
+
 
     POP_SUB(poisson_libisf_init)
 #endif
@@ -173,10 +173,8 @@ contains
     call dmesh_to_cube_parallel(mesh, rho, cube, cf, mesh_cube_map)
   
     call profiling_in(prof,"ISF_LIBRARY")
-    call H_potential(this%geocode, this%datacode, mpi_world%rank, mpi_world%size, &
-         cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), &
-         mesh%spacing(1), mesh%spacing(2), mesh%spacing(3), &
-         cf%dRS, this%kernel, pot_ion, hartree_energy, offset, .false., &
+    call H_potential(this%datacode, this%kernel, &
+         cf%dRS, pot_ion, hartree_energy, offset, .false., &
          quiet = "NO ", stress_tensor = strten) !optional argument
     call profiling_out(prof)
 
@@ -227,10 +225,8 @@ contains
       call dmesh_to_cube(mesh, rho, cube, cf)
     end if
 
-    call H_potential(this%geocode, this%datacode, mpi_world%rank, mpi_world%size, &
-         cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), &
-         mesh%spacing(1), mesh%spacing(2), mesh%spacing(3), &
-         cf%dRS, this%kernel, pot_ion, hartree_energy, offset, .false., &
+    call H_potential(this%datacode, this%kernel, &
+         cf%dRS,  pot_ion, hartree_energy, offset, .false., &
          quiet = "NO ", stress_tensor = strten) !optional argument
 
     if(mesh%parallel_in_domains) then
@@ -270,7 +266,7 @@ contains
     !>    n3pi        Dimension of the pot_ion array, always with distributed data. 
     !!                For distributed data n3pi=n3p
     integer :: n3pi
-    !>!    i3xcsh     Shift of the density that must be performed to enter in the 
+    !>     i3xcsh     Shift of the density that must be performed to enter in the 
     !!                non-overlapping region. Useful for recovering the values of the potential
     !!                when using GGA XC functionals. If the density starts from rhopot(1,1,1),
     !!                the potential starts from rhopot(1,1,i3xcsh+1). 
@@ -285,12 +281,18 @@ contains
     !!                For global disposition i3s is equal to distributed case with i3xcsh=0.
     integer :: i3s
 
+    !> use_gradient   .true. if functional is using the gradient.
+    logical :: use_gradient = .false.
+    !> use_wb_corr    .true. if functional is using WB corrections.
+    logical :: use_wb_corr = .false.
+
     PUSH_SUB(poisson_libisf_get_dims)
 
     !! Get the dimensions of the cube
     call PS_dim4allocation(this%geocode, this%datacode, mpi_world%rank, mpi_world%size, &
          cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), &
-         ixc, n3d, n3p, n3pi, i3xcsh, i3s)
+         use_gradient, use_wb_corr, &
+         n3d, n3p, n3pi, i3xcsh, i3s)
     this%localnscatterarr(:) = (/ n3d, n3p, n3pi, i3xcsh, i3s /)
 
     cube%rs_n(1:2)      = cube%rs_n_global(1:2)
