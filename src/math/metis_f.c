@@ -24,8 +24,6 @@
 
 #include <stdlib.h>
 
-#include <string.h>
-
 #if defined(HAVE_METIS)
 #include <metis.h>
 #endif
@@ -50,7 +48,7 @@ void FC_FUNC_(oct_metis_partgraphrecursive, OCT_METIS_PARTGRAPHRECURSIVE)
 {
 
   METIS_PartGraphRecursive(nvtxs, ncon, xadj, adjncy, NULL, NULL, NULL, nparts, 
-			   NULL, NULL, options, objval, part);
+			   tpwgts, ubvec, options, objval, part);
 }
 
 
@@ -60,7 +58,7 @@ void FC_FUNC_(oct_metis_partgraphkway, OCT_METIS_PARTGRAPHKWAY)
 {
 
   METIS_PartGraphKway(nvtxs, ncon, xadj, adjncy, NULL, NULL, NULL, nparts, 
-		      NULL, NULL, options, objval, part);
+		      tpwgts, ubvec, options, objval, part);
 }
 
 #endif
