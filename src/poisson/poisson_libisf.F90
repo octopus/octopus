@@ -50,7 +50,9 @@ module poisson_libisf_m
 
   type poisson_libisf_t
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
+#ifdef HAVE_LIBISF
     type(coulomb_operator)   :: kernel !< choice of kernel, one of options above
+#endif
     !> Indicates the boundary conditions (BC) of the problem:
     !!            'F' free BC, isolated systems.
     !!                The program calculates the solution as if the given density is
