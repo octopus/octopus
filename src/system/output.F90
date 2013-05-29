@@ -519,8 +519,10 @@ contains
 
     PUSH_SUB(output_all)
 
-    message(1) = "Writing output to " // trim(dir)
-    call messages_info(1)
+    if(outp%what /= 0) then
+      message(1) = "Writing output to " // trim(dir)
+      call messages_info(1)
+    endif
 
     call output_states(st, gr, geo, dir, outp)
     call output_hamiltonian(hm, gr%der, dir, outp, geo)
