@@ -35,12 +35,12 @@ m4_if(_AC_LANG, Fortran, [fmm_func=fcs_init], [AC_FC_FUNC(fmm_func)])
 
 dnl Check if the library was given in the command line
 if test $acx_libfm_ok = no; then
-  AC_ARG_WITH(libfm, [AS_HELP_STRING([--with-libfm=<lib>], [use LIBFM library <lib>])])
-  case $with_libfm in
+  AC_ARG_WITH(libfm, [AS_HELP_STRING([--with-libfm-prefix=<lib>], [use LIBFM library <lib>])])
+  case $with_libfm_prefix in
     yes | "") ;;
     no) acx_libfm_ok=disable ;;
-    -* | */* | *.a | *.so | *.so.* | *.o) LIBS_LIBFM="-I $with_libfm/include -L $with_libfm/lib -lfcs -lfcs_fmm -lfcs_common -lfcs_direct -lfcs_near -lfcs_gridsort -lfcs4fortran" ;;
-    *) LIBS_LIBFM="-l$with_libfm" ;;
+    -* | */* | *.a | *.so | *.so.* | *.o) LIBS_LIBFM="-I $with_libfm_prefix/include -L $with_libfm_prefix/lib -lfcs -lfcs_fmm -lfcs_common -lfcs_direct -lfcs_near -lfcs_gridsort -lfcs4fortran" ;;
+    *) LIBS_LIBFM="-l$with_libfm_prefix" ;;
   esac
 fi
 
@@ -51,12 +51,6 @@ LIBS="$FLIBS $LIBS_LIBFM $LIBS"
 dnl First, check LIBS_LIBFM environment variable
 if test $acx_libfm_ok = no; then
   AC_MSG_CHECKING([for $fmm_func in $LIBS_LIBFM])
-dnl AC_LINK_IFELSE([AC_LANG_CALL([], [$fmm_func])], [acx_libfm_ok=yes], [])
-dnl if test $acx_libfm_ok = no; then
-dnl   AC_MSG_RESULT([$acx_libfm_ok ($LIBS_LIBFM)])
-dnl else
-dnl   AC_MSG_RESULT([$acx_libfm_ok ($LIBS_LIBFM)])
-dnl fi
   AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
     include "fcs_fconfig.h"
     use fcs_module
@@ -70,6 +64,12 @@ dnl fi
     ret = fcs_init(handle, trim(adjustl(method)) // c_null_char, communicator)
   ]), [acx_libfm_ok=yes], [])
 fi
+dnl AC_LINK_IFELSE([AC_LANG_CALL([], [$fmm_func])], [acx_libfm_ok=yes], [])
+ if test $acx_libfm_ok = no; then
+   AC_MSG_RESULT([$acx_libfm_ok ($LIBS_LIBFM)])
+ else
+   AC_MSG_RESULT([$acx_libfm_ok ($LIBS_LIBFM)])
+ fi
 
 dnl Generic LIBFM library?
 for libfm in fcs_fmm; do
@@ -97,6 +97,7 @@ LIBS="$acx_libfm_save_LIBS"
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_libfm_ok" = xyes; then
+   echo "FMM was found"
   AC_DEFINE(HAVE_LIBFM,1,[Defined if you have LIBFM library.])
   $1
 else
