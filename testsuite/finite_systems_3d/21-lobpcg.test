@@ -12,8 +12,7 @@ Enabled    : Yes
 # Depending on the context, the LOBPCG routine takes different branches, which
 # are checked with this test:
 #   * spin-polarized.
-#   * spinors,
-#   * curvilinear coordinates,
+#   * spinors
 
 Input: 21-lobpcg.01-spin_polarized.inp
 match ; Eigenvalue 1 up; GREP(static/info, ' 1   up', 13) ;       -14.461727

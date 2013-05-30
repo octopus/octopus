@@ -43,8 +43,8 @@ module opt_control_global_m
     oct_ctr_function_real_time       = 1,       &
     oct_ctr_function_parametrized    = 2
 
-  ! These are the possible QOCT schemes or algorithms; the component "algorithm"
-  ! of the oct_t datatype can get any of these values.
+  !> These are the possible QOCT schemes or algorithms; the component "algorithm"
+  !! of the oct_t datatype can get any of these values.
   integer, parameter, public ::  &
     oct_algorithm_zbr98              = 1,       &
     oct_algorithm_zr98               = 2,       &
