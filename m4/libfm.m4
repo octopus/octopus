@@ -97,7 +97,6 @@ LIBS="$acx_libfm_save_LIBS"
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_libfm_ok" = xyes; then
-   echo "FMM was found"
   AC_DEFINE(HAVE_LIBFM,1,[Defined if you have LIBFM library.])
   $1
 else
