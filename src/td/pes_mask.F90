@@ -212,6 +212,12 @@ contains
       call messages_fatal(2)
     end if
 
+    if( hm%ab  /=  NOT_ABSORBING) then
+      message(1) = 'PhotoElectronSpectrum = pes_mask already contains absorbing boundaries.'
+      message(2) = 'Set AbsorbingBoundaries = no and rerun.'
+      call messages_fatal(2)
+    end if
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!  Calculation mode
@@ -718,16 +724,18 @@ contains
       ! Precalculate the potential vector for all the simulation time
       do il = 1, hm%ep%no_lasers
         select case(laser_kind(hm%ep%lasers(il)))
-        case(E_FIELD_MAGNETIC, E_FIELD_ELECTRIC)
-          write(message(1),'(a)') 'PESMask works only with vector_potential unless in passive_mode.'
-          call messages_warning(1)
         case(E_FIELD_VECTOR_POTENTIAL)
           do it = 1, max_iter
             field=M_ZERO
             call laser_field(hm%ep%lasers(il), field, it*dt)
-!             mask%ext_pot(it,:)= mask%ext_pot(it,:)-field(:) !Sum up all the fields (for some reason needs negative sign)
             mask%ext_pot(it,:)= mask%ext_pot(it,:)+field(:) 
           end do
+          
+        case default 
+          write(message(1),'(a)') 'PESMask should work only with TDExternalFields = vector_potential.'
+          write(message(2),'(a)') 'Unless PESMaskMode = passive_mode the results are likely to be wrong. '
+          call messages_warning(2)
+          
         end select
       end do
     else 
