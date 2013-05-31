@@ -643,8 +643,6 @@ contains
 
     mesh%mpi_grp = mpi_grp
 
-    SAFE_ALLOCATE(mesh%vp%part_vec(1:mesh%np_part_global))
-
     !%Variable MeshPartitionFromScratch
     !%Type logical
     !%Default false
@@ -656,8 +654,9 @@ contains
     call parse_logical(datasets_check('MeshPartitionFromScratch'), .false., from_scratch)
 
     ierr = -1
-    if(.not. from_scratch) call mesh_partition_read(mesh, mesh%vp%part_vec, ierr)
-    
+    if(.not. from_scratch) call mesh_partition_read(mesh, ierr)
+
+
     if(ierr /= 0) then
 
       !%Variable MeshPartitionVirtualSize
@@ -681,23 +680,24 @@ contains
       end if
       
       if(.not. present(parent)) then
-        call mesh_partition(mesh, stencil, mesh%vp%part_vec)
+        call mesh_partition(mesh, stencil)
       else
         ! if there is a parent grid, use its partition
-        do ip = 1, mesh%np_global
-          ix = 2*mesh%idx%lxyz(ip, 1)
-          iy = 2*mesh%idx%lxyz(ip, 2)
-          iz = 2*mesh%idx%lxyz(ip, 3)
-          ii = parent%idx%lxyz_inv(ix, iy, iz)
-          mesh%vp%part_vec(ip) = parent%vp%part_vec(ii)
-        end do
+        call mesh_partition_from_parent(mesh, parent)
       end if
       
-      call mesh_partition_boundaries(mesh, stencil, mesh%vp%part_vec)
-      
-      call mesh_partition_write(mesh, mesh%vp%part_vec)
+      !Do the partioning of the boundary points
+      call mesh_partition_boundaries(mesh, stencil)
 
+      !Now that we have the partitions, we save them
+      call mesh_partition_write(mesh)
     end if
+
+    !At the moment we still need the global partition. This will be removed in near future.
+    SAFE_ALLOCATE(mesh%vp%part_vec(1:mesh%np_part_global))
+    call partition_get_global(mesh%inner_partition, mesh%vp%part_vec(1:mesh%np_global))
+    call partition_get_global(mesh%bndry_partition, mesh%vp%part_vec(mesh%np_global+1:mesh%np_part_global))      
+
 
     !%Variable PartitionPrint
     !%Type logical

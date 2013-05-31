@@ -36,6 +36,7 @@ module mesh_m
   use multicomm_m
   use loct_m
   use par_vec_m
+  use partition_m
   use parser_m
   use profiling_m
   use simul_box_m
@@ -97,12 +98,13 @@ module mesh_m
     logical         :: parallel_in_domains 
     type(mpi_grp_t) :: mpi_grp             !< the mpi group describing parallelization in domains
     type(pv_t)      :: vp                  !< describes parallel vectors defined on the mesh.
+    type(partition_t) :: inner_partition   !< describes how the inner points are assigned to the domains
+    type(partition_t) :: bndry_partition   !< describes how the boundary points are assigned to the domains
 
     FLOAT, pointer :: x(:,:)            !< The (local) \b points
     integer, pointer :: resolution(:, :, :)
     FLOAT            :: volume_element    !< The global volume element.
     FLOAT, pointer   :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
-    integer          :: partition_library !< The partition name that has been used to partition the mesh
 
     type(mesh_cube_map_t) :: cube_map
   end type mesh_t

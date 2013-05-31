@@ -117,7 +117,7 @@ mesh_cube_map.o : mesh_cube_map.F90 index.o partition_transfer.o cube.o
 mesh_cube_parallel_map.o : mesh_cube_parallel_map.F90 partition_transfer.o mesh.o cube.o
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o modelmb_1part.o
 mesh_init.o : mesh_init.F90 mesh.o par_vec.o stencil.o ob_grid.o partition.o mesh_partition.o mesh_cube_map.o
-mesh.o : mesh.F90 par_vec.o index.o curvilinear.o mesh_cube_map.o
+mesh.o : mesh.F90 par_vec.o index.o curvilinear.o mesh_cube_map.o partition.o
 mesh_partition.o : mesh_partition.F90 mesh.o stencil_star.o stencil.o partition.o
 modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o
 multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o transfer_table.o boundaries.o

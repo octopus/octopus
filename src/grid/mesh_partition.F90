@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
+!! Copyright (C) 2002-2013 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -47,6 +47,7 @@ module mesh_partition_m
   public ::                      &
     mesh_partition,              &
     mesh_partition_boundaries,   &
+    mesh_partition_from_parent,  &
     mesh_partition_write,        &
     mesh_partition_read,         &
     mesh_partition_write_info,   &
@@ -72,10 +73,9 @@ contains
   !! which has to be allocated beforehand.
   !! (mesh_partition_end should be called later.)
   ! ---------------------------------------------------------------
-  subroutine mesh_partition(mesh, lapl_stencil, part)
-    type(mesh_t),    intent(inout)  :: mesh
-    type(stencil_t), intent(in)  :: lapl_stencil
-    integer,         intent(out) :: part(:) !< 1:mesh%np_part_global
+  subroutine mesh_partition(mesh, lapl_stencil)
+    type(mesh_t),      intent(inout)  :: mesh
+    type(stencil_t),   intent(in)  :: lapl_stencil
 
     integer              :: iv, jp, inb, jpart
     integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
@@ -105,14 +105,15 @@ contains
 
     integer              :: iunit          !< For debug output to files.
     integer, allocatable :: rcounts(:), rdispls(:)
-    integer, allocatable :: part_local(:)  !< Output of the ParMETIS call
+    integer, allocatable :: part(:)        !< The local partition
+    integer, allocatable :: part_global(:) !< The global partition (only used with METIS)
     integer, allocatable :: vtxdist(:)     !< Initial distribution of the points
 
     type(stencil_t) :: stencil
     integer :: stencil_to_use, default_method, method
     integer :: library
     integer, parameter   :: STAR = 1, LAPLACIAN = 2
-    integer, allocatable :: istart(:), ifinal(:), lsize(:), rdispl(:)
+    integer, allocatable :: istart(:), lsize(:)
 
     type(profile_t), save :: prof
     integer :: default
@@ -155,7 +156,6 @@ contains
       call messages_fatal(1)
     end if
 #endif
-    mesh%partition_library = library
 
     !%Variable MeshPartitionStencil
     !%Type integer
@@ -186,18 +186,22 @@ contains
     ! Shortcut to the global number of vertices
     nv_global = mesh%np_global
 
+    call partition_init(mesh%inner_partition, nv_global, mesh%mpi_grp)
+
     ! Get number of partitions.
     npart = mesh%mpi_grp%size
     ipart = mesh%mpi_grp%rank + 1
 
     SAFE_ALLOCATE(istart(1:npart))
-    SAFE_ALLOCATE(ifinal(1:npart))
     SAFE_ALLOCATE(lsize(1:npart))
     SAFE_ALLOCATE(vtxdist(1:npart+1))
-    call multicomm_divide_range(nv_global, npart, istart, ifinal, lsize)  
+    call partition_get_local_size(mesh%inner_partition, iv, nv)
+#ifdef HAVE_MPI
+    call MPI_Allgather(iv, 1, MPI_INTEGER, istart(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Allgather(nv, 1, MPI_INTEGER, lsize(1), 1, MPI_INTEGER, mesh%mpi_grp%comm, mpi_err)
+#endif
     vtxdist(1:npart) = istart(1:npart)
     vtxdist(npart+1) = nv_global + 1
-    nv = lsize(ipart)
 
     ! Create graph with each point being represented by a 
     ! vertex and edges between neighbouring points.
@@ -212,7 +216,7 @@ contains
       ! Set entry in index table.
       xadj(iv) = ne
       ! Check all possible neighbours.
-      do jp = 1, stencil%size 
+      do jp = 1, stencil%size
         if(jp == stencil%center) cycle
 
         ! Store coordinates of possible neighbors, they
@@ -300,12 +304,13 @@ contains
       call messages_info(1)
     end if
 
-
     ! The sum of all tpwgts elements has to be 1 and 
     ! we don`t care about the weights. So; 1/npart
     SAFE_ALLOCATE(tpwgts(1:npart))
     tpwgts(1:npart) = real(1.0, 4)/real(npart, 4)
-
+    
+    ! Allocate local output matrix
+    SAFE_ALLOCATE(part(1:nv))
 
     select case(library)
     case(METIS)
@@ -336,6 +341,7 @@ contains
       !%End
       call parse_integer(datasets_check('MeshPartition'), default_method, method)
 
+      SAFE_ALLOCATE(part_global(1:nv_global))
 
       !Now we can call METIS
 #ifdef HAVE_METIS
@@ -344,19 +350,22 @@ contains
         message(1) = 'Info: Using METIS 5 multilevel recursive bisection to partition the mesh.'
         call messages_info(1)
         call oct_metis_partgraphrecursive(nv_global, 1, xadj_global(1), adjncy_global(1), npart, &
-                                          tpwgts(1), 1.01_4, options(1), edgecut, part(1))
+                                          tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
       case(GRAPH)
         message(1) = 'Info: Using METIS 5 multilevel k-way algorithm to partition the mesh.'
         call messages_info(1)
         call oct_metis_partgraphkway(nv_global, 1, xadj_global(1), adjncy_global(1), npart, &
-                                     tpwgts(1), 1.01_4, options(1), edgecut, part(1))
+                                     tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
       case default
         message(1) = 'Selected partition method is not available in METIS 5.'
         call messages_fatal(1)
       end select
 #endif
 
+      part(1:nv) = part_global(istart(ipart):istart(ipart) + nv - 1)
+
       SAFE_DEALLOCATE_A(options)
+      SAFE_DEALLOCATE_A(part_global)
 
     case(PARMETIS)
 
@@ -366,34 +375,23 @@ contains
       write(message(1),'(a)') 'Info: Using ParMETIS multilevel k-way algorithm to partition the mesh.'
       call messages_info(1)
 
-      ! Allocate local output matrix
-      SAFE_ALLOCATE(part_local(1:lsize(ipart)))
-
       ! Call to ParMETIS with no inbalance tolerance
 #ifdef HAVE_PARMETIS
       call oct_parmetis_v3_partkway(vtxdist(1), xadj(1), adjncy(1), & 
            1, mesh%mpi_grp%size, tpwgts(1), 1.05_4, & 
-           options(1), edgecut, part_local(1), mesh%mpi_grp%comm)
+           options(1), edgecut, part(1), mesh%mpi_grp%comm)
 #endif
-
-      ASSERT(all(part_local(1:nv)>0))
-
-      ! Gather local outputs to a global old-fashion one
-      SAFE_ALLOCATE(rdispls(npart))
-      rdispls(1:npart) = istart(1:npart) - 1
-#ifdef HAVE_MPI
-      call MPI_Allgatherv(part_local(1), lsize(ipart), MPI_INTEGER, &
-           part(1), lsize(1), rdispls(1), MPI_INTEGER, &
-           mesh%mpi_grp%comm, mpi_err)
-#endif
-      SAFE_DEALLOCATE_A(rdispls)
 
       ! Deallocate matrices
-      SAFE_DEALLOCATE_A(part_local)
       SAFE_DEALLOCATE_A(vtxdist)
       SAFE_DEALLOCATE_A(options)
 
     end select
+    
+    ASSERT(all(part(1:nv) > 0))
+    ASSERT(all(part(1:nv) <= npart))
+    call partition_set(mesh%inner_partition, part)
+
 
     if (in_debug_mode .or. library == METIS) then
       SAFE_DEALLOCATE_A(xadj_global)
@@ -403,13 +401,8 @@ contains
     SAFE_DEALLOCATE_A(xadj)
     SAFE_DEALLOCATE_A(adjncy)   
     SAFE_DEALLOCATE_A(istart)
-    SAFE_DEALLOCATE_A(ifinal)
     SAFE_DEALLOCATE_A(lsize)
-    SAFE_DEALLOCATE_A(rdispl)
-
-
-    ASSERT(all(part(1:mesh%np_global) > 0))
-    ASSERT(all(part(1:mesh%np_global) <= npart))
+    SAFE_DEALLOCATE_A(part)
 
     call stencil_end(stencil)
     POP_SUB(mesh_partition)
@@ -418,38 +411,94 @@ contains
   end subroutine mesh_partition
 
   ! --------------------------------------------------------
-  subroutine mesh_partition_boundaries(mesh, stencil, part)
-    type(mesh_t),    intent(in)    :: mesh
-    type(stencil_t), intent(in)    :: stencil
-    integer,         intent(inout) :: part(:)
+  subroutine mesh_partition_boundaries(mesh, stencil)
+    type(mesh_t),      intent(inout) :: mesh
+    type(stencil_t),   intent(in)    :: stencil
 
-    integer              :: ii, jj         ! Counter.
+    integer              :: np_global, istart, np, ipart, npart, ip
+    integer              :: is, ii, jj         ! Counter.
     integer              :: ix(1:MAX_DIM), jx(1:MAX_DIM)
-    integer              :: npart
-    integer, allocatable :: votes(:), bps(:)
+    integer, allocatable :: neighbours_index(:), neighbours_part(:)
+    integer, allocatable :: part(:)
+    integer, allocatable :: votes(:), bps(:), bps_total(:)
     logical, allocatable :: winner(:)
-    integer :: ip, maxvotes
+    integer              :: maxvotes
 
     PUSH_SUB(mesh_partition_boundaries)
 
+    ipart = mesh%mpi_grp%rank + 1
     npart = mesh%mpi_grp%size
+    np_global = mesh%np_part_global - mesh%np_global
+    call partition_init(mesh%bndry_partition, np_global, mesh%mpi_grp)
+    call partition_get_local_size(mesh%bndry_partition, istart, np)
 
-    SAFE_ALLOCATE(votes(1:npart))
-    SAFE_ALLOCATE(bps(1:npart))
-    SAFE_ALLOCATE(winner(1:npart))
+    !Get the global indexes of the neighbours connected through the stencil
+    !Neighbours that are not inner points get a value of 0
+    SAFE_ALLOCATE(neighbours_index(np*stencil%size))
+    neighbours_index = 0
 
-    !assign boundary points
-    bps = 0
-    do ii = mesh%np_global + 1, mesh%np_part_global
+    do is = 1, np
+      !Global index of the point
+      ii = mesh%np_global + istart - 1 + is
+
       !get the coordinates of the point
       call index_to_coords(mesh%idx, mesh%sb%dim, ii, ix)
-      votes = 0
-      ! check the partition of all the points that are connected through the stencil with this one
+
       do jj = 1, stencil%size
         jx(1:MAX_DIM) = ix(1:MAX_DIM) + stencil%points(1:MAX_DIM, jj)
         if(any(jx < mesh%idx%nr(1, :)) .or. any(jx > mesh%idx%nr(2, :))) cycle
         ip = index_from_coords(mesh%idx, mesh%sb%dim, jx)
-        if(ip > 0 .and. ip <= mesh%np_global) votes(part(ip)) = votes(part(ip)) + 1
+        if (ip > 0 .and. ip <= mesh%np_global) neighbours_index((is-1)*stencil%size + jj) = ip
+      end do
+
+    end do
+
+    !Get the partition number of the neighbours
+    SAFE_ALLOCATE(neighbours_part(np*stencil%size))
+    call partition_get_partition_number(mesh%inner_partition, np*stencil%size, neighbours_index, neighbours_part)
+    SAFE_DEALLOCATE_A(neighbours_index)
+
+    !First round of voting
+    SAFE_ALLOCATE(part(np))
+    SAFE_ALLOCATE(bps(1:npart))
+    SAFE_ALLOCATE(votes(1:npart))
+    SAFE_ALLOCATE(winner(1:npart))
+    part = 0
+    bps = 0
+    do is = 1, np
+      votes = 0
+      do jj = 1, stencil%size
+        ipart = neighbours_part((is-1)*stencil%size + jj)
+        if (ipart == 0) cycle
+        votes(ipart) = votes(ipart) + 1
+      end do
+
+      ! now count the votes
+      maxvotes = maxval(votes)
+
+      ! choose a winner if it is unique
+      if (count(votes == maxvotes) == 1) then
+        part(is) = maxloc(votes, dim = 1)
+        bps(part(is)) = bps(part(is)) + 1
+      end if
+    end do
+
+    !Count how many points have already been assigned to each partition in all processes
+    SAFE_ALLOCATE(bps_total(1:npart))
+#ifdef HAVE_MPI 
+    call MPI_Reduce(bps(1), bps_total(1), npart, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, mpi_err)
+#endif
+
+    !Second round of voting
+    do is = 1, np
+      !Only points that were not assigned yet
+      if (part(is) /= 0) cycle
+
+      votes = 0
+      do jj = 1, stencil%size
+        ipart = neighbours_part((is-1)*stencil%size + jj)
+        if (ipart == 0) cycle
+        votes(ipart) = votes(ipart) + 1
       end do
 
       ! now count the votes
@@ -457,49 +506,87 @@ contains
       ! from all the ones that have the maximum
       winner = (votes == maxvotes)
       ! select the one that has fewer points currently
-      part(ii) = minloc(bps, dim = 1,  mask = winner)
+      part(is) = minloc(bps_total, dim = 1,  mask = winner)
       ! and count it
-      bps(part(ii)) = bps(part(ii)) + 1
-
+      bps_total(part(is)) = bps_total(part(is)) + 1
     end do
 
     SAFE_DEALLOCATE_A(votes)
     SAFE_DEALLOCATE_A(bps)
     SAFE_DEALLOCATE_A(winner)
 
+    ASSERT(all(part > 0))
+    ASSERT(all(part <= npart))
+    call partition_set(mesh%bndry_partition, part)
+
+    SAFE_DEALLOCATE_A(part)
+
     POP_SUB(mesh_partition_boundaries)
   end subroutine mesh_partition_boundaries
 
   ! ----------------------------------------------------
+  subroutine mesh_partition_from_parent(mesh, parent)
+    type(mesh_t), intent(inout) :: mesh
+    type(mesh_t), intent(in)    :: parent
 
-  subroutine mesh_partition_write(mesh, part)
+    integer :: istart, np, ip_local, ip_global, ix, iy, iz, ii
+    integer, allocatable :: points(:), part(:)
+
+    PUSH_SUB(mesh_partition_from_parent)
+
+    !Initialize partition
+    call partition_init(mesh%inner_partition, mesh%np_global, mesh%mpi_grp)
+    call partition_get_local_size(mesh%inner_partition, istart, np)
+
+    !Get the partition number of each point from the parent mesh
+    SAFE_ALLOCATE(points(np))
+    SAFE_ALLOCATE(part(np))
+    do ip_local = 1, np
+      ip_global = istart + ip_local - 1
+      ix = 2*mesh%idx%lxyz(ip_global, 1)
+      iy = 2*mesh%idx%lxyz(ip_global, 2)
+      iz = 2*mesh%idx%lxyz(ip_global, 3)
+      ii = parent%idx%lxyz_inv(ix, iy, iz)
+      points(ip_local) = ii
+    end do
+    call partition_get_partition_number(parent%inner_partition, np, points, part)
+
+    !Set the partition
+    call partition_set(mesh%inner_partition, part)
+
+    !Free memory
+    SAFE_DEALLOCATE_A(points)
+    SAFE_DEALLOCATE_A(part)
+
+    POP_SUB(mesh_partition_from_parent)
+  end subroutine mesh_partition_from_parent
+
+  ! ----------------------------------------------------
+  subroutine mesh_partition_write(mesh)
     type(mesh_t),    intent(in)    :: mesh
-    integer,         intent(in)    :: part(:)
     
-    character(len=6) :: numstring
     integer          :: ierr
+    character(len=6) :: numstring
 
     PUSH_SUB(mesh_partition_write)
 
-    ! here we assume that all nodes have the same partition
     if(mpi_grp_is_root(mpi_world)) then
-
       write(numstring, '(i6.6)') mesh%mpi_grp%size
 
       call io_mkdir('restart', is_tmp = .true.)
       call io_mkdir('restart/partition', is_tmp = .true.)
       call mesh_write_fingerprint(mesh, 'restart/partition/grid_'//trim(numstring))
-      call io_binary_write('restart/partition/partition_'//trim(numstring)//'.obf', mesh%np_part_global, part, ierr)
     end if
+
+    call partition_write(mesh%inner_partition, 'restart/partition/inner_partition_'//trim(numstring)//'.obf')
+    call partition_write(mesh%bndry_partition, 'restart/partition/bndry_partition_'//trim(numstring)//'.obf')
 
     POP_SUB(mesh_partition_write)
   end subroutine mesh_partition_write
 
   ! ----------------------------------------------------
-
-  subroutine mesh_partition_read(mesh, part, ierr)
-    type(mesh_t),    intent(in)    :: mesh
-    integer,         intent(out)   :: part(:)
+  subroutine mesh_partition_read(mesh, ierr)
+    type(mesh_t),    intent(inout) :: mesh
     integer,         intent(out)   :: ierr
     
     character(len=6) :: numstring
@@ -507,18 +594,30 @@ contains
 
     PUSH_SUB(mesh_partition_read)
 
+    call partition_init(mesh%inner_partition, mesh%np_global, mesh%mpi_grp)
+    call partition_init(mesh%bndry_partition, mesh%np_part_global-mesh%np_global, mesh%mpi_grp)
+
+    ! Read mesh fingerprint
     if(mpi_grp_is_root(mesh%mpi_grp)) then
-
       write(numstring, '(i6.6)') mesh%mpi_grp%size
-
       call mesh_read_fingerprint(mesh, 'restart/partition/grid_'//trim(numstring), read_np_part, ierr)
+    end if
+#ifdef HAVE_MPI
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
+#endif
 
-      if (ierr == 0) then
-        call io_binary_read('restart/partition/partition_'//trim(numstring)//'.obf', mesh%np_part_global, part, ierr)
-      else
-        ierr = -1
-      end if
+    ! If fingerprint is OK then we read the inner partition
+    if (ierr == 0) then
+      call partition_read(mesh%inner_partition, 'restart/partition/inner_partition_'//trim(numstring)//'.obf', ierr)
+    end if
 
+    ! If inner partition is OK then we read the boundary partition
+    if (ierr == 0) then
+      call partition_read(mesh%bndry_partition, 'restart/partition/bndry_partition_'//trim(numstring)//'.obf', ierr)
+    end if
+
+    ! Tell the user if we found a compatible mesh partition
+    if(mpi_grp_is_root(mesh%mpi_grp)) then
       if(ierr == 0) then
         message(1) = "Info: Found a compatible mesh partition."
       else
@@ -526,15 +625,14 @@ contains
       end if
       call messages_info(1)
     end if
-    
-    !broadcast the result
-#ifdef HAVE_MPI
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
-    if (ierr == 0) call MPI_Bcast(part(1), mesh%np_part_global, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
-#endif
+
+    ! Free the memory in case we were unable to read the partitions
+    if (ierr /= 0) then
+      call partition_end(mesh%inner_partition)
+      call partition_end(mesh%bndry_partition)
+    end if
 
     POP_SUB(mesh_partition_read)
-
   end subroutine mesh_partition_read
 
 
