@@ -440,7 +440,7 @@ contains
       call states_end(psi)
       if(oct_iterator_maxiter(iterator) == 0) then
         ! Nothing to do.
-        POP_SUB(opt_control_run.scheme_cg)
+        POP_SUB(opt_control_run.scheme_direct)
         return
       end if
 
@@ -456,7 +456,6 @@ contains
       hm_       => hm
       td_       => td
 
-      call controlfunction_basis_to_theta(par)
       ! theta may be in single precision, whereas x is always double precision.
       call controlfunction_get_theta(par, theta)
       x = theta
@@ -528,7 +527,6 @@ contains
       hm_       => hm
       td_       => td
 
-      call controlfunction_basis_to_theta(par)
       call controlfunction_get_theta(par, theta)
       x = theta
 
@@ -685,8 +683,8 @@ contains
 
     call controlfunction_set_rep(par_chi)
 
-    ! Fix the fluence, in case it is needed.
-    if(oct%mode_fixed_fluence) call controlfunction_set_fluence(par_chi)
+!!$    ! Fix the fluence, in case it is needed.
+!!$    if(oct%mode_fixed_fluence) call controlfunction_set_fluence(par_chi)
 
     ! Copy par_chi to par
     call controlfunction_copy(par, par_chi)

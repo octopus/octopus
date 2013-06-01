@@ -75,8 +75,6 @@ module controlfunction_m
             controlfunction_prepare_initial,   &
             controlfunction_fluence,           &
             controlfunction_j2,                &
-            controlfunction_basis_to_theta,    &
-            controlfunction_theta_to_basis,    &
             controlfunction_get_theta,         &
             controlfunction_set_theta,         &
             controlfunction_randomize,         &
@@ -1492,90 +1490,113 @@ contains
   ! ---------------------------------------------------------
 
 
+  ! ---------------------------------------------------------
+  subroutine controlfunction_deltaedeltau(par, dedu)
+    type(controlfunction_t), intent(in)    :: par
+    FLOAT, intent(inout)                   :: dedu(:, :) ! (1:dof, 1:dim)
 
-
-  !> controlfunction_gradient computes the gradient with respect
-  !! to the theta basis (dim=dof)
-  subroutine controlfunction_gradient(xx, par, par_output, grad)
-    FLOAT,                   intent(in)    :: xx(:)
-    type(controlfunction_t), intent(in)    :: par, par_output
-    FLOAT,                   intent(inout) :: grad(:)
-
-    integer :: dim, jj
+    integer :: i
     FLOAT :: rr
-    FLOAT, allocatable :: theta(:), grad_matrix(:,:), gradb(:)
+    FLOAT, allocatable :: grad_matrix(:, :), dedv(:, :)
 
-    PUSH_SUB(controlfunction_gradient)
-
-
-    select case(par%current_representation)
-    case(ctr_fourier_series)
-
-       dim = par%dim
-       SAFE_ALLOCATE(theta(1:dim)) ! dim = dof for fourier-series
-       call controlfunction_get_theta(par_output, theta)
-       forall(jj = 1:dim) 
-         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%u(jj, :)*xx(:)) - M_TWO * theta(jj)
-       end forall
-
-    case(ctr_zero_fourier_series)
-
-       dim = par%dof
-       forall(jj = 1:dim) 
-         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%u(jj, :)*xx(:))
-       end forall
-       SAFE_ALLOCATE(theta(1:dim+1))
-       forall(jj = 1:dim+1) theta(jj) = tdf(par_output%f(1), jj)
-       do jj = 1, dim/2
-         grad(jj) = grad(jj) - M_TWO*(theta(jj+1) - theta(1))
-       end do
-       do jj = dim/2+1, dim
-         grad(jj) = grad(jj) - M_TWO*theta(jj+1)
-       end do
-
+    select case(cf_common%representation)
 
     case(ctr_fourier_series_h)
-
-       dim = par%dim
-       SAFE_ALLOCATE(theta(1:dim))   ! dim = dof + 1 for fourier-series-h
-       SAFE_ALLOCATE(grad_matrix(1:dim - 1, 1:dim))
-
-       forall(jj = 1:dim) theta(jj) = M_TWO * tdf(par_output%f(1), jj) ! get the projection on my basis set of function (theta=b)
+       SAFE_ALLOCATE(grad_matrix(1:par%dim - 1, 1:par%dim))
        rr = sqrt(cf_common%targetfluence)
-       call hypersphere_grad_matrix(grad_matrix, rr, xx)
-       grad = matmul(grad_matrix, matmul(transpose(par%utransfi), theta))
-       grad = -grad  ! the CG algorithm minimizes, so we need to give the negative gradient for maximization
-       
+       call hypersphere_grad_matrix(grad_matrix, rr, par%theta)
+       dedu = matmul(grad_matrix, transpose(par%utransfi))
        SAFE_DEALLOCATE_A(grad_matrix)
 
     case(ctr_zero_fourier_series_h)
-
-       dim = par%dim
-       SAFE_ALLOCATE(theta(1:dim))
-       SAFE_ALLOCATE(gradb(1:dim-1))
-
-       forall(jj = 1:dim) theta(jj) = tdf(par_output%f(1), jj)
-
-       do jj = 1, dim/2-1
-         gradb(jj) = - M_TWO*(theta(jj+1) - theta(1))
+       SAFE_ALLOCATE(dedv(1:par%dim-1, 1:par%dim))
+       dedv = M_ZERO
+       do i = 1, (par%dim-1)/2
+         dedv(i, 1) = - M_ONE
+         dedv(i, i+1) = M_ONE
        end do
-       do jj = dim/2, dim-1
-         gradb(jj) = - M_TWO*theta(jj+1)
+       do i = (par%dim-1)/2+1, par%dim-1
+         dedv(i, i+1) = M_ONE
        end do
-
-       SAFE_ALLOCATE(grad_matrix(1:dim - 2, 1:dim - 1))
+       SAFE_ALLOCATE(grad_matrix(1:par%dim - 2, 1:par%dim - 1))
        rr = sqrt(cf_common%targetfluence)
-       call hypersphere_grad_matrix(grad_matrix, rr, xx)
-
-       grad = matmul(grad_matrix, matmul(transpose(par%utransfi), gradb))
-
+       call hypersphere_grad_matrix(grad_matrix, rr, par%theta)
+       dedu = matmul(grad_matrix, matmul(transpose(par%utransfi), dedv))
        SAFE_DEALLOCATE_A(grad_matrix)
-       SAFE_DEALLOCATE_A(theta)
-       SAFE_DEALLOCATE_A(gradb)
+       SAFE_DEALLOCATE_A(dedv)
+
+    case(ctr_fourier_series)
+      dedu = M_ZERO
+      do i = 1, par%dim
+        dedu(i, i) = M_ONE
+      end do
+
+    case(ctr_zero_fourier_series)
+      dedu = M_ZERO
+      do i = 1, par%dof/2
+        dedu(i, 1) = - M_ONE
+        dedu(i, i+1) = M_ONE
+      end do
+      do i = par%dof/2+1, par%dof
+        dedu(i, i+1) = M_ONE
+      end do
 
     end select
 
-    SAFE_DEALLOCATE_A(theta)
+  end subroutine controlfunction_deltaedeltau
+  ! ---------------------------------------------------------
+
+
+  !> controlfunction_der computes the derivative of a controlfunciton with respect
+  !! to one of its degrees of freedom.
+  subroutine controlfunction_der(par, depsilon, i)
+    type(controlfunction_t), intent(in)    :: par
+    type(tdf_t), intent(inout) :: depsilon
+    integer,                 intent(in)    :: i
+
+    FLOAT, allocatable :: dedu(:, :)
+    PUSH_SUB(controlfunction_der)
+    ASSERT( i > 0 .and. i <= par%dof)
+
+    SAFE_ALLOCATE(dedu(1:par%dof, 1:par%dim))
+    call controlfunction_deltaedeltau(par, dedu)
+    call tdf_set_numerical(depsilon, dedu(i, 1:par%dim))
+
+    SAFE_DEALLOCATE_A(dedu)
+    POP_SUB(controlfunction_der)
+  end subroutine controlfunction_der
+
+
+  !> controlfunction_gradient computes the gradient with respect
+  !! to the theta basis
+  subroutine controlfunction_gradient(par, par_output, grad)
+    type(controlfunction_t), intent(in)    :: par, par_output
+    FLOAT,                   intent(inout) :: grad(:)
+
+    integer :: jj
+    type(tdf_t) :: depsilon
+    PUSH_SUB(controlfunction_gradient)
+
+    select case(par%current_representation)
+    case(ctr_fourier_series, ctr_zero_fourier_series)
+      do jj = 1, par%dof
+        call tdf_copy(depsilon, par%f(1))
+        call controlfunction_der(par, depsilon, jj)
+        grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%u(jj, :)*par%theta(:)) &
+                 - M_TWO * tdf_dot_product(par_output%f(1), depsilon)
+        call tdf_end(depsilon)
+      end do
+
+    case(ctr_fourier_series_h, ctr_zero_fourier_series_h)
+      do jj = 1, par%dof
+        call tdf_copy(depsilon, par%f(1))
+        call controlfunction_der(par, depsilon, jj)
+        grad(jj) = - M_TWO * tdf_dot_product(par_output%f(1), depsilon)
+        call tdf_end(depsilon)
+      end do
+
+    end select
+
     POP_SUB(controlfunction_gradient)
   end subroutine controlfunction_gradient
   ! ---------------------------------------------------------

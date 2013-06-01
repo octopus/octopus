@@ -40,7 +40,6 @@
     theta(index_) = x
 
     call controlfunction_set_theta(par_, theta)
-    call controlfunction_theta_to_basis(par_)
     call states_copy(psi, initial_st)
     call propagate_forward(sys_, hm_, td_, par_, oct_target, psi)
     f = - target_j1(oct_target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
@@ -73,7 +72,6 @@
     if(getgrad  ==  1) then
       theta = x
       call controlfunction_set_theta(par_, theta)
-      call controlfunction_theta_to_basis(par_)
       call controlfunction_copy(par_new, par_)
       call f_striter(sys_, hm_, td_, par_new, j1)
       f = - j1 - controlfunction_j2(par_)
@@ -81,7 +79,7 @@
       call controlfunction_set_rep(par_new)
       SAFE_ALLOCATE(dff(1:n))
       dff = df
-      call controlfunction_gradient(real(x, REAL_PRECISION), par_, par_new, dff)
+      call controlfunction_gradient(par_, par_new, dff)
       df = dff
 
       ! Check if the gradient has been computed properly... This should be done only
@@ -123,7 +121,6 @@
     else
       theta = x
       call controlfunction_set_theta(par_, theta)
-      call controlfunction_theta_to_basis(par_)
       call states_copy(psi, initial_st)
       call propagate_forward(sys_, hm_, td_, par_, oct_target, psi)
       f = - target_j1(oct_target, sys_%gr, psi, sys_%geo) - controlfunction_j2(par_)
@@ -188,7 +185,6 @@
     SAFE_ALLOCATE(theta(1:n))
     theta = x
     call controlfunction_set_theta(par_, theta)
-    call controlfunction_theta_to_basis(par_)
 
     if(oct%delta == M_ZERO) then
       ! We only need the value of the target functional.
@@ -226,7 +222,6 @@
     SAFE_ALLOCATE(theta(1:n))
     theta = x
     call controlfunction_set_theta(par_, theta)
-    call controlfunction_theta_to_basis(par_)
     SAFE_DEALLOCATE_A(theta)
 
     j = - val
