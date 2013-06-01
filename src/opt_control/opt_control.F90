@@ -678,13 +678,7 @@ contains
     ! Backward propagation, while at the same time finding the output field, 
     ! which is placed at par_chi
     call bwd_step_2(sys, td, hm, oct_target, par, par_chi, chi, prop_chi, prop_psi)
-
-    if(controlfunction_mode() == controlfunction_mode_f) call controlfunction_cosine_multiply(par_chi)
-
-    call controlfunction_set_rep(par_chi)
-
-!!$    ! Fix the fluence, in case it is needed.
-!!$    if(oct%mode_fixed_fluence) call controlfunction_set_fluence(par_chi)
+    !if(oct%mode_fixed_fluence) call controlfunction_set_fluence(par_chi)
 
     ! Copy par_chi to par
     call controlfunction_copy(par, par_chi)

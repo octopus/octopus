@@ -76,7 +76,6 @@
       call f_striter(sys_, hm_, td_, par_new, j1)
       f = - j1 - controlfunction_j2(par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
-      call controlfunction_set_rep(par_new)
       SAFE_ALLOCATE(dff(1:n))
       dff = df
       call controlfunction_gradient(par_, par_new, dff)

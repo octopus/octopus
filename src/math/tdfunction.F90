@@ -773,9 +773,9 @@ contains
   !------------------------------------------------------------
   subroutine tdf_to_numerical(f, niter, dt, omegamax)
     type(tdf_t), intent(inout) :: f
-    integer,     intent(in)    :: niter
-    FLOAT,       intent(in)    :: dt
-    FLOAT,       intent(in)    :: omegamax
+    integer, optional, intent(in)    :: niter
+    FLOAT, optional,   intent(in)    :: dt
+    FLOAT, optional,   intent(in)    :: omegamax
 
     FLOAT :: t
     integer :: j
@@ -784,18 +784,23 @@ contains
     if(f%mode  ==  TDF_NUMERICAL) return
     PUSH_SUB(tdf_to_numerical)
 
-    SAFE_ALLOCATE(val(1:niter+1))
+    select case(f%mode)
+    case(TDF_ZERO_FOURIER)
+      call tdf_zerofourier_to_numerical(f)
+    case(TDF_FOURIER_SERIES)
+      call tdf_fourier_to_numerical(f)
+    case default
+      SAFE_ALLOCATE(val(1:niter+1))
+      do j = 1, niter + 1
+        t = (j-1)*dt
+        val(j) = tdf(f, t)
+      end do
+      call tdf_end(f)
+      call tdf_init_numerical(f, niter, dt, omegamax)
+      call tdf_set_numerical(f, val)
+      SAFE_DEALLOCATE_A(val)
+    end select
 
-    do j = 1, niter + 1
-      t = (j-1)*dt
-      val(j) = tdf(f, t)
-    end do
-
-    call tdf_end(f)
-    call tdf_init_numerical(f, niter, dt, omegamax)
-    call tdf_set_numerical(f, val)
-
-    SAFE_DEALLOCATE_A(val)
     POP_SUB(tdf_to_numerical)
   end subroutine tdf_to_numerical
   !------------------------------------------------------------

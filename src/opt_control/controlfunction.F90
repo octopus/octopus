@@ -1561,6 +1561,8 @@ contains
     SAFE_ALLOCATE(dedu(1:par%dof, 1:par%dim))
     call controlfunction_deltaedeltau(par, dedu)
     call tdf_set_numerical(depsilon, dedu(i, 1:par%dim))
+    call tdf_to_numerical(depsilon)
+    if(controlfunction_mode() == controlfunction_mode_f) call tdf_cosine_multiply(par%w0, depsilon)
 
     SAFE_DEALLOCATE_A(dedu)
     POP_SUB(controlfunction_der)
