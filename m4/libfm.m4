@@ -39,8 +39,7 @@ if test $acx_libfm_ok = no; then
   case $with_libfm_prefix in
     yes | "") ;;
     no) acx_libfm_ok=disable ;;
-    -* | */* | *.a | *.so | *.so.* | *.o) LIBS_LIBFM="-I $with_libfm_prefix/include -L $with_libfm_prefix/lib -lfcs -lfcs_fmm -lfcs_common -lfcs_direct -lfcs_near -lfcs_gridsort -lfcs4fortran" ;;
-    *) LIBS_LIBFM="-l$with_libfm_prefix" ;;
+    *) FCFLAGS_LIBFM="-I $with_libfm_prefix/include" LIBS_LIBFM="-L $with_libfm_prefix/lib -lfcs -lfcs_fmm -lfcs_common -lfcs_direct -lfcs_near -lfcs_gridsort -lfcs4fortran" ;;
   esac
 fi
 
@@ -67,28 +66,8 @@ if test $acx_libfm_ok = no; then
 fi
 dnl AC_LINK_IFELSE([AC_LANG_CALL([], [$fmm_func])], [acx_libfm_ok=yes], [])
 
-dnl Generic LIBFM library?
-for libfm in fcs_fmm; do
-  if test $acx_libfm_ok = no; then
-    AC_CHECK_LIB($libfm , $fmm_func,
-      [acx_libfm_ok=yes; LIBS_LIBFM="$LIBS_LIBFM -l$libfm"], [], [$FLIBS])
-  fi
-done
-
-dnl Generic LIBFM library?
-for libfm in fcs_fmm; do
-  dnl if test x"$libfm" = xlibfm-openmpi; then       
-  dnl   libfmCinit="libfmCinit-openmpi"
-  dnl else
-  dnl libfm="fm_r64"
-  dnl fi
-  if test $acx_libfm_ok = no; then
-    AC_CHECK_LIB($libfm, $fmm_func,
-      [acx_libfm_ok=yes; LIBS_LIBFM="$LIBS_LIBFM -l$libfm"], [], [$FLIBS])
-  fi
-done
-
 AC_SUBST(LIBS_LIBFM)
+AC_SUBST(FCFLAGS_LIBFM)
 LIBS="$acx_libfm_save_LIBS"
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
