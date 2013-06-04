@@ -63,13 +63,9 @@ if test $acx_libfm_ok = no; then
     integer                                         ::  communicator
     ret = fcs_init(handle, trim(adjustl(method)) // c_null_char, communicator)
   ]), [acx_libfm_ok=yes], [])
+  AC_MSG_RESULT([$acx_libfm_ok])
 fi
 dnl AC_LINK_IFELSE([AC_LANG_CALL([], [$fmm_func])], [acx_libfm_ok=yes], [])
- if test $acx_libfm_ok = no; then
-   AC_MSG_RESULT([$acx_libfm_ok ($LIBS_LIBFM)])
- else
-   AC_MSG_RESULT([$acx_libfm_ok ($LIBS_LIBFM)])
- fi
 
 dnl Generic LIBFM library?
 for libfm in fcs_fmm; do
