@@ -50,7 +50,7 @@ module partition_m
   !! In this module this array is distributed among the processes, such that each process 
   !! only stores a portion of the full array. Because each process needs to know in a 
   !! straighforward way (i.e. without having to perform any kind of communication or 
-  !! lenghly operations) which process stores the partition corresponding to any giving
+  !! lengthy operations) which process stores the partition corresponding to any giving
   !! point, all the processes except one (the one with the highest rank) store exactly the 
   !! same number of points.
   !!

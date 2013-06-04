@@ -3700,7 +3700,7 @@ contains
           mb=min(i1+(lot-1),(n1/2))
           nfft=mb-ma+1
 
-          !inserting real data into complex array of half lenght
+          !inserting real data into complex array of half length
           call halfill_upcorn(md1,md3,lot,nfft,n3,zf(i1,1,j2),zw(1,1,1))
 
           !performing FFT
@@ -4435,7 +4435,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
         mb=min(i1+(lot-1),n1)
         nfft=mb-ma+1
 
-        !inserting real data into complex array of half lenght
+        !inserting real data into complex array of half length
         !input: I1,I3,J2,(Jp2)
         call inserthalf(nd1,lot,nfft,n3,zf(i1,1,j2),zw(1,1,1))
         
