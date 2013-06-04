@@ -30,4 +30,4 @@ libnewuoa_a_SOURCES = newuoa_mod.f90
 .f90.o:
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $<
 
-CLEANFILES = *~ *.bak
+CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc*
