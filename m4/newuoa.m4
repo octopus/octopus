@@ -2,8 +2,8 @@ AC_DEFUN([ACX_NEWUOA], [
 
 dnl NEWUOA is included in the distribution
 
-AC_ARG_ENABLE(newuoa, AS_HELP_STRING([--enable-newuoa], [Compile with internal NEWUOA optimization library.]),[acx_newuoa_ok=$enableval],[acx_newuoa_ok=no])
-dnl NEWUOA is disabled by default
+AC_ARG_ENABLE(newuoa, AS_HELP_STRING([--enable-newuoa], [Compile with internal NEWUOA optimization library.]),[acx_newuoa_ok=$enableval],[acx_newuoa_ok=yes])
+dnl NEWUOA is enabled by default
 
 AC_MSG_CHECKING([whether NEWUOA is enabled])
 
