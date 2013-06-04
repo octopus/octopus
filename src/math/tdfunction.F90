@@ -796,6 +796,9 @@ contains
         val(j) = tdf(f, t)
       end do
       call tdf_end(f)
+      ASSERT(present(niter))
+      ASSERT(present(dt))
+      ASSERT(present(omegamax))
       call tdf_init_numerical(f, niter, dt, omegamax)
       call tdf_set_numerical(f, val)
       SAFE_DEALLOCATE_A(val)

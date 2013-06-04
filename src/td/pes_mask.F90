@@ -1600,13 +1600,13 @@ contains
               
               if(mask%back_action .eqv. .true.) then
                 
-                ! Apply Back-action to wavewunction in A
+                ! Apply Back-action to wavefunction in A
                 call PES_mask_K_to_X(mask,mesh,cf1%Fs,cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
                 call PES_mask_cube_to_mesh(mask, cf2, mf)  
                 st%zpsi(:, idim, ist, ik) = st%zpsi(:, idim, ist, ik) + mf
                 
                 
-                ! Apply correction to wavefunciton in B
+                ! Apply correction to wavefunction in B
                 cf2%zRs= (mask%cM%zRs) * cf2%zRs                                     ! cf2 = M*\Psi_B(x,t1)
                 call PES_mask_X_to_K(mask,mesh,cf2%zRs,cf1%Fs)
                 

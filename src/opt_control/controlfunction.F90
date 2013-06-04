@@ -1499,6 +1499,8 @@ contains
     FLOAT :: rr
     FLOAT, allocatable :: grad_matrix(:, :), dedv(:, :)
 
+    PUSH_SUB(controlfunction_deltaedeltau)
+
     select case(cf_common%representation)
 
     case(ctr_fourier_series_h)
@@ -1543,11 +1545,12 @@ contains
 
     end select
 
+    POP_SUB(controlfunction_deltaedeltau)
   end subroutine controlfunction_deltaedeltau
   ! ---------------------------------------------------------
 
 
-  !> controlfunction_der computes the derivative of a controlfunciton with respect
+  !> controlfunction_der computes the derivative of a controlfunction with respect
   !! to one of its degrees of freedom.
   subroutine controlfunction_der(par, depsilon, i)
     type(controlfunction_t), intent(in)    :: par
