@@ -1097,8 +1097,8 @@ contains
     filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf", is_tmp=is_tmp)
 
      
-    call X(out_cf_netcdf)(filename, ierr, cf, cube, mesh%sb%dim,& 
-          units_from_atomic(units_out%length, mesh%spacing(1:mesh%sb%dim)), transpose = .true.)
+    call X(out_cf_netcdf)(filename, ierr, cf, cube, mesh%sb%dim, & 
+      units_from_atomic(units_out%length, mesh%spacing), .true., unit)
 
     call cube_end(cube)
     call X(cube_function_free_RS)(cube, cf)
@@ -1313,7 +1313,7 @@ end function X(interpolate_isolevel)
   ! --------------------------------------------------------- 
   !>  Writes a cube_function in netcdf format
   ! ---------------------------------------------------------
-  subroutine X(out_cf_netcdf)(filename, ierr, cf, cube, sb_dim, spacing, transpose)
+  subroutine X(out_cf_netcdf)(filename, ierr, cf, cube, sb_dim, spacing, transpose, unit)
     character(len=*),      intent(in) :: filename        !< the file name
     integer,               intent(out):: ierr            !< error message   
     type(cube_function_t), intent(in) :: cf              !< the cube_function to be written 
@@ -1321,7 +1321,7 @@ end function X(interpolate_isolevel)
     integer,               intent(in) :: sb_dim          !< the simulation box dimensions aka sb%dim
     FLOAT,                 intent(in) :: spacing(:)      !< the mesh spacing already converted to units_out
     logical,               intent(in) :: transpose       !< whether we want the function cf(x,y,z) to be saved as cf(z,y,x)
-
+    type(unit_t),          intent(in) :: unit            !< unit of data in cf
 
     integer :: ncid, status, data_id, pos_id, dim_min
     integer :: dim_data_id(3), dim_pos_id(2)
@@ -1336,7 +1336,6 @@ end function X(interpolate_isolevel)
     PUSH_SUB(X(out_cf_netcdf))
 
     ierr = 0
-
 
     status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
     if(status /= NF90_NOERR) then
@@ -1442,18 +1441,20 @@ end function X(interpolate_isolevel)
     if(status == NF90_NOERR) then
       if (transpose) then
         call transpose3(real(cf%X(RS), REAL_PRECISION), xx)
-      else 
+      else
         xx = real(cf%X(RS))
-      end if    
+      end if
+      xx = units_from_atomic(unit, xx)
       call write_variable(ncid, data_id, status, sb_dim, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
     if(status == NF90_NOERR) then
-      if ( transpose ) then 
+      if ( transpose ) then
         call transpose3(aimag(cf%X(RS)), xx)
       else
         xx = aimag(cf%X(RS))
       end if
+      xx = units_from_atomic(unit, xx)
       call write_variable(ncid, data_im_id, status, sb_dim, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
@@ -1463,7 +1464,8 @@ end function X(interpolate_isolevel)
         call transpose3(cf%X(RS), xx)
       else             
         xx=cf%X(RS)
-      end if 
+      end if
+      xx = units_from_atomic(unit, xx)
       call write_variable(ncid, data_id, status, sb_dim, xx)
       call ncdf_error('nf90_put_var', status, filename, ierr)
     end if
@@ -1477,27 +1479,26 @@ end function X(interpolate_isolevel)
     
     contains
 
-    ! ---------------------------------------------------------
-    subroutine write_variable(ncid, data_id, status, sb_dim, xx)
-      integer, intent(in)  :: ncid, data_id
-      integer, intent(out) :: status
-      integer, intent(in)  :: sb_dim
-      FLOAT,   intent(in)  :: xx(:,:,:)
+      ! ---------------------------------------------------------
+      subroutine write_variable(ncid, data_id, status, sb_dim, xx)
+        integer, intent(in)  :: ncid, data_id
+        integer, intent(out) :: status
+        integer, intent(in)  :: sb_dim
+        FLOAT,   intent(in)  :: xx(:,:,:)
 
-      PUSH_SUB(X(out_cf_netcdf).write_variable)
+        PUSH_SUB(X(out_cf_netcdf).write_variable)
 
-      select case(sb_dim)
-      case(1)
-        status = nf90_put_var (ncid, data_id, xx(1,1,:))
-      case(2)
-        status = nf90_put_var (ncid, data_id, xx(1,:,:))
-      case(3)
-        status = nf90_put_var (ncid, data_id, xx)
-      end select
-    
-      POP_SUB(X(out_cf_netcdf).write_variable)
-    end subroutine write_variable
-    
+        select case(sb_dim)
+        case(1)
+          status = nf90_put_var (ncid, data_id, xx(1,1,:))
+        case(2)
+          status = nf90_put_var (ncid, data_id, xx(1,:,:))
+        case(3)
+          status = nf90_put_var (ncid, data_id, xx)
+        end select
+        
+        POP_SUB(X(out_cf_netcdf).write_variable)
+      end subroutine write_variable
 
   end subroutine X(out_cf_netcdf)
 

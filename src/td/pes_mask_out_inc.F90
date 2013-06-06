@@ -384,8 +384,9 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk)
 
   filename = trim(file)//".ncdf"
 
-  call dout_cf_netcdf(filename, ierr, cf, cube, sb_dim,&
-        units_from_atomic(sqrt(units_out%energy), dk ), transpose = .false.)
+  ! I do not know what the unit of this quantity is supposed to be... --DAS
+  call dout_cf_netcdf(filename, ierr, cf, cube, sb_dim, &
+        units_from_atomic(sqrt(units_out%energy), dk ), .false., unit_one)
 
   call cube_end(cube)
   call dcube_function_free_RS(cube, cf)
