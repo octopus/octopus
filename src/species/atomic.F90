@@ -26,7 +26,7 @@ module atomic_m
   use messages_m
   use periodic_table_m
   use profiling_m
-  use xc_f90_lib_m ! this is the double-precision version
+  use xc_f90_lib_m
 
   implicit none
 
@@ -36,7 +36,7 @@ module atomic_m
     atomhxc,       &
     vhrtre, egofv
 
-  ! Following stuff is for the "val_conf_t" data type, made to handle atomic configurations.
+  !> Following stuff is for the "val_conf_t" data type, made to handle atomic configurations.
   public ::        &
     valconf_t,     &
     valconf_copy,  &
@@ -53,18 +53,18 @@ module atomic_m
   type valconf_t
     integer           :: z
     character(len=3)  :: symbol
-    integer           :: type     ! 0 for the most normal valence configuration, 1 for semicore.
-    integer           :: p        ! number of orbitals.
-    integer           :: n(6)     ! n quantum number
-    integer           :: l(6)     ! l quantum number
-    FLOAT             :: occ(6,2) ! occupations of each level
+    integer           :: type     !< 0 for the most normal valence configuration, 1 for semicore.
+    integer           :: p        !< number of orbitals.
+    integer           :: n(6)     !< n quantum number
+    integer           :: l(6)     !< l quantum number
+    FLOAT             :: occ(6,2) !< occupations of each level
   end type valconf_t
 
 
 contains
 
   ! ---------------------------------------------------------
-  ! Subroutines to write and read valence configurations.
+  !> Subroutines to write and read valence configurations.
   subroutine valconf_null(c)
     type(valconf_t), intent(out) :: c
 
@@ -215,50 +215,45 @@ contains
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Finds total exchange-correlation energy and potential for a                 !
-! spherical electron density distribution.                                    !
-! This version implements the Local (spin) Density Approximation and          !
-! the Generalized-Gradient-Aproximation with the explicit mesh                !
-! functional method of White & Bird, PRB 50, 4954 (1994).                     !
-! Gradients are defined by numerical derivatives, using 2*NN+1 mesh         !
-!   points, where NN is a parameter defined below                             !
-! Coded by L.C.Balbas and J.M.Soler. December 1996. Version 0.5.              !
-!                                                                             !
-! CHARACTER*(*) FUNCTL : Functional to be used:                               !
-!              LDA or LSD => Local (spin) Density Approximation           !
-!                     GGA => Generalized Gradient Corrections             !
-!                                Uppercase is optional                        !
-! CHARACTER*(*) AUTHOR : Parametrization desired:                             !
-!     CA or PZ => LSD Perdew & Zunger, PRB 23, 5075 (1981)                !
-!         PW92 => LSD Perdew & Wang, PRB, 45, 13244 (1992). This is       !
-!                     the local density limit of the next:                    !
-!          PBE => GGA Perdew, Burke & Ernzerhof, PRL 77, 3865 (1996)      !
-!                     Uppercase is optional                                   !
-! INTEGER NR           : Number of radial mesh points                         !
-! INTEGER MAXR         : Physical first dimension of RMESH, DENS and V_XC     !
-! REAL*8  RMESH(MAXR)  : Radial mesh points                                   !
-! INTEGER NSPIN        : NSPIN=1 => unpolarized; NSPIN=2 => polarized         !
-! REAL*8  DENS(MAXR,NSPIN) : Total (NSPIN=1) or spin (NSPIN=2) electron       !
-!                            density at mesh points                           !
-! ************************* OUTPUT **********************************         !
-! REAL*8  EX              : Total exchange energy                             !
-! REAL*8  EC              : Total correlation energy                          !
-! REAL*8  DX              : IntegralOf( rho * (eps_x - v_x) )                 !
-! REAL*8  DC              : IntegralOf( rho * (eps_c - v_c) )                 !
-! REAL*8  V_XC(MAXR,NSPIN): (Spin) exch-corr potential                        !
-! ************************ UNITS ************************************         !
-! Distances in atomic units (Bohr).                                           !
-! Densities in atomic units (electrons/Bohr**3)                               !
-! Energy unit depending of parameter EUNIT below                              !
-! ********* ROUTINES CALLED *****************************************         !
-! GGAXC, LDAXC                                                                !
+!> Finds total exchange-correlation energy and potential for a                !
+!! spherical electron density distribution.                                   !
+!! This version implements the Local (spin) Density Approximation and         !
+!! the Generalized-Gradient-Aproximation with the explicit mesh               !
+!! functional method of White & Bird, PRB 50, 4954 (1994).                    !
+!! Gradients are defined by numerical derivatives, using 2*NN+1 mesh          !
+!!   points, where NN is a parameter defined below                            !
+!! Coded by L.C.Balbas and J.M.Soler. December 1996. Version 0.5.             !
+!!                                                                            !
+!! CHARACTER*(*) FUNCTL : Functional to be used:                              !
+!!              LDA or LSD => Local (spin) Density Approximation              !
+!!                     GGA => Generalized Gradient Corrections                !
+!!                                Uppercase is optional                       !
+!! CHARACTER*(*) AUTHOR : Parametrization desired:                            !
+!!     CA or PZ => LSD Perdew & Zunger, PRB 23, 5075 (1981)                   !
+!!         PW92 => LSD Perdew & Wang, PRB, 45, 13244 (1992). This is          !
+!!                     the local density limit of the next:                   !
+!!          PBE => GGA Perdew, Burke & Ernzerhof, PRL 77, 3865 (1996)         !
+!!                     Uppercase is optional                                  !
+!! INTEGER NR           : Number of radial mesh points                        !
+!! INTEGER MAXR         : Physical first dimension of RMESH, DENS and V_XC    !
+!! REAL*8  RMESH(MAXR)  : Radial mesh points                                  !
+!! INTEGER NSPIN        : NSPIN=1 => unpolarized; NSPIN=2 => polarized        !
+!! REAL*8  DENS(MAXR,NSPIN) : Total (NSPIN=1) or spin (NSPIN=2) electron      !
+!!                            density at mesh points                          !
+!! ************************* OUTPUT **********************************        !
+!! REAL*8  EX              : Total exchange energy                            !
+!! REAL*8  EC              : Total correlation energy                         !
+!! REAL*8  DX              : IntegralOf( rho * (eps_x - v_x) )                !
+!! REAL*8  DC              : IntegralOf( rho * (eps_c - v_c) )                !
+!! REAL*8  V_XC(MAXR,NSPIN): (Spin) exch-corr potential                       !
+!! ************************ UNITS ************************************        !
+!! Distances in atomic units (Bohr).                                          !
+!! Densities in atomic units (electrons/Bohr**3)                              !
+!! Energy unit depending of parameter EUNIT below                             !
+!! ********* ROUTINES CALLED *****************************************        !
+!! GGAXC, LDAXC                                                               !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine atomxc( FUNCTL, AUTHOR, NR, MAXR, RMESH, NSPIN, DENS, EX, EC, DX, DC, V_XC )
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Argument types and dimensions                                               !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
     character(len=*), intent(in) :: FUNCTL, AUTHOR
     integer, intent(in) :: NR, MAXR
     FLOAT, intent(in) :: RMESH(MAXR)
@@ -504,25 +499,25 @@ contains
   end subroutine atomxc
   
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!   VHRTRE CONSTRUCTS THE ELECTROSTATIC POTENTIAL DUE TO A SUPPLIED           !
-!   ELECTRON DENSITY.  THE NUMEROV METHOD IS USED TO INTEGRATE                !
-!   POISSONS EQN.                                                             !
-!                                                                             !
-!   DESCRIPTION OF ARGUMENTS:                                                 !
-!      RHO....4*PI*R**2 * THE ELECTRON DENSITY FOR WHICH WE CALCULATING       !
-!             THE ELECTROSTATIC POTENTIAL                                     !
-!      V......THE ELECTROSTATIC POTENTIAL DUE TO THE ELECTRON DENSITY         !
-!             RHO.  THE CONSTANTS OF INTEGRATION ARE FIXED SO THAT THE        !
-!             POTENTIAL TENDS TO A CONSTANT AT THE ORIGIN AND TO              !
-!             2*Q/R AT R=R(NR), WHERE Q IS THE INTEGRATED CHARGE              !
-!             CONTAINED IN RHO(R)                                             !
-!      R......THE RADIAL MESH R(I) = B*(EXP(A(I-1))-1)                        !
-!      NR.....THE NUMBER OF RADIAL MESH POINTS                                !
-!      DRDI...DR(I)/DI                                                        !
-!     SRDRDI.SQRT(DR/DI)                                                      !
-!      A......THE PARAMETER APPEARING IN R(I) = B*(EXP(A(I-1))-1)             !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!>   VHRTRE CONSTRUCTS THE ELECTROSTATIC POTENTIAL DUE TO A SUPPLIED           !
+!!   ELECTRON DENSITY.  THE NUMEROV METHOD IS USED TO INTEGRATE                !
+!!   POISSONS EQN.                                                             !
+!!                                                                             !
+!!   DESCRIPTION OF ARGUMENTS:                                                 !
+!!      RHO....4*PI*R**2 * THE ELECTRON DENSITY FOR WHICH WE CALCULATING       !
+!!             THE ELECTROSTATIC POTENTIAL                                     !
+!!      V......THE ELECTROSTATIC POTENTIAL DUE TO THE ELECTRON DENSITY         !
+!!             RHO.  THE CONSTANTS OF INTEGRATION ARE FIXED SO THAT THE        !
+!!             POTENTIAL TENDS TO A CONSTANT AT THE ORIGIN AND TO              !
+!!             2*Q/R AT R=R(NR), WHERE Q IS THE INTEGRATED CHARGE              !
+!!             CONTAINED IN RHO(R)                                             !
+!!      R......THE RADIAL MESH R(I) = B*(EXP(A(I-1))-1)                        !
+!!      NR.....THE NUMBER OF RADIAL MESH POINTS                                !
+!!      DRDI...DR(I)/DI                                                        !
+!!     SRDRDI.SQRT(DR/DI)                                                      !
+!!      A......THE PARAMETER APPEARING IN R(I) = B*(EXP(A(I-1))-1)             !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
     FLOAT,   intent(in)  :: rho(:)
     FLOAT,   intent(out) :: v(:)
@@ -643,24 +638,24 @@ contains
 ! NEEDED FOR THESE PROCEDURES.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  egofv determines the eigenenergy and wavefunction corresponding            !
-!  to a particular l, principal quantum number and boundary condition.        !
-!                                                                             !
-!  two fundamental techniques are used to locate the solution:                !
-!      1) node counting and bisection                                         !
-!      2) variational estimate based on a slope discontinuity in psi          !
-!  the arguments are defined as follows:                                      !
-!       h,s: g = (h-e*s)*g                                                    !
-!       nr: maximum allowed number of radial points                           !
-!       e: e is the energy found                                              !
-!       ne: number of energies found                                          !
-!       l: the angular momentum                                               !
-!       ncor: the number of lower-energy state                                !
-!                                                                             !
-!  the individual energies are resolved by performing a fixed number          !
-!  of bisections after a given eigenvalue has been isolated                   !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!>  egofv determines the eigenenergy and wavefunction corresponding            !
+!!  to a particular l, principal quantum number and boundary condition.        !
+!!                                                                             !
+!!  two fundamental techniques are used to locate the solution:                !
+!!      1) node counting and bisection                                         !
+!!      2) variational estimate based on a slope discontinuity in psi          !
+!!  the arguments are defined as follows:                                      !
+!!       h,s: g = (h-e*s)*g                                                    !
+!!       nr: maximum allowed number of radial points                           !
+!!       e: e is the energy found                                              !
+!!       ne: number of energies found                                          !
+!!       l: the angular momentum                                               !
+!!       ncor: the number of lower-energy state                                !
+!!                                                                             !
+!!  the individual energies are resolved by performing a fixed number          !
+!!  of bisections after a given eigenvalue has been isolated                   !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr,ierr)
     REAL_DOUBLE, intent(in)    :: h(:), s(:) !< (n)
     integer,     intent(in)    :: n
@@ -803,23 +798,23 @@ contains
   subroutine yofe(e,de,dr,rmax,h,s,y,nmax,l,ncor,nnode,z,a,b)
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!   yofe integrates the radial Schroedinger eqn using the Numerov             !
-!   method.                                                                   !
-!                                                                             !
-!   the arguments are defined as follows:                                     !
-!       e is the old energy (overwritten) by the new energy                   !
-!       de is the e change predicted to elim the kink in psi                  !
-!       dr is the log deriv (the boundary condition)                          !
-!       gpp = (h-es)g (all diagonal in i (radius) )                           !
-!       y is the numerov independent variable y = g - gpp/12                  !
-!       n is the number of radial mesh points                                 !
-!       l is the angular momentum                                             !
-!       ncor is the number of states of lower energy                          !
-!       nnode is 1 + the number of interior nodes in psi                      !
-!       z is the atomic number                                                !
-!       a and b specify the radial mesh r(i)=(exp(a*(i-1))-1)*b               !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!>   yofe integrates the radial Schroedinger eqn using the Numerov             !
+!!   method.                                                                   !
+!!                                                                             !
+!!   the arguments are defined as follows:                                     !
+!!       e is the old energy (overwritten) by the new energy                   !
+!!       de is the e change predicted to elim the kink in psi                  !
+!!       dr is the log deriv (the boundary condition)                          !
+!!       gpp = (h-es)g (all diagonal in i (radius) )                           !
+!!       y is the numerov independent variable y = g - gpp/12                  !
+!!       n is the number of radial mesh points                                 !
+!!       l is the angular momentum                                             !
+!!       ncor is the number of states of lower energy                          !
+!!       nnode is 1 + the number of interior nodes in psi                      !
+!!       z is the atomic number                                                !
+!!       a and b specify the radial mesh r(i)=(exp(a*(i-1))-1)*b               !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     REAL_DOUBLE, intent(inout) :: e
     REAL_DOUBLE, intent(out)   :: de
@@ -913,25 +908,25 @@ contains
   subroutine nrmlzg(g,s,n)
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!   nrmlzg normalizes the supplied radial wavefunction                        !
-!                                                                             !
-!   the arguments are defined as follows:                                     !
-!       g is the radial wavefunction appropriate to the Numerov               !
-!             representation of the radial Schroedinger equation              !
-!             that is, the radial fcn r(r) = (drdi)**1/2 g(i) / r(i)          !
-!       gpp = (h-es)g (all diagonal in i (radius) )                           !
-!       n1 is the number of radial mesh points corresponding to               !
-!             the portion of the radial mesh on which the norm                !
-!             is defined                                                      !
-!       n2 is the number of radial mesh points corresponding to               !
-!             the portion of the radial mesh on which the wavefunction        !
-!             is defined. For the intended use of this                        !
-!             routine, n1 = nrval and n2 = nrcor                              !
-!       a and b are the radial mesh parameters                                !
-!             r(i) = ( exp(a*(i-1)) - 1 ) * b                                 !
-!             (dr/di = a*b at the origin)                                     !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!>   nrmlzg normalizes the supplied radial wavefunction                        !
+!!                                                                             !
+!!   the arguments are defined as follows:                                     !
+!!       g is the radial wavefunction appropriate to the Numerov               !
+!!             representation of the radial Schroedinger equation              !
+!!             that is, the radial fcn r(r) = (drdi)**1/2 g(i) / r(i)          !
+!!       gpp = (h-es)g (all diagonal in i (radius) )                           !
+!!       n1 is the number of radial mesh points corresponding to               !
+!!             the portion of the radial mesh on which the norm                !
+!!             is defined                                                      !
+!!       n2 is the number of radial mesh points corresponding to               !
+!!             the portion of the radial mesh on which the wavefunction        !
+!!             is defined. For the intended use of this                        !
+!!             routine, n1 = nrval and n2 = nrcor                              !
+!!       a and b are the radial mesh parameters                                !
+!!             r(i) = ( exp(a*(i-1)) - 1 ) * b                                 !
+!!             (dr/di = a*b at the origin)                                     !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     REAL_DOUBLE, intent(inout) :: g(:)
     REAL_DOUBLE, intent(in)    :: s(:)
