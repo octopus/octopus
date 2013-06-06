@@ -17,7 +17,7 @@
 !!
 !! $Id: h.F90 4037 2008-04-03 13:30:00Z xavier $
 
-! Lead-related routines for open boundaries.
+!> Lead-related routines for open boundaries.
 
 #include "global.h"
 
@@ -273,7 +273,7 @@ contains
   subroutine lead_init_pot(lead, np, np_part, nspin)
     type(lead_t),        intent(out) :: lead
     integer,             intent(in)  :: np
-    integer,             intent(in)  :: np_part ! including ghost and boundary points
+    integer,             intent(in)  :: np_part !< including ghost and boundary points
     integer,             intent(in)  :: nspin
 
     PUSH_SUB(lead_init_pot)
@@ -289,10 +289,10 @@ contains
 
   !> init the kinetic part (diag and offdiag) of the lead
   subroutine lead_init_kin(lead, np, np_part, dim)
-    type(lead_t),        intent(out) :: lead
-    integer,             intent(in)  :: np
-    integer,             intent(in)  :: np_part ! including ghost and boundary points
-    integer,             intent(in)  :: dim
+    type(lead_t),        intent(inout) :: lead
+    integer,             intent(in)    :: np
+    integer,             intent(in)    :: np_part !< including ghost and boundary points
+    integer,             intent(in)    :: dim
 
     PUSH_SUB(lead_init_kin)
 

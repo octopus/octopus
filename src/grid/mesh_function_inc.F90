@@ -412,7 +412,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   integer :: iu, iv, ip
   R_DOUBLE, allocatable :: f_global(:)
-  real(8) :: pp(MAX_DIM)
+  real(8) :: pp(3)
   type(qshep_t) :: interp
   real(8), allocatable :: xglobal(:, :)
 
@@ -437,7 +437,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
       pp(1) = plane%origin(1) + iu*plane%spacing * plane%u(1) + iv * plane%spacing * plane%v(1)
       pp(2) = plane%origin(2) + iu*plane%spacing * plane%u(2) + iv * plane%spacing * plane%v(2)
       pp(3) = plane%origin(3) + iu*plane%spacing * plane%u(3) + iv * plane%spacing * plane%v(3)
-      f_in_plane(iu, iv) = qshep_interpolate(interp, f_global, pp)
+      f_in_plane(iu, iv) = qshep_interpolate(interp, f_global, pp(1:3))
     end do
   end do
 
@@ -461,7 +461,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
 
   integer :: iu, ip
   R_DOUBLE, allocatable :: f_global(:)
-  real(8) :: pp(MAX_DIM)
+  real(8) :: pp(2)
   type(qshep_t) :: interp
   real(8), allocatable :: xglobal(:, :)
 
@@ -499,7 +499,7 @@ end subroutine X(mf_interpolate_on_line)
 !! function on a given plane.
 R_TYPE function X(mf_surface_integral_scalar) (mesh, ff, plane) result(dd)
   type(mesh_t),       intent(in) :: mesh
-  R_TYPE,             intent(in) :: ff(:)  ! (mesh%np)
+  R_TYPE,             intent(in) :: ff(:)  !< (mesh%np)
   type(mesh_plane_t), intent(in) :: plane
 
   R_TYPE, allocatable :: f_in_plane(:, :)
