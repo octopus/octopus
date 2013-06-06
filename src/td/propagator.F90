@@ -548,8 +548,8 @@ contains
     case(PROP_ETRS);                     call td_etrs()
     case(PROP_AETRS, PROP_CAETRS);       call td_aetrs()
     case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint()
-    case(PROP_CRANK_NICOLSON);           call td_crank_nicolson()
-    case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson_sparskit()
+    case(PROP_CRANK_NICOLSON);           call td_crank_nicolson(.false.)
+    case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson(.true.)
     case(PROP_MAGNUS);                   call td_magnus()
     case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
     case(PROP_QOCT_TDDFT_PROPAGATOR)
@@ -599,8 +599,8 @@ contains
           case(PROP_ETRS);                     call td_etrs()
           case(PROP_AETRS, PROP_CAETRS);       call td_aetrs()
           case(PROP_EXPONENTIAL_MIDPOINT);     call exponential_midpoint()
-          case(PROP_CRANK_NICOLSON);           call td_crank_nicolson()
-          case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson_sparskit()
+          case(PROP_CRANK_NICOLSON);           call td_crank_nicolson(.false.)
+          case(PROP_CRANK_NICOLSON_SPARSKIT);  call td_crank_nicolson(.true.)
           case(PROP_MAGNUS);                   call td_magnus()
           case(PROP_CRANK_NICOLSON_SRC_MEM);   call td_crank_nicolson_src_mem()
           case(PROP_QOCT_TDDFT_PROPAGATOR)
@@ -1003,139 +1003,9 @@ contains
 
 
     ! ---------------------------------------------------------
-    !> Crank-Nicolson propagator, SPARSKIT.
-    subroutine td_crank_nicolson_sparskit()
-
-#ifdef HAVE_SPARSKIT
-      CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:), inhpsi(:)
-      integer :: ik, ist, idim, ip, isize, np_part, np
-
-      PUSH_SUB(propagator_dt.td_crank_nicolson_sparskit)
-
-      np_part = gr%mesh%np_part
-      np = gr%mesh%np
-      isize = np_part*st%lnst*st%d%kpt%nlocal*st%d%dim
-
-      ! define pointer and variables for usage in td_zop, td_zopt routines
-      grid_p    => gr
-      hm_p      => hm
-      tr_p      => tr
-      dt_op = dt
-      t_op  = time - dt/M_TWO
-      dim_op = st%d%dim
-
-      ! we (ab)use exponential_apply to compute (1-i\delta t/2 H_n)\psi^n
-      ! exponential order needs to be only 1
-      tr%te%exp_method = EXP_TAYLOR
-      tr%te%exp_order  = 1
-
-      SAFE_ALLOCATE(zpsi_rhs(1:np_part, 1:st%d%dim))
-      SAFE_ALLOCATE(zpsi(1:np*st%d%dim))
-      SAFE_ALLOCATE(rhs(1:np*st%d%dim))
-        
-      call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time - dt/M_TWO, hm%vhxc(:, :))
-      if(hm%cmplxscl%space) & 
-        call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time - dt/M_TWO, hm%Imvhxc(:, :))
-    
-      call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
-      
-      
-      ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-
-          call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs)
-          call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, dt/M_TWO, time - dt/M_TWO)
-
-          if(hamiltonian_inh_term(hm)) then
-            SAFE_ALLOCATE(inhpsi(1:np))
-            do idim = 1, st%d%dim
-              call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-              forall(ip = 1:np) zpsi_rhs(ip, idim) = zpsi_rhs(ip, idim) + dt*inhpsi(ip)
-            end do
-            SAFE_DEALLOCATE_A(inhpsi)
-          end if
-
-          ! put the values in a continuous array
-          do idim = 1, st%d%dim
-            call states_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np))
-            rhs((idim - 1)*np + 1:idim*np) = zpsi_rhs(1:np, idim)
-          end do
-
-          ist_op = ist
-          ik_op = ik
-          call zsparskit_solver_run(tdsk, td_zop, td_zopt, zpsi, rhs)
-
-          do idim = 1, st%d%dim
-            call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np))
-          end do
-         
-        end do
-      end do
-
-      if(hm%cmplxscl%space) then !Left states
-        
-        dt_op = - dt !propagate backwards
-        t_op  = time + dt/M_TWO
-        
-        
-        call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%v_old(:, :, 0:2), time + dt/M_TWO, hm%vhxc(:, :))
-        if(hm%cmplxscl%space) & 
-          call interpolate( (/time, time - dt, time - M_TWO*dt/), tr%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
-    
-        call hamiltonian_update(hm, gr%mesh, time = time + dt/M_TWO)
-      
-      
-        ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do ist = st%st_start, st%st_end
-
-            call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs,left = .true. )
-            call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, -dt/M_TWO, time + dt/M_TWO)
-
-            if(hamiltonian_inh_term(hm)) then
-              SAFE_ALLOCATE(inhpsi(1:np))
-              do idim = 1, st%d%dim
-                call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi, left = .true.)
-                forall(ip = 1:np) zpsi_rhs(ip, idim) = zpsi_rhs(ip, idim) - dt*inhpsi(ip)
-              end do
-              SAFE_DEALLOCATE_A(inhpsi)
-            end if
-
-            ! put the values is a continuous array
-            do idim = 1, st%d%dim
-              call states_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np), left = .true.)
-              rhs((idim - 1)*np + 1:idim*np) = zpsi_rhs(1:np, idim)
-            end do
-
-            ist_op = ist
-            ik_op = ik
-            call zsparskit_solver_run(tdsk, td_zop, td_zopt, zpsi, rhs)
-
-            do idim = 1, st%d%dim
-              call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np), left = .true.)
-            end do          
-
-          end do
-        end do
-        
-        
-      end if
-
-
-      SAFE_DEALLOCATE_A(zpsi_rhs)
-      SAFE_DEALLOCATE_A(zpsi)
-      SAFE_DEALLOCATE_A(rhs)
-      POP_SUB(propagator_dt.td_crank_nicolson_sparskit)
-#endif
-
-    end subroutine td_crank_nicolson_sparskit
-    ! ---------------------------------------------------------
-
-
-    ! ---------------------------------------------------------
-    !> Crank-Nicolson propagator, QMR linear solver.
-    subroutine td_crank_nicolson()
+    !> Crank-Nicolson propagator
+    subroutine td_crank_nicolson(use_sparskit)
+      logical, intent(in) :: use_sparskit
 
       CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:), inhpsi(:)
       integer :: ik, ist, idim, ip, isize, np_part, np, iter
@@ -1144,6 +1014,11 @@ contains
       logical :: converged
 
       PUSH_SUB(propagator_dt.td_crank_nicolson)
+
+#ifndef HAVE_SPARSKIT
+      if(use_sparskit) &
+        call messages_fatal("Cannot use SPARSKIT in Crank-Nicolson propagator: not compiled with SPARSKIT support.")
+#endif
 
       np_part = gr%mesh%np_part
       np = gr%mesh%np
@@ -1197,19 +1072,27 @@ contains
 
           ist_op = ist
           ik_op = ik
-          iter = 2000
-          call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
+
+          if(use_sparskit) then
+#ifdef HAVE_SPARSKIT
+            call zsparskit_solver_run(tdsk, td_zop, td_zopt, zpsi, rhs)
+#endif
+          else
+            iter = 2000
+            call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
             propagator_qmr_prec, iter, dres, cgtol, showprogress = .false., converged = converged)
+
+            if(.not.converged) then
+              write(message(1),'(a)')        'The linear solver used for the Crank-Nicolson'
+              write(message(2),'(a,es14.4)') 'propagator did not converge: Residual = ', dres
+              call messages_warning(2)
+            end if
+
+          endif
 
           do idim = 1, st%d%dim
             call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np))
           end do          
-
-          if(.not.converged) then
-            write(message(1),'(a)')        'The linear solver used for the Crank-Nicolson'
-            write(message(2),'(a,es14.4)') 'propagator did not converge: Residual = ', dres
-            call messages_warning(2)
-          end if
 
         end do
       end do
@@ -1243,7 +1126,7 @@ contains
               SAFE_DEALLOCATE_A(inhpsi)
             end if
 
-            ! put the values is a continuous array
+            ! put the values in a continuous array
             do idim = 1, st%d%dim
               call states_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np), left = .true.)
               rhs((idim - 1)*np + 1:idim*np) = zpsi_rhs(1:np, idim)
@@ -1251,19 +1134,26 @@ contains
 
             ist_op = ist
             ik_op = ik
-            iter = 2000
-            call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
+            if(use_sparskit) then
+#ifdef HAVE_SPARSKIT
+              call zsparskit_solver_run(tdsk, td_zop, td_zopt, zpsi, rhs)
+#endif
+            else
+              iter = 2000
+              call zqmr_sym(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
               propagator_qmr_prec, iter, dres, cgtol, showprogress = .false., converged = converged)
+
+              if(.not.converged) then
+                write(message(1),'(a)')        'The linear solver used for the Crank-Nicolson'
+                write(message(2),'(a,es14.4)') 'propagator did not converge for left states: Residual = ', dres
+                call messages_warning(2)
+              end if
+
+            endif
 
             do idim = 1, st%d%dim
               call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np), left = .true.)
-            end do          
-
-            if(.not.converged) then
-              write(message(1),'(a)')        'The linear solver used for the Crank-Nicolson'
-              write(message(2),'(a,es14.4)') 'propagator did not converge for left states: Residual = ', dres
-              call messages_warning(2)
-            end if
+            end do
 
           end do
         end do
