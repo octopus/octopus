@@ -32,6 +32,7 @@ GuessMagnetDensity = user_defined
 %
 
 EigenSolver = lobpcg
+ExperimentalFeatures = yes
 EigenSolverMaxIter = 10
 
 ConvRelDens = 1e-4
