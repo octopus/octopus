@@ -31,4 +31,5 @@ ExtraStates = 2
 
 ExperimentalFeatures = yes
 Output = wfs + wfs_fourier + density + geometry
-OutputHow = etsf
+OutputHow = etsf + netcdf
+OutputWfsNumber = "3-4"

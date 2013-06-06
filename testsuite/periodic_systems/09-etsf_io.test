@@ -45,3 +45,7 @@ match ; density-etsf.nc  ; SIZE(static/density-etsf.nc)  ;   25784
 match ; geometry-etsf.nc ; SIZE(static/geometry-etsf.nc) ;    3716
 match ; wfs-etsf.nc      ; SIZE(static/wfs-etsf.nc)      ; 1585324
 match ; wfs-pw-etsf.nc   ; SIZE(static/wfs-pw-etsf.nc)   ;  837836
+
+match ; density.ncdf     ; SIZE(static/density.ncdf)        ;   22248
+match ; netcdf wfn 3     ; SIZE(static/wf-k001-st0003.ncdf) ;   44320
+match ; netcdf wfn 4     ; SIZE(static/wf-k001-st0004.ncdf) ;   44320
