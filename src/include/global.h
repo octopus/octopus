@@ -50,7 +50,7 @@
 ! The assertions are ignored if the code is compiled in not-debug mode (NDEBUG
 ! is defined). Otherwise it is merely a logical assertion that, when fails,
 ! prints out the assertion string, the file, and the line. The subroutine
-! aassert_die is in the global_m module.
+! assert_die is in the global_m module.
 #define __STRING(x)     #x
 #if !defined(NDEBUG)
 #  define ASSERT(expr)  \

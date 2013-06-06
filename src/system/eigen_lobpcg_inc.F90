@@ -17,10 +17,10 @@
 !!
 !! $Id: eigen.F90 3030 2007-06-25 16:45:05Z marques $
   
-! Implementation of the locally optimal block preconditioned conjugate-
-! gradients algorithm.
+!> Implementation of the locally optimal block preconditioned conjugate-
+!! gradients algorithm.
 
-! Index set of unconverged eigenvectors.
+!> Index set of unconverged eigenvectors.
 #define UC uc(1:nuc)
 
 ! ---------------------------------------------------------
