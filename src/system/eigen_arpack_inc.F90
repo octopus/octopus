@@ -29,7 +29,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   integer,             intent(in)    :: ik
   FLOAT,     optional, intent(out)   :: diff(:) !< (1:st%nst)
 	
-  logical, allocatable :: select(:)
+  logical, allocatable :: select_array(:)
   R_TYPE, allocatable  :: resid(:), v(:, :), &
                           workd(:), workev(:), workl(:), zd(:), &
                           psi(:,:), hpsi(:,:)
@@ -65,7 +65,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   SAFE_ALLOCATE(workd(3*ldv))
   SAFE_ALLOCATE(workev(3*ncv))
   SAFE_ALLOCATE(workl(lworkl))
-  SAFE_ALLOCATE(select(ncv))
+  SAFE_ALLOCATE(select_array(ncv))
   SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
   
 #if defined(R_TCOMPLEX)
@@ -73,7 +73,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   SAFE_ALLOCATE(zd(ncv+1))
 #endif
   which = arpack%sort
-  select(:) = .true.
+  select_array(:) = .true.
 
   ! The idea with initial_tolerance is to optionally base the arpack tolerance on the current degree of convergence
   ! of the electronic density, which can improve performance in some (badly converged) SCF steps by at least an order
@@ -202,21 +202,21 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   if(arpack%use_parpack) then
 #if defined(HAVE_PARPACK) 
     call pzneupd  (mpi_comm,&
-          .true., 'A', select, zd, v, ldv, sigma, &
+          .true., 'A', select_array, zd, v, ldv, sigma, &
           workev, 'I', n, which, nev, tol, resid, ncv, & 
           v, ldv, iparam, ipntr, workd, workl, lworkl, &
           rwork, info)
-          d(:,1)=real(zd(:))
+          d(:,1)=real(zd(:), REAL_PRECISION)
           d(:,2)=aimag(zd(:))
           d(:,3)=M_ZERO
 #endif
   else
     call zneupd  (&
-          .true., 'A', select, zd, v, ldv, sigma, &
+          .true., 'A', select_array, zd, v, ldv, sigma, &
           workev, 'I', n,  which, nev, tol, resid, ncv, & 
           v, ldv, iparam, ipntr, workd, workl, lworkl, &
           rwork, info)
-          d(:,1)=real(zd(:))
+          d(:,1)=real(zd(:), REAL_PRECISION)
           d(:,2)=aimag(zd(:))
           d(:,3)=M_ZERO
   end if    
@@ -225,7 +225,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   if(arpack%use_parpack) then
 #if defined(HAVE_PARPACK)
     call pdneupd (mpi_comm,&
-         .true., 'A', select, d, d(1,2), v, ldv, &
+         .true., 'A', select_array, d, d(1,2), v, ldv, &
          sigmar, sigmai, workev, 'I', n, which, nev, tol, &
          resid, ncv, v, ldv, iparam, ipntr, workd, workl, &
          lworkl, info )
@@ -233,7 +233,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
 #endif
   else
     call dneupd (&
-         .true., 'A', select, d, d(1,2), v, ldv, &
+         .true., 'A', select_array, d, d(1,2), v, ldv, &
          sigmar, sigmai, workev, 'I', n, which, nev, tol, &
          resid, ncv, v, ldv, iparam, ipntr, workd, workl, &
          lworkl, info )
@@ -272,7 +272,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
 
     eps_temp = (d(j, 1) + M_zI * d(j, 2)) / arpack%rotation
 
-    st%eigenval(j, ik) = real(eps_temp)
+    st%eigenval(j, ik) = real(eps_temp, REAL_PRECISION)
     if(associated(st%zeigenval%Im)) then
       st%zeigenval%Im(j, ik) = aimag(eps_temp)
     end if
@@ -316,7 +316,7 @@ subroutine X(eigen_solver_arpack)(arpack, gr, st, hm, tolerance, current_rel_den
   SAFE_DEALLOCATE_A(workd)
   SAFE_DEALLOCATE_A(workev)
   SAFE_DEALLOCATE_A(workl)
-  SAFE_DEALLOCATE_A(select)
+  SAFE_DEALLOCATE_A(select_array)
   
   SAFE_DEALLOCATE_A(psi)
   
