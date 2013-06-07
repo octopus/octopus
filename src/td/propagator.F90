@@ -1016,8 +1016,10 @@ contains
       PUSH_SUB(propagator_dt.td_crank_nicolson)
 
 #ifndef HAVE_SPARSKIT
-      if(use_sparskit) &
-        call messages_fatal("Cannot use SPARSKIT in Crank-Nicolson propagator: not compiled with SPARSKIT support.")
+      if(use_sparskit) then
+        message(1) = "Cannot use SPARSKIT in Crank-Nicolson propagator: not compiled with SPARSKIT support."
+        call messages_fatal(1)
+      endif
 #endif
 
       np_part = gr%mesh%np_part
