@@ -198,10 +198,44 @@ contains
       call messages_fatal(1, only_root_writes = .true.)
      endif
 
-    ! some modes are not available in some circumstances, so we reset how
-    if(sb%dim == 1) how = iand(how, not(C_OUTPUT_HOW_AXIS_Y + C_OUTPUT_HOW_PLANE_Z))
-    if(sb%dim <= 2) how = iand(how, not(C_OUTPUT_HOW_AXIS_Z + &
-      C_OUTPUT_HOW_PLANE_X + C_OUTPUT_HOW_PLANE_Y + C_OUTPUT_HOW_DX + C_OUTPUT_HOW_CUBE))
+    ! some modes are not available in some circumstances
+    if(sb%dim == 1) then
+      if(iand(how, C_OUTPUT_HOW_AXIS_Y) /= 0) then
+        message(1) = "OutputHow = axis_y not available with Dimensions = 1."
+        call messages_fatal(1)
+      endif
+      if(iand(how, C_OUTPUT_HOW_PLANE_Z) /= 0) then
+        message(1) = "OutputHow = plane_z not available with Dimensions = 1."
+        call messages_fatal(1)
+      endif
+    endif
+
+    if(sb%dim <= 2) then
+      if(iand(how, C_OUTPUT_HOW_AXIS_Z) /= 0) then
+        message(1) = "OutputHow = axis_z not available with Dimensions <= 2."
+        call messages_fatal(1)
+      endif
+      if(iand(how, C_OUTPUT_HOW_PLANE_X) /= 0) then
+        message(1) = "OutputHow = plane_x not available with Dimensions <= 2."
+        call messages_fatal(1)
+      endif
+      if(iand(how, C_OUTPUT_HOW_PLANE_Y) /= 0) then
+        message(1) = "OutputHow = plane_y not available with Dimensions <= 2."
+        call messages_fatal(1)
+      endif
+      if(iand(how, C_OUTPUT_HOW_DX) /= 0) then
+        message(1) = "OutputHow = dx not available with Dimensions <= 2."
+        call messages_fatal(1)
+      endif
+      if(iand(how, C_OUTPUT_HOW_CUBE) /= 0) then
+        message(1) = "OutputHow = cube not available with Dimensions <= 2."
+        call messages_fatal(1)
+      endif
+      if(iand(how, C_OUTPUT_HOW_XCRYSDEN) /= 0) then
+        message(1) = "OutputHow = xcrysden not available with Dimensions <= 2."
+        call messages_fatal(1)
+      endif
+    endif
 
 #if !defined(HAVE_NETCDF)
     if (iand(how, C_OUTPUT_HOW_NETCDF) /= 0) then
