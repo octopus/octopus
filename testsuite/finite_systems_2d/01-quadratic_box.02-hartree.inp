@@ -5,7 +5,7 @@
 # E. Rasanen et al., Phys. Rev. B 67, 235307 (2003).
 #
 # This adds the Hartree interaction in 2D to the previous particle in a box example.
-# To make it more meaninful, it uses two electrons.
+# To make it more meaningful, it uses two electrons.
 
 CalculationMode = gs
 FromScratch = yes

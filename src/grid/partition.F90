@@ -55,7 +55,7 @@ module partition_m
   !! same number of points.
   !!
   !! Note 1: this module can be a bit confusing as they are in fact two partitions. One is the
-  !! partition of some array (in the case of Octopus, this is tipically the mesh functions),
+  !! partition of some array (in the case of Octopus, this is typically the mesh functions),
   !! which is the main information stored in the partition_t object, and then there is the 
   !! partition of the partition itself, as this is also distributed.
   !! 
