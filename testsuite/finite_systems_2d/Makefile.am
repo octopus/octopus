@@ -39,6 +39,8 @@ dist_share_DATA = \
 	05-spin_precession.02-time_propagation.inp \
 	07-modelmb.test                                \
 	07-modelmb.01-gs.inp                           \
-	07-modelmb.02-td.inp
+	07-modelmb.02-td.inp \
+        08-gdlib.test \
+        08-gdlib.01-gs.inp
 
 CLEANFILES = *~ *.bak

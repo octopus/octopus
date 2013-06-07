@@ -1,0 +1,15 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 07-modelmb.test 5186 2009-04-11 07:26:12Z xavier $
+
+Test       : gdlib: particle in an octopus
+Options    : gdlib
+Programs   : octopus; octopus_mpi
+TestGroups : short-run, finite_systems_2d
+Enabled    : Yes
+
+Input : 08-gdlib.01-gs.inp
+
+match ; Total energy ; GREP(static/info, 'Total       =', 20);   0.50252348
+match ; Eigenvalue   ; GREP(static/info, ' 1   --',       13);   0.502523
+match ; Dipole x     ; GREP(static/info, '<x> =',         12);   1.03804E+00
+match ; Dipole y     ; GREP(static/info, '<y> =',         12);   1.02525E+00

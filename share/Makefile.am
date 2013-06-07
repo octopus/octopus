@@ -26,7 +26,8 @@ dist_dta1_DATA = logo                 \
 	filter_mask.data              \
 	gequad.data                   \
 	marching_cubes_edges.data     \
-	marching_cubes_triangles.data
+	marching_cubes_triangles.data \
+        gdlib.png
 
 dta2dir = $(pkgdatadir)
 dist_dta2_DATA = variables varinfo

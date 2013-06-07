@@ -1,0 +1,25 @@
+# particle in an octopus
+
+CalculationMode = gs
+FromScratch = yes
+Dimensions = 2
+
+%Species
+"qd" | 1.0 | spec_user_defined | 1 | "0"
+%
+
+%Coordinates
+"qd" | 0 | 0
+%
+
+BoxShape = box_image
+BoxShapeImage = "gdlib.png"
+# located in share/, dimensions 135x95
+
+ff = 20
+%Lsize
+ 135 / ff | 95 / ff
+%
+
+TheoryLevel = independent_particles
+ConvEigenError = yes
