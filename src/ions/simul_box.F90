@@ -362,8 +362,10 @@ contains
       !% The simulation box will be a parallelepiped whose dimensions are taken from
       !% the variable <tt>Lsize</tt>.
       !%Option box_image 5
-      !% The simulation box will be defined through an image. White means that the point
+      !% The simulation box will be defined through an image, specified with <tt>BoxShapeImage</tt>.
+      !% White (RGB = 255,255,255) means that the point
       !% is contained in the simulation box, while any other color means that the point is out.
+      !% The image will be scaled to fit <tt>Lsize</tt>, while its resolution will define <tt>Spacing</tt>.
       !%Option user_defined 77
       !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>.
       !%Option hypercube 6
@@ -497,10 +499,15 @@ contains
         !%Type string
         !%Section Mesh::Simulation Box
         !%Description
-        !% Name of the file that contains the image that defines the simulation box.
+        !% Name of the file that contains the image that defines the simulation box
+        !% when <tt>BoxShape = box_image</tt>.
         !%End
 #if defined(HAVE_GDLIB)        
         call parse_string(datasets_check("BoxShapeImage"), "", filename)
+        if(trim(filename) == "") then
+          message(1) = "Must specify BoxShapeImage if BoxShape = box_image."
+          call messages_fatal(1)
+        endif
         sb%image = loct_gdimage_create_from(filename)
         if(.not.c_associated(sb%image)) then
           message(1) = "Could not open file '" // filename // "'"
