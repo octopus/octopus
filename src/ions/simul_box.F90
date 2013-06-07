@@ -334,6 +334,7 @@ contains
       type(block_t) :: blk
 
       FLOAT :: default
+      logical :: found
 
       PUSH_SUB(simul_box_init.read_box)
       ! Read box shape.
@@ -500,7 +501,8 @@ contains
         !%Section Mesh::Simulation Box
         !%Description
         !% Name of the file that contains the image that defines the simulation box
-        !% when <tt>BoxShape = box_image</tt>. No default.
+        !% when <tt>BoxShape = box_image</tt>. No default. Will search in current
+        !% directory and <tt>OCTOPUS-HOME/share/</tt>.
         !%End
 #if defined(HAVE_GDLIB)        
         call parse_string(datasets_check("BoxShapeImage"), "", sb%filename)
@@ -508,6 +510,18 @@ contains
           message(1) = "Must specify BoxShapeImage if BoxShape = box_image."
           call messages_fatal(1)
         endif
+
+        ! Find out the file and read it.
+        inquire(file=trim(sb%filename), exist=found)
+        if(.not. found) then
+          message(1) = "Could not find file '" // trim(sb%filename) // "' for BoxShape = box_image."
+
+          sb%filename = trim(conf%share) // '/' // trim(sb%filename)
+          inquire(file=trim(sb%filename), exist=found)
+          
+          if(.not. found) call messages_fatal(1)
+        end if
+
         sb%image = loct_gdimage_create_from(sb%filename)
         if(.not.c_associated(sb%image)) then
           message(1) = "Could not open file '" // trim(sb%filename) // "' for BoxShape = box_image."
