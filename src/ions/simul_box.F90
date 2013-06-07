@@ -352,10 +352,10 @@ contains
       !% <li><tt>Box_image</tt> is only allowed in 2D.</li>
       !% </ul>
       !%Option sphere 1
-      !% The simulation box will be a sphere of radius <tt>Radius</tt>.
+      !% The simulation box will be a sphere of radius <tt>Radius</tt>. (In 2D, this is a circle.)
       !%Option cylinder 2
-      !% The simulation box will be a cylinder with radius <tt>Radius</tt> and height two times
-      !% <tt>Xlength</tt>.
+      !% The simulation box will be a cylinder with radius <tt>Radius</tt> and height (in the <i>x</i>-direction)
+      !% of two times <tt>Xlength</tt>.
       !%Option minimum 3
       !% The simulation box will be constructed by adding spheres created around each
       !% atom (or user-defined potential), of radius <tt>Radius</tt>.
@@ -382,8 +382,11 @@ contains
       case(SPHERE, MINIMUM, BOX_IMAGE, BOX_USDEF)
         if(sb%dim > 1 .and. simul_box_is_periodic(sb)) call input_error('BoxShape')
       case(CYLINDER)
-        if (sb%dim > 2 .and. &
-          ((sb%dim - sb%periodic_dim == 0) .or. (sb%dim - sb%periodic_dim == 1))) call input_error('BoxShape')
+        if(sb%dim == 2) then
+          message(1) = "BoxShape = cylinder is not meaningful in 2D. Use sphere if you want a circle."
+          call messages_fatal(1)
+        endif
+        if(sb%periodic_dim > 1) call input_error('BoxShape')
       end select
 
       ! ignore box_shape in 1D
@@ -396,6 +399,8 @@ contains
       if(sb%dim > 3 .and. sb%box_shape /= HYPERCUBE) then
         message(1) = "For more than 3 dimensions, you can only use the hypercubic box."
         call messages_fatal(1)
+        ! FIXME: why not a hypersphere as another option?
+        ! Also, hypercube should be unified with parallepiped.
       end if
 
       sb%rsize = -M_ONE
@@ -1074,7 +1079,7 @@ contains
 
     case(CYLINDER)
       do ip = 1, npoints
-        rr = sqrt(xx(2, ip)**2 + xx(3, ip)**2)
+        rr = sqrt(sum(xx(2:sb%dim, ip)**2))
         in_box(ip) = (rr <= sb%rsize + DELTA .and. abs(xx(1, ip)) <= sb%xsize + DELTA)
       end do
 
@@ -1202,23 +1207,23 @@ contains
     write(iunit, '(a20,i4)')        'transport_dim=      ', sb%transport_dim
     select case(sb%box_shape)
     case(SPHERE, MINIMUM)
-      write(iunit, '(a20,e22.14)')  'rsize=              ', sb%rsize
+      write(iunit, '(a20,e22.14)')   'rsize=              ', sb%rsize
       write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
     case(CYLINDER)
-      write(iunit, '(a20,e22.14)')  'rsize=              ', sb%rsize
-      write(iunit, '(a20,e22.14)')  'xlength=            ', sb%xsize
+      write(iunit, '(a20,e22.14)')   'rsize=              ', sb%rsize
+      write(iunit, '(a20,e22.14)')   'xlength=            ', sb%xsize
       write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
     case(PARALLELEPIPED)
       write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
     case(BOX_USDEF)
       write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
-      write(iunit, '(a20,a1024)')   'user_def=           ', sb%user_def
+      write(iunit, '(a20,a1024)')    'user_def=           ', sb%user_def
     end select
     write(iunit, '(a20,99e22.14)')   'box_offset=         ', sb%box_offset(1:sb%dim)
-    write(iunit, '(a20,l7)')        'mr_flag=            ', sb%mr_flag
+    write(iunit, '(a20,l7)')         'mr_flag=            ', sb%mr_flag
     if(sb%mr_flag) then
-      write(iunit, '(a20,i4)')        'num_areas=         ',sb%hr_area%num_areas
-      write(iunit, '(a20,i4)')        'num_radii=         ',sb%hr_area%num_radii
+      write(iunit, '(a20,i4)')       'num_areas=         ',sb%hr_area%num_areas
+      write(iunit, '(a20,i4)')       'num_radii=         ',sb%hr_area%num_radii
       do idir = 1, sb%hr_area%num_radii
         write(iunit, '(a10,i2.2,a9,e22.14)') 'mr_radius_', idir, '=        ',sb%hr_area%radius(idir)
       end do
@@ -1227,7 +1232,7 @@ contains
       end do
     end if
     do idir = 1, sb%dim
-      write(iunit, '(a9,i1,a11,99e22.14)')    'rlattice(', idir, ')=         ', &
+      write(iunit, '(a9,i1,a11,99e22.14)')   'rlattice(', idir, ')=         ', &
         sb%rlattice_primitive(1:sb%dim, idir)
     end do
 
