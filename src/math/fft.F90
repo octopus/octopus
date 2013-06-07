@@ -541,9 +541,9 @@ contains
       ! between rs and fs is done with a forward transform (and fs->rs with backward).
       ! This is exactly the opposite of the definitions used by all the libraries 
       ! performing FFTs (PNFFT and NFFT included) [see e.g. M. Frigo, and S. G. Johnson, Proc. 
-      ! IEEE 93, 216–231 (2005)].
+      ! IEEE 93, 216-231 (2005)].
       ! While this leads to no problem on ordinary ffts where fs and rs can be exchanged 
-      ! it does makes a fundamental difference for PNFFT (for some reason I don't know NFFT 
+      ! it does makes a fundamental difference for PNFFT (for some reason I don`t know NFFT 
       ! is still symmetric).
       ! Therefore, in order to perform rs->fs tranforms with PNFFT one should use the 
       ! backward transform.     

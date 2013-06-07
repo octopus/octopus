@@ -383,7 +383,7 @@ foreach my $octopus_exe (@executables){
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
 	  exit 255;
         } else {
-	  die "Unknown option 'Enabled = $enabled' in testsuite file.\n\n";
+	  die "Unknown option 'Enabled = $enabled' in testsuite file, or 'Enabled' has not been set.\n\n";
 	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
         }
       }
