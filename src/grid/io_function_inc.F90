@@ -638,7 +638,7 @@ contains
       if(ixvect(d2)==0.and.ixvect(d3)==0) then
         xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
         fu = units_from_atomic(unit, ff(ip))
-        write(iunit, mformat, iostat=ierr) xx(d1), R_REAL(fu), R_AIMAG(fu)
+        write(iunit, mformat, iostat=ierr) xx(d1), fu
       end if
     end do
 
@@ -663,7 +663,7 @@ contains
     iunit = io_open(filename, action='write', is_tmp=is_tmp)
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d2), index2axis(d3), 'Re', 'Im'
-    write(iunit, mformat)
+    write(iunit, mformat, iostat=ierr)
 
 ! here we find the indices for coordinate 0 along all directions apart from d2
 ! and d3, to get a plane. Do the same as for ix, but with all the other
@@ -690,7 +690,7 @@ contains
     ! ixvect is prepared for all dimensions apart from d2 and d3
     
     do iy = mesh%idx%nr(1, d2), mesh%idx%nr(2, d2)
-      write(iunit, *)
+      write(iunit, mformat, iostat=ierr)
       do iz = mesh%idx%nr(1, d3), mesh%idx%nr(2, d3)
 
         ixvect(d2) = iy
@@ -701,7 +701,7 @@ contains
           xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
           fu = units_from_atomic(unit, ff(ip))
           write(iunit, mformat, iostat=ierr)  &
-            xx(d2), xx(d3), R_REAL(fu), R_AIMAG(fu)
+            xx(d2), xx(d3), fu
         end if
       end do
     end do
@@ -827,7 +827,7 @@ contains
        end if
        fu = units_from_atomic(unit, ff(ip))
        if(ierr==0) write(iunit, mformat2, iostat=ierr) ip, &
-         (units_from_atomic(units_out%length, xx(idir)), idir = 1, 3), R_REAL(fu), R_AIMAG(fu)
+         (units_from_atomic(units_out%length, xx(idir)), idir = 1, 3), fu
     end do
 
     if(ierr == 0) write(iunit, mformat, iostat=ierr)

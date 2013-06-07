@@ -500,7 +500,7 @@ contains
     if(iand(outp%what, iand(not(C_OUTPUT_MATRIX_ELEMENTS), not(C_OUTPUT_BERKELEYGW))) /= 0) then
       call io_function_read_how(sb, outp%how)
     else
-       outp%how = 0
+      outp%how = 0
     endif
 
     POP_SUB(output_init)
