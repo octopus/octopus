@@ -19,5 +19,6 @@ Spacing = 0.25
 %
 
 EigenSolver = lobpcg
+ExperimentalFeatures = yes
 
 ParallelizationStrategy = par_domains
