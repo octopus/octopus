@@ -28,6 +28,7 @@ ExtraStates = 2
 XCFunctional = lda_x + lda_c_pz
 
 EigenSolver = lobpcg
+ExperimentalFeatures = yes
 
 ConvRelDens = 1e-6
 
