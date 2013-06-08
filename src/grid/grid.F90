@@ -148,6 +148,7 @@ contains
     !% coordinates, this is a canonical spacing that will be changed locally by the
     !% transformation. In periodic directions, your spacing may be slightly larger than
     !% what you request here, since the box size must be an integer multiple of the spacing.
+    !% This variable is ignored if <tt>BoxShape = box_image</tt>.
     !%
     !% It is possible to have a different spacing in each one of the Cartesian directions
     !% if we define <tt>Spacing</tt> as block of the form

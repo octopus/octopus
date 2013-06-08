@@ -335,6 +335,7 @@ contains
 
       FLOAT :: default
       logical :: found
+      integer :: box_npts
 
       PUSH_SUB(simul_box_init.read_box)
       ! Read box shape.
@@ -367,6 +368,7 @@ contains
       !% White (RGB = 255,255,255) means that the point
       !% is contained in the simulation box, while any other color means that the point is out.
       !% The image will be scaled to fit <tt>Lsize</tt>, while its resolution will define <tt>Spacing</tt>.
+      !% The actual box may be slightly larger than <tt>Lsize</tt> to ensure one grid point = one pixel.
       !%Option user_defined 77
       !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>.
       !%Option hypercube 6
@@ -379,7 +381,7 @@ contains
       call parse_integer(datasets_check('BoxShape'), MINIMUM, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call input_error('BoxShape')
       select case(sb%box_shape)
-      case(SPHERE, MINIMUM, BOX_IMAGE, BOX_USDEF)
+      case(SPHERE, MINIMUM, BOX_USDEF)
         if(sb%dim > 1 .and. simul_box_is_periodic(sb)) call input_error('BoxShape')
       case(CYLINDER)
         if(sb%dim == 2) then
@@ -492,10 +494,6 @@ contains
             call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
           sb%lsize(1:sb%dim) = sb%lsize(1)
         end if
-
-        do idir = 1, sb%dim
-
-        end do
       end if
 
       ! read in image for box_image
@@ -534,6 +532,16 @@ contains
         end if
         sb%image_size(1) = loct_gdImage_SX(sb%image)
         sb%image_size(2) = loct_gdImage_SY(sb%image)
+
+        ! adjust Lsize if necessary to ensure that one grid point = one pixel
+        do idir = 1, 2
+          box_npts = sb%image_size(idir)
+          if((idir >  sb%periodic_dim .and. even(sb%image_size(idir))) .or. &
+             (idir <= sb%periodic_dim .and.  odd(sb%image_size(idir)))) then
+            box_npts = box_npts + 1
+            sb%lsize(idir) = sb%lsize(idir) * box_npts / sb%image_size(idir)
+          endif
+        enddo
 #else
         message(1) = "To use 'BoxShape = box_image', you have to compile Octopus"
         message(2) = "with GD library support."
