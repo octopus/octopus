@@ -375,8 +375,7 @@ void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
 
 #else
 #warning directory search not compiled
-  printf("Warning: Directory search not implemented.\n");
-
+  fprintf(stderr, "Warning: Directory search not implemented.\n");
 #endif
 
 }
