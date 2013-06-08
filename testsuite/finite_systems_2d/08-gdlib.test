@@ -12,4 +12,4 @@ Input : 08-gdlib.01-gs.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20);   0.50252348
 match ; Eigenvalue   ; GREP(static/info, ' 1   --',       13);   0.502523
 match ; Dipole x     ; GREP(static/info, '<x> =',         12);   1.03804E+00
-match ; Dipole y     ; GREP(static/info, '<y> =',         12);   1.02525E+00
+match ; Dipole y     ; GREP(static/info, '<y> =',         12);  -1.02525E+00

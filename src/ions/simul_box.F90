@@ -951,7 +951,8 @@ contains
     if(sb%box_shape  ==  BOX_USDEF) then
       write(message(2), '(a)') '  Type = user-defined'
     else if(sb%box_shape == BOX_IMAGE) then
-      write(message(2), '(3a)') '  Type = defined by image "', trim(sb%filename), '"'
+      write(message(2), '(3a,i6,a,i6)') '  Type = defined by image "', trim(sb%filename), '", ', &
+        sb%image_size(1), ' x ', sb%image_size(2)
     else
       write(message(2), '(2a)') '  Type = ', trim(bs(sb%box_shape))
     end if
@@ -1143,10 +1144,14 @@ contains
       end forall
 
 #if defined(HAVE_GDLIB)
+! Why the minus sign for y? Explanation: http://biolinx.bios.niu.edu/bios546/gd_mod.htm
+! For reasons that probably made sense to someone at some time, computer graphic coordinates are not the same
+! as in standard graphing. ... The top left corner of the screen is (0,0).
+
     case(BOX_IMAGE)
       do ip = 1, npoints
-        ix = nint((xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
-        iy = nint((xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
+        ix = nint(( xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
+        iy = nint((-xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
         call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
         in_box(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
       end do

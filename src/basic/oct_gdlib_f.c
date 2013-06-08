@@ -106,6 +106,8 @@ void FC_FUNC_(oct_gdimage_get_pixel_rgb, OCT_GDIMAGE_GET_PIXEL_RGB)
     *g = gdImageGreen(*im, color);
     *b = gdImageBlue (*im, color);
   }else{
+    /* this will happen for boundary points */
+    //    fprintf(stderr, "Illegal pixel coordinate %d %d\n", *x, *y);
     *r = 0; *g = 0; *b = 0;
   }
 }
