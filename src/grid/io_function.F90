@@ -140,7 +140,7 @@ contains
     !%Option dx 64
     !% For printing three-dimensional information, the open-source program
     !% visualization tool OpenDX (<tt>http://www.opendx.org/</tt>) can be used. The string
-    !% <tt>.dx</tt> is appended to previous file names.
+    !% <tt>.dx</tt> is appended to previous file names. Available only in 3D.
     !%Option netcdf 128
     !% Outputs in NetCDF (<tt>http://www.unidata.ucar.edu/packages/netcdf/</tt>) format. This file
     !% can then be read, for example, by OpenDX. The string <tt>.ncdf</tt> is appended to previous file names.
@@ -149,13 +149,13 @@ contains
     !% Generates output files of a given quantity (density, wavefunctions, ...) which include
     !% the internal numbering of mesh points. Since this mode produces large datafiles this is only 
     !% useful for small meshes and debugging purposes.
-    !% The output can also be used to display the mesh directly. A Gnuplot script for mesh vizualization
+    !% The output can also be used to display the mesh directly. A Gnuplot script for mesh visualization
     !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>.
     !%Option xcrysden 1024
     !% A format for printing structures and three-dimensional information, which can be visualized by
     !% the free open-source program XCrySDen (<tt>http://www.xcrysden.org/</tt>). The string
     !% <tt>.xsf</tt> is appended to previous file names. Note that lattice vectors and coordinates are as
-    !% specified by <tt>UnitsOutput</tt>.
+    !% specified by <tt>UnitsOutput</tt>. Available in 2D and 3D.
     !%Option matlab 2048
     !% In combination with <tt>plane_x</tt>, <tt>plane_y</tt> and
     !% <tt>plane_z</tt>, this option produces output files which are
@@ -184,7 +184,8 @@ contains
     !%Option xyz 65536
     !% Geometry will be output in XYZ format. Does not affect other outputs.
     !%Option cube 131072
-    !% Generates output in the cube file format (<tt>http://local.wasp.uwa.edu.au/~pbourke/dataformats/cube/</tt>)
+    !% Generates output in the cube file format (<tt>http://local.wasp.uwa.edu.au/~pbourke/dataformats/cube/</tt>).
+    !% Available only in 3D.
     !%Option openscad 262144
     !% Generates output in OpenSCAD format (http://www.openscad.org/). For the moment only the geometry is supported.
     !%End
@@ -208,6 +209,10 @@ contains
         message(1) = "OutputHow = plane_z not available with Dimensions = 1."
         call messages_fatal(1)
       endif
+      if(iand(how, C_OUTPUT_HOW_XCRYSDEN) /= 0) then
+        message(1) = "OutputHow = xcrysden not available with Dimensions = 1."
+        call messages_fatal(1)
+      endif
     endif
 
     if(sb%dim <= 2) then
@@ -229,10 +234,6 @@ contains
       endif
       if(iand(how, C_OUTPUT_HOW_CUBE) /= 0) then
         message(1) = "OutputHow = cube not available with Dimensions <= 2."
-        call messages_fatal(1)
-      endif
-      if(iand(how, C_OUTPUT_HOW_XCRYSDEN) /= 0) then
-        message(1) = "OutputHow = xcrysden not available with Dimensions <= 2."
         call messages_fatal(1)
       endif
     endif

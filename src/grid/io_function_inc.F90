@@ -990,8 +990,8 @@ contains
     fname_ext = trim(fname)
 #endif
 
-    if(mesh%sb%dim /= 3) then
-      write(message(1), '(a)') 'Cannot output function '//trim(fname_ext)//' in XCrySDen format except in 3D.'
+    if(mesh%sb%dim /= 3 .and. mesh%sb%dim /= 2) then
+      write(message(1), '(a)') 'Cannot output function '//trim(fname_ext)//' in XCrySDen format except in 2D or 3D.'
       call messages_warning(1)
       return
     endif
@@ -1007,7 +1007,8 @@ contains
     ! but "periodic" in periodic directions.
     ! Making this assignment, the output grid is entirely "general"
     my_n(1:mesh%sb%periodic_dim) = mesh%idx%ll(1:mesh%sb%periodic_dim) + 1
-    my_n(mesh%sb%periodic_dim + 1:3) = mesh%idx%ll(mesh%sb%periodic_dim + 1:3)
+    my_n(mesh%sb%periodic_dim + 1:mesh%sb%dim) = mesh%idx%ll(mesh%sb%periodic_dim + 1:mesh%sb%dim)
+    if(mesh%sb%dim == 2) my_n(3) = 1
 
     ! This differs from mesh%sb%rlattice if it is not an integer multiple of the spacing
     do idir = 1, 3
@@ -1021,14 +1022,14 @@ contains
     ASSERT(present(geo))
     call write_xsf_geometry(iunit, geo, mesh)
 
-    write(iunit, '(a)') 'BEGIN_BLOCK_DATAGRID3D'
+    write(iunit, '(a,i1,a)') 'BEGIN_BLOCK_DATAGRID', mesh%sb%dim, 'D'
     write(iunit, '(4a)') 'units: coords = ', trim(units_abbrev(units_out%length)), &
                             ', function = ', trim(units_abbrev(unit))
-    write(iunit, '(a)') 'DATAGRID_3D_function'
-    write(iunit, '(3i7)') my_n(1:3)
+    write(iunit, '(a,i1,a)') 'DATAGRID_', mesh%sb%dim, 'D_function'
+    write(iunit, '(3i7)') my_n(1:mesh%sb%dim)
     write(iunit, '(a)') '0.0 0.0 0.0'
 
-    do idir = 1, 3
+    do idir = 1, mesh%sb%dim
       write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
         lattice_vectors(idir2, idir)), idir2 = 1, 3)
     enddo
@@ -1068,8 +1069,8 @@ contains
       end do
     end do
 
-    write(iunit, '(a)') 'END_DATAGRID3D'
-    write(iunit, '(a)') 'END_BLOCK_DATAGRID3D'
+    write(iunit, '(a,i1,a)') 'END_DATAGRID', mesh%sb%dim, 'D'
+    write(iunit, '(a,i1,a)') 'END_BLOCK_DATAGRID', mesh%sb%dim, 'D'
 
     call io_close(iunit)
     call cube_end(cube)
