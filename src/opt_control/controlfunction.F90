@@ -188,7 +188,7 @@ contains
   end subroutine controlfunction_common_nullify
 
   !> Initializes the module, should be the first subroutine to be called (the last one
-  !! should be controlfunction_mod_close, when the module is no longer to be used.
+  !! should be controlfunction_mod_close, when the module is no longer to be used).
   !!
   !! It fills the module variable "cf_common", whose type is controlfunction_common_t, with 
   !! information obtained from the inp file.
@@ -542,19 +542,19 @@ contains
 
   elemental subroutine controlfunction_nullify(this)
     type(controlfunction_t), intent(out) :: this
-    !
+
     this%no_controlfunctions    = 0
     this%dim                    = 0
     this%dof                    = 0
-    this%f                      =>NULL()
-    this%alpha                  =>NULL()
+    nullify(this%f)
+    nullify(this%alpha)
     this%current_representation = 0
     this%w0                     = M_ZERO
-    this%u                      =>NULL()
-    this%utransf                =>NULL()
-    this%utransfi               =>NULL()
-    this%theta                  =>NULL()
-    return
+    nullify(this%u)
+    nullify(this%utransf)
+    nullify(this%utransfi)
+    nullify(this%theta)
+
   end subroutine controlfunction_nullify
   
   !> Before using an controlfunction_t variable, it needs
@@ -1493,7 +1493,7 @@ contains
   ! ---------------------------------------------------------
   subroutine controlfunction_deltaedeltau(par, dedu)
     type(controlfunction_t), intent(in)    :: par
-    FLOAT, intent(inout)                   :: dedu(:, :) ! (1:dof, 1:dim)
+    FLOAT, intent(inout)                   :: dedu(:, :) !< (1:dof, 1:dim)
 
     integer :: i
     FLOAT :: rr

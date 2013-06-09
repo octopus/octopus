@@ -64,7 +64,7 @@ module opt_control_m
             opt_control_function_forward
 
 
-  ! Module variables
+  !> Module variables
   type(filter_t), save       :: filter
   type(oct_t), save          :: oct
   type(oct_iterator_t), save :: iterator
@@ -72,7 +72,7 @@ module opt_control_m
   type(states_t), save       :: initial_st
   
 
-  ! For the direct, newuoa, and cg schemes:
+  !> For the direct, newuoa, and cg schemes:
   type(controlfunction_t), save :: par_
   type(system_t), pointer :: sys_
   type(hamiltonian_t), pointer :: hm_
