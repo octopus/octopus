@@ -212,49 +212,6 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   call profiling_out(C_PROFILING_BLOCKT)
 end subroutine X(states_blockt_mul)
 
-
-! ---------------------------------------------------------
-!> Gather all states on all nodes. out has to be of sufficient size.
-#if defined(HAVE_MPI)
-subroutine X(states_gather)(mesh, st, in, out)
-  type(states_t), intent(in)  :: st
-  type(mesh_t),   intent(in)  :: mesh
-  R_TYPE,         intent(in)  :: in(:, :, :)
-  R_TYPE,         intent(out) :: out(:, :, :)
-
-  integer              :: ii
-  integer, allocatable :: sendcnts(:), sdispls(:), recvcnts(:), rdispls(:)
-
-  PUSH_SUB(X(states_gather))
-
-  SAFE_ALLOCATE(sendcnts(1:st%mpi_grp%size))
-  SAFE_ALLOCATE( sdispls(1:st%mpi_grp%size))
-  SAFE_ALLOCATE(recvcnts(1:st%mpi_grp%size))
-  SAFE_ALLOCATE( rdispls(1:st%mpi_grp%size))
-
-  sendcnts   = mesh%np_part*st%d%dim*st%st_num(st%mpi_grp%rank)
-  sdispls    = 0
-  recvcnts   = st%st_num*mesh%np_part*st%d%dim
-  rdispls(1) = 0
-  do ii = 2, st%mpi_grp%size
-    rdispls(ii) = rdispls(ii-1) + recvcnts(ii-1)
-  end do
-
-  call mpi_debug_in(st%mpi_grp%comm, C_MPI_ALLTOALLV)
-  call MPI_Alltoallv(in(:, 1, 1), sendcnts, sdispls, R_MPITYPE, &
-    out(:, 1, 1), recvcnts, rdispls, R_MPITYPE, st%mpi_grp%comm, mpi_err)
-  call mpi_debug_out(st%mpi_grp%comm, C_MPI_ALLTOALLV)
-
-  SAFE_DEALLOCATE_A(sendcnts)
-  SAFE_DEALLOCATE_A(sdispls)
-  SAFE_DEALLOCATE_A(recvcnts)
-  SAFE_DEALLOCATE_A(rdispls)
-
-  POP_SUB(X(states_gather))
-end subroutine X(states_gather)
-#endif
-
-
 ! ---------------------------------------------------------
 !> Multiplication of block of states by matrix plus block of states
 !! (with the corresponding column indices):

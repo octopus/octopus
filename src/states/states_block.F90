@@ -48,10 +48,6 @@ module states_block_m
     states_block_matr_mul_add
 
 
-#if defined(HAVE_MPI)
-  public :: states_gather
-#endif
-
 !   ! This type encapsulates an array of wavefunctions with numbers
 !   ! st_start to st_end. It is used to pass arrays of states around
 !   ! between subroutines because array in types do not get their
@@ -78,16 +74,6 @@ module states_block_m
   interface states_block_matr_mul_add
     module procedure dstates_block_matr_mul_add, zstates_block_matr_mul_add
   end interface states_block_matr_mul_add
-
-!   interface states_block_wrap
-!     module procedure dstates_block_wrap, zstates_block_wrap
-!   end interface states_block_wrap
-
-#if defined(HAVE_MPI)
-  interface states_gather
-    module procedure dstates_gather, zstates_gather
-  end interface states_gather
-#endif
 
 contains
 
