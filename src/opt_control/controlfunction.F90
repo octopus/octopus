@@ -181,10 +181,9 @@ contains
     this%w0                  = M_ZERO
     this%mode                = controlfunction_mode_none
     this%no_controlfunctions = 0
-    this%alpha               =>NULL()
-    this%td_penalty          =>NULL()
-    !call tdf_nullify(this%f)
-    return
+    nullify(this%alpha)
+    nullify(this%td_penalty)
+
   end subroutine controlfunction_common_nullify
 
   !> Initializes the module, should be the first subroutine to be called (the last one
@@ -211,8 +210,11 @@ contains
     PUSH_SUB(controlfunction_mod_init)
 
     if(.not.cf_common_initialized)then
-      cf_common => NULL()
+      nullify(cf_common)
       cf_common_initialized=.true.
+    else
+      message(1) = "Internal error: Cannot call controlfunction_mod_init twice."
+      call messages_fatal(1)
     end if
 
     if(.not. associated(cf_common)) then
@@ -1476,6 +1478,12 @@ contains
 
     PUSH_SUB(controlfunction_mod_close)
 
+    if(.not. cf_common_initialized) then
+      message(1) = "Internal error: Cannot call controlfunction_mod_close when not initialized."
+      call messages_fatal(1)
+      endif
+
+    cf_common_initialized=.false.
     SAFE_DEALLOCATE_P(cf_common%alpha)
 
     do ipar = 1, cf_common%no_controlfunctions
