@@ -41,4 +41,4 @@ e0 = 6.0
 %
 
 Output = wfs + density + potential
-OutputHow = axis_x + axis_y + axis_z
+OutputHow = axis_x
