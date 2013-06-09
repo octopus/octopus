@@ -347,7 +347,7 @@ contains
   !------------------------------------------------------------
   subroutine tdf_init_cw(f, a0, omega0)
     type(tdf_t), intent(inout) :: f
-    FLOAT, intent(in) :: a0, omega0
+    FLOAT,       intent(in)    :: a0, omega0
 
     PUSH_SUB(tdf_init_cw)
 
@@ -366,7 +366,7 @@ contains
   !------------------------------------------------------------
   subroutine tdf_init_gaussian(f, a0, omega0, t0, tau0)
     type(tdf_t), intent(inout) :: f
-    FLOAT, intent(in) :: a0, omega0, t0, tau0
+    FLOAT,       intent(in)    :: a0, omega0, t0, tau0
 
     PUSH_SUB(tdf_init_gaussian)
 
@@ -387,7 +387,7 @@ contains
   !------------------------------------------------------------
   subroutine tdf_init_cosinoidal(f, a0, omega0, t0, tau0)
     type(tdf_t), intent(inout) :: f
-    FLOAT, intent(in) :: a0, omega0, t0, tau0
+    FLOAT,       intent(in)    :: a0, omega0, t0, tau0
 
     PUSH_SUB(tdf_init_cosinoidal)
 
@@ -408,7 +408,7 @@ contains
   !------------------------------------------------------------
   subroutine tdf_init_trapezoidal(f, a0, omega0, t0, tau0, tau1)
     type(tdf_t), intent(inout) :: f
-    FLOAT, intent(in) :: a0, omega0, t0, tau0, tau1
+    FLOAT,       intent(in)    :: a0, omega0, t0, tau0, tau1
 
     PUSH_SUB(tdf_init_trapezoidal)
 
@@ -429,8 +429,8 @@ contains
 
   !------------------------------------------------------------
   subroutine tdf_init_fromexpr(f, expression)
-    type(tdf_t), intent(inout)   :: f
-    character(len=*), intent(in) :: expression
+    type(tdf_t),      intent(inout) :: f
+    character(len=*), intent(in)    :: expression
 
     PUSH_SUB(tdf_init_fromexpr)
 
@@ -499,12 +499,12 @@ contains
 
   !------------------------------------------------------------
   subroutine tdf_init_numerical(f, niter, dt, omegamax, initval, rep)
-    type(tdf_t), intent(inout) :: f
-    integer, intent(in) :: niter
-    FLOAT, intent(in)   :: dt
-    FLOAT, intent(in)   :: omegamax
-    FLOAT, intent(in), optional :: initval
-    integer, intent(in), optional :: rep
+    type(tdf_t),       intent(inout) :: f
+    integer,           intent(in)    :: niter
+    FLOAT,             intent(in)    :: dt
+    FLOAT,             intent(in)    :: omegamax
+    FLOAT,   optional, intent(in)    :: initval
+    integer, optional, intent(in)    :: rep
 
     integer :: n(3), optimize_parity(3)
     logical :: optimize(3)
@@ -559,8 +559,8 @@ contains
 
   !------------------------------------------------------------
   subroutine tdf_fourier_grid(f, wgrid)
-    type(tdf_t), intent(in) :: f
-    FLOAT, intent(inout)    :: wgrid(:)
+    type(tdf_t), intent(in)    :: f
+    FLOAT,       intent(inout) :: wgrid(:)
     integer :: i
     FLOAT   :: df
 
@@ -574,7 +574,8 @@ contains
          wgrid(i) = (i-1)*df
       enddo
     case default
-      stop 'Error'
+      message(1) = "Illegal mode in tdf_fourier_grid."
+      call messages_fatal(1)
     end select
 
     POP_SUB(tdf_fourier_grid)
@@ -585,8 +586,10 @@ contains
   !------------------------------------------------------------
   subroutine tdf_numerical_to_fourier(f)
     type(tdf_t), intent(inout) :: f
+
     integer :: j
     CMPLX, allocatable :: tmp(:)
+
     PUSH_SUB(tdf_numerical_to_fourier)
 
     SAFE_ALLOCATE(tmp(1:f%niter/2+1))
@@ -617,6 +620,7 @@ contains
   !------------------------------------------------------------
   subroutine tdf_fourier_to_numerical(f)
     type(tdf_t), intent(inout) :: f
+
     integer :: j
     CMPLX, allocatable :: tmp(:)
 
@@ -644,6 +648,7 @@ contains
   !------------------------------------------------------------
   subroutine tdf_numerical_to_zerofourier(f)
     type(tdf_t), intent(inout) :: f
+
     FLOAT :: s
     PUSH_SUB(tdf_numerical_to_zerofourier)
 
@@ -661,6 +666,7 @@ contains
   !------------------------------------------------------------
   subroutine tdf_zerofourier_to_numerical(f)
     type(tdf_t), intent(inout) :: f
+
     PUSH_SUB(tdf_zerofourier_to_numerical)
 
     ASSERT(f%valww(1) == M_ZERO)
@@ -715,8 +721,8 @@ contains
 
   !------------------------------------------------------------ 
   subroutine tdf_set_random(f, fdotf)
-    type(tdf_t), intent(inout)  :: f
-    FLOAT, intent(in), optional :: fdotf
+    type(tdf_t),     intent(inout) :: f
+    FLOAT, optional, intent(in)    :: fdotf
 
     type(c_ptr) :: random_gen_pointer
     integer :: i, n
@@ -731,7 +737,8 @@ contains
     case(TDF_ZERO_FOURIER)
       n = 2*f%nfreqs-2
     case default
-      stop 'Error'
+      message(1) = "Illegal value for f%mode in tdf_set_random."
+      call messages_fatal(1)
     end select
     SAFE_ALLOCATE(e(1:n))
 
@@ -772,10 +779,10 @@ contains
 
   !------------------------------------------------------------
   subroutine tdf_to_numerical(f, niter, dt, omegamax)
-    type(tdf_t), intent(inout) :: f
+    type(tdf_t),       intent(inout) :: f
     integer, optional, intent(in)    :: niter
-    FLOAT, optional,   intent(in)    :: dt
-    FLOAT, optional,   intent(in)    :: omegamax
+    FLOAT,   optional, intent(in)    :: dt
+    FLOAT,   optional, intent(in)    :: omegamax
 
     FLOAT :: t
     integer :: j
@@ -812,10 +819,10 @@ contains
   !------------------------------------------------------------
   FLOAT pure function tdfi(f, i) result(y)
     type(tdf_t), intent(in) :: f
-    integer, intent(in)     :: i
+    integer,     intent(in) :: i
 
     ! Maybe there should be a grid for any kind of function, so
-    ! that a meaningul number is produced in any case.
+    ! that a meaningful number is produced in any case.
     y = M_z0
     select case(f%mode)
     case(TDF_NUMERICAL)
@@ -833,7 +840,7 @@ contains
   !------------------------------------------------------------
   FLOAT function tdft(f, t) result(y)
     type(tdf_t), intent(in) :: f
-    FLOAT, intent(in)       :: t
+    FLOAT,       intent(in) :: t
 
     FLOAT :: r, fre, fim, tcu
     integer :: il, iu
@@ -927,7 +934,7 @@ contains
   !------------------------------------------------------------
   subroutine tdf_copy(fout, fin)
     type(tdf_t), intent(inout) :: fout
-    type(tdf_t), intent(in)  :: fin
+    type(tdf_t), intent(in)    :: fin
 
     PUSH_SUB(tdf_copy)
 
@@ -975,7 +982,7 @@ contains
 
   !------------------------------------------------------------
   subroutine tdf_scalar_multiply(alpha, f) 
-    FLOAT, intent(in) :: alpha
+    FLOAT,       intent(in)    :: alpha
     type(tdf_t), intent(inout) :: f
 
     PUSH_SUB(tdf_scalar_multiply)
@@ -998,7 +1005,7 @@ contains
 
   !------------------------------------------------------------
   subroutine tdf_cosine_multiply(omega, f) 
-    FLOAT, intent(in) :: omega
+    FLOAT,       intent(in)    :: omega
     type(tdf_t), intent(inout) :: f
 
     integer :: j
@@ -1022,7 +1029,7 @@ contains
   !------------------------------------------------------------
   subroutine tdf_write(f, iunit)
     type(tdf_t), intent(in) :: f
-    integer, intent(in) :: iunit
+    integer,     intent(in) :: iunit
 
     PUSH_SUB(tdf_write)
 
@@ -1079,6 +1086,7 @@ contains
   !------------------------------------------------------------
   FLOAT function tdf_dot_product(f, g) result (fg)
     type(tdf_t), intent(in) :: f, g
+
     integer :: i
     FLOAT :: t
 
@@ -1124,6 +1132,7 @@ contains
   !------------------------------------------------------------
   FLOAT function tdf_diff(f, g) result (fg)
     type(tdf_t), intent(in) :: f, g
+
     integer :: i
     type(tdf_t) :: fminusg
 
