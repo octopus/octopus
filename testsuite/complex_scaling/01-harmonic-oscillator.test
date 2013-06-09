@@ -9,10 +9,10 @@ Enabled    : Yes
 # direct_sum doesn't complex-scale correctly these days so this test temporarily uses 2D for the non-independent particle test
 
 Processors: 1
-Input: 01-harmonic-oscillator.independent.inp
+Input: 01-harmonic-oscillator.01-independent.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20)    ; 2.00000000      7.438546E-13
 match ; 3rd state   ; GREP(static/info, '   3   --     ', 12) ; 5.000000
 
-Input: 01-harmonic-oscillator.complex-lda.inp
+Input: 01-harmonic-oscillator.02-complex_lda.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; 2.0811
 match ; 3rd state    ; GREP(static/info, '   3   --     ', 12) ; 5.7692

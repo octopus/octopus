@@ -7,5 +7,5 @@ TestGroups : short-run; complex_scaling
 Enabled    : Yes
 
 Processors: 1
-Input: 02-1dwell.lda.inp
+Input: 02-1dwell.01-lda.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20)    ; -41.06552818     -4.267637E-03

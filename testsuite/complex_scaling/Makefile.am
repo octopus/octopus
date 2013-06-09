@@ -20,10 +20,10 @@
 sharedir = $(pkgdatadir)/testsuite/complex_scaling
 
 dist_share_DATA = \
-	01-harmonic-oscillator.complex-lda.inp \
-	01-harmonic-oscillator.independent.inp \
+	01-harmonic-oscillator.01-independent.inp \
+	01-harmonic-oscillator.02-complex_lda.inp \
 	01-harmonic-oscillator.test \
-	02-1dwell.lda.inp \
+	02-1dwell.01-lda.inp \
 	02-1dwell.test
 
 CLEANFILES = *~ *.bak
