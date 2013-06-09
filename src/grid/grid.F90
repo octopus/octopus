@@ -133,13 +133,6 @@ contains
     ! initialize to -1
     grid_spacing = -M_ONE
 
-#if defined(HAVE_GDLIB)
-    if(gr%sb%box_shape == BOX_IMAGE) then 
-      ! grid_spacing is determined from lsize and the size of the image
-      grid_spacing(1:2) = M_TWO*gr%sb%lsize(1:2)/real(gr%sb%image_size(1:2), REAL_PRECISION)
-    else
-#endif
-
     !%Variable Spacing
     !%Type float
     !%Section Mesh
@@ -148,7 +141,7 @@ contains
     !% coordinates, this is a canonical spacing that will be changed locally by the
     !% transformation. In periodic directions, your spacing may be slightly larger than
     !% what you request here, since the box size must be an integer multiple of the spacing.
-    !% This variable is ignored if <tt>BoxShape = box_image</tt>.
+    !% The default is defined by the species, or by the image resolution if <tt>BoxShape = box_image</tt>.
     !%
     !% It is possible to have a different spacing in each one of the Cartesian directions
     !% if we define <tt>Spacing</tt> as block of the form
@@ -171,6 +164,17 @@ contains
       if(def_h > M_ZERO) call messages_check_def(grid_spacing(1), .true., def_h, 'Spacing', units_out%length)
     end if
 
+#if defined(HAVE_GDLIB)
+    if(gr%sb%box_shape == BOX_IMAGE) then 
+      do idir = 1, gr%sb%dim
+        ! default grid_spacing is determined from lsize and the size of the image
+        if(grid_spacing(idir) < M_ZERO) then
+          grid_spacing(idir) = M_TWO*gr%sb%lsize(idir)/real(gr%sb%image_size(idir), REAL_PRECISION)
+        endif
+      enddo
+    endif
+#endif
+
     do idir = 1, gr%sb%dim
       if(grid_spacing(idir) < M_ZERO) then
         if(def_h > M_ZERO .and. def_h < huge(def_h)) then
@@ -189,10 +193,6 @@ contains
         end if
       end if
     end do
-
-#if defined(HAVE_GDLIB)
-  end if
-#endif
 
     ! initialize curvilinear coordinates
     call curvilinear_init(gr%cv, gr%sb, geo, grid_spacing)

@@ -367,8 +367,9 @@ contains
       !% The simulation box will be defined through an image, specified with <tt>BoxShapeImage</tt>.
       !% White (RGB = 255,255,255) means that the point
       !% is contained in the simulation box, while any other color means that the point is out.
-      !% The image will be scaled to fit <tt>Lsize</tt>, while its resolution will define <tt>Spacing</tt>.
-      !% The actual box may be slightly larger than <tt>Lsize</tt> to ensure one grid point = one pixel.
+      !% The image will be scaled to fit <tt>Lsize</tt>, while its resolution will define the default <tt>Spacing</tt>.
+      !% The actual box may be slightly larger than <tt>Lsize</tt> to ensure one grid point = one pixel for
+      !% default <tt>Spacing</tt>.
       !%Option user_defined 77
       !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>.
       !%Option hypercube 6
