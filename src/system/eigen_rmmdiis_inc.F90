@@ -71,12 +71,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   failed = .false.
   prog = 0
 
-  do ib = st%block_start, st%block_end
+  do ib = st%group%block_start, st%group%block_end
     minst = states_block_min(st, ib)
     maxst = states_block_max(st, ib)
     bsize = maxst - minst + 1
 
-    psib(1)%batch => st%psib(ib, ik)
+    psib(1)%batch => st%group%psib(ib, ik)
 
     if(pack) call batch_pack(psib(1)%batch)
 
@@ -105,7 +105,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     if(all(done(1:bsize) /= 0)) then
       if(pack) then
-        call batch_unpack(st%psib(ib, ik))
+        call batch_unpack(st%group%psib(ib, ik))
       end if
       call batch_end(resb(1)%batch, copy = .false.)
       cycle
@@ -286,11 +286,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     if(save_pack_mem) call batch_pack(psib(1)%batch, copy = .false.)
 
-    call batch_copy_data(gr%mesh%np, resb(niter - 1)%batch, st%psib(ib, ik))
+    call batch_copy_data(gr%mesh%np, resb(niter - 1)%batch, st%group%psib(ib, ik))
 
     call batch_end(resb(niter - 1)%batch, copy = .false.)
 
-    if(pack) call batch_unpack(st%psib(ib, ik))
+    if(pack) call batch_unpack(st%group%psib(ib, ik))
 
     prog = prog + bsize
     if(mpi_grp_is_root(mpi_world)) then
@@ -307,18 +307,18 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   SAFE_ALLOCATE(eigen(st%st_start:st%st_end))
 
-  do ib = st%block_start, st%block_end
+  do ib = st%group%block_start, st%group%block_end
     minst = states_block_min(st, ib)
     maxst = states_block_max(st, ib)
 
-    call batch_copy(st%psib(ib, ik), resb(1)%batch, reference = .false.)
+    call batch_copy(st%group%psib(ib, ik), resb(1)%batch, reference = .false.)
 
-    call X(hamiltonian_apply_batch)(hm, gr%der, st%psib(ib, ik), resb(1)%batch, ik)
-    call X(mesh_batch_dotp_vector)(gr%der%mesh, st%psib(ib, ik), resb(1)%batch, eigen(minst:maxst))
+    call X(hamiltonian_apply_batch)(hm, gr%der, st%group%psib(ib, ik), resb(1)%batch, ik)
+    call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, eigen(minst:maxst))
 
     st%eigenval(minst:maxst, ik) = R_REAL(eigen(minst:maxst))
 
-    call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%psib(ib, ik), resb(1)%batch)
+    call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb(1)%batch)
 
     call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(1)%batch, resb(1)%batch, eigen(minst:maxst))
 
@@ -389,27 +389,27 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
   niter = 0
 
-  do ib = st%block_start, st%block_end
+  do ib = st%group%block_start, st%group%block_end
     minst = states_block_min(st, ib)
     maxst = states_block_max(st, ib)
 
-    if(pack) call batch_pack(st%psib(ib, ik))
+    if(pack) call batch_pack(st%group%psib(ib, ik))
 
-    call batch_copy(st%psib(ib, ik), resb, reference = .false.)
-    call batch_copy(st%psib(ib, ik), kresb, reference = .false.)
+    call batch_copy(st%group%psib(ib, ik), resb, reference = .false.)
+    call batch_copy(st%group%psib(ib, ik), kresb, reference = .false.)
 
     do isd = 1, sd_steps
 
-      call X(hamiltonian_apply_batch)(hm, gr%der, st%psib(ib, ik), resb, ik)
+      call X(hamiltonian_apply_batch)(hm, gr%der, st%group%psib(ib, ik), resb, ik)
 
-      call X(mesh_batch_dotp_vector)(gr%mesh, st%psib(ib, ik), resb, me1(1, :), reduce = .false.)
-      call X(mesh_batch_dotp_vector)(gr%mesh, st%psib(ib, ik), st%psib(ib, ik), me1(2, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), resb, me1(1, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me1(2, :), reduce = .false.)
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me1)
 
       forall(ist = minst:maxst) st%eigenval(ist, ik) = R_REAL(me1(1, ist - minst + 1)/me1(2, ist - minst + 1))
  
-      call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%psib(ib, ik), resb)
+      call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb)
 
       call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb, kresb)
 
@@ -418,9 +418,9 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
       niter = niter + 2*(maxst - minst + 1)
 
       call X(mesh_batch_dotp_vector)(gr%mesh, kresb, kresb, me2(1, :), reduce = .false.)
-      call X(mesh_batch_dotp_vector)(gr%mesh, st%psib(ib, ik),  kresb, me2(2, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik),  kresb, me2(2, :), reduce = .false.)
       call X(mesh_batch_dotp_vector)(gr%mesh, kresb, resb,  me2(3, :), reduce = .false.)
-      call X(mesh_batch_dotp_vector)(gr%mesh, st%psib(ib, ik),  resb,  me2(4, :), reduce = .false.)
+      call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik),  resb,  me2(4, :), reduce = .false.)
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me2)
 
@@ -435,11 +435,11 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
       end do
 
-      call batch_axpy(gr%mesh%np, lambda, kresb, st%psib(ib, ik))
+      call batch_axpy(gr%mesh%np, lambda, kresb, st%group%psib(ib, ik))
       
     end do
 
-    if(pack) call batch_unpack(st%psib(ib, ik))
+    if(pack) call batch_unpack(st%group%psib(ib, ik))
 
     call batch_end(resb, copy = .false.)
     call batch_end(kresb, copy = .false.)

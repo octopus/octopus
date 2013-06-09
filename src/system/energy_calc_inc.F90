@@ -61,28 +61,28 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
   SAFE_ALLOCATE(eigen(st%st_start:st%st_end))
 
   do ik = st%d%kpt%start, st%d%kpt%end
-    do ib = st%block_start, st%block_end
+    do ib = st%group%block_start, st%group%block_end
 
       minst = states_block_min(st, ib)
       maxst = states_block_max(st, ib)
 
-      call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
+      call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
-        call batch_pack(st%psib(ib, ik))
+        call batch_pack(st%group%psib(ib, ik))
         if(st%have_left_states) call batch_pack(st%psibL(ib, ik))
         call batch_pack(hpsib, copy = .false.)
       end if
 
       
-      call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik, time)
+      call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik, time)
       if(st%have_left_states) then
         call X(mesh_batch_dotp_vector)(der%mesh, st%psibL(ib, ik), hpsib, eigen(minst:maxst), cproduct = cmplxscl)
       else
-        call X(mesh_batch_dotp_vector)(der%mesh, st%psib(ib, ik), hpsib, eigen(minst:maxst), cproduct = cmplxscl)        
+        call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst), cproduct = cmplxscl)        
       end if
       if(hamiltonian_apply_packed(hm, der%mesh)) then
-        call batch_unpack(st%psib(ib, ik), copy = .false.)
+        call batch_unpack(st%group%psib(ib, ik), copy = .false.)
         if(st%have_left_states) call batch_unpack(st%psibL(ib, ik), copy = .false.)
       end if
 
@@ -126,17 +126,17 @@ R_TYPE function X(energy_calc_electronic)(hm, der, st, terms, cproduct) result(e
   tt = M_ZERO
 
   do ik = st%d%kpt%start, st%d%kpt%end
-    do ib = st%block_start, st%block_end
+    do ib = st%group%block_start, st%group%block_end
       minst = states_block_min(st, ib)
       maxst = states_block_max(st, ib)
 
-      call batch_copy(st%psib(ib, ik), hpsib, reference = .false.)
+      call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
 
-      call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hpsib, ik, terms = terms)
+      call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik, terms = terms)
       if(st%have_left_states) then
         call X(mesh_batch_dotp_vector)(der%mesh, st%psibL(ib, ik), hpsib, tt(minst:maxst, ik), cproduct = cproduct_)
       else
-        call X(mesh_batch_dotp_vector)(der%mesh, st%psib(ib, ik), hpsib, tt(minst:maxst, ik), cproduct = cproduct_)
+        call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, tt(minst:maxst, ik), cproduct = cproduct_)
       end if
       call batch_end(hpsib, copy = .false.)
 

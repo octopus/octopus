@@ -387,11 +387,11 @@ contains
     end if
     
     do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%block_start, st%block_end
+      do ib = st%group%block_start, st%group%block_end
         if(cmplxscl) then
-          call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik), st%psibL(ib, ik))
+          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik), st%psibL(ib, ik))
         else
-          call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
+          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
         end if
       end do
     end do
@@ -434,10 +434,10 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       if(n < st%st_start .or. n > st%st_end) cycle
 
-      do ib =  st%block_start, st%block_end
+      do ib =  st%group%block_start, st%group%block_end
         if(states_block_max(st, ib) <= n) then
 
-          call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
+          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
           if(states_block_max(st, ib) == n) exit
 
         else 

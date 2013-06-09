@@ -413,8 +413,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
       
-      do ib = st%block_start, st%block_end
-        call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psicopy)
+      do ib = st%group%block_start, st%group%block_end
+        call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy)
       end do
       
       do idim = 1, st%d%dim
@@ -426,8 +426,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
       end do
       
-      do ib = st%block_start, st%block_end
-        call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psicopy)
+      do ib = st%group%block_start, st%group%block_end
+        call batch_set_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy)
       end do
 
     end do 
@@ -437,7 +437,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_trsm for spinors')
 
 #ifdef HAVE_OPENCL
-    block_size = batch_points_block_size(st%psib(st%block_start, ik))
+    block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
     call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
@@ -452,9 +452,9 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
       
-      do ib = st%block_start, st%block_end
-        ASSERT(R_TYPE_VAL == batch_type(st%psib(ib, ik)))
-        call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
+      do ib = st%group%block_start, st%group%block_end
+        ASSERT(R_TYPE_VAL == batch_type(st%group%psib(ib, ik)))
+        call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
 #if defined(HAVE_CLAMDBLAS) && defined(R_TREAL)
@@ -488,8 +488,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 #endif
       call opencl_finish()
 
-      do ib = st%block_start, st%block_end
-        call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
+      do ib = st%group%block_start, st%group%block_end
+        call batch_set_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
     end do
     
@@ -1216,8 +1216,8 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
       
-      do ib = st%block_start, st%block_end
-        call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psicopy)
+      do ib = st%group%block_start, st%group%block_end
+        call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy)
       end do
       
       do idim = 1, st%d%dim
@@ -1232,8 +1232,8 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
         
       end do
       
-      do ib = st%block_start, st%block_end
-        call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psinew)
+      do ib = st%group%block_start, st%group%block_end
+        call batch_set_points(st%group%psib(ib, ik), sp, sp + size - 1, psinew)
       end do
 
     end do
@@ -1244,7 +1244,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_rotate for spinors')
 #ifdef HAVE_OPENCL
-    block_size = batch_points_block_size(st%psib(st%block_start, ik))
+    block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
     call opencl_create_buffer(uu_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
     call opencl_write_buffer(uu_buffer, product(ubound(uu)), uu)
@@ -1255,8 +1255,8 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
       
-      do ib = st%block_start, st%block_end
-        call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
+      do ib = st%group%block_start, st%group%block_end
+        call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
 #ifdef HAVE_CLAMDBLAS
@@ -1294,8 +1294,8 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
 
       call opencl_finish()
 
-      do ib = st%block_start, st%block_end
-        call batch_set_points(st%psib(ib, ik), sp, sp + size - 1, psinew_buffer, st%nst)
+      do ib = st%group%block_start, st%group%block_end
+        call batch_set_points(st%group%psib(ib, ik), sp, sp + size - 1, psinew_buffer, st%nst)
       end do
     end do
 
@@ -1367,8 +1367,8 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
 
-      do ib = st%block_start, st%block_end
-        call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psi)
+      do ib = st%group%block_start, st%group%block_end
+        call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi)
       end do
 
       if(mesh%use_curvilinear) then
@@ -1412,16 +1412,16 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
     ! we need to use a temporary array
 
-    block_size = batch_points_block_size(st%psib(st%block_start, ik))
+    block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
     call opencl_create_buffer(psi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
 
-      do ib = st%block_start, st%block_end
-        ASSERT(R_TYPE_VAL == batch_type(st%psib(ib, ik)))
-        call batch_get_points(st%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
+      do ib = st%group%block_start, st%group%block_end
+        ASSERT(R_TYPE_VAL == batch_type(st%group%psib(ib, ik)))
+        call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
       end do
 
 #ifdef R_TREAL
@@ -1468,12 +1468,12 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
     ASSERT(.not. present(psi2))
 
-    do ib = st%block_start, st%block_end
-      do jb = ib, st%block_end
+    do ib = st%group%block_start, st%group%block_end
+      do jb = ib, st%group%block_end
         if(ib == jb) then
-          call X(mesh_batch_dotp_self)(mesh, st%psib(ib, ik), overlap)
+          call X(mesh_batch_dotp_self)(mesh, st%group%psib(ib, ik), overlap)
         else
-          call X(mesh_batch_dotp_matrix)(mesh, st%psib(ib, ik), st%psib(jb, ik), overlap)
+          call X(mesh_batch_dotp_matrix)(mesh, st%group%psib(ib, ik), st%group%psib(jb, ik), overlap)
         end if
       end do
     end do

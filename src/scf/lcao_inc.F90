@@ -625,10 +625,10 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
         call lcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, ispin, iatom, this%norb_atom(iatom))
 
-        do ib = st%block_start, st%block_end
+        do ib = st%group%block_start, st%group%block_end
           ! FIXME: this call handles spinors incorrectly.
           call X(submesh_batch_add_matrix)(this%sphere(iatom), evec(ibasis:, states_block_min(st, ib):), &
-            this%orbitals(iatom), st%psib(ib, ik))
+            this%orbitals(iatom), st%group%psib(ib, ik))
         end do
 
         if(.not. this%keep_orb) call lcao_alt_end_orbital(this%orbitals(iatom))

@@ -51,9 +51,9 @@ subroutine X(states_get_state1)(st, mesh, idim, ist, iqn, psi, left)
 
   if (optional_default(left, .false.)) then
     ASSERT(st%have_left_states)
-    call batch_get_state(st%psibL(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
+    call batch_get_state(st%psibL(st%group%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
   else
-    call batch_get_state(st%psib(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
+    call batch_get_state(st%group%psib(st%group%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
   end if
 
 
@@ -96,9 +96,9 @@ subroutine X(states_set_state1)(st, mesh, idim, ist, iqn, psi, left)
   
   if (optional_default(left, .false.)) then
     ASSERT(st%have_left_states)
-    call batch_set_state(st%psibL(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
+    call batch_set_state(st%psibL(st%group%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
   else
-    call batch_set_state(st%psib(st%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
+    call batch_set_state(st%group%psib(st%group%iblock(ist, iqn), iqn), (/ist, idim/), mesh%np, psi)
   end if
   
   POP_SUB(X(states_set_state1))
@@ -120,8 +120,8 @@ subroutine X(states_get_points1)(st, start_point, end_point, iqn, psi)
 
   PUSH_SUB(X(states_get_points1))
     
-  do ib = st%block_start, st%block_end
-    call batch_get_points(st%psib(ib, iqn), start_point, end_point, psi)
+  do ib = st%group%block_start, st%group%block_end
+    call batch_get_points(st%group%psib(ib, iqn), start_point, end_point, psi)
   end do
   
   POP_SUB(X(states_get_points1))

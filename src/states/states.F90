@@ -58,6 +58,7 @@ module states_m
   use profiling_m
   use simul_box_m
   use smear_m
+  use states_group_m
   use states_dim_m
   use symmetrizer_m
   use types_m
@@ -173,16 +174,7 @@ module states_m
     type(batch_t),   pointer :: psibL(:, :)  !< Left wave-functions blocks
     logical                  :: have_left_states
 
-
-    type(batch_t), pointer   :: psib(:, :)            !< A set of wave-functions blocks
-    integer                  :: nblocks               !< The number of blocks
-    integer                  :: block_start           !< The lowest index of local blocks
-    integer                  :: block_end             !< The highest index of local blocks
-    integer, pointer         :: iblock(:, :)          !< A map, that for each state index, returns the index of block containing it
-    integer, pointer         :: block_range(:, :)     !< Each block contains states from block_range(:, 1) to block_range(:, 2)
-    integer, pointer         :: block_size(:)         !< The number of states in each block.
-    logical, pointer         :: block_is_local(:, :)  !< It is true if the block is in this node.
-    logical                  :: block_initialized     !< For keeping track of the blocks to avoid memory leaks
+    type(states_group_t)     :: group
 
     logical             :: open_boundaries
     CMPLX, pointer      :: zphi(:, :, :, :)  !< Free states for open-boundary calculations.
@@ -271,6 +263,8 @@ contains
     PUSH_SUB(states_null)
 
     call states_dim_null(st%d)
+    call states_group_null(st%group)
+
     st%d%orth_method = 0
     call modelmb_particles_nullify(st%modelmbparticles)
     st%priv%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
@@ -285,10 +279,6 @@ contains
     nullify(st%psibL)
 
     nullify(st%dpsi, st%zpsi)
-    nullify(st%psib, st%iblock, st%block_is_local)
-    nullify(st%block_range)
-    st%block_initialized = .false.
-
     
     nullify(st%zphi, st%ob_eigenval, st%ob_occ)
     st%open_boundaries = .false.
@@ -1326,19 +1316,19 @@ contains
 
     SAFE_ALLOCATE(bstart(1:st%nst))
     SAFE_ALLOCATE(bend(1:st%nst))
-    SAFE_ALLOCATE(st%iblock(1:st%nst, 1:st%d%nik))
-    st%iblock = 0
+    SAFE_ALLOCATE(st%group%iblock(1:st%nst, 1:st%d%nik))
+    st%group%iblock = 0
 
     verbose_ = optional_default(verbose, .true.)
 
     ! count and assign blocks
     ib = 0
-    st%nblocks = 0
+    st%group%nblocks = 0
     bstart(1) = 1
     do ist = 1, st%nst
       INCR(ib, 1)
 
-      st%iblock(ist, st%d%kpt%start:st%d%kpt%end) = st%nblocks + 1
+      st%group%iblock(ist, st%d%kpt%start:st%d%kpt%end) = st%group%nblocks + 1
 
       same_node = .true.
       if(st%parallel_in_states .and. ist /= st%nst) then
@@ -1349,43 +1339,43 @@ contains
 
       if(ib == st%d%block_size .or. ist == st%nst .or. .not. same_node) then
         ib = 0
-        INCR(st%nblocks, 1)
-        bend(st%nblocks) = ist
-        if(ist /= st%nst) bstart(st%nblocks + 1) = ist + 1
+        INCR(st%group%nblocks, 1)
+        bend(st%group%nblocks) = ist
+        if(ist /= st%nst) bstart(st%group%nblocks + 1) = ist + 1
       end if
     end do
 
-    SAFE_ALLOCATE(st%psib(1:st%nblocks, 1:st%d%nik))
+    SAFE_ALLOCATE(st%group%psib(1:st%group%nblocks, 1:st%d%nik))
     if(st%have_left_states) then
-      SAFE_ALLOCATE(st%psibL(1:st%nblocks, 1:st%d%nik))
+      SAFE_ALLOCATE(st%psibL(1:st%group%nblocks, 1:st%d%nik))
     end if
-    SAFE_ALLOCATE(st%block_is_local(1:st%nblocks, 1:st%d%nik))
-    st%block_is_local = .false.
-    st%block_start  = -1
-    st%block_end    = -2  ! this will make that loops block_start:block_end do not run if not initialized
+    SAFE_ALLOCATE(st%group%block_is_local(1:st%group%nblocks, 1:st%d%nik))
+    st%group%block_is_local = .false.
+    st%group%block_start  = -1
+    st%group%block_end    = -2  ! this will make that loops block_start:block_end do not run if not initialized
 
-    do ib = 1, st%nblocks
+    do ib = 1, st%group%nblocks
       if(bstart(ib) >= st%st_start .and. bend(ib) <= st%st_end) then
-        if(st%block_start == -1) st%block_start = ib
-        st%block_end = ib
+        if(st%group%block_start == -1) st%group%block_start = ib
+        st%group%block_end = ib
         do iqn = st%d%kpt%start, st%d%kpt%end
-          st%block_is_local(ib, iqn) = .true.
+          st%group%block_is_local(ib, iqn) = .true.
 
           if (states_are_real(st)) then
             if(associated(st%dpsi)) then
-              call batch_init(st%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%dpsi(:, :, bstart(ib):bend(ib), iqn))
+              call batch_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%dpsi(:, :, bstart(ib):bend(ib), iqn))
             else
               ASSERT(present(mesh))
-              call batch_init(st%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-              call dbatch_new(st%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+              call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
+              call dbatch_new(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
             end if
           else
             if(associated(st%zpsi)) then
-              call batch_init(st%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%zpsi(:, :, bstart(ib):bend(ib), iqn))
+              call batch_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%zpsi(:, :, bstart(ib):bend(ib), iqn))
             else
               ASSERT(present(mesh))
-              call batch_init(st%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-              call zbatch_new(st%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+              call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
+              call zbatch_new(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
             end if
             if(st%have_left_states) then !cmplxscl
               if(associated(st%psi%zL)) then
@@ -1396,7 +1386,7 @@ contains
                 call zbatch_new(st%psibL(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
               end if 
             else
-              st%psibL => st%psib                           
+              st%psibL => st%group%psib                           
             end if            
           end if
           
@@ -1404,29 +1394,29 @@ contains
       end if
     end do
 
-    SAFE_ALLOCATE(st%block_range(1:st%nblocks, 1:2))
-    SAFE_ALLOCATE(st%block_size(1:st%nblocks))
+    SAFE_ALLOCATE(st%group%block_range(1:st%group%nblocks, 1:2))
+    SAFE_ALLOCATE(st%group%block_size(1:st%group%nblocks))
 
-    st%block_range(1:st%nblocks, 1) = bstart(1:st%nblocks)
-    st%block_range(1:st%nblocks, 2) = bend(1:st%nblocks)
-    st%block_size(1:st%nblocks) = bend(1:st%nblocks) - bstart(1:st%nblocks) + 1
+    st%group%block_range(1:st%group%nblocks, 1) = bstart(1:st%group%nblocks)
+    st%group%block_range(1:st%group%nblocks, 2) = bend(1:st%group%nblocks)
+    st%group%block_size(1:st%group%nblocks) = bend(1:st%group%nblocks) - bstart(1:st%group%nblocks) + 1
 
-    st%block_initialized = .true.
+    st%group%block_initialized = .true.
 
     if(verbose_) then
       call messages_write('Info: Blocks of states')
       call messages_info()
-      do ib = 1, st%nblocks
+      do ib = 1, st%group%nblocks
         call messages_write('      Block ')
         call messages_write(ib)
         call messages_write(' contains ')
-        call messages_write(st%block_size(ib))
+        call messages_write(st%group%block_size(ib))
         call messages_write(' states')
-        if(st%block_size(ib) > 0) then
+        if(st%group%block_size(ib) > 0) then
           call messages_write(':')
-          call messages_write(st%block_range(ib, 1))
+          call messages_write(st%group%block_range(ib, 1))
           call messages_write(' - ')
-          call messages_write(st%block_range(ib, 2))
+          call messages_write(st%group%block_range(ib, 2))
         endif
         call messages_info()
       end do
@@ -1436,11 +1426,11 @@ contains
 !     if(st%have_left_states) then
 !       do ib = 1, st%nblocks
 !         do iqn = st%d%kpt%start, st%d%kpt%end
-!           call batch_copy(st%psib(ib,iqn), st%psibL(ib,iqn), reference = .false.)
+!           call batch_copy(st%group%psib(ib,iqn), st%psibL(ib,iqn), reference = .false.)
 !         end do
 !       end do
 !     else
-!       st%psibL => st%psib
+!       st%psibL => st%group%psib
 !     end if
 
 !!$!!!!DEBUG
@@ -1448,15 +1438,15 @@ contains
 !!$    if(mpi_grp_is_root(mpi_world)) then
 !!$      print*, "NST       ", st%nst
 !!$      print*, "BLOCKSIZE ", st%d%block_size
-!!$      print*, "NBLOCKS   ", st%nblocks
+!!$      print*, "NBLOCKS   ", st%group%nblocks
 !!$
 !!$      print*, "==============="
 !!$      do ist = 1, st%nst
-!!$        print*, st%node(ist), ist, st%iblock(ist, 1)
+!!$        print*, st%node(ist), ist, st%group%iblock(ist, 1)
 !!$      end do
 !!$      print*, "==============="
 !!$
-!!$      do ib = 1, st%nblocks
+!!$      do ib = 1, st%group%nblocks
 !!$        print*, ib, bstart(ib), bend(ib)
 !!$      end do
 !!$
@@ -1478,28 +1468,28 @@ contains
 
     PUSH_SUB(states_deallocate_wfns)
 
-    if (st%block_initialized) then
-       do ib = 1, st%nblocks
+    if (st%group%block_initialized) then
+       do ib = 1, st%group%nblocks
           do iq = st%d%kpt%start, st%d%kpt%end
-            if(st%block_is_local(ib, iq)) then
-              call batch_end(st%psib(ib, iq))
+            if(st%group%block_is_local(ib, iq)) then
+              call batch_end(st%group%psib(ib, iq))
               if(st%have_left_states) call batch_end(st%psibL(ib, iq)) !cmplxscl
             end if
           end do
        end do
 
-       SAFE_DEALLOCATE_P(st%psib)
+       SAFE_DEALLOCATE_P(st%group%psib)
 
        if(st%have_left_states) then !cmplxscl
          SAFE_DEALLOCATE_P(st%psibL)
        else  
          nullify(st%psibL)
        end if      
-       SAFE_DEALLOCATE_P(st%iblock)
-       SAFE_DEALLOCATE_P(st%block_range)
-       SAFE_DEALLOCATE_P(st%block_size)
-       SAFE_DEALLOCATE_P(st%block_is_local)
-       st%block_initialized = .false.
+       SAFE_DEALLOCATE_P(st%group%iblock)
+       SAFE_DEALLOCATE_P(st%group%block_range)
+       SAFE_DEALLOCATE_P(st%group%block_size)
+       SAFE_DEALLOCATE_P(st%group%block_is_local)
+       st%group%block_initialized = .false.
     end if
 
     if (states_are_real(st)) then
@@ -1737,7 +1727,7 @@ contains
     
     ! the call to init_block is done at the end of this subroutine
     ! it allocates iblock, psib, block_is_local
-    stout%nblocks = stin%nblocks
+    stout%group%nblocks = stin%group%nblocks
 
     stout%open_boundaries = stin%open_boundaries
     ! Warning: some of the "open boundaries" variables are not copied.
@@ -1783,8 +1773,8 @@ contains
 
     stout%symmetrize_density = stin%symmetrize_density
 
-    stout%block_initialized = .false.
-    if(stin%block_initialized) then
+    stout%group%block_initialized = .false.
+    if(stin%group%block_initialized) then
       call states_init_block(stout, verbose = .false.)
     end if
 
@@ -2586,22 +2576,22 @@ contains
 
     mem = 0
     qnloop: do iqn = st%d%kpt%start, st%d%kpt%end
-      do ib = st%block_start, st%block_end
+      do ib = st%group%block_start, st%group%block_end
 
-        mem = mem + batch_pack_size(st%psib(ib, iqn))
+        mem = mem + batch_pack_size(st%group%psib(ib, iqn))
 
         if(mem > max_mem) then
           call messages_write('Not enough CL device memory to store all states simultaneously.', new_line = .true.)
           call messages_write('Only ')
-          call messages_write(ib - st%block_start)
+          call messages_write(ib - st%group%block_start)
           call messages_write(' of ')
-          call messages_write(st%block_end - st%block_start + 1)
+          call messages_write(st%group%block_end - st%group%block_start + 1)
           call messages_write(' blocks will be stored in device memory.', new_line = .true.)
           call messages_warning()
           exit qnloop
         end if
         
-        call batch_pack(st%psib(ib, iqn), copy)
+        call batch_pack(st%group%psib(ib, iqn), copy)
         if(st%have_left_states)  call batch_pack(st%psibL(ib, iqn), copy)
       end do
     end do qnloop
@@ -2624,9 +2614,9 @@ contains
     st%packed = .false.
 
     do iqn = st%d%kpt%start, st%d%kpt%end
-      do ib = st%block_start, st%block_end
-        if(batch_is_packed(st%psib(ib, iqn))) call batch_unpack(st%psib(ib, iqn), copy)
-        if(batch_is_packed(st%psib(ib, iqn)) .and. st%have_left_states) call batch_unpack(st%psibL(ib, iqn), copy)        
+      do ib = st%group%block_start, st%group%block_end
+        if(batch_is_packed(st%group%psib(ib, iqn))) call batch_unpack(st%group%psib(ib, iqn), copy)
+        if(batch_is_packed(st%group%psib(ib, iqn)) .and. st%have_left_states) call batch_unpack(st%psibL(ib, iqn), copy)        
       end do
     end do
 
@@ -2645,8 +2635,8 @@ contains
     if(states_are_packed(st)) then
 
       do iqn = st%d%kpt%start, st%d%kpt%end
-        do ib = st%block_start, st%block_end
-          call batch_sync(st%psib(ib, iqn))
+        do ib = st%group%block_start, st%group%block_end
+          call batch_sync(st%group%psib(ib, iqn))
           if(st%have_left_states) call batch_sync(st%psibL(ib, iqn))
         end do
       end do
@@ -2697,8 +2687,8 @@ contains
     PUSH_SUB(states_set_zero)
 
     do iqn = st%d%kpt%start, st%d%kpt%end
-      do ib = st%block_start, st%block_end
-        call batch_set_zero(st%psib(ib, iqn))
+      do ib = st%group%block_start, st%group%block_end
+        call batch_set_zero(st%group%psib(ib, iqn))
         if(st%have_left_states) call batch_set_zero(st%psibL(ib, iqn)) 
       end do
     end do
@@ -2712,7 +2702,7 @@ contains
     type(states_t),    intent(in) :: st
     integer,           intent(in) :: ib
     
-    range = st%block_range(ib, 1)
+    range = st%group%block_range(ib, 1)
   end function states_block_min
 
   ! ------------------------------------------------------------
@@ -2721,7 +2711,7 @@ contains
     type(states_t),    intent(in) :: st
     integer,           intent(in) :: ib
     
-    range = st%block_range(ib, 2)
+    range = st%group%block_range(ib, 2)
   end function states_block_max
 
   ! ------------------------------------------------------------
@@ -2730,7 +2720,7 @@ contains
     type(states_t),    intent(in) :: st
     integer,           intent(in) :: ib
     
-    size = st%block_size(ib)
+    size = st%group%block_size(ib)
   end function states_block_size
 
 #include "undef.F90"

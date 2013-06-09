@@ -358,14 +358,14 @@ subroutine X(hamiltonian_apply_all) (hm, der, st, hst, time, Imtime)
 
   if(present(Imtime)) then
     do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%block_start, st%block_end
-        call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hst%psib(ib, ik), ik, time, Imtime)
+      do ib = st%group%block_start, st%group%block_end
+        call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time, Imtime)
       end do
     end do
   else 
     do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%block_start, st%block_end
-        call X(hamiltonian_apply_batch)(hm, der, st%psib(ib, ik), hst%psib(ib, ik), ik, time)
+      do ib = st%group%block_start, st%group%block_end
+        call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time)
       end do
     end do
   end if

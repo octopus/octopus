@@ -661,19 +661,19 @@ contains
         call density_calc_init(dens_calc, st, gr, st%rho)
 
         do ik = st%d%kpt%start, st%d%kpt%end
-          do ib = st%block_start, st%block_end
+          do ib = st%group%block_start, st%group%block_end
 
             !save the state
-            call batch_copy(st%psib(ib, ik), zpsib_save, reference = .false.)
-            if(batch_is_packed(st%psib(ib, ik))) call batch_pack(zpsib_save, copy = .false.)
-            call batch_copy_data(gr%der%mesh%np, st%psib(ib, ik), zpsib_save)
+            call batch_copy(st%group%psib(ib, ik), zpsib_save, reference = .false.)
+            if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_save, copy = .false.)
+            call batch_copy_data(gr%der%mesh%np, st%group%psib(ib, ik), zpsib_save)
 
             !propagate the state dt with H(time - dt)
-            call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/mu, time - dt)
-            call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
+            call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/mu, time - dt)
+            call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
 
             !restore the saved state
-            call batch_copy_data(gr%der%mesh%np, zpsib_save, st%psib(ib, ik))
+            call batch_copy_data(gr%der%mesh%np, zpsib_save, st%group%psib(ib, ik))
 
             call batch_end(zpsib_save)
 
@@ -691,8 +691,8 @@ contains
 
       ! propagate dt/2 with H(time - dt)
       do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%block_start, st%block_end
-          call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/(mu*M_TWO), time - dt)
+        do ib = st%group%block_start, st%group%block_end
+          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(mu*M_TWO), time - dt)
         end do
       end do
 
@@ -714,8 +714,8 @@ contains
       call hamiltonian_update(hm, gr%mesh, time = time)
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%block_start, st%block_end
-          call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/(M_TWO*mu), time)
+        do ib = st%group%block_start, st%group%block_end
+          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(M_TWO*mu), time)
         end do
       end do
 
@@ -751,8 +751,8 @@ contains
 
       ! propagate half of the time step with H(time - dt)
       do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%block_start, st%block_end
-          call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/(M_TWO*mu), time - dt)
+        do ib = st%group%block_start, st%group%block_end
+          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(M_TWO*mu), time - dt)
         end do
       end do
 
@@ -801,48 +801,48 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         ispin = states_dim_get_spin_index(st%d, ik)
 
-        do ib = st%block_start, st%block_end
-          if(hamiltonian_apply_packed(hm, gr%mesh)) call batch_pack(st%psib(ib, ik))
+        do ib = st%group%block_start, st%group%block_end
+          if(hamiltonian_apply_packed(hm, gr%mesh)) call batch_pack(st%group%psib(ib, ik))
           
           if(tr%method == PROP_CAETRS) then
             call profiling_in(phase_prof, "CAETRS_PHASE")
-            select case(batch_status(st%psib(ib, ik)))
+            select case(batch_status(st%group%psib(ib, ik)))
             case(BATCH_NOT_PACKED)
               do ip = 1, gr%mesh%np
                 vv = vold(ip, ispin)
                 phase = TOCMPLX(cos(vv), -sin(vv))
-                forall(ist = 1:st%psib(ib, ik)%nst_linear)
-                  st%psib(ib, ik)%states_linear(ist)%zpsi(ip) = st%psib(ib, ik)%states_linear(ist)%zpsi(ip)*phase
+                forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
+                  st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip) = st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip)*phase
                 end forall
               end do
             case(BATCH_PACKED)
               do ip = 1, gr%mesh%np
                 vv = vold(ip, ispin)
                 phase = TOCMPLX(cos(vv), -sin(vv))
-                forall(ist = 1:st%psib(ib, ik)%nst_linear)
-                  st%psib(ib, ik)%pack%zpsi(ist, ip) = st%psib(ib, ik)%pack%zpsi(ist, ip)*phase
+                forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
+                  st%group%psib(ib, ik)%pack%zpsi(ist, ip) = st%group%psib(ib, ik)%pack%zpsi(ist, ip)*phase
                 end forall
               end do
             case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
               call opencl_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
               call opencl_set_kernel_arg(kernel_phase, 1, phase_buff)
-              call opencl_set_kernel_arg(kernel_phase, 2, st%psib(ib, ik)%pack%buffer)
-              call opencl_set_kernel_arg(kernel_phase, 3, log2(st%psib(ib, ik)%pack%size(1)))
+              call opencl_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%pack%buffer)
+              call opencl_set_kernel_arg(kernel_phase, 3, log2(st%group%psib(ib, ik)%pack%size(1)))
 
-              iprange = opencl_max_workgroup_size()/st%psib(ib, ik)%pack%size(1)
+              iprange = opencl_max_workgroup_size()/st%group%psib(ib, ik)%pack%size(1)
 
-              call opencl_kernel_run(kernel_phase, (/st%psib(ib, ik)%pack%size(1), pnp/), &
-                (/st%psib(ib, ik)%pack%size(1), iprange/))
+              call opencl_kernel_run(kernel_phase, (/st%group%psib(ib, ik)%pack%size(1), pnp/), &
+                (/st%group%psib(ib, ik)%pack%size(1), iprange/))
 #endif
             end select
             call profiling_out(phase_prof)
           end if
 
-          call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/(M_TWO*mu), time)
-          call density_calc_accumulate(dens_calc, ik, st%psib(ib, ik))
+          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/(M_TWO*mu), time)
+          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
 
-          if(hamiltonian_apply_packed(hm, gr%mesh)) call batch_unpack(st%psib(ib, ik))
+          if(hamiltonian_apply_packed(hm, gr%mesh)) call batch_unpack(st%group%psib(ib, ik))
         end do
       end do
 
@@ -898,9 +898,9 @@ contains
         call hamiltonian_update(hm, gr%mesh, time = real(zt - zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt - zdt/M_z2  ))
 
         do ik = st%d%kpt%start, st%d%kpt%end
-          do ib = st%block_start, st%block_end
+          do ib = st%group%block_start, st%group%block_end
 
-            call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, &
+            call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, &
               real(zdt/mu,REAL_PRECISION), real(zt - zdt/M_z2,REAL_PRECISION), &
               Imdeltat = aimag(zdt/mu), Imtime = aimag(zt -  zdt / M_z2 ) )
 
@@ -931,9 +931,9 @@ contains
         call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
 
         do ik = st%d%kpt%start, st%d%kpt%end
-          do ib = st%block_start, st%block_end
+          do ib = st%group%block_start, st%group%block_end
 
-            call exponential_apply_batch(tr%te, gr%der, hm, st%psib(ib, ik), ik, dt/mu, time - dt/M_TWO)
+            call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt/mu, time - dt/M_TWO)
 
           end do
         end do
@@ -957,7 +957,7 @@ contains
           call hamiltonian_update(hm, gr%mesh, time = real(zt + zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt + zdt/M_z2  ))
           
           do ik = st%d%kpt%start, st%d%kpt%end
-            do ib = st%block_start, st%block_end
+            do ib = st%group%block_start, st%group%block_end
               call exponential_apply_batch(tr%te, gr%der, hm, st%psibL(ib, ik), ik,&
                 real(-zdt/mu, REAL_PRECISION), real(zt + zdt/M_z2, REAL_PRECISION), &
                 Imdeltat = aimag(-zdt/mu), Imtime = aimag(zt +  zdt / M_z2 ) )
@@ -978,7 +978,7 @@ contains
           call hamiltonian_update(hm, gr%mesh, time = time + M_HALF*dt)
 
           do ik = st%d%kpt%start, st%d%kpt%end
-            do ib = st%block_start, st%block_end
+            do ib = st%group%block_start, st%group%block_end
               call exponential_apply_batch(tr%te, gr%der, hm, st%psibL(ib, ik), ik, -dt/mu, time + dt/M_TWO)
 
             end do

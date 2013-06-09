@@ -739,10 +739,10 @@ contains
       end if
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%block_start, st%block_end
-            call batch_set_zero(st1%psib(ib, ik))
-            call batch_axpy(der%mesh%np, -M_zI, hst1%psib(ib, ik), st1%psib(ib, ik))
-            call batch_axpy(der%mesh%np, zfact, st1%psib(ib, ik), st%psib(ib, ik))
+        do ib = st%group%block_start, st%group%block_end
+            call batch_set_zero(st1%group%psib(ib, ik))
+            call batch_axpy(der%mesh%np, -M_zI, hst1%group%psib(ib, ik), st1%group%psib(ib, ik))
+            call batch_axpy(der%mesh%np, zfact, st1%group%psib(ib, ik), st%group%psib(ib, ik))
         end do
       end do
 
@@ -761,8 +761,8 @@ contains
 
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%block_start, st%block_end
-          call batch_axpy(der%mesh%np, deltat, st1%psib(ib, ik), st%psib(ib, ik))
+        do ib = st%group%block_start, st%group%block_end
+          call batch_axpy(der%mesh%np, deltat, st1%group%psib(ib, ik), st%group%psib(ib, ik))
         end do
       end do
 
@@ -777,10 +777,10 @@ contains
         end if
 
         do ik = st%d%kpt%start, st%d%kpt%end
-          do ib = st%block_start, st%block_end
-            call batch_set_zero(st1%psib(ib, ik))
-            call batch_axpy(der%mesh%np, -M_zI, hst1%psib(ib, ik), st1%psib(ib, ik))
-            call batch_axpy(der%mesh%np, deltat * zfact, st1%psib(ib, ik), st%psib(ib, ik))
+          do ib = st%group%block_start, st%group%block_end
+            call batch_set_zero(st1%group%psib(ib, ik))
+            call batch_axpy(der%mesh%np, -M_zI, hst1%group%psib(ib, ik), st1%group%psib(ib, ik))
+            call batch_axpy(der%mesh%np, deltat * zfact, st1%group%psib(ib, ik), st%group%psib(ib, ik))
           end do
         end do
 
