@@ -539,16 +539,11 @@ contains
 
     if(present(rep)) then
       select case(rep)
-        case(TDF_FOURIER_SERIES)
+        case(TDF_FOURIER_SERIES,TDF_ZERO_FOURIER)
           SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
           f%valww = M_ZERO
           SAFE_DEALLOCATE_P(f%val)
-          f%mode = TDF_FOURIER_SERIES
-        case(TDF_ZERO_FOURIER)
-          SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
-          f%valww = M_ZERO
-          SAFE_DEALLOCATE_P(f%val)
-          f%mode = TDF_ZERO_FOURIER
+          f%mode = rep
       end select
     end if
 
@@ -561,6 +556,7 @@ contains
   subroutine tdf_fourier_grid(f, wgrid)
     type(tdf_t), intent(in)    :: f
     FLOAT,       intent(inout) :: wgrid(:)
+
     integer :: i
     FLOAT   :: df
 
@@ -918,13 +914,13 @@ contains
     case(TDF_FROM_FILE)
       call spline_end(f%amplitude)
     case(TDF_NUMERICAL)
-      SAFE_DEALLOCATE_P(f%val)
       call fft_end(f%fft_handler)
-    case(TDF_FOURIER_SERIES)
+    case(TDF_FOURIER_SERIES, TDF_ZERO_FOURIER)
       SAFE_DEALLOCATE_P(f%valww)
       call fft_end(f%fft_handler)
     end select
     f%mode = TDF_EMPTY
+    SAFE_DEALLOCATE_P(f%val)
 
     POP_SUB(tdf_end)
   end subroutine tdf_end
@@ -963,12 +959,7 @@ contains
       fout%val  = fin%val
       call fft_copy(fin%fft_handler, fout%fft_handler)
     end if
-    if(fin%mode  ==  TDF_FOURIER_SERIES) then
-      SAFE_ALLOCATE(fout%valww(2*fout%nfreqs-1))
-      fout%valww  = fin%valww
-      call fft_copy(fin%fft_handler, fout%fft_handler)
-    end if
-    if(fin%mode  ==  TDF_ZERO_FOURIER) then
+    if(fin%mode  ==  TDF_FOURIER_SERIES .or. fin%mode  ==  TDF_ZERO_FOURIER) then
       SAFE_ALLOCATE(fout%valww(2*fout%nfreqs-1))
       fout%valww  = fin%valww
       call fft_copy(fin%fft_handler, fout%fft_handler)
