@@ -104,7 +104,6 @@ module tdfunction_m
     character(len=200)     :: expression
     FLOAT, pointer :: val(:)    => NULL()
     FLOAT, pointer :: valww(:)  => NULL()
-    FLOAT, pointer :: coeffs(:) => NULL()
     type(fft_t) :: fft_handler
   end type tdf_t
 
@@ -325,7 +324,6 @@ contains
     f%dt = M_ZERO
     nullify(f%val)
     nullify(f%valww)
-    nullify(f%coeffs)
 
     POP_SUB(tdf_init)
   end subroutine tdf_init
@@ -356,7 +354,6 @@ contains
     f%omega0 = omega0
     nullify(f%val)
     nullify(f%valww)
-    nullify(f%coeffs)
 
     POP_SUB(tdf_init_cw)
   end subroutine tdf_init_cw
@@ -377,7 +374,6 @@ contains
     f%tau0 = tau0
     nullify(f%val)
     nullify(f%valww)
-    nullify(f%coeffs)
 
     POP_SUB(tdf_init_gaussian)
   end subroutine tdf_init_gaussian
@@ -398,7 +394,6 @@ contains
     f%tau0 = tau0
     nullify(f%val)
     nullify(f%valww)
-    nullify(f%coeffs)
 
     POP_SUB(tdf_init_cosinoidal)
   end subroutine tdf_init_cosinoidal
@@ -420,7 +415,6 @@ contains
     f%tau1 = tau1
     nullify(f%val)
     nullify(f%valww)
-    nullify(f%coeffs)
 
     POP_SUB(tdf_init_trapezoidal)
   end subroutine tdf_init_trapezoidal
@@ -438,7 +432,6 @@ contains
     f%expression = trim(expression)
     nullify(f%val)
     nullify(f%valww)
-    nullify(f%coeffs)
     
     POP_SUB(tdf_init_fromexpr)
   end subroutine tdf_init_fromexpr
@@ -489,7 +482,6 @@ contains
 
     nullify(f%val)
     nullify(f%valww)
-    nullify(f%coeffs)
     SAFE_DEALLOCATE_A(t)
     SAFE_DEALLOCATE_A(am)
     POP_SUB(tdf_init_fromfile)
@@ -983,7 +975,7 @@ contains
       f%a0 = alpha*f%a0
     case(TDF_NUMERICAL)
       f%val = alpha*f%val
-    case(TDF_FOURIER_SERIES)
+    case(TDF_FOURIER_SERIES,TDF_ZERO_FOURIER)
       f%valww = alpha*f%valww
     case(TDF_FROM_FILE)
       call spline_times(alpha, f%amplitude)
