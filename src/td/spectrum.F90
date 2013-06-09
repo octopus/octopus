@@ -1133,7 +1133,8 @@ contains
       call loct_1dminimize(xa, xb, xx, hsfunction, ierr)
     end if
 #else
-    stop "FIXME: cannot work in single-precision."
+    message(1) = "FIXME: cannot work in single-precision."
+    call messages_fatal(1)
 #endif
 
     if(ierr /= 0) then
