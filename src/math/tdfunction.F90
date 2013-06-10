@@ -119,6 +119,7 @@ module tdfunction_m
 contains
 
   !------------------------------------------------------------
+  !> This function initializes "f" from the TDFunctions block.
   subroutine tdf_read(f, function_name, ierr)
     type(tdf_t),      intent(inout) :: f
     character(len=*), intent(in)    :: function_name
@@ -234,24 +235,30 @@ contains
         a0 = M_ZERO; tau0 = M_ZERO; t0 = M_ZERO; tau1 = M_ZERO
         select case(function_type)
           case(TDF_CW)
-            call parse_block_float(blk, i-1, 2, a0)
+            call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
+            call tdf_init_cw(f, a0, M_ZERO)
           case(TDF_GAUSSIAN)
-            call parse_block_float(blk, i-1, 2, a0)
-            call parse_block_float(blk, i-1, 3, tau0)
-            call parse_block_float(blk, i-1, 4, t0)
+            call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
+            call parse_block_float(blk, i-1, 3, tau0, units_inp%time)
+            call parse_block_float(blk, i-1, 4, t0, units_inp%time)
+            call tdf_init_gaussian(f, a0, M_ZERO, t0, tau0)
           case(TDF_COSINOIDAL)
-            call parse_block_float(blk, i-1, 2, a0)
-            call parse_block_float(blk, i-1, 3, tau0)
-            call parse_block_float(blk, i-1, 4, t0)
+            call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
+            call parse_block_float(blk, i-1, 3, tau0, units_inp%time)
+            call parse_block_float(blk, i-1, 4, t0, units_inp%time)
+            call tdf_init_cosinoidal(f, a0, M_ZERO, t0, tau0)
           case(TDF_TRAPEZOIDAL)
-            call parse_block_float(blk, i-1, 2, a0)
-            call parse_block_float(blk, i-1, 3, tau0)
-            call parse_block_float(blk, i-1, 4, t0)
-            call parse_block_float(blk, i-1, 5, tau1)
+            call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
+            call parse_block_float(blk, i-1, 3, tau0, units_inp%time)
+            call parse_block_float(blk, i-1, 4, t0, units_inp%time)
+            call parse_block_float(blk, i-1, 5, tau1, units_inp%time)
+            call tdf_init_trapezoidal(f, a0, M_ZERO, t0, tau0, tau1)
           case(TDF_FROM_FILE)
             call parse_block_string(blk, i-1, 2, filename)
+            call tdf_init_fromfile(f, trim(filename), ierr)
           case(TDF_FROM_EXPR)
             call parse_block_string(blk, i-1, 2, function_expression)
+            call tdf_init_fromexpr(f, trim(function_expression))
           case default
             ierr = -2
             call parse_block_end(blk)
@@ -259,25 +266,6 @@ contains
             return
         end select
 
-        a0   = units_to_atomic(units_inp%energy/units_inp%length, a0)
-        tau0 = units_to_atomic(units_inp%time, tau0)
-        t0   = units_to_atomic(units_inp%time, t0)
-        tau1 = units_to_atomic(units_inp%time, tau1)
-
-        select case(function_type)
-        case(TDF_CW)
-          call tdf_init_cw(f, a0, M_ZERO)
-        case(TDF_GAUSSIAN)
-          call tdf_init_gaussian(f, a0, M_ZERO, t0, tau0)
-        case(TDF_COSINOIDAL)
-          call tdf_init_cosinoidal(f, a0, M_ZERO, t0, tau0)
-        case(TDF_TRAPEZOIDAL)
-          call tdf_init_trapezoidal(f, a0, M_ZERO, t0, tau0, tau1)
-        case(TDF_FROM_FILE)
-          call tdf_init_fromfile(f, trim(filename), ierr)
-        case(TDF_FROM_EXPR)
-          call tdf_init_fromexpr(f, trim(function_expression))
-        end select
         ierr = 0
         exit row_loop
       end if
@@ -687,20 +675,20 @@ contains
 
 
   !------------------------------------------------------------
-  subroutine tdf_set_numericalr1(f, index, value)
+  subroutine tdf_set_numericalr1(f, index, val)
     type(tdf_t), intent(inout) :: f
     integer,     intent(in)    :: index
-    FLOAT,       intent(in)    :: value
+    FLOAT,       intent(in)    :: val
 
     ! no push_sub because it is called too frequently
 
     select case(f%mode)
     case(TDF_NUMERICAL)
-      f%val(index) = value
+      f%val(index) = val
     case(TDF_FOURIER_SERIES)
-      f%valww(index) = value
+      f%valww(index) = val
     case(TDF_ZERO_FOURIER)
-      f%valww(index+1) = value
+      f%valww(index+1) = val
     end select
 
   end subroutine tdf_set_numericalr1

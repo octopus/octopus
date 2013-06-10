@@ -1361,7 +1361,7 @@ contains
     FLOAT,                   intent(in)    :: dd(:)
     CMPLX,                   intent(in)    :: dq(:)
 
-    FLOAT :: value
+    FLOAT :: val
     integer :: ipar
     
     PUSH_SUB(controlfunction_update)
@@ -1369,20 +1369,20 @@ contains
     select case(dir)
       case('f')
         do ipar = 1, cp%no_controlfunctions
-          value = dd(ipar) / ( tdf(cf_common%td_penalty(ipar), iter) - M_TWO * aimag(dq(ipar)) )
-          value = (M_ONE - mu) * tdf(cpp%f(ipar), iter) + mu * value
-          call tdf_set_numerical(cp%f(ipar), iter, value)
-          if(iter + 1 <= tdf_niter(cp%f(ipar)) + 1)  call tdf_set_numerical(cp%f(ipar), iter+1, value)
-          if(iter + 2 <= tdf_niter(cp%f(ipar)) + 1)  call tdf_set_numerical(cp%f(ipar), iter+2, value)
+          val = dd(ipar) / ( tdf(cf_common%td_penalty(ipar), iter) - M_TWO * aimag(dq(ipar)) )
+          val = (M_ONE - mu) * tdf(cpp%f(ipar), iter) + mu * val
+          call tdf_set_numerical(cp%f(ipar), iter, val)
+          if(iter + 1 <= tdf_niter(cp%f(ipar)) + 1)  call tdf_set_numerical(cp%f(ipar), iter+1, val)
+          if(iter + 2 <= tdf_niter(cp%f(ipar)) + 1)  call tdf_set_numerical(cp%f(ipar), iter+2, val)
         end do
 
       case('b')
         do ipar = 1, cp%no_controlfunctions
-          value = dd(ipar) / ( tdf(cf_common%td_penalty(ipar), iter + 1) - M_TWO * aimag(dq(ipar)) )
-          value = (M_ONE - mu) * tdf(cpp%f(ipar), iter + 1) + mu * value
-          call tdf_set_numerical(cp%f(ipar), iter + 1, value)
-          if(iter > 0) call tdf_set_numerical(cp%f(ipar), iter, value)
-          if(iter - 1 > 0) call tdf_set_numerical(cp%f(ipar), iter-1, value)
+          val = dd(ipar) / ( tdf(cf_common%td_penalty(ipar), iter + 1) - M_TWO * aimag(dq(ipar)) )
+          val = (M_ONE - mu) * tdf(cpp%f(ipar), iter + 1) + mu * val
+          call tdf_set_numerical(cp%f(ipar), iter + 1, val)
+          if(iter > 0) call tdf_set_numerical(cp%f(ipar), iter, val)
+          if(iter - 1 > 0) call tdf_set_numerical(cp%f(ipar), iter-1, val)
         end do
     end select
 
