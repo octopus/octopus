@@ -267,7 +267,7 @@
       case(2)
         write(iunit,'(a)')        '# Line:'
         write(iunit,'(3a,2f9.5)') '# origin [',  trim(units_abbrev(units_out%length)), '] = ', &
-             (units_from_atomic(units_out%length, outp%plane%origin(idir)), idir = 1, 2)
+             (units_from_atomic(units_out%length, outp%line%origin(idir)), idir = 1, 2)
         write(iunit,'(a,2f9.5)')  '# u = ', outp%line%u(1), outp%line%u(2)
         write(iunit,'(a,2f9.5)')  '# n = ', outp%line%n(1), outp%line%n(2)
         write(iunit,'(a, f9.5)')  '# spacing = ', units_from_atomic(units_out%length, outp%line%spacing)
