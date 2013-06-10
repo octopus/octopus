@@ -594,40 +594,40 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine messages_print_var_valuei(iunit, var, value)
+  subroutine messages_print_var_valuei(iunit, var, val)
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
-    integer,          intent(in) :: value
+    integer,          intent(in) :: val
 
     character(len=10) :: intstring
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
-    write(intstring,'(i10)') value
+    write(intstring,'(i10)') val
     write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(intstring))//']'
 
   end subroutine messages_print_var_valuei
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine messages_print_var_values(iunit, var, value)
+  subroutine messages_print_var_values(iunit, var, val)
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
-    character(len=*), intent(in) :: value
+    character(len=*), intent(in) :: val
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
-    write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(value)//']'
+    write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(val)//']'
 
   end subroutine messages_print_var_values
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine messages_print_var_valuer(iunit, var, value, unit)
+  subroutine messages_print_var_valuer(iunit, var, val, unit)
     integer,                intent(in) :: iunit
     character(len=*),       intent(in) :: var
-    FLOAT,                  intent(in) :: value
+    FLOAT,                  intent(in) :: val
     type(unit_t), optional, intent(in) :: unit
 
     character(len=10) :: floatstring
@@ -635,10 +635,10 @@ contains
     if(.not. mpi_grp_is_root(mpi_world)) return
 
     if(.not. present(unit)) then
-      write(floatstring,'(g10.4)') value
+      write(floatstring,'(g10.4)') val
       write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(floatstring))//']'
     else
-      write(floatstring,'(g10.4)') units_from_atomic(unit, value)
+      write(floatstring,'(g10.4)') units_from_atomic(unit, val)
       write(iunit,'(a)') 'Input: ['//trim(var)//' = '//trim(adjustl(floatstring))//' '//trim(units_abbrev(unit))//']'
     end if
 
@@ -647,16 +647,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine messages_print_var_valuel(iunit, var, value)
+  subroutine messages_print_var_valuel(iunit, var, val)
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
-    logical,          intent(in) :: value
+    logical,          intent(in) :: val
 
     character(len=3) :: lstring
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
-    if(value) then
+    if(val) then
       lstring = 'yes'
     else
       lstring = 'no'

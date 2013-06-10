@@ -257,11 +257,11 @@ contains
   end subroutine pert_setup_atom
 
   ! --------------------------------------------------------------------
-  subroutine pert_setup_mixed_dir(this, iatom, idir, value, jatom, jdir, valuej)
+  subroutine pert_setup_mixed_dir(this, iatom, idir, val, jatom, jdir, valuej)
     type(pert_t),      intent(inout) :: this
     integer,           intent(in)    :: iatom
     integer,           intent(in)    :: idir
-    FLOAT,             intent(in)    :: value
+    FLOAT,             intent(in)    :: val
     integer, optional, intent(in)    :: jatom
     integer, optional, intent(in)    :: jdir
     FLOAT,   optional, intent(in)    :: valuej
@@ -272,7 +272,7 @@ contains
 
     this%ionic%pure_dir = .false.
     
-    this%ionic%mix1(iatom, idir) = value
+    this%ionic%mix1(iatom, idir) = val
     
     have_dir_2 = present(jatom) .and. present(jdir) .and. present(jatom)
 

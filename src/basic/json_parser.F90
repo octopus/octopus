@@ -249,9 +249,9 @@ contains
     return
   end subroutine json_parser_parse_literal
 
-  subroutine json_parser_parse_null(parser, value, iostat)
+  subroutine json_parser_parse_null(parser, val, iostat)
     type(json_parser_t), intent(inout) :: parser
-    type(json_null_t),   intent(out)   :: value
+    type(json_null_t),   intent(out)   :: val
     integer,             intent(out)   :: iostat
 
     character(len=*), parameter :: data="null"
@@ -259,17 +259,17 @@ contains
 
     PUSH_SUB(json_parser_parse_null)
 
-    call json_end(value)
+    call json_end(val)
     call json_parser_parse_literal(parser, data, ok, iostat)
-    if((iostat==0).and.(ok)) call json_init(value)
+    if((iostat==0).and.(ok)) call json_init(val)
 
     POP_SUB(json_parser_parse_null)
     return
   end subroutine json_parser_parse_null
 
-  subroutine json_parser_parse_false(parser, value, iostat)
+  subroutine json_parser_parse_false(parser, val, iostat)
     type(json_parser_t),  intent(inout) :: parser
-    type(json_logical_t), intent(inout) :: value
+    type(json_logical_t), intent(inout) :: val
     integer,              intent(out)   :: iostat
 
     character(len=*), parameter :: data="false"
@@ -277,17 +277,17 @@ contains
 
     PUSH_SUB(json_parser_parse_false)
 
-    call json_end(value)
+    call json_end(val)
     call json_parser_parse_literal(parser, data, ok, iostat)
-    if((iostat==0).and.(ok)) call json_init(value, .false.)
+    if((iostat==0).and.(ok)) call json_init(val, .false.)
 
     POP_SUB(json_parser_parse_false)
     return
   end subroutine json_parser_parse_false
 
-  subroutine json_parser_parse_true(parser, value, iostat)
+  subroutine json_parser_parse_true(parser, val, iostat)
     type(json_parser_t),  intent(inout) :: parser
-    type(json_logical_t), intent(inout) :: value
+    type(json_logical_t), intent(inout) :: val
     integer,              intent(out)   :: iostat
 
     character(len=*), parameter :: data="true"
@@ -295,9 +295,9 @@ contains
 
     PUSH_SUB(json_parser_parse_true)
 
-    call json_end(value)
+    call json_end(val)
     call json_parser_parse_literal(parser, data, ok, iostat)
-    if((iostat==0).and.(ok)) call json_init(value, .true.)
+    if((iostat==0).and.(ok)) call json_init(val, .true.)
 
     POP_SUB(json_parser_parse_true)
     return
@@ -409,9 +409,9 @@ contains
     return
   end subroutine json_parser_parse_string
 
-  recursive subroutine json_parser_parse_value(parser, value, iostat)
+  recursive subroutine json_parser_parse_value(parser, val, iostat)
     type(json_parser_t), intent(inout) :: parser
-    type(json_value_t),  intent(out)   :: value
+    type(json_value_t),  intent(out)   :: val
     integer,             intent(out)   :: iostat
 
     type(json_null_t),    pointer :: nvalue
@@ -425,7 +425,7 @@ contains
 
     PUSH_SUB(json_parser_parse_value)
 
-    call json_end(value)
+    call json_end(val)
     call json_parser_peek_nonblank_char(parser, char, iostat)
     if(iostat==0)then
       select case(json_parser_to_lower(char))
@@ -433,7 +433,7 @@ contains
         SAFE_ALLOCATE(nvalue)
         call json_parser_parse_null(parser, nvalue, iostat)
         if((iostat==0).and.(json_isdef(nvalue)))then
-          call json_init(value, nvalue)
+          call json_init(val, nvalue)
         else
           call json_end(nvalue)
           SAFE_DEALLOCATE_P(nvalue)
@@ -443,7 +443,7 @@ contains
         SAFE_ALLOCATE(lvalue)
         call json_parser_parse_false(parser, lvalue, iostat)
         if((iostat==0).and.(json_isdef(lvalue)))then
-          call json_init(value, lvalue)
+          call json_init(val, lvalue)
         else
           call json_end(lvalue)
           SAFE_DEALLOCATE_P(lvalue)
@@ -453,7 +453,7 @@ contains
         SAFE_ALLOCATE(lvalue)
         call json_parser_parse_true(parser, lvalue, iostat)
         if((iostat==0).and.(json_isdef(lvalue)))then
-          call json_init(value, lvalue)
+          call json_init(val, lvalue)
         else
           call json_end(lvalue)
           SAFE_DEALLOCATE_P(lvalue)
@@ -467,7 +467,7 @@ contains
             SAFE_ALLOCATE(ivalue)
             call json_init(ivalue, string)
             if(json_isdef(ivalue))then
-              call json_init(value, ivalue)
+              call json_init(val, ivalue)
             else
               SAFE_DEALLOCATE_P(ivalue)
             end if
@@ -476,7 +476,7 @@ contains
             SAFE_ALLOCATE(rvalue)
             call json_init(rvalue, string)
             if(json_isdef(rvalue))then
-              call json_init(value, rvalue)
+              call json_init(val, rvalue)
             else
               SAFE_DEALLOCATE_P(rvalue)
             end if
@@ -490,7 +490,7 @@ contains
         SAFE_ALLOCATE(string)
         call json_parser_parse_string(parser, string, iostat)
         if((iostat==0).and.(json_isdef(string)))then
-          call json_init(value, string)
+          call json_init(val, string)
         else
           call json_end(string)
           SAFE_DEALLOCATE_P(string)
@@ -500,7 +500,7 @@ contains
         SAFE_ALLOCATE(array)
         call json_parser_parse_array(parser, array, iostat)
         if((iostat==0).and.(json_isdef(array)))then
-          call json_init(value, array)
+          call json_init(val, array)
         else
           call json_end(array)
           SAFE_DEALLOCATE_P(array)
@@ -510,7 +510,7 @@ contains
         SAFE_ALLOCATE(object)
         call json_parser_parse_object(parser, object, iostat)
         if((iostat==0).and.(json_isdef(object)))then
-          call json_init(value, object)
+          call json_init(val, object)
         else
           call json_end(object)
           SAFE_DEALLOCATE_P(object)
@@ -528,7 +528,7 @@ contains
     type(json_array_t),  intent(out)   :: array
     integer,             intent(out)   :: iostat
 
-    type(json_value_t), pointer :: value
+    type(json_value_t), pointer :: val
     character                   :: char
 
     PUSH_SUB(json_parser_parse_array)
@@ -544,19 +544,19 @@ contains
           call json_parser_get_nonblank_char(parser, char, iostat)
         else
           do
-            SAFE_ALLOCATE(value)
-            call json_parser_parse_value(parser, value, iostat)
-            if(json_isdef(value))then
-              call json_append(array, value)
+            SAFE_ALLOCATE(val)
+            call json_parser_parse_value(parser, val, iostat)
+            if(json_isdef(val))then
+              call json_append(array, val)
               call json_parser_get_nonblank_char(parser, char, iostat)
               if((iostat/=0).or.(char/=","))exit
             else
-              call json_end(value)
-              SAFE_DEALLOCATE_P(value)
+              call json_end(val)
+              SAFE_DEALLOCATE_P(val)
               call json_end(array)
               exit
             end if
-            nullify(value)
+            nullify(val)
           end do
         end if
         if((.not.json_isdef(array)).or.(iostat/=0).or.(char/="]"))call json_end(array)
@@ -573,7 +573,7 @@ contains
     integer,             intent(out)   :: iostat
 
     type(json_string_t), pointer :: string
-    type(json_value_t),  pointer :: value
+    type(json_value_t),  pointer :: val
     character                    :: char
 
     PUSH_SUB(json_parser_parse_member)
@@ -584,15 +584,15 @@ contains
     if((iostat==0).and.(json_isdef(string)))then
       call json_parser_get_nonblank_char(parser, char, iostat)
       if((iostat==0).and.(char==':'))then
-        SAFE_ALLOCATE(value)
-        call json_parser_parse_value(parser, value, iostat)
-        if((iostat==0).and.(json_isdef(value)))then
-          call json_init(member, string, value)
+        SAFE_ALLOCATE(val)
+        call json_parser_parse_value(parser, val, iostat)
+        if((iostat==0).and.(json_isdef(val)))then
+          call json_init(member, string, val)
         else
-          call json_end(value)
-          SAFE_DEALLOCATE_P(value)
+          call json_end(val)
+          SAFE_DEALLOCATE_P(val)
         end if
-        nullify(value)
+        nullify(val)
       end if
     end if
     if((iostat/=0).or.(.not.json_isdef(member)))then

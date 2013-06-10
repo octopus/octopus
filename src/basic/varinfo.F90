@@ -54,7 +54,7 @@ contains
     integer,optional, intent(out):: ierr
 
     type(c_ptr) :: handle, opt, name, type, section, desc
-    integer :: value
+    integer :: val
     logical :: first
 
     call varinfo_getvar(var, handle)
@@ -87,7 +87,7 @@ contains
           write(iunit, '(a)') "Available options:"
           first = .false.
         end if
-        call varinfo_opt_getinfo(opt, name, value, desc)
+        call varinfo_opt_getinfo(opt, name, val, desc)
         call print_C_string(iunit, name, "  ")
         call print_C_string(iunit, desc, "    ")
       end if
@@ -103,7 +103,7 @@ contains
     logical, optional, intent(in) :: is_flag
 
     type(c_ptr) :: handle, opt, name, desc
-    integer :: value, option_
+    integer :: val, option_
     logical :: is_flag_
 
     is_flag_ = .false.
@@ -119,12 +119,12 @@ contains
     do
       call varinfo_getopt(handle, opt)
       if(.not. c_associated(opt)) exit
-      call varinfo_opt_getinfo(opt, name, value, desc)
+      call varinfo_opt_getinfo(opt, name, val, desc)
 
       if(is_flag_) then
-        option_ = iand(option_, not(value))
+        option_ = iand(option_, not(val))
       else
-        if(value == option_) then
+        if(val == option_) then
           l = .true.
           return
         end if
@@ -145,7 +145,7 @@ contains
     character(len=*), intent(in), optional :: pre
 
     type(c_ptr) :: handle, opt, name, desc
-    integer :: value
+    integer :: val
 
     call varinfo_getvar(var, handle)
     if(.not. c_associated(handle)) return
@@ -155,9 +155,9 @@ contains
       call varinfo_getopt(handle, opt)
       if(.not. c_associated(opt)) exit
 
-      call varinfo_opt_getinfo(opt, name, value, desc)
+      call varinfo_opt_getinfo(opt, name, val, desc)
 
-      if(value == option) then
+      if(val == option) then
         write(iunit, '(4a)', advance='no') "Input:", ' [', var, ' = '
         call print_C_string(iunit, name, advance='no')
         write(iunit, '(a)', advance='no') ']'

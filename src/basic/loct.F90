@@ -133,9 +133,9 @@ module loct_m
   ! ---------------------------------------------------------
   !> Varia
   interface loct_getenv
-    subroutine oct_getenv(var, value)
+    subroutine oct_getenv(var, val)
       character(len=*), intent(in)  :: var
-      character(len=*), intent(out) :: value
+      character(len=*), intent(out) :: val
     end subroutine oct_getenv
   end interface loct_getenv
 
