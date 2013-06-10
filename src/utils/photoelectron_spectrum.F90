@@ -85,6 +85,7 @@ program photoelectron_spectrum
   uPhstep = -1
   uPhspan = (/-1,-1/)
   center = (/0,0,0/)
+  pvec = (/1,0,0/)
   Emin = M_ZERO
   Emax = M_ZERO
   
