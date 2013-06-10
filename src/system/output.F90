@@ -358,8 +358,7 @@ contains
       !%Type block
       !%Section States
       !%Description
-      !% At the end of the ground-state calculation, the code can calculate
-      !% the steady-state current in the ground state 
+      !% The code can calculate current
       !% traversing a user-defined portion of a plane, as specified by this block.
       !% In the format below, <tt>origin</tt> is a point in the plane.
       !% <tt>u</tt> and <tt>v</tt> are the (dimensionless) lattice vectors defining the plane;

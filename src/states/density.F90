@@ -98,7 +98,7 @@ contains
       this%Imdensity => Imdensity
       this%Imdensity = M_ZERO
     else 
-      this%Imdensity => NULL()
+      nullify(this%Imdensity)
     end if      
 
     this%packed = .false.

@@ -551,8 +551,8 @@ end function X(mf_surface_integral_vector)
 !> This subroutine calculates the line integral of a scalar
 !! function on a given line.
 R_TYPE function X(mf_line_integral_scalar) (mesh, ff, line) result(dd)
-  type(mesh_t), intent(in)       :: mesh
-  R_TYPE,       intent(in)       :: ff(:)  !< (mesh%np)
+  type(mesh_t),      intent(in) :: mesh
+  R_TYPE,            intent(in) :: ff(:)  !< (mesh%np)
   type(mesh_line_t), intent(in) :: line
 
   R_TYPE, allocatable :: f_in_line(:)
@@ -579,8 +579,8 @@ end function X(mf_line_integral_scalar)
 !> This subroutine calculates the line integral of a vector
 !! function on a given line.
 R_TYPE function X(mf_line_integral_vector) (mesh, ff, line) result(dd)
-  type(mesh_t), intent(in)       :: mesh
-  R_TYPE,       intent(in)       :: ff(:, :)  !< (mesh%np, MAX_DIM)
+  type(mesh_t),      intent(in) :: mesh
+  R_TYPE,            intent(in) :: ff(:, :)  !< (mesh%np, MAX_DIM)
   type(mesh_line_t), intent(in) :: line
 
   R_TYPE, allocatable :: fn(:)
@@ -590,10 +590,10 @@ R_TYPE function X(mf_line_integral_vector) (mesh, ff, line) result(dd)
 
   SAFE_ALLOCATE(fn(1:mesh%np))
   do ip = 1, mesh%np
-    fn(ip) = sum(ff(ip, :) * line%n(:))
+    fn(ip) = sum(ff(ip, 1:mesh%sb%dim) * line%n(1:mesh%sb%dim))
   end do
 
-  dd =  X(mf_line_integral_scalar)(mesh, fn, line)
+  dd = X(mf_line_integral_scalar)(mesh, fn, line)
 
   SAFE_DEALLOCATE_A(fn)
   POP_SUB(X(mf_line_integral_vector))
