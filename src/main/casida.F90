@@ -752,7 +752,7 @@ contains
       logical, optional, intent(in) :: is_forces
 
       FLOAT :: temp
-      integer :: ia, jb, iunit
+      integer :: ia, jb, iunit, ia_iter, ia_length, jb_tmp
       integer :: maxcount, actual, counter
       FLOAT :: mtxel_vh, mtxel_xc
       logical, allocatable :: is_saved(:, :), is_calcd(:, :)
@@ -805,7 +805,22 @@ contains
         if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
 
         ! note: the ordering of jb, ia loops are crucial to minimize number of Poisson solves required.
-        do ia = jb, cas%n_pairs
+        ia_length = (cas%n_pairs - 1) / 2
+        if(mod(cas%n_pairs, 2) == 0) then ! even
+          if(jb > cas%n_pairs / 2) then
+            jb_tmp = cas%n_pairs - jb + 1
+          else
+            jb_tmp = jb
+          endif
+          ia_length = ia_length + mod(jb_tmp, 2)
+        endif
+
+        do ia_iter = jb, jb + ia_length
+
+          ! make ia in range [1, cas%n_pairs]
+          ia = mod(ia_iter, cas%n_pairs)
+          if(ia == 0) ia = cas%n_pairs
+
           if(cas%type == CASIDA_PETERSILKA) then
             ! only calculate off-diagonals in degenerate subspace
             if(isnt_degenerate(cas, st, ia, jb)) cycle
@@ -1084,7 +1099,7 @@ contains
 #ifdef HAVE_MPI
       call MPI_Bcast(is_saved(1, 1), cas%n_pairs**2, MPI_LOGICAL, 0, mpi_world, mpi_err)
 ! No need to bcast these, since they will be obtained from a reduction
-!      call MPI_Bcast(cas%mat(1, 1), cas%npairs**2, MPI_FLOAT,   0, mpi_world, mpi_err)
+!      call MPI_Bcast(cas%mat(1, 1), cas%n_pairs**2, MPI_FLOAT,   0, mpi_world, mpi_err)
 #endif
 
       POP_SUB(casida_work.load_saved)
@@ -1389,6 +1404,7 @@ contains
             units_from_atomic(units_out%length, cas%tm(cas%ind(ia), idim))
         enddo
 
+        ! this stuff should go BEFORE calculation of transition matrix elements!
         temp = M_ONE
         ! make the largest component positive, to specify the phase
         if( maxval(cas%mat(:, cas%ind(ia))) - abs(minval(cas%mat(:, cas%ind(ia)))) < -M_EPSILON) temp = -temp

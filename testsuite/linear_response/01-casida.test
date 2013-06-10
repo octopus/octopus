@@ -40,7 +40,7 @@ match ; Total energy   ; GREP(static/info, 'Total       =', 20) ;  -19.96949077
 match ; HOMO-1         ; GREP(static/info, '4   --', 12) ;  -0.441038
 match ; HOMO           ; GREP(static/info, '5   --', 12) ;  -0.388160
 
-# These precisions are too generous, and suggest a problem with vib_modes.
+# FIXME: These precisions are too generous, and suggest a problem with vib_modes.
 Input: 01-casida.012-vib_modes.inp
 Precision : 0.002
 match ; Bond stretch   ; LINE(vib_modes/normal_frequencies_lr, 1, 7); 2254.152
@@ -134,16 +134,16 @@ match ; Petersilka spectrum z   ; LINE(casida/spectrum.petersilka, 532, 43);  4.
 match ; Petersilka spectrum tot ; LINE(casida/spectrum.petersilka, 532, 57);  9.235394E+00
 
 match ; Casida spectrum x    ; LINE(casida/spectrum.casida, 532, 15);  2.038311E-01
-match ; Casida spectrum y    ; LINE(casida/spectrum.casida, 532, 29);  4.770060E+00
-match ; Casida spectrum z    ; LINE(casida/spectrum.casida, 532, 43);  4.770060E+00
-match ; Casida spectrum tot  ; LINE(casida/spectrum.casida, 532, 57);  9.743952E+00
+match ; Casida spectrum y    ; LINE(casida/spectrum.casida, 532, 29);  4.770376E+00
+match ; Casida spectrum z    ; LINE(casida/spectrum.casida, 532, 43);  4.770376E+00
+match ; Casida spectrum tot  ; LINE(casida/spectrum.casida, 532, 57);  9.744579E+00
 
 match ; CV(2) spectrum x   ; LINE(casida/spectrum.variational, 532, 15);  1.363797E-01
-match ; CV(2) spectrum y   ; LINE(casida/spectrum.variational, 532, 29);  2.573934E-01
-match ; CV(2) spectrum z   ; LINE(casida/spectrum.variational, 532, 43);  2.573934E-01
-match ; CV(2) spectrum tot ; LINE(casida/spectrum.variational, 532, 57);  6.511665E-01
+match ; CV(2) spectrum y   ; LINE(casida/spectrum.variational, 532, 29);  2.577090E-01
+match ; CV(2) spectrum z   ; LINE(casida/spectrum.variational, 532, 43);  2.577090E-01
+match ; CV(2) spectrum tot ; LINE(casida/spectrum.variational, 532, 57);  6.517916E-01
 
 match ; Tamm-Dancoff spectrum x   ; LINE(casida/spectrum.tamm_dancoff, 532, 15);  1.797967E-01
-match ; Tamm-Dancoff spectrum y   ; LINE(casida/spectrum.tamm_dancoff, 532, 29);  6.122645E+00
-match ; Tamm-Dancoff spectrum z   ; LINE(casida/spectrum.tamm_dancoff, 532, 43);  6.122645E+00
-match ; Tamm-Dancoff spectrum tot ; LINE(casida/spectrum.tamm_dancoff, 532, 57);  1.242509E+01
+match ; Tamm-Dancoff spectrum y   ; LINE(casida/spectrum.tamm_dancoff, 532, 29);  6.124928E+00
+match ; Tamm-Dancoff spectrum z   ; LINE(casida/spectrum.tamm_dancoff, 532, 43);  6.124928E+00
+match ; Tamm-Dancoff spectrum tot ; LINE(casida/spectrum.tamm_dancoff, 532, 57);  1.242965E+01
