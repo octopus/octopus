@@ -1982,9 +1982,8 @@ contains
     FLOAT              :: charge
     CMPLX, allocatable :: zpsi(:, :)
 #if defined(HAVE_MPI)
-    integer            :: jj
-    integer            :: tmp
-    FLOAT, allocatable :: lspin(:, :) !< To exchange spin.
+    integer            :: idir, tmp
+    FLOAT, allocatable :: lspin(:), lspin2(:) !< To exchange spin.
 #endif
 
     PUSH_SUB(states_fermi)
@@ -2028,12 +2027,17 @@ contains
         end do
 #if defined(HAVE_MPI)
         if(st%parallel_in_states) then
-          SAFE_ALLOCATE(lspin(1:3, 1:st%lnst))
-          lspin = st%spin(1:3, st%st_start:st%st_end, ik)
-          do jj = 1, 3
-            call lmpi_gen_allgatherv(st%lnst, lspin(jj, :), tmp, st%spin(jj, :, ik), st%mpi_grp)
+          SAFE_ALLOCATE(lspin (1:st%lnst))
+          SAFE_ALLOCATE(lspin2(1:st%nst))
+          do idir = 1, 3
+            lspin = st%spin(idir, st%st_start:st%st_end, ik)
+            call lmpi_gen_allgatherv(st%lnst, lspin, tmp, lspin2, st%mpi_grp)
+            do ist = 1, st%nst
+              st%spin(idir, ist, ik) = lspin2(ist)
+            enddo
           end do
           SAFE_DEALLOCATE_A(lspin)
+          SAFE_DEALLOCATE_A(lspin2)
         end if
 #endif
       end do
