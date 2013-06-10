@@ -355,9 +355,9 @@ end subroutine FNAME(axpy_6)
 !! ------------------------------------------------------------------
 
 subroutine FNAME(copy_1)(n1, dx, dy)
-  integer, intent(in)  :: n1
-  TYPE1,   intent(in)  :: dx(:)
-  TYPE1,   intent(out) :: dy(:)
+  integer, intent(in)    :: n1
+  TYPE1,   intent(in)    :: dx(:)
+  TYPE1,   intent(inout) :: dy(:)
 
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
@@ -375,9 +375,9 @@ subroutine FNAME(copy_1)(n1, dx, dy)
 end subroutine FNAME(copy_1)
 
 subroutine FNAME(copy_2)(n1, n2, dx, dy)
-  integer, intent(in)  :: n1, n2
-  TYPE1,   intent(in)  :: dx(:,:)
-  TYPE1,   intent(out) :: dy(:,:)
+  integer, intent(in)    :: n1, n2
+  TYPE1,   intent(in)    :: dx(:,:)
+  TYPE1,   intent(inout) :: dy(:,:)
 
   if (n1*n2 < 1) return
 
@@ -395,9 +395,9 @@ subroutine FNAME(copy_2)(n1, n2, dx, dy)
 end subroutine FNAME(copy_2)
 
 subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
-  integer, intent(in)  :: n1, n2, n3
-  TYPE1,   intent(in)  :: dx(:,:,:)
-  TYPE1,   intent(out) :: dy(:,:,:)
+  integer, intent(in)    :: n1, n2, n3
+  TYPE1,   intent(in)    :: dx(:,:,:)
+  TYPE1,   intent(inout) :: dy(:,:,:)
 
   if(n1*n2*n3 < 1) return
 
@@ -417,9 +417,9 @@ subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
 end subroutine FNAME(copy_3)
 
 subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
-  integer, intent(in)  :: n1, n2, n3, n4
-  TYPE1,   intent(in)  :: dx(:,:,:,:)
-  TYPE1,   intent(out) :: dy(:,:,:,:)
+  integer, intent(in)    :: n1, n2, n3, n4
+  TYPE1,   intent(in)    :: dx(:,:,:,:)
+  TYPE1,   intent(inout) :: dy(:,:,:,:)
 
   if (n1*n2*n3*n4 < 1) return
 

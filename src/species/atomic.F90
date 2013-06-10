@@ -18,7 +18,6 @@
 !! $Id$
 
 #include "global.h"
-#define R_TOPREC(x) real(x, REAL_PRECISION)
 
 module atomic_m
   use global_m
@@ -1126,7 +1125,7 @@ contains
 
   subroutine numout(e, h, s, y, ncor, knk, nnode, y2, g, gsg, x)
     REAL_DOUBLE, intent(in)    :: e, h(:), s(:)
-    REAL_DOUBLE, intent(out)   :: y(:)
+    REAL_DOUBLE, intent(inout) :: y(:)
     integer,     intent(in)    :: ncor
     integer,     intent(inout) :: knk
     integer,     intent(out)   :: nnode
