@@ -355,21 +355,21 @@ contains
 
 
 
-    print *, mpi_world%rank, "local_N(3)       ", local_N
-    print *, mpi_world%rank, "local_N_start(3) ", local_N_start
-    print *, mpi_world%rank, "fs_istart(1:3)   ", fs_istart
-    print *, mpi_world%rank, "fs_n(1:3)        ", fs_n
-    print *, mpi_world%rank, "rs_istart(1:3)   ", rs_istart
-    print *, mpi_world%rank, "rs_n(1:3)        ", rs_n
-    print *, mpi_world%rank, "lower_border     ", lower_border
-    print *, mpi_world%rank, "upper_border     ", upper_border
-    print *, mpi_world%rank, "rs_range         ", upper_border(:) - lower_border(:)
-    print *, mpi_world%rank, "local_M          ", local_M
-    print *, mpi_world%rank, "pnfft%N_local    ", pnfft%N_local 
-    print *, mpi_world%rank, "pnfft%M          ", pnfft%M 
-    print *, mpi_world%rank, "pnfft%M_istart   ", pnfft%M_istart 
-    print *, mpi_world%rank, "size(pnfft%f_hat)", size(pnfft%f_hat,1), size(pnfft%f_hat,2), size(pnfft%f_hat, 3) 
-    print *, mpi_world%rank, "size(pnfft%f)    ", size(pnfft%f,1), size(pnfft%f,2), size(pnfft%f,3)
+    write(6,*) mpi_world%rank, "local_N(3)       ", local_N
+    write(6,*) mpi_world%rank, "local_N_start(3) ", local_N_start
+    write(6,*) mpi_world%rank, "fs_istart(1:3)   ", fs_istart
+    write(6,*) mpi_world%rank, "fs_n(1:3)        ", fs_n
+    write(6,*) mpi_world%rank, "rs_istart(1:3)   ", rs_istart
+    write(6,*) mpi_world%rank, "rs_n(1:3)        ", rs_n
+    write(6,*) mpi_world%rank, "lower_border     ", lower_border
+    write(6,*) mpi_world%rank, "upper_border     ", upper_border
+    write(6,*) mpi_world%rank, "rs_range         ", upper_border(:) - lower_border(:)
+    write(6,*) mpi_world%rank, "local_M          ", local_M
+    write(6,*) mpi_world%rank, "pnfft%N_local    ", pnfft%N_local 
+    write(6,*) mpi_world%rank, "pnfft%M          ", pnfft%M 
+    write(6,*) mpi_world%rank, "pnfft%M_istart   ", pnfft%M_istart 
+    write(6,*) mpi_world%rank, "size(pnfft%f_hat)", size(pnfft%f_hat,1), size(pnfft%f_hat,2), size(pnfft%f_hat, 3) 
+    write(6,*) mpi_world%rank, "size(pnfft%f)    ", size(pnfft%f,1), size(pnfft%f,2), size(pnfft%f,3)
 
     POP_SUB(pnfft_init_plan)
   end subroutine pnfft_init_plan
@@ -383,11 +383,11 @@ contains
     call pnfft_finalize(pnfft%plan, PNFFT_FREE_X + PNFFT_FREE_F_HAT + PNFFT_FREE_F)
     call pnfft_cleanup()
    
-    pnfft%f_lin => NULL()
-    pnfft%f => NULL()
-    pnfft%f_hat => NULL()
-    pnfft%x => NULL()
-    pnfft%x_lin => NULL()
+    nullify(pnfft%f_lin)
+    nullify(pnfft%f)
+    nullify(pnfft%f_hat)
+    nullify(pnfft%x)
+    nullify(pnfft%x_lin)
    
     POP_SUB(pnfft_end)
   end subroutine pnfft_end
@@ -447,7 +447,7 @@ contains
           
           temp = (X(pnfft%M_istart(3)+i3-1, 3)  - cc(3))/len(3)
           if(temp > pnfft%upper_border(3) .or. temp < pnfft%lower_border(3) ) then
-            print *, mpi_world%rank, "out of bounds x3 = ", temp,"-- ", pnfft%lower_border(3), pnfft%upper_border(3)
+            write(6,*) mpi_world%rank, "out of bounds x3 = ", temp,"-- ", pnfft%lower_border(3), pnfft%upper_border(3)
           end if
 
 
@@ -455,14 +455,14 @@ contains
 
         temp = (X(pnfft%M_istart(2)+i2-1, 2)  - cc(2))/len(2)
         if(temp > pnfft%upper_border(2) .or. temp < pnfft%lower_border(2) ) then
-          print *, mpi_world%rank, "out of bounds x2 = ", temp,"-- ", pnfft%lower_border(2), pnfft%upper_border(2)
+          write(6,*) mpi_world%rank, "out of bounds x2 = ", temp,"-- ", pnfft%lower_border(2), pnfft%upper_border(2)
         end if
 
       end do
 
       temp = (X(pnfft%M_istart(1)+i1-1, 1)  - cc(1))/len(1)
       if(temp > pnfft%upper_border(1) .or. temp < pnfft%lower_border(1) ) then
-        print *, mpi_world%rank, "out of bounds x1 = ", temp,"-- ", pnfft%lower_border(1), pnfft%upper_border(1)
+        write(6,*) mpi_world%rank, "out of bounds x1 = ", temp,"-- ", pnfft%lower_border(1), pnfft%upper_border(1)
       end if
 
     end do
@@ -493,7 +493,7 @@ contains
 !     pnfft%norm = M_ONE/(minval(dX(:,1)) * minval(dX(:,2)) * minval(dX(:,3)))
     pnfft%norm = M_ONE/(pnfft%N(1)*pnfft%N(2)*pnfft%N(3))
 
-    print *, mpi_world%rank, "pnfft%norm", pnfft%norm 
+    write(6,*) mpi_world%rank, "pnfft%norm", pnfft%norm 
 
     POP_SUB(pnfft_set_sp_nodes)
   end subroutine pnfft_set_sp_nodes

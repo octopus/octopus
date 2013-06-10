@@ -47,11 +47,11 @@ contains
 
   elemental subroutine projector_matrix_nullify(this)
     type(projector_matrix_t), intent(out) :: this
-    !
-    this%map=>null()
-    this%projectors=>null()
-    this%scal=>null()
-    return
+
+    nullify(this%map)
+    nullify(this%projectors)
+    nullify(this%scal)
+
   end subroutine projector_matrix_nullify
   
   ! -------------------------------------------------
@@ -76,7 +76,7 @@ contains
   ! -------------------------------------------------
 
   subroutine projector_matrix_deallocate(this)
-    type(projector_matrix_t), intent(out) :: this
+    type(projector_matrix_t), intent(inout) :: this
 
     PUSH_SUB(projector_matrix_deallocate)
 
