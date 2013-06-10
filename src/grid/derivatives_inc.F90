@@ -518,7 +518,7 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc, fact
   type(nl_operator_t), target, intent(in)    :: op
   type(derivatives_t),         intent(in)    :: der
   R_TYPE,                      intent(inout) :: ff(:)     !< (der%mesh%np_part)
-  R_TYPE,                      intent(out)   :: op_ff(:)  !< (der%mesh%np)
+  R_TYPE,                      intent(inout) :: op_ff(:)  !< (>= der%mesh%np)
   logical, optional,           intent(in)    :: ghost_update
   logical, optional,           intent(in)    :: set_bc
   FLOAT,   optional,           intent(in)    :: factor

@@ -585,15 +585,12 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   if(normalize_) then
     if (st%cmplxscl%space) then 
       nrm2 = sqrt(X(mf_dotp)(mesh, st%d%dim, phi, phi, dotu = .true.))
-      do idim = 1, st%d%dim
-         phi(:, idim) = phi(:, idim) / nrm2
-      end do
     else
       nrm2 = X(mf_nrm2)(mesh, st%d%dim, phi)
-      do idim = 1, st%d%dim
-         call lalg_scal(mesh%np, M_ONE/nrm2, phi(:, idim))
-      end do
     end if
+    do idim = 1, st%d%dim
+      call lalg_scal(mesh%np, M_ONE/nrm2, phi(:, idim))
+    end do
   end if
 
   if(present(overlap)) then

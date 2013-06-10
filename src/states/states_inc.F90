@@ -22,7 +22,7 @@ subroutine X(states_get_state2)(st, mesh, ist, iqn, psi, left)
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: ist       !< current state
   integer,           intent(in)    :: iqn       !< current k-point
-  R_TYPE,            intent(out)   :: psi(:, :)
+  R_TYPE,            intent(inout) :: psi(:, :)
   logical, optional, intent (in)   :: left
   
   integer :: idim
@@ -44,7 +44,7 @@ subroutine X(states_get_state1)(st, mesh, idim, ist, iqn, psi, left)
   integer,           intent(in)    :: idim   !< current dimension
   integer,           intent(in)    :: ist
   integer,           intent(in)    :: iqn    !< current k-point
-  R_TYPE,            intent(out)   :: psi(:)
+  R_TYPE,            intent(inout) :: psi(:)
   logical, optional, intent(in)    :: left 
 
   PUSH_SUB(X(states_get_state1))

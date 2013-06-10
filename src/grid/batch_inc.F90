@@ -102,6 +102,7 @@ subroutine X(batch_new)(this, st_start, st_end, np)
   PUSH_SUB(X(batch_new))
 
   SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:st_end - st_start + 1))
+  this%X(psicont) = R_TOTYPE(M_ZERO)
 
   this%is_allocated = .true.
 
