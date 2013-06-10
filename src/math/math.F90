@@ -1106,15 +1106,15 @@ contains
         axis = axis / dot_product(axis, axis)
 
         M(1,1) = cos(phi) + axis(1)**2 * (1 - cos(phi))    
-        M(1,2) = axis(1)*axis(2)*(1-cos(phi)) + axis(3)*sin(phi)
-        M(1,3) = axis(1)*axis(3)*(1-cos(phi)) - axis(2)*sin(phi)
+        M(1,2) = axis(1)*axis(2)*(1-cos(phi)) - axis(3)*sin(phi)
+        M(1,3) = axis(1)*axis(3)*(1-cos(phi)) + axis(2)*sin(phi)
 
-        M(2,1) = axis(2)*axis(1)*(1-cos(phi)) - axis(3)*sin(phi)
+        M(2,1) = axis(2)*axis(1)*(1-cos(phi)) + axis(3)*sin(phi)
         M(2,2) = cos(phi) + axis(2)**2 * (1 - cos(phi))
-        M(2,3) = axis(2)*axis(3)*(1-cos(phi)) + axis(1)*sin(phi) 
+        M(2,3) = axis(2)*axis(3)*(1-cos(phi)) - axis(2)*sin(phi) 
 
-        M(3,1) = axis(3)*axis(1)*(1-cos(phi)) + axis(2)*sin(phi)
-        M(3,2) = axis(3)*axis(2)*(1-cos(phi)) - axis(1)*sin(phi)
+        M(3,1) = axis(3)*axis(1)*(1-cos(phi)) - axis(2)*sin(phi)
+        M(3,2) = axis(3)*axis(2)*(1-cos(phi)) + axis(1)*sin(phi)
         M(3,3) = cos(phi) + axis(3)**2 * (1 - cos(phi))          
 
         SAFE_DEALLOCATE_A(axis)
