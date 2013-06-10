@@ -804,7 +804,9 @@ void photoelectron_spectrum_help(){
   printf("                      - 2D\n");
   printf("                         '2' : (theta, E). Angle- and energy-resolved ionization probability.\n");
   printf("                              The values are integrated in phi.\n");
-  printf("                         '3' : (px, py). Velocity map on a plane orthogonal to vec.\n");
+  printf("                         '3' : (px, py). Velocity map on a plane orthogonal to pvec (only x,y,z=0 planes).\n");
+  printf("                              The space is rotated so that the z-axis is along vec (by default the \n");
+  printf("                              polarization axis).\n");
   printf("                         '4' : (Ex, Ey). Angle- and energy-resolved on the inclination plane.\n");
   printf("                              The values are integrated in phi.\n");
   printf("                         '5' : (theta, phi). Ionization probability integrated on spherical cuts with\n");
@@ -818,6 +820,8 @@ void photoelectron_spectrum_help(){
   printf("  -i, --int=Y/N       Interpolate the output. Default is Yes.\n");
   printf("  -V, --vec=x,y,z     The polar zenith direction in comma-separated format \n");
   printf("                      (without spaces). Default is the laser polarization. \n");
+  printf("  -u, --pvec=x,y,z    The plane cut vector in comma-separated format.\n");
+  printf("                      Default is 0,0,1 (px-py plane). \n");
   printf("  -C, --center=x,y,z  Center of the coordinates in p-space in comma-separated format \n");
   printf("                      Default: 0,0,0. \n");
   printf("  -E,                 Maximum and minimum energy in colon-separated values. \n");
@@ -835,7 +839,8 @@ void photoelectron_spectrum_help(){
 
 void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
      ( int *m, int *interp, double *estep, double *espan, double *thstep, 
-     double *thspan, double *phstep, double *phspan, double *pol, double *center)
+       double *thspan, double *phstep, double *phspan, double *pol, 
+       double *center, double *pvec)
 {
   int c;
   char delims[] = ",:";
@@ -865,6 +870,7 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
       {"dph", required_argument, 0, 'p'},
       {"phspan", required_argument, 0, 'P'},
       {"vec", required_argument, 0, 'V'},
+      {"pvec", required_argument, 0, 'v'},
       {"center", required_argument, 0, 'C'},
       {0, 0, 0, 0}
     };
@@ -873,9 +879,9 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
   while (1) {
     int option_index = 0;
 #if defined(HAVE_GETOPT_LONG)
-    c = getopt_long(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:u:", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:");
+    c = getopt(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:u:");
 #endif
     if (c == -1) break;
     switch (c) {
@@ -942,6 +948,16 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
       pol[1] = atof(tok);     
       tok = strtok(NULL,delims);
       pol[2] = atof(tok);     
+
+    break;
+
+    case 'u':
+      tok = strtok(optarg,delims);
+      pvec[0] = atof(tok);
+      tok = strtok(NULL,delims);
+      pvec[1] = atof(tok);     
+      tok = strtok(NULL,delims);
+      pvec[2] = atof(tok);     
 
     break;
 
