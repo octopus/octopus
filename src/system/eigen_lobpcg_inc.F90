@@ -116,7 +116,7 @@ end subroutine X(eigensolver_lobpcg)
 !! A. V. Knyazev, I. Lashuk, M. E. Argentati, and E. Ovchin-
 !! nikov. Block Locally Optimal Preconditioned Eigenvalue Xolvers
 !! (BLOPEX) in hypre and PETSc. SIAM Journal of Scientific Computing,
-!! 2007.
+!! 25 (5): 517–541, doi:10.1137/060661624 (2007)
 !!
 !! There is also a wiki page at
 !! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:LOBPCG
@@ -167,7 +167,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   R_TYPE, allocatable         :: dir(:, :, :)     !< Conjugate directions.
   R_TYPE, allocatable         :: h_dir(:, :, :)   !< H dir.
   R_TYPE, allocatable         :: h_psi(:, :, :)   !< H |psi>.
-  FLOAT,  allocatable          :: eval(:)         !< The eigenvalues of the current block.
+  FLOAT,  allocatable         :: eval(:)          !< The eigenvalues of the current block.
   R_TYPE, allocatable         :: gram_h(:, :)     !< Gram matrix for Hamiltonian.
   R_TYPE, allocatable         :: gram_i(:, :)     !< Gram matrix for unit matrix.
   R_TYPE, allocatable         :: gram_block(:, :) !< Space to construct the Gram matrix blocks.
@@ -286,7 +286,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
   ! Orthonormalize initial vectors.
   no_bof = .false.
-  call X(lobpcg_orth)(st_start, st_end, psi(:, :, :), no_bof)
+  call X(lobpcg_orth)(st_start, st_end, psi, no_bof)
 
   if(no_bof) then
     message(1) = 'Problem: orthonormalization of initial vectors failed.'
@@ -303,7 +303,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   call batch_end(hpsib)
 
   niter = niter+lnst
-  call X(blockt_mul)(psi(:, :, :), h_psi, gram_block, xpsi1=all_ev, xpsi2=all_ev, symm=.true.)
+  call X(blockt_mul)(psi, h_psi, gram_block, xpsi1=all_ev, xpsi2=all_ev, symm=.true.)
 
   SAFE_ALLOCATE(ritz_vec(1:nst, 1:nst))
   no_bof = .false.
@@ -439,7 +439,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! Rayleigh-Ritz procedure.
     ! gram_h matrix.
     if(explicit_gram) then
-      call X(blockt_mul)(h_psi, psi(:, :, :), gram_h(1:nst, 1:nst), xpsi1=all_ev, xpsi2=all_ev)
+      call X(blockt_mul)(h_psi, psi, gram_h(1:nst, 1:nst), xpsi1=all_ev, xpsi2=all_ev)
     else
       ! (1, 1)-block: eigenvalues on diagonal.
       gram_h(1:nst, 1:nst) = R_TOTYPE(M_ZERO)
@@ -468,7 +468,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! gram_i matrix.
     ! Diagonal blocks.
     if(explicit_gram) then
-      call X(blockt_mul)(psi(:, :, :), psi(:, :, :), gram_i(1:nst, 1:nst), xpsi1=all_ev, xpsi2=all_ev)
+      call X(blockt_mul)(psi, psi, gram_i(1:nst, 1:nst), xpsi1=all_ev, xpsi2=all_ev)
       call X(blockt_mul)(res, res, gram_i(nst+1:nst+nuc, nst+1:nst+nuc), xpsi1=UC, xpsi2=UC)
       call X(blockt_mul)(dir, dir, gram_i(nst+nuc+1:nst+2*nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
     else
@@ -480,11 +480,11 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     end if
 
     ! (1, 2)-block: <psi| res.
-    call X(blockt_mul)(psi(:, :, :), res, gram_i(1:nst, nst+1:nst+nuc), xpsi1=all_ev, xpsi2=UC)
+    call X(blockt_mul)(psi, res, gram_i(1:nst, nst+1:nst+nuc), xpsi1=all_ev, xpsi2=UC)
 
     if(iter > 1) then
       ! (1, 3)-block: <psi| dir.
-      call X(blockt_mul)(psi(:, :, :), dir, gram_i(1:nst, nst+nuc+1:nst+2*nuc), xpsi1=all_ev, xpsi2=UC)
+      call X(blockt_mul)(psi, dir, gram_i(1:nst, nst+nuc+1:nst+2*nuc), xpsi1=all_ev, xpsi2=UC)
 
       ! (2, 3)-block: res^+ dir.
       call X(blockt_mul)(res, dir, gram_i(nst+1:nst+nuc, nst+nuc+1:nst+2*nuc), xpsi1=UC, xpsi2=UC)
@@ -520,7 +520,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! Calculate new eigenstates:
     ! |psi> <- |psi> ritz_psi + dir
     ! h_psi <- (H |psi>) ritz_psi + H dir
-    call X(block_matr_mul)(psi(:, :, :), ritz_psi, tmp, xpsi=all_ev, xres=all_ev)
+    call X(block_matr_mul)(psi, ritz_psi, tmp, xpsi=all_ev, xres=all_ev)
     call lalg_copy(gr%mesh%np_part, st%d%dim, lnst, tmp(:, :, st_start:), psi(:, :, st_start:))
     do ist = st_start, st_end ! Leave this loop, otherwise xlf90 crashes.
       call lalg_axpy(gr%mesh%np_part, st%d%dim, M_ONE, dir(:, :, ist), psi(:, :, ist))
