@@ -506,9 +506,6 @@ contains
     !%End
     steps = max_iter
     SAFE_ALLOCATE(cf_common%td_penalty(1:cf_common%no_controlfunctions))
-    do ipar = 1, cf_common%no_controlfunctions
-      call tdf_init_numerical(cf_common%td_penalty(ipar), steps, dt, -M_ONE, initval = M_ONE)
-    end do
 
     if (parse_block(datasets_check('OCTLaserEnvelope'), blk)==0) then
 
@@ -535,6 +532,10 @@ contains
       end do
 
       call parse_block_end(blk)
+    else
+      do ipar = 1, cf_common%no_controlfunctions
+        call tdf_init_numerical(cf_common%td_penalty(ipar), steps, dt, -M_ONE, initval = M_ONE)
+      end do
     end if
 
     call messages_print_stress(stdout)
