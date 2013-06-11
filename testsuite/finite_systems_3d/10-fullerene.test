@@ -9,8 +9,10 @@ Enabled    : Yes
 Processors: 4
 Input: 10-fullerene.01-gs.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -340.67480783
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ;  3706.61771965
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -71.57879406
 match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  4008.93596422
+match ; Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ;  -141.16744474
 match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -94.55595344
 match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;   -13.38926436
 match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   280.72712553
@@ -33,8 +35,10 @@ match ; Eigenvalue 140     ; GREP(static/info, '140   --', 13) ;   0.181107
 
 Input: 10-fullerene.02-gs_packed.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -340.67480783
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ;  3706.61771965
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -71.57879406
 match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  4008.93596422
+match ; Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ;  -141.16744474
 match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -94.55595344
 match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;   -13.38926436
 match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   280.72712553
@@ -57,8 +61,10 @@ match ; Eigenvalue 140     ; GREP(static/info, '140   --', 13) ;   0.181107
 
 Input: 10-fullerene.03-gs_stdlcao.inp
 match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -340.67480783
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ;  3706.61771965
 match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -71.57879406
 match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;  4008.93596422
+match ; Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ;  -141.16744474
 match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -94.55595344
 match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;   -13.38926436
 match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;   280.72712553
