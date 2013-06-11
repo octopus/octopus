@@ -65,6 +65,8 @@ module hamiltonian_base_m
     hamiltonian_base_t,                        &
     dhamiltonian_base_local,                   &
     zhamiltonian_base_local,                   &
+    dhamiltonian_base_local_sub,               &
+    zhamiltonian_base_local_sub,               &
     dhamiltonian_base_magnetic,                &
     zhamiltonian_base_magnetic,                &
     dhamiltonian_base_nlocal_start,            &

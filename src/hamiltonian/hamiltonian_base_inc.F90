@@ -25,6 +25,35 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   type(batch_t), target,       intent(in)    :: psib
   type(batch_t), target,       intent(inout) :: vpsib
 
+  PUSH_SUB(X(hamiltonian_base_local))
+
+  if(batch_status(psib) == BATCH_CL_PACKED) then
+#ifdef HAVE_OPENCL
+    call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, &
+      psib, vpsib, potential_opencl = this%potential_opencl)
+#endif
+  else
+    if(associated(this%Impotential)) then
+      call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, &
+        psib, vpsib, Impotential = this%Impotential)
+    else
+      call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, psib, vpsib)
+    endif
+  endif
+
+  POP_SUB(X(hamiltonian_base_local))
+end subroutine X(hamiltonian_base_local)
+
+subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsib, Impotential, potential_opencl)
+  FLOAT,                        intent(in)    :: potential(:,:)
+  type(mesh_t),                 intent(in)    :: mesh
+  type(states_dim_t),           intent(in)    :: std
+  integer,                      intent(in)    :: ispin
+  type(batch_t), target,        intent(in)    :: psib
+  type(batch_t), target,        intent(inout) :: vpsib
+  FLOAT, optional,              intent(in)    :: Impotential(:,:)
+  type(opencl_mem_t), optional, intent(in)    :: potential_opencl
+
   integer :: ist, ip
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
   R_TYPE  :: psi1, psi2
@@ -34,15 +63,11 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   integer :: pnp, iprange
 #endif
 
-  if(.not. associated(this%potential)) then
-    return
-  end if
-  
-  cmplxscl = .false.
-  if(associated(this%Impotential)) cmplxscl = .true.
-
   call profiling_in(prof_vlpsi, "VLPSI")
-  PUSH_SUB(X(hamiltonian_base_local))
+  PUSH_SUB(X(hamiltonian_base_local_sub))
+
+  cmplxscl = .false.
+  if(present(Impotential)) cmplxscl = .true.
 
   if(batch_is_packed(psib) .or. batch_is_packed(vpsib)) then
     ASSERT(batch_is_packed(psib))
@@ -53,6 +78,8 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   select case(batch_status(psib))
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
+    ASSERT(.not. cmplxscl) ! not implemented
+
     pnp = opencl_padded_size(mesh%np)
 
     select case(std%ispin)
@@ -97,8 +124,8 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
     case(UNPOLARIZED, SPIN_POLARIZED)
       if(cmplxscl)then
         do ip = 1, mesh%np
-          vv = this%potential(ip, ispin)
-          Imvv= this%impotential(ip, ispin)
+          vv = potential(ip, ispin)
+          Imvv = Impotential(ip, ispin)
           forall (ist = 1:psib%nst_linear)
             vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + (vv+M_zI*Imvv)*psib%pack%X(psi)(ist, ip)
           end forall
@@ -106,7 +133,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
       else
         !$omp parallel do private(vv, ist)
         do ip = 1, mesh%np
-          vv = this%potential(ip, ispin)
+          vv = potential(ip, ispin)
           forall (ist = 1:psib%nst_linear)
             vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + vv*psib%pack%X(psi)(ist, ip)
           end forall
@@ -127,9 +154,9 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
           psi1 = psib%pack%zpsi(ist    , ip)
           psi2 = psib%pack%zpsi(ist + 1, ip)
           vpsib%pack%zpsi(ist    , ip) = vpsib%pack%zpsi(ist    , ip) + &
-            this%potential(ip, 1)*psi1 + (this%potential(ip, 3) + M_zI*this%potential(ip, 4))*psi2
+            potential(ip, 1)*psi1 + (potential(ip, 3) + M_zI*potential(ip, 4))*psi2
           vpsib%pack%zpsi(ist + 1, ip) = vpsib%pack%zpsi(ist + 1, ip) + &
-            this%potential(ip, 2)*psi2 + (this%potential(ip, 3) - M_zI*this%potential(ip, 4))*psi1
+            potential(ip, 2)*psi2 + (potential(ip, 3) - M_zI*potential(ip, 4))*psi1
         end do
       end do
       !$omp end parallel do
@@ -146,7 +173,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
         do ist = 1, psib%nst
           forall (ip = 1:mesh%np)
             vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + &
-              (this%potential(ip, ispin)+ M_zI*this%Impotential(ip, ispin)) * psib%states(ist)%X(psi)(ip, 1) 
+              (potential(ip, ispin)+ M_zI*Impotential(ip, ispin)) * psib%states(ist)%X(psi)(ip, 1) 
           end forall
         end do
       else
@@ -154,7 +181,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
         do ist = 1, psib%nst
           forall (ip = 1:mesh%np)
             vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + &
-              this%potential(ip, ispin) * psib%states(ist)%X(psi)(ip, 1)
+              potential(ip, ispin) * psib%states(ist)%X(psi)(ip, 1)
           end forall
         end do
         !$omp end parallel do
@@ -171,10 +198,10 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
         vpsi => vpsib%states(ist)%X(psi)
 
         forall(ip = 1:mesh%np)
-          vpsi(ip, 1) = vpsi(ip, 1) + this%potential(ip, 1)*psi(ip, 1) + &
-            (this%potential(ip, 3) + M_zI*this%potential(ip, 4))*psi(ip, 2)
-          vpsi(ip, 2) = vpsi(ip, 2) + this%potential(ip, 2)*psi(ip, 2) + &
-            (this%potential(ip, 3) - M_zI*this%potential(ip, 4))*psi(ip, 1)
+          vpsi(ip, 1) = vpsi(ip, 1) + potential(ip, 1)*psi(ip, 1) + &
+            (potential(ip, 3) + M_zI*potential(ip, 4))*psi(ip, 2)
+          vpsi(ip, 2) = vpsi(ip, 2) + potential(ip, 2)*psi(ip, 2) + &
+            (potential(ip, 3) - M_zI*potential(ip, 4))*psi(ip, 1)
         end forall
 
       end do
@@ -185,9 +212,9 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   end select
 
   call profiling_out(prof_vlpsi)
-  POP_SUB(X(hamiltonian_base_local))
+  POP_SUB(X(hamiltonian_base_local_sub))
 
-end subroutine X(hamiltonian_base_local)
+end subroutine X(hamiltonian_base_local_sub)
 
 ! ---------------------------------------------------------------------------------------
 

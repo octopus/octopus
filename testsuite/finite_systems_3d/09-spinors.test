@@ -8,7 +8,7 @@ Enabled  : Yes
 
 Input: 09-spinors.01-ground_state.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669588
-match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.26769811
+match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.29125114
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
 match ; <Sx>         ; GREP(static/info, '1   --', 36) ;  0.1928
 match ; <Sy>         ; GREP(static/info, '1   --', 44) ;  0.1928
@@ -19,7 +19,7 @@ match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.83
 
 Input: 09-spinors.02-rmmdiis.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669588
-match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.26641724
+match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.29125114
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
 match ; <Sx>         ; GREP(static/info, '1   --', 36) ;  0.1975
 match ; <Sy>         ; GREP(static/info, '1   --', 44) ;  0.1975
@@ -33,7 +33,7 @@ match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.82
 
 Input: 09-spinors.03-rmmdiis_extra_states.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669588
-match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.29125110
+match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.29125114
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
 match ; <Sx>         ; GREP(static/info, '1   --', 36) ;  0.0736
 match ; <Sy>         ; GREP(static/info, '1   --', 44) ;  0.0736

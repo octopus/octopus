@@ -225,70 +225,61 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
 
-  integer :: ii, ip
-  logical :: cmplxscl 
+  FLOAT, allocatable :: vpsl_spin(:,:), Imvpsl_spin(:,:)
+  integer :: ispin
 #ifdef HAVE_OPENCL
-  integer :: pnp, iprange
-  type(opencl_mem_t) :: vext_buff
+  integer :: pnp
+  type(opencl_mem_t) :: vpsl_buff
 #endif
 
   PUSH_SUB(X(hamiltonian_external))
 
-  cmplxscl = this%cmplxscl%space
-  
-  select case(batch_status(psib))
-  case(BATCH_NOT_PACKED)
-    do ii = 1, psib%nst
-      vpsib%states_linear(ii)%X(psi)(1:mesh%np) = vpsib%states_linear(ii)%X(psi)(1:mesh%np) + &
-        this%ep%vpsl(1:mesh%np)*psib%states_linear(ii)%X(psi)(1:mesh%np)
-    end do
-#ifdef R_TCOMPLEX    
-    if(cmplxscl) then
-      do ii = 1, psib%nst
-        vpsib%states_linear(ii)%X(psi)(1:mesh%np) = vpsib%states_linear(ii)%X(psi)(1:mesh%np) + &
-          M_zI * this%ep%Imvpsl(1:mesh%np)*psib%states_linear(ii)%X(psi)(1:mesh%np)
-      end do      
-    end if 
-#endif    
-  case(BATCH_PACKED)
-    do ip = 1, mesh%np
-      do ii = 1, psib%nst
-        vpsib%pack%X(psi)(ii, ip) = vpsib%pack%X(psi)(ii, ip) + this%ep%vpsl(ip)*psib%pack%X(psi)(ii, ip)
-      end do
-    end do
-#ifdef R_TCOMPLEX    
-    if(cmplxscl) then
-      do ii = 1, psib%nst
-        vpsib%pack%X(psi)(ii, ip) = vpsib%pack%X(psi)(ii, ip) + M_zI * this%ep%Imvpsl(ip)*psib%pack%X(psi)(ii, ip)
-      end do      
-    end if 
-#endif    
-  case(BATCH_CL_PACKED)
+  SAFE_ALLOCATE(vpsl_spin(mesh%np, this%d%nspin))
+  vpsl_spin(1:mesh%np, 1) = this%ep%vpsl(1:mesh%np)
+  if(this%d%ispin == SPINORS) then
+    ! yes this means a little unnecessary computation in the later call,
+    ! but with the great benefit of being able to reuse an existing routine
+    vpsl_spin(1:mesh%np, 2) = this%ep%vpsl(1:mesh%np)
+    vpsl_spin(1:mesh%np, 3) = M_ZERO
+    vpsl_spin(1:mesh%np, 4) = M_ZERO
+  endif
+
+  if(this%cmplxscl%space) then
+    SAFE_ALLOCATE(Imvpsl_spin(mesh%np, this%d%nspin))
+    Imvpsl_spin(1:mesh%np, 1) = this%ep%Imvpsl(1:mesh%np)
+    if(this%d%ispin == SPINORS) then
+      Imvpsl_spin(1:mesh%np, 2) = this%ep%Imvpsl(1:mesh%np)
+      Imvpsl_spin(1:mesh%np, 3) = M_ZERO
+      Imvpsl_spin(1:mesh%np, 4) = M_ZERO
+    endif
+  endif
+
+  if(batch_status(psib) == BATCH_CL_PACKED) then
 #ifdef HAVE_OPENCL
     pnp = opencl_padded_size(mesh%np)
+    ! FIXME: not set up for spinors yet
+    call opencl_create_buffer(vpsl_buff, CL_MEM_READ_ONLY, TYPE_FLOAT, pnp)
+    call opencl_write_buffer(vpsl_buff, mesh%np, this%ep%vpsl)
 
-    call opencl_create_buffer(vext_buff, CL_MEM_READ_ONLY, TYPE_FLOAT, pnp)
+    call X(hamiltonian_base_local_sub)(vpsl_spin, mesh, this%d, 1, &
+      psib, vpsib, potential_opencl = vpsl_buff)
 
-    call opencl_write_buffer(vext_buff, mesh%np, this%ep%vpsl)
-
-    call opencl_set_kernel_arg(kernel_vpsi, 0, 0)
-    call opencl_set_kernel_arg(kernel_vpsi, 1, mesh%np)
-    call opencl_set_kernel_arg(kernel_vpsi, 2, vext_buff)
-    call opencl_set_kernel_arg(kernel_vpsi, 3, psib%pack%buffer)
-    call opencl_set_kernel_arg(kernel_vpsi, 4, log2(psib%pack%size_real(1)))
-    call opencl_set_kernel_arg(kernel_vpsi, 5, vpsib%pack%buffer)
-    call opencl_set_kernel_arg(kernel_vpsi, 6, log2(vpsib%pack%size_real(1)))
-    
-    iprange = opencl_max_workgroup_size()/psib%pack%size_real(1)
-    
-    call opencl_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), iprange/))
-
-    call opencl_finish()
-
-    call opencl_release_buffer(vext_buff)
+    call opencl_release_buffer(vpsl_buff)
 #endif
-  end select
+  else
+    if(this%cmplxscl%space) then
+      call X(hamiltonian_base_local_sub)(vpsl_spin, mesh, this%d, 1, &
+        psib, vpsib, Impotential = Imvpsl_spin)
+    else
+      call X(hamiltonian_base_local_sub)(vpsl_spin, mesh, this%d, 1, psib, vpsib)
+    endif
+  endif
 
+  SAFE_DEALLOCATE_A(vpsl_spin)
+  if(this%cmplxscl%space) then
+    SAFE_DEALLOCATE_A(Imvpsl_spin)
+  endif
+  
   POP_SUB(X(hamiltonian_external))
 end subroutine X(hamiltonian_external)
 
