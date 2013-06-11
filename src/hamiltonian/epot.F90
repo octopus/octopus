@@ -583,7 +583,7 @@ contains
         end if
       else
         if(cmplxscl) then
-          call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, ep%Imvpsl)
+          call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, ep%Imvpsl, density = density)
         else
           call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
         end if
