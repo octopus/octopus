@@ -86,8 +86,7 @@ module controlfunction_m
             controlfunction_alpha,             &
             controlfunction_targetfluence,     &
             controlfunction_filter,            &
-            controlfunction_gradient,          &
-            controlfunction_cosine_multiply
+            controlfunction_gradient
 
 
   integer, public, parameter ::     &
@@ -493,16 +492,8 @@ contains
     !%
     !% It is possible to choose different envelopes for different control functions.
     !% There should be one line for each control function. Each line should
-    !% have only one element: a string with the function that defines the
-    !% <b>inverse</b> of the time-dependent penalty, which is then defined as
-    !% 1 divided by (this function + 1.0e-7) (to avoid possible singularities).
-    !%
-    !% The usual choices should be functions between zero and one.
-    !%
-    !% If, instead of defining a function, the string is <tt>default</tt>, then
-    !% the program will use the function:
-    !%
-    !% <math> \frac{1}{\alpha(t)} = \frac{1}{2}( erf((100/T)*(t-T/20))+ erf(-(100/T)*(t-T+T/20)) </math>
+    !% have only one element: a string with the name of a time-dependent function,
+    !% that should be correspondingly defined in a "TDFunctions" block.
     !%End
     steps = max_iter
     SAFE_ALLOCATE(cf_common%td_penalty(1:cf_common%no_controlfunctions))
@@ -523,11 +514,11 @@ contains
         call parse_block_string(blk, irow - 1, 0, expression)
         call parse_block_end(blk)
         call tdf_read(cf_common%td_penalty(irow), trim(expression), ierr)
-        call tdf_to_numerical(cf_common%td_penalty(irow), steps, dt, cf_common%omegamax)
         if(ierr.ne.0) then
           message(1) = 'Time-dependent function "'//trim(expression)//'" could not be read from inp file.'
           call messages_fatal(1)
         end if
+        call tdf_to_numerical(cf_common%td_penalty(irow), steps, dt, cf_common%omegamax)
         ierr = parse_block(datasets_check('OCTLaserEnvelope'), blk)
       end do
 
@@ -1614,26 +1605,6 @@ contains
     POP_SUB(controlfunction_gradient)
   end subroutine controlfunction_gradient
   ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  !> Multiplies all the control function by cos(w0*t), where
-  !! w0 is the carrier frequency.
-  subroutine controlfunction_cosine_multiply(par)
-    type(controlfunction_t), intent(inout) :: par
-
-    integer :: i
-
-    PUSH_SUB(controlfunction_cosine_multiply)
-
-    call controlfunction_to_realtime(par)
-
-    do i = 1, par%no_controlfunctions
-      call tdf_cosine_multiply(par%w0, par%f(i))
-    end do
-
-    POP_SUB(controlfunction_cosine_multiply)
-  end subroutine controlfunction_cosine_multiply
 
 #include "controlfunction_trans_inc.F90"
 
