@@ -377,8 +377,9 @@ contains
     integer :: maxiter, ik, ns, ist
 #ifdef HAVE_MPI
     logical :: conv_reduced
-    integer :: outcount
+    integer :: outcount, lmatvec
     FLOAT, allocatable :: ldiff(:), leigenval(:)
+    integer, allocatable :: lconv(:)
 #endif
     type(profile_t), save :: prof
 
@@ -518,6 +519,15 @@ contains
         call MPI_Allreduce(conv, conv_reduced, 1, MPI_LOGICAL, MPI_LAND, st%d%kpt%mpi_grp%comm, mpi_err)
         conv = conv_reduced
       end if
+
+      lmatvec = eigens%matvec
+      call MPI_Allreduce(lmatvec, eigens%matvec, 1, MPI_INTEGER, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+
+      SAFE_ALLOCATE(lconv(1:st%d%kpt%nlocal))
+      lconv(1:st%d%kpt%nlocal) = eigens%converged(st%d%kpt%start:st%d%kpt%end)
+      call lmpi_gen_allgatherv(st%d%kpt%nlocal, lconv, outcount, eigens%converged, st%d%kpt%mpi_grp)
+      ASSERT(outcount == st%d%nik)
+      SAFE_DEALLOCATE_A(lconv)
 
       ! every node needs to know all eigenvalues (and diff)
       SAFE_ALLOCATE(ldiff(1:st%d%kpt%nlocal))
