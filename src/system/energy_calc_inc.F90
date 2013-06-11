@@ -19,18 +19,15 @@
 
 
 ! ---------------------------------------------------------
-!> calculates the eigenvalues of the real orbitals
+!> calculates the eigenvalues of the orbitals
 subroutine X(calculate_eigenvalues)(hm, der, st, time)
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
   FLOAT,   optional,   intent(in)    :: time
 
-  R_TYPE, allocatable :: hpsi(:, :, :)
-  R_TYPE, allocatable :: eigen(:)
-  integer :: ik, minst, maxst, ib
-  type(batch_t) :: hpsib
-  type(profile_t), save :: prof
+  R_TYPE, allocatable :: eigen(:, :)
+  integer :: ik
   logical :: cmplxscl
 
   PUSH_SUB(X(calculate_eigenvalues))
@@ -42,8 +39,6 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
     POP_SUB(X(calculate_eigenvalues))
     return
   end if
-
-  call profiling_in(prof, "EIGENVALUE_CALC")
 
   if(in_debug_mode) then
     write(message(1), '(a)') 'Debug: Calculating eigenvalues.'
@@ -58,7 +53,40 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
   !      \ Psi_R | 0    H_RC H_RR | Psi_R /
   ! But I am not sure how to calculate this right now.
 
-  SAFE_ALLOCATE(eigen(st%st_start:st%st_end))
+  SAFE_ALLOCATE(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+  call X(calculate_expectation_values)(hm, der, st, eigen, time = time)
+
+  st%eigenval(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
+    real(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), REAL_PRECISION)
+#ifdef R_TCOMPLEX    
+  if(cmplxscl) st%zeigenval%Im(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
+    aimag(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+#endif
+
+  SAFE_DEALLOCATE_A(eigen)
+
+  POP_SUB(X(calculate_eigenvalues))
+end subroutine X(calculate_eigenvalues)
+
+subroutine X(calculate_expectation_values)(hm, der, st, eigen, time, terms)
+  type(hamiltonian_t), intent(in)    :: hm
+  type(derivatives_t), intent(inout) :: der
+  type(states_t),      intent(inout) :: st
+  R_TYPE,              intent(out)   :: eigen(:, :) !< (st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
+  FLOAT,   optional,   intent(in)    :: time
+  integer, optional,   intent(in)    :: terms
+
+  R_TYPE, allocatable :: hpsi(:, :, :)
+  integer :: ik, minst, maxst, ib
+  type(batch_t) :: hpsib
+  type(profile_t), save :: prof
+  logical :: cmplxscl
+
+  PUSH_SUB(X(calculate_expectation_values))
+  
+  call profiling_in(prof, "EIGENVALUE_CALC")
+
+  cmplxscl = hm%cmplxscl%space
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ib = st%group%block_start, st%group%block_end
@@ -74,12 +102,11 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
         call batch_pack(hpsib, copy = .false.)
       end if
 
-      
-      call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik, time)
+      call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik, time = time, terms = terms)
       if(st%have_left_states) then
-        call X(mesh_batch_dotp_vector)(der%mesh, st%psibL(ib, ik), hpsib, eigen(minst:maxst), cproduct = cmplxscl)
+        call X(mesh_batch_dotp_vector)(der%mesh, st%psibL(ib, ik), hpsib, eigen(minst:maxst, ik), cproduct = cmplxscl)
       else
-        call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst), cproduct = cmplxscl)        
+        call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), cproduct = cmplxscl)        
       end if
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_unpack(st%group%psib(ib, ik), copy = .false.)
@@ -89,59 +116,30 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
       call batch_end(hpsib, copy = .false.)
 
     end do
-    
-    st%eigenval(st%st_start:st%st_end, ik) = real(eigen(st%st_start:st%st_end), REAL_PRECISION)
-#ifdef R_TCOMPLEX    
-    if(cmplxscl) st%zeigenval%Im(st%st_start:st%st_end, ik) = aimag(eigen(st%st_start:st%st_end)) ! not REAL_PRECISION?
-#endif
-
   end do
 
   SAFE_DEALLOCATE_A(hpsi)
-  SAFE_DEALLOCATE_A(eigen)
 
   call profiling_out(prof)
-  POP_SUB(X(calculate_eigenvalues))
-end subroutine X(calculate_eigenvalues)
+  POP_SUB(X(calculate_expectation_values))
+end subroutine X(calculate_expectation_values)
 
 ! ---------------------------------------------------------
-R_TYPE function X(energy_calc_electronic)(hm, der, st, terms, cproduct) result(energy)
+R_TYPE function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
   integer,             intent(in)    :: terms
-  logical, optional,   intent(in)    :: cproduct
 
   integer :: ik, ib, minst, maxst
   type(batch_t) :: hpsib
   R_TYPE, allocatable  :: tt(:, :)
-  logical :: cproduct_
-  
-  cproduct_ = optional_default(cproduct, .false.)
  
   PUSH_SUB(X(energy_calc_electronic))
 
-  SAFE_ALLOCATE(tt(st%st_start:st%st_end, 1:st%d%nik))
+  SAFE_ALLOCATE(tt(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
-  tt = M_ZERO
-
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ib = st%group%block_start, st%group%block_end
-      minst = states_block_min(st, ib)
-      maxst = states_block_max(st, ib)
-
-      call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
-
-      call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik, terms = terms)
-      if(st%have_left_states) then
-        call X(mesh_batch_dotp_vector)(der%mesh, st%psibL(ib, ik), hpsib, tt(minst:maxst, ik), cproduct = cproduct_)
-      else
-        call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, tt(minst:maxst, ik), cproduct = cproduct_)
-      end if
-      call batch_end(hpsib, copy = .false.)
-
-    end do
-  end do
+  call X(calculate_expectation_values)(hm, der, st, tt, terms = terms)
 
   if(hm%cmplxscl%space) then
 #ifdef R_TCOMPLEX

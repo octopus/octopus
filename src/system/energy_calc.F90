@@ -91,16 +91,16 @@ contains
         hm%energy%extern   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
         evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       else
-        etmp  = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC, cproduct = hm%cmplxscl%space)
+        etmp  = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%kinetic   = real(etmp)
         hm%energy%Imkinetic = aimag(etmp)
          
         etmp  = zenergy_calc_electronic(hm, gr%der, st, &
-          terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL, cproduct = hm%cmplxscl%space)
+          terms = TERM_NON_LOCAL_POTENTIAL + TERM_LOCAL_EXTERNAL)
         hm%energy%extern   =  real(etmp)
         hm%energy%Imextern =  aimag(etmp)
         
-        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA, cproduct = hm%cmplxscl%space)
+        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
         
         evxctau   = real(etmp)
         Imevxctau = aimag(etmp)
