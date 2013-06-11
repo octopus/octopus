@@ -78,7 +78,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack%size(1)*vp%np_ghost))
 
     do ipart = 1, vp%npart
-      if(vp%np_ghost_neigh_partno(ipart) == 0) cycle
+      if(vp%rcounts(ipart) == 0) cycle
       
       handle%nnb = handle%nnb + 1
       tag = 0
@@ -91,7 +91,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   case(BATCH_PACKED)
     !In this case, data from different vectors is contiguous. So we can use one message per partition.
     do ipart = 1, vp%npart
-      if(vp%np_ghost_neigh_partno(ipart) == 0) cycle
+      if(vp%rcounts(ipart) == 0) cycle
       
       handle%nnb = handle%nnb + 1
       tag = 0
@@ -103,7 +103,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   case(BATCH_NOT_PACKED)
     do ii = 1, v_local%nst_linear
       do ipart = 1, vp%npart
-        if(vp%np_ghost_neigh_partno(ipart) == 0) cycle
+        if(vp%rcounts(ipart) == 0) cycle
         
         handle%nnb = handle%nnb + 1
         tag = ii
