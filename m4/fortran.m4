@@ -79,37 +79,45 @@ m4_define([AC_LANG_FUNC_LINK_TRY(Fortran)],
 # Fortran preprocessing
 # --------------------------- 
 
-# Defining this suppresses warnings from AC_EGREP_CPP, concerned that Fortran preprocessing isn't defined
-m4_define([AC_LANG_PREPROC(Fortran)],[])
+# like built-in AC_EGREP_CPP, only using FCCPP and a Fortran extension
+# some cpp's will behave differently on .F90 and on .c files
+AC_DEFUN([ACX_EGREP_FCCPP],[
+     echo "$2" > conftest.F90
+
+     if (eval "$FCCPP conftest.F90") 2>&5 |
+       $EGREP "$1" >/dev/null 2>&1; then :
+       $3
+     else
+       $4
+    fi
+    rm -f conftest*
+])
 
 AC_DEFUN([ACX_FCCPP],[
-     AC_LANG_ASSERT(Fortran)
-     CPP_save="$CPP"
-
      # "gcc -E -x c" means treat the file as if it were C. For some reason, when gcc identifies the source
      # as Fortran, it will not concatenate tokens in preprocessing, so we must trick it.
-     for CPP_base in "$FCCPP" "/lib/cpp" "$CPP_save" "$CPP_save -x c" "`which cpp`"; do
+     for FCCPP_base in "$FCCPP" "/lib/cpp" "$CPP" "$CPP -x c" "`which cpp`"; do
          # cycle if blank
-         if test -z "$CPP_base"; then
+         if test -z "$FCCPP_base"; then
            continue
          fi
 
-         for CPP in "$CPP_base" "$CPP_base -ansi"; do
-           AC_MSG_CHECKING([whether $CPP is usable for Fortran preprocessing])
+         for FCCPP in "$FCCPP_base" "$FCCPP_base -ansi"; do
+           AC_MSG_CHECKING([whether $FCCPP is usable for Fortran preprocessing])
 	   acx_fpp_ok=yes
 
-      	   AC_EGREP_CPP([anything], AC_LANG_PROGRAM([],[anything]),
+      	   ACX_EGREP_FCCPP([anything], AC_LANG_PROGRAM([],[anything]),
 	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor cannot be run]); break])
 	     # very unlikely that adding -ansi will allow it to be run at all
 
-      	   AC_EGREP_CPP([hi], AC_LANG_PROGRAM([],[
+      	   ACX_EGREP_FCCPP([hi], AC_LANG_PROGRAM([],[
 #define ADD_I(x) x ## i
 ADD_I(h)]),
 	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor does not concatenate tokens])])
 
            # in Fortran this is string concatenation, must not be stripped
 	   # some cpp's (e.g. icc -E -ansi) might actually insert a space between // too which is not acceptable
-           AC_EGREP_CPP([rout // ine], AC_LANG_PROGRAM([],[
+           ACX_EGREP_FCCPP([rout // ine], AC_LANG_PROGRAM([],[
 #define PUSH_SUB(x) x // ine
 PUSH_SUB(rout)]),
 	     [], [acx_fpp_ok=no; AC_MSG_RESULT([preprocessor mangles C++ style comment])])
@@ -128,8 +136,6 @@ PUSH_SUB(rout)]),
      	AC_MSG_ERROR([Could not find preprocessor usable for Fortran.])
      fi
 
-     FCCPP="$CPP"
-     CPP="$CPP_save"
      AC_SUBST(FCCPP)
 ])
 
