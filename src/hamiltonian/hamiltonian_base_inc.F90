@@ -87,7 +87,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
     case(UNPOLARIZED, SPIN_POLARIZED)
       call opencl_set_kernel_arg(kernel_vpsi, 0, pnp*(ispin - 1))
       call opencl_set_kernel_arg(kernel_vpsi, 1, mesh%np)
-      call opencl_set_kernel_arg(kernel_vpsi, 2, this%potential_opencl)
+      call opencl_set_kernel_arg(kernel_vpsi, 2, potential_opencl)
       call opencl_set_kernel_arg(kernel_vpsi, 3, psib%pack%buffer)
       call opencl_set_kernel_arg(kernel_vpsi, 4, log2(psib%pack%size_real(1)))
       call opencl_set_kernel_arg(kernel_vpsi, 5, vpsib%pack%buffer)
@@ -99,7 +99,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
 
     case(SPINORS)
       call opencl_set_kernel_arg(kernel_vpsi_spinors, 0, mesh%np)
-      call opencl_set_kernel_arg(kernel_vpsi_spinors, 1, this%potential_opencl)
+      call opencl_set_kernel_arg(kernel_vpsi_spinors, 1, potential_opencl)
       call opencl_set_kernel_arg(kernel_vpsi_spinors, 2, pnp)
       call opencl_set_kernel_arg(kernel_vpsi_spinors, 3, psib%pack%buffer)
       call opencl_set_kernel_arg(kernel_vpsi_spinors, 4, psib%pack%size(1))

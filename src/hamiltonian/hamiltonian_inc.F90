@@ -226,7 +226,6 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   type(batch_t),               intent(inout) :: vpsib
 
   FLOAT, allocatable :: vpsl_spin(:,:), Imvpsl_spin(:,:)
-  integer :: ispin
 #ifdef HAVE_OPENCL
   integer :: pnp
   type(opencl_mem_t) :: vpsl_buff
