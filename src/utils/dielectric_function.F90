@@ -115,7 +115,7 @@ program dielectric_function
   call io_skip_header(in_file)
   
   do ii = 1, time_steps
-    read(in_file, *) jj, tt, vecpot(ii, 1:space%dim*3)
+    read(in_file, *) jj, tt, (vecpot(ii, kk), kk = 1, space%dim*3)
   end do
 
   call io_close(in_file)
