@@ -42,7 +42,7 @@ program photoelectron_spectrum
 
   integer              :: dim, ll(MAX_DIM), ii, dir
   FLOAT                :: Emax, Emin,Estep, uEstep,uEspan(2), pol(3)
-  FLOAT                :: uThstep,uThspan(2),uPhstep,uPhspan(2) 
+  FLOAT                :: uThstep,uThspan(2),uPhstep,uPhspan(2), pvec(3)
   FLOAT                :: center(3)
   FLOAT, pointer       :: lk(:),RR(:)
   FLOAT, allocatable   :: PESK(:,:,:)
@@ -85,6 +85,7 @@ program photoelectron_spectrum
   uPhstep = -1
   uPhspan = (/-1,-1/)
   center = (/0,0,0/)
+  pvec = (/1,0,0/)
   Emin = M_ZERO
   Emax = M_ZERO
   
@@ -92,7 +93,7 @@ program photoelectron_spectrum
   call get_laser_polarizaion(pol)
   
   call getopt_photoelectron_spectrum(mode,interp,uEstep, uEspan,&
-                                     uThstep, uThspan, uPhstep, uPhspan, pol, center)
+                                     uThstep, uThspan, uPhstep, uPhspan, pol, center, pvec)
   if(interp  ==  0) interpol = .false.
 
   call PES_mask_read_info(tmpdir, dim, Emax, Estep, ll(1), Lk,RR)
@@ -148,22 +149,22 @@ program photoelectron_spectrum
   case(3) ! On a plane
     
     dir = -1
-    if(sum((pol-(/1 ,0 ,0/))**2)  <= 1E-14  )  dir = 1
-    if(sum((pol-(/0 ,1 ,0/))**2)  <= 1E-14  )  dir = 2
-    if(sum((pol-(/0 ,0 ,1/))**2)  <= 1E-14  )  dir = 3
+    if(sum((pvec-(/1 ,0 ,0/))**2)  <= 1E-14  )  dir = 1
+    if(sum((pvec-(/0 ,1 ,0/))**2)  <= 1E-14  )  dir = 2
+    if(sum((pvec-(/0 ,0 ,1/))**2)  <= 1E-14  )  dir = 3
 
     filename = "./PES_velocity.map."//index2axis(dir)//"=0"
 
 
     if (dir == -1) then
-        write(message(1), '(a)') 'Unrecognized plane. Use -V to change.'
+        write(message(1), '(a)') 'Unrecognized plane. Use -u to change.'
         call messages_fatal(1)
       else
         write(message(1), '(a)') 'Calculating velocity map on plane '//index2axis(dir)//"=0"
         call messages_info(1)
     end if 
     
-    call PES_mask_dump_full_mapM_cut(PESK, filename, Lk, dim, dir)    
+    call PES_mask_dump_full_mapM_cut(PESK, filename, Lk, dim, pol, dir)    
 
   case(4) ! Angle energy resolved on plane 
     write(message(1), '(a)') 'Calculating angle and energy-resolved PES'
@@ -176,7 +177,7 @@ program photoelectron_spectrum
 
     call PES_mask_dump_ar_plane_M(PESK,'./PES_energy.map', Lk, dim, pol, Emax, Estep)
 
-  case(5) ! Full momentum resolved matrix 
+  case(5) ! Angular-resolved  
 
 
     write(message(1), '(a,es19.12,a2,es19.12,2x,a19)') &

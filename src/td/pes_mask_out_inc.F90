@@ -261,6 +261,9 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
   PUSH_SUB(PES_mask_interpolator_init)
 
 
+  call messages_write("Initializing Qshep interpolator... ")
+  call messages_info()
+
   ll = 1
   do ii = 1, dim
     ll(ii) = size(PESK,ii) 
@@ -319,8 +322,9 @@ subroutine PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
   SAFE_DEALLOCATE_A(ky)    
   SAFE_DEALLOCATE_A(kz)    
  
-  message(1) = "Qshep interpolator initialized."
-  call messages_info(1)
+  call messages_write("done")
+  call messages_new_line()
+  call messages_info()
   
 
   POP_SUB(PES_mask_interpolator_init)
@@ -384,9 +388,9 @@ subroutine PES_mask_dump_full_mapM(PESK, file, Lk)
 
   filename = trim(file)//".ncdf"
 
-  ! I do not know what the unit of this quantity is supposed to be... --DAS
   call dout_cf_netcdf(filename, ierr, cf, cube, sb_dim, &
-        units_from_atomic(sqrt(units_out%energy), dk ), .false., unit_one)
+        units_from_atomic(sqrt(units_out%energy), dk ), & 
+        .false., sqrt(units_out%energy)**sb_dim)
 
   call cube_end(cube)
   call dcube_function_free_RS(cube, cf)
@@ -448,11 +452,12 @@ end subroutine PES_mask_dump_full_mapM
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, dir)
+subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir)
   FLOAT,            intent(in) :: PESK(:,:,:)
   FLOAT,            intent(in) :: Lk(:)
   character(len=*), intent(in) :: file
   integer,          intent(in) :: dim
+  FLOAT,            intent(in) :: pol(3)
   integer,          intent(in) :: dir
 
   integer              :: ii, ix, iy, iunit
@@ -460,57 +465,111 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, dir)
   integer              :: ll(3)
   integer, allocatable :: idx(:,:)
   FLOAT, allocatable   :: Lk_(:,:)
+  FLOAT                :: rotation(1:dim,1:dim)
 
+  FLOAT, pointer :: cube_f(:)
+  type(qshep_t) :: interp
 
   PUSH_SUB(PES_mask_dump_full_mapM_cut)
   
   iunit = io_open(file, action='write')
-  
+
   ll = 1
   do ii = 1, dim
     ll(ii) = size(PESK, ii) 
   end do
-  
+
   ASSERT(size(PESK, 1) == size(Lk,1))
 
   SAFE_ALLOCATE(idx(maxval(ll(:)), 3))
   SAFE_ALLOCATE(Lk_(size(Lk,1), 3))
-  
+
 
   do ii = 1, 3
     Lk_(:,ii) = Lk(:)
     call sort(Lk_(1:ll(ii), ii), idx(1:ll(ii), ii)) !We need to sort the k-vectors in order to dump in gnuplot format
   end do  
+  
+  
+  if (sum((pol-(/0 ,0 ,1/))**2)  <= 1E-14) then !no need to rotate and interpolate
     
-  do ix = 1, ll(1)
-    KK(1) = Lk_(ix, 1)
-    do iy = 1, ll(2)
-      KK(2) = Lk_(iy, 2)
+    do ix = 1, ll(1)
+      KK(1) = Lk_(ix, 1)
+      do iy = 1, ll(2)
+        KK(2) = Lk_(iy, 2)
       
 
-      select case (dir)
-        case (1)
-          temp = PESK(idx(ll(dir)/2 + 1, 1), idx(ix, 2), idx(iy, 3))    
+        select case (dir)
+          case (1)
+            temp = PESK(idx(ll(dir)/2 + 1, 1), idx(ix, 2), idx(iy, 3))    
     
-        case (2)
-          temp = PESK(idx(ix, 1), idx(ll(dir)/2 + 1, 2), idx(iy, 3))    
+          case (2)
+            temp = PESK(idx(ix, 1), idx(ll(dir)/2 + 1, 2), idx(iy, 3))    
       
-        case (3)
-          temp = PESK(idx(ix, 1), idx(iy, 2), idx(ll(dir)/2 + 1, 3))    
+          case (3)
+            temp = PESK(idx(ix, 1), idx(iy, 2), idx(ll(dir)/2 + 1, 3))    
     
-      end select
+        end select
         
-      write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
-              units_from_atomic(sqrt(units_out%energy), KK(1)),&
-              units_from_atomic(sqrt(units_out%energy), KK(2)),&
-              temp
+        write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+                units_from_atomic(sqrt(units_out%energy), KK(1)),&
+                units_from_atomic(sqrt(units_out%energy), KK(2)),&
+                temp
  
        
-    end do
-    write(iunit, *)  
+      end do
+      write(iunit, *)  
     
-  end do
+    end do
   
+    
+  else 
+    ! We set the polarization axis along z 
+    call generate_rotation_matrix(rotation,  (/M_ZERO, M_ZERO, M_ONE/), pol)
+
+    if(in_debug_mode) then
+      print *,rotation(1,:)
+      print *,rotation(2,:)
+      print *,rotation(3,:)
+    end if
+
+    call PES_mask_interpolator_init(PESK, Lk, dim, cube_f, interp)
+
+    do ix = 1, ll(1)
+     do iy = 1, ll(2)
+
+       select case (dir)
+         case (1)
+           KK(1) = M_ZERO         
+           KK(2) = Lk_(ix, 1)
+           KK(3) = Lk_(iy, 2)
+
+         case (2)
+           KK(1) = Lk_(ix, 1)
+           KK(2) = M_ZERO
+           KK(3) = Lk_(iy, 2)
+ 
+         case (3)
+           KK(1) = Lk_(ix, 1)
+           KK(2) = Lk_(iy, 2)
+           KK(3) = M_ZERO
+
+       end select
+
+       temp = qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) )
+   
+       write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+               units_from_atomic(sqrt(units_out%energy), Lk_(ix, 1)),&
+               units_from_atomic(sqrt(units_out%energy), Lk_(iy, 2)),&
+               temp
+  
+     end do
+     write(iunit, *)  
+    end do
+
+
+  end if
+
   call io_close(iunit)
   
   SAFE_DEALLOCATE_A(idx) 
@@ -1680,7 +1739,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
 
     ! Dump the k resolved PES on plane kz=0
     write(fn, '(a,a)') trim(dir), '_map.z=0'
-    call PES_mask_dump_full_mapM_cut(PESK, fn, mask%Lk, mask%mesh%sb%dim, dir = 3)
+    call PES_mask_dump_full_mapM_cut(PESK, fn, mask%Lk, mask%mesh%sb%dim, pol = (/M_ZERO, M_ZERO, M_ONE/), dir = 3)
 
     ! Total power spectrum 
     write(fn, '(a,a)') trim(dir), '_power.sum'
