@@ -15,6 +15,14 @@ Enabled    : Yes
 #   * spinors
 
 Input: 21-lobpcg.01-spin_polarized.inp
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -146.74150377
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -38.58624314
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   120.23139030
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -34.26008614
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;    -4.76230915
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;    88.52863377
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -316.47911276
+
 match ; Eigenvalue 1 up; GREP(static/info, ' 1   up', 13) ;       -14.461727
 match ; Eigenvalue 1 dn; GREP(static/info, ' 1   dn', 13) ;       -11.750136
 match ; Eigenvalue 2 up; GREP(static/info, ' 2   up', 13) ;       -6.187145
@@ -25,12 +33,27 @@ match ; Eigenvalue 4 up; GREP(static/info, ' 4   up', 13) ;       -6.187145
 match ; Eigenvalue 4 dn; GREP(static/info, ' 4   dn', 13) ;       -3.682145
 
 Input: 21-lobpcg.02-spinors.inp
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -141.78902121
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -43.94215767
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   108.74069997
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -30.77240857
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;    -4.56273978
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;    61.84482418
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -277.03949593
+
 Precision : 0.001
-match ; Eigenvalue 1 up; GREP(static/info, ' 1   --', 13) ;       -18.502399
-match ; Eigenvalue 1 dn; GREP(static/info, ' 2   --', 13) ;       -16.447015
-match ; Eigenvalue 2 up; GREP(static/info, ' 3   --', 13) ;        -4.496144
-match ; Eigenvalue 2 dn; GREP(static/info, ' 4   --', 13) ;        -4.496139
-match ; Eigenvalue 3 up; GREP(static/info, ' 5   --', 13) ;        -4.496132
+match ; Eigenvalue 1 ; GREP(static/info, ' 1   --', 13) ;       -18.502399
+match ; Eigenvalue 2 ; GREP(static/info, ' 2   --', 13) ;       -16.447015
+match ; Eigenvalue 3 ; GREP(static/info, ' 3   --', 13) ;        -4.496144
+match ; Eigenvalue 4 ; GREP(static/info, ' 4   --', 13) ;        -4.496139
+match ; Eigenvalue 5 ; GREP(static/info, ' 5   --', 13) ;        -4.496132
+match ; <Sx> 1        ; GREP(static/info,  '1   --', 36) ;         0.2974
+match ; <Sy> 1        ; GREP(static/info,  '1   --', 44) ;         0.2974
+match ; <Sz> 1        ; GREP(static/info,  '1   --', 52) ;        -0.2703
+match ; <Sx> 5        ; GREP(static/info,  '5   --', 36) ;         0.2974
+match ; <Sy> 5        ; GREP(static/info,  '5   --', 44) ;         0.2974
+match ; <Sz> 5        ; GREP(static/info,  '5   --', 52) ;        -0.2703
+
 Precision : 0.005
 match ; mx             ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ;  1.187255
 match ; my             ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ;  1.187255
