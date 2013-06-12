@@ -227,7 +227,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
 
   FLOAT, allocatable :: vpsl_spin(:,:), Imvpsl_spin(:,:)
 #ifdef HAVE_OPENCL
-  integer :: pnp
+  integer :: pnp, offset, ispin
   type(opencl_mem_t) :: vpsl_buff
 #endif
 
@@ -256,9 +256,14 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   if(batch_status(psib) == BATCH_CL_PACKED) then
 #ifdef HAVE_OPENCL
     pnp = opencl_padded_size(mesh%np)
-    ! FIXME: not set up for spinors yet
-    call opencl_create_buffer(vpsl_buff, CL_MEM_READ_ONLY, TYPE_FLOAT, pnp)
+    call opencl_create_buffer(vpsl_buff, CL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
     call opencl_write_buffer(vpsl_buff, mesh%np, this%ep%vpsl)
+
+    offset = 0
+    do ispin = 1, this%d%nspin
+       call opencl_write_buffer(vpsl_buff, mesh%np, vpsl_spin(:, ispin), offset = offset)
+       offset = offset + pnp
+    end do
 
     call X(hamiltonian_base_local_sub)(vpsl_spin, mesh, this%d, 1, &
       psib, vpsib, potential_opencl = vpsl_buff)
