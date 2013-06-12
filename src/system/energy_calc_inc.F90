@@ -76,7 +76,6 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, time, terms)
   FLOAT,   optional,   intent(in)    :: time
   integer, optional,   intent(in)    :: terms
 
-  R_TYPE, allocatable :: hpsi(:, :, :)
   integer :: ik, minst, maxst, ib
   type(batch_t) :: hpsib
   type(profile_t), save :: prof
@@ -118,8 +117,6 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, time, terms)
     end do
   end do
 
-  SAFE_DEALLOCATE_A(hpsi)
-
   call profiling_out(prof)
   POP_SUB(X(calculate_expectation_values))
 end subroutine X(calculate_expectation_values)
@@ -132,7 +129,6 @@ R_TYPE function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
   integer,             intent(in)    :: terms
 
   integer :: ik, ib, minst, maxst
-  type(batch_t) :: hpsib
   R_TYPE, allocatable  :: tt(:, :)
  
   PUSH_SUB(X(energy_calc_electronic))
