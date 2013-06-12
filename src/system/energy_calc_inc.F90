@@ -72,7 +72,7 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, time, terms)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
-  R_TYPE,              intent(out)   :: eigen(:, :) !< (st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
+  R_TYPE,              intent(out)   :: eigen(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
   FLOAT,   optional,   intent(in)    :: time
   integer, optional,   intent(in)    :: terms
 
