@@ -37,32 +37,32 @@ match ; Eigenvalue 4 dn; GREP(static/info, ' 4   dn', 13) ;       -3.682145
 match ; mz             ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ;  2.00000
 
 Input: 21-lobpcg.02-spinors.inp
-match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -141.78902121
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;  -141.78882842
 match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ;     0.00000000
-match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -43.94215767
-match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   108.74069997
-match ; Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ;   -46.22898478
-match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -30.77240857
-match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;    -4.56273978
-match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;    61.84482418
-match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -277.03949593
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;   -43.94163200
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;   108.74106965
+match ; Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ;    -46.22913931
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;   -30.77251312
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;    -4.56275297
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;    61.84478448
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;  -277.03941862
 
 Precision : 0.001
-match ; Eigenvalue 1 ; GREP(static/info, ' 1   --', 13) ;       -18.502399
-match ; Eigenvalue 2 ; GREP(static/info, ' 2   --', 13) ;       -16.447015
-match ; Eigenvalue 3 ; GREP(static/info, ' 3   --', 13) ;        -4.496144
-match ; Eigenvalue 4 ; GREP(static/info, ' 4   --', 13) ;        -4.496139
-match ; Eigenvalue 5 ; GREP(static/info, ' 5   --', 13) ;        -4.496132
-match ; <Sx> 1        ; GREP(static/info,  '1   --', 36) ;         0.2974
-match ; <Sy> 1        ; GREP(static/info,  '1   --', 44) ;         0.2974
-match ; <Sz> 1        ; GREP(static/info,  '1   --', 52) ;        -0.2703
-match ; <Sx> 5        ; GREP(static/info,  '5   --', 36) ;         0.2974
-match ; <Sy> 5        ; GREP(static/info,  '5   --', 44) ;         0.2974
-match ; <Sz> 5        ; GREP(static/info,  '5   --', 52) ;        -0.2703
+match ; Eigenvalue 1  ; GREP(static/info, ' 1   --', 13) ;       -18.502391
+match ; Eigenvalue 2  ; GREP(static/info, ' 2   --', 13) ;       -16.446975
+match ; Eigenvalue 3  ; GREP(static/info, ' 3   --', 13) ;        -4.496133
+match ; Eigenvalue 4  ; GREP(static/info, ' 4   --', 13) ;        -4.496133
+match ; Eigenvalue 5  ; GREP(static/info, ' 5   --', 13) ;        -4.496133
+match ; <Sx> 1        ; GREP(static/info,  '1   --', 36) ;         0.3000
+match ; <Sy> 1        ; GREP(static/info,  '1   --', 44) ;         0.3000
+match ; <Sz> 1        ; GREP(static/info,  '1   --', 52) ;        -0.2645
+match ; <Sx> 5        ; GREP(static/info,  '5   --', 36) ;         0.3000
+match ; <Sy> 5        ; GREP(static/info,  '5   --', 44) ;         0.3000
+match ; <Sz> 5        ; GREP(static/info,  '5   --', 52) ;        -0.2645
 
 Precision : 0.005
-match ; mx             ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ;  1.187255
-match ; my             ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ;  1.187255
-match ; mz             ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; -1.081269
+match ; mx             ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ;  1.200124
+match ; my             ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ;  1.200124
+match ; mz             ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; -1.058020
 # This differs significantly from the initial magnetization.
 # It is due to the small radius and large spacing.
