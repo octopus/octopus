@@ -318,14 +318,15 @@ contains
       write(iunit,'(a)') '         the numbers below may be meaningless.    '
       write(iunit,'(a)') '                                                  '
       write(iunit,'(a)') 'Angular Momentum of the KS states [dimensionless]:'
+      ! FIXME: not dimensionless
       if (st%d%nik > ns) then
         message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) // ']'
         call messages_info(1, iunit)
       end if
     end if
 
-    SAFE_ALLOCATE(ang (1:st%nst, 1:st%d%nik, 1:3))
-    SAFE_ALLOCATE(ang2(1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(ang (st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 1:3))
+    SAFE_ALLOCATE(ang2(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
@@ -337,6 +338,7 @@ contains
       do ist = st%st_start, st%st_end
         if (states_are_real(st)) then
           call states_get_state(st, gr%mesh, ist, ik, dpsi)
+          ! FIXME: this array reference looks dubious
           call dstates_angular_momentum(gr, dpsi, ang(ist, ik, :), ang2(ist, ik))
         else
           call states_get_state(st, gr%mesh, ist, ik, zpsi)
@@ -381,6 +383,7 @@ contains
         
         ASSERT(.not. st%parallel_in_states)
         
+        ! note: could use lmpi_gen_allgatherv here
         SAFE_ALLOCATE(lang(1:st%lnst, 1:kn))
         do idir = 1, 3
           lang(1:st%lnst, 1:kn) = ang(st%st_start:st%st_end, kstart:kend, ist)

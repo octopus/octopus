@@ -2051,8 +2051,8 @@ contains
   ! ---------------------------------------------------------
   !> function to calculate the eigenvalues sum using occupations as weights
   function states_eigenvalues_sum(st, alt_eig) result(tot)
-    type(states_t), intent(in)  :: st
-    FLOAT, optional, intent(in) :: alt_eig(st%st_start:, :) !< (st%st_start:st%st_end, 1:st%d%nik)
+    type(states_t),  intent(in) :: st
+    FLOAT, optional, intent(in) :: alt_eig(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
     FLOAT                       :: tot
 
     integer :: ik
@@ -2078,8 +2078,8 @@ contains
   ! ---------------------------------------------------------
   !> Same as states_eigenvalues_sum but suitable for cmplxscl
   function zstates_eigenvalues_sum(st, alt_eig) result(tot)
-    type(states_t), intent(in)  :: st
-    CMPLX, optional, intent(in) :: alt_eig(st%st_start:, :) !< (st%st_start:st%st_end, 1:st%d%nik)
+    type(states_t),  intent(in) :: st
+    CMPLX, optional, intent(in) :: alt_eig(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
     CMPLX                       :: tot
 
     integer :: ik
