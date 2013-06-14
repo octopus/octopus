@@ -84,6 +84,8 @@ m4_define([AC_LANG_FUNC_LINK_TRY(Fortran)],
 # using $GREP or $EGREP would imply AC_REQUIRE(AC_PROG_GREP) which leads to this warning:
 # configure.ac:189: *GNU* is m4_require'd but not m4_defun'd
 AC_DEFUN([ACX_GREP_FCCPP],[
+     AC_ARG_VAR(FCCPP, [Fortran preprocessor])
+
      echo "$2" > conftest.F90
 
      if (eval "$FCCPP conftest.F90") 2>&5 |
