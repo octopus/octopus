@@ -63,12 +63,12 @@ module output_me_m
     integer :: ks_multipoles      
   end type output_me_t
 
-  integer, parameter, public ::               &
-       output_me_momentum       =   1, &
-       output_me_ang_momentum   =   2, &
-       output_me_one_body       =   4, &
-       output_me_two_body       =   8, &
-       output_me_ks_multipoles  =  16
+  integer, parameter, public :: &
+    OUTPUT_ME_MOMENTUM       =   1, &
+    OUTPUT_ME_ANG_MOMENTUM   =   2, &
+    OUTPUT_ME_ONE_BODY       =   4, &
+    OUTPUT_ME_TWO_BODY       =   8, &
+    OUTPUT_ME_KS_MULTIPOLES  =  16
 
 contains
   
@@ -85,19 +85,20 @@ contains
     !%Section Output
     !%Description
     !% Specifies what matrix elements to print.
+    !% Enabled only if <tt>Output</tt> includes <tt>matrix_elements</tt>.
     !% The output files go into the <tt>static</tt> directory, except when
     !% running a time-dependent simulation, when the directory <tt>td.XXXXXXX</tt> is used.
     !% Example: "momentum + ks_multipoles"
     !%Option momentum 1
-    !% TODO
+    !% Momentum. Filename: <tt>ks_me_momentum</tt>.
     !%Option ang_momentum 2
-    !% TODO
+    !% Dimensionless angular momentum (r x k). Filename: <tt>ks_me_angular_momentum</tt>.
     !%Option one_body 4
     !% <math>&lt;i|T + V_{ext}|j&gt;</math>
     !%Option two_body 8
     !% <math>&lt;ij| 1/|r_1-r_2| |kl&gt;</math>
     !%Option ks_multipoles 16
-    !% TODO
+    !% See <tt>OutputMEMultipoles</tt>.
     !%End
 
     call parse_integer(datasets_check('OutputMatrixElements'), 0, this%what)
@@ -105,17 +106,17 @@ contains
       call input_error('OutputMatrixElements')
     end if
 
-    if(sb%dim /= 2 .and. sb%dim /= 3) this%what = iand(this%what, not(output_me_ang_momentum))
+    if(sb%dim /= 2 .and. sb%dim /= 3) this%what = iand(this%what, not(OUTPUT_ME_ANG_MOMENTUM))
 
-    if(iand(this%what, output_me_ks_multipoles) /= 0) then
+    if(iand(this%what, OUTPUT_ME_KS_MULTIPOLES) /= 0) then
       !%Variable OutputMEMultipoles
       !%Type integer
       !%Default 1
       !%Section Output
       !%Description
-      !% This variable decides which multipole moments
-      !% are printed out: <i>e.g.</i>, if 1, then the
-      !% program will print three files, <tt>ks_multipoles.x</tt> (<tt>x</tt>=1,2,3), containing
+      !% This variable decides which multipole moments are printed out for
+      !% <tt>OutputMatrixElements = ks_multipoles</tt>: <i>e.g.</i>, if 1, then the
+      !% program will print three files, <tt>ks_me_multipoles.x</tt> (<tt>x</tt>=1,2,3), containing
       !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
       !% between Kohn-Sham states.
       !%End
@@ -151,8 +152,7 @@ contains
     end if
 
     if(iand(this%what, output_me_ks_multipoles) /= 0) then
-      ! The files will be called matrix_elements.x. The content of each file
-      ! should be clear from the header of each file.
+      ! The content of each file should be clear from the header of each file.
       id = 1
       do ik = 1, st%d%nik
         do ll = 1, this%ks_multipoles
@@ -318,7 +318,7 @@ contains
       write(iunit,'(a)') '         the numbers below may be meaningless.    '
       write(iunit,'(a)') '                                                  '
       write(iunit,'(a)') 'Angular Momentum of the KS states [dimensionless]:'
-      ! FIXME: not dimensionless
+      ! r x k is dimensionless. we do not include hbar.
       if (st%d%nik > ns) then
         message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) // ']'
         call messages_info(1, iunit)
@@ -353,7 +353,7 @@ contains
     angular(1) =  states_eigenvalues_sum(st, ang (:, :, 1))
     angular(2) =  states_eigenvalues_sum(st, ang (:, :, 2))
     angular(3) =  states_eigenvalues_sum(st, ang (:, :, 3))
-    lsquare    =  states_eigenvalues_sum(st, ang2(:, :))
+    lsquare    =  states_eigenvalues_sum(st, ang2)
 
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then

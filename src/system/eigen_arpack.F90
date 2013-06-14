@@ -87,7 +87,7 @@ contains
     !%Variable ArpackInitialTolerance
     !%Type float
     !%Default 0.0
-    !%Section SCF::Eigensolver 
+    !%Section SCF::Eigensolver::ARPACK
     !%Description 
     !% Use this tolerance in Arpack when the relative density error is
     !% approximately 1. As the relative density error becomes lower,
@@ -111,9 +111,10 @@ contains
     
     !%Variable EigensolverParpack 
     !%Type logical 
-    !%Section SCF::Eigensolver 
-    !%Description 
-    !% Use PARPACK.
+    !%Section SCF::Eigensolver::ARPACK
+    !%Description
+    !% Use Parallel ARPACK. Default is true if parallel in domains. Code must have been built with
+    !% PARPACK support. Only relevant if <tt>Eigensolver = arpack</tt>.
     !%End 
     call parse_logical(datasets_check('EigensolverParpack'), use_parpack, this%use_parpack)
     call messages_print_var_value(stdout, "EigensolverParpack", this%use_parpack)
@@ -122,7 +123,7 @@ contains
     
     !%Variable EigensolverArnoldiVectors 
     !%Type integer 
-    !%Section SCF::Eigensolver 
+    !%Section SCF::Eigensolver::ARPACK
     !%Description 
     !% This indicates how many Arnoldi vectors are generated 
     !% It must satisfy EigenSolverArnoldiVectors - Number Of Eigenvectors >= 2. 
@@ -136,7 +137,7 @@ contains
     !%Variable EigensolverArpackSort
     !%Type string 
     !%Default SR 
-    !%Section SCF::Eigensolver 
+    !%Section SCF::Eigensolver::ARPACK
     !%Description 
     !% Eigenvalues sorting strategy (case sensitive).
     !% From ARPACK documentation: 
@@ -161,7 +162,7 @@ contains
     !%Variable EigensolverArpackInitialResid
     !%Type integer
     !%Default constant
-    !%Section SCF::Eigensolver
+    !%Section SCF::Eigensolver::ARPACK
     !%Description
     !% Initial residual vector.
     !%Option constant 2

@@ -86,7 +86,7 @@ contains
 
     !%Variable Preconditioner
     !%Type integer
-    !%Default filter
+    !%Default pre_filter
     !%Section SCF::Eigensolver
     !%Description
     !% Which preconditioner to use in order to solve the Kohn-Sham equations or
