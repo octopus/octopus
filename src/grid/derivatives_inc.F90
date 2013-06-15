@@ -527,6 +527,8 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc, fact
 
   PUSH_SUB(X(derivatives_perform))
 
+  ASSERT(ubound(ff, DIM=1) >= der%mesh%np_part)
+
   call batch_init     (batch_ff, 1)
   call batch_add_state(batch_ff, ff)
 
