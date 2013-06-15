@@ -108,7 +108,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   R_TYPE, allocatable :: psii(:, :), psij(:, :)
 
   SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
   
   PUSH_SUB(X(one_body))
 
