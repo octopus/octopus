@@ -385,6 +385,10 @@ contains
     call set_null(spl%spl)
     call set_null(spl%acc)
 
+    ! deliberately illegal values, for checking
+    spl%x_limit(1) = -1d0
+    spl%x_limit(2) = -2d0
+
   end subroutine spline_init_0
 
 
@@ -500,10 +504,10 @@ contains
 
   !------------------------------------------------------------
   subroutine spline_fit8(nrc, rofi, ffit, spl)
-    integer,        intent(in)  :: nrc
-    real(8),        intent(in)  :: rofi(:)
-    real(8),        intent(in)  :: ffit(:)
-    type(spline_t), intent(out) :: spl
+    integer,        intent(in)    :: nrc
+    real(8),        intent(in)    :: rofi(:)
+    real(8),        intent(in)    :: ffit(:)
+    type(spline_t), intent(inout) :: spl
 
     !No PUSH SUB, called too often
 
@@ -519,7 +523,7 @@ contains
     integer,        intent(in)    :: nrc
     real(4),        intent(in)    :: rofi(:)
     real(4),        intent(in)    :: ffit(:)
-    type(spline_t), intent(out)   :: spl
+    type(spline_t), intent(inout) :: spl
 
     real(8), allocatable :: rofi8(:), ffit8(:)
 
@@ -583,8 +587,8 @@ contains
     type(spline_t), intent(in)  :: spl1
     type(spline_t), intent(in)  :: spl2
     type(spline_t), intent(out) :: splsum
-    integer :: npoints, i
 
+    integer :: npoints, i
     real(8), allocatable :: x(:), y(:), y2(:)
 
     PUSH_SUB(spline_sum)
@@ -603,7 +607,7 @@ contains
     end do
 
     y2 = y2 + y
-    call oct_spline_fit(npoints, x(1), y2(1), splsum%spl, splsum%acc)
+    call spline_fit(npoints, x, y2, splsum)
 
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
@@ -633,7 +637,7 @@ contains
     do i = 1, npoints
       y(i) = a*y(i)
     end do
-    call oct_spline_fit(npoints, x(1), y(1), spl%spl, spl%acc)
+    call spline_fit(npoints, x, y, spl)
 
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
@@ -748,7 +752,7 @@ contains
       y2(j) = CNST(4.0)*M_PI*y(j)*x(j)**2
     end do
     call spline_init(aux)
-    call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
+    call spline_fit(npoints, x, y2, aux)
     yw(1) = oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
     call spline_end(aux)
 
@@ -757,13 +761,13 @@ contains
         y2(j) = (CNST(4.0)*M_PI/xw(i))*y(j)*x(j)*sin(xw(i)*x(j))
       end do
       call spline_init(aux)
-      call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
+      call spline_fit(npoints, x, y2, aux)
       yw(i) = oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
       call spline_end(aux)
     end do
 
     call spline_init(splw)
-    call oct_spline_fit(np, xw(1), yw(1), splw%spl, splw%acc)
+    call spline_fit(np, xw, yw, splw)
 
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
@@ -823,13 +827,13 @@ contains
         y2(j) = y(j) * x(j)**2 * loct_sph_bessel(l, x(j)*xw(i))
       end do
       call spline_init(aux)
-      call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
+      call spline_fit(npoints, x, y2, aux)
       yw(i) = sqrt(CNST(2.0)/M_PI)*oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
       call spline_end(aux)
     end do
 
     call spline_init(splw)
-    call oct_spline_fit(np, xw(1), yw(1), splw%spl, splw%acc)
+    call spline_fit(np, xw, yw, splw)
 
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
@@ -865,7 +869,7 @@ contains
       endif
       y(i) = y(i) * exp(-beta*(x(i)/cutoff - CNST(1.0))**2)
     end do
-    call oct_spline_fit(npoints, x(1), y(1), spl%spl, spl%acc)
+    call spline_fit(npoints, x, y, spl)
 
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
@@ -894,13 +898,15 @@ contains
     call oct_spline_y(spla%spl, y(1))
     call oct_spline_end(spla%spl, spla%acc)
   
+    ASSERT(splb%x_limit(2) >= splb%x_limit(1))
+
     do i = npoints, 1, -1
       if(x(i) > splb%x_limit(2)) cycle
       aa = spline_eval(splb, x(i))
       y(i) = y(i)/aa
     end do
     
-    call oct_spline_fit(npoints, x(1), y(1), spla%spl, spla%acc)
+    call spline_fit(npoints, x, y, spla)
 
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
@@ -929,6 +935,8 @@ contains
     call oct_spline_y(spla%spl, y(1))
     call oct_spline_end(spla%spl, spla%acc)
   
+    ASSERT(splb%x_limit(2) >= splb%x_limit(1))
+
     do i = npoints, 1, -1
       if(x(i) > splb%x_limit(2)) then
         aa = M_ZERO
@@ -938,7 +946,7 @@ contains
       y(i) = y(i)*aa
     end do
     
-    call oct_spline_fit(npoints, x(1), y(1), spla%spl, spla%acc)
+    call spline_fit(npoints, x, y, spla)
 
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
@@ -972,7 +980,7 @@ contains
     do i = 1, npoints
       y(i) = oct_spline_eval_der(x(i), spl%spl, spl%acc)
     end do
-    call oct_spline_fit(npoints, x(1), y(1), dspl%spl, dspl%acc)
+    call spline_fit(npoints, x, y, dspl)
 
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
@@ -1006,7 +1014,7 @@ contains
     do i = 1, npoints
       y(i) = oct_spline_eval_der2(x(i), spl%spl, spl%acc)
     end do
-    call oct_spline_fit(npoints, x(1), y(1), dspl%spl, dspl%acc)
+    call spline_fit(npoints, x, y, dspl)
 
     SAFE_DEALLOCATE_A(x)
     SAFE_DEALLOCATE_A(y)
@@ -1115,13 +1123,15 @@ contains
 
  
   !------------------------------------------------------------
-  FLOAT pure function spline_cutoff_radius(spl, threshold) result(r)
+  FLOAT function spline_cutoff_radius(spl, threshold) result(r)
     type(spline_t), intent(in) :: spl
     FLOAT,          intent(in) :: threshold
 
     integer :: ii, jj
     FLOAT, parameter :: dx = CNST(0.01)
     
+    ASSERT(spl%x_limit(2) >= spl%x_limit(1))
+
     jj = int(spl%x_limit(2)/dx) + 1
 
     do ii = jj, 1, -1
