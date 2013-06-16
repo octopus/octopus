@@ -42,15 +42,15 @@ module spline_filter_m
 
 contains
 
-  !     The function spline_filter_ft permits to filter out
-  !     high-values of a given spline function, either in real or in
-  !     Fourier space.  If the optional argument fs is supplied, a
-  !     filter in Fourier space will be done by moving to the Fourier
-  !     representation and then calling spline_cut with cutoff = fs(1)
-  !     and beta = fs(2). If the optional argument rs is supplied, a
-  !     filter in real space will be done by calling spline_cut with
-  !     cutoff = rs(1) and beta = rs(2). If both arguments are
-  !     supplied, the Fourier filter will be applied *before*.
+  !>     The function spline_filter_ft permits to filter out
+  !!     high-values of a given spline function, either in real or in
+  !!     Fourier space.  If the optional argument fs is supplied, a
+  !!     filter in Fourier space will be done by moving to the Fourier
+  !!     representation and then calling spline_cut with cutoff = fs(1)
+  !!     and beta = fs(2). If the optional argument rs is supplied, a
+  !!     filter in real space will be done by calling spline_cut with
+  !!     cutoff = rs(1) and beta = rs(2). If both arguments are
+  !!     supplied, the Fourier filter will be applied *before*.
   !
   !----------------------------------------------------------------------------
   subroutine spline_filter_ft(spl, fs, rs)
@@ -59,6 +59,8 @@ contains
     FLOAT, optional,     intent(in)    :: rs(2)
 
     type(spline_t) :: splw
+
+    PUSH_SUB(spline_filter_ft)
 
     if(present(fs)) then
       call spline_init(splw)
@@ -72,16 +74,19 @@ contains
       call spline_cut(spl, rs(1), rs(2))
     end if
 
+    POP_SUB(spline_filter_ft)
   end subroutine spline_filter_ft
 
   
   !----------------------------------------------------------------------------
   subroutine spline_filter_bessel(spl, l, qmax, alpha, beta_fs, rcut, beta_rs)
     type(spline_t), intent(inout) :: spl
-    integer, intent(in) :: l
-    FLOAT, intent(in)   :: qmax, alpha, beta_fs, rcut, beta_rs
+    integer,        intent(in)    :: l
+    FLOAT,          intent(in)    :: qmax, alpha, beta_fs, rcut, beta_rs
 
     type(spline_t) :: splw
+
+    PUSH_SUB(spline_filter_bessel)
 
     call spline_init(splw)
     call spline_besselft(spl, splw, l, M_FOUR*qmax)
@@ -90,11 +95,13 @@ contains
     call spline_end(splw)
     call spline_cut(spl, rcut, beta_rs)
 
+    PUSH_SUB(spline_filter_bessel)
   end subroutine spline_filter_bessel
 
 
   !----------------------------------------------------------------------------
   subroutine spline_filter_mask_init()
+
     integer :: iunit, i
 
     PUSH_SUB(spline_filter_mask_init)

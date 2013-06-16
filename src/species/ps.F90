@@ -445,7 +445,6 @@ contains
       alpha = CNST(1.1)
       gamma = CNST(2.0)
 
-
       rmax = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold)
       call spline_filter_mask(ps%vl, max(0, ps%l_loc), rmax, gmax, alpha, gamma)
       do l = 0, ps%l_max
@@ -622,7 +621,7 @@ contains
 
     PUSH_SUB(hgh_load)
 
-    ! Fixes some components of ps, read in psf
+    ! Fixes some components of ps
     ps%z_val = psp%z_val
     ps%icore = 'nc'
     if(ps%l_max>=0) then
@@ -649,6 +648,7 @@ contains
     POP_SUB(hgh_load)
 
   contains
+
     ! ---------------------------------------------------------
     subroutine get_splines()
       integer :: l, is, nrc, j
