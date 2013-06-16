@@ -31,12 +31,12 @@ SUBDIRS = \
         photo_electron   \
         complex_scaling
 
-bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite
+bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite.sh
 
-EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite.in
+EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite.sh.in
 
 # OCTOPUS_SHARE has to be set to an absolute path because
-# oct-run_testsuite changes the working directory for every
+# oct-run_testsuite.sh changes the working directory for every
 # testcase.
 # If the testsuite should be skipped, e. g. in make distcheck,
 # set the environment variable SKIP_CHECK to some value.
@@ -45,7 +45,7 @@ check:
 	    base=`basename "$(top_builddir)/share"` && \
 	    dir=`dirname "$(top_builddir)/share"` && \
 	    sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \
-	    OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite -c -d $(srcdir) -l -g short-run; \
+	    OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite.sh -c -d $(srcdir) -l -g short-run; \
 	else \
 	    echo "Skipping checks"; \
 	fi
@@ -55,7 +55,7 @@ check-full:
 	    base=`basename "$(top_builddir)/share"` && \
 	    dir=`dirname "$(top_builddir)/share"` && \
 	    sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \
-	    OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite -c -d $(srcdir) -l; \
+	    OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite.sh -c -d $(srcdir) -l; \
 	else \
 	    echo "Skipping checks"; \
 	fi

@@ -1,12 +1,12 @@
 ema=head1 NAME
 
-oct-run_testsuite - Script to run the B<octopus> testsuite.
+oct-run_testsuite.sh - Script to run the B<octopus> testsuite.
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<oct-run_testsuite> [option]...
+=item B<oct-run_testsuite.sh> [option]...
 
 =back
 

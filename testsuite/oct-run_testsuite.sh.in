@@ -45,7 +45,7 @@ function usage() {
 
  Copyright (C) 2005-2006 by Heiko Appel
 
-Usage: oct-run_testsuite [options]
+Usage: oct-run_testsuite.sh [options]
     
      -h            this message
      -n            dry-run mode (show what would be executed)
@@ -208,7 +208,7 @@ for y in $tests; do
 	echo "Found: $failed_tests"
 	echo "Mailing report to: $mailaddr"
 	cat oct-header ${xybase}.log ${xybase}.out.log | \
-	    mutt -s "[oct-run_testsuite on $arch] daily report - $datestamp" $mailaddr
+	    mutt -s "[oct-run_testsuite.sh on $arch] daily report - $datestamp" $mailaddr
     fi
 done
 }
@@ -277,7 +277,7 @@ if [ -z "$testfiles" ]; then
     if [ "$send_mail" == "yes" ]; then
 	datestamp=`date +"%Y-%m-%d"`
 	echo "No testfiles for group(s) $test_groups found." | \
-	    mutt -s "[oct-run_testsuite on $arch] daily report - $datestamp" $mailaddr
+	    mutt -s "[oct-run_testsuite.sh on $arch] daily report - $datestamp" $mailaddr
     fi
 
 # Otherwise, start the whole machinery.

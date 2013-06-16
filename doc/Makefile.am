@@ -23,7 +23,7 @@ SUBDIRS = pdf html
 
 man_MANS = octopus.1 oct-atomic_occupations.1 oct-casida_spectrum.1 oct-center-geom.1 oct-propagation_spectrum.1 \
         oct-display_partitions.1 oct-harmonic-spectrum.1 oct-vibrational_spectrum.1 oct-rotatory_strength.1 \
-	oct-run_periodic_table.1 oct-run_regression_test.pl.1 oct-run_testsuite.1 oct-xyz-anim.1
+	oct-run_periodic_table.1 oct-run_regression_test.pl.1 oct-run_testsuite.sh.1 oct-xyz-anim.1
 
 EXTRA_DIST = \
 	$(man_MANS:.1=.pod) \
@@ -45,7 +45,5 @@ EXTRA_DIST = \
 
 CLEANFILES = *~ *.bak variables.texi $(man_MANS)
 
-#octopus.1: octopus.pod
-#	pod2man -c "Octopus Documentation" -s 1 octopus.pod > octopus.1
 .pod.1:
 	pod2man -c "octopus documentation" -s 1 $< > $@
