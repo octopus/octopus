@@ -15,3 +15,26 @@ fromScratch = yes
 TheoryLevel = independent_particles
 
 EigenSolverMaxIter = 300
+
+ExtraStates = 1
+%Occupations
+0 | 1
+%
+
+%StaticMagneticField
+0.0 | 0.0 | 0.5
+%
+
+%CurrentThroughPlane
+0 | 0 | 0
+0 | 1 | 0
+0 | 0 | 1
+0.15
+0 | 130
+-130 | 130
+%
+
+CalculateSelfInducedMagneticField = yes
+
+Output = potential
+OutputHow = axis_y

@@ -67,8 +67,6 @@ dist_share_DATA = \
 	13-full_potential_hydrogen.01-gs.inp \
 	13-full_potential_hydrogen.02-gs-cg.inp \
 	13-full_potential_hydrogen.test \
-	18-current.01-current.inp \
-	18-current.test \
 	20-eigensolver.01-lobpcg.inp \
 	20-eigensolver.02-cg.inp \
 	20-eigensolver.03-cg_new.inp \
