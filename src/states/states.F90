@@ -1590,7 +1590,7 @@ contains
 
     !%Variable StatesOrthogonalization
     !%Type integer
-    !%Section Execution::Optimization
+    !%Section SCF::Eigensolver
     !%Description
     !% The full orthogonalization method used by some
     !% eigensolvers. The default is <tt>cholesky_serial</tt>. With state
