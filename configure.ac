@@ -89,7 +89,7 @@ AX_TLS
 # Checks for library functions.
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_STAT
-AC_CHECK_FUNCS([gettimeofday \
+AC_CHECK_FUNCS([gettimeofday nanosleep sysconf getpid \
 strndup tcgetpgrp scandir alphasort \
 sigaction readdir closedir strchr strtod \
 perror strcasestr sbrk getopt_long uname ioctl])

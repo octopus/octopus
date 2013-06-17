@@ -76,8 +76,9 @@ module loct_m
   end interface loct_gettimeofday
 
   interface loct_nanosleep
-    subroutine oct_nanosleep(sec, usec)
-      integer, intent(in) :: sec, usec
+    subroutine oct_nanosleep(sec, nsec)
+      integer, intent(in) :: sec  !< number of seconds
+      integer, intent(in) :: nsec !< + number of nanoseconds
     end subroutine oct_nanosleep
   end interface loct_nanosleep
 

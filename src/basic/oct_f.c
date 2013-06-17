@@ -217,14 +217,14 @@ double FC_FUNC_(oct_clock, OCT_CLOCK)
 }
 
 void FC_FUNC_(oct_nanosleep, OCT_NANOSLEEP)
-	(int *sec, int *usec)
+	(int *sec, int *nsec)
 {
-#ifdef linux
+#ifdef HAVE_NANOSLEEP
   /* Datatypes should be long instead of int (see comment in gettimeofday) */
-  struct timespec req, rem;
+  struct timespec req;
   req.tv_sec  = (time_t) *sec;
-  req.tv_nsec = (long)   *usec;
-  nanosleep(&req, &rem);
+  req.tv_nsec = (long)   *nsec;
+  nanosleep(&req, NULL);
 #endif
 }
 
@@ -394,7 +394,7 @@ float FC_FUNC_(oct_hypotf, OCT_HYPOTF)
 
 void * FC_FUNC_(get_memory_usage, GET_MEMORY_USAGE)()
 {
-#ifdef linux
+#if defined(HAVE_SYSCONF) && defined(HAVE_GETPID)
   static size_t pagesize = 0;
   FILE *f;
   int pid;
