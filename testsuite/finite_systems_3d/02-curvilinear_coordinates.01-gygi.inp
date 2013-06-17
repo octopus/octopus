@@ -24,8 +24,6 @@ DerivativesOrder = 3
 
 LCAOStart = no
 
-ConvAbsDens = 1e-10
-
 PoissonSolver = cg_corrected
 
 #for the moment OpenCL is not supported

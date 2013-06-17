@@ -10,5 +10,15 @@ Processors : 1
 # curvilinear not compatible with domain parallelization
 # there is only one state, so we cannot use state parallelization
 Input: 02-curvilinear_coordinates.01-gygi.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.86805481
-match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.576032
+
+match ; Total energy       ; GREP(static/info, 'Total       =', 20) ;    -2.86805481
+match ; Ion-ion energy     ; GREP(static/info, 'Ion-ion     =', 20) ;     0.00000000
+match ; Eigenvalues sum    ; GREP(static/info, 'Eigenvalues =', 20) ;    -1.15215173
+match ; Hartree energy     ; GREP(static/info, 'Hartree     =', 20) ;     2.02132612
+match ; Int[n*v_xc]        ; GREP(static/info, 'Int\[n\*v_xc\] =', 20) ;   -1.28990262
+match ; Exchange energy    ; GREP(static/info, 'Exchange    =', 20) ;    -0.87307978
+match ; Correlation energy ; GREP(static/info, 'Correlation =', 20) ;    -0.11143832
+match ; Kinetic energy     ; GREP(static/info, 'Kinetic     =', 20) ;     2.81804915
+match ; External energy    ; GREP(static/info, 'External    =', 20) ;    -6.72295049
+
+match ; Eigenvalue         ; GREP(static/info, '1   --',        13) ;    -0.576076
