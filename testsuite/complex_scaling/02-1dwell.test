@@ -1,6 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
-Test       : Complex-scaling - harmonic oscillator
+Test       : Complex-scaling - 1D Well
 Options    : arpack
 Programs   : octopus; octopus_mpi
 TestGroups : short-run; complex_scaling
