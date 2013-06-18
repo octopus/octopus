@@ -270,7 +270,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   ! Auxiliary index maps, required because we compact the distributed blocks of each node
   ! in the Rayleigh-Ritz into one big block.
   ! all_ev:     {1, ..., nst} -> {1, ..., st%nst} (blocksize to number of eigenvectors).
-  ! all_ev_inv: {1, ..., st%nst} -> {1, ..., nst} (the reverese of all_ev).
+  ! all_ev_inv: {1, ..., st%nst} -> {1, ..., nst} (the reverse of all_ev).
   SAFE_ALLOCATE(all_ev(1:nst))
   all_ev = uc
   hash_table_size = max(3, st%nst) ! Minimum size of hash table is 3.
@@ -616,6 +616,13 @@ contains
     do i = 1, lnuc
       ist = luc(i)
       diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, ist))
+
+      if(in_debug_mode) then
+        write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') &
+          'Debug: LOBPCG Eigensolver - ik', ik, ' ist ', ist, ' iter ', iter, ' res ', diff(ist)
+        call messages_info(1)
+      end if
+
       if(diff(ist) >= tol) then
         new_uc(j) = ist
         new_nuc   = new_nuc+1

@@ -56,6 +56,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_ALLOCATE(failed(1:st%d%block_size))
   SAFE_ALLOCATE(fr(1:4, 1:st%d%block_size))
   SAFE_ALLOCATE(nrmsq(1:st%d%block_size))
+  SAFE_ALLOCATE(eigen(1:st%d%block_size))
 
   do iter = 1, niter
     if(iter /= 1) then
@@ -85,13 +86,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(1)%batch, resb(1)%batch, ik)
     nops = nops + bsize
 
-    SAFE_ALLOCATE(eigen(1:bsize))
-
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(1)%batch, eigen)
 
     st%eigenval(minst:maxst, ik) = R_REAL(eigen(1:bsize))
-
-    SAFE_DEALLOCATE_A(eigen)
 
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(1)%batch, resb(1)%batch)
 
@@ -243,10 +240,21 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       nops = nops + bsize
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
 
+      ! why not allocate these outside the loop?
       SAFE_DEALLOCATE_A(eval)      
       SAFE_DEALLOCATE_A(evec)
 
-    end do
+      if(in_debug_mode) then
+        call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(iter)%batch, resb(iter)%batch, eigen)
+
+        do ist = minst, maxst
+          write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') &
+            'Debug: RMMDIIS Eigensolver - ik', ik, ' ist ', ist, ' iter ', iter, ' res ', sqrt(abs(eigen(ist - minst + 1)))
+          call messages_info(1)
+        enddo
+      end if
+
+    end do ! iter
 
     if(save_pack_mem) call batch_unpack(psib(niter - 1)%batch, copy = any(failed(1:bsize)))
 
@@ -297,41 +305,36 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       call loct_progress_bar(st%nst*(ik - 1) + prog, st%nst*st%d%nik)
     end if
     
-  end do
+  end do ! ib
 
   call profiling_out(prof)
 
   call X(states_orthogonalization_full)(st, gr%mesh, ik)
 
   ! recalculate the eigenvalues and residuals
-
-  SAFE_ALLOCATE(eigen(st%st_start:st%st_end))
-
   do ib = st%group%block_start, st%group%block_end
     minst = states_block_min(st, ib)
     maxst = states_block_max(st, ib)
-
+    
     call batch_copy(st%group%psib(ib, ik), resb(1)%batch, reference = .false.)
-
+    
     call X(hamiltonian_apply_batch)(hm, gr%der, st%group%psib(ib, ik), resb(1)%batch, ik)
-    call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, eigen(minst:maxst))
-
-    st%eigenval(minst:maxst, ik) = R_REAL(eigen(minst:maxst))
-
+    call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, eigen)
+    
+    st%eigenval(minst:maxst, ik) = R_REAL(eigen(1:maxst - minst + 1))
+    
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb(1)%batch)
-
-    call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(1)%batch, resb(1)%batch, eigen(minst:maxst))
-
-    diff(minst:maxst) = sqrt(abs(eigen(minst:maxst)))
-
+    
+    call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(1)%batch, resb(1)%batch, eigen)
+    
+    diff(minst:maxst) = sqrt(abs(eigen(1:maxst - minst + 1)))
+    
     call batch_end(resb(1)%batch, copy = .false.)
-
+    
     nops = nops + maxst - minst + 1
   end do
-
+  
   converged = converged + count(diff(:) <= tol)
-
-  SAFE_DEALLOCATE_A(eigen)
 
   do iter = 1, niter
     if(iter /= 1) then
@@ -371,8 +374,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
   integer :: isd, ist, minst, maxst, ib, ii
   R_TYPE  :: ca, cb, cc
-  R_TYPE, allocatable :: res(:, :, :), lambda(:)
-  R_TYPE, allocatable :: kres(:, :, :)
+  R_TYPE, allocatable :: lambda(:), diff(:)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
   logical :: pack
   type(batch_t) :: resb, kresb
@@ -383,11 +385,13 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
   SAFE_ALLOCATE(me1(1:2, 1:st%d%block_size))
   SAFE_ALLOCATE(me2(1:4, 1:st%d%block_size))
-  SAFE_ALLOCATE(res(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
-  SAFE_ALLOCATE(kres(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%block_size))
   SAFE_ALLOCATE(lambda(1:st%nst))
 
   niter = 0
+
+  if(in_debug_mode) then
+    SAFE_ALLOCATE(diff(1:st%d%block_size))
+  endif
 
   do ib = st%group%block_start, st%group%block_end
     minst = states_block_min(st, ib)
@@ -410,6 +414,16 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
       forall(ist = minst:maxst) st%eigenval(ist, ik) = R_REAL(me1(1, ist - minst + 1)/me1(2, ist - minst + 1))
  
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb)
+
+      if(in_debug_mode) then
+        call X(mesh_batch_dotp_vector)(gr%der%mesh, resb, resb, diff)
+
+        do ist = minst, maxst
+          write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') &
+            'Debug: RMMDIIS MIN Eigensolver - ik', ik, ' ist ', ist, ' iter ', isd, ' res ', sqrt(abs(diff(ist - minst + 1)))
+          call messages_info(1)
+        enddo
+      end if
 
       call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb, kresb)
 
@@ -450,6 +464,10 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
   end do
 
+  if(in_debug_mode) then
+    SAFE_DEALLOCATE_A(diff)
+  endif
+
   call X(states_orthogonalization_full)(st, gr%mesh, ik)
 
   converged = 0
@@ -457,8 +475,6 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
   SAFE_DEALLOCATE_A(lambda)
   SAFE_DEALLOCATE_A(me1)
   SAFE_DEALLOCATE_A(me2)
-  SAFE_DEALLOCATE_A(res)
-  SAFE_DEALLOCATE_A(kres)
 
   POP_SUB(X(eigensolver_rmmdiis_min))
 

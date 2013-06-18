@@ -276,6 +276,15 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         end do
       end do ordering
 
+      if(in_debug_mode) then
+        do ist = 1, st%nst
+          ! there do not seem to be counted iterations here
+          write(message(1), '(a,i4,a,i4,a,es12.6)') &
+            'Debug: PLAN Eigensolver - ik', ik, ' ist ', ist, ' res ', res(ist)
+          call messages_info(1)
+        end do
+      end if
+
       ! If the maximum mat-vecs is exceeded, get out of here.
       if(matvec > maxmatvecs) exit outer_loop
 
