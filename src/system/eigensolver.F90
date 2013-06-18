@@ -178,6 +178,7 @@ contains
     select case(eigens%es_type)
     case(RS_CG_NEW)
     case(RS_MG)
+      call messages_experimental("multigrid eigensolver")
     case(RS_CG)
     case(RS_PLAN)
     case(RS_EVO)
@@ -217,7 +218,7 @@ contains
       !% The RMMDIIS eigensolver may require a considerable amount of
       !% extra memory. When this variable is set to yes, the
       !% eigensolver will use less memory at the expense of some
-      !% performance. This is specially useful for GPUs. The default is no.
+      !% performance. This is especially useful for GPUs. The default is no.
       !%End
 
       call parse_logical(datasets_check('EigensolverSaveMemory'), .false., eigens%save_mem)
