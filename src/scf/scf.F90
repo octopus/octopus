@@ -445,7 +445,7 @@ contains
 
     if(scf%forced_finish) then
       message(1) = "Previous clean stop, not doing SCF and quitting."
-      call messages_fatal(1)
+      call messages_fatal(1, only_root_writes = .true.)
     endif
 
     cmplxscl = st%cmplxscl%space
