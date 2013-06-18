@@ -45,6 +45,7 @@ subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
   call mpi_debug_out(mpi_grp%comm, C_MPI_ALLGATHER)
 
   outcount = sum(recvbuf)
+  ASSERT(ubound(out, 1) >= outcount)
 
   ! Exchange the data.
   recvcnts = recvbuf
