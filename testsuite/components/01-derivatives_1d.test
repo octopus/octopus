@@ -6,7 +6,7 @@ Programs   : oct-test; oct-test_mpi
 TestGroups : short-run, components
 Enabled    : Yes
 
-Precision : 3.0e-9
+Precision : 3.5e-9
 Input: 01-derivatives_1d.01.inp
 match ; Real Laplacian (blocksize =   1); GREP(out, 'Laplacian real bsize =   1', 37, 0) ; 2.7801274971E-09
 match ; Real Laplacian (blocksize =   2); GREP(out, 'Laplacian real bsize =   2', 37, 0) ; 2.7801274971E-09
