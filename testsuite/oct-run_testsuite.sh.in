@@ -113,11 +113,17 @@ function checkqueue {
       for (( ijob=1; ijob <= $NUM; ijob++ )); do
 	testpid=`echo $OCT_QUEUE | cut -f $ijob -d " "`
         test_name=`echo $OUTLIST | cut -f $ijob -d " "`
+	#echo "checking $test_name $testpid"
         ps -p $testpid > /dev/null;
 	# is this pid still running?
         if [ $? -ne 0 ]; then
+          # for a process that already finished, this just gives the return value
+	  wait $testpid
+          failures=$?
+
 	  still_waiting=0;
 	  # remove it from the queue
+
           if [ $NUM -eq 1 ]; then
             OCT_QUEUE=
 	    OUTLIST=
@@ -136,9 +142,7 @@ function checkqueue {
       sleep 0.1s;
     done
 
-    # Look for failed/passed/skipped testcases and add
-    # to failure summary.
-    failures=$?
+    # Look for failed/passed/skipped testcases and add to failure summary.
     if [ "${failures}" -eq 0 ]; then
 	passed_tests=$((passed_tests + 1))
     elif [ ${failures} -eq 255 ]; then
