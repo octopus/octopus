@@ -22,15 +22,13 @@ subroutine X(poisson1D_solve)(this, pot, rho, theta)
   R_TYPE,          intent(out) :: pot(:)
   R_TYPE,          intent(in)  :: rho(:)
   FLOAT, optional, intent(in)  :: theta !< Complex scaling angle
-  ! Passing theta is not needed for a normal Poisson solver due to linearity,
-  ! which makes it possible to solve separately for real/imaginary parts.
-  ! But the soft-Coulomb kernel makes it necessary.
-  !
-  ! Note that we don`t divide by e^(i theta) here, we do it "outside" as with the other Poisson solvers.
+  !! Passing theta is not needed for a normal Poisson solver due to linearity,
+  !! which makes it possible to solve separately for real/imaginary parts.
+  !! But the soft-Coulomb kernel makes it necessary.
+  !! Note that we don`t divide by e^(i theta) here, we do it "outside" as with the other Poisson solvers.
 
   integer             :: ip, jp
   FLOAT               :: xx, yy
-  logical             :: cmplxscl
   R_TYPE              :: soft_coulomb_param_squared
 #ifdef HAVE_MPI
   R_TYPE              :: tmp

@@ -243,8 +243,8 @@ contains
   end subroutine ob_propagator_init
 
 
-  CMPLX function lambda(m, k, max_iter, sm_u) result(res)
-    integer, intent(in) :: m, k, max_iter
+  CMPLX function lambda(m, k, sm_u) result(res)
+    integer, intent(in) :: m, k
     CMPLX,   intent(in) :: sm_u(0:) !< (0:max_iter)
 
     integer :: j
@@ -259,12 +259,11 @@ contains
   !> Crank-Nicolson timestep with source and memory.
   !! Only non-interacting electrons for the moment, so no
   !! predictor-corrector scheme.
-  subroutine cn_src_mem_dt(ob, st, hm, gr, max_iter, dt, t, timestep)
+  subroutine cn_src_mem_dt(ob, st, hm, gr, dt, t, timestep)
     type(ob_terms_t), target,    intent(inout) :: ob
     type(states_t),              intent(inout) :: st
     type(hamiltonian_t), target, intent(inout) :: hm
     type(grid_t), target,        intent(inout) :: gr
-    integer,                     intent(in)    :: max_iter
     FLOAT, target,               intent(in)    :: dt
     FLOAT, target,               intent(in)    :: t
     integer,                     intent(in)    :: timestep
@@ -334,13 +333,13 @@ contains
             end if
             call calc_source_wf(ob%max_mem_coeffs, m, np, tmp_mem(1:np, 1:np), dt, &
               st%ob_lead(il)%intf_psi(:, 1, ist, ik), ob%src_mem_u(:, il), f0, fac,              &
-              lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
+              lambda(m, 0, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
             call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), psi)
           end if
           ! 3. Add memory term.
           if(iand(ob%additional_terms, MEM_TERM_FLAG) /= 0) then
             do it = max(m-ob%max_mem_coeffs,0), m-1
-              factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
+              factor = -dt**2/M_FOUR*lambda(m, it, ob%src_mem_u(:, il)) / &
                 (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
               tmp_wf(1:np) = ob%lead(il)%st_intface(1:np, ist, ik, mod(it+1, ob%max_mem_coeffs+1)) &
                           + ob%lead(il)%st_intface(1:np, ist, ik, mod(it, ob%max_mem_coeffs+1))
@@ -475,13 +474,13 @@ contains
             call calc_source_wf_sp(max_iter, m, np, &
               tmp_mem(1:npo), dt, order, gr%sb%dim, st%ob_lead(il)%intf_psi(:, 1, ist, ik), &
               ob%lead(il)%q_s(:, :, :), ob%lead(il)%sp2full_map, ob%src_mem_u(:, il), f0, fac,   &
-              lambda(m, 0, max_iter, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
+              lambda(m, 0, ob%src_mem_u(:, il)), ob%lead(il)%src_prev(:, 1, ist, ik))
             call apply_src(gr%intf(il), ob%lead(il)%src_prev(1:np, 1, ist, ik), psi)
           end if
           ! 3. Add memory term.
           if(iand(ob%additional_terms, MEM_TERM_FLAG) /= 0) then
             do it = max(m-ob%max_mem_coeffs,0), m-1
-              factor = -dt**2/M_FOUR*lambda(m, it, max_iter, ob%src_mem_u(:, il)) / &
+              factor = -dt**2/M_FOUR*lambda(m, it, ob%src_mem_u(:, il)) / &
                 (ob%src_mem_u(m, il)*ob%src_mem_u(it, il))
               tmp_wf(1:np) = ob%lead(il)%st_intface(1:np, ist, ik, mod(it+1, ob%max_mem_coeffs+1)) &
                           + ob%lead(il)%st_intface(1:np, ist, ik, mod(it, ob%max_mem_coeffs+1))

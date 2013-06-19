@@ -294,10 +294,10 @@ subroutine X(subspace_diag_hamiltonian)(this, der, st, hm, ik, hmss)
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(out)   :: hmss(:, :)
 
-  integer       :: ib, jb, minst, maxst, ierr
+  integer       :: ib, jb
   type(batch_t) :: hpsib
 #ifdef HAVE_CLAMDBLAS
-  integer :: sp, ep, size, block_size
+  integer :: sp, ep, size, block_size, ierr
   type(batch_t), allocatable :: hpsib_all(:)
   type(opencl_mem_t) :: psi_buffer, hpsi_buffer, hmss_buffer
 #endif

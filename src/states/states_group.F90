@@ -52,8 +52,6 @@ contains
   subroutine states_group_null(this)
     type(states_group_t), intent(inout) :: this
 
-    integer :: il
-
     PUSH_SUB(states_group_null)
 
     nullify(this%psib)

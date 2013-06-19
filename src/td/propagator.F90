@@ -1240,7 +1240,7 @@ contains
       
       select case(tr%ob%mem_type)
       case(SAVE_CPU_TIME)
-        call cn_src_mem_dt(tr%ob, st, hm, gr, max_iter, dt, time, nt)
+        call cn_src_mem_dt(tr%ob, st, hm, gr, dt, time, nt)
       case(SAVE_RAM_USAGE)
         call cn_src_mem_sp_dt(tr%ob, st, hm, gr, max_iter, dt, time, nt)
       end select

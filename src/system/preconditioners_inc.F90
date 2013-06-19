@@ -30,9 +30,6 @@ subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
   integer :: idim
   FLOAT   :: omega_
   type(profile_t), save :: preconditioner_prof
-#ifndef R_TREAL
-  integer :: ip
-#endif
 
   call profiling_in(preconditioner_prof, "PRECONDITIONER")
   PUSH_SUB(X(preconditioner_apply))

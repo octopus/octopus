@@ -184,15 +184,11 @@ contains
     
     type(block_t) :: blk
     
-    integer :: il, it, ii, ll(3)
+    integer :: il, it, ll(3)
     FLOAT :: field(3)
     FLOAT :: DeltaE, MaxE, pCutOff
     FLOAT :: width 
-    integer :: defaultMask,k1,k2,st1,st2, optimize_parity(3)
-    logical :: optimize(3)
-    FLOAT, allocatable  ::  XX(:,:)  
-    
-    integer :: mpi_comm
+    integer :: defaultMask,k1,k2,st1,st2
     
     PUSH_SUB(PES_mask_init)
     
