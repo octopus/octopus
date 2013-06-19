@@ -22,11 +22,13 @@
 
 # Paths.
 prefix=@prefix@
-pkgdatadir=@datadir@/@PACKAGE@
-testsuite="$pkgdatadir/testsuite"
 # we do not care about this one, but without it we get a warning from configure:
 # config.status: WARNING:  'testsuite/oct-run_testsuite.in' seems to ignore the --datarootdir setting
+# this variable is not substituted by older versions of autoconf, e.g. 2.59
+# NOTE: datarootdir line must precede pkgdatadir since @datadir@ may be substituted as ${datarootdir}
 datarootdir=@datarootdir@
+pkgdatadir=@datadir@/@PACKAGE@
+testsuite="$pkgdatadir/testsuite"
 
 # Architecture.
 arch=`echo "$MACHTYPE" | awk -F- '{print $1}'`
