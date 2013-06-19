@@ -882,7 +882,7 @@ contains
     type(states_t), intent(inout) :: st
     FLOAT,          intent(in)    :: excess_charge
 
-    integer :: ik, ist, ispin, nspin, ncols, el_per_state, icol, start_pos
+    integer :: ik, ist, ispin, nspin, ncols, nrows, el_per_state, icol, start_pos
     type(block_t) :: blk
     FLOAT :: rr, charge
     logical :: integral_occs
@@ -918,8 +918,11 @@ contains
     !% at most as many columns as states in the calculation. If there are fewer columns
     !% than states, then the code will assume that the user is indicating the occupations
     !% of the uppermost states, assigning maximum occupation (i.e. 2 for spin-unpolarized
-    !% calculations, 1 otherwise) to the lower states. If <tt>SpinComponents == polarized</tt>
+    !% calculations, 1 otherwise) to the lower states. The number of rows should be equal
+    !% to the number of k-points times the number of spins. For example, for a finite system
+    !% with <tt>SpinComponents == polarized</tt>,
     !% this block should contain two lines, one for each spin channel.
+    !% All rows must have the same number of columns.
     !% This variable is very useful when dealing with highly symmetric small systems
     !% (like an open-shell atom), for it allows us to fix the occupation numbers
     !% of degenerate states in order to help <tt>octopus</tt> to converge. This is to
@@ -966,14 +969,28 @@ contains
         ! read in occupations
         st%fixed_occ = .true.
 
-        ! Reads the number of columns in the first row. This assumes that all rows
-        ! have the same column number; otherwise the code will stop with an error.
         ncols = parse_block_cols(blk, 0)
         if(ncols > st%nst) then
           message(1) = "Too many columns in block Occupations."
           call messages_warning(1)
           call input_error("Occupations")
         end if
+
+        nrows = parse_block_n(blk)
+        if(nrows /= st%d%nik) then
+          message(1) = "Wrong number of rows in block Occupations."
+          call messages_warning(1)
+          call input_error("Occupations")
+        end if
+
+        do ik = 1, st%d%nik - 1
+          if(parse_block_cols(blk, ik) /= ncols) then
+            message(1) = "All rows in block Occupations must have the same number of columns."
+            call messages_warning(1)
+            call input_error("Occupations")
+          endif
+        enddo
+
         ! Now we fill all the "missing" states with the maximum occupation.
         if(st%d%ispin == UNPOLARIZED) then
           el_per_state = M_TWO
