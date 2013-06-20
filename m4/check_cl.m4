@@ -36,20 +36,9 @@
 #
 AC_DEFUN([AX_CHECK_CL],
 [AC_REQUIRE([AC_CANONICAL_HOST])dnl
-AC_REQUIRE([AC_PATH_X])dnl
 AC_REQUIRE([AC_PROG_SED])dnl
 
 AC_LANG_PUSH([C])
-
-#
-# Use x_includes and x_libraries if they have been set (presumably by
-# AC_PATH_X).
-#
-AS_IF([test X$no_x != Xyes],
-      [AS_IF([test -n "$x_includes"],
-             [CL_CFLAGS="-I$x_includes $CL_CFLAGS"])]
-       AS_IF([test -n "$x_libraries"],
-             [CL_LIBS="-L$x_libraries -lX11 $CL_LIBS"]))
 
 ax_save_CPPFLAGS=$CPPFLAGS
 CPPFLAGS="$CL_CFLAGS $CPPFLAGS"
