@@ -203,7 +203,7 @@ contains
 
     integer            :: ik, ist, is, ns, iunit, idir
     character(len=80)  :: cspin, str_tmp
-    FLOAT              :: occ, kpoint(1:MAX_DIM)
+    FLOAT              :: kpoint(1:MAX_DIM)
     FLOAT, allocatable :: momentum(:,:,:)
 
     PUSH_SUB(output_me_out_momentum)
@@ -254,12 +254,6 @@ contains
       do ist = 1, st%nst
         do is = 0, ns-1
           
-          if(ist > st%nst) then
-            occ = M_ZERO
-          else
-            occ = st%occ(ist, ik+is)
-          end if
-          
           if(is  ==  0) cspin = 'up'
           if(is  ==  1) cspin = 'dn'
           if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
@@ -269,7 +263,7 @@ contains
             write(str_tmp, '(f12.6)') momentum(idir, ist, ik)
             message(1) = trim(message(1)) // trim(str_tmp)
           enddo
-          write(str_tmp, '(3x,f12.6)') occ
+          write(str_tmp, '(3x,f12.6)') st%occ(ist, ik+is)
           message(1) = trim(message(1)) // trim(str_tmp)
           call messages_info(1, iunit)
           
@@ -296,7 +290,7 @@ contains
 
     integer            :: iunit, ik, ist, is, ns, idir
     character(len=80)  :: tmp_str(MAX_DIM), cspin
-    FLOAT              :: angular(3), lsquare, occ, kpoint(1:MAX_DIM)
+    FLOAT              :: angular(3), lsquare, kpoint(1:MAX_DIM)
     FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
 #if defined(HAVE_MPI)
     integer            :: tmp
@@ -416,12 +410,6 @@ contains
       if(mpi_grp_is_root(mpi_world)) then
         do ist = 1, st%nst
           do is = 0, ns-1
-
-            if(ist > st%nst) then
-              occ = M_ZERO
-            else
-              occ = st%occ(ist, ik+is)
-            end if
             
             if(is  ==  0) cspin = 'up'
             if(is  ==  1) cspin = 'dn'
@@ -429,7 +417,7 @@ contains
 
             write(tmp_str(1), '(i4,3x,a2)') ist, trim(cspin)
             write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
-                 ang(ist, ik+is, 1:3), ang2(ist, ik+is), occ
+                 ang(ist, ik+is, 1:3), ang2(ist, ik+is), st%occ(ist, ik+is)
             message(1) = trim(tmp_str(1))//trim(tmp_str(2))
             call messages_info(1, iunit)
           end do
