@@ -18,7 +18,6 @@ ExtraStates = 1
 
 %Occupations
 1 | 1
-0 | 0
 %
 
 BoxShape = sphere
