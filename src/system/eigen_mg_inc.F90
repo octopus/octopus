@@ -70,6 +70,9 @@ subroutine X(eigensolver_mg) (der, st, hm, sdiag, niter, ik, diff)
 
   niter = iter*10
 
+  SAFE_DEALLOCATE_A(cc)
+  SAFE_DEALLOCATE_A(aa)
+
   POP_SUB(X(eigensolver_mg))
 end subroutine X(eigensolver_mg)
 
@@ -153,6 +156,10 @@ subroutine X(coordinate_relaxation)(der, hm, nst, steps, ik, psi, aa, cc)
     end do
     
   end do
+
+  SAFE_DEALLOCATE_A(sigma)
+  SAFE_DEALLOCATE_A(beta)
+  SAFE_DEALLOCATE_A(hdiag)
   
   POP_SUB(X(coordinate_relaxation))
 end subroutine X(coordinate_relaxation)
