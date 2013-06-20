@@ -41,10 +41,13 @@ subroutine X(eigensolver_mg) (der, st, hm, sdiag, niter, ik, diff)
 
     call X(subspace_diag)(sdiag, der, st, hm, ik, st%eigenval(:, ik), diff)
 
-    do ist = 1, st%nst
-      print*, iter, ist, st%eigenval(ist, ik), diff(ist)
-    end do
-    print*, " "
+    if(in_debug_mode) then
+      do ist = 1, st%nst
+        write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') &
+          'Debug: MG Eigensolver - ik', ik, ' ist ', ist, ' iter ', iter, ' res ', diff(ist)
+        call messages_info(1)
+      end do
+    end if
 
     do ist = 1, st%nst
 
@@ -107,7 +110,12 @@ subroutine X(coordinate_relaxation)(der, hm, nst, steps, ik, psi, aa, cc)
     
     do ip = 1, der%mesh%np
       
-      vv = sqrt(der%mesh%vol_pp(ip))
+      if(der%mesh%use_curvilinear) then
+        vv = sqrt(der%mesh%vol_pp(ip))
+      else
+        vv = sqrt(der%mesh%volume_element)
+      endif
+
       dh = real(hdiag(ip, 1), REAL_PRECISION)
       pot = hm%vhxc(ip, 1) + hm%ep%vpsl(ip)
       
@@ -156,11 +164,11 @@ subroutine X(coordinate_relaxation)(der, hm, nst, steps, ik, psi, aa, cc)
     end do
     
   end do
-
+  
   SAFE_DEALLOCATE_A(sigma)
   SAFE_DEALLOCATE_A(beta)
   SAFE_DEALLOCATE_A(hdiag)
-  
+
   POP_SUB(X(coordinate_relaxation))
 end subroutine X(coordinate_relaxation)
 
