@@ -1,7 +1,11 @@
 TestMode = derivatives
 
+# coordinates are not used at all
 %Coordinates
-"Na" | 0.0 | 0.0
+"dummy" | 0.0 | 0.0
+%
+%Species
+"dummy" | 1 | spec_user_defined | 1 | "0"
 %
 
 Dimensions = 2
