@@ -45,6 +45,8 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
   ! inclusion from double_grid.F90 results in local and non-local versions
   PUSH_SUB(double_grid_apply)
 
+  ASSERT(mesh%sb%dim == 3)
+
   ps => species_ps(spec)
   xx = M_ZERO !must be initialized so xx(dim + 1:MAX_DIM) = 0.0
 

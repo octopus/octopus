@@ -319,6 +319,11 @@ contains
       geo%only_user_def = (geo%only_user_def .and. &
         (species_type(geo%species(k)) == SPEC_USDEF .or. species_type(geo%species(k)) == SPEC_CHARGE_DENSITY .or. &
         species_type(geo%species(k)) == SPEC_FROM_FILE .or. species_type(geo%species(k)) == SPEC_JELLI_SLAB))
+
+      if(species_is_ps(geo%species(k)) .and. geo%space%dim /= 3) then
+        message(1) = "Pseudopotentials may only be used with Dimensions = 3."
+        call messages_fatal(1)
+      endif
     end do atoms2
 
     ! Reads the spin components. This is read here, as well as in states_init,

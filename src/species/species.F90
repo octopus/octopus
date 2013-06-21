@@ -217,6 +217,7 @@ contains
     !% units). The third defines the type of species (the valid options
     !% are detailed below). The fourth is the atomic number (or valence charge for non-atomic species).
     !% Some types may need some parameters given in the remaining fields of the row.
+    !% Note: pseudopotentials may only be used in 3D.
     !%
     !% In 3D, <i>e.g.</i>
     !%
