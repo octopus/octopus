@@ -937,7 +937,7 @@ contains
     SAFE_ALLOCATE(angular(0:time_steps, 1:3))
     call io_skip_header(in_file)
     do ie = 0, time_steps
-      read(in_file, *) trash, dump, angular(ie, 1:3)
+      read(in_file, *) trash, dump, (angular(ie, idir), idir = 1, 3)
     end do
 
     ! subtract static dipole

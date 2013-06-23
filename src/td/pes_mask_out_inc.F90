@@ -1669,7 +1669,7 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
   integer,           intent(in)    :: iter
 
   CMPLX, allocatable :: wfAk(:,:,:,:,:,:) 
-  FLOAT :: PESK(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3))
+  FLOAT :: PESK(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3)),pol(3)
   integer :: ist, ik, idim, ierr, st1, st2, k1, k2
   character(len=100) :: fn
   character(len=256) :: dir
@@ -1739,7 +1739,8 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
 
     ! Dump the k resolved PES on plane kz=0
     write(fn, '(a,a)') trim(dir), '_map.z=0'
-    call PES_mask_dump_full_mapM_cut(PESK, fn, mask%Lk, mask%mesh%sb%dim, pol = (/M_ZERO, M_ZERO, M_ONE/), dir = 3)
+    pol = (/M_ZERO, M_ZERO, M_ONE/)
+    call PES_mask_dump_full_mapM_cut(PESK, fn, mask%Lk, mask%mesh%sb%dim, pol = pol, dir = 3)
 
     ! Total power spectrum 
     write(fn, '(a,a)') trim(dir), '_power.sum'
