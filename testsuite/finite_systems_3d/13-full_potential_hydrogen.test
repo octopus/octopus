@@ -7,7 +7,7 @@ TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 # Calculation of a Hydrogen atom placed on a very small magnetic field (in order
-# to get orbitals with the proper symmetry). The electron is placed on the p_{+1}
+# to get orbitals with the proper symmetry). The electron is placed on the pz
 # orbital; this orbital has non-null current, and it produces a current flow
 # through the x=0,y>0 half plane.
 #
@@ -24,6 +24,8 @@ Enabled    : Yes
 # slightly. Other sources of error with respect to the analytical paper are the
 # approximation of the full potential, finite domain, and discrete grid.
 
+Processors : 2
+
 Input: 13-full_potential_hydrogen.01-gs.inp
 match ; Eigenvalue 1                  ; GREP(static/info, ' 1   -- ',       12) ;  -0.497964
 match ; Eigenvalue 2                  ; GREP(static/info, ' 2   -- ',       12) ;  -0.107244
@@ -33,5 +35,18 @@ Precision : 1e-7
 match ; Magnetic Field at loop center ; LINE(static/Bind_z.x=0\,z=0, 34, 24)    ;  -1.38240030702503E-005
 
 Precision : 1e-4
+match ; 1s  <Lx>                      ; GREP(static/ks_me_angular_momentum, ' 1   -- ', 12) ;  0.0
+match ; 1s  <Ly>                      ; GREP(static/ks_me_angular_momentum, ' 1   -- ', 24) ;  0.0
+match ; 1s  <Lz>                      ; GREP(static/ks_me_angular_momentum, ' 1   -- ', 36) ;  0.0
+match ; 1s  <L2>                      ; GREP(static/ks_me_angular_momentum, ' 1   -- ', 49) ;  0.000042
+match ; 2pz <Lx>                      ; GREP(static/ks_me_angular_momentum, ' 2   -- ', 12) ;  0.0
+match ; 2pz <Ly>                      ; GREP(static/ks_me_angular_momentum, ' 2   -- ', 24) ;  0.0
+match ; 2pz <Lz>                      ; GREP(static/ks_me_angular_momentum, ' 2   -- ', 36) ; -0.999973
+match ; 2pz <L2>                      ; GREP(static/ks_me_angular_momentum, ' 2   -- ', 49) ;  2.010470
+match ; Tot <Lx>                      ; GREP(static/ks_me_angular_momentum, 'Total', 12, 1) ;  0.0
+match ; Tot <Ly>                      ; GREP(static/ks_me_angular_momentum, 'Total', 24, 1) ;  0.0
+match ; Tot <Lz>                      ; GREP(static/ks_me_angular_momentum, 'Total', 36, 1) ; -0.999973
+match ; Tot <L2>                      ; GREP(static/ks_me_angular_momentum, 'Total', 49, 1) ;  2.010470
+
 Input: 13-full_potential_hydrogen.02-gs-cg.inp
 match ; Total energy ; GREP(static/info, 'Total       =', 20); -0.50144038

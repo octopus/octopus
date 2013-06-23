@@ -94,11 +94,11 @@ contains
     !%Option ang_momentum 2
     !% Dimensionless angular momentum (r x k). Filename: <tt>ks_me_angular_momentum</tt>.
     !%Option one_body 4
-    !% <math>&lt;i|T + V_{ext}|j&gt;</math>
+    !% <math>&lt;i|T + V_{ext}|j&gt;</math>. Not available with states parallelization.
     !%Option two_body 8
-    !% <math>&lt;ij| 1/|r_1-r_2| |kl&gt;</math>
+    !% <math>&lt;ij| 1/|r_1-r_2| |kl&gt;</math>. Not available with states parallelization.
     !%Option ks_multipoles 16
-    !% See <tt>OutputMEMultipoles</tt>.
+    !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
     !%End
 
     call parse_integer(datasets_check('OutputMatrixElements'), 0, this%what)
@@ -253,7 +253,7 @@ contains
       
       do ist = 1, st%nst
         do is = 0, ns-1
-          
+
           if(is  ==  0) cspin = 'up'
           if(is  ==  1) cspin = 'dn'
           if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
@@ -297,13 +297,12 @@ contains
     FLOAT, allocatable :: lang(:, :)
     integer            :: kstart, kend, kn
 #endif
-    FLOAT, allocatable :: dpsi(:, :)
-    CMPLX, allocatable :: zpsi(:, :)
 
     PUSH_SUB(output_me_out_ang_momentum)
 
     ns = 1
     if(st%d%nspin == 2) ns = 2
+    ASSERT(gr%sb%dim == 3)
 
     iunit = io_open(fname, action='write')
 
@@ -319,35 +318,47 @@ contains
       end if
     end if
 
-    SAFE_ALLOCATE(ang (st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end, 1:3))
-    SAFE_ALLOCATE(ang2(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+    SAFE_ALLOCATE(ang (1:st%nst, 1:st%d%nik, 1:3))
+    SAFE_ALLOCATE(ang2(1:st%nst, 1:st%d%nik))
 
     if (states_are_real(st)) then
-      SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
+      call dstates_angular_momentum(st, gr, ang, ang2)
     else
-      SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:st%d%dim))
+      call zstates_angular_momentum(st, gr, ang, ang2)
     end if
 
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        if (states_are_real(st)) then
-          call states_get_state(st, gr%mesh, ist, ik, dpsi)
-          ! FIXME: this array reference looks dubious
-          call dstates_angular_momentum(gr, dpsi, ang(ist, ik, :), ang2(ist, ik))
-        else
-          call states_get_state(st, gr%mesh, ist, ik, zpsi)
-          call zstates_angular_momentum(gr, zpsi, ang(ist, ik, :), ang2(ist, ik))
-        end if
+    kstart = st%d%kpt%start
+    kend = st%d%kpt%end
+    do idir = 1, 3
+      angular(idir) = states_eigenvalues_sum(st, ang(st%st_start:st%st_end, kstart:kend, idir))
+    enddo
+    lsquare = states_eigenvalues_sum(st, ang2(st%st_start:st%st_end, kstart:kend))
+
+#if defined(HAVE_MPI)
+    if(st%d%kpt%parallel) then
+      kn = st%d%kpt%nlocal
+      
+      ASSERT(.not. st%parallel_in_states)
+      
+      ! note: could use lmpi_gen_allgatherv here?
+      SAFE_ALLOCATE(lang(1:st%lnst, 1:kn))
+      do idir = 1, 3
+        lang(1:st%lnst, 1:kn) = ang(st%st_start:st%st_end, kstart:kend, idir)
+        call MPI_Allgatherv(lang, st%nst*kn, MPI_FLOAT, &
+          ang(:, :, idir), st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
+          st%d%kpt%mpi_grp%comm, mpi_err)
       end do
-    end do
+      lang(1:st%lnst, 1:kn) = ang2(st%st_start:st%st_end, kstart:kend)
+      call MPI_Allgatherv(lang, st%nst*kn, MPI_FLOAT, &
+        ang2, st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
+        st%d%kpt%mpi_grp%comm, mpi_err)
+      SAFE_DEALLOCATE_A(lang)
+   end if
 
-    SAFE_DEALLOCATE_A(dpsi)
-    SAFE_DEALLOCATE_A(zpsi)
-
-    angular(1) =  states_eigenvalues_sum(st, ang (:, :, 1))
-    angular(2) =  states_eigenvalues_sum(st, ang (:, :, 2))
-    angular(3) =  states_eigenvalues_sum(st, ang (:, :, 3))
-    lsquare    =  states_eigenvalues_sum(st, ang2)
+   if(st%parallel_in_states) then
+      SAFE_ALLOCATE(lang(1:st%lnst, 1))
+    endif
+#endif
 
     do ik = 1, st%d%nik, ns
       if(st%d%nik > ns) then
@@ -370,41 +381,21 @@ contains
       
       ! Exchange ang and ang2.
 #if defined(HAVE_MPI)
-      if(st%d%kpt%parallel) then
-        kstart = st%d%kpt%start
-        kend = st%d%kpt%end
-        kn = st%d%kpt%nlocal
-        
-        ASSERT(.not. st%parallel_in_states)
-        
-        ! note: could use lmpi_gen_allgatherv here
-        SAFE_ALLOCATE(lang(1:st%lnst, 1:kn))
-        do idir = 1, 3
-          lang(1:st%lnst, 1:kn) = ang(st%st_start:st%st_end, kstart:kend, ist)
-          call MPI_Allgatherv(lang, st%nst*kn, MPI_FLOAT, &
-               ang(:, :, ist), st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
-               st%d%kpt%mpi_grp%comm, mpi_err)
-        end do
-        lang(1:st%lnst, 1:kn) = ang2(st%st_start:st%st_end, kstart:kend)
-        call MPI_Allgatherv(lang, st%nst*kn, MPI_FLOAT, &
-             ang2(:, :), st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
-             st%d%kpt%mpi_grp%comm, mpi_err)
-        SAFE_DEALLOCATE_A(lang)
-      end if
-      
       if(st%parallel_in_states) then
-        SAFE_ALLOCATE(lang(1:st%lnst, 1:1))
-        do idir = 1, 3
-          lang(1:st%lnst, 1) = ang(st%st_start:st%st_end, ik, ist)
-          call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang(:, ik, ist), st%mpi_grp)
-        end do
-        lang(1:st%lnst, 1) = ang2(st%st_start:st%st_end, ik)
-        call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang2(:, ik), st%mpi_grp)
-        SAFE_DEALLOCATE_A(lang)
+        ASSERT(.not. st%d%kpt%parallel)
+
+        do is = 1, ns
+          do idir = 1, 3
+            lang(1:st%lnst, 1) = ang(st%st_start:st%st_end, ik+is-1, idir)
+            call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang(:, ik+is-1, idir), st%mpi_grp)
+          end do
+          lang(1:st%lnst, 1) = ang2(st%st_start:st%st_end, ik+is-1)
+          call lmpi_gen_allgatherv(st%lnst, lang(:, 1), tmp, ang2(:, ik+is-1), st%mpi_grp)
+        enddo
       end if
 #endif
       write(message(1), '(a4,1x,a5,4a12,4x,a12,1x)')       &
-           '#st',' Spin','        <Lx>', '        <Ly>', '        <Lz>', '        <L2>', 'Occupation '
+        '#st',' Spin','        <Lx>', '        <Ly>', '        <Lz>', '        <L2>', 'Occupation '
       call messages_info(1, iunit)
 
       if(mpi_grp_is_root(mpi_world)) then
@@ -414,10 +405,10 @@ contains
             if(is  ==  0) cspin = 'up'
             if(is  ==  1) cspin = 'dn'
             if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
-
+            
             write(tmp_str(1), '(i4,3x,a2)') ist, trim(cspin)
             write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
-                 ang(ist, ik+is, 1:3), ang2(ist, ik+is), st%occ(ist, ik+is)
+              (ang(ist, ik+is, idir), idir = 1, 3), ang2(ist, ik+is), st%occ(ist, ik+is)
             message(1) = trim(tmp_str(1))//trim(tmp_str(2))
             call messages_info(1, iunit)
           end do
@@ -425,7 +416,7 @@ contains
       end if
       write(message(1),'(a)') ''
       call messages_info(1, iunit)
-
+      
     end do
 
     write(message(1),'(a)') 'Total Angular Momentum L [dimensionless]'
@@ -434,6 +425,12 @@ contains
 
     call io_close(iunit)
 
+#if defined(HAVE_MPI)
+    if(st%parallel_in_states) then
+      SAFE_DEALLOCATE_A(lang)
+    endif
+#endif
+    
     SAFE_DEALLOCATE_A(ang)
     SAFE_DEALLOCATE_A(ang2)
     

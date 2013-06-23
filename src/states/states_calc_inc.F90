@@ -877,25 +877,6 @@ subroutine X(states_calc_momentum)(st, der, momentum)
 
     ! Exchange momenta in the parallel case.
 #if defined(HAVE_MPI)
-    if(st%d%kpt%parallel) then
-      kstart = st%d%kpt%start
-      kend = st%d%kpt%end
-      kn = st%d%kpt%nlocal
-      ndim = ubound(momentum, dim = 1)
-
-      ASSERT(.not. st%parallel_in_states)
-      
-      SAFE_ALLOCATE(lmom(1:ndim, 1:st%nst, 1:kn))
-
-      lmom(1:ndim, 1:st%nst, 1:kn) = momentum(1:ndim, 1:st%nst, kstart:kend)
-
-      call MPI_Allgatherv(lmom(1, 1, 1), ndim*st%nst*kn, MPI_FLOAT, &
-           momentum, st%d%kpt%num(:)*st%nst*ndim, (st%d%kpt%range(1, :) - 1)*st%nst*ndim, MPI_FLOAT, &
-           st%d%kpt%mpi_grp%comm, mpi_err)
-
-      SAFE_DEALLOCATE_A(lmom)
-    end if
-
     if(st%parallel_in_states) then
       SAFE_ALLOCATE(lmomentum(1:st%lnst))
       SAFE_ALLOCATE(gmomentum(1:st%nst))
@@ -912,6 +893,27 @@ subroutine X(states_calc_momentum)(st, der, momentum)
 #endif
   end do
 
+#if defined(HAVE_MPI)
+  if(st%d%kpt%parallel) then
+    kstart = st%d%kpt%start
+    kend = st%d%kpt%end
+    kn = st%d%kpt%nlocal
+    ndim = ubound(momentum, dim = 1)
+    
+    ASSERT(.not. st%parallel_in_states)
+    
+    SAFE_ALLOCATE(lmom(1:ndim, 1:st%nst, 1:kn))
+    
+    lmom(1:ndim, 1:st%nst, 1:kn) = momentum(1:ndim, 1:st%nst, kstart:kend)
+    
+    call MPI_Allgatherv(lmom(1, 1, 1), ndim*st%nst*kn, MPI_FLOAT, &
+      momentum, st%d%kpt%num(:)*st%nst*ndim, (st%d%kpt%range(1, :) - 1)*st%nst*ndim, MPI_FLOAT, &
+      st%d%kpt%mpi_grp%comm, mpi_err)
+    
+    SAFE_DEALLOCATE_A(lmom)
+  end if
+#endif  
+
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(grad)
 
@@ -921,22 +923,24 @@ end subroutine X(states_calc_momentum)
 
 ! ---------------------------------------------------------
 !> It calculates the expectation value of the angular
-!! momentum of the state phi. If l2 is passed, it also
+!! momentum of the states. If l2 is passed, it also
 !! calculates the expectation value of the square of the
 !! angular momentum of the state phi.
 ! ---------------------------------------------------------
-subroutine X(states_angular_momentum)(gr, phi, ll, l2)
-  type(grid_t), intent(inout)  :: gr
-  R_TYPE,       intent(inout)  :: phi(:, :)
-  FLOAT,        intent(out)    :: ll(MAX_DIM)
-  FLOAT, optional, intent(out) :: l2
+subroutine X(states_angular_momentum)(st, gr, ll, l2)
+  type(states_t),  intent(in)     :: st
+  type(grid_t),    intent(inout)  :: gr
+  FLOAT,           intent(out)    :: ll(:, :, :) !< (st%nst, st%d%nik, 1 or 3)
+  FLOAT, optional, intent(out)    :: l2(:, :)    !< (st%nst, st%d%nik)
 
-  integer :: idim, dim
-  R_TYPE, allocatable :: lpsi(:, :)
+  integer :: idim, ist, ik
+  R_TYPE, allocatable :: psi(:), lpsi(:, :)
 
   PUSH_SUB(X(states_angular_momemtum))
 
   ASSERT(gr%mesh%sb%dim /= 1)
+
+  SAFE_ALLOCATE(psi(1:gr%mesh%np_part))
 
   select case(gr%mesh%sb%dim)
   case(3)
@@ -945,31 +949,34 @@ subroutine X(states_angular_momentum)(gr, phi, ll, l2)
     SAFE_ALLOCATE(lpsi(1:gr%mesh%np_part, 1:1))
   end select
 
-  dim = size(phi, 2)
-
   ll = M_ZERO
   if(present(l2)) l2 = M_ZERO
 
-  do idim = 1, dim
-#if defined(R_TREAL)
-    ll = M_ZERO
-#else
-    call X(physics_op_L)(gr%der, phi(:, idim), lpsi)
-    select case(gr%mesh%sb%dim)
-    case(3)
-      ll(1) = ll(1) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
-      ll(2) = ll(2) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 2))
-      ll(3) = ll(3) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 3))
-    case(2)
-      ll(3) = ll(3) + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
-    end select
-#endif
-    if(present(l2)) then
-      call X(physics_op_L2)(gr%der, phi(:, idim), lpsi(:, 1))
-      l2 = l2 + X(mf_dotp)(gr%mesh, phi(:, idim), lpsi(:, 1))
-    end if
-  end do
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ist = st%st_start, st%st_end
+      do idim = 1, st%d%dim
+        call states_get_state(st, gr%mesh, idim, ist, ik, psi)
 
+#if defined(R_TREAL)
+        ll = M_ZERO
+#else
+        call X(physics_op_L)(gr%der, psi, lpsi)
+
+        ll(ist, ik, 1) = ll(ist, ik, 1) + X(mf_dotp)(gr%mesh, psi, lpsi(:, 1))
+        if(gr%mesh%sb%dim == 3) then
+          ll(ist, ik, 2) = ll(ist, ik, 2) + X(mf_dotp)(gr%mesh, psi, lpsi(:, 2))
+          ll(ist, ik, 3) = ll(ist, ik, 3) + X(mf_dotp)(gr%mesh, psi, lpsi(:, 3))
+        endif
+#endif
+        if(present(l2)) then
+          call X(physics_op_L2)(gr%der, psi(:), lpsi(:, 1))
+          l2(ist, ik) = l2(ist, ik) + X(mf_dotp)(gr%mesh, psi(:), lpsi(:, 1))
+        end if
+      enddo
+    enddo
+  enddo
+
+  SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(lpsi)
   POP_SUB(X(states_angular_momemtum))
 end subroutine X(states_angular_momentum)
