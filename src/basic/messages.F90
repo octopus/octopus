@@ -80,6 +80,7 @@ module messages_m
   !> max_lun is currently 99, i.e. we can hardwire unit_offset above 1000
   integer, parameter, private :: unit_offset = 1000
   character(len=512), private :: msg
+  integer, parameter, private :: SLEEPYTIME_ALL = 1, SLEEPYTIME_NONWRITERS = 60 !< seconds
 
 
   ! ---------------------------------------------------------
@@ -256,24 +257,30 @@ contains
         action='write', position='append')
     end if
 
-    if(should_write) then
-      call messages_print_stress(stderr, "FATAL ERROR")
-      write(msg, '(a)') '*** Fatal Error (description follows)'
-      call flush_msg(stderr, msg)
+    ! Give a moment for all standard output hopefully to be printed
+    call loct_nanosleep(SLEEPYTIME_ALL, 0)
+
+    ! If we are not writing wait for the root node to get here and
+    ! write the error message. If the root doesn`t get here, we all print the
+    ! error messsage anyways and die. Otherwise, no message might be written.
+    if(.not. should_write) call loct_nanosleep(SLEEPYTIME_NONWRITERS, 0)
+
+    call messages_print_stress(stderr, "FATAL ERROR")
+    write(msg, '(a)') '*** Fatal Error (description follows)'
+    call flush_msg(stderr, msg)
 
 #ifdef HAVE_MPI
-      if(.not. only_root_writes_) then
-        call flush_msg(stderr, shyphens)
-        write(msg, '(a,i4)') "* From node = ", mpi_world%rank
-        call flush_msg(stderr, msg)
-      endif
-#endif
+    if(.not. only_root_writes_ .or. .not. mpi_grp_is_root(mpi_world)) then
       call flush_msg(stderr, shyphens)
-      do ii = 1, no_lines_
-        write(msg, '(a,1x,a)') '*', trim(message(ii))
-        call flush_msg(stderr, msg)
-      end do
+      write(msg, '(a,i4)') "* From node = ", mpi_world%rank
+      call flush_msg(stderr, msg)
     endif
+#endif
+    call flush_msg(stderr, shyphens)
+    do ii = 1, no_lines_
+      write(msg, '(a,1x,a)') '*', trim(message(ii))
+      call flush_msg(stderr, msg)
+    end do
 
     ! We only dump the stack in debug mode because subroutine invocations
     ! are only recorded in debug mode (via push_sub/pop_sub). Otherwise,
