@@ -35,7 +35,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
   FLOAT, allocatable :: multipole(:)
   FLOAT :: rr, xx(MAX_DIM), ylm
   R_TYPE :: multip_element
-    R_TYPE, allocatable :: psii(:, :), psij(:, :)
+  R_TYPE, allocatable :: psii(:, :), psij(:, :)
 
   PUSH_SUB(X(output_me_ks_multipoles))
 
@@ -62,6 +62,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
     multipole(ip) = rr**ll * ylm
   end do
   
+  ASSERT(.not. st%parallel_in_states)
   do ist = 1, st%nst
 
     call states_get_state(st, gr%mesh, ist, 1, psii)
@@ -114,6 +115,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
 
   np = gr%mesh%np
 
+  ASSERT(.not. st%parallel_in_states)
   iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
 
   do ist = 1, st%nst
@@ -192,6 +194,7 @@ subroutine X(two_body) (dir, gr, st)
 
   PUSH_SUB(X(two_body))
 
+  ASSERT(.not. st%parallel_in_states)
   iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
 
   SAFE_ALLOCATE(nn(1:gr%mesh%np))

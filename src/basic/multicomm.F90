@@ -470,7 +470,7 @@ contains
         write(message(2),'(a,i6)') '  MPI processes      = ', base_grp%size
         write(message(3),'(a,i6)') '  Required processes = ', product(real_group_sizes(1:mc%n_index))
         message(4) = ''
-        message(5) = 'You probably have a problem in the ParallelizationGroupRanks block.'
+        message(5) = 'You probably have a problem in the ParallelizationGroupRanks block or ParallelizationStrategy.'
         call messages_fatal(5, only_root_writes = .true.)
       end if
 
