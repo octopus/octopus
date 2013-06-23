@@ -288,14 +288,14 @@ contains
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(inout) :: gr
 
-    integer            :: iunit, ik, ist, is, ns, idir
+    integer            :: iunit, ik, ist, is, ns, idir, kstart, kend
     character(len=80)  :: tmp_str(MAX_DIM), cspin
     FLOAT              :: angular(3), lsquare, kpoint(1:MAX_DIM)
     FLOAT, allocatable :: ang(:, :, :), ang2(:, :)
 #if defined(HAVE_MPI)
     integer            :: tmp
     FLOAT, allocatable :: lang(:, :)
-    integer            :: kstart, kend, kn
+    integer            :: kn
 #endif
 
     PUSH_SUB(output_me_out_ang_momentum)
