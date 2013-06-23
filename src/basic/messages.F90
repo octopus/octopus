@@ -569,33 +569,10 @@ contains
   subroutine input_error(var)
     character(len=*), intent(in) :: var
 
-    if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
-      open(unit=iunit_out, file='messages.stdout', &
-        action='write', position='append')
-    end if
+    if(mpi_grp_is_root(mpi_world)) call varinfo_print(stdout, var)
+    message(1) = "Input error in variable " // trim(var)
+    call messages_fatal(1, only_root_writes = .true.)
 
-    if(mpi_grp_is_root(mpi_world)) then
-      call messages_print_stress(stderr, "INPUT ERROR")
-      write(msg, '(a)') '*** Fatal Error in input '
-      call flush_msg(stderr, msg)
-      call flush_msg(stderr, shyphens)
-
-      call varinfo_print(stderr, var)
-      call messages_print_stress(stderr)
-    end if
-
-    if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
-      close(iunit_out)
-    end if
-
-    ! switch file indicator to state aborted
-    call switch_status('aborted')
-
-#ifdef HAVE_MPI
-    call MPI_Abort(mpi_world%comm, 999, mpi_err)
-#endif
-
-    call loct_exit_failure()
   end subroutine input_error
   ! ---------------------------------------------------------
 
