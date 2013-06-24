@@ -22,47 +22,30 @@
 module forces_m
   use born_charges_m
   use comm_m
-  use datasets_m
   use derivatives_m
   use epot_m
-  use gauge_field_m
   use geometry_m
   use global_m
   use grid_m
   use index_m
   use io_m
   use kpoints_m
-  use lalg_adv_m
   use lalg_basic_m
   use lasers_m
   use linear_response_m
-  use logrid_m
   use mesh_m
   use mesh_function_m
   use messages_m
   use mpi_m
-  use multigrid_m
-  use parser_m
-  use poisson_m
-  use poisson_cutoff_m
-  use poisson_sete_m
   use profiling_m
   use projector_m
-  use ps_m
   use simul_box_m
-  use smear_m
-  use solids_m
   use species_m
   use species_pot_m
-  use splines_m
-  use spline_filter_m
   use states_m
   use states_dim_m
   use symm_op_m
-  use symmetries_m
   use symmetrizer_m
-  use submesh_m
-  use varinfo_m
 
   implicit none
 
