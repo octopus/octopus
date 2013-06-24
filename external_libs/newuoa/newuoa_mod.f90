@@ -883,10 +883,10 @@ contains
       DENMAX=SUM 
       ISAVE=0 
       IU=49 
-      TEMP=TWOPI/DFLOAT(IU+1) 
+      TEMP=TWOPI/dble(IU+1) 
       PAR(1)=ONE 
       DO 250 I=1,IU 
-      ANGLE=DFLOAT(I)*TEMP 
+      ANGLE=dble(I)*TEMP 
       PAR(2)=DCOS(ANGLE) 
       PAR(3)=DSIN(ANGLE) 
       DO 230 J=4,8,2 
@@ -912,7 +912,7 @@ contains
           TEMPB=TEMPB-DENMAX 
           STEP=HALF*(TEMPA-TEMPB)/(TEMPA+TEMPB) 
       END IF 
-      ANGLE=TEMP*(DFLOAT(ISAVE)+STEP) 
+      ANGLE=TEMP*(dble(ISAVE)+STEP) 
 !                                                                       
 !     Calculate the new parameters of the denominator, the new VLAG vect
 !     and the new D. Then test for convergence.                         
@@ -1118,9 +1118,9 @@ contains
       TAUOLD=TAUBEG 
       ISAVE=0 
       IU=49 
-      TEMP=TWOPI/DFLOAT(IU+1) 
+      TEMP=TWOPI/dble(IU+1) 
       DO 140 I=1,IU 
-      ANGLE=DFLOAT(I)*TEMP 
+      ANGLE=dble(I)*TEMP 
       CTH=DCOS(ANGLE) 
       STH=DSIN(ANGLE) 
       TAU=CF1+(CF2+CF4*CTH)*CTH+(CF3+CF5*CTH)*STH 
@@ -1140,7 +1140,7 @@ contains
           TEMPB=TEMPB-TAUMAX 
           STEP=HALF*(TEMPA-TEMPB)/(TEMPA+TEMPB) 
       END IF 
-      ANGLE=TEMP*(DFLOAT(ISAVE)+STEP) 
+      ANGLE=TEMP*(dble(ISAVE)+STEP) 
 !                                                                       
 !     Calculate the new D and GD. Then test for convergence.            
 !                                                                       
@@ -1302,9 +1302,9 @@ contains
       QMIN=QBEG 
       ISAVE=0 
       IU=49 
-      TEMP=TWOPI/DFLOAT(IU+1) 
+      TEMP=TWOPI/dble(IU+1) 
       DO 140 I=1,IU 
-      ANGLE=DFLOAT(I)*TEMP 
+      ANGLE=dble(I)*TEMP 
       CTH=DCOS(ANGLE) 
       STH=DSIN(ANGLE) 
       QNEW=(SG+CF*CTH)*CTH+(DG+DHS*CTH)*STH 
@@ -1324,7 +1324,7 @@ contains
           TEMPB=TEMPB-QMIN 
           ANGLE=HALF*(TEMPA-TEMPB)/(TEMPA+TEMPB) 
       END IF 
-      ANGLE=TEMP*(DFLOAT(ISAVE)+ANGLE) 
+      ANGLE=TEMP*(dble(ISAVE)+ANGLE) 
 !                                                                       
 !     Calculate the new STEP and HS. Then test for convergence.         
 !                                                                       

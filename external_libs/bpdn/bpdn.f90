@@ -37,8 +37,8 @@ module bpdn_m
       implicit none
 
       integer, intent(in)    :: nn
-      real(8), intent(inout) :: xx !(1:nn)
-      real(8), intent(in)    :: cc !(1:nn)
+      real(8), intent(inout) :: xx !< (1:nn)
+      real(8), intent(in)    :: cc !< (1:nn)
       real(8), intent(in)    :: tau
     end subroutine spgl1_projector
   end interface
@@ -65,14 +65,14 @@ module bpdn_m
       integer,   intent(in)    :: m
       integer,   intent(in)    :: n
       real(8),   intent(in)    :: alpha
-      real(8),   intent(in)    :: a !(1:lda, :)
+      real(8),   intent(in)    :: a !< (1:lda, :)
       integer,   intent(in)    :: lda
-      real(8),   intent(in)    :: x !(:)
+      real(8),   intent(in)    :: x !< (:)
       integer,   intent(in)    :: incx
       real(8),   intent(in)    :: beta
-      real(8),   intent(in)    :: y !(:)
+      real(8),   intent(inout) :: y !< (:)
       integer,   intent(in)    :: incy
-    end SUBROUTINE DGEMV
+    end subroutine dgemv
   end interface
 
   real(8), parameter :: opttol = 1.0e-6_8
@@ -86,7 +86,7 @@ module bpdn_m
     integer          :: type
     integer          :: nn
     integer          :: mm
-    real(8), pointer :: matrix(:, :) !(1:nn, 1:mm)
+    real(8), pointer :: matrix(:, :) !< (1:nn, 1:mm)
     real(8)          :: dnn
     real(8)          :: dmm
   end type bpdn_matrix
@@ -133,10 +133,10 @@ contains
   subroutine bpdn(nn, mm, aa, bb, sigma, xx, ierr, activesetit)
     integer,           intent(out)   :: nn, mm
     type(bpdn_matrix), intent(in)    :: aa
-    real(8),           intent(in)    :: bb(:)    !(1:nn)
+    real(8),           intent(in)    :: bb(:)    !< (1:nn)
     real(8),           intent(in)    :: sigma
-    real(8),           intent(out)   :: xx(:)    !(1:mm)
-    integer, optional, intent(out)   :: ierr     ! < 0 : some error occurred. >= 0 : solution found
+    real(8),           intent(out)   :: xx(:)    !< (1:mm)
+    integer, optional, intent(out)   :: ierr     !<  < 0 : some error occurred. >= 0 : solution found
     integer, optional, intent(in)    :: activesetit
 
     integer, parameter :: nprevvals = 3
@@ -193,7 +193,7 @@ contains
     call calc_grad(aa, res, grad)
     ff = dotp(nn, res, res)/2.0_8
 
-    ! Required for nonmonotone strategy.
+    ! Required for non-monotonic strategy.
     lastffv(1:nprevvals) = ff
     ffbest               = ff
     xxbest(1:mm)         = xx(1:mm)
@@ -398,14 +398,14 @@ contains
 
   subroutine spg_line_curvy(aa, bb, xx, gg, fmax, stepmax, tau, xxnew, resnew, fnew, ierr)
     type(bpdn_matrix), intent(in)    :: aa
-    real(8),           intent(in)    :: bb(:)    !(1:nn)
-    real(8),           intent(in)    :: xx(:)    !(1:mm)
-    real(8),           intent(in)    :: gg(:)    !(1:mm)
+    real(8),           intent(in)    :: bb(:)    !< (1:nn)
+    real(8),           intent(in)    :: xx(:)    !< (1:mm)
+    real(8),           intent(in)    :: gg(:)    !< (1:mm)
     real(8),           intent(in)    :: fmax
     real(8),           intent(in)    :: stepmax
     real(8),           intent(in)    :: tau
-    real(8),           intent(out)   :: xxnew(:)  !(1:mm)
-    real(8),           intent(out)   :: resnew(:) !(1:nn)
+    real(8),           intent(out)   :: xxnew(:)  !< (1:mm)
+    real(8),           intent(out)   :: resnew(:) !< (1:nn)
     real(8),           intent(out)   :: fnew
     integer,           intent(out)   :: ierr
 
@@ -478,7 +478,7 @@ contains
 
   ! -----------------------------------------
 
-  ! Find the current active set.
+  !> Find the current active set.
   subroutine active_vars(mm, xx, gg, nnzidx, nnzx, nnzg, nnzdiff)
     integer, intent(in)    :: mm
     real(8), intent(in)    :: xx(:)
@@ -565,9 +565,9 @@ contains
   
   subroutine residual(aa, bb, xx, res)
     type(bpdn_matrix), intent(in)    :: aa
-    real(8),           intent(in)    :: bb(:)    !(1:aa%nn)
-    real(8),           intent(in)    :: xx(:)    !(1:aa%mm)
-    real(8),           intent(out)   :: res(:)   !(1:nn)
+    real(8),           intent(in)    :: bb(:)    !< (1:aa%nn)
+    real(8),           intent(in)    :: xx(:)    !< (1:aa%mm)
+    real(8),           intent(out)   :: res(:)   !< (1:nn)
 
     integer :: inn, comp
 
@@ -596,8 +596,8 @@ contains
 
   subroutine calc_grad(aa, res, grad)
     type(bpdn_matrix), intent(in)    :: aa
-    real(8),           intent(in)    :: res(:)   !(1:aa%nn)
-    real(8),           intent(out)   :: grad(:)  !(1:aa%mm)
+    real(8),           intent(in)    :: res(:)   !< (1:aa%nn)
+    real(8),           intent(out)   :: grad(:)  !< (1:aa%mm)
 
     integer :: comp
 
