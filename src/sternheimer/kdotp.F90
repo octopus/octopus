@@ -246,7 +246,7 @@ contains
         end do
       endif
 
-      write(message(1),'(a,f12.6)') "Norm of relative density variation = ", errornorm / sys%st%qtot
+      write(message(1),'(a,g12.6)') "Norm of relative density variation = ", errornorm / sys%st%qtot
       call messages_info(1)
 
       ! TODO: use equality of mixed partials to calculate fewer of these

@@ -7,7 +7,7 @@ TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 # Calculation of a Hydrogen atom placed on a very small magnetic field (in order
-# to get orbitals with the proper symmetry). The electron is placed on the pz
+# to get orbitals with the proper symmetry). The electron is placed on the p_{-1}
 # orbital; this orbital has non-null current, and it produces a current flow
 # through the x=0,y>0 half plane.
 #

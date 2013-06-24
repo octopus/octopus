@@ -565,7 +565,6 @@ contains
   subroutine mesh_partition_write(mesh)
     type(mesh_t),    intent(in)    :: mesh
     
-    integer          :: ierr
     character(len=6) :: numstring
 
     PUSH_SUB(mesh_partition_write)
