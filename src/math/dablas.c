@@ -19,8 +19,10 @@
  $Id: dablas.c 2146 2006-05-23 17:36:00Z xavier $
 */
 
-
 #include <config.h>
+
+#include <stdio.h>
+
 
 /* declare blas functions */
 void FC_FUNC(sscal, SSCAL)(const int * n, const float  * a, const float  * x, const int * incx);
@@ -72,4 +74,39 @@ void FC_FUNC(sazaxpy, SAZAXPY)(const int * n,
 
   FC_FUNC(saxpy, SAXPY)(&twon, a, x, &one, y, &one);
 
+}
+
+
+/* declare blas functions */
+void FC_FUNC(sgemm, SGEMM)(const char * transa, const char * transb,
+			   const int * m, const int * n, const int * k,
+			   const float * alpha, const float * a, const int * lda,
+			   const float * b, const int * ldb, const float * beta, 
+			   float * c, const int * ldc);
+
+void FC_FUNC(dgemm, DGEMM)(const char * transa, const char * transb,
+			   const int * m, const int * n, const int * k,
+			   const double * alpha, const double * a, const int * lda,
+			   const double * b, const int * ldb, const double * beta, 
+			   double * c, const int * ldc);
+
+/* interface to apply dgemm passing complex vectors
+   the same as dgemm, but allows giving each an appropriate Fortan interface
+   in which alpha, beta, a, b, c are actually complex in Fortran 
+   Could be inline, but in that case pgcc will not put it in the symbol table. */
+void FC_FUNC(zdgemm, ZDGEMM)(const char * transa, const char * transb,
+			     const int * m, const int * n, const int * k,
+			     const double * alpha, const double * restrict a, const int * lda,
+			     const double * restrict b, const int * ldb, const double * beta, 
+			     double * restrict c, const int * ldc) {
+  FC_FUNC(dgemm, DGEMM)(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+}
+
+void FC_FUNC(csgemm, CSGEMM)(const char * transa, const char * transb,
+			     const int * m, const int * n, const int * k,
+			     const float * alpha, const float * restrict a, const int * lda,
+			     const float * restrict b, const int * ldb, const float * beta, 
+			     float * restrict c, const int * ldc) {
+
+  FC_FUNC(sgemm, SGEMM)(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
 }

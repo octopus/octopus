@@ -392,6 +392,26 @@ module blas_m
       complex(8),   intent(inout) :: c !< c(ldc,n)
     end subroutine zgemm
   end interface blas_gemm
+    
+  interface blas_dgemm
+    subroutine csgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1), intent(in)    :: transa, transb
+      integer,      intent(in)    :: m, n, k, lda, ldb, ldc
+      real(4),      intent(in)    :: alpha, beta
+      complex(4),   intent(in)    :: a !< a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
+      real(4),      intent(in)    :: b !< b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
+      complex(4),   intent(inout) :: c !< c(ldc,n)
+    end subroutine csgemm
+
+    subroutine zdgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1), intent(in)    :: transa, transb
+      integer,      intent(in)    :: m, n, k, lda, ldb, ldc
+      real(8),      intent(in)    :: alpha, beta
+      complex(8),   intent(in)    :: a !< a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
+      real(8),      intent(in)    :: b !< b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
+      complex(8),   intent(inout) :: c !< c(ldc,n)
+    end subroutine zdgemm
+  end interface
 
   !> ----------------- trmm ------------------ 
   !! Performs one of the matrix-matrix operations
