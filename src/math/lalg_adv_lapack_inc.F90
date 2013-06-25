@@ -453,8 +453,8 @@ end subroutine deigensolve_nonh
 !! Here A and B are assumed to be symmetric and B is also positive definite.
 subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   integer,           intent(in)    :: k, n
-  FLOAT,             intent(in)    :: a(:,:)   !< (n, n)
-  FLOAT,             intent(in)    :: b(:,:)   !< (n, n)
+  FLOAT,             intent(inout) :: a(:,:)   !< (n, n)
+  FLOAT,             intent(inout) :: b(:,:)   !< (n, n)
   FLOAT,             intent(out)   :: e(:)     !< (n)
   FLOAT,             intent(out)   :: v(:,:)   !< (n, n)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
@@ -463,12 +463,12 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   interface
     subroutine DLAPACK(sygvx)(itype, jobz, range, uplo, n, a, lda, b, ldb, &
       vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
-      integer,      intent(in)  :: itype, n, lda, ldb, il, iu, ldz, lwork
-      character(1), intent(in)  :: jobz, range, uplo
-      integer,      intent(out) :: m, iwork, ifail, info
-      FLOAT,        intent(in)  :: vl, vu, abstol
-      FLOAT,        intent(in)  :: a, b
-      FLOAT,        intent(out) :: w, z, work
+      integer,      intent(in)    :: itype, n, lda, ldb, il, iu, ldz, lwork
+      character(1), intent(in)    :: jobz, range, uplo
+      integer,      intent(out)   :: m, iwork, ifail, info
+      FLOAT,        intent(in)    :: vl, vu, abstol
+      FLOAT,        intent(inout) :: a, b
+      FLOAT,        intent(out)   :: w, z, work
     end subroutine DLAPACK(sygvx)
   end interface
   
@@ -530,8 +530,8 @@ end subroutine dlowest_geneigensolve
 !! Here A and B are assumed to be Hermitian and B is also positive definite.
 subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   integer,           intent(in)    :: k, n
-  CMPLX,             intent(in)    :: a(:,:)   !< (n,n)
-  CMPLX,             intent(in)    :: b(:,:)   !< (n,n)
+  CMPLX,             intent(inout) :: a(:,:)   !< (n,n)
+  CMPLX,             intent(inout) :: b(:,:)   !< (n,n)
   FLOAT,             intent(out)   :: e(:)     !< (n)
   CMPLX,             intent(out)   :: v(:,:)   !< (n)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
@@ -545,7 +545,7 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
       integer,      intent(out)   :: m, iwork, ifail, info
       FLOAT,        intent(in)    :: vl, vu, abstol
       FLOAT,        intent(out)   :: w, rwork
-      CMPLX,        intent(in)    :: a, b
+      CMPLX,        intent(inout) :: a, b
       CMPLX,        intent(out)   :: z, work
     end subroutine ZLAPACK(hegvx)
   end interface
