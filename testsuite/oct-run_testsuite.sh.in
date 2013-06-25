@@ -119,10 +119,6 @@ function checkqueue {
         ps -p $testpid > /dev/null;
 	# is this pid still running?
         if [ $? -ne 0 ]; then
-          # for a process that already finished, this just gives the return value
-	  wait $testpid
-          failures=$?
-
 	  still_waiting=0;
 	  # remove it from the queue
 
@@ -144,6 +140,11 @@ function checkqueue {
       sleep 0.1s;
     done
 
+    varname=`get_varname $test_name`
+    failures=$(eval echo \$${varname})
+    echo "failures ($varname) = $failures"
+    unset $varname
+
     # Look for failed/passed/skipped testcases and add to failure summary.
     if [ "${failures}" -eq 0 ]; then
 	passed_tests=$((passed_tests + 1))
@@ -158,6 +159,12 @@ function checkqueue {
     fi
     cat `basename $test_name .test`.log
     printf " ************************\n\n"
+}
+
+function get_varname() {
+    # purge funny characters which could cause trouble for bash parsing
+    # lead with 'v' because variables cannot start with numbers
+    echo v$1 | tr -d "+/._-"
 }
 
 # Run all tests. Takes as first argument a list of testfile names.
@@ -197,9 +204,12 @@ for y in $tests; do
         test_index=$(($test_index + 1))
 	echo Starting test $test_index: $test_name
 
+	# store return code in varname for reading in checkqueue when it finishes
+	varname=`get_varname $test_name`
+	# without the final echo it doesn't work, I don't know why...
 	CMD $runtest_directory/oct-run_regression_test.pl -l \
 	    $preserve_opt $suffix_opt -D $bin_directory -f $y \
-	    > ${ybase}.log 2>&1 &
+	    > ${ybase}.log 2>&1; let $(($varname=$?)); echo > /dev/null &
 	ppid=$!
 	queue $ppid $test_name
 	
