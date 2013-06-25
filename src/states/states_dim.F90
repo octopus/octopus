@@ -81,7 +81,7 @@ module states_dim_m
     ORTH_QR                = 4
 
   type states_dim_t
-    integer :: dim                  !< Dimension of the state (one or two for spinors)
+    integer :: dim                  !< Dimension of the state (one, or two for spinors)
     integer :: nik                  !< Number of irreducible subspaces
     integer :: nik_axis(MAX_DIM)    !< Number of k-points per axis
     integer :: ispin                !< spin mode (unpolarized, spin-polarized, spinors)
