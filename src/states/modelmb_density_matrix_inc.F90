@@ -154,7 +154,7 @@ end subroutine X(mf_calculate_gamma)
 subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
   type(grid_t),           intent(in) :: gr
   type(states_t),         intent(in) :: st
-  R_TYPE,                 intent(in) :: wf(1:gr%mesh%np_part)
+  R_TYPE,                 intent(in) :: wf(:) !< (1:gr%mesh%np)
   integer,                intent(in) :: mm
   type(modelmb_denmat_t), intent(in) :: denmat
 

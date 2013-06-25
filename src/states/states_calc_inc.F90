@@ -519,7 +519,6 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   FLOAT,   optional, intent(in)    :: theta_fi
   R_TYPE,  optional, intent(in)    :: beta_ij(:)   ! beta_ij(nst)
 
-  logical :: normalize_
   integer :: ist, idim
   R_TYPE  :: nrm2
   R_TYPE, allocatable  :: ss(:), psi(:, :)
@@ -575,19 +574,16 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     end do
   end do
 
-  ! the following ifs cannot be given as a single line (without the
-  ! then) to avoid a bug in xlf 10.1
-  normalize_ = .false.
-  if(present(normalize)) then
-    normalize_ = normalize
-  end if
-
-  if(normalize_) then
+  if(optional_default(normalize, .false.)) then
     if (st%cmplxscl%space) then 
       nrm2 = sqrt(X(mf_dotp)(mesh, st%d%dim, phi, phi, dotu = .true.))
     else
       nrm2 = X(mf_nrm2)(mesh, st%d%dim, phi)
     end if
+    if(abs(nrm2) == M_ZERO) then
+      message(1) = "Wavefunction has zero norm after states_orthogonalize_single; cannot normalize."
+      call messages_fatal(1)
+    endif
     do idim = 1, st%d%dim
       call lalg_scal(mesh%np, M_ONE/nrm2, phi(:, idim))
     end do
@@ -598,6 +594,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   end if
 
   if(present(norm)) then
+    ASSERT(present(normalize))
     ASSERT(normalize)
     norm = nrm2
   end if
