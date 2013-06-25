@@ -60,7 +60,7 @@ libmath_a_SOURCES =                      \
 	compressed_sensing.F90           \
 	fftw_low.c                       \
 	minimizer.F90                    \
-  pnfft.F90
+        pnfft.F90
 
 noinst_HEADERS =                   \
 	fft_inc.F90                      \
@@ -92,7 +92,7 @@ fftw.o : fftw.F90
 pfft.o : pfft.F90 fftw.o math.o
 pnfft.o : pnfft.F90 pnfft_inc.F90 pfft.o fftw.o math.o
 nfft_f.o : nfft_f.c
-nfft.o : nfft.F90 nfft_inc.F90 nfft_f.o lalg_basic.o fftw.o loct_math.o
+nfft.o : nfft.F90 nfft_inc.F90 nfft_f.o fftw.o loct_math.o
 spline_filter.o: spline_filter.F90 splines.o
 gauss_legendre.o : gauss_legendre.F90 
 lalg_basic.o : lalg_basic.F90 lalg_basic_blas_inc.F90 blas.o 
