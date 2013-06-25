@@ -439,7 +439,7 @@ contains
   subroutine ctrig(n,trig,after,before,now,isign,ic)
     integer :: n, isign, ic
     integer :: now(7), after(7), before(7)
-    real(8) :: trig(2,8192)
+    real(8) :: trig(:,:) !< (2,<=8192)
 
     integer :: i, j, itt, nh
     real(8) :: angle, trigc, trigs, twopi
@@ -597,7 +597,8 @@ contains
   subroutine fftstp(mm,nfft,m,nn,n,zin,zout,trig,after,now,before,isign)
     integer :: mm, nfft, m, nn, n, isign
     integer :: after, before, atn, atb, now
-    real(8) :: trig(2,8192), zin(2, mm, m), zout(2, nn, n)
+    real(8) :: trig(:,:) !< (2,<=8192)
+    real(8) :: zin(2, mm, m), zout(2, nn, n)
 
     real(8) :: rt2i, dp, cp, cm, ci5, cr5, ci6, cr6, am, ap, ci8, cr8
     real(8) :: r, r1, r2, r3, r4, r5, r6, r7, r8, r25, r34
@@ -2081,7 +2082,8 @@ contains
   subroutine fftrot(mm,nfft,m,nn,n,zin,zout,trig,after,now,before,isign)
     integer :: mm, nfft, m, nn, n, isign
     integer :: after, before, atn, atb, now
-    real(8) :: trig(2,8192), zin(2, mm, m), zout(2, n, nn)
+    real(8) :: trig(:,:) !< (2,<=8192)
+    real(8) :: zin(2, mm, m), zout(2, n, nn)
 
     real(8) :: rt2i, dp, cp, cm, ci5, cr5, ci6, cr6, am, ap, ci8, cr8
     real(8) :: r, r1, r2, r3, r4, r5, r6, r7, r8, r25, r34
