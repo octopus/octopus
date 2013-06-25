@@ -659,9 +659,18 @@ contains
         end do
       end if
 
-      scf%rel_dens = scf%abs_dens / st%qtot
+      if(st%qtot == M_ZERO) then
+        scf%rel_dens = M_HUGE
+      else
+        scf%rel_dens = scf%abs_dens / st%qtot
+      endif
+
       scf%abs_ev = abs(evsum_out - evsum_in)
-      scf%rel_ev = scf%abs_ev / abs(evsum_out)
+      if(abs(evsum_out) == M_ZERO) then
+        scf%rel_ev = M_HUGE
+      else
+        scf%rel_ev = scf%abs_ev / abs(evsum_out)
+      endif
       
       scf%eigens%current_rel_dens_error = scf%rel_dens
 
