@@ -887,8 +887,7 @@ contains
     call cube_function_alloc_fs(cube, cf)
 
     ! NOTE: in BerkeleyGW, no G-vector may have coordinate equal to the half the FFT grid size.
-    ! Instead, they should be minus that.
-    call fourier_shell_init(shell, cube, gr%mesh, convention = .false.)
+    call fourier_shell_init(shell, cube, gr%mesh)
     SAFE_ALLOCATE(field_g(shell%ngvectors, st%d%nspin))
 
     call bgw_setup_header()

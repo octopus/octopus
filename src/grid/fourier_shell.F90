@@ -47,13 +47,10 @@ module fourier_shell_m
 
 contains
 
-  !> convention = .true.  : G-vectors are in (-n/2, n/2]
-  !> convention = .false. : G-vectors are in [-n/2, n/2)
-  subroutine fourier_shell_init(this, cube, mesh, convention)
+  subroutine fourier_shell_init(this, cube, mesh)
     type(fourier_shell_t), intent(out)   :: this
     type(cube_t),          intent(in)    :: cube
     type(mesh_t),          intent(in)    :: mesh
-    logical,               intent(in)    :: convention
 
     integer :: ig, ix, iy, iz, ixx(1:3), imap
     FLOAT :: dg(1:3), gmax2, gvec(1:3)
@@ -69,17 +66,20 @@ contains
     SAFE_ALLOCATE(modg2(1:product(cube%rs_n_global(1:3))))
     SAFE_ALLOCATE(ucoords(1:3, 1:product(cube%rs_n_global(1:3))))
     SAFE_ALLOCATE(ured_gvec(1:3, 1:product(cube%rs_n_global(1:3))))
-    
+
     ig = 0
+    ! According to the conventions of plane-wave codes, e.g. Quantum ESPRESSO,
+    ! PARATEC, EPM, and BerkeleyGW, if the FFT grid is even, then neither
+    ! nfft/2 nor -nfft/2 should be a valid G-vector component.
     do ix = 1, cube%rs_n_global(1)
       ixx(1) = pad_feq(ix, cube%rs_n_global(1), .true.)
-      if(.not. convention .and. 2 * ixx(1) == cube%rs_n_global(1)) ixx(1) = -ixx(1)
+      if(2 * ixx(1) == cube%rs_n_global(1)) cycle
       do iy = 1, cube%rs_n_global(2)
         ixx(2) = pad_feq(iy, cube%rs_n_global(2), .true.)
-        if(.not. convention .and. 2 * ixx(2) == cube%rs_n_global(2)) ixx(2) = -ixx(2)
+        if(2 * ixx(2) == cube%rs_n_global(2)) cycle
         do iz = 1, cube%rs_n_global(3)
           ixx(3) = pad_feq(iz, cube%rs_n_global(3), .true.)
-          if(.not. convention .and. 2 * ixx(3) == cube%rs_n_global(3)) ixx(3) = -ixx(3)
+          if(2 * ixx(3) == cube%rs_n_global(3)) cycle
 
           gvec(1:3) = dg(1:3)*ixx(1:3)
           if(sum(gvec(1:3)**2) <= gmax2 + CNST(1e-10)) then
