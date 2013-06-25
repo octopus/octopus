@@ -411,6 +411,8 @@ module blas_m
       real(8),      intent(in)    :: b !< b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
       complex(8),   intent(inout) :: c !< c(ldc,n)
     end subroutine zdgemm
+
+    procedure sgemm, dgemm
   end interface
 
   !> ----------------- trmm ------------------ 
