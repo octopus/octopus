@@ -381,7 +381,7 @@ if( elem->nparam >= 4 ){
         }
     r = sqrt( r ) ;
     if( r < ToleranceSame ){
-        fprintf( stderr, "Normal collapced!\n" ) ;
+        fprintf( stderr, "Normal collapsed!\n" ) ;
         exit( EXIT_FAILURE ) ;
         }
     for( k = 0 ; k < DIMENSION ; k++ ){
@@ -400,7 +400,7 @@ if( elem->nparam >= 7 ){
         }
     r = sqrt( r ) ;
     if( r < ToleranceSame ){
-        fprintf( stderr, "Direction collapced!\n" ) ;
+        fprintf( stderr, "Direction collapsed!\n" ) ;
         exit( EXIT_FAILURE ) ;
         }
     for( k = 0 ; k < DIMENSION ; k++ ){

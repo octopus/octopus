@@ -200,7 +200,7 @@ contains
     
     cutoff = mesh_gcutoff(mesh)**2 / M_TWO
     write(message(4),'(3a,f12.6,a,f12.6)') '  Grid Cutoff [', trim(units_abbrev(units_out%energy)),'] = ', &
-      units_from_atomic(units_out%energy, cutoff), '    Grid Cutoff [Ry] = ', cutoff * 2
+      units_from_atomic(units_out%energy, cutoff), '    Grid Cutoff [Ry] = ', cutoff * M_TWO
     call messages_info(4, unit)
     
     POP_SUB(mesh_write_info)
