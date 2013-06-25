@@ -425,7 +425,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
       
       ! Now matrix-multiply to calculate the projections.
       ! the line below does: projection = matmul(psi, pmat%projectors)
-      call blas_dgemm('N', 'N', nreal, nprojs, npoints, M_ONE, psi(1, 1), nreal, pmat%projectors(1, 1), npoints, &
+      call blas_gemm('N', 'N', nreal, nprojs, npoints, M_ONE, psi(1, 1), nreal, pmat%projectors(1, 1), npoints, &
         M_ZERO, projection%X(projection)(1, iprojection + 1), nreal)
 
       ! apply the scale
@@ -524,7 +524,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 
       ! Matrix-multiply again.
       ! the line below does: psi = matmul(projection, transpose(pmat%projectors))
-      call blas_dgemm('N', 'T', nreal, npoints, nprojs, &
+      call blas_gemm('N', 'T', nreal, npoints, nprojs, &
         M_ONE, projection%X(projection)(1, iprojection + 1), nreal, pmat%projectors(1, 1), npoints, &
         M_ZERO, psi(1, 1), nreal)
       

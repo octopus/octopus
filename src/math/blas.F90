@@ -391,9 +391,7 @@ module blas_m
       complex(8),   intent(in)    :: b !< b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
       complex(8),   intent(inout) :: c !< c(ldc,n)
     end subroutine zgemm
-  end interface blas_gemm
-    
-  interface blas_dgemm
+
     subroutine csgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
       character(1), intent(in)    :: transa, transb
       integer,      intent(in)    :: m, n, k, lda, ldb, ldc
@@ -411,8 +409,6 @@ module blas_m
       real(8),      intent(in)    :: b !< b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
       complex(8),   intent(inout) :: c !< c(ldc,n)
     end subroutine zdgemm
-
-    procedure sgemm, dgemm
   end interface
 
   !> ----------------- trmm ------------------ 
