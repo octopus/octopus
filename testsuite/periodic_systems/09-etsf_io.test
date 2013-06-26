@@ -44,7 +44,7 @@ match ; Eigenvalue 18 ; GREP(static/info, '#k =   2', 12, 18) ;  0.217481
 match ; density-etsf.nc  ; SIZE(static/density-etsf.nc)  ;   25784
 match ; geometry-etsf.nc ; SIZE(static/geometry-etsf.nc) ;    3716
 match ; wfs-etsf.nc      ; SIZE(static/wfs-etsf.nc)      ; 1585324
-match ; wfs-pw-etsf.nc   ; SIZE(static/wfs-pw-etsf.nc)   ;  837836
+match ; wfs-pw-etsf.nc   ; SIZE(static/wfs-pw-etsf.nc)   ;  836072
 
 match ; density.ncdf     ; SIZE(static/density.ncdf)        ;   22248
 match ; netcdf wfn 3     ; SIZE(static/wf-k001-st0003.ncdf) ;   44320

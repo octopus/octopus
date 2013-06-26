@@ -142,7 +142,7 @@ function checkqueue {
 
     varname=`get_varname $test_name`
     failures=$(eval echo \$${varname})
-    echo "failures ($varname) = $failures"
+    #echo "failures ($varname) = $failures"
     unset $varname
 
     # Look for failed/passed/skipped testcases and add to failure summary.
