@@ -63,6 +63,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
   end do
   
   ASSERT(.not. st%parallel_in_states)
+  ! how to do this properly? states_matrix
   do ist = 1, st%nst
 
     call states_get_state(st, gr%mesh, ist, 1, psii)
@@ -116,6 +117,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   np = gr%mesh%np
 
   ASSERT(.not. st%parallel_in_states)
+  ! how to do this properly? states_matrix
   iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
 
   do ist = 1, st%nst
@@ -195,6 +197,7 @@ subroutine X(two_body) (dir, gr, st)
   PUSH_SUB(X(two_body))
 
   ASSERT(.not. st%parallel_in_states)
+  ! how to do this properly? states_matrix
   iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
 
   SAFE_ALLOCATE(nn(1:gr%mesh%np))

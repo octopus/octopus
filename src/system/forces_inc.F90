@@ -539,7 +539,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, lr_dir, born_charges
   type(lr_t),                     intent(in)    :: lr
   type(lr_t),                     intent(in)    :: lr2
   integer,                        intent(in)    :: lr_dir
-  type(born_charges_t),           intent(out)   :: born_charges
+  type(born_charges_t),           intent(inout) :: born_charges
 
   ! lr, lr2 should be the wfns from electric perturbation in the lr_dir direction
   ! lr is for +omega, lr2 is for -omega.
