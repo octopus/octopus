@@ -197,11 +197,11 @@ contains
       this%method = KPOINTS_GAMMA
       call read_MP(gamma_only = .true.)
     else 
+      call read_MP(gamma_only = .false.)
       if(read_user_kpoints()) then
         this%method = KPOINTS_USER
       else
         this%method = KPOINTS_MONKH_PACK
-        call read_MP(gamma_only = .false.)
 
         write(message(1),'(a)') ' '
         write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'

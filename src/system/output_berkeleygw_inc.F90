@@ -195,9 +195,6 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
     enddo
     norm = norm * gr%mesh%volume_element
     if(is_wfn) norm = sqrt(norm)
-    if(mpi_grp_is_root(mpi_world)) then
-      write(0,*) 'norm in real space = ', norm
-    endif
 
     norm = M_ZERO
     do iz = 1, cube%fs_n_global(3)
@@ -215,9 +212,6 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
       norm = sqrt(norm * gr%mesh%volume_element / product(cube%rs_n_global(1:3)))
     else
       norm = norm / product(cube%rs_n_global(1:3))
-    endif
-    if(mpi_grp_is_root(mpi_world)) then
-      write(0,*) 'norm in Fourier space = ', norm
     endif
     
     field_g(:,:) = M_ZERO
@@ -238,7 +232,6 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
 
     ! renormalize
 
-    write(0,*) 'shell norm = ', norm
     if(is_wfn) then
       field_g(:,:) = field_g(:,:) / sqrt(norm)
       if(abs(norm - M_ONE) > 0.01) then
