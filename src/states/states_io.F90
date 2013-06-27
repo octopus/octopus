@@ -122,7 +122,7 @@ contains
     call messages_info(1, iunit)
 
     do ik = 1, st%d%nik, ns
-      if(st%d%nik > ns) then
+      if(simul_box_is_periodic(sb)) then
         kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .false.)
         write(message(1), '(a,i4,a)') '#k =', ik, ', k = ('
         do idir = 1, sb%dim
