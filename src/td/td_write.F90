@@ -276,17 +276,10 @@ contains
         call messages_fatal(1)
       endif
 
-      call states_copy(writ%gs_st, st)
+      call states_copy(writ%gs_st, st, exclude = .true.)
 
       ! clean up all the stuff we have to reallocate
-      call states_deallocate_wfns(writ%gs_st)
-      SAFE_DEALLOCATE_P(writ%gs_st%occ)
-      SAFE_DEALLOCATE_P(writ%gs_st%zeigenval%Re)
-      nullify(writ%gs_st%eigenval)
       SAFE_DEALLOCATE_P(writ%gs_st%node)
-      if(writ%gs_st%d%ispin == SPINORS) then
-        SAFE_DEALLOCATE_P(writ%gs_st%spin)
-      end if
 
       call states_look (trim(restart_dir)//'gs', gr%mesh%mpi_grp, ii, jj, writ%gs_st%nst, ierr)
 

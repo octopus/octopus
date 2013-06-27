@@ -1709,9 +1709,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_copy(stout, stin)
+  subroutine states_copy(stout, stin, exclude)
     type(states_t), target, intent(inout) :: stout
     type(states_t),         intent(in)    :: stin
+    logical, optional,      intent(in)    :: exclude !< do not copy wavefunctions, etc.
 
     PUSH_SUB(states_copy)
 
@@ -1723,22 +1724,30 @@ contains
     stout%nst           = stin%nst
 
     stout%only_userdef_istates = stin%only_userdef_istates
-    call loct_pointer_copy(stout%dpsi, stin%dpsi)
 
-    !cmplxscl
-    call loct_pointer_copy(stout%psi%zR, stin%psi%zR)         
-    stout%zpsi => stout%psi%zR
-    call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)           
-    stout%rho => stout%zrho%Re
-    call loct_pointer_copy(stout%zeigenval%Re, stin%zeigenval%Re) 
-    stout%eigenval => stout%zeigenval%Re
-    if(stin%cmplxscl%space) then
-      call loct_pointer_copy(stout%psi%zL, stin%psi%zL)         
-      call loct_pointer_copy(stout%zrho%Im, stin%zrho%Im)           
-      call loct_pointer_copy(stout%zeigenval%Im, stin%zeigenval%Im) 
-      call loct_pointer_copy(stout%Imrho_core, stin%Imrho_core)
-      call loct_pointer_copy(stout%Imfrozen_rho, stin%Imfrozen_rho)
-    end if
+    if(.not. optional_default(exclude, .false.)) then
+      call loct_pointer_copy(stout%dpsi, stin%dpsi)
+
+      !cmplxscl
+      call loct_pointer_copy(stout%psi%zR, stin%psi%zR)
+      stout%zpsi => stout%psi%zR
+      call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)
+      stout%rho => stout%zrho%Re
+      call loct_pointer_copy(stout%zeigenval%Re, stin%zeigenval%Re)
+      stout%eigenval => stout%zeigenval%Re
+      if(stin%cmplxscl%space) then
+        call loct_pointer_copy(stout%psi%zL, stin%psi%zL)         
+        call loct_pointer_copy(stout%zrho%Im, stin%zrho%Im)           
+        call loct_pointer_copy(stout%zeigenval%Im, stin%zeigenval%Im) 
+        call loct_pointer_copy(stout%Imrho_core, stin%Imrho_core)
+        call loct_pointer_copy(stout%Imfrozen_rho, stin%Imfrozen_rho)
+      end if
+
+      call loct_pointer_copy(stout%occ, stin%occ)
+      call loct_pointer_copy(stout%spin, stin%spin)
+      call loct_pointer_copy(stout%node, stin%node)
+    endif
+
     stout%have_left_states = stin%have_left_states
 
     
@@ -1760,10 +1769,7 @@ contains
     stout%fixed_occ = stin%fixed_occ
     stout%restart_fixed_occ = stin%restart_fixed_occ
 
-    call loct_pointer_copy(stout%occ, stin%occ)
     stout%fixed_spins = stin%fixed_spins
-
-    call loct_pointer_copy(stout%spin, stin%spin)
 
     stout%qtot       = stin%qtot
     stout%val_charge = stin%val_charge
@@ -1782,7 +1788,6 @@ contains
     stout%lnst       = stin%lnst
     stout%st_start   = stin%st_start
     stout%st_end     = stin%st_end
-    call loct_pointer_copy(stout%node, stin%node)
     call loct_pointer_copy(stout%st_range, stin%st_range)
     call loct_pointer_copy(stout%st_num, stin%st_num)
 
