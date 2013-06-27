@@ -39,7 +39,7 @@ magnetic_field | 0 | 0 |  -1 | 0.0 | "envelope_function"
 
 Output = wfs
 OutputHow = axis_x
-TDOutput = energy + laser + td_occup + multipoles
+TDOutput = energy + laser + td_occup + multipoles + populations
 
 # In order to replicate the results of Popsueve et al. [J. Phys.: Condens. Matter 19, 196204 (2007)],
 # one should put T=200 -- at T=200 the total population transfer is produced. For the test we
