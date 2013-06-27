@@ -1746,6 +1746,10 @@ contains
       call loct_pointer_copy(stout%occ, stin%occ)
       call loct_pointer_copy(stout%spin, stin%spin)
       call loct_pointer_copy(stout%node, stin%node)
+
+      if(stin%group%block_initialized) then
+        call states_init_block(stout, verbose = .false.)
+      end if
     endif
 
     stout%have_left_states = stin%have_left_states
@@ -1796,9 +1800,6 @@ contains
     stout%symmetrize_density = stin%symmetrize_density
 
     stout%group%block_initialized = .false.
-    if(stin%group%block_initialized) then
-      call states_init_block(stout, verbose = .false.)
-    end if
 
     stout%packed = stin%packed
 
