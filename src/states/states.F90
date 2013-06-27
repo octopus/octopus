@@ -1714,7 +1714,11 @@ contains
     type(states_t),         intent(in)    :: stin
     logical, optional,      intent(in)    :: exclude !< do not copy wavefunctions, etc.
 
+    logical :: exclude_
+
     PUSH_SUB(states_copy)
+
+    exclude_ = optional_default(exclude, .false.)
 
     call states_null(stout)
 
@@ -1725,7 +1729,7 @@ contains
 
     stout%only_userdef_istates = stin%only_userdef_istates
 
-    if(.not. optional_default(exclude, .false.)) then
+    if(.not. exclude_) then
       call loct_pointer_copy(stout%dpsi, stin%dpsi)
 
       !cmplxscl
@@ -1746,10 +1750,6 @@ contains
       call loct_pointer_copy(stout%occ, stin%occ)
       call loct_pointer_copy(stout%spin, stin%spin)
       call loct_pointer_copy(stout%node, stin%node)
-
-      if(stin%group%block_initialized) then
-        call states_init_block(stout, verbose = .false.)
-      end if
     endif
 
     stout%have_left_states = stin%have_left_states
@@ -1799,7 +1799,12 @@ contains
 
     stout%symmetrize_density = stin%symmetrize_density
 
-    stout%group%block_initialized = .false.
+    if(.not. exclude_) then
+      stout%group%block_initialized = .false.
+      if(stin%group%block_initialized) then
+        call states_init_block(stout, verbose = .false.)
+      end if
+    endif
 
     stout%packed = stin%packed
 
