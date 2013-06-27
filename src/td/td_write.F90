@@ -180,7 +180,7 @@ contains
     !% approximations to the excited states) to the file
     !% <tt>td.general/populations</tt>. Note that the calculation of
     !% populations is expensive in memory and computer time, so it
-    !% should only be used if it is really needed.
+    !% should only be used if it is really needed. See <tt>TDExcitedStatesToProject</tt>.
     !%Option geometry 16
     !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
     !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>. On by default if <tt>MoveIons = yes</tt>.
@@ -199,7 +199,7 @@ contains
     !% time-dependent Kohn-Sham wavefunctions onto the static
     !% (zero-time) wavefunctions to the file
     !% <tt>td.general/projections.XXX</tt>. Only use this option if
-    !% you really need it, as it might be computationally expensive.
+    !% you really need it, as it might be computationally expensive. See <tt>TDProjStateStart</tt>.
     !%Option local_mag_moments 512
     !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
     !% The radius of the sphere can be set with <tt>LocalMagneticMomentsSphereRadius</tt>.
@@ -283,13 +283,15 @@ contains
 
       call states_look (trim(restart_dir)//'gs', gr%mesh%mpi_grp, ii, jj, writ%gs_st%nst, ierr)
 
-      if(writ%out(OUT_POPULATIONS)%write) then ! do only this when not calculating populations
+      ! do this only when not calculating populations, since all states are needed then
+      if(.not. writ%out(OUT_POPULATIONS)%write) then
         ! We will store the ground-state Kohn-Sham system for all processors.
         !%Variable TDProjStateStart
         !%Type integer
         !%Default 1
         !%Section Time-Dependent::TD Output
         !%Description
+        !% To be used with <tt>TDOutput = td_occup</tt>. Not available if <tt>TDOutput = populations</tt>.
         !% Only output projections to states above <tt>TDProjStateStart</tt>. Usually one is only interested
         !% in particle-hole projections around the HOMO, so there is no need to calculate (and store)
         !% the projections of all TD states onto all static states. This sets a lower limit. The upper limit
@@ -327,7 +329,9 @@ contains
       !%Type block
       !%Section Time-Dependent::TD Output
       !%Description
-      !% <b>[WARNING: This is a *very* experimental feature]</b> The population of the excited states
+      !% <b>[WARNING: This is a *very* experimental feature]</b>
+      !% To be used with <tt>TDOutput = populations</tt>.
+      !% The population of the excited states
       !% (as defined by <Phi_I|Phi(t)> where |Phi(t)> is the many-body time-dependent state at
       !% time <i>t</i>, and |Phi_I> is the excited state of interest) can be approximated -- it is not clear 
       !% how well -- by substituting for those real many-body states the time-dependent Kohn-Sham
@@ -337,7 +341,25 @@ contains
       !% populations for a number of excited states, which will be described in the files specified
       !% in this block: each line should be the name of a file that contains one excited state.
       !%
-      !% FIXME: description of the format of the files.
+      !% This file structure is the one written by the casida run mode, in the files in the directory "excitations".
+      !% The file describes the "promotions" from occupied
+      !% to unoccupied levels that change the initial Slater determinant
+      !% structure specified in ground_state. These promotions are a set
+      !% of electron-hole pairs. Each line in the file, after an optional header, has four
+      !% columns:
+      !%
+      !% i  a  sigma  weight
+      !% 
+      !% where i should be an occupied state, a an unoccupied one, and sigma
+      !% the spin state of the corresponding orbital. This pair is then associated with a
+      !% creation-annihilation pair a^t_{a,sigma} a_{i,sigma}, so that the
+      !% excited state will be a linear combination in the form:
+      !% 
+      !% |ExcitedState> = Sum [ weight(i,a,sigma) a^t_{a,sigma} a_{i,sigma} |GroundState> ]
+      !%
+      !% where weight is the number in the fourth column.
+      !% These weights should be normalized to one; otherwise the routine
+      !% will normalize them, and write a warning.
       !%End
       if(parse_block('TDExcitedStatesToProject', blk) == 0) then
         writ%n_excited_states = parse_block_n(blk)

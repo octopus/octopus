@@ -163,8 +163,7 @@ contains
   !! i  a  sigma  weight
   !! 
   !! where i should be an occupied state, a an unoccupied one, and sigma
-  !! the spin state of the corresponding orbital, if the calculation is
-  !! of spin-polarized type. This pair is then associated with a
+  !! the spin state of the corresponding orbital. This pair is then associated with a
   !! creation-annihilation pair a^t_{a,sigma} a_{i,sigma}, so that the
   !! excited state will be a linear combination in the form:
   !! 
@@ -174,7 +173,7 @@ contains
   !! These weights should be normalized to one; otherwise the routine
   !! will normalize them, and write a warning.
   !!
-  !! This file structure is the one written by the casida module, in the files
+  !! This file structure is the one written by the casida run mode, in the files
   !! in the directory "excitations".
   !! ---------------------------------------------------------
   subroutine excited_states_init(excited_state, ground_state, filename) 
