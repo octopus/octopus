@@ -91,6 +91,7 @@ module opencl_m
 #endif
     integer(SIZEOF_SIZE_T) :: size
     type(type_t)           :: type
+    integer                :: flags
   end type opencl_mem_t
 
   type(opencl_t), public :: opencl
@@ -731,6 +732,7 @@ contains
 
     this%type = type
     this%size = size
+    this%flags = flags
     fsize = int(size, 8)*types_get_size(type)
 
     ASSERT(fsize >= 0)
@@ -760,6 +762,7 @@ contains
     INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
 
     this%size = 0
+    this%flags = 0
 
     POP_SUB(opencl_release_buffer)
   end subroutine opencl_release_buffer
@@ -931,7 +934,8 @@ contains
     string='-w'
     ! full optimization
     string=trim(string)//' -cl-denorms-are-zero'
-    string=trim(string)//' -cl-strict-aliasing'
+    ! The following flag gives an error with the Xeon Phi
+    !    string=trim(string)//' -cl-strict-aliasing'
     string=trim(string)//' -cl-mad-enable'
     string=trim(string)//' -cl-unsafe-math-optimizations'
     string=trim(string)//' -cl-finite-math-only'
