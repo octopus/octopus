@@ -352,7 +352,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   else
 
 #ifdef HAVE_OPENCL    
-    call opencl_create_buffer(mf_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, mesh%np_global)
+    call opencl_create_buffer(mf_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, mesh%np_global)
 
     call octcl_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(cube_to_mesh)))
     kernel_ref = octcl_kernel_get_ref(kernel)
