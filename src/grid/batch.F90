@@ -724,7 +724,7 @@ contains
 
     ASSERT(batch_is_ok(this))
 
-    if(this%nst_linear == 1) then
+    if(this%nst_linear == 0) then
       ! we can copy directly
       if(batch_type(this) == TYPE_FLOAT) then
         call opencl_read_buffer(this%pack%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
@@ -736,7 +736,7 @@ contains
       unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack%size(1))
 
       ! we use a kernel to move to a temporary array and then we read
-      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), unroll*this%pack%size(2))
+      call opencl_create_buffer(tmp, CL_MEM_WRITE_ONLY, batch_type(this), unroll*this%pack%size(2))
 
       if(batch_type(this) == TYPE_FLOAT) then
         kernel = dunpack
