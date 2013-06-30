@@ -724,7 +724,7 @@ contains
 
     ASSERT(batch_is_ok(this))
 
-    if(this%nst_linear == 0) then
+    if(this%nst_linear == 1) then
       ! we can copy directly
       if(batch_type(this) == TYPE_FLOAT) then
         call opencl_read_buffer(this%pack%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
