@@ -50,7 +50,8 @@ module opencl_m
     opencl_init,                  &
     opencl_end,                   &
     opencl_padded_size,           &
-    opencl_mem_t
+    opencl_mem_t,                 &
+    opencl_use_shared_mem
 
 #ifdef HAVE_OPENCL
   public ::                       &
@@ -173,6 +174,7 @@ module opencl_m
 
   integer :: buffer_alloc_count
   integer(8) :: allocated_mem
+  logical :: shared_mem
 
 contains
 
@@ -422,6 +424,17 @@ contains
     call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, opencl%max_workgroup_size, cl_status)
     call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, opencl%local_memory_size, cl_status)
 
+    call clGetDeviceInfo(opencl%device, CL_DEVICE_TYPE, device_type, cl_status)
+
+    select case(device_type)
+    case(CL_DEVICE_TYPE_GPU)
+      shared_mem = .true.
+    case(CL_DEVICE_TYPE_CPU, CL_DEVICE_TYPE_ACCELERATOR)
+      shared_mem = .false.
+    case default
+      shared_mem = .false.
+    end select
+
     ! now initialize the kernels
     call opencl_build_program(prog, trim(conf%share)//'/opencl/set_zero.cl')
     call opencl_create_kernel(set_zero, prog, "set_zero")
@@ -556,6 +569,18 @@ contains
 
       call messages_new_line()
       call messages_write('Selected CL device:')
+      call messages_new_line()
+
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_TYPE, val, cl_status)
+      call messages_write('      Device type            :')
+      select case(int(val, 4))
+      case(CL_DEVICE_TYPE_GPU)
+        call messages_write(' GPU')
+      case(CL_DEVICE_TYPE_CPU)
+        call messages_write(' CPU')
+      case(CL_DEVICE_TYPE_ACCELERATOR)
+        call messages_write(' accelerator')
+      end select
       call messages_new_line()
 
       call clGetDeviceInfo(opencl%device, CL_DEVICE_VENDOR, val_str, cl_status)
@@ -952,13 +977,17 @@ contains
       call messages_fatal()
     end if
 
+    if(opencl_use_shared_mem()) then
+      string = trim(string)//' -DSHARED_MEM'
+    end if
+
     if(present(flags)) then
       string = trim(string)//' '//trim(flags)
     end if
 
     if(in_debug_mode) then
-      message(1) = "Debug info: compilation flags '"//trim(string)//"'. "
-      call messages_info(1)
+      call messages_write("Debug info: compilation flags '"//trim(string)//"'. ")
+      call messages_info()
     end if
 
     call clBuildProgram(prog, trim(string), ierr)
@@ -1341,8 +1370,14 @@ contains
     end do
   end subroutine opencl_check_bandwidth
 
+  ! ----------------------------------------------------
 
+  logical pure function opencl_use_shared_mem() result(use_shared_mem)
+    
+    use_shared_mem = shared_mem
 
+  end function opencl_use_shared_mem
+  
 #include "undef.F90"
 #include "real.F90"
 #include "opencl_inc.F90"
