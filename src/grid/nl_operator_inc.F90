@@ -329,7 +329,9 @@ contains
       ASSERT(isize > 0)
       ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
 
-      call opencl_set_kernel_arg(kernel_operate, 9, TYPE_INTEGER, isize*op%stencil%size)
+      if(opencl_use_shared_mem()) then
+        call opencl_set_kernel_arg(kernel_operate, 9, TYPE_INTEGER, isize*op%stencil%size)
+      end if
 
       call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
 
