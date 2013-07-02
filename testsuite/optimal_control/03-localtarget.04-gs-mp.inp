@@ -32,9 +32,3 @@ TheoryLevel = independent_particles
 ExtraStates = 1
 
 
-# ------------------
-# Ground state.
-# ------------------
-
-EigenSolverMaxIter = 1000
-

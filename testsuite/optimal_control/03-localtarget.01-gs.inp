@@ -30,6 +30,6 @@ TheoryLevel = independent_particles
 "AWD1D" | 0
 %
 
-EigenSolverMaxIter = 1000
+#EigenSolverMaxIter = 1000
 
 NumberUnoccStates = 1
