@@ -63,7 +63,6 @@ LCAOStart = no
 
 EigenSolver = cg_new
 EigenSolverTolerance = 1.0e-8
-EigenSolverMaxIter = 1000
 
 ExtraStates = 1
 

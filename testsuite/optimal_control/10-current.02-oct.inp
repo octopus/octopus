@@ -91,4 +91,3 @@ electric_field | 1 | 0 | 0 | freq | "envelope_function"
 #---------------------------- 
 Output=  wfs + density
 OutputHow= axis_x
-TDOutput = laser + td_occup

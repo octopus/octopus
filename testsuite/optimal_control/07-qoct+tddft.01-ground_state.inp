@@ -24,8 +24,7 @@ DerivativesOrder = 4
 # ------------------
 
 EigenSolver = cg_new
-EigenSolverTolerance = 1e-10
-EigenSolverMaxIter = 250
+EigenSolverTolerance = 1e-8
 TypeOfMixing = broyden
 Mixing = 0.5
 ConvRelDens = 1.0e-7
