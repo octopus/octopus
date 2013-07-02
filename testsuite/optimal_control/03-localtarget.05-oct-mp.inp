@@ -70,12 +70,6 @@ OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_density
 OCTTargetDensity = "exp(-x^2)"
 
-OCTMixing = yes
-TypeOfMixing = broyden
-Mixing = 1.0
-MixNumberSteps = 4
-
-
 OCTScheme  = oct_algorithm_zr98
 OCTDoubleCheck = no
 

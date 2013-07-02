@@ -31,4 +31,4 @@ Radius =  9.0
 TheoryLevel = independent_particles
 ExtraStates = 1
 
-
+ConvRelDens = 1.0e-8

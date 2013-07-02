@@ -45,4 +45,5 @@ match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -2.16891047
 # Now once again we run for only one iteration and check the convergence.
 Processors : 2
 Input: 03-localtarget.05-oct-mp.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -4.18633454
+match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; -4.18633452
+

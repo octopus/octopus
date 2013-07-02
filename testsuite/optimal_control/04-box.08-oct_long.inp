@@ -43,7 +43,6 @@ OCTControlFunctionRepresentation = control_fourier_series
 OCTControlFunctionOmegaMax = 0.20
 
 OCTDoubleCheck = no
-OCTMixing = no
 
 
 

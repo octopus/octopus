@@ -41,7 +41,6 @@ dist_share_DATA = \
 	04-box.02-oct_long.inp                 \
 	04-box.03-oct_long.inp                 \
 	04-box.04-oct_long.inp                 \
-	04-box.05-oct_long.inp                 \
 	04-box.06-oct_long.inp                 \
 	04-box.07-oct_long.inp                 \
 	04-box.08-oct_long.inp                 \

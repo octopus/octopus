@@ -135,10 +135,6 @@ contains
       (oct%algorithm == oct_algorithm_zbr98), (oct%algorithm == oct_algorithm_cg) )
 
 
-    ! If mixing is required, the mixing machinery has to be initialized -- inside the controlfunction_m module.
-    if(oct%use_mixing) call controlfunction_mixing_init(par)
-
-
     ! If filters are to be used, they also have to be initialized.
     call filter_init(td%max_iter, td%dt, filter)
     call filter_write(filter)
@@ -205,7 +201,6 @@ contains
     ! clean up
     call controlfunction_end(par)
     call oct_iterator_end(iterator)
-    if(oct%use_mixing) call controlfunction_mixing_end()
     call filter_end(filter)
     call td_end(td)
     call states_end(initial_st)
@@ -228,11 +223,6 @@ contains
         call f_striter(sys, hm, td, par, j1)
         stop_loop = iteration_manager(j1, par_prev, par, iterator)
         if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
-        if(oct%use_mixing) then
-          call controlfunction_mixing(oct_iterator_current(iterator), par_prev, par, par_new)
-          call controlfunction_copy(par, par_new)
-          if(oct%mode_fixed_fluence) call controlfunction_set_fluence(par)
-        end if
       end do ctr_loop
 
       call controlfunction_end(par_new)
@@ -257,12 +247,6 @@ contains
         call f_iter(sys, hm, td, psi, par, prop_psi, prop_chi, j1)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
-        if( oct%use_mixing .and. (oct_iterator_current(iterator) > 1) ) then
-          ! We do not mix if it is the first iteration, since in that case f_iter only propagates
-          ! with the input field, and does not generate any output field.
-          call controlfunction_mixing(oct_iterator_current(iterator) - 1, par_prev, par, par_new)
-          call controlfunction_copy(par, par_new)
-        end if
       end do ctr_loop
 
       call states_end(psi)
@@ -294,10 +278,6 @@ contains
         call f_wg05(sys, hm, td, psi, par, prop_psi, prop_chi, j1)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
-        if(oct%use_mixing) then
-          call controlfunction_mixing(oct_iterator_current(iterator), par_prev, par, par_new)
-          call controlfunction_copy(par, par_new)
-        end if
       end do ctr_loop
 
       call states_end(psi)
@@ -338,10 +318,6 @@ contains
         j1 = target_j1(oct_target, sys%gr, psi)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
-        if(oct%use_mixing) then
-          call controlfunction_mixing(oct_iterator_current(iterator) - 1, par_prev, par, par_new)
-          call controlfunction_copy(par, par_new)
-        end if
       end do ctr_loop
 
       call states_end(psi)
@@ -567,12 +543,6 @@ contains
 
     call controlfunction_copy(par_chi, par)
 
-    if(oct%use_mixing) then
-      call states_end(psi)
-      call states_copy(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
-    end if
-
     call target_get_state(oct_target, chi)
     call bwd_step(sys, td, hm, oct_target, par, par_chi, chi, prop_chi, prop_psi)
 
@@ -720,13 +690,6 @@ contains
 
     call controlfunction_copy(par_chi, par)
 
-    if(oct%use_mixing .and. (oct_iterator_current(iterator) > 1) ) then
-      ! No need to do this auxiliary propagation if no mixing has been done previously.
-      call states_end(psi)
-      call states_copy(psi, initial_st)
-      call propagate_forward(sys, hm, td, par, oct_target, psi, prop_psi)
-    end if
-    
     call states_copy(chi, psi)
     call target_chi(oct_target, sys%gr, psi, chi, sys%geo)
     call bwd_step(sys, td, hm, oct_target, par, par_chi, chi, prop_chi, prop_psi)

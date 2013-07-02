@@ -71,8 +71,6 @@ module opt_control_global_m
     FLOAT   :: eta, delta           !< "Technical" variables, that complete the definition of some algorithms.
     FLOAT   :: direct_step          !< The "initial step" of the optimization search, used by some algorithms. Filled
                                     ! by the OCTDirectStep input variable.
-    logical :: use_mixing           !< Some algorithms can be "improved" by appling a mixing strategy. This is filled by
-                                    !! the OCTMixing input variable.
     logical :: oct_double_check     !< At the end of the optimization, a final run can be performed in order to make sure
                                     !! that, indeed, the optimized field produces the optimal value.
     FLOAT   :: check_gradient       !< If using the conjugate gradients algorithm, one may make sure that the forward-backward
@@ -163,8 +161,7 @@ contains
     !%Option oct_algorithm_straight_iteration 6
     !% Straight iteration: one forward and one backward propagation is performed at each
     !% iteration, both with the same control field. An output field is calculated with the
-    !% resulting wavefunctions. Note that this scheme typically does not converge, unless
-    !% some mixing (<tt>OCTMixing = yes</tt>) is used.
+    !% resulting wavefunctions. 
     !%Option oct_algorithm_cg 7
     !% Conjugate-gradients, as implemented in the GNU GSL library.
     !%Option oct_algorithm_direct 8
@@ -246,26 +243,6 @@ contains
     call parse_float(datasets_check('OCTCheckGradient'), CNST(0.0), oct%check_gradient)
     call messages_print_var_value(stdout, "OCTCheckGradient", oct%check_gradient)
 
-
-    !%Variable OCTMixing
-    !%Type logical
-    !%Section Calculation Modes::Optimal Control
-    !%Default false
-    !%Description 
-    !% Use mixing algorithms to create the input fields in the iterative OCT schemes.
-    !% Note that this idea is still a little bit experimental, and depending on the
-    !% kind of mixing that you use, and the parameters that you set, it may or may
-    !% not accelerate the convergence, or even spoil the convergence.
-    !%
-    !% Using <tt>TypeOfMixing = broyden</tt>, <tt>Mixing = 0.1</tt> and <tt>MixNumberSteps = 3</tt> seems
-    !% to work in many cases, but your mileage may vary.
-    !%
-    !% Note that mixing does not make sense (and is therefore not done, this variable
-    !% being ignored), for some OCT algorithms (in particular, if <tt>OCTScheme</tt> is
-    !% <tt>oct_algorithm_direct</tt> or <tt>oct_algorithm_newuoa</tt>).
-    !%End
-    call parse_logical(datasets_check('OCTMixing'), .false., oct%use_mixing)
-    call messages_print_var_value(stdout, "OCTMixing", oct%use_mixing)
 
     !%Variable OCTDirectStep
     !%Type float

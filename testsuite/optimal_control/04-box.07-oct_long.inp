@@ -44,7 +44,6 @@ OCTControlFunctionOmegaMax = 0.05
 OCTControlFunctionType = controlfunction_mode_f
 
 OCTDoubleCheck = no
-OCTMixing = no
 
 
 

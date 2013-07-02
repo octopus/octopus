@@ -36,7 +36,6 @@ module controlfunction_m
   use math_m
   use mesh_m
   use messages_m
-  use mix_m
   use mpi_m
   use parser_m
   use profiling_m
@@ -62,9 +61,6 @@ module controlfunction_m
             controlfunction_to_h,              &
             controlfunction_to_h_val,          &
             controlfunction_write,             &
-            controlfunction_mixing,            &
-            controlfunction_mixing_init,       &
-            controlfunction_mixing_end,        &
             controlfunction_diff,              &
             controlfunction_apply_envelope,    &
             controlfunction_set_fluence,       &
@@ -164,7 +160,6 @@ module controlfunction_m
   !! and it can not be properly initialized thanks to a bug in the PGI compiler
   logical                                 :: cf_common_initialized=.false.
   type(controlfunction_common_t), pointer :: cf_common => NULL()
-  type(mix_t) :: controlfunction_mix
 
 contains
 
@@ -861,61 +856,6 @@ contains
 
     POP_SUB(controlfunction_dotp)
   end function controlfunction_dotp
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine controlfunction_mixing_init(par)
-    type(controlfunction_t), intent(in) :: par
-    PUSH_SUB(controlfunction_mixing_init)
-    call mix_init(controlfunction_mix, par%dim, par%no_controlfunctions, 1)
-    POP_SUB(controlfunction_mixing_init)
-  end subroutine controlfunction_mixing_init
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine controlfunction_mixing_end
-    PUSH_SUB(controlfunction_mixing_end)
-    call mix_end(controlfunction_mix)
-    POP_SUB(controlfunction_mixing_end)
-  end subroutine controlfunction_mixing_end
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine controlfunction_mixing(iter, par_in, par_out, par_new)
-    integer, intent(in) :: iter
-    type(controlfunction_t), intent(in) :: par_in, par_out
-    type(controlfunction_t), intent(inout) :: par_new
-
-    integer :: ipar, idir, dim
-    FLOAT, allocatable :: e_in(:, :, :), e_out(:, :, :), e_new(:, :, :)
-    PUSH_SUB(controlfunction_mixing)
-
-    dim = par_in%dim
-    SAFE_ALLOCATE(e_in (1:dim, 1:par_in%no_controlfunctions, 1:1))
-    SAFE_ALLOCATE(e_out(1:dim, 1:par_in%no_controlfunctions, 1:1))
-    SAFE_ALLOCATE(e_new(1:dim, 1:par_in%no_controlfunctions, 1:1))
-
-    do ipar = 1, par_in%no_controlfunctions
-      do idir = 1, dim
-        e_in (idir, ipar, 1) = tdf(par_in%f(ipar), idir)
-        e_out(idir, ipar, 1) = tdf(par_out%f(ipar), idir)
-      end do
-    end do
-
-    e_new = M_ZERO
-    call dmixing(controlfunction_mix, iter, e_in, e_out, e_new, controlfunction_dotp)
-    do ipar = 1, par_out%no_controlfunctions
-      call tdf_set_numerical(par_new%f(ipar), e_new(:, ipar, 1))
-    end do
-
-    SAFE_DEALLOCATE_A(e_in)
-    SAFE_DEALLOCATE_A(e_out)
-    SAFE_DEALLOCATE_A(e_new)
-    POP_SUB(controlfunction_mixing)
-  end subroutine controlfunction_mixing
   ! ---------------------------------------------------------
 
 

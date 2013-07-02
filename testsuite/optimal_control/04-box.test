@@ -37,15 +37,6 @@ match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.710502
 match ; J1 2nd iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.85778506
 match ; J1 5th iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.98592581
 
-# Then, run the optimization for 5 iterations with the STRAIGHT ITERATION scheme
-# This test makes use of Broyden mixing.
-# Note that, despite the poor behaviour of the first iterations, the run actually converges
-# if it is allowed to run for more iterations.
-Input: 04-box.05-oct_long.inp
-match ; J1 1st iteration  ; GREP(opt-control/convergence, ' 1  ', 40) ; 0.57638645
-match ; J1 2nd iteration  ; GREP(opt-control/convergence, ' 2  ', 40) ; 0.74121147
-match ; J1 5th iteration  ; GREP(opt-control/convergence, ' 5  ', 40) ; 0.78685946
-
 # Then, run the optimization for "a few" iterations with the DIRECT OPTIMIZATION scheme
 Input: 04-box.06-oct_long.inp
 match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1', 40) ; 0.02135990
