@@ -80,11 +80,14 @@ __kernel void operate_map(const int nn,
   barrier(CLK_LOCAL_MEM_FENCE);
 
 #define INDEX(j) index[(j)]
-#else
-#define INDEX(j) ri[map[ip] + (j)]
 #endif
 
   if(ip < np) {
+
+#ifndef SHARED_MEM
+    const int mip = map[ip];
+#define INDEX(j) ri[mip + (j)]
+#endif
 
 #if STENCIL_SIZE > 27
 

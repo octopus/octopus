@@ -747,6 +747,10 @@ subroutine X(derivatives_test)(this)
       call batch_pack(opffb, copy = .false.)
     end if
 
+    if(times > 1) then
+      call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false., factor = CNST(0.5))
+    end if
+
     stime = loct_clock()
     do itime = 1, times
       call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false., factor = CNST(0.5))
