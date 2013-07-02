@@ -50,8 +50,7 @@ module opencl_m
     opencl_init,                  &
     opencl_end,                   &
     opencl_padded_size,           &
-    opencl_mem_t,                 &
-    opencl_use_shared_mem
+    opencl_mem_t
 
 #ifdef HAVE_OPENCL
   public ::                       &
@@ -71,7 +70,8 @@ module opencl_m
     opencl_print_error,           &
     clblas_print_error,           &
     clfft_print_error,            &
-    opencl_set_buffer_to_zero
+    opencl_set_buffer_to_zero,    &
+    opencl_use_shared_mem
 #endif
 
   type opencl_t 
