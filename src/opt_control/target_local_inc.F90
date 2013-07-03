@@ -1,0 +1,82 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+!!
+!! $Id: target_local_inc.F90 $
+
+
+  ! ----------------------------------------------------------------------
+  !> 
+  subroutine target_init_local(gr, tg)
+    type(grid_t),     intent(in)    :: gr
+    type(target_t),   intent(inout) :: tg
+
+    integer             :: ip
+    FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
+    character(len=1024) :: expression
+    PUSH_SUB(target_init_local)
+
+    !%Variable OCTLocalTarget
+    !%Type string
+    !%Section Calculation Modes::Optimal Control
+    !%Description
+    !% If <tt>OCTTargetOperator = oct_tg_local</tt>, then one must supply a function
+    !% that defines the target. This should be done by defining it through a string, using 
+    !% the variable <tt>OCTLocalTarget</tt>.
+    !%End
+    if(parse_isdef('OCTLocalTarget') /= 0) then
+      SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
+      tg%rho = M_ZERO
+      call parse_string(datasets_check('OCTLocalTarget'), "0", expression)
+      call conv_to_C_string(expression)
+      do ip = 1, gr%mesh%np
+        call mesh_r(gr%mesh, ip, rr, coords = xx)
+        ! parse user-defined expression
+        call parse_expression(psi_re, psi_im, gr%sb%dim, xx, rr, M_ZERO, expression)
+        tg%rho(ip) = psi_re
+      end do
+    else
+      message(1) = 'If OCTTargetOperator = oct_tg_local, then you must give the shape'
+      message(2) = 'of this target in variable "OCTLocalTarget".'
+      call messages_fatal(2)
+    end if
+
+    POP_SUB(target_init_local)
+  end subroutine target_init_local
+
+
+  ! ----------------------------------------------------------------------
+  !> 
+  FLOAT function target_j1_local(gr, tg, psi) result(j1)
+    type(grid_t),     intent(inout) :: gr
+    type(target_t),   intent(inout) :: tg
+    type(states_t),   intent(inout) :: psi
+
+    integer :: is
+    PUSH_SUB(target_j1_local)
+
+    j1 = M_ZERO
+    do is = 1, psi%d%spin_channels
+      j1 = j1 + dmf_dotp(gr%mesh, tg%rho, psi%rho(:, is))
+    end do
+
+    POP_SUB(target_j1_local)
+  end function target_j1_local
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

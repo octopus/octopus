@@ -182,12 +182,10 @@ contains
     type(oct_t),      intent(in)    :: oct
     type(epot_t),     intent(inout) :: ep
 
-    integer             :: ierr, ip, ist, jst, ib, idim, inst, inik, id, ik, no_states
-    type(block_t)       :: blk
-    FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
-    CMPLX, allocatable  :: rotation_matrix(:, :)
-    type(states_t)      :: tmp_st
-    character(len=1024) :: expression
+!    integer             :: ip
+!    type(block_t)       :: blk
+!    FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
+!    character(len=1024) :: expression
 
     PUSH_SUB(target_init)
 
@@ -248,219 +246,27 @@ contains
 
     select case(tg%type)
     case(oct_tg_groundstate)
-      message(1) =  'Info: Using Ground State for TargetOperator'
-      call messages_info(1)
-      call restart_read(trim(restart_dir)//GS_DIR, tg%st, gr, ierr, exact = .true.)
-      
+      call target_init_groundstate(gr, tg)
     case(oct_tg_excited) 
-
-      message(1) =  'Info: TargetOperator is a linear combination of Slater determinants.'
-      call messages_info(1)
-
-      call states_look (trim(restart_dir)//GS_DIR, gr%mesh%mpi_grp, ip, ip, tg%st%nst, ierr)
-      tg%st%st_start = 1
-      tg%st%st_end   = tg%st%nst
-
-      SAFE_DEALLOCATE_P(tg%st%occ)
-      SAFE_DEALLOCATE_P(tg%st%eigenval)
-      SAFE_DEALLOCATE_P(tg%st%node)
-
-      SAFE_ALLOCATE(     tg%st%occ(1:tg%st%nst, 1:tg%st%d%nik))
-      SAFE_ALLOCATE(tg%st%eigenval(1:tg%st%nst, 1:tg%st%d%nik))
-      SAFE_ALLOCATE(    tg%st%node(1:tg%st%nst))
-      if(tg%st%d%ispin == SPINORS) then
-        SAFE_DEALLOCATE_P(tg%st%spin)
-        SAFE_ALLOCATE(tg%st%spin(1:3, 1:tg%st%nst, 1:tg%st%d%nik))
-      end if
-      call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
-      tg%st%node(:)  = 0
-
-      call restart_read(trim(restart_dir)//GS_DIR, tg%st, gr, ierr, exact = .true.)
-      call excited_states_init(tg%est, tg%st, "oct-excited-state-target") 
-
+      call target_init_excited(gr, tg)
     case(oct_tg_exclude_state)
-
-      message(1) =  'Info: The target functional is the exclusion of a number of states defined by'
-      message(2) =  '      "OCTExcludedStates".'
-      call messages_info(2)
-      !%Variable OCTExcludedStates
-      !%Type string
-      !%Section Calculation Modes::Optimal Control
-      !%Description
-      !% If the target is the exclusion of several targets, ("OCTTargetOperator = oct_exclude_states") 
-      !% then you must declare which states are to be excluded, by setting the OCTExcludedStates variable.
-      !% It must be a string in "list" format: "1-8", or "2,3,4-9", for example. Be careful to include
-      !% in this list only states that have been calculated in a previous "gs" or "unocc" calculation,
-      !% or otherwise the error will be silently ignored.
-      !%End
-      call parse_string(datasets_check('OCTExcludedStates'), "1", tg%excluded_states_list)
-      call states_deallocate_wfns(tg%st)
-      call restart_look_and_read(tg%st, gr)
-
-    case(oct_tg_gstransformation)  
-
-      message(1) =  'Info: Using Superposition of States for TargetOperator'
-      call messages_info(1)
-
-      !%Variable OCTTargetTransformStates
-      !%Type block
-      !%Default no
-      !%Section Calculation Modes::Optimal Control
-      !%Description
-      !% If <tt>OCTTargetOperator = oct_tg_gstransformation</tt>, you must specify a
-      !% <tt>OCTTargetTransformStates</tt> block, in order to specify which linear
-      !% combination of the states present in <tt>restart/gs</tt> is used to
-      !% create the target state.
-      !% 
-      !% The syntax is the same as the <tt>TransformStates</tt> block.
-      !%End
-      if(parse_isdef(datasets_check('OCTTargetTransformStates')) /= 0) then
-        if(parse_block(datasets_check('OCTTargetTransformStates'), blk) == 0) then
-          call states_copy(tmp_st, tg%st)
-          call states_deallocate_wfns(tmp_st)
-          call restart_look_and_read(tmp_st, gr)
-          SAFE_ALLOCATE(rotation_matrix(1:tg%st%nst, 1:tmp_st%nst))
-          rotation_matrix = M_z0
-          do ist = 1, tg%st%nst
-            do jst = 1, parse_block_cols(blk, ist - 1)
-              call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
-            end do
-          end do
-
-          call states_rotate(gr%mesh, tg%st, tmp_st, rotation_matrix)
-          SAFE_DEALLOCATE_A(rotation_matrix)
-          call states_end(tmp_st)
-          call parse_block_end(blk)
-          call density_calc(tg%st, gr, tg%st%rho)
-        else
-          message(1) = '"OCTTargetTransformStates" has to be specified as block.'
-          call messages_info(1)
-          call input_error('OCTTargetTransformStates')
-        end if
-      else
-        message(1) = 'Error: if "OCTTargetOperator = oct_tg_superposition", then you must'
-        message(2) = 'supply one "OCTTargetTransformStates" block to create the superposition.'
-        call messages_info(2)
-        call input_error('OCTTargetTransformStates')
-      end if
-
+      call target_init_exclude(gr, tg)
+    case(oct_tg_gstransformation)
+      call target_init_gstransformation(gr, tg)
     case(oct_tg_userdefined) 
-       message(1) =  'Info: Target is a user-defined state.'
-      call messages_info(1)
-      
-      !%Variable OCTTargetUserdefined
-      !%Type block
-      !%Section Calculation Modes::Optimal Control
-      !%Description
-      !% Define a target state. Syntax follows the one of the <tt>UserDefinedStates</tt> block.
-      !% Example:
-      !%
-      !% <tt>%OCTTargetUserdefined
-      !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
-      !% <br>%</tt>
-      !%  
-      !%End
-      if(parse_block(datasets_check('OCTTargetUserdefined'), blk) == 0) then
-        
-        no_states = parse_block_n(blk)
-        do ib = 1, no_states
-          call parse_block_integer(blk, ib - 1, 0, idim)
-          call parse_block_integer(blk, ib - 1, 1, inst)
-          call parse_block_integer(blk, ib - 1, 2, inik)
-
-          ! read formula strings and convert to C strings
-          do id = 1, tg%st%d%dim
-            do ist = 1, tg%st%nst
-              do ik = 1, tg%st%d%nik   
-                
-                ! does the block entry match and is this node responsible?
-                if(.not. (id  ==  idim .and. ist  ==  inst .and. ik  ==  inik    &
-                  .and. tg%st%st_start  <=  ist .and. tg%st%st_end >= ist) ) cycle
-                
-                ! parse formula string
-                call parse_block_string(                            &
-                  blk, ib - 1, 3, tg%st%user_def_states(id, ist, ik))
-                ! convert to C string
-                call conv_to_C_string(tg%st%user_def_states(id, ist, ik))
-                
-                do ip = 1, gr%mesh%np
-                  xx = gr%mesh%x(ip, :)
-                  rr = sqrt(sum(xx(:)**2))
-                  
-                  ! parse user-defined expressions
-                  call parse_expression(psi_re, psi_im, &
-                    gr%sb%dim, xx, rr, M_ZERO, tg%st%user_def_states(id, ist, ik))
-                  ! fill state
-                  tg%st%zpsi(ip, id, ist, ik) = psi_re + M_zI * psi_im
-                end do
-                ! normalize orbital
-                call zstates_normalize_orbital(gr%mesh, tg%st%d%dim, &
-                  tg%st%zpsi(:,:, ist, ik))
-              end do
-            end do
-          enddo
-        end do
-        call parse_block_end(blk)
-        call density_calc(tg%st, gr, tg%st%rho)
-      else
-        message(1) = '"OCTTargetUserdefined" has to be specified as block.'
-        call messages_fatal(1)
-      end if
-
+      call target_init_userdefined(gr, tg)
     case(oct_tg_jdensity)
       call target_init_density(gr, tg, stin, td)
-
     case(oct_tg_local)
-      !%Variable OCTLocalTarget
-      !%Type string
-      !%Section Calculation Modes::Optimal Control
-      !%Description
-      !% If <tt>OCTTargetOperator = oct_tg_local</tt>, then one must supply a function
-      !% that defines the target. This should be done by defining it through a string, using 
-      !% the variable <tt>OCTLocalTarget</tt>.
-      !%End
-
-      if(parse_isdef('OCTLocalTarget') /= 0) then
-        SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
-        tg%rho = M_ZERO
-        call parse_string(datasets_check('OCTLocalTarget'), "0", expression)
-        call conv_to_C_string(expression)
-        do ip = 1, gr%mesh%np
-          call mesh_r(gr%mesh, ip, rr, coords = xx)
-          ! parse user-defined expression
-          call parse_expression(psi_re, psi_im, gr%sb%dim, xx, rr, M_ZERO, expression)
-          tg%rho(ip) = psi_re
-        end do
-      else
-        message(1) = 'If OCTTargetOperator = oct_tg_local, then you must give the shape'
-        message(2) = 'of this target in variable "OCTLocalTarget".'
-        call messages_fatal(2)
-      end if
-
+      call target_init_local(gr, tg)
     case(oct_tg_td_local)
-      if(parse_block(datasets_check('OCTTdTarget'),blk)==0) then
-        call parse_block_string(blk, 0, 0, tg%td_local_target)
-        call conv_to_C_string(tg%td_local_target)
-        SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
-        call parse_block_end(blk)
-      else
-        message(1) = 'If OCTTargetMode = oct_targetmode_td, you must suppy a OCTTDTarget block.'
-        call messages_fatal(1)
-      end if
-      tg%dt = td%dt
-      SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
-      tg%td_fitness = M_ZERO
-      call target_build_tdlocal(tg, gr, M_ZERO)
-
+      call target_init_tdlocal(gr, tg, td)
     case(oct_tg_hhg)
       call target_init_hhg(tg, td, w0)
-
     case(oct_tg_hhgnew)
       call target_init_hhgnew(gr, tg, td, geo, ep)
-
     case(oct_tg_velocity)
       call target_init_velocity(gr, geo, tg, oct, td, ep)
-
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
       call messages_fatal(1)
@@ -765,28 +571,6 @@ contains
   !----------------------------------------------------------
 
 
-  !----------------------------------------------------------
-  subroutine target_build_tdlocal(tg, gr, time)
-    type(target_t), intent(inout) :: tg
-    type(grid_t),   intent(in)    :: gr
-    FLOAT,          intent(in)    :: time
-
-    integer :: ip
-    FLOAT :: xx(MAX_DIM), rr, re, im
-
-    PUSH_SUB(target_build_tdlocal)
-
-    do ip = 1, gr%mesh%np
-      call mesh_r(gr%mesh, ip, rr, coords = xx)
-      call parse_expression(re, im, gr%sb%dim, xx, rr, time, tg%td_local_target)
-      tg%rho(ip) = re
-    end do
-
-    POP_SUB(target_build_tdlocal)
-  end subroutine target_build_tdlocal
-  !----------------------------------------------------------
-
-
   ! ---------------------------------------------------------
   !> Calculates the J1 functional, i.e.:
   !! <Psi(T)|\hat{O}|Psi(T) in the time-independent
@@ -798,57 +582,32 @@ contains
     type(states_t), intent(inout)   :: psi
     type(geometry_t), intent(in), optional :: geo
 
-    integer :: is, ist, maxiter, ik
-
     PUSH_SUB(target_j1)
 
     j1 = M_ZERO
     select case(tg%type)
+    case(oct_tg_groundstate)
+      j1 = target_j1_groundstate(tg, gr, psi)
+    case(oct_tg_excited)
+      j1 = target_j1_excited(tg, gr, psi)
+    case(oct_tg_gstransformation)
+      j1 = target_j1_gstransformation(tg, gr, psi)
+    case(oct_tg_userdefined)
+      j1 = target_j1_userdefined(tg, gr, psi)
     case(oct_tg_jdensity)
       j1 = target_j1_density(gr, tg, psi)
-
     case(oct_tg_local)
-      j1 = M_ZERO
-      do is = 1, psi%d%spin_channels
-        j1 = j1 + dmf_dotp(gr%mesh, tg%rho, psi%rho(:, is))
-      end do
-
+      j1 = target_j1_local(gr, tg, psi)
     case(oct_tg_td_local)
-      maxiter = size(tg%td_fitness) - 1
-      j1 = M_HALF * tg%dt * tg%td_fitness(0) + & 
-           M_HALF * tg%dt * tg%td_fitness(maxiter) + & 
-           tg%dt * sum(tg%td_fitness(1:maxiter-1))
-
-    case(oct_tg_excited)
-      j1 = abs(zstates_mpdotp(gr%mesh, tg%est, psi))**2
-
+      j1 = target_j1_tdlocal(tg)
     case(oct_tg_exclude_state)
-
-      j1 = M_ONE
-      do ist = 1, tg%st%nst
-        if(loct_isinstringlist(ist, tg%excluded_states_list)) then
-          j1 = j1 - abs(zmf_dotp(gr%mesh, psi%d%dim, &
-            tg%st%zpsi(:, :, ist, 1), psi%zpsi(:, :, 1, 1)))**2
-        end if
-      end do
-
+      j1 = target_j1_exclude(gr, tg, psi)
     case(oct_tg_hhg)
       j1 = target_j1_hhg(tg)
-
     case(oct_tg_hhgnew)
       j1 = target_j1_hhgnew(gr, tg)
-
     case(oct_tg_velocity)
       j1 = target_j1_velocity(tg, geo)
-
-    case default
-      do ik = 1, psi%d%nik
-        do ist = psi%st_start, psi%st_end
-          j1 = j1 + psi%occ(ist, ik) * &
-            abs(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, ik), &
-                tg%st%zpsi(:, :, ist, ik)))**2
-        end do
-      end do
     end select
 
     POP_SUB(target_j1)
@@ -1074,10 +833,16 @@ contains
   end function is_spatial_curr_wgt
   ! ----------------------------------------------------------------------
 
-
 #include "target_density_inc.F90"
 #include "target_velocity_inc.F90"
 #include "target_hhg_inc.F90"
+#include "target_groundstate_inc.F90"
+#include "target_excited_inc.F90"
+#include "target_gstransformation_inc.F90"
+#include "target_exclude_inc.F90"
+#include "target_userdefined_inc.F90"
+#include "target_local_inc.F90"
+#include "target_tdlocal_inc.F90"
 
 end module opt_control_target_m
 
