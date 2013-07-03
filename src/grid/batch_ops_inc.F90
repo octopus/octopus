@@ -577,7 +577,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     end if
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
-    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
+    call opencl_create_buffer(tmp, CL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
 
     call opencl_set_kernel_arg(X(unpack), 0, this%pack%size(1))
     call opencl_set_kernel_arg(X(unpack), 1, ist - 1)
