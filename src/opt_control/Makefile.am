@@ -27,7 +27,7 @@ libopt_control_a_SOURCES = \
 
 noinst_HEADERS = \
 	controlfunction_trans_inc.F90 check_input_inc.F90 finalcheck_inc.F90 opt_control_c_inc.F90 \
-	target_density_inc.F90
+	target_density_inc.F90 target_velocity_inc.F90 target_hhg_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -39,7 +39,7 @@ opt_control_global.o : opt_control_global.F90
 filters.o : filters.F90 
 controlfunction.o : controlfunction.F90 controlfunction_trans_inc.F90 filters.o 
 opt_control_iter.o : opt_control_iter.F90 controlfunction.o opt_control_global.o 
-target.o : target.F90 target_density_inc.F90 opt_control_global.o 
+target.o : target.F90 target_density_inc.F90 target_velocity_inc.F90 target_hhg_inc.F90 opt_control_global.o 
 initst.o: initst.F90 
 propagation.o : propagation.F90 controlfunction.o target.o opt_control_global.o 
 opt_control.o : opt_control.F90 finalcheck_inc.F90 opt_control_c_inc.F90 initst.o check_input_inc.F90 target.o \

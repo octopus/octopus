@@ -38,6 +38,10 @@
     message(1) =  'Info: Target is a combination of a density and/or a current functional.'
     call messages_info(1)
 
+    tg%curr_functional = oct_no_curr
+    tg%curr_weight = M_ZERO
+    tg%strt_iter_curr_tg = 0
+
     !%Variable OCTTargetDensity
     !%Type string
     !%Section Calculation Modes::Optimal Control
