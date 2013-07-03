@@ -66,7 +66,8 @@ libgrid_a_SOURCES =       \
 	subarray.F90            \
 	submesh.F90             \
 	symmetrizer.F90         \
-	transfer_table.F90
+	transfer_table.F90      \
+	hilbert.c
 
 noinst_HEADERS =                   \
 	batch_inc.F90              \

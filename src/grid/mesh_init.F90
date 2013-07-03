@@ -501,118 +501,202 @@ contains
 
   ! ---------------------------------------------------------
   subroutine create_x_lxyz()
-    integer :: il, iin, ien, ix, iy, iz
+    integer :: il, iin, ien, ix, iy, iz, ihilbert, point(1:3)
     integer :: ixb, iyb, izb, bsize(1:3)
     type(block_t) :: blk
-    integer :: idir, nn
+    integer :: idir, nn, order, size, bits
     FLOAT :: chi(1:MAX_DIM), xx(1:MAX_DIM)
+
+    integer, parameter :: &
+      ORDER_BLOCKS  =  1, &
+      ORDER_HILBERT =  2
 
     PUSH_SUB(mesh_init_stage_3.create_x_lxyz)
 
     SAFE_ALLOCATE(mesh%idx%lxyz(1:mesh%np_part_global, 1:MAX_DIM))
 
-    call messages_obsolete_variable('MeshBlockSizeXY', 'MeshBlockSize')
-    call messages_obsolete_variable('MeshBlockSizeZ', 'MeshBlockSize')
-
-    !%Variable MeshBlockSize
-    !%Type block
+    !%Variable MeshOrder
+    !%Type integer
     !%Section Execution::Optimization
     !%Description
-    !% To improve memory-access locality when calculating derivatives,
-    !% <tt>Octopus</tt> arranges mesh points in blocks. This variable
-    !% controls the size of this blocks in the different
-    !% directions. The default is selected according to the value of
-    !% the StatesBlockSize variable. (This variable only affects the
-    !% performance of <tt>Octopus</tt> and not the results.)
+    !% This variable controls how the grid points are mapped to a
+    !% linear array. This influences the performance of the code. The
+    !% default is blocks.
+    !%Option blocks 1
+    !% The grid is mapped using small parallelepipedic grids. The size
+    !% of the blocks is controlled by MeshBlockSize.
+    !%Option hilbert 2
+    !% (experimental) A Hilbert space filling curve is used to map the
+    !% grid.
     !%End
 
-    select case(conf%target_states_block_size)
-    case(1)
-      bsize(1:3) = (/  2,   1, 200/)
-    case(2)
-      bsize(1:3) = (/ 10,   4, 200/)
-    case(4)
-      bsize(1:3) = (/ 10,   4,  80/)
-    case(8)
-      bsize(1:3) = (/ 10,   2,  30/)
-    case(16)
-      bsize(1:3) = (/ 15,  15,   4/)
-    case(32)
-      bsize(1:3) = (/ 15,  15,   2/)
-    case(64)
-      bsize(1:3) = (/  8,  10,   4/)
-    case(128)
-      bsize(1:3) = (/  8,   6,   2/)
-    case(256)
-      bsize(1:3) = (/  4,   6,   2/)
-    case default
-      bsize(1:3) = (/ 15,  15,   4/)
-    end select
+    call parse_integer(datasets_check('MeshOrder'), ORDER_BLOCKS, order)
 
-    if(parse_block('MeshBlockSize', blk) == 0) then
-      nn = parse_block_cols(blk, 0)
-      do idir = 1, nn
-        call parse_block_integer(blk, 0, idir - 1, bsize(idir))
-      end do
-    end if
-    
-    ! When using open boundaries we need to have a mesh block-size of 1
-    if (parse_block(datasets_check('OpenBoundaries'), blk) == 0) then
-      if (any(bsize > 1)) then
-        message(1) = 'When in transport mode, the block-ordering'
-        message(2) = 'of the mesh points cannot be chosen freely.'
-        message(3) = 'All the values of MeshBlockSize have to be'
-        message(4) = 'initialized with the value 1.'
-        call messages_fatal(4)
+    select case(order)
+    case(ORDER_BLOCKS)
+
+      call messages_obsolete_variable('MeshBlockSizeXY', 'MeshBlockSize')
+      call messages_obsolete_variable('MeshBlockSizeZ', 'MeshBlockSize')
+
+      !%Variable MeshBlockSize
+      !%Type block
+      !%Section Execution::Optimization
+      !%Description
+      !% To improve memory-access locality when calculating derivatives,
+      !% <tt>Octopus</tt> arranges mesh points in blocks. This variable
+      !% controls the size of this blocks in the different
+      !% directions. The default is selected according to the value of
+      !% the StatesBlockSize variable. (This variable only affects the
+      !% performance of <tt>Octopus</tt> and not the results.)
+      !%End
+
+      select case(conf%target_states_block_size)
+      case(1)
+        bsize(1:3) = (/  2,   1, 200/)
+      case(2)
+        bsize(1:3) = (/ 10,   4, 200/)
+      case(4)
+        bsize(1:3) = (/ 10,   4,  80/)
+      case(8)
+        bsize(1:3) = (/ 10,   2,  30/)
+      case(16)
+        bsize(1:3) = (/ 15,  15,   4/)
+      case(32)
+        bsize(1:3) = (/ 15,  15,   2/)
+      case(64)
+        bsize(1:3) = (/  8,  10,   4/)
+      case(128)
+        bsize(1:3) = (/  8,   6,   2/)
+      case(256)
+        bsize(1:3) = (/  4,   6,   2/)
+      case default
+        bsize(1:3) = (/ 15,  15,   4/)
+      end select
+
+      if(parse_block('MeshBlockSize', blk) == 0) then
+        nn = parse_block_cols(blk, 0)
+        do idir = 1, nn
+          call parse_block_integer(blk, 0, idir - 1, bsize(idir))
+        end do
       end if
-    end if
-    
-    ! first we fill the points in the inner mesh
-    iin = 0
-    ien = mesh%np_global
-    do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize(1)
-      do iyb = mesh%idx%nr(1,2), mesh%idx%nr(2,2), bsize(2)
-        do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
 
-          do ix = ixb, min(ixb + bsize(1) - 1, mesh%idx%nr(2,1))
-            chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + mesh%sb%box_offset(1)
-            do iy = iyb, min(iyb + bsize(2) - 1, mesh%idx%nr(2,2))
-              chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2) + mesh%sb%box_offset(2)
-              do iz = izb, min(izb + bsize(3) - 1, mesh%idx%nr(2,3))
-                chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + mesh%sb%box_offset(3)
-                
-                if(btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
-                  iin = iin + 1
-                  il = iin
-                else if (btest(mesh%idx%lxyz_inv(ix, iy, iz), ENLARGEMENT_POINT)) then
-                  ien = ien + 1
-                  il = ien
-                else
-                  cycle
-                end if
-                  
-                mesh%idx%lxyz(il, 1) = ix
-                mesh%idx%lxyz(il, 2) = iy
-                mesh%idx%lxyz(il, 3) = iz
+      ! When using open boundaries we need to have a mesh block-size of 1
+      if (parse_block(datasets_check('OpenBoundaries'), blk) == 0) then
+        if (any(bsize > 1)) then
+          message(1) = 'When in transport mode, the block-ordering'
+          message(2) = 'of the mesh points cannot be chosen freely.'
+          message(3) = 'All the values of MeshBlockSize have to be'
+          message(4) = 'initialized with the value 1.'
+          call messages_fatal(4)
+        end if
+      end if
 
-                mesh%idx%lxyz_inv(ix, iy, iz) = il
+      ! first we fill the points in the inner mesh
+      iin = 0
+      ien = mesh%np_global
+      do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize(1)
+        do iyb = mesh%idx%nr(1,2), mesh%idx%nr(2,2), bsize(2)
+          do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
+
+            do ix = ixb, min(ixb + bsize(1) - 1, mesh%idx%nr(2,1))
+              chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1) + mesh%sb%box_offset(1)
+              do iy = iyb, min(iyb + bsize(2) - 1, mesh%idx%nr(2,2))
+                chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2) + mesh%sb%box_offset(2)
+                do iz = izb, min(izb + bsize(3) - 1, mesh%idx%nr(2,3))
+                  chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3) + mesh%sb%box_offset(3)
+
+                  if(btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
+                    iin = iin + 1
+                    il = iin
+                  else if (btest(mesh%idx%lxyz_inv(ix, iy, iz), ENLARGEMENT_POINT)) then
+                    ien = ien + 1
+                    il = ien
+                  else
+                    cycle
+                  end if
+
+                  mesh%idx%lxyz(il, 1) = ix
+                  mesh%idx%lxyz(il, 2) = iy
+                  mesh%idx%lxyz(il, 3) = iz
+
+                  mesh%idx%lxyz_inv(ix, iy, iz) = il
 
 #ifdef HAVE_MPI
-                if(.not. mesh%parallel_in_domains) then
+                  if(.not. mesh%parallel_in_domains) then
 #endif
-                  call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-                  mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
+                    call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+                    mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
 #ifdef HAVE_MPI
-                end if
+                  end if
 #endif                                   
+                end do
               end do
             end do
+
           end do
-          
         end do
       end do
-    end do
-    
+
+    case(ORDER_HILBERT)
+      
+      call messages_experimental('Hilbert grid ordering')
+
+      size = maxval(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + 1)
+
+      bits = log2(pad_pow2(size))
+
+      ! since we are using a 32 bit integer, the number of bits is
+      ! limited to 8 (3d * 8 = 24 <= 31)
+      ASSERT(bits <= 8)
+
+      iin = 0
+      ien = mesh%np_global
+      do ihilbert = 0, 2**(bits*3) - 1
+
+        call hilbert_index_to_point(bits, ihilbert, point)
+
+        ix = point(1) + mesh%idx%nr(1, 1)
+        iy = point(2) + mesh%idx%nr(1, 2)
+        iz = point(3) + mesh%idx%nr(1, 3)
+
+        if(ix > mesh%idx%nr(2, 1)) cycle
+        if(iy > mesh%idx%nr(2, 2)) cycle
+        if(iz > mesh%idx%nr(2, 3)) cycle
+
+        if(btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
+          iin = iin + 1
+          il = iin
+          !debug output
+          !write(12, *) point(1:3), '# ', ihilbert 
+        else if (btest(mesh%idx%lxyz_inv(ix, iy, iz), ENLARGEMENT_POINT)) then
+          ien = ien + 1
+          il = ien
+        else
+          cycle
+        end if
+      
+        mesh%idx%lxyz(il, 1) = ix
+        mesh%idx%lxyz(il, 2) = iy
+        mesh%idx%lxyz(il, 3) = iz
+        
+        mesh%idx%lxyz_inv(ix, iy, iz) = il
+        
+#ifdef HAVE_MPI
+        if(.not. mesh%parallel_in_domains) then
+#endif
+          chi(1) = real(ix, REAL_PRECISION)*mesh%spacing(1) + mesh%sb%box_offset(1)
+          chi(2) = real(iy, REAL_PRECISION)*mesh%spacing(2) + mesh%sb%box_offset(2)
+          chi(3) = real(iz, REAL_PRECISION)*mesh%spacing(3) + mesh%sb%box_offset(3)
+
+          call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+          mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
+#ifdef HAVE_MPI
+        end if
+#endif                 
+      end do
+
+    end select
+
     ! set the rest to zero
     mesh%idx%lxyz(1:mesh%np_part_global, 4:MAX_DIM) = 0
 
@@ -620,7 +704,7 @@ contains
 
     ASSERT(iin == mesh%np_global)
     ASSERT(ien == mesh%np_part_global)
-    
+
     POP_SUB(mesh_init_stage_3.create_x_lxyz)
   end subroutine create_x_lxyz
 
