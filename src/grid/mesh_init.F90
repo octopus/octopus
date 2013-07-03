@@ -501,12 +501,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine create_x_lxyz()
-    integer :: il, iin, ien, ix, iy, iz, ihilbert, point(1:3)
+    integer :: il, iin, ien, ix, iy, iz, point(1:3)
+    integer(8) :: ihilbert
     integer :: ixb, iyb, izb, bsize(1:3)
     type(block_t) :: blk
     integer :: idir, nn, order, size, bits
     FLOAT :: chi(1:MAX_DIM), xx(1:MAX_DIM)
-
+    
     integer, parameter :: &
       ORDER_BLOCKS  =  1, &
       ORDER_HILBERT =  2
@@ -645,9 +646,9 @@ contains
 
       bits = log2(pad_pow2(size))
 
-      ! since we are using a 32 bit integer, the number of bits is
-      ! limited to 8 (3d * 8 = 24 <= 31)
-      ASSERT(bits <= 8)
+      ! since we are using a 64 bit integer, the number of bits is
+      ! limited to 21 (3d * 21 = 63)
+      ASSERT(bits <= 21)
 
       iin = 0
       ien = mesh%np_global
