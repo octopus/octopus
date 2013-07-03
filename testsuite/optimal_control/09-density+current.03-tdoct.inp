@@ -50,7 +50,7 @@ OCTPenalty = 1.0
 OCTMaxIter =1 
 
 OCTInitialState = oct_is_groundstate
-OCTTargetOperator = oct_tg_density
+OCTTargetOperator = oct_tg_jdensity
 OCTTargetDensity = "OCTTargetDensityFromState"
 %OCTTargetDensityFromState
  0 | 1 

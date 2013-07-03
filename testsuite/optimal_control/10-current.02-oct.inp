@@ -51,7 +51,7 @@ OCTScheme  = oct_algorithm_zr98
 
 OCTInitialState = oct_is_groundstate
 
-OCTTargetOperator = oct_tg_current
+OCTTargetOperator = oct_tg_jdensity
 
 OCTCurrentFunctional =  oct_curr_square
 OCTCurrentWeight = -10.

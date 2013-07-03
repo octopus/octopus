@@ -97,10 +97,10 @@
       
     ! local targets only in ZR98 and WG05
     if(target_type(oct_target)  ==  oct_tg_local .or. &
-       target_type(oct_target)  ==  oct_tg_density .or. &
+       target_type(oct_target)  ==  oct_tg_jdensity .or. &
        target_type(oct_target)  ==  oct_tg_td_local) then
       if(oct%algorithm  ==  oct_algorithm_zbr98) then
-        write(message(1), '(a)') 'Cannot use ZBR98 OCT scheme if the target is oct_tg_density,'
+        write(message(1), '(a)') 'Cannot use ZBR98 OCT scheme if the target is oct_tg_jdensity,'
         write(message(2), '(a)') 'oct_tg_local or oct_tg_td_local.'
         call messages_fatal(2)
       end if

@@ -82,14 +82,14 @@ module opt_control_target_m
     oct_tg_excited          = 2,      &
     oct_tg_gstransformation = 3,      &
     oct_tg_userdefined      = 4,      &
-    oct_tg_density          = 5,      &        
+    oct_tg_jdensity         = 5,      &        
     oct_tg_local            = 6,      &
     oct_tg_td_local         = 7,      &
     oct_tg_exclude_state    = 8,      &
     oct_tg_hhg              = 9,      &
     oct_tg_velocity         = 10,     &
-    oct_tg_current          = 11,     &
     oct_tg_hhgnew           = 12
+
 
   integer, public, parameter ::       &
     oct_targetmode_static = 0,        &
@@ -121,6 +121,7 @@ module opt_control_target_m
     FLOAT   :: hhg_w0
     FLOAT   :: dt
     integer :: curr_functional
+    FLOAT   :: density_weight
     FLOAT   :: curr_weight
     integer :: strt_iter_curr_tg
     FLOAT, pointer :: spatial_curr_wgt(:) => null()
@@ -219,12 +220,8 @@ contains
     !% orbitals defined by the block <tt>OCTTargetTransformStates</tt>.
     !%Option oct_tg_userdefined 4
     !% Allows to define target state by using <tt>OCTTargetUserdefined</tt>.
-    !%Option oct_tg_density 5
-    !% The target operator is a given density, <i>i.e.</i> the final state should have a density
-    !% as close as possible as the one given in the input file, either from the variable
-    !% <tt>OCTTargetDensityFromState</tt>, or from <tt>OCTTargetDensity</tt>. It can be extended to a
-    !% combination with a current functional by setting <tt>OCTCurrentFunctional</tt> and attributing
-    !% a value to <tt>OCTCurrentWeight</tt>. 
+    !%Option oct_tg_jdensity 5
+    !% EXPERIMENTAL: 
     !%Option oct_tg_local 6
     !% The target operator is a local operator.
     !%Option oct_tg_td_local 7
@@ -240,11 +237,6 @@ contains
     !%Option oct_tg_velocity 10
     !% The target is a function of the velocities of the nuclei at the end of the influence of
     !% the external field, defined by <tt>OCTVelocityTarget</tt>
-    !%Option oct_tg_current 11
-    !% The target is exclusively a target in terms of the current. 
-    !% If combined with target that involves the density, set variable <tt>OCTTargetOperator</tt>= <tt>OCTTargetDensity</tt> 
-    !% and set explicitly <tt>OCTCurrentFunctional</tt>. Only this combination is enabled. All other targets force
-    !% <tt>OCTCurrentFunctional</tt>=0.
     !%Option oct_tg_hhgnew 12
     !% EXPERIMENTAL: The  target is the optimization of the HHG yield. You must supply the
     !% OCTHarmonicWeigth string. It attempts to optimized the integral of the harmonic spectrum multiplied
@@ -259,6 +251,12 @@ contains
     call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
 
     nullify(tg%td_fitness)
+
+
+    ! WARNING This should probably go somewhere else
+    tg%curr_functional = oct_no_curr
+    tg%curr_weight = M_ZERO
+    tg%strt_iter_curr_tg = 0
 
     select case(tg%type)
     case(oct_tg_groundstate)
@@ -421,86 +419,9 @@ contains
         call messages_fatal(1)
       end if
 
-    case(oct_tg_density) 
+    case(oct_tg_jdensity)
+      call target_init_density(gr, tg, stin, td)
 
-      message(1) =  'Info: Target is a density.'
-      call messages_info(1)
-
-      !%Variable OCTTargetDensity
-      !%Type string
-      !%Section Calculation Modes::Optimal Control
-      !%Description
-      !% If <tt>OCTTargetOperator = oct_tg_density</tt>, then one must supply the target density
-      !% that should be searched for. This one can do by supplying a string through
-      !% the variable <tt>OCTTargetDensity</tt>.
-      !%End
-
-      !%Variable OCTTargetDensityFromState
-      !%Type block
-      !%Default no
-      !%Section Calculation Modes::Optimal Control
-      !%Description
-      !% If <tt>OCTTargetOperator = oct_tg_density</tt>, and <tt>OCTLocalTarget = "OCTTargetDensityFromState"</tt>,
-      !% you must specify a <tt>OCTTargetDensityState</tt> block, in order to specify which linear
-      !% combination of the states present in <tt>restart/gs</tt> is used to
-      !% create the target density.
-      !%
-      !% The syntax is the same as the <tt>TransformStates</tt> block.
-      !%End
-
-      if(parse_isdef('OCTTargetDensity') /= 0) then
-        SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
-        tg%rho = M_ZERO
-        call parse_string(datasets_check('OCTTargetDensity'), "0", expression)
-
-
-        if(trim(expression)  ==  'OCTTargetDensityFromState') then
-
-          if(parse_block(datasets_check('OCTTargetDensityFromState'), blk) == 0) then
-            call states_copy(tmp_st, tg%st)
-            SAFE_DEALLOCATE_P(tmp_st%zpsi)
-            call restart_look_and_read(tmp_st, gr)
-            SAFE_ALLOCATE(rotation_matrix(1:tg%st%nst, 1:tmp_st%nst))
-            rotation_matrix = M_z0
-            do ist = 1, tg%st%nst
-              do jst = 1, parse_block_cols(blk, ist - 1)
-                call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
-              end do
-            end do
-            call states_rotate(gr%mesh, tg%st, tmp_st, rotation_matrix)
-            SAFE_DEALLOCATE_A(rotation_matrix)
-            call density_calc(tg%st, gr, tg%st%rho)
-            do ip = 1, gr%mesh%np
-              tg%rho(ip) = sum(tg%st%rho(ip, 1:tg%st%d%spin_channels))
-            end do
-            call states_end(tmp_st)
-            call parse_block_end(blk)
-          else
-            message(1) = '"OCTTargetDensityState" has to be specified as block.'
-            call messages_info(1)
-            call input_error('OCTTargetDensity')
-          end if
-
-        else
-
-          call conv_to_C_string(expression)
-          do ip = 1, gr%mesh%np
-            call mesh_r(gr%mesh, ip, rr, coords = xx)
-            ! parse user-defined expression
-            call parse_expression(psi_re, psi_im, gr%sb%dim, xx, rr, M_ZERO, expression)
-            tg%rho(ip) = psi_re
-          end do
-          ! Normalize
-          rr = dmf_integrate(gr%mesh, tg%rho)
-          tg%rho = (-tg%st%val_charge) * tg%rho/rr
-        end if
-
-      else
-        message(1) = 'If OCTTargetOperator = oct_tg_density, then you must give the shape'
-        message(2) = 'of this target in variable "OCTTargetDensity".'
-        call messages_fatal(2)
-      end if
-      
     case(oct_tg_local)
       !%Variable OCTLocalTarget
       !%Type string
@@ -808,206 +729,9 @@ contains
        SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
        tg%td_fitness = M_ZERO
        
-    case(oct_tg_current)
-      message(1) =  'Info: Target is a current.'
-      call messages_info(1)
-      ! current specific instructions are read-in out of this case block 
-      ! inorder to combine current targets with other targets.
-            
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
       call messages_fatal(1)
-    end select
-
-
-    ! set up quantities specified for current functionals (that might be
-    ! combined with other functionals)
-    select case(tg%type)
-    case(oct_tg_current, oct_tg_density)
-     
-      !%Variable OCTCurrentFunctional
-      !%Type integer
-      !%Section Calculation Modes::Optimal Control
-      !%Default oct_no_curr
-      !%Description
-      !% The variable <tt>OCTCurrentFunctional</tt> describes which kind of current target functional J1_c[j] is
-      !% to be used. EXPERIMENTAL!
-      !%Option oct_no_curr 0
-      !% No current functional is used, no current calculated.
-      !%Option oct_curr_square 1
-      !% Calculates the square of current j: J1_c[j] = <tt>OCTCurrentWeight</tt>*\int|j(r)|^2 dr. 
-      !% For <tt>OCTCurrentWeight</tt> .LT. 0 the current will be minimized (useful in combination with 
-      !% target density in order to obtain stable final target density), while for 
-      !% OCTCurrentWeight</tt> .GT. 0 it will be maximized (useful in combination with a target density 
-      !% in order to obtain a high-velocity impact, for instance). It is a static target, to be reached at
-      !% total time. 
-      !%Option oct_max_curr_ring 2
-      !% Maximizes the current of a quantum ring in one direction. The functional maximizes the z projection of the 
-      !% outer product between the position \vec{r} and the current \vec{j}: 
-      !% J1[j] = <tt>OCTCurrentWeight</tt>*\int (\vec{r} \times \vec{j}) \hat{z} dr. For <tt>OCTCurrentWeight</tt> .GT. 0. the
-      !% current flows in counter-clockwise direction, while for <tt>OCTCurrentWeight</tt> .LT. 0 the current is clockwise.
-      !%Option oct_curr_square_td 3
-      !% The time dependent version of <tt>oct_curr_square</tt>. In fact, calculates the 
-      !% square of current in time interval [<tt>OCTStartTimeCurrTg</tt>, 
-      !% total time = <tt>TDMaximumIter</tt> * <tt>TDTimeStep</tt>]. 
-      !% Set <tt>TDPropagator</tt> = <tt>crank_nicolson</tt>.
-      !%End 
-
-      !%Variable OCTCurrentWeight
-      !%Type float
-      !%Section Calculation Modes::Optimal Control
-      !%Default 0.0
-      !%Description
-      !% In the case of simultaneous optimization of density n and current j, one can tune the importance
-      !% of the current functional J1_c[j], as the respective functionals might not provide results on the
-      !% same scale of magnitude. J1[n,j]= J1_d[n]+ <tt>OCTCurrentWeight</tt> * J1_c[j]. Be aware that its
-      !% sign is crucial for the chosen <tt>OCTCurrentFunctional</tt> as explained there.
-      !%End
-
-      !%Variable OCTStartIterCurrTg
-      !%Type integer
-      !%Section Calculation Modes::Optimal Control
-      !%Default 0
-      !%Description
-      !% Allows for a time dependent target for the current without defining it for the total 
-      !% time-interval of the simulation.
-      !% Thus it can be switched on at the iteration desired, <tt>OCTStartIterCurrTg</tt> >= 0
-      !% and  <tt>OCTStartIterCurrTg</tt>  <  <tt>TDMaximumIter</tt>. 
-      !% Tip: If you would like to specify a real time for switching
-      !% the functional on rather than the number of steps, just use something
-      !% like:
-      !% <tt>OCTStartIterCurrTg</tt> = 100.0 / <tt>TDTimeStep</tt>
-      !%End
- 
-      !%Variable OCTSpatialCurrWeight
-      !%Type block
-      !%Section Calculation Modes::Optimal Control
-      !%Description
-      !% Can be seen as a position dependent <tt>OCTCurrentWeight</tt>. Consequently, it
-      !% weights contribution of current j to its functional J1_c[j] according to the position in space. 
-      !% For example, <tt>oct_curr_square</tt> thus becomes 
-      !% J1_c[j] = <tt>OCTCurrentWeight</tt> \int |j(r)|^2 <tt>OCTSpatialCurrWeight</tt>(r) dr.
-      !%
-      !% It is defined <tt>OCTSpatialCurrWeight</tt>(r) = g(x)*g(y)*g(z), where   
-      !% g(x) = \sum_{i} 1/(1+exp( -fact*(x-startpoint_i) )) - 1/(1+exp( -fact*(x-endpoint_i) )).
-      !% If not specified, g(x) = 1. 
-      !% 
-      !% Each g(x) is represented by one line of the block that has the following form
-      !%
-      !% <tt>%OCTSpatialCurrWeight
-      !% <br>&nbsp;&nbsp;  dimension  |  fact |  startpoint_1  | endpoint_1  | startpoint_2 | endpoint_2 |...
-      !% <br>%</tt>
-      !%
-      !% There are no restrictions on the number of lines, nor on the number of pairs of start- and endpoints. 
-      !% Attention: <tt>startpoint</tt> and <tt>endpoint</tt> have to be supplied pairwise 
-      !% with <tt>startpoint  <  endpoint</tt>. <tt>dimension > 0</tt> is integer, <tt>fact</tt> is float.
-      !%End
-      
-      call parse_integer(datasets_check('OCTCurrentFunctional'), oct_no_curr, tg%curr_functional)
-      select case(tg%curr_functional)
-      case(oct_no_curr)
-      case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
-        SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:stin%d%nspin ) )
-        stin%current= M_ZERO
-        if(tg%type  ==  oct_tg_density) then
-          message(1) =  'Info: Target is also a current.'
-          call messages_info(1)
-        end if
-      end select
- 
-
-      call parse_float(datasets_check('OCTCurrentWeight'), M_ZERO, tg%curr_weight)
-      write(message(1), '(a,i3)')   'Info: OCTCurrentFunctional = ', tg%curr_functional
-      write(message(2), '(a,f8.3)') 'Info: OCTCurrentWeight = ',  tg%curr_weight
-      call messages_info(2)
-
-      if (target_mode(tg)  ==  oct_targetmode_td) then
-        call parse_integer(datasets_check('OCTStartIterCurrTg'), 0, tg%strt_iter_curr_tg)
-        if (tg%strt_iter_curr_tg  <  0) then
-          message(1) = 'OCTStartIterCurrTg must be positive.'
-          call messages_fatal(1)
-        elseif (tg%strt_iter_curr_tg >= td%max_iter) then
-          message(1) = 'OCTStartIterCurrTg has to be  <  TDMaximumIter.'
-          call messages_fatal(1)
-        end if
-        write(message(1), '(a,i3)')   'Info: TargetMode = ', target_mode(tg)
-        write(message(2), '(a,i8)') 'Info: OCTStartIterCurrTg = ',  tg%strt_iter_curr_tg
-        call messages_info(2)
-        tg%dt = td%dt
-        SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
-        tg%td_fitness = M_ZERO
-      else
-        tg%strt_iter_curr_tg = 0
-      end if
-
-
-      if(parse_isdef(datasets_check('OCTSpatialCurrWeight')) /= 0) then
-        if(parse_block(datasets_check('OCTSpatialCurrWeight'), blk) == 0) then
-          SAFE_ALLOCATE(tg%spatial_curr_wgt(1:gr%mesh%np_part))
-          SAFE_ALLOCATE(xp(1:gr%mesh%np_part))
-          SAFE_ALLOCATE(tmp_box(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
-          
-          no_constraint = parse_block_n(blk)
-          tmp_box = M_ZERO
-          cstr_dim = 0
-          do ib = 1, no_constraint
-            call parse_block_integer(blk, ib - 1, 0, idim)
-            if( idim  <=  0 .or. idim > gr%mesh%sb%dim) then
-              write(message(1), '(a,i3)') 'Error in "OCTSpatialCurrWeight" block, line:', ib
-              write(message(2), '(a)'   ) '"dimension" has to be positive'
-              write(message(3), '(a)'   ) 'and must not exceed dimensions of the system.'
-              call messages_fatal(3)
-            end if
-            cstr_dim(idim) = 1
-            xp(1:gr%mesh%np_part) = gr%mesh%x(1:gr%mesh%np_part, idim)
-
-            call parse_block_float(blk, ib - 1, 1, fact)
-
-            no_ptpair = parse_block_cols(blk, ib-1) - 2
-            if (mod(no_ptpair,2) /= 0) then
-              write(message(1), '(a,i3)') 'Error in "OCTSpatialCurrWeight" block, line:', ib
-              write(message(2), '(a)'   ) 'Each interval needs start and end point!'
-              call messages_fatal(2)
-            end if
-              
-            do jj= 2, no_ptpair, 2
-              call parse_block_float(blk, ib - 1, jj, xstart)
-              call parse_block_float(blk, ib - 1, jj+1, xend)
-                           
-              if (xstart >= xend) then
-                write(message(1), '(a,i3)') 'Error in "OCTSpatialCurrWeight" block, line:', ib
-                write(message(2), '(a)'   ) 'Set "startpoint"  <  "endpoint" ' 
-                call messages_fatal(2)
-              end if
-
-              do ip = 1, gr%mesh%np_part
-                tmp_box(ip,idim) = tmp_box(ip,idim) + M_ONE/(M_ONE+exp(-fact*(xp(ip)-xstart) )) -  &
-                                                      M_ONE/(M_ONE+exp(-fact*(xp(ip)-xend) ))
-              end do
-            end do
-            
-          end do
-          
-          do idim = 1, gr%mesh%sb%dim
-            if(cstr_dim(idim) == 0) tmp_box(:,idim) = M_ONE
-          end do
-          tg%spatial_curr_wgt(1:gr%mesh%np_part) = product(tmp_box(1:gr%mesh%np_part, 1:gr%mesh%sb%dim),2) 
-          SAFE_DEALLOCATE_A(xp)
-          SAFE_DEALLOCATE_A(tmp_box)
-                             
-          call parse_block_end(blk)     
-        else
-          message(1) = '"OCTSpatialCurrWeight" has to be specified as a block.'
-          call messages_info(1)
-          call input_error('OCTEvalBoxCurrTg')
-        end if
-      end if
-    
-    case default
-
-      tg%curr_functional = oct_no_curr
-      tg%curr_weight = M_ZERO
-      tg%strt_iter_curr_tg = 0
     end select
 
     POP_SUB(target_init)
@@ -1024,7 +748,7 @@ contains
 
     call states_end(tg%st)
     if(tg%type  ==  oct_tg_local .or. &
-       tg%type  ==  oct_tg_density .or. &
+       tg%type  ==  oct_tg_jdensity .or. &
        tg%type  ==  oct_tg_td_local) then
       SAFE_DEALLOCATE_P(tg%rho)
     end if
@@ -1054,8 +778,7 @@ contains
           call fft_end(tg%fft_handler)
        end if
     end if
-    if(tg%type  ==  oct_tg_current .or. &
-       tg%type  ==  oct_tg_density) then
+    if(tg%type  ==  oct_tg_jdensity) then
       SAFE_DEALLOCATE_P(tg%spatial_curr_wgt)
     end if
     POP_SUB(target_end)
@@ -1088,10 +811,12 @@ contains
         call dio_function_output(outp%how, trim(dir), 'td_local_target', gr%mesh, &
           tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
       end if
-    case(oct_tg_density)
+    case(oct_tg_jdensity)
       if(outp%how /= 0) then
-        call dio_function_output(outp%how, trim(dir), 'density_target', gr%mesh, &
-          tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+        if(tg%density_weight > M_ZERO) then
+          call dio_function_output(outp%how, trim(dir), 'density_target', gr%mesh, &
+            tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+        end if
       end if
     case(oct_tg_excited)
       call output_states(tg%est%st, gr, geo, trim(dir)//'/st', outp)
@@ -1238,8 +963,7 @@ contains
      call td_calc_tacc(gr, geo, psi, hm, acc, time*tg%dt)
      tg%td_fitness(time) = acc(1)
 
-    ! case oct_tg_density only active if combined with td current functional
-    case(oct_tg_current, oct_tg_density)
+    case(oct_tg_jdensity)
 
       if (time >= tg%strt_iter_curr_tg) then
         tg%td_fitness(time) = jcurr_functional(tg, gr, psi)
@@ -1291,7 +1015,7 @@ contains
          inh%zpsi(ip, idim, ist, ik) = - psi%occ(ist, ik) * tg%rho(ip) * psi%zpsi(ip, idim, ist, ik)
       end forall
    
-    case(oct_tg_current, oct_tg_density)
+    case(oct_tg_jdensity)
       if (abs(nint(time/tg%dt)) >= tg%strt_iter_curr_tg) then
         inh%zpsi =  -chi_current(tg, gr, psi)
       else
@@ -1353,14 +1077,8 @@ contains
 
     j1 = M_ZERO
     select case(tg%type)
-    case(oct_tg_density)
-
-      SAFE_ALLOCATE(local_function(1:gr%mesh%np))
-      do ip = 1, gr%mesh%np
-        local_function(ip) = - ( sqrt(psi%rho(ip, 1)) - sqrt(tg%rho(ip)) )**2
-      end do
-      j1 = dmf_integrate(gr%mesh, local_function)
-      SAFE_DEALLOCATE_A(local_function)
+    case(oct_tg_jdensity)
+      j1 = target_j1_density(gr, tg, psi)
 
     case(oct_tg_local)
       j1 = M_ZERO
@@ -1423,11 +1141,6 @@ contains
       call parse_expression(f_re, dummy(1), 1, dummy(1:3), dummy(1), dummy(1), inp_string)
       j1 = f_re
 
-    case(oct_tg_current)
-      ! calculate functional out of this select case(tg%type) block,
-      ! so it can be combined with other tg%type.
-      j1 = M_ZERO
-
     case default
       do ik = 1, psi%d%nik
         do ist = psi%st_start, psi%st_end
@@ -1436,30 +1149,7 @@ contains
                 tg%st%zpsi(:, :, ist, ik)))**2
         end do
       end do
-
-
     end select
-
-    ! current functionals are conveniently combined with others
-    if (tg%type  ==  oct_tg_current .or. &
-        tg%curr_functional /= oct_no_curr) then
-      select case(target_mode(tg))
-      case(oct_targetmode_static)
-        currfunc_tmp = jcurr_functional(tg, gr, psi )
-      case(oct_targetmode_td)
-        maxiter = size(tg%td_fitness) - 1
-        currfunc_tmp = M_HALF * tg%dt * tg%td_fitness(tg%strt_iter_curr_tg) + & 
-                       M_HALF * tg%dt * tg%td_fitness(maxiter) + & 
-                       tg%dt * sum(tg%td_fitness(tg%strt_iter_curr_tg+1:maxiter-1))  
-      end select
-      if(conf%devel_version) then
-        write(message(1), '(6x,a,f12.5)')    " => Other functional   = ", j1
-        write(message(2), '(6x,a,f12.5)')    " => Current functional = ", currfunc_tmp
-        call messages_info(2)
-      end if
-      ! accumulating functional values
-      j1 = j1 + currfunc_tmp
-    end if 
 
     POP_SUB(target_j1)
   end function target_j1
@@ -1488,39 +1178,8 @@ contains
 
     select case(tg%type)
 
-    case(oct_tg_density)
-
-      select case(psi_in%d%ispin)
-      case(UNPOLARIZED)
-
-        ASSERT(psi_in%d%nik  ==  1)
-
-        if(no_electrons  ==  1) then
-          do ip = 1, gr%mesh%np
-            chi_out%zpsi(ip, 1, 1, 1) = sqrt(tg%rho(ip)) * &
-              exp(M_zI * atan2(aimag(psi_in%zpsi(ip, 1, 1, 1)), &
-                                real(psi_in%zpsi(ip, 1, 1, 1) )) )
-          end do
-        else
-          do ist = psi_in%st_start, psi_in%st_end
-            do ip = 1, gr%mesh%np
-              if(psi_in%rho(ip, 1) > CNST(1.0e-8)) then
-                chi_out%zpsi(ip, 1, ist, 1) = psi_in%occ(ist, 1) * sqrt(tg%rho(ip) / psi_in%rho(ip, 1)) * &
-                  psi_in%zpsi(ip, 1, ist, 1)
-              else
-                chi_out%zpsi(ip, 1, ist, 1) = M_ZERO !sqrt(tg%rho(ip))
-              end if
-            end do
-          end do
-        end if
-
-      case(SPIN_POLARIZED)
-         message(1) = 'Error in target.target_chi: spin_polarized.'
-         call messages_fatal(1)
-      case(SPINORS)
-         message(1) = 'Error in target.target_chi: spinors.'
-         call messages_fatal(1)
-      end select
+    case(oct_tg_jdensity)
+      call target_chi_density(tg, gr, psi_in, chi_out)
 
     case(oct_tg_local)
       do ik = 1, psi_in%d%nik
@@ -1669,11 +1328,6 @@ contains
          end do
       end do
     
-    case(oct_tg_current)
-      ! the chi_out%zpsi is calculated outside this select block by
-      ! an accumulating sum in order to combine it with other targets.
-      chi_out%zpsi = M_ZERO
-  
     case default
 
       !olap = zstates_mpdotp(gr%mesh, tg%st, psi_in)
@@ -1685,17 +1339,6 @@ contains
       end do
 
     end select
-    
-
-    ! boundary conditions of static current functionals are combined with others.
-    ! chi_out%zpsi is accumulated.
-    if(tg%type  ==  oct_tg_current .or. &
-      tg%curr_functional /= oct_no_curr) then
-      if (target_mode(tg)  ==  oct_targetmode_static ) then
-        chi_out%zpsi = chi_out%zpsi + chi_current(tg, gr, psi_in)
-      end if
-    end if 
-
 
     POP_SUB(target_chi)
   end subroutine target_chi
@@ -1802,164 +1445,7 @@ contains
   ! ----------------------------------------------------------------------
 
 
-  ! ----------------------------------------------------------------------
-  !> Calculates a current functional that may be combined with
-  !! other functionals found in function target_j1.
-  FLOAT function jcurr_functional(tg, gr, psi) result(jcurr)
-    type(target_t), intent(in)    :: tg
-    type(grid_t),   intent(in)    :: gr
-    type(states_t), intent(inout) :: psi
-
-    integer :: ip
-    FLOAT, allocatable :: semilocal_function(:)
- 
-    PUSH_SUB(jcurr_functional)
-    
-    jcurr = M_ZERO    
-    ASSERT(psi%d%nik  ==  1)
-    SAFE_ALLOCATE(semilocal_function(1:gr%mesh%np))
-    semilocal_function = M_ZERO
-
-    select case(tg%curr_functional)
-    case(oct_no_curr)
-      semilocal_function = M_ZERO
-
-    case(oct_curr_square,oct_curr_square_td)
-      call states_calc_quantities(gr%der, psi, paramagnetic_current=psi%current) 
-      do ip = 1, gr%mesh%np
-        semilocal_function(ip) =  sum(psi%current(ip, 1:gr%sb%dim, 1)**2)  
-      end do
-      
-    case(oct_max_curr_ring)
-      call states_calc_quantities(gr%der, psi, paramagnetic_current=psi%current) 
-
-      if(gr%sb%dim /= M_TWO) then
-        call messages_not_implemented('Target for dimension != 2')
-      end if
-
-      do ip = 1, gr%mesh%np
-        ! func = j_y * x - j_x * y 
-        semilocal_function (ip) = psi%current(ip, 2, 1) *  gr%mesh%x(ip,1) -  &
-                                    psi%current(ip, 1, 1) * gr%mesh%x(ip,2)
-      end do
-    case default
-      message(1) = 'Error in target.jcurr_functional: chosen target does not exist'
-      call messages_fatal(1)
-    end select
-
- 
-    if( is_spatial_curr_wgt(tg) ) then
-      do ip = 1, gr%mesh%np
-        semilocal_function(ip) = semilocal_function(ip) * tg%spatial_curr_wgt(ip) 
-      end do
-    end if
-
-    jcurr = tg%curr_weight * dmf_integrate(gr%mesh, semilocal_function)
-        
-    SAFE_DEALLOCATE_A(semilocal_function)
-
-    POP_SUB(jcurr_functional)
-  end function jcurr_functional
-  !-----------------------------------------------------------------------
-
-  ! ----------------------------------------------------------------------
-  ! Calculates current-specific boundary condition
-  !-----------------------------------------------------------------------
-  function chi_current(tg, gr, psi_in) result(chi)
-    type(target_t),    intent(in)    :: tg
-    type(grid_t),      intent(in)    :: gr
-    type(states_t),    intent(inout) :: psi_in
-    CMPLX                            :: chi( size(psi_in%zpsi,1), 1, size(psi_in%zpsi,3), 1)
-        
-    CMPLX, allocatable :: grad_psi_in(:,:,:)
-    FLOAT, allocatable :: div_curr_psi_in(:,:)   
-    integer :: ip, ist, idim
-
-    PUSH_SUB(chi_current)
-
-    chi = M_ZERO    
-
-    SAFE_ALLOCATE(grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim, 1))
-
-    if(target_mode(tg)  ==  oct_targetmode_td ) then 
-      call states_calc_quantities(gr%der, psi_in, paramagnetic_current=psi_in%current) 
-    end if
-
-
-
-    select case(tg%curr_functional)
-    case(oct_no_curr)
-      chi(ip, 1, ist, 1) = M_ZERO
-
-    case(oct_curr_square,oct_curr_square_td)
-       ! components current weighted by its position in the mesh, np_part included,
-       ! since needed for the divergence of current.
-       if( is_spatial_curr_wgt(tg) ) then
-        do idim = 1, gr%sb%dim
-          do ip = 1, gr%mesh%np_part 
-            psi_in%current(ip, idim, 1) = psi_in%current(ip, idim, 1) * tg%spatial_curr_wgt(ip) 
-          end do
-        end do
-      end if
-      
-      SAFE_ALLOCATE(div_curr_psi_in(1:gr%der%mesh%np_part,1))
-      call dderivatives_div(gr%der, psi_in%current(1:gr%der%mesh%np_part, 1:gr%mesh%sb%dim, 1), &
-                                    div_curr_psi_in(1:gr%der%mesh%np_part,1)) 
-      
-      ! the boundary condition  
-      do ist = psi_in%st_start, psi_in%st_end
-        call zderivatives_grad(gr%der, psi_in%zpsi(1:gr%der%mesh%np_part,1, ist, 1), & 
-                               grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim,1))
-            
-        do ip = 1, gr%mesh%np 
-          chi(ip, 1, ist, 1) =  -M_zI * tg%curr_weight  * &
-               ( M_TWO * sum(psi_in%current(ip, 1:gr%sb%dim, 1) * grad_psi_in(ip, 1:gr%sb%dim, 1))+ &
-               div_curr_psi_in(ip,1) * psi_in%zpsi(ip, 1, ist, 1) )
-        end do
-      end do
-      SAFE_DEALLOCATE_A(div_curr_psi_in)
-
-    case(oct_max_curr_ring)
-
-      if( is_spatial_curr_wgt(tg) ) then
-
-        do ist = psi_in%st_start, psi_in%st_end
-          call zderivatives_grad(gr%der, psi_in%zpsi(:,1, ist, 1), grad_psi_in(:,:,1))
-          do ip = 1, gr%mesh%np 
-            chi(ip, 1, ist, 1) =  M_zI * tg%curr_weight * tg%spatial_curr_wgt(ip) * &
-                 ( grad_psi_in(ip, 1, 1)  * gr%mesh%x(ip,2) - &
-                 grad_psi_in(ip, 2, 1)  * gr%mesh%x(ip,1)   ) 
-          end do
-        end do
-
-      else
-
-        do ist = psi_in%st_start, psi_in%st_end
-          call zderivatives_grad(gr%der, psi_in%zpsi(:,1, ist, 1), grad_psi_in(:,:,1))
-          do ip = 1, gr%mesh%np 
-            chi(ip, 1, ist, 1) =  M_zI * tg%curr_weight * &
-                 ( grad_psi_in(ip, 1, 1)  * gr%mesh%x(ip,2) - &
-                 grad_psi_in(ip, 2, 1)  * gr%mesh%x(ip,1)   ) 
-          end do
-        end do
-      end if
-
-    case default
-      message(1) = 'Error in target.chi_current: chosen target does not exist'
-      call messages_fatal(1)
-    end select  
-
-    
-
-
-    SAFE_DEALLOCATE_A(grad_psi_in)       
-
-    POP_SUB(chi_current)
-  end function chi_current
-  ! ----------------------------------------------------------------------
-
-
-
+#include "target_density_inc.F90"
 
 end module opt_control_target_m
 
