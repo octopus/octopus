@@ -30,28 +30,20 @@
 
 */
 
-void InttoTranspose(const long long int h, int * x){
+void InttoTranspose(const int dim, const long long int h, int * x){
   /* the code uses some funny way of storing the bits */
-
-  x[2] =  (((h>>0)&1)<<0)   + (((h>>3)&1)<<1)   + (((h>>6)&1)<<2)   + (((h>>9 )&1)<<3)  + (((h>>12)&1)<<4);
-  x[1] =  (((h>>1)&1)<<0)   + (((h>>4)&1)<<1)   + (((h>>7)&1)<<2)   + (((h>>10)&1)<<3)  + (((h>>13)&1)<<4);
-  x[0] =  (((h>>2)&1)<<0)   + (((h>>5)&1)<<1)   + (((h>>8)&1)<<2)   + (((h>>11)&1)<<3)  + (((h>>14)&1)<<4);
-
-  x[2] += (((h>>15)&1)<<5)  + (((h>>18)&1)<<6)  + (((h>>21)&1)<<7)  + (((h>>24)&1)<<8)  + (((h>>27)&1)<<9);
-  x[1] += (((h>>16)&1)<<5)  + (((h>>19)&1)<<6)  + (((h>>22)&1)<<7)  + (((h>>25)&1)<<8)  + (((h>>28)&1)<<9);
-  x[0] += (((h>>17)&1)<<5)  + (((h>>20)&1)<<6)  + (((h>>23)&1)<<7)  + (((h>>26)&1)<<8)  + (((h>>29)&1)<<9);
-
-  x[2] += (((h>>30)&1)<<10) + (((h>>33)&1)<<11) + (((h>>36)&1)<<12) + (((h>>39)&1)<<13) + (((h>>42)&1)<<14);
-  x[1] += (((h>>31)&1)<<10) + (((h>>34)&1)<<11) + (((h>>37)&1)<<12) + (((h>>40)&1)<<13) + (((h>>43)&1)<<14);
-  x[0] += (((h>>32)&1)<<10) + (((h>>35)&1)<<11) + (((h>>38)&1)<<12) + (((h>>41)&1)<<13) + (((h>>44)&1)<<14);
   
-  x[2] += (((h>>45)&1)<<15) + (((h>>48)&1)<<16) + (((h>>51)&1)<<17) + (((h>>54)&1)<<18) + (((h>>57)&1)<<19);
-  x[1] += (((h>>46)&1)<<15) + (((h>>49)&1)<<16) + (((h>>52)&1)<<17) + (((h>>55)&1)<<18) + (((h>>58)&1)<<19);
-  x[0] += (((h>>47)&1)<<15) + (((h>>50)&1)<<16) + (((h>>53)&1)<<17) + (((h>>56)&1)<<18) + (((h>>59)&1)<<19);
+  int idir, ibit, ifbit;
+
+  for(idir = 0; idir < dim; idir++) x[idir] = 0;
   
-  x[2] += (((h>>60)&1)<<20);
-  x[1] += (((h>>61)&1)<<20);
-  x[0] += (((h>>62)&1)<<20);
+  ifbit = 0;
+  for(ibit = 0; ibit < 21; ibit++){
+    for(idir = dim - 1; idir >= 0; idir--){
+      x[idir] += (((h>>ifbit)&1)<<ibit);
+      ifbit++;
+    }
+  }
   
 }
 
@@ -80,10 +72,10 @@ void TransposetoAxes(int* X, int b, int n ){ /* position, #bits, dimension */
 
 }
 
-void FC_FUNC_(hilbert_index_to_point, HILBERT_INDEX_TO_POINT)(const int * nbits, const long long int * index, int * point){
+void FC_FUNC_(hilbert_index_to_point, HILBERT_INDEX_TO_POINT)(const int * dim, const int * nbits, const long long int * index, int * point){
   
-  InttoTranspose(*index, point);
-  TransposetoAxes(point, *nbits, 3);
-  
+  InttoTranspose(*dim, *index, point);
+  TransposetoAxes(point, *nbits, *dim);
+
 }
 

@@ -507,10 +507,12 @@ contains
     type(block_t) :: blk
     integer :: idir, nn, order, size, bits
     FLOAT :: chi(1:MAX_DIM), xx(1:MAX_DIM)
-    
+
     integer, parameter :: &
-      ORDER_BLOCKS  =  1, &
-      ORDER_HILBERT =  2
+      ORDER_BLOCKS     =  1, &
+      ORDER_HILBERT    =  2, &
+      ORDER_HILBERT_2D =  3
+
 
     PUSH_SUB(mesh_init_stage_3.create_x_lxyz)
 
@@ -529,6 +531,9 @@ contains
     !%Option hilbert 2
     !% (experimental) A Hilbert space filling curve is used to map the
     !% grid.
+    !%Option hilbert_2d 3
+    !% (experimental) A Hilbert space filling curve is used to map the
+    !% grid in two of the dimensions.
     !%End
 
     call parse_integer(datasets_check('MeshOrder'), ORDER_BLOCKS, order)
@@ -639,7 +644,7 @@ contains
       end do
 
     case(ORDER_HILBERT)
-      
+
       call messages_experimental('Hilbert grid ordering')
 
       size = maxval(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + 1)
@@ -654,7 +659,7 @@ contains
       ien = mesh%np_global
       do ihilbert = 0, 2**(bits*3) - 1
 
-        call hilbert_index_to_point(bits, ihilbert, point)
+        call hilbert_index_to_point(3, bits, ihilbert, point)
 
         ix = point(1) + mesh%idx%nr(1, 1)
         iy = point(2) + mesh%idx%nr(1, 2)
@@ -675,13 +680,13 @@ contains
         else
           cycle
         end if
-      
+
         mesh%idx%lxyz(il, 1) = ix
         mesh%idx%lxyz(il, 2) = iy
         mesh%idx%lxyz(il, 3) = iz
-        
+
         mesh%idx%lxyz_inv(ix, iy, iz) = il
-        
+
 #ifdef HAVE_MPI
         if(.not. mesh%parallel_in_domains) then
 #endif
@@ -696,18 +701,85 @@ contains
 #endif                 
       end do
 
-    end select
+    case(ORDER_HILBERT_2D)
 
-    ! set the rest to zero
-    mesh%idx%lxyz(1:mesh%np_part_global, 4:MAX_DIM) = 0
+      call messages_experimental('Hilbert 2D grid ordering')
 
-    call checksum_calculate(1, mesh%np_part_global*mesh%sb%dim, mesh%idx%lxyz(1, 1), mesh%idx%checksum)
+      size = maxval(mesh%idx%nr(2, 1:2) - mesh%idx%nr(1, 1:2) + 1)
 
-    ASSERT(iin == mesh%np_global)
-    ASSERT(ien == mesh%np_part_global)
+      bits = log2(pad_pow2(size))
 
-    POP_SUB(mesh_init_stage_3.create_x_lxyz)
-  end subroutine create_x_lxyz
+      bsize = 10
+      if(parse_block('MeshBlockSize', blk) == 0) then
+        nn = parse_block_cols(blk, 0)
+        do idir = 1, nn
+          call parse_block_integer(blk, 0, idir - 1, bsize(idir))
+        end do
+      end if
+
+      ASSERT(bsize(3) > 0)
+
+      iin = 0
+      ien = mesh%np_global
+      do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
+        do ihilbert = 0, 2**(bits*2) - 1
+
+          call hilbert_index_to_point(2, bits, ihilbert, point)
+
+          ix = point(1) + mesh%idx%nr(1, 1)
+          iy = point(2) + mesh%idx%nr(1, 2)
+
+          if(ix > mesh%idx%nr(2, 1)) cycle
+          if(iy > mesh%idx%nr(2, 2)) cycle
+
+          do iz = izb, min(izb + bsize(3) - 1, mesh%idx%nr(2,3))
+
+            if(btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
+              iin = iin + 1
+              il = iin
+              !debug output
+              !write(12, *) ix, iy, iz, '# ', ihilbert 
+            else if (btest(mesh%idx%lxyz_inv(ix, iy, iz), ENLARGEMENT_POINT)) then
+              ien = ien + 1
+              il = ien
+            else
+              cycle
+            end if
+
+            mesh%idx%lxyz(il, 1) = ix
+            mesh%idx%lxyz(il, 2) = iy
+            mesh%idx%lxyz(il, 3) = iz
+
+            mesh%idx%lxyz_inv(ix, iy, iz) = il
+
+#ifdef HAVE_MPI
+            if(.not. mesh%parallel_in_domains) then
+#endif
+              chi(1) = real(ix, REAL_PRECISION)*mesh%spacing(1) + mesh%sb%box_offset(1)
+              chi(2) = real(iy, REAL_PRECISION)*mesh%spacing(2) + mesh%sb%box_offset(2)
+              chi(3) = real(iz, REAL_PRECISION)*mesh%spacing(3) + mesh%sb%box_offset(3)
+
+              call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+              mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
+#ifdef HAVE_MPI
+            end if
+#endif          
+          end do
+        end do
+      end do
+
+      end select
+
+      ! set the rest to zero
+      mesh%idx%lxyz(1:mesh%np_part_global, 4:MAX_DIM) = 0
+
+      call checksum_calculate(1, mesh%np_part_global*mesh%sb%dim, mesh%idx%lxyz(1, 1), mesh%idx%checksum)
+
+      ASSERT(iin == mesh%np_global)
+      ASSERT(ien == mesh%np_part_global)
+
+      POP_SUB(mesh_init_stage_3.create_x_lxyz)
+    end subroutine create_x_lxyz
 
 
   ! ---------------------------------------------------------
