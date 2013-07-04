@@ -49,6 +49,33 @@
 
   ! ----------------------------------------------------------------------
   !> 
+  subroutine target_end_exclude()
+    PUSH_SUB(target_end_exclude)
+
+    POP_SUB(target_end_exclude)
+  end subroutine target_end_exclude
+
+
+  ! ----------------------------------------------------------------------
+  subroutine target_output_exclude(tg, gr, dir, geo, outp)
+    type(target_t), intent(inout) :: tg
+    type(grid_t), intent(inout)   :: gr
+    character(len=*), intent(in)  :: dir
+    type(geometry_t),       intent(in)  :: geo
+    type(output_t),         intent(in)  :: outp
+
+    PUSH_SUB(target_output_exclude)
+    
+    call loct_mkdir(trim(dir))
+    call output_states(tg%st, gr, geo, trim(dir), outp)
+
+    POP_SUB(target_output_exclude)
+  end subroutine target_output_exclude
+  ! ----------------------------------------------------------------------
+
+
+  ! ----------------------------------------------------------------------
+  !> 
   FLOAT function target_j1_exclude(gr, tg, psi) result(j1)
     type(grid_t),     intent(inout) :: gr
     type(target_t),   intent(inout) :: tg
@@ -67,6 +94,30 @@
 
     POP_SUB(target_j1_exclude)
   end function target_j1_exclude
+
+
+  ! ----------------------------------------------------------------------
+  !> 
+  subroutine target_chi_exclude(tg, gr, psi_in, chi_out)
+    type(target_t),    intent(inout) :: tg
+    type(grid_t),      intent(inout) :: gr
+    type(states_t),    intent(inout) :: psi_in
+    type(states_t),    intent(inout) :: chi_out
+
+    integer :: ist
+    CMPLX :: olap
+    PUSH_SUB(target_chi_exclude)
+
+    chi_out%zpsi(:, :, 1, 1) = psi_in%zpsi(:, :, 1, 1)
+    do ist = 1, tg%st%nst
+      if(loct_isinstringlist(ist, tg%excluded_states_list)) then
+        olap = zmf_dotp(gr%mesh, psi_in%d%dim, tg%st%zpsi(:, :, ist, 1), psi_in%zpsi(:, :, 1, 1))
+        chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap * tg%st%zpsi(:, :, ist, 1)
+      end if
+    end do
+
+    POP_SUB(target_chi_exclude)
+  end subroutine target_chi_exclude
 
 !! Local Variables:
 !! mode: f90

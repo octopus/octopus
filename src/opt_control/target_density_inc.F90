@@ -293,6 +293,45 @@
 
   ! ----------------------------------------------------------------------
   !> 
+  subroutine target_end_density(tg)
+    type(target_t),   intent(inout) :: tg
+    PUSH_SUB(target_end_density)
+    SAFE_DEALLOCATE_P(tg%rho)
+    SAFE_DEALLOCATE_P(tg%spatial_curr_wgt)
+    select case(tg%curr_functional)
+    case(oct_curr_square_td) 
+      SAFE_DEALLOCATE_P(tg%td_fitness)
+    end select
+    POP_SUB(target_end_density)
+  end subroutine target_end_density
+
+
+  ! ----------------------------------------------------------------------
+  subroutine target_output_density(tg, gr, dir, geo, outp)
+    type(target_t), intent(inout) :: tg
+    type(grid_t), intent(inout)   :: gr
+    character(len=*), intent(in)  :: dir
+    type(geometry_t),       intent(in)  :: geo
+    type(output_t),         intent(in)  :: outp
+
+    integer :: ierr
+    PUSH_SUB(target_output_density)
+    
+    call loct_mkdir(trim(dir))
+    if(outp%how /= 0) then
+      if(tg%density_weight > M_ZERO) then
+        call dio_function_output(outp%how, trim(dir), 'density_target', gr%mesh, &
+          tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+      end if
+    end if
+
+    POP_SUB(target_output_density)
+  end subroutine target_output_density
+  ! ----------------------------------------------------------------------
+
+
+  ! ----------------------------------------------------------------------
+  !> 
   FLOAT function target_j1_density(gr, tg, psi) result(j1)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
@@ -396,6 +435,28 @@
 
     POP_SUB(target_chi_density)
   end subroutine target_chi_density
+
+
+  ! ---------------------------------------------------------
+  !> 
+  !!
+  subroutine target_tdcalc_density(tg, gr, psi, time)
+    type(target_t),      intent(inout) :: tg
+    type(grid_t),        intent(inout) :: gr
+    type(states_t),      intent(inout) :: psi
+    integer,             intent(in)    :: time
+
+    PUSH_SUB(target_tdcalc_density)
+
+    if (time >= tg%strt_iter_curr_tg) then
+      tg%td_fitness(time) = jcurr_functional(tg, gr, psi)
+    end if 
+
+
+    POP_SUB(target_tdcalc_density)
+  end subroutine target_tdcalc_density
+  ! ----------------------------------------------------------------------
+
 
   ! ----------------------------------------------------------------------
   !> Calculates a current functional that may be combined with

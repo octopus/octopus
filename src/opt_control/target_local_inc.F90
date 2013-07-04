@@ -60,6 +60,38 @@
 
   ! ----------------------------------------------------------------------
   !> 
+  subroutine target_end_local(tg)
+    type(target_t),   intent(inout) :: tg
+    PUSH_SUB(target_end_local)
+    SAFE_DEALLOCATE_P(tg%rho)
+    POP_SUB(target_end_local)
+  end subroutine target_end_local
+
+
+  ! ----------------------------------------------------------------------
+  subroutine target_output_local(tg, gr, dir, geo, outp)
+    type(target_t), intent(inout) :: tg
+    type(grid_t), intent(inout)   :: gr
+    character(len=*), intent(in)  :: dir
+    type(geometry_t),       intent(in)  :: geo
+    type(output_t),         intent(in)  :: outp
+
+    integer :: ierr
+    PUSH_SUB(target_output_local)
+    
+    call loct_mkdir(trim(dir))
+    if(outp%how /= 0) then
+      call dio_function_output(outp%how, trim(dir), 'local_target', gr%mesh, &
+        tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
+    end if
+
+    POP_SUB(target_output_local)
+  end subroutine target_output_local
+  ! ----------------------------------------------------------------------
+
+
+  ! ----------------------------------------------------------------------
+  !> 
   FLOAT function target_j1_local(gr, tg, psi) result(j1)
     type(grid_t),     intent(inout) :: gr
     type(target_t),   intent(inout) :: tg
@@ -75,6 +107,33 @@
 
     POP_SUB(target_j1_local)
   end function target_j1_local
+
+
+  ! ----------------------------------------------------------------------
+  !> 
+  subroutine target_chi_local(tg, gr, psi_in, chi_out)
+    type(target_t),    intent(inout) :: tg
+    type(grid_t),      intent(inout) :: gr
+    type(states_t),    intent(inout) :: psi_in
+    type(states_t),    intent(inout) :: chi_out
+
+    integer :: ik, idim, ist, ip
+    PUSH_SUB(target_chi_local)
+
+    do ik = 1, psi_in%d%nik
+      do idim = 1, psi_in%d%dim
+        do ist = psi_in%st_start, psi_in%st_end
+          do ip = 1, gr%mesh%np
+            chi_out%zpsi(ip, idim, ist, ik) = psi_in%occ(ist, ik) * tg%rho(ip) * psi_in%zpsi(ip, idim, ist, ik)
+          end do
+        end do
+      end do
+    end do
+
+    POP_SUB(target_chi_local)
+  end subroutine target_chi_local
+
+
 
 !! Local Variables:
 !! mode: f90

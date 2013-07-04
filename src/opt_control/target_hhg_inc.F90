@@ -191,6 +191,57 @@
 
   ! ----------------------------------------------------------------------
   !> 
+  subroutine target_end_hhg(tg)
+    type(target_t),   intent(inout) :: tg
+    PUSH_SUB(target_end_hhg)
+    SAFE_DEALLOCATE_P(tg%hhg_k)
+    SAFE_DEALLOCATE_P(tg%hhg_alpha)
+    SAFE_DEALLOCATE_P(tg%hhg_a)
+    SAFE_DEALLOCATE_P(tg%td_fitness)
+    POP_SUB(target_end_hhg)
+  end subroutine target_end_hhg
+
+
+  ! ----------------------------------------------------------------------
+  subroutine target_output_hhg(tg, gr, dir, geo, outp)
+    type(target_t), intent(inout) :: tg
+    type(grid_t), intent(inout)   :: gr
+    character(len=*), intent(in)  :: dir
+    type(geometry_t),       intent(in)  :: geo
+    type(output_t),         intent(in)  :: outp
+
+    PUSH_SUB(target_output_hhg)
+    
+    call loct_mkdir(trim(dir))
+    call output_states(tg%st, gr, geo, trim(dir), outp)
+
+    POP_SUB(target_output_hhg)
+  end subroutine target_output_hhg
+  ! ----------------------------------------------------------------------
+
+
+  ! ----------------------------------------------------------------------
+  !> 
+  subroutine target_end_hhgnew(tg, oct)
+    type(target_t),   intent(inout) :: tg
+    type(oct_t), intent(in)       :: oct
+    PUSH_SUB(target_init_hhgnew)
+    if(oct%algorithm  ==  oct_algorithm_cg) then
+      SAFE_DEALLOCATE_P(tg%grad_local_pot)
+      SAFE_DEALLOCATE_P(tg%rho)
+      SAFE_DEALLOCATE_P(tg%vel)
+      SAFE_DEALLOCATE_P(tg%acc)
+      SAFE_DEALLOCATE_P(tg%gvec)
+      SAFE_DEALLOCATE_P(tg%alpha)
+      SAFE_DEALLOCATE_P(tg%td_fitness)
+      call fft_end(tg%fft_handler)
+    end if
+    POP_SUB(target_end_hhgnew)
+  end subroutine target_end_hhgnew
+
+
+  ! ----------------------------------------------------------------------
+  !> 
   FLOAT function target_j1_hhg(tg) result(j1)
     type(target_t),   intent(inout) :: tg
 
@@ -238,6 +289,113 @@
 
     POP_SUB(target_j1_hhgnew)
   end function target_j1_hhgnew
+
+
+  ! ----------------------------------------------------------------------
+  !> 
+  subroutine target_chi_hhg(gr, chi_out)
+    type(grid_t),      intent(inout) :: gr
+    type(states_t),    intent(inout) :: chi_out
+
+    integer :: ik, idim, ist, ip
+    PUSH_SUB(target_chi_hhg)
+
+    !we have a time-dependent target --> Chi(T)=0
+    forall(ip=1:gr%mesh%np, idim=1:chi_out%d%dim, ist=chi_out%st_start:chi_out%st_end, ik=1:chi_out%d%nik)
+      chi_out%zpsi(ip, idim, ist, ik) = M_z0
+    end forall
+
+    POP_SUB(target_chi_hhg)
+  end subroutine target_chi_hhg
+
+
+  ! ---------------------------------------------------------
+  !> 
+  !!
+  subroutine target_tdcalc_hhgnew(tg, gr, psi, time, max_time)
+    type(target_t),      intent(inout) :: tg
+    type(grid_t),        intent(inout) :: gr
+    type(states_t),      intent(inout) :: psi
+    integer,             intent(in)    :: time
+    integer,             intent(in)    :: max_time
+
+    CMPLX, allocatable :: opsi(:, :)
+    integer :: iw, ia, ist, idim, ik
+    FLOAT :: acc(MAX_DIM), dt, dw
+
+    PUSH_SUB(target_tdcalc_hhgnew)
+
+    tg%td_fitness(time) = M_ZERO
+
+    ! If the ions move, the tg is computed in the propagation routine.
+    if(.not.target_move_ions(tg)) then
+
+      SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
+
+      opsi = M_z0
+      ! WARNING This does not work for spinors.
+      ! The following is a temporary hack. It assumes only one atom at the origin.
+      acc = M_ZERO
+      do ik = 1, psi%d%nik
+        do ist = 1, psi%nst
+          do idim = 1, gr%sb%dim
+            opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(1, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
+            acc(idim) = acc(idim) + real( psi%occ(ist, ik) * &
+                zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik)), REAL_PRECISION )
+            tg%acc(time+1, idim) = tg%acc(time+1, idim) + psi%occ(ist, ik) * &
+                zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik))
+          end do
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(opsi)
+    end if
+
+    dt = tg%dt
+    dw = (M_TWO * M_PI/(max_time * tg%dt))
+    if(time  ==  max_time) then
+      tg%acc(1, 1:gr%sb%dim) = M_HALF * (tg%acc(1, 1:gr%sb%dim) + tg%acc(max_time+1, 1:gr%sb%dim))
+      do ia = 1, gr%sb%dim
+        call zfft_forward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%vel(1:max_time, ia))
+      end do
+      tg%vel = tg%vel * tg%dt
+      do iw = 1, max_time
+        ! We add the one-half dt term because when doing the propagation we want the value at interpolated times.
+
+        tg%acc(iw, 1:gr%sb%dim) = tg%vel(iw, 1:gr%sb%dim) * tg%alpha(iw) * exp(M_zI * (iw-1) * dw * M_HALF * dt)
+      end do
+      do ia = 1, gr%sb%dim
+        call zfft_backward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%gvec(1:max_time, ia))
+      end do
+      tg%gvec(max_time + 1, 1:gr%sb%dim) = tg%gvec(1, 1:gr%sb%dim)
+      tg%gvec = tg%gvec * (M_TWO * M_PI/ tg%dt)
+    end if
+
+    POP_SUB(target_tdcalc_hhgnew)
+  end subroutine target_tdcalc_hhgnew
+  ! ----------------------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  !> 
+  !!
+  subroutine target_tdcalc_hhg(tg, hm, gr, geo, psi, time)
+    type(target_t),      intent(inout) :: tg
+    type(hamiltonian_t), intent(inout) :: hm
+    type(grid_t),        intent(inout) :: gr
+    type(geometry_t),    intent(inout) :: geo
+    type(states_t),      intent(inout) :: psi
+    integer,             intent(in)    :: time
+
+    FLOAT :: acc(MAX_DIM)
+    PUSH_SUB(target_tdcalc_hhg)
+
+    call td_calc_tacc(gr, geo, psi, hm, acc, time*tg%dt)
+    tg%td_fitness(time) = acc(1)
+
+    POP_SUB(target_tdcalc_hhg)
+  end subroutine target_tdcalc_hhg
+  ! ----------------------------------------------------------------------
 
 
 

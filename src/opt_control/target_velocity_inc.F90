@@ -35,65 +35,56 @@
 
     PUSH_SUB(target_init_velocity)
 
-      !%Variable OCTVelocityTarget
-      !%Type block
-      !%Section Calculation Modes::Optimal Control
-      !%Description
-      !% If <tt>OCTTargetOperator = oct_tg_velocity</tt>, then one must supply the 
-      !% target to optimize in terms of the ionic velocities. This is done by 
-      !% supplying a string through the block <tt>OCTVelocityTarget</tt>.
-      !% Each velocity component is supplied by <tt>"v[n_atom,vec_comp]"</tt>,
-      !% while "n_atom" is the respective atom number, corresponding to the 
-      !% <tt>Coordinates</tt> block and "vec_comp" is the corresponding
-      !% vector component of the velocity. The target string can be
-      !% supplied by using several lines in the OCTTargetOperator block.
-      !% As an example, the following target can be used to maximize the
-      !% velocity difference between atom 1 and 2 (in a 3D system):
-      !%
-      !% <tt>%OCTVelocityTarget
-      !% <br> "(v[1,1]-v[2,1])^2 + (v[1,2]-v[2,2])^2 + "
-      !% <br> "(v[1,3]-v[2,3])^2"
-      !% <br>%</tt>
-      !%
-      !%End
+    !%Variable OCTVelocityTarget
+    !%Type block
+    !%Section Calculation Modes::Optimal Control
+    !%Description
+    !% If <tt>OCTTargetOperator = oct_tg_velocity</tt>, then one must supply the 
+    !% target to optimize in terms of the ionic velocities. This is done by 
+    !% supplying a string through the block <tt>OCTVelocityTarget</tt>.
+    !% Each velocity component is supplied by <tt>"v[n_atom,vec_comp]"</tt>,
+    !% while "n_atom" is the respective atom number, corresponding to the 
+    !% <tt>Coordinates</tt> block and "vec_comp" is the corresponding
+    !% vector component of the velocity. The target string can be
+    !% supplied by using several lines in the OCTTargetOperator block.
+    !% As an example, the following target can be used to maximize the
+    !% velocity difference between atom 1 and 2 (in a 3D system):
+    !%
+    !% <tt>%OCTVelocityTarget
+    !% <br> "(v[1,1]-v[2,1])^2 + (v[1,2]-v[2,2])^2 + "
+    !% <br> "(v[1,3]-v[2,3])^2"
+    !% <br>%</tt>
+    !%
+    !%End
 
-      !%Variable OCTVelocityDerivatives
-      !%Type block
-      !%Section Calculation Modes::Optimal Control
-      !%Description
-      !% If <tt>OCTTargetOperator = oct_tg_velocity</tt>, and
-      !% <tt>OCTScheme = oct_algorithm_cg</tt> then you must supply 
-      !% the target in terms of the ionic velocities AND the derivatives
-      !% of the target with respect to the ionic velocity components.
-      !% The derivatives are supplied via strings through the block
-      !% <tt>OCTVelocityDerivatives</tt>.
-      !% Each velocity component is supplied by <tt>"v[n_atom,vec_comp]"</tt>,
-      !% while "n_atom" is the atom number, corresponding to the 
-      !% <tt>Coordinates</tt> block and "vec_comp" is the corresponding
-      !% vector component of the velocity. The first line of the 
-      !% <tt>OCTVelocityDerivatives</tt> block contains the derivatives
-      !% with respect to "v[1,*]", the second with respect to "v[2,*]" and so
-      !% on. The first column contains all derivatives with respect "v[*,1]",
-      !% the second with respect to "v[*,2]" and the third w.r.t. "v[*,3]".
-      !% As an example, we show the <tt>OCTVelocityDerivatives</tt> block
-      !% corresponding to the target shown in the <tt>OCTVelocityTarget</tt> 
-      !% help section:
-      !%
-      !% <tt>%OCTVelocityDerivatives
-      !% <br> " 2*(v[1,1]-v[2,1])" | " 2*(v[1,2]-v[2,2])" | " 2*(v[1,3]-v[2,3])"
-      !% <br> "-2*(v[1,1]-v[2,1])" | "-2*(v[1,2]-v[2,2])" | "-2*(v[1,3]-v[2,3])"
-      !% <br>%</tt>
-      !%
-      !%End
-       
-      !%Variable OCTMoveIons
-      !%Type logical
-      !%Section Calculation Modes::Optimal Control
-      !%Description
-      !% If <tt>OCTTargetOperator = oct_tg_velocity</tt>, then one must specify
-      !% if the ions are assumed to be fixed or if they can move by setting
-      !% <tt>OCTMoveIons</tt> to <tt>true</tt> or <tt>false</tt>.
-      !%End
+    !%Variable OCTVelocityDerivatives
+    !%Type block
+    !%Section Calculation Modes::Optimal Control
+    !%Description
+    !% If <tt>OCTTargetOperator = oct_tg_velocity</tt>, and
+    !% <tt>OCTScheme = oct_algorithm_cg</tt> then you must supply 
+    !% the target in terms of the ionic velocities AND the derivatives
+    !% of the target with respect to the ionic velocity components.
+    !% The derivatives are supplied via strings through the block
+    !% <tt>OCTVelocityDerivatives</tt>.
+    !% Each velocity component is supplied by <tt>"v[n_atom,vec_comp]"</tt>,
+    !% while "n_atom" is the atom number, corresponding to the 
+    !% <tt>Coordinates</tt> block and "vec_comp" is the corresponding
+    !% vector component of the velocity. The first line of the 
+    !% <tt>OCTVelocityDerivatives</tt> block contains the derivatives
+    !% with respect to "v[1,*]", the second with respect to "v[2,*]" and so
+    !% on. The first column contains all derivatives with respect "v[*,1]",
+    !% the second with respect to "v[*,2]" and the third w.r.t. "v[*,3]".
+    !% As an example, we show the <tt>OCTVelocityDerivatives</tt> block
+    !% corresponding to the target shown in the <tt>OCTVelocityTarget</tt> 
+    !% help section:
+    !%
+    !% <tt>%OCTVelocityDerivatives
+    !% <br> " 2*(v[1,1]-v[2,1])" | " 2*(v[1,2]-v[2,2])" | " 2*(v[1,3]-v[2,3])"
+    !% <br> "-2*(v[1,1]-v[2,1])" | "-2*(v[1,2]-v[2,2])" | "-2*(v[1,3]-v[2,3])"
+    !% <br>%</tt>
+    !%
+    !%End
        
     if(parse_block(datasets_check('OCTVelocityTarget'),blk)==0) then
       tg%vel_input_string = " "
@@ -108,13 +99,7 @@
       call messages_fatal(2)
     end if
        
-    if(parse_isdef('OCTMoveIons')  ==  0) then
-      message(1) = 'If OCTTargetOperator = oct_tg_velocity, then you must supply'
-      message(2) = 'the variable "OCTMoveIons".'
-      call messages_fatal(2)
-    else
-      call parse_logical(datasets_check('OCTMoveIons'), .false., tg%move_ions)
-    end if
+    tg%move_ions = ion_dynamics_ions_move(td%ions)
        
     if(oct%algorithm  ==  oct_algorithm_cg) then
       if(parse_block(datasets_check('OCTVelocityDerivatives'),blk)==0) then
@@ -164,6 +149,40 @@
 
     POP_SUB(target_init_velocity)
   end subroutine target_init_velocity
+
+
+  ! ----------------------------------------------------------------------
+  !> 
+  subroutine target_end_velocity(tg, oct)
+    type(target_t),   intent(inout) :: tg
+    type(oct_t), intent(in)       :: oct
+    PUSH_SUB(target_end_velocity)
+    if(oct%algorithm  ==  oct_algorithm_cg) then
+      SAFE_DEALLOCATE_P(tg%vel_der_array)
+      SAFE_DEALLOCATE_P(tg%grad_local_pot)
+      SAFE_DEALLOCATE_P(tg%rho)
+     end if
+     SAFE_DEALLOCATE_P(tg%td_fitness)
+    POP_SUB(target_end_velocity)
+  end subroutine target_end_velocity
+
+
+  ! ----------------------------------------------------------------------
+  subroutine target_output_velocity(tg, gr, dir, geo, outp)
+    type(target_t), intent(inout) :: tg
+    type(grid_t), intent(inout)   :: gr
+    character(len=*), intent(in)  :: dir
+    type(geometry_t),       intent(in)  :: geo
+    type(output_t),         intent(in)  :: outp
+
+    PUSH_SUB(target_output_velocity)
+    
+    call loct_mkdir(trim(dir))
+    call output_states(tg%st, gr, geo, trim(dir), outp)
+
+    POP_SUB(target_output_velocity)
+  end subroutine target_output_velocity
+  ! ----------------------------------------------------------------------
 
 
   ! ----------------------------------------------------------------------
@@ -222,6 +241,59 @@
 
     POP_SUB(target_chi_velocity)
   end subroutine target_chi_velocity
+
+
+  ! ---------------------------------------------------------
+  !> 
+  !!
+  subroutine target_tdcalc_velocity(tg, hm, gr, geo, psi, time, max_time)
+    type(target_t),      intent(inout) :: tg
+    type(hamiltonian_t), intent(inout) :: hm
+    type(grid_t),        intent(inout) :: gr
+    type(geometry_t),    intent(inout) :: geo
+    type(states_t),      intent(inout) :: psi
+    integer,             intent(in)    :: time
+    integer,             intent(in)    :: max_time
+
+    CMPLX, allocatable :: opsi(:, :)
+    integer :: iatom, ik, ist, idim
+    FLOAT :: dt
+    PUSH_SUB(target_tdcalc_velocity)
+
+    tg%td_fitness(time) = M_ZERO
+
+    ! If the ions move, the target is computed in the propagation routine.
+    if(.not.target_move_ions(tg)) then
+
+      SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
+      opsi = M_z0
+      ! WARNING This does not work for spinors.
+      do iatom = 1, geo%natoms
+        geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
+        do ik = 1, psi%d%nik
+          do ist = 1, psi%nst
+            do idim = 1, gr%sb%dim
+              opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
+              geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) + real(psi%occ(ist, ik) * &
+                zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik)), REAL_PRECISION)
+            end do
+          end do
+        end do
+      end do
+      SAFE_DEALLOCATE_A(opsi)
+
+    end if
+
+    dt = tg%dt
+    if( (time  ==  0) .or. (time  ==  max_time) ) dt = tg%dt * M_HALF
+    do iatom = 1, geo%natoms
+       geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) + &
+         geo%atom(iatom)%f(1:MAX_DIM) * dt / species_weight(geo%atom(iatom)%spec)
+    end do
+
+    POP_SUB(target_tdcalc_velocity)
+  end subroutine target_tdcalc_velocity
+  ! ----------------------------------------------------------------------
 
 
   ! ----------------------------------------------------------------------

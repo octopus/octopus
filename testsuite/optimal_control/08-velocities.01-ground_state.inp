@@ -69,6 +69,7 @@ totaltime = 500.0
 #TDExponentialMethod = taylor
 #TDExpOrder = 4
 #MoveIons = vel_verlet
+MoveIons = no
 
 TDOutput = multipoles + laser + geometry
 
@@ -94,7 +95,6 @@ OCTControlFunctionRepresentation = control_zero_fourier_series_h
 
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_velocity
-OCTMoveIons = false
 
 %OCTVelocityTarget 
 "((v[1,1]-v[2,1])*1836.15)^2"

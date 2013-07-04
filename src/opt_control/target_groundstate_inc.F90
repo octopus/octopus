@@ -37,6 +37,33 @@
 
   ! ----------------------------------------------------------------------
   !> 
+  subroutine target_end_groundstate()
+    PUSH_SUB(target_end_groundstate)
+
+    POP_SUB(target_end_groundstate)
+  end subroutine target_end_groundstate
+
+
+  ! ----------------------------------------------------------------------
+  subroutine target_output_groundstate(tg, gr, dir, geo, outp)
+    type(target_t), intent(inout) :: tg
+    type(grid_t), intent(inout)   :: gr
+    character(len=*), intent(in)  :: dir
+    type(geometry_t),       intent(in)  :: geo
+    type(output_t),         intent(in)  :: outp
+
+    PUSH_SUB(target_output_groundstate)
+    
+    call loct_mkdir(trim(dir))
+    call output_states(tg%st, gr, geo, trim(dir), outp)
+
+    POP_SUB(target_output_groundstate)
+  end subroutine target_output_groundstate
+  ! ----------------------------------------------------------------------
+
+
+  ! ----------------------------------------------------------------------
+  !> 
   FLOAT function target_j1_groundstate(tg, gr, psi) result(j1)
     type(target_t),   intent(inout) :: tg
     type(grid_t),     intent(inout) :: gr
@@ -56,6 +83,28 @@
     POP_SUB(target_j1_groundstate)
   end function target_j1_groundstate
 
+
+  ! ----------------------------------------------------------------------
+  !> 
+  subroutine target_chi_groundstate(tg, gr, psi_in, chi_out)
+    type(target_t),    intent(inout) :: tg
+    type(grid_t),      intent(inout) :: gr
+    type(states_t),    intent(inout) :: psi_in
+    type(states_t),    intent(inout) :: chi_out
+
+    integer :: ik, ist
+    CMPLX :: olap
+    PUSH_SUB(target_chi_groundstate)
+
+    do ik = 1, psi_in%d%nik
+      do ist = psi_in%st_start, psi_in%st_end
+        olap = zmf_dotp(gr%mesh, tg%st%zpsi(:, 1, ist, ik), psi_in%zpsi(:, 1, ist, ik))
+        chi_out%zpsi(:, :, ist, ik) = olap * tg%st%zpsi(:, :, ist, ik)
+      end do
+    end do
+
+    POP_SUB(target_chi_groundstate)
+  end subroutine target_chi_groundstate
 
 
 !! Local Variables:

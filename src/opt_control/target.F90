@@ -33,6 +33,7 @@ module opt_control_target_m
   use hamiltonian_m
   use io_m
   use io_function_m
+  use ion_dynamics_m
   use lalg_adv_m
   use lalg_basic_m
   use loct_m
@@ -182,11 +183,6 @@ contains
     type(oct_t),      intent(in)    :: oct
     type(epot_t),     intent(inout) :: ep
 
-!    integer             :: ip
-!    type(block_t)       :: blk
-!    FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
-!    character(len=1024) :: expression
-
     PUSH_SUB(target_init)
 
     !%Variable OCTTargetOperator
@@ -285,40 +281,32 @@ contains
     PUSH_SUB(target_end)
 
     call states_end(tg%st)
-    if(tg%type  ==  oct_tg_local .or. &
-       tg%type  ==  oct_tg_jdensity .or. &
-       tg%type  ==  oct_tg_td_local) then
-      SAFE_DEALLOCATE_P(tg%rho)
-    end if
-    if(tg%type  ==  oct_tg_hhg) then
-      SAFE_DEALLOCATE_P(tg%hhg_k)
-      SAFE_DEALLOCATE_P(tg%hhg_alpha)
-      SAFE_DEALLOCATE_P(tg%hhg_a)
-    end if
-    if(target_mode(tg) == oct_targetmode_td) then
-      SAFE_DEALLOCATE_P(tg%td_fitness)
-    end if
-    if(target_type(tg) == oct_tg_velocity) then
-       if(oct%algorithm  ==  oct_algorithm_cg) then
-          SAFE_DEALLOCATE_P(tg%vel_der_array)
-          SAFE_DEALLOCATE_P(tg%grad_local_pot)
-          SAFE_DEALLOCATE_P(tg%rho)
-       end if
-    end if
-    if(target_type(tg) == oct_tg_hhgnew) then
-       if(oct%algorithm  ==  oct_algorithm_cg) then
-          SAFE_DEALLOCATE_P(tg%grad_local_pot)
-          SAFE_DEALLOCATE_P(tg%rho)
-          SAFE_DEALLOCATE_P(tg%vel)
-          SAFE_DEALLOCATE_P(tg%acc)
-          SAFE_DEALLOCATE_P(tg%gvec)
-          SAFE_DEALLOCATE_P(tg%alpha)
-          call fft_end(tg%fft_handler)
-       end if
-    end if
-    if(tg%type  ==  oct_tg_jdensity) then
-      SAFE_DEALLOCATE_P(tg%spatial_curr_wgt)
-    end if
+
+    select case(tg%type)
+    case(oct_tg_groundstate)
+      call target_end_groundstate()
+    case(oct_tg_excited)
+      call target_end_excited()
+    case(oct_tg_exclude_state)
+      call target_end_exclude()
+    case(oct_tg_gstransformation)
+      call target_end_gstransformation()
+    case(oct_tg_userdefined) 
+      call target_end_userdefined()
+    case(oct_tg_jdensity)
+      call target_end_density(tg)
+    case(oct_tg_local)
+      call target_end_local(tg)
+    case(oct_tg_td_local)
+      call target_end_tdlocal(tg)
+    case(oct_tg_hhg)
+      call target_end_hhg(tg)
+    case(oct_tg_hhgnew)
+      call target_end_hhgnew(tg, oct)
+    case(oct_tg_velocity)
+      call target_end_velocity(tg, oct)
+    end select
+
     POP_SUB(target_end)
   end subroutine target_end
   ! ----------------------------------------------------------------------
@@ -332,37 +320,33 @@ contains
     type(geometry_t),       intent(in)  :: geo
     type(output_t),         intent(in)  :: outp
 
-    integer :: ierr
     PUSH_SUB(target_output)
-    
-    call loct_mkdir(trim(dir))
 
     select case(tg%type)
-    case(oct_tg_local)
-      if(outp%how /= 0) then
-        call dio_function_output(outp%how, trim(dir), 'local_target', gr%mesh, &
-          tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
-      end if
-    case(oct_tg_td_local)
-      call target_build_tdlocal(tg, gr, M_ZERO)
-      if(outp%how /= 0) then
-        call dio_function_output(outp%how, trim(dir), 'td_local_target', gr%mesh, &
-          tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
-      end if
-    case(oct_tg_jdensity)
-      if(outp%how /= 0) then
-        if(tg%density_weight > M_ZERO) then
-          call dio_function_output(outp%how, trim(dir), 'density_target', gr%mesh, &
-            tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
-        end if
-      end if
+    case(oct_tg_groundstate)
+      call target_output_groundstate(tg, gr, dir, geo, outp)
     case(oct_tg_excited)
-      call output_states(tg%est%st, gr, geo, trim(dir)//'/st', outp)
-      call excited_states_output(tg%est, trim(dir))
-    case default
-      call output_states(tg%st, gr, geo, trim(dir), outp)
+      call target_output_excited(tg, gr, dir, geo, outp)
+    case(oct_tg_exclude_state)
+      call target_output_exclude(tg, gr, dir, geo, outp)
+    case(oct_tg_gstransformation)
+      call target_output_gstransformation(tg, gr, dir, geo, outp)
+    case(oct_tg_userdefined) 
+      call target_output_userdefined(tg, gr, dir, geo, outp)
+    case(oct_tg_jdensity)
+      call target_output_density(tg, gr, dir, geo, outp)
+    case(oct_tg_local)
+      call target_output_local(tg, gr, dir, geo, outp)
+    case(oct_tg_td_local)
+      call target_output_tdlocal(tg, gr, dir, geo, outp)
+    case(oct_tg_hhg)
+      call target_output_hhg(tg, gr, dir, geo, outp)
+    case(oct_tg_hhgnew)
+      call target_output_hhg(tg, gr, dir, geo, outp)
+    case(oct_tg_velocity)
+      call target_output_velocity(tg, gr, dir, geo, outp)
     end select
-
+    
     POP_SUB(target_output)
   end subroutine target_output
   ! ----------------------------------------------------------------------
@@ -381,11 +365,6 @@ contains
     integer,             intent(in)    :: time
     integer,             intent(in)    :: max_time
 
-    CMPLX, allocatable :: opsi(:, :)
-    integer :: ist, ip, ia, iw
-    FLOAT :: acc(MAX_DIM), dt, dw
-    integer :: iatom, idim, ik
-
     if(target_mode(tg)  /= oct_targetmode_td) return
 
     PUSH_SUB(target_tdcalc)
@@ -393,120 +372,16 @@ contains
     tg%td_fitness(time) = M_ZERO
 
     select case(tg%type)
-
     case(oct_tg_hhgnew)
-
-      ! If the ions move, the tg is computed in the propagation routine.
-      if(.not.target_move_ions(tg)) then
-
-        SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
-
-        opsi = M_z0
-        ! WARNING This does not work for spinors.
-        ! The following is a temporary hack. It assumes only one atom at the origin.
-        acc = M_ZERO
-        do ik = 1, psi%d%nik
-          do ist = 1, psi%nst
-            do idim = 1, gr%sb%dim
-              opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(1, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
-              acc(idim) = acc(idim) + real( psi%occ(ist, ik) * &
-                  zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik)), REAL_PRECISION )
-              tg%acc(time+1, idim) = tg%acc(time+1, idim) + psi%occ(ist, ik) * &
-                  zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik))
-            end do
-          end do
-        end do
-
-        SAFE_DEALLOCATE_A(opsi)
-      end if
-
-      dt = tg%dt
-      dw = (M_TWO * M_PI/(max_time * tg%dt))
-      if(time  ==  max_time) then
-        tg%acc(1, 1:gr%sb%dim) = M_HALF * (tg%acc(1, 1:gr%sb%dim) + tg%acc(max_time+1, 1:gr%sb%dim))
-        do ia = 1, gr%sb%dim
-          call zfft_forward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%vel(1:max_time, ia))
-        end do
-        tg%vel = tg%vel * tg%dt
-        do iw = 1, max_time
-          ! We add the one-half dt term because when doing the propagation we want the value at interpolated times.
-          tg%acc(iw, 1:gr%sb%dim) = tg%vel(iw, 1:gr%sb%dim) * tg%alpha(iw) * exp(M_zI * (iw-1) * dw * M_HALF * dt)
-        end do
-        do ia = 1, gr%sb%dim
-          call zfft_backward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%gvec(1:max_time, ia))
-        end do
-        tg%gvec(max_time + 1, 1:gr%sb%dim) = tg%gvec(1, 1:gr%sb%dim)
-        tg%gvec = tg%gvec * (M_TWO * M_PI/ tg%dt)
-      end if
-
-
+      call target_tdcalc_hhgnew(tg, gr, psi, time, max_time)
     case(oct_tg_velocity)
-
-      ! If the ions move, the target is computed in the propagation routine.
-      if(.not.target_move_ions(tg)) then
-
-      SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
-      opsi = M_z0
-      ! WARNING This does not work for spinors.
-      do iatom = 1, geo%natoms
-        geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
-        do ik = 1, psi%d%nik
-          do ist = 1, psi%nst
-            do idim = 1, gr%sb%dim
-              opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
-              geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) + real(psi%occ(ist, ik) * &
-                zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik)), REAL_PRECISION)
-            end do
-          end do
-        end do
-      end do
-      SAFE_DEALLOCATE_A(opsi)
-
-      end if
-
-      dt = tg%dt
-      if( (time  ==  0) .or. (time  ==  max_time) ) dt = tg%dt * M_HALF
-      do iatom = 1, geo%natoms
-         geo%atom(iatom)%v(1:MAX_DIM) = geo%atom(iatom)%v(1:MAX_DIM) + &
-           geo%atom(iatom)%f(1:MAX_DIM) * dt / species_weight(geo%atom(iatom)%spec)
-      end do
-
+      call target_tdcalc_velocity(tg, hm, gr, geo, psi, time, max_time)
     case(oct_tg_td_local)
-
-      !!!! WARNING Here one should build the time-dependent target.
-      select case(psi%d%ispin)
-      case(UNPOLARIZED)
-        ASSERT(psi%d%nik  ==  1)
-        SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
-        opsi = M_z0
-        do ist  = psi%st_start, psi%st_end
-          do ip = 1, gr%mesh%np
-            opsi(ip, 1) = tg%rho(ip) * psi%zpsi(ip, 1, ist, 1)
-          end do
-          tg%td_fitness(time) = &
-            tg%td_fitness(time) + psi%occ(ist, 1) * &
-              real(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :)), REAL_PRECISION)
-        end do
-        SAFE_DEALLOCATE_A(opsi)
-      case(SPIN_POLARIZED)
-        message(1) = 'Error in target.target_tdcalc: spin_polarized.'
-        call messages_fatal(1)
-      case(SPINORS)
-        message(1) = 'Error in target.target_tdcalc: spinors.'
-        call messages_fatal(1)
-      end select
-
+      call target_tdcalc_tdlocal(tg, gr, psi, time)
     case(oct_tg_hhg)
-
-     call td_calc_tacc(gr, geo, psi, hm, acc, time*tg%dt)
-     tg%td_fitness(time) = acc(1)
-
+      call target_tdcalc_hhg(tg, hm, gr, geo, psi, time)
     case(oct_tg_jdensity)
-
-      if (time >= tg%strt_iter_curr_tg) then
-        tg%td_fitness(time) = jcurr_functional(tg, gr, psi)
-      end if 
-
+      call target_tdcalc_density(tg, gr, psi, time)
     case default
       message(1) = 'Error in target.target_tdcalc: default.'
       call messages_fatal(1)
@@ -515,6 +390,7 @@ contains
     POP_SUB(target_tdcalc)
   end subroutine target_tdcalc
   ! ----------------------------------------------------------------------
+
 
 
   ! ---------------------------------------------------------------
@@ -584,7 +460,6 @@ contains
 
     PUSH_SUB(target_j1)
 
-    j1 = M_ZERO
     select case(tg%type)
     case(oct_tg_groundstate)
       j1 = target_j1_groundstate(tg, gr, psi)
@@ -623,158 +498,31 @@ contains
     type(states_t),    intent(inout) :: psi_in
     type(states_t),    intent(inout) :: chi_out
     type(geometry_t),  intent(in)    :: geo
-    
-    CMPLX :: olap, zdet
-    CMPLX, allocatable :: cI(:), dI(:), mat(:, :, :), mm(:, :, :, :), mk(:, :), lambda(:, :)
-    integer :: ik, ip, ist, jst, idim, no_electrons, ia, ib, n_pairs, nst, kpoints, jj
     PUSH_SUB(target_chi)
 
-    no_electrons = -nint(psi_in%val_charge)
-
     select case(tg%type)
-
+    case(oct_tg_groundstate)
+      call target_chi_groundstate(tg, gr, psi_in, chi_out)
+    case(oct_tg_excited) 
+      call target_chi_excited(tg, gr, psi_in, chi_out)
+    case(oct_tg_gstransformation)
+      call target_chi_gstransformation(tg, gr, psi_in, chi_out)
+    case(oct_tg_userdefined)
+      call target_chi_userdefined(tg, gr, psi_in, chi_out)
     case(oct_tg_jdensity)
       call target_chi_density(tg, gr, psi_in, chi_out)
-
     case(oct_tg_local)
-      do ik = 1, psi_in%d%nik
-        do idim = 1, psi_in%d%dim
-          do ist = psi_in%st_start, psi_in%st_end
-            do ip = 1, gr%mesh%np
-              chi_out%zpsi(ip, idim, ist, ik) = psi_in%occ(ist, ik) * tg%rho(ip) * psi_in%zpsi(ip, idim, ist, ik)
-            end do
-          end do
-        end do
-      end do
-
+      call target_chi_local(tg, gr, psi_in, chi_out)
     case(oct_tg_td_local)
-      !We assume that there is no time-independent operator.
-      forall(ik = 1:chi_out%d%nik, ist = chi_out%st_start:chi_out%st_end, idim = 1:chi_out%d%dim, ip = 1:gr%mesh%np)
-        chi_out%zpsi(ip, idim, ist, ik) = M_z0
-      end forall
-
-    case(oct_tg_excited) 
-
-      n_pairs = tg%est%n_pairs
-      kpoints = psi_in%d%nik
-      nst = psi_in%nst
-
-      SAFE_ALLOCATE(cI(1:n_pairs))
-      SAFE_ALLOCATE(dI(1:n_pairs))
-      SAFE_ALLOCATE(mat(1:tg%est%st%nst, 1:nst, 1:psi_in%d%nik))
-      SAFE_ALLOCATE(mm(1:nst, 1:nst, 1:kpoints, 1:n_pairs))
-      SAFE_ALLOCATE(mk(1:gr%mesh%np_part, 1:psi_in%d%dim))
-      SAFE_ALLOCATE(lambda(1:n_pairs, 1:n_pairs))
-
-      call zstates_matrix(gr%mesh, tg%est%st, psi_in, mat)
-
-      do ia = 1, n_pairs
-        cI(ia) = tg%est%weight(ia)
-        call zstates_matrix_swap(mat, tg%est%pair(ia))
-        mm(1:nst, 1:nst, 1:kpoints, ia) = mat(1:nst, 1:kpoints, 1:kpoints)
-        dI(ia) = zstates_mpdotp(gr%mesh, tg%est%st, psi_in, mat)
-        if(abs(dI(ia)) > CNST(1.0e-12)) then
-          do ik = 1, kpoints
-            zdet = lalg_inverter(nst, mm(1:nst, 1:nst, ik, ia))
-          end do
-        end if
-        call zstates_matrix_swap(mat, tg%est%pair(ia))
-      end do
-
-      do ia = 1, n_pairs
-        do ib = 1, n_pairs
-          lambda(ia, ib) = conjg(cI(ib)) * cI(ia) * conjg(dI(ia)) * dI(ib)
-        end do
-      end do
-
-      select case(psi_in%d%ispin)
-      case(UNPOLARIZED)
-        write(message(1), '(a)') 'Internal error in target.target_chi: unpolarized.'
-        call messages_fatal(1)
-
-      case(SPIN_POLARIZED)
-        ASSERT(chi_out%d%nik  ==  2)
-
-        do ik = 1, kpoints
-          do ist = chi_out%st_start, chi_out%st_end
-            chi_out%zpsi(:, :, ist, ik) = M_z0
-            do ia = 1, n_pairs
-              if(ik /= tg%est%pair(ia)%sigma) cycle
-              if(abs(dI(ia)) < CNST(1.0e-12)) cycle
-              do ib = 1, n_pairs
-                if(abs(dI(ib)) < CNST(1.0e-12)) cycle
-                mk = M_z0
-                do jst = 1, nst
-                  if(jst  ==  tg%est%pair(ib)%i) jj = tg%est%pair(ia)%a
-                  mk(:, :) = mk(:, :) + conjg(mm(ist, jst, ik, ib)) * tg%est%st%zpsi(:, :, jj, ik)
-                end do
-                call lalg_axpy(gr%mesh%np_part, psi_in%d%dim, M_z1, lambda(ib, ia) * mk(:, :), chi_out%zpsi(:, :, ist, ik))
-              end do
-            end do
-          end do
-        end do
-        
-      case(SPINORS)
-        ASSERT(chi_out%d%nik  ==  1)
-
-        do ist = chi_out%st_start, chi_out%st_end
-          chi_out%zpsi(:, :, ist, 1) = M_z0
-
-          do ia = 1, n_pairs
-            if(abs(dI(ia)) < CNST(1.0e-12)) cycle
-
-            do ib = 1, n_pairs
-              if(abs(dI(ib)) < CNST(1.0e-12)) cycle
-
-              mk = M_z0
-              do jst = 1, nst
-                if(jst  ==  tg%est%pair(ib)%i) jj = tg%est%pair(ia)%a
-                mk(:, :) = mk(:, :) + conjg(mm(ist, jst, 1, ib)) * tg%est%st%zpsi(:, :, jj, 1)
-              end do
-
-              call lalg_axpy(gr%mesh%np_part, 2, M_z1, lambda(ib, ia) * mk(:, :), chi_out%zpsi(:, :, ist, 1))
-            end do
-          end do
-        end do
-
-      end select
-
-      SAFE_DEALLOCATE_A(cI)
-      SAFE_DEALLOCATE_A(dI)
-      SAFE_DEALLOCATE_A(mat)
-      SAFE_DEALLOCATE_A(mm)
-      SAFE_DEALLOCATE_A(mk)
-      SAFE_DEALLOCATE_A(lambda)
-
+      call target_chi_tdlocal(gr, chi_out)
     case(oct_tg_exclude_state)
-
-      chi_out%zpsi(:, :, 1, 1) = psi_in%zpsi(:, :, 1, 1)
-      do ist = 1, tg%st%nst
-        if(loct_isinstringlist(ist, tg%excluded_states_list)) then
-          olap = zmf_dotp(gr%mesh, psi_in%d%dim, tg%st%zpsi(:, :, ist, 1), psi_in%zpsi(:, :, 1, 1))
-          chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap * tg%st%zpsi(:, :, ist, 1)
-        end if
-      end do
-
+      call target_chi_exclude(tg, gr, psi_in, chi_out)
+    case(oct_tg_hhg)
+      call target_chi_hhg(gr, chi_out)
     case(oct_tg_hhgnew)
-      !we have a time-dependent target --> Chi(T)=0
-      forall(ip=1:gr%mesh%np, idim=1:chi_out%d%dim, ist=chi_out%st_start:chi_out%st_end, ik=1:chi_out%d%nik)
-         chi_out%zpsi(ip, idim, ist, ik) = M_z0
-      end forall
-
+      call target_chi_hhg(gr, chi_out)
     case(oct_tg_velocity)
       call target_chi_velocity(gr, tg, chi_out, geo)
-    
-    case default
-
-      !olap = zstates_mpdotp(gr%mesh, tg%st, psi_in)
-      do ik = 1, psi_in%d%nik
-        do ist = psi_in%st_start, psi_in%st_end
-          olap = zmf_dotp(gr%mesh, tg%st%zpsi(:, 1, ist, ik), psi_in%zpsi(:, 1, ist, ik))
-          chi_out%zpsi(:, :, ist, ik) = olap * tg%st%zpsi(:, :, ist, ik)
-        end do
-      end do
-
     end select
 
     POP_SUB(target_chi)
