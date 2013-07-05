@@ -452,13 +452,14 @@ end subroutine PES_mask_dump_full_mapM
 
 
 ! ---------------------------------------------------------
-subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir)
+subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
   FLOAT,            intent(in) :: PESK(:,:,:)
   FLOAT,            intent(in) :: Lk(:)
   character(len=*), intent(in) :: file
   integer,          intent(in) :: dim
   FLOAT,            intent(in) :: pol(3)
   integer,          intent(in) :: dir
+  integer,          intent(in) :: integrate
 
   integer              :: ii, ix, iy, iunit
   FLOAT                :: KK(3),temp
@@ -466,6 +467,10 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir)
   integer, allocatable :: idx(:,:)
   FLOAT, allocatable   :: Lk_(:,:)
   FLOAT                :: rotation(1:dim,1:dim)
+! integration
+  FLOAT                :: K, KKK(3), theta, phi, Dphi
+  integer              :: iph, Nphi
+
 
   FLOAT, pointer :: cube_f(:)
   type(qshep_t) :: interp
@@ -491,7 +496,7 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir)
   end do  
   
   
-  if (sum((pol-(/0 ,0 ,1/))**2)  <= 1E-14) then !no need to rotate and interpolate
+  if (sum((pol-(/0 ,0 ,1/))**2)  <= 1E-14 .and. integrate == INTEGRATE_NONE) then !no need to rotate and interpolate
     
     do ix = 1, ll(1)
       KK(1) = Lk_(ix, 1)
@@ -557,6 +562,27 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir)
        end select
 
        temp = qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) )
+       if (integrate == INTEGRATE_PHI) then
+         temp = M_ZERO
+         K = sqrt(KK(1)**2 + KK(2)**2 + KK(3)**2)
+
+         Nphi = 360
+         Dphi = M_TWO * M_PI/Nphi
+
+         do iph = 0, Nphi
+           phi = iph * Dphi
+           theta = atan2(KK(2),KK(1))
+
+           KKK(1) = K *sin(theta)*cos(phi) 
+           KKK(2) = K *sin(theta)*sin(phi)
+           KKK(3) = K *cos(theta)
+        
+           temp = temp + &
+                         abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+         end do
+         temp = temp * Dphi     
+
+       end if
    
        write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
                units_from_atomic(sqrt(units_out%energy), Lk_(ix, 1)),&
@@ -974,7 +1000,7 @@ end subroutine PES_mask_dump_ar_spherical_cut_M
 !!  - 1 Angle- and energy-resolved on cartesian coordinates
 !!  - 2 Angle- and energy-resolved in polar coordinates
 !!  - 3 Velocity map on a plane
-!!  - 4 Velocity map on a plane
+!!  - 4 Spherical cut
 !
 ! ========================================================================
 subroutine PES_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
@@ -983,7 +1009,7 @@ subroutine PES_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
   integer,          intent(in) :: mode
   FLOAT,            intent(in) :: xGrid(:)   !< max min and step for the x axis
   FLOAT,            intent(in) :: yGrid(:)   !< max min and step for the y axis
-  FLOAT,            intent(in) :: vv(:)      !< for mode=1,2 indicate the Zenith axis for mode 3 the cutting plane 
+  FLOAT,            intent(in) :: vv(:)      !< for mode=1,2 indicate the Zenith axis for mode 3 the cutting plane
   FLOAT, optional,  intent(in) :: intSpan(:) !< for integrated quantities indicate the integral region    
 
   integer :: nx,ny, iunit, ix,iy
@@ -1550,107 +1576,6 @@ subroutine PES_mask_write_power_total(file, step, pes, npoints)
 end subroutine PES_mask_write_power_total
 
 
-! ---------------------------------------------------------
-subroutine PES_mask_dump_ARPES(mask, st, file, wfAk)
-  type(PES_mask_t), intent(in) :: mask
-  type(states_t),   intent(in) :: st
-  character(len=*), intent(in) :: file
-  CMPLX, optional,  intent(in) :: wfAk(:,:,:,:,:,:)
-
-  integer :: ist, ik, ii, ix, iy, iz, iunit,idim
-  FLOAT ::  KK(3),vec
-  
-  integer :: nn
-  FLOAT  :: step,DE
-  FLOAT, allocatable :: npoints(:), arpes(:)
-
-  ! needed for interpolation in 2D and 3D 
-  FLOAT :: Dtheta, Dphi
-  integer :: np, Ntheta, Nphi
-
-
-  type(profile_t), save :: prof
-  call profiling_in(prof, "ARPES_dump")
-
-  PUSH_SUB(PES_mask_dump_ARPES)
-
-
-  step = mask%energyStep
-  nn = 90
-
-  DE = (mask%Lk(2)-mask%Lk(1))**2/M_TWO
-  
-  np = mask%ll(1)*mask%ll(2)*mask%ll(3)  
-
-  Ntheta = 36
-  Dtheta = M_TWO*M_PI/Ntheta
-
-  Nphi = 18
-  Dphi = M_PI/Nphi
-
-  SAFE_ALLOCATE(arpes(1:nn))
-  arpes = M_ZERO
-
-  SAFE_ALLOCATE(npoints(1:nn))
-  npoints = M_ZERO
-
-
-  do ix = 1, mask%ll(1)
-    KK(1) = mask%Lk(ix)
-    do iy = 1, mask%ll(2)
-      KK(2) = mask%Lk(iy)
-      do iz = 1, mask%ll(3)
-        KK(3) = mask%Lk(iz)
-        
-        if(KK(3)==0 .and. (KK(1) /= 0 .or. KK(2) /= 0)) then
-          vec = atan2(KK(2), KK(1))
-          ii  = int(abs(vec) * (nn - 1)/M_PI) + 1
-          
-          if(ii <= nn) then ! should always be true
-            do ik = 1, st%d%kpt%nglobal
-              do ist = 1, st%nst
-                
-                if(present(wfAk))then
-                  arpes(ii) = arpes(ii) + st%occ(ist, ik) *& 
-                    sum(abs(mask%k(ix, iy, iz, :, ist, ik) + wfAk(ix,iy,iz,:, ist, ik)  )**2)
-                else 
-                  arpes(ii) = arpes(ii) + st%occ(ist, ik) * sum(abs(mask%k(ix, iy, iz, :, ist, ik)  )**2)
-                end if
-              end do
-            end do
-            npoints(ii) = npoints(ii) + M_ONE
-          end if
-        end if
-        
-      end do
-    end do
-  end do
-  
-  
-  do idim=1, mask%mesh%sb%dim
-    arpes = arpes *( mask%spacing(idim)/sqrt(M_TWO*M_PI))**2
-  end do
-  
-  
-  iunit = io_open(file, action='write')
-  
-  do ii = 1, nn
-    if(npoints(ii) > 0) then
-      write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')  (ii-1)*CNST(180.0)/real(nn-1, REAL_PRECISION), arpes(ii), npoints(ii)
-    end if
-  end do
-  
-  call io_close(iunit)
-  
-  SAFE_DEALLOCATE_A(arpes)
-  SAFE_DEALLOCATE_A(npoints)
-  
-  POP_SUB(PES_mask_dump_ARPES)
-  
-  call profiling_out(prof)
-  
-end subroutine PES_mask_dump_ARPES
-
   
 ! ---------------------------------------------------------
 !
@@ -1740,7 +1665,8 @@ subroutine PES_mask_output(mask, mesh, st,outp, file,gr, geo,iter)
     ! Dump the k resolved PES on plane kz=0
     write(fn, '(a,a)') trim(dir), '_map.z=0'
     pol = (/M_ZERO, M_ZERO, M_ONE/)
-    call PES_mask_dump_full_mapM_cut(PESK, fn, mask%Lk, mask%mesh%sb%dim, pol = pol, dir = 3)
+    call PES_mask_dump_full_mapM_cut(PESK, fn, mask%Lk, mask%mesh%sb%dim, pol = pol, &
+                                     dir = 3, integrate = INTEGRATE_NONE )
 
     ! Total power spectrum 
     write(fn, '(a,a)') trim(dir), '_power.sum'

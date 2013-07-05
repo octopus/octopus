@@ -168,6 +168,16 @@ module pes_mask_m
   integer, parameter ::       &
     IN                =  1,   &  
     OUT               =  2
+
+  integer, public, parameter ::   &
+    INTEGRATE_NONE    = -1,       &
+    INTEGRATE_PHI     =  1,       &  
+    INTEGRATE_THETA   =  2,       &  
+    INTEGRATE_R       =  3,       &  
+    INTEGRATE_KX      =  4,       &  
+    INTEGRATE_KY      =  5,       &  
+    INTEGRATE_KZ      =  6
+
   
 contains 
 

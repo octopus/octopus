@@ -38,7 +38,7 @@ program photoelectron_spectrum
 
   implicit none
 
-  integer              :: ierr, mode, interp
+  integer              :: ierr, mode, interp, integrate
 
   integer              :: dim, ll(MAX_DIM), ii, dir
   FLOAT                :: Emax, Emin,Estep, uEstep,uEspan(2), pol(3)
@@ -78,6 +78,7 @@ program photoelectron_spectrum
   !set default values
   mode = 1
   interp = 1
+  integrate = -1
   uEstep = -1
   uEspan = (/-1,-1/)
   uThstep = -1
@@ -93,7 +94,8 @@ program photoelectron_spectrum
   call get_laser_polarizaion(pol)
   
   call getopt_photoelectron_spectrum(mode,interp,uEstep, uEspan,&
-                                     uThstep, uThspan, uPhstep, uPhspan, pol, center, pvec)
+                                     uThstep, uThspan, uPhstep, &
+                                     uPhspan, pol, center, pvec, integrate)
   if(interp  ==  0) interpol = .false.
 
   call PES_mask_read_info(tmpdir, dim, Emax, Estep, ll(1), Lk,RR)
@@ -135,13 +137,13 @@ program photoelectron_spectrum
   ! these functions are defined in pes_mask_out_inc.F90
   select case(mode)
   case(1) ! Energy-resolved
-    write(message(1), '(a)') 'Calculating energy-resolved PES'
+    write(message(1), '(a)') 'Compute energy-resolved PES'
     call messages_info(1)
     call PES_mask_dump_power_totalM(PESK,'./PES_power.sum', Lk, dim, Emax, Estep, interpol)
  
  
   case(2) ! Angle and energy resolved
-    write(message(1), '(a)') 'Calculating angle- and energy-resolved PES'
+    write(message(1), '(a)') 'Compute angle- and energy-resolved PES'
     call messages_info(1)
     call PES_mask_dump_ar_polar_M(PESK,'./PES_angle_energy.map', Lk, dim, pol, Emax, Estep)
 
@@ -160,14 +162,19 @@ program photoelectron_spectrum
         write(message(1), '(a)') 'Unrecognized plane. Use -u to change.'
         call messages_fatal(1)
       else
-        write(message(1), '(a)') 'Calculating velocity map on plane '//index2axis(dir)//"=0"
+        write(message(1), '(a)') 'Compute velocity map on plane: '//index2axis(dir)//" = 0"
         call messages_info(1)
     end if 
     
-    call PES_mask_dump_full_mapM_cut(PESK, filename, Lk, dim, pol, dir)    
+    if(integrate /= INTEGRATE_NONE) then
+      write(message(1), '(a)') 'Integrate on: '//index2var(integrate)
+      call messages_info(1)      
+    end if
+    
+    call PES_mask_dump_full_mapM_cut(PESK, filename, Lk, dim, pol, dir, integrate)    
 
   case(4) ! Angle energy resolved on plane 
-    write(message(1), '(a)') 'Calculating angle and energy-resolved PES'
+    write(message(1), '(a)') 'Compute angle and energy-resolved PES'
     call messages_info(1)
     if(uEstep >  0 .and. uEstep > Estep) then
       Estep = uEstep
@@ -181,7 +188,7 @@ program photoelectron_spectrum
 
 
     write(message(1), '(a,es19.12,a2,es19.12,2x,a19)') &
-          'Calculating PES on a spherical cut at E= ',Emin,", ",Emax, & 
+          'Compute PES on a spherical cut at E= ',Emin,", ",Emax, & 
            str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19) 
     call messages_info(1)
 
@@ -194,7 +201,7 @@ program photoelectron_spectrum
     call PES_mask_dump_ar_spherical_cut_M(PESK,'./PES_sphere.map', Lk, dim, pol, Emin, Emax, Estep)       
 
   case(6) ! Full momentum resolved matrix 
-    write(message(1), '(a)') 'Calculating full momentum-resolved PES'
+    write(message(1), '(a)') 'Compute full momentum-resolved PES'
     call messages_info(1)
  
     call PES_mask_dump_full_mapM(PESK, './PES_fullmap', Lk)        
@@ -248,7 +255,26 @@ program photoelectron_spectrum
         POP_SUB(get_laser_polarization)
     end subroutine get_laser_polarizaion
 
+    character(5) pure function index2var(ivar) result(ch)
+      integer, intent(in) :: ivar
 
+      select case(ivar)
+        case(INTEGRATE_PHI)
+          ch = 'phi'
+        case(INTEGRATE_THETA)
+          ch = 'theta'
+        case(INTEGRATE_R)
+          ch = 'r'
+        case(INTEGRATE_KX)
+          ch = 'kx'
+        case(INTEGRATE_KY)
+          ch = 'ky'
+        case(INTEGRATE_KZ)
+          ch = 'kz'
+        case default
+          write(ch,'(i1)') ivar
+      end select
+    end function index2var
 
 
 end program photoelectron_spectrum

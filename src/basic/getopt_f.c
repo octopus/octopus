@@ -805,8 +805,8 @@ void photoelectron_spectrum_help(){
   printf("                         '2' : (theta, E). Angle- and energy-resolved ionization probability.\n");
   printf("                              The values are integrated in phi.\n");
   printf("                         '3' : (px, py). Velocity map on a plane orthogonal to pvec (only x,y,z=0 planes).\n");
-  printf("                              The space is rotated so that the z-axis is along vec (by default the \n");
-  printf("                              polarization axis).\n");
+  printf("                              The space is oriented so that the z-axis is along vec (by default the \n");
+  printf("                              polarization axis). Support the -I option.\n");
   printf("                         '4' : (Ex, Ey). Angle- and energy-resolved on the inclination plane.\n");
   printf("                              The values are integrated in phi.\n");
   printf("                         '5' : (theta, phi). Ionization probability integrated on spherical cuts with\n");
@@ -833,6 +833,8 @@ void photoelectron_spectrum_help(){
   printf("  -P,                 Maximum and minimum phi in colon separated format. \n");
   printf("   --phspan=phimin:phimax                                                  \n");
   printf("  -p, --dph           The resolution in phi.\n");
+  printf("  -I, --integr=var    The spectrum is integrated over the specified variable. For \n");
+  printf("                      example \"-I phi\" integrates over phi. \n");
 
   exit(-1);
 }
@@ -840,7 +842,7 @@ void photoelectron_spectrum_help(){
 void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
      ( int *m, int *interp, double *estep, double *espan, double *thstep, 
        double *thspan, double *phstep, double *phspan, double *pol, 
-       double *center, double *pvec)
+       double *center, double *pvec, int *integrate)
 {
   int c;
   char delims[] = ",:";
@@ -863,6 +865,7 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
       {"version", no_argument, 0, 'v'},
       {"mode", required_argument, 0, 'm'},
       {"int", required_argument, 0, 'i'},
+      {"integr", required_argument, 0, 'I'},
       {"de", required_argument, 0, 'e'},
       {"espan", required_argument, 0, 'E'},
       {"dth", required_argument, 0, 't'},
@@ -879,9 +882,9 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
   while (1) {
     int option_index = 0;
 #if defined(HAVE_GETOPT_LONG)
-    c = getopt_long(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:u:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:u:I:", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:u:");
+    c = getopt(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:u:I:");
 #endif
     if (c == -1) break;
     switch (c) {
@@ -903,6 +906,17 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
     case 'i':
       if ((strcmp(optarg,"y") == 0)|| (strcmp(optarg,"yes")== 0))  *interp = 1;
       if ((strcmp(optarg,"n") == 0)|| (strcmp(optarg,"no") == 0))  *interp = 0;
+    break;
+
+    case 'I':
+      if ((strcmp(optarg,"phi") == 0))
+      { 
+         *integrate = 1;
+       }
+      else{
+        printf("Unrecognized integration variable %s.\n", optarg);
+        *integrate = -1;        
+      }
     break;
    
     case 'e':

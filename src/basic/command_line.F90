@@ -155,7 +155,7 @@ module command_line_m
     end subroutine getopt_help
     
     subroutine getopt_photoelectron_spectrum(mode, interp, estep, espan, &
-      thstep, thspan, phstep, phspan, pol, center, pvec)
+      thstep, thspan, phstep, phspan, pol, center, pvec, integrate)
       integer, intent(inout) :: mode
       integer, intent(inout) :: interp
       real(8), intent(inout) :: estep
@@ -167,6 +167,7 @@ module command_line_m
       real(8), intent(inout) :: pol(3)
       real(8), intent(inout) :: center(3)
       real(8), intent(inout) :: pvec(3)
+      integer, intent(inout) :: integrate
     end subroutine getopt_photoelectron_spectrum
 
   end interface
