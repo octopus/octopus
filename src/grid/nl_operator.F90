@@ -111,6 +111,9 @@ module nl_operator_m
     type(opencl_mem_t) :: buff_imax
     type(opencl_mem_t) :: buff_ri
     type(opencl_mem_t) :: buff_map
+    type(opencl_mem_t) :: buff_stencil
+    type(opencl_mem_t) :: buff_ip_to_xyz
+    type(opencl_mem_t) :: buff_xyz_to_ip
 #endif
   end type nl_operator_t
 
@@ -121,9 +124,10 @@ module nl_operator_m
        OP_MAX     = OP_VEC
 
 #ifdef HAVE_OPENCL
-  integer, parameter ::  &
+  integer, parameter ::     &
     OP_INVMAP    = 1,       &
-    OP_MAP       = 2
+    OP_MAP       = 2,       &
+    OP_NOMAP     = 3
 #endif
 
   integer, public, parameter :: OP_ALL = 3, OP_INNER = 1, OP_OUTER = 2
@@ -206,6 +210,8 @@ contains
       !% The standard implementation ported to OpenCL.
       !%Option map 2
       !% A different version, more suitable for GPUs.
+      !%Option nomap 3
+      !% (Experimental) This version does not use a map.
       !%End
       call parse_integer(datasets_check('OperateOpenCL'),  OP_MAP, function_opencl)
 
@@ -326,14 +332,14 @@ contains
     logical, optional,    intent(in)    :: const_w  !< are the weights constant (independent of the point)
     logical, optional,    intent(in)    :: cmplx_op !< do we have complex weights?
 
-    integer :: ii, jj, p1(MAX_DIM), time, current
-    integer, allocatable :: st1(:), st2(:), st1r(:)
+    integer :: ii, jj, p1(MAX_DIM), time, current, size
+    integer, allocatable :: st1(:), st2(:), st1r(:), stencil(:, :)
     integer :: nn
 #ifdef HAVE_MPI
     integer :: ir, maxp, iinner, iouter
 #endif
     logical :: change, force_change
-    character(len=20) :: flags
+    character(len=200) :: flags
 
     PUSH_SUB(nl_operator_build)
 
@@ -564,13 +570,15 @@ contains
     if(opencl_is_enabled() .and. op%const_w) then
 
       write(flags, '(i5)') op%stencil%size
-      flags='-DSTENCIL_SIZE='//trim(adjustl(flags))
+      flags='-DNDIM=3 -DSTENCIL_SIZE='//trim(adjustl(flags))
 
       select case(function_opencl)
-      case(OP_MAP)
-        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate_map', flags)
       case(OP_INVMAP)
         call octcl_kernel_build(op%kernel, 'operate.cl', 'operate', flags)
+      case(OP_MAP)
+        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate_map', flags)
+      case(OP_NOMAP)
+        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate_nomap', flags)
       end select
 
       call opencl_create_buffer(op%buff_ri, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri*op%stencil%size)
@@ -586,6 +594,46 @@ contains
       case(OP_MAP)
         call opencl_create_buffer(op%buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
         call opencl_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
+
+      case(OP_NOMAP)
+
+        ASSERT(op%mesh%sb%dim == 3)
+        ASSERT(.not. op%mesh%parallel_in_domains)
+
+        call opencl_create_buffer(op%buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
+        call opencl_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
+        
+        SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:op%stencil%size + 1))
+
+        stencil(1:op%mesh%sb%dim, 1:op%stencil%size) = op%stencil%points(1:op%mesh%sb%dim, 1:op%stencil%size)
+
+        stencil(1, op%stencil%size + 1) = 1
+        stencil(2, op%stencil%size + 1) = mesh%idx%nr(2, 1) - mesh%idx%nr(1, 1) + 1
+        stencil(3, op%stencil%size + 1) = stencil(2, op%stencil%size + 1)*(mesh%idx%nr(2, 2) - mesh%idx%nr(1, 2) + 1)
+
+        call opencl_create_buffer(op%buff_stencil, CL_MEM_READ_ONLY, TYPE_INTEGER, op%mesh%sb%dim*(op%stencil%size + 1))
+        call opencl_write_buffer(op%buff_stencil, op%mesh%sb%dim*(op%stencil%size + 1), stencil)
+        
+        SAFE_DEALLOCATE_A(stencil)
+
+        size = product(mesh%idx%nr(2, 1:op%mesh%sb%dim) - mesh%idx%nr(1, 1:op%mesh%sb%dim) + 1)
+
+        call opencl_create_buffer(op%buff_xyz_to_ip, CL_MEM_READ_ONLY, TYPE_INTEGER, size)
+        call opencl_write_buffer(op%buff_xyz_to_ip, size, op%mesh%idx%lxyz_inv - 1)
+
+        SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:mesh%np_part))
+
+        do jj = 1, op%mesh%sb%dim
+          stencil(jj, 1:mesh%np_part) = op%mesh%idx%lxyz(1:mesh%np_part, jj) - mesh%idx%nr(1, jj)
+        end do
+
+        ASSERT(minval(stencil) == 0)
+
+        call opencl_create_buffer(op%buff_ip_to_xyz, CL_MEM_READ_ONLY, TYPE_INTEGER, op%mesh%np_part*op%mesh%sb%dim)
+        call opencl_write_buffer(op%buff_ip_to_xyz, op%mesh%np_part*op%mesh%sb%dim, stencil)
+
+        SAFE_DEALLOCATE_A(stencil)
+
       end select
     end if
 #endif
@@ -1015,6 +1063,12 @@ contains
 
       case(OP_MAP)
         call opencl_release_buffer(op%buff_map)
+
+      case(OP_NOMAP)
+        call opencl_release_buffer(op%buff_map)
+        call opencl_release_buffer(op%buff_stencil)
+        call opencl_release_buffer(op%buff_xyz_to_ip)
+        call opencl_release_buffer(op%buff_ip_to_xyz)
       end select
     end if
 #endif

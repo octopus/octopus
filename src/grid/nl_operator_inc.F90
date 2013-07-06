@@ -340,6 +340,42 @@ contains
       do ist = 1, fi%nst_linear
         call profiling_count_transfers(op%mesh%np_part*op%stencil%size + op%mesh%np, R_TOTYPE(M_ONE))
       end do
+
+   case(OP_NOMAP)
+      call opencl_set_kernel_arg(kernel_operate, 0, op%mesh%np)
+      call opencl_set_kernel_arg(kernel_operate, 1, op%buff_stencil)
+      call opencl_set_kernel_arg(kernel_operate, 2, op%buff_xyz_to_ip)
+      call opencl_set_kernel_arg(kernel_operate, 3, op%buff_ip_to_xyz)
+      call opencl_set_kernel_arg(kernel_operate, 4, buff_weights)
+      call opencl_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
+      call opencl_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
+      call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
+
+      call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
+      isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
+      isize = isize - mod(isize, eff_size)
+      bsize = eff_size*isize
+      bsize = min(opencl_kernel_workgroup_size(kernel_operate), bsize)
+
+      if(bsize < fi%pack%size_real(1)) then
+        call messages_write('The value of StatesBlockSize is too large for this OpenCL implementation.')
+        call messages_fatal()
+      end if
+
+      isize = bsize/eff_size
+
+      ASSERT(isize > 0)
+      ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
+
+      call opencl_set_kernel_arg(kernel_operate, 8, TYPE_INTEGER, isize*op%stencil%size)
+
+      call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
+
+      call profiling_count_transfers(op%stencil%size*op%mesh%np + op%mesh%np, isize)
+
+      do ist = 1, fi%nst_linear
+        call profiling_count_transfers(op%mesh%np_part*op%stencil%size + op%mesh%np, R_TOTYPE(M_ONE))
+      end do
     end select
 
     call opencl_finish()
