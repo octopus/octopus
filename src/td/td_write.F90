@@ -469,7 +469,9 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_end(writ)
     type(td_write_t), intent(inout) :: writ
+
     integer :: ist, iout
+
     PUSH_SUB(td_write_end)
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -483,6 +485,7 @@ contains
       do ist = 1, writ%n_excited_states
         call excited_states_kill(writ%excited_st(ist))
       end do
+      writ%n_excited_states = 0
     end if
 
     if(writ%out(OUT_PROJ)%write.or.writ%out(OUT_POPULATIONS)%write) then
@@ -535,7 +538,7 @@ contains
 
     if(writ%out(OUT_POPULATIONS)%write) &
       call td_write_populations(writ%out(OUT_POPULATIONS)%handle, gr%mesh, st, &
-        writ%gs_st, writ%n_excited_states, writ%excited_st, dt, iter)
+        writ, dt, iter)
 
     if(writ%out(OUT_ACC)%write) &
       call td_write_acc(writ%out(OUT_ACC)%handle, gr, geo, st, hm, dt, iter)
@@ -1161,13 +1164,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_populations(out_populations, mesh, st, gs_st, n_excited_states, excited_st, dt, iter)
+  subroutine td_write_populations(out_populations, mesh, st, writ, dt, iter)
     type(c_ptr),            intent(in)    :: out_populations
     type(mesh_t),           intent(in)    :: mesh
     type(states_t),         intent(inout) :: st
-    type(states_t),         intent(in)    :: gs_st
-    integer,                intent(in)    :: n_excited_states
-    type(excited_states_t), intent(in)    :: excited_st(:)
+    type(td_write_t),       intent(in)    :: writ
     FLOAT,                  intent(in)    :: dt
     integer,                intent(in)    :: iter
  
@@ -1183,16 +1184,16 @@ contains
     ! this is required if st%X(psi) is used
     call states_sync(st)
 
-    SAFE_ALLOCATE(dotprodmatrix(1:gs_st%nst, 1:st%nst, 1:st%d%nik))
-    call zstates_matrix(mesh, gs_st, st, dotprodmatrix)
+    SAFE_ALLOCATE(dotprodmatrix(1:writ%gs_st%nst, 1:st%nst, 1:st%d%nik))
+    call zstates_matrix(mesh, writ%gs_st, st, dotprodmatrix)
 
     ! all processors calculate the projection
-    gsp = zstates_mpdotp(mesh, gs_st, st, dotprodmatrix)
+    gsp = zstates_mpdotp(mesh, writ%gs_st, st, dotprodmatrix)
 
-    if(n_excited_states > 0) then
-      SAFE_ALLOCATE(excited_state_p(1:n_excited_states))
-      do ist = 1, n_excited_states
-        excited_state_p(ist) = zstates_mpdotp(mesh, excited_st(ist), st, dotprodmatrix)
+    if(writ%n_excited_states > 0) then
+      SAFE_ALLOCATE(excited_state_p(1:writ%n_excited_states))
+      do ist = 1, writ%n_excited_states
+        excited_state_p(ist) = zstates_mpdotp(mesh, writ%excited_st(ist), st, dotprodmatrix)
       end do
     end if
 
@@ -1204,7 +1205,7 @@ contains
         call write_iter_header_start(out_populations)
         call write_iter_header(out_populations, 'Re<Phi_gs|Phi(t)>')
         call write_iter_header(out_populations, 'Im<Phi_gs|Phi(t)>')
-        do ist = 1, n_excited_states
+        do ist = 1, writ%n_excited_states
           write(excited_name,'(a2,i3,a1)') 'P(', ist,')'
           call write_iter_header(out_populations, 'Re<'//excited_name//'|Phi(t)>')
           call write_iter_header(out_populations, 'Im<'//excited_name//'|Phi(t)>')
@@ -1224,14 +1225,14 @@ contains
       call write_iter_double(out_populations, units_from_atomic(units_out%time, iter*dt),  1)
       call write_iter_double(out_populations, real(gsp),  1)
       call write_iter_double(out_populations, aimag(gsp), 1)
-      do ist = 1, n_excited_states
+      do ist = 1, writ%n_excited_states
         call write_iter_double(out_populations, real(excited_state_p(ist)),  1)
         call write_iter_double(out_populations, aimag(excited_state_p(ist)), 1)
       end do
       call write_iter_nl(out_populations)
     end if
 
-    if(n_excited_states > 0) then
+    if(writ%n_excited_states > 0) then
       SAFE_DEALLOCATE_A(excited_state_p)
     end if
     SAFE_DEALLOCATE_A(dotprodmatrix)
