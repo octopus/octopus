@@ -140,7 +140,7 @@ contains
   ! ---------------------------------------------------------
   !> This routine performs all the things that must be initialized
   !! prior to a forward evolution, regarding the target. Right now
-  !! some of those initizalizations are not done here, and should
+  !! some of those initializations are not done here, and should
   !! be moved.
   subroutine target_init_propagation(tg)
     type(target_t), intent(inout)    :: tg
