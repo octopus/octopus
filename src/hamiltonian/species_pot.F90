@@ -97,7 +97,8 @@ contains
 
     ! build density ...
     select case (species_type(spec))
-    case (SPEC_FROM_FILE, SPEC_USDEF, SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
+    case (SPEC_FROM_FILE, SPEC_USDEF, SPEC_SOFT_COULOMB, &
+          SPEC_FULL_DELTA, SPEC_FULL_GAUSSIAN, SPEC_PS_CPI, SPEC_PS_FHI) ! ... from userdef
       do isp = 1, spin_channels
         rho(1:mesh%np, isp) = M_ONE
         x = (species_zval(spec)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(mesh, rho(:, isp))
@@ -571,6 +572,15 @@ contains
     call profiling_in(prof, "SPECIES_GET_LOCAL")
 
       select case(species_type(spec))
+
+      case(SPEC_SOFT_COULOMB)
+
+        do ip = 1, mesh%np
+          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
+          r2 = sum(xx(1:mesh%sb%dim)**2)
+          vl(ip) = -species_zval(spec)/sqrt(r2+species_sc_alpha(spec))
+        end do
+
       case(SPEC_USDEF)
 
         do ip = 1, mesh%np

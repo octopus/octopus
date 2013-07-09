@@ -59,6 +59,7 @@ module species_m
     species_ps,                    &
     species_zval,                  &
     species_z,                     &
+    species_sc_alpha,              &
     species_def_rsize,             &
     species_def_h,                 &
     species_jradius,               &
@@ -95,7 +96,8 @@ module species_m
     SPEC_FULL_GAUSSIAN  = 124,   & !< full-potential atom
     SPEC_CHARGE_DENSITY = 125,   &
     SPEC_FROM_FILE      = 126,   &
-    SPEC_FULL_DELTA     = 127      !< full-potential atom
+    SPEC_FULL_DELTA     = 127,   & !< full-potential atom
+    SPEC_SOFT_COULOMB   = 128      !< soft-Coulomb potential
 
   type species_t
     private
@@ -121,6 +123,7 @@ module species_m
     FLOAT :: jradius              !< jellium stuff
     FLOAT :: jthick               !< jellium stuff
 
+    FLOAT :: sc_alpha                !< the soft-Coulomb parameter
 
     type(ps_t), pointer :: ps
     logical             :: nlcc   !< true if we have non-local core corrections
@@ -316,6 +319,14 @@ contains
     !% Column 5 is an expression for the charge distribution.
     !%Option species_from_file  126
     !% The potential is read from a file, whose name is given in column 5.
+    !%Option spec_soft_coulomb 128
+    !% The potential is a soft-Coulomb function, i.e. a function in the form:
+    !%
+    !% <math>
+    !% v(r) = - z_val / sqrt( a + r^2)
+    !% </math>
+    !%
+    !% The parameter a should be given in the fifth column.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -397,6 +408,14 @@ contains
     spec%has_density = .false.
 
     select case(spec%type)
+    case(SPEC_SOFT_COULOMB)
+      if(print_info_) then
+        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a soft-Coulomb potential.'
+        call messages_info(1)
+      end if
+      spec%niwfs = 2*nint(spec%z_val)
+      spec%omega = CNST(0.1)
+
     case(SPEC_PS_PSF, SPEC_PS_HGH, SPEC_PS_CPI, SPEC_PS_FHI, SPEC_PS_UPF)
       ! allocate structure
       SAFE_ALLOCATE(spec%ps) 
@@ -677,6 +696,14 @@ contains
     type(species_t), intent(in) :: spec
     species_ps => spec%ps
   end function species_ps
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  FLOAT pure function species_sc_alpha(spec)
+    type(species_t), intent(in) :: spec
+    species_sc_alpha = spec%sc_alpha
+  end function species_sc_alpha
   ! ---------------------------------------------------------
 
 
@@ -1078,6 +1105,13 @@ contains
     call parse_block_integer(blk, row, 2, spec%type)
 
     select case(spec%type)
+
+    case(SPEC_SOFT_COULOMB)
+      spec%Z=M_ZERO
+      call parse_block_float(blk, row, 3, spec%Z_val)
+      call parse_block_float(blk, row, 4, spec%sc_alpha)
+      read_data = 5
+
     case(SPEC_USDEF) ! user-defined
       spec%Z=M_ZERO
       call parse_block_float(blk, row, 3, spec%Z_val)
