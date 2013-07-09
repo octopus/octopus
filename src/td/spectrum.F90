@@ -573,7 +573,6 @@ contains
     SAFE_ALLOCATE(sigma(0:no_e, 1:3, 1:nspin))
 
 
-    print *, "time_steps", time_steps, "dt", dt, "no_e", no_e
     if(cmplxscl) then
       call batch_init(dipoleb, 3, 1, nspin, dipole + M_zI * Imdipole)
     else
@@ -604,7 +603,6 @@ contains
     if (abs(kick%delta_strength) < 1.d-12) kick%delta_strength = M_ONE
     do ie = 0, no_e
       energy = ie * spectrum%energy_step
-      print * , ie, energy, (sigma(ie, idir, 1), idir = 1, 3), kick%delta_strength
       forall(isp = 1:nspin) sf(ie, isp) = sum(sigma(ie, 1:3, isp)*kick%pol(1:3, kick%pol_dir))
       sf(ie, 1:nspin) = -sf(ie, 1:nspin) * (energy * M_TWO) / (M_PI * kick%delta_strength)
       sigma(ie, 1:3, 1:nspin) = -sigma(ie, 1:3, 1:nspin)*(M_FOUR*M_PI*energy/P_c)/kick%delta_strength
