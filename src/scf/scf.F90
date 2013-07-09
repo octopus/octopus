@@ -133,7 +133,8 @@ contains
     !%Section SCF::Convergence
     !%Description
     !% Maximum number of SCF iterations. The code will stop even if convergence
-    !% has not been achieved. -1 means unlimited. 0 means just do LCAO and stop.
+    !% has not been achieved. -1 means unlimited.
+    !% 0 means just do LCAO (or read from restart) and stop.
     !%End
     call parse_integer(datasets_check('MaximumIter'), 200, scf%max_iter)
 
