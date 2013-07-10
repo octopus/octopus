@@ -396,7 +396,7 @@ contains
         call io_free(iunit)
         iunit = -1
         if(die_) then
-          write(*, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
+          write(stderr, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
             '" for action="', trim(action), '"'
           message(1) = 'io_open.'
           call messages_fatal(1)
