@@ -139,7 +139,24 @@ contains
 
     PUSH_SUB(curv_modine_init)
 
+    !%Variable CurvModineXBar
+    !%Type float
+    !%Default 1/3
+    !%Section Mesh::Curvilinear::Modine
+    !%Description
+    !% Size of central flat region (in units of <tt>Lsize</tt>). Must be between 0 and 1.
+    !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
+    !%End
     call parse_float(datasets_check('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
+
+    !%Variable CurvModineJBar
+    !%Type float
+    !%Default 1/2
+    !%Section Mesh::Curvilinear::Modine
+    !%Description
+    !% Increase in density of points is inverse of this parameter.
+    !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
+    !%End
     call parse_float(datasets_check('CurvModineJBar'), M_HALF, cv%Jbar)
 
     cv%L = M_ZERO
@@ -154,7 +171,25 @@ contains
     SAFE_ALLOCATE(cv%Jrange(1:geo%natoms))
 
     ! \warning: the reading has to be done for each atom kind
+
+    !%Variable CurvModineJlocal
+    !%Type float
+    !%Default 0.25
+    !%Section Mesh::Curvilinear::Modine
+    !%Description
+    !% Local refinement around the atoms. Must be between 0 and 1.
+    !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
+    !%End
     call parse_float(datasets_check('CurvModineJlocal'), CNST(0.25), cv%Jlocal(1))
+
+    !%Variable CurvModineJrange
+    !%Type float
+    !%Default 2 b
+    !%Section Mesh::Curvilinear::Modine
+    !%Description
+    !% Local refinement range (a length).
+    !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
+    !%End
     call parse_float(datasets_check('CurvModineJrange'), units_from_atomic(units_inp%length, M_TWO), cv%Jrange(1))
 
     cv%Jrange(1) = units_to_atomic(units_inp%length, cv%Jrange(1))
