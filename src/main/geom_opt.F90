@@ -164,6 +164,7 @@ contains
       logical :: center, does_exist
       integer :: iter
       character*100 :: filename
+      FLOAT :: default_toldr
 
       PUSH_SUB(geom_opt_run.init_)
 
@@ -254,7 +255,6 @@ contains
       
       !%Variable GOMinimumMove
       !%Type float
-      !%Default 0.001 b
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Convergence criterion, for stopping the minimization. In
@@ -262,12 +262,16 @@ contains
       !% of all species change less than <tt>GOMinimumMove</tt>, or the
       !% <tt>GOTolerance</tt> criterion is satisfied.
       !% If <tt>GOMinimumMove = 0</tt>, this criterion is ignored.
-      !%
-      !% Note that if you use <tt>GOMethod =
-      !% simplex</tt>, then you must supply a non-zero
-      !% <tt>GOMinimumMove</tt>.
+      !% Default is zero, except 0.001 b with <tt>GOMethod = simplex</tt>.
+      !% Note that if you use <tt>GOMethod = simplex</tt>,
+      !% then you must supply a non-zero <tt>GOMinimumMove</tt>.
       !%End
-      call parse_float(datasets_check('GOMinimumMove'), CNST(0.001), g_opt%toldr, units_inp%length)
+      if(g_opt%method == MINMETHOD_NMSIMPLEX) then
+        default_toldr = CNST(0.001)
+      else
+        default_toldr = M_ZERO
+      endif
+      call parse_float(datasets_check('GOMinimumMove'), default_toldr, g_opt%toldr, units_inp%length)
 
       if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call input_error('GOMinimumMove')
       

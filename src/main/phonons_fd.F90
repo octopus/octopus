@@ -85,8 +85,7 @@ contains
     !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
     !% dynamical matrix.
     !%End
-    call parse_float(datasets_check('Displacement'), units_from_atomic(units_inp%length, CNST(0.01)), vib%disp)
-    vib%disp = units_to_atomic(units_inp%length, vib%disp)
+    call parse_float(datasets_check('Displacement'), CNST(0.01), vib%disp, units_inp%length)
 
     ! calculate dynamical matrix
     call get_dyn_matrix(sys%gr, sys%mc, sys%geo, sys%st, sys%ks, hm, sys%outp, vib)
