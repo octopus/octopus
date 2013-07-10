@@ -985,7 +985,7 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
   type(states_t), intent(in)  :: st1, st2
   R_TYPE,         intent(out) :: aa(:, :, :)
 
-  integer :: ii, jj, dim, n1, n2, ik
+  integer :: ii, jj, dim, ik
 #if defined(HAVE_MPI)
   R_TYPE, allocatable :: phi2(:, :)
   integer :: kk, ll, ist
@@ -995,12 +995,9 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
   PUSH_SUB(X(states_matrix))
 
-  n1 = st1%nst
-  n2 = st2%nst
-
   dim = st1%d%dim
 
-  do ik = 1, st1%d%nik
+  do ik = st1%d%kpt%start, st1%d%kpt%end
 
   if(st1%parallel_in_states) then
 
@@ -1035,9 +1032,9 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
     ! Each process holds some lines of the matrix. So it is broadcasted (All processes
     ! should get the whole matrix)
     call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
-    do ii = 1, n1
+    do ii = 1, st1%nst
       kk = st1%node(ii)
-      do jj = 1, n2
+      do jj = 1, st2%nst
         call MPI_Bcast(aa(ii, jj, ik), 1, R_MPITYPE, kk, st1%mpi_grp%comm, mpi_err)
       end do
     end do
@@ -1047,8 +1044,9 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 #endif
 
   else
-    do ii = 1, n1
-      do jj = 1, n2
+
+    do ii = st1%st_start, st1%nst
+      do jj = st2%st_start, st2%nst
         aa(ii, jj, ik) = X(mf_dotp)(mesh, dim, st1%X(psi)(:, :, ii, ik), st2%X(psi)(:, :, jj, ik))
       end do
     end do
