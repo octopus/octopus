@@ -28,12 +28,8 @@ dist_share_DATA =                        \
           03-h1d_ati.01.inp              \
           04-nfft.01-ba.inp              \
           04-nfft.02-ati.inp             \
-          05-pfft-h3d.01-gs.inp          \
-          05-pfft-h3d.02-mask.inp        \
-          05-pfft-h3d.03-ba.inp
-          
-          
-          
-
+          05-pfft.01-gs.inp              \
+          05-pfft.02-mask.inp            \
+          05-pfft.03-ba.inp
 
 CLEANFILES = *~ *.bak
