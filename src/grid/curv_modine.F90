@@ -184,10 +184,10 @@ contains
 
     !%Variable CurvModineJrange
     !%Type float
-    !%Default 2
+    !%Default 2 b
     !%Section Mesh::Curvilinear::Modine
     !%Description
-    !% Local refinement range.
+    !% Local refinement range (a length).
     !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
     !%End
     call parse_float(datasets_check('CurvModineJrange'), M_TWO, cv%Jrange(1), units_inp%length)
