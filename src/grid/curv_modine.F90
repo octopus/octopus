@@ -155,9 +155,7 @@ contains
 
     ! \warning: the reading has to be done for each atom kind
     call parse_float(datasets_check('CurvModineJlocal'), CNST(0.25), cv%Jlocal(1))
-    call parse_float(datasets_check('CurvModineJrange'), units_from_atomic(units_inp%length, M_TWO), cv%Jrange(1))
-
-    cv%Jrange(1) = units_to_atomic(units_inp%length, cv%Jrange(1))
+    call parse_float(datasets_check('CurvModineJrange'), M_TWO, cv%Jrange(1), units_inp%length)
 
     if(cv%Jlocal(1)<M_ZERO.or.cv%Jlocal(1)>M_ONE) then
       message(1) = 'The parameter "CurvModineJlocal" must lie between 0 and 1.'

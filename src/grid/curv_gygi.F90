@@ -97,7 +97,7 @@ contains
     !% It must be larger than zero.
     !%End
 
-    call parse_float(datasets_check('CurvGygiAlpha'), units_from_atomic(units_inp%length, M_TWO), cv%alpha)
+    call parse_float(datasets_check('CurvGygiAlpha'), M_TWO, cv%alpha, units_inp%length)
     !%Variable CurvGygiBeta
     !%Type float
     !%Default 4.0 a.u.
@@ -107,14 +107,11 @@ contains
     !% recovered. [This is the <math>b_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli,
     !% <i>Phys. Rev. B</i> <b>52</b>, R2229 (1995)]. It must be larger than zero.
     !%End
-    call parse_float(datasets_check('CurvGygiBeta'),  units_from_atomic(units_inp%length, M_FOUR), cv%beta)
+    call parse_float(datasets_check('CurvGygiBeta'), M_FOUR, cv%beta, units_inp%length)
 
     if(cv%a<=M_ZERO)     call input_error('CurvGygiA')
     if(cv%alpha<=M_ZERO) call input_error('CurvGygiAlpha')
     if(cv%beta<=M_ZERO)  call input_error('CurvGygiBeta')
-
-    cv%alpha = units_to_atomic(units_inp%length, cv%alpha)
-    cv%beta  = units_to_atomic(units_inp%length, cv%beta)
 
     cv%npos = geo%natoms
     SAFE_ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim))
