@@ -421,7 +421,7 @@ contains
       !%Section Mesh::KPoints
       !%Description
       !% Same as the block <tt>KPoints</tt> but this time the input is given in reduced 
-      !% coordinates, , <i>i.e.</i>
+      !% coordinates, <i>i.e.</i>
       !% what <tt>Octopus</tt> writes in a line in the ground-state standard output as
       !% <tt>#k =   1, k = (    0.154000,    0.154000,    0.154000)</tt>.
       !%End
