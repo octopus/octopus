@@ -1015,7 +1015,7 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
     ! Processes are received, and then the matrix elements are calculated.
     SAFE_ALLOCATE(phi2(1:mesh%np, 1:st1%d%dim))
-    do jj = 1, n2
+    do jj = 1, st2%nst
       ll = st1%node(jj)
       if(ll /= st1%mpi_grp%rank) then
         call MPI_Irecv(phi2(1, 1), st1%d%dim*mesh%np, R_MPITYPE, ll, jj, st1%mpi_grp%comm, request, mpi_err)
@@ -1045,8 +1045,8 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
   else
 
-    do ii = st1%st_start, st1%nst
-      do jj = st2%st_start, st2%nst
+    do ii = st1%st_start, st1%st_end
+      do jj = st2%st_start, st2%st_end
         aa(ii, jj, ik) = X(mf_dotp)(mesh, dim, st1%X(psi)(:, :, ii, ik), st2%X(psi)(:, :, jj, ik))
       end do
     end do
