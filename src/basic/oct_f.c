@@ -32,6 +32,8 @@
 #include <math.h>
 #include <time.h>
 
+#include <fortran_types.h>
+
 #ifdef HAVE_DIRENT_H
 #include <dirent.h>
 #endif
@@ -80,7 +82,7 @@ void FC_FUNC_(oct_mkdir, OCT_MKDIR)
 }
 
 void FC_FUNC_(oct_stat, OCT_STAT)
-	(int *ierr, STR_F_TYPE name STR_ARG1)
+	(fint *ierr, STR_F_TYPE name STR_ARG1)
 {
   char *name_c;
   struct stat statbuf;
@@ -128,7 +130,7 @@ void FC_FUNC_(oct_getenv, OCT_GETENV)
 /* this function gets a string of the form '1-12, 34' and fills
 	 array l with the 1 if the number is in the list, or 0 otherwise */
 void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
-		 (STR_F_TYPE str, int l[16384] STR_ARG1)
+		 (STR_F_TYPE str, fint l[16384] STR_ARG1)
 {
   int i, i1, i2;
   char c[20], *c1, *str_c, *s;
@@ -170,14 +172,14 @@ void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
 #include "varia.h"
 
 void FC_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
-  (int *a, int *max)
+  (fint *a, fint *max)
 {
   progress_bar(*a, *max);
 }
 
 /* ------------------------------ some stuff  -------------------------------- */
 void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
-  (int *sec, int *usec)
+  (fint *sec, fint *usec)
 {
 #ifdef HAVE_GETTIMEOFDAY
   struct timeval tv;
@@ -217,7 +219,7 @@ double FC_FUNC_(oct_clock, OCT_CLOCK)
 }
 
 void FC_FUNC_(oct_nanosleep, OCT_NANOSLEEP)
-	(int *sec, int *nsec)
+	(fint *sec, fint *nsec)
 {
 #ifdef HAVE_NANOSLEEP
   /* Datatypes should be long instead of int (see comment in gettimeofday) */
@@ -307,7 +309,7 @@ ierr results:
 */
 
 void FC_FUNC_(oct_search_file_lr, OCT_SEARCH_FILE_LR)
-     (double * freq, const int * tag, int * ierr, STR_F_TYPE dirname STR_ARG1)
+     (double * freq, const fint * tag, fint * ierr, STR_F_TYPE dirname STR_ARG1)
 {
 #if HAVE_DIRENT_H && HAVE_CLOSEDIR && HAVE_READDIR && HAVE_STRCHR && HAVE_STRTOD
 

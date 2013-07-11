@@ -20,7 +20,7 @@
 ## $Id: Makefile.am 2995 2007-06-13 17:49:22Z xavier $
 
 noinst_HEADERS = \
-	global.h integer.F90 real.F90 complex.F90 undef.F90 vectors.h
+	global.h integer.F90 real.F90 complex.F90 undef.F90 vectors.h fortran_types.h
 
 include $(srcdir)/../common-rules.make
 

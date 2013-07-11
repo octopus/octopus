@@ -31,6 +31,9 @@
 #include <config.h>
 #include "string_f.h"
 
+#include <fortran_types.h>
+
+
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
@@ -86,9 +89,9 @@ void write_iter_header_work(write_iter *w, char *s)
 /* Functions called from FORTRAN */
 void FC_FUNC_(write_iter_init, WRITE_ITER_INIT)
 #ifdef SINGLE_PRECISION
-		 (void **v, int *i, float  *d, STR_F_TYPE fname STR_ARG1)
+		 (void **v, fint *i, float  *d, STR_F_TYPE fname STR_ARG1)
 #else
-		 (void **v, int *i, double *d, STR_F_TYPE fname STR_ARG1)
+		 (void **v, fint *i, double *d, STR_F_TYPE fname STR_ARG1)
 #endif
 {
 	write_iter *w;
@@ -152,7 +155,7 @@ void FC_FUNC_(write_iter_start, WRITE_ITER_START)
 }
 
 void FC_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
-		 (void **v, double *d, int *no)
+		 (void **v, double *d, fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;
@@ -165,7 +168,7 @@ void FC_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
 }
 
 void FC_FUNC_(write_iter_float_1, WRITE_ITER_FLOAT_1)
-		 (void **v, float *d, int *no)
+		 (void **v, float *d, fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;
@@ -178,7 +181,7 @@ void FC_FUNC_(write_iter_float_1, WRITE_ITER_FLOAT_1)
 }
 
 void FC_FUNC_(write_iter_double_n, WRITE_ITER_DOUBLE_N)
-		 (void **v, double *d, int *no)
+		 (void **v, double *d, fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;
@@ -191,7 +194,7 @@ void FC_FUNC_(write_iter_double_n, WRITE_ITER_DOUBLE_N)
 }
 
 void FC_FUNC_(write_iter_float_n, WRITE_ITER_FLOAT_N)
-		 (void **v, float *d, int *no)
+		 (void **v, float *d, fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;
@@ -204,7 +207,7 @@ void FC_FUNC_(write_iter_float_n, WRITE_ITER_FLOAT_N)
 }
 
 void FC_FUNC_(write_iter_int_1, WRITE_ITER_INT_1)
-		 (void **v, int *d, int *no)
+		 (void **v, fint *d, fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;
@@ -217,7 +220,7 @@ void FC_FUNC_(write_iter_int_1, WRITE_ITER_INT_1)
 }
 
 void FC_FUNC_(write_iter_int_n, WRITE_ITER_INT_N)
-		 (void **v, int *d, int *no)
+		 (void **v, fint *d, fint *no)
 {
 	write_iter *w=(write_iter *)*v;
 	int i;

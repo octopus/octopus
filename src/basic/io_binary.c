@@ -35,6 +35,7 @@ The functions in this file write and read an array to binary file.
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <fortran_types.h>
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -185,7 +186,7 @@ static inline int check_header(header_t * h, int * correct_endianness){
 
 
 void FC_FUNC_(write_binary,WRITE_BINARY)
-     (const int * np, void * f, int * type, int * ierr, STR_F_TYPE fname STR_ARG1)
+     (const fint * np, void * f, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
 {
   header_t * h;
   char * filename;
@@ -241,7 +242,7 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
 }
  
 void FC_FUNC_(read_binary,READ_BINARY)
-     (const int * np, const int * offset, byte * f, int * output_type, int * ierr, STR_F_TYPE fname STR_ARG1)
+     (const fint * np, const fint * offset, byte * f, fint * output_type, fint * ierr, STR_F_TYPE fname STR_ARG1)
 {
   header_t * h;
   char * filename;
@@ -414,7 +415,7 @@ static void convert ( multi * in, multi * out, int t_in, int t_out){
 
 
 void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
-     (int * np, int * type, int * ierr, STR_F_TYPE fname STR_ARG1)
+     (fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
 {
   header_t * h;
   char * filename;

@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
+#include <fortran_types.h>
 
 #include <gsl/gsl_sf_legendre.h>
 
@@ -40,7 +41,7 @@ static double sph_cnsts[9] = {
 	 constant and plm associated legendre polynomials. */
 
 void FC_FUNC_(oct_ylm, OCT_YLM)
-     (const int * np, const double *x, const double *y, const double *z, const int *l, const int *m, double * restrict ylm)
+     (const fint * np, const double *x, const double *y, const double *z, const fint *l, const fint *m, double * restrict ylm)
 {
   double r, r2, rr, rx, ry, rz, cosphi, sinphi, cosm, sinm, phase;
   int i, ip;

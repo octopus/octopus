@@ -41,6 +41,8 @@
 
 #include "string_f.h"
 
+#include <fortran_types.h>
+
 /* Numerical threshold for oct_bessel_k0 and oct_bessel_k1 */
 #define  BESSEL_K_THRES  1.0e2
 
@@ -74,19 +76,19 @@ double FC_FUNC_(oct_incomplete_gamma, OCT_INCOMPLETE_GAMMA)
 }
 
 double FC_FUNC_(oct_sph_bessel, OCT_SPH_BESSEL)
-     (const int *l, const double*x)
+     (const fint *l, const double*x)
 {
   return gsl_sf_bessel_jl(*l, *x);
 }
 
 double FC_FUNC_(oct_bessel, OCT_BESSEL)
-     (const int *n, const double *x)
+     (const fint *n, const double *x)
 {
   return gsl_sf_bessel_Jn(*n, *x);
 }
 
 double FC_FUNC_(oct_bessel_in, OCT_BESSEL_IN)
-     (const int *n, const double *x)
+     (const fint *n, const double *x)
 {
   return gsl_sf_bessel_In(*n, *x);
 }
@@ -148,7 +150,7 @@ double FC_FUNC_(oct_erf, OCT_ERF)
 }
 
 double FC_FUNC_(oct_legendre_sphplm, OCT_LEGENDRE_SPHPLM)
-     (const int *l, const int *m, const double *x)
+     (const fint *l, const int *m, const double *x)
 {
   return gsl_sf_legendre_sphPlm(*l, *m, *x);
 }
@@ -208,7 +210,7 @@ void FC_FUNC_(oct_spline_end, OCT_SPLINE_END)
 }
 
 void FC_FUNC_(oct_spline_fit, OCT_SPLINE_FIT)
-		 (const int *nrc, const double *x, const double *y, void **spl, void **acc)
+		 (const fint *nrc, const double *x, const double *y, void **spl, void **acc)
 {
   /* the GSL headers actually specify size_t instead of const int for nrc */
   *acc = (void *)gsl_interp_accel_alloc();
@@ -226,7 +228,7 @@ double FC_FUNC_(oct_spline_eval, OCT_SPLINE_EVAL)
 
 
 void FC_FUNC_(oct_spline_eval_array, OCT_SPLINE_EVAL_ARRAY)
-     (const int * nn, double *xf, const void **spl, void **acc)
+     (const fint * nn, double *xf, const void **spl, void **acc)
 {
   int ii;
   for(ii = 0; ii < *nn; ii++){
@@ -235,7 +237,7 @@ void FC_FUNC_(oct_spline_eval_array, OCT_SPLINE_EVAL_ARRAY)
 }
 
 void FC_FUNC_(oct_spline_eval_array4, OCT_SPLINE_EVAL_ARRAY)
-     (const int * nn, float *xf, const void **spl, void **acc)
+     (const fint * nn, float *xf, const void **spl, void **acc)
 {
   int ii;
   for(ii = 0; ii < *nn; ii++){
@@ -245,10 +247,10 @@ void FC_FUNC_(oct_spline_eval_array4, OCT_SPLINE_EVAL_ARRAY)
 
 /* This function returns the number of points with which a spline
 	 was constructed (the size component of the gsl_spline struct). */
-int FC_FUNC_(oct_spline_npoints, OCT_SPLINE_NPOINTS)
+fint FC_FUNC_(oct_spline_npoints, OCT_SPLINE_NPOINTS)
      (const void **spl)
 {
-  return (int)((gsl_spline *)(*spl))->size;
+  return (fint)((gsl_spline *)(*spl))->size;
 }
 
 /* This function places in the x array the x values of a given spline spl*/ 
@@ -298,7 +300,7 @@ double FC_FUNC_(oct_spline_eval_der2, OCT_SPLINE_EVAL_DER2)
 }
 
 void FC_FUNC_(oct_strerror, OCT_STRERROR)
-     (const int *err, STR_F_TYPE res STR_ARG1)
+     (const fint *err, STR_F_TYPE res STR_ARG1)
 {
   const char *c;
 

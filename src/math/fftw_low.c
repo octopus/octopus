@@ -21,6 +21,7 @@
 
 
 #include <config.h>
+#include <fortran_types.h>
 
 /**
  * Optimizes the order of the FFT grid.
@@ -58,7 +59,7 @@ void fft_optimize(int *n, int par)
 }
 
 void FC_FUNC_(oct_fft_optimize, OCT_FFT_OPTIMIZE)
-  (int *n, int *par)
+  (fint *n, fint *par)
 {
   fft_optimize(n, *par);
 }
