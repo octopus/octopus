@@ -1063,75 +1063,141 @@ contains
   end function is_prime
 
   ! ---------------------------------------------------------
-  !>  Generates a rotation matrix M from direction u to direction v. 
-  subroutine generate_rotation_matrix(M, u, v)
-    FLOAT,   intent(out)  :: M(:,:)
-    FLOAT,   intent(in)   :: u(:)
-    FLOAT,   intent(in)   :: v(:)
+  !>  Generates a rotation matrix R to rotate a vector f to t.
+  !> 
+  !>	T. Möller and J. F. Hughes, Journal of Graphics Tools 4, 1 (1999)
+  !>
+  subroutine generate_rotation_matrix(R, ff, tt)
+    FLOAT,   intent(out)  :: R(:,:)
+    FLOAT,   intent(in)   :: ff(:)
+    FLOAT,   intent(in)   :: tt(:)
 
-    integer            :: dim, ii
-    FLOAT              :: phi
-    FLOAT, allocatable :: axis(:), uu(:), vv(:)
+    integer            :: dim, i, j
+    FLOAT              :: th, uv, uu, vv, ft
+    FLOAT, allocatable :: axis(:), u(:), v(:), f(:), t(:), p(:)
 
     PUSH_SUB(generate_rotation_matrix)
 
-    dim = size(u,1)  
+    dim = size(ff,1)  
 
     ASSERT((dim < 3) .or. (dim > 2))
-    ASSERT(size(v,1)  ==  dim)
-    ASSERT((size(M,1)  ==  dim) .and. (size(M,2)  ==  dim))
+    ASSERT(size(tt,1)  ==  dim)
+    ASSERT((size(R,1)  ==  dim) .and. (size(R,2)  ==  dim))
 
-    SAFE_ALLOCATE(uu(1:dim))
-    SAFE_ALLOCATE(vv(1:dim))
+    SAFE_ALLOCATE(u(1:dim))
+    SAFE_ALLOCATE(v(1:dim))
+    SAFE_ALLOCATE(f(1:dim))
+    SAFE_ALLOCATE(t(1:dim))
 
 
-    vv = v /dot_product(v,v)
-    uu = u /dot_product(u,u)
+    !normalize
+    f = ff / sqrt( dot_product(ff,ff) )
+    t = tt / sqrt( dot_product(tt,tt) )
 
-    phi = acos(dot_product(uu,vv))
+    ft = dot_product(f,t)
 
-    if(phi > M_ZERO) then
+    if(abs(ft) < M_ONE) then
       select case (dim)
       case (2)
-        M(1,1) = cos(phi)
-        M(1,2) = -sin(phi)
+        th = acos(ft)
+        R(1,1) = cos(th)
+        R(1,2) = -sin(th)
 
-        M(2,1) = sin(phi)
-        M(2,2) = cos(phi)
+        R(2,1) = sin(th)
+        R(2,2) = cos(th)
 
       case (3)
-        SAFE_ALLOCATE(axis(1:dim))
+        if(.false.) then 
+          !Old implementation
+          SAFE_ALLOCATE(axis(1:dim))
+          th = acos(ft)
+
+          u = f / dot_product(f,f)
+          v = t /dot_product(t,t)
         
-        axis = dcross_product(uu,vv)    
-        axis = axis / dot_product(axis, axis)
+          axis = dcross_product(u,v)    
+          axis = axis / sqrt(dot_product(axis, axis))
 
-        M(1,1) = cos(phi) + axis(1)**2 * (1 - cos(phi))    
-        M(1,2) = axis(1)*axis(2)*(1-cos(phi)) + axis(3)*sin(phi)
-        M(1,3) = axis(1)*axis(3)*(1-cos(phi)) - axis(2)*sin(phi)
+          R(1,1) = cos(th) + axis(1)**2 * (1 - cos(th))    
+          R(1,2) = axis(1)*axis(2)*(1-cos(th)) + axis(3)*sin(th)
+          R(1,3) = axis(1)*axis(3)*(1-cos(th)) - axis(2)*sin(th)
 
-        M(2,1) = axis(2)*axis(1)*(1-cos(phi)) - axis(3)*sin(phi)
-        M(2,2) = cos(phi) + axis(2)**2 * (1 - cos(phi))
-        M(2,3) = axis(2)*axis(3)*(1-cos(phi)) + axis(1)*sin(phi) 
+          R(2,1) = axis(2)*axis(1)*(1-cos(th)) - axis(3)*sin(th)
+          R(2,2) = cos(th) + axis(2)**2 * (1 - cos(th))
+          R(2,3) = axis(2)*axis(3)*(1-cos(th)) + axis(1)*sin(th) 
 
-        M(3,1) = axis(3)*axis(1)*(1-cos(phi)) + axis(2)*sin(phi)
-        M(3,2) = axis(3)*axis(2)*(1-cos(phi)) - axis(1)*sin(phi)
-        M(3,3) = cos(phi) + axis(3)**2 * (1 - cos(phi))          
+          R(3,1) = axis(3)*axis(1)*(1-cos(th)) + axis(2)*sin(th)
+          R(3,2) = axis(3)*axis(2)*(1-cos(th)) - axis(1)*sin(th)
+          R(3,3) = cos(th) + axis(3)**2 * (1 - cos(th))          
 
-        SAFE_DEALLOCATE_A(axis)
+          SAFE_DEALLOCATE_A(axis)
+        end if
+        
+        if(.true.) then 
+        !Naive implementation
+          th = acos(ft)
+          u = dcross_product(f,t)    
+          u = u / sqrt(dot_product(u,u)) 
+
+          R(1,1) = u(1)**2 + (1-u(1)**2)*cos(th)
+          R(1,2) = u(1)*u(2)*(1-cos(th)) - u(3)*sin(th) 
+          R(1,3) = u(1)*u(3) + u(2)*sin(th)
+
+          R(2,1) = u(1)*u(2)*(1-cos(th)) + u(3)*sin(th) 
+          R(2,2) = u(2)**2 + (1-u(2)**2)*cos(th)
+          R(2,3) = u(2)*u(3)*(1-cos(th)) - u(1)*sin(th)
+
+          R(3,1) = u(1)*u(3)*(1-cos(th)) - u(2)*sin(th)
+          R(3,2) = u(2)*u(3)*(1-cos(th)) + u(1)*sin(th)
+          R(3,3) = u(3)**2 + (1-u(3)**2)*cos(th)         
+        end if
+
+        if(.false.) then 
+          !Fast
+          SAFE_ALLOCATE(p(1:dim))
+        
+          if(abs(f(1))<=abs(f(2)) .and. abs(f(1))<abs(f(3))) then
+            p = (/M_ONE, M_ZERO, M_ZERO/)
+          else if(abs(f(2))<abs(f(1)) .and. abs(f(2))<=abs(f(3))) then
+            p = (/M_ZERO, M_ONE, M_ZERO/)
+          else if(abs(f(3))<=abs(f(1)) .and. abs(f(3))<abs(f(2))) then
+            p = (/M_ZERO, M_ZERO, M_ONE/)
+          end if  
+        
+          u = p - f
+          v = p - t
+        
+          uu = dot_product(u,u)
+          vv = dot_product(v,v)
+          uv = dot_product(u,v)
+        
+          do i=1,3
+            do j=1,3
+          
+              R(i,j) = ddelta(i,j) - M_TWO * u(i)*u(j)/uu - M_TWO * v(i)*v(j)/vv &
+              + CNST(4)*uv * v(i)*u(j) /(uu*vv)
+  
+            end do
+          end do
+        
+          SAFE_DEALLOCATE_A(p)
+        end if
+
+
       end select
 
-    else
+    else 
 
-      M = M_ZERO
-      do ii=1,dim
-        M(ii,ii) = M_ONE 
+      R = M_ZERO
+      do i=1,dim
+        R(i,i) = M_ONE 
       end do
 
     endif
 
 
-    SAFE_DEALLOCATE_A(uu)
-    SAFE_DEALLOCATE_A(vv)
+    SAFE_DEALLOCATE_A(u)
+    SAFE_DEALLOCATE_A(v)
 
     POP_SUB(generate_rotation_matrix)  
   end subroutine generate_rotation_matrix
