@@ -144,7 +144,7 @@ contains
     !%Option netcdf 128
     !% Outputs in NetCDF (<tt>http://www.unidata.ucar.edu/packages/netcdf/</tt>) format. This file
     !% can then be read, for example, by OpenDX. The string <tt>.ncdf</tt> is appended to previous file names.
-    !% Requires the NetCDF library.
+    !% Requires the NetCDF library. Only writes the real part of complex functions.
     !%Option mesh_index 512
     !% Generates output files of a given quantity (density, wavefunctions, ...) which include
     !% the internal numbering of mesh points. Since this mode produces large datafiles this is only 
@@ -185,7 +185,7 @@ contains
     !% Geometry will be output in XYZ format. Does not affect other outputs.
     !%Option cube 131072
     !% Generates output in the cube file format (<tt>http://local.wasp.uwa.edu.au/~pbourke/dataformats/cube/</tt>).
-    !% Available only in 3D.
+    !% Available only in 3D. Only writes the real part of complex functions.
     !%Option openscad 262144
     !% Generates output in OpenSCAD format (http://www.openscad.org/). For the moment only the geometry is supported.
     !%End

@@ -217,12 +217,12 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
       SAFE_ALLOCATE(x_out(1:cube%rs_n_global(1), 1:1))
       
       do ii = 1, dims(1)
-        x_in(ii,:) = (/ real(ii-1)*(real(cube%rs_n_global(1)-1)/(dims(1)-1)) /)
+        x_in(ii,:) = (/ real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) /)
       end do
 
       
       do ii = 1, cube%rs_n_global(1)
-        x_out(ii,1) = real(ii-1)
+        x_out(ii,1) = real(ii-1, REAL_PRECISION)
       end do
         
       call X(mf_interpolate_points)(2, int(dims(1),4), x_in(:,:),&
@@ -238,14 +238,14 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
       do ii = 1, dims(2)
         do jj = 1, dims(1)
           x_in((ii-1)*dims(1) + jj,:) = & 
-              &(/ real(jj-1)*(real(cube%rs_n_global(1)-1)/(dims(1)-1)),&
-              &   real(ii-1)*(real(cube%rs_n_global(2)-1)/(dims(2)-1)) /)
+              &(/ real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)),&
+              &   real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) /)
         end do
       end do
       
       do ii = 1, cube%rs_n_global(2)
         do jj = 1, cube%rs_n_global(1)
-          x_out((ii-1)*cube%rs_n_global(1) + jj,:) = (/ real(jj-1), real(ii-1) /)
+          x_out((ii-1)*cube%rs_n_global(1) + jj,:) = (/ real(jj-1, REAL_PRECISION), real(ii-1, REAL_PRECISION) /)
         end do
       end do
       call X(mf_interpolate_points)(2, int(dims(1)*dims(2),4), x_in(:,:),&
@@ -261,9 +261,9 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
         do jj = 1, dims(2)
           do kk = 1, dims(1)
             x_in((ii-1)*dims(1)*dims(2) + (jj-1)*dims(1) + kk,:) = &
-              &(/ real(kk-1)*(real(cube%rs_n_global(1)-1)/(dims(1)-1))  ,&
-              &   real(jj-1)*(real(cube%rs_n_global(2)-1)/(dims(2)-1))  ,&
-              &   real(ii-1)*(real(cube%rs_n_global(3)-1)/(dims(3)-1))  /)
+              &(/ real(kk-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) , &
+              &   real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) , &
+              &   real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(3)-1, REAL_PRECISION)/(dims(3)-1)) /)
           end do
         end do
       end do
@@ -272,7 +272,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, is_tmp, map)
         do jj = 1, cube%rs_n_global(2)
           do kk = 1, cube%rs_n_global(1)
             x_out((ii-1)*cube%rs_n_global(1)*cube%rs_n_global(2) + (jj-1)*cube%rs_n_global(1) + kk,:) = &
-              &(/ real(kk-1), real(jj-1), real(ii-1) /)
+              &(/ real(kk-1, REAL_PRECISION), real(jj-1, REAL_PRECISION), real(ii-1, REAL_PRECISION) /)
             end do
           end do
         end do
@@ -1060,7 +1060,7 @@ contains
           if(.not. write_real) then
             write(iunit,'(2f25.15)') aimag(units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2)))
           else
-            write(iunit,'(2f25.15)') real(units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2)))
+            write(iunit,'(2f25.15)') real(units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2)), REAL_PRECISION)
           endif
 #else
           write(iunit,'(2f25.15)') units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2))
@@ -1443,7 +1443,7 @@ end function X(interpolate_isolevel)
       if (transpose) then
         call transpose3(real(cf%X(RS), REAL_PRECISION), xx)
       else
-        xx = real(cf%X(RS))
+        xx = real(cf%X(RS), REAL_PRECISION)
       end if
       xx = units_from_atomic(unit, xx)
       call write_variable(ncid, data_id, status, sb_dim, xx)
