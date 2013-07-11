@@ -12,8 +12,8 @@
 !!
 !! You should have received a copy of the GNU General Public License
 !! along with this program; if not, write to the Free Software
-!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-!! 02111-1307, USA.
+!! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+!! 02110-1301, USA.
 !!
 !! $Id: em_resp.F90 2686 2007-02-03 22:10:51Z xavier $
 
