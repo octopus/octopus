@@ -248,7 +248,7 @@ contains
       !% Convergence criterion, for stopping the minimization. In
       !% units of force; minimization is stopped when all forces on
       !% ions are smaller than this criterion, or the
-      !% <tt>GOMinimumMove</tt> is satisfied. If <tt>GOTolerance = 0</tt>,
+      !% <tt>GOMinimumMove</tt> is satisfied. If <tt>GOTolerance < 0</tt>,
       !% this criterion is ignored.
       !%End
       call parse_float(datasets_check('GOTolerance'), CNST(0.001), g_opt%tolgrad, units_inp%force)
@@ -261,15 +261,15 @@ contains
       !% units of length; minimization is stopped when the coordinates
       !% of all species change less than <tt>GOMinimumMove</tt>, or the
       !% <tt>GOTolerance</tt> criterion is satisfied.
-      !% If <tt>GOMinimumMove = 0</tt>, this criterion is ignored.
-      !% Default is zero, except 0.001 b with <tt>GOMethod = simplex</tt>.
+      !% If <tt>GOMinimumMove < 0</tt>, this criterion is ignored.
+      !% Default is -1, except 0.001 b with <tt>GOMethod = simplex</tt>.
       !% Note that if you use <tt>GOMethod = simplex</tt>,
       !% then you must supply a non-zero <tt>GOMinimumMove</tt>.
       !%End
       if(g_opt%method == MINMETHOD_NMSIMPLEX) then
         default_toldr = CNST(0.001)
       else
-        default_toldr = M_ZERO
+        default_toldr = -M_ONE
       endif
       call parse_float(datasets_check('GOMinimumMove'), default_toldr, g_opt%toldr, units_inp%length)
 
