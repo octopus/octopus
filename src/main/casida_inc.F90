@@ -388,8 +388,9 @@ subroutine X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
 
   do ia = 1, cas%n_pairs
     do jb = ia, cas%n_pairs
-!      not sure if this line is appropriate or not. --DAS
-!      if(cas%type == CASIDA_PETERSILKA .and. isnt_degenerate(cas, st, ia, jb)) cycle
+      ! only matrix elements between degenerate states matter for degenerate perturbation theory
+      if((cas%type == CASIDA_PETERSILKA .or. cas%type == CASIDA_EPS_DIFF) &
+        .and. isnt_degenerate(cas, st, ia, jb)) cycle
 
       ! if occ states the same, apply unocc matrix elements
       if(cas%pair(ia)%i == cas%pair(jb)%i) then
