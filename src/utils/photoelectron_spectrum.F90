@@ -68,6 +68,9 @@ program photoelectron_spectrum
   call io_init()
   call io_init_datasets()
 
+  call messages_init()
+
+
   call getopt_init(ierr)
   if(ierr /= 0) then
     message(1) = "Your Fortran compiler doesn't support command-line arguments;"
@@ -155,7 +158,7 @@ program photoelectron_spectrum
     if(sum((pvec-(/0 ,1 ,0/))**2)  <= 1E-14  )  dir = 2
     if(sum((pvec-(/0 ,0 ,1/))**2)  <= 1E-14  )  dir = 3
 
-    filename = "./PES_velocity.map."//index2axis(dir)//"=0"
+    filename = "PES_velocity.map."//index2axis(dir)//"=0"
 
 
     if (dir == -1) then
@@ -169,6 +172,7 @@ program photoelectron_spectrum
     if(integrate /= INTEGRATE_NONE) then
       write(message(1), '(a)') 'Integrate on: '//index2var(integrate)
       call messages_info(1)      
+      filename = "PES_velocity.map.i_"//trim(index2var(integrate))//"."//index2axis(dir)//"=0"
     end if
     
     call PES_mask_dump_full_mapM_cut(PESK, filename, Lk, dim, pol, dir, integrate)    

@@ -468,7 +468,7 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
   FLOAT, allocatable   :: Lk_(:,:)
   FLOAT                :: rotation(1:dim,1:dim)
 ! integration
-  FLOAT                :: K, KKK(3), theta, phi, Dphi
+  FLOAT                :: K, KKK(3), theta, phi, Dphi, Dk
   integer              :: iph, Nphi
 
 
@@ -489,7 +489,8 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
   SAFE_ALLOCATE(idx(maxval(ll(:)), 3))
   SAFE_ALLOCATE(Lk_(size(Lk,1), 3))
 
-
+  Dk = abs(Lk(2)-Lk(1)) 
+  
   do ii = 1, 3
     Lk_(:,ii) = Lk(:)
     call sort(Lk_(1:ll(ii), ii), idx(1:ll(ii), ii)) !We need to sort the k-vectors in order to dump in gnuplot format
@@ -529,10 +530,11 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
   
     
   else 
-    ! We set the polarization axis along z 
-    call generate_rotation_matrix(rotation,  (/M_ZERO, M_ZERO, M_ONE/), pol)
+    ! We set the z-axis along the polarization 
+    call generate_rotation_matrix(rotation, (/M_ZERO, M_ZERO, M_ONE/), pol )
 
     if(in_debug_mode) then
+      print *,"Rotate z-axis over the zenith axis"
       print *,rotation(1,:)
       print *,rotation(2,:)
       print *,rotation(3,:)
@@ -543,6 +545,7 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
     do ix = 1, ll(1)
      do iy = 1, ll(2)
 
+       !cut 
        select case (dir)
          case (1)
            KK(1) = M_ZERO         
@@ -562,27 +565,56 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
        end select
 
        temp = qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) )
-       if (integrate == INTEGRATE_PHI) then
-         temp = M_ZERO
-         K = sqrt(KK(1)**2 + KK(2)**2 + KK(3)**2)
 
-         Nphi = 360
-         Dphi = M_TWO * M_PI/Nphi
+       select case (integrate)
+         case (INTEGRATE_PHI)
+           temp = M_ZERO
+           K = sqrt(KK(1)**2 + KK(2)**2 + KK(3)**2)
 
-         do iph = 0, Nphi
-           phi = iph * Dphi
-           theta = atan2(KK(2),KK(1))
+           Nphi = 360
+           Dphi = M_TWO * M_PI/Nphi
 
-           KKK(1) = K *sin(theta)*cos(phi) 
-           KKK(2) = K *sin(theta)*sin(phi)
-           KKK(3) = K *cos(theta)
+           do iph = 0, Nphi
+             phi = iph * Dphi
+             theta = atan2(KK(2),KK(1))
+
+             KKK(1) = K *sin(theta)*cos(phi) 
+             KKK(2) = K *sin(theta)*sin(phi)
+             KKK(3) = K *cos(theta)
         
-           temp = temp + &
-                         abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
-         end do
-         temp = temp * Dphi     
+             temp = temp + &
+                           abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+           end do
+           temp = temp * Dphi     
+           
+         case (INTEGRATE_KX)
+           temp = M_ZERO
+           do ii =1, ll(1)
+              KKK(:) = KK(:) + (/Lk(ii), M_ZERO, M_ZERO/)
+              temp = temp + &
+                            abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+           end do
+           temp = temp * Dk  
+         
+         case (INTEGRATE_KY)
+           temp = M_ZERO
+           do ii =1, ll(2)
+              KKK(:) = KK(:) + (/M_ZERO, Lk(ii), M_ZERO/)
+              temp = temp + &
+                            abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+           end do
+           temp = temp * Dk  
+         
+         case (INTEGRATE_KZ)
+           temp = M_ZERO
+           do ii =1, ll(3)
+              KKK(:) = KK(:) + (/M_ZERO, M_ZERO, Lk(ii)/)
+              temp = temp + &
+                            abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+           end do
+           temp = temp * Dk  
 
-       end if
+       end select
    
        write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
                units_from_atomic(sqrt(units_out%energy), Lk_(ix, 1)),&

@@ -913,6 +913,26 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
       { 
          *integrate = 1;
        }
+      else if ((strcmp(optarg,"theta") == 0))
+      { 
+         *integrate = 2;
+       }
+      else if ((strcmp(optarg,"r") == 0))
+      { 
+         *integrate = 3;
+       }       
+      else if ((strcmp(optarg,"kx") == 0))
+       { 
+          *integrate = 4;
+        }
+      else if ((strcmp(optarg,"ky") == 0))
+       { 
+          *integrate = 5;
+        }
+      else if ((strcmp(optarg,"kz") == 0))
+       { 
+          *integrate = 6;
+        }
       else{
         printf("Unrecognized integration variable %s.\n", optarg);
         *integrate = -1;        
