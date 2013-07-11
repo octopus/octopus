@@ -576,7 +576,7 @@ subroutine PES_mask_dump_full_mapM_cut(PESK, file, Lk, dim, pol, dir, integrate)
 
            do iph = 0, Nphi
              phi = iph * Dphi
-             theta = atan2(KK(2),KK(1))
+             theta = atan2(sqrt(KK(1)**2+KK(2)**2),KK(3))
 
              KKK(1) = K *sin(theta)*cos(phi) 
              KKK(2) = K *sin(theta)*sin(phi)
