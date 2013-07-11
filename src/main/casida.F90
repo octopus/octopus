@@ -95,6 +95,9 @@ module casida_m
     integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%sigma) = j
     integer, pointer  :: ind(:)         !< ordering in energy of solutions
 
+    integer :: qi_old, qa_old, mu_old   !< previous mtxel calculated in K_term
+    FLOAT,   pointer  :: pot(:)         !< previous exchange potential calculated in K_term
+
     !> FIXME: mat, tm should be R_TYPE
     FLOAT,   pointer  :: mat(:,:)       !< general-purpose matrix
     FLOAT,   pointer  :: mat_save(:,:)  !< to save mat when it gets turned into the eigenvectors
@@ -611,11 +614,9 @@ contains
     type(states_t), pointer :: st
     type(mesh_t),   pointer :: mesh
 
-    FLOAT, allocatable :: rho(:, :), rho_spin(:, :), pot(:), &
+    FLOAT, allocatable :: rho(:, :), rho_spin(:, :), &
       dl_rho(:,:), kxc(:,:,:,:)
     FLOAT, target, allocatable :: fxc(:,:,:), fxc_spin(:,:,:), lr_fxc(:,:,:)
-    FLOAT, pointer :: xc(:,:,:)
-    integer :: qi_old, qa_old, mu_old
     character(len=100) :: restart_filename
 
     PUSH_SUB(casida_work)
@@ -641,11 +642,11 @@ contains
     if (cas%type /= CASIDA_EPS_DIFF) then
       ! This is to be allocated here, and is used inside K_term.
       if(.not. cas%triplet) then
-        SAFE_ALLOCATE(pot(1:mesh%np))
+        SAFE_ALLOCATE(cas%pot(1:mesh%np))
       endif
-      qi_old = -1
-      qa_old = -1
-      mu_old = -1
+      cas%qi_old = -1
+      cas%qa_old = -1
+      cas%mu_old = -1
     endif
       
     if (cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
@@ -676,12 +677,11 @@ contains
     restart_filename = trim(cas%restart_dir)//'/kernel'
     if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
 
-    xc => fxc
     select case(cas%type)
     case(CASIDA_EPS_DIFF)
       call solve_eps_diff()
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
-      call casida_get_matrix(cas%mat, restart_filename)
+      call casida_get_matrix(cas, hm, st, mesh, cas%mat, fxc, restart_filename)
       call casida_matrix_factors(cas%mat)
       call solve_casida()
     end select
@@ -692,7 +692,7 @@ contains
     if (cas%type /= CASIDA_EPS_DIFF) then
       SAFE_DEALLOCATE_A(fxc)
       if(.not. cas%triplet) then
-        SAFE_DEALLOCATE_A(pot)
+        SAFE_DEALLOCATE_P(cas%pot)
       endif
       if(cas%calc_forces) then
         SAFE_DEALLOCATE_A(lr_fxc)
@@ -743,135 +743,6 @@ contains
 
       POP_SUB(casida_work.solve_eps_diff)
     end subroutine solve_eps_diff
-
-
-    ! ---------------------------------------------------------
-    subroutine casida_get_matrix(matrix, restart_file, is_forces)
-      FLOAT,            intent(out) :: matrix(:,:)
-      character(len=*), intent(in)  :: restart_file
-      logical, optional, intent(in) :: is_forces
-
-      FLOAT :: temp
-      integer :: ia, jb, iunit, ia_iter, ia_length, jb_tmp
-      integer :: maxcount, actual, counter
-      FLOAT :: mtxel_vh, mtxel_xc
-      logical, allocatable :: is_saved(:, :), is_calcd(:, :)
-      logical :: is_forces_
-
-      PUSH_SUB(casida_work.casida_get_matrix)
-
-      mtxel_vh = M_ZERO
-      mtxel_xc = M_ZERO
-      is_forces_ = optional_default(is_forces, .false.)
-
-      ! load saved matrix elements
-      SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
-      call load_saved(matrix, is_saved, restart_file)
-
-      SAFE_ALLOCATE(is_calcd(1:cas%n_pairs, 1:cas%n_pairs))
-      is_calcd = .true.
-      ! purge saved non-degenerate offdiagonals, mark which are being calculated
-      if(cas%type == CASIDA_PETERSILKA .and. mpi_grp_is_root(mpi_world)) then
-        do ia = 1, cas%n_pairs
-          do jb = ia, cas%n_pairs
-            if(isnt_degenerate(cas, st, ia, jb)) then
-              matrix(ia, jb) = M_ZERO
-              matrix(jb, ia) = M_ZERO
-              is_calcd(ia, jb) = .false.
-              is_calcd(jb, ia) = .false.
-            endif
-          enddo
-        enddo
-      endif
-
-      if(cas%type == CASIDA_PETERSILKA) then
-        maxcount = cas%n_pairs
-      else
-        maxcount = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
-      endif
-      counter = 0
-      actual = 0
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, maxcount)
-
-      ! only root retains the saved values
-      if(.not. mpi_grp_is_root(mpi_world)) matrix = M_ZERO
-
-      ! calculate the matrix elements of (v + fxc)
-      do jb = 1, cas%n_pairs
-        actual = actual + 1
-        if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
-
-        ! we only count diagonals for Petersilka
-        if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
-
-        ! note: the ordering of jb, ia loops are crucial to minimize number of Poisson solves required.
-        ia_length = (cas%n_pairs - 1) / 2
-        if(mod(cas%n_pairs, 2) == 0) then ! even
-          if(jb > cas%n_pairs / 2) then
-            jb_tmp = cas%n_pairs - jb + 1
-          else
-            jb_tmp = jb
-          endif
-          ia_length = ia_length + mod(jb_tmp, 2)
-        endif
-
-        do ia_iter = jb, jb + ia_length
-
-          ! make ia in range [1, cas%n_pairs]
-          ia = mod(ia_iter, cas%n_pairs)
-          if(ia == 0) ia = cas%n_pairs
-
-          if(cas%type == CASIDA_PETERSILKA) then
-            ! only calculate off-diagonals in degenerate subspace
-            if(isnt_degenerate(cas, st, ia, jb)) cycle
-          else
-            counter = counter + 1
-          endif
-
-          ! if not loaded, then calculate matrix element
-          if(.not. is_saved(ia, jb)) then
-            if(is_forces_) then
-              call K_term(cas%pair(ia), cas%pair(jb), mtxel_xc = mtxel_xc)
-            else
-              call K_term(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
-            endif
-            matrix(ia, jb) = mtxel_vh + mtxel_xc
-          end if
-          if(jb /= ia) matrix(jb, ia) = matrix(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
-        end do
-        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
-      end do
-
-      if(mpi_grp_is_root(mpi_world)) then
-        call loct_progress_bar(maxcount, maxcount)
-        ! complete progress bar
-        write(stdout, '(1x)')
-      endif
-
-      ! sum all matrix elements
-      if(cas%parallel_in_eh_pairs) then
-        call comm_allreduce(cas%mpi_grp%comm, matrix)
-      end if
-
-      if(mpi_grp_is_root(mpi_world)) then
-        ! output the restart file
-        iunit = io_open(trim(restart_file), action='write', &
-          position='append', is_tmp=.true.)
-
-        do ia = 1, cas%n_pairs
-          do jb = ia, cas%n_pairs
-            if(.not. is_saved(ia, jb) .and. is_calcd(ia, jb)) &
-              call write_K_term(cas, matrix(ia, jb), iunit, ia, jb)
-          enddo
-        enddo
-
-        call io_close(iunit)
-      endif
-      SAFE_DEALLOCATE_A(is_saved)
-
-      POP_SUB(casida_work.casida_get_matrix)
-
-    end subroutine casida_get_matrix
 
     ! ---------------------------------------------------------
     subroutine casida_matrix_factors(matrix)
@@ -973,138 +844,6 @@ contains
 
       POP_SUB(casida_work.solve_casida)
     end subroutine solve_casida
-
-    ! ---------------------------------------------------------
-    !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-    !> FIXME: all FLOATs here should be R_TYPE
-    subroutine K_term(pp, qq, mtxel_vh, mtxel_xc)
-      type(states_pair_t), intent(in) :: pp, qq
-      FLOAT,    optional, intent(out) :: mtxel_vh
-      FLOAT,    optional, intent(out) :: mtxel_xc
-
-      integer :: pi, qi, sigma, pa, qa, mu
-      FLOAT, allocatable :: rho_i(:), rho_j(:), integrand(:)
-
-      PUSH_SUB(casida_work.K_term)
-
-      if(cas%herm_conj) then
-        pi = qq%i
-        pa = qq%a
-        sigma = qq%sigma
-
-        qi = pp%i
-        qa = pp%a
-        mu = pp%sigma
-      else
-        pi = pp%i
-        pa = pp%a
-        sigma = pp%sigma
-
-        qi = qq%i
-        qa = qq%a
-        mu = qq%sigma
-      endif
-
-      SAFE_ALLOCATE(rho_i(1:mesh%np))
-      SAFE_ALLOCATE(rho_j(1:mesh%np))
-      SAFE_ALLOCATE(integrand(1:mesh%np))
-
-      if (states_are_real(st)) then
-        call dcasida_get_rho(st, mesh, pa, pi, sigma, rho_i)
-        call dcasida_get_rho(st, mesh, qi, qa, mu, rho_j)
-      else
-        call zcasida_get_rho(st, mesh, pa, pi, sigma, rho_i)
-        call zcasida_get_rho(st, mesh, qi, qa, mu, rho_j)
-      end if
-
-      !  first the Hartree part (only works for real wfs...)
-      if(present(mtxel_vh)) then
-        if(.not. cas%triplet) then
-          if(qi /= qi_old  .or.   qa /= qa_old   .or.  mu /= mu_old) then
-            pot(1:mesh%np) = M_ZERO
-            if(hm%theory_level /= INDEPENDENT_PARTICLES) call dpoisson_solve(psolver, pot, rho_j, all_nodes=.false.)
-          endif
-          ! value of pot is retained between calls
-          mtxel_vh = dmf_dotp(mesh, rho_i(:), pot(:))
-
-          qi_old = qi
-          qa_old = qa
-          mu_old = mu
-        else
-          mtxel_vh = M_ZERO
-        endif
-      end if
-
-      if(present(mtxel_xc)) then
-        integrand(1:mesh%np) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * xc(1:mesh%np, sigma, mu)
-        mtxel_xc = dmf_integrate(mesh, integrand)
-      endif
-
-! FIXME: needed when there is a complex version
-!      if(cas%herm_conj) then
-!        if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
-!        if(present(mtxel_xc)) mtxel_vh = R_CONJ(mtxel_xc)
-!      endif
-
-      SAFE_DEALLOCATE_A(rho_i)
-      SAFE_DEALLOCATE_A(rho_j)
-      SAFE_DEALLOCATE_A(integrand)
-
-      POP_SUB(casida_work.K_term)
-    end subroutine K_term
-
-    ! ---------------------------------------------------------
-    subroutine load_saved(matrix, is_saved, restart_file)
-      FLOAT,            intent(out) :: matrix(:,:)
-      logical,          intent(out) :: is_saved(:,:)
-      character(len=*), intent(in)  :: restart_file
-
-      integer :: iunit, err
-      integer :: ia, jb, ii, aa, is, jj, bb, js
-      FLOAT   :: val
-
-      PUSH_SUB(casida_work.load_saved)
-
-      is_saved = .false.
-      matrix = M_ZERO
-
-      if(mpi_grp_is_root(mpi_world)) then
-        iunit = io_open(trim(restart_file), action='read', &
-          status='old', die=.false., is_tmp=.true.)
-
-        if( iunit > 0) then
-          do
-            read(iunit, fmt=*, iostat=err) ii, aa, is, jj, bb, js, val
-            if(err /= 0) exit
-            
-            ia = cas%index(ii, aa, is)
-            jb = cas%index(jj, bb, js)
-            
-            if(ia > 0 .and. jb > 0) then
-              matrix(ia, jb) = val
-              is_saved(ia, jb) = .true.
-              matrix(jb, ia) = val
-              is_saved(jb, ia) = .true.
-            endif
-          end do
-        
-          call io_close(iunit)
-        else if(.not. cas%fromScratch) then
-          message(1) = "Could not find restart file '" // trim(restart_file) // "'. Starting from scratch."
-          call messages_warning(1)
-        endif
-      endif
-
-      ! if no file found, root has no new information to offer the others
-#ifdef HAVE_MPI
-      call MPI_Bcast(is_saved(1, 1), cas%n_pairs**2, MPI_LOGICAL, 0, mpi_world, mpi_err)
-! No need to bcast these, since they will be obtained from a reduction
-!      call MPI_Bcast(cas%mat(1, 1), cas%n_pairs**2, MPI_FLOAT,   0, mpi_world, mpi_err)
-#endif
-
-      POP_SUB(casida_work.load_saved)
-    end subroutine load_saved
-
 
     ! ---------------------------------------------------------
     subroutine casida_forces_init()
@@ -1231,8 +970,7 @@ contains
             if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
 
             if(states_are_real(st)) then
-              xc => lr_fxc(:, :, :)
-              call casida_get_matrix(cas%dmat2, restart_filename, is_forces = .true.)
+              call casida_get_matrix(cas, hm, st, mesh, cas%dmat2, lr_fxc, restart_filename, is_forces = .true.)
               call casida_matrix_factors(cas%dmat2)
             else
               call messages_not_implemented("lr_kernel for complex wfns") ! FIXME
@@ -1292,6 +1030,272 @@ contains
     end subroutine casida_forces_init
 
   end subroutine casida_work
+
+    ! ---------------------------------------------------------
+    subroutine casida_get_matrix(cas, hm, st, mesh, matrix, xc, restart_file, is_forces)
+      type(casida_t),      intent(inout) :: cas
+      type(hamiltonian_t), intent(in)    :: hm
+      type(states_t),      intent(in)    :: st
+      type(mesh_t),        intent(in)    :: mesh
+      FLOAT,               intent(out)   :: matrix(:,:)
+      FLOAT,               intent(in)    :: xc(:,:,:)
+      character(len=*),    intent(in)    :: restart_file
+      logical,   optional, intent(in)    :: is_forces
+
+      FLOAT :: temp
+      integer :: ia, jb, iunit, ia_iter, ia_length, jb_tmp
+      integer :: maxcount, actual, counter
+      FLOAT :: mtxel_vh, mtxel_xc
+      logical, allocatable :: is_saved(:, :), is_calcd(:, :)
+      logical :: is_forces_
+
+      PUSH_SUB(casida_get_matrix)
+
+      mtxel_vh = M_ZERO
+      mtxel_xc = M_ZERO
+      is_forces_ = optional_default(is_forces, .false.)
+
+      ! load saved matrix elements
+      SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
+      call load_saved(matrix, is_saved, restart_file)
+
+      SAFE_ALLOCATE(is_calcd(1:cas%n_pairs, 1:cas%n_pairs))
+      is_calcd = .true.
+      ! purge saved non-degenerate offdiagonals, mark which are being calculated
+      if(cas%type == CASIDA_PETERSILKA .and. mpi_grp_is_root(mpi_world)) then
+        do ia = 1, cas%n_pairs
+          do jb = ia, cas%n_pairs
+            if(isnt_degenerate(cas, st, ia, jb)) then
+              matrix(ia, jb) = M_ZERO
+              matrix(jb, ia) = M_ZERO
+              is_calcd(ia, jb) = .false.
+              is_calcd(jb, ia) = .false.
+            endif
+          enddo
+        enddo
+      endif
+
+      if(cas%type == CASIDA_PETERSILKA) then
+        maxcount = cas%n_pairs
+      else
+        maxcount = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
+      endif
+      counter = 0
+      actual = 0
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, maxcount)
+
+      ! only root retains the saved values
+      if(.not. mpi_grp_is_root(mpi_world)) matrix = M_ZERO
+
+      ! calculate the matrix elements of (v + fxc)
+      do jb = 1, cas%n_pairs
+        actual = actual + 1
+        if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
+
+        ! we only count diagonals for Petersilka
+        if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
+
+        ! note: the ordering of jb, ia loops are crucial to minimize number of Poisson solves required.
+        ia_length = (cas%n_pairs - 1) / 2
+        if(mod(cas%n_pairs, 2) == 0) then ! even
+          if(jb > cas%n_pairs / 2) then
+            jb_tmp = cas%n_pairs - jb + 1
+          else
+            jb_tmp = jb
+          endif
+          ia_length = ia_length + mod(jb_tmp, 2)
+        endif
+
+        do ia_iter = jb, jb + ia_length
+
+          ! make ia in range [1, cas%n_pairs]
+          ia = mod(ia_iter, cas%n_pairs)
+          if(ia == 0) ia = cas%n_pairs
+
+          if(cas%type == CASIDA_PETERSILKA) then
+            ! only calculate off-diagonals in degenerate subspace
+            if(isnt_degenerate(cas, st, ia, jb)) cycle
+          else
+            counter = counter + 1
+          endif
+
+          ! if not loaded, then calculate matrix element
+          if(.not. is_saved(ia, jb)) then
+            if(is_forces_) then
+              call K_term(cas%pair(ia), cas%pair(jb), mtxel_xc = mtxel_xc)
+            else
+              call K_term(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
+            endif
+            matrix(ia, jb) = mtxel_vh + mtxel_xc
+          end if
+          if(jb /= ia) matrix(jb, ia) = matrix(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
+        end do
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
+      end do
+
+      if(mpi_grp_is_root(mpi_world)) then
+        call loct_progress_bar(maxcount, maxcount)
+        ! complete progress bar
+        write(stdout, '(1x)')
+      endif
+
+      ! sum all matrix elements
+      if(cas%parallel_in_eh_pairs) then
+        call comm_allreduce(cas%mpi_grp%comm, matrix)
+      end if
+
+      if(mpi_grp_is_root(mpi_world)) then
+        ! output the restart file
+        iunit = io_open(trim(restart_file), action='write', &
+          position='append', is_tmp=.true.)
+
+        do ia = 1, cas%n_pairs
+          do jb = ia, cas%n_pairs
+            if(.not. is_saved(ia, jb) .and. is_calcd(ia, jb)) &
+              call write_K_term(cas, matrix(ia, jb), iunit, ia, jb)
+          enddo
+        enddo
+
+        call io_close(iunit)
+      endif
+      SAFE_DEALLOCATE_A(is_saved)
+
+      POP_SUB(casida_get_matrix)
+
+    contains
+
+    ! ---------------------------------------------------------
+    !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
+    !> FIXME: all FLOATs here should be R_TYPE
+    subroutine K_term(pp, qq, mtxel_vh, mtxel_xc)
+      type(states_pair_t), intent(in) :: pp, qq
+      FLOAT,    optional, intent(out) :: mtxel_vh
+      FLOAT,    optional, intent(out) :: mtxel_xc
+
+      integer :: pi, qi, sigma, pa, qa, mu
+      FLOAT, allocatable :: rho_i(:), rho_j(:), integrand(:)
+
+      PUSH_SUB(casida_get_matrix.K_term)
+
+      if(cas%herm_conj) then
+        pi = qq%i
+        pa = qq%a
+        sigma = qq%sigma
+
+        qi = pp%i
+        qa = pp%a
+        mu = pp%sigma
+      else
+        pi = pp%i
+        pa = pp%a
+        sigma = pp%sigma
+
+        qi = qq%i
+        qa = qq%a
+        mu = qq%sigma
+      endif
+
+      SAFE_ALLOCATE(rho_i(1:mesh%np))
+      SAFE_ALLOCATE(rho_j(1:mesh%np))
+      SAFE_ALLOCATE(integrand(1:mesh%np))
+
+      if (states_are_real(st)) then
+        call dcasida_get_rho(st, mesh, pa, pi, sigma, rho_i)
+        call dcasida_get_rho(st, mesh, qi, qa, mu, rho_j)
+      else
+        call zcasida_get_rho(st, mesh, pa, pi, sigma, rho_i)
+        call zcasida_get_rho(st, mesh, qi, qa, mu, rho_j)
+      end if
+
+      !  first the Hartree part (only works for real wfs...)
+      if(present(mtxel_vh)) then
+        if(.not. cas%triplet) then
+          if(qi /= cas%qi_old  .or.   qa /= cas%qa_old   .or.  mu /= cas%mu_old) then
+            cas%pot(1:mesh%np) = M_ZERO
+            if(hm%theory_level /= INDEPENDENT_PARTICLES) call dpoisson_solve(psolver, cas%pot, rho_j, all_nodes=.false.)
+          endif
+          ! value of pot is retained between calls
+          mtxel_vh = dmf_dotp(mesh, rho_i(:), cas%pot(:))
+
+          cas%qi_old = qi
+          cas%qa_old = qa
+          cas%mu_old = mu
+        else
+          mtxel_vh = M_ZERO
+        endif
+      end if
+
+      if(present(mtxel_xc)) then
+        integrand(1:mesh%np) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * xc(1:mesh%np, sigma, mu)
+        mtxel_xc = dmf_integrate(mesh, integrand)
+      endif
+
+! FIXME: needed when there is a complex version
+!      if(cas%herm_conj) then
+!        if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
+!        if(present(mtxel_xc)) mtxel_vh = R_CONJ(mtxel_xc)
+!      endif
+
+      SAFE_DEALLOCATE_A(rho_i)
+      SAFE_DEALLOCATE_A(rho_j)
+      SAFE_DEALLOCATE_A(integrand)
+
+      POP_SUB(casida_get_matrix.K_term)
+    end subroutine K_term
+
+    ! ---------------------------------------------------------
+    subroutine load_saved(matrix, is_saved, restart_file)
+      FLOAT,            intent(out) :: matrix(:,:)
+      logical,          intent(out) :: is_saved(:,:)
+      character(len=*), intent(in)  :: restart_file
+
+      integer :: iunit, err
+      integer :: ia, jb, ii, aa, is, jj, bb, js
+      FLOAT   :: val
+
+      PUSH_SUB(casida_get_matrix.load_saved)
+
+      is_saved = .false.
+      matrix = M_ZERO
+
+      if(mpi_grp_is_root(mpi_world)) then
+        iunit = io_open(trim(restart_file), action='read', &
+          status='old', die=.false., is_tmp=.true.)
+
+        if( iunit > 0) then
+          do
+            read(iunit, fmt=*, iostat=err) ii, aa, is, jj, bb, js, val
+            if(err /= 0) exit
+            
+            ia = cas%index(ii, aa, is)
+            jb = cas%index(jj, bb, js)
+            
+            if(ia > 0 .and. jb > 0) then
+              matrix(ia, jb) = val
+              is_saved(ia, jb) = .true.
+              matrix(jb, ia) = val
+              is_saved(jb, ia) = .true.
+            endif
+          end do
+        
+          call io_close(iunit)
+        else if(.not. cas%fromScratch) then
+          message(1) = "Could not find restart file '" // trim(restart_file) // "'. Starting from scratch."
+          call messages_warning(1)
+        endif
+      endif
+
+      ! if no file found, root has no new information to offer the others
+#ifdef HAVE_MPI
+      call MPI_Bcast(is_saved(1, 1), cas%n_pairs**2, MPI_LOGICAL, 0, mpi_world, mpi_err)
+! No need to bcast these, since they will be obtained from a reduction
+!      call MPI_Bcast(cas%mat(1, 1), cas%n_pairs**2, MPI_FLOAT,   0, mpi_world, mpi_err)
+#endif
+
+      POP_SUB(casida_get_matrix.load_saved)
+    end subroutine load_saved
+
+  end subroutine casida_get_matrix
 
   ! ---------------------------------------------------------
   subroutine qcasida_write(cas)
