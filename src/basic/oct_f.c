@@ -420,6 +420,6 @@ void * FC_FUNC_(get_memory_usage, GET_MEMORY_USAGE)()
 #endif
 }
 
-void FC_FUNC_(loct_exit_failure, LOCT_EXIT_FAILURE)(const int * exit_code){
+void FC_FUNC_(loct_exit_failure, LOCT_EXIT_FAILURE)(){
   exit(EXIT_FAILURE);
 }
