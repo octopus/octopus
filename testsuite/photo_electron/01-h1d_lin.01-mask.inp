@@ -1,7 +1,6 @@
 CalculationMode = td
 
 Dimensions = 1
-
 FromScratch = YES
 
 ExperimentalFeatures = YES
@@ -79,5 +78,4 @@ omega = 1.5
 # OUT
 #########################
 
-OutputEvery = 50
-
+RestartWriteInterval = 50

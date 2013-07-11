@@ -36,6 +36,6 @@ TDDeltaStrength = 0.2
 
 TDPolarizationDirection = 1
 
-OutputEvery = 10
+OutputInterval = 10
 
 TDEnergyUpdateIter = 5

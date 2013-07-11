@@ -235,8 +235,8 @@ contains
       if(write_iter_) then
         call td_write_iter(write_handler, gr, psi, hm, sys%geo, hm%ep%kick, td%dt, istep)
         ii = ii + 1 
-        if(ii == sys%outp%iter+1 .or. istep == td%max_iter) then ! output
-          if(istep == td%max_iter) sys%outp%iter = ii - 1
+        if(ii == sys%outp%output_interval+1 .or. istep == td%max_iter) then ! output
+          if(istep == td%max_iter) sys%outp%output_interval = ii - 1
           ii = istep
           call td_write_data(write_handler, gr, psi, hm, sys%ks%xc, sys%outp, sys%geo, istep) 
         end if

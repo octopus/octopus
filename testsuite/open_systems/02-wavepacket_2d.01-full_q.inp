@@ -94,7 +94,7 @@ flat_OpenBoundariesAdditionalTerms = mem_term
 
 Output = density
 OutputHow = binary
-OutputEvery = 25
+OutputInterval = 25
 
 TDEnergyUpdateIter = 1
 

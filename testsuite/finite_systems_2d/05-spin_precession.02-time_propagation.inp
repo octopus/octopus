@@ -48,7 +48,7 @@ TDExponentialMethod = lanczos
 TDExpOrder = 16
 TDTimeStep = dt
 
-OutputEvery = 25
+OutputInterval = 25
 TDOutput = energy + multipoles + spin
 
 ExperimentalFeatures = yes

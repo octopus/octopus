@@ -87,6 +87,6 @@ EigensolverTolerance = 1e-9
 
 well_Output = density
 well_OutputHow = binary
-well_OutputEvery = 100
+well_OutputInterval = 100
 
 TDEnergyUpdateIter = 100

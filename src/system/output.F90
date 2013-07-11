@@ -113,7 +113,8 @@ module output_m
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
     !> These variables fine-tune the output for some of the possible output options:
-    integer :: iter                !< output every iter
+    integer :: output_interval     !< output every iter
+    integer :: restart_write_interval
     logical :: duringscf
 
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
@@ -470,17 +471,36 @@ contains
       call output_berkeleygw_init(nst, outp%bgw)
     end if
 
-    !%Variable OutputEvery
+    !%Variable OutputInterval
     !%Type integer
     !%Default 50
     !%Section Output
     !%Description
-    !% The output is saved when the iteration number is a multiple of the
-    !% <tt>OutputEvery</tt> variable. For <tt>CalculationMode = gs</tt> or <tt>unocc</tt>,
-    !% this variable controls writing of restart files. For <tt>td</tt> and <tt>opt_control</tt>,
-    !% this variable also controls the writing of the output requested by the variable <tt>Output</tt>.
+    !% The output requested by variable <tt>OutputDuringSCF</tt> or <tt>TDOutput</tt> is written
+    !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
+    !% (Output of restart files is controlled by <tt>RestartWriteInterval</tt>.)
+    !% Must be > 0.
     !%End
-    call parse_integer(datasets_check('OutputEvery'), 50, outp%iter)
+    call parse_integer(datasets_check('OutputInterval'), 50, outp%output_interval)
+    call messages_obsolete_variable("OutputEvery", "OutputInterval/RestartWriteInterval")
+    if(outp%output_interval <= 0) then
+      message(1) = "OutputInterval must be > 0."
+      call messages_fatal(1)
+    endif
+
+    !%Variable RestartWriteInterval
+    !%Type integer
+    !%Default 50
+    !%Section Execution::IO
+    !%Description
+    !% Restart data is written when the iteration number is a multiple of the
+    !% <tt>RestartWriteInterval</tt> variable. (Other output is controlled by <tt>OutputInterval</tt>.)
+    !%End
+    call parse_integer(datasets_check('RestartWriteInterval'), 50, outp%restart_write_interval)
+    if(outp%restart_write_interval <= 0) then
+      message(1) = "RestartWriteInterval must be > 0."
+      call messages_fatal(1)
+    endif
 
     !%Variable OutputDuringSCF
     !%Type logical
@@ -488,8 +508,8 @@ contains
     !%Section Output
     !%Description
     !% If this variable is set to yes, during a ground-state run,
-    !% <tt>Octopus</tt> output will be written after every self-consistent
-    !% iteration to a directory called <tt>scf.nnnn/</tt> (with
+    !% <tt>Octopus</tt> output will be written after every <tt>OutputInterval</tt>
+    !% iterations to a directory called <tt>scf.nnnn/</tt> (with
     !% <tt>nnnn</tt> the iteration number).
     !%End
 

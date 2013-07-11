@@ -223,8 +223,8 @@ contains
     type(PES_t),         intent(inout) :: pes
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
-    FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: ii
+    FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
 
     PUSH_SUB(PES_calc)
@@ -252,7 +252,7 @@ contains
     PUSH_SUB(PES_output)
     
     if(mpi_grp_is_root(mpi_world)) then
-      if(pes%calc_rc)   call PES_rc_output   (pes%rc, st, iter,outp%iter, dt)
+      if(pes%calc_rc)   call PES_rc_output   (pes%rc, st, iter, outp%output_interval, dt)
     endif
 
     if(pes%calc_mask) call PES_mask_output (pes%mask, mesh, st,outp, "td.general/PESM",gr, geo,iter)

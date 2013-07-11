@@ -52,7 +52,7 @@ TDExponentialMethod = lanczos
 TDExpOrder = 20
 TDTimeStep = dt
 
-OutputEvery = 200
+OutputInterval = 200
 
 AbsorbingBoundaries = no
 

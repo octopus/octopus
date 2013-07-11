@@ -130,7 +130,7 @@ subroutine td_init(td, sys, hm)
   call kick_init(hm%ep%kick, sys%st%d%nspin, sys%gr%mesh%sb%dim)
 
   ! now the photoelectron stuff
-  call PES_init(td%PESv, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%iter, hm, td%max_iter, td%dt)
+  call PES_init(td%PESv, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%output_interval, hm, td%max_iter, td%dt)
 
   !%Variable TDDynamics
   !%Type integer
@@ -165,7 +165,7 @@ subroutine td_init(td, sys, hm)
   !% variable.
   !%
   !% The recalculation is not done every time step, but only every
-  !% OutputEvery time steps.
+  !% <tt>RestartWriteInterval</tt> time steps.
   !%End
   call parse_logical(datasets_check("RecalculateGSDuringEvolution"), .false., td%recalculate_gs)
 

@@ -725,7 +725,8 @@ contains
 
       if(gs_run_) then 
         ! save restart information
-        if(finish .or. (modulo(iter, outp%iter) == 0) .or. iter == scf%max_iter .or. scf%forced_finish) then
+        if(finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
+          .or. iter == scf%max_iter .or. scf%forced_finish) then
           call restart_write(trim(tmpdir) // GS_DIR, st, gr, err, iter=iter)
           if(err /= 0) then
             message(1) = 'Unsuccessful write of "'//trim(tmpdir)//GS_DIR//'"'
@@ -746,7 +747,7 @@ contains
         exit
       end if
 
-      if(outp%duringscf .and. gs_run_) then
+      if(outp%duringscf .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,i4.4)') "scf.",iter
         call output_all(outp, gr, geo, st, hm, ks%xc, dirname)
       end if

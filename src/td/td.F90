@@ -127,7 +127,7 @@ contains
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
     logical                   :: stopping, update_energy, cmplxscl
-    integer                   :: iter, ii, ierr, scsteps, ispin
+    integer                   :: iter, ierr, scsteps, ispin
     real(8)                   :: etime
     logical                   :: generate
     type(gauge_force_t)       :: gauge_force
@@ -213,7 +213,6 @@ contains
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
 
-    ii = 1
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
@@ -356,7 +355,7 @@ contains
 
       !Photoelectron stuff 
       if(td%PESv%calc_rc .or. td%PESv%calc_mask ) &
-           call PES_calc(td%PESv, gr%mesh, st, ii, td%dt, iter)
+        call PES_calc(td%PESv, gr%mesh, st, mod(iter, sys%outp%output_interval), td%dt, iter)
 
       call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
 
@@ -432,13 +431,14 @@ contains
       end if
       call messages_info(1)
       etime = loct_clock()
-      ii = ii + 1
-      if(ii==sys%outp%iter+1 .or. iter == td%max_iter .or. stopping) then ! output
-        if(iter == td%max_iter) sys%outp%iter = ii - 1
-        ii = 1
-        call td_save_restart(iter)
+
+      if(mod(iter, sys%outp%output_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! output
         call td_write_data(write_handler, gr, st, hm, sys%ks%xc, sys%outp, geo, iter, td%dt)
-	!Photoelectron output and restart dump
+      end if
+
+      if(mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
+        !if(iter == td%max_iter) sys%outp%iter = ii - 1
+        call td_save_restart(iter)
         call PES_output(td%PESv, gr%mesh, st, iter, sys%outp, td%dt,gr,geo)
         call PES_restart_write(td%PESv, st)
         if( (ion_dynamics_ions_move(td%ions)) .and. td%recalculate_gs) then

@@ -81,7 +81,7 @@ TDExpOrder = 20
 TDLanczosTol = 1.0e-5
 TDTimeStep = dt
 
-OutputEvery = 10000
+OutputInterval = 10000
 
 AbsorbingBoundaries = no
 ABWidth = 3.0
