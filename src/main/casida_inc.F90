@@ -23,8 +23,8 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
   type(mesh_t), intent(in) :: mesh
   type(states_t), intent(in) :: st
 
-  FLOAT, allocatable :: deltav(:), psi_a(:)
-  R_TYPE, allocatable :: xx(:)
+  FLOAT, allocatable :: deltav(:)
+  R_TYPE, allocatable :: xx(:), psi_a(:)
   CMPLX, allocatable :: zf(:), zx(:)
   FLOAT, allocatable :: gaus_leg_points(:), gaus_leg_weights(:)
   integer :: ii, jj, ia, ip, idir
@@ -60,7 +60,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
       call states_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%sigma, psi_a)
 
       do ip = 1, mesh%np
-        zf(ip) = exp(M_zI*dot_product(cas%qvector(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*zf(ip)*psi_a(ip)
+        zf(ip) = exp(M_zI*dot_product(cas%qvector(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*aimag(zf(ip))*psi_a(ip)
       end do
 
       zx(ia) = zmf_integrate(mesh, zf)
@@ -99,7 +99,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
 
           do ia = 1, cas%n_pairs
             forall(ip = 1:mesh%np)
-              zf(ip) = exp(M_zI*dot_product(qvect(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*zf(ip)*psi_a(ip)
+              zf(ip) = exp(M_zI*dot_product(qvect(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*aimag(zf(ip))*psi_a(ip)
             end forall
             zx(ia) = zmf_integrate(mesh, zf)
           end do
@@ -159,7 +159,7 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   type(states_t), intent(in) :: st
   type(mesh_t),   intent(in) :: mesh
   FLOAT,          intent(in) :: dv(:)
-  FLOAT :: xx(cas%n_pairs)
+  R_TYPE :: xx(cas%n_pairs)
 
   R_TYPE, allocatable :: ff(:)
   R_TYPE, allocatable :: psii(:, :), psia(:, :)
@@ -507,7 +507,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, mesh, matrix, xc, restart_file, is_
         endif
         matrix(ia, jb) = mtxel_vh + mtxel_xc
       end if
-      if(jb /= ia) matrix(jb, ia) = matrix(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
+      if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
     end do
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
   end do
@@ -545,7 +545,6 @@ contains
 
   ! ---------------------------------------------------------
   !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-  !> FIXME: all FLOATs here should be R_TYPE
   subroutine X(K_term)(pp, qq, mtxel_vh, mtxel_xc)
     type(states_pair_t), intent(in) :: pp, qq
     R_TYPE,   optional, intent(out) :: mtxel_vh
@@ -581,8 +580,7 @@ contains
     call X(casida_get_rho)(st, mesh, pa, pi, sigma, rho_i)
     call X(casida_get_rho)(st, mesh, qi, qa, mu,    rho_j)
 
-    !  first the Hartree part (only works for real wfs...)
-    ! FIXME: make work for cplx
+    !  first the Hartree part
     if(present(mtxel_vh)) then
       if(.not. cas%triplet) then
         if(qi /= cas%qi_old  .or.   qa /= cas%qa_old   .or.  mu /= cas%mu_old) then
@@ -664,7 +662,7 @@ contains
 #ifdef HAVE_MPI
     call MPI_Bcast(is_saved(1, 1), cas%n_pairs**2, MPI_LOGICAL, 0, mpi_world, mpi_err)
     ! No need to bcast these, since they will be obtained from a reduction
-    !      call MPI_Bcast(cas%X(mat)(1, 1), cas%n_pairs**2, MPI_FLOAT,   0, mpi_world, mpi_err)
+    !      call MPI_Bcast(cas%X(mat)(1, 1), cas%n_pairs**2, R_MPITYPE,   0, mpi_world, mpi_err)
 #endif
 
     POP_SUB(X(casida_get_matrix).load_saved)

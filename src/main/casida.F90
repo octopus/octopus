@@ -110,9 +110,8 @@ module casida_m
     FLOAT,   pointer  :: f(:)           !< The (dipole) strengths
     FLOAT,   pointer  :: s(:)           !< The diagonal part of the S-matrix
 
-    FLOAT, pointer :: rho(:, :)
-    FLOAT, pointer :: fxc(:,:,:)
-    FLOAT, pointer :: xc(:,:,:)
+    FLOAT,   pointer  :: rho(:,:)       !< density
+    FLOAT,   pointer  :: fxc(:,:,:)     !< derivative of xc potential
 
     FLOAT,   pointer  :: dmat2(:,:)     !< matrix to diagonalize for forces
     CMPLX,   pointer  :: zmat2(:,:)     !< matrix to diagonalize for forces
@@ -642,7 +641,7 @@ contains
     type(states_t), pointer :: st
     type(mesh_t),   pointer :: mesh
 
-    FLOAT, allocatable :: rho(:, :), rho_spin(:, :)
+    FLOAT, allocatable :: rho_spin(:, :)
     FLOAT, target, allocatable :: fxc_spin(:,:,:)
     character(len=100) :: restart_filename
 
@@ -1005,7 +1004,8 @@ contains
               call dcasida_get_matrix(cas, hm, st, mesh, cas%dmat2, lr_fxc, restart_filename, is_forces = .true.)
               cas%dmat2 = cas%dmat2 * casida_matrix_factor(cas, sys)
             else
-              call messages_not_implemented("lr_kernel for complex wfns") ! FIXME
+              call zcasida_get_matrix(cas, hm, st, mesh, cas%zmat2, lr_fxc, restart_filename, is_forces = .true.)
+              cas%zmat2 = cas%zmat2 * casida_matrix_factor(cas, sys)
             endif
           else
             if(cas%states_are_real) then
