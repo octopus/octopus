@@ -728,9 +728,9 @@ contains
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
-        call dcasida_forces_init(cas, sys, mesh, st, hm)
+        call dcasida_forces(cas, sys, mesh, st, hm)
       else
-        call zcasida_forces_init(cas, sys, mesh, st, hm)
+        call zcasida_forces(cas, sys, mesh, st, hm)
       endif
     endif
 

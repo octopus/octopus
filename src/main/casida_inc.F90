@@ -332,7 +332,7 @@ end subroutine X(casida_get_rho)
 ! -----------------------------------------------------------------------------
 
 !> one-particle matrix elements of perturbation
-subroutine X(casida_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, st_start, st_end, ik)
+subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, st_start, st_end, ik)
   type(system_t),      intent(in)    :: sys
   type(hamiltonian_t), intent(inout) :: hm
   type(pert_t),        intent(in)    :: pert
@@ -345,7 +345,7 @@ subroutine X(casida_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, st_start, st_end, i
   integer :: ist, jst, ispin, idim
   R_TYPE, allocatable :: psi(:,:,:), pert_psi(:,:)
 
-  PUSH_SUB(X(casida_lr_hmat1))
+  PUSH_SUB(X(casida_calc_lr_hmat1))
 
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, st_start:st_end))
   SAFE_ALLOCATE(pert_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
@@ -370,8 +370,8 @@ subroutine X(casida_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, st_start, st_end, i
     enddo
   enddo
 
-  POP_SUB(X(casida_lr_hmat1))
-end subroutine X(casida_lr_hmat1)
+  POP_SUB(X(casida_calc_lr_hmat1))
+end subroutine X(casida_calc_lr_hmat1)
 
 ! -----------------------------------------------------------------------------
 
@@ -636,7 +636,6 @@ contains
 
       if( iunit > 0) then
         do
-          ! FIXME: need (real, imag) for cplx quantities
           read(iunit, fmt=*, iostat=err) ii, aa, is, jj, bb, js, val
           if(err /= 0) exit
 
@@ -688,27 +687,26 @@ subroutine X(write_K_term)(cas, mat_val, iunit, ia, jb)
 end subroutine X(write_K_term)
 
 ! ---------------------------------------------------------
-subroutine X(casida_forces_init)(cas, sys, mesh, st, hm)
+subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   type(casida_t), intent(inout) :: cas
   type(system_t), intent(inout) :: sys
   type(mesh_t), intent(in) :: mesh
   type(states_t), intent(inout) :: st
   type(hamiltonian_t), intent(inout) :: hm
   
-  integer :: ip, iatom, idir, is1, is2, ierr, ik, ia, ist, jst, iunit
-  FLOAT, allocatable :: hvar(:,:,:), dl_rho(:,:), kxc(:,:,:,:)
+  integer :: ip, iatom, idir, is1, is2, ierr, ik, ia
+  FLOAT, allocatable :: dl_rho(:,:), kxc(:,:,:,:)
   FLOAT, target, allocatable :: lr_fxc(:,:,:)
   R_TYPE, allocatable :: lr_hmat1(:,:,:)
-  type(pert_t) :: ionic_pert
   FLOAT :: factor = CNST(1e6) ! FIXME: allow user to set
   character(len=100) :: restart_filename
-  
-  PUSH_SUB(X(casida_forces_init))
+
+  PUSH_SUB(X(casida_forces))
   
   if(cas%type == CASIDA_CASIDA) then
     message(1) = "Forces for Casida theory level not implemented"
     call messages_warning(1)
-    POP_SUB(X(casida_forces_init))
+    POP_SUB(X(casida_forces))
     return
   endif
   
@@ -734,21 +732,13 @@ subroutine X(casida_forces_init)(cas, sys, mesh, st, hm)
     enddo
   endif
   
-  SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:1))
-
   SAFE_ALLOCATE(lr_hmat1(cas%nst, cas%nst, cas%nik))
   SAFE_ALLOCATE(cas%X(lr_hmat2)(cas%n_pairs, cas%n_pairs))
   SAFE_ALLOCATE(cas%X(mat2)(cas%n_pairs, cas%n_pairs))
   SAFE_ALLOCATE(cas%X(w2)(cas%n_pairs))
 
-  call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
-  
   do iatom = 1, sys%geo%natoms
-    call pert_setup_atom(ionic_pert, iatom)
-    
     do idir = 1, mesh%sb%dim
-      
-      call pert_setup_dir(ionic_pert, idir)
       
       call drestart_read_lr_rho(dl_rho, sys%gr, st%d%nspin, &
         VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
@@ -757,33 +747,10 @@ subroutine X(casida_forces_init)(cas, sys, mesh, st, hm)
         message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
         call messages_fatal(1)
       end if
+
+      call X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
       
-      call dcalc_hvar(.true., sys, dl_rho, 1, hvar, fxc = cas%fxc)
-      
-      lr_hmat1 = M_ZERO
       cas%X(lr_hmat2) = M_ZERO
-      
-      do ik = 1, cas%nik
-        ! occ-occ matrix elements
-        call X(casida_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, 1, cas%n_occ(ik), ik)
-        ! unocc-unocc matrix elements
-        call X(casida_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
-      enddo
-      
-      if(mpi_grp_is_root(mpi_world)) then
-        write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_hmat1_', iatom, '_', idir
-        iunit = io_open(restart_filename, action = 'write')
-        do ik = 1, cas%nik
-          do ist = 1, cas%nst
-            do jst = ist, cas%nst
-              ! FIXME: complex needs (real, imag)
-              write(iunit, *) ist, jst, ik, lr_hmat1(ist, jst, ik)
-            enddo
-          enddo
-        enddo
-        call io_close(iunit)
-      endif
-      
       ! use them to make two-particle matrix elements (as for eigenvalues)
       do ik = 1, cas%nik
         call X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
@@ -811,13 +778,11 @@ subroutine X(casida_forces_init)(cas, sys, mesh, st, hm)
     enddo
   enddo
   
-  call pert_end(ionic_pert)
   if(cas%type /= CASIDA_EPS_DIFF) then
     SAFE_DEALLOCATE_A(kxc)
     SAFE_DEALLOCATE_A(lr_fxc)
   endif
   SAFE_DEALLOCATE_A(dl_rho)
-  SAFE_DEALLOCATE_A(hvar)
 
   SAFE_DEALLOCATE_A(lr_hmat1)
   SAFE_DEALLOCATE_P(cas%X(mat2))
@@ -834,9 +799,62 @@ subroutine X(casida_forces_init)(cas, sys, mesh, st, hm)
     enddo
   endif
   
-  POP_SUB(X(casida_forces_init))
+  POP_SUB(X(casida_forces))
 
-end subroutine X(casida_forces_init)
+end subroutine X(casida_forces)
+
+
+subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
+  type(casida_t),      intent(in)     :: cas
+  type(system_t),      intent(inout)  :: sys
+  type(hamiltonian_t), intent(inout)  :: hm
+  integer,             intent(in)     :: iatom
+  integer,             intent(in)     :: idir
+  FLOAT,               intent(in)     :: dl_rho(:,:)
+  R_TYPE,              intent(out)    :: lr_hmat1(:,:,:)
+
+  FLOAT, allocatable :: hvar(:,:,:)
+  integer :: ik, ist, jst, iunit
+  type(pert_t) :: ionic_pert
+  character(len=100) :: restart_filename
+
+  PUSH_SUB(X(casida_get_lr_hmat1))
+
+  call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
+  call pert_setup_atom(ionic_pert, iatom)
+  call pert_setup_dir(ionic_pert, idir)
+    
+  SAFE_ALLOCATE(hvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
+  call dcalc_hvar(.true., sys, dl_rho, 1, hvar, fxc = cas%fxc)
+      
+  lr_hmat1 = M_ZERO
+  
+  do ik = 1, cas%nik
+    ! occ-occ matrix elements
+    call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, 1, cas%n_occ(ik), ik)
+    ! unocc-unocc matrix elements
+    call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
+  enddo
+
+  SAFE_DEALLOCATE_A(hvar)
+  call pert_end(ionic_pert)
+  
+  if(mpi_grp_is_root(mpi_world)) then
+    write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_hmat1_', iatom, '_', idir
+    iunit = io_open(restart_filename, action = 'write')
+    do ik = 1, cas%nik
+      do ist = 1, cas%nst
+        do jst = ist, cas%nst
+          write(iunit, *) ist, jst, ik, lr_hmat1(ist, jst, ik)
+        enddo
+      enddo
+    enddo
+    call io_close(iunit)
+  endif
+
+  POP_SUB(X(casida_get_lr_hmat1))
+
+end subroutine X(casida_get_lr_hmat1)
 
 !! Local Variables:
 !! mode: f90
