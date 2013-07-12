@@ -687,6 +687,157 @@ subroutine X(write_K_term)(cas, mat_val, iunit, ia, jb)
   POP_SUB(X(write_K_term))
 end subroutine X(write_K_term)
 
+! ---------------------------------------------------------
+subroutine X(casida_forces_init)(cas, sys, mesh, st, hm)
+  type(casida_t), intent(inout) :: cas
+  type(system_t), intent(inout) :: sys
+  type(mesh_t), intent(in) :: mesh
+  type(states_t), intent(inout) :: st
+  type(hamiltonian_t), intent(inout) :: hm
+  
+  integer :: ip, iatom, idir, is1, is2, ierr, ik, ia, ist, jst, iunit
+  FLOAT, allocatable :: hvar(:,:,:), dl_rho(:,:), kxc(:,:,:,:)
+  FLOAT, target, allocatable :: lr_fxc(:,:,:)
+  R_TYPE, allocatable :: lr_hmat1(:,:,:)
+  type(pert_t) :: ionic_pert
+  FLOAT :: factor = CNST(1e6) ! FIXME: allow user to set
+  character(len=100) :: restart_filename
+  
+  PUSH_SUB(X(casida_forces_init))
+  
+  if(cas%type == CASIDA_CASIDA) then
+    message(1) = "Forces for Casida theory level not implemented"
+    call messages_warning(1)
+    POP_SUB(X(casida_forces_init))
+    return
+  endif
+  
+  if(cas%type /= CASIDA_EPS_DIFF) then
+    SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
+    kxc = M_ZERO
+    ! not spin polarized so far
+    call xc_get_kxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, kxc(:, :, :, :))
+  endif
+  
+  message(1) = "Reading vib_modes density for calculating excited-state forces."
+  call messages_info(1)
+  
+  SAFE_ALLOCATE(dl_rho(1:mesh%np, 1:st%d%nspin))
+  if (cas%type /= CASIDA_EPS_DIFF) then
+    SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
+  endif
+  
+  if(cas%type == CASIDA_EPS_DIFF) then
+    cas%X(mat_save) = M_ZERO
+    do ia = 1, cas%n_pairs
+      cas%X(mat_save)(ia, ia) = cas%w(ia)
+    enddo
+  endif
+  
+  SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:1))
+
+  SAFE_ALLOCATE(lr_hmat1(cas%nst, cas%nst, cas%nik))
+  SAFE_ALLOCATE(cas%X(lr_hmat2)(cas%n_pairs, cas%n_pairs))
+  SAFE_ALLOCATE(cas%X(mat2)(cas%n_pairs, cas%n_pairs))
+  SAFE_ALLOCATE(cas%X(w2)(cas%n_pairs))
+
+  call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
+  
+  do iatom = 1, sys%geo%natoms
+    call pert_setup_atom(ionic_pert, iatom)
+    
+    do idir = 1, mesh%sb%dim
+      
+      call pert_setup_dir(ionic_pert, idir)
+      
+      call drestart_read_lr_rho(dl_rho, sys%gr, st%d%nspin, &
+        VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
+      
+      if(ierr /= 0) then
+        message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
+        call messages_fatal(1)
+      end if
+      
+      call dcalc_hvar(.true., sys, dl_rho, 1, hvar, fxc = cas%fxc)
+      
+      lr_hmat1 = M_ZERO
+      cas%X(lr_hmat2) = M_ZERO
+      
+      do ik = 1, cas%nik
+        ! occ-occ matrix elements
+        call X(casida_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, 1, cas%n_occ(ik), ik)
+        ! unocc-unocc matrix elements
+        call X(casida_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
+      enddo
+      
+      if(mpi_grp_is_root(mpi_world)) then
+        write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_hmat1_', iatom, '_', idir
+        iunit = io_open(restart_filename, action = 'write')
+        do ik = 1, cas%nik
+          do ist = 1, cas%nst
+            do jst = ist, cas%nst
+              ! FIXME: complex needs (real, imag)
+              write(iunit, *) ist, jst, ik, lr_hmat1(ist, jst, ik)
+            enddo
+          enddo
+        enddo
+        call io_close(iunit)
+      endif
+      
+      ! use them to make two-particle matrix elements (as for eigenvalues)
+      do ik = 1, cas%nik
+        call X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
+      enddo
+      
+      if (cas%type /= CASIDA_EPS_DIFF .and. cas%calc_forces_kernel) then
+        forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
+          lr_fxc(ip, is1, is2) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :))
+        end forall
+        
+        write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_kernel_', iatom, '_', idir
+        if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
+        
+        call X(casida_get_matrix)(cas, hm, st, mesh, cas%X(mat2), lr_fxc, restart_filename, is_forces = .true.)
+        cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, sys)
+      else
+        cas%X(mat2) = M_ZERO
+      endif
+      
+      cas%X(mat2) = cas%X(mat_save) * factor + cas%X(lr_hmat2) + cas%X(mat2)
+      call lalg_eigensolve(cas%n_pairs, cas%X(mat2), cas%X(w2))
+      do ia = 1, cas%n_pairs
+        cas%forces(iatom, idir, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - R_REAL(cas%X(w2)(ia))
+      enddo
+    enddo
+  enddo
+  
+  call pert_end(ionic_pert)
+  if(cas%type /= CASIDA_EPS_DIFF) then
+    SAFE_DEALLOCATE_A(kxc)
+    SAFE_DEALLOCATE_A(lr_fxc)
+  endif
+  SAFE_DEALLOCATE_A(dl_rho)
+  SAFE_DEALLOCATE_A(hvar)
+
+  SAFE_DEALLOCATE_A(lr_hmat1)
+  SAFE_DEALLOCATE_P(cas%X(mat2))
+  SAFE_DEALLOCATE_P(cas%X(w2))
+  
+  if(cas%calc_forces_scf) then
+    call forces_calculate(sys%gr, sys%geo, hm%ep, st)
+    do ia = 1, cas%n_pairs
+      do iatom = 1, sys%geo%natoms
+        do idir = 1, sys%gr%sb%dim
+          cas%forces(iatom, idir, ia) = cas%forces(iatom, idir, ia) + sys%geo%atom(iatom)%f(idir)
+        enddo
+      enddo
+    enddo
+  endif
+  
+  POP_SUB(X(casida_forces_init))
+
+end subroutine X(casida_forces_init)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

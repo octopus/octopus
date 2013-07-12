@@ -726,7 +726,13 @@ contains
       call solve_casida()
     end select
 
-    if(cas%calc_forces) call casida_forces_init(cas, sys, mesh, st, hm)
+    if(cas%calc_forces) then
+      if(cas%states_are_real) then
+        call dcasida_forces_init(cas, sys, mesh, st, hm)
+      else
+        call zcasida_forces_init(cas, sys, mesh, st, hm)
+      endif
+    endif
 
     ! clean up
     if (cas%type /= CASIDA_EPS_DIFF) then
@@ -870,222 +876,29 @@ contains
 
   end subroutine casida_work
 
-    ! ---------------------------------------------------------
-    subroutine casida_forces_init(cas, sys, mesh, st, hm)
-      type(casida_t), intent(inout) :: cas
-      type(system_t), intent(inout) :: sys
-      type(mesh_t), intent(in) :: mesh
-      type(states_t), intent(inout) :: st
-      type(hamiltonian_t), intent(inout) :: hm
-      
-      integer :: ip, iatom, idir, is1, is2, ierr, ik, ia, ist, jst, iunit
-      FLOAT, allocatable :: hvar(:,:,:), dlr_hmat1(:,:,:), dl_rho(:,:), kxc(:,:,:,:)
-      FLOAT, target, allocatable :: lr_fxc(:,:,:)
-      CMPLX, allocatable :: zlr_hmat1(:,:,:)
-      type(pert_t) :: ionic_pert
-      FLOAT :: factor = CNST(1e6) ! FIXME: allow user to set
-      character(len=100) :: restart_filename
-      
-      PUSH_SUB(casida_forces_init)
-      
-      if(cas%type == CASIDA_CASIDA) then
-        message(1) = "Forces for Casida theory level not implemented"
-        call messages_warning(1)
-        POP_SUB(casida_forces_init)
-        return
-      endif
-
-      if(cas%type /= CASIDA_EPS_DIFF) then
-        SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
-        kxc = M_ZERO
-        ! not spin polarized so far
-        call xc_get_kxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, kxc(:, :, :, :))
-      endif
-
-      message(1) = "Reading vib_modes density for calculating excited-state forces."
-      call messages_info(1)
-      
-      SAFE_ALLOCATE(dl_rho(1:mesh%np, 1:st%d%nspin))
-      if (cas%type /= CASIDA_EPS_DIFF) then
-        SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
-      endif
-
-      if(cas%type == CASIDA_EPS_DIFF) then
-        cas%dmat_save = M_ZERO
-        do ia = 1, cas%n_pairs
-          cas%dmat_save(ia, ia) = cas%w(ia)
-        enddo
-      endif
-
-      SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:1))
-      if(cas%states_are_real) then
-        SAFE_ALLOCATE(dlr_hmat1(cas%nst, cas%nst, cas%nik))
-        SAFE_ALLOCATE(cas%dlr_hmat2(cas%n_pairs, cas%n_pairs))
-        SAFE_ALLOCATE(cas%dmat2(cas%n_pairs, cas%n_pairs))
-        SAFE_ALLOCATE(cas%dw2(cas%n_pairs))
-      else
-        SAFE_ALLOCATE(zlr_hmat1(cas%nst, cas%nst, cas%nik))
-        SAFE_ALLOCATE(cas%zlr_hmat2(cas%n_pairs, cas%n_pairs))
-        SAFE_ALLOCATE(cas%zmat2(cas%n_pairs, cas%n_pairs))
-        SAFE_ALLOCATE(cas%zw2(cas%n_pairs))
-      endif
-      call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
-
-      do iatom = 1, sys%geo%natoms
-        call pert_setup_atom(ionic_pert, iatom)
-
-        do idir = 1, mesh%sb%dim
-
-          call pert_setup_dir(ionic_pert, idir)
-
-          call drestart_read_lr_rho(dl_rho, sys%gr, st%d%nspin, &
-            VIB_MODES_DIR, phn_rho_tag(iatom, idir), ierr)
-          
-          if(ierr /= 0) then
-            message(1) = "Could not load vib_modes density; previous vib_modes calculation required."
-            call messages_fatal(1)
-          end if
-
-          call dcalc_hvar(.true., sys, dl_rho, 1, hvar, fxc = cas%fxc)
-
-          if(cas%states_are_real) then
-            dlr_hmat1 = M_ZERO
-            cas%dlr_hmat2 = M_ZERO
-          else
-            zlr_hmat1 = M_ZERO
-            cas%zlr_hmat2 = M_ZERO
-          endif
-
-          do ik = 1, cas%nik
-            if(cas%states_are_real) then
-              ! occ-occ matrix elements
-              call dcasida_lr_hmat1(sys, hm, ionic_pert, hvar, dlr_hmat1, 1, cas%n_occ(ik), ik)
-              ! unocc-unocc matrix elements
-              call dcasida_lr_hmat1(sys, hm, ionic_pert, hvar, dlr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
-            else
-              ! occ-occ matrix elements
-              call zcasida_lr_hmat1(sys, hm, ionic_pert, hvar, zlr_hmat1, 1, cas%n_occ(ik), ik)
-              ! unocc-unocc matrix elements
-              call zcasida_lr_hmat1(sys, hm, ionic_pert, hvar, zlr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
-            endif
-          enddo
-
-          if(mpi_grp_is_root(mpi_world)) then
-            write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_hmat1_', iatom, '_', idir
-            iunit = io_open(restart_filename, action = 'write')
-            do ik = 1, cas%nik
-              do ist = 1, cas%nst
-                do jst = ist, cas%nst
-                  write(iunit, *) ist, jst, ik, dlr_hmat1(ist, jst, ik)
-                enddo
-              enddo
-            enddo
-            call io_close(iunit)
-          endif
-
-          ! use them to make two-particle matrix elements (as for eigenvalues)
-          do ik = 1, cas%nik
-            if(cas%states_are_real) then
-              call dcasida_lr_hmat2(cas, st, dlr_hmat1, ik)
-            else
-              call zcasida_lr_hmat2(cas, st, zlr_hmat1, ik)
-            endif
-          enddo
-
-          if (cas%type /= CASIDA_EPS_DIFF .and. cas%calc_forces_kernel) then
-            forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
-              lr_fxc(ip, is1, is2) = sum(kxc(ip, is1, is2, :) * dl_rho(ip, :))
-            end forall
-
-            write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_kernel_', iatom, '_', idir
-            if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
-
-            if(cas%states_are_real) then
-              call dcasida_get_matrix(cas, hm, st, mesh, cas%dmat2, lr_fxc, restart_filename, is_forces = .true.)
-              cas%dmat2 = cas%dmat2 * casida_matrix_factor(cas, sys)
-            else
-              call zcasida_get_matrix(cas, hm, st, mesh, cas%zmat2, lr_fxc, restart_filename, is_forces = .true.)
-              cas%zmat2 = cas%zmat2 * casida_matrix_factor(cas, sys)
-            endif
-          else
-            if(cas%states_are_real) then
-              cas%dmat2 = M_ZERO
-            else
-              cas%zmat2 = M_ZERO
-            endif
-          endif
-
-          if(cas%states_are_real) then
-            cas%dmat2 = cas%dmat_save * factor + cas%dlr_hmat2 + cas%dmat2
-            call lalg_eigensolve(cas%n_pairs, cas%dmat2, cas%dw2)
-            do ia = 1, cas%n_pairs
-              cas%forces(iatom, idir, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - cas%dw2(ia)
-            enddo
-          else
-            cas%zmat2 = cas%zmat_save * factor + cas%zlr_hmat2 + cas%zmat2
-            call lalg_eigensolve(cas%n_pairs, cas%zmat2, cas%zw2)
-            do ia = 1, cas%n_pairs
-              cas%forces(iatom, idir, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - real(cas%zw2(ia), REAL_PRECISION)
-            enddo
-          endif
-        enddo
-      enddo
-
-      call pert_end(ionic_pert)
-      if(cas%type /= CASIDA_EPS_DIFF) then
-        SAFE_DEALLOCATE_A(kxc)
-        SAFE_DEALLOCATE_A(lr_fxc)
-      endif
-      SAFE_DEALLOCATE_A(dl_rho)
-      SAFE_DEALLOCATE_A(hvar)
-      if(cas%states_are_real) then
-        SAFE_DEALLOCATE_A(dlr_hmat1)
-        SAFE_DEALLOCATE_P(cas%dmat2)
-        SAFE_DEALLOCATE_P(cas%dw2)
-      else
-        SAFE_DEALLOCATE_A(zlr_hmat1)
-        SAFE_DEALLOCATE_P(cas%zmat2)
-        SAFE_DEALLOCATE_P(cas%zw2)
-      endif
-      
-      if(cas%calc_forces_scf) then
-        call forces_calculate(sys%gr, sys%geo, hm%ep, st)
-        do ia = 1, cas%n_pairs
-          do iatom = 1, sys%geo%natoms
-            do idir = 1, sys%gr%sb%dim
-              cas%forces(iatom, idir, ia) = cas%forces(iatom, idir, ia) + sys%geo%atom(iatom)%f(idir)
-            enddo
-          enddo
-        enddo
-      endif
-
-      POP_SUB(casida_forces_init)
-
-    end subroutine casida_forces_init
-
-    ! ---------------------------------------------------------
-    FLOAT function casida_matrix_factor(cas, sys)
-      type(casida_t), intent(in)    :: cas
-      type(system_t), intent(in)    :: sys
-
-      FLOAT :: factor
-      
-      PUSH_SUB(casida_matrix_factors)
-      
-      factor = M_ONE
-
-      if(cas%type == CASIDA_VARIATIONAL) then
-        factor = M_TWO * factor
-      endif
-      
-      if(sys%st%d%ispin == UNPOLARIZED) then
-        factor = M_TWO * factor
-      endif
-      
-      POP_SUB(casida_matrix_factor)
-
-    end function casida_matrix_factor
-
+  ! ---------------------------------------------------------
+  FLOAT function casida_matrix_factor(cas, sys)
+    type(casida_t), intent(in)    :: cas
+    type(system_t), intent(in)    :: sys
+    
+    FLOAT :: factor
+    
+    PUSH_SUB(casida_matrix_factors)
+    
+    factor = M_ONE
+    
+    if(cas%type == CASIDA_VARIATIONAL) then
+      factor = M_TWO * factor
+    endif
+    
+    if(sys%st%d%ispin == UNPOLARIZED) then
+      factor = M_TWO * factor
+    endif
+    
+    POP_SUB(casida_matrix_factor)
+    
+  end function casida_matrix_factor
+  
   ! ---------------------------------------------------------
   subroutine qcasida_write(cas)
     type(casida_t), intent(in) :: cas
