@@ -106,6 +106,10 @@ module casida_m
     FLOAT,   pointer  :: f(:)           !< The (dipole) strengths
     FLOAT,   pointer  :: s(:)           !< The diagonal part of the S-matrix
 
+    FLOAT, pointer :: rho(:, :)
+    FLOAT, pointer :: fxc(:,:,:)
+    FLOAT, pointer :: xc(:,:,:)
+
     FLOAT,   pointer  :: dmat2(:,:)     !< matrix to diagonalize for forces
     CMPLX,   pointer  :: zmat2(:,:)     !< matrix to diagonalize for forces
     FLOAT,   pointer  :: dlr_hmat2(:,:) !< derivative of single-particle contribution to mat
@@ -614,9 +618,8 @@ contains
     type(states_t), pointer :: st
     type(mesh_t),   pointer :: mesh
 
-    FLOAT, allocatable :: rho(:, :), rho_spin(:, :), &
-      dl_rho(:,:), kxc(:,:,:,:)
-    FLOAT, target, allocatable :: fxc(:,:,:), fxc_spin(:,:,:), lr_fxc(:,:,:)
+    FLOAT, allocatable :: rho(:, :), rho_spin(:, :)
+    FLOAT, target, allocatable :: fxc_spin(:,:,:)
     character(len=100) :: restart_filename
 
     PUSH_SUB(casida_work)
@@ -651,26 +654,26 @@ contains
       
     if (cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
       ! We calculate here the kernel, since it will be needed later.
-      SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
-      SAFE_ALLOCATE(fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
-      fxc = M_ZERO
+      SAFE_ALLOCATE(cas%rho(1:mesh%np, 1:st%d%nspin))
+      SAFE_ALLOCATE(cas%fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
+      cas%fxc = M_ZERO
 
-      call states_total_density(st, mesh, rho)
+      call states_total_density(st, mesh, cas%rho)
       if(cas%triplet) then
         SAFE_ALLOCATE(rho_spin(1:mesh%np, 1:2))
         SAFE_ALLOCATE(fxc_spin(1:mesh%np, 1:2, 1:2))
 
         fxc_spin = M_ZERO
-        rho_spin(:, 1) = M_HALF * rho(:, 1)
-        rho_spin(:, 2) = M_HALF * rho(:, 1)
+        rho_spin(:, 1) = M_HALF * cas%rho(:, 1)
+        rho_spin(:, 2) = M_HALF * cas%rho(:, 1)
 
         call xc_get_fxc(sys%ks%xc, mesh, rho_spin, SPIN_POLARIZED, fxc_spin)
-        fxc(:, 1, 1) = M_HALF * (fxc_spin(:, 1, 1) - fxc_spin(:, 1, 2))
+        cas%fxc(:, 1, 1) = M_HALF * (fxc_spin(:, 1, 1) - fxc_spin(:, 1, 2))
 
         SAFE_DEALLOCATE_A(rho_spin)
         SAFE_DEALLOCATE_A(fxc_spin)
       else
-        call xc_get_fxc(sys%ks%xc, mesh, rho, st%d%ispin, fxc)
+        call xc_get_fxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, cas%fxc)
       endif
     end if
 
@@ -681,25 +684,22 @@ contains
     case(CASIDA_EPS_DIFF)
       call solve_eps_diff()
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
-      call casida_get_matrix(cas, hm, st, mesh, cas%mat, fxc, restart_filename)
-      call casida_matrix_factors(cas%mat)
+      call casida_get_matrix(cas, hm, st, mesh, cas%mat, cas%fxc, restart_filename)
+      call casida_matrix_factors(cas, sys, cas%mat)
       call solve_casida()
     end select
 
-    if(cas%calc_forces) call casida_forces_init()
+    if(cas%calc_forces) call casida_forces_init(cas, sys, mesh, st, hm)
 
     ! clean up
     if (cas%type /= CASIDA_EPS_DIFF) then
-      SAFE_DEALLOCATE_A(fxc)
+      SAFE_DEALLOCATE_P(cas%fxc)
       if(.not. cas%triplet) then
         SAFE_DEALLOCATE_P(cas%pot)
       endif
-      if(cas%calc_forces) then
-        SAFE_DEALLOCATE_A(lr_fxc)
-      endif
     end if
     if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
-      SAFE_DEALLOCATE_A(rho)
+      SAFE_DEALLOCATE_P(cas%rho)
     endif
 
     POP_SUB(casida_work)
@@ -743,24 +743,6 @@ contains
 
       POP_SUB(casida_work.solve_eps_diff)
     end subroutine solve_eps_diff
-
-    ! ---------------------------------------------------------
-    subroutine casida_matrix_factors(matrix)
-      FLOAT, intent(inout) :: matrix(:,:)
-
-      PUSH_SUB(casida_matrix_factors)
-
-      if(cas%type == CASIDA_VARIATIONAL) then
-        matrix = M_TWO * matrix
-      endif
-    
-      if(sys%st%d%ispin == UNPOLARIZED) then
-        matrix = M_TWO * matrix
-      endif
-
-      POP_SUB(casida_matrix_factors)
-
-    end subroutine casida_matrix_factors
 
     ! ---------------------------------------------------------
     subroutine solve_casida()
@@ -845,17 +827,25 @@ contains
       POP_SUB(casida_work.solve_casida)
     end subroutine solve_casida
 
+  end subroutine casida_work
+
     ! ---------------------------------------------------------
-    subroutine casida_forces_init()
+    subroutine casida_forces_init(cas, sys, mesh, st, hm)
+      type(casida_t), intent(inout) :: cas
+      type(system_t), intent(inout) :: sys
+      type(mesh_t), intent(in) :: mesh
+      type(states_t), intent(inout) :: st
+      type(hamiltonian_t), intent(inout) :: hm
       
       integer :: ip, iatom, idir, is1, is2, ierr, ik, ia, ist, jst, iunit
-      FLOAT, allocatable :: hvar(:,:,:), dlr_hmat1(:,:,:)
+      FLOAT, allocatable :: hvar(:,:,:), dlr_hmat1(:,:,:), dl_rho(:,:), kxc(:,:,:,:)
+      FLOAT, target, allocatable :: lr_fxc(:,:,:)
       CMPLX, allocatable :: zlr_hmat1(:,:,:)
       type(pert_t) :: ionic_pert
       FLOAT :: factor = CNST(1e6) ! FIXME: allow user to set
       character(len=100) :: restart_filename
       
-      PUSH_SUB(casida_work.casida_forces_init)
+      PUSH_SUB(casida_forces_init)
       
       if(cas%type == CASIDA_CASIDA) then
         message(1) = "Forces for Casida theory level not implemented"
@@ -868,7 +858,7 @@ contains
         SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
         kxc = M_ZERO
         ! not spin polarized so far
-        call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc(:, :, :, :))
+        call xc_get_kxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, kxc(:, :, :, :))
       endif
 
       message(1) = "Reading vib_modes density for calculating excited-state forces."
@@ -915,7 +905,7 @@ contains
             call messages_fatal(1)
           end if
 
-          call dcalc_hvar(.true., sys, dl_rho, 1, hvar, fxc = fxc)
+          call dcalc_hvar(.true., sys, dl_rho, 1, hvar, fxc = cas%fxc)
 
           if(states_are_real(st)) then
             dlr_hmat1 = M_ZERO
@@ -971,7 +961,7 @@ contains
 
             if(states_are_real(st)) then
               call casida_get_matrix(cas, hm, st, mesh, cas%dmat2, lr_fxc, restart_filename, is_forces = .true.)
-              call casida_matrix_factors(cas%dmat2)
+              call casida_matrix_factors(cas, sys, cas%dmat2)
             else
               call messages_not_implemented("lr_kernel for complex wfns") ! FIXME
             endif
@@ -1002,6 +992,7 @@ contains
       call pert_end(ionic_pert)
       if(cas%type /= CASIDA_EPS_DIFF) then
         SAFE_DEALLOCATE_A(kxc)
+        SAFE_DEALLOCATE_A(lr_fxc)
       endif
       SAFE_DEALLOCATE_A(dl_rho)
       SAFE_DEALLOCATE_A(hvar)
@@ -1026,10 +1017,29 @@ contains
         enddo
       endif
 
-      POP_SUB(casida_work.casida_forces_init)
+      POP_SUB(casida_forces_init)
+
     end subroutine casida_forces_init
 
-  end subroutine casida_work
+    ! ---------------------------------------------------------
+    subroutine casida_matrix_factors(cas, sys, matrix)
+      type(casida_t), intent(in)    :: cas
+      type(system_t), intent(in)    :: sys
+      FLOAT,          intent(inout) :: matrix(:,:)
+      
+      PUSH_SUB(casida_matrix_factors)
+      
+      if(cas%type == CASIDA_VARIATIONAL) then
+        matrix = M_TWO * matrix
+      endif
+      
+      if(sys%st%d%ispin == UNPOLARIZED) then
+        matrix = M_TWO * matrix
+      endif
+      
+      POP_SUB(casida_matrix_factors)
+
+    end subroutine casida_matrix_factors
 
     ! ---------------------------------------------------------
     subroutine casida_get_matrix(cas, hm, st, mesh, matrix, xc, restart_file, is_forces)
