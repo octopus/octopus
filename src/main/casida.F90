@@ -850,7 +850,7 @@ contains
       if(cas%type == CASIDA_CASIDA) then
         message(1) = "Forces for Casida theory level not implemented"
         call messages_warning(1)
-        POP_SUB(casida_work.casida_forces_init)
+        POP_SUB(casida_forces_init)
         return
       endif
 
