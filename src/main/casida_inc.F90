@@ -332,12 +332,13 @@ end subroutine X(casida_get_rho)
 ! -----------------------------------------------------------------------------
 
 !> one-particle matrix elements of perturbation
-subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, st_start, st_end, ik)
+subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, is_saved, st_start, st_end, ik)
   type(system_t),      intent(in)    :: sys
   type(hamiltonian_t), intent(inout) :: hm
   type(pert_t),        intent(in)    :: pert
   FLOAT,               intent(in)    :: hvar(:,:,:)
   R_TYPE,              intent(out)   :: lr_hmat1(:,:,:)
+  logical,             intent(in)    :: is_saved(:,:,:)
   integer,             intent(in)    :: st_start
   integer,             intent(in)    :: st_end
   integer,             intent(in)    :: ik
@@ -359,14 +360,17 @@ subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, st_start, st_e
   enddo
 
   do ist = st_start, st_end
+    ! FIXME: cycle if all saved
     call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, psi(:, :, ist), pert_psi(:, :))
     do idim = 1, sys%st%d%dim
       pert_psi(:, idim) = pert_psi(:, idim) + hvar(:, ispin, 1) * psi(:, idim, ist)
     enddo
 
     do jst = ist, st_end
-      lr_hmat1(jst, ist, ik) = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi(:, :, jst), pert_psi(:, :))
-      if(jst /= ist) lr_hmat1(ist, jst, ik) = R_CONJ(lr_hmat1(jst, ist, ik)) ! Hermiticity
+      if(.not. is_saved(ist, jst, ik)) then
+        lr_hmat1(jst, ist, ik) = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi(:, :, jst), pert_psi(:, :))
+        if(jst /= ist) lr_hmat1(ist, jst, ik) = R_CONJ(lr_hmat1(jst, ist, ik)) ! Hermiticity
+      endif
     enddo
   enddo
 
@@ -622,7 +626,7 @@ contains
     character(len=*), intent(in)  :: restart_file
 
     integer :: iunit, err
-    integer :: ia, jb, ii, aa, is, jj, bb, js
+    integer :: ia, jb, ii, aa, ik, jj, bb, jk
     R_TYPE  :: val
 
     PUSH_SUB(X(casida_get_matrix).load_saved)
@@ -630,17 +634,27 @@ contains
     is_saved = .false.
     matrix = M_ZERO
 
+    ! if fromScratch, we already deleted the restart files
     if(mpi_grp_is_root(mpi_world)) then
       iunit = io_open(trim(restart_file), action='read', &
         status='old', die=.false., is_tmp=.true.)
 
       if( iunit > 0) then
         do
-          read(iunit, fmt=*, iostat=err) ii, aa, is, jj, bb, js, val
+          read(iunit, fmt=*, iostat=err) ii, aa, ik, jj, bb, jk, val
           if(err /= 0) exit
 
-          ia = cas%index(ii, aa, is)
-          jb = cas%index(jj, bb, js)
+          if(ii < 1 .or. aa < 1 .or. ik < 1) then
+            message(1) = "Illegal indices in '" // trim(restart_file) // "': working from scratch."
+            call messages_warning(1)
+            call loct_rm(trim(restart_file))
+            ! if file is corrupt, do not trust anything that was read
+            is_saved = .false.
+            exit
+          endif
+
+          ia = cas%index(ii, aa, ik)
+          jb = cas%index(jj, bb, jk)
 
           if(ia > 0 .and. jb > 0) then
             matrix(ia, jb) = val
@@ -803,7 +817,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
 
 end subroutine X(casida_forces)
 
-
+! ---------------------------------------------------------
 subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
   type(casida_t),      intent(in)     :: cas
   type(system_t),      intent(inout)  :: sys
@@ -814,43 +828,86 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
   R_TYPE,              intent(out)    :: lr_hmat1(:,:,:)
 
   FLOAT, allocatable :: hvar(:,:,:)
-  integer :: ik, ist, jst, iunit
+  integer :: ik, ist, jst, iunit, err, ii, aa, num_saved
   type(pert_t) :: ionic_pert
   character(len=100) :: restart_filename
+  R_TYPE :: val
+  logical, allocatable :: is_saved(:,:,:)
 
   PUSH_SUB(X(casida_get_lr_hmat1))
 
+  lr_hmat1 = M_ZERO
+  SAFE_ALLOCATE(is_saved(cas%nst, cas%nst, cas%nik))
+  is_saved = .false.
+  num_saved = 0
+
+  ! if fromScratch, we already deleted the restart files
+  if(mpi_grp_is_root(mpi_world)) then
+    write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_hmat1_', iatom, '_', idir
+    iunit = io_open(restart_filename, action = 'read', status = 'old', die = .false., is_tmp = .true.)
+
+    if(iunit > 0) then
+      do
+        read(iunit, fmt=*, iostat=err) ii, aa, ik, val
+        if(err /= 0) exit
+
+        if(ii < 1 .or. aa < 1 .or. ik < 1) then
+          message(1) = "Illegal indices in '" // trim(restart_filename) // "': working from scratch."
+          call messages_warning(1)
+          call loct_rm(trim(restart_filename))
+          ! if file is corrupt, do not trust anything that was read
+          is_saved = .false.
+          exit
+        endif
+
+        ! FIXME: what about elements which are always zero? store only half matrix
+        if(ii <= cas%nst .and. aa <= cas%nst .and. ik <= cas%nik) then
+          lr_hmat1(ii, aa, ik) = val
+          is_saved(ii, aa, ik) = .true.
+          num_saved = num_saved + 1
+        endif
+      enddo
+      write(6,'(a,i8,a,a)') 'Read ', num_saved, ' saved elements from ', trim(restart_filename)
+
+      call io_close(iunit)
+    else if(.not. cas%fromScratch) then
+      message(1) = "Could not find restart file '" // trim(restart_filename) // "'. Starting from scratch."
+      call messages_warning(1)
+    endif
+  endif
+
+  ! FIXME: skip if all saved
   call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
   call pert_setup_atom(ionic_pert, iatom)
   call pert_setup_dir(ionic_pert, idir)
-    
+
   SAFE_ALLOCATE(hvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
   call dcalc_hvar(.true., sys, dl_rho, 1, hvar, fxc = cas%fxc)
-      
-  lr_hmat1 = M_ZERO
-  
+
+  ! FIXME: do this only for states called for in CasidaKohnShamStates
   do ik = 1, cas%nik
     ! occ-occ matrix elements
-    call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, 1, cas%n_occ(ik), ik)
+    call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, is_saved, 1, cas%n_occ(ik), ik)
     ! unocc-unocc matrix elements
-    call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, cas%n_occ(ik) + 1, cas%nst, ik)
+    call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, is_saved, cas%n_occ(ik) + 1, cas%nst, ik)
   enddo
 
   SAFE_DEALLOCATE_A(hvar)
   call pert_end(ionic_pert)
   
   if(mpi_grp_is_root(mpi_world)) then
-    write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_hmat1_', iatom, '_', idir
-    iunit = io_open(restart_filename, action = 'write')
+    iunit = io_open(restart_filename, action = 'write', position = 'append', is_tmp = .true.)
     do ik = 1, cas%nik
       do ist = 1, cas%nst
         do jst = ist, cas%nst
-          write(iunit, *) ist, jst, ik, lr_hmat1(ist, jst, ik)
+          if(.not. is_saved(ist, jst, ik)) write(iunit, *) ist, jst, ik, lr_hmat1(ist, jst, ik)
         enddo
       enddo
     enddo
     call io_close(iunit)
   endif
+
+  SAFE_DEALLOCATE_A(is_saved)
 
   POP_SUB(X(casida_get_lr_hmat1))
 

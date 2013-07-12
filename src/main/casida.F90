@@ -432,6 +432,9 @@ contains
             write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_kernel_', iatom, '_', idir
             if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
             call loct_rm(trim(restart_filename))
+
+            write(restart_filename,'(a,a,i6.6,a,i1)') trim(cas%restart_dir), '/lr_hmat1_', iatom, '_', idir
+            call loct_rm(trim(restart_filename))
           enddo
         enddo
       endif
