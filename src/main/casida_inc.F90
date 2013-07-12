@@ -34,7 +34,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
   PUSH_SUB(X(oscillator_strengths))
 
   if(cas%triplet) then
-    cas%tm(:,:) = M_ZERO
+    cas%X(tm)(:,:) = M_ZERO
     cas%f(:) = M_ZERO
 
     if(cas%qcalc) then
@@ -82,14 +82,14 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
       qlen = sqrt(dot_product(cas%qvector, cas%qvector))
       do ii = 1, cas%avg_order
         do jj = 1, 2 * cas%avg_order
-          
+
           ! construct the q-vector
           phi   = acos(gaus_leg_points(ii))
           theta = M_PI * jj / cas%avg_order
           qvect(1) = qlen * cos(theta) * sin(phi)
           qvect(2) = qlen * sin(theta) * sin(phi)
           qvect(3) = qlen * cos(phi)
-          
+
           ! matrix elements
           zx(:) = M_ZERO
           zf(:) = M_ZERO
@@ -109,18 +109,18 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
             cas%qf_avg(ia) = cas%qf_avg(ia) + &
               gaus_leg_weights(ii)*abs(ztransition_matrix_element(cas, ia, zx))**2
           end do
-          
+
         end do ! jj (thetas)
       end do ! ii (phis)
-      
+
       ! normalize: for integral over sphere one would multiply by pi/N, but since
       !            we want the average, the integral must be divided by 4*pi
       forall(ia = 1:cas%n_pairs) cas%qf_avg(ia) = cas%qf_avg(ia) / (4*cas%avg_order)
-      
+
       ! and finalize
       SAFE_DEALLOCATE_A(gaus_leg_points)
       SAFE_DEALLOCATE_A(gaus_leg_weights)
-      
+
     end if ! averaging
 
     SAFE_DEALLOCATE_A(zf)
@@ -138,14 +138,14 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
     xx = X(ks_matrix_elements)(cas, st, mesh, deltav)
     ! And now we are able to get the transition matrix elements between many-electron states.
     do ia = 1, cas%n_pairs
-      cas%tm(ia, idir) = X(transition_matrix_element)(cas, ia, xx)
+      cas%X(tm)(ia, idir) = X(transition_matrix_element)(cas, ia, xx)
     end do
   end do
   SAFE_DEALLOCATE_A(xx)
 
   ! And the oscillator strengths.
   do ia = 1, cas%n_pairs
-    cas%f(ia) = (M_TWO / mesh%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
+    cas%f(ia) = (M_TWO / mesh%sb%dim) * cas%w(ia) * sum( (abs(cas%X(tm)(ia, :)))**2 )
   end do
 
   call profiling_out(prof)
@@ -206,12 +206,12 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
       zz = sqrt(TOFLOAT(cas%el_per_state)) * xx(ia)
     else if(cas%type == CASIDA_CASIDA) then
       do jb = 1, cas%n_pairs
-        zz = zz + xx(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
+        zz = zz + xx(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%X(mat)(jb, ia)
       end do
       zz = (M_ONE/sqrt(cas%w(ia))) * zz
     else ! TAMM_DANCOFF, VARIATIONAL, PETERSILKA
       do jb = 1, cas%n_pairs
-        zz = zz + xx(jb) * cas%mat(jb, ia)
+        zz = zz + xx(jb) * cas%X(mat)(jb, ia)
       end do
       if(cas%nik == 1) zz = sqrt(M_TWO) * zz
     endif
@@ -245,7 +245,7 @@ subroutine X(transition_density) (cas, st, mesh, ia, n0I)
     ep = min(sp + block_size - 1, mesh%np)
 
     call states_get_points(st, sp, ep, psi)
-    
+
     do ip = sp, ep
       do jb = 1, cas%n_pairs
         do idim = 1, st%d%dim
@@ -289,7 +289,7 @@ subroutine X(get_transition_densities) (cas, sys)
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,a,i'//trim(intstr)//')') trim(theory_name(cas)), '_rho_n0',ia
       call X(io_function_output)(sys%outp%how, CASIDA_DIR, trim(filename), &
-                              sys%gr%mesh, n0I, fn_unit, ierr, geo = sys%geo)
+        sys%gr%mesh, n0I, fn_unit, ierr, geo = sys%geo)
     end if
   end do
 
@@ -305,7 +305,7 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, sigma, rho)
   integer,        intent(in)  :: ii
   integer,        intent(in)  :: ia
   integer,        intent(in)  :: sigma
-  FLOAT,          intent(out) :: rho(:) !< FIXME: should be R_TYPE
+  R_TYPE,         intent(out) :: rho(:)
 
   R_TYPE, allocatable :: psi_i(:), psi_a(:)
   integer :: ip
@@ -318,11 +318,11 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, sigma, rho)
   ! FIXME: need to take into account spinor dimension here, not just 1
   call states_get_state(st, mesh, 1, ii, sigma, psi_i)
   call states_get_state(st, mesh, 1, ia, sigma, psi_a)
-  
+
   do ip = 1, mesh%np
     rho(ip) = R_CONJ(psi_i(ip))*psi_a(ip)
   end do
-  
+
   SAFE_DEALLOCATE_A(psi_i)
   SAFE_DEALLOCATE_A(psi_a)
 
@@ -353,17 +353,17 @@ subroutine X(casida_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, st_start, st_end, i
   ! could use batches?
 
   ispin = states_dim_get_spin_index(sys%st%d, ik)
-  
+
   do ist = st_start, st_end
     call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:, :, ist))
   enddo
-    
+
   do ist = st_start, st_end
     call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, psi(:, :, ist), pert_psi(:, :))
     do idim = 1, sys%st%d%dim
       pert_psi(:, idim) = pert_psi(:, idim) + hvar(:, ispin, 1) * psi(:, idim, ist)
     enddo
-    
+
     do jst = ist, st_end
       lr_hmat1(jst, ist, ik) = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi(:, :, jst), pert_psi(:, :))
       if(jst /= ist) lr_hmat1(ist, jst, ik) = R_CONJ(lr_hmat1(jst, ist, ik)) ! Hermiticity
@@ -409,6 +409,285 @@ subroutine X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
   POP_SUB(X(casida_lr_hmat2))
 
 end subroutine X(casida_lr_hmat2)
+
+! -----------------------------------------------------------------------------
+
+subroutine X(casida_get_matrix)(cas, hm, st, mesh, matrix, xc, restart_file, is_forces)
+  type(casida_t),      intent(inout) :: cas
+  type(hamiltonian_t), intent(in)    :: hm
+  type(states_t),      intent(in)    :: st
+  type(mesh_t),        intent(in)    :: mesh
+  R_TYPE,              intent(out)   :: matrix(:,:)
+  FLOAT,               intent(in)    :: xc(:,:,:)
+  character(len=*),    intent(in)    :: restart_file
+  logical,   optional, intent(in)    :: is_forces
+
+  integer :: ia, jb, iunit, ia_iter, ia_length, jb_tmp
+  integer :: maxcount, actual, counter
+  R_TYPE :: mtxel_vh, mtxel_xc
+  logical, allocatable :: is_saved(:, :), is_calcd(:, :)
+  logical :: is_forces_
+
+  PUSH_SUB(X(casida_get_matrix))
+
+  mtxel_vh = M_ZERO
+  mtxel_xc = M_ZERO
+  is_forces_ = optional_default(is_forces, .false.)
+
+  ! load saved matrix elements
+  SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
+  call load_saved(matrix, is_saved, restart_file)
+
+  SAFE_ALLOCATE(is_calcd(1:cas%n_pairs, 1:cas%n_pairs))
+  is_calcd = .true.
+  ! purge saved non-degenerate offdiagonals, mark which are being calculated
+  if(cas%type == CASIDA_PETERSILKA .and. mpi_grp_is_root(mpi_world)) then
+    do ia = 1, cas%n_pairs
+      do jb = ia, cas%n_pairs
+        if(isnt_degenerate(cas, st, ia, jb)) then
+          matrix(ia, jb) = M_ZERO
+          matrix(jb, ia) = M_ZERO
+          is_calcd(ia, jb) = .false.
+          is_calcd(jb, ia) = .false.
+        endif
+      enddo
+    enddo
+  endif
+
+  if(cas%type == CASIDA_PETERSILKA) then
+    maxcount = cas%n_pairs
+  else
+    maxcount = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
+  endif
+  counter = 0
+  actual = 0
+  if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, maxcount)
+
+  ! only root retains the saved values
+  if(.not. mpi_grp_is_root(mpi_world)) matrix = M_ZERO
+
+  ! calculate the matrix elements of (v + fxc)
+  do jb = 1, cas%n_pairs
+    actual = actual + 1
+    if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
+
+    ! we only count diagonals for Petersilka
+    if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
+
+    ! note: the ordering of jb, ia loops are crucial to minimize number of Poisson solves required.
+    ia_length = (cas%n_pairs - 1) / 2
+    if(mod(cas%n_pairs, 2) == 0) then ! even
+      if(jb > cas%n_pairs / 2) then
+        jb_tmp = cas%n_pairs - jb + 1
+      else
+        jb_tmp = jb
+      endif
+      ia_length = ia_length + mod(jb_tmp, 2)
+    endif
+
+    do ia_iter = jb, jb + ia_length
+
+      ! make ia in range [1, cas%n_pairs]
+      ia = mod(ia_iter, cas%n_pairs)
+      if(ia == 0) ia = cas%n_pairs
+
+      if(cas%type == CASIDA_PETERSILKA) then
+        ! only calculate off-diagonals in degenerate subspace
+        if(isnt_degenerate(cas, st, ia, jb)) cycle
+      else
+        counter = counter + 1
+      endif
+
+      ! if not loaded, then calculate matrix element
+      if(.not. is_saved(ia, jb)) then
+        if(is_forces_) then
+          call X(K_term)(cas%pair(ia), cas%pair(jb), mtxel_xc = mtxel_xc)
+        else
+          call X(K_term)(cas%pair(ia), cas%pair(jb), mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
+        endif
+        matrix(ia, jb) = mtxel_vh + mtxel_xc
+      end if
+      if(jb /= ia) matrix(jb, ia) = matrix(ia, jb) ! the matrix is symmetric (FIXME: actually Hermitian)
+    end do
+    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
+  end do
+
+  if(mpi_grp_is_root(mpi_world)) then
+    call loct_progress_bar(maxcount, maxcount)
+    ! complete progress bar
+    write(stdout, '(1x)')
+  endif
+
+  ! sum all matrix elements
+  if(cas%parallel_in_eh_pairs) then
+    call comm_allreduce(cas%mpi_grp%comm, matrix)
+  end if
+
+  if(mpi_grp_is_root(mpi_world)) then
+    ! output the restart file
+    iunit = io_open(trim(restart_file), action='write', &
+      position='append', is_tmp=.true.)
+
+    do ia = 1, cas%n_pairs
+      do jb = ia, cas%n_pairs
+        if(.not. is_saved(ia, jb) .and. is_calcd(ia, jb)) &
+          call X(write_K_term)(cas, matrix(ia, jb), iunit, ia, jb)
+      enddo
+    enddo
+
+    call io_close(iunit)
+  endif
+  SAFE_DEALLOCATE_A(is_saved)
+
+  POP_SUB(X(casida_get_matrix))
+
+contains
+
+  ! ---------------------------------------------------------
+  !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
+  !> FIXME: all FLOATs here should be R_TYPE
+  subroutine X(K_term)(pp, qq, mtxel_vh, mtxel_xc)
+    type(states_pair_t), intent(in) :: pp, qq
+    R_TYPE,   optional, intent(out) :: mtxel_vh
+    R_TYPE,   optional, intent(out) :: mtxel_xc
+
+    integer :: pi, qi, sigma, pa, qa, mu
+    R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
+
+    PUSH_SUB(X(casida_get_matrix).X(K_term))
+
+    if(cas%herm_conj) then
+      pi = qq%i
+      pa = qq%a
+      sigma = qq%sigma
+
+      qi = pp%i
+      qa = pp%a
+      mu = pp%sigma
+    else
+      pi = pp%i
+      pa = pp%a
+      sigma = pp%sigma
+
+      qi = qq%i
+      qa = qq%a
+      mu = qq%sigma
+    endif
+
+    SAFE_ALLOCATE(rho_i(1:mesh%np))
+    SAFE_ALLOCATE(rho_j(1:mesh%np))
+    SAFE_ALLOCATE(integrand(1:mesh%np))
+
+    call X(casida_get_rho)(st, mesh, pa, pi, sigma, rho_i)
+    call X(casida_get_rho)(st, mesh, qi, qa, mu,    rho_j)
+
+    !  first the Hartree part (only works for real wfs...)
+    ! FIXME: make work for cplx
+    if(present(mtxel_vh)) then
+      if(.not. cas%triplet) then
+        if(qi /= cas%qi_old  .or.   qa /= cas%qa_old   .or.  mu /= cas%mu_old) then
+          cas%X(pot)(1:mesh%np) = M_ZERO
+          if(hm%theory_level /= INDEPENDENT_PARTICLES) call X(poisson_solve)(psolver, cas%X(pot), rho_j, all_nodes=.false.)
+        endif
+        ! value of pot is retained between calls
+        mtxel_vh = X(mf_dotp)(mesh, rho_i(:), cas%X(pot)(:))
+
+        cas%qi_old = qi
+        cas%qa_old = qa
+        cas%mu_old = mu
+      else
+        mtxel_vh = M_ZERO
+      endif
+    end if
+
+    if(present(mtxel_xc)) then
+      integrand(1:mesh%np) = rho_i(1:mesh%np) * rho_j(1:mesh%np) * xc(1:mesh%np, sigma, mu)
+      mtxel_xc = X(mf_integrate)(mesh, integrand)
+    endif
+
+    if(cas%herm_conj) then
+      if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
+      if(present(mtxel_xc)) mtxel_vh = R_CONJ(mtxel_xc)
+    endif
+
+    SAFE_DEALLOCATE_A(rho_i)
+    SAFE_DEALLOCATE_A(rho_j)
+    SAFE_DEALLOCATE_A(integrand)
+
+    POP_SUB(X(casida_get_matrix).X(K_term))
+  end subroutine X(K_term)
+
+  ! ---------------------------------------------------------
+  subroutine load_saved(matrix, is_saved, restart_file)
+    R_TYPE,           intent(out) :: matrix(:,:)
+    logical,          intent(out) :: is_saved(:,:)
+    character(len=*), intent(in)  :: restart_file
+
+    integer :: iunit, err
+    integer :: ia, jb, ii, aa, is, jj, bb, js
+    R_TYPE  :: val
+
+    PUSH_SUB(X(casida_get_matrix).load_saved)
+
+    is_saved = .false.
+    matrix = M_ZERO
+
+    if(mpi_grp_is_root(mpi_world)) then
+      iunit = io_open(trim(restart_file), action='read', &
+        status='old', die=.false., is_tmp=.true.)
+
+      if( iunit > 0) then
+        do
+          ! FIXME: need (real, imag) for cplx quantities
+          read(iunit, fmt=*, iostat=err) ii, aa, is, jj, bb, js, val
+          if(err /= 0) exit
+
+          ia = cas%index(ii, aa, is)
+          jb = cas%index(jj, bb, js)
+
+          if(ia > 0 .and. jb > 0) then
+            matrix(ia, jb) = val
+            is_saved(ia, jb) = .true.
+            matrix(jb, ia) = val
+            is_saved(jb, ia) = .true.
+          endif
+        end do
+
+        call io_close(iunit)
+      else if(.not. cas%fromScratch) then
+        message(1) = "Could not find restart file '" // trim(restart_file) // "'. Starting from scratch."
+        call messages_warning(1)
+      endif
+    endif
+
+    ! if no file found, root has no new information to offer the others
+#ifdef HAVE_MPI
+    call MPI_Bcast(is_saved(1, 1), cas%n_pairs**2, MPI_LOGICAL, 0, mpi_world, mpi_err)
+    ! No need to bcast these, since they will be obtained from a reduction
+    !      call MPI_Bcast(cas%X(mat)(1, 1), cas%n_pairs**2, MPI_FLOAT,   0, mpi_world, mpi_err)
+#endif
+
+    POP_SUB(X(casida_get_matrix).load_saved)
+  end subroutine load_saved
+
+end subroutine X(casida_get_matrix)
+
+! ---------------------------------------------------------
+!> write matrix element to casida_restart file
+subroutine X(write_K_term)(cas, mat_val, iunit, ia, jb)
+  type(casida_t), intent(in) :: cas
+  R_TYPE,         intent(in) :: mat_val
+  integer,        intent(in) :: iunit
+  integer,        intent(in) :: ia
+  integer,        intent(in) :: jb
+
+  PUSH_SUB(X(write_K_term))
+  
+  write(iunit,*) cas%pair(ia)%i, cas%pair(ia)%a, cas%pair(ia)%sigma, &
+    cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%sigma, mat_val
+  
+  POP_SUB(X(write_K_term))
+end subroutine X(write_K_term)
 
 !! Local Variables:
 !! mode: f90
