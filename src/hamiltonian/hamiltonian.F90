@@ -229,7 +229,19 @@ contains
     hm%xc_family    = xc_family
     call states_dim_copy(hm%d, states_dim)
 
-    call hamiltonian_base_init(hm%hm_base, hm%d%nspin)
+    !%Variable ParticleMass
+    !%Type float
+    !%Default 1.0
+    !%Section Hamiltonian
+    !%Description
+    !% It is possible to make calculations for a particle with a mass
+    !% different from one (atomic unit of mass, or mass of the electron).
+    !% This is useful to describe non-electronic systems, or for
+    !% esoteric purposes.
+    !%End
+    call parse_float(datasets_check('ParticleMass'), M_ONE, hm%mass)
+
+    call hamiltonian_base_init(hm%hm_base, hm%d%nspin, hm%mass)
     ASSERT(associated(gr%der%lapl))
     hm%hm_base%kinetic => gr%der%lapl
 
@@ -371,18 +383,6 @@ contains
     nullify(hm%ab_pot)
 
     if(hm%ab /= NOT_ABSORBING) call init_abs_boundaries()
-
-    !%Variable ParticleMass
-    !%Type float
-    !%Default 1.0
-    !%Section Hamiltonian
-    !%Description
-    !% It is possible to make calculations for a particle with a mass
-    !% different from one (atomic unit of mass, or mass of the electron).
-    !% This is useful to describe non-electronic systems, or for
-    !% esoteric purposes.
-    !%End
-    call parse_float(datasets_check('ParticleMass'), M_ONE, hm%mass)
 
     !%Variable MassScaling
     !%Type block
