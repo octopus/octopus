@@ -881,24 +881,22 @@ contains
     type(casida_t), intent(in)    :: cas
     type(system_t), intent(in)    :: sys
     
-    FLOAT :: factor
-    
     PUSH_SUB(casida_matrix_factors)
     
-    factor = M_ONE
+    casida_matrix_factor = M_ONE
     
     if(cas%type == CASIDA_VARIATIONAL) then
-      factor = M_TWO * factor
+      casida_matrix_factor = M_TWO * casida_matrix_factor
     endif
     
     if(sys%st%d%ispin == UNPOLARIZED) then
-      factor = M_TWO * factor
+      casida_matrix_factor = M_TWO * casida_matrix_factor
     endif
     
     POP_SUB(casida_matrix_factor)
     
   end function casida_matrix_factor
-  
+
   ! ---------------------------------------------------------
   subroutine qcasida_write(cas)
     type(casida_t), intent(in) :: cas
