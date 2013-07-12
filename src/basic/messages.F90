@@ -1233,7 +1233,6 @@ end module messages_m
 !> module so it can be called from any file. The interface is declared
 !> in global_m.
 subroutine assert_die(s, f, l)
-  use global_m
   use messages_m
   use mpi_m
 

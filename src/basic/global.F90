@@ -31,11 +31,12 @@ module global_m
 
   ! ---------------------------------------------------------
   !> Public types, variables and procedures.
-  public ::          &
-    conf_t,          &
-    global_init,     &
-    global_end,      & 
-    optional_default
+  public ::           &
+    conf_t,           &
+    global_init,      &
+    global_end,       & 
+    optional_default, &
+    assert_die
 
   integer, public, parameter :: MAX_PATH_LEN=256
 

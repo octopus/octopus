@@ -569,7 +569,7 @@ contains
     real(8),           intent(in)    :: xx(:)    !< (1:aa%mm)
     real(8),           intent(out)   :: res(:)   !< (1:nn)
 
-    integer :: inn, comp
+    integer :: inn
 
     select case(aa%type)
     case(EXPLICIT_MATRIX)
@@ -578,9 +578,6 @@ contains
         x = xx(1), incx = 1, beta = 1.0_8, y = res(1), incy = 1)
 
     case(SIN_MATRIX, COS_MATRIX)
-
-      comp = 0
-      if(aa%type == SIN_MATRIX) comp = 1
 
       call expmm(aa%mm, aa%nn, xx(1), res(1), aa%dmm, aa%dnn,  1)
         
