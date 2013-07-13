@@ -884,7 +884,7 @@ contains
     type(casida_t), intent(in)    :: cas
     type(system_t), intent(in)    :: sys
     
-    PUSH_SUB(casida_matrix_factors)
+    PUSH_SUB(casida_matrix_factor)
     
     casida_matrix_factor = M_ONE
     
