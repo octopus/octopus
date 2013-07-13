@@ -882,7 +882,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
   endif
 
 #ifdef HAVE_MPI
-    call MPI_Bcast(is_saved(1, 1), cas%nst**2, MPI_LOGICAL, 0, mpi_world, mpi_err)
+    call MPI_Bcast(is_saved(1, 1, 1), cas%nst**2, MPI_LOGICAL, 0, mpi_world, mpi_err)
 #endif
 
   all_done = .true.
