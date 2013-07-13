@@ -175,6 +175,7 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
     call states_get_state(st, mesh, cas%pair(ia)%i, cas%pair(ia)%sigma, psii)
     call states_get_state(st, mesh, cas%pair(ia)%a, cas%pair(ia)%sigma, psia)
 
+    ! FIXME: parallelize in states
     ! use forall here
     do ip = 1, mesh%np
       ff(ip) = M_ZERO
@@ -352,6 +353,7 @@ subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, is_saved, st_s
   SAFE_ALLOCATE(pert_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
   ! could use batches?
+  ! FIXME: parallelize in states
 
   ispin = states_dim_get_spin_index(sys%st%d, ik)
 
@@ -360,7 +362,7 @@ subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, is_saved, st_s
   enddo
 
   do ist = st_start, st_end
-    ! FIXME: cycle if all saved
+    if(all(is_saved(ist, ist:st_end, ik))) cycle
     call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, psi(:, :, ist), pert_psi(:, :))
     do idim = 1, sys%st%d%dim
       pert_psi(:, idim) = pert_psi(:, idim) + hvar(:, ispin, 1) * psi(:, idim, ist)
@@ -659,7 +661,7 @@ contains
           if(ia > 0 .and. jb > 0) then
             matrix(ia, jb) = val
             is_saved(ia, jb) = .true.
-            matrix(jb, ia) = val
+            matrix(jb, ia) = R_CONJ(val)
             is_saved(jb, ia) = .true.
           endif
         end do
@@ -832,6 +834,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
   type(pert_t) :: ionic_pert
   character(len=100) :: restart_filename
   R_TYPE :: val
+  logical :: all_done
   logical, allocatable :: is_saved(:,:,:)
 
   PUSH_SUB(X(casida_get_lr_hmat1))
@@ -860,10 +863,12 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
           exit
         endif
 
-        ! FIXME: what about elements which are always zero? store only half matrix
+        ! FIXME: what about elements which are always zero?
         if(ii <= cas%nst .and. aa <= cas%nst .and. ik <= cas%nik) then
           lr_hmat1(ii, aa, ik) = val
           is_saved(ii, aa, ik) = .true.
+          lr_hmat1(aa, ii, ik) = R_CONJ(val)
+          is_saved(aa, ii, ik) = .true.
           num_saved = num_saved + 1
         endif
       enddo
@@ -876,7 +881,22 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
     endif
   endif
 
-  ! FIXME: skip if all saved
+#ifdef HAVE_MPI
+    call MPI_Bcast(is_saved(1, 1), cas%nst**2, MPI_LOGICAL, 0, mpi_world, mpi_err)
+#endif
+
+  all_done = .true.
+  do ik = 1, cas%nik
+    all_done = all_done .and. all(is_saved(1:cas%n_occ(ik), 1:cas%n_occ(ik), ik)) &
+      .and. all(is_saved(cas%n_occ(ik) + 1:cas%nst, cas%n_occ(ik) + 1:cas%nst, ik))
+  enddo
+
+  if(all_done) then
+    SAFE_DEALLOCATE_A(is_saved)
+    POP_SUB(X(casida_forces))
+    return
+  endif
+
   call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
   call pert_setup_atom(ionic_pert, iatom)
   call pert_setup_dir(ionic_pert, idir)
