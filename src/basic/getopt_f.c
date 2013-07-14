@@ -120,6 +120,9 @@ void print_config(){
 #ifdef HAVE_CLAMDBLAS
   printf("clamdblas ");
 #endif  
+#ifdef HAVE_NEWUOA
+  printf("newuoa ");
+#endif  
   printf("\n");
 }
 

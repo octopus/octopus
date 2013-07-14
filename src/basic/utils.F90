@@ -267,6 +267,9 @@ contains
 #ifdef HAVE_CLAMDBLAS
     message(2) = trim(message(2))//' clamdblas'
 #endif
+#ifdef HAVE_NEWUOA
+    message(2) = trim(message(2))//' newuoa'
+#endif
 
     message(3) = &
          'Architecture           : '// TOSTRING(OCT_ARCH)
