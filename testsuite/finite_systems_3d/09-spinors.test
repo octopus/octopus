@@ -7,19 +7,19 @@ TestGroups  : short-run, finite_systems_3d
 Enabled  : Yes
 
 Input: 09-spinors.01-ground_state.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669588
-match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.29125114
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669593
+match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.29125118
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
-match ; <Sx>         ; GREP(static/info, '1   --', 36) ;  0.1928
-match ; <Sy>         ; GREP(static/info, '1   --', 44) ;  0.1928
-match ; <Sz>         ; GREP(static/info, '1   --', 52) ;  0.4191
-match ; mx           ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ; 0.385559
-match ; my           ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ; 0.385559
-match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.838265
+match ; <Sx>         ; GREP(static/info, '1   --', 36) ;  0.1913
+match ; <Sy>         ; GREP(static/info, '1   --', 44) ;  0.1913
+match ; <Sz>         ; GREP(static/info, '1   --', 52) ;  0.4204
+match ; mx           ; GREP(static/info, 'Local Magnetic Moments', 20, 2) ; 0.382691
+match ; my           ; GREP(static/info, 'Local Magnetic Moments', 33, 2) ; 0.382691
+match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.840889
 
 Input: 09-spinors.02-rmmdiis.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669588
-match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.29125114
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669575
+match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.29125111
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
 match ; <Sx>         ; GREP(static/info, '1   --', 36) ;  0.1975
 match ; <Sy>         ; GREP(static/info, '1   --', 44) ;  0.1975
@@ -32,8 +32,8 @@ match ; mz           ; GREP(static/info, 'Local Magnetic Moments', 46, 2) ; 0.82
 # It is due to the small radius and large spacing.
 
 Input: 09-spinors.03-rmmdiis_extra_states.inp
-match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669588
-match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.29125114
+match ; Total energy ; GREP(static/info, 'Total       =', 20) ; -0.17669585
+match ; External energy ; GREP(static/info, 'External    =', 20) ;  -0.29125110
 match ; Eigenvalue   ; GREP(static/info, '1   --', 13) ; -0.085321
 match ; <Sx>         ; GREP(static/info, '1   --', 36) ;  0.0736
 match ; <Sy>         ; GREP(static/info, '1   --', 44) ;  0.0736
