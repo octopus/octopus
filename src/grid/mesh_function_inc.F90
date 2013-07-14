@@ -305,12 +305,12 @@ subroutine X(mf_random)(mesh, ff, seed)
   aa = M_ZERO
   do idim = 1, mesh%sb%dim
     call quickrnd(iseed, rnd)
-    aa(idim) = M_TWO*(2*rnd - 1)
+    aa(idim) = M_TWO*(2*rnd - 1) * M_FOUR * mesh%spacing(idim)
   end do
 
   !$omp parallel do private(rr)
   do ip = 1, mesh%np
-    rr = sum((mesh%x(ip, 1:mesh%sb%dim) - aa(1:mesh%sb%dim))**2)
+    rr = sum( ((mesh%x(ip, 1:mesh%sb%dim) - aa(1:mesh%sb%dim)) / (M_FOUR * mesh%spacing(1:idim)) ) **2)
     if ( rr < CNST(100.0) ) then 
       ff(ip) = exp(-M_HALF*rr)
     else
