@@ -116,6 +116,7 @@
         message(3) = 'blocks "OCTVelocityTarget" AND "OCTVelocityDerivatives"'
         call messages_fatal(3)
       end if
+    end if
           
       SAFE_ALLOCATE(tg%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
       SAFE_ALLOCATE(vl(1:gr%mesh%np_part))
@@ -140,8 +141,6 @@
       ! conditions. The best way to solve this problems is to define the 
       ! target making use of the definition of the forces based on the gradient
       ! of the density, rather than on the gradient of the potential.
-
-    end if
 
     tg%dt = td%dt
     SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))

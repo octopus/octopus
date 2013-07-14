@@ -201,7 +201,7 @@
        if((oct%algorithm  ==  oct_algorithm_cg) .and. target_move_ions(oct_target)) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_velocity", and'
           write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", then you have to'
-          write(message(3), '(a)') 'set "OCTMoveIons = false"'
+          write(message(3), '(a)') 'set "MoveIons = false"'
           call messages_fatal(3)
        end if
     end if
@@ -219,7 +219,7 @@
        if((oct%algorithm  ==  oct_algorithm_cg) .and. target_move_ions(oct_target)) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_hhgnew", and'
           write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", then you have to'
-          write(message(3), '(a)') 'set "OCTMoveIons = false"'
+          write(message(3), '(a)') 'set "MoveIons = false"'
           call messages_fatal(3)
        end if
     end if

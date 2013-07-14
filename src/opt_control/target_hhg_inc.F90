@@ -110,13 +110,7 @@
     FLOAT, allocatable  :: vl(:), vl_grad(:,:)
     PUSH_SUB(target_init_hhgnew)
 
-    if(parse_isdef('OCTMoveIons')  ==  0) then
-       message(1) = 'If OCTTargetOperator = oct_tg_hhgnew, then you must supply'
-       message(2) = 'the variable "OCTMoveIons".'
-       call messages_fatal(2)
-    else
-       call parse_logical(datasets_check('OCTMoveIons'), .false., tg%move_ions)
-    end if
+    tg%move_ions = ion_dynamics_ions_move(td%ions)
 
     ! We allocate many things that are perhaps not necessary if we use a direct optimization scheme.
     SAFE_ALLOCATE(tg%vel(td%max_iter+1, MAX_DIM))

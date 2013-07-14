@@ -25,3 +25,8 @@ Input: 08-velocities.02-oct.inp
 Precision : 0.1
 match ; J1 1st iteration  ; GREP(opt-control/convergence, '##        1 ', 35) ; 2118.92730417
 
+Input: 08-velocities.03-movingions.inp
+
+Precision : 0.1
+match ; J1 11th function evaluation  ; GREP(opt-control/convergence, '         11 ', 35) ; 0.38052857
+
