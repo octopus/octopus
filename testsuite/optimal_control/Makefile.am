@@ -58,7 +58,7 @@ dist_share_DATA = \
 	08-velocities.test                     \
 	08-velocities.01-ground_state.inp      \
 	08-velocities.02-oct.inp               \
-	08-velocities.02-movingions.inp
+	08-velocities.03-movingions.inp
 
 
 CLEANFILES = *~ *.bak
