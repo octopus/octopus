@@ -893,7 +893,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
 
   if(all_done) then
     SAFE_DEALLOCATE_A(is_saved)
-    POP_SUB(X(casida_forces))
+    POP_SUB(X(casida_get_lr_hmat1))
     return
   endif
 
