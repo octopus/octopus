@@ -435,12 +435,14 @@ contains
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/velocity")))
 
       if(writ%out(OUT_LASER)%write) then
-        call write_iter_init(writ%out(OUT_LASER)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/laser")))
-        do ii = 0, max_iter
-          call td_write_laser(writ%out(OUT_LASER)%handle, gr, hm, dt, ii)
-        end do
-        call write_iter_end(writ%out(OUT_LASER)%handle)
+        if(iter .eq. 0) then
+          call write_iter_init(writ%out(OUT_LASER)%handle, first, &
+            units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/laser")))
+          do ii = 0, max_iter
+            call td_write_laser(writ%out(OUT_LASER)%handle, gr, hm, dt, ii)
+          end do
+          call write_iter_end(writ%out(OUT_LASER)%handle)
+        end if
       end if
 
 
