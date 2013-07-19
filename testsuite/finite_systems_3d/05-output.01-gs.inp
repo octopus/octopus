@@ -14,4 +14,4 @@ Spacing = 0.5
 %
 
 Output = density + geometry + wfs + bader + potential + forces + el_pressure + ELF
-OutputHow = axis_x + plane_x + dx + xyz + xcrysden
+OutputHow = axis_x + plane_x + dx + xyz + xcrysden + mesh_index
