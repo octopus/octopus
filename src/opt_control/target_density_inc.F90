@@ -350,6 +350,8 @@
       end do
       j1 = tg%density_weight * dmf_integrate(gr%mesh, local_function)
       SAFE_DEALLOCATE_A(local_function)
+    else
+      j1 = M_ZERO
     end if
 
     ! current functionals are conveniently combined with others

@@ -655,7 +655,7 @@ contains
 
     if(ion_dynamics_ions_move(ions)) then
       if(.not. propagator_ions_are_propagated(tr)) then
-        call ion_dynamics_propagate(ions, gr%sb, geo, nt*dt, dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), dt)
         generate = .true.
       end if
     end if
@@ -665,7 +665,7 @@ contains
     end if
 
     if(generate .or. geometry_species_time_dependent(geo)) then
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = nt*dt)
+      call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
     end if
 
     update_energy_ = optional_default(update_energy, .false.)
@@ -687,7 +687,7 @@ contains
       end if
 
       ! update Hamiltonian and eigenvalues (fermi is *not* called)
-      call v_ks_calc(ks, hm, st, geo, calc_eigenval = update_energy_, time = nt*dt, calc_energy = update_energy_)
+      call v_ks_calc(ks, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
 
       ! Get the energies.
       if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
@@ -709,9 +709,9 @@ contains
 
     ! Recalculate forces, update velocities...
     if(ion_dynamics_ions_move(ions)) then
-      call forces_calculate(gr, geo, hm%ep, st, nt*dt, dt)
+      call forces_calculate(gr, geo, hm%ep, st, abs(nt*dt), dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
-      if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = nt*dt)
+      if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     end if
 

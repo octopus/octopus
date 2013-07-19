@@ -136,7 +136,7 @@ contains
     type(grid_t),  pointer :: gr
     type(td_write_t)           :: write_handler
     FLOAT, allocatable :: x_initial(:,:)
-    logical :: vel_target_ = .false. , move_ions_ = .false.
+    logical :: vel_target_ = .false.
     integer :: iatom
 
     PUSH_SUB(propagate_forward)
@@ -185,11 +185,7 @@ contains
        end do
     end if
 
-    if(target_move_ions(tg)) then
-      move_ions_ = .true.
-    else
-      call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)
-    end if
+    if(.not.target_move_ions(tg)) call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)
 
     call target_tdcalc(tg, hm, gr, sys%geo, psi, 0, td%max_iter)
 
