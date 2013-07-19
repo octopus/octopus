@@ -138,7 +138,8 @@ subroutine td_init(td, sys, hm)
   !%Section Time-Dependent::Propagation
   !%Description
   !% Type of dynamics to follow during a time propagation. By default
-  !% it is Ehrenfest TDDFT.
+  !% it is Ehrenfest TDDFT. In any of the other two cases, you must set
+  !% 'MoveIons = yes'.
   !%Option ehrenfest 1
   !% Ehrenfest dynamics.
   !%Option bo 2
@@ -150,6 +151,9 @@ subroutine td_init(td, sys, hm)
   call parse_integer(datasets_check('TDDynamics'), EHRENFEST, td%dynamics)
   if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call input_error('TDDynamics')
   call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
+  if(td%dynamics .ne. EHRENFEST) then
+    if(.not.ion_dynamics_ions_move(td%ions)) call input_error('TDDynamics')
+  end if
 
   !%Variable RecalculateGSDuringEvolution
   !%Type logical

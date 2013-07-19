@@ -27,10 +27,13 @@ module propagator_m
   use cl
 #endif
   use cmplxscl_m
+  use cpmd_m
   use cube_function_m
   use datasets_m
   use density_m
+  use energy_calc_m
   use exponential_m
+  use forces_m
   use gauge_field_m
   use grid_m
   use geometry_m
@@ -44,11 +47,14 @@ module propagator_m
   use math_m
   use mesh_function_m
   use messages_m
+  use multicomm_m
   use ob_mem_m
   use ob_propagator_m
   use ob_terms_m
   use opencl_m
+  use output_m
   use profiling_m
+  use scf_m
   use states_dim_m
   use solvers_m
   use sparskit_m
@@ -60,18 +66,21 @@ module propagator_m
   implicit none
 
   private
-  public ::                       &
-    propagator_t,                 &
-    propagator_init,              &
-    propagator_end,               &
-    propagator_copy,              &
-    propagator_run_zero_iter,     &
-    propagator_dt,                &
-    propagator_set_scf_prop,      &
-    propagator_remove_scf_prop,   &
+  public ::                         &
+    propagator_t,                   &
+    propagator_init,                &
+    propagator_end,                 &
+    propagator_copy,                &
+    propagator_run_zero_iter,       &
+    propagator_dt,                  &
+    propagator_set_scf_prop,        &
+    propagator_remove_scf_prop,     &
     propagator_ions_are_propagated, &
     propagator_dens_is_propagated,  &
-    propagator_requires_vks
+    propagator_requires_vks,        &
+    propagator_dt_cpmd,             &
+    propagator_dt_bo
+
 
   integer, public, parameter ::        &
     PROP_ETRS                    = 2,  &
@@ -465,7 +474,7 @@ contains
   !> Propagates st from time - dt to t.
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, max_iter, nt, gauge_force, ions, geo, scsteps)
+  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, mu, max_iter, nt, ions, geo, gauge_force, scsteps, update_energy)
     type(v_ks_t),                    intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -476,14 +485,15 @@ contains
     FLOAT,                           intent(in)    :: mu
     integer,                         intent(in)    :: max_iter
     integer,                         intent(in)    :: nt
+    type(ion_dynamics_t),            intent(inout) :: ions
+    type(geometry_t),                intent(inout) :: geo
     type(gauge_force_t),  optional,  intent(inout) :: gauge_force
-    type(ion_dynamics_t), optional,  intent(inout) :: ions
-    type(geometry_t),     optional,  intent(inout) :: geo
     integer,              optional,  intent(out)   :: scsteps
+    logical,              optional,  intent(in)    :: update_energy
 
-    integer :: is, iter, ik, ist
+    integer :: is, iter, ik, ist, ispin
     FLOAT   :: d, d_max
-    logical :: self_consistent, cmplxscl
+    logical :: self_consistent, cmplxscl, generate, update_energy_
     CMPLX, allocatable :: zpsi1(:, :, :, :)
     FLOAT, allocatable :: dtmp(:), vaux(:, :), vold(:, :)
     FLOAT, allocatable :: Imvaux(:, :), Imvold(:, :)
@@ -493,10 +503,6 @@ contains
     PUSH_SUB(propagator_dt)
 
     cmplxscl = hm%cmplxscl%space
-
-    if(present(ions)) then
-      ASSERT(present(geo))
-    end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       ASSERT(present(gauge_force))
@@ -635,7 +641,85 @@ contains
     
     SAFE_DEALLOCATE_A(Imvold)
     SAFE_DEALLOCATE_A(Imvaux)
-    
+
+    ! update density
+    if(.not. propagator_dens_is_propagated(tr)) then 
+      if(.not. cmplxscl) then
+        call density_calc(st, gr, st%rho)
+      else
+        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+      end if  
+    end if
+
+    generate = .false.
+
+    if(ion_dynamics_ions_move(ions)) then
+      if(.not. propagator_ions_are_propagated(tr)) then
+        call ion_dynamics_propagate(ions, gr%sb, geo, nt*dt, dt)
+        generate = .true.
+      end if
+    end if
+
+    if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(tr)) then
+      call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
+    end if
+
+    if(generate .or. geometry_species_time_dependent(geo)) then
+      call hamiltonian_epot_generate(hm, gr, geo, st, time = nt*dt)
+    end if
+
+    update_energy_ = optional_default(update_energy, .false.)
+
+    if(update_energy_ .or. propagator_requires_vks(tr)) then
+
+      ! save the vhxc potential for later
+      if(.not. propagator_requires_vks(tr)) then
+        SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
+        do ispin = 1, st%d%nspin
+          call lalg_copy(gr%mesh%np, hm%vhxc(:, ispin), vold(:, ispin))
+        end do
+        if(cmplxscl) then
+          SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
+          do ispin = 1, st%d%nspin
+            call lalg_copy(gr%mesh%np, hm%Imvhxc(:, ispin), Imvold(:, ispin))
+          end do
+        end if
+      end if
+
+      ! update Hamiltonian and eigenvalues (fermi is *not* called)
+      call v_ks_calc(ks, hm, st, geo, calc_eigenval = update_energy_, time = nt*dt, calc_energy = update_energy_)
+
+      ! Get the energies.
+      if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
+
+      ! restore the vhxc
+      if(.not. propagator_requires_vks(tr)) then
+        do ispin = 1, st%d%nspin
+          call lalg_copy(gr%mesh%np, vold(:, ispin), hm%vhxc(:, ispin))
+        end do
+        SAFE_DEALLOCATE_A(vold)
+        if(cmplxscl) then
+          do ispin = 1, st%d%nspin
+            call lalg_copy(gr%mesh%np, Imvold(:, ispin), hm%Imvhxc(:, ispin))
+          end do
+          SAFE_DEALLOCATE_A(Imvold)
+        end if
+      end if
+    end if
+
+    ! Recalculate forces, update velocities...
+    if(ion_dynamics_ions_move(ions)) then
+      call forces_calculate(gr, geo, hm%ep, st, nt*dt, dt)
+      call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
+      if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = nt*dt)
+      geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+    end if
+
+    if(gauge_field_is_applied(hm%ep%gfield)) then
+      call gauge_field_get_force(gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
+      call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, dt)
+    end if
+
     POP_SUB(propagator_dt)
     call profiling_out(prof)
 
@@ -699,7 +783,7 @@ contains
       ! propagate dt/2 with H(t)
 
       ! first move the ions to time t
-      if(present(ions)) then
+      if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
       end if
@@ -784,7 +868,7 @@ contains
       call lalg_copy(gr%mesh%np, st%d%nspin, tr%v_old(:, :, 0), hm%vhxc)
 
       ! move the ions to time t
-      if(present(ions)) then      
+      if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
       end if
@@ -882,7 +966,7 @@ contains
 
         !FIXME: not implemented yet
         !move the ions to time 'time - dt/2'
-        if(present(ions)) then
+        if(ion_dynamics_ions_move(ions)) then
           call ion_dynamics_save_state(ions, geo, ions_state)
           call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
           call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
@@ -916,7 +1000,7 @@ contains
         end if
 
         !move the ions to time 'time - dt/2'
-        if(present(ions)) then
+        if(ion_dynamics_ions_move(ions)) then
           call ion_dynamics_save_state(ions, geo, ions_state)
           call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
           call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
@@ -988,9 +1072,8 @@ contains
                 
       end if
 
-
       !restore to time 'time - dt'
-      if(present(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
+      if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
 
       if(gauge_field_is_applied(hm%ep%gfield)) then
         call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
@@ -1404,6 +1487,122 @@ contains
   end function propagator_requires_vks
 
   ! ---------------------------------------------------------
+
+
+  subroutine propagator_dt_cpmd(cp_propagator, gr, ks, st, hm, gauge_force, geo, iter, dt, ions, scsteps, update_energy)
+    type(cpmd_t), intent(inout)        :: cp_propagator
+    type(grid_t), intent(inout)        :: gr
+    type(v_ks_t), intent(inout)        :: ks
+    type(states_t), intent(inout)      :: st
+    type(hamiltonian_t), intent(inout) :: hm
+    type(gauge_force_t), intent(inout) :: gauge_force
+    type(geometry_t), intent(inout)    :: geo
+    integer, intent(in)                :: iter
+    FLOAT, intent(in)                  :: dt
+    type(ion_dynamics_t), intent(inout) :: ions
+    integer, intent(inout)             :: scsteps
+    logical, intent(in)                :: update_energy
+
+    logical :: cmplxscl, generate
+    PUSH_SUB(propagator_dt_cpmd)
+
+    cmplxscl = hm%cmplxscl%space
+
+    if(states_are_real(st)) then
+      call dcpmd_propagate(cp_propagator, gr, hm, st, iter, dt)
+    else
+      call zcpmd_propagate(cp_propagator, gr, hm, st, iter, dt)
+    end if
+    scsteps = 1
+
+    if(.not. cmplxscl) then
+        call density_calc(st, gr, st%rho)
+    else
+        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+    end if  
+
+    call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt)
+    generate = .true.
+
+    if(gauge_field_is_applied(hm%ep%gfield)) then
+       call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
+    end if
+
+    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
+
+    ! update Hamiltonian and eigenvalues (fermi is *not* called)
+    call v_ks_calc(ks, hm, st, geo, calc_eigenval = update_energy, time = iter*dt, calc_energy = update_energy)
+    ! Get the energies.
+    if(update_energy) call energy_calc_total(hm, gr, st, iunit = -1)
+
+    if(states_are_real(st)) then
+      call dcpmd_propagate_vel(cp_propagator, gr, hm, st, dt)
+    else
+      call zcpmd_propagate_vel(cp_propagator, gr, hm, st, dt)
+    end if
+
+    ! Recalculate forces, update velocities...
+    call forces_calculate(gr, geo, hm%ep, st, iter*dt, dt)
+    call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
+    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
+    geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+
+    if(gauge_field_is_applied(hm%ep%gfield)) then
+      call gauge_field_get_force(gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
+      call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, dt)
+    end if
+
+    POP_SUB(propapagor_dt_cpmd)
+  end subroutine propagator_dt_cpmd
+
+
+  subroutine propagator_dt_bo(scf, gr, ks, st, hm, gauge_force, geo, mc, outp, iter, dt, ions, scsteps)
+    type(scf_t), intent(inout)         :: scf
+    type(grid_t), intent(inout)        :: gr
+    type(v_ks_t), intent(inout)        :: ks
+    type(states_t), intent(inout)      :: st
+    type(hamiltonian_t), intent(inout) :: hm
+    type(gauge_force_t), intent(inout) :: gauge_force
+    type(geometry_t), intent(inout)    :: geo
+    type(multicomm_t), intent(inout)   :: mc    !< index and domain communicators
+    type(output_t), intent(inout)      :: outp
+    integer, intent(in)                :: iter
+    FLOAT, intent(in)                  :: dt
+    type(ion_dynamics_t), intent(inout) :: ions
+    integer, intent(inout)             :: scsteps
+
+    PUSH_SUB(propagator_dt_bo)
+
+    ! move the hamiltonian to time t
+    call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt)
+    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
+    ! now calculate the eigenfunctions
+    call scf_run(scf, mc, gr, geo, st, ks, hm, outp, &
+      gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
+
+    if(gauge_field_is_applied(hm%ep%gfield)) then
+      call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
+    end if
+
+    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
+
+    ! update Hamiltonian and eigenvalues (fermi is *not* called)
+    call v_ks_calc(ks, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
+
+    ! Get the energies.
+    call energy_calc_total(hm, gr, st, iunit = -1)
+
+    call ion_dynamics_propagate_vel(ions, geo)
+    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
+     geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+
+    if(gauge_field_is_applied(hm%ep%gfield)) then
+      call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, dt)
+    end if
+
+    POP_SUB(propagator_dt_bo)
+  end subroutine propagator_dt_bo
+
 
 #include "propagator_qoct_inc.F90"
 

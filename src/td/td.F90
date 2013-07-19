@@ -47,7 +47,6 @@ module td_m
   use mesh_m
   use messages_m
   use mpi_m
-  use multicomm_m
   use parser_m
   use PES_m
   use profiling_m
@@ -126,13 +125,11 @@ contains
     type(grid_t),     pointer :: gr   ! some shortcuts
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
-    logical                   :: stopping, update_energy, cmplxscl
-    integer                   :: iter, ierr, scsteps, ispin
+    logical                   :: stopping, cmplxscl
+    integer                   :: iter, ierr, scsteps
     real(8)                   :: etime
-    logical                   :: generate
     type(gauge_force_t)       :: gauge_force
     type(profile_t),     save :: prof
-    FLOAT, allocatable :: vold(:, :), Imvold(:, :)
 
     PUSH_SUB(td_run)
 
@@ -236,122 +233,18 @@ contains
       !Apply mask absorbing boundaries
       if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st) 
 
-      ! time iterate wavefunctions
+      ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        if(ion_dynamics_ions_move(td%ions)) then
-          call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, td%max_iter, iter, gauge_force, &
-            ions = td%ions, geo = sys%geo, scsteps = scsteps)
-        else
-          call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, td%max_iter, iter, gauge_force, &
-            geo=sys%geo, scsteps = scsteps)
-        end if
+        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%mu, td%max_iter, iter, td%ions, geo, &
+          gauge_force = gauge_force, scsteps = scsteps, &
+          update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)
-        ! move the hamiltonian to time t
-        call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, iter*td%dt, td%dt)
-        call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
-        ! now calculate the eigenfunctions
-        call scf_run(td%scf, sys%mc, sys%gr, geo, st, sys%ks, hm, sys%outp, &
-          gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
+        call propagator_dt_bo(td%scf, gr, sys%ks, st, hm, gauge_force, geo, sys%mc, sys%outp, iter, td%dt, td%ions, scsteps)
       case(CP)
-        if(states_are_real(st)) then
-          call dcpmd_propagate(td%cp_propagator, sys%gr, hm, st, iter, td%dt)
-        else
-          call zcpmd_propagate(td%cp_propagator, sys%gr, hm, st, iter, td%dt)
-        end if
-        scsteps = 1
+        call propagator_dt_cpmd(td%cp_propagator, gr, sys%ks, st, hm, gauge_force, geo, iter, td%dt, td%ions, scsteps, &
+          update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       end select
-
-      ! update density
-      if(.not. propagator_dens_is_propagated(td%tr)) then 
-        if(.not. cmplxscl) then
-          call density_calc(st, gr, st%rho)
-        else
-          call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-        end if  
-      end if
-      
-      generate = .false.
-
-      if(ion_dynamics_ions_move(td%ions)) then
-        if(td%dynamics == CP .or. .not. propagator_ions_are_propagated(td%tr)) then
-          call ion_dynamics_propagate(td%ions, sys%gr%sb, sys%geo, iter*td%dt, td%dt)
-          generate = .true.
-        end if
-      end if
-
-      if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(td%tr)) then
-        call gauge_field_propagate(hm%ep%gfield, gauge_force, td%dt)
-      end if
-
-      if(generate .or. geometry_species_time_dependent(geo)) then
-        call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
-      end if
-
-      update_energy = (td%dynamics == BO) .or. (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter)
-
-      if(update_energy .or. propagator_requires_vks(td%tr)) then
-
-        ! save the vhxc potential for later
-        if(.not. propagator_requires_vks(td%tr)) then
-          SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
-          do ispin = 1, st%d%nspin
-            call lalg_copy(gr%mesh%np, hm%vhxc(:, ispin), vold(:, ispin))
-          end do
-          if(cmplxscl) then
-            SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
-            do ispin = 1, st%d%nspin
-              call lalg_copy(gr%mesh%np, hm%Imvhxc(:, ispin), Imvold(:, ispin))
-            end do
-          end if
-        end if
-   
-
-
-        ! update Hamiltonian and eigenvalues (fermi is *not* called)
-        call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval = update_energy, time = iter*td%dt, calc_energy = update_energy)
-
-        ! Get the energies.
-        if(update_energy) call energy_calc_total(hm, sys%gr, st, iunit = -1)
-
-        if (td%dynamics == CP) then
-          if(states_are_real(st)) then
-            call dcpmd_propagate_vel(td%cp_propagator, sys%gr, hm, st, td%dt)
-          else
-            call zcpmd_propagate_vel(td%cp_propagator, sys%gr, hm, st, td%dt)
-          end if
-        end if
-
-        ! restore the vhxc
-        if(.not. propagator_requires_vks(td%tr)) then
-          do ispin = 1, st%d%nspin
-            call lalg_copy(gr%mesh%np, vold(:, ispin), hm%vhxc(:, ispin))
-          end do
-          SAFE_DEALLOCATE_A(vold)
-          if(cmplxscl) then
-            do ispin = 1, st%d%nspin
-              call lalg_copy(gr%mesh%np, Imvold(:, ispin), hm%Imvhxc(:, ispin))
-            end do
-            SAFE_DEALLOCATE_A(Imvold)
-          end if
-        end if
-      end if
-
-      ! Recalculate forces, update velocities...
-      if(ion_dynamics_ions_move(td%ions)) then
-        if(td%dynamics /= BO) call forces_calculate(gr, sys%geo, hm%ep, st, iter*td%dt, td%dt)
-
-        call ion_dynamics_propagate_vel(td%ions, sys%geo, atoms_moved = generate)
-
-        if(generate) call hamiltonian_epot_generate(hm, gr, sys%geo, st, time = iter*td%dt)
-
-        geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
-      end if
-
-      if(gauge_field_is_applied(hm%ep%gfield)) then
-        if(td%dynamics /= BO) call gauge_field_get_force(gr, geo, hm%ep%proj, hm%phase, st, gauge_force)
-        call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, td%dt)
-      end if
 
       !Photoelectron stuff 
       if(td%PESv%calc_rc .or. td%PESv%calc_mask ) &

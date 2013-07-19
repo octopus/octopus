@@ -200,12 +200,11 @@ contains
     ii = 1
     do istep = 1, td%max_iter
       ! time-iterate wavefunctions
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, td%max_iter, istep)
+      call propagator_dt(sys%ks, hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, td%max_iter, istep, td%ions, sys%geo)
 
       if(present(prop)) call oct_prop_output(prop, istep, psi, gr)
 
       ! update
-      call density_calc(psi, gr, psi%rho)
       call v_ks_calc(sys%ks, hm, psi, sys%geo, time = istep*td%dt)
       call energy_calc_total(hm, sys%gr, psi)
 
@@ -213,23 +212,6 @@ contains
 
       ! if td_target
       call target_tdcalc(tg, hm, gr, sys%geo, psi, istep, td%max_iter)
-
-      ! calculate velocity and new position of each atom
-      if(move_ions_) then
-         call forces_calculate(gr, sys%geo, hm%ep, psi, istep*td%dt)
-         do iatom= 1, sys%geo%natoms
-           if(istep /= td%max_iter) then
-             sys%geo%atom(iatom)%v(1:MAX_DIM) = sys%geo%atom(iatom)%v(1:MAX_DIM) + &
-               sys%geo%atom(iatom)%f(1:MAX_DIM)*td%dt/species_weight(sys%geo%atom(iatom)%spec)
-           else
-             sys%geo%atom(iatom)%v(1:MAX_DIM) = sys%geo%atom(iatom)%v(1:MAX_DIM) + &
-               M_HALF * sys%geo%atom(iatom)%f(1:MAX_DIM)*td%dt/species_weight(sys%geo%atom(iatom)%spec)
-           end if
-           sys%geo%atom(iatom)%x(1:MAX_DIM) = sys%geo%atom(iatom)%x(1:MAX_DIM) + &
-           sys%geo%atom(iatom)%v(1:MAX_DIM)*td%dt
-         end do
-         call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = istep*td%dt)
-      end if
 
       ! only write in final run
       if(write_iter_) then
@@ -291,9 +273,8 @@ contains
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     do istep = td%max_iter, 1, -1
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, (istep - 1)*td%dt, -td%dt, td%mu, td%max_iter, istep)
+      call propagator_dt(sys%ks, hm, gr, psi, td%tr, (istep - 1)*td%dt, -td%dt, td%mu, td%max_iter, istep, td%ions, sys%geo)
       call oct_prop_output(prop, istep - 1, psi, gr)
-      call density_calc(psi, gr, psi%rho)
       call v_ks_calc(sys%ks, hm, psi, sys%geo)
       if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter - istep + 1, td%max_iter)
     end do
@@ -375,14 +356,14 @@ contains
       call update_field(i, par, gr, hm, psi, chi, par_chi, dir = 'f')
       call update_hamiltonian_chi(i, gr, sys%ks, hm, td, tg, par_chi, psi2)
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
-      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, td%max_iter, i)
+      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
       if(aux_fwd_propagation) then
         call update_hamiltonian_psi(i, gr, sys%ks, hm, td, tg, par_prev, psi2, sys%geo)
-        call propagator_dt(sys%ks, hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%mu, td%max_iter, i)
+        call propagator_dt(sys%ks, hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
       end if
       call update_hamiltonian_psi(i, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
       call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i)
+      call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
       call target_tdcalc(tg, hm, gr, sys%geo, psi, i, td%max_iter) 
       call oct_prop_output(prop_psi, i, psi, gr)
       call oct_prop_check(prop_chi, chi, gr, i)
@@ -460,11 +441,11 @@ contains
       call update_field(i, par_chi, gr, hm, psi, chi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, psi)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
-      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
       call oct_prop_output(prop_chi, i-1, chi, gr)
       call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
       call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+      call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
     end do
     td%dt = -td%dt
     call update_field(0, par_chi, gr, hm, psi, chi, par, dir = 'b')
@@ -548,11 +529,11 @@ contains
       call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
       st_ref%zpsi = psi%zpsi
       vhxc(:, :) = hm%vhxc(:, :)
-      call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+      call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
       st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
       hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, st_ref)
-      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i)
+      call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, td%max_iter, i, td%ions, sys%geo)
       hm%vhxc(:, :) = vhxc(:, :)
       call oct_prop_output(prop_chi, i-1, chi, gr)
     end do
