@@ -1552,7 +1552,7 @@ contains
       call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, dt)
     end if
 
-    POP_SUB(propapagor_dt_cpmd)
+    POP_SUB(propagator_dt_cpmd)
   end subroutine propagator_dt_cpmd
 
 
